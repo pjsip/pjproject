@@ -1,0 +1,233 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "pjlib"=..\pjlib\build\pjlib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjlib/build", UIAAAAAA
+    ..\pjlib\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjlib_test"=..\pjlib\build\pjlib_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjlib/build", HICAAAAA
+    ..\pjlib\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjlibpp"=..\pjlib\build\pjlibpp.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjlib/build", HICAAAAA
+    ..\pjlib\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjmedia"=..\pjmedia\build\pjmedia.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", MJCAAAAA
+    ..\pjmedia\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjmedia_audio_tool"=..\pjmedia\build\pjmedia_audio_tool.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", MJCAAAAA
+    ..\pjmedia\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjmedia_test"=..\pjmedia\build\pjmedia_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", MJCAAAAA
+    ..\pjmedia\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjsip_core"=..\pjsip\build\pjsip_core.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjsip/build", LJCAAAAA
+    ..\pjsip\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsip_core_test"=..\pjsip\build\pjsip_core_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjsip/build", LJCAAAAA
+    ..\pjsip\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjsip_simple"=..\pjsip\build\pjsip_simple.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjsip/build", LJCAAAAA
+    ..\pjsip\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsip_ua"=..\pjsip\build\pjsip_ua.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjsip/build", LJCAAAAA
+    ..\pjsip\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsua"=..\pjsip\build\pjsua.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjsip/build", LJCAAAAA
+    ..\pjsip\build
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_ua
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/build", KYBAAAAA
+    .
+    end source code control
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

@@ -1,0 +1,103 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "pjaudio_tool"=.\pjaudio_tool.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", TKAAAAAA
+    .
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjlib"=..\..\pjlib\build\pjlib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", TKAAAAAA
+    .
+    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjmedia"=.\pjmedia.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", TKAAAAAA
+    .
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjmedia_test"=.\pjmedia_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", TKAAAAAA
+    .
+    end source code control
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsdp
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+    begin source code control
+    "$/pjproject/pjmedia/build", TKAAAAAA
+    .
+    end source code control
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

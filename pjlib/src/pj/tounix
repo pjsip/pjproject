@@ -1,0 +1,4 @@
+#!/bin/sh
+cp $1 /tmp
+cat /tmp/$1 | tr -d '\r' > $1
+
