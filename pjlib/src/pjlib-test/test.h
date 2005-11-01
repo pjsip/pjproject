@@ -4,11 +4,11 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  1
-#define GROUP_OS                    1
-#define GROUP_DATA_STRUCTURE        1
-#define GROUP_NETWORK               1
-#define GROUP_EXTRA                 1
+#define GROUP_LIBC                  0
+#define GROUP_OS                    0
+#define GROUP_DATA_STRUCTURE        0
+#define GROUP_NETWORK               0
+#define GROUP_EXTRA                 0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
@@ -18,7 +18,7 @@
 #define INCLUDE_POOL_TEST	    GROUP_LIBC
 #define INCLUDE_POOL_PERF_TEST	    (PJ_HAS_MALLOC && GROUP_LIBC)
 #define INCLUDE_STRING_TEST	    GROUP_DATA_STRUCTURE
-#define INCLUDE_FIFOBUF_TEST	    GROUP_DATA_STRUCTURE
+#define INCLUDE_FIFOBUF_TEST	    0	// GROUP_DATA_STRUCTURE
 #define INCLUDE_RBTREE_TEST	    GROUP_DATA_STRUCTURE
 #define INCLUDE_TIMER_TEST	    GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
@@ -35,14 +35,14 @@
 
 
 #define INCLUDE_ECHO_SERVER         0
-#define INCLUDE_ECHO_CLIENT         0
+#define INCLUDE_ECHO_CLIENT         1
 
 #define ECHO_SERVER_MAX_THREADS     4
 #define ECHO_SERVER_START_PORT      65000
 #define ECHO_SERVER_ADDRESS         "compaq.home"
 #define ECHO_SERVER_DURATION_MSEC   (60*60*1000)
 
-#define ECHO_CLIENT_MAX_THREADS     10
+#define ECHO_CLIENT_MAX_THREADS     2
 
 PJ_BEGIN_DECL
 

@@ -46,7 +46,7 @@ static int wait_socket(pj_sock_t sock, unsigned msec_timeout)
     PJ_FD_ZERO(&fdset);
     PJ_FD_SET(sock, &fdset);
     
-    return pj_sock_select(1, &fdset, NULL, NULL, &timeout);
+    return pj_sock_select(FD_SETSIZE, &fdset, NULL, NULL, &timeout);
 }
 
 static int echo_client_thread(void *arg)
@@ -83,6 +83,10 @@ static int echo_client_thread(void *arg)
         return -20;
     }
 
+    PJ_LOG(3,("", "...socket connected to %s:%d", 
+		  pj_inet_ntoa(addr.sin_addr),
+		  pj_ntohs(addr.sin_port)));
+
     pj_create_random_string(send_buf, BUF_SIZE);
     thread_total = 0;
 
@@ -115,6 +119,11 @@ static int echo_client_thread(void *arg)
         rc = wait_socket(sock, 500);
         if (rc == 0) {
             PJ_LOG(3,("", "...timeout"));
+	    bytes = 0;
+	} else if (rc < 0) {
+	    rc = pj_get_netos_error();
+	    app_perror("...select() error", rc);
+	    break;
         } else {
             /* Receive back the original packet. */
             bytes = 0;
@@ -129,10 +138,11 @@ static int echo_client_thread(void *arg)
                         pj_thread_sleep(100);
                     }
                     bytes = 0;
+		    received = 0;
                     break;
                 }
                 bytes += received;
-            } while (bytes != BUF_SIZE);
+            } while (bytes != BUF_SIZE && bytes != 0);
         }
 
         /* Accumulate total received. */
@@ -177,7 +187,7 @@ static int echo_client_thread(void *arg)
             continue;
 
         if (pj_memcmp(send_buf, recv_buf, BUF_SIZE) != 0) {
-            PJ_LOG(3,("", "...error: buffer has changed!"));
+            //PJ_LOG(3,("", "...error: buffer has changed!"));
             break;
         }
     }

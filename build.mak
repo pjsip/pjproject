@@ -53,3 +53,11 @@ export HOST_NAME := unix
 #export KERNEL_DIR = /usr/src/uml/linux
 #export KERNEL_ARCH = ARCH=um
 
+#
+# SunOS, sparc, gcc
+#
+export MACHINE_NAME := sparc
+export OS_NAME := sunos
+export CC_NAME := gcc
+export HOST_NAME := unix
+

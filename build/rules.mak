@@ -148,15 +148,16 @@ depend:
 	$(subst @@,$(DEP_FILE),$(HOST_RM))
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
-	     echo -n $(OBJDIR)/ >> $(DEP_FILE); \
+	     bash -c "echo -n $(OBJDIR)/" >> $(DEP_FILE); \
 	     if gcc -MM $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
 		true; \
 	     else \
 		echo 'err:' >> $(DEP_FILE); \
+		rm -f $(DEP_FILE); \
 		exit 1; \
 	     fi; \
 	   fi; \
-	done
+	done;
 
 dep: depend
 

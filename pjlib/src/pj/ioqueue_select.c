@@ -498,14 +498,15 @@ do_readable_scan:
                  */
 #	        if defined(PJ_WIN32) && PJ_WIN32 != 0
                 rc = pj_sock_recv(h->fd, h->rd_buf, &bytes_read, 0);
-#               elif defined(PJ_LINUX) && PJ_LINUX != 0
+#               elif (defined(PJ_LINUX) && PJ_LINUX != 0) || \
+		     (defined(PJ_SUNOS) && PJ_SUNOS != 0)
                 bytes_read = read(h->fd, h->rd_buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : pj_get_os_error();
 #		elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
                 bytes_read = sys_read(h->fd, h->rd_buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : -bytes_read;
 #               else
-#               error "Check this man!"
+#               error "Implement read() for this platform!"
 #               endif
             }
 	    
@@ -559,12 +560,13 @@ do_writable_scan:
 	pj_assert(PJ_IOQUEUE_IS_WRITE_OP(h->op) || 
 		  PJ_IOQUEUE_IS_CONNECT_OP(h->op));
 
-#if PJ_HAS_TCP
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 	if ((h->op & PJ_IOQUEUE_OP_CONNECT)) {
 	    /* Completion of connect() operation */
 	    pj_ssize_t bytes_transfered;
 
-#if defined(PJ_LINUX) || defined(PJ_LINUX_KERNEL)
+#if (defined(PJ_LINUX) && PJ_LINUX!=0) || \
+    (defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0)
 	    /* from connect(2): 
 		* On Linux, use getsockopt to read the SO_ERROR option at
 		* level SOL_SOCKET to determine whether connect() completed
@@ -584,10 +586,25 @@ do_writable_scan:
 	    } else {
                 bytes_transfered = value;
 	    }
-#elif defined(PJ_WIN32)
+#elif defined(PJ_WIN32) && PJ_WIN32!=0
 	    bytes_transfered = 0; /* success */
 #else
-#  error "Got to check this one!"
+	    /* Excellent information in D.J. Bernstein page:
+	     * http://cr.yp.to/docs/connect.html
+	     *
+	     * Seems like the most portable way of detecting connect()
+	     * failure is to call getpeername(). If socket is connected,
+	     * getpeername() will return 0. If the socket is not connected,
+	     * it will return ENOTCONN, and read(fd, &ch, 1) will produce
+	     * the right errno through error slippage. This is a combination
+	     * of suggestions from Douglas C. Schmidt and Ken Keys.
+	     */
+	    int gp_rc;
+	    struct sockaddr_in addr;
+	    socklen_t addrlen = sizeof(addr);
+
+	    gp_rc = getpeername(h->fd, (struct sockaddr*)&addr, &addrlen);
+	    bytes_transfered = gp_rc;
 #endif
 
 	    /* Clear operation. */

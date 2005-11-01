@@ -252,7 +252,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     }
 
     /* Initialize and set the thread entry. */
-    pj_memset(desc, 0, sizeof(pj_thread_desc));
+    pj_memset(desc, 0, sizeof(struct pj_thread_t));
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
 	pj_sprintf(thread->obj_name, cstr_thread_name, thread->thread);
@@ -287,7 +287,7 @@ pj_status_t pj_thread_init(void)
     if (rc != PJ_SUCCESS)
 	return rc;
 
-    return pj_thread_register("pjlib-main", (pj_uint8_t*)&main_thread, &dummy);
+    return pj_thread_register("pjlib-main", (long*)&main_thread, &dummy);
 }
 
 PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool, const char *thread_name,
@@ -472,10 +472,11 @@ PJ_DEF(void) pj_thread_local_free(long index)
     pj_assert(index >= 0 && index < MAX_TLS_ID);
 }
 
-PJ_DEF(void) pj_thread_local_set(long index, void *value)
+PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
 {
     pj_assert(index >= 0 && index < MAX_TLS_ID);
     tls_values[index] = value;
+    return PJ_SUCCESS;
 }
 
 PJ_DEF(void*) pj_thread_local_get(long index)

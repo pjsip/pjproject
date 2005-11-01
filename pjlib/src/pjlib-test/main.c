@@ -35,11 +35,28 @@ static void boost(void)
 #define boost()
 #endif
 
+#if defined(PJ_SUNOS) && PJ_SUNOS!=0
+#include <signal.h>
+static void init_signals()
+{
+    struct sigaction act;
+
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = SIG_IGN;
+
+    sigaction(SIGALRM, &act, NULL);
+}
+
+#else
+#define init_signals()
+#endif
+
 int main(int argc, char *argv[])
 {
     int rc;
 
     boost();
+    init_signals();
 
     while (argc > 1) {
         char *arg = argv[--argc];

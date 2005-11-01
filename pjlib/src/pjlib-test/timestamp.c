@@ -123,8 +123,11 @@ int timestamp_test(void)
 
     /* See if elapsed time is reasonable. */
     if (elapsed < 1 || elapsed > 100000) {
-	PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u)",
-			     elapsed));
+	PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u, "
+			     "t1.u32.hi=%u, t1.u32.lo=%u, "
+			     "t2.u32.hi=%u, t2.u32.lo=%u)",
+			     elapsed, 
+			     t1.u32.hi, t1.u32.lo, t2.u32.hi, t2.u32.lo));
 	return -1030;
     }
     return 0;

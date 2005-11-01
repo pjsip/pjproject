@@ -174,6 +174,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 {
 #if PJ_HAS_THREADS
     char stack_ptr;
+    pj_status_t rc;
     pj_thread_t *thread = (pj_thread_t *)desc;
     pj_str_t thread_name = pj_str((char*)cstr_thread_name);
 
@@ -190,7 +191,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     }
 
     /* Initialize and set the thread entry. */
-    pj_memset(desc, 0, sizeof(pj_thread_desc));
+    pj_memset(desc, 0, sizeof(struct pj_thread_t));
     thread->thread = pthread_self();
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
@@ -198,7 +199,9 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     else
 	pj_sprintf(thread->obj_name, "thr%p", (void*)thread->thread);
     
-    pj_thread_local_set(thread_tls_id, thread);
+    rc = pj_thread_local_set(thread_tls_id, thread);
+    if (rc != PJ_SUCCESS)
+	return rc;
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     thread->stk_start = &stack_ptr;
@@ -213,7 +216,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 #else
     pj_thread_t *thread = (pj_thread_t*)desc;
     *ptr_thread = thread;
-    return SUCCESS;
+    return PJ_SUCCESS;
 #endif
 }
 
@@ -230,7 +233,7 @@ pj_status_t pj_thread_init(void)
     if (rc != PJ_SUCCESS) {
 	return rc;
     }
-    return pj_thread_register("thr%p", (pj_uint8_t*)&main_thread, &dummy);
+    return pj_thread_register("thr%p", (long*)&main_thread, &dummy);
 #else
     PJ_LOG(2,(THIS_FILE, "Thread init error. Threading is not enabled!"));
     return PJ_EINVALIDOP;
@@ -247,13 +250,17 @@ static void *thread_main(void *param)
 {
     pj_thread_t *rec = param;
     void *result;
+    pj_status_t rc;
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     rec->stk_start = (char*)&rec;
 #endif
 
     /* Set current thread id. */
-    pj_thread_local_set(thread_tls_id, rec);
+    rc = pj_thread_local_set(thread_tls_id, rec);
+    if (rc != PJ_SUCCESS) {
+	pj_assert(!"Thread TLS ID is not set (pj_init() error?)");
+    }
 
     /* Check if suspension is required. */
     if (rec->suspended_mutex)
@@ -659,16 +666,18 @@ PJ_DEF(void) pj_thread_local_free(long index)
 /*
  * pj_thread_local_set()
  */
-PJ_DEF(void) pj_thread_local_set(long index, void *value)
+PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
 {
     //Can't check stack because this function is called in the
     //beginning before main thread is initialized.
     //PJ_CHECK_STACK();
 #if PJ_HAS_THREADS
-    pthread_setspecific(index, value);
+    int rc=pthread_setspecific(index, value);
+    return rc==0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(rc);
 #else
     pj_assert(index >= 0 && index < MAX_THREADS);
     tls[index] = value;
+    return PJ_SUCCESS;
 #endif
 }
 
@@ -705,16 +714,34 @@ PJ_DEF(void) pj_leave_critical_section(void)
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 {
 #if PJ_HAS_THREADS
-    PJ_UNUSED_ARG(type);
+    pthread_mutexattr_t attr;
+    int rc;
 
     PJ_CHECK_STACK();
 
+    pthread_mutexattr_init(&attr);
+
     if (type == PJ_MUTEX_SIMPLE) {
-	pthread_mutex_t the_mutex = PTHREAD_MUTEX_INITIALIZER;
-	mutex->mutex = the_mutex;
+#if defined(PJ_LINUX) && PJ_LINUX!=0
+	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
+#else
+	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+#endif
     } else {
-	pthread_mutex_t the_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-	mutex->mutex = the_mutex;
+#if defined(PJ_LINUX) && PJ_LINUX!=0
+	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+#else
+	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+#endif
+    }
+    
+    if (rc != 0) {
+	return PJ_RETURN_OS_ERROR(rc);
+    }
+
+    rc = pthread_mutex_init(&mutex->mutex, &attr);
+    if (rc != 0) {
+	return PJ_RETURN_OS_ERROR(rc);
     }
     
 #if PJ_DEBUG

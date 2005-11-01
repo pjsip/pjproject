@@ -21,16 +21,18 @@
 
 
 /********************************************************************
- * Include target specific configuration.
+ * Include target OS specific configuration.
  */
-#if defined(PJ_WIN32)
+#if defined(PJ_WIN32) && PJ_WIN32!=0
 #  include <pj/compat/os_win32.h>
-#elif defined(PJ_LINUX)
+#elif defined(PJ_LINUX) && PJ_LINUX!=0
 #  include <pj/compat/os_linux.h>
-#elif defined(PJ_LINUX_KERNEL)
+#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
 #  include <pj/compat/os_linux_kernel.h>
-#elif defined(PJ_PALMOS)
+#elif defined(PJ_PALMOS) && PJ_PALMOS!=0
 #  include <pj/compat/os_palmos.h>
+#elif defined(PJ_SUNOS) && PJ_SUNOS!=0
+#  include <pj/compat/os_sunos.h>
 #else
 #  error "Please specify target os."
 #endif
@@ -40,11 +42,13 @@
  * Target machine specific configuration.
  */
 #if defined (PJ_M_I386) && PJ_M_I386 != 0
-#  include <pj/compat/m_i386.h>
+#   include <pj/compat/m_i386.h>
 #elif defined (PJ_M_M68K) && PJ_M_M68K != 0
 #   include <pj/compat/m_m68k.h>
 #elif defined (PJ_M_ALPHA) && PJ_M_ALPHA != 0
 #   include <pj/compat/m_alpha.h>
+#elif defined (PJ_M_SPARC) && PJ_M_SPARC != 0
+#   include <pj/compat/m_sparc.h>
 #else
 #  error "Please specify target machine."
 #endif

@@ -1,9 +1,7 @@
 DIRS = pjlib pjsdp pjmedia pjsip
 
-MAKE_FLAGS := TARGET=$(TARGET)
-
 ifdef MINSIZE
-MAKE_FLAGS := $(MAKE_FLAGS) MINSIZE=1
+MAKE_FLAGS := MINSIZE=1
 endif
 
 all clean dep depend distclean doc print realclean:
@@ -21,10 +19,7 @@ LIBS = pjlib/lib/libpj.a pjsdp/lib/libpjsdp.a pjmedia/lib/libpjmedia.a \
        pjsip/lib/libpjsip_core.a pjsip/lib/libpjsip_ua.a
 BINS = pjsip/bin/pjsua$(EXE) 
 
-include pjlib/build/make-$(TARGET).inc
-
 size:
-	@echo 'TARGET=$(TARGET)'
 	@echo -n 'Date: '
 	@date
 	@echo
@@ -40,4 +35,11 @@ size:
 		echo "size $$bin:"; \
 		size $$bin; \
 	done
+
+dos2unix:
+	for f in `find . | egrep '(mak|h|c|S|s|Makefile)$$'`; do \
+		dos2unix "$$f" > dos2unix.tmp; \
+		cp dos2unix.tmp "$$f"; \
+	done
+	rm -f dos2unix.tmp
 

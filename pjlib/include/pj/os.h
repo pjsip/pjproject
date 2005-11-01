@@ -57,14 +57,14 @@ typedef int (PJ_THREAD_FUNC pj_thread_proc)(void*);
  * Size of thread struct.
  */
 #if !defined(PJ_THREAD_DESC_SIZE)
-#   define PJ_THREAD_DESC_SIZE	    (PJ_MAX_OBJ_NAME + 10*sizeof(long))
+#   define PJ_THREAD_DESC_SIZE	    (16)
 #endif
 
 /**
  * Thread structure, to thread's state when the thread is created by external
  * or native API. 
  */
-typedef pj_uint8_t pj_thread_desc[PJ_THREAD_DESC_SIZE];
+typedef long pj_thread_desc[PJ_THREAD_DESC_SIZE];
 
 /**
  * Get process ID.
@@ -244,7 +244,7 @@ PJ_DECL(void) pj_thread_local_free(long index);
  * @param index	    The index of the variable.
  * @param value	    The value.
  */
-PJ_DECL(void) pj_thread_local_set(long index, void *value);
+PJ_DECL(pj_status_t) pj_thread_local_set(long index, void *value);
 
 /**
  * Get the value of thread local variable.
@@ -783,8 +783,13 @@ typedef union pj_timestamp
 {
     struct
     {
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
 	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
 	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
+#else
+	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
+	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
+#endif
     } u32;                  /**< The 64-bit value as two 32-bit values. */
 
 #if PJ_HAS_INT64

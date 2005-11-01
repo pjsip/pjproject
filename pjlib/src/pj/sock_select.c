@@ -20,13 +20,17 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 
+#if defined(PJ_HAS_STRING_H) && PJ_HAS_STRING_H!=0
+#   include <string.h>
+#endif
 
 #ifdef _MSC_VER
 #  pragma warning(disable: 4018)    // Signed/unsigned mismatch in FD_*
 #endif
 
-#define PART_FDSET(p_fdsetp)    ((fd_set*)&p_fdsetp->data[1])
-#define PART_COUNT(p_fdsetp)    (p_fdsetp->data[0])
+#define PART_FDSET(ps)		((fd_set*)&ps->data[1])
+#define PART_FDSET_OR_NULL(ps)	(ps ? PART_FDSET(ps) : NULL)
+#define PART_COUNT(ps)		(ps->data[0])
 
 PJ_DEF(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp)
 {
@@ -95,7 +99,7 @@ PJ_DEF(int) pj_sock_select( int n,
 	p_os_timeout = NULL;
     }
 
-    return select(n, PART_FDSET(readfds), PART_FDSET(writefds),
-		  PART_FDSET(exceptfds), p_os_timeout);
+    return select(n, PART_FDSET_OR_NULL(readfds), PART_FDSET_OR_NULL(writefds),
+		  PART_FDSET_OR_NULL(exceptfds), p_os_timeout);
 }
 

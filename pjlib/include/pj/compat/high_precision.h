@@ -35,6 +35,8 @@
     typedef pj_int64_t pj_highprec_t;
 
 #else
+#   warning "High precision math is not available"
+
     /*
      * Last, fallback to 32-bit arithmetics.
      */

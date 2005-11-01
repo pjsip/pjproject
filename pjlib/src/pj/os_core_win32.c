@@ -191,6 +191,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
                                          pj_thread_t **thread_ptr)
 {
     char stack_ptr;
+    pj_status_t rc;
     pj_thread_t *thread = (pj_thread_t *)desc;
     pj_str_t thread_name = pj_str((char*)cstr_thread_name);
 
@@ -207,7 +208,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     }
 
     /* Initialize and set the thread entry. */
-    pj_memset(desc, 0, sizeof(pj_thread_desc));
+    pj_memset(desc, 0, sizeof(struct pj_thread_t));
     thread->hthread = GetCurrentThread();
     thread->idthread = GetCurrentThreadId();
 
@@ -224,7 +225,9 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     else
 	pj_sprintf(thread->obj_name, "thr%p", (void*)thread->idthread);
     
-    pj_thread_local_set(thread_tls_id, thread);
+    rc = pj_thread_local_set(thread_tls_id, thread);
+    if (rc != PJ_SUCCESS)
+	return rc;
 
     *thread_ptr = thread;
     return PJ_SUCCESS;
@@ -256,7 +259,10 @@ static DWORD WINAPI thread_main(void *param)
 
     PJ_LOG(6,(rec->obj_name, "Thread started"));
 
-    pj_thread_local_set(thread_tls_id, rec);
+    if (pj_thread_local_set(thread_tls_id, rec) != PJ_SUCCESS) {
+	pj_assert(!"TLS is not set (pj_init() error?)");
+    }
+
     result = (*rec->proc)(rec->arg);
 
     PJ_LOG(6,(rec->obj_name, "Thread quitting"));
@@ -585,12 +591,15 @@ PJ_DEF(void) pj_thread_local_free(long index)
 /*
  * pj_thread_local_set()
  */
-PJ_DEF(void) pj_thread_local_set(long index, void *value)
+PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
 {
+    BOOL rc;
+
     //Can't check stack because this function is called in the
     //beginning before main thread is initialized.
     //PJ_CHECK_STACK();
-    TlsSetValue(index, value);
+    rc = TlsSetValue(index, value);
+    return rc!=0 ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(GetLastError());
 }
 
 /*
