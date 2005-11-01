@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_parser.h 10    9/11/05 9:28a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_PARSER_H__
 #define __PJSIP_SIP_PARSER_H__
 

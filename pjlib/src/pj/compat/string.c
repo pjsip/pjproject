@@ -1,9 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/string.c 1     9/22/05 10:43a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/compat/string.c $
- * 
- * 1     9/22/05 10:43a Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/types.h>
 #include <pj/compat/string.h>

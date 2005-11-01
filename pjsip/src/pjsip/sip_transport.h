@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip/sip_transport.h 11    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_TRANSPORT_H__
 #define __PJSIP_SIP_TRANSPORT_H__
 

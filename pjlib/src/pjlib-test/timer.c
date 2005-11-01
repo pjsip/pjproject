@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/timer.c 3     10/29/05 10:23p Bennylp $ */
+/* $Id$
+ *
+ */
 #include "test.h"
 
 /**

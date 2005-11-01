@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/nullsound.c 3     6/14/05 12:54a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/sound.h>
 
 /*

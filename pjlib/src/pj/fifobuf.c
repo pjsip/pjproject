@@ -1,9 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/fifobuf.c 4     9/17/05 10:37a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/fifobuf.c $
- * 
- * 4     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/fifobuf.h>
 #include <pj/log.h>

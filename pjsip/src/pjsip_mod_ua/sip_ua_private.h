@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_mod_ua/sip_ua_private.h 3     3/25/05 12:51p Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJSIP_UA_PRIVATE_H__
 #define __PJSIP_UA_PRIVATE_H__

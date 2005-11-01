@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/stream.c 14    6/24/05 11:14p Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjmedia/stream.h>
 #include <pjmedia/rtp.h>

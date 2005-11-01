@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/stdfileio.h 1     9/17/05 10:36a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/compat/stdfileio.h $
  * 
  * 1     9/17/05 10:36a Bennylp

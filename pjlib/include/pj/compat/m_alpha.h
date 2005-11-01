@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/compat/m_alpha.h 1     10/29/05 5:23p Bennylp $ */
+/* $Id$
+ *
+ */
 /* 
  * $Log: /pjproject-0.3/pjlib/include/pj/compat/m_alpha.h $
  * 

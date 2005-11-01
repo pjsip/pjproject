@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/compiletest.cpp 4     8/24/05 10:29a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjlib++.hpp>
 
 

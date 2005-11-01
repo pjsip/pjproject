@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/compat/high_precision.h 3     10/29/05 11:51a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_COMPAT_HIGH_PRECISION_H__
 #define __PJ_COMPAT_HIGH_PRECISION_H__
 

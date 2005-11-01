@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/xpidf.c 3     6/22/05 11:42p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip_simple/xpidf.h>
 #include <pj/pool.h>
 #include <pj/string.h>

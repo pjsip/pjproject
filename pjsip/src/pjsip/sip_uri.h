@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_uri.h 7     6/19/05 6:12p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_URI_H__
 #define __PJSIP_SIP_URI_H__
 

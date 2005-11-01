@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/addr_resolv.h 2     10/14/05 12:25a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_ADDR_RESOLV_H__
 #define __PJ_ADDR_RESOLV_H__

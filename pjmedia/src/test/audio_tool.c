@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/test/audio_tool.c 11    6/24/05 11:17p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia.h>
 #include <pjlib.h>
 #include <stdio.h>

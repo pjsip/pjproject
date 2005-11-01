@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/pasound.c 3     6/24/05 11:13p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/sound.h>
 #include <pj/string.h>
 #include <pj/os.h>

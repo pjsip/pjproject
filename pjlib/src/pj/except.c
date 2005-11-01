@@ -1,17 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/except.c 6     10/14/05 12:26a Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/except.c $
- * 
- * 6     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 5     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 4     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/except.h>
 #include <pj/os.h>

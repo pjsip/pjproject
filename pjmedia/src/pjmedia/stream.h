@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/stream.h 6     8/24/05 10:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_STREAM_H__
 #define __PJMEDIA_STREAM_H__

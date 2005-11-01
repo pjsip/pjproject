@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/scanner.h 10    10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_PARSER_H__
 #define __PJ_PARSER_H__

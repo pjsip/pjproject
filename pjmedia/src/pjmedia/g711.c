@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjmedia/src/pjmedia/g711.c 5     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 /* This file contains file from Sun Microsystems, Inc, with the complete 
  * copyright notice in the second half of this file.
  */

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/pj++.cpp 4     4/17/05 11:59a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pj++/scanner.hpp>
 #include <pj++/timer.hpp>
 #include <pj/except.h>

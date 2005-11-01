@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/event_notify.c 11    8/31/05 9:05p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip_simple/event_notify.h>
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_misc.h>

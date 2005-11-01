@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/timer.h 7     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /* (C)1993-2003 Douglas C. Schmidt
  *
  * This file is originaly from ACE library by Doug Schmidt

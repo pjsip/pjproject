@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsua/main.c 40    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjlib.h>
 #include <pjsip_core.h>

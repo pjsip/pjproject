@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip_mod_ua/sip_dialog.c 27    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip_mod_ua/sip_dialog.h>
 #include <pjsip_mod_ua/sip_ua.h>
 #include <pjsip_mod_ua/sip_ua_private.h>

@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/lock.h 2     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_LOCK_H__
 #define __PJ_LOCK_H__
 

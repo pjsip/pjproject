@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/assert.h 4     10/14/05 12:25a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_ASSERT_H__
 #define __PJ_ASSERT_H__
 

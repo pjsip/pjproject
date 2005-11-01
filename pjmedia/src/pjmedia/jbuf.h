@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjmedia/src/pjmedia/jbuf.h 7     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_JBUF_H__
 #define __PJMEDIA_JBUF_H__

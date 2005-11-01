@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/session.h 8     8/24/05 10:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_SESSION_H__
 #define __PJMEDIA_SESSION_H__

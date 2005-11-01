@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/m_m68k.h 2     9/17/05 10:37a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/compat/m_m68k.h $
  * 
  * 2     9/17/05 10:37a Bennylp

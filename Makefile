@@ -43,3 +43,10 @@ dos2unix:
 	done
 	rm -f dos2unix.tmp
 
+xhdrid:
+	for f in `find . | egrep '\.(h|c|S|s|cpp|hpp)$$'`; do \
+		echo Processing $$f...; \
+		cat $$f | sed 's/.*\$$Author\$$/ */' > /tmp/id; \
+		cp /tmp/id $$f; \
+	done
+

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/rtcp.c 4     8/24/05 10:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjmedia/rtcp.h>
 #include <pj/os.h>	/* pj_gettimeofday */

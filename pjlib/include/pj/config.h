@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/config.h 12    10/29/05 10:25p Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_CONFIG_H__
 #define __PJ_CONFIG_H__

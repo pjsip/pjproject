@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/list_i.h 4     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 
 /* Internal */

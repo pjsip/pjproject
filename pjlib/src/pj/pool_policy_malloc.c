@@ -1,16 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/pool_policy_malloc.c 2     10/14/05 12:26a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/pool_policy_malloc.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     9/21/05 1:37p Bennylp
- * Renamed from pool_policy.c
- * 
- * 3     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/pool.h>
 #include <pj/except.h>

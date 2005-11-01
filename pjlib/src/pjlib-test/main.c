@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/main.c 4     29/10/05 21:32 Bennylp $
+/* $Id$
+ *
+
  */
 /* 
  * $Log: /pjproject-0.3/pjlib/src/pjlib-test/main.c $

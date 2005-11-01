@@ -1,18 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_timestamp_linux.c 4     10/29/05 10:27p Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_timestamp_linux.c $
- * 
- * 4     10/29/05 10:27p Bennylp
- * Fixed misc warnings.
- * 
- * 3     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 2     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 1     9/18/05 9:25p Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/os.h>
 #include <pj/errno.h>

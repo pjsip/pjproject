@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/event_notify_msg.h 4     8/24/05 10:33a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIMPLE_EVENT_NOTIFY_MSG_H__
 #define __PJSIP_SIMPLE_EVENT_NOTIFY_MSG_H__
 

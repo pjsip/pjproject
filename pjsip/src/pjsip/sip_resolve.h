@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_resolve.h 5     6/17/05 11:16p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_RESOLVE_H__
 #define __PJSIP_SIP_RESOLVE_H__
 

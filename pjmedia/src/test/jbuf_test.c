@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/test/jbuf_test.c 9     6/24/05 11:18p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <stdio.h>
 #include <ctype.h>
 #include <pjmedia/jbuf.h>

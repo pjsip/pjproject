@@ -1,16 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/scanner.c 9     10/14/05 12:26a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/scanner.c $
- * 
- * 9     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 8     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 7     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/scanner.h>
 #include <pj/string.h>

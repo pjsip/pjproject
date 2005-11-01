@@ -1,24 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/ioqueue_select.c 15    10/29/05 10:27p Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/ioqueue_select.c $
- * 
- * 15    10/29/05 10:27p Bennylp
- * Fixed misc warnings.
- * 
- * 14    10/29/05 11:31a Bennylp
- * Changed accept and lock.
- * 
- * 13    10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 12    9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 11    9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
-
 /*
  * sock_select.c
  *

@@ -1,19 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_core_win32.c 12    10/29/05 11:51a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_core_win32.c $
- * 
- * 12    10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 11    10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 10    9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 9     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/os.h>
 #include <pj/pool.h>

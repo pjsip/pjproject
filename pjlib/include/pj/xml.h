@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/xml.h 4     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_XML_H__
 #define __PJ_XML_H__

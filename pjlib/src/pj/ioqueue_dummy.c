@@ -1,13 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/ioqueue_dummy.c 2     10/29/05 11:31a Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/ioqueue_dummy.c $
- * 
- * 2     10/29/05 11:31a Bennylp
- * Changed accept and lock.
- * 
- * 1     10/23/05 12:53p Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/ioqueue.h>
 #include <pj/os.h>

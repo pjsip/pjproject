@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/m_i386.h 3     9/21/05 1:39p Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/compat/m_i386.h $
  * 
  * 3     9/21/05 1:39p Bennylp

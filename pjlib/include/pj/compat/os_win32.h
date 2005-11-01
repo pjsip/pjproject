@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/compat/os_win32.h 6     10/29/05 11:51a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/include/pj/compat/os_win32.h $
  * 
  * 6     10/29/05 11:51a Bennylp

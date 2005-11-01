@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/mediamgr.h 7     8/24/05 10:29a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_MEDIAMGR_H__
 #define __PJMEDIA_MEDIAMGR_H__

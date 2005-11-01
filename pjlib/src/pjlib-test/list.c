@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/list.c 2     10/14/05 12:26a Bennylp $
+/* $Id$
+ *
+
  */
 #include "test.h"
 

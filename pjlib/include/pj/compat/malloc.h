@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/malloc.h 2     9/17/05 10:37a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/compat/malloc.h $
  * 
  * 2     9/17/05 10:37a Bennylp

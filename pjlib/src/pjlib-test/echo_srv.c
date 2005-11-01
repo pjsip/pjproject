@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/echo_srv.c 3     10/29/05 10:23p Bennylp $ */
+/* $Id$
+ *
+ */
 /*
  * $Log: /pjproject-0.3/pjlib/src/pjlib-test/echo_srv.c $
  * 

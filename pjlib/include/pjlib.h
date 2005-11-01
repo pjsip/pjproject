@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pjlib.h 6     10/29/05 11:30a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJLIB_H__
 #define __PJLIB_H__
 

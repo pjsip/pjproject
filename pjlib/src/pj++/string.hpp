@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/string.hpp 2     2/24/05 11:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_STRING_H__
 #define __PJPP_STRING_H__
 

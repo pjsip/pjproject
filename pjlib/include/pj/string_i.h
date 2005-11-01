@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/string_i.h 8     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 PJ_IDEF(pj_str_t) pj_str(char *str)
 {

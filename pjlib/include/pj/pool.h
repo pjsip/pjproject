@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/pool.h 10    10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_POOL_H__
 #define __PJ_POOL_H__

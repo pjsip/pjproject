@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/test.h 4     10/29/05 10:28p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJLIB_TEST_H__
 #define __PJLIB_TEST_H__
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/dsound.c 6     6/14/05 12:54a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifdef _MSC_VER
 //# pragma warning(disable: 4201)   // non-standard extension: nameless struct/union

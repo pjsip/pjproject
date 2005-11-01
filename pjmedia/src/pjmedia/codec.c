@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/codec.c 3     4/17/05 11:59a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/codec.h>
 #include <pj/pool.h>
 #include <pj/string.h>

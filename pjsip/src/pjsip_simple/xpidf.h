@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/xpidf.h 3     8/24/05 10:33a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIMPLE_XPIDF_H__
 #define __PJSIP_SIMPLE_XPIDF_H__
 

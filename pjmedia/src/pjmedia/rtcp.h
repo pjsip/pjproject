@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/rtcp.h 5     8/24/05 10:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_RTCP_H__
 #define __PJMEDIA_RTCP_H__

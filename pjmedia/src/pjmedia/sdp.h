@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/sdp.h 9     6/17/05 11:16p Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJSDP_SDP_H__
 #define __PJSDP_SDP_H__

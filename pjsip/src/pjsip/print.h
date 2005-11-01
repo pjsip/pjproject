@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/print.h 9     6/22/05 12:27a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_PRINT_H__
 #define __PJSIP_PRINT_H__
 

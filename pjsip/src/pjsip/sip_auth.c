@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_auth.c 12    9/11/05 9:08a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_auth_parser.h>	/* just to get pjsip_DIGEST_STR */
 #include <pjsip/sip_transport.h>

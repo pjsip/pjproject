@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pjlib++.hpp 1     7/05/05 12:58a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJLIBPP_H__
 #define __PJLIBPP_H__
 

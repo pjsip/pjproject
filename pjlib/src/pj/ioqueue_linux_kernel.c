@@ -1,9 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/ioqueue_linux_kernel.c 1     10/05/05 4:42p Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/ioqueue_linux_kernel.c $
- * 
- * 1     10/05/05 4:42p Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/ioqueue.h>
 #include <pj/os.h>

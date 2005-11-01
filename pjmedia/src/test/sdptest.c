@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/test/sdptest.c 8     6/12/05 11:36a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/sdp.h>
 #include <pj/os.h>
 #include <pj/pool.h>

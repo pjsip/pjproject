@@ -1,12 +1,4 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_error_linux_kernel.c 2     10/29/05 11:51a Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/os_error_linux_kernel.c $
- * 
- * 2     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 1     10/19/05 1:48p Bennylp
- * Created.
+/* $Id$
  *
  */
 #include <pj/string.h>

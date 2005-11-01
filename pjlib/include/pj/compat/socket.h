@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/compat/socket.h 5     10/29/05 11:51a Bennylp $*/
+/* $Id$
+ *
+*/
 /* $Log: /pjproject-0.3/pjlib/include/pj/compat/socket.h $
  * 
  * 5     10/29/05 11:51a Bennylp

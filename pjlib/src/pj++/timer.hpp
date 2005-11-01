@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/timer.hpp 4     8/24/05 10:29a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_TIMER_H__
 #define __PJPP_TIMER_H__
 

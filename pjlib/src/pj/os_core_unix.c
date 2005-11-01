@@ -1,16 +1,4 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_core_unix.c 11    10/29/05 10:27p Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/os_core_unix.c $ 
- * 
- * 11    10/29/05 10:27p Bennylp
- * Fixed misc warnings.
- * 
- * 10    10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 9     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
+/* $Id$
  *
  */
 #include <pj/os.h>
@@ -32,6 +20,9 @@
 #include <errno.h>	    // errno
 
 #define __USE_GNU
+//uncomment this to get pthread_mutexattr_settype declaration.
+//unfortunately this causes syntax error in pthread.h! :(
+//#define __USE_UNIX98
 #include <pthread.h>
 
 #define THIS_FILE   "osunix"

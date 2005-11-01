@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/test/main.c 9     6/24/05 11:18p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pjmedia/sound.h>

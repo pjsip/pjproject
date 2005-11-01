@@ -1,13 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/log.c 7     10/14/05 12:26a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/log.c $
- * 
- * 7     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 6     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/types.h>
 #include <pj/log.h>

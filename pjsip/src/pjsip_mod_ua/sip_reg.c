@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_mod_ua/sip_reg.c 14    8/31/05 9:05p Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip_mod_ua/sip_reg.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_parser.h>

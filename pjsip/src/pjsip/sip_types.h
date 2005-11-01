@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_types.h 5     6/19/05 6:12p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_TYPES_H__
 #define __PJSIP_SIP_TYPES_H__
 

@@ -1,13 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/guid_win32.c 4     10/14/05 12:26a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/guid_win32.c $
- * 
- * 4     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 3     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/guid.h>
 #include <pj/string.h>

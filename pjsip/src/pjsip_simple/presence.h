@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/presence.h 6     8/24/05 10:33a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIMPLE_PRESENCE_H__
 #define __PJSIP_SIMPLE_PRESENCE_H__
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple.h 5     6/17/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 /**
  * @defgroup PJSIP_SIMPLE SIP Event, Instant Messaging and Presence Extension (SIMPLE)

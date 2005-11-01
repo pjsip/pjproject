@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/hash.hpp 5     8/24/05 10:29a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_HASH_H__
 #define __PJPP_HASH_H__
 

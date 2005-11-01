@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/errno.c 4     10/14/05 3:05p Bennylp $ */
+/* $Id$
+ *
+ */
 /*
  * $Log: /pjproject-0.3/pjlib/src/pjlib-test/errno.c $
  * 

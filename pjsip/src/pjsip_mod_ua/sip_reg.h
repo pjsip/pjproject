@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_mod_ua/sip_reg.h 11    8/24/05 10:35a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_REG_H__
 #define __PJSIP_SIP_REG_H__
 

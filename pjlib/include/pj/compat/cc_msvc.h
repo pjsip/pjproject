@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/compat/cc_msvc.h 3     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/include/pj/compat/cc_msvc.h $
  * 
  * 3     10/14/05 12:26a Bennylp

@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/types.h 11    10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_TYPES_H__
 #define __PJ_TYPES_H__

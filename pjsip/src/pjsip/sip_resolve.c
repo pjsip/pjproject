@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip/sip_resolve.c 5     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjsip/sip_resolve.h>
 #include <pjsip/sip_transport.h>

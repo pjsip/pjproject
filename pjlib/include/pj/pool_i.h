@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/pool_i.h 6     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 
 #include <pj/string.h>

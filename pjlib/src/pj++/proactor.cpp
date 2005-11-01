@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj++/proactor.cpp 7     10/29/05 11:51a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pj++/proactor.hpp>
 #include <pj/string.h>	// memset
 

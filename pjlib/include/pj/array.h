@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/array.h 7     10/14/05 12:25a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_ARRAY_H__
 #define __PJ_ARRAY_H__
 

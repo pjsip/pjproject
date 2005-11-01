@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/sound.h 8     8/24/05 10:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMEDIA_SOUND_H__
 #define __PJMEDIA_SOUND_H__

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/types.hpp 3     4/17/05 11:59a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_TYPES_H__
 #define __PJPP_TYPES_H__
 

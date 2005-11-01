@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/session.c 10    6/14/05 12:54a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/session.h>
 #include <pj/log.h>
 #include <pj/os.h> 

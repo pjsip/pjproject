@@ -1,9 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/pool_caching.c 5     9/17/05 10:37a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/pool_caching.c $
- * 
- * 5     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/pool.h>
 #include <pj/log.h>

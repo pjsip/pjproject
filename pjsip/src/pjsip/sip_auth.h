@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_auth.h 11    8/31/05 9:05p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_AUTH_SIP_AUTH_H__
 #define __PJSIP_AUTH_SIP_AUTH_H__
 

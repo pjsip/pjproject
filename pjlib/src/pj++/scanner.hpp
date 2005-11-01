@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/scanner.hpp 3     2/27/05 10:09p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_SCANNER_H__
 #define __PJPP_SCANNER_H__
 

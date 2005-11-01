@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip/sip_transaction.h 7     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_TRANSACTION_H__
 #define __PJSIP_SIP_TRANSACTION_H__
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/tests/pjsip_core/main.c 2     2/24/05 10:46a Bennylp $ */
+/* $Id$
+ *
+ */
 #include "test.h"
 #include <stdio.h>
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjmedia/src/pjmedia/rtp.c 5     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjmedia/rtp.h>
 #include <pj/log.h>

@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-test/udp_echo_srv_sync.c 2     29/10/05 21:34 Bennylp $ */
+/* $Id$
+ *
+ */
 /*
  * $Log: /pjproject-0.3/pjlib/src/pjlib-test/udp_echo_srv_sync.c $
  * 

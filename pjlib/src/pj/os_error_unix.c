@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_error_unix.c 1     10/14/05 12:19a Bennylp $ */
+/* $Id$
+ *
+ */
 /* 
  * $Log: /pjproject-0.3/pjlib/src/pj/os_error_unix.c $
  * 

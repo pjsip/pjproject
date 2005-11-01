@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/tests/pjsip_core/test.h 2     2/24/05 10:46a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pj/types.h>
 
 pj_status_t test_uri(void);

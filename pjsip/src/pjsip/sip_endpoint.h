@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_endpoint.h 12    6/22/05 12:27a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_ENDPOINT_H__
 #define __PJSIP_SIP_ENDPOINT_H__
 

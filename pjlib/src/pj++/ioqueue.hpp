@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjlib/src/pj++/ioqueue.hpp 4     8/24/05 10:29a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJPP_IOQUEUE_H__
 #define __PJPP_IOQUEUE_H__
 

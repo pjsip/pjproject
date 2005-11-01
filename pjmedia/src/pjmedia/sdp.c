@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/sdp.c 9     6/12/05 11:36a Bennylp $ */
+/* $Id$
+ *
+ */
 
 
 #include <pjmedia/sdp.h>

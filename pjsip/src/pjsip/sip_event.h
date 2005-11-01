@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_event.h 5     6/17/05 11:16p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_EVENT_H__
 #define __PJSIP_SIP_EVENT_H__
 

@@ -1,12 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/extra-exports.c 1     10/29/05 11:56a Bennylp $ */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pj/extra-exports.c $
- * 
- * 1     10/29/05 11:56a Bennylp
- * Version 0.3-pre2
+/* $Id$
  *
  */
-
 /*
  * This file contains code to export extra symbols from Linux kernel.
  * It should be copied to Linux kernel source tree and added to

@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/rbtree.h 5     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_RBTREE_H__
 #define __PJ_RBTREE_H__

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_msg.c 16    6/22/05 12:40a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip/sip_msg.h>
 #include <pjsip/print.h>
 #include <pj/string.h>

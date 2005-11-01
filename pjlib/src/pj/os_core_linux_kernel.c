@@ -1,15 +1,4 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_core_linux_kernel.c 3     10/29/05 11:51a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_core_linux_kernel.c $
- * 
- * 3     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     9/22/05 10:38a Bennylp
- * Creaetd.
+/* $Id$
  *
  */
 #include <pj/os.h>

@@ -1,21 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/ioqueue_epoll.c 4     10/29/05 10:27p Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/ioqueue_epoll.c $
- * 
- * 4     10/29/05 10:27p Bennylp
- * Fixed misc warnings.
- * 
- * 3     10/29/05 11:49a Bennylp
- * Fixed warnings.
- * 
- * 2     10/29/05 11:31a Bennylp
- * Changed accept and lock.
- * 
- * 1     10/17/05 10:49p Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
-
 /*
  * ioqueue_epoll.c
  *

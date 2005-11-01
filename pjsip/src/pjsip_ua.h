@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_ua.h 1     4/17/05 11:59a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJSIP_UA_H__
 #define __PJSIP_UA_H__

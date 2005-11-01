@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/md5.c 5     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /*
   Copyright (C) 1999, 2000, 2002 Aladdin Enterprises.  All rights reserved.
 
@@ -22,7 +24,7 @@
   ghost@aladdin.com
 
  */
-/* $Id: md5.c,v 1.6 2002/04/13 19:20:28 lpd Exp $ */
+/* Id: md5.c,v 1.6 2002/04/13 19:20:28 lpd Exp */
 /*
   Independent implementation of MD5 (RFC 1321).
 
@@ -402,3 +404,4 @@ md5_finish(md5_state_t *pms, md5_byte_t digest[16])
     for (i = 0; i < 16; ++i)
 	digest[i] = (md5_byte_t)(pms->abcd[i >> 2] >> ((i & 3) << 3));
 }
+

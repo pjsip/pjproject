@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_core.h 2     6/19/05 6:12p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_CORE_H__
 #define __PJSIP_CORE_H__
 

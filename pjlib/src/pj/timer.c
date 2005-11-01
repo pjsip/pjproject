@@ -1,23 +1,13 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/timer.c 8     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /* (C)1993-2003 Douglas C. Schmidt
  *
  * This file is originaly from ACE library by Doug Schmidt
- * ACE(TM), TAO(TM) and CIAO(TM) are copyrighted by Douglas C. Schmidt and his research 
- * group at Washington University, University of California, Irvine, and Vanderbilt 
- * University Copyright (c) 1993-2003, all rights reserved.
- */
-/* $Log: /pjproject-0.3/pjlib/src/pj/timer.c $
- * 
- * 8     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 7     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 6     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- *
+ * ACE(TM), TAO(TM) and CIAO(TM) are copyrighted by Douglas C. Schmidt and 
+ * his research group at Washington University, University of California, 
+ * Irvine, and Vanderbilt University Copyright 
+ * (c) 1993-2003, all rights reserved.
  */
 #include <pj/timer.h>
 #include <pj/pool.h>

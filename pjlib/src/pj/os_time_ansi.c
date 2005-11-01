@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_time_ansi.c 2     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/os_time_ansi.c $
  * 
  * 2     10/14/05 12:26a Bennylp

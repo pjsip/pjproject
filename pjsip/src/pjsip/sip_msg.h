@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip/sip_msg.h 13    6/22/05 12:27a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_MSG_H__
 #define __PJSIP_SIP_MSG_H__
 

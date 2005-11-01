@@ -1,19 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/sock_bsd.c 10    10/29/05 11:51a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/sock_bsd.c $
- * 
- * 10    10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 9     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 8     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 7     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+/* $Id$
+ *
  */
 #include <pj/sock.h>
 #include <pj/os.h>

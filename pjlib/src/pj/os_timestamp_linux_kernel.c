@@ -1,12 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_timestamp_linux_kernel.c 2     10/29/05 11:51a Bennylp $ */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_timestamp_linux_kernel.c $
- * 
- * 2     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 1     9/22/05 10:39a Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/os.h>
 #include <linux/time.h>

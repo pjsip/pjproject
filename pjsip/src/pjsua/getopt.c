@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsua/getopt.c 4     5/14/05 12:24a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifdef _MSC_VER
 /* in VC this file will generate a lot of warning about old style function

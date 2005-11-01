@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/compat/assert.h 3     9/22/05 10:31a Bennylp $ */
+/* $Id$
+ *
+ */
 /* $Log: /pjproject-0.3/pjlib/src/pj/compat/assert.h $
  * 
  * 3     9/22/05 10:31a Bennylp

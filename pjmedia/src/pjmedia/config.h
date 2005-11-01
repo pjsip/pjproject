@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/config.h 3     2/24/05 10:40a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJMED_CONFIG_H__
 #define __PJMED_CONFIG_H__

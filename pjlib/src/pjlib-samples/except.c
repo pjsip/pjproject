@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pjlib-samples/except.c 2     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 /*
  * $Log: /pjproject-0.3/pjlib/src/pjlib-samples/except.c $
  * 

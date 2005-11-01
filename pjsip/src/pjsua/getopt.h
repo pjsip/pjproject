@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsua/getopt.h 3     5/05/05 11:43p Bennylp $ */
+/* $Id$
+ *
+ */
 /* Declarations for getopt.
    Copyright (C) 1989,90,91,92,93,94,96,97,98 Free Software Foundation, Inc.
    This file is part of the GNU C Library.

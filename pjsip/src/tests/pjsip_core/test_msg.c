@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/tests/pjsip_core/test_msg.c 10    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_parser.h>
 #include <pj/os.h>

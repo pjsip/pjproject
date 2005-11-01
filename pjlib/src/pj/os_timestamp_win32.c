@@ -1,14 +1,5 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/os_timestamp_win32.c 2     10/14/05 12:26a Bennylp $ */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pj/os_timestamp_win32.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     9/18/05 8:15p Bennylp
- * Created.
- * 
+/* $Id$
+ *
  */
 #include <pj/os.h>
 #include <pj/errno.h>

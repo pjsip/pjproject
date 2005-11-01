@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip/sip_endpoint.c 26    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_private.h>

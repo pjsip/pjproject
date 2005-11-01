@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/src/pj/md5.h 5     9/17/05 10:37a Bennylp $ */
+/* $Id$
+ *
+ */
 /*
   Copyright (C) 1999, 2002 Aladdin Enterprises.  All rights reserved.
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/presence.c 7     8/24/05 10:33a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjsip_simple/presence.h>
 #include <pjsip/sip_transport.h>
 #include <pj/pool.h>

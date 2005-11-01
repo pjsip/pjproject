@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjmedia/src/pjmedia/jbuf.c 8     10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #include <pjmedia/jbuf.h>
 #include <pj/log.h>

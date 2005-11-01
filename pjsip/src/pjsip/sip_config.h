@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjsip/src/pjsip/sip_config.h 10    10/14/05 12:23a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIP_CONFIG_H__
 #define __PJSIP_SIP_CONFIG_H__
 

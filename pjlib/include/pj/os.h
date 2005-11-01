@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/os.h 12    10/29/05 11:30a Bennylp $ */
+/* $Id$
+ *
+ */
 
 #ifndef __PJ_OS_H__
 #define __PJ_OS_H__

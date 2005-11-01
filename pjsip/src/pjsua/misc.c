@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsua/misc.c 21    6/23/05 12:36a Bennylp $ */
+/* $Id$
+ *
+ */
 
 /*
  * THIS FILE IS INCLUDED BY main.c.

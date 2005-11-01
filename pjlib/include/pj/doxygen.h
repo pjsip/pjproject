@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/doxygen.h 5     10/29/05 10:27p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_DOXYGEN_H__
 #define __PJ_DOXYGEN_H__
 

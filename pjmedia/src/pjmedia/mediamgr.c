@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjmedia/src/pjmedia/mediamgr.c 8     6/24/05 1:00a Bennylp $ */
+/* $Id$
+ *
+ */
 #include <pjmedia/mediamgr.h>
 #include <pj/sock.h>
 #include <pj/pool.h>

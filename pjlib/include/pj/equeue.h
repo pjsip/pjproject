@@ -1,4 +1,6 @@
-/* $Header: /pjproject-0.3/pjlib/include/pj/equeue.h 2     10/14/05 12:26a Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJ_EQUEUE_H__
 #define __PJ_EQUEUE_H__
 

@@ -1,4 +1,6 @@
-/* $Header: /pjproject/pjsip/src/pjsip_simple/messaging.h 6     8/31/05 9:05p Bennylp $ */
+/* $Id$
+ *
+ */
 #ifndef __PJSIP_SIMPLE_MESSAGING_H__
 #define __PJSIP_SIMPLE_MESSAGING_H__
 
