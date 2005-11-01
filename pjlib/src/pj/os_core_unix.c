@@ -526,23 +526,17 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 /*
  * pj_atomic_set()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_set(pj_atomic_t *atomic_var, 
-					pj_atomic_value_t value)
+PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
-    pj_atomic_value_t oldval;
-    
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if PJ_HAS_THREADS
     pj_mutex_lock( atomic_var->mutex );
 #endif
-    oldval = atomic_var->value;
     atomic_var->value = value;
 #if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
 #endif 
-    return oldval;
 }
 
 /*
@@ -553,7 +547,6 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
     pj_atomic_value_t oldval;
     
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if PJ_HAS_THREADS
     pj_mutex_lock( atomic_var->mutex );
@@ -568,41 +561,49 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_inc()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_inc(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
 {
-    pj_atomic_value_t newval;
-
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if PJ_HAS_THREADS
     pj_mutex_lock( atomic_var->mutex );
 #endif
-    newval = ++atomic_var->value;
+    ++atomic_var->value;
 #if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
 #endif
-    return newval;
 }
 
 /*
  * pj_atomic_dec()
  */
-PJ_DEF(pj_atomic_value_t) pj_atomic_dec(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
-    pj_atomic_value_t newval;
-
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if PJ_HAS_THREADS
     pj_mutex_lock( atomic_var->mutex );
 #endif
-    newval = --atomic_var->value;
+    --atomic_var->value;
 #if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
 #endif
-    return newval;
+}
+
+/*
+ * pj_atomic_add()
+ */ 
+PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var, pj_atomic_value_t value )
+{
+#if PJ_HAS_THREADS
+    pj_mutex_lock(atomic_var->mutex);
+#endif
+    
+    atomic_var->value += value;
+
+#if PJ_HAS_THREADS
+    pj_mutex_unlock(atomic_var->mutex);
+#endif
 }
 
 

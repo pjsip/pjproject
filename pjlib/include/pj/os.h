@@ -304,11 +304,9 @@ PJ_DECL(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var );
  *
  * @param atomic_var	the atomic variable.
  * @param value		value to be set to the variable.
- *
- * @return the previous value of the variable.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_set(pj_atomic_t *atomic_var, 
-					 pj_atomic_value_t value);
+PJ_DECL(void) pj_atomic_set( pj_atomic_t *atomic_var, 
+			     pj_atomic_value_t value);
 
 /**
  * Get the value of an atomic type.
@@ -323,19 +321,24 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var);
  * Increment the value of an atomic type.
  *
  * @param atomic_var	the atomic variable.
- *
- * @return the result.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_inc(pj_atomic_t *atomic_var);
+PJ_DECL(void) pj_atomic_inc(pj_atomic_t *atomic_var);
 
 /**
  * Decrement the value of an atomic type.
  *
  * @param atomic_var	the atomic variable.
- *
- * @return the result.
  */
-PJ_DECL(pj_atomic_value_t) pj_atomic_dec(pj_atomic_t *atomic_var);
+PJ_DECL(void) pj_atomic_dec(pj_atomic_t *atomic_var);
+
+/**
+ * Add a value to an atomic type.
+ *
+ * @param atomic_var	The atomic variable.
+ * @param value		Value to be added.
+ */
+PJ_DECL(void) pj_atomic_add( pj_atomic_t *atomic_var,
+			     pj_atomic_value_t value);
 
 /**
  * @}

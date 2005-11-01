@@ -495,18 +495,17 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *var )
 /*
  * pj_atomic_set()
  */
-PJ_DEF(long) pj_atomic_set(pj_atomic_t *atomic_var, long value)
+PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
-    return InterlockedExchange(&atomic_var->value, value);
+    InterlockedExchange(&atomic_var->value, value);
 }
 
 /*
  * pj_atomic_get()
  */
-PJ_DEF(long) pj_atomic_get(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(atomic_var, 0);
@@ -517,13 +516,12 @@ PJ_DEF(long) pj_atomic_get(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_inc()
  */
-PJ_DEF(long) pj_atomic_inc(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    return InterlockedIncrement(&atomic_var->value);
+    InterlockedIncrement(&atomic_var->value);
 #else
 #   error Fix Me
 #endif
@@ -532,19 +530,27 @@ PJ_DEF(long) pj_atomic_inc(pj_atomic_t *atomic_var)
 /*
  * pj_atomic_dec()
  */
-PJ_DEF(long) pj_atomic_dec(pj_atomic_t *atomic_var)
+PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(atomic_var, 0);
 
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    return InterlockedDecrement(&atomic_var->value);
+    InterlockedDecrement(&atomic_var->value);
 #else
 #   error Fix me
 #endif
 }
 
+/*
+ * pj_atomic_add()
+ */
+PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
+			    pj_atomic_value_t value )
+{
+    InterlockedExchangeAdd( &atomic_var->value, value );
+}
 
+	
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * pj_thread_local_alloc()

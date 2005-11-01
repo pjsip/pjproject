@@ -415,15 +415,12 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 
 PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *var )
 {
-    return 0;
+    return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_atomic_value_t) pj_atomic_set(pj_atomic_t *var, 
-				        pj_atomic_value_t value)
+PJ_DEF(void) pj_atomic_set(pj_atomic_t *var, pj_atomic_value_t value)
 {
-    pj_atomic_value_t oldval = atomic_read(&var->atom);
     atomic_set(&var->atom, value);
-    return oldval;
 }
 
 PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *var)
@@ -431,18 +428,20 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *var)
     return atomic_read(&var->atom);
 }
 
-PJ_DEF(pj_atomic_value_t) pj_atomic_inc(pj_atomic_t *var)
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t *var)
 {
     atomic_inc(&var->atom);
-    return atomic_read(&var->atom);
 }
 
-PJ_DEF(pj_atomic_value_t) pj_atomic_dec(pj_atomic_t *var)
+PJ_DEF(void) pj_atomic_dec(pj_atomic_t *var)
 {
     atomic_dec(&var->atom);
-    return atomic_read(&var->atom);
 }
 
+PJ_DEF(void) pj_atomic_add( pj_atomic_t *var, pj_atomic_value_t value )
+{
+    atomic_add(value, &var->atom);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////

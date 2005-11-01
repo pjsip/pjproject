@@ -28,11 +28,7 @@ struct client
     int port;
 };
 
-static pj_sem_t *sem;
-static pj_mutex_t *mutex;
-static pj_size_t total_bw;
-static unsigned total_poster;
-static pj_time_val first_report;
+static pj_atomic_t *totalBytes;
 
 #define MSEC_PRINT_DURATION 1000
 
@@ -61,9 +57,7 @@ static int echo_client_thread(void *arg)
     pj_status_t rc;
     struct client *client = arg;
     pj_status_t last_recv_err = PJ_SUCCESS, last_send_err = PJ_SUCCESS;
-
-    pj_time_val last_report, next_report;
-    pj_size_t thread_total;
+    unsigned counter = 0;
 
     rc = app_socket(PJ_AF_INET, client->sock_type, 0, -1, &sock);
     if (rc != PJ_SUCCESS) {
@@ -89,21 +83,19 @@ static int echo_client_thread(void *arg)
 		  pj_inet_ntoa(addr.sin_addr),
 		  pj_ntohs(addr.sin_port)));
 
-    pj_create_random_string(send_buf, BUF_SIZE);
-    thread_total = 0;
+    pj_memset(send_buf, 'A', BUF_SIZE);
+    send_buf[BUF_SIZE-1]='\0';
 
     /* Give other thread chance to initialize themselves! */
-    pj_thread_sleep(500);
-
-    pj_gettimeofday(&last_report);
-    next_report = first_report;
+    pj_thread_sleep(200);
 
     //PJ_LOG(3,("", "...thread %p running", pj_thread_this()));
 
     for (;;) {
         int rc;
         pj_ssize_t bytes;
-        pj_time_val now;
+
+	++counter;
 
         /* Send a packet. */
         bytes = BUF_SIZE;
@@ -147,51 +139,20 @@ static int echo_client_thread(void *arg)
             } while (bytes != BUF_SIZE && bytes != 0);
         }
 
-        /* Accumulate total received. */
-        thread_total = thread_total + bytes;
-
-        /* Report current bandwidth on due. */
-        pj_gettimeofday(&now);
-
-        if (PJ_TIME_VAL_GTE(now, next_report)) {
-            pj_uint32_t bw;
-            pj_bool_t signal_parent = 0;
-            pj_time_val duration;
-            pj_uint32_t msec;
-
-            duration = now;
-            PJ_TIME_VAL_SUB(duration, last_report);
-            msec = PJ_TIME_VAL_MSEC(duration);
-
-            bw = thread_total * 1000 / msec;
-
-            /* Post result to parent */
-            pj_mutex_lock(mutex);
-            total_bw += bw;
-            total_poster++;
-            //PJ_LOG(3,("", "...thread %p posting result", pj_thread_this()));
-            if (total_poster >= ECHO_CLIENT_MAX_THREADS)
-                signal_parent = 1;
-            pj_mutex_unlock(mutex);
-
-            thread_total = 0;
-            last_report = now;
-            next_report.sec++;
-
-            if (signal_parent) {
-                pj_sem_post(sem);
-            }
-
-            pj_thread_sleep(0);
-        }
-
         if (bytes == 0)
             continue;
 
         if (pj_memcmp(send_buf, recv_buf, BUF_SIZE) != 0) {
-            //PJ_LOG(3,("", "...error: buffer has changed!"));
-            break;
+	    recv_buf[BUF_SIZE-1] = '\0';
+            PJ_LOG(3,("", "...error: buffer %u has changed!\n"
+			  "send_buf=%s\n"
+			  "recv_buf=%s\n", 
+			  counter, send_buf, recv_buf));
+            //break;
         }
+
+        /* Accumulate total received. */
+	pj_atomic_add(totalBytes, bytes);
     }
 
     pj_sock_close(sock);
@@ -205,6 +166,8 @@ int echo_client(int sock_type, const char *server, int port)
     pj_status_t rc;
     struct client client;
     int i;
+    pj_atomic_value_t last_received;
+    pj_timestamp last_report;
 
     client.sock_type = sock_type;
     client.server = server;
@@ -212,33 +175,16 @@ int echo_client(int sock_type, const char *server, int port)
 
     pool = pj_pool_create( mem, NULL, 4000, 4000, NULL );
 
-    rc = pj_sem_create(pool, NULL, 0, ECHO_CLIENT_MAX_THREADS+1, &sem);
-    if (rc != PJ_SUCCESS) {
-        PJ_LOG(3,("", "...error: unable to create semaphore", rc));
-        return -10;
-    }
-
-    rc = pj_mutex_create_simple(pool, NULL, &mutex);
-    if (rc != PJ_SUCCESS) {
-        PJ_LOG(3,("", "...error: unable to create mutex", rc));
-        return -20;
-    }
-
-    /*
-    rc = pj_atomic_create(pool, 0, &atom);
+    rc = pj_atomic_create(pool, 0, &totalBytes);
     if (rc != PJ_SUCCESS) {
         PJ_LOG(3,("", "...error: unable to create atomic variable", rc));
         return -30;
     }
-    */
 
     PJ_LOG(3,("", "Echo client started"));
     PJ_LOG(3,("", "  Destination: %s:%d", 
                   ECHO_SERVER_ADDRESS, ECHO_SERVER_START_PORT));
     PJ_LOG(3,("", "  Press Ctrl-C to exit"));
-
-    pj_gettimeofday(&first_report);
-    first_report.sec += 2;
 
     for (i=0; i<ECHO_CLIENT_MAX_THREADS; ++i) {
         rc = pj_thread_create( pool, NULL, &echo_client_thread, &client, 
@@ -250,19 +196,37 @@ int echo_client(int sock_type, const char *server, int port)
         }
     }
 
+    last_received = 0;
+    pj_get_timestamp(&last_report);
+
     for (;;) {
-        pj_uint32_t bw;
+	pj_timestamp now;
+	unsigned long received, cur_received;
+	unsigned msec;
+	pj_highprec_t bw;
+	pj_time_val elapsed;
+	unsigned bw32;
 
-        pj_sem_wait(sem);
+	pj_thread_sleep(1000);
 
-        pj_mutex_lock(mutex);
-        bw = total_bw;
-        total_bw = 0;
-        total_poster = 0;
-        pj_mutex_unlock(mutex);
+	pj_get_timestamp(&now);
+	elapsed = pj_elapsed_time(&last_report, &now);
+	msec = PJ_TIME_VAL_MSEC(elapsed);
+
+	received = pj_atomic_get(totalBytes);
+	cur_received = received - last_received;
+	
+	bw = cur_received;
+	pj_highprec_mul(bw, 1000);
+	pj_highprec_div(bw, msec);
+
+	bw32 = (unsigned)bw;
+	
+	last_report = now;
+	last_received = received;
 
         PJ_LOG(3,("", "...%d threads, total bandwidth: %d KB/s", 
-                  ECHO_CLIENT_MAX_THREADS, bw/1000));
+                  ECHO_CLIENT_MAX_THREADS, bw32/1000));
     }
 
     for (i=0; i<ECHO_CLIENT_MAX_THREADS; ++i) {
