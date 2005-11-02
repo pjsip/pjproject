@@ -3,26 +3,16 @@
 #include "test.h"
 #include <pjlib.h>
 
-static pj_sem_t    *sem;
-static pj_mutex_t  *mutex;
-static pj_size_t    total_bw;
+static pj_atomic_t *total_bytes;
 
 static int worker_thread(void *arg)
 {
     pj_sock_t    sock = (pj_sock_t)arg;
     char         buf[1516];
-    pj_size_t    received;
-    pj_time_val  last_print;
     pj_status_t  last_recv_err = PJ_SUCCESS, last_write_err = PJ_SUCCESS;
-
-    received = 0;
-    pj_gettimeofday(&last_print);
 
     for (;;) {
         pj_ssize_t len;
-        pj_uint32_t delay_msec;
-        pj_time_val now;
-        pj_highprec_t bw;
         pj_status_t rc;
         pj_sockaddr_in addr;
         int addrlen;
@@ -38,7 +28,7 @@ static int worker_thread(void *arg)
             continue;
         }
 
-        received += len;
+        pj_atomic_add(total_bytes, len);
 
         rc = pj_sock_sendto(sock, buf, &len, 0, &addr, addrlen);
         if (rc != PJ_SUCCESS) {
@@ -48,26 +38,6 @@ static int worker_thread(void *arg)
             }
             continue;
         }
-
-        pj_gettimeofday(&now);
-        PJ_TIME_VAL_SUB(now, last_print);
-        delay_msec = PJ_TIME_VAL_MSEC(now);
-
-        if (delay_msec < 1000)
-            continue;
- 
-        bw = received;
-        pj_highprec_mul(bw, 1000);
-        pj_highprec_div(bw, delay_msec);
-
-        pj_mutex_lock(mutex);
-        total_bw = total_bw + (pj_size_t)bw;
-        pj_mutex_unlock(mutex);
-
-        pj_gettimeofday(&last_print);
-        received = 0;
-        pj_sem_post(sem);
-        pj_thread_sleep(0);
     }
 }
 
@@ -78,7 +48,8 @@ int echo_srv_sync(void)
     pj_sock_t sock;
     pj_thread_t *thread[ECHO_SERVER_MAX_THREADS];
     pj_status_t rc;
-    pj_highprec_t abs_total;
+    pj_highprec_t last_received, avg_bw, highest_bw;
+    pj_time_val last_print;
     unsigned count;
     int i;
 
@@ -86,16 +57,10 @@ int echo_srv_sync(void)
     if (!pool)
         return -5;
 
-    rc = pj_sem_create(pool, NULL, 0, ECHO_SERVER_MAX_THREADS, &sem);
+    rc = pj_atomic_create(pool, 0, &total_bytes);
     if (rc != PJ_SUCCESS) {
-        app_perror("...unable to create semaphore", rc);
+        app_perror("...unable to create atomic_var", rc);
         return -6;
-    }
-
-    rc = pj_mutex_create_simple(pool, NULL, &mutex);
-    if (rc != PJ_SUCCESS) {
-        app_perror("...unable to create mutex", rc);
-        return -7;
     }
 
     rc = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, ECHO_SERVER_START_PORT, &sock);
@@ -118,41 +83,52 @@ int echo_srv_sync(void)
                   ECHO_SERVER_MAX_THREADS, ECHO_SERVER_START_PORT));
     PJ_LOG(3,("", "...Press Ctrl-C to abort"));
 
-    abs_total = 0;
+    last_received = 0;
+    pj_gettimeofday(&last_print);
+    avg_bw = highest_bw = 0;
     count = 0;
 
     for (;;) {
-        pj_uint32_t avg32;
-        pj_highprec_t avg;
+        pj_highprec_t received, cur_received, bw;
+        unsigned msec;
+        pj_time_val now, duration;
 
-        for (i=0; i<ECHO_SERVER_MAX_THREADS; ++i)
-            pj_sem_wait(sem);
+        pj_thread_sleep(1000);
 
-        /* calculate average so far:
-           avg = abs_total / count;
-         */
-        count++;
-        abs_total += total_bw;
-        avg = abs_total;
-        pj_highprec_div(avg, count);
-        avg32 = (pj_uint32_t)avg;
+        received = cur_received = pj_atomic_get(total_bytes);
+        cur_received = cur_received - last_received;
 
+        pj_gettimeofday(&now);
+        duration = now;
+        PJ_TIME_VAL_SUB(duration, last_print);
+        msec = PJ_TIME_VAL_MSEC(duration);
         
+        bw = cur_received;
+        pj_highprec_mul(bw, 1000);
+        pj_highprec_div(bw, msec);
+
+        last_print = now;
+        last_received = received;
+
+        avg_bw = avg_bw + bw;
+        count++;
+
         PJ_LOG(3,("", "Synchronous UDP (%d threads): %u KB/s  (avg=%u KB/s) %s", 
                   ECHO_SERVER_MAX_THREADS, 
-                  total_bw / 1000,
-                  avg32 / 1000,
+                  (unsigned)(bw / 1000),
+                  (unsigned)(avg_bw / count / 1000),
                   (count==20 ? "<ses avg>" : "")));
 
-        total_bw = 0;
-
         if (count==20) {
-            count = 0;
-            abs_total = 0;
-        }
+            if (avg_bw/count > highest_bw)
+                highest_bw = avg_bw/count;
 
-        while (pj_sem_trywait(sem) == PJ_SUCCESS)
-            ;
+            count = 0;
+            avg_bw = 0;
+
+            PJ_LOG(3,("", "Highest average bandwidth=%u KB/s",
+                          (unsigned)(highest_bw/1000)));
+        }
     }
 }
 
