@@ -433,6 +433,27 @@
  * subprojects. For example, to open the complete PJLIB workspace, open
  * <tt>pjlib.dsw</tt> in <tt>$PJPROJECT/pjlib/build</tt> directory.
  *
+ *
+ * @subsubsection config_site_create_vc_sec Create config_site.h
+ *
+ * The file <tt><b>$PJPROJECT/pjlib/include/pj/config_site.h</b></tt>
+ * is supposed to contain configuration that is specific to your site/target.
+ * This file is not part of PJLIB, so you must create it yourself. Normally
+ * you just need to create a blank file.
+ *
+ * The reason why it's not included in PJLIB is so that you would not accidently
+ * overwrite your site configuration.
+ *
+ * If you fail to do this, Visual C will complain with error like: 
+ *
+ * <b>"fatal error C1083: Cannot open include file: 'pj/config_site.h': No such file 
+ * or directory"</b>.
+ *
+ * @subsubsection build_vc_subsubsec Build the Projects
+ *
+ * Just hit the build button!
+ *
+ *
  * @subsection build_sys_install_unix_sec Make System
  *
  * For other targets, PJLIB provides a rather comprehensive build system
@@ -483,6 +504,7 @@
  \verbatim
    $ cd /home/user/pjproject         # <-- go to $PJPROJECT
    $ vi build.mak                    # <-- set build target etc
+   $ touch pjlib/include/pj/config_site.h
    $ cd pjlib/build                  # <-- go to projet's build dir
    $ make                            # <-- build the project
  \endverbatim
@@ -563,6 +585,17 @@
  *  - <tt>os-linux-kernel.mak</tt>: rules when PJLIB is to be build as
  *    part of Linux kernel.
  *  - <tt>os-win32.mak</tt>: rules when target OS is Win32.
+ *
+ *
+ * @subsubsection config_site_create_sec Create config_site.h
+ *
+ * The file <tt><b>$PJPROJECT/pjlib/include/pj/config_site.h</b></tt>
+ * is supposed to contain configuration that is specific to your site/target.
+ * This file is not part of PJLIB, so you must create it yourself.
+ *
+ * The reason why it's not included in PJLIB is so that you would not accidently
+ * overwrite your site configuration.
+ *
  *
  * @subsubsection invoking_make_sec Invoking make
  *
