@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/rand.h>
 #include <pj/os.h>

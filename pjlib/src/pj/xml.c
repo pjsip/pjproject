@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/xml.h>
 #include <pj/scanner.h>

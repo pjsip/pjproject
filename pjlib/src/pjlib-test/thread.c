@@ -1,23 +1,4 @@
 /* $Id$
- *
-
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/thread.c $
- * 
- * 4     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 3     14/10/05 11:32 Bennylp
- * More lenient with timeslice difference.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     10/11/05 12:39a Bennylp
- * Created.
- *
  */
 #include "test.h"
 

@@ -1,18 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/echo_clt.c $
- * 
- * 3     10/29/05 10:25p Bennylp
- * Tested.
- * 
- * 2     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 1     10/24/05 11:28a Bennylp
- * Created.
- *
  */
 #include "test.h"
 #include <pjlib.h>

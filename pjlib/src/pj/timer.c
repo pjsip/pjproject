@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 /* (C)1993-2003 Douglas C. Schmidt
  *

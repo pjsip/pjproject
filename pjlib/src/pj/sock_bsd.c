@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/sock.h>
 #include <pj/os.h>

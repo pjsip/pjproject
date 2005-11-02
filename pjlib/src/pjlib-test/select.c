@@ -1,13 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/select.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- *
  */
 #include "test.h"
 

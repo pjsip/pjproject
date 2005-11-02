@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/except.h>
 #include <pj/os.h>

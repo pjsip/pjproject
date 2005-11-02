@@ -1,20 +1,4 @@
 /* $Id$
- *
-
- */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/main.c $
- * 
- * 4     29/10/05 21:32 Bennylp
- * Boost process priority in Win32
- * 
- * 3     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- *
  */
 #include "test.h"
 

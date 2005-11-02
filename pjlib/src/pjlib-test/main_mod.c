@@ -1,16 +1,4 @@
 /* $Id$
- *
-
- */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/main_mod.c $
- * 
- * 2     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 1     10/05/05 5:12p Bennylp
- * Created.
- *
  */
 #include "test.h"
 #include <linux/module.h>

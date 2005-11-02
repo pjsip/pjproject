@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>

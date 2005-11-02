@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/fifobuf.h>
 #include <pj/log.h>

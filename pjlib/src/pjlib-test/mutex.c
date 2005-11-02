@@ -1,12 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/mutex.c $
- * 
- * 1     10/23/05 12:52p Bennylp
- * Craeted.
- *
  */
 #include "test.h"
 #include <pjlib.h>

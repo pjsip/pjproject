@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/log.h>
 #include <pj/os.h>

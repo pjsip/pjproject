@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/sock_select.h>
 #include <pj/compat/socket.h>
@@ -12,7 +11,8 @@
 #endif
 
 #ifdef _MSC_VER
-#  pragma warning(disable: 4018)    // Signed/unsigned mismatch in FD_*
+#   pragma warning(disable: 4018)    // Signed/unsigned mismatch in FD_*
+#   pragma warning(disable: 4389)    // Signed/unsigned mismatch in FD_*
 #endif
 
 #define PART_FDSET(ps)		((fd_set*)&ps->data[1])

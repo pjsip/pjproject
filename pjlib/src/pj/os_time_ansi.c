@@ -1,15 +1,4 @@
 /* $Id$
- *
- */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_time_ansi.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     9/17/05 10:36a Bennylp
- * Created.
- *
  */
 #include <pj/os.h>
 #include <pj/compat/time.h>

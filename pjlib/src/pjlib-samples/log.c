@@ -1,16 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-samples/log.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     10/10/05 3:16p Bennylp
- * Created.
- *
  */
 #include <pj/log.h>
 

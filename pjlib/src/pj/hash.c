@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/hash.h>
 #include <pj/log.h>

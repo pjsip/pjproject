@@ -9,7 +9,7 @@
  * @brief Doxygen's mainpage.
  */
 
-/*//////////////////////////////////////////////////////////////////////////*/
+/*////////////////////////////////////////////////////////////////////////// */
 /*
 	INTRODUCTION PAGE
  */
@@ -441,14 +441,50 @@
  *  - i386/Win32/mingw
  *  - i386/Linux
  *  - i386/Linux (kernel)
+ *  - alpha/linux
+ *  - sparc/SunOS
+ *  - etc..
  *
- * Generally, steps required to build the projects are:
+ *
+ * @subsubsection build_req_sec Requirements
+ *
+ * In order to use the \c make based build system, you MUST have:
+ *
+ *  - <b>GNU make</b>
+ *\n
+ *    The Makefiles heavily utilize GNU make commands which most likely
+ *    are not available in other \c make system.
+ *  - <b>bash</b> shell is recommended.
+ *\n
+ *    Specificly, there is a command <tt>"echo -n"</tt> which may not work
+ *    in other shells. This command is used when generating dependencies
+ *    (<tt>make dep</tt>) and it's located in 
+ *    <tt>$PJPROJECT/build/rules.mak</tt>.
+ *  - <b>ar</b>, <b>ranlib</b> from GNU binutils
+ *\n
+ *    In your system has different <tt>ar</tt> or <tt>ranlib</tt> (e.g. they
+ *    may have been installed as <tt>gar</tt> and <tt>granlib</tt>), then
+ *    either you create the relevant symbolic links, <b>or</b> modify
+ *    <tt>$PJPROJECT/build/cc-gcc.mak</tt> and rename <tt>ar</tt> and
+ *    <tt>ranlib</tt> to the appropriate names.
+ *  - <b>gcc</b> to generate dependency.
+ *\n
+ *    Currently the build system uses <tt>"gcc -MM"</tt> to generate build
+ *    dependencies. If <tt>gcc</tt> is not desired to generate dependency,
+ *    then either you don't run <tt>make dep</tt>, <b>or</b> edit
+ *    <tt>$PJPROJECT/build/rules.mak</tt> to calculate dependency using
+ *    your prefered method. (And let me know when you do so so that I can
+ *    update the file. :) )
+ *
+ * @subsubsection build_overview_sec Building the Project
+ *
+ * Generally, steps required to build the PJLIB are:
  *
  \verbatim
-   $ cd /home/user/pjproject-0.3     # <-- go to $PJPROJECT\n
-   $ vi build.mak                    # <-- set build target etc\n
-   $ cd pjlib/build                  # <-- go to projet's build dir\n
-   $ make                            # <-- build the project\n
+   $ cd /home/user/pjproject         # <-- go to $PJPROJECT
+   $ vi build.mak                    # <-- set build target etc
+   $ cd pjlib/build                  # <-- go to projet's build dir
+   $ make                            # <-- build the project
  \endverbatim
  *
  * For other project, \a cd to <tt>build</tt> directory in the project
@@ -463,21 +499,27 @@
  * specify the build configuration. This file is expected to export
  * the following \a make variables:
  *
- *  - \c MACHINE_NAME
+ *  - <tt><b>MACHINE_NAME</b></tt>
  *\n
- *    Target machine/processor, one of: <b>{ i386 }</b>.
+ *    Target machine/processor, one of: <b>{ i386 | alpha | sparc }</b>.
  *
- *  - \c OS_NAME
+ *  - <tt><b>OS_NAME</b></tt>
  *\n
- *    Target operating system, one of: <b>{ win32 | linux | linux-kernel }</b>.
+ *    Target operating system, one of: <b>{ win32 | linux | 
+ *      linux-kernel | sunos }</b>.
  *
- *  - \c CC_NAME
+ *  - <tt><b>CC_NAME</b></tt>
  *\n
- *    Compiler name: <b>{ gcc | vc }</b>
+ *    Compiler name: <b>{ gcc | vc }</b>\n
+ *    (Note that support for Visual C (vc) compiler with the \c make system is
+ *    experimental, and it will only work when run inside a DOS shell
+ *    (i.e. <tt>"HOST_NAME=win32"</tt>)).
  *
- *  - \c HOST_NAME
+ *  - <tt><b>HOST_NAME</b></tt>
  *\n
- *    Build host: <b>{ unix | mingw }</b>
+ *    Build host: <b>{ unix | mingw | win32 }</b>\n
+ *    (Note: win32 host means a DOS command prompt. Support for this type
+ *    of development host is experimental).
  *
  * These variables will cause the correct configuration file in 
  * \c $PJPROJECT/build directory to be executed by \a make. For 
@@ -533,6 +575,9 @@
    $ make
  \endverbatim
  *
+ * Alternatively you may invoke <tt>make</tt> in <tt>$PJPROJECT</tt> 
+ * directory, to build all projects under that directory (e.g. 
+ * PJLIB, PJSIP, etc.).
  *
  *
  * @subsubsection linux_kern_target_subsec Linux Kernel Target

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="pjlib_samples"
+	SccProjectName=""
+	SccAuxPath=""
+	SccLocalPath=""
+	SccProvider=""
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc7-debug"
+			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc7-debug"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug"
+				ReBuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug /a"
+				Output="pjlib samples"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc7-release"
+			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc7-release"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release"
+				ReBuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release /a"
+				Output="pjlib samples"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			<File
+				RelativePath="..\src\pjlib-samples\except.c">
+			</File>
+			<File
+				RelativePath="..\src\pjlib-samples\list.c">
+			</File>
+			<File
+				RelativePath="..\src\pjlib-samples\log.c">
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+		</Filter>
+		<File
+			RelativePath="pjlib_samples.mak">
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

@@ -1,12 +1,4 @@
 /* $Id$
- *
- */
-/* 
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/rand.c $
- * 
- * 1     10/05/05 5:13p Bennylp
- * Created.
- *
  */
 #include <pj/rand.h>
 #include <pj/log.h>

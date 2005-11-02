@@ -1,25 +1,4 @@
 /* $Id$
- *
- */
-/* $Log: /pjproject-0.3/pjlib/src/pjlib-test/sock.c $
- * 
- * 4     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 3     14/10/05 11:31 Bennylp
- * Fixed bug when TCP data is received in chunks.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     9/21/05 1:38p Bennylp
- * Renamed from *.cpp
- * 
- * 2     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
- * 1     9/15/05 8:41p Bennylp
  */
 #include <pjlib.h>
 #include "test.h"

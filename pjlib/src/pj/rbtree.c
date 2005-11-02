@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/rbtree.h>
 #include <pj/os.h>

@@ -1,15 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/udp_echo_srv_sync.c $
- * 
- * 2     29/10/05 21:34 Bennylp
- * Tested on Win32
- * 
- * 1     10/29/05 9:56a Bennylp
- * Created.
- *
  */
 #include "test.h"
 #include <pjlib.h>

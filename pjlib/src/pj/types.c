@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/types.h>
 #include <pj/os.h>

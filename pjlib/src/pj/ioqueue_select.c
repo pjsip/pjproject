@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 /*
  * sock_select.c

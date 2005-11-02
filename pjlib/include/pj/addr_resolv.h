@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 
 #ifndef __PJ_ADDR_RESOLV_H__

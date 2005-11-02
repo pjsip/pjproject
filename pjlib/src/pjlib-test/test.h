@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJLIB_TEST_H__
 #define __PJLIB_TEST_H__
@@ -44,7 +43,7 @@
 #define ECHO_SERVER_ADDRESS         "compaq.home"
 #define ECHO_SERVER_DURATION_MSEC   (60*60*1000)
 
-#define ECHO_CLIENT_MAX_THREADS     6
+#define ECHO_CLIENT_MAX_THREADS     10
 
 PJ_BEGIN_DECL
 

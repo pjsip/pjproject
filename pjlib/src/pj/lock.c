@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/lock.h>
 #include <pj/os.h>

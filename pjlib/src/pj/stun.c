@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/stun.h>
 #include <pj/pool.h>

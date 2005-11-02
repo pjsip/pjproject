@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/ioqueue.h>
 #include <pj/os.h>

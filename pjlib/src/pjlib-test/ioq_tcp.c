@@ -1,20 +1,4 @@
 /* $Id$
- *
-
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/ioq_tcp.c $
- * 
- * 4     10/29/05 10:23p Bennylp
- * Fixed no-memory exception.
- * 
- * 3     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- *
  */
 #include "test.h"
 

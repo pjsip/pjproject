@@ -1,22 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/errno.c $
- * 
- * 4     10/14/05 3:05p Bennylp
- * Fixed warning about strlen() on Linux.
- * 
- * 3     14/10/05 11:30 Bennylp
- * Verify the error message.
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     10/09/05 9:56p Bennylp
- * Created.
- *
  */
 #include "test.h"
 #include <pj/errno.h>

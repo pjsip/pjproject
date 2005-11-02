@@ -1,16 +1,4 @@
 /* $Id$
- *
- */
-/*
- * $Log: /pjproject-0.3/pjlib/src/pjlib-test/atomic.c $
- * 
- * 2     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 1     10/07/05 9:49p Bennylp
- * Created.
- *
  */
 #include "test.h"
 #include <pjlib.h>

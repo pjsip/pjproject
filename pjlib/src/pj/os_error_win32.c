@@ -1,18 +1,4 @@
 /* $Id$
- *
- */
-/* $Log: /pjproject-0.3/pjlib/src/pj/os_error_win32.c $
- * 
- * 3     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 2     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 1     9/17/05 10:36a Bennylp
- * Created.
- *
  */
 #include <pj/errno.h>
 #include <pj/assert.h>

@@ -3,11 +3,10 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib_test"
-	ProjectGUID="{A684A4C0-00D6-4497-B144-FC6AED4FAD8A}"
-	SccProjectName="&quot;$/pjproject&quot;, PIAAAAAA"
+	SccProjectName=""
 	SccAuxPath=""
-	SccLocalPath="..\.."
-	SccProvider="MSSCCI:Microsoft Visual SourceSafe">
+	SccLocalPath=""
+	SccProvider="">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -15,8 +14,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\pjlib_test_vc7_Debug"
-			IntermediateDirectory=".\output\pjlib_test_vc7_Debug"
+			OutputDirectory=".\output\pjlib-test-i386-win32-vc7-debug"
+			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc7-debug"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -24,15 +23,15 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../src"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32;PJ_M_I386"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\output\pjlib_test_vc7_Debug/pjlib_test.pch"
-				AssemblerListingLocation=".\output\pjlib_test_vc7_Debug/"
-				ObjectFile=".\output\pjlib_test_vc7_Debug/"
-				ProgramDataBaseFileName=".\output\pjlib_test_vc7_Debug/"
+				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc7-debug/pjlib_test.pch"
+				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc7-debug/"
+				ObjectFile=".\output\pjlib-test-i386-win32-vc7-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc7-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -43,16 +42,16 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="..\bin\pjlib_test_vc7d.exe"
-				LinkIncremental="2"
+				OutputFile="../bin/pjlib-test-i386-win32-vc7-debug.exe"
+				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\output\pjlib_test_vc7_Debug/pjlib_test.pdb"
+				ProgramDatabaseFile=".\output\pjlib-test-i386-win32-vc7-debug/pjlib-test-i386-win32-vc7-debug.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\output\pjlib_test_vc7_Debug/pjlib_test.tlb"
+				TypeLibraryName=".\output\pjlib-test-i386-win32-vc7-debug/pjlib_test.tlb"
 				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
@@ -77,8 +76,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\pjlib_test_vc7_Release"
-			IntermediateDirectory=".\output\pjlib_test_vc7_Release"
+			OutputDirectory=".\output\pjlib-test-i386-win32-vc7-release"
+			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc7-release"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -87,16 +86,16 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../src"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32;PJ_M_I386"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\output\pjlib_test_vc7_Release/pjlib_test.pch"
-				AssemblerListingLocation=".\output\pjlib_test_vc7_Release/"
-				ObjectFile=".\output\pjlib_test_vc7_Release/"
-				ProgramDataBaseFileName=".\output\pjlib_test_vc7_Release/"
+				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc7-release/pjlib_test.pch"
+				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc7-release/"
+				ObjectFile=".\output\pjlib-test-i386-win32-vc7-release/"
+				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc7-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -107,16 +106,16 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="../bin/pjlib_test_vc7.exe"
+				OutputFile="../bin/pjlib-test-i386-win32-vc7-release.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\output\pjlib_test_vc7_Release/pjlib_test.pdb"
+				ProgramDatabaseFile=".\output\pjlib-test-i386-win32-vc7-release/pjlib-test-i386-win32-vc7-release.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\output\pjlib_test_vc7_Release/pjlib_test.tlb"
+				TypeLibraryName=".\output\pjlib-test-i386-win32-vc7-release/pjlib_test.tlb"
 				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
@@ -147,7 +146,7 @@
 			Name="Source Files"
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
 			<File
-				RelativePath="..\src\test\exception_test.cpp">
+				RelativePath="..\src\pjlib-test\atomic.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -169,7 +168,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\fifobuf_test.cpp">
+				RelativePath="..\src\pjlib-test\echo_clt.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -191,7 +190,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\ioqueue_test.cpp">
+				RelativePath="..\src\pjlib-test\echo_srv.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -213,7 +212,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\ioqueue_test_tcp.cpp">
+				RelativePath="..\src\pjlib-test\errno.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -235,7 +234,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\ioqueue_test_udp.cpp">
+				RelativePath="..\src\pjlib-test\exception.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -257,7 +256,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\list_test.cpp">
+				RelativePath="..\src\pjlib-test\fifobuf.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -279,7 +278,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\main.cpp">
+				RelativePath="..\src\pjlib-test\ioq_perf.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -301,7 +300,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\os_test.cpp">
+				RelativePath="..\src\pjlib-test\ioq_tcp.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -323,7 +322,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\pool_test.cpp">
+				RelativePath="..\src\pjlib-test\ioq_udp.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -345,7 +344,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\rbtree_test.cpp">
+				RelativePath="..\src\pjlib-test\list.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -367,7 +366,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\timer_test.cpp">
+				RelativePath="..\src\pjlib-test\main.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -389,26 +388,436 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test\xml_test.cpp">
+				RelativePath="..\src\pjlib-test\main_mod.c">
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\mutex.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\os.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\pool.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\pool_perf.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\rand.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\rbtree.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\select.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\sleep.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\sock.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\sock_perf.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\string.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\test.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\thread.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\timer.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\timestamp.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\udp_echo_srv_sync.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\util.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\xml.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl">
 			<File
-				RelativePath="..\src\test\libpj_test.h">
+				RelativePath="..\src\pjlib-test\test.h">
 			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
-		</Filter>
-		<Filter
-			Name="Test Files"
-			Filter="">
-			<File
-				RelativePath="..\src\test\pidf-diff.xml">
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

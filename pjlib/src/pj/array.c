@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/array.h>
 #include <pj/string.h>

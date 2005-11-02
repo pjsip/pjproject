@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pj/errno.h>
 #include <pj/string.h>
