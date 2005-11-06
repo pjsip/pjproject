@@ -8,7 +8,7 @@
 #define GROUP_LIBC                  0
 #define GROUP_OS                    0
 #define GROUP_DATA_STRUCTURE        0
-#define GROUP_NETWORK               0
+#define GROUP_NETWORK               1
 #define GROUP_EXTRA                 0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
@@ -34,9 +34,9 @@
 #define INCLUDE_IOQUEUE_PERF_TEST   GROUP_NETWORK
 #define INCLUDE_XML_TEST	    GROUP_EXTRA
 
-
 #define INCLUDE_ECHO_SERVER         0
-#define INCLUDE_ECHO_CLIENT         1
+#define INCLUDE_ECHO_CLIENT         0
+
 
 #define ECHO_SERVER_MAX_THREADS     4
 #define ECHO_SERVER_START_PORT      65000
@@ -72,6 +72,10 @@ extern int xml_test(void);
 
 extern int echo_server(void);
 extern int echo_client(int sock_type, const char *server, int port);
+
+extern int echo_srv_sync(void);
+extern int udp_echo_srv_ioqueue(void);
+extern int echo_srv_common_loop(pj_atomic_t *bytes_counter);
 
 extern pj_pool_factory *mem;
 

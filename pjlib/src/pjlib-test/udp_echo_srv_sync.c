@@ -8,7 +8,7 @@ static pj_atomic_t *total_bytes;
 static int worker_thread(void *arg)
 {
     pj_sock_t    sock = (pj_sock_t)arg;
-    char         buf[1516];
+    char         buf[512];
     pj_status_t  last_recv_err = PJ_SUCCESS, last_write_err = PJ_SUCCESS;
 
     for (;;) {
@@ -48,9 +48,6 @@ int echo_srv_sync(void)
     pj_sock_t sock;
     pj_thread_t *thread[ECHO_SERVER_MAX_THREADS];
     pj_status_t rc;
-    pj_highprec_t last_received, avg_bw, highest_bw;
-    pj_time_val last_print;
-    unsigned count;
     int i;
 
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
@@ -83,6 +80,17 @@ int echo_srv_sync(void)
                   ECHO_SERVER_MAX_THREADS, ECHO_SERVER_START_PORT));
     PJ_LOG(3,("", "...Press Ctrl-C to abort"));
 
+    echo_srv_common_loop(total_bytes);
+    return 0;
+}
+
+
+int echo_srv_common_loop(pj_atomic_t *bytes_counter)
+{
+    pj_highprec_t last_received, avg_bw, highest_bw;
+    pj_time_val last_print;
+    unsigned count;
+
     last_received = 0;
     pj_gettimeofday(&last_print);
     avg_bw = highest_bw = 0;
@@ -95,7 +103,7 @@ int echo_srv_sync(void)
 
         pj_thread_sleep(1000);
 
-        received = cur_received = pj_atomic_get(total_bytes);
+        received = cur_received = pj_atomic_get(bytes_counter);
         cur_received = cur_received - last_received;
 
         pj_gettimeofday(&now);

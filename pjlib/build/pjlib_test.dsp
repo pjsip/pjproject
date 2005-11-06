@@ -196,6 +196,10 @@ SOURCE="..\src\pjlib-test\timestamp.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-test\udp_echo_srv_ioqueue.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-test\udp_echo_srv_sync.c"
 # End Source File
 # Begin Source File

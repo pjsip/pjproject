@@ -97,16 +97,6 @@ PJ_DECL(pj_bool_t) PJ_FD_ISSET(pj_sock_t fd, const pj_fd_set_t *fdsetp);
 
 
 /**
- * Get the number of descriptors in the set.
- *
- * @param fdsetp    The descriptor set.
- *
- * @return          Number of descriptors in the set.
- */
-PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
-
-
-/**
  * This function wait for a number of file  descriptors to change status.
  * The behaviour is the same as select() function call which appear in
  * standard BSD socket libraries.

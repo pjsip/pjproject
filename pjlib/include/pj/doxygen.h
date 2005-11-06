@@ -88,8 +88,11 @@
  * <b>Related Pages</b> on the top of HTML document or on 
  * <b>PJLIB Page Documentation</b> on navigation pane of your PDF reader.
  *
- *
- *
+ *  - <b>How to Submit Code to PJLIB Project</b>
+ *\n
+ * Please read \ref pjlib_coding_convention_page before submitting
+ * your code. Send your code as patch against current Subversion tree
+ * to the appropriate mailing list.
  *
  *
  * @section features_sec Features
@@ -394,6 +397,52 @@
  */
 
 
+
+/*////////////////////////////////////////////////////////////////////////// */
+/*
+         CODING CONVENTION
+ */
+
+/**
+ * @page pjlib_coding_convention_page Coding Convention
+ *
+ * Before you submit your code/patches to be included with PJLIB, you must
+ * make sure that your code is compliant with PJLIB coding convention.
+ * <b>This is very important!</b> Otherwise we would not accept your code.
+ *
+ * @section coding_conv_editor_sec Editor Settings
+ *
+ * The single most important thing in the whole coding convention is editor 
+ * settings. It's more important than the correctness of your code (bugs will
+ * only crash the system, but incorrect tab size is mental!).
+ *
+ * Kindly set your editor as follows:
+ *  - tab size to \b 8.
+ *  - indentation to \b 4.
+ *
+ * With \c vi, you can do it with:
+ * <pre>
+ *  :se ts=8
+ *  :se sts=4
+ * </pre>
+ *
+ * You should replace tab with eight spaces.
+ *
+ * @section coding_conv_detail_sec Coding Style
+ *
+ * Coding style MUST strictly follow K&R style. The rest of coding style
+ * must follow current style. You SHOULD be able to observe the style
+ * currently used by PJLIB from PJLIB sources, and apply the style to your 
+ * code. If you're not able to do simple thing like to observe PJLIB
+ * coding style from the sources, then logic dictates that your ability to
+ * observe more difficult area in PJLIB such as memory allocation strategy, 
+ * concurrency, etc is questionable.
+ *
+ * @section coding_conv_comment_sec Commenting Your Code
+ *
+ * Public API (e.g. in header files) MUST have doxygen compliant comments.
+ *
+ */
 
 
 /*////////////////////////////////////////////////////////////////////////// */

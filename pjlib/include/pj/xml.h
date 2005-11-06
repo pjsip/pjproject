@@ -30,7 +30,7 @@ typedef struct pj_xml_node pj_xml_node;
 /** This structure declares XML attribute. */
 struct pj_xml_attr
 {
-    PJ_DECL_LIST_MEMBER(pj_xml_attr)
+    PJ_DECL_LIST_MEMBER(pj_xml_attr);
     pj_str_t	name;	    /**< Attribute name. */
     pj_str_t	value;	    /**< Attribute value. */
 };
@@ -39,13 +39,13 @@ struct pj_xml_attr
  */
 typedef struct pj_xml_node_head
 {
-    PJ_DECL_LIST_MEMBER(pj_xml_node)
+    PJ_DECL_LIST_MEMBER(pj_xml_node);
 } pj_xml_node_head;
 
 /** This structure describes XML node. */
 struct pj_xml_node
 {
-    PJ_DECL_LIST_MEMBER(pj_xml_node)    /** List @a prev and @a next member */
+    PJ_DECL_LIST_MEMBER(pj_xml_node);   /** List @a prev and @a next member */
     pj_str_t		name;		/** Node name. */
     pj_xml_attr		attr_head;      /** Attribute list. */
     pj_xml_node_head	node_head;      /** Node list. */

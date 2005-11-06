@@ -113,7 +113,7 @@ typedef void pj_pool_callback(pj_pool_t *pool, pj_size_t size);
  */
 typedef struct pj_pool_block
 {
-    PJ_DECL_LIST_MEMBER(struct pj_pool_block)   /**< List's prev and next.  */
+    PJ_DECL_LIST_MEMBER(struct pj_pool_block);  /**< List's prev and next.  */
     unsigned char    *buf;                      /**< Start of buffer.       */
     unsigned char    *cur;                      /**< Current alloc ptr.     */
     unsigned char    *end;                      /**< End of buffer.         */
@@ -126,7 +126,7 @@ typedef struct pj_pool_block
  */
 struct pj_pool_t
 {
-    PJ_DECL_LIST_MEMBER(struct pj_pool_t)
+    PJ_DECL_LIST_MEMBER(struct pj_pool_t);
 
     /** Pool name */
     char	    obj_name[PJ_MAX_OBJ_NAME];

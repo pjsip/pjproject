@@ -391,6 +391,10 @@ SOURCE=..\include\pj\compat\os_palmos.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pj\compat\os_sunos.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pj\compat\os_win32.h
 # End Source File
 # Begin Source File

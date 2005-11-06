@@ -46,7 +46,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  */
 #define PJ_DECL_LIST_MEMBER(type)  type *prev; /** List @a prev. */ \
-                                   type *next; /** List @a next. */ 
+                                   type *next  /** List @a next. */ 
 
 
 /**
@@ -56,7 +56,7 @@ PJ_BEGIN_DECL
  */
 struct pj_list
 {
-    PJ_DECL_LIST_MEMBER(void)
+    PJ_DECL_LIST_MEMBER(void);
 };
 
 

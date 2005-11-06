@@ -4,7 +4,7 @@
 #include <pj/log.h>
 
 static const char *id = "config.c";
-const char *PJ_VERSION = "0.3.0-pre1";
+const char *PJ_VERSION = "0.3.0-pre4";
 
 PJ_DEF(void) pj_dump_config(void)
 {

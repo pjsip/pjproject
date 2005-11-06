@@ -60,6 +60,21 @@
 
 #define PJ_SOCK_HAS_INET_ATON	    0
 
+/* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
+ * the status of non-blocking connect() operation.
+ */
+#define PJ_HAS_SO_ERROR             0
+
+/* This value specifies the value set in errno by the OS when a non-blocking
+ * socket recv() or send() can not return immediately.
+ */
+#define PJ_BLOCKING_ERROR_VAL       WSAEWOULDBLOCK
+
+/* This value specifies the value set in errno by the OS when a non-blocking
+ * socket connect() can not get connected immediately.
+ */
+#define PJ_BLOCKING_CONNECT_ERROR_VAL   WSAEWOULDBLOCK
+
 /* Default threading is enabled, unless it's overridden. */
 #ifndef PJ_HAS_THREADS
 #  define PJ_HAS_THREADS	    (1)

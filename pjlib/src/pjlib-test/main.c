@@ -11,7 +11,8 @@ extern const char *param_echo_server;
 extern int param_echo_port;
 
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+//#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if 0
 #include <windows.h>
 static void boost(void)
 {

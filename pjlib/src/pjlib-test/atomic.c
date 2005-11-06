@@ -49,19 +49,27 @@ int atomic_test(void)
         return -30;
 
     /* increment. */
-    if (pj_atomic_inc(atomic_var) != 112)
+    pj_atomic_inc(atomic_var);
+    if (pj_atomic_get(atomic_var) != 112)
         return -40;
 
     /* decrement. */
-    if (pj_atomic_dec(atomic_var) != 111)
+    pj_atomic_dec(atomic_var);
+    if (pj_atomic_get(atomic_var) != 111)
         return -50;
 
     /* set */
-    if (pj_atomic_set(atomic_var, 211) != 111)
+    pj_atomic_set(atomic_var, 211);
+    if (pj_atomic_get(atomic_var) != 211)
+        return -60;
+
+    /* add */
+    pj_atomic_add(atomic_var, 10);
+    if (pj_atomic_get(atomic_var) != 221)
         return -60;
 
     /* check the value again. */
-    if (pj_atomic_get(atomic_var) != 211)
+    if (pj_atomic_get(atomic_var) != 221)
         return -70;
 
     /* destroy */
