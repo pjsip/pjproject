@@ -72,6 +72,11 @@ const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
 #  error "SOL_IPV6 undeclared!"
 #endif
 
+/* optname values. */
+const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
+const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
+const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
+
 /*
  * Convert 16-bit value from network byte order to host byte order.
  */
@@ -553,8 +558,8 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom( pj_sock_t sockfd,
  * Get socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sockfd,
-					int level,
-					int optname,
+					pj_uint16_t level,
+					pj_uint16_t optname,
 					void *optval,
 					int *optlen)
 {
@@ -580,8 +585,8 @@ PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sockfd,
  * Set socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sockfd,
-					int level,
-					int optname,
+					pj_uint16_t level,
+					pj_uint16_t optname,
 					const void *optval,
 					int optlen)
 {

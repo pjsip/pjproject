@@ -69,7 +69,7 @@ extern const pj_uint16_t PJ_SOCK_RDM;    /**< Reliably-delivered messages.  */
 
 
 /**
- * Socket level specified in #pj_sock_setsockopt().
+ * Socket level specified in #pj_sock_setsockopt() or #pj_sock_getsockopt().
  * APPLICATION MUST USE THESE VALUES INSTEAD OF NORMAL SOL_*, BECAUSE
  * THE LIBRARY WILL TRANSLATE THE VALUE TO THE NATIVE VALUE.
  */
@@ -78,6 +78,15 @@ extern const pj_uint16_t PJ_SOL_IP;	/**< IP level.	    */
 extern const pj_uint16_t PJ_SOL_TCP;	/**< TCP level.	    */
 extern const pj_uint16_t PJ_SOL_UDP;	/**< UDP level.	    */
 extern const pj_uint16_t PJ_SOL_IPV6;	/**< IP version 6   */
+
+/**
+ * Values to be specified as \c optname when calling #pj_sock_setsockopt() 
+ * or #pj_sock_getsockopt().
+ */
+extern const pj_uint16_t PJ_SO_TYPE;    /**< Socket type.               */
+extern const pj_uint16_t PJ_SO_RCVBUF;  /**< Buffer size for receive.   */
+extern const pj_uint16_t PJ_SO_SNDBUF;  /**< Buffer size for send.      */
+
 
 /**
  * Flags to be specified in #pj_sock_recv, #pj_sock_send, etc.
@@ -539,8 +548,7 @@ PJ_DECL(pj_status_t) pj_sock_getsockname( pj_sock_t sockfd,
  *
  * @param sockfd	The socket descriptor.
  * @param level		The level which to get the option from.
- * @param optname	The option name, which will be passed uninterpreted
- *			by the library.
+ * @param optname	The option name.
  * @param optval	Identifies the buffer which the value will be
  *			returned.
  * @param optlen	Initially contains the length of the buffer, upon
@@ -549,8 +557,8 @@ PJ_DECL(pj_status_t) pj_sock_getsockname( pj_sock_t sockfd,
  * @return		Zero on success.
  */
 PJ_DECL(pj_status_t) pj_sock_getsockopt( pj_sock_t sockfd,
-					 int level,
-					 int optname,
+					 pj_uint16_t level,
+					 pj_uint16_t optname,
 					 void *optval,
 					 int *optlen);
 /**
@@ -560,16 +568,15 @@ PJ_DECL(pj_status_t) pj_sock_getsockopt( pj_sock_t sockfd,
  *
  * @param sockfd	The socket descriptor.
  * @param level		The level which to get the option from.
- * @param optname	The option name, which will be passed uninterpreted
- *			by the library.
+ * @param optname	The option name.
  * @param optval	Identifies the buffer which contain the value.
  * @param optlen	The length of the value.
  *
  * @return		PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_setsockopt( pj_sock_t sockfd,
-					 int level,
-					 int optname,
+					 pj_uint16_t level,
+					 pj_uint16_t optname,
 					 const void *optval,
 					 int optlen);
 

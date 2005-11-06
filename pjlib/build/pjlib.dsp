@@ -206,29 +206,21 @@ SOURCE=..\src\pj\hash.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\ioqueue_select.c
-
-!IF  "$(CFG)" == "pjlib - Win32 Release"
-
+SOURCE=..\src\pj\ioqueue_common_abs.c
 # PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
 
-!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
+SOURCE=..\src\pj\ioqueue_common_abs.h
+# End Source File
+# Begin Source File
 
-!ENDIF 
-
+SOURCE=..\src\pj\ioqueue_select.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_winnt.c
-
-!IF  "$(CFG)" == "pjlib - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
-
 # PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

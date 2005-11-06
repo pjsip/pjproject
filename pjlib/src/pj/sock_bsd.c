@@ -60,6 +60,11 @@ const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
 #endif
 
+/* optname values. */
+const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
+const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
+const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
+
 
 /*
  * Convert 16-bit value from network byte order to host byte order.
@@ -464,8 +469,8 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
  * Get socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
-					int level,
-					int optname,
+					pj_uint16_t level,
+					pj_uint16_t optname,
 					void *optval,
 					int *optlen)
 {
@@ -482,8 +487,8 @@ PJ_DEF(pj_status_t) pj_sock_getsockopt( pj_sock_t sock,
  * Set socket option.
  */
 PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
-					int level,
-					int optname,
+					pj_uint16_t level,
+					pj_uint16_t optname,
 					const void *optval,
 					int optlen)
 {

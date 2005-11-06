@@ -71,7 +71,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             char errmsg[128];
 
 	    if (rc != last_error) {
-	        last_error = rc;
+	        //last_error = rc;
 	        pj_strerror(rc, errmsg, sizeof(errmsg));
 	        PJ_LOG(3,(THIS_FILE, "...error: read error, bytes_read=%d (%s)", 
 		          bytes_read, errmsg));

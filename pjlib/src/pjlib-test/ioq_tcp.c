@@ -179,10 +179,6 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     pj_get_timestamp(&t2);
     t_elapsed->u32.lo += (t2.u32.lo - t1.u32.lo);
 
-    if (status < 0) {
-	return -176;
-    }
-
     // Compare recv buffer with send buffer.
     if (pj_memcmp(send_buf, recv_buf, bufsize) != 0) {
 	return -180;

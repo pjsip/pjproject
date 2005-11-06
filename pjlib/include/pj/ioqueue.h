@@ -82,11 +82,10 @@ PJ_BEGIN_DECL
  *
  * The items below describe rules that must be obeyed when using the I/O 
  * queue, with regard to concurrency:
- *  - in general, the I/O queue is thread safe (assuming the lock strategy
- *    is not changed to disable mutex protection). All operations, except
- *    unregistration which is described below, can be safely invoked 
- *    simultaneously by multiple  threads.
- *  - however, <b>care must be taken when unregistering a key</b> from the
+ *  - simultaneous operations (by different threads) to different key is safe.
+ *  - simultaneous operations to the same key is also safe, except
+ *    <b>unregistration</b>, which is described below.
+ *  - <b>care must be taken when unregistering a key</b> from the
  *    ioqueue. Application must take care that when one thread is issuing
  *    an unregistration, other thread is not simultaneously invoking an
  *    operation <b>to the same key</b>.
@@ -206,10 +205,15 @@ typedef enum pj_ioqueue_operation_e
 
 
 /**
- * Indicates that the I/O Queue should be created to handle reasonable
- * number of threads.
+ * This macro specifies the maximum number of events that can be
+ * processed by the ioqueue on a single poll cycle, on implementation
+ * that supports it. The value is only meaningfull when specified
+ * during PJLIB build.
  */
-#define PJ_IOQUEUE_DEFAULT_THREADS  0
+#ifndef PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL
+#   define PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL     (16)
+#endif
+
 
 /**
  * Create a new I/O Queue framework.
