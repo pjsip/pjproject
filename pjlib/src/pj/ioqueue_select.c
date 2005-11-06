@@ -205,8 +205,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     /* Create key. */
     key = (pj_ioqueue_key_t*)pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
     rc = ioqueue_init_key(pool, ioqueue, key, sock, user_data, cb);
-    if (rc != PJ_SUCCESS)
-        return rc;
+    if (rc != PJ_SUCCESS) {
+	key = NULL;
+	goto on_return;
+    }
 
     /* Register */
     pj_list_insert_before(&ioqueue->key_list, key);
@@ -380,8 +382,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     pj_ioqueue_key_t *h;
     struct event
     {
-        pj_ioqueue_key_t    *key;
-        enum event_type      event_type;
+        pj_ioqueue_key_t	*key;
+        enum ioqueue_event_type  event_type;
     } event[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
 
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
@@ -452,7 +454,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         {
             event[counter].key = h;
             event[counter].event_type = READABLE_EVENT;
-            ++counter;        }
+            ++counter;
+	}
 
 #if PJ_HAS_TCP
         if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset)) {
@@ -482,7 +485,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
             ioqueue_dispatch_exception_event(ioqueue, event[counter].key);
             break;
         case NO_EVENT:
-        default:
             pj_assert(!"Invalid event!");
             break;
         }

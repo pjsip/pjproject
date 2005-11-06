@@ -60,7 +60,7 @@ export PJLIB_LIB := ../lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 ###############################################################################
 # Gather all flags.
 #
-export _CFLAGS 	:= -O2 $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
+export _CFLAGS 	:= -O2 -g $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
@@ -98,7 +98,6 @@ export TEST_EXE := ../bin/pjlib-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST
 
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
-
 ###############################################################################
 # Main entry
 #
@@ -124,9 +123,12 @@ depend:
 
 dep: depend
 
-pjlib:
+pjlib: ../include/pj/config_site.h
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib $(PJLIB_LIB)
 
+../include/pj/config_site.h:
+	touch ../include/pj/config_site.h
+	
 pjlib-test: 
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $(TEST_EXE)
 

@@ -1,13 +1,14 @@
 /* $Id$ */
 
-#include <pj/ioqueue.h>
-#include <pj/errno.h>
-#include <pj/list.h>
-#include <pj/sock.h>
-#include <pj/lock.h>
-#include <pj/assert.h>
-#include <pj/string.h>
-
+/*
+ * ioqueue_common_abs.c
+ *
+ * This contains common functionalities to emulate proactor pattern with
+ * various event dispatching mechanisms (e.g. select, epoll).
+ *
+ * This file will be included by the appropriate ioqueue implementation.
+ * This file is NOT supposed to be compiled as stand-alone source.
+ */
 
 static void ioqueue_init( pj_ioqueue_t *ioqueue )
 {
@@ -325,10 +326,11 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
 	}
 
 	/* Call callback. */
-        if (h->cb.on_accept_complete)
+        if (h->cb.on_accept_complete) {
 	    (*h->cb.on_accept_complete)(h, 
                                         (pj_ioqueue_op_key_t*)accept_op,
                                         *accept_op->accept_fd, rc);
+	}
 
     }
     else
@@ -336,8 +338,6 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
     if (key_has_pending_read(h)) {
         struct read_operation *read_op;
         pj_ssize_t bytes_read;
-
-        pj_assert(!pj_list_empty(&h->read_list));
 
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
@@ -377,10 +377,10 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
                 //rc = ReadFile((HANDLE)h->fd, read_op->buf, read_op->size,
                 //              &bytes_read, NULL);
 #           elif (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
-                bytes_read = read(h->fd, h->rd_buf, bytes_read);
+                bytes_read = read(h->fd, read_op->buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : pj_get_os_error();
 #	    elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
-                bytes_read = sys_read(h->fd, h->rd_buf, bytes_read);
+                bytes_read = sys_read(h->fd, read_op->buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : -bytes_read;
 #           else
 #               error "Implement read() for this platform!"

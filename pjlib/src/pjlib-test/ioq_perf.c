@@ -76,7 +76,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	        PJ_LOG(3,(THIS_FILE, "...error: read error, bytes_read=%d (%s)", 
 		          bytes_read, errmsg));
 	        PJ_LOG(3,(THIS_FILE, 
-		          ".....additional info: total read=%u, total written=%u",
+		          ".....additional info: total read=%u, total sent=%u",
 		          item->bytes_recv, item->bytes_sent));
 	    } else {
 	        last_error_counter++;
@@ -107,7 +107,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             data_is_available = 0;
 	    if (rc != last_error) {
 	        last_error = rc;
-	        app_perror("...error: read error", rc);
+	        app_perror("...error: read error(1)", rc);
 	    } else {
 	        last_error_counter++;
 	    }

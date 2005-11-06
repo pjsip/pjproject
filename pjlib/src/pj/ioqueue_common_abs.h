@@ -14,7 +14,7 @@
  * the correct error code.
  */
 #if PJ_RETURN_OS_ERROR(100) != PJ_STATUS_FROM_OS(100)
-#   error "Error reporting must be enabled for this function to work!"
+#   error "Proper error reporting must be enabled for ioqueue to work!"
 #endif
 
 
@@ -105,3 +105,4 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_sock_t fd, 
                                      enum ioqueue_event_type event_type);
+

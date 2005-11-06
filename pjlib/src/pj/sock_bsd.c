@@ -104,7 +104,9 @@ PJ_DEF(pj_uint32_t) pj_htonl(pj_uint32_t hostlong)
  */
 PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 {
-    return inet_ntoa(*(struct in_addr*)&inaddr);
+    struct in_addr addr;
+    addr.s_addr = inaddr.s_addr;
+    return inet_ntoa(addr);
 }
 
 /*

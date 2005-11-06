@@ -715,12 +715,14 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 
     if (type == PJ_MUTEX_SIMPLE) {
 #if defined(PJ_LINUX) && PJ_LINUX!=0
+	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
     } else {
 #if defined(PJ_LINUX) && PJ_LINUX!=0
+	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
