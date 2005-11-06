@@ -95,10 +95,6 @@ SOURCE="..\src\pjlib-test\echo_clt.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjlib-test\echo_srv.c"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\pjlib-test\errno.c"
 # End Source File
 # Begin Source File

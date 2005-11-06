@@ -14,6 +14,8 @@ struct op_key
     pj_size_t            size;
     int                  is_pending;
     pj_status_t          last_err;
+    pj_sockaddr_in       addr;
+    int                  addrlen;
 };
 
 static void on_read_complete(pj_ioqueue_key_t *key, 
@@ -28,8 +30,10 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         recv_rec->is_pending = 0;
 
         if (bytes_received < 0) {
-            PJ_LOG(3,("","...error receiving data, received=%d", 
-                      bytes_received));
+            if (-bytes_received != recv_rec->last_err) {
+                recv_rec->last_err = -bytes_received;
+                app_perror("...error receiving data", -bytes_received);
+            }
         } else if (bytes_received == 0) {
             /* note: previous error, or write callback */
         } else {
@@ -38,20 +42,24 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             if (!send_rec->is_pending) {
                 pj_ssize_t sent = bytes_received;
                 pj_memcpy(send_rec->buffer, recv_rec->buffer, bytes_received);
-                rc = pj_ioqueue_send(key, &send_rec->op_key_, 
-                                     send_rec->buffer, &sent, 0);
+                pj_memcpy(&send_rec->addr, &recv_rec->addr, recv_rec->addrlen);
+                send_rec->addrlen = recv_rec->addrlen;
+                rc = pj_ioqueue_sendto(key, &send_rec->op_key_, 
+                                       send_rec->buffer, &sent, 0,
+                                       &send_rec->addr, send_rec->addrlen);
                 send_rec->is_pending = (rc==PJ_EPENDING);
 
                 if (rc!=PJ_SUCCESS && rc!=PJ_EPENDING) {
-                    app_perror("...send error", rc);
+                    app_perror("...send error(1)", rc);
                 }
             }
         }
 
         if (!send_rec->is_pending) {
             bytes_received = recv_rec->size;
-            rc = pj_ioqueue_recv(key, &recv_rec->op_key_, 
-                                 recv_rec->buffer, &bytes_received, 0);
+            rc = pj_ioqueue_recvfrom(key, &recv_rec->op_key_, 
+                                     recv_rec->buffer, &bytes_received, 0,
+                                     &recv_rec->addr, &recv_rec->addrlen);
             recv_rec->is_pending = (rc==PJ_EPENDING);
             if (rc == PJ_SUCCESS) {
                 /* fall through next loop. */
@@ -80,8 +88,11 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     struct op_key *send_rec = (struct op_key*)op_key;
 
     if (bytes_sent <= 0) {
-        pj_status_t rc = pj_get_netos_error();
-        app_perror("...send error", rc);
+        pj_status_t rc = -bytes_sent;
+        if (rc != send_rec->last_err) {
+            send_rec->last_err = rc;
+            app_perror("...send error(2)", rc);
+        }
     }
 
     send_rec->is_pending = 0;
@@ -101,6 +112,8 @@ static int worker_thread(void *arg)
     read_op.last_err = 0;
     read_op.buffer = recv_buf;
     read_op.size = sizeof(recv_buf);
+    read_op.addrlen = sizeof(read_op.addr);
+
     write_op.peer = &read_op;
     write_op.is_pending = 0;
     write_op.last_err = 0;
@@ -108,7 +121,8 @@ static int worker_thread(void *arg)
     write_op.size = sizeof(send_buf);
 
     length = sizeof(recv_buf);
-    rc = pj_ioqueue_recv(key, &read_op.op_key_, recv_buf, &length, 0);
+    rc = pj_ioqueue_recvfrom(key, &read_op.op_key_, recv_buf, &length, 0,
+                             &read_op.addr, &read_op.addrlen);
     if (rc == PJ_SUCCESS) {
         read_op.is_pending = 1;
         on_read_complete(key, &read_op.op_key_, length);

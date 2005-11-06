@@ -132,7 +132,9 @@ int test_inner(void)
 
 #if INCLUDE_ECHO_SERVER
     //echo_server();
-    echo_srv_sync();
+    //echo_srv_sync();
+    udp_echo_srv_ioqueue();
+
 #elif INCLUDE_ECHO_CLIENT
     if (param_echo_sock_type == 0)
         param_echo_sock_type = PJ_SOCK_DGRAM;

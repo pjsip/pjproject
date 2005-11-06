@@ -287,9 +287,11 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 
         /* Done. */
     } else {
-        pj_assert(!"Descriptor is signaled but key "
-                   "has no pending operation!");
-
+        /*
+         * This is normal; execution may fall here when multiple threads
+         * are signalled for the same event, but only one thread eventually
+         * able to process the event.
+         */
         pj_mutex_unlock(h->mutex);
     }
 }
@@ -416,6 +418,11 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         }
 
     } else {
+        /*
+         * This is normal; execution may fall here when multiple threads
+         * are signalled for the same event, but only one thread eventually
+         * able to process the event.
+         */
         pj_mutex_unlock(h->mutex);
     }
 }
@@ -616,7 +623,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
      */
     write_op = (struct write_operation*)op_key;
     write_op->op = PJ_IOQUEUE_OP_SEND;
-    write_op->buf = NULL;
+    write_op->buf = (void*)data;
     write_op->size = *length;
     write_op->written = 0;
     write_op->flags = flags;
@@ -694,7 +701,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
      */
     write_op = (struct write_operation*)op_key;
     write_op->op = PJ_IOQUEUE_OP_SEND_TO;
-    write_op->buf = NULL;
+    write_op->buf = (void*)data;
     write_op->size = *length;
     write_op->written = 0;
     write_op->flags = flags;
