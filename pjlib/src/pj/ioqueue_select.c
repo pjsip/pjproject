@@ -67,11 +67,14 @@ PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
  * During debugging build, VALIDATE_FD_SET is set.
  * This will check the validity of the fd_sets.
  */
+/*
 #if defined(PJ_DEBUG) && PJ_DEBUG != 0
 #  define VALIDATE_FD_SET		1
 #else
 #  define VALIDATE_FD_SET		0
 #endif
+*/
+#define VALIDATE_FD_SET     0
 
 /*
  * This describes each key.
@@ -270,6 +273,14 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
 			  const pj_fd_set_t *xfdset)
 {
     pj_ioqueue_key_t *key;
+
+    /*
+     * This basicly would not work anymore.
+     * We need to lock key before performing the check, but we can't do
+     * so because we're holding ioqueue mutex. If we acquire key's mutex
+     * now, the will cause deadlock.
+     */
+    pj_assert(0);
 
     key = ioqueue->key_list.next;
     while (key != &ioqueue->key_list) {
