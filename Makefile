@@ -1,4 +1,4 @@
-DIRS = pjlib pjsdp pjmedia pjsip
+DIRS = pjlib
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
