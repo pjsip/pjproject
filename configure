@@ -27,6 +27,17 @@ if echo $SYSTEM | grep -i sunos > /dev/null; then
 elif echo $SYSTEM | grep -i linux > /dev/null; then
     OS_NAME=linux
     HOST_NAME=unix
+    # More on linux version
+    KERNEL_VER=`uname -r`
+    if echo $KERNEL_VER | grep '^2\.4' > /dev/null; then
+	LINUX_POLL=select
+    elif echo $KERNEL_VER | grep '^2\.2' > /dev/null; then
+	LINUX_POLL=select
+    elif echo $KERNEL_VER | grep '^2\.0' > /dev/null; then
+	LINUX_EPOLL=select
+    else
+	LINUX_POLL=epoll
+    fi
 elif echo $SYSTEM | grep -i mingw > /dev/null; then
     OS_NAME=win32
     HOST_NAME=mingw
@@ -54,15 +65,20 @@ if test -f build.mak; then
 fi
 
 echo 'Writing build.mak as follows:'
-echo " MACHINE_NAME=$MACHINE_NAME"
-echo " OS_NAME=$OS_NAME"
-echo " HOST_NAME=$HOST_NAME"
-echo " CC_NAME=$CC_NAME"
+echo " MACHINE_NAME = $MACHINE_NAME"
+echo " OS_NAME      = $OS_NAME"
+echo " HOST_NAME    = $HOST_NAME"
+echo " CC_NAME      = $CC_NAME"
+echo " LINUX_POLL   = $LINUX_POLL"
 
 echo "# Auto-generated build.mak" > build.mak
 echo "export MACHINE_NAME := $MACHINE_NAME" >> build.mak
 echo "export OS_NAME := $OS_NAME" >> build.mak
 echo "export HOST_NAME := $HOST_NAME" >> build.mak
 echo "export CC_NAME := $CC_NAME" >> build.mak
+echo "export LINUX_POLL := $LINUX_POLL" >> build.mak
+
+echo
+echo "You may review build.mak if you wish"
 echo "Done."
 

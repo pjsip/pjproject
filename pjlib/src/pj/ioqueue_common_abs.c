@@ -168,20 +168,22 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	 * level SOL_SOCKET to determine whether connect() completed
 	 * successfully (if SO_ERROR is zero).
 	 */
-	int value;
-	socklen_t vallen = sizeof(value);
-	int gs_rc = getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
+	{
+	  int value;
+	  socklen_t vallen = sizeof(value);
+	  int gs_rc = getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
                                &value, &vallen);
-	if (gs_rc != 0) {
+	  if (gs_rc != 0) {
 	    /* Argh!! What to do now??? 
 	     * Just indicate that the socket is connected. The
 	     * application will get error as soon as it tries to use
 	     * the socket to send/receive.
 	     */
 	    bytes_transfered = 0;
-	} else {
+	  } else {
             bytes_transfered = value;
-	}
+	  }
+ 	}
 #elif defined(PJ_WIN32) && PJ_WIN32!=0
 	bytes_transfered = 0; /* success */
 #else

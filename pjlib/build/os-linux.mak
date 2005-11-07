@@ -14,8 +14,11 @@ export PJLIB_OBJS += 	addr_resolv_sock.o guid_simple.o \
 			os_time_ansi.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
-#export PJLIB_OBJS += ioqueue_select.o 
+ifeq (epoll,$(LINUX_POLL))
 export PJLIB_OBJS += ioqueue_epoll.o
+else
+export PJLIB_OBJS += ioqueue_select.o 
+endif
 
 export PJLIB_OBJS += file_access_unistd.o file_io_ansi.o
 

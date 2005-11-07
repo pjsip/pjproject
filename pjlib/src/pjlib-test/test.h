@@ -5,11 +5,11 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  0
-#define GROUP_OS                    0
-#define GROUP_DATA_STRUCTURE        0
-#define GROUP_NETWORK               0
-#define GROUP_FILE                  0
+#define GROUP_LIBC                  1
+#define GROUP_OS                    1
+#define GROUP_DATA_STRUCTURE        1
+#define GROUP_NETWORK               1
+#define GROUP_FILE                  1
 #define GROUP_EXTRA                 0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
@@ -37,7 +37,7 @@
 #define INCLUDE_XML_TEST	    GROUP_EXTRA
 
 #define INCLUDE_ECHO_SERVER         0
-#define INCLUDE_ECHO_CLIENT         1
+#define INCLUDE_ECHO_CLIENT         0
 
 
 #define ECHO_SERVER_MAX_THREADS     2

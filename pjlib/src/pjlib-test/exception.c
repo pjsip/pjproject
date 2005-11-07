@@ -140,8 +140,10 @@ int exception_test(void)
     enum { LOOP = 10 };
 
     for (i=0; i<LOOP; ++i) {
-	if ((rc=test()) != 0)
+	if ((rc=test()) != 0) {
+	    PJ_LOG(3,("", "...failed at i=%d (rc=%d)", i, rc));
 	    return rc;
+	}
     }
     return 0;
 }
