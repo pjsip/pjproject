@@ -159,6 +159,18 @@ struct pj_ioqueue_t
 #include "ioqueue_common_abs.c"
 
 /*
+ * pj_ioqueue_name()
+ */
+PJ_DEF(const char*) pj_ioqueue_name(void)
+{
+#if defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
+	return "epoll-kernel";
+#else
+	return "epoll";
+#endif
+}
+
+/*
  * pj_ioqueue_create()
  *
  * Create select ioqueue.

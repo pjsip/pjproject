@@ -110,7 +110,6 @@ PJ_BEGIN_DECL
  */
 
 
-
 /**
  * This structure describes operation specific key to be submitted to
  * I/O Queue when performing the asynchronous operation. This key will
@@ -218,6 +217,13 @@ typedef enum pj_ioqueue_operation_e
 #ifndef PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL
 #   define PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL     (16)
 #endif
+
+/**
+ * Return the name of the ioqueue implementation.
+ *
+ * @return		Implementation name.
+ */
+PJ_DECL(const char*) pj_ioqueue_name(void);
 
 
 /**

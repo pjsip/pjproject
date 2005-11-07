@@ -41,6 +41,9 @@ static int echo_client_thread(void *arg)
     pj_sockaddr_in addr;
     pj_str_t s;
     pj_status_t rc;
+    pj_uint32_t buffer_id;
+    pj_uint32_t buffer_counter;
+    pj_uint32_t timeout_counter=0, invalid_counter=0;
     struct client *client = arg;
     pj_status_t last_recv_err = PJ_SUCCESS, last_send_err = PJ_SUCCESS;
     unsigned counter = 0;
@@ -77,14 +80,24 @@ static int echo_client_thread(void *arg)
 
     //PJ_LOG(3,("", "...thread %p running", pj_thread_this()));
 
+    buffer_id = (pj_uint32_t) pj_thread_this();
+    buffer_counter = 0;
+
+    *(pj_uint32_t*)send_buf = buffer_id;
+
     for (;;) {
         int rc;
         pj_ssize_t bytes;
+	pj_uint32_t *p_buffer_id, *p_buffer_counter;
 
 	++counter;
 
+	while (wait_socket(sock,0) > 0)
+	    ;
+
         /* Send a packet. */
         bytes = BUF_SIZE;
+	*(pj_uint32_t*)(send_buf+4) = ++buffer_counter;
         rc = pj_sock_send(sock, send_buf, &bytes, 0);
         if (rc != PJ_SUCCESS || bytes != BUF_SIZE) {
             if (rc != last_send_err) {
@@ -100,6 +113,7 @@ static int echo_client_thread(void *arg)
         if (rc == 0) {
             PJ_LOG(3,("", "...timeout"));
 	    bytes = 0;
+	    timeout_counter++;
 	} else if (rc < 0) {
 	    rc = pj_get_netos_error();
 	    app_perror("...select() error", rc);

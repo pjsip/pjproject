@@ -224,6 +224,14 @@ static pj_ioqueue_key_t *check_connecting( pj_ioqueue_t *ioqueue,
 #endif
 
 /*
+ * pj_ioqueue_name()
+ */
+PJ_DEF(const char*) pj_ioqueue_name(void)
+{
+    return "iocp";
+}
+
+/*
  * pj_ioqueue_create()
  */
 PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 

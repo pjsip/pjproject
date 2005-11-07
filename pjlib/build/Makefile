@@ -84,13 +84,13 @@ export PJLIB_CFLAGS += $(_CFLAGS)
 # Defines for building test application
 #
 export TEST_SRCDIR = ../src/pjlib-test
-export TEST_OBJS += atomic.o echo_clt.o echo_srv.o errno.o exception.o \
-		    fifobuf.o \
+export TEST_OBJS += atomic.o echo_clt.o errno.o exception.o \
+		    fifobuf.o file.o \
 		    ioq_perf.o ioq_udp.o ioq_tcp.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
 		    select.o sleep.o sock.o sock_perf.o \
 		    string.o test.o thread.o timer.o timestamp.o \
-		    udp_echo_srv_sync.o \
+		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \
 		    util.o xml.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_LDFLAGS += $(_LDFLAGS)
@@ -113,7 +113,7 @@ print:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib print_lib
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test print_bin
 	
-depend:
+depend: ../include/pj/config_site.h
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib depend
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test depend
 	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .pjlib-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend

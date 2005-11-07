@@ -2,6 +2,7 @@
  */
 #include <pj/config.h>
 #include <pj/log.h>
+#include <pj/ioqueue.h>
 
 static const char *id = "config.c";
 const char *PJ_VERSION = "0.3.0-pre4";
@@ -23,7 +24,9 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_HAS_SEMAPHORE         : %d", PJ_HAS_SEMAPHORE));
     PJ_LOG(3, (id, " PJ_HAS_EVENT_OBJ         : %d", PJ_HAS_EVENT_OBJ));
     PJ_LOG(3, (id, " PJ_HAS_HIGH_RES_TIMER    : %d", PJ_HAS_HIGH_RES_TIMER));
-    PJ_LOG(3, (id, " PJ_(endianness)          : %s", (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
+    PJ_LOG(3, (id, " PJ_(endianness)          : %s", 
+	       (PJ_IS_BIG_ENDIAN?"big-endian":"little-endian")));
+    PJ_LOG(3, (id, " ioqueue type             : %s", pj_ioqueue_name()));
     PJ_LOG(3, (id, " PJ_IOQUEUE_MAX_HANDLES   : %d", PJ_IOQUEUE_MAX_HANDLES));
 }
 

@@ -9,7 +9,7 @@
 #define GROUP_OS                    0
 #define GROUP_DATA_STRUCTURE        0
 #define GROUP_NETWORK               0
-#define GROUP_FILE                  1
+#define GROUP_FILE                  0
 #define GROUP_EXTRA                 0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
@@ -36,11 +36,11 @@
 #define INCLUDE_FILE_TEST           GROUP_FILE
 #define INCLUDE_XML_TEST	    GROUP_EXTRA
 
-#define INCLUDE_ECHO_SERVER         0
+#define INCLUDE_ECHO_SERVER         1
 #define INCLUDE_ECHO_CLIENT         0
 
 
-#define ECHO_SERVER_MAX_THREADS     4
+#define ECHO_SERVER_MAX_THREADS     2
 #define ECHO_SERVER_START_PORT      65000
 #define ECHO_SERVER_ADDRESS         "compaq.home"
 #define ECHO_SERVER_DURATION_MSEC   (60*60*1000)

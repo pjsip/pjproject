@@ -60,7 +60,7 @@ int echo_srv_sync(void)
         return -6;
     }
 
-    rc = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, ECHO_SERVER_START_PORT, &sock);
+    rc = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM,0, ECHO_SERVER_START_PORT, &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...socket error", rc);
         return -10;
@@ -121,7 +121,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         avg_bw = avg_bw + bw;
         count++;
 
-        PJ_LOG(3,("", "Synchronous UDP (%d threads): %u KB/s  (avg=%u KB/s) %s", 
+        PJ_LOG(3,("", "Synchronous UDP (%d threads): %u KB/s (avg=%u KB/s) %s", 
                   ECHO_SERVER_MAX_THREADS, 
                   (unsigned)(bw / 1000),
                   (unsigned)(avg_bw / count / 1000),

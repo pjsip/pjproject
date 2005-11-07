@@ -106,6 +106,14 @@ struct pj_ioqueue_t
 #include "ioqueue_common_abs.c"
 
 /*
+ * pj_ioqueue_name()
+ */
+PJ_DEF(const char*) pj_ioqueue_name(void)
+{
+    return "select";
+}
+
+/*
  * pj_ioqueue_create()
  *
  * Create select ioqueue.
