@@ -63,6 +63,14 @@ typedef int		pj_bool_t;
 /** False value. */
 #define PJ_FALSE    0
 
+/**
+ * File offset type.
+ */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+typedef pj_int64_t pj_off_t;
+#else
+typedef pj_ssize_t pj_off_t;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 /*

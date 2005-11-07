@@ -14,8 +14,8 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJ_IO Network I/O
- * @brief Network I/O
+ * @defgroup PJ_IO Input/Output
+ * @brief Input/Output
  * @ingroup PJ_OS
  *
  * This section contains API building blocks to perform network I/O and 
@@ -52,6 +52,11 @@ PJ_BEGIN_DECL
  * asynchronous operation and to be notified later when the operation has
  * completed.
  *
+ * The I/O Queue can work on both socket and file descriptors. For 
+ * asynchronous file operations however, one must make sure that the correct
+ * file I/O back-end is used, because not all file I/O back-end can be
+ * used with the ioqueue. Please see \ref PJ_FILE_IO for more details.
+ *
  * The framework works natively in platforms where asynchronous operation API
  * exists, such as in Windows NT with IoCompletionPort/IOCP. In other 
  * platforms, the I/O queue abstracts the operating system's event poll API
@@ -60,7 +65,7 @@ PJ_BEGIN_DECL
  *
  * The I/O queue provides more than just unified abstraction. It also:
  *  - makes sure that the operation uses the most effective way to utilize
- *    the underlying mechanism, to provide the maximum theoritical
+ *    the underlying mechanism, to achieve the maximum theoritical
  *    throughput possible on a given platform.
  *  - choose the most efficient mechanism for event polling on a given
  *    platform.
@@ -487,7 +492,6 @@ PJ_DECL(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 					  pj_sockaddr_t *addr,
 					  int *addrlen);
 
-
 /**
  * Instruct the I/O Queue to write to the handle. This function will return
  * immediately (i.e. non-blocking) regardless whether some data has been 
@@ -529,8 +533,12 @@ PJ_DECL(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
 
 
 /**
- * This function behaves similarly as #pj_ioqueue_write(), except that
- * pj_sock_sendto() (or equivalent) will be called to send the data.
+ * Instruct the I/O Queue to write to the handle. This function will return
+ * immediately (i.e. non-blocking) regardless whether some data has been 
+ * transfered. If the function can't complete immediately, the caller will
+ * be notified about the completion when it calls pj_ioqueue_poll(). If 
+ * operation completes immediately and data has been transfered, the function
+ * returns PJ_SUCCESS and the callback will NOT be called.
  *
  * @param key	    the key that identifies the handle.
  * @param op_key    An operation specific key to be associated with the

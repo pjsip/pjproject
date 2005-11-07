@@ -31,14 +31,16 @@ int test_inner(void)
 
     mem = &caching_pool.factory;
 
+    pj_log_set_level(3);
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+                     PJ_LOG_HAS_MICRO_SEC);
+
     rc = pj_init();
     if (rc != 0) {
 	app_perror("pj_init() error!!", rc);
 	return rc;
     }
     
-    pj_log_set_level(3);
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
     pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
@@ -124,6 +126,10 @@ int test_inner(void)
 
 #if INCLUDE_IOQUEUE_PERF_TEST
     DO_TEST( ioqueue_perf_test() );
+#endif
+
+#if INCLUDE_FILE_TEST
+    DO_TEST( file_test() );
 #endif
 
 #if INCLUDE_XML_TEST

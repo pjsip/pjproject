@@ -45,8 +45,11 @@ PJ_BEGIN_DECL
  * declares additional member @a prev and @a next to the structure.
  * @hideinitializer
  */
-#define PJ_DECL_LIST_MEMBER(type)  type *prev; /** List @a prev. */ \
-                                   type *next  /** List @a next. */ 
+#define PJ_DECL_LIST_MEMBER(type)                       \
+                                   /** List @a prev. */ \
+                                   type *prev;          \
+                                   /** List @a next. */ \
+                                   type *next 
 
 
 /**

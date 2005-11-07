@@ -14,7 +14,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup pj_addr_resolve Address Resolution
+ * @defgroup pj_addr_resolve Network Address Resolution
  * @ingroup PJ_IO
  * @{
  *

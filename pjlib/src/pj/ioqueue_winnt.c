@@ -35,7 +35,7 @@ typedef struct generic_overlapped
 } generic_overlapped;
 
 /*
- * OVERLAP structure for send and receive.
+ * OVERLAPPPED structure for send and receive.
  */
 typedef struct ioqueue_overlapped
 {
@@ -75,6 +75,14 @@ union operation_key
 #endif
 };
 
+/* Type of handle in the key. */
+enum handle_type
+{
+    HND_IS_UNKNOWN,
+    HND_IS_FILE,
+    HND_IS_SOCKET,
+};
+
 /*
  * Structure for individual socket.
  */
@@ -83,6 +91,7 @@ struct pj_ioqueue_key_t
     pj_ioqueue_t       *ioqueue;
     HANDLE		hnd;
     void	       *user_data;
+    enum handle_type    hnd_type;
 #if PJ_HAS_TCP
     int			connecting;
 #endif
@@ -317,6 +326,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     rec = pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
     rec->ioqueue = ioqueue;
     rec->hnd = (HANDLE)sock;
+    rec->hnd_type = HND_IS_SOCKET;
     rec->user_data = user_data;
     pj_memcpy(&rec->cb, cb, sizeof(pj_ioqueue_callback));
 
@@ -363,6 +373,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 	pj_lock_release(ioqueue->lock);
     }
 #endif
+    if (key->hnd_type == HND_IS_FILE) {
+        CloseHandle(key->hnd);
+    }
     return PJ_SUCCESS;
 }
 
@@ -505,7 +518,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     union operation_key *op_key_rec;
 
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(key && op_key && buffer, PJ_EINVAL);
+    PJ_ASSERT_RETURN(key && op_key && buffer && length, PJ_EINVAL);
 
     op_key_rec = (union operation_key*)op_key->internal__;
     op_key_rec->overlapped.wsabuf.buf = buffer;

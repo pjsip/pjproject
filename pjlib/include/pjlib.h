@@ -16,6 +16,8 @@
 #include <pj/errno.h>
 #include <pj/except.h>
 #include <pj/fifobuf.h>
+#include <pj/file_access.h>
+#include <pj/file_io.h>
 #include <pj/guid.h>
 #include <pj/hash.h>
 #include <pj/ioqueue.h>

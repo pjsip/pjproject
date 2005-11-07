@@ -126,7 +126,7 @@ typedef struct pj_pool_block
  */
 struct pj_pool_t
 {
-    PJ_DECL_LIST_MEMBER(struct pj_pool_t);
+    PJ_DECL_LIST_MEMBER(struct pj_pool_t);  /**< Standard list elements.    */
 
     /** Pool name */
     char	    obj_name[PJ_MAX_OBJ_NAME];

@@ -107,6 +107,10 @@ SOURCE="..\src\pjlib-test\fifobuf.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-test\file.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-test\ioq_perf.c"
 # End Source File
 # Begin Source File

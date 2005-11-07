@@ -194,6 +194,19 @@ SOURCE=..\src\pj\fifobuf.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\file_access_win32.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\file_io_ansi.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\file_io_win32.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\guid.c
 # End Source File
 # Begin Source File
@@ -473,6 +486,14 @@ SOURCE=..\include\pj\except.h
 # Begin Source File
 
 SOURCE=..\include\pj\fifobuf.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\file_access.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\file_io.h
 # End Source File
 # Begin Source File
 

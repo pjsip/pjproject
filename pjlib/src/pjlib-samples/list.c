@@ -15,7 +15,7 @@
 struct my_node
 {
     // This must be the first member declared in the struct!
-    PJ_DECL_LIST_MEMBER(struct my_node)
+    PJ_DECL_LIST_MEMBER(struct my_node);
     int value;
 };
 
