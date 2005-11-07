@@ -199,11 +199,11 @@ SOURCE=..\src\pj\file_access_win32.c
 # Begin Source File
 
 SOURCE=..\src\pj\file_io_ansi.c
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pj\file_io_win32.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
