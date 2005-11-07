@@ -36,8 +36,8 @@
 #define INCLUDE_FILE_TEST           GROUP_FILE
 #define INCLUDE_XML_TEST	    GROUP_EXTRA
 
-#define INCLUDE_ECHO_SERVER         1
-#define INCLUDE_ECHO_CLIENT         0
+#define INCLUDE_ECHO_SERVER         0
+#define INCLUDE_ECHO_CLIENT         1
 
 
 #define ECHO_SERVER_MAX_THREADS     2

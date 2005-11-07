@@ -15,6 +15,8 @@ struct client
 };
 
 static pj_atomic_t *totalBytes;
+static pj_atomic_t *timeout_counter;
+static pj_atomic_t *invalid_counter;
 
 #define MSEC_PRINT_DURATION 1000
 
@@ -43,7 +45,6 @@ static int echo_client_thread(void *arg)
     pj_status_t rc;
     pj_uint32_t buffer_id;
     pj_uint32_t buffer_counter;
-    pj_uint32_t timeout_counter=0, invalid_counter=0;
     struct client *client = arg;
     pj_status_t last_recv_err = PJ_SUCCESS, last_send_err = PJ_SUCCESS;
     unsigned counter = 0;
@@ -88,12 +89,11 @@ static int echo_client_thread(void *arg)
     for (;;) {
         int rc;
         pj_ssize_t bytes;
-	pj_uint32_t *p_buffer_id, *p_buffer_counter;
 
 	++counter;
 
-	while (wait_socket(sock,0) > 0)
-	    ;
+	//while (wait_socket(sock,0) > 0)
+	//    ;
 
         /* Send a packet. */
         bytes = BUF_SIZE;
@@ -113,7 +113,7 @@ static int echo_client_thread(void *arg)
         if (rc == 0) {
             PJ_LOG(3,("", "...timeout"));
 	    bytes = 0;
-	    timeout_counter++;
+	    pj_atomic_inc(timeout_counter);
 	} else if (rc < 0) {
 	    rc = pj_get_netos_error();
 	    app_perror("...select() error", rc);
@@ -148,7 +148,7 @@ static int echo_client_thread(void *arg)
 			  "send_buf=%s\n"
 			  "recv_buf=%s\n", 
 			  counter, send_buf, recv_buf));
-            //break;
+	    pj_atomic_inc(invalid_counter);
         }
 
         /* Accumulate total received. */
@@ -180,6 +180,8 @@ int echo_client(int sock_type, const char *server, int port)
         PJ_LOG(3,("", "...error: unable to create atomic variable", rc));
         return -30;
     }
+    rc = pj_atomic_create(pool, 0, &invalid_counter);
+    rc = pj_atomic_create(pool, 0, &timeout_counter);
 
     PJ_LOG(3,("", "Echo client started"));
     PJ_LOG(3,("", "  Destination: %s:%d", 
@@ -206,6 +208,7 @@ int echo_client(int sock_type, const char *server, int port)
 	pj_highprec_t bw;
 	pj_time_val elapsed;
 	unsigned bw32;
+	pj_uint32_t timeout, invalid;
 
 	pj_thread_sleep(1000);
 
@@ -225,8 +228,14 @@ int echo_client(int sock_type, const char *server, int port)
 	last_report = now;
 	last_received = received;
 
-        PJ_LOG(3,("", "...%d threads, total bandwidth: %d KB/s", 
-                  ECHO_CLIENT_MAX_THREADS, bw32/1000));
+	timeout = pj_atomic_get(timeout_counter);
+	invalid = pj_atomic_get(invalid_counter);
+
+        PJ_LOG(3,("", 
+	          "...%d threads, total bandwidth: %d KB/s, "
+		  "timeout=%d, invalid=%d", 
+                  ECHO_CLIENT_MAX_THREADS, bw32/1000,
+		  timeout, invalid));
     }
 
     for (i=0; i<ECHO_CLIENT_MAX_THREADS; ++i) {
