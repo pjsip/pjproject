@@ -90,11 +90,14 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
     pj_highprec_t last_received, avg_bw, highest_bw;
     pj_time_val last_print;
     unsigned count;
+    const char *ioqueue_name;
 
     last_received = 0;
     pj_gettimeofday(&last_print);
     avg_bw = highest_bw = 0;
     count = 0;
+
+    ioqueue_name = pj_ioqueue_name();
 
     for (;;) {
         pj_highprec_t received, cur_received, bw;
@@ -121,7 +124,8 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
         avg_bw = avg_bw + bw;
         count++;
 
-        PJ_LOG(3,("", "Synchronous UDP (%d threads): %u KB/s (avg=%u KB/s) %s", 
+        PJ_LOG(3,("", "%s UDP (%d threads): %u KB/s (avg=%u KB/s) %s", 
+		  ioqueue_name,
                   ECHO_SERVER_MAX_THREADS, 
                   (unsigned)(bw / 1000),
                   (unsigned)(avg_bw / count / 1000),
