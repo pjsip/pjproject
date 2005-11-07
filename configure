@@ -48,6 +48,11 @@ else
     exit 1
 fi
 
+if test -f build.mak; then
+  echo 'Saving build.mak --> build.mak.old'
+  cp -f build.mak build.mak.old
+fi
+
 echo 'Writing build.mak as follows:'
 echo " MACHINE_NAME=$MACHINE_NAME"
 echo " OS_NAME=$OS_NAME"
