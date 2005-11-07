@@ -45,7 +45,7 @@
 #define ECHO_SERVER_ADDRESS         "compaq.home"
 #define ECHO_SERVER_DURATION_MSEC   (60*60*1000)
 
-#define ECHO_CLIENT_MAX_THREADS     10
+#define ECHO_CLIENT_MAX_THREADS     6
 
 PJ_BEGIN_DECL
 
