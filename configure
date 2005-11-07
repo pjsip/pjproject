@@ -1,0 +1,63 @@
+#!/bin/sh
+
+#
+# Detect machine
+#
+MACHINE=`uname -m`
+
+if echo $MACHINE | grep sun4u > /dev/null; then
+    MACHINE_NAME=sparc
+elif echo $MACHINE | grep i.86 > /dev/null; then
+    MACHINE_NAME=i386
+elif echo $MACHINE | grep alpha > /dev/null; then
+    MACHINE_NAME=alpha
+else
+    echo "Unable to detect processor type ('uname -m' == '$MACHINE')"
+    exit 1
+fi
+
+#
+# Detect OS and host
+#
+SYSTEM=`uname -s`
+
+if echo $SYSTEM | grep -i sunos > /dev/null; then
+    OS_NAME=sunos
+    HOST_NAME=unix
+elif echo $SYSTEM | grep -i linux > /dev/null; then
+    OS_NAME=linux
+    HOST_NAME=unix
+elif echo $SYSTEM | grep -i mingw > /dev/null; then
+    OS_NAME=win32
+    HOST_NAME=mingw
+elif echo $SYSTEM | grep -i cygwin > /dev/null; then
+    OS_NAME=win32
+    HOST_NAME=mingw
+else
+    echo "Unable to detect system type ('uname -s' == '$SYSTEM')"
+    exit 1
+fi
+
+#
+# Detect gcc
+#
+if gcc --version 2>&1 > /dev/null; then
+    CC_NAME=gcc
+else
+    echo "Unable to find gcc"
+    exit 1
+fi
+
+echo 'Writing build.mak as follows:'
+echo " MACHINE_NAME=$MACHINE_NAME"
+echo " OS_NAME=$OS_NAME"
+echo " HOST_NAME=$HOST_NAME"
+echo " CC_NAME=$CC_NAME"
+
+echo "# Auto-generated build.mak" > build.mak
+echo "export MACHINE_NAME := $MACHINE_NAME" >> build.mak
+echo "export OS_NAME := $OS_NAME" >> build.mak
+echo "export HOST_NAME := $HOST_NAME" >> build.mak
+echo "export CC_NAME := $CC_NAME" >> build.mak
+echo "Done."
+

@@ -2,11 +2,13 @@
 #
 # MACHINE_NAME values: 
 #	- i386 (generic x86)
-#	- m68k
+#	- sparc
+#	- alpha
 #
 # OS_NAME values:
 #	- win32 (generic windows)
 #	- linux
+#	- sunos
 #
 # CC_NAME values:
 #	- gcc
@@ -15,6 +17,7 @@
 # HOST_NAME values:
 #	- win32 (Windows command line)
 #	- mingw (Windows, mingw)
+#	- unix
 #
 
 #
