@@ -10,7 +10,6 @@
 #define GROUP_DATA_STRUCTURE        1
 #define GROUP_NETWORK               1
 #define GROUP_FILE                  1
-#define GROUP_EXTRA                 0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
@@ -34,7 +33,6 @@
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_IOQUEUE_PERF_TEST   GROUP_NETWORK
 #define INCLUDE_FILE_TEST           GROUP_FILE
-#define INCLUDE_XML_TEST	    GROUP_EXTRA
 
 #define INCLUDE_ECHO_SERVER         0
 #define INCLUDE_ECHO_CLIENT         0
@@ -71,7 +69,6 @@ extern int udp_ioqueue_test(void);
 extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test(void);
 extern int file_test(void);
-extern int xml_test(void);
 
 extern int echo_server(void);
 extern int echo_client(int sock_type, const char *server, int port);

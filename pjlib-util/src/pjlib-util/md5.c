@@ -53,7 +53,7 @@
   1999-05-03 lpd Original version.
  */
 
-#include <pj/md5.h>
+#include <pjlib-util/md5.h>
 #include <pj/string.h>
 #include <pj/os.h>
 

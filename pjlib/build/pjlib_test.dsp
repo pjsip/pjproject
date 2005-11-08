@@ -206,10 +206,6 @@ SOURCE="..\src\pjlib-test\udp_echo_srv_sync.c"
 
 SOURCE="..\src\pjlib-test\util.c"
 # End Source File
-# Begin Source File
-
-SOURCE="..\src\pjlib-test\xml.c"
-# End Source File
 # End Group
 # Begin Group "Header Files"
 

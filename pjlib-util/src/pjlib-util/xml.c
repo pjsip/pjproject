@@ -1,7 +1,7 @@
 /* $Id$
  */
-#include <pj/xml.h>
-#include <pj/scanner.h>
+#include <pjlib-util/xml.h>
+#include <pjlib-util/scanner.h>
 #include <pj/except.h>
 #include <pj/pool.h>
 #include <pj/string.h>

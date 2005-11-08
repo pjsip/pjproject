@@ -1,6 +1,6 @@
 /* $Id$
  */
-#include <pj/stun.h>
+#include <pjlib-util/stun.h>
 #include <pj/pool.h>
 #include <pj/log.h>
 #include <pj/string.h>

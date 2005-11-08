@@ -1,4 +1,4 @@
-DIRS = pjlib
+DIRS = pjlib pjlib-util
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1

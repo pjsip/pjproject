@@ -1,6 +1,6 @@
 /* $Id$
  */
-#include <pj/scanner.h>
+#include <pjlib-util/scanner.h>
 #include <pj/string.h>
 #include <pj/except.h>
 #include <pj/os.h>

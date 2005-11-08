@@ -253,10 +253,6 @@ SOURCE=..\src\pj\log_writer_stdout.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\md5.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pj\os_core_win32.c
 # End Source File
 # Begin Source File
@@ -301,10 +297,6 @@ SOURCE=..\src\pj\rbtree.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\scanner.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pj\sock_bsd.c
 # End Source File
 # Begin Source File
@@ -317,23 +309,11 @@ SOURCE=..\src\pj\string.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\stun.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pj\stun_client.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pj\timer.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pj\types.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pj\xml.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -521,10 +501,6 @@ SOURCE=..\include\pj\log.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pj\md5.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pj\os.h
 # End Source File
 # Begin Source File
@@ -545,10 +521,6 @@ SOURCE=..\include\pj\rbtree.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pj\scanner.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pj\sock.h
 # End Source File
 # Begin Source File
@@ -561,19 +533,11 @@ SOURCE=..\include\pj\string.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pj\stun.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pj\timer.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\include\pj\types.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pj\xml.h
 # End Source File
 # End Group
 # Begin Group "Inline Files"

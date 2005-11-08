@@ -278,6 +278,12 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pj\file_access_win32.c">
+			</File>
+			<File
+				RelativePath="..\src\pj\file_io_win32.c">
+			</File>
+			<File
 				RelativePath="..\src\pj\guid.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -342,6 +348,24 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pj\ioqueue_common_abs.c">
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pj\ioqueue_common_abs.h">
 			</File>
 			<File
 				RelativePath="..\src\pj\ioqueue_select.c">
@@ -457,28 +481,6 @@
 			</File>
 			<File
 				RelativePath="..\src\pj\log_writer_stdout.c">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pj\md5.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -742,28 +744,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pj\scanner.c">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\src\pj\sock_bsd.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -830,50 +810,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pj\stun.c">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pj\stun_client.c">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\src\pj\timer.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -897,28 +833,6 @@
 			</File>
 			<File
 				RelativePath="..\src\pj\types.c">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pj\xml.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool
@@ -964,6 +878,36 @@
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
 							BrowseInformation="1"/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\src\pj\file_access_unistd.c">
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\src\pj\file_io_ansi.c">
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -1036,6 +980,21 @@
 							AdditionalIncludeDirectories=""
 							PreprocessorDefinitions=""
 							BrowseInformation="1"/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\src\pj\ioqueue_linux_kernel.c">
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
 					</FileConfiguration>
 				</File>
 				<File
@@ -1341,6 +1300,12 @@
 				RelativePath="..\include\pj\fifobuf.h">
 			</File>
 			<File
+				RelativePath="..\include\pj\file_access.h">
+			</File>
+			<File
+				RelativePath="..\include\pj\file_io.h">
+			</File>
+			<File
 				RelativePath="..\include\pj\guid.h">
 			</File>
 			<File
@@ -1359,9 +1324,6 @@
 				RelativePath="..\include\pj\log.h">
 			</File>
 			<File
-				RelativePath="..\include\pj\md5.h">
-			</File>
-			<File
 				RelativePath="..\include\pj\os.h">
 			</File>
 			<File
@@ -1377,9 +1339,6 @@
 				RelativePath="..\include\pj\rbtree.h">
 			</File>
 			<File
-				RelativePath="..\include\pj\scanner.h">
-			</File>
-			<File
 				RelativePath="..\include\pj\sock.h">
 			</File>
 			<File
@@ -1389,16 +1348,10 @@
 				RelativePath="..\include\pj\string.h">
 			</File>
 			<File
-				RelativePath="..\include\pj\stun.h">
-			</File>
-			<File
 				RelativePath="..\include\pj\timer.h">
 			</File>
 			<File
 				RelativePath="..\include\pj\types.h">
-			</File>
-			<File
-				RelativePath="..\include\pj\xml.h">
 			</File>
 			<Filter
 				Name="compat"

@@ -495,12 +495,14 @@ int tcp_ioqueue_test()
 {
     int status;
 
-    PJ_LOG(3, (THIS_FILE, "..compliance test 0 (success scenario)"));
+    PJ_LOG(3, (THIS_FILE, "..%s compliance test 0 (success scenario)",
+	       pj_ioqueue_name()));
     if ((status=compliance_test_0()) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
-    PJ_LOG(3, (THIS_FILE, "..compliance test 1 (failed scenario)"));
+    PJ_LOG(3, (THIS_FILE, "..%s compliance test 1 (failed scenario)",
+               pj_ioqueue_name()));
     if ((status=compliance_test_1()) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;

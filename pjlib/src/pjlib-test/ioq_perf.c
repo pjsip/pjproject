@@ -440,7 +440,7 @@ int ioqueue_perf_test(void)
     pj_size_t best_bandwidth;
     int best_index = 0;
 
-    PJ_LOG(3,(THIS_FILE, "   Benchmarking ioqueue:"));
+    PJ_LOG(3,(THIS_FILE, "   Benchmarking %s ioqueue:", pj_ioqueue_name()));
     PJ_LOG(3,(THIS_FILE, "   ==============================================="));
     PJ_LOG(3,(THIS_FILE, "   Type  Threads  Skt.Pairs  Avg.Time    Bandwidth"));
     PJ_LOG(3,(THIS_FILE, "   ==============================================="));

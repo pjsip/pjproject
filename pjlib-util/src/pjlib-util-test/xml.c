@@ -5,7 +5,7 @@
 
 #if INCLUDE_XML_TEST
 
-#include <pj/xml.h>
+#include <pjlib-util/xml.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "xml_test"

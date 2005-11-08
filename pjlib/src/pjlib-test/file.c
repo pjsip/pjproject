@@ -8,7 +8,8 @@
 #define NEWNAME                 "testfil2.txt"
 #define INCLUDE_FILE_TIME_TEST  0
 
-static char buffer[11] = "Hello world";
+static char buffer[11] = {'H', 'e', 'l', 'l', 'o', ' ',
+		          'W', 'o', 'r', 'l', 'd' };
 
 int file_test(void)
 {
@@ -112,7 +113,9 @@ int file_test(void)
         read = 1;
         status = pj_file_read(fd, &readbuf[size], &read);
         if (status != PJ_SUCCESS) {
-            app_perror("...file_read() error", status);
+	    PJ_LOG(3,("", "...error reading file after %d bytes (error follows)", 
+		      size));
+            app_perror("...error", status);
             return -110;
         }
         if (read == 0) {

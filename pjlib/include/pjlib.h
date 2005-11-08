@@ -24,18 +24,14 @@
 #include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>
-#include <pj/md5.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/rand.h>
 #include <pj/rbtree.h>
-#include <pj/scanner.h>
 #include <pj/sock.h>
 #include <pj/sock_select.h>
 #include <pj/string.h>
-#include <pj/stun.h>
 #include <pj/timer.h>
-#include <pj/xml.h>
 
 #include <pj/compat/high_precision.h>
 
