@@ -18,9 +18,10 @@ static void ioqueue_init( pj_ioqueue_t *ioqueue )
 
 static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
-    if (ioqueue->auto_delete_lock && ioqueue->lock )
+    if (ioqueue->auto_delete_lock && ioqueue->lock ) {
+	pj_lock_release(ioqueue->lock);
         return pj_lock_destroy(ioqueue->lock);
-    else
+    } else
         return PJ_SUCCESS;
 }
 

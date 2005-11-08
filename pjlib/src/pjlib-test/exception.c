@@ -83,6 +83,9 @@ static int test(void)
 	if (!rc) rc = 0;
     }
     PJ_DEFAULT {
+        int id = PJ_GET_EXCEPTION();
+        PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
+                  id, pj_exception_id_name(id)));
 	if (!rc) rc = -20;
     }
     PJ_END;

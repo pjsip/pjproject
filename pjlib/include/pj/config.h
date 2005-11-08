@@ -226,10 +226,10 @@
  * maximum number of socket handles passed to select() (i.e. FD_SETSIZE will 
  * be set to this value).
  *
- * Default: 64
+ * Default: 256
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
-#  define PJ_IOQUEUE_MAX_HANDLES    (64)
+#  define PJ_IOQUEUE_MAX_HANDLES    (256)
 #endif
 
 /**

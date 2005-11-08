@@ -149,7 +149,7 @@ depend:
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
 	     echo -n "$(OBJDIR)/" >> $(DEP_FILE); \
-	     if gcc -MM $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
+	     if gcc -M $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
 		true; \
 	     else \
 		echo 'err:' >> $(DEP_FILE); \

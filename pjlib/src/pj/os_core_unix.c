@@ -260,7 +260,7 @@ static void *thread_main(void *param)
     PJ_LOG(6,(rec->obj_name, "Thread started"));
 
     /* Call user's entry! */
-    result = (void*) (*rec->proc)(rec->arg);
+    result = (void*)(long)(*rec->proc)(rec->arg);
 
     /* Done. */
     PJ_LOG(6,(rec->obj_name, "Thread quitting"));
