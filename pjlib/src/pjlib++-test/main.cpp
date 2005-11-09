@@ -9,6 +9,14 @@
 #include <pj++/timer.hpp>
 #include <pj++/tree.hpp>
 
+class My_Async_Op : public Pj_Async_Op
+{
+};
+
+class My_Event_Handler : public Pj_Event_Handler
+{
+};
+
 int main()
 {
     Pjlib lib;
@@ -23,6 +31,12 @@ int main()
 
     plsem = new(pool) Pj_Semaphore_Lock(pool);
     delete plsem;
+
+    Pj_Proactor proactor(pool, 100, 100);
+
+    My_Event_Handler *event_handler = new(the_pool) My_Event_Handler;
+    proactor.register_socket_handler(pool, event_handler);
+    proactor.unregister_handler(event_handler);
 
     return 0;
 }

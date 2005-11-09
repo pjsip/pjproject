@@ -15,8 +15,19 @@ class Pj_Object
 {
 public:
     void *operator new(unsigned int class_size, Pj_Pool *pool);
-    void operator delete(void*);
-    void operator delete(void*, Pj_Pool*);
+    void *operator new(unsigned int class_size, Pj_Pool &pool);
+
+    void operator delete(void*)
+    {
+    }
+
+    void operator delete(void*, Pj_Pool*)
+    {
+    }
+
+    void operator delete(void*, Pj_Pool&)
+    {
+    }
 
     //
     // Inline implementations at the end of this file.
@@ -220,11 +231,9 @@ inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool *pool)
 {
     return pool->alloc(class_size);
 }
-inline void Pj_Object::operator delete(void *ptr)
+inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool &pool)
 {
-}
-inline void Pj_Object::operator delete(void *ptr, Pj_Pool*)
-{
+    return pool.alloc(class_size);
 }
 
 //

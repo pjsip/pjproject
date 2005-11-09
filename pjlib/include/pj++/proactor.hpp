@@ -23,12 +23,29 @@ class Pj_Async_Op : public pj_ioqueue_op_key_t
 {
 public:
     //
+    // Construct with null handler.
+    // App must call set_handler() before use.
+    //
+    Pj_Async_Op()
+        : handler_(NULL)
+    {
+    }
+
+    //
     // Constructor.
     //
     explicit Pj_Async_Op(Pj_Event_Handler *handler)
         : handler_(handler)
     {
         pj_memset(this, 0, sizeof(pj_ioqueue_op_key_t));
+    }
+
+    //
+    // Set handler.
+    //
+    void set_handler(Pj_Event_Handler *handler)
+    {
+        handler_ = handler;
     }
 
     //
@@ -97,7 +114,7 @@ public:
     }
 
     //
-    // Receive data.
+    // Start async receive.
     //
     pj_status_t recv( Pj_Async_Op *op_key, 
                       void *buf, pj_ssize_t *len, 
@@ -108,7 +125,7 @@ public:
     }
 
     //
-    // Recvfrom()
+    // Start async recvfrom()
     //
     pj_status_t recvfrom( Pj_Async_Op *op_key, 
                           void *buf, pj_ssize_t *len, unsigned flags,
@@ -120,7 +137,7 @@ public:
     }
 
     //
-    // send()
+    // Start async send()
     //
     pj_status_t send( Pj_Async_Op *op_key, 
                       const void *data, pj_ssize_t *len, 
@@ -130,7 +147,7 @@ public:
     }
 
     //
-    // sendto()
+    // Start async sendto()
     //
     pj_status_t sendto( Pj_Async_Op *op_key,
                         const void *data, pj_ssize_t *len, unsigned flags,
@@ -142,7 +159,7 @@ public:
 
 #if PJ_HAS_TCP
     //
-    // connect()
+    // Start async connect()
     //
     pj_status_t connect(const Pj_Inet_Addr &addr)
     {
@@ -150,7 +167,7 @@ public:
     }
 
     //
-    // accept.
+    // Start async accept().
     //
     pj_status_t accept( Pj_Async_Op *op_key,
                         Pj_Socket *sock, 
@@ -272,6 +289,8 @@ public:
         cb_.on_write_complete   = &write_complete_cb;
         cb_.on_accept_complete  = &accept_complete_cb;
         cb_.on_connect_complete = &connect_complete_cb;
+
+        create(pool, max_fd, max_timer_entries);
     }
 
     //
@@ -304,7 +323,7 @@ public:
             return NULL;
         }
         
-        status;
+        return status;
     }
 
     //
