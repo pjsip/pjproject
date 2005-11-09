@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJPP_OS_H__
 #define __PJPP_OS_H__
@@ -8,7 +7,96 @@
 #include <pj++/types.hpp>
 #include <pj++/pool.hpp>
 
-class PJ_Thread
+class Pj_Thread;
+
+//
+// Thread API.
+//
+class Pj_Thread_API
+{
+public:
+    //
+    // Create a thread.
+    //
+    static pj_status_t create( Pj_Pool *pool, pj_thread_t **thread,
+                               pj_thread_proc *proc, void *arg,
+                               unsigned flags = 0,
+                               const char *name = NULL,
+                               pj_size_t stack_size = 0 )
+    {
+        return pj_thread_create(pool->pool_(), name, proc, arg, stack_size,
+                                flags, thread);
+    }
+
+    //
+    // Register a thread.
+    //
+    static pj_status_t register_this_thread( pj_thread_desc desc,
+                                             pj_thread_t **thread,
+                                             const char *name = NULL )
+    {
+        return pj_thread_register( name, desc, thread );
+    }
+
+    //
+    // Get current thread.
+    // Will return pj_thread_t (sorry folks, not Pj_Thread).
+    //
+    static pj_thread_t *this_thread()
+    {
+        return pj_thread_this();
+    }
+
+    //
+    // Get thread name.
+    //
+    static const char *get_name(pj_thread_t *thread)
+    {
+        return pj_thread_get_name(thread);
+    }
+
+    //
+    // Resume thread.
+    //
+    static pj_status_t resume(pj_thread_t *thread)
+    {
+        return pj_thread_resume(thread);
+    }
+
+    //
+    // Sleep.
+    //
+    static pj_status_t sleep(unsigned msec)
+    {
+	return pj_thread_sleep(msec);
+    }
+
+    //
+    // Join the specified thread.
+    //
+    static pj_status_t join(pj_thread_t *thread)
+    {
+        return pj_thread_join(thread);
+    }
+
+    //
+    // Destroy thread
+    //
+    static pj_status_t destroy(pj_thread_t *thread)
+    {
+        return pj_thread_destroy(thread);
+    }
+};
+
+
+
+//
+// Thread object.
+//
+// How to use:
+//  Derive a class from this class, then override main().
+//
+class Pj_Thread : public Pj_Object
 {
 public:
     enum Flags
@@ -16,134 +104,305 @@ public:
 	FLAG_SUSPENDED = PJ_THREAD_SUSPENDED
     };
 
-    static PJ_Thread *create( PJ_Pool *pool, const char *thread_name,
-			      pj_thread_proc *proc, void *arg,
-			      pj_size_t stack_size, void *stack_ptr, 
-			      unsigned flags)
+    //
+    // Default constructor.
+    //
+    Pj_Thread()
+        : thread_(NULL)
     {
-	return (PJ_Thread*) pj_thread_create( pool->pool_(), thread_name, proc, arg, stack_size, stack_ptr, flags);
     }
 
-    static PJ_Thread *register_current_thread(const char *name, pj_thread_desc desc)
+    //
+    // Destroy thread.
+    //
+    ~Pj_Thread()
     {
-	return (PJ_Thread*) pj_thread_register(name, desc);
+        destroy();
     }
 
-    static PJ_Thread *get_current_thread()
+    //
+    // This is the main thread function.
+    //
+    virtual int main() = 0;
+
+    //
+    // Start a thread.
+    //
+    pj_status_t create( Pj_Pool *pool, 
+                        unsigned flags = 0,
+                        const char *thread_name = NULL,
+			pj_size_t stack_size = PJ_THREAD_DEFAULT_STACK_SIZE)
     {
-	return (PJ_Thread*) pj_thread_this();
+        destroy();
+        return Pj_Thread_API::create( pool, &thread_, &thread_proc, this,
+                                      flags, thread_name);
     }
 
-    static pj_status_t sleep(unsigned msec)
-    {
-	return pj_thread_sleep(msec);
-    }
-
-    static pj_status_t usleep(unsigned usec)
-    {
-	return pj_thread_usleep(usec);
-    }
-
+    //
+    // Get pjlib compatible thread object.
+    //
     pj_thread_t *pj_thread_t_()
     {
-	return (pj_thread_t*)this;
+	return thread_;
     }
 
+    //
+    // Get thread name.
+    //
     const char *get_name()
     {
-	return pj_thread_get_name( this->pj_thread_t_() );
+        return Pj_Thread_API::get_name(thread_);
     }
 
+    //
+    // Resume a suspended thread.
+    //
     pj_status_t resume()
     {
-	return pj_thread_resume( this->pj_thread_t_() );
+        return Pj_Thread_API::resume(thread_);
     }
 
+    //
+    // Join this thread.
+    //
     pj_status_t join()
     {
-	return pj_thread_join( this->pj_thread_t_() );
+        return Pj_Thread_API::join(thread_);
     }
 
+    //
+    // Destroy thread.
+    //
     pj_status_t destroy()
     {
-	return pj_thread_destroy( this->pj_thread_t_() );
+        if (thread_) {
+            Pj_Thread_API::destroy(thread_);
+            thread_ = NULL;
+        }
+    }
+
+protected:
+    pj_thread_t *thread_;
+
+    static int PJ_THREAD_FUNC thread_proc(void *obj)
+    {
+        Pj_Thread *thread_class = (Pj_Thread*)obj;
+        return thread_class->main();
     }
 };
 
 
-class PJ_Thread_Local
+//
+// External Thread
+//  (threads that were started by external means, i.e. not 
+//   with Pj_Thread::create).
+//
+// This class will normally be defined as local variable in
+// external thread's stack, normally inside thread's main proc.
+// But be aware that the handle will be destroyed on destructor!
+//
+class Pj_External_Thread : public Pj_Thread
 {
 public:
-    static PJ_Thread_Local *alloc()
+    Pj_External_Thread()
     {
-	long index = pj_thread_local_alloc();
-	return index < 0 ? NULL : (PJ_Thread_Local*)index;
-    }
-    void free()
-    {
-	pj_thread_local_free( this->tls_() );
     }
 
-    long tls_() const
+    //
+    // Register external thread so that pjlib functions can work
+    // in that thread.
+    //
+    pj_status_t register_this_thread( const char *name=NULL )
     {
-	return (long)this;
+        return Pj_Thread_API::register_this_thread(desc_, &thread_,name);
     }
 
-    void set(void *value)
-    {
-	pj_thread_local_set( this->tls_(), value );
-    }
-
-    void *get()
-    {
-	return pj_thread_local_get( this->tls_() );
-    }
+private:
+    pj_thread_desc desc_;
 };
 
 
-class PJ_Atomic
+//
+// Thread specific data/thread local storage/TLS.
+//
+class Pj_Thread_Local_API
 {
 public:
-    static PJ_Atomic *create(PJ_Pool *pool, long initial)
+    //
+    // Allocate thread local storage (TLS) index.
+    //
+    static pj_status_t alloc(long *index)
     {
-	return (PJ_Atomic*) pj_atomic_create(pool->pool_(), initial);
+        return pj_thread_local_alloc(index);
     }
 
+    //
+    // Free TLS index.
+    //
+    static void free(long index)
+    {
+        pj_thread_local_free(index);
+    }
+
+    //
+    // Set thread specific data.
+    //
+    static pj_status_t set(long index, void *value)
+    {
+        return pj_thread_local_set(index, value);
+    }
+
+    //
+    // Get thread specific data.
+    //
+    static void *get(long index)
+    {
+        return pj_thread_local_get(index);
+    }
+
+};
+
+//
+// Atomic variable
+//
+// How to use:
+//   Pj_Atomic_Var var(pool, 0);
+//   var.set(..);
+//
+class Pj_Atomic_Var : public Pj_Object
+{
+public:
+    //
+    // Default constructor, initialize variable with NULL.
+    //
+    Pj_Atomic_Var()
+        : var_(NULL)
+    {
+    }
+
+    //
+    // Construct atomic variable.
+    //
+    Pj_Atomic_Var(Pj_Pool *pool, pj_atomic_value_t value)
+        : var_(NULL)
+    {
+        create(pool, value);
+    }
+
+    //
+    // Destructor.
+    //
+    ~Pj_Atomic_Var()
+    {
+        destroy();
+    }
+
+    //
+    // Create atomic variable.
+    //
+    pj_status_t create( Pj_Pool *pool, pj_atomic_value_t value)
+    {
+        destroy();
+	return pj_atomic_create(pool->pool_(), value, &var_);
+    }
+
+    //
+    // Destroy.
+    //
+    void destroy()
+    {
+        if (var_) {
+            pj_atomic_destroy(var_);
+            var_ = NULL;
+        }
+    }
+
+    //
+    // Get pjlib compatible atomic variable.
+    //
     pj_atomic_t *pj_atomic_t_()
     {
-	return (pj_atomic_t*)this;
+	return var_;
     }
 
-    pj_status_t destroy()
+    //
+    // Set the value.
+    //
+    void set(pj_atomic_value_t val)
     {
-	return pj_atomic_destroy( this->pj_atomic_t_() );
+	pj_atomic_set(var_, val);
     }
 
-    long set(long val)
+    //
+    // Get the value.
+    //
+    pj_atomic_value_t get()
     {
-	return pj_atomic_set( this->pj_atomic_t_(), val);
+	return pj_atomic_get(var_);
     }
 
-    long get()
+    //
+    // Increment.
+    //
+    void inc()
     {
-	return pj_atomic_get( this->pj_atomic_t_() );
+	pj_atomic_inc(var_);
     }
 
-    long inc()
+    //
+    // Increment and get the result.
+    //
+    pj_atomic_value_t inc_and_get()
     {
-	return pj_atomic_inc( this->pj_atomic_t_() );
+        return pj_atomic_inc_and_get(var_);
     }
 
-    long dec()
+    //
+    // Decrement.
+    //
+    void dec()
     {
-	return pj_atomic_dec( this->pj_atomic_t_() );
+	pj_atomic_dec(var_);
     }
+
+    //
+    // Decrement and get the result.
+    //
+    pj_atomic_value_t dec_and_get()
+    {
+        return pj_atomic_dec_and_get(var_);
+    }
+
+    //
+    // Add the variable.
+    //
+    void add(pj_atomic_value_t value)
+    {
+        pj_atomic_add(var_, value);
+    }
+
+    //
+    // Add the variable and get the value.
+    //
+    pj_atomic_value_t add_and_get(pj_atomic_value_t value)
+    {
+        return pj_atomic_add_and_get(var_, value );
+    }
+
+private:
+    pj_atomic_t *var_;
 };
 
 
-class PJ_Mutex
+//
+// Mutex
+//
+class Pj_Mutex : public Pj_Object
 {
 public:
+    //
+    // Mutex type.
+    //
     enum Type
     {
 	DEFAULT = PJ_MUTEX_DEFAULT,
@@ -151,194 +410,378 @@ public:
 	RECURSE = PJ_MUTEX_RECURSE,
     };
 
-    static PJ_Mutex *create( PJ_Pool *pool, const char *name, Type type)
+    //
+    // Default constructor will create default mutex.
+    //
+    explicit Pj_Mutex(Pj_Pool *pool, Type type = DEFAULT,
+                      const char *name = NULL)
+        : mutex_(NULL)
     {
-	return (PJ_Mutex*) pj_mutex_create( pool->pool_(), name, type);
+        create(pool, type, name);
     }
 
-    pj_mutex_t *pj_mutex_()
+    //
+    // Destructor.
+    //
+    ~Pj_Mutex()
     {
-	return (pj_mutex_t*)this;
+        destroy();
     }
 
-    pj_status_t destroy()
+    //
+    // Create mutex.
+    //
+    pj_status_t create( Pj_Pool *pool, Type type, const char *name = NULL)
     {
-	return pj_mutex_destroy( this->pj_mutex_() );
+        destroy();
+	return pj_mutex_create( pool->pool_(), name, type,
+                                &mutex_ );
     }
 
-    pj_status_t lock()
+    //
+    // Create simple mutex.
+    //
+    pj_status_t create_simple( Pj_Pool *pool,const char *name = NULL)
     {
-	return pj_mutex_lock( this->pj_mutex_() );
+        return create(pool, SIMPLE, name);
     }
 
-    pj_status_t unlock()
+    //
+    // Create recursive mutex.
+    //
+    pj_status_t create_recursive( Pj_Pool *pool, const char *name = NULL )
     {
-	return pj_mutex_unlock( this->pj_mutex_() );
+        return create(pool, RECURSE, name);
     }
 
-    pj_status_t trylock()
+    //
+    // Get pjlib compatible mutex object.
+    //
+    pj_mutex_t *pj_mutex_t_()
     {
-	return pj_mutex_trylock( this->pj_mutex_() );
+	return mutex_;
     }
 
-#if PJ_DEBUG
-    pj_status_t is_locked()
+    //
+    // Destroy mutex.
+    //
+    void destroy()
     {
-	return pj_mutex_is_locked( this->pj_mutex_() );
+        if (mutex_) {
+	    pj_mutex_destroy(mutex_);
+            mutex_ = NULL;
+        }
     }
-#endif
+
+    //
+    // Lock mutex.
+    //
+    pj_status_t acquire()
+    {
+	return pj_mutex_lock(mutex_);
+    }
+
+    //
+    // Unlock mutex.
+    //
+    pj_status_t release()
+    {
+	return pj_mutex_unlock(mutex_);
+    }
+
+    //
+    // Try locking the mutex.
+    //
+    pj_status_t tryacquire()
+    {
+	return pj_mutex_trylock(mutex_);
+    }
+
+private:
+    pj_mutex_t *mutex_;
 };
 
 
-class PJ_Semaphore
+//
+// Semaphore
+//
+class Pj_Semaphore : public Pj_Object
 {
 public:
-    static PJ_Semaphore *create( PJ_Pool *pool, const char *name, unsigned initial, unsigned max)
+    //
+    // Construct semaphore
+    //
+    Pj_Semaphore(Pj_Pool *pool, unsigned max,
+                 unsigned initial = 0, const char *name = NULL)
+    : sem_(NULL)
     {
-	return (PJ_Semaphore*) pj_sem_create( pool->pool_(), name, initial, max);
     }
 
+    //
+    // Destructor.
+    //
+    ~Pj_Semaphore()
+    {
+        destroy();
+    }
+
+    //
+    // Create semaphore
+    //
+    pj_status_t create( Pj_Pool *pool, unsigned max,
+                        unsigned initial = 0, const char *name = NULL )
+    {
+        destroy();
+	return pj_sem_create( pool->pool_(), name, initial, max, &sem_);
+    }
+
+    //
+    // Destroy semaphore.
+    //
+    void destroy()
+    {
+        if (sem_) {
+            pj_sem_destroy(sem_);
+            sem_ = NULL;
+        }
+    }
+
+    //
+    // Get pjlib compatible semaphore object.
+    //
     pj_sem_t *pj_sem_t_()
     {
 	return (pj_sem_t*)this;
     }
 
-    pj_status_t destroy()
-    {
-	return pj_sem_destroy(this->pj_sem_t_());
-    }
-
+    //
+    // Wait semaphore.
+    //
     pj_status_t wait()
     {
 	return pj_sem_wait(this->pj_sem_t_());
     }
 
-    pj_status_t lock()
+    //
+    // Wait semaphore.
+    //
+    pj_status_t acquire()
     {
 	return wait();
     }
 
+    //
+    // Try wait semaphore.
+    //
     pj_status_t trywait()
     {
 	return pj_sem_trywait(this->pj_sem_t_());
     }
 
-    pj_status_t trylock()
+    //
+    // Try wait semaphore.
+    //
+    pj_status_t tryacquire()
     {
 	return trywait();
     }
 
+    //
+    // Post semaphore.
+    //
     pj_status_t post()
     {
 	return pj_sem_post(this->pj_sem_t_());
     }
 
-    pj_status_t unlock()
+    //
+    // Post semaphore.
+    //
+    pj_status_t release()
     {
 	return post();
     }
+
+private:
+    pj_sem_t *sem_;
 };
 
 
-class PJ_Event
+//
+// Event object.
+//
+class Pj_Event
 {
 public:
-    static PJ_Event *create( PJ_Pool *pool, const char *name, bool manual_reset, bool initial)
+    //
+    // Construct event object.
+    //
+    Pj_Event( Pj_Pool *pool, bool manual_reset = false,
+              bool initial = false, const char *name = NULL )
+    : event_(NULL)
     {
-	return (PJ_Event*) pj_event_create(pool->pool_(), name, manual_reset, initial);
+        create(pool, manual_reset, initial, name);
     }
 
+    //
+    // Destructor.
+    //
+    ~Pj_Event()
+    {
+        destroy();
+    }
+
+    //
+    // Create event object.
+    //
+    pj_status_t create( Pj_Pool *pool, bool manual_reset = false, 
+                        bool initial = false, const char *name = NULL)
+    {
+        destroy();
+	return pj_event_create(pool->pool_(), name, manual_reset, initial,
+                               &event_);
+    }
+
+    //
+    // Get pjlib compatible event object.
+    //
     pj_event_t *pj_event_t_()
     {
-	return (pj_event_t*)this;
+	return event_;
     }
 
-    pj_status_t destroy()
+    //
+    // Destroy event object.
+    //
+    void destroy()
     {
-	return pj_event_destroy(this->pj_event_t_());
+        if (event_) {
+	    pj_event_destroy(event_);
+            event_ = NULL;
+        }
     }
 
+    //
+    // Wait.
+    //
     pj_status_t wait()
     {
-	return pj_event_wait(this->pj_event_t_());
+	return pj_event_wait(event_);
     }
 
+    //
+    // Try wait.
+    //
     pj_status_t trywait()
     {
-	return pj_event_trywait(this->pj_event_t_());
+	return pj_event_trywait(event_);
     }
 
+    //
+    // Set event state to signalled.
+    //
     pj_status_t set()
     {
 	return pj_event_set(this->pj_event_t_());
     }
 
+    //
+    // Release one waiting thread.
+    //
     pj_status_t pulse()
     {
 	return pj_event_pulse(this->pj_event_t_());
     }
 
+    //
+    // Set a non-signalled.
+    //
     pj_status_t reset()
     {
 	return pj_event_reset(this->pj_event_t_());
     }
+
+private:
+    pj_event_t *event_;
 };
 
-class PJ_OS
+//
+// OS abstraction.
+//
+class Pj_OS_API
 {
 public:
-    static pj_status_t gettimeofday( PJ_Time_Val *tv )
+    //
+    // Get current time.
+    //
+    static pj_status_t gettimeofday( Pj_Time_Val *tv )
     {
 	return pj_gettimeofday(tv);
     }
 
-    static pj_status_t time_decode( const PJ_Time_Val *tv, pj_parsed_time *pt )
+    //
+    // Parse to time of day.
+    //
+    static pj_status_t time_decode( const Pj_Time_Val *tv, 
+                                    pj_parsed_time *pt )
     {
 	return pj_time_decode(tv, pt);
     }
 
-    static pj_status_t time_encode(const pj_parsed_time *pt, PJ_Time_Val *tv)
+    //
+    // Parse from time of day.
+    //
+    static pj_status_t time_encode( const pj_parsed_time *pt, 
+                                    Pj_Time_Val *tv)
     {
 	return pj_time_encode(pt, tv);
     }
 
-    static pj_status_t time_local_to_gmt( PJ_Time_Val *tv )
+    //
+    // Convert to GMT.
+    //
+    static pj_status_t time_local_to_gmt( Pj_Time_Val *tv )
     {
 	return pj_time_local_to_gmt( tv );
     }
 
-    static pj_status_t time_gmt_to_local( PJ_Time_Val *tv) 
+    //
+    // Convert time to local.
+    //
+    static pj_status_t time_gmt_to_local( Pj_Time_Val *tv) 
     {
 	return pj_time_gmt_to_local( tv );
     }
 };
 
-
-inline pj_status_t PJ_Time_Val::gettimeofday()
+//
+// Timeval inlines.
+//
+inline pj_status_t Pj_Time_Val::gettimeofday()
 {
-    return PJ_OS::gettimeofday(this);
+    return Pj_OS_API::gettimeofday(this);
 }
 
-inline pj_parsed_time PJ_Time_Val::decode()
+inline pj_parsed_time Pj_Time_Val::decode()
 {
     pj_parsed_time pt;
-    PJ_OS::time_decode(this, &pt);
+    Pj_OS_API::time_decode(this, &pt);
     return pt;
 }
 
-inline pj_status_t PJ_Time_Val::encode(const pj_parsed_time *pt)
+inline pj_status_t Pj_Time_Val::encode(const pj_parsed_time *pt)
 {
-    return PJ_OS::time_encode(pt, this);
+    return Pj_OS_API::time_encode(pt, this);
 }
 
-inline pj_status_t PJ_Time_Val::to_gmt()
+inline pj_status_t Pj_Time_Val::to_gmt()
 {
-    return PJ_OS::time_local_to_gmt(this);
+    return Pj_OS_API::time_local_to_gmt(this);
 }
 
-inline pj_status_t PJ_Time_Val::to_local()
+inline pj_status_t Pj_Time_Val::to_local()
 {
-    return PJ_OS::time_gmt_to_local(this);
+    return Pj_OS_API::time_gmt_to_local(this);
 }
 
 #endif	/* __PJPP_OS_H__ */

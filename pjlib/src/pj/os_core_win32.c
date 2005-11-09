@@ -513,16 +513,38 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 }
 
 /*
- * pj_atomic_inc()
+ * pj_atomic_inc_and_get()
  */
-PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 {
     PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    InterlockedIncrement(&atomic_var->value);
+    return InterlockedIncrement(&atomic_var->value);
 #else
 #   error Fix Me
+#endif
+}
+
+/*
+ * pj_atomic_inc()
+ */
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
+{
+    pj_atomic_inc_and_get(atomic_var);
+}
+
+/*
+ * pj_atomic_dec_and_get()
+ */
+PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
+{
+    PJ_CHECK_STACK();
+
+#if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
+    return InterlockedDecrement(&atomic_var->value);
+#else
+#   error Fix me
 #endif
 }
 
@@ -531,13 +553,7 @@ PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
-    PJ_CHECK_STACK();
-
-#if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
-    InterlockedDecrement(&atomic_var->value);
-#else
-#   error Fix me
-#endif
+    pj_atomic_dec_and_get(atomic_var);
 }
 
 /*
@@ -546,10 +562,27 @@ PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
 			    pj_atomic_value_t value )
 {
+#if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     InterlockedExchangeAdd( &atomic_var->value, value );
+#else
+#   error Fix me
+#endif
 }
 
-	
+/*
+ * pj_atomic_add_and_get()
+ */
+PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
+			                         pj_atomic_value_t value)
+{
+#if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
+    long oldValue = InterlockedExchangeAdd( &atomic_var->value, value);
+    return oldValue + value;
+#else
+#   error Fix me
+#endif
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * pj_thread_local_alloc()

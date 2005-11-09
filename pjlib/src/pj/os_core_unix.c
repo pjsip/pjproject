@@ -559,19 +559,50 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 }
 
 /*
- * pj_atomic_inc()
+ * pj_atomic_inc_and_get()
  */
-PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
+PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 {
+    pj_atomic_value_t new_value;
+
     PJ_CHECK_STACK();
 
 #if PJ_HAS_THREADS
     pj_mutex_lock( atomic_var->mutex );
 #endif
-    ++atomic_var->value;
+    new_value = ++atomic_var->value;
 #if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
 #endif
+
+    return new_value;
+}
+/*
+ * pj_atomic_inc()
+ */
+PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
+{
+    pj_atomic_inc_and_get(atomic_var);
+}
+
+/*
+ * pj_atomic_dec_and_get()
+ */
+PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
+{
+    pj_atomic_value_t new_value;
+
+    PJ_CHECK_STACK();
+
+#if PJ_HAS_THREADS
+    pj_mutex_lock( atomic_var->mutex );
+#endif
+    new_value = --atomic_var->value;
+#if PJ_HAS_THREADS
+    pj_mutex_unlock( atomic_var->mutex);
+#endif
+
+    return new_value;
 }
 
 /*
@@ -579,33 +610,39 @@ PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
-    PJ_CHECK_STACK();
-
-#if PJ_HAS_THREADS
-    pj_mutex_lock( atomic_var->mutex );
-#endif
-    --atomic_var->value;
-#if PJ_HAS_THREADS
-    pj_mutex_unlock( atomic_var->mutex);
-#endif
+    pj_atomic_dec_and_get(atomic_var);
 }
 
 /*
- * pj_atomic_add()
+ * pj_atomic_add_and_get()
  */ 
-PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var, pj_atomic_value_t value )
+PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var, 
+                                                 pj_atomic_value_t value )
 {
+    pj_atomic_value_t new_value;
+
 #if PJ_HAS_THREADS
     pj_mutex_lock(atomic_var->mutex);
 #endif
     
     atomic_var->value += value;
+    new_value = atomic_var->value;
 
 #if PJ_HAS_THREADS
     pj_mutex_unlock(atomic_var->mutex);
 #endif
+
+    return new_value;
 }
 
+/*
+ * pj_atomic_add()
+ */ 
+PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var, 
+                            pj_atomic_value_t value )
+{
+    pj_atomic_add_and_get(atomic_var, value);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*

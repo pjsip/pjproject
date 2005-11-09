@@ -1,196 +1,426 @@
 /* $Id$
- *
  */
 #ifndef __PJPP_SOCK_H__
 #define __PJPP_SOCK_H__
 
 #include <pj/sock.h>
+#include <pj/string.h>
 
-class PJ_Addr
+class Pj_Event_Handler;
+
+//
+// Base class for address.
+//
+class Pj_Addr
 {
 };
 
-class PJ_INET_Addr : public pj_sockaddr_in, public PJ_Addr
+//
+// Internet address.
+//
+class Pj_Inet_Addr : public pj_sockaddr_in, public Pj_Addr
 {
 public:
+    //
+    // Get port number.
+    //
     pj_uint16_t get_port_number() const
     {
-	return pj_sockaddr_get_port(this);
+	return pj_sockaddr_in_get_port(this);
     }
 
+    //
+    // Set port number.
+    //
     void set_port_number(pj_uint16_t port)
     {
 	sin_family = PJ_AF_INET;
-	pj_sockaddr_set_port(this, port);
+	pj_sockaddr_in_set_port(this, port);
     }
 
+    //
+    // Get IP address.
+    //
     pj_uint32_t get_ip_address() const
     {
-	return pj_sockaddr_get_addr(this);
+	return pj_sockaddr_in_get_addr(this).s_addr;
     }
 
+    //
+    // Get address string.
+    //
     const char *get_address() const
     {
-	return pj_sockaddr_get_str_addr(this);
+	return pj_inet_ntoa(sin_addr);
     }
 
+    //
+    // Set IP address.
+    //
     void set_ip_address(pj_uint32_t addr)
     {
 	sin_family = PJ_AF_INET;
-	pj_sockaddr_set_addr(this, addr);
+	pj_sockaddr_in_set_addr(this, addr);
     }
 
+    //
+    // Set address.
+    //
     pj_status_t set_address(const pj_str_t *addr)
     {
-	return pj_sockaddr_set_str_addr(this, addr);
+	return pj_sockaddr_in_set_str_addr(this, addr);
     }
 
+    //
+    // Set address.
+    //
     pj_status_t set_address(const char *addr)
     {
-	return pj_sockaddr_set_str_addr2(this, addr);
+        pj_str_t s;
+	return pj_sockaddr_in_set_str_addr(this, pj_cstr(&s, addr));
     }
 
-    int cmp(const PJ_INET_Addr &rhs) const
+    //
+    // Compare for equality.
+    //
+    bool operator==(const Pj_Inet_Addr &rhs) const
     {
-	return pj_sockaddr_cmp(this, &rhs);
+	return sin_family == rhs.sin_family &&
+               sin_addr.s_addr == rhs.sin_addr.s_addr &&
+               sin_port == rhs.sin_port;
     }
 
-    bool operator==(const PJ_INET_Addr &rhs) const
-    {
-	return cmp(rhs) == 0;
-    }
+private:
+    //
+    // Dummy length used in pj_ioqueue_recvfrom() etc
+    //
+    friend class Pj_Event_Handler;
+    friend class Pj_Socket;
+    friend class Pj_Sock_Stream;
+    friend class Pj_Sock_Dgram;
+
+    int addrlen_;
 };
 
-class PJ_Socket
+
+//
+// Socket base class.
+//
+// Note:
+//  socket will not automatically be closed on destructor.
+//
+class Pj_Socket
 {
 public:
-    PJ_Socket() {}
-    PJ_Socket(const PJ_Socket &rhs) : sock_(rhs.sock_) {}
+    //
+    // Default constructor.
+    //
+    Pj_Socket()
+        : sock_(PJ_INVALID_SOCKET) 
+    {
+    }
 
+    //
+    // Initialize from a socket handle.
+    //
+    explicit Pj_Socket(pj_sock_t sock)
+        : sock_(sock)
+    {
+    }
+
+    //
+    // Copy constructor.
+    //
+    Pj_Socket(const Pj_Socket &rhs) 
+        : sock_(rhs.sock_) 
+    {
+    }
+
+    //
+    // Destructor will not close the socket.
+    // You must call close() explicitly.
+    //
+    ~Pj_Socket()
+    {
+    }
+
+    //
+    // Set socket handle.
+    //
     void set_handle(pj_sock_t sock)
     {
 	sock_ = sock;
     }
 
+    //
+    // Get socket handle.
+    //
     pj_sock_t get_handle() const
     {
 	return sock_;
     }
 
+    //
+    // Get socket handle.
+    //
     pj_sock_t& get_handle()
     {
 	return sock_;
     }
 
-    bool socket(int af, int type, int proto, pj_uint32_t flag=0)
+    //
+    // See if the socket is valid.
+    //
+    bool is_valid() const
     {
-	sock_ = pj_sock_socket(af, type, proto, flag);
-	return sock_ != -1;
+        return sock_ != PJ_INVALID_SOCKET;
     }
 
-    bool bind(const PJ_INET_Addr &addr)
+    //
+    // Create the socket.
+    //
+    pj_status_t create(int af, int type, int proto)
     {
-	return pj_sock_bind(sock_, &addr, sizeof(PJ_INET_Addr)) == 0;
+	return pj_sock_socket(af, type, proto, &sock_);
     }
 
-    bool close()
+    //
+    // Bind socket.
+    //
+    pj_status_t bind(const Pj_Inet_Addr &addr)
     {
-	return pj_sock_close(sock_) == 0;
+	return pj_sock_bind(sock_, &addr, sizeof(Pj_Inet_Addr));
     }
 
-    bool getpeername(PJ_INET_Addr *addr)
+    //
+    // Close socket.
+    //
+    pj_status_t close()
     {
-	int namelen;
-	return pj_sock_getpeername(sock_, addr, &namelen) == 0;
+	pj_sock_close(sock_);
     }
 
-    bool getsockname(PJ_INET_Addr *addr)
+    //
+    // Get peer socket name.
+    //
+    pj_status_t getpeername(Pj_Inet_Addr *addr)
     {
-	int namelen;
-	return pj_sock_getsockname(sock_, addr, &namelen) == 0;
+	return pj_sock_getpeername(sock_, addr, &addr->addrlen_);
     }
 
-    bool getsockopt(int level, int optname, void *optval, int *optlen)
+    //
+    // getsockname
+    //
+    pj_status_t getsockname(Pj_Inet_Addr *addr)
     {
-	return pj_sock_getsockopt(sock_, level, optname, optval, optlen) == 0;
+	return pj_sock_getsockname(sock_, addr, &addr->addrlen_);
     }
 
-    bool setsockopt(int level, int optname, const void *optval, int optlen)
+    //
+    // getsockopt.
+    //
+    pj_status_t getsockopt(int level, int optname, 
+                           void *optval, int *optlen)
     {
-	return pj_sock_setsockopt(sock_, level, optname, optval, optlen) == 0;
+	return pj_sock_getsockopt(sock_, level, optname, optval, optlen);
     }
 
-    bool ioctl(long cmd, pj_uint32_t *val)
+    //
+    // setsockopt
+    // 
+    pj_status_t setsockopt(int level, int optname, 
+                           const void *optval, int optlen)
     {
-	return pj_sock_ioctl(sock_, cmd, val) == 0;
+	return pj_sock_setsockopt(sock_, level, optname, optval, optlen);
     }
 
-    int recv(void *buf, int len, int flag = 0)
+    //
+    // receive data.
+    //
+    pj_ssize_t recv(void *buf, pj_size_t len, int flag = 0)
     {
-	return pj_sock_recv(sock_, buf, len, flag);
+        pj_ssize_t bytes = len;
+	if (pj_sock_recv(sock_, buf, &bytes, flag) != PJ_SUCCESS)
+            return -1;
+        return bytes;
     }
 
-    int send(const void *buf, int len, int flag = 0)
+    //
+    // send data.
+    //
+    pj_ssize_t send(const void *buf, pj_ssize_t len, int flag = 0)
     {
-	return pj_sock_send(sock_, buf, len, flag);
+        pj_ssize_t bytes = len;
+	if (pj_sock_send(sock_, buf, &bytes, flag) != PJ_SUCCESS)
+            return -1;
+        return bytes;
+    }
+
+    //
+    // connect.
+    //
+    pj_status_t connect(const Pj_Inet_Addr &addr)
+    {
+	return pj_sock_connect(sock_, &addr, sizeof(Pj_Inet_Addr));
+    }
+
+    //
+    // assignment.
+    //
+    Pj_Socket &operator=(const Pj_Socket &rhs)
+    {
+        sock_ = rhs.sock_;
+        return *this;
     }
 
 protected:
+    friend class Pj_Event_Handler;
     pj_sock_t sock_;
 };
 
+
 #if PJ_HAS_TCP
-class PJ_Sock_Stream : public PJ_Socket
+//
+// Stream socket.
+//
+class Pj_Sock_Stream : public Pj_Socket
 {
 public:
-    PJ_Sock_Stream() {}
-    PJ_Sock_Stream(const PJ_Sock_Stream &rhs) : PJ_Socket(rhs) {}
-    PJ_Sock_Stream &operator=(const PJ_Sock_Stream &rhs) { sock_ = rhs.sock_; return *this; }
-
-    bool listen(int backlog = 5)
+    //
+    // Default constructor.
+    //
+    Pj_Sock_Stream() 
     {
-	return pj_sock_listen(sock_, backlog) == 0;
     }
 
-    bool accept(PJ_Sock_Stream *new_sock, PJ_INET_Addr *addr, int *addrlen)
+    //
+    // Initialize from a socket handle.
+    //
+    explicit Pj_Sock_Stream(pj_sock_t sock)
+        : Pj_Socket(sock)
     {
-	pj_sock_t s = pj_sock_accept(sock_, addr, addrlen);
-	if (s == -1)
-	    return false;
-	new_sock->set_handle(s);
-	return true;
     }
 
-    bool connect(const PJ_INET_Addr &addr)
+    //
+    // Copy constructor.
+    //
+    Pj_Sock_Stream(const Pj_Sock_Stream &rhs) : Pj_Socket(rhs) 
     {
-	return pj_sock_connect(sock_, &addr, sizeof(PJ_INET_Addr)) == 0;
     }
 
-    bool shutdown(int how)
+    //
+    // Assignment.
+    //
+    Pj_Sock_Stream &operator=(const Pj_Sock_Stream &rhs) 
+    { 
+        sock_ = rhs.sock_; 
+        return *this; 
+    }
+
+    //
+    // listen()
+    //
+    pj_status_t listen(int backlog = 5)
     {
-	return pj_sock_shutdown(sock_, how) == 0;
+	return pj_sock_listen(sock_, backlog);
+    }
+
+    //
+    // blocking accept()
+    //
+    Pj_Sock_Stream accept(Pj_Inet_Addr *remote_addr = NULL)
+    {
+        pj_sock_t newsock;
+        int *addrlen = remote_addr ? &remote_addr->addrlen_ : NULL;
+        pj_status_t status;
+        
+        status = pj_sock_accept(sock_, &newsock, remote_addr, addrlen);
+        if (status != PJ_SUCCESS)
+            return Pj_Sock_Stream(-1);
+
+        return Pj_Sock_Stream(newsock);
+    }
+
+    //
+    // shutdown()
+    //
+    pj_status_t shutdown(int how = PJ_SHUT_RDWR)
+    {
+	return pj_sock_shutdown(sock_, how);
     }
 
 };
 #endif
 
-class PJ_Sock_Dgram : public PJ_Socket
+//
+// Datagram socket.
+//
+class Pj_Sock_Dgram : public Pj_Socket
 {
 public:
-    PJ_Sock_Dgram() {}
-    PJ_Sock_Dgram(const PJ_Sock_Dgram &rhs) : PJ_Socket(rhs) {}
-    PJ_Sock_Dgram &operator=(const PJ_Sock_Dgram &rhs) { sock_ = rhs.sock_; return *this; }
-
-    int recvfrom(void *buf, int len, int flag, PJ_INET_Addr *fromaddr)
+    //
+    // Default constructor.
+    //
+    Pj_Sock_Dgram() 
     {
-	int addrlen;
-	return pj_sock_recvfrom(sock_, buf, len, flag, fromaddr, &addrlen);
     }
 
-    int sendto(const void *buf, int len, int flag, const PJ_INET_Addr &addr)
+    //
+    // Initialize from a socket handle.
+    //
+    explicit Pj_Sock_Dgram(pj_sock_t sock)
+        : Pj_Socket(sock)
     {
-	return pj_sock_sendto(sock_, buf, len, flag, &addr, sizeof(PJ_INET_Addr));
+    }
+
+    //
+    // Copy constructor.
+    //
+    Pj_Sock_Dgram(const Pj_Sock_Dgram &rhs) 
+        : Pj_Socket(rhs) 
+    {
+    }
+
+    //
+    // Assignment.
+    //
+    Pj_Sock_Dgram &operator=(const Pj_Sock_Dgram &rhs) 
+    { 
+        Pj_Socket::operator =(rhs);
+        return *this; 
+    }
+
+    //
+    // recvfrom()
+    //
+    pj_ssize_t recvfrom( void *buf, pj_size_t len, int flag = 0, 
+                         Pj_Inet_Addr *fromaddr = NULL)
+    {
+        pj_ssize_t bytes = len;
+        int *addrlen = fromaddr ? &fromaddr->addrlen_ : NULL;
+	if (pj_sock_recvfrom( sock_, buf, &bytes, flag, 
+                              fromaddr, addrlen) != PJ_SUCCESS)
+        {
+            return -1;
+        }
+        return bytes;
+    }
+
+    //
+    // sendto()
+    //
+    pj_ssize_t sendto( const void *buf, pj_size_t len, int flag, 
+                       const Pj_Inet_Addr &addr)
+    {
+        pj_ssize_t bytes = len;
+	if (pj_sock_sendto( sock_, buf, &bytes, flag, 
+                            &addr, sizeof(pj_sockaddr_in)) != PJ_SUCCESS)
+        {
+            return -1;
+        }
+        return bytes;
     }
 };
+
 
 #endif	/* __PJPP_SOCK_H__ */

@@ -110,18 +110,6 @@ struct pj_timer_entry
 
 
 /**
- * Default flag for timer heap, indicates that synchronization will be
- * used.
- */
-#define PJ_TIMER_HEAP_SYNCHRONIZE	(0)
-
-/**
- * Flag to indicate that thread synchronization is NOT needed for the 
- * timer heap.
- */
-#define PJ_TIMER_HEAP_NO_SYNCHRONIZE	(1)
-
-/**
  * Calculate memory size required to create a timer heap.
  *
  * @param count     Number of timer entries to be supported.
@@ -140,16 +128,45 @@ PJ_DECL(pj_size_t) pj_timer_heap_mem_size(pj_size_t count);
  * @param count     The maximum number of timer entries to be supported 
  *                  initially. If the application registers more entries 
  *                  during runtime, then the timer heap will resize.
- * @param flag      Creation flag, currently only PJ_TIMER_HEAP_NO_SYNCHRONIZE
- *                  is recognized..
  * @param ht        Pointer to receive the created timer heap.
  *
  * @return          PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
 					   pj_size_t count,
-					   unsigned flag,
                                            pj_timer_heap_t **ht);
+
+/**
+ * Destroy the timer heap.
+ *
+ * @param ht        The timer heap.
+ */
+PJ_DECL(void) pj_timer_heap_destroy( pj_timer_heap_t *ht );
+
+
+/**
+ * Set lock object to be used by the timer heap. By default, the timer heap
+ * uses dummy synchronization.
+ *
+ * @param ht        The timer heap.
+ * @param lock      The lock object to be used for synchronization.
+ * @param auto_del  If nonzero, the lock object will be destroyed when
+ *                  the timer heap is destroyed.
+ */
+PJ_DECL(void) pj_timer_heap_set_lock( pj_timer_heap_t *ht,
+                                      pj_lock_t *lock,
+                                      pj_bool_t auto_del );
+
+/**
+ * Set maximum number of timed out entries to process in a single poll.
+ *
+ * @param ht        The timer heap.
+ * @param count     Number of entries.
+ *
+ * @return          The old number.
+ */
+PJ_DECL(unsigned) pj_timer_heap_set_max_timed_out_per_poll(pj_timer_heap_t *ht,
+                                                           unsigned count );
 
 /**
  * Initialize a timer entry. Application should call this function at least
@@ -215,19 +232,21 @@ PJ_DECL(pj_size_t) pj_timer_heap_count( pj_timer_heap_t *ht );
  * @return          PJ_SUCCESS, or PJ_ENOTFOUND if no entry is scheduled.
  */
 PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht, 
-					   pj_time_val *timeval);
+					          pj_time_val *timeval);
 
 /**
  * Poll the timer heap, check for expired timers and call the callback for
  * each of the expired timers.
  *
- * @param ht        The timer heap.
+ * @param ht         The timer heap.
  * @param next_delay If this parameter is not NULL, it will be filled up with
  *		     the time delay until the next timer elapsed, or -1 in
  *		     the sec part if no entry exist.
- * @return          The number of timers expired.
+ *
+ * @return           The number of timers expired.
  */
-PJ_DECL(int) pj_timer_heap_poll( pj_timer_heap_t *ht, pj_time_val *next_delay);
+PJ_DECL(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht, 
+                                      pj_time_val *next_delay);
 
 /**
  * @}

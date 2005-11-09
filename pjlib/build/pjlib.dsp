@@ -234,6 +234,13 @@ SOURCE=..\src\pj\ioqueue_select.c
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_winnt.c
+
+!IF  "$(CFG)" == "pjlib - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 

@@ -210,6 +210,11 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * Invalid operation.
  */
 #define PJ_EINVALIDOP	    (PJ_ERRNO_START_STATUS + 13)
+/**
+ * @hideinitializer
+ * Operation is cancelled.
+ */
+#define PJ_ECANCELLED	    (PJ_ERRNO_START_STATUS + 14)
 
 /** @} */   /* pj_errnum */
 

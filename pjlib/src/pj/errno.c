@@ -29,7 +29,8 @@ static const struct
     { PJ_ETOOMANY,      "Too many objects of the specified type"},
     { PJ_EBUSY,         "Object is busy"},
     { PJ_ENOTSUP,	"Option/operation is not supported"},
-    { PJ_EINVALIDOP,	"Invalid operation"}
+    { PJ_EINVALIDOP,	"Invalid operation"},
+    { PJ_ECANCELLED,    "Operation cancelled"}
 };
 
 /*

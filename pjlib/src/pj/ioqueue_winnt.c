@@ -891,3 +891,37 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 }
 #endif	/* #if PJ_HAS_TCP */
 
+
+
+PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
+                                         pj_ioqueue_op_key_t *op_key )
+{
+    BOOL rc;
+    DWORD bytesTransfered;
+
+    rc = GetOverlappedResult( key->hnd, (LPOVERLAPPED)op_key,
+                              &bytesTransfered, FALSE );
+
+    if (rc == FALSE) {
+        return GetLastError()==ERROR_IO_INCOMPLETE;
+    }
+
+    return FALSE;
+}
+
+
+PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
+                                                pj_ioqueue_op_key_t *op_key,
+                                                pj_ssize_t bytes_status )
+{
+    BOOL rc;
+
+    rc = PostQueuedCompletionStatus(key->ioqueue->iocp, bytes_status,
+                                    (long)key, (OVERLAPPED*)op_key );
+    if (rc == FALSE) {
+        return PJ_RETURN_OS_ERROR(GetLastError());
+    }
+
+    return PJ_SUCCESS;
+}
+

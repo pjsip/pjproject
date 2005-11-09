@@ -4,13 +4,13 @@
 #ifndef __PJPP_SCANNER_H__
 #define __PJPP_SCANNER_H__
 
-#include <pj/scanner.h>
+#include <pjlib-util/scanner.h>
 #include <pj++/string.hpp>
 
-class PJ_CharSpec
+class Pj_Char_Spec
 {
 public:
-    PJ_CharSpec() { pj_cs_init(cs__); }
+    Pj_Char_Spec() { pj_cs_init(cs__); }
 
     void set(int c) { pj_cs_set(cs__, c); }
     void add_range(int begin, int end) { pj_cs_add_range(cs__, begin, end); }
@@ -36,10 +36,10 @@ private:
     pj_char_spec cs__;
 };
 
-class PJ_Scanner
+class Pj_Scanner
 {
 public:
-    PJ_Scanner() {}
+    Pj_Scanner() {}
 
     enum
     {
@@ -67,30 +67,30 @@ public:
 
     int peek_char() const
     {
-	return *scanner_.current;
+	return *scanner_.curptr;
     }
 
-    int peek(const PJ_CharSpec *cs, PJ_String *out)
+    int peek(const Pj_Char_Spec *cs, Pj_String *out)
     {
 	return pj_scan_peek(&scanner_,  cs->cs_(), out);
     }
 
-    int peek_n(pj_size_t len, PJ_String *out)
+    int peek_n(pj_size_t len, Pj_String *out)
     {
 	return pj_scan_peek_n(&scanner_, len, out);
     }
 
-    int peek_until(const PJ_CharSpec *cs, PJ_String *out)
+    int peek_until(const Pj_Char_Spec *cs, Pj_String *out)
     {
 	return pj_scan_peek_until(&scanner_, cs->cs_(), out);
     }
 
-    void get(const PJ_CharSpec *cs, PJ_String *out)
+    void get(const Pj_Char_Spec *cs, Pj_String *out)
     {
 	pj_scan_get(&scanner_, cs->cs_(), out);
     }
 
-    void get_n(unsigned N, PJ_String *out)
+    void get_n(unsigned N, Pj_String *out)
     {
 	pj_scan_get_n(&scanner_, N, out);
     }
@@ -100,7 +100,7 @@ public:
 	return pj_scan_get_char(&scanner_);
     }
 
-    void get_quote(int begin_quote, int end_quote, PJ_String *out)
+    void get_quote(int begin_quote, int end_quote, Pj_String *out)
     {
 	pj_scan_get_quote(&scanner_, begin_quote, end_quote, out);
     }
@@ -110,17 +110,17 @@ public:
 	pj_scan_get_newline(&scanner_);
     }
 
-    void get_until(const PJ_CharSpec *cs, PJ_String *out)
+    void get_until(const Pj_Char_Spec *cs, Pj_String *out)
     {
 	pj_scan_get_until(&scanner_, cs->cs_(), out);
     }
 
-    void get_until_ch(int until_ch, PJ_String *out)
+    void get_until_ch(int until_ch, Pj_String *out)
     {
 	pj_scan_get_until_ch(&scanner_, until_ch, out);
     }
 
-    void get_until_chr(const char *spec, PJ_String *out)
+    void get_until_chr(const char *spec, Pj_String *out)
     {
 	pj_scan_get_until_chr(&scanner_, spec, out);
     }

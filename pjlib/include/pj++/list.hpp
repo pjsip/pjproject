@@ -1,164 +1,290 @@
 /* $Id$
- *
  */
 #ifndef __PJPP_LIST_H__
 #define __PJPP_LIST_H__
 
 #include <pj/list.h>
-
-template <typename T>
-struct PJ_List_Node
-{
-    PJ_DECL_LIST_MEMBER(T)
-};
+#include <pj++/pool.hpp>
 
 
-template <class Node>
-class PJ_List
+//
+// Linked-list.
+//
+// Note:
+//  List_Node must have public member next and prev. Normally
+//  it will be declared like:
+//
+//  struct my_node
+//  {
+//      PJ_DECL_LIST_MEMBER(struct my_node);
+//      ..
+//  };
+//
+//
+template <class List_Node>
+class Pj_List : public Pj_Object
 {
 public:
-    PJ_List() { pj_list_init(&root_); if (0) compiletest(); }
-    ~PJ_List() {}
-
+    //
+    // List const_iterator.
+    //
     class const_iterator
     {
     public:
-	const_iterator() : node_(NULL) {}
-	const_iterator(const Node *nd) : node_((Node*)nd) {}
-	const Node * operator *() { return node_; }
-	const Node * operator -> () { return node_; }
-	const_iterator operator++() { return const_iterator(node_->next); }
-	bool operator==(const const_iterator &rhs) { return node_ == rhs.node_; }
-	bool operator!=(const const_iterator &rhs) { return node_ != rhs.node_; }
+	const_iterator() 
+            : node_(NULL) 
+        {}
+	const_iterator(const List_Node *nd) 
+            : node_((List_Node*)nd) 
+        {}
+	const List_Node * operator *() 
+        { 
+            return node_; 
+        }
+	const List_Node * operator -> () 
+        { 
+            return node_; 
+        }
+	const_iterator operator++() 
+        { 
+            return const_iterator(node_->next); 
+        }
+	bool operator==(const const_iterator &rhs) 
+        { 
+            return node_ == rhs.node_; 
+        }
+	bool operator!=(const const_iterator &rhs) 
+        { 
+            return node_ != rhs.node_; 
+        }
 
     protected:
-	Node *node_;
+	List_Node *node_;
     };
 
+    //
+    // List iterator.
+    //
     class iterator : public const_iterator
     {
     public:
-	iterator() {}
-	iterator(Node *nd) : const_iterator(nd) {}
-	Node * operator *() { return node_; }
-	Node * operator -> () { return node_; }
-	iterator operator++() { return iterator(node_->next); }
-	bool operator==(const iterator &rhs) { return node_ == rhs.node_; }
-	bool operator!=(const iterator &rhs) { return node_ != rhs.node_; }
+	iterator() 
+        {}
+	iterator(List_Node *nd) 
+            : const_iterator(nd) 
+        {}
+	List_Node * operator *() 
+        { 
+            return node_; 
+        }
+	List_Node * operator -> () 
+        { 
+            return node_; 
+        }
+	iterator operator++() 
+        { 
+            return iterator(node_->next); 
+        }
+	bool operator==(const iterator &rhs) 
+        { 
+            return node_ == rhs.node_; 
+        }
+	bool operator!=(const iterator &rhs) 
+        { 
+            return node_ != rhs.node_; 
+        }
     };
 
+    //
+    // Default constructor.
+    //
+    Pj_List() 
+    { 
+        pj_list_init(&root_); 
+        if (0) compiletest(); 
+    }
+
+    //
+    // Check if list is empty.
+    // 
     bool empty() const
     {
 	return pj_list_empty(&root_);
     }
 
+    //
+    // Get first element.
+    //
     iterator begin()
     {
 	return iterator(root_.next);
     }
 
+    //
+    // Get first element.
+    //
     const_iterator begin() const
     {
 	return const_iterator(root_.next);
     }
 
+    //
+    // Get end-of-element
+    //
     const_iterator end() const
     {
-	return const_iterator((Node*)&root_);
+	return const_iterator((List_Node*)&root_);
     }
 
+    //
+    // Get end-of-element
+    //
     iterator end()
     {
-	return iterator((Node*)&root_);
+	return iterator((List_Node*)&root_);
     }
 
-    void insert_before (iterator &pos, Node *node)
+    //
+    // Insert node.
+    //
+    void insert_before (iterator &pos, List_Node *node)
     {
 	pj_list_insert_before( *pos, node );
     }
 
-    void insert_after(iterator &pos, Node *node)
+    //
+    // Insert node.
+    //
+    void insert_after(iterator &pos, List_Node *node)
     {
 	pj_list_insert_after(*pos, node);
     }
 
-    void merge_first(Node *list2)
+    //
+    // Merge list.
+    //
+    void merge_first(List_Node *list2)
     {
 	pj_list_merge_first(&root_, list2);
     }
 
-    void merge_last(PJ_List *list)
+    //
+    // Merge list.
+    //
+    void merge_last(Pj_List *list)
     {
 	pj_list_merge_last(&root_, &list->root_);
     }
 
-    void insert_nodes_before(iterator &pos, PJ_List *list2)
+    //
+    // Insert list.
+    //
+    void insert_nodes_before(iterator &pos, Pj_List *list2)
     {
 	pj_list_insert_nodes_before(*pos, &list2->root_);
     }
 
-    void insert_nodes_after(iterator &pos, PJ_List *list2)
+    //
+    // Insert list.
+    //
+    void insert_nodes_after(iterator &pos, Pj_List *list2)
     {
 	pj_list_insert_nodes_after(*pos, &list2->root_);
     }
 
+    //
+    // Erase an element.
+    //
     void erase(iterator &it)
     {
 	pj_list_erase(*it);
     }
 
-    Node *front()
+    //
+    // Get first element.
+    //
+    List_Node *front()
     {
 	return root_.next;
     }
 
-    const Node *front() const
+    //
+    // Get first element.
+    //
+    const List_Node *front() const
     {
 	return root_.next;
     }
 
+    //
+    // Remove first element.
+    //
     void pop_front()
     {
 	pj_list_erase(root_.next);
     }
 
-    Node *back()
+    //
+    // Get last element.
+    //
+    List_Node *back()
     {
 	return root_.prev;
     }
 
-    const Node *back() const
+    //
+    // Get last element.
+    //
+    const List_Node *back() const
     {
 	return root_.prev;
     }
 
+    //
+    // Remove last element.
+    //
     void pop_back()
     {
 	pj_list_erase(root_.prev);
     }
 
-    iterator find(Node *node)
+    //
+    // Find a node.
+    //
+    iterator find(List_Node *node)
     {
-	Node *n = pj_list_find_node(&root_, node);
+	List_Node *n = pj_list_find_node(&root_, node);
 	return n ? iterator(n) : end();
     }
 
-    const_iterator find(Node *node) const
+    //
+    // Find a node.
+    //
+    const_iterator find(List_Node *node) const
     {
-	Node *n = pj_list_find_node(&root_, node);
+	List_Node *n = pj_list_find_node(&root_, node);
 	return n ? const_iterator(n) : end();
     }
 
-    void push_back(Node *node)
+    //
+    // Insert a node in the back.
+    //
+    void push_back(List_Node *node)
     {
 	pj_list_insert_after(root_.prev, node);
     }
 
-    void push_front(Node *node)
+    //
+    // Insert a node in the front.
+    //
+    void push_front(List_Node *node)
     {
 	pj_list_insert_before(root_.next, node);
     }
 
+    //
+    // Remove all elements.
+    //
     void clear()
     {
 	root_.next = &root_;
@@ -168,14 +294,14 @@ public:
 private:
     struct RootNode
     {
-	PJ_DECL_LIST_MEMBER(Node)
+	PJ_DECL_LIST_MEMBER(List_Node);
     } root_;
 
     void compiletest()
     {
 	// If you see error in this line, 
-	// it's because Node is not derived from PJ_List_Node.
-	Node *n = (Node*)0;
+	// it's because List_Node is not derived from Pj_List_Node.
+	List_Node *n = (List_Node*)0;
 	n = n->next; n = n->prev;
     }
 };

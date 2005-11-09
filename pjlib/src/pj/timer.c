@@ -14,9 +14,13 @@
 #include <pj/string.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/lock.h>
 
 #define HEAP_PARENT(X)	(X == 0 ? 0 : (((X) - 1) / 2))
 #define HEAP_LEFT(X)	(((X)+(X))+1)
+
+
+#define DEFAULT_MAX_TIMED_OUT_PER_POLL  (64)
 
 
 /**
@@ -33,8 +37,14 @@ struct pj_timer_heap_t
     /** Current size of the heap. */
     pj_size_t cur_size;
 
-    /** Mutex for synchronization, or NULL */
-    pj_mutex_t *mutex;
+    /** Max timed out entries to process per poll. */
+    unsigned max_entries_per_poll;
+
+    /** Lock object. */
+    pj_lock_t *lock;
+
+    /** Autodelete lock. */
+    pj_bool_t auto_delete_lock;
 
     /**
      * Current contents of the Heap, which is organized as a "heap" of
@@ -71,15 +81,15 @@ struct pj_timer_heap_t
 
 PJ_INLINE(void) lock_timer_heap( pj_timer_heap_t *ht )
 {
-    if (ht->mutex) {
-	pj_mutex_lock(ht->mutex);
+    if (ht->lock) {
+	pj_lock_acquire(ht->lock);
     }
 }
 
 PJ_INLINE(void) unlock_timer_heap( pj_timer_heap_t *ht )
 {
-    if (ht->mutex) {
-	pj_mutex_unlock(ht->mutex);
+    if (ht->lock) {
+	pj_lock_release(ht->lock);
     }
 }
 
@@ -319,7 +329,7 @@ PJ_DEF(pj_size_t) pj_timer_heap_mem_size(pj_size_t count)
            sizeof(pj_timer_heap_t) + 
            /* size of each entry: */
            (count+2) * (sizeof(pj_timer_entry*)+sizeof(pj_timer_id_t)) +
-           /* mutex, pool etc: */
+           /* lock, pool etc: */
            132;
 }
 
@@ -328,7 +338,6 @@ PJ_DEF(pj_size_t) pj_timer_heap_mem_size(pj_size_t count)
  */
 PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
 					  pj_size_t size,
-					  unsigned flag,
                                           pj_timer_heap_t **p_heap)
 {
     pj_timer_heap_t *ht;
@@ -349,22 +358,13 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
     /* Initialize timer heap sizes */
     ht->max_size = size;
     ht->cur_size = 0;
+    ht->max_entries_per_poll = DEFAULT_MAX_TIMED_OUT_PER_POLL;
     ht->timer_ids_freelist = 1;
     ht->pool = pool;
 
-    /* Mutex. */
-    if (flag & PJ_TIMER_HEAP_NO_SYNCHRONIZE) {
-	ht->mutex = NULL;
-    } else {
-        pj_status_t rc;
-
-	/* Mutex must be the recursive types. 
-         * See commented code inside pj_timer_heap_poll() 
-         */
-	rc = pj_mutex_create(pool, "tmhp%p", PJ_MUTEX_RECURSE, &ht->mutex);
-	if (rc != PJ_SUCCESS)
-	    return rc;
-    }
+    /* Lock. */
+    ht->lock = NULL;
+    ht->auto_delete_lock = 0;
 
     // Create the heap array.
     ht->heap = pj_pool_alloc(pool, sizeof(pj_timer_entry*) * size);
@@ -384,6 +384,34 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
 
     *p_heap = ht;
     return PJ_SUCCESS;
+}
+
+PJ_DEF(void) pj_timer_heap_destroy( pj_timer_heap_t *ht )
+{
+    if (ht->lock && ht->auto_delete_lock) {
+        pj_lock_destroy(ht->lock);
+        ht->lock = NULL;
+    }
+}
+
+PJ_DEF(void) pj_timer_heap_set_lock(  pj_timer_heap_t *ht,
+                                      pj_lock_t *lock,
+                                      pj_bool_t auto_del )
+{
+    if (ht->lock && ht->auto_delete_lock)
+        pj_lock_destroy(ht->lock);
+
+    ht->lock = lock;
+    ht->auto_delete_lock = auto_del;
+}
+
+
+PJ_DEF(unsigned) pj_timer_heap_set_max_timed_out_per_poll(pj_timer_heap_t *ht,
+                                                          unsigned count )
+{
+    unsigned old_count = ht->max_entries_per_poll;
+    ht->max_entries_per_poll = count;
+    return old_count;
 }
 
 PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
@@ -433,12 +461,13 @@ PJ_DEF(int) pj_timer_heap_cancel( pj_timer_heap_t *ht,
     return count;
 }
 
-PJ_DEF(int) pj_timer_heap_poll( pj_timer_heap_t *ht, pj_time_val *next_delay )
+PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht, 
+                                     pj_time_val *next_delay )
 {
     pj_time_val now;
-    int count;
+    unsigned count;
 
-    PJ_ASSERT_RETURN(ht, -1);
+    PJ_ASSERT_RETURN(ht, 0);
 
     if (!ht->cur_size && next_delay) {
 	next_delay->sec = next_delay->msec = PJ_MAXINT32;
@@ -450,16 +479,15 @@ PJ_DEF(int) pj_timer_heap_poll( pj_timer_heap_t *ht, pj_time_val *next_delay )
 
     lock_timer_heap(ht);
     while ( ht->cur_size && 
-	    PJ_TIME_VAL_LTE(ht->heap[0]->_timer_value, now) ) 
+	    PJ_TIME_VAL_LTE(ht->heap[0]->_timer_value, now) &&
+            count < ht->max_entries_per_poll ) 
     {
 	pj_timer_entry *node = remove_node(ht, 0);
 	++count;
 
-	//Better not to temporarily release mutex to save some syscalls.
-	//But then make sure the mutex must be the recursive types (PJ_MUTEX_RECURSE)!
-	//unlock_timer_heap(ht);
+	unlock_timer_heap(ht);
 	(*node->cb)(ht, node);
-	//lock_timer_heap(ht);
+	lock_timer_heap(ht);
     }
     if (ht->cur_size && next_delay) {
 	*next_delay = ht->heap[0]->_timer_value;
@@ -474,6 +502,8 @@ PJ_DEF(int) pj_timer_heap_poll( pj_timer_heap_t *ht, pj_time_val *next_delay )
 
 PJ_DEF(pj_size_t) pj_timer_heap_count( pj_timer_heap_t *ht )
 {
+    PJ_ASSERT_RETURN(ht, 0);
+
     return ht->cur_size;
 }
 

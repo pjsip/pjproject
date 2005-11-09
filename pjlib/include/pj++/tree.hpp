@@ -6,6 +6,9 @@
 
 #include <pj/rbtree.h>
 
+//
+// Tree.
+//
 class PJ_Tree
 {
 public:

@@ -1,86 +1,244 @@
 /* $Id$
- *
  */
 #ifndef __PJPP_POOL_H__
 #define __PJPP_POOL_H__
 
 #include <pj/pool.h>
 
-class PJ_Pool
+class Pj_Pool;
+class Pj_Caching_Pool;
+
+//
+// Base class for all Pjlib objects
+//
+class Pj_Object
 {
 public:
-    const char *getobjname() const
-    {
-	return pj_pool_getobjname(this->pool_());
-    }
+    void *operator new(unsigned int class_size, Pj_Pool *pool);
+    void operator delete(void*);
+    void operator delete(void*, Pj_Pool*);
 
-    pj_pool_t *pool_()
-    {
-	return (pj_pool_t*)this;
-    }
+    //
+    // Inline implementations at the end of this file.
+    //
 
-    const pj_pool_t *pool_() const
-    {
-	return (const pj_pool_t*)this;
-    }
-
-    void release()
-    {
-	pj_pool_release(this->pool_());
-    }
-
-    void reset()
-    {
-	pj_pool_reset(this->pool_());
-    }
-
-    pj_size_t get_capacity()
-    {
-	pj_pool_get_capacity(this->pool_());
-    }
-
-    pj_size_t get_used_size()
-    {
-	pj_pool_get_used_size(this->pool_());
-    }
-
-    void *alloc(pj_size_t size)
-    {
-	return pj_pool_alloc(this->pool_(), size);
-    }
-
-    void *calloc(pj_size_t count, pj_size_t elem)
-    {
-	return pj_pool_calloc(this->pool_(), count, elem);
-    }
+private:
+    // Can not use normal new operator; must use pool.
+    // e.g.:
+    //   obj = new(pool) Pj_The_Object(pool, ...);
+    //
+    void *operator new(unsigned int)
+    {}
 };
 
-class PJ_Caching_Pool
+
+//
+// Pool.
+//
+class Pj_Pool : public Pj_Object
 {
 public:
-    void init(pj_size_t max_capacity,
-	      const pj_pool_factory_policy *pol=&pj_pool_factory_default_policy)
+    //
+    // Default constructor, initializes internal pool to NULL.
+    // Application must call attach() some time later.
+    //
+    Pj_Pool()
+        : p_(NULL)
     {
-	pj_caching_pool_init(&cp_, pol, max_capacity);
     }
 
-    void destroy()
+    //
+    // Create pool.
+    //
+    Pj_Pool(Pj_Caching_Pool &caching_pool,
+            pj_size_t initial_size, 
+            pj_size_t increment_size, 
+            const char *name = NULL, 
+            pj_pool_callback *callback = NULL);
+
+    //
+    // Construct from existing pool.
+    //
+    explicit Pj_Pool(pj_pool_t *pool)
+        : p_(pool)
+    {
+    }
+
+    //
+    // Attach existing pool.
+    //
+    void attach(pj_pool_t *pool)
+    {
+        p_ = pool;
+    }
+
+    //
+    // Destructor.
+    //
+    // Release pool back to factory. Remember: if you delete pool, then 
+    // make sure that all objects that have been allocated from this pool
+    // have been properly destroyed.
+    //
+    // This is where C++ is trickier than plain C!!
+    //
+    ~Pj_Pool()
+    {
+        if (p_)
+	    pj_pool_release(p_);
+    }
+
+    //
+    // Get name.
+    //
+    const char *getobjname() const
+    {
+	return pj_pool_getobjname(p_);
+    }
+
+    //
+    // Get pjlib compatible pool object.
+    //
+    pj_pool_t *pool_()
+    {
+	return p_;
+    }
+
+    //
+    // Get pjlib compatible pool object.
+    //
+    const pj_pool_t *pool_() const
+    {
+	return p_;
+    }
+
+    //
+    // Get pjlib compatible pool object.
+    //
+    pj_pool_t *pj_pool_t_()
+    {
+	return p_;
+    }
+
+    //
+    // Reset pool.
+    //
+    void reset()
+    {
+	pj_pool_reset(p_);
+    }
+
+    //
+    // Get current capacity.
+    //
+    pj_size_t get_capacity()
+    {
+	pj_pool_get_capacity(p_);
+    }
+
+    //
+    // Get current total bytes allocated from the pool.
+    //
+    pj_size_t get_used_size()
+    {
+	pj_pool_get_used_size(p_);
+    }
+
+    //
+    // Allocate.
+    //
+    void *alloc(pj_size_t size)
+    {
+	return pj_pool_alloc(p_, size);
+    }
+
+    //
+    // Allocate elements and zero fill the memory.
+    //
+    void *calloc(pj_size_t count, pj_size_t elem)
+    {
+	return pj_pool_calloc(p_, count, elem);
+    }
+
+    //
+    // Allocate and zero fill memory.
+    //
+    void *zalloc(pj_size_t size)
+    {
+        return pj_pool_zalloc(p_, size);
+    }
+
+private:
+    pj_pool_t *p_;
+};
+
+
+//
+// Caching pool.
+//
+class Pj_Caching_Pool
+{
+public:
+    //
+    // Construct caching pool.
+    //
+    Pj_Caching_Pool( pj_size_t cache_capacity = 0,
+	             const pj_pool_factory_policy *pol=&pj_pool_factory_default_policy)
+    {
+	pj_caching_pool_init(&cp_, pol, cache_capacity);
+    }
+
+    //
+    // Destroy caching pool.
+    //
+    ~Pj_Caching_Pool()
     {
 	pj_caching_pool_destroy(&cp_);
     }
 
-    PJ_Pool *create_pool(const char *name, pj_size_t initial_size, pj_size_t increment_size, pj_pool_callback *callback)
+    //
+    // Create pool.
+    //
+    pj_pool_t *create_pool( pj_size_t initial_size, 
+                            pj_size_t increment_size, 
+                            const char *name = NULL, 
+                            pj_pool_callback *callback = NULL)
     {
-	return (PJ_Pool*) (*cp_.factory.create_pool)(&cp_.factory, name, initial_size, increment_size, callback);
-    }
-
-    void release_pool( PJ_Pool *pool )
-    {
-	pj_pool_release(pool->pool_());
+	return (pj_pool_t*)(*cp_.factory.create_pool)(&cp_.factory, name, 
+                                                     initial_size, 
+                                                     increment_size, 
+                                                     callback);
     }
 
 private:
     pj_caching_pool cp_;
 };
+
+//
+// Inlines for Pj_Object
+//
+inline void *Pj_Object::operator new(unsigned int class_size, Pj_Pool *pool)
+{
+    return pool->alloc(class_size);
+}
+inline void Pj_Object::operator delete(void *ptr)
+{
+}
+inline void Pj_Object::operator delete(void *ptr, Pj_Pool*)
+{
+}
+
+//
+// Inlines for Pj_Pool
+//
+inline Pj_Pool::Pj_Pool( Pj_Caching_Pool &caching_pool,
+                         pj_size_t initial_size, 
+                         pj_size_t increment_size, 
+                         const char *name, 
+                         pj_pool_callback *callback)
+{
+    p_ = caching_pool.create_pool(initial_size, increment_size, name,
+                                  callback);
+}
+
 
 #endif	/* __PJPP_POOL_H__ */

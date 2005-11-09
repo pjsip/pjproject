@@ -297,14 +297,19 @@ PJ_DECL(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
 
 /**
  * Unregister from the I/O Queue framework. Caller must make sure that
- * the key doesn't have any pending operation before calling this function,
- * or otherwise the behaviour is undefined (either callback will be called
- * later when the data is sent/received, or the callback will not be called,
- * or even something else).
+ * the key doesn't have any pending operations before calling this function,
+ * by calling #pj_ioqueue_is_pending() for all previously submitted
+ * operations except asynchronous connect, and if necessary call
+ * #pj_ioqueue_post_completion() to cancel the pending operations.
+ *
+ * Note that asynchronous connect operation will automatically be 
+ * cancelled during the unregistration.
  *
  * @param key	    The key that was previously obtained from registration.
  *
  * @return          PJ_SUCCESS on success or the error code.
+ *
+ * @see pj_ioqueue_is_pending
  */
 PJ_DECL(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key );
 
@@ -333,6 +338,41 @@ PJ_DECL(void*) pj_ioqueue_get_user_data( pj_ioqueue_key_t *key );
 PJ_DECL(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
                                                void *user_data,
                                                void **old_data);
+
+
+/**
+ * Check if operation is pending on the specified operation key.
+ * The \c op_key must have been submitted as pending operation before,
+ * or otherwise the result is undefined.
+ *
+ * @param key       The key.
+ * @param op_key    The operation key, previously submitted to any of
+ *                  the I/O functions and has returned PJ_EPENDING.
+ *
+ * @return          Non-zero if operation is still pending.
+ */
+PJ_DECL(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
+                                          pj_ioqueue_op_key_t *op_key );
+
+
+/**
+ * Post completion status to the specified operation key and call the
+ * appropriate callback. When the callback is called, the number of bytes 
+ * received in read/write callback or the status in accept/connect callback
+ * will be set from the \c bytes_status parameter.
+ *
+ * @param key           The key.
+ * @param op_key        Pending operation key.
+ * @param bytes_status  Number of bytes or status to be set. A good value
+ *                      to put here is -PJ_ECANCELLED.
+ *
+ * @return              PJ_SUCCESS if completion status has been successfully
+ *                      sent.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
+                                                 pj_ioqueue_op_key_t *op_key,
+                                                 pj_ssize_t bytes_status );
+
 
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
