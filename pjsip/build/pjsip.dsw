@@ -3,14 +3,10 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "pjlib"="..\..\pjlib\build\pjlib.dsp" - Package Owner=<4>
+Project: "pjlib"=..\..\pjlib\build\pjlib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<4>
@@ -19,14 +15,10 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjmedia"="..\..\pjmedia\build\pjmedia.dsp" - Package Owner=<4>
+Project: "pjlib_util"="..\..\pjlib-util\build\pjlib_util.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<4>
@@ -35,14 +27,10 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_core"=".\pjsip_core.dsp" - Package Owner=<4>
+Project: "pjmedia"=..\..\pjmedia\build\pjmedia.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<4>
@@ -51,14 +39,10 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_core_test"=".\pjsip_core_test.dsp" - Package Owner=<4>
+Project: "pjsip_core"=.\pjsip_core.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<4>
@@ -67,14 +51,10 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_ua"=".\pjsip_ua.dsp" - Package Owner=<4>
+Project: "pjsip_core_test"=.\pjsip_core_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<4>
@@ -83,14 +63,22 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsua"=".\pjsua.dsp" - Package Owner=<4>
+Project: "pjsip_ua"=.\pjsip_ua.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsua"=.\pjsua.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
 }}}
 
 Package=<4>
@@ -118,10 +106,6 @@ Global:
 
 Package=<5>
 {{{
-    begin source code control
-    "$/pjproject/pjsip/build", RIAAAAAA
-    .
-    end source code control
 }}}
 
 Package=<3>
