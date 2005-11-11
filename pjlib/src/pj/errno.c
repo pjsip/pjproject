@@ -30,7 +30,8 @@ static const struct
     { PJ_EBUSY,         "Object is busy"},
     { PJ_ENOTSUP,	"Option/operation is not supported"},
     { PJ_EINVALIDOP,	"Invalid operation"},
-    { PJ_ECANCELLED,    "Operation cancelled"}
+    { PJ_ECANCELLED,    "Operation cancelled"},
+    { PJ_EEXISTS,       "Object already exists" }
 };
 
 /*

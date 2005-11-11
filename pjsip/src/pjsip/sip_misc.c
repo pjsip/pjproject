@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_misc.h>
 #include <pjsip/sip_transport.h>
@@ -13,8 +12,11 @@
 #include <pj/guid.h>
 #include <pj/pool.h>
 #include <pj/except.h>
+#include <pj/rand.h>
+#include <pj/assert.h>
+#include <pj/errno.h>
 
-#define LOG_THIS    "endpoint..."
+#define THIS_FILE    "endpoint"
 
 static const char *event_str[] = 
 {
@@ -44,8 +46,8 @@ struct aux_tsx_data
 static pj_status_t aux_tsx_init( pjsip_endpoint *endpt,
 				 struct pjsip_module *mod, pj_uint32_t id )
 {
-    PJ_UNUSED_ARG(endpt)
-    PJ_UNUSED_ARG(mod)
+    PJ_UNUSED_ARG(endpt);
+    PJ_UNUSED_ARG(mod);
 
     aux_mod_id = id;
     return 0;
@@ -53,13 +55,16 @@ static pj_status_t aux_tsx_init( pjsip_endpoint *endpt,
 
 static void aux_tsx_handler( struct pjsip_module *mod, pjsip_event *event )
 {
-    pjsip_transaction *tsx = event->obj.tsx;
+    pjsip_transaction *tsx;
     struct aux_tsx_data *tsx_data;
 
-    PJ_UNUSED_ARG(mod)
+    PJ_UNUSED_ARG(mod);
 
-    if (event->type != PJSIP_EVENT_TSX_STATE_CHANGED)
+    if (event->type != PJSIP_EVENT_TSX_STATE)
 	return;
+
+    pj_assert(event->body.tsx_state.tsx != NULL);
+    tsx = event->body.tsx_state.tsx;
     if (tsx == NULL)
 	return;
     if (tsx->module_data[aux_mod_id] == NULL)
@@ -100,8 +105,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 {
     pjsip_transaction *tsx;
     struct aux_tsx_data *tsx_data;
+    pj_status_t status;
 
-    tsx = pjsip_endpt_create_tsx(endpt);
+    status = pjsip_endpt_create_tsx(endpt, &tsx);
     if (!tsx) {
 	pjsip_tx_data_dec_ref(tdata);
 	return -1;
@@ -134,7 +140,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
  * That's why the session will shallow_clone it's headers before calling
  * this function.
  */
-static void init_request_throw( pjsip_tx_data *tdata, 
+static void init_request_throw( pjsip_endpoint *endpt,
+                                pjsip_tx_data *tdata, 
 				pjsip_method *method,
 				pjsip_uri *param_target,
 				pjsip_from_hdr *param_from,
@@ -146,6 +153,7 @@ static void init_request_throw( pjsip_tx_data *tdata,
 {
     pjsip_msg *msg;
     pjsip_msg_body *body;
+    const pjsip_hdr *endpt_hdr;
 
     /* Create the message. */
     msg = tdata->msg = pjsip_msg_create(tdata->pool, PJSIP_REQUEST_MSG);
@@ -153,6 +161,14 @@ static void init_request_throw( pjsip_tx_data *tdata,
     /* Init request URI. */
     pj_memcpy(&msg->line.req.method, method, sizeof(*method));
     msg->line.req.uri = param_target;
+
+    /* Add additional request headers from endpoint. */
+    endpt_hdr = pjsip_endpt_get_request_headers(endpt)->next;
+    while (endpt_hdr != pjsip_endpt_get_request_headers(endpt)) {
+	pjsip_hdr *hdr = pjsip_hdr_shallow_clone(tdata->pool, endpt_hdr);
+	pjsip_msg_add_hdr( tdata->msg, hdr );
+	endpt_hdr = endpt_hdr->next;
+    }
 
     /* Add From header. */
     if (param_from->tag.slen == 0)
@@ -189,15 +205,16 @@ static void init_request_throw( pjsip_tx_data *tdata,
 /*
  * Create arbitrary request.
  */
-PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt, 
-						    const pjsip_method *method,
-						    const pj_str_t *param_target,
-						    const pj_str_t *param_from,
-						    const pj_str_t *param_to, 
-						    const pj_str_t *param_contact,
-						    const pj_str_t *param_call_id,
-						    int param_cseq, 
-						    const pj_str_t *param_text)
+PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt, 
+						 const pjsip_method *method,
+						 const pj_str_t *param_target,
+						 const pj_str_t *param_from,
+						 const pj_str_t *param_to, 
+						 const pj_str_t *param_contact,
+						 const pj_str_t *param_call_id,
+						 int param_cseq, 
+						 const pj_str_t *param_text,
+						 pjsip_tx_data **p_tdata)
 {
     pjsip_uri *target;
     pjsip_tx_data *tdata;
@@ -207,13 +224,14 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
     pjsip_cseq_hdr *cseq = NULL;    /* = NULL, warning in VC6 */
     pjsip_cid_hdr *call_id;
     pj_str_t tmp;
+    pj_status_t status;
     PJ_USE_EXCEPTION;
 
-    PJ_LOG(5,(LOG_THIS, "Entering pjsip_endpt_create_request()"));
+    PJ_LOG(5,(THIS_FILE, "Entering pjsip_endpt_create_request()"));
 
-    tdata = pjsip_endpt_create_tdata(endpt);
-    if (!tdata)
-	return NULL;
+    status = pjsip_endpt_create_tdata(endpt, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Init reference counter to 1. */
     pjsip_tx_data_add_ref(tdata);
@@ -223,7 +241,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	pj_strdup_with_null(tdata->pool, &tmp, param_target);
 	target = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 0);
 	if (target == NULL) {
-	    PJ_LOG(4,(LOG_THIS, "Error creating request: invalid target %s", 
+	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid target %s", 
 		      tmp.ptr));
 	    goto on_error;
 	}
@@ -234,7 +252,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	from->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
 				     PJSIP_PARSE_URI_AS_NAMEADDR);
 	if (from->uri == NULL) {
-	    PJ_LOG(4,(LOG_THIS, "Error creating request: invalid 'From' URI '%s'",
+	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid 'From' URI '%s'",
 				tmp.ptr));
 	    goto on_error;
 	}
@@ -246,7 +264,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	to->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
 				   PJSIP_PARSE_URI_AS_NAMEADDR);
 	if (to->uri == NULL) {
-	    PJ_LOG(4,(LOG_THIS, "Error creating request: invalid 'To' URI '%s'",
+	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid 'To' URI '%s'",
 				tmp.ptr));
 	    goto on_error;
 	}
@@ -258,7 +276,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	    contact->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen,
 					    PJSIP_PARSE_URI_AS_NAMEADDR);
 	    if (contact->uri == NULL) {
-		PJ_LOG(4,(LOG_THIS, 
+		PJ_LOG(4,(THIS_FILE, 
 			  "Error creating request: invalid 'Contact' URI '%s'",
 			  tmp.ptr));
 		goto on_error;
@@ -285,30 +303,30 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	pjsip_method_copy(tdata->pool, &cseq->method, method);
 
 	/* Create the request. */
-	init_request_throw( tdata, &cseq->method, target, from, to, contact, 
-			    call_id, cseq, param_text);
+	init_request_throw( endpt, tdata, &cseq->method, target, from, to, 
+                            contact, call_id, cseq, param_text);
     }
     PJ_DEFAULT {
-	PJ_LOG(4,(LOG_THIS, "Caught exception %d when creating request", 
-			    PJ_GET_EXCEPTION()));
+	status = PJ_ENOMEM;
 	goto on_error;
     }
     PJ_END
 
-    PJ_LOG(4,(LOG_THIS, "Request %s (%d %.*s) created.", 
+    PJ_LOG(4,(THIS_FILE, "Request %s (%d %.*s) created.", 
 		        tdata->obj_name, 
 			cseq->cseq, 
 			cseq->method.name.slen,
 			cseq->method.name.ptr));
 
-    return tdata;
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
 
 on_error:
     pjsip_tx_data_dec_ref(tdata);
-    return NULL;
+    return status;
 }
 
-PJ_DEF(pjsip_tx_data*)
+PJ_DEF(pj_status_t)
 pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 				     const pjsip_method *method,
 				     const pjsip_uri *param_target,
@@ -317,7 +335,8 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 				     const pjsip_contact_hdr *param_contact,
 				     const pjsip_cid_hdr *param_call_id,
 				     int param_cseq,
-				     const pj_str_t *param_text )
+				     const pj_str_t *param_text,
+				     pjsip_tx_data **p_tdata)
 {
     pjsip_uri *target;
     pjsip_tx_data *tdata;
@@ -326,13 +345,14 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
     pjsip_contact_hdr *contact;
     pjsip_cid_hdr *call_id;
     pjsip_cseq_hdr *cseq = NULL; /* The NULL because warning in VC6 */
+    pj_status_t status;
     PJ_USE_EXCEPTION;
 
-    PJ_LOG(5,(LOG_THIS, "Entering pjsip_endpt_create_request_from_hdr()"));
+    PJ_LOG(5,(THIS_FILE, "Entering pjsip_endpt_create_request_from_hdr()"));
 
-    tdata = pjsip_endpt_create_tdata(endpt);
-    if (!tdata)
-	return NULL;
+    status = pjsip_endpt_create_tdata(endpt, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
 
     pjsip_tx_data_add_ref(tdata);
 
@@ -354,53 +374,56 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 	    cseq->cseq = pj_rand() % 0xFFFF;
 	pjsip_method_copy(tdata->pool, &cseq->method, method);
 
-	init_request_throw(tdata, &cseq->method, target, from, to, contact, 
-			   call_id, cseq, param_text);
+	init_request_throw(endpt, tdata, &cseq->method, target, from, to, 
+                           contact, call_id, cseq, param_text);
     }
     PJ_DEFAULT {
-	PJ_LOG(4,(LOG_THIS, "Caught exception %d when creating request", 
-			    PJ_GET_EXCEPTION()));
+	status = PJ_ENOMEM;
 	goto on_error;
     }
     PJ_END;
 
-    PJ_LOG(4,(LOG_THIS, "Request %s (%d %.*s) created.", 
+    PJ_LOG(4,(THIS_FILE, "Request %s (%d %.*s) created.", 
 			tdata->obj_name, 
 			cseq->cseq, 
 			cseq->method.name.slen,
 			cseq->method.name.ptr));
-    return tdata;
+
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
 
 on_error:
     pjsip_tx_data_dec_ref(tdata);
-    return NULL;
+    return status;
 }
 
 /*
  * Construct a minimal response message for the received request.
  */
-PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_response( pjsip_endpoint *endpt,
-						    const pjsip_rx_data *rdata,
-						    int code)
+PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
+						 const pjsip_rx_data *rdata,
+						 int code,
+						 pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
     pjsip_msg *msg, *req_msg;
     pjsip_hdr *hdr;
     pjsip_via_hdr *via;
     pjsip_rr_hdr *rr;
+    pj_status_t status;
 
     /* rdata must be a request message. */
     req_msg = rdata->msg;
     pj_assert(req_msg->type == PJSIP_REQUEST_MSG);
 
     /* Log this action. */
-    PJ_LOG(5,(LOG_THIS, "pjsip_endpt_create_response(rdata=%p, code=%d)", 
+    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_response(rdata=%p, code=%d)", 
 		         rdata, code));
 
     /* Create a new transmit buffer. */
-    tdata = pjsip_endpt_create_tdata( endpt );
-    if (!tdata)
-	return NULL;
+    status = pjsip_endpt_create_tdata( endpt, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Create new response message. */
     tdata->msg = msg = pjsip_msg_create(tdata->pool, PJSIP_RESPONSE_MSG);
@@ -451,7 +474,8 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pjsip_msg_add_hdr( msg, hdr);
 
     /* All done. */
-    return tdata;
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
 }
 
 
@@ -478,7 +502,7 @@ PJ_DEF(void) pjsip_endpt_create_ack(pjsip_endpoint *endpt,
 	      rdata->msg->line.status.code >= 300);
 
     /* Log this action. */
-    PJ_LOG(5,(LOG_THIS, "pjsip_endpt_create_ack(rdata=%p)", rdata));
+    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_ack(rdata=%p)", rdata));
 
     /* Create new request message. */
     ack_msg = pjsip_msg_create(tdata->pool, PJSIP_REQUEST_MSG);
@@ -502,7 +526,7 @@ PJ_DEF(void) pjsip_endpt_create_ack(pjsip_endpoint *endpt,
     /* Copy To header from the original INVITE. */
     to = (pjsip_to_hdr*)pjsip_msg_find_remove_hdr( invite_msg, 
 						   PJSIP_H_TO, NULL);
-    pj_strdup(tdata->pool, &to->tag, &rdata->to_tag);
+    pj_strdup(tdata->pool, &to->tag, &rdata->to->tag);
     pjsip_msg_add_hdr( ack_msg, (pjsip_hdr*)to );
 
     /* Must contain single Via, just as the original INVITE. */
@@ -542,8 +566,9 @@ PJ_DEF(void) pjsip_endpt_create_ack(pjsip_endpoint *endpt,
  * Construct CANCEL request for the previously sent request, according to
  * chapter 9.1 of RFC3261.
  */
-PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
-						  pjsip_tx_data *req_tdata )
+PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
+					       pjsip_tx_data *req_tdata,
+					       pjsip_tx_data **p_tdata)
 {
     pjsip_msg *req_msg;	/* the original request. */
     pjsip_tx_data *cancel_tdata;
@@ -551,21 +576,23 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
     pjsip_hdr *hdr;
     pjsip_cseq_hdr *req_cseq, *cseq;
     pjsip_uri *req_uri;
+    pj_status_t status;
 
     /* Log this action. */
-    PJ_LOG(5,(LOG_THIS, "pjsip_endpt_create_cancel(tdata=%p)", req_tdata));
+    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_cancel(tdata=%p)", req_tdata));
 
     /* Get the original request. */
     req_msg = req_tdata->msg;
 
     /* The transmit buffer must INVITE request. */
-    pj_assert(req_msg->type == PJSIP_REQUEST_MSG &&
-	      req_msg->line.req.method.id == PJSIP_INVITE_METHOD );
+    PJ_ASSERT_RETURN(req_msg->type == PJSIP_REQUEST_MSG &&
+		     req_msg->line.req.method.id == PJSIP_INVITE_METHOD,
+		     PJ_EINVAL);
 
     /* Create new transmit buffer. */
-    cancel_tdata = pjsip_endpt_create_tdata( endpt );
-    if (!cancel_tdata) {
-	return NULL;
+    status = pjsip_endpt_create_tdata( endpt, &cancel_tdata);
+    if (status != PJ_SUCCESS) {
+	return status;
     }
 
     /* Create CANCEL request message. */
@@ -623,7 +650,8 @@ PJ_DEF(pjsip_tx_data*) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
     /* Done.
      * Return the transmit buffer containing the CANCEL request.
      */
-    return cancel_tdata;
+    *p_tdata = cancel_tdata;
+    return PJ_SUCCESS;
 }
 
 /* Get the address parameters (host, port, flag, TTL, etc) to send the
@@ -650,8 +678,8 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
 	const pj_sockaddr_in *remote_addr;
 	remote_addr = pjsip_transport_get_remote_addr(req_transport);
 	pj_strdup2(pool, &send_addr->host, 
-		   pj_sockaddr_get_str_addr(remote_addr));
-	send_addr->port = pj_sockaddr_get_port(remote_addr);
+		   pj_inet_ntoa(remote_addr->sin_addr));
+	send_addr->port = pj_sockaddr_in_get_port(remote_addr);
 
     } else {
 	/* Set the host part */

@@ -1,12 +1,12 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_auth_parser.h>
 #include <pj/pool.h>
 #include <pj/list.h>
 #include <pj/string.h>
-#include <pjsip/print.h>
+#include <pj/assert.h>
+#include <pjsip/print_util.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -67,9 +67,9 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
 
 static int print_pgp_credential(pjsip_pgp_credential *cred, char *buf, pj_size_t size)
 {
-    PJ_UNUSED_ARG(cred)
-    PJ_UNUSED_ARG(buf)
-    PJ_UNUSED_ARG(size)
+    PJ_UNUSED_ARG(cred);
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(size);
     return -1;
 }
 
@@ -212,9 +212,9 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
 static int print_pgp_challenge( pjsip_pgp_challenge *chal,
 			        char *buf, pj_size_t size)
 {
-    PJ_UNUSED_ARG(chal)
-    PJ_UNUSED_ARG(buf)
-    PJ_UNUSED_ARG(size)
+    PJ_UNUSED_ARG(chal);
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(size);
     return -1;
 }
 

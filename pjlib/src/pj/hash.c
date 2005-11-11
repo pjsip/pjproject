@@ -51,6 +51,20 @@ PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key, unsigned key
     return hash;
 }
 
+PJ_DEF(pj_uint32_t) pj_hash_calc_tolower( pj_uint32_t hval,
+                                          char *result,
+                                          const pj_str_t *key)
+{
+    long i;
+
+    for (i=0; i<key->slen; ++i) {
+	result[i] = (char)pj_tolower(key->ptr[i]);
+	hval = hval * PJ_HASH_MULTIPLIER + result[i];
+    }
+
+    return hval;
+}
+
 
 PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
 {

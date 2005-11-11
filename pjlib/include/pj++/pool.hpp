@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_POOL_H__
-#define __PJPP_POOL_H__
+#ifndef __PJPP_POOL_HPP__
+#define __PJPP_POOL_HPP__
 
 #include <pj/pool.h>
 
@@ -250,4 +250,5 @@ inline Pj_Pool::Pj_Pool( Pj_Caching_Pool &caching_pool,
 }
 
 
-#endif	/* __PJPP_POOL_H__ */
+#endif	/* __PJPP_POOL_HPP__ */
+

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_TYPES_H__
 #define __PJSIP_SIP_TYPES_H__
@@ -73,6 +72,11 @@ typedef struct pjsip_rx_data pjsip_rx_data;
 typedef struct pjsip_msg pjsip_msg;
 
 /**
+ * Forward declaration for header field (sip_msg.h).
+ */
+typedef struct pjsip_hdr pjsip_hdr;
+
+/**
  * Forward declaration for URI (sip_uri.h).
  */
 typedef struct pjsip_uri pjsip_uri;
@@ -133,6 +137,25 @@ typedef struct pjsip_host_port
     int	     port;	/**< Port number. */
 } pjsip_host_port;
 
+
+/**
+ * Convert exception ID into pj_status_t status.
+ *
+ * @param exception_id  Exception Id.
+ *
+ * @return              Error code for the specified exception Id.
+ */
+PJ_DECL(pj_status_t) pjsip_exception_to_status(int exception_id);
+
+/**
+ * Return standard pj_status_t status from current exception.
+ */
+#define PJSIP_RETURN_EXCEPTION() pjsip_exception_to_status(PJ_GET_EXCEPTION())
+
+/**
+ * Attributes to inform that the function may throw exceptions.
+ */
+#define PJSIP_THROW_SPEC(list)
 
 #endif	/* __PJSIP_SIP_TYPES_H__ */
 

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_PRINT_H__
 #define __PJSIP_PRINT_H__

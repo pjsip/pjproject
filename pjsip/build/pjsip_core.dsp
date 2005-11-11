@@ -32,16 +32,16 @@ RSC=rc.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "Release"
-# PROP BASE Intermediate_Dir "Release"
+# PROP BASE Output_Dir ".\output\pjsip-core-i386-win32-vc6-release"
+# PROP BASE Intermediate_Dir ".\output\pjsip-core-i386-win32-vc6-release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir ".\output\pjsip_core_vc6_Release"
-# PROP Intermediate_Dir ".\output\pjsip_core_vc6_Release"
+# PROP Output_Dir ".\output\pjsip-core-i386-win32-vc6-release"
+# PROP Intermediate_Dir ".\output\pjsip-core-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../src" /I "../../pjlib/src" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /FR /FD /c
+# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -50,22 +50,22 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_core_vc6s.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-core-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "pjsip_core - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "Debug"
-# PROP BASE Intermediate_Dir "Debug"
+# PROP BASE Output_Dir ".\output\pjsip-core-i386-win32-vc6-debug"
+# PROP BASE Intermediate_Dir ".\output\pjsip-core-i386-win32-vc6-debug"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir ".\output\pjsip_core_vc6_Debug"
-# PROP Intermediate_Dir ".\output\pjsip_core_vc6_Debug"
+# PROP Output_Dir ".\output\pjsip-core-i386-win32-vc6-debug"
+# PROP Intermediate_Dir ".\output\pjsip-core-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../src" /I "../../pjlib/src" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_core_vc6sd.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-core-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 
@@ -135,75 +135,79 @@ SOURCE=..\src\pjsip\sip_uri.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\src\pjsip_core.h
+SOURCE=..\include\pjsip_core.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\print.h
+SOURCE=..\include\pjsip\print_util.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_auth.h
+SOURCE=..\include\pjsip\sip_auth.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_auth_msg.h
+SOURCE=..\include\pjsip\sip_auth_msg.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_auth_parser.h
+SOURCE=..\include\pjsip\sip_auth_parser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_config.h
+SOURCE=..\include\pjsip\sip_config.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_endpoint.h
+SOURCE=..\include\pjsip\sip_endpoint.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_event.h
+SOURCE=..\include\pjsip\sip_errno.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_misc.h
+SOURCE=..\include\pjsip\sip_event.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_module.h
+SOURCE=..\include\pjsip\sip_misc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_msg.h
+SOURCE=..\include\pjsip\sip_module.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_parser.h
+SOURCE=..\include\pjsip\sip_msg.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_private.h
+SOURCE=..\include\pjsip\sip_parser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_resolve.h
+SOURCE=..\include\pjsip\sip_private.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_transaction.h
+SOURCE=..\include\pjsip\sip_resolve.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_transport.h
+SOURCE=..\include\pjsip\sip_transaction.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_types.h
+SOURCE=..\include\pjsip\sip_transport.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_uri.h
+SOURCE=..\include\pjsip\sip_types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_uri.h
 # End Source File
 # End Group
 # Begin Group "Inline Files"
@@ -211,7 +215,7 @@ SOURCE=..\src\pjsip\sip_uri.h
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_msg_i.h
+SOURCE=..\include\pjsip\sip_msg_i.h
 # End Source File
 # End Group
 # Begin Source File

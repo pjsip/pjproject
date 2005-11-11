@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_ENDPOINT_H__
 #define __PJSIP_SIP_ENDPOINT_H__
@@ -28,13 +27,15 @@ PJ_BEGIN_DECL
  * SIP Endpoint instance (pjsip_endpoint) can be viewed as the master/owner of
  * all SIP objects in an application. It performs the following roles:
  *  - it manages the allocation/deallocation of memory pools for all objects.
- *  - it manages listeners and transports, and how they are used by transactions.
+ *  - it manages listeners and transports, and how they are used by 
+ *    transactions.
  *  - it owns transaction hash table.
  *  - it receives incoming messages from transport layer and automatically
  *    dispatches them to the correct transaction (or create a new one).
  *  - it has a single instance of timer management (timer heap).
  *  - it manages modules, which is the primary means of extending the library.
- *  - it provides single polling function for all objects and distributes events.
+ *  - it provides single polling function for all objects and distributes 
+ *    events.
  *  - it provides SIP policy such as which outbound proxy to use for all
  *    outgoing SIP request messages.
  *  - it automatically handles incoming requests which can not be handled by
@@ -49,14 +50,21 @@ PJ_BEGIN_DECL
 
 /**
  * Create an instance of SIP endpoint from the specified pool factory.
- * The pool factory reference then will be kept by the endpoint, so that future
- * memory allocations by SIP components will be taken from the same pool factory.
+ * The pool factory reference then will be kept by the endpoint, so that 
+ * future memory allocations by SIP components will be taken from the same
+ * pool factory.
  *
- * @param pf	Pool factory that will be used for the lifetime of endpoint.
+ * @param pf	        Pool factory that will be used for the lifetime of 
+ *                      endpoint.
+ * @param name          Optional name to be specified for the endpoint.
+ *                      If this parameter is NULL, then the name will use
+ *                      local host name.
+ * @param endpt         Pointer to receive endpoint instance.
  *
- * @return the endpoint instance on success.
+ * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pjsip_endpoint*) pjsip_endpt_create(pj_pool_factory *pf);
+PJ_DECL(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
+                                        pjsip_endpoint **endpt);
 
 /**
  * Destroy endpoint instance. Application must make sure that all pending
@@ -66,6 +74,16 @@ PJ_DECL(pjsip_endpoint*) pjsip_endpt_create(pj_pool_factory *pf);
  * @param endpt		The SIP endpoint to be destroyed.
  */
 PJ_DECL(void) pjsip_endpt_destroy(pjsip_endpoint *endpt);
+
+/**
+ * Get endpoint name.
+ *
+ * @param endpt         The SIP endpoint instance.
+ *
+ * @return              Endpoint name, as was registered during endpoint
+ *                      creation. The string is NULL terminated.
+ */
+PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
 
 /**
  * Poll for events. Application must call this function periodically to ensure
@@ -154,9 +172,12 @@ PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
  * This function, like all other endpoint functions, is thread safe.
  *
  * @param endpt	    The SIP endpoint.
- * @return	    The new transaction, or NULL on failure.
+ * @param p_tsx	    Pointer to receive the transaction.
+ *
+ * @return	    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pjsip_transaction*) pjsip_endpt_create_tsx(pjsip_endpoint *endpt);
+PJ_DECL(pj_status_t) pjsip_endpt_create_tsx(pjsip_endpoint *endpt,
+					    pjsip_transaction **p_tsx);
 
 /**
  * Register the transaction to the endpoint's transaction table.
@@ -187,10 +208,13 @@ PJ_DECL(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
  * Create a new transmit data buffer.
  * This function, like all other endpoint functions, is thread safe.
  *
- * @param endpt the endpoint.
- * @return new transmit data.
+ * @param endpt	    The endpoint.
+ * @param p_tdata    Pointer to receive transmit data buffer.
+ *
+ * @return	    PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_endpt_create_tdata( pjsip_endpoint *endpt );
+PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
+					       pjsip_tx_data **p_tdata);
 
 /**
  * Asynchronously resolve a SIP target host or domain according to rule 
@@ -330,6 +354,24 @@ PJ_DECL(pj_status_t) pjsip_endpt_set_proxies( pjsip_endpoint *endpt,
  * @return	    List of "Route" header.
  */
 PJ_DECL(const pjsip_route_hdr*) pjsip_endpt_get_routing( pjsip_endpoint *endpt );
+
+/**
+ * Log an error.
+ */
+PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
+				     const char *sender,
+                                     pj_status_t error_code,
+                                     const char *format,
+                                     ... );
+
+#define PJSIP_ENDPT_LOG_ERROR(expr)   \
+            pjsip_endpt_log_error expr
+
+#define PJSIP_ENDPT_TRACE(tracing,expr) \
+            do {                        \
+                if ((tracing))          \
+                    PJ_LOG(4,expr);     \
+            } while (0)
 
 /**
  * @}

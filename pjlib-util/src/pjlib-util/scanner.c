@@ -4,6 +4,7 @@
 #include <pj/string.h>
 #include <pj/except.h>
 #include <pj/os.h>
+#include <pj/errno.h>
 
 #define PJ_SCAN_IS_SPACE(c)	((c)==' ' || (c)=='\t')
 #define PJ_SCAN_IS_NEWLINE(c)	((c)=='\r' || (c)=='\n')
@@ -15,67 +16,99 @@ static void pj_scan_syntax_err(pj_scanner *scanner)
     (*scanner->callback)(scanner);
 }
 
-PJ_DEF(void) pj_cs_init( pj_char_spec cs)
+PJ_DEF(void) pj_cis_buf_init( pj_cis_buf_t *cis_buf)
 {
-    PJ_CHECK_STACK();
-    memset(cs, 0, sizeof(cs));
+    pj_memset(cis_buf->cis_buf, 0, sizeof(cis_buf->cis_buf));
+    cis_buf->use_mask = 0;
 }
 
-PJ_DEF(void) pj_cs_set( pj_char_spec cs, int c)
-{
-    PJ_CHECK_STACK();
-    cs[c] = 1;
-}
-
-PJ_DEF(void) pj_cs_add_range( pj_char_spec cs, int cstart, int cend)
-{
-    PJ_CHECK_STACK();
-    while (cstart != cend)
-	cs[cstart++] = 1;
-}
-
-PJ_DEF(void) pj_cs_add_alpha( pj_char_spec cs)
-{
-    pj_cs_add_range( cs, 'a', 'z'+1);
-    pj_cs_add_range( cs, 'A', 'Z'+1);
-}
-
-PJ_DEF(void) pj_cs_add_num( pj_char_spec cs)
-{
-    pj_cs_add_range( cs, '0', '9'+1);
-}
-
-PJ_DEF(void) pj_cs_add_str( pj_char_spec cs, const char *str)
-{
-    PJ_CHECK_STACK();
-    while (*str) {
-        cs[(int)*str] = 1;
-	++str;
-    }
-}
-
-PJ_DEF(void) pj_cs_del_range( pj_char_spec cs, int cstart, int cend)
-{
-    PJ_CHECK_STACK();
-    while (cstart != cend)
-	cs[cstart++] = 0;
-}
-
-PJ_DEF(void) pj_cs_del_str( pj_char_spec cs, const char *str)
-{
-    PJ_CHECK_STACK();
-    while (*str) {
-        cs[(int)*str] = 0;
-	++str;
-    }
-}
-
-PJ_DEF(void) pj_cs_invert( pj_char_spec cs )
+PJ_DEF(pj_status_t) pj_cis_init(pj_cis_buf_t *cis_buf, pj_cis_t *cis)
 {
     unsigned i;
-    PJ_CHECK_STACK();
-    for (i=0; i<sizeof(pj_char_spec)/sizeof(cs[0]); ++i) {
-	cs[i] = (pj_char_spec_element_t) !cs[i];
+
+    cis->cis_buf = cis_buf->cis_buf;
+
+    for (i=0; i<PJ_CIS_MAX_INDEX; ++i) {
+        if ((cis_buf->use_mask & (1 << i)) == 0) {
+            cis->cis_index = i;
+            return PJ_SUCCESS;
+        }
+    }
+
+    cis->cis_index = PJ_CIS_MAX_INDEX;
+    return PJ_ETOOMANY;
+}
+
+PJ_DEF(pj_status_t) pj_cis_dup( pj_cis_t *new_cis, pj_cis_t *existing)
+{
+    pj_status_t status;
+    unsigned i;
+
+    status = pj_cis_init(existing->cis_buf, new_cis);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    for (i=0; i<256; ++i) {
+        if (PJ_CIS_ISSET(existing, i))
+            PJ_CIS_SET(new_cis, i);
+        else
+            PJ_CIS_CLR(new_cis, i);
+    }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(void) pj_cis_add_range(pj_cis_t *cis, int cstart, int cend)
+{
+    while (cstart != cend) {
+        PJ_CIS_SET(cis, cstart);
+	++cstart;
+    }
+}
+
+PJ_DEF(void) pj_cis_add_alpha(pj_cis_t *cis)
+{
+    pj_cis_add_range( cis, 'a', 'z'+1);
+    pj_cis_add_range( cis, 'A', 'Z'+1);
+}
+
+PJ_DEF(void) pj_cis_add_num(pj_cis_t *cis)
+{
+    pj_cis_add_range( cis, '0', '9'+1);
+}
+
+PJ_DEF(void) pj_cis_add_str( pj_cis_t *cis, const char *str)
+{
+    while (*str) {
+        PJ_CIS_SET(cis, *str);
+	++str;
+    }
+}
+
+PJ_DEF(void) pj_cis_del_range( pj_cis_t *cis, int cstart, int cend)
+{
+    while (cstart != cend) {
+        PJ_CIS_CLR(cis, cstart);
+        cstart++;
+    }
+}
+
+PJ_DEF(void) pj_cis_del_str( pj_cis_t *cis, const char *str)
+{
+    while (*str) {
+        PJ_CIS_CLR(cis, *str);
+	++str;
+    }
+}
+
+PJ_DEF(void) pj_cis_invert( pj_cis_t *cis )
+{
+    unsigned i;
+    for (i=0; i<256; ++i) {
+	if (PJ_CIS_ISSET(cis,i))
+            PJ_CIS_CLR(cis,i);
+        else
+            PJ_CIS_SET(cis,i);
     }
 }
 
@@ -165,7 +198,7 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
 }
 
 PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
-			   const pj_char_spec spec, pj_str_t *out)
+			  const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     register char *end = scanner->end;
@@ -177,7 +210,7 @@ PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
 	return -1;
     }
 
-    while (PJ_SCAN_CHECK_EOF(s) && pj_cs_match(spec, *s))
+    while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s))
 	++s;
 
     pj_strset3(out, scanner->curptr, s);
@@ -203,8 +236,8 @@ PJ_DEF(int) pj_scan_peek_n( pj_scanner *scanner,
 
 
 PJ_DEF(int) pj_scan_peek_until( pj_scanner *scanner,
-				  const pj_char_spec spec, 
-				  pj_str_t *out)
+				const pj_cis_t *spec, 
+				pj_str_t *out)
 {
     register char *s = scanner->curptr;
     register char *end = scanner->end;
@@ -216,7 +249,7 @@ PJ_DEF(int) pj_scan_peek_until( pj_scanner *scanner,
 	return -1;
     }
 
-    while (PJ_SCAN_CHECK_EOF(s) && !pj_cs_match( spec, *s))
+    while (PJ_SCAN_CHECK_EOF(s) && !pj_cis_match( spec, *s))
 	++s;
 
     pj_strset3(out, scanner->curptr, s);
@@ -225,7 +258,7 @@ PJ_DEF(int) pj_scan_peek_until( pj_scanner *scanner,
 
 
 PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
-			   const pj_char_spec spec, pj_str_t *out)
+			  const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     register char *end = scanner->end;
@@ -233,14 +266,14 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     PJ_CHECK_STACK();
 
-    if (pj_scan_is_eof(scanner) || !pj_cs_match(spec, *s)) {
+    if (pj_scan_is_eof(scanner) || !pj_cis_match(spec, *s)) {
 	pj_scan_syntax_err(scanner);
 	return;
     }
 
     do {
 	++s;
-    } while (PJ_SCAN_CHECK_EOF(s) && pj_cs_match(spec, *s));
+    } while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s));
 
     pj_strset3(out, scanner->curptr, s);
 
@@ -395,7 +428,7 @@ PJ_DEF(void) pj_scan_get_newline( pj_scanner *scanner )
 
 
 PJ_DEF(void) pj_scan_get_until( pj_scanner *scanner,
-				 const pj_char_spec spec, pj_str_t *out)
+				const pj_cis_t *spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     register char *end = scanner->end;
@@ -408,7 +441,7 @@ PJ_DEF(void) pj_scan_get_until( pj_scanner *scanner,
 	return;
     }
 
-    while (PJ_SCAN_CHECK_EOF(s) && !pj_cs_match(spec, *s)) {
+    while (PJ_SCAN_CHECK_EOF(s) && !pj_cis_match(spec, *s)) {
 	++s;
     }
 
@@ -424,7 +457,7 @@ PJ_DEF(void) pj_scan_get_until( pj_scanner *scanner,
 
 
 PJ_DEF(void) pj_scan_get_until_ch( pj_scanner *scanner, 
-				    int until_char, pj_str_t *out)
+				   int until_char, pj_str_t *out)
 {
     register char *s = scanner->curptr;
     register char *end = scanner->end;

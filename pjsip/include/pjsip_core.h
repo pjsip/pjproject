@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_CORE_H__
 #define __PJSIP_CORE_H__

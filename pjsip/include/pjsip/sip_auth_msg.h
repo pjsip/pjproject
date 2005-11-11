@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_MSG_H__
 #define __PJSIP_AUTH_SIP_AUTH_MSG_H__
@@ -68,7 +67,7 @@ typedef struct pjsip_pgp_credential pjsip_pgp_credential;
  */
 struct pjsip_authorization_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_authorization_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_authorization_hdr);
     pj_str_t scheme;
     union
     {
@@ -157,7 +156,7 @@ typedef struct pjsip_pgp_challenge pjsip_pgp_challenge;
  */
 struct pjsip_www_authenticate_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_www_authenticate_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_www_authenticate_hdr);
     pj_str_t	scheme;
     union
     {

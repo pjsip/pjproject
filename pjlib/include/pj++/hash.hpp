@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_HASH_H__
-#define __PJPP_HASH_H__
+#ifndef __PJPP_HASH_HPP__
+#define __PJPP_HASH_HPP__
 
 #include <pj++/types.hpp>
 #include <pj++/pool.hpp>
@@ -135,5 +135,5 @@ private:
 };
 
 
-#endif	/* __PJPP_HASH_H__ */
+#endif	/* __PJPP_HASH_HPP__ */
 

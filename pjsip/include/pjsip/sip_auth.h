@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_H__
 #define __PJSIP_AUTH_SIP_AUTH_H__
@@ -60,7 +59,7 @@ struct pjsip_cred_info
  */
 typedef struct pjsip_cached_auth_hdr
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth_hdr)
+    PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth_hdr);
 
     pjsip_method	     method;
     pjsip_authorization_hdr *hdr;
@@ -80,7 +79,7 @@ typedef struct pjsip_cached_auth_hdr
  */
 typedef struct pjsip_auth_session
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_auth_session)
+    PJ_DECL_LIST_MEMBER(struct pjsip_auth_session);
 
     pj_str_t			 realm;
     pj_bool_t			 is_proxy;

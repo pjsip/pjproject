@@ -147,7 +147,7 @@
  * Default: 4
  */
 #ifndef PJ_LOG_MAX_LEVEL
-#  define PJ_LOG_MAX_LEVEL   4
+#  define PJ_LOG_MAX_LEVEL   5
 #endif
 
 /**
@@ -402,6 +402,13 @@
 #ifndef PJ_TODO
 #  define PJ_TODO(id)	    TODO___##id:
 #endif
+
+/**
+ * Function attributes to inform that the function may throw exception.
+ *
+ * @param x     The exception list, enclosed in parenthesis.
+ */
+#define __pj_throw__(x)
 
 
 /********************************************************************

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_RESOLVE_H__
 #define __PJSIP_SIP_RESOLVE_H__

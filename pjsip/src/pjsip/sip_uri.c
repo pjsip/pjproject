@@ -1,11 +1,11 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_uri.h>
 #include <pjsip/sip_msg.h>
-#include <pjsip/print.h>
+#include <pjsip/print_util.h>
 #include <pj/string.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
 
 #define IS_SIPS(url)	((url)->vptr==&sips_url_vptr)
 
@@ -68,13 +68,13 @@ static pjsip_uri_vptr name_addr_vptr =
 
 static const pj_str_t *pjsip_url_get_scheme(const pjsip_url *url)
 {
-    PJ_UNUSED_ARG(url)
+    PJ_UNUSED_ARG(url);
     return &sip_str;
 }
 
 static const pj_str_t *pjsips_url_get_scheme(const pjsip_url *url)
 {
-    PJ_UNUSED_ARG(url)
+    PJ_UNUSED_ARG(url);
     return &sips_str;
 }
 
@@ -253,7 +253,7 @@ static int pjsip_url_compare( pjsip_uri_context_e context,
 	return -1;
     }
 
-    if (strcmp(str_url1, str_url2)) {
+    if (pj_native_strcmp(str_url1, str_url2)) {
 	/* Not equal */
 	return -1;
     }

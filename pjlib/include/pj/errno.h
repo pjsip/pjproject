@@ -215,6 +215,11 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * Operation is cancelled.
  */
 #define PJ_ECANCELLED	    (PJ_ERRNO_START_STATUS + 14)
+/**
+ * @hideinitializer
+ * Object already exists.
+ */
+#define PJ_EEXISTS          (PJ_ERRNO_START_STATUS + 14)
 
 /** @} */   /* pj_errnum */
 

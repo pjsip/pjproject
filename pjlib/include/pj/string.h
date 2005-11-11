@@ -12,6 +12,9 @@
 
 #include <pj/types.h>
 #include <pj/compat/string.h>
+#include <pj/compat/sprintf.h>
+#include <pj/compat/vsprintf.h>
+
 
 PJ_BEGIN_DECL
 

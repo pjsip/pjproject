@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_PARSER_H__
 #define __PJSIP_SIP_PARSER_H__
@@ -10,7 +9,7 @@
  */
 
 #include <pjsip/sip_types.h>
-#include <pj/scanner.h>
+#include <pjlib-util/scanner.h>
 #include <pj/list.h>
 
 PJ_BEGIN_DECL
@@ -51,12 +50,23 @@ enum
  */
 typedef struct pjsip_parser_err_report
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_parser_err_report)
+    PJ_DECL_LIST_MEMBER(struct pjsip_parser_err_report);
     int		exception_code;	/**< Error exception (e.g. PJSIP_SYN_ERR_EXCEPTION) */
     int		line;		/**< Line number. */
     int		col;		/**< Column number. */
     pj_str_t	hname;		/**< Header name, if any. */
 } pjsip_parser_err_report;
+
+
+/**
+ * Parsing context, the default argument for parsing functions.
+ */
+typedef struct pjsip_parse_ctx
+{
+    pj_scanner      *scanner;   /**< The scanner.       */
+    pj_pool_t       *pool;      /**< The pool.          */
+    pjsip_rx_data   *rdata;     /**< Optional rdata.    */
+} pjsip_parse_ctx;
 
 
 /**
@@ -76,7 +86,7 @@ typedef struct pjsip_parser_err_report
  *	- for the last header, these separator is optional since parsing
  *        can be terminated when seeing EOF.
  */
-typedef void* (pjsip_parse_hdr_func)(pj_scanner *scanner, pj_pool_t *pool);
+typedef pjsip_hdr* (pjsip_parse_hdr_func)(pjsip_parse_ctx *context);
 
 /**
  * Type of function to parse URI scheme.
@@ -94,8 +104,7 @@ typedef void* (pjsip_parse_uri_func)(pj_scanner *scanner, pj_pool_t *pool);
  * @param hshortname	The short header name or NULL.
  * @param fptr		The pointer to function to parser the header.
  *
- * @return		zero if success.
- * @see pjsip_parse_hdr_func
+ * @return		PJ_SUCCESS if success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_register_hdr_parser( const char *hname,
 						const char *hshortname,
@@ -185,6 +194,27 @@ PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool,
 
 
 /**
+ * Parse a packet buffer and build a rdata. The resulting message will be
+ * stored in \c msg field in the \c rdata. This behaves pretty much like
+ * #pjsip_parse_msg(), except that it will also initialize the header fields
+ * in the \c rdata.
+ *
+ * This function is normally called by the transport layer.
+ *
+ * @param buf           The input buffer
+ * @param buf		The input buffer, which size must be at least (size+1)
+ *			because the function will temporarily put NULL 
+ *			termination at the end of the buffer during parsing.
+ * @param size		The length of the string (not counting NULL terminator).
+ * @param rdata         The receive data buffer to store the message and
+ *                      its elements.
+ *
+ * @return              The message inside the rdata if successfull, or NULL.
+ */
+PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
+                                        pjsip_rx_data *rdata );
+
+/**
  * Check incoming packet to see if a (probably) valid SIP message has been 
  * received.
  *
@@ -193,10 +223,12 @@ PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool,
  * @param msg_size	[out] If message is valid, this parameter will contain
  *			the size of the SIP message (including body, if any).
  *
- * @return		PJ_TRUE (1) if a message is found.
+ * @return		PJ_SUCCESS if a message is found, or an error code.
  */
-PJ_DECL(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size, 
-				   pj_bool_t is_datagram, pj_size_t *msg_size);
+PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf, 
+                                    pj_size_t size, 
+				    pj_bool_t is_datagram, 
+                                    pj_size_t *msg_size);
 
 /**
  * Parse the content of a header and return the header instance.
@@ -247,7 +279,7 @@ PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool,
  * parsers.
  */
 extern
-pj_char_spec	pjsip_HOST_SPEC,	    /* For scanning host part. */
+pj_cis_t	pjsip_HOST_SPEC,	    /* For scanning host part. */
 		pjsip_DIGIT_SPEC,	    /* Decimal digits */
 		pjsip_ALPHA_SPEC,	    /* Alpha (A-Z, a-z) */
 		pjsip_ALNUM_SPEC,	    /* Decimal + Alpha. */

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_MSG_H__
 #define __PJSIP_SIP_MSG_H__
@@ -260,7 +259,7 @@ typedef struct pjsip_hdr_vptr
  */
 #define PJSIP_DECL_HDR_MEMBER(hdr)   \
     /** List members. */	\
-    PJ_DECL_LIST_MEMBER(hdr)	\
+    PJ_DECL_LIST_MEMBER(hdr);	\
     /** Header type */		\
     pjsip_hdr_e	    type;	\
     /** Header name. */		\
@@ -268,17 +267,17 @@ typedef struct pjsip_hdr_vptr
     /** Header short name version. */	\
     pj_str_t	    sname;		\
     /** Virtual function table. */	\
-    pjsip_hdr_vptr *vptr;
+    pjsip_hdr_vptr *vptr
 
 
 /**
  * Generic SIP header structure, for generic manipulation for headers in the
  * message. All header fields can be typecasted to this type.
  */
-typedef struct pjsip_hdr
+struct pjsip_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_hdr)
-} pjsip_hdr;
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_hdr);
+};
 
 
 /**
@@ -687,7 +686,7 @@ PJ_IDECL(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr );
  * @return	The length of the printed characters (in bytes), or NEGATIVE
  *		value if the message is too large for the specified buffer.
  */
-PJ_DECL(int) pjsip_msg_print( pjsip_msg *msg, char *buf, pj_size_t size);
+PJ_DECL(pj_ssize_t) pjsip_msg_print(pjsip_msg *msg, char *buf, pj_size_t size);
 
 /**
  * @}
@@ -707,7 +706,7 @@ PJ_DECL(int) pjsip_msg_print( pjsip_msg *msg, char *buf, pj_size_t size);
  */
 typedef struct pjsip_generic_string_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_string_hdr) /**< Standard header field. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_string_hdr); /**< Standard header field. */
     pj_str_t hvalue;				    /**< hvalue */
 } pjsip_generic_string_hdr;
 
@@ -756,7 +755,7 @@ pjsip_generic_string_hdr_create_with_text( pj_pool_t *pool,
  */
 typedef struct pjsip_generic_int_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_int_hdr) /**< Standard header field. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_int_hdr); /**< Standard header field. */
     pj_int32_t ivalue;				    /**< ivalue */
 } pjsip_generic_int_hdr;
 
@@ -805,7 +804,7 @@ pjsip_generic_int_hdr_create_with_value( pj_pool_t *pool,
 
 typedef struct pjsip_generic_array_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_array_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_array_hdr);
     unsigned	count;					/**< Number of elements. */
     pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];	/**< Elements.		 */
 } pjsip_generic_array_hdr;
@@ -886,7 +885,7 @@ PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_create(pj_pool_t *pool);
  */
 typedef struct pjsip_cid_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_cid_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_cid_hdr);
     pj_str_t id;	    /**< Call-ID string. */
 } pjsip_cid_hdr;
 
@@ -917,7 +916,7 @@ PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_create( pj_pool_t *pool );
  */
 typedef struct pjsip_clen_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_clen_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_clen_hdr);
     int len;	/**< Content length. */
 } pjsip_clen_hdr;
 
@@ -945,7 +944,7 @@ PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_create( pj_pool_t *pool );
  */
 typedef struct pjsip_cseq_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_cseq_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_cseq_hdr);
     int		    cseq;	/**< CSeq number. */
     pjsip_method    method;	/**< CSeq method. */
 } pjsip_cseq_hdr;
@@ -977,7 +976,7 @@ PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_create( pj_pool_t *pool );
  */
 typedef struct pjsip_contact_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_contact_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_contact_hdr);
     int		    star;	    /**< The contact contains only a '*' character */
     pjsip_uri *uri;	    /**< URI in the contact. */
     int		    q1000;	    /**< The "q" value times 1000 (to avoid float) */
@@ -1010,7 +1009,7 @@ PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool );
  */
 typedef struct pjsip_ctype_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_ctype_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_ctype_hdr);
     pjsip_media_type media; /**< Media type. */
 } pjsip_ctype_hdr;
 
@@ -1061,7 +1060,7 @@ PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool );
  */
 typedef struct pjsip_fromto_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_fromto_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_fromto_hdr);
     pjsip_uri  *uri;	    /**< URI in From/To header. */
     pj_str_t	     tag;	    /**< Header "tag" parameter. */
     pj_str_t	     other_param;   /**< Other params, concatenated as a single string. */
@@ -1170,7 +1169,7 @@ PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_create(pj_pool_t *pool);
  */
 typedef struct pjsip_routing_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_routing_hdr)  /**< Generic header fields. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_routing_hdr);  /**< Generic header fields. */
     pjsip_name_addr  name_addr;	  /**< The URL in the Route/Record-Route header. */
     pj_str_t	     other_param; /** Other parameter. */
 } pjsip_routing_hdr;
@@ -1327,7 +1326,7 @@ PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_create(pj_pool_t *pool);
  */
 typedef struct pjsip_via_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_via_hdr)
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_via_hdr);
     pj_str_t	     transport;	    /**< Transport type. */
     pjsip_host_port  sent_by;	    /**< Host and optional port */
     int		     ttl_param;	    /**< TTL parameter, or -1 if it's not specified. */

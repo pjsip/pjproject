@@ -341,7 +341,7 @@ static int parse_args(pj_pool_t *pool, int argc, char *argv[])
 	    global.cred_info[0].data = pj_str(optarg);
 	    break;
 	case OPT_USE_STUN1:   /* STUN server 1 */
-	    p = strchr(optarg, ':');
+	    p = pj_native_strchr(optarg, ':');
 	    if (p) {
 		*p = '\0';
 		global.stun_srv1 = pj_str(optarg);
@@ -356,7 +356,7 @@ static int parse_args(pj_pool_t *pool, int argc, char *argv[])
 	    }
 	    break;
 	case OPT_USE_STUN2:   /* STUN server 2 */
-	    p = strchr(optarg, ':');
+	    p = pj_native_strchr(optarg, ':');
 	    if (p) {
 		*p = '\0';
 		global.stun_srv2 = pj_str(optarg);

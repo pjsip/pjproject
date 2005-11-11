@@ -46,6 +46,21 @@ PJ_DECL(pj_uint32_t) pj_hash_calc(pj_uint32_t hval,
 
 
 /**
+ * Convert the key to lowercase and calculate the hash value. The resulting
+ * string is stored in \c result.
+ *
+ * @param hval      The initial hash value, normally zero.
+ * @param result    Buffer to store the result, which must be enough to hold
+ *                  the string.
+ * @param key       The input key to be converted and calculated.
+ *
+ * @return          The hash value.
+ */
+PJ_DECL(pj_uint32_t) pj_hash_calc_tolower(pj_uint32_t hval,
+                                          char *result,
+                                          const pj_str_t *key);
+
+/**
  * Create a hash table with the specified 'bucket' size.
  *
  * @param pool	the pool from which the hash table will be allocated from.

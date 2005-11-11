@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_PROACTOR_H__
-#define __PJPP_PROACTOR_H__
+#ifndef __PJPP_PROACTOR_HPP__
+#define __PJPP_PROACTOR_HPP__
 
 #include <pj/ioqueue.h>
 #include <pj++/pool.hpp>
@@ -29,6 +29,7 @@ public:
     Pj_Async_Op()
         : handler_(NULL)
     {
+	pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
@@ -37,7 +38,7 @@ public:
     explicit Pj_Async_Op(Pj_Event_Handler *handler)
         : handler_(handler)
     {
-        pj_memset(this, 0, sizeof(pj_ioqueue_op_key_t));
+	pj_ioqueue_op_key_init(this, sizeof(*this));
     }
 
     //
@@ -497,4 +498,5 @@ private:
 
 };
 
-#endif	/* __PJPP_PROACTOR_H__ */
+#endif	/* __PJPP_PROACTOR_HPP__ */
+

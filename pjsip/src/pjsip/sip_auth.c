@@ -1,15 +1,16 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_auth_parser.h>	/* just to get pjsip_DIGEST_STR */
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
-#include <pj/md5.h>
+#include <pjlib-util/md5.h>
 #include <pj/log.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/guid.h>
+#include <pj/assert.h>
+#include <pj/ctype.h>
 
 /* Length of digest string. */
 #define MD5STRLEN 32
@@ -146,7 +147,7 @@ static pj_bool_t has_auth_qop( pj_pool_t *pool, const pj_str_t *qop_offer)
     pj_strdup_with_null( pool, &qop, qop_offer);
     p = qop.ptr;
     while (*p) {
-	*p = (char)tolower(*p);
+	*p = (char)pj_tolower(*p);
 	++p;
     }
 
@@ -217,7 +218,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	 */
 	cred->qop = pjsip_AUTH_STR;
 	cred->nc.ptr = pj_pool_alloc(pool, 16);
-	sprintf(cred->nc.ptr, "%06u", nc);
+	pj_snprintf(cred->nc.ptr, 16, "%06u", nc);
 
 	if (cnonce && cnonce->slen) {
 	    pj_strdup(pool, &cred->cnonce, cnonce);
@@ -484,7 +485,7 @@ PJ_DEF(const pjsip_cred_info*) pjsip_auth_find_cred( unsigned count,
 						     const pj_str_t *scheme)
 {
     unsigned i;
-    PJ_UNUSED_ARG(scheme)
+    PJ_UNUSED_ARG(scheme);
     for (i=0; i<count; ++i) {
 	if (pj_stricmp(&cred[i].realm, realm) == 0)
 	    return &cred[i];
@@ -715,7 +716,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt,
     const pjsip_hdr *hdr;
     pjsip_via_hdr *via;
 
-    PJ_UNUSED_ARG(endpt)
+    PJ_UNUSED_ARG(endpt);
 
     pj_assert(rdata->msg->type == PJSIP_RESPONSE_MSG);
     pj_assert(rdata->msg->line.status.code == 401 ||

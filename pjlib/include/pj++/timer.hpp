@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_TIMER_H__
-#define __PJPP_TIMER_H__
+#ifndef __PJPP_TIMER_HPP__
+#define __PJPP_TIMER_HPP__
 
 #include <pj/timer.h>
 #include <pj++/types.hpp>
@@ -177,4 +177,5 @@ private:
     pj_timer_heap_t *ht_;
 };
 
-#endif	/* __PJPP_TIMER_H__ */
+#endif	/* __PJPP_TIMER_HPP__ */
+

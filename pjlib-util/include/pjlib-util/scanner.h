@@ -1,9 +1,7 @@
 /* $Id$
- *
  */
-
-#ifndef __PJ_PARSER_H__
-#define __PJ_PARSER_H__
+#ifndef __PJ_SCANNER_H__
+#define __PJ_SCANNER_H__
 
 /**
  * @file scanner.h
@@ -19,114 +17,174 @@ PJ_BEGIN_DECL
  * @ingroup PJ_MISC
  * @brief
  * Text scanning utility.
- */
-
-/**
- * @defgroup PJ_CHARSPEC Character Filter Specification
- * @ingroup PJ_SCAN
- * @brief
- * The type pj_char_spec is a specification of character set used in
- * scanner. Application can define multiple character specs, such as to
- * scan alpha numerics, numbers, tokens, etc.
+ *
  * @{
  */
 
 /**
  * This describes the type of individual character specification in
- * #pj_char_spec.
+ * #pj_cis_buf_t. Basicly the number of bits here
  */
-typedef pj_uint8_t pj_char_spec_element_t;
+#ifndef PJ_CIS_ELEM_TYPE
+#   define PJ_CIS_ELEM_TYPE pj_uint32_t
+#endif
 
 /**
- * The character specification is implemented as array of boolean flags. Each
- * flag indicates the membership of the character in the spec. If the flag
- * at one position is non-zero, then the character at that position belongs
- * to the specification, and vice versa.
+ * This describes the type of individual character specification in
+ * #pj_cis_buf_t.
  */
-typedef pj_char_spec_element_t pj_char_spec[256];
-// Note: it's got to be 256 (not 128) to cater for extended character in input.
+typedef PJ_CIS_ELEM_TYPE pj_cis_elem_t;
 
 /**
- * Initialize character spec.
- * @param cs the scanner character specification.
+ * Maximum number of input specification in a buffer.
+ * Effectively this means the number of bits in pj_cis_elem_t.
  */
-PJ_DECL(void) pj_cs_init( pj_char_spec cs);
+#define PJ_CIS_MAX_INDEX   (sizeof(pj_cis_elem_t) << 3)
 
 /**
- * Set the membership of the specified character to TRUE.
- * @param cs the scanner character specification.
- * @param c the character.
+ * The scanner input specification buffer.
  */
-PJ_DECL(void) pj_cs_set( pj_char_spec cs, int c);
+typedef struct pj_cis_buf_t
+{
+    pj_cis_elem_t    cis_buf[256];  /**< Must be 256 (not 128)! */
+    pj_cis_elem_t    use_mask;      /**< To keep used indexes.  */
+} pj_cis_buf_t;
+
+/**
+ * Character input specification.
+ */
+typedef struct pj_cis_t
+{
+    pj_cis_elem_t   *cis_buf;       /**< Pointer to buffer.     */
+    int              cis_id;        /**< Id.                    */
+} pj_cis_t;
+
+/**
+ * Initialize scanner input specification buffer.
+ *
+ * @param cs_buf    The scanner character specification.
+ */
+PJ_DECL(void) pj_cis_buf_init(pj_cis_buf_t *cs_buf);
+
+/**
+ * Create a new input specification.
+ *
+ * @param cs_buf    Specification buffer.
+ * @param cis       Character input specification to be initialized.
+ *
+ * @return          PJ_SUCCESS if new specification has been successfully
+ *                  created, or PJ_ETOOMANY if there are already too many
+ *                  specifications in the buffer.
+ */
+PJ_DECL(pj_status_t) pj_cis_init(pj_cis_buf_t *cs_buf, pj_cis_t *cis);
+
+/**
+ * Create a new input specification based on an existing specification.
+ *
+ * @param new_cis   The new specification to be initialized.
+ * @param existing  The existing specification, from which the input
+ *                  bitmask will be copied to the new specification.
+ *
+ * @return          PJ_SUCCESS if new specification has been successfully
+ *                  created, or PJ_ETOOMANY if there are already too many
+ *                  specifications in the buffer.
+ */
+PJ_DECL(pj_status_t) pj_cis_dup(pj_cis_t *new_cis, pj_cis_t *existing);
+
+/**
+ * Set the membership of the specified character.
+ * Note that this is a macro, and arguments may be evaluated more than once.
+ *
+ * @param cis       Pointer to character input specification.
+ * @param c         The character.
+ */
+#define PJ_CIS_SET(cis,c)   ((cis)->cis_buf[(c)] |= (1 << (cis)->cis_id))
+
+/**
+ * Remove the membership of the specified character.
+ * Note that this is a macro, and arguments may be evaluated more than once.
+ *
+ * @param cis       Pointer to character input specification.
+ * @param c         The character to be removed from the membership.
+ */
+#define PJ_CIS_CLR(cis,c)   ((cis)->cis_buf[c] &= ~(1 << (cis)->cis_id))
+
+/**
+ * Check the membership of the specified character.
+ * Note that this is a macro, and arguments may be evaluated more than once.
+ *
+ * @param cis       Pointer to character input specification.
+ * @param c         The character.
+ */
+#define PJ_CIS_ISSET(cis,c) ((cis)->cis_buf[c] & (1 << (cis)->cis_id))
 
 /**
  * Add the characters in the specified range '[cstart, cend)' to the 
  * specification (the last character itself ('cend') is not added).
- * @param cs the scanner character specification.
- * @param cstart the first character in the range.
- * @param cend the next character after the last character in the range.
+ *
+ * @param cis       The scanner character specification.
+ * @param cstart    The first character in the range.
+ * @param cend      The next character after the last character in the range.
  */
-PJ_DECL(void) pj_cs_add_range( pj_char_spec cs, int cstart, int cend);
+PJ_DECL(void) pj_cis_add_range( pj_cis_t *cis, int cstart, int cend);
 
 /**
  * Add alphabetic characters to the specification.
- * @param cs the scanner character specification.
+ *
+ * @param cis       The scanner character specification.
  */
-PJ_DECL(void) pj_cs_add_alpha( pj_char_spec cs);
+PJ_DECL(void) pj_cis_add_alpha( pj_cis_t *cis);
 
 /**
  * Add numeric characters to the specification.
- * @param cs the scanner character specification.
+ *
+ * @param cis       The scanner character specification.
  */
-PJ_DECL(void) pj_cs_add_num( pj_char_spec cs);
+PJ_DECL(void) pj_cis_add_num( pj_cis_t *cis);
 
 /**
  * Add the characters in the string to the specification.
- * @param cs the scanner character specification.
- * @param str the string.
+ *
+ * @param cis       The scanner character specification.
+ * @param str       The string.
  */
-PJ_DECL(void) pj_cs_add_str( pj_char_spec cs, const char *str);
+PJ_DECL(void) pj_cis_add_str( pj_cis_t *cis, const char *str);
 
 /**
  * Delete characters in the specified range from the specification.
- * @param cs the scanner character specification.
- * @param cstart the first character in the range.
- * @param cend the next character after the last character in the range.
+ *
+ * @param cis       The scanner character specification.
+ * @param cstart    The first character in the range.
+ * @param cend      The next character after the last character in the range.
  */
-PJ_DECL(void) pj_cs_del_range( pj_char_spec cs, int cstart, int cend);
+PJ_DECL(void) pj_cis_del_range( pj_cis_t *cis, int cstart, int cend);
 
 /**
  * Delete characters in the specified string from the specification.
- * @param cs the scanner character specification.
- * @param str the string.
+ *
+ * @param cis       The scanner character specification.
+ * @param str       The string.
  */
-PJ_DECL(void) pj_cs_del_str( pj_char_spec cs, const char *str);
+PJ_DECL(void) pj_cis_del_str( pj_cis_t *cis, const char *str);
 
 /**
  * Invert specification.
- * @param cs the scanner character specification.
+ *
+ * @param cis       The scanner character specification.
  */
-PJ_DECL(void) pj_cs_invert( pj_char_spec cs );
+PJ_DECL(void) pj_cis_invert( pj_cis_t *cis );
 
 /**
  * Check whether the specified character belongs to the specification.
- * @param cs the scanner character specification.
- * @param c the character to check for matching.
+ *
+ * @param cis       The scanner character specification.
+ * @param c         The character to check for matching.
  */
-PJ_INLINE(int) pj_cs_match( const pj_char_spec cs, int c )
+PJ_INLINE(int) pj_cis_match( const pj_cis_t *cis, int c )
 {
-    return cs[c];
+    return PJ_CIS_ISSET(cis, c);
 }
 
-/**
- * @}
- */
-
-/**
- * @defgroup PJ_SCANNER Text Scanner
- * @ingroup PJ_SCAN
- * @{
- */
 
 /**
  * Flags for scanner.
@@ -156,7 +214,8 @@ struct pj_scanner;
 /**
  * The callback function type to be called by the scanner when it encounters
  * syntax error.
- * @param scanner   The scanner instance that calls the callback .
+ *
+ * @param scanner       The scanner instance that calls the callback .
  */
 typedef void (*pj_syn_err_func_ptr)(struct pj_scanner *scanner);
 
@@ -244,7 +303,7 @@ PJ_INLINE(int) pj_scan_is_eof( const pj_scanner *scanner)
  *	   no more characters.
  */
 PJ_DECL(int) pj_scan_peek( pj_scanner *scanner,
-			    const pj_char_spec spec, pj_str_t *out);
+			   const pj_cis_t *spec, pj_str_t *out);
 
 
 /** 
@@ -261,7 +320,7 @@ PJ_DECL(int) pj_scan_peek( pj_scanner *scanner,
  *	   no more characters.
  */
 PJ_DECL(int) pj_scan_peek_n( pj_scanner *scanner,
-			      pj_size_t len, pj_str_t *out);
+			     pj_size_t len, pj_str_t *out);
 
 
 /** 
@@ -277,8 +336,8 @@ PJ_DECL(int) pj_scan_peek_n( pj_scanner *scanner,
  * @return the character right after the peek-ed position.
  */
 PJ_DECL(int) pj_scan_peek_until( pj_scanner *scanner,
-				  const pj_char_spec spec, 
-				  pj_str_t *out);
+				 const pj_cis_t *spec, 
+				 pj_str_t *out);
 
 
 /** 
@@ -293,7 +352,7 @@ PJ_DECL(int) pj_scan_peek_until( pj_scanner *scanner,
  * @param out	    String to store the result.
  */
 PJ_DECL(void) pj_scan_get( pj_scanner *scanner,
-			    const pj_char_spec spec, pj_str_t *out);
+			   const pj_cis_t *spec, pj_str_t *out);
 
 
 /** 
@@ -317,7 +376,7 @@ PJ_DECL(void) pj_scan_get_quote( pj_scanner *scanner,
  * @param out	    String to store the result.
  */
 PJ_DECL(void) pj_scan_get_n( pj_scanner *scanner,
-			      unsigned N, pj_str_t *out);
+			     unsigned N, pj_str_t *out);
 
 
 /** 
@@ -325,7 +384,7 @@ PJ_DECL(void) pj_scan_get_n( pj_scanner *scanner,
  *
  * @param scanner   The scanner.
  *
- * @return (unknown)
+ * @return The character.
  */
 PJ_DECL(int) pj_scan_get_char( pj_scanner *scanner );
 
@@ -348,7 +407,7 @@ PJ_DECL(void) pj_scan_get_newline( pj_scanner *scanner );
  * @param out	    String to store the result.
  */
 PJ_DECL(void) pj_scan_get_until( pj_scanner *scanner,
-				  const pj_char_spec spec, pj_str_t *out);
+				 const pj_cis_t *spec, pj_str_t *out);
 
 
 /** 
@@ -360,7 +419,7 @@ PJ_DECL(void) pj_scan_get_until( pj_scanner *scanner,
  * @param out		String to store the result.
  */
 PJ_DECL(void) pj_scan_get_until_ch( pj_scanner *scanner, 
-				     int until_char, pj_str_t *out);
+				    int until_char, pj_str_t *out);
 
 
 /** 
@@ -372,7 +431,7 @@ PJ_DECL(void) pj_scan_get_until_ch( pj_scanner *scanner,
  * @param out		String to store the result.
  */
 PJ_DECL(void) pj_scan_get_until_chr( pj_scanner *scanner,
-				      const char *until_spec, pj_str_t *out);
+				     const char *until_spec, pj_str_t *out);
 
 /** 
  * Advance the scanner N characters, and skip whitespace
@@ -384,7 +443,7 @@ PJ_DECL(void) pj_scan_get_until_chr( pj_scanner *scanner,
  *		    after skipping the characters.
  */
 PJ_DECL(void) pj_scan_advance_n( pj_scanner *scanner,
-				  unsigned N, pj_bool_t skip);
+				 unsigned N, pj_bool_t skip);
 
 
 /** 
@@ -444,10 +503,6 @@ PJ_DECL(void) pj_scan_restore_state( pj_scanner *scanner,
 /**
  * @}
  */
-
-#if PJ_FUNCTIONS_ARE_INLINED
-#  include "scanner_i.h"
-#endif
 
 
 PJ_END_DECL

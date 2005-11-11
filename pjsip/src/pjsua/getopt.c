@@ -278,7 +278,7 @@ static char *posixly_correct;
    On some systems, it contains special magic macros that don't work
    in GCC.  */
 #include <string.h>
-#define	my_index	strchr
+#define	my_index	pj_native_strchr
 #else
 
 static char *
@@ -644,7 +644,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 	 then exchange with previous non-options as if it were an option,
 	 then skip everything else like a non-option.  */
 
-      if (optind != argc && !strcmp (argv[optind], "--"))
+      if (optind != argc && !pj_native_strcmp(argv[optind], "--"))
 	{
 	  optind++;
 

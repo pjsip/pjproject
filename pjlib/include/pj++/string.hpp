@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_STRING_H__
-#define __PJPP_STRING_H__
+#ifndef __PJPP_STRING_HPP__
+#define __PJPP_STRING_HPP__
 
 #include <pj/string.h>
 #include <pj++/pool.hpp>
@@ -405,4 +405,5 @@ private:
     void operator=(const Pj_String &rhs) { pj_assert(false); }
 };
 
-#endif	/* __PJPP_STRING_H__ */
+#endif	/* __PJPP_STRING_HPP__ */
+

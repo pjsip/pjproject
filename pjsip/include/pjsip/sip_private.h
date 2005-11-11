@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_PRIVATE_H__
 #define __PJSIP_SIP_PRIVATE_H__
@@ -26,16 +25,18 @@ PJ_BEGIN_DECL
  * @param endpt The endpoint
  * @param cb Callback to be called to receive messages from transport.
  */
-PJ_DECL(pjsip_transport_mgr*) pjsip_transport_mgr_create( pj_pool_t *pool,
-							  pjsip_endpoint *endpt,
-							  void (*cb)(pjsip_endpoint *,pjsip_rx_data *));
+PJ_DECL(pj_status_t) pjsip_transport_mgr_create( pj_pool_t *pool,
+						 pjsip_endpoint *endpt,
+						 void (*cb)(pjsip_endpoint *,
+							    pjsip_rx_data *),
+						 pjsip_transport_mgr **);
 
 
 /**
  * Destroy transport manager and release all transports.
  * @param mgr Transport manager to be destroyed.
  */
-PJ_DECL(void) pjsip_transport_mgr_destroy( pjsip_transport_mgr *mgr );
+PJ_DECL(pj_status_t) pjsip_transport_mgr_destroy( pjsip_transport_mgr *mgr );
 
 /**
  * Poll for transport events.

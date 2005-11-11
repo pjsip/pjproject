@@ -87,15 +87,19 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjsip_mod_ua\sip_dialog.c
+SOURCE="..\src\pjsip-ua\sip_dialog.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_mod_ua\sip_reg.c
+SOURCE="..\src\pjsip-ua\sip_reg.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_mod_ua\sip_ua.c
+SOURCE="..\src\pjsip-ua\sip_ua.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjsip-ua\sip_ua_private.h"
 # End Source File
 # End Group
 # Begin Group "Header Files"

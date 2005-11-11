@@ -40,4 +40,13 @@
 #endif
 
 
+#define pj_native_strcmp        strcmp
+#define pj_native_strlen        strlen
+#define pj_native_strcpy        strcpy
+#define pj_native_strstr        strstr
+#define pj_native_strchr        strchr
+#define pj_native_strcasecmp    strcasecmp
+#define pj_native_strncasecmp   strncasecmp
+
+
 #endif	/* __PJ_COMPAT_STRING_H__ */

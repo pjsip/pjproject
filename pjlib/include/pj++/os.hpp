@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_OS_H__
-#define __PJPP_OS_H__
+#ifndef __PJPP_OS_HPP__
+#define __PJPP_OS_HPP__
 
 #include <pj/os.h>
 #include <pj++/types.hpp>
@@ -784,4 +784,5 @@ inline pj_status_t Pj_Time_Val::to_local()
     return Pj_OS_API::time_gmt_to_local(this);
 }
 
-#endif	/* __PJPP_OS_H__ */
+#endif	/* __PJPP_OS_HPP__ */
+

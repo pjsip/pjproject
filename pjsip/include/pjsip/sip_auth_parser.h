@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_AUTH_SIP_AUTH_PARSER_H__
 #define __PJSIP_AUTH_SIP_AUTH_PARSER_H__
@@ -24,8 +23,10 @@ PJ_BEGIN_DECL
  * This will register parser handler for various Authorization related headers
  * such as Authorization, WWW-Authenticate, Proxy-Authorizization, and 
  * Proxy-Authenticate headers.
+ *
+ * @return      PJ_SUCCESS or the appropriate status code.
  */
-PJ_DECL(void) pjsip_auth_init_parser();
+PJ_DECL(pj_status_t) pjsip_auth_init_parser(void);
 
 /**
  * DeInitialize authorization parser module.

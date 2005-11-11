@@ -1,8 +1,7 @@
 /* $Id$
- *
  */
-#ifndef __PJPP_TYPES_H__
-#define __PJPP_TYPES_H__
+#ifndef __PJPP_TYPES_HPP__
+#define __PJPP_TYPES_HPP__
 
 #include <pj/types.h>
 
@@ -141,4 +140,5 @@ private:
 
 };
 
-#endif	/* __PJPP_TYPES_H__ */
+#endif	/* __PJPP_TYPES_HPP__ */
+

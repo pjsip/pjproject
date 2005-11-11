@@ -1,11 +1,11 @@
 /* $Id$
- *
  */
 
 #include <pjsip/sip_resolve.h>
 #include <pjsip/sip_transport.h>
 #include <pj/pool.h>
-#include <ctype.h>
+#include <pj/ctype.h>
+#include <pj/assert.h>
 
 struct pjsip_resolver_t
 {
@@ -21,7 +21,7 @@ PJ_DEF(pjsip_resolver_t*) pjsip_resolver_create(pj_pool_t *pool)
 
 PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
 {
-    PJ_UNUSED_ARG(resolver)
+    PJ_UNUSED_ARG(resolver);
 }
 
 static int is_str_ip(const pj_str_t *host)
@@ -30,7 +30,7 @@ static int is_str_ip(const pj_str_t *host)
     const char *end = ((const char*)host->ptr) + host->slen;
 
     while (p != end) {
-	if (isdigit(*p) || *p=='.') {
+	if (pj_isdigit(*p) || *p=='.') {
 	    ++p;
 	} else {
 	    return 0;
@@ -50,8 +50,8 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     int is_ip_addr;
     pjsip_transport_type_e type = target->type;
 
-    PJ_UNUSED_ARG(resolver)
-    PJ_UNUSED_ARG(pool)
+    PJ_UNUSED_ARG(resolver);
+    PJ_UNUSED_ARG(pool);
 
     /* We only do synchronous resolving at this moment. */
     PJ_TODO(SUPPORT_RFC3263_SERVER_RESOLUTION)
@@ -94,9 +94,11 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
     /* Resolve hostname. */
     if (!is_ip_addr) {
-	status = pj_sockaddr_init(&svr_addr.entry[0].addr, &target->host, target->port);
+	status = pj_sockaddr_in_init(&svr_addr.entry[0].addr, &target->host, 
+				     (pj_uint16_t)target->port);
     } else {
-	status = pj_sockaddr_init(&svr_addr.entry[0].addr, &target->host, target->port);
+	status = pj_sockaddr_in_init(&svr_addr.entry[0].addr, &target->host, 
+				     (pj_uint16_t)target->port);
 	pj_assert(status == PJ_SUCCESS);
     }
 

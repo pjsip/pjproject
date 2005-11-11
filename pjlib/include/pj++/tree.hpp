@@ -1,8 +1,7 @@
 /* $Id$
- *
  */
-#ifndef __PJPP_TREE_H__
-#define __PJPP_TREE_H__
+#ifndef __PJPP_TREE_HPP__
+#define __PJPP_TREE_HPP__
 
 #include <pj/rbtree.h>
 
@@ -109,4 +108,5 @@ private:
     pj_rbtree t_;
 };
 
-#endif	/* __PJPP_TREE_H__ */
+#endif	/* __PJPP_TREE_HPP__ */
+

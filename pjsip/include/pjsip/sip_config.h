@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_CONFIG_H__
 #define __PJSIP_SIP_CONFIG_H__
@@ -133,7 +132,6 @@
 
 
 #include <pj/config.h>
-#include <pj/compat.h>
 
 
 #endif	/* __PJSIP_SIP_CONFIG_H__ */

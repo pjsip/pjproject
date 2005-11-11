@@ -250,7 +250,7 @@ static void pres_on_received_request(pjsip_presentity *pres, pjsip_rx_data *rdat
 
     urllen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, rdata->from->uri, url, sizeof(url)-1);
     if (urllen < 1) {
-	strcpy(url, "<unknown>");
+	pj_native_strcpy(url, "<unknown>");
     } else {
 	url[urllen] = '\0';
     }
@@ -1103,7 +1103,7 @@ static pj_status_t init_stack()
     } 
     
     if (global.user_id[0]=='\0') {
-	strcpy(global.user_id, "user");
+	pj_native_strcpy(global.user_id, "user");
     }
 
     /* build contact */
@@ -1233,12 +1233,12 @@ static int on_incoming_im_msg(pjsip_rx_data *rdata)
     len = pjsip_uri_print( PJSIP_URI_IN_CONTACT_HDR, 
 			   rdata->from->uri, from, sizeof(from));
     if (len > 0) from[len] = '\0';
-    else strcpy(from, "<URL too long..>");
+    else pj_native_strcpy(from, "<URL too long..>");
 
     len = pjsip_uri_print( PJSIP_URI_IN_CONTACT_HDR, 
 			   rdata->to->uri, to, sizeof(to));
     if (len > 0) to[len] = '\0';
-    else strcpy(to, "<URL too long..>");
+    else pj_native_strcpy(to, "<URL too long..>");
 
     PJ_LOG(3,(THIS_FILE, "Incoming instant message:"));
     

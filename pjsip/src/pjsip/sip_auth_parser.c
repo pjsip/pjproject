@@ -1,21 +1,25 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_auth_parser.h>
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_parser.h>
+#include <pj/assert.h>
 #include <pj/string.h>
 #include <pj/except.h>
 
-static pjsip_authorization_hdr*	      parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool);
-static pjsip_proxy_authorization_hdr* parse_hdr_proxy_authorization( pj_scanner *scanner, pj_pool_t *pool);
-static pjsip_www_authenticate_hdr*    parse_hdr_www_authenticate( pj_scanner *scanner, pj_pool_t *pool);
-static pjsip_proxy_authenticate_hdr*  parse_hdr_proxy_authenticate( pj_scanner *scanner, pj_pool_t *pool);
+static pjsip_hdr* parse_hdr_authorization       ( pjsip_parse_ctx *ctx );
+static pjsip_hdr* parse_hdr_proxy_authorization ( pjsip_parse_ctx *ctx );
+static pjsip_hdr* parse_hdr_www_authenticate    ( pjsip_parse_ctx *ctx );
+static pjsip_hdr* parse_hdr_proxy_authenticate  ( pjsip_parse_ctx *ctx );
 
-static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, pjsip_digest_credential *cred);
-static void parse_pgp_credential( pj_scanner *scanner, pj_pool_t *pool, pjsip_pgp_credential *cred);
-static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_digest_challenge *chal);
-static void parse_pgp_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_pgp_challenge *chal);
+static void parse_digest_credential ( pj_scanner *scanner, pj_pool_t *pool, 
+                                      pjsip_digest_credential *cred);
+static void parse_pgp_credential    ( pj_scanner *scanner, pj_pool_t *pool, 
+                                      pjsip_pgp_credential *cred);
+static void parse_digest_challenge  ( pj_scanner *scanner, pj_pool_t *pool, 
+                                      pjsip_digest_challenge *chal);
+static void parse_pgp_challenge     ( pj_scanner *scanner, pj_pool_t *pool,
+                                      pjsip_pgp_challenge *chal);
 
 const pj_str_t	pjsip_USERNAME_STR =	    { "username", 8 },
 		pjsip_REALM_STR =	    { "realm", 5},
@@ -43,12 +47,13 @@ const pj_str_t	pjsip_USERNAME_STR =	    { "username", 8 },
 		pjsip_QUOTED_AUTH_STR =	    { "\"auth\"", 6 };
 
 
-static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, pjsip_digest_credential *cred)
+static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, 
+                                     pjsip_digest_credential *cred)
 {
     for (;;) {
 	pj_str_t name, value;
 
-	pjsip_parse_param_imp(scanner, &name, &value, PJSIP_PARSE_REMOVE_QUOTE);
+	pjsip_parse_param_imp(scanner, &name, &value,PJSIP_PARSE_REMOVE_QUOTE);
 
 	if (!pj_stricmp(&name, &pjsip_USERNAME_STR)) {
 	    cred->username = value;
@@ -81,32 +86,34 @@ static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, pjsip
 	    cred->nc = value;
 
 	} else {
-	    pjsip_concat_param_imp(&cred->other_param, pool, &name, &value, ',');
+	    pjsip_concat_param_imp(&cred->other_param,pool,&name,&value, ',');
 	}
 
 	/* Eat comma */
-	if (!pj_scan_is_eof(scanner) && *scanner->current == ',')
+	if (!pj_scan_is_eof(scanner) && *scanner->curptr == ',')
 	    pj_scan_get_char(scanner);
 	else
 	    break;
     }
 }
 
-static void parse_pgp_credential( pj_scanner *scanner, pj_pool_t *pool, pjsip_pgp_credential *cred)
+static void parse_pgp_credential( pj_scanner *scanner, pj_pool_t *pool, 
+                                  pjsip_pgp_credential *cred)
 {
-    PJ_UNUSED_ARG(scanner)
-    PJ_UNUSED_ARG(pool)
-    PJ_UNUSED_ARG(cred)
+    PJ_UNUSED_ARG(scanner);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(cred);
 
     PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 }
 
-static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_digest_challenge *chal)
+static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, 
+                                    pjsip_digest_challenge *chal)
 {
     for (;;) {
 	pj_str_t name, value;
 
-	pjsip_parse_param_imp(scanner, &name, &value, PJSIP_PARSE_REMOVE_QUOTE);
+	pjsip_parse_param_imp(scanner, &name, &value,PJSIP_PARSE_REMOVE_QUOTE);
 
 	if (!pj_stricmp(&name, &pjsip_REALM_STR)) {
 	    chal->realm = value;
@@ -121,8 +128,11 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_
 	    chal->opaque = value;
 
 	} else if (!pj_stricmp(&name, &pjsip_STALE_STR)) {
-	    if (!pj_stricmp(&value, &pjsip_TRUE_STR) || !pj_stricmp(&value, &pjsip_QUOTED_TRUE_STR))
+	    if (!pj_stricmp(&value, &pjsip_TRUE_STR) || 
+                !pj_stricmp(&value, &pjsip_QUOTED_TRUE_STR))
+            {
 		chal->stale = 1;
+            }
 
 	} else if (!pj_stricmp(&name, &pjsip_ALGORITHM_STR)) {
 	    chal->algorithm = value;
@@ -132,35 +142,37 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_
 	    chal->qop = value;
 
 	} else {
-	    pjsip_concat_param_imp(&chal->other_param, pool, &name, &value, ',');
+	    pjsip_concat_param_imp(&chal->other_param, pool, 
+                                   &name, &value, ',');
 	}
 
 	/* Eat comma */
-	if (!pj_scan_is_eof(scanner) && *scanner->current == ',')
+	if (!pj_scan_is_eof(scanner) && *scanner->curptr == ',')
 	    pj_scan_get_char(scanner);
 	else
 	    break;
     }
 }
 
-static void parse_pgp_challenge( pj_scanner *scanner, pj_pool_t *pool, pjsip_pgp_challenge *chal)
+static void parse_pgp_challenge( pj_scanner *scanner, pj_pool_t *pool, 
+                                 pjsip_pgp_challenge *chal)
 {
-    PJ_UNUSED_ARG(scanner)
-    PJ_UNUSED_ARG(pool)
-    PJ_UNUSED_ARG(chal)
+    PJ_UNUSED_ARG(scanner);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(chal);
 
     PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 }
 
-static void int_parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool, 
+static void int_parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool,
 					 pjsip_authorization_hdr *hdr)
 {
-    if (*scanner->current == '"') {
+    if (*scanner->curptr == '"') {
 	pj_scan_get_quote(scanner, '"', '"', &hdr->scheme);
 	hdr->scheme.ptr++;
 	hdr->scheme.slen -= 2;
     } else {
-	pj_scan_get(scanner, pjsip_TOKEN_SPEC, &hdr->scheme);
+	pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->scheme);
     }
 
     if (!pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR)) {
@@ -181,12 +193,12 @@ static void int_parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool,
 static void int_parse_hdr_authenticate( pj_scanner *scanner, pj_pool_t *pool, 
 					pjsip_www_authenticate_hdr *hdr)
 {
-    if (*scanner->current == '"') {
+    if (*scanner->curptr == '"') {
 	pj_scan_get_quote(scanner, '"', '"', &hdr->scheme);
 	hdr->scheme.ptr++;
 	hdr->scheme.slen -= 2;
     } else {
-	pj_scan_get(scanner, pjsip_TOKEN_SPEC, &hdr->scheme);
+	pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->scheme);
     }
 
     if (!pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR)) {
@@ -205,41 +217,56 @@ static void int_parse_hdr_authenticate( pj_scanner *scanner, pj_pool_t *pool,
 }
 
 
-static pjsip_authorization_hdr *parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool)
+static pjsip_hdr* parse_hdr_authorization( pjsip_parse_ctx *ctx )
 {
-    pjsip_authorization_hdr *hdr = pjsip_authorization_hdr_create(pool);
-    int_parse_hdr_authorization(scanner, pool, hdr);
-    return hdr;
+    pjsip_authorization_hdr *hdr = pjsip_authorization_hdr_create(ctx->pool);
+    int_parse_hdr_authorization(ctx->scanner, ctx->pool, hdr);
+    return (pjsip_hdr*)hdr;
 }
 
-static pjsip_proxy_authorization_hdr *parse_hdr_proxy_authorization( pj_scanner *scanner, pj_pool_t *pool)
+static pjsip_hdr* parse_hdr_proxy_authorization( pjsip_parse_ctx *ctx )
 {
-    pjsip_proxy_authorization_hdr *hdr = pjsip_proxy_authorization_hdr_create(pool);
-    int_parse_hdr_authorization(scanner, pool, hdr);
-    return hdr;
+    pjsip_proxy_authorization_hdr *hdr = 
+        pjsip_proxy_authorization_hdr_create(ctx->pool);
+    int_parse_hdr_authorization(ctx->scanner, ctx->pool, hdr);
+    return (pjsip_hdr*)hdr;
 }
 
-static pjsip_www_authenticate_hdr *parse_hdr_www_authenticate( pj_scanner *scanner, pj_pool_t *pool)
+static pjsip_hdr* parse_hdr_www_authenticate( pjsip_parse_ctx *ctx )
 {
-    pjsip_www_authenticate_hdr *hdr = pjsip_www_authenticate_hdr_create(pool);
-    int_parse_hdr_authenticate(scanner, pool, hdr);
-    return hdr;
+    pjsip_www_authenticate_hdr *hdr = 
+        pjsip_www_authenticate_hdr_create(ctx->pool);
+    int_parse_hdr_authenticate(ctx->scanner, ctx->pool, hdr);
+    return (pjsip_hdr*)hdr;
 }
 
-static pjsip_proxy_authenticate_hdr *parse_hdr_proxy_authenticate( pj_scanner *scanner, pj_pool_t *pool)
+static pjsip_hdr* parse_hdr_proxy_authenticate( pjsip_parse_ctx *ctx )
 {
-    pjsip_proxy_authenticate_hdr *hdr = pjsip_proxy_authenticate_hdr_create(pool);
-    int_parse_hdr_authenticate(scanner, pool, hdr);
-    return hdr;
+    pjsip_proxy_authenticate_hdr *hdr = 
+        pjsip_proxy_authenticate_hdr_create(ctx->pool);
+    int_parse_hdr_authenticate(ctx->scanner, ctx->pool, hdr);
+    return (pjsip_hdr*)hdr;
 }
 
 
-PJ_DEF(void) pjsip_auth_init_parser()
+PJ_DEF(pj_status_t) pjsip_auth_init_parser()
 {
-    pjsip_register_hdr_parser( "Authorization", NULL, (pjsip_parse_hdr_func*) &parse_hdr_authorization);
-    pjsip_register_hdr_parser( "Proxy-Authorization", NULL, (pjsip_parse_hdr_func*) &parse_hdr_proxy_authorization);
-    pjsip_register_hdr_parser( "WWW-Authenticate", NULL, (pjsip_parse_hdr_func*) &parse_hdr_www_authenticate);
-    pjsip_register_hdr_parser( "Proxy-Authenticate", NULL, (pjsip_parse_hdr_func*) &parse_hdr_proxy_authenticate);
+    pj_status_t status;
+
+    status = pjsip_register_hdr_parser( "Authorization", NULL, 
+                                        &parse_hdr_authorization);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    status = pjsip_register_hdr_parser( "Proxy-Authorization", NULL, 
+                                        &parse_hdr_proxy_authorization);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    status = pjsip_register_hdr_parser( "WWW-Authenticate", NULL, 
+                                        &parse_hdr_www_authenticate);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    status = pjsip_register_hdr_parser( "Proxy-Authenticate", NULL, 
+                                        &parse_hdr_proxy_authenticate);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+
+    return PJ_SUCCESS;
 }
 
 PJ_DEF(void) pjsip_auth_deinit_parser()

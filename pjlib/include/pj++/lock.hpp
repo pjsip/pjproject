@@ -1,6 +1,7 @@
-/* $Id$ */
-#ifndef __PJPP_LOCK_H__
-#define __PJPP_LOCK_H__
+/* $Id$ 
+ */
+#ifndef __PJPP_LOCK_HPP__
+#define __PJPP_LOCK_HPP__
 
 #include <pj++/types.hpp>
 #include <pj/lock.h>
@@ -127,5 +128,5 @@ public:
 
 
 
-#endif	/* __PJPP_LOCK_H__ */
+#endif	/* __PJPP_LOCK_HPP__ */
 

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_transport.h>
@@ -7,14 +6,16 @@
 #include <pjsip/sip_misc.h>
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_endpoint.h>
+#include <pjsip/sip_errno.h>
 #include <pj/log.h>
 #include <pj/string.h>
 #include <pj/os.h>
 #include <pj/guid.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
 
 /* Thread Local Storage ID for transaction lock (initialized by endpoint) */
-int pjsip_tsx_lock_tls_id;
+long pjsip_tsx_lock_tls_id;
 
 /* State names */
 static const char *state_str[] = 
@@ -43,10 +44,14 @@ typedef struct tsx_lock_data {
     int			  is_alive;
 } tsx_lock_data;
 
+
 /* Timer timeout value constants */
-static const pj_time_val t1_timer_val = { PJSIP_T1_TIMEOUT/1000, PJSIP_T1_TIMEOUT%1000 };
-static const pj_time_val t4_timer_val = { PJSIP_T4_TIMEOUT/1000, PJSIP_T4_TIMEOUT%1000 };
-static const pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000, PJSIP_TD_TIMEOUT%1000 };
+static const pj_time_val t1_timer_val = { PJSIP_T1_TIMEOUT/1000, 
+                                          PJSIP_T1_TIMEOUT%1000 };
+static const pj_time_val t4_timer_val = { PJSIP_T4_TIMEOUT/1000, 
+                                          PJSIP_T4_TIMEOUT%1000 };
+static const pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000, 
+                                          PJSIP_TD_TIMEOUT%1000 };
 static const pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
 					       (64*PJSIP_T1_TIMEOUT)%1000 };
 
@@ -58,35 +63,39 @@ enum Transaction_Timer_Id
 };
 
 /* Function Prototypes */
-static int  pjsip_tsx_on_state_null( pjsip_transaction *tsx, 
-				     pjsip_event *event);
-static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx, 
-				        pjsip_event *event);
-static int  pjsip_tsx_on_state_trying( pjsip_transaction *tsx, 
-				       pjsip_event *event);
-static int  pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, 
-					       pjsip_event *event);
-static int  pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, 
-					       pjsip_event *event);
-static int  pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, 
-					      pjsip_event *event);
-static int  pjsip_tsx_on_state_completed_uac( pjsip_transaction *tsx, 
-					      pjsip_event *event);
-static int  pjsip_tsx_on_state_confirmed( pjsip_transaction *tsx, 
-					  pjsip_event *event);
-static int  pjsip_tsx_on_state_terminated( pjsip_transaction *tsx, 
-					   pjsip_event *event);
-static int  pjsip_tsx_on_state_destroyed( pjsip_transaction *tsx, 
-					  pjsip_event *event);
-static void tsx_timer_callback( pj_timer_heap_t *theap, 
-			        pj_timer_entry *entry);
-static int  tsx_send_msg( pjsip_transaction *tsx, pjsip_tx_data *tdata);
-static void lock_tsx( pjsip_transaction *tsx, struct tsx_lock_data *lck );
-static pj_status_t unlock_tsx( pjsip_transaction *tsx, struct tsx_lock_data *lck );
+static pj_status_t pjsip_tsx_on_state_null(     pjsip_transaction *tsx, 
+				                pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_calling(  pjsip_transaction *tsx, 
+				                pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_trying(   pjsip_transaction *tsx, 
+				                pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, 
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx,
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, 
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_completed_uac( pjsip_transaction *tsx,
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_confirmed(pjsip_transaction *tsx, 
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_terminated(pjsip_transaction *tsx, 
+					        pjsip_event *event);
+static pj_status_t pjsip_tsx_on_state_destroyed(pjsip_transaction *tsx, 
+					        pjsip_event *event);
+
+static void         tsx_timer_callback( pj_timer_heap_t *theap, 
+			                pj_timer_entry *entry);
+static int          tsx_send_msg( pjsip_transaction *tsx, 
+                                  pjsip_tx_data *tdata);
+static void         lock_tsx( pjsip_transaction *tsx, struct 
+                               tsx_lock_data *lck );
+static pj_status_t  unlock_tsx( pjsip_transaction *tsx, 
+                               struct tsx_lock_data *lck );
 
 /* State handlers for UAC, indexed by state */
-static int  (*tsx_state_handler_uac[PJSIP_TSX_STATE_MAX])(pjsip_transaction *tsx,
-							  pjsip_event *event ) = 
+static int  (*tsx_state_handler_uac[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
+							  pjsip_event *) = 
 {
     &pjsip_tsx_on_state_null,
     &pjsip_tsx_on_state_calling,
@@ -99,8 +108,8 @@ static int  (*tsx_state_handler_uac[PJSIP_TSX_STATE_MAX])(pjsip_transaction *tsx
 };
 
 /* State handlers for UAS */
-static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *tsx, 
-							  pjsip_event *event ) = 
+static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *, 
+							  pjsip_event *) = 
 {
     &pjsip_tsx_on_state_null,
     &pjsip_tsx_on_state_calling,
@@ -153,11 +162,11 @@ PJ_DEF(const char *) pjsip_role_name(pjsip_role_e role)
  * The transaction key is constructed from the common components of above
  * components. Additional comparison is needed to fully match a transaction.
  */
-void create_tsx_key_2543( pj_pool_t *pool,
-			  pj_str_t *str,
-			  pjsip_role_e role,
-			  const pjsip_method *method,
-			  const pjsip_rx_data *rdata )
+static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
+			                pj_str_t *str,
+			                pjsip_role_e role,
+			                const pjsip_method *method,
+			                const pjsip_rx_data *rdata )
 {
 #define SEPARATOR   '$'
     char *key, *p, *end;
@@ -166,17 +175,22 @@ void create_tsx_key_2543( pj_pool_t *pool,
     pjsip_uri *req_uri;
     pj_str_t *host;
 
+    PJ_ASSERT_RETURN(pool && str && method && rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->msg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->via, PJSIP_EMISSINGHDR);
+    PJ_ASSERT_RETURN(rdata->cseq, PJSIP_EMISSINGHDR);
+    PJ_ASSERT_RETURN(rdata->from, PJSIP_EMISSINGHDR);
+
     host = &rdata->via->sent_by.host;
     req_uri = (pjsip_uri*)rdata->msg->line.req.uri;
 
     /* Calculate length required. */
-    len_required = PJSIP_MAX_URL_SIZE +	    /* URI */
-		   9 +			    /* CSeq number */
-		   rdata->from_tag.slen +   /* From tag. */
+    len_required = 9 +			    /* CSeq number */
+		   rdata->from->tag.slen +   /* From tag. */
 		   rdata->call_id.slen +    /* Call-ID */
 		   host->slen +		    /* Via host. */
 		   9 +			    /* Via port. */
-		   32;			    /* Separator+Allowance. */
+		   16;			    /* Separator+Allowance. */
     key = p = pj_pool_alloc(pool, len_required);
     end = p + len_required;
 
@@ -223,9 +237,6 @@ void create_tsx_key_2543( pj_pool_t *pool,
      * only used to match request retransmission, and we expect that the 
      * request retransmissions will contain the same port.
      */
-    if ((end-p) < host->slen + 12) {
-	goto on_error;
-    }
     pj_memcpy(p, host->ptr, host->slen);
     p += host->slen;
     *p++ = ':';
@@ -240,26 +251,21 @@ void create_tsx_key_2543( pj_pool_t *pool,
     str->ptr = key;
     str->slen = p-key;
 
-    return;
-
-on_error:
-    PJ_LOG(2,("tsx........", "Not enough buffer (%d) for transaction key",
-	      len_required));
-    pj_assert(0);
-    str->ptr = NULL;
-    str->slen = 0;
+    return PJ_SUCCESS;
 }
 
 /*
  * Create transaction key for RFC3161 compliant system.
  */
-void create_tsx_key_3261( pj_pool_t *pool,
-			  pj_str_t *key,
-			  pjsip_role_e role,
-			  const pjsip_method *method,
-			  const pj_str_t *branch )
+static pj_status_t create_tsx_key_3261( pj_pool_t *pool,
+		                        pj_str_t *key,
+		                        pjsip_role_e role,
+		                        const pjsip_method *method,
+		                        const pj_str_t *branch)
 {
     char *p;
+
+    PJ_ASSERT_RETURN(pool && key && method && branch, PJ_EINVAL);
 
     p = key->ptr = pj_pool_alloc(pool, branch->slen + method->name.slen + 4 );
     
@@ -280,18 +286,22 @@ void create_tsx_key_3261( pj_pool_t *pool,
 
     /* Set length */
     key->slen = p - key->ptr;
+
+    return PJ_SUCCESS;
 }
 
 /*
  * Create key from the incoming data, to be used to search the transaction
  * in the transaction hash table.
  */
-PJ_DEF(void) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key, 
-				   pjsip_role_e role, 
-				   const pjsip_method *method, 
-				   const pjsip_rx_data *rdata )
+PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key, 
+				          pjsip_role_e role, 
+				          const pjsip_method *method, 
+				          const pjsip_rx_data *rdata)
 {
-    pj_str_t rfc3261_branch = {PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN};
+    pj_str_t rfc3261_branch = {PJSIP_RFC3261_BRANCH_ID, 
+                               PJSIP_RFC3261_BRANCH_LEN};
+
 
     /* Get the branch parameter in the top-most Via.
      * If branch parameter is started with "z9hG4bK", then the message was
@@ -300,17 +310,18 @@ PJ_DEF(void) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
      */
     const pj_str_t *branch = &rdata->via->branch_param;
 
-    if (pj_strncmp(branch, &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) == 0) {
+    if (pj_strncmp(branch,&rfc3261_branch,PJSIP_RFC3261_BRANCH_LEN)==0) {
 
 	/* Create transaction key. */
-	create_tsx_key_3261(pool, key, role, method, branch);
+	return create_tsx_key_3261(pool, key, role, method, branch);
 
     } else {
-	/* Create the key for the message. This key will be matched up with the
-	 * transaction key. For RFC2563 transactions, the transaction key
-	 * was created by the same function, so it will match the message.
+	/* Create the key for the message. This key will be matched up 
+         * with the transaction key. For RFC2563 transactions, the 
+         * transaction key was created by the same function, so it will 
+         * match the message.
 	 */
-	create_tsx_key_2543( pool, key, role, method, rdata );
+	return create_tsx_key_2543( pool, key, role, method, rdata );
     }
 }
 
@@ -318,10 +329,12 @@ PJ_DEF(void) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
 /*
  * Create new transaction.
  */
-PJ_DEF(pjsip_transaction *) pjsip_tsx_create(pj_pool_t *pool,
-					     pjsip_endpoint *endpt)
+pj_status_t pjsip_tsx_create( pj_pool_t *pool,
+			      pjsip_endpoint *endpt,
+                              pjsip_transaction **p_tsx)
 {
     pjsip_transaction *tsx;
+    pj_status_t status;
 
     tsx = pj_pool_calloc(pool, 1, sizeof(pjsip_transaction));
 
@@ -335,13 +348,14 @@ PJ_DEF(pjsip_transaction *) pjsip_tsx_create(pj_pool_t *pool,
     tsx->timeout_timer._timer_id = -1;
     tsx->timeout_timer.user_data = tsx;
     tsx->timeout_timer.cb = &tsx_timer_callback;
-    sprintf(tsx->obj_name, "tsx%p", tsx);
-    tsx->mutex = pj_mutex_create(pool, "mtsx%p", 0);
-    if (!tsx->mutex) {
-	return NULL;
+    pj_sprintf(tsx->obj_name, "tsx%p", tsx);
+    status = pj_mutex_create_recursive(pool, "mtsx%p", &tsx->mutex);
+    if (status != PJ_SUCCESS) {
+	return status;
     }
 
-    return tsx;
+    *p_tsx = tsx;
+    return PJ_SUCCESS;
 }
 
 /*
@@ -352,7 +366,8 @@ static void lock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck)
     struct tsx_lock_data *prev_data;
 
     pj_mutex_lock(tsx->mutex);
-    prev_data = (struct tsx_lock_data *) pj_thread_local_get(pjsip_tsx_lock_tls_id);
+    prev_data = (struct tsx_lock_data *) 
+                    pj_thread_local_get(pjsip_tsx_lock_tls_id);
     lck->prev = prev_data;
     lck->tsx = tsx;
     lck->is_alive = 1;
@@ -367,7 +382,8 @@ static void lock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck)
  * because when transaction is destroyed the is_alive flag for the transaction
  * will be set to zero.
  */
-static pj_status_t unlock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck)
+static pj_status_t unlock_tsx( pjsip_transaction *tsx, 
+                               struct tsx_lock_data *lck)
 {
     pj_assert( (void*)pj_thread_local_get(pjsip_tsx_lock_tls_id) == lck);
     pj_assert( lck->tsx == tsx );
@@ -375,7 +391,7 @@ static pj_status_t unlock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck)
     if (lck->is_alive)
 	pj_mutex_unlock(tsx->mutex);
 
-    return lck->is_alive ? 0 : -1;
+    return lck->is_alive ? PJ_SUCCESS : PJSIP_ETSXDESTROYED;
 }
 
 /*
@@ -383,13 +399,14 @@ static pj_status_t unlock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck)
  */
 static void tsx_set_state( pjsip_transaction *tsx,
 			   pjsip_tsx_state_e state,
-			   const pjsip_event *event )
+			   pjsip_event_id_e event_src_type,
+                           void *event_src )
 {
     pjsip_event e;
 
-    PJ_LOG(4, (tsx->obj_name, "STATE %s-->%s, ev=%s (src:%s)", 
-	       state_str[tsx->state], state_str[state], pjsip_event_str(event->type),
-	       pjsip_event_str(event->src_type)));
+    PJ_LOG(4, (tsx->obj_name, "STATE %s-->%s, cause = %s",
+	       state_str[tsx->state], state_str[state], 
+               pjsip_event_str(event_src_type)));
 
     /* Change state. */
     tsx->state = state;
@@ -402,9 +419,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
     }
 
     /* Inform TU */
-    pj_memcpy(&e, event, sizeof(*event));
-    e.type = PJSIP_EVENT_TSX_STATE_CHANGED;
-    e.obj.tsx = tsx;
+    PJSIP_EVENT_INIT_TSX_STATE(e, tsx, event_src_type, event_src);
     pjsip_endpt_send_tsx_event( tsx->endpt, &e  );
 
     /* When the transaction is terminated, release transport, and free the
@@ -413,7 +428,9 @@ static void tsx_set_state( pjsip_transaction *tsx,
     if (state == PJSIP_TSX_STATE_TERMINATED) {
 
 	/* Decrement transport reference counter. */
-	if (tsx->transport && tsx->transport_state == PJSIP_TSX_TRANSPORT_STATE_FINAL) {
+	if (tsx->transport && 
+            tsx->transport_state == PJSIP_TSX_TRANSPORT_STATE_FINAL) 
+        {
 	    pjsip_transport_dec_ref( tsx->transport );
 	    tsx->transport = NULL;
 	}
@@ -483,7 +500,8 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 	topmost_route_uri = &first_route_hdr->name_addr;
 	while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
 	    pjsip_route_hdr *hdr;
-	    hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, last_route_hdr->next);
+	    hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+                                     last_route_hdr->next);
 	    if (!hdr)
 		break;
 	    last_route_hdr = hdr;
@@ -563,14 +581,16 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 	send_addr->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
 	pj_strdup(tdata->pool, &send_addr->host, &url->host);
         send_addr->port = url->port;
-	send_addr->type = pjsip_transport_get_type_from_name(&url->transport_param);
+	send_addr->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
 
     } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
 	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
 	pj_strdup(tdata->pool, &send_addr->host, &url->host);
 	send_addr->port = url->port;
-	send_addr->type = pjsip_transport_get_type_from_name(&url->transport_param);
+	send_addr->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
 #if PJ_HAS_TCP
 	if (send_addr->type == PJSIP_TRANSPORT_TCP || 
 	    send_addr->type == PJSIP_TRANSPORT_SCTP) 
@@ -579,9 +599,8 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 	}
 #endif
     } else {
-	PJ_LOG(2, (tsx->obj_name, "Unable to lookup destination address for "
-				  "non SIP-URL"));   
-	return -1;
+        pj_assert(!"Unsupported URI scheme!");
+	return PJSIP_EINVALIDSCHEME;
     }
 
     /* If target URI is different than request URI, replace 
@@ -598,7 +617,7 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
     }
 
     /* Success. */
-    return 0;  
+    return PJ_SUCCESS;  
 }
 
 
@@ -624,7 +643,7 @@ static void tsx_transport_callback(pjsip_transport_t *tr,
 				  pjsip_transport_get_type_name(tr),
 				  addr, tsx->dest_name.port));
     } else {
-	PJ_LOG(3, (tsx->obj_name, "%s unable to connect to %s:%d, status=%d", 
+	PJ_LOG(4, (tsx->obj_name, "%s unable to connect to %s:%d, status=%d", 
 				  pjsip_transport_get_type_name(tr),
 				  addr, tsx->dest_name.port, status));
     }
@@ -633,23 +652,19 @@ static void tsx_transport_callback(pjsip_transport_t *tr,
     lock_tsx(tsx, &lck);
 
     if (status != PJ_SUCCESS) {
-	pjsip_event event;
-	
-	event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-	event.src_type = PJSIP_EVENT_TX_MSG;
-	event.src.tdata = tsx->last_tx;
-
 	tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_FINAL;
 	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+
+	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED,
+                      PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
 
 	/* Unlock transaction. */
 	unlock_tsx(tsx, &lck);
 	return;
     }
 
-    /* See if transaction has already been terminated. If so, schedule to destroy
-     * the transaction.
+    /* See if transaction has already been terminated. 
+     * If so, schedule to destroy the transaction.
      */
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	pj_time_val timeout = {0, 0};
@@ -690,15 +705,10 @@ static void tsx_resolver_callback(pj_status_t status,
     PJ_LOG(4, (tsx->obj_name, "resolver job complete, status=%d", status));
 
     if (status != PJ_SUCCESS || addr->count == 0) {
-	pjsip_event event;
-	
-	event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-	event.src_type = PJSIP_EVENT_TX_MSG;
-	event.src.tdata = tsx->last_tx;
-
 	lock_tsx(tsx, &lck);
 	tsx->status_code = PJSIP_SC_TSX_RESOLVE_ERROR;
-	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, 
+                      PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
 	unlock_tsx(tsx, &lck);
 	return;
     }
@@ -711,8 +721,8 @@ static void tsx_resolver_callback(pj_status_t status,
 
     /* Create/find the transport for the remote address. */
     PJ_LOG(5,(tsx->obj_name, "tsx getting transport for %s:%d",
-			     pj_sockaddr_get_str_addr(&addr->entry[0].addr),
-			     pj_sockaddr_get_port(&addr->entry[0].addr)));
+			     pj_inet_ntoa(addr->entry[0].addr.sin_addr),
+			     pj_ntohs(addr->entry[0].addr.sin_port)));
 
     tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_CONNECTING;
     pjsip_endpt_get_transport(tsx->endpt, tsx->pool,
@@ -738,8 +748,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
     pjsip_msg *msg;
     pjsip_cseq_hdr *cseq;
     pjsip_via_hdr *via;
+    pj_status_t status;
     struct tsx_lock_data lck;
-    const pjsip_hdr *endpt_hdr;
 
     PJ_LOG(4,(tsx->obj_name, "initializing tsx as UAC (tdata=%p)", tdata));
 
@@ -755,7 +765,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
     /* Save method. */
     pjsip_method_copy( tsx->pool, &tsx->method, &msg->line.req.method);
 
-    /* Generate branch parameter if it doesn't exist. */
+    /* Generate Via header if it doesn't exist. */
     via = pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
     if (via == NULL) {
 	via = pjsip_via_hdr_create(tdata->pool);
@@ -771,23 +781,23 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
 
 	tmp.ptr = via->branch_param.ptr + PJSIP_RFC3261_BRANCH_LEN;
 	pj_generate_unique_string( &tmp );
+
+        /* Save branch parameter. */
+        tsx->branch = via->branch_param;
+    } else {
+        /* Copy branch parameter. */
+        pj_strdup(tsx->pool, &tsx->branch, &via->branch_param);
     }
 
-    /* Copy branch parameter. */
-    tsx->branch = via->branch_param;
-
-    /* Add additional request headers from endpoint. */
-    endpt_hdr = pjsip_endpt_get_request_headers(tsx->endpt)->next;
-    while (endpt_hdr != pjsip_endpt_get_request_headers(tsx->endpt)) {
-	pjsip_hdr *hdr = pjsip_hdr_shallow_clone(tdata->pool, endpt_hdr);
-	pjsip_msg_add_hdr( tdata->msg, hdr );
-	endpt_hdr = endpt_hdr->next;
-    }
 
     /* Generate transaction key. */
-    create_tsx_key_3261( tsx->pool, &tsx->transaction_key,
-			 PJSIP_ROLE_UAC, &tsx->method, 
-			 &via->branch_param);
+    status = create_tsx_key_3261( tsx->pool, &tsx->transaction_key,
+			          PJSIP_ROLE_UAC, &tsx->method, 
+			          &via->branch_param);
+    if (status != PJ_SUCCESS) {
+        unlock_tsx(tsx, &lck);
+        return status;
+    }
 
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
 	       tsx->transaction_key.ptr));
@@ -795,8 +805,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
     /* Save CSeq. */
     cseq = pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
     if (!cseq) {
-	PJ_LOG(4,(tsx->obj_name, "CSeq header not present in outgoing message!"));
-	return -1;
+	pj_assert(!"CSeq header not present in outgoing message!");
+        unlock_tsx(tsx, &lck);
+	return PJSIP_EMISSINGHDR;
     }
     tsx->cseq = cseq->cseq;
 
@@ -805,22 +816,17 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
      * Manually set-up the state becase we don't want to call the callback.
      */
     tsx->state = PJSIP_TSX_STATE_NULL;
-    tsx->state_handler = pjsip_tsx_on_state_null;
+    tsx->state_handler = &pjsip_tsx_on_state_null;
 
     /* Get destination name from the message. */
-    if (tsx_process_route(tsx, tdata, &tsx->dest_name) != 0) {
-	pjsip_event event;
-	PJ_LOG(3,(tsx->obj_name, "Error: unable to get destination address for request"));
-	
-	event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-	event.src_type = PJSIP_EVENT_TX_MSG;
-	event.src.tdata = tsx->last_tx;
-
+    status = tsx_process_route(tsx, tdata, &tsx->dest_name);
+    if (status != PJ_SUCCESS) {
 	tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_FINAL;
 	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+	tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, 
+                      PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
 	unlock_tsx(tsx, &lck);
-	return -1;
+	return status;
     }
 
     /* Resolve destination.
@@ -858,6 +864,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
     pjsip_msg *msg = rdata->msg;
     pj_str_t *branch;
     pjsip_cseq_hdr *cseq;
+    pj_status_t status;
     struct tsx_lock_data lck;
 
     PJ_LOG(4,(tsx->obj_name, "initializing tsx as UAS (rdata=%p)", rdata));
@@ -877,8 +884,12 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
     /* Get transaction key either from branch for RFC3261 message, or
      * create transaction key.
      */
-    pjsip_tsx_create_key(tsx->pool, &tsx->transaction_key, PJSIP_ROLE_UAS, 
-			 &tsx->method, rdata);
+    status = pjsip_tsx_create_key(tsx->pool, &tsx->transaction_key, 
+                                  PJSIP_ROLE_UAS, &tsx->method, rdata);
+    if (status != PJ_SUCCESS) {
+        unlock_tsx(tsx, &lck);
+        return status;
+    }
 
     /* Duplicate branch parameter for transaction. */
     branch = &rdata->via->branch_param;
@@ -913,7 +924,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 
 	tsx->current_addr = 0;
 	tsx->remote_addr.count = 1;
-	tsx->remote_addr.entry[0].type = pjsip_transport_get_type(tsx->transport);
+	tsx->remote_addr.entry[0].type = 
+		pjsip_transport_get_type(tsx->transport);
 	pj_memcpy(&tsx->remote_addr.entry[0].addr, 
 		  &rdata->addr, rdata->addr_len);
 	
@@ -923,17 +935,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 	status = pjsip_get_response_addr(tsx->pool, rdata->transport,
 					 rdata->via, &tsx->dest_name);
 	if (status != PJ_SUCCESS) {
-	    pjsip_event event;
-	    PJ_LOG(2,(tsx->obj_name, "Unable to get destination address "
-				     "for response"));
-	    
-	    event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-	    event.src_type = PJSIP_EVENT_TX_MSG;
-	    event.src.tdata = tsx->last_tx;
-
 	    tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_FINAL;
 	    tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-	    tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+	    tsx_set_state(tsx, PJSIP_TSX_STATE_TERMINATED, 
+                          PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
 	    unlock_tsx(tsx, &lck);
 	    return status;
 	}
@@ -943,7 +948,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 	 * the callback will be called.
 	 */
 	PJ_LOG(5,(tsx->obj_name, "tsx resolving destination %.*s:%d",
-				 tsx->dest_name.host.slen, tsx->dest_name.host.ptr,
+				 tsx->dest_name.host.slen, 
+				 tsx->dest_name.host.ptr,
 				 tsx->dest_name.port));
 
 	tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_RESOLVING;
@@ -975,11 +981,14 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
     PJ_UNUSED_ARG(theap);
 
     PJ_LOG(5,(tsx->obj_name, "got timer event (%s timer)", 
-	     (entry->id == TSX_TIMER_RETRANSMISSION ? "Retransmit" : "Timeout")));
+	     (entry->id==TSX_TIMER_RETRANSMISSION ? "Retransmit" : "Timeout")));
 
-    event.type = event.src_type = PJSIP_EVENT_TIMER;
-    event.src.timer = (entry->id == TSX_TIMER_RETRANSMISSION ? 
-	&tsx->retransmit_timer : &tsx->timeout_timer);
+
+    if (entry->id == TSX_TIMER_RETRANSMISSION) {
+        PJSIP_EVENT_INIT_TIMER(event, &tsx->retransmit_timer);
+    } else {
+        PJSIP_EVENT_INIT_TIMER(event, &tsx->timeout_timer);
+    }
 
     /* Dispatch event to transaction. */
     lock_tsx(tsx, &lck);
@@ -999,10 +1008,11 @@ PJ_DEF(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx, pjsip_tx_data *tdata)
 {
     pjsip_msg *msg;
     pjsip_host_port dest_addr;
-    pjsip_event event;
     pjsip_via_hdr *via;
     struct tsx_lock_data lck;
+    pj_status_t status = PJ_SUCCESS;
 
+    /* Lock tsx. */
     lock_tsx(tsx, &lck);
 
     pj_assert(tsx->handle_ack != 0);
@@ -1023,8 +1033,8 @@ PJ_DEF(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx, pjsip_tx_data *tdata)
     }
 
     /* Get destination name from the message. */
-    if (tsx_process_route(tsx, tdata, &dest_addr) != 0){
-	PJ_LOG(2,(tsx->obj_name, "Unable to get destination address for request"));
+    status = tsx_process_route(tsx, tdata, &dest_addr);
+    if (status != 0){
 	goto on_error;
     }
 
@@ -1088,10 +1098,9 @@ on_error:
      * Send TERMINATED event.
      */
     tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-    event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-    event.src_type = PJSIP_EVENT_TX_MSG;
-    event.src.tdata = tdata;
-    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+
+    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                   PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
 
     unlock_tsx(tsx, &lck);
 }
@@ -1105,19 +1114,16 @@ PJ_DEF(void) pjsip_tsx_on_tx_msg( pjsip_transaction *tsx,
 {
     pjsip_event event;
     struct tsx_lock_data lck;
+    pj_status_t status;
 
-    PJ_LOG(5,(tsx->obj_name, "on transmit msg (tdata=%p)", tdata));
+    PJ_LOG(5,(tsx->obj_name, "Request to transmit msg on state %s (tdata=%p)",
+                             state_str[tsx->state], tdata));
 
-    event.type = event.src_type = PJSIP_EVENT_TX_MSG;
-    event.src.tdata = tdata;
-
-    PJ_LOG(5,(tsx->obj_name, "on state %s (ev=%s, src=%s, data=%p)", 
-	      state_str[tsx->state], pjsip_event_str(event.type), 
-	      pjsip_event_str(event.src_type), event.src.data));
+    PJSIP_EVENT_INIT_TX_MSG(event, tsx, tdata);
 
     /* Dispatch to transaction. */
     lock_tsx(tsx, &lck);
-    (*tsx->state_handler)(tsx, &event);
+    status = (*tsx->state_handler)(tsx, &event);
     unlock_tsx(tsx, &lck);
 }
 
@@ -1130,17 +1136,16 @@ PJ_DEF(void) pjsip_tsx_on_rx_msg( pjsip_transaction *tsx,
 {
     pjsip_event event;
     struct tsx_lock_data lck;
+    pj_status_t status;
 
-    event.type = event.src_type = PJSIP_EVENT_RX_MSG;
-    event.src.rdata = rdata;
+    PJ_LOG(5,(tsx->obj_name, "Incoming msg on state %s (rdata=%p)", 
+	      state_str[tsx->state], rdata));
 
-    PJ_LOG(5,(tsx->obj_name, "on state %s (ev=%s, src=%s, data=%p)", 
-	      state_str[tsx->state], pjsip_event_str(event.type), 
-	      pjsip_event_str(event.src_type), event.src.data));
+    PJSIP_EVENT_INIT_RX_MSG(event, tsx, rdata);
 
     /* Dispatch to transaction. */
     lock_tsx(tsx, &lck);
-    (*tsx->state_handler)(tsx, &event);
+    status = (*tsx->state_handler)(tsx, &event);
     unlock_tsx(tsx, &lck);
 }
 
@@ -1149,17 +1154,12 @@ PJ_DEF(void) pjsip_tsx_on_rx_msg( pjsip_transaction *tsx,
  */
 PJ_DEF(void) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 {
-    pjsip_event event;
     struct tsx_lock_data lck;
 
     lock_tsx(tsx, &lck);
-
     tsx->status_code = code;
-    event.type = PJSIP_EVENT_USER;
-    event.src_type = PJSIP_EVENT_USER;
-    event.src.data = 0;
-    event.obj.tsx = tsx;
-    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, &event);
+    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                   PJSIP_EVENT_USER, NULL);
 
     unlock_tsx(tsx, &lck);
 }
@@ -1169,14 +1169,15 @@ PJ_DEF(void) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
  * If transport is not yet available, then do nothing. The message will be
  * transmitted when transport connection completion callback is called.
  */
-static int tsx_send_msg( pjsip_transaction *tsx, pjsip_tx_data *tdata)
+static pj_status_t tsx_send_msg( pjsip_transaction *tsx, 
+                                 pjsip_tx_data *tdata)
 {
-    pjsip_event event;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_LOG(5,(tsx->obj_name, "sending msg (tdata=%p)", tdata));
 
     if (tsx->transport_state == PJSIP_TSX_TRANSPORT_STATE_FINAL) {
-	int sent;
+	pj_ssize_t sent;
 	pjsip_event before_tx_event;
 
 	pj_assert(tsx->transport != NULL);
@@ -1199,25 +1200,22 @@ static int tsx_send_msg( pjsip_transaction *tsx, pjsip_tx_data *tdata)
 		pj_strdup2(tdata->pool, &via->transport, 
 			pjsip_transport_get_type_name(tsx->transport));
 		pj_strdup2(tdata->pool, &via->sent_by.host, 
-			pj_sockaddr_get_str_addr(addr_name));
-		via->sent_by.port = pj_sockaddr_get_port(addr_name);
+			   pj_inet_ntoa(addr_name->sin_addr));
+		via->sent_by.port = pj_ntohs(addr_name->sin_port);
 	    }
 	}
 
 	/* Notify everybody we're about to send message. */
-	before_tx_event.type = PJSIP_EVENT_BEFORE_TX;
-	before_tx_event.src_type = PJSIP_EVENT_TX_MSG;
-	before_tx_event.obj.tsx = tsx;
-	before_tx_event.src.tdata = tdata;
-	before_tx_event.data.long_data = tsx->retransmit_count;
-	pjsip_endpt_send_tsx_event( tsx->endpt, &before_tx_event  );
+        PJSIP_EVENT_INIT_PRE_TX_MSG(before_tx_event, tsx, tdata, 
+                                    tsx->retransmit_count);
+	pjsip_endpt_send_tsx_event( tsx->endpt, &before_tx_event );
 
 	tsx->has_unsent_msg = 0;
-	sent = pjsip_transport_send_msg(
-		tsx->transport, tdata,
-		&tsx->remote_addr.entry[tsx->current_addr].addr
-		);
-	if (sent < 1) {
+	status = pjsip_transport_send_msg(
+		        tsx->transport, tdata,
+		        &tsx->remote_addr.entry[tsx->current_addr].addr,
+                        &sent);
+	if (status != PJ_SUCCESS) {
 	    goto on_error;
 	}
     } else {
@@ -1228,11 +1226,9 @@ static int tsx_send_msg( pjsip_transaction *tsx, pjsip_tx_data *tdata)
 
 on_error:
     tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-    event.type = PJSIP_EVENT_TRANSPORT_ERROR;
-    event.src_type = PJSIP_EVENT_TX_MSG;
-    event.src.tdata = tdata;
-    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, &event);
-    return -1;
+    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                   PJSIP_EVENT_TRANSPORT_ERROR, (void*)status);
+    return status;
 }
 
 /*
@@ -1241,6 +1237,8 @@ on_error:
 static pj_status_t pjsip_tsx_retransmit( pjsip_transaction *tsx,
 					 int should_restart_timer)
 {
+    pj_status_t status;
+
     PJ_LOG(4,(tsx->obj_name, "retransmiting (tdata=%p, count=%d, restart?=%d)", 
 	      tsx->last_tx, tsx->retransmit_count, should_restart_timer));
 
@@ -1248,8 +1246,9 @@ static pj_status_t pjsip_tsx_retransmit( pjsip_transaction *tsx,
 
     ++tsx->retransmit_count;
 
-    if (tsx_send_msg( tsx, tsx->last_tx) != 0) {
-	return -1;
+    status = tsx_send_msg( tsx, tsx->last_tx);
+    if (status != PJ_SUCCESS) {
+	return status;
     }
     
     /* Restart timer T1. */
@@ -1257,12 +1256,13 @@ static pj_status_t pjsip_tsx_retransmit( pjsip_transaction *tsx,
 	pj_time_val timeout;
 	int msec_time = (1 << (tsx->retransmit_count)) * PJSIP_T1_TIMEOUT;
 
-	if (tsx->method.id != PJSIP_INVITE_METHOD && msec_time > PJSIP_T2_TIMEOUT) 
+	if (tsx->method.id!=PJSIP_INVITE_METHOD && msec_time>PJSIP_T2_TIMEOUT) 
 	    msec_time = PJSIP_T2_TIMEOUT;
 
 	timeout.sec = msec_time / 1000;
 	timeout.msec = msec_time % 1000;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, &timeout);
+	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, 
+				    &timeout);
     }
 
     return PJ_SUCCESS;
@@ -1271,8 +1271,11 @@ static pj_status_t pjsip_tsx_retransmit( pjsip_transaction *tsx,
 /*
  * Handler for events in state Null.
  */
-static int  pjsip_tsx_on_state_null( pjsip_transaction *tsx, pjsip_event *event )
+static pj_status_t pjsip_tsx_on_state_null( pjsip_transaction *tsx, 
+                                            pjsip_event *event )
 {
+    pj_status_t status;
+
     pj_assert( tsx->state == PJSIP_TSX_STATE_NULL);
     pj_assert( tsx->last_tx == NULL );
     pj_assert( tsx->has_unsent_msg == 0);
@@ -1281,24 +1284,27 @@ static int  pjsip_tsx_on_state_null( pjsip_transaction *tsx, pjsip_event *event 
 
 	/* Set state to Trying. */
 	pj_assert(event->type == PJSIP_EVENT_RX_MSG);
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TRYING, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TRYING, 
+                       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 
     } else {
-	pjsip_tx_data *tdata = event->src.tdata;
+	pjsip_tx_data *tdata = event->body.tx_msg.tdata;
 
 	/* Save the message for retransmission. */
 	tsx->last_tx = tdata;
 	pjsip_tx_data_add_ref(tdata);
 
 	/* Send the message. */
-	if (tsx_send_msg( tsx, tdata) != 0) {
-	    return -1;
+        status = tsx_send_msg( tsx, tdata);
+	if (status != PJ_SUCCESS) {
+	    return status;
 	}
 
 	/* Start Timer B (or called timer F for non-INVITE) for transaction 
 	 * timeout.
 	 */
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout_timer_val);
+	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+                                    &timeout_timer_val);
 
 	/* Start Timer A (or timer E) for retransmission only if unreliable 
 	 * transport is being used.
@@ -1306,12 +1312,14 @@ static int  pjsip_tsx_on_state_null( pjsip_transaction *tsx, pjsip_event *event 
 	if (tsx->transport_state == PJSIP_TSX_TRANSPORT_STATE_FINAL &&
 	    PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) 
 	{
-	    pjsip_endpt_schedule_timer(tsx->endpt, &tsx->retransmit_timer, &t1_timer_val);
+	    pjsip_endpt_schedule_timer(tsx->endpt, &tsx->retransmit_timer, 
+                                       &t1_timer_val);
 	    tsx->retransmit_count = 0;
 	}
 
 	/* Move state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_CALLING, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_CALLING, 
+                       PJSIP_EVENT_TX_MSG, tdata);
     }
 
     return PJ_SUCCESS;
@@ -1321,23 +1329,25 @@ static int  pjsip_tsx_on_state_null( pjsip_transaction *tsx, pjsip_event *event 
  * State Calling is for UAC after it sends request but before any responses
  * is received.
  */
-static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx, 
-				        pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_calling( pjsip_transaction *tsx, 
+				               pjsip_event *event )
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_CALLING);
     pj_assert(tsx->role == PJSIP_ROLE_UAC);
 
     if (event->type == PJSIP_EVENT_TIMER && 
-	event->src.timer == &tsx->retransmit_timer) 
+	event->body.timer.entry == &tsx->retransmit_timer) 
     {
+        pj_status_t status;
 
 	/* Retransmit the request. */
-	if (pjsip_tsx_retransmit( tsx, 1 ) != 0) {
-	    return -1;
+        status = pjsip_tsx_retransmit( tsx, 1 );
+	if (status != PJ_SUCCESS) {
+	    return status;
 	}
 
     } else if (event->type == PJSIP_EVENT_TIMER && 
-	      event->src.timer == &tsx->timeout_timer) 
+	       event->body.timer.entry == &tsx->timeout_timer) 
     {
 
 	/* Cancel retransmission timer. */
@@ -1349,10 +1359,11 @@ static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx,
 	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
 
 	/* Inform TU. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event );
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
 
 	/* Transaction is destroyed */
-	return -1;
+	return PJSIP_ETSXDESTROYED;
 
     } else if (event->type == PJSIP_EVENT_RX_MSG) {
 	int code;
@@ -1369,7 +1380,7 @@ static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx,
 	 * the final response.
 	 */
 	/* Keep last_tx for authorization. */
-	code = event->src.rdata->msg->line.status.code;
+	code = event->body.rx_msg.rdata->msg->line.status.code;
 	if (tsx->method.id != PJSIP_INVITE_METHOD && code!=401 && code!=407) {
 	    pjsip_tx_data_dec_ref(tsx->last_tx);
 	    tsx->last_tx = NULL;
@@ -1380,6 +1391,7 @@ static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx,
 
     } else {
 	pj_assert(0);
+        return PJ_EBUG;
     }
 
     return PJ_SUCCESS;
@@ -1391,9 +1403,10 @@ static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx,
  * Note: this is different than RFC3261, which can use Trying state for
  *	 non-INVITE client transaction (bug in RFC?).
  */
-static int  pjsip_tsx_on_state_trying( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_trying( pjsip_transaction *tsx, 
+                                              pjsip_event *event)
 {
-    int result;
+    pj_status_t status;
 
     pj_assert(tsx->state == PJSIP_TSX_STATE_TRYING);
 
@@ -1414,21 +1427,23 @@ static int  pjsip_tsx_on_state_trying( pjsip_transaction *tsx, pjsip_event *even
     /* The rest of the processing of the event is exactly the same as in
      * "Proceeding" state.
      */
-    result = pjsip_tsx_on_state_proceeding_uas( tsx, event);
+    status = pjsip_tsx_on_state_proceeding_uas( tsx, event);
 
     /* Inform the TU of the state transision if state is still State_Trying */
-    if (result==0 && tsx->state == PJSIP_TSX_STATE_TRYING) {
-	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, event);
+    if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TRYING) {
+	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
+                       PJSIP_EVENT_TX_MSG, event->body.tx_msg.tdata);
     }
 
-    return result;
+    return status;
 }
 
 /*
  * Handler for events in Proceeding for UAS
  * This state happens after the TU sends provisional response.
  */
-static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
+                                                      pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_PROCEEDING || 
 	      tsx->state == PJSIP_TSX_STATE_TRYING);
@@ -1439,13 +1454,17 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
     /* Receive request retransmission. */
     if (event->type == PJSIP_EVENT_RX_MSG) {
 
+        pj_status_t status;
+
 	/* Send last response. */
-	if (pjsip_tsx_retransmit( tsx, 0 ) != 0) {
-	    return -1;
+        status = pjsip_tsx_retransmit( tsx, 0 );
+	if (status != PJ_SUCCESS) {
+	    return status;
 	}
 	
     } else if (event->type == PJSIP_EVENT_TX_MSG ) {
-	pjsip_tx_data *tdata = event->src.tdata;
+	pjsip_tx_data *tdata = event->body.tx_msg.tdata;
+        pj_status_t status;
 
 	/* The TU sends response message to the request. Save this message so
 	 * that we can retransmit the last response in case we receive request
@@ -1471,8 +1490,9 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
 	}
 
 	/* Send the message. */
-	if (tsx_send_msg(tsx, tdata) != 0) {
-	    return -1;
+        status = tsx_send_msg(tsx, tdata);
+	if (status != PJ_SUCCESS) {
+	    return status;
 	}
 
 	// Update To tag header for RFC2543 transaction.
@@ -1485,26 +1505,29 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
 		tsx->last_tx = tdata;
 		pjsip_tx_data_add_ref( tdata );
 	    }
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, event);
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
+                           PJSIP_EVENT_TX_MSG, tdata );
 
 	} else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 200)) {
 
 	    if (tsx->method.id == PJSIP_INVITE_METHOD && tsx->handle_ack==0) {
 
-		/* 2xx class message is not saved, because retransmission is handled
-		 * by the TU.
+		/* 2xx class message is not saved, because retransmission 
+                 * is handled by TU.
 		 */
-		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
+		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                               PJSIP_EVENT_TX_MSG, tdata );
 
 		/* Transaction is destroyed. */
-		return -1;
+		return PJSIP_ETSXDESTROYED;
 
 	    } else {
 		pj_time_val timeout;
 
 		if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		    tsx->retransmit_count = 0;
-		    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, 
+		    pjsip_endpt_schedule_timer( tsx->endpt, 
+                                                &tsx->retransmit_timer, 
 						&t1_timer_val);
 		}
 
@@ -1525,37 +1548,45 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
 		    timeout.sec = timeout.msec = 0;
 		}
 
-		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
+		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+                                            &timeout);
 
 		/* Set state to "Completed" */
-		tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, event);
+		tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+                               PJSIP_EVENT_TX_MSG, tdata );
 	    }
 
 	} else if (tsx->status_code >= 300) {
 
-	    /* 3xx-6xx class message causes transaction to move to "Completed" state. */
+	    /* 3xx-6xx class message causes transaction to move to 
+             * "Completed" state. 
+             */
 	    if (tsx->last_tx != tdata) {
 		tsx->last_tx = tdata;
 		pjsip_tx_data_add_ref( tdata );
 	    }
 
 	    /* Start timer H for transaction termination */
-	    pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,&timeout_timer_val);
+	    pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
+                                       &timeout_timer_val);
 
 	    /* For INVITE, if unreliable transport is used, retransmission 
 	     * timer G will be scheduled (retransmission).
 	     */
 	    if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
-		pjsip_cseq_hdr *cseq = pjsip_msg_find_hdr( msg, PJSIP_H_CSEQ, NULL);
+		pjsip_cseq_hdr *cseq = pjsip_msg_find_hdr( msg, PJSIP_H_CSEQ,
+                                                           NULL);
 		if (cseq->method.id == PJSIP_INVITE_METHOD) {
 		    tsx->retransmit_count = 0;
-		    pjsip_endpt_schedule_timer(tsx->endpt, &tsx->retransmit_timer, 
+		    pjsip_endpt_schedule_timer(tsx->endpt, 
+                                               &tsx->retransmit_timer, 
 					       &t1_timer_val);
 		}
 	    }
 
 	    /* Inform TU */
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, event);
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+                           PJSIP_EVENT_TX_MSG, tdata );
 
 	} else {
 	    pj_assert(0);
@@ -1563,34 +1594,38 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
 
 
     } else if (event->type == PJSIP_EVENT_TIMER && 
-	       event->src.timer == &tsx->retransmit_timer) {
+	       event->body.timer.entry == &tsx->retransmit_timer) {
 	/* Retransmission timer elapsed. */
+        pj_status_t status;
 
 	/* Must have last response to retransmit. */
 	pj_assert(tsx->last_tx != NULL);
 
 	/* Retransmit the last response. */
-	if (pjsip_tsx_retransmit( tsx, 1 ) != 0) {
-	    return -1;
+        status = pjsip_tsx_retransmit( tsx, 1 );
+	if (status != PJ_SUCCESS) {
+	    return status;
 	}
 
     } else if (event->type == PJSIP_EVENT_TIMER && 
-	       event->src.timer == &tsx->timeout_timer) {
+	       event->body.timer.entry == &tsx->timeout_timer) {
 
 	/* Timeout timer. should not happen? */
 	pj_assert(0);
 
 	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
 
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
 
-	return -1;
+	return PJ_EBUG;
 
     } else {
 	pj_assert(0);
+        return PJ_EBUG;
     }
 
-    return 0;
+    return PJ_SUCCESS;
 }
 
 /*
@@ -1598,7 +1633,8 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
  * This state happens after provisional response(s) has been received from
  * UAS.
  */
-static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_proceeding_uac(pjsip_transaction *tsx, 
+                                                     pjsip_event *event)
 {
 
     pj_assert(tsx->state == PJSIP_TSX_STATE_PROCEEDING || 
@@ -1610,10 +1646,10 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
 	 */
 	pj_assert(event->type == PJSIP_EVENT_RX_MSG);
 	if (event->type != PJSIP_EVENT_RX_MSG) {
-	    return 0;
+	    return PJ_EINVALIDOP;
 	}
 
-	tsx->status_code = event->src.rdata->msg->line.status.code;
+	tsx->status_code = event->body.rx_msg.rdata->msg->line.status.code;
     } else {
 	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
     }
@@ -1621,7 +1657,8 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
     if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 100)) {
 
 	/* Inform the message to TU. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
+                       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 
     } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code,200)) {
 
@@ -1632,8 +1669,9 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
 	 * handled in TU). For non-INVITE, state moves to Completed.
 	 */
 	if (tsx->method.id == PJSIP_INVITE_METHOD && tsx->handle_ack == 0) {
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
-	    return -1;
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+	    return PJSIP_ETSXDESTROYED;
 
 	} else {
 	    pj_time_val timeout;
@@ -1649,23 +1687,28 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
 	    } else {
 		timeout.sec = timeout.msec = 0;
 	    }
-	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
+	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+					&timeout);
 
 	    /* Move state to Completed, inform TU. */
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, event);
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 	}
 
     } else if (tsx->status_code >= 300 && tsx->status_code <= 699) {
 	pj_time_val timeout;
+        pj_status_t status;
 
 	/* Stop timer B. */
 	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 
 	/* Generate and send ACK for INVITE. */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
-	    pjsip_endpt_create_ack( tsx->endpt, tsx->last_tx, event->src.rdata );
-	    if (tsx_send_msg( tsx, tsx->last_tx) != 0) {
-		return -1;
+	    pjsip_endpt_create_ack( tsx->endpt, tsx->last_tx, 
+                                    event->body.rx_msg.rdata );
+            status = tsx_send_msg( tsx, tsx->last_tx);
+	    if (status != PJ_SUCCESS) {
+		return status;
 	    }
 	}
 
@@ -1682,11 +1725,13 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 
 	/* Inform TU. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+                       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 
     } else {
 	// Shouldn't happen because there's no timer for this state.
 	pj_assert(0);
+        return PJ_EBUG;
     }
 
     return PJ_SUCCESS;
@@ -1695,18 +1740,22 @@ static int pjsip_tsx_on_state_proceeding_uac( pjsip_transaction *tsx, pjsip_even
 /*
  * Handler for events in Completed state for UAS
  */
-static int pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, 
+                                                     pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_COMPLETED);
 
     if (event->type == PJSIP_EVENT_RX_MSG) {
-	pjsip_msg *msg = event->src.rdata->msg;
+	pjsip_msg *msg = event->body.rx_msg.rdata->msg;
 	pjsip_cseq_hdr *cseq = pjsip_msg_find_hdr( msg, PJSIP_H_CSEQ, NULL );
 
 	/* On receive request retransmission, retransmit last response. */
 	if (cseq->method.id != PJSIP_ACK_METHOD) {
-	    if (pjsip_tsx_retransmit( tsx, 0 ) != 0) {
-		return -1;
+            pj_status_t status;
+
+            status = pjsip_tsx_retransmit( tsx, 0 );
+	    if (status != PJ_SUCCESS) {
+		return status;
 	    }
 
 	} else {
@@ -1717,18 +1766,23 @@ static int pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, pjsip_event
 
 	    /* Start timer I in T4 interval (transaction termination). */
 	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
-	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &t4_timer_val);
+	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+					&t4_timer_val);
 
 	    /* Move state to "Confirmed" */
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_CONFIRMED, event);
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_CONFIRMED, 
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 	}	
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
 
-	if (event->src.timer == &tsx->retransmit_timer) {
+	if (event->body.timer.entry == &tsx->retransmit_timer) {
 	    /* Retransmit message. */
-	    if (pjsip_tsx_retransmit( tsx, 1 ) != 0) {
-		return -1;
+            pj_status_t status;
+
+            status = pjsip_tsx_retransmit( tsx, 1 );
+	    if (status != PJ_SUCCESS) {
+		return status;
 	    }
 
 	} else {
@@ -1740,20 +1794,22 @@ static int pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, pjsip_event
 
 		tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
 
-		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
+		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                               PJSIP_EVENT_TIMER, &tsx->timeout_timer );
 
-		return -1;
+		return PJSIP_ETSXDESTROYED;
 
 	    } else {
 		/* Transaction terminated, it can now be deleted. */
-		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
-		return -1;
+		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                               PJSIP_EVENT_TIMER, &tsx->timeout_timer );
+		return PJSIP_ETSXDESTROYED;
 	    }
 	}
 
     } else {
 	/* Ignore request to transmit. */
-	pj_assert(event->src.tdata == tsx->last_tx);
+	pj_assert(event->body.tx_msg.tdata == tsx->last_tx);
     }
 
     return PJ_SUCCESS;
@@ -1762,32 +1818,37 @@ static int pjsip_tsx_on_state_completed_uas( pjsip_transaction *tsx, pjsip_event
 /*
  * Handler for events in Completed state for UAC transaction.
  */
-static int pjsip_tsx_on_state_completed_uac( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_completed_uac( pjsip_transaction *tsx,
+                                                     pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_COMPLETED);
 
     if (event->type == PJSIP_EVENT_TIMER) {
 	/* Must be the timeout timer. */
-	pj_assert(event->src.timer == &tsx->timeout_timer);
+	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
 
 	/* Move to Terminated state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                       PJSIP_EVENT_TIMER, event->body.timer.entry );
 
 	/* Transaction has been destroyed. */
-	return -1;
+	return PJSIP_ETSXDESTROYED;
 
     } else if (event->type == PJSIP_EVENT_RX_MSG) {
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
 	    /* On received of final response retransmission, retransmit the ACK.
 	     * TU doesn't need to be informed.
 	     */
-	    pjsip_msg *msg = event->src.rdata->msg;
+	    pjsip_msg *msg = event->body.rx_msg.rdata->msg;
 	    pj_assert(msg->type == PJSIP_RESPONSE_MSG);
 	    if (msg->type==PJSIP_RESPONSE_MSG &&
 		msg->line.status.code >= 200)
 	    {
-		if (pjsip_tsx_retransmit( tsx, 0 ) != 0) {
-		    return -1;
+                pj_status_t status;
+
+                status = pjsip_tsx_retransmit( tsx, 0 );
+		if (status != PJ_SUCCESS) {
+		    return status;
 		}
 	    } else {
 		/* Very late retransmission of privisional response. */
@@ -1798,34 +1859,41 @@ static int pjsip_tsx_on_state_completed_uac( pjsip_transaction *tsx, pjsip_event
 	}
     } else if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	       event->type == PJSIP_EVENT_TX_MSG &&
-	       event->src.tdata->msg->line.req.method.id == PJSIP_ACK_METHOD) {
+	       event->body.tx_msg.tdata->msg->line.req.method.id==PJSIP_ACK_METHOD) {
+
+        pj_status_t status;
 
 	/* Set last transmitted message. */
-	if (tsx->last_tx != event->src.tdata) {
+	if (tsx->last_tx != event->body.tx_msg.tdata) {
 	    pjsip_tx_data_dec_ref( tsx->last_tx );
-	    tsx->last_tx = event->src.tdata;
+	    tsx->last_tx = event->body.tx_msg.tdata;
 	    pjsip_tx_data_add_ref( tsx->last_tx );
 	}
 
 	/* No state changed, but notify app. 
 	 * Must notify now, so app has chance to put SDP in outgoing ACK msg.
 	 */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, event );
+	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+                       PJSIP_EVENT_TX_MSG, event->body.tx_msg.tdata );
 
 	/* Send msg */
-	tsx_send_msg(tsx, event->src.tdata);
+	status = tsx_send_msg(tsx, event->body.tx_msg.tdata);
+        if (status != PJ_SUCCESS)
+            return status;
 
     } else {
 	pj_assert(0);
+        return PJ_EBUG;
     }
 
-    return 0;
+    return PJ_SUCCESS;
 }
 
 /*
  * Handler for events in state Confirmed.
  */
-static int pjsip_tsx_on_state_confirmed( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_confirmed( pjsip_transaction *tsx,
+                                                 pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_CONFIRMED);
 
@@ -1835,25 +1903,36 @@ static int pjsip_tsx_on_state_confirmed( pjsip_transaction *tsx, pjsip_event *ev
 
     /* Absorb any ACK received. */
     if (event->type == PJSIP_EVENT_RX_MSG) {
+
+        pjsip_method_e method_id = 
+            event->body.rx_msg.rdata->msg->line.req.method.id;
+
 	/* Must be a request message. */
-	pj_assert(event->src.rdata->msg->type == PJSIP_REQUEST_MSG);
+	pj_assert(event->body.rx_msg.rdata->msg->type == PJSIP_REQUEST_MSG);
 
 	/* Must be an ACK request or a late INVITE retransmission. */
-	pj_assert(event->src.rdata->msg->line.req.method.id == PJSIP_ACK_METHOD ||
-		  event->src.rdata->msg->line.req.method.id == PJSIP_INVITE_METHOD);
+	pj_assert(method_id == PJSIP_ACK_METHOD ||
+		  method_id == PJSIP_INVITE_METHOD);
+
+        /* Just so that compiler won't complain about unused vars when
+         * building release code.
+         */
+        PJ_UNUSED_ARG(method_id);
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
 	/* Must be from timeout_timer_. */
-	pj_assert(event->src.timer == &tsx->timeout_timer);
+	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
 
 	/* Move to Terminated state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, event);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+                       PJSIP_EVENT_TIMER, &tsx->timeout_timer );
 
 	/* Transaction has been destroyed. */
-	return -1;
+	return PJSIP_ETSXDESTROYED;
 
     } else {
 	pj_assert(0);
+        return PJ_EBUG;
     }
 
     return PJ_SUCCESS;
@@ -1862,23 +1941,26 @@ static int pjsip_tsx_on_state_confirmed( pjsip_transaction *tsx, pjsip_event *ev
 /*
  * Handler for events in state Terminated.
  */
-static int pjsip_tsx_on_state_terminated( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_terminated( pjsip_transaction *tsx,
+                                                  pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_TERMINATED);
 
-    PJ_UNUSED_ARG(event)
+    PJ_UNUSED_ARG(event);
 
     /* Destroy this transaction */
-    tsx_set_state(tsx, PJSIP_TSX_STATE_DESTROYED, event);
+    tsx_set_state(tsx, PJSIP_TSX_STATE_DESTROYED, 
+                  event->type, event->body.user.user1 );
 
     return PJ_SUCCESS;
 }
 
 
-static int pjsip_tsx_on_state_destroyed( pjsip_transaction *tsx, pjsip_event *event)
+static pj_status_t pjsip_tsx_on_state_destroyed(pjsip_transaction *tsx,
+                                                pjsip_event *event)
 {
-    PJ_UNUSED_ARG(tsx)
-    PJ_UNUSED_ARG(event)
+    PJ_UNUSED_ARG(tsx);
+    PJ_UNUSED_ARG(event);
     return PJ_SUCCESS;
 }
 

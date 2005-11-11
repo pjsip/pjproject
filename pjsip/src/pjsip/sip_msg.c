@@ -1,8 +1,7 @@
 /* $Id$
- *
  */
 #include <pjsip/sip_msg.h>
-#include <pjsip/print.h>
+#include <pjsip/print_util.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 
@@ -264,7 +263,7 @@ PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg,
     return hdr;
 }
 
-PJ_DEF(int) pjsip_msg_print( pjsip_msg *msg, char *buf, pj_size_t size)
+PJ_DEF(pj_ssize_t) pjsip_msg_print( pjsip_msg *msg, char *buf, pj_size_t size)
 {
     char *p=buf, *end=buf+size;
     int len;

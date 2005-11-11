@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_LIST_H__
-#define __PJPP_LIST_H__
+#ifndef __PJPP_LIST_HPP__
+#define __PJPP_LIST_HPP__
 
 #include <pj/list.h>
 #include <pj++/pool.hpp>
@@ -307,4 +307,5 @@ private:
 };
 
 
-#endif	/* __PJPP_LIST_H__ */
+#endif	/* __PJPP_LIST_HPP__ */
+

@@ -1,5 +1,4 @@
 /* $Id$
- *
  */
 #ifndef __PJSIP_SIP_MISC_H__
 #define __PJSIP_SIP_MISC_H__
@@ -30,18 +29,20 @@ PJ_BEGIN_DECL
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
  * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
  * @param text	    Optional text body (put NULL to omit body).
+ * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    The transmit data.
+ * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_endpt_create_request( pjsip_endpoint *endpt, 
-						    const pjsip_method *method,
-						    const pj_str_t *target,
-						    const pj_str_t *from,
-						    const pj_str_t *to, 
-						    const pj_str_t *contact,
-						    const pj_str_t *call_id,
-						    int cseq, 
-						    const pj_str_t *text);
+PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt, 
+						 const pjsip_method *method,
+						 const pj_str_t *target,
+						 const pj_str_t *from,
+						 const pj_str_t *to, 
+						 const pj_str_t *contact,
+						 const pj_str_t *call_id,
+						 int cseq, 
+						 const pj_str_t *text,
+						 pjsip_tx_data **p_tdata);
 
 /**
  * Create an independent request message from the specified headers. This
@@ -58,10 +59,11 @@ PJ_DECL(pjsip_tx_data*) pjsip_endpt_create_request( pjsip_endpoint *endpt,
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
  * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
  * @param text	    Optional text body (put NULL to omit body).
+ * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    The transmit data.
+ * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pjsip_tx_data*)
+PJ_DECL(pj_status_t)
 pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 				     const pjsip_method *method,
 				     const pjsip_uri *target,
@@ -70,7 +72,8 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 				     const pjsip_contact_hdr *contact,
 				     const pjsip_cid_hdr *call_id,
 				     int cseq,
-				     const pj_str_t *text );
+				     const pj_str_t *text,
+				     pjsip_tx_data **p_tdata);
 
 /**
  * Send outgoing request and initiate UAC transaction for the request.
@@ -89,7 +92,7 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
  *		    the previously registered token and the event that triggers
  *		    the completion of the transaction.
  *
- * @return	    Zero if transaction is started successfully.
+ * @return	    PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
 					       pjsip_tx_data *tdata,
@@ -107,12 +110,14 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
  * @param endpt	    The endpoint.
  * @param rdata	    The request receive data.
  * @param code	    Status code to be put in the response.
+ * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    Transmit data.
+ * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_endpt_create_response(pjsip_endpoint *endpt,
-						    const pjsip_rx_data *rdata,
-						    int code);
+PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
+						  const pjsip_rx_data *rdata,
+						  int code,
+						  pjsip_tx_data **p_tdata);
 
 /**
  * Construct a full ACK request for the received non-2xx final response.
@@ -136,11 +141,13 @@ PJ_DECL(void) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
  *
  * @param endpt	    The endpoint.
  * @param tdata	    The transmit buffer for the request being cancelled.
+ * @param p_tdata   Pointer to receive the transmit data.
  *
- * @return	    Cancel request.
+ * @return	    PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
-						   pjsip_tx_data *tdata );
+PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
+						pjsip_tx_data *tdata,
+						pjsip_tx_data **p_tdata);
 
 
 /**
@@ -158,7 +165,6 @@ PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
 					     const pjsip_transport_t *tr,
 					     const pjsip_via_hdr *via,
 					     pjsip_host_port *addr);
-
 
 /**
  * @}

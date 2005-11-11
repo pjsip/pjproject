@@ -341,9 +341,19 @@ PJ_DECL(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
 
 
 /**
+ * Initialize operation key.
+ *
+ * @param op_key    The operation key to be initialied.
+ * @param size	    The size of the operation key.
+ */
+PJ_DECL(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
+				      pj_size_t size );
+
+/**
  * Check if operation is pending on the specified operation key.
- * The \c op_key must have been submitted as pending operation before,
- * or otherwise the result is undefined.
+ * The \c op_key must have been initialized with #pj_ioqueue_op_key_init() 
+ * or submitted as pending operation before, or otherwise the result 
+ * is undefined.
  *
  * @param key       The key.
  * @param op_key    The operation key, previously submitted to any of

@@ -892,6 +892,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 #endif	/* #if PJ_HAS_TCP */
 
 
+PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
+				     pj_size_t size )
+{
+    pj_memset(op_key, 0, size);
+}
 
 PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
                                          pj_ioqueue_op_key_t *op_key )

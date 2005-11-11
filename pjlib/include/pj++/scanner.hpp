@@ -1,8 +1,7 @@
 /* $Id$
- *
  */
-#ifndef __PJPP_SCANNER_H__
-#define __PJPP_SCANNER_H__
+#ifndef __PJPP_SCANNER_HPP__
+#define __PJPP_SCANNER_HPP__
 
 #include <pjlib-util/scanner.h>
 #include <pj++/string.hpp>
@@ -170,4 +169,5 @@ private:
     pj_scanner scanner_;
 };
 
-#endif	/* __PJPP_SCANNER_H__ */
+#endif	/* __PJPP_SCANNER_HPP__ */
+

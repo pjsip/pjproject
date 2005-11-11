@@ -183,6 +183,7 @@ PJ_DECL(pj_status_t) pj_exception_id_free(pj_exception_id_t id);
  */
 PJ_DECL(const char*) pj_exception_id_name(pj_exception_id_t id);
 
+
 /** @} */
 
 /**

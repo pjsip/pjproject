@@ -1,7 +1,7 @@
 /* $Id$
  */
-#ifndef __PJPP_SOCK_H__
-#define __PJPP_SOCK_H__
+#ifndef __PJPP_SOCK_HPP__
+#define __PJPP_SOCK_HPP__
 
 #include <pj/sock.h>
 #include <pj/string.h>
@@ -423,4 +423,5 @@ public:
 };
 
 
-#endif	/* __PJPP_SOCK_H__ */
+#endif	/* __PJPP_SOCK_HPP__ */
+
