@@ -1,21 +1,28 @@
-Version 0.3
+RELEASE NOTES
+
+Version 0.3-pre4
+Nov 13th, 2005
+====================================
+
 PJLIB
-	- Correct error reporting in the whole library. No more vague -1 errors!
-	- New super portable socket abstraction.
-	- Other headers were made super portable too.
-	- Ioqueue supports multiple pending operations in a single socket!
-	- No more floating point.
-	- Ported to new platforms:
-		- i386/linux kernel (!)
-		- Sparc/Solaris
-		- Alpha/Linux
+ - Correct error reporting in the whole library. No more vague -1 errors!
+ - New super portable socket abstraction.
+ - Other headers were made super portable too.
+ - Ioqueue supports multiple pending operations in a single socket!
+ - No more floating point.
+ - Ported to new platforms:
+    - i386/linux kernel (!)
+    - Sparc/Solaris
+    - Alpha/Linux
+
 PJSIP
-	- Correct error reporting in the whole library. No more -1 errors!
-	- Rewrote event, now much more readable.
-	- Per object tracing.
+  - Correct error reporting in the whole library. No more -1 errors!
+  - Rewrote event, now much more readable.
+  - Per object tracing.
 
 
 Version 0.2.9 - 2005/06/19
+====================================
 Core:
   - Moved authentication stuff to core.
 SIMPLE:

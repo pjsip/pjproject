@@ -29,7 +29,7 @@
  * @section download_sec Download
  *
  * PJLIB and all documentation can be downloaded from 
- * http://www.bulukucing.org.
+ * http://www.pjproject.net.
  *
  *
  * @section how_to_use_sec About This Documentation
@@ -237,11 +237,6 @@
  * from the system (see @ref PJ_TIMESTAMP).
  *
  *
- * @subsection lexical_scanner_sec Lexical Scanner
- *
- * A fast, small, top-down lexical scanner to create fully optimized
- * hand-written parser. See @ref PJ_SCAN for more info.
- *
  * @subsection data_struct_sec Various Data Structures
  *
  * Various data structures are provided in the library:
@@ -257,7 +252,7 @@
  *
  * A convenient TRY/CATCH like construct to propagate errors, which by
  * default are used by the @ref PJ_POOL_GROUP "memory pool" and 
- * the @ref PJ_SCAN "scanner". The exception
+ * the lexical scanner in pjlib-util. The exception
  * construct can be used to write programs like below:
  *
  * <pre>
@@ -393,7 +388,7 @@
  *
  * Enjoy using PJLIB!
  *
- * Benny Prijono < bennylp at bulukucing dot org >
+ * Benny Prijono < bennylp at pjproject dot net >
  */
 
 
