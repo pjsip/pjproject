@@ -1,45 +1,20 @@
-/* $Id$
- *
- */
+/* $Id$ */
 /* 
- * PJLIB - PJ Foundation Library
- * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
+ * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
  *
- * Author:
- *  Benny Prijono <bennylp@bulukucing.org>
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- * 
- * This library is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-/* $Log: /pjproject-0.3/pjlib/include/pj/compat/os_linux.h $
- * 
- * 6     10/29/05 11:51a Bennylp
- * Version 0.3-pre2.
- * 
- * 5     10/14/05 12:26a Bennylp
- * Finished error code framework, some fixes in ioqueue, etc. Pretty
- * major.
- * 
- * 4     9/22/05 10:31a Bennylp
- * Moving all *.h files to include/.
- * 
- * 3     9/21/05 1:39p Bennylp
- * Periodic checkin for backup.
- * 
- * 2     9/17/05 10:37a Bennylp
- * Major reorganization towards version 0.3.
- * 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #ifndef __PJ_COMPAT_OS_LINUX_H__
 #define __PJ_COMPAT_OS_LINUX_H__
