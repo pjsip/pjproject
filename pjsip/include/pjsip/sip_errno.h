@@ -54,6 +54,11 @@
 
 /**
  * @hideinitializer
+ * Invalid message (syntax error)
+ */
+#define PJSIP_EINVALIDMSG       (PJSIP_ERRNO_START_PJSIP + 0)
+/**
+ * @hideinitializer
  * Missing required header(s).
  */
 #define PJSIP_EMISSINGHDR       (PJSIP_ERRNO_START_PJSIP + 1)
@@ -97,6 +102,22 @@
  * Invalid Via header in response (sent-by, etc).
  */
 #define PJSIP_EINVALIDVIA	(PJSIP_ERRNO_START_PJSIP + 9)
+/**
+ * @hideinitializer
+ * Multiple Via headers in response.
+ */
+#define PJSIP_EMULTIPLEVIA	(PJSIP_ERRNO_START_PJSIP + 9)
+/**
+ * @hideinitializer
+ * SIP object is busy.
+ */
+#define PJSIP_EBUSY		(PJSIP_ERRNO_START_PJSIP + 10)
+/**
+ * @hideinitializer
+ * SIP object with the same type already exists.
+ */
+#define PJSIP_ETYPEEXISTS	(PJSIP_ERRNO_START_PJSIP + 11)
+
 
 
 #endif	/* __PJSIP_SIP_ERRNO_H__ */

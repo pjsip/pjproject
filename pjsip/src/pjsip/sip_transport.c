@@ -29,152 +29,32 @@
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
-
-#define MGR_IDLE_CHECK_INTERVAL	30
-#define MGR_HASH_TABLE_SIZE	PJSIP_MAX_DIALOG_COUNT
-#define BACKLOG			5
-#define DEFAULT_SO_SNDBUF	(8 * 1024 * 1024)
-#define DEFAULT_SO_RCVBUF	(8 * 1024 * 1024)
-
-#define LOG_TRANSPORT_MGR	"trmgr"	
-#define THIS_FILE		"sip_transport"
-
-static void destroy_transport( pjsip_transport_mgr *mgr, pjsip_transport_t *tr );
+#include <pj/lock.h>
 
 
-/**
- * New TCP socket for accept.
- */
-typedef struct incoming_socket_rec
-{
-    pj_sock_t		sock;
-    pj_sockaddr_in	remote;
-    pj_sockaddr_in	local;
-    int			addrlen;
-} incoming_socket_rec;
-
-/**
- * SIP Transport.
- */
-struct pjsip_transport_t
-{
-    /** Standard list members, for chaining the transport in the 
-     *  listener list. 
-     */
-    PJ_DECL_LIST_MEMBER(struct pjsip_transport_t);
-
-    /** Transport's pool. */
-    pj_pool_t		*pool;
-
-    /** Mutex */
-    pj_mutex_t		*tr_mutex;
-
-    /** Transport name for logging purpose */
-    char		 obj_name[PJ_MAX_OBJ_NAME];
-
-    /** Socket handle */
-    pj_sock_t		 sock;
-
-    /** Transport type. */
-    pjsip_transport_type_e type;
-
-    /** Flags to keep various states (see pjsip_transport_flags_e). */
-    pj_uint32_t		 flag;
-
-    /** I/O Queue key */
-    pj_ioqueue_key_t	*key;
-
-    /** Accept key. */
-    pj_ioqueue_op_key_t	 accept_op;
-
-    /** Receive data buffer */
-    pjsip_rx_data	*rdata;
-
-    /** Pointer to transport manager */
-    pjsip_transport_mgr *mgr;
-
-    /** Reference counter, to prevent this transport from being closed while
-     *  it's being used. 
-     */
-    pj_atomic_t		 *ref_cnt;
-
-    /** Local address. */
-    pj_sockaddr_in	 local_addr;
-
-    /** Address name (what to put in Via address field). */
-    pj_sockaddr_in	 addr_name;
-
-    /** Remote address (can be zero for UDP and for listeners). UDP listener
-     *  bound to local loopback interface (127.0.0.1) has remote address set
-     *  to 127.0.0.1 to prevent client from using it to send to remote hosts,
-     *  because remote host then will receive 127.0.0.1 as the packet's 
-     *  source address.
-     */
-    pj_sockaddr_in	 remote_addr;
-
-    /** Struct to save incoming socket information. */
-    incoming_socket_rec	 accept_data;
-
-    /** When this transport should be closed. */
-    pj_time_val		 close_time;
-
-    /** List of callbacks to be called when client attempt to use this 
-     *  transport while it's not connected (i.e. still connecting). 
-     */
-    pj_list		 cb_list;
-};
-
+#define THIS_FILE    "transport"
 
 /*
  * Transport manager.
  */
-struct pjsip_transport_mgr 
+struct pjsip_tpmgr 
 {
-    pj_hash_table_t *transport_table;
-    pj_mutex_t	    *mutex;
+    pj_hash_table_t *table;
+    pj_lock_t	    *lock;
     pjsip_endpoint  *endpt;
     pj_ioqueue_t    *ioqueue;
-    pj_time_val	     next_idle_check;
-    pj_size_t        send_buf_size;
-    pj_size_t        recv_buf_size;
-    void           (*message_callback)(pjsip_endpoint*, pjsip_rx_data *rdata);
+    pj_timer_heap_t *timer_heap;
+    pjsip_tpfactory  factory_list;
+    void           (*msg_cb)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
 };
 
-/*
- * Transport role.
- */
-typedef enum transport_role_e
-{
-    TRANSPORT_ROLE_LISTENER,
-    TRANSPORT_ROLE_TRANSPORT,
-} transport_role_e;
 
-/*
- * Transport key for indexing in the hash table.
- * WATCH OUT FOR ALIGNMENT PROBLEM HERE!
- */
-typedef struct transport_key
-{
-    pj_uint8_t	type;
-    pj_uint8_t	zero;
-    pj_uint16_t	port;
-    pj_uint32_t	addr;
-} transport_key;
 
-/*
- * Transport callback.
- */
-struct transport_callback
-{
-    PJ_DECL_LIST_MEMBER(struct transport_callback);
-
-    /** User defined token to be passed to the callback. */
-    void *token;
-
-    /** The callback function. */
-    void (*cb)(pjsip_transport_t *tr, void *token, pj_status_t status);
-
-};
+/*****************************************************************************
+ *
+ * GENERAL TRANSPORT (NAMES, TYPES, ETC.)
+ *
+ *****************************************************************************/
 
 /*
  * Transport names.
@@ -184,129 +64,16 @@ const struct
     pjsip_transport_type_e type;
     pj_uint16_t		   port;
     pj_str_t		   name;
+    unsigned		   flag;
 } transport_names[] = 
 {
-    { PJSIP_TRANSPORT_UNSPECIFIED, 0, {NULL, 0}},
-    { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}},
-#if PJ_HAS_TCP
-    { PJSIP_TRANSPORT_TCP, 5060, {"TCP", 3}},
-    { PJSIP_TRANSPORT_TLS, 5061, {"TLS", 3}},
-    { PJSIP_TRANSPORT_SCTP, 5060, {"SCTP", 4}}
-#endif
+    { PJSIP_TRANSPORT_UNSPECIFIED, 0, {NULL, 0}, 0},
+    { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}, PJSIP_TRANSPORT_DATAGRAM},
+    { PJSIP_TRANSPORT_TCP, 5060, {"TCP", 3}, PJSIP_TRANSPORT_RELIABLE},
+    { PJSIP_TRANSPORT_TLS, 5061, {"TLS", 3}, PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE},
+    { PJSIP_TRANSPORT_SCTP, 5060, {"SCTP", 4}, PJSIP_TRANSPORT_RELIABLE}
 };
 
-static void on_ioqueue_read(pj_ioqueue_key_t *key, 
-                            pj_ioqueue_op_key_t *op_key, 
-                            pj_ssize_t bytes_read);
-static void on_ioqueue_write(pj_ioqueue_key_t *key, 
-                             pj_ioqueue_op_key_t *op_key, 
-                             pj_ssize_t bytes_sent);
-static void on_ioqueue_accept(pj_ioqueue_key_t *key, 
-                              pj_ioqueue_op_key_t *op_key, 
-			      pj_sock_t newsock,
-                              int status);
-static void on_ioqueue_connect(pj_ioqueue_key_t *key, 
-                               int status);
-
-static pj_ioqueue_callback ioqueue_transport_callback = 
-{
-    &on_ioqueue_read,
-    &on_ioqueue_write,
-    &on_ioqueue_accept,
-    &on_ioqueue_connect
-};
-
-static void init_key_from_transport(transport_key *key, 
-				    const pjsip_transport_t *tr)
-{
-    /* This is to detect alignment problems. */
-    pj_assert(sizeof(transport_key) == 8);
-
-    key->type = (pj_uint8_t)tr->type;
-    key->zero = 0;
-    key->addr = pj_sockaddr_in_get_addr(&tr->remote_addr).s_addr;
-    key->port = pj_sockaddr_in_get_port(&tr->remote_addr);
-    /*
-    if (key->port == 0) {
-	key->port = pj_sockaddr_in_get_port(&tr->local_addr);
-    }
-    */
-}
-
-#if PJ_HAS_TCP
-static void init_tcp_key(transport_key *key, pjsip_transport_type_e type,
-			 const pj_sockaddr_in *addr)
-{
-    /* This is to detect alignment problems. */
-    pj_assert(sizeof(transport_key) == 8);
-
-    key->type = (pj_uint8_t)type;
-    key->zero = 0;
-    key->addr = pj_sockaddr_in_get_addr(addr).s_addr;
-    key->port = pj_sockaddr_in_get_port(addr);
-}
-#endif
-
-static void init_udp_key(transport_key *key, pjsip_transport_type_e type,
-			  const pj_sockaddr_in *addr)
-{
-    PJ_UNUSED_ARG(addr);
-
-    /* This is to detect alignment problems. */
-    pj_assert(sizeof(transport_key) == 8);
-
-    pj_memset(key, 0, sizeof(*key));
-    key->type = (pj_uint8_t)type;
-
-#if 0	/* Not sure why we need to make 127.0.0.1 a special case */
-    if (addr->sin_addr.s_addr == inet_addr("127.0.0.1")) {
-	/* This looks more complicated than it is because key->addr uses
-	 * the host version of the address (i.e. converted with ntohl()).
-	 */
-	pj_str_t localaddr = pj_str("127.0.0.1");
-	pj_sockaddr_in addr;
-	pj_sockaddr_set_str_addr(&addr, &localaddr);
-	key->addr = pj_sockaddr_in_get_addr(&addr);
-    }
-#endif
-}
-
-/*
- * Get type format name (for pool name).
- */
-static const char *transport_get_name_format( int type )
-{
-    switch (type) {
-    case PJSIP_TRANSPORT_UDP:
-	return " udp%p";
-#if PJ_HAS_TCP
-    case PJSIP_TRANSPORT_TCP:
-	return " tcp%p";
-    case PJSIP_TRANSPORT_TLS:
-	return " tls%p";
-    case PJSIP_TRANSPORT_SCTP:
-	return "sctp%p";
-#endif
-    }
-    pj_assert(0);
-    return 0;
-}
-
-/*
- * Get the default SIP port number for the specified type.
- */
-PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
-{
-    return transport_names[type].port;
-}
-
-/*
- * Get transport name.
- */
-static const char *get_type_name(int type)
-{
-    return transport_names[type].name.ptr;
-}
 
 /*
  * Get transport type from name.
@@ -321,33 +88,78 @@ pjsip_transport_get_type_from_name(const pj_str_t *name)
 	    return transport_names[i].type;
 	}
     }
+
+    pj_assert(!"Invalid transport name");
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
+
+
+/*
+ * Get the transport type for the specified flags.
+ */
+PJ_DEF(pjsip_transport_type_e) 
+pjsip_transport_get_type_from_flag(unsigned flag)
+{
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
+	if (transport_names[i].flag == flag) {
+	    return transport_names[i].type;
+	}
+    }
+
+    pj_assert(!"Invalid transport type");
+    return PJSIP_TRANSPORT_UNSPECIFIED;
+}
+
+PJ_DEF(unsigned)
+pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
+{
+    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 0);
+    return transport_names[type].flag;
+}
+
+/*
+ * Get the default SIP port number for the specified type.
+ */
+PJ_DEF(int) 
+pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
+{
+    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 5060);
+    return transport_names[type].port;
+}
+
+
+/*****************************************************************************
+ *
+ * TRANSMIT DATA BUFFER MANIPULATION.
+ *
+ *****************************************************************************/
 
 /*
  * Create new transmit buffer.
  */
-pj_status_t pjsip_tx_data_create( pjsip_transport_mgr *mgr,
-                                  pjsip_tx_data **p_tdata )
+PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
+					  pjsip_tx_data **p_tdata )
 {
     pj_pool_t *pool;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    PJ_LOG(5, ("", "pjsip_tx_data_create"));
-
     PJ_ASSERT_RETURN(mgr && p_tdata, PJ_EINVAL);
 
-    pool = pjsip_endpt_create_pool( mgr->endpt, "ptdt%p",
+    PJ_LOG(5, ("", "pjsip_tx_data_create"));
+
+    pool = pjsip_endpt_create_pool( mgr->endpt, "tdta%p",
 				    PJSIP_POOL_LEN_TDATA,
 				    PJSIP_POOL_INC_TDATA );
-    if (!pool) {
+    if (!pool)
 	return PJ_ENOMEM;
-    }
-    tdata = pj_pool_calloc(pool, 1, sizeof(pjsip_tx_data));
+
+    tdata = pj_pool_zalloc(pool, sizeof(pjsip_tx_data));
     tdata->pool = pool;
     tdata->mgr = mgr;
-    pj_sprintf(tdata->obj_name,"txd%p", tdata);
+    pj_snprintf(tdata->obj_name, PJ_MAX_OBJ_NAME, "tdta%p", tdata);
 
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);
     if (status != PJ_SUCCESS) {
@@ -355,9 +167,19 @@ pj_status_t pjsip_tx_data_create( pjsip_transport_mgr *mgr,
 	return status;
     }
     
+    //status = pj_lock_create_simple_mutex(pool, "tdta%p", &tdata->lock);
+    status = pj_lock_create_null_mutex(pool, "tdta%p", &tdata->lock);
+    if (status != PJ_SUCCESS) {
+	pjsip_endpt_destroy_pool( mgr->endpt, tdata->pool );
+	return status;
+    }
+
+    pj_ioqueue_op_key_init(&tdata->op_key, sizeof(tdata->op_key));
+
     *p_tdata = tdata;
     return PJ_SUCCESS;
 }
+
 
 /*
  * Add reference to tx buffer.
@@ -375,8 +197,9 @@ PJ_DEF(void) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 {
     pj_assert( pj_atomic_get(tdata->ref_cnt) > 0);
     if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
-	PJ_LOG(6,(tdata->obj_name, "destroying txdata"));
+	PJ_LOG(5,(tdata->obj_name, "destroying txdata"));
 	pj_atomic_destroy( tdata->ref_cnt );
+	pj_lock_destroy( tdata->lock );
 	pjsip_endpt_destroy_pool( tdata->mgr->endpt, tdata->pool );
     }
 }
@@ -390,328 +213,79 @@ PJ_DEF(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata )
     tdata->buf.cur = tdata->buf.start;
 }
 
-/*
- * Get the transport type.
- */
-PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type( const pjsip_transport_t * tr)
+PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
 {
-    return tr->type;
+    return tdata->buf.cur != tdata->buf.start;
 }
 
-/*
- * Get transport type from transport flag.
- */
-PJ_DEF(pjsip_transport_type_e) pjsip_get_transport_type_from_flag(unsigned flag)
-{
-#if PJ_HAS_TCP
-    if (flag & PJSIP_TRANSPORT_SECURE) {
-	return PJSIP_TRANSPORT_TLS;
-    } else if (flag & PJSIP_TRANSPORT_RELIABLE) {
-	return PJSIP_TRANSPORT_TCP;
-    } else 
-#else
-    PJ_UNUSED_ARG(flag);
-#endif
-    {
-	return PJSIP_TRANSPORT_UDP;
-    }
-}
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT KEY
+ *
+ *****************************************************************************/
 
 /*
- * Get the transport type name.
+ * Transport key for indexing in the hash table.
  */
-PJ_DEF(const char *) pjsip_transport_get_type_name( const pjsip_transport_t * tr)
+typedef struct transport_key
 {
-    return get_type_name(tr->type);
-}
+    pj_uint8_t	type;
+    pj_uint8_t	zero;
+    pj_uint16_t	port;
+    pj_uint32_t	addr;
+} transport_key;
 
-/*
- * Get the transport's object name.
- */
-PJ_DEF(const char*) pjsip_transport_get_obj_name( const pjsip_transport_t *tr )
+
+/*****************************************************************************
+ *
+ * TRANSPORT
+ *
+ *****************************************************************************/
+
+static void transport_send_callback(pjsip_transport *transport,
+				    void *token,
+				    pj_status_t status)
 {
-    return tr->obj_name;
-}
+    pjsip_tx_data *tdata = token;
 
-/*
- * Get the transport's reference counter.
- */
-PJ_DEF(int) pjsip_transport_get_ref_cnt( const pjsip_transport_t *tr )
-{
-    return pj_atomic_get(tr->ref_cnt);
-}
+    PJ_UNUSED_ARG(transport);
 
-/*
- * Get transport local address.
- */
-PJ_DEF(const pj_sockaddr_in*) pjsip_transport_get_local_addr( pjsip_transport_t *tr )
-{
-    return &tr->local_addr;
-}
-
-/*
- * Get address name.
- */
-PJ_DEF(const pj_sockaddr_in*) pjsip_transport_get_addr_name (pjsip_transport_t *tr)
-{
-    return &tr->addr_name;
-}
-
-/*
- * Get transport remote address.
- */
-PJ_DEF(const pj_sockaddr_in*) pjsip_transport_get_remote_addr( const pjsip_transport_t *tr )
-{
-    return &tr->remote_addr;
-}
-
-/*
- * Get transport flag.
- */
-PJ_DEF(unsigned) pjsip_transport_get_flag( const pjsip_transport_t * tr )
-{
-    return tr->flag;
-}
-
-/*
- * Add reference to the specified transport.
- */
-PJ_DEF(void) pjsip_transport_add_ref( pjsip_transport_t * tr )
-{
-    pj_atomic_inc(tr->ref_cnt);
-}
-
-/*
- * Decrease the reference time of the transport.
- */
-PJ_DEF(void) pjsip_transport_dec_ref( pjsip_transport_t *tr )
-{
-    pj_assert(tr->ref_cnt > 0);
-    if (pj_atomic_dec_and_get(tr->ref_cnt) == 0) {
-	pj_gettimeofday(&tr->close_time);
-	tr->close_time.sec += PJSIP_TRANSPORT_CLOSE_TIMEOUT;
-    }
-}
-
-/*
- * Open the underlying transport.
- */
-static pj_status_t create_socket( pjsip_transport_type_e type,
-				  pj_sockaddr_in *local,
-                                  pj_sock_t *p_sock)
-{
-    int sock_family;
-    int sock_type;
-    int sock_proto;
-    int len;
-    pj_status_t status;
-    pj_sock_t sock;
-
-    /* Set socket parameters */
-    if (type == PJSIP_TRANSPORT_UDP) {
-	sock_family = PJ_AF_INET;
-	sock_type = PJ_SOCK_DGRAM;
-	sock_proto = 0;
-
-#if PJ_HAS_TCP
-    } else if (type == PJSIP_TRANSPORT_TCP) {
-	sock_family = PJ_AF_INET;
-	sock_type = PJ_SOCK_STREAM;
-	sock_proto = 0;
-#endif
-    } else {
-	return PJ_EINVAL;
-    }
-
-    /* Create socket. */
-    status = pj_sock_socket( sock_family, sock_type, sock_proto, &sock);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Bind the socket to the requested address, or if no address is
-     * specified, let the operating system chooses the address.
+    /* Mark pending off so that app can resend/reuse txdata from inside
+     * the callback.
      */
-    if (/*local->sin_addr.s_addr != 0 &&*/ local->sin_port != 0) {
-	/* Bind to the requested address. */
-        status = pj_sock_bind(sock, local, sizeof(*local));
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(sock);
-	    return status;
-	}
-    } else if (type == PJSIP_TRANSPORT_UDP) {
-	/* Only for UDP sockets: bind to any address so that the operating 
-	 * system allocates the port for us. For TCP, let the OS implicitly
-	 * bind the socket with connect() syscall (if we bind now, then we'll
-	 * get 0.0.0.0 as local address).
-	 */
-	pj_memset(local, 0, sizeof(*local));
-	local->sin_family = PJ_AF_INET;
-        status = pj_sock_bind(sock, local, sizeof(*local));
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(sock);
-	    return status;
-	}
+    tdata->is_pending = 0;
 
-	/* Get the local address. */
-	len = sizeof(pj_sockaddr_in);
-        status = pj_sock_getsockname(sock, local, &len);
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(sock);
-	    return status;
-	}
+    /* Call callback, if any. */
+    if (tdata->cb) {
+	(*tdata->cb)(tdata->token, tdata, status);
     }
 
-    *p_sock = sock;
-    return PJ_SUCCESS;
+    /* Decrement reference count. */
+    pjsip_tx_data_dec_ref(tdata);
 }
 
 /*
- * Close the transport.
+ * Send a SIP message using the specified transport.
  */
-static void destroy_socket( pjsip_transport_t * tr)
+PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr, 
+					   pjsip_tx_data *tdata,
+					   const pj_sockaddr_in *addr,
+					   void *token,
+					   void (*cb)(void *token, 
+						      pjsip_tx_data *tdata,
+						      pj_status_t))
 {
-    pj_assert( pj_atomic_get(tr->ref_cnt) == 0);
-    pj_sock_close(tr->sock);
-    tr->sock = -1;
-}
-
-/*
- * Create a new transport object.
- */
-static pj_status_t create_transport( pjsip_transport_mgr *mgr,
-				     pjsip_transport_type_e type,
-				     pj_sock_t sock_hnd,
-				     const pj_sockaddr_in *local_addr,
-				     const pj_sockaddr_in *addr_name,
-				     pjsip_transport_t **p_transport )
-{
-    pj_pool_t *tr_pool=NULL, *rdata_pool=NULL;
-    pjsip_transport_t *tr = NULL;
     pj_status_t status;
 
-    /* Allocate pool for transport from endpoint. */
-    tr_pool = pjsip_endpt_create_pool( mgr->endpt,
-				       transport_get_name_format(type),
-				       PJSIP_POOL_LEN_TRANSPORT,
-				       PJSIP_POOL_INC_TRANSPORT );
-    if (!tr_pool) {
-	status = PJ_ENOMEM;
-	goto on_error;
-    }
+    PJ_ASSERT_RETURN(tr && tdata && addr, PJ_EINVAL);
 
-    /* Allocate pool for rdata from endpoint. */
-    rdata_pool = pjsip_endpt_create_pool( mgr->endpt,
-					     "prdt%p",
-					     PJSIP_POOL_LEN_RDATA,
-					     PJSIP_POOL_INC_RDATA );
-    if (!rdata_pool) {
-	status = PJ_ENOMEM;
-	goto on_error;
-    }
-
-    /* Allocate and initialize the transport. */
-    tr = pj_pool_calloc(tr_pool, 1, sizeof(*tr));
-    tr->pool = tr_pool;
-    tr->type = type;
-    tr->mgr = mgr;
-    tr->sock = sock_hnd;
-    pj_memcpy(&tr->local_addr, local_addr, sizeof(pj_sockaddr_in));
-    pj_list_init(&tr->cb_list);
-    pj_sprintf(tr->obj_name, transport_get_name_format(type), tr);
-
-    if (type != PJSIP_TRANSPORT_UDP) {
-	tr->flag |= PJSIP_TRANSPORT_RELIABLE;
-    }
-
-    /* Address name. */
-    if (addr_name == NULL) {
-	addr_name = &tr->local_addr;
-    } 
-    pj_memcpy(&tr->addr_name, addr_name, sizeof(*addr_name));
-
-    /* Create atomic */
-    status = pj_atomic_create(tr_pool, 0, &tr->ref_cnt);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-    
-    /* Init rdata in the transport. */
-    tr->rdata = pj_pool_alloc(rdata_pool, sizeof(*tr->rdata));
-    tr->rdata->pool = rdata_pool;
-    tr->rdata->len = 0;
-    tr->rdata->transport = tr;
-    
-    /* Init transport mutex. */
-    status = pj_mutex_create_recursive(tr_pool, "mtr%p", &tr->tr_mutex);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Register to I/O Queue */
-    status = pj_ioqueue_register_sock( tr_pool, mgr->ioqueue, 
-				       tr->sock, tr,
-				       &ioqueue_transport_callback,
-				       &tr->key);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    *p_transport = tr;
-    return PJ_SUCCESS;
-
-on_error:
-    if (tr && tr->tr_mutex) {
-	pj_mutex_destroy(tr->tr_mutex);
-    }
-    if (tr_pool) {
-	pjsip_endpt_destroy_pool(mgr->endpt, tr_pool);
-    }
-    if (rdata_pool) {
-	pjsip_endpt_destroy_pool(mgr->endpt, rdata_pool);
-    }
-    return status;
-}
-
-/*
- * Destroy transport.
- */
-static void destroy_transport( pjsip_transport_mgr *mgr, pjsip_transport_t *tr)
-{
-    transport_key hash_key;
-
-    /* Remove from I/O queue. */
-    pj_ioqueue_unregister( tr->key );
-
-    /* Remove from hash table */
-    init_key_from_transport(&hash_key, tr);
-    pj_hash_set(NULL, mgr->transport_table, &hash_key, sizeof(hash_key), NULL);
-
-    /* Close transport. */
-    destroy_socket(tr);
-
-    /* Destroy the transport mutex. */
-    pj_mutex_destroy(tr->tr_mutex);
-
-    /* Destroy atomic */
-    pj_atomic_destroy( tr->ref_cnt );
-
-    /* Release the pool associated with the rdata. */
-    pjsip_endpt_destroy_pool(mgr->endpt, tr->rdata->pool );
-
-    /* Release the pool associated with the transport. */
-    pjsip_endpt_destroy_pool(mgr->endpt, tr->pool );
-}
-
-
-static pj_status_t transport_send_msg( pjsip_transport_t *tr, 
-				       pjsip_tx_data *tdata,
-				       const pj_sockaddr_in *addr, 
-				       pj_ssize_t *p_sent)
-{
-    const char *buf = tdata->buf.start;
-    pj_ssize_t size;
-    pj_status_t status;
-
-    /* Can only send if tdata is not being sent! */
-    if (pj_ioqueue_is_pending(tr->key, &tdata->op_key))
+    /* Is it currently being sent? */
+    if (tdata->is_pending) {
+	pj_assert(!"Invalid operation step!");
 	return PJSIP_EPENDINGTX;
+    }
 
     /* Allocate buffer if necessary. */
     if (tdata->buf.start == NULL) {
@@ -720,8 +294,10 @@ static pj_status_t transport_send_msg( pjsip_transport_t *tr,
 	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
     }
 
-    /* Print the message if it's not printed */
-    if (tdata->buf.cur <= tdata->buf.start) {
+    /* Do we need to reprint? */
+    if (!pjsip_tx_data_is_valid(tdata)) {
+	pj_ssize_t size;
+
 	size = pjsip_msg_print( tdata->msg, tdata->buf.start, 
 			        tdata->buf.end - tdata->buf.start);
 	if (size < 0) {
@@ -732,952 +308,544 @@ static pj_status_t transport_send_msg( pjsip_transport_t *tr,
 	tdata->buf.cur[size] = '\0';
     }
 
-    /* Send the message. */
-    buf = tdata->buf.start;
-    size = tdata->buf.cur - tdata->buf.start;
+    /* Save callback data. */
+    tdata->token = token;
+    tdata->cb = cb;
 
-    if (tr->type == PJSIP_TRANSPORT_UDP) {
-	PJ_LOG(4,(tr->obj_name, "sendto %s:%d, %d bytes, data:\n"
-		  "----------- begin msg ------------\n"
-		  "%s"
-		  "------------ end msg -------------",
-		  pj_inet_ntoa(addr->sin_addr), 
-		  pj_sockaddr_in_get_port(addr),
-		  size, buf));
+    /* Add reference counter. */
+    pjsip_tx_data_add_ref(tdata);
 
-	status = pj_ioqueue_sendto( tr->key, &tdata->op_key,
-				    buf, &size, 0, addr, sizeof(*addr));
-    } 
-#if PJ_HAS_TCP
-    else {
-	PJ_LOG(4,(tr->obj_name, "sending %d bytes, data:\n"
-		  "----------- begin msg ------------\n"
-		  "%s"
-		  "------------ end msg -------------",
-		  size, buf));
+    /* Mark as pending. */
+    tdata->is_pending = 1;
 
-	status = pj_ioqueue_send(tr->key, &tdata->op_key, buf, &size, 0);
+    /* Send to transport. */
+    status = (*tr->send_msg)(tr, tdata->buf.start, 
+			     tdata->buf.cur - tdata->buf.start,
+			     &tdata->op_key,
+			     addr, tdata, &transport_send_callback);
+
+    if (status != PJ_EPENDING) {
+	tdata->is_pending = 0;
+	pjsip_tx_data_dec_ref(tdata);
     }
-#else
-    else {
-	pj_assert(!"Unsupported transport");
-	status = PJSIP_EUNSUPTRANSPORT;
-    }
-#endif
 
-    *p_sent = size;
     return status;
 }
 
-/*
- * Send a SIP message using the specified transport, to the address specified
- * in the outgoing data.
- */
-PJ_DEF(pj_status_t) pjsip_transport_send_msg( pjsip_transport_t *tr,
-					      pjsip_tx_data *tdata,
-					      const pj_sockaddr_in *addr,
-					      pj_ssize_t *sent)
+static void transport_idle_callback(pj_timer_heap_t *timer_heap,
+				    struct pj_timer_entry *entry)
 {
-    PJ_LOG(5, (tr->obj_name, "pjsip_transport_send_msg(tdata=%s)", tdata->obj_name));
+    pjsip_transport *tp = entry->user_data;
+    pj_assert(tp != NULL);
 
-    return transport_send_msg(tr, tdata, addr, sent );
+    PJ_UNUSED_ARG(timer_heap);
+
+    entry->id = PJ_FALSE;
+    pjsip_transport_unregister(tp->tpmgr, tp);
 }
 
-///////////////////////////////////////////////////////////////////////////////
+/*
+ * Add ref.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
+{
+    PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
+
+    if (pj_atomic_inc_and_get(tp->ref_cnt) == 1) {
+	pj_lock_acquire(tp->tpmgr->lock);
+	/* Verify again. */
+	if (pj_atomic_get(tp->ref_cnt) == 1) {
+	    if (tp->idle_timer.id != PJ_FALSE) {
+		pj_timer_heap_cancel(tp->tpmgr->timer_heap, &tp->idle_timer);
+		tp->idle_timer.id = PJ_FALSE;
+	    }
+	}
+	pj_lock_release(tp->tpmgr->lock);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Dec ref.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
+{
+    PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
+
+    pj_assert(pj_atomic_get(tp->ref_cnt) > 0);
+
+    if (pj_atomic_dec_and_get(tp->ref_cnt) == 0) {
+	pj_lock_acquire(tp->tpmgr->lock);
+	/* Verify again. */
+	if (pj_atomic_get(tp->ref_cnt) == 0) {
+	    pj_time_val delay = { PJSIP_TRANSPORT_IDLE_TIME, 0 };
+
+	    pj_assert(tp->idle_timer.id == 0);
+	    tp->idle_timer.id = PJ_TRUE;
+	    pj_timer_heap_schedule(tp->tpmgr->timer_heap, &tp->idle_timer, &delay);
+	}
+	pj_lock_release(tp->tpmgr->lock);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Register a transport.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
+					      pjsip_transport *tp )
+{
+    transport_key key;
+
+    /* Init. */
+    tp->tpmgr = mgr;
+    pj_memset(&tp->idle_timer, 0, sizeof(tp->idle_timer));
+    tp->idle_timer.user_data = tp;
+    tp->idle_timer.cb = &transport_idle_callback;
+
+    /* 
+     * Register to hash table.
+     */
+    key.type = (pj_uint8_t)tp->type;
+    key.zero = 0;
+    key.addr = pj_ntohl(tp->rem_addr.sin_addr.s_addr);
+    key.port = pj_ntohs(tp->rem_addr.sin_port);
+
+    pj_lock_acquire(mgr->lock);
+    pj_hash_set(tp->pool, mgr->table, &key, sizeof(key), tp);
+    pj_lock_release(mgr->lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Unregister transport.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
+						pjsip_transport *tp)
+{
+    transport_key key;
+
+    PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
+
+    pj_lock_acquire(tp->lock);
+    pj_lock_acquire(mgr->lock);
+
+    /*
+     * Unregister timer, if any.
+     */
+    pj_assert(tp->idle_timer.id == PJ_FALSE);
+    if (tp->idle_timer.id != PJ_FALSE) {
+	pj_timer_heap_cancel(mgr->timer_heap, &tp->idle_timer);
+	tp->idle_timer.id = PJ_FALSE;
+    }
+
+    /*
+     * Unregister from hash table.
+     */
+    key.type = (pj_uint8_t)tp->type;
+    key.zero = 0;
+    key.addr = pj_ntohl(tp->rem_addr.sin_addr.s_addr);
+    key.port = pj_ntohs(tp->rem_addr.sin_port);
+
+    pj_hash_set(tp->pool, mgr->table, &key, sizeof(key), NULL);
+
+    pj_lock_release(mgr->lock);
+
+    /* Destroy. */
+    return tp->destroy(tp);
+}
+
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT FACTORY
+ *
+ *****************************************************************************/
+
+
+PJ_DEF(pj_status_t) pjsip_tpmgr_register_tpfactory( pjsip_tpmgr *mgr,
+						    pjsip_tpfactory *tpf)
+{
+    pjsip_tpfactory *p;
+    pj_status_t status;
+
+    pj_lock_acquire(mgr->lock);
+
+    /* Check that no factory with the same type has been registered. */
+    status = PJ_SUCCESS;
+    for (p=mgr->factory_list.next; p!=&mgr->factory_list; p=p->next) {
+	if (p->type == tpf->type) {
+	    status = PJSIP_ETYPEEXISTS;
+	    break;
+	}
+	if (p == tpf) {
+	    status = PJ_EEXISTS;
+	    break;
+	}
+    }
+
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(mgr->lock);
+	return status;
+    }
+
+    pj_list_insert_before(&mgr->factory_list, tpf);
+
+    pj_lock_release(mgr->lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Unregister factory.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
+						      pjsip_tpfactory *tpf)
+{
+    pj_lock_acquire(mgr->lock);
+
+    pj_assert(pj_list_find_node(&mgr->factory_list, tpf) == tpf);
+    pj_list_erase(tpf);
+
+    pj_lock_release(mgr->lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT MANAGER
+ *
+ *****************************************************************************/
 
 /*
  * Create a new transport manager.
  */
-PJ_DEF(pj_status_t) pjsip_transport_mgr_create( pj_pool_t *pool,
-						pjsip_endpoint * endpt,
-						void (*cb)(pjsip_endpoint*,
-							   pjsip_rx_data *),
-						pjsip_transport_mgr **p_mgr)
+PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
+					pjsip_endpoint *endpt,
+					pj_ioqueue_t *ioqueue,
+					pj_timer_heap_t *timer_heap,
+					void (*cb)(pjsip_endpoint*,
+						   pj_status_t,
+						   pjsip_rx_data *),
+					pjsip_tpmgr **p_mgr)
 {
-    pjsip_transport_mgr *mgr;
+    pjsip_tpmgr *mgr;
     pj_status_t status;
 
-    PJ_LOG(5, (LOG_TRANSPORT_MGR, "pjsip_transport_mgr_create()"));
+    PJ_ASSERT_RETURN(pool && endpt && cb && p_mgr, PJ_EINVAL);
 
-    mgr = pj_pool_alloc(pool, sizeof(*mgr));
+    PJ_LOG(5, (THIS_FILE, "pjsip_tpmgr_create()"));
+
+    mgr = pj_pool_zalloc(pool, sizeof(*mgr));
     mgr->endpt = endpt;
-    mgr->message_callback = cb;
-    mgr->send_buf_size = DEFAULT_SO_SNDBUF;
-    mgr->recv_buf_size = DEFAULT_SO_RCVBUF;
+    mgr->msg_cb = cb;
+    mgr->ioqueue = ioqueue;
+    mgr->timer_heap = timer_heap;
+    pj_list_init(&mgr->factory_list);
 
-    mgr->transport_table = pj_hash_create(pool, MGR_HASH_TABLE_SIZE);
-    if (!mgr->transport_table) {
+    mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
+    if (!mgr->table)
 	return PJ_ENOMEM;
-    }
-    status = pj_ioqueue_create(pool, PJSIP_MAX_TRANSPORTS, &mgr->ioqueue);
-    if (status != PJ_SUCCESS) {
+
+    status = pj_lock_create_recursive_mutex(pool, "tmgr%p", &mgr->lock);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
-    status = pj_mutex_create_recursive(pool, "tmgr%p", &mgr->mutex);
-    if (status != PJ_SUCCESS) {
-	pj_ioqueue_destroy(mgr->ioqueue);
-	return status;
-    }
-    pj_gettimeofday(&mgr->next_idle_check);
-    mgr->next_idle_check.sec += MGR_IDLE_CHECK_INTERVAL;
 
     *p_mgr = mgr;
-    return status;
+    return PJ_SUCCESS;
 }
 
 /*
+ * pjsip_tpmgr_destroy()
+ *
  * Destroy transport manager.
  */
-PJ_DEF(pj_status_t) pjsip_transport_mgr_destroy( pjsip_transport_mgr *mgr )
+PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 {
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
     
-    PJ_LOG(5, (LOG_TRANSPORT_MGR, "pjsip_transport_mgr_destroy()"));
+    PJ_LOG(5, (THIS_FILE, "pjsip_tpmgr_destroy()"));
 
-    pj_mutex_lock(mgr->mutex);
+    pj_lock_acquire(mgr->lock);
 
-    itr = pjsip_transport_first(mgr, &itr_val);
+    itr = pj_hash_first(mgr->table, &itr_val);
     while (itr != NULL) {
 	pj_hash_iterator_t *next;
-	pjsip_transport_t *transport;
+	pjsip_transport *transport;
 	
-	transport = pjsip_transport_this(mgr, itr);
+	transport = pj_hash_this(mgr->table, itr);
 
-	next = pjsip_transport_next(mgr, itr);
+	next = pj_hash_next(mgr->table, itr);
 
 	pj_atomic_set(transport->ref_cnt, 0);
-	destroy_transport( mgr, transport);
+	pjsip_transport_unregister(mgr, transport);
 
 	itr = next;
     }
     pj_ioqueue_destroy(mgr->ioqueue);
 
-    pj_mutex_unlock(mgr->mutex);
+    pj_lock_release(mgr->lock);
 
     return PJ_SUCCESS;
 }
 
-/*
- * Create listener
- */
-static pj_status_t create_listener( pjsip_transport_mgr *mgr,
-				    pjsip_transport_type_e type,
-				    pj_sock_t sock_hnd,
-				    pj_sockaddr_in *local_addr,
-				    const pj_sockaddr_in *addr_name)
-{
-    pjsip_transport_t *tr;
-    struct transport_key *hash_key;
-    const pj_str_t loopback_addr = { "127.0.0.1", 9 };
-    pj_status_t status;
-
-    if (mgr->send_buf_size != 0) {
-        int opt_val = mgr->send_buf_size;
-        status = pj_sock_setsockopt( sock_hnd, PJ_SOL_SOCKET, 
-                                     PJ_SO_SNDBUF, 
-                                     &opt_val, sizeof(opt_val));
-
-        if (status != PJ_SUCCESS) {
-	    return status;
-        }
-    }
-
-    if (mgr->recv_buf_size != 0) {
-        int opt_val = mgr->recv_buf_size;
-        status = pj_sock_setsockopt( sock_hnd, PJ_SOL_SOCKET, 
-                                     PJ_SO_RCVBUF, 
-                                     &opt_val, sizeof(opt_val));
-        if (status != PJ_SUCCESS) {
-	    return status;
-        }
-    }
-
-    status = create_transport(mgr, type, sock_hnd, local_addr, addr_name, &tr);
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(sock_hnd);
-	return status;
-    }
-#if PJ_HAS_TCP
-    if (type == PJSIP_TRANSPORT_TCP) {
-
-	status = pj_sock_listen(tr->sock, BACKLOG);
-	if (status != 0) {
-	    destroy_transport(mgr, tr);
-	    return status;
-	}
-	
-	/* Discard immediate connections. */
-	do {
-	    tr->accept_data.addrlen = sizeof(tr->accept_data.local);
-	    status = pj_ioqueue_accept(tr->key, &tr->accept_op,
-				       &tr->accept_data.sock, 
-				       &tr->accept_data.local, 
-				       &tr->accept_data.remote,
-				       &tr->accept_data.addrlen);
-	    if (status==PJ_SUCCESS) {
-		pj_sock_close(tr->accept_data.sock);
-	    } else if (status != PJ_EPENDING) {
-		destroy_transport(mgr, tr);
-		return status;
-	    }
-	} while (status==PJ_SUCCESS);
-
-    } else 
-#endif
-    if (type == PJSIP_TRANSPORT_UDP) {
-	pj_ssize_t bytes;
-
-	/* Discard immediate data. */
-	do {
-	    tr->rdata->addr_len = sizeof(tr->rdata->addr);
-	    bytes = PJSIP_MAX_PKT_LEN;
-	    status = pj_ioqueue_recvfrom( tr->key, &tr->rdata->op_key,
-					  tr->rdata->packet, &bytes, 0,
-					  &tr->rdata->addr, 
-					  &tr->rdata->addr_len);
-	    if (status == PJ_SUCCESS) {
-		;
-	    } else if (status != PJ_EPENDING) {
-		destroy_transport(mgr, tr);
-		return status;
-	    }
-	} while (status == PJ_SUCCESS);
-    }
-
-    pj_atomic_set(tr->ref_cnt, 1);
-
-    /* Listeners normally have no remote address */
-    pj_memset(&tr->remote_addr, 0, sizeof(tr->remote_addr));
-
-    /* Set remote address to 127.0.0.1 for UDP socket bound to 127.0.0.1. 
-     * See further comments on struct pjsip_transport_t definition.
-     */
-    if (type == PJSIP_TRANSPORT_UDP && 
-	local_addr->sin_addr.s_addr == pj_inet_addr(&loopback_addr).s_addr)
-    {
-	pj_str_t localaddr = pj_str("127.0.0.1");
-	pj_sockaddr_in_set_str_addr( &tr->remote_addr, &localaddr);
-    }
-    hash_key = pj_pool_alloc(tr->pool, sizeof(transport_key));
-    init_key_from_transport(hash_key, tr);
-
-    pj_mutex_lock(mgr->mutex);
-    pj_hash_set(tr->pool, mgr->transport_table, 
-		hash_key, sizeof(transport_key), tr);
-    pj_mutex_unlock(mgr->mutex);
-
-    PJ_LOG(4,(tr->obj_name, "Listening at %s %s:%d", 
-			 get_type_name(tr->type), 
-			 pj_inet_ntoa(tr->local_addr.sin_addr),
-			 pj_sockaddr_in_get_port(&tr->local_addr)));
-    PJ_LOG(4,(tr->obj_name, "Listener public address is at %s %s:%d", 
-			 get_type_name(tr->type), 
-			 pj_inet_ntoa(tr->addr_name.sin_addr),
-			 pj_sockaddr_in_get_port(&tr->addr_name)));
-    return PJ_SUCCESS;
-}
 
 /*
- * Create listener.
+ * pjsip_tpmgr_receive_packet()
+ *
+ * Called by tranports when they receive a new packet.
  */
-PJ_DEF(pj_status_t) pjsip_create_listener( pjsip_transport_mgr *mgr,
-					   pjsip_transport_type_e type,
-					   pj_sockaddr_in *local_addr,
-					   const pj_sockaddr_in *addr_name)
+PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
+					       pjsip_rx_data *rdata)
 {
-    pj_sock_t sock_hnd;
-    pj_status_t status;
-
-    PJ_LOG(5, (LOG_TRANSPORT_MGR, "pjsip_create_listener(type=%d)", type));
-
-    status = create_socket(type, local_addr, &sock_hnd);
-    if (status != PJ_SUCCESS) {
-	return status;
-    }
-
-    return create_listener(mgr, type, sock_hnd, local_addr, addr_name);
-}
-
-/*
- * Create UDP listener.
- */
-PJ_DEF(pj_status_t) pjsip_create_udp_listener( pjsip_transport_mgr *mgr,
-					       pj_sock_t sock,
-					       const pj_sockaddr_in *addr_name)
-{
-    pj_sockaddr_in local_addr;
-    pj_status_t status;
-    int addrlen = sizeof(local_addr);
-
-    status = pj_sock_getsockname(sock, (pj_sockaddr_t*)&local_addr, &addrlen);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    return create_listener(mgr, PJSIP_TRANSPORT_UDP, sock, 
-			   &local_addr, addr_name);
-}
-
-/*
- * Find transport to be used to send message to remote destination. If no
- * suitable transport is found, a new one will be created.
- */
-PJ_DEF(void) pjsip_transport_get( pjsip_transport_mgr *mgr,
-			          pj_pool_t *pool,
-				  pjsip_transport_type_e type,
-				  const pj_sockaddr_in *remote,
-				  void *token,
-				  pjsip_transport_completion_callback *cb)
-{
-    transport_key search_key, *hash_key;
-    pjsip_transport_t *tr;
-    pj_sockaddr_in local;
-    pj_sock_t sock_hnd;
-    pj_status_t status;
-    struct transport_callback *cb_rec;
-
-    PJ_LOG(5, (LOG_TRANSPORT_MGR, "pjsip_transport_get()"));
-
-    /* Create the callback record.
-     */
-    cb_rec = pj_pool_calloc(pool, 1, sizeof(*cb_rec));
-    cb_rec->token = token;
-    cb_rec->cb = cb;
-
-    /* Create key for hash table look-up.
-     * The key creation is different for TCP and UDP.
-     */
-#if PJ_HAS_TCP
-    if (type==PJSIP_TRANSPORT_TCP) {
-	init_tcp_key(&search_key, type, remote);
-    } else 
-#endif
-    if (type==PJSIP_TRANSPORT_UDP) {
-	init_udp_key(&search_key, type, remote);
-    }
-
-    /* Start lock the manager. */
-    pj_mutex_lock(mgr->mutex);
-
-    /* Lookup the transport in the hash table. */
-    tr = pj_hash_get(mgr->transport_table, &search_key, sizeof(transport_key));
-
-    if (tr) {
-	/* Transport found. If the transport is still busy (i.e. connecting
-	 * is in progress), then just register the callback. Otherwise
-	 * report via the callback if callback is specified. 
-	 */
-	pj_mutex_unlock(mgr->mutex);
-	pj_mutex_lock(tr->tr_mutex);
-
-	if (tr->flag & PJSIP_TRANSPORT_IOQUEUE_BUSY) {
-	    /* Transport is busy. Just register the callback. */
-	    pj_list_insert_before(&tr->cb_list, cb_rec);
-
-	} else {
-	    /* Transport is ready. Call callback now.
-	     */
-	    (*cb_rec->cb)(tr, cb_rec->token, PJ_SUCCESS);
-	}
-	pj_mutex_unlock(tr->tr_mutex);
-
-	return;
-    }
-
-
-    /* Transport not found. Create new one. */
-    pj_memset(&local, 0, sizeof(local));
-    local.sin_family = PJ_AF_INET;
-    status = create_socket(type, &local, &sock_hnd);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(mgr->mutex);
-	(*cb_rec->cb)(NULL, cb_rec->token, status);
-	return;
-    }
-    status = create_transport(mgr, type, sock_hnd, &local, NULL, &tr);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(mgr->mutex);
-	(*cb_rec->cb)(NULL, cb_rec->token, status);
-	return;
-    }
-
-#if PJ_HAS_TCP
-    if (type == PJSIP_TRANSPORT_TCP) {
-	pj_memcpy(&tr->remote_addr, remote, sizeof(pj_sockaddr_in));
-	status = pj_ioqueue_connect(tr->key, &tr->remote_addr, 
-				    sizeof(pj_sockaddr_in));
-	pj_assert(status != 0);
-	if (status != PJ_EPENDING) {
-	    PJ_TODO(HANDLE_IMMEDIATE_CONNECT);
-	    destroy_transport(mgr, tr);
-	    pj_mutex_unlock(mgr->mutex);
-	    (*cb_rec->cb)(NULL, cb_rec->token, status);
-	    return;
-	}
-    } else 
-#endif
-    if (type == PJSIP_TRANSPORT_UDP) {
-	pj_ssize_t size;
-
-	do {
-	    tr->rdata->addr_len = sizeof(tr->rdata->addr);
-	    size = PJSIP_MAX_PKT_LEN;
-	    status = pj_ioqueue_recvfrom( tr->key, &tr->rdata->op_key,
-					  tr->rdata->packet, &size, 0,
-					  &tr->rdata->addr, 
-					  &tr->rdata->addr_len);
-	    if (status == PJ_SUCCESS)
-		;
-	    else if (status != PJ_EPENDING) {
-		destroy_transport(mgr, tr);
-		pj_mutex_unlock(mgr->mutex);
-		(*cb_rec->cb)(NULL, cb_rec->token, status);
-		return;
-	    }
-
-	    /* Bug here.
-	     * If data is immediately available, although not likely, it will
-	     * be dropped because we don't expect to have data right after
-	     * the socket is created, do we ?!
-	     */
-	    PJ_TODO(FIXED_BUG_ON_IMMEDIATE_TRANSPORT_DATA);
-
-	} while (status == PJ_SUCCESS);
-
-	//Bug: cb will never be called!
-	//     Must force status to PJ_SUCCESS;
-	//status = PJ_IOQUEUE_PENDING;
-
-	status = PJ_SUCCESS;
-
-    } else {
-	pj_mutex_unlock(mgr->mutex);
-	(*cb_rec->cb)(NULL, cb_rec->token, PJSIP_EUNSUPTRANSPORT);
-	return;
-    }
-
-    pj_assert(status==PJ_EPENDING || status==PJ_SUCCESS);
-    pj_mutex_lock(tr->tr_mutex);
-    hash_key = pj_pool_alloc(tr->pool, sizeof(transport_key));
-    pj_memcpy(hash_key, &search_key, sizeof(transport_key));
-    pj_hash_set(tr->pool, mgr->transport_table, 
-		hash_key, sizeof(transport_key), tr);
-    if (status == PJ_SUCCESS) {
-	pj_mutex_unlock(tr->tr_mutex);
-	pj_mutex_unlock(mgr->mutex);
-	(*cb_rec->cb)(tr, cb_rec->token, PJ_SUCCESS);
-    } else {
-	pj_list_insert_before(&tr->cb_list, cb_rec);
-	pj_mutex_unlock(tr->tr_mutex);
-	pj_mutex_unlock(mgr->mutex);
-    }
-
-}
-
-#if PJ_HAS_TCP
-/*
- * Handle completion of asynchronous accept() operation.
- * This function is called by handle_events() function.
- */
-static void handle_new_connection( pjsip_transport_mgr *mgr,
-				   pjsip_transport_t *listener,
-				   pj_status_t status )
-{
-    pjsip_transport_t *tr;
-    transport_key *hash_key;
-    pj_ssize_t size;
-
-    pj_assert (listener->type == PJSIP_TRANSPORT_TCP);
-
-    if (status != PJ_SUCCESS) {
-	PJSIP_ENDPT_LOG_ERROR((mgr->endpt, listener->obj_name, status,
-			       "Error in accept() completion"));
-	goto on_return;
-    }
-
-    PJ_LOG(4,(listener->obj_name, "incoming tcp connection from %s:%d",
-	      pj_inet_ntoa(listener->accept_data.remote.sin_addr),
-	      pj_sockaddr_in_get_port(&listener->accept_data.remote)));
-
-    status = create_transport(mgr, listener->type, 
-			      listener->accept_data.sock,
-			      &listener->accept_data.local,
-			      NULL, &tr);
-    if (status != PJ_SUCCESS) {
-	PJSIP_ENDPT_LOG_ERROR((mgr->endpt, listener->obj_name, status,
-			       "Error in creating new incoming TCP"));
-	goto on_return;
-    }
-
-    /*
-    tr->rdata->addr_len = sizeof(tr->rdata->addr);
-    status = pj_ioqueue_recvfrom( mgr->ioqueue, tr->key, 
-				  tr->rdata->packet, PJSIP_MAX_PKT_LEN,
-				  &tr->rdata->addr, 
-				  &tr->rdata->addr_len);
-    */
-    tr->rdata->addr = listener->accept_data.remote;
-    tr->rdata->addr_len = listener->accept_data.addrlen;
-
-    size = PJSIP_MAX_PKT_LEN;
-    status = pj_ioqueue_recv(tr->key, &tr->rdata->op_key, 
-			     tr->rdata->packet, &size, 0);
-    if (status != PJ_EPENDING) {
-	PJSIP_ENDPT_LOG_ERROR((mgr->endpt, listener->obj_name, status,
-			       "Error in receiving data"));
-	PJ_TODO(IMMEDIATE_DATA);
-	destroy_transport(mgr, tr);
-	goto on_return;
-    }
-
-    pj_memcpy(&tr->remote_addr, &listener->accept_data.remote, 
-	      listener->accept_data.addrlen);
-    hash_key = pj_pool_alloc(tr->pool, sizeof(transport_key));
-    init_key_from_transport(hash_key, tr);
-
-    pj_mutex_lock(mgr->mutex);
-    pj_hash_set(tr->pool, mgr->transport_table, hash_key, 
-		sizeof(transport_key), tr);
-    pj_mutex_unlock(mgr->mutex);
-
-on_return:
-    /* Re-initiate asynchronous accept() */
-    listener->accept_data.addrlen = sizeof(listener->accept_data.local);
-    status = pj_ioqueue_accept(listener->key, &listener->accept_op,
-			       &listener->accept_data.sock, 
-			       &listener->accept_data.local, 
-			       &listener->accept_data.remote,
-			       &listener->accept_data.addrlen);
-    if (status != PJ_EPENDING) {
-	PJSIP_ENDPT_LOG_ERROR((mgr->endpt, listener->obj_name, status,
-			       "Error in receiving data"));
-	PJ_TODO(IMMEDIATE_ACCEPT);
-	return;
-    }
-}
-
-/*
- * Handle completion of asynchronous connect() function.
- * This function is called by the handle_events() function.
- */
-static void handle_connect_completion( pjsip_transport_mgr *mgr,
-				       pjsip_transport_t *tr,
-				       pj_status_t status )
-{
-    struct transport_callback new_list;
-    struct transport_callback *cb_rec;
-    pj_ssize_t recv_size;
-
-    PJ_UNUSED_ARG(mgr);
-
-    /* On connect completion, we must call all registered callbacks in
-     * the transport.
-     */
-
-    /* Initialize new list. */
-    pj_list_init(&new_list);
-
-    /* Hold transport's mutex. We don't want other thread to register a 
-     * callback while we're dealing with it. 
-    */
-    pj_mutex_lock(tr->tr_mutex);
-
-    /* Copy callback list to new list so that we can call the callbacks
-     * without holding the mutex.
-     */
-    pj_list_merge_last(&new_list, &tr->cb_list);
-
-    /* Clear transport's busy flag. */
-    tr->flag &= ~PJSIP_TRANSPORT_IOQUEUE_BUSY;
-
-    /* If success, update local address. 
-     * Local address is only available after connect() has returned.
-     */
-    if (status == PJ_SUCCESS) {
-	int addrlen = sizeof(tr->local_addr);
-	
-	status = pj_sock_getsockname(tr->sock, 
-				     (pj_sockaddr_t*)&tr->local_addr, 
-				     &addrlen);
-	if (status == PJ_SUCCESS) {
-	    pj_memcpy(&tr->addr_name, &tr->local_addr, sizeof(tr->addr_name));
-	}
-    }
-
-    /* Unlock mutex. */
-    pj_mutex_unlock(tr->tr_mutex);
-
-    /* Call all registered callbacks. */
-    cb_rec = new_list.next;
-    while (cb_rec != &new_list) {
-	struct transport_callback *next;
-	next = cb_rec->next;
-	(*cb_rec->cb)(tr, cb_rec->token, status);
-	cb_rec = next;
-    }
-
-    /* Success? */
-    if (status != PJ_SUCCESS) {
-	destroy_transport(mgr, tr);
-	PJ_TODO(WTF);
-	return;
-    }
-
-    /* Initiate read operation to socket. */
-    recv_size = PJSIP_MAX_PKT_LEN;
-    status = pj_ioqueue_recv( tr->key, &tr->rdata->op_key, tr->rdata->packet, 
-			      &recv_size, 0);
-    if (status != PJ_EPENDING) {
-	destroy_transport(mgr, tr);
-	PJ_TODO(IMMEDIATE_DATA);
-	return;
-    }
-}
-#endif /* PJ_HAS_TCP */
-
-/*
- * Handle incoming data.
- * This function is called when the transport manager receives 'notification'
- * from the I/O Queue that the receive operation has completed.
- * This function will then attempt to parse the message, and hands over the
- * message to the endpoint.
- */
-static void handle_received_data( pjsip_transport_mgr *mgr,
-				  pjsip_transport_t *tr,
-				  pj_ssize_t size )
-{
-    pjsip_msg *msg;
-    pjsip_rx_data *rdata = tr->rdata;
-    pj_pool_t *rdata_pool;
-    pjsip_hdr *hdr;
+    pjsip_transport *tr = rdata->tp_info.transport;
     pj_str_t s;
-    char *src_addr;
-    int src_port;
-    pj_size_t msg_fragment_size = 0;
+
+    char *current_pkt;
+    pj_size_t remaining_len;
+    pj_size_t total_processed = 0;
 
     /* Check size. */
-    if (size < 1) {
-	if (tr->type != PJSIP_TRANSPORT_UDP) {
-	    /* zero bytes indicates transport has been closed for TCP.
-	     * But alas, we can't destroy it now since transactions may still
-	     * have reference to it. In that case, just do nothing, the 
-	     * transaction will receive error when it tries to send anything.
-	     * But alas!! UAC transactions wont send anything!!.
-	     * So this is a bug!
-	     */
-	    if (pj_atomic_get(tr->ref_cnt)==0) {
-		PJ_LOG(4,(tr->obj_name, "connection closed"));
-		destroy_transport(mgr, tr);
-	    } else {
-		PJ_TODO(HANDLE_TCP_TRANSPORT_CLOSED);
-		//PJ_TODO(SIGNAL_TRANSACTIONS_ON_TRANSPORT_CLOSED);
-	    }
-	    return;
-	} else {
-	    /* On Windows machines, UDP recv() will return zero upon receiving
-	     * ICMP port unreachable message.
-	     */
-	    PJ_LOG(4,(tr->obj_name, "Ignored zero length UDP packet (port unreachable?)"));
-	    goto on_return;
-	}
-    }
+    pj_assert(rdata->pkt_info.len > 0);
+    if (rdata->pkt_info.len <= 0)
+	return -1;
     
-    /* Save received time. */
-    pj_gettimeofday(&rdata->timestamp);
+    current_pkt = rdata->pkt_info.packet;
+    remaining_len = rdata->pkt_info.len;
     
-    /* Update length. */
-    rdata->len += size;
-
-    /* Null terminate packet, this is the requirement of the parser. */
-    rdata->packet[rdata->len] = '\0';
-
-    /* Get source address and port for logging purpose. */
-    src_addr = pj_inet_ntoa(rdata->addr.sin_addr);
-    src_port = pj_sockaddr_in_get_port(&rdata->addr);
-
-    /* Print the whole data to the log. */
-    PJ_LOG(4,(tr->obj_name, "%d bytes recvfrom %s:%d:\n"
-		    "----------- begin msg ------------\n"
-		    "%s"
-		    "------------ end msg -------------", 
-	       rdata->len, src_addr, src_port, rdata->packet));
-
+    /* Must NULL terminate buffer. This is the requirement of the 
+     * parser etc. 
+     */
+    current_pkt[remaining_len] = '\0';
 
     /* Process all message fragments. */
-    while (rdata->len > 0) {
+    while (total_processed < remaining_len) {
 
-	msg_fragment_size = rdata->len;
-#if PJ_HAS_TCP
+	pjsip_msg *msg;
+	pj_size_t msg_fragment_size = 0;
+
+	/* Initialize default fragment size. */
+	msg_fragment_size = remaining_len;
+
+	/* Null terminate packet. */
+
+	/* Clear and init msg_info in rdata. 
+	 * Endpoint might inspect the values there when we call the callback
+	 * to report some errors.
+	 */
+	pj_memset(&rdata->msg_info, 0, sizeof(rdata->msg_info));
+	pj_list_init(&rdata->msg_info.parse_err);
+	rdata->msg_info.msg_buf = current_pkt;
+	rdata->msg_info.len = remaining_len;
+
 	/* For TCP transport, check if the whole message has been received. */
-	if (tr->type != PJSIP_TRANSPORT_UDP) {
+	if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
 	    pj_status_t msg_status;
-	    msg_status = pjsip_find_msg(rdata->packet, rdata->len, PJ_FALSE, 
+	    msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
 	    if (msg_status != PJ_SUCCESS) {
-		if (rdata->len == PJSIP_MAX_PKT_LEN) {
-                    PJSIP_ENDPT_LOG_ERROR((mgr->endpt, tr->obj_name, 
-                                           PJSIP_EOVERFLOW,
-                                           "Buffer discarded for %s:%d",
-			                   src_addr, src_port));
-		    goto on_return;
+		if (remaining_len == PJSIP_MAX_PKT_LEN) {
+		    mgr->msg_cb(mgr->endpt, PJSIP_EOVERFLOW, rdata);
+		    /* Exhaust all data. */
+		    return rdata->pkt_info.len;
 		} else {
-		    goto tcp_read_packet;
+		    /* Not enough data in packet. */
+		    return total_processed;
 		}
 	    }
 	}
-#endif
 
-	/* Clear parser error report */
-	pj_list_init(&rdata->parse_err);
+	/* Update msg_info. */
+	rdata->msg_info.len = msg_fragment_size;
 
 	/* Parse the message. */
-	PJ_LOG(5,(tr->obj_name, "Parsing %d bytes from %s:%d", msg_fragment_size,
-		src_addr, src_port));
-
-	msg = pjsip_parse_rdata( rdata->packet, msg_fragment_size, rdata);
+	rdata->msg_info.msg = msg = 
+	    pjsip_parse_rdata( current_pkt, msg_fragment_size, rdata);
 	if (msg == NULL) {
-	    PJ_LOG(3,(tr->obj_name, "Bad message (%d bytes from %s:%d)", msg_fragment_size,
-		    src_addr, src_port));
+	    mgr->msg_cb(mgr->endpt, PJSIP_EINVALIDMSG, rdata);
 	    goto finish_process_fragment;
 	}
 
 	/* Perform basic header checking. */
-	if (rdata->call_id.ptr == NULL || rdata->from == NULL || 
-	    rdata->to == NULL || rdata->via == NULL || rdata->cseq == NULL) 
+	if (rdata->msg_info.call_id.ptr == NULL || 
+	    rdata->msg_info.from == NULL || 
+	    rdata->msg_info.to == NULL || 
+	    rdata->msg_info.via == NULL || 
+	    rdata->msg_info.cseq == NULL) 
 	{
-	    PJ_LOG(3,(tr->obj_name, "Bad message from %s:%d: missing some header", 
-		    src_addr, src_port));
+	    mgr->msg_cb(mgr->endpt, PJSIP_EMISSINGHDR, rdata);
 	    goto finish_process_fragment;
 	}
 
-	/* If message is received from address that's different from the sent-by,
+	/* If message is received from address that's different from sent-by,
   	 * MUST add received parameter to the via.
-	 * In our case, we add Via receive param for EVERY received message, 
-	 * because it saves us from resolving the host HERE in case sent-by is in
-	 * FQDN format. And it doesn't hurt either.
 	 */
-	s = pj_str(src_addr);
-	pj_strdup(rdata->pool, &rdata->via->recvd_param, &s);
+	s = pj_str(pj_inet_ntoa(rdata->pkt_info.addr.sin_addr));
+	if (pj_strcmp(&s, &rdata->msg_info.via->sent_by.host) != 0) {
+	    pj_strdup(rdata->tp_info.pool, 
+		      &rdata->msg_info.via->recvd_param, &s);
+	}
 
 	/* RFC 3581:
 	 * If message contains "rport" param, put the received port there.
 	 */
-	if (rdata->via->rport_param == 0) {
-	    rdata->via->rport_param = pj_sockaddr_in_get_port(&rdata->addr);
+	if (rdata->msg_info.via->rport_param == 0) {
+	    rdata->msg_info.via->rport_param = 
+		pj_ntohs(rdata->pkt_info.addr.sin_port);
 	}
 
 	/* Drop response message if it has more than one Via.
 	*/
 	if (msg->type == PJSIP_RESPONSE_MSG) {
-	    hdr = (pjsip_hdr*)rdata->via->next;
-	    if (hdr != &rdata->msg->hdr) {
+	    pjsip_hdr *hdr;
+	    hdr = (pjsip_hdr*)rdata->msg_info.via->next;
+	    if (hdr != &msg->hdr) {
 		hdr = pjsip_msg_find_hdr(msg, PJSIP_H_VIA, hdr);
 		if (hdr) {
-		    PJ_LOG(3,(tr->obj_name, "Bad message from %s:%d: "
-					    "multiple Via in response message",
-					    src_addr, src_port));
+		    mgr->msg_cb(mgr->endpt, PJSIP_EMULTIPLEVIA, rdata);
 		    goto finish_process_fragment;
 		}
 	    }
 	}
 
 	/* Call the transport manager's upstream message callback.
-	*/
-	(*mgr->message_callback)(mgr->endpt, rdata);
+	 */
+	mgr->msg_cb(mgr->endpt, PJ_SUCCESS, rdata);
+
 
 finish_process_fragment:
-	rdata->len -= msg_fragment_size;
-	if (rdata->len > 0) {
-	    pj_memmove(rdata->packet, rdata->packet+msg_fragment_size, rdata->len);
-	    PJ_LOG(4,(tr->obj_name, "Processing next fragment, size=%d bytes", rdata->len));
-	}
+	total_processed += msg_fragment_size;
+	current_pkt += msg_fragment_size;
+	remaining_len -= msg_fragment_size;
 
-    }	/* while (rdata->len > 0) */
-
-on_return:
-    /* Reset the pool and rdata */
-    rdata_pool = rdata->pool;
-    pj_pool_reset(rdata_pool);
-    rdata = pj_pool_alloc( rdata_pool, sizeof(*rdata) );
-    rdata->len = 0;
-    rdata->transport = tr;
-    rdata->pool = rdata_pool;
-    tr->rdata = rdata;
-
-    /* Read the next packet. */
-    rdata->addr_len = sizeof(rdata->addr);
-    if (tr->type == PJSIP_TRANSPORT_UDP) {
-	pj_ssize_t size = PJSIP_MAX_PKT_LEN;
-	pj_ioqueue_recvfrom(tr->key, &tr->rdata->op_key,
-			    tr->rdata->packet, &size, 0, 
-			    &rdata->addr, &rdata->addr_len);
-	PJ_TODO(HANDLE_IMMEDIATE_DATA);
-    }
-
-#if PJ_HAS_TCP
-    /* The next 'if' should have been 'else if', but we need to put the
-       label inside the '#if PJ_HAS_TCP' block to avoid 'unreferenced label' warning.
-     */
-tcp_read_packet:
-    if (tr->type == PJSIP_TRANSPORT_TCP) {
-	pj_ssize_t size = PJSIP_MAX_PKT_LEN - tr->rdata->len;
-	pj_ioqueue_recv( tr->key, &tr->rdata->op_key,
-			 tr->rdata->packet + tr->rdata->len,
-			 &size, 0);
-	PJ_TODO(HANDLE_IMMEDIATE_DATA_1);
-    }
-#endif
-}
-
-static void transport_mgr_on_idle( pjsip_transport_mgr *mgr )
-{
-    pj_time_val now;
-    pj_hash_iterator_t itr_val;
-    pj_hash_iterator_t *itr;
+    }	/* while (rdata->pkt_info.len > 0) */
 
 
-    /* Get time for comparing transport's close time. */
-    pj_gettimeofday(&now);
-    if (now.sec < mgr->next_idle_check.sec) {
-	return;
-    }
-
-    /* Acquire transport manager's lock. */
-    pj_mutex_lock(mgr->mutex);
-
-    /* Update next idle check. */
-    mgr->next_idle_check.sec += MGR_IDLE_CHECK_INTERVAL;
-
-    /* Iterate all transports, and close transports that are not used for
-       some periods.
-     */
-    itr = pjsip_transport_first(mgr, &itr_val);
-    while (itr != NULL) {
-	pj_hash_iterator_t *next;
-	pjsip_transport_t *transport;
-	
-	transport = pjsip_transport_this(mgr, itr);
-
-	next = pjsip_transport_next(mgr, itr);
-
-	if (pj_atomic_get(transport->ref_cnt)==0 && 
-	    PJ_TIME_VAL_LTE(transport->close_time, now))
-	{
-	    destroy_transport(mgr, transport);
-	}
-
-	itr = next;
-    }
-
-    /* Release transport manager's lock. */
-    pj_mutex_unlock(mgr->mutex);
-}
-
-static void on_ioqueue_read(pj_ioqueue_key_t *key, 
-			    pj_ioqueue_op_key_t *op_key, 
-			    pj_ssize_t bytes_read)
-{
-    pjsip_transport_t *t;
-    t = pj_ioqueue_get_user_data(key);
-
-    handle_received_data( t->mgr, t, bytes_read );
-}
-
-static void on_ioqueue_write(pj_ioqueue_key_t *key, 
-			     pj_ioqueue_op_key_t *op_key, 
-			     pj_ssize_t bytes_sent)
-{
-    PJ_UNUSED_ARG(key);
-    PJ_UNUSED_ARG(bytes_sent);
-
-    /* Completion of write operation. 
-     * Do nothing.
-     */
-}
-
-static void on_ioqueue_accept(pj_ioqueue_key_t *key, 
-			      pj_ioqueue_op_key_t *op_key, 
-			      pj_sock_t newsock,
-			      int status)
-{
-#if PJ_HAS_TCP
-    pjsip_transport_t *t;
-    t = pj_ioqueue_get_user_data(key);
-
-    handle_new_connection( t->mgr, t, status );
-#else
-    PJ_UNUSED_ARG(key);
-    PJ_UNUSED_ARG(status);
-#endif
-}
-
-static void on_ioqueue_connect(pj_ioqueue_key_t *key, int status)
-{
-#if PJ_HAS_TCP
-    pjsip_transport_t *t;
-    t = pj_ioqueue_get_user_data(key);
-
-    handle_connect_completion( t->mgr, t, status);
-#else
-    PJ_UNUSED_ARG(key);
-    PJ_UNUSED_ARG(status);
-#endif
+    return total_processed;
 }
 
 
 /*
- * Poll for events.
+ * pjsip_tpmgr_alloc_transport()
+ *
+ * Get transport suitable to communicate to remote. Create a new one
+ * if necessary.
  */
-PJ_DEF(int) pjsip_transport_mgr_handle_events( pjsip_transport_mgr *mgr,
-					       const pj_time_val *req_timeout )
+PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
+						 pjsip_transport_type_e type,
+						 const pj_sockaddr_in *remote,
+						 pjsip_transport **p_transport)
 {
-    int event_count;
-    int break_loop;
-    int result;
-    pj_time_val timeout;
+    transport_key key;
+    pjsip_transport *transport;
+    pjsip_tpfactory *factory;
+    pj_status_t status;
 
-    PJ_LOG(5, (LOG_TRANSPORT_MGR, "pjsip_transport_mgr_handle_events()"));
+    pj_lock_acquire(mgr->lock);
 
-    event_count = 0;
-    break_loop = 0;
-    timeout = *req_timeout;
-    do {
-	result = pj_ioqueue_poll( mgr->ioqueue, &timeout);
-	if (result == 1) {
-	    ++event_count;
+    /* First try to get exact destination. */
+    key.type = (pj_uint8_t)type;
+    key.zero = 0;
+    key.addr = pj_ntohl(remote->sin_addr.s_addr);
+    key.port = pj_ntohs(remote->sin_port);
 
-	    /* Break the loop. */
-	    //if (timeout.msec==0 && timeout.sec==0) {
-	    	break_loop = 1;
-	    //}
+    transport = pj_hash_get(mgr->table, &key, sizeof(key));
+    if (transport != NULL) {
+	unsigned flag = pjsip_transport_get_flag_from_type(type);
+	
+	/* For datagram transports, try lookup with zero address. */
+	if (flag & PJSIP_TRANSPORT_DATAGRAM) {
+	    key.addr = 0;
+	    key.port = 0;
 
-	} else {
-	    /* On idle, cleanup transport. */
-	    transport_mgr_on_idle(mgr);
-
-	    break_loop = 1;
+	    transport = pj_hash_get(mgr->table, &key, sizeof(key));
 	}
-	timeout.sec = timeout.msec = 0;
-    } while (!break_loop);
+    }
+    
+    if (transport != NULL) {
+	/*
+	 * Transport found!
+	 */
+	pjsip_transport_add_ref(transport);
+	pj_lock_release(mgr->lock);
+	*p_transport = transport;
+	return PJ_SUCCESS;
+    }
 
-    return event_count;
+    /*
+     * Transport not found!
+     * Find factory that can create such transport.
+     */
+    factory = mgr->factory_list.next;
+    while (factory != &mgr->factory_list) {
+	if (factory->type == type)
+	    break;
+	factory = factory->next;
+    }
+
+    if (factory == &mgr->factory_list) {
+	/* No factory can create the transport! */
+	pj_lock_release(mgr->lock);
+	return PJSIP_EUNSUPTRANSPORT;
+    }
+
+    /* Request factory to create transport. */
+    status = factory->create_transport(factory, mgr, mgr->endpt,
+				       mgr->ioqueue, remote, p_transport);
+
+    pj_lock_release(mgr->lock);
+    return status;
 }
 
-
-PJ_DEF(pj_hash_iterator_t*) pjsip_transport_first( pjsip_transport_mgr *mgr,
-						   pj_hash_iterator_t *it )
+/**
+ * Dump transport info.
+ */
+PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 {
-    return pj_hash_first(mgr->transport_table, it);
+#if PJ_LOG_MAX_LEVEL >= 3
+    pj_hash_iterator_t itr_val;
+    pj_hash_iterator_t *itr;
+
+    pj_lock_acquire(mgr->lock);
+
+    itr = pj_hash_first(mgr->table, &itr_val);
+    if (itr) {
+	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));
+
+	do {
+	    char src_addr[128], dst_addr[128];
+	    int src_port, dst_port;
+	    pjsip_transport *t;
+
+	    t = pj_hash_this(mgr->table, itr);
+	    pj_native_strcpy(src_addr, pj_inet_ntoa(t->local_addr.sin_addr));
+	    src_port = pj_ntohs(t->local_addr.sin_port);
+
+	    pj_native_strcpy(dst_addr, pj_inet_ntoa(t->rem_addr.sin_addr));
+	    dst_port = pj_ntohs(t->rem_addr.sin_port);
+
+	    PJ_LOG(3, (THIS_FILE, "  %s %s %s:%d --> %s:%d (refcnt=%d)", 
+		       t->type_name,
+		       t->obj_name,
+		       src_addr, src_port,
+		       dst_addr, dst_port,
+		       pj_atomic_get(t->ref_cnt)));
+
+	    itr = pj_hash_next(mgr->table, itr);
+	} while (itr);
+    }
+
+    pj_lock_release(mgr->lock);
+#endif
 }
 
-PJ_DEF(pj_hash_iterator_t*) pjsip_transport_next( pjsip_transport_mgr *mgr,
-						  pj_hash_iterator_t *itr )
-{
-    return pj_hash_next(mgr->transport_table, itr);
-}
-
-PJ_DEF(pjsip_transport_t*) pjsip_transport_this( pjsip_transport_mgr *mgr,
-						 pj_hash_iterator_t *itr )
-{
-    return pj_hash_this(mgr->transport_table, itr);
-}

@@ -558,19 +558,19 @@ PJ_DEF(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
                  &on_syntax_error);
 
     context.scanner = &scanner;
-    context.pool = rdata->pool;
+    context.pool = rdata->tp_info.pool;
     context.rdata = rdata;
 
     PJ_TRY {
-	rdata->msg = int_parse_msg(&context, &rdata->parse_err);
+	rdata->msg_info.msg = int_parse_msg(&context, &rdata->msg_info.parse_err);
     } 
     PJ_DEFAULT {
-	rdata->msg = NULL;
+	rdata->msg_info.msg = NULL;
     }
     PJ_END
 
     pj_scan_fini(&scanner);
-    return rdata->msg;
+    return rdata->msg_info.msg;
 }
 
 /* Determine if a message has been received. */
@@ -1258,7 +1258,7 @@ static pjsip_hdr* parse_hdr_call_id(pjsip_parse_ctx *ctx)
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
-        ctx->rdata->call_id = hdr->id;
+        ctx->rdata->msg_info.call_id = hdr->id;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1339,7 +1339,7 @@ static pjsip_hdr* parse_hdr_content_len( pjsip_parse_ctx *ctx )
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
-        ctx->rdata->clen = hdr;
+        ctx->rdata->msg_info.clen = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1367,7 +1367,7 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
-        ctx->rdata->ctype = hdr;
+        ctx->rdata->msg_info.ctype = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1388,7 +1388,7 @@ static pjsip_hdr* parse_hdr_cseq( pjsip_parse_ctx *ctx )
     parse_hdr_end( ctx->scanner );
 
     if (ctx->rdata)
-        ctx->rdata->cseq = hdr;
+        ctx->rdata->msg_info.cseq = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1432,7 +1432,7 @@ static pjsip_hdr* parse_hdr_from( pjsip_parse_ctx *ctx )
     pjsip_from_hdr *hdr = pjsip_from_hdr_create(ctx->pool);
     parse_hdr_fromto(ctx->scanner, ctx->pool, hdr);
     if (ctx->rdata)
-        ctx->rdata->from = hdr;
+        ctx->rdata->msg_info.from = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1443,8 +1443,8 @@ static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
     pjsip_require_hdr *hdr = pjsip_require_hdr_create(ctx->pool);
     parse_generic_array_hdr(hdr, ctx->scanner);
 
-    if (ctx->rdata && ctx->rdata->require == NULL)
-        ctx->rdata->require = hdr;
+    if (ctx->rdata && ctx->rdata->msg_info.require == NULL)
+        ctx->rdata->msg_info.require = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1474,7 +1474,7 @@ static pjsip_hdr* parse_hdr_to( pjsip_parse_ctx *ctx )
     parse_hdr_fromto(ctx->scanner, ctx->pool, hdr);
 
     if (ctx->rdata)
-        ctx->rdata->to = hdr;
+        ctx->rdata->msg_info.to = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1528,7 +1528,7 @@ static pjsip_hdr* parse_hdr_max_forwards( pjsip_parse_ctx *ctx )
     parse_generic_int_hdr(hdr, ctx->scanner);
 
     if (ctx->rdata)
-        ctx->rdata->max_fwd = hdr;
+        ctx->rdata->msg_info.max_fwd = hdr;
 
     return (pjsip_hdr*)hdr;
 }
@@ -1578,8 +1578,8 @@ static pjsip_hdr* parse_hdr_rr( pjsip_parse_ctx *ctx)
     } while (1);
     parse_hdr_end(scanner);
 
-    if (ctx->rdata && ctx->rdata->record_route==NULL)
-        ctx->rdata->record_route = first;
+    if (ctx->rdata && ctx->rdata->msg_info.record_route==NULL)
+        ctx->rdata->msg_info.record_route = first;
 
     return (pjsip_hdr*)first;
 }
@@ -1606,8 +1606,8 @@ static pjsip_hdr* parse_hdr_route( pjsip_parse_ctx *ctx )
     } while (1);
     parse_hdr_end(scanner);
 
-    if (ctx->rdata && ctx->rdata->route==NULL)
-        ctx->rdata->route = first;
+    if (ctx->rdata && ctx->rdata->msg_info.route==NULL)
+        ctx->rdata->msg_info.route = first;
 
     return (pjsip_hdr*)first;
 }
@@ -1659,8 +1659,8 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 
     parse_hdr_end(scanner);
 
-    if (ctx->rdata && ctx->rdata->via == NULL)
-        ctx->rdata->via = first;
+    if (ctx->rdata && ctx->rdata->msg_info.via == NULL)
+        ctx->rdata->msg_info.via = first;
 
     return (pjsip_hdr*)first;
 }

@@ -1079,6 +1079,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_dlg_answer( pjsip_dlg *dlg, int code )
     /* Get transmit data and the message. 
      * We will rewrite the message with a new status code.
      */
+    only if tdata is not pending!!!
     tdata = dlg->invite_tsx->last_tx;
     msg = tdata->msg;
 

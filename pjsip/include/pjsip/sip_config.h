@@ -63,6 +63,15 @@
 #define PJSIP_POOL_LEN_DIALOG		1200
 #define PJSIP_POOL_INC_DIALOG		512
 
+/* Transport manager hash table size (must be 2^n-1). */
+#define PJSIP_TPMGR_HTABLE_SIZE		31
+
+/* Transport idle timeout before it's destroyed. */
+#define PJSIP_TRANSPORT_IDLE_TIME	30
+
+/* Max entries to process in timer heap per poll. */
+#define PJSIP_MAX_TIMED_OUT_ENTRIES	10
+
 /* Module related constants. */
 #define PJSIP_MAX_MODULE		8
 

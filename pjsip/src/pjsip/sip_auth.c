@@ -35,7 +35,7 @@
 #define MAX_TEMP  128
 
 /* A macro just to get rid of type mismatch between char and unsigned char */
-#define MD5_APPEND(pms,buf,len)	md5_append(pms, (const unsigned char*)buf, len)
+#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, len)
 
 /* Logging. */
 #define THIS_FILE   "sip_auth.c"
@@ -80,7 +80,7 @@ static void create_digest( pj_str_t *result,
     char ha1[MD5STRLEN];
     char ha2[MD5STRLEN];
     unsigned char digest[16];
-    md5_state_t pms;
+    pj_md5_context pms;
 
     pj_assert(result->slen >= MD5STRLEN);
 
@@ -90,13 +90,13 @@ static void create_digest( pj_str_t *result,
 	/*** 
 	 *** ha1 = MD5(username ":" realm ":" password) 
 	 ***/
-	md5_init(&pms);
+	pj_md5_init(&pms);
 	MD5_APPEND( &pms, cred_info->username.ptr, cred_info->username.slen);
 	MD5_APPEND( &pms, ":", 1);
 	MD5_APPEND( &pms, cred_info->realm.ptr, cred_info->realm.slen);
 	MD5_APPEND( &pms, ":", 1);
 	MD5_APPEND( &pms, cred_info->data.ptr, cred_info->data.slen);
-	md5_finish(&pms, digest);
+	pj_md5_final(&pms, digest);
 
 	digest2str(digest, ha1);
 
@@ -110,11 +110,11 @@ static void create_digest( pj_str_t *result,
     /***
      *** ha2 = MD5(method ":" req_uri) 
      ***/
-    md5_init(&pms);
+    pj_md5_init(&pms);
     MD5_APPEND( &pms, method->ptr, method->slen);
     MD5_APPEND( &pms, ":", 1);
     MD5_APPEND( &pms, uri->ptr, uri->slen);
-    md5_finish(&pms, digest);
+    pj_md5_final(&pms, digest);
     digest2str(digest, ha2);
 
     AUTH_TRACE_((THIS_FILE, "  ha2=%.32s", ha2));
@@ -126,7 +126,7 @@ static void create_digest( pj_str_t *result,
      *** When qop=auth is used:
      ***    response = MD5(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
      ***/
-    md5_init(&pms);
+    pj_md5_init(&pms);
     MD5_APPEND( &pms, ha1, MD5STRLEN);
     MD5_APPEND( &pms, ":", 1);
     MD5_APPEND( &pms, nonce->ptr, nonce->slen);
@@ -142,7 +142,7 @@ static void create_digest( pj_str_t *result,
     MD5_APPEND( &pms, ha2, MD5STRLEN);
 
     /* This is the final response digest. */
-    md5_finish(&pms, digest);
+    pj_md5_final(&pms, digest);
     
     /* Convert digest to string and store in chal->response. */
     result->slen = MD5STRLEN;
@@ -734,15 +734,15 @@ PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt,
 
     PJ_UNUSED_ARG(endpt);
 
-    pj_assert(rdata->msg->type == PJSIP_RESPONSE_MSG);
-    pj_assert(rdata->msg->line.status.code == 401 ||
-	      rdata->msg->line.status.code == 407 );
+    pj_assert(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG);
+    pj_assert(rdata->msg_info.msg->line.status.code == 401 ||
+	      rdata->msg_info.msg->line.status.code == 407 );
 
     /*
      * Respond to each authentication challenge.
      */
-    hdr = rdata->msg->hdr.next;
-    while (hdr != &rdata->msg->hdr) {
+    hdr = rdata->msg_info.msg->hdr.next;
+    while (hdr != &rdata->msg_info.msg->hdr) {
 	pjsip_auth_session *sess;
 	const pjsip_www_authenticate_hdr *hchal;
 	pjsip_authorization_hdr *hauth;
@@ -750,11 +750,11 @@ PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt,
 	/* Find WWW-Authenticate or Proxy-Authenticate header. */
 	while (hdr->type != PJSIP_H_WWW_AUTHENTICATE &&
 	       hdr->type != PJSIP_H_PROXY_AUTHENTICATE &&
-	       hdr != &rdata->msg->hdr)
+	       hdr != &rdata->msg_info.msg->hdr)
 	{
 	    hdr = hdr->next;
 	}
-	if (hdr == &rdata->msg->hdr)
+	if (hdr == &rdata->msg_info.msg->hdr)
 	    break;
 
 	hchal = (const pjsip_www_authenticate_hdr*) hdr;

@@ -29,6 +29,7 @@
 #include <pj/sock.h>
 #include <pj/list.h>
 #include <pj/ioqueue.h>
+#include <pj/timer.h>
 
 PJ_BEGIN_DECL
 
@@ -43,6 +44,78 @@ PJ_BEGIN_DECL
  * @{
  */
 
+/*****************************************************************************
+ *
+ * GENERAL TRANSPORT (NAMES, TYPES, ETC.)
+ *
+ *****************************************************************************/
+
+/**
+ * Flags for SIP transports.
+ */
+enum pjsip_transport_flags_e
+{
+    PJSIP_TRANSPORT_RELIABLE	    = 1,    /**< Transport is reliable.	    */
+    PJSIP_TRANSPORT_SECURE	    = 2,    /**< Transport is secure.	    */
+    PJSIP_TRANSPORT_DATAGRAM	    = 4,    /**< Datagram based transport.  */
+};
+
+/**
+ * Check if transport tp is reliable.
+ */
+#define PJSIP_TRANSPORT_IS_RELIABLE(tp)	    \
+	    ((tp)->flag & PJSIP_TRANSPORT_RELIABLE)
+
+/**
+ * Get the transport type from the transport name.
+ *
+ * @param name	    Transport name, such as "TCP", or "UDP".
+ *
+ * @return	    The transport type, or PJSIP_TRANSPORT_UNSPECIFIED if 
+ *		    the name is not recognized as the name of supported 
+ *		    transport.
+ */
+PJ_DECL(pjsip_transport_type_e) 
+pjsip_transport_get_type_from_name(const pj_str_t *name);
+
+/**
+ * Get the transport type for the specified flags.
+ *
+ * @param flag	    The transport flag.
+ *
+ * @return	    Transport type.
+ */
+PJ_DECL(pjsip_transport_type_e) 
+pjsip_transport_get_type_from_flag(unsigned flag);
+
+/**
+ * Get transport flag from type.
+ *
+ * @param type	    Transport type.
+ *
+ * @return	    Transport flags.
+ */
+PJ_DECL(unsigned)
+pjsip_transport_get_flag_from_type( pjsip_transport_type_e type );
+
+/**
+ * Get the default SIP port number for the specified type.
+ *
+ * @param type	    Transport type.
+ *
+ * @return	    The port number, which is the default SIP port number for
+ *		    the specified type.
+ */
+PJ_DECL(int) 
+pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
+
+
+/*****************************************************************************
+ *
+ * RECEIVE DATA BUFFER.
+ *
+ *****************************************************************************/
+
 /**
  * Incoming message buffer.
  * This structure keep all the information regarding the received message. This
@@ -52,77 +125,129 @@ PJ_BEGIN_DECL
  */
 struct pjsip_rx_data
 {
-    //PJ_DECL_LIST_MEMBER(struct pjsip_rx_data);
 
-    /** Memory pool for this buffer. */
-    pj_pool_t		*pool;
-
-    /** Ioqueue op key. */
-    pj_ioqueue_op_key_t	 op_key;
-
-    /** Time when the message was received. */
-    pj_time_val		 timestamp;
-
-    /** The packet buffer. */
-    char		 packet[PJSIP_MAX_PKT_LEN];
-
-    /** The length of the packet received. */
-    int			 len;
-
-    /** The source address from which the packet was received. */
-    pj_sockaddr_in	 addr;
-
-    /** The length of the source address. */
-    int			 addr_len;
-
-    /** The transport object which received this packet. */
-    pjsip_transport_t	*transport;
-
-    /** The parsed message, if any. */
-    pjsip_msg		*msg;
-
-    /** This the transaction key generated from the message. This key is only
-     *  available after the rdata has reached the endpoint. 
+    /**
+     * tp_info is part of rdata that remains static for the duration of the
+     * buffer. It is initialized when the buffer was created by transport.
      */
-    pj_str_t		 key;
+    struct 
+    {
+	/** Memory pool for this buffer. */
+	pj_pool_t		*pool;
 
-    /** The Call-ID header as found in the message. */
-    pj_str_t		 call_id;
+	/** The transport object which received this packet. */
+	pjsip_transport		*transport;
 
-    /** The From header as found in the message. */
-    pjsip_from_hdr	*from;
+	/** Ioqueue key. */
+	pj_ioqueue_op_key_t	 op_key;
 
-    /** The To header as found in the message. */
-    pjsip_to_hdr	*to;
+    } tp_info;
 
-    /** The topmost Via header as found in the message. */
-    pjsip_via_hdr	*via;
 
-    /** The CSeq header as found in the message. */
-    pjsip_cseq_hdr	*cseq;
+    /**
+     * pkt_info is initialized by transport when it receives an incoming
+     * packet.
+     */
+    struct
+    {
+	/** Time when the message was received. */
+	pj_time_val		 timestamp;
 
-    /** Max forwards header. */
-    pjsip_max_forwards_hdr *max_fwd;
+	/** Pointer to the original packet. */
+	char			 packet[PJSIP_MAX_PKT_LEN];
 
-    /** The first route header. */
-    pjsip_route_hdr     *route;
+	/** Zero termination for the packet. */
+	pj_uint32_t		 zero;
 
-    /** The first record-route header. */
-    pjsip_rr_hdr        *record_route;
+	/** The length of the packet received. */
+	int			 len;
 
-    /** Content-type header. */
-    pjsip_ctype_hdr     *ctype;
+	/** The source address from which the packet was received. */
+	pj_sockaddr_in		 addr;
 
-    /** Content-length header. */
-    pjsip_clen_hdr      *clen;
+	/** The length of the source address. */
+	int			 addr_len;
 
-    /** The first Require header. */
-    pjsip_require_hdr   *require;
+    } pkt_info;
 
-    /** The list of error generated by the parser when parsing this message. */
-    pjsip_parser_err_report parse_err;
+
+    /**
+     * msg_info is initialized by transport mgr (tpmgr) before this buffer
+     * is passed to endpoint.
+     */
+    struct
+    {
+	/** Start of msg buffer. */
+	char			*msg_buf;
+
+	/** Length fo message. */
+	int			 len;
+
+	/** The parsed message, if any. */
+	pjsip_msg		*msg;
+
+	/** The Call-ID header as found in the message. */
+	pj_str_t		 call_id;
+
+	/** The From header as found in the message. */
+	pjsip_from_hdr		*from;
+
+	/** The To header as found in the message. */
+	pjsip_to_hdr		*to;
+
+	/** The topmost Via header as found in the message. */
+	pjsip_via_hdr		*via;
+
+	/** The CSeq header as found in the message. */
+	pjsip_cseq_hdr		*cseq;
+
+	/** Max forwards header. */
+	pjsip_max_forwards_hdr	*max_fwd;
+
+	/** The first route header. */
+	pjsip_route_hdr		*route;
+
+	/** The first record-route header. */
+	pjsip_rr_hdr		*record_route;
+
+	/** Content-type header. */
+	pjsip_ctype_hdr		*ctype;
+
+	/** Content-length header. */
+	pjsip_clen_hdr		*clen;
+
+	/** The first Require header. */
+	pjsip_require_hdr	*require;
+
+	/** The list of error generated by the parser when parsing 
+	    this message. 
+	 */
+	pjsip_parser_err_report parse_err;
+
+    } msg_info;
+
+
+    /**
+     * endpt_info is initialized by endpoint after this buffer reaches
+     * endpoint.
+     */
+    struct
+    {
+	/** 
+	 * This the transaction key generated for the message. 
+	 */
+	pj_str_t		 key;
+
+    } endpt_info;
+
 };
 
+
+/*****************************************************************************
+ *
+ * TRANSMIT DATA BUFFER MANIPULATION.
+ *
+ *****************************************************************************/
 
 /**
  * Data structure for sending outgoing message. Application normally creates
@@ -156,10 +281,13 @@ struct pjsip_tx_data
     pj_time_val		 rx_timestamp;
 
     /** The transport manager for this buffer. */
-    pjsip_transport_mgr *mgr;
+    pjsip_tpmgr		*mgr;
 
     /** Ioqueue asynchronous operation key. */
     pj_ioqueue_op_key_t	 op_key;
+
+    /** Lock object. */
+    pj_lock_t		*lock;
 
     /** The message in this buffer. */
     pjsip_msg 		*msg;
@@ -174,8 +302,29 @@ struct pjsip_tx_data
 
     /** Reference counter. */
     pj_atomic_t		*ref_cnt;
+
+    /** Being sent? */
+    int			 is_pending;
+
+    /** Transport internal. */
+    void		*token;
+    void	       (*cb)(void*, pjsip_tx_data*, pj_status_t);
 };
 
+
+/**
+ * Create a new, blank transmit buffer. The reference count is initialized
+ * to zero.
+ *
+ * @param mgr		The transport manager.
+ * @param tdata		Pointer to receive transmit data.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ *
+ * @see pjsip_endpt_create_tdata
+ */
+pj_status_t pjsip_tx_data_create( pjsip_tpmgr *mgr,
+                                  pjsip_tx_data **tdata );
 
 /**
  * Add reference counter to the transmit buffer. The reference counter controls
@@ -195,6 +344,13 @@ PJ_DECL(void) pjsip_tx_data_add_ref( pjsip_tx_data *tdata );
 PJ_DECL(void) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata );
 
 /**
+ * Check if transmit data buffer contains a valid message.
+ *
+ * @param tdata	    The transmit buffer.
+ */
+PJ_DECL(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata );
+
+/**
  * Invalidate the print buffer to force message to be re-printed. Call
  * when the message has changed after it has been printed to buffer. The
  * message is printed to buffer normally by transport when it is about to be 
@@ -207,288 +363,251 @@ PJ_DECL(void) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata );
 PJ_DECL(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata );
 
 
+/*****************************************************************************
+ *
+ * TRANSPORT
+ *
+ *****************************************************************************/
+
 /**
- * Flags for SIP transports.
+ * This structure represent the "public" interface of a SIP transport.
+ * Applications normally extend this structure to include transport
+ * specific members.
  */
-enum pjsip_transport_flags_e
+typedef struct pjsip_transport
 {
-    PJSIP_TRANSPORT_RELIABLE	    = 1,    /**< Transport is reliable. */
-    PJSIP_TRANSPORT_SECURE	    = 2,    /**< Transport is secure. */
-    PJSIP_TRANSPORT_IOQUEUE_BUSY    = 4,    /**< WTH?? */
+    char		    obj_name[PJ_MAX_OBJ_NAME];	/**< Name. */
+
+    pj_pool_t		   *pool;	    /**< Pool used by transport.    */
+    pj_atomic_t		   *ref_cnt;	    /**< Reference counter.	    */
+    pj_lock_t		   *lock;	    /**< Lock object.		    */
+    int			    tracing;	    /**< Tracing enabled?	    */
+
+    pjsip_transport_type_e  type;	    /**< Transport type.	    */
+    char		    type_name[8];   /**< Type name.		    */
+    unsigned		    flag;	    /**< #pjsip_transport_flags_e   */
+
+    pj_sockaddr_in	    local_addr;	    /**< Bound address.		    */
+    pj_sockaddr_in	    public_addr;    /**< STUN addres.		    */
+    pj_sockaddr_in	    rem_addr;	    /**< Remote addr (zero for UDP) */
+
+    pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
+    pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
+
+    /**
+     * Function to be called by transport manager to send SIP message.
+     *
+     * @param transport	    The transport to send the message.
+     * @param packet	    The buffer to send.
+     * @param length	    The length of the buffer to send.
+     * @param op_key	    Completion token, which will be supplied to
+     *			    caller when pending send operation completes.
+     * @param rem_addr	    The remote destination address.
+     * @param callback	    If supplied, the callback will be called
+     *			    once a pending transmission has completed. If
+     *			    the function completes immediately (i.e. return
+     *			    code is not PJ_EPENDING), the callback will not
+     *			    be called.
+     *
+     * @return		    Should return PJ_SUCCESS only if data has been
+     *			    succesfully queued to operating system for 
+     *			    transmission. Otherwise it may return PJ_EPENDING
+     *			    if the underlying transport can not send the
+     *			    data immediately and will send it later, which in
+     *			    this case caller doesn't have to do anything 
+     *			    except wait the calback to be called, if it 
+     *			    supplies one.
+     *			    Other return values indicate the error code.
+     */
+    pj_status_t (*send_msg)(pjsip_transport *transport, 
+			    const void *packet, 
+			    pj_size_t length,
+			    pj_ioqueue_op_key_t *op_key,
+			    const pj_sockaddr_in *rem_addr,
+			    void *token,
+			    void (*callback)(pjsip_transport *transport,
+					     void *token, 
+					     pj_status_t status));
+
+    /**
+     * Destroy this transport.
+     */
+    pj_status_t (*destroy)(pjsip_transport *transport);
+
+    /*
+     * Application may extend this structure..
+     */
+} pjsip_transport;
+
+
+/**
+ * Register a transport.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
+					       pjsip_transport *tp );
+
+
+/**
+ * Unregister transport. This will eventually call the transport to
+ * destroy itself.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
+						 pjsip_transport *tp);
+
+/**
+ * Add ref.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp );
+
+/**
+ * Dec ref.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp );
+
+
+/**
+ * Call for incoming message.
+ */
+PJ_DECL(pj_ssize_t) pjsip_tpmgr_receive_packet(pjsip_tpmgr *mgr,
+					       pjsip_rx_data *rdata);
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT FACTORY
+ *
+ *****************************************************************************/
+
+
+/**
+ * Transport factory.
+ */
+typedef struct pjsip_tpfactory pjsip_tpfactory;
+
+/**
+ * Transport factory.
+ */
+struct pjsip_tpfactory
+{
+    /* This list is managed by transport manager. */
+    PJ_DECL_LIST_MEMBER(struct pjsip_tpfactory);
+
+    pj_pool_t		   *pool;
+    pj_lock_t		   *lock;
+
+    pjsip_transport_type_e  type;
+    char		    type_name[8];
+    unsigned		    flag;
+
+    pj_sockaddr_in	    local_addr;
+    pj_sockaddr_in	    public_addr;
+
+    /**
+     * Create new outbound connection.
+     */
+    pj_status_t (*create_transport)(pjsip_tpfactory *factory,
+				    pjsip_tpmgr *mgr,
+				    pjsip_endpoint *endpt,
+				    pj_ioqueue_t *ioqueue,
+				    const pj_sockaddr_in *rem_addr,
+				    pjsip_transport **transport);
+
+    /*
+     * Application may extend this structure..
+     */
 };
 
-/**
- * Get the transport type from the transport name.
- *
- * @param name	    Transport name, such as "TCP", or "UDP".
- *
- * @return	    The transport type, or PJSIP_TRANSPORT_UNSPECIFIED if 
- *		    the name is not recognized as the name of supported 
- *		    transport.
- */
-PJ_DECL(pjsip_transport_type_e) 
-pjsip_transport_get_type_from_name(const pj_str_t *name);
-
-/**
- * Get the transport type for the specified flags.
- *
- * @param flag	    The transport flag.
- *
- * @return	    Transport type.
- */
-PJ_DECL(pjsip_transport_type_e) 
-pjsip_transport_get_type_from_flag(unsigned flag);
-
-/**
- * Get the default SIP port number for the specified type.
- *
- * @param type	    Transport type.
- *
- * @return	    The port number, which is the default SIP port number for
- *		    the specified type.
- */
-PJ_DECL(int) 
-pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
 
 
 /**
- * Add reference to transport.
- * Transactions or dialogs that uses a particular transport must call this 
- * function to indicate that the transport is being used, thus preventing the
- * transport from being closed.
+ * Register a transport factory.
  *
- * @param transport	The transport.
+ * @param mgr		The transport manager.
+ * @param factory	Transport factory.
+ *
+ * @return		PJ_SUCCESS if listener was successfully created.
  */
-PJ_DECL(void) 
-pjsip_transport_add_ref( pjsip_transport_t *transport );
+PJ_DECL(pj_status_t) pjsip_tpmgr_register_tpfactory(pjsip_tpmgr *mgr,
+						    pjsip_tpfactory *tpf);
 
 /**
- * Decrease reference to transport.
- * When the transport reference counter becomes zero, a timer will be started
- * and when this timer expires and the reference counter is still zero, the
- * transport will be released.
- *
- * @param transport	The transport
+ * Unregister factory.
  */
-PJ_DECL(void) 
-pjsip_transport_dec_ref( pjsip_transport_t *transport );
+PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
+						      pjsip_tpfactory *tpf);
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT MANAGER
+ *
+ *****************************************************************************/
+
+/**
+ * Create a new transport manager.
+ *
+ * @param pool	    Pool.
+ * @param endpt	    Endpoint instance.
+ * @param cb	    Callback to receive incoming message.
+ * @param p_mgr	    Pointer to receive the new transport manager.
+ *
+ * @return	    PJ_SUCCESS or the appropriate error code on error.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
+					 pjsip_endpoint * endpt,
+					 pj_ioqueue_t *ioqueue,
+					 pj_timer_heap_t *timer_heap,
+					 void (*cb)(pjsip_endpoint*,
+						    pj_status_t,
+						    pjsip_rx_data *),
+					 pjsip_tpmgr **p_mgr);
 
 
 /**
- * Macro to check whether the transport is reliable.
- *
- * @param transport	The transport
- *
- * @return		non-zero (not necessarily 1) if transport is reliable.
+ * Destroy transport manager.
  */
-#define PJSIP_TRANSPORT_IS_RELIABLE(transport)	\
-	(pjsip_transport_get_flag(transport) & PJSIP_TRANSPORT_RELIABLE)
+PJ_DECL(pj_status_t) pjsip_tpmgr_destroy(pjsip_tpmgr *mgr);
 
 
 /**
- * Macro to check whether the transport is secure.
- *
- * @param transport	The transport
- *
- * @return		non-zero (not necessarily one) if transport is secure.
+ * Dump transport info.
  */
-#define PJSIP_TRANSPORT_IS_SECURE(transport)	\
-	(pjsip_transport_get_flag(transport) & PJSIP_TRANSPORT_SECURE)
+PJ_DECL(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr);
+
+
+/*****************************************************************************
+ *
+ * PUBLIC API
+ *
+ *****************************************************************************/
+
 
 /**
- * Get the transport type.
- *
- * @param tr		The transport.
- *
- * @return		Transport type.
+ * Find transport to be used to send message to remote destination. If no
+ * suitable transport is found, a new one will be created.
  */
-PJ_DECL(pjsip_transport_type_e) 
-pjsip_transport_get_type( const pjsip_transport_t * tr);
+PJ_DECL(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
+					   pjsip_transport_type_e type,
+					   const pj_sockaddr_in *remote,
+					   pjsip_transport **p_transport );
+
 
 /**
- * Get the transport type name (ie "UDP", or "TCP").
- *
- * @param tr		The transport.
- * @return		The string type.
+ * Send a SIP message using the specified transport.
  */
-PJ_DECL(const char *) 
-pjsip_transport_get_type_name( const pjsip_transport_t * tr);
-
-/**
- * Get the transport's object name.
- *
- * @param tr		The transport.
- * @return		The object name.
- */
-PJ_DECL(const char*) 
-pjsip_transport_get_obj_name( const pjsip_transport_t *tr );
-
-/**
- * Get the transport's reference counter.
- *
- * @param tr		The transport.
- * @return		The reference count value.
- */
-PJ_DECL(int) 
-pjsip_transport_get_ref_cnt( const pjsip_transport_t *tr );
-
-/**
- * Get transport flag.
- *
- * @param tr		The transport.
- * @return		Transport flag.
- */
-PJ_DECL(unsigned) 
-pjsip_transport_get_flag( const pjsip_transport_t * tr );
-
-/**
- * Get the local address of the transport, ie. the address which the socket
- * is bound.
- *
- * @param tr		The transport.
- * @return		The address.
- */
-PJ_DECL(const pj_sockaddr_in *) 
-pjsip_transport_get_local_addr( pjsip_transport_t * tr );
-
-/**
- * Get the address name of the transport. Address name can be an arbitrary
- * address assigned to a transport. This is usefull for example when STUN
- * is used, then the address name of an UDP transport can specify the public
- * address of the transport. When the address name is not set, then value
- * will be equal to the local/bound address. Application should normally
- * prefer to use the address name instead of the local address.
- *
- * @param tr		The transport.
- * @return		The address name.
- */
-PJ_DECL(const pj_sockaddr_in*) 
-pjsip_transport_get_addr_name (pjsip_transport_t *tr);
-
-/**
- * Get the remote address of the transport. Not all transports will have 
- * a valid remote address. UDP transports, for example, will likely to have
- * zero has their remote address, because UDP transport can be used to send
- * and receive messages from multiple destinations.
- *
- * @param tr		The transport.
- * @return		The address.
- */
-PJ_DECL(const pj_sockaddr_in *) 
-pjsip_transport_get_remote_addr( const pjsip_transport_t * tr );
-
-/**
- * Send a SIP message using the specified transport, to the address specified
- * in the outgoing data. This function is only usefull for application when it
- * wants to handle the message statelessly, because otherwise it should create
- * a transaction and let the transaction handles the transmission of the 
- * message.
- *
- * This function will send the message immediately, so application must be
- * sure that the transport is ready to do so before calling this function.
- *
- * @param tr		The transport to send the message.
- * @param tdata		The outgoing message buffer.
- * @param addr		The remote address.
- * @param sent          If not null, it will be filled up with the length of
- *                      data sent.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsip_transport_send_msg( pjsip_transport_t *tr, 
-					       pjsip_tx_data *tdata,
-					       const pj_sockaddr_in *addr,
-					       pj_ssize_t *sent);
+PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr, 
+					   pjsip_tx_data *tdata,
+					   const pj_sockaddr_in *addr,
+					   void *token,
+					   void (*cb)(void *token, 
+						      pjsip_tx_data *tdata,
+						      pj_status_t));
 
 
 /**
  * @}
  */
 
-/*
- * PRIVATE FUNCTIONS!!!
- *
- * These functions are normally to be used by endpoint. Application should
- * use the variant provided by the endpoint instance.
- *
- * Application normally wouldn't be able to call these functions because it
- * has no reference of the transport manager (the instance of the transport
- * manager is hidden by endpoint!).
- */
-
-/*
- * Create a new transmit buffer.
- *
- * @param mgr		The transport manager.
- * @return		The transmit buffer data, or NULL on error.
- */
-pj_status_t pjsip_tx_data_create( pjsip_transport_mgr *mgr,
-                                  pjsip_tx_data **tdata );
-
-
-/**
- * Create listener.
- *
- * @param mgr		The transport manager.
- * @param type		Transport type.
- * @param local_addr	The address to bind.
- * @param addr_name	If not null, sets the address name. If NULL, 
- *			then the local address will be used.
- *
- * @return		PJ_SUCCESS if listener was successfully created.
- */
-PJ_DECL(pj_status_t) pjsip_create_listener( pjsip_transport_mgr *mgr,
-					    pjsip_transport_type_e type,
-					    pj_sockaddr_in *local_addr,
-					    const pj_sockaddr_in *addr_name);
-
-
-/**
- * Create UDP listener.
- *
- * @param mgr		The transport manager.
- * @param sock		The UDP socket.
- * @param addr_name	If not null, sets the address name. If NULL, 
- *			then the local address will be used.
- *
- * @return		PJ_SUCCESS if listener was successfully created.
- */
-PJ_DECL(pj_status_t) pjsip_create_udp_listener( pjsip_transport_mgr *mgr,
-						pj_sock_t sock,
-						const pj_sockaddr_in *addr_name);
-
-/** 
- * Type of function to receive asynchronous transport completion for
- * pjsip_transport_get() operation.
- *
- * @param tr		The transport.
- * @param token		Token registered previously.
- * @param status	Status of operation.
- */
-typedef void pjsip_transport_completion_callback(pjsip_transport_t *tr, 
-						 void *token, 
-						 pj_status_t status);
-
-/**
- * Find transport to be used to send message to remote destination. If no
- * suitable transport is found, a new one will be created. If transport
- * can not be available immediately (for example, an outgoing TCP connec()),
- * then the caller will be notified later via the callback.
- *
- * @param mgr		The transport manager.
- * @param pool		Pool to allocate asychronous job (if required).
- * @param type		The transport type.
- * @param remote	The remote address.
- * @param token		The token that will be passed to the callback.
- * @param cb		The callback to be called to report the completion of 
- *			the operation.
- */
-PJ_DECL(void) pjsip_transport_get( pjsip_transport_mgr *mgr,
-				   pj_pool_t *pool,
-				   pjsip_transport_type_e type,
-				   const pj_sockaddr_in *remote,
-				   void *token,
-				   pjsip_transport_completion_callback *cb);
 
 PJ_END_DECL
 

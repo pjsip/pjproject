@@ -259,51 +259,10 @@ PJ_DECL(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
  *
  * @see pjsip_transport_get
  */
-PJ_DECL(void) pjsip_endpt_get_transport( pjsip_endpoint *endpt,
-					 pj_pool_t *pool,
-					 pjsip_transport_type_e type,
-					 const pj_sockaddr_in *remote,
-					 void *token,
-					 pjsip_transport_completion_callback *cb);
-
-/**
- * Create listener a new transport listener. A listener is transport object
- * that is capable of receiving SIP messages. For UDP listener, normally
- * application should use #pjsip_endpt_create_udp_listener instead if the 
- * application has already created the socket.
- * This function, like all other endpoint functions, is thread safe.
- *
- * @param endpt	    The endpoint instance.
- * @param type	    Transport type (eg. UDP, TCP, etc.)
- * @param addr	    The bound address of the transport.
- * @param addr_name The address to be advertised in SIP messages. For example,
- *		    the bound address can be 0.0.0.0, but the advertised address
- *		    normally will be the IP address of the host.
- *
- * @return	    Zero if listener is created successfully.
- */
-PJ_DECL(pj_status_t) pjsip_endpt_create_listener( pjsip_endpoint *endpt,
+PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
-						  pj_sockaddr_in *addr,
-						  const pj_sockaddr_in *addr_name);
-
-/**
- * Create UDP listener. For UDP, normally the application would create the
- * socket by itself (for STUN purpose), then it can register the socket as
- * listener by calling this function.
- * This function, like all other endpoint functions, is thread safe.
- *
- * @param endpt	    The endpoint instance.
- * @param sock	    The socket handle.
- * @param addr_name The address to be advertised in SIP message. If the socket
- *		    has been resolved with STUN, then application may specify 
- *		    the mapped address in this parameter.
- *
- * @return	    Zero if listener is created successfully.
- */
-PJ_DECL(pj_status_t) pjsip_endpt_create_udp_listener( pjsip_endpoint *endpt,
-						      pj_sock_t sock,
-						      const pj_sockaddr_in *addr_name);
+						  const pj_sockaddr_in *remote,
+						  pjsip_transport **p_transport);
 
 /**
  * Get additional headers to be put in outgoing request message. 

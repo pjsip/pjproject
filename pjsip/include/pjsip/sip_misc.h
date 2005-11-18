@@ -178,7 +178,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
  * @return	    zero (PJ_OK) if successfull.
  */
 PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
-					     const pjsip_transport_t *tr,
+					     const pjsip_transport *tr,
 					     const pjsip_via_hdr *via,
 					     pjsip_host_port *addr);
 

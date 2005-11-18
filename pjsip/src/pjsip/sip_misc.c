@@ -429,7 +429,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pj_status_t status;
 
     /* rdata must be a request message. */
-    req_msg = rdata->msg;
+    req_msg = rdata->msg_info.msg;
     pj_assert(req_msg->type == PJSIP_REQUEST_MSG);
 
     /* Log this action. */
@@ -449,10 +449,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     msg->line.status.reason = *pjsip_get_status_text(code);
 
     /* Set TX data attributes. */
-    tdata->rx_timestamp = rdata->timestamp;
+    tdata->rx_timestamp = rdata->pkt_info.timestamp;
 
     /* Copy all the via headers, in order. */
-    via = rdata->via;
+    via = rdata->msg_info.via;
     while (via) {
 	pjsip_msg_add_hdr( msg, pjsip_hdr_clone(tdata->pool, via));
 	via = via->next;
@@ -478,15 +478,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pjsip_msg_add_hdr(msg, pjsip_hdr_clone(tdata->pool, hdr));
 
     /* Copy From header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->from);
+    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.from);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* Copy To header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->to);
+    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.to);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* Copy CSeq header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->cseq);
+    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.cseq);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* All done. */
@@ -514,8 +514,8 @@ PJ_DEF(void) pjsip_endpt_create_ack(pjsip_endpoint *endpt,
     PJ_UNUSED_ARG(endpt);
 
     /* rdata must be a final response. */
-    pj_assert(rdata->msg->type==PJSIP_RESPONSE_MSG &&
-	      rdata->msg->line.status.code >= 300);
+    pj_assert(rdata->msg_info.msg->type==PJSIP_RESPONSE_MSG &&
+	      rdata->msg_info.msg->line.status.code >= 300);
 
     /* Log this action. */
     PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_ack(rdata=%p)", rdata));
@@ -542,7 +542,7 @@ PJ_DEF(void) pjsip_endpt_create_ack(pjsip_endpoint *endpt,
     /* Copy To header from the original INVITE. */
     to = (pjsip_to_hdr*)pjsip_msg_find_remove_hdr( invite_msg, 
 						   PJSIP_H_TO, NULL);
-    pj_strdup(tdata->pool, &to->tag, &rdata->to->tag);
+    pj_strdup(tdata->pool, &to->tag, &rdata->msg_info.to->tag);
     pjsip_msg_add_hdr( ack_msg, (pjsip_hdr*)to );
 
     /* Must contain single Via, just as the original INVITE. */
@@ -674,7 +674,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
  * response.
  */
 PJ_DEF(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
-					    const pjsip_transport_t *req_transport,
+					    const pjsip_transport *req_transport,
 					    const pjsip_via_hdr *via,
 					    pjsip_host_port *send_addr)
 {
@@ -687,12 +687,12 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
      * - otherwise if received parameter is present, set to this address.
      * - otherwise send to the address in sent-by.
      */
-    send_addr->flag = pjsip_transport_get_flag(req_transport);
-    send_addr->type = pjsip_transport_get_type(req_transport);
+    send_addr->flag = req_transport->flag;
+    send_addr->type = req_transport->type;
 
     if (PJSIP_TRANSPORT_IS_RELIABLE(req_transport)) {
 	const pj_sockaddr_in *remote_addr;
-	remote_addr = pjsip_transport_get_remote_addr(req_transport);
+	remote_addr = &req_transport->rem_addr;
 	pj_strdup2(pool, &send_addr->host, 
 		   pj_inet_ntoa(remote_addr->sin_addr));
 	send_addr->port = pj_sockaddr_in_get_port(remote_addr);

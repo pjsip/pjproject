@@ -25,12 +25,12 @@
 /**
  * Opaque data structure for transports (sip_transport.h).
  */
-typedef struct pjsip_transport_t pjsip_transport_t;
+typedef struct pjsip_transport pjsip_transport;
 
 /**
  * Opaque data type for transport manager (sip_transport.h).
  */
-typedef struct pjsip_transport_mgr pjsip_transport_mgr;
+typedef struct pjsip_tpmgr pjsip_tpmgr;
 
 /**
  * Transport types.
@@ -43,7 +43,6 @@ typedef enum pjsip_transport_type_e
     /** UDP. */
     PJSIP_TRANSPORT_UDP,
 
-#if PJ_HAS_TCP
     /** TCP. */
     PJSIP_TRANSPORT_TCP,
 
@@ -52,7 +51,6 @@ typedef enum pjsip_transport_type_e
 
     /** SCTP. */
     PJSIP_TRANSPORT_SCTP,
-#endif
 
 } pjsip_transport_type_e;
 

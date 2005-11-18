@@ -32,7 +32,7 @@
 #include <pj/hash.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
-
+#include <pj/lock.h>
 
 #define PJSIP_EX_NO_MEMORY  PJ_NO_MEMORY_EXCEPTION
 #define THIS_FILE	    "endpoint"
@@ -63,7 +63,10 @@ struct pjsip_endpoint
     pj_timer_heap_t	*timer_heap;
 
     /** Transport manager. */
-    pjsip_transport_mgr *transport_mgr;
+    pjsip_tpmgr		*transport_mgr;
+
+    /** Ioqueue. */
+    pj_ioqueue_t	*ioqueue;
 
     /** DNS Resolver. */
     pjsip_resolver_t	*resolver;
@@ -95,7 +98,8 @@ struct pjsip_endpoint
 /*
  * Prototypes.
  */
-static void endpt_transport_callback( pjsip_endpoint *, pjsip_rx_data *rdata );
+static void endpt_transport_callback(pjsip_endpoint*, 
+				     pj_status_t, pjsip_rx_data*);
 
 
 /*
@@ -354,6 +358,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pj_pool_t *pool;
     pjsip_endpoint *endpt;
     pjsip_max_forwards_hdr *mf_hdr;
+    pj_lock_t *lock = NULL;
 
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create()"));
 
@@ -398,11 +403,28 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 	goto on_error;
     }
 
+    /* Set recursive lock for the timer heap. */
+    status = pj_lock_create_recursive_mutex( endpt->pool, "edpt%p", &lock);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+    pj_timer_heap_set_lock(endpt->timer_heap, lock, PJ_TRUE);
+
+    /* Set maximum timed out entries to process in a single poll. */
+    pj_timer_heap_set_max_timed_out_per_poll(endpt->timer_heap, 
+					     PJSIP_MAX_TIMED_OUT_ENTRIES);
+
+    /* Create ioqueue. */
+    status = pj_ioqueue_create( endpt->pool, PJSIP_MAX_TRANSPORTS, &endpt->ioqueue);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
     /* Create transport manager. */
-    status = pjsip_transport_mgr_create( endpt->pool,
-					 endpt,
-					 &endpt_transport_callback,
-					 &endpt->transport_mgr);
+    status = pjsip_tpmgr_create( endpt->pool, endpt,
+				 endpt->ioqueue, endpt->timer_heap,
+			         &endpt_transport_callback,
+				 &endpt->transport_mgr);
     if (status != PJ_SUCCESS) {
 	goto on_error;
     }
@@ -445,7 +467,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 
 on_error:
     if (endpt->transport_mgr) {
-	pjsip_transport_mgr_destroy(endpt->transport_mgr);
+	pjsip_tpmgr_destroy(endpt->transport_mgr);
 	endpt->transport_mgr = NULL;
     }
     if (endpt->mutex) {
@@ -470,7 +492,7 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_destroy()"));
 
     /* Shutdown and destroy all transports. */
-    pjsip_transport_mgr_destroy(endpt->transport_mgr);
+    pjsip_tpmgr_destroy(endpt->transport_mgr);
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
@@ -532,20 +554,16 @@ PJ_DEF(void) pjsip_endpt_destroy_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
 PJ_DEF(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
 					const pj_time_val *max_timeout)
 {
-    pj_time_val timeout;
-    int i;
+    /* timeout is 'out' var. This just to make compiler happy. */
+    pj_time_val timeout = { 0, 0};
 
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_handle_events()"));
 
     /* Poll the timer. The timer heap has its own mutex for better 
-     * granularity, so we don't need to lock end endpoint. We also keep
-     * polling the timer while we have events.
+     * granularity, so we don't need to lock end endpoint. 
      */
-    timeout.sec = timeout.msec = 0; /* timeout is 'out' var. This just to make compiler happy. */
-    for (i=0; i<10; ++i) {
-	if (pj_timer_heap_poll( endpt->timer_heap, &timeout ) < 1)
-	    break;
-    }
+    timeout.sec = timeout.msec = 0;
+    pj_timer_heap_poll( endpt->timer_heap, &timeout );
 
     /* If caller specifies maximum time to wait, then compare the value with
      * the timeout to wait from timer, and use the minimum value.
@@ -554,8 +572,8 @@ PJ_DEF(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
 	timeout = *max_timeout;
     }
 
-    /* Poll events in the transport manager. */
-    pjsip_transport_mgr_handle_events( endpt->transport_mgr, &timeout);
+    /* Poll ioqueue. */
+    pj_ioqueue_poll( endpt->ioqueue, &timeout);
 }
 
 /*
@@ -658,13 +676,13 @@ PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
 static void rdata_create_key( pjsip_rx_data *rdata)
 {
     pjsip_role_e role;
-    if (rdata->msg->type == PJSIP_REQUEST_MSG) {
+    if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
 	role = PJSIP_ROLE_UAS;
     } else {
 	role = PJSIP_ROLE_UAC;
     }
-    pjsip_tsx_create_key(rdata->pool, &rdata->key, role,
-			 &rdata->cseq->method, rdata);
+    pjsip_tsx_create_key(rdata->tp_info.pool, &rdata->endpt_info.key, role,
+			 &rdata->msg_info.cseq->method, rdata);
 }
 
 /*
@@ -672,13 +690,25 @@ static void rdata_create_key( pjsip_rx_data *rdata)
  * receives a message from the network.
  */
 static void endpt_transport_callback( pjsip_endpoint *endpt,
+				      pj_status_t status,
 				      pjsip_rx_data *rdata )
 {
-    pjsip_msg *msg = rdata->msg;
+    pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_transaction *tsx;
     pj_bool_t a_new_transaction_just_been_created = PJ_FALSE;
 
     PJ_LOG(5, (THIS_FILE, "endpt_transport_callback(rdata=%p)", rdata));
+
+    if (status != PJ_SUCCESS) {
+	const char *src_addr = pj_inet_ntoa(rdata->pkt_info.addr.sin_addr);
+	int port = pj_ntohs(rdata->pkt_info.addr.sin_port);
+	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
+			       "Src.addr=%s:%d, packet:--\n"
+			       "%s\n"
+			       "-- end of packet. Error",
+			       src_addr, port, rdata->msg_info.msg_buf));
+	return;
+    }
 
     /* For response, check that the value in Via sent-by match the transport.
      * If not matched, silently drop the response.
@@ -687,16 +717,16 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
     if (msg->type == PJSIP_RESPONSE_MSG) {
 	const pj_sockaddr_in *addr;
 	const char *addr_addr;
-	int port = rdata->via->sent_by.port;
+	int port = rdata->msg_info.via->sent_by.port;
 	pj_bool_t mismatch = PJ_FALSE;
 	if (port == 0) {
 	    int type;
-	    type = pjsip_transport_get_type(rdata->transport);
+	    type = rdata->tp_info.transport->type;
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}
-	addr = pjsip_transport_get_addr_name(rdata->transport);
+	addr = &rdata->tp_info.transport->public_addr;
 	addr_addr = pj_inet_ntoa(addr->sin_addr);
-	if (pj_strcmp2(&rdata->via->sent_by.host, addr_addr) != 0)
+	if (pj_strcmp2(&rdata->msg_info.via->sent_by.host, addr_addr) != 0)
 	    mismatch = PJ_TRUE;
 	else if (port != pj_ntohs(addr->sin_port)) {
 	    /* Port or address mismatch, we should discard response */
@@ -706,7 +736,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	     * So we discard the response only if the port doesn't match
 	     * both the port in sent-by and rport. We try to be lenient here!
 	     */
-	    if (rdata->via->rport_param != pj_sockaddr_in_get_port(addr))
+	    if (rdata->msg_info.via->rport_param != pj_sockaddr_in_get_port(addr))
 		mismatch = PJ_TRUE;
 	    else {
 		PJ_LOG(4,(THIS_FILE, "Response %p has mismatch port in sent-by"
@@ -729,13 +759,13 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 
     /* Find the transaction for the received message. */
     PJ_LOG(5, (THIS_FILE, "finding tsx with key=%.*s", 
-			 rdata->key.slen, rdata->key.ptr));
+			 rdata->endpt_info.key.slen, rdata->endpt_info.key.ptr));
 
     /* Start lock mutex in the endpoint. */
     pj_mutex_lock(endpt->tsx_table_mutex);
 
     /* Find the transaction in the hash table. */
-    tsx = pj_hash_get( endpt->tsx_table, rdata->key.ptr, rdata->key.slen );
+    tsx = pj_hash_get( endpt->tsx_table, rdata->endpt_info.key.ptr, rdata->endpt_info.key.slen );
 
     /* Unlock mutex. */
     pj_mutex_unlock(endpt->tsx_table_mutex);
@@ -752,7 +782,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 
 	    /* Inform TU about the 200 message, only if it's INVITE. */
 	    if (PJSIP_IS_STATUS_IN_CLASS(msg->line.status.code, 200) &&
-		rdata->cseq->method.id == PJSIP_INVITE_METHOD) 
+		rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) 
 	    {
 		pjsip_event e;
 
@@ -776,7 +806,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	/*
 	 * For non-ACK request message, create a new transaction.
 	 */
-	} else if (rdata->msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	} else if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
 
 	    pj_status_t status;
 
@@ -805,7 +835,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	/* Dispatch message to transaction. */
 	pjsip_tsx_on_rx_msg( tsx, rdata );
 
-    } else if (rdata->msg->line.req.method.id == PJSIP_ACK_METHOD) {
+    } else if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD) {
 	/*
 	 * This is an ACK message, but the INVITE transaction could not
 	 * be found (possibly because the branch parameter in Via in ACK msg
@@ -914,42 +944,21 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 /*
  * Find/create transport.
  */
-PJ_DEF(void) pjsip_endpt_get_transport( pjsip_endpoint *endpt,
-					pj_pool_t *pool,
-					pjsip_transport_type_e type,
-					const pj_sockaddr_in *remote,
-					void *token,
-					pjsip_transport_completion_callback *cb)
+PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
+						  pjsip_transport_type_e type,
+						  const pj_sockaddr_in *remote,
+						  pjsip_transport **p_transport)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_get_transport()"));
-    pjsip_transport_get( endpt->transport_mgr, pool, type,
-			 remote, token, cb);
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_alloc_transport()"));
+    return pjsip_tpmgr_alloc_transport( endpt->transport_mgr, type, remote,
+					p_transport);
 }
 
-
-PJ_DEF(pj_status_t) pjsip_endpt_create_listener( pjsip_endpoint *endpt,
-						 pjsip_transport_type_e type,
-						 pj_sockaddr_in *addr,
-						 const pj_sockaddr_in *addr_name)
-{
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_listener()"));
-    return pjsip_create_listener( endpt->transport_mgr, type, addr, addr_name );
-}
-
-PJ_DEF(pj_status_t) pjsip_endpt_create_udp_listener( pjsip_endpoint *endpt,
-						     pj_sock_t sock,
-						     const pj_sockaddr_in *addr_name)
-{
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_udp_listener()"));
-    return pjsip_create_udp_listener( endpt->transport_mgr, sock, addr_name );
-}
 
 PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 {
 #if PJ_LOG_MAX_LEVEL >= 3
     unsigned count;
-    pj_hash_iterator_t itr_val;
-    pj_hash_iterator_t *itr;
 
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_dump()"));
 
@@ -1014,38 +1023,8 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     }
 
     /* Transports. 
-     * Note: transport is not properly locked in this function.
-     *       See pjsip_transport_first, pjsip_transport_next.
      */
-    itr = pjsip_transport_first( endpt->transport_mgr, &itr_val );
-    if (itr) {
-	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));
-
-	do {
-	    char src_addr[128], dst_addr[128];
-	    int src_port, dst_port;
-	    const pj_sockaddr_in *addr;
-	    pjsip_transport_t *t;
-
-	    t = pjsip_transport_this(endpt->transport_mgr, itr);
-	    addr = pjsip_transport_get_local_addr(t);
-	    pj_native_strcpy(src_addr, pj_inet_ntoa(addr->sin_addr));
-	    src_port = pj_ntohs(addr->sin_port);
-
-	    addr = pjsip_transport_get_remote_addr(t);
-	    pj_native_strcpy(dst_addr, pj_inet_ntoa(addr->sin_addr));
-	    dst_port = pj_ntohs(addr->sin_port);
-
-	    PJ_LOG(3, (THIS_FILE, "  %s %s %s:%d --> %s:%d (refcnt=%d)", 
-		       pjsip_transport_get_type_name(t),
-		       pjsip_transport_get_obj_name(t),
-		       src_addr, src_port,
-		       dst_addr, dst_port,
-		       pjsip_transport_get_ref_cnt(t)));
-
-	    itr = pjsip_transport_next(endpt->transport_mgr, itr);
-	} while (itr);
-    }
+    pjsip_tpmgr_dump_transports( endpt->transport_mgr );
 
     /* Timer. */
     PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries", 

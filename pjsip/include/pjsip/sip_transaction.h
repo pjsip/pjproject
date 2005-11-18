@@ -111,7 +111,7 @@ struct pjsip_transaction
     pjsip_server_addresses	remote_addr;    /**< Addresses resolved.    */
     int				current_addr;   /**< Address currently used. */
 
-    pjsip_transport_t	       *transport;      /**< Transport to use.      */
+    pjsip_transport	       *transport;      /**< Transport to use.      */
 
     /*
      * Messages and timer.
