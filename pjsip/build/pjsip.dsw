@@ -57,7 +57,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_core_test"=.\pjsip_core_test.dsp - Package Owner=<4>
+Project: "test_pjsip"=.\test_pjsip.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
