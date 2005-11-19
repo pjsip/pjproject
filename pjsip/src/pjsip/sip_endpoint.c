@@ -53,6 +53,9 @@ struct pjsip_endpoint
     /** Pool factory. */
     pj_pool_factory	*pf;
 
+    /** Name. */
+    pj_str_t		 name;
+
     /** Transaction table. */
     pj_hash_table_t	*tsx_table;
 
@@ -352,6 +355,7 @@ PJ_DEF(const pjsip_route_hdr*) pjsip_endpt_get_routing( pjsip_endpoint *endpt )
  * Initialize endpoint.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
+				       const char *name,
                                        pjsip_endpoint **p_endpt)
 {
     pj_status_t status;
@@ -375,6 +379,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     endpt = pj_pool_calloc(pool, 1, sizeof(*endpt));
     endpt->pool = pool;
     endpt->pf = pf;
+
+    /* Get name. */
+    if (name != NULL) {
+	pj_str_t temp;
+	pj_strdup_with_null(endpt->pool, &endpt->name, pj_cstr(&temp, name));
+    } else {
+	pj_strdup_with_null(endpt->pool, &endpt->name, pj_gethostname());
+    }
 
     /* Create mutex for the events, etc. */
     status = pj_mutex_create_recursive( endpt->pool, "ept%p", &endpt->mutex );
@@ -422,7 +434,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 
     /* Create transport manager. */
     status = pjsip_tpmgr_create( endpt->pool, endpt,
-				 endpt->ioqueue, endpt->timer_heap,
 			         &endpt_transport_callback,
 				 &endpt->transport_mgr);
     if (status != PJ_SUCCESS) {
@@ -503,6 +514,15 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     /* Finally destroy pool. */
     pj_pool_release(endpt->pool);
 }
+
+/*
+ * Get endpoint name.
+ */
+PJ_DEF(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt)
+{
+    return &endpt->name;
+}
+
 
 /*
  * Create new pool.
@@ -939,6 +959,22 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 {
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_resolve()"));
     pjsip_resolve( endpt->resolver, pool, target, token, cb);
+}
+
+/*
+ * Get transport manager.
+ */
+PJ_DEF(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint *endpt)
+{
+    return endpt->transport_mgr;
+}
+
+/*
+ * Get ioqueue instance.
+ */
+PJ_DEF(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt)
+{
+    return endpt->ioqueue;
 }
 
 /*

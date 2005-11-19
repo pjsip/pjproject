@@ -127,6 +127,10 @@ SOURCE=..\src\pjsip\sip_transport.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_transport_udp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_uri.c
 # End Source File
 # End Group

@@ -116,6 +116,17 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
  *
  *****************************************************************************/
 
+/** 
+ * A customized ioqueue async operation key which is used by transport
+ * to locate rdata when a pending read operation completes.
+ */
+typedef struct pjsip_rx_data_op_key
+{
+    pj_ioqueue_op_key_t		op_key;
+    pjsip_rx_data	       *rdata;
+} pjsip_rx_data_op_key;
+
+
 /**
  * Incoming message buffer.
  * This structure keep all the information regarding the received message. This
@@ -139,7 +150,7 @@ struct pjsip_rx_data
 	pjsip_transport		*transport;
 
 	/** Ioqueue key. */
-	pj_ioqueue_op_key_t	 op_key;
+	pjsip_rx_data_op_key	 op_key;
 
     } tp_info;
 
@@ -249,6 +260,18 @@ struct pjsip_rx_data
  *
  *****************************************************************************/
 
+/** Customized ioqueue async operation key, used by transport to keep
+ *  callback parameters.
+ */
+typedef struct pjsip_tx_data_op_key
+{
+    pj_ioqueue_op_key_t	    key;
+    pjsip_tx_data	   *tdata;
+    void		   *token;
+    void		  (*callback)(pjsip_transport*,void*,pj_ssize_t);
+} pjsip_tx_data_op_key;
+
+
 /**
  * Data structure for sending outgoing message. Application normally creates
  * this buffer by calling #pjsip_endpt_create_tdata.
@@ -265,6 +288,7 @@ struct pjsip_rx_data
  */
 struct pjsip_tx_data
 {
+    /** This is for transmission queue; it's managed by transports. */
     PJ_DECL_LIST_MEMBER(struct pjsip_tx_data);
 
     /** Memory pool for this buffer. */
@@ -284,7 +308,7 @@ struct pjsip_tx_data
     pjsip_tpmgr		*mgr;
 
     /** Ioqueue asynchronous operation key. */
-    pj_ioqueue_op_key_t	 op_key;
+    pjsip_tx_data_op_key op_key;
 
     /** Lock object. */
     pj_lock_t		*lock;
@@ -303,10 +327,10 @@ struct pjsip_tx_data
     /** Reference counter. */
     pj_atomic_t		*ref_cnt;
 
-    /** Being sent? */
+    /** Being processed by transport? */
     int			 is_pending;
 
-    /** Transport internal. */
+    /** Transport manager internal. */
     void		*token;
     void	       (*cb)(void*, pjsip_tx_data*, pj_status_t);
 };
@@ -391,6 +415,7 @@ typedef struct pjsip_transport
     pj_sockaddr_in	    public_addr;    /**< STUN addres.		    */
     pj_sockaddr_in	    rem_addr;	    /**< Remote addr (zero for UDP) */
 
+    pjsip_endpoint	   *endpt;	    /**< Endpoint instance.	    */
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
 
@@ -420,14 +445,12 @@ typedef struct pjsip_transport
      *			    Other return values indicate the error code.
      */
     pj_status_t (*send_msg)(pjsip_transport *transport, 
-			    const void *packet, 
-			    pj_size_t length,
-			    pj_ioqueue_op_key_t *op_key,
+			    pjsip_tx_data *tdata,
 			    const pj_sockaddr_in *rem_addr,
 			    void *token,
 			    void (*callback)(pjsip_transport *transport,
 					     void *token, 
-					     pj_status_t status));
+					     pj_ssize_t sent_bytes));
 
     /**
      * Destroy this transport.
@@ -508,7 +531,6 @@ struct pjsip_tpfactory
     pj_status_t (*create_transport)(pjsip_tpfactory *factory,
 				    pjsip_tpmgr *mgr,
 				    pjsip_endpoint *endpt,
-				    pj_ioqueue_t *ioqueue,
 				    const pj_sockaddr_in *rem_addr,
 				    pjsip_transport **transport);
 
@@ -555,8 +577,6 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					 pjsip_endpoint * endpt,
-					 pj_ioqueue_t *ioqueue,
-					 pj_timer_heap_t *timer_heap,
 					 void (*cb)(pjsip_endpoint*,
 						    pj_status_t,
 						    pjsip_rx_data *),
@@ -601,7 +621,7 @@ PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
 					   void *token,
 					   void (*cb)(void *token, 
 						      pjsip_tx_data *tdata,
-						      pj_status_t));
+						      pj_ssize_t bytes_sent));
 
 
 /**

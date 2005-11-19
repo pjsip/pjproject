@@ -42,8 +42,6 @@ struct pjsip_tpmgr
     pj_hash_table_t *table;
     pj_lock_t	    *lock;
     pjsip_endpoint  *endpt;
-    pj_ioqueue_t    *ioqueue;
-    pj_timer_heap_t *timer_heap;
     pjsip_tpfactory  factory_list;
     void           (*msg_cb)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
 };
@@ -356,7 +354,7 @@ PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
 	/* Verify again. */
 	if (pj_atomic_get(tp->ref_cnt) == 1) {
 	    if (tp->idle_timer.id != PJ_FALSE) {
-		pj_timer_heap_cancel(tp->tpmgr->timer_heap, &tp->idle_timer);
+		pjsip_endpt_cancel_timer(tp->tpmgr->endpt, &tp->idle_timer);
 		tp->idle_timer.id = PJ_FALSE;
 	    }
 	}
@@ -383,7 +381,8 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 
 	    pj_assert(tp->idle_timer.id == 0);
 	    tp->idle_timer.id = PJ_TRUE;
-	    pj_timer_heap_schedule(tp->tpmgr->timer_heap, &tp->idle_timer, &delay);
+	    pjsip_endpt_schedule_timer(tp->tpmgr->endpt, &tp->idle_timer, 
+				       &delay);
 	}
 	pj_lock_release(tp->tpmgr->lock);
     }
@@ -440,7 +439,7 @@ PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
      */
     pj_assert(tp->idle_timer.id == PJ_FALSE);
     if (tp->idle_timer.id != PJ_FALSE) {
-	pj_timer_heap_cancel(mgr->timer_heap, &tp->idle_timer);
+	pjsip_endpt_cancel_timer(mgr->endpt, &tp->idle_timer);
 	tp->idle_timer.id = PJ_FALSE;
     }
 
@@ -531,8 +530,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
  */
 PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					pjsip_endpoint *endpt,
-					pj_ioqueue_t *ioqueue,
-					pj_timer_heap_t *timer_heap,
 					void (*cb)(pjsip_endpoint*,
 						   pj_status_t,
 						   pjsip_rx_data *),
@@ -548,8 +545,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     mgr = pj_pool_zalloc(pool, sizeof(*mgr));
     mgr->endpt = endpt;
     mgr->msg_cb = cb;
-    mgr->ioqueue = ioqueue;
-    mgr->timer_heap = timer_heap;
     pj_list_init(&mgr->factory_list);
 
     mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
@@ -592,7 +587,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
 	itr = next;
     }
-    pj_ioqueue_destroy(mgr->ioqueue);
 
     pj_lock_release(mgr->lock);
 
@@ -801,7 +795,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
 
     /* Request factory to create transport. */
     status = factory->create_transport(factory, mgr, mgr->endpt,
-				       mgr->ioqueue, remote, p_transport);
+				       remote, p_transport);
 
     pj_lock_release(mgr->lock);
     return status;

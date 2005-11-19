@@ -80,6 +80,7 @@ PJ_BEGIN_DECL
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
+					const char *name,
                                         pjsip_endpoint **endpt);
 
 /**
@@ -250,6 +251,24 @@ PJ_DECL(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 				   pjsip_host_port *target,
 				   void *token,
 				   pjsip_resolver_callback *cb);
+
+/**
+ * Get transport manager instance.
+ *
+ * @param endpt	    The endpoint.
+ *
+ * @return	    Transport manager instance.
+ */
+PJ_DECL(pjsip_tpmgr*) pjsip_endpt_get_tpmgr(pjsip_endpoint *endpt);
+
+/**
+ * Get ioqueue instance.
+ *
+ * @param endpt	    The endpoint.
+ *
+ * @return	    The ioqueue.
+ */
+PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
 
 /**
  * Find a SIP transport suitable for sending SIP message to the specified
