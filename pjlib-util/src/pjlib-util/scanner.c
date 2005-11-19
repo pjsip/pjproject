@@ -46,12 +46,12 @@ PJ_DEF(pj_status_t) pj_cis_init(pj_cis_buf_t *cis_buf, pj_cis_t *cis)
 
     for (i=0; i<PJ_CIS_MAX_INDEX; ++i) {
         if ((cis_buf->use_mask & (1 << i)) == 0) {
-            cis->cis_index = i;
+            cis->cis_id = i;
             return PJ_SUCCESS;
         }
     }
 
-    cis->cis_index = PJ_CIS_MAX_INDEX;
+    cis->cis_id = PJ_CIS_MAX_INDEX;
     return PJ_ETOOMANY;
 }
 
@@ -60,7 +60,8 @@ PJ_DEF(pj_status_t) pj_cis_dup( pj_cis_t *new_cis, pj_cis_t *existing)
     pj_status_t status;
     unsigned i;
 
-    status = pj_cis_init(existing->cis_buf, new_cis);
+    /* Warning: typecasting here! */
+    status = pj_cis_init((pj_cis_buf_t*)existing->cis_buf, new_cis);
     if (status != PJ_SUCCESS)
         return status;
 
