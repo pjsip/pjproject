@@ -529,7 +529,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
 				      void *buffer,
 				      pj_ssize_t *length,
-				      unsigned flags )
+				      pj_uint32_t flags )
 {
     /*
      * Ideally we should just call pj_ioqueue_recvfrom() with NULL addr and
@@ -553,18 +553,22 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     /* Try non-overlapped received first to see if data is
      * immediately available.
      */
-    rc = WSARecv((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
-                 &bytesRead, &dwFlags, NULL, NULL);
-    if (rc == 0) {
-        *length = bytesRead;
-        return PJ_SUCCESS;
-    } else {
-        DWORD dwError = WSAGetLastError();
-        if (dwError != WSAEWOULDBLOCK) {
-            *length = -1;
-            return PJ_RETURN_OS_ERROR(dwError);
-        }
+    if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
+	rc = WSARecv((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
+		     &bytesRead, &dwFlags, NULL, NULL);
+	if (rc == 0) {
+	    *length = bytesRead;
+	    return PJ_SUCCESS;
+	} else {
+	    DWORD dwError = WSAGetLastError();
+	    if (dwError != WSAEWOULDBLOCK) {
+		*length = -1;
+		return PJ_RETURN_OS_ERROR(dwError);
+	    }
+	}
     }
+
+    dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /*
      * No immediate data available.
@@ -598,7 +602,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
                                          pj_ioqueue_op_key_t *op_key,
 					 void *buffer,
 					 pj_ssize_t *length,
-                                         unsigned flags,
+                                         pj_uint32_t flags,
 					 pj_sockaddr_t *addr,
 					 int *addrlen)
 {
@@ -619,18 +623,22 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     /* Try non-overlapped received first to see if data is
      * immediately available.
      */
-    rc = WSARecvFrom((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
-                     &bytesRead, &dwFlags, addr, addrlen, NULL, NULL);
-    if (rc == 0) {
-        *length = bytesRead;
-        return PJ_SUCCESS;
-    } else {
-        DWORD dwError = WSAGetLastError();
-        if (dwError != WSAEWOULDBLOCK) {
-            *length = -1;
-            return PJ_RETURN_OS_ERROR(dwError);
-        }
+    if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
+	rc = WSARecvFrom((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
+			 &bytesRead, &dwFlags, addr, addrlen, NULL, NULL);
+	if (rc == 0) {
+	    *length = bytesRead;
+	    return PJ_SUCCESS;
+	} else {
+	    DWORD dwError = WSAGetLastError();
+	    if (dwError != WSAEWOULDBLOCK) {
+		*length = -1;
+		return PJ_RETURN_OS_ERROR(dwError);
+	    }
+	}
     }
+
+    dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /*
      * No immediate data available.
@@ -664,7 +672,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send(  pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
 				      const void *data,
 				      pj_ssize_t *length,
-				      unsigned flags )
+				      pj_uint32_t flags )
 {
     return pj_ioqueue_sendto(key, op_key, data, length, flags, NULL, 0);
 }
@@ -679,7 +687,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
 				       const void *data,
 				       pj_ssize_t *length,
-                                       unsigned flags,
+                                       pj_uint32_t flags,
 				       const pj_sockaddr_t *addr,
 				       int addrlen)
 {
@@ -693,27 +701,31 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     
     op_key_rec = (union operation_key*)op_key->internal__;
 
-    dwFlags = flags;
-
     /*
      * First try blocking write.
      */
     op_key_rec->overlapped.wsabuf.buf = (void*)data;
     op_key_rec->overlapped.wsabuf.len = *length;
 
-    rc = WSASendTo((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
-                   &bytesWritten, dwFlags, addr, addrlen,
-                   NULL, NULL);
-    if (rc == 0) {
-        *length = bytesWritten;
-        return PJ_SUCCESS;
-    } else {
-        DWORD dwStatus = WSAGetLastError();
-        if (dwStatus != WSAEWOULDBLOCK) {
-            *length = -1;
-            return PJ_RETURN_OS_ERROR(dwStatus);
-        }
+    dwFlags = flags;
+
+    if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
+	rc = WSASendTo((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
+		       &bytesWritten, dwFlags, addr, addrlen,
+		       NULL, NULL);
+	if (rc == 0) {
+	    *length = bytesWritten;
+	    return PJ_SUCCESS;
+	} else {
+	    DWORD dwStatus = WSAGetLastError();
+	    if (dwStatus != WSAEWOULDBLOCK) {
+		*length = -1;
+		return PJ_RETURN_OS_ERROR(dwStatus);
+	    }
+	}
     }
+
+    dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /*
      * Data can't be sent immediately.

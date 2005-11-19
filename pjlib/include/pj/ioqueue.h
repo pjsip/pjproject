@@ -235,6 +235,12 @@ typedef enum pj_ioqueue_operation_e
 #endif
 
 /**
+ * When this flag is specified in ioqueue's recv() or send() operations,
+ * the ioqueue will always mark the operation as asynchronous.
+ */
+#define PJ_IOQUEUE_ALWAYS_ASYNC	    ((pj_uint32_t)1 << (pj_uint32_t)31)
+
+/**
  * Return the name of the ioqueue implementation.
  *
  * @return		Implementation name.
@@ -505,7 +511,8 @@ PJ_DECL(int) pj_ioqueue_poll( pj_ioqueue_t *ioque,
  *                  callback. This parameter can point to local variable in
  *                  caller's stack and doesn't have to remain valid for the
  *                  duration of pending operation.
- * @param flags     Recv flag.
+ * @param flags     Recv flag. If flags has PJ_IOQUEUE_ALWAYS_ASYNC then
+ *		    the function will never return PJ_SUCCESS.
  *
  * @return
  *  - PJ_SUCCESS    If immediate data has been received in the buffer. In this
@@ -518,7 +525,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_recv( pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
 				      void *buffer,
 				      pj_ssize_t *length,
-				      unsigned flags );
+				      pj_uint32_t flags );
 
 /**
  * This function behaves similarly as #pj_ioqueue_recv(), except that it is
@@ -542,7 +549,8 @@ PJ_DECL(pj_status_t) pj_ioqueue_recv( pj_ioqueue_key_t *key,
  *                  callback. This parameter can point to local variable in
  *                  caller's stack and doesn't have to remain valid for the
  *                  duration of pending operation.
- * @param flags     Recv flag.
+ * @param flags     Recv flag. If flags has PJ_IOQUEUE_ALWAYS_ASYNC then
+ *		    the function will never return PJ_SUCCESS.
  * @param addr      Optional Pointer to buffer to receive the address.
  * @param addrlen   On input, specifies the length of the address buffer.
  *                  On output, it will be filled with the actual length of
@@ -560,7 +568,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
                                           pj_ioqueue_op_key_t *op_key,
 					  void *buffer,
 					  pj_ssize_t *length,
-                                          unsigned flags,
+                                          pj_uint32_t flags,
 					  pj_sockaddr_t *addr,
 					  int *addrlen);
 
@@ -587,7 +595,8 @@ PJ_DECL(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
  *                  number of bytes sent. This parameter can point to local 
  *                  variable on caller's stack and doesn't have to remain 
  *                  valid until the operation has completed.
- * @param flags     Send flags.
+ * @param flags     Send flags. If flags has PJ_IOQUEUE_ALWAYS_ASYNC then
+ *		    the function will never return PJ_SUCCESS.
  *
  * @return
  *  - PJ_SUCCESS    If data was immediately transfered. In this case, no
@@ -601,7 +610,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
                                       pj_ioqueue_op_key_t *op_key,
 				      const void *data,
 				      pj_ssize_t *length,
-				      unsigned flags );
+				      pj_uint32_t flags );
 
 
 /**
@@ -627,7 +636,8 @@ PJ_DECL(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
  *                  number of bytes sent. This parameter can point to local 
  *                  variable on caller's stack and doesn't have to remain 
  *                  valid until the operation has completed.
- * @param flags     send flags.
+ * @param flags     send flags. If flags has PJ_IOQUEUE_ALWAYS_ASYNC then
+ *		    the function will never return PJ_SUCCESS.
  * @param addr      Optional remote address.
  * @param addrlen   Remote address length, \c addr is specified.
  *
@@ -640,7 +650,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
                                         pj_ioqueue_op_key_t *op_key,
 					const void *data,
 					pj_ssize_t *length,
-                                        unsigned flags,
+                                        pj_uint32_t flags,
 					const pj_sockaddr_t *addr,
 					int addrlen);
 

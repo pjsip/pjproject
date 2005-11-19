@@ -491,8 +491,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 				      pj_ssize_t *length,
 				      unsigned flags )
 {
-    pj_status_t status;
-    pj_ssize_t size;
     struct read_operation *read_op;
 
     PJ_ASSERT_RETURN(key && op_key && buffer && length, PJ_EINVAL);
@@ -503,19 +501,26 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 
     /* Try to see if there's data immediately available. 
      */
-    size = *length;
-    status = pj_sock_recv(key->fd, buffer, &size, flags);
-    if (status == PJ_SUCCESS) {
-        /* Yes! Data is available! */
-        *length = size;
-        return PJ_SUCCESS;
-    } else {
-        /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
-         * the error to caller.
-         */
-        if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
-            return status;
+    if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
+	pj_status_t status;
+	pj_ssize_t size;
+
+	size = *length;
+	status = pj_sock_recv(key->fd, buffer, &size, flags);
+	if (status == PJ_SUCCESS) {
+	    /* Yes! Data is available! */
+	    *length = size;
+	    return PJ_SUCCESS;
+	} else {
+	    /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
+	     * the error to caller.
+	     */
+	    if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
+		return status;
+	}
     }
+
+    flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /*
      * No data is immediately available.
@@ -547,8 +552,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 				         pj_sockaddr_t *addr,
 				         int *addrlen)
 {
-    pj_status_t status;
-    pj_ssize_t size;
     struct read_operation *read_op;
 
     PJ_ASSERT_RETURN(key && op_key && buffer && length, PJ_EINVAL);
@@ -559,20 +562,27 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 
     /* Try to see if there's data immediately available. 
      */
-    size = *length;
-    status = pj_sock_recvfrom(key->fd, buffer, &size, flags,
-                              addr, addrlen);
-    if (status == PJ_SUCCESS) {
-        /* Yes! Data is available! */
-        *length = size;
-        return PJ_SUCCESS;
-    } else {
-        /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
-         * the error to caller.
-         */
-        if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
-            return status;
+    if ((flags & PJ_IOQUEUE_ALWAYS_ASYNC) == 0) {
+	pj_status_t status;
+	pj_ssize_t size;
+
+	size = *length;
+	status = pj_sock_recvfrom(key->fd, buffer, &size, flags,
+				  addr, addrlen);
+	if (status == PJ_SUCCESS) {
+	    /* Yes! Data is available! */
+	    *length = size;
+	    return PJ_SUCCESS;
+	} else {
+	    /* If error is not EWOULDBLOCK (or EAGAIN on Linux), report
+	     * the error to caller.
+	     */
+	    if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
+		return status;
+	}
     }
+
+    flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /*
      * No data is immediately available.
@@ -613,6 +623,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
 
     write_op = (struct write_operation*)op_key;
     write_op->op = 0;
+
+    /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write. */
+    flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /* Fast track:
      *   Try to send data immediately, only if there's no pending write!
@@ -675,7 +688,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
                                        pj_ioqueue_op_key_t *op_key,
 			               const void *data,
 			               pj_ssize_t *length,
-                                       unsigned flags,
+                                       pj_uint32_t flags,
 			               const pj_sockaddr_t *addr,
 			               int addrlen)
 {
@@ -688,6 +701,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 
     write_op = (struct write_operation*)op_key;
     write_op->op = 0;
+
+    /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write */
+    flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
     /* Fast track:
      *   Try to send data immediately, only if there's no pending write!
