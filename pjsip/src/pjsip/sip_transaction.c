@@ -717,6 +717,7 @@ static void tsx_resolver_callback(pj_status_t status,
 {
     pjsip_transaction *tsx = token;
     struct tsx_lock_data lck;
+    pjsip_transport *tp;
 
     PJ_LOG(4, (tsx->obj_name, "resolver job complete, status=%d", status));
 
@@ -741,10 +742,10 @@ static void tsx_resolver_callback(pj_status_t status,
 			     pj_ntohs(addr->entry[0].addr.sin_port)));
 
     tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_CONNECTING;
-    pjsip_endpt_get_transport(tsx->endpt, tsx->pool,
-			      addr->entry[0].type, &addr->entry[0].addr,
-			      tsx,
-			      &tsx_transport_callback);
+    status = pjsip_endpt_alloc_transport( tsx->endpt, addr->entry[0].type,
+					  &addr->entry[0].addr,
+					  &tp);
+    tsx_transport_callback(tp, tsx, status);
 
     /* Unlock transaction */
     unlock_tsx(tsx, &lck);
@@ -940,8 +941,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 
 	tsx->current_addr = 0;
 	tsx->remote_addr.count = 1;
-	tsx->remote_addr.entry[0].type = 
-		pjsip_transport_get_type(tsx->transport);
+	tsx->remote_addr.entry[0].type = tsx->transport->type;
 	pj_memcpy(&tsx->remote_addr.entry[0].addr, 
 		  &rdata->pkt_info.addr, rdata->pkt_info.addr_len);
 	
@@ -1181,6 +1181,20 @@ PJ_DEF(void) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 }
 
 /*
+ * Transport send completion callback.
+ */
+static void tsx_on_send_complete(void *token, pjsip_tx_data *tdata,
+				 pj_ssize_t bytes_sent)
+{
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(tdata);
+
+    if (bytes_sent <= 0) {
+	PJ_TODO(HANDLE_TRANSPORT_ERROR);
+    }
+}
+
+/*
  * Send message to the transport.
  * If transport is not yet available, then do nothing. The message will be
  * transmitted when transport connection completion callback is called.
@@ -1193,7 +1207,6 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
     PJ_LOG(5,(tsx->obj_name, "sending msg (tdata=%p)", tdata));
 
     if (tsx->transport_state == PJSIP_TSX_TRANSPORT_STATE_FINAL) {
-	pj_ssize_t sent;
 	pjsip_event before_tx_event;
 
 	pj_assert(tsx->transport != NULL);
@@ -1227,11 +1240,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	pjsip_endpt_send_tsx_event( tsx->endpt, &before_tx_event );
 
 	tsx->has_unsent_msg = 0;
-	status = pjsip_transport_send_msg(
-		        tsx->transport, tdata,
-		        &tsx->remote_addr.entry[tsx->current_addr].addr,
-                        &sent);
-	if (status != PJ_SUCCESS) {
+	status = pjsip_transport_send(tsx->transport, tdata,
+			&tsx->remote_addr.entry[tsx->current_addr].addr,
+			tsx, &tsx_on_send_complete);
+	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	    PJ_TODO(HANDLE_TRANSPORT_ERROR);
 	    goto on_error;
 	}
     } else {

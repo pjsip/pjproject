@@ -332,7 +332,7 @@ struct pjsip_tx_data
 
     /** Transport manager internal. */
     void		*token;
-    void	       (*cb)(void*, pjsip_tx_data*, pj_status_t);
+    void	       (*cb)(void*, pjsip_tx_data*, pj_ssize_t);
 };
 
 

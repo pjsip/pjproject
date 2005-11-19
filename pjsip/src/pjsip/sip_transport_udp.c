@@ -109,6 +109,7 @@ static void on_read_complete( pj_ioqueue_key_t *key,
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet);
+	rdata->pkt_info.addr_len = sizeof(rdata->pkt_info.addr);
 	status = pj_ioqueue_recvfrom(key, op_key, 
 				     rdata->pkt_info.packet,
 				     &bytes_read, flags,
@@ -160,6 +161,8 @@ static void on_write_complete( pj_ioqueue_key_t *key,
     struct udp_transport *tp = pj_ioqueue_get_user_data(key);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
+    tdata_op_key->tdata = NULL;
+
     if (tdata_op_key->callback) {
 	tdata_op_key->callback(&tp->base, tdata_op_key->token, bytes_sent);
     }
@@ -183,7 +186,8 @@ static pj_status_t transport_send_msg( pjsip_transport *transport,
     pj_ssize_t size;
 
     PJ_ASSERT_RETURN(transport && tdata, PJ_EINVAL);
-
+    PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
+    
     /* Init op key. */
     tdata->op_key.tdata = tdata;
     tdata->op_key.token = token;
@@ -239,21 +243,22 @@ static pj_status_t transport_destroy( pjsip_transport *transport )
 
 
 /*
- * pjsip_udp_transport_start()
+ * pjsip_udp_transport_attach()
  *
- * Start an UDP transport/listener.
+ * Attach UDP socket and start transport.
  */
-PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
-					       const pj_sockaddr_in *local,
-					       const pj_sockaddr_in *pub_addr,
-					       unsigned async_cnt,
-					       pjsip_transport **p_transport)
+PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
+						pj_sock_t sock,
+						const pj_sockaddr_in *pub_addr,
+						unsigned async_cnt,
+						pjsip_transport **p_transport)
 {
     pj_pool_t *pool;
     struct udp_transport *tp;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback ioqueue_cb;
     unsigned i;
+    int addrlen;
     pj_status_t status;
 
     /* Create pool. */
@@ -272,7 +277,12 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
     tp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
 
     /* Init addresses. */
-    pj_memcpy(&tp->base.local_addr, local, sizeof(pj_sockaddr_in));
+    addrlen = sizeof(tp->base.local_addr);
+    status = pj_sock_getsockname(sock, &tp->base.local_addr, &addrlen);
+    if (status != PJ_SUCCESS) {
+	pjsip_endpt_destroy_pool(endpt, pool);
+	return status;
+    }
     pj_memcpy(&tp->base.public_addr, pub_addr, sizeof(pj_sockaddr_in));
     tp->base.rem_addr.sin_family = PJ_AF_INET;
 
@@ -286,15 +296,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    /* Create socket. */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &tp->sock);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Bind socket. */
-    status = pj_sock_bind(tp->sock, local, sizeof(pj_sockaddr_in));
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    /* Attach socket. */
+    tp->sock = sock;
 
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(endpt);
@@ -374,6 +377,34 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 on_error:
     transport_destroy((pjsip_transport*)tp);
     return status;
+}
+
+/*
+ * pjsip_udp_transport_start()
+ *
+ * Start an UDP transport/listener.
+ */
+PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
+					       const pj_sockaddr_in *local,
+					       const pj_sockaddr_in *pub_addr,
+					       unsigned async_cnt,
+					       pjsip_transport **p_transport)
+{
+    pj_sock_t sock;
+    pj_status_t status;
+
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_sock_bind(sock, local, sizeof(*local));
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(sock);
+	return status;
+    }
+
+    return pjsip_udp_transport_attach( endpt, sock, pub_addr, async_cnt, 
+				       p_transport );
 }
 
 

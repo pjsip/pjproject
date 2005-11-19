@@ -207,6 +207,10 @@ SOURCE=..\include\pjsip\sip_transport.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjsip\sip_transport_udp.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjsip\sip_types.h
 # End Source File
 # Begin Source File

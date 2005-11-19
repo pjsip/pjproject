@@ -172,7 +172,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
 	return status;
     }
 
-    pj_ioqueue_op_key_init(&tdata->op_key, sizeof(tdata->op_key));
+    pj_ioqueue_op_key_init(&tdata->op_key.key, sizeof(tdata->op_key));
 
     *p_tdata = tdata;
     return PJ_SUCCESS;
@@ -244,7 +244,7 @@ typedef struct transport_key
 
 static void transport_send_callback(pjsip_transport *transport,
 				    void *token,
-				    pj_status_t status)
+				    pj_ssize_t size)
 {
     pjsip_tx_data *tdata = token;
 
@@ -257,7 +257,7 @@ static void transport_send_callback(pjsip_transport *transport,
 
     /* Call callback, if any. */
     if (tdata->cb) {
-	(*tdata->cb)(tdata->token, tdata, status);
+	(*tdata->cb)(tdata->token, tdata, size);
     }
 
     /* Decrement reference count. */
@@ -273,7 +273,7 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 					   void *token,
 					   void (*cb)(void *token, 
 						      pjsip_tx_data *tdata,
-						      pj_status_t))
+						      pj_ssize_t))
 {
     pj_status_t status;
 
@@ -317,10 +317,8 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     tdata->is_pending = 1;
 
     /* Send to transport. */
-    status = (*tr->send_msg)(tr, tdata->buf.start, 
-			     tdata->buf.cur - tdata->buf.start,
-			     &tdata->op_key,
-			     addr, tdata, &transport_send_callback);
+    status = (*tr->send_msg)(tr, tdata,  addr, (void*)tdata, 
+			     &transport_send_callback);
 
     if (status != PJ_EPENDING) {
 	tdata->is_pending = 0;
