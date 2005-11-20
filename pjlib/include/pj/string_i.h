@@ -21,7 +21,7 @@ PJ_IDEF(pj_str_t) pj_str(char *str)
 {
     pj_str_t dst;
     dst.ptr = str;
-    dst.slen = str ? strlen(str) : 0;
+    dst.slen = str ? pj_native_strlen(str) : 0;
     return dst;
 }
 
@@ -56,7 +56,7 @@ PJ_IDEF(pj_str_t*) pj_strdup2(pj_pool_t *pool,
 			      pj_str_t *dst,
 			      const char *src)
 {
-    dst->slen = src ? strlen(src) : 0;
+    dst->slen = src ? pj_native_strlen(src) : 0;
     if (dst->slen) {
 	dst->ptr = (char*)pj_pool_alloc(pool, dst->slen);
 	pj_memcpy(dst->ptr, src, dst->slen);
@@ -91,11 +91,35 @@ PJ_IDEF(pj_str_t*) pj_strcpy(pj_str_t *dst, const pj_str_t *src)
 
 PJ_IDEF(pj_str_t*) pj_strcpy2(pj_str_t *dst, const char *src)
 {
-    dst->slen = src ? strlen(src) : 0;
+    dst->slen = src ? pj_native_strlen(src) : 0;
     if (dst->slen > 0)
 	pj_memcpy(dst->ptr, src, dst->slen);
     return dst;
 }
+
+PJ_IDEF(pj_str_t*) pj_strncpy( pj_str_t *dst, const pj_str_t *src, 
+			       pj_ssize_t max)
+{
+    if (max > src->slen) max = src->slen;
+    pj_memcpy(dst->ptr, src->ptr, max);
+    dst->slen = max;
+    return dst;
+}
+
+PJ_IDEF(pj_str_t*) pj_strncpy_with_null( pj_str_t *dst, const pj_str_t *src,
+					 pj_ssize_t max)
+{
+    if (max <= src->slen)
+	max = max-1;
+    else
+	max = src->slen;
+
+    pj_memcpy(dst->ptr, src->ptr, max);
+    dst->ptr[max] = '\0';
+    dst->slen = max;
+    return dst;
+}
+
 
 PJ_IDEF(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2)
 {
@@ -104,8 +128,8 @@ PJ_IDEF(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2)
     diff = str1->slen - str2->slen;
     if (diff) {
 	return (int)diff;
-    } else if (str1->ptr) {
-	return strncmp(str1->ptr, str2->ptr, str1->slen);
+    } else if (str1->ptr && str1->slen) {
+	return pj_native_strncmp(str1->ptr, str2->ptr, str1->slen);
     } else {
 	return 0;
     }
@@ -114,14 +138,15 @@ PJ_IDEF(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2)
 PJ_IDEF(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2, 
 			 pj_size_t len)
 {
-    return (str1->ptr && str2->ptr) ? strncmp(str1->ptr, str2->ptr, len) :
-	   (str1->ptr == str2->ptr ? 0 : 1);
+    return (str1->ptr && str2->ptr) ? 
+	    pj_native_strncmp(str1->ptr, str2->ptr, len) :
+	    (str1->ptr == str2->ptr ? 0 : 1);
 }
 
 PJ_IDEF(int) pj_strncmp2( const pj_str_t *str1, const char *str2, 
 			  pj_size_t len)
 {
-    return (str1->ptr && str2) ? strncmp(str1->ptr, str2, len) :
+    return (str1->ptr && str2) ? pj_native_strncmp(str1->ptr, str2, len) :
 	   (str1->ptr==str2 ? 0 : 1);
 }
 
@@ -138,28 +163,31 @@ PJ_IDEF(int) pj_stricmp( const pj_str_t *str1, const pj_str_t *str2)
     if (diff) {
 	return (int)diff;
     } else {
-	return strnicmp(str1->ptr, str2->ptr, str1->slen);
+	return pj_native_strnicmp(str1->ptr, str2->ptr, str1->slen);
     }
 }
 
 PJ_IDEF(int) pj_stricmp2( const pj_str_t *str1, const char *str2)
 {
-    return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, str1->slen) :
-	   (str1->ptr==str2 ? 0 : 1);
+    return (str1->ptr && str2) ? 
+	    pj_native_strnicmp(str1->ptr, str2, str1->slen) :
+	    (str1->ptr==str2 ? 0 : 1);
 }
 
 PJ_IDEF(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2, 
 			  pj_size_t len)
 {
-    return (str1->ptr && str2->ptr) ? strnicmp(str1->ptr, str2->ptr, len) :
-	   (str1->ptr == str2->ptr ? 0 : 1);
+    return (str1->ptr && str2->ptr) ? 
+	    pj_native_strnicmp(str1->ptr, str2->ptr, len) :
+	    (str1->ptr == str2->ptr ? 0 : 1);
 }
 
 PJ_IDEF(int) pj_strnicmp2( const pj_str_t *str1, const char *str2, 
 			   pj_size_t len)
 {
-    return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, len) :
-	   (str1->ptr == str2 ? 0 : 1);
+    return (str1->ptr && str2) ? 
+	    pj_native_strnicmp(str1->ptr, str2, len) :
+	    (str1->ptr == str2 ? 0 : 1);
 }
 
 PJ_IDEF(void) pj_strcat(pj_str_t *dst, const pj_str_t *src)

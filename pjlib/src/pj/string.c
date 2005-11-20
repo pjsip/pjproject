@@ -27,9 +27,6 @@
 #endif
 
 
-static char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-		     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-
 PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     register char *p = str->ptr;
@@ -50,12 +47,6 @@ PJ_DEF(pj_str_t*) pj_strrtrim( pj_str_t *str )
     return str;
 }
 
-PJ_INLINE(void) pj_val_to_hex_digit(unsigned value, char *p)
-{
-    *p++ = hex[ (value & 0xF0) >> 4 ];
-    *p++ = hex[ (value & 0x0F) ];
-}
-
 PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
 {
     unsigned i;
@@ -72,7 +63,7 @@ PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
 	p += 8;
     }
     for (i=i * 8; i<len; ++i) {
-	*p++ = hex[ pj_rand() & 0x0F ];
+	*p++ = pj_hex_digits[ pj_rand() & 0x0F ];
     }
     return str;
 }
@@ -128,4 +119,5 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
 
     return len;
 }
+
 

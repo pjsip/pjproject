@@ -24,7 +24,10 @@
  * @brief C type helper macros.
  */
 
+#include <pj/types.h>
 #include <pj/compat/ctype.h>
+
+PJ_BEGIN_DECL
 
 /**
  * @defgroup pj_ctype ctype - Character Type
@@ -99,15 +102,6 @@ PJ_INLINE(int) pj_islower(int c) { return islower(c); }
 PJ_INLINE(int) pj_isupper(int c) { return isupper(c); }
 
 /**
- * Returns a non-zero value if c is a particular representation of 
- * an hexadecimal digit character.
- * @param c     The integer character to test.
- * @return      Non-zero value if c is a particular representation of 
- *              an hexadecimal digit character.
- */
-PJ_INLINE(int) pj_isxdigit(int c){ return isxdigit(c); }
-
-/**
  * Returns a non-zero value if c is a either a space (' ') or horizontal
  * tab ('\\t') character.
  * @param c     The integer character to test.
@@ -130,7 +124,50 @@ PJ_INLINE(int) pj_tolower(int c) { return tolower(c); }
  */
 PJ_INLINE(int) pj_toupper(int c) { return toupper(c); }
 
+/**
+ * Returns a non-zero value if c is a particular representation of 
+ * an hexadecimal digit character.
+ * @param c     The integer character to test.
+ * @return      Non-zero value if c is a particular representation of 
+ *              an hexadecimal digit character.
+ */
+PJ_INLINE(int) pj_isxdigit(int c){ return isxdigit(c); }
+
+/**
+ * Array of hex digits, in lowerspace.
+ */
+extern char pj_hex_digits[];
+
+/**
+ * Convert a value to hex representation.
+ * @param value	    Integral value to convert.
+ * @param p	    Buffer to hold the hex representation, which must be
+ *		    at least two bytes length.
+ */
+PJ_INLINE(void) pj_val_to_hex_digit(unsigned value, char *p)
+{
+    *p++ = pj_hex_digits[ (value & 0xF0) >> 4 ];
+    *p   = pj_hex_digits[ (value & 0x0F) ];
+}
+
+/**
+ * Convert hex digit c to integral value.
+ * @param c	The hex digit character.
+ * @return	The integral value between 0 and 15.
+ */
+PJ_INLINE(unsigned) pj_hex_digit_to_val(unsigned c)
+{
+    if (c <= '9')
+	return (c-'0') & 0x0F;
+    else if (c <= 'F')
+	return  (c-'A'+10) & 0x0F;
+    else
+	return (c-'a'+10) & 0x0F;
+}
+
 /** @} */
+
+PJ_END_DECL
 
 #endif	/* __PJ_CTYPE_H__ */
 

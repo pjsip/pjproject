@@ -64,8 +64,8 @@ PJ_DEF(pj_log_func*) pj_log_get_log_func(void)
     return log_writer;
 }
 
-static void pj_log(const char *sender, int level, 
-		   const char *format, va_list marker)
+PJ_DEF(void) pj_log( const char *sender, int level, 
+		     const char *format, va_list marker)
 {
     pj_time_val now;
     pj_parsed_time ptime;

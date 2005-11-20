@@ -129,17 +129,13 @@ PJ_DEF(pj_status_t) pj_init(void)
     pj_str_t guid;
     pj_status_t rc;
 
-    PJ_LOG(5, ("pj_init", "Initializing PJ Library.."));
-
     /* Init Winsock.. */
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {
-	PJ_LOG(1, ("pj_init", "Winsock initialization has returned an error"));
 	return PJ_RETURN_OS_ERROR(WSAGetLastError());
     }
 
     /* Init this thread's TLS. */
     if ((rc=pj_thread_init()) != PJ_SUCCESS) {
-	PJ_LOG(1, ("pj_init", "Thread initialization has returned an error"));
 	return rc;
     }
     

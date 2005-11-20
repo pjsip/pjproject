@@ -164,77 +164,77 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * @hideinitializer
  * Unknown error has been reported.
  */
-#define PJ_EUNKNOWN	    (PJ_ERRNO_START_STATUS + 1)
+#define PJ_EUNKNOWN	    (PJ_ERRNO_START_STATUS + 1)	/* 70001 */
 /**
  * @hideinitializer
  * The operation is pending and will be completed later.
  */
-#define PJ_EPENDING	    (PJ_ERRNO_START_STATUS + 2)
+#define PJ_EPENDING	    (PJ_ERRNO_START_STATUS + 2)	/* 70002 */
 /**
  * @hideinitializer
  * Too many connecting sockets.
  */
-#define PJ_ETOOMANYCONN	    (PJ_ERRNO_START_STATUS + 3)
+#define PJ_ETOOMANYCONN	    (PJ_ERRNO_START_STATUS + 3)	/* 70003 */
 /**
  * @hideinitializer
  * Invalid argument.
  */
-#define PJ_EINVAL	    (PJ_ERRNO_START_STATUS + 4)
+#define PJ_EINVAL	    (PJ_ERRNO_START_STATUS + 4)	/* 70004 */
 /**
  * @hideinitializer
  * Name too long (eg. hostname too long).
  */
-#define PJ_ENAMETOOLONG	    (PJ_ERRNO_START_STATUS + 5)
+#define PJ_ENAMETOOLONG	    (PJ_ERRNO_START_STATUS + 5)	/* 70005 */
 /**
  * @hideinitializer
  * Not found.
  */
-#define PJ_ENOTFOUND	    (PJ_ERRNO_START_STATUS + 6)
+#define PJ_ENOTFOUND	    (PJ_ERRNO_START_STATUS + 6)	/* 70006 */
 /**
  * @hideinitializer
  * Not enough memory.
  */
-#define PJ_ENOMEM	    (PJ_ERRNO_START_STATUS + 7)
+#define PJ_ENOMEM	    (PJ_ERRNO_START_STATUS + 7)	/* 70007 */
 /**
  * @hideinitializer
  * Bug detected!
  */
-#define PJ_EBUG             (PJ_ERRNO_START_STATUS + 8)
+#define PJ_EBUG             (PJ_ERRNO_START_STATUS + 8)	/* 70008 */
 /**
  * @hideinitializer
  * Operation timed out.
  */
-#define PJ_ETIMEDOUT        (PJ_ERRNO_START_STATUS + 9)
+#define PJ_ETIMEDOUT        (PJ_ERRNO_START_STATUS + 9)	/* 70009 */
 /**
  * @hideinitializer
  * Too many objects.
  */
-#define PJ_ETOOMANY         (PJ_ERRNO_START_STATUS + 10)
+#define PJ_ETOOMANY         (PJ_ERRNO_START_STATUS + 10)/* 70010 */
 /**
  * @hideinitializer
  * Object is busy.
  */
-#define PJ_EBUSY            (PJ_ERRNO_START_STATUS + 11)
+#define PJ_EBUSY            (PJ_ERRNO_START_STATUS + 11)/* 70011 */
 /**
  * @hideinitializer
  * The specified option is not supported.
  */
-#define PJ_ENOTSUP	    (PJ_ERRNO_START_STATUS + 12)
+#define PJ_ENOTSUP	    (PJ_ERRNO_START_STATUS + 12)/* 70012 */
 /**
  * @hideinitializer
  * Invalid operation.
  */
-#define PJ_EINVALIDOP	    (PJ_ERRNO_START_STATUS + 13)
+#define PJ_EINVALIDOP	    (PJ_ERRNO_START_STATUS + 13)/* 70013 */
 /**
  * @hideinitializer
  * Operation is cancelled.
  */
-#define PJ_ECANCELLED	    (PJ_ERRNO_START_STATUS + 14)
+#define PJ_ECANCELLED	    (PJ_ERRNO_START_STATUS + 14)/* 70014 */
 /**
  * @hideinitializer
  * Object already exists.
  */
-#define PJ_EEXISTS          (PJ_ERRNO_START_STATUS + 14)
+#define PJ_EEXISTS          (PJ_ERRNO_START_STATUS + 15)/* 70015 */
 
 /** @} */   /* pj_errnum */
 
@@ -254,18 +254,21 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
 
 /**
  * PJ_ERRNO_START_STATUS is where PJLIB specific status codes start.
+ * Effectively the error in this class would be 70000 - 119000.
  */
 #define PJ_ERRNO_START_STATUS	(PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
 
 /**
  * PJ_ERRNO_START_SYS converts platform specific error codes into
  * pj_status_t values.
+ * Effectively the error in this class would be 120000 - 169000.
  */
 #define PJ_ERRNO_START_SYS	(PJ_ERRNO_START_STATUS + PJ_ERRNO_SPACE_SIZE)
 
 /**
  * PJ_ERRNO_START_USER are reserved for applications that use error
  * codes along with PJLIB codes.
+ * Effectively the error in this class would be 170000 - 219000.
  */
 #define PJ_ERRNO_START_USER	(PJ_ERRNO_START_SYS + PJ_ERRNO_SPACE_SIZE)
 

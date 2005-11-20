@@ -174,6 +174,32 @@ PJ_IDECL(pj_str_t*) pj_strcpy(pj_str_t *dst, const pj_str_t *src);
 PJ_IDECL(pj_str_t*) pj_strcpy2(pj_str_t *dst, const char *src);
 
 /**
+ * Copy source string to destination up to the specified max length.
+ *
+ * @param dst	    The target string.
+ * @param src	    The source string.
+ * @param max	    Maximum characters to copy.
+ *
+ * @return the target string.
+ */
+PJ_IDECL(pj_str_t*) pj_strncpy(pj_str_t *dst, const pj_str_t *src, 
+			       pj_ssize_t max);
+
+/**
+ * Copy source string to destination up to the specified max length,
+ * and NULL terminate the destination. If source string length is
+ * greater than or equal to max, then max-1 will be copied.
+ *
+ * @param dst	    The target string.
+ * @param src	    The source string.
+ * @param max	    Maximum characters to copy.
+ *
+ * @return the target string.
+ */
+PJ_IDECL(pj_str_t*) pj_strncpy_with_null(pj_str_t *dst, const pj_str_t *src,
+					 pj_ssize_t max);
+
+/**
  * Duplicate string.
  *
  * @param pool	    The pool.
@@ -519,6 +545,7 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 {
     return memchr(buf, c, size);
 }
+
 
 /**
  * @}

@@ -25,7 +25,7 @@
  */
 
 #include <pj/types.h>
-
+#include <stdarg.h>
 
 PJ_BEGIN_DECL
 
@@ -122,6 +122,17 @@ PJ_DECL(void) pj_log_write(int level, const char *buffer, int len);
 
 
 #if PJ_LOG_MAX_LEVEL >= 1
+
+/**
+ * Write to log.
+ *
+ * @param sender    Source of the message.
+ * @param level	    Verbosity level.
+ * @param format    Format.
+ * @param marker    Marker.
+ */
+PJ_DECL(void) pj_log(const char *sender, int level, 
+		     const char *format, va_list marker);
 
 /**
  * Change log output function. The front-end logging functions will call
