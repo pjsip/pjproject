@@ -16,21 +16,50 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __TEST_H__
-#define __TEST_H__
-
-#include <pjsip/sip_types.h>
-
-#define SILENT		1
-#define IS_PROFILING	1
-#define LOOP		2000
-
-extern pjsip_endpoint *endpt;
-
-pj_status_t parse_uri(void);
-pj_status_t parse_msg(void);
-
-void app_perror(const char *msg, pj_status_t status);
 
 
-#endif	/* __TEST_H__ */
+#include "test.h"
+#include <pjlib.h>
+#include <pjsip_core.h>
+
+#define DO_TEST(test)	do { \
+			    PJ_LOG(3, ("test", "Running %s...", #test));  \
+			    rc = test; \
+			    PJ_LOG(3, ("test",  \
+				       "%s(%d)",  \
+				       (rc ? "..ERROR" : "..success"), rc)); \
+			    if (rc!=0) goto on_return; \
+			} while (0)
+
+
+
+pjsip_endpoint *endpt;
+
+void app_perror(const char *msg, pj_status_t rc)
+{
+    char errbuf[256];
+
+    PJ_CHECK_STACK();
+
+    pjsip_strerror(rc, errbuf, sizeof(errbuf));
+    PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+
+}
+
+
+
+int main()
+{
+    pj_status_t rc;
+
+    if ((rc=pj_init()) != PJ_SUCCESS) {
+	app_perror("pj_init", rc);
+    }
+
+    DO_TEST(parse_uri());
+    DO_TEST(parse_msg());
+
+on_return:
+    return 0;
+}
+

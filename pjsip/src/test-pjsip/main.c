@@ -16,17 +16,3 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
-#include <stdio.h>
-
-int main()
-{
-    test_uri();
-    test_msg();
-
-#if !IS_PROFILING
-    puts("Press <ENTER> to quit.");
-    fgets( s, sizeof(s), stdin);
-#endif
-    return 0;
-}
