@@ -647,7 +647,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                                         &msg_fragment_size);
 	    if (msg_status != PJ_SUCCESS) {
 		if (remaining_len == PJSIP_MAX_PKT_LEN) {
-		    mgr->msg_cb(mgr->endpt, PJSIP_EOVERFLOW, rdata);
+		    mgr->msg_cb(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
 		    /* Exhaust all data. */
 		    return rdata->pkt_info.len;
 		} else {

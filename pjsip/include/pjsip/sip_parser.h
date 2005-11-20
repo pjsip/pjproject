@@ -294,19 +294,21 @@ PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool,
  * Various specification used in parsing, exported here as extern for other
  * parsers.
  */
-extern
-pj_cis_t	pjsip_HOST_SPEC,	    /* For scanning host part. */
-		pjsip_DIGIT_SPEC,	    /* Decimal digits */
-		pjsip_ALPHA_SPEC,	    /* Alpha (A-Z, a-z) */
-		pjsip_ALNUM_SPEC,	    /* Decimal + Alpha. */
-		pjsip_TOKEN_SPEC,	    /* Token. */
-		pjsip_HEX_SPEC,		    /* Hexadecimal digits. */
-		pjsip_PARAM_CHAR_SPEC,	    /* For scanning pname (or pvalue when it's not quoted.) */
-		pjsip_PROBE_USER_HOST_SPEC, /* Hostname characters. */
-		pjsip_PASSWD_SPEC,	    /* Password. */
-		pjsip_USER_SPEC,	    /* User */
-		pjsip_NEWLINE_OR_EOF_SPEC,  /* For eating up header.*/
-		pjsip_DISPLAY_SCAN_SPEC;    /* Used when searching for display name in URL. */
+extern pj_cis_t    
+    pjsip_HOST_SPEC,		/**< For scanning host part. */
+    pjsip_DIGIT_SPEC,		/**< Decimal digits */
+    pjsip_ALPHA_SPEC,		/**< Alpha (A-Z, a-z) */
+    pjsip_ALNUM_SPEC,		/**< Decimal + Alpha. */
+    pjsip_TOKEN_SPEC,		/**< Token. */
+    pjsip_HEX_SPEC,	        /**< Hexadecimal digits. */
+    pjsip_PARAM_CHAR_SPEC,      /**< For scanning pname (or pvalue when it's 
+				     not quoted.) */
+    pjsip_HDR_CHAR_SPEC,	/**< Chars in hname/havalue in URL. */
+    pjsip_PROBE_USER_HOST_SPEC, /**< Hostname characters. */
+    pjsip_PASSWD_SPEC,		/**< Password. */
+    pjsip_USER_SPEC,		/**< User */
+    pjsip_NEWLINE_OR_EOF_SPEC,  /**< For eating up header.*/
+    pjsip_DISPLAY_SCAN_SPEC;    /**< Used when searching for display name. */
 
 /*
  * Various string constants.

@@ -18,11 +18,59 @@
  */
 #include <pjsip/sip_uri.h>
 #include <pjsip/sip_msg.h>
+#include <pjsip/sip_parser.h>
 #include <pjsip/print_util.h>
+#include <pjsip/sip_errno.h>
+#include <pjlib-util/string.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
 
+/*
+ * Generic parameter manipulation.
+ */
+PJ_DEF(pjsip_param*) pjsip_param_find(  pjsip_param *param_list,
+					const pj_str_t *name )
+{
+    pjsip_param *p = param_list->next;
+    while (p != param_list) {
+	if (pj_stricmp(&p->name, name)==0)
+	    return p;
+	p = p->next;
+    }
+    return NULL;
+}
+
+PJ_DEF(const pjsip_param*) pjsip_param_cfind( const pjsip_param *param_list,
+					      const pj_str_t *name )
+{
+    const pjsip_param *p = param_list->next;
+    while (p != param_list) {
+	if (pj_stricmp(&p->name, name)==0)
+	    return p;
+	p = p->next;
+    }
+    return NULL;
+}
+
+PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
+				const pjsip_param *src_list)
+{
+    const pjsip_param *p = src_list->next;
+
+    pj_list_init(dst_list);
+    while (p != src_list) {
+	pjsip_param *new_param = pj_pool_alloc(pool, sizeof(pjsip_param));
+	pj_strdup(pool, &new_param->name, &p->name);
+	pj_strdup(pool, &new_param->value, &p->value);
+	pj_list_insert_before(dst_list, new_param);
+	p = p->next;
+    }
+}
+
+/*
+ * URI stuffs
+ */
 #define IS_SIPS(url)	((url)->vptr==&sips_url_vptr)
 
 static const pj_str_t *pjsip_url_get_scheme( const pjsip_url* );
@@ -109,6 +157,8 @@ PJ_DEF(void) pjsip_url_init(pjsip_url *url, int secure)
     pj_memset(url, 0, sizeof(*url));
     url->ttl_param = -1;
     url->vptr = secure ? &sips_url_vptr : &sip_url_vptr;
+    pj_list_init(&url->other_param);
+    pj_list_init(&url->header_param);
 }
 
 PJ_DEF(pjsip_url*) pjsip_url_create( pj_pool_t *pool, int secure )
@@ -123,37 +173,25 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 			     char *buf, pj_size_t size)
 {
     int printed;
-    pj_size_t size_required;
     char *startbuf = buf;
+    char *endbuf = buf+size;
     const pj_str_t *scheme;
-    *buf = '\0';
+    pjsip_param *param;
+    char hparam_char = '?';
 
-    /* Check the buffer length. */
-    size_required = 6 + url->host.slen + 10 +
-		    url->user.slen + url->passwd.slen + 2 +
-		    url->user_param.slen + 6 +
-		    url->method_param.slen + 8 +
-		    url->transport_param.slen + 11 +
-		    9 + 5 +
-		    url->maddr_param.slen + 7 +
-		    3 +
-		    url->other_param.slen +
-		    url->header_param.slen;
-    if (size < size_required) {
-	return -1;
-    }
+    *buf = '\0';
 
     /* Print scheme ("sip:" or "sips:") */
     scheme = pjsip_uri_get_scheme(url);
-    copy_advance_no_check(buf, *scheme);
+    copy_advance_check(buf, *scheme);
     *buf++ = ':';
 
     /* Print "user:password@", if any. */
     if (url->user.slen) {
-	copy_advance_no_check(buf, url->user);
+	copy_advance_escape(buf, url->user, pjsip_USER_SPEC);
 	if (url->passwd.slen) {
 	    *buf++ = ':';
-	    copy_advance_no_check(buf, url->passwd);
+	    copy_advance_escape(buf, url->passwd, pjsip_PASSWD_SPEC);
 	}
 
 	*buf++ = '@';
@@ -161,7 +199,7 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print host. */
     pj_assert(url->host.slen != 0);
-    copy_advance_no_check(buf, url->host);
+    copy_advance_check(buf, url->host);
 
     /* Only print port if it is explicitly specified. 
      * Port is not allowed in To and From header.
@@ -170,29 +208,31 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
      * number exactly as it was sent. We don't remember whether an
      * UA has sent us port, so we'll just send the port indiscrimately
      */
-    PJ_TODO(SHOULD_DISALLOW_URI_PORT_IN_FROM_TO_HEADER)
-    if (url->port /*&& context != PJSIP_URI_IN_FROMTO_HDR*/) {
+    //PJ_TODO(SHOULD_DISALLOW_URI_PORT_IN_FROM_TO_HEADER)
+    if (url->port && context != PJSIP_URI_IN_FROMTO_HDR) {
 	*buf++ = ':';
 	printed = pj_utoa(url->port, buf);
 	buf += printed;
     }
 
     /* User param is allowed in all contexes */
-    copy_advance_pair_no_check(buf, ";user=", 6, url->user_param);
+    copy_advance_pair_check(buf, ";user=", 6, url->user_param);
 
     /* Method param is only allowed in external/other context. */
     if (context == PJSIP_URI_IN_OTHER) {
-	copy_advance_pair_no_check(buf, ";method=", 8, url->method_param);
+	copy_advance_pair_escape(buf, ";method=", 8, url->method_param, 
+				 pjsip_PARAM_CHAR_SPEC);
     }
 
     /* Transport is not allowed in From/To header. */
     if (context != PJSIP_URI_IN_FROMTO_HDR) {
-	copy_advance_pair_no_check(buf, ";transport=", 11, url->transport_param);
+	copy_advance_pair_escape(buf, ";transport=", 11, url->transport_param,
+				 pjsip_PARAM_CHAR_SPEC);
     }
 
     /* TTL param is not allowed in From, To, Route, and Record-Route header. */
     if (url->ttl_param >= 0 && context != PJSIP_URI_IN_FROMTO_HDR &&
-	context != PJSIP_URI_IN_ROUTING_HDR) 
+	context != PJSIP_URI_IN_ROUTING_HDR && (endbuf-buf) > 15) 
     {
 	pj_memcpy(buf, ";ttl=", 5);
 	printed = pj_utoa(url->ttl_param, buf+5);
@@ -201,7 +241,8 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 
     /* maddr param is not allowed in From and To header. */
     if (context != PJSIP_URI_IN_FROMTO_HDR) {
-	copy_advance_pair_no_check(buf, ";maddr=", 7, url->maddr_param);
+	copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
+				 pjsip_PARAM_CHAR_SPEC);
     }
 
     /* lr param is not allowed in From, To, and Contact header. */
@@ -209,86 +250,166 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 	context != PJSIP_URI_IN_CONTACT_HDR) 
     {
 	pj_str_t lr = { ";lr", 3 };
-	copy_advance_no_check(buf, lr);
+	copy_advance_check(buf, lr);
     }
 
     /* Other param. */
-    if (url->other_param.slen) {
-	copy_advance_no_check(buf, url->other_param);
+    param = url->other_param.next;
+    while (param != &url->other_param) {
+	*buf++ = ';';
+	copy_advance_escape(buf, param->name, pjsip_PARAM_CHAR_SPEC);
+	if (param->value.slen) {
+	    *buf++ = '=';
+	    copy_advance_escape(buf, param->value, pjsip_PARAM_CHAR_SPEC);
+	}
+	param = param->next;
     }
 
     /* Header param. */
-    if (url->header_param.slen) {
-	copy_advance_no_check(buf, url->header_param);
+    param = url->header_param.next;
+    while (param != &url->header_param) {
+	*buf++ = hparam_char;
+	copy_advance_escape(buf, param->name, pjsip_HDR_CHAR_SPEC);
+	if (param->value.slen) {
+	    *buf++ = '=';
+	    copy_advance_escape(buf, param->value, pjsip_HDR_CHAR_SPEC);
+	}
+	param = param->next;
+	hparam_char = '&';
     }
 
     *buf = '\0';
     return buf-startbuf;
 }
 
-static int pjsip_url_compare( pjsip_uri_context_e context,
-			      const pjsip_url *url1, const pjsip_url *url2)
+static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
+				      const pjsip_url *url1, 
+				      const pjsip_url *url2)
 {
-    /* The easiest (and probably the most efficient) way to compare two URLs
-       are to print them, and compare them bytes per bytes. This technique
-       works quite well with RFC3261, as the RFC (unlike RFC2543) defines that
-       components specified in one URL does NOT match its default value if
-       it is not specified in the second URL. For example, parameter "user=ip"
-       does NOT match if it is omited in second URL.
+    const pjsip_param *p1;
 
-       HOWEVER, THE SAME CAN NOT BE APPLIED FOR other-param NOR header-param.
-       For these, each of the parameters must be compared one by one. Parameter
-       that exists in one URL will match the comparison. But parameter that
-       exists in both URLs and doesn't match wont match the URL comparison.
-
-       The solution for this is to compare 'standard' URL components with
-       bytes-to-bytes comparison, and compare other-param and header-param with
-       more intelligent comparison.
+    /*
+     * Compare two SIP URL's according to Section 19.1.4 of RFC 3261.
      */
-    char str_url1[PJSIP_MAX_URL_SIZE];
-    char str_url2[PJSIP_MAX_URL_SIZE];
-    int len1, len2;
 
-    /* Must compare scheme first, as the second URI may not be SIP URL. */
-    if (pj_stricmp(pjsip_uri_get_scheme(url1), pjsip_uri_get_scheme(url2)))
-	return -1;
+    /* SIP and SIPS URI are never equivalent. 
+     * Note: just compare the vptr to avoid string comparison. 
+     *       Pretty neat huh!!
+     */
+    if (url1->vptr != url2->vptr)
+	return PJSIP_ECMPSCHEME;
 
-    len1 = pjsip_url_print(context, url1, str_url1, sizeof(str_url1));
-    if (len1 < 1) {
-	pj_assert(0);
-	return -1;
-    }
-    len2 = pjsip_url_print(context, url2, str_url2, sizeof(str_url2));
-    if (len2 < 1) {
-	pj_assert(0);
-	return -1;
-    }
-
-    if (len1 != len2) {
-	/* Not equal. */
-	return -1;
-    }
-
-    if (pj_native_strcmp(str_url1, str_url2)) {
-	/* Not equal */
-	return -1;
-    }
-
-    /* TODO: compare other-param and header-param in more intelligent manner. */
-    PJ_TODO(HPARAM_AND_OTHER_PARAM_COMPARISON_IN_URL_COMPARISON)
-
-    if (pj_strcmp(&url1->other_param, &url2->other_param)) {
-	/* Not equal. */
-	return -1;
-    }
-    if (pj_strcmp(&url1->header_param, &url2->header_param)) {
-	/* Not equal. */
-	return -1;
-    }
-
-    /* Seems to be equal, isn't it. */
-    return 0;
+    /* Comparison of the userinfo of SIP and SIPS URIs is case-sensitive. 
+     * This includes userinfo containing passwords or formatted as 
+     * telephone-subscribers.
+     */
+    if (pj_strcmp(&url1->user, &url2->user) != 0)
+	return PJSIP_ECMPUSER;
+    if (pj_strcmp(&url1->passwd, &url2->passwd) != 0)
+	return PJSIP_ECMPPASSWD;
     
+    /* Comparison of all other components of the URI is
+     * case-insensitive unless explicitly defined otherwise.
+     */
+
+    /* The ordering of parameters and header fields is not significant 
+     * in comparing SIP and SIPS URIs.
+     */
+
+    /* Characters other than those in the “reserved” set (see RFC 2396 [5])
+     * are equivalent to their “encoding.
+     */
+
+    /* An IP address that is the result of a DNS lookup of a host name 
+     * does not match that host name.
+     */
+    if (pj_stricmp(&url1->host, &url2->host) != 0)
+	return PJSIP_ECMPHOST;
+
+    /* A URI omitting any component with a default value will not match a URI
+     * explicitly containing that component with its default value. 
+     * For instance, a URI omitting the optional port component will not match
+     * a URI explicitly declaring port 5060. 
+     * The same is true for the transport-parameter, ttl-parameter, 
+     * user-parameter, and method components.
+     */
+
+    /* Port is not allowed in To and From header.
+     */
+    if (context != PJSIP_URI_IN_FROMTO_HDR) {
+	if (url1->port != url2->port)
+	    return PJSIP_ECMPPORT;
+    }
+    /* Transport is not allowed in From/To header. */
+    if (context != PJSIP_URI_IN_FROMTO_HDR) {
+	if (pj_stricmp(&url1->transport_param, &url2->transport_param) != 0)
+	    return PJSIP_ECMPTRANSPORTPRM;
+    }
+    /* TTL param is not allowed in From, To, Route, and Record-Route header. */
+    if (context != PJSIP_URI_IN_FROMTO_HDR &&
+	context != PJSIP_URI_IN_ROUTING_HDR)
+    {
+	if (url1->ttl_param != url2->ttl_param)
+	    return PJSIP_ECMPTTLPARAM;
+    }
+    /* User param is allowed in all contexes */
+    if (pj_stricmp(&url1->user_param, &url2->user_param) != 0)
+	return PJSIP_ECMPUSERPARAM;
+    /* Method param is only allowed in external/other context. */
+    if (context == PJSIP_URI_IN_OTHER) {
+	if (pj_stricmp(&url1->method_param, &url2->method_param) != 0)
+	    return PJSIP_ECMPMETHODPARAM;
+    }
+    /* maddr param is not allowed in From and To header. */
+    if (context != PJSIP_URI_IN_FROMTO_HDR) {
+	if (pj_stricmp(&url1->maddr_param, &url2->maddr_param) != 0)
+	    return PJSIP_ECMPMADDRPARAM;
+    }
+
+    /* lr parameter is ignored (?) */
+    /* lr param is not allowed in From, To, and Contact header. */
+
+
+    /* All other uri-parameters appearing in only one URI are ignored when 
+     * comparing the URIs.
+     */
+    p1 = url1->other_param.next;
+    while (p1 != &url1->other_param) {
+	const pjsip_param *p2;
+	p2 = pjsip_param_cfind(&url2->other_param, &p1->name);
+	if (p2 ) {
+	    if (pj_stricmp(&p1->value, &p2->value) != 0)
+		return PJSIP_ECMPOTHERPARAM;
+	}
+
+	p1 = p1->next;
+    }
+
+    /* URI header components are never ignored. Any present header component
+     * MUST be present in both URIs and match for the URIs to match. 
+     * The matching rules are defined for each header field in Section 20.
+     */
+    p1 = url1->header_param.next;
+    while (p1 != &url1->header_param) {
+	const pjsip_param *p2;
+	p2 = pjsip_param_cfind(&url2->header_param, &p1->name);
+	if (p2) {
+	    /* It seems too much to compare two header params according to
+	     * the rule of each header. We'll just compare them string to
+	     * string..
+	     */
+	    PJ_TODO(MORE_COMPLIANT_HEADER_PARAM_COMPARISON_IN_URL);
+
+	    if (pj_stricmp(&p1->value, &p2->value) != 0)
+		return PJSIP_ECMPHEADERPARAM;
+	} else {
+	    return PJSIP_ECMPHEADERPARAM;
+	}
+	p1 = p1->next;
+    }
+
+    /* Equal!! Pheuww.. */
+    return PJ_SUCCESS;
 }
 
 
@@ -304,8 +425,8 @@ PJ_DEF(void) pjsip_url_assign(pj_pool_t *pool, pjsip_url *url,
     pj_strdup( pool, &url->transport_param, &rhs->transport_param);
     url->ttl_param = rhs->ttl_param;
     pj_strdup( pool, &url->maddr_param, &rhs->maddr_param);
-    pj_strdup( pool, &url->other_param, &rhs->other_param);
-    pj_strdup( pool, &url->header_param, &rhs->header_param);
+    pjsip_param_clone(pool, &url->other_param, &rhs->other_param);
+    pjsip_param_clone(pool, &url->header_param, &rhs->header_param);
     url->lr_param = rhs->lr_param;
 }
 

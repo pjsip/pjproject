@@ -21,15 +21,12 @@
 
 #include <pjsip/sip_types.h>
 
-#define SILENT		1
-#define IS_PROFILING	1
-#define LOOP		2000
-
 extern pjsip_endpoint *endpt;
 
-pj_status_t parse_uri(void);
-pj_status_t parse_msg(void);
+pj_status_t uri_test(void);
+pj_status_t msg_test(void);
 
+int  test_main(void);
 void app_perror(const char *msg, pj_status_t status);
 
 

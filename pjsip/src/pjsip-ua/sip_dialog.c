@@ -24,7 +24,7 @@
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_uri.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_parser.h>

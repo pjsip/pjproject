@@ -57,18 +57,6 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test_pjsip"=.\test_pjsip.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
 Project: "pjsip_ua"=.\pjsip_ua.dsp - Package Owner=<4>
 
 Package=<5>
@@ -103,6 +91,24 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjsdp
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "test_pjsip"=.\test_pjsip.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
     End Project Dependency
 }}}
 

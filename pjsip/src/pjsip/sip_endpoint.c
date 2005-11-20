@@ -22,7 +22,7 @@
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_resolve.h>
 #include <pjsip/sip_module.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_errno.h>
 #include <pj/except.h>
 #include <pj/log.h>
@@ -104,13 +104,6 @@ struct pjsip_endpoint
 static void endpt_transport_callback(pjsip_endpoint*, 
 				     pj_status_t, pjsip_rx_data*);
 
-
-/*
- * Create transaction.
- * Defined in sip_transaction.c
- */
-pj_status_t pjsip_tsx_create( pj_pool_t *pool, pjsip_endpoint *endpt,
-                              pjsip_transaction **tsx );
 
 /*
  * This is the global handler for memory allocation failure, for pools that
@@ -294,7 +287,7 @@ void pjsip_endpt_send_tsx_event( pjsip_endpoint *endpt, pjsip_event *evt )
 /*
  * Get "Allow" header.
  */
-PJ_DECL(const pjsip_allow_hdr*) pjsip_endpt_get_allow_hdr( pjsip_endpoint *endpt )
+PJ_DEF(const pjsip_allow_hdr*) pjsip_endpt_get_allow_hdr( pjsip_endpoint *endpt )
 {
     return endpt->allow_hdr;
 }
@@ -671,7 +664,7 @@ PJ_DEF(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
 /*
  * Find transaction by the key.
  */
-PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
+PJ_DEF(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
 					          const pj_str_t *key )
 {
     pjsip_transaction *tsx;
@@ -980,7 +973,7 @@ PJ_DEF(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt)
 /*
  * Find/create transport.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
+PJ_DEF(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
 						  const pj_sockaddr_in *remote,
 						  pjsip_transport **p_transport)
@@ -991,6 +984,50 @@ PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
 }
 
 
+/*
+ * Report error.
+ */
+PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
+				     const char *sender,
+                                     pj_status_t error_code,
+                                     const char *format,
+                                     ... )
+{
+    char newformat[256];
+    int len;
+    va_list marker;
+
+    va_start(marker, format);
+
+    PJ_UNUSED_ARG(endpt);
+
+    len = pj_native_strlen(format);
+    if (len < sizeof(newformat)-30) {
+	pj_str_t errstr;
+
+	pj_native_strcpy(newformat, format);
+	pj_snprintf(newformat+len, sizeof(newformat)-len-1,
+		    ": [err %d] ", error_code);
+	len += pj_native_strlen(newformat+len);
+
+	errstr = pjsip_strerror(error_code, newformat+len, 
+				sizeof(newformat)-len-1);
+
+	len += errstr.slen;
+	newformat[len] = '\0';
+
+	pj_log(sender, 1, newformat, marker);
+    } else {
+	pj_log(sender, 1, format, marker);
+    }
+
+    va_end(marker);
+}
+
+
+/*
+ * Dump endpoint.
+ */
 PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 {
 #if PJ_LOG_MAX_LEVEL >= 3

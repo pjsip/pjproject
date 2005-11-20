@@ -21,7 +21,7 @@
 #include <pjsip_mod_ua/sip_ua_private.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_event.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_transaction.h>
 #include <pj/list.h>

@@ -16,19 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip/sip_msg.h>
-#include <pjsip/sip_parser.h>
-#include <pj/os.h>
-#include <pj/pool.h>
-#include <pj/string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "test.h"
-
-#define ERR_SYNTAX_ERR	(-2)
-#define ERR_NOT_EQUAL	(-3)
-#define ERR_SYSTEM	(-4)
-
+#include <pjsip_core.h>
+#include <pjlib.h>
 
 static pjsip_msg *create_msg0(pj_pool_t *pool);
 
@@ -66,65 +56,30 @@ struct test_msg
     }
 };
 
-static pj_caching_pool cp;
-static pj_pool_factory *pf = &cp.factory;
 static pj_uint32_t parse_len, parse_time, print_time;
 
-static void pool_error(pj_pool_t *pool, pj_size_t sz)
-{
-    PJ_UNUSED_ARG(pool)
-    PJ_UNUSED_ARG(sz)
-
-    pj_assert(0);
-    exit(1);
-}
-
-static const char *STATUS_STR(pj_status_t status)
-{
-    switch (status) {
-    case 0: return "OK";
-    case ERR_SYNTAX_ERR: return "Syntax Error";
-    case ERR_NOT_EQUAL: return "Not Equal";
-    case ERR_SYSTEM: return "System Error";
-    }
-    return "???";
-}
-
-static pj_status_t test_entry( struct test_msg *entry )
+static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 {
     pjsip_msg *parsed_msg, *ref_msg;
-    pj_pool_t *pool;
     pj_status_t status = PJ_SUCCESS;
     int len;
     pj_str_t str1, str2;
     pjsip_hdr *hdr1, *hdr2;
-    pj_hr_timestamp t1, t2;
+    pj_timestamp t1, t2;
     char *msgbuf;
 
     enum { BUFLEN = 512 };
     
-    pool = pj_pool_create( pf, "", 
-			   PJSIP_POOL_LEN_RDATA*2, PJSIP_POOL_INC_RDATA, 
-			   &pool_error);
-
-    if (entry->len == 0) {
-	entry->len = strlen(entry->msg);
-    }
-
     /* Parse message. */
     parse_len += entry->len;
-    pj_hr_gettimestamp(&t1);
+    pj_get_timestamp(&t1);
     parsed_msg = pjsip_parse_msg(pool, entry->msg, entry->len, NULL);
     if (parsed_msg == NULL) {
-	status = ERR_SYNTAX_ERR;
+	status = -10;
 	goto on_return;
     }
-    pj_hr_gettimestamp(&t2);
+    pj_get_timestamp(&t2);
     parse_time += t2.u32.lo - t1.u32.lo;
-
-#if IS_PROFILING
-    goto print_msg;
-#endif
 
     /* Create reference message. */
     ref_msg = entry->creator(pool);
@@ -135,7 +90,7 @@ static pj_status_t test_entry( struct test_msg *entry )
 
     /* Compare message type. */
     if (parsed_msg->type != ref_msg->type) {
-	status = ERR_NOT_EQUAL;
+	status = -20;
 	goto on_return;
     }
 
@@ -145,7 +100,7 @@ static pj_status_t test_entry( struct test_msg *entry )
 	pjsip_method *m2 = &ref_msg->line.req.method;
 
 	if (m1->id != m2->id || pj_strcmp(&m1->name, &m2->name)) {
-	    status = ERR_NOT_EQUAL;
+	    status = -30;
 	    goto on_return;
 	}
     } else {
@@ -159,26 +114,20 @@ static pj_status_t test_entry( struct test_msg *entry )
     while (hdr1 != &parsed_msg->hdr && hdr2 != &ref_msg->hdr) {
 	len = hdr1->vptr->print_on(hdr1, str1.ptr, BUFLEN);
 	if (len < 1) {
-	    status = ERR_SYSTEM;
+	    status = -40;
 	    goto on_return;
 	}
 	str1.slen = len;
 
 	len = hdr2->vptr->print_on(hdr2, str2.ptr, BUFLEN);
 	if (len < 1) {
-	    status = ERR_SYSTEM;
+	    status = -50;
 	    goto on_return;
 	}
 	str2.slen = len;
 
-	if (!SILENT) {
-	    printf("hdr1='%.*s'\n"
-		   "hdr2='%.*s'\n\n",
-		   str1.slen, str1.ptr,
-		   str2.slen, str2.ptr);
-	}
 	if (pj_strcmp(&str1, &str2) != 0) {
-	    status = ERR_NOT_EQUAL;
+	    status = -60;
 	    goto on_return;
 	}
 
@@ -187,62 +136,42 @@ static pj_status_t test_entry( struct test_msg *entry )
     }
 
     if (hdr1 != &parsed_msg->hdr || hdr2 != &ref_msg->hdr) {
-	status = ERR_NOT_EQUAL;
+	status = -70;
 	goto on_return;
     }
 
     /* Print message. */
-#if IS_PROFILING
-print_msg:
-#endif
     msgbuf = pj_pool_alloc(pool, PJSIP_MAX_PKT_LEN);
     if (msgbuf == NULL) {
-	status = ERR_SYSTEM;
+	status = -80;
 	goto on_return;
     }
-    pj_hr_gettimestamp(&t1);
+    pj_get_timestamp(&t1);
     len = pjsip_msg_print(parsed_msg, msgbuf, PJSIP_MAX_PKT_LEN);
     if (len < 1) {
-	status = ERR_SYSTEM;
+	status = -90;
 	goto on_return;
     }
-    pj_hr_gettimestamp(&t2);
+    pj_get_timestamp(&t2);
     print_time += t2.u32.lo - t1.u32.lo;
     status = PJ_SUCCESS;
 
 on_return:
-    pj_pool_release(pool);
     return status;
 }
 
-static void warm_up()
-{
-    pj_pool_t *pool;
-    pool = pj_pool_create( pf, "", 
-			   PJSIP_POOL_LEN_RDATA*2, PJSIP_POOL_INC_RDATA, 
-			   &pool_error);
-    pj_pool_release(pool);
-}
 
-
-pj_status_t test_msg(void)
+pj_status_t msg_test(void)
 {
     pj_status_t status;
-    unsigned i;
+    pj_pool_t *pool;
 
-    pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
-    warm_up();
+    pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
 
-    for (i=0; i<LOOP; ++i) {
-	status = test_entry( &test_array[0] );
-    }
-    printf("%s\n", STATUS_STR(status));
+    status = test_entry( pool, &test_array[0] );
 
-    printf("Total bytes: %u, parse time=%f/char, print time=%f/char\n", 
-	   parse_len, 
-	   parse_time*1.0/parse_len,
-	   print_time*1.0/parse_len);
-    return PJ_SUCCESS;
+    pjsip_endpt_destroy(endpt);
+    return status;
 }
 
 /*****************************************************************************/

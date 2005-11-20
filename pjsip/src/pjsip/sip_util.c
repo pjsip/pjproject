@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_endpoint.h>

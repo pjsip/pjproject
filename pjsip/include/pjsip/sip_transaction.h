@@ -129,6 +129,23 @@ struct pjsip_transaction
 };
 
 
+/**
+ * Create new transaction. Application would normally use 
+ * #pjsip_endpt_create_tsx rather than this function.
+ *
+ * @param pool	    Pool to use by the transaction.
+ * @param endpt	    Endpoint.
+ * @param p_tsx	    Pointer to return the transaction.
+ *
+ * @return	    PJ_SUCCESS or the appropriate error code.
+ *
+ * @see pjsip_endpt_create_tsx
+ *
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_create( pj_pool_t *pool,
+				      pjsip_endpoint *endpt,
+				      pjsip_transaction **p_tsx);
+
 /** 
  * Init transaction as UAC from the specified transmit data (\c tdata).
  * The transmit data must have a valid \c Request-Line and \c CSeq header.

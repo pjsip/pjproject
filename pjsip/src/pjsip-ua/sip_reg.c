@@ -22,7 +22,7 @@
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_event.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_auth_msg.h>
 #include <pj/pool.h>
 #include <pj/string.h>

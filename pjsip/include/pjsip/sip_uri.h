@@ -26,6 +26,7 @@
 
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_config.h>
+#include <pj/list.h>
 
 PJ_BEGIN_DECL
 
@@ -36,6 +37,53 @@ PJ_BEGIN_DECL
  * @ingroup PJSIP_MSG
  * @{
  */
+
+/**
+ * Generic parameter, normally used in other_param or header_param.
+ */
+typedef struct pjsip_param
+{
+    PJ_DECL_LIST_MEMBER(struct pjsip_param);	/**< Generic list member.   */
+    pj_str_t	    name;			/**< Param/header name.	    */
+    pj_str_t	    value;			/**< Param/header value.    */
+} pjsip_param;
+
+
+/**
+ * Find the specified parameter name in the list. The name will be compared
+ * in case-insensitive comparison.
+ *
+ * @param param_list	List of parameters to find.
+ * @param name		Parameter/header name to find.
+ *
+ * @return		The parameter if found, or NULL.
+ */
+PJ_DECL(pjsip_param*) pjsip_param_find( pjsip_param *param_list,
+					const pj_str_t *name );
+
+
+/**
+ * Find the specified parameter name in the list. The name will be compared
+ * in case-insensitive comparison.
+ *
+ * @param param_list	List of parameters to find.
+ * @param name		Parameter/header name to find.
+ *
+ * @return		The parameter if found, or NULL.
+ */
+PJ_DECL(const pjsip_param*) pjsip_param_cfind(const pjsip_param *param_list,
+					      const pj_str_t *name );
+
+
+/**
+ * Duplicate the parameters.
+ *
+ * @param pool		Pool to allocate memory from.
+ * @param dst_list	Destination list.
+ * @param src_list	Source list.
+ */
+PJ_DECL(void) pjsip_param_clone(pj_pool_t *pool, pjsip_param *dst_list,
+				const pjsip_param *src_list);
 
 /**
  * URI context.
@@ -89,10 +137,11 @@ typedef struct pjsip_uri_vptr
      * @param context the context.
      * @param uri1 the first URI (self).
      * @param uri2 the second URI.
-     * @return zero if equal.
+     * @return PJ_SUCCESS if equal, or otherwise the error status which
+     *		    should point to the mismatch part.
      */
-    int	(*p_compare)(pjsip_uri_context_e context, 
-		     const void *uri1, const void *uri2);
+    pj_status_t	(*p_compare)(pjsip_uri_context_e context, 
+			     const void *uri1, const void *uri2);
 
     /** 
      * Clone URI. 
@@ -139,7 +188,6 @@ struct pjsip_uri
     (pj_strnicmp2(pjsip_uri_get_scheme(url), "tel", 3)==0)
 
 
-
 /**
  * SIP and SIPS URL scheme.
  */
@@ -156,8 +204,8 @@ typedef struct pjsip_url
     int		    ttl_param;		/**< Optional TTL param, or -1. */
     int		    lr_param;		/**< Optional loose routing param, or zero */
     pj_str_t	    maddr_param;	/**< Optional maddr param */
-    pj_str_t	    other_param;	/**< Other parameters grouped together. */
-    pj_str_t	    header_param;	/**< Optional header parameter. */
+    pjsip_param	    other_param;	/**< Other parameters grouped together. */
+    pjsip_param	    header_param;	/**< Optional header parameter. */
 } pjsip_url;
 
 
@@ -207,10 +255,11 @@ PJ_INLINE(void*) pjsip_uri_get_uri(void *uri)
  * @param context   Comparison context.
  * @param uri1	    The first URI.
  * @param uri2	    The second URI.
- * @return	    Zero if equal.
+ * @return	    PJ_SUCCESS if equal, or otherwise the error status which
+ *		    should point to the mismatch part.
  */
-PJ_INLINE(int) pjsip_uri_cmp(pjsip_uri_context_e context, 
-			     const void *uri1, const void *uri2)
+PJ_INLINE(pj_status_t) pjsip_uri_cmp(pjsip_uri_context_e context, 
+				     const void *uri1, const void *uri2)
 {
     return (*((const pjsip_uri*)uri1)->vptr->p_compare)(context, uri1, uri2);
 }

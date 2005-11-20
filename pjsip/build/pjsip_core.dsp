@@ -103,7 +103,7 @@ SOURCE=..\src\pjsip\sip_endpoint.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_misc.c
+SOURCE=..\src\pjsip\sip_errno.c
 # End Source File
 # Begin Source File
 
@@ -132,6 +132,10 @@ SOURCE=..\src\pjsip\sip_transport_udp.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_uri.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_util.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -175,10 +179,6 @@ SOURCE=..\include\pjsip\sip_event.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_misc.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjsip\sip_module.h
 # End Source File
 # Begin Source File
@@ -216,6 +216,10 @@ SOURCE=..\include\pjsip\sip_types.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_uri.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_util.h
 # End Source File
 # End Group
 # Begin Group "Inline Files"

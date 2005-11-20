@@ -18,7 +18,7 @@
  */
 #include <pjsip_simple/event_notify.h>
 #include <pjsip/sip_msg.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_transaction.h>

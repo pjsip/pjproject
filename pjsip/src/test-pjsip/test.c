@@ -46,20 +46,59 @@ void app_perror(const char *msg, pj_status_t rc)
 
 }
 
+pj_status_t register_static_modules(pj_size_t *count, pjsip_module **modules)
+{
+    *count = 0;
+    return PJ_SUCCESS;
+}
 
-
-int main()
+int test_main(void)
 {
     pj_status_t rc;
+    pj_caching_pool caching_pool;
+    const char *filename;
+    int line;
+
+    pj_log_set_level(3);
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+                     PJ_LOG_HAS_MICRO_SEC);
 
     if ((rc=pj_init()) != PJ_SUCCESS) {
 	app_perror("pj_init", rc);
+	return rc;
     }
 
-    DO_TEST(parse_uri());
-    DO_TEST(parse_msg());
+    pj_dump_config();
+
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+
+    rc = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
+    if (rc != PJ_SUCCESS) {
+	app_perror("pjsip_endpt_create", rc);
+	pj_caching_pool_destroy(&caching_pool);
+	return rc;
+    }
+
+    PJ_LOG(3,("",""));
+
+    DO_TEST(uri_test());
 
 on_return:
+
+    pjsip_endpt_destroy(endpt);
+    pj_caching_pool_destroy(&caching_pool);
+
+    PJ_LOG(3,("test", ""));
+ 
+    pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
+    PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u", 
+	              pj_thread_get_stack_max_usage(pj_thread_this()),
+		      filename, line));
+    if (rc == 0)
+	PJ_LOG(3,("test", "Looks like everything is okay!.."));
+    else
+	PJ_LOG(3,("test", "Test completed with error(s)"));
+
     return 0;
 }
 

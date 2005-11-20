@@ -23,6 +23,7 @@
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_transport.h>        /* rdata structure */
 #include <pjlib-util/scanner.h>
+#include <pjlib-util/string.h>
 #include <pj/except.h>
 #include <pj/log.h>
 #include <pj/hash.h>
@@ -32,16 +33,20 @@
 #include <pj/ctype.h>
 #include <pj/assert.h>
 
-#define RESERVED    ";/?:@&=+$,"
-#define MARK	    "-_.!~*'()"
-#define ESCAPED	    "%"
-#define USER	    "&=+$,;?/"
-#define PASS	    "&=+$,"
-#define TOKEN	    "-.!%*_=`'~+"   /* '+' is because of application/pidf+xml
-                                     * in Content-Type! */
-#define HOST	    "_-."
-#define HEX_DIGIT   "abcdefABCDEF"
-#define PARAM_CHAR  "[]/:&+$" MARK "%"
+#define ALNUM
+#define RESERVED	    ";/?:@&=+$,"
+#define MARK		    "-_.!~*'()"
+#define UNRESERVED	    ALNUM MARK
+#define ESCAPED		    "%"
+#define USER_UNRESERVED	    "&=+$,;?/"
+#define PASS		    "&=+$,"
+#define TOKEN		    "-.!%*_=`'~+"   /* '+' is because of app/pidf+xml
+					     * in Content-Type! */
+#define HOST		    "_-."
+#define HEX_DIGIT	    "abcdefABCDEF"
+#define PARAM_CHAR	    "[]/:&+$" UNRESERVED ESCAPED
+#define HNV_UNRESERVED	    "[]/?:+$"
+#define HDR_CHAR	    HNV_UNRESERVED UNRESERVED ESCAPED
 
 #define PJSIP_VERSION		"SIP/2.0"
 #define PJSIP_SYN_ERR_EXCEPTION	1
@@ -92,6 +97,7 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 	    pjsip_HEX_SPEC,	        /* Hexadecimal digits. */
 	    pjsip_PARAM_CHAR_SPEC,      /* For scanning pname (or pvalue when
                                          * it's not quoted.) */
+	    pjsip_HDR_CHAR_SPEC,	/* Chars in hname or hvalue */
 	    pjsip_PROBE_USER_HOST_SPEC, /* Hostname characters. */
 	    pjsip_PASSWD_SPEC,	        /* Password. */
 	    pjsip_USER_SPEC,	        /* User */
@@ -109,6 +115,9 @@ static pjsip_msg *  int_parse_msg( pjsip_parse_ctx *ctx,
 static void	    int_parse_param( pj_scanner *scanner, 
 				     pj_str_t *pname, 
 				     pj_str_t *pvalue);
+static void	    int_parse_hparam( pj_scanner *scanner,
+				      pj_str_t *hname,
+				      pj_str_t *hvalue );
 static void         int_parse_req_line( pj_scanner *scanner, 
 					pj_pool_t *pool,
 					pjsip_request_line *req_line);
@@ -271,9 +280,13 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str(&pjsip_PARAM_CHAR_SPEC, PARAM_CHAR);
 
+    status = pj_cis_dup(&pjsip_HDR_CHAR_SPEC, &pjsip_ALNUM_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pjsip_HDR_CHAR_SPEC, HDR_CHAR);
+
     status = pj_cis_dup(&pjsip_USER_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_USER_SPEC, MARK ESCAPED USER );
+    pj_cis_add_str( &pjsip_USER_SPEC, ESCAPED USER_UNRESERVED );
 
     status = pj_cis_dup(&pjsip_PASSWD_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -858,6 +871,7 @@ void pjsip_parse_param_imp(  pj_scanner *scanner,
 {
     /* pname */
     pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pname);
+    pj_str_unescape(pname);
 
     /* pvalue, if any */
     if (*scanner->curptr == '=') {
@@ -871,6 +885,7 @@ void pjsip_parse_param_imp(  pj_scanner *scanner,
 	    }
 	} else {
 	    pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pvalue);
+	    pj_str_unescape(pvalue);
 	}
     } else {
 	pvalue->ptr = NULL;
@@ -889,15 +904,39 @@ static void int_parse_param( pj_scanner *scanner,
     pjsip_parse_param_imp(scanner, pname, pvalue, 0);
 }
 
+/* Parse header parameter. */
+static void int_parse_hparam( pj_scanner *scanner,
+			      pj_str_t *hname, pj_str_t *hvalue )
+{
+    /* Get '?' or '&' character. */
+    pj_scan_get_char(scanner);
+
+    /* hname */
+    pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hname);
+    pj_str_unescape(hname);
+
+    /* pvalue, if any */
+    if (*scanner->curptr == '=') {
+	pj_scan_get_char(scanner);
+	pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hvalue);
+	pj_str_unescape(hvalue);
+    } else {
+	hvalue->ptr = NULL;
+	hvalue->slen = 0;
+    }
+}
+
 /* Parse host:port in URI. */
 static void int_parse_uri_host_port( pj_scanner *scanner, 
 				     pj_str_t *host, int *p_port)
 {
     pj_scan_get( scanner, &pjsip_HOST_SPEC, host);
+    /* RFC3261 section 19.1.2: host don't need to be unescaped */
     if (*scanner->curptr == ':') {
 	pj_str_t port;
 	pj_scan_get_char(scanner);
 	pj_scan_get(scanner, &pjsip_DIGIT_SPEC, &port);
+	pj_str_unescape(&port);
 	*p_port = pj_strtoul(&port);
     } else {
 	*p_port = 0;
@@ -926,9 +965,12 @@ static void int_parse_user_pass( pj_scanner *scanner,
 				 pj_str_t *user, pj_str_t *pass)
 {
     pj_scan_get( scanner, &pjsip_USER_SPEC, user);
+    pj_str_unescape(user);
+
     if ( *scanner->curptr == ':') {
 	pj_scan_get_char( scanner );
 	pj_scan_get( scanner, &pjsip_PASSWD_SPEC, pass);
+	pj_str_unescape(pass);
     } else {
 	pass->ptr = NULL;
 	pass->slen = 0;
@@ -944,6 +986,9 @@ static pjsip_uri *int_parse_uri_or_name_addr( pj_scanner *scanner, pj_pool_t *po
 {
     pjsip_uri *uri;
     int is_name_addr = 0;
+
+    /* Exhaust any whitespaces. */
+    pj_scan_skip_whitespace(scanner);
 
     if (*scanner->curptr=='"' || *scanner->curptr=='<') {
 	uri = (pjsip_uri*)int_parse_name_addr( scanner, pool );
@@ -1034,6 +1079,7 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
     pjsip_url *url;
     int colon;
     int skip_ws = scanner->skip_ws;
+    int hsep = '?';
     scanner->skip_ws = 0;
 
     pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &scheme);
@@ -1089,14 +1135,20 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
 	    url->lr_param = 1;
 
 	} else {
-	    concat_param(&url->other_param, pool, &pname, &pvalue);
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = pname;
+	    p->value = pvalue;
+	    pj_list_insert_before(&url->other_param, p);
 	}
     }
 
     /* Get header params. */
-    if (parse_params && *scanner->curptr == '?') {
-	pj_scan_get_until(scanner, &pjsip_NEWLINE_OR_EOF_SPEC, 
-                          &url->header_param);
+    while (parse_params && *scanner->curptr == hsep) {
+	pjsip_param *param;
+	param = pj_pool_alloc(pool, sizeof(pjsip_param));
+	int_parse_hparam(scanner, &param->name, &param->value);
+	pj_list_insert_before(&url->header_param, param);
+	hsep = '&';
     }
 
     scanner->skip_ws = skip_ws;

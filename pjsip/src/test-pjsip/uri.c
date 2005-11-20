@@ -16,17 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip/sip_parser.h>
-#include <pjsip/sip_uri.h>
-#include <pj/os.h>
-#include <pj/pool.h>
-#include <pj/string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "test.h"
+#include <pjsip_core.h>
+#include <pjlib.h>
 
-#define ERR_SYNTAX_ERR	(-2)
-#define ERR_NOT_EQUAL	(-3)
 
 #define ALPHANUM    "abcdefghijklmnopqrstuvwxyz" \
 		    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
@@ -38,18 +31,7 @@
 
 #define POOL_SIZE	4096
 
-static const char *STATUS_STR(pj_status_t status)
-{
-    switch (status) {
-    case 0: return "OK";
-    case ERR_SYNTAX_ERR: return "Syntax Error";
-    case ERR_NOT_EQUAL: return "Not Equal";
-    }
-    return "???";
-}
-
 static pj_uint32_t parse_len, parse_time, print_time;
-static pj_caching_pool cp;
 
 
 /* URI creator functions. */
@@ -73,6 +55,9 @@ static pjsip_uri *create_uri17( pj_pool_t *pool );
 static pjsip_uri *create_uri18( pj_pool_t *pool );
 static pjsip_uri *create_uri19( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
+
+#define ERR_NOT_EQUAL	-1001
+#define ERR_SYNTAX_ERR	-1002
 
 struct uri_test
 {
@@ -239,12 +224,7 @@ struct uri_test
 	ERR_SYNTAX_ERR,
 	"",
 	&create_dummy,
-    },
-    {
-	PJ_SUCCESS,
-	"",
-	NULL,
-    },
+    }
 };
 
 static pjsip_uri *create_uri1(pj_pool_t *pool)
@@ -476,47 +456,37 @@ static pjsip_uri *create_uri18(pj_pool_t *pool)
 
 static pjsip_uri *create_dummy(pj_pool_t *pool)
 {
-    PJ_UNUSED_ARG(pool)
+    PJ_UNUSED_ARG(pool);
     return NULL;
 }
 
 /*****************************************************************************/
 
-static void pool_error(pj_pool_t *pool, pj_size_t sz)
-{
-    PJ_UNUSED_ARG(pool)
-    PJ_UNUSED_ARG(sz)
-
-    pj_assert(0);
-    exit(1);
-}
-
 /*
  * Test one test entry.
  */
-static pj_status_t test_entry(struct uri_test *entry)
+static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 {
     pj_status_t status;
-    pj_pool_t *pool;
     int len;
     pjsip_uri *parsed_uri, *ref_uri;
     pj_str_t s1 = {NULL, 0}, s2 = {NULL, 0};
-    pj_hr_timestamp t1, t2;
+    pj_timestamp t1, t2;
 
-    pool = (*cp.factory.create_pool)( &cp.factory, "", POOL_SIZE, 0, &pool_error);
+    entry->len = pj_native_strlen(entry->str);
 
     /* Parse URI text. */
-    pj_hr_gettimestamp(&t1);
+    pj_get_timestamp(&t1);
     parse_len += entry->len;
     parsed_uri = pjsip_parse_uri(pool, entry->str, entry->len, 0);
     if (!parsed_uri) {
 	/* Parsing failed. If the entry says that this is expected, then
 	 * return OK.
 	 */
-	status = entry->status==ERR_SYNTAX_ERR ? PJ_SUCCESS : ERR_SYNTAX_ERR;
+	status = entry->status==ERR_SYNTAX_ERR ? PJ_SUCCESS : -10;
 	goto on_return;
     }
-    pj_hr_gettimestamp(&t2);
+    pj_get_timestamp(&t2);
     parse_time += t2.u32.lo - t1.u32.lo;
 
     /* Create the reference URI. */
@@ -526,32 +496,32 @@ static pj_status_t test_entry(struct uri_test *entry)
     s1.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     s2.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 
-    pj_hr_gettimestamp(&t1);
+    pj_get_timestamp(&t1);
     len = pjsip_uri_print( PJSIP_URI_IN_OTHER, parsed_uri, s1.ptr, PJSIP_MAX_URL_SIZE);
     if (len < 1) {
-	status = -1;
+	status = -20;
 	goto on_return;
     }
     s1.slen = len;
 
     len = pjsip_uri_print( PJSIP_URI_IN_OTHER, ref_uri, s2.ptr, PJSIP_MAX_URL_SIZE);
     if (len < 1) {
-	status = -1;
+	status = -30;
 	goto on_return;
     }
     s2.slen = len;
-    pj_hr_gettimestamp(&t2);
+    pj_get_timestamp(&t2);
     print_time += t2.u32.lo - t1.u32.lo;
 
     /* Full comparison of parsed URI with reference URI. */
     if (pjsip_uri_cmp(PJSIP_URI_IN_OTHER, parsed_uri, ref_uri) != 0) {
 	/* Not equal. See if this is the expected status. */
-	status = entry->status==ERR_NOT_EQUAL ? PJ_SUCCESS : ERR_NOT_EQUAL;
+	status = entry->status==ERR_NOT_EQUAL ? PJ_SUCCESS : -40;
 	goto on_return;
 
     } else {
 	/* Equal. See if this is the expected status. */
-	status = entry->status==PJ_SUCCESS ? PJ_SUCCESS : -1;
+	status = entry->status==PJ_SUCCESS ? PJ_SUCCESS : -50;
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}
@@ -560,101 +530,31 @@ static pj_status_t test_entry(struct uri_test *entry)
     /* Compare text. */
     if (pj_strcmp(&s1, &s2) != 0) {
 	/* Not equal. */
-	status = ERR_NOT_EQUAL;
+	status = -60;
     }
 
 on_return:
-    if (!SILENT) {
-	printf("%.2d %s (expected status=%s)\n"
-	       "   str=%s\n"
-	       "   uri=%.*s\n"
-	       "   ref=%.*s\n\n", 
-	       entry-uri_test_array, 
-	       STATUS_STR(status), 
-	       STATUS_STR(entry->status), 
-	       entry->str, 
-	       (int)s1.slen, s1.ptr, (int)s2.slen, s2.ptr);
-    }
-
-    pj_pool_release(pool);
     return status;
 }
 
-static void warm_up(pj_pool_factory *pf)
+pj_status_t uri_test()
 {
-    pj_pool_t *pool;
-    struct uri_test *entry;
-
-    pool = pj_pool_create(pf, "", POOL_SIZE, 0, &pool_error);
-    pjsip_parse_uri(pool, "sip:host", 8, 0);
-    entry = &uri_test_array[0];
-    while (entry->creator) {
-	entry->len = strlen(entry->str);
-	++entry;
-    }
-    pj_pool_release(pool);
-}
-
-//#if !IS_PROFILING
-#if 1
-pj_status_t test_uri()
-{
-    struct uri_test *entry;
-    int i=0, err=0;
-    pj_status_t status;
-    pj_hr_timestamp t1, t2;
-    pj_uint32_t total_time;
-
-    pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
-    warm_up(&cp.factory);
-
-    pj_hr_gettimestamp(&t1);
-    for (i=0; i<LOOP; ++i) {
-	entry = &uri_test_array[0];
-	while (entry->creator) {
-	    status = test_entry(entry);
-	    if (status != PJ_SUCCESS) {
-		++err;
-	    }
-	    ++entry;
-	}
-    }
-    pj_hr_gettimestamp(&t2);
-    total_time = t2.u32.lo - t1.u32.lo;
-
-    printf("Error=%d\n", err);
-    printf("Total parse len:  %u bytes\n", parse_len);
-    printf("Total parse time: %u (%f/char), print time: %u (%f/char)\n", 
-	    parse_time, parse_time*1.0/parse_len,
-	    print_time, print_time*1.0/parse_len);
-    printf("Total time: %u (%f/char)\n", total_time, total_time*1.0/parse_len);
-    return err;
-}
-
-#else
-
-pj_status_t test_uri()
-{
-    struct uri_test *entry;
     unsigned i;
+    pj_pool_t *pool;
+    pj_status_t status;
 
-    warm_up();
-    pj_caching_pool_init(&cp, 1024*1024);
+    pool = pjsip_endpt_create_pool(endpt, "", 4000, 4000);
 
-    for (i=0; i<LOOP; ++i) {
-	entry = &uri_test_array[0];
-	while (entry->creator) {
-	    pj_pool_t *pool;
-	    pjsip_uri *uri1, *uri2;
-
-	    pool = pj_pool_create( &cp.factory, "", POOL_SIZE, 0, &pool_error);
-	    uri1 = pjsip_parse_uri(pool, entry->str, strlen(entry->str));
-	    pj_pool_release(pool);
-	    ++entry;
+    for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
+	status = do_uri_test(pool, &uri_test_array[i]);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(3,("uri_test", "  error %d when testing entry %d",
+		      status, i));
+	    break;
 	}
     }
 
-    return 0;
+    pjsip_endpt_destroy_pool(endpt, pool);
+    return status;
 }
 
-#endif

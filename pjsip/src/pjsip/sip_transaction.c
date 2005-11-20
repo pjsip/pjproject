@@ -19,7 +19,7 @@
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_config.h>
-#include <pjsip/sip_misc.h>
+#include <pjsip/sip_util.h>
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
@@ -345,9 +345,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
 /*
  * Create new transaction.
  */
-pj_status_t pjsip_tsx_create( pj_pool_t *pool,
-			      pjsip_endpoint *endpt,
-                              pjsip_transaction **p_tsx)
+PJ_DEF(pj_status_t) pjsip_tsx_create( pj_pool_t *pool,
+				      pjsip_endpoint *endpt,
+				      pjsip_transaction **p_tsx)
 {
     pjsip_transaction *tsx;
     pj_status_t status;
