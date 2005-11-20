@@ -93,6 +93,10 @@ SOURCE="..\src\pjlib-util\scanner.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\string.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\stun.c"
 # End Source File
 # Begin Source File
@@ -122,6 +126,10 @@ SOURCE="..\include\pjlib-util.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\scanner.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\string.h"
 # End Source File
 # Begin Source File
 

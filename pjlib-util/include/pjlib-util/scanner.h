@@ -195,6 +195,8 @@ PJ_DECL(void) pj_cis_invert( pj_cis_t *cis );
  *
  * @param cis       The scanner character specification.
  * @param c         The character to check for matching.
+ *
+ * @return	    Non-zero if match (not necessarily one).
  */
 PJ_INLINE(int) pj_cis_match( const pj_cis_t *cis, int c )
 {
