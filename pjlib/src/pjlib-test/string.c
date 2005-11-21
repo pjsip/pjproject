@@ -19,6 +19,7 @@
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include "test.h"
 
 /**
@@ -62,6 +63,148 @@
 #define HELLO_WORLD	"Hello World"
 #define JUST_HELLO	"Hello"
 #define UL_VALUE	3456789012UL
+
+static int stricmp_test(void)
+{
+#define STRTEST(res,S1,S2,code)	\
+	    do { \
+	        s1.ptr=S1; s1.slen=len; \
+	        s2.ptr=S2; s2.slen=len; \
+		pj_get_timestamp(&t1); \
+	        if (pj_stricmp(&s1,&s2)!=res) return code; \
+		pj_get_timestamp(&t2); \
+		pj_sub_timestamp(&t2, &t1); \
+		pj_add_timestamp(&e1, &t2); \
+		pj_get_timestamp(&t1); \
+	        if (pj_stricmp_alnum(&s1,&s2)!=res) return code-1; \
+		pj_get_timestamp(&t2); \
+		pj_sub_timestamp(&t2, &t1); \
+		pj_add_timestamp(&e2, &t2); \
+	    } while (0)
+
+    char *buf;
+    pj_str_t s1, s2;
+    pj_timestamp t1, t2, e1, e2, zero;
+    pj_uint32_t c1, c2;
+    int len;
+
+    e1.u32.hi = e1.u32.lo = e2.u32.hi = e2.u32.lo = 0;
+
+    pj_thread_sleep(0);
+
+    /* Compare empty strings. */
+    len=0;
+    STRTEST( 0, "","",-500);
+
+    /* equal, length=1 
+     * use buffer to simulate non-aligned string.
+     */
+    buf = "a""A";
+    len=1;
+    STRTEST( 0, "a",buf+0,-510);
+    STRTEST( 0, "a",buf+1,-512);
+
+    /* equal, length=2 
+     * use buffer to simulate non-aligned string.
+     */
+    buf = "aa""Aa""aA""AA";
+    len=2;
+    STRTEST( 0, "aa",buf+0,-520);
+    STRTEST( 0, "aa",buf+2,-522);
+    STRTEST( 0, "aa",buf+4,-524);
+    STRTEST( 0, "aa",buf+6,-524);
+
+    /* equal, length=3 
+     * use buffer to simulate non-aligned string.
+     */
+    buf = "aaa""Aaa""aAa""aaA""AAa""aAA""AaA""AAA";
+    len=3;
+    STRTEST( 0, "aaa",buf+0,-530);
+    STRTEST( 0, "aaa",buf+3,-532);
+    STRTEST( 0, "aaa",buf+6,-534);
+    STRTEST( 0, "aaa",buf+9,-536);
+    STRTEST( 0, "aaa",buf+12,-538);
+    STRTEST( 0, "aaa",buf+15,-540);
+    STRTEST( 0, "aaa",buf+18,-542);
+    STRTEST( 0, "aaa",buf+21,-534);
+
+    /* equal, length=4 */
+    len=4;
+    STRTEST( 0, "aaaa","aaaa",-540);
+    STRTEST( 0, "aaaa","Aaaa",-542);
+    STRTEST( 0, "aaaa","aAaa",-544);
+    STRTEST( 0, "aaaa","aaAa",-546);
+    STRTEST( 0, "aaaa","aaaA",-548);
+    STRTEST( 0, "aaaa","AAaa",-550);
+    STRTEST( 0, "aaaa","aAAa",-552);
+    STRTEST( 0, "aaaa","aaAA",-554);
+    STRTEST( 0, "aaaa","AaAa",-556);
+    STRTEST( 0, "aaaa","aAaA",-558);
+    STRTEST( 0, "aaaa","AaaA",-560);
+    STRTEST( 0, "aaaa","AAAa",-562);
+    STRTEST( 0, "aaaa","aAAA",-564);
+    STRTEST( 0, "aaaa","AAaA",-566);
+    STRTEST( 0, "aaaa","AaAA",-568);
+    STRTEST( 0, "aaaa","AAAA",-570);
+
+    /* equal, length=5 */
+    buf = "aaaAa""AaaaA""AaAaA""AAAAA";
+    len=5;
+    STRTEST( 0, "aaaaa",buf+0,-580);
+    STRTEST( 0, "aaaaa",buf+5,-582);
+    STRTEST( 0, "aaaaa",buf+10,-584);
+    STRTEST( 0, "aaaaa",buf+15,-586);
+
+    /* not equal, length=1 */
+    len=1;
+    STRTEST( -1, "a", "b", -600);
+
+    /* not equal, length=2 */
+    buf = "ab""ba";
+    len=2;
+    STRTEST( -1, "aa", buf+0, -610);
+    STRTEST( -1, "aa", buf+2, -612);
+
+    /* not equal, length=3 */
+    buf = "aab""aba""baa";
+    len=3;
+    STRTEST( -1, "aaa", buf+0, -620);
+    STRTEST( -1, "aaa", buf+3, -622);
+    STRTEST( -1, "aaa", buf+6, -624);
+
+    /* not equal, length=4 */
+    buf = "aaab""aaba""abaa""baaa";
+    len=4;
+    STRTEST( -1, "aaaa", buf+0, -630);
+    STRTEST( -1, "aaaa", buf+4, -632);
+    STRTEST( -1, "aaaa", buf+8, -634);
+    STRTEST( -1, "aaaa", buf+12, -636);
+
+    /* not equal, length=5 */
+    buf="aaaab""aaaba""aabaa""abaaa""baaaa";
+    len=5;
+    STRTEST( -1, "aaaaa", buf+0, -640);
+    STRTEST( -1, "aaaaa", buf+5, -642);
+    STRTEST( -1, "aaaaa", buf+10, -644);
+    STRTEST( -1, "aaaaa", buf+15, -646);
+    STRTEST( -1, "aaaaa", buf+20, -648);
+
+    zero.u32.hi = zero.u32.lo = 0;
+    c1 = pj_elapsed_cycle(&zero, &e1);
+    c2 = pj_elapsed_cycle(&zero, &e2);
+
+    if (c1 < c2) {
+	PJ_LOG(3,("", "  error: pj_stricmp_alnum is slower than pj_stricmp!"));
+	return -700;
+    }
+
+    PJ_LOG(3, ("", "  time: stricmp=%u, stricmp_alnum=%u (speedup=%d.%02dx)", 
+		   c1, c2,
+		   (c1 * 100 / c2) / 100,
+		   (c1 * 100 / c2) % 100));
+    return 0;
+#undef STRTEST
+}
 
 int string_test(void)
 {
@@ -162,7 +305,8 @@ int string_test(void)
 
     /* Done. */
     pj_pool_release(pool);
-    return 0;
+
+    return stricmp_test();
 }
 
 #else

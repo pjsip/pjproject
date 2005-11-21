@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+#include <pj/pool.h>
+
 PJ_IDEF(pj_str_t) pj_str(char *str)
 {
     pj_str_t dst;
@@ -157,13 +159,49 @@ PJ_IDEF(int) pj_strcmp2( const pj_str_t *str1, const char *str2 )
 
 PJ_IDEF(int) pj_stricmp( const pj_str_t *str1, const pj_str_t *str2)
 {
-    pj_ssize_t diff;
-
-    diff = str1->slen - str2->slen;
-    if (diff) {
-	return (int)diff;
+    register int len = str1->slen;
+    if (len != str2->slen) {
+	return (int)(len - str2->slen);
+    } else if (len == 0) {
+	return 0;
     } else {
-	return pj_native_strnicmp(str1->ptr, str2->ptr, str1->slen);
+	return pj_native_strnicmp(str1->ptr, str2->ptr, len);
+    }
+}
+
+PJ_IDEF(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2)
+{
+    register int len = str1->slen;
+
+    if (len != str2->slen) {
+	return -1;
+    } else if (len == 0) {
+	return 0;
+    } else {
+	register const pj_uint32_t *p1 = (pj_uint32_t*)str1->ptr, 
+		                   *p2 = (pj_uint32_t*)str2->ptr;
+	while (len > 3 && (*p1 & 0x1F1F1F1F)==(*p2 & 0x1F1F1F1F))
+	    ++p1, ++p2, len-=4;
+
+	if (len > 3)
+	    return -1;
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+	else if (len==3)
+	    return ((*p1 & 0x001F1F1F)==(*p2 & 0x001F1F1F)) ? 0 : -1;
+	else if (len==2)
+	    return ((*p1 & 0x00001F1F)==(*p2 & 0x00001F1F)) ? 0 : -1;
+	else if (len==1)
+	    return ((*p1 & 0x0000001F)==(*p2 & 0x0000001F)) ? 0 : -1;
+#else
+	else if (len==3)
+	    return ((*p1 & 0x1F1F1F00)==(*p2 & 0x1F1F1F00)) ? 0 : -1;
+	else if (len==2)
+	    return ((*p1 & 0x1F1F0000)==(*p2 & 0x1F1F0000)) ? 0 : -1;
+	else if (len==1)
+	    return ((*p1 & 0x1F000000)==(*p2 & 0x1F000000)) ? 0 : -1;
+#endif
+	else 
+	    return 0;
     }
 }
 
