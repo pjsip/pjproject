@@ -29,24 +29,27 @@ PJ_IDEF(pj_size_t) pj_pool_get_capacity( pj_pool_t *pool )
 
 PJ_IDEF(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool )
 {
-    return pool->used_size;
+    pj_pool_block *b = pool->block_list.next;
+    pj_size_t used_size = sizeof(pj_pool_t);
+    while (b != &pool->block_list) {
+	used_size += (b->cur - b->buf) + sizeof(pj_pool_block);
+	b = b->next;
+    }
+    return used_size;
 }
 
-PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_t *pool,
-					 pj_pool_block *block, pj_size_t size )
+PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
 {
     /* The operation below is valid for size==0. 
      * When size==0, the function will return the pointer to the pool
      * memory address, but no memory will be allocated.
      */
     if (size & (PJ_POOL_ALIGNMENT-1)) {
-	size &= ~(PJ_POOL_ALIGNMENT-1);
-	size += PJ_POOL_ALIGNMENT;
+	size = (size + PJ_POOL_ALIGNMENT) & ~(PJ_POOL_ALIGNMENT-1);
     }
     if ((unsigned)(block->end - block->cur) >= size) {
 	void *ptr = block->cur;
 	block->cur += size;
-	pool->used_size += size;
 	return ptr;
     }
     return NULL;
@@ -54,8 +57,7 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_t *pool,
 
 PJ_IDEF(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size)
 {
-    pj_pool_block *block = pool->block_list.next;
-    void *ptr = pj_pool_alloc_from_block(pool, block, size);
+    void *ptr = pj_pool_alloc_from_block(pool->block_list.next, size);
     if (!ptr)
 	ptr = pj_pool_allocate_find(pool, size);
     return ptr;

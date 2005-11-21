@@ -174,7 +174,8 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 
     /* Reset pool. */
     PJ_LOG(4, (pool->obj_name, "recycle(): cap=%d, used=%d(%d%%)", 
-	       pool->capacity, pool->used_size, pool->used_size*100/pool->capacity));
+	       pool->capacity, pj_pool_get_used_size(pool), 
+	       pj_pool_get_used_size(pool)*100/pool->capacity));
     pj_pool_reset(pool);
 
     /*
@@ -207,9 +208,9 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
 	while (pool != (void*)&cp->used_list) {
 	    PJ_LOG(3,("cachpool", "   %12s: %8d of %8d (%d%%) used", pool->obj_name, 
-				  pool->used_size, pool->capacity,
-				  pool->used_size*100/pool->capacity));
-	    total_used += pool->used_size;
+				  pj_pool_get_used_size(pool), pool->capacity,
+				  pj_pool_get_used_size(pool)*100/pool->capacity));
+	    total_used += pj_pool_get_used_size(pool);
 	    total_capacity += pool->capacity;
 	    pool = pool->next;
 	}

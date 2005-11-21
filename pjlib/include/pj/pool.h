@@ -151,9 +151,6 @@ struct pj_pool_t
     /** Current capacity allocated by the pool. */
     pj_size_t	    capacity;
 
-    /** Number of memory used/allocated. */
-    pj_size_t	    used_size;
-
     /** Size of memory block to be allocated when the pool runs out of memory */
     pj_size_t	    increment_size;
 
