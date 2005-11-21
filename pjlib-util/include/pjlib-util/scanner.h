@@ -26,6 +26,16 @@
 
 #include <pj/types.h>
 
+/**
+ * Macro PJ_SCANNER_USE_BITWISE is defined and non-zero (by default yes)
+ * will enable the use of bitwise for character input specification (cis).
+ * This would save several kilobytes of .bss memory in the SIP parser.
+ */
+#ifndef PJ_SCANNER_USE_BITWISE
+#  define PJ_SCANNER_USE_BITWISE   1
+#endif
+
+
 PJ_BEGIN_DECL
 
 /**
@@ -36,44 +46,11 @@ PJ_BEGIN_DECL
  *
  * @{
  */
-
-/**
- * This describes the type of individual character specification in
- * #pj_cis_buf_t. Basicly the number of bits here
- */
-#ifndef PJ_CIS_ELEM_TYPE
-#   define PJ_CIS_ELEM_TYPE pj_uint32_t
+#if defined(PJ_SCANNER_USE_BITWISE) && PJ_SCANNER_USE_BITWISE != 0
+#  include <pjlib-util/scanner_cis_bitwise.h>
+#else
+#  include <pjlib-util/scanner_cis_uint.h>
 #endif
-
-/**
- * This describes the type of individual character specification in
- * #pj_cis_buf_t.
- */
-typedef PJ_CIS_ELEM_TYPE pj_cis_elem_t;
-
-/**
- * Maximum number of input specification in a buffer.
- * Effectively this means the number of bits in pj_cis_elem_t.
- */
-#define PJ_CIS_MAX_INDEX   (sizeof(pj_cis_elem_t) << 3)
-
-/**
- * The scanner input specification buffer.
- */
-typedef struct pj_cis_buf_t
-{
-    pj_cis_elem_t    cis_buf[256];  /**< Must be 256 (not 128)! */
-    pj_cis_elem_t    use_mask;      /**< To keep used indexes.  */
-} pj_cis_buf_t;
-
-/**
- * Character input specification.
- */
-typedef struct pj_cis_t
-{
-    pj_cis_elem_t   *cis_buf;       /**< Pointer to buffer.     */
-    int              cis_id;        /**< Id.                    */
-} pj_cis_t;
 
 /**
  * Initialize scanner input specification buffer.
@@ -106,33 +83,6 @@ PJ_DECL(pj_status_t) pj_cis_init(pj_cis_buf_t *cs_buf, pj_cis_t *cis);
  *                  specifications in the buffer.
  */
 PJ_DECL(pj_status_t) pj_cis_dup(pj_cis_t *new_cis, pj_cis_t *existing);
-
-/**
- * Set the membership of the specified character.
- * Note that this is a macro, and arguments may be evaluated more than once.
- *
- * @param cis       Pointer to character input specification.
- * @param c         The character.
- */
-#define PJ_CIS_SET(cis,c)   ((cis)->cis_buf[(c)] |= (1 << (cis)->cis_id))
-
-/**
- * Remove the membership of the specified character.
- * Note that this is a macro, and arguments may be evaluated more than once.
- *
- * @param cis       Pointer to character input specification.
- * @param c         The character to be removed from the membership.
- */
-#define PJ_CIS_CLR(cis,c)   ((cis)->cis_buf[c] &= ~(1 << (cis)->cis_id))
-
-/**
- * Check the membership of the specified character.
- * Note that this is a macro, and arguments may be evaluated more than once.
- *
- * @param cis       Pointer to character input specification.
- * @param c         The character.
- */
-#define PJ_CIS_ISSET(cis,c) ((cis)->cis_buf[c] & (1 << (cis)->cis_id))
 
 /**
  * Add the characters in the specified range '[cstart, cend)' to the 

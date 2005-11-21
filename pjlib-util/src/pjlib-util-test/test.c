@@ -74,7 +74,7 @@ int test_main(void)
     PJ_TRY {
         return test_inner();
     }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
         PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)", 
                   id, pj_exception_id_name(id)));

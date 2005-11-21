@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "./output/pjlib-util-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /Zi /O2 /Ob2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -93,6 +93,16 @@ SOURCE="..\src\pjlib-util\scanner.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\scanner_cis_bitwise.c"
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\scanner_cis_uint.c"
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\string.c"
 # End Source File
 # Begin Source File
@@ -126,6 +136,14 @@ SOURCE="..\include\pjlib-util.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\scanner.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\scanner_cis_bitwise.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\scanner_cis_uint.h"
 # End Source File
 # Begin Source File
 

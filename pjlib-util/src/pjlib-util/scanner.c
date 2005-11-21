@@ -21,10 +21,18 @@
 #include <pj/except.h>
 #include <pj/os.h>
 #include <pj/errno.h>
+#include <pj/assert.h>
 
 #define PJ_SCAN_IS_SPACE(c)	((c)==' ' || (c)=='\t')
 #define PJ_SCAN_IS_NEWLINE(c)	((c)=='\r' || (c)=='\n')
 #define PJ_SCAN_CHECK_EOF(s)	(s != end)
+
+
+#if defined(PJ_SCANNER_USE_BITWISE) && PJ_SCANNER_USE_BITWISE != 0
+#  include "scanner_cis_bitwise.c"
+#else
+#  include "scanner_cis_uint.c"
+#endif
 
 
 static void pj_scan_syntax_err(pj_scanner *scanner)
@@ -32,52 +40,12 @@ static void pj_scan_syntax_err(pj_scanner *scanner)
     (*scanner->callback)(scanner);
 }
 
-PJ_DEF(void) pj_cis_buf_init( pj_cis_buf_t *cis_buf)
-{
-    pj_memset(cis_buf->cis_buf, 0, sizeof(cis_buf->cis_buf));
-    cis_buf->use_mask = 0;
-}
-
-PJ_DEF(pj_status_t) pj_cis_init(pj_cis_buf_t *cis_buf, pj_cis_t *cis)
-{
-    unsigned i;
-
-    cis->cis_buf = cis_buf->cis_buf;
-
-    for (i=0; i<PJ_CIS_MAX_INDEX; ++i) {
-        if ((cis_buf->use_mask & (1 << i)) == 0) {
-            cis->cis_id = i;
-	    cis_buf->use_mask |= (1 << i);
-            return PJ_SUCCESS;
-        }
-    }
-
-    cis->cis_id = PJ_CIS_MAX_INDEX;
-    return PJ_ETOOMANY;
-}
-
-PJ_DEF(pj_status_t) pj_cis_dup( pj_cis_t *new_cis, pj_cis_t *existing)
-{
-    pj_status_t status;
-    unsigned i;
-
-    /* Warning: typecasting here! */
-    status = pj_cis_init((pj_cis_buf_t*)existing->cis_buf, new_cis);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    for (i=0; i<256; ++i) {
-        if (PJ_CIS_ISSET(existing, i))
-            PJ_CIS_SET(new_cis, i);
-        else
-            PJ_CIS_CLR(new_cis, i);
-    }
-
-    return PJ_SUCCESS;
-}
 
 PJ_DEF(void) pj_cis_add_range(pj_cis_t *cis, int cstart, int cend)
 {
+    /* Can not set zero. This is the requirement of the parser. */
+    pj_assert(cstart > 0);
+
     while (cstart != cend) {
         PJ_CIS_SET(cis, cstart);
 	++cstart;
@@ -122,7 +90,8 @@ PJ_DEF(void) pj_cis_del_str( pj_cis_t *cis, const char *str)
 PJ_DEF(void) pj_cis_invert( pj_cis_t *cis )
 {
     unsigned i;
-    for (i=0; i<256; ++i) {
+    /* Can not set zero. This is the requirement of the parser. */
+    for (i=1; i<256; ++i) {
 	if (PJ_CIS_ISSET(cis,i))
             PJ_CIS_CLR(cis,i);
         else
@@ -284,6 +253,8 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     PJ_CHECK_STACK();
 
+    pj_assert(pj_cis_match(spec,0)==0);
+
     if (pj_scan_is_eof(scanner) || !pj_cis_match(spec, *s)) {
 	pj_scan_syntax_err(scanner);
 	return;
@@ -291,7 +262,11 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     do {
 	++s;
-    } while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s));
+    } while (pj_cis_match(spec, *s));
+    /* No need to check EOF here (PJ_SCAN_CHECK_EOF(s)) because
+     * buffer is NULL terminated and pj_cis_match(spec,0) should be
+     * false.
+     */
 
     pj_strset3(out, scanner->curptr, s);
 
