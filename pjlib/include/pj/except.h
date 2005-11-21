@@ -45,12 +45,12 @@ PJ_BEGIN_DECL
  * \section pj_except_except Exception Handling
  *
  * This module provides exception handling syntactically similar to C++ in
- * C language. The underlying mechanism use setjmp() and longjmp(), and since
- * these constructs are ANSI standard, the mechanism here should be available
- * on most platforms/compilers which are ANSI compliant.
+ * C language. In Win32 systems, it uses Windows Structured Exception
+ * Handling (SEH) if macro PJ_EXCEPTION_USE_WIN32_SEH is non-zero.
+ * Otherwise it will use setjmp() and longjmp().
  *
- * If ANSI libc is not available, then setjmp()/longjmp() implementation will
- * be provided. See <pj/compat/setjmp.h> for compatibility.
+ * On some platforms where setjmp/longjmp is not available, setjmp/longjmp 
+ * implementation is provided. See <pj/compat/setjmp.h> for compatibility.
  *
  * The exception handling mechanism is completely thread safe, so the exception
  * thrown by one thread will not interfere with other thread.
@@ -61,7 +61,9 @@ PJ_BEGIN_DECL
  *    hold some resorce such as pool or mutex etc.
  *  - You CAN NOT make nested exception in one single function without using
  *    a nested PJ_USE_EXCEPTION.
- *  - Exceptions will always be caught by the first handle (unlike C++ where
+ *  - You can not provide more than PJ_CATCH or PJ_CATCH_ANY nor use PJ_CATCH
+ *    and PJ_CATCH_ANY for a single PJ_TRY.
+ *  - Exceptions will always be caught by the first handler (unlike C++ where
  *    exception is only caught if the type matches.
  *
  * The exception handling constructs are similar to C++. The blocks will be
@@ -71,7 +73,7 @@ PJ_BEGIN_DECL
    #define NO_MEMORY     1
    #define SYNTAX_ERROR  2
   
-   int main()
+   int sample1()
    {
       PJ_USE_EXCEPTION;  // declare local exception stack.
   
@@ -81,11 +83,21 @@ PJ_BEGIN_DECL
       PJ_CATCH(NO_MEMORY) {
         ... // handle exception 1
       }
-      PJ_CATCH(SYNTAX_ERROR) {
-        ... // handle exception 2
+      PJ_END;
+   }
+
+   int sample2()
+   {
+      PJ_USE_EXCEPTION;  // declare local exception stack.
+  
+      PJ_TRY {
+        ...// do something..
       }
-      PJ_DEFAULT {
-        ... // handle other exceptions.
+      PJ_CATCH_ANY {
+         if (PJ_GET_EXCEPTION() == NO_MEMORY)
+	    ...; // handle no memory situation
+	 else if (PJ_GET_EXCEPTION() == SYNTAX_ERROR)
+	    ...; // handle syntax error
       }
       PJ_END;
    }
@@ -126,6 +138,8 @@ PJ_BEGIN_DECL
  * block. 
  * Actually, this is just a macro to declare local variable which is used to
  * push the exception state to the exception stack.
+ * Note: you must specify PJ_USE_EXCEPTION as the last statement in the
+ * local variable declarations, since it may evaluate to nothing.
  *
  * \subsection PJ_TRY PJ_TRY
  * The \a PJ_TRY keyword is typically followed by a block. If an exception is
@@ -137,18 +151,16 @@ PJ_BEGIN_DECL
  * if the exception being thrown is equal to the expression specified in the
  * \a PJ_CATCH.
  *
- * \subsection PJ_DEFAULT PJ_DEFAULT
- * The \a PJ_DEFAULT keyword is normally followed by a block. This block will
- * be executed if the exception being thrown doesn't match any of the \a
- * PJ_CATCH specification. The \a PJ_DEFAULT block \b MUST be placed as the
- * last block of the handlers.
+ * \subsection PJ_CATCH_ANY PJ_CATCH_ANY
+ * The \a PJ_CATCH is normally followed by a block. This block will be executed
+ * if any exception was raised in the TRY block.
  *
  * \subsection PJ_END PJ_END
  * Specify this keyword to mark the end of \a PJ_TRY / \a PJ_CATCH blocks.
  *
  * \subsection PJ_GET_EXCEPTION PJ_GET_EXCEPTION(void)
  * Get the last exception thrown. This macro is normally called inside the
- * \a PJ_CATCH or \a PJ_DEFAULT block, altough it can be used anywhere where
+ * \a PJ_CATCH or \a PJ_CATCH_ANY block, altough it can be used anywhere where
  * the \a PJ_USE_EXCEPTION definition is in scope.
  *
  * 
@@ -199,6 +211,38 @@ PJ_DECL(const char*) pj_exception_id_name(pj_exception_id_t id);
 
 
 /** @} */
+
+#if defined(PJ_EXCEPTION_USE_WIN32_SEH) && PJ_EXCEPTION_USE_WIN32_SEH != 0
+/*****************************************************************************
+ **
+ ** IMPLEMENTATION OF EXCEPTION USING WINDOWS SEH
+ **
+ ****************************************************************************/
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+PJ_IDECL_NO_RETURN(void)
+pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN
+{
+    RaiseException(id,1,0,NULL);
+}
+
+#define PJ_USE_EXCEPTION    
+#define PJ_TRY		    __try
+#define PJ_CATCH(id)	    __except(GetExceptionCode()==id ? \
+				      EXCEPTION_EXECUTE_HANDLER : \
+				      EXCEPTION_CONTINUE_SEARCH)
+#define PJ_CATCH_ANY	    __except(EXCEPTION_EXECUTE_HANDLER)
+#define PJ_END		    
+#define PJ_THROW(id)	    pj_throw_exception_(id)
+#define PJ_GET_EXCEPTION()  GetExceptionCode()
+
+#else
+/*****************************************************************************
+ **
+ ** IMPLEMENTATION OF EXCEPTION USING GENERIC SETJMP/LONGJMP
+ **
+ ****************************************************************************/
 
 /**
  * This structure (which should be invisible to user) manages the TRY handler
@@ -252,7 +296,7 @@ PJ_DECL(void) pj_pop_exception_handler_(void);
  * Catch any exception number.
  * @hideinitializer
  */
-#define PJ_DEFAULT	    else
+#define PJ_CATCH_ANY	    else
 
 /**
  * End of exception specification block.
@@ -274,6 +318,9 @@ PJ_DECL(void) pj_pop_exception_handler_(void);
  * @hideinitializer
  */
 #define PJ_GET_EXCEPTION()	(pj_x_code__)
+
+#endif	/* PJ_EXCEPTION_USE_WIN32_SEH */
+
 
 PJ_END_DECL
 

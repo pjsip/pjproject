@@ -65,8 +65,8 @@ static int throw_id_2(void)
 
 static int test(void)
 {
-    PJ_USE_EXCEPTION;
     int rc = 0;
+    PJ_USE_EXCEPTION;
 
     /*
      * No exception situation.
@@ -74,10 +74,7 @@ static int test(void)
     PJ_TRY {
         rc = rc;
     }
-    PJ_CATCH( ID_1 ) {
-        rc = -2;
-    }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
         rc = -3;
     }
     PJ_END;
@@ -95,14 +92,13 @@ static int test(void)
 	// should not reach here.
 	rc = -10;
     }
-    PJ_CATCH( ID_1 ) {
-	if (!rc) rc = 0;
-    }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
-        PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
-                  id, pj_exception_id_name(id)));
-	if (!rc) rc = -20;
+	if (id != ID_1) {
+	    PJ_LOG(3,("", "...error: got unexpected exception %d (%s)", 
+		      id, pj_exception_id_name(id)));
+	    if (!rc) rc = -20;
+	}
     }
     PJ_END;
 
@@ -117,14 +113,16 @@ static int test(void)
 	// should not reach here.
 	rc = -25;
     }
-    PJ_CATCH( ID_1 ) {
-	if (!rc) rc = -30;
-    }
-    PJ_CATCH( ID_2 ) {
-	if (!rc) rc = 0;
-    }
-    PJ_DEFAULT {
-	if (!rc) rc = -40;
+    PJ_CATCH_ANY {
+	switch (PJ_GET_EXCEPTION()) {
+	case ID_1:
+	    if (!rc) rc = -30; break;
+	case ID_2:
+	    if (!rc) rc = 0; break;
+	default:
+	    if (!rc) rc = -40;
+	    break;
+	}
     }
     PJ_END;
 
@@ -139,11 +137,15 @@ static int test(void)
 	// should not reach here
 	rc = -50;
     }
-    PJ_CATCH( ID_2 ) {
-	if (!rc) rc = -60;
-    }
-    PJ_DEFAULT {
-	if (!rc) rc = 0;
+    PJ_CATCH_ANY {
+	switch (PJ_GET_EXCEPTION()) {
+	case ID_1:
+	    if (!rc) rc = 0;
+	    break;
+	default:
+	    if (!rc) rc = -60;
+	    break;
+	}
     }
     PJ_END;
 

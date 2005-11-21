@@ -35,6 +35,7 @@ static long thread_local_id = -1;
 #endif  /* PJ_HAS_EXCEPTION_NAMES */
 
 
+#if !defined(PJ_EXCEPTION_USE_WIN32_SEH) || PJ_EXCEPTION_USE_WIN32_SEH==0
 PJ_DEF(void) pj_throw_exception_(int exception_id)
 {
     struct pj_exception_state_t *handler;
@@ -69,6 +70,7 @@ PJ_DEF(void) pj_pop_exception_handler_(void)
     pj_assert(handler != NULL);
     pj_thread_local_set(thread_local_id, handler->prev);
 }
+#endif
 
 #if defined(PJ_HAS_EXCEPTION_NAMES) && PJ_HAS_EXCEPTION_NAMES != 0
 PJ_DEF(pj_status_t) pj_exception_id_alloc( const char *name,

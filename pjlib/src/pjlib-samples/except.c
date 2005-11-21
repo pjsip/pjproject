@@ -54,11 +54,7 @@ static int test_exception()
         free(data);
         randomly_throw_exception();
     }
-    PJ_CATCH( NO_MEMORY ) {
-        puts("Can't allocate memory");
-        return 0;
-    }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
         pj_exception_id_t x_id;
         
         x_id = PJ_GET_EXCEPTION();
