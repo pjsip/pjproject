@@ -322,7 +322,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	init_request_throw( endpt, tdata, &cseq->method, target, from, to, 
                             contact, call_id, cseq, param_text);
     }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	status = PJ_ENOMEM;
 	goto on_error;
     }
@@ -393,7 +393,7 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 	init_request_throw(endpt, tdata, &cseq->method, target, from, to, 
                            contact, call_id, cseq, param_text);
     }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	status = PJ_ENOMEM;
 	goto on_error;
     }

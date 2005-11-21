@@ -183,7 +183,7 @@ static unsigned long pj_strtoul_mindigit(const pj_str_t *str,
 }
 
 /* Case insensitive comparison */
-#define parser_stricmp(str1, str2)  pj_stricmp(&str1, &str2)
+#define parser_stricmp(s1, s2)  (pj_stricmp_alnum(&s1, &s2))
 
 
 /* Syntax error handler for parser. */
@@ -551,7 +551,7 @@ PJ_DEF(pjsip_msg*) pjsip_parse_msg( pj_pool_t *pool,
     PJ_TRY {
 	msg = int_parse_msg(&context, err_list);
     } 
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	msg = NULL;
     }
     PJ_END
@@ -580,7 +580,7 @@ PJ_DEF(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
     PJ_TRY {
 	rdata->msg_info.msg = int_parse_msg(&context, &rdata->msg_info.parse_err);
     } 
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	rdata->msg_info.msg = NULL;
     }
     PJ_END
@@ -656,7 +656,10 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
 		/* Found a valid Content-Length header. */
 		content_length = pj_strtoul(&str_clen);
-	    } 
+	    }
+	    PJ_CATCH_ANY {
+		content_length = -1;
+	    }
 	    PJ_END
 
 	    pj_scan_fini(&scanner);
@@ -691,9 +694,9 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
 					 char *buf, pj_size_t size,
 					 unsigned option)
 {
-    PJ_USE_EXCEPTION;
     pj_scanner scanner;
     pjsip_uri *uri = NULL;
+    PJ_USE_EXCEPTION;
 
     init_sip_parser();
 
@@ -702,6 +705,9 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
     
     PJ_TRY {
 	uri = int_parse_uri_or_name_addr(&scanner, pool, option);
+    }
+    PJ_CATCH_ANY {
+	uri = NULL;
     }
     PJ_END;
 
@@ -738,12 +744,12 @@ static int generic_print_body (pjsip_msg_body *msg_body,
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
 {
-    PJ_USE_EXCEPTION;
     int ch;
     pjsip_msg *msg;
     pjsip_ctype_hdr *ctype_hdr = NULL;
     pj_scanner *scanner = ctx->scanner;
     pj_pool_t *pool = ctx->pool;
+    PJ_USE_EXCEPTION;
 
     /* Skip leading newlines. */
     ch = *scanner->curptr;
@@ -800,7 +806,7 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 	    }
 
 	}
-	PJ_DEFAULT {
+	PJ_CATCH_ANY {
 	    /* Exception was thrown during parsing. 
 	     * Skip until newline, and parse next header. 
 	     */
@@ -815,7 +821,7 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 		pjsip_parser_err_report *err_info;
 		
 		err_info = pj_pool_alloc(pool, sizeof(*err_info));
-		err_info->exception_code = PJ_GET_EXCEPTION();
+		err_info->except_code = PJ_GET_EXCEPTION();
 		err_info->line = scanner->line;
 		err_info->col = scanner->col;
 		err_info->hname = hname;
@@ -1079,10 +1085,9 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
 				     pj_bool_t parse_params)
 {
     pj_str_t scheme;
-    pjsip_url *url;
+    pjsip_url *url = NULL;
     int colon;
     int skip_ws = scanner->skip_ws;
-    int hsep = '?';
     scanner->skip_ws = 0;
 
     pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &scheme);
@@ -1114,7 +1119,8 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
     int_parse_uri_host_port(scanner, &url->host, &url->port);
 
     /* Get URL parameters. */
-    while ( parse_params && *scanner->curptr == ';' ) {
+    if (parse_params) {
+      while (*scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
 	int_parse_param( scanner, pool, &pname, &pvalue);
@@ -1143,15 +1149,17 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
 	    p->value = pvalue;
 	    pj_list_insert_before(&url->other_param, p);
 	}
+      }
     }
 
     /* Get header params. */
-    while (parse_params && *scanner->curptr == hsep) {
+    if (parse_params && *scanner->curptr == '?') {
+      do {
 	pjsip_param *param;
 	param = pj_pool_alloc(pool, sizeof(pjsip_param));
 	int_parse_hparam(scanner, pool, &param->name, &param->value);
 	pj_list_insert_before(&url->header_param, param);
-	hsep = '&';
+      } while (*scanner->curptr == '&');
     }
 
     scanner->skip_ws = skip_ws;
@@ -1774,7 +1782,7 @@ PJ_DEF(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
 	}
 
     } 
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	hdr = NULL;
     }
     PJ_END

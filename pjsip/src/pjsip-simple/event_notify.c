@@ -336,7 +336,7 @@ PJ_DEF(pjsip_event_sub*) pjsip_event_sub_create( pjsip_endpoint *endpt,
 	pj_mutex_unlock( mgr.mutex );
 
     }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	PJ_LOG(4,(THIS_FILE, "event_sub%p (%s): caught exception %d during init", 
 			     sub, state[sub->state].ptr, PJ_GET_EXCEPTION()));
 

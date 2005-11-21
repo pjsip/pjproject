@@ -67,7 +67,7 @@ enum
 typedef struct pjsip_parser_err_report
 {
     PJ_DECL_LIST_MEMBER(struct pjsip_parser_err_report);
-    int		exception_code;	/**< Error exception (e.g. PJSIP_SYN_ERR_EXCEPTION) */
+    int		except_code;	/**< Error exception (e.g. PJSIP_SYN_ERR_EXCEPTION) */
     int		line;		/**< Line number. */
     int		col;		/**< Column number. */
     pj_str_t	hname;		/**< Header name, if any. */

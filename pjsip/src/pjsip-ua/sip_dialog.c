@@ -756,7 +756,7 @@ PJ_DEF(pjsip_tx_data*) pjsip_dlg_create_request( pjsip_dlg *dlg,
 	dlg_create_request_throw(&tdata, dlg, method, cseq);
 	PJ_LOG(5, (dlg->obj_name, "request data %s created", tdata->obj_name));
     }
-    PJ_DEFAULT {
+    PJ_CATCH_ANY {
 	/* Failed! Delete transmit data. */
 	if (tdata) {
 	    pjsip_tx_data_dec_ref( tdata );

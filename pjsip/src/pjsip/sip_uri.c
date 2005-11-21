@@ -46,7 +46,7 @@ PJ_DEF(const pjsip_param*) pjsip_param_cfind( const pjsip_param *param_list,
 {
     const pjsip_param *p = param_list->next;
     while (p != param_list) {
-	if (pj_stricmp(&p->name, name)==0)
+	if (pj_stricmp_alnum(&p->name, name)==0)
 	    return p;
 	p = p->next;
     }
