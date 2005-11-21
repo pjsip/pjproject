@@ -922,6 +922,24 @@ PJ_DECL(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
                                       const pj_timestamp *stop );
 
 /**
+ * Calculate the elapsed time as 32-bit miliseconds.
+ * This function calculates the elapsed time using highest precision
+ * calculation that is available for current platform, considering
+ * whether floating point or 64-bit precision arithmetic is available. 
+ * For maximum portability, application should prefer to use this function
+ * rather than calculating the elapsed time by itself.
+ *
+ * @param start     The starting timestamp.
+ * @param stop      The end timestamp.
+ *
+ * @return	    Elapsed time in milisecond.
+ *
+ * @see pj_elapsed_time(), pj_elapsed_cycle(), pj_elapsed_nanosec()
+ */
+PJ_DECL(pj_uint32_t) pj_elapsed_msec( const pj_timestamp *start,
+                                      const pj_timestamp *stop );
+
+/**
  * Calculate the elapsed time in 32-bit microseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering

@@ -97,6 +97,7 @@
 #   undef PJ_HAS_SEMAPHORE
 #   undef PJ_HAS_EVENT_OBJ
 #   undef PJ_ENABLE_EXTRA_CHECK
+#   undef PJ_EXCEPTION_USE_WIN32_SEH
 #endif
 
 /**
@@ -319,6 +320,27 @@
 #   define PJ_MAX_EXCEPTION_ID      16
 #endif
 
+/**
+ * Should we use Windows Structured Exception Handling (SEH) for the
+ * PJLIB exceptions.
+ *
+ * Default: 0
+ */
+#ifndef PJ_EXCEPTION_USE_WIN32_SEH
+#  define PJ_EXCEPTION_USE_WIN32_SEH 0
+#endif
+
+/**
+ * Should we attempt to use Pentium's rdtsc for high resolution
+ * timestamp.
+ *
+ * Default: 0
+ */
+#ifndef PJ_TIMESTAMP_USE_RDTSC
+#   define PJ_TIMESTAMP_USE_RDTSC   0
+#endif
+
+
 /** @} */
 
 /********************************************************************
@@ -353,11 +375,13 @@
 #ifdef __cplusplus
 #  define PJ_DECL(type)		    type
 #  define PJ_DECL_NO_RETURN(type)   type PJ_NORETURN
+#  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
 #  define PJ_BEGIN_DECL		    extern "C" {
 #  define PJ_END_DECL		    }
 #else
 #  define PJ_DECL(type)		    extern type
 #  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN type
+#  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
 #  define PJ_BEGIN_DECL
 #  define PJ_END_DECL
 #endif

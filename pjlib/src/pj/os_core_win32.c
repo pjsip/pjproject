@@ -161,8 +161,10 @@ PJ_DEF(pj_status_t) pj_init(void)
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
     {
 	pj_timestamp dummy_ts;
+	if ((rc=pj_get_timestamp_freq(&dummy_ts)) != PJ_SUCCESS) {
+	    return rc;
+	}
 	if ((rc=pj_get_timestamp(&dummy_ts)) != PJ_SUCCESS) {
-	    PJ_LOG(1, ("pj_init", "Unable to initialize timestamp"));
 	    return rc;
 	}
     }

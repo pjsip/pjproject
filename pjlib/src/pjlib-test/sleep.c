@@ -124,8 +124,9 @@ static int sleep_duration_test(void)
     {
 	pj_time_val t1, t2;
         pj_timestamp start, stop;
-        pj_time_val elapsed;
 	pj_uint32_t msec;
+
+	pj_thread_sleep(0);
 
         /* Mark start of test. */
         rc = pj_get_timestamp(&start);
@@ -156,10 +157,8 @@ static int sleep_duration_test(void)
 	    return -75;
 	}
 
-        /* Get elapsed time in time_val */
-        elapsed = pj_elapsed_time(&start, &stop);
-
-	msec = PJ_TIME_VAL_MSEC(elapsed);
+        /* Get elapsed time in msec */
+        msec = pj_elapsed_msec(&start, &stop);
 
 	/* Check if it's within range. */
 	if (msec < DURATION2 * (100-MIS)/100 ||
@@ -169,7 +168,13 @@ static int sleep_duration_test(void)
 		      "...error: slept for %d ms instead of %d ms "
 		      "(outside %d%% err window)",
 		      msec, DURATION2, MIS));
-	    return -30;
+	    PJ_TIME_VAL_SUB(t2, t1);
+	    PJ_LOG(3,(THIS_FILE, 
+		      "...info: gettimeofday() reported duration is "
+		      "%d msec",
+		      PJ_TIME_VAL_MSEC(t2)));
+
+	    return -76;
 	}
     }
 

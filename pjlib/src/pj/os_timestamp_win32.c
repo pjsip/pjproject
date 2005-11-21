@@ -20,6 +20,75 @@
 #include <pj/errno.h>
 #include <windows.h>
 
+#if defined(PJ_TIMESTAMP_USE_RDTSC) && PJ_TIMESTAMP_USE_RDTSC!=0 && \
+    defined(PJ_M_I386) && PJ_M_I386 != 0 && \
+    defined(_MSC_VER)
+/*
+ * Use rdtsc to get the OS timestamp.
+ */
+static LONG CpuMhz;
+static pj_int64_t CpuHz;
+ 
+static pj_status_t GetCpuHz(void)
+{
+    HKEY key;
+    LONG rc;
+    DWORD size;
+
+    rc = RegOpenKey( HKEY_LOCAL_MACHINE,
+		     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+		     &key);
+    if (rc != ERROR_SUCCESS)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    size = sizeof(CpuMhz);
+    rc = RegQueryValueEx(key, "~MHz", NULL, NULL, (BYTE*)&CpuMhz, &size);
+    RegCloseKey(key);
+
+    if (rc != ERROR_SUCCESS) {
+	return PJ_RETURN_OS_ERROR(rc);
+    }
+
+    CpuHz = CpuMhz;
+    CpuHz = CpuHz * 1000000;
+
+    return PJ_SUCCESS;
+}
+
+/* __int64 is nicely returned in EDX:EAX */
+__declspec(naked) __int64 rdtsc() 
+{
+    __asm 
+    {
+	RDTSC
+	RET
+    }
+}
+
+PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
+{
+    ts->u64 = rdtsc();
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
+{
+    pj_status_t status;
+
+    if (CpuHz == 0) {
+	status = GetCpuHz();
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    freq->u64 = CpuHz;
+    return PJ_SUCCESS;
+}
+
+#else
+/*
+ * Use QueryPerformanceCounter and QueryPerformanceFrequency.
+ */
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     LARGE_INTEGER val;
@@ -41,4 +110,6 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
     freq->u64 = val.QuadPart;
     return PJ_SUCCESS;
 }
+
+#endif	/* PJ_TIMESTAMP_USE_RDTSC */
 
