@@ -336,7 +336,7 @@ enum
     PJSIP_PARSE_REMOVE_QUOTE = 1,
 };
 
-void pjsip_parse_param_imp(  pj_scanner *scanner,
+void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
 			     unsigned opt);
 void pjsip_concat_param_imp( pj_str_t *param, pj_pool_t *pool, 

@@ -22,6 +22,7 @@
 #include <pj/assert.h>
 #include <pj/string.h>
 #include <pj/except.h>
+#include <pj/pool.h>
 
 static pjsip_hdr* parse_hdr_authorization       ( pjsip_parse_ctx *ctx );
 static pjsip_hdr* parse_hdr_proxy_authorization ( pjsip_parse_ctx *ctx );
@@ -66,10 +67,13 @@ const pj_str_t	pjsip_USERNAME_STR =	    { "username", 8 },
 static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool, 
                                      pjsip_digest_credential *cred)
 {
+    pj_list_init(&cred->other_param);
+
     for (;;) {
 	pj_str_t name, value;
 
-	pjsip_parse_param_imp(scanner, &name, &value,PJSIP_PARSE_REMOVE_QUOTE);
+	pjsip_parse_param_imp(scanner, pool, &name, &value,
+			      PJSIP_PARSE_REMOVE_QUOTE);
 
 	if (!pj_stricmp(&name, &pjsip_USERNAME_STR)) {
 	    cred->username = value;
@@ -102,7 +106,10 @@ static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool,
 	    cred->nc = value;
 
 	} else {
-	    pjsip_concat_param_imp(&cred->other_param,pool,&name,&value, ',');
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = name;
+	    p->value = value;
+	    pj_list_insert_before(&cred->other_param, p);
 	}
 
 	/* Eat comma */
@@ -126,10 +133,13 @@ static void parse_pgp_credential( pj_scanner *scanner, pj_pool_t *pool,
 static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool, 
                                     pjsip_digest_challenge *chal)
 {
+    pj_list_init(&chal->other_param);
+
     for (;;) {
 	pj_str_t name, value;
 
-	pjsip_parse_param_imp(scanner, &name, &value,PJSIP_PARSE_REMOVE_QUOTE);
+	pjsip_parse_param_imp(scanner, pool, &name, &value,
+			      PJSIP_PARSE_REMOVE_QUOTE);
 
 	if (!pj_stricmp(&name, &pjsip_REALM_STR)) {
 	    chal->realm = value;
@@ -158,8 +168,10 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool,
 	    chal->qop = value;
 
 	} else {
-	    pjsip_concat_param_imp(&chal->other_param, pool, 
-                                   &name, &value, ',');
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = name;
+	    p->value = value;
+	    pj_list_insert_before(&chal->other_param, p);
 	}
 
 	/* Eat comma */

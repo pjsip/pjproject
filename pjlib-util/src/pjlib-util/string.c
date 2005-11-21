@@ -1,4 +1,4 @@
-/* $Id: $ */
+/* $Id$ */
 /* 
  * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
  *
@@ -18,13 +18,21 @@
  */
 #include <pjlib-util/string.h>
 #include <pj/ctype.h>
+#include <pj/string.h>
+#include <pj/pool.h>
 
-PJ_DEF(void) pj_str_unescape(pj_str_t *str)
+PJ_DEF(pj_str_t) pj_str_unescape( pj_pool_t *pool, const pj_str_t *src_str)
 {
-    char *src = str->ptr;
-    char *dst = str->ptr;
-    char *end = src + str->slen;
+    char *src = src_str->ptr;
+    char *end = src + src_str->slen;
+    pj_str_t dst_str;
+    char *dst;
     
+    if (pj_strchr(src_str, '%')==NULL)
+	return *src_str;
+
+    dst = dst_str.ptr = pj_pool_alloc(pool, src_str->slen);
+
     while (src != end) {
 	if (*src == '%' && src < end-2) {
 	    *dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(src+1)) << 4) + 
@@ -32,11 +40,11 @@ PJ_DEF(void) pj_str_unescape(pj_str_t *str)
 	    ++dst;
 	    src += 3;
 	} else {
-	    ++src;
-	    ++dst;
+	    *dst++ = *src++;
 	}
     }
-    str->slen = dst - str->ptr;
+    dst_str.slen = dst - dst_str.ptr;
+    return dst_str;
 }
 
 PJ_DEF(pj_str_t*) pj_strcpy_unescape(pj_str_t *dst_str,

@@ -86,6 +86,31 @@ PJ_DECL(void) pjsip_param_clone(pj_pool_t *pool, pjsip_param *dst_list,
 				const pjsip_param *src_list);
 
 /**
+ * Duplicate the parameters.
+ *
+ * @param pool		Pool to allocate memory from.
+ * @param dst_list	Destination list.
+ * @param src_list	Source list.
+ */
+PJ_DECL(void) pjsip_param_shallow_clone(pj_pool_t *pool, 
+					pjsip_param *dst_list,
+					const pjsip_param *src_list);
+
+/**
+ * Print parameters.
+ *
+ * @param param_list	The parameter list.
+ * @param buf		Buffer.
+ * @param size		Size of buffer.
+ * @param sep		Separator character (either ';' or ',').
+ *
+ * @return		The number of bytes printed, or -1 on errr.
+ */
+PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
+					 char *buf, pj_size_t size,
+					 int sep);
+
+/**
  * URI context.
  */
 typedef enum pjsip_uri_context_e

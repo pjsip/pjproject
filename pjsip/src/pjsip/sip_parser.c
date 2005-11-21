@@ -113,9 +113,11 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 static pjsip_msg *  int_parse_msg( pjsip_parse_ctx *ctx, 
 				   pjsip_parser_err_report *err_list);
 static void	    int_parse_param( pj_scanner *scanner, 
+				     pj_pool_t *pool,
 				     pj_str_t *pname, 
 				     pj_str_t *pvalue);
 static void	    int_parse_hparam( pj_scanner *scanner,
+				      pj_pool_t *pool,
 				      pj_str_t *hname,
 				      pj_str_t *hvalue );
 static void         int_parse_req_line( pj_scanner *scanner, 
@@ -125,6 +127,7 @@ static int          int_is_next_user( pj_scanner *scanner);
 static void	    int_parse_status_line( pj_scanner *scanner, 
 					   pjsip_status_line *line);
 static void	    int_parse_user_pass( pj_scanner *scanner, 
+					 pj_pool_t *pool,
 					 pj_str_t *user, 
 					 pj_str_t *pass);
 static void	    int_parse_uri_host_port( pj_scanner *scanner, 
@@ -286,11 +289,11 @@ static pj_status_t init_parser()
 
     status = pj_cis_dup(&pjsip_USER_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_USER_SPEC, ESCAPED USER_UNRESERVED );
+    pj_cis_add_str( &pjsip_USER_SPEC, UNRESERVED ESCAPED USER_UNRESERVED );
 
     status = pj_cis_dup(&pjsip_PASSWD_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_PASSWD_SPEC, MARK ESCAPED PASS);
+    pj_cis_add_str( &pjsip_PASSWD_SPEC, UNRESERVED ESCAPED PASS);
 
     status = pj_cis_init(&cis_buf, &pjsip_PROBE_USER_HOST_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -865,13 +868,13 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 }
 
 /* Parse parameter (pname ["=" pvalue]). */
-void pjsip_parse_param_imp(  pj_scanner *scanner,
+void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
 			     unsigned option)
 {
     /* pname */
     pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pname);
-    pj_str_unescape(pname);
+    *pname = pj_str_unescape(pool, pname);
 
     /* pvalue, if any */
     if (*scanner->curptr == '=') {
@@ -885,7 +888,7 @@ void pjsip_parse_param_imp(  pj_scanner *scanner,
 	    }
 	} else {
 	    pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pvalue);
-	    pj_str_unescape(pvalue);
+	    *pvalue = pj_str_unescape(pool, pvalue);
 	}
     } else {
 	pvalue->ptr = NULL;
@@ -894,18 +897,19 @@ void pjsip_parse_param_imp(  pj_scanner *scanner,
 }
 
 /* Parse parameter (";" pname ["=" pvalue]). */
-static void int_parse_param( pj_scanner *scanner,
+static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue)
 {
     /* Get ';' character */
     pj_scan_get_char(scanner);
 
     /* Get pname and optionally pvalue */
-    pjsip_parse_param_imp(scanner, pname, pvalue, 0);
+    pjsip_parse_param_imp(scanner, pool, pname, pvalue, 
+			  PJSIP_PARSE_REMOVE_QUOTE);
 }
 
 /* Parse header parameter. */
-static void int_parse_hparam( pj_scanner *scanner,
+static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
 			      pj_str_t *hname, pj_str_t *hvalue )
 {
     /* Get '?' or '&' character. */
@@ -913,13 +917,13 @@ static void int_parse_hparam( pj_scanner *scanner,
 
     /* hname */
     pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hname);
-    pj_str_unescape(hname);
+    *hname = pj_str_unescape(pool, hname);
 
     /* pvalue, if any */
     if (*scanner->curptr == '=') {
 	pj_scan_get_char(scanner);
 	pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hvalue);
-	pj_str_unescape(hvalue);
+	*hvalue = pj_str_unescape(pool, hvalue);
     } else {
 	hvalue->ptr = NULL;
 	hvalue->slen = 0;
@@ -936,7 +940,6 @@ static void int_parse_uri_host_port( pj_scanner *scanner,
 	pj_str_t port;
 	pj_scan_get_char(scanner);
 	pj_scan_get(scanner, &pjsip_DIGIT_SPEC, &port);
-	pj_str_unescape(&port);
 	*p_port = pj_strtoul(&port);
     } else {
 	*p_port = 0;
@@ -961,16 +964,16 @@ static int int_is_next_user(pj_scanner *scanner)
 }
 
 /* Parse user:pass tokens in an URI. */
-static void int_parse_user_pass( pj_scanner *scanner, 
+static void int_parse_user_pass( pj_scanner *scanner, pj_pool_t *pool,
 				 pj_str_t *user, pj_str_t *pass)
 {
     pj_scan_get( scanner, &pjsip_USER_SPEC, user);
-    pj_str_unescape(user);
+    *user = pj_str_unescape(pool, user);
 
     if ( *scanner->curptr == ':') {
 	pj_scan_get_char( scanner );
 	pj_scan_get( scanner, &pjsip_PASSWD_SPEC, pass);
-	pj_str_unescape(pass);
+	*pass = pj_str_unescape(pool, pass);
     } else {
 	pass->ptr = NULL;
 	pass->slen = 0;
@@ -1104,7 +1107,7 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
     }
 
     if (int_is_next_user(scanner)) {
-	int_parse_user_pass(scanner, &url->user, &url->passwd);
+	int_parse_user_pass(scanner, pool, &url->user, &url->passwd);
     }
 
     /* Get host:port */
@@ -1114,7 +1117,7 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
     while ( parse_params && *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, &pname, &pvalue);
+	int_parse_param( scanner, pool, &pname, &pvalue);
 
 	if (!parser_stricmp(pname, pjsip_USER_STR) && pvalue.slen) {
 	    url->user_param = pvalue;
@@ -1146,7 +1149,7 @@ static pjsip_url *int_parse_sip_url( pj_scanner *scanner,
     while (parse_params && *scanner->curptr == hsep) {
 	pjsip_param *param;
 	param = pj_pool_alloc(pool, sizeof(pjsip_param));
-	int_parse_hparam(scanner, &param->name, &param->value);
+	int_parse_hparam(scanner, pool, &param->name, &param->value);
 	pj_list_insert_before(&url->header_param, param);
 	hsep = '&';
     }
@@ -1167,6 +1170,9 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
 
     if (*scanner->curptr == '"') {
 	pj_scan_get_quote( scanner, '"', '"', &name_addr->display);
+	/* Trim the leading and ending quote */
+	name_addr->display.ptr++;
+	name_addr->display.slen -= 2;
 
     } else if (*scanner->curptr != '<') {
 	int next;
@@ -1323,7 +1329,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, &pname, &pvalue);
+	int_parse_param( scanner, pool, &pname, &pvalue);
 	if (!parser_stricmp(pname, pjsip_Q_STR) && pvalue.slen) {
 	    char *dot_pos = memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
@@ -1337,7 +1343,10 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	    hdr->expires = pj_strtoul(&pvalue);
 
 	} else {
-	    concat_param(&hdr->other_param, pool, &pname, &pvalue);
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = pname;
+	    p->value = pvalue;
+	    pj_list_insert_before(&hdr->other_param, p);
 	}
     }
 }
@@ -1412,7 +1421,7 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
     /* Parse media parameters */
     while (*scanner->curptr == ';') {
 	pj_str_t pname, pvalue;
-	int_parse_param(scanner, &pname, &pvalue);
+	int_parse_param(scanner, ctx->pool, &pname, &pvalue);
 	concat_param(&hdr->media.param, ctx->pool, &pname, &pvalue);
     }
 
@@ -1465,13 +1474,16 @@ static void parse_hdr_fromto( pj_scanner *scanner,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, &pname, &pvalue);
+	int_parse_param( scanner, pool, &pname, &pvalue);
 
 	if (!parser_stricmp(pname, pjsip_TAG_STR)) {
 	    hdr->tag = pvalue;
 	    
 	} else {
-	    concat_param(&hdr->other_param, pool, &pname, &pvalue);
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = pname;
+	    p->value = pvalue;
+	    pj_list_insert_before(&hdr->other_param, p);
 	}
     }
 
@@ -1546,7 +1558,7 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, &pname, &pvalue);
+	int_parse_param( scanner, pool, &pname, &pvalue);
 
 	if (!parser_stricmp(pname, pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
@@ -1566,10 +1578,12 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	    else
 		hdr->rport_param = 0;
 	} else {
-	    concat_param( &hdr->other_param, pool, &pname, &pvalue);
+	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    p->name = pname;
+	    p->value = pvalue;
+	    pj_list_insert_before(&hdr->other_param, p);
 	}
     }
-
 }
 
 /* Parse Max-Forwards header. */
@@ -1602,9 +1616,11 @@ static void parse_hdr_rr_route( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_name_addr *temp=int_parse_name_addr(scanner, pool);
 
     pj_memcpy(&hdr->name_addr, temp, sizeof(*temp));
-    if (*scanner->curptr == ';') {
-	pj_scan_get_until(scanner, &pjsip_NEWLINE_OR_EOF_SPEC, 
-                          &hdr->other_param);
+
+    while (*scanner->curptr == ';') {
+	pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	int_parse_param(scanner, pool, &p->name, &p->value);
+	pj_list_insert_before(&hdr->other_param, p);
     }
 }
 

@@ -47,6 +47,7 @@ PJ_DEF(pjsip_authorization_hdr*) pjsip_authorization_hdr_create(pj_pool_t *pool)
 {
     pjsip_authorization_hdr *hdr = pj_pool_calloc(pool, 1, sizeof(*hdr));
     init_hdr(hdr, PJSIP_H_AUTHORIZATION, &authorization_hdr_vptr);
+    pj_list_init(&hdr->credential.common.other_param);
     return hdr;
 }
 
@@ -54,6 +55,7 @@ PJ_DEF(pjsip_proxy_authorization_hdr*) pjsip_proxy_authorization_hdr_create(pj_p
 {
     pjsip_proxy_authorization_hdr *hdr = pj_pool_calloc(pool, 1, sizeof(*hdr));
     init_hdr(hdr, PJSIP_H_PROXY_AUTHORIZATION, &authorization_hdr_vptr);
+    pj_list_init(&hdr->credential.common.other_param);
     return hdr;
 }
 
@@ -76,7 +78,11 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     //copy_advance_pair_quote_cond(buf, ", qop=", 6, cred->qop, '"', '"');
     copy_advance_pair(buf, ", qop=", 6, cred->qop);
     copy_advance_pair(buf, ", nc=", 5, cred->nc);
-    copy_advance(buf, cred->other_param);
+    
+    printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf, ',');
+    if (printed < 0)
+	return -1;
+    buf += printed;
 
     return (int) (buf-startbuf);
 }
@@ -147,7 +153,7 @@ static pjsip_authorization_hdr* pjsip_authorization_hdr_clone(  pj_pool_t *pool,
 	pj_strdup(pool, &hdr->credential.digest.opaque, &rhs->credential.digest.opaque);
 	pj_strdup(pool, &hdr->credential.digest.qop, &rhs->credential.digest.qop);
 	pj_strdup(pool, &hdr->credential.digest.nc, &rhs->credential.digest.nc);
-	pj_strdup(pool, &hdr->credential.digest.other_param, &rhs->credential.digest.other_param);
+	pjsip_param_clone(pool, &hdr->credential.digest.other_param, &rhs->credential.digest.other_param);
     } else if (pj_stricmp2(&hdr->scheme, "pgp") == 0) {
 	pj_assert(0);
 	return NULL;
@@ -165,6 +171,8 @@ static pjsip_authorization_hdr* pjsip_authorization_hdr_shallow_clone( pj_pool_t
     /* This function also serves Proxy-Authorization header. */
     pjsip_authorization_hdr *hdr = pj_pool_alloc(pool, sizeof(*hdr));
     pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_param_shallow_clone(pool, &hdr->credential.common.other_param, 
+			      &rhs->credential.common.other_param);
     return hdr;
 }
 
@@ -192,6 +200,7 @@ PJ_DEF(pjsip_www_authenticate_hdr*) pjsip_www_authenticate_hdr_create(pj_pool_t 
 {
     pjsip_www_authenticate_hdr *hdr = pj_pool_calloc(pool, 1, sizeof(*hdr));
     init_hdr(hdr, PJSIP_H_WWW_AUTHENTICATE, &www_authenticate_hdr_vptr);
+    pj_list_init(&hdr->challenge.common.other_param);
     return hdr;
 }
 
@@ -200,6 +209,7 @@ PJ_DEF(pjsip_proxy_authenticate_hdr*) pjsip_proxy_authenticate_hdr_create(pj_poo
 {
     pjsip_proxy_authenticate_hdr *hdr = pj_pool_calloc(pool, 1, sizeof(*hdr));
     init_hdr(hdr, PJSIP_H_PROXY_AUTHENTICATE, &www_authenticate_hdr_vptr);
+    pj_list_init(&hdr->challenge.common.other_param);
     return hdr;
 }
 
@@ -220,7 +230,11 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     }
     copy_advance_pair(buf, ",algorithm=", 11, chal->algorithm);
     copy_advance_pair_quote_cond(buf, ",qop=", 5, chal->qop, '"', '"');
-    copy_advance(buf, chal->other_param);
+    
+    printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf, ',');
+    if (printed < 0)
+	return -1;
+    buf += printed;
 
     return (int)(buf-startbuf);
 }
@@ -285,7 +299,8 @@ static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_clone( pj_pool_t *
 	hdr->challenge.digest.stale = rhs->challenge.digest.stale;
 	pj_strdup(pool, &hdr->challenge.digest.algorithm, &rhs->challenge.digest.algorithm);
 	pj_strdup(pool, &hdr->challenge.digest.qop, &rhs->challenge.digest.qop);
-	pj_strdup(pool, &hdr->challenge.digest.other_param, &rhs->challenge.digest.other_param);
+	pjsip_param_clone(pool, &hdr->challenge.digest.other_param, 
+			  &rhs->challenge.digest.other_param);
     } else if (pj_stricmp2(&hdr->scheme, "pgp") == 0) {
 	pj_assert(0);
 	return NULL;
@@ -304,6 +319,8 @@ static pjsip_www_authenticate_hdr* pjsip_www_authenticate_hdr_shallow_clone( pj_
     /* This function also serves Proxy-Authenticate header. */
     pjsip_www_authenticate_hdr *hdr = pj_pool_alloc(pool, sizeof(*hdr));
     pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_param_shallow_clone(pool, &hdr->challenge.common.other_param, 
+			      &rhs->challenge.common.other_param);
     return hdr;
 }
 

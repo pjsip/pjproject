@@ -68,6 +68,44 @@ PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
     }
 }
 
+
+PJ_DEF(void) pjsip_param_shallow_clone( pj_pool_t *pool, 
+					pjsip_param *dst_list,
+					const pjsip_param *src_list)
+{
+    const pjsip_param *p = src_list->next;
+
+    pj_list_init(dst_list);
+    while (p != src_list) {
+	pjsip_param *new_param = pj_pool_alloc(pool, sizeof(pjsip_param));
+	new_param->name = p->name;
+	new_param->value = p->value;
+	pj_list_insert_before(dst_list, new_param);
+	p = p->next;
+    }
+}
+
+PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
+					 char *buf, pj_size_t size,
+					 int sep)
+{
+    const pjsip_param *p = param_list->next;
+    char *startbuf = buf;
+    char *endbuf = buf + size;
+
+    while (p != param_list) {
+	*buf++ = (char)sep;
+	copy_advance_escape(buf, p->name, pjsip_PARAM_CHAR_SPEC);
+	if (p->value.slen) {
+	    *buf++ = '=';
+	    copy_advance_escape(buf, p->value, pjsip_PARAM_CHAR_SPEC);
+	}
+	p = p->next;
+    }
+    return buf-startbuf;
+}
+
+
 /*
  * URI stuffs
  */
@@ -254,16 +292,10 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
     }
 
     /* Other param. */
-    param = url->other_param.next;
-    while (param != &url->other_param) {
-	*buf++ = ';';
-	copy_advance_escape(buf, param->name, pjsip_PARAM_CHAR_SPEC);
-	if (param->value.slen) {
-	    *buf++ = '=';
-	    copy_advance_escape(buf, param->value, pjsip_PARAM_CHAR_SPEC);
-	}
-	param = param->next;
-    }
+    printed = pjsip_param_print_on(&url->other_param, buf, endbuf-buf, ';');
+    if (printed < 0)
+	return -1;
+    buf += printed;
 
     /* Header param. */
     param = url->header_param.next;
@@ -472,8 +504,11 @@ static int pjsip_name_addr_print( pjsip_uri_context_e context,
     pj_assert(name->uri != NULL);
 
     if (context != PJSIP_URI_IN_REQ_URI) {
-	copy_advance(buf, name->display);
 	if (name->display.slen) {
+	    if (endbuf-buf < 8) return -1;
+	    *buf++ = '"';
+	    copy_advance(buf, name->display);
+	    *buf++ = '"';
 	    *buf++ = ' ';
 	}
 	*buf++ = '<';

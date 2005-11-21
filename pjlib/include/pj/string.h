@@ -398,7 +398,7 @@ PJ_IDECL(void) pj_strcat(pj_str_t *dst, const pj_str_t *src);
  *
  * @return the pointer to first character found, or NULL.
  */
-PJ_INLINE(char*) pj_strchr( pj_str_t *str, int chr)
+PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 {
     return (char*) memchr(str->ptr, chr, str->slen);
 }

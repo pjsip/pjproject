@@ -994,10 +994,10 @@ typedef struct pjsip_contact_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_contact_hdr);
     int		    star;	    /**< The contact contains only a '*' character */
-    pjsip_uri *uri;	    /**< URI in the contact. */
+    pjsip_uri	   *uri;	    /**< URI in the contact. */
     int		    q1000;	    /**< The "q" value times 1000 (to avoid float) */
     pj_int32_t	    expires;	    /**< Expires parameter, otherwise -1 if not present. */
-    pj_str_t	    other_param;    /**< Other parameters, concatenated in a single string. */
+    pjsip_param	    other_param;    /**< Other parameters, concatenated in a single string. */
 } pjsip_contact_hdr;
 
 
@@ -1077,9 +1077,9 @@ PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool );
 typedef struct pjsip_fromto_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_fromto_hdr);
-    pjsip_uri  *uri;	    /**< URI in From/To header. */
+    pjsip_uri	    *uri;	    /**< URI in From/To header. */
     pj_str_t	     tag;	    /**< Header "tag" parameter. */
-    pj_str_t	     other_param;   /**< Other params, concatenated as a single string. */
+    pjsip_param	     other_param;   /**< Other params, concatenated as a single string. */
 } pjsip_fromto_hdr;
 
 /** Alias for From header. */
@@ -1187,7 +1187,7 @@ typedef struct pjsip_routing_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_routing_hdr);  /**< Generic header fields. */
     pjsip_name_addr  name_addr;	  /**< The URL in the Route/Record-Route header. */
-    pj_str_t	     other_param; /** Other parameter. */
+    pjsip_param	     other_param; /** Other parameter. */
 } pjsip_routing_hdr;
 
 /** Alias for Record-Route header. */
@@ -1351,7 +1351,7 @@ typedef struct pjsip_via_hdr
     pj_str_t	     maddr_param;   /**< "maddr" parameter. */
     pj_str_t	     recvd_param;   /**< "received" parameter. */
     pj_str_t	     branch_param;  /**< "branch" parameter. */
-    pj_str_t	     other_param;   /**< Other parameters, concatenated as single string. */
+    pjsip_param	     other_param;   /**< Other parameters, concatenated as single string. */
     pj_str_t	     comment;	    /**< Comment. */
 } pjsip_via_hdr;
 

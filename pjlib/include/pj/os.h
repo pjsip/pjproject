@@ -866,6 +866,44 @@ PJ_DECL(pj_status_t) pj_get_timestamp(pj_timestamp *ts);
 PJ_DECL(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq);
 
 /**
+ * Add timestamp t2 to t1.
+ * @param t1	    t1.
+ * @param t2	    t2.
+ */
+PJ_INLINE(void) pj_add_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
+{
+#if PJ_HAS_INT64
+    t1->u64 += t2->u64;
+#else
+    pj_uint32_t old = t1->u32.lo;
+    t1->u32.hi += t2->u32.hi;
+    t1->u32.lo += t2->u32.lo;
+    if (t1->u32.lo < old)
+	++t1->u32.hi;
+#endif
+}
+
+/**
+ * Substract timestamp t2 from t1.
+ * @param t1	    t1.
+ * @param t2	    t2.
+ */
+PJ_INLINE(void) pj_sub_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
+{
+#if PJ_HAS_INT64
+    t1->u64 -= t2->u64;
+#else
+    t1->u32.hi -= t2->u32.hi;
+    if (t1->u32.lo >= t2->u32.lo)
+	t1->u32.lo -= t2->u32.lo;
+    else {
+	t1->u32.lo -= t2->u32.lo;
+	--t1->u32.hi;
+    }
+#endif
+}
+
+/**
  * Calculate the elapsed time, and store it in pj_time_val.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering

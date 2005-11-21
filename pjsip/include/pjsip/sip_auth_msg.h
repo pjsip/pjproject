@@ -36,6 +36,7 @@ PJ_BEGIN_DECL
 struct pjsip_common_credential
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
 };
 
 typedef struct pjsip_common_credential pjsip_common_credential;
@@ -48,6 +49,7 @@ typedef struct pjsip_common_credential pjsip_common_credential;
 struct pjsip_digest_credential
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
     pj_str_t	username;
     pj_str_t	nonce;
     pj_str_t	uri;
@@ -57,7 +59,6 @@ struct pjsip_digest_credential
     pj_str_t	opaque;
     pj_str_t	qop;
     pj_str_t	nc;
-    pj_str_t	other_param;
 };
 
 typedef struct pjsip_digest_credential pjsip_digest_credential;
@@ -69,6 +70,7 @@ typedef struct pjsip_digest_credential pjsip_digest_credential;
 struct pjsip_pgp_credential
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
     pj_str_t	version;
     pj_str_t	signature;
     pj_str_t	signed_by;
@@ -129,6 +131,7 @@ PJ_DECL(pjsip_proxy_authorization_hdr*) pjsip_proxy_authorization_hdr_create(pj_
 struct pjsip_common_challenge
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
 };
 
 typedef struct pjsip_common_challenge pjsip_common_challenge;
@@ -140,13 +143,13 @@ typedef struct pjsip_common_challenge pjsip_common_challenge;
 struct pjsip_digest_challenge
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
     pj_str_t	domain;
     pj_str_t	nonce;
     pj_str_t	opaque;
     int		stale;
     pj_str_t	algorithm;
     pj_str_t	qop;
-    pj_str_t	other_param;
 };
 
 typedef struct pjsip_digest_challenge pjsip_digest_challenge;
@@ -158,6 +161,7 @@ typedef struct pjsip_digest_challenge pjsip_digest_challenge;
 struct pjsip_pgp_challenge
 {
     pj_str_t	realm;
+    pjsip_param	other_param;
     pj_str_t	version;
     pj_str_t	micalgorithm;
     pj_str_t	pubalgorithm;

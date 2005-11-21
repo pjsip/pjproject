@@ -1,4 +1,4 @@
-/* $Id: $ */
+/* $Id$ */
 /* 
  * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
  *
@@ -30,11 +30,16 @@
 PJ_BEGIN_DECL
 
 /**
- * Unescape string.
+ * Unescape string. If source string does not contain any escaped
+ * characters, the function would simply return the original string.
+ * Otherwise a new string will be allocated.
  *
- * @param str	    The string to unescape.
+ * @param pool	    Pool to allocate the string.
+ * @param src	    Source string to unescape.
+ *
+ * @return	    String with no escaped characters.
  */
-PJ_DECL(void) pj_str_unescape(pj_str_t *str);
+PJ_DECL(pj_str_t) pj_str_unescape( pj_pool_t *pool, const pj_str_t *src);
 
 /**
  * Unescape string to destination.
