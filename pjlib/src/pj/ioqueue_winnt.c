@@ -438,7 +438,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     DWORD dwMsec, dwBytesTransfered, dwKey;
     generic_overlapped *pOv;
     pj_ioqueue_key_t *key;
-    pj_ssize_t size_status;
+    pj_ssize_t size_status = -1;
     BOOL rc;
 
     PJ_ASSERT_RETURN(ioqueue, -PJ_EINVAL);
@@ -509,6 +509,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     if (GetLastError()==WAIT_TIMEOUT) {
 	/* Check the connecting array (again). */
 #if PJ_HAS_TCP
+	size_status = -1;   /* make MSVC happy */
 	key = check_connecting(ioqueue, &size_status);
 	if (key != NULL) {
 	    key->cb.on_connect_complete(key, (int)size_status);

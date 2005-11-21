@@ -28,19 +28,27 @@
 #  error "This header file is only for Visual C compiler!"
 #endif
 
-#  pragma warning(disable: 4127)	// conditional expression is constant
-#  pragma warning(disable: 4611)	// not wise to mix setjmp with C++
-#  pragma warning(disable: 4514)	// unreferenced inline function has been removed
-#  ifdef __cplusplus
-#    define PJ_INLINE_SPECIFIER	inline
-#  else
-#    define PJ_INLINE_SPECIFIER	static __inline
-#  endif
-#  define PJ_THREAD_FUNC	
-#  define PJ_NORETURN		__declspec(noreturn)
-#  define PJ_ATTR_NORETURN	
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4611) // not wise to mix setjmp with C++
+#pragma warning(disable: 4514) // unref. inline function has been removed
+#ifdef NDEBUG
+#  pragma warning(disable: 4702) // unreachable code
+#  pragma warning(disable: 4710) // function is not inlined.
+#  pragma warning(disable: 4711) // function selected for auto inline expansion
+#endif
 
-#  define PJ_HAS_INT64	1
+#ifdef __cplusplus
+#  define PJ_INLINE_SPECIFIER	inline
+#else
+#  define PJ_INLINE_SPECIFIER	static __inline
+#endif
+
+#define PJ_THREAD_FUNC	
+#define PJ_NORETURN		__declspec(noreturn)
+#define PJ_ATTR_NORETURN	
+
+#define PJ_HAS_INT64	1
+
 typedef __int64 pj_int64_t;
 typedef unsigned __int64 pj_uint64_t;
 
