@@ -364,6 +364,10 @@ SOURCE=..\include\pj\compat\m_m68k.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pj\compat\m_sparc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pj\compat\malloc.h
 # End Source File
 # Begin Source File

@@ -24,7 +24,7 @@
  * @brief Describes Intel i386 family processor specifics.
  */
 
-#define PJ_M_I386		1
+#define PJ_M_NAME		"i386"
 
 #define PJ_HAS_PENTIUM		1
 #define PJ_IS_LITTLE_ENDIAN	1

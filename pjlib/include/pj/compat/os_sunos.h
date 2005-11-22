@@ -24,6 +24,8 @@
  * @brief Describes SunOS/Solaris operating system specifics.
  */
 
+#define PJ_OS_NAME		    "sunos"
+
 #define PJ_HAS_ARPA_INET_H	    1
 #define PJ_HAS_ASSERT_H		    1
 #define PJ_HAS_CTYPE_H		    1

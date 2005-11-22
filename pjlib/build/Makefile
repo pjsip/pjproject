@@ -21,7 +21,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 #
 export PJLIB_SRCDIR = ../src/pj
 export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-	array.o config.o errno.o except.o fifobuf.o guid.o \
+	array.o config.o ctype.o errno.o except.o fifobuf.o guid.o \
 	hash.o list.o lock.o log.o \
 	pool.o pool_caching.o rand.o \
 	rbtree.o string.o timer.o \

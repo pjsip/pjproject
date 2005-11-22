@@ -24,7 +24,7 @@
  * @brief Describes SPARC family processor specifics.
  */
 
-#define PJ_SPARC		1
+#define PJ_M_NAME		"sparc"
 
 #define PJ_HAS_PENTIUM		0
 #define PJ_IS_LITTLE_ENDIAN	0

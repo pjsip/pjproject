@@ -24,6 +24,8 @@
  * @brief Describes Linux operating system specifics.
  */
 
+#define PJ_OS_NAME		    "linux-module"
+
 #define PJ_HAS_ARPA_INET_H	    0
 #define PJ_HAS_ASSERT_H		    0
 #define PJ_HAS_CTYPE_H		    0

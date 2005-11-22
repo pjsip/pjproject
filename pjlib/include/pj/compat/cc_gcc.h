@@ -28,6 +28,12 @@
 #  error "This file is only for gcc!"
 #endif
 
+#define PJ_CC_NAME		"gcc"
+#define PJ_CC_VER_1		__GNUC__
+#define PJ_CC_VER_2		__GNUC_MINOR__
+#define PJ_CC_VER_3		__GNUC_PATCHLEVEL__
+
+
 #define PJ_INLINE_SPECIFIER	static inline
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		
