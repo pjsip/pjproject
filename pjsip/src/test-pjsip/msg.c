@@ -34,7 +34,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool);
 #define FLAG_PARSE_ONLY		4
 #define FLAG_PRINT_ONLY		8
 
-static int flag = FLAG_PARSE_ONLY;
+static int flag = 0;
 
 struct test_msg
 {
@@ -105,6 +105,7 @@ static pj_timestamp  detect_time, parse_time, print_time;
 static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 {
     pjsip_msg *parsed_msg, *ref_msg;
+    static pjsip_msg *print_msg;
     pj_status_t status = PJ_SUCCESS;
     int len;
     pj_str_t str1, str2;
@@ -114,15 +115,18 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     pj_size_t msg_size;
     char msgbuf1[PJSIP_MAX_PKT_LEN];
     char msgbuf2[PJSIP_MAX_PKT_LEN];
-
     enum { BUFLEN = 512 };
 
     entry->len = pj_native_strlen(entry->msg);
 
     if (flag & FLAG_PARSE_ONLY)
 	goto parse_msg;
-    if (flag & FLAG_PRINT_ONLY)
+
+    if (flag & FLAG_PRINT_ONLY) {
+	if (print_msg == NULL)
+	    print_msg = entry->creator(pool);
 	goto print_msg;
+    }
 
     /* Detect message. */
     detect_len = detect_len + entry->len;
@@ -144,7 +148,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     pj_sub_timestamp(&t2, &t1);
     pj_add_timestamp(&detect_time, &t2);
 
-    if (flag & FLAG_PARSE_ONLY)
+    if (flag & FLAG_DETECT_ONLY)
 	return PJ_SUCCESS;
     
     /* Parse message. */
@@ -302,7 +306,9 @@ parse_msg:
 print_msg:
     print_len = print_len + entry->len;
     pj_get_timestamp(&t1);
-    len = pjsip_msg_print(parsed_msg, msgbuf1, PJSIP_MAX_PKT_LEN);
+    if (flag && FLAG_PRINT_ONLY)
+	ref_msg = print_msg;
+    len = pjsip_msg_print(ref_msg, msgbuf1, PJSIP_MAX_PKT_LEN);
     if (len < 1) {
 	status = -150;
 	goto on_return;

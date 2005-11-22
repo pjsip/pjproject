@@ -103,6 +103,7 @@ static int stricmp_test(void)
     len=1;
     STRTEST( 0, "a",buf+0,-510);
     STRTEST( 0, "a",buf+1,-512);
+    STRTEST( -1, "0", "P", -514);
 
     /* equal, length=2 
      * use buffer to simulate non-aligned string.

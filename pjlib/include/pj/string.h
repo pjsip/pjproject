@@ -342,11 +342,29 @@ PJ_IDECL(int) pj_stricmp(const pj_str_t *str1, const pj_str_t *str2);
 /**
  * Perform lowercase comparison to the strings which consists of only
  * alnum characters. More over, it will only return non-zero if both
- * strings are not equal, and is not able to detect which string is
- * 'less'.
+ * strings are not equal, not the usual negative or positive value.
  *
  * If non-alnum inputs are given, then the function may mistakenly 
- * treat two strings as equal while they're not.
+ * treat two strings as equal.
+ *
+ * @param str1	    The string to compare.
+ * @param str2	    The string to compare.
+ * @param len	    The length to compare.
+ *
+ * @return 
+ *      - 0	    if str1 is equal to str2
+ *      - (-1)	    if not equal.
+ */
+PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
+			     int len);
+
+/**
+ * Perform lowercase comparison to the strings which consists of only
+ * alnum characters. More over, it will only return non-zero if both
+ * strings are not equal, not the usual negative or positive value.
+ *
+ * If non-alnum inputs are given, then the function may mistakenly 
+ * treat two strings as equal.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.

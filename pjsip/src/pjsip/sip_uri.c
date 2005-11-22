@@ -89,11 +89,19 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 					 char *buf, pj_size_t size,
 					 int sep)
 {
-    const pjsip_param *p = param_list->next;
-    char *startbuf = buf;
-    char *endbuf = buf + size;
+    const pjsip_param *p;
+    char *startbuf;
+    char *endbuf;
+    int printed;
 
-    while (p != param_list) {
+    p = param_list->next;
+    if (p == param_list)
+	return 0;
+
+    startbuf = buf;
+    endbuf = buf + size;
+
+    do {
 	*buf++ = (char)sep;
 	copy_advance_escape(buf, p->name, pjsip_PARAM_CHAR_SPEC);
 	if (p->value.slen) {
@@ -101,7 +109,8 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 	    copy_advance_escape(buf, p->value, pjsip_PARAM_CHAR_SPEC);
 	}
 	p = p->next;
-    }
+    } while (p != param_list);
+
     return buf-startbuf;
 }
 
@@ -248,6 +257,9 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
      */
     //PJ_TODO(SHOULD_DISALLOW_URI_PORT_IN_FROM_TO_HEADER)
     if (url->port && context != PJSIP_URI_IN_FROMTO_HDR) {
+	if (endbuf - buf < 10)
+	    return -1;
+
 	*buf++ = ':';
 	printed = pj_utoa(url->port, buf);
 	buf += printed;
@@ -270,8 +282,10 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 
     /* TTL param is not allowed in From, To, Route, and Record-Route header. */
     if (url->ttl_param >= 0 && context != PJSIP_URI_IN_FROMTO_HDR &&
-	context != PJSIP_URI_IN_ROUTING_HDR && (endbuf-buf) > 15) 
+	context != PJSIP_URI_IN_ROUTING_HDR) 
     {
+	if (endbuf - buf < 15)
+	    return -1;
 	pj_memcpy(buf, ";ttl=", 5);
 	printed = pj_utoa(url->ttl_param, buf+5);
 	buf += printed + 5;
@@ -288,6 +302,8 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 	context != PJSIP_URI_IN_CONTACT_HDR) 
     {
 	pj_str_t lr = { ";lr", 3 };
+	if (endbuf - buf < 3)
+	    return -1;
 	copy_advance_check(buf, lr);
     }
 
@@ -300,6 +316,8 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
     /* Header param. */
     param = url->header_param.next;
     while (param != &url->header_param) {
+	if (endbuf - buf < param->name.slen+2)
+	    return -1;
 	*buf++ = hparam_char;
 	copy_advance_escape(buf, param->name, pjsip_HDR_CHAR_SPEC);
 	if (param->value.slen) {

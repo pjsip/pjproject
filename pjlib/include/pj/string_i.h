@@ -169,6 +169,39 @@ PJ_IDEF(int) pj_stricmp( const pj_str_t *str1, const pj_str_t *str2)
     }
 }
 
+PJ_IDEF(int) strnicmp_alnum( const char *str1, const char *str2,
+			     int len)
+{
+    if (len==0)
+	return 0;
+    else {
+	register const pj_uint32_t *p1 = (pj_uint32_t*)str1, 
+		                   *p2 = (pj_uint32_t*)str2;
+	while (len > 3 && (*p1 & 0x5F5F5F5F)==(*p2 & 0x5F5F5F5F))
+	    ++p1, ++p2, len-=4;
+
+	if (len > 3)
+	    return -1;
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+	else if (len==3)
+	    return ((*p1 & 0x005F5F5F)==(*p2 & 0x005F5F5F)) ? 0 : -1;
+	else if (len==2)
+	    return ((*p1 & 0x00005F5F)==(*p2 & 0x00005F5F)) ? 0 : -1;
+	else if (len==1)
+	    return ((*p1 & 0x0000005F)==(*p2 & 0x0000005F)) ? 0 : -1;
+#else
+	else if (len==3)
+	    return ((*p1 & 0x5F5F5F00)==(*p2 & 0x5F5F5F00)) ? 0 : -1;
+	else if (len==2)
+	    return ((*p1 & 0x5F5F0000)==(*p2 & 0x5F5F0000)) ? 0 : -1;
+	else if (len==1)
+	    return ((*p1 & 0x5F000000)==(*p2 & 0x5F000000)) ? 0 : -1;
+#endif
+	else 
+	    return 0;
+    }
+}
+
 PJ_IDEF(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2)
 {
     register int len = str1->slen;
@@ -180,25 +213,25 @@ PJ_IDEF(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2)
     } else {
 	register const pj_uint32_t *p1 = (pj_uint32_t*)str1->ptr, 
 		                   *p2 = (pj_uint32_t*)str2->ptr;
-	while (len > 3 && (*p1 & 0x1F1F1F1F)==(*p2 & 0x1F1F1F1F))
+	while (len > 3 && (*p1 & 0x5F5F5F5F)==(*p2 & 0x5F5F5F5F))
 	    ++p1, ++p2, len-=4;
 
 	if (len > 3)
 	    return -1;
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
 	else if (len==3)
-	    return ((*p1 & 0x001F1F1F)==(*p2 & 0x001F1F1F)) ? 0 : -1;
+	    return ((*p1 & 0x005F5F5F)==(*p2 & 0x005F5F5F)) ? 0 : -1;
 	else if (len==2)
-	    return ((*p1 & 0x00001F1F)==(*p2 & 0x00001F1F)) ? 0 : -1;
+	    return ((*p1 & 0x00005F5F)==(*p2 & 0x00005F5F)) ? 0 : -1;
 	else if (len==1)
-	    return ((*p1 & 0x0000001F)==(*p2 & 0x0000001F)) ? 0 : -1;
+	    return ((*p1 & 0x0000005F)==(*p2 & 0x0000005F)) ? 0 : -1;
 #else
 	else if (len==3)
-	    return ((*p1 & 0x1F1F1F00)==(*p2 & 0x1F1F1F00)) ? 0 : -1;
+	    return ((*p1 & 0x5F5F5F00)==(*p2 & 0x5F5F5F00)) ? 0 : -1;
 	else if (len==2)
-	    return ((*p1 & 0x1F1F0000)==(*p2 & 0x1F1F0000)) ? 0 : -1;
+	    return ((*p1 & 0x5F5F0000)==(*p2 & 0x5F5F0000)) ? 0 : -1;
 	else if (len==1)
-	    return ((*p1 & 0x1F000000)==(*p2 & 0x1F000000)) ? 0 : -1;
+	    return ((*p1 & 0x5F000000)==(*p2 & 0x5F000000)) ? 0 : -1;
 #endif
 	else 
 	    return 0;

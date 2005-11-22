@@ -307,8 +307,10 @@ extern pj_cis_t
     pjsip_PROBE_USER_HOST_SPEC, /**< Hostname characters. */
     pjsip_PASSWD_SPEC,		/**< Password. */
     pjsip_USER_SPEC,		/**< User */
-    pjsip_NEWLINE_OR_EOF_SPEC,  /**< For eating up header.*/
-    pjsip_DISPLAY_SCAN_SPEC;    /**< Used when searching for display name. */
+    pjsip_NOT_NEWLINE,		/**< For eating up header, basicly any chars
+				     except newlines or zero. */
+    pjsip_NOT_COMMA_OR_NEWLINE, /**< Array elements. */
+    pjsip_DISPLAY_SPEC;		/**< Used when searching for display name. */
 
 /*
  * Various string constants.

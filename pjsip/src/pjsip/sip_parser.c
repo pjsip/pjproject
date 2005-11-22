@@ -65,7 +65,6 @@ static handler_rec handler[127];
 static unsigned handler_count;
 static int parser_is_initialized;
 
-
 /*
  * Global vars (also extern).
  */
@@ -101,9 +100,9 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 	    pjsip_PROBE_USER_HOST_SPEC, /* Hostname characters. */
 	    pjsip_PASSWD_SPEC,	        /* Password. */
 	    pjsip_USER_SPEC,	        /* User */
-	    pjsip_ARRAY_ELEMENTS,       /* Array separator. */
-	    pjsip_NEWLINE_OR_EOF_SPEC,  /* For eating up header.*/
-	    pjsip_DISPLAY_SCAN_SPEC;    /* Used when searching for display name
+	    pjsip_NOT_COMMA_OR_NEWLINE, /* Array separator. */
+	    pjsip_NOT_NEWLINE,		/* For eating up header.*/
+	    pjsip_DISPLAY_SPEC;         /* Used when searching for display name
                                          * in URL. */
 
 
@@ -258,14 +257,15 @@ static pj_status_t init_parser()
     pj_cis_add_alpha( &pjsip_ALNUM_SPEC );
     pj_cis_add_num( &pjsip_ALNUM_SPEC );
 
-    status = pj_cis_init(&cis_buf, &pjsip_NEWLINE_OR_EOF_SPEC);
+    status = pj_cis_init(&cis_buf, &pjsip_NOT_NEWLINE);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_NEWLINE_OR_EOF_SPEC, "\r\n");
-    //pj_cs_set(pjsip_NEWLINE_OR_EOF_SPEC, 0);
+    pj_cis_add_str(&pjsip_NOT_NEWLINE, "\r\n");
+    pj_cis_invert(&pjsip_NOT_NEWLINE);
 
-    status = pj_cis_init(&cis_buf, &pjsip_ARRAY_ELEMENTS);
+    status = pj_cis_init(&cis_buf, &pjsip_NOT_COMMA_OR_NEWLINE);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_ARRAY_ELEMENTS, ",\r\n");
+    pj_cis_add_str( &pjsip_NOT_COMMA_OR_NEWLINE, ",\r\n");
+    pj_cis_invert(&pjsip_NOT_COMMA_OR_NEWLINE);
 
     status = pj_cis_dup(&pjsip_TOKEN_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -300,9 +300,10 @@ static pj_status_t init_parser()
     pj_cis_add_str( &pjsip_PROBE_USER_HOST_SPEC, "@ \n>");
     pj_cis_invert( &pjsip_PROBE_USER_HOST_SPEC );
 
-    status = pj_cis_init(&cis_buf, &pjsip_DISPLAY_SCAN_SPEC);
+    status = pj_cis_init(&cis_buf, &pjsip_DISPLAY_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_DISPLAY_SCAN_SPEC, ":\r\n<");
+    pj_cis_add_str( &pjsip_DISPLAY_SPEC, ":\r\n<");
+    pj_cis_invert(&pjsip_DISPLAY_SPEC);
 
     status = pjsip_register_hdr_parser( "Accept", NULL, &parse_hdr_accept);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -374,7 +375,7 @@ static pj_status_t init_parser()
     return status;
 }
 
-static void init_sip_parser(void)
+void init_sip_parser(void)
 {
     if (!parser_is_initialized) {
 	/* Prevent race cond. */
@@ -392,22 +393,26 @@ static void init_sip_parser(void)
  * - <0 if handler is 'less' than the header name.
  * - >0 if handler is 'greater' than header name.
  */
-static int compare_handler( const handler_rec *r1, 
+PJ_INLINE(int) compare_handler( const handler_rec *r1, 
 			    const char *name, 
 			    pj_size_t name_len,
 			    pj_uint32_t hash )
 {
-    /* Compare length. */
-    if (r1->hname_len < name_len)
-	return -1;
-    if (r1->hname_len > name_len)
-	return 1;
+    PJ_UNUSED_ARG(name_len);
 
-    /* Length is equal, compare hashed value. */
+    /* Compare hashed value. */
     if (r1->hname_hash < hash)
 	return -1;
     if (r1->hname_hash > hash)
 	return 1;
+
+    /* Compare length. */
+    /*
+    if (r1->hname_len < name_len)
+	return -1;
+    if (r1->hname_len > name_len)
+	return 1;
+     */
 
     /* Equal length and equal hash. compare the strings. */
     return pj_native_strcmp(r1->hname, name);
@@ -609,19 +614,20 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
 
     /* Find the end of header area by finding an empty line. */
-    if ((pos = pj_native_strstr(buf, "\n\r\n")) == NULL) {
+    pos = pj_native_strstr(buf, "\n\r\n");
+    if (pos == NULL) {
 	return PJSIP_EPARTIALMSG;
     }
-
+ 
     hdr_end = pos+1;
     body_start = pos+3;
 
     /* Find "Content-Length" header the hard way. */
     line = pj_native_strchr(buf, '\n');
-    while (line && line < hdr_end-14) {
+    while (line && line < hdr_end) {
 	++line;
 	if ( ((*line=='C' || *line=='c') && 
-              pj_native_strncasecmp(line, "Content-Length", 14) == 0) ||
+              strnicmp_alnum(line, "Content-Length", 14) == 0) ||
 	     ((*line=='l' || *line=='L') && 
               (*(line+1)==' ' || *(line+1)=='\t' || *(line+1)==':')))
 	{
@@ -744,22 +750,20 @@ static int generic_print_body (pjsip_msg_body *msg_body,
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
 {
-    int ch;
     pjsip_msg *msg;
+    pj_str_t hname;
     pjsip_ctype_hdr *ctype_hdr = NULL;
     pj_scanner *scanner = ctx->scanner;
     pj_pool_t *pool = ctx->pool;
     PJ_USE_EXCEPTION;
 
     /* Skip leading newlines. */
-    ch = *scanner->curptr;
-    while (ch=='\r' || ch=='\n') {
-	pj_scan_get_char(scanner);
-	ch = *scanner->curptr;
+    while (*scanner->curptr=='\r' || *scanner->curptr=='\n') {
+	pj_scan_get_newline(scanner);
     }
 
     /* Parse request or status line */
-    if (pj_scan_stricmp( scanner, PJSIP_VERSION, 7) == 0) {
+    if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
 	msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
 	int_parse_status_line( scanner, &msg->line.status );
     } else {
@@ -768,22 +772,23 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
     }
 
     /* Parse headers. */
-    do {
-	pj_str_t hname;
-	pjsip_parse_hdr_func * handler;
-	pjsip_hdr *hdr = NULL;
+parse_headers:
 
-	/* Get hname. */
-	pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &hname);
-	ch = pj_scan_get_char( scanner );
-	if (ch != ':') {
-	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-	}
-
-	/* Find handler. */
-	handler = find_handler(&hname);
-
-	PJ_TRY {
+    PJ_TRY 
+    {
+	do {
+	    pjsip_parse_hdr_func * handler;
+	    pjsip_hdr *hdr = NULL;
+	    
+	    /* Get hname. */
+	    pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &hname);
+	    if (pj_scan_get_char( scanner ) != ':') {
+		PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+	    }
+	    
+	    /* Find handler. */
+	    handler = find_handler(&hname);
+	    
 	    /* Call the handler if found.
 	     * If no handler is found, then treat the header as generic
 	     * hname/hvalue pair.
@@ -795,46 +800,15 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 		hdr->type = PJSIP_H_OTHER;
 		hdr->name = hdr->sname = hname;
 	    }
-
+	    
 	    /* Check if we've just parsed a Content-Type header. 
-	     * We will check for a message body if we've got Content-Type header.
+	     * We will check for a message body if we've got Content-Type 
+	     * header.
 	     */
 	    if (hdr->type == PJSIP_H_CONTENT_TYPE) {
 		ctype_hdr = (pjsip_ctype_hdr*)hdr;
 	    }
-
-	}
-	PJ_CATCH_ANY {
-	    /* Exception was thrown during parsing. 
-	     * Skip until newline, and parse next header. 
-	     */
-	    pj_str_t token;
-	    hdr = NULL;
-
-	    //PJ_LOG(4,("sipparser", 
-            //          "Syntax error in line %d col %d (hname=%.*s)",
-	    //	      scanner->line, scanner->col, hname.slen, hname.ptr));
-
-	    if (err_list) {
-		pjsip_parser_err_report *err_info;
 		
-		err_info = pj_pool_alloc(pool, sizeof(*err_info));
-		err_info->except_code = PJ_GET_EXCEPTION();
-		err_info->line = scanner->line;
-		err_info->col = scanner->col;
-		err_info->hname = hname;
-
-		pj_list_insert_before(err_list, err_info);
-	    }
-
-	    if (!pj_scan_is_eof(scanner)) {
-		pj_scan_get_until(scanner, &pjsip_NEWLINE_OR_EOF_SPEC, &token);
-		parse_hdr_end(scanner);
-	    }
-	}
-	PJ_END;
-
-	if (hdr) {
 	    /* Single parse of header line can produce multiple headers.
 	     * For example, if one Contact: header contains Contact list
 	     * separated by comma, then these Contacts will be split into
@@ -842,11 +816,44 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 	     * So here we must insert list instead of just insert one header.
 	     */
 	    pj_list_insert_nodes_before(&msg->hdr, hdr);
+	    
+	    /* Parse until EOF or an empty line is found. */
+	} while (!pj_scan_is_eof(scanner) && 
+		  *scanner->curptr != '\r' && *scanner->curptr != '\n');
+	
+    }
+    PJ_CATCH_ANY 
+    {
+	/* Exception was thrown during parsing. 
+	 * Skip until newline, and parse next header. 
+	 */
+	pj_str_t token;
+	
+	if (err_list) {
+	    pjsip_parser_err_report *err_info;
+	    
+	    err_info = pj_pool_alloc(pool, sizeof(*err_info));
+	    err_info->except_code = PJ_GET_EXCEPTION();
+	    err_info->line = scanner->line;
+	    err_info->col = pj_scan_get_col(scanner);
+	    err_info->hname = hname;
+	    
+	    pj_list_insert_before(err_list, err_info);
+	}
+	
+	if (!pj_scan_is_eof(scanner)) {
+	    pj_scan_get(scanner, &pjsip_NOT_NEWLINE, &token);
+	    parse_hdr_end(scanner);
 	}
 
-	/* Parse until EOF or an empty line is found. */
-    } while (!pj_scan_is_eof(scanner) && 
-	      *scanner->curptr != '\r' && *scanner->curptr != '\n');
+	if (!pj_scan_is_eof(scanner) && 
+	    *scanner->curptr != '\r' && *scanner->curptr != '\n');
+	{
+	    goto parse_headers;
+	}
+    }
+    PJ_END;
+
 
     /* If empty line is found, eat it. */
     if (!pj_scan_is_eof(scanner)) {
@@ -858,9 +865,10 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
     /* If we have Content-Type header, treat the rest of the message as body.*/
     if (ctype_hdr && scanner->curptr!=scanner->end) {
 	pjsip_msg_body *body = pj_pool_alloc(pool, sizeof(pjsip_msg_body));
-	pj_strdup(pool, &body->content_type.type, &ctype_hdr->media.type);
-	pj_strdup(pool, &body->content_type.subtype, &ctype_hdr->media.subtype);
-	pj_strdup(pool, &body->content_type.param, &ctype_hdr->media.param);
+	body->content_type.type = ctype_hdr->media.type;
+	body->content_type.subtype = ctype_hdr->media.subtype;
+	body->content_type.param = ctype_hdr->media.param;
+
 	body->data = scanner->curptr;
 	body->len = scanner->end - scanner->curptr;
 	body->print_body = &generic_print_body;
@@ -1001,16 +1009,12 @@ static pjsip_uri *int_parse_uri_or_name_addr( pj_scanner *scanner, pj_pool_t *po
 	uri = (pjsip_uri*)int_parse_name_addr( scanner, pool );
 	is_name_addr = 1;
     } else {
-	pj_scan_state backtrack;
 	pj_str_t scheme;
-	int colon;
+	int next_ch;
 
-	pj_scan_save_state( scanner, &backtrack);
-	pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &scheme);
-	colon = pj_scan_get_char( scanner );
-	pj_scan_restore_state( scanner, &backtrack);
+	next_ch = pj_scan_peek( scanner, &pjsip_DISPLAY_SPEC, &scheme);
 
-	if (colon==':' && 
+	if (next_ch==':' && 
             (parser_stricmp(scheme, pjsip_SIP_STR)==0 || 
              parser_stricmp(scheme, pjsip_SIPS_STR)==0)) 
 	{
@@ -1018,7 +1022,7 @@ static pjsip_uri *int_parse_uri_or_name_addr( pj_scanner *scanner, pj_pool_t *po
                 int_parse_sip_url( scanner, pool, 
 				   (opt & PJSIP_PARSE_URI_IN_FROM_TO_HDR)== 0);
 
-	} else if (colon==':' && parser_stricmp( scheme, pjsip_TEL_STR)==0) {
+	} else if (next_ch==':') {
 
 	    /* Not supported. */
 	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
@@ -1189,7 +1193,7 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
 	 * We're only interested in display name, because SIP URL
 	 * will be parser later.
 	 */
-	next = pj_scan_peek_until(scanner, &pjsip_DISPLAY_SCAN_SPEC, &dummy);
+	next = pj_scan_peek(scanner, &pjsip_DISPLAY_SPEC, &dummy);
 	if (next == '<') {
 	    /* Ok, this is what we're looking for, a display name. */
 	    pj_scan_get_until_ch( scanner, '<', &name_addr->display);
@@ -1205,8 +1209,10 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
     if (has_bracket)
 	pj_scan_get_char(scanner);
     name_addr->uri = int_parse_uri( scanner, pool, PJ_TRUE );
-    if (has_bracket)
-	pj_scan_get_char(scanner);
+    if (has_bracket) {
+	if (pj_scan_get_char(scanner) != '>')
+	    PJ_THROW( PJSIP_SYN_ERR_EXCEPTION);
+    }
 
     return name_addr;
 }
@@ -1222,7 +1228,7 @@ static void int_parse_req_line( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_method_init_np( &req_line->method, &token);
 
     req_line->uri = int_parse_uri(scanner, pool, PJ_TRUE);
-    if (pj_scan_stricmp( scanner, PJSIP_VERSION, 7) != 0)
+    if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) != 0)
 	PJ_THROW( PJSIP_SYN_ERR_EXCEPTION);
     pj_scan_advance_n (scanner, 7, 1);
     pj_scan_get_newline( scanner );
@@ -1234,14 +1240,13 @@ static void int_parse_status_line( pj_scanner *scanner,
 {
     pj_str_t token;
 
-    if (pj_scan_stricmp(scanner, PJSIP_VERSION, 7) != 0)
+    if (pj_scan_stricmp_alnum(scanner, PJSIP_VERSION, 7) != 0)
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
     pj_scan_advance_n( scanner, 7, 1);
 
     pj_scan_get( scanner, &pjsip_DIGIT_SPEC, &token);
     status_line->code = pj_strtoul(&token);
-    pj_scan_get_until( scanner, &pjsip_NEWLINE_OR_EOF_SPEC, 
-                       &status_line->reason);
+    pj_scan_get( scanner, &pjsip_NOT_NEWLINE, &status_line->reason);
     pj_scan_get_newline( scanner );
 }
 
@@ -1267,13 +1272,13 @@ void pjsip_parse_end_hdr_imp( pj_scanner *scanner )
 static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 				     pj_scanner *scanner)
 {
-    pj_scan_get_until( scanner, &pjsip_ARRAY_ELEMENTS, &hdr->values[0]);
+    pj_scan_get( scanner, &pjsip_NOT_COMMA_OR_NEWLINE, &hdr->values[0]);
     hdr->count++;
 
     while (*scanner->curptr == ',') {
 	pj_scan_get_char(scanner);
-	pj_scan_get_until( scanner, &pjsip_ARRAY_ELEMENTS, 
-                           &hdr->values[hdr->count]);
+	pj_scan_get( scanner, &pjsip_NOT_COMMA_OR_NEWLINE, 
+		     &hdr->values[hdr->count]);
 	hdr->count++;
     }
     parse_hdr_end(scanner);
@@ -1283,7 +1288,11 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 static void parse_generic_string_hdr( pjsip_generic_string_hdr *hdr,
 				      pj_scanner *scanner )
 {
-    pj_scan_get_until( scanner, &pjsip_NEWLINE_OR_EOF_SPEC, &hdr->hvalue);
+    if (pj_cis_match(&pjsip_NOT_NEWLINE, *scanner->curptr))
+	pj_scan_get( scanner, &pjsip_NOT_NEWLINE, &hdr->hvalue);
+    else
+	hdr->hvalue.slen = 0;
+
     parse_hdr_end(scanner);
 }
 
@@ -1292,7 +1301,7 @@ static void parse_generic_int_hdr( pjsip_generic_int_hdr *hdr,
 				   pj_scanner *scanner )
 {
     pj_str_t tmp;
-    pj_scan_get_until( scanner, &pjsip_NEWLINE_OR_EOF_SPEC, &tmp);
+    pj_scan_get( scanner, &pjsip_DIGIT_SPEC, &tmp);
     hdr->ivalue = pj_strtoul(&tmp);
     parse_hdr_end(scanner);
 }
@@ -1318,7 +1327,7 @@ static pjsip_hdr* parse_hdr_allow(pjsip_parse_ctx *ctx)
 static pjsip_hdr* parse_hdr_call_id(pjsip_parse_ctx *ctx)
 {
     pjsip_cid_hdr *hdr = pjsip_cid_hdr_create(ctx->pool);
-    pj_scan_get_until( ctx->scanner, &pjsip_NEWLINE_OR_EOF_SPEC, &hdr->id);
+    pj_scan_get( ctx->scanner, &pjsip_NOT_NEWLINE, &hdr->id);
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
@@ -1700,7 +1709,7 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	else
 	    pj_list_insert_before(first, hdr);
 
-	if (pj_scan_stricmp( scanner, PJSIP_VERSION "/", 8) != 0)
+	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION "/", 8) != 0)
 	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 
 	pj_scan_advance_n( scanner, 8, 1);

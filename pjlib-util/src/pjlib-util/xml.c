@@ -173,7 +173,7 @@ PJ_DEF(pj_xml_node*) pj_xml_parse( pj_pool_t *pool, char *msg, pj_size_t len)
     }
     PJ_CATCH_ANY {
 	PJ_LOG(4,(THIS_FILE, "Syntax error parsing XML in line %d column %d",
-		  scanner.line, scanner.col));
+		  scanner.line, pj_scan_get_col(&scanner)));
     }
     PJ_END;
     pj_scan_fini( &scanner );

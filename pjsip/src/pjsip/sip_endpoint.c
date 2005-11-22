@@ -104,6 +104,7 @@ struct pjsip_endpoint
 static void endpt_transport_callback(pjsip_endpoint*, 
 				     pj_status_t, pjsip_rx_data*);
 
+void init_sip_parser(void);
 
 /*
  * This is the global handler for memory allocation failure, for pools that
@@ -372,6 +373,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     endpt = pj_pool_calloc(pool, 1, sizeof(*endpt));
     endpt->pool = pool;
     endpt->pf = pf;
+
+    /* Init parser. */
+    init_sip_parser();
 
     /* Get name. */
     if (name != NULL) {

@@ -193,12 +193,12 @@ typedef void (*pj_syn_err_func_ptr)(struct pj_scanner *scanner);
  */
 typedef struct pj_scanner
 {
-    char *begin;        /**< Start of input buffer. */
-    char *end;          /**< End of input buffer.   */
-    char *curptr;       /**< Current pointer.       */
-    int  line;          /**< Current line.          */
-    int  col;           /**< Current column.        */
-    int  skip_ws;       /**< Skip whitespace flag.  */
+    char *begin;        /**< Start of input buffer.	*/
+    char *end;          /**< End of input buffer.	*/
+    char *curptr;       /**< Current pointer.		*/
+    int   line;         /**< Current line.		*/
+    char *start_line;   /**< Where current line starts.	*/
+    int   skip_ws;      /**< Skip whitespace flag.	*/
     pj_syn_err_func_ptr callback;   /**< Syntax error callback. */
 } pj_scanner;
 
@@ -210,8 +210,8 @@ typedef struct pj_scanner
 typedef struct pj_scan_state
 {
     char *curptr;       /**< Current scanner's pointer. */
-    int   line;         /**< Current line.      */
-    int   col;          /**< Current column.    */
+    int   line;         /**< Current line.		*/
+    char *start_line;   /**< Start of current line.	*/
 } pj_scan_state;
 
 
@@ -325,7 +325,8 @@ PJ_DECL(void) pj_scan_get( pj_scanner *scanner,
 
 /** 
  * Get characters between quotes. If current input doesn't match begin_quote,
- * syntax error will be thrown.
+ * syntax error will be thrown. Note that the resulting string will contain
+ * the enclosing quote.
  *
  * @param scanner	The scanner.
  * @param begin_quote	The character to begin the quote.
@@ -333,8 +334,8 @@ PJ_DECL(void) pj_scan_get( pj_scanner *scanner,
  * @param out		String to store the result.
  */
 PJ_DECL(void) pj_scan_get_quote( pj_scanner *scanner,
-				  int begin_quote, int end_quote, 
-				  pj_str_t *out);
+				 int begin_quote, int end_quote, 
+				 pj_str_t *out);
 
 /** 
  * Get N characters from the scanner.
@@ -355,15 +356,6 @@ PJ_DECL(void) pj_scan_get_n( pj_scanner *scanner,
  * @return The character.
  */
 PJ_DECL(int) pj_scan_get_char( pj_scanner *scanner );
-
-
-/** 
- * Get a newline from the scanner. A newline is defined as '\\n', or '\\r', or
- * "\\r\\n". If current input is not newline, syntax error will be thrown.
- *
- * @param scanner   The scanner.
- */
-PJ_DECL(void) pj_scan_get_newline( pj_scanner *scanner );
 
 
 /** 
@@ -438,6 +430,34 @@ PJ_DECL(int) pj_scan_strcmp( pj_scanner *scanner, const char *s, int len);
  */
 PJ_DECL(int) pj_scan_stricmp( pj_scanner *scanner, const char *s, int len);
 
+/**
+ * Perform case insensitive string comparison of string in current position,
+ * knowing that the string to compare only consists of alphanumeric
+ * characters.
+ *
+ * Note that unlike #pj_scan_stricmp, this function can only return zero or
+ * -1.
+ *
+ * @param scanner   The scanner.
+ * @param s	    The string to compare with.
+ * @param len	    Length of the string to compare with.
+ *
+ * @return	    zero if equal or -1.
+ *
+ * @see strnicmp_alnum, pj_stricmp_alnum
+ */
+PJ_DECL(int) pj_scan_stricmp_alnum( pj_scanner *scanner, const char *s, 
+				    int len);
+
+
+/** 
+ * Get a newline from the scanner. A newline is defined as '\\n', or '\\r', or
+ * "\\r\\n". If current input is not newline, syntax error will be thrown.
+ *
+ * @param scanner   The scanner.
+ */
+PJ_DECL(void) pj_scan_get_newline( pj_scanner *scanner );
+
 
 /** 
  * Manually skip whitespaces according to flag that was specified when
@@ -447,6 +467,13 @@ PJ_DECL(int) pj_scan_stricmp( pj_scanner *scanner, const char *s, int len);
  */
 PJ_DECL(void) pj_scan_skip_whitespace( pj_scanner *scanner );
 
+
+/**
+ * Skip current line.
+ *
+ * @param scanner   The scanner.
+ */
+PJ_DECL(void) pj_scan_skip_line( pj_scanner *scanner );
 
 /** 
  * Save the full scanner state.
@@ -467,6 +494,18 @@ PJ_DECL(void) pj_scan_save_state( pj_scanner *scanner, pj_scan_state *state);
  */
 PJ_DECL(void) pj_scan_restore_state( pj_scanner *scanner, 
 				      pj_scan_state *state);
+
+/**
+ * Get current column position.
+ *
+ * @param scanner   The scanner.
+ *
+ * @return	    The column position.
+ */
+PJ_INLINE(int) pj_scan_get_col( pj_scanner *scanner )
+{
+    return scanner->curptr - scanner->start_line;
+}
 
 /**
  * @}

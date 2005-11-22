@@ -81,8 +81,8 @@ int test_main(void)
 
     PJ_LOG(3,("",""));
 
-    //DO_TEST(uri_test());
-    DO_TEST(msg_test());
+    DO_TEST(uri_test());
+    //DO_TEST(msg_test());
 
 on_return:
 

@@ -19,53 +19,29 @@
 #ifndef __PJSIP_PRINT_H__
 #define __PJSIP_PRINT_H__
 
-/* Minimum space left in the buffer */
-#define MIN_SPACE	10
-
 #define copy_advance_check(buf,str)   \
 	do { \
-	    if ((str).slen+MIN_SPACE >= (endbuf-buf)) return -1;	\
+	    if ((str).slen >= (endbuf-buf)) return -1;	\
 	    pj_memcpy(buf, (str).ptr, (str).slen); \
 	    buf += (str).slen; \
 	} while (0)
-
-/*
-static char *imp_copy_advance_pair(char *buf, char *endbuf, const char *str1, int len1, const pj_str_t *str2)
-{
-    if (str2->slen) {
-	int printed = len1+str2->slen;
-	if (printed+MIN_SPACE >= (endbuf-buf)) return NULL;
-	pj_memcpy(buf,str1,len1);
-	pj_memcpy(buf+len1, str2->ptr, str2->slen);
-	return buf + printed;
-    } else
-	return buf;
-}
-*/
 
 #define copy_advance_pair_check(buf,str1,len1,str2)   \
 	do { \
 	    if (str2.slen) { \
 		printed = len1+str2.slen; \
-		if (printed+MIN_SPACE >= (endbuf-buf)) return -1;	\
+		if (printed >= (endbuf-buf)) return -1;	\
 		pj_memcpy(buf,str1,len1); \
 		pj_memcpy(buf+len1, str2.ptr, str2.slen); \
 		buf += printed; \
 	    } \
 	} while (0)
-/*
-#define copy_advance_pair(buf,str1,len1,str2)   \
-	do { \
-	    buf = imp_copy_advance_pair(buf, endbuf, str1, len1, &str2); \
-	    if (buf == NULL) return -1; \
-	} while (0)
-*/
 
 #define copy_advance_pair_quote_check(buf,str1,len1,str2,quotebegin,quoteend) \
 	do { \
 	    if (str2.slen) { \
 		printed = len1+str2.slen+2; \
-		if (printed+MIN_SPACE >= (endbuf-buf)) return -1;	\
+		if (printed >= (endbuf-buf)) return -1;	\
 		pj_memcpy(buf,str1,len1); \
 		*(buf+len1)=quotebegin; \
 		pj_memcpy(buf+len1+1, str2.ptr, str2.slen); \
@@ -76,16 +52,13 @@ static char *imp_copy_advance_pair(char *buf, char *endbuf, const char *str1, in
 
 #define copy_advance_pair_escape(buf,str1,len1,str2,unres)	\
 	do { \
-	    if (str2.slen) { \
-		pj_ssize_t esc_len; \
-		if (len1+str2.slen+MIN_SPACE >= (endbuf-buf)) return -1; \
-		pj_memcpy(buf,str1,len1); \
-		buf += len1; \
-		esc_len=pj_strncpy2_escape(buf, &str2, (endbuf-buf), &unres); \
-		if (esc_len < 0) return -1; \
-		buf += esc_len; \
-		if (endbuf-buf < MIN_SPACE) return -1; \
-	    } \
+	  if (str2.slen) { \
+	    if (len1+str2.slen >= (endbuf-buf)) return -1; \
+	    pj_memcpy(buf,str1,len1); \
+	    printed=pj_strncpy2_escape(buf,&str2,(endbuf-buf-len1),&unres);\
+	    if (printed < 0) return -1; \
+	    buf += (printed+len1); \
+	  } \
 	} while (0)
 
 
@@ -97,11 +70,10 @@ static char *imp_copy_advance_pair(char *buf, char *endbuf, const char *str1, in
 
 #define copy_advance_escape(buf,str,unres)    \
 	do { \
-	    pj_ssize_t len = \
+	    printed = \
 		pj_strncpy2_escape(buf, &(str), (endbuf-buf), &(unres)); \
-	    if (len < 0) return -1; \
-	    buf += len; \
-	    if (endbuf-buf < MIN_SPACE) return -1; \
+	    if (printed < 0) return -1; \
+	    buf += printed; \
 	} while (0)
 
 #define copy_advance_pair_no_check(buf,str1,len1,str2)   \
@@ -117,10 +89,10 @@ static char *imp_copy_advance_pair(char *buf, char *endbuf, const char *str1, in
 
 #define copy_advance_pair_quote_cond(buf,str1,len1,str2,quotebegin,quoteend) \
 	do {	\
-	    if (str2.slen && *str2.ptr!=quotebegin) \
-		copy_advance_pair_quote(buf,str1,len1,str2,quotebegin,quoteend); \
-	    else \
-		copy_advance_pair(buf,str1,len1,str2); \
+	  if (str2.slen && *str2.ptr!=quotebegin) \
+	    copy_advance_pair_quote(buf,str1,len1,str2,quotebegin,quoteend); \
+	  else \
+	    copy_advance_pair(buf,str1,len1,str2); \
 	} while (0)
 
 /*
