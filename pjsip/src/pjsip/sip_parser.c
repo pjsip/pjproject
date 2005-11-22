@@ -758,14 +758,12 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 	ch = *scanner->curptr;
     }
 
-    msg = pjsip_msg_create(pool, PJSIP_REQUEST_MSG);
-
     /* Parse request or status line */
     if (pj_scan_stricmp( scanner, PJSIP_VERSION, 7) == 0) {
-	msg->type = PJSIP_RESPONSE_MSG;
+	msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
 	int_parse_status_line( scanner, &msg->line.status );
     } else {
-	msg->type = PJSIP_REQUEST_MSG;
+	msg = pjsip_msg_create(pool, PJSIP_REQUEST_MSG);
 	int_parse_req_line(scanner, pool, &msg->line.req );
     }
 
@@ -858,7 +856,7 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
     }
 
     /* If we have Content-Type header, treat the rest of the message as body.*/
-    if (ctype_hdr) {
+    if (ctype_hdr && scanner->curptr!=scanner->end) {
 	pjsip_msg_body *body = pj_pool_alloc(pool, sizeof(pjsip_msg_body));
 	pj_strdup(pool, &body->content_type.type, &ctype_hdr->media.type);
 	pj_strdup(pool, &body->content_type.subtype, &ctype_hdr->media.subtype);
@@ -1379,7 +1377,8 @@ static pjsip_hdr* parse_hdr_contact( pjsip_parse_ctx *ctx )
 	} else {
 	    hdr->star = 0;
 	    hdr->uri = int_parse_uri_or_name_addr(scanner, ctx->pool, 
-                                                  PJSIP_PARSE_URI_AS_NAMEADDR);
+                                                  PJSIP_PARSE_URI_AS_NAMEADDR |
+						  PJSIP_PARSE_URI_IN_FROM_TO_HDR);
 
 	    int_parse_contact_param(hdr, scanner, ctx->pool);
 	}

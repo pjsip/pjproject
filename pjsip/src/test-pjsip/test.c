@@ -42,7 +42,7 @@ void app_perror(const char *msg, pj_status_t rc)
     PJ_CHECK_STACK();
 
     pjsip_strerror(rc, errbuf, sizeof(errbuf));
-    PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+    PJ_LOG(3,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 
 }
 
@@ -81,7 +81,8 @@ int test_main(void)
 
     PJ_LOG(3,("",""));
 
-    DO_TEST(uri_test());
+    //DO_TEST(uri_test());
+    DO_TEST(msg_test());
 
 on_return:
 

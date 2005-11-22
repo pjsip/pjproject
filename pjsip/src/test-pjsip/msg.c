@@ -20,43 +20,87 @@
 #include <pjsip_core.h>
 #include <pjlib.h>
 
+#define POOL_SIZE	8000
+#define LOOP		10000
+#define AVERAGE_MSG_LEN	800
+
 static pjsip_msg *create_msg0(pj_pool_t *pool);
+static pjsip_msg *create_msg1(pj_pool_t *pool);
+
+#define STATUS_PARTIAL		1
+#define STATUS_SYNTAX_ERROR	2
+
+#define FLAG_DETECT_ONLY	1
+#define FLAG_PARSE_ONLY		4
+#define FLAG_PRINT_ONLY		8
+
+static int flag = FLAG_PARSE_ONLY;
 
 struct test_msg
 {
     char	 msg[1024];
     pjsip_msg *(*creator)(pj_pool_t *pool);
     pj_size_t	 len;
+    int		 expected_status;
 } test_array[] = 
 {
-    {
-	/* 'Normal' message with all headers. */
-	"INVITE sip:user@foo SIP/2.0\n"
-	"From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=1234578901234567890\r"
-	"To: Fellow User <sip:user@foo.bar.domain.com>\r\n"
-	"Call-ID: 12345678901234567890@bar\r\n"
-	"Content-Length: 0\r\n"
-	"CSeq: 123456 INVITE\n"
-	"Contact: <sip:joe@bar> ; q=0.5;expires=3600,sip:user@host;q=0.500\r"
-	"  ,sip:user2@host2\n"
-	"Content-Type: text/html ; charset=ISO-8859-4\r"
-	"Route: <sip:bigbox3.site3.atlanta.com;lr>,\r\n"
-	"  <sip:server10.biloxi.com;lr>\r"
-	"Record-Route: <sip:server10.biloxi.com>,\r\n"
-	"  <sip:bigbox3.site3.atlanta.com;lr>\n"
-	"Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1\n"
-	"Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n"
-	" ;received=192.0.2.1\r\n"
-	"Via: SIP/2.0/UDP 10.2.1.1, SIP/2.0/TCP 192.168.1.1\n"
-	"Organization: \r"
-	"Max-Forwards: 70\n"
-	"X-Header: \r\n"
-	"\r",
-	&create_msg0
-    }
+{
+    /* 'Normal' message with all headers. */
+    "INVITE sip:user@foo SIP/2.0\n"
+    "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=1234578901234567890\r"
+    "To: Fellow User <sip:user@foo.bar.domain.com>\r\n"
+    "Call-ID: 12345678901234567890@bar\r\n"
+    "Content-Length: 0\r\n"
+    "CSeq: 123456 INVITE\n"
+    "Contact: <sip:joe@bar> ; q=0.5;expires=3600,sip:user@host;q=0.500\r"
+    "  ,sip:user2@host2\n"
+    "Content-Type: text/html ; charset=ISO-8859-4\r"
+    "Route: <sip:bigbox3.site3.atlanta.com;lr>,\r\n"
+    "  <sip:server10.biloxi.com;lr>\r"
+    "Record-Route: <sip:server10.biloxi.com>,\r\n"
+    "  <sip:bigbox3.site3.atlanta.com;lr>\n"
+    "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1\n"
+    "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n"
+    " ;received=192.0.2.1\r\n"
+    "Via: SIP/2.0/UDP 10.2.1.1, SIP/2.0/TCP 192.168.1.1\n"
+    "Organization: \r"
+    "Max-Forwards: 70\n"
+    "X-Header: \r\n"
+    "\r\n",
+    &create_msg0,
+    PJ_SUCCESS
+},
+{
+    /* Typical response message. */
+    "SIP/2.0 200 OK\r\n"
+    "Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1\r\n"
+    "Via: SIP/2.0/UDP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2\r\n"
+    "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds ;received=192.0.2.3\r\n"
+    "Route: <sip:proxy.sipprovider.com>\r\n"
+    "Route: <sip:proxy.supersip.com:5060>\r\n"
+    "Max-Forwards: 70\r\n"
+    "To: Bob <sip:bob@biloxi.com>;tag=a6c85cf\r\n"
+    "From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+    "Call-ID: a84b4c76e66710@pc33.atlanta.com\r\n"
+    "CSeq: 314159 INVITE\r\n"
+    "Contact: <sips:bob@192.0.2.4>\r\n"
+    "Content-Type: application/sdp\r\n"
+    "Content-Length: 150\r\n"
+    "\r\n"
+    "v=0\r\n"
+    "o=alice 53655765 2353687637 IN IP4 pc33.atlanta.com\r\n"
+    "s=-\r\n"
+    "t=0 0\r\n"
+    "c=IN IP4 pc33.atlanta.com\r\n"
+    "m=audio 3456 RTP/AVP 0 1 3 99\r\n"
+    "a=rtpmap:0 PCMU/8000\r\n",
+    &create_msg1,
+    PJ_SUCCESS
+}
 };
 
-static pj_uint32_t parse_len, parse_time, print_time;
+static pj_highprec_t detect_len, parse_len, print_len;
+static pj_timestamp  detect_time, parse_time, print_time;
 
 static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 {
@@ -66,20 +110,65 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     pj_str_t str1, str2;
     pjsip_hdr *hdr1, *hdr2;
     pj_timestamp t1, t2;
-    char *msgbuf;
+    pjsip_parser_err_report err_list;
+    pj_size_t msg_size;
+    char msgbuf1[PJSIP_MAX_PKT_LEN];
+    char msgbuf2[PJSIP_MAX_PKT_LEN];
 
     enum { BUFLEN = 512 };
-    
-    /* Parse message. */
-    parse_len += entry->len;
+
+    entry->len = pj_native_strlen(entry->msg);
+
+    if (flag & FLAG_PARSE_ONLY)
+	goto parse_msg;
+    if (flag & FLAG_PRINT_ONLY)
+	goto print_msg;
+
+    /* Detect message. */
+    detect_len = detect_len + entry->len;
     pj_get_timestamp(&t1);
-    parsed_msg = pjsip_parse_msg(pool, entry->msg, entry->len, NULL);
-    if (parsed_msg == NULL) {
-	status = -10;
-	goto on_return;
+    status = pjsip_find_msg(entry->msg, entry->len, PJ_FALSE, &msg_size);
+    if (status != PJ_SUCCESS) {
+	if (status!=PJSIP_EPARTIALMSG || 
+	    entry->expected_status!=STATUS_PARTIAL)
+	{
+	    app_perror("   error: unable to detect message", status);
+	    return -5;
+	}
+    }
+    if (msg_size != entry->len) {
+	PJ_LOG(3,("", "   error: size mismatch"));
+	return -6;
     }
     pj_get_timestamp(&t2);
-    parse_time += t2.u32.lo - t1.u32.lo;
+    pj_sub_timestamp(&t2, &t1);
+    pj_add_timestamp(&detect_time, &t2);
+
+    if (flag & FLAG_PARSE_ONLY)
+	return PJ_SUCCESS;
+    
+    /* Parse message. */
+parse_msg:
+    parse_len = parse_len + entry->len;
+    pj_get_timestamp(&t1);
+    pj_list_init(&err_list);
+    parsed_msg = pjsip_parse_msg(pool, entry->msg, entry->len, &err_list);
+    if (parsed_msg == NULL) {
+	if (entry->expected_status != STATUS_SYNTAX_ERROR) {
+	    status = -10;
+	    if (err_list.next != &err_list) {
+		PJ_LOG(3,("", "   Syntax error in line %d col %d",
+			      err_list.next->line, err_list.next->col));
+	    }
+	    goto on_return;
+	}
+    }
+    pj_get_timestamp(&t2);
+    pj_sub_timestamp(&t2, &t1);
+    pj_add_timestamp(&parse_time, &t2);
+
+    if (flag & FLAG_PARSE_ONLY)
+	return PJ_SUCCESS;
 
     /* Create reference message. */
     ref_msg = entry->creator(pool);
@@ -99,12 +188,31 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 	pjsip_method *m1 = &parsed_msg->line.req.method;
 	pjsip_method *m2 = &ref_msg->line.req.method;
 
-	if (m1->id != m2->id || pj_strcmp(&m1->name, &m2->name)) {
+	if (pjsip_method_cmp(m1, m2) != 0) {
 	    status = -30;
 	    goto on_return;
 	}
+	status = pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
+			       parsed_msg->line.req.uri, 
+			       ref_msg->line.req.uri);
+	if (status != PJ_SUCCESS) {
+	    app_perror("   error: request URI mismatch", status);
+	    status = -31;
+	    goto on_return;
+	}
     } else {
-
+	if (parsed_msg->line.status.code != ref_msg->line.status.code) {
+	    PJ_LOG(3,("", "   error: status code mismatch"));
+	    status = -32;
+	    goto on_return;
+	}
+	if (pj_strcmp(&parsed_msg->line.status.reason, 
+		      &ref_msg->line.status.reason) != 0) 
+	{
+	    PJ_LOG(3,("", "   error: status text mismatch"));
+	    status = -33;
+	    goto on_return;
+	}
     }
 
     /* Compare headers. */
@@ -117,6 +225,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 	    status = -40;
 	    goto on_return;
 	}
+	str1.ptr[len] = '\0';
 	str1.slen = len;
 
 	len = hdr2->vptr->print_on(hdr2, str2.ptr, BUFLEN);
@@ -124,10 +233,15 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 	    status = -50;
 	    goto on_return;
 	}
+	str2.ptr[len] = '\0';
 	str2.slen = len;
 
 	if (pj_strcmp(&str1, &str2) != 0) {
 	    status = -60;
+	    PJ_LOG(3,("", "   error: header string mismatch:\n"
+		          "   h1='%s'\n"
+			  "   h2='%s'\n",
+			  str1.ptr, str2.ptr));
 	    goto on_return;
 	}
 
@@ -140,41 +254,70 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 	goto on_return;
     }
 
-    /* Print message. */
-    msgbuf = pj_pool_alloc(pool, PJSIP_MAX_PKT_LEN);
-    if (msgbuf == NULL) {
+    /* Compare body? */
+    if (parsed_msg->body==NULL && ref_msg->body==NULL)
+	goto print_msg;
+
+    /* Compare msg body length. */
+    if (parsed_msg->body->len != ref_msg->body->len) {
 	status = -80;
 	goto on_return;
     }
-    pj_get_timestamp(&t1);
-    len = pjsip_msg_print(parsed_msg, msgbuf, PJSIP_MAX_PKT_LEN);
-    if (len < 1) {
+
+    /* Compare msg body content type. */
+    if (pj_strcmp(&parsed_msg->body->content_type.type,
+	          &ref_msg->body->content_type.type) != 0) {
 	status = -90;
 	goto on_return;
     }
+    if (pj_strcmp(&parsed_msg->body->content_type.subtype,
+	          &ref_msg->body->content_type.subtype) != 0) {
+	status = -100;
+	goto on_return;
+    }
+
+    /* Compare body content. */
+    str1.slen = parsed_msg->body->print_body(parsed_msg->body,
+					     msgbuf1, sizeof(msgbuf1));
+    if (str1.slen < 1) {
+	status = -110;
+	goto on_return;
+    }
+    str1.ptr = msgbuf1;
+
+    str2.slen = ref_msg->body->print_body(ref_msg->body,
+					  msgbuf2, sizeof(msgbuf2));
+    if (str2.slen < 1) {
+	status = -120;
+	goto on_return;
+    }
+    str2.ptr = msgbuf2;
+
+    if (pj_strcmp(&str1, &str2) != 0) {
+	status = -140;
+	goto on_return;
+    }
+    
+    /* Print message. */
+print_msg:
+    print_len = print_len + entry->len;
+    pj_get_timestamp(&t1);
+    len = pjsip_msg_print(parsed_msg, msgbuf1, PJSIP_MAX_PKT_LEN);
+    if (len < 1) {
+	status = -150;
+	goto on_return;
+    }
     pj_get_timestamp(&t2);
-    print_time += t2.u32.lo - t1.u32.lo;
+    pj_sub_timestamp(&t2, &t1);
+    pj_add_timestamp(&print_time, &t2);
+
+
     status = PJ_SUCCESS;
 
 on_return:
     return status;
 }
 
-
-pj_status_t msg_test(void)
-{
-    pj_status_t status;
-    pj_pool_t *pool;
-
-    pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
-
-    status = test_entry( pool, &test_array[0] );
-
-    pjsip_endpt_destroy(endpt);
-    return status;
-}
-
-/*****************************************************************************/
 
 static pjsip_msg *create_msg0(pj_pool_t *pool)
 {
@@ -257,16 +400,20 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     contact = pjsip_contact_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)contact);
     contact->q1000 = 500;
+    name_addr = pjsip_name_addr_create(pool);
+    contact->uri = (pjsip_uri*)name_addr;
     url = pjsip_url_create(pool, 0);
-    contact->uri = (pjsip_uri*)url;
+    name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user");
     pj_strdup2(pool, &url->host, "host");
 
     /* "  ,sip:user2@host2\n" */
     contact = pjsip_contact_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)contact);
+    name_addr = pjsip_name_addr_create(pool);
+    contact->uri = (pjsip_uri*)name_addr;
     url = pjsip_url_create(pool, 0);
-    contact->uri = (pjsip_uri*)url;
+    name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user2");
     pj_strdup2(pool, &url->host, "host2");
 
@@ -367,3 +514,227 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
 
     return msg;
 }
+
+static pjsip_msg *create_msg1(pj_pool_t *pool)
+{
+    pjsip_via_hdr *via;
+    pjsip_route_hdr *route;
+    pjsip_name_addr *name_addr;
+    pjsip_url *url;
+    pjsip_max_forwards_hdr *max_fwd;
+    pjsip_to_hdr *to;
+    pjsip_from_hdr *from;
+    pjsip_contact_hdr *contact;
+    pjsip_ctype_hdr *ctype;
+    pjsip_cid_hdr *cid;
+    pjsip_clen_hdr *clen;
+    pjsip_cseq_hdr *cseq;
+    pjsip_msg *msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
+    pjsip_msg_body *body;
+
+    //"SIP/2.0 200 OK\r\n"
+    msg->line.status.code = 200;
+    msg->line.status.reason = pj_str("OK");
+
+    //"Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1\r\n"
+    via = pjsip_via_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
+    via->transport = pj_str("SCTP");
+    via->sent_by.host = pj_str("server10.biloxi.com");
+    via->branch_param = pj_str("z9hG4bKnashds8");
+    via->rport_param = 0;
+    via->recvd_param = pj_str("192.0.2.1");
+
+    //"Via: SIP/2.0/UDP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2\r\n"
+    via = pjsip_via_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
+    via->transport = pj_str("UDP");
+    via->sent_by.host = pj_str("bigbox3.site3.atlanta.com");
+    via->branch_param = pj_str("z9hG4bK77ef4c2312983.1");
+    via->recvd_param = pj_str("192.0.2.2");
+
+    //"Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds ;received=192.0.2.3\r\n"
+    via = pjsip_via_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
+    via->transport = pj_str("UDP");
+    via->sent_by.host = pj_str("pc33.atlanta.com");
+    via->branch_param = pj_str("z9hG4bK776asdhds");
+    via->recvd_param = pj_str("192.0.2.3");
+
+    //"Route: <sip:proxy.sipprovider.com>\r\n"
+    route = pjsip_route_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)route);
+    url = pjsip_url_create(pool, PJ_FALSE);
+    route->name_addr.uri = (pjsip_uri*)url;
+    url->host = pj_str("proxy.sipprovider.com");
+    
+    //"Route: <sip:proxy.supersip.com:5060>\r\n"
+    route = pjsip_route_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)route);
+    url = pjsip_url_create(pool, PJ_FALSE);
+    route->name_addr.uri = (pjsip_uri*)url;
+    url->host = pj_str("proxy.supersip.com");
+    url->port = 5060;
+
+    //"Max-Forwards: 70\r\n"
+    max_fwd = pjsip_max_forwards_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)max_fwd);
+    max_fwd->ivalue = 70;
+
+    //"To: Bob <sip:bob@biloxi.com>;tag=a6c85cf\r\n"
+    to = pjsip_to_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)to);
+    name_addr = pjsip_name_addr_create(pool);
+    name_addr->display = pj_str("Bob");
+    to->uri = (pjsip_uri*)name_addr;
+    url = pjsip_url_create(pool, PJ_FALSE);
+    name_addr->uri = (pjsip_uri*)url;
+    url->user = pj_str("bob");
+    url->host = pj_str("biloxi.com");
+    to->tag = pj_str("a6c85cf");
+
+    //"From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+    from = pjsip_from_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)from);
+    name_addr = pjsip_name_addr_create(pool);
+    name_addr->display = pj_str("Alice");
+    from->uri = (pjsip_uri*)name_addr;
+    url = pjsip_url_create(pool, PJ_FALSE);
+    name_addr->uri = (pjsip_uri*)url;
+    url->user = pj_str("alice");
+    url->host = pj_str("atlanta.com");
+    from->tag = pj_str("1928301774");
+
+    //"Call-ID: a84b4c76e66710@pc33.atlanta.com\r\n"
+    cid = pjsip_cid_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)cid);
+    cid->id = pj_str("a84b4c76e66710@pc33.atlanta.com");
+
+    //"CSeq: 314159 INVITE\r\n"
+    cseq = pjsip_cseq_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)cseq);
+    cseq->cseq = 314159;
+    pjsip_method_set(&cseq->method, PJSIP_INVITE_METHOD);
+
+    //"Contact: <sips:bob@192.0.2.4>\r\n"
+    contact = pjsip_contact_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)contact);
+    name_addr = pjsip_name_addr_create(pool);
+    contact->uri = (pjsip_uri*)name_addr;
+    url = pjsip_url_create(pool, PJ_TRUE);
+    name_addr->uri = (pjsip_uri*)url;
+    url->user = pj_str("bob");
+    url->host = pj_str("192.0.2.4");
+
+    //"Content-Type: application/sdp\r\n"
+    ctype = pjsip_ctype_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)ctype);
+    ctype->media.type = pj_str("application");
+    ctype->media.subtype = pj_str("sdp");
+
+    //"Content-Length: 150\r\n"
+    clen = pjsip_clen_hdr_create(pool);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)clen);
+    clen->len = 150;
+
+    // Body
+    body = pj_pool_zalloc(pool, sizeof(*body));
+    msg->body = body;
+    body->content_type.type = pj_str("application");
+    body->content_type.subtype = pj_str("sdp");
+    body->data = 
+	"v=0\r\n"
+	"o=alice 53655765 2353687637 IN IP4 pc33.atlanta.com\r\n"
+	"s=-\r\n"
+	"t=0 0\r\n"
+	"c=IN IP4 pc33.atlanta.com\r\n"
+	"m=audio 3456 RTP/AVP 0 1 3 99\r\n"
+	"a=rtpmap:0 PCMU/8000\r\n";
+    body->len = pj_native_strlen(body->data);
+    body->print_body = &pjsip_print_text_body;
+
+    return msg;
+}
+
+/*****************************************************************************/
+
+pj_status_t msg_test(void)
+{
+    pj_status_t status;
+    pj_pool_t *pool;
+    int i, loop;
+    pj_timestamp zero;
+    pj_time_val elapsed;
+    pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
+
+    PJ_LOG(3,("", "  simple test.."));
+    for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
+	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+	status = test_entry( pool, &test_array[i] );
+	pjsip_endpt_destroy_pool(endpt, pool);
+
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    PJ_LOG(3,("", "  benchmarking.."));
+    detect_len = parse_len = print_len = 0;
+    zero.u64 = detect_time.u64 = parse_time.u64 = print_time.u64 = 0;
+    
+    for (loop=0; loop<LOOP; ++loop) {
+	for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
+	    pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+	    status = test_entry( pool, &test_array[i] );
+	    pjsip_endpt_destroy_pool(endpt, pool);
+
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+    }
+
+    kbytes = detect_len;
+    pj_highprec_mod(kbytes, 1000000);
+    pj_highprec_div(kbytes, 100000);
+    elapsed = pj_elapsed_time(&zero, &detect_time);
+    avg_detect = pj_elapsed_usec(&zero, &detect_time);
+    pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN);
+    pj_highprec_div(avg_detect, detect_len);
+    avg_detect = 1000000 / avg_detect;
+
+    PJ_LOG(3,("", "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
+		  (unsigned)(detect_len/1000000), (unsigned)kbytes,
+		  elapsed.sec, elapsed.msec,
+		  (unsigned)avg_detect));
+
+    kbytes = parse_len;
+    pj_highprec_mod(kbytes, 1000000);
+    pj_highprec_div(kbytes, 100000);
+    elapsed = pj_elapsed_time(&zero, &parse_time);
+    avg_parse = pj_elapsed_usec(&zero, &parse_time);
+    pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN);
+    pj_highprec_div(avg_parse, parse_len);
+    avg_parse = 1000000 / avg_parse;
+
+    PJ_LOG(3,("", "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
+		  (unsigned)(parse_len/1000000), (unsigned)kbytes,
+		  elapsed.sec, elapsed.msec,
+		  (unsigned)avg_parse));
+
+    kbytes = print_len;
+    pj_highprec_mod(kbytes, 1000000);
+    pj_highprec_div(kbytes, 100000);
+    elapsed = pj_elapsed_time(&zero, &print_time);
+    avg_print = pj_elapsed_usec(&zero, &print_time);
+    pj_highprec_mul(avg_print, AVERAGE_MSG_LEN);
+    pj_highprec_div(avg_print, print_len);
+    avg_print = 1000000 / avg_print;
+
+    PJ_LOG(3,("", "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
+		  (unsigned)(print_len/1000000), (unsigned)kbytes,
+		  elapsed.sec, elapsed.msec,
+		  (unsigned)avg_print));
+
+    return status;
+}
+
+/*****************************************************************************/

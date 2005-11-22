@@ -49,9 +49,9 @@ enum
 
     /** If this option is specified, function #pjsip_parse_uri and other
      *  internal functions that this function calls will parse URI according
-     *  to convention for parsing From/To header. For example, when the URI
-     *  is not enclosed in brackets ("<" and ">"), all parameters will not
-     *  be stored to the URI (it will be stored to the header).
+     *  to convention for parsing From/To/Contact header. For example, when 
+     *  the URI is not enclosed in brackets ("<" and ">"), all parameters 
+     *  are treated as header parameters (not URI parameters).
      */
     PJSIP_PARSE_URI_IN_FROM_TO_HDR = 2,
 };
