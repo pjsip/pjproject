@@ -117,6 +117,14 @@ PJ_DECL(void) pj_cis_add_num( pj_cis_t *cis);
 PJ_DECL(void) pj_cis_add_str( pj_cis_t *cis, const char *str);
 
 /**
+ * Add specification from another specification.
+ *
+ * @param cis	    The specification is to be set.
+ * @param rhs	    The specification to be copied.
+ */
+PJ_DECL(void) pj_cis_add_cis( pj_cis_t *cis, const pj_cis_t *rhs);
+
+/**
  * Delete characters in the specified range from the specification.
  *
  * @param cis       The scanner character specification.
