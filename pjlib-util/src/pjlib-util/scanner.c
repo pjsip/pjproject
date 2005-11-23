@@ -186,10 +186,7 @@ PJ_DEF(void) pj_scan_skip_line( pj_scanner *scanner )
     } else {
 	scanner->curptr = scanner->start_line = s+1;
 	scanner->line++;
-	if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
-	    pj_scan_skip_whitespace(scanner);    
-	}
-    }
+   }
 }
 
 PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
