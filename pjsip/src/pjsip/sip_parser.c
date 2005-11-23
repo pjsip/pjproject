@@ -53,6 +53,10 @@
 
 #define UNREACHED(expr)
 
+//#define IS_NEWLINE(c)	((c)=='\r' || (c)=='\n')
+#define IS_NEWLINE(c)	((c)=='\r')
+#define IS_SPACE(c)	((c)==' ' || (c)=='\t')
+
 typedef struct handler_rec
 {
     char		  hname[PJSIP_MAX_HNAME_LEN+1];
@@ -542,7 +546,6 @@ PJ_DEF(pjsip_msg*) pjsip_parse_msg( pj_pool_t *pool,
     pjsip_msg *msg = NULL;
     pj_scanner scanner;
     pjsip_parse_ctx context;
-    PJ_USE_EXCEPTION;
 
     init_sip_parser();
 
@@ -553,13 +556,7 @@ PJ_DEF(pjsip_msg*) pjsip_parse_msg( pj_pool_t *pool,
     context.pool = pool;
     context.rdata = NULL;
 
-    PJ_TRY {
-	msg = int_parse_msg(&context, err_list);
-    } 
-    PJ_CATCH_ANY {
-	msg = NULL;
-    }
-    PJ_END
+    msg = int_parse_msg(&context, err_list);
 
     pj_scan_fini(&scanner);
     return msg;
@@ -571,7 +568,6 @@ PJ_DEF(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
 {
     pj_scanner scanner;
     pjsip_parse_ctx context;
-    PJ_USE_EXCEPTION;
 
     init_sip_parser();
 
@@ -582,13 +578,7 @@ PJ_DEF(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
     context.pool = rdata->tp_info.pool;
     context.rdata = rdata;
 
-    PJ_TRY {
-	rdata->msg_info.msg = int_parse_msg(&context, &rdata->msg_info.parse_err);
-    } 
-    PJ_CATCH_ANY {
-	rdata->msg_info.msg = NULL;
-    }
-    PJ_END
+    rdata->msg_info.msg = int_parse_msg(&context, &rdata->msg_info.parse_err);
 
     pj_scan_fini(&scanner);
     return rdata->msg_info.msg;
@@ -718,9 +708,7 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
     PJ_END;
 
     /* Must have exhausted all inputs. */
-    if (pj_scan_is_eof(&scanner) || *scanner.curptr=='\r' || 
-                       *scanner.curptr=='\n') 
-    {
+    if (pj_scan_is_eof(&scanner) || IS_NEWLINE(*scanner.curptr)) {
 	/* Success. */
 	pj_scan_fini(&scanner);
 	return uri;
@@ -750,32 +738,39 @@ static int generic_print_body (pjsip_msg_body *msg_body,
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
 {
-    pjsip_msg *msg;
+    pj_bool_t parsing_headers;
+    pjsip_msg *msg = NULL;
     pj_str_t hname;
     pjsip_ctype_hdr *ctype_hdr = NULL;
     pj_scanner *scanner = ctx->scanner;
     pj_pool_t *pool = ctx->pool;
     PJ_USE_EXCEPTION;
 
-    /* Skip leading newlines. */
-    while (*scanner->curptr=='\r' || *scanner->curptr=='\n') {
-	pj_scan_get_newline(scanner);
-    }
-
-    /* Parse request or status line */
-    if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
-	msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
-	int_parse_status_line( scanner, &msg->line.status );
-    } else {
-	msg = pjsip_msg_create(pool, PJSIP_REQUEST_MSG);
-	int_parse_req_line(scanner, pool, &msg->line.req );
-    }
-
-    /* Parse headers. */
-parse_headers:
+    parsing_headers = PJ_FALSE;
 
     PJ_TRY 
     {
+	if (parsing_headers)
+	    goto parse_headers;
+
+	/* Skip leading newlines. */
+	while (IS_NEWLINE(*scanner->curptr)) {
+	    pj_scan_get_newline(scanner);
+	}
+
+	/* Parse request or status line */
+	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
+	    msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
+	    int_parse_status_line( scanner, &msg->line.status );
+	} else {
+	    msg = pjsip_msg_create(pool, PJSIP_REQUEST_MSG);
+	    int_parse_req_line(scanner, pool, &msg->line.req );
+	}
+
+	parsing_headers = PJ_TRUE;
+
+parse_headers:
+	/* Parse headers. */
 	do {
 	    pjsip_parse_hdr_func * handler;
 	    pjsip_hdr *hdr = NULL;
@@ -795,20 +790,21 @@ parse_headers:
 	     */
 	    if (handler) {
 		hdr = (*handler)(ctx);
+
+		/* Check if we've just parsed a Content-Type header. 
+		 * We will check for a message body if we've got Content-Type 
+		 * header.
+		 */
+		if (hdr->type == PJSIP_H_CONTENT_TYPE) {
+		    ctype_hdr = (pjsip_ctype_hdr*)hdr;
+		}
+
 	    } else {
 		hdr = parse_hdr_generic_string(ctx);
-		hdr->type = PJSIP_H_OTHER;
 		hdr->name = hdr->sname = hname;
 	    }
 	    
-	    /* Check if we've just parsed a Content-Type header. 
-	     * We will check for a message body if we've got Content-Type 
-	     * header.
-	     */
-	    if (hdr->type == PJSIP_H_CONTENT_TYPE) {
-		ctype_hdr = (pjsip_ctype_hdr*)hdr;
-	    }
-		
+	
 	    /* Single parse of header line can produce multiple headers.
 	     * For example, if one Contact: header contains Contact list
 	     * separated by comma, then these Contacts will be split into
@@ -818,17 +814,38 @@ parse_headers:
 	    pj_list_insert_nodes_before(&msg->hdr, hdr);
 	    
 	    /* Parse until EOF or an empty line is found. */
-	} while (!pj_scan_is_eof(scanner) && 
-		  *scanner->curptr != '\r' && *scanner->curptr != '\n');
+	} while (!pj_scan_is_eof(scanner) && !IS_NEWLINE(*scanner->curptr));
 	
+	parsing_headers = PJ_FALSE;
+
+	/* If empty line is found, eat it. */
+	if (!pj_scan_is_eof(scanner)) {
+	    if (IS_NEWLINE(*scanner->curptr)) {
+		pj_scan_get_newline(scanner);
+	    }
+	}
+
+	/* If we have Content-Type header, treat the rest of the message 
+	 * as body.
+	 */
+	if (ctype_hdr && scanner->curptr!=scanner->end) {
+	    pjsip_msg_body *body = pj_pool_alloc(pool, sizeof(pjsip_msg_body));
+	    body->content_type.type = ctype_hdr->media.type;
+	    body->content_type.subtype = ctype_hdr->media.subtype;
+	    body->content_type.param = ctype_hdr->media.param;
+
+	    body->data = scanner->curptr;
+	    body->len = scanner->end - scanner->curptr;
+	    body->print_body = &generic_print_body;
+
+	    msg->body = body;
+	}
     }
     PJ_CATCH_ANY 
     {
 	/* Exception was thrown during parsing. 
 	 * Skip until newline, and parse next header. 
 	 */
-	pj_str_t token;
-	
 	if (err_list) {
 	    pjsip_parser_err_report *err_info;
 	    
@@ -836,45 +853,32 @@ parse_headers:
 	    err_info->except_code = PJ_GET_EXCEPTION();
 	    err_info->line = scanner->line;
 	    err_info->col = pj_scan_get_col(scanner);
-	    err_info->hname = hname;
+	    if (parsing_headers)
+		err_info->hname = hname;
+	    else
+		err_info->hname.slen = 0;
 	    
 	    pj_list_insert_before(err_list, err_info);
 	}
 	
-	if (!pj_scan_is_eof(scanner)) {
-	    pj_scan_get(scanner, &pjsip_NOT_NEWLINE, &token);
-	    parse_hdr_end(scanner);
+	if (parsing_headers) {
+	    if (!pj_scan_is_eof(scanner)) {
+		/* Skip until next line.
+		 * Watch for header continuation.
+		 */
+		do {
+		    pj_scan_skip_line(scanner);
+		} while (IS_SPACE(*scanner->curptr));
+	    }
+
+	    if (!pj_scan_is_eof(scanner) && !IS_NEWLINE(*scanner->curptr)) {
+		goto parse_headers;
+	    }
 	}
 
-	if (!pj_scan_is_eof(scanner) && 
-	    *scanner->curptr != '\r' && *scanner->curptr != '\n');
-	{
-	    goto parse_headers;
-	}
+	msg = NULL;
     }
     PJ_END;
-
-
-    /* If empty line is found, eat it. */
-    if (!pj_scan_is_eof(scanner)) {
-	if (*scanner->curptr=='\r' || *scanner->curptr=='\n') {
-	    pj_scan_get_newline(scanner);
-	}
-    }
-
-    /* If we have Content-Type header, treat the rest of the message as body.*/
-    if (ctype_hdr && scanner->curptr!=scanner->end) {
-	pjsip_msg_body *body = pj_pool_alloc(pool, sizeof(pjsip_msg_body));
-	body->content_type.type = ctype_hdr->media.type;
-	body->content_type.subtype = ctype_hdr->media.subtype;
-	body->content_type.param = ctype_hdr->media.param;
-
-	body->data = scanner->curptr;
-	body->len = scanner->end - scanner->curptr;
-	body->print_body = &generic_print_body;
-
-	msg->body = body;
-    }
 
     return msg;
 }

@@ -997,6 +997,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
                                      const char *format,
                                      ... )
 {
+#if PJ_LOG_MAX_LEVEL > 0
     char newformat[256];
     int len;
     va_list marker;
@@ -1026,6 +1027,12 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
     }
 
     va_end(marker);
+#else
+    PJ_UNUSED_ARG(format);
+    PJ_UNUSED_ARG(error_code);
+    PJ_UNUSED_ARG(sender);
+    PJ_UNUSED_ARG(endpt);
+#endif
 }
 
 
@@ -1110,6 +1117,8 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     /* Unlock mutex. */
     pj_mutex_unlock(endpt->mutex);
 #else
+    PJ_UNUSED_ARG(endpt);
+    PJ_UNUSED_ARG(detail);
     PJ_LOG(3,(THIS_FILE, "pjsip_end_dump: can't dump because it's disabled."));
 #endif
 }

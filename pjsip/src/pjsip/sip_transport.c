@@ -838,6 +838,8 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
     }
 
     pj_lock_release(mgr->lock);
+#else
+    PJ_UNUSED_ARG(mgr);
 #endif
 }
 
