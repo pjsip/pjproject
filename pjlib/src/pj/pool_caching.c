@@ -218,5 +218,8 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 			      total_used, total_capacity,
 			      total_used * 100 / total_capacity));
     }
+#else
+    PJ_UNUSED_ARG(factory);
+    PJ_UNUSED_ARG(detail);
 #endif
 }
