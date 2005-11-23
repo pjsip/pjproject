@@ -28,6 +28,7 @@
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_parser.h>
 #include <pjsip/sip_resolve.h>
+#include <pjsip/sip_tel_uri.h>
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_uri.h>

@@ -27,6 +27,7 @@
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_config.h>
 #include <pj/list.h>
+#include <pjlib-util/scanner.h>
 
 PJ_BEGIN_DECL
 
@@ -102,12 +103,16 @@ PJ_DECL(void) pjsip_param_shallow_clone(pj_pool_t *pool,
  * @param param_list	The parameter list.
  * @param buf		Buffer.
  * @param size		Size of buffer.
+ * @param pname_unres	Specification of allowed characters in pname.
+ * @param pvalue_unres	Specification of allowed characters in pvalue.
  * @param sep		Separator character (either ';' or ',').
  *
  * @return		The number of bytes printed, or -1 on errr.
  */
 PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
 					 char *buf, pj_size_t size,
+					 const pj_cis_t *pname_unres,
+					 const pj_cis_t *pvalue_unres,
 					 int sep);
 
 /**

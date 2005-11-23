@@ -87,6 +87,8 @@ PJ_DEF(void) pjsip_param_shallow_clone( pj_pool_t *pool,
 
 PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 					 char *buf, pj_size_t size,
+					 const pj_cis_t *pname_spec,
+					 const pj_cis_t *pvalue_spec,
 					 int sep)
 {
     const pjsip_param *p;
@@ -103,10 +105,10 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 
     do {
 	*buf++ = (char)sep;
-	copy_advance_escape(buf, p->name, pjsip_PARAM_CHAR_SPEC);
+	copy_advance_escape(buf, p->name, (*pname_spec));
 	if (p->value.slen) {
 	    *buf++ = '=';
-	    copy_advance_escape(buf, p->value, pjsip_PARAM_CHAR_SPEC);
+	    copy_advance_escape(buf, p->value, (*pvalue_spec));
 	}
 	p = p->next;
     } while (p != param_list);
@@ -308,7 +310,9 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
     }
 
     /* Other param. */
-    printed = pjsip_param_print_on(&url->other_param, buf, endbuf-buf, ';');
+    printed = pjsip_param_print_on(&url->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC, 
+				   &pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -448,8 +452,6 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
 	     * the rule of each header. We'll just compare them string to
 	     * string..
 	     */
-	    PJ_TODO(MORE_COMPLIANT_HEADER_PARAM_COMPARISON_IN_URL);
-
 	    if (pj_stricmp(&p1->value, &p2->value) != 0)
 		return PJSIP_ECMPHEADERPARAM;
 	} else {

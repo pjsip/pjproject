@@ -59,7 +59,7 @@ enum
 /**
  * Parser syntax error exception value.
  */
-#define PJSIP_SYN_ERR_EXCEPTION	1
+extern int PJSIP_SYN_ERR_EXCEPTION;
 
 /**
  * This structure is used to get error reporting from parser.
@@ -109,7 +109,8 @@ typedef pjsip_hdr* (pjsip_parse_hdr_func)(pjsip_parse_ctx *context);
  * Most of the specification of header parser handler (pjsip_parse_hdr_func)
  * also applies here (except the separator part).
  */
-typedef void* (pjsip_parse_uri_func)(pj_scanner *scanner, pj_pool_t *pool);
+typedef void* (pjsip_parse_uri_func)(pj_scanner *scanner, pj_pool_t *pool,
+				     pj_bool_t parse_params);
 
 /**
  * Register header parser handler. The parser handler MUST follow the 
@@ -148,7 +149,7 @@ PJ_DECL(pj_status_t) pjsip_unregister_hdr_parser( const char *hname,
  *
  * @return		zero on success.
  */
-PJ_DECL(pj_status_t) pjsip_register_uri_parser( const char *scheme,
+PJ_DECL(pj_status_t) pjsip_register_uri_parser( char *scheme,
 					        pjsip_parse_uri_func *func);
 
 /**

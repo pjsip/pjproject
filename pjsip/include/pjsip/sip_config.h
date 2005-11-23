@@ -75,6 +75,12 @@
 /* Module related constants. */
 #define PJSIP_MAX_MODULE		8
 
+/* Maximum header types. */
+#define PJSIP_MAX_HEADER_TYPES		64
+
+/* Maximum URI types. */
+#define PJSIP_MAX_URI_TYPES		4
+
 /*****************************************************************************
  *  Default timeout settings, in miliseconds. 
  */

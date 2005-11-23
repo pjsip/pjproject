@@ -55,7 +55,7 @@
 	  if (str2.slen) { \
 	    if (len1+str2.slen >= (endbuf-buf)) return -1; \
 	    pj_memcpy(buf,str1,len1); \
-	    printed=pj_strncpy2_escape(buf,&str2,(endbuf-buf-len1),&unres);\
+	    printed=pj_strncpy2_escape(buf+len1,&str2,(endbuf-buf-len1),&unres);\
 	    if (printed < 0) return -1; \
 	    buf += (printed+len1); \
 	  } \

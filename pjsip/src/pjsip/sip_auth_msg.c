@@ -18,6 +18,7 @@
  */
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_auth_parser.h>
+#include <pjsip/sip_parser.h>
 #include <pj/pool.h>
 #include <pj/list.h>
 #include <pj/string.h>
@@ -79,7 +80,9 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     copy_advance_pair(buf, ", qop=", 6, cred->qop);
     copy_advance_pair(buf, ", nc=", 5, cred->nc);
     
-    printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf, ',');
+    printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC, 
+				   &pjsip_PARAM_CHAR_SPEC, ',');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -231,7 +234,9 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     copy_advance_pair(buf, ",algorithm=", 11, chal->algorithm);
     copy_advance_pair_quote_cond(buf, ",qop=", 5, chal->qop, '"', '"');
     
-    printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf, ',');
+    printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC, 
+				   &pjsip_PARAM_CHAR_SPEC, ',');
     if (printed < 0)
 	return -1;
     buf += printed;

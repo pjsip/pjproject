@@ -57,6 +57,17 @@ static pjsip_uri *create_uri14( pj_pool_t *pool );
 static pjsip_uri *create_uri15( pj_pool_t *pool );
 static pjsip_uri *create_uri16( pj_pool_t *pool );
 static pjsip_uri *create_uri17( pj_pool_t *pool );
+static pjsip_uri *create_uri25( pj_pool_t *pool );
+static pjsip_uri *create_uri26( pj_pool_t *pool );
+static pjsip_uri *create_uri27( pj_pool_t *pool );
+static pjsip_uri *create_uri28( pj_pool_t *pool );
+static pjsip_uri *create_uri29( pj_pool_t *pool );
+static pjsip_uri *create_uri30( pj_pool_t *pool );
+static pjsip_uri *create_uri31( pj_pool_t *pool );
+static pjsip_uri *create_uri32( pj_pool_t *pool );
+static pjsip_uri *create_uri33( pj_pool_t *pool );
+static pjsip_uri *create_uri34( pj_pool_t *pool );
+static pjsip_uri *create_uri35( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
 
 #define ERR_NOT_EQUAL	-1001
@@ -66,7 +77,8 @@ struct uri_test
 {
     pj_status_t	     status;
     char	     str[PJSIP_MAX_URL_SIZE];
-    pjsip_uri *(*creator)(pj_pool_t *pool);
+    pjsip_uri	    *(*creator)(pj_pool_t *pool);
+    const char	    *printed;
     pj_size_t	     len;
 } uri_test_array[] = 
 {
@@ -226,7 +238,78 @@ struct uri_test
 	ERR_SYNTAX_ERR,
 	"",
 	&create_dummy,
-    }
+    },
+    {
+	/* 25: Simple tel: URI with global context */
+	PJ_SUCCESS,
+	"tel:+1-201-555-0123",
+	&create_uri25,
+	"tel:+1-201-555-0123"
+    },
+    {
+	/* 26: Simple tel: URI with local context */
+	PJ_SUCCESS,
+	"tel:7042;phone-context=example.com",
+	&create_uri26,
+	"tel:7042;phone-context=example.com"
+    },
+    {
+	/* 27: Simple tel: URI with local context */
+	PJ_SUCCESS,
+	"tel:863-1234;phone-context=+1-914-555",
+	&create_uri27,
+	"tel:863-1234;phone-context=+1-914-555"
+    },
+    {
+	/* 28: Comparison between local and global number */
+	ERR_NOT_EQUAL,
+	"tel:+1",
+	&create_uri28,
+	"tel:+1"
+    },
+    {
+	/* 29: tel: with some visual chars and spaces */
+	PJ_SUCCESS,
+	"tel:(44).1234-*#+Deaf",
+	&create_uri29,
+	"tel:(44).1234-*#+Deaf"
+    },
+    {
+	/* 30: isub parameters */
+	PJ_SUCCESS,
+	"tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1%21+=",
+	&create_uri30,
+	"tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1%21+%3d"
+    },
+    {
+	/* 31: extension number parsing and encoding */
+	PJ_SUCCESS,
+	"tel:+1;ext=+123",
+	&create_uri31,
+	"tel:+1;ext=%2b123"
+    },
+    {
+	/* 32: context parameter parsing and encoding */
+	PJ_SUCCESS,
+	"tel:911;phone-context=+1-911",
+	&create_uri32,
+	"tel:911;phone-context=+1-911"
+    },
+    {
+	/* 33: case-insensitive comparison */
+	PJ_SUCCESS,
+	"tel:911;phone-context=emergency.example.com",
+	&create_uri33,
+	"tel:911;phone-context=emergency.example.com"
+    },
+    {
+	/* 34: parameter only appears in one URL */
+	ERR_NOT_EQUAL,
+	"tel:911;p1=p1;p2=p2",
+	&create_uri34,
+	"tel:911;p1=p1;p2=p2"
+    },
+    
 };
 
 static pjsip_uri *create_uri0(pj_pool_t *pool)
@@ -474,6 +557,110 @@ static pjsip_uri *create_uri17(pj_pool_t *pool)
     return (pjsip_uri*)url;
 }
 
+
+static pjsip_uri *create_uri25(pj_pool_t *pool)
+{
+    /* "tel:+1-201-555-0123" */
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("+1-201-555-0123");
+    return (pjsip_uri*)uri;
+}
+
+static pjsip_uri *create_uri26(pj_pool_t *pool)
+{
+    /* tel:7042;phone-context=example.com */
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("7042");
+    uri->context = pj_str("example.com");
+    return (pjsip_uri*)uri;
+}
+
+static pjsip_uri *create_uri27(pj_pool_t *pool)
+{
+    /* "tel:863-1234;phone-context=+1-914-555" */
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("863-1234");
+    uri->context = pj_str("+1-914-555");
+    return (pjsip_uri*)uri;
+}
+
+/* "tel:1" */
+static pjsip_uri *create_uri28(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("1");
+    return (pjsip_uri*)uri;
+}
+
+/* "tel:(44).1234-*#+Deaf" */
+static pjsip_uri *create_uri29(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("(44).1234-*#+Deaf");
+    return (pjsip_uri*)uri;    
+}
+
+/* "tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1%21+=" */
+static pjsip_uri *create_uri30(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("+1");
+    uri->isub_param = pj_str("/:@&$,-_.!~*'()[]/:&$aA1%21+=");
+    return (pjsip_uri*)uri;    
+}
+
+/* "tel:+1;ext=+123" */
+static pjsip_uri *create_uri31(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("+1");
+    uri->ext_param = pj_str("+123");
+    return (pjsip_uri*)uri;    
+}
+
+/* "tel:911;phone-context=+1-911" */
+static pjsip_uri *create_uri32(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("911");
+    uri->context = pj_str("+1-911");
+    return (pjsip_uri*)uri;    
+}
+
+/* "tel:911;phone-context=emergency.example.com" */
+static pjsip_uri *create_uri33(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+
+    uri->number = pj_str("911");
+    uri->context = pj_str("EMERGENCY.EXAMPLE.COM");
+    return (pjsip_uri*)uri;    
+}
+
+/* "tel:911;p1=p1;p2=p2" */
+static pjsip_uri *create_uri34(pj_pool_t *pool)
+{
+    pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
+    pjsip_param *p;
+
+    uri->number = pj_str("911");
+    
+    p = pj_pool_alloc(pool, sizeof(*p));
+    p->name = p->value = pj_str("p1");
+    pj_list_insert_before(&uri->other_param, p);
+
+    return (pjsip_uri*)uri;    
+}
+
+
 static pjsip_uri *create_dummy(pj_pool_t *pool)
 {
     PJ_UNUSED_ARG(pool);
@@ -572,9 +759,24 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     pj_add_timestamp(&cmp_time, &t2);
 
     /* Compare text. */
-    if (pj_strcmp(&s1, &s2) != 0) {
-	/* Not equal. */
-	status = -60;
+    if (entry->printed) {
+	if (pj_strcmp2(&s1, entry->printed) != 0) {
+	    /* Not equal. */
+	    PJ_LOG(3,("", "   uri print mismatch:\n"
+			  "    printed='%s'\n"
+			  "    expectd='%s'",
+			  s1.ptr, entry->printed));
+	    status = -60;
+	}
+    } else {
+	if (pj_strcmp(&s1, &s2) != 0) {
+	    /* Not equal. */
+	    PJ_LOG(3,("", "   uri print mismatch:\n"
+			  "    uri1='%s'\n"
+			  "    uri2='%s'",
+			  s1.ptr, s2.ptr));
+	    status = -70;
+	}
     }
 
 on_return:

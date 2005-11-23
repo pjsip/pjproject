@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsip/sip_msg.h>
+#include <pjsip/sip_parser.h>
 #include <pjsip/print_util.h>
 #include <pj/string.h>
 #include <pj/pool.h>
@@ -927,7 +928,9 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	    buf += printed + 9;
 	}
 
-	printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,';');
+	printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
+				       &pjsip_PARAM_CHAR_SPEC,
+				       &pjsip_PARAM_CHAR_SPEC, ';');
 	if (printed < 0)
 	    return printed;
 	buf += printed;
@@ -1120,7 +1123,9 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
 
     copy_advance_pair(buf, ";tag=", 5, hdr->tag);
 
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, ';');
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC,
+				   &pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1243,7 +1248,9 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
 	return -1;
     buf += printed;
 
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, ';');
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC, 
+				   &pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1406,7 +1413,9 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     copy_advance_pair(buf, ";received=", 10, hdr->recvd_param);
     copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
     
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, ';');
+    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
+				   &pjsip_PARAM_CHAR_SPEC,
+				   &pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
