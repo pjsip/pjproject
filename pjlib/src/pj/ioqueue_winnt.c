@@ -202,40 +202,61 @@ static void erase_connecting_socket( pj_ioqueue_t *ioqueue, unsigned pos)
  * succeeded, 'result' will have value zero, otherwise will have the error
  * code.
  */
-static pj_ioqueue_key_t *check_connecting( pj_ioqueue_t *ioqueue, 
-					   pj_ssize_t *connect_err )
+static int check_connecting( pj_ioqueue_t *ioqueue )
 {
-    pj_ioqueue_key_t *key = NULL;
-
     if (ioqueue->connecting_count) {
-	DWORD result;
+	int i, count;
+	struct 
+	{
+	    pj_ioqueue_key_t *key;
+	    pj_status_t	      status;
+	} events[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL-1];
 
 	pj_lock_acquire(ioqueue->lock);
-	result = WaitForMultipleObjects(ioqueue->connecting_count,
-					ioqueue->connecting_handles,
-					FALSE, 0);
-	if (result >= WAIT_OBJECT_0 && 
-	    result < WAIT_OBJECT_0+ioqueue->connecting_count) 
-	{
-	    WSANETWORKEVENTS net_events;
+	for (count=0; count<PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL-1; ++count) {
+	    DWORD result;
 
-	    /* Got completed connect(). */
-	    unsigned pos = result - WAIT_OBJECT_0;
-	    key = ioqueue->connecting_keys[pos];
+	    result = WaitForMultipleObjects(ioqueue->connecting_count,
+					    ioqueue->connecting_handles,
+					    FALSE, 0);
+	    if (result >= WAIT_OBJECT_0 && 
+		result < WAIT_OBJECT_0+ioqueue->connecting_count) 
+	    {
+		WSANETWORKEVENTS net_events;
 
-	    /* See whether connect has succeeded. */
-	    WSAEnumNetworkEvents((pj_sock_t)key->hnd, 
-				 ioqueue->connecting_handles[pos], 
-				 &net_events);
-	    *connect_err = 
-                PJ_STATUS_FROM_OS(net_events.iErrorCode[FD_CONNECT_BIT]);
+		/* Got completed connect(). */
+		unsigned pos = result - WAIT_OBJECT_0;
+		events[count].key = ioqueue->connecting_keys[pos];
 
-	    /* Erase socket from pending connect. */
-	    erase_connecting_socket(ioqueue, pos);
+		/* See whether connect has succeeded. */
+		WSAEnumNetworkEvents((pj_sock_t)events[count].key->hnd, 
+				     ioqueue->connecting_handles[pos], 
+				     &net_events);
+		events[count].status = 
+		    PJ_STATUS_FROM_OS(net_events.iErrorCode[FD_CONNECT_BIT]);
+
+		/* Erase socket from pending connect. */
+		erase_connecting_socket(ioqueue, pos);
+	    } else {
+		/* No more events */
+		break;
+	    }
 	}
 	pj_lock_release(ioqueue->lock);
+
+	/* Call callbacks. */
+	for (i=0; i<count; ++i) {
+	    if (events[i].key->cb.on_connect_complete) {
+		events[i].key->cb.on_connect_complete(events[i].key, 
+						      events[i].status);
+	    }
+	}
+
+	return count;
     }
-    return key;
+
+    return 0;
+    
 }
 #endif
 
@@ -438,26 +459,24 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     DWORD dwMsec, dwBytesTransfered, dwKey;
     generic_overlapped *pOv;
     pj_ioqueue_key_t *key;
+    int connect_count;
     pj_ssize_t size_status = -1;
-    BOOL rc;
+    BOOL rcGetQueued;;
 
     PJ_ASSERT_RETURN(ioqueue, -PJ_EINVAL);
 
     /* Check the connecting array. */
 #if PJ_HAS_TCP
-    key = check_connecting(ioqueue, &size_status);
-    if (key != NULL) {
-	key->cb.on_connect_complete(key, (int)size_status);
-	return 1;
-    }
+    connect_count = check_connecting(ioqueue);
 #endif
 
     /* Calculate miliseconds timeout for GetQueuedCompletionStatus */
     dwMsec = timeout ? timeout->sec*1000 + timeout->msec : INFINITE;
 
     /* Poll for completion status. */
-    rc = GetQueuedCompletionStatus(ioqueue->iocp, &dwBytesTransfered, &dwKey,
-				   (OVERLAPPED**)&pOv, dwMsec);
+    rcGetQueued = GetQueuedCompletionStatus(ioqueue->iocp, &dwBytesTransfered,
+					    &dwKey, (OVERLAPPED**)&pOv, 
+					    dwMsec);
 
     /* The return value is:
      * - nonzero if event was dequeued.
@@ -503,22 +522,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    pj_assert(0);
 	    break;
 	}
-	return 1;
+	return connect_count+1;
     }
 
-    if (GetLastError()==WAIT_TIMEOUT) {
-	/* Check the connecting array (again). */
-#if PJ_HAS_TCP
-	size_status = -1;   /* make MSVC happy */
-	key = check_connecting(ioqueue, &size_status);
-	if (key != NULL) {
-	    key->cb.on_connect_complete(key, (int)size_status);
-	    return 1;
-	}
-#endif
-	return 0;
-    }
-    return -1;
+    /* No event was queued. */
+    return connect_count;
 }
 
 /*
