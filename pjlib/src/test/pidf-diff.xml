@@ -1,0 +1,63 @@
+   <?xml version="1.0" encoding="UTF-8"?>
+   <p:pidf-full xmlns="urn:ietf:params:xml:ns:pidf"
+          xmlns:p="urn:ietf:params:xml:ns:pidf-diff"
+          xmlns:r="urn:ietf:params:xml:ns:pidf:rpid"
+          xmlns:c="urn:ietf:params:xml:ns:pidf:caps"
+          entity="pres:someone@example.com"
+          version="567">
+
+    <tuple id="sg89ae">
+     <status>
+      <basic>open</basic>
+      <r:relationship>assistant</r:relationship>
+     </status>
+     <c:servcaps>
+      <c:audio>true</c:audio>
+      <c:video>false</c:video>
+      <c:message>true</c:message>
+     </c:servcaps>
+     <contact priority="0.8">tel:09012345678</contact>
+    </tuple>
+
+    <tuple id="cg231jcr">
+     <status>
+      <basic>open</basic>
+     </status>
+     <contact priority="1.0">im:pep@example.com</contact>
+    </tuple>
+
+    <tuple id="r1230d">
+     <status>
+      <basic>closed</basic>
+      <r:activity>meeting</r:activity>
+     </status>
+     <r:homepage>http://example.com/~pep/</r:homepage>
+     <r:icon>http://example.com/~pep/icon.gif</r:icon>
+     <r:card>http://example.com/~pep/card.vcd</r:card>
+     <contact priority="0.9">sip:pep@example.com</contact>
+    </tuple>
+
+    <note xml:lang="en">Full state presence document</note>
+
+    <r:person>
+     <r:status>
+      <r:activities>
+       <r:on-the-phone/>
+       <r:busy/>
+      </r:activities>
+     </r:status>
+    </r:person>
+
+    <r:device id="urn:esn:600b40c7">
+     <r:status>
+      <c:devcaps>
+       <c:mobility>
+        <c:supported>
+         <c:mobile/>
+        </c:supported>
+       </c:mobility>
+      </c:devcaps>
+     </r:status>
+    </r:device>
+
+   </p:pidf-full>

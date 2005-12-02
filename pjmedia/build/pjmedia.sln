@@ -1,0 +1,90 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjsdp", "..\..\pjsdp\build\pjsdp.vcproj", "{CC953678-66FC-4C91-9DC7-2783B7427B19}"
+	ProjectSection(ProjectDependencies) = postProject
+		{72790D99-35BB-45AC-9A23-3BB60C901E63} = {72790D99-35BB-45AC-9A23-3BB60C901E63}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjaudio_tool", "pjaudio_tool.vcproj", "{B5DAC8A2-E01F-41B8-8FFE-7CD396C183DD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E6181719-4557-4EB5-8DBA-1E21C5183670} = {E6181719-4557-4EB5-8DBA-1E21C5183670}
+		{CC953678-66FC-4C91-9DC7-2783B7427B19} = {CC953678-66FC-4C91-9DC7-2783B7427B19}
+		{72790D99-35BB-45AC-9A23-3BB60C901E63} = {72790D99-35BB-45AC-9A23-3BB60C901E63}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjmedia", "pjmedia.vcproj", "{E6181719-4557-4EB5-8DBA-1E21C5183670}"
+	ProjectSection(ProjectDependencies) = postProject
+		{72790D99-35BB-45AC-9A23-3BB60C901E63} = {72790D99-35BB-45AC-9A23-3BB60C901E63}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjmedia_test", "pjmedia_test.vcproj", "{13EF030B-5BB9-48AC-8EAA-723B6BD1DD7D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E6181719-4557-4EB5-8DBA-1E21C5183670} = {E6181719-4557-4EB5-8DBA-1E21C5183670}
+		{CC953678-66FC-4C91-9DC7-2783B7427B19} = {CC953678-66FC-4C91-9DC7-2783B7427B19}
+		{72790D99-35BB-45AC-9A23-3BB60C901E63} = {72790D99-35BB-45AC-9A23-3BB60C901E63}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib", "..\..\pjlib\build\pjlib.vcproj", "{72790D99-35BB-45AC-9A23-3BB60C901E63}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SourceCodeControl) = preSolution
+		SccNumberOfProjects = 6
+		SccProjectUniqueName0 = ..\\..\\pjsdp\\build\\pjsdp.vcproj
+		SccLocalPath0 = ..\\..
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection0 = pjsdp\\build\\
+		SccProjectUniqueName1 = pjmedia.vcproj
+		SccLocalPath1 = ..\\..
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection1 = pjmedia\\build\\
+		SccProjectUniqueName2 = ..\\..\\pjlib\\build\\pjlib.vcproj
+		SccLocalPath2 = ..\\..
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection2 = pjlib\\build\\
+		SccProjectName3 = \u0022$/pjproject\u0022,\u0020PIAAAAAA
+		SccLocalPath3 = ..\\..
+		SccProvider3 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection3 = pjmedia\\build\\
+		SolutionUniqueID = {ADA38C1E-12DE-4E20-AC46-530CA681F3E8}
+		SccProjectUniqueName4 = pjaudio_tool.vcproj
+		SccLocalPath4 = ..\\..
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection4 = pjmedia\\build\\
+		SccProjectUniqueName5 = pjmedia_test.vcproj
+		SccLocalPath5 = ..\\..
+		CanCheckoutShared = false
+		SccProjectFilePathRelativizedFromConnection5 = pjmedia\\build\\
+	EndGlobalSection
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{CC953678-66FC-4C91-9DC7-2783B7427B19}.Debug.ActiveCfg = Debug|Win32
+		{CC953678-66FC-4C91-9DC7-2783B7427B19}.Debug.Build.0 = Debug|Win32
+		{CC953678-66FC-4C91-9DC7-2783B7427B19}.Release.ActiveCfg = Release|Win32
+		{CC953678-66FC-4C91-9DC7-2783B7427B19}.Release.Build.0 = Release|Win32
+		{B5DAC8A2-E01F-41B8-8FFE-7CD396C183DD}.Debug.ActiveCfg = Debug|Win32
+		{B5DAC8A2-E01F-41B8-8FFE-7CD396C183DD}.Debug.Build.0 = Debug|Win32
+		{B5DAC8A2-E01F-41B8-8FFE-7CD396C183DD}.Release.ActiveCfg = Release|Win32
+		{B5DAC8A2-E01F-41B8-8FFE-7CD396C183DD}.Release.Build.0 = Release|Win32
+		{E6181719-4557-4EB5-8DBA-1E21C5183670}.Debug.ActiveCfg = Debug|Win32
+		{E6181719-4557-4EB5-8DBA-1E21C5183670}.Debug.Build.0 = Debug|Win32
+		{E6181719-4557-4EB5-8DBA-1E21C5183670}.Release.ActiveCfg = Release|Win32
+		{E6181719-4557-4EB5-8DBA-1E21C5183670}.Release.Build.0 = Release|Win32
+		{13EF030B-5BB9-48AC-8EAA-723B6BD1DD7D}.Debug.ActiveCfg = Debug|Win32
+		{13EF030B-5BB9-48AC-8EAA-723B6BD1DD7D}.Debug.Build.0 = Debug|Win32
+		{13EF030B-5BB9-48AC-8EAA-723B6BD1DD7D}.Release.ActiveCfg = Release|Win32
+		{13EF030B-5BB9-48AC-8EAA-723B6BD1DD7D}.Release.Build.0 = Release|Win32
+		{72790D99-35BB-45AC-9A23-3BB60C901E63}.Debug.ActiveCfg = Debug|Win32
+		{72790D99-35BB-45AC-9A23-3BB60C901E63}.Debug.Build.0 = Debug|Win32
+		{72790D99-35BB-45AC-9A23-3BB60C901E63}.Release.ActiveCfg = Release|Win32
+		{72790D99-35BB-45AC-9A23-3BB60C901E63}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

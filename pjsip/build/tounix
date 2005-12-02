@@ -1,0 +1,5 @@
+#!/bin/sh
+name=`basename $1`
+cp $1 /tmp
+cat /tmp/$name | tr -d '\r' > $1
+rm -f /tmp/$name

@@ -1,0 +1,147 @@
+Version 0.2.9 - 2005/06/19
+Core:
+  - Moved authentication stuff to core.
+SIMPLE:
+  - Initial implementation of Event framework (SUBSCRIBE/NOTIFY)
+  - Initial implementation of Presence
+  - Tidying up here and there.
+ 
+Version 0.2.8.5 - 2005/06/05
+====================================
+Core:
+  - Tidying up sip_msg.h (no need to export clone/shallow_clone/print API
+    for headers).
+  - Endpoint now can respond with 501/Not Supported if incoming request is
+    not handled by any modules.
+  - Endpoint also supports Allow header now.
+  - Changed transport names to capital letters (thanks ...)
+  - Fixed bug with locking in select() ioqueue.
+  - Add status phrase for >= 700 status codes.
+  
+pjsua:
+  - Verify URL in arguments to prevent crash.
+  - Can read commands from config file.
+  - Now has buddy list and can send IM!
+
+SIMPLE:
+  - Instant Messaging support!
+ 
+MEDIA:
+  - CLOSING SEQUENCE IS NOT PROPER!!! SOMETIMES THREAD IS DEADLOCKED,
+    OR DSOUND IS NOT CLOSED PROPERLY!!!
+   
+Version 0.2.8 - 2005/05/28
+====================================
+- Simple STUN client support
+  SIP UDP port and media RTP/RTCP ports are now STUN aware. 
+- Major changed in I/O queue, now callback is used.
+  Callback is better because multiple libraries can register to single I/O queue.
+  It was not possible with previous implementation, because the function which does
+  polling needs to understand what to do when a key is signalled. The changes was
+  initially needed to support STUN, but then the STUN client implementation uses the
+  simpler select() (in stun_client.c).
+- Merge SDP library into PJMEDIA (no more PJSDP).
+  PJSDP only has couple of files (sdp.[hc]), not worth maintaining a library.
+- Fixed bug in select() I/O queue (not thread safe).
+
+
+Version 0.2.7 - 2005/05/14
+====================================
+PJLIB:
+- Major reorganization in pool, introducing pool factory and policy.
+  All libraries now can be completely agnostic about memory management 
+  choosen by application.
+- Fixed bug in GUID generation on mingw
+- Fixed bug in scanner if ASCII > 127 is fed into the input
+- More doxygen documentation
+
+PJMEDIA:
+- Renamed some functions/structs/etc.
+
+UA library:
+- Registration client completed (including authentication).
+- Fixed a crash condition when tsx has not received any response.
+
+PJSUA:
+- Use getopt.c
+
+
+Version 0.2.6 - 2005/04/17
+====================================
+All:
+- tidying up header files.
+
+Core library:
+- Removed PJSIP_HAS_DUMP macro (now automatically calculated based on log level)
+- Added pjsip_tx_data_invalidate_msg()
+
+UA library:
+- big modification in dialog API to better support injecting custom header
+  in outgoing message and to make it more flexible for future features (such
+  as caching the outgoing message):
+    - sending messages is now done in two steps: (1)create the msg transmit
+      buffer (pjsip_dlg_tx_data), (2)send the msg transmit buffer.
+    - dialog state won't change in step (1); it will change only
+      when the message is actually sent in step (2).
+      What won't change:
+	- the dialog state
+	- outgoing CSeq
+    - outgoing message transmit buffer (pjsip_dlg_tx_data) will be deleted 
+      when sent in step (2). Application MAY save request messages for 
+      future transmission, even after the request has been sent. To do so,
+      it must increment the reference counter and remember that each time
+      the request is sent, the reference counter will be decremented. Also
+      application CAN NOT re-send the message while the transaction that
+      sends the message has not terminated.
+- changed API names: pjsip_dlg_answer_invitation() --> pjsip_dlg_answer(), etc.
+- initial sip_reg.h for SIP registration.
+
+Auth library:
+- the digest authentication should work, however it has not been tested
+  with any SIP servers because we don't have REGISTER support yet.
+*Note*:
+  authentication in pjsua still uses hardcoded user/pass: hello/world.
+
+
+Version 0.2.5.2 - 2005/03/25
+====================================
+UA library:
+- Major modification in dialog callbacks, now high level callbacks such as
+  on_calling(), on_incoming(), on_provisional(), on_established(), and
+  on_disconnected() are provided instead of just one callback (on_event()).
+- Added pjsip_dlg_disconnect() which should handle all cases of disconnection
+  such as sending CANCEL, sending BYE, or sending final response to INVITE.
+- Added and updated doxygen comments.
+- Changed: pjsip_dialog_xxx --> pjsip_dlg_xxx
+
+New:
+- PJSIP Auth library, which supports digest scheme.
+- Only client functionality is present at the moment.
+
+PJSUA:
+- Remove callgen feature, as it makes the application complicated.
+  Will move it to different application, to make way for more sophisticated
+  call generator.
+- Support the new callback framework.
+- Support the new digest authentication (UAC only).
+
+SIP core:
+- Added PJSIP_EVENT_BEFORE_TX, triggered by transaction before sending
+  outgoing message (including retransmission). Application can use this event
+  (via dialog callback) to modify the message before transmission (such as
+  adding authorization headers).
+- Added general purpose function to print text body.
+- Move constant strings in parser to public/extern, just in case other
+  part of the library need to use them.
+
+PJMEDIA:
+- Protect against NULL in destroy session.
+
+Misc:
+- Rename build output directory x_Win32_x --> x_vc7_x or x_vc6_x, also
+  library naming includes _vc7_ or _vc6_ now.
+- Renamed pjsip_test_core --> pjsip_core_test.
+- Renamed pjaudio_tool --> pjmedia_audio_tool.
+- Renamed sdp_test --> pjsdp_test
+- PJLIB test: added second pool test after new/malloc test.
+- Renamed README.txt --> INSTALL.txt

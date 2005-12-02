@@ -1,0 +1,119 @@
+LIBDIR = ../lib
+BINDIR = ../bin
+
+#
+# The full path of output lib file (e.g. ../lib/libapp.a).
+#
+LIB = $($(APP)_LIB)
+
+#
+# The full path of output executable file (e.g. ../bin/app.exe).
+#
+EXE = $($(APP)_EXE)
+
+#
+# Source directory
+#
+SRCDIR = $($(APP)_SRCDIR)
+
+#
+# SRCEXT is .c
+# SRCS is file.c
+# FULL_SRCS is ../src/app/file.c
+#
+SRCEXT = $($(APP)_SRCEXT)
+SRCS = $($(APP)_SRCS)
+FULL_SRCS = $(foreach file, $(SRCS), $(SRCDIR)/$(file))
+
+
+#
+# Output directory for object files (i.e. output/target)
+#
+OBJDIR = ./output/$(app)-$(TARGET)
+
+#
+# OBJS1 is ./output/target/file.c
+# OBJS is ./output/target/file.o
+#
+OBJS1 = $(foreach file, $(SRCS), $(OBJDIR)/$(file))
+OBJS = $(OBJS1:%$(SRCEXT)=%$(OBJEXT))
+OBJDIRS := $(sort $(foreach file, $(SRCS), $(dir $(OBJDIR)/$(file))))
+
+
+#
+# When generating dependency (gcc -MM), ideally we use only either
+# CFLAGS or CXXFLAGS (not both). But I just couldn't make if/ifeq to work.
+#
+DEPFLAGS = $($(APP)_CXXFLAGS) $($(APP)_CFLAGS)
+
+print_common:
+	@echo "###"
+	@echo "### DUMPING MAKE VARIABLES (I WON'T DO ANYTHING ELSE):"
+	@echo "###"
+	@echo APP=$(APP)
+	@echo SRCEXT=$(SRCEXT)
+	@echo OBJDIR=$(OBJDIR)
+	@echo OBJS=$(OBJS)
+	@echo SRCDIR=$(SRCDIR)
+	@echo FULL_SRCS=$(FULL_SRCS)
+	@echo $(APP)_CFLAGS=$($(APP)_CFLAGS)
+	@echo $(APP)_CXXFLAGS=$($(APP)_CXXFLAGS)
+	@echo $(APP)_LDFLAGS=$($(APP)_LDFLAGS)
+	@echo DEPFLAGS=$(DEPFLAGS)
+
+print_bin: print_common
+	@echo EXE=$(EXE)
+	@echo BINDIR=$(BINDIR)
+
+print_lib: print_common
+	@echo LIB=$(LIB)
+	@echo LIBDIR=$(LIBDIR)
+
+$(LIB): $(LIBDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+	$(AR) $(LIB) $(OBJS)
+	$(RANLIB) $(LIB)
+
+$(EXE): $(BINDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+	$(LD) $(LDOUT) $(EXE) $(OBJS) $($(APP)_LDFLAGS)
+
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
+	$(CC) $($(APP)_CFLAGS) $< $(CCOUT) $@
+
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp
+	$(CC) $($(APP)_CXXFLAGS) $< $(CCOUT) $@
+
+#$(OBJDIR):
+#	$(MKDIR) $(OBJDIR)
+$(OBJDIRS):
+	$(MKDIR) $@
+
+$(LIBDIR):
+	$(MKDIR) $(LIBDIR)
+
+$(BINDIR):
+	$(MKDIR) $(BINDIR)
+
+clean:
+	$(RM) -r $(OBJDIR)/*
+	$(RMDIR) $(OBJDIR)
+
+realclean: clean
+	$(RM) $(LIB) $(EXE)
+	$(RM) .$(app).depend
+
+depend:
+	$(RM) .$(app).depend
+	for F in $(FULL_SRCS); do \
+	   echo -n $(OBJDIR)/ >> .$(app).depend; \
+	   if gcc -MM $(DEPFLAGS) $$F >> .$(app).depend; then \
+		true; \
+	   else \
+		echo 'err:' >> .$(app).depend; \
+		exit 1; \
+	   fi; \
+	done
+
+dep: depend
+
+-include .$(app).depend
+
