@@ -1,6 +1,6 @@
 Version 0.2.9 - 2005/06/19
 Core:
-  - Moved authentication stuff to core.
+  - Moved authentication stuff to core. 
 SIMPLE:
   - Initial implementation of Event framework (SUBSCRIBE/NOTIFY)
   - Initial implementation of Presence
