@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/string.h 5     6/14/05 2:15p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/string.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -32,6 +32,22 @@
 #include <pj/types.h>
 #include <string.h>
 
+#if defined(PJ_WIN32) && PJ_WIN32==1
+#  define strcasecmp	stricmp
+#  define strncasecmp	strnicmp
+#  define snprintf	_snprintf
+#  define vsnprintf	_vsnprintf	
+#elif defined(PJ_WIN32_WINCE)
+//#  define strcasecmp	stricmp
+//#  define strncasecmp	strnicmp
+#  define snprintf	_snprintf
+#  define vsnprintf	_vsnprintf	
+#else
+#  define stricmp	strcasecmp
+#  define strnicmp	strncasecmp
+#endif
+
+
 PJ_BEGIN_DECL
 
 /**
@@ -39,16 +55,6 @@ PJ_BEGIN_DECL
  * @ingroup PJ_DS
  * @{
  */
-
-#if defined(PJ_WIN32) && PJ_WIN32==1
-#  define strcasecmp	stricmp
-#  define strncasecmp	strnicmp
-#  define snprintf	_snprintf
-#  define vsnprintf	_vsnprintf	
-#else
-#  define stricmp	strcasecmp
-#  define strnicmp	strncasecmp
-#endif
 
 /**
  * Create string initializer from a normal C string.
@@ -386,9 +392,11 @@ PJ_DECL(int) pj_rand(void);
  * snprintf.
  * @return the number of characters printed.
  */
-#ifdef PJ_WIN32
+#if defined(PJ_WIN32) && !defined(PJ_WIN32_WINCE)
+#   define pj_vsnprintf _vsnprintf 
 #   define pj_snprintf _snprintf
 #else
+#   define pj_vsnprintf vsnprintf
 #   define pj_snprintf snprintf
 #endif
 

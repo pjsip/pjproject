@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/compat.h 6     8/24/05 10:27a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/compat.h,v 1.1 2005/12/02 20:02:28 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/rbtree.h 3     4/17/05 11:59a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/rbtree.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

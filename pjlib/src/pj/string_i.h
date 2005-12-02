@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/string_i.h 5     8/31/05 9:05p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/string_i.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -200,27 +200,27 @@ PJ_IDEF(int) pj_stricmp( const pj_str_t *str1, const pj_str_t *str2)
     if (diff) {
 	return (int)diff;
     } else {
-	return strnicmp(str1->ptr, str2->ptr, str1->slen);
+	return strncasecmp(str1->ptr, str2->ptr, str1->slen);//return strnicmp(str1->ptr, str2->ptr, str1->slen);
     }
 }
 
 PJ_IDEF(int) pj_stricmp2( const pj_str_t *str1, const char *str2)
 {
-    return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, str1->slen) :
-	   (str1->ptr==str2 ? 0 : 1);
+    return (str1->ptr && str2) ? strncasecmp(str1->ptr, str2, str1->slen) ://return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, str1->slen) : 
+	    (str1->ptr==str2 ? 0 : 1);
 }
 
 PJ_IDEF(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2, 
 			  pj_size_t len)
 {
-    return (str1->ptr && str2->ptr) ? strnicmp(str1->ptr, str2->ptr, len) :
-	   (str1->ptr == str2->ptr ? 0 : 1);
+    return (str1->ptr && str2->ptr) ? strncasecmp(str1->ptr, str2->ptr, len) ://return (str1->ptr && str2->ptr) ? strnicmp(str1->ptr, str2->ptr, len) : 
+	    (str1->ptr == str2->ptr ? 0 : 1);
 }
 
 PJ_IDEF(int) pj_strnicmp2( const pj_str_t *str1, const char *str2, 
 			   pj_size_t len)
 {
-    return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, len) :
+    return (str1->ptr && str2) ? strncasecmp(str1->ptr, str2, len) ://return (str1->ptr && str2) ? strnicmp(str1->ptr, str2, len) :
 	   (str1->ptr == str2 ? 0 : 1);
 }
 

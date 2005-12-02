@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/timer.c 4     5/03/05 9:07a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/timer.c,v 1.1 2005/12/02 20:02:31 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

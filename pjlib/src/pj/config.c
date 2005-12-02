@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/config.c 3     5/28/05 7:12a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/config.c,v 1.1 2005/12/02 20:02:28 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -37,7 +37,9 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_LOG_MAX_LEVEL         : %d", PJ_LOG_MAX_LEVEL));
 #if defined(PJ_WIN32)
     PJ_LOG(3, (id, " PJ_WIN32                 : %d", PJ_WIN32));
+#if defined(PJ_WIN32_WINNT)
     PJ_LOG(3, (id, " PJ_WIN32_WINNT           : %d", PJ_WIN32_WINNT));
+#endif
 #endif
 #if defined(PJ_LINUX)
     PJ_LOG(3, (id, " PJ_LINUX                 : %d", PJ_LINUX));

@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/scanner.c 5     6/04/05 4:29p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/scanner.c,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -494,7 +494,8 @@ PJ_DEF(int) pj_scan_stricmp( pj_scanner *scanner, const char *s, int len)
 	pj_scan_syntax_err(scanner);
 	return -1;
     }
-    return strnicmp(scanner->current, s, len);
+    //return strnicmp(scanner->current, s, len);
+    return strncasecmp(scanner->current, s, len);
 }
 
 

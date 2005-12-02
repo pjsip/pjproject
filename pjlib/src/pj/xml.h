@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/xml.h 2     6/17/05 12:27a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/xml.h,v 1.1 2005/12/02 20:02:31 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

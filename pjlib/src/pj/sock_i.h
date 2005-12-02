@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/sock_i.h 3     5/24/05 12:14a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/sock_i.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -149,7 +149,7 @@ PJ_IDEF(pj_status_t) pj_sock_ioctl( pj_sock_t sock,
 				   long cmd,
 				   pj_uint32_t *val)
 {
-#if defined(PJ_WIN32) && PJ_WIN32==1
+#if defined(PJ_WIN32) && (PJ_WIN32==1 || PJ_WIN32==2)
     return ioctlsocket(sock, cmd, (unsigned long*)val);
 #else
     return ioctl(sock, cmd, (unsigned long*)val);

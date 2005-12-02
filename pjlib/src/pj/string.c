@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/string.c 6     6/14/05 2:15p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/string.c,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -24,6 +24,53 @@
 #include <pj/pool.h>
 #include <ctype.h>	/* isspace() */
 #include <stdlib.h>	/* rand() */
+
+#if defined(PJ_WIN32_WINCE)
+
+int strncasecmp( const char *s1, const char *s2, size_t count ) {
+	int i;
+	char *r1 = s1;
+	char *r2 = s2;
+
+	for (i=0; i<count; i++) {
+		if (*r1=='\0' && *r2=='\0')
+			break;
+		if (*r1=='\0' || *r2=='\0')
+			return -1;
+		if (tolower(*r1)!=tolower(*r2)) {
+			return -1;
+		}
+		r1++;
+		r2++;
+	}
+	
+	return 0;
+}
+
+int strcasecmp( const char *s1, const char *s2 )
+{
+	int i = 0;
+	char *r1 = s1;
+	char *r2 = s2;
+
+	while (1) {
+		if (*r1=='\0' && *r2=='\0')
+			break;
+		if (*r1=='\0' || *r2=='\0')
+			return -1;
+		if (tolower(*r1)!=tolower(*r2)) {
+			return -1;
+		}
+		r1++;
+		r2++;
+		i++;
+		if (i>1024) return -1;
+	}
+	
+	return 0;
+}
+
+#endif
 
 #if PJ_FUNCTIONS_ARE_INLINED==0
 #  include <pj/string_i.h>

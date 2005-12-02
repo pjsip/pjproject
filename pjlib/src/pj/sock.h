@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/sock.h 7     5/28/05 9:59a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/sock.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -36,6 +36,8 @@ PJ_BEGIN_DECL
 #if defined(PJ_WIN32) && PJ_WIN32==1
 #  define WIN32_LEAN_AND_MEAN
 #  include <winsock2.h>
+#elif defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE==1
+#  include <winsock.h>
 #else
 #  include <sys/types.h>
 #  include <sys/socket.h>

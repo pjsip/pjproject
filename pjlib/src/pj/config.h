@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/config.h 7     5/28/05 11:00a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/config.h,v 1.1 2005/12/02 20:02:28 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -27,7 +27,7 @@
 extern const char *PJ_VERSION;
 
 #ifndef PJ_HAS_SYS_TYPES_H   
-#  define PJ_HAS_SYS_TYPES_H	    1
+#  define PJ_HAS_SYS_TYPES_H	    0
 #endif
 #ifndef PJ_HAS_STDDEF_H	
 #  define PJ_HAS_STDDEF_H	    1
@@ -73,6 +73,13 @@ extern const char *PJ_VERSION;
 #  define PJ_WIN32_WINNT	    0x0400
 #endif
 
+#ifdef _WIN32_WCE
+#  undef  PJ_WIN32
+#  define PJ_WIN32		    2
+#  define PJ_WIN32_WINCE	1
+#  define PJ_GUID_TYPE	    1
+#endif
+
 /*
  * Linux
  */
@@ -85,14 +92,14 @@ extern const char *PJ_VERSION;
  * (Otherwise pjtest will fail to compile).
  */
 #ifndef PJ_HAS_HIGH_RES_TIMER
-#  define PJ_HAS_HIGH_RES_TIMER	    1
+#  define PJ_HAS_HIGH_RES_TIMER	    0
 #endif
 
 /*
  * Default set to Pentium (PJ_HAS_PENTIUM) to get Pentium rdtsc working.
  */
 #if !defined(PJ_HAS_PENTIUM)
-#  define PJ_HAS_PENTIUM	    1
+#  define PJ_HAS_PENTIUM	    0
 #endif
 
 /*
@@ -120,7 +127,7 @@ extern const char *PJ_VERSION;
 /*
  * I/O Queue uses IOCP on WinNT, and fallback to select() on others
  */
-#if defined(PJ_WIN32) && defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
+#if defined(PJ_WIN32) //&& defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
 #  define PJ_IOQUEUE_USE_WIN32_IOCP (0)
 #  define PJ_IOQUEUE_USE_SELECT     (1)
 #else

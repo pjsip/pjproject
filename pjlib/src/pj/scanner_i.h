@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/scanner_i.h 4     6/04/05 4:29p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/scanner_i.h,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

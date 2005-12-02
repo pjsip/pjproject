@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/md5.h 3     5/05/05 11:34p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/md5.h,v 1.1 2005/12/02 20:02:29 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -43,7 +43,7 @@
   ghost@aladdin.com
 
  */
-/* $Id: md5.h,v 1.4 2002/04/13 19:20:28 lpd Exp $ */
+/* $Id: md5.h,v 1.1 2005/12/02 20:02:29 nn Exp $ */
 /*
   Independent implementation of MD5 (RFC 1321).
 

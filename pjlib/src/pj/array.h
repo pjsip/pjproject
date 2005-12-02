@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/array.h 3     5/05/05 11:34p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/array.h,v 1.1 2005/12/02 20:02:28 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/types.h 7     5/12/05 9:53p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/types.h,v 1.1 2005/12/02 20:02:31 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

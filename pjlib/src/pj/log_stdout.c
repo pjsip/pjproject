@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/log_stdout.c 1     6/13/05 7:09p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/log_stdout.c,v 1.1 2005/12/02 20:02:29 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -22,6 +22,8 @@
  */
 #include <pj/log.h>
 #include <pj/os.h>
+
+#if !defined(PJ_WIN32_WINCE)
 
 #define CLR_FATAL    (PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R)
 #define CLR_WARNING  (PJ_TERM_COLOR_BRIGHT | PJ_TERM_COLOR_R | PJ_TERM_COLOR_G)
@@ -59,4 +61,16 @@ PJ_DEF(void) pj_log_to_stdout(int level, const char *buffer, int len)
 
     fflush(stdout);
 }
+
+#else
+
+static void term_set_color(int level)
+{
+}
+
+PJ_DEF(void) pj_log_to_stdout(int level, const char *buffer, int len)
+{
+}
+
+#endif
 

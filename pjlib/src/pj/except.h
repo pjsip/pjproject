@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/except.h 5     6/14/05 2:15p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/except.h,v 1.1 2005/12/02 20:02:29 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>

@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/sock.c 5     5/28/05 9:59a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/sock.c,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -22,7 +22,9 @@
  */
 #include <pj/sock.h>
 #include <pj/pool.h>
+#if !PJ_WIN32_WINCE
 #include <errno.h>
+#endif
 
 #if !PJ_FUNCTIONS_ARE_INLINED
 #  include <pj/sock_i.h>
@@ -124,7 +126,7 @@ PJ_DEF(int) pj_sock_select( int nfds,
 
 PJ_DEF(pj_status_t) pj_sock_getlasterror(void)
 {
-#if defined(PJ_WIN32) && PJ_WIN32==1
+#if defined(PJ_WIN32) && (PJ_WIN32==1 || PJ_WIN32==2)
     return WSAGetLastError();
 #else
     return errno;

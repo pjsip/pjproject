@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/guid.c 9     6/14/05 2:15p Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/guid.c,v 1.1 2005/12/02 20:02:29 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -39,6 +39,12 @@
 
 #ifndef PJ_GUID_TYPE
 # define PJ_GUID_TYPE	    PJ_GUID_SIMPLE
+#endif
+
+#if defined(PJ_WIN32_WINCE) && PJ_GUID_TYPE==PJ_GUID_COCREATEGUID
+#include <windows.h>
+#include <winsock2.h>
+#include <wincrypt.h>
 #endif
 
 #define MHZ_IN_HZ	    1000000.0
@@ -271,7 +277,34 @@ static void pj_guid_to_str( const GUID *guid, pj_str_t *str )
 PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
 {
     GUID guid;
+#if !defined(PJ_WIN32_WINCE)
     CoCreateGuid(&guid);
+#else
+	char bits[16];
+	HCRYPTPROV hCryptProv = 0;
+
+	if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+		return NULL;
+	}
+
+    if (!CryptGenRandom(hCryptProv, 16, bits)) {
+		return NULL;
+    }
+
+	// set the variant
+    bits[8] &= 0x3f;
+    bits[8] |= 2 << 6;
+
+    // set the version
+    bits[7] &= 0x0f;
+    bits[7] |= 4 << 4;
+
+    if (hCryptProv != 0)
+       CryptReleaseContext(hCryptProv, 0);
+
+    pj_memcpy(&guid, bits, 16);
+#endif // WINCE
+
     pj_guid_to_str( &guid, str );
     return str;
 }

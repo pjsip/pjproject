@@ -1,4 +1,4 @@
-/* $Header: /pjproject/pjlib/src/pj/os_win32.c 7     6/21/05 12:37a Bennylp $ */
+/* $Header: /cvs/pjproject-0.2.9.3/pjlib/src/pj/os_win32.c,v 1.1 2005/12/02 20:02:30 nn Exp $ */
 /* 
  * PJLIB - PJ Foundation Library
  * (C)2003-2005 Benny Prijono <bennylp@bulukucing.org>
@@ -26,7 +26,72 @@
 #include <pj/string.h>
 #include <pj/guid.h>
 #include <stddef.h>
-#include <sys/timeb.h>
+#ifndef PJ_WIN32_WINCE
+#  include <sys/timeb.h>
+#else
+
+#  include <windows.h>
+
+struct timeb {
+	time_t time;
+	unsigned short millitm;
+};
+
+static void ftime( struct timeb *tb )
+{
+	SYSTEMTIME st;
+	int days, years, leapyears;
+	
+	if(tb == NULL)
+	{
+		//nlSetError(NL_NULL_POINTER);
+		assert(tb);
+		return;
+	}
+	GetSystemTime(&st);
+	leapyears = (st.wYear - 1970 + 1) / 4;
+	years = st.wYear - 1970 - leapyears;
+	
+	days = years * 365 + leapyears * 366;
+	
+	switch (st.wMonth) {
+	case 1:
+	case 3:
+	case 5:
+	case 7:
+	case 8:
+	case 10:
+	case 12:
+		days += 31;
+		break;
+	case 4:
+	case 6:
+	case 9:
+	case 11:
+		days += 30;
+		break;
+	case 2:
+		days += (st.wYear%4 == 0) ? 29 : 28;
+		break;
+	default:
+		break;
+	}
+	days += st.wDay;
+	tb->time = days * 86400 + st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
+	tb->millitm = st.wMilliseconds;
+}
+
+time_t time(time_t *t)
+{
+	struct timeb tb;
+	
+	ftime(&tb);
+	*t = tb.time;
+	
+	return *t;
+} 
+#endif
+
 #include <time.h>
 #include <stdlib.h>
 
@@ -320,6 +385,8 @@ PJ_DEF(long) pj_atomic_inc(pj_atomic_t *atomic_var)
 
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     return InterlockedIncrement(&atomic_var->value);
+#elif defined(PJ_WIN32_WINCE)
+    return InterlockedIncrement(&atomic_var->value);
 #else
 #   error Fix Me
 #endif
@@ -331,6 +398,8 @@ PJ_DEF(long) pj_atomic_dec(pj_atomic_t *atomic_var)
 
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     return InterlockedDecrement(&atomic_var->value);
+#elif defined(PJ_WIN32_WINCE)
+    return InterlockedIncrement(&atomic_var->value);
 #else
 #   error Fix me
 #endif
@@ -663,8 +732,21 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
 
 PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 {
+    #if defined(PJ_WIN32_WINCE)
+	SYSTEMTIME local_time;
+    GetLocalTime(&local_time);
+	
+    pt->year = local_time.wYear;
+    pt->mon = local_time.wMonth;
+    pt->day = local_time.wDay;
+    pt->hour = local_time.wHour;
+    pt->min = local_time.wMinute;
+    pt->sec = local_time.wSecond;
+    pt->wday = local_time.wDayOfWeek;
+    pt->yday = 0; //note this
+    pt->msec = local_time.wMilliseconds;
+#else
     struct tm *local_time;
-
     local_time = localtime((time_t*)&tv->sec);
 
     pt->year = local_time->tm_year+1900;
@@ -676,6 +758,8 @@ PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
     pt->wday = local_time->tm_wday;
     pt->yday = local_time->tm_yday;
     pt->msec = tv->msec;
+#endif
+
 
     return PJ_OK;
 }
@@ -700,6 +784,7 @@ PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv);
 /*
  * Terminal
  */
+#if !defined(PJ_WIN32_WINCE)
 
 static WORD pj_color_to_os_attr(pj_color_t color)
 {
@@ -756,4 +841,36 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
     GetConsoleScreenBufferInfo( GetStdHandle(STD_OUTPUT_HANDLE), &info);
     return os_attr_to_pj_color(info.wAttributes);
 }
+
+#else
+
+static short pj_color_to_os_attr(pj_color_t color)
+{
+     return 0;
+}
+
+static pj_color_t os_attr_to_pj_color(short attr)
+{
+    return 0;
+}
+
+
+/**
+ * Set terminal color.
+ */
+PJ_DEF(pj_status_t) pj_term_set_color(pj_color_t color)
+{
+    return PJ_OK;
+}
+
+/**
+ * Get current terminal foreground color.
+ */
+PJ_DEF(pj_color_t) pj_term_get_color(void)
+{
+    return 0;
+}
+
+
+#endif
 
