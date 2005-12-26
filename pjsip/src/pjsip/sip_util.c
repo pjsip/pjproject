@@ -676,7 +676,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 PJ_DEF(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
 					    const pjsip_transport *req_transport,
 					    const pjsip_via_hdr *via,
-					    pjsip_host_port *send_addr)
+					    pjsip_host_info *send_addr)
 {
     /* Determine the destination address (section 18.2.2):
      * - for TCP, SCTP, or TLS, send the response using the transport where
@@ -688,27 +688,25 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
      * - otherwise send to the address in sent-by.
      */
     send_addr->flag = req_transport->flag;
-    send_addr->type = req_transport->type;
+    send_addr->type = req_transport->key.type;
 
     if (PJSIP_TRANSPORT_IS_RELIABLE(req_transport)) {
-	const pj_sockaddr_in *remote_addr;
-	remote_addr = &req_transport->rem_addr;
-	pj_strdup2(pool, &send_addr->host, 
-		   pj_inet_ntoa(remote_addr->sin_addr));
-	send_addr->port = pj_sockaddr_in_get_port(remote_addr);
+	pj_strdup( pool, &send_addr->addr.host, 
+		   &req_transport->remote_name.host);
+	send_addr->addr.port = req_transport->remote_name.port;
 
     } else {
 	/* Set the host part */
 	if (via->maddr_param.slen) {
-	    pj_strdup(pool, &send_addr->host, &via->maddr_param);
+	    pj_strdup(pool, &send_addr->addr.host, &via->maddr_param);
 	} else if (via->recvd_param.slen) {
-	    pj_strdup(pool, &send_addr->host, &via->recvd_param);
+	    pj_strdup(pool, &send_addr->addr.host, &via->recvd_param);
 	} else {
-	    pj_strdup(pool, &send_addr->host, &via->sent_by.host);
+	    pj_strdup(pool, &send_addr->addr.host, &via->sent_by.host);
 	}
 
 	/* Set the port */
-	send_addr->port = via->sent_by.port;
+	send_addr->addr.port = via->sent_by.port;
     }
 
     return PJ_SUCCESS;

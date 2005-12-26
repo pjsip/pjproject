@@ -46,8 +46,6 @@ struct pjsip_tpmgr
     void           (*msg_cb)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
 };
 
-
-
 /*****************************************************************************
  *
  * GENERAL TRANSPORT (NAMES, TYPES, ETC.)
@@ -81,6 +79,13 @@ pjsip_transport_get_type_from_name(const pj_str_t *name)
 {
     unsigned i;
 
+    /* Sanity check. 
+     * Check that transport_names[] are indexed on transport type. 
+     */
+    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
+		     PJSIP_TRANSPORT_UDP, PJSIP_TRANSPORT_UNSPECIFIED);
+
+    /* Get transport type from name. */
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
 	if (pj_stricmp(name, &transport_names[i].name) == 0) {
 	    return transport_names[i].type;
@@ -100,6 +105,13 @@ pjsip_transport_get_type_from_flag(unsigned flag)
 {
     unsigned i;
 
+    /* Sanity check. 
+     * Check that transport_names[] are indexed on transport type. 
+     */
+    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
+		     PJSIP_TRANSPORT_UDP, PJSIP_TRANSPORT_UNSPECIFIED);
+
+    /* Get the transport type for the specified flags. */
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
 	if (transport_names[i].flag == flag) {
 	    return transport_names[i].type;
@@ -113,7 +125,16 @@ pjsip_transport_get_type_from_flag(unsigned flag)
 PJ_DEF(unsigned)
 pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
 {
+    /* Sanity check. 
+     * Check that transport_names[] are indexed on transport type. 
+     */
+    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
+		     PJSIP_TRANSPORT_UDP, 0);
+
+    /* Check that argument is valid. */
     PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 0);
+
+    /* Return transport flag. */
     return transport_names[type].flag;
 }
 
@@ -123,7 +144,16 @@ pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
 PJ_DEF(int) 
 pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
 {
+    /* Sanity check. 
+     * Check that transport_names[] are indexed on transport type. 
+     */
+    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
+		     PJSIP_TRANSPORT_UDP, 0);
+
+    /* Check that argument is valid. */
     PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 5060);
+
+    /* Return the port. */
     return transport_names[type].port;
 }
 
@@ -224,17 +254,6 @@ PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
  *
  *****************************************************************************/
 
-/*
- * Transport key for indexing in the hash table.
- */
-typedef struct transport_key
-{
-    pj_uint8_t	type;
-    pj_uint8_t	zero;
-    pj_uint16_t	port;
-    pj_uint32_t	addr;
-} transport_key;
-
 
 /*****************************************************************************
  *
@@ -269,7 +288,8 @@ static void transport_send_callback(pjsip_transport *transport,
  */
 PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr, 
 					   pjsip_tx_data *tdata,
-					   const pj_sockaddr_in *addr,
+					   const pj_sockaddr *addr,
+					   int addr_len,
 					   void *token,
 					   void (*cb)(void *token, 
 						      pjsip_tx_data *tdata,
@@ -317,7 +337,7 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     tdata->is_pending = 1;
 
     /* Send to transport. */
-    status = (*tr->send_msg)(tr, tdata,  addr, (void*)tdata, 
+    status = (*tr->send_msg)(tr, tdata,  addr, addr_len, (void*)tdata, 
 			     &transport_send_callback);
 
     if (status != PJ_EPENDING) {
@@ -395,7 +415,7 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 					      pjsip_transport *tp )
 {
-    transport_key key;
+    int key_len;
 
     /* Init. */
     tp->tpmgr = mgr;
@@ -406,13 +426,9 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     /* 
      * Register to hash table.
      */
-    key.type = (pj_uint8_t)tp->type;
-    key.zero = 0;
-    key.addr = pj_ntohl(tp->rem_addr.sin_addr.s_addr);
-    key.port = pj_ntohs(tp->rem_addr.sin_port);
-
+    key_len = sizeof(tp->key.type) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
-    pj_hash_set(tp->pool, mgr->table, &key, sizeof(key), tp);
+    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, tp);
     pj_lock_release(mgr->lock);
 
     return PJ_SUCCESS;
@@ -425,8 +441,9 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
 						pjsip_transport *tp)
 {
-    transport_key key;
+    int key_len;
 
+    /* Must have no user. */
     PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
 
     pj_lock_acquire(tp->lock);
@@ -444,12 +461,8 @@ PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
     /*
      * Unregister from hash table.
      */
-    key.type = (pj_uint8_t)tp->type;
-    key.zero = 0;
-    key.addr = pj_ntohl(tp->rem_addr.sin_addr.s_addr);
-    key.port = pj_ntohs(tp->rem_addr.sin_port);
-
-    pj_hash_set(tp->pool, mgr->table, &key, sizeof(key), NULL);
+    key_len = sizeof(tp->key.type) + tp->addr_len;
+    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, NULL);
 
     pj_lock_release(mgr->lock);
 
@@ -601,7 +614,6 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 					       pjsip_rx_data *rdata)
 {
     pjsip_transport *tr = rdata->tp_info.transport;
-    pj_str_t s;
 
     char *current_pkt;
     pj_size_t remaining_len;
@@ -682,18 +694,19 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	/* If message is received from address that's different from sent-by,
   	 * MUST add received parameter to the via.
 	 */
-	s = pj_str(pj_inet_ntoa(rdata->pkt_info.addr.sin_addr));
-	if (pj_strcmp(&s, &rdata->msg_info.via->sent_by.host) != 0) {
-	    pj_strdup(rdata->tp_info.pool, 
-		      &rdata->msg_info.via->recvd_param, &s);
+	if (pj_strcmp2(&rdata->msg_info.via->sent_by.host, 
+		       rdata->pkt_info.src_name) != 0) 
+	{
+	    pj_strdup2(rdata->tp_info.pool, 
+		       &rdata->msg_info.via->recvd_param, 
+		       rdata->pkt_info.src_name);
 	}
 
 	/* RFC 3581:
 	 * If message contains "rport" param, put the received port there.
 	 */
 	if (rdata->msg_info.via->rport_param == 0) {
-	    rdata->msg_info.via->rport_param = 
-		pj_ntohs(rdata->pkt_info.addr.sin_port);
+	    rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
 	}
 
 	/* Drop response message if it has more than one Via.
@@ -735,32 +748,47 @@ finish_process_fragment:
  */
 PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
 						 pjsip_transport_type_e type,
-						 const pj_sockaddr_in *remote,
+						 const pj_sockaddr_t *remote,
+						 int addr_len,
 						 pjsip_transport **p_transport)
 {
-    transport_key key;
+    struct transport_key
+    {
+	pjsip_transport_type_e	type;
+	pj_sockaddr		addr;
+    } key;
+    int key_len;
     pjsip_transport *transport;
     pjsip_tpfactory *factory;
     pj_status_t status;
 
     pj_lock_acquire(mgr->lock);
 
+    key_len = sizeof(key.type) + addr_len;
+
     /* First try to get exact destination. */
-    key.type = (pj_uint8_t)type;
-    key.zero = 0;
-    key.addr = pj_ntohl(remote->sin_addr.s_addr);
-    key.port = pj_ntohs(remote->sin_port);
+    key.type = type;
+    pj_memcpy(&key.addr, remote, addr_len);
 
-    transport = pj_hash_get(mgr->table, &key, sizeof(key));
-    if (transport != NULL) {
+    transport = pj_hash_get(mgr->table, &key, key_len);
+    if (transport == NULL) {
 	unsigned flag = pjsip_transport_get_flag_from_type(type);
-	
-	/* For datagram transports, try lookup with zero address. */
-	if (flag & PJSIP_TRANSPORT_DATAGRAM) {
-	    key.addr = 0;
-	    key.port = 0;
+	const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
-	    transport = pj_hash_get(mgr->table, &key, sizeof(key));
+	/* For datagram transports, try lookup with zero address. 
+	 */
+	if ( (flag & PJSIP_TRANSPORT_DATAGRAM) && 
+	     (remote_addr->sa_family == PJ_AF_INET)) 
+	{
+	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+
+	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
+	    addr->sin_family = PJ_AF_INET;
+	    addr->sin_addr.s_addr = 0;
+	    addr->sin_port = 0;
+
+	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+	    transport = pj_hash_get(mgr->table, &key, key_len);
 	}
     }
     
@@ -815,22 +843,11 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));
 
 	do {
-	    char src_addr[128], dst_addr[128];
-	    int src_port, dst_port;
-	    pjsip_transport *t;
+	    pjsip_transport *t = pj_hash_this(mgr->table, itr);
 
-	    t = pj_hash_this(mgr->table, itr);
-	    pj_native_strcpy(src_addr, pj_inet_ntoa(t->local_addr.sin_addr));
-	    src_port = pj_ntohs(t->local_addr.sin_port);
-
-	    pj_native_strcpy(dst_addr, pj_inet_ntoa(t->rem_addr.sin_addr));
-	    dst_port = pj_ntohs(t->rem_addr.sin_port);
-
-	    PJ_LOG(3, (THIS_FILE, "  %s %s %s:%d --> %s:%d (refcnt=%d)", 
-		       t->type_name,
+	    PJ_LOG(3, (THIS_FILE, "  %s %s (refcnt=%d)", 
 		       t->obj_name,
-		       src_addr, src_port,
-		       dst_addr, dst_port,
+		       t->info,
 		       pj_atomic_get(t->ref_cnt)));
 
 	    itr = pj_hash_next(mgr->table, itr);

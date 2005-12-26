@@ -107,7 +107,7 @@ struct pjsip_transaction
      * Transport.
      */
     pjsip_tsx_transport_state_e	transport_state;/**< Transport's state.     */
-    pjsip_host_port		dest_name;      /**< Destination address.   */
+    pjsip_host_info		dest_name;      /**< Destination address.   */
     pjsip_server_addresses	remote_addr;    /**< Addresses resolved.    */
     int				current_addr;   /**< Address currently used. */
 

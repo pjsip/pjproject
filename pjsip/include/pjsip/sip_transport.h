@@ -174,10 +174,16 @@ struct pjsip_rx_data
 	int			 len;
 
 	/** The source address from which the packet was received. */
-	pj_sockaddr_in		 addr;
+	pj_sockaddr		 src_addr;
 
 	/** The length of the source address. */
-	int			 addr_len;
+	int			 src_addr_len;
+
+	/** The IP source address string (NULL terminated). */
+	char			 src_name[16];
+
+	/** The IP source port number. */
+	int			 src_port;
 
     } pkt_info;
 
@@ -407,14 +413,21 @@ typedef struct pjsip_transport
     pj_lock_t		   *lock;	    /**< Lock object.		    */
     int			    tracing;	    /**< Tracing enabled?	    */
 
-    pjsip_transport_type_e  type;	    /**< Transport type.	    */
-    char		    type_name[8];   /**< Type name.		    */
+    /** Key for indexing this transport in hash table. */
+    struct {
+	pjsip_transport_type_e  type;	    /**< Transport type.	    */
+	pj_sockaddr		rem_addr;   /**< Remote addr (zero for UDP) */
+    } key;
+
+    char		   *type_name;	    /**< Type name.		    */
     unsigned		    flag;	    /**< #pjsip_transport_flags_e   */
+    char		   *info;	    /**< Transport info/description.*/
 
-    pj_sockaddr_in	    local_addr;	    /**< Bound address.		    */
-    pj_sockaddr_in	    public_addr;    /**< STUN addres.		    */
-    pj_sockaddr_in	    rem_addr;	    /**< Remote addr (zero for UDP) */
-
+    int			    addr_len;	    /**< Length of addresses.	    */
+    pj_sockaddr		    local_addr;	    /**< Bound address.		    */
+    pjsip_host_port	    local_name;	    /**< Published name (eg. STUN). */
+    pjsip_host_port	    remote_name;    /**< Remote address name.	    */
+    
     pjsip_endpoint	   *endpt;	    /**< Endpoint instance.	    */
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
@@ -428,6 +441,7 @@ typedef struct pjsip_transport
      * @param op_key	    Completion token, which will be supplied to
      *			    caller when pending send operation completes.
      * @param rem_addr	    The remote destination address.
+     * @param addr_len	    Size of remote address.
      * @param callback	    If supplied, the callback will be called
      *			    once a pending transmission has completed. If
      *			    the function completes immediately (i.e. return
@@ -446,7 +460,8 @@ typedef struct pjsip_transport
      */
     pj_status_t (*send_msg)(pjsip_transport *transport, 
 			    pjsip_tx_data *tdata,
-			    const pj_sockaddr_in *rem_addr,
+			    const pj_sockaddr_t *rem_addr,
+			    int addr_len,
 			    void *token,
 			    void (*callback)(pjsip_transport *transport,
 					     void *token, 
@@ -522,8 +537,8 @@ struct pjsip_tpfactory
     char		    type_name[8];
     unsigned		    flag;
 
-    pj_sockaddr_in	    local_addr;
-    pj_sockaddr_in	    public_addr;
+    pj_sockaddr		    local_addr;
+    pjsip_host_port	    addr_name;
 
     /**
      * Create new outbound connection.
@@ -531,7 +546,7 @@ struct pjsip_tpfactory
     pj_status_t (*create_transport)(pjsip_tpfactory *factory,
 				    pjsip_tpmgr *mgr,
 				    pjsip_endpoint *endpt,
-				    const pj_sockaddr_in *rem_addr,
+				    const pj_sockaddr *rem_addr,
 				    pjsip_transport **transport);
 
     /*
@@ -607,9 +622,10 @@ PJ_DECL(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr);
  * suitable transport is found, a new one will be created.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
-					   pjsip_transport_type_e type,
-					   const pj_sockaddr_in *remote,
-					   pjsip_transport **p_transport );
+						  pjsip_transport_type_e type,
+						  const pj_sockaddr_t *remote,
+						  int addr_len,
+						  pjsip_transport **p_transport );
 
 
 /**
@@ -617,7 +633,8 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
  */
 PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr, 
 					   pjsip_tx_data *tdata,
-					   const pj_sockaddr_in *addr,
+					   const pj_sockaddr_t *addr,
+					   int addr_len,
 					   void *token,
 					   void (*cb)(void *token, 
 						      pjsip_tx_data *tdata,

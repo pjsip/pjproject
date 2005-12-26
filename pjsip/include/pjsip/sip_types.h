@@ -145,11 +145,19 @@ typedef struct pjsip_buffer
  */
 typedef struct pjsip_host_port
 {
-    unsigned flag;	/**< Flags of pjsip_transport_flags_e (not used in Via). */
-    unsigned type;	/**< Transport type (pjsip_transport_type_e), or zero. */
-    pj_str_t host;	/**< Host part. */
+    pj_str_t host;	/**< Host part or IP address. */
     int	     port;	/**< Port number. */
 } pjsip_host_port;
+
+/**
+ * Host information.
+ */
+typedef struct pjsip_host_info
+{
+    unsigned		    flag;   /**< Flags of pjsip_transport_flags_e. */
+    pjsip_transport_type_e  type;   /**< Transport type. */
+    pjsip_host_port	    addr;   /**< Address information. */
+} pjsip_host_info;
 
 
 /**

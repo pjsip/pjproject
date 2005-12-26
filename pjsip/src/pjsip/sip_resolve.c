@@ -56,7 +56,7 @@ static int is_str_ip(const pj_str_t *host)
 
 PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 			    pj_pool_t *pool,
-			    pjsip_host_port *target,
+			    pjsip_host_info *target,
 			    void *token,
 			    pjsip_resolver_callback *cb)
 {
@@ -72,13 +72,13 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     PJ_TODO(SUPPORT_RFC3263_SERVER_RESOLUTION)
 
     /* Is it IP address or hostname?. */
-    is_ip_addr = is_str_ip(&target->host);
+    is_ip_addr = is_str_ip(&target->addr.host);
 
     /* Set the transport type if not explicitly specified. 
      * RFC 3263 section 4.1 specify rules to set up this.
      */
     if (type == PJSIP_TRANSPORT_UNSPECIFIED) {
-	if (is_ip_addr || (target->port != 0)) {
+	if (is_ip_addr || (target->addr.port != 0)) {
 #if PJ_HAS_TCP
 	    if (target->flag & PJSIP_TRANSPORT_SECURE) 
 	    {
@@ -103,23 +103,26 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     }
 
     /* Set the port number if not specified. */
-    if (target->port == 0) {
-	target->port = pjsip_transport_get_default_port_for_type(type);
+    if (target->addr.port == 0) {
+	target->addr.port = pjsip_transport_get_default_port_for_type(type);
     }
 
     /* Resolve hostname. */
     if (!is_ip_addr) {
-	status = pj_sockaddr_in_init(&svr_addr.entry[0].addr, &target->host, 
-				     (pj_uint16_t)target->port);
+	status = pj_sockaddr_in_init((pj_sockaddr_in*)&svr_addr.entry[0].addr, 
+				     &target->addr.host, 
+				     (pj_uint16_t)target->addr.port);
     } else {
-	status = pj_sockaddr_in_init(&svr_addr.entry[0].addr, &target->host, 
-				     (pj_uint16_t)target->port);
+	status = pj_sockaddr_in_init((pj_sockaddr_in*)&svr_addr.entry[0].addr, 
+				      &target->addr.host, 
+				     (pj_uint16_t)target->addr.port);
 	pj_assert(status == PJ_SUCCESS);
     }
 
     /* Call the callback. */
     svr_addr.count = (status == PJ_SUCCESS) ? 1 : 0;
     svr_addr.entry[0].type = type;
+    svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);
     (*cb)(status, token, &svr_addr);
 }
 

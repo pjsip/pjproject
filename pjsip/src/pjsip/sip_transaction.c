@@ -498,7 +498,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
  */
 static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 				      pjsip_tx_data *tdata,
-				      pjsip_host_port *send_addr )
+				      pjsip_host_info *send_addr )
 {
     const pjsip_uri *new_request_uri, *target_uri;
     const pjsip_name_addr *topmost_route_uri;
@@ -595,16 +595,16 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
 	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
 	send_addr->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
-	pj_strdup(tdata->pool, &send_addr->host, &url->host);
-        send_addr->port = url->port;
+	pj_strdup(tdata->pool, &send_addr->addr.host, &url->host);
+        send_addr->addr.port = url->port;
 	send_addr->type = 
             pjsip_transport_get_type_from_name(&url->transport_param);
 
     } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
 	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
-	pj_strdup(tdata->pool, &send_addr->host, &url->host);
-	send_addr->port = url->port;
+	pj_strdup(tdata->pool, &send_addr->addr.host, &url->host);
+	send_addr->addr.port = url->port;
 	send_addr->type = 
             pjsip_transport_get_type_from_name(&url->transport_param);
 #if PJ_HAS_TCP
@@ -650,18 +650,18 @@ static void tsx_transport_callback(pjsip_transport *tr,
     pjsip_transaction *tsx = token;
     struct tsx_lock_data lck;
 
-    pj_memcpy(addr, tsx->dest_name.host.ptr, tsx->dest_name.host.slen);
-    addr[tsx->dest_name.host.slen] = '\0';
+    pj_memcpy(addr, tsx->dest_name.addr.host.ptr, tsx->dest_name.addr.host.slen);
+    addr[tsx->dest_name.addr.host.slen] = '\0';
 
 
     if (status == PJ_SUCCESS) {
 	PJ_LOG(4, (tsx->obj_name, "%s connected to %s:%d",
 				  tr->type_name,
-				  addr, tsx->dest_name.port));
+				  addr, tsx->dest_name.addr.port));
     } else {
 	PJ_LOG(4, (tsx->obj_name, "%s unable to connect to %s:%d, status=%d", 
 				  tr->type_name,
-				  addr, tsx->dest_name.port, status));
+				  addr, tsx->dest_name.addr.port, status));
     }
 
     /* Lock transaction. */
@@ -737,13 +737,10 @@ static void tsx_resolver_callback(pj_status_t status,
     pj_memcpy(&tsx->remote_addr, addr, sizeof(*addr));
 
     /* Create/find the transport for the remote address. */
-    PJ_LOG(5,(tsx->obj_name, "tsx getting transport for %s:%d",
-			     pj_inet_ntoa(addr->entry[0].addr.sin_addr),
-			     pj_ntohs(addr->entry[0].addr.sin_port)));
-
     tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_CONNECTING;
     status = pjsip_endpt_alloc_transport( tsx->endpt, addr->entry[0].type,
 					  &addr->entry[0].addr,
+					  addr->entry[0].addr_len,
 					  &tp);
     tsx_transport_callback(tp, tsx, status);
 
@@ -851,9 +848,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx,
      * the callback will be called.
      */
     PJ_LOG(5,(tsx->obj_name, "tsx resolving destination %.*s:%d",
-			     tsx->dest_name.host.slen, 
-			     tsx->dest_name.host.ptr,
-			     tsx->dest_name.port));
+			     tsx->dest_name.addr.host.slen, 
+			     tsx->dest_name.addr.host.ptr,
+			     tsx->dest_name.addr.port));
 
     tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_RESOLVING;
     pjsip_endpt_resolve( tsx->endpt, tsx->pool, &tsx->dest_name, 
@@ -941,9 +938,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 
 	tsx->current_addr = 0;
 	tsx->remote_addr.count = 1;
-	tsx->remote_addr.entry[0].type = tsx->transport->type;
+	tsx->remote_addr.entry[0].type = tsx->transport->key.type;
 	pj_memcpy(&tsx->remote_addr.entry[0].addr, 
-		  &rdata->pkt_info.addr, rdata->pkt_info.addr_len);
+		  &rdata->pkt_info.src_addr, rdata->pkt_info.src_addr_len);
 	
     } else {
 	pj_status_t status;
@@ -964,9 +961,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
 	 * the callback will be called.
 	 */
 	PJ_LOG(5,(tsx->obj_name, "tsx resolving destination %.*s:%d",
-				 tsx->dest_name.host.slen, 
-				 tsx->dest_name.host.ptr,
-				 tsx->dest_name.port));
+				 tsx->dest_name.addr.host.slen, 
+				 tsx->dest_name.addr.host.ptr,
+				 tsx->dest_name.addr.port));
 
 	tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_RESOLVING;
 	pjsip_endpt_resolve( tsx->endpt, tsx->pool, &tsx->dest_name, 
@@ -1023,7 +1020,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 PJ_DEF(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx, pjsip_tx_data *tdata)
 {
     pjsip_msg *msg;
-    pjsip_host_port dest_addr;
+    pjsip_host_info dest_addr;
     pjsip_via_hdr *via;
     struct tsx_lock_data lck;
     pj_status_t status = PJ_SUCCESS;
@@ -1059,8 +1056,8 @@ PJ_DEF(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx, pjsip_tx_data *tdata)
      */
     if (dest_addr.type == tsx->dest_name.type &&
 	dest_addr.flag == tsx->dest_name.flag &&
-	dest_addr.port == tsx->dest_name.port &&
-	pj_stricmp(&dest_addr.host, &tsx->dest_name.host) == 0)
+	dest_addr.addr.port == tsx->dest_name.addr.port &&
+	pj_stricmp(&dest_addr.addr.host, &tsx->dest_name.addr.host) == 0)
     {
 	/* Equal destination. We can use current transport. */
 	pjsip_tsx_on_tx_msg(tsx, tdata);
@@ -1071,12 +1068,12 @@ PJ_DEF(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx, pjsip_tx_data *tdata)
 
     /* New destination; we'll have to resolve host and create new transport. */
     pj_memcpy(&tsx->dest_name, &dest_addr, sizeof(dest_addr));
-    pj_strdup(tsx->pool, &tsx->dest_name.host, &dest_addr.host);
+    pj_strdup(tsx->pool, &tsx->dest_name.addr.host, &dest_addr.addr.host);
 
     PJ_LOG(5,(tsx->obj_name, "tsx resolving destination %.*s:%d",
-			     tsx->dest_name.host.slen, 
-			     tsx->dest_name.host.ptr,
-			     tsx->dest_name.port));
+			     tsx->dest_name.addr.host.slen, 
+			     tsx->dest_name.addr.host.ptr,
+			     tsx->dest_name.addr.port));
 
     tsx->transport_state = PJSIP_TSX_TRANSPORT_STATE_RESOLVING;
     pjsip_transport_dec_ref(tsx->transport);
@@ -1215,7 +1212,6 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	 * requests. 
 	 */
 	if (tdata->msg->type == PJSIP_REQUEST_MSG) {
-	    const pj_sockaddr_in *addr_name;
 	    pjsip_via_hdr *via = (pjsip_via_hdr*) 
 		pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 
@@ -1225,12 +1221,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
 	    /* Don't update Via sent-by on retransmission. */
 	    if (via->sent_by.host.slen == 0) {
-		addr_name = &tsx->transport->public_addr;
 		pj_strdup2(tdata->pool, &via->transport, 
 			   tsx->transport->type_name);
-		pj_strdup2(tdata->pool, &via->sent_by.host, 
-			   pj_inet_ntoa(addr_name->sin_addr));
-		via->sent_by.port = pj_ntohs(addr_name->sin_port);
+		pj_strdup(tdata->pool, &via->sent_by.host, 
+			  &tsx->transport->local_name.host);
+		via->sent_by.port = tsx->transport->local_name.port;
 	    }
 	}
 
@@ -1242,6 +1237,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	tsx->has_unsent_msg = 0;
 	status = pjsip_transport_send(tsx->transport, tdata,
 			&tsx->remote_addr.entry[tsx->current_addr].addr,
+			tsx->remote_addr.entry[tsx->current_addr].addr_len,
 			tsx, &tsx_on_send_complete);
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    PJ_TODO(HANDLE_TRANSPORT_ERROR);

@@ -248,7 +248,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
  */
 PJ_DECL(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 				   pj_pool_t *pool,
-				   pjsip_host_port *target,
+				   pjsip_host_info *target,
 				   void *token,
 				   pjsip_resolver_callback *cb);
 
@@ -280,7 +280,8 @@ PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
  */
 PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
-						  const pj_sockaddr_in *remote,
+						  const pj_sockaddr *remote,
+						  int addr_len,
 						  pjsip_transport **p_transport);
 
 /**

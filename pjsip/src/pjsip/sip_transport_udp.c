@@ -40,14 +40,14 @@ struct udp_transport
 
 
 /*
- * on_read_complete()
+ * udp_on_read_complete()
  *
  * This is callback notification from ioqueue that a pending recvfrom()
  * operation has completed.
  */
-static void on_read_complete( pj_ioqueue_key_t *key, 
-			      pj_ioqueue_op_key_t *op_key, 
-			      pj_ssize_t bytes_read)
+static void udp_on_read_complete( pj_ioqueue_key_t *key, 
+				  pj_ioqueue_op_key_t *op_key, 
+				  pj_ssize_t bytes_read)
 {
     enum { MAX_IMMEDIATE_PACKET = 10 };
     pjsip_rx_data_op_key *rdata_op_key = (pjsip_rx_data_op_key*) op_key;
@@ -72,10 +72,16 @@ static void on_read_complete( pj_ioqueue_key_t *key,
 	/* Report the packet to transport manager. */
 	if (bytes_read > 0) {
 	    pj_size_t size_eaten;
+	    const pj_sockaddr_in *src_addr = 
+		(pj_sockaddr_in*)&rdata->pkt_info.src_addr;
 
+	    /* Init pkt_info part. */
 	    rdata->pkt_info.len = bytes_read;
 	    rdata->pkt_info.zero = 0;
 	    pj_gettimeofday(&rdata->pkt_info.timestamp);
+	    pj_native_strcpy(rdata->pkt_info.src_name,
+			     pj_inet_ntoa(src_addr->sin_addr));
+	    rdata->pkt_info.src_port = pj_ntohs(src_addr->sin_port);
 
 	    size_eaten = 
 		pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
@@ -109,12 +115,12 @@ static void on_read_complete( pj_ioqueue_key_t *key,
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet);
-	rdata->pkt_info.addr_len = sizeof(rdata->pkt_info.addr);
+	rdata->pkt_info.src_addr_len = sizeof(rdata->pkt_info.src_addr);
 	status = pj_ioqueue_recvfrom(key, op_key, 
 				     rdata->pkt_info.packet,
 				     &bytes_read, flags,
-				     &rdata->pkt_info.addr, 
-				     &rdata->pkt_info.addr_len);
+				     &rdata->pkt_info.src_addr, 
+				     &rdata->pkt_info.src_addr_len);
 
 	if (status == PJ_SUCCESS) {
 	    /* Continue loop. */
@@ -149,14 +155,14 @@ static void on_read_complete( pj_ioqueue_key_t *key,
 }
 
 /*
- * on_write_complete()
+ * udp_on_write_complete()
  *
  * This is callback notification from ioqueue that a pending sendto()
  * operation has completed.
  */
-static void on_write_complete( pj_ioqueue_key_t *key, 
-			       pj_ioqueue_op_key_t *op_key,
-			       pj_ssize_t bytes_sent)
+static void udp_on_write_complete( pj_ioqueue_key_t *key, 
+				   pj_ioqueue_op_key_t *op_key,
+				   pj_ssize_t bytes_sent)
 {
     struct udp_transport *tp = pj_ioqueue_get_user_data(key);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
@@ -169,18 +175,19 @@ static void on_write_complete( pj_ioqueue_key_t *key,
 }
 
 /*
- * transport_send_msg()
+ * udp_send_msg()
  *
  * This function is called by transport manager (by transport->send_msg())
  * to send outgoing message.
  */
-static pj_status_t transport_send_msg( pjsip_transport *transport,
-				       pjsip_tx_data *tdata,
-				       const pj_sockaddr_in *rem_addr,
-				       void *token,
-				       void (*callback)(pjsip_transport*,
-							void *token,
-							pj_ssize_t))
+static pj_status_t udp_send_msg( pjsip_transport *transport,
+				 pjsip_tx_data *tdata,
+				 const pj_sockaddr_t *rem_addr,
+				 int addr_len,
+				 void *token,
+				 void (*callback)(pjsip_transport*,
+						  void *token,
+						  pj_ssize_t))
 {
     struct udp_transport *tp = (struct udp_transport*)transport;
     pj_ssize_t size;
@@ -197,15 +204,15 @@ static pj_status_t transport_send_msg( pjsip_transport *transport,
     size = tdata->buf.cur - tdata->buf.start;
     return pj_ioqueue_sendto(tp->key, (pj_ioqueue_op_key_t*)&tdata->op_key,
 			     tdata->buf.start, &size, 0,
-			     rem_addr, (rem_addr ? sizeof(pj_sockaddr_in):0));
+			     rem_addr, addr_len);
 }
 
 /*
- * transport_destroy()
+ * udp_destroy()
  *
  * This function is called by transport manager (by transport->destroy()).
  */
-static pj_status_t transport_destroy( pjsip_transport *transport )
+static pj_status_t udp_destroy( pjsip_transport *transport )
 {
     struct udp_transport *tp = (struct udp_transport*)transport;
     int i;
@@ -249,7 +256,7 @@ static pj_status_t transport_destroy( pjsip_transport *transport )
  */
 PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 						pj_sock_t sock,
-						const pj_sockaddr_in *pub_addr,
+						const pjsip_host_port *a_name,
 						unsigned async_cnt,
 						pjsip_transport **p_transport)
 {
@@ -258,33 +265,22 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback ioqueue_cb;
     unsigned i;
-    int addrlen;
     pj_status_t status;
 
     /* Create pool. */
     pool = pjsip_endpt_create_pool(endpt, "udp%p", PJSIP_POOL_LEN_TRANSPORT, 
-			       PJSIP_POOL_INC_TRANSPORT);
+				   PJSIP_POOL_INC_TRANSPORT);
     if (!pool)
 	return PJ_ENOMEM;
 
+    /* Create the UDP transport object. */
     tp = pj_pool_zalloc(pool, sizeof(struct udp_transport));
+
+    /* Save pool. */
     tp->base.pool = pool;
-    tp->base.endpt = endpt;
 
-    /* Init type, type_name, and flag */
-    tp->base.type = PJSIP_TRANSPORT_UDP;
-    pj_native_strcpy(tp->base.type_name, "UDP");
-    tp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
-
-    /* Init addresses. */
-    addrlen = sizeof(tp->base.local_addr);
-    status = pj_sock_getsockname(sock, &tp->base.local_addr, &addrlen);
-    if (status != PJ_SUCCESS) {
-	pjsip_endpt_destroy_pool(endpt, pool);
-	return status;
-    }
-    pj_memcpy(&tp->base.public_addr, pub_addr, sizeof(pj_sockaddr_in));
-    tp->base.rem_addr.sin_family = PJ_AF_INET;
+    /* Object name. */
+    pj_sprintf(tp->base.obj_name, "udp%p", tp);
 
     /* Init reference counter. */
     status = pj_atomic_create(pool, 0, &tp->base.ref_cnt);
@@ -296,22 +292,65 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Set type. */
+    tp->base.key.type = PJSIP_TRANSPORT_UDP;
+
+    /* Remote address is left zero (except the family) */
+    tp->base.key.rem_addr.sa_family = PJ_AF_INET;
+
+    /* Type name. */
+    tp->base.type_name = "UDP";
+
+    /* Transport flag */
+    tp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_UDP);
+
+
+    /* Length of addressess. */
+    tp->base.addr_len = sizeof(pj_sockaddr_in);
+
+    /* Init local address. */
+    status = pj_sock_getsockname(sock, &tp->base.local_addr, 
+				 &tp->base.addr_len);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Init address name (published address) */
+    pj_strdup_with_null(pool, &tp->base.local_name.host, &a_name->host);
+    tp->base.local_name.port = a_name->port;
+
+    /* Init remote name. */
+    tp->base.remote_name.host = pj_str("0.0.0.0");
+    tp->base.remote_name.port = 0;
+
+    /* Transport info. */
+    tp->base.info = pj_pool_alloc(pool, 80);
+    pj_sprintf(tp->base.info, "udp %s:%d [published as %s:%d]",
+			      pj_inet_ntoa(((pj_sockaddr_in*)&tp->base.local_addr)->sin_addr),
+			      pj_ntohs(((pj_sockaddr_in*)&tp->base.local_addr)->sin_port),
+			      tp->base.local_name.host,
+			      tp->base.local_name.port);
+
+    /* Set endpoint. */
+    tp->base.endpt = endpt;
+
+    /* Transport manager and timer will be initialized by tpmgr */
+
     /* Attach socket. */
     tp->sock = sock;
 
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(endpt);
     pj_memset(&ioqueue_cb, 0, sizeof(ioqueue_cb));
-    ioqueue_cb.on_read_complete = &on_read_complete;
-    ioqueue_cb.on_write_complete = &on_write_complete;
+    ioqueue_cb.on_read_complete = &udp_on_read_complete;
+    ioqueue_cb.on_write_complete = &udp_on_write_complete;
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->sock, tp, 
 				      &ioqueue_cb, &tp->key);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /* Set functions. */
-    tp->base.send_msg = &transport_send_msg;
-    tp->base.destroy = &transport_destroy;
+    tp->base.send_msg = &udp_send_msg;
+    tp->base.destroy = &udp_destroy;
 
     /* This is a permanent transport, so we initialize the ref count
      * to one so that transport manager don't destroy this transport
@@ -330,8 +369,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->rdata_cnt = 0;
     for (i=0; i<async_cnt; ++i) {
 	pj_pool_t *rdata_pool = pjsip_endpt_create_pool(endpt, "rtd%p", 
-							PJSIP_POOL_LEN_RDATA,
-							PJSIP_POOL_INC_RDATA);
+							PJSIP_POOL_RDATA_LEN,
+							PJSIP_POOL_RDATA_INC);
 	if (!rdata_pool) {
 	    pj_atomic_set(tp->base.ref_cnt, 0);
 	    pjsip_transport_unregister(tp->base.tpmgr, &tp->base);
@@ -339,6 +378,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 	}
 
 	tp->rdata[i] = pj_pool_zalloc(rdata_pool, sizeof(pjsip_rx_data));
+
+	/* Init tp_info part. */
 	tp->rdata[i]->tp_info.pool = rdata_pool;
 	tp->rdata[i]->tp_info.transport = &tp->base;
 	pj_ioqueue_op_key_init(&tp->rdata[i]->tp_info.op_key.op_key, 
@@ -352,17 +393,17 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 	pj_ssize_t size;
 
 	size = sizeof(tp->rdata[i]->pkt_info.packet);
-	tp->rdata[i]->pkt_info.addr_len = sizeof(tp->rdata[i]->pkt_info.addr);
+	tp->rdata[i]->pkt_info.src_addr_len = sizeof(tp->rdata[i]->pkt_info.src_addr);
 	status = pj_ioqueue_recvfrom(tp->key, 
 				     &tp->rdata[i]->tp_info.op_key.op_key,
 				     tp->rdata[i]->pkt_info.packet,
 				     &size, PJ_IOQUEUE_ALWAYS_ASYNC,
-				     &tp->rdata[i]->pkt_info.addr,
-				     &tp->rdata[i]->pkt_info.addr_len);
+				     &tp->rdata[i]->pkt_info.src_addr,
+				     &tp->rdata[i]->pkt_info.src_addr_len);
 	if (status == PJ_SUCCESS) {
 	    pj_assert(!"Shouldn't happen because PJ_IOQUEUE_ALWAYS_ASYNC!");
-	    on_read_complete(tp->key, &tp->rdata[i]->tp_info.op_key.op_key, 
-			     size);
+	    udp_on_read_complete(tp->key, &tp->rdata[i]->tp_info.op_key.op_key,
+				 size);
 	} else if (status != PJ_EPENDING) {
 	    /* Error! */
 	    pjsip_transport_unregister(tp->base.tpmgr, &tp->base);
@@ -375,23 +416,25 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     return PJ_SUCCESS;
 
 on_error:
-    transport_destroy((pjsip_transport*)tp);
+    udp_destroy((pjsip_transport*)tp);
     return status;
 }
 
 /*
  * pjsip_udp_transport_start()
  *
- * Start an UDP transport/listener.
+ * Create a UDP socket in the specified address and start a transport.
  */
 PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 					       const pj_sockaddr_in *local,
-					       const pj_sockaddr_in *pub_addr,
+					       const pjsip_host_port *a_name,
 					       unsigned async_cnt,
 					       pjsip_transport **p_transport)
 {
     pj_sock_t sock;
     pj_status_t status;
+    char addr_buf[16];
+    pjsip_host_port bound_name;
 
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS)
@@ -403,7 +446,14 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 	return status;
     }
 
-    return pjsip_udp_transport_attach( endpt, sock, pub_addr, async_cnt, 
+    if (a_name == NULL) {
+	a_name = &bound_name;
+	bound_name.host.ptr = addr_buf;
+	pj_strcpy2(&bound_name.host, pj_inet_ntoa(local->sin_addr));
+	bound_name.port = pj_ntohs(local->sin_port);
+    }
+
+    return pjsip_udp_transport_attach( endpt, sock, a_name, async_cnt, 
 				       p_transport );
 }
 

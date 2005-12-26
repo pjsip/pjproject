@@ -93,7 +93,7 @@ SOURCE="..\src\test-pjsip\main.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\msg.c"
+SOURCE="..\src\test-pjsip\msg_test.c"
 # End Source File
 # Begin Source File
 
@@ -101,7 +101,7 @@ SOURCE="..\src\test-pjsip\test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\uri.c"
+SOURCE="..\src\test-pjsip\uri_test.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"

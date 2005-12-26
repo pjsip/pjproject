@@ -725,8 +725,8 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
     PJ_LOG(5, (THIS_FILE, "endpt_transport_callback(rdata=%p)", rdata));
 
     if (status != PJ_SUCCESS) {
-	const char *src_addr = pj_inet_ntoa(rdata->pkt_info.addr.sin_addr);
-	int port = pj_ntohs(rdata->pkt_info.addr.sin_port);
+	const char *src_addr = rdata->pkt_info.src_name;
+	int port = rdata->pkt_info.src_port;
 	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
 			       "Src.addr=%s:%d, packet:--\n"
 			       "%s\n"
@@ -740,20 +740,18 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
      * Ref: RFC3261 Section 18.1.2 Receiving Response
      */
     if (msg->type == PJSIP_RESPONSE_MSG) {
-	const pj_sockaddr_in *addr;
-	const char *addr_addr;
+	const pj_str_t *addr_addr;
 	int port = rdata->msg_info.via->sent_by.port;
 	pj_bool_t mismatch = PJ_FALSE;
 	if (port == 0) {
 	    int type;
-	    type = rdata->tp_info.transport->type;
+	    type = rdata->tp_info.transport->key.type;
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}
-	addr = &rdata->tp_info.transport->public_addr;
-	addr_addr = pj_inet_ntoa(addr->sin_addr);
-	if (pj_strcmp2(&rdata->msg_info.via->sent_by.host, addr_addr) != 0)
+	addr_addr = &rdata->tp_info.transport->local_name.host;
+	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, addr_addr) != 0)
 	    mismatch = PJ_TRUE;
-	else if (port != pj_ntohs(addr->sin_port)) {
+	else if (port != rdata->tp_info.transport->local_name.port) {
 	    /* Port or address mismatch, we should discard response */
 	    /* But we saw one implementation (we don't want to name it to 
 	     * protect the innocence) which put wrong sent-by port although
@@ -761,7 +759,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	     * So we discard the response only if the port doesn't match
 	     * both the port in sent-by and rport. We try to be lenient here!
 	     */
-	    if (rdata->msg_info.via->rport_param != pj_sockaddr_in_get_port(addr))
+	    if (rdata->msg_info.via->rport_param != rdata->tp_info.transport->local_name.port)
 		mismatch = PJ_TRUE;
 	    else {
 		PJ_LOG(4,(THIS_FILE, "Response %p has mismatch port in sent-by"
@@ -958,7 +956,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_tdata(  pjsip_endpoint *endpt,
  */
 PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 				  pj_pool_t *pool,
-				  pjsip_host_port *target,
+				  pjsip_host_info *target,
 				  void *token,
 				  pjsip_resolver_callback *cb)
 {
@@ -987,12 +985,13 @@ PJ_DEF(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt)
  */
 PJ_DEF(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
-						  const pj_sockaddr_in *remote,
+						  const pj_sockaddr *remote,
+						  int addr_len,
 						  pjsip_transport **p_transport)
 {
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_alloc_transport()"));
-    return pjsip_tpmgr_alloc_transport( endpt->transport_mgr, type, remote,
-					p_transport);
+    return pjsip_tpmgr_alloc_transport( endpt->transport_mgr, type, 
+					remote, addr_len, p_transport);
 }
 
 

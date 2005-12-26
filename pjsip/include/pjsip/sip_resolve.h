@@ -59,7 +59,10 @@ struct pjsip_server_addresses
 	pjsip_transport_type_e	type;
 
 	/** The server's address. */
-	pj_sockaddr_in		addr;
+	pj_sockaddr		addr;
+
+	/** Address length. */
+	int			addr_len;
 
     } entry[PJSIP_MAX_RESOLVED_ADDRESSES];
 
@@ -107,7 +110,7 @@ PJ_DECL(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver);
  */
 PJ_DECL(void) pjsip_resolve( pjsip_resolver_t *resolver,
 			     pj_pool_t *pool,
-			     pjsip_host_port *target,
+			     pjsip_host_info *target,
 			     void *token,
 			     pjsip_resolver_callback *cb);
 

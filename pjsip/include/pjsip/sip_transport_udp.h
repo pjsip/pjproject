@@ -28,7 +28,9 @@ PJ_DECL
  *
  * @param endpt		The SIP endpoint.
  * @param local		Local address to bind.
- * @param pub_addr	Public address to advertise.
+ * @param a_name	Published address (only the host and port portion is 
+ *			used). If this argument is NULL, then the bound address
+ *			will be used as the published address.
  * @param async_cnt	Number of simultaneous async operations.
  * @param p_transport	Pointer to receive the transport.
  *
@@ -38,7 +40,7 @@ PJ_DECL
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_start(pjsip_endpoint *endpt,
 					       const pj_sockaddr_in *local,
-					       const pj_sockaddr_in *pub_addr,
+					       const pjsip_host_port *a_name,
 					       unsigned async_cnt,
 					       pjsip_transport **p_transport);
 
@@ -47,7 +49,8 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_start(pjsip_endpoint *endpt,
  *
  * @param endpt		The SIP endpoint.
  * @param sock		UDP socket to use.
- * @param pub_addr	Public address to advertise.
+ * @param a_name	Published address (only the host and port portion is 
+ *			used).
  * @param async_cnt	Number of simultaneous async operations.
  * @param p_transport	Pointer to receive the transport.
  *
@@ -57,7 +60,7 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_start(pjsip_endpoint *endpt,
  */
 PJ_DECL(pj_status_t) pjsip_udp_transport_attach(pjsip_endpoint *endpt,
 						pj_sock_t sock,
-						const pj_sockaddr_in *pub_addr,
+						const pjsip_host_port *a_name,
 						unsigned async_cnt,
 						pjsip_transport **p_transport);
 

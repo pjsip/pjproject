@@ -180,7 +180,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 PJ_DECL(pj_status_t) pjsip_get_response_addr(pj_pool_t *pool,
 					     const pjsip_transport *tr,
 					     const pjsip_via_hdr *via,
-					     pjsip_host_port *addr);
+					     pjsip_host_info *addr);
 
 /**
  * @}
