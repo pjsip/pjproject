@@ -1782,8 +1782,6 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	    pj_scan_get_char(scanner);
 	    pj_scan_get(scanner, &pjsip_DIGIT_SPEC, &digit);
 	    hdr->sent_by.port = pj_strtoul(&digit);
-	} else {
-	    hdr->sent_by.port = 5060;
 	}
 	
 	int_parse_via_param(hdr, scanner, ctx->pool);

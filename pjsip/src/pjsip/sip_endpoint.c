@@ -56,12 +56,6 @@ struct pjsip_endpoint
     /** Name. */
     pj_str_t		 name;
 
-    /** Transaction table. */
-    pj_hash_table_t	*tsx_table;
-
-    /** Mutex for transaction table. */
-    pj_mutex_t		*tsx_table_mutex;
-
     /** Timer heap. */
     pj_timer_heap_t	*timer_heap;
 
@@ -74,11 +68,14 @@ struct pjsip_endpoint
     /** DNS Resolver. */
     pjsip_resolver_t	*resolver;
 
-    /** Number of modules registered. */
-    pj_uint32_t		 mod_count;
+    /** Modules lock. */
+    pj_rwmutex_t	*mod_mutex;
 
     /** Modules. */
     pjsip_module        *modules[PJSIP_MAX_MODULE];
+
+    /** Module list, sorted by priority. */
+    pjsip_module	 module_list;
 
     /** Number of supported methods. */
     unsigned		 method_cnt;
@@ -127,167 +124,119 @@ static void pool_callback( pj_pool_t *pool, pj_size_t size )
 
 
 /*
- * Initialize modules.
+ * Register new module to the endpoint.
+ * The endpoint will then call the load and start function in the module to 
+ * properly initialize the module, and assign a unique module ID for the 
+ * module.
  */
-static pj_status_t init_modules( pjsip_endpoint *endpt )
+PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
+						 pjsip_module *mod )
 {
-    pj_status_t status;
-    unsigned i;
-    //pj_str_t str_COMMA = { ", ", 2 };
-    extern pjsip_module aux_tsx_module;
+    pj_status_t status = PJ_SUCCESS;
+    pjsip_module *m;
+    int i;
 
-    PJ_LOG(5, (THIS_FILE, "init_modules()"));
+    pj_rwmutex_lock_write(endpt->mod_mutex);
 
-    /* Load static modules. */
-    endpt->mod_count = PJSIP_MAX_MODULE;
-    status = register_static_modules( &endpt->mod_count, endpt->modules );
-    if (status != 0) {
-	return status;
+    /* Make sure that this module has not been registered. */
+    PJ_ASSERT_ON_FAIL(	pj_list_find_node(&endpt->module_list, mod) == NULL,
+			{status = PJ_EEXISTS; goto on_return;});
+
+    /* Find unused ID for this module. */
+    for (i=0; i<PJ_ARRAY_SIZE(endpt->modules); ++i) {
+	if (endpt->modules[i] == NULL)
+	    break;
+    }
+    if (i == PJ_ARRAY_SIZE(endpt->modules)) {
+	pj_assert(!"Too many modules registered!");
+	status = PJ_ETOOMANY;
+	goto on_return;
     }
 
-    /* Add mini aux module. */
-    endpt->modules[endpt->mod_count++] = &aux_tsx_module;
+    /* Assign the ID. */
+    mod->id = i;
 
-    /* Load dynamic modules. */
-    // Not supported yet!
-
-    /* Sort modules on the priority. */
-    for (i=endpt->mod_count-1; i>0; --i) {
-	pj_uint32_t max = 0;
-	unsigned j;
-	for (j=1; j<=i; ++j) {
-	    if (endpt->modules[j]->priority > endpt->modules[max]->priority)
-		max = j;
-	}
-	if (max != i) {
-	    pjsip_module *temp = endpt->modules[max];
-	    endpt->modules[max] = endpt->modules[i];
-	    endpt->modules[i] = temp;
-	}
+    /* Try to load the module. */
+    if (mod->load) {
+	status = (*mod->load)(endpt);
+	if (status != PJ_SUCCESS)
+	    goto on_return;
     }
 
-    /* Initialize each module. */
-    for (i=0; i < endpt->mod_count; ++i) {
-	int j;
-
-	pjsip_module *mod = endpt->modules[i];
-	if (mod->init_module) {
-	    status = mod->init_module(endpt, mod, i);
-	    if (status != 0) {
-		return status;
-	    }
-	}
-
-	/* Collect all supported methods from modules. */
-	for (j=0; j<mod->method_cnt; ++j) {
-	    unsigned k;
-	    for (k=0; k<endpt->method_cnt; ++k) {
-		if (pjsip_method_cmp(mod->methods[j], endpt->methods[k]) == 0)
-		    break;
-	    }
-	    if (k == endpt->method_cnt) {
-		if (endpt->method_cnt < MAX_METHODS) {
-		    endpt->methods[endpt->method_cnt++] = mod->methods[j];
-		} else {
-		    PJ_LOG(1,(THIS_FILE, "Too many methods"));
-		    return -1;
-		}
-	    }
-	}
+    /* Try to start the module. */
+    if (mod->start) {
+	status = (*mod->start)();
+	if (status != PJ_SUCCESS)
+	    goto on_return;
     }
 
-    /* Create Allow header. */
-    endpt->allow_hdr = pjsip_allow_hdr_create( endpt->pool );
-    endpt->allow_hdr->count = endpt->method_cnt;
-    for (i=0; i<endpt->method_cnt; ++i) {
-	endpt->allow_hdr->values[i] = endpt->methods[i]->name;
-    }
+    /* Save the module. */
+    endpt->modules[i] = mod;
 
-    /* Start each module. */
-    for (i=0; i < endpt->mod_count; ++i) {
-	pjsip_module *mod = endpt->modules[i];
-	if (mod->start_module) {
-	    status = mod->start_module(mod);
-	    if (status != 0) {
-		return status;
-	    }
-	}
+    /* Put in the module list, sorted by priority. */
+    m = endpt->module_list.next;
+    while (m != &endpt->module_list) {
+	if (m->priority > mod->priority)
+	    break;
+	m = m->next;
     }
+    pj_list_insert_before(m, mod);
 
     /* Done. */
-    return 0;
+    PJ_TODO(BUILD_ALLOW_HEADER_BASED_ON_MODULES_SUPPORTED_METHODS);
+
+on_return:
+    pj_rwmutex_unlock_write(endpt->mod_mutex);
+    return status;
 }
 
 /*
- * Unregister the transaction from the hash table, and destroy the resources
- * from the transaction.
+ * Unregister a module from the endpoint.
+ * The endpoint will then call the stop and unload function in the module to 
+ * properly shutdown the module.
  */
-PJ_DEF(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
-				      pjsip_transaction *tsx)
+PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
+						   pjsip_module *mod )
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_destroy_tsx(%s)", tsx->obj_name));
+    pj_status_t status;
 
-    pj_assert(tsx->state == PJSIP_TSX_STATE_DESTROYED);
+    pj_rwmutex_lock_write(endpt->mod_mutex);
 
-    /* No need to lock transaction. 
-     * This function typically is called from the transaction callback, which
-     * means that transaction mutex is being held.
-     */
-    pj_assert( pj_mutex_is_locked(tsx->mutex) );
+    /* Make sure the module exists in the list. */
+    PJ_ASSERT_ON_FAIL(	pj_list_find_node(&endpt->module_list, mod) == mod,
+			{status = PJ_ENOTFOUND;goto on_return;} );
 
-    /* Lock endpoint. */
-    pj_mutex_lock( endpt->tsx_table_mutex );
+    /* Make sure the module exists in the array. */
+    PJ_ASSERT_ON_FAIL(	mod->id>=0 && mod->id<PJ_ARRAY_SIZE(endpt->modules) &&
+			endpt->modules[mod->id] == mod,
+			{status = PJ_ENOTFOUND; goto on_return;});
 
-    /* Unregister from the hash table. */
-    pj_hash_set( NULL, endpt->tsx_table, tsx->transaction_key.ptr, 
-		 tsx->transaction_key.slen, NULL);
-
-    /* Unlock endpoint mutex. */
-    pj_mutex_unlock( endpt->tsx_table_mutex );
-
-    /* Destroy transaction mutex. */
-    pj_mutex_destroy( tsx->mutex );
-
-    /* Release the pool for the transaction. */
-    pj_pool_release(tsx->pool);
-
-    PJ_LOG(4, (THIS_FILE, "tsx%p destroyed", tsx));
-}
-
-
-/*
- * Receive transaction events from transactions and dispatch them to the 
- * modules.
- */
-static void endpt_do_event( pjsip_endpoint *endpt, pjsip_event *evt)
-{
-    unsigned i;
-
-    /* Dispatch event to modules. */
-    for (i=0; i<endpt->mod_count; ++i) {
-	pjsip_module *mod = endpt->modules[i];
-	if (mod && mod->tsx_handler) {
-	    mod->tsx_handler( mod, evt );
-	}
+    /* Try to stop the module. */
+    if (mod->stop) {
+	status = (*mod->stop)();
+	if (status != PJ_SUCCESS) goto on_return;
     }
 
-    /* Destroy transaction if it is terminated. */
-    if (evt->type == PJSIP_EVENT_TSX_STATE && 
-	evt->body.tsx_state.tsx->state == PJSIP_TSX_STATE_DESTROYED) 
-    {
-	/* No need to lock mutex. Mutex is locked inside the destroy function */
-	pjsip_endpt_destroy_tsx( endpt, evt->body.tsx_state.tsx );
+    /* Try to unload the module. */
+    if (mod->unload) {
+	status = (*mod->unload)();
+	if (status != PJ_SUCCESS) goto on_return;
     }
-}
 
-/*
- * Receive transaction events from transactions and put in the event queue
- * to be processed later.
- */
-void pjsip_endpt_send_tsx_event( pjsip_endpoint *endpt, pjsip_event *evt )
-{
-    // Need to protect this with try/catch?
-    endpt_do_event(endpt, evt);
+    /* Remove module from array. */
+    endpt->modules[mod->id] = NULL;
+
+    /* Remove module from list. */
+    pj_list_erase(mod);
+
+    /* Done. */
+    status = PJ_SUCCESS;
+
+    PJ_TODO(REMOVE_METHODS_FROM_ALLOW_HEADER_WHEN_MODULE_IS_UNREGISTERED);
+
+on_return:
+    pj_rwmutex_unlock_write(endpt->mod_mutex);
+    return status;
 }
 
 /*
@@ -375,9 +324,17 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 	return PJ_ENOMEM;
 
     /* Create endpoint. */
-    endpt = pj_pool_calloc(pool, 1, sizeof(*endpt));
+    endpt = pj_pool_zalloc(pool, sizeof(*endpt));
     endpt->pool = pool;
     endpt->pf = pf;
+
+    /* Init modules list. */
+    pj_list_init(&endpt->module_list);
+
+    /* Create R/W mutex for module manipulation. */
+    status = pj_rwmutex_create(endpt->pool, "ept%p", &endpt->mod_mutex);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     /* Init parser. */
     init_sip_parser();
@@ -396,20 +353,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Create mutex for the events, etc. */
     status = pj_mutex_create_recursive( endpt->pool, "ept%p", &endpt->mutex );
     if (status != PJ_SUCCESS) {
-	goto on_error;
-    }
-
-    /* Create mutex for the transaction table. */
-    status = pj_mutex_create_recursive( endpt->pool, "mtbl%p", 
-                                        &endpt->tsx_table_mutex);
-    if (status != PJ_SUCCESS) {
-	goto on_error;
-    }
-
-    /* Create hash table for transaction. */
-    endpt->tsx_table = pj_hash_create( endpt->pool, PJSIP_MAX_TSX_COUNT );
-    if (!endpt->tsx_table) {
-	status = PJ_ENOMEM;
 	goto on_error;
     }
 
@@ -452,13 +395,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 	goto on_error;
     }
 
-    /* Initialize TLS ID for transaction lock. */
-    status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
-    if (status != PJ_SUCCESS) {
-	goto on_error;
-    }
-    pj_thread_local_set(pjsip_tsx_lock_tls_id, NULL);
-
     /* Initialize request headers. */
     pj_list_init(&endpt->req_hdr);
 
@@ -469,13 +405,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     mf_hdr = pjsip_max_forwards_hdr_create(endpt->pool);
     mf_hdr->ivalue = PJSIP_MAX_FORWARDS_VALUE;
     pj_list_insert_before( &endpt->req_hdr, mf_hdr);
-
-    /* Load and init modules. */
-    status = init_modules(endpt);
-    if (status != PJ_SUCCESS) {
-	PJ_LOG(4, (THIS_FILE, "pjsip_endpt_init(): error in init_modules()"));
-	return status;
-    }
 
     /* Done. */
     *p_endpt = endpt;
@@ -490,9 +419,9 @@ on_error:
 	pj_mutex_destroy(endpt->mutex);
 	endpt->mutex = NULL;
     }
-    if (endpt->tsx_table_mutex) {
-	pj_mutex_destroy(endpt->tsx_table_mutex);
-	endpt->tsx_table_mutex = NULL;
+    if (endpt->mod_mutex) {
+	pj_rwmutex_destroy(endpt->mod_mutex);
+	endpt->mod_mutex = NULL;
     }
     pj_pool_release( endpt->pool );
 
@@ -512,9 +441,6 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
-
-    /* Delete transaction table mutex. */
-    pj_mutex_destroy(endpt->tsx_table_mutex);
 
     /* Finally destroy pool. */
     pj_pool_release(endpt->pool);
@@ -624,93 +550,6 @@ PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
 }
 
 /*
- * Create a new transaction.
- * Endpoint must then initialize the new transaction as either UAS or UAC, and
- * register it to the hash table.
- */
-PJ_DEF(pj_status_t) pjsip_endpt_create_tsx(pjsip_endpoint *endpt,
-					   pjsip_transaction **p_tsx)
-{
-    pj_pool_t *pool;
-
-    PJ_ASSERT_RETURN(endpt && p_tsx, PJ_EINVAL);
-
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_tsx()"));
-
-    /* Request one pool for the transaction. Mutex is locked there. */
-    pool = pjsip_endpt_create_pool(endpt, "ptsx%p", 
-				      PJSIP_POOL_LEN_TSX, PJSIP_POOL_INC_TSX);
-    if (pool == NULL) {
-	return PJ_ENOMEM;
-    }
-
-    /* Create the transaction. */
-    return pjsip_tsx_create(pool, endpt, p_tsx);
-}
-
-/*
- * Register the transaction to the endpoint.
- * This will put the transaction to the transaction hash table. Before calling
- * this function, the transaction must be INITIALIZED as either UAS or UAC, so
- * that the transaction key is built.
- */
-PJ_DEF(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
-				       pjsip_transaction *tsx)
-{
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_register_tsx(%s)", tsx->obj_name));
-
-    pj_assert(tsx->transaction_key.slen != 0);
-    //pj_assert(tsx->state != PJSIP_TSX_STATE_NULL);
-
-    /* Lock hash table mutex. */
-    pj_mutex_lock(endpt->tsx_table_mutex);
-
-    /* Register the transaction to the hash table. */
-    pj_hash_set( tsx->pool, endpt->tsx_table, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, tsx);
-
-    /* Unlock mutex. */
-    pj_mutex_unlock(endpt->tsx_table_mutex);
-}
-
-/*
- * Find transaction by the key.
- */
-PJ_DEF(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
-					          const pj_str_t *key )
-{
-    pjsip_transaction *tsx;
-
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_find_tsx()"));
-
-    /* Start lock mutex in the endpoint. */
-    pj_mutex_lock(endpt->tsx_table_mutex);
-
-    /* Find the transaction in the hash table. */
-    tsx = pj_hash_get( endpt->tsx_table, key->ptr, key->slen );
-
-    /* Unlock mutex. */
-    pj_mutex_unlock(endpt->tsx_table_mutex);
-
-    return tsx;
-}
-
-/*
- * Create key.
- */
-static void rdata_create_key( pjsip_rx_data *rdata)
-{
-    pjsip_role_e role;
-    if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
-	role = PJSIP_ROLE_UAS;
-    } else {
-	role = PJSIP_ROLE_UAC;
-    }
-    pjsip_tsx_create_key(rdata->tp_info.pool, &rdata->endpt_info.key, role,
-			 &rdata->msg_info.cseq->method, rdata);
-}
-
-/*
  * This is the callback that is called by the transport manager when it 
  * receives a message from the network.
  */
@@ -719,19 +558,17 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 				      pjsip_rx_data *rdata )
 {
     pjsip_msg *msg = rdata->msg_info.msg;
-    pjsip_transaction *tsx;
-    pj_bool_t a_new_transaction_just_been_created = PJ_FALSE;
 
     PJ_LOG(5, (THIS_FILE, "endpt_transport_callback(rdata=%p)", rdata));
 
     if (status != PJ_SUCCESS) {
-	const char *src_addr = rdata->pkt_info.src_name;
-	int port = rdata->pkt_info.src_port;
 	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
-			       "Src.addr=%s:%d, packet:--\n"
+			       "Error processing packet from %s:%d, packet:--\n"
 			       "%s\n"
-			       "-- end of packet. Error",
-			       src_addr, port, rdata->msg_info.msg_buf));
+			       "-- end of packet.",
+			       rdata->pkt_info.src_name, 
+			       rdata->pkt_info.src_port, 
+			       rdata->msg_info.msg_buf));
 	return;
     }
 
@@ -740,7 +577,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
      * Ref: RFC3261 Section 18.1.2 Receiving Response
      */
     if (msg->type == PJSIP_RESPONSE_MSG) {
-	const pj_str_t *addr_addr;
+	const pj_str_t *local_addr;
 	int port = rdata->msg_info.via->sent_by.port;
 	pj_bool_t mismatch = PJ_FALSE;
 	if (port == 0) {
@@ -748,8 +585,8 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	    type = rdata->tp_info.transport->key.type;
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}
-	addr_addr = &rdata->tp_info.transport->local_name.host;
-	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, addr_addr) != 0)
+	local_addr = &rdata->tp_info.transport->local_name.host;
+	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, local_addr) != 0)
 	    mismatch = PJ_TRUE;
 	else if (port != rdata->tp_info.transport->local_name.port) {
 	    /* Port or address mismatch, we should discard response */
@@ -759,186 +596,71 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	     * So we discard the response only if the port doesn't match
 	     * both the port in sent-by and rport. We try to be lenient here!
 	     */
-	    if (rdata->msg_info.via->rport_param != rdata->tp_info.transport->local_name.port)
+	    if (rdata->msg_info.via->rport_param != 
+		rdata->tp_info.transport->local_name.port)
 		mismatch = PJ_TRUE;
 	    else {
-		PJ_LOG(4,(THIS_FILE, "Response %p has mismatch port in sent-by"
-				    " but the rport parameter is correct",
-				    rdata));
+		PJ_LOG(4,(THIS_FILE, "Response %p from %s has mismatch port in "
+				     "sent-by but the rport parameter is "
+				     "correct",
+				     rdata, rdata->pkt_info.src_name));
 	    }
 	}
 
 	if (mismatch) {
-	    pjsip_event e;
-
-	    PJSIP_EVENT_INIT_DISCARD_MSG(e, rdata, PJSIP_EINVALIDVIA);
-	    endpt_do_event( endpt, &e );
+	    PJ_TODO(ENDPT_REPORT_WHEN_DROPPING_MESSAGE);
+	    PJ_LOG(4,(THIS_FILE, "Dropping response from %s:%d because sent-by"
+				 " is mismatch", 
+				 rdata->pkt_info.src_name, 
+				 rdata->pkt_info.src_port));
 	    return;
 	}
-    } 
-
-    /* Create key for transaction lookup. */
-    rdata_create_key( rdata);
-
-    /* Find the transaction for the received message. */
-    PJ_LOG(5, (THIS_FILE, "finding tsx with key=%.*s", 
-			 rdata->endpt_info.key.slen, rdata->endpt_info.key.ptr));
-
-    /* Start lock mutex in the endpoint. */
-    pj_mutex_lock(endpt->tsx_table_mutex);
-
-    /* Find the transaction in the hash table. */
-    tsx = pj_hash_get( endpt->tsx_table, rdata->endpt_info.key.ptr, rdata->endpt_info.key.slen );
-
-    /* Unlock mutex. */
-    pj_mutex_unlock(endpt->tsx_table_mutex);
-
-    /* If the transaction is not found... */
-    if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
-
-	/* 
-	 * For response message, discard the message, except if the response is
-	 * an 2xx class response to INVITE, which in this case it must be
-	 * passed to TU to be acked.
-	 */
-	if (msg->type == PJSIP_RESPONSE_MSG) {
-
-	    /* Inform TU about the 200 message, only if it's INVITE. */
-	    if (PJSIP_IS_STATUS_IN_CLASS(msg->line.status.code, 200) &&
-		rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) 
-	    {
-		pjsip_event e;
-
-		/* Should not happen for UA. Tsx theoritically lives until
-		 * all responses are absorbed.
-		 */
-		pj_assert(0);
-
-		PJSIP_EVENT_INIT_RX_200_MSG(e, rdata);
-		endpt_do_event( endpt, &e );
-
-	    } else {
-		/* Just discard the response, inform TU. */
-		pjsip_event e;
-
-		PJSIP_EVENT_INIT_DISCARD_MSG(e, rdata, 
-		    PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_CALL_TSX_DOES_NOT_EXIST));
-		endpt_do_event( endpt, &e );
-	    }
-
-	/*
-	 * For non-ACK request message, create a new transaction.
-	 */
-	} else if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
-
-	    pj_status_t status;
-
-	    /* Create transaction, mutex is locked there. */
-	    status = pjsip_endpt_create_tsx(endpt, &tsx);
-	    if (status != PJ_SUCCESS) {
-		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
-				       "Unable to create transaction"));
-		return;
-	    }
-
-	    /* Initialize transaction as UAS. */
-	    pjsip_tsx_init_uas( tsx, rdata );
-
-	    /* Register transaction, mutex is locked there. */
-	    pjsip_endpt_register_tsx( endpt, tsx );
-
-	    a_new_transaction_just_been_created = PJ_TRUE;
-	}
     }
 
-    /* If transaction is found (or newly created), pass the message.
-     * Otherwise if it's an ACK request, pass directly to TU.
-     */
-    if (tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED) {
-	/* Dispatch message to transaction. */
-	pjsip_tsx_on_rx_msg( tsx, rdata );
 
-    } else if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD) {
-	/*
-	 * This is an ACK message, but the INVITE transaction could not
-	 * be found (possibly because the branch parameter in Via in ACK msg
-	 * is different than the branch in original INVITE). This happens with
-	 * SER!
-	 */
-	pjsip_event event;
+    /* Distribute to modules. */
+    pj_rwmutex_lock_read(endpt->mod_mutex);
 
-	PJSIP_EVENT_INIT_RX_ACK_MSG(event,rdata);
-	endpt_do_event( endpt, &event );
-    }
+    if (msg->type == PJSIP_REQUEST_MSG) {
+	pjsip_module *mod;
+	pj_bool_t handled = PJ_FALSE;
 
-    /*
-     * If a new request message has just been receieved, but no modules
-     * seem to be able to handle the request message, then terminate the
-     * transaction.
-     *
-     * Ideally for cases like "unsupported method", we should be able to
-     * answer the request statelessly. But we can not do that since the
-     * endpoint shoule be able to be used as both user agent and proxy stack,
-     * and a proxy stack should be able to handle arbitrary methods.
-     */
-    if (a_new_transaction_just_been_created && tsx->status_code < 100) {
-	/* Certainly no modules has sent any response message.
-	 * Check that any modules has attached a module data.
-	 */
-	int i;
-	for (i=0; i<PJSIP_MAX_MODULE; ++i) {
-	    if (tsx->module_data[i] != NULL) {
+	mod = endpt->module_list.next;
+	while (mod != &endpt->module_list) {
+	    if (mod->on_rx_request)
+		handled = (*mod->on_rx_request)(rdata);
+	    if (handled)
 		break;
-	    }
+	    mod = mod->next;
 	}
-	if (i == PJSIP_MAX_MODULE) {
-	    /* No modules have attached itself to the transaction. 
-	     * Terminate the transaction with 501/Not Implemented.
-	     */
-	    pjsip_tx_data *tdata;
-	    pj_status_t status;
-	    
-	    if (tsx->method.id == PJSIP_OPTIONS_METHOD) {
-		status = pjsip_endpt_create_response(endpt, rdata, 200, 
-						     &tdata);
-	    } else {
-		status = pjsip_endpt_create_response(endpt, rdata, 
-						     PJSIP_SC_METHOD_NOT_ALLOWED,
-						     &tdata);
-	    }
 
-	    if (status != PJ_SUCCESS) {
-		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
-				       "Unable to create response"));
-		return;
-	    }
+	/* No module is able to handle the request. */
+	if (!handled) {
+	    PJ_TODO(ENDPT_RESPOND_UNHANDLED_REQUEST);
+	    PJ_LOG(4,(THIS_FILE, "Request from %s:%d was dropped/unhandled by"
+				 " any modules"));
+	}
 
-	    if (endpt->allow_hdr) {
-		pjsip_msg_add_hdr( tdata->msg, 
-				   pjsip_hdr_shallow_clone(tdata->pool, endpt->allow_hdr));
-	    }
-	    pjsip_tsx_on_tx_msg( tsx, tdata );
+    } else {
+	pjsip_module *mod;
+	pj_bool_t handled = PJ_FALSE;
 
-	} else {
-	    /*
-	     * If a module has registered itself in the transaction but it
-	     * hasn't responded the request, chances are the module wouldn't
-	     * respond to the request at all. We terminate the request here
-	     * with 500/Internal Server Error, to be safe.
-	     */
-	    pjsip_tx_data *tdata;
-	    pj_status_t status;
+	mod = endpt->module_list.next;
+	while (mod != &endpt->module_list) {
+	    if (mod->on_rx_response)
+		handled = (*mod->on_rx_response)(rdata);
+	    if (handled)
+		break;
+	    mod = mod->next;
+	}
 
-	    status = pjsip_endpt_create_response(endpt, rdata, 500, &tdata);
-	    if (status != PJ_SUCCESS) {
-		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
-				       "Unable to create response"));
-		return;
-	    }
-
-	    pjsip_tsx_on_tx_msg(tsx, tdata);
+	if (!handled) {
+	    PJ_LOG(4,(THIS_FILE, "Response from %s:%d was dropped/unhandled by"
+				 " any modules"));
 	}
     }
+
+    pj_rwmutex_unlock_read(endpt->mod_mutex);
 }
 
 /*
@@ -983,15 +705,15 @@ PJ_DEF(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt)
 /*
  * Find/create transport.
  */
-PJ_DEF(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
+PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport(pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
-						  const pj_sockaddr *remote,
+						  const pj_sockaddr_t *remote,
 						  int addr_len,
-						  pjsip_transport **p_transport)
+						  pjsip_transport **transport)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_alloc_transport()"));
-    return pjsip_tpmgr_alloc_transport( endpt->transport_mgr, type, 
-					remote, addr_len, p_transport);
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_acquire_transport()"));
+    return pjsip_tpmgr_acquire_transport(endpt->transport_mgr, type, 
+					 remote, addr_len, transport);
 }
 
 
@@ -1049,8 +771,6 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
 PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 {
 #if PJ_LOG_MAX_LEVEL >= 3
-    unsigned count;
-
     PJ_LOG(5, (THIS_FILE, "pjsip_endpt_dump()"));
 
     /* Lock mutex. */
@@ -1065,53 +785,6 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%u, used_size=%u",
 	       pj_pool_get_capacity(endpt->pool),
 	       pj_pool_get_used_size(endpt->pool)));
-
-    /* Transaction tables. */
-    count = pj_hash_count(endpt->tsx_table);
-    PJ_LOG(3, (THIS_FILE, " Number of transactions: %u", count));
-
-    if (count && detail) {
-	pj_hash_iterator_t it_val;
-	pj_hash_iterator_t *it;
-	pj_time_val now;
-
-	PJ_LOG(3, (THIS_FILE, " Dumping transaction tables:"));
-
-	pj_gettimeofday(&now);
-	it = pj_hash_first(endpt->tsx_table, &it_val);
-
-	while (it != NULL) {
-	    int timeout_diff;
-
-	    /* Get the transaction. No need to lock transaction's mutex
-	     * since we already hold endpoint mutex, so that no transactions
-	     * will be deleted.
-	     */
-	    pjsip_transaction *tsx = pj_hash_this(endpt->tsx_table, it);
-
-	    const char *role = (tsx->role == PJSIP_ROLE_UAS ? "UAS" : "UAC");
-	
-	    if (tsx->timeout_timer._timer_id != -1) {
-		if (tsx->timeout_timer._timer_value.sec > now.sec) {
-		    timeout_diff = tsx->timeout_timer._timer_value.sec - now.sec;
-		} else {
-		    timeout_diff = now.sec - tsx->timeout_timer._timer_value.sec;
-		    timeout_diff = 0 - timeout_diff;
-		}
-	    } else {
-		timeout_diff = -1;
-	    }
-
-	    PJ_LOG(3, (THIS_FILE, "  %s %s %10.*s %.9u %s t=%ds", 
-		       tsx->obj_name, role, 
-		       tsx->method.name.slen, tsx->method.name.ptr,
-		       tsx->cseq,
-		       pjsip_tsx_state_str(tsx->state),
-		       timeout_diff));
-
-	    it = pj_hash_next(endpt->tsx_table, it);
-	}
-    }
 
     /* Transports. 
      */

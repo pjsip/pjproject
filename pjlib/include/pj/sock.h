@@ -176,13 +176,13 @@ typedef struct pj_in_addr
 /**
  * This structure describes Internet socket address.
  */
-typedef struct pj_sockaddr_in
+struct pj_sockaddr_in
 {
     pj_uint16_t	sin_family;	/**< Address family.		    */
     pj_uint16_t	sin_port;	/**< Transport layer port number.   */
     pj_in_addr	sin_addr;	/**< IP address.		    */
     char	sin_zero[8];	/**< Padding.			    */
-} pj_sockaddr_in;
+};
 
 
 /**

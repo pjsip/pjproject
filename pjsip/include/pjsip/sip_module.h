@@ -41,28 +41,31 @@ PJ_BEGIN_DECL
  */
 struct pjsip_module
 {
+    /** To allow chaining of modules in the endpoint. */
+    PJ_DECL_LIST_MEMBER(struct pjsip_module);
+
     /**
      * Module name.
      */
     pj_str_t name;
 
     /**
-     * Flag to indicate the type of interfaces supported by the module.
+     * Module ID.
      */
-    pj_uint32_t flag;
+    int id;
 
     /**
      * Integer number to identify module initialization and start order with
      * regard to other modules. Higher number will make the module gets
      * initialized later.
      */
-    pj_uint32_t priority;
+    int priority;
 
     /**
      * Opaque data which can be used by a module to identify a resource within
      * the module itself.
      */
-    void *mod_data;
+    void *user_data;
 
     /**
      * Number of methods supported by this module.
@@ -78,22 +81,24 @@ struct pjsip_module
      * Pointer to function to be called to initialize the module.
      *
      * @param endpt	The endpoint instance.
-     * @param mod	The module.
-     * @param id	The unique module ID assigned to this module.
-     *
-     * @return		Module should return zero when initialization succeed.
+     * @return		Module should return PJ_SUCCESS to indicate success.
      */
-    pj_status_t (*init_module)(pjsip_endpoint *endpt,
-			       struct pjsip_module *mod, pj_uint32_t id);
+    pj_status_t (*load)(pjsip_endpoint *endpt);
 
     /**
      * Pointer to function to be called to start the module.
      *
-     * @param mod	The module.
-     *
      * @return		Module should return zero to indicate success.
      */
-    pj_status_t (*start_module)(struct pjsip_module *mod);
+    pj_status_t (*start)(void);
+
+    /**
+     * Pointer to function to be called to deinitialize the module before
+     * it is unloaded.
+     *
+     * @return		Module should return PJ_SUCCESS to indicate success.
+     */
+    pj_status_t (*stop)(void);
 
     /**
      * Pointer to function to be called to deinitialize the module before
@@ -101,34 +106,55 @@ struct pjsip_module
      *
      * @param mod	The module.
      *
-     * @return		Module should return zero to indicate success.
+     * @return		Module should return PJ_SUCCESS to indicate success.
      */
-    pj_status_t (*deinit_module)(struct pjsip_module *mod);
+    pj_status_t (*unload)(void);
 
     /**
-     * Pointer to function to receive transaction related events.
-     * If the module doesn't wish to receive such notification, this member
-     * must be set to NULL.
+     * Called to process incoming request.
      *
-     * @param mod	The module.
-     * @param event	The transaction event.
+     * @param rdata	The incoming message.
+     *
+     * @return		Module should return PJ_TRUE if it handles the request,
+     *			or otherwise it should return PJ_FALSE to allow other
+     *			modules to handle the request.
      */
-    void (*tsx_handler)(struct pjsip_module *mod, pjsip_event *event);
+    pj_bool_t (*on_rx_request)(pjsip_rx_data *rdata);
+
+    /**
+     * Called to processed incoming response.
+     *
+     * @param rdata	The incoming message.
+     *
+     * @return		Module should return PJ_TRUE if it handles the 
+     *			response, or otherwise it should return PJ_FALSE to 
+     *			allow other modules to handle the response.
+     */
+    pj_bool_t (*on_rx_response)(pjsip_rx_data *rdata);
+
+    /**
+     * Called when this module is acting as transaction user for the specified
+     * transaction, when the transaction's state has changed.
+     *
+     * @param tsx	The transaction.
+     * @param event	The event which has caused the transaction state
+     *			to change.
+     */
+    void (*on_tsx_state)(pjsip_transaction *tsx, pjsip_event *event);
+
 };
 
 
 /**
- * Prototype of function to register static modules (eg modules that are
- * linked staticly with the application). This function must be implemented 
- * by any applications that use PJSIP library.
- *
- * @param count	    [input/output] On input, it contains the maximum number of
- *		    elements in the array. On output, the function fills with 
- *		    the number of modules to be registered.
- * @param modules   [output] array of pointer to modules to be registered.
+ * Module priority guidelines.
  */
-pj_status_t register_static_modules( pj_size_t *count,
-				     pjsip_module **modules );
+enum pjsip_module_priority
+{
+    PJSIP_MOD_PRIORITY_TSX_LAYER = 4,
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER = 16,
+    PJSIP_MOD_PRIORITY_APPLICATION = 32,
+};
+
 
 /**
  * @}

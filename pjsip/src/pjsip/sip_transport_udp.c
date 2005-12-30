@@ -21,6 +21,7 @@
 #include <pjsip/sip_errno.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
+#include <pj/addr_resolv.h>
 #include <pj/os.h>
 #include <pj/lock.h>
 #include <pj/string.h>
@@ -267,6 +268,9 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     unsigned i;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(endpt && sock!=PJ_INVALID_SOCKET && a_name && async_cnt>0,
+		     PJ_EINVAL);
+
     /* Create pool. */
     pool = pjsip_endpt_create_pool(endpt, "udp%p", PJSIP_POOL_LEN_TRANSPORT, 
 				   PJSIP_POOL_INC_TRANSPORT);
@@ -327,7 +331,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     pj_sprintf(tp->base.info, "udp %s:%d [published as %s:%d]",
 			      pj_inet_ntoa(((pj_sockaddr_in*)&tp->base.local_addr)->sin_addr),
 			      pj_ntohs(((pj_sockaddr_in*)&tp->base.local_addr)->sin_port),
-			      tp->base.local_name.host,
+			      tp->base.local_name.host.ptr,
 			      tp->base.local_name.port);
 
     /* Set endpoint. */
@@ -367,6 +371,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 
     /* Create rdata and put it in the array. */
     tp->rdata_cnt = 0;
+    tp->rdata = pj_pool_calloc(tp->base.pool, async_cnt, 
+			       sizeof(pjsip_rx_data*));
     for (i=0; i<async_cnt; ++i) {
 	pj_pool_t *rdata_pool = pjsip_endpt_create_pool(endpt, "rtd%p", 
 							PJSIP_POOL_RDATA_LEN,
@@ -382,6 +388,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 	/* Init tp_info part. */
 	tp->rdata[i]->tp_info.pool = rdata_pool;
 	tp->rdata[i]->tp_info.transport = &tp->base;
+	tp->rdata[i]->tp_info.op_key.rdata = tp->rdata[i];
 	pj_ioqueue_op_key_init(&tp->rdata[i]->tp_info.op_key.op_key, 
 			       sizeof(pj_ioqueue_op_key_t));
 
@@ -436,6 +443,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
     char addr_buf[16];
     pjsip_host_port bound_name;
 
+    PJ_ASSERT_RETURN(local != NULL, PJ_EINVAL);
+
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
@@ -447,10 +456,31 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
     }
 
     if (a_name == NULL) {
+	/* Address name is not specified. 
+	 * Build a name based on bound address.
+	 */
 	a_name = &bound_name;
 	bound_name.host.ptr = addr_buf;
-	pj_strcpy2(&bound_name.host, pj_inet_ntoa(local->sin_addr));
 	bound_name.port = pj_ntohs(local->sin_port);
+
+	/* If bound address specifies "0.0.0.0", get the IP address
+	 * of local hostname.
+	 */
+	if (local->sin_addr.s_addr == PJ_INADDR_ANY) {
+	    pj_hostent he;
+	    const pj_str_t *hostname = pj_gethostname();
+	    status = pj_gethostbyname(hostname, &he);
+	    if (status != PJ_SUCCESS) {
+		pj_sock_close(sock);
+		return status;
+	    }
+	    pj_strcpy2(&bound_name.host, 
+		       pj_inet_ntoa(*(pj_in_addr*)he.h_addr));
+	} else {
+	    /* Otherwise use bound address. */
+	    pj_strcpy2(&bound_name.host, pj_inet_ntoa(local->sin_addr));
+	}
+	
     }
 
     return pjsip_udp_transport_attach( endpt, sock, a_name, async_cnt, 

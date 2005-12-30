@@ -664,7 +664,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 
 /*****************************************************************************/
 
-pj_status_t msg_test(void)
+int msg_test(void)
 {
     pj_status_t status;
     pj_pool_t *pool;

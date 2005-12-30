@@ -17,8 +17,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
+#include <stdio.h>
 
-int main(void)
+int main(int argc, char *argv[])
 {
-    return test_main();
+    int retval = test_main();
+
+    if (argc != 1) {
+	char s[10];
+	printf("<Press ENTER to quit>\n");
+	fgets(s, sizeof(s), stdin);
+    }
+
+    return retval;
 }

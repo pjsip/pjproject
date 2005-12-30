@@ -83,6 +83,8 @@ int test_main(void)
 
     DO_TEST(uri_test());
     DO_TEST(msg_test());
+    DO_TEST(txdata_test());
+    DO_TEST(transport_udp_test());
 
 on_return:
 

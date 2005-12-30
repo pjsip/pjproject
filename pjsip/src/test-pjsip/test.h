@@ -23,10 +23,27 @@
 
 extern pjsip_endpoint *endpt;
 
-pj_status_t uri_test(void);
-pj_status_t msg_test(void);
+#define TEST_UDP_PORT	15060
 
+/* The tests */
+int uri_test(void);
+int msg_test(void);
+int txdata_test(void);
+int transport_udp_test(void);
+
+/* Transport test helpers (transport_test.c). */
+int generic_transport_test(pjsip_transport *tp);
+int transport_send_recv_test( pjsip_transport_type_e tp_type,
+			      pjsip_transport *ref_tp,
+			      const pj_sockaddr_in *rem_addr );
+int transport_rt_test( pjsip_transport_type_e tp_type,
+		       pjsip_transport *ref_tp,
+		       const pj_sockaddr_in *rem_addr );
+
+/* Test main entry */
 int  test_main(void);
+
+/* Test utilities. */
 void app_perror(const char *msg, pj_status_t status);
 
 

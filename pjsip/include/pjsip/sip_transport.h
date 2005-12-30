@@ -367,16 +367,21 @@ PJ_DECL(void) pjsip_tx_data_add_ref( pjsip_tx_data *tdata );
 
 /**
  * Decrement reference counter of the transmit buffer.
- * When the transmit buffer is no longer used, it will be destroyed.
+ * When the transmit buffer is no longer used, it will be destroyed and
+ * caller is informed with PJSIP_EBUFDESTROYED return status.
  *
  * @param tdata	    The transmit buffer data.
+ * @return	    This function will always succeeded eventhough the return
+ *		    status is non-zero. A status PJSIP_EBUFDESTROYED will be
+ *		    returned to inform that buffer is destroyed.
  */
-PJ_DECL(void) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata );
+PJ_DECL(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata );
 
 /**
  * Check if transmit data buffer contains a valid message.
  *
  * @param tdata	    The transmit buffer.
+ * @return	    Non-zero (PJ_TRUE) if buffer contains a valid message.
  */
 PJ_DECL(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata );
 
@@ -542,11 +547,14 @@ struct pjsip_tpfactory
 
     /**
      * Create new outbound connection.
+     * Note that the factory is responsible for both creating the
+     * transport and registering it to the transport manager.
      */
     pj_status_t (*create_transport)(pjsip_tpfactory *factory,
 				    pjsip_tpmgr *mgr,
 				    pjsip_endpoint *endpt,
 				    const pj_sockaddr *rem_addr,
+				    int addr_len,
 				    pjsip_transport **transport);
 
     /*
@@ -621,11 +629,11 @@ PJ_DECL(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr);
  * Find transport to be used to send message to remote destination. If no
  * suitable transport is found, a new one will be created.
  */
-PJ_DECL(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
-						  pjsip_transport_type_e type,
-						  const pj_sockaddr_t *remote,
-						  int addr_len,
-						  pjsip_transport **p_transport );
+PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
+						   pjsip_transport_type_e type,
+						   const pj_sockaddr_t *remote,
+						   int addr_len,
+						   pjsip_transport **tp);
 
 
 /**

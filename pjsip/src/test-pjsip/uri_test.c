@@ -783,7 +783,7 @@ on_return:
     return status;
 }
 
-pj_status_t uri_test()
+int uri_test()
 {
     unsigned i, loop;
     pj_pool_t *pool;

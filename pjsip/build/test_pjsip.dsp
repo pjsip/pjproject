@@ -101,6 +101,18 @@ SOURCE="..\src\test-pjsip\test.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\transport_test.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\test-pjsip\transport_udp_test.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\test-pjsip\txdata_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\uri_test.c"
 # End Source File
 # End Group

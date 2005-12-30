@@ -93,7 +93,7 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  ***********************************************************/
 /**
  * @hideinitializer
- * Invalid message (syntax error)
+ * General invalid message error (e.g. syntax error)
  */
 #define PJSIP_EINVALIDMSG       (PJSIP_ERRNO_START_PJSIP + 20)	/* 171020 */
 /**
@@ -113,19 +113,45 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
 #define PJSIP_EPARTIALMSG       (PJSIP_ERRNO_START_PJSIP + 23)	/* 171023 */
 /**
  * @hideinitializer
+ * Missing Request-URI.
+ */
+#define PJSIP_EMISSINGREQURI    (PJSIP_ERRNO_START_PJSIP + 24)	/* 171024 */
+/**
+ * @hideinitializer
  * Missing required header(s).
  */
-#define PJSIP_EMISSINGHDR       (PJSIP_ERRNO_START_PJSIP + 24)	/* 171024 */
+#define PJSIP_EMISSINGHDR       (PJSIP_ERRNO_START_PJSIP + 25)	/* 171025 */
+/**
+ * @hideinitializer
+ * Missing message body.
+ */
+#define PJSIP_EMISSINGBODY	(PJSIP_ERRNO_START_PJSIP + 26)	/* 171026 */
 /**
  * @hideinitializer
  * Invalid Via header in response (sent-by, etc).
  */
-#define PJSIP_EINVALIDVIA	(PJSIP_ERRNO_START_PJSIP + 25)	/* 171025 */
+#define PJSIP_EINVALIDVIA	(PJSIP_ERRNO_START_PJSIP + 27)	/* 171027 */
 /**
  * @hideinitializer
  * Multiple Via headers in response.
  */
-#define PJSIP_EMULTIPLEVIA	(PJSIP_ERRNO_START_PJSIP + 26)	/* 171026 */
+#define PJSIP_EMULTIPLEVIA	(PJSIP_ERRNO_START_PJSIP + 28)	/* 171028 */
+/**
+ * @hideinitializer
+ * Invalid request URI.
+ */
+#define PJSIP_EINVALIDREQURI	(PJSIP_ERRNO_START_PJSIP + 29)	/* 171029 */
+/**
+ * @hideinitializer
+ * Expecting request message.
+ */
+#define PJSIP_ENOTREQUESTMSG	(PJSIP_ERRNO_START_PJSIP + 30)	/* 171030 */
+/**
+ * @hideinitializer
+ * Expecting response message.
+ */
+#define PJSIP_ENOTRESPONSEMSG	(PJSIP_ERRNO_START_PJSIP + 31)	/* 171031 */
+
 
 /************************************************************
  * TRANSPORT ERRORS
@@ -144,7 +170,13 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * @hideinitializer
  * Rx buffer overflow. See also PJSIP_EMSGTOOLONG.
  */
-#define PJSIP_ERXOVERFLOW         (PJSIP_ERRNO_START_PJSIP + 42)/* 171042 */
+#define PJSIP_ERXOVERFLOW       (PJSIP_ERRNO_START_PJSIP + 42)	/* 171042 */
+/**
+ * @hideinitializer
+ * This is not really an error, it just informs application that
+ * transmit data has been deleted on return of pjsip_tx_data_dec_ref().
+ */
+#define PJSIP_EBUFDESTROYED     (PJSIP_ERRNO_START_PJSIP + 43)	/* 171043 */
 
 
 /************************************************************

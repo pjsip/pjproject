@@ -507,6 +507,75 @@ PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * @defgroup PJ_RW_MUTEX Reader/Writer Mutex
+ * @ingroup PJ_OS
+ * @{
+ * Reader/writer mutex is a classic synchronization object where multiple
+ * readers can acquire the mutex, but only a single writer can acquire the 
+ * mutex.
+ */
+typedef struct pj_rwmutex_t pj_rwmutex_t;
+
+/**
+ * Create reader/writer mutex.
+ *
+ * @param pool	    Pool to allocate memory for the mutex.
+ * @param name	    Name to be assigned to the mutex.
+ * @param mutex	    Pointer to receive the newly created mutex.
+ *
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
+				       pj_rwmutex_t **mutex);
+
+/**
+ * Lock the mutex for reading.
+ *
+ * @param mutex	    The mutex.
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex);
+
+/**
+ * Lock the mutex for writing.
+ *
+ * @param mutex	    The mutex.
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex);
+
+/**
+ * Release read lock.
+ *
+ * @param mutex	    The mutex.
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex);
+
+/**
+ * Release write lock.
+ *
+ * @param mutex	    The mutex.
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex);
+
+/**
+ * Destroy reader/writer mutex.
+ *
+ * @param mutex	    The mutex.
+ * @return	    PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex);
+
+
+/**
+ * @}
+ */
+
+
+///////////////////////////////////////////////////////////////////////////////
+/**
  * @defgroup PJ_CRIT_SEC Critical sections.
  * @ingroup PJ_OS
  * @{

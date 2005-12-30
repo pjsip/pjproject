@@ -39,14 +39,20 @@ static const struct
     { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
     { PJSIP_EMSGTOOLONG,	"Message too long" },
     { PJSIP_EPARTIALMSG,	"Partial message" },
+    { PJSIP_EMISSINGREQURI,	"Missing Request-URI" },
     { PJSIP_EMISSINGHDR,	"Missing required header(s)" },
+    { PJSIP_EMISSINGBODY,	"Missing message body" },
     { PJSIP_EINVALIDVIA,	"Invalid Via header" },
     { PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" },
+    { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
+    { PJSIP_ENOTREQUESTMSG,	"Expecting request message"},
+    { PJSIP_ENOTRESPONSEMSG,	"Expecting response message"},
 
     /* Transport errors */
     { PJSIP_EUNSUPTRANSPORT,	"Unsupported transport"},
     { PJSIP_EPENDINGTX,		"Transmit buffer already pending"},
     { PJSIP_ERXOVERFLOW,	"Rx buffer overflow"},
+    { PJSIP_EBUFDESTROYED,	"Buffer destroyed"},
 
     /* Transaction errors */
     { PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"},

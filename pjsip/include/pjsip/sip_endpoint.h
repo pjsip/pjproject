@@ -115,6 +115,34 @@ PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
 PJ_DECL(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt, 
 					 const pj_time_val *max_timeout);
 
+
+/**
+ * Schedule timer to endpoint's timer heap. Application must poll the endpoint
+ * periodically (by calling #pjsip_endpt_handle_events) to ensure that the
+ * timer events are handled in timely manner. When the timeout for the timer
+ * has elapsed, the callback specified in the entry argument will be called.
+ * This function, like all other endpoint functions, is thread safe.
+ *
+ * @param endpt	    The endpoint.
+ * @param entry	    The timer entry.
+ * @param delay	    The relative delay of the timer.
+ * @return	    PJ_OK (zero) if successfull.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
+						 pj_timer_entry *entry,
+						 const pj_time_val *delay );
+
+/**
+ * Cancel the previously registered timer.
+ * This function, like all other endpoint functions, is thread safe.
+ *
+ * @param endpt	    The endpoint.
+ * @param entry	    The timer entry previously registered.
+ */
+PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
+					pj_timer_entry *entry );
+
+
 /**
  * Dump endpoint status to the log. This will print the status to the log
  * with log level 3.
@@ -125,6 +153,35 @@ PJ_DECL(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
  *			it tries to access all memory pools.
  */
 PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
+
+
+/**
+ * Register new module to the endpoint.
+ * The endpoint will then call the load and start function in the module to 
+ * properly initialize the module, and assign a unique module ID for the 
+ * module.
+ *
+ * @param endpt		The endpoint.
+ * @param module	The module to be registered.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
+						  pjsip_module *module );
+
+/**
+ * Unregister a module from the endpoint.
+ * The endpoint will then call the stop and unload function in the module to 
+ * properly shutdown the module.
+ *
+ * @param endpt		The endpoint.
+ * @param module	The module to be registered.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
+						    pjsip_module *module );
+
 
 /**
  * Create pool from the endpoint. All SIP components should allocate their
@@ -154,32 +211,6 @@ PJ_DECL(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  */
 PJ_DECL(void) pjsip_endpt_destroy_pool( pjsip_endpoint *endpt,
 					pj_pool_t *pool );
-
-/**
- * Schedule timer to endpoint's timer heap. Application must poll the endpoint
- * periodically (by calling #pjsip_endpt_handle_events) to ensure that the
- * timer events are handled in timely manner. When the timeout for the timer
- * has elapsed, the callback specified in the entry argument will be called.
- * This function, like all other endpoint functions, is thread safe.
- *
- * @param endpt	    The endpoint.
- * @param entry	    The timer entry.
- * @param delay	    The relative delay of the timer.
- * @return	    PJ_OK (zero) if successfull.
- */
-PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
-						 pj_timer_entry *entry,
-						 const pj_time_val *delay );
-
-/**
- * Cancel the previously registered timer.
- * This function, like all other endpoint functions, is thread safe.
- *
- * @param endpt	    The endpoint.
- * @param entry	    The timer entry previously registered.
- */
-PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
-					pj_timer_entry *entry );
 
 /**
  * Create a new transaction. After creating the transaction, application MUST
@@ -278,11 +309,12 @@ PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
  *
  * @see pjsip_transport_get
  */
-PJ_DECL(pj_status_t) pjsip_endpt_alloc_transport( pjsip_endpoint *endpt,
-						  pjsip_transport_type_e type,
-						  const pj_sockaddr *remote,
-						  int addr_len,
-						  pjsip_transport **p_transport);
+PJ_DECL(pj_status_t) 
+pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
+			       pjsip_transport_type_e type,
+			       const pj_sockaddr_t *remote,
+			       int addr_len,
+			       pjsip_transport **p_transport);
 
 /**
  * Get additional headers to be put in outgoing request message. 

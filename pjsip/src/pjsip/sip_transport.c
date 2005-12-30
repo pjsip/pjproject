@@ -43,6 +43,9 @@ struct pjsip_tpmgr
     pj_lock_t	    *lock;
     pjsip_endpoint  *endpt;
     pjsip_tpfactory  factory_list;
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    pj_atomic_t	    *tdata_counter;
+#endif
     void           (*msg_cb)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
 };
 
@@ -204,6 +207,10 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
 
     pj_ioqueue_op_key_init(&tdata->op_key.key, sizeof(tdata->op_key));
 
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    pj_atomic_inc( tdata->mgr->tdata_counter );
+#endif
+
     *p_tdata = tdata;
     return PJ_SUCCESS;
 }
@@ -221,14 +228,20 @@ PJ_DEF(void) pjsip_tx_data_add_ref( pjsip_tx_data *tdata )
  * Decrease transport data reference, destroy it when the reference count
  * reaches zero.
  */
-PJ_DEF(void) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
+PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 {
     pj_assert( pj_atomic_get(tdata->ref_cnt) > 0);
     if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
 	PJ_LOG(5,(tdata->obj_name, "destroying txdata"));
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+	pj_atomic_dec( tdata->mgr->tdata_counter );
+#endif
 	pj_atomic_destroy( tdata->ref_cnt );
 	pj_lock_destroy( tdata->lock );
 	pjsip_endpt_destroy_pool( tdata->mgr->endpt, tdata->pool );
+	return PJSIP_EBUFDESTROYED;
+    } else {
+	return PJ_SUCCESS;
     }
 }
 
@@ -452,7 +465,7 @@ PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
     /*
      * Unregister timer, if any.
      */
-    pj_assert(tp->idle_timer.id == PJ_FALSE);
+    //pj_assert(tp->idle_timer.id == PJ_FALSE);
     if (tp->idle_timer.id != PJ_FALSE) {
 	pjsip_endpt_cancel_timer(mgr->endpt, &tp->idle_timer);
 	tp->idle_timer.id = PJ_FALSE;
@@ -566,6 +579,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    status = pj_atomic_create(pool, 0, &mgr->tdata_counter);
+    if (status != PJ_SUCCESS)
+	return status;
+#endif
+
     *p_mgr = mgr;
     return PJ_SUCCESS;
 }
@@ -581,6 +600,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     pj_hash_iterator_t *itr;
     
     PJ_LOG(5, (THIS_FILE, "pjsip_tpmgr_destroy()"));
+
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
+#endif
 
     pj_lock_acquire(mgr->lock);
 
@@ -600,6 +623,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     }
 
     pj_lock_release(mgr->lock);
+    pj_lock_destroy(mgr->lock);
 
     return PJ_SUCCESS;
 }
@@ -741,16 +765,16 @@ finish_process_fragment:
 
 
 /*
- * pjsip_tpmgr_alloc_transport()
+ * pjsip_tpmgr_acquire_transport()
  *
  * Get transport suitable to communicate to remote. Create a new one
  * if necessary.
  */
-PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
-						 pjsip_transport_type_e type,
-						 const pj_sockaddr_t *remote,
-						 int addr_len,
-						 pjsip_transport **p_transport)
+PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
+						  pjsip_transport_type_e type,
+						  const pj_sockaddr_t *remote,
+						  int addr_len,
+						  pjsip_transport **tp)
 {
     struct transport_key
     {
@@ -798,7 +822,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
 	 */
 	pjsip_transport_add_ref(transport);
 	pj_lock_release(mgr->lock);
-	*p_transport = transport;
+	*tp = transport;
 	return PJ_SUCCESS;
     }
 
@@ -821,8 +845,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_alloc_transport( pjsip_tpmgr *mgr,
 
     /* Request factory to create transport. */
     status = factory->create_transport(factory, mgr, mgr->endpt,
-				       remote, p_transport);
-
+				       remote, addr_len, tp);
+    if (status == PJ_SUCCESS) {
+	PJ_ASSERT_ON_FAIL(tp!=NULL, 
+	    {pj_lock_release(mgr->lock); return PJ_EBUG;});
+	pjsip_transport_add_ref(*tp);
+    }
     pj_lock_release(mgr->lock);
     return status;
 }

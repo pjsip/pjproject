@@ -859,6 +859,123 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+
+struct pj_rwmutex_t
+{
+    pj_mutex_t *read_lock, *write_lock;
+    int reader_count;
+};
+
+/*
+ * Create reader/writer mutex.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
+				      pj_rwmutex_t **p_mutex)
+{
+    pj_status_t status;
+    pj_rwmutex_t *rwmutex;
+
+    PJ_ASSERT_RETURN(pool && p_mutex, PJ_EINVAL);
+
+    *p_mutex = NULL;
+    rwmutex = pj_pool_alloc(pool, sizeof(struct pj_rwmutex_t));
+
+    status = pj_mutex_create_simple(pool, name, &rwmutex ->read_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_mutex_create_recursive(pool, name, &rwmutex->write_lock);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_destroy(rwmutex->read_lock);
+	return status;
+    }
+
+    rwmutex->reader_count = 0;
+    *p_mutex = rwmutex;
+    return PJ_SUCCESS;
+}
+
+/*
+ * Lock the mutex for reading.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
+
+    status = pj_mutex_lock(mutex->read_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    mutex->reader_count++;
+    if (mutex->reader_count == 1)
+	pj_mutex_lock(mutex->write_lock);
+
+    status = pj_mutex_unlock(mutex->read_lock);
+    return status;
+}
+
+/*
+ * Lock the mutex for writing.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex)
+{
+    PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
+    return pj_mutex_lock(mutex->write_lock);
+}
+
+/*
+ * Release read lock.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
+
+    status = pj_mutex_lock(mutex->read_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_assert(mutex->reader_count >= 1);
+
+    --mutex->reader_count;
+    if (mutex->reader_count == 0)
+	pj_mutex_unlock(mutex->write_lock);
+
+    status = pj_mutex_unlock(mutex->read_lock);
+    return status;
+}
+
+/*
+ * Release write lock.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
+{
+    PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
+    return pj_mutex_unlock(mutex->write_lock);
+}
+
+
+/*
+ * Destroy reader/writer mutex.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
+{
+    PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
+    pj_mutex_destroy(mutex->read_lock);
+    pj_mutex_destroy(mutex->write_lock);
+    return PJ_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
  * pj_enter_critical_section()
  */

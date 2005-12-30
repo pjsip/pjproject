@@ -218,6 +218,9 @@ typedef long pj_sock_t;
 /** Generic socket address. */
 typedef void pj_sockaddr_t;
 
+/** Forward declaration. */
+typedef struct pj_sockaddr_in pj_sockaddr_in;
+
 /** Color type. */
 typedef unsigned int pj_color_t;
 

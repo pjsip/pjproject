@@ -21,6 +21,7 @@
 #include <pjsip/print_util.h>
 #include <pj/string.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
 
 /*
  * Include inline definitions here if functions are NOT inlined.
@@ -29,14 +30,22 @@
 #  include <pjsip/sip_msg_i.h>
 #endif
 
-static const pj_str_t method_names[] = 
+const pjsip_method 
+    pjsip_invite_method	    = { PJSIP_INVITE_METHOD,	{ "INVITE",6 }	},
+    pjsip_cancel_method	    = { PJSIP_CANCEL_METHOD,	{ "CANCEL",6 }	},
+    pjsip_ack_method	    = { PJSIP_ACK_METHOD,	{ "ACK",3}	},
+    pjsip_bye_method	    = { PJSIP_BYE_METHOD,	{ "BYE",3}	},
+    pjsip_register_method   = { PJSIP_REGISTER_METHOD,	{ "REGISTER",8}	},
+    pjsip_options_method    = { PJSIP_OPTIONS_METHOD,	{ "OPTIONS",7}	};
+
+static const pj_str_t *method_names[] = 
 {
-    { "INVITE",	    6 },
-    { "CANCEL",	    6 },
-    { "ACK",	    3 },
-    { "BYE",	    3 },
-    { "REGISTER",   8 },
-    { "OPTIONS",    7 },
+    &pjsip_invite_method.name,
+    &pjsip_cancel_method.name,
+    &pjsip_ack_method.name,
+    &pjsip_bye_method.name,
+    &pjsip_register_method.name,
+    &pjsip_options_method.name
 };
 
 const pj_str_t pjsip_hdr_names[] = 
@@ -178,8 +187,9 @@ PJ_DEF(void) pjsip_method_init( pjsip_method *m,
 
 PJ_DEF(void) pjsip_method_set( pjsip_method *m, pjsip_method_e me )
 {
+    pj_assert(me < PJSIP_OTHER_METHOD);
     m->id = me;
-    m->name = method_names[me];
+    m->name = *method_names[me];
 }
 
 PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
@@ -187,9 +197,9 @@ PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 {
     int i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
-	if (pj_stricmp(str, &method_names[i])==0) {
+	if (pj_stricmp(str, method_names[i])==0) {
 	    m->id = (pjsip_method_e)i;
-	    m->name = method_names[i];
+	    m->name = *method_names[i];
 	    return;
 	}
     }
@@ -235,25 +245,26 @@ PJ_DEF(pjsip_msg*) pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type)
     return msg;
 }
 
-PJ_DEF(void*)  pjsip_msg_find_hdr( pjsip_msg *msg, 
-				   pjsip_hdr_e hdr_type, void *start)
+PJ_DEF(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg, 
+				   pjsip_hdr_e hdr_type, const void *start)
 {
-    pjsip_hdr *hdr=start, *end=&msg->hdr;
+    const pjsip_hdr *hdr=start, *end=&msg->hdr;
 
     if (hdr == NULL) {
 	hdr = msg->hdr.next;
     }
     for (; hdr!=end; hdr = hdr->next) {
 	if (hdr->type == hdr_type)
-	    return hdr;
+	    return (void*)hdr;
     }
     return NULL;
 }
 
-PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( pjsip_msg *msg, 
-					   const pj_str_t *name, void *start)
+PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg, 
+					   const pj_str_t *name, 
+					   const void *start)
 {
-    pjsip_hdr *hdr=start, *end=&msg->hdr;
+    const pjsip_hdr *hdr=start, *end=&msg->hdr;
 
     if (hdr == NULL) {
 	hdr = msg->hdr.next;
@@ -261,10 +272,10 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( pjsip_msg *msg,
     for (; hdr!=end; hdr = hdr->next) {
 	if (hdr->type < PJSIP_H_OTHER) {
 	    if (pj_stricmp(&pjsip_hdr_names[hdr->type], name) == 0)
-		return hdr;
+		return (void*)hdr;
 	} else {
 	    if (pj_stricmp(&hdr->name, name) == 0)
-		return hdr;
+		return (void*)hdr;
 	}
     }
     return NULL;
@@ -280,7 +291,8 @@ PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg,
     return hdr;
 }
 
-PJ_DEF(pj_ssize_t) pjsip_msg_print( pjsip_msg *msg, char *buf, pj_size_t size)
+PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg, 
+				    char *buf, pj_size_t size)
 {
     char *p=buf, *end=buf+size;
     int len;
@@ -1349,7 +1361,7 @@ PJ_DEF(pjsip_via_hdr*) pjsip_via_hdr_create( pj_pool_t *pool )
 {
     pjsip_via_hdr *hdr = pj_pool_calloc(pool, 1, sizeof(*hdr));
     init_hdr(hdr, PJSIP_H_VIA, &via_hdr_vptr);
-    hdr->sent_by.port = 5060;
+    //hdr->sent_by.port = 5060;
     hdr->ttl_param = -1;
     hdr->rport_param = -1;
     pj_list_init(&hdr->other_param);
@@ -1383,9 +1395,11 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     *buf++ = ' ';
     pj_memcpy(buf, hdr->sent_by.host.ptr, hdr->sent_by.host.slen);
     buf += hdr->sent_by.host.slen;
-    *buf++ = ':';
-    printed = pj_utoa(hdr->sent_by.port, buf);
-    buf += printed;
+    if (hdr->sent_by.port != 0) {
+	*buf++ = ':';
+	printed = pj_utoa(hdr->sent_by.port, buf);
+	buf += printed;
+    }
 
     if (hdr->ttl_param >= 0) {
 	size = endbuf-buf;

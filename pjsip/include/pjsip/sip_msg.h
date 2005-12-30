@@ -52,27 +52,14 @@ PJ_BEGIN_DECL
  */
 typedef enum pjsip_method_e
 {
-    /** INVITE method, for establishing dialogs. */
-    PJSIP_INVITE_METHOD,
+    PJSIP_INVITE_METHOD,    /**< INVITE method, for establishing dialogs.   */
+    PJSIP_CANCEL_METHOD,    /**< CANCEL method, for cancelling request.	    */
+    PJSIP_ACK_METHOD,	    /**< ACK method.				    */
+    PJSIP_BYE_METHOD,	    /**< BYE method, for terminating dialog.	    */
+    PJSIP_REGISTER_METHOD,  /**< REGISTER method.			    */
+    PJSIP_OPTIONS_METHOD,   /**< OPTIONS method.			    */
 
-    /** CANCEL method, for cancelling request. */
-    PJSIP_CANCEL_METHOD,
-
-    /** ACK method, for acknowledging final response to INVITE. */
-    PJSIP_ACK_METHOD,
-
-    /** BYE method, for terminating dialog. */
-    PJSIP_BYE_METHOD,
-
-    /** REGISTER method. */
-    PJSIP_REGISTER_METHOD,
-
-    /** OPTIONS method, for querying remote capabilities. */
-    PJSIP_OPTIONS_METHOD,
-
-    /** Other method, which means that the method name itself will be stored
-        elsewhere. */
-    PJSIP_OTHER_METHOD,
+    PJSIP_OTHER_METHOD,	    /**< Other method.				    */
 
 } pjsip_method_e;
 
@@ -91,6 +78,17 @@ typedef struct pjsip_method
     pj_str_t	   name;    /**< Method name, which will always contain the 
 			         method string. */
 } pjsip_method;
+
+
+/*
+ * For convenience, standard method structures are defined in the library.
+ */
+extern const pjsip_method pjsip_invite_method;	    /**< INVITE structure.  */
+extern const pjsip_method pjsip_cancel_method;	    /**< CANCEL structure.  */
+extern const pjsip_method pjsip_ack_method;	    /**< ACK structure.     */
+extern const pjsip_method pjsip_bye_method;	    /**< BYE structure.     */
+extern const pjsip_method pjsip_register_method;    /**< REGISTER structure.*/
+extern const pjsip_method pjsip_options_method;	    /**< OPTIONS structure. */
 
 
 /** 
@@ -638,8 +636,8 @@ PJ_DECL(pjsip_msg*)  pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type);
  * @return	    The header field, or NULL if no header with the specified 
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_msg_find_hdr( pjsip_msg *msg, 
-				    pjsip_hdr_e type, void *start);
+PJ_DECL(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg, 
+				    pjsip_hdr_e type, const void *start);
 
 /** 
  * Find a header in the message by its name.
@@ -654,8 +652,9 @@ PJ_DECL(void*)  pjsip_msg_find_hdr( pjsip_msg *msg,
  * @return	    The header field, or NULL if no header with the specified 
  *		    type is found.
  */
-PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( pjsip_msg *msg, 
-					    const pj_str_t *name, void *start);
+PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg, 
+					    const pj_str_t *name, 
+					    const void *start);
 
 /** 
  * Find and remove a header in the message. 
@@ -702,7 +701,8 @@ PJ_IDECL(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr );
  * @return	The length of the printed characters (in bytes), or NEGATIVE
  *		value if the message is too large for the specified buffer.
  */
-PJ_DECL(pj_ssize_t) pjsip_msg_print(pjsip_msg *msg, char *buf, pj_size_t size);
+PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg, 
+				    char *buf, pj_size_t size);
 
 /**
  * @}

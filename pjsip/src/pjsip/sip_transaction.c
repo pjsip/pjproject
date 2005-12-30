@@ -30,6 +30,396 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
+#if 0	// XXX JUNK
+    /* Initialize TLS ID for transaction lock. */
+    status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+    pj_thread_local_set(pjsip_tsx_lock_tls_id, NULL);
+
+
+    /* Create hash table for transaction. */
+    endpt->tsx_table = pj_hash_create( endpt->pool, PJSIP_MAX_TSX_COUNT );
+    if (!endpt->tsx_table) {
+	status = PJ_ENOMEM;
+	goto on_error;
+    }
+
+
+/*
+ * Create a new transaction.
+ * Endpoint must then initialize the new transaction as either UAS or UAC, and
+ * register it to the hash table.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_create_tsx(pjsip_endpoint *endpt,
+					   pjsip_transaction **p_tsx)
+{
+    pj_pool_t *pool;
+
+    PJ_ASSERT_RETURN(endpt && p_tsx, PJ_EINVAL);
+
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_tsx()"));
+
+    /* Request one pool for the transaction. Mutex is locked there. */
+    pool = pjsip_endpt_create_pool(endpt, "ptsx%p", 
+				      PJSIP_POOL_LEN_TSX, PJSIP_POOL_INC_TSX);
+    if (pool == NULL) {
+	return PJ_ENOMEM;
+    }
+
+    /* Create the transaction. */
+    return pjsip_tsx_create(pool, endpt, p_tsx);
+}
+
+
+/*
+ * Register the transaction to the endpoint.
+ * This will put the transaction to the transaction hash table. Before calling
+ * this function, the transaction must be INITIALIZED as either UAS or UAC, so
+ * that the transaction key is built.
+ */
+PJ_DEF(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
+				       pjsip_transaction *tsx)
+{
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_register_tsx(%s)", tsx->obj_name));
+
+    pj_assert(tsx->transaction_key.slen != 0);
+    //pj_assert(tsx->state != PJSIP_TSX_STATE_NULL);
+
+    /* Lock hash table mutex. */
+    pj_mutex_lock(endpt->tsx_table_mutex);
+
+    /* Register the transaction to the hash table. */
+    pj_hash_set( tsx->pool, endpt->tsx_table, tsx->transaction_key.ptr,
+		 tsx->transaction_key.slen, tsx);
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(endpt->tsx_table_mutex);
+}
+
+/*
+ * Find transaction by the key.
+ */
+PJ_DEF(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
+					          const pj_str_t *key )
+{
+    pjsip_transaction *tsx;
+
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_find_tsx()"));
+
+    /* Start lock mutex in the endpoint. */
+    pj_mutex_lock(endpt->tsx_table_mutex);
+
+    /* Find the transaction in the hash table. */
+    tsx = pj_hash_get( endpt->tsx_table, key->ptr, key->slen );
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(endpt->tsx_table_mutex);
+
+    return tsx;
+}
+
+/*
+ * Create key.
+ */
+static void rdata_create_key( pjsip_rx_data *rdata)
+{
+    pjsip_role_e role;
+    if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
+	role = PJSIP_ROLE_UAS;
+    } else {
+	role = PJSIP_ROLE_UAC;
+    }
+    pjsip_tsx_create_key(rdata->tp_info.pool, &rdata->endpt_info.key, role,
+			 &rdata->msg_info.cseq->method, rdata);
+}
+
+
+/*
+ * This is the callback that is called by the transport manager when it 
+ * receives a message from the network.
+ */
+static void endpt_transport_callback( pjsip_endpoint *endpt,
+				      pj_status_t status,
+				      pjsip_rx_data *rdata )
+{
+    pjsip_msg *msg = rdata->msg_info.msg;
+    pjsip_transaction *tsx;
+    pj_bool_t a_new_transaction_just_been_created = PJ_FALSE;
+
+    PJ_LOG(5, (THIS_FILE, "endpt_transport_callback(rdata=%p)", rdata));
+
+    if (status != PJ_SUCCESS) {
+	const char *src_addr = rdata->pkt_info.src_name;
+	int port = rdata->pkt_info.src_port;
+	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
+			       "Src.addr=%s:%d, packet:--\n"
+			       "%s\n"
+			       "-- end of packet. Error",
+			       src_addr, port, rdata->msg_info.msg_buf));
+	return;
+    }
+
+    /* For response, check that the value in Via sent-by match the transport.
+     * If not matched, silently drop the response.
+     * Ref: RFC3261 Section 18.1.2 Receiving Response
+     */
+    if (msg->type == PJSIP_RESPONSE_MSG) {
+	const pj_str_t *addr_addr;
+	int port = rdata->msg_info.via->sent_by.port;
+	pj_bool_t mismatch = PJ_FALSE;
+	if (port == 0) {
+	    int type;
+	    type = rdata->tp_info.transport->key.type;
+	    port = pjsip_transport_get_default_port_for_type(type);
+	}
+	addr_addr = &rdata->tp_info.transport->local_name.host;
+	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, addr_addr) != 0)
+	    mismatch = PJ_TRUE;
+	else if (port != rdata->tp_info.transport->local_name.port) {
+	    /* Port or address mismatch, we should discard response */
+	    /* But we saw one implementation (we don't want to name it to 
+	     * protect the innocence) which put wrong sent-by port although
+	     * the "rport" parameter is correct.
+	     * So we discard the response only if the port doesn't match
+	     * both the port in sent-by and rport. We try to be lenient here!
+	     */
+	    if (rdata->msg_info.via->rport_param != rdata->tp_info.transport->local_name.port)
+		mismatch = PJ_TRUE;
+	    else {
+		PJ_LOG(4,(THIS_FILE, "Response %p has mismatch port in sent-by"
+				    " but the rport parameter is correct",
+				    rdata));
+	    }
+	}
+
+	if (mismatch) {
+	    pjsip_event e;
+
+	    PJSIP_EVENT_INIT_DISCARD_MSG(e, rdata, PJSIP_EINVALIDVIA);
+	    endpt_do_event( endpt, &e );
+	    return;
+	}
+    }
+
+    /* Create key for transaction lookup. */
+    rdata_create_key( rdata);
+
+    /* Find the transaction for the received message. */
+    PJ_LOG(5, (THIS_FILE, "finding tsx with key=%.*s", 
+			 rdata->endpt_info.key.slen, rdata->endpt_info.key.ptr));
+
+    /* Start lock mutex in the endpoint. */
+    pj_mutex_lock(endpt->tsx_table_mutex);
+
+    /* Find the transaction in the hash table. */
+    tsx = pj_hash_get( endpt->tsx_table, rdata->endpt_info.key.ptr, rdata->endpt_info.key.slen );
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(endpt->tsx_table_mutex);
+
+    /* If the transaction is not found... */
+    if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+
+	/* 
+	 * For response message, discard the message, except if the response is
+	 * an 2xx class response to INVITE, which in this case it must be
+	 * passed to TU to be acked.
+	 */
+	if (msg->type == PJSIP_RESPONSE_MSG) {
+
+	    /* Inform TU about the 200 message, only if it's INVITE. */
+	    if (PJSIP_IS_STATUS_IN_CLASS(msg->line.status.code, 200) &&
+		rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) 
+	    {
+		pjsip_event e;
+
+		/* Should not happen for UA. Tsx theoritically lives until
+		 * all responses are absorbed.
+		 */
+		pj_assert(0);
+
+		PJSIP_EVENT_INIT_RX_200_MSG(e, rdata);
+		endpt_do_event( endpt, &e );
+
+	    } else {
+		/* Just discard the response, inform TU. */
+		pjsip_event e;
+
+		PJSIP_EVENT_INIT_DISCARD_MSG(e, rdata, 
+		    PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_CALL_TSX_DOES_NOT_EXIST));
+		endpt_do_event( endpt, &e );
+	    }
+
+	/*
+	 * For non-ACK request message, create a new transaction.
+	 */
+	} else if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+
+	    pj_status_t status;
+
+	    /* Create transaction, mutex is locked there. */
+	    status = pjsip_endpt_create_tsx(endpt, &tsx);
+	    if (status != PJ_SUCCESS) {
+		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
+				       "Unable to create transaction"));
+		return;
+	    }
+
+	    /* Initialize transaction as UAS. */
+	    pjsip_tsx_init_uas( tsx, rdata );
+
+	    /* Register transaction, mutex is locked there. */
+	    pjsip_endpt_register_tsx( endpt, tsx );
+
+	    a_new_transaction_just_been_created = PJ_TRUE;
+	}
+    }
+
+    /* If transaction is found (or newly created), pass the message.
+     * Otherwise if it's an ACK request, pass directly to TU.
+     */
+    if (tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED) {
+	/* Dispatch message to transaction. */
+	pjsip_tsx_on_rx_msg( tsx, rdata );
+
+    } else if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD) {
+	/*
+	 * This is an ACK message, but the INVITE transaction could not
+	 * be found (possibly because the branch parameter in Via in ACK msg
+	 * is different than the branch in original INVITE). This happens with
+	 * SER!
+	 */
+	pjsip_event event;
+
+	PJSIP_EVENT_INIT_RX_ACK_MSG(event,rdata);
+	endpt_do_event( endpt, &event );
+    }
+
+    /*
+     * If a new request message has just been receieved, but no modules
+     * seem to be able to handle the request message, then terminate the
+     * transaction.
+     *
+     * Ideally for cases like "unsupported method", we should be able to
+     * answer the request statelessly. But we can not do that since the
+     * endpoint shoule be able to be used as both user agent and proxy stack,
+     * and a proxy stack should be able to handle arbitrary methods.
+     */
+    if (a_new_transaction_just_been_created && tsx->status_code < 100) {
+	/* Certainly no modules has sent any response message.
+	 * Check that any modules has attached a module data.
+	 */
+	int i;
+	for (i=0; i<PJSIP_MAX_MODULE; ++i) {
+	    if (tsx->module_data[i] != NULL) {
+		break;
+	    }
+	}
+	if (i == PJSIP_MAX_MODULE) {
+	    /* No modules have attached itself to the transaction. 
+	     * Terminate the transaction with 501/Not Implemented.
+	     */
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+	    
+	    if (tsx->method.id == PJSIP_OPTIONS_METHOD) {
+		status = pjsip_endpt_create_response(endpt, rdata, 200, 
+						     &tdata);
+	    } else {
+		status = pjsip_endpt_create_response(endpt, rdata, 
+						     PJSIP_SC_METHOD_NOT_ALLOWED,
+						     &tdata);
+	    }
+
+	    if (status != PJ_SUCCESS) {
+		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
+				       "Unable to create response"));
+		return;
+	    }
+
+	    if (endpt->allow_hdr) {
+		pjsip_msg_add_hdr( tdata->msg, 
+				   pjsip_hdr_shallow_clone(tdata->pool, endpt->allow_hdr));
+	    }
+	    pjsip_tsx_on_tx_msg( tsx, tdata );
+
+	} else {
+	    /*
+	     * If a module has registered itself in the transaction but it
+	     * hasn't responded the request, chances are the module wouldn't
+	     * respond to the request at all. We terminate the request here
+	     * with 500/Internal Server Error, to be safe.
+	     */
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
+	    status = pjsip_endpt_create_response(endpt, rdata, 500, &tdata);
+	    if (status != PJ_SUCCESS) {
+		PJSIP_ENDPT_LOG_ERROR((endpt, THIS_FILE, status,
+				       "Unable to create response"));
+		return;
+	    }
+
+	    pjsip_tsx_on_tx_msg(tsx, tdata);
+	}
+    }
+}
+
+
+
+    /* Transaction tables. */
+    count = pj_hash_count(endpt->tsx_table);
+    PJ_LOG(3, (THIS_FILE, " Number of transactions: %u", count));
+
+    if (count && detail) {
+	pj_hash_iterator_t it_val;
+	pj_hash_iterator_t *it;
+	pj_time_val now;
+
+	PJ_LOG(3, (THIS_FILE, " Dumping transaction tables:"));
+
+	pj_gettimeofday(&now);
+	it = pj_hash_first(endpt->tsx_table, &it_val);
+
+	while (it != NULL) {
+	    int timeout_diff;
+
+	    /* Get the transaction. No need to lock transaction's mutex
+	     * since we already hold endpoint mutex, so that no transactions
+	     * will be deleted.
+	     */
+	    pjsip_transaction *tsx = pj_hash_this(endpt->tsx_table, it);
+
+	    const char *role = (tsx->role == PJSIP_ROLE_UAS ? "UAS" : "UAC");
+	
+	    if (tsx->timeout_timer._timer_id != -1) {
+		if (tsx->timeout_timer._timer_value.sec > now.sec) {
+		    timeout_diff = tsx->timeout_timer._timer_value.sec - now.sec;
+		} else {
+		    timeout_diff = now.sec - tsx->timeout_timer._timer_value.sec;
+		    timeout_diff = 0 - timeout_diff;
+		}
+	    } else {
+		timeout_diff = -1;
+	    }
+
+	    PJ_LOG(3, (THIS_FILE, "  %s %s %10.*s %.9u %s t=%ds", 
+		       tsx->obj_name, role, 
+		       tsx->method.name.slen, tsx->method.name.ptr,
+		       tsx->cseq,
+		       pjsip_tsx_state_str(tsx->state),
+		       timeout_diff));
+
+	    it = pj_hash_next(endpt->tsx_table, it);
+	}
+    }
+
+
+
+#endif	// XXX JUNK
+
 /* Thread Local Storage ID for transaction lock (initialized by endpoint) */
 long pjsip_tsx_lock_tls_id;
 
@@ -152,6 +542,45 @@ PJ_DEF(const char *) pjsip_role_name(pjsip_role_e role)
 {
     return role_name[role];
 }
+
+
+
+/*
+ * Unregister the transaction from the hash table, and destroy the resources
+ * from the transaction.
+ */
+PJ_DEF(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
+				      pjsip_transaction *tsx)
+{
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_destroy_tsx(%s)", tsx->obj_name));
+
+    pj_assert(tsx->state == PJSIP_TSX_STATE_DESTROYED);
+
+    /* No need to lock transaction. 
+     * This function typically is called from the transaction callback, which
+     * means that transaction mutex is being held.
+     */
+    pj_assert( pj_mutex_is_locked(tsx->mutex) );
+
+    /* Lock endpoint. */
+    pj_mutex_lock( endpt->tsx_table_mutex );
+
+    /* Unregister from the hash table. */
+    pj_hash_set( NULL, endpt->tsx_table, tsx->transaction_key.ptr, 
+		 tsx->transaction_key.slen, NULL);
+
+    /* Unlock endpoint mutex. */
+    pj_mutex_unlock( endpt->tsx_table_mutex );
+
+    /* Destroy transaction mutex. */
+    pj_mutex_destroy( tsx->mutex );
+
+    /* Release the pool for the transaction. */
+    pj_pool_release(tsx->pool);
+
+    PJ_LOG(4, (THIS_FILE, "tsx%p destroyed", tsx));
+}
+
 
 
 /*
@@ -500,9 +929,7 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
 				      pjsip_tx_data *tdata,
 				      pjsip_host_info *send_addr )
 {
-    const pjsip_uri *new_request_uri, *target_uri;
-    const pjsip_name_addr *topmost_route_uri;
-    pjsip_route_hdr *first_route_hdr, *last_route_hdr;
+    pjsip_route_hdr *route_hdr;
     
     pj_assert(tdata->msg->type == PJSIP_REQUEST_MSG);
 
@@ -510,130 +937,20 @@ static pj_status_t tsx_process_route( pjsip_transaction *tsx,
      * have any "Route" headers but the endpoint has, then copy the "Route"
      * headers from the endpoint first.
      */
-    last_route_hdr = first_route_hdr = 
-	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
-    if (first_route_hdr) {
-	topmost_route_uri = &first_route_hdr->name_addr;
-	while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
-	    pjsip_route_hdr *hdr;
-	    hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
-                                     last_route_hdr->next);
-	    if (!hdr)
-		break;
-	    last_route_hdr = hdr;
-	}
-    } else {
+    route_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+    if (!route_hdr) {
 	const pjsip_route_hdr *hdr_list;
-	hdr_list = (pjsip_route_hdr*)pjsip_endpt_get_routing(tsx->endpt);
-	if (hdr_list->next != hdr_list) {
-	    const pjsip_route_hdr *hdr = (pjsip_route_hdr*)hdr_list->next;
-	    first_route_hdr = NULL;
-	    topmost_route_uri = &hdr->name_addr;
-	    do {
-		last_route_hdr = pjsip_hdr_shallow_clone(tdata->pool, hdr);
-		if (first_route_hdr == NULL)
-		    first_route_hdr = last_route_hdr;
-		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)last_route_hdr);
-		hdr = hdr->next;
-	    } while (hdr != hdr_list);
-	} else {
-	    topmost_route_uri = NULL;
+	const pjsip_route_hdr *hdr;
+	hdr_list = (const pjsip_route_hdr*)pjsip_endpt_get_routing(tsx->endpt);
+	hdr = hdr_list->next;
+	while (hdr != hdr_list {
+	    route_hdr = pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)route_hdr);
+	    hdr = hdr->next;
 	}
     }
 
-    /* If Route headers exist, and the first element indicates loose-route,
-     * the URI is taken from the Request-URI, and we keep all existing Route
-     * headers intact.
-     * If Route headers exist, and the first element DOESN'T indicate loose
-     * route, the URI is taken from the first Route header, and remove the
-     * first Route header from the message.
-     * Otherwise if there's no Route headers, the URI is taken from the
-     * Request-URI.
-     */
-    if (topmost_route_uri) {
-	pj_bool_t has_lr_param;
-
-	if (PJSIP_URI_SCHEME_IS_SIP(topmost_route_uri) ||
-	    PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
-	{
-	    const pjsip_url *url = pjsip_uri_get_uri((void*)topmost_route_uri);
-	    has_lr_param = url->lr_param;
-	} else {
-	    has_lr_param = 0;
-	}
-
-	if (has_lr_param) {
-	    new_request_uri = tdata->msg->line.req.uri;
-	    /* We shouldn't need to delete topmost Route if it has lr param.
-	     * But seems like it breaks some proxy implementation, so we
-	     * delete it anyway.
-	     */
-	    /*
-	    pj_list_erase(first_route_hdr);
-	    if (first_route_hdr == last_route_hdr)
-		last_route_hdr = NULL;
-	    */
-	} else {
-	    new_request_uri = pjsip_uri_get_uri((void*)topmost_route_uri);
-	    pj_list_erase(first_route_hdr);
-	    if (first_route_hdr == last_route_hdr)
-		last_route_hdr = NULL;
-	}
-
-	target_uri = (pjsip_uri*)topmost_route_uri;
-
-    } else {
-	target_uri = new_request_uri = tdata->msg->line.req.uri;
-    }
-
-    /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
-     * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
-     */
-    pj_memset(send_addr, 0, sizeof(*send_addr));
-
-    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
-	send_addr->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
-	pj_strdup(tdata->pool, &send_addr->addr.host, &url->host);
-        send_addr->addr.port = url->port;
-	send_addr->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-
-    } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
-	pj_strdup(tdata->pool, &send_addr->addr.host, &url->host);
-	send_addr->addr.port = url->port;
-	send_addr->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-#if PJ_HAS_TCP
-	if (send_addr->type == PJSIP_TRANSPORT_TCP || 
-	    send_addr->type == PJSIP_TRANSPORT_SCTP) 
-	{
-	    send_addr->flag |= PJSIP_TRANSPORT_RELIABLE;
-	}
-#endif
-    } else {
-        pj_assert(!"Unsupported URI scheme!");
-	return PJSIP_EINVALIDSCHEME;
-    }
-
-    /* If target URI is different than request URI, replace 
-     * request URI add put the original URI in the last Route header.
-     */
-    if (new_request_uri && new_request_uri!=tdata->msg->line.req.uri) {
-	pjsip_route_hdr *route = pjsip_route_hdr_create(tdata->pool);
-	route->name_addr.uri = tdata->msg->line.req.uri;
-	if (last_route_hdr)
-	    pj_list_insert_after(last_route_hdr, route);
-	else
-	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)route);
-	tdata->msg->line.req.uri = (pjsip_uri*)new_request_uri;
-    }
-
-    /* Success. */
-    return PJ_SUCCESS;  
+    return pjsip_get_request_addr(tdata, send_addr);  
 }
 
 

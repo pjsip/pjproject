@@ -124,6 +124,7 @@ SOURCE=..\src\pjsip\sip_tel_uri.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transaction.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -140,6 +141,11 @@ SOURCE=..\src\pjsip\sip_uri.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_util.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_util_statefull.c
+# PROP Exclude_From_Build 1
 # End Source File
 # End Group
 # Begin Group "Header Files"

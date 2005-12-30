@@ -21,7 +21,7 @@
 
 #include <pjsip/sip_transport.h>
 
-PJ_DECL
+PJ_BEGIN_DECL
 
 /**
  * Start UDP transport.
