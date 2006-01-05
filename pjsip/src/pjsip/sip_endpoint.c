@@ -490,9 +490,9 @@ PJ_DEF(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  * Return back pool to endpoint's pool manager to be either destroyed or
  * recycled.
  */
-PJ_DEF(void) pjsip_endpt_destroy_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
+PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_destroy_pool(%s)", pj_pool_getobjname(pool)));
+    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_release_pool(%s)", pj_pool_getobjname(pool)));
 
     pj_mutex_lock(endpt->mutex);
     pj_pool_release( pool );

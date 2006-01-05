@@ -328,6 +328,29 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 							   pj_bool_t *cont));
 
 /**
+ * This composite function sends response message statelessly to an incoming
+ * request message. Internally it calls #pjsip_endpt_create_response() and
+ * #pjsip_endpt_send_response().
+ *
+ * @param endpt	    The endpoint instance.
+ * @param rdata	    The incoming request message.
+ * @param st_code   Status code of the response.
+ * @param st_text   Optional status text of the response.
+ * @param hdr_list  Optional header list to be added to the response.
+ * @param body	    Optional message body to be added to the response.
+ *
+ * @return	    PJ_SUCCESS if response message has successfully been
+ *		    created.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
+						   pjsip_rx_data *rdata,
+						   int st_code,
+						   const pj_str_t *st_text,
+						   const pjsip_hdr *hdr_list,
+						   const pjsip_msg_body *body);
+						    
+
+/**
  * Send outgoing request and initiate UAC transaction for the request.
  * This is an auxiliary function to be used by application to send arbitrary
  * requests outside a dialog. To send a request within a dialog, application
@@ -351,6 +374,65 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
 					       int timeout,
 					       void *token,
 					       void (*cb)(void*,pjsip_event*));
+
+/**
+ * Create new request message to be forwarded upstream to new destination URI 
+ * in uri. The new request is a full/deep clone of the request received in 
+ * rdata, unless if other copy mechanism is specified in the options. 
+ * The branch parameter, if not NULL, will be used as the branch-param in 
+ * the Via header. If it is NULL, then a unique branch parameter will be used.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param rdata	    The incoming request message.
+ * @param uri	    The URI where the request will be forwarded to.
+ * @param branch    Optional branch parameter.
+ * @param options   Optional option flags when duplicating the message.
+ * @param tdata	    The result.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd( pjsip_endpoint *endpt,
+						     pjsip_rx_data *rdata, 
+						     const pjsip_uri *uri,
+						     const pj_str_t *branch,
+						     unsigned options,
+						     pjsip_tx_data **tdata);
+
+/**
+ * Create new response message to be forwarded downstream by the proxy from 
+ * the response message found in rdata. Note that this function practically 
+ * will clone the response as is, i.e. without checking the validity of the 
+ * response or removing top most Via header. This function will perform 
+ * full/deep clone of the response, unless other copy mechanism is used in 
+ * the options.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param rdata	    The incoming response message.
+ * @param options   Optional option flags when duplicate the message.
+ * @param tdata	    The result
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
+						      pjsip_rx_data *rdata, 
+						      unsigned options,
+						      pjsip_tx_data **tdata);
+
+
+/**
+ * Create a globally unique branch parameter based on the information in 
+ * the incoming request message. This function guarantees that subsequent 
+ * retransmissions of the same request will generate the same branch id.
+ * This function can also be used in the loop detection process. 
+ * If the same request arrives back in the proxy with the same URL, it will
+ * calculate into the same branch id.
+ * Note that the returned string was allocated from rdata's pool.
+ *
+ * @param rdata	    The incoming request message.
+ *
+ * @return	    Unique branch-ID string.
+ */
+PJ_DECL(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata );
 
 
 /**

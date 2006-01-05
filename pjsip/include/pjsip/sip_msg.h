@@ -499,9 +499,13 @@ typedef struct pjsip_msg_body
      *  For incoming messages, the parser will fill in this member with the
      *  content type found in Content-Type header.
      *
-     *  For outgoing messages, application must fill in this member with
+     *  For outgoing messages, application may fill in this member with
      *  appropriate value, because the stack will generate Content-Type header
      *  based on the value specified here.
+     *
+     *  If the content_type is empty, no Content-Type AND Content-Length header
+     *  will be added to the message. The stack assumes that application adds
+     *  these headers themselves.
      */
     pjsip_media_type content_type;
 
@@ -543,6 +547,19 @@ typedef struct pjsip_msg_body
     int (*print_body)(struct pjsip_msg_body *msg_body, 
 		      char *buf, pj_size_t size);
 
+    /** Clone the data part only of this message body. Note that this only
+     *  duplicates the data part of the body instead of the whole message
+     *  body. If application wants to duplicate the entire message body
+     *  structure, it must call #pjsip_msg_body_clone().
+     *
+     *  @param pool	    Pool used to clone the data.
+     *  @param data	    The data inside message body, to be cloned.
+     *  @param len	    The length of the data.
+     *
+     *  @return		    New data duplicated from the original data.
+     */
+    void* (*clone_data)(pj_pool_t *pool, const void *data, unsigned len);
+
 } pjsip_msg_body;
 
 /**
@@ -560,6 +577,22 @@ typedef struct pjsip_msg_body
  */
 PJ_DECL(int) pjsip_print_text_body( pjsip_msg_body *msg_body, 
 				    char *buf, pj_size_t size);
+
+/**
+ * Clone the message body in src_body to the dst_body. This will duplicate
+ * the contents of the message body using the \a clone_data member of the
+ * source message body.
+ *
+ * @param pool		Pool to use to duplicate the message body.
+ * @param dst_body	Destination message body.
+ * @param src_body	Source message body to duplicate.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_msg_body_clone(pj_pool_t *pool,
+					  pjsip_msg_body *dst_body,
+					  const pjsip_msg_body *src_body );
+					   
 
 /**
  * @}

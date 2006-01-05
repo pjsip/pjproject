@@ -171,7 +171,7 @@ struct pjsip_rx_data
 	pj_uint32_t		 zero;
 
 	/** The length of the packet received. */
-	int			 len;
+	pj_ssize_t		 len;
 
 	/** The source address from which the packet was received. */
 	pj_sockaddr		 src_addr;
@@ -251,9 +251,9 @@ struct pjsip_rx_data
     struct
     {
 	/** 
-	 * This the transaction key generated for the message. 
+	 * Data attached by modules to this message. 
 	 */
-	pj_str_t		 key;
+	void	*mod_data[PJSIP_MAX_MODULE];
 
     } endpt_info;
 

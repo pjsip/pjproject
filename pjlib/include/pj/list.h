@@ -117,6 +117,19 @@ PJ_IDECL(void)	pj_list_insert_before(pj_list_type *pos, pj_list_type *node);
 
 
 /**
+ * Insert the node to the back of the list. This is just an alias for
+ * #pj_list_insert_before().
+ *
+ * @param list	The list. 
+ * @param node	The element to be inserted.
+ */
+PJ_INLINE(void) pj_list_push_back(pj_list_type *list, pj_list_type *node)
+{
+    pj_list_insert_before(list, node);
+}
+
+
+/**
  * Inserts all nodes in \a nodes to the target list.
  *
  * @param lst	    The target list.
@@ -135,6 +148,20 @@ PJ_IDECL(void) pj_list_insert_nodes_before(pj_list_type *lst,
  * @return void.
  */
 PJ_IDECL(void) pj_list_insert_after(pj_list_type *pos, pj_list_type *node);
+
+
+/**
+ * Insert the node to the front of the list. This is just an alias for
+ * #pj_list_insert_after().
+ *
+ * @param list	The list. 
+ * @param node	The element to be inserted.
+ */
+PJ_INLINE(void) pj_list_push_front(pj_list_type *list, pj_list_type *node)
+{
+    pj_list_insert_after(list, node);
+}
+
 
 /**
  * Insert all nodes in \a nodes to the target list.

@@ -1,4 +1,4 @@
-/* $Id: $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
  *
@@ -47,6 +47,7 @@ static const struct
     { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
     { PJSIP_ENOTREQUESTMSG,	"Expecting request message"},
     { PJSIP_ENOTRESPONSEMSG,	"Expecting response message"},
+    { PJSIP_EINVALIDHDR,	"Invalid header field"},
 
     /* Transport errors */
     { PJSIP_EUNSUPTRANSPORT,	"Unsupported transport"},

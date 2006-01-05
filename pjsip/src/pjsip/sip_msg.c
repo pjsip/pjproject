@@ -19,6 +19,7 @@
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_parser.h>
 #include <pjsip/print_util.h>
+#include <pjsip/sip_errno.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -365,37 +366,44 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
     /* Process message body. */
     if (msg->body) {
-	pj_str_t ctype_hdr = { "Content-Type: ", 14};
-	int len;
-	const pjsip_media_type *media = &msg->body->content_type;
-	char *clen_pos;
+	char *clen_pos = NULL;
 
-	/* Add Content-Type header. */
-	if ( (end-p) < 24+media->type.slen+media->subtype.slen+media->param.slen) {
-	    return -1;
-	}
-	pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
-	p += ctype_hdr.slen;
-	p += print_media_type(p, media);
-	*p++ = '\r';
-	*p++ = '\n';
-
-	/* Add Content-Length header. */
-	if ((end-p) < clen_hdr.slen+12+2) {
-	    return -1;
-	}
-	pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
-	p += clen_hdr.slen;
-	
-	/* Print blanks after "Content-Type:", this is where we'll put
-	 * the content length value after we know the length of the
-	 * body.
+	/* Automaticly adds Content-Type and Content-Length headers, only
+	 * if content_type is set in the message body.
 	 */
-	pj_memset(p, ' ', 12);
-	clen_pos = p;
-	p += 12;
-	*p++ = '\r';
-	*p++ = '\n';
+	if (msg->body->content_type.type.slen) {
+	    pj_str_t ctype_hdr = { "Content-Type: ", 14};
+	    const pjsip_media_type *media = &msg->body->content_type;
+
+	    /* Add Content-Type header. */
+	    if ( (end-p) < 24 + media->type.slen + media->subtype.slen + 
+			   media->param.slen) 
+	    {
+		return -1;
+	    }
+	    pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
+	    p += ctype_hdr.slen;
+	    p += print_media_type(p, media);
+	    *p++ = '\r';
+	    *p++ = '\n';
+
+	    /* Add Content-Length header. */
+	    if ((end-p) < clen_hdr.slen + 12 + 2) {
+		return -1;
+	    }
+	    pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
+	    p += clen_hdr.slen;
+	    
+	    /* Print blanks after "Content-Type:", this is where we'll put
+	     * the content length value after we know the length of the
+	     * body.
+	     */
+	    pj_memset(p, ' ', 12);
+	    clen_pos = p;
+	    p += 12;
+	    *p++ = '\r';
+	    *p++ = '\n';
+	}
 	
 	/* Add blank newline. */
 	*p++ = '\r';
@@ -411,8 +419,10 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	/* Now that we have the length of the body, print this to the
 	 * Content-Length header.
 	 */
-	len = pj_utoa(len, clen_pos);
-	clen_pos[len] = ' ';
+	if (clen_pos) {
+	    len = pj_utoa(len, clen_pos);
+	    clen_pos[len] = ' ';
+	}
 
     } else {
 	/* There's no message body.
@@ -1464,7 +1474,7 @@ static pjsip_via_hdr* pjsip_via_hdr_shallow_clone( pj_pool_t *pool,
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
- * General purpose function to textual data in a SIP body. 
+ * Message body manipulations.
  */
 PJ_DEF(int) pjsip_print_text_body(pjsip_msg_body *msg_body, char *buf, pj_size_t size)
 {
@@ -1473,3 +1483,33 @@ PJ_DEF(int) pjsip_print_text_body(pjsip_msg_body *msg_body, char *buf, pj_size_t
     pj_memcpy(buf, msg_body->data, msg_body->len);
     return msg_body->len;
 }
+
+PJ_DEF(pj_status_t) pjsip_msg_body_clone( pj_pool_t *pool,
+					  pjsip_msg_body *dst_body,
+					  const pjsip_msg_body *src_body )
+{
+    /* First check if clone_data field is initialized. */
+    PJ_ASSERT_RETURN( src_body->clone_data!=NULL, PJ_EINVAL );
+
+    /* Duplicate content-type */
+    pj_strdup(pool, &dst_body->content_type.type, 
+		    &src_body->content_type.type);
+    pj_strdup(pool, &dst_body->content_type.subtype, 
+		    &src_body->content_type.subtype);
+    pj_strdup(pool, &dst_body->content_type.param,
+		    &src_body->content_type.param);
+
+    /* Duplicate data. */
+    dst_body->data = (*src_body->clone_data)(pool, src_body->data, 
+					     src_body->len );
+
+    /* Length. */
+    dst_body->len = src_body->len;
+
+    /* Function pointers. */
+    dst_body->print_body = src_body->print_body;
+    dst_body->clone_data = src_body->clone_data;
+
+    return PJ_SUCCESS;
+}
+

@@ -52,6 +52,12 @@ typedef enum pjsip_transport_type_e
     /** SCTP. */
     PJSIP_TRANSPORT_SCTP,
 
+    /** Loopback (stream, reliable) */
+    PJSIP_TRANSPORT_LOOP,
+
+    /** Loopback (datagram, unreliable) */
+    PJSIP_TRANSPORT_LOOP_DGRAM,
+
 } pjsip_transport_type_e;
 
 

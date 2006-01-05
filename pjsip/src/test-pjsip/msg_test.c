@@ -47,7 +47,7 @@ struct test_msg
 {
     /* 'Normal' message with all headers. */
     "INVITE sip:user@foo SIP/2.0\n"
-    "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=1234578901234567890\r"
+    "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=123457890123456\r"
     "To: Fellow User <sip:user@foo.bar.domain.com>\r\n"
     "Call-ID: 12345678901234567890@bar\r\n"
     "Content-Length: 0\r\n"
@@ -57,15 +57,16 @@ struct test_msg
     "Content-Type: text/html ; charset=ISO-8859-4\r"
     "Route: <sip:bigbox3.site3.atlanta.com;lr>,\r\n"
     "  <sip:server10.biloxi.com;lr>\r"
-    "Record-Route: <sip:server10.biloxi.com>,\r\n"
+    "Record-Route: <sip:server10.biloxi.com>,\r\n" /* multiple routes+folding*/
     "  <sip:bigbox3.site3.atlanta.com;lr>\n"
-    "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1\n"
-    "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n"
+    "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c230\n"
+    "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n" /* folding. */
     " ;received=192.0.2.1\r\n"
     "Via: SIP/2.0/UDP 10.2.1.1, SIP/2.0/TCP 192.168.1.1\n"
     "Organization: \r"
     "Max-Forwards: 70\n"
-    "X-Header: \r\n"
+    "X-Header: \r\n"	    /* empty header */
+    "P-Associated-URI:\r\n" /* empty header without space */
     "\r\n",
     &create_msg0,
     PJ_SUCCESS
@@ -351,10 +352,10 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pj_strdup2(pool, &url->user, "user");
     pj_strdup2(pool, &url->host, "foo");
 
-    /* "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=1234578901234567890\r" */
+    /* "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=123457890123456\r" */
     fromto = pjsip_from_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)fromto);
-    pj_strdup2(pool, &fromto->tag, "1234578901234567890");
+    pj_strdup2(pool, &fromto->tag, "123457890123456");
     name_addr = pjsip_name_addr_create(pool);
     fromto->uri = (pjsip_uri*)name_addr;
     pj_strdup2(pool, &name_addr->display, "Hi I'm Joe");
@@ -462,12 +463,12 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pj_strdup2(pool, &url->host, "bigbox3.site3.atlanta.com");
     url->lr_param = 1;
 
-    /* "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1\n" */
+    /* "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c230\n" */
     via = pjsip_via_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
     pj_strdup2(pool, &via->transport, "SCTP");
     pj_strdup2(pool, &via->sent_by.host, "bigbox3.site3.atlanta.com");
-    pj_strdup2(pool, &via->branch_param, "z9hG4bK77ef4c2312983.1");
+    pj_strdup2(pool, &via->branch_param, "z9hG4bK77ef4c230");
 
     /* "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n"
 	" ;received=192.0.2.1\r\n" */
@@ -512,6 +513,15 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "X-Header: \r\n" */
     str.ptr = "X-Header";
     str.slen = 8;
+    generic = pjsip_generic_string_hdr_create(pool, &str);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
+    str.ptr = NULL;
+    str.slen = 0;
+    generic->hvalue = str;
+
+    /* P-Associated-URI:\r\n */
+    str.ptr = "P-Associated-URI";
+    str.slen = 16;
     generic = pjsip_generic_string_hdr_create(pool, &str);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
     str.ptr = NULL;
@@ -677,7 +687,7 @@ int msg_test(void)
     for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
 	status = test_entry( pool, &test_array[i] );
-	pjsip_endpt_destroy_pool(endpt, pool);
+	pjsip_endpt_release_pool(endpt, pool);
 
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -691,7 +701,7 @@ int msg_test(void)
 	for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
 	    pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
 	    status = test_entry( pool, &test_array[i] );
-	    pjsip_endpt_destroy_pool(endpt, pool);
+	    pjsip_endpt_release_pool(endpt, pool);
 
 	    if (status != PJ_SUCCESS)
 		return status;

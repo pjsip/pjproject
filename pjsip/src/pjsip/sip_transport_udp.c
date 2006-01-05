@@ -1,4 +1,4 @@
-/* $Id: $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
  *
@@ -192,6 +192,7 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 {
     struct udp_transport *tp = (struct udp_transport*)transport;
     pj_ssize_t size;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(transport && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
@@ -203,9 +204,14 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 
     /* Send to ioqueue! */
     size = tdata->buf.cur - tdata->buf.start;
-    return pj_ioqueue_sendto(tp->key, (pj_ioqueue_op_key_t*)&tdata->op_key,
-			     tdata->buf.start, &size, 0,
-			     rem_addr, addr_len);
+    status = pj_ioqueue_sendto(tp->key, (pj_ioqueue_op_key_t*)&tdata->op_key,
+			       tdata->buf.start, &size, 0,
+			       rem_addr, addr_len);
+
+    if (status != PJ_EPENDING)
+	tdata->op_key.tdata = NULL;
+
+    return status;
 }
 
 /*
@@ -244,7 +250,7 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
 	pj_lock_destroy(tp->base.lock);
 
     /* Destroy pool. */
-    pjsip_endpt_destroy_pool(tp->base.endpt, tp->base.pool);
+    pjsip_endpt_release_pool(tp->base.endpt, tp->base.pool);
 
     return PJ_SUCCESS;
 }
@@ -419,7 +425,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     }
 
     /* Done. */
-    *p_transport = &tp->base;
+    if (p_transport)
+	*p_transport = &tp->base;
     return PJ_SUCCESS;
 
 on_error:

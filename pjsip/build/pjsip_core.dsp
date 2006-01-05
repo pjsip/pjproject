@@ -124,11 +124,23 @@ SOURCE=..\src\pjsip\sip_tel_uri.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transaction.c
+
+!IF  "$(CFG)" == "pjsip_core - Win32 Release"
+
 # PROP Exclude_From_Build 1
+
+!ELSEIF  "$(CFG)" == "pjsip_core - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transport.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_transport_loop.c
 # End Source File
 # Begin Source File
 
@@ -141,6 +153,10 @@ SOURCE=..\src\pjsip\sip_uri.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_util.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_util_proxy.c
 # End Source File
 # Begin Source File
 
@@ -218,6 +234,10 @@ SOURCE=..\include\pjsip\sip_transaction.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_transport.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_transport_loop.h
 # End Source File
 # Begin Source File
 

@@ -32,6 +32,7 @@
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_transport_udp.h>
+#include <pjsip/sip_transport_loop.h>
 #include <pjsip/sip_uri.h>
 #include <pjsip/sip_util.h>
 

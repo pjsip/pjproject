@@ -209,7 +209,7 @@ PJ_DECL(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  * @param endpt	    The endpoint.
  * @param pool	    The pool to be destroyed.
  */
-PJ_DECL(void) pjsip_endpt_destroy_pool( pjsip_endpoint *endpt,
+PJ_DECL(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt,
 					pj_pool_t *pool );
 
 /**

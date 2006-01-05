@@ -151,6 +151,11 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * Expecting response message.
  */
 #define PJSIP_ENOTRESPONSEMSG	(PJSIP_ERRNO_START_PJSIP + 31)	/* 171031 */
+/**
+ * @hideinitializer
+ * Invalid header field.
+ */
+#define PJSIP_EINVALIDHDR	(PJSIP_ERRNO_START_PJSIP + 32)	/* 171032 */
 
 
 /************************************************************

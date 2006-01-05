@@ -25,7 +25,7 @@
  */
 
 #include <pjsip/sip_msg.h>
-#include <pjsip/sip_resolve.h>
+#include <pjsip/sip_util.h>
 #include <pj/timer.h>
 
 PJ_BEGIN_DECL
@@ -36,42 +36,26 @@ PJ_BEGIN_DECL
  * @{
  */
 
-/* Forward decl. */
-struct pjsip_transaction;
-
-
 /**
- * Transaction state.
+ * This enumeration represents transaction state.
  */
 typedef enum pjsip_tsx_state_e
 {
-    PJSIP_TSX_STATE_NULL,
-    PJSIP_TSX_STATE_CALLING,
-    PJSIP_TSX_STATE_TRYING,
-    PJSIP_TSX_STATE_PROCEEDING,
-    PJSIP_TSX_STATE_COMPLETED,
-    PJSIP_TSX_STATE_CONFIRMED,
-    PJSIP_TSX_STATE_TERMINATED,
-    PJSIP_TSX_STATE_DESTROYED,
-    PJSIP_TSX_STATE_MAX,
+    PJSIP_TSX_STATE_NULL,	/**< For UAC, before any message is sent.   */
+    PJSIP_TSX_STATE_CALLING,	/**< For UAC, just after request is sent.   */
+    PJSIP_TSX_STATE_TRYING,	/**< For UAS, just after request is received.*/
+    PJSIP_TSX_STATE_PROCEEDING,	/**< For UAS/UAC, after provisional response.*/
+    PJSIP_TSX_STATE_COMPLETED,	/**< For UAS/UAC, after final response.	    */
+    PJSIP_TSX_STATE_CONFIRMED,	/**< For UAS, after ACK is received.	    */
+    PJSIP_TSX_STATE_TERMINATED,	/**< For UAS/UAC, before it's destroyed.    */
+    PJSIP_TSX_STATE_DESTROYED,	/**< For UAS/UAC, will be destroyed now.    */
+    PJSIP_TSX_STATE_MAX,	/**< Number of states.			    */
 } pjsip_tsx_state_e;
 
 
 /**
- * State of the transport in the transaction.
- * The transport is progressing independently of the transaction.
- */
-typedef enum pjsip_tsx_transport_state_e
-{
-    PJSIP_TSX_TRANSPORT_STATE_NULL,
-    PJSIP_TSX_TRANSPORT_STATE_RESOLVING,
-    PJSIP_TSX_TRANSPORT_STATE_CONNECTING,
-    PJSIP_TSX_TRANSPORT_STATE_FINAL,
-} pjsip_tsx_transport_state_e;
-
-
-/**
- * Transaction state.
+ * This structure describes SIP transaction object. The transaction object
+ * is used to handle both UAS and UAC transaction.
  */
 struct pjsip_transaction
 {
@@ -79,18 +63,18 @@ struct pjsip_transaction
      * Administrivia
      */
     pj_pool_t		       *pool;           /**< Pool owned by the tsx. */
+    pjsip_module	       *tsx_user;	/**< Transaction user.	    */
     pjsip_endpoint	       *endpt;          /**< Endpoint instance.     */
     pj_mutex_t		       *mutex;          /**< Mutex for this tsx.    */
-    char			obj_name[PJ_MAX_OBJ_NAME];  /**< Tsx name.  */
-    int                         tracing;        /**< Tracing enabled?       */
 
     /*
      * Transaction identification.
      */
+    char			obj_name[PJ_MAX_OBJ_NAME];  /**< Log info.  */
     pjsip_role_e		role;           /**< Role (UAS or UAC)      */
     pjsip_method		method;         /**< The method.            */
     int				cseq;           /**< The CSeq               */
-    pj_str_t			transaction_key;/**< hash table key.        */
+    pj_str_t			transaction_key;/**< Hash table key.        */
     pj_str_t			branch;         /**< The branch Id.         */
 
     /*
@@ -98,7 +82,8 @@ struct pjsip_transaction
      */
     int				status_code;    /**< Last status code seen. */
     pjsip_tsx_state_e		state;          /**< State.                 */
-    int				handle_ack;     /**< Should we handle ACK?  */
+    int				handle_200resp; /**< UAS 200/INVITE  retrsm.*/
+    int                         tracing;        /**< Tracing enabled?       */
 
     /** Handler according to current state. */
     pj_status_t (*state_handler)(struct pjsip_transaction *, pjsip_event *);
@@ -106,123 +91,115 @@ struct pjsip_transaction
     /*
      * Transport.
      */
-    pjsip_tsx_transport_state_e	transport_state;/**< Transport's state.     */
-    pjsip_host_info		dest_name;      /**< Destination address.   */
-    pjsip_server_addresses	remote_addr;    /**< Addresses resolved.    */
-    int				current_addr;   /**< Address currently used. */
-
     pjsip_transport	       *transport;      /**< Transport to use.      */
+    pj_sockaddr			addr;		/**< Destination address.   */
+    int				addr_len;	/**< Address length.	    */
+    pjsip_response_addr		res_addr;	/**< Response address.	    */
+    unsigned			transport_flag;	/**< Miscelaneous flag.	    */
 
     /*
      * Messages and timer.
      */
     pjsip_tx_data	       *last_tx;        /**< Msg kept for retrans.  */
-    int				has_unsent_msg; /**< Non-zero if tsx need to 
-                                                     transmit msg once resolver
-                                                     completes.             */
     int				retransmit_count;/**< Retransmission count. */
     pj_timer_entry		retransmit_timer;/**< Retransmit timer.     */
     pj_timer_entry		timeout_timer;  /**< Timeout timer.         */
 
     /** Module specific data. */
-    void		       *module_data[PJSIP_MAX_MODULE];
+    void		       *mod_data[PJSIP_MAX_MODULE];
 };
 
 
 /**
- * Create new transaction. Application would normally use 
- * #pjsip_endpt_create_tsx rather than this function.
+ * Create and register transaction layer module to the specified endpoint.
  *
- * @param pool	    Pool to use by the transaction.
- * @param endpt	    Endpoint.
- * @param p_tsx	    Pointer to return the transaction.
+ * @param endpt	    The endpoint instance.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
- *
- * @see pjsip_endpt_create_tsx
- *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DEF(pj_status_t) pjsip_tsx_create( pj_pool_t *pool,
-				      pjsip_endpoint *endpt,
-				      pjsip_transaction **p_tsx);
+PJ_DECL(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt);
 
-/** 
- * Init transaction as UAC from the specified transmit data (\c tdata).
- * The transmit data must have a valid \c Request-Line and \c CSeq header.
- * If \c Route headers are present, it will be used to calculate remote
- * destination.
+/**
+ * Get the instance of the transaction layer module.
+ *
+ * @return	    The transaction layer module.
+ */
+PJ_DECL(pjsip_module*) pjsip_tsx_layer_instance(void);
+
+/**
+ * Unregister and destroy transaction layer module.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_layer_destroy(void);
+
+/**
+ * Find a transaction with the specified key. The transaction key normally
+ * is created by calling #pjsip_tsx_create_key() from an incoming message.
+ *
+ * @param key	    The key string to find the transaction.
+ * @param lock	    If non-zero, transaction will be locked before the
+ *		    function returns, to make sure that it's not deleted
+ *		    by other threads.
+ *
+ * @return	    The matching transaction instance, or NULL if transaction
+ *		    can not be found.
+ */
+PJ_DECL(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
+						      pj_bool_t lock );
+
+/**
+ * Create, initialize, and register a new transaction as UAC from the 
+ * specified transmit data (\c tdata). The transmit data must have a valid
+ * \c Request-Line and \c CSeq header. 
  *
  * If \c Via header does not exist, it will be created along with a unique
  * \c branch parameter. If it exists and contains branch parameter, then
- * the \c branch parameter will be used as is as the transaction key.
+ * the \c branch parameter will be used as is as the transaction key. If
+ * it exists but branch parameter doesn't exist, a unique branch parameter
+ * will be created.
  *
- * The \c Route headers in the transmit data, if present, are used to 
- * calculate remote destination.
- *
- * At the end of the function, the transaction will start resolving the
- * addresses of remote server to contact. Transport will be acquired as soon
- * as the resolving job completes.
- *
- * @param tsx       The transaction.
- * @param tdata     The transmit data.
+ * @param tsx_user  Module to be registered as transaction user of the new
+ *		    transaction, which will receive notification from the
+ *		    transaction via on_tsx_state() callback.
+ * @param tdata     The outgoing request message.
+ * @param p_tsx	    On return will contain the new transaction instance.
  *
  * @return          PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjsip_tsx_init_uac( pjsip_transaction *tsx, 
-					 pjsip_tx_data *tdata);
+PJ_DECL(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
+					   pjsip_tx_data *tdata,
+					   pjsip_transaction **p_tsx);
 
 /**
- * Init transaction as UAS.
+ * Create, initialize, and register a new transaction as UAS from the
+ * specified incoming request in \c rdata.
  *
- * @param tsx       The transaction to be initialized.
+ * @param tsx_user  Module to be registered as transaction user of the new
+ *		    transaction, which will receive notification from the
+ *		    transaction via on_tsx_state() callback.
  * @param rdata     The received incoming request.
+ * @param p_tsx	    On return will contain the new transaction instance.
  *
- * @return PJ_SUCCESS if successfull.
+ * @return	    PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjsip_tsx_init_uas( pjsip_transaction *tsx,
-					 pjsip_rx_data *rdata);
+PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
+					   pjsip_rx_data *rdata,
+					   pjsip_transaction **p_tsx );
 
 /**
- * Process incoming message for this transaction.
- *
- * @param tsx       The transaction.
- * @param rdata     The incoming message.
- */
-PJ_DECL(void) pjsip_tsx_on_rx_msg( pjsip_transaction *tsx,
-				   pjsip_rx_data *rdata);
-
-/**
- * Transmit message with this transaction.
+ * Transmit message in tdata with this transaction. It is possible to
+ * pass NULL in tdata for UAC transaction, which in this case the request
+ * message which was specified in #pjsip_tsx_create_uac() will be sent.
  *
  * @param tsx       The transaction.
  * @param tdata     The outgoing message.
- */
-PJ_DECL(void) pjsip_tsx_on_tx_msg( pjsip_transaction *tsx,
-				   pjsip_tx_data *tdata);
-
-
-/**
- * Transmit ACK message for 2xx/INVITE with this transaction. The ACK for
- * non-2xx/INVITE is automatically sent by the transaction.
- * This operation is only valid if the transaction is configured to handle ACK
- * (tsx->handle_ack is non-zero). If this attribute is not set, then the
- * transaction will comply with RFC-3261, i.e. it will set itself to 
- * TERMINATED state when it receives 2xx/INVITE.
  *
- * @param tsx       The transaction.
- * @param tdata     The ACK request.
+ * @return	    PJ_SUCCESS if successfull.
  */
-PJ_DECL(void) pjsip_tsx_on_tx_ack( pjsip_transaction *tsx,
-				   pjsip_tx_data *tdata);
+PJ_DECL(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
+					 pjsip_tx_data *tdata);
 
-/**
- * Force terminate transaction.
- *
- * @param tsx       The transaction.
- * @param code      The status code to report.
- */
-PJ_DECL(void) pjsip_tsx_terminate( pjsip_transaction *tsx,
-				   int code );
 
 /**
  * Create transaction key, which is used to match incoming requests 
@@ -244,6 +221,29 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool,
 
 
 /**
+ * Force terminate transaction.
+ *
+ * @param tsx       The transaction.
+ * @param code      The status code to report.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
+					  int st_code );
+
+
+/**
+ * Get the transaction instance in the incoming message. If the message
+ * has a corresponding transaction, this function will return non NULL
+ * value.
+ *
+ * @param rdata	    The incoming message buffer.
+ *
+ * @return	    The transaction instance associated with this message,
+ *		    or NULL if the message doesn't match any transactions.
+ */
+PJ_DECL(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata );
+
+
+/**
  * @}
  */
 
@@ -261,9 +261,6 @@ PJ_DECL(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state);
  */
 PJ_DECL(const char *) pjsip_role_name(pjsip_role_e role);
 
-
-/* Thread Local Storage ID for transaction lock (initialized by endpoint) */
-extern long pjsip_tsx_lock_tls_id;
 
 PJ_END_DECL
 

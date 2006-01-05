@@ -862,8 +862,13 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 
 struct pj_rwmutex_t
 {
-    pj_mutex_t *read_lock, *write_lock;
-    int reader_count;
+    pj_mutex_t *read_lock;
+    /* write_lock must use semaphore, because write_lock may be released
+     * by thread other than the thread that acquire the write_lock in the
+     * first place.
+     */
+    pj_sem_t   *write_lock;
+    pj_int32_t  reader_count;
 };
 
 /*
@@ -885,7 +890,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_mutex_create_recursive(pool, name, &rwmutex->write_lock);
+    status = pj_sem_create(pool, name, 1, 1, &rwmutex->write_lock);
     if (status != PJ_SUCCESS) {
 	pj_mutex_destroy(rwmutex->read_lock);
 	return status;
@@ -907,12 +912,17 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
     status = pj_mutex_lock(mutex->read_lock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_assert(!"This pretty much is unexpected");
 	return status;
+    }
 
     mutex->reader_count++;
+
+    pj_assert(mutex->reader_count < 0x7FFFFFF0L);
+
     if (mutex->reader_count == 1)
-	pj_mutex_lock(mutex->write_lock);
+	pj_sem_wait(mutex->write_lock);
 
     status = pj_mutex_unlock(mutex->read_lock);
     return status;
@@ -925,7 +935,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
 PJ_DEF(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex)
 {
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
-    return pj_mutex_lock(mutex->write_lock);
+    return pj_sem_wait(mutex->write_lock);
 }
 
 /*
@@ -939,14 +949,16 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
     status = pj_mutex_lock(mutex->read_lock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_assert(!"This pretty much is unexpected");
 	return status;
+    }
 
     pj_assert(mutex->reader_count >= 1);
 
     --mutex->reader_count;
     if (mutex->reader_count == 0)
-	pj_mutex_unlock(mutex->write_lock);
+	pj_sem_post(mutex->write_lock);
 
     status = pj_mutex_unlock(mutex->read_lock);
     return status;
@@ -959,7 +971,8 @@ PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
 PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
 {
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
-    return pj_mutex_unlock(mutex->write_lock);
+    pj_assert(mutex->reader_count <= 1);
+    return pj_sem_post(mutex->write_lock);
 }
 
 
@@ -971,7 +984,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
 {
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
     pj_mutex_destroy(mutex->read_lock);
-    pj_mutex_destroy(mutex->write_lock);
+    pj_sem_destroy(mutex->write_lock);
     return PJ_SUCCESS;
 }
 

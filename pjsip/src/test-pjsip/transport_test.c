@@ -75,7 +75,6 @@ int generic_transport_test(pjsip_transport *tp)
  * before we continue with more complicated tests.
  */
 #define FROM_HDR    "Bob <sip:bob@example.com>"
-#define TO_HDR	    "Alice <sip:alice@example.com>"
 #define CONTACT_HDR "Bob <sip:bob@127.0.0.1>"
 #define CALL_ID_HDR "SendRecv-Test"
 #define CSEQ_VALUE  100
@@ -108,7 +107,7 @@ static pjsip_module my_module =
     NULL,				/* unload()		*/
     &my_on_rx_request,			/* on_rx_request()	*/
     &my_on_rx_response,			/* on_rx_response()	*/
-    NULL,				/* tsx_handler()	*/
+    NULL,				/* on_tsx_state()	*/
 };
 
 
@@ -188,10 +187,9 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
 /* Test that we receive loopback message. */
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
 			      pjsip_transport *ref_tp,
-			      const pj_sockaddr_in *rem_addr )
+			      char *target_url )
 {
     pj_status_t status;
-    char target_buf[80];
     pj_str_t target, from, to, contact, call_id, body;
     pjsip_method method;
     pjsip_tx_data *tdata;
@@ -209,11 +207,9 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     }
 
     /* Create a request message. */
-    pj_sprintf(target_buf, "sip:%s:%d", pj_inet_ntoa(rem_addr->sin_addr),
-					pj_ntohs(rem_addr->sin_port));
-    target = pj_str(target_buf);
+    target = pj_str(target_url);
     from = pj_str(FROM_HDR);
-    to = pj_str(TO_HDR);
+    to = pj_str(target_url);
     contact = pj_str(CONTACT_HDR);
     call_id = pj_str(CALL_ID_HDR);
     body = pj_str(BODY);
@@ -333,7 +329,7 @@ static struct
     pj_str_t call_id;
 } rt_test_data[16];
 
-static char	 rt_target_uri[32];
+static char	 rt_target_uri[64];
 static pj_bool_t rt_stop;
 static pj_str_t  rt_call_id;
 
@@ -349,15 +345,18 @@ static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
 
 	status = pjsip_endpt_create_response( endpt, rdata, 200, NULL, &tdata);
 	if (status != PJ_SUCCESS) {
+	    app_perror("    error creating response", status);
 	    return PJ_TRUE;
 	}
 	status = pjsip_get_response_addr( tdata->pool, rdata, &res_addr);
 	if (status != PJ_SUCCESS) {
+	    app_perror("    error in get response address", status);
 	    pjsip_tx_data_dec_ref(tdata);
 	    return PJ_TRUE;
 	}
 	status = pjsip_endpt_send_response( endpt, &res_addr, tdata, NULL, NULL);
 	if (status != PJ_SUCCESS) {
+	    app_perror("    error sending response", status);
 	    pjsip_tx_data_dec_ref(tdata);
 	    return PJ_TRUE;
 	}
@@ -376,7 +375,7 @@ static pj_status_t rt_send_request(int thread_id)
     /* Create a request message. */
     target = pj_str(rt_target_uri);
     from = pj_str(FROM_HDR);
-    to = pj_str(TO_HDR);
+    to = pj_str(rt_target_uri);
     contact = pj_str(CONTACT_HDR);
     call_id = rt_test_data[thread_id].call_id;
 
@@ -430,7 +429,7 @@ static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 
 static int rt_thread(void *arg)
 {
-    int thread_id = (int)arg;
+    int i, thread_id = (int)arg;
     pj_time_val poll_delay = { 0, 10 };
 
     /* Sleep to allow main threads to run. */
@@ -443,12 +442,17 @@ static int rt_thread(void *arg)
     while (!rt_stop) {
 	pjsip_endpt_handle_events(endpt, &poll_delay);
     }
+
+    /* Exhaust responses. */
+    for (i=0; i<100; ++i)
+	pjsip_endpt_handle_events(endpt, &poll_delay);
+
     return 0;
 }
 
 int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
-		       const pj_sockaddr_in *rem_addr )
+		       char *target_url )
 {
     enum { THREADS = 4, INTERVAL = 10 };
     int i;
@@ -483,8 +487,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	return -610;
 
     /* Initialize static test data. */
-    pj_sprintf(rt_target_uri, "sip:%s:%d", pj_inet_ntoa(rem_addr->sin_addr),
-					   pj_ntohs(rem_addr->sin_port));
+    pj_native_strcpy(rt_target_uri, target_url);
     rt_call_id = pj_str("RT-Call-Id/");
     rt_stop = PJ_FALSE;
 
@@ -551,7 +554,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	PJ_LOG(3,("", "    no message was lost"));
     PJ_LOG(3,("", "    average round-trip=%d usec", usec_rt));
 
-    pjsip_endpt_destroy_pool(endpt, pool);
+    pjsip_endpt_release_pool(endpt, pool);
 
     if (is_reliable && (total_sent != total_recv)) {
 	PJ_LOG(3,("", "   error: %d messages lost", total_sent-total_recv));

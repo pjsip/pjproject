@@ -76,13 +76,15 @@ int transport_udp_test(void)
     /* Basic transport's send/receive loopback test. */
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
-	status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp, &rem_addr);
+	status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp, 
+					  "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR);
 	if (status != 0)
 	    return status;
     }
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp, &rem_addr);
+    status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp, 
+			       "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR);
     if (status != 0)
 	return status;
 
@@ -92,6 +94,12 @@ int transport_udp_test(void)
 
     /* Destroy this transport. */
     pjsip_transport_dec_ref(udp_tp);
+
+    /* Force destroy this transport. */
+    status = pjsip_transport_unregister( pjsip_endpt_get_tpmgr(endpt), udp_tp);
+    if (status != PJ_SUCCESS)
+	return -90;
+
 
     /* Done */
     return 0;

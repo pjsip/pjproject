@@ -81,10 +81,12 @@ int test_main(void)
 
     PJ_LOG(3,("",""));
 
-    DO_TEST(uri_test());
-    DO_TEST(msg_test());
-    DO_TEST(txdata_test());
-    DO_TEST(transport_udp_test());
+    //DO_TEST(uri_test());
+    //DO_TEST(msg_test());
+    //DO_TEST(txdata_test());
+    //DO_TEST(transport_udp_test());
+    DO_TEST(transport_loop_test());
+    //DO_TEST(tsx_uac_test());
 
 on_return:
 

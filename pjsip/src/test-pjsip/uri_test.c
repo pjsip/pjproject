@@ -804,7 +804,7 @@ int uri_test()
 	    goto on_return;
 	}
     }
-    pjsip_endpt_destroy_pool(endpt, pool);
+    pjsip_endpt_release_pool(endpt, pool);
 
     PJ_LOG(3,("", "  benchmarking..."));
     parse_len = print_len = cmp_len = 0;
@@ -818,11 +818,11 @@ int uri_test()
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(3,("uri_test", "  error %d when testing entry %d",
 			  status, i));
-		pjsip_endpt_destroy_pool(endpt, pool);
+		pjsip_endpt_release_pool(endpt, pool);
 		goto on_return;
 	    }
 	}
-	pjsip_endpt_destroy_pool(endpt, pool);
+	pjsip_endpt_release_pool(endpt, pool);
     }
 
     kbytes = parse_len;

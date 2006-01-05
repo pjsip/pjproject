@@ -70,7 +70,9 @@ const struct
     { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}, PJSIP_TRANSPORT_DATAGRAM},
     { PJSIP_TRANSPORT_TCP, 5060, {"TCP", 3}, PJSIP_TRANSPORT_RELIABLE},
     { PJSIP_TRANSPORT_TLS, 5061, {"TLS", 3}, PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE},
-    { PJSIP_TRANSPORT_SCTP, 5060, {"SCTP", 4}, PJSIP_TRANSPORT_RELIABLE}
+    { PJSIP_TRANSPORT_SCTP, 5060, {"SCTP", 4}, PJSIP_TRANSPORT_RELIABLE},
+    { PJSIP_TRANSPORT_LOOP, 15060, {"LOOP", 4}, PJSIP_TRANSPORT_RELIABLE}, 
+    { PJSIP_TRANSPORT_LOOP_DGRAM, 15060, {"LOOP-DGRAM", 10}, PJSIP_TRANSPORT_DATAGRAM},
 };
 
 
@@ -194,14 +196,14 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
 
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);
     if (status != PJ_SUCCESS) {
-	pjsip_endpt_destroy_pool( mgr->endpt, tdata->pool );
+	pjsip_endpt_release_pool( mgr->endpt, tdata->pool );
 	return status;
     }
     
     //status = pj_lock_create_simple_mutex(pool, "tdta%p", &tdata->lock);
     status = pj_lock_create_null_mutex(pool, "tdta%p", &tdata->lock);
     if (status != PJ_SUCCESS) {
-	pjsip_endpt_destroy_pool( mgr->endpt, tdata->pool );
+	pjsip_endpt_release_pool( mgr->endpt, tdata->pool );
 	return status;
     }
 
@@ -238,7 +240,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 #endif
 	pj_atomic_destroy( tdata->ref_cnt );
 	pj_lock_destroy( tdata->lock );
-	pjsip_endpt_destroy_pool( tdata->mgr->endpt, tdata->pool );
+	pjsip_endpt_release_pool( tdata->mgr->endpt, tdata->pool );
 	return PJSIP_EBUFDESTROYED;
     } else {
 	return PJ_SUCCESS;
@@ -715,16 +717,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    goto finish_process_fragment;
 	}
 
-	/* If message is received from address that's different from sent-by,
-  	 * MUST add received parameter to the via.
-	 */
-	if (pj_strcmp2(&rdata->msg_info.via->sent_by.host, 
-		       rdata->pkt_info.src_name) != 0) 
-	{
-	    pj_strdup2(rdata->tp_info.pool, 
-		       &rdata->msg_info.via->recvd_param, 
-		       rdata->pkt_info.src_name);
-	}
+	/* Always add received parameter to the via. */
+	pj_strdup2(rdata->tp_info.pool, 
+		   &rdata->msg_info.via->recvd_param, 
+		   rdata->pkt_info.src_name);
 
 	/* RFC 3581:
 	 * If message contains "rport" param, put the received port there.

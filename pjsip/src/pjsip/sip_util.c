@@ -176,8 +176,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	pj_strdup_with_null(tdata->pool, &tmp, param_target);
 	target = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 0);
 	if (target == NULL) {
-	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid target %s", 
-		      tmp.ptr));
+	    status = PJSIP_EINVALIDREQURI;
 	    goto on_error;
 	}
 
@@ -187,8 +186,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	from->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
 				     PJSIP_PARSE_URI_AS_NAMEADDR);
 	if (from->uri == NULL) {
-	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid 'From' URI '%s'",
-				tmp.ptr));
+	    status = PJSIP_EINVALIDHDR;
 	    goto on_error;
 	}
 	pj_create_unique_string(tdata->pool, &from->tag);
@@ -199,8 +197,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	to->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen, 
 				   PJSIP_PARSE_URI_AS_NAMEADDR);
 	if (to->uri == NULL) {
-	    PJ_LOG(4,(THIS_FILE, "Error creating request: invalid 'To' URI '%s'",
-				tmp.ptr));
+	    status = PJSIP_EINVALIDHDR;
 	    goto on_error;
 	}
 
@@ -211,9 +208,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 	    contact->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen,
 					    PJSIP_PARSE_URI_AS_NAMEADDR);
 	    if (contact->uri == NULL) {
-		PJ_LOG(4,(THIS_FILE, 
-			  "Error creating request: invalid 'Contact' URI '%s'",
-			  tmp.ptr));
+		status = PJSIP_EINVALIDHDR;
 		goto on_error;
 	    }
 	} else {
@@ -1169,7 +1164,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 	    /* Callback will be called later. */
 	    return PJ_SUCCESS;
 	} else {
-	    send_response_transport_cb(send_state, tdata, -status);
+	    pjsip_transport_dec_ref(send_state->cur_transport);
 	    return status;
 	}
     } else {
@@ -1179,6 +1174,57 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
     }
 }
 
+/*
+ * Send response
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
+						   pjsip_rx_data *rdata,
+						   int st_code,
+						   const pj_str_t *st_text,
+						   const pjsip_hdr *hdr_list,
+						   const pjsip_msg_body *body)
+{
+    pj_status_t status;
+    pjsip_response_addr res_addr;
+    pjsip_tx_data *tdata;
+
+    /* Create response message */
+    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
+					  &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Add the message headers, if any */
+    if (hdr_list) {
+	const pjsip_hdr *hdr = hdr_list->next;
+	while (hdr != hdr_list) {
+	    pjsip_msg_add_hdr( tdata->msg, pjsip_hdr_clone(tdata->pool, hdr) );
+	    hdr = hdr->next;
+	}
+    }
+
+    /* Add the message body, if any. */
+    if (body) {
+	tdata->msg->body = pj_pool_alloc(tdata->pool, sizeof(pjsip_msg_body));
+	status = pjsip_msg_body_clone( tdata->pool, tdata->msg->body, body );
+	if (status != PJ_SUCCESS) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
+    }
+
+    /* Get where to send request. */
+    status = pjsip_get_response_addr( tdata->pool, rdata, &res_addr );
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
+    /* Send! */
+    status = pjsip_endpt_send_response( endpt, &res_addr, tdata, NULL, NULL );
+
+    return status;
+}
 
 /*
  * Get the event string from the event ID.
