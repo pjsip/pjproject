@@ -36,6 +36,7 @@
 
 
 pjsip_endpoint *endpt;
+int log_level = 5;
 
 void app_perror(const char *msg, pj_status_t rc)
 {
@@ -81,7 +82,7 @@ int test_main(void)
     const char *filename;
     int line;
 
-    pj_log_set_level(5);
+    pj_log_set_level(log_level);
     /*
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
                      PJ_LOG_HAS_MICRO_SEC);

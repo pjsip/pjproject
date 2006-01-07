@@ -18,10 +18,54 @@
  */
 #include "test.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+static void usage()
+{
+    puts("Usage: test-pjsip");
+    puts("Options:");
+    puts(" -i,--interractive   Key input at the end.");
+    puts(" -h,--help           Show this screen");
+    puts(" -l,--log-level N    Set log level (0-6)");
+}
 
 int main(int argc, char *argv[])
 {
-    int retval = test_main();
+    int interractive = 0;
+    int retval;
+    char **opt_arg;
+
+    /* Parse arguments. */
+    opt_arg = argv+1;
+    while (*opt_arg) {
+	if (strcmp(*opt_arg, "-i") == 0 ||
+	    strcmp(*opt_arg, "--interractive") == 0)
+	{
+	    interractive = 1;
+	} else if (strcmp(*opt_arg, "-h") == 0 ||
+		   strcmp(*opt_arg, "--help") == 0) 
+	{
+	    usage();
+	    return 1;
+	} else if (strcmp(*opt_arg, "-l") == 0 ||
+		   strcmp(*opt_arg, "--log-level") == 0) 
+	{
+	    ++opt_arg;
+	    if (!opt_arg) {
+		usage();
+		return 1;
+	    }
+	    log_level = atoi(*opt_arg);
+	} else {
+	    usage();
+	    return 1;
+	}
+
+	++opt_arg;
+    }
+
+    retval = test_main();
 
     if (argc != 1) {
 	char s[10];

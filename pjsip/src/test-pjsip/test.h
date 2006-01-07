@@ -54,4 +54,7 @@ int init_msg_logger(void);
 int msg_logger_set_enabled(pj_bool_t enabled);
 void flush_events(unsigned duration);
 
+/* Settings. */
+extern int log_level;
+
 #endif	/* __TEST_H__ */
