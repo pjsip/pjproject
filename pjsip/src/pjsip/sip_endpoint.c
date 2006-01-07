@@ -35,7 +35,7 @@
 #include <pj/lock.h>
 
 #define PJSIP_EX_NO_MEMORY  PJ_NO_MEMORY_EXCEPTION
-#define THIS_FILE	    "endpoint"
+#define THIS_FILE	    "sip_endpoint.c"
 
 #define MAX_METHODS   32
 
@@ -98,8 +98,10 @@ struct pjsip_endpoint
 /*
  * Prototypes.
  */
-static void endpt_transport_callback(pjsip_endpoint*, 
-				     pj_status_t, pjsip_rx_data*);
+static void endpt_on_rx_msg( pjsip_endpoint*, 
+			     pj_status_t, pjsip_rx_data*);
+static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
+				    pjsip_tx_data *tdata );
 
 /* Defined in sip_parser.c */
 void init_sip_parser(void);
@@ -229,6 +231,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
     /* Remove module from list. */
     pj_list_erase(mod);
 
+    /* Set module Id to -1. */
+    mod->id = -1;
+
     /* Done. */
     status = PJ_SUCCESS;
 
@@ -312,7 +317,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pjsip_max_forwards_hdr *mf_hdr;
     pj_lock_t *lock = NULL;
 
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create()"));
+    PJ_LOG(5, (THIS_FILE, "Creating endpoint instance..."));
 
     *p_endpt = NULL;
 
@@ -382,7 +387,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 
     /* Create transport manager. */
     status = pjsip_tpmgr_create( endpt->pool, endpt,
-			         &endpt_transport_callback,
+			         &endpt_on_rx_msg,
+				 &endpt_on_tx_msg,
 				 &endpt->transport_mgr);
     if (status != PJ_SUCCESS) {
 	goto on_error;
@@ -391,7 +397,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Create asynchronous DNS resolver. */
     endpt->resolver = pjsip_resolver_create(endpt->pool);
     if (!endpt->resolver) {
-	PJ_LOG(4, (THIS_FILE, "pjsip_endpt_init(): error creating resolver"));
+	PJ_LOG(4, (THIS_FILE, "Error creating resolver instance"));
 	goto on_error;
     }
 
@@ -425,7 +431,7 @@ on_error:
     }
     pj_pool_release( endpt->pool );
 
-    PJ_LOG(4, (THIS_FILE, "pjsip_endpt_init() failed"));
+    PJ_LOG(4, (THIS_FILE, "Error creating endpoint"));
     return status;
 }
 
@@ -434,7 +440,14 @@ on_error:
  */
 PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_destroy()"));
+    pjsip_module *mod;
+
+    PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
+
+    /* Unregister modules. */
+    while ((mod=endpt->module_list.prev) != &endpt->module_list) {
+	pjsip_endpt_unregister_module(endpt, mod);
+    }
 
     /* Shutdown and destroy all transports. */
     pjsip_tpmgr_destroy(endpt->transport_mgr);
@@ -444,6 +457,8 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Finally destroy pool. */
     pj_pool_release(endpt->pool);
+
+    PJ_LOG(4, (THIS_FILE, "Endpoint %p destroyed", endpt));
 }
 
 /*
@@ -465,8 +480,6 @@ PJ_DEF(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
 {
     pj_pool_t *pool;
 
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_pool()"));
-
     /* Lock endpoint mutex. */
     pj_mutex_lock(endpt->mutex);
 
@@ -477,9 +490,7 @@ PJ_DEF(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
     /* Unlock mutex. */
     pj_mutex_unlock(endpt->mutex);
 
-    if (pool) {
-	PJ_LOG(5, (THIS_FILE, "   pool %s created", pj_pool_getobjname(pool)));
-    } else {
+    if (!pool) {
 	PJ_LOG(4, (THIS_FILE, "Unable to create pool %s!", pool_name));
     }
 
@@ -492,7 +503,7 @@ PJ_DEF(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
  */
 PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_release_pool(%s)", pj_pool_getobjname(pool)));
+    PJ_LOG(6, (THIS_FILE, "Releasing pool %s", pj_pool_getobjname(pool)));
 
     pj_mutex_lock(endpt->mutex);
     pj_pool_release( pool );
@@ -508,7 +519,7 @@ PJ_DEF(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
     /* timeout is 'out' var. This just to make compiler happy. */
     pj_time_val timeout = { 0, 0};
 
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_handle_events()"));
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_handle_events()"));
 
     /* Poll the timer. The timer heap has its own mutex for better 
      * granularity, so we don't need to lock end endpoint. 
@@ -534,7 +545,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 						pj_timer_entry *entry,
 						const pj_time_val *delay )
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
 			 entry, delay->sec, delay->msec));
     return pj_timer_heap_schedule( endpt->timer_heap, entry, delay );
 }
@@ -545,7 +556,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
 				       pj_timer_entry *entry )
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_cancel_timer(entry=%p)", entry));
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_cancel_timer(entry=%p)", entry));
     pj_timer_heap_cancel( endpt->timer_heap, entry );
 }
 
@@ -553,13 +564,11 @@ PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
  * This is the callback that is called by the transport manager when it 
  * receives a message from the network.
  */
-static void endpt_transport_callback( pjsip_endpoint *endpt,
+static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 				      pj_status_t status,
 				      pjsip_rx_data *rdata )
 {
     pjsip_msg *msg = rdata->msg_info.msg;
-
-    PJ_LOG(5, (THIS_FILE, "endpt_transport_callback(rdata=%p)", rdata));
 
     if (status != PJ_SUCCESS) {
 	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
@@ -571,6 +580,9 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 			       rdata->msg_info.msg_buf));
 	return;
     }
+
+    PJ_LOG(5, (THIS_FILE, "Processing incoming message: %s", 
+	       pjsip_rx_data_get_info(rdata)));
 
     /* For response, check that the value in Via sent-by match the transport.
      * If not matched, silently drop the response.
@@ -600,17 +612,19 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 		rdata->tp_info.transport->local_name.port)
 		mismatch = PJ_TRUE;
 	    else {
-		PJ_LOG(4,(THIS_FILE, "Response %p from %s has mismatch port in "
+		PJ_LOG(4,(THIS_FILE, "Message %s from %s has mismatch port in "
 				     "sent-by but the rport parameter is "
 				     "correct",
-				     rdata, rdata->pkt_info.src_name));
+				     pjsip_rx_data_get_info(rdata), 
+				     rdata->pkt_info.src_name));
 	    }
 	}
 
 	if (mismatch) {
 	    PJ_TODO(ENDPT_REPORT_WHEN_DROPPING_MESSAGE);
-	    PJ_LOG(4,(THIS_FILE, "Dropping response from %s:%d because sent-by"
-				 " is mismatch", 
+	    PJ_LOG(4,(THIS_FILE, "Dropping response %s from %s:%d because "
+				 "sent-by is mismatch", 
+				 pjsip_rx_data_get_info(rdata),
 				 rdata->pkt_info.src_name, 
 				 rdata->pkt_info.src_port));
 	    return;
@@ -618,7 +632,7 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
     }
 
 
-    /* Distribute to modules. */
+    /* Distribute to modules, starting from modules with highest priority */
     pj_rwmutex_lock_read(endpt->mod_mutex);
 
     if (msg->type == PJSIP_REQUEST_MSG) {
@@ -637,8 +651,11 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	/* No module is able to handle the request. */
 	if (!handled) {
 	    PJ_TODO(ENDPT_RESPOND_UNHANDLED_REQUEST);
-	    PJ_LOG(4,(THIS_FILE, "Request from %s:%d was dropped/unhandled by"
-				 " any modules"));
+	    PJ_LOG(4,(THIS_FILE, "Message %s from %s:%d was dropped/unhandled by"
+				 " any modules",
+				 pjsip_rx_data_get_info(rdata),
+				 rdata->pkt_info.src_name,
+				 rdata->pkt_info.src_port));
 	}
 
     } else {
@@ -655,8 +672,11 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 	}
 
 	if (!handled) {
-	    PJ_LOG(4,(THIS_FILE, "Response from %s:%d was dropped/unhandled by"
-				 " any modules"));
+	    PJ_LOG(4,(THIS_FILE, "Message %s from %s:%d was dropped/unhandled"
+				 " by any modules",
+				 pjsip_rx_data_get_info(rdata),
+				 rdata->pkt_info.src_name,
+				 rdata->pkt_info.src_port));
 	}
     }
 
@@ -664,12 +684,50 @@ static void endpt_transport_callback( pjsip_endpoint *endpt,
 }
 
 /*
+ * This callback is called by transport manager before message is sent.
+ * Modules may inspect the message before it's actually sent.
+ */
+static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
+				    pjsip_tx_data *tdata )
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsip_module *mod;
+
+    /* Distribute to modules, starting from modules with LOWEST priority */
+    pj_rwmutex_lock_read(endpt->mod_mutex);
+
+    mod = endpt->module_list.prev;
+    if (tdata->msg->type == PJSIP_REQUEST_MSG) {
+	while (mod != &endpt->module_list) {
+	    if (mod->on_tx_request)
+		status = (*mod->on_tx_request)(tdata);
+	    if (status != PJ_SUCCESS)
+		break;
+	    mod = mod->prev;
+	}
+
+    } else {
+	while (mod != &endpt->module_list) {
+	    if (mod->on_tx_response)
+		status = (*mod->on_tx_response)(tdata);
+	    if (status != PJ_SUCCESS)
+		break;
+	    mod = mod->prev;
+	}
+    }
+
+    pj_rwmutex_unlock_read(endpt->mod_mutex);
+
+    return status;
+}
+
+
+/*
  * Create transmit data buffer.
  */
 PJ_DEF(pj_status_t) pjsip_endpt_create_tdata(  pjsip_endpoint *endpt,
 					       pjsip_tx_data **p_tdata)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_create_tdata()"));
     return pjsip_tx_data_create(endpt->transport_mgr, p_tdata);
 }
 
@@ -682,7 +740,6 @@ PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
 				  void *token,
 				  pjsip_resolver_callback *cb)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_resolve()"));
     pjsip_resolve( endpt->resolver, pool, target, token, cb);
 }
 
@@ -711,7 +768,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport(pjsip_endpoint *endpt,
 						  int addr_len,
 						  pjsip_transport **transport)
 {
-    PJ_LOG(5, (THIS_FILE, "pjsip_endpt_acquire_transport()"));
     return pjsip_tpmgr_acquire_transport(endpt->transport_mgr, type, 
 					 remote, addr_len, transport);
 }

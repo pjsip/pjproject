@@ -129,11 +129,8 @@ static void init_request_throw( pjsip_endpoint *endpt,
 	msg->body = body;
     }
 
-    PJ_LOG(4,(THIS_FILE, "Request %s (CSeq=%d/%.*s) created.", 
-			 tdata->obj_name, 
-			 param_cseq->cseq, 
-			 param_cseq->method.name.slen,
-			 param_cseq->method.name.ptr));
+    PJ_LOG(5,(THIS_FILE, "%s created.", 
+			 pjsip_tx_data_get_info(tdata)));
 
 }
 
@@ -161,8 +158,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
     pj_str_t tmp;
     pj_status_t status;
     PJ_USE_EXCEPTION;
-
-    PJ_LOG(5,(THIS_FILE, "Entering pjsip_endpt_create_request()"));
 
     status = pjsip_endpt_create_tdata(endpt, &tdata);
     if (status != PJ_SUCCESS)
@@ -272,8 +267,6 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
     pj_status_t status;
     PJ_USE_EXCEPTION;
 
-    PJ_LOG(5,(THIS_FILE, "Entering pjsip_endpt_create_request_from_hdr()"));
-
     /* Check arguments. */
     PJ_ASSERT_RETURN(endpt && method && param_target && param_from &&
 		     param_to && p_tdata, PJ_EINVAL);
@@ -343,10 +336,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     req_msg = rdata->msg_info.msg;
     pj_assert(req_msg->type == PJSIP_REQUEST_MSG);
 
-    /* Log this action. */
-    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_response(rdata=%p, code=%d)", 
-		         rdata, st_code));
-
     /* Create a new transmit buffer. */
     status = pjsip_endpt_create_tdata( endpt, &tdata);
     if (status != PJ_SUCCESS)
@@ -408,6 +397,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
 
     /* All done. */
     *p_tdata = tdata;
+
+    PJ_LOG(5,(THIS_FILE, "%s created", pjsip_tx_data_get_info(tdata)));
     return PJ_SUCCESS;
 }
 
@@ -431,9 +422,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
     const pjsip_hdr *hdr;
     pjsip_to_hdr *to;
     pj_status_t status;
-
-    /* Log this action. */
-    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_ack(rdata=%p)", rdata));
 
     /* rdata must be a final response. */
     pj_assert(rdata->msg_info.msg->type==PJSIP_RESPONSE_MSG &&
@@ -524,9 +512,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
     const pjsip_cseq_hdr *cseq_hdr;
     const pjsip_hdr *hdr;
     pj_status_t status;
-
-    /* Log this action. */
-    PJ_LOG(5,(THIS_FILE, "pjsip_endpt_create_cancel(tdata=%p)", req_tdata));
 
     /* The transmit buffer must INVITE request. */
     PJ_ASSERT_RETURN(req_tdata->msg->type == PJSIP_REQUEST_MSG &&
@@ -702,13 +687,8 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
 	dest_info->addr.port = url->port;
 	dest_info->type = 
             pjsip_transport_get_type_from_name(&url->transport_param);
-#if PJ_HAS_TCP
-	if (dest_info->type == PJSIP_TRANSPORT_TCP || 
-	    dest_info->type == PJSIP_TRANSPORT_SCTP) 
-	{
-	    dest_info->flag |= PJSIP_TRANSPORT_RELIABLE;
-	}
-#endif
+	dest_info->flag = 
+	    pjsip_transport_get_flag_from_type(dest_info->type);
     } else {
         pj_assert(!"Unsupported URI scheme!");
 	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);

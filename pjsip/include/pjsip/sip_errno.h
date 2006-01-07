@@ -23,6 +23,11 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * Guidelines on error message length.
+ */
+#define PJSIP_ERR_MSG_SIZE  64
+
 /*
  * PJSIP error codes occupies 170000 - 219000, and mapped as follows:
  *  - 170100 - 170799: mapped to SIP status code in response msg.
@@ -86,6 +91,11 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * SIP object with the same type already exists.
  */
 #define PJSIP_ETYPEEXISTS	(PJSIP_ERRNO_START_PJSIP + 2)	/* 171002 */
+/**
+ * @hideinitializer
+ * SIP stack is shutting down.
+ */
+#define PJSIP_ESHUTDOWN		(PJSIP_ERRNO_START_PJSIP + 3)	/* 171003 */
 
 
 /************************************************************

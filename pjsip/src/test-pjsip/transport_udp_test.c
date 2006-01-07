@@ -21,6 +21,8 @@
 #include <pjsip_core.h>
 #include <pjlib.h>
 
+#define THIS_FILE   "transport_udp_test.c"
+
 
 /*
  * UDP transport test.
@@ -32,7 +34,7 @@ int transport_udp_test(void)
     pj_sockaddr_in addr, rem_addr;
     pj_str_t s;
     pj_status_t status;
-    int i;
+    int i, pkt_lost;
 
     pj_sockaddr_in_init(&addr, NULL, TEST_UDP_PORT);
 
@@ -84,9 +86,13 @@ int transport_udp_test(void)
 
     /* Multi-threaded round-trip test. */
     status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp, 
-			       "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR);
+			       "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR, 
+			       &pkt_lost);
     if (status != 0)
 	return status;
+
+    if (pkt_lost != 0)
+	PJ_LOG(3,(THIS_FILE, "   note: %d packet(s) was lost", pkt_lost));
 
     /* Check again that reference counter is 1. */
     if (pj_atomic_get(udp_tp->ref_cnt) != 1)
@@ -100,6 +106,9 @@ int transport_udp_test(void)
     if (status != PJ_SUCCESS)
 	return -90;
 
+    /* Flush events. */
+    PJ_LOG(3,(THIS_FILE, "   Flushing events, 1 second..."));
+    flush_events(1000);
 
     /* Done */
     return 0;

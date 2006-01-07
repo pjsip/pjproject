@@ -58,9 +58,10 @@ PJ_DECL(pj_status_t) pjsip_loop_set_discard( pjsip_transport *tp,
  * will occur after some delay, which is controlled by #pjsip_loop_set_delay().
  *
  * @param tp		The loop transport.
- * @param fail_flag	If set to 1, the transport will return immediate error.
- *			If set to 2, the transport will return error via
- *			callback. If zero, the transport will deliver
+ * @param fail_flag	If set to 1, the transport will return fail to deliver
+ *			the message. If delay is zero, failure will occur
+ *			immediately; otherwise it will be reported in callback.
+ *			If set to zero, the transport will successfully deliver
  *			the packet.
  * @param prev_value	Optional argument to receive previous value of
  *			the failure flag.
@@ -73,7 +74,8 @@ PJ_DECL(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
 
 
 /**
- * Set delay (in miliseconds) before packet is delivered. This will also 
+ * Set delay (in miliseconds) before packet is received by the other end
+ * of the loop transport. This will also 
  * control the delay for error notification callback.
  *
  * @param tp		The loop transport.
@@ -83,9 +85,38 @@ PJ_DECL(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success.
  */
+PJ_DECL(pj_status_t) pjsip_loop_set_recv_delay( pjsip_transport *tp,
+						unsigned delay,
+						unsigned *prev_value);
+
+
+/**
+ * Set delay (in miliseconds) before send notification is delivered to sender.
+ * This will also control the delay for error notification callback.
+ *
+ * @param tp		The loop transport.
+ * @param delay		Delay, in miliseconds.
+ * @param prev_value	Optional argument to receive previous value of the
+ *			delay.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_loop_set_send_callback_delay( pjsip_transport *tp,
+							 unsigned delay,
+							 unsigned *prev_value);
+
+
+/**
+ * Set both receive and send notification delay.
+ *
+ * @param tp		The loop transport.
+ * @param delay		Delay, in miliseconds.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
 PJ_DECL(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp,
-					   unsigned delay,
-					   unsigned *prev_value);
+					   unsigned delay );
+
 
 PJ_END_DECL
 

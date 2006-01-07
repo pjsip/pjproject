@@ -18,9 +18,13 @@
  */
 #include <pjsip/sip_resolve.h>
 #include <pjsip/sip_transport.h>
+#include <pjsip/sip_errno.h>
 #include <pj/pool.h>
 #include <pj/ctype.h>
 #include <pj/assert.h>
+#include <pj/log.h>
+
+#define THIS_FILE   "sip_resolve.c"
 
 struct pjsip_resolver_t
 {
@@ -67,6 +71,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
     PJ_UNUSED_ARG(resolver);
     PJ_UNUSED_ARG(pool);
+
+    PJ_LOG(5,(THIS_FILE, "Resolving server '%.*s:%d' type=%s",
+			 target->addr.host.slen,
+			 target->addr.host.ptr,
+			 target->addr.port,
+			 pjsip_transport_get_type_name(type)));
 
     /* We only do synchronous resolving at this moment. */
     PJ_TODO(SUPPORT_RFC3263_SERVER_RESOLUTION)
@@ -116,10 +126,30 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	status = pj_sockaddr_in_init((pj_sockaddr_in*)&svr_addr.entry[0].addr, 
 				      &target->addr.host, 
 				     (pj_uint16_t)target->addr.port);
-	pj_assert(status == PJ_SUCCESS);
+    }
+
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJSIP_ERR_MSG_SIZE];
+	PJ_LOG(4,(THIS_FILE, "Failed to resolve '%.*s'. Err=%d (%s)",
+			     target->addr.host.slen,
+			     target->addr.host.ptr,
+			     status,
+			     pjsip_strerror(status,errmsg,sizeof(errmsg)).ptr));
+	(*cb)(status, token, &svr_addr);
+	return;
     }
 
     /* Call the callback. */
+    PJ_LOG(5,(THIS_FILE, "Server resolved: '%.*s:%d' type=%s has %d entries, "
+			 "entry[0]=%s:%d type=%s",
+			 target->addr.host.slen,
+			 target->addr.host.ptr,
+			 target->addr.port,
+			 pjsip_transport_get_type_name(type),
+			 1,
+			 pj_inet_ntoa(((pj_sockaddr_in*)&svr_addr.entry[0].addr)->sin_addr),
+			 target->addr.port,
+			 pjsip_transport_get_type_name(type)));
     svr_addr.count = (status == PJ_SUCCESS) ? 1 : 0;
     svr_addr.entry[0].type = type;
     svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);

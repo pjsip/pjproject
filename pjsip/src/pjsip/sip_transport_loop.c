@@ -27,9 +27,6 @@
 #include <pj/compat/socket.h>
 
 
-#define FAIL_IMMEDIATE	1
-#define FAIL_CALLBACK	2
-
 #define ADDR_LOOP	"128.0.0.1"
 #define ADDR_LOOP_DGRAM	"129.0.0.1"
 
@@ -61,7 +58,8 @@ struct loop_transport
     pj_bool_t		     thread_quit_flag;
     pj_bool_t		     discard;
     int			     fail_mode;
-    unsigned		     delay;
+    unsigned		     recv_delay;
+    unsigned		     send_delay;
     struct recv_list	     recv_list;
     struct send_list	     send_list;
 };
@@ -100,7 +98,7 @@ struct recv_list *create_incoming_packet( struct loop_transport *loop,
 
     /* When do we need to "deliver" this packet. */
     pj_gettimeofday(&pkt->rdata.pkt_info.timestamp);
-    pkt->rdata.pkt_info.timestamp.msec += loop->delay;
+    pkt->rdata.pkt_info.timestamp.msec += loop->recv_delay;
     pj_time_val_normalize(&pkt->rdata.pkt_info.timestamp);
 
     /* Done. */
@@ -130,7 +128,7 @@ static pj_status_t add_notification( struct loop_transport *loop,
     sent_status->callback = callback;
 
     pj_gettimeofday(&sent_status->sent_time);
-    sent_status->sent_time.msec += loop->delay;
+    sent_status->sent_time.msec += loop->send_delay;
     pj_time_val_normalize(&sent_status->sent_time);
 
     pj_lock_acquire(loop->base.lock);
@@ -160,17 +158,16 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
     PJ_UNUSED_ARG(addr_len);
 
 
-    /* Need to send failure immediately? */
-    if (loop->fail_mode == FAIL_IMMEDIATE) {
-	return PJ_STATUS_FROM_OS(OSERR_ECONNRESET);
+    /* Need to send failure? */
+    if (loop->fail_mode) {
+	if (loop->send_delay == 0) {
+	    return PJ_STATUS_FROM_OS(OSERR_ECONNRESET);
+	} else {
+	    add_notification(loop, tdata, -PJ_STATUS_FROM_OS(OSERR_ECONNRESET),
+			     token, cb);
 
-    /* Need to send failure later? */
-    } else if (loop->fail_mode == FAIL_CALLBACK) {
-
-	add_notification(loop, tdata, -PJ_STATUS_FROM_OS(OSERR_ECONNRESET), 
-			 token, cb);
-
-	return PJ_EPENDING;
+	    return PJ_EPENDING;
+	}
     }
 
     /* Discard any packets? */
@@ -183,7 +180,7 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
 	return PJ_ENOMEM;
 
     /* If delay is not configured, deliver this packet now! */
-    if (loop->delay == 0) {
+    if (loop->recv_delay == 0) {
 	pj_ssize_t size_eaten;
 
 	size_eaten = pjsip_tpmgr_receive_packet( loop->base.tpmgr, 
@@ -192,20 +189,22 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
 
 	pjsip_endpt_release_pool(loop->base.endpt, 
 				 recv_pkt->rdata.tp_info.pool);
-	return PJ_SUCCESS;
 
     } else {
 	/* Otherwise if delay is configured, add the "packet" to the 
-	 * receive list to be processed by worker thread, and add
-	 * pending notification for calling the callback.
+	 * receive list to be processed by worker thread.
 	 */
-	add_notification(loop, tdata, tdata->buf.cur - tdata->buf.start, 
-			 token, cb);
-
 	pj_lock_acquire(loop->base.lock);
 	pj_list_push_back(&loop->recv_list, recv_pkt);
 	pj_lock_release(loop->base.lock);
+    }
+
+    if (loop->send_delay != 0) {
+	add_notification(loop, tdata, tdata->buf.cur - tdata->buf.start,
+			 token, cb);
 	return PJ_EPENDING;
+    } else {
+	return PJ_SUCCESS;
     }
 }
 
@@ -223,6 +222,26 @@ static pj_status_t loop_destroy(pjsip_transport *tp)
     pj_thread_join(loop->thread);
     pj_thread_destroy(loop->thread);
 
+    /* Clear pending send notifications. */
+    while (!pj_list_empty(&loop->send_list)) {
+	struct send_list *node = loop->send_list.next;
+	/* Notify callback. */
+	if (node->callback) {
+	    (*node->callback)(&loop->base, node->token, -PJSIP_ESHUTDOWN);
+	}
+	pj_list_erase(node);
+	pjsip_tx_data_dec_ref(node->tdata);
+    }
+
+    /* Clear "incoming" packets in the queue. */
+    while (!pj_list_empty(&loop->recv_list)) {
+	struct recv_list *node = loop->recv_list.next;
+	pj_list_erase(node);
+	pjsip_endpt_release_pool(loop->base.endpt,
+				 node->rdata.tp_info.pool);
+    }
+
+    /* Self destruct.. heheh.. */
     pj_lock_destroy(loop->base.lock);
     pj_atomic_destroy(loop->base.ref_cnt);
     pjsip_endpt_release_pool(loop->base.endpt, loop->base.pool);
@@ -238,7 +257,7 @@ static int loop_thread(void *arg)
     while (!loop->thread_quit_flag) {
 	pj_time_val now;
 
-	pj_thread_sleep(10);
+	pj_thread_sleep(1);
 	pj_gettimeofday(&now);
 
 	pj_lock_acquire(loop->base.lock);
@@ -320,7 +339,7 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
     loop->base.key.type = PJSIP_TRANSPORT_LOOP_DGRAM;
-    loop->base.key.rem_addr.sa_family = PJ_AF_INET;
+    //loop->base.key.rem_addr.sa_family = PJ_AF_INET;
     loop->base.type_name = "LOOP-DGRAM";
     loop->base.info = "LOOP-DGRAM";
     loop->base.flag = PJSIP_TRANSPORT_DATAGRAM;
@@ -356,7 +375,9 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
      * Done.
      */
 
-    *transport = &loop->base;
+    if (transport)
+	*transport = &loop->base;
+
     return PJ_SUCCESS;
 
 on_error:
@@ -405,9 +426,9 @@ PJ_DEF(pj_status_t) pjsip_loop_set_failure( pjsip_transport *tp,
 }
 
 
-PJ_DEF(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp,
-					  unsigned delay,
-					  unsigned *prev_value)
+PJ_DEF(pj_status_t) pjsip_loop_set_recv_delay( pjsip_transport *tp,
+					       unsigned delay,
+					       unsigned *prev_value)
 {
     struct loop_transport *loop = (struct loop_transport*)tp;
 
@@ -415,8 +436,37 @@ PJ_DEF(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp,
 	             tp->key.type == PJSIP_TRANSPORT_LOOP_DGRAM), PJ_EINVAL);
 
     if (prev_value)
-	*prev_value = loop->delay;
-    loop->delay = delay;
+	*prev_value = loop->recv_delay;
+    loop->recv_delay = delay;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_loop_set_send_callback_delay( pjsip_transport *tp,
+							unsigned delay,
+							unsigned *prev_value)
+{
+    struct loop_transport *loop = (struct loop_transport*)tp;
+
+    PJ_ASSERT_RETURN(tp && (tp->key.type == PJSIP_TRANSPORT_LOOP ||
+	             tp->key.type == PJSIP_TRANSPORT_LOOP_DGRAM), PJ_EINVAL);
+
+    if (prev_value)
+	*prev_value = loop->send_delay;
+    loop->send_delay = delay;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp, unsigned delay )
+{
+    struct loop_transport *loop = (struct loop_transport*)tp;
+
+    PJ_ASSERT_RETURN(tp && (tp->key.type == PJSIP_TRANSPORT_LOOP ||
+	             tp->key.type == PJSIP_TRANSPORT_LOOP_DGRAM), PJ_EINVAL);
+
+    loop->recv_delay = delay;
+    loop->send_delay = delay;
 
     return PJ_SUCCESS;
 }

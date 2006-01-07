@@ -127,8 +127,6 @@ SOURCE=..\src\pjsip\sip_transaction.c
 
 !IF  "$(CFG)" == "pjsip_core - Win32 Release"
 
-# PROP Exclude_From_Build 1
-
 !ELSEIF  "$(CFG)" == "pjsip_core - Win32 Debug"
 
 !ENDIF 

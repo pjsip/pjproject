@@ -117,6 +117,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[183], "Session Progress");
 
     pj_strset2( &status_phrase[200], "OK");
+    pj_strset2( &status_phrase[202], "Accepted");
 
     pj_strset2( &status_phrase[300], "Multiple Choices");
     pj_strset2( &status_phrase[301], "Moved Permanently");
@@ -140,6 +141,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[416], "Unsupported URI Scheme");
     pj_strset2( &status_phrase[420], "Bad Extension");
     pj_strset2( &status_phrase[421], "Extension Required");
+    pj_strset2( &status_phrase[422], "Session Timer Too Small");
     pj_strset2( &status_phrase[423], "Interval Too Brief");
     pj_strset2( &status_phrase[480], "Temporarily Unavailable");
     pj_strset2( &status_phrase[481], "Call/Transaction Does Not Exist");
@@ -150,6 +152,8 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[486], "Busy Here");
     pj_strset2( &status_phrase[487], "Request Terminated");
     pj_strset2( &status_phrase[488], "Not Acceptable Here");
+    pj_strset2( &status_phrase[489], "Unknown Event");
+    pj_strset2( &status_phrase[490], "Request Updated");
     pj_strset2( &status_phrase[491], "Request Pending");
     pj_strset2( &status_phrase[493], "Undecipherable");
 
@@ -160,6 +164,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[504], "Server Timeout");
     pj_strset2( &status_phrase[505], "Version Not Supported");
     pj_strset2( &status_phrase[513], "Message Too Large");
+    pj_strset2( &status_phrase[580], "Precondition Failure");
 
     pj_strset2( &status_phrase[600], "Busy Everywhere");
     pj_strset2( &status_phrase[603], "Decline");

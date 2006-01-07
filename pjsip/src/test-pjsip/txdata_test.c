@@ -23,6 +23,9 @@
 
 #define HFIND(msg,h,H) ((pjsip_##h##_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_##H, NULL))
 
+#define THIS_FILE   "txdata_test.c"
+
+
 /*
  * This tests various core message creation functions. 
  */
@@ -50,12 +53,12 @@ int txdata_test(void)
 
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(invite) != 0) {
-	PJ_LOG(3,("", "   error: buffer must be invalid"));
+	PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
 	return -14;
     }
     /* Reference counter must be set to 1. */
     if (pj_atomic_get(invite->ref_cnt) != 1) {
-	PJ_LOG(3,("", "   error: invalid reference counter"));
+	PJ_LOG(3,(THIS_FILE, "   error: invalid reference counter"));
 	return -15;
     }
     /* Check message type. */
@@ -102,12 +105,12 @@ int txdata_test(void)
     
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(invite2) != 0) {
-	PJ_LOG(3,("", "   error: buffer must be invalid"));
+	PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
 	return -34;
     }
     /* Reference counter must be set to 1. */
     if (pj_atomic_get(invite2->ref_cnt) != 1) {
-	PJ_LOG(3,("", "   error: invalid reference counter"));
+	PJ_LOG(3,(THIS_FILE, "   error: invalid reference counter"));
 	return -35;
     }
     /* Check message type. */
@@ -141,7 +144,7 @@ int txdata_test(void)
 
     /* Done checking invite2. We can delete this. */
     if (pjsip_tx_data_dec_ref(invite2) != PJSIP_EBUFDESTROYED) {
-	PJ_LOG(3,("", "   error: request buffer not destroyed!"));
+	PJ_LOG(3,(THIS_FILE, "   error: request buffer not destroyed!"));
 	return -49;
     }
 
@@ -172,12 +175,12 @@ int txdata_test(void)
     
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(response) != 0) {
-	PJ_LOG(3,("", "   error: buffer must be invalid"));
+	PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
 	return -54;
     }
     /* Check reference counter. */
     if (pj_atomic_get(response->ref_cnt) != 1) {
-	PJ_LOG(3,("", "   error: invalid ref count in response"));
+	PJ_LOG(3,(THIS_FILE, "   error: invalid ref count in response"));
 	return -55;
     }
     /* Check message type. */
@@ -214,12 +217,12 @@ int txdata_test(void)
 
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(cancel) != 0) {
-	PJ_LOG(3,("", "   error: buffer must be invalid"));
+	PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
 	return -84;
     }
     /* Check reference counter. */
     if (pj_atomic_get(cancel->ref_cnt) != 1) {
-	PJ_LOG(3,("", "   error: invalid ref count in CANCEL request"));
+	PJ_LOG(3,(THIS_FILE, "   error: invalid ref count in CANCEL request"));
 	return -85;
     }
     /* Check message type. */
@@ -247,7 +250,7 @@ int txdata_test(void)
 
     /* Done checking CANCEL request. */
     if (pjsip_tx_data_dec_ref(cancel) != PJSIP_EBUFDESTROYED) {
-	PJ_LOG(3,("", "   error: response buffer not destroyed!"));
+	PJ_LOG(3,(THIS_FILE, "   error: response buffer not destroyed!"));
 	return -99;
     }
 
@@ -259,17 +262,17 @@ int txdata_test(void)
     /* Create ACK request */
     status = pjsip_endpt_create_ack( endpt, invite, &dummy_rdata, &ack );
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3,("", "   error: unable to create ACK"));
+	PJ_LOG(3,(THIS_FILE, "   error: unable to create ACK"));
 	return -100;
     }
     /* Buffer must be invalid. */
     if (pjsip_tx_data_is_valid(ack) != 0) {
-	PJ_LOG(3,("", "   error: buffer must be invalid"));
+	PJ_LOG(3,(THIS_FILE, "   error: buffer must be invalid"));
 	return -104;
     }
     /* Check reference counter. */
     if (pj_atomic_get(ack->ref_cnt) != 1) {
-	PJ_LOG(3,("", "   error: invalid ref count in ACK request"));
+	PJ_LOG(3,(THIS_FILE, "   error: invalid ref count in ACK request"));
 	return -105;
     }
     /* Check message type. */
@@ -298,19 +301,19 @@ int txdata_test(void)
 
     /* Done checking invite message. */
     if (pjsip_tx_data_dec_ref(invite) != PJSIP_EBUFDESTROYED) {
-	PJ_LOG(3,("", "   error: response buffer not destroyed!"));
+	PJ_LOG(3,(THIS_FILE, "   error: response buffer not destroyed!"));
 	return -120;
     }
 
     /* Done checking response message. */
     if (pjsip_tx_data_dec_ref(response) != PJSIP_EBUFDESTROYED) {
-	PJ_LOG(3,("", "   error: response buffer not destroyed!"));
+	PJ_LOG(3,(THIS_FILE, "   error: response buffer not destroyed!"));
 	return -130;
     }
 
     /* Done checking ack message. */
     if (pjsip_tx_data_dec_ref(ack) != PJSIP_EBUFDESTROYED) {
-	PJ_LOG(3,("", "   error: response buffer not destroyed!"));
+	PJ_LOG(3,(THIS_FILE, "   error: response buffer not destroyed!"));
 	return -140;
     }
 

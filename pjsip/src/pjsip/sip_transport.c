@@ -22,6 +22,7 @@
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_private.h>
 #include <pjsip/sip_errno.h>
+#include <pjsip/sip_module.h>
 #include <pj/os.h>
 #include <pj/log.h>
 #include <pj/ioqueue.h>
@@ -32,7 +33,33 @@
 #include <pj/lock.h>
 
 
-#define THIS_FILE    "transport"
+#define THIS_FILE    "sip_transport.c"
+
+/* Prototype. */
+static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
+
+/* This module has sole purpose to print transmit data to contigous buffer
+ * before actually transmitted to the wire. 
+ */
+static pjsip_module mod_msg_print = 
+{
+    NULL, NULL,				/* prev and next	*/
+    { "mod-msg-print", 13},		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,	/* Priority		*/
+    NULL,				/* User data.		*/
+    0,					/* Number of methods supported (=0). */
+    { 0 },				/* Array of methods (none) */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    NULL,				/* on_rx_request()	*/
+    NULL,				/* on_rx_response()	*/
+    &mod_on_tx_msg,			/* on_tx_request()	*/
+    &mod_on_tx_msg,			/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+};
 
 /*
  * Transport manager.
@@ -46,7 +73,8 @@ struct pjsip_tpmgr
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     pj_atomic_t	    *tdata_counter;
 #endif
-    void           (*msg_cb)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
+    void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
+    pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
 };
 
 /*****************************************************************************
@@ -66,7 +94,7 @@ const struct
     unsigned		   flag;
 } transport_names[] = 
 {
-    { PJSIP_TRANSPORT_UNSPECIFIED, 0, {NULL, 0}, 0},
+    { PJSIP_TRANSPORT_UNSPECIFIED, 0, {"Unspecified", 11}, 0},
     { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}, PJSIP_TRANSPORT_DATAGRAM},
     { PJSIP_TRANSPORT_TCP, 5060, {"TCP", 3}, PJSIP_TRANSPORT_RELIABLE},
     { PJSIP_TRANSPORT_TLS, 5061, {"TLS", 3}, PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE},
@@ -89,6 +117,9 @@ pjsip_transport_get_type_from_name(const pj_str_t *name)
      */
     PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
 		     PJSIP_TRANSPORT_UDP, PJSIP_TRANSPORT_UNSPECIFIED);
+
+    if (name->slen == 0)
+	return PJSIP_TRANSPORT_UNSPECIFIED;
 
     /* Get transport type from name. */
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
@@ -162,6 +193,23 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
     return transport_names[type].port;
 }
 
+/*
+ * Get transport name.
+ */
+PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
+{
+    /* Sanity check. 
+     * Check that transport_names[] are indexed on transport type. 
+     */
+    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
+		     PJSIP_TRANSPORT_UDP, "Unknown");
+
+    /* Check that argument is valid. */
+    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), "Unknown");
+
+    /* Return the port. */
+    return transport_names[type].name.ptr;
+}
 
 /*****************************************************************************
  *
@@ -180,8 +228,6 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(mgr && p_tdata, PJ_EINVAL);
-
-    PJ_LOG(5, ("", "pjsip_tx_data_create"));
 
     pool = pjsip_endpt_create_pool( mgr->endpt, "tdta%p",
 				    PJSIP_POOL_LEN_TDATA,
@@ -234,7 +280,8 @@ PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 {
     pj_assert( pj_atomic_get(tdata->ref_cnt) > 0);
     if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
-	PJ_LOG(5,(tdata->obj_name, "destroying txdata"));
+	PJ_LOG(5,(tdata->obj_name, "Destroying txdata %s",
+		  pjsip_tx_data_get_info(tdata)));
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
 	pj_atomic_dec( tdata->mgr->tdata_counter );
 #endif
@@ -254,6 +301,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 PJ_DEF(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata )
 {
     tdata->buf.cur = tdata->buf.start;
+    tdata->info = NULL;
 }
 
 PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
@@ -261,7 +309,72 @@ PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
     return tdata->buf.cur != tdata->buf.start;
 }
 
+static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
+			  const pjsip_msg *msg)
+{
+    char info_buf[128], *info;
+    const pjsip_cseq_hdr *cseq;
+    int len;
 
+    cseq = pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
+    PJ_ASSERT_RETURN(cseq != NULL, "INVALID MSG");
+
+    if (msg->type == PJSIP_REQUEST_MSG) {
+	len = pj_snprintf(info_buf, sizeof(info_buf), 
+			  "Request msg %.*s/cseq=%d (%s)",
+			  msg->line.req.method.name.slen,
+			  msg->line.req.method.name.ptr,
+			  cseq->cseq, obj_name);
+    } else {
+	len = pj_snprintf(info_buf, sizeof(info_buf),
+			  "Response msg %d/%.*s/cseq=%d (%s)",
+			  msg->line.status.code,
+			  cseq->method.name.slen,
+			  cseq->method.name.ptr,
+			  cseq->cseq, obj_name);
+    }
+
+    if (len < 1 || len >= sizeof(info_buf)) {
+	return (char*)obj_name;
+    }
+
+    info = pj_pool_alloc(pool, len+1);
+    pj_memcpy(info, info_buf, len+1);
+
+    return info;
+}
+
+PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
+{
+
+    PJ_ASSERT_RETURN(tdata && tdata->msg, "INVALID MSG");
+
+    if (tdata->info)
+	return tdata->info;
+
+    pj_lock_acquire(tdata->lock);
+    tdata->info = get_msg_info(tdata->pool, tdata->obj_name, tdata->msg);
+    pj_lock_release(tdata->lock);
+
+    return tdata->info;
+}
+
+PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
+{
+    char obj_name[16];
+
+    PJ_ASSERT_RETURN(rdata->msg_info.msg, "INVALID MSG");
+
+    if (rdata->msg_info.info)
+	return rdata->msg_info.info;
+
+    pj_native_strcpy(obj_name, "rdata");
+    pj_sprintf(obj_name+5, "%p", rdata);
+
+    rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
+					rdata->msg_info.msg);
+    return rdata->msg_info.info;
+}
 
 /*****************************************************************************
  *
@@ -298,6 +411,35 @@ static void transport_send_callback(pjsip_transport *transport,
     pjsip_tx_data_dec_ref(tdata);
 }
 
+/* This function is called by endpoint for on_tx_request() and on_tx_response()
+ * notification.
+ */
+static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
+{
+    /* Allocate buffer if necessary. */
+    if (tdata->buf.start == NULL) {
+	tdata->buf.start = pj_pool_alloc( tdata->pool, PJSIP_MAX_PKT_LEN);
+	tdata->buf.cur = tdata->buf.start;
+	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
+    }
+
+    /* Do we need to reprint? */
+    if (!pjsip_tx_data_is_valid(tdata)) {
+	pj_ssize_t size;
+
+	size = pjsip_msg_print( tdata->msg, tdata->buf.start, 
+			        tdata->buf.end - tdata->buf.start);
+	if (size < 0) {
+	    return PJSIP_EMSGTOOLONG;
+	}
+	pj_assert(size != 0);
+	tdata->buf.cur += size;
+	tdata->buf.cur[size] = '\0';
+    }
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Send a SIP message using the specified transport.
  */
@@ -320,25 +462,28 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 	return PJSIP_EPENDINGTX;
     }
 
-    /* Allocate buffer if necessary. */
-    if (tdata->buf.start == NULL) {
-	tdata->buf.start = pj_pool_alloc( tdata->pool, PJSIP_MAX_PKT_LEN);
-	tdata->buf.cur = tdata->buf.start;
-	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
+    /* Fill in tp_info. */
+    tdata->tp_info.transport = tr;
+    pj_memcpy(&tdata->tp_info.dst_addr, addr, addr_len);
+    tdata->tp_info.dst_addr_len = addr_len;
+    if (addr->sa_family == PJ_AF_INET) {
+	const char *str_addr;
+	str_addr = pj_inet_ntoa(((pj_sockaddr_in*)addr)->sin_addr);
+	pj_native_strcpy(tdata->tp_info.dst_name, str_addr);
+	tdata->tp_info.dst_port = pj_ntohs(((pj_sockaddr_in*)addr)->sin_port);
+    } else {
+	pj_native_strcpy(tdata->tp_info.dst_name, "<unknown>");
+	tdata->tp_info.dst_port = 0;
     }
 
-    /* Do we need to reprint? */
-    if (!pjsip_tx_data_is_valid(tdata)) {
-	pj_ssize_t size;
-
-	size = pjsip_msg_print( tdata->msg, tdata->buf.start, 
-			        tdata->buf.end - tdata->buf.start);
-	if (size < 0) {
-	    return PJSIP_EMSGTOOLONG;
-	}
-	pj_assert(size != 0);
-	tdata->buf.cur += size;
-	tdata->buf.cur[size] = '\0';
+    /* Distribute to modules. 
+     * When the message reach mod_msg_print, the contents of the message will
+     * be "printed" to contiguous buffer.
+     */
+    if (tr->tpmgr->on_tx_msg) {
+	status = (*tr->tpmgr->on_tx_msg)(tr->endpt, tdata);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     /* Save callback data. */
@@ -449,17 +594,11 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     return PJ_SUCCESS;
 }
 
-
-/**
- * Unregister transport.
- */
-PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
-						pjsip_transport *tp)
+/* Force destroy transport (e.g. during transport manager shutdown. */
+static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
+				      pjsip_transport *tp )
 {
     int key_len;
-
-    /* Must have no user. */
-    PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
 
     pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
@@ -483,6 +622,19 @@ PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
 
     /* Destroy. */
     return tp->destroy(tp);
+}
+
+/**
+ * Unregister transport.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
+						pjsip_transport *tp)
+{
+    /* Must have no user. */
+    PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
+
+    /* Destroy. */
+    return destroy_transport(mgr, tp);
 }
 
 
@@ -556,21 +708,28 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
  */
 PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					pjsip_endpoint *endpt,
-					void (*cb)(pjsip_endpoint*,
-						   pj_status_t,
-						   pjsip_rx_data *),
+					void (*rx_cb)(pjsip_endpoint*,
+						      pj_status_t,
+						      pjsip_rx_data *),
+					pj_status_t (*tx_cb)(pjsip_endpoint*,
+							     pjsip_tx_data*),
 					pjsip_tpmgr **p_mgr)
 {
     pjsip_tpmgr *mgr;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && endpt && cb && p_mgr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && endpt && rx_cb && p_mgr, PJ_EINVAL);
 
-    PJ_LOG(5, (THIS_FILE, "pjsip_tpmgr_create()"));
+    /* Register mod_msg_print module. */
+    status = pjsip_endpt_register_module(endpt, &mod_msg_print);
+    if (status != PJ_SUCCESS)
+	return status;
 
+    /* Create and initialize transport manager. */
     mgr = pj_pool_zalloc(pool, sizeof(*mgr));
     mgr->endpt = endpt;
-    mgr->msg_cb = cb;
+    mgr->on_rx_msg = rx_cb;
+    mgr->on_tx_msg = tx_cb;
     pj_list_init(&mgr->factory_list);
 
     mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
@@ -587,6 +746,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 	return status;
 #endif
 
+    PJ_LOG(5, (THIS_FILE, "Transport manager created."));
+
     *p_mgr = mgr;
     return PJ_SUCCESS;
 }
@@ -600,12 +761,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 {
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
+    pjsip_endpoint *endpt = mgr->endpt;
     
-    PJ_LOG(5, (THIS_FILE, "pjsip_tpmgr_destroy()"));
-
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
-    pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
-#endif
+    PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
     pj_lock_acquire(mgr->lock);
 
@@ -618,14 +776,26 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
 	next = pj_hash_next(mgr->table, itr);
 
-	pj_atomic_set(transport->ref_cnt, 0);
-	pjsip_transport_unregister(mgr, transport);
+	destroy_transport(mgr, transport);
 
 	itr = next;
     }
 
     pj_lock_release(mgr->lock);
     pj_lock_destroy(mgr->lock);
+
+    /* Unregister mod_msg_print. */
+    if (mod_msg_print.id != -1) {
+	pjsip_endpt_unregister_module(endpt, &mod_msg_print);
+    }
+
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    /* If you encounter assert error on this line, it means there are
+     * leakings in transmit data (i.e. some transmit data have not been
+     * destroyed).
+     */
+    pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
+#endif
 
     return PJ_SUCCESS;
 }
@@ -685,7 +855,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                                         &msg_fragment_size);
 	    if (msg_status != PJ_SUCCESS) {
 		if (remaining_len == PJSIP_MAX_PKT_LEN) {
-		    mgr->msg_cb(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
+		    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
 		    /* Exhaust all data. */
 		    return rdata->pkt_info.len;
 		} else {
@@ -702,7 +872,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	rdata->msg_info.msg = msg = 
 	    pjsip_parse_rdata( current_pkt, msg_fragment_size, rdata);
 	if (msg == NULL) {
-	    mgr->msg_cb(mgr->endpt, PJSIP_EINVALIDMSG, rdata);
+	    mgr->on_rx_msg(mgr->endpt, PJSIP_EINVALIDMSG, rdata);
 	    goto finish_process_fragment;
 	}
 
@@ -713,7 +883,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    rdata->msg_info.via == NULL || 
 	    rdata->msg_info.cseq == NULL) 
 	{
-	    mgr->msg_cb(mgr->endpt, PJSIP_EMISSINGHDR, rdata);
+	    mgr->on_rx_msg(mgr->endpt, PJSIP_EMISSINGHDR, rdata);
 	    goto finish_process_fragment;
 	}
 
@@ -737,7 +907,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    if (hdr != &msg->hdr) {
 		hdr = pjsip_msg_find_hdr(msg, PJSIP_H_VIA, hdr);
 		if (hdr) {
-		    mgr->msg_cb(mgr->endpt, PJSIP_EMULTIPLEVIA, rdata);
+		    mgr->on_rx_msg(mgr->endpt, PJSIP_EMULTIPLEVIA, rdata);
 		    goto finish_process_fragment;
 		}
 	    }
@@ -745,7 +915,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
 	/* Call the transport manager's upstream message callback.
 	 */
-	mgr->msg_cb(mgr->endpt, PJ_SUCCESS, rdata);
+	mgr->on_rx_msg(mgr->endpt, PJ_SUCCESS, rdata);
 
 
 finish_process_fragment:
@@ -795,17 +965,25 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	unsigned flag = pjsip_transport_get_flag_from_type(type);
 	const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
-	/* For datagram transports, try lookup with zero address. 
+	/* Ignore address for loop transports. */
+	if (type == PJSIP_TRANSPORT_LOOP ||
+	         type == PJSIP_TRANSPORT_LOOP_DGRAM)
+	{
+	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+
+	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
+	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+	    transport = pj_hash_get(mgr->table, &key, key_len);
+	}
+	/* For datagram INET transports, try lookup with zero address.
 	 */
-	if ( (flag & PJSIP_TRANSPORT_DATAGRAM) && 
-	     (remote_addr->sa_family == PJ_AF_INET)) 
+	else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
+	         (remote_addr->sa_family == PJ_AF_INET)) 
 	{
 	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
 
 	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
 	    addr->sin_family = PJ_AF_INET;
-	    addr->sin_addr.s_addr = 0;
-	    addr->sin_port = 0;
 
 	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
 	    transport = pj_hash_get(mgr->table, &key, key_len);

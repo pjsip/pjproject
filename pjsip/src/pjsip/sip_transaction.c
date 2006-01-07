@@ -30,6 +30,8 @@
 #include <pj/guid.h>
 #include <pj/log.h>
 
+#define THIS_FILE   "sip_transaction.c"
+
 /*****************************************************************************
  **
  ** Declarations and static variable definitions section.
@@ -101,6 +103,7 @@ enum
     TSX_HAS_PENDING_RESCHED	= 2,
     TSX_HAS_PENDING_SEND	= 4,
     TSX_HAS_PENDING_DESTROY	= 8,
+    TSX_HAS_RESOLVED_SERVER	= 16,
 };
 
 /* Transaction lock. */
@@ -412,6 +415,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt)
 
     PJ_ASSERT_RETURN(mod_tsx_layer.endpt==NULL, PJ_EINVALIDOP);
 
+    PJ_LOG(5,(THIS_FILE, "Initializing transaction layer module"));
 
     /* Initialize TLS ID for transaction lock. */
     status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
@@ -460,6 +464,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt)
 	pjsip_endpt_release_pool(endpt, pool);
 	return status;
     }
+
+    PJ_LOG(4,(THIS_FILE, "Transaction layer module initialized"));
 
     return PJ_SUCCESS;
 }
@@ -580,15 +586,18 @@ static pj_status_t mod_tsx_layer_stop(void)
 {
     pj_hash_iterator_t it_buf, *it;
 
+    PJ_LOG(4,(THIS_FILE, "Stopping transaction layer module"));
+
     pj_mutex_lock(mod_tsx_layer.mutex);
 
     /* Destroy all transactions. */
     it = pj_hash_first(mod_tsx_layer.htable, &it_buf);
     while (it) {
 	pjsip_transaction *tsx = pj_hash_this(mod_tsx_layer.htable, it);
+	pj_hash_iterator_t *next = pj_hash_next(mod_tsx_layer.htable, it);
 	if (tsx)
 	    tsx_destroy(tsx);
-	it = pj_hash_next(mod_tsx_layer.htable, it);
+	it = next;
     }
 
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -610,6 +619,8 @@ static pj_status_t mod_tsx_layer_unload(void)
     /* Mark as unregistered. */
     mod_tsx_layer.endpt = NULL;
 
+    PJ_LOG(4,(THIS_FILE, "Transaction layer module destroyed"));
+
     return PJ_SUCCESS;
 }
 
@@ -627,7 +638,9 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
+
     tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen );
+
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
 	 * Reject the request so that endpoint passes the request to
@@ -666,7 +679,9 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
 
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
+
     tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen );
+
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
 	 * Reject the request so that endpoint passes the request to
@@ -790,7 +805,53 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
 /* Destroy transaction. */
 static void tsx_destroy( pjsip_transaction *tsx )
 {
+    struct tsx_lock_data *lck;
+
+    /* Decrement transport reference counter. */
+    if (tsx->transport) {
+	pjsip_transport_dec_ref( tsx->transport );
+	tsx->transport = NULL;
+    }
+    /* Free last transmitted message. */
+    if (tsx->last_tx) {
+	pjsip_tx_data_dec_ref( tsx->last_tx );
+	tsx->last_tx = NULL;
+    }
+    /* Cancel timeout timer. */
+    if (tsx->timeout_timer._timer_id != -1) {
+	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+	tsx->timeout_timer._timer_id = -1;
+    }
+    /* Cancel retransmission timer. */
+    if (tsx->retransmit_timer._timer_id != -1) {
+	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+	tsx->retransmit_timer._timer_id = -1;
+    }
+
+    /* Clear some pending flags. */
+    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED | TSX_HAS_PENDING_SEND);
+
+    /* Refuse to destroy transaction if it has pending resolving. */
+    if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
+	tsx->transport_flag |= TSX_HAS_PENDING_DESTROY;
+	PJ_LOG(5,(tsx->obj_name, "Will destroy later because transport is "
+				 "in progress"));
+	return;
+    }
+
+    /* Clear TLS, so that mutex will not be unlocked */
+    lck = pj_thread_local_get(pjsip_tsx_lock_tls_id);
+    while (lck) {
+	if (lck->tsx == tsx) {
+	    lck->is_alive = 0;
+	}
+	lck = lck->prev;
+    }
+
     pj_mutex_destroy(tsx->mutex);
+
+    PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
+
     pjsip_endpt_release_pool(tsx->endpt, tsx->pool);
 }
 
@@ -806,7 +867,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
     PJ_UNUSED_ARG(theap);
 
-    PJ_LOG(5,(tsx->obj_name, "got timer event (%s timer)", 
+    PJ_LOG(6,(tsx->obj_name, "%s timer event", 
 	     (entry->id==TSX_TIMER_RETRANSMISSION ? "Retransmit":"Timeout")));
 
 
@@ -831,7 +892,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
 			   pjsip_event_id_e event_src_type,
                            void *event_src )
 {
-    PJ_LOG(4, (tsx->obj_name, "STATE %s-->%s, cause = %s",
+    PJ_LOG(5, (tsx->obj_name, "State changed from %s to %s, event=%s",
 	       state_str[tsx->state], state_str[state], 
                pjsip_event_str(event_src_type)));
 
@@ -859,46 +920,22 @@ static void tsx_set_state( pjsip_transaction *tsx,
     if (state == PJSIP_TSX_STATE_TERMINATED) {
 	pj_time_val timeout = {0, 0};
 
-	/* Decrement transport reference counter. */
-	if (tsx->transport) {
-	    pjsip_transport_dec_ref( tsx->transport );
-	    tsx->transport = NULL;
-	}
-	/* Free last transmitted message. */
-	if (tsx->last_tx) {
-	    pjsip_tx_data_dec_ref( tsx->last_tx );
-	    tsx->last_tx = NULL;
-	}
-	/* Cancel timeout timer. */
-	if (tsx->timeout_timer._timer_id != -1) {
-	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-	    tsx->timeout_timer._timer_id = -1;
-	}
-	/* Cancel retransmission timer. */
-	if (tsx->retransmit_timer._timer_id != -1) {
-	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-	    tsx->retransmit_timer._timer_id = -1;
-	}
-
 	/* Reschedule timeout timer to destroy this transaction. */
 	if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 	    tsx->transport_flag |= TSX_HAS_PENDING_DESTROY;
 	} else {
+	    /* Cancel timeout timer. */
+	    if (tsx->timeout_timer._timer_id != -1) {
+		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+		tsx->timeout_timer._timer_id = -1;
+	    }
+
 	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					&timeout);
 	}
 
 
     } else if (state == PJSIP_TSX_STATE_DESTROYED) {
-
-	/* Clear TLS, so that mutex will not be unlocked */
-	struct tsx_lock_data *lck = pj_thread_local_get(pjsip_tsx_lock_tls_id);
-	while (lck) {
-	    if (lck->tsx == tsx) {
-		lck->is_alive = 0;
-	    }
-	    lck = lck->prev;
-	}
 
 	/* Unregister transaction. */
 	mod_tsx_layer_unregister_tsx(tsx);
@@ -920,6 +957,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     pjsip_msg *msg;
     pjsip_cseq_hdr *cseq;
     pjsip_via_hdr *via;
+    pjsip_host_info dst_info;
     struct tsx_lock_data lck;
     pj_status_t status;
 
@@ -998,6 +1036,15 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     tsx->last_tx = tdata;
     pjsip_tx_data_add_ref(tsx->last_tx);
 
+    /* Determine whether reliable transport should be used initially.
+     * This will be updated whenever transport has changed.
+     */
+    status = pjsip_get_request_addr(tdata, &dst_info);
+    if (status != PJ_SUCCESS) {
+	tsx_destroy(tsx);
+	return status;
+    }
+    tsx->is_reliable = (dst_info.flag & PJSIP_TRANSPORT_RELIABLE);
 
     /* Register transaction to hash table. */
     mod_tsx_layer_register_tsx(tsx);
@@ -1005,6 +1052,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 
     /* Unlock transaction and return. */
     unlock_tsx(tsx, &lck);
+
+    PJ_LOG(5,(tsx->obj_name, "Transaction created for %s",
+	      pjsip_tx_data_get_info(tdata)));
 
     *p_tsx = tsx;
     return PJ_SUCCESS;
@@ -1112,6 +1162,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     /* Unlock transaction and return. */
     unlock_tsx(tsx, &lck);
 
+
+    PJ_LOG(5,(tsx->obj_name, "Transaction created for %s",
+	      pjsip_rx_data_get_info(rdata)));
+
+
     *p_tsx = tsx;
     return PJ_SUCCESS;
 }
@@ -1126,6 +1181,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
+
+    if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
+	return PJ_SUCCESS;
 
     lock_tsx(tsx, &lck);
     tsx->status_code = code;
@@ -1151,8 +1209,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
 
     PJ_ASSERT_RETURN(tdata != NULL, PJ_EINVALIDOP);
 
-    PJ_LOG(5,(tsx->obj_name, "Request to transmit msg on state %s (tdata=%p)",
-                             state_str[tsx->state], tdata));
+    PJ_LOG(5,(tsx->obj_name, "Sending %s in state %s",
+                             pjsip_tx_data_get_info(tdata),
+			     state_str[tsx->state]));
 
     PJSIP_EVENT_INIT_TX_MSG(event, tsx, tdata);
 
@@ -1160,6 +1219,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
     lock_tsx(tsx, &lck);
     status = (*tsx->state_handler)(tsx, &event);
     unlock_tsx(tsx, &lck);
+
+    /* Will always decrement tdata reference counter
+     * (consistent with other send functions.
+     */
+    pjsip_tx_data_dec_ref(tdata);
 
     return status;
 }
@@ -1175,8 +1239,8 @@ static void tsx_on_rx_msg( pjsip_transaction *tsx, pjsip_rx_data *rdata)
     struct tsx_lock_data lck;
     pj_status_t status;
 
-    PJ_LOG(5,(tsx->obj_name, "Incoming msg on state %s (rdata=%p)", 
-	      state_str[tsx->state], rdata));
+    PJ_LOG(5,(tsx->obj_name, "Incoming %s in state %s", 
+	      pjsip_rx_data_get_info(rdata), state_str[tsx->state]));
 
     /* Put the transaction in the rdata's mod_data. */
     rdata->endpt_info.mod_data[mod_tsx_layer.mod.id] = tsx;
@@ -1205,16 +1269,29 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	pj_assert(send_state->cur_transport != NULL);
 
 	if (tsx->transport != send_state->cur_transport) {
+	    /* Update transport. */
 	    if (tsx->transport) {
 		pjsip_transport_dec_ref(tsx->transport);
 		tsx->transport = NULL;
 	    }
 	    tsx->transport = send_state->cur_transport;
 	    pjsip_transport_add_ref(tsx->transport);
+
+	    /* Update remote address. */
+	    tsx->addr_len = send_state->addr.entry[send_state->cur_addr].addr_len;
+	    pj_memcpy(&tsx->addr, 
+		      &send_state->addr.entry[send_state->cur_addr].addr,
+		      tsx->addr_len);
+
+	    /* Update is_reliable flag. */
+	    tsx->is_reliable = PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport);
 	}
 
 	/* Clear pending transport flag. */
 	tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+
+	/* Mark that we have resolved the addresses. */
+	tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
 	/* Pending destroy? */
 	if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
@@ -1233,7 +1310,11 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	/* Need to reschedule retransmission? */
 	if (tsx->transport_flag & TSX_HAS_PENDING_RESCHED) {
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
-	    tsx_resched_retransmission(tsx);
+
+	    /* Only update when transport turns out to be unreliable. */
+	    if (!tsx->is_reliable) {
+		tsx_resched_retransmission(tsx);
+	    }
 	}
 
     } else {
@@ -1251,16 +1332,36 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	}
 
 	if (!*cont) {
-	    PJ_LOG(4,(tsx->obj_name, "Failed to send message! status=%d",
-		      -sent));
+	    char errmsg[PJSIP_ERR_MSG_SIZE];
+
+	    PJ_LOG(4,(tsx->obj_name, 
+		      "Failed to send %s! err=%d (%s)",
+		      pjsip_tx_data_get_info(send_state->tdata), -sent,
+		      pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 
 	    /* Clear pending transport flag. */
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-	    /* Terminate transaction. */
+	    /* Mark that we have resolved the addresses. */
+	    tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
+
+	    /* Terminate transaction, if it's not already terminated. */
 	    tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-			   PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata );
+	    if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
+		tsx->state != PJSIP_TSX_STATE_DESTROYED)
+	    {
+		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+			       PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata);
+	    }
+
+	} else {
+	    char errmsg[PJSIP_ERR_MSG_SIZE];
+
+	    PJ_LOG(4,(tsx->obj_name, 
+		      "Temporary failure in sending %s, "
+		      "will try next server. Err=%d (%s)",
+		      pjsip_tx_data_get_info(send_state->tdata), -sent,
+		      pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 	}
     }
 
@@ -1275,9 +1376,11 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     if (sent < 0) {
 	pjsip_transaction *tsx = token;
 	struct tsx_lock_data lck;
+	char errmsg[PJSIP_ERR_MSG_SIZE];
 
-	PJ_LOG(4,(tsx->obj_name, "Failed to send message! status=%d",
-		  -sent));
+	PJ_LOG(4,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
+		  pjsip_tx_data_get_info(tdata), -sent,
+		  pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 
 	lock_tsx(tsx, &lck);
 
@@ -1300,7 +1403,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 static pj_status_t tsx_send_msg( pjsip_transaction *tsx, 
                                  pjsip_tx_data *tdata)
 {
-    pj_status_t status = PJ_EBUG;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(tsx && tdata, PJ_EINVAL);
 
@@ -1310,69 +1413,111 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	return PJ_SUCCESS;
     }
 
-    if (tdata->msg->type == PJSIP_REQUEST_MSG) {
-	/* If we have the transport, send the message using that transport.
-	 * Otherwise perform full transport resolution.
-	 */
-	if (tsx->transport) {
-	    status = pjsip_transport_send( tsx->transport, tdata, &tsx->addr,
-					   tsx->addr_len, tsx, 
-					   &transport_callback);
-	    if (status == PJ_EPENDING)
-		status = PJ_SUCCESS;
+    /* If we have the transport, send the message using that transport.
+     * Otherwise perform full transport resolution.
+     */
+    if (tsx->transport) {
+	status = pjsip_transport_send( tsx->transport, tdata, &tsx->addr,
+				       tsx->addr_len, tsx, 
+				       &transport_callback);
+	if (status == PJ_EPENDING)
+	    status = PJ_SUCCESS;
 
-	    if (status != PJ_SUCCESS) {
-		/* On error, release transport to force using full transport
-		 * resolution procedure.
-		 */
-		if (tsx->transport) {
-		    pjsip_transport_dec_ref(tsx->transport);
-		    tsx->transport = NULL;
-		}
-		tsx->addr_len = 0;
+	if (status != PJ_SUCCESS) {
+	    char errmsg[PJSIP_ERR_MSG_SIZE];
+
+	    PJ_LOG(4,(tsx->obj_name, 
+		      "Error sending %s: Err=%d (%s)",
+		      pjsip_tx_data_get_info(tdata), status, 
+		      pjsip_strerror(status, errmsg, sizeof(errmsg)).ptr));
+
+	    /* On error, release transport to force using full transport
+	     * resolution procedure.
+	     */
+	    if (tsx->transport) {
+		pjsip_transport_dec_ref(tsx->transport);
+		tsx->transport = NULL;
 	    }
-	}
-	
-	if (!tsx->transport) {
-	    tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
-	    status = pjsip_endpt_send_request_stateless(tsx->endpt, tdata, tsx,
-							&send_msg_callback);
-	    if (status == PJ_EPENDING)
-		status = PJ_SUCCESS;
-	}
-
-    } else {
-	/* If we have the transport, send the message using that transport.
-	 * Otherwise perform full transport resolution.
-	 */
-	if (tsx->transport) {
-	    status = pjsip_transport_send( tsx->transport, tdata, 
-					   &tsx->addr, tsx->addr_len,
-					   tsx, &transport_callback);
-	    if (status == PJ_EPENDING)
-		status = PJ_SUCCESS;
-
-	    if (status != PJ_SUCCESS) {
-		if (tsx->transport) {
-		    pjsip_transport_dec_ref(tsx->transport);
-		    tsx->transport = NULL;
-		}
-		tsx->addr_len = 0;
-		tsx->res_addr.transport = NULL;
-		tsx->res_addr.addr_len = 0;
-	    }
-
-	} 
-
-	if (!tsx->transport) {
-	    tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
-	    status = pjsip_endpt_send_response( tsx->endpt, &tsx->res_addr, 
-						tdata, tsx, 
-						&send_msg_callback);
-	    if (status == PJ_EPENDING)
-		status = PJ_SUCCESS;
+	    tsx->addr_len = 0;
+	    tsx->res_addr.transport = NULL;
+	    tsx->res_addr.addr_len = 0;
+	} else {
+	    return PJ_SUCCESS;
 	}
     }
+
+    /* We are here because we don't have transport, or we failed to send
+     * the message using existing transport. If we haven't resolved the
+     * server before, then begin the long process of resolving the server
+     * and send the message with possibly new server.
+     */
+    pj_assert(status != PJ_SUCCESS || tsx->transport == NULL);
+
+    /* If we have resolved the server, we treat the error as permanent error.
+     * Terminate transaction with transport error failure.
+     */
+    if (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER) {
+	
+	char errmsg[PJSIP_ERR_MSG_SIZE];
+
+	if (status == PJ_SUCCESS) {
+	    pj_assert(!"Unexpected status!");
+	    status = PJ_EUNKNOWN;
+	}
+
+	/* We have resolved the server!.
+	 * Treat this as permanent transport error.
+	 */
+	PJ_LOG(4,(tsx->obj_name, 
+		  "Transport error, terminating transaction. "
+		  "Err=%d (%s)",
+		  status, 
+		  pjsip_strerror(status, errmsg, sizeof(errmsg)).ptr));
+
+	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+		       PJSIP_EVENT_TRANSPORT_ERROR, NULL );
+
+	return status;
+    }
+
+    /* Must add reference counter because the send request functions
+     * decrement the reference counter.
+     */
+    pjsip_tx_data_add_ref(tdata);
+
+    /* Begin resolving destination etc to send the message. */
+    if (tdata->msg->type == PJSIP_REQUEST_MSG) {
+
+	tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
+	status = pjsip_endpt_send_request_stateless(tsx->endpt, tdata, tsx,
+						    &send_msg_callback);
+	if (status == PJ_EPENDING)
+	    status = PJ_SUCCESS;
+	if (status != PJ_SUCCESS)
+	    pjsip_tx_data_dec_ref(tdata);
+	
+	/* Check if transaction is terminated. */
+	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
+	    status = PJSIP_ETSXDESTROYED;
+
+    } else {
+
+	tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
+	status = pjsip_endpt_send_response( tsx->endpt, &tsx->res_addr, 
+					    tdata, tsx, 
+					    &send_msg_callback);
+	if (status == PJ_EPENDING)
+	    status = PJ_SUCCESS;
+	if (status != PJ_SUCCESS)
+	    pjsip_tx_data_dec_ref(tdata);
+
+	/* Check if transaction is terminated. */
+	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
+	    status = PJSIP_ETSXDESTROYED;
+
+    }
+
 
     return status;
 }
@@ -1408,8 +1553,9 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
 
     PJ_ASSERT_RETURN(tsx->last_tx!=NULL, PJ_EBUG);
 
-    PJ_LOG(4,(tsx->obj_name, "retransmiting (tdata=%p, count=%d, restart?=%d)", 
-	      tsx->last_tx, tsx->retransmit_count, resched));
+    PJ_LOG(5,(tsx->obj_name, "Retransmiting %s, count=%d, restart?=%d", 
+	      pjsip_tx_data_get_info(tsx->last_tx), 
+	      tsx->retransmit_count, resched));
 
     ++tsx->retransmit_count;
 
@@ -1451,7 +1597,11 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
     } else {
 	pjsip_tx_data *tdata;
 
-	/* Must be transmit event. */
+	/* Must be transmit event. 
+	 * You may got this assertion when using loop transport with delay 
+	 * set to zero. That would cause on_rx_response() callback to be 
+	 * called before tsx_send_msg() has completed.
+	 */
 	PJ_ASSERT_RETURN(event->type == PJSIP_EVENT_TX_MSG, PJ_EBUG);
 
 	/* Get the txdata */
@@ -1482,7 +1632,7 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	/* Start Timer A (or timer E) for retransmission only if unreliable 
 	 * transport is being used.
 	 */
-	if (!PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport))  {
+	if (!tsx->is_reliable)  {
 	    tsx->retransmit_count = 0;
 	    if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 		tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
@@ -1527,9 +1677,11 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
     {
 
 	/* Cancel retransmission timer. */
-	if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+	if (tsx->retransmit_timer._timer_id != -1) {
 	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+	    tsx->retransmit_timer._timer_id = -1;
 	}
+	tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	/* Set status code */
 	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
@@ -1553,8 +1705,12 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	    return PJSIP_ENOTRESPONSEMSG;
 
 	/* Cancel retransmission timer A. */
-	if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0)
+	if (tsx->retransmit_timer._timer_id != -1) {
 	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+	    tsx->retransmit_timer._timer_id = -1;
+	}
+	tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
+
 
 	/* Cancel timer B (transaction timeout) */
 	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
@@ -1738,7 +1894,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		/* Start timer J at 64*T1 for unreliable transport or zero for
 		 * reliable transport.
 		 */
-		if (!PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)) {
+		if (!tsx->is_reliable) {
 		    timeout = timeout_timer_val;
 		} else {
 		    timeout.sec = timeout.msec = 0;
@@ -1769,7 +1925,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	    /* For INVITE, if unreliable transport is used, retransmission 
 	     * timer G will be scheduled (retransmission).
 	     */
-	    if (!PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)) {
+	    if (!tsx->is_reliable) {
 		pjsip_cseq_hdr *cseq = pjsip_msg_find_hdr( msg, PJSIP_H_CSEQ,
                                                            NULL);
 		if (cseq->method.id == PJSIP_INVITE_METHOD) {
@@ -1893,7 +2049,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	    /* For unreliable transport, start timer D (for INVITE) or 
 	     * timer K for non-INVITE. */
-	    if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport) == 0) {
+	    if (!tsx->is_reliable) {
 		if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		    timeout = td_timer_val;
 		} else {
@@ -1939,7 +2095,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	}
 
 	/* Start Timer D with TD/T4 timer if unreliable transport is used. */
-	if (!PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)) {
+	if (!tsx->is_reliable) {
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		timeout = td_timer_val;
 	    } else {
@@ -1992,7 +2148,11 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    /* Process incoming ACK request. */
 
 	    /* Cease retransmission. */
-	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->retransmit_timer );
+	    if (tsx->retransmit_timer._timer_id != -1) {
+		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+		tsx->retransmit_timer._timer_id = -1;
+	    }
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	    /* Start timer I in T4 interval (transaction termination). */
 	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );

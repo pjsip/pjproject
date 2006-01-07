@@ -58,8 +58,10 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
     pj_status_t status;
 
     /* Don't do anything if transport is closing. */
-    if (tp->is_closing)
+    if (tp->is_closing) {
+	tp->is_closing++;
 	return;
+    }
 
     /*
      * The idea of the loop is to process immediate data received by
@@ -228,10 +230,17 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
     tp->is_closing = 1;
 
     /* Cancel all pending operations. */
+    /* blp: NO NO NO...
+     *      No need to post queued completion as we poll the ioqueue until
+     *      we've got events anyway. Posting completion will only cause
+     *      callback to be called twice with IOCP: one for the post completion
+     *      and another one for closing the socket.
+     *
     for (i=0; i<tp->rdata_cnt; ++i) {
 	pj_ioqueue_post_completion(tp->key, 
 				   &tp->rdata[i]->tp_info.op_key.op_key, -1);
     }
+    */
 
     /* Unregister from ioqueue. */
     if (tp->key)
@@ -240,6 +249,20 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
     /* Close socket. */
     if (tp->sock && tp->sock != PJ_INVALID_SOCKET)
 	pj_sock_close(tp->sock);
+
+    /* Must poll ioqueue because IOCP calls the callback when socket
+     * is closed. We poll the ioqueue until all pending callbacks 
+     * have been called.
+     */
+    for (i=0; i<50 && tp->is_closing < 1+tp->rdata_cnt; ++i) {
+	int cnt;
+	pj_time_val timeout = {0, 1};
+
+	cnt = pj_ioqueue_poll(pjsip_endpt_get_ioqueue(transport->endpt), 
+			      &timeout);
+	if (cnt == 0)
+	    break;
+    }
 
     /* Destroy reference counter. */
     if (tp->base.ref_cnt)

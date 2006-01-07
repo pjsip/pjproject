@@ -22,10 +22,12 @@
 #include <pjlib.h>
 #include <pjsip_core.h>
 
+#define THIS_FILE   "test.c"
+
 #define DO_TEST(test)	do { \
-			    PJ_LOG(3, ("test", "Running %s...", #test));  \
+			    PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
 			    rc = test; \
-			    PJ_LOG(3, ("test",  \
+			    PJ_LOG(3, (THIS_FILE,  \
 				       "%s(%d)",  \
 				       (rc ? "..ERROR" : "..success"), rc)); \
 			    if (rc!=0) goto on_return; \
@@ -42,8 +44,28 @@ void app_perror(const char *msg, pj_status_t rc)
     PJ_CHECK_STACK();
 
     pjsip_strerror(rc, errbuf, sizeof(errbuf));
-    PJ_LOG(3,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+    PJ_LOG(3,(THIS_FILE, "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 
+}
+
+void flush_events(unsigned duration)
+{
+    pj_time_val stop_time;
+
+    pj_gettimeofday(&stop_time);
+    stop_time.msec += duration;
+    pj_time_val_normalize(&stop_time);
+
+    /* Process all events for the specified duration. */
+    for (;;) {
+	pj_time_val timeout = {0, 1}, now;
+
+	pjsip_endpt_handle_events(endpt, &timeout);
+
+	pj_gettimeofday(&now);
+	if (PJ_TIME_VAL_GTE(now, stop_time))
+	    break;
+    }
 }
 
 pj_status_t register_static_modules(pj_size_t *count, pjsip_module **modules)
@@ -59,9 +81,11 @@ int test_main(void)
     const char *filename;
     int line;
 
-    pj_log_set_level(3);
+    pj_log_set_level(5);
+    /*
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
                      PJ_LOG_HAS_MICRO_SEC);
+     */
 
     if ((rc=pj_init()) != PJ_SUCCESS) {
 	app_perror("pj_init", rc);
@@ -79,30 +103,50 @@ int test_main(void)
 	return rc;
     }
 
-    PJ_LOG(3,("",""));
+    PJ_LOG(3,(THIS_FILE,""));
+
+    /* Init logger module. */
+    init_msg_logger();
+    msg_logger_set_enabled(1);
+
+    /* Start transaction layer module. */
+    rc = pjsip_tsx_layer_init(endpt);
+    if (rc != PJ_SUCCESS) {
+	app_perror("   Error initializing transaction module", rc);
+	goto on_return;
+    }
+
+    /* Create loop transport. */
+    rc = pjsip_loop_start(endpt, NULL);
+    if (rc != PJ_SUCCESS) {
+	app_perror("   error: unable to create datagram loop transport", 
+		   rc);
+	goto on_return;
+    }
 
     //DO_TEST(uri_test());
     //DO_TEST(msg_test());
     //DO_TEST(txdata_test());
     //DO_TEST(transport_udp_test());
-    DO_TEST(transport_loop_test());
-    //DO_TEST(tsx_uac_test());
+    //DO_TEST(transport_loop_test());
+    //DO_TEST(tsx_basic_test());
+    DO_TEST(tsx_uac_test());
 
 on_return:
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
 
-    PJ_LOG(3,("test", ""));
+    PJ_LOG(3,(THIS_FILE, ""));
  
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
-    PJ_LOG(3,("test", "Stack max usage: %u, deepest: %s:%u", 
+    PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u", 
 	              pj_thread_get_stack_max_usage(pj_thread_this()),
 		      filename, line));
     if (rc == 0)
-	PJ_LOG(3,("test", "Looks like everything is okay!.."));
+	PJ_LOG(3,(THIS_FILE, "Looks like everything is okay!.."));
     else
-	PJ_LOG(3,("test", "Test completed with error(s)"));
+	PJ_LOG(3,(THIS_FILE, "Test completed with error(s)"));
 
     return 0;
 }

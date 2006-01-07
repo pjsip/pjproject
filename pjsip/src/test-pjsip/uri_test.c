@@ -20,6 +20,8 @@
 #include <pjsip_core.h>
 #include <pjlib.h>
 
+#define THIS_FILE   "uri_test.c"
+
 
 #define ALPHANUM    "abcdefghijklmnopqrstuvwxyz" \
 		    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
@@ -692,9 +694,9 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 	 */
 	status = entry->status==ERR_SYNTAX_ERR ? PJ_SUCCESS : -10;
 	if (status != 0) {
-	    PJ_LOG(3,("", "   uri parse error!\n"
-			  "   uri='%s'\n",
-			  entry->str));
+	    PJ_LOG(3,(THIS_FILE, "   uri parse error!\n"
+				 "   uri='%s'\n",
+				 entry->str));
 	}
 	goto on_return;
     }
@@ -738,10 +740,10 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 	/* Not equal. See if this is the expected status. */
 	status = entry->status==ERR_NOT_EQUAL ? PJ_SUCCESS : -40;
 	if (status != 0) {
-	    PJ_LOG(3,("", "   uri comparison mismatch, status=%d:\n"
-			  "    uri1='%s'\n"
-			  "    uri2='%s'",
-			  status, s1.ptr, s2.ptr));
+	    PJ_LOG(3,(THIS_FILE, "   uri comparison mismatch, status=%d:\n"
+				 "    uri1='%s'\n"
+				 "    uri2='%s'",
+				 status, s1.ptr, s2.ptr));
 	}
 	goto on_return;
 
@@ -762,19 +764,19 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     if (entry->printed) {
 	if (pj_strcmp2(&s1, entry->printed) != 0) {
 	    /* Not equal. */
-	    PJ_LOG(3,("", "   uri print mismatch:\n"
-			  "    printed='%s'\n"
-			  "    expectd='%s'",
-			  s1.ptr, entry->printed));
+	    PJ_LOG(3,(THIS_FILE, "   uri print mismatch:\n"
+				 "    printed='%s'\n"
+				 "    expectd='%s'",
+				 s1.ptr, entry->printed));
 	    status = -60;
 	}
     } else {
 	if (pj_strcmp(&s1, &s2) != 0) {
 	    /* Not equal. */
-	    PJ_LOG(3,("", "   uri print mismatch:\n"
-			  "    uri1='%s'\n"
-			  "    uri2='%s'",
-			  s1.ptr, s2.ptr));
+	    PJ_LOG(3,(THIS_FILE, "   uri print mismatch:\n"
+				 "    uri1='%s'\n"
+				 "    uri2='%s'",
+				 s1.ptr, s2.ptr));
 	    status = -70;
 	}
     }
@@ -794,19 +796,19 @@ int uri_test()
 
     zero.u32.hi = zero.u32.lo = 0;
 
-    PJ_LOG(3,("", "  simple test"));
+    PJ_LOG(3,(THIS_FILE, "  simple test"));
     pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
     for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
 	status = do_uri_test(pool, &uri_test_array[i]);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,("uri_test", "  error %d when testing entry %d",
+	    PJ_LOG(3,(THIS_FILE, "  error %d when testing entry %d",
 		      status, i));
 	    goto on_return;
 	}
     }
     pjsip_endpt_release_pool(endpt, pool);
 
-    PJ_LOG(3,("", "  benchmarking..."));
+    PJ_LOG(3,(THIS_FILE, "  benchmarking..."));
     parse_len = print_len = cmp_len = 0;
     parse_time.u32.hi = parse_time.u32.lo = 0;
     print_time.u32.hi = print_time.u32.lo = 0;
@@ -816,7 +818,7 @@ int uri_test()
 	for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
 	    status = do_uri_test(pool, &uri_test_array[i]);
 	    if (status != PJ_SUCCESS) {
-		PJ_LOG(3,("uri_test", "  error %d when testing entry %d",
+		PJ_LOG(3,(THIS_FILE, "  error %d when testing entry %d",
 			  status, i));
 		pjsip_endpt_release_pool(endpt, pool);
 		goto on_return;
@@ -834,10 +836,11 @@ int uri_test()
     pj_highprec_div(avg_parse, parse_len);
     avg_parse = 1000000 / avg_parse;
 
-    PJ_LOG(3,("", "    %u.%u MB of urls parsed in %d.%03ds (avg=%d urls/sec)", 
-		  (unsigned)(parse_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_parse));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB of urls parsed in %d.%03ds (avg=%d urls/sec)", 
+	      (unsigned)(parse_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_parse));
 
     kbytes = print_len;
     pj_highprec_mod(kbytes, 1000000);
@@ -848,10 +851,11 @@ int uri_test()
     pj_highprec_div(avg_print, parse_len);
     avg_print = 1000000 / avg_print;
 
-    PJ_LOG(3,("", "    %u.%u MB of urls printed in %d.%03ds (avg=%d urls/sec)", 
-		  (unsigned)(print_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_print));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB of urls printed in %d.%03ds (avg=%d urls/sec)", 
+	      (unsigned)(print_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_print));
 
     kbytes = cmp_len;
     pj_highprec_mod(kbytes, 1000000);
@@ -862,12 +866,13 @@ int uri_test()
     pj_highprec_div(avg_cmp, cmp_len);
     avg_cmp = 1000000 / avg_cmp;
 
-    PJ_LOG(3,("", "    %u.%u MB of urls compared in %d.%03ds (avg=%d urls/sec)", 
-		  (unsigned)(cmp_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_cmp));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB of urls compared in %d.%03ds (avg=%d urls/sec)", 
+	      (unsigned)(cmp_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_cmp));
 
-    PJ_LOG(3,("", "  multithreaded test"));
+    PJ_LOG(3,(THIS_FILE, "  multithreaded test"));
 
 
 on_return:

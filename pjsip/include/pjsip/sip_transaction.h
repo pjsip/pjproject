@@ -92,6 +92,7 @@ struct pjsip_transaction
      * Transport.
      */
     pjsip_transport	       *transport;      /**< Transport to use.      */
+    pj_bool_t			is_reliable;	/**< Transport is reliable. */
     pj_sockaddr			addr;		/**< Destination address.   */
     int				addr_len;	/**< Address length.	    */
     pjsip_response_addr		res_addr;	/**< Response address.	    */
@@ -189,11 +190,16 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
 /**
  * Transmit message in tdata with this transaction. It is possible to
- * pass NULL in tdata for UAC transaction, which in this case the request
- * message which was specified in #pjsip_tsx_create_uac() will be sent.
+ * pass NULL in tdata for UAC transaction, which in this case the last message
+ * or the request message which was specified in #pjsip_tsx_create_uac() 
+ * will be sent.
+ *
+ * This function decrements the reference counter of the transmit buffer.
  *
  * @param tsx       The transaction.
- * @param tdata     The outgoing message.
+ * @param tdata     The outgoing message. If NULL is specified, then the
+ *		    last message transmitted (or the message specified 
+ *		    in UAC initialization) will be sent.
  *
  * @return	    PJ_SUCCESS if successfull.
  */

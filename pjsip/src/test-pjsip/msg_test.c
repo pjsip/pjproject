@@ -23,6 +23,7 @@
 #define POOL_SIZE	8000
 #define LOOP		10000
 #define AVERAGE_MSG_LEN	800
+#define THIS_FILE	"msg_test.c"
 
 static pjsip_msg *create_msg0(pj_pool_t *pool);
 static pjsip_msg *create_msg1(pj_pool_t *pool);
@@ -142,7 +143,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 	}
     }
     if (msg_size != entry->len) {
-	PJ_LOG(3,("", "   error: size mismatch"));
+	PJ_LOG(3,(THIS_FILE, "   error: size mismatch"));
 	return -6;
     }
     pj_get_timestamp(&t2);
@@ -162,7 +163,7 @@ parse_msg:
 	if (entry->expected_status != STATUS_SYNTAX_ERROR) {
 	    status = -10;
 	    if (err_list.next != &err_list) {
-		PJ_LOG(3,("", "   Syntax error in line %d col %d",
+		PJ_LOG(3,(THIS_FILE, "   Syntax error in line %d col %d",
 			      err_list.next->line, err_list.next->col));
 	    }
 	    goto on_return;
@@ -207,14 +208,14 @@ parse_msg:
 	}
     } else {
 	if (parsed_msg->line.status.code != ref_msg->line.status.code) {
-	    PJ_LOG(3,("", "   error: status code mismatch"));
+	    PJ_LOG(3,(THIS_FILE, "   error: status code mismatch"));
 	    status = -32;
 	    goto on_return;
 	}
 	if (pj_strcmp(&parsed_msg->line.status.reason, 
 		      &ref_msg->line.status.reason) != 0) 
 	{
-	    PJ_LOG(3,("", "   error: status text mismatch"));
+	    PJ_LOG(3,(THIS_FILE, "   error: status text mismatch"));
 	    status = -33;
 	    goto on_return;
 	}
@@ -243,7 +244,7 @@ parse_msg:
 
 	if (pj_strcmp(&str1, &str2) != 0) {
 	    status = -60;
-	    PJ_LOG(3,("", "   error: header string mismatch:\n"
+	    PJ_LOG(3,(THIS_FILE, "   error: header string mismatch:\n"
 		          "   h1='%s'\n"
 			  "   h2='%s'\n",
 			  str1.ptr, str2.ptr));
@@ -683,7 +684,7 @@ int msg_test(void)
     pj_time_val elapsed;
     pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
 
-    PJ_LOG(3,("", "  simple test.."));
+    PJ_LOG(3,(THIS_FILE, "  simple test.."));
     for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
 	status = test_entry( pool, &test_array[i] );
@@ -693,7 +694,7 @@ int msg_test(void)
 	    return status;
     }
 
-    PJ_LOG(3,("", "  benchmarking.."));
+    PJ_LOG(3,(THIS_FILE, "  benchmarking.."));
     detect_len = parse_len = print_len = 0;
     zero.u64 = detect_time.u64 = parse_time.u64 = print_time.u64 = 0;
     
@@ -717,10 +718,11 @@ int msg_test(void)
     pj_highprec_div(avg_detect, detect_len);
     avg_detect = 1000000 / avg_detect;
 
-    PJ_LOG(3,("", "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
-		  (unsigned)(detect_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_detect));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
+	      (unsigned)(detect_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_detect));
 
     kbytes = parse_len;
     pj_highprec_mod(kbytes, 1000000);
@@ -731,10 +733,11 @@ int msg_test(void)
     pj_highprec_div(avg_parse, parse_len);
     avg_parse = 1000000 / avg_parse;
 
-    PJ_LOG(3,("", "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
-		  (unsigned)(parse_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_parse));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
+	      (unsigned)(parse_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_parse));
 
     kbytes = print_len;
     pj_highprec_mod(kbytes, 1000000);
@@ -745,10 +748,11 @@ int msg_test(void)
     pj_highprec_div(avg_print, print_len);
     avg_print = 1000000 / avg_print;
 
-    PJ_LOG(3,("", "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
-		  (unsigned)(print_len/1000000), (unsigned)kbytes,
-		  elapsed.sec, elapsed.msec,
-		  (unsigned)avg_print));
+    PJ_LOG(3,(THIS_FILE, 
+	      "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
+	      (unsigned)(print_len/1000000), (unsigned)kbytes,
+	      elapsed.sec, elapsed.msec,
+	      (unsigned)avg_print));
 
     return status;
 }

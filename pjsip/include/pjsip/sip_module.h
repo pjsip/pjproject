@@ -133,6 +133,28 @@ struct pjsip_module
     pj_bool_t (*on_rx_response)(pjsip_rx_data *rdata);
 
     /**
+     * Called to process outgoing request.
+     *
+     * @param tdata	The outgoing request message.
+     *
+     * @return		Module should return PJ_SUCCESS in all cases. 
+     *			If non-zero (or PJ_FALSE) is returned, the message 
+     *			will not be sent.
+     */
+    pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
+
+    /**
+     * Called to process outgoing response message.
+     *
+     * @param tdata	The outgoing response message.
+     *
+     * @return		Module should return PJ_SUCCESS in all cases. 
+     *			If non-zero (or PJ_FALSE) is returned, the message 
+     *			will not be sent.
+     */
+    pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);
+
+    /**
      * Called when this module is acting as transaction user for the specified
      * transaction, when the transaction's state has changed.
      *
@@ -150,9 +172,10 @@ struct pjsip_module
  */
 enum pjsip_module_priority
 {
-    PJSIP_MOD_PRIORITY_TSX_LAYER = 4,
-    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER = 16,
-    PJSIP_MOD_PRIORITY_APPLICATION = 32,
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER	= 8,
+    PJSIP_MOD_PRIORITY_TSX_LAYER	= 16,
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER	= 32,
+    PJSIP_MOD_PRIORITY_APPLICATION	= 64,
 };
 
 

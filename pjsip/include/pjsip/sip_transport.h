@@ -109,6 +109,15 @@ pjsip_transport_get_flag_from_type( pjsip_transport_type_e type );
 PJ_DECL(int) 
 pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
 
+/**
+ * Get transport type name.
+ *
+ * @param t	    Transport type.
+ *
+ * @return	    Transport name.
+ */
+PJ_DECL(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e t);
+
 
 /*****************************************************************************
  *
@@ -203,6 +212,11 @@ struct pjsip_rx_data
 	/** The parsed message, if any. */
 	pjsip_msg		*msg;
 
+	/** Short description about the message. 
+	 *  Application should use #pjsip_rx_data_get_info() instead.
+	 */
+	char			*info;
+
 	/** The Call-ID header as found in the message. */
 	pj_str_t		 call_id;
 
@@ -259,6 +273,15 @@ struct pjsip_rx_data
 
 };
 
+/**
+ * Get printable information about the message in the rdata.
+ *
+ * @param rdata	    The receive data buffer.
+ *
+ * @return	    Printable information.
+ */
+PJ_DECL(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata);
+
 
 /*****************************************************************************
  *
@@ -303,6 +326,12 @@ struct pjsip_tx_data
     /** A name to identify this buffer. */
     char		 obj_name[PJ_MAX_OBJ_NAME];
 
+    /** Short information describing this buffer and the message in it. 
+     *  Application should use #pjsip_tx_data_get_info() instead of
+     *  directly accessing this member.
+     */
+    char		*info;
+
     /** For response message, this contains the reference to timestamp when 
      *  the original request message was received. The value of this field
      *  is set when application creates response message to a request by
@@ -339,6 +368,18 @@ struct pjsip_tx_data
     /** Transport manager internal. */
     void		*token;
     void	       (*cb)(void*, pjsip_tx_data*, pj_ssize_t);
+
+    /** Transport information, only valid during on_tx_request() and 
+     *  on_tx_response() callback.
+     */
+    struct
+    {
+	pjsip_transport	    *transport;	    /**< Transport being used.	*/
+	pj_sockaddr	     dst_addr;	    /**< Destination address.	*/
+	int		     dst_addr_len;  /**< Length of address.	*/
+	char		     dst_name[16];  /**< Destination address.	*/
+	int		     dst_port;	    /**< Destination port.	*/
+    } tp_info;
 };
 
 
@@ -396,6 +437,16 @@ PJ_DECL(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata );
  * @param tdata	    The transmit buffer.
  */
 PJ_DECL(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata );
+
+/**
+ * Get short printable info about the transmit data. This will normally return
+ * short information about the message.
+ *
+ * @param tdata	    The transmit buffer.
+ *
+ * @return	    Null terminated info string.
+ */
+PJ_DECL(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata );
 
 
 /*****************************************************************************
@@ -593,16 +644,20 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  *
  * @param pool	    Pool.
  * @param endpt	    Endpoint instance.
- * @param cb	    Callback to receive incoming message.
+ * @param rx_cb	    Callback to receive incoming message.
+ * @param tx_cb	    Callback to be called before transport manager is sending
+ *		    outgoing message.
  * @param p_mgr	    Pointer to receive the new transport manager.
  *
  * @return	    PJ_SUCCESS or the appropriate error code on error.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					 pjsip_endpoint * endpt,
-					 void (*cb)(pjsip_endpoint*,
-						    pj_status_t,
-						    pjsip_rx_data *),
+					 void (*rx_cb)(pjsip_endpoint*,
+						       pj_status_t,
+						       pjsip_rx_data *),
+					 pj_status_t (*tx_cb)(pjsip_endpoint*,
+							      pjsip_tx_data*),
 					 pjsip_tpmgr **p_mgr);
 
 

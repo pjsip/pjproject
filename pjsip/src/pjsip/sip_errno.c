@@ -33,6 +33,7 @@ static const struct
     /* Generic SIP errors */
     { PJSIP_EBUSY,		"Object is busy" },
     { PJSIP_ETYPEEXISTS ,	"Object with the same type exists" },
+    { PJSIP_ESHUTDOWN,		"SIP stack shutting down" },
 
     /* Messaging errors */
     { PJSIP_EINVALIDMSG,	"Invalid message/syntax error" },

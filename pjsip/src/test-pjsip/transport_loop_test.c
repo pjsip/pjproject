@@ -21,38 +21,23 @@
 #include <pjsip_core.h>
 #include <pjlib.h>
 
+#define THIS_FILE   "transport_loop_test.c"
+
 static int datagram_loop_test()
 {
-    pjsip_transport *loop, *tp;
-    pj_str_t s;
-    int i, log_level;
+    pjsip_transport *loop;
+    int i, pkt_lost;
     pj_sockaddr_in addr;
     pj_status_t status;
 
-    PJ_LOG(3,("", "testing datagram loop transport"));
-
-    /* Create loop transport. */
-    status = pjsip_loop_start(endpt, &loop);
-    if (status != PJ_SUCCESS) {
-	app_perror("   error: unable to create datagram loop transport", 
-		   status);
-	return -10;
-    }
-
-    /* Create dummy address. */
-    pj_sockaddr_in_init(&addr, pj_cstr(&s, "130.0.0.1"), TEST_UDP_PORT);
+    PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
 
     /* Test acquire transport. */
     status = pjsip_endpt_acquire_transport( endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-					    &addr, sizeof(addr), &tp);
+					    &addr, sizeof(addr), &loop);
     if (status != PJ_SUCCESS) {
-	app_perror("   error: unable to acquire transport", status);
+	app_perror("   error: loop transport is not configured", status);
 	return -20;
-    }
-
-    /* Check that this is the right transport. */
-    if (tp != loop) {
-	return -30;
     }
 
     /* Test basic transport attributes */
@@ -68,45 +53,40 @@ static int datagram_loop_test()
 	    return status;
     }
 
-    /* For multithreaded round-trip test to work, delay must be set
-     * (otherwise functions will be called recursively until no memory is
-     * left in the system)
-     */
+    /* Multi-threaded round-trip test. */
+    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
+			       "sip:bob@130.0.0.1;transport=loop-dgram",
+			       &pkt_lost);
+    if (status != 0)
+	return status;
+
+    if (pkt_lost != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
+	return -40;
+    }
 
     /* Put delay. */
-    pjsip_loop_set_delay(loop, 1, NULL);
+    PJ_LOG(3,(THIS_FILE,"  setting network delay to 10 ms"));
+    pjsip_loop_set_delay(loop, 10);
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, tp, 
-			       "sip:bob@130.0.0.1;transport=loop-dgram");
+    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
+			       "sip:bob@130.0.0.1;transport=loop-dgram",
+			       &pkt_lost);
     if (status != 0)
 	return status;
 
+    if (pkt_lost != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
+	return -50;
+    }
 
-    /* Next test will test without delay.
-     * This will stress-test the system.
-     */
-    PJ_LOG(3,("","  performing another multithreaded round-trip test..."));
-
-    /* Remove delay. */
-    pjsip_loop_set_delay(loop, 0, NULL);
-
-    /* Ignore errors. */
-    log_level = pj_log_get_level();
-    pj_log_set_level(2);
-
-    /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, tp, 
-			       "sip:bob@130.0.0.1;transport=loop-dgram");
-    if (status != 0)
-	return status;
-
-    /* Restore log level. */
-    pj_log_set_level(log_level);
+    /* Restore delay. */
+    pjsip_loop_set_delay(loop, 0);
 
     /* Check that reference counter is one. */
     if (pj_atomic_get(loop->ref_cnt) != 1) {
-	return -30;
+	return -50;
     }
 
     /* Decrement reference. */

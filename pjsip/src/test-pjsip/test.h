@@ -32,6 +32,7 @@ int msg_test(void);
 int txdata_test(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
+int tsx_basic_test(void);
 int tsx_uac_test(void);
 
 /* Transport test helpers (transport_test.c). */
@@ -41,13 +42,16 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 			      char *target_url );
 int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
-		       char *target_url );
+		       char *target_url,
+		       int *pkt_lost);
 
 /* Test main entry */
 int  test_main(void);
 
 /* Test utilities. */
 void app_perror(const char *msg, pj_status_t status);
-
+int init_msg_logger(void);
+int msg_logger_set_enabled(pj_bool_t enabled);
+void flush_events(unsigned duration);
 
 #endif	/* __TEST_H__ */

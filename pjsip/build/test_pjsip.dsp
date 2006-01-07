@@ -93,6 +93,10 @@ SOURCE="..\src\test-pjsip\main.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\msg_logger.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\msg_test.c"
 # End Source File
 # Begin Source File
@@ -110,6 +114,10 @@ SOURCE="..\src\test-pjsip\transport_test.c"
 # Begin Source File
 
 SOURCE="..\src\test-pjsip\transport_udp_test.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\test-pjsip\tsx_basic_test.c"
 # End Source File
 # Begin Source File
 
