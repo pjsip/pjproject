@@ -253,6 +253,11 @@ static pj_status_t loop_destroy(pjsip_transport *tp)
 static int loop_thread(void *arg)
 {
     struct loop_transport *loop = arg;
+    struct recv_list r;
+    struct send_list s;
+
+    pj_list_init(&r);
+    pj_list_init(&s);
 
     while (!loop->thread_quit_flag) {
 	pj_time_val now;
@@ -262,7 +267,7 @@ static int loop_thread(void *arg)
 
 	pj_lock_acquire(loop->base.lock);
 
-	/* Process pending send notification. */
+	/* Move expired send notification to local list. */
 	while (!pj_list_empty(&loop->send_list)) {
 	    struct send_list *node = loop->send_list.next;
 
@@ -270,26 +275,54 @@ static int loop_thread(void *arg)
 	    if (PJ_TIME_VAL_GTE(node->sent_time, now))
 		break;
 
+	    /* Delete this from the list. */
+	    pj_list_erase(node);
+
+	    /* Add to local list. */
+	    pj_list_push_back(&s, node);
+	}
+
+	/* Move expired "incoming" packet to local list. */
+	while (!pj_list_empty(&loop->recv_list)) {
+	    struct recv_list *node = loop->recv_list.next;
+
+	    /* Break when next node time is greater than now. */
+	    if (PJ_TIME_VAL_GTE(node->rdata.pkt_info.timestamp, now))
+		break;
+
+	    /* Delete this from the list. */
+	    pj_list_erase(node);
+
+	    /* Add to local list. */
+	    pj_list_push_back(&r, node);
+
+	}
+
+	pj_lock_release(loop->base.lock);
+
+	/* Process send notification and incoming packet notification
+	 * without holding down the loop's mutex.
+	 */
+	while (!pj_list_empty(&s)) {
+	    struct send_list *node = s.next;
+
+	    pj_list_erase(node);
+
 	    /* Notify callback. */
 	    if (node->callback) {
 		(*node->callback)(&loop->base, node->token, node->sent);
 	    }
 
-	    /* Delete this from the list. */
-	    pj_list_erase(node);
-
 	    /* Decrement tdata reference counter. */
 	    pjsip_tx_data_dec_ref(node->tdata);
 	}
 
-	/* Process "incoming" packets. */
-	while (!pj_list_empty(&loop->recv_list)) {
-	    struct recv_list *node = loop->recv_list.next;
+	/* Process "incoming" packet. */
+	while (!pj_list_empty(&r)) {
+	    struct recv_list *node = r.next;
 	    pj_ssize_t size_eaten;
 
-	    /* Break when next node time is greater than now. */
-	    if (PJ_TIME_VAL_GTE(node->rdata.pkt_info.timestamp, now))
-		break;
+	    pj_list_erase(node);
 
 	    /* Notify transport manager about the "incoming packet" */
 	    size_eaten = pjsip_tpmgr_receive_packet(loop->base.tpmgr,
@@ -298,15 +331,10 @@ static int loop_thread(void *arg)
 	    /* Must "eat" all the packets. */
 	    pj_assert(size_eaten == node->rdata.pkt_info.len);
 
-	    /* Delete this from the list. */
-	    pj_list_erase(node);
-
 	    /* Done. */
 	    pjsip_endpt_release_pool(loop->base.endpt,
 				     node->rdata.tp_info.pool);
 	}
-
-	pj_lock_release(loop->base.lock);
     }
 
     return 0;

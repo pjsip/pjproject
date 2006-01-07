@@ -892,6 +892,8 @@ static void tsx_set_state( pjsip_transaction *tsx,
 			   pjsip_event_id_e event_src_type,
                            void *event_src )
 {
+    pjsip_tsx_state_e prev_state = tsx->state;
+
     PJ_LOG(5, (tsx->obj_name, "State changed from %s to %s, event=%s",
 	       state_str[tsx->state], state_str[state], 
                pjsip_event_str(event_src_type)));
@@ -909,7 +911,8 @@ static void tsx_set_state( pjsip_transaction *tsx,
     /* Inform TU */
     if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
 	pjsip_event e;
-	PJSIP_EVENT_INIT_TSX_STATE(e, tsx, event_src_type, event_src);
+	PJSIP_EVENT_INIT_TSX_STATE(e, tsx, event_src_type, event_src,
+				   prev_state);
 	(*tsx->tsx_user->on_tsx_state)(tsx, &e);
     }
     
@@ -2106,7 +2109,12 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	}
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 
-	/* Inform TU. */
+	/* Inform TU. 
+	 * blp: You might be tempted to move this notification before
+	 *      sending ACK, but I think you shouldn't. Better set-up
+	 *      everything before calling tsx_user's callback to avoid
+	 *      mess up.
+	 */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
                        PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 
