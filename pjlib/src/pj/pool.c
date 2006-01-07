@@ -28,7 +28,7 @@
 #  include <pj/pool_i.h>
 #endif
 
-#define LOG(expr)   PJ_LOG(5,expr)
+#define LOG(expr)   PJ_LOG(6,expr)
 
 int PJ_NO_MEMORY_EXCEPTION;
 

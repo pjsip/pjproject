@@ -91,7 +91,7 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
     h = pj_pool_alloc(pool, sizeof(pj_hash_table_t));
     h->count = 0;
 
-    PJ_LOG( 5, ("hashtbl", "hash table %p created from pool %s", h, pj_pool_getobjname(pool)));
+    PJ_LOG( 6, ("hashtbl", "hash table %p created from pool %s", h, pj_pool_getobjname(pool)));
 
     /* size must be 2^n - 1.
        round-up the size to this rule, except when size is 2^n, then size
@@ -147,7 +147,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
 
     /* create a new entry */
     entry = pj_pool_alloc(pool, sizeof(pj_hash_entry));
-    PJ_LOG(5, ("hashtbl", "%p: New p_entry %p created, pool used=%u, cap=%u", ht, entry, 
+    PJ_LOG(6, ("hashtbl", "%p: New p_entry %p created, pool used=%u, cap=%u", ht, entry, 
 			  pj_pool_get_used_size(pool), pj_pool_get_capacity(pool)));
     entry->next = NULL;
     entry->hash = hash;
@@ -179,14 +179,14 @@ PJ_DEF(void) pj_hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
     if (*p_entry) {
 	if (value == NULL) {
 	    /* delete entry */
-	    PJ_LOG(5, ("hashtbl", "%p: p_entry %p deleted", ht, *p_entry));
+	    PJ_LOG(6, ("hashtbl", "%p: p_entry %p deleted", ht, *p_entry));
 	    *p_entry = (*p_entry)->next;
 	    --ht->count;
 	    
 	} else {
 	    /* overwrite */
 	    (*p_entry)->value = value;
-	    PJ_LOG(5, ("hashtbl", "%p: p_entry %p value set to %p", ht, *p_entry, value));
+	    PJ_LOG(6, ("hashtbl", "%p: p_entry %p value set to %p", ht, *p_entry, value));
 	}
     }
 }

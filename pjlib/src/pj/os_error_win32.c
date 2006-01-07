@@ -153,6 +153,13 @@ int platform_strerror( pj_os_err_type os_errcode,
                 break;
             }
         }
+
+    } else {
+	/* Remove trailing newlines. */
+	while (len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
+	    buf[len-1] = '\0';
+	    --len;
+	}
     }
 
     if (!len) {
