@@ -1251,7 +1251,7 @@ static int perform_generic_test( const char *title,
     int i, status;
     unsigned delay[] = { 1, 200 };
 
-    PJ_LOG(3,(THIS_FILE, "  test6: %s", title));
+    PJ_LOG(3,(THIS_FILE, "  %s", title));
 
     /* Do the test. */
     for (i=0; i<PJ_ARRAY_SIZE(delay); ++i) {
@@ -1334,26 +1334,26 @@ int tsx_uac_test(void)
 	return status;
 
     /* TEST6_BRANCH_ID: Successfull non-invite transaction */
-    status = perform_generic_test("successfull non-invite transaction",
+    status = perform_generic_test("test6: successfull non-invite transaction",
 				  TEST6_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
 	return status;
 
     /* TEST7_BRANCH_ID: Successfull non-invite transaction */
-    status = perform_generic_test("successfull non-invite transaction "
+    status = perform_generic_test("test7: successfull non-invite transaction "
 				  "with provisional response",
 				  TEST7_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
 	return status;
 
     /* TEST8_BRANCH_ID: Failed invite transaction */
-    status = perform_generic_test("failed invite transaction",
+    status = perform_generic_test("test8: failed invite transaction",
 				  TEST8_BRANCH_ID, &pjsip_invite_method);
     if (status != 0)
 	return status;
 
     /* TEST9_BRANCH_ID: Failed invite transaction with provisional response */
-    status = perform_generic_test("failed invite transaction with "
+    status = perform_generic_test("test9: failed invite transaction with "
 				  "provisional response",
 				  TEST9_BRANCH_ID, &pjsip_invite_method);
     if (status != 0)
