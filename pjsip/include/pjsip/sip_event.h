@@ -122,7 +122,8 @@ struct pjsip_event
                 void            *data;  /**< Generic data.              */
             } src;
             pjsip_transaction   *tsx;   /**< The transaction.           */
-            pjsip_event_id_e    type;   /**< Type of event source:      
+	    int			 prev_state; /**< Previous state.	*/
+            pjsip_event_id_e     type;  /**< Type of event source:      
                                          *      - PJSIP_EVENT_TX_MSG
                                          *      - PJSIP_EVENT_RX_MSG,
                                          *      - PJSIP_EVENT_TRANSPORT_ERROR
@@ -204,12 +205,13 @@ struct pjsip_event
 /**
  * Init tsx state event.
  */
-#define PJSIP_EVENT_INIT_TSX_STATE(event,ptsx,ptype,pdata)   \
+#define PJSIP_EVENT_INIT_TSX_STATE(event,ptsx,ptype,pdata,prev)   \
         do { \
             (event).type = PJSIP_EVENT_TSX_STATE;           \
             (event).body.tsx_state.tsx = ptsx;		    \
             (event).body.tsx_state.type = ptype;            \
             (event).body.tsx_state.src.data = pdata;        \
+	    (event).body.tsx_state.prev_state = prev;	    \
         } while (0)
 
 /**
