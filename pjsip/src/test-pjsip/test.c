@@ -131,7 +131,8 @@ int test_main(void)
     //DO_TEST(transport_udp_test());
     //DO_TEST(transport_loop_test());
     //DO_TEST(tsx_basic_test());
-    DO_TEST(tsx_uac_test());
+    //DO_TEST(tsx_uac_test());
+    DO_TEST(tsx_uas_test());
 
 on_return:
 

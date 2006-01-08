@@ -77,15 +77,15 @@
  *****************************************************************************
  */
 
-static char *TEST1_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test1";
-static char *TEST2_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test2";
-static char *TEST3_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test3";
-static char *TEST4_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test4";
-static char *TEST5_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test5";
-static char *TEST6_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test6";
-static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test7";
-static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test8";
-static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-Test9";
+static char *TEST1_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test1";
+static char *TEST2_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test2";
+static char *TEST3_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test3";
+static char *TEST4_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test4";
+static char *TEST5_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test5";
+static char *TEST6_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test6";
+static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test7";
+static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test8";
+static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test9";
 
 #define      TEST1_ALLOWED_DIFF	    (150)
 #define      TEST4_RETRANSMIT_CNT   3
@@ -99,7 +99,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata);
 static pjsip_module tsx_user = 
 {
     NULL, NULL,				/* prev and next	*/
-    { "Tsx-User", 8},			/* Name.		*/
+    { "Tsx-UAC-User", 12},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
     NULL,				/* User data.		*/
@@ -120,7 +120,7 @@ static pjsip_module tsx_user =
 static pjsip_module msg_receiver = 
 {
     NULL, NULL,				/* prev and next	*/
-    { "Test", 4},			/* Name.		*/
+    { "Msg-Receiver", 12},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
     NULL,				/* User data.		*/
@@ -971,11 +971,6 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
 	    pjsip_tx_data_dec_ref(tdata);
 	    return -130;
 	}
-    }
-
-    if (status < 0) {
-	pjsip_tx_data_dec_ref(tdata);
-	return status;
     }
 
     if (test_complete < 0) {

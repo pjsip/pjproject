@@ -34,6 +34,7 @@ int transport_udp_test(void);
 int transport_loop_test(void);
 int tsx_basic_test(void);
 int tsx_uac_test(void);
+int tsx_uas_test(void);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
