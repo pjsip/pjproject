@@ -125,6 +125,12 @@ static void pool_callback( pj_pool_t *pool, pj_size_t size )
 }
 
 
+/* Compare module name, used for searching module based on name. */
+static int cmp_mod_name(void *name, const pjsip_module *mod)
+{
+    return pj_stricmp(name, &mod->name);
+}
+
 /*
  * Register new module to the endpoint.
  * The endpoint will then call the load and start function in the module to 
@@ -143,6 +149,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
     /* Make sure that this module has not been registered. */
     PJ_ASSERT_ON_FAIL(	pj_list_find_node(&endpt->module_list, mod) == NULL,
 			{status = PJ_EEXISTS; goto on_return;});
+
+    /* Make sure that no module with the same name has been registered. */
+    PJ_ASSERT_ON_FAIL(	pj_list_search(&endpt->module_list, &mod->name, 
+				       &cmp_mod_name)==NULL,
+			{status = PJ_EEXISTS; goto on_return; });
 
     /* Find unused ID for this module. */
     for (i=0; i<PJ_ARRAY_SIZE(endpt->modules); ++i) {
