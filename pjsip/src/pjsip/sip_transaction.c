@@ -1226,7 +1226,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
     /* Will always decrement tdata reference counter
      * (consistent with other send functions.
      */
-    pjsip_tx_data_dec_ref(tdata);
+    if (status == PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+    }
 
     return status;
 }

@@ -190,11 +190,12 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
 /**
  * Transmit message in tdata with this transaction. It is possible to
- * pass NULL in tdata for UAC transaction, which in this case the last message
- * or the request message which was specified in #pjsip_tsx_create_uac() 
- * will be sent.
+ * pass NULL in tdata for UAC transaction, which in this case the last 
+ * message transmitted, or the request message which was specified when
+ * calling #pjsip_tsx_create_uac(), will be sent.
  *
- * This function decrements the reference counter of the transmit buffer.
+ * This function decrements the reference counter of the transmit buffer
+ * only when it returns PJ_SUCCESS;
  *
  * @param tsx       The transaction.
  * @param tdata     The outgoing message. If NULL is specified, then the
