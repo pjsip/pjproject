@@ -444,6 +444,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     pj_time_val expires;
 
     PJ_ASSERT_RETURN(ht && entry && delay, PJ_EINVAL);
+    PJ_ASSERT_RETURN(entry->cb != NULL, PJ_EINVAL);
 
     pj_gettimeofday(&expires);
     PJ_TIME_VAL_ADD(expires, *delay);
@@ -494,7 +495,8 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 	++count;
 
 	unlock_timer_heap(ht);
-	(*node->cb)(ht, node);
+	if (node->cb)
+	    (*node->cb)(ht, node);
 	lock_timer_heap(ht);
     }
     if (ht->cur_size && next_delay) {
