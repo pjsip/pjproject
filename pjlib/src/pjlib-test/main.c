@@ -57,6 +57,7 @@ static void init_signals()
 int main(int argc, char *argv[])
 {
     int rc;
+    int interractive = 0;
 
     boost();
     init_signals();
@@ -64,7 +65,10 @@ int main(int argc, char *argv[])
     while (argc > 1) {
         char *arg = argv[--argc];
 
-        if (*arg=='-' && *(arg+1)=='p') {
+	if (*arg=='-' && *(arg+1)=='i') {
+	    interractive = 1;
+
+	} else if (*arg=='-' && *(arg+1)=='p') {
             pj_str_t port = pj_str(argv[--argc]);
 
             param_echo_port = pj_strtoul(&port);
@@ -87,6 +91,13 @@ int main(int argc, char *argv[])
     }
 
     rc = test_main();
+
+    if (interractive) {
+	char s[10];
+	puts("");
+	puts("Press <ENTER> to exit");
+	fgets(s, sizeof(s), stdin);
+    }
 
     return rc;
 }

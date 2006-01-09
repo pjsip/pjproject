@@ -47,7 +47,7 @@
  *  - pj_utoa()
  *  - pj_strtoul()
  *  - pj_create_random_string()
- *
+ *  - ... and mode..
  *
  * This file is <b>pjlib-test/string.c</b>
  *
@@ -66,10 +66,14 @@
 
 static int stricmp_test(void)
 {
+/* This specificly tests and benchmark pj_stricmp(), pj_stricmp_alnum().
+ * In addition, it also tests pj_stricmp2(), pj_strnicmp(), and 
+ * pj_strnicmp2().
+ */
 #define STRTEST(res,S1,S2,code)	\
 	    do { \
-	        s1.ptr=S1; s1.slen=len; \
-	        s2.ptr=S2; s2.slen=len; \
+		s1.ptr=S1; s1.slen=S1?len:0; \
+		s2.ptr=S2; s2.slen=S2?len:0; \
 		pj_get_timestamp(&t1); \
 	        if (pj_stricmp(&s1,&s2)!=res) return code; \
 		pj_get_timestamp(&t2); \
@@ -80,6 +84,9 @@ static int stricmp_test(void)
 		pj_get_timestamp(&t2); \
 		pj_sub_timestamp(&t2, &t1); \
 		pj_add_timestamp(&e2, &t2); \
+		if (pj_stricmp2(&s1,S2)!=res) return code*10; \
+		if (pj_strnicmp(&s1,&s2,len)!=res) return code*100; \
+		if (pj_strnicmp2(&s1,S2,len)!=res) return code*1000; \
 	    } while (0)
 
     char *buf;
@@ -95,6 +102,10 @@ static int stricmp_test(void)
     /* Compare empty strings. */
     len=0;
     STRTEST( 0, "","",-500);
+    STRTEST( 0, NULL,"",-502);
+    STRTEST( 0, "",NULL,-504);
+    STRTEST( 0, NULL,NULL,-506);
+    STRTEST( 0, "hello","world",-508);
 
     /* equal, length=1 
      * use buffer to simulate non-aligned string.
@@ -104,6 +115,8 @@ static int stricmp_test(void)
     STRTEST( 0, "a",buf+0,-510);
     STRTEST( 0, "a",buf+1,-512);
     STRTEST( -1, "0", "P", -514);
+    STRTEST(-1, NULL, "a", -516);
+    STRTEST(1, "a", NULL, -518);
 
     /* equal, length=2 
      * use buffer to simulate non-aligned string.
@@ -207,6 +220,44 @@ static int stricmp_test(void)
 #undef STRTEST
 }
 
+/* This tests pj_strcmp(), pj_strcmp2(), pj_strncmp(), pj_strncmp2() */
+static int strcmp_test(void)
+{
+#define STR_TEST(res,S1,S2,code)    \
+	    do { \
+		s1.ptr=S1; s1.slen=S1?len:0; \
+		s2.ptr=S2; s2.slen=S2?len:0; \
+	        if (pj_strcmp(&s1,&s2)!=res) return code; \
+		if (pj_strcmp2(&s1,S2)!=res) return code-1; \
+		if (pj_strncmp(&s1,&s2,len)!=res) return code-2; \
+		if (pj_strncmp2(&s1,S2,len)!=res) return code-3; \
+	    } while (0)
+
+    pj_str_t s1, s2;
+    int len;
+    
+    /* Test with length == 0 */
+    len=0;
+    STR_TEST(0, "", "", -400);
+    STR_TEST(0, NULL, "", -405);
+    STR_TEST(0, "", NULL, -410);
+    STR_TEST(0, NULL, NULL, -415);
+    STR_TEST(0, "hello", "", -420);
+    STR_TEST(0, "hello", NULL, -425);
+
+    /* Test with length != 0 */
+    len = 2;
+    STR_TEST(0, "12", "12", -430);
+    STR_TEST(1, "12", "1", -435);
+    STR_TEST(-1, "1", "12", -440);
+    STR_TEST(-1, NULL, "12", -445);
+    STR_TEST(1, "12", NULL, -450);
+
+    return 0;
+
+#undef STR_TEST
+}
+
 int string_test(void)
 {
     const pj_str_t hello_world = { HELLO_WORLD, strlen(HELLO_WORLD) };
@@ -307,7 +358,17 @@ int string_test(void)
     /* Done. */
     pj_pool_release(pool);
 
-    return stricmp_test();
+    /* Case sensitive comparison test. */
+    i = strcmp_test();
+    if (i != 0)
+	return i;
+
+    /* Caseless comparison test. */
+    i = stricmp_test();
+    if (i != 0)
+	return i;
+
+    return 0;
 }
 
 #else
