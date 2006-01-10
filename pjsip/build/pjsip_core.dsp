@@ -124,13 +124,6 @@ SOURCE=..\src\pjsip\sip_tel_uri.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transaction.c
-
-!IF  "$(CFG)" == "pjsip_core - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsip_core - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -257,10 +250,6 @@ SOURCE=..\include\pjsip\sip_util.h
 # Begin Group "Inline Files"
 
 # PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_msg_i.h
-# End Source File
 # End Group
 # Begin Source File
 

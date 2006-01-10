@@ -154,9 +154,9 @@ static void	    int_parse_uri_host_port( pj_scanner *scanner,
 static pjsip_uri *  int_parse_uri_or_name_addr( pj_scanner *scanner, 
 					        pj_pool_t *pool, 
                                                 unsigned option);
-static pjsip_url *  int_parse_sip_url( pj_scanner *scanner, 
-				       pj_pool_t *pool,
-				       pj_bool_t parse_params);
+static pjsip_sip_uri* int_parse_sip_url( pj_scanner *scanner, 
+				         pj_pool_t *pool,
+				         pj_bool_t parse_params);
 static pjsip_name_addr *
                     int_parse_name_addr( pj_scanner *scanner, 
 					 pj_pool_t *pool );
@@ -953,23 +953,26 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
     pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pname);
     *pname = pj_str_unescape(pool, pname);
 
+    /* init pvalue */
+    pvalue->ptr = NULL;
+    pvalue->slen = 0;
+
     /* pvalue, if any */
     if (*scanner->curptr == '=') {
 	pj_scan_get_char(scanner);
-	/* pvalue can be a quoted string. */
-	if (*scanner->curptr == '"') {
-	    pj_scan_get_quote( scanner, '"', '"', pvalue);
-	    if (option & PJSIP_PARSE_REMOVE_QUOTE) {
-		pvalue->ptr++;
-		pvalue->slen -= 2;
+	if (!pj_scan_is_eof(scanner)) {
+	    /* pvalue can be a quoted string. */
+	    if (*scanner->curptr == '"') {
+		pj_scan_get_quote( scanner, '"', '"', pvalue);
+		if (option & PJSIP_PARSE_REMOVE_QUOTE) {
+		    pvalue->ptr++;
+		    pvalue->slen -= 2;
+		}
+	    } else if(pj_cis_match(&pjsip_PARAM_CHAR_SPEC, *scanner->curptr)) {
+		pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pvalue);
+		*pvalue = pj_str_unescape(pool, pvalue);
 	    }
-	} else {
-	    pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pvalue);
-	    *pvalue = pj_str_unescape(pool, pvalue);
 	}
-    } else {
-	pvalue->ptr = NULL;
-	pvalue->slen = 0;
     }
 }
 
@@ -996,14 +999,19 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hname);
     *hname = pj_str_unescape(pool, hname);
 
+    /* Init hvalue */
+    hvalue->ptr = NULL;
+    hvalue->slen = 0;
+
     /* pvalue, if any */
     if (*scanner->curptr == '=') {
 	pj_scan_get_char(scanner);
-	pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hvalue);
-	*hvalue = pj_str_unescape(pool, hvalue);
-    } else {
-	hvalue->ptr = NULL;
-	hvalue->slen = 0;
+	if (!pj_scan_is_eof(scanner) && 
+	    pj_cis_match(&pjsip_HDR_CHAR_SPEC, *scanner->curptr))
+	{
+	    pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hvalue);
+	    *hvalue = pj_str_unescape(pool, hvalue);
+	}
     }
 }
 
@@ -1142,12 +1150,12 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
 }
 
 /* Parse "sip:" and "sips:" URI. */
-static pjsip_url *int_parse_sip_url( pj_scanner *scanner, 
-				     pj_pool_t *pool,
-				     pj_bool_t parse_params)
+static pjsip_sip_uri *int_parse_sip_url( pj_scanner *scanner, 
+					 pj_pool_t *pool,
+					 pj_bool_t parse_params)
 {
     pj_str_t scheme;
-    pjsip_url *url = NULL;
+    pjsip_sip_uri *url = NULL;
     int colon;
     int skip_ws = scanner->skip_ws;
     scanner->skip_ws = 0;

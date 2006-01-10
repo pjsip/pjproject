@@ -347,7 +347,8 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 {
 
-    PJ_ASSERT_RETURN(tdata && tdata->msg, "INVALID MSG");
+    if (tdata==NULL || tdata->msg==NULL)
+	return "INVALID MSG";
 
     if (tdata->info)
 	return tdata->info;

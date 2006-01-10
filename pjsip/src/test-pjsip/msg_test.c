@@ -332,7 +332,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
 
     pjsip_msg *msg;
     pjsip_name_addr *name_addr;
-    pjsip_url *url;
+    pjsip_sip_uri *url;
     pjsip_fromto_hdr *fromto;
     pjsip_cid_hdr *cid;
     pjsip_clen_hdr *clen;
@@ -537,7 +537,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     pjsip_via_hdr *via;
     pjsip_route_hdr *route;
     pjsip_name_addr *name_addr;
-    pjsip_url *url;
+    pjsip_sip_uri *url;
     pjsip_max_forwards_hdr *max_fwd;
     pjsip_to_hdr *to;
     pjsip_from_hdr *from;

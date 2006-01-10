@@ -412,7 +412,7 @@ pj_status_t pjsip_dlg_init_from_rdata( pjsip_dlg *dlg, pjsip_rx_data *rdata )
     pjsip_to_hdr *to;
     pjsip_contact_hdr *contact;
     pjsip_name_addr *name_addr;
-    pjsip_url *url;
+    pjsip_sip_uri *url;
     unsigned flag;
     pjsip_event event;
 
@@ -445,7 +445,7 @@ pj_status_t pjsip_dlg_init_from_rdata( pjsip_dlg *dlg, pjsip_rx_data *rdata )
     dlg->local.contact->star = 0;
     name_addr = (pjsip_name_addr *)dlg->local.info->uri;
     dlg->local.contact->uri = (pjsip_uri*) name_addr;
-    url = (pjsip_url*) name_addr->uri;
+    url = (pjsip_sip_uri*) name_addr->uri;
     //url->port = rdata->via->sent_by.port;
     //url->port = pj_sockaddr_get_port( pjsip_transport_get_local_addr(rdata->transport) );
 

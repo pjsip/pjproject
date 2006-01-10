@@ -111,6 +111,7 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 	    copy_advance_escape(buf, p->value, (*pvalue_spec));
 	}
 	p = p->next;
+	if (sep == '?') sep = '&';
     } while (p != param_list);
 
     return buf-startbuf;
@@ -122,8 +123,8 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
  */
 #define IS_SIPS(url)	((url)->vptr==&sips_url_vptr)
 
-static const pj_str_t *pjsip_url_get_scheme( const pjsip_url* );
-static const pj_str_t *pjsips_url_get_scheme( const pjsip_url* );
+static const pj_str_t *pjsip_url_get_scheme( const pjsip_sip_uri* );
+static const pj_str_t *pjsips_url_get_scheme( const pjsip_sip_uri* );
 static const pj_str_t *pjsip_name_addr_get_scheme( const pjsip_name_addr * );
 static void *pjsip_get_uri( pjsip_uri *uri );
 static void *pjsip_name_addr_get_uri( pjsip_name_addr *name );
@@ -146,11 +147,13 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 				     const pjsip_name_addr *naddr1,
 				     const pjsip_name_addr *naddr2);
 static int pjsip_url_print(  pjsip_uri_context_e context,
-			     const pjsip_url *url, 
+			     const pjsip_sip_uri *url, 
 			     char *buf, pj_size_t size);
 static int pjsip_url_compare( pjsip_uri_context_e context,
-			      const pjsip_url *url1, const pjsip_url *url2);
-static pjsip_url* pjsip_url_clone(pj_pool_t *pool, const pjsip_url *rhs);
+			      const pjsip_sip_uri *url1, 
+			      const pjsip_sip_uri *url2);
+static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, 
+				      const pjsip_sip_uri *rhs);
 
 static pjsip_uri_vptr sip_url_vptr = 
 {
@@ -179,13 +182,13 @@ static pjsip_uri_vptr name_addr_vptr =
     HAPPY_FLAG &pjsip_name_addr_clone
 };
 
-static const pj_str_t *pjsip_url_get_scheme(const pjsip_url *url)
+static const pj_str_t *pjsip_url_get_scheme(const pjsip_sip_uri *url)
 {
     PJ_UNUSED_ARG(url);
     return &sip_str;
 }
 
-static const pj_str_t *pjsips_url_get_scheme(const pjsip_url *url)
+static const pj_str_t *pjsips_url_get_scheme(const pjsip_sip_uri *url)
 {
     PJ_UNUSED_ARG(url);
     return &sips_str;
@@ -201,7 +204,7 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
     return name->uri;
 }
 
-PJ_DEF(void) pjsip_url_init(pjsip_url *url, int secure)
+PJ_DEF(void) pjsip_url_init(pjsip_sip_uri *url, int secure)
 {
     pj_memset(url, 0, sizeof(*url));
     url->ttl_param = -1;
@@ -210,23 +213,21 @@ PJ_DEF(void) pjsip_url_init(pjsip_url *url, int secure)
     pj_list_init(&url->header_param);
 }
 
-PJ_DEF(pjsip_url*) pjsip_url_create( pj_pool_t *pool, int secure )
+PJ_DEF(pjsip_sip_uri*) pjsip_url_create( pj_pool_t *pool, int secure )
 {
-    pjsip_url *url = pj_pool_alloc(pool, sizeof(pjsip_url));
+    pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
     pjsip_url_init(url, secure);
     return url;
 }
 
 static int pjsip_url_print(  pjsip_uri_context_e context,
-			     const pjsip_url *url, 
+			     const pjsip_sip_uri *url, 
 			     char *buf, pj_size_t size)
 {
     int printed;
     char *startbuf = buf;
     char *endbuf = buf+size;
     const pj_str_t *scheme;
-    pjsip_param *param;
-    char hparam_char = '?';
 
     *buf = '\0';
 
@@ -317,19 +318,18 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 	return -1;
     buf += printed;
 
-    /* Header param. */
-    param = url->header_param.next;
-    while (param != &url->header_param) {
-	if (endbuf - buf < param->name.slen+2)
+    /* Header param. 
+     * Header param is only allowed in these contexts:
+     *	- PJSIP_URI_IN_CONTACT_HDR
+     *	- PJSIP_URI_IN_OTHER
+     */
+    if (context == PJSIP_URI_IN_CONTACT_HDR || context == PJSIP_URI_IN_OTHER) {
+	printed = pjsip_param_print_on(&url->header_param, buf, endbuf-buf,
+				       &pjsip_HDR_CHAR_SPEC, 
+				       &pjsip_HDR_CHAR_SPEC, '?');
+	if (printed < 0)
 	    return -1;
-	*buf++ = hparam_char;
-	copy_advance_escape(buf, param->name, pjsip_HDR_CHAR_SPEC);
-	if (param->value.slen) {
-	    *buf++ = '=';
-	    copy_advance_escape(buf, param->value, pjsip_HDR_CHAR_SPEC);
-	}
-	param = param->next;
-	hparam_char = '&';
+	buf += printed;
     }
 
     *buf = '\0';
@@ -337,8 +337,8 @@ static int pjsip_url_print(  pjsip_uri_context_e context,
 }
 
 static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
-				      const pjsip_url *url1, 
-				      const pjsip_url *url2)
+				      const pjsip_sip_uri *url1, 
+				      const pjsip_sip_uri *url2)
 {
     const pjsip_param *p1;
 
@@ -465,8 +465,8 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
 }
 
 
-PJ_DEF(void) pjsip_url_assign(pj_pool_t *pool, pjsip_url *url, 
-			      const pjsip_url *rhs)
+PJ_DEF(void) pjsip_url_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
+			      const pjsip_sip_uri *rhs)
 {
     pj_strdup( pool, &url->user, &rhs->user);
     pj_strdup( pool, &url->passwd, &rhs->passwd);
@@ -482,9 +482,9 @@ PJ_DEF(void) pjsip_url_assign(pj_pool_t *pool, pjsip_url *url,
     url->lr_param = rhs->lr_param;
 }
 
-static pjsip_url* pjsip_url_clone(pj_pool_t *pool, const pjsip_url *rhs)
+static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, const pjsip_sip_uri *rhs)
 {
-    pjsip_url *url = pj_pool_alloc(pool, sizeof(pjsip_url));
+    pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
     if (!url)
 	return NULL;
 

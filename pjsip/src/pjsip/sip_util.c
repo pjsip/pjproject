@@ -112,10 +112,29 @@ static void init_request_throw( pjsip_endpoint *endpt,
     /* Add CSeq header. */
     pjsip_msg_add_hdr(msg, (void*)param_cseq);
 
-    /* Add a blank Via header. */
+    /* Add a blank Via header in the front of the message. */
     via = pjsip_via_hdr_create(tdata->pool);
     via->rport_param = 0;
     pjsip_msg_insert_first_hdr(msg, (void*)via);
+
+    /* Add header params as request headers */
+    if (PJSIP_URI_SCHEME_IS_SIP(param_target) || 
+	PJSIP_URI_SCHEME_IS_SIPS(param_target)) 
+    {
+	pjsip_sip_uri *uri = (pjsip_sip_uri*) pjsip_uri_get_uri(param_target);
+	pjsip_param *hparam;
+
+	hparam = uri->header_param.next;
+	while (hparam != &uri->header_param) {
+	    pjsip_generic_string_hdr *hdr;
+
+	    hdr = pjsip_generic_string_hdr_create_with_text(tdata->pool, 
+							    &hparam->name,
+							    &hparam->value);
+	    pjsip_msg_add_hdr(msg, (pjsip_hdr*)hdr);
+	    hparam = hparam->next;
+	}
+    }
 
     /* Create message body. */
     if (param_text) {
@@ -636,7 +655,8 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
 	if (PJSIP_URI_SCHEME_IS_SIP(topmost_route_uri) ||
 	    PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
 	{
-	    const pjsip_url *url = pjsip_uri_get_uri((void*)topmost_route_uri);
+	    const pjsip_sip_uri *url = 
+		pjsip_uri_get_uri((void*)topmost_route_uri);
 	    has_lr_param = url->lr_param;
 	} else {
 	    has_lr_param = 0;
@@ -673,7 +693,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
 
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
 	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
         dest_info->addr.port = url->port;
@@ -682,7 +702,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
 
     } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_url *url = (const pjsip_url*)pjsip_uri_get_uri(uri);
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
 	dest_info->addr.port = url->port;
 	dest_info->type = 

@@ -105,7 +105,10 @@ PJ_DECL(void) pjsip_param_shallow_clone(pj_pool_t *pool,
  * @param size		Size of buffer.
  * @param pname_unres	Specification of allowed characters in pname.
  * @param pvalue_unres	Specification of allowed characters in pvalue.
- * @param sep		Separator character (either ';' or ',').
+ * @param sep		Separator character (either ';', ',', or '?').
+ *			When separator is set to '?', this function will
+ *			automatically adjust the separator character to
+ *			'&' after the first parameter is printed.
  *
  * @return		The number of bytes printed, or -1 on errr.
  */
@@ -221,7 +224,7 @@ struct pjsip_uri
 /**
  * SIP and SIPS URL scheme.
  */
-typedef struct pjsip_url
+typedef struct pjsip_sip_uri
 {
     pjsip_uri_vptr *vptr;		/**< Pointer to virtual function table.*/
     pj_str_t	    user;		/**< Optional user part. */
@@ -236,7 +239,7 @@ typedef struct pjsip_url
     pj_str_t	    maddr_param;	/**< Optional maddr param */
     pjsip_param	    other_param;	/**< Other parameters grouped together. */
     pjsip_param	    header_param;	/**< Optional header parameter. */
-} pjsip_url;
+} pjsip_sip_uri;
 
 
 /**
@@ -329,20 +332,20 @@ PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
  * @param secure    Tlag to indicate whether secure transport should be used.
  * @return SIP URL.
  */
-PJ_DECL(pjsip_url*) pjsip_url_create( pj_pool_t *pool, int secure );
+PJ_DECL(pjsip_sip_uri*) pjsip_url_create( pj_pool_t *pool, int secure );
 
 /**
  * Create new SIPS URL and initialize all fields with zero or NULL.
  * @param pool	    The pool.
  * @return	    SIPS URL.
  */
-PJ_DECL(pjsip_url*) pjsips_url_create( pj_pool_t *pool );
+PJ_DECL(pjsip_sip_uri*) pjsips_url_create( pj_pool_t *pool );
 
 /**
  * Initialize SIP URL (all fields are set to NULL or zero).
  * @param url	    The URL.
  */
-PJ_DECL(void)  pjsip_url_init(pjsip_url *url, int secure);
+PJ_DECL(void)  pjsip_url_init(pjsip_sip_uri *url, int secure);
 
 /**
  * Perform full assignment to the SIP URL.
@@ -350,7 +353,8 @@ PJ_DECL(void)  pjsip_url_init(pjsip_url *url, int secure);
  * @param url	    Destination URL.
  * @param rhs	    The source URL.
  */
-PJ_DECL(void)  pjsip_url_assign(pj_pool_t *pool, pjsip_url *url, const pjsip_url *rhs);
+PJ_DECL(void)  pjsip_url_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
+				const pjsip_sip_uri *rhs);
 
 /**
  * Create new instance of name address and initialize all fields with zero or

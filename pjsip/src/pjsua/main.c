@@ -1108,7 +1108,7 @@ static pj_status_t init_stack()
 	uri = pjsip_parse_uri(pool, global.local_uri.ptr, global.local_uri.slen, 0);
 	if (uri) {
 	    if (pj_stricmp2(pjsip_uri_get_scheme(uri), "sip")==0) {
-		pjsip_url *url = (pjsip_url*)pjsip_uri_get_uri(uri);
+		pjsip_sip_uri *url = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 		if (url->user.slen)
 		    strncpy(global.user_id, url->user.ptr, url->user.slen);
 	    }

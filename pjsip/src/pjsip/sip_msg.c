@@ -24,13 +24,6 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
-/*
- * Include inline definitions here if functions are NOT inlined.
- */
-#if PJ_FUNCTIONS_ARE_INLINED==0
-#  include <pjsip/sip_msg_i.h>
-#endif
-
 const pjsip_method 
     pjsip_invite_method	    = { PJSIP_INVITE_METHOD,	{ "INVITE",6 }	},
     pjsip_cancel_method	    = { PJSIP_CANCEL_METHOD,	{ "CANCEL",6 }	},

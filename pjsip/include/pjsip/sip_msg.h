@@ -716,7 +716,10 @@ PJ_DECL(void*)  pjsip_msg_find_remove_hdr( pjsip_msg *msg,
  * @bug Once the header is put in a list (or message), it can not be put in 
  *      other list (or message). Otherwise Real Bad Thing will happen.
  */
-PJ_IDECL(void) pjsip_msg_add_hdr( pjsip_msg *msg, pjsip_hdr *hdr );
+PJ_INLINE(void) pjsip_msg_add_hdr( pjsip_msg *msg, pjsip_hdr *hdr )
+{
+    pj_list_insert_before(&msg->hdr, hdr);
+}
 
 /** 
  * Add header field to the message, putting it in the front of the header list.
@@ -727,7 +730,10 @@ PJ_IDECL(void) pjsip_msg_add_hdr( pjsip_msg *msg, pjsip_hdr *hdr );
  * @bug Once the header is put in a list (or message), it can not be put in 
  *      other list (or message). Otherwise Real Bad Thing will happen.
  */
-PJ_IDECL(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr );
+PJ_INLINE(void) pjsip_msg_insert_first_hdr( pjsip_msg *msg, pjsip_hdr *hdr )
+{
+    pj_list_insert_after(&msg->hdr, hdr);
+}
 
 /** 
  * Print the message to the specified buffer. 
@@ -1550,13 +1556,6 @@ typedef pjsip_generic_string_hdr pjsip_warning_hdr;
 /**
  * @}  // PJSIP_MSG
  */
-
-/*
- * Include inline definitions.
- */
-#if PJ_FUNCTIONS_ARE_INLINED
-#  include <pjsip/sip_msg_i.h>
-#endif
 
 
 PJ_END_DECL

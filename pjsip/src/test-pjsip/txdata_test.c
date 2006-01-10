@@ -29,12 +29,14 @@
 /*
  * This tests various core message creation functions. 
  */
-int txdata_test(void)
+static int core_txdata_test(void)
 {
     pj_status_t status;
     pj_str_t target, from, to, contact, body;
     pjsip_rx_data dummy_rdata;
     pjsip_tx_data *invite, *invite2, *cancel, *response, *ack;
+
+    PJ_LOG(3,(THIS_FILE, "   core transmit data test"));
 
     /* Create INVITE request. */
     target = pj_str("tel:+1");
@@ -321,3 +323,207 @@ int txdata_test(void)
     return 0;
 }
 
+/* This tests the request creating functions against the following
+ * requirements:
+ *  - header params in URI creates header in the request.
+ *  - method and headers params are correctly shown or hidden in
+ *    request URI, From, To, and Contact header.
+ */
+static int txdata_test_uri_params(void)
+{
+    char msgbuf[512];
+    pj_str_t target = pj_str("sip:alice@wonderland:5061;x-param=param%201"
+			     "?X-Hdr-1=Header%201"
+			     "&X-Empty-Hdr=");
+    pj_str_t pname = pj_str("x-param");
+    pj_str_t hname = pj_str("X-Hdr-1");
+    pj_str_t hemptyname = pj_str("X-Empty-Hdr");
+    pjsip_from_hdr *from_hdr;
+    pjsip_to_hdr *to_hdr;
+    pjsip_contact_hdr *contact_hdr;
+    pjsip_generic_string_hdr *hdr;
+    pjsip_tx_data *tdata;
+    pjsip_sip_uri *uri;
+    pjsip_param *param;
+    pjsip_msg *msg;
+    int len;
+    pj_status_t status;
+
+    PJ_LOG(3,(THIS_FILE, "   header param in URI to create request"));
+
+    /* Create request with header param in target URI. */
+    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
+					&target, &target, &target, NULL, -1,
+					NULL, &tdata);
+    if (status != 0) {
+	app_perror("   error: Unable to create request", status);
+	return -200;
+    }
+
+    /* Print and parse the request.
+     * We'll check that header params are not present in
+     */
+    len = pjsip_msg_print(tdata->msg, msgbuf, sizeof(msgbuf));
+    if (len < 1) {
+	PJ_LOG(3,(THIS_FILE, "   error: printing message"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -250;
+    }
+    msgbuf[len] = '\0';
+
+    PJ_LOG(5,(THIS_FILE, "%d bytes request created:--begin-msg--\n"
+			 "%s\n"
+			 "--end-msg--", len, msgbuf));
+
+    /* Now parse the message. */
+    msg = pjsip_parse_msg( tdata->pool, msgbuf, len, NULL);
+    if (msg == NULL) {
+	app_perror("   error: parsing message message", status);
+	pjsip_tx_data_dec_ref(tdata);
+	return -250;
+    }
+
+    /* Check the existence of port, other_param, and header param.
+     * Port is now allowed in To and From header.
+     */
+    /* Port in request URI. */
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(msg->line.req.uri);
+    if (uri->port != 5061) {
+	PJ_LOG(3,(THIS_FILE, "   error: port not present in request URI"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -260;
+    }
+    /* other_param in request_uri */
+    param = pjsip_param_find(&uri->other_param, &pname);
+    if (param == NULL || pj_strcmp2(&param->value, "param 1") != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: x-param not present in request URI"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -261;
+    }
+    /* header param in request uri. */
+    if (!pj_list_empty(&uri->header_param)) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam in request URI"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -262;
+    }
+
+    /* Port in From header. */
+    from_hdr = (pjsip_from_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(from_hdr->uri);
+    if (uri->port != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: port most not exist in From header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -270;
+    }
+    /* other_param in From header */
+    param = pjsip_param_find(&uri->other_param, &pname);
+    if (param == NULL || pj_strcmp2(&param->value, "param 1") != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: x-param not present in From header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -271;
+    }
+    /* header param in From header. */
+    if (!pj_list_empty(&uri->header_param)) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam in From header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -272;
+    }
+
+
+    /* Port in To header. */
+    to_hdr = (pjsip_to_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(to_hdr->uri);
+    if (uri->port != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: port most not exist in To header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -280;
+    }
+    /* other_param in To header */
+    param = pjsip_param_find(&uri->other_param, &pname);
+    if (param == NULL || pj_strcmp2(&param->value, "param 1") != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: x-param not present in To header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -281;
+    }
+    /* header param in From header. */
+    if (!pj_list_empty(&uri->header_param)) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam in To header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -282;
+    }
+
+
+
+    /* Port in Contact header. */
+    contact_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(contact_hdr->uri);
+    if (uri->port != 5061) {
+	PJ_LOG(3,(THIS_FILE, "   error: port not present in Contact header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -290;
+    }
+    /* other_param in Contact header */
+    param = pjsip_param_find(&uri->other_param, &pname);
+    if (param == NULL || pj_strcmp2(&param->value, "param 1") != 0) {
+	PJ_LOG(3,(THIS_FILE, "   error: x-param not present in Contact header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -291;
+    }
+    /* header param in Contact header. */
+    if (pj_list_empty(&uri->header_param)) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam is missing in Contact header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -292;
+    }
+    /* Check for X-Hdr-1 */
+    param = pjsip_param_find(&uri->header_param, &hname);
+    if (param == NULL || pj_strcmp2(&param->value, "Header 1")!=0) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam is missing in Contact header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -293;
+    }
+    /* Check for X-Empty-Hdr */
+    param = pjsip_param_find(&uri->header_param, &hemptyname);
+    if (param == NULL || pj_strcmp2(&param->value, "")!=0) {
+	PJ_LOG(3,(THIS_FILE, "   error: hparam is missing in Contact header"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -294;
+    }
+
+
+    /* Check that headers are present in the request. */
+    hdr = (pjsip_generic_string_hdr*) 
+	pjsip_msg_find_hdr_by_name(msg, &hname, NULL);
+    if (hdr == NULL || pj_strcmp2(&hdr->hvalue, "Header 1")!=0) {
+	PJ_LOG(3,(THIS_FILE, "   error: header X-Hdr-1 not created"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -300;
+    }
+
+    hdr = (pjsip_generic_string_hdr*) 
+	pjsip_msg_find_hdr_by_name(msg, &hemptyname, NULL);
+    if (hdr == NULL || pj_strcmp2(&param->value, "")!=0) {
+	PJ_LOG(3,(THIS_FILE, "   error: header X-Empty-Hdr not created"));
+	pjsip_tx_data_dec_ref(tdata);
+	return -330;
+    }
+
+    pjsip_tx_data_dec_ref(tdata);
+    return 0;
+}
+
+int txdata_test(void)
+{
+    int status;
+
+    status = core_txdata_test();
+    if (status  != 0)
+	return status;
+
+
+    status = txdata_test_uri_params();
+    if (status != 0)
+	return status;
+
+    return 0;
+}

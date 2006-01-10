@@ -499,13 +499,20 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_destroy(void)
 /*
  * Register the transaction to the hash table.
  */
-static void mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
+static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 {
     pj_assert(tsx->transaction_key.slen != 0);
-    //pj_assert(tsx->state != PJSIP_TSX_STATE_NULL);
 
     /* Lock hash table mutex. */
     pj_mutex_lock(mod_tsx_layer.mutex);
+
+    /* Check if no transaction with the same key exists. */
+    if (pj_hash_get( mod_tsx_layer.htable, &tsx->transaction_key.ptr,
+		     tsx->transaction_key.slen) != NULL)
+    {
+	pj_mutex_unlock(mod_tsx_layer.mutex);
+	return PJ_EEXISTS;
+    }
 
     /* Register the transaction to the hash table. */
     pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
@@ -513,6 +520,8 @@ static void mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
+
+    return PJ_SUCCESS;
 }
 
 
@@ -1050,7 +1059,12 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     tsx->is_reliable = (dst_info.flag & PJSIP_TRANSPORT_RELIABLE);
 
     /* Register transaction to hash table. */
-    mod_tsx_layer_register_tsx(tsx);
+    status = mod_tsx_layer_register_tsx(tsx);
+    if (status != PJ_SUCCESS) {
+	pj_assert(!"Bug in branch_param generator (i.e. not unique)");
+	tsx_destroy(tsx);
+	return status;
+    }
 
 
     /* Unlock transaction and return. */
@@ -1159,8 +1173,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
 
     /* Register the transaction. */
-    mod_tsx_layer_register_tsx(tsx);
-
+    status = mod_tsx_layer_register_tsx(tsx);
+    if (status != PJ_SUCCESS) {
+	tsx_destroy(tsx);
+	return status;
+    }
 
     /* Unlock transaction and return. */
     unlock_tsx(tsx, &lck);
@@ -1540,8 +1557,16 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 
     msec_time = (1 << (tsx->retransmit_count)) * PJSIP_T1_TIMEOUT;
 
-    if (msec_time>PJSIP_T2_TIMEOUT && tsx->method.id!=PJSIP_INVITE_METHOD)
-	msec_time = PJSIP_T2_TIMEOUT;
+    if (tsx->role == PJSIP_ROLE_UAC) {
+	/* Retransmission for non-INVITE transaction caps-off at T2 */
+	if (msec_time>PJSIP_T2_TIMEOUT && tsx->method.id!=PJSIP_INVITE_METHOD)
+	    msec_time = PJSIP_T2_TIMEOUT;
+    } else {
+	/* Retransmission of INVITE final response also caps-off at T2 */
+	pj_assert(tsx->status_code >= 200);
+	if (msec_time>PJSIP_T2_TIMEOUT)
+	    msec_time = PJSIP_T2_TIMEOUT;
+    }
 
     timeout.sec = msec_time / 1000;
     timeout.msec = msec_time % 1000;
