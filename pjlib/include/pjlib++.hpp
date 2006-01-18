@@ -19,6 +19,7 @@
 #ifndef __PJLIBPP_H__
 #define __PJLIBPP_H__
 
+#include <pj++/file.hpp>
 #include <pj++/pool.hpp>
 #include <pj++/hash.hpp>
 #include <pj++/list.hpp>

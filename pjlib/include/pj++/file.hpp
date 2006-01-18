@@ -83,9 +83,9 @@ public:
     //
     enum Offset_Type
     {
-        SEEK_SET = PJ_SEEK_SET,
-        SEEK_CUR = PJ_SEEK_CUR,
-        SEEK_END = PJ_SEEK_END,
+        PJ_SEEK_SET = PJ_SEEK_SET,
+        PJ_SEEK_CUR = PJ_SEEK_CUR,
+        PJ_SEEK_END = PJ_SEEK_END,
     };
 
     //

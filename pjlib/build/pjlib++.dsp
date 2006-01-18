@@ -107,6 +107,10 @@ SOURCE="..\include\pj++\os.hpp"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjlib++.hpp"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pj++\pool.hpp"
 # End Source File
 # Begin Source File

@@ -20,6 +20,7 @@
 #define __PJPP_OS_HPP__
 
 #include <pj/os.h>
+#include <pj/string.h>
 #include <pj++/types.hpp>
 #include <pj++/pool.hpp>
 
@@ -151,7 +152,7 @@ public:
     {
         destroy();
         return Pj_Thread_API::create( pool, &thread_, &thread_proc, this,
-                                      flags, thread_name);
+                                      flags, thread_name, stack_size);
     }
 
     //
@@ -531,6 +532,7 @@ public:
                  unsigned initial = 0, const char *name = NULL)
     : sem_(NULL)
     {
+	create(pool, max, initial, name);
     }
 
     //
@@ -720,6 +722,69 @@ public:
 private:
     pj_event_t *event_;
 };
+
+//
+// Timestamp
+//
+class Pj_Timestamp
+{
+public:
+    pj_status_t get_timestamp()
+    {
+	return pj_get_timestamp(&ts_);
+    }
+
+    Pj_Timestamp& operator += (const Pj_Timestamp &rhs)
+    {
+	pj_add_timestamp(&ts_, &rhs.ts_);
+	return *this;
+    }
+
+    Pj_Timestamp& operator -= (const Pj_Timestamp &rhs)
+    {
+	pj_sub_timestamp(&ts_, &rhs.ts_);
+	return *this;
+    }
+
+    Pj_Time_Val to_time() const
+    {
+	Pj_Timestamp zero;
+	pj_memset(&zero, 0, sizeof(zero));
+	return Pj_Time_Val(pj_elapsed_time(&zero.ts_, &ts_));
+    }
+
+    pj_uint32_t to_msec() const
+    {
+	Pj_Timestamp zero;
+	pj_memset(&zero, 0, sizeof(zero));
+	return pj_elapsed_msec(&zero.ts_, &ts_);
+    }
+
+    pj_uint32_t to_usec() const
+    {
+	Pj_Timestamp zero;
+	pj_memset(&zero, 0, sizeof(zero));
+	return pj_elapsed_usec(&zero.ts_, &ts_);
+    }
+
+    pj_uint32_t to_nanosec() const
+    {
+	Pj_Timestamp zero;
+	pj_memset(&zero, 0, sizeof(zero));
+	return pj_elapsed_nanosec(&zero.ts_, &ts_);
+    }
+
+    pj_uint32_t to_cycle() const
+    {
+	Pj_Timestamp zero;
+	pj_memset(&zero, 0, sizeof(zero));
+	return pj_elapsed_cycle(&zero.ts_, &ts_);
+    }
+
+private:
+    pj_timestamp    ts_;
+};
+
 
 //
 // OS abstraction.

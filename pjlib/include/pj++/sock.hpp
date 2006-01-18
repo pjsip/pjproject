@@ -235,7 +235,7 @@ public:
     //
     // getsockopt.
     //
-    pj_status_t getsockopt(int level, int optname, 
+    pj_status_t getsockopt(pj_uint16_t level, pj_uint16_t optname, 
                            void *optval, int *optlen)
     {
 	return pj_sock_getsockopt(sock_, level, optname, optval, optlen);
@@ -244,7 +244,7 @@ public:
     //
     // setsockopt
     // 
-    pj_status_t setsockopt(int level, int optname, 
+    pj_status_t setsockopt(pj_uint16_t level, pj_uint16_t optname, 
                            const void *optval, int optlen)
     {
 	return pj_sock_setsockopt(sock_, level, optname, optval, optlen);

@@ -206,23 +206,21 @@ protected:
     //
     // Timeout callback.
     //
-    virtual void on_timeout(int data) 
+    virtual void on_timeout(int) 
     {
     }
 
     //
     // On read complete callback.
     //
-    virtual void on_read_complete( Pj_Async_Op *op_key,
-                                   pj_ssize_t bytes_read) 
+    virtual void on_read_complete( Pj_Async_Op*, pj_ssize_t) 
     {
     }
 
     //
     // On write complete callback.
     //
-    virtual void on_write_complete( Pj_Async_Op *op_key, 
-                                    pj_ssize_t bytes_sent) 
+    virtual void on_write_complete( Pj_Async_Op *, pj_ssize_t) 
     {
     }
 
@@ -230,16 +228,14 @@ protected:
     //
     // On connect complete callback.
     //
-    virtual void on_connect_complete(pj_status_t status) 
+    virtual void on_connect_complete(pj_status_t) 
     {
     }
 
     //
     // On new connection callback.
     //
-    virtual void on_accept_complete( Pj_Async_Op *op_key,
-                                     pj_sock_t new_sock,
-                                     pj_status_t status) 
+    virtual void on_accept_complete( Pj_Async_Op*, pj_sock_t, pj_status_t) 
     {
     }
 
@@ -256,7 +252,7 @@ private:
     //
     // Static timer callback.
     //
-    static void timer_callback( pj_timer_heap_t *timer_heap, 
+    static void timer_callback( pj_timer_heap_t*, 
                                 struct pj_timer_entry *entry)
     {
         Pj_Event_Handler *handler = 

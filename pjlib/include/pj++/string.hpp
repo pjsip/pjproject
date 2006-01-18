@@ -344,6 +344,24 @@ public:
     }
 
     //
+    // Assign from char*
+    //
+    Pj_String& operator=(char *s)
+    {
+	set(s);
+	return *this;
+    }
+
+    ///
+    // Assign from another Pj_String
+    //
+    Pj_String& operator=(Pj_String &rhs)
+    {
+	set(rhs);
+	return *this;
+    }
+
+    //
     // Find a character in the string.
     //
     char *strchr(int chr)
@@ -415,10 +433,6 @@ public:
         slen = pj_utoa_pad(value, ptr, min_dig, pad);
     }
 
-
-private:
-    //Pj_String(const Pj_String &rhs) {}
-    void operator=(const Pj_String &rhs) { pj_assert(false); }
 };
 
 #endif	/* __PJPP_STRING_HPP__ */

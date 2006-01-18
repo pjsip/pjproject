@@ -663,7 +663,7 @@ PJ_DECL(pj_status_t) pj_sock_send(pj_sock_t sockfd,
  * @param to		The address to send.
  * @param tolen		The length of the address in bytes.
  *
- * @return		The length of data successfully sent.
+ * @return		PJ_SUCCESS or the status code.
  */
 PJ_DECL(pj_status_t) pj_sock_sendto(pj_sock_t sockfd,
 				    const void *buf,

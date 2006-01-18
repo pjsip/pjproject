@@ -44,6 +44,8 @@
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
+#define PJ_INT64_FMT		"L"
+
 
 #endif	/* __PJ_COMPAT_CC_GCC_H__ */
 

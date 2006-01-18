@@ -62,7 +62,7 @@ public:
 private:
     pj_timer_entry entry_;
 
-    static void timer_heap_callback(pj_timer_heap_t *th, pj_timer_entry *e)
+    static void timer_heap_callback(pj_timer_heap_t*, pj_timer_entry *e)
     {
         Pj_Timer_Entry *entry = (Pj_Timer_Entry*) e->user_data;
         entry->on_timeout(e->id);
