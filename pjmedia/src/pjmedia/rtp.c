@@ -20,7 +20,9 @@
 #include <pj/log.h>
 #include <pj/os.h>	/* pj_gettimeofday() */
 #include <pj/sock.h>	/* pj_htonx, pj_htonx */
-#include <string.h>	/* memset() */
+#include <pj/assert.h>
+#include <pj/string.h>
+
 
 #define THIS_FILE   "rtp.c"
 
@@ -61,7 +63,7 @@ PJ_DEF(pj_status_t) pj_rtp_session_init( pj_rtp_session *ses,
     /* Sequence number will be initialized when the first RTP packet is receieved. */
 
     /* Build default header for outgoing RTP packet. */
-    memset(ses, 0, sizeof(*ses));
+    pj_memset(ses, 0, sizeof(*ses));
     ses->out_hdr.v = RTP_VERSION;
     ses->out_hdr.p = 0;
     ses->out_hdr.x = 0;

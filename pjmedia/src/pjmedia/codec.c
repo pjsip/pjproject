@@ -19,6 +19,7 @@
 #include <pjmedia/codec.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+#include <pj/assert.h>
 #include <pj/log.h>
 
 #define THIS_FILE   "codec.c"
@@ -65,7 +66,7 @@ PJ_DEF(pj_status_t) pj_codec_mgr_register_factory (pj_codec_mgr *mgr,
 
 PJ_DEF(void) pj_codec_mgr_unregister_factory (pj_codec_mgr *mgr, pj_codec_factory *factory)
 {
-    PJ_UNUSED_ARG(mgr)
+    PJ_UNUSED_ARG(mgr);
     pj_list_erase(factory);
     enum_all_codecs (mgr);
 }
@@ -100,7 +101,7 @@ PJ_DEF(pj_codec*) pj_codec_mgr_alloc_codec (pj_codec_mgr *mgr, const struct pj_c
 
 PJ_DEF(void) pj_codec_mgr_dealloc_codec (pj_codec_mgr *mgr, pj_codec *codec)
 {
-    PJ_UNUSED_ARG(mgr)
+    PJ_UNUSED_ARG(mgr);
     (*codec->factory->op->dealloc_codec)(codec->factory, codec);
 }
 

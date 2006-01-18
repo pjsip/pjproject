@@ -17,111 +17,77 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound.h>
+#include <pj/assert.h>
 
-/*
- * Null Factory Operations
- */
-static pj_status_t null_sound_init(void);
-static const char *null_sound_get_name(void);
-static pj_status_t null_sound_destroy(void);
-static pj_status_t null_sound_enum_devices(int *count, char *dev_names[]);
-static pj_status_t null_sound_create_dev(const char *dev_name, pj_snd_dev *dev);
-static pj_status_t null_sound_destroy_dev(pj_snd_dev *dev);
-
-
-/*
- * Null Device Operations
- */
-static pj_status_t null_sound_dev_open( pj_snd_dev *dev, pj_snd_role_t role );
-static pj_status_t null_sound_dev_close( pj_snd_dev *dev );
-static pj_status_t null_sound_dev_play( pj_snd_dev *dev );
-static pj_status_t null_sound_dev_record( pj_snd_dev *dev );
-
-
-static pj_snd_dev_factory null_sound_factory = 
+static pj_snd_dev_info null_info = 
 {
-    &null_sound_init,
-    &null_sound_get_name,
-    &null_sound_destroy,
-    &null_sound_enum_devices,
-    &null_sound_create_dev,
-    &null_sound_destroy_dev
+    "Null Device",
+    1,
+    1,
+    8000
 };
 
-static struct pj_snd_dev_op null_sound_dev_op = 
-{
-    &null_sound_dev_open,
-    &null_sound_dev_close,
-    &null_sound_dev_play,
-    &null_sound_dev_record
-};
 
-PJ_DEF(pj_snd_dev_factory*) pj_nullsound_get_factory()
+PJ_DEF(pj_status_t) pj_snd_init(pj_pool_factory *factory)
 {
-    return &null_sound_factory;
+    PJ_UNUSED_ARG(factory);
+    return PJ_SUCCESS;
 }
 
-static pj_status_t null_sound_init(void)
+PJ_DEF(int) pj_snd_get_dev_count(void)
 {
-    return 0;
+    return 1;
 }
 
-static const char *null_sound_get_name(void)
+PJ_DEF(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index)
 {
-    return "nullsound";
+    PJ_ASSERT_RETURN(index==0, NULL);
+    return &null_info;
 }
 
-static pj_status_t null_sound_destroy(void)
+PJ_DEF(pj_snd_stream*) pj_snd_open_recorder( int index,
+					     const pj_snd_stream_info *param,
+					     pj_snd_rec_cb rec_cb,
+					     void *user_data)
 {
-    return 0;
+    PJ_UNUSED_ARG(index);
+    PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(rec_cb);
+    PJ_UNUSED_ARG(user_data);
+    return (void*)1;
 }
 
-static pj_status_t null_sound_enum_devices(int *count, char *dev_names[])
+PJ_DEF(pj_snd_stream*) pj_snd_open_player( int index,
+					   const pj_snd_stream_info *param,
+					   pj_snd_play_cb play_cb,
+					   void *user_data)
 {
-    *count = 1;
-    dev_names[0] = "nullsound";
-    return 0;
+    PJ_UNUSED_ARG(index);
+    PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(play_cb);
+    PJ_UNUSED_ARG(user_data);
+    return (void*)1;
 }
 
-static pj_status_t null_sound_create_dev(const char *dev_name, pj_snd_dev *dev)
+PJ_DEF(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream)
 {
-    PJ_UNUSED_ARG(dev_name);
-    dev->op = &null_sound_dev_op;
-    return 0;
+    PJ_UNUSED_ARG(stream);
+    return PJ_SUCCESS;
 }
 
-static pj_status_t null_sound_destroy_dev(pj_snd_dev *dev)
+PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
 {
-    PJ_UNUSED_ARG(dev);
-    return 0;
+    PJ_UNUSED_ARG(stream);
+    return PJ_SUCCESS;
 }
 
-
-/*
- * Null Device Operations
- */
-static pj_status_t null_sound_dev_open( pj_snd_dev *dev, pj_snd_role_t role )
+PJ_DEF(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream)
 {
-    PJ_UNUSED_ARG(dev);
-    PJ_UNUSED_ARG(role);
-    return 0;
+    PJ_UNUSED_ARG(stream);
+    return PJ_SUCCESS;
 }
 
-static pj_status_t null_sound_dev_close( pj_snd_dev *dev )
+PJ_DEF(pj_status_t) pj_snd_deinit(void)
 {
-    PJ_UNUSED_ARG(dev);
-    return 0;
+    return PJ_SUCCESS;
 }
-
-static pj_status_t null_sound_dev_play( pj_snd_dev *dev )
-{
-    PJ_UNUSED_ARG(dev);
-    return 0;
-}
-
-static pj_status_t null_sound_dev_record( pj_snd_dev *dev )
-{
-    PJ_UNUSED_ARG(dev);
-    return 0;
-}
-

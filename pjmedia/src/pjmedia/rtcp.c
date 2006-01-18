@@ -19,7 +19,8 @@
 #include <pjmedia/rtcp.h>
 #include <pj/os.h>	/* pj_gettimeofday */
 #include <pj/sock.h>	/* pj_htonx, pj_ntohx */
-#include <string.h>	/* memset */
+#include <pj/string.h>	/* pj_memset */
+
 
 #define RTCP_SR   200
 #define RTCP_RR   201
@@ -46,7 +47,7 @@ PJ_DEF(void) pj_rtcp_init(pj_rtcp_session *s, pj_uint32_t ssrc)
 {
     pj_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
     
-    memset(rtcp_pkt, 0, sizeof(pj_rtcp_pkt));
+    pj_memset(rtcp_pkt, 0, sizeof(pj_rtcp_pkt));
     
     /* Init time */
     s->rtcp_lsr.hi = s->rtcp_lsr.lo = 0;
@@ -67,7 +68,7 @@ PJ_DEF(void) pj_rtcp_init(pj_rtcp_session *s, pj_uint32_t ssrc)
 PJ_DEF(void) pj_rtcp_fini(pj_rtcp_session *session)
 {
     /* Nothing to do. */
-    PJ_UNUSED_ARG(session)
+    PJ_UNUSED_ARG(session);
 }
 
 static void rtcp_init_seq(pj_rtcp_session *s, pj_uint16_t  seq)

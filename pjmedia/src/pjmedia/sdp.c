@@ -17,12 +17,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sdp.h>
-#include <pj/scanner.h>
+#include <pjlib-util/scanner.h>
 #include <pj/except.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
 
 enum {
     SKIP_WS = 0,
@@ -123,7 +124,8 @@ static struct attr_map_rec
  * Scanner character specification.
  */
 static int is_initialized;
-static pj_char_spec cs_token;
+static pj_cis_buf_t cis_buf;
+static pj_cis_t cs_token;
 
 static void init_sdp_parser(void)
 {
@@ -133,9 +135,12 @@ static void init_sdp_parser(void)
 	    return;
 	}
     }
-    pj_cs_add_alpha(cs_token);
-    pj_cs_add_num(cs_token);
-    pj_cs_add_str( cs_token, TOKEN);
+
+    pj_cis_buf_init(&cis_buf);
+    pj_cis_init(&cis_buf, &cs_token);
+    pj_cis_add_alpha(&cs_token);
+    pj_cis_add_num(&cs_token);
+    pj_cis_add_str(&cs_token, TOKEN);
 }
 
 static int print_rtpmap_attr(const pjsdp_rtpmap_attr *rtpmap, 
@@ -202,9 +207,9 @@ static int print_generic_num_attr(const pjsdp_attr_num *attr, char *buf, int len
 
 static int print_name_only_attr(const pjsdp_attr *attr, char *buf, int len)
 {
-    PJ_UNUSED_ARG(attr)
-    PJ_UNUSED_ARG(buf)
-    PJ_UNUSED_ARG(len)
+    PJ_UNUSED_ARG(attr);
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(len);
     return 0;
 }
 
@@ -706,12 +711,12 @@ static void parse_media(pj_scanner *scanner, pjsdp_media_desc *med)
     pj_scan_get_char(scanner);
 
     /* port */
-    pj_scan_get(scanner, cs_token, &str);
+    pj_scan_get(scanner, &cs_token, &str);
     med->desc.port = (unsigned short)pj_strtoul(&str);
-    if (*scanner->current == '/') {
+    if (*scanner->curptr == '/') {
 	/* port count */
 	pj_scan_get_char(scanner);
-	pj_scan_get(scanner, cs_token, &str);
+	pj_scan_get(scanner, &cs_token, &str);
 	med->desc.port_count = pj_strtoul(&str);
 
     } else {
@@ -727,9 +732,9 @@ static void parse_media(pj_scanner *scanner, pjsdp_media_desc *med)
 
     /* format list */
     med->desc.fmt_count = 0;
-    while (*scanner->current == ' ') {
+    while (*scanner->curptr == ' ') {
 	pj_scan_get_char(scanner);
-	pj_scan_get(scanner, cs_token, &med->desc.fmt[med->desc.fmt_count++]);
+	pj_scan_get(scanner, &cs_token, &med->desc.fmt[med->desc.fmt_count++]);
     }
 
     /* newline */
@@ -751,10 +756,10 @@ static pjsdp_rtpmap_attr * parse_rtpmap_attr( pj_pool_t *pool, pj_scanner *scann
 
     pj_scan_get_until_ch(scanner, '/', &rtpmap->encoding_name);
     pj_scan_get_char(scanner);
-    pj_scan_get(scanner, cs_token, &str);
+    pj_scan_get(scanner, &cs_token, &str);
     rtpmap->clock_rate = pj_strtoul(&str);
 
-    if (*scanner->current == '/') {
+    if (*scanner->curptr == '/') {
 	pj_scan_get_char(scanner);
 	pj_scan_get_until_ch(scanner, '\r', &rtpmap->parameter);
     }
@@ -793,7 +798,7 @@ static pjsdp_attr * parse_name_only_attr( pj_pool_t *pool, pj_scanner *scanner )
 {
     pjsdp_attr *attr;
 
-    PJ_UNUSED_ARG(scanner)
+    PJ_UNUSED_ARG(scanner);
     attr = pj_pool_calloc(pool, 1, sizeof(*attr));
     return attr;
 }
@@ -824,7 +829,7 @@ static pjsdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner)
     pj_scan_advance_n(scanner, 2, SKIP_WS);
     
     /* get attr name. */
-    pj_scan_get(scanner, cs_token, &attrname);
+    pj_scan_get(scanner, &cs_token, &attrname);
 
     /* find entry to handle attrname */
     for (i=0; i<PJ_ARRAY_SIZE(attr_map); ++i) {
@@ -851,7 +856,7 @@ static pjsdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner)
 
 static void on_scanner_error(pj_scanner *scanner)
 {
-    PJ_UNUSED_ARG(scanner)
+    PJ_UNUSED_ARG(scanner);
 
     PJ_THROW(SYNTAX_ERROR);
 }
@@ -878,7 +883,7 @@ PJ_DEF(pjsdp_session_desc*) pjsdp_parse( char *buf, pj_size_t len,
 
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {
-		cur_name = *scanner.current;
+		cur_name = *scanner.curptr;
 		switch (cur_name) {
 		case 'a':
 		    attr = parse_attr(pool, &scanner);
@@ -924,9 +929,9 @@ PJ_DEF(pjsdp_session_desc*) pjsdp_parse( char *buf, pj_size_t len,
     }
     PJ_CATCH(SYNTAX_ERROR) {
 	PJ_LOG(2, (LOG_THIS, "Syntax error in SDP parser '%c' line %d col %d",
-		cur_name, scanner.line, scanner.col));
+		cur_name, scanner.line, pj_scan_get_col(&scanner)));
 	if (!pj_scan_is_eof(&scanner)) {
-	    if (*scanner.current != '\r') {
+	    if (*scanner.curptr != '\r') {
 		pj_scan_get_until_ch(&scanner, '\r', &dummy);
 	    }
 	    pj_scan_get_newline(&scanner);

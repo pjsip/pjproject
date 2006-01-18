@@ -21,6 +21,8 @@
 #include <pj/os.h> 
 #include <pj/pool.h>
 #include <pj/string.h>
+#include <pj/assert.h>
+
 
 typedef struct pj_media_stream_desc
 {
@@ -771,7 +773,7 @@ pj_media_session_activate_stream (pj_media_session_t *session, unsigned index)
     scp.rtp_sock = sd->info.sock_info.rtp_sock;
     scp.rtcp_sock = sd->info.sock_info.rtcp_sock;
     scp.remote_addr = pj_pool_calloc (session->pool, 1, sizeof(pj_sockaddr_in));
-    pj_sockaddr_init (scp.remote_addr, &sd->info.rem_addr, sd->info.rem_port);
+    pj_sockaddr_in_init(scp.remote_addr, &sd->info.rem_addr, sd->info.rem_port);
     scp.ssrc = tv.sec;
     scp.jb_min = 1;
     scp.jb_max = 15;

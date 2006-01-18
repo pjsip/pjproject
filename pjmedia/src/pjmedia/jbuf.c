@@ -19,7 +19,9 @@
 #include <pjmedia/jbuf.h>
 #include <pj/log.h>
 #include <pj/pool.h>
-#include <string.h>	/* memset() */
+#include <pj/assert.h>
+#include <pj/string.h>
+
 
 /*
  * At the current state, this is basicly an ugly jitter buffer.
@@ -67,7 +69,7 @@ pj_framelist_init( pj_jbframelist *lst, pj_pool_t *pool, unsigned maxcount )
 {
     PJ_LOG(5, (THIS_FILE, "..pj_frame_list_init [lst=%p], maxcount=%d", lst, maxcount));
 
-    memset(lst, 0, sizeof(*lst));
+    pj_memset(lst, 0, sizeof(*lst));
     lst->maxcount = maxcount;
     lst->frames = pj_pool_calloc( pool, maxcount, sizeof(*lst->frames) );
     if (lst->frames == NULL) {

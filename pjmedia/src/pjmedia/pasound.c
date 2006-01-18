@@ -60,14 +60,14 @@ static int PaRecorderCallback(const void *input,
     pj_snd_stream *stream = userData;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(output)
-    PJ_UNUSED_ARG(timeInfo)
+    PJ_UNUSED_ARG(output);
+    PJ_UNUSED_ARG(timeInfo);
 
     if (stream->quit_flag)
 	goto on_break;
 
     if (stream->thread_initialized == 0) {
-	stream->thread = pj_thread_register("pa_rec", stream->thread_desc);
+	status = pj_thread_register("pa_rec", stream->thread_desc, &stream->thread);
 	stream->thread_initialized = 1;
     }
 
@@ -100,14 +100,14 @@ static int PaPlayerCallback( const void *input,
     pj_status_t status;
     unsigned size = frameCount * stream->bytes_per_sample;
 
-    PJ_UNUSED_ARG(input)
-    PJ_UNUSED_ARG(timeInfo)
+    PJ_UNUSED_ARG(input);
+    PJ_UNUSED_ARG(timeInfo);
 
     if (stream->quit_flag)
 	goto on_break;
 
     if (stream->thread_initialized == 0) {
-	stream->thread = pj_thread_register("pa_rec", stream->thread_desc);
+	status = pj_thread_register("pa_rec", stream->thread_desc, &stream->thread);
 	stream->thread_initialized = 1;
     }
 

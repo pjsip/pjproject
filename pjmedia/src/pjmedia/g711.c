@@ -22,7 +22,8 @@
 #include <pjmedia/codec.h>
 #include <pj/pool.h>
 #include <pj/string.h>
-#include <string.h>	/* memset */
+#include <pj/assert.h>
+
 
 #define G711_BPS	64000
 #define G711_CODEC_CNT	0	/* number of codec to preallocate in memory */
@@ -128,7 +129,7 @@ PJ_DEF(pj_status_t) g711_deinit_factory (pj_codec_factory *factory)
 
 static pj_status_t g711_match_id( pj_codec_factory *factory, const pj_codec_id *id )
 {
-    PJ_UNUSED_ARG(factory)
+    PJ_UNUSED_ARG(factory);
 
     /* It's sufficient to check payload type only. */
     return (id->pt==PJ_RTP_PT_PCMU || id->pt==PJ_RTP_PT_PCMA) ? 0 : -1;
@@ -138,7 +139,7 @@ static pj_status_t g711_default_attr (pj_codec_factory *factory,
 				      const pj_codec_id *id, 
 				      pj_codec_attr *attr )
 {
-    PJ_UNUSED_ARG(factory)
+    PJ_UNUSED_ARG(factory);
 
     memset(attr, 0, sizeof(pj_codec_attr));
     attr->sample_rate = 8000;
@@ -155,7 +156,7 @@ static pj_status_t g711_default_attr (pj_codec_factory *factory,
 static unsigned	g711_enum_codecs (pj_codec_factory *factory, 
 				  unsigned count, pj_codec_id codecs[])
 {
-    PJ_UNUSED_ARG(factory)
+    PJ_UNUSED_ARG(factory);
 
     if (count > 0) {
 	codecs[0].type = PJ_MEDIA_TYPE_AUDIO;
@@ -229,8 +230,8 @@ static pj_status_t g711_codec_default_attr  (pj_codec *codec, pj_codec_attr *att
 static pj_status_t g711_init( pj_codec *codec, pj_pool_t *pool )
 {
     /* There's nothing to do here really */
-    PJ_UNUSED_ARG(codec)
-    PJ_UNUSED_ARG(pool)
+    PJ_UNUSED_ARG(codec);
+    PJ_UNUSED_ARG(pool);
 
     return PJ_SUCCESS;
 }

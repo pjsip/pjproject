@@ -214,7 +214,7 @@ typedef struct pj_codec_op
 struct pj_codec
 {
     /** Entries to put this codec instance in codec factory's list. */
-    PJ_DECL_LIST_MEMBER(struct pj_codec)
+    PJ_DECL_LIST_MEMBER(struct pj_codec);
 
     /** Codec's private data. */
     void	*codec_data;
@@ -282,7 +282,7 @@ typedef struct pj_codec_factory_op
 struct pj_codec_factory
 {
     /** Entries to put this structure in the codec manager list. */
-    PJ_DECL_LIST_MEMBER(struct pj_codec_factory)
+    PJ_DECL_LIST_MEMBER(struct pj_codec_factory);
 
     /** The factory's private data. */
     void		*factory_data;
