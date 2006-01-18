@@ -107,23 +107,15 @@ SOURCE="..\src\pjsip-ua\sip_ua_private.h"
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\src\pjsip_ua.h
+SOURCE="..\include\pjsip-ua\sip_dialog.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_mod_ua\sip_dialog.h
+SOURCE="..\include\pjsip-ua\sip_regc.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_mod_ua\sip_reg.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip_mod_ua\sip_ua.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip_mod_ua\sip_ua_private.h
+SOURCE="..\include\pjsip-ua\sip_ua.h"
 # End Source File
 # End Group
 # End Target

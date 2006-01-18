@@ -34,21 +34,28 @@ static const struct
     { PJSIP_EBUSY,		"Object is busy" },
     { PJSIP_ETYPEEXISTS ,	"Object with the same type exists" },
     { PJSIP_ESHUTDOWN,		"SIP stack shutting down" },
+    { PJSIP_ENOTINITIALIZED,	"SIP object is not initialized." },
 
     /* Messaging errors */
     { PJSIP_EINVALIDMSG,	"Invalid message/syntax error" },
-    { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
-    { PJSIP_EMSGTOOLONG,	"Message too long" },
-    { PJSIP_EPARTIALMSG,	"Partial message" },
-    { PJSIP_EMISSINGREQURI,	"Missing Request-URI" },
-    { PJSIP_EMISSINGHDR,	"Missing required header(s)" },
-    { PJSIP_EMISSINGBODY,	"Missing message body" },
-    { PJSIP_EINVALIDVIA,	"Invalid Via header" },
-    { PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" },
-    { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
     { PJSIP_ENOTREQUESTMSG,	"Expecting request message"},
     { PJSIP_ENOTRESPONSEMSG,	"Expecting response message"},
+    { PJSIP_EMSGTOOLONG,	"Message too long" },
+    { PJSIP_EPARTIALMSG,	"Partial message" },
+
+    { PJSIP_EINVALIDSTATUS,	"Invalid status code"},
+
+    { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
+    { PJSIP_EMISSINGREQURI,	"Missing Request-URI" },
+    { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
+    { PJSIP_EURITOOLONG,	"URI is too long" }, 
+
+    { PJSIP_EMISSINGHDR,	"Missing required header(s)" },
     { PJSIP_EINVALIDHDR,	"Invalid header field"},
+    { PJSIP_EINVALIDVIA,	"Invalid Via header" },
+    { PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" },
+
+    { PJSIP_EMISSINGBODY,	"Missing message body" },
 
     /* Transport errors */
     { PJSIP_EUNSUPTRANSPORT,	"Unsupported transport"},
@@ -58,6 +65,19 @@ static const struct
 
     /* Transaction errors */
     { PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"},
+
+    /* Authentication. */
+    { PJSIP_EFAILEDCREDENTIAL,	"Credential failed to authenticate"},
+    { PJSIP_ENOCREDENTIAL,	"No suitable credential"},
+    { PJSIP_EINVALIDALGORITHM,	"Invalid/unsupported digest algorithm" },
+    { PJSIP_EINVALIDQOP,	"Invalid/unsupported digest qop" },
+    { PJSIP_EINVALIDAUTHSCHEME,	"Unsupported authentication scheme" },
+    { PJSIP_EAUTHNOPREVCHAL,	"No previous challenge" },
+    { PJSIP_EAUTHNOAUTH,	"No suitable authorization header" },
+    { PJSIP_EAUTHACCNOTFOUND,	"Account or credential not found" },
+    { PJSIP_EAUTHACCDISABLED,	"Account or credential is disabled" },
+    { PJSIP_EAUTHINVALIDREALM,	"Invalid authorization realm"},
+    { PJSIP_EAUTHINVALIDDIGEST,	"Invalid authorization digest" }
 };
 
 

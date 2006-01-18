@@ -218,7 +218,7 @@ struct pjsip_rx_data
 	char			*info;
 
 	/** The Call-ID header as found in the message. */
-	pj_str_t		 call_id;
+	pjsip_cid_hdr		*cid;
 
 	/** The From header as found in the message. */
 	pjsip_from_hdr		*from;

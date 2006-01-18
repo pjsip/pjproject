@@ -1399,7 +1399,7 @@ static pjsip_hdr* parse_hdr_call_id(pjsip_parse_ctx *ctx)
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
-        ctx->rdata->msg_info.call_id = hdr->id;
+        ctx->rdata->msg_info.cid = hdr;
 
     return (pjsip_hdr*)hdr;
 }

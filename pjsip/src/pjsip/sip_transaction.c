@@ -269,7 +269,7 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
     /* Calculate length required. */
     len_required = 9 +			    /* CSeq number */
 		   rdata->msg_info.from->tag.slen +   /* From tag. */
-		   rdata->msg_info.call_id.slen +    /* Call-ID */
+		   rdata->msg_info.cid->id.slen +    /* Call-ID */
 		   host->slen +		    /* Via host. */
 		   9 +			    /* Via port. */
 		   16;			    /* Separator+Allowance. */
@@ -299,8 +299,8 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
     *p++ = SEPARATOR;
 
     /* Add Call-ID. */
-    len = rdata->msg_info.call_id.slen;
-    pj_memcpy( p, rdata->msg_info.call_id.ptr, len );
+    len = rdata->msg_info.cid->id.slen;
+    pj_memcpy( p, rdata->msg_info.cid->id.ptr, len );
     p += len;
     *p++ = SEPARATOR;
 
@@ -1589,17 +1589,21 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
 
     ++tsx->retransmit_count;
 
-    status = tsx_send_msg( tsx, tsx->last_tx);
-    if (status != PJ_SUCCESS)
-	return status;
-    
-    /* Restart timer T1. */
+    /* Restart timer T1 first before sending the message to ensure that
+     * retransmission timer is not engaged when loop transport is used.
+     */
     if (resched) {
+	pj_assert(tsx->state != PJSIP_TSX_STATE_CONFIRMED);
 	if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 	    tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
 	} else {
 	    tsx_resched_retransmission(tsx);
 	}
+    }
+
+    status = tsx_send_msg( tsx, tsx->last_tx);
+    if (status != PJ_SUCCESS) {
+	return status;
     }
 
     return PJ_SUCCESS;

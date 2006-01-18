@@ -66,10 +66,19 @@
  **	until it's terminated by user).
  **     Transaction also MUST terminate in T4 seconds.
  **
- ** TEST10_BRANCH_ID
- **	Test where INVITE UAS transaction never receives ACK
- **
  ** TEST11_BRANCH_ID
+ **	Test scenario where transport fails before response is sent (i.e.
+ **	in TRYING state).
+ **
+ ** TEST12_BRANCH_ID
+ **	As above, after provisional response is sent but before final
+ **	response is sent (i.e. in PROCEEDING state).
+ **
+ ** TEST13_BRANCH_ID
+ **	As above, for INVITE, after final response has been sent but before
+ **	ACK is received (i.e. in CONNECTED state).
+ **
+ ** TEST14_BRANCH_ID
  **	When UAS failed to deliver the response with the selected transport,
  **	it should try contacting the client with other transport or begin
  **	RFC 3263 server resolution procedure.
@@ -78,11 +87,6 @@
  **	    b. PROCEEDING state (when failed to retransmit last response
  **	       upon receiving request retransmission).
  **	    c. COMPLETED state.
- **
- ** TEST12_BRANCH_ID
- **	Variant of previous test, where transaction fails to deliver the 
- **	response using any kind of transports. Transaction should report
- **	transport error to its transaction user.
  **
  **/
 
@@ -98,6 +102,7 @@ static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test9";
 static char *TEST10_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test10";
 static char *TEST11_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test11";
 static char *TEST12_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test12";
+static char *TEST13_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test13";
 
 #define TEST1_STATUS_CODE	200
 #define TEST2_STATUS_CODE	301
@@ -115,6 +120,7 @@ static char *TEST12_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test12";
 #define TEST6_RESPONSE_COUNT	3
 #define TEST7_STATUS_CODE	301
 #define TEST8_STATUS_CODE	302
+#define TEST9_STATUS_CODE	301
 
 
 #define TEST4_TITLE "test4: absorbing request retransmission"
@@ -210,10 +216,14 @@ static void send_response_timer( pj_timer_heap_t *timer_heap,
 
     status = pjsip_tsx_send_msg(tsx, r->tdata);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3,(THIS_FILE,"    error: timer unable to send response"));
+	// Some tests do expect failure!
+	//PJ_LOG(3,(THIS_FILE,"    error: timer unable to send response"));
+	pj_mutex_unlock(tsx->mutex);
 	pjsip_tx_data_dec_ref(r->tdata);
 	return;
     }
+
+    pj_mutex_unlock(tsx->mutex);
 }
 
 /* Utility to send response. */
@@ -234,9 +244,10 @@ static void send_response( pjsip_rx_data *rdata,
 
     status = pjsip_tsx_send_msg(tsx, tdata);
     if (status != PJ_SUCCESS) {
-	app_perror("    error: unable to send response", status);
 	pjsip_tx_data_dec_ref(tdata);
-	test_complete = -197;
+	// Some tests do expect failure!
+	//app_perror("    error: unable to send response", status);
+	//test_complete = -197;
 	return;
     }
 }
@@ -249,6 +260,7 @@ static void schedule_send_response( pjsip_rx_data *rdata,
 {
     pj_status_t status;
     pjsip_tx_data *tdata;
+    pj_timer_entry *t;
     struct response *r;
     pj_time_val delay;
 
@@ -268,14 +280,15 @@ static void schedule_send_response( pjsip_rx_data *rdata,
     delay.msec = msec_delay;
     pj_time_val_normalize(&delay);
 
-    timer.user_data = r;
-    timer.cb = &send_response_timer;
+    t = pj_pool_zalloc(tdata->pool, sizeof(*t));
+    t->user_data = r;
+    t->cb = &send_response_timer;
 
-    status = pjsip_endpt_schedule_timer(endpt, &timer, &delay);
+    status = pjsip_endpt_schedule_timer(endpt, t, &delay);
     if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
 	app_perror("    error: unable to schedule timer", status);
 	test_complete = -199;
-	pjsip_tx_data_dec_ref(tdata);
 	return;
     }
 }
@@ -574,6 +587,83 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	}
 
+
+    } else
+    if (pj_strcmp2(&tsx->branch, TEST9_BRANCH_ID)==0)  {
+	/*
+	 * TEST9_BRANCH_ID tests that retransmission of INVITE final response
+	 * must cease when ACK is received.
+	 */
+
+	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+
+	    if (test_complete == 0)
+		test_complete = 1;
+
+	    /* Check status code. */
+	    if (tsx->status_code != TEST9_STATUS_CODE) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
+		test_complete = -160;
+	    }
+	    
+	    /* Previous state. */
+	    if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_CONFIRMED) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
+		test_complete = -161;
+	    }
+
+	} else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
+
+	    /* Check that status code is status_code. */
+	    if (tsx->status_code != TEST9_STATUS_CODE) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
+		test_complete = -162;
+	    }
+	    
+	    /* Previous state. */
+	    if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
+		test_complete = -163;
+	    }
+
+
+	} else if (tsx->state == PJSIP_TSX_STATE_CONFIRMED) {
+
+	    /* Check that status code is status_code. */
+	    if (tsx->status_code != TEST9_STATUS_CODE) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
+		test_complete = -164;
+	    }
+	    
+	    /* Previous state. */
+	    if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
+		PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
+		test_complete = -165;
+	    }
+
+	} else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)  {
+
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    test_complete = -166;
+
+	}
+
+
+    } else
+    if (pj_strcmp2(&tsx->branch, TEST10_BRANCH_ID)==0 ||
+	pj_strcmp2(&tsx->branch, TEST11_BRANCH_ID)==0 ||
+	pj_strcmp2(&tsx->branch, TEST12_BRANCH_ID)==0)  
+    {
+	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	    
+	    if (!test_complete)
+		test_complete = 1;
+
+	    if (tsx->status_code != PJSIP_SC_TSX_TRANSPORT_ERROR) {
+		PJ_LOG(3,(THIS_FILE,"    error: incorrect status code"));
+		test_complete = -170;
+	    }
+	}
     }
 
 }
@@ -612,7 +702,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 			  TEST1_STATUS_CODE : TEST2_STATUS_CODE;
 
 	if (msg->type == PJSIP_REQUEST_MSG) {
-	    /* On received response, create UAS and respond with final 
+	    /* On received request, create UAS and respond with final 
 	     * response. 
 	     */
 	    pjsip_transaction *tsx;
@@ -652,7 +742,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	/* TEST3_BRANCH_ID tests provisional response. */
 
 	if (msg->type == PJSIP_REQUEST_MSG) {
-	    /* On received response, create UAS and respond with provisional
+	    /* On received request, create UAS and respond with provisional
 	     * response, then schedule timer to send final response.
 	     */
 	    pjsip_transaction *tsx;
@@ -705,7 +795,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	/* TEST6_BRANCH_ID: retransmit last response in COMPLETED state. */
 
 	if (msg->type == PJSIP_REQUEST_MSG) {
-	    /* On received response, create UAS. */
+	    /* On received request, create UAS. */
 	    pjsip_transaction *tsx;
 
 	    status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
@@ -786,7 +876,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	 */
 	if (msg->type == PJSIP_REQUEST_MSG) {
 
-	    /* On received response, create UAS. */
+	    /* On received request, create UAS. */
 	    pjsip_transaction *tsx;
 
 	    status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
@@ -861,7 +951,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	}
 	return PJ_TRUE;
 
-    } else if (pj_strcmp2(&branch_param, TEST9_BRANCH_ID)) {
+    } else if (pj_strcmp2(&branch_param, TEST9_BRANCH_ID) == 0) {
 
 	/*
 	 * TEST9_BRANCH_ID tests that the retransmission of INVITE final 
@@ -870,49 +960,36 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	 */
 	if (msg->type == PJSIP_REQUEST_MSG) {
 
-	    /* On received response, create UAS. */
+	    /* On received request, create UAS. */
 	    pjsip_transaction *tsx;
 
 	    status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
 	    if (status != PJ_SUCCESS) {
 		app_perror("    error: unable to create transaction", status);
-		test_complete = -140;
+		test_complete = -150;
 		return PJ_TRUE;
 	    }
 
 	    save_key(tsx);
+	    send_response(rdata, tsx, TEST9_STATUS_CODE);
 
-	    if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0) {
-
-		send_response(rdata, tsx, TEST7_STATUS_CODE);
-
-	    } else {
-
-		send_response(rdata, tsx, TEST8_STATUS_CODE);
-
-	    }
 
 	} else {
-	    int code;
 
 	    ++recv_count;
 
-	    if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0)
-		code = TEST7_STATUS_CODE;
-	    else
-		code = TEST8_STATUS_CODE;
+	    if (rdata->msg_info.msg->line.status.code != TEST9_STATUS_CODE) {
+		PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
+		test_complete = -151;
+	    }
 
 	    if (recv_count==1) {
-		
-		if (rdata->msg_info.msg->line.status.code != code) {
-		    PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
-		    test_complete = -141;
-		}
 
 		recv_last = rdata->pkt_info.timestamp;
 
-	    } else {
+	    } else if (recv_count < 5) {
 
+		/* Let UAS retransmit some messages before we send ACK. */
 		pj_time_val now;
 		unsigned msec, msec_expected;
 
@@ -930,19 +1007,90 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 			      "    error: incorrect retransmission "
 			      "time (%d ms expected, %d ms received",
 			      msec_expected, msec));
-		    test_complete = -142;
-		}
-
-		if (recv_count > 11) {
-		    PJ_LOG(3,(THIS_FILE,"    error: too many responses (%d)",
-					recv_count));
-		    test_complete = -143;
+		    test_complete = -152;
 		}
 
 		recv_last = rdata->pkt_info.timestamp;
+
+	    } else if (recv_count == 5) {
+		pjsip_tx_data *tdata;
+		pjsip_sip_uri *uri;
+		pjsip_via_hdr *via;
+
+		status = pjsip_endpt_create_request_from_hdr(
+			    endpt, &pjsip_ack_method, 
+			    rdata->msg_info.to->uri,
+			    rdata->msg_info.from,
+			    rdata->msg_info.to,
+			    NULL, 
+			    rdata->msg_info.cid,
+			    rdata->msg_info.cseq->cseq,
+			    NULL,
+			    &tdata);
+		if (status != PJ_SUCCESS) {
+		    app_perror("    error: unable to create ACK", status);
+		    test_complete = -153;
+		    return PJ_TRUE;
+		}
+
+		uri=(pjsip_sip_uri*)pjsip_uri_get_uri(tdata->msg->line.req.uri);
+		uri->transport_param = pj_str("loop-dgram");
+
+		via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+		via->branch_param = pj_str(TEST9_BRANCH_ID);
+
+		status = pjsip_endpt_send_request_stateless(endpt, tdata,
+							    NULL, NULL);
+		if (status != PJ_SUCCESS) {
+		    app_perror("    error: unable to send ACK", status);
+		    test_complete = -154;
+		}
+
+	    } else {
+		PJ_LOG(3,(THIS_FILE,"    error: too many responses (%d)",
+				    recv_count));
+		test_complete = -155;
 	    }
 
 	}
+	return PJ_TRUE;
+
+    } else if (pj_strcmp2(&branch_param, TEST10_BRANCH_ID) == 0 ||
+	       pj_strcmp2(&branch_param, TEST11_BRANCH_ID) == 0 ||
+	       pj_strcmp2(&branch_param, TEST12_BRANCH_ID) == 0) 
+    {
+	int test_num, code1, code2;
+
+	if (pj_strcmp2(&branch_param, TEST10_BRANCH_ID) == 0)
+	    test_num=10, code1 = 100, code2 = 0;
+	else if (pj_strcmp2(&branch_param, TEST11_BRANCH_ID) == 0)
+	    test_num=11, code1 = 100, code2 = 200;
+	else
+	    test_num=12, code1 = 200, code2 = 0;
+
+	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
+
+	    /* On received response, create UAS. */
+	    pjsip_transaction *tsx;
+
+	    status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
+	    if (status != PJ_SUCCESS) {
+		app_perror("    error: unable to create transaction", status);
+		test_complete = -150;
+		return PJ_TRUE;
+	    }
+
+	    save_key(tsx);
+	    
+	    schedule_send_response(rdata, &tsx_key, code1, 1000);
+
+	    if (code2)
+		schedule_send_response(rdata, &tsx_key, code2, 2000);
+
+	} else {
+
+	}
+
 	return PJ_TRUE;
     }
 
@@ -1212,6 +1360,113 @@ static int tsx_final_response_retransmission_test(void)
 }
 
 
+/*****************************************************************************
+ **
+ ** TEST9_BRANCH_ID: retransmission of non-2xx INVITE final response must 
+ ** cease when ACK is received
+ **
+ *****************************************************************************
+ */
+static int tsx_ack_test(void)
+{
+    int status;
+
+    PJ_LOG(3,(THIS_FILE,
+	      "  test9: receiving ACK for non-2xx final response"));
+
+    status = perform_test("sip:129.0.0.1;transport=loop-dgram",
+		          "sip:129.0.0.1;transport=loop-dgram",
+			  TEST9_BRANCH_ID,
+			  20, /* allow 5 retransmissions */
+			  &pjsip_invite_method, 1, 0, 0);
+    if (status != 0)
+	return status;
+
+
+    return 0;
+}
+
+
+
+/*****************************************************************************
+ **
+ ** TEST10_BRANCH_ID: test transport failure in TRYING state.
+ ** TEST11_BRANCH_ID: test transport failure in PROCEEDING state.
+ ** TEST12_BRANCH_ID: test transport failure in CONNECTED state.
+ ** TEST13_BRANCH_ID: test transport failure in CONFIRMED state.
+ **
+ *****************************************************************************
+ */
+static int tsx_transport_failure_test(void)
+{
+    struct test_desc
+    {
+	int transport_delay;
+	int fail_delay;
+	char *branch_id;
+	char *title;
+    } tests[] = 
+    {
+	{ 0,  10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (no delay)" },
+	{ 50, 10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (50 ms delay)" },
+	{ 0,  1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (no delay)" },
+	{ 50, 1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (50 ms delay)" },
+	{ 0,  2500, TEST12_BRANCH_ID, "test12: failed transport in COMPLETED state (no delay)" },
+	{ 50, 2500, TEST12_BRANCH_ID, "test12: failed transport in COMPLETED state (50 ms delay)" },
+    };
+    int i, status;
+
+    for (i=0; i<PJ_ARRAY_SIZE(tests); ++i) {
+	pj_time_val fail_time, end_test, now;
+
+	PJ_LOG(3,(THIS_FILE, "  %s", tests[i].title));
+	pjsip_loop_set_failure(loop, 0, NULL);
+	pjsip_loop_set_delay(loop, tests[i].transport_delay);
+
+	status = perform_test("sip:129.0.0.1;transport=loop-dgram",
+			      "sip:129.0.0.1;transport=loop-dgram",
+			      tests[i].branch_id,
+			      0,
+			      &pjsip_invite_method, 1, 0, 1);
+	if (status && status != TEST_TIMEOUT_ERROR)
+	    return status;
+	if (!status) {
+	    PJ_LOG(3,(THIS_FILE, "   error: expecting timeout"));
+	    return -40;
+	}
+
+	pj_gettimeofday(&fail_time);
+	fail_time.msec += tests[i].fail_delay;
+	pj_time_val_normalize(&fail_time);
+
+	do {
+	    pj_time_val interval = { 0, 1 };
+	    pj_gettimeofday(&now);
+	    pjsip_endpt_handle_events(endpt, &interval);
+	} while (PJ_TIME_VAL_LT(now, fail_time));
+
+	pjsip_loop_set_failure(loop, 1, NULL);
+
+	end_test = now;
+	end_test.sec += 5;
+
+	do {
+	    pj_time_val interval = { 0, 1 };
+	    pj_gettimeofday(&now);
+	    pjsip_endpt_handle_events(endpt, &interval);
+	} while (!test_complete && PJ_TIME_VAL_LT(now, end_test));
+
+	if (test_complete == 0) {
+	    PJ_LOG(3,(THIS_FILE, "   error: test has timed out"));
+	    return -41;
+	}
+
+	if (test_complete != 1)
+	    return test_complete;
+    }
+
+    return 0;
+}
 
 /*****************************************************************************
  **
@@ -1244,7 +1499,6 @@ int tsx_uas_test(void)
 	return -4;
     }
 
-#if 0
     /* TEST1_BRANCH_ID: Basic 2xx final response. 
      * TEST2_BRANCH_ID: Basic non-2xx final response. 
      */
@@ -1293,7 +1547,22 @@ int tsx_uas_test(void)
     if (status != 0)
 	return status;
 
-#endif
+    /* TEST9_BRANCH_ID: retransmission of non-2xx INVITE final response must 
+     * cease when ACK is received
+     */
+    status = tsx_ack_test();
+    if (status != 0)
+	return status;
+
+    /* TEST10_BRANCH_ID: test transport failure in TRYING state.
+     * TEST11_BRANCH_ID: test transport failure in PROCEEDING state.
+     * TEST12_BRANCH_ID: test transport failure in CONNECTED state.
+     * TEST13_BRANCH_ID: test transport failure in CONFIRMED state.
+     */
+    status = tsx_transport_failure_test();
+    if (status != 0)
+	return status;
+
 
     pjsip_transport_dec_ref(loop);
     return 0;

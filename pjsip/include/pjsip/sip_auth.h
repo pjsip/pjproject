@@ -29,13 +29,18 @@
 
 PJ_BEGIN_DECL
 
+
 /**
  * @defgroup PJSIP_AUTH_API Authorization API's
  * @ingroup PJSIP_AUTH
  * @{
  */
 
- /** Type of data in the credential information. */
+/* Length of digest string. */
+#define PJSIP_MD5STRLEN 32
+
+
+/** Type of data in the credential information. */
 typedef enum pjsip_cred_data_type
 {
     PJSIP_CRED_DATA_PLAIN_PASSWD,   /**< Plain text password.	*/
@@ -77,8 +82,8 @@ typedef struct pjsip_cached_auth_hdr
 {
     PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth_hdr);
 
-    pjsip_method	     method;
-    pjsip_authorization_hdr *hdr;
+    pjsip_method	     method;	/**< To quickly see the method. */
+    pjsip_authorization_hdr *hdr;	/**< The cached header.		*/
 
 } pjsip_cached_auth_hdr;
 
@@ -93,89 +98,109 @@ typedef struct pjsip_cached_auth_hdr
  * Other than that, this structure also keeps the last authorization headers
  * that have been sent in the cache list.
  */
-typedef struct pjsip_auth_session
+typedef struct pjsip_cached_auth
 {
-    PJ_DECL_LIST_MEMBER(struct pjsip_auth_session);
+    PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth);
 
-    pj_str_t			 realm;
-    pj_bool_t			 is_proxy;
-    pjsip_auth_qop_type		 qop_value;
+    pj_str_t			 realm;	    /**< Realm.			    */
+    pj_bool_t			 is_proxy;  /**< Server type (401/407)	    */
+    pjsip_auth_qop_type		 qop_value; /**< qop required by server.    */
 #if PJSIP_AUTH_QOP_SUPPORT
-    pj_uint32_t			 nc;
-    pj_str_t			 cnonce;
+    pj_uint32_t			 nc;	    /**< Nonce count.		    */
+    pj_str_t			 cnonce;    /**< Cnonce value.		    */
 #endif
 #if PJSIP_AUTH_AUTO_SEND_NEXT
-    pjsip_www_authenticate_hdr	*last_chal;
+    pjsip_www_authenticate_hdr	*last_chal; /**< Last challenge seen.	    */
 #endif
 #if PJSIP_AUTH_HEADER_CACHING
-    pjsip_cached_auth_hdr	 cached_hdr;
+    pjsip_cached_auth_hdr	 cached_hdr;/**< List of cached header for
+						 each method.		    */
 #endif
 
-} pjsip_auth_session;
+} pjsip_cached_auth;
 
 
 /**
- * Create authorization header for the specified credential.
- * Application calls this function to create Authorization or Proxy-Authorization
- * header after receiving WWW-Authenticate or Proxy-Authenticate challenge
- * (normally in 401/407 response).
- * If authorization session argument is specified, this function will update
- * the session with the updated information if required (e.g. to update
- * nonce-count when qop is "auth" or "auth-int"). This function will also
- * save the authorization header in the session's cached header list.
- *
- * @param req_pool	Pool to allocate new header for the request.
- * @param hdr		The WWW-Authenticate or Proxy-Authenticate found in 
- *			the response.
- * @param uri		The URI for which authorization is targeted to.
- * @param cred_info	The credential to be used for authentication.
- * @param method	The method.
- * @param sess_pool	Session pool to update session or to allocate message
- *			in the cache. May be NULL if auth_sess is NULL.
- * @param auth_sess	If not NULL, this specifies the specific authentication
- *			session to be used or updated.
- *
- * @return		The Authorization header, which can be typecasted to 
- *			Proxy-Authorization.
+ * This structure describes client authentication sessions. It keeps
+ * all the information needed to authorize the client against all downstream 
+ * servers.
  */
-PJ_DECL(pjsip_authorization_hdr*) pjsip_auth_respond( 
-					 pj_pool_t *req_pool,
-					 const pjsip_www_authenticate_hdr *hdr,
-					 const pjsip_uri *uri,
-					 const pjsip_cred_info *cred_info,
-					 const pjsip_method *method,
-					 pj_pool_t *sess_pool,
-					 pjsip_auth_session *auth_sess);
+typedef struct pjsip_auth_clt_sess
+{
+    pj_pool_t		*pool;		/**< Pool to use.		    */
+    pjsip_endpoint	*endpt;		/**< Endpoint where this belongs.   */
+    unsigned		 cred_cnt;	/**< Number of credentials.	    */
+    pjsip_cred_info	*cred_info;	/**< Array of credential information*/
+    pjsip_cached_auth	 cached_auth;	/**< Cached authorization info.	    */
 
-/**
- * Verify digest in the authorization request.
- *
- * @param hdr		The incoming Authorization/Proxy-Authorization header.
- * @param method	The method.
- * @param password	The plaintext password to verify.
- *
- * @return		Non-zero if authorization succeed.
- */
-PJ_DECL(pj_bool_t) pjsip_auth_verify(	const pjsip_authorization_hdr *hdr,
-					const pj_str_t *method,
-					const pjsip_cred_info *cred_info );
+} pjsip_auth_clt_sess;
 
 
 /**
- * This function can be used to find credential information which matches
- * the specified realm.
+ * Type of function to lookup credential for the specified name.
  *
- * @param count		Number of credentials in the parameter.
- * @param cred		The array of credentials.
- * @param realm		Realm to search.
- * @param scheme	Authentication scheme.
+ * @param pool		Pool to initialize the credential info.
+ * @param realm		Realm to find the account.
+ * @param acc_name	Account name to look for.
+ * @param cred_info	The structure to put the credential when it's found.
  *
- * @return		The credential which matches the specified realm.
+ * @return		The function MUST return PJ_SUCCESS when it found
+ *			a correct credential for the specified account and
+ *			realm. Otherwise it may return PJSIP_EAUTHACCNOTFOUND
+ *			or PJSIP_EAUTHACCDISABLED.
  */
-PJ_DECL(const pjsip_cred_info*) pjsip_auth_find_cred( unsigned count,
-						      const pjsip_cred_info cred[],
-						      const pj_str_t *realm,
-						      const pj_str_t *scheme );
+typedef pj_status_t pjsip_auth_lookup_cred( pj_pool_t *pool,
+					    const pj_str_t *realm,
+					    const pj_str_t *acc_name,
+					    pjsip_cred_info *cred_info );
+
+/** Flag to specify that server is a proxy. */
+#define PJSIP_AUTH_SRV_IS_PROXY	    1
+
+/**
+ * This structure describes server authentication information.
+ */
+typedef struct pjsip_auth_srv
+{
+    pj_str_t		     realm;	/**< Realm to serve.		    */
+    pj_bool_t		     is_proxy;	/**< Will issue 407 instead of 401  */
+    pjsip_auth_lookup_cred  *lookup;	/**< Lookup function.		    */
+
+} pjsip_auth_srv;
+
+
+/**
+ * Initialize client authentication session data structure, and set the 
+ * session to use pool for its subsequent memory allocation. The argument 
+ * options should be set to zero for this PJSIP version.
+ *
+ * @param sess		The client authentication session.
+ * @param endpt		Endpoint where this session belongs.
+ * @param pool		Pool to use.
+ * @param options	Must be zero.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_init( pjsip_auth_clt_sess *sess,
+					  pjsip_endpoint *endpt,
+					  pj_pool_t *pool, 
+					  unsigned options);
+
+
+
+/**
+ * Set the credentials to be used during the session. This will duplicate 
+ * the specified credentials using client authentication's pool.
+ *
+ * @param sess		The client authentication session.
+ * @param cred_cnt	Number of credentials.
+ * @param c		Array of credentials.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
+						     int cred_cnt,
+						     const pjsip_cred_info *c);
 
 
 /**
@@ -194,20 +219,14 @@ PJ_DECL(const pjsip_cred_info*) pjsip_auth_find_cred( unsigned count,
  * are not set, this function will do nothing. The stack then will only send
  * Authorization/Proxy-Authorization to respond 401/407 response.
  *
- * @param sess_pool	Session level pool, where memory will be allocated from
- *			for data that persists across requests (e.g. caching).
+ * @param sess		The client authentication session.
  * @param tdata		The request message to be initialized.
- * @param sess_list	List of authorization sessions that have been recorded.
- * @param cred_count	Number of credentials.
- * @param cred_info	Array of credentials.
  *
- * @return		Zero if successfull.
+ * @return		PJ_SUCCESS if successfull.
  */
-PJ_DECL(pj_status_t) pjsip_auth_init_req( pj_pool_t *sess_pool,
-					  pjsip_tx_data *tdata,
-					  pjsip_auth_session *sess_list,
-					  int cred_count, 
-					  const pjsip_cred_info cred_info[]);
+PJ_DECL(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
+					      pjsip_tx_data *tdata );
+
 
 /**
  * Call this function when a transaction failed with 401 or 407 response.
@@ -215,33 +234,104 @@ PJ_DECL(pj_status_t) pjsip_auth_init_req( pj_pool_t *sess_pool,
  * authentication challenge found in the response message, and add the
  * new authorization header in the authorization cache.
  *
- * Note that upon return the reference counter of the transmit data
- * will be incremented.
+ * Note that upon return the reference counter of the new transmit data
+ * will be set to 1.
  *
- * @param endpt		Endpoint.
- * @param pool		The pool to allocate memory for new cred_info.
- * @param cached_list	Cached authorization headers.
- * @param cred_count	Number of credentials.
- * @param cred_info	Array of credentials to use.
- * @param tdata		The original request message, which normally can be
- *			retrieved from tsx->last_tx.
+ * @param sess		The client authentication session.
  * @param rdata		The response message containing 401/407 status.
+ * @param old_request	The original request message, which will be re-
+ *			created with authorization info.
+ * @param new_request	Pointer to receive new request message which
+ *			will contain all required authorization headers.
  *
- * @return		New transmit data buffer, or NULL if the dialog
- *			can not respond to the authorization challenge.
+ * @return		PJ_SUCCESS if new request can be successfully
+ *			created to respond all the authentication
+ *			challenges.
  */
-PJ_DECL(pjsip_tx_data*) 
-pjsip_auth_reinit_req( pjsip_endpoint *endpt,
-		       pj_pool_t *ses_pool,
-		       pjsip_auth_session *sess_list,
-		       int cred_count, const pjsip_cred_info cred_info[],
-		       pjsip_tx_data *tdata, const pjsip_rx_data *rdata);
+PJ_DECL(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
+						const pjsip_rx_data *rdata,
+						pjsip_tx_data *old_request,
+						pjsip_tx_data **new_request );
+
+/**
+ * Initialize server authorization session data structure to serve the 
+ * specified realm and to use lookup_func function to look for the credential 
+ * info. 
+ *
+ * @param pool		Pool used to initialize the authentication server.
+ * @param auth_srv	The authentication server structure.
+ * @param realm		Realm to be served by the server.
+ * @param lookup	Account lookup function.
+ * @param options	Options, bitmask of:
+ *			- PJSIP_AUTH_SRV_IS_PROXY: to specify that the server
+ *			  will authorize clients as a proxy server (instead of
+ *			  as UAS), which means that Proxy-Authenticate will 
+ *			  be used instead of WWW-Authenticate.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
+					  pjsip_auth_srv *auth_srv,
+					  const pj_str_t *realm,
+					  pjsip_auth_lookup_cred *lookup,
+					  unsigned options );
+
+
+/**
+ * Request the authorization server framework to verify the authorization 
+ * information in the specified request in rdata.
+ *
+ * @param auth_srv	The server authentication structure.
+ * @param rdata		Incoming request to be authenticated.
+ * @param status_code	When not null, it will be filled with suitable 
+ *			status code to be sent to the client.
+ *
+ * @return		PJ_SUCCESS if request is successfully authenticated.
+ *			Otherwise the function may return one of the
+ *			following error codes:
+ *			- PJSIP_EAUTHNOAUTH
+ *			- PJSIP_EINVALIDAUTHSCHEME
+ *			- PJSIP_EAUTHACCNOTFOUND
+ *			- PJSIP_EAUTHACCDISABLED
+ *			- PJSIP_EAUTHINVALIDREALM
+ *			- PJSIP_EAUTHINVALIDDIGEST
+ */
+PJ_DECL(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
+					    pjsip_rx_data *rdata,
+					    int *status_code );
+
+
+/**
+ * Add authentication challenge headers to the outgoing response in tdata. 
+ * Application may specify its customized nonce and opaque for the challenge, 
+ * or can leave the value to NULL to make the function fills them in with 
+ * random characters.
+ *
+ * @param auth_srv	The server authentication structure.
+ * @param qop		Optional qop value.
+ * @param nonce		Optional nonce value.
+ * @param opaque	Optional opaque value.
+ * @param stale		Stale indication.
+ * @param tdata		The outgoing response message. The response must have
+ *			401 or 407 response code.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
+					       const pj_str_t *qop,
+					       const pj_str_t *nonce,
+					       const pj_str_t *opaque,
+					       pj_bool_t stale,
+					       pjsip_tx_data *tdata);
+
 
 /**
  * @}
  */
 
+
 PJ_END_DECL
+
 
 #endif	/* __PJSIP_AUTH_SIP_AUTH_H__ */
 

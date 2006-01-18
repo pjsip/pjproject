@@ -489,7 +489,8 @@ PJ_DECL(void) pj_scan_skip_line( pj_scanner *scanner );
  * @param scanner   The scanner.
  * @param state	    Variable to store scanner's state.
  */
-PJ_DECL(void) pj_scan_save_state( pj_scanner *scanner, pj_scan_state *state);
+PJ_DECL(void) pj_scan_save_state( const pj_scanner *scanner, 
+				  pj_scan_state *state);
 
 
 /** 
@@ -501,7 +502,7 @@ PJ_DECL(void) pj_scan_save_state( pj_scanner *scanner, pj_scan_state *state);
  * @param state	    State of the scanner.
  */
 PJ_DECL(void) pj_scan_restore_state( pj_scanner *scanner, 
-				      pj_scan_state *state);
+				     pj_scan_state *state);
 
 /**
  * Get current column position.
@@ -510,7 +511,7 @@ PJ_DECL(void) pj_scan_restore_state( pj_scanner *scanner,
  *
  * @return	    The column position.
  */
-PJ_INLINE(int) pj_scan_get_col( pj_scanner *scanner )
+PJ_INLINE(int) pj_scan_get_col( const pj_scanner *scanner )
 {
     return scanner->curptr - scanner->start_line;
 }

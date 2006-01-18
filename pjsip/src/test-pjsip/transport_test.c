@@ -116,7 +116,7 @@ static pjsip_module my_module =
 static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 {
     /* Check that this is our request. */
-    if (pj_strcmp2(&rdata->msg_info.call_id, CALL_ID_HDR) == 0) {
+    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
 	/* It is! */
 	/* Send response. */
 	pjsip_tx_data *tdata;
@@ -149,7 +149,7 @@ static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 
 static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 {
-    if (pj_strcmp2(&rdata->msg_info.call_id, CALL_ID_HDR) == 0) {
+    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
 	pj_get_timestamp(&my_recv_time);
 	recv_status = PJ_SUCCESS;
 	return PJ_TRUE;
@@ -334,8 +334,8 @@ static pj_str_t  rt_call_id;
 
 static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
 {
-    if (!pj_strncmp(&rdata->msg_info.call_id, &rt_call_id, rt_call_id.slen)) {
-	char *pos = pj_strchr(&rdata->msg_info.call_id, '/');
+    if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
+	char *pos = pj_strchr(&rdata->msg_info.cid->id, '/');
 	int thread_id = (*pos - '0');
 
 	pjsip_tx_data *tdata;
@@ -422,8 +422,8 @@ static pj_status_t rt_send_request(int thread_id)
 
 static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 {
-    if (!pj_strncmp(&rdata->msg_info.call_id, &rt_call_id, rt_call_id.slen)) {
-	char *pos = pj_strchr(&rdata->msg_info.call_id, '/')+1;
+    if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
+	char *pos = pj_strchr(&rdata->msg_info.cid->id, '/')+1;
 	int thread_id = (*pos - '0');
 	pj_timestamp recv_time;
 

@@ -878,7 +878,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	}
 
 	/* Perform basic header checking. */
-	if (rdata->msg_info.call_id.ptr == NULL || 
+	if (rdata->msg_info.cid->id.ptr == NULL || 
 	    rdata->msg_info.from == NULL || 
 	    rdata->msg_info.to == NULL || 
 	    rdata->msg_info.via == NULL || 

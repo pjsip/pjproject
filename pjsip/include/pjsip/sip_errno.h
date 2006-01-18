@@ -79,7 +79,7 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
 #define PJSIP_ERRNO_START_PJSIP (PJSIP_ERRNO_START + 1000)
 
 /************************************************************
- * GENERIC SIP ERRORS
+ * GENERIC/GENERAL SIP ERRORS
  ***********************************************************/
 /**
  * @hideinitializer
@@ -96,6 +96,11 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * SIP stack is shutting down.
  */
 #define PJSIP_ESHUTDOWN		(PJSIP_ERRNO_START_PJSIP + 3)	/* 171003 */
+/**
+ * @hideinitializer
+ * SIP object is not initialized.
+ */
+#define PJSIP_ENOTINITIALIZED	(PJSIP_ERRNO_START_PJSIP + 4)	/* 171004 */
 
 
 /************************************************************
@@ -108,64 +113,77 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
 #define PJSIP_EINVALIDMSG       (PJSIP_ERRNO_START_PJSIP + 20)	/* 171020 */
 /**
  * @hideinitializer
- * Unsupported URL scheme.
- */
-#define PJSIP_EINVALIDSCHEME    (PJSIP_ERRNO_START_PJSIP + 21)	/* 171021 */
-/**
- * @hideinitializer
- * Message too long. See also PJSIP_ERXOVERFLOW.
- */
-#define PJSIP_EMSGTOOLONG	(PJSIP_ERRNO_START_PJSIP + 22)	/* 171022 */
-/**
- * @hideinitializer
- * Message not completely received.
- */
-#define PJSIP_EPARTIALMSG       (PJSIP_ERRNO_START_PJSIP + 23)	/* 171023 */
-/**
- * @hideinitializer
- * Missing Request-URI.
- */
-#define PJSIP_EMISSINGREQURI    (PJSIP_ERRNO_START_PJSIP + 24)	/* 171024 */
-/**
- * @hideinitializer
- * Missing required header(s).
- */
-#define PJSIP_EMISSINGHDR       (PJSIP_ERRNO_START_PJSIP + 25)	/* 171025 */
-/**
- * @hideinitializer
- * Missing message body.
- */
-#define PJSIP_EMISSINGBODY	(PJSIP_ERRNO_START_PJSIP + 26)	/* 171026 */
-/**
- * @hideinitializer
- * Invalid Via header in response (sent-by, etc).
- */
-#define PJSIP_EINVALIDVIA	(PJSIP_ERRNO_START_PJSIP + 27)	/* 171027 */
-/**
- * @hideinitializer
- * Multiple Via headers in response.
- */
-#define PJSIP_EMULTIPLEVIA	(PJSIP_ERRNO_START_PJSIP + 28)	/* 171028 */
-/**
- * @hideinitializer
- * Invalid request URI.
- */
-#define PJSIP_EINVALIDREQURI	(PJSIP_ERRNO_START_PJSIP + 29)	/* 171029 */
-/**
- * @hideinitializer
  * Expecting request message.
  */
-#define PJSIP_ENOTREQUESTMSG	(PJSIP_ERRNO_START_PJSIP + 30)	/* 171030 */
+#define PJSIP_ENOTREQUESTMSG	(PJSIP_ERRNO_START_PJSIP + 21)	/* 171021 */
 /**
  * @hideinitializer
  * Expecting response message.
  */
-#define PJSIP_ENOTRESPONSEMSG	(PJSIP_ERRNO_START_PJSIP + 31)	/* 171031 */
+#define PJSIP_ENOTRESPONSEMSG	(PJSIP_ERRNO_START_PJSIP + 22)	/* 171022 */
+/**
+ * @hideinitializer
+ * Message too long. See also PJSIP_ERXOVERFLOW.
+ */
+#define PJSIP_EMSGTOOLONG	(PJSIP_ERRNO_START_PJSIP + 23)	/* 171023 */
+/**
+ * @hideinitializer
+ * Message not completely received.
+ */
+#define PJSIP_EPARTIALMSG       (PJSIP_ERRNO_START_PJSIP + 24)	/* 171024 */
+
+/**
+ * @hideinitializer
+ * Status code is invalid.
+ */
+#define PJSIP_EINVALIDSTATUS	(PJSIP_ERRNO_START_PJSIP + 30)	/* 171030 */
+
+/**
+ * @hideinitializer
+ * Unsupported URL scheme.
+ */
+#define PJSIP_EINVALIDSCHEME    (PJSIP_ERRNO_START_PJSIP + 40)	/* 171040 */
+/**
+ * @hideinitializer
+ * Missing Request-URI.
+ */
+#define PJSIP_EMISSINGREQURI    (PJSIP_ERRNO_START_PJSIP + 41)	/* 171041 */
+/**
+ * @hideinitializer
+ * Invalid request URI.
+ */
+#define PJSIP_EINVALIDREQURI	(PJSIP_ERRNO_START_PJSIP + 42)	/* 171042 */
+/**
+ * @hideinitializer
+ * URI is too long.
+ */
+#define PJSIP_EURITOOLONG	(PJSIP_ERRNO_START_PJSIP + 43)	/* 171043 */
+
+/**
+ * @hideinitializer
+ * Missing required header(s).
+ */
+#define PJSIP_EMISSINGHDR       (PJSIP_ERRNO_START_PJSIP + 50)	/* 171050 */
 /**
  * @hideinitializer
  * Invalid header field.
  */
-#define PJSIP_EINVALIDHDR	(PJSIP_ERRNO_START_PJSIP + 32)	/* 171032 */
+#define PJSIP_EINVALIDHDR	(PJSIP_ERRNO_START_PJSIP + 51)	/* 171051 */
+/**
+ * @hideinitializer
+ * Invalid Via header in response (sent-by, etc).
+ */
+#define PJSIP_EINVALIDVIA	(PJSIP_ERRNO_START_PJSIP + 52)	/* 171052 */
+/**
+ * @hideinitializer
+ * Multiple Via headers in response.
+ */
+#define PJSIP_EMULTIPLEVIA	(PJSIP_ERRNO_START_PJSIP + 53)	/* 171053 */
+/**
+ * @hideinitializer
+ * Missing message body.
+ */
+#define PJSIP_EMISSINGBODY	(PJSIP_ERRNO_START_PJSIP + 54)	/* 171054 */
 
 
 /************************************************************
@@ -175,23 +193,23 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * @hideinitializer
  * Unsupported transport type.
  */
-#define PJSIP_EUNSUPTRANSPORT	(PJSIP_ERRNO_START_PJSIP + 40)	/* 171040 */
+#define PJSIP_EUNSUPTRANSPORT	(PJSIP_ERRNO_START_PJSIP + 60)	/* 171060 */
 /**
  * @hideinitializer
  * Buffer is being sent, operation still pending.
  */
-#define PJSIP_EPENDINGTX	(PJSIP_ERRNO_START_PJSIP + 41)	/* 171041 */
+#define PJSIP_EPENDINGTX	(PJSIP_ERRNO_START_PJSIP + 61)	/* 171061 */
 /**
  * @hideinitializer
  * Rx buffer overflow. See also PJSIP_EMSGTOOLONG.
  */
-#define PJSIP_ERXOVERFLOW       (PJSIP_ERRNO_START_PJSIP + 42)	/* 171042 */
+#define PJSIP_ERXOVERFLOW       (PJSIP_ERRNO_START_PJSIP + 62)	/* 171062 */
 /**
  * @hideinitializer
  * This is not really an error, it just informs application that
  * transmit data has been deleted on return of pjsip_tx_data_dec_ref().
  */
-#define PJSIP_EBUFDESTROYED     (PJSIP_ERRNO_START_PJSIP + 43)	/* 171043 */
+#define PJSIP_EBUFDESTROYED     (PJSIP_ERRNO_START_PJSIP + 63)	/* 171063 */
 
 
 /************************************************************
@@ -201,7 +219,7 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * @hideinitializer
  * Transaction has just been destroyed.
  */
-#define PJSIP_ETSXDESTROYED     (PJSIP_ERRNO_START_PJSIP + 60)	/* 171060 */
+#define PJSIP_ETSXDESTROYED     (PJSIP_ERRNO_START_PJSIP + 70)	/* 171070 */
 
 
 /************************************************************
@@ -268,6 +286,65 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  */
 #define PJSIP_ECMPHEADERPARAM	(PJSIP_ERRNO_START_PJSIP + 91)	/* 171091 */
 
+
+/************************************************************
+ * AUTHENTICATION FRAMEWORK
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Credential failed to authenticate.
+ */
+#define PJSIP_EFAILEDCREDENTIAL	(PJSIP_ERRNO_START_PJSIP + 100)	/* 171100 */
+/**
+ * @hideinitializer
+ * No suitable credential.
+ */
+#define PJSIP_ENOCREDENTIAL	(PJSIP_ERRNO_START_PJSIP + 101)	/* 171101 */
+/**
+ * @hideinitializer
+ * Invalid/unsupported algorithm.
+ */
+#define PJSIP_EINVALIDALGORITHM	(PJSIP_ERRNO_START_PJSIP + 102)	/* 171102 */
+/**
+ * @hideinitializer
+ * Invalid/unsupported qop.
+ */
+#define PJSIP_EINVALIDQOP	(PJSIP_ERRNO_START_PJSIP + 103)	/* 171103 */
+/**
+ * @hideinitializer
+ * Invalid/unsupported authentication scheme.
+ */
+#define PJSIP_EINVALIDAUTHSCHEME (PJSIP_ERRNO_START_PJSIP + 104)/* 171104 */
+/**
+ * @hideinitializer
+ * No previous challenge.
+ */
+#define PJSIP_EAUTHNOPREVCHAL	(PJSIP_ERRNO_START_PJSIP + 105)	/* 171105 */
+/**
+ * @hideinitializer
+ * No authorization is found.
+ */
+#define PJSIP_EAUTHNOAUTH	(PJSIP_ERRNO_START_PJSIP + 106)	/* 171106 */
+/**
+ * @hideinitializer
+ * Account not found.
+ */
+#define PJSIP_EAUTHACCNOTFOUND	(PJSIP_ERRNO_START_PJSIP + 107)	/* 171107 */
+/**
+ * @hideinitializer
+ * Account is disabled.
+ */
+#define PJSIP_EAUTHACCDISABLED	(PJSIP_ERRNO_START_PJSIP + 108)	/* 171108 */
+/**
+ * @hideinitializer
+ * Invalid realm.
+ */
+#define PJSIP_EAUTHINVALIDREALM	(PJSIP_ERRNO_START_PJSIP + 109)	/* 171109 */
+/**
+ * @hideinitializer
+ * Invalid digest.
+ */
+#define PJSIP_EAUTHINVALIDDIGEST (PJSIP_ERRNO_START_PJSIP+110)	/* 171110 */
 
 
 PJ_END_DECL

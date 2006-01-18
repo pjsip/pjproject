@@ -20,11 +20,10 @@
 #define __PJSIP_SIP_UA_H__
 
 /**
- * @file ua.h
- * @brief SIP User Agent Library
+ * @file sip_ua.h
+ * @brief SIP User Agent Module
  */
 
-#include <pjsip_mod_ua/sip_dialog.h>
 
 PJ_BEGIN_DECL
 
@@ -40,58 +39,41 @@ PJ_BEGIN_DECL
  *   User Agent manages the interactions between application and SIP dialogs.
  */
 
-typedef struct pjsip_dlg_callback pjsip_dlg_callback;
-
-/**
- * \brief This structure describes a User Agent instance.
- */
-struct pjsip_user_agent
-{
-    pjsip_endpoint     *endpt;
-    pj_pool_t	       *pool;
-    pj_mutex_t	       *mutex;
-    pj_uint32_t		mod_id;
-    pj_hash_table_t    *dlg_table;
-    pjsip_dlg_callback *dlg_cb;
-    pj_list		dlg_list;
-};
-
-/**
- * Create a new dialog.
- */
-PJ_DECL(pjsip_dlg*) pjsip_ua_create_dialog( pjsip_user_agent *ua,
-					       pjsip_role_e role );
+/** User agent type. */
+typedef pjsip_module pjsip_user_agent;
 
 
 /**
- * Destroy dialog.
+ * Initialize user agent layer and register it to the specified endpoint.
+ *
+ * @param endpt		The endpoint where the user agent will be
+ *			registered.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_ua_destroy_dialog( pjsip_dlg *dlg );
-
-
-/** 
- * Register callback to receive dialog notifications.
- */
-PJ_DECL(void) pjsip_ua_set_dialog_callback( pjsip_user_agent *ua, 
-					    pjsip_dlg_callback *cb );
-
+PJ_DECL(pj_status_t) pjsip_ua_init(pjsip_endpoint *endpt);
 
 /**
- * Get the module interface for the UA module.
+ * Get the instance of the user agent.
+ *
+ * @return		The user agent module instance.
  */
-PJ_DECL(pjsip_module*) pjsip_ua_get_module(void);
-
+PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
 
 /**
- * Dump user agent state to log file.
+ * Destroy the user agent layer.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_ua_dump( pjsip_user_agent *ua );
+PJ_DECL(pj_status_t) pjsip_ua_destroy(void);
+
 
 /**
  * @}
  */
 
 PJ_END_DECL
+
 
 #endif	/* __PJSIP_UA_H__ */
 

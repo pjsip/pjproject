@@ -398,12 +398,14 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		test_complete = -747;
 	    }
 
-	    /* last_tx is ACK in this case. */
+	    /* last_tx MUST be the INVITE request
+	     * (authorization depends on this behavior)
+	     */
 	    if (tsx->last_tx && tsx->last_tx->msg->line.req.method.id !=
-		PJSIP_ACK_METHOD)
+		PJSIP_INVITE_METHOD)
 	    {
 		PJ_LOG(3,(THIS_FILE, 
-			  "    error: last_tx is not ACK"));
+			  "    error: last_tx is not INVITE"));
 		test_complete = -748;
 	    }
 	}
@@ -461,12 +463,14 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		test_complete = -763;
 	    }
 
-	    /* last_tx is ACK in this case. */
+	    /* last_tx MUST be INVITE. 
+	     * (authorization depends on this behavior)
+	     */
 	    if (tsx->last_tx && tsx->last_tx->msg->line.req.method.id !=
-		PJSIP_ACK_METHOD)
+		PJSIP_INVITE_METHOD)
 	    {
 		PJ_LOG(3,(THIS_FILE, 
-			  "    error: last_tx is not ACK"));
+			  "    error: last_tx is not INVITE"));
 		test_complete = -764;
 	    }
 

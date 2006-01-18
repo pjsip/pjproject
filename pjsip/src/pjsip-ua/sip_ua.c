@@ -41,10 +41,8 @@
 /*
  * Static prototypes.
  */
-static pj_status_t ua_init( pjsip_endpoint *endpt,
-			    struct pjsip_module *mod, pj_uint32_t id );
-static pj_status_t ua_start( struct pjsip_module *mod );
-static pj_status_t ua_deinit( struct pjsip_module *mod );
+static pj_status_t ua_load(pjsip_endpoint *endpt);
+static pj_status_t ua_unload(void);
 static void ua_tsx_handler( struct pjsip_module *mod, pjsip_event *evt );
 static pjsip_dlg *find_dialog( pjsip_user_agent *ua,
 			       pjsip_rx_data *rdata );
@@ -53,65 +51,63 @@ static pj_status_t ua_register_dialog( pjsip_user_agent *ua, pjsip_dlg *dlg,
 PJ_DECL(void) pjsip_on_dialog_destroyed( pjsip_dlg *dlg );
 
 /*
- * Default UA instance.
- */
-static pjsip_user_agent ua_instance;
-
-/*
  * Module interface.
  */
-static struct pjsip_module mod_ua = 
+static struct user_agent
 {
-    { "User-Agent", 10 },   /* Name.		*/
-    0,			    /* Flag		*/
-    128,		    /* Priority		*/
-    NULL,		    /* User agent instance, initialized by APP.	*/
-    0,			    /* Number of methods supported (will be initialized later). */
-    { 0 },		    /* Array of methods (will be initialized later) */
-    &ua_init,		    /* init_module()	*/
-    &ua_start,		    /* start_module()	*/
-    &ua_deinit,		    /* deinit_module()	*/
-    &ua_tsx_handler,	    /* tsx_handler()	*/
+    pjsip_module	 mod;
+    pj_pool_t		*pool;
+    pjsip_endpoint	*endpt;
+    pj_mutex_t		*mutex;
+    pj_hash_table_t	*dlg_table;
+    pjsip_dialog	 dlg_list;
+
+} mod_ua = 
+{
+  {
+    NULL, NULL,		    /* prev, next.			*/
+    { "mod-ua", 6 },	    /* Name.				*/
+    -1,			    /* Id				*/
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER,	/* Priority		*/
+    NULL,		    /* User data.			*/
+    0,			    /* Number of methods supported.	*/
+    { 0 },		    /* Array of methods			*/
+    &ua_load,		    /* load()				*/
+    NULL,		    /* start()				*/
+    NULL,		    /* stop()				*/
+    &ua_unload,		    /* unload()				*/
+    NULL,		    /* on_rx_request()			*/
+    NULL,		    /* on_rx_response()			*/
+    NULL,		    /* on_tx_request.			*/
+    NULL,		    /* on_tx_response()			*/
+    NULL,		    /* on_tsx_state()			*/
+  }
 };
 
 /*
  * Initialize user agent instance.
  */
-static pj_status_t ua_init( pjsip_endpoint *endpt,
-			    struct pjsip_module *mod, pj_uint32_t id )
+static pj_status_t ua_load( pjsip_endpoint *endpt )
 {
-    static pjsip_method m_invite, m_ack, m_cancel, m_bye;
-    pjsip_user_agent *ua = mod->mod_data;
     extern int pjsip_dlg_lock_tls_id;	/* defined in sip_dialog.c */
-
-    pjsip_method_set( &m_invite, PJSIP_INVITE_METHOD );
-    pjsip_method_set( &m_ack, PJSIP_ACK_METHOD );
-    pjsip_method_set( &m_cancel, PJSIP_CANCEL_METHOD );
-    pjsip_method_set( &m_bye, PJSIP_BYE_METHOD );
-
-    mod->method_cnt = 4;
-    mod->methods[0] = &m_invite;
-    mod->methods[1] = &m_ack;
-    mod->methods[2] = &m_cancel;
-    mod->methods[3] = &m_bye;
+    pj_status_t status;
 
     /* Initialize the user agent. */
-    ua->endpt = endpt;
-    ua->pool = pjsip_endpt_create_pool(endpt, "pua%p", PJSIP_POOL_LEN_UA, 
-				       PJSIP_POOL_INC_UA);
-    if (!ua->pool) {
-	return -1;
-    }
-    ua->mod_id = id;
-    ua->mutex = pj_mutex_create(ua->pool, " ua%p", 0);
-    if (!ua->mutex) {
-	return -1;
-    }
-    ua->dlg_table = pj_hash_create(ua->pool, PJSIP_MAX_DIALOG_COUNT);
-    if (ua->dlg_table == NULL) {
-	return -1;
-    }
-    pj_list_init(&ua->dlg_list);
+    mod_ua.endpt = endpt;
+    status = pjsip_endpt_create_pool( endpt, "pua%p", PJSIP_POOL_LEN_UA, 
+				      PJSIP_POOL_INC_UA, &mod_ua.pool);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_mutex_create_recursive(mod_ua.pool, " ua%p", &mod_ua.mutex);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    mod_ua.dlg_table = pj_hash_create(mod_ua.pool, PJSIP_MAX_DIALOG_COUNT);
+    if (ua->dlg_table == NULL)
+	return PJ_ENOMEM;
+
+    pj_list_init(&mod_ua.dlg_list);
 
     /* Initialize dialog lock. */
     pjsip_dlg_lock_tls_id = pj_thread_local_alloc();
@@ -120,50 +116,21 @@ static pj_status_t ua_init( pjsip_endpoint *endpt,
     }
     pj_thread_local_set(pjsip_dlg_lock_tls_id, NULL);
 
-    return 0;
-}
-
-/*
- * Start user agent instance.
- */
-static pj_status_t ua_start( struct pjsip_module *mod )
-{
-    PJ_UNUSED_ARG(mod)
-    return 0;
+    return PJ_SUCCESS;
 }
 
 /*
  * Destroy user agent.
  */
-static pj_status_t ua_deinit( struct pjsip_module *mod )
+static pj_status_t ua_unload()
 {
-    pjsip_user_agent *ua = mod->mod_data;
-
-    pj_mutex_unlock(ua->mutex);
+    pj_mutex_unlock(mod_ua.mutex);
 
     /* Release pool */
-    if (ua->pool) {
-	pjsip_endpt_destroy_pool( ua->endpt, ua->pool );
+    if (mod_ua.pool) {
+	pjsip_endpt_destroy_pool( mod_ua.endpt, mod_ua.pool );
     }
-    return 0;
-}
-
-/*
- * Get the module interface for the UA module.
- */
-PJ_DEF(pjsip_module*) pjsip_ua_get_module(void)
-{
-    mod_ua.mod_data = &ua_instance;
-    return &mod_ua;
-}
-
-/*
- * Register callback to receive dialog notifications.
- */
-PJ_DEF(void) pjsip_ua_set_dialog_callback( pjsip_user_agent *ua, 
-					   pjsip_dlg_callback *cb )
-{
-    ua->dlg_cb = cb;
+    return PJ_SUCCESS;
 }
 
 /* 

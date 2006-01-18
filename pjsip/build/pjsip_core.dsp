@@ -87,7 +87,7 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjsip\sip_auth.c
+SOURCE=..\src\pjsip\sip_auth_client.c
 # End Source File
 # Begin Source File
 
@@ -96,6 +96,10 @@ SOURCE=..\src\pjsip\sip_auth_msg.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_auth_parser.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_auth_server.c
 # End Source File
 # Begin Source File
 

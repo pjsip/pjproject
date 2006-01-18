@@ -37,7 +37,7 @@ static pj_xml_node *alloc_node( pj_pool_t *pool )
 {
     pj_xml_node *node;
 
-    node = pj_pool_calloc(pool, 1, sizeof(pj_xml_node));
+    node = pj_pool_zalloc(pool, sizeof(pj_xml_node));
     pj_list_init( &node->attr_head );
     pj_list_init( &node->node_head );
 
@@ -313,6 +313,21 @@ PJ_DEF(int) pj_xml_print(const pj_xml_node *node, char *buf, pj_size_t len,
     return printed;
 }
 
+PJ_DEF(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name)
+{
+    pj_xml_node *node = alloc_node(pool);
+    pj_strdup(pool, &node->name, name);
+    return node;
+}
+
+PJ_DEF(pj_xml_attr*) pj_xml_attr_new( pj_pool_t *pool, const pj_str_t *name,
+				      const pj_str_t *value)
+{
+    pj_xml_attr *attr = alloc_attr(pool);
+    pj_strdup( pool, &attr->name, name);
+    pj_strdup( pool, &attr->value, value);
+    return attr;
+}
 
 PJ_DEF(void) pj_xml_add_node( pj_xml_node *parent, pj_xml_node *node )
 {

@@ -250,7 +250,7 @@ static pj_status_t loop_destroy(pjsip_transport *tp)
 }
 
 /* Worker thread for loop transport. */
-static int loop_thread(void *arg)
+static int loop_transport_worker_thread(void *arg)
 {
     struct loop_transport *loop = arg;
     struct recv_list r;
@@ -384,7 +384,8 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     pj_list_init(&loop->send_list);
 
     /* Create worker thread. */
-    status = pj_thread_create(pool, "loop", &loop_thread, loop, 0, 
+    status = pj_thread_create(pool, "loop", 
+			      &loop_transport_worker_thread, loop, 0, 
 			      PJ_THREAD_SUSPENDED, &loop->thread);
     if (status != PJ_SUCCESS)
 	goto on_error;

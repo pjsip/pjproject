@@ -16,10 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_auth_parser.h>	/* just to get pjsip_DIGEST_STR */
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
+#include <pjsip/sip_errno.h>
 #include <pjlib-util/md5.h>
 #include <pj/log.h>
 #include <pj/string.h>
@@ -28,61 +30,53 @@
 #include <pj/assert.h>
 #include <pj/ctype.h>
 
-/* Length of digest string. */
-#define MD5STRLEN 32
 
-/* Maximum stack size we use for storing username+realm+password etc. */
-#define MAX_TEMP  128
 
 /* A macro just to get rid of type mismatch between char and unsigned char */
 #define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, len)
 
 /* Logging. */
-#define THIS_FILE   "sip_auth.c"
+#define THIS_FILE   "sip_auth_client.c"
 #if 0
 #  define AUTH_TRACE_(expr)  PJ_LOG(3, expr)
 #else
 #  define AUTH_TRACE_(expr)
 #endif
 
-static const char hex[] = "0123456789abcdef";
-
 /* Transform digest to string.
- * output must be at least MD5STRLEN+1 bytes.
+ * output must be at least PJSIP_MD5STRLEN+1 bytes.
  *
  * NOTE: THE OUTPUT STRING IS NOT NULL TERMINATED!
  */
 static void digest2str(const unsigned char digest[], char *output)
 {
-    char *p = output;
     int i;
-
     for (i = 0; i<16; ++i) {
-	int val = digest[i];
-	*p++ = hex[val >> 4];
-	*p++ = hex[val & 0x0F];
+	pj_val_to_hex_digit(digest[i], output);
+	output += 2;
     }
 }
+
 
 /*
  * Create response digest based on the parameters and store the
  * digest ASCII in 'result'. 
  */
-static void create_digest( pj_str_t *result,
-			   const pj_str_t *nonce,
-			   const pj_str_t *nc,
-			   const pj_str_t *cnonce,
-			   const pj_str_t *qop,
-			   const pj_str_t *uri,
-			   const pjsip_cred_info *cred_info,
-			   const pj_str_t *method)
+void pjsip_auth_create_digest( pj_str_t *result,
+			       const pj_str_t *nonce,
+			       const pj_str_t *nc,
+			       const pj_str_t *cnonce,
+			       const pj_str_t *qop,
+			       const pj_str_t *uri,
+			       const pjsip_cred_info *cred_info,
+			       const pj_str_t *method)
 {
-    char ha1[MD5STRLEN];
-    char ha2[MD5STRLEN];
+    char ha1[PJSIP_MD5STRLEN];
+    char ha2[PJSIP_MD5STRLEN];
     unsigned char digest[16];
     pj_md5_context pms;
 
-    pj_assert(result->slen >= MD5STRLEN);
+    pj_assert(result->slen >= PJSIP_MD5STRLEN);
 
     AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
 
@@ -127,7 +121,7 @@ static void create_digest( pj_str_t *result,
      ***    response = MD5(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
      ***/
     pj_md5_init(&pms);
-    MD5_APPEND( &pms, ha1, MD5STRLEN);
+    MD5_APPEND( &pms, ha1, PJSIP_MD5STRLEN);
     MD5_APPEND( &pms, ":", 1);
     MD5_APPEND( &pms, nonce->ptr, nonce->slen);
     if (qop && qop->slen != 0) {
@@ -139,13 +133,13 @@ static void create_digest( pj_str_t *result,
 	MD5_APPEND( &pms, qop->ptr, qop->slen);
     }
     MD5_APPEND( &pms, ":", 1);
-    MD5_APPEND( &pms, ha2, MD5STRLEN);
+    MD5_APPEND( &pms, ha2, PJSIP_MD5STRLEN);
 
     /* This is the final response digest. */
     pj_md5_final(&pms, digest);
     
     /* Convert digest to string and store in chal->response. */
-    result->slen = MD5STRLEN;
+    result->slen = PJSIP_MD5STRLEN;
     digest2str(digest, result->ptr);
 
     AUTH_TRACE_((THIS_FILE, "  digest=%.32s", result->ptr));
@@ -206,7 +200,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     {
 	PJ_LOG(4,(THIS_FILE, "Unsupported digest algorithm \"%.*s\"",
 		  chal->algorithm.slen, chal->algorithm.ptr));
-	return -1;
+	return PJSIP_EINVALIDALGORITHM;
     }
 
     /* Build digest credential from arguments. */
@@ -218,15 +212,15 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     pj_strdup(pool, &cred->opaque, &chal->opaque);
     
     /* Allocate memory. */
-    cred->response.ptr = pj_pool_alloc(pool, MD5STRLEN);
-    cred->response.slen = MD5STRLEN;
+    cred->response.ptr = pj_pool_alloc(pool, PJSIP_MD5STRLEN);
+    cred->response.slen = PJSIP_MD5STRLEN;
 
     if (chal->qop.slen == 0) {
 	/* Server doesn't require quality of protection. */
 
 	/* Convert digest to string and store in chal->response. */
-	create_digest( &cred->response, &cred->nonce, NULL, NULL, NULL,
-		       uri, cred_info, method);
+	pjsip_auth_create_digest( &cred->response, &cred->nonce, NULL, NULL, 
+				  NULL, uri, cred_info, method);
 
     } else if (has_auth_qop(pool, &chal->qop)) {
 	/* Server requires quality of protection. 
@@ -243,118 +237,166 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	    pj_strdup(pool, &cred->cnonce, &dummy_cnonce);
 	}
 
-	create_digest( &cred->response, &cred->nonce, &cred->nc, cnonce, 
-		       &pjsip_AUTH_STR, uri, cred_info, method );
+	pjsip_auth_create_digest( &cred->response, &cred->nonce, &cred->nc, 
+				  cnonce, &pjsip_AUTH_STR, uri, cred_info, 
+				  method );
 
     } else {
 	/* Server requires quality protection that we don't support. */
 	PJ_LOG(4,(THIS_FILE, "Unsupported qop offer %.*s", 
 		  chal->qop.slen, chal->qop.ptr));
-	return -1;
+	return PJSIP_EINVALIDQOP;
     }
 
-    return 0;
+    return PJ_SUCCESS;
 }
 
-#if PJSIP_AUTH_QOP_SUPPORT
+#if defined(PJSIP_AUTH_QOP_SUPPORT) && PJSIP_AUTH_QOP_SUPPORT!=0
 /*
  * Update authentication session with a challenge.
  */
 static void update_digest_session( pj_pool_t *ses_pool, 
-				   pjsip_auth_session *auth_sess,
+				   pjsip_cached_auth *cached_auth,
 				   const pjsip_www_authenticate_hdr *hdr )
 {
     if (hdr->challenge.digest.qop.slen == 0)
 	return;
 
     /* Initialize cnonce and qop if not present. */
-    if (auth_sess->cnonce.slen == 0) {
+    if (cached_auth->cnonce.slen == 0) {
 	/* Save the whole challenge */
-	auth_sess->last_chal = pjsip_hdr_clone(ses_pool, hdr);
+	cached_auth->last_chal = pjsip_hdr_clone(ses_pool, hdr);
 
 	/* Create cnonce */
-	pj_create_unique_string( ses_pool, &auth_sess->cnonce );
+	pj_create_unique_string( ses_pool, &cached_auth->cnonce );
 
 	/* Initialize nonce-count */
-	auth_sess->nc = 1;
+	cached_auth->nc = 1;
 
 	/* Save realm. */
-	pj_assert(auth_sess->realm.slen != 0);
-	if (auth_sess->realm.slen == 0) {
-	    pj_strdup(ses_pool, &auth_sess->realm, 
+	pj_assert(cached_auth->realm.slen != 0);
+	if (cached_auth->realm.slen == 0) {
+	    pj_strdup(ses_pool, &cached_auth->realm, 
 		      &hdr->challenge.digest.realm);
 	}
 
     } else {
 	/* Update last_nonce and nonce-count */
 	if (!pj_strcmp(&hdr->challenge.digest.nonce, 
-		       &auth_sess->last_chal->challenge.digest.nonce)) 
+		       &cached_auth->last_chal->challenge.digest.nonce)) 
 	{
 	    /* Same nonce, increment nonce-count */
-	    ++auth_sess->nc;
+	    ++cached_auth->nc;
 	} else {
 	    /* Server gives new nonce. */
-	    pj_strdup(ses_pool, &auth_sess->last_chal->challenge.digest.nonce,
+	    pj_strdup(ses_pool, &cached_auth->last_chal->challenge.digest.nonce,
 		      &hdr->challenge.digest.nonce);
 	    /* Has the opaque changed? */
-	    if (pj_strcmp(&auth_sess->last_chal->challenge.digest.opaque,
+	    if (pj_strcmp(&cached_auth->last_chal->challenge.digest.opaque,
 			  &hdr->challenge.digest.opaque)) 
 	    {
 		pj_strdup(ses_pool, 
-			  &auth_sess->last_chal->challenge.digest.opaque,
+			  &cached_auth->last_chal->challenge.digest.opaque,
 			  &hdr->challenge.digest.opaque);
 	    }
-	    auth_sess->nc = 1;
+	    cached_auth->nc = 1;
 	}
     }
 }
 #endif	/* PJSIP_AUTH_QOP_SUPPORT */
 
 
-/* Find authentication session in the list. */
-static pjsip_auth_session *find_session( pjsip_auth_session *sess_list,
-					 const pj_str_t *realm )
+/* Find cached authentication in the list for the specified realm. */
+static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
+					    const pj_str_t *realm )
 {
-    pjsip_auth_session *sess = sess_list->next;
-    while (sess != sess_list) {
-	if (pj_stricmp(&sess->realm, realm) == 0)
-	    return sess;
-	sess = sess->next;
+    pjsip_cached_auth *auth = sess->cached_auth.next;
+    while (auth != &sess->cached_auth) {
+	if (pj_stricmp(&auth->realm, realm) == 0)
+	    return auth;
+	auth = auth->next;
     }
 
     return NULL;
 }
 
+/* Find credential to use for the specified realm and auth scheme. */
+static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
+					      const pj_str_t *realm,
+					      const pj_str_t *auth_scheme)
+{
+    unsigned i;
+    PJ_UNUSED_ARG(auth_scheme);
+    for (i=0; i<sess->cred_cnt; ++i) {
+	if (pj_stricmp(&sess->cred_info[i].realm, realm) == 0)
+	    return &sess->cred_info[i];
+    }
+    return NULL;
+}
+
+
+/* Init client session. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
+					  pjsip_endpoint *endpt,
+					  pj_pool_t *pool, 
+					  unsigned options)
+{
+    PJ_ASSERT_RETURN(sess && endpt && pool && (options==0), PJ_EINVAL);
+
+    sess->pool = pool;
+    sess->endpt = endpt;
+    sess->cred_cnt = 0;
+    sess->cred_info = NULL;
+    pj_list_init(&sess->cached_auth);
+
+    return PJ_SUCCESS;
+}
+
+
+/* Set client credentials. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
+						    int cred_cnt,
+						    const pjsip_cred_info *c)
+{
+    PJ_ASSERT_RETURN(sess && cred_cnt && c, PJ_EINVAL);
+
+    sess->cred_info = pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
+    pj_memcpy(sess->cred_info, c, cred_cnt * sizeof(*c));
+    sess->cred_cnt = cred_cnt;
+
+    return PJ_SUCCESS;
+}
+
+
 /* 
  * Create Authorization/Proxy-Authorization response header based on the challege
  * in WWW-Authenticate/Proxy-Authenticate header.
  */
-PJ_DEF(pjsip_authorization_hdr*)
-pjsip_auth_respond( pj_pool_t *req_pool,
-		    const pjsip_www_authenticate_hdr *hdr,
-		    const pjsip_uri *uri,
-		    const pjsip_cred_info *cred_info,
-		    const pjsip_method *method,
-		    pj_pool_t *sess_pool,
-		    pjsip_auth_session *auth_sess)
+static pj_status_t auth_respond( pj_pool_t *req_pool,
+				 const pjsip_www_authenticate_hdr *hdr,
+				 const pjsip_uri *uri,
+				 const pjsip_cred_info *cred_info,
+				 const pjsip_method *method,
+				 pj_pool_t *sess_pool,
+				 pjsip_cached_auth *cached_auth,
+				 pjsip_authorization_hdr **p_h_auth)
 {
-    pjsip_authorization_hdr *auth;
+    pjsip_authorization_hdr *hauth;
     char tmp[PJSIP_MAX_URL_SIZE];
     pj_str_t uri_str;
     pj_pool_t *pool;
+    pj_status_t status;
 
-    pj_assert(hdr != NULL);
-    pj_assert(uri != NULL);
-    pj_assert(cred_info != NULL);
-    pj_assert(method != NULL);
+    /* Verify arguments. */
+    PJ_ASSERT_RETURN(req_pool && hdr && uri && cred_info && method &&
+		     sess_pool && cached_auth && p_h_auth, PJ_EINVAL);
 
     /* Print URL in the original request. */
     uri_str.ptr = tmp;
-    uri_str.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, uri, tmp, sizeof(tmp));
+    uri_str.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, uri, tmp,sizeof(tmp));
     if (uri_str.slen < 1) {
 	pj_assert(!"URL is too long!");
-	PJ_LOG(4,(THIS_FILE, "Unable to authorize: URI is too long!"));
-	return NULL;
+	return PJSIP_EURITOOLONG;
     }
 
 #   if (PJSIP_AUTH_HEADER_CACHING)
@@ -370,52 +412,51 @@ pjsip_auth_respond( pj_pool_t *req_pool,
 #   endif
 
     if (hdr->type == PJSIP_H_WWW_AUTHENTICATE)
-	auth = pjsip_authorization_hdr_create(pool);
+	hauth = pjsip_authorization_hdr_create(pool);
     else if (hdr->type == PJSIP_H_PROXY_AUTHENTICATE)
-	auth = pjsip_proxy_authorization_hdr_create(pool);
+	hauth = pjsip_proxy_authorization_hdr_create(pool);
     else {
-	pj_assert(0);
-	return NULL;
+	pj_assert(!"Invalid response header!");
+	return PJSIP_EINVALIDHDR;
     }
 
     /* Only support digest scheme at the moment. */
     if (!pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR)) {
-	pj_status_t rc;
 	pj_str_t *cnonce = NULL;
 	pj_uint32_t nc = 1;
 
 	/* Update the session (nonce-count etc) if required. */
 #	if PJSIP_AUTH_QOP_SUPPORT
 	{
-	    if (auth_sess) {
-		update_digest_session( sess_pool, auth_sess, hdr );
+	    if (cached_auth) {
+		update_digest_session( sess_pool, cached_auth, hdr );
 
-		cnonce = &auth_sess->cnonce;
-		nc = auth_sess->nc;
+		cnonce = &cached_auth->cnonce;
+		nc = cached_auth->nc;
 	    }
 	}
 #	endif	/* PJSIP_AUTH_QOP_SUPPORT */
 
-	auth->scheme = pjsip_DIGEST_STR;
-	rc = respond_digest( pool, &auth->credential.digest,
-			     &hdr->challenge.digest, &uri_str, cred_info,
-			     cnonce, nc, &method->name);
-	if (rc != 0)
-	    return NULL;
+	hauth->scheme = pjsip_DIGEST_STR;
+	status = respond_digest( pool, &hauth->credential.digest,
+				 &hdr->challenge.digest, &uri_str, cred_info,
+				 cnonce, nc, &method->name);
+	if (status != PJ_SUCCESS)
+	    return status;
 
 	/* Set qop type in auth session the first time only. */
-	if (hdr->challenge.digest.qop.slen != 0 && auth_sess) {
-	    if (auth_sess->qop_value == PJSIP_AUTH_QOP_NONE) {
-		pj_str_t *qop_val = &auth->credential.digest.qop;
+	if (hdr->challenge.digest.qop.slen != 0 && cached_auth) {
+	    if (cached_auth->qop_value == PJSIP_AUTH_QOP_NONE) {
+		pj_str_t *qop_val = &hauth->credential.digest.qop;
 		if (!pj_strcmp(qop_val, &pjsip_AUTH_STR)) {
-		    auth_sess->qop_value = PJSIP_AUTH_QOP_AUTH;
+		    cached_auth->qop_value = PJSIP_AUTH_QOP_AUTH;
 		} else {
-		    auth_sess->qop_value = PJSIP_AUTH_QOP_UNKNOWN;
+		    cached_auth->qop_value = PJSIP_AUTH_QOP_UNKNOWN;
 		}
 	    }
 	}
     } else {
-	auth = NULL;
+	return PJSIP_EINVALIDAUTHSCHEME;
     }
 
     /* Keep the new authorization header in the cache, only
@@ -423,236 +464,166 @@ pjsip_auth_respond( pj_pool_t *req_pool,
      */
 #   if PJSIP_AUTH_HEADER_CACHING
     {
-	if (auth && auth_sess && auth_sess->qop_value == PJSIP_AUTH_QOP_NONE) {
+	if (hauth && cached_auth && cached_auth->qop_value == PJSIP_AUTH_QOP_NONE) {
 	    pjsip_cached_auth_hdr *cached_hdr;
 
 	    /* Delete old header with the same method. */
-	    cached_hdr = auth_sess->cached_hdr.next;
-	    while (cached_hdr != &auth_sess->cached_hdr) {
+	    cached_hdr = cached_auth->cached_hdr.next;
+	    while (cached_hdr != &cached_auth->cached_hdr) {
 		if (pjsip_method_cmp(method, &cached_hdr->method)==0)
 		    break;
 		cached_hdr = cached_hdr->next;
 	    }
 
 	    /* Save the header to the list. */
-	    if (cached_hdr != &auth_sess->cached_hdr) {
-		cached_hdr->hdr = auth;
+	    if (cached_hdr != &cached_auth->cached_hdr) {
+		cached_hdr->hdr = hauth;
 	    } else {
 		cached_hdr = pj_pool_alloc(pool, sizeof(*cached_hdr));
 		pjsip_method_copy( pool, &cached_hdr->method, method);
-		cached_hdr->hdr = auth;
-		pj_list_insert_before( &auth_sess->cached_hdr, cached_hdr );
+		cached_hdr->hdr = hauth;
+		pj_list_insert_before( &cached_auth->cached_hdr, cached_hdr );
 	    }
 	}
     }
 #   endif
 
-    return auth;
+    *p_h_auth = hauth;
+    return PJ_SUCCESS;
 
 }
 
-/* Verify incoming Authorization/Proxy-Authorization header against existing
- * credentials. Will return TRUE if the authorization request matches any of
- * the credential.
- */
-PJ_DEF(pj_bool_t) pjsip_auth_verify(const pjsip_authorization_hdr *hdr,
-				    const pj_str_t *method,
-				    const pjsip_cred_info *cred_info )
-{
-    if (pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR) == 0) {
-	char digest_buf[MD5STRLEN];
-	pj_str_t digest;
-	const pjsip_digest_credential *dig = &hdr->credential.digest;
 
-	/* Check that username match. */
-	if (pj_strcmp(&dig->username, &cred_info->username) != 0)
-	    return PJ_FALSE;
-
-	/* Check that realm match. */
-	if (pj_strcmp(&dig->realm, &cred_info->realm) != 0)
-	    return PJ_FALSE;
-
-	/* Prepare for our digest calculation. */
-	digest.ptr = digest_buf;
-	digest.slen = MD5STRLEN;
-
-	/* Create digest for comparison. */
-	create_digest(  &digest, 
-			&hdr->credential.digest.nonce,
-			&hdr->credential.digest.nc, 
-			&hdr->credential.digest.cnonce,
-			&hdr->credential.digest.qop,
-			&hdr->credential.digest.uri,
-			cred_info, 
-			method );
-
-	return pj_stricmp(&digest, &hdr->credential.digest.response) == 0;
-
-    } else {
-	pj_assert(0);
-	return PJ_FALSE;
-    }
-}
-
-/* Find credential to use for the specified realm and scheme. */
-PJ_DEF(const pjsip_cred_info*) pjsip_auth_find_cred( unsigned count,
-						     const pjsip_cred_info cred[],
-						     const pj_str_t *realm,
-						     const pj_str_t *scheme)
-{
-    unsigned i;
-    PJ_UNUSED_ARG(scheme);
-    for (i=0; i<count; ++i) {
-	if (pj_stricmp(&cred[i].realm, realm) == 0)
-	    return &cred[i];
-    }
-    return NULL;
-}
-
-#if PJSIP_AUTH_AUTO_SEND_NEXT
-static void new_auth_for_req( pjsip_tx_data *tdata,
-			      pj_pool_t *sess_pool,
-			      pjsip_auth_session *sess,
-			      int cred_count,
-			      const pjsip_cred_info cred_info[])
+#if defined(PJSIP_AUTH_AUTO_SEND_NEXT) && PJSIP_AUTH_AUTO_SEND_NEXT!=0
+static pj_status_t new_auth_for_req( pjsip_tx_data *tdata,
+				     pjsip_auth_clt_sess *sess,
+				     pjsip_cached_auth *auth,
+				     pjsip_authorization_hdr **p_h_auth)
 {
     const pjsip_cred_info *cred;
     pjsip_authorization_hdr *hauth;
+    pj_status_t status;
 
-    pj_assert(sess->last_chal != NULL);
+    PJ_ASSERT_RETURN(tdata && sess && auth, PJ_EINVAL);
+    PJ_ASSERT_RETURN(auth->last_chal != NULL, PJSIP_EAUTHNOPREVCHAL);
 
-    cred = pjsip_auth_find_cred( cred_count, cred_info, &sess->realm,
-				 &sess->last_chal->scheme );
+    cred = auth_find_cred( sess, &auth->realm, &auth->last_chal->scheme );
     if (!cred)
-	return;
+	return PJSIP_ENOCREDENTIAL;
 
+    status = auth_respond( tdata->pool, auth->last_chal,
+			   tdata->msg->line.req.uri,
+			   cred, &tdata->msg->line.req.method,
+			   sess->pool, auth, &hauth);
+    if (status != PJ_SUCCESS)
+	return status;
     
-    hauth = pjsip_auth_respond( tdata->pool, sess->last_chal,
-				tdata->msg->line.req.uri,
-				cred, &tdata->msg->line.req.method,
-				sess_pool, sess);
-    if (hauth) {
-	pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)hauth);
-    }
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)hauth);
+
+    if (p_h_auth)
+	*p_h_auth = hauth;
+
+    return PJ_SUCCESS;
 }
 #endif
 
-/* 
- * Initialize new request message with authorization headers.
- * This function will put Authorization/Proxy-Authorization headers to the
- * outgoing request message. If caching is enabled (PJSIP_AUTH_HEADER_CACHING)
- * and the session has previously sent Authorization/Proxy-Authorization header
- * with the same method, then the same Authorization/Proxy-Authorization header
- * will be resent from the cache only if qop is not present. If the stack is 
- * configured to automatically generate next Authorization/Proxy-Authorization
- * headers (PJSIP_AUTH_AUTO_SEND_NEXT flag), then new Authorization/Proxy-
- * Authorization headers are calculated and generated when they are not present
- * in the case or if authorization session has qop.
- *
- * If both PJSIP_AUTH_HEADER_CACHING flag and PJSIP_AUTH_AUTO_SEND_NEXT flag
- * are not set, this function will do nothing. The stack then will only send
- * Authorization/Proxy-Authorization to respond 401/407 response.
- */
-PJ_DEF(pj_status_t) pjsip_auth_init_req( pj_pool_t *sess_pool,
-					 pjsip_tx_data *tdata,
-					 pjsip_auth_session *sess_list,
-					 int cred_count, 
-					 const pjsip_cred_info cred_info[])
+
+
+/* Initialize outgoing request. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
+					     pjsip_tx_data *tdata )
 {
-    pjsip_auth_session *sess;
-    pjsip_method *method = &tdata->msg->line.req.method;
+    const pjsip_method *method;
+    pjsip_cached_auth *auth;
+    pj_status_t status;
 
-    pj_assert(tdata->msg->type == PJSIP_REQUEST_MSG);
+    PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
+    PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
 
-    if (!sess_list)
-	return 0;
+    /* Get the method. */
+    method = &tdata->msg->line.req.method;
 
-    sess = sess_list->next;
-    while (sess != sess_list) {
-	if (sess->qop_value == PJSIP_AUTH_QOP_NONE) {
-#	    if (PJSIP_AUTH_HEADER_CACHING)
+    auth = sess->cached_auth.next;
+    while (auth != &sess->cached_auth) {
+	if (auth->qop_value == PJSIP_AUTH_QOP_NONE) {
+#	    if defined(PJSIP_AUTH_HEADER_CACHING) && \
+	       PJSIP_AUTH_HEADER_CACHING!=0
 	    {
-		pjsip_cached_auth_hdr *entry = sess->cached_hdr.next;
-		while (entry != &sess->cached_hdr) {
+		pjsip_cached_auth_hdr *entry = auth->cached_hdr.next;
+		while (entry != &auth->cached_hdr) {
 		    if (pjsip_method_cmp(&entry->method, method)==0) {
 			pjsip_authorization_hdr *hauth;
 			hauth = pjsip_hdr_shallow_clone(tdata->pool, entry->hdr);
 			pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
 		    } else {
-#			if (PJSIP_AUTH_AUTO_SEND_NEXT)
+#			if defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
+			   PJSIP_AUTH_AUTO_SEND_NEXT!=0
 			{
-			    new_auth_for_req( tdata, sess_pool, sess, 
-					      cred_count, cred_info);
+			    new_auth_for_req( tdata, sess, auth, NULL);
 			}
-#			else
-			{
-			    PJ_UNUSED_ARG(sess_pool);
-			    PJ_UNUSED_ARG(cred_count);
-			    PJ_UNUSED_ARG(cred_info);
-			}
-#			endif	/* PJSIP_AUTH_AUTO_SEND_NEXT */
+#			endif
 		    }
 		    entry = entry->next;
 		}
 	    }
-#	    elif (PJSIP_AUTH_AUTO_SEND_NEXT)
+#	    elif defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
+		 PJSIP_AUTH_AUTO_SEND_NEXT!=0
 	    {
-		new_auth_for_req( tdata, sess_pool, sess, 
-				  cred_count, cred_info);
+		new_auth_for_req( tdata, sess, auth, NULL);
 	    }
-#	    else
-	    {
-		PJ_UNUSED_ARG(sess_pool);
-		PJ_UNUSED_ARG(cred_count);
-		PJ_UNUSED_ARG(cred_info);
-	    }
-#	    endif   /* PJSIP_AUTH_HEADER_CACHING */
+#	    endif
 
 	} 
-#	if (PJSIP_AUTH_QOP_SUPPORT && PJSIP_AUTH_AUTO_SEND_NEXT)
-	else if (sess->qop_value == PJSIP_AUTH_QOP_AUTH) {
+#	if defined(PJSIP_AUTH_QOP_SUPPORT) && \
+	   defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
+	   (PJSIP_AUTH_QOP_SUPPORT && PJSIP_AUTH_AUTO_SEND_NEXT)
+	else if (auth->qop_value == PJSIP_AUTH_QOP_AUTH) {
 	    /* For qop="auth", we have to re-create the authorization header. 
 	     */
 	    const pjsip_cred_info *cred;
 	    pjsip_authorization_hdr *hauth;
 
-	    cred = pjsip_auth_find_cred( cred_count, cred_info, 
-					 &sess->realm, 
-					 &sess->last_chal->scheme);
+	    cred = auth_find_cred(sess, &auth->realm, 
+				  &auth->last_chal->scheme);
 	    if (!cred) {
-		sess = sess->next;
+		auth = auth->next;
 		continue;
 	    }
 
-	    hauth = pjsip_auth_respond( tdata->pool, sess->last_chal, 
-					tdata->msg->line.req.uri, 
-					cred,
-					&tdata->msg->line.req.method,
-					sess_pool, sess );
-	    if (hauth) {
-		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
-	    }
+	    status = auth_respond( tdata->pool, auth->last_chal, 
+				   tdata->msg->line.req.uri, 
+				   cred,
+				   &tdata->msg->line.req.method,
+				   sess->pool, auth, &hauth);
+	    if (status != PJ_SUCCESS)
+		return status;
+	    
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
 	}
 #	endif	/* PJSIP_AUTH_QOP_SUPPORT && PJSIP_AUTH_AUTO_SEND_NEXT */
 
-	sess = sess->next;
+	auth = auth->next;
     }
-    return 0;
+
+    return PJ_SUCCESS;
 }
 
+
 /* Process authorization challenge */
-static pjsip_authorization_hdr *process_auth( pj_pool_t *req_pool,
-					      const pjsip_www_authenticate_hdr *hchal,
-					      const pjsip_uri *uri,
-					      pjsip_tx_data *tdata,
-					      int cred_count,
-					      const pjsip_cred_info cred_info[],
-					      pj_pool_t *ses_pool,
-					      pjsip_auth_session *auth_sess)
+static pj_status_t process_auth( pj_pool_t *req_pool,
+				 const pjsip_www_authenticate_hdr *hchal,
+				 const pjsip_uri *uri,
+				 pjsip_tx_data *tdata,
+				 pjsip_auth_clt_sess *sess,
+				 pjsip_cached_auth *cached_auth,
+				 pjsip_authorization_hdr **h_auth)
 {
     const pjsip_cred_info *cred;
-    pjsip_authorization_hdr *sent_auth = NULL, *hauth;
+    pjsip_authorization_hdr *sent_auth = NULL;
     pjsip_hdr *hdr;
+    pj_status_t status;
 
     /* See if we have sent authorization header for this realm */
     hdr = tdata->msg->hdr.next;
@@ -685,7 +656,7 @@ static pjsip_authorization_hdr *process_auth( pj_pool_t *req_pool,
 		       sent_auth->credential.digest.username.ptr,
 		       sent_auth->credential.digest.realm.slen,
 		       sent_auth->credential.digest.realm.ptr));
-	    return NULL;
+	    return PJSIP_EFAILEDCREDENTIAL;
 	}
 
 	/* Otherwise remove old, stale authorization header from the mesasge.
@@ -695,8 +666,8 @@ static pjsip_authorization_hdr *process_auth( pj_pool_t *req_pool,
     }
 
     /* Find credential to be used for the challenge. */
-    cred = pjsip_auth_find_cred( cred_count, cred_info, 
-				 &hchal->challenge.common.realm, &hchal->scheme);
+    cred = auth_find_cred( sess, &hchal->challenge.common.realm, 
+			   &hchal->scheme);
     if (!cred) {
 	const pj_str_t *realm = &hchal->challenge.common.realm;
 	PJ_LOG(4,(THIS_FILE, 
@@ -704,14 +675,14 @@ static pjsip_authorization_hdr *process_auth( pj_pool_t *req_pool,
 		  tdata->obj_name, 
 		  realm->slen, realm->ptr,
 		  hchal->scheme.slen, hchal->scheme.ptr));
-	return NULL;
+	return PJSIP_ENOCREDENTIAL;
     }
 
     /* Respond to authorization challenge. */
-    hauth = pjsip_auth_respond( req_pool, hchal, uri, cred, 
-				&tdata->msg->line.req.method, 
-				ses_pool, auth_sess);
-    return hauth;
+    status = auth_respond( req_pool, hchal, uri, cred, 
+			   &tdata->msg->line.req.method, 
+			   sess->pool, cached_auth, h_auth);
+    return status;
 }
 
 
@@ -721,29 +692,35 @@ static pjsip_authorization_hdr *process_auth( pj_pool_t *req_pool,
  *  - to put the newly created Authorization/Proxy-Authorization header
  *    in cached_list.
  */
-PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt, 
-					      pj_pool_t *ses_pool, 
-					      pjsip_auth_session *sess_list,
-					      int cred_count, 
-					      const pjsip_cred_info cred_info[],
-					      pjsip_tx_data *tdata, 
-					      const pjsip_rx_data *rdata)
+PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
+						const pjsip_rx_data *rdata,
+						pjsip_tx_data *old_request,
+						pjsip_tx_data **new_request )
 {
+    pjsip_tx_data *tdata;
     const pjsip_hdr *hdr;
     pjsip_via_hdr *via;
+    pj_status_t status;
 
-    PJ_UNUSED_ARG(endpt);
+    PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG,
+		     PJSIP_ENOTRESPONSEMSG);
+    PJ_ASSERT_RETURN(old_request->msg->type == PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->line.status.code == 401 ||
+		     rdata->msg_info.msg->line.status.code == 407,
+		     PJSIP_EINVALIDSTATUS);
 
-    pj_assert(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG);
-    pj_assert(rdata->msg_info.msg->line.status.code == 401 ||
-	      rdata->msg_info.msg->line.status.code == 407 );
-
+    tdata = old_request;
+    
     /*
      * Respond to each authentication challenge.
      */
     hdr = rdata->msg_info.msg->hdr.next;
     while (hdr != &rdata->msg_info.msg->hdr) {
-	pjsip_auth_session *sess;
+	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
 	pjsip_authorization_hdr *hauth;
 
@@ -762,26 +739,26 @@ PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt,
 	/* Find authentication session for this realm, create a new one
 	 * if not present.
 	 */
-	sess = find_session(sess_list, &hchal->challenge.common.realm );
-	if (!sess) {
-	    sess = pj_pool_calloc( ses_pool, 1, sizeof(*sess));
-	    pj_strdup( ses_pool, &sess->realm, &hchal->challenge.common.realm);
-	    sess->is_proxy = (hchal->type == PJSIP_H_PROXY_AUTHENTICATE);
+	cached_auth = find_cached_auth(sess, &hchal->challenge.common.realm );
+	if (!cached_auth) {
+	    cached_auth = pj_pool_zalloc( sess->pool, sizeof(*cached_auth));
+	    pj_strdup( sess->pool, &cached_auth->realm, &hchal->challenge.common.realm);
+	    cached_auth->is_proxy = (hchal->type == PJSIP_H_PROXY_AUTHENTICATE);
 #	    if (PJSIP_AUTH_HEADER_CACHING)
 	    {
-		pj_list_init(&sess->cached_hdr);
+		pj_list_init(&cached_auth->cached_hdr);
 	    }
 #	    endif
-	    pj_list_insert_before( sess_list, sess );
+	    pj_list_insert_before( &sess->cached_auth, cached_auth );
 	}
 
 	/* Create authorization header for this challenge, and update
 	 * authorization session.
 	 */
-	hauth = process_auth( tdata->pool, hchal, tdata->msg->line.req.uri, 
-			      tdata, cred_count, cred_info, ses_pool, sess );
-	if (!hauth)
-	    return NULL;
+	status = process_auth( tdata->pool, hchal, tdata->msg->line.req.uri, 
+			       tdata, sess, cached_auth, &hauth);
+	if (status != PJ_SUCCESS)
+	    return status;
 
 	/* Add to the message. */
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
@@ -799,6 +776,8 @@ PJ_DEF(pjsip_tx_data*) pjsip_auth_reinit_req( pjsip_endpoint *endpt,
     pjsip_tx_data_add_ref(tdata);
 
     /* Done. */
-    return tdata;
+    *new_request = tdata;
+    return PJ_SUCCESS;
+
 }
 

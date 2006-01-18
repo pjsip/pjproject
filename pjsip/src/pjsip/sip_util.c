@@ -351,6 +351,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pjsip_rr_hdr *rr;
     pj_status_t status;
 
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(endpt && rdata && p_tdata, PJ_EINVAL);
+
+    /* Check status code. */
+    PJ_ASSERT_RETURN(st_code >= 100 && st_code <= 699, PJ_EINVAL);
+
     /* rdata must be a request message. */
     req_msg = rdata->msg_info.msg;
     pj_assert(req_msg->type == PJSIP_REQUEST_MSG);

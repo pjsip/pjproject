@@ -527,7 +527,8 @@ PJ_DEF(int) pj_scan_stricmp_alnum( pj_scanner *scanner, const char *s,
     return strnicmp_alnum(scanner->curptr, s, len);
 }
 
-PJ_DEF(void) pj_scan_save_state( pj_scanner *scanner, pj_scan_state *state)
+PJ_DEF(void) pj_scan_save_state( const pj_scanner *scanner, 
+				 pj_scan_state *state)
 {
     state->curptr = scanner->curptr;
     state->line = scanner->line;
@@ -536,7 +537,7 @@ PJ_DEF(void) pj_scan_save_state( pj_scanner *scanner, pj_scan_state *state)
 
 
 PJ_DEF(void) pj_scan_restore_state( pj_scanner *scanner, 
-				     pj_scan_state *state)
+				    pj_scan_state *state)
 {
     scanner->curptr = state->curptr;
     scanner->line = state->line;

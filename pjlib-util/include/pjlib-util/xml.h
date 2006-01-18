@@ -97,6 +97,29 @@ PJ_DECL(int) pj_xml_print( const pj_xml_node *node, char *buf, pj_size_t len,
 			   pj_bool_t include_prolog);
 
 /**
+ * Create an empty node.
+ *
+ * @param pool	    Pool.
+ * @param name	    Node name.
+ *
+ * @return	    The new node.
+ */
+PJ_DECL(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name);
+
+
+/**
+ * Create new XML attribute.
+ *
+ * @param pool	    Pool.
+ * @param name	    Attribute name.
+ * @param attr	    Attribute value.
+ *
+ * @return	    The new XML attribute.
+ */
+PJ_DECL(pj_xml_attr*) pj_xml_attr_new(pj_pool_t *pool, const pj_str_t *name,
+				      const pj_str_t *value);
+
+/**
  * Add node to another node.
  *
  * @param parent    Parent node.

@@ -154,7 +154,7 @@ static int core_txdata_test(void)
      * We should never do this in real application, as there are many
      * many more fields need to be initialized!!
      */
-    dummy_rdata.msg_info.call_id = (HFIND(invite->msg, cid, CALL_ID))->id;
+    dummy_rdata.msg_info.cid = HFIND(invite->msg, cid, CALL_ID);
     dummy_rdata.msg_info.clen = NULL;
     dummy_rdata.msg_info.cseq = HFIND(invite->msg, cseq, CSEQ);
     dummy_rdata.msg_info.ctype = NULL;
