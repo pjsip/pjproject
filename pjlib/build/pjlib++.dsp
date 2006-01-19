@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjlibp_vc6s.lib"
+# ADD LIB32 /nologo /out:"../lib/pjlib++-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "pjlib++ - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjlibp_vc6sd.lib"
+# ADD LIB32 /nologo /out:"../lib/pjlib++-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 

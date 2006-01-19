@@ -3,10 +3,10 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib_samples"
-	SccProjectName=""
+	SccProjectName="&quot;$/pjproject-0.3/pjlib/build&quot;, EJDAAAAA"
 	SccAuxPath=""
-	SccLocalPath=""
-	SccProvider=""
+	SccLocalPath="."
+	SccProvider="MSSCCI:Microsoft Visual SourceSafe"
 	Keyword="MakeFileProj">
 	<Platforms>
 		<Platform
@@ -22,8 +22,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug"
-				ReBuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug /a"
+				BuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug VC=vc7"
+				ReBuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug VC=vc7 /a"
 				Output="pjlib samples"/>
 		</Configuration>
 		<Configuration
@@ -35,8 +35,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release"
-				ReBuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release /a"
+				BuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release VC=vc7"
+				ReBuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release VC=vc7 /a"
 				Output="pjlib samples"/>
 		</Configuration>
 	</Configurations>

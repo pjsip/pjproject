@@ -3,10 +3,8 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib_test"
-	SccProjectName=""
-	SccAuxPath=""
-	SccLocalPath=""
-	SccProvider="">
+	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
+	SccLocalPath=".">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -110,7 +108,6 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\output\pjlib-test-i386-win32-vc7-release/pjlib-test-i386-win32-vc7-release.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
 			<Tool
@@ -257,6 +254,25 @@
 			</File>
 			<File
 				RelativePath="..\src\pjlib-test\file.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-test\ioq_perf.c">
@@ -702,6 +718,28 @@
 			</File>
 			<File
 				RelativePath="..\src\pjlib-test\timestamp.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\udp_echo_srv_ioqueue.c">
 				<FileConfiguration
 					Name="Debug|Win32">
 					<Tool

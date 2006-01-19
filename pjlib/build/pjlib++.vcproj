@@ -2,11 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.10"
-	Name="pjlibpp"
-	SccProjectName=""
-	SccAuxPath=""
-	SccLocalPath=""
-	SccProvider="">
+	Name="pjlib++"
+	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
+	SccLocalPath=".">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -14,8 +12,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\pjlibpp-i386-win32-vc7-release"
-			IntermediateDirectory=".\output\pjlibpp-i386-win32-vc7-release"
+			OutputDirectory=".\output\pjlib++-i386-win32-vc7-release"
+			IntermediateDirectory=".\output\pjlib++-i386-win32-vc7-release"
 			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -24,15 +22,15 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../src"
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				AdditionalIncludeDirectories="../include,../../pjlib-util/include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
-				PrecompiledHeaderFile=".\output\pjlibpp-i386-win32-vc7-release/pjlibpp.pch"
-				AssemblerListingLocation=".\output\pjlibpp-i386-win32-vc7-release/"
-				ObjectFile=".\output\pjlibpp-i386-win32-vc7-release/"
-				ProgramDataBaseFileName=".\output\pjlibpp-i386-win32-vc7-release/"
+				PrecompiledHeaderFile=".\output\pjlib++-i386-win32-vc7-release/pjlib++.pch"
+				AssemblerListingLocation=".\output\pjlib++-i386-win32-vc7-release/"
+				ObjectFile=".\output\pjlib++-i386-win32-vc7-release/"
+				ProgramDataBaseFileName=".\output\pjlib++-i386-win32-vc7-release/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
 				CompileAs="0"/>
@@ -40,7 +38,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlibp_vc6s.lib"
+				OutputFile="../lib/pjlib++-i386-win32-vc7-release.lib"
 				SuppressStartupBanner="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -65,8 +63,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\pjlibpp-i386-win32-vc7-debug"
-			IntermediateDirectory=".\output\pjlibpp-i386-win32-vc7-debug"
+			OutputDirectory=".\output\pjlib++-i386-win32-vc7-debug"
+			IntermediateDirectory=".\output\pjlib++-i386-win32-vc7-debug"
 			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -74,14 +72,14 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../src"
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				AdditionalIncludeDirectories="../include,../../pjlib-util/include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjlibpp-i386-win32-vc7-debug/pjlibpp.pch"
-				AssemblerListingLocation=".\output\pjlibpp-i386-win32-vc7-debug/"
-				ObjectFile=".\output\pjlibpp-i386-win32-vc7-debug/"
-				ProgramDataBaseFileName=".\output\pjlibpp-i386-win32-vc7-debug/"
+				PrecompiledHeaderFile=".\output\pjlib++-i386-win32-vc7-debug/pjlib++.pch"
+				AssemblerListingLocation=".\output\pjlib++-i386-win32-vc7-debug/"
+				ObjectFile=".\output\pjlib++-i386-win32-vc7-debug/"
+				ProgramDataBaseFileName=".\output\pjlib++-i386-win32-vc7-debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
 				DebugInformationFormat="4"
@@ -90,7 +88,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlibp_vc6sd.lib"
+				OutputFile="../lib/pjlib++-i386-win32-vc7-debug.lib"
 				SuppressStartupBanner="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -118,110 +116,49 @@
 	</References>
 	<Files>
 		<Filter
-			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
-			<File
-				RelativePath="..\src\pj++\compiletest.cpp">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pj++\pj++.cpp">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pj++\proactor.cpp">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
-			</File>
-		</Filter>
-		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl">
 			<File
-				RelativePath="..\src\pj++\hash.hpp">
+				RelativePath="..\include\pj++\file.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\ioqueue.hpp">
+				RelativePath="..\include\pj++\hash.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\list.hpp">
+				RelativePath="..\include\pj++\list.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\os.hpp">
+				RelativePath="..\include\pj++\lock.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pjlib++.hpp">
+				RelativePath="..\include\pj++\os.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\pool.hpp">
+				RelativePath="..\include\pjlib++.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\proactor.hpp">
+				RelativePath="..\include\pj++\pool.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\scanner.hpp">
+				RelativePath="..\include\pj++\proactor.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\sock.hpp">
+				RelativePath="..\include\pj++\scanner.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\string.hpp">
+				RelativePath="..\include\pj++\sock.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\timer.hpp">
+				RelativePath="..\include\pj++\string.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\tree.hpp">
+				RelativePath="..\include\pj++\timer.hpp">
 			</File>
 			<File
-				RelativePath="..\src\pj++\types.hpp">
+				RelativePath="..\include\pj++\tree.hpp">
+			</File>
+			<File
+				RelativePath="..\include\pj++\types.hpp">
 			</File>
 		</Filter>
 	</Files>

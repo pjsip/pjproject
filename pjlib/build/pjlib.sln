@@ -1,44 +1,72 @@
 Microsoft Visual Studio Solution File, Format Version 8.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib", "pjlib.vcproj", "{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib", "pjlib.vcproj", "{4A6465DC-D757-43F2-9180-60920E33522B}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib_samples", "pjlib_samples.vcproj", "{07AD8099-71FF-4DA3-9078-EF787D88A494}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib++", "pjlib++.vcproj", "{D124EDDD-ED22-43C0-9DDC-279BDEE7DF61}"
 	ProjectSection(ProjectDependencies) = postProject
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A} = {7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib_test", "pjlib_test.vcproj", "{14E6C298-03F6-4125-8545-7FD5A34B8E5A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib++_test", "pjlib++-test.vcproj", "{2B01F39B-FF97-46BF-9CC8-26E3246ACA0E}"
 	ProjectSection(ProjectDependencies) = postProject
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A} = {7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}
+		{4A6465DC-D757-43F2-9180-60920E33522B} = {4A6465DC-D757-43F2-9180-60920E33522B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlibpp", "pjlibpp.vcproj", "{7BB69569-F8F5-41AB-95BB-9E3AA3A0CAB4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib_samples", "pjlib_samples.vcproj", "{C1B9C84B-CE30-45D7-A322-986786CE29D5}"
 	ProjectSection(ProjectDependencies) = postProject
+		{4A6465DC-D757-43F2-9180-60920E33522B} = {4A6465DC-D757-43F2-9180-60920E33522B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjlib_test", "pjlib_test.vcproj", "{0F28531A-FE4A-4E40-9C7F-763316CA5C9C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4A6465DC-D757-43F2-9180-60920E33522B} = {4A6465DC-D757-43F2-9180-60920E33522B}
 	EndProjectSection
 EndProject
 Global
+	GlobalSection(SourceCodeControl) = preSolution
+		SccNumberOfProjects = 4
+		SccProjectUniqueName0 = pjlib.vcproj
+		SccProjectName0 = \u0022$/pjproject/pjlib/build\u0022,\u0020UIAAAAAA
+		SccLocalPath0 = .
+		SccProvider0 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+		SccProjectUniqueName1 = pjlib++.vcproj
+		SccProjectName1 = \u0022$/pjproject/pjlib/build\u0022,\u0020UIAAAAAA
+		SccLocalPath1 = .
+		SccProvider1 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+		SccProjectUniqueName2 = pjlib_samples.vcproj
+		SccProjectName2 = \u0022$/pjproject-0.3/pjlib/build\u0022,\u0020EJDAAAAA
+		SccLocalPath2 = .
+		SccProvider2 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+		SccProjectUniqueName3 = pjlib_test.vcproj
+		SccProjectName3 = \u0022$/pjproject/pjlib/build\u0022,\u0020UIAAAAAA
+		SccLocalPath3 = .
+		SccProvider3 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+	EndGlobalSection
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
 		Release = Release
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}.Debug.ActiveCfg = Debug|Win32
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}.Debug.Build.0 = Debug|Win32
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}.Release.ActiveCfg = Release|Win32
-		{7BDE3EEB-E290-4E28-BCA2-7DC3F512AA8A}.Release.Build.0 = Release|Win32
-		{07AD8099-71FF-4DA3-9078-EF787D88A494}.Debug.ActiveCfg = Debug|Win32
-		{07AD8099-71FF-4DA3-9078-EF787D88A494}.Debug.Build.0 = Debug|Win32
-		{07AD8099-71FF-4DA3-9078-EF787D88A494}.Release.ActiveCfg = Release|Win32
-		{07AD8099-71FF-4DA3-9078-EF787D88A494}.Release.Build.0 = Release|Win32
-		{14E6C298-03F6-4125-8545-7FD5A34B8E5A}.Debug.ActiveCfg = Debug|Win32
-		{14E6C298-03F6-4125-8545-7FD5A34B8E5A}.Debug.Build.0 = Debug|Win32
-		{14E6C298-03F6-4125-8545-7FD5A34B8E5A}.Release.ActiveCfg = Release|Win32
-		{14E6C298-03F6-4125-8545-7FD5A34B8E5A}.Release.Build.0 = Release|Win32
-		{7BB69569-F8F5-41AB-95BB-9E3AA3A0CAB4}.Debug.ActiveCfg = Debug|Win32
-		{7BB69569-F8F5-41AB-95BB-9E3AA3A0CAB4}.Debug.Build.0 = Debug|Win32
-		{7BB69569-F8F5-41AB-95BB-9E3AA3A0CAB4}.Release.ActiveCfg = Release|Win32
-		{7BB69569-F8F5-41AB-95BB-9E3AA3A0CAB4}.Release.Build.0 = Release|Win32
+		{4A6465DC-D757-43F2-9180-60920E33522B}.Debug.ActiveCfg = Debug|Win32
+		{4A6465DC-D757-43F2-9180-60920E33522B}.Debug.Build.0 = Debug|Win32
+		{4A6465DC-D757-43F2-9180-60920E33522B}.Release.ActiveCfg = Release|Win32
+		{4A6465DC-D757-43F2-9180-60920E33522B}.Release.Build.0 = Release|Win32
+		{D124EDDD-ED22-43C0-9DDC-279BDEE7DF61}.Debug.ActiveCfg = Debug|Win32
+		{D124EDDD-ED22-43C0-9DDC-279BDEE7DF61}.Debug.Build.0 = Debug|Win32
+		{D124EDDD-ED22-43C0-9DDC-279BDEE7DF61}.Release.ActiveCfg = Release|Win32
+		{D124EDDD-ED22-43C0-9DDC-279BDEE7DF61}.Release.Build.0 = Release|Win32
+		{2B01F39B-FF97-46BF-9CC8-26E3246ACA0E}.Debug.ActiveCfg = Debug|Win32
+		{2B01F39B-FF97-46BF-9CC8-26E3246ACA0E}.Debug.Build.0 = Debug|Win32
+		{2B01F39B-FF97-46BF-9CC8-26E3246ACA0E}.Release.ActiveCfg = Release|Win32
+		{2B01F39B-FF97-46BF-9CC8-26E3246ACA0E}.Release.Build.0 = Release|Win32
+		{C1B9C84B-CE30-45D7-A322-986786CE29D5}.Debug.ActiveCfg = Debug|Win32
+		{C1B9C84B-CE30-45D7-A322-986786CE29D5}.Debug.Build.0 = Debug|Win32
+		{C1B9C84B-CE30-45D7-A322-986786CE29D5}.Release.ActiveCfg = Release|Win32
+		{C1B9C84B-CE30-45D7-A322-986786CE29D5}.Release.Build.0 = Release|Win32
+		{0F28531A-FE4A-4E40-9C7F-763316CA5C9C}.Debug.ActiveCfg = Debug|Win32
+		{0F28531A-FE4A-4E40-9C7F-763316CA5C9C}.Debug.Build.0 = Debug|Win32
+		{0F28531A-FE4A-4E40-9C7F-763316CA5C9C}.Release.ActiveCfg = Release|Win32
+		{0F28531A-FE4A-4E40-9C7F-763316CA5C9C}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection
