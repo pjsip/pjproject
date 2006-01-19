@@ -138,13 +138,19 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
     /* Print the whole message to the string log_buffer. */
     len = len + vsnprintf(pre, sizeof(log_buffer)-len, format, marker);
-    if (len > 0 && len < sizeof(log_buffer)-1) {
+    if (len > 0 && len < sizeof(log_buffer)-2) {
+	if (log_decor & PJ_LOG_HAS_CR) {
+	    log_buffer[len++] = '\r';
+	}
 	if (log_decor & PJ_LOG_HAS_NEWLINE) {
 	    log_buffer[len++] = '\n';
 	}
 	log_buffer[len++] = '\0';
     } else {
 	len = sizeof(log_buffer)-1;
+	if (log_decor & PJ_LOG_HAS_CR) {
+	    log_buffer[sizeof(log_buffer)-3] = '\r';
+	}
 	if (log_decor & PJ_LOG_HAS_NEWLINE) {
 	    log_buffer[sizeof(log_buffer)-2] = '\n';
 	}

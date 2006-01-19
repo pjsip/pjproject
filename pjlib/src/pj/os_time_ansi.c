@@ -48,7 +48,6 @@ PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
     pt->min = local_time->tm_min;
     pt->sec = local_time->tm_sec;
     pt->wday = local_time->tm_wday;
-    pt->yday = local_time->tm_yday;
     pt->msec = tv->msec;
 
     return PJ_SUCCESS;
@@ -57,7 +56,23 @@ PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 /**
  * Encode parsed time to time value.
  */
-PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv);
+PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
+{
+    struct tm local_time;
+
+    local_time.tm_year = pt->year-1900;
+    local_time.tm_mon = pt->mon;
+    local_time.tm_mday = pt->day;
+    local_time.tm_hour = pt->hour;
+    local_time.tm_min = pt->min;
+    local_time.tm_sec = pt->sec;
+    local_time.tm_isdst = 0;
+    
+    tv->sec = mktime(&local_time);
+    tv->msec = pt->msec;
+
+    return PJ_SUCCESS;
+}
 
 /**
  * Convert local time to GMT.

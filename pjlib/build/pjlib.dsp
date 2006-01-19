@@ -164,6 +164,15 @@ SOURCE=..\src\pj\symbols.c
 # PROP Exclude_From_Build 1
 # End Source File
 # End Group
+# Begin Group "src_compat"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pj\compat\unicode_win32.c
+# PROP Exclude_From_Build 1
+# End Source File
+# End Group
 # Begin Source File
 
 SOURCE=..\src\pj\addr_resolv_sock.c
@@ -425,6 +434,10 @@ SOURCE=..\include\pj\compat\string.h
 # Begin Source File
 
 SOURCE=..\include\pj\compat\time.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\compat\unicode.h
 # End Source File
 # Begin Source File
 

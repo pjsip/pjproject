@@ -16,27 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
-#include <linux/module.h>
-#include <linux/kernel.h>
+#ifndef __PJ_COMPAT_M_ARM_H__
+#define __PJ_COMPAT_M_ARM_H__
 
-int init_module(void)
-{
-    printk(KERN_INFO "PJLIB test module loaded. Starting tests...\n");
-    
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+/**
+ * @file m_arm.h
+ * @brief Describes ARM family processor specifics.
+ */
 
-    test_main();
+/*
+ * This file covers PJ_M_ARMV4 etc.
+ */
 
-    /* Prevent module from loading. We've finished test anyway.. */
-    return 1;
-}
+#define PJ_M_NAME		"ARM"
 
-void cleanup_module(void)
-{
-    printk(KERN_INFO "PJLIB test module unloading...\n");
-}
+#define PJ_HAS_PENTIUM		0
+#define PJ_IS_LITTLE_ENDIAN	1
+#define PJ_IS_BIG_ENDIAN	0
 
-MODULE_LICENSE("GPL");
 
+#endif	/* __PJ_COMPAT_M_ARM_H__ */

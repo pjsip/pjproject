@@ -16,27 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
-#include <linux/module.h>
-#include <linux/kernel.h>
+#ifndef __PJ_COMPAT_UNICODE_H__
+#define __PJ_COMPAT_UNICODE_H__
 
-int init_module(void)
-{
-    printk(KERN_INFO "PJLIB test module loaded. Starting tests...\n");
-    
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+#include <pj/types.h>
 
-    test_main();
+/**
+ * @file unicode.h
+ * @brief Provides Unicode conversion for Unicode OSes
+ */
 
-    /* Prevent module from loading. We've finished test anyway.. */
-    return 1;
-}
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
 
-void cleanup_module(void)
-{
-    printk(KERN_INFO "PJLIB test module unloading...\n");
-}
+#   define PJ_DECL_UNICODE_TEMP_BUF(var,size)    wchar_t var[size]
+#   define PJ_NATIVE_STRING(s,buf) pj_ansi_to_unicode(s,buf,PJ_ARRAY_SIZE(buf))
 
-MODULE_LICENSE("GPL");
+    PJ_DECL(wchar_t*) pj_ansi_to_unicode(const char *s, wchar_t *buf,
+					 pj_size_t buf_count);
 
+#else	/* PJ_NATIVE_STRING_IS_UNICODE */
+
+#   define PJ_DECL_UNICODE_TEMP_BUF(var,size)
+#   define PJ_NATIVE_STRING(s, buf)		s
+
+#endif	/* PJ_NATIVE_STRING_IS_UNICODE */
+
+
+#endif	/* __PJ_COMPAT_UNICODE_H__ */

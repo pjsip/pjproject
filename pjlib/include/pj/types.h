@@ -386,10 +386,10 @@ typedef struct pj_parsed_time
     /** This represents day of week where value zero means Sunday */
     int wday;
 
-    /** This represents day of the year, 0-365, where zero means
+    /* This represents day of the year, 0-365, where zero means
      *  1st of January.
      */
-    int yday;
+    /*int yday; */
 
     /** This represents day of month: 1-31 */
     int day;

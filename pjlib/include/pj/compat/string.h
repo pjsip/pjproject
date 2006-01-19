@@ -35,7 +35,11 @@
 
 #if defined(_MSC_VER)
 #  define strcasecmp	stricmp
-#  define strncasecmp	strnicmp
+#  if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+#   define strncasecmp	_strnicmp
+#  else
+#   define strncasecmp	strnicmp
+#  endif
 #  define snprintf	_snprintf
 #else
 #  define stricmp	strcasecmp

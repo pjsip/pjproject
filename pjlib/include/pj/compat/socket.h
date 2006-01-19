@@ -95,7 +95,7 @@
 /*
  * Linux kernel specifics
  */
-#ifdef PJ_LINUX_KERNEL
+#if defined(PJ_LINUX_KERNEL)
 #   include <linux/net.h>
 #   include <asm/ioctls.h>		/* FIONBIO	*/
 #   include <linux/syscalls.h>	/* sys_select() */
@@ -123,8 +123,8 @@
 /*
  * Windows specific
  */
-#ifdef PJ_WIN32
-    typedef int socklen_t;;
+#if defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+    typedef int socklen_t;
 #endif
 
 

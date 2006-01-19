@@ -16,27 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
-#include <linux/module.h>
-#include <linux/kernel.h>
+#include <pj/compat/unicode.h>
+#include <pj/assert.h>
+#include <pj/string.h>
+#include <windows.h>
 
-int init_module(void)
+
+PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, wchar_t *buf,
+				    pj_size_t buf_count)
 {
-    printk(KERN_INFO "PJLIB test module loaded. Starting tests...\n");
-    
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+    int len;
 
-    test_main();
+    PJ_ASSERT_RETURN(s, NULL);
 
-    /* Prevent module from loading. We've finished test anyway.. */
-    return 1;
+    len = MultiByteToWideChar(CP_ACP, 0, s, strlen(s), 
+			      buf, buf_count);
+    if (!len)
+	return NULL;
+
+    return buf;
 }
-
-void cleanup_module(void)
-{
-    printk(KERN_INFO "PJLIB test module unloading...\n");
-}
-
-MODULE_LICENSE("GPL");
-

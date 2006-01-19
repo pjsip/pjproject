@@ -24,6 +24,7 @@
     defined(PJ_M_I386) && PJ_M_I386 != 0 && \
     defined(PJ_HAS_PENTIUM) && PJ_HAS_PENTIUM!=0 && \
     defined(_MSC_VER)
+
 /*
  * Use rdtsc to get the OS timestamp.
  */
@@ -36,9 +37,16 @@ static pj_status_t GetCpuHz(void)
     LONG rc;
     DWORD size;
 
+#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+		      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+		      0, 0, &key);
+#else
     rc = RegOpenKey( HKEY_LOCAL_MACHINE,
 		     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
 		     &key);
+#endif
+
     if (rc != ERROR_SUCCESS)
 	return PJ_RETURN_OS_ERROR(rc);
 

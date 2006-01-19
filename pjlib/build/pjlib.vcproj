@@ -4,7 +4,9 @@
 	Version="7.10"
 	Name="pjlib"
 	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
-	SccLocalPath=".">
+	SccAuxPath=""
+	SccLocalPath="."
+	SccProvider="MSSCCI:Microsoft Visual SourceSafe">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -1308,6 +1310,25 @@
 					</FileConfiguration>
 				</File>
 			</Filter>
+			<Filter
+				Name="Src Compat"
+				Filter="">
+				<File
+					RelativePath="..\src\pj\compat\unicode_win32.c">
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="TRUE">
+						<Tool
+							Name="VCCLCompilerTool"/>
+					</FileConfiguration>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -1476,6 +1497,9 @@
 				</File>
 				<File
 					RelativePath="..\include\pj\compat\time.h">
+				</File>
+				<File
+					RelativePath="..\include\pj\compat\unicode.h">
 				</File>
 				<File
 					RelativePath="..\include\pj\compat\vsprintf.h">

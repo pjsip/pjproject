@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/file_io.h>
+#include <pj/compat/unicode.h>
 #include <pj/errno.h>
 #include <pj/assert.h>
 
@@ -43,6 +44,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                                   unsigned flags,
                                   pj_oshandle_t *fd)
 {
+    PJ_DECL_UNICODE_TEMP_BUF(wpathname,256);
     HANDLE hFile;
     DWORD dwDesiredAccess = 0;
     DWORD dwShareMode = 0;
@@ -76,7 +78,8 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-    hFile = CreateFile(pathname, dwDesiredAccess, dwShareMode, NULL,
+    hFile = CreateFile(PJ_NATIVE_STRING(pathname,wpathname), 
+		       dwDesiredAccess, dwShareMode, NULL,
                        dwCreationDisposition, dwFlagsAndAttributes, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         *fd = 0;

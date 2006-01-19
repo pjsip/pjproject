@@ -362,7 +362,8 @@ PJ_DEF(pj_status_t) pj_sock_close(pj_sock_t sock)
     int rc;
 
     PJ_CHECK_STACK();
-#if defined(PJ_WIN32) && PJ_WIN32==1
+#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     rc = closesocket(sock);
 #else
     rc = close(sock);

@@ -221,7 +221,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
 
     /* Set socket to nonblocking. */
     value = 1;
-#ifdef PJ_WIN32
+#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(sock, FIONBIO, (u_long*)&value)) {
 #else
     if (ioctl(sock, FIONBIO, &value)) {

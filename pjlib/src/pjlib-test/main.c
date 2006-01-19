@@ -90,6 +90,9 @@ int main(int argc, char *argv[])
         }
     }
 
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+                     PJ_LOG_HAS_MICRO_SEC);
+
     rc = test_main();
 
     if (interractive) {

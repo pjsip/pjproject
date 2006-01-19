@@ -41,6 +41,8 @@
  */
 #if defined(PJ_WIN32) && PJ_WIN32!=0
 #  include <pj/compat/os_win32.h>
+#elif defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+#  include <pj/compat/os_win32_wince.h>
 #elif defined(PJ_LINUX) && PJ_LINUX!=0
 #  include <pj/compat/os_linux.h>
 #elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
@@ -65,6 +67,8 @@
 #   include <pj/compat/m_alpha.h>
 #elif defined (PJ_M_SPARC) && PJ_M_SPARC != 0
 #   include <pj/compat/m_sparc.h>
+#elif defined (PJ_M_ARMV4) && PJ_M_ARMV4 != 0
+#   include <pj/compat/m_arm.h>
 #else
 #  error "Please specify target machine."
 #endif

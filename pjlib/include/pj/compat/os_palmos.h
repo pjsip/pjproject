@@ -75,5 +75,6 @@
 
 #define PJ_HAS_HIGH_RES_TIMER	    1
 #define PJ_OS_HAS_CHECK_STACK	    0
+#define PJ_NATIVE_STRING_IS_UNICODE 0
 
 #endif	/* __PJ_COMPAT_OS_PALMOS_H__ */

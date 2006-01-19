@@ -536,7 +536,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     return InterlockedIncrement(&atomic_var->value);
 #else
-#   error Fix Me
+    return InterlockedIncrement(&atomic_var->value);
 #endif
 }
 
@@ -558,7 +558,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     return InterlockedDecrement(&atomic_var->value);
 #else
-#   error Fix me
+    return InterlockedDecrement(&atomic_var->value);
 #endif
 }
 
@@ -579,7 +579,7 @@ PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     InterlockedExchangeAdd( &atomic_var->value, value );
 #else
-#   error Fix me
+    InterlockedExchangeAdd( &atomic_var->value, value );
 #endif
 }
 
@@ -593,7 +593,8 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
     long oldValue = InterlockedExchangeAdd( &atomic_var->value, value);
     return oldValue + value;
 #else
-#   error Fix me
+    long oldValue = InterlockedExchangeAdd( &atomic_var->value, value);
+    return oldValue + value;
 #endif
 }
 

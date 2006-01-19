@@ -17,8 +17,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/file_access.h>
+#include <pj/compat/unicode.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/string.h>
+#include <pj/os.h>
 #include <windows.h>
 #include <time.h>
 
@@ -28,10 +31,12 @@
 PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
 {
     HANDLE hFile;
+    PJ_DECL_UNICODE_TEMP_BUF(wfilename,256);
 
     PJ_ASSERT_RETURN(filename != NULL, 0);
 
-    hFile = CreateFile(filename, READ_CONTROL, FILE_SHARE_READ, NULL,
+    hFile = CreateFile(PJ_NATIVE_STRING(filename,wfilename), READ_CONTROL, 
+		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return 0;
@@ -49,10 +54,11 @@ PJ_DEF(pj_off_t) pj_file_size(const char *filename)
     HANDLE hFile;
     DWORD sizeLo, sizeHi;
     pj_off_t size;
+    PJ_DECL_UNICODE_TEMP_BUF(wfilename,256);
 
     PJ_ASSERT_RETURN(filename != NULL, -1);
 
-    hFile = CreateFile(filename, READ_CONTROL, 
+    hFile = CreateFile(PJ_NATIVE_STRING(filename, wfilename), READ_CONTROL, 
                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -80,9 +86,11 @@ PJ_DEF(pj_off_t) pj_file_size(const char *filename)
  */
 PJ_DEF(pj_status_t) pj_file_delete(const char *filename)
 {
+    PJ_DECL_UNICODE_TEMP_BUF(wfilename,256);
+
     PJ_ASSERT_RETURN(filename != NULL, PJ_EINVAL);
 
-    if (DeleteFile(filename) == FALSE)
+    if (DeleteFile(PJ_NATIVE_STRING(filename,wfilename)) == FALSE)
         return PJ_RETURN_OS_ERROR(GetLastError());
 
     return PJ_SUCCESS;
@@ -95,14 +103,18 @@ PJ_DEF(pj_status_t) pj_file_delete(const char *filename)
 PJ_DEF(pj_status_t) pj_file_move( const char *oldname, const char *newname)
 {
     BOOL rc;
+    PJ_DECL_UNICODE_TEMP_BUF(woldname,256);
+    PJ_DECL_UNICODE_TEMP_BUF(wnewname,256);
 
     PJ_ASSERT_RETURN(oldname!=NULL && newname!=NULL, PJ_EINVAL);
 
 #if PJ_WIN32_WINNT >= 0x0400
-    rc = MoveFileEx(oldname, newname, 
+    rc = MoveFileEx(PJ_NATIVE_STRING(oldname,woldname), 
+		    PJ_NATIVE_STRING(newname,wnewname), 
                     MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING);
 #else
-    rc = MoveFile(oldname, newname);
+    rc = MoveFile(PJ_NATIVE_STRING(oldname, woldname), 
+		  PJ_NATIVE_STRING(newname, wnewname));
 #endif
 
     if (!rc)
@@ -115,31 +127,31 @@ PJ_DEF(pj_status_t) pj_file_move( const char *oldname, const char *newname)
 static pj_status_t file_time_to_time_val(const FILETIME *file_time,
                                          pj_time_val *time_val)
 {
-    SYSTEMTIME systemTime, localTime;
-    struct tm tm;
+    FILETIME local_file_time;
+    SYSTEMTIME localTime;
+    pj_parsed_time pt;
 
-    if (!FileTimeToSystemTime(file_time, &systemTime))
-        return -1;
+    if (!FileTimeToLocalFileTime(file_time, &local_file_time))
+	return PJ_RETURN_OS_ERROR(GetLastError());
 
-    if (!SystemTimeToTzSpecificLocalTime(NULL, &systemTime, &localTime))
-        return -1;
+    if (!FileTimeToSystemTime(file_time, &localTime))
+        return PJ_RETURN_OS_ERROR(GetLastError());
 
-    memset(&tm, 0, sizeof(struct tm));
-    tm.tm_year = localTime.wYear - 1900;
-    tm.tm_mon = localTime.wMonth - 1;
-    tm.tm_mday = localTime.wDay;
-    tm.tm_hour = localTime.wHour;
-    tm.tm_min = localTime.wMinute;
-    tm.tm_sec = localTime.wSecond;
-    tm.tm_isdst = 0;
+    //if (!SystemTimeToTzSpecificLocalTime(NULL, &systemTime, &localTime))
+    //    return PJ_RETURN_OS_ERROR(GetLastError());
 
-    time_val->sec = mktime(&tm);
-    if (time_val->sec == (time_t)-1)
-        return -1;
+    pj_memset(&pt, 0, sizeof(pt));
+    pt.year = localTime.wYear;
+    pt.mon = localTime.wMonth-1;
+    pt.day = localTime.wDay;
+    pt.wday = localTime.wDayOfWeek;
 
-    time_val->msec = localTime.wMilliseconds;
+    pt.hour = localTime.wHour;
+    pt.min = localTime.wMinute;
+    pt.sec = localTime.wSecond;
+    pt.msec = localTime.wMilliseconds;
 
-    return PJ_SUCCESS;
+    return pj_time_encode(&pt, time_val);
 }
 
 /*
@@ -150,10 +162,12 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
     HANDLE hFile;
     DWORD sizeLo, sizeHi;
     FILETIME creationTime, accessTime, writeTime;
+    PJ_DECL_UNICODE_TEMP_BUF(wfilename,256);
 
     PJ_ASSERT_RETURN(filename!=NULL && stat!=NULL, PJ_EINVAL);
 
-    hFile = CreateFile(filename, READ_CONTROL, FILE_SHARE_READ, NULL,
+    hFile = CreateFile(PJ_NATIVE_STRING(filename,wfilename), READ_CONTROL, 
+		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return PJ_RETURN_OS_ERROR(GetLastError());

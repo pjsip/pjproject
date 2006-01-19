@@ -215,12 +215,14 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	 * the right errno through error slippage. This is a combination
 	 * of suggestions from Douglas C. Schmidt and Ken Keys.
 	 */
-	int gp_rc;
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
+	{
+	    int gp_rc;
+	    struct sockaddr_in addr;
+	    socklen_t addrlen = sizeof(addr);
 
-	gp_rc = getpeername(h->fd, (struct sockaddr*)&addr, &addrlen);
-	bytes_transfered = gp_rc;
+	    gp_rc = getpeername(h->fd, (struct sockaddr*)&addr, &addrlen);
+	    bytes_transfered = gp_rc;
+	}
 #endif
 
 	/* Call callback. */
@@ -399,7 +401,8 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
              * read(). That's why we only specify PJ_LINUX here so
              * that error is easier to catch.
              */
-#	    if defined(PJ_WIN32) && PJ_WIN32 != 0
+#	    if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
+	       defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
                 rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 0);
                 //rc = ReadFile((HANDLE)h->fd, read_op->buf, read_op->size,
                 //              &bytes_read, NULL);
