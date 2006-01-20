@@ -16,23 +16,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pj/compat/unicode.h>
+#include <pj/unicode.h>
 #include <pj/assert.h>
 #include <pj/string.h>
 #include <windows.h>
 
 
-PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, wchar_t *buf,
-				    pj_size_t buf_count)
+PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, pj_size_t len,
+				    wchar_t *buf, pj_size_t buf_count)
 {
-    int len;
+    PJ_ASSERT_RETURN(s && buf, NULL);
 
-    PJ_ASSERT_RETURN(s, NULL);
-
-    len = MultiByteToWideChar(CP_ACP, 0, s, strlen(s), 
+    len = MultiByteToWideChar(CP_ACP, 0, s, len, 
 			      buf, buf_count);
-    if (!len)
-	return NULL;
-
+    buf[len] = 0;
     return buf;
 }
+
+
+PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_size_t len,
+				  char *buf, pj_size_t buf_size)
+{
+    PJ_ASSERT_RETURN(wstr && buf, NULL);
+
+    len = WideCharToMultiByte(CP_ACP, 0, wstr, len, buf, buf_size, NULL, NULL);
+    buf[len] = '\0';
+    return buf;
+}
+

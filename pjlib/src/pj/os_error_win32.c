@@ -21,6 +21,7 @@
 #include <pj/compat/stdarg.h>
 #include <pj/compat/sprintf.h>
 #include <pj/compat/vsprintf.h>
+#include <pj/unicode.h>
 #include <pj/string.h>
 
 
@@ -121,6 +122,7 @@ int platform_strerror( pj_os_err_type os_errcode,
                        char *buf, pj_size_t bufsize)
 {
     int len;
+    PJ_DECL_UNICODE_TEMP_BUF(wbuf,128);
 
     pj_assert(buf != NULL);
     pj_assert(bufsize >= 0);
@@ -131,14 +133,28 @@ int platform_strerror( pj_os_err_type os_errcode,
        //PJ_CHECK_STACK();
      */
 
+#if PJ_NATIVE_STRING_IS_UNICODE
     len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
 			 | FORMAT_MESSAGE_IGNORE_INSERTS,
 			 NULL,
 			 os_errcode,
 			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-			 (LPTSTR)buf,
-			 (DWORD)bufsize,
+			 wbuf,
+			 sizeof(wbuf),
 			 NULL);
+    if (len) {
+	pj_unicode_to_ansi(wbuf, len, buf, bufsize);
+    }
+#else
+    len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+			 | FORMAT_MESSAGE_IGNORE_INSERTS,
+			 NULL,
+			 os_errcode,
+			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+			 buf,
+			 bufsize,
+			 NULL);
+#endif
 
     if (!len) {
 	int i;

@@ -247,7 +247,6 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
          */
         if (h->fd_type == PJ_SOCK_DGRAM) {
             pj_list_erase(write_op);
-            write_op->op = 0;
 
             if (pj_list_empty(&h->write_list))
                 ioqueue_remove_from_set(ioqueue, h->fd, WRITEABLE_EVENT);
@@ -261,9 +260,11 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
          */
         sent = write_op->size - write_op->written;
         if (write_op->op == PJ_IOQUEUE_OP_SEND) {
+	    write_op->op = 0;
             send_rc = pj_sock_send(h->fd, write_op->buf+write_op->written,
                                    &sent, write_op->flags);
         } else if (write_op->op == PJ_IOQUEUE_OP_SEND_TO) {
+	    write_op->op = 0;
             send_rc = pj_sock_sendto(h->fd, 
                                      write_op->buf+write_op->written,
                                      &sent, write_op->flags,
@@ -271,6 +272,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
                                      write_op->rmt_addrlen);
         } else {
             pj_assert(!"Invalid operation type!");
+	    write_op->op = 0;
             send_rc = PJ_EBUG;
         }
 
@@ -370,7 +372,6 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
         pj_list_erase(read_op);
-        read_op->op = 0;
 
         /* Clear fdset if there is no pending read. */
         if (pj_list_empty(&h->read_list))
@@ -382,13 +383,16 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         bytes_read = read_op->size;
 
 	if ((read_op->op == PJ_IOQUEUE_OP_RECV_FROM)) {
+	    read_op->op = 0;
 	    rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 0,
 				  read_op->rmt_addr, 
                                   read_op->rmt_addrlen);
 	} else if ((read_op->op == PJ_IOQUEUE_OP_RECV)) {
+	    read_op->op = 0;
 	    rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 0);
         } else {
             pj_assert(read_op->op == PJ_IOQUEUE_OP_READ);
+	    read_op->op = 0;
             /*
              * User has specified pj_ioqueue_read().
              * On Win32, we should do ReadFile(). But because we got

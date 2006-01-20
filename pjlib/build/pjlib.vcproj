@@ -946,6 +946,9 @@
 						BrowseInformation="1"/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\src\pj\unicode_win32.c">
+			</File>
 			<Filter
 				Name="Other Targets"
 				Filter="">
@@ -1310,25 +1313,6 @@
 					</FileConfiguration>
 				</File>
 			</Filter>
-			<Filter
-				Name="Src Compat"
-				Filter="">
-				<File
-					RelativePath="..\src\pj\compat\unicode_win32.c">
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="TRUE">
-						<Tool
-							Name="VCCLCompilerTool"/>
-					</FileConfiguration>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -1420,6 +1404,9 @@
 			<File
 				RelativePath="..\include\pj\types.h">
 			</File>
+			<File
+				RelativePath="..\include\pj\unicode.h">
+			</File>
 			<Filter
 				Name="compat"
 				Filter="">
@@ -1497,9 +1484,6 @@
 				</File>
 				<File
 					RelativePath="..\include\pj\compat\time.h">
-				</File>
-				<File
-					RelativePath="..\include\pj\compat\unicode.h">
 				</File>
 				<File
 					RelativePath="..\include\pj\compat\vsprintf.h">

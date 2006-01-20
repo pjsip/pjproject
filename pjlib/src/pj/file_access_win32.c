@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/file_access.h>
-#include <pj/compat/unicode.h>
+#include <pj/unicode.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/string.h>
@@ -35,7 +35,7 @@ PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
 
     PJ_ASSERT_RETURN(filename != NULL, 0);
 
-    hFile = CreateFile(PJ_NATIVE_STRING(filename,wfilename), READ_CONTROL, 
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename), READ_CONTROL, 
 		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -58,7 +58,7 @@ PJ_DEF(pj_off_t) pj_file_size(const char *filename)
 
     PJ_ASSERT_RETURN(filename != NULL, -1);
 
-    hFile = CreateFile(PJ_NATIVE_STRING(filename, wfilename), READ_CONTROL, 
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename, wfilename), READ_CONTROL, 
                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -90,7 +90,7 @@ PJ_DEF(pj_status_t) pj_file_delete(const char *filename)
 
     PJ_ASSERT_RETURN(filename != NULL, PJ_EINVAL);
 
-    if (DeleteFile(PJ_NATIVE_STRING(filename,wfilename)) == FALSE)
+    if (DeleteFile(PJ_STRING_TO_NATIVE(filename,wfilename)) == FALSE)
         return PJ_RETURN_OS_ERROR(GetLastError());
 
     return PJ_SUCCESS;
@@ -109,12 +109,12 @@ PJ_DEF(pj_status_t) pj_file_move( const char *oldname, const char *newname)
     PJ_ASSERT_RETURN(oldname!=NULL && newname!=NULL, PJ_EINVAL);
 
 #if PJ_WIN32_WINNT >= 0x0400
-    rc = MoveFileEx(PJ_NATIVE_STRING(oldname,woldname), 
-		    PJ_NATIVE_STRING(newname,wnewname), 
+    rc = MoveFileEx(PJ_STRING_TO_NATIVE(oldname,woldname), 
+		    PJ_STRING_TO_NATIVE(newname,wnewname), 
                     MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING);
 #else
-    rc = MoveFile(PJ_NATIVE_STRING(oldname, woldname), 
-		  PJ_NATIVE_STRING(newname, wnewname));
+    rc = MoveFile(PJ_STRING_TO_NATIVE(oldname, woldname), 
+		  PJ_STRING_TO_NATIVE(newname, wnewname));
 #endif
 
     if (!rc)
@@ -166,7 +166,7 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
 
     PJ_ASSERT_RETURN(filename!=NULL && stat!=NULL, PJ_EINVAL);
 
-    hFile = CreateFile(PJ_NATIVE_STRING(filename,wfilename), READ_CONTROL, 
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename), READ_CONTROL, 
 		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)

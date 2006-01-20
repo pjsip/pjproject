@@ -118,7 +118,7 @@ static pj_ioqueue_callback test_cb =
 static int compliance_test(void)
 {
     pj_sock_t ssock=-1, csock=-1;
-    pj_sockaddr_in addr;
+    pj_sockaddr_in addr, dst_addr;
     int addrlen;
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
@@ -154,7 +154,7 @@ static int compliance_test(void)
 
     // Bind server socket.
     TRACE_("bind socket...");
-    memset(&addr, 0, sizeof(addr));
+    pj_memset(&addr, 0, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
@@ -186,19 +186,12 @@ static int compliance_test(void)
 	status=-26; goto on_error;
     }
 
-    // Set destination address to send the packet.
-    TRACE_("set destination address...");
-    temp = pj_str("127.0.0.1");
-    if ((rc=pj_sockaddr_in_init(&addr, &temp, PORT)) != 0) {
-	app_perror("...error: unable to resolve 127.0.0.1", rc);
-	status=-26; goto on_error;
-    }
-
     // Randomize send_buf.
     pj_create_random_string(send_buf, bufsize);
 
     // Register reading from ioqueue.
     TRACE_("start recvfrom...");
+    pj_memset(&addr, 0, sizeof(addr));
     addrlen = sizeof(addr);
     bytes = bufsize;
     rc = pj_ioqueue_recvfrom(skey, &read_op, recv_buf, &bytes, 0,
@@ -216,11 +209,19 @@ static int compliance_test(void)
 	status=-29; goto on_error;
     }
 
+    // Set destination address to send the packet.
+    TRACE_("set destination address...");
+    temp = pj_str("127.0.0.1");
+    if ((rc=pj_sockaddr_in_init(&dst_addr, &temp, PORT)) != 0) {
+	app_perror("...error: unable to resolve 127.0.0.1", rc);
+	status=-290; goto on_error;
+    }
+
     // Write must return the number of bytes.
     TRACE_("start sendto...");
     bytes = bufsize;
-    rc = pj_ioqueue_sendto(ckey, &write_op, send_buf, &bytes, 0, &addr, 
-			   sizeof(addr));
+    rc = pj_ioqueue_sendto(ckey, &write_op, send_buf, &bytes, 0, &dst_addr, 
+			   sizeof(dst_addr));
     if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
         app_perror("...error: pj_ioqueue_sendto", rc);
 	status=-30; goto on_error;
@@ -268,8 +269,14 @@ static int compliance_test(void)
                 status=-66; goto on_error;
             }
 
-	    if (memcmp(send_buf, recv_buf, bufsize) != 0) {
-		status=-70; goto on_error;
+	    if (pj_memcmp(send_buf, recv_buf, bufsize) != 0) {
+		status=-67; goto on_error;
+	    }
+	    if (addrlen != sizeof(pj_sockaddr_in)) {
+		status=-68; goto on_error;
+	    }
+	    if (addr.sin_family != PJ_AF_INET) {
+		status=-69; goto on_error;
 	    }
 
 
@@ -295,13 +302,6 @@ static int compliance_test(void)
     status = 0;
 
 on_error:
-    if (status != 0) {
-	char errbuf[128];
-	PJ_LOG(1, (THIS_FILE, 
-		   "...compliance test error: status=%d, os_err=%d (%s)", 
-		   status, pj_get_netos_error(),
-	           pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
-    }
     if (ssock)
 	pj_sock_close(ssock);
     if (csock)
@@ -431,7 +431,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
     }
 
     // Bind server socket.
-    memset(&addr, 0, sizeof(addr));
+    pj_memset(&addr, 0, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr)))
@@ -452,7 +452,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 				    inactive_sock_count*sizeof(pj_sock_t));
     inactive_read_op = (pj_ioqueue_op_key_t*)pj_pool_alloc(pool,
                               inactive_sock_count*sizeof(pj_ioqueue_op_key_t));
-    memset(&addr, 0, sizeof(addr));
+    pj_memset(&addr, 0, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     for (i=0; i<inactive_sock_count; ++i) {
         pj_ssize_t bytes;
@@ -479,7 +479,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	}
         bytes = bufsize;
 	rc = pj_ioqueue_recv(key, &inactive_read_op[i], recv_buf, &bytes, 0);
-	if ( rc < 0 && rc != PJ_EPENDING) {
+	if (rc != PJ_EPENDING) {
 	    pj_sock_close(inactive_sock[i]);
 	    inactive_sock[i] = PJ_INVALID_SOCKET;
 	    app_perror("...error: pj_ioqueue_read()", rc);
@@ -519,7 +519,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	// Start reading on the server side.
         bytes = bufsize;
 	rc = pj_ioqueue_recv(skey, &read_op, recv_buf, &bytes, 0);
-	if (rc < 0 && rc != PJ_EPENDING) {
+	if (rc != PJ_EPENDING) {
 	    app_perror("...error: pj_ioqueue_read()", rc);
 	    break;
 	}
@@ -530,7 +530,6 @@ static int bench_test(int bufsize, int inactive_sock_count)
 			       &addr, sizeof(addr));
 	if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
 	    app_perror("...error: pj_ioqueue_write()", bytes);
-	    rc = -1;
 	    break;
 	}
 
@@ -548,14 +547,17 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	pj_get_timestamp(&t2);
 	t_elapsed.u64 += (t2.u64 - t1.u64);
 
-	if (rc < 0)
+	if (rc < 0) {
+	    app_perror("   error: pj_ioqueue_poll", -rc);
 	    break;
+	}
 
 	// Compare recv buffer with send buffer.
 	if (callback_read_size != bufsize || 
-	    memcmp(send_buf, recv_buf, bufsize)) 
+	    pj_memcmp(send_buf, recv_buf, bufsize)) 
 	{
-	    rc = -1;
+	    rc = -10;
+	    PJ_LOG(3,(THIS_FILE, "   error: size/buffer mismatch"));
 	    break;
 	}
 
@@ -580,8 +582,8 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	           bufsize, inactive_sock_count, usec_delay));
 
     } else {
-	PJ_LOG(2, (THIS_FILE, "...ERROR (buf:%d, fds:%d)", 
-			      bufsize, inactive_sock_count+2));
+	PJ_LOG(2, (THIS_FILE, "...ERROR rc=%d (buf:%d, fds:%d)", 
+			      rc, bufsize, inactive_sock_count+2));
     }
 
     // Cleaning up.
@@ -592,7 +594,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 
     pj_ioqueue_destroy(ioque);
     pj_pool_release( pool);
-    return 0;
+    return rc;
 
 on_error:
     PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
@@ -638,8 +640,8 @@ int udp_ioqueue_test()
     PJ_LOG(3, (THIS_FILE, "...====================================="));
 
     for (bufsize=BUF_MIN_SIZE; bufsize <= BUF_MAX_SIZE; bufsize *= 2) {
-	if (bench_test(bufsize, SOCK_INACTIVE_MIN))
-	    return -1;
+	if ((status=bench_test(bufsize, SOCK_INACTIVE_MIN)) != 0)
+	    return status;
     }
     bufsize = 512;
     for (sock_count=SOCK_INACTIVE_MIN+2; 
@@ -647,8 +649,8 @@ int udp_ioqueue_test()
 	 sock_count *= 2) 
     {
 	//PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
-	if (bench_test(bufsize, sock_count-2))
-	    return -1;
+	if ((status=bench_test(bufsize, sock_count-2)) != 0)
+	    return status;
     }
     return 0;
 }

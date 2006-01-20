@@ -19,6 +19,7 @@
 #include "test.h"
 #include <pj/os.h>
 #include <pj/log.h>
+#include <pj/rand.h>
 
 
 /**
@@ -48,9 +49,10 @@
 
 int timestamp_test(void)
 {
-    enum { CONSECUTIVE_LOOP = 1000 };
+    enum { CONSECUTIVE_LOOP = 100 };
     volatile unsigned i;
     pj_timestamp freq, t1, t2;
+    pj_time_val tv1, tv2;
     unsigned elapsed;
     pj_status_t rc;
 
@@ -74,27 +76,41 @@ int timestamp_test(void)
      */
     rc = pj_get_timestamp(&t1);
     if (rc != PJ_SUCCESS) {
-	app_perror("...ERROR: get timestamp", rc);
+	app_perror("...ERROR: pj_get_timestamp", rc);
 	return -1001;
     }
+    rc = pj_gettimeofday(&tv1);
+    if (rc != PJ_SUCCESS) {
+	app_perror("...ERROR: pj_gettimeofday", rc);
+	return -1002;
+    }
     for (i=0; i<CONSECUTIVE_LOOP; ++i) {
-        /*
-	volatile unsigned j;
-	for (j=0; j<1000; ++j)
-	    ;
-         */
-        pj_thread_sleep(1);
+        
+        pj_thread_sleep(pj_rand() % 100);
+
 	rc = pj_get_timestamp(&t2);
 	if (rc != PJ_SUCCESS) {
-	    app_perror("...ERROR: get timestamp", rc);
-	    return -1002;
+	    app_perror("...ERROR: pj_get_timestamp", rc);
+	    return -1003;
 	}
+	rc = pj_gettimeofday(&tv2);
+	if (rc != PJ_SUCCESS) {
+	    app_perror("...ERROR: pj_gettimeofday", rc);
+	    return -1004;
+	}
+
 	/* compare t2 with t1, expecting t2 >= t1. */
 	if (t2.u32.hi < t1.u32.hi ||
 	    (t2.u32.hi == t1.u32.hi && t2.u32.lo < t1.u32.lo))
 	{
-	    PJ_LOG(3,(THIS_FILE, "...ERROR: timestamp runs backwards!"));
-	    return -1003;
+	    PJ_LOG(3,(THIS_FILE, "...ERROR: timestamp run backwards!"));
+	    return -1005;
+	}
+
+	/* compare tv2 with tv1, expecting tv2 >= tv1. */
+	if (PJ_TIME_VAL_LT(tv2, tv1)) {
+	    PJ_LOG(3,(THIS_FILE, "...ERROR: time run backwards!"));
+	    return -1006;
 	}
     }
 

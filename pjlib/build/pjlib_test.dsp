@@ -128,11 +128,24 @@ SOURCE="..\src\pjlib-test\list.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-test\main.c"
+
+!IF  "$(CFG)" == "pjlib_test - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjlib-test\main_mod.c"
 # PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-test\main_win32.c"
 # End Source File
 # Begin Source File
 

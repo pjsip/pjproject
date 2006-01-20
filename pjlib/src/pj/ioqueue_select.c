@@ -423,7 +423,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         enum ioqueue_event_type  event_type;
     } event[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
 
-    PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ioqueue, -PJ_EINVAL);
 
     /* Lock ioqueue before making fd_set copies */
     pj_lock_acquire(ioqueue->lock);
@@ -460,7 +460,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     count = pj_sock_select(FD_SETSIZE, &rfdset, &wfdset, &xfdset, timeout);
     
     if (count <= 0)
-	return count;
+	return -pj_get_netos_error();
     else if (count > PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL)
         count = PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL;
 

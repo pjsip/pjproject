@@ -24,9 +24,6 @@ int init_module(void)
 {
     printk(KERN_INFO "PJLIB test module loaded. Starting tests...\n");
     
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
-
     test_main();
 
     /* Prevent module from loading. We've finished test anyway.. */

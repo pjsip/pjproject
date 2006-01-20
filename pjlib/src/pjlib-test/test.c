@@ -37,6 +37,8 @@ pj_pool_factory *mem;
 int param_echo_sock_type;
 const char *param_echo_server = ECHO_SERVER_ADDRESS;
 int param_echo_port = ECHO_SERVER_START_PORT;
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 int test_inner(void)
 {
@@ -48,6 +50,7 @@ int test_inner(void)
     mem = &caching_pool.factory;
 
     pj_log_set_level(3);
+    pj_log_set_decor(param_log_decor);
 
     rc = pj_init();
     if (rc != 0) {

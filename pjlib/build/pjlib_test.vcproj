@@ -4,7 +4,9 @@
 	Version="7.10"
 	Name="pjlib_test"
 	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
-	SccLocalPath=".">
+	SccAuxPath=""
+	SccLocalPath="."
+	SccProvider="MSSCCI:Microsoft Visual SourceSafe">
 	<Platforms>
 		<Platform
 			Name="Win32"/>

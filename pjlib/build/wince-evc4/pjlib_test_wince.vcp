@@ -445,7 +445,7 @@ RSC=rc.exe
 # ADD RSC /l 0x409 /d "$(CePlatform)" /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "_X86_" /d "x86" /d "_i386_" /r
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D "_i386_" /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "i_386_" /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /YX /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "_i386_" /D "i_386_" /D "_X86_" /D "x86" /D PJ_WIN32_WINCE=1 /D PJ_M_I386=1 /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "UNICODE" /D "_UNICODE" /YX /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "_i386_" /D "i_386_" /D "_X86_" /D "x86" /D PJ_WIN32_WINCE=1 /D PJ_M_I386=1 /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "UNICODE" /D "_UNICODE" /FR /YX /Gs8192 /GF /c
 MTL=midl.exe
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
@@ -643,7 +643,7 @@ RSC=rc.exe
 # ADD RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "DEBUG" /d "UNICODE" /d "_UNICODE" /d "$(CePlatform)" /d "ARM" /d "_ARM_" /d "ARMV4" /r
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "UNICODE" /D "_UNICODE" /YX /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "UNICODE" /D "_UNICODE" /YX /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "UNICODE" /D "_UNICODE" /FR /YX /M$(CECrtMTDebug) /c
 MTL=midl.exe
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
@@ -15396,6 +15396,7 @@ DEP_CPP_MAIN_W=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	"..\..\src\pjlib-test\test.h"\
 	
 
@@ -15596,6 +15597,9 @@ DEP_CPP_MAIN_W=\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
 	"..\..\src\pjlib-test\test.h"\
+	
+NODEP_CPP_MAIN_W=\
+	"..\..\include\pj\compat\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPS16) Release"
@@ -31692,6 +31696,7 @@ DEP_CPP_TIMES=\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
+	"..\..\include\pj\rand.h"\
 	"..\..\include\pj\types.h"\
 	"..\..\src\pjlib-test\test.h"\
 	

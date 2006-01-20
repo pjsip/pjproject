@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/file_io.h>
-#include <pj/compat/unicode.h>
+#include <pj/unicode.h>
 #include <pj/errno.h>
 #include <pj/assert.h>
 
@@ -78,7 +78,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-    hFile = CreateFile(PJ_NATIVE_STRING(pathname,wpathname), 
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,wpathname), 
 		       dwDesiredAccess, dwShareMode, NULL,
                        dwCreationDisposition, dwFlagsAndAttributes, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {

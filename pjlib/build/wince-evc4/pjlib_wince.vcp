@@ -715,811 +715,6 @@ BSC32=bscmake.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-# Begin Group "src_compat"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\..\src\pj\compat\unicode_win32.c
-
-!IF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII_FP) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII_FP) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH4) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH4) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH3) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH3) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_arm.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV_FP) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV_FP) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_arm.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Release"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Debug"
-
-DEP_CPP_UNICO=\
-	"..\..\include\pj\assert.h"\
-	"..\..\include\pj\compat\assert.h"\
-	"..\..\include\pj\compat\cc_gcc.h"\
-	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
-	"..\..\include\pj\compat\os_linux.h"\
-	"..\..\include\pj\compat\os_linux_kernel.h"\
-	"..\..\include\pj\compat\os_palmos.h"\
-	"..\..\include\pj\compat\os_sunos.h"\
-	"..\..\include\pj\compat\os_win32.h"\
-	"..\..\include\pj\compat\os_win32_wince.h"\
-	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
-	"..\..\include\pj\config.h"\
-	"..\..\include\pj\config_site.h"\
-	"..\..\include\pj\list.h"\
-	"..\..\include\pj\list_i.h"\
-	"..\..\include\pj\pool.h"\
-	"..\..\include\pj\pool_i.h"\
-	"..\..\include\pj\string.h"\
-	"..\..\include\pj\string_i.h"\
-	"..\..\include\pj\types.h"\
-	
-
-!ENDIF 
-
-# End Source File
-# End Group
 # Begin Source File
 
 SOURCE=..\..\src\pj\addr_resolv_sock.c
@@ -7328,7 +6523,6 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\sprintf.h"\
 	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\compat\vsprintf.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
@@ -7992,7 +7186,6 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\errno.h"\
@@ -25649,6 +24842,805 @@ DEP_CPP_TYPES=\
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\..\src\pj\unicode_win32.c
+
+!IF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII_FP) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII_FP) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSII) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH4) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH4) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH3) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE SH3) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV_FP) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPSIV_FP) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_UNICO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_i386.h"\
+	"..\..\include\pj\compat\m_m68k.h"\
+	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\types.h"\
+	
+
+!ENDIF 
+
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -25727,10 +25719,6 @@ SOURCE=..\..\include\pj\compat\string.h
 # Begin Source File
 
 SOURCE=..\..\include\pj\compat\time.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\include\pj\compat\unicode.h
 # End Source File
 # Begin Source File
 
@@ -25860,6 +25848,10 @@ SOURCE=..\..\include\pj\timer.h
 # Begin Source File
 
 SOURCE=..\..\include\pj\types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pj\unicode.h
 # End Source File
 # End Group
 # End Target

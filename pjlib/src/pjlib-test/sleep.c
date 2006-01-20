@@ -152,7 +152,7 @@ static int sleep_duration_test(void)
 	pj_gettimeofday(&t2);
 
 	/* Compare t1 and t2. */
-	if (PJ_TIME_VAL_LTE(t2, t1)) {
+	if (PJ_TIME_VAL_LT(t2, t1)) {
 	    PJ_LOG(3,(THIS_FILE, "...error: t2 is less than t1!!"));
 	    return -75;
 	}

@@ -400,8 +400,10 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     msec = timeout ? PJ_TIME_VAL_MSEC(*timeout) : 9000;
     
     count = os_epoll_wait( ioqueue->epfd, events, PJ_ARRAY_SIZE(events), msec);
-    if (count <= 0)
+    if (count == 0)
 	return count;
+    else if (count < 0)
+	return -pj_get_netos_error();
 
     /* Lock ioqueue. */
     pj_lock_acquire(ioqueue->lock);

@@ -303,7 +303,7 @@ static int perform_test(int sock_type, const char *type_name,
         /* Start writing. */
 	TRACE_((THIS_FILE, "      pj_ioqueue_write.."));
         bytes = items[i].buffer_size;
-        rc = pj_ioqueue_send(items[i].client_key, &items[i].recv_op,
+        rc = pj_ioqueue_send(items[i].client_key, &items[i].send_op,
                              items[i].outgoing_buffer, &bytes, 0);
         if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
             app_perror("...error: pj_ioqueue_write", rc);

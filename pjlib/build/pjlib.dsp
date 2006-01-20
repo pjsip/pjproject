@@ -164,15 +164,6 @@ SOURCE=..\src\pj\symbols.c
 # PROP Exclude_From_Build 1
 # End Source File
 # End Group
-# Begin Group "src_compat"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\pj\compat\unicode_win32.c
-# PROP Exclude_From_Build 1
-# End Source File
-# End Group
 # Begin Source File
 
 SOURCE=..\src\pj\addr_resolv_sock.c
@@ -328,6 +319,10 @@ SOURCE=..\src\pj\timer.c
 
 SOURCE=..\src\pj\types.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\unicode_win32.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -434,10 +429,6 @@ SOURCE=..\include\pj\compat\string.h
 # Begin Source File
 
 SOURCE=..\include\pj\compat\time.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pj\compat\unicode.h
 # End Source File
 # Begin Source File
 
@@ -559,6 +550,10 @@ SOURCE=..\include\pj\timer.h
 # Begin Source File
 
 SOURCE=..\include\pj\types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\unicode.h
 # End Source File
 # End Group
 # Begin Group "Inline Files"
