@@ -140,15 +140,15 @@ static pj_str_t sips_str = { "sips", 4 };
 
 static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool, 
 					       const pjsip_name_addr *rhs);
-static int pjsip_name_addr_print( pjsip_uri_context_e context,
-				  const pjsip_name_addr *name, 
-				  char *buf, pj_size_t size);
+static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
+					const pjsip_name_addr *name, 
+					char *buf, pj_size_t size);
 static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 				     const pjsip_name_addr *naddr1,
 				     const pjsip_name_addr *naddr2);
-static int pjsip_url_print(  pjsip_uri_context_e context,
-			     const pjsip_sip_uri *url, 
-			     char *buf, pj_size_t size);
+static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
+				    const pjsip_sip_uri *url, 
+				    char *buf, pj_size_t size);
 static int pjsip_url_compare( pjsip_uri_context_e context,
 			      const pjsip_sip_uri *url1, 
 			      const pjsip_sip_uri *url2);
@@ -204,7 +204,7 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
     return name->uri;
 }
 
-PJ_DEF(void) pjsip_url_init(pjsip_sip_uri *url, int secure)
+PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, int secure)
 {
     pj_memset(url, 0, sizeof(*url));
     url->ttl_param = -1;
@@ -213,16 +213,16 @@ PJ_DEF(void) pjsip_url_init(pjsip_sip_uri *url, int secure)
     pj_list_init(&url->header_param);
 }
 
-PJ_DEF(pjsip_sip_uri*) pjsip_url_create( pj_pool_t *pool, int secure )
+PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, int secure )
 {
     pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
-    pjsip_url_init(url, secure);
+    pjsip_sip_uri_init(url, secure);
     return url;
 }
 
-static int pjsip_url_print(  pjsip_uri_context_e context,
-			     const pjsip_sip_uri *url, 
-			     char *buf, pj_size_t size)
+static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
+				    const pjsip_sip_uri *url, 
+				    char *buf, pj_size_t size)
 {
     int printed;
     char *startbuf = buf;
@@ -465,8 +465,8 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
 }
 
 
-PJ_DEF(void) pjsip_url_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
-			      const pjsip_sip_uri *rhs)
+PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
+				  const pjsip_sip_uri *rhs)
 {
     pj_strdup( pool, &url->user, &rhs->user);
     pj_strdup( pool, &url->passwd, &rhs->passwd);
@@ -488,8 +488,8 @@ static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, const pjsip_sip_uri *rhs)
     if (!url)
 	return NULL;
 
-    pjsip_url_init(url, IS_SIPS(rhs));
-    pjsip_url_assign(pool, url, rhs);
+    pjsip_sip_uri_init(url, IS_SIPS(rhs));
+    pjsip_sip_uri_assign(pool, url, rhs);
     return url;
 }
 
@@ -513,9 +513,9 @@ PJ_DEF(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t *pool)
     return name_addr;
 }
 
-static int pjsip_name_addr_print( pjsip_uri_context_e context,
-				  const pjsip_name_addr *name, 
-				  char *buf, pj_size_t size)
+static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
+					const pjsip_name_addr *name, 
+					char *buf, pj_size_t size)
 {
     int printed;
     char *startbuf = buf;

@@ -43,22 +43,20 @@ static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
  */
 static pjsip_module mod_msg_print = 
 {
-    NULL, NULL,				/* prev and next	*/
-    { "mod-msg-print", 13},		/* Name.		*/
-    -1,					/* Id			*/
-    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,	/* Priority		*/
-    NULL,				/* User data.		*/
-    0,					/* Number of methods supported (=0). */
-    { 0 },				/* Array of methods (none) */
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    NULL,				/* on_rx_request()	*/
-    NULL,				/* on_rx_response()	*/
-    &mod_on_tx_msg,			/* on_tx_request()	*/
-    &mod_on_tx_msg,			/* on_tx_response()	*/
-    NULL,				/* on_tsx_state()	*/
+    NULL, NULL,				/* prev and next		    */
+    { "mod-msg-print", 13},		/* Name.			    */
+    -1,					/* Id				    */
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,	/* Priority			    */
+    NULL,				/* User data.			    */
+    NULL,				/* load()			    */
+    NULL,				/* start()			    */
+    NULL,				/* stop()			    */
+    NULL,				/* unload()			    */
+    NULL,				/* on_rx_request()		    */
+    NULL,				/* on_rx_response()		    */
+    &mod_on_tx_msg,			/* on_tx_request()		    */
+    &mod_on_tx_msg,			/* on_tx_response()		    */
+    NULL,				/* on_tsx_state()		    */
 };
 
 /*
@@ -348,7 +346,7 @@ PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 {
 
     if (tdata==NULL || tdata->msg==NULL)
-	return "INVALID MSG";
+	return "NULL";
 
     if (tdata->info)
 	return tdata->info;
@@ -589,7 +587,7 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
-    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, tp);
+    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, tp);
     pj_lock_release(mgr->lock);
 
     return PJ_SUCCESS;
@@ -617,7 +615,7 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
      * Unregister from hash table.
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
-    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, NULL);
+    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, NULL);
 
     pj_lock_release(mgr->lock);
 
@@ -878,7 +876,8 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	}
 
 	/* Perform basic header checking. */
-	if (rdata->msg_info.cid->id.ptr == NULL || 
+	if (rdata->msg_info.cid == NULL ||
+	    rdata->msg_info.cid->id.slen == 0 || 
 	    rdata->msg_info.from == NULL || 
 	    rdata->msg_info.to == NULL || 
 	    rdata->msg_info.via == NULL || 
@@ -961,7 +960,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
     key.type = type;
     pj_memcpy(&key.addr, remote, addr_len);
 
-    transport = pj_hash_get(mgr->table, &key, key_len);
+    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
     if (transport == NULL) {
 	unsigned flag = pjsip_transport_get_flag_from_type(type);
 	const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
@@ -974,7 +973,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 
 	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
 	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
-	    transport = pj_hash_get(mgr->table, &key, key_len);
+	    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
 	}
 	/* For datagram INET transports, try lookup with zero address.
 	 */
@@ -987,7 +986,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	    addr->sin_family = PJ_AF_INET;
 
 	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
-	    transport = pj_hash_get(mgr->table, &key, key_len);
+	    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
 	}
     }
     

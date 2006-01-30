@@ -128,9 +128,9 @@ static void init_request_throw( pjsip_endpoint *endpt,
 	while (hparam != &uri->header_param) {
 	    pjsip_generic_string_hdr *hdr;
 
-	    hdr = pjsip_generic_string_hdr_create_with_text(tdata->pool, 
-							    &hparam->name,
-							    &hparam->value);
+	    hdr = pjsip_generic_string_hdr_create(tdata->pool, 
+						  &hparam->name,
+						  &hparam->value);
 	    pjsip_msg_add_hdr(msg, (pjsip_hdr*)hdr);
 	    hparam = hparam->next;
 	}
@@ -302,9 +302,9 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 	/* Duplicate target URI and headers. */
 	target = pjsip_uri_clone(tdata->pool, param_target);
 	from = pjsip_hdr_clone(tdata->pool, param_from);
-	pjsip_fromto_set_from(from);
+	pjsip_fromto_hdr_set_from(from);
 	to = pjsip_hdr_clone(tdata->pool, param_to);
-	pjsip_fromto_set_to(to);
+	pjsip_fromto_hdr_set_to(to);
 	if (param_contact)
 	    contact = pjsip_hdr_clone(tdata->pool, param_contact);
 	else

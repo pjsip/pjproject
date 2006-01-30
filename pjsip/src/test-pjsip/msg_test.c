@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-#include <pjsip_core.h>
+#include <pjsip.h>
 #include <pjlib.h>
 
 #define POOL_SIZE	8000
@@ -348,7 +348,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
 
     /* "INVITE sip:user@foo SIP/2.0\n" */
     pjsip_method_set(&msg->line.req.method, PJSIP_INVITE_METHOD);
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     msg->line.req.uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user");
     pj_strdup2(pool, &url->host, "foo");
@@ -360,7 +360,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     name_addr = pjsip_name_addr_create(pool);
     fromto->uri = (pjsip_uri*)name_addr;
     pj_strdup2(pool, &name_addr->display, "Hi I'm Joe");
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "joe.user");
     pj_strdup2(pool, &url->host, "bar.otherdomain.com");
@@ -371,7 +371,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     name_addr = pjsip_name_addr_create(pool);
     fromto->uri = (pjsip_uri*)name_addr;
     pj_strdup2(pool, &name_addr->display, "Fellow User");
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user");
     pj_strdup2(pool, &url->host, "foo.bar.domain.com");
@@ -399,7 +399,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     contact->expires = 3600;
     name_addr = pjsip_name_addr_create(pool);
     contact->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "joe");
     pj_strdup2(pool, &url->host, "bar");
@@ -410,7 +410,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     contact->q1000 = 500;
     name_addr = pjsip_name_addr_create(pool);
     contact->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user");
     pj_strdup2(pool, &url->host, "host");
@@ -420,7 +420,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)contact);
     name_addr = pjsip_name_addr_create(pool);
     contact->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->user, "user2");
     pj_strdup2(pool, &url->host, "host2");
@@ -435,7 +435,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "Route: <sip:bigbox3.site3.atlanta.com;lr>,\r\n" */
     routing = pjsip_route_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)routing);
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     routing->name_addr.uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->host, "bigbox3.site3.atlanta.com");
     url->lr_param = 1;
@@ -443,7 +443,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "  <sip:server10.biloxi.com;lr>\r" */
     routing = pjsip_route_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)routing);
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     routing->name_addr.uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->host, "server10.biloxi.com");
     url->lr_param = 1;
@@ -451,7 +451,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "Record-Route: <sip:server10.biloxi.com>,\r\n" */
     routing = pjsip_rr_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)routing);
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     routing->name_addr.uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->host, "server10.biloxi.com");
     url->lr_param = 0;
@@ -459,7 +459,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "  <sip:bigbox3.site3.atlanta.com;lr>\n" */
     routing = pjsip_rr_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)routing);
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     routing->name_addr.uri = (pjsip_uri*)url;
     pj_strdup2(pool, &url->host, "bigbox3.site3.atlanta.com");
     url->lr_param = 1;
@@ -497,7 +497,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "Organization: \r" */
     str.ptr = "Organization";
     str.slen = 12;
-    generic = pjsip_generic_string_hdr_create(pool, &str);
+    generic = pjsip_generic_string_hdr_create(pool, &str, NULL);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
     generic->hvalue.ptr = NULL;
     generic->hvalue.slen = 0;
@@ -505,7 +505,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "Max-Forwards: 70\n" */
     str.ptr = "Max-Forwards";
     str.slen = 12;
-    generic = pjsip_generic_string_hdr_create(pool, &str);
+    generic = pjsip_generic_string_hdr_create(pool, &str, NULL);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
     str.ptr = "70";
     str.slen = 2;
@@ -514,7 +514,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* "X-Header: \r\n" */
     str.ptr = "X-Header";
     str.slen = 8;
-    generic = pjsip_generic_string_hdr_create(pool, &str);
+    generic = pjsip_generic_string_hdr_create(pool, &str, NULL);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
     str.ptr = NULL;
     str.slen = 0;
@@ -523,7 +523,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     /* P-Associated-URI:\r\n */
     str.ptr = "P-Associated-URI";
     str.slen = 16;
-    generic = pjsip_generic_string_hdr_create(pool, &str);
+    generic = pjsip_generic_string_hdr_create(pool, &str, NULL);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)generic);
     str.ptr = NULL;
     str.slen = 0;
@@ -538,7 +538,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     pjsip_route_hdr *route;
     pjsip_name_addr *name_addr;
     pjsip_sip_uri *url;
-    pjsip_max_forwards_hdr *max_fwd;
+    pjsip_max_fwd_hdr *max_fwd;
     pjsip_to_hdr *to;
     pjsip_from_hdr *from;
     pjsip_contact_hdr *contact;
@@ -581,22 +581,21 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     //"Route: <sip:proxy.sipprovider.com>\r\n"
     route = pjsip_route_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)route);
-    url = pjsip_url_create(pool, PJ_FALSE);
+    url = pjsip_sip_uri_create(pool, PJ_FALSE);
     route->name_addr.uri = (pjsip_uri*)url;
     url->host = pj_str("proxy.sipprovider.com");
     
     //"Route: <sip:proxy.supersip.com:5060>\r\n"
     route = pjsip_route_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)route);
-    url = pjsip_url_create(pool, PJ_FALSE);
+    url = pjsip_sip_uri_create(pool, PJ_FALSE);
     route->name_addr.uri = (pjsip_uri*)url;
     url->host = pj_str("proxy.supersip.com");
     url->port = 5060;
 
     //"Max-Forwards: 70\r\n"
-    max_fwd = pjsip_max_forwards_hdr_create(pool);
+    max_fwd = pjsip_max_fwd_hdr_create(pool, 70);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)max_fwd);
-    max_fwd->ivalue = 70;
 
     //"To: Bob <sip:bob@biloxi.com>;tag=a6c85cf\r\n"
     to = pjsip_to_hdr_create(pool);
@@ -604,7 +603,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     name_addr = pjsip_name_addr_create(pool);
     name_addr->display = pj_str("Bob");
     to->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, PJ_FALSE);
+    url = pjsip_sip_uri_create(pool, PJ_FALSE);
     name_addr->uri = (pjsip_uri*)url;
     url->user = pj_str("bob");
     url->host = pj_str("biloxi.com");
@@ -616,7 +615,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     name_addr = pjsip_name_addr_create(pool);
     name_addr->display = pj_str("Alice");
     from->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, PJ_FALSE);
+    url = pjsip_sip_uri_create(pool, PJ_FALSE);
     name_addr->uri = (pjsip_uri*)url;
     url->user = pj_str("alice");
     url->host = pj_str("atlanta.com");
@@ -638,7 +637,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)contact);
     name_addr = pjsip_name_addr_create(pool);
     contact->uri = (pjsip_uri*)name_addr;
-    url = pjsip_url_create(pool, PJ_TRUE);
+    url = pjsip_sip_uri_create(pool, PJ_TRUE);
     name_addr->uri = (pjsip_uri*)url;
     url->user = pj_str("bob");
     url->host = pj_str("192.0.2.4");

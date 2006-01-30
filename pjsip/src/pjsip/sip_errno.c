@@ -45,6 +45,7 @@ static const struct
 
     { PJSIP_EINVALIDSTATUS,	"Invalid status code"},
 
+    { PJSIP_EINVALIDURI,	"Invalid URI" },
     { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
     { PJSIP_EMISSINGREQURI,	"Missing Request-URI" },
     { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
@@ -77,7 +78,10 @@ static const struct
     { PJSIP_EAUTHACCNOTFOUND,	"Account or credential not found" },
     { PJSIP_EAUTHACCDISABLED,	"Account or credential is disabled" },
     { PJSIP_EAUTHINVALIDREALM,	"Invalid authorization realm"},
-    { PJSIP_EAUTHINVALIDDIGEST,	"Invalid authorization digest" }
+    { PJSIP_EAUTHINVALIDDIGEST,	"Invalid authorization digest" },
+
+    /* UA/dialog layer. */
+    { PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" }
 };
 
 

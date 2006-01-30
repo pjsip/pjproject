@@ -49,7 +49,7 @@
 
 /**
  * @hideinitializer
- * If #PJ_ENABLE_EXTRA_CHECK is declared and non-zero, then 
+ * If #PJ_ENABLE_EXTRA_CHECK is declared and the value is non-zero, then 
  * #PJ_ASSERT_RETURN macro will evaluate the expression in @a expr during
  * run-time. If the expression yields false, assertion will be triggered
  * and the current function will return with the specified return value.

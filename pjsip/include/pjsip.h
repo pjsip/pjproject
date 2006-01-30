@@ -16,21 +16,41 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJSIP_UA_PRIVATE_H__
-#define __PJSIP_UA_PRIVATE_H__
+#ifndef __PJSIP_H__
+#define __PJSIP_H__
+
+/* Base types. */
+#include <pjsip/sip_types.h>
+#include <pjsip/sip_errno.h>
+
+/* Messaging and parsing. */
+#include <pjsip/sip_uri.h>
+#include <pjsip/sip_tel_uri.h>
+#include <pjsip/sip_msg.h>
+#include <pjsip/sip_parser.h>
+
+/* Core */
+#include <pjsip/sip_event.h>
+#include <pjsip/sip_module.h>
+#include <pjsip/sip_endpoint.h>
+#include <pjsip/sip_util.h>
+
+/* Transport layer */
+#include <pjsip/sip_transport.h>
+#include <pjsip/sip_transport_udp.h>
+#include <pjsip/sip_transport_loop.h>
+#include <pjsip/sip_resolve.h>
+
+/* Authentication. */
+#include <pjsip/sip_auth.h>
+
+/* Transaction layer. */
+#include <pjsip/sip_transaction.h>
+
+/* UA Layer. */
+#include <pjsip/sip_ua_layer.h>
+#include <pjsip/sip_dialog.h>
 
 
-/*
- * Internal dialog functions.
- */
-pj_status_t pjsip_dlg_init_from_rdata( pjsip_dlg *dlg,
-				       pjsip_rx_data *rdata );
-
-
-void pjsip_dlg_on_tsx_event( pjsip_dlg *dlg, 
-			     pjsip_transaction *tsx, 
-			     pjsip_event *event);
-
-
-#endif	/* __PJSIP_UA_PRIVATE_H__ */
+#endif	/* __PJSIP_H__ */
 

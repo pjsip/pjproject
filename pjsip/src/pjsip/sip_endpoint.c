@@ -77,17 +77,11 @@ struct pjsip_endpoint
     /** Module list, sorted by priority. */
     pjsip_module	 module_list;
 
-    /** Number of supported methods. */
-    unsigned		 method_cnt;
-
-    /** Array of supported methods. */
-    const pjsip_method	*methods[MAX_METHODS];
-
-    /** Allow header. */
-    pjsip_allow_hdr	*allow_hdr;
-
     /** Route header list. */
     pjsip_route_hdr	 route_hdr_list;
+
+    /** Capability header list. */
+    pjsip_hdr		 cap_hdr;
 
     /** Additional request headers. */
     pjsip_hdr		 req_hdr;
@@ -196,7 +190,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
     pj_list_insert_before(m, mod);
 
     /* Done. */
-    PJ_TODO(BUILD_ALLOW_HEADER_BASED_ON_MODULES_SUPPORTED_METHODS);
 
 on_return:
     pj_rwmutex_unlock_write(endpt->mod_mutex);
@@ -248,19 +241,86 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
     /* Done. */
     status = PJ_SUCCESS;
 
-    PJ_TODO(REMOVE_METHODS_FROM_ALLOW_HEADER_WHEN_MODULE_IS_UNREGISTERED);
-
 on_return:
     pj_rwmutex_unlock_write(endpt->mod_mutex);
     return status;
 }
 
+
 /*
- * Get "Allow" header.
+ * Get the value of the specified capability header field.
  */
-PJ_DEF(const pjsip_allow_hdr*) pjsip_endpt_get_allow_hdr( pjsip_endpoint *endpt )
+PJ_DEF(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
+						     int htype,
+						     const pj_str_t *hname)
 {
-    return endpt->allow_hdr;
+    pjsip_hdr *hdr = endpt->cap_hdr.next;
+
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(endpt != NULL, NULL);
+    PJ_ASSERT_RETURN(htype != PJSIP_H_OTHER || hname, NULL);
+
+    if (htype != PJSIP_H_OTHER) {
+	while (hdr != &endpt->cap_hdr) {
+	    if (hdr->type == htype)
+		return hdr;
+	    hdr = hdr->next;
+	}
+    }
+    return NULL;
+}
+
+
+/*
+ * Add or register new capabilities as indicated by the tags to the
+ * appropriate header fields in the endpoint.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
+						pjsip_module *mod,
+						int htype,
+						const pj_str_t *hname,
+						unsigned count,
+						const pj_str_t tags[])
+{
+    pjsip_generic_array_hdr *hdr;
+    unsigned i;
+
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(endpt!=NULL && mod!=NULL && count>0 && tags, PJ_EINVAL);
+    PJ_ASSERT_RETURN(htype==PJSIP_H_ACCEPT || 
+		     htype==PJSIP_H_ALLOW ||
+		     htype==PJSIP_H_SUPPORTED,
+		     PJ_EINVAL);
+
+    /* Find the header. */
+    hdr = (pjsip_generic_array_hdr*) pjsip_endpt_get_capability(endpt, 
+								htype, hname);
+
+    /* Create the header when it's not present */
+    if (hdr == NULL) {
+	switch (htype) {
+	case PJSIP_H_ACCEPT:
+	    hdr = pjsip_accept_hdr_create(endpt->pool);
+	    break;
+	case PJSIP_H_ALLOW:
+	    hdr = pjsip_allow_hdr_create(endpt->pool);
+	    break;
+	case PJSIP_H_SUPPORTED:
+	    hdr = pjsip_supported_hdr_create(endpt->pool);
+	    break;
+	default:
+	    return PJ_EINVAL;
+	}
+    }
+
+    /* Add the tags to the header. */
+    for (i=0; i<count; ++i) {
+	pj_strdup(endpt->pool, &hdr->values[hdr->count], &tags[i]);
+	++hdr->count;
+    }
+
+    /* Done. */
+    return PJ_SUCCESS;
 }
 
 /*
@@ -325,7 +385,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pj_status_t status;
     pj_pool_t *pool;
     pjsip_endpoint *endpt;
-    pjsip_max_forwards_hdr *mf_hdr;
+    pjsip_max_fwd_hdr *mf_hdr;
     pj_lock_t *lock = NULL;
 
     PJ_LOG(5, (THIS_FILE, "Creating endpoint instance..."));
@@ -419,9 +479,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pj_list_init(&endpt->route_hdr_list);
 
     /* Add "Max-Forwards" for request header. */
-    mf_hdr = pjsip_max_forwards_hdr_create(endpt->pool);
-    mf_hdr->ivalue = PJSIP_MAX_FORWARDS_VALUE;
+    mf_hdr = pjsip_max_fwd_hdr_create(endpt->pool,
+				      PJSIP_MAX_FORWARDS_VALUE);
     pj_list_insert_before( &endpt->req_hdr, mf_hdr);
+
+    /* Initialize capability header list. */
+    pj_list_init(&endpt->cap_hdr);
 
     /* Done. */
     *p_endpt = endpt;

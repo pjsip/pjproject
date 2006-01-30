@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-#include <pjsip_core.h>
+#include <pjsip.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "msg_logger.c"
@@ -64,8 +64,6 @@ static pjsip_module mod_msg_logger =
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority		*/
     NULL,				/* User data.		*/
-    0,					/* Number of methods supported (=0). */
-    { 0 },				/* Array of methods (none) */
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

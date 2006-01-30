@@ -18,7 +18,7 @@
  */
 
 #include "test.h"
-#include <pjsip_core.h>
+#include <pjsip.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "tsx_uac_test.c"
@@ -103,8 +103,6 @@ static pjsip_module tsx_user =
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
     NULL,				/* User data.		*/
-    0,					/* Number of methods supported (=0). */
-    { 0 },				/* Array of methods (none) */
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/
@@ -124,8 +122,6 @@ static pjsip_module msg_receiver =
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
     NULL,				/* User data.		*/
-    0,					/* Number of methods supported (=0). */
-    { 0 },				/* Array of methods (none) */
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

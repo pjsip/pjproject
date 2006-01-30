@@ -228,6 +228,19 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_tsx(pjsip_endpoint *endpt,
 					    pjsip_transaction **p_tsx);
 
 /**
+ * Find transaction in endpoint's transaction table by the transaction's key.
+ * This function normally is only used by modules. The key for a transaction
+ * can be created by calling #pjsip_tsx_create_key.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param key	    Transaction key, as created with #pjsip_tsx_create_key.
+ *
+ * @return	    The transaction, or NULL if it's not found.
+ */
+PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
+					          const pj_str_t *key );
+
+/**
  * Register the transaction to the endpoint's transaction table.
  * Before the transaction is registered, it must have been initialized as
  * either UAS or UAC by calling #pjsip_tsx_init_uac or #pjsip_tsx_init_uas.
@@ -316,40 +329,78 @@ pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
 			       int addr_len,
 			       pjsip_transport **p_transport);
 
+
+/*****************************************************************************
+ *
+ * Capabilities Management
+ *
+ * Modules may implement new capabilities to the stack. These capabilities
+ * are indicated by the appropriate SIP header fields, such as Accept,
+ * Accept-Encoding, Accept-Language, Allow, Supported, etc.
+ *
+ * When a module provides new capabilities to the stack, it registers these
+ * capabilities to the endpoint by supplying new tags (strings) to the
+ * appropriate header fields. Application (or other modules) can then query
+ * these header fields to get the list of supported capabilities, and may
+ * include these headers in the outgoing message.
+ *****************************************************************************
+ */
+
 /**
- * Get additional headers to be put in outgoing request message. 
- * This function is normally called by transaction layer when sending outgoing
- * requests.
- * 
+ * Get the value of the specified capability header field.
+ *
  * @param endpt	    The endpoint.
+ * @param htype	    The header type to be retrieved, which value may be:
+ *		    - PJSIP_H_ACCEPT
+ *		    - PJSIP_H_ALLOW
+ *		    - PJSIP_H_SUPPORTED
+ * @param hname	    If htype specifies PJSIP_H_OTHER, then the header name
+ *		    must be supplied in this argument. Otherwise the value
+ *		    must be set to NULL.
  *
- * @return	    List of additional headers to be put in outgoing requests.
+ * @return	    The appropriate header, or NULL if the header is not
+ *		    available.
  */
-PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *endpt);
+PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
+						      int htype,
+						      const pj_str_t *hname);
+
 
 /**
- * Get "Allow" header from endpoint. The endpoint builds the "Allow" header
- * from the list of methods supported by modules.
+ * Add or register new capabilities as indicated by the tags to the
+ * appropriate header fields in the endpoint.
  *
  * @param endpt	    The endpoint.
+ * @param mod	    The module which registers the capability.
+ * @param htype	    The header type to be set, which value may be:
+ *		    - PJSIP_H_ACCEPT
+ *		    - PJSIP_H_ALLOW
+ *		    - PJSIP_H_SUPPORTED
+ * @param hname	    If htype specifies PJSIP_H_OTHER, then the header name
+ *		    must be supplied in this argument. Otherwise the value
+ *		    must be set to NULL.
+ * @param count	    The number of tags in the array.
+ * @param tags	    Array of tags describing the capabilities or extensions
+ *		    to be added to the appropriate header.
  *
- * @return	    "Allow" header, or NULL if endpoint doesn't have "Allow" header.
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(const pjsip_allow_hdr*) pjsip_endpt_get_allow_hdr( pjsip_endpoint *endpt );
-
+PJ_DECL(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
+						 pjsip_module *mod,
+						 int htype,
+						 const pj_str_t *hname,
+						 unsigned count,
+						 const pj_str_t tags[]);
 
 /**
- * Find transaction in endpoint's transaction table by the transaction's key.
- * This function normally is only used by modules. The key for a transaction
- * can be created by calling #pjsip_tsx_create_key.
+ * Get list of additional headers to be put in outgoing request message.
  *
- * @param endpt	    The endpoint instance.
- * @param key	    Transaction key, as created with #pjsip_tsx_create_key.
+ * @param e	    The endpoint.
  *
- * @return	    The transaction, or NULL if it's not found.
+ * @return	    List of headers.
  */
-PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
-					          const pj_str_t *key );
+PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *e);
+
 
 /**
  * Set list of SIP proxies to be visited for all outbound request messages.

@@ -123,6 +123,14 @@ public:
     }
 
     //
+    // You can cast Pj_Pool to pj_pool_t*
+    //
+    operator pj_pool_t*()
+    {
+	return p_;
+    }
+
+    //
     // Get pjlib compatible pool object.
     //
     pj_pool_t *pool_()

@@ -1167,10 +1167,10 @@ static pjsip_sip_uri *int_parse_sip_url( pj_scanner *scanner,
     }
 
     if (parser_stricmp(scheme, pjsip_SIP_STR)==0) {
-	url = pjsip_url_create(pool, 0);
+	url = pjsip_sip_uri_create(pool, 0);
 
     } else if (parser_stricmp(scheme, pjsip_SIPS_STR)==0) {
-	url = pjsip_url_create(pool, 1);
+	url = pjsip_sip_uri_create(pool, 1);
 
     } else {
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
@@ -1541,7 +1541,7 @@ static pjsip_hdr* parse_hdr_cseq( pjsip_parse_ctx *ctx )
 /* Parse Expires header. */
 static pjsip_hdr* parse_hdr_expires(pjsip_parse_ctx *ctx)
 {
-    pjsip_expires_hdr *hdr = pjsip_expires_hdr_create(ctx->pool);
+    pjsip_expires_hdr *hdr = pjsip_expires_hdr_create(ctx->pool, 0);
     parse_generic_int_hdr(hdr, ctx->scanner);
     return (pjsip_hdr*)hdr;
 }
@@ -1601,7 +1601,7 @@ static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 {
     pjsip_retry_after_hdr *hdr;
-    hdr = pjsip_retry_after_hdr_create(ctx->pool);
+    hdr = pjsip_retry_after_hdr_create(ctx->pool, 0);
     parse_generic_int_hdr(hdr, ctx->scanner);
     return (pjsip_hdr*)hdr;
 }
@@ -1673,8 +1673,8 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 /* Parse Max-Forwards header. */
 static pjsip_hdr* parse_hdr_max_forwards( pjsip_parse_ctx *ctx )
 {
-    pjsip_max_forwards_hdr *hdr;
-    hdr = pjsip_max_forwards_hdr_create(ctx->pool);
+    pjsip_max_fwd_hdr *hdr;
+    hdr = pjsip_max_fwd_hdr_create(ctx->pool, 0);
     parse_generic_int_hdr(hdr, ctx->scanner);
 
     if (ctx->rdata)
@@ -1687,7 +1687,7 @@ static pjsip_hdr* parse_hdr_max_forwards( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_min_expires(pjsip_parse_ctx *ctx)
 {
     pjsip_min_expires_hdr *hdr;
-    hdr = pjsip_min_expires_hdr_create(ctx->pool);
+    hdr = pjsip_min_expires_hdr_create(ctx->pool, 0);
     parse_generic_int_hdr(hdr, ctx->scanner);
     return (pjsip_hdr*)hdr;
 }
@@ -1820,7 +1820,7 @@ static pjsip_hdr* parse_hdr_generic_string( pjsip_parse_ctx *ctx )
 {
     pjsip_generic_string_hdr *hdr;
 
-    hdr = pjsip_generic_string_hdr_create(ctx->pool, NULL);
+    hdr = pjsip_generic_string_hdr_create(ctx->pool, NULL, NULL);
     parse_generic_string_hdr(hdr, ctx->scanner);
     return (pjsip_hdr*)hdr;
 

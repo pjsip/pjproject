@@ -64,9 +64,9 @@ static pj_str_t pjsip_PH_CTX_STR = { "phone-context", 13 };
 
 static const pj_str_t *tel_uri_get_scheme( const pjsip_tel_uri* );
 static void *tel_uri_get_uri( pjsip_tel_uri* );
-static int tel_uri_print( pjsip_uri_context_e context,
-			  const pjsip_tel_uri *url, 
-			  char *buf, pj_size_t size);
+static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
+				 const pjsip_tel_uri *url, 
+				 char *buf, pj_size_t size);
 static int tel_uri_cmp( pjsip_uri_context_e context,
 			const pjsip_tel_uri *url1, const pjsip_tel_uri *url2);
 static pjsip_tel_uri* tel_uri_clone(pj_pool_t *pool, const pjsip_tel_uri *rhs);
@@ -164,9 +164,9 @@ pj_status_t pjsip_tel_uri_subsys_init(void)
 }
 
 /* Print tel: URI */
-static int tel_uri_print( pjsip_uri_context_e context,
-			  const pjsip_tel_uri *uri, 
-			  char *buf, pj_size_t size)
+static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
+				 const pjsip_tel_uri *uri, 
+				 char *buf, pj_size_t size)
 {
     int printed;
     char *startbuf = buf;

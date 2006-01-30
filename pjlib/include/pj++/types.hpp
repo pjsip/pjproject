@@ -156,5 +156,19 @@ private:
 
 };
 
+//
+// Macro to declare common object comparison operators.
+//
+#define PJ_DECLARE_OPERATORS(rhs_type)			    \
+	    bool operator!=(rhs_type rhs) const {	    \
+		return !operator==(rhs); }		    \
+	    bool operator<=(rhs_type rhs) const {	    \
+		return operator<(rhs) || operator==(rhs); } \
+	    bool operator>(rhs_type rhs) const {	    \
+		return !operator<=(rhs); }		    \
+	    bool operator>=(rhs_type rhs) const {	    \
+		return !operator<(rhs); }
+
+
 #endif	/* __PJPP_TYPES_HPP__ */
 

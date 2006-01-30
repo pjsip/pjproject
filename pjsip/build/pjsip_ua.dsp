@@ -87,19 +87,16 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\src\pjsip-ua\sip_dialog.c"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\pjsip-ua\sip_reg.c"
-# End Source File
-# Begin Source File
 
-SOURCE="..\src\pjsip-ua\sip_ua.c"
-# End Source File
-# Begin Source File
+!IF  "$(CFG)" == "pjsip_ua - Win32 Release"
 
-SOURCE="..\src\pjsip-ua\sip_ua_private.h"
+!ELSEIF  "$(CFG)" == "pjsip_ua - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -107,15 +104,7 @@ SOURCE="..\src\pjsip-ua\sip_ua_private.h"
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="..\include\pjsip-ua\sip_dialog.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\include\pjsip-ua\sip_regc.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\include\pjsip-ua\sip_ua.h"
 # End Source File
 # End Group
 # End Target

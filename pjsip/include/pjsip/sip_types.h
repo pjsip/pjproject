@@ -102,6 +102,11 @@ typedef struct pjsip_hdr pjsip_hdr;
 typedef struct pjsip_uri pjsip_uri;
 
 /**
+ * Forward declaration for SIP method (sip_msg.h)
+ */
+typedef struct pjsip_method pjsip_method;
+
+/**
  * Opaque data type for the resolver engine (sip_resolve.h).
  */
 typedef struct pjsip_resolver_t pjsip_resolver_t;
@@ -116,6 +121,18 @@ typedef struct pjsip_cred_info pjsip_cred_info;
  * Forward declaration for module (sip_module.h).
  */
 typedef struct pjsip_module pjsip_module;
+
+
+/** 
+ * Forward declaration for user agent type (sip_ua_layer.h). 
+ */
+typedef pjsip_module pjsip_user_agent;
+
+/**
+ * Forward declaration for dialog (sip_dialog.h).
+ */
+typedef struct pjsip_dialog pjsip_dialog;
+
 
 /**
  * Transaction role.

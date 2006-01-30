@@ -61,8 +61,6 @@ static struct mod_tsx_layer
 	-1,				/* Module ID		    */
 	PJSIP_MOD_PRIORITY_TSX_LAYER,	/* Priority.		    */
 	NULL,				/* User_data.		    */
-	0,				/* Methods count.	    */
-	{ NULL },			/* Array of methods.	    */
 	mod_tsx_layer_load,		/* load().		    */
 	mod_tsx_layer_start,		/* start()		    */
 	mod_tsx_layer_stop,		/* stop()		    */
@@ -507,16 +505,19 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
     pj_mutex_lock(mod_tsx_layer.mutex);
 
     /* Check if no transaction with the same key exists. */
-    if (pj_hash_get( mod_tsx_layer.htable, &tsx->transaction_key.ptr,
-		     tsx->transaction_key.slen) != NULL)
-    {
-	pj_mutex_unlock(mod_tsx_layer.mutex);
-	return PJ_EEXISTS;
-    }
+    PJ_ASSERT_ON_FAIL(pj_hash_get( mod_tsx_layer.htable, 
+				   &tsx->transaction_key.ptr,
+				   tsx->transaction_key.slen, 
+				   &tsx->hashed_key) == NULL,
+			{
+			    pj_mutex_unlock(mod_tsx_layer.mutex);
+			    return PJ_EEXISTS;
+			}
+		      );
 
     /* Register the transaction to the hash table. */
     pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, tsx);
+		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -538,7 +539,7 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
 
     /* Register the transaction to the hash table. */
     pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, NULL);
+		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -554,7 +555,7 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
     pjsip_transaction *tsx;
 
     pj_mutex_lock(mod_tsx_layer.mutex);
-    tsx = pj_hash_get( mod_tsx_layer.htable, key->ptr, key->slen );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key->ptr, key->slen, NULL );
     pj_mutex_unlock(mod_tsx_layer.mutex);
 
 
@@ -648,7 +649,7 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
 
-    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, NULL );
 
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
@@ -689,7 +690,7 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
 
-    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, NULL );
 
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
@@ -1035,6 +1036,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 			 PJSIP_ROLE_UAC, &tsx->method, 
 			 &via->branch_param);
 
+    /* Calculate hashed key value. */
+    tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
+				   tsx->transaction_key.slen);
+
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
 	       tsx->transaction_key.ptr));
 
@@ -1140,6 +1145,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
         return status;
     }
 
+    /* Calculate hashed key value. */
+    tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
+				   tsx->transaction_key.slen);
+
     /* Duplicate branch parameter for transaction. */
     branch = &rdata->msg_info.via->branch_param;
     pj_strdup(tsx->pool, &tsx->branch, branch);
@@ -1178,6 +1187,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 	tsx_destroy(tsx);
 	return status;
     }
+
+    /* Put this transaction in rdata's mod_data. */
+    rdata->endpt_info.mod_data[mod_tsx_layer.mod.id] = tsx;
 
     /* Unlock transaction and return. */
     unlock_tsx(tsx, &lck);

@@ -63,7 +63,7 @@ public:
         }
 	const_iterator operator++() 
         { 
-            return const_iterator(node_->next); 
+            return const_iterator((const List_Node *)node_->next); 
         }
 	bool operator==(const const_iterator &rhs) 
         { 
@@ -99,7 +99,7 @@ public:
         }
 	iterator operator++() 
         { 
-            return iterator(node_->next); 
+            return iterator((List_Node*)node_->next); 
         }
 	bool operator==(const iterator &rhs) 
         { 
@@ -118,6 +118,30 @@ public:
     { 
         pj_list_init(&root_); 
         if (0) compiletest(); 
+    }
+
+    //
+    // You can cast Pj_List to pj_list
+    //
+    operator pj_list&()
+    {
+	return (pj_list&)root_;
+    }
+    operator const pj_list&()
+    {
+	return (const pj_list&)root_;
+    }
+
+    //
+    // You can cast Pj_List to pj_list* too
+    //
+    operator pj_list*()
+    {
+	return (pj_list*)&root_;
+    }
+    operator const pj_list*()
+    {
+	return (const pj_list*)&root_;
     }
 
     //
@@ -318,7 +342,7 @@ private:
 	// If you see error in this line, 
 	// it's because List_Node is not derived from Pj_List_Node.
 	List_Node *n = (List_Node*)0;
-	n = n->next; n = n->prev;
+	n = (List_Node *)n->next; n = (List_Node *)n->prev;
     }
 };
 

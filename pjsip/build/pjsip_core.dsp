@@ -85,6 +85,73 @@ LIB32=link.exe -lib
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Group "Base (.c)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_errno.c
+# End Source File
+# End Group
+# Begin Group "Messaging and Parsing (.c)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_msg.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_parser.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_tel_uri.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_uri.c
+# End Source File
+# End Group
+# Begin Group "Core (.c)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_endpoint.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_util.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_util_proxy.c
+# End Source File
+# End Group
+# Begin Group "Transport Layer (.c)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_resolve.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_transport.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_transport_loop.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_transport_udp.c
+# End Source File
+# End Group
+# Begin Group "Authentication (.c)"
+
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_auth_client.c
@@ -101,57 +168,13 @@ SOURCE=..\src\pjsip\sip_auth_parser.c
 
 SOURCE=..\src\pjsip\sip_auth_server.c
 # End Source File
-# Begin Source File
+# End Group
+# Begin Group "Transaction Layer (.c)"
 
-SOURCE=..\src\pjsip\sip_endpoint.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_errno.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_msg.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_parser.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_resolve.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_tel_uri.c
-# End Source File
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transaction.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_transport.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_transport_loop.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_transport_udp.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_uri.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_util.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip\sip_util_proxy.c
 # End Source File
 # Begin Source File
 
@@ -159,36 +182,28 @@ SOURCE=..\src\pjsip\sip_util_statefull.c
 # PROP Exclude_From_Build 1
 # End Source File
 # End Group
+# Begin Group "UA Layer (.c)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_dialog.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsip\sip_ua_layer.c
+# End Source File
+# End Group
+# End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
+# Begin Group "Base Types (.h)"
 
-SOURCE=..\include\pjsip_core.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\print_util.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_auth.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_auth_msg.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_auth_parser.h
-# End Source File
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_config.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_endpoint.h
 # End Source File
 # Begin Source File
 
@@ -196,11 +211,19 @@ SOURCE=..\include\pjsip\sip_errno.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_event.h
+SOURCE=..\include\pjsip\sip_private.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_module.h
+SOURCE=..\include\pjsip\sip_types.h
+# End Source File
+# End Group
+# Begin Group "Messaging and Parsing (.h)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\include\pjsip\print_util.h
 # End Source File
 # Begin Source File
 
@@ -212,19 +235,39 @@ SOURCE=..\include\pjsip\sip_parser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_private.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjsip\sip_resolve.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjsip\sip_tel_uri.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_transaction.h
+SOURCE=..\include\pjsip\sip_uri.h
+# End Source File
+# End Group
+# Begin Group "Core (.h)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_endpoint.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_event.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_module.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_util.h
+# End Source File
+# End Group
+# Begin Group "Transport Layer (.h)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_resolve.h
 # End Source File
 # Begin Source File
 
@@ -238,17 +281,46 @@ SOURCE=..\include\pjsip\sip_transport_loop.h
 
 SOURCE=..\include\pjsip\sip_transport_udp.h
 # End Source File
+# End Group
+# Begin Group "Authentication (.h)"
+
+# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_types.h
+SOURCE=..\include\pjsip\sip_auth.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_uri.h
+SOURCE=..\include\pjsip\sip_auth_msg.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjsip\sip_util.h
+SOURCE=..\include\pjsip\sip_auth_parser.h
+# End Source File
+# End Group
+# Begin Group "Transaction Layer (.h)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_transaction.h
+# End Source File
+# End Group
+# Begin Group "UA Layer (.h)"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_dialog.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_ua_layer.h
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=..\include\pjsip.h
 # End Source File
 # End Group
 # Begin Group "Inline Files"

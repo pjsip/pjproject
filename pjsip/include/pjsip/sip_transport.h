@@ -67,6 +67,12 @@ enum pjsip_transport_flags_e
 	    ((tp)->flag & PJSIP_TRANSPORT_RELIABLE)
 
 /**
+ * Check if transport tp is secure.
+ */
+#define PJSIP_TRANSPORT_IS_SECURE(tp)	    \
+	    ((tp)->flag & PJSIP_TRANSPORT_SECURE)
+
+/**
  * Get the transport type from the transport name.
  *
  * @param name	    Transport name, such as "TCP", or "UDP".
@@ -233,7 +239,7 @@ struct pjsip_rx_data
 	pjsip_cseq_hdr		*cseq;
 
 	/** Max forwards header. */
-	pjsip_max_forwards_hdr	*max_fwd;
+	pjsip_max_fwd_hdr	*max_fwd;
 
 	/** The first route header. */
 	pjsip_route_hdr		*route;

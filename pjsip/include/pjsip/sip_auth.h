@@ -187,6 +187,18 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_init( pjsip_auth_clt_sess *sess,
 					  unsigned options);
 
 
+/**
+ * Clone client initialization session. 
+ *
+ * @param pool		Pool to use.
+ * @param sess		Structure to put the duplicated session.
+ * @param rhs		The client session to be cloned.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
+					   pjsip_auth_clt_sess *sess,
+					   const pjsip_auth_clt_sess *rhs);
 
 /**
  * Set the credentials to be used during the session. This will duplicate 

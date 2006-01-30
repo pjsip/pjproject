@@ -40,9 +40,9 @@ public:
     }
 
     //
-    // Construct the buffer from a char*.
+    // Construct the buffer from a char* (use with care)
     //
-    explicit Pj_String(char *str) 
+    Pj_String(char *str) 
     { 
 	set(str);
     }
@@ -50,41 +50,52 @@ public:
     //
     // Construct from a const char*.
     //
-    Pj_String(Pj_Pool *pool, const char *src)
+    Pj_String(Pj_Pool &pool, const char *src)
     {
 	set(pool, src);
     }
 
     //
-    // Construct from pj_str_t*.
+    // Construct from pj_str_t&.
     //
-    explicit Pj_String(pj_str_t *s)
+    explicit Pj_String(pj_str_t &s)
     {
-	set(s);
+	ptr = s.ptr;
+	slen = s.slen;
+    }
+
+    //
+    // Construct from const pj_str_t& (use with care!).
+    //
+    explicit Pj_String(const pj_str_t &s)
+    {
+	ptr = (char*)s.ptr;
+	slen = s.slen;
     }
 
     //
     // Construct by copying from const pj_str_t*.
     //
-    Pj_String(Pj_Pool *pool, const pj_str_t *s)
+    Pj_String(Pj_Pool &pool, const pj_str_t *s)
     {
 	set(pool, s);
     }
 
     //
-    // Construct from another Pj_String
+    // Construct by copying from Pj_String
     //
-    explicit Pj_String(Pj_String &rhs)
+    Pj_String(Pj_Pool &pool, const Pj_String &rhs)
     {
-	set(rhs);
+	set(pool, rhs);
     }
 
     //
-    // Construct by copying from Pj_String
+    // Construct from another Pj_String, use with care!
     //
-    Pj_String(Pj_Pool *pool, const Pj_String &rhs)
+    explicit Pj_String(const Pj_String &rhs)
     {
-	set(pool, rhs);
+	ptr = rhs.ptr;
+	slen = rhs.slen;
     }
 
     //
@@ -101,6 +112,22 @@ public:
     Pj_String(char *begin, char *end)
     {
 	pj_strset3(this, begin, end);
+    }
+
+    //
+    // You can cast Pj_String to pj_str_t*
+    //
+    operator pj_str_t*()
+    {
+	return this;
+    }
+
+    //
+    // You can cast const Pj_String to const pj_str_t*
+    //
+    operator const pj_str_t*() const
+    {
+	return this;
     }
 
     //
@@ -138,9 +165,9 @@ public:
     //
     // Initialize by copying from a const char*.
     //
-    void set(Pj_Pool *pool, const char *s)
+    void set(Pj_Pool &pool, const char *s)
     {
-	pj_strdup2(pool->pool_(), this, s);
+	pj_strdup2(pool, this, s);
     }
 
     //
@@ -154,9 +181,9 @@ public:
     //
     // Initialize by copying from const pj_str_t*.
     //
-    void set(Pj_Pool *pool, const pj_str_t *s)
+    void set(Pj_Pool &pool, const pj_str_t *s)
     {
-	pj_strdup(pool->pool_(), this, s);
+	pj_strdup(pool, this, s);
     }
 
     //
@@ -186,17 +213,17 @@ public:
     //
     // Initialize by copying from a Pj_String*.
     //
-    void set(Pj_Pool *pool, const Pj_String *s)
+    void set(Pj_Pool &pool, const Pj_String *s)
     {
-	pj_strdup(pool->pool_(), this, s);
+	pj_strdup(pool, this, s);
     }
 
     //
     // Initialize by copying from other Pj_String.
     //
-    void set(Pj_Pool *pool, const Pj_String &s)
+    void set(Pj_Pool &pool, const Pj_String &s)
     {
-	pj_strdup(pool->pool_(), this, &s);
+	pj_strdup(pool, this, &s);
     }
 
     //
@@ -353,11 +380,12 @@ public:
     }
 
     ///
-    // Assign from another Pj_String
+    // Assign from another Pj_String, use with care!
     //
-    Pj_String& operator=(Pj_String &rhs)
+    Pj_String& operator=(const Pj_String &rhs)
     {
-	set(rhs);
+	ptr = rhs.ptr;
+	slen = rhs.slen;
 	return *this;
     }
 

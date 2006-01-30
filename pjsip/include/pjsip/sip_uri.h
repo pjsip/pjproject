@@ -161,9 +161,9 @@ typedef struct pjsip_uri_vptr
      * @param size the size of the buffer.
      * @return the length printed.
      */
-    int	(*p_print)(pjsip_uri_context_e context,
-		   const void *uri, 
-		   char *buf, pj_size_t size);
+    pj_ssize_t (*p_print)(pjsip_uri_context_e context,
+			  const void *uri, 
+		          char *buf, pj_size_t size);
 
     /** 
      * Compare two URIs according to the context.
@@ -332,20 +332,20 @@ PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
  * @param secure    Tlag to indicate whether secure transport should be used.
  * @return SIP URL.
  */
-PJ_DECL(pjsip_sip_uri*) pjsip_url_create( pj_pool_t *pool, int secure );
+PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, int secure );
 
 /**
  * Create new SIPS URL and initialize all fields with zero or NULL.
  * @param pool	    The pool.
  * @return	    SIPS URL.
  */
-PJ_DECL(pjsip_sip_uri*) pjsips_url_create( pj_pool_t *pool );
+PJ_DECL(pjsip_sip_uri*) pjsip_sips_uri_create( pj_pool_t *pool );
 
 /**
  * Initialize SIP URL (all fields are set to NULL or zero).
  * @param url	    The URL.
  */
-PJ_DECL(void)  pjsip_url_init(pjsip_sip_uri *url, int secure);
+PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, int secure);
 
 /**
  * Perform full assignment to the SIP URL.
@@ -353,8 +353,8 @@ PJ_DECL(void)  pjsip_url_init(pjsip_sip_uri *url, int secure);
  * @param url	    Destination URL.
  * @param rhs	    The source URL.
  */
-PJ_DECL(void)  pjsip_url_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
-				const pjsip_sip_uri *rhs);
+PJ_DECL(void)  pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
+				    const pjsip_sip_uri *rhs);
 
 /**
  * Create new instance of name address and initialize all fields with zero or

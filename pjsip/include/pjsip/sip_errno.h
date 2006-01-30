@@ -140,6 +140,11 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
 
 /**
  * @hideinitializer
+ * General Invalid URI error.
+ */
+#define PJSIP_EINVALIDURI	(PJSIP_ERRNO_START_PJSIP + 39)	/* 171039 */
+/**
+ * @hideinitializer
  * Unsupported URL scheme.
  */
 #define PJSIP_EINVALIDSCHEME    (PJSIP_ERRNO_START_PJSIP + 40)	/* 171040 */
@@ -345,6 +350,17 @@ PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
  * Invalid digest.
  */
 #define PJSIP_EAUTHINVALIDDIGEST (PJSIP_ERRNO_START_PJSIP+110)	/* 171110 */
+
+
+/************************************************************
+ * UA AND DIALOG ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Missing From/To tag.
+ */
+#define PJSIP_EMISSINGTAG	 (PJSIP_ERRNO_START_PJSIP+120)	/* 171120 */
+
 
 
 PJ_END_DECL

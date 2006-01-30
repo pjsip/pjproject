@@ -18,7 +18,7 @@
  */
 
 #include "test.h"
-#include <pjsip_core.h>
+#include <pjsip.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "transport_loop_test.c"

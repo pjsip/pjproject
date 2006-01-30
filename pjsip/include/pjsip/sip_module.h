@@ -24,6 +24,7 @@
  * @brief Module helpers
  */
 #include <pjsip/sip_types.h>
+#include <pj/list.h>
 
 PJ_BEGIN_DECL
 
@@ -66,16 +67,6 @@ struct pjsip_module
      * the module itself.
      */
     void *user_data;
-
-    /**
-     * Number of methods supported by this module.
-     */
-    int method_cnt;
-
-    /**
-     * Array of methods supported by this module.
-     */
-    const pjsip_method *methods[8];
 
     /**
      * Pointer to function to be called to initialize the module.

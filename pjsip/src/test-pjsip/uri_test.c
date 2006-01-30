@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-#include <pjsip_core.h>
+#include <pjsip.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "uri_test.c"
@@ -317,7 +317,7 @@ struct uri_test
 static pjsip_uri *create_uri0(pj_pool_t *pool)
 {
     /* "sip:localhost" */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2(pool, &url->host, "localhost");
     return (pjsip_uri*)url;
@@ -326,7 +326,7 @@ static pjsip_uri *create_uri0(pj_pool_t *pool)
 static pjsip_uri *create_uri1(pj_pool_t *pool)
 {
     /* "sip:user@localhost" */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2( pool, &url->user, "user");
     pj_strdup2( pool, &url->host, "localhost");
@@ -337,7 +337,7 @@ static pjsip_uri *create_uri1(pj_pool_t *pool)
 static pjsip_uri *create_uri2(pj_pool_t *pool)
 {
     /* "sip:user:password@localhost:5060" */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2( pool, &url->user, "user");
     pj_strdup2( pool, &url->passwd, "password");
@@ -350,7 +350,7 @@ static pjsip_uri *create_uri2(pj_pool_t *pool)
 static pjsip_uri *create_uri3(pj_pool_t *pool)
 {
     /* Like: "sip:localhost:5060", but without the port. */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2(pool, &url->host, "localhost");
     return (pjsip_uri*)url;
@@ -359,7 +359,7 @@ static pjsip_uri *create_uri3(pj_pool_t *pool)
 static pjsip_uri *create_uri4(pj_pool_t *pool)
 {
     /* "sip:localhost;transport=tcp;user=ip;ttl=255;lr;maddr=127.0.0.1;method=ACK" */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2(pool, &url->host, "localhost");
     pj_strdup2(pool, &url->transport_param, "tcp");
@@ -386,7 +386,7 @@ static pjsip_uri *create_uri5(pj_pool_t *pool)
     /* "sip:localhost;pickup=hurry;user=phone;message=I%20am%20sorry"
        "?Subject=Hello%20There&Server=SIP%20Server" 
      */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 0);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 0);
 
     pj_strdup2(pool, &url->host, "localhost");
     pj_strdup2(pool, &url->user_param, "phone");
@@ -405,7 +405,7 @@ static pjsip_uri *create_uri5(pj_pool_t *pool)
 static pjsip_uri *create_uri6(pj_pool_t *pool)
 {
     /* "sips:localhost" */
-    pjsip_sip_uri *url = pjsip_url_create(pool, 1);
+    pjsip_sip_uri *url = pjsip_sip_uri_create(pool, 1);
 
     pj_strdup2(pool, &url->host, "localhost");
     return (pjsip_uri*)url;
@@ -417,7 +417,7 @@ static pjsip_uri *create_uri7(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &url->host, "localhost");
@@ -430,7 +430,7 @@ static pjsip_uri *create_uri8(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 1);
+    url = pjsip_sip_uri_create(pool, 1);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "Power Administrator");
@@ -444,7 +444,7 @@ static pjsip_uri *create_uri9(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "User");
@@ -460,7 +460,7 @@ static pjsip_uri *create_uri10(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "Strange User\\\"\\\\\\\"");
@@ -474,7 +474,7 @@ static pjsip_uri *create_uri11(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "Rogue User\\");
@@ -488,7 +488,7 @@ static pjsip_uri *create_uri12(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "Strange User\"");
@@ -500,7 +500,7 @@ static pjsip_uri *create_uri13(pj_pool_t *pool)
 {
     /* "sip:localhost;pvalue=\"hello world\"" */
     pjsip_sip_uri *url;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     pj_strdup2(pool, &url->host, "localhost");
     //pj_strdup2(pool, &url->other_param, ";pvalue=\"hello world\"");
     param_add(url->other_param, "pvalue", "hello world");
@@ -513,7 +513,7 @@ static pjsip_uri *create_uri14(pj_pool_t *pool)
     pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
     pjsip_sip_uri *url;
 
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "This is -. !% *_+`'~ me");
@@ -528,7 +528,7 @@ static pjsip_uri *create_uri15(pj_pool_t *pool)
 {
     /* "sip:abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.com" */
     pjsip_sip_uri *url;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     pj_strdup2(pool, &url->host, ALPHANUM "-_.com");
     return (pjsip_uri*)url;
 }
@@ -537,7 +537,7 @@ static pjsip_uri *create_uri16(pj_pool_t *pool)
 {
     /* "sip:" USER_CHAR ":" PASS_CHAR "@host" */
     pjsip_sip_uri *url;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     pj_strdup2(pool, &url->user, USER_CHAR);
     pj_strdup2(pool, &url->passwd, PASS_CHAR);
     pj_strdup2(pool, &url->host, "host");
@@ -548,7 +548,7 @@ static pjsip_uri *create_uri17(pj_pool_t *pool)
 {
     /* "sip:host;user=ip;" PARAM_CHAR "%21=" PARAM_CHAR "%21;lr;other=1;transport=sctp;other2" */
     pjsip_sip_uri *url;
-    url = pjsip_url_create(pool, 0);
+    url = pjsip_sip_uri_create(pool, 0);
     pj_strdup2(pool, &url->host, "host");
     pj_strdup2(pool, &url->user_param, "ip");
     pj_strdup2(pool, &url->transport_param, "sctp");

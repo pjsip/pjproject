@@ -20,7 +20,7 @@
 
 #include "test.h"
 #include <pjlib.h>
-#include <pjsip_core.h>
+#include <pjsip.h>
 
 #define THIS_FILE   "test.c"
 

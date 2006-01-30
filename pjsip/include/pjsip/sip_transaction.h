@@ -75,6 +75,7 @@ struct pjsip_transaction
     pjsip_method		method;         /**< The method.            */
     int				cseq;           /**< The CSeq               */
     pj_str_t			transaction_key;/**< Hash table key.        */
+    pj_uint32_t			hashed_key;	/**< Key's hashed value.    */
     pj_str_t			branch;         /**< The branch Id.         */
 
     /*
