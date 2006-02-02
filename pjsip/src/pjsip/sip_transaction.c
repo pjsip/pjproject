@@ -974,7 +974,14 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     struct tsx_lock_data lck;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(tdata!=NULL && p_tsx!=NULL, PJ_EINVAL);
+    /* Validate arguments. */
+    PJ_ASSERT_RETURN(tdata && tdata->msg && p_tsx, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
+
+    /* Method MUST NOT be ACK! */
+    PJ_ASSERT_RETURN(tdata->msg->line.req.method.id != PJSIP_ACK_METHOD,
+		     PJ_EINVALIDOP);
 
     /* Keep shortcut */
     msg = tdata->msg;
@@ -1097,13 +1104,18 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     pj_status_t status;
     struct tsx_lock_data lck;
 
-    PJ_ASSERT_RETURN(rdata!=NULL && p_tsx!=NULL, PJ_EINVAL);
+    /* Validate arguments. */
+    PJ_ASSERT_RETURN(rdata && rdata->msg_info.msg && p_tsx, PJ_EINVAL);
 
     /* Keep shortcut to message */
     msg = rdata->msg_info.msg;
     
     /* Make sure this is a request message. */
     PJ_ASSERT_RETURN(msg->type == PJSIP_REQUEST_MSG, PJSIP_ENOTREQUESTMSG);
+
+    /* Make sure method is not ACK */
+    PJ_ASSERT_RETURN(msg->line.req.method.id != PJSIP_ACK_METHOD,
+		     PJ_EINVALIDOP);
 
     /* Make sure CSeq header is present. */
     cseq = rdata->msg_info.cseq;
