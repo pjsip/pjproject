@@ -84,7 +84,7 @@ PJ_DECL(pjsip_endpoint*) pjsip_ua_get_endpt(pjsip_user_agent *ua);
 
 
 /*
- * Internal.
+ * Internal (called by sip_dialog.c).
  */
 
 PJ_DECL(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
