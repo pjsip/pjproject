@@ -18,6 +18,7 @@
  */
 #include <pj/errno.h>
 #include <pj/string.h>
+#include <pj/assert.h>
 #include <pj/compat/sprintf.h>
 
 /* Prototype for platform specific error message, which will be defined 
@@ -25,6 +26,18 @@
  */
 extern int platform_strerror( pj_os_err_type code, 
                               char *buf, pj_size_t bufsize );
+
+#define PJLIB_MAX_ERR_MSG_HANDLER   8
+
+/* Error message handler. */
+static unsigned err_msg_hnd_cnt;
+static struct err_msg_hnd
+{
+    pj_status_t	    begin;
+    pj_status_t	    end;
+    pj_str_t	  (*strerror)(pj_status_t, char*, pj_size_t);
+
+} err_msg_hnd[PJLIB_MAX_ERR_MSG_HANDLER];
 
 /* PJLIB's own error codes/messages */
 static const struct 
@@ -76,6 +89,45 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
     return 3;
 }
 
+#define IN_RANGE(val,start,end)	    ((val)>=(start) && (val)<(end))
+
+/* Register strerror handle. */
+PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start,
+					  pj_status_t space,
+					  pj_str_t (*f)(pj_status_t,char*,
+							pj_size_t))
+{
+    unsigned i;
+
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(start && space && f, PJ_EINVAL);
+
+    /* Check if there aren't too many handlers registered. */
+    PJ_ASSERT_RETURN(err_msg_hnd_cnt < PJ_ARRAY_SIZE(err_msg_hnd),
+		     PJ_ETOOMANY);
+
+    /* Start error must be greater than PJ_ERRNO_START_USER */
+    PJ_ASSERT_RETURN(start >= PJ_ERRNO_START_USER, PJ_EEXISTS);
+
+    /* Check that no existing handler has covered the specified range. */
+    for (i=0; i<err_msg_hnd_cnt; ++i) {
+	if (IN_RANGE(start, err_msg_hnd[i].begin, err_msg_hnd[i].end) ||
+	    IN_RANGE(start+space-1, err_msg_hnd[i].begin, err_msg_hnd[i].end))
+	{
+	    return PJ_EEXISTS;
+	}
+    }
+
+    /* Register the handler. */
+    err_msg_hnd[err_msg_hnd_cnt].begin = start;
+    err_msg_hnd[err_msg_hnd_cnt].end = start + space;
+    err_msg_hnd[err_msg_hnd_cnt].strerror = f;
+
+    ++err_msg_hnd_cnt;
+
+    return PJ_SUCCESS;
+}
+
 /*
  * pj_strerror()
  */
@@ -84,6 +136,8 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 {
     int len = -1;
     pj_str_t errstr;
+
+    pj_assert(buf && bufsize);
 
     if (statcode < PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE) {
         len = pj_snprintf( buf, bufsize, "Unknown error %d", statcode);
@@ -94,12 +148,15 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
     } else if (statcode < PJ_ERRNO_START_SYS + PJ_ERRNO_SPACE_SIZE) {
         len = platform_strerror(PJ_STATUS_TO_OS(statcode), buf, bufsize);
 
-    } else if (statcode < PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE) {
-        len = pj_snprintf( buf, bufsize, "User error %d", statcode);
-
     } else {
-        len = pj_snprintf( buf, bufsize, "Invalid error %d", statcode);
+	unsigned i;
 
+	/* Find user handler to get the error message. */
+	for (i=0; i<err_msg_hnd_cnt; ++i) {
+	    if (IN_RANGE(statcode, err_msg_hnd[i].begin, err_msg_hnd[i].end)) {
+		return (*err_msg_hnd[i].strerror)(statcode, buf, bufsize);
+	    }
+	}
     }
 
     if (len < 1) {

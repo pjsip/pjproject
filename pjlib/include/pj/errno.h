@@ -106,6 +106,29 @@ PJ_DECL(void) pj_set_netos_error(pj_status_t code);
 PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode, 
 			       char *buf, pj_size_t bufsize);
 
+/**
+ * Register strerror message handler for the specified error space.
+ * Application can register its own handler to supply the error message
+ * for the specified error code range. This handler will be called
+ * by #pj_strerror().
+ *
+ * @param start_code	The starting error code where the handler should
+ *			be called to retrieve the error message.
+ * @param err_space	The size of error space. The error code range then
+ *			will fall in start_code to start_code+err_space-1
+ *			range.
+ * @param f		The handler to be called when #pj_strerror() is
+ *			supplied with error code that falls into this range.
+ *
+ * @return		PJ_SUCCESS or the specified error code. The 
+ *			registration may fail when the error space has been
+ *			occupied by other handler, or when there are too many
+ *			handlers registered to PJLIB.
+ */
+PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
+					  pj_status_t err_space,
+					  pj_str_t (*f)(pj_status_t,char*,
+							pj_size_t));
 
 /**
  * @hideinitializer
