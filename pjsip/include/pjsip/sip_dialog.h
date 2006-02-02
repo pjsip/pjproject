@@ -126,6 +126,11 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
  * local Contact to contact. If contact is not specified, the local contact 
  * is initialized from the URI in the To header in the request. 
  *
+ * This function will also create UAS transaction for the incoming request,
+ * and associate the transaction to the rdata. Application can query the
+ * transaction used to handle this request by calling #pjsip_rdata_get_tsx()
+ * after this function returns.
+ *
  * Note that initially, the session count in the dialog will be initialized 
  * to zero.
  */
@@ -300,6 +305,28 @@ PJ_DECL(pj_status_t) pjsip_dlg_send_response(	pjsip_dialog *dlg,
 						pjsip_tx_data *tdata);
 
 
+/**
+ * This composite function sends response message statefully to an incoming
+ * request message.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param rdata	    The incoming request message.
+ * @param st_code   Status code of the response.
+ * @param st_text   Optional status text of the response.
+ * @param hdr_list  Optional header list to be added to the response.
+ * @param body	    Optional message body to be added to the response.
+ *
+ * @return	    PJ_SUCCESS if response message has successfully been
+ *		    sent.
+ */
+PJ_DECL(pj_status_t) pjsip_dlg_respond( pjsip_dialog *dlg,
+					pjsip_rx_data *rdata,
+					int st_code,
+					const pj_str_t *st_text);
+
+/* 
+ * Internal (called by sip_ua_layer.c)
+ */
 
 /* Receives transaction event (called by user_agent module) */
 void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
