@@ -1194,6 +1194,17 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     pjsip_response_addr res_addr;
     pjsip_tx_data *tdata;
 
+    /* Verify arguments. */
+    PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
+
+    /* Check that no UAS transaction has been created for this request. 
+     * If UAS transaction has been created for this request, application
+     * MUST send the response statefully using that transaction.
+     */
+    PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata)==NULL, PJ_EINVALIDOP);
+
     /* Create response message */
     status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
 					  &tdata);
@@ -1231,6 +1242,72 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
 
     return status;
 }
+
+
+/*
+ * Send response statefully.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
+					  pjsip_module *tsx_user,
+					  pjsip_rx_data *rdata,
+					  int st_code,
+					  const pj_str_t *st_text,
+					  const pjsip_hdr *hdr_list,
+					  const pjsip_msg_body *body,
+					  pjsip_transaction **p_tsx )
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
+
+    /* Validate arguments. */
+    PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
+
+    if (p_tsx) *p_tsx = NULL;
+
+    /* Create response message */
+    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
+					  &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Add the message headers, if any */
+    if (hdr_list) {
+	const pjsip_hdr *hdr = hdr_list->next;
+	while (hdr != hdr_list) {
+	    pjsip_msg_add_hdr( tdata->msg, pjsip_hdr_clone(tdata->pool, hdr) );
+	    hdr = hdr->next;
+	}
+    }
+
+    /* Add the message body, if any. */
+    if (body) {
+	tdata->msg->body = pj_pool_alloc(tdata->pool, sizeof(pjsip_msg_body));
+	status = pjsip_msg_body_clone( tdata->pool, tdata->msg->body, body );
+	if (status != PJ_SUCCESS) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
+    }
+
+    /* Create UAS transaction. */
+    status = pjsip_tsx_create_uas(tsx_user, rdata, &tsx);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
+    /* Send the message. */
+    status = pjsip_tsx_send_msg(tsx, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+    } else {
+	*p_tsx = tsx;
+    }
+
+    return status;
+}
+
 
 /*
  * Get the event string from the event ID.
