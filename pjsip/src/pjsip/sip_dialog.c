@@ -216,6 +216,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     pj_status_t status;
     pjsip_hdr *contact_hdr;
     pjsip_rr_hdr *rr;
+    pjsip_transaction *tsx = NULL;
     pjsip_dialog *dlg;
 
     /* Check arguments. */
@@ -346,6 +347,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Create UAS transaction for this request. */
+    status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Associate this dialog to the transaction. */
+    tsx->mod_data[dlg->ua->id] = dlg;
+
+    /* Increment tsx counter */
+    ++dlg->tsx_count;
+
     /* Calculate hash value of remote tag. */
     dlg->remote.tag_hval = pj_hash_calc(0, dlg->remote.info->tag.ptr, 
 					dlg->remote.info->tag.slen);
@@ -365,6 +377,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     return PJ_SUCCESS;
 
 on_error:
+    if (tsx) {
+	pjsip_tsx_terminate(tsx, 500);
+	--dlg->tsx_count;
+    }
+
     destroy_dialog(dlg);
     return status;
 }
@@ -558,6 +575,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg )
 
     pj_mutex_lock(dlg->mutex);
 
+    pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
     if (dlg->sess_count==0 && dlg->tsx_count==0)
@@ -733,15 +751,22 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
 
 
 /*
- * Update CSeq in outgoing request to reflect the dialog.
- * Then increment local CSeq.
+ * Send request statefully, and update dialog'c CSeq.
  */
-static void update_cseq( pjsip_dialog *dlg,
-			 pjsip_tx_data *tdata )
+PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
+					    pjsip_tx_data *tdata,
+					    pjsip_transaction **p_tsx )
 {
+    pjsip_transaction *tsx;
     pjsip_msg *msg = tdata->msg;
+    pj_status_t status;
 
-    /* Start locking the dialog. */
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(dlg && tdata && tdata->msg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
+
+    /* Update CSeq */
     pj_mutex_lock(dlg->mutex);
 
     /* Update dialog's CSeq and message's CSeq if request is not
@@ -753,7 +778,7 @@ static void update_cseq( pjsip_dialog *dlg,
 	pjsip_cseq_hdr *ch;
 	
 	ch = PJSIP_MSG_CSEQ_HDR(msg);
-	PJ_ASSERT_ON_FAIL(ch!=NULL, return);
+	PJ_ASSERT_RETURN(ch!=NULL, PJ_EBUG);
 
 	ch->cseq = dlg->local.cseq++;
 
@@ -761,50 +786,39 @@ static void update_cseq( pjsip_dialog *dlg,
 	pjsip_tx_data_invalidate_msg( tdata );
     }
 
-}
-
-/*
- * Send request statefully, and update dialog'c CSeq.
- */
-PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
-					    pjsip_tx_data *tdata,
-					    pjsip_transaction **p_tsx )
-{
-    pjsip_transaction *tsx;
-    pj_status_t status;
-
-    /* Check arguments. */
-    PJ_ASSERT_RETURN(dlg && tdata && tdata->msg, PJ_EINVAL);
-    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
-		     PJSIP_ENOTREQUESTMSG);
-
-    /* Update CSeq */
-    update_cseq(dlg, tdata);
-
-    /* Create a new transaction. 
+    /* Create a new transaction if method is not ACK.
      * The transaction user is the user agent module.
      */
-    status = pjsip_tsx_create_uac(dlg->ua, tdata, &tsx);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    if (msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	status = pjsip_tsx_create_uac(dlg->ua, tdata, &tsx);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
 
-    /* Attach this dialog to the transaction, so that user agent
-     * will dispatch events to this dialog.
-     */
-    tsx->mod_data[dlg->ua->id] = dlg;
+	/* Attach this dialog to the transaction, so that user agent
+	 * will dispatch events to this dialog.
+	 */
+	tsx->mod_data[dlg->ua->id] = dlg;
 
-    /* Increment transaction counter. */
-    ++dlg->tsx_count;
+	/* Increment transaction counter. */
+	++dlg->tsx_count;
 
-    /* Send the message. */
-    status = pjsip_tsx_send_msg(tsx, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsip_tsx_terminate(tsx, tsx->status_code);
-	goto on_error;
+	/* Send the message. */
+	status = pjsip_tsx_send_msg(tsx, tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsip_tsx_terminate(tsx, tsx->status_code);
+	    goto on_error;
+	}
+
+	*p_tsx = tsx;
+
+    } else {
+	status = pjsip_endpt_send_request_stateless(
+		    pjsip_ua_get_endpt(dlg->ua), tdata, NULL, NULL);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	*p_tsx = NULL;
     }
-
-    /* Done. */
-    *p_tsx = tsx;
 
     /* Unlock dialog. */
     pj_mutex_unlock(dlg->mutex);
@@ -993,6 +1007,37 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
 }
 
 
+/*
+ * Combo function to create and send response statefully.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
+					pjsip_rx_data *rdata,
+					int st_code,
+					const pj_str_t *st_text )
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+
+    /* Sanity check. */
+    PJ_ASSERT_RETURN(dlg && rdata && rdata->msg_info.msg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
+		     PJSIP_ENOTREQUESTMSG);
+
+    /* The transaction must belong to this dialog.  */
+    PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata) &&
+		     pjsip_rdata_get_tsx(rdata)->mod_data[dlg->ua->id] == dlg,
+		     PJ_EINVALIDOP);
+
+    /* Create the response. */
+    status = pjsip_dlg_create_response(dlg, rdata, st_code, st_text, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Send the response. */
+    return pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);
+}
+
+
 /* This function is called by user agent upon receiving incoming response
  * message.
  */
@@ -1004,6 +1049,20 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
+
+    /* Check CSeq */
+    if (rdata->msg_info.cseq->cseq <= dlg->remote.cseq) {
+	/* Invalid CSeq.
+	 * Respond statelessly with 500 (Internal Server Error)
+	 */
+	pj_mutex_unlock(dlg->mutex);
+	pjsip_endpt_respond_stateless(pjsip_ua_get_endpt(dlg->ua),
+				      rdata, 500, NULL, NULL, NULL);
+	return;
+    }
+
+    /* Update CSeq. */
+    dlg->remote.cseq = rdata->msg_info.cseq->cseq;
 
     /* Create UAS transaction for this request. */
     status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
