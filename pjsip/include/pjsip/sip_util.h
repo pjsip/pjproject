@@ -340,7 +340,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
  * @param body	    Optional message body to be added to the response.
  *
  * @return	    PJ_SUCCESS if response message has successfully been
- *		    created.
+ *		    sent.
  */
 PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
 						   pjsip_rx_data *rdata,
@@ -349,6 +349,32 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
 						   const pjsip_hdr *hdr_list,
 						   const pjsip_msg_body *body);
 						    
+
+/**
+ * This composite function creates and sends response statefully for the
+ * incoming request.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param tsx_user  The module to be registered as transaction user.
+ * @param rdata	    The incoming request message.
+ * @param st_code   Status code of the response.
+ * @param st_text   Optional status text of the response.
+ * @param hdr_list  Optional header list to be added to the response.
+ * @param body	    Optional message body to be added to the response.
+ * @param p_tsx	    Optional pointer to receive the transaction which was
+ *		    created to send the response.
+ *
+ * @return	    PJ_SUCCESS if response message has successfully been
+ *		    created.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
+					  pjsip_module *tsx_user,
+					  pjsip_rx_data *rdata,
+					  int st_code,
+					  const pj_str_t *st_text,
+					  const pjsip_hdr *hdr_list,
+					  const pjsip_msg_body *body,
+					  pjsip_transaction **p_tsx );
 
 /**
  * Send outgoing request and initiate UAC transaction for the request.
