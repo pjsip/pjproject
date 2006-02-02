@@ -16,17 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
+#ifndef __PJMEDIA_TEST_H__
+#define __PJMEDIA_TEST_H__
 
-int main()
-{
-    int rc;
-    char s[10];
+#include <pjmedia.h>
+#include <pjlib.h>
 
-    rc = test_main();
 
-    puts("\nPress <ENTER> to quit");
-    fgets(s, sizeof(s), stdin);
+int session_test(void);
+int rtp_test(void);
+int sdp_test(void);
+int jbuf_main(void);
+int sdp_neg_test(void);
 
-    return rc;
-}
+extern pj_pool_factory *mem;
+void app_perror(pj_status_t status, const char *title);
+
+int test_main(void);
+
+#endif	/* __PJMEDIA_TEST_H__ */

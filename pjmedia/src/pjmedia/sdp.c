@@ -17,13 +17,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sdp.h>
+#include <pjmedia/errno.h>
 #include <pjlib-util/scanner.h>
+#include <pj/array.h>
 #include <pj/except.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
+
 
 enum {
     SKIP_WS = 0,
@@ -31,94 +35,31 @@ enum {
 };
 #define TOKEN		"-.!%*_=`'~"
 #define NTP_OFFSET	((pj_uint32_t)2208988800)
-#define LOG_THIS	"sdp"
+#define THIS_FILE	"sdp.c"
+
+typedef struct parse_context
+{ 
+    pj_status_t last_error;
+} parse_context;
+
 
 /*
  * Prototypes for line parser.
  */
-static void parse_version(pj_scanner *scanner);
-static void parse_origin(pj_scanner *scanner, pjsdp_session_desc *ses);
-static void parse_time(pj_scanner *scanner, pjsdp_session_desc *ses);
-static void parse_generic_line(pj_scanner *scanner, pj_str_t *str);
-static void parse_connection_info(pj_scanner *scanner, pjsdp_conn_info *conn);
-static pjsdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner);
-static void parse_media(pj_scanner *scanner, pjsdp_media_desc *med);
+static void parse_version(pj_scanner *scanner, parse_context *ctx);
+static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
+			 parse_context *ctx);
+static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
+		       parse_context *ctx);
+static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
+			       parse_context *ctx);
+static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
+				  parse_context *ctx);
+static pjmedia_sdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner,
+				    parse_context *ctx);
+static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
+			parse_context *ctx);
 
-/*
- * Prototypes for attribute parsers.
- */
-static pjsdp_rtpmap_attr *  parse_rtpmap_attr( pj_pool_t *pool, pj_scanner *scanner );
-static pjsdp_attr_string *  parse_generic_string_attr( pj_pool_t *pool, pj_scanner *scanner );
-static pjsdp_attr_num *	    parse_generic_num_attr( pj_pool_t *pool, pj_scanner *scanner );
-static pjsdp_attr *	    parse_name_only_attr( pj_pool_t *pool, pj_scanner *scanner );
-static pjsdp_fmtp_attr *    parse_fmtp_attr( pj_pool_t *pool, pj_scanner *scanner );
-
-
-/* 
- * Prototypes for functions to print attribute.
- * All of them returns integer for the length printed, or -1 on error.
- */
-static int print_rtpmap_attr(const pjsdp_rtpmap_attr *attr, 
-			     char *buf, int length);
-static int print_generic_string_attr(const pjsdp_attr_string *attr, 
-				     char *buf, int length);
-static int print_generic_num_attr(const pjsdp_attr_num *attr, 
-				  char *buf, int length);
-static int print_name_only_attr(const pjsdp_attr *attr, 
-				char *buf, int length);
-static int print_fmtp_attr(const pjsdp_fmtp_attr *attr, 
-			   char *buf, int length);
-
-/*
- * Prototypes for cloning attributes.
- */
-static pjsdp_attr* clone_rtpmap_attr (pj_pool_t *pool, const pjsdp_attr *rhs);
-static pjsdp_attr* clone_generic_string_attr (pj_pool_t *pool, const pjsdp_attr *rhs);
-static pjsdp_attr* clone_generic_num_attr (pj_pool_t *pool, const pjsdp_attr *rhs);
-static pjsdp_attr* clone_name_only_attr (pj_pool_t *pool, const pjsdp_attr *rhs);
-static pjsdp_attr* clone_fmtp_attr (pj_pool_t *pool, const pjsdp_attr *rhs);
-
-
-/*
- * Prototypes
- */
-static void init_sdp_parser(void);
-
-
-typedef void *  (*FPARSE)(pj_pool_t *pool, pj_scanner *scanner);
-typedef int (*FPRINT)(const void *attr, char *buf, int length);
-typedef pjsdp_attr*  (*FCLONE)(pj_pool_t *pool, const pjsdp_attr *rhs);
-
-/*
- * Array of functions to print attribute.
- */
-static struct attr_map_rec
-{
-    pj_str_t name;
-    FPARSE   parse_attr;
-    FPRINT   print_attr;
-    FCLONE   clone;
-} attr_map[] = 
-{
-    {{"rtpmap", 6},    (FPARSE)&parse_rtpmap_attr,	   (FPRINT)&print_rtpmap_attr,		(FCLONE)&clone_rtpmap_attr},
-    {{"cat", 3},       (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"keywds", 6},    (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"tool", 4},      (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"ptime", 5},     (FPARSE)&parse_generic_num_attr,    (FPRINT)&print_generic_num_attr,	(FCLONE)&clone_generic_num_attr},
-    {{"recvonly", 8},  (FPARSE)&parse_name_only_attr,	   (FPRINT)&print_name_only_attr,	(FCLONE)&clone_name_only_attr},
-    {{"sendonly", 8},  (FPARSE)&parse_name_only_attr,	   (FPRINT)&print_name_only_attr,	(FCLONE)&clone_name_only_attr},
-    {{"sendrecv", 8},  (FPARSE)&parse_name_only_attr,	   (FPRINT)&print_name_only_attr,	(FCLONE)&clone_name_only_attr},
-    {{"orient", 6},    (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"type", 4},      (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"charset", 7},   (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"sdplang", 7},   (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"lang", 4},      (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"framerate", 9}, (FPARSE)&parse_generic_string_attr, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr},
-    {{"quality", 7},   (FPARSE)&parse_generic_num_attr,    (FPRINT)&print_generic_num_attr,	(FCLONE)&clone_generic_num_attr},
-    {{"fmtp", 4},      (FPARSE)&parse_fmtp_attr,	   (FPRINT)&print_fmtp_attr,		(FCLONE)&clone_fmtp_attr},
-    {{"inactive", 8},  (FPARSE)&parse_name_only_attr,	   (FPRINT)&print_name_only_attr,	(FCLONE)&clone_name_only_attr},
-    {{"", 0},	       NULL, (FPRINT)&print_generic_string_attr,	(FCLONE)&clone_generic_string_attr}
-};
 
 /*
  * Scanner character specification.
@@ -143,213 +84,358 @@ static void init_sdp_parser(void)
     pj_cis_add_str(&cs_token, TOKEN);
 }
 
-static int print_rtpmap_attr(const pjsdp_rtpmap_attr *rtpmap, 
-			     char *buf, int len)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
+						   const char *name,
+						   const pj_str_t *value)
 {
-    char *p = buf;
+    pjmedia_sdp_attr *attr;
 
-    if (len < 16+rtpmap->encoding_name.slen+rtpmap->parameter.slen) {
-	return -1;
-    }
-    
-    /* colon and payload type. */
-    *p++ = ':';
-    len = pj_utoa(rtpmap->payload_type, p);
-    p += len;
+    PJ_ASSERT_RETURN(pool && name, NULL);
 
-    /* space, encoding name */
-    *p++ = ' ';
-    pj_memcpy(p, rtpmap->encoding_name.ptr, rtpmap->encoding_name.slen);
-    p += rtpmap->encoding_name.slen;
+    attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+    pj_strdup2(pool, &attr->name, name);
 
-    /* slash, clock-rate. */
-    *p++ = '/';
-    len = pj_utoa(rtpmap->clock_rate, p);
-    p += len;
-
-    /* optionally add encoding parameter. */
-    if (rtpmap->parameter.slen) {
-	*p++ = '/';
-	pj_memcpy(p, rtpmap->parameter.ptr, rtpmap->parameter.slen);
-	p += rtpmap->parameter.slen;
+    if (value)
+	pj_strdup(pool, &attr->value, value);
+    else {
+	attr->value.ptr = NULL;
+	attr->value.slen = 0;
     }
 
-    return p-buf;
-}
-
-static int print_generic_string_attr(const pjsdp_attr_string *attr, 
-				     char *buf, int len)
-{
-    char *p = buf;
-
-    if (len < attr->value.slen + 4) {
-	return -1;
-    }
-
-    /* colon and attribute value. */
-    *p++ = ':';
-    pj_memcpy(p, attr->value.ptr, attr->value.slen);
-    p += attr->value.slen;
-
-    return p-buf;
-}
-
-static int print_generic_num_attr(const pjsdp_attr_num *attr, char *buf, int len)
-{
-    char *p = buf;
-
-    if (len < 10) {
-	return -1;
-    }
-    *p++ = ':';
-    return pj_utoa(attr->value, p);
-}
-
-static int print_name_only_attr(const pjsdp_attr *attr, char *buf, int len)
-{
-    PJ_UNUSED_ARG(attr);
-    PJ_UNUSED_ARG(buf);
-    PJ_UNUSED_ARG(len);
-    return 0;
-}
-
-static int print_fmtp_attr(const pjsdp_fmtp_attr *fmtp, char *buf, int len)
-{
-    char *p = buf;
-
-    if (len < 4+fmtp->format.slen+fmtp->param.slen) {
-	return -1;
-    }
-
-    /* colon and format. */
-    *p++ = ':';
-    pj_memcpy(p, fmtp->format.ptr, fmtp->format.slen);
-    p += fmtp->format.slen;
-
-    /* space and parameter. */
-    *p++ = ' ';
-    pj_memcpy(p, fmtp->param.ptr, fmtp->param.slen);
-    p += fmtp->param.slen;
-
-    return p-buf;
-}
-
-
-static int print_attr(const pjsdp_attr *attr, char *buf, int len)
-{
-    char *p = buf;
-    struct attr_map_rec *desc = &attr_map[attr->type];
-
-    if (len < 16) {
-	return -1;
-    }
-
-    *p++ = 'a';
-    *p++ = '=';
-    pj_memcpy(p, desc->name.ptr, desc->name.slen);
-    p += desc->name.slen;
-    
-    len = (*desc->print_attr)(attr, p, (buf+len)-p);
-    if (len < 0) {
-	return -1;
-    }
-    p += len;
-    *p++ = '\r';
-    *p++ = '\n';
-    return p-buf;
-}
-
-static pjsdp_attr* clone_rtpmap_attr (pj_pool_t *pool, const pjsdp_attr *p)
-{
-    const pjsdp_rtpmap_attr *rhs = (const pjsdp_rtpmap_attr*)p;
-    pjsdp_rtpmap_attr *attr = pj_pool_alloc (pool, sizeof(pjsdp_rtpmap_attr));
-    if (!attr)
-	return NULL;
-
-    attr->type = rhs->type;
-    attr->payload_type = rhs->payload_type;
-    if (!pj_strdup (pool, &attr->encoding_name, &rhs->encoding_name)) return NULL;
-    attr->clock_rate = rhs->clock_rate;
-    if (!pj_strdup (pool, &attr->parameter, &rhs->parameter)) return NULL;
-
-    return (pjsdp_attr*)attr;
-}
-
-static pjsdp_attr* clone_generic_string_attr (pj_pool_t *pool, const pjsdp_attr *p)
-{
-    const pjsdp_attr_string* rhs = (const pjsdp_attr_string*) p;
-    pjsdp_attr_string *attr = pj_pool_alloc (pool, sizeof(pjsdp_attr_string));
-    if (!attr)
-	return NULL;
-
-    attr->type = rhs->type;
-    if (!pj_strdup (pool, &attr->value, &rhs->value)) return NULL;
-
-    return (pjsdp_attr*)attr;
-}
-
-static pjsdp_attr* clone_generic_num_attr (pj_pool_t *pool, const pjsdp_attr *p)
-{
-    const pjsdp_attr_num* rhs = (const pjsdp_attr_num*) p;
-    pjsdp_attr_num *attr = pj_pool_alloc (pool, sizeof(pjsdp_attr_num));
-    if (!attr)
-	return NULL;
-
-    attr->type = rhs->type;
-    attr->value = rhs->value;
-
-    return (pjsdp_attr*)attr;
-}
-
-static pjsdp_attr* clone_name_only_attr (pj_pool_t *pool, const pjsdp_attr *rhs)
-{
-    pjsdp_attr *attr = pj_pool_alloc (pool, sizeof(pjsdp_attr));
-    if (!attr)
-	return NULL;
-
-    attr->type = rhs->type;
     return attr;
 }
 
-static pjsdp_attr* clone_fmtp_attr (pj_pool_t *pool, const pjsdp_attr *p)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool, 
+						 const pjmedia_sdp_attr *rhs)
 {
-    const pjsdp_fmtp_attr* rhs = (const pjsdp_fmtp_attr*) p;
-    pjsdp_fmtp_attr *attr = pj_pool_alloc (pool, sizeof(pjsdp_fmtp_attr));
-    if (!attr)
-	return NULL;
+    pjmedia_sdp_attr *attr;
+    
+    PJ_ASSERT_RETURN(pool && rhs, NULL);
 
-    attr->type = rhs->type;
-    if (!pj_strdup (pool, &attr->format, &rhs->format)) return NULL;
-    if (!pj_strdup (pool, &attr->param, &rhs->param)) return NULL;
+    attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
 
-    return (pjsdp_attr*)attr;
+    pj_strdup(pool, &attr->name, &rhs->name);
+    pj_strdup(pool, &attr->value, &rhs->value);
+
+    return attr;
 }
 
-PJ_DEF(pjsdp_attr*) pjsdp_attr_clone (pj_pool_t *pool, const pjsdp_attr *rhs)
+PJ_DEF(pjmedia_sdp_attr*) 
+pjmedia_sdp_attr_find (unsigned count, 
+		       const pjmedia_sdp_attr *const attr_array[],
+		       const pj_str_t *name,
+		       const pj_str_t *c_fmt)
 {
-    struct attr_map_rec *desc;
+    char fmtbuf[16];
+    pj_str_t fmt = { NULL, 0};
+    unsigned i;
 
-    if (rhs->type >= PJSDP_END_OF_ATTR) {
-	pj_assert(0);
-	return NULL;
-    }
+    if (c_fmt) {
+	/* To search the format, we prepend the string with a colon and
+	 * append space
+	 */
+	PJ_ASSERT_RETURN(c_fmt->slen<sizeof(fmtbuf)-2, NULL);
+	fmt.ptr = fmtbuf;
+	fmt.slen = c_fmt->slen + 2;
+	fmtbuf[0] = ':';
+	pj_memcpy(fmt.ptr+1, c_fmt->ptr, c_fmt->slen);
+	fmtbuf[c_fmt->slen+1] = ' ';
 
-    desc = &attr_map[rhs->type];
-    return (*desc->clone) (pool, rhs);
-}
-
-PJ_DEF(const pjsdp_attr*) pjsdp_attr_find (int count, const pjsdp_attr *attr_array[], int type)
-{
-    int i;
+    } 
 
     for (i=0; i<count; ++i) {
-	if (attr_array[i]->type == type)
-	    return attr_array[i];
+	if (pj_strcmp(&attr_array[i]->name, name) == 0) {
+	    const pjmedia_sdp_attr *a = attr_array[i];
+	    if (c_fmt) {
+		if (a->value.slen > fmt.slen &&
+		    pj_strncmp(&a->value, &fmt, fmt.slen)==0)
+		{
+		    return (pjmedia_sdp_attr*)a;
+		}
+	    } else 
+		return (pjmedia_sdp_attr*)a;
+	}
     }
     return NULL;
 }
 
-static int print_connection_info( pjsdp_conn_info *c, char *buf, int len)
+PJ_DEF(pjmedia_sdp_attr*) 
+pjmedia_sdp_attr_find2(unsigned count, 
+		       const pjmedia_sdp_attr *const attr_array[],
+		       const char *c_name,
+		       const pj_str_t *c_fmt)
+{
+    pj_str_t name;
+
+    name.ptr = (char*)c_name;
+    name.slen = pj_native_strlen(c_name);
+
+    return pjmedia_sdp_attr_find(count, attr_array, &name, c_fmt);
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
+					 pjmedia_sdp_attr *attr_array[],
+					 pjmedia_sdp_attr *attr)
+{
+    PJ_ASSERT_RETURN(count && attr_array && attr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(*count < PJSDP_MAX_ATTR, PJ_ETOOMANY);
+
+    attr_array[*count] = attr;
+    (*count)++;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
+					     pjmedia_sdp_attr *attr_array[],
+					     const char *name)
+{
+    unsigned i, removed = 0;
+    pj_str_t attr_name;
+
+    PJ_ASSERT_RETURN(count && attr_array && name, PJ_EINVAL);
+
+    attr_name.ptr = (char*)name;
+    attr_name.slen = pj_native_strlen(name);
+
+    for (i=0; i<*count; ) {
+	if (pj_strcmp(&attr_array[i]->name, &attr_name)==0) {
+	    pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
+			   *count, i);
+	    --(*count);
+	    ++removed;
+	} else {
+	    ++i;
+	}   
+    }
+
+    return removed;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
+					     pjmedia_sdp_attr *attr_array[],
+					     pjmedia_sdp_attr *attr )
+{
+    unsigned i, removed=0;
+
+    PJ_ASSERT_RETURN(count && attr_array && attr, PJ_EINVAL);
+
+    for (i=0; i<*count; ) {
+	if (attr_array[i] == attr) {
+	    pj_array_erase(attr_array, sizeof(pjmedia_sdp_attr*),
+			   *count, i);
+	    --(*count);
+	    ++removed;
+	} else {
+	    ++i;
+	}
+    }
+
+    return removed ? PJ_SUCCESS : PJ_ENOTFOUND;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
+						 pjmedia_sdp_rtpmap *rtpmap)
+{
+    const char *p = attr->value.ptr;
+    const char *end = attr->value.ptr + attr->value.slen;
+    pj_str_t token;
+
+    PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtpmap")==0, PJ_EINVALIDOP);
+
+    /* rtpmap sample:
+     *	a=rtpmap:98 L16/16000/2.
+     */
+
+    /* Eat the first ':' */
+    if (*p != ':') return PJMEDIA_SDP_EINRTPMAP;
+
+    /* Get ':' */
+    ++p;
+
+    /* Get payload type. */
+    token.ptr = (char*)p;
+    while (pj_isdigit(*p) && p!=end)
+	++p;
+    token.slen = p - token.ptr;
+    if (token.slen == 0)
+	return PJMEDIA_SDP_EINRTPMAP;
+
+    rtpmap->pt = token;
+
+    /* Expecting space after payload type. */
+    if (*p != ' ') return PJMEDIA_SDP_EINRTPMAP;
+
+    /* Get space. */
+    ++p;
+
+    /* Get encoding name. */
+    token.ptr = (char*)p;
+    while (*p != '/' && p != end)
+	++p;
+    token.slen = p - token.ptr;
+    if (token.slen == 0)
+	return PJMEDIA_SDP_EINRTPMAP;
+    rtpmap->enc_name = token;
+
+    /* Expecting '/' after encoding name. */
+    if (*p != '/') return PJMEDIA_SDP_EINRTPMAP;
+
+    /* Get '/' */
+    ++p;
+
+    /* Get the clock rate. */
+    token.ptr = (char*)p;
+    while (pj_isdigit(*p) && p != end)
+	++p;
+    token.slen = p - token.ptr;
+    if (token.slen == 0)
+	return PJMEDIA_SDP_EINRTPMAP;
+
+    rtpmap->clock_rate = pj_strtoul(&token);
+
+    /* Expecting either '/' or EOF */
+    if (*p != '/' && p != end)
+	return PJMEDIA_SDP_EINRTPMAP;
+
+    if (*p == '/') {
+	++p;
+	token.ptr = (char*)p;
+	token.slen = end-p;
+	rtpmap->param = token;
+    } else {
+	rtpmap->param.ptr = NULL;
+	rtpmap->param.slen = 0;
+    }
+
+    return PJ_SUCCESS;
+
+}
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
+					       pjmedia_sdp_fmtp *fmtp)
+{
+    const char *p = attr->value.ptr;
+    const char *end = attr->value.ptr + attr->value.slen;
+    pj_str_t token;
+
+    PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "fmtp")==0, PJ_EINVALIDOP);
+
+    /* fmtp BNF:
+     *	a=fmtp:<format> <format specific parameter>
+     */
+
+    /* Eat the first ':' */
+    if (*p != ':') return PJMEDIA_SDP_EINFMTP;
+
+    /* Get ':' */
+    ++p;
+
+    /* Get format. */
+    token.ptr = (char*)p;
+    while (pj_isdigit(*p) && p!=end)
+	++p;
+    token.slen = p - token.ptr;
+    if (token.slen == 0)
+	return PJMEDIA_SDP_EINFMTP;
+
+    fmtp->fmt = token;
+
+    /* Expecting space after format. */
+    if (*p != ' ') return PJMEDIA_SDP_EINFMTP;
+
+    /* Get space. */
+    ++p;
+
+    /* Set the remaining string as fmtp format parameter. */
+    fmtp->fmt_param.ptr = (char*)p;
+    fmtp->fmt_param.slen = end - p;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
+					       const pjmedia_sdp_attr *attr,
+					       pjmedia_sdp_rtpmap **p_rtpmap)
+{
+    PJ_ASSERT_RETURN(pool && attr && p_rtpmap, PJ_EINVAL);
+
+    *p_rtpmap = pj_pool_alloc(pool, sizeof(pjmedia_sdp_rtpmap));
+    PJ_ASSERT_RETURN(*p_rtpmap, PJ_ENOMEM);
+
+    return pjmedia_sdp_attr_get_rtpmap(attr, *p_rtpmap);
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
+					       const pjmedia_sdp_rtpmap *rtpmap,
+					       pjmedia_sdp_attr **p_attr)
+{
+    pjmedia_sdp_attr *attr;
+    char tempbuf[64], *p, *endbuf;
+    int i;
+
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(pool && rtpmap && p_attr, PJ_EINVAL);
+
+    /* Check that mandatory attributes are specified. */
+    PJ_ASSERT_RETURN(rtpmap->enc_name.slen && rtpmap->clock_rate,
+		     PJMEDIA_SDP_EINRTPMAP);
+
+    /* Check size. */
+    i = rtpmap->enc_name.slen + rtpmap->param.slen + 32;
+    if (i >= sizeof(tempbuf)-1) {
+	pj_assert(!"rtpmap attribute is too long");
+	return PJMEDIA_SDP_ERTPMAPTOOLONG;
+    }
+
+    attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+    PJ_ASSERT_RETURN(attr != NULL, PJ_ENOMEM);
+
+    attr->name.ptr = "rtpmap";
+    attr->name.slen = 6;
+
+    p = tempbuf;
+    endbuf = tempbuf+sizeof(tempbuf);
+
+    /* Add payload type. */
+    pj_memcpy(p, rtpmap->pt.ptr, rtpmap->pt.slen);
+    p += rtpmap->pt.slen;
+    *p++ = ' ';
+
+    /* Add encoding name. */
+    for (i=0; i<rtpmap->enc_name.slen; ++i)
+	p[i] = rtpmap->enc_name.ptr[i];
+    p += rtpmap->enc_name.slen;
+    *p++ = '/';
+
+    /* Add clock rate. */
+    p += pj_utoa(rtpmap->clock_rate, p);
+
+    /* Add parameter if necessary. */
+    if (rtpmap->param.slen > 0) {
+	*p++ = '/';
+	for (i=0; i<rtpmap->param.slen; ++i)
+	    p[i] = rtpmap->param.ptr[i];
+	p += rtpmap->param.slen;
+    }
+
+    *p = '\0';
+
+    attr->value.slen = p-tempbuf;
+    attr->value.ptr = pj_pool_alloc(pool, attr->value.slen);
+    pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen);
+
+    *p_attr = attr;
+    return PJ_SUCCESS;
+}
+
+
+static int print_connection_info( pjmedia_sdp_conn *c, char *buf, int len)
 {
     char *p = buf;
 
@@ -372,9 +458,10 @@ static int print_connection_info( pjsdp_conn_info *c, char *buf, int len)
     return p-buf;
 }
 
-PJ_DEF(pjsdp_conn_info*) pjsdp_conn_info_clone (pj_pool_t *pool, const pjsdp_conn_info *rhs)
+PJ_DEF(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone (pj_pool_t *pool, 
+						  const pjmedia_sdp_conn *rhs)
 {
-    pjsdp_conn_info *c = pj_pool_alloc (pool, sizeof(pjsdp_conn_info));
+    pjmedia_sdp_conn *c = pj_pool_alloc (pool, sizeof(pjmedia_sdp_conn));
     if (!c) return NULL;
 
     if (!pj_strdup (pool, &c->net_type, &rhs->net_type)) return NULL;
@@ -384,7 +471,31 @@ PJ_DEF(pjsdp_conn_info*) pjsdp_conn_info_clone (pj_pool_t *pool, const pjsdp_con
     return c;
 }
 
-static int print_media_desc( pjsdp_media_desc *m, char *buf, int len)
+static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr, 
+			     char *buf, pj_size_t len)
+{
+    char *p = buf;
+
+    if ((int)len < attr->name.slen + attr->value.slen + 10)
+	return -1;
+
+    *p++ = 'a';
+    *p++ = '=';
+    pj_memcpy(p, attr->name.ptr, attr->name.slen);
+    p += attr->name.slen;
+    
+
+    if (attr->value.slen) {
+	pj_memcpy(p, attr->value.ptr, attr->value.slen);
+	p += attr->value.slen;
+    }
+
+    *p++ = '\r';
+    *p++ = '\n';
+    return p-buf;
+}
+
+static int print_media_desc( pjmedia_sdp_media *m, char *buf, int len)
 {
     char *p = buf;
     char *end = buf+len;
@@ -439,13 +550,13 @@ static int print_media_desc( pjsdp_media_desc *m, char *buf, int len)
     return p-buf;
 }
 
-PJ_DEF(pjsdp_media_desc*) pjsdp_media_desc_clone (pj_pool_t *pool, 
-						  const pjsdp_media_desc *rhs)
+PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
+						 pj_pool_t *pool, 
+						 const pjmedia_sdp_media *rhs)
 {
     unsigned int i;
-    pjsdp_media_desc *m = pj_pool_alloc (pool, sizeof(pjsdp_media_desc));
-    if (!m)
-	return NULL;
+    pjmedia_sdp_media *m = pj_pool_alloc (pool, sizeof(pjmedia_sdp_media));
+    PJ_ASSERT_RETURN(m != NULL, NULL);
 
     pj_strdup (pool, &m->desc.media, &rhs->desc.media);
     m->desc.port = rhs->desc.port;
@@ -456,54 +567,62 @@ PJ_DEF(pjsdp_media_desc*) pjsdp_media_desc_clone (pj_pool_t *pool,
 	m->desc.fmt[i] = rhs->desc.fmt[i];
 
     if (rhs->conn) {
-	m->conn = pjsdp_conn_info_clone (pool, rhs->conn);
-	if (!m->conn)
-	    return NULL;
+	m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
+	PJ_ASSERT_RETURN(m->conn != NULL, NULL);
     } else {
 	m->conn = NULL;
     }
 
     m->attr_count = rhs->attr_count;
     for (i=0; i < rhs->attr_count; ++i) {
-	m->attr[i] = pjsdp_attr_clone (pool, rhs->attr[i]);
-	if (!m->attr[i])
-	    return NULL;
+	m->attr[i] = pjmedia_sdp_attr_clone (pool, rhs->attr[i]);
+	PJ_ASSERT_RETURN(m->attr[i] != NULL, NULL);
     }
 
     return m;
 }
 
-/** Check if the media description has the specified attribute. */
-PJ_DEF(pj_bool_t) pjsdp_media_desc_has_attr (const pjsdp_media_desc *m, 
-					     pjsdp_attr_type_e attr_type)
+PJ_DEF(pjmedia_sdp_attr*) 
+pjmedia_sdp_media_find_attr(const pjmedia_sdp_media *m,
+			    const pj_str_t *name, const pj_str_t *fmt)
 {
-    unsigned i;
-    for (i=0; i<m->attr_count; ++i) {
-	pjsdp_attr *attr = m->attr[i];
-	if (attr->type == attr_type)
-	    return 1;
-    }
-    return 0;
-}
-
-/** Find rtpmap attribute for the specified payload type. */
-PJ_DEF(const pjsdp_rtpmap_attr*) 
-pjsdp_media_desc_find_rtpmap (const pjsdp_media_desc *m, unsigned pt)
-{
-    unsigned i;
-    for (i=0; i<m->attr_count; ++i) {
-	pjsdp_attr *attr = m->attr[i];
-	if (attr->type == PJSDP_ATTR_RTPMAP) {
-	    const pjsdp_rtpmap_attr* rtpmap = (const pjsdp_rtpmap_attr*)attr;
-	    if (rtpmap->payload_type == pt)
-		return rtpmap;
-	}
-    }
-    return NULL;
+    PJ_ASSERT_RETURN(m && name, NULL);
+    return pjmedia_sdp_attr_find(m->attr_count, m->attr, name, fmt);
 }
 
 
-static int print_session(const pjsdp_session_desc *ses, char *buf, pj_ssize_t len)
+
+PJ_DEF(pjmedia_sdp_attr*) 
+pjmedia_sdp_media_find_attr2(const pjmedia_sdp_media *m,
+			     const char *name, const pj_str_t *fmt)
+{
+    PJ_ASSERT_RETURN(m && name, NULL);
+    return pjmedia_sdp_attr_find2(m->attr_count, m->attr, name, fmt);
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_media_add_attr( pjmedia_sdp_media *m,
+						pjmedia_sdp_attr *attr)
+{
+    return pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+}
+
+PJ_DEF(unsigned) 
+pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
+				  const char *name)
+{
+    return pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, name);
+}
+
+PJ_DEF(pj_status_t)
+pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
+			      pjmedia_sdp_attr *attr)
+{
+    return pjmedia_sdp_attr_remove(&m->attr_count, m->attr, attr);
+}
+
+static int print_session(const pjmedia_sdp_session *ses, 
+			 char *buf, pj_ssize_t len)
 {
     char *p = buf;
     char *end = buf+len;
@@ -604,15 +723,20 @@ static int print_session(const pjsdp_session_desc *ses, char *buf, pj_ssize_t le
  * PARSERS
  */
 
-static void parse_version(pj_scanner *scanner)
+static void parse_version(pj_scanner *scanner, parse_context *ctx)
 {
+    ctx->last_error = PJMEDIA_SDP_EINVER;
+
     pj_scan_advance_n(scanner, 3, SKIP_WS);
     pj_scan_get_newline(scanner);
 }
 
-static void parse_origin(pj_scanner *scanner, pjsdp_session_desc *ses)
+static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
+			 parse_context *ctx)
 {
     pj_str_t str;
+
+    ctx->last_error = PJMEDIA_SDP_EINORIGIN;
 
     /* o= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -646,9 +770,12 @@ static void parse_origin(pj_scanner *scanner, pjsdp_session_desc *ses)
     pj_scan_get_newline(scanner);
 }
 
-static void parse_time(pj_scanner *scanner, pjsdp_session_desc *ses)
+static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
+		       parse_context *ctx)
 {
     pj_str_t str;
+
+    ctx->last_error = PJMEDIA_SDP_EINTIME;
 
     /* t= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -667,8 +794,11 @@ static void parse_time(pj_scanner *scanner, pjsdp_session_desc *ses)
     pj_scan_get_newline(scanner);
 }
 
-static void parse_generic_line(pj_scanner *scanner, pj_str_t *str)
+static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
+			       parse_context *ctx)
 {
+    ctx->last_error = PJMEDIA_SDP_EINSDP;
+
     /* x= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
@@ -679,8 +809,11 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str)
     pj_scan_get_newline(scanner);
 }
 
-static void parse_connection_info(pj_scanner *scanner, pjsdp_conn_info *conn)
+static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
+				  parse_context *ctx)
 {
+    ctx->last_error = PJMEDIA_SDP_EINCONN;
+
     /* c= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
@@ -699,9 +832,12 @@ static void parse_connection_info(pj_scanner *scanner, pjsdp_conn_info *conn)
     pj_scan_get_newline(scanner);
 }
 
-static void parse_media(pj_scanner *scanner, pjsdp_media_desc *med)
+static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
+			parse_context *ctx)
 {
     pj_str_t str;
+
+    ctx->last_error = PJMEDIA_SDP_EINMEDIA;
 
     /* m= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -741,119 +877,6 @@ static void parse_media(pj_scanner *scanner, pjsdp_media_desc *med)
     pj_scan_get_newline(scanner);
 }
 
-static pjsdp_rtpmap_attr * parse_rtpmap_attr( pj_pool_t *pool, pj_scanner *scanner )
-{
-    pjsdp_rtpmap_attr *rtpmap;
-    pj_str_t str;
-
-    rtpmap = pj_pool_calloc(pool, 1, sizeof(*rtpmap));
-    if (pj_scan_get_char(scanner) != ':') {
-	PJ_THROW(SYNTAX_ERROR);
-    }
-    pj_scan_get_until_ch(scanner, ' ', &str);
-    rtpmap->payload_type = pj_strtoul(&str);
-    pj_scan_get_char(scanner);
-
-    pj_scan_get_until_ch(scanner, '/', &rtpmap->encoding_name);
-    pj_scan_get_char(scanner);
-    pj_scan_get(scanner, &cs_token, &str);
-    rtpmap->clock_rate = pj_strtoul(&str);
-
-    if (*scanner->curptr == '/') {
-	pj_scan_get_char(scanner);
-	pj_scan_get_until_ch(scanner, '\r', &rtpmap->parameter);
-    }
-
-    return rtpmap;
-}
-
-static pjsdp_attr_string * parse_generic_string_attr( pj_pool_t *pool, pj_scanner *scanner )
-{
-    pjsdp_attr_string *attr;
-    attr = pj_pool_calloc(pool, 1, sizeof(*attr));
-
-    if (pj_scan_get_char(scanner) != ':') {
-	PJ_THROW(SYNTAX_ERROR);
-    }
-    pj_scan_get_until_ch(scanner, '\r', &attr->value);
-    return attr;
-}
-
-static pjsdp_attr_num *	parse_generic_num_attr( pj_pool_t *pool, pj_scanner *scanner )
-{
-    pjsdp_attr_num *attr;
-    pj_str_t str;
-
-    attr = pj_pool_calloc(pool, 1, sizeof(*attr));
-
-    if (pj_scan_get_char(scanner) != ':') {
-	PJ_THROW(SYNTAX_ERROR);
-    }
-    pj_scan_get_until_ch(scanner, '\r', &str);
-    attr->value = pj_strtoul(&str);
-    return attr;
-}
-
-static pjsdp_attr * parse_name_only_attr( pj_pool_t *pool, pj_scanner *scanner )
-{
-    pjsdp_attr *attr;
-
-    PJ_UNUSED_ARG(scanner);
-    attr = pj_pool_calloc(pool, 1, sizeof(*attr));
-    return attr;
-}
-
-static pjsdp_fmtp_attr * parse_fmtp_attr( pj_pool_t *pool, pj_scanner *scanner )
-{
-    pjsdp_fmtp_attr *fmtp;
-
-    fmtp = pj_pool_calloc(pool, 1, sizeof(*fmtp));
-
-    if (pj_scan_get_char(scanner) != ':') {
-	PJ_THROW(SYNTAX_ERROR);
-    }
-    pj_scan_get_until_ch(scanner, ' ', &fmtp->format);
-    pj_scan_get_char(scanner);
-    pj_scan_get_until_ch(scanner, '\r', &fmtp->param);
-    return fmtp;
-}
-
-static pjsdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner)
-{
-    void * (*parse_func)(pj_pool_t *pool, pj_scanner *scanner) = NULL;
-    pj_str_t attrname;
-    unsigned i;
-    pjsdp_attr *attr;
-
-    /* skip a= */
-    pj_scan_advance_n(scanner, 2, SKIP_WS);
-    
-    /* get attr name. */
-    pj_scan_get(scanner, &cs_token, &attrname);
-
-    /* find entry to handle attrname */
-    for (i=0; i<PJ_ARRAY_SIZE(attr_map); ++i) {
-	struct attr_map_rec *p = &attr_map[i];
-	if (pj_strcmp(&attrname, &p->name) == 0) {
-	    parse_func = p->parse_attr;
-	    break;
-	}
-    }
-
-    /* fallback to generic string parser. */
-    if (parse_func == NULL) {
-	parse_func = &parse_generic_string_attr;
-    }
-
-    attr = (*parse_func)(pool, scanner);
-    attr->type = i;
-	
-    /* newline */
-    pj_scan_get_newline(scanner);
-
-    return attr;
-}
-
 static void on_scanner_error(pj_scanner *scanner)
 {
     PJ_UNUSED_ARG(scanner);
@@ -861,32 +884,66 @@ static void on_scanner_error(pj_scanner *scanner)
     PJ_THROW(SYNTAX_ERROR);
 }
 
+static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
+				    parse_context *ctx)
+{
+    pjmedia_sdp_attr *attr;
+
+    ctx->last_error = PJMEDIA_SDP_EINATTR;
+
+    attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+
+    /* skip a= */
+    pj_scan_advance_n(scanner, 2, SKIP_WS);
+    
+    /* get attr name. */
+    pj_scan_get(scanner, &cs_token, &attr->name);
+
+    if (*scanner->curptr != '\r' && *scanner->curptr != '\n') {
+	/* get value */
+	pj_scan_get_until_ch(scanner, '\r', &attr->value);
+    } else {
+	attr->value.ptr = NULL;
+	attr->value.slen = 0;
+    }
+
+    /* newline */
+    pj_scan_get_newline(scanner);
+
+    return attr;
+}
+
 /*
  * Parse SDP message.
  */
-PJ_DEF(pjsdp_session_desc*) pjsdp_parse( char *buf, pj_size_t len, 
-					 pj_pool_t *pool)
+PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
+				       char *buf, pj_size_t len, 
+				       pjmedia_sdp_session **p_sdp)
 {
     pj_scanner scanner;
-    pjsdp_session_desc *session;
-    pjsdp_media_desc *media = NULL;
+    pjmedia_sdp_session *session;
+    pjmedia_sdp_media *media = NULL;
     void *attr;
-    pjsdp_conn_info *conn;
+    pjmedia_sdp_conn *conn;
     pj_str_t dummy;
     int cur_name = 254;
+    parse_context ctx;
     PJ_USE_EXCEPTION;
+
+    ctx.last_error = PJ_SUCCESS;
 
     init_sdp_parser();
 
     pj_scan_init(&scanner, buf, len, 0, &on_scanner_error);
-    session = pj_pool_calloc(pool, 1, sizeof(*session));
+    session = pj_pool_calloc(pool, 1, sizeof(pjmedia_sdp_session));
+    PJ_ASSERT_RETURN(session != NULL, PJ_ENOMEM);
 
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {
 		cur_name = *scanner.curptr;
 		switch (cur_name) {
 		case 'a':
-		    attr = parse_attr(pool, &scanner);
+		    attr = parse_attr(pool, &scanner, &ctx);
 		    if (attr) {
 			if (media) {
 			    media->attr[media->attr_count++] = attr;
@@ -896,14 +953,14 @@ PJ_DEF(pjsdp_session_desc*) pjsdp_parse( char *buf, pj_size_t len,
 		    }
 		    break;
 		case 'o':
-		    parse_origin(&scanner, session);
+		    parse_origin(&scanner, session, &ctx);
 		    break;
 		case 's':
-		    parse_generic_line(&scanner, &session->name);
+		    parse_generic_line(&scanner, &session->name, &ctx);
 		    break;
 		case 'c':
 		    conn = pj_pool_calloc(pool, 1, sizeof(*conn));
-		    parse_connection_info(&scanner, conn);
+		    parse_connection_info(&scanner, conn, &ctx);
 		    if (media) {
 			media->conn = conn;
 		    } else {
@@ -911,44 +968,201 @@ PJ_DEF(pjsdp_session_desc*) pjsdp_parse( char *buf, pj_size_t len,
 		    }
 		    break;
 		case 't':
-		    parse_time(&scanner, session);
+		    parse_time(&scanner, session, &ctx);
 		    break;
 		case 'm':
 		    media = pj_pool_calloc(pool, 1, sizeof(*media));
-		    parse_media(&scanner, media);
+		    parse_media(&scanner, media, &ctx);
 		    session->media[ session->media_count++ ] = media;
 		    break;
 		case 'v':
-		    parse_version(&scanner);
+		    parse_version(&scanner, &ctx);
 		    break;
 		default:
-		    parse_generic_line(&scanner, &dummy);
+		    parse_generic_line(&scanner, &dummy, &ctx);
 		    break;
 		}
 	}
+
+	ctx.last_error = PJ_SUCCESS;
+
     }
     PJ_CATCH(SYNTAX_ERROR) {
-	PJ_LOG(2, (LOG_THIS, "Syntax error in SDP parser '%c' line %d col %d",
-		cur_name, scanner.line, pj_scan_get_col(&scanner)));
-	if (!pj_scan_is_eof(&scanner)) {
-	    if (*scanner.curptr != '\r') {
-		pj_scan_get_until_ch(&scanner, '\r', &dummy);
-	    }
-	    pj_scan_get_newline(&scanner);
-	}
+	
+	char errmsg[PJMEDIA_ERR_MSG_SIZE];
+	pjmedia_strerror(ctx.last_error, errmsg, sizeof(errmsg));
+
+	PJ_LOG(4, (THIS_FILE, "Error parsing SDP in line %d col %d: %s",
+		   scanner.line, pj_scan_get_col(&scanner),
+		   errmsg));
+
+	session = NULL;
+
     }
     PJ_END;
 
     pj_scan_fini(&scanner);
-    return session;
+
+    *p_sdp = session;
+    return ctx.last_error;
 }
 
 /*
  * Print SDP description.
  */
-PJ_DEF(int) pjsdp_print( const pjsdp_session_desc *desc, char *buf, pj_size_t size)
+PJ_DEF(int) pjmedia_sdp_print( const pjmedia_sdp_session *desc, 
+			       char *buf, pj_size_t size)
 {
     return print_session(desc, buf, size);
+}
+
+
+/*
+ * Clone session
+ */
+PJ_DEF(pjmedia_sdp_session*) 
+pjmedia_sdp_session_clone( pj_pool_t *pool,
+			   const pjmedia_sdp_session *rhs)
+{
+    pjmedia_sdp_session *sess;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(pool && rhs, NULL);
+
+    sess = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_session));
+    PJ_ASSERT_RETURN(sess != NULL, NULL);
+
+    /* Clone origin line. */
+    pj_strdup(pool, &sess->origin.user, &rhs->origin.user);
+    sess->origin.id = rhs->origin.id;
+    sess->origin.version = rhs->origin.version;
+    pj_strdup(pool, &sess->origin.net_type, &rhs->origin.net_type);
+    pj_strdup(pool, &sess->origin.addr_type, &rhs->origin.addr_type);
+    pj_strdup(pool, &sess->origin.addr, &rhs->origin.addr);
+
+    /* Clone subject line. */
+    pj_strdup(pool, &sess->name, &rhs->name);
+
+    /* Clone connection line */
+    if (rhs->conn) {
+	sess->conn = pjmedia_sdp_conn_clone(pool, rhs->conn);
+	PJ_ASSERT_RETURN(sess->conn != NULL, NULL);
+    }
+
+    /* Clone time line. */
+    sess->time.start = rhs->time.start;
+    sess->time.stop = rhs->time.stop;
+
+    /* Duplicate session attributes. */
+    sess->attr_count = rhs->attr_count;
+    for (i=0; i<rhs->attr_count; ++i) {
+	sess->attr[i] = pjmedia_sdp_attr_clone(pool, rhs->attr[i]);
+    }
+
+    /* Duplicate media descriptors. */
+    sess->media_count = rhs->media_count;
+    for (i=0; i<rhs->media_count; ++i) {
+	sess->media[i] = pjmedia_sdp_media_clone(pool, rhs->media[i]);
+    }
+
+    return sess;
+}
+
+
+#define CHECK(exp,ret)	do {			\
+			    pj_assert(exp);	\
+			    if (!(exp))		\
+				return ret;	\
+			} while (0)
+
+/* Validate SDP connetion info. */
+static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
+{
+    CHECK( c, PJ_EINVAL);
+    CHECK( pj_strcmp2(&c->net_type, "IN")==0, PJMEDIA_SDP_EINCONN);
+    CHECK( pj_strcmp2(&c->addr_type, "IP4")==0 ||
+	   pj_strcmp2(&c->addr_type, "IP6")==0, 
+	   PJMEDIA_SDP_EINCONN);
+    CHECK( c->addr.slen != 0, PJMEDIA_SDP_EINCONN);
+
+    return PJ_SUCCESS;
+}
+
+
+/* Validate SDP session descriptor. */
+PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
+{
+    unsigned i;
+
+    CHECK( sdp != NULL, PJ_EINVAL);
+
+    /* Validate origin line. */
+    CHECK( sdp->origin.user.slen != 0, PJMEDIA_SDP_EINORIGIN);
+    CHECK( pj_strcmp2(&sdp->origin.net_type, "IN")==0, 
+	   PJMEDIA_SDP_EINORIGIN);
+    CHECK( pj_strcmp2(&sdp->origin.addr_type, "IP4")==0 ||
+	   pj_strcmp2(&sdp->origin.addr_type, "IP6")==0, 
+	   PJMEDIA_SDP_EINORIGIN);
+    CHECK( sdp->origin.addr.slen != 0, PJMEDIA_SDP_EINORIGIN);
+
+    /* Validate subject line. */
+    CHECK( sdp->name.slen != 0, PJMEDIA_SDP_EINNAME);
+
+    /* Ignore start and stop time. */
+
+    /* If session level connection info is present, validate it. */
+    if (sdp->conn) {
+	pj_status_t status = validate_sdp_conn(sdp->conn);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Validate each media. */
+    for (i=0; i<sdp->media_count; ++i) {
+	const pjmedia_sdp_media *m = sdp->media[i];
+	unsigned j;
+
+	/* Validate the m= line. */
+	CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
+	CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
+	CHECK( m->desc.fmt_count != 0, PJMEDIA_SDP_ENOFMT);
+
+	/* If media level connection info is present, validate it. */
+	if (m->conn) {
+	    pj_status_t status = validate_sdp_conn(m->conn);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+
+	/* If media doesn't have connection info, then connection info
+	 * must be present in the session.
+	 */
+	if (m->conn == NULL) {
+	    if (sdp->conn == NULL)
+		return PJMEDIA_SDP_EMISSINGCONN;
+	}
+
+	/* Verify payload type. */
+	for (j=0; j<m->desc.fmt_count; ++j) {
+	    unsigned pt = pj_strtoul(&m->desc.fmt[j]);
+
+	    /* Payload type is between 0 and 127. */
+	    CHECK( pt <= 127, PJMEDIA_SDP_EINPT);
+
+	    /* If port is not zero, then for each dynamic payload type, an
+	     * rtpmap attribute must be specified.
+	     */
+	    if (m->desc.port != 0 && pt >= 96) {
+		const pjmedia_sdp_attr *a;
+
+		a = pjmedia_sdp_media_find_attr2(m, "rtpmap", &m->desc.fmt[j]);
+		CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
+	    }
+	}
+    }
+
+    /* Looks good. */
+    return PJ_SUCCESS;
 }
 
 

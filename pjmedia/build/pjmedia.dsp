@@ -96,6 +96,10 @@ SOURCE=..\src\pjmedia\dsound.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\errno.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\g711.c
 # End Source File
 # Begin Source File
@@ -129,7 +133,24 @@ SOURCE=..\src\pjmedia\sdp.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\sdp_cmp.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\sdp_neg.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\session.c
+
+!IF  "$(CFG)" == "pjmedia - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjmedia - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -146,6 +167,10 @@ SOURCE=..\include\pjmedia\codec.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\errno.h
 # End Source File
 # Begin Source File
 
@@ -173,6 +198,10 @@ SOURCE=..\include\pjmedia\sdp.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\sdp_neg.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\session.h
 # End Source File
 # Begin Source File
@@ -182,6 +211,10 @@ SOURCE=..\include\pjmedia\sound.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\stream.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\types.h
 # End Source File
 # End Group
 # Begin Group "PortAudio"

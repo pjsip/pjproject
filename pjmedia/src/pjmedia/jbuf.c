@@ -300,7 +300,7 @@ PJ_DEF(pj_status_t) pj_jb_put( JB *jb, pj_uint32_t extseq, void *buf )
 	jb->level++;
     }
 
-    if (jb->lst.count > jb->max_level)
+    if ((int)jb->lst.count > jb->max_level)
 	jb->max_level++;
 
     jb->last_op = JB_PUT;

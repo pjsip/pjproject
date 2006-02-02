@@ -77,6 +77,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name pjsdp
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
 }}}
 
 ###############################################################################
