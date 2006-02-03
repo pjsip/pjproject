@@ -22,6 +22,8 @@
 #include <pj/os.h>
 #include "test.h"
 
+#define THIS_FILE	"string.c"
+
 /**
  * \page page_pjlib_string_test Test: String
  *
@@ -64,6 +66,27 @@
 #define JUST_HELLO	"Hello"
 #define UL_VALUE	3456789012UL
 
+#if 1
+/* See if both integers have the same sign */
+PJ_INLINE(int) cmp(const char *expr, int i, int j)
+{
+    i = !((i>0 && j>0) || (i<0 && j<0) || (i==0 && j==0));
+    if (i) {
+	PJ_LOG(3,(THIS_FILE,"   error: %s: expecting %d, got %d", expr, j, i));
+    }
+    return i;
+}
+#else
+/* For strict comparison, must be equal */
+PJ_INLINE(int) cmp(const char *expr, int i, int j)
+{
+    PJ_UNUSED_ARG(expr);
+    return i!=j;
+}
+#endif
+
+#define C(expr, res)	cmp(#expr, expr, res)
+
 static int stricmp_test(void)
 {
 /* This specificly tests and benchmark pj_stricmp(), pj_stricmp_alnum().
@@ -75,18 +98,18 @@ static int stricmp_test(void)
 		s1.ptr=S1; s1.slen=S1?len:0; \
 		s2.ptr=S2; s2.slen=S2?len:0; \
 		pj_get_timestamp(&t1); \
-	        if (pj_stricmp(&s1,&s2)!=res) return code; \
+	        if (C(pj_stricmp(&s1,&s2),res)) return code; \
 		pj_get_timestamp(&t2); \
 		pj_sub_timestamp(&t2, &t1); \
 		pj_add_timestamp(&e1, &t2); \
 		pj_get_timestamp(&t1); \
-	        if (pj_stricmp_alnum(&s1,&s2)!=res) return code-1; \
+	        if (C(pj_stricmp_alnum(&s1,&s2),res)) return code-1; \
 		pj_get_timestamp(&t2); \
 		pj_sub_timestamp(&t2, &t1); \
 		pj_add_timestamp(&e2, &t2); \
-		if (pj_stricmp2(&s1,S2)!=res) return code*10; \
-		if (pj_strnicmp(&s1,&s2,len)!=res) return code*100; \
-		if (pj_strnicmp2(&s1,S2,len)!=res) return code*1000; \
+		if (C(pj_stricmp2(&s1,S2),res)) return code*10; \
+		if (C(pj_strnicmp(&s1,&s2,len),res)) return code*100; \
+		if (C(pj_strnicmp2(&s1,S2,len),res)) return code*1000; \
 	    } while (0)
 
     char *buf;
@@ -114,7 +137,7 @@ static int stricmp_test(void)
     len=1;
     STRTEST( 0, "a",buf+0,-510);
     STRTEST( 0, "a",buf+1,-512);
-    STRTEST( -1, "0", "P", -514);
+    STRTEST( -1, "O", "P", -514);
     STRTEST(-1, NULL, "a", -516);
     STRTEST(1, "a", NULL, -518);
 
@@ -227,10 +250,10 @@ static int strcmp_test(void)
 	    do { \
 		s1.ptr=S1; s1.slen=S1?len:0; \
 		s2.ptr=S2; s2.slen=S2?len:0; \
-	        if (pj_strcmp(&s1,&s2)!=res) return code; \
-		if (pj_strcmp2(&s1,S2)!=res) return code-1; \
-		if (pj_strncmp(&s1,&s2,len)!=res) return code-2; \
-		if (pj_strncmp2(&s1,S2,len)!=res) return code-3; \
+	        if (C(pj_strcmp(&s1,&s2),res)) return code; \
+		if (C(pj_strcmp2(&s1,S2),res)) return code-1; \
+		if (C(pj_strncmp(&s1,&s2,len),res)) return code-2; \
+		if (C(pj_strncmp2(&s1,S2,len),res)) return code-3; \
 	    } while (0)
 
     pj_str_t s1, s2;

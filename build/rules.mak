@@ -137,6 +137,11 @@ ifeq ($(OS_NAME),linux-kernel)
 	rm -f ../lib/$(app).o
 endif
 
+gcov-report:
+	for file in $(FULL_SRCS); do \
+		gcov $$file -n -o $(OBJDIR); \
+	done
+
 realclean: clean
 	$(subst @@,$(subst /,$(HOST_PSEP),$(LIB)) $(subst /,$(HOST_PSEP),$(EXE)),$(HOST_RM))
 	$(subst @@,$(DEP_FILE),$(HOST_RM))

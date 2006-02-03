@@ -99,3 +99,7 @@ realclean:
 
 distclean: realclean
 
+gcov-report:
+	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib gcov-report
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test gcov-report
+
