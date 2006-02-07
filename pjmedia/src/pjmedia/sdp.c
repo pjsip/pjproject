@@ -1093,6 +1093,7 @@ static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
 PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 {
     unsigned i;
+    const pj_str_t STR_RTPMAP = { "rtpmap", 6 };
 
     CHECK( sdp != NULL, PJ_EINVAL);
 
@@ -1155,7 +1156,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 	    if (m->desc.port != 0 && pt >= 96) {
 		const pjmedia_sdp_attr *a;
 
-		a = pjmedia_sdp_media_find_attr2(m, "rtpmap", &m->desc.fmt[j]);
+		a = pjmedia_sdp_media_find_attr(m,&STR_RTPMAP,&m->desc.fmt[j]);
 		CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
 	    }
 	}

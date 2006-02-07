@@ -77,7 +77,7 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) 
 pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
-				      const pjmedia_sdp_session *local,
+				      const pjmedia_sdp_session *initial,
 				      const pjmedia_sdp_session *remote,
 				      pjmedia_sdp_neg **p_neg)
 {
@@ -85,29 +85,35 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     pj_status_t status;
 
     /* Check arguments are valid. */
-    PJ_ASSERT_RETURN(pool && local && remote && p_neg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && remote && p_neg, PJ_EINVAL);
 
     *p_neg = NULL;
 
-    /* Validate remote offer and local answer */
+    /* Validate remote offer and initial answer */
     status = pjmedia_sdp_validate(remote);
     if (status != PJ_SUCCESS)
 	return status;
-    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(local))==PJ_SUCCESS, status);
 
     /* Create and initialize negotiator. */
     neg = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_neg));
     PJ_ASSERT_RETURN(neg != NULL, PJ_ENOMEM);
 
-    neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
-    neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
-    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(neg->initial_sdp))==PJ_SUCCESS,
-		     status);
-
-    neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
-    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(neg->neg_remote_sdp))==PJ_SUCCESS,
-		      status);
+
+    if (initial) {
+	PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(initial))==PJ_SUCCESS, 
+			 status);
+
+	neg->initial_sdp = pjmedia_sdp_session_clone(pool, initial);
+	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, initial);
+
+	neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
+
+    } else {
+	
+	neg->state = PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
+
+    }
 
     *p_neg = neg;
     return PJ_SUCCESS;
@@ -126,8 +132,8 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg )
 
 
 PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_get_local( pjmedia_sdp_neg *neg,
-			   const pjmedia_sdp_session **local)
+pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
+				  const pjmedia_sdp_session **local)
 {
     PJ_ASSERT_RETURN(neg && local, PJ_EINVAL);
     PJ_ASSERT_RETURN(neg->active_local_sdp, PJMEDIA_SDPNEG_ENOACTIVE);
@@ -138,13 +144,35 @@ pjmedia_sdp_neg_get_local( pjmedia_sdp_neg *neg,
 
 
 PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_get_remote( pjmedia_sdp_neg *neg,
-			    const pjmedia_sdp_session **remote)
+pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
+				   const pjmedia_sdp_session **remote)
 {
     PJ_ASSERT_RETURN(neg && remote, PJ_EINVAL);
     PJ_ASSERT_RETURN(neg->active_remote_sdp, PJMEDIA_SDPNEG_ENOACTIVE);
 
     *remote = neg->active_remote_sdp;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t)
+pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
+				const pjmedia_sdp_session **remote)
+{
+    PJ_ASSERT_RETURN(neg && remote, PJ_EINVAL);
+    PJ_ASSERT_RETURN(neg->neg_remote_sdp, PJMEDIA_SDPNEG_ENONEG);
+
+    *remote = neg->neg_remote_sdp;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) 
+pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
+			       const pjmedia_sdp_session **local)
+{
+    PJ_ASSERT_RETURN(neg && local, PJ_EINVAL);
+    PJ_ASSERT_RETURN(neg->neg_local_sdp, PJMEDIA_SDPNEG_ENONEG);
+
+    *local = neg->neg_local_sdp;
     return PJ_SUCCESS;
 }
 
@@ -174,9 +202,9 @@ pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_tx_local_offer( pj_pool_t *pool,
-				pjmedia_sdp_neg *neg,
-				const pjmedia_sdp_session **offer)
+pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
+				  pjmedia_sdp_neg *neg,
+				  const pjmedia_sdp_session **offer)
 {
     /* Check arguments are valid. */
     PJ_ASSERT_RETURN(neg && offer, PJ_EINVAL);
@@ -210,31 +238,9 @@ pjmedia_sdp_neg_tx_local_offer( pj_pool_t *pool,
 
 
 PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_rx_remote_offer( pj_pool_t *pool,
-				 pjmedia_sdp_neg *neg,
-				 const pjmedia_sdp_session *remote)
-{
-    /* Check arguments are valid. */
-    PJ_ASSERT_RETURN(pool && neg && remote, PJ_EINVAL);
-
-    /* Can only do this in STATE_DONE.
-     * If we already provide local offer, then rx_remote_answer() should
-     * be called instead of this function.
-     */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE, 
-		     PJMEDIA_SDPNEG_EINSTATE);
-
-    /* We're ready to negotiate. */
-    neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
-    neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
-
-    return PJ_SUCCESS;
-}
-
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_rx_remote_answer( pj_pool_t *pool,
-				  pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session *remote)
+pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
+				   pjmedia_sdp_neg *neg,
+				   const pjmedia_sdp_session *remote)
 {
     /* Check arguments are valid. */
     PJ_ASSERT_RETURN(pool && neg && remote, PJ_EINVAL);
@@ -251,6 +257,55 @@ pjmedia_sdp_neg_rx_remote_answer( pj_pool_t *pool,
     neg->has_remote_answer = 1;
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
  
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) 
+pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
+				  pjmedia_sdp_neg *neg,
+				  const pjmedia_sdp_session *remote)
+{
+    /* Check arguments are valid. */
+    PJ_ASSERT_RETURN(pool && neg && remote, PJ_EINVAL);
+
+    /* Can only do this in STATE_DONE.
+     * If we already provide local offer, then rx_remote_answer() should
+     * be called instead of this function.
+     */
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE, 
+		     PJMEDIA_SDPNEG_EINSTATE);
+
+    /* State now is STATE_REMOTE_OFFER. */
+    neg->state = PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER;
+    neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) 
+pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
+				  pjmedia_sdp_neg *neg,
+				  const pjmedia_sdp_session *local)
+{
+    /* Check arguments are valid. */
+    PJ_ASSERT_RETURN(pool && neg && local, PJ_EINVAL);
+
+    /* Can only do this in STATE_REMOTE_OFFER.
+     * If we already provide local offer, then rx_remote_answer() should
+     * be called instead of this function.
+     */
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER, 
+		     PJMEDIA_SDPNEG_EINSTATE);
+
+    /* State now is STATE_WAIT_NEGO. */
+    neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
+    if (local)
+	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+    else {
+	PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
+	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -463,6 +518,7 @@ static pj_status_t process_answer(pj_pool_t *pool,
 				  pjmedia_sdp_session **p_active)
 {
     unsigned mi;
+    pj_bool_t has_active = PJ_FALSE;
     pj_status_t status;
 
     /* Check arguments. */
@@ -478,10 +534,14 @@ static pj_status_t process_answer(pj_pool_t *pool,
 				  allow_asym);
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	if (offer->media[mi]->desc.port != 0)
+	    has_active = PJ_TRUE;
     }
 
     *p_active = offer;
-    return PJ_SUCCESS;
+
+    return has_active ? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA;
 }
 
 /* Try to match offer with answer. */
@@ -674,6 +734,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 				  pjmedia_sdp_session **p_answer)
 {
     pj_status_t status;
+    pj_bool_t has_active = PJ_FALSE;
     pjmedia_sdp_session *answer;
     char media_used[PJSDP_MAX_MEDIA];
     unsigned i;
@@ -748,10 +809,15 @@ static pj_status_t create_answer( pj_pool_t *pool,
 
 	/* Add the media answer */
 	answer->media[answer->media_count++] = am;
+
+	/* Check if this media is active.*/
+	if (am->desc.port != 0)
+	    has_active = PJ_TRUE;
     }
 
     *p_answer = answer;
-    return PJ_SUCCESS;
+
+    return has_active ? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA;
 }
 
 /* The best bit: SDP negotiation function! */
@@ -784,7 +850,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     } else {
 	pjmedia_sdp_session *answer;
 
-	status = create_answer(pool, neg->initial_sdp, neg->neg_remote_sdp,
+	status = create_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
 			       &answer);
 	if (status == PJ_SUCCESS) {
 	    pj_uint32_t active_ver;

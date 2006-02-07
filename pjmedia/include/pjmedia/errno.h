@@ -149,29 +149,44 @@ PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
 #define PJMEDIA_SDPNEG_EINSTATE	    (PJMEDIA_ERRNO_START+40)    /* 220040 */
 /**
  * @hideinitializer
+ * No initial local SDP.
+ */
+#define PJMEDIA_SDPNEG_ENOINITIAL   (PJMEDIA_ERRNO_START+41)    /* 220041 */
+/**
+ * @hideinitializer
  * No currently active SDP.
  */
-#define PJMEDIA_SDPNEG_ENOACTIVE    (PJMEDIA_ERRNO_START+41)    /* 220041 */
+#define PJMEDIA_SDPNEG_ENOACTIVE    (PJMEDIA_ERRNO_START+42)    /* 220042 */
+/**
+ * @hideinitializer
+ * No current offer or answer.
+ */
+#define PJMEDIA_SDPNEG_ENONEG	    (PJMEDIA_ERRNO_START+43)    /* 220043 */
 /**
  * @hideinitializer
  * Media count mismatch in offer and answer.
  */
-#define PJMEDIA_SDPNEG_EMISMEDIA    (PJMEDIA_ERRNO_START+42)    /* 220042 */
+#define PJMEDIA_SDPNEG_EMISMEDIA    (PJMEDIA_ERRNO_START+44)    /* 220044 */
 /**
  * @hideinitializer
  * Media type is different in the remote answer.
  */
-#define PJMEDIA_SDPNEG_EINVANSMEDIA (PJMEDIA_ERRNO_START+43)    /* 220043 */
+#define PJMEDIA_SDPNEG_EINVANSMEDIA (PJMEDIA_ERRNO_START+45)    /* 220045 */
 /**
  * @hideinitializer
  * Transport type is different in the remote answer.
  */
-#define PJMEDIA_SDPNEG_EINVANSTP    (PJMEDIA_ERRNO_START+44)    /* 220044 */
+#define PJMEDIA_SDPNEG_EINVANSTP    (PJMEDIA_ERRNO_START+46)    /* 220046 */
 /**
  * @hideinitializer
  * No common media payload is provided in the answer.
  */
-#define PJMEDIA_SDPNEG_EANSNOMEDIA  (PJMEDIA_ERRNO_START+45)    /* 220045 */
+#define PJMEDIA_SDPNEG_EANSNOMEDIA  (PJMEDIA_ERRNO_START+47)    /* 220047 */
+/**
+ * @hideinitializer
+ * No media is active after negotiation.
+ */
+#define PJMEDIA_SDPNEG_ENOMEDIA	    (PJMEDIA_ERRNO_START+48)    /* 220048 */
 
 
 /************************************************************

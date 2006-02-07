@@ -53,11 +53,14 @@ static const struct
 
     /* SDP negotiator errors. */
     { PJMEDIA_SDPNEG_EINSTATE,	    "Invalid SDP negotiator state for operation" },
+    { PJMEDIA_SDPNEG_ENOINITIAL,    "No initial local SDP in SDP negotiator" },
     { PJMEDIA_SDPNEG_ENOACTIVE,	    "No active SDP in SDP negotiator" },
+    { PJMEDIA_SDPNEG_ENONEG,	    "No current local/remote offer/answer" },
     { PJMEDIA_SDPNEG_EMISMEDIA,	    "SDP media count mismatch in offer/answer" },
     { PJMEDIA_SDPNEG_EINVANSMEDIA,  "SDP media type mismatch in offer/answer" },
     { PJMEDIA_SDPNEG_EINVANSTP,	    "SDP media transport type mismatch in offer/answer" },
     { PJMEDIA_SDPNEG_EANSNOMEDIA,   "No common SDP media payload in answer" },
+    { PJMEDIA_SDPNEG_ENOMEDIA,	    "No active media stream after negotiation" },
 
     /* SDP comparison results */
     { PJMEDIA_SDP_EMEDIANOTEQUAL,   "SDP media descriptor not equal" },
