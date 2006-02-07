@@ -311,6 +311,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
 	default:
 	    return PJ_EINVAL;
 	}
+
+	if (hdr) {
+	    pj_list_push_back(&endpt->cap_hdr, hdr);
+	}
     }
 
     /* Add the tags to the header. */
@@ -755,6 +759,11 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     }
 
     pj_rwmutex_unlock_read(endpt->mod_mutex);
+
+    /* Must clear mod_data before returning rdata to transport, since
+     * rdata may be reused.
+     */
+    pj_memset(&rdata->endpt_info, 0, sizeof(rdata->endpt_info));
 }
 
 /*

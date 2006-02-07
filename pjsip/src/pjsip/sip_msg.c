@@ -1702,6 +1702,40 @@ static pjsip_via_hdr* pjsip_via_hdr_shallow_clone( pj_pool_t *pool,
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
+ * Warning header.
+ */
+PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
+						      int code,
+						      const pj_str_t *host,
+						      const pj_str_t *text)
+{
+    const pj_str_t str_warning = { "Warning", 7 };
+    pj_str_t hvalue;
+
+    hvalue.ptr = pj_pool_alloc(pool, 10 +		/* code */
+				     host->slen + 2 +	/* host */
+				     text->slen + 2);	/* text */
+    hvalue.slen = pj_sprintf(hvalue.ptr, "%u %.*s \"%.*s\"",
+			     code, host->slen, host->ptr,
+			     text->slen, text->ptr);
+
+    return pjsip_generic_string_hdr_create(pool, &str_warning, &hvalue);
+}
+
+PJ_DEF(pjsip_warning_hdr*) 
+pjsip_warning_hdr_create_from_status( pj_pool_t *pool,
+				      const pj_str_t *host,
+				      pj_status_t status)
+{
+    char errbuf[PJ_ERR_MSG_SIZE];
+    pj_str_t text;
+    
+    text = pj_strerror(status, errbuf, sizeof(errbuf));
+    return pjsip_warning_hdr_create(pool, 399, host, &text);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/*
  * Message body manipulations.
  */
 PJ_DEF(int) pjsip_print_text_body(pjsip_msg_body *msg_body, char *buf, pj_size_t size)

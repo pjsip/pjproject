@@ -168,8 +168,11 @@ static void mod_ua_on_tsx_state( pjsip_transaction *tsx, pjsip_event *e)
     /* Get the dialog where this transaction belongs. */
     dlg = tsx->mod_data[mod_ua.mod.id];
     
-    /* Must have the dialog instance! */
-    PJ_ASSERT_ON_FAIL(dlg != NULL, return);
+    /* If dialog instance has gone, it could mean that the dialog
+     * may has been destroyed.
+     */
+    if (dlg == NULL)
+	return;
 
     /* Hand over the event to the dialog. */
     pjsip_dlg_on_tsx_state(dlg, tsx, e);
@@ -204,6 +207,17 @@ PJ_DEF(pj_status_t) pjsip_ua_init( pjsip_endpoint *endpt,
 PJ_DEF(pjsip_user_agent*) pjsip_ua_instance(void)
 {
     return &mod_ua.mod;
+}
+
+
+/*
+ * Get the endpoint where this UA is currently registered.
+ */
+PJ_DEF(pjsip_endpoint*) pjsip_ua_get_endpt(pjsip_user_agent *ua)
+{
+    PJ_UNUSED_ARG(ua);
+    pj_assert(ua == &mod_ua.mod);
+    return mod_ua.endpt;
 }
 
 
@@ -460,17 +474,27 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t *from_tag;
     pjsip_dialog *dlg;
 
+    /* Optimized path: bail out early if request doesn't have To tag */
+    if (rdata->msg_info.to->tag.slen == 0)
+	return PJ_FALSE;
+
     /* Lock user agent before looking up the dialog hash table. */
     pj_mutex_lock(mod_ua.mutex);
 
     /* Lookup the dialog set, based on the To tag header. */
     dlg_set = find_dlg_set_for_msg(rdata);
 
-    /* Bail out if dialog is not found. */
+    /* If dialog is not found, respond with 481 (Call/Transaction
+     * Does Not Exist).
+     */
     if (dlg_set == NULL) {
-	/* Not ours. */
+	/* Unable to find dialog. */
 	pj_mutex_unlock(mod_ua.mutex);
-	return PJ_FALSE;
+
+	/* Respond with 481 . */
+	pjsip_endpt_respond_stateless( mod_ua.endpt, rdata, 481, NULL, NULL,
+				       NULL );
+	return PJ_TRUE;
     }
 
     /* Dialog set has been found.
@@ -530,7 +554,7 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 
     /* Check if transaction is present. */
     tsx = pjsip_rdata_get_tsx(rdata);
-    if (!tsx) {
+    if (tsx) {
 	/* Check if dialog is present in the transaction. */
 	dlg = pjsip_tsx_get_dlg(tsx);
 	if (!dlg)

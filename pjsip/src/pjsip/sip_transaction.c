@@ -32,6 +32,13 @@
 
 #define THIS_FILE   "sip_transaction.c"
 
+#if 0
+#define TSX_TRACE_(expr)    PJ_LOG(3,expr)
+#else
+#define TSX_TRACE_(expr)
+#endif
+
+
 /*****************************************************************************
  **
  ** Declarations and static variable definitions section.
@@ -504,20 +511,26 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
     /* Lock hash table mutex. */
     pj_mutex_lock(mod_tsx_layer.mutex);
 
-    /* Check if no transaction with the same key exists. */
-    PJ_ASSERT_ON_FAIL(pj_hash_get( mod_tsx_layer.htable, 
-				   &tsx->transaction_key.ptr,
-				   tsx->transaction_key.slen, 
-				   &tsx->hashed_key) == NULL,
-			{
-			    pj_mutex_unlock(mod_tsx_layer.mutex);
-			    return PJ_EEXISTS;
-			}
-		      );
+    /* Check if no transaction with the same key exists. 
+     * Do not use PJ_ASSERT_RETURN since it evaluates the expression
+     * twice!
+     */
+    pj_assert(pj_hash_get( mod_tsx_layer.htable, 
+			   &tsx->transaction_key.ptr,
+			   tsx->transaction_key.slen, 
+			   NULL) == NULL);
+
+    TSX_TRACE_((THIS_FILE, 
+		"Transaction %p registered with hkey=0x%p and key=%.*s",
+		tsx, tsx->hashed_key, tsx->transaction_key.slen,
+		tsx->transaction_key.ptr));
 
     /* Register the transaction to the hash table. */
+    //pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    //		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
+    PJ_TODO(USE_PRECALCULATED_HASHED_VALUE);
     pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
+    		 tsx->transaction_key.slen, 0, tsx);
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -538,8 +551,16 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
     pj_mutex_lock(mod_tsx_layer.mutex);
 
     /* Register the transaction to the hash table. */
+    //pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    //		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
+    PJ_TODO(USE_PRECALCULATED_HASHED_VALUE);
     pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
+		 tsx->transaction_key.slen, 0, NULL);
+
+    TSX_TRACE_((THIS_FILE, 
+		"Transaction %p unregistered, hkey=0x%p and key=%.*s",
+		tsx, tsx->hashed_key, tsx->transaction_key.slen,
+		tsx->transaction_key.ptr));
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -553,11 +574,15 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
 						     pj_bool_t lock )
 {
     pjsip_transaction *tsx;
+    pj_uint32_t hval = 0;
 
     pj_mutex_lock(mod_tsx_layer.mutex);
-    tsx = pj_hash_get( mod_tsx_layer.htable, key->ptr, key->slen, NULL );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key->ptr, key->slen, &hval );
     pj_mutex_unlock(mod_tsx_layer.mutex);
 
+    TSX_TRACE_((THIS_FILE, 
+		"Finding tsx with hkey=0x%p and key=%.*s: found %p",
+		hval, key->slen, key->ptr, tsx));
 
     /* Race condition!
      * Transaction may gets deleted before we have chance to lock it.
@@ -641,6 +666,7 @@ static pj_status_t mod_tsx_layer_unload(void)
 static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_str_t key;
+    pj_uint32_t hval = 0;
     pjsip_transaction *tsx;
 
     pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
@@ -649,7 +675,13 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
 
-    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, NULL );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+
+
+    TSX_TRACE_((THIS_FILE, 
+		"Finding tsx for request, hkey=0x%p and key=%.*s, found %p",
+		hval, key.slen, key.ptr, tsx));
+
 
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
@@ -682,6 +714,7 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
 {
     pj_str_t key;
+    pj_uint32_t hval = 0;
     pjsip_transaction *tsx;
 
     pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAC,
@@ -690,7 +723,13 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
     /* Find transaction. */
     pj_mutex_lock( mod_tsx_layer.mutex );
 
-    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, NULL );
+    tsx = pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+
+
+    TSX_TRACE_((THIS_FILE, 
+		"Finding tsx for response, hkey=0x%p and key=%.*s, found %p",
+		hval, key.slen, key.ptr, tsx));
+
 
     if (tsx == NULL || tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	/* Transaction not found.
@@ -918,7 +957,28 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	tsx->state_handler = tsx_state_handler_uas[state];
     }
 
-    /* Inform TU */
+    /* Before informing TU about state changed, inform TU about
+     * rx event.
+     */
+    if (event_src_type==PJSIP_EVENT_RX_MSG && tsx->tsx_user) {
+	pjsip_rx_data *rdata = event_src;
+
+	pj_assert(rdata != NULL);
+
+	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG &&
+	    tsx->tsx_user->on_rx_request)
+	{
+	    (*tsx->tsx_user->on_rx_request)(rdata);
+
+	} else if (rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG &&
+		   tsx->tsx_user->on_rx_response)
+	{
+	    (*tsx->tsx_user->on_rx_response)(rdata);
+	}
+
+    }
+
+    /* Inform TU about state changed. */
     if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
 	pjsip_event e;
 	PJSIP_EVENT_INIT_TSX_STATE(e, tsx, event_src_type, event_src,
@@ -1044,8 +1104,13 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 			 &via->branch_param);
 
     /* Calculate hashed key value. */
+    PJ_TODO(OPTIMIZE_TSX_BY_PRECALCULATING_HASHED_KEY_VALUE);
+    /*
+     blp: somehow this yields different hashed value!!
+
     tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
 				   tsx->transaction_key.slen);
+     */
 
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
 	       tsx->transaction_key.ptr));
@@ -1158,8 +1223,13 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     }
 
     /* Calculate hashed key value. */
+    PJ_TODO(OPTIMIZE_TSX_BY_PRECALCULATING_HASHED_KEY_VALUE);
+    /*
+     blp: somehow this yields different hashed value!!
+
     tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
 				   tsx->transaction_key.slen);
+     */
 
     /* Duplicate branch parameter for transaction. */
     branch = &rdata->msg_info.via->branch_param;

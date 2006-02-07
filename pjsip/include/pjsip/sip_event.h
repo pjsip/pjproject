@@ -57,20 +57,8 @@ typedef enum pjsip_event_id_e
     /** Transaction state changed event. */
     PJSIP_EVENT_TSX_STATE,
 
-    /** 2xx response received event. */
-    PJSIP_EVENT_RX_200_MSG,
-
-    /** ACK request received event. */
-    PJSIP_EVENT_RX_ACK_MSG,
-
-    /** Message discarded event. */
-    PJSIP_EVENT_DISCARD_MSG,
-
     /** Indicates that the event was triggered by user action. */
     PJSIP_EVENT_USER,
-
-    /** On before transmitting message. */
-    PJSIP_EVENT_PRE_TX_MSG,
 
 } pjsip_event_id_e;
 
@@ -140,14 +128,6 @@ struct pjsip_event
 
         } tx_msg;
 
-        /** Pre-transmission event. */
-        struct
-        {
-            pjsip_tx_data       *tdata; /**< Msg to be transmitted.     */
-            pjsip_transaction   *tsx;   /**< The transaction.           */
-            int                  retcnt;/**< Retransmission count.      */
-        } pre_tx_msg;
-
         /** Transmission error event. */
         struct
         {
@@ -161,25 +141,6 @@ struct pjsip_event
             pjsip_rx_data       *rdata; /**< The receive data buffer.   */
             pjsip_transaction   *tsx;   /**< The transaction.           */
         } rx_msg;
-
-        /** Receipt of 200/INVITE response. */
-        struct
-        {
-            pjsip_rx_data       *rdata; /**< The 200 response msg.      */
-        } rx_200_msg;
-
-        /** Receipt of ACK message. */
-        struct
-        {
-            pjsip_rx_data       *rdata; /**< The ack message.           */
-        } rx_ack_msg;
-
-        /** Notification that endpoint has discarded a message. */
-        struct
-        {
-            pjsip_rx_data       *rdata; /**< The discarded message.     */
-            pj_status_t          reason;/**< The reason.                */
-        } discard_msg;
 
         /** User event. */
         struct
@@ -245,34 +206,6 @@ struct pjsip_event
         } while (0)
 
 /**
- * Init rx 200/INVITE event.
- */
-#define PJSIP_EVENT_INIT_RX_200_MSG(event,prdata)       \
-        do { \
-            (event).type = PJSIP_EVENT_RX_200_MSG;      \
-            (event).body.rx_200_msg.rdata = prdata;	\
-        } while (0)
-
-/**
- * Init rx ack msg event.
- */
-#define PJSIP_EVENT_INIT_RX_ACK_MSG(event,prdata)       \
-        do { \
-            (event).type = PJSIP_EVENT_RX_ACK_MSG;      \
-            (event).body.rx_ack_msg.rdata = prdata;	\
-        } while (0)
-
-/**
- * Init discard msg event.
- */
-#define PJSIP_EVENT_INIT_DISCARD_MSG(event,prdata,preason)  \
-        do { \
-            (event).type = PJSIP_EVENT_DISCARD_MSG;         \
-            (event).body.discard_msg.rdata = prdata;	    \
-            (event).body.discard_msg.reason = preason;	    \
-        } while (0)
-
-/**
  * Init user event.
  */
 #define PJSIP_EVENT_INIT_USER(event,u1,u2,u3,u4)    \
@@ -283,18 +216,6 @@ struct pjsip_event
             (event).body.user.user3 = (void*)u3;     \
             (event).body.user.user4 = (void*)u4;     \
         } while (0)
-
-/**
- * Init pre tx msg event.
- */
-#define PJSIP_EVENT_INIT_PRE_TX_MSG(event,ptsx,ptdata,pretcnt) \
-        do { \
-            (event).type = PJSIP_EVENT_PRE_TX_MSG;	\
-            (event).body.pre_tx_msg.tsx = ptsx;		\
-            (event).body.pre_tx_msg.tdata = ptdata;	\
-            (event).body.pre_tx_msg.retcnt = pretcnt;	\
-        } while (0)
-
 
 /**
  * Get the event string from the event ID.

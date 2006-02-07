@@ -43,11 +43,7 @@ static const char *event_str[] =
     "RX_MSG",
     "TRANSPORT_ERROR",
     "TSX_STATE",
-    "RX_2XX_RESPONSE",
-    "RX_ACK",
-    "DISCARD_MSG",
     "USER",
-    "BEFORE_TX",
 };
 
 static pj_str_t str_TEXT = { "text", 4},

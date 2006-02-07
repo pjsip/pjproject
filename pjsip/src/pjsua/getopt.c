@@ -36,6 +36,8 @@
 #include "config.h"
 #endif
 
+#include <pj/string.h>
+
 #ifndef HAVE_GETOPT_LONG
 
 /* getopt_long and getopt_long_only entry points for GNU getopt.

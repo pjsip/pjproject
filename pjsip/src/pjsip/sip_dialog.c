@@ -37,6 +37,7 @@
 
 #define THIS_FILE	"sip_dialog.c"
 
+long pjsip_dlg_lock_tls_id;
 
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 {
@@ -72,6 +73,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     dlg->pool = pool;
     pj_sprintf(dlg->obj_name, "dlg%p", dlg);
     dlg->ua = ua;
+    dlg->endpt = endpt;
 
     status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex);
     if (status != PJ_SUCCESS)
@@ -92,7 +94,7 @@ static void destroy_dialog( pjsip_dialog *dlg )
 {
     if (dlg->mutex)
 	pj_mutex_destroy(dlg->mutex);
-    pjsip_endpt_release_pool(pjsip_ua_get_endpt(dlg->ua), dlg->pool);
+    pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 
 
@@ -144,7 +146,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Randomize local CSeq. */
     dlg->local.first_cseq = pj_rand() % 0x7FFFFFFFL;
-    dlg->local.cseq = dlg->local.cseq;
+    dlg->local.cseq = dlg->local.first_cseq;
 
     /* Init local contact. */
     dlg->local.contact = pjsip_contact_hdr_create(dlg->pool);
@@ -183,7 +185,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     pj_list_init(&dlg->route_set);
 
     /* Init client authentication session. */
-    status = pjsip_auth_clt_init(&dlg->auth_sess, pjsip_ua_get_endpt(ua), 
+    status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt, 
 				 dlg->pool, 0);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -342,7 +344,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     }
 
     /* Init client authentication session. */
-    status = pjsip_auth_clt_init(&dlg->auth_sess, pjsip_ua_get_endpt(ua),
+    status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
 				 dlg->pool, 0);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -506,9 +508,12 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg )
 	return status;
     }
 
+    /* Log */
+    PJ_LOG(5,(dlg->obj_name, "Dialog destroyed"));
+
     /* Destroy this dialog. */
     pj_mutex_destroy(dlg->mutex);
-    pjsip_endpt_release_pool(pjsip_ua_get_endpt(dlg->ua), dlg->pool);
+    pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 
     return PJ_SUCCESS;
 }
@@ -629,6 +634,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
     /* Set module data. */
     dlg->mod_data[mod->id] = mod_data;
 
+    /* Increment count. */
+    ++dlg->usage_cnt;
+
     pj_mutex_unlock(dlg->mutex);
 
     return PJ_SUCCESS;
@@ -663,7 +671,7 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
      * Create the request by cloning from the headers in the
      * dialog.
      */
-    status = pjsip_endpt_create_request_from_hdr(pjsip_ua_get_endpt(dlg->ua),
+    status = pjsip_endpt_create_request_from_hdr(dlg->endpt,
 						 method,
 						 dlg->target,
 						 dlg->local.info,
@@ -809,15 +817,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	    goto on_error;
 	}
 
-	*p_tsx = tsx;
+	if (p_tsx)
+	    *p_tsx = tsx;
 
     } else {
-	status = pjsip_endpt_send_request_stateless(
-		    pjsip_ua_get_endpt(dlg->ua), tdata, NULL, NULL);
+	status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata, 
+						    NULL, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	*p_tsx = NULL;
+	if (p_tsx)
+	    *p_tsx = NULL;
     }
 
     /* Unlock dialog. */
@@ -832,7 +842,8 @@ on_error:
     /* Whatever happen delete the message. */
     pjsip_tx_data_dec_ref( tdata );
 
-    *p_tsx = NULL;
+    if (p_tsx)
+	*p_tsx = NULL;
     return status;
 }
 
@@ -852,7 +863,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
     int st_class;
 
     /* Create generic response. */
-    status = pjsip_endpt_create_response(pjsip_ua_get_endpt(dlg->ua),
+    status = pjsip_endpt_create_response(dlg->endpt,
 					 rdata, st_code, st_text, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
@@ -914,7 +925,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 	/* Add Allow header in 2xx and 405 response. */
 	if (st_class==2 || st_code==405) {
 	    const pjsip_hdr *c_hdr;
-	    c_hdr = pjsip_endpt_get_capability(pjsip_ua_get_endpt(dlg->ua),
+	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
 					       PJSIP_H_ALLOW, NULL);
 	    if (c_hdr) {
 		pjsip_hdr *hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
@@ -925,7 +936,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 	/* Add Supported header in 2xx response. */
 	if (st_class==2) {
 	    const pjsip_hdr *c_hdr;
-	    c_hdr = pjsip_endpt_get_capability(pjsip_ua_get_endpt(dlg->ua),
+	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
 					       PJSIP_H_SUPPORTED, NULL);
 	    if (c_hdr) {
 		pjsip_hdr *hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
@@ -1056,7 +1067,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 * Respond statelessly with 500 (Internal Server Error)
 	 */
 	pj_mutex_unlock(dlg->mutex);
-	pjsip_endpt_respond_stateless(pjsip_ua_get_endpt(dlg->ua),
+	pjsip_endpt_respond_stateless(dlg->endpt,
 				      rdata, 500, NULL, NULL, NULL);
 	return;
     }
@@ -1094,7 +1105,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 		  "%s is unhandled by dialog usages. "
 		  "Dialog will response with 500 (Internal Server Error)",
 		  pjsip_rx_data_get_info(rdata)));
-	status = pjsip_endpt_create_response(pjsip_ua_get_endpt(dlg->ua), 
+	status = pjsip_endpt_create_response(dlg->endpt, 
 					     rdata, 
 					     PJSIP_SC_INTERNAL_SERVER_ERROR, 
 					     NULL, &tdata);
@@ -1125,6 +1136,9 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
 
+    /* Check that rdata already has dialog in mod_data. */
+    pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
+
     /* Update the remote tag, if none is specified yet. */
     if (dlg->remote.info->tag.slen == 0 && rdata->msg_info.to->tag.slen != 0) {
 
@@ -1133,8 +1147,19 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	/* No need to update remote's tag_hval since its never used. */
     }
 
-    /* Check that rdata already has dialog in mod_data. */
-    pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
+    /* Update remote target when receiving certain response messages. */
+    if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
+	rdata->msg_info.msg->line.status.code/100 == 2)
+    {
+	pjsip_contact_hdr *contact;
+
+	contact = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
+				     NULL);
+	if (contact) {
+	    dlg->remote.contact = pjsip_hdr_clone(dlg->pool, contact);
+	    dlg->target = dlg->remote.contact->uri;
+	}
+    }
 
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
@@ -1185,6 +1210,9 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED && dlg->tsx_count == 0 && 
 	dlg->sess_count == 0) 
     {
+	/* Unregister this dialog from the transaction. */
+	tsx->mod_data[dlg->ua->id] = NULL;
+
 	/* Time to destroy dialog. */
 	unregister_and_destroy_dialog(dlg);
 

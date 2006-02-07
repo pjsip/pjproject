@@ -16,13 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-
 #ifndef __PJSIP_UA_H__
 #define __PJSIP_UA_H__
 
-#include <pjsip_mod_ua/sip_dialog.h>
-#include <pjsip_mod_ua/sip_reg.h>
-#include <pjsip_mod_ua/sip_ua.h>
+#include <pjsip-ua/sip_inv.h>
 
 #endif	/* __PJSIP_UA_H__ */
 

@@ -61,6 +61,7 @@ struct pjsip_dialog
     pj_pool_t	       *pool;	    /**< Dialog's pool.			    */
     pj_mutex_t	       *mutex;	    /**< Dialog's mutex.		    */
     pjsip_user_agent   *ua;	    /**< User agent instance.		    */
+    pjsip_endpoint     *endpt;	    /**< Endpoint instance.		    */
 
     /* The dialog set. */
     void	       *dlg_set;

@@ -1821,6 +1821,58 @@ PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_init( pj_pool_t *pool,
  * @}
  */
 
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * @defgroup PJSIP_MSG_HDR_WARNING Header Field: Warning
+ * @brief Warning header field.
+ * @ingroup PJSIP_MSG
+ * @{
+ */
+/**
+ * SIP Warning header.
+ * In this version, Warning header is just a typedef for generic string 
+ * header.
+ */
+typedef pjsip_generic_string_hdr pjsip_warning_hdr;
+
+/**
+ * Create a warning header with the specified contents.
+ *
+ * @param pool	    Pool to allocate memory from.
+ * @param code	    Warning code, 300-399.
+ * @param host	    The host portion of the Warning header.
+ * @param text	    The warning text, which MUST not be quoted with
+ *		    double quote.
+ *
+ * @return	    The Warning header field.
+ */
+PJ_DECL(pjsip_warning_hdr*) pjsip_warning_hdr_create( pj_pool_t *pool,
+						      int code,
+						      const pj_str_t *host,
+						      const pj_str_t *text);
+
+/**
+ * Create a warning header and initialize the contents from the error
+ * message for the specified status code. The warning code will be
+ * set to 399.
+ *
+ * @param pool	    Pool to allocate memory from.
+ * @param host	    The host portion of the Warning header.
+ * @param status    The error status code, which error text will be
+ *		    put in as the Warning text.
+ *
+ * @return	    The Warning header field.
+ */
+PJ_DECL(pjsip_warning_hdr*) 
+pjsip_warning_hdr_create_from_status( pj_pool_t *pool,
+				      const pj_str_t *host,
+				      pj_status_t status);
+
+/**
+ * @}
+ */
+
 /**
  * @bug Once a header is put in the message, the header CAN NOT be put in
  *      other list. Solution:
@@ -1953,11 +2005,6 @@ typedef pjsip_generic_string_hdr pjsip_user_agent_hdr;
 /** Create User-Agent header. */
 #define pjsip_user_agent_hdr_create pjsip_generic_string_hdr_create
 
-/** Warning header. */
-typedef pjsip_generic_string_hdr pjsip_warning_hdr;
-
-/** Create Warning header. */
-#define pjsip_warning_hdr_create pjsip_generic_string_hdr_create
 
 /**
  * @}
