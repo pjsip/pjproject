@@ -35,8 +35,10 @@
 #include <pjlib.h>
 
 
+PJ_BEGIN_DECL
+
 /* PJSUA application variables. */
-extern struct pjsua_t
+struct pjsua_t
 {
     /* Control: */
 
@@ -109,8 +111,9 @@ extern struct pjsua_t
     unsigned	     log_decor;	    /**< Log decoration.		*/
     char	    *log_filename;  /**< Log filename.			*/
 
-} pjsua;
+};
 
+extern struct pjsua_t pjsua;
 
 /*****************************************************************************
  * PJSUA API.
@@ -192,5 +195,7 @@ void pjsua_regc_update(pj_bool_t renew);
  */
 void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
 
+
+PJ_END_DECL
 
 #endif	/* __PJSUA_H__ */

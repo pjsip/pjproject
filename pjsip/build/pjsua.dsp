@@ -95,13 +95,6 @@ SOURCE=..\src\pjsua\getopt.c
 # Begin Source File
 
 SOURCE=..\src\pjsua\main.c
-
-!IF  "$(CFG)" == "pjsua - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsua - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -123,7 +116,7 @@ SOURCE=..\src\pjsua\misc.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsua\pjsua.c
+SOURCE=..\src\pjsua\pjsua_core.c
 # End Source File
 # Begin Source File
 

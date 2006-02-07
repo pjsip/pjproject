@@ -71,6 +71,7 @@ static void ui_help(void)
     puts("  h    Hangup current call");
     puts("  q    Quit");
     puts("");
+    fflush(stdout);
 }
 
 static void ui_console_main(void)
@@ -100,16 +101,18 @@ static void ui_console_main(void)
 	case 'm':
 	    if (inv_session != NULL) {
 		puts("Can not make call while another one is in progress");
+		fflush(stdout);
 		continue;
 	    }
 
 #if 1
-	    printf("Enter URL to call: ");
+	    printf("Enter URL to call: "); fflush(stdout);
 	    fgets(buf, sizeof(buf), stdin);
 
 	    if (buf[0]=='\r' || buf[0]=='\n') {
 		/* Cancelled. */
 		puts("<cancelled>");
+		fflush(stdout);
 		continue;
 	    }
 
@@ -133,6 +136,7 @@ static void ui_console_main(void)
 
 	    if (inv_session == NULL) {
 		puts("No current call");
+		fflush(stdout);
 		continue;
 
 	    } else {
@@ -384,6 +388,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
     fhnd = fopen(filename, "rt");
     if (!fhnd) {
 	printf("Unable to open config file %s\n", filename);
+	fflush(stdout);
 	return -1;
     }
 
@@ -416,6 +421,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 
     if (argc == MAX_ARGS && (i!=*app_argc || !feof(fhnd))) {
 	printf("Too many arguments specified in cmd line/config file\n");
+	fflush(stdout);
 	fclose(fhnd);
 	return -1;
     }

@@ -54,7 +54,7 @@ export PJSIP_UA_CFLAGS += $(_CFLAGS)
 #
 export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			main.o pjsua_reg.o pjsua.o
+			main.o pjsua_reg.o pjsua_core.o
 export PJSUA_CFLAGS += $(_CFLAGS)
 export PJSUA_LDFLAGS += $(_LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
