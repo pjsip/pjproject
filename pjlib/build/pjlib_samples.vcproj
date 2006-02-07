@@ -3,10 +3,10 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib_samples"
-	SccProjectName="&quot;$/pjproject-0.3/pjlib/build&quot;, EJDAAAAA"
+	SccProjectName=""
 	SccAuxPath=""
-	SccLocalPath="."
-	SccProvider="MSSCCI:Microsoft Visual SourceSafe"
+	SccLocalPath=""
+	SccProvider=""
 	Keyword="MakeFileProj">
 	<Platforms>
 		<Platform
@@ -15,28 +15,28 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc7-debug"
-			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc7-debug"
+			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc6-debug"
+			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc6-debug"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug VC=vc7"
-				ReBuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug VC=vc7 /a"
+				BuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug"
+				ReBuildCommandLine="nmake /nologo /f &quot;pjlib_samples.mak&quot; MODE=debug /a"
 				Output="pjlib samples"/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc7-release"
-			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc7-release"
+			OutputDirectory=".\./output/pjlib-samples-i386-win32-vc6-release"
+			IntermediateDirectory=".\./output/pjlib-samples-i386-win32-vc6-release"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release VC=vc7"
-				ReBuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release VC=vc7 /a"
+				BuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release"
+				ReBuildCommandLine="nmake /f &quot;pjlib_samples.mak&quot; MODE=release /a"
 				Output="pjlib samples"/>
 		</Configuration>
 	</Configurations>

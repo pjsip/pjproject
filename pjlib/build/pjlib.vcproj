@@ -3,10 +3,10 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib"
-	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
+	SccProjectName=""
 	SccAuxPath=""
-	SccLocalPath="."
-	SccProvider="MSSCCI:Microsoft Visual SourceSafe">
+	SccLocalPath=""
+	SccProvider="">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -14,8 +14,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\pjlib-i386-win32-vc7-debug"
-			IntermediateDirectory=".\output\pjlib-i386-win32-vc7-debug"
+			OutputDirectory=".\output\pjlib-i386-win32-vc6-debug"
+			IntermediateDirectory=".\output\pjlib-i386-win32-vc6-debug"
 			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -27,10 +27,10 @@
 				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc7-debug/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc7-debug/"
-				ObjectFile=".\output\pjlib-i386-win32-vc7-debug/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc7-debug/"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc6-debug/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc6-debug/"
+				ObjectFile=".\output\pjlib-i386-win32-vc6-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc6-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -40,7 +40,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc7-debug.lib"
+				OutputFile="../lib/pjlib-i386-win32-vc6-debug.lib"
 				SuppressStartupBanner="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -65,8 +65,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="\.output\pjlib-i386-win32-vc7-release"
-			IntermediateDirectory=".\output\pjlib-i386-win32-vc7-release"
+			OutputDirectory="\.output\pjlib-i386-win32-vc6-release"
+			IntermediateDirectory=".\output\pjlib-i386-win32-vc6-release"
 			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -80,10 +80,10 @@
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc7-release/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc7-release/"
-				ObjectFile=".\output\pjlib-i386-win32-vc7-release/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc7-release/"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc6-release/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc6-release/"
+				ObjectFile=".\output\pjlib-i386-win32-vc6-release/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc6-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -93,7 +93,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc7-release.lib"
+				OutputFile="../lib/pjlib-i386-win32-vc6-release.lib"
 				SuppressStartupBanner="TRUE"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -948,6 +948,25 @@
 			</File>
 			<File
 				RelativePath="..\src\pj\unicode_win32.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
 			</File>
 			<Filter
 				Name="Other Targets"

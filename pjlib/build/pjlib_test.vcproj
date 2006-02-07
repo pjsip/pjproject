@@ -3,10 +3,10 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pjlib_test"
-	SccProjectName="&quot;$/pjproject/pjlib/build&quot;, UIAAAAAA"
+	SccProjectName=""
 	SccAuxPath=""
-	SccLocalPath="."
-	SccProvider="MSSCCI:Microsoft Visual SourceSafe">
+	SccLocalPath=""
+	SccProvider="">
 	<Platforms>
 		<Platform
 			Name="Win32"/>
@@ -14,8 +14,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\pjlib-test-i386-win32-vc7-debug"
-			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc7-debug"
+			OutputDirectory=".\output\pjlib-test-i386-win32-vc6-debug"
+			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc6-debug"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -28,10 +28,10 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc7-debug/pjlib_test.pch"
-				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc7-debug/"
-				ObjectFile=".\output\pjlib-test-i386-win32-vc7-debug/"
-				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc7-debug/"
+				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc6-debug/pjlib_test.pch"
+				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc6-debug/"
+				ObjectFile=".\output\pjlib-test-i386-win32-vc6-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc6-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -42,16 +42,16 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="../bin/pjlib-test-i386-win32-vc7-debug.exe"
+				OutputFile="../bin/pjlib-test-i386-win32-vc6-debug.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\output\pjlib-test-i386-win32-vc7-debug/pjlib-test-i386-win32-vc7-debug.pdb"
+				ProgramDatabaseFile=".\output\pjlib-test-i386-win32-vc6-debug/pjlib-test-i386-win32-vc6-debug.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\output\pjlib-test-i386-win32-vc7-debug/pjlib_test.tlb"
+				TypeLibraryName=".\output\pjlib-test-i386-win32-vc6-debug/pjlib_test.tlb"
 				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
@@ -76,8 +76,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\pjlib-test-i386-win32-vc7-release"
-			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc7-release"
+			OutputDirectory=".\output\pjlib-test-i386-win32-vc6-release"
+			IntermediateDirectory=".\output\pjlib-test-i386-win32-vc6-release"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -92,10 +92,10 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc7-release/pjlib_test.pch"
-				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc7-release/"
-				ObjectFile=".\output\pjlib-test-i386-win32-vc7-release/"
-				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc7-release/"
+				PrecompiledHeaderFile=".\output\pjlib-test-i386-win32-vc6-release/pjlib_test.pch"
+				AssemblerListingLocation=".\output\pjlib-test-i386-win32-vc6-release/"
+				ObjectFile=".\output\pjlib-test-i386-win32-vc6-release/"
+				ProgramDataBaseFileName=".\output\pjlib-test-i386-win32-vc6-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="TRUE"
@@ -106,7 +106,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="../bin/pjlib-test-i386-win32-vc7-release.exe"
+				OutputFile="../bin/pjlib-test-i386-win32-vc6-release.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				GenerateDebugInformation="TRUE"
@@ -114,7 +114,7 @@
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\output\pjlib-test-i386-win32-vc7-release/pjlib_test.tlb"
+				TypeLibraryName=".\output\pjlib-test-i386-win32-vc6-release/pjlib_test.tlb"
 				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
@@ -367,7 +367,8 @@
 			<File
 				RelativePath="..\src\pjlib-test\main.c">
 				<FileConfiguration
-					Name="Debug|Win32">
+					Name="Debug|Win32"
+					ExcludedFromBuild="TRUE">
 					<Tool
 						Name="VCCLCompilerTool"
 						Optimization="0"
@@ -402,6 +403,28 @@
 				<FileConfiguration
 					Name="Release|Win32"
 					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BrowseInformation="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-test\main_win32.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
 					<Tool
 						Name="VCCLCompilerTool"
 						Optimization="2"

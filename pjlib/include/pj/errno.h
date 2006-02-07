@@ -64,6 +64,11 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Guidelines on error message length.
+ */
+#define PJ_ERR_MSG_SIZE  64
+
+/**
  * Get the last platform error/status, folded into pj_status_t.
  * @return	OS dependent error code, folded into pj_status_t.
  * @remark	This function gets errno, or calls GetLastError() function and
