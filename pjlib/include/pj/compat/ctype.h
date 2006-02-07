@@ -40,7 +40,9 @@
 #  define toupper(c)	    (((c) >= 'a' && (c) <= 'z') ? (c)-('a'-'A') : (c))
 #endif
 
-#define isblank(c)	    (c==' ' || c=='\t')
+#ifndef isblank
+#   define isblank(c)	    (c==' ' || c=='\t')
+#endif
 
 
 #endif	/* __PJ_COMPAT_CTYPE_H__ */
