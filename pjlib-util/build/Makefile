@@ -18,7 +18,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 		   $(LDFLAGS) 
 
 ###############################################################################
-# Defines for building PJLIB library
+# Defines for building PJLIB-UTIL library
 #
 export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
