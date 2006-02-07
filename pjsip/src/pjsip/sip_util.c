@@ -441,10 +441,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
     const pjsip_cid_hdr *cid_hdr;
     const pjsip_cseq_hdr *cseq_hdr;
     const pjsip_hdr *hdr;
+    pjsip_hdr *via;
     pjsip_to_hdr *to;
     pj_status_t status;
 
-    /* rdata must be a final response. */
+    /* rdata must be a non-2xx final response. */
     pj_assert(rdata->msg_info.msg->type==PJSIP_RESPONSE_MSG &&
 	      rdata->msg_info.msg->line.status.code >= 300);
 
@@ -487,11 +488,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
     to = (pjsip_to_hdr*) pjsip_msg_find_hdr(ack->msg, PJSIP_H_TO, NULL);
     pj_strdup(ack->pool, &to->tag, &rdata->msg_info.to->tag);
 
+
+    /* Clear Via headers in the new request. */
+    while ((via=pjsip_msg_find_hdr(ack->msg, PJSIP_H_VIA, NULL)) != NULL)
+	pj_list_erase(via);
+
     /* Must contain single Via, just as the original INVITE. */
     hdr = pjsip_msg_find_hdr( invite_msg, PJSIP_H_VIA, NULL);
-    if (hdr) {
-        pjsip_msg_insert_first_hdr( ack->msg, pjsip_hdr_clone(ack->pool,hdr) );
-    }
+    pjsip_msg_insert_first_hdr( ack->msg, pjsip_hdr_clone(ack->pool,hdr) );
 
     /* If the original INVITE has Route headers, those header fields MUST 
      * appear in the ACK.

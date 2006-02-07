@@ -617,15 +617,24 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     /* Check for forked response. 
      * Request will fork only for the initial INVITE request.
      */
-    if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
-	rdata->msg_info.cseq->cseq == dlg_set->dlg_list.next->local.first_cseq)
-    {
+
+    //This doesn't work when there is authentication challenge, since 
+    //first_cseq evaluation will yield false.
+    //if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+    //	rdata->msg_info.cseq->cseq == dlg_set->dlg_list.next->local.first_cseq)
+
+    if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
 	pj_str_t *to_tag = &rdata->msg_info.to->tag;
 
 	/* Must hold UA mutex before accessing dialog set. */
 	pj_mutex_lock(mod_ua.mutex);
 
 	dlg = dlg_set->dlg_list.next;
+
+	/* Forking handling is temporarily disabled. */
+	PJ_TODO(UA_LAYER_HANDLE_FORKING);
+
+#if 0
 	while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {
 
 	    /* If there is dialog with no remote tag (i.e. dialog has not
@@ -669,6 +678,7 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 	    }
 	}
+#endif
 
 	/* Done with the dialog set. */
 	pj_mutex_unlock(mod_ua.mutex);

@@ -2195,6 +2195,13 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	}
 
     } else if (tsx->status_code >= 300 && tsx->status_code <= 699) {
+
+
+#if 0
+	/* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
+	/*
+	 * This is the old code; it's broken for authentication.
+	 */
 	pj_time_val timeout;
         pj_status_t status;
 
@@ -2242,6 +2249,62 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	 */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
                        PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+
+	/* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
+#endif
+
+	/* New code, taken from 0.2.9.x branch */
+	pj_time_val timeout;
+	pjsip_tx_data *ack_tdata = NULL;
+
+	/* Stop timer B. */
+	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+
+	/* Generate ACK now (for INVITE) but send it later because
+	 * dialog need to use last_tx.
+	 */
+	if (tsx->method.id == PJSIP_INVITE_METHOD) {
+	    pj_status_t status;
+
+	    status = pjsip_endpt_create_ack( tsx->endpt, tsx->last_tx, 
+					     event->body.rx_msg.rdata,
+					     &ack_tdata);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+
+	/* Inform TU. */
+	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
+		       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata);
+
+	/* Generate and send ACK for INVITE. */
+	if (tsx->method.id == PJSIP_INVITE_METHOD) {
+	    pj_status_t status;
+
+	    status = tsx_send_msg( tsx, ack_tdata);
+
+	    if (ack_tdata != tsx->last_tx) {
+		pjsip_tx_data_dec_ref(tsx->last_tx);
+		tsx->last_tx = ack_tdata;
+		pjsip_tx_data_add_ref(ack_tdata);
+	    }
+
+	    if (status != PJ_SUCCESS) {
+		return status;
+	    }
+	}
+
+	/* Start Timer D with TD/T4 timer if unreliable transport is used. */
+	if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport) == 0) {
+	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+		timeout = td_timer_val;
+	    } else {
+		timeout = t4_timer_val;
+	    }
+	} else {
+	    timeout.sec = timeout.msec = 0;
+	}
+	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 
     } else {
 	// Shouldn't happen because there's no timer for this state.

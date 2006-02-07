@@ -23,8 +23,7 @@ struct pjsua pjsua;
 #define THIS_FILE   "pjsua.c"
 
 
-#define PJSUA_LOCAL_URI	    "<sip:bennylp@192.168.0.7>"
-#define PJSUA_CONTACT_URI   "<sip:bennylp@192.168.0.7>"
+#define PJSUA_LOCAL_URI	    "<sip:user@127.0.0.1>"
 
 static char *PJSUA_DUMMY_SDP_OFFER = 
 	    "v=0\r\n"
@@ -71,6 +70,10 @@ void pjsua_default(void)
     /* Default: do not use STUN: */
 
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
+
+    /* Default URIs: */
+
+    pjsua.local_uri = pj_str(PJSUA_LOCAL_URI);
 }
 
 
@@ -129,7 +132,7 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
  */
 static void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 {
-    ui_inv_on_state_changed(inv, e);
+    pjsua_ui_inv_on_state_changed(inv, e);
 }
 
 
@@ -396,46 +399,7 @@ static pj_status_t init_stack(void)
     }
 
 
-    /* Add UDP transport: */
-
-    {
-	/* Init the published name for the transport.
-         * Depending whether STUN is used, this may be the STUN mapped
-	 * address, or socket's bound address.
-	 */
-	pjsip_host_port addr_name;
-
-	addr_name.host.ptr = pj_inet_ntoa(pjsua.sip_sock_name.sin_addr);
-	addr_name.host.slen = pj_native_strlen(addr_name.host.ptr);
-	addr_name.port = pj_ntohs(pjsua.sip_sock_name.sin_port);
-
-	/* Create UDP transport from previously created UDP socket: */
-
-	status = pjsip_udp_transport_attach( pjsua.endpt, pjsua.sip_sock,
-					     &addr_name, 1, NULL);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Unable to start UDP transport", status);
-	    goto on_error;
-	}
-    }
-
-    /* Initialize local user info and contact: */
-
-    {
-	pj_strdup2(pjsua.pool, &pjsua.local_uri, PJSUA_LOCAL_URI);
-	pj_strdup2(pjsua.pool, &pjsua.contact_uri, PJSUA_CONTACT_URI);
-    }
-
-    /* Initialize global route_set: */
-
-    PJ_TODO(INIT_GLOBAL_ROUTE_SET);
-
-
-    /* Start registration: */
-
-    PJ_TODO(START_REGISTRATION);
-
-    /* Done? */
+    /* Done */
 
     return PJ_SUCCESS;
 
@@ -461,11 +425,11 @@ static int PJ_THREAD_FUNC pjsua_worker_thread(void *arg)
 
 /*
  * Initialize pjsua application.
- * This will start the registration process, if registration is configured.
+ * This will initialize all libraries, create endpoint instance, and register
+ * pjsip modules.
  */
 pj_status_t pjsua_init(void)
 {
-    int i;  /* Must be signed */
     pj_status_t status;
 
     /* Init PJLIB logging: */
@@ -491,6 +455,31 @@ pj_status_t pjsua_init(void)
     pjsua.pool = pj_pool_create(&pjsua.cp.factory, "pjsua", 4000, 4000, NULL);
 
 
+    /* Init PJSIP and all the modules: */
+
+    status = init_stack();
+    if (status != PJ_SUCCESS) {
+	pj_caching_pool_destroy(&pjsua.cp);
+	pjsua_perror("Stack initialization has returned error", status);
+	return status;
+    }
+
+    /* Done. */
+    return PJ_SUCCESS;
+}
+
+
+
+/*
+ * Start pjsua stack.
+ * This will start the registration process, if registration is configured.
+ */
+pj_status_t pjsua_start(void)
+{
+    int i;  /* Must be signed */
+    pjsip_transport *udp_transport;
+    pj_status_t status;
+
     /* Init sockets (STUN etc): */
 
     status = init_sockets();
@@ -501,14 +490,106 @@ pj_status_t pjsua_init(void)
     }
 
 
-    /* Init PJSIP and all the modules: */
+    /* Add UDP transport: */
 
-    status = init_stack();
-    if (status != PJ_SUCCESS) {
-	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror("Stack initialization has returned error", status);
-	return status;
+    {
+	/* Init the published name for the transport.
+         * Depending whether STUN is used, this may be the STUN mapped
+	 * address, or socket's bound address.
+	 */
+	pjsip_host_port addr_name;
+
+	addr_name.host.ptr = pj_inet_ntoa(pjsua.sip_sock_name.sin_addr);
+	addr_name.host.slen = pj_native_strlen(addr_name.host.ptr);
+	addr_name.port = pj_ntohs(pjsua.sip_sock_name.sin_port);
+
+	/* Create UDP transport from previously created UDP socket: */
+
+	status = pjsip_udp_transport_attach( pjsua.endpt, pjsua.sip_sock,
+					     &addr_name, 1, 
+					     &udp_transport);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror("Unable to start UDP transport", status);
+	    return status;
+	}
     }
+
+    /* Initialize Contact URI, if one is not specified: */
+
+    if (pjsua.contact_uri.slen == 0 && pjsua.local_uri.slen) {
+
+	pjsip_uri *uri;
+	pjsip_sip_uri *sip_uri;
+	char contact[128];
+	int len;
+
+	/* The local Contact is the username@ip-addr, where
+	 *  - username is taken from the local URI,
+	 *  - ip-addr in UDP transport's address name (which may have been
+	 *    resolved from STUN.
+	 */
+	
+	/* Need to parse local_uri to get the elements: */
+
+	uri = pjsip_parse_uri(pjsua.pool, pjsua.local_uri.ptr, 
+			      pjsua.local_uri.slen, 0);
+	if (uri == NULL) {
+	    pjsua_perror("Invalid local URI", PJSIP_EINVALIDURI);
+	    return PJSIP_EINVALIDURI;
+	}
+
+
+	/* Local URI MUST be a SIP or SIPS: */
+
+	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri)) {
+	    pjsua_perror("Invalid local URI", PJSIP_EINVALIDSCHEME);
+	    return PJSIP_EINVALIDSCHEME;
+	}
+
+
+	/* Get the SIP URI object: */
+
+	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+
+	
+	/* Build temporary contact string. */
+
+	if (sip_uri->user.slen) {
+
+	    /* With the user part. */
+	    len = pj_snprintf(contact, sizeof(contact),
+			      "<sip:%.*s@%.*s:%d>",
+			      sip_uri->user.slen,
+			      sip_uri->user.ptr,
+			      udp_transport->local_name.host.slen,
+			      udp_transport->local_name.host.ptr,
+			      udp_transport->local_name.port);
+	} else {
+
+	    /* Without user part */
+
+	    len = pj_snprintf(contact, sizeof(contact),
+			      "<sip:%.*s:%d>",
+			      udp_transport->local_name.host.slen,
+			      udp_transport->local_name.host.ptr,
+			      udp_transport->local_name.port);
+	}
+
+	if (len < 1 || len >= sizeof(contact)) {
+	    pjsua_perror("Invalid Contact", PJSIP_EURITOOLONG);
+	    return PJSIP_EURITOOLONG;
+	}
+
+	/* Duplicate Contact uri. */
+
+	pj_strdup2(pjsua.pool, &pjsua.contact_uri, contact);
+
+    }
+
+    /* Initialize global route_set: */
+
+    PJ_TODO(INIT_GLOBAL_ROUTE_SET);
+
 
     /* Create worker thread(s), if required: */
 
@@ -526,7 +607,21 @@ pj_status_t pjsua_init(void)
 	}
     }
 
-    /* Done. */
+    /* Start registration: */
+
+    /* Create client registration session: */
+
+    status = pjsua_regc_init();
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Perform registration, if required. */
+    if (pjsua.regc) {
+	pjsua_regc_update(1);
+    }
+
+
+
     return PJ_SUCCESS;
 }
 
@@ -537,6 +632,16 @@ pj_status_t pjsua_init(void)
 pj_status_t pjsua_destroy(void)
 {
     int i;
+
+    /* Unregister, if required: */
+    if (pjsua.regc) {
+
+	pjsua_regc_update(0);
+
+	/* Wait for some time to allow unregistration to complete: */
+
+	pj_thread_sleep(500);
+    }
 
     /* Signal threads to quit: */
 
@@ -610,9 +715,14 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     }
 
 
+    /* Set dialog Route-Set: */
+
+    PJ_TODO(INIT_DIALOG_ROUTE_SET);
+
     /* Set credentials: */
 
-    PJ_TODO(SET_DIALOG_CREDENTIALS);
+    pjsip_auth_clt_set_credentials( &dlg->auth_sess, pjsua.cred_count, 
+				    pjsua.cred_info);
 
 
     /* Create initial INVITE: */

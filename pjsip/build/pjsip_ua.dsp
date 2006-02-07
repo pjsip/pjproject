@@ -97,8 +97,6 @@ SOURCE="..\src\pjsip-ua\sip_reg.c"
 
 !ELSEIF  "$(CFG)" == "pjsip_ua - Win32 Debug"
 
-# PROP Exclude_From_Build 1
-
 !ENDIF 
 
 # End Source File
@@ -106,6 +104,10 @@ SOURCE="..\src\pjsip-ua\sip_reg.c"
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=..\include\pjsip_ua.h
+# End Source File
 # Begin Source File
 
 SOURCE="..\include\pjsip-ua\sip_inv.h"

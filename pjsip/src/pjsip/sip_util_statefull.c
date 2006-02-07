@@ -21,50 +21,56 @@
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_event.h>
+#include <pjsip/sip_errno.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
 
-struct aux_tsx_data
+struct tsx_data
 {
     void *token;
-    void (*cb)(void*,pjsip_event*);
+    void (*cb)(void*, pjsip_event*);
 };
 
-static void aux_tsx_handler( pjsip_transaction *tsx, pjsip_event *event );
+static void mod_util_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
-pjsip_module aux_tsx_module = 
+/* This module will be registered in pjsip_endpt.c */
+
+pjsip_module mod_stateful_util = 
 {
-    NULL, NULL,				/* prev and next	*/
-    { "Aux-Tsx", 7},			/* Name.		*/
-    -1,					/* Id		*/
-    PJSIP_MOD_PRIORITY_APPLICATION-1,   /* Priority		*/
-    NULL,				/* User data.	*/
-    0,					/* Number of methods supported (=0). */
-    { 0 },				/* Array of methods (none) */
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    NULL,				/* on_rx_request()	*/
-    NULL,				/* on_rx_response()	*/
-    &aux_tsx_handler,			/* tsx_handler()	*/
+    NULL, NULL,			    /* prev, next.			*/
+    { "mod-stateful-util", 17 },    /* Name.				*/
+    -1,				    /* Id				*/
+    PJSIP_MOD_PRIORITY_APPLICATION, /* Priority				*/
+    NULL,			    /* User data.			*/
+    NULL,			    /* load()				*/
+    NULL,			    /* start()				*/
+    NULL,			    /* stop()				*/
+    NULL,			    /* unload()				*/
+    NULL,			    /* on_rx_request()			*/
+    NULL,			    /* on_rx_response()			*/
+    NULL,			    /* on_tx_request.			*/
+    NULL,			    /* on_tx_response()			*/
+    &mod_util_on_tsx_state,	    /* on_tsx_state()			*/
 };
 
-static void aux_tsx_handler( pjsip_transaction *tsx, pjsip_event *event )
+static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 {
-    struct aux_tsx_data *tsx_data;
+    struct tsx_data *tsx_data;
 
     if (event->type != PJSIP_EVENT_TSX_STATE)
 	return;
-    if (tsx->module_data[aux_tsx_module.id] == NULL)
+
+    tsx_data = tsx->mod_data[mod_stateful_util.id];
+    if (tsx_data == NULL)
 	return;
+
     if (tsx->status_code < 200)
 	return;
 
     /* Call the callback, if any, and prevent the callback to be called again
      * by clearing the transaction's module_data.
      */
-    tsx_data = tsx->module_data[aux_tsx_module.id];
-    tsx->module_data[aux_tsx_module.id] = NULL;
+    tsx->mod_data[mod_stateful_util.id] = NULL;
 
     if (tsx_data->cb) {
 	(*tsx_data->cb)(tsx_data->token, event);
@@ -79,30 +85,24 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 					       void (*cb)(void*,pjsip_event*))
 {
     pjsip_transaction *tsx;
-    struct aux_tsx_data *tsx_data;
+    struct tsx_data *tsx_data;
     pj_status_t status;
 
-    status = pjsip_endpt_create_tsx(endpt, &tsx);
-    if (!tsx) {
+    PJ_ASSERT_RETURN(endpt && tdata && (timeout==-1 || timeout>0), PJ_EINVAL);
+
+    status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
+    if (status != PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);
-	return -1;
+	return status;
     }
 
-    tsx_data = pj_pool_alloc(tsx->pool, sizeof(struct aux_tsx_data));
+    tsx_data = pj_pool_alloc(tsx->pool, sizeof(struct tsx_data));
     tsx_data->token = token;
     tsx_data->cb = cb;
-    tsx->module_data[aux_tsx_module.id] = tsx_data;
+    tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
-    if (pjsip_tsx_init_uac(tsx, tdata) != 0) {
-	pjsip_endpt_destroy_tsx(endpt, tsx);
-	pjsip_tx_data_dec_ref(tdata);
-	return -1;
-    }
+    PJ_TODO(IMPLEMENT_TIMEOUT_FOR_SEND_REQUEST);
 
-    pjsip_endpt_register_tsx(endpt, tsx);
-    pjsip_tx_data_invalidate_msg(tdata);
-    pjsip_tsx_on_tx_msg(tsx, tdata);
-    pjsip_tx_data_dec_ref(tdata);
-    return 0;
+    return pjsip_tsx_send_msg(tsx, NULL);
 }
 

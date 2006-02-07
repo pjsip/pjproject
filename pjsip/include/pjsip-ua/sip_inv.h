@@ -38,7 +38,6 @@ enum pjsip_inv_state
     PJSIP_INV_STATE_CONNECTING,	    /**< After 2xx is sent/received.	    */
     PJSIP_INV_STATE_CONFIRMED,	    /**< After ACK is sent/received.	    */
     PJSIP_INV_STATE_DISCONNECTED,   /**< Session is terminated.		    */
-    PJSIP_INV_STATE_TERMINATED,	    /**< Session will be destroyed soon.    */
 };
 
 /**

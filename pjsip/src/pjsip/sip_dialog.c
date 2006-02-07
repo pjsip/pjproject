@@ -697,10 +697,12 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)r);
     }
 
-    /* Copy authorization headers. */
-    status = pjsip_auth_clt_init_req( &dlg->auth_sess, tdata );
-    if (status != PJ_SUCCESS)
-	return status;
+    /* Copy authorization headers, if request is not ACK or CANCEL. */
+    if (method->id != PJSIP_ACK_METHOD && method->id != PJSIP_CANCEL_METHOD) {
+	status = pjsip_auth_clt_init_req( &dlg->auth_sess, tdata );
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Done. */
     *p_tdata = tdata;
@@ -1132,6 +1134,7 @@ on_return:
 void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     unsigned i;
+    int res_code;
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
@@ -1139,17 +1142,66 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     /* Check that rdata already has dialog in mod_data. */
     pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
 
-    /* Update the remote tag, if none is specified yet. */
-    if (dlg->remote.info->tag.slen == 0 && rdata->msg_info.to->tag.slen != 0) {
+    /* Update the remote tag if it is different. */
+    if (pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag) != 0) {
 
 	pj_strdup(dlg->pool, &dlg->remote.info->tag, &rdata->msg_info.to->tag);
 
 	/* No need to update remote's tag_hval since its never used. */
     }
 
-    /* Update remote target when receiving certain response messages. */
+    /* Keep the response's status code */
+    res_code = rdata->msg_info.msg->line.status.code;
+
+    /* When we receive response that establishes dialog, update the route
+     * set and dialog target.
+     */
+    if (!dlg->established && 
+	pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
+	(res_code > 100 && res_code < 300) &&
+	rdata->msg_info.to->tag.slen)
+    {
+	/* RFC 3271 Section 12.1.2:
+	 * The route set MUST be set to the list of URIs in the Record-Route
+	 * header field from the response, taken in reverse order and 
+	 * preserving all URI parameters. If no Record-Route header field 
+	 * is present in the response, the route set MUST be set to the 
+	 * empty set. This route set, even if empty, overrides any pre-existing
+	 * route set for future requests in this dialog.
+	 */
+	pjsip_hdr *hdr, *end_hdr;
+	pjsip_contact_hdr *contact;
+
+	pj_list_init(&dlg->route_set);
+
+	end_hdr = &rdata->msg_info.msg->hdr;
+	for (hdr=rdata->msg_info.msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
+	    if (hdr->type == PJSIP_H_RECORD_ROUTE) {
+		pjsip_route_hdr *r;
+		r = pjsip_hdr_clone(dlg->pool, hdr);
+		pjsip_routing_hdr_set_route(r);
+		pj_list_push_back(&dlg->route_set, r);
+	    }
+	}
+
+	/* The remote target MUST be set to the URI from the Contact header 
+	 * field of the response.
+	 */
+	contact = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
+				     NULL);
+	if (contact) {
+	    dlg->remote.contact = pjsip_hdr_clone(dlg->pool, contact);
+	    dlg->target = dlg->remote.contact->uri;
+	}
+
+	dlg->established = 1;
+    }
+
+    /* Update remote target (again) when receiving 2xx response messages
+     * that's defined as target refresh. 
+     */
     if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
-	rdata->msg_info.msg->line.status.code/100 == 2)
+	res_code/100 == 2)
     {
 	pjsip_contact_hdr *contact;
 
@@ -1160,6 +1212,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	    dlg->target = dlg->remote.contact->uri;
 	}
     }
+
 
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {

@@ -106,11 +106,26 @@ static pj_status_t mod_inv_unload(void)
 
 static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 {
+    pjsip_dialog *dlg;
+
     /* Ignore requests outside dialog */
-    if (pjsip_rdata_get_dlg(rdata) == NULL)
+    dlg = pjsip_rdata_get_dlg(rdata);
+    if (dlg == NULL)
 	return PJ_FALSE;
 
-    /* Ignore all. */
+    /* Answer BYE with 200/OK. */
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_BYE_METHOD) {
+	pj_status_t status;
+	pjsip_tx_data *tdata;
+
+	status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
+	if (status == PJ_SUCCESS)
+	    status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata),
+					     tdata);
+
+	return status==PJ_SUCCESS ? PJ_TRUE : PJ_FALSE;
+    }
+
     return PJ_FALSE;
 }
 
@@ -914,7 +929,6 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	break;
 
     case PJSIP_INV_STATE_DISCONNECTED:
-    case PJSIP_INV_STATE_TERMINATED:
 	/* No need to do anything. */
 	PJ_TODO(RETURN_A_PROPER_STATUS_CODE_HERE);
 	return PJ_EINVALIDOP;
@@ -1066,10 +1080,11 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
+    pj_status_t status;
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
     
-    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    if (tsx == s->invite_tsx) {
 
 	switch (tsx->state) {
 
@@ -1092,8 +1107,39 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 		pj_assert(0);
 		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
 
+	    } else if (tsx->status_code==401 || tsx->status_code==407) {
+
+		/* Handle authentication failure:
+		 * Resend the request with Authorization header.
+		 */
+		pjsip_tx_data *tdata;
+
+		status = pjsip_auth_clt_reinit_req(&s->dlg->auth_sess, 
+						   e->body.tsx_state.src.rdata,
+						   tsx->last_tx,
+						   &tdata);
+
+		if (status != PJ_SUCCESS) {
+
+		    /* Does not have proper credentials. 
+		     * End the session.
+		     */
+		    inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+
+		} else {
+
+		    /* Restart session. */
+		    s->state = PJSIP_INV_STATE_NULL;
+		    s->invite_tsx = NULL;
+
+		    /* Send the request. */
+		    status = pjsip_inv_send_msg(s, tdata, NULL );
+		}
+
 	    } else {
+
 		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+
 	    }
 	    break;
 
@@ -1115,7 +1161,6 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 
 	    } else  {
 		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
-		inv_set_state(s, PJSIP_INV_STATE_TERMINATED, e);
 	    }
 	    break;
 
@@ -1135,7 +1180,7 @@ static void inv_on_state_incoming( pjsip_inv_session *s, pjsip_event *e)
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    if (tsx == s->invite_tsx) {
 	switch (tsx->state) {
 	case PJSIP_TSX_STATE_PROCEEDING:
 	    if (tsx->status_code > 100)
@@ -1150,7 +1195,6 @@ static void inv_on_state_incoming( pjsip_inv_session *s, pjsip_event *e)
 	case PJSIP_TSX_STATE_TERMINATED:
 	    /* This happens on transport error */
 	    inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
-	    inv_set_state(s, PJSIP_INV_STATE_TERMINATED, e);
 	    break;
 	default:
 	    pj_assert(!"Unexpected state");
@@ -1167,7 +1211,7 @@ static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e)
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    if (tsx == s->invite_tsx) {
 
 	switch (tsx->state) {
 
@@ -1206,7 +1250,6 @@ static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e)
 
 	    } else  {
 		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
-		inv_set_state(s, PJSIP_INV_STATE_TERMINATED, e);
 	    }
 	    break;
 
@@ -1243,6 +1286,12 @@ static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e)
 	    }
 	}
 
+    } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+
+	/* Ignore previously failed INVITE transaction event
+	 * (e.g. when rejected with 401/407)
+	 */
+
     } else {
 	pj_assert(!"Unexpected transaction type");
     }
@@ -1255,7 +1304,7 @@ static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e)
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    if (tsx == s->invite_tsx) {
 
 	switch (tsx->state) {
 
@@ -1269,7 +1318,6 @@ static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e)
 	     */
 	    if (tsx->status_code/100 != 2) {
 		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
-		inv_set_state(s, PJSIP_INV_STATE_TERMINATED, e);
 	    }
 	    break;
 
@@ -1296,7 +1344,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *s, pjsip_event *e)
     if (tsx->method.id == PJSIP_BYE_METHOD) {
 	inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
 
-    } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    } else if (tsx == s->invite_tsx) {
 	
 	switch (tsx->state) {
 	case PJSIP_TSX_STATE_TERMINATED:
@@ -1307,6 +1355,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *s, pjsip_event *e)
 	    break;
 	}
 
+    } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+
+	/* Re-INVITE */
 
     } else {
 	pj_assert(!"Unexpected transaction type");

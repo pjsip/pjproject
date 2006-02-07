@@ -179,7 +179,6 @@ SOURCE=..\src\pjsip\sip_transaction.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_util_statefull.c
-# PROP Exclude_From_Build 1
 # End Source File
 # End Group
 # Begin Group "UA Layer (.c)"

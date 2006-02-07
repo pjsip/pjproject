@@ -26,7 +26,7 @@
 
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_auth.h>
-#include <pjsip_mod_ua/sip_ua.h>
+//#include <pjsip/sip_ua.h>
 
 PJ_BEGIN_DECL
 
@@ -85,11 +85,13 @@ PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
  * @param endpt	    Endpoint, used to allocate pool from.
  * @param token	    A data to be associated with the client registration struct.
  * @param cb	    Pointer to callback function to receive registration status.
+ * @param p_regc    Pointer to receive client registration structure.
  *
- * @return	    client registration structure.
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pjsip_regc*) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
-				        pjsip_regc_cb *cb);
+PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
+				        pjsip_regc_cb *cb, 
+					pjsip_regc **p_regc);
 
 
 /**
@@ -98,8 +100,10 @@ PJ_DECL(pjsip_regc*) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
  * has been received, and in this case, the callback won't be called.
  *
  * @param regc	    The client registration structure.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_regc_destroy(pjsip_regc *regc);
+PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
 
 /**
  * Get the memory pool associated with a registration client handle.
@@ -137,11 +141,11 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 /**
  * Set authentication credentials to use by this registration.
  *
- * @param dlg		The registration structure.
- * @param count		Number of credentials in the array.
- * @param cred		Array of credentials.
+ * @param dlg	    The registration structure.
+ * @param count	    Number of credentials in the array.
+ * @param cred	    Array of credentials.
  *
- * @return		Zero on success.
+ * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
 						 int count,
@@ -157,20 +161,24 @@ PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
  * @param regc	    The client registration structure.
  * @param autoreg   If non zero, the library will automatically refresh the
  *		    next registration until application unregister.
+ * @param p_tdata   Pointer to receive the REGISTER request.
  *
- * @return	    SIP REGISTER request.
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg);
+PJ_DECL(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
+					 pjsip_tx_data **p_tdata);
 
 
 /**
  * Create REGISTER request to unregister all contacts from server records.
  *
  * @param regc	    The client registration structure.
+ * @param p_tdata   Pointer to receive the REGISTER request.
  *
- * @return	    SIP REGISTER request.
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pjsip_tx_data*) pjsip_regc_unregister(pjsip_regc *regc);
+PJ_DECL(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
+					   pjsip_tx_data **p_tdata);
 
 /**
  * Update Contact details in the client registration structure.
@@ -201,8 +209,10 @@ PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
  *
  * @param regc	    The client registration structure.
  * @param tdata	    Transmit data.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
+PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
 
 
 PJ_END_DECL

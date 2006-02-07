@@ -20,6 +20,8 @@
 #define __PJSIP_UA_H__
 
 #include <pjsip-ua/sip_inv.h>
+#include <pjsip-ua/sip_regc.h>
+
 
 #endif	/* __PJSIP_UA_H__ */
 

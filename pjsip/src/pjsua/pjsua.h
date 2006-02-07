@@ -47,8 +47,28 @@ extern struct pjsua
     
 
     /* User info: */
+
     pj_str_t	     local_uri;	    /**< Uri in From: header.		*/
     pj_str_t	     contact_uri;   /**< Uri in Contact: header.	*/
+
+    /* Proxy URLs: */
+
+    pj_str_t	     proxy;
+    pj_str_t	     outbound_proxy;
+
+    /* Registration: */
+
+    pj_str_t	     registrar_uri;
+    pjsip_regc	    *regc;
+    pj_int32_t	     reg_timeout;
+    pj_timer_entry   regc_timer;
+
+
+    /* Authentication credentials: */
+
+    int		     cred_count;
+    pjsip_cred_info  cred_info[4];
+
 
     /* Threading: */
 
@@ -76,11 +96,18 @@ extern struct pjsua
     int		     stun_port2;
 
 
+    /* Media stack: */
+
+    pj_bool_t	     null_audio;
+    pj_med_mgr_t    *mmgr;
+
+
     /* Misc: */
     
     int		     log_level;	    /**< Logging verbosity.		*/
     int		     app_log_level; /**< stdout log verbosity.		*/
     unsigned	     log_decor;	    /**< Log decoration.		*/
+    char	    *log_filename;  /**< Log filename.			*/
 
 } pjsua;
 
@@ -102,10 +129,25 @@ void pjsua_perror(const char *title, pj_status_t status);
 
 
 /**
- * Initialize pjsua application.
- * This will start the registration process, if registration is configured.
+ * Initialize pjsua application. Application can call this before parsing
+ * application settings.
+ *
+ * This will initialize all libraries, create endpoint instance, and register
+ * pjsip modules. Transport will NOT be created however.
+ *
+ * Application may register module after calling this function.
  */
 pj_status_t pjsua_init(void);
+
+
+/**
+ * Start pjsua stack. Application calls this after pjsua settings has been
+ * configured.
+ *
+ * This will start the transport, worker threads (if any), and registration 
+ * process, if registration is configured.
+ */
+pj_status_t pjsua_start(void);
 
 
 /**
@@ -122,6 +164,24 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 
 
 /*****************************************************************************
+ * PJSUA Client Registration API.
+ */
+
+/**
+ * Initialize client registration session.
+ *
+ * @param app_callback	Optional callback
+ */
+pj_status_t pjsua_regc_init(void);
+
+/**
+ * Update registration or perform unregistration. If renew argument is zero,
+ * this will start unregistration process.
+ */
+void pjsua_regc_update(pj_bool_t renew);
+
+
+/*****************************************************************************
  * User Interface API.
  * The UI API specifies functions that will be called by pjsua upon
  * occurence of various events.
@@ -130,7 +190,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 /**
  * Notify UI when invite state has changed.
  */
-void ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
+void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
 
 
 #endif	/* __PJSUA_H__ */

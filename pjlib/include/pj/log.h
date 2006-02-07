@@ -112,6 +112,7 @@ typedef void pj_log_func(int level, const char *data, int len);
 
 /**
  * Default logging writer function used by front end logger function.
+ * This function will print the log message to stdout only.
  * Application normally should NOT need to call this function, but
  * rather use the PJ_LOG macro.
  *

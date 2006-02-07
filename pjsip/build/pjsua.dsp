@@ -100,6 +100,17 @@ SOURCE=..\src\pjsua\main.c
 
 !ELSEIF  "$(CFG)" == "pjsua - Win32 Debug"
 
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\main_old.c
+
+!IF  "$(CFG)" == "pjsua - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjsua - Win32 Debug"
+
 # PROP Exclude_From_Build 1
 
 !ENDIF 
@@ -110,6 +121,14 @@ SOURCE=..\src\pjsua\main.c
 SOURCE=..\src\pjsua\misc.c
 # PROP Exclude_From_Build 1
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\pjsua.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\pjsua_reg.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -117,6 +136,10 @@ SOURCE=..\src\pjsua\misc.c
 # Begin Source File
 
 SOURCE=..\src\pjsua\getopt.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\pjsua.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"

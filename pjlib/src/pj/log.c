@@ -73,7 +73,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 #if PJ_LOG_USE_STACK_BUFFER
     char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
-    int len;
+    int len, print_len;
 
     PJ_CHECK_STACK();
 
@@ -137,7 +137,12 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     len = pre - log_buffer;
 
     /* Print the whole message to the string log_buffer. */
-    len = len + vsnprintf(pre, sizeof(log_buffer)-len, format, marker);
+    print_len = vsnprintf(pre, sizeof(log_buffer)-len, format, marker);
+    if (print_len < 0) {
+	print_len = pj_snprintf(pre, sizeof(log_buffer)-len, 
+				"<logging error: msg too long>");
+    }
+    len = len + print_len;
     if (len > 0 && len < sizeof(log_buffer)-2) {
 	if (log_decor & PJ_LOG_HAS_CR) {
 	    log_buffer[len++] = '\r';

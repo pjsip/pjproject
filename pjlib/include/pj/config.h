@@ -175,10 +175,10 @@
  * This may affect the stack usage, depending whether PJ_LOG_USE_STACK_BUFFER
  * flag is set.
  *
- * Default: 800
+ * Default: 1500
  */
 #ifndef PJ_LOG_MAX_SIZE
-#  define PJ_LOG_MAX_SIZE	    800
+#  define PJ_LOG_MAX_SIZE	    1500
 #endif
 
 /**

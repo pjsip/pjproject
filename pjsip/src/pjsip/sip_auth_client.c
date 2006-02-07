@@ -394,11 +394,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 						    int cred_cnt,
 						    const pjsip_cred_info *c)
 {
-    PJ_ASSERT_RETURN(sess && cred_cnt && c, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
 
-    sess->cred_info = pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
-    pj_memcpy(sess->cred_info, c, cred_cnt * sizeof(*c));
-    sess->cred_cnt = cred_cnt;
+    if (cred_cnt == 0) {
+	sess->cred_cnt = 0;
+    } else {
+	sess->cred_info = pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
+	pj_memcpy(sess->cred_info, c, cred_cnt * sizeof(*c));
+	sess->cred_cnt = cred_cnt;
+    }
 
     return PJ_SUCCESS;
 }
@@ -521,6 +525,12 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
 		pj_list_insert_before( &cached_auth->cached_hdr, cached_hdr );
 	    }
 	}
+
+#	if defined(PJSIP_AUTH_AUTO_SEND_NEXT) && PJSIP_AUTH_AUTO_SEND_NEXT!=0
+	    if (hdr != cached_auth->last_chal) {
+		cached_auth->last_chal = pjsip_hdr_clone(sess_pool, hdr);
+	    }
+#	endif
     }
 #   endif
 

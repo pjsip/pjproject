@@ -67,6 +67,7 @@ struct pjsip_dialog
     void	       *dlg_set;
 
     /* Dialog's session properties. */
+    pj_bool_t		established;/**< Dialog is established?		    */
     pjsip_uri	       *target;	    /**< Current target.		    */
     pjsip_dlg_party     local;	    /**< Local party info.		    */
     pjsip_dlg_party     remote;	    /**< Remote party info.		    */
