@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#define _GNU_SOURCE
 #include <pj/os.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
@@ -34,10 +35,6 @@
 #include <unistd.h>	    // getpid()
 #include <errno.h>	    // errno
 
-#define __USE_GNU
-//uncomment this to get pthread_mutexattr_settype declaration.
-//unfortunately this causes syntax error in pthread.h! :(
-//#define __USE_UNIX98
 #include <pthread.h>
 
 #define THIS_FILE   "osunix"
@@ -998,6 +995,100 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 #endif
 }
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
+struct pj_rwmutex_t
+{
+    pthread_rwlock_t rwlock;
+};
+
+PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
+				      pj_rwmutex_t **p_mutex)
+{
+    pj_rwmutex_t *rwm;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(name);
+    
+    rwm = pj_pool_alloc(pool, sizeof(pj_rwmutex_t));
+    PJ_ASSERT_RETURN(rwm, PJ_ENOMEM);
+
+    status = pthread_rwlock_init(&rwm->rwlock, NULL);
+    if (status != 0)
+	return PJ_RETURN_OS_ERROR(status);
+
+    *p_mutex = rwm;
+    return PJ_SUCCESS;
+}
+
+/*
+ * Lock the mutex for reading.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_lock_read(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    status = pthread_rwlock_rdlock(&mutex->rwlock);
+    if (status != 0)
+	return PJ_RETURN_OS_ERROR(status);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Lock the mutex for writing.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_lock_write(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    status = pthread_rwlock_wrlock(&mutex->rwlock);
+    if (status != 0)
+	return PJ_RETURN_OS_ERROR(status);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Release read lock.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_unlock_read(pj_rwmutex_t *mutex)
+{
+    return pj_rwmutex_unlock_write(mutex);
+}
+
+/*
+ * Release write lock.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_unlock_write(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    status = pthread_rwlock_unlock(&mutex->rwlock);
+    if (status != 0)
+	return PJ_RETURN_OS_ERROR(status);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Destroy reader/writer mutex.
+ *
+ */
+PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
+{
+    pj_status_t status;
+
+    status = pthread_rwlock_destroy(&mutex->rwlock);
+    if (status != 0)
+	return PJ_RETURN_OS_ERROR(status);
+
+    return PJ_SUCCESS;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
