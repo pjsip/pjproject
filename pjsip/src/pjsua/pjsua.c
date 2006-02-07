@@ -18,10 +18,10 @@
  */
 #include "pjsua.h"
 
-struct pjsua pjsua;
 
 #define THIS_FILE   "pjsua.c"
 
+struct pjsua_t pjsua;
 
 #define PJSUA_LOCAL_URI	    "<sip:user@127.0.0.1>"
 

@@ -320,14 +320,14 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     if (msg->type == PJSIP_REQUEST_MSG) {
 	len = pj_snprintf(info_buf, sizeof(info_buf), 
 			  "Request msg %.*s/cseq=%d (%s)",
-			  msg->line.req.method.name.slen,
+			  (int)msg->line.req.method.name.slen,
 			  msg->line.req.method.name.ptr,
 			  cseq->cseq, obj_name);
     } else {
 	len = pj_snprintf(info_buf, sizeof(info_buf),
 			  "Response msg %d/%.*s/cseq=%d (%s)",
 			  msg->line.status.code,
-			  cseq->method.name.slen,
+			  (int)cseq->method.name.slen,
 			  cseq->method.name.ptr,
 			  cseq->cseq, obj_name);
     }
@@ -444,7 +444,7 @@ static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
  */
 PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr, 
 					   pjsip_tx_data *tdata,
-					   const pj_sockaddr *addr,
+					   const pj_sockaddr_t *addr,
 					   int addr_len,
 					   void *token,
 					   void (*cb)(void *token, 
@@ -465,7 +465,7 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     tdata->tp_info.transport = tr;
     pj_memcpy(&tdata->tp_info.dst_addr, addr, addr_len);
     tdata->tp_info.dst_addr_len = addr_len;
-    if (addr->sa_family == PJ_AF_INET) {
+    if (((pj_sockaddr*)addr)->sa_family == PJ_AF_INET) {
 	const char *str_addr;
 	str_addr = pj_inet_ntoa(((pj_sockaddr_in*)addr)->sin_addr);
 	pj_native_strcpy(tdata->tp_info.dst_name, str_addr);

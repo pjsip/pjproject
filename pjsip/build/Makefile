@@ -1,73 +1,113 @@
-include make-$(TARGET).inc
+include ../../build/common.mak
 
+RULES_MAK := ../../build/rules.mak
+
+PJLIB_LIB:=../../pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+
+export PJSIP_LIB:=../lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+export PJSIP_UA_LIB:=../lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+
+
+###############################################################################
+# Gather all flags.
+#
+export _CFLAGS 	:= -O2 -g $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
+		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
+		   $(CC_INC)../../pjlib-util/include $(CC_INC)../../pjmedia/include
+export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
+		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
+		   $(LDFLAGS) 
+
+
+###############################################################################
+# Defines for building PJSIP core library
+#
 export PJSIP_SRCDIR = ../src/pjsip
-export PJSIP_SRCEXT = .c
-export PJSIP_SRCS = $(PJSIP_SOURCES) sip_auth.c sip_auth_msg.c sip_auth_parser.c \
-		    sip_endpoint.c sip_misc.c sip_msg.c sip_parser.c \
-		    sip_resolve.c sip_transaction.c sip_transport.c sip_uri.c
+export PJSIP_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+		sip_errno.o sip_msg.o sip_parser.o sip_tel_uri.o sip_uri.o \
+		sip_endpoint.o sip_util.o sip_util_proxy.o \
+		sip_resolve.o sip_transport.o sip_transport_loop.o sip_transport_udp.o \
+		sip_auth_client.o sip_auth_msg.o sip_auth_parser.o sip_auth_server.o \
+		sip_transaction.o sip_util_statefull.o \
+		sip_dialog.o sip_ua_layer.o
+export PJSIP_CFLAGS += $(_CFLAGS)
 
-export PJSIP_UA_SRCDIR = ../src/pjsip_mod_ua
-export PJSIP_UA_SRCEXT = .c
-export PJSIP_UA_SRCS = $(PJSIP_UA_SOURCES) sip_dialog.c sip_reg.c sip_ua.c 
+###############################################################################
+# Defines for building PJSIP UA library
+#
+export PJSIP_UA_SRCDIR = ../src/pjsip-ua
+export PJSIP_UA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			sip_inv.o sip_reg.o
+export PJSIP_UA_CFLAGS += $(_CFLAGS)
 
-export PJSIP_SIMPLE_SRCDIR = ../src/pjsip_simple
-export PJSIP_SIMPLE_SRCEXT = .c
-export PJSIP_SIMPLE_SRCS = $(PJSIP_SIMPLE_SOURCES) event_notify.c event_notify_msg.c \
-		    messaging.c pidf.c presence.c xpidf.c
 
+###############################################################################
+# Defines for building PJSUA
+#
 export PJSUA_SRCDIR = ../src/pjsua
-export PJSUA_SRCEXT = .c
-export PJSUA_SRCS = $(PJSUA_SOURCES) main.c getopt.c
+export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			main.o pjsua_reg.o pjsua.o
+export PJSUA_CFLAGS += $(_CFLAGS)
+export PJSUA_LDFLAGS += $(_LDFLAGS)
+export PJSUA_EXE:=../bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
 
-export TARGET CCOUT CC AR RANLIB MV RM RMDIR MKDIR OBJEXT LD LDOUT 
 
-all: pjsip pjsip_ua pjsip_simple pjsua 
+
+export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
+###############################################################################
+# Main entry
+#
+#
+TARGETS := pjsip pjsip-ua pjsua
+
+all: $(TARGETS)
 
 doc:
 	cd .. && doxygen docs/doxygen.cfg
 
-print:
-	$(MAKE) -f make-rules APP=PJSIP app=pjsip print_lib
-	$(MAKE) -f make-rules APP=PJSIP_UA app=pjsip_ua print_lib
-	$(MAKE) -f make-rules APP=PJSIP_SIMPLE app=pjsip_simple print_lib
-	$(MAKE) -f make-rules APP=PJSUA app=pjsua print_bin
-	
-depend:
-	$(MAKE) -f make-rules APP=PJSIP app=pjsip depend
-	$(MAKE) -f make-rules APP=PJSUA app=pjsua depend
-	$(MAKE) -f make-rules APP=PJSIP_UA app=pjsip_ua depend
-	$(MAKE) -f make-rules APP=PJSIP_SIMPLE app=pjsip_simple depend
-	echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB)' >> .pjsua.depend
-
 dep: depend
+distclean: realclean
+
+.PHONY: dep depend pjsip pjsip-ua pjsua clean realclean distclean
 
 pjsip:
-	$(MAKE) -f make-rules APP=PJSIP app=pjsip $(PJSIP_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $(PJSIP_LIB)
 
-pjsua: 
-	$(MAKE) -f make-rules APP=PJSUA app=pjsua $(PJSUA_EXE)
+pjsip-ua:
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $(PJSIP_UA_LIB)
 
-pjsip_ua:
-	$(MAKE) -f make-rules APP=PJSIP_UA app=pjsip_ua $(PJSIP_UA_LIB)
+pjsua: $(PJSIP_LIB) $(PJSIP_UA_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
-pjsip_simple:
-	$(MAKE) -f make-rules APP=PJSIP_SIMPLE app=pjsip_simple $(PJSIP_SIMPLE_LIB)
+.PHONY: ../lib/pjsip.ko
+../lib/pjsip.ko:
+	echo Making $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 
-samples:
-	gcc $(_CFLAGS) -o ../bin/simpleua ../src/samples/simpleua.c $(_LDFLAGS) 
+.PHONY: ../lib/pjsip-ua.ko
+../lib/pjsip-ua.ko:
+	echo Making $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 
-clean:
-	$(MAKE) -f make-rules APP=PJSIP app=pjsip clean
-	$(MAKE) -f make-rules APP=PJSUA app=pjsua clean
-	$(MAKE) -f make-rules APP=PJSIP_UA app=pjsip_ua clean
-	$(MAKE) -f make-rules APP=PJSIP_SIMPLE app=pjsip_simple clean
+.PHONY: ../lib/pjsua.ko
+../lib/pjsua.ko:
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 
-realclean:
-	$(MAKE) -f make-rules APP=PJSIP app=pjsip realclean
-	$(MAKE) -f make-rules APP=PJSUA app=pjsua realclean
-	$(MAKE) -f make-rules APP=PJSIP_UA app=pjsip_ua realclean
-	$(MAKE) -f make-rules APP=PJSIP_SIMPLE app=pjsip_simple realclean
+clean depend realclean:
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
+	@if test "$@" == "depend"; then \
+	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	fi
 
-distclean: realclean
 
 

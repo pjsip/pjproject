@@ -1716,8 +1716,8 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
 				     host->slen + 2 +	/* host */
 				     text->slen + 2);	/* text */
     hvalue.slen = pj_sprintf(hvalue.ptr, "%u %.*s \"%.*s\"",
-			     code, host->slen, host->ptr,
-			     text->slen, text->ptr);
+			     code, (int)host->slen, host->ptr,
+			     (int)text->slen, text->ptr);
 
     return pjsip_generic_string_hdr_create(pool, &str_warning, &hvalue);
 }

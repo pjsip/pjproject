@@ -154,7 +154,7 @@ static void	    int_parse_uri_host_port( pj_scanner *scanner,
 static pjsip_uri *  int_parse_uri_or_name_addr( pj_scanner *scanner, 
 					        pj_pool_t *pool, 
                                                 unsigned option);
-static pjsip_sip_uri* int_parse_sip_url( pj_scanner *scanner, 
+static void*	    int_parse_sip_url( pj_scanner *scanner, 
 				         pj_pool_t *pool,
 				         pj_bool_t parse_params);
 static pjsip_name_addr *
@@ -1149,10 +1149,12 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
     }
 }
 
-/* Parse "sip:" and "sips:" URI. */
-static pjsip_sip_uri *int_parse_sip_url( pj_scanner *scanner, 
-					 pj_pool_t *pool,
-					 pj_bool_t parse_params)
+/* Parse "sip:" and "sips:" URI. 
+ * This actually returns (pjsip_sip_uri*) type,
+ */
+static void* int_parse_sip_url( pj_scanner *scanner, 
+				pj_pool_t *pool,
+				pj_bool_t parse_params)
 {
     pj_str_t scheme;
     pjsip_sip_uri *url = NULL;

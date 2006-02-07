@@ -72,12 +72,12 @@ typedef enum pjsip_method_e
  * member will always contain a valid method string regardless whether the ID
  * is recognized or not.
  */
-typedef struct pjsip_method
+struct pjsip_method
 {
     pjsip_method_e id;	    /**< Method ID, from \a pjsip_method_e. */
     pj_str_t	   name;    /**< Method name, which will always contain the 
 			         method string. */
-} pjsip_method;
+};
 
 
 /*

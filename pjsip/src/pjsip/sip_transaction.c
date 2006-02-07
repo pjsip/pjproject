@@ -44,7 +44,7 @@
  ** Declarations and static variable definitions section.
  **
  *****************************************************************************
-
+ **/
 /* Prototypes. */
 static pj_status_t mod_tsx_layer_load(pjsip_endpoint *endpt);
 static pj_status_t mod_tsx_layer_start(void);
@@ -408,7 +408,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
  ** Transaction layer module
  **
  *****************************************************************************
-
+ **/
 /*
  * Create transaction layer module and registers it to the endpoint.
  */
@@ -770,7 +770,7 @@ PJ_DEF(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata )
  ** Transaction
  **
  *****************************************************************************
-
+ **/
 /*
  * Lock transaction and set the value of Thread Local Storage.
  */

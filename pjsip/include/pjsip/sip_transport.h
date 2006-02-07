@@ -466,7 +466,7 @@ PJ_DECL(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata );
  * Applications normally extend this structure to include transport
  * specific members.
  */
-typedef struct pjsip_transport
+struct pjsip_transport
 {
     char		    obj_name[PJ_MAX_OBJ_NAME];	/**< Name. */
 
@@ -537,7 +537,7 @@ typedef struct pjsip_transport
     /*
      * Application may extend this structure..
      */
-} pjsip_transport;
+};
 
 
 /**

@@ -846,7 +846,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
     /* Include SDP for 18x and 2xx response. */
     if (st_code/10 == 18 || st_code/10 == 20) {
-	pjmedia_sdp_session *local;
+	const pjmedia_sdp_session *local;
 
 	status = pjmedia_sdp_neg_get_neg_local(inv->neg, &local);
 	if (status == PJ_SUCCESS)

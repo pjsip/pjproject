@@ -36,7 +36,7 @@
 
 
 /* PJSUA application variables. */
-extern struct pjsua
+extern struct pjsua_t
 {
     /* Control: */
 

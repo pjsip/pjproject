@@ -70,7 +70,7 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
 static int tel_uri_cmp( pjsip_uri_context_e context,
 			const pjsip_tel_uri *url1, const pjsip_tel_uri *url2);
 static pjsip_tel_uri* tel_uri_clone(pj_pool_t *pool, const pjsip_tel_uri *rhs);
-static pjsip_tel_uri *tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
+static void*	      tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 				     pj_bool_t parse_params);
 
 #ifdef __GNUC__
@@ -350,9 +350,11 @@ static pjsip_tel_uri* tel_uri_clone(pj_pool_t *pool, const pjsip_tel_uri *rhs)
     return uri;
 }
 
-/* Parse tel: URI */
-static pjsip_tel_uri *tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
-				     pj_bool_t parse_params)
+/* Parse tel: URI 
+ * THis actually returns (pjsip_tel_uri *) type.
+ */
+static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
+			    pj_bool_t parse_params)
 {
     pjsip_tel_uri *uri;
     pj_str_t token;

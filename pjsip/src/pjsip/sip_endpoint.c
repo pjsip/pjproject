@@ -122,9 +122,9 @@ static void pool_callback( pj_pool_t *pool, pj_size_t size )
 
 
 /* Compare module name, used for searching module based on name. */
-static int cmp_mod_name(void *name, const pjsip_module *mod)
+static int cmp_mod_name(void *name, const void *mod)
 {
-    return pj_stricmp(name, &mod->name);
+    return pj_stricmp(name, &((pjsip_module*)mod)->name);
 }
 
 /*

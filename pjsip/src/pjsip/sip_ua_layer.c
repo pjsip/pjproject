@@ -624,7 +624,7 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     //	rdata->msg_info.cseq->cseq == dlg_set->dlg_list.next->local.first_cseq)
 
     if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
-	pj_str_t *to_tag = &rdata->msg_info.to->tag;
+	//pj_str_t *to_tag = &rdata->msg_info.to->tag;
 
 	/* Must hold UA mutex before accessing dialog set. */
 	pj_mutex_lock(mod_ua.mutex);
