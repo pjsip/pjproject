@@ -483,8 +483,6 @@ PJ_DEF(void) pj_scan_get_until_chr( pj_scanner *scanner,
 PJ_DEF(void) pj_scan_advance_n( pj_scanner *scanner,
 				 unsigned N, pj_bool_t skip_ws)
 {
-    char *start = scanner->curptr;
-
     if (scanner->curptr + N > scanner->end) {
 	pj_scan_syntax_err(scanner);
 	return;

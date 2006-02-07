@@ -69,7 +69,7 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character.
  */
-#define PJ_CIS_SET(cis,c)   ((cis)->cis_buf[(c)] |= (1 << (cis)->cis_id))
+#define PJ_CIS_SET(cis,c)   ((cis)->cis_buf[(int)(c)] |= (1 << (cis)->cis_id))
 
 /**
  * Remove the membership of the specified character.
@@ -78,7 +78,7 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character to be removed from the membership.
  */
-#define PJ_CIS_CLR(cis,c)   ((cis)->cis_buf[c] &= ~(1 << (cis)->cis_id))
+#define PJ_CIS_CLR(cis,c)   ((cis)->cis_buf[(int)c] &= ~(1 << (cis)->cis_id))
 
 /**
  * Check the membership of the specified character.
@@ -87,7 +87,7 @@ typedef struct pj_cis_t
  * @param cis       Pointer to character input specification.
  * @param c         The character.
  */
-#define PJ_CIS_ISSET(cis,c) ((cis)->cis_buf[c] & (1 << (cis)->cis_id))
+#define PJ_CIS_ISSET(cis,c) ((cis)->cis_buf[(int)c] & (1 << (cis)->cis_id))
 
 
 
