@@ -1,67 +1,96 @@
-include make-$(TARGET).inc
+include ../../build/common.mak
 
-export PJMEDIA_SRCEXT = .c
+RULES_MAK := ../../build/rules.mak
+
+PJLIB_LIB:=../../pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+
+export PJMEDIA_LIB:=../lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+
+###############################################################################
+# Gather all flags.
+#
+export _CFLAGS 	:= -O2 -g $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
+		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
+		   $(CC_INC)../../pjlib-util/include
+export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
+		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
+		   $(LDFLAGS) 
+
+###############################################################################
+# Defines for building PJMEDIA library
+#
+PA_DIR:=portaudio
 export PJMEDIA_SRCDIR = ../src/pjmedia
-export PJMEDIA_SRCS = 	$(PJMEDIA_SOURCES) codec.c jbuf.c rtp.c mediamgr.c \
-		      	session.c g711.c  rtcp.c  stream.c sdp.c pasound.c \
-		      	$(PA_DIR)/pa_allocation.c \
-			$(PA_DIR)/pa_converters.c \
-			$(PA_DIR)/pa_cpuload.c \
-			$(PA_DIR)/pa_dither.c \
-			$(PA_DIR)/pa_front.c \
-			$(PA_DIR)/pa_process.c \
-			$(PA_DIR)/pa_skeleton.c \
-			$(PA_DIR)/pa_stream.c \
-			$(PA_DIR)/pa_trace.c
+export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			codec.o errno.o g711.o jbuf.o mediamgr.o rtcp.o \
+			rtp.o sdp.o sdp_cmp.o sdp_neg.o stream.o \
+#			pasound.o \
+#		      	$(PA_DIR)/pa_allocation.o \
+#			$(PA_DIR)/pa_converters.o \
+#			$(PA_DIR)/pa_cpuload.o \
+#			$(PA_DIR)/pa_dither.o \
+#			$(PA_DIR)/pa_front.o \
+#			$(PA_DIR)/pa_process.o \
+#			$(PA_DIR)/pa_skeleton.o \
+#			$(PA_DIR)/pa_stream.o \
+#			$(PA_DIR)/pa_trace.o
 
-export TEST_SRCEXT = .c
-export TEST_SRCDIR = ../src/test
-export TEST_SRCS = $(TEST_SOURCES) jbuf_test.c rtp_test.c main.c \
-		session_test.c sdptest.c
-		   
+export PJMEDIA_CFLAGS += $(_CFLAGS)
 
-export PJAUT_SRCEXT = .c
-export PJAUT_SRCDIR = ../src/test
-export PJAUT_SRCS = $(PJAUT_SOURCES) audio_tool.c
 
-export CCOUT CC AR RANLIB MV RM RMDIR MKDIR OBJEXT LD LDOUT 
+###############################################################################
+# Defines for building test application
+#
+export PJMEDIA_TEST_SRCDIR = ../src/test
+export PJMEDIA_TEST_OBJS += jbuf_test.o main.o rtp_test.o sdp_neg_test.o test.o
+export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
+export PJMEDIA_TEST_LDFLAGS += $(_LDFLAGS)
+export PJMEDIA_TEST_EXE:=../bin/pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
 
-all: pjmedia test pjaut
+	
+export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
+###############################################################################
+# Main entry
+#
+# $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
+#
+TARGETS := pjmedia pjmedia-test
+
+all: $(TARGETS)
 
 doc:
 	cd .. && doxygen docs/doxygen.cfg
 
-print:
-	$(MAKE) -f make-rules APP=PJMEDIA app=pjmedia print_lib
-	$(MAKE) -f make-rules APP=TEST app=test print_bin
-	$(MAKE) -f make-rules APP=PJAUT app=pjaut print_bin
-	
-depend:
-	$(MAKE) -f make-rules APP=PJMEDIA app=pjmedia depend
-	$(MAKE) -f make-rules APP=TEST app=test depend
-	$(MAKE) -f make-rules APP=PJAUT app=pjaut depend
-
 dep: depend
+distclean: realclean
+
+.PHONY: dep depend pjmedia pjmedia-test clean realclean distclean
 
 pjmedia:
-	$(MAKE) -f make-rules APP=PJMEDIA app=pjmedia $(PJMEDIA_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $(PJMEDIA_LIB)
 
-test:
-	$(MAKE) -f make-rules APP=TEST app=test $(TEST_EXE)
+pjmedia-test: $(PJMEDIA_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $(PJMEDIA_TEST_EXE)
 
-pjaut:
-	$(MAKE) -f make-rules APP=PJAUT app=pjaut $(PJAUT_EXE)
-	
-clean:
-	$(MAKE) -f make-rules APP=PJMEDIA app=pjmedia clean
-	$(MAKE) -f make-rules APP=TEST app=test clean
-	$(MAKE) -f make-rules APP=PJAUT app=pjaut clean
+.PHONY: ../lib/pjmedia.ko
+../lib/pjmedia.ko:
+	echo Making $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 
-realclean:
-	$(MAKE) -f make-rules APP=PJMEDIA app=pjmedia realclean
-	$(MAKE) -f make-rules APP=TEST app=test realclean
-	$(MAKE) -f make-rules APP=PJAUT app=pjaut realclean
+.PHONY: ../lib/pjmedia-test.ko
+../lib/pjmedia-test.ko:
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 
-distclean: realclean
+clean depend realclean:
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+	@if test "$@" == "depend"; then \
+	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB)' >> .pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	fi
 
 

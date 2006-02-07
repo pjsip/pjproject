@@ -1017,7 +1017,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 
 	/* Give the answer to negotiator. */
-	status = pjmedia_sdp_neg_rx_remote_answer(pool, neg, sdp2);
+	status = pjmedia_sdp_neg_set_remote_answer(pool, neg, sdp2);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: pjmedia_sdp_neg_rx_remote_answer");
 	    return -60;
@@ -1031,7 +1031,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 
 	/* Get the local active media. */
-	status = pjmedia_sdp_neg_get_local(neg, &active);
+	status = pjmedia_sdp_neg_get_active_local(neg, &active);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: pjmedia_sdp_neg_get_local");
 	    return -80;
@@ -1103,7 +1103,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 
 	} else {
 	    /* Received subsequent offer from remote. */
-	    status = pjmedia_sdp_neg_rx_remote_offer(pool, neg, sdp1);
+	    status = pjmedia_sdp_neg_set_remote_offer(pool, neg, sdp1);
 	    if (status != PJ_SUCCESS) {
 		app_perror(status, "   error: pjmedia_sdp_neg_rx_remote_offer");
 		return -230;
@@ -1118,7 +1118,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 	
 	/* Get our answer. */
-	status = pjmedia_sdp_neg_get_local(neg, &answer);
+	status = pjmedia_sdp_neg_get_active_local(neg, &answer);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: pjmedia_sdp_neg_get_local");
 	    return -250;
