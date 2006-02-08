@@ -522,6 +522,21 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
 }
 
 /*
+ * Connect socket.
+ */
+PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
+				     const pj_sockaddr_t *addr,
+				     int namelen)
+{
+    PJ_CHECK_STACK();
+    if (connect(sock, (struct sockaddr*)addr, namelen) != 0)
+	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+    else
+	return PJ_SUCCESS;
+}
+
+
+/*
  * Shutdown socket.
  */
 #if PJ_HAS_TCP
@@ -543,20 +558,6 @@ PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     if (listen(sock, backlog) != 0)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
-	return PJ_SUCCESS;
-}
-
-/*
- * Connect socket.
- */
-PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
-				     const pj_sockaddr_t *addr,
-				     int namelen)
-{
-    PJ_CHECK_STACK();
-    if (connect(sock, (struct sockaddr*)addr, namelen) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
 	return PJ_SUCCESS;

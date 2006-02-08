@@ -50,11 +50,13 @@ pj_status_t app_socket(int family, int type, int proto, int port,
     if (rc != PJ_SUCCESS)
         return rc;
     
+#if PJ_HAS_TCP
     if (type == PJ_SOCK_STREAM) {
         rc = pj_sock_listen(sock, 5);
         if (rc != PJ_SUCCESS)
             return rc;
     }
+#endif
 
     *ptr_sock = sock;
     return PJ_SUCCESS;
@@ -94,11 +96,13 @@ pj_status_t app_socketpair(int family, int type, int protocol,
         goto on_error;
 
     /* For TCP, listen the socket. */
+#if PJ_HAS_TCP
     if (type == PJ_SOCK_STREAM) {
         rc = pj_sock_listen(sock[SERVER], PJ_SOMAXCONN);
         if (rc != PJ_SUCCESS)
             goto on_error;
     }
+#endif
 
     /* Connect client socket. */
     addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
@@ -107,6 +111,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
         goto on_error;
 
     /* For TCP, must accept(), and get the new socket. */
+#if PJ_HAS_TCP
     if (type == PJ_SOCK_STREAM) {
         pj_sock_t newserver;
 
@@ -118,6 +123,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
         pj_sock_close(sock[SERVER]);
         sock[SERVER] = newserver;
     }
+#endif
 
     *serverfd = sock[SERVER];
     *clientfd = sock[CLIENT];

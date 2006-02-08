@@ -71,15 +71,17 @@
 
 /* Default threading is enabled, unless it's overridden. */
 #ifndef PJ_HAS_THREADS
-#  define PJ_HAS_THREADS	    (1)
+#  define PJ_HAS_THREADS		(1)
 #endif
 
-#define PJ_HAS_HIGH_RES_TIMER	    1
-#define PJ_HAS_MALLOC               1
-#define PJ_OS_HAS_CHECK_STACK	    0
-#define PJ_NATIVE_STRING_IS_UNICODE 0
+#define PJ_HAS_HIGH_RES_TIMER		1
+#define PJ_HAS_MALLOC			1
+#ifndef PJ_OS_HAS_CHECK_STACK
+#   define PJ_OS_HAS_CHECK_STACK        0
+#endif
+#define PJ_NATIVE_STRING_IS_UNICODE	0
 
-#define PJ_ATOMIC_VALUE_TYPE	    long
+#define PJ_ATOMIC_VALUE_TYPE		long
 
 /* Get BSD related identifers in Sun's include files */
 #define BSD_COMP
