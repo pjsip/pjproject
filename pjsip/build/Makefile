@@ -13,7 +13,7 @@ export PJSIP_UA_LIB:=../lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(L
 ###############################################################################
 # Gather all flags.
 #
-export _CFLAGS 	:= -O2 -g $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
+export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include $(CC_INC)../../pjmedia/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
