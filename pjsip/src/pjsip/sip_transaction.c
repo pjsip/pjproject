@@ -2019,12 +2019,27 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		    pjsip_tx_data_add_ref(tdata);
 		}
 
-		/* Start timer J at 64*T1 for unreliable transport or zero for
-		 * reliable transport.
-		 */
-		if (!tsx->is_reliable) {
+		/* Setup timeout timer: */
+		
+		if (tsx->method.id == PJSIP_INVITE_METHOD) {
+		    
+		    /* Start Timer H at 64*T1 for INVITE server transaction,
+		     * regardless of transport.
+		     */
 		    timeout = timeout_timer_val;
+		    
+		} else if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		    
+		    /* For non-INVITE, start timer J at 64*T1 for unreliable
+		     * transport.
+		     */
+		    timeout = timeout_timer_val;
+		    
 		} else {
+		    
+		    /* Transaction terminates immediately for non-INVITE when
+		     * reliable transport is used.
+		     */
 		    timeout.sec = timeout.msec = 0;
 		}
 
