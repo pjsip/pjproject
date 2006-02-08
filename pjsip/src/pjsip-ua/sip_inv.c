@@ -26,6 +26,7 @@
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
+#include <pj/os.h>
 
 #define THIS_FILE	"sip_invite_session.c"
 
@@ -38,16 +39,15 @@ static pj_bool_t   mod_inv_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t   mod_inv_on_rx_response(pjsip_rx_data *rdata);
 static void	   mod_inv_on_tsx_state(pjsip_transaction*, pjsip_event*);
 
-static void inv_on_state_null( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_incoming( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_confirmed( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_disconnected( pjsip_inv_session *s, pjsip_event *e);
-static void inv_on_state_terminated( pjsip_inv_session *s, pjsip_event *e);
+static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_incoming( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e);
+static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e);
 
-static void (*inv_state_handler[])( pjsip_inv_session *s, pjsip_event *e) = 
+static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
     &inv_on_state_calling,
@@ -56,7 +56,6 @@ static void (*inv_state_handler[])( pjsip_inv_session *s, pjsip_event *e) =
     &inv_on_state_connecting,
     &inv_on_state_confirmed,
     &inv_on_state_disconnected,
-    &inv_on_state_terminated,
 };
 
 static struct mod_inv
@@ -86,7 +85,9 @@ static struct mod_inv
 };
 
 
-
+/*
+ * Module load()
+ */
 static pj_status_t mod_inv_load(pjsip_endpoint *endpt)
 {
     pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6}};
@@ -98,38 +99,19 @@ static pj_status_t mod_inv_load(pjsip_endpoint *endpt)
     return PJ_SUCCESS;
 }
 
+/*
+ * Module unload()
+ */
 static pj_status_t mod_inv_unload(void)
 {
     /* Should remove capability here */
     return PJ_SUCCESS;
 }
 
-static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
-{
-    pjsip_dialog *dlg;
-
-    /* Ignore requests outside dialog */
-    dlg = pjsip_rdata_get_dlg(rdata);
-    if (dlg == NULL)
-	return PJ_FALSE;
-
-    /* Answer BYE with 200/OK. */
-    if (rdata->msg_info.msg->line.req.method.id == PJSIP_BYE_METHOD) {
-	pj_status_t status;
-	pjsip_tx_data *tdata;
-
-	status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
-	if (status == PJ_SUCCESS)
-	    status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata),
-					     tdata);
-
-	return status==PJ_SUCCESS ? PJ_TRUE : PJ_FALSE;
-    }
-
-    return PJ_FALSE;
-}
-
-static pj_status_t send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
+/*
+ * Send ACK for 2xx response.
+ */
+static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -152,6 +134,47 @@ static pj_status_t send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
     return PJ_SUCCESS;
 }
 
+/*
+ * Module on_rx_request()
+ *
+ * This callback is called for these events:
+ *  - endpoint receives request which was unhandled by higher priority
+ *    modules (e.g. transaction layer, dialog layer).
+ *  - dialog distributes incoming request to its usages.
+ */
+static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_method *method;
+
+    /* Only wants to receive request from a dialog. */
+    if (pjsip_rdata_get_dlg(rdata) == NULL)
+	return PJ_FALSE;
+
+    /* Report to dialog that we handle INVITE, CANCEL, BYE, ACK. 
+     * If we need to send response, it will be sent in the state
+     * handlers.
+     */
+    method = &rdata->msg_info.msg->line.req.method;
+
+    if (method->id == PJSIP_INVITE_METHOD ||
+	method->id == PJSIP_CANCEL_METHOD ||
+	method->id == PJSIP_ACK_METHOD ||
+	method->id == PJSIP_BYE_METHOD)
+    {
+	return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
+/*
+ * Module on_rx_response().
+ *
+ * This callback is called for these events:
+ *  - dialog distributes incoming 2xx response to INVITE (outside
+ *    transaction) to its usages.
+ *  - endpoint distributes strayed responses.
+ */
 static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 {
     pjsip_dialog *dlg;
@@ -175,7 +198,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     if (msg->type == PJSIP_RESPONSE_MSG && msg->line.status.code/100==2 &&
 	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
 
-	send_ack(inv, rdata);
+	inv_send_ack(inv, rdata);
 	return PJ_TRUE;
 
     }
@@ -184,6 +207,12 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     return PJ_FALSE;
 }
 
+/*
+ * Module on_tsx_state()
+ *
+ * This callback is called by dialog framework for all transactions
+ * inside the dialog for all its dialog usages.
+ */
 static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     pjsip_dialog *dlg;
@@ -209,6 +238,10 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	inv->invite_tsx = NULL;
 }
 
+
+/*
+ * Initialize the invite module.
+ */
 PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
 					  pjsip_module *app_module,
 					  const pjsip_inv_callback *cb)
@@ -236,19 +269,26 @@ PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
     return status;
 }
 
+/*
+ * Get the instance of invite module.
+ */
 PJ_DEF(pjsip_module*) pjsip_inv_usage_instance(void)
 {
     return &mod_inv.mod;
 }
 
 
+/*
+ * Return the invite session for the specified dialog.
+ */
 PJ_DEF(pjsip_inv_session*) pjsip_dlg_get_inv_session(pjsip_dialog *dlg)
 {
     return dlg->mod_data[mod_inv.mod.id];
 }
 
+
 /*
- * Create UAC session.
+ * Create UAC invite session.
  */
 PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 					  const pjmedia_sdp_session *local_sdp,
@@ -348,7 +388,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
     /* Init response header list */
     pj_list_init(&res_hdr_list);
 
-    /* Check the request body, see if it's something that we support
+    /* Check the request body, see if it'inv something that we support
      * (i.e. SDP). 
      */
     if (msg->body) {
@@ -623,7 +663,7 @@ on_return:
 }
 
 /*
- * Create UAS session.
+ * Create UAS invite session.
  */
 PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 					  pjsip_rx_data *rdata,
@@ -662,7 +702,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAS;
-    inv->state = PJSIP_INV_STATE_NULL;
+    inv->state = PJSIP_INV_STATE_INCOMING;
     inv->dlg = dlg;
     inv->options = options;
 
@@ -854,7 +894,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					      ;
     }
 
-    /* Do we need to increment tdata's reference counter? */
+    /* Do we need to increment tdata'inv reference counter? */
     PJ_TODO(INV_ANSWER_MAY_HAVE_TO_INCREMENT_REF_COUNTER);
 
     *p_tdata = last_res;
@@ -1037,7 +1077,98 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	pjsip_dlg_dec_session(inv->dlg);
 }
 
-static void inv_on_state_null( pjsip_inv_session *s, pjsip_event *e)
+
+
+/*
+ * Respond to incoming CANCEL request.
+ */
+static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
+					pjsip_transaction *cancel_tsx,
+					pjsip_rx_data *rdata)
+{
+    pjsip_tx_data *tdata;
+    pjsip_transaction *invite_tsx;
+    pj_str_t key;
+    pj_status_t status;
+
+    /* See if we have matching INVITE server transaction: */
+
+    pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
+			 &pjsip_invite_method, rdata);
+    invite_tsx = pjsip_tsx_layer_find_tsx(&key, PJ_TRUE);
+
+    if (invite_tsx == NULL) {
+
+	/* Invite transaction not found! 
+	 * Respond CANCEL with 491 (RFC 3261 Section 9.2 page 42)
+	 */
+	status = pjsip_dlg_create_response( inv->dlg, rdata, 200, NULL, 
+					    &tdata);
+
+    } else {
+	/* Always answer CANCEL will 200 (OK) regardless of
+	 * the state of the INVITE transaction.
+	 */
+	status = pjsip_dlg_create_response( inv->dlg, rdata, 200, NULL, 
+					    &tdata);
+    }
+
+    /* See if we have created the response successfully. */
+    if (status != PJ_SUCCESS) return;
+
+    /* Send the CANCEL response */
+    status = pjsip_dlg_send_response(inv->dlg, cancel_tsx, tdata);
+    if (status != PJ_SUCCESS) return;
+
+
+    /* See if we need to terminate the UAS INVITE transaction
+     * with 487 (Request Terminated) response. 
+     */
+    if (invite_tsx && invite_tsx->status_code < 200) {
+
+	pj_assert(invite_tsx->last_tx != NULL);
+
+	tdata = invite_tsx->last_tx;
+
+	status = pjsip_dlg_modify_response(inv->dlg, tdata, 487, NULL);
+	if (status == PJ_SUCCESS)
+	    pjsip_dlg_send_response(inv->dlg, invite_tsx, tdata);
+    }
+
+    if (invite_tsx)
+	pj_mutex_unlock(invite_tsx->mutex);
+}
+
+
+/*
+ * Respond to incoming BYE request.
+ */
+static void inv_respond_incoming_bye( pjsip_inv_session *inv,
+				      pjsip_transaction *bye_tsx,
+				      pjsip_rx_data *rdata,
+				      pjsip_event *e )
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+
+    /* Respond BYE with 200: */
+
+    status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
+    if (status != PJ_SUCCESS) return;
+
+    status = pjsip_dlg_send_response(inv->dlg, bye_tsx, tdata);
+    if (status != PJ_SUCCESS) return;
+
+    /* Terminate session: */
+
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED)
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+}
+
+/*
+ * State NULL is before anything is sent/received.
+ */
+static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
@@ -1049,12 +1180,12 @@ static void inv_on_state_null( pjsip_inv_session *s, pjsip_event *e)
 	if (dlg->role == PJSIP_ROLE_UAC) {
 
 	    /* Keep the initial INVITE transaction. */
-	    if (s->invite_tsx == NULL)
-		s->invite_tsx = tsx;
+	    if (inv->invite_tsx == NULL)
+		inv->invite_tsx = tsx;
 
 	    switch (tsx->state) {
 	    case PJSIP_TSX_STATE_CALLING:
-		inv_set_state(s, PJSIP_INV_STATE_CALLING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CALLING, e);
 		break;
 	    default:
 		pj_assert(!"Unexpected state");
@@ -1064,7 +1195,7 @@ static void inv_on_state_null( pjsip_inv_session *s, pjsip_event *e)
 	} else {
 	    switch (tsx->state) {
 	    case PJSIP_TSX_STATE_TRYING:
-		inv_set_state(s, PJSIP_INV_STATE_INCOMING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_INCOMING, e);
 		break;
 	    default:
 		pj_assert(!"Unexpected state");
@@ -1076,7 +1207,11 @@ static void inv_on_state_null( pjsip_inv_session *s, pjsip_event *e)
     }
 }
 
-static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * State CALLING is after sending initial INVITE request but before
+ * any response (with tag) is received.
+ */
+static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
@@ -1084,13 +1219,13 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
     
-    if (tsx == s->invite_tsx) {
+    if (tsx == inv->invite_tsx) {
 
 	switch (tsx->state) {
 
 	case PJSIP_TSX_STATE_PROCEEDING:
 	    if (dlg->remote.info->tag.slen) {
-		inv_set_state(s, PJSIP_INV_STATE_EARLY, e);
+		inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 	    } else {
 		/* Ignore 100 (Trying) response, as it doesn't change
 		 * session state. It only ceases retransmissions.
@@ -1105,7 +1240,7 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 		 * When transaction receives 2xx, it should be terminated
 		 */
 		pj_assert(0);
-		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 
 	    } else if (tsx->status_code==401 || tsx->status_code==407) {
 
@@ -1114,7 +1249,7 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 		 */
 		pjsip_tx_data *tdata;
 
-		status = pjsip_auth_clt_reinit_req(&s->dlg->auth_sess, 
+		status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess, 
 						   e->body.tsx_state.src.rdata,
 						   tsx->last_tx,
 						   &tdata);
@@ -1124,21 +1259,21 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 		    /* Does not have proper credentials. 
 		     * End the session.
 		     */
-		    inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
 		} else {
 
 		    /* Restart session. */
-		    s->state = PJSIP_INV_STATE_NULL;
-		    s->invite_tsx = NULL;
+		    inv->state = PJSIP_INV_STATE_NULL;
+		    inv->invite_tsx = NULL;
 
 		    /* Send the request. */
-		    status = pjsip_inv_send_msg(s, tdata, NULL );
+		    status = pjsip_inv_send_msg(inv, tdata, NULL );
 		}
 
 	    } else {
 
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
 	    }
 	    break;
@@ -1152,79 +1287,116 @@ static void inv_on_state_calling( pjsip_inv_session *s, pjsip_event *e)
 		/* This must be receipt of 2xx response */
 
 		/* Set state to CONNECTING */
-		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 
 		/* Send ACK */
 		pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
-		send_ack(s, e->body.tsx_state.src.rdata);
+		inv_send_ack(inv, e->body.tsx_state.src.rdata);
 
 	    } else  {
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
 
-	default:
-	    pj_assert(!"Unexpected state");
 	}
-
-    } else {
-	pj_assert(!"Unexpected transaction type");
     }
 }
 
-static void inv_on_state_incoming( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * State INCOMING is after we received the request, but before
+ * responses with tag are sent.
+ */
+static void inv_on_state_incoming( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx == s->invite_tsx) {
+    if (tsx == inv->invite_tsx) {
+
+	/*
+	 * Handle the INVITE state transition.
+	 */
+
 	switch (tsx->state) {
+
 	case PJSIP_TSX_STATE_PROCEEDING:
+	    /*
+	     * Transaction sent provisional response.
+	     */
 	    if (tsx->status_code > 100)
-		inv_set_state(s, PJSIP_INV_STATE_EARLY, e);
+		inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 	    break;
+
 	case PJSIP_TSX_STATE_COMPLETED:
+	    /*
+	     * Transaction sent final response.
+	     */
 	    if (tsx->status_code/100 == 2)
-		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 	    else
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    break;
+
 	case PJSIP_TSX_STATE_TERMINATED:
-	    /* This happens on transport error */
-	    inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+	    /* 
+	     * This happens on transport error (e.g. failed to send
+	     * response)
+	     */
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    break;
+
 	default:
-	    pj_assert(!"Unexpected state");
+	    pj_assert(!"Unexpected INVITE state");
+	    break;
 	}
-    } else {
-	pj_assert(!"Unexpected transaction type");
+
+    } else if (tsx->method.id == PJSIP_CANCEL_METHOD &&
+	       tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->state < PJSIP_TSX_STATE_COMPLETED &&
+	       e->body.tsx_state.type == PJSIP_EVENT_RX_MSG )
+    {
+
+	/*
+	 * Handle incoming CANCEL request.
+	 */
+
+	inv_respond_incoming_cancel(inv, tsx, e->body.tsx_state.src.rdata);
+
     }
 }
 
-static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * State EARLY is for both UAS and UAC, after response with To tag
+ * is sent/received.
+ */
+static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx == s->invite_tsx) {
+    if (tsx == inv->invite_tsx) {
+
+	/*
+	 * Handle the INVITE state progress.
+	 */
 
 	switch (tsx->state) {
 
 	case PJSIP_TSX_STATE_PROCEEDING:
 	    /* Send/received another provisional response. */
-	    inv_set_state(s, PJSIP_INV_STATE_EARLY, e);
+	    inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 	    break;
 
 	case PJSIP_TSX_STATE_COMPLETED:
 	    if (tsx->status_code/100 == 2)
-		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 	    else
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    break;
 
 	case PJSIP_TSX_STATE_TERMINATED:
@@ -1237,75 +1409,57 @@ static void inv_on_state_early( pjsip_inv_session *s, pjsip_event *e)
 		/* This must be receipt of 2xx response */
 
 		/* Set state to CONNECTING */
-		inv_set_state(s, PJSIP_INV_STATE_CONNECTING, e);
+		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 
 		/* if UAC, send ACK and move state to confirmed. */
 		if (tsx->role == PJSIP_ROLE_UAC) {
 		    pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
-		    send_ack(s, e->body.tsx_state.src.rdata);
+		    inv_send_ack(inv, e->body.tsx_state.src.rdata);
 
-		    inv_set_state(s, PJSIP_INV_STATE_CONFIRMED, e);
+		    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
 		}
 
 	    } else  {
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
 
 	default:
-	    pj_assert(!"Unexpected state");
+	    pj_assert(!"Unexpected INVITE tsx state");
 	}
 
-    } else if (tsx->method.id == PJSIP_CANCEL_METHOD) {
+    } else if (inv->role == PJSIP_ROLE_UAS &&
+	       tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->method.id == PJSIP_CANCEL_METHOD &&
+	       tsx->state < PJSIP_TSX_STATE_COMPLETED &&
+	       e->body.tsx_state.type == PJSIP_EVENT_RX_MSG )
+    {
 
-	/* Handle incoming CANCEL request. */
-	if (tsx->role == PJSIP_ROLE_UAS && s->role == PJSIP_ROLE_UAS &&
-	    e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
-	{
-
-	    pj_status_t status;
-	    pjsip_tx_data *tdata;
-
-	    /* Respond CANCEL with 200 (OK) */
-	    status = pjsip_dlg_create_response(dlg, e->body.tsx_state.src.rdata,
-					       200, NULL, &tdata);
-	    if (status == PJ_SUCCESS) {
-		pjsip_dlg_send_response(dlg, tsx, tdata);
-	    }
-    
-	    /* Respond the original UAS transaction with 487 (Request 
-	     * Terminated) response.
-	     */
-	    pj_assert(s->invite_tsx && s->invite_tsx->last_tx);
-	    tdata = s->invite_tsx->last_tx;
-
-	    status = pjsip_dlg_modify_response(dlg, tdata, 487, NULL);
-	    if (status == PJ_SUCCESS) {
-		pjsip_dlg_send_response(dlg, s->invite_tsx, tdata);
-	    }
-	}
-
-    } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
-
-	/* Ignore previously failed INVITE transaction event
-	 * (e.g. when rejected with 401/407)
+	/*
+	 * Handle incoming CANCEL request.
 	 */
 
-    } else {
-	pj_assert(!"Unexpected transaction type");
+	inv_respond_incoming_cancel(inv, tsx, e->body.tsx_state.src.rdata);
+
     }
 }
 
-static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * State CONNECTING is after 2xx response to INVITE is sent/received.
+ */
+static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx == s->invite_tsx) {
+    if (tsx == inv->invite_tsx) {
 
+	/*
+	 * Handle INVITE state progression.
+	 */
 	switch (tsx->state) {
 
 	case PJSIP_TSX_STATE_CONFIRMED:
@@ -1317,7 +1471,7 @@ static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e)
 	     * error.
 	     */
 	    if (tsx->status_code/100 != 2) {
-		inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
 
@@ -1329,50 +1483,110 @@ static void inv_on_state_connecting( pjsip_inv_session *s, pjsip_event *e)
 	    pj_assert(!"Unexpected state");
 	}
 
-    } else {
-	pj_assert(!"Unexpected transaction type");
+    } else if (tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->method.id == PJSIP_BYE_METHOD &&
+	       tsx->status_code < 200 &&
+	       e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+    {
+
+	/*
+	 * Handle incoming BYE.
+	 */
+
+	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
+
     }
 }
 
-static void inv_on_state_confirmed( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * State CONFIRMED is after ACK is sent/received.
+ */
+static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_transaction *tsx = e->body.tsx_state.tsx;
     pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx->method.id == PJSIP_BYE_METHOD) {
-	inv_set_state(s, PJSIP_INV_STATE_DISCONNECTED, e);
 
-    } else if (tsx == s->invite_tsx) {
+    if (tsx->method.id == PJSIP_BYE_METHOD &&
+	tsx->role == PJSIP_ROLE_UAC &&
+	tsx->state == PJSIP_TSX_STATE_COMPLETED)
+    {
+	/*
+	 * Outgoing BYE.
+	 */
+	pj_status_t status;
 	
-	switch (tsx->state) {
-	case PJSIP_TSX_STATE_TERMINATED:
-	case PJSIP_TSX_STATE_DESTROYED:
-	    break;
-	default:
-	    pj_assert(!"Unexpected state");
-	    break;
+	/* Handle 401/407 challenge. */
+	if (tsx->status_code == 401 || tsx->status_code == 407) {
+
+	    pjsip_tx_data *tdata;
+	    
+	    status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
+					        e->body.tsx_state.src.rdata,
+					        tsx->last_tx,
+					        &tdata);
+	    
+	    if (status != PJ_SUCCESS) {
+		
+		/* Does not have proper credentials. 
+		 * End the session anyway.
+		 */
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+		
+	    } else {
+		/* Re-send BYE. */
+		status = pjsip_inv_send_msg(inv, tdata, NULL );
+	    }
+
+	} else {
+
+	    /* End the session. */
+
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	}
 
-    } else if (tsx->method.id == PJSIP_INVITE_METHOD) {
+    }
+    else if (tsx->method.id == PJSIP_BYE_METHOD &&
+	     tsx->role == PJSIP_ROLE_UAS &&
+	     tsx->status_code < 200 &&
+	     e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+    {
 
-	/* Re-INVITE */
+	/*
+	 * Handle incoming BYE.
+	 */
 
-    } else {
-	pj_assert(!"Unexpected transaction type");
+	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
+
     }
 }
 
-static void inv_on_state_disconnected( pjsip_inv_session *s, pjsip_event *e)
+/*
+ * After session has been terminated, but before dialog is destroyed
+ * (because dialog has other usages, or because dialog is waiting for
+ * the last transaction to terminate).
+ */
+static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
 {
-    PJ_UNUSED_ARG(s);
-    PJ_UNUSED_ARG(e);
-}
+    pjsip_transaction *tsx = e->body.tsx_state.tsx;
+    pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
-static void inv_on_state_terminated( pjsip_inv_session *s, pjsip_event *e)
-{
-    PJ_UNUSED_ARG(s);
-    PJ_UNUSED_ARG(e);
+    PJ_ASSERT_ON_FAIL(tsx && dlg, return);
+
+    if (tsx->method.id == PJSIP_BYE_METHOD &&
+	tsx->role == PJSIP_ROLE_UAS &&
+	tsx->status_code < 200 &&
+	e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+    {
+
+	/*
+	 * Be nice, handle incoming BYE.
+	 */
+
+	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
+
+    }
 }
 

@@ -99,15 +99,7 @@ SOURCE=..\src\pjsua\main.c
 # Begin Source File
 
 SOURCE=..\src\pjsua\main_old.c
-
-!IF  "$(CFG)" == "pjsua - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsua - Win32 Debug"
-
 # PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

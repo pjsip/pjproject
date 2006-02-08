@@ -536,6 +536,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
     const pjsip_cid_hdr *cid_hdr;
     const pjsip_cseq_hdr *cseq_hdr;
     const pjsip_hdr *hdr;
+    pjsip_hdr *via;
     pj_status_t status;
 
     /* The transmit buffer must INVITE request. */
@@ -571,6 +572,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Clear Via headers in the new request. */
+    while ((via=pjsip_msg_find_hdr(cancel_tdata->msg, PJSIP_H_VIA, NULL)) != NULL)
+	pj_list_erase(via);
+
 
     /* Must only have single Via which matches the top-most Via in the 
      * request being cancelled. 
