@@ -66,7 +66,6 @@ struct write_operation
     int			    rmt_addrlen;
 };
 
-#if PJ_HAS_TCP
 struct accept_operation
 {
     PJ_DECL_LIST_MEMBER(struct accept_operation);
@@ -77,7 +76,6 @@ struct accept_operation
     pj_sockaddr_t	   *rmt_addr;
     int			   *addrlen;
 };
-#endif
 
 union operation_key
 {
