@@ -1375,7 +1375,6 @@ static int  pjsip_tsx_on_state_calling( pjsip_transaction *tsx,
 	return -1;
 
     } else if (event->type == PJSIP_EVENT_RX_MSG) {
-	int code;
 
 	/* Cancel retransmission timer A. */
 	if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0)
@@ -1539,14 +1538,32 @@ static int pjsip_tsx_on_state_proceeding_uas( pjsip_transaction *tsx, pjsip_even
 		    pjsip_tx_data_add_ref(tdata);
 		}
 
-		/* Start timer J at 64*T1 for unreliable transport or zero for
-		 * reliable transport.
-		 */
-		if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		/* Setup timeout timer: */
+		
+		if (tsx->method.id == PJSIP_INVITE_METHOD) {
+		    
+		    /* Start Timer H at 64*T1 for INVITE server transaction,
+		     * regardless of transport.
+		     */
 		    timeout = timeout_timer_val;
+		    
+		} else if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		    
+		    /* For non-INVITE, start timer J at 64*T1 for unreliable
+		     * transport.
+		     */
+		    timeout = timeout_timer_val;
+		    
 		} else {
+		    
+		    /* Transaction terminates immediately for non-INVITE when
+		     * reliable transport is used.
+		     */
 		    timeout.sec = timeout.msec = 0;
 		}
+
+		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+                                            &timeout);
 
 		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 
