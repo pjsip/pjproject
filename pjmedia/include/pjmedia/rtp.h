@@ -79,14 +79,14 @@ PJ_BEGIN_DECL
  */
 enum pj_rtp_error_t
 {
-    PJ_RTP_ERR_RTP_PACKING,	    /**< Invalid RTP packet. */
-    PJ_RTP_ERR_INVALID_VERSION,	    /**< Invalid RTP version. */
-    PJ_RTP_ERR_INVALID_SSRC,	    /**< Invalid SSRC. */
-    PJ_RTP_ERR_INVALID_PT,	    /**< Invalid payload type. */
-    PJ_RTP_ERR_INVALID_PACKET,	    /**< Invalid packet. */
-    PJ_RTP_ERR_SESSION_RESTARTED,   /**< Session has just been restarted. */
-    PJ_RTP_ERR_SESSION_PROBATION,   /**< Session in probation. */
-    PJ_RTP_ERR_BAD_SEQUENCE,	    /**< Bad RTP sequence number. */
+    PJMEDIA_RTP_ERR_RTP_PACKING,	    /**< Invalid RTP packet. */
+    PJMEDIA_RTP_ERR_INVALID_VERSION,	    /**< Invalid RTP version. */
+    PJMEDIA_RTP_ERR_INVALID_SSRC,	    /**< Invalid SSRC. */
+    PJMEDIA_RTP_ERR_INVALID_PT,	    /**< Invalid payload type. */
+    PJMEDIA_RTP_ERR_INVALID_PACKET,	    /**< Invalid packet. */
+    PJMEDIA_RTP_ERR_SESSION_RESTARTED,   /**< Session has just been restarted. */
+    PJMEDIA_RTP_ERR_SESSION_PROBATION,   /**< Session in probation. */
+    PJMEDIA_RTP_ERR_BAD_SEQUENCE,	    /**< Bad RTP sequence number. */
 };
 
 #pragma pack(1)

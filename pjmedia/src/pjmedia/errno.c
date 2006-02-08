@@ -76,6 +76,15 @@ static const struct
     { PJMEDIA_SDP_EORIGINNOTEQUAL,  "SDP origin line not equal" },
     { PJMEDIA_SDP_ENAMENOTEQUAL,    "SDP name/subject line not equal" },
     { PJMEDIA_SDP_ETIMENOTEQUAL,    "SDP time line not equal" },
+
+    /* Codec errors. */
+    { PJMEDIA_CODEC_EUNSUP,	    "Unsupported media codec" },
+
+    /* Media errors. */
+    { PJMEDIA_EINVALIDIP,	    "Invalid remote media (IP) address" },
+    { PJMEDIA_EASYMCODEC,	    "Asymetric media codec is not supported" },
+    { PJMEDIA_EINVALIDPT,	    "Invalid media payload type" },
+    { PJMEDIA_EMISSINGRTPMAP,	    "Missing rtpmap in media description" },
 };
 
 

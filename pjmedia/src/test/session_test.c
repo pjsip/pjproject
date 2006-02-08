@@ -44,8 +44,8 @@ pj_status_t session_test (pj_pool_factory *pf)
     s1 = pj_media_session_create (mm, NULL);
 
     // Set caller's media to send-only.
-    sd_info.dir = PJ_MEDIA_DIR_ENCODING;
-    pj_media_session_modify_stream (s1, 0, PJ_MEDIA_STREAM_MODIFY_DIR, &sd_info);
+    sd_info.dir = PJMEDIA_DIR_ENCODING;
+    pj_media_session_modify_stream (s1, 0, PJMEDIA_STREAM_MODIFY_DIR, &sd_info);
 
     // Create caller SDP.
     sdp = pj_media_session_create_sdp (s1, pool, 0);

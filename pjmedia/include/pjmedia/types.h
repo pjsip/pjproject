@@ -20,7 +20,149 @@
 #define __PJMEDIA_TYPES_H__
 
 #include <pj/types.h>
+#include <pj/sock.h>
 
+
+/** 
+ * Top most media type. 
+ */
+enum pjmedia_type
+{
+    /** No type. */
+    PJMEDIA_TYPE_NONE = 0,
+
+    /** The media is audio */
+    PJMEDIA_TYPE_AUDIO = 1,
+
+    /** The media is video. */
+    PJMEDIA_TYPE_VIDEO = 2,
+
+    /** Unknown media type, in this case the name will be specified in 
+     *  encoding_name.
+     */
+    PJMEDIA_TYPE_UNKNOWN = 3,
+
+};
+
+
+/** 
+ * Media direction. 
+ */
+enum pjmedia_dir
+{
+    /** None */
+    PJMEDIA_DIR_NONE = 0,
+
+    /** Encoding (outgoing to network) stream */
+    PJMEDIA_DIR_ENCODING = 1,
+
+    /** Decoding (incoming from network) stream. */
+    PJMEDIA_DIR_DECODING = 2,
+
+    /** Incoming and outgoing stream. */
+    PJMEDIA_DIR_ENCODING_DECODING = 3,
+
+};
+
+
+/**
+ * Top level media type.
+ */
+typedef enum pjmedia_type pjmedia_type;
+
+/**
+ * Media direction.
+ */
+typedef enum pjmedia_dir pjmedia_dir;
+
+/**
+ * Codec info.
+ */
+typedef struct pjmedia_codec_info pjmedia_codec_info;
+
+/**
+ * Codec initialization parameter.
+ */
+typedef struct pjmedia_codec_param pjmedia_codec_param;
+
+/** 
+ * Types of media frames. 
+ */
+typedef enum pjmedia_frame_type pjmedia_frame_type;
+
+/** 
+ * This structure describes a media frame. 
+ */
+typedef struct pjmedia_frame pjmedia_frame;
+
+/**
+ * Codec instance.
+ */
+typedef struct pjmedia_codec pjmedia_codec;
+
+/**
+ * Codec factory.
+ */
+typedef struct pjmedia_codec_factory pjmedia_codec_factory;
+
+/**
+ * Codec operation.
+ */
+typedef struct pjmedia_codec_op pjmedia_codec_op;
+
+/**
+ * Codec factory operation.
+ */
+typedef struct pjmedia_codec_factory_op pjmedia_codec_factory_op;
+
+/**
+ * Codec manager.
+ */
+typedef struct pjmedia_codec_mgr pjmedia_codec_mgr;
+
+/** 
+ * Opague declaration of media endpoint. 
+ */
+typedef struct pjmedia_endpt pjmedia_endpt;
+
+
+/** 
+ * Media socket info. 
+ */
+typedef struct pjmedia_sock_info
+{
+
+    pj_sock_t	    rtp_sock;
+    pj_sock_t	    rtcp_sock;
+    pj_sockaddr_in  rtp_addr_name;
+
+} pjmedia_sock_info;
+
+
+/**
+ * Typedef for media stream information.
+ */
+typedef struct pjmedia_stream_info pjmedia_stream_info;
+
+/**
+ * Typedef for media stream statistic.
+ */
+typedef struct pjmedia_stream_stat pjmedia_stream_stat;
+
+/**
+ * Typedef for media stream.
+ */
+typedef struct pjmedia_stream pjmedia_stream;
+
+/**
+ * Individual channel statistic.
+ */
+typedef struct pjmedia_channel_stat pjmedia_channel_stat;
+
+/** 
+ * Opaque declaration of media session. 
+ */
+typedef struct pjmedia_session pjmedia_session;
 
 /**
  * Forward declaration for SDP attribute (sdp.h)

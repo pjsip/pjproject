@@ -27,7 +27,7 @@
 
 #include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
-#include <pjmedia/mediamgr.h>
+#include <pjmedia/endpoint.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
@@ -39,55 +39,124 @@ PJ_BEGIN_DECL
  * @{
  */
 
-typedef struct pj_media_stream_t pj_media_stream_t;
+/**
+ * Opaque declaration for media channel.
+ * Media channel is unidirectional flow of media from sender to
+ * receiver.
+ */
+typedef struct pjmedia_channel pjmedia_channel;
 
-/** Parameter for creating channel. */
-typedef struct pj_media_stream_create_param
+/** 
+ * This structure describes media stream information. Each media stream
+ * corresponds to one "m=" line in SDP session descriptor, and it has
+ * its own RTP/RTCP socket pair.
+ */
+struct pjmedia_stream_info
 {
-    /** Codec ID, must NOT be NULL. */
-    pj_codec_id		 *codec_id;
+    pjmedia_type	type;	    /**< Media type (audio, video)	    */
+    pjmedia_dir		dir;	    /**< Media direction.		    */
+    pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
+    pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
+    pjmedia_codec_info	fmt;	    /**< Codec format info.		    */
+    pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
+    int			jb_min;	    /**< Jitter buffer min delay.	    */
+    int			jb_max;	    /**< Jitter buffer max delay.	    */
+    int			jb_maxcnt;  /**< Jitter buffer max delay.	    */
+};
 
-    /** Media manager, must NOT be NULL. */
-    pj_med_mgr_t	 *mediamgr;
 
-    /** Direction: IN_OUT, or IN only, or OUT only. */
-    pj_media_dir_t	  dir;
-
-    /** RTP socket. */
-    pj_sock_t		 rtp_sock;
-
-    /** RTCP socket. */
-    pj_sock_t		 rtcp_sock;
-
-    /** Address of remote */
-    pj_sockaddr_in	 *remote_addr;
-
-    /** RTP SSRC */
-    pj_uint32_t		  ssrc;
-
-    /** Jitter buffer parameters. */
-    int			  jb_min, jb_max, jb_maxcnt;
-
-} pj_media_stream_create_param;
-
-typedef struct pj_media_stream_stat
+/**
+ * Individual channel statistic.
+ */
+struct pjmedia_channel_stat
 {
-    pj_uint32_t pkt_tx, pkt_rx;	/* packets transmitted/received */
-    pj_uint32_t oct_tx, oct_rx;	/* octets transmitted/received */
-    pj_uint32_t jitter;		/* receive jitter in ms */
-    pj_uint32_t pkt_lost;	/* total packet lost count */
-} pj_media_stream_stat;
+    pj_uint32_t pkt;	    /**< Total number of packets.		    */
+    pj_uint32_t bytes;	    /**< Total number of bytes, including RTP hdr.  */
+    pj_uint32_t lost;	    /**< Total number of packet lost		    */
+};
 
-PJ_DECL(pj_status_t) pj_media_stream_create (pj_pool_t *pool,
-					     pj_media_stream_t **enc_stream,
-					     pj_media_stream_t **dec_stream,
-					     pj_media_stream_create_param *param);
-PJ_DECL(pj_status_t) pj_media_stream_start (pj_media_stream_t *stream);
-PJ_DECL(pj_status_t) pj_media_stream_get_stat (const pj_media_stream_t *stream,
-					       pj_media_stream_stat *stat);
-PJ_DECL(pj_status_t) pj_media_stream_pause (pj_media_stream_t *stream);
-PJ_DECL(pj_status_t) pj_media_stream_resume (pj_media_stream_t *stream);
-PJ_DECL(pj_status_t) pj_media_stream_destroy (pj_media_stream_t *stream);
+/**
+ * Stream statistic.
+ */
+struct pjmedia_stream_stat
+{
+    pjmedia_channel_stat    enc;    /**< Encoder statistics.		    */
+    pjmedia_channel_stat    dec;    /**< Decoder statistics.		    */
+};
+
+
+/**
+ * Create a media stream based on the specified stream parameter.
+ * All channels in the stream initially will be inactive.
+ *
+ * @param endpt		Media endpoint.
+ * @param pool		Pool to allocate memory for the stream. A large
+ *			number of memory may be needed because jitter
+ *			buffer needs to preallocate some storage.
+ * @param info		Stream information.
+ * @param p_stream	Pointer to receive the media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_create(pjmedia_endpt *endpt,
+					   pj_pool_t *pool,
+					   const pjmedia_stream_info *info,
+					   pjmedia_stream **p_stream);
+
+/**
+ * Destroy the media stream.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_destroy(pjmedia_stream *stream);
+
+/**
+ * Start the media stream. This will start the appropriate channels
+ * in the media stream, depending on the media direction that was set
+ * when the stream was created.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
+
+
+/**
+ * Get the stream statistics.
+ *
+ * @param stream	The media stream.
+ * @param stat		Media stream statistics.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
+					      pjmedia_stream_stat *stat);
+
+/**
+ * Pause the individual channel in the stream.
+ *
+ * @param channel	The media channel.
+ * @param dir		Which direction to pause.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
+					   pjmedia_dir dir);
+
+/**
+ * Resume the individual channel in the stream.
+ *
+ * @param channel	The media channel.
+ * @param dir		Which direction to resume.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
+					   pjmedia_dir dir);
+
 
 /**
  * @}

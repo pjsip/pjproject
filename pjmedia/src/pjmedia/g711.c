@@ -20,6 +20,7 @@
  * notice in the second half of this file.
  */
 #include <pjmedia/codec.h>
+#include <pjmedia/errno.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -29,8 +30,8 @@
 #define G711_CODEC_CNT	0	/* number of codec to preallocate in memory */
 
 /* These are the only public functions exported to applications */
-PJ_DECL(pj_status_t) g711_init_factory (pj_codec_factory *factory, pj_pool_t *pool);
-PJ_DECL(pj_status_t) g711_deinit_factory (pj_codec_factory *factory);
+PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool);
+PJ_DECL(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory);
 
 /* Algorithm prototypes. */
 static unsigned char linear2alaw(int		pcm_val);   /* 2's complement (16-bit range) */
@@ -39,24 +40,24 @@ static unsigned char linear2ulaw(int		pcm_val);
 static int	     ulaw2linear(unsigned char	u_val);
 
 /* Prototypes for G711 factory */
-static pj_status_t  g711_match_id( pj_codec_factory *factory, const pj_codec_id *id );
-static pj_status_t  g711_default_attr( pj_codec_factory *factory, const pj_codec_id *id, pj_codec_attr *attr );
-static unsigned	    g711_enum_codecs (pj_codec_factory *factory, unsigned count, pj_codec_id codecs[]);
-static pj_codec*    g711_alloc_codec( pj_codec_factory *factory, const pj_codec_id *id);
-static void	    g711_dealloc_codec( pj_codec_factory *factory, pj_codec *codec );
+static pj_status_t g711_match_id( pjmedia_codec_factory *factory, const pjmedia_codec_info *id );
+static pj_status_t g711_default_attr( pjmedia_codec_factory *factory, const pjmedia_codec_info *id, pjmedia_codec_param *attr );
+static pj_status_t g711_enum_codecs (pjmedia_codec_factory *factory, unsigned *count, pjmedia_codec_info codecs[]);
+static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, const pjmedia_codec_info *id, pjmedia_codec **p_codec);
+static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, pjmedia_codec *codec );
 
 /* Prototypes for G711 implementation. */
-static pj_status_t  g711_codec_default_attr (pj_codec *codec, pj_codec_attr *attr);
-static pj_status_t  g711_init( pj_codec *codec, pj_pool_t *pool );
-static pj_status_t  g711_open( pj_codec *codec, pj_codec_attr *attr );
-static pj_status_t  g711_close( pj_codec *codec );
-static pj_status_t  g711_encode( pj_codec *codec, const struct pj_audio_frame *input,
-				 unsigned output_buf_len, struct pj_audio_frame *output);
-static pj_status_t  g711_decode( pj_codec *codec, const struct pj_audio_frame *input,
-				 unsigned output_buf_len, struct pj_audio_frame *output);
+static pj_status_t  g711_codec_default_attr (pjmedia_codec *codec, pjmedia_codec_param *attr);
+static pj_status_t  g711_init( pjmedia_codec *codec, pj_pool_t *pool );
+static pj_status_t  g711_open( pjmedia_codec *codec, pjmedia_codec_param *attr );
+static pj_status_t  g711_close( pjmedia_codec *codec );
+static pj_status_t  g711_encode( pjmedia_codec *codec, const struct pjmedia_frame *input,
+				 unsigned output_buf_len, struct pjmedia_frame *output);
+static pj_status_t  g711_decode( pjmedia_codec *codec, const struct pjmedia_frame *input,
+				 unsigned output_buf_len, struct pjmedia_frame *output);
 
 /* Definition for G711 codec operations. */
-static pj_codec_op g711_op = 
+static pjmedia_codec_op g711_op = 
 {
     &g711_codec_default_attr ,
     &g711_init,
@@ -67,7 +68,7 @@ static pj_codec_op g711_op =
 };
 
 /* Definition for G711 codec factory operations. */
-static pj_codec_factory_op g711_factory_op =
+static pjmedia_codec_factory_op g711_factory_op =
 {
     &g711_match_id,
     &g711_default_attr,
@@ -80,7 +81,7 @@ static pj_codec_factory_op g711_factory_op =
 struct g711_factory_private
 {
     pj_pool_t  *pool;
-    pj_codec	codec_list;
+    pjmedia_codec	codec_list;
 };
 
 /* G711 codec private data. */
@@ -90,10 +91,10 @@ struct g711_private
 };
 
 
-PJ_DEF(pj_status_t) g711_init_factory (pj_codec_factory *factory, pj_pool_t *pool)
+PJ_DEF(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool)
 {
     struct g711_factory_private *priv;
-    //enum { CODEC_MEM_SIZE = sizeof(pj_codec) + sizeof(struct g711_private) + 4 };
+    //enum { CODEC_MEM_SIZE = sizeof(pjmedia_codec) + sizeof(struct g711_private) + 4 };
 
     /* Create pool. */
     /*
@@ -117,7 +118,7 @@ PJ_DEF(pj_status_t) g711_init_factory (pj_codec_factory *factory, pj_pool_t *poo
     return 0;
 }
 
-PJ_DEF(pj_status_t) g711_deinit_factory (pj_codec_factory *factory)
+PJ_DEF(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory)
 {
     struct g711_factory_private *priv = factory->factory_data;
 
@@ -127,21 +128,21 @@ PJ_DEF(pj_status_t) g711_deinit_factory (pj_codec_factory *factory)
     return 0;
 }
 
-static pj_status_t g711_match_id( pj_codec_factory *factory, const pj_codec_id *id )
+static pj_status_t g711_match_id( pjmedia_codec_factory *factory, const pjmedia_codec_info *id )
 {
     PJ_UNUSED_ARG(factory);
 
     /* It's sufficient to check payload type only. */
-    return (id->pt==PJ_RTP_PT_PCMU || id->pt==PJ_RTP_PT_PCMA) ? 0 : -1;
+    return (id->pt==PJMEDIA_RTP_PT_PCMU || id->pt==PJMEDIA_RTP_PT_PCMA) ? 0 : -1;
 }
 
-static pj_status_t g711_default_attr (pj_codec_factory *factory, 
-				      const pj_codec_id *id, 
-				      pj_codec_attr *attr )
+static pj_status_t g711_default_attr (pjmedia_codec_factory *factory, 
+				      const pjmedia_codec_info *id, 
+				      pjmedia_codec_param *attr )
 {
     PJ_UNUSED_ARG(factory);
 
-    memset(attr, 0, sizeof(pj_codec_attr));
+    memset(attr, 0, sizeof(pjmedia_codec_param));
     attr->sample_rate = 8000;
     attr->avg_bps = G711_BPS;
     attr->pcm_bits_per_sample = 16;
@@ -153,40 +154,46 @@ static pj_status_t g711_default_attr (pj_codec_factory *factory,
     return PJ_SUCCESS;
 }
 
-static unsigned	g711_enum_codecs (pj_codec_factory *factory, 
-				  unsigned count, pj_codec_id codecs[])
+static pj_status_t g711_enum_codecs(pjmedia_codec_factory *factory, 
+				    unsigned *count, 
+				    pjmedia_codec_info codecs[])
 {
     PJ_UNUSED_ARG(factory);
 
-    if (count > 0) {
-	codecs[0].type = PJ_MEDIA_TYPE_AUDIO;
-	codecs[0].pt = PJ_RTP_PT_PCMU;
+    if (*count > 0) {
+	codecs[0].type = PJMEDIA_TYPE_AUDIO;
+	codecs[0].pt = PJMEDIA_RTP_PT_PCMU;
 	codecs[0].encoding_name = pj_str("PCMU");
 	codecs[0].sample_rate = 8000;
     }
-    if (count > 1) {
-	codecs[1].type = PJ_MEDIA_TYPE_AUDIO;
-	codecs[1].pt = PJ_RTP_PT_PCMA;
+    if (*count > 1) {
+	codecs[1].type = PJMEDIA_TYPE_AUDIO;
+	codecs[1].pt = PJMEDIA_RTP_PT_PCMA;
 	codecs[1].encoding_name = pj_str("PCMA");
 	codecs[1].sample_rate = 8000;
     }
 
-    return 2;
+    if (*count > 0) *count=1;
+    if (*count > 1) *count=2;
+
+    return PJ_SUCCESS;
 }
 
-static pj_codec *g711_alloc_codec( pj_codec_factory *factory, const pj_codec_id *id)
+static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, 
+				     const pjmedia_codec_info *id,
+				     pjmedia_codec **p_codec)
 {
     struct g711_factory_private *priv = factory->factory_data;
-    pj_codec *codec = NULL;
+    pjmedia_codec *codec = NULL;
 
     /* Allocate new codec if no more is available */
     if (pj_list_empty(&priv->codec_list)) {
 	struct g711_private *codec_priv;
 
-	codec = pj_pool_alloc(priv->pool, sizeof(pj_codec));
+	codec = pj_pool_alloc(priv->pool, sizeof(pjmedia_codec));
 	codec_priv = pj_pool_alloc(priv->pool, sizeof(struct g711_private));
 	if (!codec || !codec_priv)
-	    return NULL;
+	    return PJ_ENOMEM;
 
 	codec_priv->pt = id->pt;
 
@@ -201,33 +208,36 @@ static pj_codec *g711_alloc_codec( pj_codec_factory *factory, const pj_codec_id 
     /* Zero the list, for error detection in g711_dealloc_codec */
     codec->next = codec->prev = NULL;
 
-    return codec;
+    *p_codec = codec;
+    return PJ_SUCCESS;
 }
 
-static void g711_dealloc_codec( pj_codec_factory *factory, pj_codec *codec )
+static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, pjmedia_codec *codec )
 {
     struct g711_factory_private *priv = factory->factory_data;
 
     /* Check that this node has not been deallocated before */
     pj_assert (codec->next==NULL && codec->prev==NULL);
     if (codec->next!=NULL || codec->prev!=NULL) {
-	return;
+	return PJ_EINVALIDOP;
     }
 
     /* Insert at the back of the list */
     pj_list_insert_before(&priv->codec_list, codec);
+
+    return PJ_SUCCESS;
 }
 
-static pj_status_t g711_codec_default_attr  (pj_codec *codec, pj_codec_attr *attr)
+static pj_status_t g711_codec_default_attr  (pjmedia_codec *codec, pjmedia_codec_param *attr)
 {
     struct g711_private *priv = codec->codec_data;
-    pj_codec_id id;
+    pjmedia_codec_info id;
 
     id.pt = priv->pt;
     return g711_default_attr (NULL, &id, attr);
 }
 
-static pj_status_t g711_init( pj_codec *codec, pj_pool_t *pool )
+static pj_status_t g711_init( pjmedia_codec *codec, pj_pool_t *pool )
 {
     /* There's nothing to do here really */
     PJ_UNUSED_ARG(codec);
@@ -236,22 +246,22 @@ static pj_status_t g711_init( pj_codec *codec, pj_pool_t *pool )
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_open( pj_codec *codec, pj_codec_attr *attr )
+static pj_status_t g711_open( pjmedia_codec *codec, pjmedia_codec_param *attr )
 {
     struct g711_private *priv = codec->codec_data;
     priv->pt = attr->pt;
     return PJ_SUCCESS;
 }
 
-static pj_status_t g711_close( pj_codec *codec )
+static pj_status_t g711_close( pjmedia_codec *codec )
 {
     PJ_UNUSED_ARG(codec);
     /* Nothing to do */
     return PJ_SUCCESS;
 }
 
-static pj_status_t  g711_encode( pj_codec *codec, const struct pj_audio_frame *input,
-				 unsigned output_buf_len, struct pj_audio_frame *output)
+static pj_status_t  g711_encode( pjmedia_codec *codec, const struct pjmedia_frame *input,
+				 unsigned output_buf_len, struct pjmedia_frame *output)
 {
     pj_int16_t *samples = (pj_int16_t*) input->buf;
     struct g711_private *priv = codec->codec_data;
@@ -261,14 +271,14 @@ static pj_status_t  g711_encode( pj_codec *codec, const struct pj_audio_frame *i
 	return -1;
 
     /* Encode */
-    if (priv->pt == PJ_RTP_PT_PCMA) {
+    if (priv->pt == PJMEDIA_RTP_PT_PCMA) {
 	unsigned i;
 	pj_uint8_t *dst = output->buf;
 
 	for (i=0; i!=input->size/2; ++i, ++dst) {
 	    *dst = linear2alaw(samples[i]);
 	}
-    } else if (priv->pt == PJ_RTP_PT_PCMU) {
+    } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i;
 	pj_uint8_t *dst = output->buf;
 
@@ -280,14 +290,14 @@ static pj_status_t  g711_encode( pj_codec *codec, const struct pj_audio_frame *i
 	return -1;
     }
 
-    output->type = PJ_AUDIO_FRAME_AUDIO;
+    output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = input->size / 2;
 
     return 0;
 }
 
-static pj_status_t  g711_decode( pj_codec *codec, const struct pj_audio_frame *input,
-				 unsigned output_buf_len, struct pj_audio_frame *output)
+static pj_status_t  g711_decode( pjmedia_codec *codec, const struct pjmedia_frame *input,
+				 unsigned output_buf_len, struct pjmedia_frame *output)
 {
     struct g711_private *priv = codec->codec_data;
 
@@ -296,7 +306,7 @@ static pj_status_t  g711_decode( pj_codec *codec, const struct pj_audio_frame *i
 	return -1;
 
     /* Decode */
-    if (priv->pt == PJ_RTP_PT_PCMA) {
+    if (priv->pt == PJMEDIA_RTP_PT_PCMA) {
 	unsigned i;
 	pj_uint8_t *src = input->buf;
 	pj_uint16_t *dst = output->buf;
@@ -304,7 +314,7 @@ static pj_status_t  g711_decode( pj_codec *codec, const struct pj_audio_frame *i
 	for (i=0; i!=input->size; ++i) {
 	    *dst++ = (pj_uint16_t) alaw2linear(*src++);
 	}
-    } else if (priv->pt == PJ_RTP_PT_PCMU) {
+    } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i;
 	pj_uint8_t *src = input->buf;
 	pj_uint16_t *dst = output->buf;
@@ -317,7 +327,7 @@ static pj_status_t  g711_decode( pj_codec *codec, const struct pj_audio_frame *i
 	return -1;
     }
 
-    output->type = PJ_AUDIO_FRAME_AUDIO;
+    output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = input->size * 2;
 
     return 0;

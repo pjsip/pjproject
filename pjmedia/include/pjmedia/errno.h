@@ -259,6 +259,42 @@ PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
 #define PJMEDIA_SDP_ETIMENOTEQUAL   (PJMEDIA_ERRNO_START+72)    /* 220072 */
 
 
+/************************************************************
+ * CODEC
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Unsupported codec.
+ */
+#define PJMEDIA_CODEC_EUNSUP	    (PJMEDIA_ERRNO_START+80)    /* 220080 */
+
+
+/************************************************************
+ * MEDIA
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Invalid remote IP address (in SDP).
+ */
+#define PJMEDIA_EINVALIDIP	    (PJMEDIA_ERRNO_START+100)    /* 220100 */
+/**
+ * @hideinitializer
+ * Asymetric codec is not supported.
+ */
+#define PJMEDIA_EASYMCODEC	    (PJMEDIA_ERRNO_START+101)    /* 220101 */
+/**
+ * @hideinitializer
+ * Invalid payload type.
+ */
+#define PJMEDIA_EINVALIDPT	    (PJMEDIA_ERRNO_START+102)    /* 220102 */
+/**
+ * @hideinitializer
+ * Missing rtpmap.
+ */
+#define PJMEDIA_EMISSINGRTPMAP	    (PJMEDIA_ERRNO_START+103)    /* 220103 */
+
+
+
 PJ_END_DECL
 
 #endif	/* __PJMEDIA_ERRNO_H__ */

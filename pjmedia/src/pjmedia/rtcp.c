@@ -92,7 +92,7 @@ PJ_DEF(void) pj_rtcp_rx_rtp(pj_rtcp_session *s, pj_uint16_t seq, pj_uint32_t rtp
 
     /* Update sequence numbers (received, lost, etc). */
     status = pj_rtp_seq_update(&s->seq_ctrl, seq);
-    if (status == PJ_RTP_ERR_SESSION_RESTARTED) {
+    if (status == PJMEDIA_RTP_ERR_SESSION_RESTARTED) {
 	rtcp_init_seq(s, seq);
 	status = 0;
     }

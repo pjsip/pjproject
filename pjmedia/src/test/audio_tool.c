@@ -26,8 +26,8 @@ static pj_caching_pool caching_pool;
 static pj_pool_factory *pf;
 static FILE *fhnd;
 static pj_med_mgr_t *mm;
-static pj_codec *codec;
-static pj_codec_attr cattr;
+static pjmedia_codec *codec;
+static pjmedia_codec_param cattr;
 
 
 #define WRITE_ORIGINAL_PCM 0
@@ -60,14 +60,14 @@ static pj_status_t play_callback(/* in */   void *user_data,
 				 /* out */  unsigned size)
 {
     char pkt[160];
-    struct pj_audio_frame in, out;
+    struct pjmedia_frame in, out;
     int frmsz = cattr.avg_bps / 8 * cattr.ptime / 1000;
 
     if (fread(pkt, frmsz, 1, fhnd) != 1) {
 	puts("EOF");
 	return -1;
     } else {
-	in.type = PJ_AUDIO_FRAME_AUDIO;
+	in.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	in.buf = pkt;
 	in.size = frmsz;
 	out.buf = frame;
@@ -85,14 +85,14 @@ static pj_status_t rec_callback( /* in */   void *user_data,
 			         /* in*/    unsigned size)
 {
     char pkt[160];
-    struct pj_audio_frame in, out;
+    struct pjmedia_frame in, out;
     //int frmsz = cattr.avg_bps / 8 * cattr.ptime / 1000;
 
 #if WRITE_ORIGINAL_PCM
     fwrite(frame, size, 1, fhnd_pcm);
 #endif
 
-    in.type = PJ_AUDIO_FRAME_AUDIO;
+    in.type = PJMEDIA_FRAME_TYPE_AUDIO;
     in.buf = (void*)frame;
     in.size = size;
     out.buf = pkt;
@@ -107,8 +107,8 @@ static pj_status_t rec_callback( /* in */   void *user_data,
 
 static pj_status_t init()
 {
-    pj_codec_mgr *cm;
-    pj_codec_id id;
+    pjmedia_codec_mgr *cm;
+    pjmedia_codec_info id;
     int i;
 
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
@@ -129,12 +129,12 @@ static pj_status_t init()
     mm = pj_med_mgr_create (&caching_pool.factory);
     cm = pj_med_mgr_get_codec_mgr (mm);
 
-    id.type = PJ_MEDIA_TYPE_AUDIO;
+    id.type = PJMEDIA_TYPE_AUDIO;
     id.pt = 0;
     id.encoding_name = pj_str("PCMU");
     id.sample_rate = 8000;
 
-    codec = pj_codec_mgr_alloc_codec (cm, &id);
+    codec = pjmedia_codec_mgr_alloc_codec (cm, &id);
     codec->op->default_attr(codec, &cattr);
     codec->op->open(codec, &cattr);
     return 0;
@@ -142,10 +142,10 @@ static pj_status_t init()
 
 static pj_status_t deinit()
 {
-    pj_codec_mgr *cm;
+    pjmedia_codec_mgr *cm;
     cm = pj_med_mgr_get_codec_mgr (mm);
     codec->op->close(codec);
-    pj_codec_mgr_dealloc_codec (cm, codec);
+    pjmedia_codec_mgr_dealloc_codec (cm, codec);
     pj_med_mgr_destroy (mm);
     pj_caching_pool_destroy(&caching_pool);
     return 0;
@@ -300,13 +300,13 @@ static int create_ses_by_remote_sdp(int local_port, char *sdp)
 	char *local_ip;
 
 	switch (info[i]->dir) {
-	case PJ_MEDIA_DIR_NONE:
+	case PJMEDIA_DIR_NONE:
 	    dir = "- NONE -"; break;
-	case PJ_MEDIA_DIR_ENCODING:
+	case PJMEDIA_DIR_ENCODING:
 	    dir = "SENDONLY"; break;
-	case PJ_MEDIA_DIR_DECODING:
+	case PJMEDIA_DIR_DECODING:
 	    dir = "RECVONLY"; break;
-	case PJ_MEDIA_DIR_ENCODING_DECODING:
+	case PJMEDIA_DIR_ENCODING_DECODING:
 	    dir = "SENDRECV"; break;
 	default:
 	    dir = "?UNKNOWN"; break;
@@ -345,7 +345,7 @@ static pj_status_t convert(const char *src, const char *dst)
 {
     char pcm[320];
     char frame[160];
-    struct pj_audio_frame in, out;
+    struct pjmedia_frame in, out;
 
     fhnd_pcm = fopen(src, "rb");
     if (!fhnd_pcm)
@@ -356,7 +356,7 @@ static pj_status_t convert(const char *src, const char *dst)
 
     while (fread(pcm, 320, 1, fhnd_pcm) == 1) {
 
-	in.type = PJ_AUDIO_FRAME_AUDIO;
+	in.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	in.buf = pcm;
 	in.size = 320;
 	out.buf = frame;

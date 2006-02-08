@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/codec.h>
+#include <pjmedia/errno.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -24,84 +25,137 @@
 
 #define THIS_FILE   "codec.c"
 
-static void enum_all_codecs (pj_codec_mgr *cm)
+/*
+ * Reinitialize array of supported codecs.
+ */
+static void enum_all_codecs (pjmedia_codec_mgr *mgr)
 {
-    pj_codec_factory *cf;
+    pjmedia_codec_factory *factory;
 
-    cf = cm->factory_list.next;
-    cm->codec_cnt = 0;
-    while (cf != &cm->factory_list) {
-	pj_codec_id temp[PJ_CODEC_MGR_MAX_CODECS];
-	int i, cnt;
-
-	cnt = cf->op->enum_codecs (cf, PJ_CODEC_MGR_MAX_CODECS, temp);
-	if (cnt > PJ_CODEC_MGR_MAX_CODECS) {
-	    pj_assert(0);
-	    PJ_LOG(4, (THIS_FILE, "Too many codecs reported by factory"));
-	    cnt = PJ_CODEC_MGR_MAX_CODECS;
-	}
-
-	for (i=0; i<cnt && cm->codec_cnt < PJ_CODEC_MGR_MAX_CODECS; ++i) {
-	    cm->codecs[cm->codec_cnt++] = temp[i];
-	}
-
-	cf = cf->next;
-    }
-}
-
-PJ_DEF(pj_status_t) pj_codec_mgr_init (pj_codec_mgr *mgr)
-{
-    pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
-    return 0;
-}
 
-PJ_DEF(pj_status_t) pj_codec_mgr_register_factory (pj_codec_mgr *mgr,
-						   pj_codec_factory *factory)
-{
-    pj_list_insert_before (&mgr->factory_list, factory);
-    enum_all_codecs (mgr);
-    return 0;
-}
-
-PJ_DEF(void) pj_codec_mgr_unregister_factory (pj_codec_mgr *mgr, pj_codec_factory *factory)
-{
-    PJ_UNUSED_ARG(mgr);
-    pj_list_erase(factory);
-    enum_all_codecs (mgr);
-}
-
-PJ_DEF(unsigned)
-pj_codec_mgr_enum_codecs (pj_codec_mgr *mgr, unsigned count, const pj_codec_id *codecs[])
-{
-    unsigned i;
-
-    if (count > mgr->codec_cnt)
-	count = mgr->codec_cnt;
-
-    for (i=0; i<count; ++i)
-	codecs[i] = &mgr->codecs[i];
-
-    return mgr->codec_cnt;
-}
-
-PJ_DEF(pj_codec*) pj_codec_mgr_alloc_codec (pj_codec_mgr *mgr, const struct pj_codec_id *id)
-{
-    pj_codec_factory *factory = mgr->factory_list.next;
+    factory = mgr->factory_list.next;
     while (factory != &mgr->factory_list) {
-	if ( (*factory->op->match_id)(factory, id) == 0 ) {
-	    pj_codec *codec = (*factory->op->alloc_codec)(factory, id);
-	    if (codec != NULL)
-		return codec;
-	}
+	unsigned count;
+	pj_status_t status;
+
+	count = PJ_ARRAY_SIZE(mgr->codecs) - mgr->codec_cnt;
+	status = factory->op->enum_info(factory, &count, 
+					mgr->codecs+mgr->codec_cnt);
+	if (status == PJ_SUCCESS)
+	    mgr->codec_cnt += count;
+
 	factory = factory->next;
     }
-    return NULL;
 }
 
-PJ_DEF(void) pj_codec_mgr_dealloc_codec (pj_codec_mgr *mgr, pj_codec *codec)
+/*
+ * Initialize codec manager.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr)
 {
-    PJ_UNUSED_ARG(mgr);
-    (*codec->factory->op->dealloc_codec)(codec->factory, codec);
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    pj_list_init (&mgr->factory_list);
+    mgr->codec_cnt = 0;
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Register a codec factory.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
+				    pjmedia_codec_factory *factory)
+{
+    PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
+
+    pj_list_push_back(&mgr->factory_list, factory);
+    enum_all_codecs (mgr);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Unregister a codec factory.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_codec_mgr_unregister_factory(pjmedia_codec_mgr *mgr, 
+				     pjmedia_codec_factory *factory)
+{
+
+    PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
+
+    /* Factory must be registered. */
+    PJ_ASSERT_RETURN(pj_list_find_node(&mgr->factory_list, factory)==factory,
+		     PJ_ENOTFOUND);
+
+
+    pj_list_erase(factory);
+    enum_all_codecs (mgr);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Enum all codecs.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr, 
+			      unsigned *count, 
+			      pjmedia_codec_info codecs[])
+{
+    PJ_ASSERT_RETURN(mgr && count && codecs, PJ_EINVAL);
+
+    if (*count > mgr->codec_cnt)
+	*count = mgr->codec_cnt;
+    
+    pj_memcpy(codecs, mgr->codecs, *count * sizeof(pjmedia_codec_info));
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Allocate one codec.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr, 
+						  const pjmedia_codec_info *info,
+						  pjmedia_codec **p_codec)
+{
+    pjmedia_codec_factory *factory;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(mgr && info && p_codec, PJ_EINVAL);
+
+    *p_codec = NULL;
+
+    factory = mgr->factory_list.next;
+    while (factory != &mgr->factory_list) {
+
+	if ( (*factory->op->test_alloc)(factory, info) == PJ_SUCCESS ) {
+
+	    status = (*factory->op->alloc_codec)(factory, info, p_codec);
+	    if (status == PJ_SUCCESS)
+		return PJ_SUCCESS;
+
+	}
+
+	factory = factory->next;
+    }
+
+
+    return PJMEDIA_CODEC_EUNSUP;
+}
+
+/*
+ * Dealloc codec.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr, 
+						    pjmedia_codec *codec)
+{
+    PJ_ASSERT_RETURN(mgr && codec, PJ_EINVAL);
+
+    return (*codec->factory->op->dealloc_codec)(codec->factory, codec);
 }
 

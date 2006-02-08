@@ -43,7 +43,7 @@ PJ_DEF(pj_status_t) pj_rtp_session_init( pj_rtp_session *ses,
     /* Check RTP header packing. */
     if (sizeof(struct pj_rtp_hdr) != 12) {
 	pj_assert(!"Wrong RTP header packing!");
-	return PJ_RTP_ERR_RTP_PACKING;
+	return PJMEDIA_RTP_ERR_RTP_PACKING;
     }
 
     /* If sender_ssrc is not specified, create from time value. */
@@ -128,7 +128,7 @@ PJ_DEF(pj_status_t) pj_rtp_decode_rtp( pj_rtp_session *ses,
     /* Check RTP header sanity. */
     if ((*hdr)->v != RTP_VERSION) {
 	PJ_LOG(4, (THIS_FILE, "  invalid RTP version!"));
-	return PJ_RTP_ERR_INVALID_VERSION;
+	return PJMEDIA_RTP_ERR_INVALID_VERSION;
     }
 
     /* Payload is located right after header plus CSRC */
@@ -142,7 +142,7 @@ PJ_DEF(pj_status_t) pj_rtp_decode_rtp( pj_rtp_session *ses,
 
     /* Check that offset is less than packet size */
     if (offset >= pkt_len)
-	return PJ_RTP_ERR_INVALID_PACKET;
+	return PJMEDIA_RTP_ERR_INVALID_PACKET;
 
     /* Find and set payload. */
     *payload = ((pj_uint8_t*)pkt) + offset;
@@ -162,7 +162,7 @@ PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr
     if (pj_ntohl(ses->peer_ssrc) != hdr->ssrc) {
 	PJ_LOG(4, (THIS_FILE, "pj_rtp_session_update: ses=%p, invalid ssrc 0x%p (!=0x%p)",
 		   ses, pj_ntohl(hdr->ssrc), ses->peer_ssrc));
-	return PJ_RTP_ERR_INVALID_SSRC;
+	return PJMEDIA_RTP_ERR_INVALID_SSRC;
     }
     */
 
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr
     if (hdr->pt != ses->out_pt) {
 	PJ_LOG(4, (THIS_FILE, "pj_rtp_session_update: ses=%p, invalid payload type %d (!=%d)",
 		   ses, hdr->pt, ses->out_pt));
-	return PJ_RTP_ERR_INVALID_PT;
+	return PJMEDIA_RTP_ERR_INVALID_PT;
     }
 
     /* Initialize sequence number on first packet received. */
@@ -179,10 +179,10 @@ PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr
 
     /* Check sequence number to see if remote session has been restarted. */
     status = pj_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq));
-    if (status == PJ_RTP_ERR_SESSION_RESTARTED) {
+    if (status == PJMEDIA_RTP_ERR_SESSION_RESTARTED) {
 	pj_rtp_seq_restart( &ses->seq_ctrl, pj_ntohs(hdr->seq));
 	++ses->received;
-    } else if (status == 0 || status == PJ_RTP_ERR_SESSION_PROBATION) {
+    } else if (status == 0 || status == PJMEDIA_RTP_ERR_SESSION_PROBATION) {
 	++ses->received;
     }
 
@@ -223,13 +223,13 @@ int pj_rtp_seq_update(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
 	    sctrl->probation--;
             sctrl->max_seq = seq;
             if (sctrl->probation == 0) {
-                return PJ_RTP_ERR_SESSION_RESTARTED;
+                return PJMEDIA_RTP_ERR_SESSION_RESTARTED;
             }
 	} else {
 	    sctrl->probation = MIN_SEQUENTIAL - 1;
 	    sctrl->max_seq = seq;
         }
-        return PJ_RTP_ERR_SESSION_PROBATION;
+        return PJMEDIA_RTP_ERR_SESSION_PROBATION;
 
     } else if (udelta < MAX_DROPOUT) {
 	/* in order, with permissible gap */
@@ -247,11 +247,11 @@ int pj_rtp_seq_update(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
 	     * restarted without telling us so just re-sync
 	     * (i.e., pretend this was the first packet).
 	     */
-	    return PJ_RTP_ERR_SESSION_RESTARTED;
+	    return PJMEDIA_RTP_ERR_SESSION_RESTARTED;
 	}
         else {
 	    sctrl->bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
-            return PJ_RTP_ERR_BAD_SEQUENCE;
+            return PJMEDIA_RTP_ERR_BAD_SEQUENCE;
         }
     } else {
 	/* duplicate or reordered packet */

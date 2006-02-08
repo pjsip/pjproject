@@ -96,6 +96,10 @@ SOURCE=..\src\pjmedia\dsound.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\endpoint.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\errno.c
 # End Source File
 # Begin Source File
@@ -105,10 +109,6 @@ SOURCE=..\src\pjmedia\g711.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\jbuf.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\mediamgr.c
 # End Source File
 # Begin Source File
 
@@ -142,7 +142,6 @@ SOURCE=..\src\pjmedia\sdp_neg.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\session.c
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -162,15 +161,15 @@ SOURCE=..\include\pjmedia\config.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\endpoint.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\errno.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\include\pjmedia\jbuf.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\mediamgr.h
 # End Source File
 # Begin Source File
 

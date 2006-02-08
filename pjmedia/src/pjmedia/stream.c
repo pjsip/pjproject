@@ -31,12 +31,13 @@
 #include <stdlib.h>
 
 
-#define THISFILE    "stream.c"
-#define ERRLEVEL    1
+#define THIS_FILE			"stream.c"
+#define ERRLEVEL			1
+#define TRACE_(expr)			PJ_LOG(3,expr)
 
-#define PJ_MAX_FRAME_DURATION_MS    200
-#define PJ_MAX_BUFFER_SIZE_MS	    2000
-#define PJ_MAX_MTU		    1500
+#define PJMEDIA_MAX_FRAME_DURATION_MS   200
+#define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
+#define PJMEDIA_MAX_MTU			1500
 
 struct jb_frame
 {
@@ -48,196 +49,218 @@ struct jb_frame
 #define pj_fifobuf_unalloc(fifo,buf)	free(buf)
 #define pj_fifobuf_free(fifo, buf)	free(buf)
 
-enum stream_state
-{
-    STREAM_STOPPED,
-    STREAM_STARTED,
-};
 
-struct pj_media_stream_t
+/**
+ * Media channel.
+ */
+struct pjmedia_channel
 {
-    pj_media_dir_t	    dir;
-    int			    pt;
-    int			    state;
-    pj_media_stream_stat    stat;
-    pj_media_stream_t	   *peer;
-    pj_snd_stream_info	    snd_info;
-    pj_snd_stream	   *snd_stream;
-    pj_mutex_t		   *mutex;
-    unsigned		    in_pkt_size;
-    void		   *in_pkt;
-    unsigned		    out_pkt_size;
-    void		   *out_pkt;
-    unsigned		    pcm_buf_size;
-    void		   *pcm_buf;
-    //pj_fifobuf_t	    fifobuf;
-    pj_codec_mgr	   *codec_mgr;
-    pj_codec		   *codec;
-    pj_rtp_session	    rtp;
-    pj_rtcp_session	   *rtcp;
-    pj_jitter_buffer	   *jb;
-    pj_sock_t		    rtp_sock;
-    pj_sock_t		    rtcp_sock;
-    pj_sockaddr_in	    dst_addr;
-    pj_thread_t		   *transport_thread;
-    int			    thread_quit_flag;
+    pjmedia_stream	   *stream;	    /**< Parent stream.		    */
+    pjmedia_dir		    dir;	    /**< Channel direction.	    */
+    unsigned		    pt;		    /**< Payload type.		    */
+    pj_bool_t		    paused;	    /**< Paused?.		    */
+    pj_snd_stream_info	    snd_info;	    /**< Sound stream param.	    */
+    pj_snd_stream	   *snd_stream;	    /**< Sound stream.		    */
+    unsigned		    in_pkt_size;    /**< Size of input buffer.	    */
+    void		   *in_pkt;	    /**< Input buffer.		    */
+    unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
+    void		   *out_pkt;	    /**< Output buffer.		    */
+    unsigned		    pcm_buf_size;   /**< Size of PCM buffer.	    */
+    void		   *pcm_buf;	    /**< PCM buffer.		    */
+    pj_rtp_session	    rtp;	    /**< RTP session.		    */
 };
 
 
+/**
+ * This structure describes media stream.
+ * A media stream is bidirectional media transmission between two endpoints.
+ * It consists of two channels, i.e. encoding and decoding channels.
+ * A media stream corresponds to a single "m=" line in a SDP session
+ * description.
+ */
+struct pjmedia_stream
+{
+    pjmedia_channel	    *enc;	    /**< Encoding channel.	    */
+    pjmedia_channel	    *dec;	    /**< Decoding channel.	    */
+
+    pjmedia_dir		     dir;	    /**< Stream direction.	    */
+    pjmedia_stream_stat	     stat;	    /**< Stream statistics.	    */
+
+    pjmedia_codec_mgr	    *codec_mgr;	    /**< Codec manager instance.    */
+    pjmedia_codec	    *codec;	    /**< Codec instance being used. */
+
+    pj_mutex_t		    *jb_mutex;
+    pj_jitter_buffer	     jb;	    /**< Jitter buffer.		    */
+
+    pj_sock_t		     rtp_sock;	    /**< RTP socket.		    */
+    pj_sock_t		     rtcp_sock;	    /**< RTCP socket.		    */
+    pj_sockaddr_in	     dst_addr;	    /**< Destination RTP address.   */
+
+    pj_rtcp_session	     rtcp;	    /**< RTCP for incoming RTP.	    */
+
+    pj_bool_t		     quit_flag;	    /**< To signal thread exit.	    */
+    pj_thread_t		    *thread;	    /**< Jitter buffer's thread.    */
+};
+
+
+
+/*
+ * play_callback()
+ *
+ * This callback is called by sound device's player thread when it
+ * needs to feed the player with some frames.
+ */
 static pj_status_t play_callback(/* in */   void *user_data,
 				 /* in */   pj_uint32_t timestamp,
 				 /* out */  void *frame,
 				 /*inout*/  unsigned size)
 {
-    pj_media_stream_t *channel = user_data;
+    pjmedia_channel *channel = user_data;
+    pjmedia_stream *stream = channel->stream;
     struct jb_frame *jb_frame;
     void *p;
     pj_uint32_t extseq;
     pj_status_t status;
-    struct pj_audio_frame frame_in, frame_out;
+    struct pjmedia_frame frame_in, frame_out;
 
     PJ_UNUSED_ARG(timestamp);
 
-    /* Lock mutex */
-    pj_mutex_lock (channel->mutex);
-
-    if (!channel->codec) {
-	pj_mutex_unlock (channel->mutex);
+    /* Do nothing if we're quitting. */
+    if (stream->quit_flag)
 	return -1;
-    }
+
+    /* Lock jitter buffer mutex */
+    pj_mutex_lock( stream->jb_mutex );
 
     /* Get frame from jitter buffer. */
-    status = pj_jb_get (channel->jb, &extseq, &p);
+    status = pj_jb_get(&stream->jb, &extseq, &p);
+
+    /* Unlock jitter buffer mutex. */
+    pj_mutex_unlock( stream->jb_mutex );
+
     jb_frame = p;
-    if (status != 0 || jb_frame == NULL) {
+    if (status != PJ_SUCCESS || jb_frame == NULL) {
 	pj_memset(frame, 0, size);
-	pj_mutex_unlock(channel->mutex);
 	return 0;
     }
 
     /* Decode */
     frame_in.buf = jb_frame->buf;
     frame_in.size = jb_frame->size;
-    frame_in.type = PJ_AUDIO_FRAME_AUDIO;  /* ignored */
+    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
     frame_out.buf = channel->pcm_buf;
-    status = channel->codec->op->decode (channel->codec, &frame_in,
-					 channel->pcm_buf_size, &frame_out);
+    status = stream->codec->op->decode( stream->codec, &frame_in,
+					channel->pcm_buf_size, &frame_out);
     if (status != 0) {
-	PJ_LOG(3, (THISFILE, "decode() has return error status %d", 
-			  status));
+	TRACE_((THIS_FILE, "decode() has return error status %d", status));
 
 	pj_memset(frame, 0, size);
 	pj_fifobuf_free (&channel->fifobuf, jb_frame);
-	pj_mutex_unlock(channel->mutex);
 	return 0;
     }
 
     /* Put in sound buffer. */
     if (frame_out.size > size) {
-	PJ_LOG(3, (THISFILE, "Sound playout buffer truncated %d bytes", 
-			  frame_out.size - size));
+	TRACE_((THIS_FILE, "Sound playout buffer truncated %d bytes", 
+		frame_out.size - size));
 	frame_out.size = size;
     }
 
     pj_memcpy(frame, frame_out.buf, size);
-
     pj_fifobuf_free (&channel->fifobuf, jb_frame);
-    pj_mutex_unlock(channel->mutex);
+
     return 0;
 }
 
+
+/**
+ * rec_callback()
+ *
+ * This callback is called when the mic device has gathered
+ * enough audio samples. We will encode the audio samples and
+ * send it to remote.
+ */
 static pj_status_t rec_callback( /* in */ void *user_data,
 			         /* in */ pj_uint32_t timestamp,
 			         /* in */ const void *frame,
 			         /* in */ unsigned size)
 {
-    pj_media_stream_t *channel = user_data;
+    pjmedia_channel *channel = user_data;
+    pjmedia_stream *stream = channel->stream;
     pj_status_t status = 0;
-    struct pj_audio_frame frame_in, frame_out;
+    struct pjmedia_frame frame_in, frame_out;
     int ts_len;
     void *rtphdr;
     int rtphdrlen;
     pj_ssize_t sent;
-#if 0
-    static FILE *fhnd = NULL;
-#endif
+
 
     PJ_UNUSED_ARG(timestamp);
 
-    /* Start locking channel mutex */
-    pj_mutex_lock (channel->mutex);
-
-    if (!channel->codec) {
-	status = -1;
-	goto on_return;
-    }
+    /* Check if stream is quitting. */
+    if (stream->quit_flag)
+	return -1;
 
     /* Encode. */
-    frame_in.type = PJ_MEDIA_TYPE_AUDIO;
+    frame_in.type = PJMEDIA_TYPE_AUDIO;
     frame_in.buf = (void*)frame;
     frame_in.size = size;
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pj_rtp_hdr);
-    status = channel->codec->op->encode (channel->codec, &frame_in, 
-					 channel->out_pkt_size - sizeof(pj_rtp_hdr), 
-					 &frame_out);
+    status = stream->codec->op->encode( stream->codec, &frame_in, 
+					channel->out_pkt_size - sizeof(pj_rtp_hdr), 
+					&frame_out);
     if (status != 0) {
-	PJ_LOG(3,(THISFILE, "Codec encode() has returned error status %d", 
-			     status));
-	goto on_return;
+	TRACE_((THIS_FILE, "Codec encode() has returned error status %d", 
+		status));
+	return status;
     }
 
     /* Encapsulate. */
     ts_len = size / (channel->snd_info.bits_per_sample / 8);
-    status = pj_rtp_encode_rtp (&channel->rtp, channel->pt, 0, 
+    status = pj_rtp_encode_rtp( &channel->rtp, 
+				channel->pt, 0, 
 				frame_out.size, ts_len, 
 				(const void**)&rtphdr, &rtphdrlen);
     if (status != 0) {
-	PJ_LOG(3,(THISFILE, "RTP encode_rtp() has returned error status %d", 
-			    status));
-	goto on_return;
+	TRACE_((THIS_FILE, "RTP encode_rtp() has returned error status %d", 
+			   status));
+	return status;
     }
 
     if (rtphdrlen != sizeof(pj_rtp_hdr)) {
 	/* We don't support RTP with extended header yet. */
 	PJ_TODO(SUPPORT_SENDING_RTP_WITH_EXTENDED_HEADER);
-	PJ_LOG(3,(THISFILE, "Unsupported extended RTP header for transmission"));
-	goto on_return;
+	TRACE_((THIS_FILE, "Unsupported extended RTP header for transmission"));
+	return 0;
     }
 
     pj_memcpy(channel->out_pkt, rtphdr, sizeof(pj_rtp_hdr));
 
     /* Send. */
     sent = frame_out.size+sizeof(pj_rtp_hdr);
-    status = pj_sock_sendto (channel->rtp_sock, channel->out_pkt, &sent, 0, 
-			   &channel->dst_addr, sizeof(channel->dst_addr));
+    status = pj_sock_sendto(stream->rtp_sock, channel->out_pkt, &sent, 0, 
+			    &stream->dst_addr, sizeof(stream->dst_addr));
     if (status != PJ_SUCCESS)
-	goto on_return;
+	return status;
 
     /* Update stat */
-    channel->stat.pkt_tx++;
-    channel->stat.oct_tx += frame_out.size+sizeof(pj_rtp_hdr);
+    stream->stat.enc.pkt++;
+    stream->stat.enc.bytes += frame_out.size+sizeof(pj_rtp_hdr);
 
-#if 0
-    if (fhnd == NULL) {
-	fhnd = fopen("RTP.DAT", "wb");
-	if (fhnd) {
-	    fwrite (channel->out_pkt, frame_out.size+sizeof(pj_rtp_hdr), 1, fhnd);
-	    fclose(fhnd);
-	}
-    }
-#endif
-
-on_return:
-    pj_mutex_unlock (channel->mutex);
-    return status;
+    return 0;
 }
 
 
-static int PJ_THREAD_FUNC stream_decoder_transport_thread (void*arg)
+/*
+ * This thread will poll the socket for incoming packets, and put
+ * the packets to jitter buffer.
+ */
+static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 {
-    pj_media_stream_t *channel = arg;
+    pjmedia_stream *stream = arg;
+    pjmedia_channel *channel = stream->dec;
 
-    while (!channel->thread_quit_flag) {
+    while (!stream->quit_flag) {
 	pj_ssize_t len, size;
 	const pj_rtp_hdr *hdr;
 	const void *payload;
@@ -250,64 +273,64 @@ static int PJ_THREAD_FUNC stream_decoder_transport_thread (void*arg)
 	pj_time_val timeout;
 
 	PJ_FD_ZERO (&fds);
-	PJ_FD_SET (channel->rtp_sock, &fds);
+	PJ_FD_SET (stream->rtp_sock, &fds);
 	timeout.sec = 0;
-	timeout.msec = 100;
+	timeout.msec = 1;
 
 	/* Wait with timeout. */
-	status = pj_sock_select(channel->rtp_sock, &fds, NULL, NULL, &timeout);
+	status = pj_sock_select(stream->rtp_sock, &fds, NULL, NULL, &timeout);
 	if (status != 1)
 	    continue;
 
 	/* Get packet from socket. */
 	len = channel->in_pkt_size;
-	status = pj_sock_recv (channel->rtp_sock, channel->in_pkt, &len, 0);
+	status = pj_sock_recv(stream->rtp_sock, channel->in_pkt, &len, 0);
 	if (len < 1 || status != PJ_SUCCESS) {
 	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) {
-		/* On Win2K SP2 (or above) and WinXP, recv() will get WSAECONNRESET
-		   when the sending side receives ICMP port unreachable.
+		/* On Win2K SP2 (or above) and WinXP, recv() will get 
+		 * WSAECONNRESET when the sending side receives ICMP port 
+		 * unreachable.
 		 */
 		continue;
 	    }
-	    //pj_perror(THISFILE, "Error receiving packet from socket (len=%d)", len);
 	    pj_thread_sleep(1);
 	    continue;
 	}
 
-	if (channel->state != STREAM_STARTED)
+	if (channel->paused)
 	    continue;
-
-	if (channel->thread_quit_flag)
-	    break;
-
-	/* Start locking the channel. */
-	pj_mutex_lock (channel->mutex);
 
 	/* Update RTP and RTCP session. */
-	status = pj_rtp_decode_rtp (&channel->rtp, channel->in_pkt, len, &hdr, &payload, &payloadlen);
-	if (status != 0) {
-	    pj_mutex_unlock (channel->mutex);
-	    PJ_LOG(4,(THISFILE, "RTP decode_rtp() has returned error status %d", status));
+	status = pj_rtp_decode_rtp(&channel->rtp, channel->in_pkt, len, 
+				   &hdr, &payload, &payloadlen);
+	if (status != PJ_SUCCESS) {
+	    TRACE_((THIS_FILE, "RTP decode_rtp() has returned error status %d",
+		    status));
 	    continue;
 	}
-	status = pj_rtp_session_update (&channel->rtp, hdr);
-	if (status != 0 && status != PJ_RTP_ERR_SESSION_PROBATION && status != PJ_RTP_ERR_SESSION_RESTARTED) {
-	    pj_mutex_unlock (channel->mutex);
-	    PJ_LOG(4,(THISFILE, "RTP session_update() has returned error status %d", status));
+
+	status = pj_rtp_session_update(&channel->rtp, hdr);
+	if (status != 0 && 
+	    status != PJMEDIA_RTP_ERR_SESSION_PROBATION && 
+	    status != PJMEDIA_RTP_ERR_SESSION_RESTARTED) 
+	{
+	    TRACE_((THIS_FILE, 
+		    "RTP session_update() has returned error status %d", 
+		    status));
 	    continue;
 	}
-	pj_rtcp_rx_rtp (channel->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
+	pj_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
 
 	/* Update stat */
-	channel->stat.pkt_rx++;
-	channel->stat.oct_rx += len;
+	stream->stat.dec.pkt++;
+	stream->stat.dec.bytes += len;
 
 	/* Copy to FIFO buffer. */
 	size = payloadlen+sizeof(struct jb_frame);
 	jb_frame = pj_fifobuf_alloc (&channel->fifobuf, size);
 	if (jb_frame == NULL) {
-	    pj_mutex_unlock (channel->mutex);
-	    PJ_LOG(4,(THISFILE, "Unable to allocate %d bytes FIFO buffer", size));
+	    TRACE_((THIS_FILE, "Unable to allocate %d bytes FIFO buffer", 
+		    size));
 	    continue;
 	}
 
@@ -317,141 +340,109 @@ static int PJ_THREAD_FUNC stream_decoder_transport_thread (void*arg)
 	pj_memcpy (jb_frame->buf, payload, payloadlen);
 
 	/* Put to jitter buffer. */
-	status = pj_jb_put (channel->jb, pj_ntohs(hdr->seq), jb_frame);
+	pj_mutex_lock( stream->jb_mutex );
+	status = pj_jb_put(&stream->jb, pj_ntohs(hdr->seq), jb_frame);
+	pj_mutex_unlock( stream->jb_mutex );
+
 	if (status != 0) {
 	    pj_fifobuf_unalloc (&channel->fifobuf, jb_frame);
-	    pj_mutex_unlock (channel->mutex);
-	    PJ_LOG(4,(THISFILE, "Jitter buffer put() has returned error status %d", status));
+	    
+	    TRACE_((THIS_FILE, 
+		    "Jitter buffer put() has returned error status %d", 
+		    status));
 	    continue;
 	}
-
-	pj_mutex_unlock (channel->mutex);
     }
 
     return 0;
 }
 
-static void init_snd_param_from_codec_attr (pj_snd_stream_info *param,
-					    const pj_codec_attr *attr)
+
+/*
+ * Create sound stream parameter from codec attributes.
+ */
+static void init_snd_param( pj_snd_stream_info *snd_param,
+			    const pjmedia_codec_param *codec_param)
 {
-    param->bits_per_sample = attr->pcm_bits_per_sample;
-    param->bytes_per_frame = 2;
-    param->frames_per_packet = attr->sample_rate * attr->ptime / 1000;
-    param->samples_per_frame = 1;
-    param->samples_per_sec = attr->sample_rate;
+    pj_memset(snd_param, 0, sizeof(*snd_param));
+
+    snd_param->bits_per_sample	 = codec_param->pcm_bits_per_sample;
+    snd_param->bytes_per_frame   = 2;
+    snd_param->frames_per_packet = codec_param->sample_rate * 
+				   codec_param->ptime / 
+				   1000;
+    snd_param->samples_per_frame = 1;
+    snd_param->samples_per_sec   = codec_param->sample_rate;
 }
 
-static pj_media_stream_t *create_channel ( pj_pool_t *pool,
-					   pj_media_dir_t dir,
-					   pj_media_stream_t *peer,
-					   pj_codec_id *codec_id,
-					   pj_media_stream_create_param *param)
+
+/*
+ * Create media channel.
+ */
+static pj_status_t create_channel( pj_pool_t *pool,
+				   pjmedia_stream *stream,
+				   pjmedia_dir dir,
+				   const pjmedia_stream_info *param,
+				   const pjmedia_codec_param *codec_param,
+				   pjmedia_channel **p_channel)
 {
-    pj_media_stream_t *channel;
-    pj_codec_attr codec_attr;
-    void *ptr;
-    unsigned size;
+    pjmedia_channel *channel;
     pj_status_t status;
     
     /* Allocate memory for channel descriptor */
-    size = sizeof(pj_media_stream_t);
-    channel = pj_pool_calloc(pool, 1, size);
-    if (!channel) {
-	PJ_LOG(1,(THISFILE, "Unable to allocate %u bytes channel descriptor", 
-			 size));
-	return NULL;
-    }
 
+    channel = pj_pool_zalloc(pool, sizeof(pjmedia_channel));
+    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
+
+    /* Init channel info. */
+
+    channel->stream = stream;
     channel->dir = dir;
-    channel->pt = codec_id->pt;
-    channel->peer = peer;
-    channel->codec_mgr = pj_med_mgr_get_codec_mgr (param->mediamgr);
-    channel->rtp_sock = param->rtp_sock;
-    channel->rtcp_sock = param->rtcp_sock;
-    channel->dst_addr = *param->remote_addr;
-    channel->state = STREAM_STOPPED;
-
-    /* Create mutex for the channel. */
-    status = pj_mutex_create_simple(pool, NULL, &channel->mutex);
-    if (status != PJ_SUCCESS)
-	goto err_cleanup;
-
-    /* Create and initialize codec, only if peer is not present.
-       We only use one codec instance for both encoder and decoder.
-     */
-    if (peer && peer->codec) {
-	channel->codec = peer->codec;
-	status = channel->codec->factory->op->default_attr(channel->codec->factory, codec_id, 
-							   &codec_attr);
-	if (status != 0) {
-	    goto err_cleanup;
-	}
-
-    } else {
-	channel->codec = pj_codec_mgr_alloc_codec(channel->codec_mgr, codec_id);
-	if (channel->codec == NULL) {
-	    goto err_cleanup;
-	}
-
-	status = channel->codec->factory->op->default_attr(channel->codec->factory, codec_id, 
-							   &codec_attr);
-	if (status != 0) {
-	    goto err_cleanup;
-	}
-
-	codec_attr.pt = codec_id->pt;
-	status = channel->codec->op->open(channel->codec, &codec_attr);
-	if (status != 0) {
-	    goto err_cleanup;
-	}
-    }
+    channel->paused = 1;
+    channel->pt = param->fmt.pt;
 
     /* Allocate buffer for incoming packet. */
-    channel->in_pkt_size = PJ_MAX_MTU;
-    channel->in_pkt = pj_pool_alloc(pool, channel->in_pkt_size);
-    if (!channel->in_pkt) {
-	PJ_LOG(1, (THISFILE, "Unable to allocate %u bytes incoming packet buffer", 
-			  channel->in_pkt_size));
-	goto err_cleanup;
-    }
 
+    channel->in_pkt_size = PJMEDIA_MAX_MTU;
+    channel->in_pkt = pj_pool_alloc( pool, channel->in_pkt_size );
+    PJ_ASSERT_RETURN(channel->in_pkt != NULL, PJ_ENOMEM);
+
+    
     /* Allocate buffer for outgoing packet. */
+
     channel->out_pkt_size = sizeof(pj_rtp_hdr) + 
-			    codec_attr.avg_bps / 8 * PJ_MAX_FRAME_DURATION_MS / 1000;
-    if (channel->out_pkt_size > PJ_MAX_MTU)
-	channel->out_pkt_size = PJ_MAX_MTU;
+			    codec_param->avg_bps/8 * 
+			    PJMEDIA_MAX_FRAME_DURATION_MS / 
+			    1000;
+
+    if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
+	channel->out_pkt_size = PJMEDIA_MAX_MTU;
+
     channel->out_pkt = pj_pool_alloc(pool, channel->out_pkt_size);
-    if (!channel->out_pkt) {
-	PJ_LOG(1, (THISFILE, "Unable to allocate %u bytes encoding buffer", 
-			  channel->out_pkt_size));
-	goto err_cleanup;
-    }
+    PJ_ASSERT_RETURN(channel->out_pkt != NULL, PJ_ENOMEM);
 
-    /* Allocate buffer for decoding to PCM */
-    channel->pcm_buf_size = codec_attr.sample_rate * 
-			    codec_attr.pcm_bits_per_sample / 8 *
-			    PJ_MAX_FRAME_DURATION_MS / 1000;
+
+    /* Allocate buffer for decoding to PCM: */
+
+    channel->pcm_buf_size = codec_param->sample_rate * 
+			    codec_param->pcm_bits_per_sample / 8 *
+			    PJMEDIA_MAX_FRAME_DURATION_MS / 1000;
     channel->pcm_buf = pj_pool_alloc (pool, channel->pcm_buf_size);
-    if (!channel->pcm_buf) {
-	PJ_LOG(1, (THISFILE, "Unable to allocate %u bytes PCM buffer", 
-			  channel->pcm_buf_size));
-	goto err_cleanup;
-    }
+    PJ_ASSERT_RETURN(channel->pcm_buf != NULL, PJ_ENOMEM);
 
-    /* Allocate buffer for frames put in jitter buffer. */
-    size = codec_attr.avg_bps / 8 * PJ_MAX_BUFFER_SIZE_MS / 1000;
-    ptr = pj_pool_alloc(pool, size);
-    if (!ptr) {
-	PJ_LOG(1, (THISFILE, "Unable to allocate %u bytes jitter buffer", 
-			  channel->pcm_buf_size));
-	goto err_cleanup;
-    }
-    //pj_fifobuf_init (&channel->fifobuf, ptr, size);
+
+    /* Create RTP and RTCP sessions: */
+
+    status = pj_rtp_session_init(&channel->rtp, param->fmt.pt, 
+				 param->ssrc);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Create and initialize sound device */
-    init_snd_param_from_codec_attr (&channel->snd_info, &codec_attr);
 
-    if (dir == PJ_MEDIA_DIR_ENCODING)
+    init_snd_param(&channel->snd_info, codec_param);
+
+    if (dir == PJMEDIA_DIR_ENCODING)
 	channel->snd_stream = pj_snd_open_recorder(-1, &channel->snd_info, 
 						   &rec_callback, channel);
     else
@@ -459,189 +450,249 @@ static pj_media_stream_t *create_channel ( pj_pool_t *pool,
 						 &play_callback, channel);
 
     if (!channel->snd_stream)
-	goto err_cleanup;
+	return -1;
 
-    /* Create RTP and RTCP sessions. */
-    if (pj_rtp_session_init(&channel->rtp, codec_id->pt, param->ssrc) != 0) {
-	PJ_LOG(1, (THISFILE, "RTP session initialization error"));
-	goto err_cleanup;
-    }
-
-    /* For decoder, create RTCP session, jitter buffer, and transport thread. */
-    if (dir == PJ_MEDIA_DIR_DECODING) {
-	channel->rtcp = pj_pool_calloc(pool, 1, sizeof(pj_rtcp_session));
-	if (!channel->rtcp) {
-	    PJ_LOG(1, (THISFILE, "Unable to allocate RTCP session"));
-	    goto err_cleanup;
-	}
-
-	pj_rtcp_init(channel->rtcp, param->ssrc);
-
-	channel->jb = pj_pool_calloc(pool, 1, sizeof(pj_jitter_buffer));
-	if (!channel->jb) {
-	    PJ_LOG(1, (THISFILE, "Unable to allocate jitter buffer descriptor"));
-	    goto err_cleanup;
-	}
-	if (pj_jb_init(channel->jb, pool, param->jb_min, param->jb_max, param->jb_maxcnt)) {
-	    PJ_LOG(1, (THISFILE, "Unable to allocate jitter buffer"));
-	    goto err_cleanup;
-	}
-
-	status = pj_thread_create(pool, "decode", 
-				  &stream_decoder_transport_thread, channel,
-				  0, 0, &channel->transport_thread);
-	if (status != PJ_SUCCESS) {
-	    //pj_perror(THISFILE, "Unable to create transport thread");
-	    goto err_cleanup;
-	}
-    }
 
     /* Done. */
-    return channel;
-
-err_cleanup:
-    pj_media_stream_destroy(channel);
-    return NULL;
+    *p_channel = channel;
+    return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_status_t) pj_media_stream_create (pj_pool_t *pool,
-					    pj_media_stream_t **enc_stream,
-					    pj_media_stream_t **dec_stream,
-					    pj_media_stream_create_param *param)
+/*
+ * Create media stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
+					   pj_pool_t *pool,
+					   const pjmedia_stream_info *info,
+					   pjmedia_stream **p_stream)
+
 {
-    *dec_stream = *enc_stream = NULL;
-
-    if (param->dir & PJ_MEDIA_DIR_DECODING) {
-	*dec_stream = 
-	    create_channel(pool, PJ_MEDIA_DIR_DECODING, NULL, param->codec_id, param);
-	if (!*dec_stream)
-	    return -1;
-    }
-
-    if (param->dir & PJ_MEDIA_DIR_ENCODING) {
-	*enc_stream = 
-	    create_channel(pool, PJ_MEDIA_DIR_ENCODING, *dec_stream, param->codec_id, param);
-	if (!*enc_stream) {
-	    if (*dec_stream) {
-		pj_media_stream_destroy(*dec_stream);
-		*dec_stream = NULL;
-	    }
-	    return -1;
-	}
-
-	if (*dec_stream) {
-	    (*dec_stream)->peer = *enc_stream;
-	}
-    }
-
-    return 0;
-}
-
-PJ_DEF(pj_status_t) pj_media_stream_start (pj_media_stream_t *channel)
-{
+    pjmedia_stream *stream;
+    pjmedia_codec_param codec_param;
     pj_status_t status;
 
-    status = pj_snd_stream_start(channel->snd_stream);
+    PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
 
-    if (status == 0)
-	channel->state = STREAM_STARTED;
+
+    /* Allocate the media stream: */
+
+    stream = pj_pool_zalloc(pool, sizeof(pjmedia_stream));
+    PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
+
+
+    /* Init stream: */
+   
+    stream->dir = info->dir;
+    stream->codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
+
+    /* Create mutex to protect jitter buffer: */
+
+    status = pj_mutex_create_simple(pool, NULL, &stream->jb_mutex);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Create and initialize codec: */
+
+    status = pjmedia_codec_mgr_alloc_codec( stream->codec_mgr,
+					    &info->fmt, &stream->codec);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Get default codec param: */
+
+    status = stream->codec->op->default_attr(stream->codec, &codec_param);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Open the codec: */
+
+    status = stream->codec->op->open(stream->codec, &codec_param);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Init RTCP session: */
+
+    pj_rtcp_init(&stream->rtcp, info->ssrc);
+
+
+    /* Init jitter buffer: */
+
+    status = pj_jb_init(&stream->jb, pool, 
+			info->jb_min, info->jb_max, info->jb_maxcnt);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /*  Create jitter buffer thread: */
+
+    status = pj_thread_create(pool, "decode", 
+			      &jitter_buffer_thread, stream,
+			      0, 0, &stream->thread);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Create decoder channel: */
+
+    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, info,
+			     &codec_param, &stream->dec);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Create encoder channel: */
+
+    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING, info,
+			     &codec_param, &stream->enc);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+
+    /* Success! */
+    *p_stream = stream;
+    return PJ_SUCCESS;
+
+
+err_cleanup:
+    pjmedia_stream_destroy(stream);
     return status;
 }
 
-PJ_DEF(pj_status_t)  pj_media_stream_get_stat (const pj_media_stream_t *stream,
-					       pj_media_stream_stat *stat)
+
+/*
+ * Destroy stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
-    if (stream->dir == PJ_MEDIA_DIR_ENCODING) {
-	pj_memcpy (stat, &stream->stat, sizeof(*stat));
-    } else {
-	pj_rtcp_pkt *rtcp_pkt;
-	int len;
 
-	pj_memset (stat, 0, sizeof(*stat));
-	pj_assert (stream->rtcp != 0);
-	pj_rtcp_build_rtcp (stream->rtcp, &rtcp_pkt, &len);
+    PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-	stat->pkt_rx = stream->stat.pkt_rx;
-	stat->oct_rx = stream->stat.oct_rx;
+    /* Signal threads to quit. */
 
-	PJ_TODO(SUPPORT_JITTER_CALCULATION_FOR_NON_8KHZ_SAMPLE_RATE)
-	stat->jitter = pj_ntohl(rtcp_pkt->rr.jitter) / 8;
-	stat->pkt_lost = (rtcp_pkt->rr.total_lost_2 << 16) +
-			 (rtcp_pkt->rr.total_lost_1 << 8) +
-			 rtcp_pkt->rr.total_lost_0;
+    stream->quit_flag = 1;
+
+
+    /* Close encoding sound stream. */
+    
+    if (stream->enc && stream->enc->snd_stream) {
+
+	pj_snd_stream_stop(stream->enc->snd_stream);
+	pj_snd_stream_close(stream->enc->snd_stream);
+	stream->enc->snd_stream = NULL;
+
     }
-    return 0;
+
+    /* Close decoding sound stream. */
+
+    if (stream->dec && stream->dec->snd_stream) {
+
+	pj_snd_stream_stop(stream->dec->snd_stream);
+	pj_snd_stream_close(stream->dec->snd_stream);
+	stream->dec->snd_stream = NULL;
+
+    }
+
+    /* Wait for jitter buffer thread to quit: */
+
+    if (stream->thread) {
+	pj_thread_join(stream->thread);
+	pj_thread_destroy(stream->thread);
+	stream->thread = NULL;
+    }
+
+    /* Free codec. */
+
+    if (stream->codec) {
+	stream->codec->op->close(stream->codec);
+	pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
+	stream->codec = NULL;
+    }
+
+    /* Free mutex */
+    
+    if (stream->jb_mutex) {
+	pj_mutex_destroy(stream->jb_mutex);
+	stream->jb_mutex = NULL;
+    }
+
+    return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_media_stream_pause (pj_media_stream_t *channel)
+
+
+/*
+ * Start stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 {
-    PJ_UNUSED_ARG(channel);
-    return -1;
+
+    PJ_ASSERT_RETURN(stream && stream->enc && stream->dec, PJ_EINVALIDOP);
+
+    if (stream->enc && (stream->dir & PJMEDIA_DIR_ENCODING)) {
+	stream->enc->paused = 0;
+	pj_snd_stream_start(stream->enc->snd_stream);
+    }
+
+    if (stream->dec && (stream->dir & PJMEDIA_DIR_DECODING)) {
+	stream->dec->paused = 0;
+	pj_snd_stream_start(stream->dec->snd_stream);
+    }
+
+    return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_media_stream_resume (pj_media_stream_t *channel)
+
+/*
+ * Get stream statistics.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
+					     pjmedia_stream_stat *stat)
 {
-    PJ_UNUSED_ARG(channel);
-    return -1;
+    PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
+
+    pj_memcpy(stat, &stream->stat, sizeof(pjmedia_stream_stat));
+
+    return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_media_stream_destroy (pj_media_stream_t *channel)
+
+/*
+ * Pause stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
+					  pjmedia_dir dir)
 {
-    channel->thread_quit_flag = 1;
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    pj_mutex_lock (channel->mutex);
-    if (channel->peer)
-	pj_mutex_lock (channel->peer->mutex);
+    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc)
+	stream->enc->paused = 1;
 
-    if (channel->jb) {
-	/* No need to deinitialize jitter buffer. */
-    }
-    if (channel->transport_thread) {
-	pj_thread_join(channel->transport_thread);
-	pj_thread_destroy(channel->transport_thread);
-	channel->transport_thread = NULL;
-    }
-    if (channel->snd_stream != NULL) {
-	pj_mutex_unlock (channel->mutex);
-	pj_snd_stream_stop(channel->snd_stream);
-	pj_mutex_lock (channel->mutex);
-	pj_snd_stream_close(channel->snd_stream);
-	channel->snd_stream = NULL;
-    }
-    if (channel->codec) {
-	channel->codec->op->close(channel->codec);
-	pj_codec_mgr_dealloc_codec(channel->codec_mgr, channel->codec);
-	channel->codec = NULL;
-    }
-    if (channel->peer) {
-	pj_media_stream_t *peer = channel->peer;
-	peer->peer = NULL;
-	peer->codec = NULL;
-	peer->thread_quit_flag = 1;
-	if (peer->transport_thread) {
-	    pj_mutex_unlock (peer->mutex);
-	    pj_thread_join(peer->transport_thread);
-	    pj_mutex_lock (peer->mutex);
-	    pj_thread_destroy(peer->transport_thread);
-	    peer->transport_thread = NULL;
-	}
-	if (peer->snd_stream) {
-	    pj_mutex_unlock (peer->mutex);
-	    pj_snd_stream_stop(peer->snd_stream);
-	    pj_mutex_lock (peer->mutex);
-	    pj_snd_stream_close(peer->snd_stream);
-	    peer->snd_stream = NULL;
-	}
-    }
+    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec)
+	stream->dec->paused = 1;
 
-    channel->state = STREAM_STOPPED;
+    return PJ_SUCCESS;
+}
 
-    if (channel->peer)
-	pj_mutex_unlock (channel->peer->mutex);
-    pj_mutex_unlock(channel->mutex);
-    pj_mutex_destroy(channel->mutex);
 
-    return 0;
+/*
+ * Resume stream
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
+					   pjmedia_dir dir)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc)
+	stream->enc->paused = 1;
+
+    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec)
+	stream->dec->paused = 1;
+
+    return PJ_SUCCESS;
 }
 

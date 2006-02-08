@@ -25,6 +25,7 @@
  * @brief Codec framework.
  */
 
+#include <pjmedia/types.h>
 #include <pj/list.h>
 
 PJ_BEGIN_DECL
@@ -36,312 +37,393 @@ PJ_BEGIN_DECL
  * @{
  */
 
-/** Top most media type. */
-typedef enum pj_media_type
-{
-    /** No type. */
-    PJ_MEDIA_TYPE_NONE = 0,
 
-    /** The media is audio */
-    PJ_MEDIA_TYPE_AUDIO = 1,
-
-    /** The media is video. */
-    PJ_MEDIA_TYPE_VIDEO = 2,
-
-    /** Unknown media type, in this case the name will be specified in 
-     *  encoding_name.
-     */
-    PJ_MEDIA_TYPE_UNKNOWN = 3,
-
-} pj_media_type;
-
-
-/** Media direction. */
-typedef enum pj_media_dir_t
-{
-    /** None */
-    PJ_MEDIA_DIR_NONE = 0,
-
-    /** Encoding (outgoing to network) stream */
-    PJ_MEDIA_DIR_ENCODING = 1,
-
-    /** Decoding (incoming from network) stream. */
-    PJ_MEDIA_DIR_DECODING = 2,
-
-    /** Incoming and outgoing stream. */
-    PJ_MEDIA_DIR_ENCODING_DECODING = 3,
-
-} pj_media_dir_t;
-
-
-/** Standard RTP paylist types. */
-typedef enum pj_rtp_pt
-{
-    PJ_RTP_PT_PCMU = 0,		/* audio PCMU */
-    PJ_RTP_PT_GSM  = 3,		/* audio GSM */
-    PJ_RTP_PT_G723 = 4,		/* audio G723 */
-    PJ_RTP_PT_DVI4_8K = 5,	/* audio DVI4 8KHz */
-    PJ_RTP_PT_DVI4_16K = 6,	/* audio DVI4 16Khz */
-    PJ_RTP_PT_LPC = 7,		/* audio LPC */
-    PJ_RTP_PT_PCMA = 8,		/* audio PCMA */
-    PJ_RTP_PT_G722 = 9,		/* audio G722 */
-    PJ_RTP_PT_L16_2 = 10,	/* audio 16bit linear 44.1KHz stereo */
-    PJ_RTP_PT_L16_1 = 11,	/* audio 16bit linear 44.1KHz mono */
-    PJ_RTP_PT_QCELP = 12,	/* audio QCELP */
-    PJ_RTP_PT_CN = 13,		/* audio Comfort Noise */
-    PJ_RTP_PT_MPA = 14,		/* audio MPEG1 or MPEG2 as elementary streams */
-    PJ_RTP_PT_G728 = 15,	/* audio G728 */
-    PJ_RTP_PT_DVI4_11K = 16,	/* audio DVI4 11.025KHz mono */
-    PJ_RTP_PT_DVI4_22K = 17,	/* audio DVI4 22.050KHz mono */
-    PJ_RTP_PT_G729 = 18,	/* audio G729 */
-    PJ_RTP_PT_CELB = 25,	/* video/comb Cell-B by Sun Microsystems (RFC 2029) */
-    PJ_RTP_PT_JPEG = 26,	/* video JPEG */
-    PJ_RTP_PT_NV = 28,		/* video NV implemented by nv program by Xerox */
-    PJ_RTP_PT_H261 = 31,	/* video H261 */
-    PJ_RTP_PT_MPV = 32,		/* video MPEG1 or MPEG2 elementary streams */
-    PJ_RTP_PT_MP2T = 33,	/* video MPEG2 transport */
-    PJ_RTP_PT_H263 = 34,	/* video H263 */
-
-    PJ_RTP_PT_DYNAMIC = 96,	/* start of dynamic RTP payload */
-} pj_rtp_pt;
-
-
-/** Identification used to search for codec factory that supports specific 
- *  codec specification. 
+/** 
+ * Standard RTP static payload types, as defined by RFC 3551. 
  */
-typedef struct pj_codec_id
+enum pjmedia_rtp_pt
 {
-    /** Media type. */
-    pj_media_type   type;
+    PJMEDIA_RTP_PT_PCMU = 0,	    /* audio PCMU			    */
+    PJMEDIA_RTP_PT_GSM  = 3,	    /* audio GSM			    */
+    PJMEDIA_RTP_PT_G723 = 4,	    /* audio G723			    */
+    PJMEDIA_RTP_PT_DVI4_8K = 5,	    /* audio DVI4 8KHz			    */
+    PJMEDIA_RTP_PT_DVI4_16K = 6,    /* audio DVI4 16Khz			    */
+    PJMEDIA_RTP_PT_LPC = 7,	    /* audio LPC			    */
+    PJMEDIA_RTP_PT_PCMA = 8,	    /* audio PCMA			    */
+    PJMEDIA_RTP_PT_G722 = 9,	    /* audio G722			    */
+    PJMEDIA_RTP_PT_L16_2 = 10,	    /* audio 16bit linear 44.1KHz stereo    */
+    PJMEDIA_RTP_PT_L16_1 = 11,	    /* audio 16bit linear 44.1KHz mono	    */
+    PJMEDIA_RTP_PT_QCELP = 12,	    /* audio QCELP			    */
+    PJMEDIA_RTP_PT_CN = 13,	    /* audio Comfort Noise		    */
+    PJMEDIA_RTP_PT_MPA = 14,	    /* audio MPEG1/MPEG2 elementary streams */
+    PJMEDIA_RTP_PT_G728 = 15,	    /* audio G728			    */
+    PJMEDIA_RTP_PT_DVI4_11K = 16,   /* audio DVI4 11.025KHz mono	    */
+    PJMEDIA_RTP_PT_DVI4_22K = 17,   /* audio DVI4 22.050KHz mono	    */
+    PJMEDIA_RTP_PT_G729 = 18,	    /* audio G729			    */
 
-    /** Payload type (can be dynamic). */
-    unsigned	    pt;
+    PJMEDIA_RTP_PT_CELB = 25,	    /* video/comb Cell-B by Sun (RFC 2029)  */
+    PJMEDIA_RTP_PT_JPEG = 26,	    /* video JPEG			    */
+    PJMEDIA_RTP_PT_NV = 28,	    /* video NV  by nv program by Xerox	    */
+    PJMEDIA_RTP_PT_H261 = 31,	    /* video H261			    */
+    PJMEDIA_RTP_PT_MPV = 32,	    /* video MPEG1 or MPEG2 elementary	    */
+    PJMEDIA_RTP_PT_MP2T = 33,	    /* video MPEG2 transport		    */
+    PJMEDIA_RTP_PT_H263 = 34,	    /* video H263			    */
 
-    /** Encoding name, must be present if the payload type is dynamic. */
-    pj_str_t	    encoding_name;
+    PJMEDIA_RTP_PT_DYNAMIC = 96,    /* start of dynamic RTP payload	    */
 
-    /** Sampling rate. */
-    unsigned	    sample_rate;
-} pj_codec_id;
+};
 
 
-/** Detailed codec attributes used both to configure a codec and to query
- *  the capability of codec factories.
+/** 
+ * Identification used to search for codec factory that supports specific 
+ * codec specification. 
  */
-typedef struct pj_codec_attr
+struct pjmedia_codec_info
 {
-    pj_uint32_t	sample_rate;	    /* Sampling rate in Hz */
-    pj_uint32_t	avg_bps;	    /* Average bandwidth in bits per second */
+    pjmedia_type    type;	    /**< Media type.			*/
+    unsigned	    pt;		    /**< Payload type (can be dynamic). */
+    pj_str_t	    encoding_name;  /**< Encoding name.			*/
+    unsigned	    sample_rate;    /**< Sampling rate.			*/
+};
 
-    pj_uint8_t	pcm_bits_per_sample;/* Bits per sample in the PCM side */
-    pj_uint16_t	ptime;		    /* Packet time in miliseconds */
 
-    unsigned	pt:8;		    /* Payload type. */
-    unsigned    vad_enabled:1;	    /* Voice Activity Detector. */
-    unsigned    cng_enabled:1;	    /* Comfort Noise Generator. */
-    unsigned    lpf_enabled:1;	    /* Low pass filter */
-    unsigned    hpf_enabled:1;	    /* High pass filter */
-    unsigned    penh_enabled:1;	    /* Perceptual Enhancement */
-    unsigned    concl_enabled:1;    /* Packet loss concealment */
-    unsigned    reserved_bit:1;
-
-} pj_codec_attr;
-
-/** Types of audio frame. */
-typedef enum pj_audio_frame_type
+/** 
+ * Detailed codec attributes used both to configure a codec and to query
+ * the capability of codec factories.
+ */
+struct pjmedia_codec_param
 {
-    /** The frame is a silence audio frame. */
-    PJ_AUDIO_FRAME_SILENCE,
+    pj_uint32_t	sample_rate;	    /**< Sampling rate in Hz		*/
+    pj_uint32_t	avg_bps;	    /**< Average bandwidth in bits/sec	*/
 
-    /** The frame is a non-silence audio frame. */
-    PJ_AUDIO_FRAME_AUDIO,
+    pj_uint8_t	pcm_bits_per_sample;/**< Bits/sample in the PCM side	*/
+    pj_uint16_t	ptime;		    /**< Packet time in miliseconds	*/
 
-} pj_audio_frame_type;
+    unsigned	pt:8;		    /**< Payload type.			*/
+    unsigned    vad_enabled:1;	    /**< Voice Activity Detector.	*/
+    unsigned    cng_enabled:1;	    /**< Comfort Noise Generator.	*/
+    unsigned    lpf_enabled:1;	    /**< Low pass filter		*/
+    unsigned    hpf_enabled:1;	    /**< High pass filter		*/
+    unsigned    penh_enabled:1;	    /**< Perceptual Enhancement		*/
+    unsigned    concl_enabled:1;    /**< Packet loss concealment	*/
+    unsigned    reserved_bit:1;	    /**< Reserved, must be NULL.	*/
 
-typedef struct pj_codec pj_codec;
-typedef struct pj_codec_factory pj_codec_factory;
+};
 
 
-/** This structure describes an audio frame. */
-struct pj_audio_frame
+/** 
+ * Types of media frame. 
+ */
+enum pjmedia_frame_type
 {
-    /** Type: silence or non-silence. */
-    pj_audio_frame_type type;
+    PJMEDIA_FRAME_TYPE_SILENCE_AUDIO,	/**< Silence audio frame.	*/
+    PJMEDIA_FRAME_TYPE_AUDIO,		/**< Normal audio frame.	*/
 
-    /** Pointer to buffer. */
-    void	*buf;
+};
 
-    /** Frame size in bytes. */
-    unsigned	 size;
+/** 
+ * This structure describes a media frame. 
+ */
+struct pjmedia_frame
+{
+    pjmedia_frame_type	 type;	/**< Frame type.		    */
+    void		*buf;	/**< Pointer to buffer.		    */
+    pj_size_t		 size;	/**< Frame size in bytes.	    */
 };
 
 /**
- * Operations that must be supported by the codec.
+ * This structure describes codec operations. Each codec MUST implement
+ * all of these functions.
  */
-typedef struct pj_codec_op
+struct pjmedia_codec_op
 {
-    /** Get default attributes. */
-    pj_status_t (*default_attr) (pj_codec *codec, pj_codec_attr *attr);
-
-    /** Open and initialize codec using the specified attribute.
-     *  @return zero on success.
+    /** 
+     * Get default attributes for this codec. 
+     *
+     * @param codec	The codec instance.
+     * @param attr	Pointer to receive default codec attributes.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    pj_status_t	(*init)( pj_codec *codec, pj_pool_t *pool );
+    pj_status_t (*default_attr)(pjmedia_codec *codec, 
+				pjmedia_codec_param *attr);
 
-    /** Close and shutdown codec.
+    /** 
+     * Initialize codec using the specified attribute.
+     *
+     * @param codec	The codec instance.
+     * @param pool	Pool to use when the codec needs to allocate
+     *			some memory.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    pj_status_t	(*open)( pj_codec *codec, pj_codec_attr *attr );
+    pj_status_t	(*init)(pjmedia_codec *codec, 
+			pj_pool_t *pool );
 
-    /** Close and shutdown codec.
+    /** 
+     * Open the codec and initialize with the specified parameter..
+     *
+     * @param codec	The codec instance.
+     * @param param	Codec initialization parameter.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    pj_status_t (*close)( pj_codec *codec );
+    pj_status_t	(*open)(pjmedia_codec *codec, 
+			pjmedia_codec_param *param );
 
-    /** Encode frame.
+    /** 
+     * Close and shutdown codec, releasing all resources allocated by
+     * this codec, if any.
+     *
+     * @param codec	The codec instance.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    pj_status_t (*encode)( pj_codec *codec, const struct pj_audio_frame *input,
-			   unsigned output_buf_len, struct pj_audio_frame *output);
+    pj_status_t (*close)(pjmedia_codec *codec);
 
-    /** Decode frame.
+
+    /** 
+     * Instruct the codec to encode the specified input frame.
+     *
+     * @param codec	The codec instance.
+     * @param input	The input frame.
+     * @param out_size	The length of buffer in the output frame.
+     * @param output	The output frame.
+     *
+     * @return		PJ_SUCCESS on success;
      */
-    pj_status_t (*decode)( pj_codec *codec, const struct pj_audio_frame *input,
-			   unsigned output_buf_len, struct pj_audio_frame *output);
+    pj_status_t (*encode)(pjmedia_codec *codec, 
+			  const struct pjmedia_frame *input,
+			  unsigned out_size, 
+			  struct pjmedia_frame *output);
 
-} pj_codec_op;
+    /** 
+     * Instruct the codec to decode the specified input frame.
+     *
+     * @param codec	The codec instance.
+     * @param input	The input frame.
+     * @param out_size	The length of buffer in the output frame.
+     * @param output	The output frame.
+     *
+     * @return		PJ_SUCCESS on success;
+     */
+    pj_status_t (*decode)(pjmedia_codec *codec, 
+			  const struct pjmedia_frame *input,
+			  unsigned out_size, 
+			  struct pjmedia_frame *output);
+
+};
+
 
 /**
- * A codec describes an instance to encode or decode media frames. 
+ * This structure describes a codec instance. 
  */
-struct pj_codec
+struct pjmedia_codec
 {
     /** Entries to put this codec instance in codec factory's list. */
-    PJ_DECL_LIST_MEMBER(struct pj_codec);
+    PJ_DECL_LIST_MEMBER(struct pjmedia_codec);
 
     /** Codec's private data. */
     void	*codec_data;
 
     /** Codec factory where this codec was allocated. */
-    pj_codec_factory *factory;
+    pjmedia_codec_factory *factory;
 
     /** Operations to codec. */
-    pj_codec_op	*op;
+    pjmedia_codec_op	*op;
 };
 
+
 /**
- * This structure describes operations that must be supported by codec factories.
+ * This structure describes operations that must be supported by codec 
+ * factories.
  */
-typedef struct pj_codec_factory_op
+struct pjmedia_codec_factory_op
 {
-    /** Check whether the factory can create codec with the specified ID.
-     *  @param factory The codec factory.
-     *  @param id  The codec ID.
-     *  @return zero it matches.
+    /** 
+     * Check whether the factory can create codec with the specified 
+     * codec info.
+     *
+     * @param factory	The codec factory.
+     * @param info	The codec info.
+     *
+     * @return		PJ_SUCCESS if this factory is able to create an
+     *			instance of codec with the specified info.
      */
-    pj_status_t	(*match_id)( pj_codec_factory *factory, const pj_codec_id *id );
+    pj_status_t	(*test_alloc)(pjmedia_codec_factory *factory, 
+			      const pjmedia_codec_info *info );
 
-    /** Create default attributes for the specified codec ID. This function can
-     *  be called by application to get the capability of the codec.
-     *  @param factory The codec factory.
-     *  @param id  The codec ID.
-     *  @param attr The attribute to be initialized.
-     *  @return zero if success.
+    /** 
+     * Create default attributes for the specified codec ID. This function
+     * can be called by application to get the capability of the codec.
+     *
+     * @param factory	The codec factory.
+     * @param info	The codec info.
+     * @param attr	The attribute to be initialized.
+     *
+     * @return		PJ_SUCCESS if success.
      */
-    pj_status_t (*default_attr)( pj_codec_factory *factory, const pj_codec_id *id,
-				 pj_codec_attr *attr );
+    pj_status_t (*default_attr)(pjmedia_codec_factory *factory, 
+				const pjmedia_codec_info *info,
+				pjmedia_codec_param *attr );
 
-    /** Enumerate supported codecs.
-     *  @param factory The codec factory.
-     *  @param count Number of entries in the array.
-     *  @param codecs The codec array.
-     *  @return the total number of supported codecs, which can be less or 
-     *          greater than requested.
+    /** 
+     * Enumerate supported codecs that can be created using this factory.
+     * 
+     *  @param factory	The codec factory.
+     *  @param count	On input, specifies the number of elements in
+     *			the array. On output, the value will be set to
+     *			the number of elements that have been initialized
+     *			by this function.
+     *  @param info	The codec info array, which contents will be 
+     *			initialized upon return.
+     *
+     *  @return		PJ_SUCCESS on success.
      */
-    unsigned (*enum_codecs) (pj_codec_factory *factory, unsigned count, pj_codec_id codecs[]);
+    pj_status_t (*enum_info)(pjmedia_codec_factory *factory, 
+			     unsigned *count, 
+			     pjmedia_codec_info codecs[]);
 
-    /** This function is called by codec manager to instantiate one codec
-     *  instance.
-     *  @param factory The codec factory.
-     *  @param id  The codec ID.
-     *  @return the instance of the codec, or NULL if codec can not be created.
+    /** 
+     * Create one instance of the codec with the specified codec info.
+     *
+     * @param factory	The codec factory.
+     * @param info	The codec info.
+     * @param p_codec	Pointer to receive the codec instance.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    pj_codec* (*alloc_codec)( pj_codec_factory *factory, const pj_codec_id *id);
+    pj_status_t (*alloc_codec)(pjmedia_codec_factory *factory, 
+			       const pjmedia_codec_info *info,
+			       pjmedia_codec **p_codec);
 
-    /** This function is called by codec manager to return a particular instance
-     *  of codec back to the codec factory.
-     *  @param factory The codec factory.
-     *  @param codec The codec instance to be returned.
+    /** 
+     * This function is called by codec manager to return a particular 
+     * instance of codec back to the codec factory.
+     *
+     * @param factory	The codec factory.
+     * @param codec	The codec instance to be returned.
+     *
+     * @return		PJ_SUCCESS on success.
      */
-    void (*dealloc_codec)( pj_codec_factory *factory, pj_codec *codec );
+    pj_status_t (*dealloc_codec)(pjmedia_codec_factory *factory, 
+				 pjmedia_codec *codec );
 
-} pj_codec_factory_op;
+};
+
 
 /**
  * Codec factory describes a module that is able to create codec with specific
  * capabilities. These capabilities can be queried by codec manager to create
  * instances of codec.
  */
-struct pj_codec_factory
+struct pjmedia_codec_factory
 {
     /** Entries to put this structure in the codec manager list. */
-    PJ_DECL_LIST_MEMBER(struct pj_codec_factory);
+    PJ_DECL_LIST_MEMBER(struct pjmedia_codec_factory);
 
     /** The factory's private data. */
-    void		*factory_data;
+    void		     *factory_data;
 
     /** Operations to the factory. */
-    pj_codec_factory_op *op;
+    pjmedia_codec_factory_op *op;
 
 };
 
 /**
  * Declare maximum codecs
  */
-#define PJ_CODEC_MGR_MAX_CODECS	    32
+#define PJMEDIA_CODEC_MGR_MAX_CODECS	    32
 
 /**
  * Codec manager maintains codec factory etc.
  */
-typedef struct pj_codec_mgr
+typedef struct pjmedia_codec_mgr
 {
-    pj_codec_factory factory_list;
-    unsigned	     codec_cnt;
-    pj_codec_id	     codecs[PJ_CODEC_MGR_MAX_CODECS];
-} pj_codec_mgr;
+    pjmedia_codec_factory   factory_list;
+    unsigned		    codec_cnt;
+    pjmedia_codec_info	    codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+} pjmedia_codec_mgr;
+
+
 
 /**
- * Init codec manager.
+ * Initialize codec manager.
+ *
+ * @param mgr	    Codec manager instance.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
-pj_codec_mgr_init (pj_codec_mgr *mgr);
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr);
+
 
 /** 
- * Register codec to codec manager. 
+ * Register codec factory to codec manager. 
+ *
+ * @param mgr	    The codec manager.
+ * @param factory   The codec factory to be registered.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) 
-pj_codec_mgr_register_factory (pj_codec_mgr *mgr, pj_codec_factory *factory);
+pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
+				    pjmedia_codec_factory *factory);
 
 /**
- * Unregister codec.
+ * Unregister codec factory from the codec manager.
+ *
+ * @param mgr	    The codec manager.
+ * @param factory   The codec factory to be unregistered.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(void) 
-pj_codec_mgr_unregister_factory (pj_codec_mgr *mgr, pj_codec_factory *factory);
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_unregister_factory( pjmedia_codec_mgr *mgr, 
+				      pjmedia_codec_factory *factory);
 
 /**
- * Enumerate codecs.
+ * Enumerate all supported codec.
+ *
+ * @param mgr	    The codec manager.
+ * @param count	    On input, specifies the number of elements in
+ *		    the array. On output, the value will be set to
+ *		    the number of elements that have been initialized
+ *		    by this function.
+ * @param info	    The codec info array, which contents will be 
+ *		    initialized upon return.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(unsigned)
-pj_codec_mgr_enum_codecs (pj_codec_mgr *mgr, unsigned count, const pj_codec_id *codecs[]);
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_enum_codecs( pjmedia_codec_mgr *mgr, 
+						    unsigned *count, 
+						    pjmedia_codec_info info[]);
 
 /**
- * Open codec.
+ * Request the codec manager to allocate one instance of codec with the
+ * specified codec info. The codec will enumerate all codec factories
+ * until it finds factory that is able to create the specified codec.
+ *
+ * @param mgr	    The codec manager.
+ * @param info	    The information about the codec to be created.
+ * @param p_codec   Pointer to receive the codec instance.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_codec*) 
-pj_codec_mgr_alloc_codec (pj_codec_mgr *mgr, const struct pj_codec_id *id);
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr, 
+						   const pjmedia_codec_info *info,
+						   pjmedia_codec **p_codec);
 
 /**
- * Close codec.
+ * Deallocate the specified codec instance. The codec manager will return
+ * the instance of the codec back to its factory.
+ *
+ * @param mgr	    The codec manager.
+ * @param codec	    The codec instance.
+ *
+ * @return	    PJ_SUCESS on success.
  */
-PJ_DECL(void) 
-pj_codec_mgr_dealloc_codec (pj_codec_mgr *mgr, pj_codec *codec);
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr, 
+						     pjmedia_codec *codec);
 
 /**
  * @}

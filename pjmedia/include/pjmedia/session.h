@@ -25,8 +25,7 @@
  * @brief Media Session.
  */
 
-#include <pj/types.h>
-#include <pjmedia/mediamgr.h>
+#include <pjmedia/endpoint.h>
 #include <pjmedia/stream.h>
 #include <pjmedia/sdp.h>
 
@@ -38,109 +37,140 @@ PJ_BEGIN_DECL
  * @{
  */
 
-/** Opaque declaration of media session. */
-typedef struct pj_media_session_t pj_media_session_t;
-
-/** Media socket info. */
-typedef struct pj_media_sock_info
-{
-    pj_sock_t	    rtp_sock, rtcp_sock;
-    pj_sockaddr_in  rtp_addr_name;
-} pj_media_sock_info;
-
-/** Stream info. */
-typedef struct pj_media_stream_info
-{
-    pj_str_t		type;
-    pj_media_dir_t	dir;
-    pj_str_t		transport;
-    pj_media_sock_info	sock_info;
-    pj_str_t		rem_addr;
-    unsigned short	rem_port;
-    unsigned		fmt_cnt;
-    pj_codec_id		fmt[PJSDP_MAX_FMT];
-
-} pj_media_stream_info;
-
-/** Flag for modifying stream. */
-enum
-{
-    PJ_MEDIA_STREAM_MODIFY_DIR = 1,
-};
 
 /**
- * Create new session offering.
+ * Create new session offering based on the local and remote SDP.
+ * The session initially will be inactive.
+ *
+ * @param endpt		The PJMEDIA endpoint instance.
+ * @param stream_cnt	Maximum number of streams to be created. This
+ *			also denotes the number of elements in the
+ *			socket information.
+ * @param skinfo	Array of socket informations. The argument stream_cnt
+ *			specifies the number of elements in this array. One
+ *			element is needed for each media stream to be
+ *			created in the session.
+ * @param local_sdp	The SDP describing local capability.
+ * @param rem_sdp	The SDP describing remote capability.
+ * @param p_session	Pointer to receive the media session.
+ *
+ * @return		PJ_SUCCESS if media session can be created 
+ *			successfully.
  */
-PJ_DECL(pj_media_session_t*) 
-pj_media_session_create ( pj_med_mgr_t *mgr, const pj_media_sock_info *skinfo );
+PJ_DECL(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt, 
+					     unsigned stream_cnt,
+					     const pjmedia_sock_info skinfo[],
+					     const pjmedia_sdp_session *local_sdp,
+					     const pjmedia_sdp_session *rem_sdp,
+					     pjmedia_session **p_session );
+
 
 /**
- * Create new session based on peer's offering.
+ * Activate all streams in media session for the specified direction.
+ *
+ * @param session	The media session.
+ * @param dir		The direction to activate.
+ *
+ * @return		PJ_SUCCESS if success.
  */
-PJ_DECL(pj_media_session_t*) 
-pj_media_session_create_from_sdp ( pj_med_mgr_t *mgr, const pjsdp_session_desc *sdp,
-				   const pj_media_sock_info *skinfo);
+PJ_DECL(pj_status_t) pjmedia_session_resume(pjmedia_session *session,
+					    pjmedia_dir dir);
+
 
 /**
- * Duplicate session. The new session is inactive.
+ * Suspend receipt and transmission of all streams in media session
+ * for the specified direction.
+ *
+ * @param session	The media session.
+ * @param dir		The media direction to suspend.
+ *
+ * @return		PJ_SUCCESS if success.
  */
-PJ_DECL(pj_media_session_t*)
-pj_media_session_clone (const pj_media_session_t *session);
+PJ_DECL(pj_status_t) pjmedia_session_pause(pjmedia_session *session,
+					   pjmedia_dir dir);
 
 /**
- * Create SDP description from the session.
+ * Suspend receipt and transmission of individual stream in media session
+ * for the specified direction.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ * @param dir		The media direction to pause.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pjsdp_session_desc*)
-pj_media_session_create_sdp ( const pj_media_session_t *session, pj_pool_t *pool,
-			      pj_bool_t only_first_fmt);
+PJ_DECL(pj_status_t) pjmedia_session_pause_stream( pjmedia_session *session,
+						   unsigned index,
+						   pjmedia_dir dir);
 
 /**
- * Update session with SDP answer from peer. The session must NOT active.
+ * Activate individual stream in media session for the specified direction.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ * @param dir		The media direction to activate.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t)
-pj_media_session_update ( pj_media_session_t *session, 
-			  const pjsdp_session_desc *sdp);
+PJ_DECL(pj_status_t) pjmedia_session_resume_stream(pjmedia_session *session,
+						   unsigned index,
+						   pjmedia_dir dir);
 
 /**
  * Enumerate media streams in the session.
- * @return the actual number of streams.
+ *
+ * @param session	The media session.
+ * @param count		On input, specifies the number of elements in
+ *			the array. On output, the number will be filled
+ *			with number of streams in the session.
+ * @param strm_info	Array of stream info.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(unsigned)
-pj_media_session_enum_streams (const pj_media_session_t *session, 
-			       unsigned count, const pj_media_stream_info *info[]);
+PJ_DECL(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
+						  unsigned *count, 
+						  pjmedia_stream_info strm_info[]);
+
 
 /**
- * Get stream statistics.
+ * Get session statistics. The stream statistic shows various
+ * indicators such as packet count, packet lost, jitter, delay, etc.
+ *
+ * @param session	The media session.
+ * @param count		On input, specifies the number of elements in
+ *			the array. On output, the number will be filled
+ *			with number of streams in the session.
+ * @param stat		Array of stream statistics.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t)
-pj_media_session_get_stat (const pj_media_session_t *session, unsigned index,
-			   pj_media_stream_stat *tx_stat,
-			   pj_media_stream_stat *rx_stat);
+PJ_DECL(pj_status_t) pjmedia_session_get_stat(const pjmedia_session *session,
+					      unsigned *count,
+					      pjmedia_stream_stat stat[]);
 
 /**
- * Modify stream, only when stream is inactive.
+ * Get individual stream statistics. The stream statistic shows various
+ * indicators such as packet count, packet lost, jitter, delay, etc.
+ *
+ * @param s		The media session.
+ * @param index		The stream index.
+ * @param stat		Stream statistics.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t)
-pj_media_session_modify_stream (pj_media_session_t *session, unsigned index,
-				unsigned modify_flag, const pj_media_stream_info *info);
-
-/**
- * Activate all streams in media session.
- */
-PJ_DECL(pj_status_t)
-pj_media_session_activate (pj_media_session_t *session);
-
-/**
- * Activate individual stream in media session.
- */
-PJ_DECL(pj_status_t)
-pj_media_session_activate_stream (pj_media_session_t *session, unsigned index);
+PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(const pjmedia_session *s,
+						     unsigned index,
+						     pjmedia_stream_stat *stat);
 
 /**
  * Destroy media session.
+ *
+ * @param session	The media session.
+ *
+ * @return		PJ_SUCCESS if success.
  */
-PJ_DECL(pj_status_t)
-pj_media_session_destroy (pj_media_session_t *session);
+PJ_DECL(pj_status_t) pjmedia_session_destroy(pjmedia_session *session);
+
 
 
 /**
