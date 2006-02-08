@@ -142,15 +142,7 @@ SOURCE=..\src\pjmedia\sdp_neg.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\session.c
-
-!IF  "$(CFG)" == "pjmedia - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjmedia - Win32 Debug"
-
 # PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
