@@ -709,6 +709,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		test_complete = -110;
 		return PJ_TRUE;
 	    }
+	    pjsip_tsx_recv_msg(tsx, rdata);
 
 	    save_key(tsx);
 	    send_response(rdata, tsx, status_code);
@@ -749,6 +750,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		test_complete = -120;
 		return PJ_TRUE;
 	    }
+	    pjsip_tsx_recv_msg(tsx, rdata);
 
 	    save_key(tsx);
 
@@ -801,6 +803,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 	    }
 
+	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 
 	    if (pj_strcmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
@@ -882,6 +885,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 	    }
 
+	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 
 	    if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0) {
@@ -966,6 +970,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 	    }
 
+	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 	    send_response(rdata, tsx, TEST9_STATUS_CODE);
 
@@ -1076,6 +1081,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 	    }
 
+	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 	    
 	    schedule_send_response(rdata, &tsx_key, code1, 1000);

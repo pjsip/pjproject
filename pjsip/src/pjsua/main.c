@@ -18,14 +18,8 @@
  */
 #include "pjsua.h"
 #include "getopt.h"
+#include <stdlib.h>
 
-
-/* For debugging, disable threading. */
-//#define NO_WORKER_THREAD
-
-#ifdef NO_WORKER_THREAD
-#include <conio.h>
-#endif
 
 #define THIS_FILE	"main.c"
 
@@ -68,35 +62,45 @@ static void ui_help(void)
     puts("");
     puts("Console keys:");
     puts("  m    Make a call");
+    puts("  a    Answer incoming call");
     puts("  h    Hangup current call");
     puts("  q    Quit");
     puts("");
     fflush(stdout);
 }
 
+static pj_bool_t input(const char *title, char *buf, pj_size_t len)
+{
+    char *p;
+
+    printf("%s (empty to cancel): ", title); fflush(stdout);
+    fgets(buf, len, stdin);
+
+    /* Remove trailing newlines. */
+    for (p=buf; ; ++p) {
+	if (*p=='\r' || *p=='\n') *p='\0';
+	else if (!*p) break;
+    }
+
+    if (!*buf)
+	return PJ_FALSE;
+    
+    return PJ_TRUE;
+}
+
 static void ui_console_main(void)
 {
-    char keyin[10];
     char buf[128];
-    char *p;
     pjsip_inv_session *inv;
 
     //ui_help();
 
     for (;;) {
 
-#ifdef NO_WORKER_THREAD
-	pj_time_val timeout = { 0, 10 };
-	pjsip_endpt_handle_events (pjsua.endpt, &timeout);
-
-	if (kbhit())
-	    fgets(keyin, sizeof(keyin), stdin);
-#else
 	ui_help();
-	fgets(keyin, sizeof(keyin), stdin);
-#endif
+	fgets(buf, sizeof(buf), stdin);
 
-	switch (keyin[0]) {
+	switch (buf[0]) {
 
 	case 'm':
 	    if (inv_session != NULL) {
@@ -106,23 +110,9 @@ static void ui_console_main(void)
 	    }
 
 #if 1
-	    printf("Enter URL to call: "); fflush(stdout);
-	    fgets(buf, sizeof(buf), stdin);
-
-	    if (buf[0]=='\r' || buf[0]=='\n') {
-		/* Cancelled. */
-		puts("<cancelled>");
-		fflush(stdout);
-		continue;
-	    }
-
-	    /* Remove trailing newlines. */
-	    for (p=buf; ; ++p) {
-		if (*p=='\r' || *p=='\n') *p='\0';
-		else if (!*p) break;
-	    }
 	    /* Make call! : */
-
+	    if (!input("Enter URL to call", buf, sizeof(buf)))
+		continue;
 	    pjsua_invite(buf, &inv);
 
 #else
@@ -131,6 +121,33 @@ static void ui_console_main(void)
 #endif
 	    break;
 
+
+	case 'a':
+
+	    if (inv_session == NULL || inv_session->role != PJSIP_ROLE_UAS ||
+		inv_session->state >= PJSIP_INV_STATE_CONNECTING) 
+	    {
+		puts("No pending incoming call");
+		fflush(stdout);
+		continue;
+
+	    } else {
+		pj_status_t status;
+		pjsip_tx_data *tdata;
+
+		if (!input("Answer with code (100-699)", buf, sizeof(buf)))
+		    continue;
+		
+		status = pjsip_inv_answer(inv_session, atoi(buf), NULL, NULL, 
+					  &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_inv_send_msg(inv_session, tdata, NULL);
+
+		if (status != PJ_SUCCESS)
+		    pjsua_perror("Unable to create/send response", status);
+	    }
+
+	    break;
 
 	case 'h':
 
@@ -670,11 +687,6 @@ int main(int argc, char *argv[])
     /* Init default settings. */
 
     pjsua_default();
-
-
-#ifdef NO_WORKER_THREAD
-    pjsua.thread_cnt = 0;
-#endif
 
 
     /* Initialize pjsua (to create pool etc).

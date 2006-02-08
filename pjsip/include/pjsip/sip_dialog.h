@@ -49,6 +49,15 @@ typedef struct pjsip_dlg_party
 
 
 /**
+ * Dialog state.
+ */
+enum pjsip_dialog_state
+{
+    PJSIP_DIALOG_STATE_NULL,
+    PJSIP_DIALOG_STATE_ESTABLISHED,
+};
+
+/**
  * This structure describes the dialog structure.
  */
 struct pjsip_dialog
@@ -67,7 +76,7 @@ struct pjsip_dialog
     void	       *dlg_set;
 
     /* Dialog's session properties. */
-    pj_bool_t		established;/**< Dialog is established?		    */
+    enum pjsip_dialog_state	state;	    /**< Dialog state.			    */
     pjsip_uri	       *target;	    /**< Current target.		    */
     pjsip_dlg_party     local;	    /**< Local party info.		    */
     pjsip_dlg_party     remote;	    /**< Remote party info.		    */

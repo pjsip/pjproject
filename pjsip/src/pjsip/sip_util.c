@@ -1303,6 +1303,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
 	return status;
     }
 
+    /* Feed the request to the transaction. */
+    pjsip_tsx_recv_msg(tsx, rdata);
+
     /* Send the message. */
     status = pjsip_tsx_send_msg(tsx, tdata);
     if (status != PJ_SUCCESS) {

@@ -74,6 +74,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     pj_sprintf(dlg->obj_name, "dlg%p", dlg);
     dlg->ua = ua;
     dlg->endpt = endpt;
+    dlg->state = PJSIP_DIALOG_STATE_NULL;
 
     status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex);
     if (status != PJ_SUCCESS)
@@ -374,6 +375,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 
     PJ_TODO(DIALOG_APP_TIMER);
 
+    /* Feed the first request to the transaction. */
+    pjsip_tsx_recv_msg(tsx, rdata);
+
     /* Done. */
     *p_dlg = dlg;
     return PJ_SUCCESS;
@@ -406,6 +410,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     /* rdata must be response message. */
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG,
 		     PJSIP_ENOTRESPONSEMSG);
+
+    /* Status code MUST be 1xx (but not 100), or 2xx */
+    status = rdata->msg_info.msg->line.status.code;
+    PJ_ASSERT_RETURN( (status/100==1 && status!=100) ||
+		      (status/100==2), PJ_EBUG);
 
     /* To tag must present in the response. */
     PJ_ASSERT_RETURN(rdata->msg_info.to->tag.slen != 0, PJSIP_EMISSINGTAG);
@@ -444,6 +453,15 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     /* Initial role is UAC. */
     dlg->role = PJSIP_ROLE_UAC;
 
+    /* Dialog state depends on the response. */
+    status = rdata->msg_info.msg->line.status.code/100;
+    if (status == 1 || status == 2)
+	dlg->state = PJSIP_DIALOG_STATE_ESTABLISHED;
+    else {
+	pj_assert(!"Invalid status code");
+	dlg->state = PJSIP_DIALOG_STATE_NULL;
+    }
+
     /* Secure? */
     dlg->secure = PJSIP_URI_SCHEME_IS_SIPS(dlg->target);
 
@@ -462,7 +480,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
 	r = r->next;
     }
 
-    /* Init client authentication session. */
+    /* Clone client authentication session. */
     status = pjsip_auth_clt_clone(dlg->pool, &dlg->auth_sess, 
 				  &first_dlg->auth_sess);
     if (status != PJ_SUCCESS)
@@ -849,6 +867,71 @@ on_error:
     return status;
 }
 
+/* Add standard headers for certain types of response */
+static void dlg_beautify_response(pjsip_dialog *dlg,
+				  int st_code,
+				  pjsip_tx_data *tdata)
+{
+    pjsip_cseq_hdr *cseq;
+    int st_class;
+    const pjsip_hdr *c_hdr;
+    pjsip_hdr *hdr;
+
+    cseq = PJSIP_MSG_CSEQ_HDR(tdata->msg);
+    pj_assert(cseq != NULL);
+
+    st_class = st_code / 100;
+
+    /* Contact, Allow, Supported header. */
+    if (pjsip_method_creates_dialog(&cseq->method)) {
+	/* Add Contact header for 1xx, 2xx, 3xx and 485 response. */
+	if (st_class==2 || st_class==3 || (st_class==1 && st_code != 100) ||
+	    st_code==485) 
+	{
+	    /* Add contact header only if one is not present. */
+	    if (pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL) == 0) {
+		hdr = pjsip_hdr_clone(tdata->pool, dlg->local.contact);
+		pjsip_msg_add_hdr(tdata->msg, hdr);
+	    }
+	}
+
+	/* Add Allow header in 2xx and 405 response. */
+	if ((st_class==2 || st_code==405) &&
+	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL)==NULL) 
+	{
+	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
+					       PJSIP_H_ALLOW, NULL);
+	    if (c_hdr) {
+		hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
+		pjsip_msg_add_hdr(tdata->msg, hdr);
+	    }
+	}
+
+	/* Add Supported header in 2xx response. */
+	if (st_class==2 && 
+	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL)==NULL) 
+	{
+	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
+					       PJSIP_H_SUPPORTED, NULL);
+	    if (c_hdr) {
+		hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
+		pjsip_msg_add_hdr(tdata->msg, hdr);
+	    }
+	}
+
+    }
+
+    /* Add To tag in all responses except 100 */
+    if (st_code != 100) {
+	pjsip_to_hdr *to;
+
+	to = PJSIP_MSG_TO_HDR(tdata->msg);
+	pj_assert(to != NULL);
+
+	to->tag = dlg->local.info->tag;
+    }
+}
+
 
 /*
  * Create response.
@@ -860,11 +943,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 						pjsip_tx_data **p_tdata)
 {
     pj_status_t status;
-    pjsip_cseq_hdr *cseq;
     pjsip_tx_data *tdata;
-    int st_class;
 
-    /* Create generic response. */
+    /* Create generic response.
+     * This will initialize response's Via, To, From, Call-ID, CSeq
+     * and Record-Route headers from the request.
+     */
     status = pjsip_endpt_create_response(dlg->endpt,
 					 rdata, st_code, st_text, &tdata);
     if (status != PJ_SUCCESS)
@@ -873,90 +957,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
 
-    /* Special treatment for 2xx response to request that establishes 
-     * dialog. 
-     *
-     * RFC 3261 Section 12.1.1
-     *
-     * When a UAS responds to a request with a response that establishes 
-     * a dialog (such as a 2xx to INVITE):
-     * - MUST copy all Record-Route header field values from the request 
-     *	 into the response (including the URIs, URI parameters, and any 
-     *	 Record-Route header field parameters, whether they are known or
-     *	 unknown to the UAS) and MUST maintain the order of those values.
-     * - The Contact header field contains an address where the UAS would
-     *	 like to be contacted for subsequent requests in the dialog.
-     *
-     * Also from Table 3, page 119.
-     */
-    cseq = PJSIP_MSG_CSEQ_HDR(tdata->msg);
-    pj_assert(cseq != NULL);
-
-    st_class = st_code / 100;
-
-    if (cseq->cseq == dlg->remote.first_cseq &&
-	(st_class==1 || st_class==2) && st_code != 100)
-    {
-	pjsip_hdr *rr, *hdr;
-
-	/* Duplicate Record-Route header from the request. */
-	rr = (pjsip_hdr*) rdata->msg_info.record_route;
-	while (rr) {
-	    hdr = pjsip_hdr_clone(tdata->pool, rr);
-	    pjsip_msg_add_hdr(tdata->msg, hdr);
-
-	    rr = rr->next;
-	    if (rr == &rdata->msg_info.msg->hdr)
-		break;
-	    rr = pjsip_msg_find_hdr(rdata->msg_info.msg, 
-				    PJSIP_H_RECORD_ROUTE, rr);
-	}
-    }
-
-    /* Contact header. */
-    if (pjsip_method_creates_dialog(&cseq->method)) {
-	/* Add Contact header for 1xx, 2xx, 3xx and 485 response. */
-	if (st_class==2 || st_class==3 || (st_class==1 && st_code != 100) ||
-	    st_code==485) 
-	{
-	    /* Add contact header. */
-	    pjsip_hdr *hdr = pjsip_hdr_clone(tdata->pool, dlg->local.contact);
-	    pjsip_msg_add_hdr(tdata->msg, hdr);
-	}
-
-	/* Add Allow header in 2xx and 405 response. */
-	if (st_class==2 || st_code==405) {
-	    const pjsip_hdr *c_hdr;
-	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
-					       PJSIP_H_ALLOW, NULL);
-	    if (c_hdr) {
-		pjsip_hdr *hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
-		pjsip_msg_add_hdr(tdata->msg, hdr);
-	    }
-	}
-
-	/* Add Supported header in 2xx response. */
-	if (st_class==2) {
-	    const pjsip_hdr *c_hdr;
-	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
-					       PJSIP_H_SUPPORTED, NULL);
-	    if (c_hdr) {
-		pjsip_hdr *hdr = pjsip_hdr_clone(tdata->pool, c_hdr);
-		pjsip_msg_add_hdr(tdata->msg, hdr);
-	    }
-	}
-
-    }
-
-    /* Add To tag in all responses except 100 */
-    if (st_code != 100 && rdata->msg_info.to->tag.slen == 0) {
-	pjsip_to_hdr *to;
-
-	to = PJSIP_MSG_TO_HDR(tdata->msg);
-	pj_assert(to != NULL);
-
-	to->tag = dlg->local.info->tag;
-    }
+    dlg_beautify_response(dlg, st_code, tdata);
 
     /* Unlock the dialog. */
     pj_mutex_unlock(dlg->mutex);
@@ -980,12 +981,26 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 		     PJSIP_ENOTRESPONSEMSG);
     PJ_ASSERT_RETURN(st_code >= 100 && st_code <= 699, PJ_EINVAL);
 
+    pj_mutex_lock(dlg->mutex);
+
+    /* Replace status code and reason */
     tdata->msg->line.status.code = st_code;
     if (st_text) {
 	pj_strdup(tdata->pool, &tdata->msg->line.status.reason, st_text);
     } else {
 	tdata->msg->line.status.reason = *pjsip_get_status_text(st_code);
     }
+
+    dlg_beautify_response(dlg, st_code, tdata);
+
+
+    /* Must add reference counter, since tsx_send_msg() will decrement it */
+    pjsip_tx_data_add_ref(tdata);
+
+    /* Force to re-print message. */
+    pjsip_tx_data_invalidate_msg(tdata);
+
+    pj_mutex_unlock(dlg->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1057,18 +1072,22 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
 void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     pj_status_t status;
-    pjsip_transaction *tsx;
+    pjsip_transaction *tsx = NULL;
     unsigned i;
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
 
     /* Check CSeq */
-    if (rdata->msg_info.cseq->cseq <= dlg->remote.cseq) {
+    if (rdata->msg_info.cseq->cseq <= dlg->remote.cseq &&
+	rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD &&
+	rdata->msg_info.msg->line.req.method.id != PJSIP_CANCEL_METHOD) 
+    {
 	/* Invalid CSeq.
 	 * Respond statelessly with 500 (Internal Server Error)
 	 */
 	pj_mutex_unlock(dlg->mutex);
+	pj_assert(pjsip_rdata_get_tsx(rdata) == NULL);
 	pjsip_endpt_respond_stateless(dlg->endpt,
 				      rdata, 500, NULL, NULL, NULL);
 	return;
@@ -1078,14 +1097,16 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     dlg->remote.cseq = rdata->msg_info.cseq->cseq;
 
     /* Create UAS transaction for this request. */
-    status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
-    PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS,{goto on_return;});
+    if (pjsip_rdata_get_tsx(rdata) == NULL) {
+	status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+	PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS,{goto on_return;});
 
-    /* Put this dialog in the transaction data. */
-    tsx->mod_data[dlg->ua->id] = dlg;
+	/* Put this dialog in the transaction data. */
+	tsx->mod_data[dlg->ua->id] = dlg;
 
-    /* Add transaction count. */
-    ++dlg->tsx_count;
+	/* Add transaction count. */
+	++dlg->tsx_count;
+    }
 
     /* Report the request to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
@@ -1100,28 +1121,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	    break;
     }
 
-    if (i==dlg->usage_cnt) {
-	pjsip_tx_data *tdata;
-
-	PJ_LOG(4,(dlg->obj_name, 
-		  "%s is unhandled by dialog usages. "
-		  "Dialog will response with 500 (Internal Server Error)",
-		  pjsip_rx_data_get_info(rdata)));
-	status = pjsip_endpt_create_response(dlg->endpt, 
-					     rdata, 
-					     PJSIP_SC_INTERNAL_SERVER_ERROR, 
-					     NULL, &tdata);
-	if (status == PJ_SUCCESS)
-	    status = pjsip_tsx_send_msg(tsx, tdata);
-
-	if (status != PJ_SUCCESS) {
-	    char errmsg[PJSIP_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(dlg->obj_name,"Error sending %s: %s",
-		      pjsip_tx_data_get_info(tdata), errmsg));
-	    pjsip_tsx_terminate(tsx, 500);
-	}
-    }
+    /* Feed the first request to the transaction. */
+    if (tsx)
+	pjsip_tsx_recv_msg(tsx, rdata);
 
 on_return:
     /* Unlock dialog. */
@@ -1142,25 +1144,25 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     /* Check that rdata already has dialog in mod_data. */
     pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
 
-    /* Update the remote tag if it is different. */
-    if (pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag) != 0) {
-
-	pj_strdup(dlg->pool, &dlg->remote.info->tag, &rdata->msg_info.to->tag);
-
-	/* No need to update remote's tag_hval since its never used. */
-    }
-
     /* Keep the response's status code */
     res_code = rdata->msg_info.msg->line.status.code;
 
-    /* When we receive response that establishes dialog, update the route
-     * set and dialog target.
+    /* When we receive response that establishes dialog, update To tag, 
+     * route set and dialog target.
      */
-    if (!dlg->established && 
+    if (dlg->state == PJSIP_DIALOG_STATE_NULL && 
 	pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
 	(res_code > 100 && res_code < 300) &&
 	rdata->msg_info.to->tag.slen)
     {
+	pjsip_hdr *hdr, *end_hdr;
+	pjsip_contact_hdr *contact;
+
+	/* Update To tag. */
+	pj_strdup(dlg->pool, &dlg->remote.info->tag, &rdata->msg_info.to->tag);
+	/* No need to update remote's tag_hval since its never used. */
+
+
 	/* RFC 3271 Section 12.1.2:
 	 * The route set MUST be set to the list of URIs in the Record-Route
 	 * header field from the response, taken in reverse order and 
@@ -1169,9 +1171,6 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 * empty set. This route set, even if empty, overrides any pre-existing
 	 * route set for future requests in this dialog.
 	 */
-	pjsip_hdr *hdr, *end_hdr;
-	pjsip_contact_hdr *contact;
-
 	pj_list_init(&dlg->route_set);
 
 	end_hdr = &rdata->msg_info.msg->hdr;
@@ -1194,7 +1193,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	    dlg->target = dlg->remote.contact->uri;
 	}
 
-	dlg->established = 1;
+	dlg->state = PJSIP_DIALOG_STATE_ESTABLISHED;
     }
 
     /* Update remote target (again) when receiving 2xx response messages
@@ -1251,6 +1250,9 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
 	--dlg->tsx_count;
 
+    /* Increment session to prevent usages from destroying dialog. */
+    ++dlg->sess_count;
+
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
 
@@ -1259,6 +1261,9 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 
 	(*dlg->usage[i]->on_tsx_state)(tsx, e);
     }
+
+    /* Decrement temporary session. */
+    --dlg->sess_count;
 
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED && dlg->tsx_count == 0 && 
 	dlg->sess_count == 0) 

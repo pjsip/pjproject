@@ -109,6 +109,21 @@ static pj_status_t mod_inv_unload(void)
 }
 
 /*
+ * Set session state.
+ */
+void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
+		   pjsip_event *e)
+{
+    inv->state = state;
+    if (mod_inv.cb.on_state_changed)
+	(*mod_inv.cb.on_state_changed)(inv, e);
+
+    if (inv->state == PJSIP_INV_STATE_DISCONNECTED)
+	pjsip_dlg_dec_session(inv->dlg);
+}
+
+
+/*
  * Send ACK for 2xx response.
  */
 static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
@@ -145,10 +160,15 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
 static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_method *method;
+    pjsip_dialog *dlg;
+    pjsip_inv_session *inv;
 
     /* Only wants to receive request from a dialog. */
-    if (pjsip_rdata_get_dlg(rdata) == NULL)
+    dlg = pjsip_rdata_get_dlg(rdata);
+    if (dlg == NULL)
 	return PJ_FALSE;
+
+    inv = dlg->mod_data[mod_inv.mod.id];
 
     /* Report to dialog that we handle INVITE, CANCEL, BYE, ACK. 
      * If we need to send response, it will be sent in the state
@@ -158,10 +178,21 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 
     if (method->id == PJSIP_INVITE_METHOD ||
 	method->id == PJSIP_CANCEL_METHOD ||
-	method->id == PJSIP_ACK_METHOD ||
 	method->id == PJSIP_BYE_METHOD)
     {
 	return PJ_TRUE;
+    }
+
+    /* On receipt ACK request, when state is CONNECTING,
+     * move state to CONFIRMED.
+     */
+    if (method->id == PJSIP_ACK_METHOD && inv &&
+	inv->state == PJSIP_INV_STATE_CONFIRMED)
+    {
+	pjsip_event event;
+
+	PJSIP_EVENT_INIT_RX_MSG(event, rdata);
+	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
     }
 
     return PJ_FALSE;
@@ -702,7 +733,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAS;
-    inv->state = PJSIP_INV_STATE_INCOMING;
+    inv->state = PJSIP_INV_STATE_NULL;
     inv->dlg = dlg;
     inv->options = options;
 
@@ -1066,19 +1097,6 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 }
 
 
-void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
-		   pjsip_event *e)
-{
-    inv->state = state;
-    if (mod_inv.cb.on_state_changed)
-	(*mod_inv.cb.on_state_changed)(inv, e);
-
-    if (inv->state == PJSIP_INV_STATE_DISCONNECTED)
-	pjsip_dlg_dec_session(inv->dlg);
-}
-
-
-
 /*
  * Respond to incoming CANCEL request.
  */
@@ -1166,6 +1184,52 @@ static void inv_respond_incoming_bye( pjsip_inv_session *inv,
 }
 
 /*
+ * Respond to BYE request.
+ */
+static void inv_handle_bye_response( pjsip_inv_session *inv,
+				     pjsip_transaction *tsx,
+				     pjsip_rx_data *rdata,
+				     pjsip_event *e )
+{
+    pj_status_t status;
+    
+    if (e->body.tsx_state.type != PJSIP_EVENT_RX_MSG) {
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	return;
+    }
+
+    /* Handle 401/407 challenge. */
+    if (tsx->status_code == 401 || tsx->status_code == 407) {
+
+	pjsip_tx_data *tdata;
+	
+	status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
+					    rdata,
+					    tsx->last_tx,
+					    &tdata);
+	
+	if (status != PJ_SUCCESS) {
+	    
+	    /* Does not have proper credentials. 
+	     * End the session anyway.
+	     */
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    
+	} else {
+	    /* Re-send BYE. */
+	    status = pjsip_inv_send_msg(inv, tdata, NULL );
+	}
+
+    } else {
+
+	/* End the session. */
+
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+    }
+
+}
+
+/*
  * State NULL is before anything is sent/received.
  */
 static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
@@ -1196,6 +1260,11 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 	    switch (tsx->state) {
 	    case PJSIP_TSX_STATE_TRYING:
 		inv_set_state(inv, PJSIP_INV_STATE_INCOMING, e);
+		break;
+	    case PJSIP_TSX_STATE_PROCEEDING:
+		inv_set_state(inv, PJSIP_INV_STATE_INCOMING, e);
+		if (tsx->status_code > 100)
+		    inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 		break;
 	    default:
 		pj_assert(!"Unexpected state");
@@ -1463,6 +1532,8 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	switch (tsx->state) {
 
 	case PJSIP_TSX_STATE_CONFIRMED:
+	    if (tsx->status_code/100 == 2)
+		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
 	    break;
 
 	case PJSIP_TSX_STATE_TERMINATED:
@@ -1495,7 +1566,18 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 
 	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
 
+    } else if (tsx->method.id == PJSIP_BYE_METHOD &&
+	       tsx->role == PJSIP_ROLE_UAC &&
+	       tsx->state == PJSIP_TSX_STATE_COMPLETED)
+    {
+
+	/*
+	 * Outgoing BYE
+	 */
+	inv_handle_bye_response( inv, tsx, e->body.tsx_state.src.rdata, e);
+
     }
+
 }
 
 /*
@@ -1513,39 +1595,15 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	tsx->role == PJSIP_ROLE_UAC &&
 	tsx->state == PJSIP_TSX_STATE_COMPLETED)
     {
+
 	/*
-	 * Outgoing BYE.
+	 * Outgoing BYE
 	 */
-	pj_status_t status;
-	
-	/* Handle 401/407 challenge. */
-	if (tsx->status_code == 401 || tsx->status_code == 407) {
 
-	    pjsip_tx_data *tdata;
-	    
-	    status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-					        e->body.tsx_state.src.rdata,
-					        tsx->last_tx,
-					        &tdata);
-	    
-	    if (status != PJ_SUCCESS) {
-		
-		/* Does not have proper credentials. 
-		 * End the session anyway.
-		 */
-		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-		
-	    } else {
-		/* Re-send BYE. */
-		status = pjsip_inv_send_msg(inv, tdata, NULL );
-	    }
-
-	} else {
-
-	    /* End the session. */
-
+	if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+	    inv_handle_bye_response( inv, tsx, e->body.tsx_state.src.rdata, e);
+	else
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-	}
 
     }
     else if (tsx->method.id == PJSIP_BYE_METHOD &&

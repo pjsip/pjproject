@@ -101,8 +101,99 @@ void pjsua_perror(const char *title, pj_status_t status)
  */
 static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
-    PJ_UNUSED_ARG(rdata);
-    PJ_TODO(IMPLEMENT_UAS);
+    pjsip_dialog *dlg = pjsip_rdata_get_dlg(rdata);
+    pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
+    pjsip_msg *msg = rdata->msg_info.msg;
+
+    /*
+     * Handle incoming INVITE outside dialog.
+     */
+    if (dlg == NULL && tsx == NULL &&
+	msg->line.req.method.id == PJSIP_INVITE_METHOD)
+    {
+	pj_status_t status;
+	pjsip_tx_data *response = NULL;
+	unsigned options = 0;
+
+	/* Verify that we can handle the request. */
+	status = pjsip_inv_verify_request(rdata, &options, NULL, NULL,
+					  pjsua.endpt, &response);
+	if (status != PJ_SUCCESS) {
+
+	    /*
+	     * No we can't handle the incoming INVITE request.
+	     */
+
+	    if (response) {
+		pjsip_response_addr res_addr;
+
+		pjsip_get_response_addr(response->pool, rdata, &res_addr);
+		pjsip_endpt_send_response(pjsua.endpt, &res_addr, response, 
+					  NULL, NULL);
+
+	    } else {
+
+		/* Respond with 500 (Internal Server Error) */
+		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
+					      NULL, NULL);
+	    }
+
+	} else {
+	    /*
+	     * Yes we can handle the incoming INVITE request.
+	     */
+	    pjsip_inv_session *inv;
+	    pjmedia_sdp_session *answer;
+
+	    /* Create dummy SDP answer: */
+
+
+	    status = pjmedia_sdp_parse(pjsua.pool, PJSUA_DUMMY_SDP_ANSWER,
+				       pj_native_strlen(PJSUA_DUMMY_SDP_ANSWER),
+				       &answer);
+	    if (status != PJ_SUCCESS) {
+
+		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
+					      NULL, NULL);
+		return PJ_TRUE;
+	    }
+
+	    /* Create dialog: */
+
+	    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
+					   &pjsua.contact_uri, &dlg);
+	    if (status != PJ_SUCCESS)
+		return PJ_TRUE;
+
+
+	    /* Create invite session: */
+
+	    status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &inv);
+	    if (status != PJ_SUCCESS) {
+
+		status = pjsip_dlg_create_response( dlg, rdata, 500, NULL,
+						    &response);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_dlg_send_response(dlg, 
+						     pjsip_rdata_get_tsx(rdata),
+						     response);
+		return PJ_TRUE;
+
+	    }
+
+	    /* Answer with 100 (using the dialog, not invite): */
+
+	    status = pjsip_dlg_create_response(dlg, rdata, 100, NULL, &response);
+	    if (status == PJ_SUCCESS)
+		status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), response);
+	}
+
+	/* This INVITE request has been handled. */
+	return PJ_TRUE;
+    }
+
+    
+
     return PJ_FALSE;
 }
 
@@ -121,7 +212,6 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
 {
     PJ_UNUSED_ARG(rdata);
-    PJ_TODO(IMPLEMENT_UAS);
     return PJ_FALSE;
 }
 

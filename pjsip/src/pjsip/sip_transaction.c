@@ -170,8 +170,6 @@ static void	   tsx_resched_retransmission( pjsip_transaction *tsx );
 static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched);
 static int         tsx_send_msg( pjsip_transaction *tsx, 
                                  pjsip_tx_data *tdata);
-static void	   tsx_on_rx_msg( pjsip_transaction *tsx,
-				  pjsip_rx_data *rdata );
 
 
 /* State handlers for UAC, indexed by state */
@@ -697,12 +695,12 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 
     /* Race condition!
      * Transaction may gets deleted before we have chance to lock it
-     * in tsx_on_rx_msg().
+     * in pjsip_tsx_recv_msg().
      */
     PJ_TODO(FIX_RACE_CONDITION_HERE);
 
     /* Pass the message to the transaction. */
-    tsx_on_rx_msg(tsx, rdata );
+    pjsip_tsx_recv_msg(tsx, rdata );
 
     return PJ_TRUE;
 }
@@ -745,12 +743,12 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
 
     /* Race condition!
      * Transaction may gets deleted before we have chance to lock it
-     * in tsx_on_rx_msg().
+     * in pjsip_tsx_recv_msg().
      */
     PJ_TODO(FIX_RACE_CONDITION_HERE);
 
     /* Pass the message to the transaction. */
-    tsx_on_rx_msg(tsx, rdata );
+    pjsip_tsx_recv_msg(tsx, rdata );
 
     return PJ_TRUE;
 }
@@ -965,12 +963,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
 
 	pj_assert(rdata != NULL);
 
-	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG &&
-	    tsx->tsx_user->on_rx_request)
-	{
-	    (*tsx->tsx_user->on_rx_request)(rdata);
-
-	} else if (rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG &&
+	if (rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG &&
 		   tsx->tsx_user->on_rx_response)
 	{
 	    (*tsx->tsx_user->on_rx_response)(rdata);
@@ -1239,11 +1232,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 	       tsx->transaction_key.ptr));
 
 
-    /* Begin with state TRYING.
+    /* Begin with state NULL.
      * Manually set-up the state becase we don't want to call the callback.
      */
-    tsx->state = PJSIP_TSX_STATE_TRYING; 
-    tsx->state_handler = &tsx_on_state_trying;
+    tsx->state = PJSIP_TSX_STATE_NULL; 
+    tsx->state_handler = &tsx_on_state_null;
 
     /* Get response address. */
     status = pjsip_get_response_addr( tsx->pool, rdata, &tsx->res_addr );
@@ -1327,7 +1320,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
                              pjsip_tx_data_get_info(tdata),
 			     state_str[tsx->state]));
 
-    PJSIP_EVENT_INIT_TX_MSG(event, tsx, tdata);
+    PJSIP_EVENT_INIT_TX_MSG(event, tdata);
 
     /* Dispatch to transaction. */
     lock_tsx(tsx, &lck);
@@ -1349,7 +1342,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
  * This function is called by endpoint when incoming message for the 
  * transaction is received.
  */
-static void tsx_on_rx_msg( pjsip_transaction *tsx, pjsip_rx_data *rdata)
+PJ_DEF(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx, 
+				 pjsip_rx_data *rdata)
 {
     pjsip_event event;
     struct tsx_lock_data lck;
@@ -1362,7 +1356,7 @@ static void tsx_on_rx_msg( pjsip_transaction *tsx, pjsip_rx_data *rdata)
     rdata->endpt_info.mod_data[mod_tsx_layer.mod.id] = tsx;
 
     /* Init event. */
-    PJSIP_EVENT_INIT_RX_MSG(event, tsx, rdata);
+    PJSIP_EVENT_INIT_RX_MSG(event, rdata);
 
     /* Dispatch to transaction. */
     lock_tsx(tsx, &lck);
@@ -1716,11 +1710,12 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 
     if (tsx->role == PJSIP_ROLE_UAS) {
 
-	/* UAS doesn't have STATE_NULL.
-	 * State has moved from NULL after transaction is initialized.
-	 */
-	pj_assert(!"Bug bug bug!!");
-	return PJ_EBUG;
+	/* Set state to Trying. */
+	pj_assert(event->type == PJSIP_EVENT_RX_MSG &&
+		  event->body.rx_msg.rdata->msg_info.msg->type == 
+		    PJSIP_REQUEST_MSG);
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TRYING, PJSIP_EVENT_RX_MSG,
+		       event->body.rx_msg.rdata);
 
     } else {
 	pjsip_tx_data *tdata;

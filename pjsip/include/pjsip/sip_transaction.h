@@ -175,7 +175,9 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 
 /**
  * Create, initialize, and register a new transaction as UAS from the
- * specified incoming request in \c rdata.
+ * specified incoming request in \c rdata. After calling this function,
+ * application MUST call #pjsip_tsx_recv_msg() so that transaction
+ * moves from state NULL.
  *
  * @param tsx_user  Module to be registered as transaction user of the new
  *		    transaction, which will receive notification from the
@@ -188,6 +190,24 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 					   pjsip_rx_data *rdata,
 					   pjsip_transaction **p_tsx );
+
+
+/**
+ * Call this function to manually feed a message to the transaction.
+ * For UAS transaction, application MUST call this function after
+ * UAS transaction has been created.
+ *
+ * This function SHOULD only be called to pass initial request message
+ * to UAS transaction. Before this function returns, on_tsx_state()
+ * callback of the transaction user will be called. If response message
+ * is passed to this function, then on_rx_response() will also be called
+ * before on_tsx_state().
+ *
+ * @param tsx	    The transaction.
+ * @param rdata	    The message.
+ */
+PJ_DECL(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx, 
+				  pjsip_rx_data *rdata);
 
 /**
  * Transmit message in tdata with this transaction. It is possible to

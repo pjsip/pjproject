@@ -124,7 +124,6 @@ struct pjsip_event
         struct
         {
             pjsip_tx_data       *tdata; /**< The transmit data buffer.  */
-            pjsip_transaction   *tsx;   /**< The transaction.           */
 
         } tx_msg;
 
@@ -139,7 +138,6 @@ struct pjsip_event
         struct
         {
             pjsip_rx_data       *rdata; /**< The receive data buffer.   */
-            pjsip_transaction   *tsx;   /**< The transaction.           */
         } rx_msg;
 
         /** User event. */
@@ -178,20 +176,18 @@ struct pjsip_event
 /**
  * Init tx msg event.
  */
-#define PJSIP_EVENT_INIT_TX_MSG(event,ptsx,ptdata)	\
+#define PJSIP_EVENT_INIT_TX_MSG(event,ptdata)	\
         do { \
             (event).type = PJSIP_EVENT_TX_MSG;          \
-            (event).body.tx_msg.tsx = ptsx;		\
             (event).body.tx_msg.tdata = ptdata;		\
         } while (0)
 
 /**
  * Init rx msg event.
  */
-#define PJSIP_EVENT_INIT_RX_MSG(event,ptsx,prdata)	\
+#define PJSIP_EVENT_INIT_RX_MSG(event,prdata)	\
         do { \
             (event).type = PJSIP_EVENT_RX_MSG;		\
-            (event).body.rx_msg.tsx = ptsx;		\
             (event).body.rx_msg.rdata = prdata;		\
         } while (0)
 

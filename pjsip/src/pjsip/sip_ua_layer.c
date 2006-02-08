@@ -474,9 +474,14 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t *from_tag;
     pjsip_dialog *dlg;
 
-    /* Optimized path: bail out early if request doesn't have To tag */
-    if (rdata->msg_info.to->tag.slen == 0)
+    /* Optimized path: bail out early if request is not CANCEL and it doesn't
+     * have To tag 
+     */
+    if (rdata->msg_info.to->tag.slen == 0 && 
+	rdata->msg_info.msg->line.req.method.id != PJSIP_CANCEL_METHOD)
+    {
 	return PJ_FALSE;
+    }
 
     /* Lock user agent before looking up the dialog hash table. */
     pj_mutex_lock(mod_ua.mutex);
@@ -624,17 +629,15 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     //	rdata->msg_info.cseq->cseq == dlg_set->dlg_list.next->local.first_cseq)
 
     if (rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
-	//pj_str_t *to_tag = &rdata->msg_info.to->tag;
+	
+	int st_code = rdata->msg_info.msg->line.status.code;
+	pj_str_t *to_tag = &rdata->msg_info.to->tag;
 
 	/* Must hold UA mutex before accessing dialog set. */
 	pj_mutex_lock(mod_ua.mutex);
 
 	dlg = dlg_set->dlg_list.next;
 
-	/* Forking handling is temporarily disabled. */
-	PJ_TODO(UA_LAYER_HANDLE_FORKING);
-
-#if 0
 	while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {
 
 	    /* If there is dialog with no remote tag (i.e. dialog has not
@@ -652,9 +655,12 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 	}
 
 	/* If no dialog with matching remote tag is found, this must be
-	 * a forked response.
+	 * a forked response. Respond to this ONLY when response is non-100
+	 * provisional response OR a 2xx response.
 	 */
-	if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
+	if (dlg == (pjsip_dialog*)&dlg_set->dlg_list &&
+	    ((st_code/100==1 && st_code!=100) || st_code/100==2)) 
+	{
 	    /* Report to application about forked condition.
 	     * Application can either create a dialog or ignore the response.
 	     */
@@ -677,8 +683,16 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 
 		return PJ_TRUE;
 	    }
+
+	} else if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
+
+	    /* For 100 or non-2xx response which has different To tag,
+	     * pass the response to the first dialog.
+	     */
+
+	    dlg = dlg_set->dlg_list.next;
+
 	}
-#endif
 
 	/* Done with the dialog set. */
 	pj_mutex_unlock(mod_ua.mutex);
