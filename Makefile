@@ -1,3 +1,6 @@
+include build.mak
+include build/host-$(HOST_NAME).mak
+
 DIRS = pjlib pjlib-util pjmedia pjsip
 
 ifdef MINSIZE
@@ -15,9 +18,12 @@ all clean dep depend distclean doc print realclean:
 	   fi \
 	done
 
-LIBS = pjlib/lib/libpj.a pjsdp/lib/libpjsdp.a pjmedia/lib/libpjmedia.a \
-       pjsip/lib/libpjsip_core.a pjsip/lib/libpjsip_ua.a
-BINS = pjsip/bin/pjsua$(EXE) 
+LIBS = 	pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjmedia/lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+       	pjsip/lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjsip/lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a
+BINS = 	pjsip/bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '
@@ -36,12 +42,12 @@ size:
 		size $$bin; \
 	done
 
-dos2unix:
-	for f in `find . | egrep '(mak|h|c|S|s|Makefile)$$'`; do \
-		dos2unix "$$f" > dos2unix.tmp; \
-		cp dos2unix.tmp "$$f"; \
-	done
-	rm -f dos2unix.tmp
+#dos2unix:
+#	for f in `find . | egrep '(mak|h|c|S|s|Makefile)$$'`; do \
+#		dos2unix "$$f" > dos2unix.tmp; \
+#		cp dos2unix.tmp "$$f"; \
+#	done
+#	rm -f dos2unix.tmp
 
 xhdrid:
 	for f in `find . | egrep '\.(h|c|S|s|cpp|hpp)$$'`; do \
