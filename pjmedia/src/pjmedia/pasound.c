@@ -141,6 +141,10 @@ PJ_DEF(pj_status_t) pj_snd_init(pj_pool_factory *factory)
     err = Pa_Initialize();
 
     PJ_LOG(4,(THIS_FILE, "PortAudio sound library initialized, status=%d", err));
+    PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
+			 Pa_GetHostApiCount()));
+    PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
+			 pj_snd_get_dev_count()));
 
     return err;
 }

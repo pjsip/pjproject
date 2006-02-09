@@ -9,5 +9,6 @@
 #
 export PJMEDIA_OBJS += $(PA_DIR)/pa_unix_hostapis.o $(PA_DIR)/pa_unix_util.o \
 		       $(PA_DIR)/pa_unix_oss.o
+#		       $(PA_DIR)/pa_linux_alsa.o
 
-export OS_CFLAGS += 
+export OS_CFLAGS +=  $(CC_DEF)PA_USE_OSS=1

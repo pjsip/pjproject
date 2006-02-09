@@ -665,6 +665,9 @@ pj_status_t pjsua_destroy(void)
 
     pjsua.quit_flag = 1;
 
+    /* Destroy sound framework: */
+    pj_snd_deinit();
+
     /* Wait worker threads to quit: */
 
     for (i=0; i<pjsua.thread_cnt; ++i) {
