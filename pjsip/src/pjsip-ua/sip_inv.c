@@ -198,9 +198,18 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
      * move state to CONFIRMED.
      */
     if (method->id == PJSIP_ACK_METHOD && inv &&
-	inv->state == PJSIP_INV_STATE_CONFIRMED)
+	inv->state != PJSIP_INV_STATE_CONFIRMED)
     {
 	pjsip_event event;
+
+	/* Terminate INVITE transaction, if it's still present. */
+	if (inv->invite_tsx && 
+	    inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
+	{
+	    pjsip_tsx_terminate(inv->invite_tsx, 
+				inv->invite_tsx->status_code);
+	    inv->invite_tsx = NULL;
+	}
 
 	PJSIP_EVENT_INIT_RX_MSG(event, rdata);
 	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
@@ -1561,6 +1570,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
 		inv_send_ack(inv, e->body.tsx_state.src.rdata);
+		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
 
 
 	    } else  {
@@ -1700,7 +1710,6 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		    pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
 		    inv_send_ack(inv, e->body.tsx_state.src.rdata);
-
 		    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
 		}
 
