@@ -377,6 +377,24 @@ PJ_DECL(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					pjsip_tx_data **p_tdata );
 
 
+#if 0
+ If we implement this, we need to send SDP answer automatically on 
+ subsequent request/response. Something like "has_answer" flag.
+
+/**
+ * Set local answer to respond to remote SDP offer. By calling this function,
+ * application can start SDP negotiation immediately without having to
+ * send any request or response message. This function is normally called
+ * when on_rx_offer() callback is called.
+ *
+ * @param inv		The invite session.
+ * @param sdp		The SDP description which will be set as answer
+ *			to remote.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer( pjsip_inv_session *inv,
+					       const pjmedia_sdp_session *sdp );
+#endif
+
 /**
  * Create a SIP message to initiate invite session termination. Depending on 
  * the state of the session, this function may return CANCEL request, 

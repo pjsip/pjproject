@@ -402,6 +402,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
     p = tempbuf;
     endbuf = tempbuf+sizeof(tempbuf);
 
+    /* Add colon */
+    *p++ = ':';
+
     /* Add payload type. */
     pj_memcpy(p, rtpmap->pt.ptr, rtpmap->pt.slen);
     p += rtpmap->pt.slen;

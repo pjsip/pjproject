@@ -97,6 +97,17 @@ enum pjmedia_sdp_neg_state
     PJMEDIA_SDP_NEG_STATE_DONE,
 };
 
+
+/**
+ * Get the state string description of the specified state.
+ *
+ * @param state		Negotiator state.
+ *
+ * @return		String description of the state.
+ */
+PJ_DECL(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state);
+
+
 /**
  * Create the SDP negotiator with local offer. The SDP negotiator then
  * will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER state, where it waits

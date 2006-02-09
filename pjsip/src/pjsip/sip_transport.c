@@ -793,7 +793,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
      * leakings in transmit data (i.e. some transmit data have not been
      * destroyed).
      */
-    pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
+    //pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
+    if (pj_atomic_get(mgr->tdata_counter) != 0) {
+	PJ_LOG(4,(THIS_FILE, "Warning: %d transmit buffers are not freed!",
+		  pj_atomic_get(mgr->tdata_counter)));
+    }
 #endif
 
     return PJ_SUCCESS;

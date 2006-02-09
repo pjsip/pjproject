@@ -77,7 +77,7 @@ void pjsua_perror(const char *title, pj_status_t status)
 
     pj_strerror(status, errmsg, sizeof(errmsg));
 
-    PJ_LOG(1,(THIS_FILE, "%s: %s", title, errmsg));
+    PJ_LOG(1,(THIS_FILE, "%s: %s [code=%d]", title, errmsg, status));
 }
 
 
@@ -229,6 +229,8 @@ static void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 	if (inv_data && inv_data->session) {
 	    pjmedia_session_destroy(inv_data->session);
 	    inv_data->session = NULL;
+
+	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
 	}
 
     }
@@ -301,6 +303,7 @@ static void pjsua_inv_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
+    PJ_LOG(3,(THIS_FILE,"Media has been started successfully"));
 }
 
 /* 

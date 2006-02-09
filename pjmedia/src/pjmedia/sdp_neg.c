@@ -40,6 +40,26 @@ struct pjmedia_sdp_neg
 			*neg_remote_sdp;    /**< Temporary remote SDP.	     */
 };
 
+static const char *state_str[] = 
+{
+    "STATE_NULL",
+    "STATE_LOCAL_OFFER",
+    "STATE_REMOTE_OFFER",
+    "STATE_WAIT_NEGO",
+    "STATE_DONE",
+};
+
+/*
+ * Get string representation of negotiator state.
+ */
+PJ_DEF(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state)
+{
+    if (state >=0 && state < PJ_ARRAY_SIZE(state_str))
+	return state_str[state];
+
+    return "<?UNKNOWN?>";
+}
+
 
 /*
  * Create with local offer.
