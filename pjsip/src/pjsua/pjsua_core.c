@@ -561,9 +561,9 @@ pj_status_t pjsua_start(void)
 	    /* With the user part. */
 	    len = pj_snprintf(contact, sizeof(contact),
 			      "<sip:%.*s@%.*s:%d>",
-			      sip_uri->user.slen,
+			      (int)sip_uri->user.slen,
 			      sip_uri->user.ptr,
-			      udp_transport->local_name.host.slen,
+			      (int)udp_transport->local_name.host.slen,
 			      udp_transport->local_name.host.ptr,
 			      udp_transport->local_name.port);
 	} else {
@@ -572,7 +572,7 @@ pj_status_t pjsua_start(void)
 
 	    len = pj_snprintf(contact, sizeof(contact),
 			      "<sip:%.*s:%d>",
-			      udp_transport->local_name.host.slen,
+			      (int)udp_transport->local_name.host.slen,
 			      udp_transport->local_name.host.ptr,
 			      udp_transport->local_name.port);
 	}

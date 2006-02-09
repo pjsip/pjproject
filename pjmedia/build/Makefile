@@ -12,7 +12,8 @@ export PJMEDIA_LIB:=../lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIB
 #
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
-		   $(CC_INC)../../pjlib-util/include
+		   $(CC_INC)../../pjlib-util/include \
+		   $(CC_INC)../src/pjmedia/portaudio
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
@@ -27,18 +28,18 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 PA_DIR:=portaudio
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			codec.o errno.o g711.o jbuf.o mediamgr.o rtcp.o \
-			rtp.o sdp.o sdp_cmp.o sdp_neg.o stream.o \
-#			pasound.o \
-#		      	$(PA_DIR)/pa_allocation.o \
-#			$(PA_DIR)/pa_converters.o \
-#			$(PA_DIR)/pa_cpuload.o \
-#			$(PA_DIR)/pa_dither.o \
-#			$(PA_DIR)/pa_front.o \
-#			$(PA_DIR)/pa_process.o \
-#			$(PA_DIR)/pa_skeleton.o \
-#			$(PA_DIR)/pa_stream.o \
-#			$(PA_DIR)/pa_trace.o
+			codec.o endpoint.o errno.o g711.o jbuf.o rtcp.o \
+			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o stream.o \
+			pasound.o \
+		      	$(PA_DIR)/pa_allocation.o \
+			$(PA_DIR)/pa_converters.o \
+			$(PA_DIR)/pa_cpuload.o \
+			$(PA_DIR)/pa_dither.o \
+			$(PA_DIR)/pa_front.o \
+			$(PA_DIR)/pa_process.o \
+			$(PA_DIR)/pa_skeleton.o \
+			$(PA_DIR)/pa_stream.o \
+			$(PA_DIR)/pa_trace.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
 
@@ -59,7 +60,8 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia pjmedia-test
+TARGETS := pjmedia 
+#pjmedia-test
 
 all: $(TARGETS)
 

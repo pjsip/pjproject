@@ -338,12 +338,12 @@ struct pjmedia_codec_factory
 /**
  * Codec manager maintains codec factory etc.
  */
-typedef struct pjmedia_codec_mgr
+struct pjmedia_codec_mgr
 {
     pjmedia_codec_factory   factory_list;
     unsigned		    codec_cnt;
     pjmedia_codec_info	    codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
-} pjmedia_codec_mgr;
+};
 
 
 

@@ -1578,6 +1578,8 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	    }
 	    break;
 
+	default:
+	    break;
 	}
     }
 }
