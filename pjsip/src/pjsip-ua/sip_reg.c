@@ -41,33 +41,34 @@
  */
 struct pjsip_regc
 {
-    pj_pool_t	        *pool;
-    pjsip_endpoint	*endpt;
-    pj_bool_t		 _delete_flag;
-    int			 pending_tsx;
+    pj_pool_t			*pool;
+    pjsip_endpoint		*endpt;
+    pj_bool_t			 _delete_flag;
+    int				 pending_tsx;
 
-    void		*token;
-    pjsip_regc_cb	*cb;
+    void			*token;
+    pjsip_regc_cb		*cb;
 
-    pj_str_t		 str_srv_url;
-    pjsip_uri		*srv_url;
-    pjsip_cid_hdr	*cid_hdr;
-    pjsip_cseq_hdr	*cseq_hdr;
-    pjsip_from_hdr	*from_hdr;
-    pjsip_to_hdr	*to_hdr;
-    char		*contact_buf;
+    pj_str_t			 str_srv_url;
+    pjsip_uri			*srv_url;
+    pjsip_cid_hdr		*cid_hdr;
+    pjsip_cseq_hdr		*cseq_hdr;
+    pjsip_from_hdr		*from_hdr;
+    pjsip_to_hdr		*to_hdr;
+    char			*contact_buf;
     pjsip_generic_string_hdr	*contact_hdr;
-    pjsip_expires_hdr	*expires_hdr;
-    pjsip_contact_hdr	*unreg_contact_hdr;
-    pjsip_expires_hdr	*unreg_expires_hdr;
-    pj_uint32_t		 expires;
+    pjsip_expires_hdr		*expires_hdr;
+    pjsip_contact_hdr		*unreg_contact_hdr;
+    pjsip_expires_hdr		*unreg_expires_hdr;
+    pj_uint32_t			 expires;
+    pjsip_route_hdr		 route_set;
 
     /* Authorization sessions. */
-    pjsip_auth_clt_sess	 auth_sess;
+    pjsip_auth_clt_sess		 auth_sess;
 
     /* Auto refresh registration. */
-    pj_bool_t		 auto_reg;
-    pj_timer_entry	 timer;
+    pj_bool_t			 auto_reg;
+    pj_timer_entry		 timer;
 };
 
 
@@ -98,6 +99,8 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     status = pjsip_auth_clt_init(&regc->auth_sess, endpt, regc->pool, 0);
     if (status != PJ_SUCCESS)
 	return status;
+
+    pj_list_init(&regc->route_set);
 
     /* Done */
     *p_regc = regc;
@@ -248,6 +251,24 @@ PJ_DEF(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
     return pjsip_auth_clt_set_credentials(&regc->auth_sess, count, cred);
 }
 
+PJ_DEF(pj_status_t) pjsip_regc_set_route_set( pjsip_regc *regc,
+					      const pjsip_route_hdr *route_set)
+{
+    const pjsip_route_hdr *chdr;
+
+    PJ_ASSERT_RETURN(regc && route_set, PJ_EINVAL);
+
+    pj_list_init(&regc->route_set);
+
+    chdr = route_set->next;
+    while (chdr != route_set) {
+	pj_list_push_back(&regc->route_set, pjsip_hdr_clone(regc->pool, chdr));
+	chdr = chdr->next;
+    }
+
+    return PJ_SUCCESS;
+}
+
 static pj_status_t create_request(pjsip_regc *regc, 
 				  pjsip_tx_data **p_tdata)
 {
@@ -272,6 +293,24 @@ static pj_status_t create_request(pjsip_regc *regc,
 
     /* Add cached authorization headers. */
     pjsip_auth_clt_init_req( &regc->auth_sess, tdata );
+
+    /* Add Route headers from route set, ideally after Via header */
+    if (!pj_list_empty(&regc->route_set)) {
+	pjsip_hdr *route_pos;
+	const pjsip_route_hdr *route;
+
+	route_pos = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+	if (!route_pos)
+	    route_pos = &tdata->msg->hdr;
+
+	route = regc->route_set.next;
+	while (route != &regc->route_set) {
+	    pjsip_hdr *new_hdr = pjsip_hdr_shallow_clone(tdata->pool, route);
+	    pj_list_insert_after(route_pos, new_hdr);
+	    route_pos = new_hdr;
+	    route = route->next;
+	}
+    }
 
     /* Done. */
     *p_tdata = tdata;

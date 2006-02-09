@@ -141,7 +141,7 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 /**
  * Set authentication credentials to use by this registration.
  *
- * @param dlg	    The registration structure.
+ * @param regc	    The registration structure.
  * @param count	    Number of credentials in the array.
  * @param cred	    Array of credentials.
  *
@@ -150,6 +150,17 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
 						 int count,
 						 const pjsip_cred_info cred[] );
+
+/**
+ * Set route set to be used for outgoing requests.
+ *
+ * @param regc	    The client registration structure.
+ * @param route_set List containing Route headers.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
+					      const pjsip_route_hdr*route_set);
 
 /**
  * Create REGISTER request for the specified client registration structure.

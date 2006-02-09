@@ -18,13 +18,23 @@
  */
 #include "pjsua.h"
 
+/*
+ * pjsua_core.c
+ *
+ * Core application functionalities.
+ */
 
-#define THIS_FILE   "pjsua.c"
+#define THIS_FILE   "pjsua_core.c"
 
-struct pjsua pjsua;
 
 /* 
- * Default local URI, if not specified in cmd-line 
+ * Global variable.
+ */
+struct pjsua pjsua;
+
+
+/* 
+ * Default local URI, if none is specified in cmd-line 
  */
 #define PJSUA_LOCAL_URI	    "<sip:user@127.0.0.1>"
 
@@ -92,105 +102,12 @@ void pjsua_perror(const char *title, pj_status_t status)
  */
 static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
-    pjsip_dialog *dlg = pjsip_rdata_get_dlg(rdata);
-    pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
-    pjsip_msg *msg = rdata->msg_info.msg;
 
-    /*
-     * Handle incoming INVITE outside dialog.
-     */
-    if (dlg == NULL && tsx == NULL &&
-	msg->line.req.method.id == PJSIP_INVITE_METHOD)
-    {
-	pj_status_t status;
-	pjsip_tx_data *response = NULL;
-	unsigned options = 0;
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
 
-	/* Verify that we can handle the request. */
-	status = pjsip_inv_verify_request(rdata, &options, NULL, NULL,
-					  pjsua.endpt, &response);
-	if (status != PJ_SUCCESS) {
+	return pjsua_inv_on_incoming(rdata);
 
-	    /*
-	     * No we can't handle the incoming INVITE request.
-	     */
-
-	    if (response) {
-		pjsip_response_addr res_addr;
-
-		pjsip_get_response_addr(response->pool, rdata, &res_addr);
-		pjsip_endpt_send_response(pjsua.endpt, &res_addr, response, 
-					  NULL, NULL);
-
-	    } else {
-
-		/* Respond with 500 (Internal Server Error) */
-		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
-					      NULL, NULL);
-	    }
-
-	} else {
-	    /*
-	     * Yes we can handle the incoming INVITE request.
-	     */
-	    pjsip_inv_session *inv;
-	    struct pjsua_inv_data *inv_data;
-	    pjmedia_sdp_session *answer;
-
-
-	    /* Get media capability from media endpoint: */
-
-	    status = pjmedia_endpt_create_sdp( pjsua.med_endpt, rdata->tp_info.pool,
-					       1, &pjsua.med_skinfo, &answer );
-	    if (status != PJ_SUCCESS) {
-
-		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
-					      NULL, NULL);
-		return PJ_TRUE;
-	    }
-
-	    /* Create dialog: */
-
-	    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-					   &pjsua.contact_uri, &dlg);
-	    if (status != PJ_SUCCESS)
-		return PJ_TRUE;
-
-
-	    /* Create invite session: */
-
-	    status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &inv);
-	    if (status != PJ_SUCCESS) {
-
-		status = pjsip_dlg_create_response( dlg, rdata, 500, NULL,
-						    &response);
-		if (status == PJ_SUCCESS)
-		    status = pjsip_dlg_send_response(dlg, 
-						     pjsip_rdata_get_tsx(rdata),
-						     response);
-		return PJ_TRUE;
-
-	    }
-
-
-	    /* Create and attach pjsua data to the dialog: */
-
-	    inv_data = pj_pool_zalloc(dlg->pool, sizeof(struct pjsua_inv_data));
-	    dlg->mod_data[pjsua.mod.id] = inv_data;
-
-
-	    /* Answer with 100 (using the dialog, not invite): */
-
-	    status = pjsip_dlg_create_response(dlg, rdata, 100, NULL, &response);
-	    if (status == PJ_SUCCESS)
-		status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), response);
-	}
-
-	/* This INVITE request has been handled. */
-	return PJ_TRUE;
     }
-
-    
 
     return PJ_FALSE;
 }
@@ -213,98 +130,6 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
     return PJ_FALSE;
 }
 
-
-/*
- * This callback receives notification from invite session when the
- * session state has changed.
- */
-static void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
-{
-
-    /* Destroy media session when invite session is disconnected. */
-    if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-	struct pjsua_inv_data *inv_data;
-
-	inv_data = inv->dlg->mod_data[pjsua.mod.id];
-	if (inv_data && inv_data->session) {
-	    pjmedia_session_destroy(inv_data->session);
-	    inv_data->session = NULL;
-
-	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
-	}
-
-    }
-
-    pjsua_ui_inv_on_state_changed(inv, e);
-}
-
-
-/*
- * This callback is called by invite session framework when UAC session
- * has forked.
- */
-static void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e)
-{
-    PJ_UNUSED_ARG(inv);
-    PJ_UNUSED_ARG(e);
-
-    PJ_TODO(HANDLE_FORKED_DIALOG);
-}
-
-/*
- *
- */
-static void pjsua_inv_on_media_update(pjsip_inv_session *inv, 
-				      pj_status_t status)
-{
-    struct pjsua_inv_data *inv_data;
-    const pjmedia_sdp_session *local_sdp;
-    const pjmedia_sdp_session *remote_sdp;
-
-    if (status != PJ_SUCCESS) {
-
-	pjsua_perror("SDP negotiation has failed", status);
-	return;
-
-    }
-
-    /* Destroy existing media session, if any. */
-
-    inv_data = inv->dlg->mod_data[pjsua.mod.id];
-    if (inv_data && inv_data->session) {
-	pjmedia_session_destroy(inv_data->session);
-	inv_data->session = NULL;
-    }
-
-    /* Get local and remote SDP */
-
-    status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to retrieve currently active local SDP", status);
-	return;
-    }
-
-
-    status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to retrieve currently active remote SDP", status);
-	return;
-    }
-
-
-    /* Create new media session. 
-     * The media session is active immediately.
-     */
-
-    status = pjmedia_session_create( pjsua.med_endpt, 1, &pjsua.med_skinfo,
-				     local_sdp, remote_sdp, &inv_data->session );
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create media session", status);
-	return;
-    }
-
-    PJ_LOG(3,(THIS_FILE,"Media has been started successfully"));
-}
 
 /* 
  * Initialize sockets and optionally get the public address via STUN. 
@@ -845,111 +670,17 @@ pj_status_t pjsua_destroy(void)
     }
 
     /* Destroy endpoint. */
+
     pjsip_endpt_destroy(pjsua.endpt);
     pjsua.endpt = NULL;
 
     /* Destroy caching pool. */
+
     pj_caching_pool_destroy(&pjsua.cp);
 
 
     /* Done. */
 
     return PJ_SUCCESS;
-}
-
-
-/**
- * Make outgoing call.
- */
-pj_status_t pjsua_invite(const char *cstr_dest_uri,
-			 pjsip_inv_session **p_inv)
-{
-    pj_str_t dest_uri;
-    pjsip_dialog *dlg;
-    pjmedia_sdp_session *offer;
-    pjsip_inv_session *inv;
-    struct pjsua_inv_data *inv_data;
-    pjsip_tx_data *tdata;
-    pj_status_t status;
-
-    /* Convert cstr_dest_uri to dest_uri */
-    
-    dest_uri = pj_str((char*)cstr_dest_uri);
-
-    /* Create outgoing dialog: */
-
-    status = pjsip_dlg_create_uac( pjsip_ua_instance(), &pjsua.local_uri,
-				   &pjsua.contact_uri, &dest_uri, &dest_uri,
-				   &dlg);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Dialog creation failed", status);
-	return status;
-    }
-
-    /* Get media capability from media endpoint: */
-
-    status = pjmedia_endpt_create_sdp( pjsua.med_endpt, dlg->pool,
-				       1, &pjsua.med_skinfo, &offer);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("pjmedia unable to create SDP", status);
-	goto on_error;
-    }
-
-    /* Create the INVITE session: */
-
-    status = pjsip_inv_create_uac( dlg, offer, 0, &inv);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Invite session creation failed", status);
-	goto on_error;
-    }
-
-
-    /* Create and associate our data in the session. */
-
-    inv_data = pj_pool_zalloc( dlg->pool, sizeof(struct pjsua_inv_data));
-    dlg->mod_data[pjsua.mod.id] = inv_data;
-
-
-    /* Set dialog Route-Set: */
-
-    if (!pj_list_empty(&pjsua.route_set))
-	pjsip_dlg_set_route_set(dlg, &pjsua.route_set);
-
-
-    /* Set credentials: */
-
-    pjsip_auth_clt_set_credentials( &dlg->auth_sess, pjsua.cred_count, 
-				    pjsua.cred_info);
-
-
-    /* Create initial INVITE: */
-
-    status = pjsip_inv_invite(inv, &tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create initial INVITE request", status);
-	goto on_error;
-    }
-
-
-    /* Send initial INVITE: */
-
-    status = pjsip_inv_send_msg(inv, tdata, NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to send initial INVITE request", status);
-	goto on_error;
-    }
-
-
-    /* Done. */
-
-    *p_inv = inv;
-
-    return PJ_SUCCESS;
-
-
-on_error:
-
-    PJ_TODO(DESTROY_DIALOG_ON_FAIL);
-    return status;
 }
 

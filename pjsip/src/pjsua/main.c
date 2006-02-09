@@ -61,7 +61,7 @@ static void ui_help(void)
 {
     puts("");
     puts("Console keys:");
-    puts("  m    Make a call");
+    puts("  m    Make a call/another call");
     puts("  a    Answer incoming call");
     puts("  h    Hangup current call");
     puts("  q    Quit");
@@ -352,10 +352,10 @@ static void usage(void)
     puts("  --use-stun1=host[:port]");
     puts("  --use-stun2=host[:port]  Use STUN and set host name and port of STUN servers");
     puts("");
-    puts("SIMPLE options (may be specified more than once):");
-    puts("  --add-buddy url     Add the specified URL to the buddy list.");
-    puts("  --offer-x-ms-msg    Offer \"x-ms-message\" in outgoing INVITE");
-    puts("  --no-presence	Do not subscribe presence of buddies");
+    //puts("SIMPLE options (may be specified more than once):");
+    //puts("  --add-buddy url     Add the specified URL to the buddy list.");
+    //puts("  --offer-x-ms-msg    Offer \"x-ms-message\" in outgoing INVITE");
+    //puts("  --no-presence	Do not subscribe presence of buddies");
     puts("");
     fflush(stdout);
 }

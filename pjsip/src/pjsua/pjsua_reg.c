@@ -18,8 +18,20 @@
  */
 #include "pjsua.h"
 
+
+/*
+ * pjsua_reg.c
+ *
+ * Client registration handler.
+ */
+
 #define THIS_FILE   "pjsua_reg.c"
 
+
+/*
+ * This callback is called by pjsip_regc when outgoing register
+ * request has completed.
+ */
 static void regc_cb(struct pjsip_regc_cbparam *param)
 {
     /*
@@ -97,6 +109,8 @@ pj_status_t pjsua_regc_init(void)
 
 	pjsip_regc_set_credentials( pjsua.regc, pjsua.cred_count, 
 				    pjsua.cred_info );
+
+	pjsip_regc_set_route_set( pjsua.regc, &pjsua.route_set );
     }
 
     return PJ_SUCCESS;

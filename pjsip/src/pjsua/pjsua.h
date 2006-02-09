@@ -128,7 +128,7 @@ struct pjsua_inv_data
 
 
 /*****************************************************************************
- * PJSUA API.
+ * PJSUA API (defined in pjsua_core.c).
  */
 
 /**
@@ -171,6 +171,10 @@ pj_status_t pjsua_start(void);
 pj_status_t pjsua_destroy(void);
 
 
+/*****************************************************************************
+ * PJSUA Invite session API (defined in pjsua_inv.c).
+ */
+
 /**
  * Make outgoing call.
  */
@@ -178,8 +182,35 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 			 pjsip_inv_session **p_inv);
 
 
+/**
+ * Handle incoming invite request.
+ */
+pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata);
+
+
+/**
+ * Callback to be called by session when invite session's state has changed.
+ */
+void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
+
+
+/**
+ * Callback to be called by session when outgoing dialog has forked.
+ * This function will create a forked dialog.
+ */
+void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e);
+
+
+/**
+ * Callback to be called when SDP offer/answer negotiation has just completed
+ * in the session. This function will start/update media if negotiation
+ * has succeeded.
+ */
+void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status);
+
+
 /*****************************************************************************
- * PJSUA Client Registration API.
+ * PJSUA Client Registration API (defined in pjsua_reg.c).
  */
 
 /**
@@ -198,6 +229,7 @@ void pjsua_regc_update(pj_bool_t renew);
 
 /*****************************************************************************
  * User Interface API.
+ *
  * The UI API specifies functions that will be called by pjsua upon
  * occurence of various events.
  */

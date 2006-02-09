@@ -98,17 +98,11 @@ SOURCE=..\src\pjsua\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsua\main_old.c
-# PROP Exclude_From_Build 1
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\misc.c
-# PROP Exclude_From_Build 1
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjsua\pjsua_core.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\pjsua_inv.c
 # End Source File
 # Begin Source File
 
