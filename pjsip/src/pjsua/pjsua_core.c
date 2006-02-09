@@ -75,6 +75,10 @@ void pjsua_default(void)
     /* Init route set list: */
 
     pj_list_init(&pjsua.route_set);
+
+    /* Init invite session list: */
+
+    pj_list_init(&pjsua.inv_list);
 }
 
 

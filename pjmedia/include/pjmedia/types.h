@@ -166,6 +166,11 @@ typedef struct pjmedia_channel_stat pjmedia_channel_stat;
 typedef struct pjmedia_session pjmedia_session;
 
 /**
+ * Media session info.
+ */
+typedef struct pjmedia_session_info pjmedia_session_info;
+
+/**
  * Forward declaration for SDP attribute (sdp.h)
  */
 typedef struct pjmedia_sdp_attr pjmedia_sdp_attr;
@@ -205,6 +210,15 @@ typedef enum pjmedia_sdp_neg_state pjmedia_sdp_neg_state;
  */
 typedef struct pjmedia_sdp_neg pjmedia_sdp_neg;
 
+/**
+ * Types of frame returned from jitter buffer (jbuf.h).
+ */
+typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
+
+/**
+ * Opaque declaration for jitter buffer.
+ */
+typedef struct pjmedia_jbuf pjmedia_jbuf;
 
 #endif	/* __PJMEDIA_TYPES_H__ */
 

@@ -929,6 +929,9 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
 	pj_assert(to != NULL);
 
 	to->tag = dlg->local.info->tag;
+
+	if (dlg->state == PJSIP_DIALOG_STATE_NULL)
+	    dlg->state = PJSIP_DIALOG_STATE_ESTABLISHED;
     }
 }
 
@@ -1097,7 +1100,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     dlg->remote.cseq = rdata->msg_info.cseq->cseq;
 
     /* Create UAS transaction for this request. */
-    if (pjsip_rdata_get_tsx(rdata) == NULL) {
+    if (pjsip_rdata_get_tsx(rdata) == NULL && 
+	rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) 
+    {
 	status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
 	PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS,{goto on_return;});
 
@@ -1279,5 +1284,4 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 	pj_mutex_unlock(dlg->mutex);
     }
 }
-
 

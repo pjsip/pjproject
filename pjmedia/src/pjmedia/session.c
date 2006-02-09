@@ -233,13 +233,16 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     }
 
     /*
-     * Now create the stream!
+     * Now create and start the stream!
      */
     for (i=0; i<(int)stream_cnt; ++i) {
 
 	status = pjmedia_stream_create(endpt, session->pool,
 				       &session->stream_info[i],
 				       &session->stream[i]);
+	if (status == PJ_SUCCESS)
+	    status = pjmedia_stream_start(session->stream[i]);
+
 	if (status != PJ_SUCCESS) {
 
 	    for ( --i; i>=0; ++i) {
@@ -255,6 +258,22 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     /* Done. */
 
     *p_session = session;
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get session info.
+ */
+PJ_DEF(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
+					      pjmedia_session_info *info )
+{
+    PJ_ASSERT_RETURN(session && info, PJ_EINVAL);
+
+    info->stream_cnt = session->stream_cnt;
+    pj_memcpy(info->stream_info, session->stream_info,
+	      session->stream_cnt * sizeof(pjmedia_stream_info));
+
     return PJ_SUCCESS;
 }
 
@@ -368,28 +387,14 @@ PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
 /**
  * Get statistics
  */
-PJ_DEF(pj_status_t) pjmedia_session_get_stat(const pjmedia_session *session, 
-					     unsigned *count,
-					     pjmedia_stream_stat stat[])
-{
-    PJ_ASSERT_RETURN(session && count && *count && stat, PJ_EINVAL);
-
-    *count = 0;
-    pj_memset(stat, 0, *count * sizeof(pjmedia_stream_stat));
-    return PJ_EINVALIDOP;
-}
-
-
-/**
- * Get individual stream statistic.
- */
-PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( const pjmedia_session *s,
+PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
 						     unsigned index,
 						     pjmedia_stream_stat *stat)
 {
-    PJ_ASSERT_RETURN(s && index < s->stream_cnt && stat, PJ_EINVAL);
-    pj_memset(stat, 0, sizeof(pjmedia_stream_stat));
-    return PJ_EINVALIDOP;
+    PJ_ASSERT_RETURN(session && stat && index < session->stream_cnt, 
+		     PJ_EINVAL);
+
+    return pjmedia_stream_get_stat(session->stream[index], stat);
 }
 
 

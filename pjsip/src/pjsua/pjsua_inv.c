@@ -78,6 +78,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     /* Create and associate our data in the session. */
 
     inv_data = pj_pool_zalloc( dlg->pool, sizeof(struct pjsua_inv_data));
+    inv_data->inv = inv;
     dlg->mod_data[pjsua.mod.id] = inv_data;
 
 
@@ -109,6 +110,10 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 	pjsua_perror("Unable to send initial INVITE request", status);
 	goto on_error;
     }
+
+    /* Add invite session to the list. */
+    
+    pj_list_push_back(&pjsua.inv_list, inv_data);
 
 
     /* Done. */
@@ -214,7 +219,10 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 	    /* Create and attach pjsua data to the dialog: */
 
 	    inv_data = pj_pool_zalloc(dlg->pool, sizeof(struct pjsua_inv_data));
+	    inv_data->inv = inv;
 	    dlg->mod_data[pjsua.mod.id] = inv_data;
+
+	    pj_list_push_back(&pjsua.inv_list, inv_data);
 
 
 	    /* Answer with 100 (using the dialog, not invite): */
@@ -244,6 +252,9 @@ void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 	struct pjsua_inv_data *inv_data;
 
 	inv_data = inv->dlg->mod_data[pjsua.mod.id];
+
+	pj_assert(inv_data != NULL);
+
 	if (inv_data && inv_data->session) {
 	    pjmedia_session_destroy(inv_data->session);
 	    inv_data->session = NULL;
@@ -251,6 +262,11 @@ void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
 	}
 
+	if (inv_data) {
+
+	    pj_list_erase(inv_data);
+
+	}
     }
 
     pjsua_ui_inv_on_state_changed(inv, e);

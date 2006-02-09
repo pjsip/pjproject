@@ -39,6 +39,17 @@ PJ_BEGIN_DECL
 
 
 /**
+ * Session info, retrieved from a session by calling
+ * #pjmedia_session_get_info().
+ */
+struct pjmedia_session_info
+{
+    unsigned		stream_cnt;
+    pjmedia_stream_info	stream_info[PJSDP_MAX_MEDIA];
+};
+
+
+/**
  * Create new session offering based on the local and remote SDP.
  * The session will start immediately.
  *
@@ -63,6 +74,18 @@ PJ_DECL(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 					     const pjmedia_sdp_session *local_sdp,
 					     const pjmedia_sdp_session *rem_sdp,
 					     pjmedia_session **p_session );
+
+
+/**
+ * Get session info.
+ *
+ * @param session	The session which info is being queried.
+ * @param info		Pointer to receive session info.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
+					       pjmedia_session_info *info );
 
 
 /**
@@ -137,28 +160,12 @@ PJ_DECL(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session
  * indicators such as packet count, packet lost, jitter, delay, etc.
  *
  * @param session	The media session.
- * @param count		On input, specifies the number of elements in
- *			the array. On output, the number will be filled
- *			with number of streams in the session.
- * @param stat		Array of stream statistics.
+ * @param index		Stream index.
+ * @param stat		Stream statistic.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_session_get_stat(const pjmedia_session *session,
-					      unsigned *count,
-					      pjmedia_stream_stat stat[]);
-
-/**
- * Get individual stream statistics. The stream statistic shows various
- * indicators such as packet count, packet lost, jitter, delay, etc.
- *
- * @param s		The media session.
- * @param index		The stream index.
- * @param stat		Stream statistics.
- *
- * @return		PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(const pjmedia_session *s,
+PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
 						     pjmedia_stream_stat *stat);
 

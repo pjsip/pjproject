@@ -37,6 +37,22 @@
 
 PJ_BEGIN_DECL
 
+
+/** 
+ * Structure to be attached to all dialog. 
+ * Given a dialog "dlg", application can retrieve this structure
+ * by accessing dlg->mod_data[pjsua.mod.id].
+ */
+struct pjsua_inv_data
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_inv_data);
+
+    pjsip_inv_session	*inv;
+    pjmedia_session	*session;
+};
+
+
+
 /* PJSUA application variables. */
 struct pjsua
 {
@@ -109,22 +125,15 @@ struct pjsua
     unsigned	     log_decor;	    /**< Log decoration.		*/
     char	    *log_filename;  /**< Log filename.			*/
 
+    /* List of invite sessions: */
+
+    struct pjsua_inv_data inv_list;
 };
 
 
 /** PJSUA instance. */
 extern struct pjsua pjsua;
 
-
-/** 
- * Structure to be attached to all dialog. 
- * Given a dialog "dlg", application can retrieve this structure
- * by accessing dlg->mod_data[pjsua.mod.id].
- */
-struct pjsua_inv_data
-{
-    pjmedia_session *session;
-};
 
 
 /*****************************************************************************

@@ -720,3 +720,73 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 }
 
 
+#if PJ_LOG_MAX_LEVEL >= 3
+static void print_dialog( const char *title,
+			  pjsip_dialog *dlg, char *buf, pj_size_t size)
+{
+    int len;
+    char userinfo[128];
+
+    len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
+    if (len < 1)
+	pj_native_strcpy(userinfo, "<--uri too long-->");
+    else
+	userinfo[len] = '\0';
+    
+    len = pj_snprintf(buf, size, "%s[%s]  %s",
+		      title,
+		      (dlg->state==PJSIP_DIALOG_STATE_NULL ? " - " :
+							     "est"),
+		      userinfo);
+    if (len < 1 || len >= (int)size) {
+	pj_native_strcpy(buf, "<--uri too long-->");
+    } else
+	buf[len] = '\0';
+}
+#endif
+
+/*
+ * Dump user agent contents (e.g. all dialogs).
+ */
+PJ_DEF(void) pjsip_ua_dump(void)
+{
+#if PJ_LOG_MAX_LEVEL >= 3
+    pj_hash_iterator_t itbuf, *it;
+    char dlginfo[128];
+
+    pj_mutex_lock(mod_ua.mutex);
+
+    PJ_LOG(3, (THIS_FILE, "Number of dialog sets: %u", pj_hash_count(mod_ua.dlg_table)));
+    PJ_LOG(3, (THIS_FILE, "Dumping dialog sets:"));
+
+    it = pj_hash_first(mod_ua.dlg_table, &itbuf);
+    for (; it != NULL; it = pj_hash_next(mod_ua.dlg_table, it))  {
+	struct dlg_set *dlg_set;
+	pjsip_dialog *dlg;
+	const char *title;
+
+	dlg_set = pj_hash_this(mod_ua.dlg_table, it);
+	if (!dlg_set || pj_list_empty(&dlg_set->dlg_list)) continue;
+
+	/* First dialog in dialog set. */
+	dlg = dlg_set->dlg_list.next;
+	if (dlg->role == PJSIP_ROLE_UAC)
+	    title = "  [out] ";
+	else
+	    title = "  [in]  ";
+
+	print_dialog(title, dlg, dlginfo, sizeof(dlginfo));
+	PJ_LOG(3,(THIS_FILE, "%s", dlginfo));
+
+	/* Next dialog in dialog set (forked) */
+	dlg = dlg->next;
+	while (dlg != (pjsip_dialog*) &dlg_set->dlg_list) {
+	    print_dialog("    [forked] ", dlg, dlginfo, sizeof(dlginfo));
+	    dlg = dlg->next;
+	}
+    }
+
+    pj_mutex_unlock(mod_ua.mutex);
+#endif
+}
+

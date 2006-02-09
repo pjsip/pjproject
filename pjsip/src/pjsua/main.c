@@ -25,26 +25,27 @@
 
 static pjsip_inv_session *inv_session;
 
+static const char *inv_state_names[] =
+{
+    "NULL      ",
+    "CALLING   ",
+    "INCOMING  ",
+    "EARLY     ",
+    "CONNECTING",
+    "CONFIRMED ",
+    "DISCONNCTD",
+    "TERMINATED",
+};
+
 /*
  * Notify UI when invite state has changed.
  */
 void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 {
-    const char *state_names[] =
-    {
-	"NULL",
-	"CALLING",
-	"INCOMING",
-	"EARLY",
-	"CONNECTING",
-	"CONFIRMED",
-	"DISCONNECTED",
-	"TERMINATED",
-    };
-
     PJ_UNUSED_ARG(e);
 
-    PJ_LOG(3,(THIS_FILE, "INVITE session state changed to %s", state_names[inv->state]));
+    PJ_LOG(3,(THIS_FILE, "INVITE session state changed to %s", 
+	      inv_state_names[inv->state]));
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 	if (inv == inv_session)
@@ -57,11 +58,130 @@ void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
     }
 }
 
+
+static void print_invite_session(const char *title,
+				 struct pjsua_inv_data *inv_data, 
+				 char *buf, pj_size_t size)
+{
+    int len;
+    pjsip_inv_session *inv = inv_data->inv;
+    pjsip_dialog *dlg = inv->dlg;
+    char userinfo[128];
+
+    /* Dump invite sesion info. */
+
+    len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
+    if (len < 1)
+	pj_native_strcpy(userinfo, "<--uri too long-->");
+    else
+	userinfo[len] = '\0';
+    
+    len = pj_snprintf(buf, size, "%s[%s] %s",
+		      title,
+		      inv_state_names[inv->state],
+		      userinfo);
+    if (len < 1 || len >= (int)size) {
+	pj_native_strcpy(buf, "<--uri too long-->");
+	len = 18;
+    } else
+	buf[len] = '\0';
+}
+
+static void dump_media_session(pjmedia_session *session)
+{
+    unsigned i;
+    pjmedia_session_info info;
+
+    pjmedia_session_get_info(session, &info);
+
+    for (i=0; i<info.stream_cnt; ++i) {
+	pjmedia_stream_stat strm_stat;
+	const char *rem_addr;
+	int rem_port;
+	const char *dir;
+
+	pjmedia_session_get_stream_stat(session, i, &strm_stat);
+	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
+	rem_port = pj_ntohs(info.stream_info[i].rem_addr.sin_port);
+
+	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
+	    dir = "sendonly";
+	else if (info.stream_info[i].dir == PJMEDIA_DIR_DECODING)
+	    dir = "recvonly";
+	else if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING_DECODING)
+	    dir = "sendrecv";
+	else
+	    dir = "inactive";
+
+	
+	PJ_LOG(3,(THIS_FILE, 
+		  "%s[Media strm#%d] %.*s, %s, peer=%s:%d",
+		  "               ",
+		  i,
+		  info.stream_info[i].fmt.encoding_name.slen,
+		  info.stream_info[i].fmt.encoding_name.ptr,
+		  dir,
+		  rem_addr, rem_port));
+	PJ_LOG(3,(THIS_FILE, 
+		  "%s tx {pkt=%u, bytes=%u} rx {pkt=%u, bytes=%u}",
+		  "                             ",
+		  strm_stat.enc.pkt, strm_stat.enc.bytes,
+		  strm_stat.dec.pkt, strm_stat.dec.bytes));
+
+    }
+}
+
+/*
+ * Dump application states.
+ */
+static void pjsua_dump(void)
+{
+    struct pjsua_inv_data *inv_data;
+    char buf[128];
+    unsigned log_decor;
+
+    log_decor = pj_log_get_decor();
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+
+    pjsip_endpt_dump(pjsua.endpt, 1);
+    pjsip_ua_dump();
+
+    /* Dump all invite sessions: */
+    PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
+
+    if (pj_list_empty(&pjsua.inv_list)) {
+
+	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
+
+    } else {
+
+	inv_data = pjsua.inv_list.next;
+
+	while (inv_data != &pjsua.inv_list) {
+
+	    print_invite_session("  ", inv_data, buf, sizeof(buf));
+	    PJ_LOG(3,(THIS_FILE, "%s", buf));
+
+	    if (inv_data->session)
+		dump_media_session(inv_data->session);
+
+	    inv_data = inv_data->next;
+	}
+    }
+
+    pj_log_set_decor(log_decor);
+}
+
+
+/*
+ * Show a bit of help.
+ */
 static void ui_help(void)
 {
     puts("");
     puts("Console keys:");
     puts("  m    Make a call/another call");
+    puts("  d    Dump application states");
     puts("  a    Answer incoming call");
     puts("  h    Hangup current call");
     puts("  q    Quit");
@@ -121,6 +241,10 @@ static void ui_console_main(void)
 #endif
 	    break;
 
+
+	case 'd':
+	    pjsua_dump();
+	    break;
 
 	case 'a':
 

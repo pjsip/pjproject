@@ -1044,6 +1044,11 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 
     pj_lock_acquire(mgr->lock);
 
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %d",
+	      pj_atomic_get(mgr->tdata_counter)));
+#endif
+
     itr = pj_hash_first(mgr->table, &itr_val);
     if (itr) {
 	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));

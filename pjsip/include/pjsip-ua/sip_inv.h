@@ -200,6 +200,11 @@ PJ_DECL(pj_status_t) pjsip_inv_usage_init(pjsip_endpoint *endpt,
 PJ_DECL(pjsip_module*) pjsip_inv_usage_instance(void);
 
 
+/**
+ * Dump user agent contents (e.g. all dialogs).
+ */
+PJ_DECL(void) pjsip_inv_usage_dump(void);
+
 
 /**
  * Create UAC invite session for the specified dialog in dlg. 

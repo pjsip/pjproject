@@ -73,6 +73,11 @@ PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
 PJ_DECL(pj_status_t) pjsip_ua_destroy(void);
 
 /**
+ * Dump user agent contents (e.g. all dialogs).
+ */
+PJ_DEF(void) pjsip_ua_dump(void);
+
+/**
  * Get the endpoint instance of a user agent module.
  *
  * @param ua		The user agent instance.

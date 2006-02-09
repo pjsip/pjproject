@@ -39,15 +39,6 @@
 #define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
 #define PJMEDIA_MAX_MTU			1500
 
-struct jb_frame
-{
-    unsigned size;
-    void    *buf;
-};
-
-#define pj_fifobuf_alloc(fifo,size)	malloc(size)
-#define pj_fifobuf_unalloc(fifo,buf)	free(buf)
-#define pj_fifobuf_free(fifo, buf)	free(buf)
 
 
 /**
@@ -88,13 +79,13 @@ struct pjmedia_stream
 
     pjmedia_codec_mgr	    *codec_mgr;	    /**< Codec manager instance.    */
     pjmedia_codec	    *codec;	    /**< Codec instance being used. */
-
+    pj_size_t		     frame_size;    /**< Size of encoded frame.	    */
     pj_mutex_t		    *jb_mutex;
-    pj_jitter_buffer	     jb;	    /**< Jitter buffer.		    */
+    pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
 
-    pj_sock_t		     rtp_sock;	    /**< RTP socket.		    */
-    pj_sock_t		     rtcp_sock;	    /**< RTCP socket.		    */
-    pj_sockaddr_in	     dst_addr;	    /**< Destination RTP address.   */
+    pjmedia_sock_info	     skinfo;	    /**< Transport info.	    */
+    pj_sockaddr_in	     rem_rtp_addr;  /**< Remote RTP address.	    */
+    pj_sockaddr_in	     rem_rtcp_addr; /**< Remote RTCP address.	    */
 
     pj_rtcp_session	     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -117,9 +108,7 @@ static pj_status_t play_callback(/* in */   void *user_data,
 {
     pjmedia_channel *channel = user_data;
     pjmedia_stream *stream = channel->stream;
-    struct jb_frame *jb_frame;
-    void *p;
-    pj_uint32_t extseq;
+    char frame_type;
     pj_status_t status;
     struct pjmedia_frame frame_in, frame_out;
 
@@ -133,20 +122,23 @@ static pj_status_t play_callback(/* in */   void *user_data,
     pj_mutex_lock( stream->jb_mutex );
 
     /* Get frame from jitter buffer. */
-    status = pj_jb_get(&stream->jb, &extseq, &p);
+    status = pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt,
+				    &frame_type);
 
     /* Unlock jitter buffer mutex. */
     pj_mutex_unlock( stream->jb_mutex );
 
-    jb_frame = p;
-    if (status != PJ_SUCCESS || jb_frame == NULL) {
+    if (status != PJ_SUCCESS || frame_type == PJMEDIA_JB_ZERO_FRAME ||
+	frame_type == PJMEDIA_JB_MISSING_FRAME) 
+    {
 	pj_memset(frame, 0, size);
 	return 0;
     }
 
+
     /* Decode */
-    frame_in.buf = jb_frame->buf;
-    frame_in.size = jb_frame->size;
+    frame_in.buf = channel->out_pkt;
+    frame_in.size = stream->frame_size;
     frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
     frame_out.buf = channel->pcm_buf;
     status = stream->codec->op->decode( stream->codec, &frame_in,
@@ -155,7 +147,6 @@ static pj_status_t play_callback(/* in */   void *user_data,
 	TRACE_((THIS_FILE, "decode() has return error status %d", status));
 
 	pj_memset(frame, 0, size);
-	pj_fifobuf_free (&channel->fifobuf, jb_frame);
 	return 0;
     }
 
@@ -167,7 +158,6 @@ static pj_status_t play_callback(/* in */   void *user_data,
     }
 
     pj_memcpy(frame, frame_out.buf, size);
-    pj_fifobuf_free (&channel->fifobuf, jb_frame);
 
     return 0;
 }
@@ -238,8 +228,8 @@ static pj_status_t rec_callback( /* in */ void *user_data,
 
     /* Send. */
     sent = frame_out.size+sizeof(pj_rtp_hdr);
-    status = pj_sock_sendto(stream->rtp_sock, channel->out_pkt, &sent, 0, 
-			    &stream->dst_addr, sizeof(stream->dst_addr));
+    status = pj_sock_sendto(stream->skinfo.rtp_sock, channel->out_pkt, &sent, 0, 
+			    &stream->rem_rtp_addr, sizeof(stream->rem_rtp_addr));
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -260,31 +250,39 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
     pjmedia_stream *stream = arg;
     pjmedia_channel *channel = stream->dec;
 
+
     while (!stream->quit_flag) {
-	pj_ssize_t len, size;
+	pj_ssize_t len;
 	const pj_rtp_hdr *hdr;
 	const void *payload;
 	unsigned payloadlen;
 	int status;
-	struct jb_frame *jb_frame;
 
 	/* Wait for packet. */
 	pj_fd_set_t fds;
 	pj_time_val timeout;
 
 	PJ_FD_ZERO (&fds);
-	PJ_FD_SET (stream->rtp_sock, &fds);
+	PJ_FD_SET (stream->skinfo.rtp_sock, &fds);
 	timeout.sec = 0;
 	timeout.msec = 1;
 
 	/* Wait with timeout. */
-	status = pj_sock_select(stream->rtp_sock, &fds, NULL, NULL, &timeout);
-	if (status != 1)
+	status = pj_sock_select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+	if (status < 0) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(pj_get_netos_error(), errmsg, sizeof(errmsg));
+	    TRACE_((THIS_FILE, "Jitter buffer select() error: %s",
+		    errmsg));
+	    pj_thread_sleep(500);
+	    continue;
+	} else if (status == 0)
 	    continue;
 
 	/* Get packet from socket. */
 	len = channel->in_pkt_size;
-	status = pj_sock_recv(stream->rtp_sock, channel->in_pkt, &len, 0);
+	status = pj_sock_recv(stream->skinfo.rtp_sock, 
+			      channel->in_pkt, &len, 0);
 	if (len < 1 || status != PJ_SUCCESS) {
 	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) {
 		/* On Win2K SP2 (or above) and WinXP, recv() will get 
@@ -325,28 +323,12 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	stream->stat.dec.pkt++;
 	stream->stat.dec.bytes += len;
 
-	/* Copy to FIFO buffer. */
-	size = payloadlen+sizeof(struct jb_frame);
-	jb_frame = pj_fifobuf_alloc (&channel->fifobuf, size);
-	if (jb_frame == NULL) {
-	    TRACE_((THIS_FILE, "Unable to allocate %d bytes FIFO buffer", 
-		    size));
-	    continue;
-	}
-
-	/* Copy the payload */
-	jb_frame->size = payloadlen;
-	jb_frame->buf = ((char*)jb_frame) + sizeof(struct jb_frame);
-	pj_memcpy (jb_frame->buf, payload, payloadlen);
-
 	/* Put to jitter buffer. */
 	pj_mutex_lock( stream->jb_mutex );
-	status = pj_jb_put(&stream->jb, pj_ntohs(hdr->seq), jb_frame);
+	status = pjmedia_jbuf_put_frame(stream->jb, payload, payloadlen, pj_ntohs(hdr->seq));
 	pj_mutex_unlock( stream->jb_mutex );
 
 	if (status != 0) {
-	    pj_fifobuf_unalloc (&channel->fifobuf, jb_frame);
-	    
 	    TRACE_((THIS_FILE, 
 		    "Jitter buffer put() has returned error status %d", 
 		    status));
@@ -485,6 +467,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
    
     stream->dir = info->dir;
     stream->codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
+    stream->skinfo = info->sock_info;
+    stream->rem_rtp_addr = info->rem_addr;
+
+    PJ_TODO(INITIALIZE_RTCP_REMOTE_ADDRESS);
 
     /* Create mutex to protect jitter buffer: */
 
@@ -515,15 +501,20 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
 
+    /* Get the frame size: */
+
+    stream->frame_size = (codec_param.avg_bps / 8) * codec_param.ptime / 1000;
+
+
     /* Init RTCP session: */
 
     pj_rtcp_init(&stream->rtcp, info->ssrc);
 
 
-    /* Init jitter buffer: */
+    /* Create jitter buffer: */
 
-    status = pj_jb_init(&stream->jb, pool, 
-			info->jb_min, info->jb_max, info->jb_maxcnt);
+    status = pjmedia_jbuf_create(pool, stream->frame_size, 15, 100,
+				 &stream->jb);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -532,7 +523,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     status = pj_thread_create(pool, "decode", 
 			      &jitter_buffer_thread, stream,
-			      0, 0, &stream->thread);
+			      0, PJ_THREAD_SUSPENDED, &stream->thread);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -552,6 +543,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+    /* Resume jitter buffer thread. */
+    status = pj_thread_resume( stream->thread );
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
 
     /* Success! */
     *p_stream = stream;
