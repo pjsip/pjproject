@@ -1116,6 +1116,9 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
 	return;
     }
 
+    /* Update address in send_state. */
+    send_state->addr = *addr;
+
     /* Send response using the transoprt. */
     status = pjsip_transport_send( send_state->cur_transport, 
 				   send_state->tdata,
