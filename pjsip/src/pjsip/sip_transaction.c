@@ -1442,12 +1442,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	}
 
 	if (!*cont) {
-	    char errmsg[PJSIP_ERR_MSG_SIZE];
+	    char errmsg[PJ_ERR_MSG_SIZE];
 
 	    PJ_LOG(4,(tsx->obj_name, 
 		      "Failed to send %s! err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
-		      pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+		      pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 
 	    /* Clear pending transport flag. */
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
@@ -1465,13 +1465,13 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    }
 
 	} else {
-	    char errmsg[PJSIP_ERR_MSG_SIZE];
+	    char errmsg[PJ_ERR_MSG_SIZE];
 
 	    PJ_LOG(4,(tsx->obj_name, 
 		      "Temporary failure in sending %s, "
 		      "will try next server. Err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
-		      pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+		      pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 	}
     }
 
@@ -1486,11 +1486,11 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     if (sent < 0) {
 	pjsip_transaction *tsx = token;
 	struct tsx_lock_data lck;
-	char errmsg[PJSIP_ERR_MSG_SIZE];
+	char errmsg[PJ_ERR_MSG_SIZE];
 
 	PJ_LOG(4,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		  pjsip_tx_data_get_info(tdata), -sent,
-		  pjsip_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+		  pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
 
 	lock_tsx(tsx, &lck);
 
@@ -1534,12 +1534,12 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	    status = PJ_SUCCESS;
 
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJSIP_ERR_MSG_SIZE];
+	    char errmsg[PJ_ERR_MSG_SIZE];
 
 	    PJ_LOG(4,(tsx->obj_name, 
 		      "Error sending %s: Err=%d (%s)",
 		      pjsip_tx_data_get_info(tdata), status, 
-		      pjsip_strerror(status, errmsg, sizeof(errmsg)).ptr));
+		      pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
 
 	    /* On error, release transport to force using full transport
 	     * resolution procedure.
@@ -1568,7 +1568,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
      */
     if (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER) {
 	
-	char errmsg[PJSIP_ERR_MSG_SIZE];
+	char errmsg[PJ_ERR_MSG_SIZE];
 
 	if (status == PJ_SUCCESS) {
 	    pj_assert(!"Unexpected status!");
@@ -1582,7 +1582,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 		  "Transport error, terminating transaction. "
 		  "Err=%d (%s)",
 		  status, 
-		  pjsip_strerror(status, errmsg, sizeof(errmsg)).ptr));
+		  pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
 
 	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 

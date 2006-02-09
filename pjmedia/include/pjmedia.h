@@ -23,10 +23,10 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/jbuf.h>
-#include <pjmedia/mediamgr.h>
+#include <pjmedia/endpoint.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/rtp.h>
-//#include <pjmedia/session.h>
+#include <pjmedia/session.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>

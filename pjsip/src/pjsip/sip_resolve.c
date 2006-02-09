@@ -129,12 +129,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     }
 
     if (status != PJ_SUCCESS) {
-	char errmsg[PJSIP_ERR_MSG_SIZE];
+	char errmsg[PJ_ERR_MSG_SIZE];
 	PJ_LOG(4,(THIS_FILE, "Failed to resolve '%.*s'. Err=%d (%s)",
 			     target->addr.host.slen,
 			     target->addr.host.ptr,
 			     status,
-			     pjsip_strerror(status,errmsg,sizeof(errmsg)).ptr));
+			     pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
 	(*cb)(status, token, &svr_addr);
 	return;
     }

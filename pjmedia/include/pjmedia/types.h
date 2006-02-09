@@ -133,8 +133,9 @@ typedef struct pjmedia_sock_info
 {
 
     pj_sock_t	    rtp_sock;
-    pj_sock_t	    rtcp_sock;
     pj_sockaddr_in  rtp_addr_name;
+    pj_sock_t	    rtcp_sock;
+    pj_sockaddr_in  rtcp_addr_name;
 
 } pjmedia_sock_info;
 

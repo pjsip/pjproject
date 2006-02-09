@@ -25,25 +25,6 @@ PJ_BEGIN_DECL
 
 
 /**
- * Guidelines on error message length.
- */
-#define PJMEDIA_ERR_MSG_SIZE  64
-
-/**
- * Get error message for the specified error code.
- *
- * @param status    The error code.
- * @param buffer    The buffer where to put the error message.
- * @param bufsize   Size of the buffer.
- *
- * @return	    The error message as NULL terminated string,
- *                  wrapped with pj_str_t.
- */
-PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
-				    pj_size_t bufsize);
-
-
-/**
  * Start of error code relative to PJ_ERRNO_START_USER.
  */
 #define PJMEDIA_ERRNO_START       (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE)

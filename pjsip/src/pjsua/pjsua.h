@@ -38,15 +38,21 @@
 PJ_BEGIN_DECL
 
 /* PJSUA application variables. */
-struct pjsua_t
+struct pjsua
 {
     /* Control: */
 
-    pj_caching_pool   cp;	    /**< Global pool factory.		*/
-    pjsip_endpoint   *endpt;	    /**< Global endpoint.		*/
-    pj_pool_t	     *pool;	    /**< pjsua's private pool.		*/
-    pjsip_module      mod;	    /**< pjsua's PJSIP module.		*/
+    pj_caching_pool  cp;	    /**< Global pool factory.		*/
+    pjsip_endpoint  *endpt;	    /**< Global endpoint.		*/
+    pj_pool_t	    *pool;	    /**< pjsua's private pool.		*/
+    pjsip_module     mod;	    /**< pjsua's PJSIP module.		*/
     
+
+    /* Media:  */
+
+    pjmedia_endpt   *med_endpt;    /**< Media endpoint.		*/
+    pj_bool_t	     null_audio;
+    pjmedia_sock_info med_skinfo;
 
     /* User info: */
 
@@ -57,6 +63,8 @@ struct pjsua_t
 
     pj_str_t	     proxy;
     pj_str_t	     outbound_proxy;
+    pjsip_route_hdr  route_set;
+
 
     /* Registration: */
 
@@ -83,10 +91,6 @@ struct pjsua_t
     pj_uint16_t	     sip_port;	    /**< SIP signaling port.		*/
     pj_sock_t	     sip_sock;	    /**< SIP UDP socket.		*/
     pj_sockaddr_in   sip_sock_name; /**< Public/STUN UDP socket addr.	*/
-    pj_sock_t	     rtp_sock;	    /**< RTP socket.			*/
-    pj_sockaddr_in   rtp_sock_name; /**< Public/STUN UDP socket addr.	*/
-    pj_sock_t	     rtcp_sock;	    /**< RTCP socket.			*/
-    pj_sockaddr_in   rtcp_sock_name;/**< Public/STUN UDP socket addr.	*/
 
 
 
@@ -98,12 +102,6 @@ struct pjsua_t
     int		     stun_port2;
 
 
-    /* Media stack: */
-
-    pj_bool_t	     null_audio;
-    pj_med_mgr_t    *mmgr;
-
-
     /* Misc: */
     
     int		     log_level;	    /**< Logging verbosity.		*/
@@ -113,7 +111,21 @@ struct pjsua_t
 
 };
 
-extern struct pjsua_t pjsua;
+
+/** PJSUA instance. */
+extern struct pjsua pjsua;
+
+
+/** 
+ * Structure to be attached to all dialog. 
+ * Given a dialog "dlg", application can retrieve this structure
+ * by accessing dlg->mod_data[pjsua.mod.id].
+ */
+struct pjsua_inv_data
+{
+    pjmedia_session *session;
+};
+
 
 /*****************************************************************************
  * PJSUA API.

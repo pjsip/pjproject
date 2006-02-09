@@ -132,20 +132,15 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 	    pj_strncpy_with_null(&errstr, &msg, bufsize);
 	    return errstr;
 
-	} else {
-	    /* Error not found. */
-	    errstr.ptr = buf;
-	    errstr.slen = pj_snprintf(buf, bufsize, 
-				      "Unknown error %d",
-				      statcode);
-
-	    return errstr;
-	}
-    }
-    else {
-	/* Not our code. Give it to PJLIB. */
-	return pj_strerror(statcode, buf, bufsize);
+	} 
     }
 
+    /* Error not found. */
+    errstr.ptr = buf;
+    errstr.slen = pj_snprintf(buf, bufsize, 
+			      "Unknown error %d",
+			      statcode);
+
+    return errstr;
 }
 

@@ -23,29 +23,11 @@
 
 PJ_BEGIN_DECL
 
-/**
- * Guidelines on error message length.
- */
-#define PJSIP_ERR_MSG_SIZE  64
-
 /*
  * PJSIP error codes occupies 170000 - 219000, and mapped as follows:
  *  - 170100 - 170799: mapped to SIP status code in response msg.
  *  - 171000 - 171999: mapped to errors generated from PJSIP core.
  */
-
-/**
- * Get error message for the specified error code.
- *
- * @param status    The error code.
- * @param buffer    The buffer where to put the error message.
- * @param bufsize   Size of the buffer.
- *
- * @return	    The error message as NULL terminated string,
- *                  wrapped with pj_str_t.
- */
-PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
-				  pj_size_t bufsize);
 
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.

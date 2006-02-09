@@ -989,8 +989,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     }
     PJ_CATCH(SYNTAX_ERROR) {
 	
-	char errmsg[PJMEDIA_ERR_MSG_SIZE];
-	pjmedia_strerror(ctx.last_error, errmsg, sizeof(errmsg));
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(ctx.last_error, errmsg, sizeof(errmsg));
 
 	PJ_LOG(4, (THIS_FILE, "Error parsing SDP in line %d col %d: %s",
 		   scanner.line, pj_scan_get_col(&scanner),

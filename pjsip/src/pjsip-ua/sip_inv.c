@@ -23,6 +23,7 @@
 #include <pjsip/sip_transaction.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
+#include <pjmedia/errno.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -760,9 +761,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 	status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, local_sdp,
 						      &inv->neg);
     } else {
-	pj_assert(!"UAS dialog without remote and local offer is not supported!");
-	PJ_TODO(IMPLEMENT_DELAYED_UAS_OFFER);
-	status = PJ_ENOTSUP;
+	status = PJ_SUCCESS;
     }
 
     if (status != PJ_SUCCESS)
@@ -875,6 +874,25 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 
 
 /*
+ * Negotiate SDP.
+ */
+static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(pjmedia_sdp_neg_get_state(inv->neg) ==
+		     PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
+		     PJMEDIA_SDPNEG_EINSTATE);
+
+    status = pjmedia_sdp_neg_negotiate(inv->pool, inv->neg, 0);
+
+    if (mod_inv.cb.on_media_update)
+	(*mod_inv.cb.on_media_update)(inv, status);
+
+    return status;
+}
+
+/*
  * Answer initial INVITE.
  */ 
 PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
@@ -898,12 +916,23 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     /* If local_sdp is specified, then we MUST NOT have answered the
      * offer before. 
      */
-    PJ_ASSERT_RETURN(!local_sdp ||
-		     (pjmedia_sdp_neg_get_state(inv->neg)==PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER),
-		     PJ_EINVALIDOP);
     if (local_sdp) {
-	status = pjmedia_sdp_neg_set_local_answer(inv->pool, inv->neg,
-						  local_sdp);
+
+	if (inv->neg == NULL) {
+	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, local_sdp,
+							  &inv->neg);
+	} else if (pjmedia_sdp_neg_get_state(inv->neg)==
+		   PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+	{
+	    status = pjmedia_sdp_neg_set_local_answer(inv->pool, inv->neg,
+						      local_sdp);
+	} else {
+
+	    /* Can not specify local SDP at this state. */
+	    pj_assert(0);
+	    status = PJMEDIA_SDPNEG_EINSTATE;
+	}
+
 	if (status != PJ_SUCCESS)
 	    return status;
     }
@@ -915,18 +944,26 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Include SDP for 18x and 2xx response. */
+    /* Include SDP for 18x and 2xx response. 
+     * Also if SDP negotiator is ready, start negotiation.
+     */
     if (st_code/10 == 18 || st_code/10 == 20) {
 	const pjmedia_sdp_session *local;
 
 	status = pjmedia_sdp_neg_get_neg_local(inv->neg, &local);
 	if (status == PJ_SUCCESS)
 	    last_res->msg->body = create_sdp_body(last_res->pool, local);
-					      ;
+
+	/* Start negotiation, if ready. */
+	if (pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO) {
+	    status = inv_negotiate_sdp(inv);
+	    if (status != PJ_SUCCESS) {
+		pjsip_tx_data_dec_ref(last_res);
+		return status;
+	    }
+	}
     }
 
-    /* Do we need to increment tdata'inv reference counter? */
-    PJ_TODO(INV_ANSWER_MAY_HAVE_TO_INCREMENT_REF_COUNTER);
 
     *p_tdata = last_res;
 

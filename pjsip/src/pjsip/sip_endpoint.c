@@ -106,6 +106,28 @@ pj_status_t pjsip_tel_uri_subsys_init(void);
 /* Defined in sip_util_statefull.c */
 extern pjsip_module mod_stateful_util;
 
+
+/* Specifies whether error subsystem has been registered to pjlib. */
+static int error_subsys_initialized;
+
+/**
+ * Defined in sip_errno.c
+ *
+ * Get error message for the specified error code. This can only get
+ * PJSIP specific error message. To get all types of error message,
+ * use pj_strerror() instead.
+ *
+ * @param status    The error code.
+ * @param buffer    The buffer where to put the error message.
+ * @param bufsize   Size of the buffer.
+ *
+ * @return	    The error message as NULL terminated string,
+ *                  wrapped with pj_str_t.
+ */
+PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
+				  pj_size_t bufsize);
+
+
 /*
  * This is the global handler for memory allocation failure, for pools that
  * are created by the endpoint (by default, all pools ARE allocated by 
@@ -393,6 +415,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pjsip_endpoint *endpt;
     pjsip_max_fwd_hdr *mf_hdr;
     pj_lock_t *lock = NULL;
+
+
+    if (!error_subsys_initialized) {
+	pj_register_strerror(PJSIP_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
+			     &pjsip_strerror);
+	error_subsys_initialized = 1;
+    }
 
     PJ_LOG(5, (THIS_FILE, "Creating endpoint instance..."));
 

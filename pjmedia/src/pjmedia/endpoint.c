@@ -40,6 +40,32 @@ static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
 PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool);
 PJ_DECL(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory);
 
+/* Flag to indicate whether pjmedia error subsystem has been registered
+ * to pjlib.
+ */
+static int error_subsys_registered;
+
+
+/**
+ * Defined in pjmedia/errno.c
+ * 
+ * Get error message for the specified error code. Note that this
+ * function is only able to decode PJMEDIA specific error code.
+ * Application should use pj_strerror(), which should be able to
+ * decode all error codes belonging to all subsystems (e.g. pjlib,
+ * pjmedia, pjsip, etc).
+ *
+ * @param status    The error code.
+ * @param buffer    The buffer where to put the error message.
+ * @param bufsize   Size of the buffer.
+ *
+ * @return	    The error message as NULL terminated string,
+ *                  wrapped with pj_str_t.
+ */
+PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
+				    pj_size_t bufsize);
+
+
 
 /** Concrete declaration of media endpoint. */
 struct pjmedia_endpt
@@ -64,6 +90,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     pjmedia_endpt *endpt;
     pjmedia_codec_factory *factory;
     pj_status_t status;
+
+    if (!error_subsys_registered) {
+	pj_register_strerror(PJMEDIA_ERRNO_START, PJ_ERRNO_SPACE_SIZE, 
+			     &pjmedia_strerror);
+	error_subsys_registered = 1;
+    }
 
     PJ_ASSERT_RETURN(pf && p_endpt, PJ_EINVAL);
 

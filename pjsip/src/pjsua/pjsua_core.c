@@ -21,27 +21,14 @@
 
 #define THIS_FILE   "pjsua.c"
 
-struct pjsua_t pjsua;
+struct pjsua pjsua;
 
+/* 
+ * Default local URI, if not specified in cmd-line 
+ */
 #define PJSUA_LOCAL_URI	    "<sip:user@127.0.0.1>"
 
-static char *PJSUA_DUMMY_SDP_OFFER = 
-	    "v=0\r\n"
-	    "o=offer 2890844526 2890844526 IN IP4 127.0.0.1\r\n"
-	    "s= \r\n"
-	    "c=IN IP4 127.0.0.1\r\n"
-	    "t=0 0\r\n"
-	    "m=audio 49170 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n";
 
-static char *PJSUA_DUMMY_SDP_ANSWER = 
-	    "v=0\r\n"
-	    "o=answer 2890844730 2890844730 IN IP4 127.0.0.1\r\n"
-	    "s= \r\n"
-	    "c=IN IP4 127.0.0.1\r\n"
-	    "t=0 0\r\n"
-	    "m=audio 49920 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n";
 
 /*
  * Init default application parameters.
@@ -74,6 +61,10 @@ void pjsua_default(void)
     /* Default URIs: */
 
     pjsua.local_uri = pj_str(PJSUA_LOCAL_URI);
+
+    /* Init route set list: */
+
+    pj_list_init(&pjsua.route_set);
 }
 
 
@@ -143,14 +134,14 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 	     * Yes we can handle the incoming INVITE request.
 	     */
 	    pjsip_inv_session *inv;
+	    struct pjsua_inv_data *inv_data;
 	    pjmedia_sdp_session *answer;
 
-	    /* Create dummy SDP answer: */
 
+	    /* Get media capability from media endpoint: */
 
-	    status = pjmedia_sdp_parse(pjsua.pool, PJSUA_DUMMY_SDP_ANSWER,
-				       pj_native_strlen(PJSUA_DUMMY_SDP_ANSWER),
-				       &answer);
+	    status = pjmedia_endpt_create_sdp( pjsua.med_endpt, rdata->tp_info.pool,
+					       1, &pjsua.med_skinfo, &answer );
 	    if (status != PJ_SUCCESS) {
 
 		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
@@ -180,6 +171,13 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 		return PJ_TRUE;
 
 	    }
+
+
+	    /* Create and attach pjsua data to the dialog: */
+
+	    inv_data = pj_pool_zalloc(dlg->pool, sizeof(struct pjsua_inv_data));
+	    dlg->mod_data[pjsua.mod.id] = inv_data;
+
 
 	    /* Answer with 100 (using the dialog, not invite): */
 
@@ -222,6 +220,19 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
  */
 static void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 {
+
+    /* Destroy media session when invite session is disconnected. */
+    if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+	struct pjsua_inv_data *inv_data;
+
+	inv_data = inv->dlg->mod_data[pjsua.mod.id];
+	if (inv_data && inv_data->session) {
+	    pjmedia_session_destroy(inv_data->session);
+	    inv_data->session = NULL;
+	}
+
+    }
+
     pjsua_ui_inv_on_state_changed(inv, e);
 }
 
@@ -236,6 +247,60 @@ static void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e)
     PJ_UNUSED_ARG(e);
 
     PJ_TODO(HANDLE_FORKED_DIALOG);
+}
+
+/*
+ *
+ */
+static void pjsua_inv_on_media_update(pjsip_inv_session *inv, 
+				      pj_status_t status)
+{
+    struct pjsua_inv_data *inv_data;
+    const pjmedia_sdp_session *local_sdp;
+    const pjmedia_sdp_session *remote_sdp;
+
+    if (status != PJ_SUCCESS) {
+
+	pjsua_perror("SDP negotiation has failed", status);
+	return;
+
+    }
+
+    /* Destroy existing media session, if any. */
+
+    inv_data = inv->dlg->mod_data[pjsua.mod.id];
+    if (inv_data && inv_data->session) {
+	pjmedia_session_destroy(inv_data->session);
+	inv_data->session = NULL;
+    }
+
+    /* Get local and remote SDP */
+
+    status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror("Unable to retrieve currently active local SDP", status);
+	return;
+    }
+
+
+    status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror("Unable to retrieve currently active remote SDP", status);
+	return;
+    }
+
+
+    /* Create new media session. 
+     * The media session is active immediately.
+     */
+
+    status = pjmedia_session_create( pjsua.med_endpt, 1, &pjsua.med_skinfo,
+				     local_sdp, remote_sdp, &inv_data->session );
+    if (status != PJ_SUCCESS) {
+	pjsua_perror("Unable to create media session", status);
+	return;
+    }
+
 }
 
 /* 
@@ -363,20 +428,24 @@ static pj_status_t init_sockets()
 
     pjsua.sip_sock = sock[SIP_SOCK];
     pj_memcpy(&pjsua.sip_sock_name, &mapped_addr[SIP_SOCK], sizeof(pj_sockaddr_in));
-    pjsua.rtp_sock = sock[RTP_SOCK];
-    pj_memcpy(&pjsua.rtp_sock_name, &mapped_addr[RTP_SOCK], sizeof(pj_sockaddr_in));
-    pjsua.rtcp_sock = sock[RTCP_SOCK];
-    pj_memcpy(&pjsua.rtcp_sock_name, &mapped_addr[RTCP_SOCK], sizeof(pj_sockaddr_in));
+
+    pjsua.med_skinfo.rtp_sock = sock[RTP_SOCK];
+    pj_memcpy(&pjsua.med_skinfo.rtp_addr_name, 
+	      &mapped_addr[RTP_SOCK], sizeof(pj_sockaddr_in));
+
+    pjsua.med_skinfo.rtcp_sock = sock[RTCP_SOCK];
+    pj_memcpy(&pjsua.med_skinfo.rtcp_addr_name, 
+	      &mapped_addr[RTCP_SOCK], sizeof(pj_sockaddr_in));
 
     PJ_LOG(4,(THIS_FILE, "SIP UDP socket reachable at %s:%d",
 	      pj_inet_ntoa(pjsua.sip_sock_name.sin_addr), 
 	      pj_ntohs(pjsua.sip_sock_name.sin_port)));
     PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s:%d",
-	      pj_inet_ntoa(pjsua.rtp_sock_name.sin_addr), 
-	      pj_ntohs(pjsua.rtp_sock_name.sin_port)));
+	      pj_inet_ntoa(pjsua.med_skinfo.rtp_addr_name.sin_addr), 
+	      pj_ntohs(pjsua.med_skinfo.rtp_addr_name.sin_port)));
     PJ_LOG(4,(THIS_FILE, "RTCP UDP socket reachable at %s:%d",
-	      pj_inet_ntoa(pjsua.rtcp_sock_name.sin_addr), 
-	      pj_ntohs(pjsua.rtcp_sock_name.sin_port)));
+	      pj_inet_ntoa(pjsua.med_skinfo.rtcp_addr_name.sin_addr), 
+	      pj_ntohs(pjsua.med_skinfo.rtcp_addr_name.sin_port)));
 
     return PJ_SUCCESS;
 
@@ -478,6 +547,7 @@ static pj_status_t init_stack(void)
 	pj_memset(&inv_cb, 0, sizeof(inv_cb));
 	inv_cb.on_state_changed = &pjsua_inv_on_state_changed;
 	inv_cb.on_new_session = &pjsua_inv_on_new_session;
+	inv_cb.on_media_update = &pjsua_inv_on_media_update;
 
 	/* Initialize invite session module: */
 	status = pjsip_inv_usage_init(pjsua.endpt, &pjsua.mod, &inv_cb);
@@ -551,6 +621,16 @@ pj_status_t pjsua_init(void)
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror("Stack initialization has returned error", status);
+	return status;
+    }
+
+
+    /* Init media endpoint: */
+
+    status = pjmedia_endpt_create(&pjsua.cp.factory, &pjsua.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pj_caching_pool_destroy(&pjsua.cp);
+	pjsua_perror("Media stack initialization has returned error", status);
 	return status;
     }
 
@@ -676,9 +756,25 @@ pj_status_t pjsua_start(void)
 
     }
 
-    /* Initialize global route_set: */
+    /* If outbound_proxy is specified, put it in the route_set: */
 
-    PJ_TODO(INIT_GLOBAL_ROUTE_SET);
+    if (pjsua.outbound_proxy.slen) {
+
+	pjsip_route_hdr *route;
+	const pj_str_t hname = { "Route", 5 };
+	int parsed_len;
+
+	route = pjsip_parse_hdr( pjsua.pool, &hname, 
+				 pjsua.outbound_proxy.ptr, 
+				 pjsua.outbound_proxy.slen,
+				   &parsed_len);
+	if (route == NULL) {
+	    pjsua_perror("Invalid outbound proxy URL", PJSIP_EINVALIDURI);
+	    return PJSIP_EINVALIDURI;
+	}
+
+	pj_list_push_back(&pjsua.route_set, route);
+    }
 
 
     /* Create worker thread(s), if required: */
@@ -769,6 +865,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     pjsip_dialog *dlg;
     pjmedia_sdp_session *offer;
     pjsip_inv_session *inv;
+    struct pjsua_inv_data *inv_data;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -786,13 +883,12 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 	return status;
     }
 
-    /* Create dummy SDP for offer: */
+    /* Get media capability from media endpoint: */
 
-    status = pjmedia_sdp_parse(dlg->pool, PJSUA_DUMMY_SDP_OFFER,
-			       pj_native_strlen(PJSUA_DUMMY_SDP_OFFER),
-			       &offer);
+    status = pjmedia_endpt_create_sdp( pjsua.med_endpt, dlg->pool,
+				       1, &pjsua.med_skinfo, &offer);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Dummy SDP offer parsing failed", status);
+	pjsua_perror("pjmedia unable to create SDP", status);
 	goto on_error;
     }
 
@@ -805,9 +901,17 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     }
 
 
+    /* Create and associate our data in the session. */
+
+    inv_data = pj_pool_zalloc( dlg->pool, sizeof(struct pjsua_inv_data));
+    dlg->mod_data[pjsua.mod.id] = inv_data;
+
+
     /* Set dialog Route-Set: */
 
-    PJ_TODO(INIT_DIALOG_ROUTE_SET);
+    if (!pj_list_empty(&pjsua.route_set))
+	pjsip_dlg_set_route_set(dlg, &pjsua.route_set);
+
 
     /* Set credentials: */
 

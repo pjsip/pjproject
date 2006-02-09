@@ -40,7 +40,7 @@ PJ_BEGIN_DECL
 
 /**
  * Create new session offering based on the local and remote SDP.
- * The session initially will be inactive.
+ * The session will start immediately.
  *
  * @param endpt		The PJMEDIA endpoint instance.
  * @param stream_cnt	Maximum number of streams to be created. This
