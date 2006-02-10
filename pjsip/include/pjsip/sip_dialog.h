@@ -183,7 +183,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
  * Increment the number of sessions in the dialog. Note that initially 
  * (after created) the dialog has the session counter set to zero.
  */
-PJ_DECL(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg );
+PJ_DECL(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
+					    pjsip_module *mod);
 
 
 /**
@@ -192,7 +193,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg );
  * destroyed. Note that this function may destroy the dialog immediately 
  * if there is no pending transaction when this function is called.
  */
-PJ_DECL(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg );
+PJ_DECL(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
+					    pjsip_module *mod);
 
 /**
  * Add a module as dialog usage, and optionally set the module specific data.

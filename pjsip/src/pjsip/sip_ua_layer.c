@@ -496,9 +496,15 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
 	/* Unable to find dialog. */
 	pj_mutex_unlock(mod_ua.mutex);
 
-	/* Respond with 481 . */
-	pjsip_endpt_respond_stateless( mod_ua.endpt, rdata, 481, NULL, NULL,
-				       NULL );
+	if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	    PJ_LOG(5,(THIS_FILE, 
+		      "Unable to find dialogset for %s, answering with 481",
+		      pjsip_rx_data_get_info(rdata)));
+
+	    /* Respond with 481 . */
+	    pjsip_endpt_respond_stateless( mod_ua.endpt, rdata, 481, NULL, 
+					   NULL, NULL );
+	}
 	return PJ_TRUE;
     }
 
@@ -517,8 +523,14 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
 
     /* Dialog MUST be found! */
     if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
+
 	/* Not found. Mulfunction UAC? */
 	pj_mutex_unlock(mod_ua.mutex);
+
+	PJ_LOG(5,(THIS_FILE, 
+	          "Unable to find dialog for %s, answering with 481",
+		  pjsip_rx_data_get_info(rdata)));
+
 	pjsip_endpt_respond_stateless(mod_ua.endpt, rdata,
 				      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, 
 				      NULL, NULL, NULL);
@@ -661,6 +673,12 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 	if (dlg == (pjsip_dialog*)&dlg_set->dlg_list &&
 	    ((st_code/100==1 && st_code!=100) || st_code/100==2)) 
 	{
+
+	    PJ_LOG(5,(THIS_FILE, 
+		      "Received forked %s for existing dialog %s",
+		      pjsip_rx_data_get_info(rdata), 
+		      dlg_set->dlg_list.next->obj_name));
+
 	    /* Report to application about forked condition.
 	     * Application can either create a dialog or ignore the response.
 	     */

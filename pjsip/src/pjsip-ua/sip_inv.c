@@ -130,7 +130,7 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	(*mod_inv.cb.on_state_changed)(inv, e);
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED)
-	pjsip_dlg_dec_session(inv->dlg);
+	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
 }
 
 
@@ -141,6 +141,9 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
+
+    PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
+	      pjsip_rx_data_get_info(rdata)));
 
     status = pjsip_dlg_create_request(inv->dlg, &pjsip_ack_method, 
 				      rdata->msg_info.cseq->cseq, &tdata);
@@ -370,6 +373,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv->dlg = dlg;
     inv->options = options;
 
+    /* Object name will use the same dialog pointer. */
+    pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
 	status = pjmedia_sdp_neg_create_w_local_offer(dlg->pool, local_sdp,
@@ -384,10 +390,14 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 	return status;
 
     /* Increment dialog session */
-    pjsip_dlg_inc_session(dlg);
+    pjsip_dlg_inc_session(dlg, &mod_inv.mod);
 
     /* Done */
     *p_inv = inv;
+
+    PJ_LOG(5,(inv->obj_name, "UAC invite session created for dialog %s",
+	      dlg->obj_name));
+
     return PJ_SUCCESS;
 }
 
@@ -759,6 +769,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->dlg = dlg;
     inv->options = options;
 
+    /* Object name will use the same dialog pointer. */
+    pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+
     /* Parse SDP in message body, if present. */
     if (msg->body) {
 	pjsip_msg_body *body = msg->body;
@@ -794,7 +807,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 	return status;
 
     /* Increment session in the dialog. */
-    pjsip_dlg_inc_session(dlg);
+    pjsip_dlg_inc_session(dlg, &mod_inv.mod);
 
     /* Save the invite transaction. */
     inv->invite_tsx = pjsip_rdata_get_tsx(rdata);
@@ -807,6 +820,10 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Done */
     *p_inv = inv;
+
+    PJ_LOG(5,(inv->obj_name, "UAS invite session created for dialog %s",
+	      dlg->obj_name));
+
     return PJ_SUCCESS;
 }
 
@@ -912,6 +929,8 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 
     status = pjmedia_sdp_neg_negotiate(inv->pool, inv->neg, 0);
 
+    PJ_LOG(5,(inv->obj_name, "SDP negotiation done, status=%d", status));
+
     if (mod_inv.cb.on_media_update)
 	(*mod_inv.cb.on_media_update)(inv, status);
 
@@ -981,6 +1000,9 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	/* This is an offer. */
 
+	PJ_LOG(5,(inv->obj_name, "Got SDP offer in %s", 
+		  pjsip_rx_data_get_info(rdata)));
+
 	if (inv->neg == NULL) {
 	    status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL, 
 							 sdp, &inv->neg);
@@ -1008,6 +1030,9 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	/* This is an answer. 
 	 * Process and negotiate remote answer.
 	 */
+
+	PJ_LOG(5,(inv->obj_name, "Got SDP answer in %s", 
+		  pjsip_rx_data_get_info(rdata)));
 
 	status = pjmedia_sdp_neg_set_remote_answer(inv->pool, inv->neg, sdp);
 
@@ -1259,6 +1284,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && tdata, PJ_EINVAL);
+
+    PJ_LOG(5,(inv->obj_name, "Sending %s", 
+	      pjsip_tx_data_get_info(tdata)));
 
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
 	pjsip_transaction *tsx;
@@ -1581,6 +1609,23 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	default:
 	    break;
 	}
+
+    } else if (inv->role == PJSIP_ROLE_UAC &&
+	       tsx->role == PJSIP_ROLE_UAC &&
+	       tsx->method.id == PJSIP_CANCEL_METHOD)
+    {
+	/*
+	 * Handle case when outgoing CANCEL is answered with 481 (Call/
+	 * Transaction Does Not Exist), 408, or when it's timed out. In these
+	 * cases, disconnect session (i.e. dialog usage only).
+	 */
+	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
+	    PJSIP_SC_TSX_TRANSPORT_ERROR)
+	{
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	}
     }
 }
 
@@ -1737,6 +1782,22 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 
 	inv_respond_incoming_cancel(inv, tsx, e->body.tsx_state.src.rdata);
 
+    } else if (inv->role == PJSIP_ROLE_UAC &&
+	       tsx->role == PJSIP_ROLE_UAC &&
+	       tsx->method.id == PJSIP_CANCEL_METHOD)
+    {
+	/*
+	 * Handle case when outgoing CANCEL is answered with 481 (Call/
+	 * Transaction Does Not Exist), 408, or when it's timed out. In these
+	 * cases, disconnect session (i.e. dialog usage only).
+	 */
+	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
+	    PJSIP_SC_TSX_TRANSPORT_ERROR)
+	{
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	}
     }
 }
 

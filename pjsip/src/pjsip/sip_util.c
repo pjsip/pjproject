@@ -357,6 +357,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     req_msg = rdata->msg_info.msg;
     pj_assert(req_msg->type == PJSIP_REQUEST_MSG);
 
+    /* Request MUST NOT be ACK request! */
+    PJ_ASSERT_RETURN(req_msg->line.req.method.id != PJSIP_ACK_METHOD,
+		     PJ_EINVALIDOP);
+
     /* Create a new transmit buffer. */
     status = pjsip_endpt_create_tdata( endpt, &tdata);
     if (status != PJ_SUCCESS)

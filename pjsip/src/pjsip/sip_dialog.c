@@ -200,6 +200,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     /* Done! */
     *p_dlg = dlg;
 
+
+    PJ_LOG(5,(dlg->obj_name, "UAC dialog created"));
+
     return PJ_SUCCESS;
 
 on_error:
@@ -380,6 +383,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 
     /* Done. */
     *p_dlg = dlg;
+    PJ_LOG(5,(dlg->obj_name, "UAS dialog created"));
     return PJ_SUCCESS;
 
 on_error:
@@ -495,6 +499,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     /* Done! */
     *new_dlg = dlg;
 
+    PJ_LOG(5,(dlg->obj_name, "Forked dialog created"));
     return PJ_SUCCESS;
 
 on_error:
@@ -576,13 +581,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
 /*
  * Increment session counter.
  */
-PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg )
+PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
+					   pjsip_module *mod )
 {
-    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(dlg && mod, PJ_EINVAL);
 
     pj_mutex_lock(dlg->mutex);
     ++dlg->sess_count;
     pj_mutex_unlock(dlg->mutex);
+
+    PJ_LOG(5,(dlg->obj_name, "Session count inc to %d by %.*s",
+	      dlg->sess_count, (int)mod->name.slen, mod->name.ptr));
 
     return PJ_SUCCESS;
 }
@@ -590,11 +599,15 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg )
 /*
  * Decrement session counter.
  */
-PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg )
+PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
+					   pjsip_module *mod)
 {
     pj_status_t status;
 
     PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+
+    PJ_LOG(5,(dlg->obj_name, "Session count dec to %d by %.*s",
+	      dlg->sess_count-1, (int)mod->name.slen, mod->name.ptr));
 
     pj_mutex_lock(dlg->mutex);
 
@@ -625,6 +638,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
     PJ_ASSERT_RETURN(mod->id >= 0 && mod->id < PJSIP_MAX_MODULE,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(dlg->usage_cnt < PJSIP_MAX_MODULE, PJ_EBUG);
+
+    PJ_LOG(5,(dlg->obj_name, "Module %.*s added as dialog usage",
+	      (int)mod->name.slen, mod->name.ptr));
 
     pj_mutex_lock(dlg->mutex);
 
@@ -793,6 +809,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
     PJ_ASSERT_RETURN(dlg && tdata && tdata->msg, PJ_EINVAL);
     PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG,
 		     PJSIP_ENOTREQUESTMSG);
+
+    PJ_LOG(5,(dlg->obj_name, "Sending %s",
+	      pjsip_tx_data_get_info(tdata)));
 
     /* Update CSeq */
     pj_mutex_lock(dlg->mutex);
@@ -1023,6 +1042,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
     /* The transaction must belong to this dialog.  */
     PJ_ASSERT_RETURN(tsx->mod_data[dlg->ua->id] == dlg, PJ_EINVALIDOP);
 
+    PJ_LOG(5,(dlg->obj_name, "Sending %s",
+	      pjsip_tx_data_get_info(tdata)));
+
     /* Check that transaction method and cseq match the response. 
      * This operation is sloooww (search CSeq header twice), that's why
      * we only do it in debug mode.
@@ -1077,6 +1099,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     pj_status_t status;
     pjsip_transaction *tsx = NULL;
     unsigned i;
+
+    PJ_LOG(5,(dlg->obj_name, "Received %s",
+	      pjsip_rx_data_get_info(rdata)));
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
@@ -1142,6 +1167,9 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     unsigned i;
     int res_code;
+
+    PJ_LOG(5,(dlg->obj_name, "Received %s",
+	      pjsip_rx_data_get_info(rdata)));
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);
@@ -1248,6 +1276,9 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 			     pjsip_event *e )
 {
     unsigned i;
+
+    PJ_LOG(5,(dlg->obj_name, "Transaction %s state changed to %s",
+	      tsx->obj_name, pjsip_tsx_state_str(tsx->state)));
 
     /* Lock the dialog. */
     pj_mutex_lock(dlg->mutex);

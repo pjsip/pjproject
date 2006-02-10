@@ -881,7 +881,7 @@ static void tsx_destroy( pjsip_transaction *tsx )
     /* Refuse to destroy transaction if it has pending resolving. */
     if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 	tsx->transport_flag |= TSX_HAS_PENDING_DESTROY;
-	PJ_LOG(5,(tsx->obj_name, "Will destroy later because transport is "
+	PJ_LOG(4,(tsx->obj_name, "Will destroy later because transport is "
 				 "in progress"));
 	return;
     }
@@ -914,7 +914,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
     PJ_UNUSED_ARG(theap);
 
-    PJ_LOG(6,(tsx->obj_name, "%s timer event", 
+    PJ_LOG(5,(tsx->obj_name, "%s timer event", 
 	     (entry->id==TSX_TIMER_RETRANSMISSION ? "Retransmit":"Timeout")));
 
 
@@ -1285,6 +1285,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 {
     struct tsx_lock_data lck;
+
+    PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction"));
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);

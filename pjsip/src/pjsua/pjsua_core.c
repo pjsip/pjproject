@@ -486,7 +486,6 @@ pj_status_t pjsua_start(void)
 
     status = init_sockets();
     if (status != PJ_SUCCESS) {
-	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror("init_sockets() has returned error", status);
 	return status;
     }
@@ -620,7 +619,6 @@ pj_status_t pjsua_start(void)
 		pj_thread_join(pjsua.threads[i]);
 		pj_thread_destroy(pjsua.threads[i]);
 	    }
-	    pj_caching_pool_destroy(&pjsua.cp);
 	    return status;
 	}
     }
@@ -665,15 +663,20 @@ pj_status_t pjsua_destroy(void)
 
     pjsua.quit_flag = 1;
 
-    /* Destroy sound framework: */
+    /* Destroy sound framework: 
+     * (this should be done in pjmedia_shutdown())
+     */
     pj_snd_deinit();
 
     /* Wait worker threads to quit: */
 
     for (i=0; i<pjsua.thread_cnt; ++i) {
 	
-	pj_thread_join(pjsua.threads[i]);
-	pj_thread_destroy(pjsua.threads[i]);
+	if (pjsua.threads[i]) {
+	    pj_thread_join(pjsua.threads[i]);
+	    pj_thread_destroy(pjsua.threads[i]);
+	    pjsua.threads[i] = NULL;
+	}
     }
 
     /* Destroy endpoint. */

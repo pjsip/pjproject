@@ -166,14 +166,15 @@ enum pjsip_inv_option
  */
 struct pjsip_inv_session
 {
-    pj_pool_t		*pool;
-    pjsip_inv_state	 state;
-    pjsip_dialog	*dlg;
-    pjsip_role_e	 role;
-    unsigned		 options;
-    pjmedia_sdp_neg	*neg;
-    pjsip_transaction	*invite_tsx;
-    void		*mod_data[PJSIP_MAX_MODULE];
+    char		 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification. */
+    pj_pool_t		*pool;			    /**< Dialog's pool.	    */
+    pjsip_inv_state	 state;			    /**< Invite sess state. */
+    pjsip_dialog	*dlg;			    /**< Underlying dialog. */
+    pjsip_role_e	 role;			    /**< Invite role.	    */
+    unsigned		 options;		    /**< Options in use.    */
+    pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
+    pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
+    void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
 };
 
 
