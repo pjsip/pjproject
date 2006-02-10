@@ -144,7 +144,9 @@ static void pjsua_dump(void)
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
 
     pjsip_endpt_dump(pjsua.endpt, 1);
+    pjmedia_endpt_dump(pjsua.med_endpt);
     pjsip_ua_dump();
+
 
     /* Dump all invite sessions: */
     PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));

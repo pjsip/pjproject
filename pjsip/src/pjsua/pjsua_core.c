@@ -466,6 +466,16 @@ pj_status_t pjsua_init(void)
 	return status;
     }
 
+    /* Init pjmedia-codecs: */
+
+    status = pjmedia_codec_init(pjsua.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pj_caching_pool_destroy(&pjsua.cp);
+	pjsua_perror("Media codec initialization has returned error", status);
+	return status;
+    }
+
+
     /* Done. */
     return PJ_SUCCESS;
 }
@@ -662,6 +672,12 @@ pj_status_t pjsua_destroy(void)
     /* Signal threads to quit: */
 
     pjsua.quit_flag = 1;
+
+
+    /* Shutdown pjmedia-codec: */
+
+    pjmedia_codec_deinit();
+
 
     /* Destroy sound framework: 
      * (this should be done in pjmedia_shutdown())
