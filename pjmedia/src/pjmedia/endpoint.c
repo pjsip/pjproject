@@ -24,6 +24,7 @@
 #include <pj/string.h>
 #include <pj/assert.h>
 #include <pj/os.h>
+#include <pj/log.h>
 
 
 #define THIS_FILE   "endpoint.c"
@@ -269,3 +270,55 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
+{
+
+#if PJ_LOG_MAX_LEVEL >= 3
+    unsigned i, count;
+    pjmedia_codec_info codec_info[32];
+
+    PJ_LOG(3,(THIS_FILE, "Dumping PJMEDIA capabilities:"));
+
+    count = PJ_ARRAY_SIZE(codec_info);
+    if (pjmedia_codec_mgr_enum_codecs(&endpt->codec_mgr, 
+				      &count, codec_info) != PJ_SUCCESS)
+    {
+	PJ_LOG(3,(THIS_FILE, " -error: failed to enum codecs"));
+	return PJ_SUCCESS;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "  Total number of installed codecs: %d", count));
+    for (i=0; i<count; ++i) {
+	const char *type;
+	pjmedia_codec_param param;
+
+	switch (codec_info[i].type) {
+	case PJMEDIA_TYPE_AUDIO:
+	    type = "Audio"; break;
+	case PJMEDIA_TYPE_VIDEO:
+	    type = "Video"; break;
+	default:
+	    type = "Unknown type"; break;
+	}
+
+	if (pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr,
+						&codec_info[i],
+						&param) != PJ_SUCCESS)
+	{
+	    pj_memset(&param, 0, sizeof(pjmedia_codec_param));
+	}
+
+	PJ_LOG(3,(THIS_FILE, 
+		  "   %s codec #%2d: pt=%d (%.*s, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
+		  type, i, codec_info[i].pt,
+		  (int)codec_info[i].encoding_name.slen,
+		  codec_info[i].encoding_name.ptr,
+		  param.avg_bps, param.ptime,
+		  param.vad_enabled,
+		  param.cng_enabled));
+    }
+#endif
+
+    return PJ_SUCCESS;
+}

@@ -148,6 +148,38 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr,
     return PJMEDIA_CODEC_EUNSUP;
 }
 
+
+/*
+ * Get default codec parameter.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
+							const pjmedia_codec_info *info,
+							pjmedia_codec_param *param )
+{
+    pjmedia_codec_factory *factory;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(mgr && info && param, PJ_EINVAL);
+
+    factory = mgr->factory_list.next;
+    while (factory != &mgr->factory_list) {
+
+	if ( (*factory->op->test_alloc)(factory, info) == PJ_SUCCESS ) {
+
+	    status = (*factory->op->default_attr)(factory, info, param);
+	    if (status == PJ_SUCCESS)
+		return PJ_SUCCESS;
+
+	}
+
+	factory = factory->next;
+    }
+
+
+    return PJMEDIA_CODEC_EUNSUP;
+}
+
+
 /*
  * Dealloc codec.
  */

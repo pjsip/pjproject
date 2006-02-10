@@ -40,21 +40,41 @@ static unsigned char linear2ulaw(int		pcm_val);
 static int	     ulaw2linear(unsigned char	u_val);
 
 /* Prototypes for G711 factory */
-static pj_status_t g711_match_id( pjmedia_codec_factory *factory, const pjmedia_codec_info *id );
-static pj_status_t g711_default_attr( pjmedia_codec_factory *factory, const pjmedia_codec_info *id, pjmedia_codec_param *attr );
-static pj_status_t g711_enum_codecs (pjmedia_codec_factory *factory, unsigned *count, pjmedia_codec_info codecs[]);
-static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, const pjmedia_codec_info *id, pjmedia_codec **p_codec);
-static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, pjmedia_codec *codec );
+static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, 
+				    const pjmedia_codec_info *id );
+static pj_status_t g711_default_attr( pjmedia_codec_factory *factory, 
+				      const pjmedia_codec_info *id, 
+				      pjmedia_codec_param *attr );
+static pj_status_t g711_enum_codecs (pjmedia_codec_factory *factory, 
+				     unsigned *count, 
+				     pjmedia_codec_info codecs[]);
+static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory, 
+				     const pjmedia_codec_info *id, 
+				     pjmedia_codec **p_codec);
+static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, 
+				       pjmedia_codec *codec );
 
 /* Prototypes for G711 implementation. */
-static pj_status_t  g711_codec_default_attr (pjmedia_codec *codec, pjmedia_codec_param *attr);
-static pj_status_t  g711_init( pjmedia_codec *codec, pj_pool_t *pool );
-static pj_status_t  g711_open( pjmedia_codec *codec, pjmedia_codec_param *attr );
+static pj_status_t  g711_codec_default_attr (pjmedia_codec *codec, 
+					     pjmedia_codec_param *attr);
+static pj_status_t  g711_init( pjmedia_codec *codec, 
+			       pj_pool_t *pool );
+static pj_status_t  g711_open( pjmedia_codec *codec, 
+			       pjmedia_codec_param *attr );
 static pj_status_t  g711_close( pjmedia_codec *codec );
-static pj_status_t  g711_encode( pjmedia_codec *codec, const struct pjmedia_frame *input,
-				 unsigned output_buf_len, struct pjmedia_frame *output);
-static pj_status_t  g711_decode( pjmedia_codec *codec, const struct pjmedia_frame *input,
-				 unsigned output_buf_len, struct pjmedia_frame *output);
+static pj_status_t  g711_get_frames(pjmedia_codec *codec,
+				    void *pkt,
+				    pj_size_t pkt_size,
+				    unsigned *frame_cnt,
+				    pjmedia_frame frames[]);
+static pj_status_t  g711_encode( pjmedia_codec *codec, 
+				 const struct pjmedia_frame *input,
+				 unsigned output_buf_len, 
+				 struct pjmedia_frame *output);
+static pj_status_t  g711_decode( pjmedia_codec *codec, 
+				 const struct pjmedia_frame *input,
+				 unsigned output_buf_len, 
+				 struct pjmedia_frame *output);
 
 /* Definition for G711 codec operations. */
 static pjmedia_codec_op g711_op = 
@@ -63,6 +83,7 @@ static pjmedia_codec_op g711_op =
     &g711_init,
     &g711_open,
     &g711_close,
+    &g711_get_frames,
     &g711_encode,
     &g711_decode
 };
@@ -70,7 +91,7 @@ static pjmedia_codec_op g711_op =
 /* Definition for G711 codec factory operations. */
 static pjmedia_codec_factory_op g711_factory_op =
 {
-    &g711_match_id,
+    &g711_test_alloc,
     &g711_default_attr,
     &g711_enum_codecs,
     &g711_alloc_codec,
@@ -128,7 +149,7 @@ PJ_DEF(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory)
     return 0;
 }
 
-static pj_status_t g711_match_id( pjmedia_codec_factory *factory, const pjmedia_codec_info *id )
+static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, const pjmedia_codec_info *id )
 {
     PJ_UNUSED_ARG(factory);
 
@@ -142,7 +163,7 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
 {
     PJ_UNUSED_ARG(factory);
 
-    memset(attr, 0, sizeof(pjmedia_codec_param));
+    pj_memset(attr, 0, sizeof(pjmedia_codec_param));
     attr->sample_rate = 8000;
     attr->avg_bps = G711_BPS;
     attr->pcm_bits_per_sample = 16;
@@ -155,26 +176,29 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
 }
 
 static pj_status_t g711_enum_codecs(pjmedia_codec_factory *factory, 
-				    unsigned *count, 
+				    unsigned *max_count, 
 				    pjmedia_codec_info codecs[])
 {
+    unsigned count = 0;
+
     PJ_UNUSED_ARG(factory);
 
-    if (*count > 0) {
-	codecs[0].type = PJMEDIA_TYPE_AUDIO;
-	codecs[0].pt = PJMEDIA_RTP_PT_PCMU;
-	codecs[0].encoding_name = pj_str("PCMU");
-	codecs[0].sample_rate = 8000;
+    if (count < *max_count) {
+	codecs[count].type = PJMEDIA_TYPE_AUDIO;
+	codecs[count].pt = PJMEDIA_RTP_PT_PCMU;
+	codecs[count].encoding_name = pj_str("PCMU");
+	codecs[count].sample_rate = 8000;
+	++count;
     }
-    if (*count > 1) {
+    if (count < *max_count) {
 	codecs[1].type = PJMEDIA_TYPE_AUDIO;
 	codecs[1].pt = PJMEDIA_RTP_PT_PCMA;
 	codecs[1].encoding_name = pj_str("PCMA");
 	codecs[1].sample_rate = 8000;
+	++count;
     }
 
-    if (*count > 0) *count=1;
-    if (*count > 1) *count=2;
+    *max_count = count;
 
     return PJ_SUCCESS;
 }
@@ -257,6 +281,32 @@ static pj_status_t g711_close( pjmedia_codec *codec )
 {
     PJ_UNUSED_ARG(codec);
     /* Nothing to do */
+    return PJ_SUCCESS;
+}
+
+static pj_status_t  g711_get_frames(pjmedia_codec *codec,
+				    void *pkt,
+				    pj_size_t pkt_size,
+				    unsigned *frame_cnt,
+				    pjmedia_frame frames[])
+{
+    unsigned count = 0;
+
+    PJ_UNUSED_ARG(codec);
+    PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
+
+    while (pkt_size >= 160 && count < *frame_cnt) {
+	frames[0].type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frames[0].buf = pkt;
+	frames[0].size = 160;
+
+	pkt = ((char*)pkt) + 160;
+	pkt_size -= 160;
+
+	++count;
+    }
+
+    *frame_cnt = count;
     return PJ_SUCCESS;
 }
 

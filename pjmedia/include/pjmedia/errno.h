@@ -248,6 +248,21 @@ PJ_BEGIN_DECL
  * Unsupported codec.
  */
 #define PJMEDIA_CODEC_EUNSUP	    (PJMEDIA_ERRNO_START+80)    /* 220080 */
+/**
+ * @hideinitializer
+ * Unable to create codec.
+ */
+#define PJMEDIA_CODEC_EFAILED	    (PJMEDIA_ERRNO_START+81)    /* 220081 */
+/**
+ * @hideinitializer
+ * Codec frame is too short.
+ */
+#define PJMEDIA_CODEC_EFRMTOOSHORT  (PJMEDIA_ERRNO_START+82)    /* 220082 */
+/**
+ * @hideinitializer
+ * PCM buffer is too short.
+ */
+#define PJMEDIA_CODEC_EPCMTOOSHORT  (PJMEDIA_ERRNO_START+83)    /* 220083 */
 
 
 /************************************************************
@@ -273,6 +288,11 @@ PJ_BEGIN_DECL
  * Missing rtpmap.
  */
 #define PJMEDIA_EMISSINGRTPMAP	    (PJMEDIA_ERRNO_START+103)    /* 220103 */
+/**
+ * @hideinitializer
+ * Invalid media type.
+ */
+#define PJMEDIA_EINVALIMEDIATYPE    (PJMEDIA_ERRNO_START+104)    /* 220104 */
 
 
 

@@ -182,6 +182,27 @@ struct pjmedia_codec_op
     pj_status_t (*close)(pjmedia_codec *codec);
 
 
+    /**
+     * Instruct the codec to inspect the specified payload/packet and
+     * split the packet info individual frames.
+     *
+     * @param codec	The codec instance
+     * @param pkt	The input packet.
+     * @param pkt_size	Size of the packet.
+     * @param frame_cnt	On input, specifies the maximum number of frames
+     *			in the array. On output, the codec must fill
+     *			with number of frames detected in the packet.
+     * @param frames	On output, specifies the frames that have been
+     *			detected in the packet.
+     *
+     * @return		PJ_SUCCESS on success.
+     */
+    pj_status_t (*get_frames)(pjmedia_codec *codec,
+			      void *pkt,
+			      pj_size_t pkt_size,
+			      unsigned *frame_cnt,
+			      pjmedia_frame frames[]);
+
     /** 
      * Instruct the codec to encode the specified input frame.
      *
@@ -397,6 +418,21 @@ pjmedia_codec_mgr_unregister_factory( pjmedia_codec_mgr *mgr,
 PJ_DECL(pj_status_t) pjmedia_codec_mgr_enum_codecs( pjmedia_codec_mgr *mgr, 
 						    unsigned *count, 
 						    pjmedia_codec_info info[]);
+
+/**
+ * Get default codec param for the specified codec info.
+ *
+ * @param mgr	    The codec manager.
+ * @param info	    The codec info, which default parameter's is being
+ *		    queried.
+ * @param param	    On return, will be filled with the default codec
+ *		    parameter.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_get_default_param(pjmedia_codec_mgr *mgr,
+							 const pjmedia_codec_info *info,
+							 pjmedia_codec_param *param );
 
 /**
  * Request the codec manager to allocate one instance of codec with the

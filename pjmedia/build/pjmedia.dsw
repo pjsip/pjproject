@@ -60,6 +60,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjmedia_codec"=.\pjmedia_codec.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjmedia_test"=.\pjmedia_test.dsp - Package Owner=<4>
 
 Package=<5>

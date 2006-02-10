@@ -118,6 +118,15 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 					       pjmedia_sdp_session **p_sdp );
 
 
+/**
+ * Dump media endpoint capabilities.
+ *
+ * @param endpt		The media endpoint.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt);
+
 
 PJ_END_DECL
 
