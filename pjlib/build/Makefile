@@ -18,19 +18,21 @@ export TEST_SRCS = $(TEST_SOURCES) exception_test.cpp fifobuf_test.cpp \
 
 export TARGET CCOUT CC AR RANLIB MV RM RMDIR MKDIR OBJEXT LD LDOUT 
 
-all: pjlib test
+all: pjlib 
+# test
+# If test is to be enabled, also remove several comments below
 
 doc:
 	cd .. && doxygen docs/doxygen.cfg
 
 print:
 	$(MAKE) -f make-rules APP=PJLIB app=pjlib print_lib
-	$(MAKE) -f make-rules APP=TEST app=test print_bin
+#	$(MAKE) -f make-rules APP=TEST app=test print_bin
 	
 depend:
 	$(MAKE) -f make-rules APP=PJLIB app=pjlib depend
-	$(MAKE) -f make-rules APP=TEST app=test depend
-	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .test.depend
+#	$(MAKE) -f make-rules APP=TEST app=test depend
+#	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .test.depend
 
 
 dep: depend
