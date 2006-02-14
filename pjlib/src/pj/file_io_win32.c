@@ -44,7 +44,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                                   unsigned flags,
                                   pj_oshandle_t *fd)
 {
-    PJ_DECL_UNICODE_TEMP_BUF(wpathname,256);
+    PJ_DECL_UNICODE_TEMP_BUF(wpathname,256)
     HANDLE hFile;
     DWORD dwDesiredAccess = 0;
     DWORD dwShareMode = 0;
@@ -78,7 +78,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-    hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,wpathname), 
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,wpathname,sizeof(wpathname)), 
 		       dwDesiredAccess, dwShareMode, NULL,
                        dwCreationDisposition, dwFlagsAndAttributes, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {

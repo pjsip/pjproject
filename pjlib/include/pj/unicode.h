@@ -21,6 +21,10 @@
 
 #include <pj/types.h>
 
+
+PJ_BEGIN_DECL
+
+
 /**
  * @file unicode.h
  * @brief Provides Unicode conversion for Unicode OSes
@@ -56,20 +60,27 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_size_t len,
 
 #if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
 
-#   define PJ_DECL_UNICODE_TEMP_BUF(buf,size)    wchar_t buf[size]
-#   define PJ_STRING_TO_NATIVE(s,buf)		 pj_ansi_to_unicode( \
+#   define PJ_DECL_UNICODE_TEMP_BUF(buf,size)   wchar_t buf[size];
+#   define PJ_STRING_TO_NATIVE(s,buf,max)	pj_ansi_to_unicode( \
 						    s, strlen(s), \
-						    buf, PJ_ARRAY_SIZE(buf))
-#   define PJ_TEXT(s)				 _TEXT(s)
+						    buf, max)
+#   define PJ_DECL_ANSI_TEMP_BUF(buf,size)	char buf[size];
+#   define PJ_NATIVE_TO_STRING(cs,buf,max)	pj_unicode_to_ansi( \
+						    cs, wcslen(cs), \
+						    buf, max)
 
 #else
 
 #   define PJ_DECL_UNICODE_TEMP_BUF(var,size)
-#   define PJ_STRING_TO_NATIVE(s, buf)		(s)
-#   define PJ_TEXT(s)				(s)
+#   define PJ_STRING_TO_NATIVE(s,buf,max)	((char*)s)
+#   define PJ_DECL_ANSI_TEMP_BUF(buf,size)
+#   define PJ_NATIVE_TO_STRING(cs,buf,max)	((char*)(const char*)cs)
 
 #endif
 
+
+
+PJ_END_DECL
 
 
 #endif	/* __PJ_UNICODE_H__ */
