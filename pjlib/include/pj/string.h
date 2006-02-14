@@ -426,6 +426,16 @@ PJ_IDECL(int) pj_strnicmp2( const pj_str_t *str1, const char *str2,
  */
 PJ_IDECL(void) pj_strcat(pj_str_t *dst, const pj_str_t *src);
 
+
+/**
+ * Concatenate strings.
+ *
+ * @param dst	    The destination string.
+ * @param src	    The source string.
+ */
+PJ_IDECL(void) pj_strcat2(pj_str_t *dst, const char *str);
+
+
 /**
  * Finds a character in a string.
  *
