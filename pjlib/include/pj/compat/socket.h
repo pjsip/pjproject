@@ -76,7 +76,8 @@
 /*
  * Define common errors.
  */
-#ifdef PJ_WIN32
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
 #  define OSERR_EWOULDBLOCK    WSAEWOULDBLOCK
 #  define OSERR_EINPROGRESS    WSAEINPROGRESS
 #  define OSERR_ECONNRESET     WSAECONNRESET

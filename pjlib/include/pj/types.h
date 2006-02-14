@@ -68,6 +68,23 @@ typedef int		pj_status_t;
 /** Boolean. */
 typedef int		pj_bool_t;
 
+/** Native char type, which will be equal to wchar_t for Unicode
+ * and char for ANSI. */
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
+    typedef wchar_t pj_char_t;
+#else
+    typedef char pj_char_t;
+#endif
+
+/** This macro creates Unicode or ANSI literal string depending whether
+ *  native platform string is Unicode or ANSI. */
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
+#   define PJ_T(literal_str)	L##literal_str
+#else
+#   define PJ_T(literal_str)	literal_str
+#endif
+
+
 /** Status is OK. */
 #define PJ_SUCCESS  0
 

@@ -68,7 +68,7 @@
 #elif defined (PJ_M_SPARC) && PJ_M_SPARC != 0
 #   include <pj/compat/m_sparc.h>
 #elif defined (PJ_M_ARMV4) && PJ_M_ARMV4 != 0
-#   include <pj/compat/m_arm.h>
+#   include <pj/compat/m_armv4.h>
 #else
 #  error "Please specify target machine."
 #endif

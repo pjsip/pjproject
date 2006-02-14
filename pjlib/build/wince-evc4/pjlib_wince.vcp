@@ -390,7 +390,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /D "ARM" /D "_ARM_" /D "ARMV4I" /D "NDEBUG" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /D "ARMV4I" /D "NDEBUG" /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -416,7 +416,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4I" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARMV4I" /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -494,7 +494,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /D "NDEBUG" /D "ARMV4" /D PJ_M_ARMV4=1 /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -520,7 +520,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARMV4" /D PJ_M_ARMV4=1 /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -598,7 +598,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -624,7 +624,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D PJ_WIN32_WINCE=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /D "DEBUG" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "ARM" /D "_ARM_" /D PJ_WIN32_WINCE=1 /D PJ_M_ARMV4=1 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -1306,6 +1306,7 @@ DEP_CPP_ADDR_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -1559,6 +1560,7 @@ DEP_CPP_ADDR_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -2163,6 +2165,7 @@ DEP_CPP_ARRAY=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -2409,6 +2412,7 @@ DEP_CPP_ARRAY=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -2816,6 +2820,7 @@ DEP_CPP_CONFI=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -2978,6 +2983,7 @@ DEP_CPP_CONFI=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -3378,6 +3384,7 @@ DEP_CPP_CTYPE=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -3540,6 +3547,7 @@ DEP_CPP_CTYPE=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -3922,6 +3930,7 @@ DEP_CPP_EQUEU=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -4077,6 +4086,7 @@ DEP_CPP_EQUEU=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -4616,10 +4626,13 @@ DEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_ERRNO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -4841,10 +4854,13 @@ DEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ERRNO=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -5351,6 +5367,7 @@ DEP_CPP_EXCEP=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -5555,6 +5572,7 @@ DEP_CPP_EXCEP=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -6007,6 +6025,7 @@ DEP_CPP_FIFOB=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -6190,6 +6209,7 @@ DEP_CPP_FIFOB=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -6651,6 +6671,7 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -6661,11 +6682,22 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -6690,7 +6722,6 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\sprintf.h"\
 	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\compat\vsprintf.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
@@ -6704,6 +6735,9 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	
+NODEP_CPP_FILE_=\
+	"..\..\include\pj\compat\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Release"
@@ -6845,6 +6879,7 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -6857,7 +6892,6 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\sprintf.h"\
 	"..\..\include\pj\compat\string.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\compat\vsprintf.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
@@ -6871,6 +6905,7 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ENDIF 
@@ -7306,6 +7341,7 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -7321,6 +7357,7 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -7343,12 +7380,14 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\types.h"\
+	
+NODEP_CPP_FILE_I=\
+	"..\..\include\pj\compat\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE MIPS16) Release"
@@ -7490,6 +7529,7 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -7500,12 +7540,12 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
-	"..\..\include\pj\compat\unicode.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ENDIF 
@@ -8018,6 +8058,7 @@ DEP_CPP_GUID_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -8236,6 +8277,7 @@ DEP_CPP_GUID_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -8803,6 +8845,7 @@ DEP_CPP_GUID_S=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -9035,6 +9078,7 @@ DEP_CPP_GUID_S=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -9633,10 +9677,13 @@ DEP_CPP_HASH_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_HASH_=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -9879,10 +9926,13 @@ DEP_CPP_HASH_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_HASH_=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -10625,6 +10675,7 @@ DEP_CPP_IOQUE=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -10927,6 +10978,7 @@ DEP_CPP_IOQUE=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -11343,6 +11395,7 @@ DEP_CPP_LIST_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -11505,6 +11558,7 @@ DEP_CPP_LIST_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -12115,6 +12169,7 @@ DEP_CPP_LOCK_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -12368,6 +12423,7 @@ DEP_CPP_LOCK_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -12937,6 +12993,7 @@ DEP_CPP_LOG_C=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -13169,6 +13226,7 @@ DEP_CPP_LOG_C=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -13594,6 +13652,7 @@ DEP_CPP_LOG_W=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -13763,6 +13822,7 @@ DEP_CPP_LOG_W=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -14438,6 +14498,7 @@ DEP_CPP_OS_CO=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -14719,6 +14780,7 @@ DEP_CPP_OS_CO=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -15327,6 +15389,7 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -15351,6 +15414,7 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -15573,6 +15637,7 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -15597,6 +15662,7 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ENDIF 
@@ -15974,6 +16040,7 @@ DEP_CPP_OS_TI=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -15984,9 +16051,18 @@ DEP_CPP_OS_TI=\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\sprintf.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\compat\vsprintf.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
 	
 
@@ -16138,6 +16214,7 @@ DEP_CPP_OS_TI=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -16546,6 +16623,7 @@ DEP_CPP_OS_TIM=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\high_precision.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -16708,6 +16786,7 @@ DEP_CPP_OS_TIM=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\high_precision.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -17123,6 +17202,7 @@ DEP_CPP_OS_TIME=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -17292,6 +17372,7 @@ DEP_CPP_OS_TIME=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -17901,6 +17982,7 @@ DEP_CPP_POOL_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -18154,6 +18236,7 @@ DEP_CPP_POOL_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -18742,6 +18825,7 @@ DEP_CPP_POOL_C=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -18981,6 +19065,7 @@ DEP_CPP_POOL_C=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -19565,6 +19650,7 @@ DEP_CPP_POOL_P=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -19804,6 +19890,7 @@ DEP_CPP_POOL_P=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -20230,6 +20317,7 @@ DEP_CPP_RAND_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -20399,6 +20487,7 @@ DEP_CPP_RAND_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -20799,6 +20888,7 @@ DEP_CPP_RBTRE=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -20961,6 +21051,7 @@ DEP_CPP_RBTRE=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -21604,6 +21695,7 @@ DEP_CPP_SOCK_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -21871,6 +21963,7 @@ DEP_CPP_SOCK_=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -22364,6 +22457,7 @@ DEP_CPP_SOCK_S=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -22561,6 +22655,7 @@ DEP_CPP_SOCK_S=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -23139,6 +23234,7 @@ DEP_CPP_STRIN=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -23378,6 +23474,7 @@ DEP_CPP_STRIN=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -24014,6 +24111,7 @@ DEP_CPP_TIMER=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -24274,6 +24372,7 @@ DEP_CPP_TIMER=\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -24668,6 +24767,7 @@ DEP_CPP_TYPES=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -24823,6 +24923,7 @@ DEP_CPP_TYPES=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
+	"..\..\include\pj\compat\m_arm.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -25382,7 +25483,7 @@ DEP_CPP_UNICO=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_arm.h"\
+	"..\..\include\pj\compat\m_armv4.h"\
 	"..\..\include\pj\compat\m_i386.h"\
 	"..\..\include\pj\compat\m_m68k.h"\
 	"..\..\include\pj\compat\m_sparc.h"\
@@ -25405,6 +25506,7 @@ DEP_CPP_UNICO=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -25636,6 +25738,7 @@ DEP_CPP_UNICO=\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
 	
 
 !ENDIF 
@@ -25651,6 +25754,10 @@ DEP_CPP_UNICO=\
 # Begin Source File
 
 SOURCE=..\..\include\pj\compat\assert.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pj\compat\cc_gcc.h
 # End Source File
 # Begin Source File
 
@@ -25670,7 +25777,7 @@ SOURCE=..\..\include\pj\compat\high_precision.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\include\pj\compat\m_arm.h
+SOURCE=..\..\include\pj\compat\m_armv4.h
 # End Source File
 # Begin Source File
 
@@ -25808,6 +25915,10 @@ SOURCE=..\..\include\pj\log.h
 # Begin Source File
 
 SOURCE=..\..\include\pj\os.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pjlib.h
 # End Source File
 # Begin Source File
 

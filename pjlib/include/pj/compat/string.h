@@ -24,6 +24,16 @@
  * @brief Provides string manipulation functions found in ANSI string.h.
  */
 
+/**
+ * Native char type, which will be equal to wchar_t for Unicode
+ * and char for ANSI.
+ */
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
+typedef wchar_t pj_char_t;
+#else
+typedef char pj_char_t;
+#endif
+
 #if defined(PJ_HAS_STRING_H) && PJ_HAS_STRING_H != 0
 #  include <string.h>
 #else
@@ -41,21 +51,72 @@
 #   define strncasecmp	strnicmp
 #  endif
 #  define snprintf	_snprintf
+#  define wcsicmp	_wcsicmp
+#  define wcsnicmp	_wcsnicmp
 #else
 #  define stricmp	strcasecmp
 #  define strnicmp	strncasecmp
+
+#  if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
+#     error "Implement Unicode string functions"
+#  endif
 #endif
 
 
-#define pj_native_strcmp        strcmp
-#define pj_native_strncmp	strncmp
-#define pj_native_strlen        strlen
-#define pj_native_strcpy        strcpy
-#define pj_native_strstr        strstr
-#define pj_native_strchr        strchr
-#define pj_native_strcasecmp    strcasecmp
-#define pj_native_stricmp	strcasecmp
-#define pj_native_strncasecmp   strncasecmp
-#define pj_native_strnicmp	strncasecmp
+#define pj_ansi_strcmp		strcmp
+#define pj_ansi_strncmp		strncmp
+#define pj_ansi_strlen		strlen
+#define pj_ansi_strcpy		strcpy
+#define pj_ansi_strcat		strcat
+#define pj_ansi_strstr		strstr
+#define pj_ansi_strchr		strchr
+#define pj_ansi_strcasecmp	strcasecmp
+#define pj_ansi_stricmp		strcasecmp
+#define pj_ansi_strncasecmp	strncasecmp
+#define pj_ansi_strnicmp	strncasecmp
+#define pj_ansi_sprintf		sprintf
+
+#define pj_unicode_strcmp	wcscmp
+#define pj_unicode_strncmp	wcsncmp
+#define pj_unicode_strlen	wcslen
+#define pj_unicode_strcpy	wcscpy
+#define pj_unicode_strcat	wcscat
+#define pj_unicode_strstr	wcsstr
+#define pj_unicode_strchr	wcschr
+#define pj_unicode_strcasecmp	wcsicmp
+#define pj_unicode_stricmp	wcsicmp
+#define pj_unicode_strncasecmp	wcsnicmp
+#define pj_unicode_strnicmp	wcsnicmp
+#define pj_unicode_sprintf	swprintf
+
+
+#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
+#   define pj_native_strcmp	    pj_unicode_strcmp
+#   define pj_native_strncmp	    pj_unicode_strncmp
+#   define pj_native_strlen	    pj_unicode_strlen
+#   define pj_native_strcpy	    pj_unicode_strcpy
+#   define pj_native_strcat	    pj_unicode_strcat
+#   define pj_native_strstr	    pj_unicode_strstr
+#   define pj_native_strchr	    pj_unicode_strchr
+#   define pj_native_strcasecmp	    pj_unicode_strcasecmp
+#   define pj_native_stricmp	    pj_unicode_stricmp
+#   define pj_native_strncasecmp    pj_unicode_strncasecmp
+#   define pj_native_strnicmp	    pj_unicode_strnicmp
+#   define pj_native_sprintf	    pj_unicode_sprintf
+#else
+#   define pj_native_strcmp	    pj_ansi_strcmp
+#   define pj_native_strncmp	    pj_ansi_strncmp
+#   define pj_native_strlen	    pj_ansi_strlen
+#   define pj_native_strcpy	    pj_ansi_strcpy
+#   define pj_native_strcat	    pj_ansi_strcat
+#   define pj_native_strstr	    pj_ansi_strstr
+#   define pj_native_strchr	    pj_ansi_strchr
+#   define pj_native_strcasecmp	    pj_ansi_strcasecmp
+#   define pj_native_stricmp	    pj_ansi_stricmp
+#   define pj_native_strncasecmp    pj_ansi_strncasecmp
+#   define pj_native_strnicmp	    pj_ansi_strnicmp
+#   define pj_native_sprintf	    pj_ansi_sprintf
+#endif
+
 
 #endif	/* __PJ_COMPAT_STRING_H__ */

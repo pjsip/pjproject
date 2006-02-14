@@ -16,11 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_COMPAT_M_ARM_H__
-#define __PJ_COMPAT_M_ARM_H__
+#ifndef __PJ_COMPAT_M_ARMV4_H__
+#define __PJ_COMPAT_M_ARMV4_H__
 
 /**
- * @file m_arm.h
+ * @file m_armv4.h
  * @brief Describes ARM family processor specifics.
  */
 
@@ -28,11 +28,11 @@
  * This file covers PJ_M_ARMV4 etc.
  */
 
-#define PJ_M_NAME		"ARM"
+#define PJ_M_NAME		"armv4"
 
 #define PJ_HAS_PENTIUM		0
 #define PJ_IS_LITTLE_ENDIAN	1
 #define PJ_IS_BIG_ENDIAN	0
 
 
-#endif	/* __PJ_COMPAT_M_ARM_H__ */
+#endif	/* __PJ_COMPAT_M_ARMV4_H__ */
