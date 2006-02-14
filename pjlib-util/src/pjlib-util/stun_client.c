@@ -246,9 +246,11 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 
 	    if (rec[i].srv[0].mapped_addr == 0 || rec[i].srv[0].mapped_port == 0) {
 		mapped_status = PJ_STUN_ERR_NO_RESPONSE;
+		break;
 	    }
 	} else {
 	    mapped_status = PJ_STUN_ERR_SYMETRIC;
+	    break;
 	}
     }
 

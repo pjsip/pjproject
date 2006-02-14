@@ -189,7 +189,7 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
 
 PJ_DEF(void) pj_scan_skip_line( pj_scanner *scanner )
 {
-    char *s = pj_native_strchr(scanner->curptr, '\n');
+    char *s = pj_ansi_strchr(scanner->curptr, '\n');
     if (!s) {
 	scanner->curptr = scanner->end;
     } else {
@@ -512,7 +512,7 @@ PJ_DEF(int) pj_scan_stricmp( pj_scanner *scanner, const char *s, int len)
 	pj_scan_syntax_err(scanner);
 	return -1;
     }
-    return strnicmp(scanner->curptr, s, len);
+    return pj_ansi_strnicmp(scanner->curptr, s, len);
 }
 
 PJ_DEF(int) pj_scan_stricmp_alnum( pj_scanner *scanner, const char *s, 
