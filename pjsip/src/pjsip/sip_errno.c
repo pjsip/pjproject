@@ -132,7 +132,7 @@ PJ_DEF(pj_str_t) pjsip_strerror( pj_status_t statcode,
 	    pj_str_t msg;
 	    
 	    msg.ptr = (char*)err_str[first].msg;
-	    msg.slen = pj_native_strlen(err_str[first].msg);
+	    msg.slen = pj_ansi_strlen(err_str[first].msg);
 
 	    errstr.ptr = buf;
 	    pj_strncpy_with_null(&errstr, &msg, bufsize);

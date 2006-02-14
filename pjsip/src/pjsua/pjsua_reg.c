@@ -52,6 +52,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     } else {
 	PJ_LOG(4, (THIS_FILE, "SIP registration updated status=%d", param->code));
     }
+
+    pjsua.regc_last_code = param->code;
+
+    pjsua_ui_regc_on_state_changed(pjsua.regc_last_code);
 }
 
 

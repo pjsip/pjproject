@@ -82,8 +82,8 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    rdata->pkt_info.len = bytes_read;
 	    rdata->pkt_info.zero = 0;
 	    pj_gettimeofday(&rdata->pkt_info.timestamp);
-	    pj_native_strcpy(rdata->pkt_info.src_name,
-			     pj_inet_ntoa(src_addr->sin_addr));
+	    pj_ansi_strcpy(rdata->pkt_info.src_name,
+			   pj_inet_ntoa(src_addr->sin_addr));
 	    rdata->pkt_info.src_port = pj_ntohs(src_addr->sin_port);
 
 	    size_eaten = 

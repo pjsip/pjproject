@@ -747,7 +747,7 @@ static void print_dialog( const char *title,
 
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 1)
-	pj_native_strcpy(userinfo, "<--uri too long-->");
+	pj_ansi_strcpy(userinfo, "<--uri too long-->");
     else
 	userinfo[len] = '\0';
     
@@ -757,7 +757,7 @@ static void print_dialog( const char *title,
 							     "est"),
 		      userinfo);
     if (len < 1 || len >= (int)size) {
-	pj_native_strcpy(buf, "<--uri too long-->");
+	pj_ansi_strcpy(buf, "<--uri too long-->");
     } else
 	buf[len] = '\0';
 }

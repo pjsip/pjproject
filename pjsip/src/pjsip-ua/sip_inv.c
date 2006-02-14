@@ -1735,6 +1735,9 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    break;
 
+	case PJSIP_TSX_STATE_CONFIRMED:
+	    /* For some reason can go here */
+
 	case PJSIP_TSX_STATE_TERMINATED:
 	    /* INVITE transaction can be terminated either because UAC
 	     * transaction received 2xx response or because of transport

@@ -367,7 +367,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
     if (rdata->msg_info.info)
 	return rdata->msg_info.info;
 
-    pj_native_strcpy(obj_name, "rdata");
+    pj_ansi_strcpy(obj_name, "rdata");
     pj_sprintf(obj_name+5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
@@ -468,10 +468,10 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     if (((pj_sockaddr*)addr)->sa_family == PJ_AF_INET) {
 	const char *str_addr;
 	str_addr = pj_inet_ntoa(((pj_sockaddr_in*)addr)->sin_addr);
-	pj_native_strcpy(tdata->tp_info.dst_name, str_addr);
+	pj_ansi_strcpy(tdata->tp_info.dst_name, str_addr);
 	tdata->tp_info.dst_port = pj_ntohs(((pj_sockaddr_in*)addr)->sin_port);
     } else {
-	pj_native_strcpy(tdata->tp_info.dst_name, "<unknown>");
+	pj_ansi_strcpy(tdata->tp_info.dst_name, "<unknown>");
 	tdata->tp_info.dst_port = 0;
     }
 

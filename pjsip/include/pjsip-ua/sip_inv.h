@@ -22,6 +22,10 @@
 #include <pjsip/sip_dialog.h>
 #include <pjmedia/sdp_neg.h>
 
+
+PJ_BEGIN_DECL
+
+
 typedef enum pjsip_inv_state pjsip_inv_state;
 typedef struct pjsip_inv_session pjsip_inv_session;
 typedef struct pjsip_inv_callback pjsip_inv_callback;
@@ -524,6 +528,8 @@ PJ_DECL(pjsip_inv_session*) pjsip_dlg_get_inv_session(pjsip_dialog *dlg);
 PJ_DECL(pjsip_inv_session*) pjsip_tsx_get_inv_session(pjsip_transaction *tsx);
 
 
+
+PJ_END_DECL
 
 
 

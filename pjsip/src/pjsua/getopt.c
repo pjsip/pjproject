@@ -29,7 +29,7 @@
  *
  * modified by Mike Borella <mike_borella@mw.3com.com>
  *
- * $Id: getopt.c,v 1.4 2000/10/30 22:06:03 mborella Exp $
+ * $Id$
  */
 
 #ifdef HAVE_CONFIG_H
@@ -295,7 +295,7 @@ static char *posixly_correct;
    On some systems, it contains special magic macros that don't work
    in GCC.  */
 #include <string.h>
-#define	my_index	pj_native_strchr
+#define	my_index	pj_ansi_strchr
 #else
 
 static char *
@@ -485,7 +485,8 @@ _getopt_initialize (argc, argv, optstring)
 
   nextchar = NULL;
 
-  posixly_correct = getenv ("POSIXLY_CORRECT");
+  //posixly_correct = getenv ("POSIXLY_CORRECT");
+  posixly_correct = NULL;
 
   /* Determine how to handle the ordering of options and nonoptions.  */
 
@@ -661,7 +662,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 	 then exchange with previous non-options as if it were an option,
 	 then skip everything else like a non-option.  */
 
-      if (optind != argc && !pj_native_strcmp(argv[optind], "--"))
+      if (optind != argc && !pj_ansi_strcmp(argv[optind], "--"))
 	{
 	  optind++;
 

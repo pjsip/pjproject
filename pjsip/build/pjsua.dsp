@@ -106,6 +106,10 @@ SOURCE=..\src\pjsua\pjsua_inv.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjsua\pjsua_opt.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsua\pjsua_reg.c
 # End Source File
 # End Group

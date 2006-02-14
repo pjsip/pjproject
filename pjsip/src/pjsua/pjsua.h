@@ -41,6 +41,11 @@
 PJ_BEGIN_DECL
 
 
+/**
+ * Max buddies in buddy list.
+ */
+#define PJSUA_MAX_BUDDIES   32
+
 /** 
  * Structure to be attached to all dialog. 
  * Given a dialog "dlg", application can retrieve this structure
@@ -52,6 +57,7 @@ struct pjsua_inv_data
 
     pjsip_inv_session	*inv;
     pjmedia_session	*session;
+    void		*mod_data[PJSIP_MAX_MODULE];
 };
 
 
@@ -91,11 +97,12 @@ struct pjsua
     pjsip_regc	    *regc;
     pj_int32_t	     reg_timeout;
     pj_timer_entry   regc_timer;
+    int		     regc_last_code;/**< Last status last register.	*/
 
 
     /* Authentication credentials: */
 
-    int		     cred_count;
+    unsigned	     cred_count;
     pjsip_cred_info  cred_info[4];
 
 
@@ -128,9 +135,16 @@ struct pjsua
     unsigned	     log_decor;	    /**< Log decoration.		*/
     char	    *log_filename;  /**< Log filename.			*/
 
+
     /* List of invite sessions: */
 
     struct pjsua_inv_data inv_list;
+
+
+    /* Buddy list: */
+
+    unsigned	    buddy_cnt;
+    pj_str_t	    buddies[PJSUA_MAX_BUDDIES];
 };
 
 
@@ -251,7 +265,49 @@ void pjsua_regc_update(pj_bool_t renew);
  */
 void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
 
+/**
+ * Notify UI when registration status has changed.
+ */
+void pjsua_ui_regc_on_state_changed(int code);
+
+
+/*****************************************************************************
+ * Utilities.
+ *
+ */
+
+/** String to describe invite session states */
+extern const char *pjsua_inv_state_names[];
+
+/**
+ * Parse arguments (pjsua_opt.c).
+ */
+pj_status_t pjsua_parse_args(int argc, char *argv[]);
+
+/**
+ * Load settings from a file.
+ */
+pj_status_t pjsua_load_settings(const char *filename);
+
+/**
+ * Save settings to a file.
+ */
+pj_status_t pjsua_save_settings(const char *filename);
+
+
+/*
+ * Verify that valid SIP url is given.
+ * @return  PJ_SUCCESS if valid.
+ */
+pj_status_t pjsua_verify_sip_url(const char *c_url);
+
+/*
+ * Dump application states.
+ */
+void pjsua_dump(void);
+
 
 PJ_END_DECL
+
 
 #endif	/* __PJSUA_H__ */

@@ -910,14 +910,14 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
 
     PJ_UNUSED_ARG(endpt);
 
-    len = pj_native_strlen(format);
+    len = pj_ansi_strlen(format);
     if (len < sizeof(newformat)-30) {
 	pj_str_t errstr;
 
-	pj_native_strcpy(newformat, format);
+	pj_ansi_strcpy(newformat, format);
 	pj_snprintf(newformat+len, sizeof(newformat)-len-1,
 		    ": [err %d] ", error_code);
-	len += pj_native_strlen(newformat+len);
+	len += pj_ansi_strlen(newformat+len);
 
 	errstr = pjsip_strerror(error_code, newformat+len, 
 				sizeof(newformat)-len-1);

@@ -82,18 +82,6 @@ void pjsua_default(void)
 }
 
 
-/*
- * Display error message for the specified error code.
- */
-void pjsua_perror(const char *title, pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(1,(THIS_FILE, "%s: %s [code=%d]", title, errmsg, status));
-}
-
 
 /*
  * Handler for receiving incoming requests.
@@ -511,7 +499,7 @@ pj_status_t pjsua_start(void)
 	pjsip_host_port addr_name;
 
 	addr_name.host.ptr = pj_inet_ntoa(pjsua.sip_sock_name.sin_addr);
-	addr_name.host.slen = pj_native_strlen(addr_name.host.ptr);
+	addr_name.host.slen = pj_ansi_strlen(addr_name.host.ptr);
 	addr_name.port = pj_ntohs(pjsua.sip_sock_name.sin_port);
 
 	/* Create UDP transport from previously created UDP socket: */

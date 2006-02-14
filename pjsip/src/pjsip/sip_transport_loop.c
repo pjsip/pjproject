@@ -91,9 +91,9 @@ struct recv_list *create_incoming_packet( struct loop_transport *loop,
     /* "Source address" info. */
     pkt->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
     if (loop->base.key.type == PJSIP_TRANSPORT_LOOP)
-	pj_native_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP);
+	pj_ansi_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP);
     else
-	pj_native_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP_DGRAM);
+	pj_ansi_strcpy(pkt->rdata.pkt_info.src_name, ADDR_LOOP_DGRAM);
     pkt->rdata.pkt_info.src_port = loop->base.local_name.port;
 
     /* When do we need to "deliver" this packet. */

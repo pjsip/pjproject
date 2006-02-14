@@ -459,7 +459,7 @@ PJ_INLINE(int) compare_handler( const handler_rec *r1,
      */
 
     /* Equal length and equal hash. compare the strings. */
-    return pj_native_strcmp(r1->hname, name);
+    return pj_ansi_strcmp(r1->hname, name);
 }
 
 /* Register one handler for one header name. */
@@ -665,7 +665,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
 
     /* Find the end of header area by finding an empty line. */
-    pos = pj_native_strstr(buf, "\n\r\n");
+    pos = pj_ansi_strstr(buf, "\n\r\n");
     if (pos == NULL) {
 	return PJSIP_EPARTIALMSG;
     }
@@ -674,7 +674,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     body_start = pos+3;
 
     /* Find "Content-Length" header the hard way. */
-    line = pj_native_strchr(buf, '\n');
+    line = pj_ansi_strchr(buf, '\n');
     while (line && line < hdr_end) {
 	++line;
 	if ( ((*line=='C' || *line=='c') && 
@@ -725,7 +725,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 	    break;
 
 	/* Go to next line. */
-	line = pj_native_strchr(line, '\n');
+	line = pj_ansi_strchr(line, '\n');
     }
 
     /* Found Content-Length? */
