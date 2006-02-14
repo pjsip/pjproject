@@ -168,7 +168,7 @@ pjmedia_sdp_attr_find2(unsigned count,
     pj_str_t name;
 
     name.ptr = (char*)c_name;
-    name.slen = pj_native_strlen(c_name);
+    name.slen = pj_ansi_strlen(c_name);
 
     return pjmedia_sdp_attr_find(count, attr_array, &name, c_fmt);
 }
@@ -198,7 +198,7 @@ PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
     PJ_ASSERT_RETURN(count && attr_array && name, PJ_EINVAL);
 
     attr_name.ptr = (char*)name;
-    attr_name.slen = pj_native_strlen(name);
+    attr_name.slen = pj_ansi_strlen(name);
 
     for (i=0; i<*count; ) {
 	if (pj_strcmp(&attr_array[i]->name, &attr_name)==0) {

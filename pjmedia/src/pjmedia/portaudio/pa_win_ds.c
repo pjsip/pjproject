@@ -67,7 +67,6 @@
 #include "pa_stream.h"
 #include "pa_cpuload.h"
 #include "pa_process.h"
-
 #include "dsound_wrapper.h"
 
 #if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
@@ -75,6 +74,8 @@
 #pragma comment( lib, "winmm.lib" )
 #endif
 
+
+#include <pj/unicode.h>
 
 #define PRINT(x) /* { printf x; fflush(stdout); } */
 #define ERR_RPT(x) PRINT(x)
@@ -325,6 +326,7 @@ static BOOL CALLBACK CollectGUIDsProc(LPGUID lpGUID,
 {
     DSDeviceNameAndGUIDVector *namesAndGUIDs = (DSDeviceNameAndGUIDVector*)lpContext;
     PaError error;
+    PJ_DECL_ANSI_TEMP_BUF(atemp,128)
 
     (void) lpszDrvName; /* unused variable */
 
@@ -352,7 +354,8 @@ static BOOL CALLBACK CollectGUIDsProc(LPGUID lpGUID,
     }
 
     namesAndGUIDs->items[namesAndGUIDs->count].name =
-            DuplicateDeviceNameString( namesAndGUIDs->allocations, lpszDesc );
+            DuplicateDeviceNameString( namesAndGUIDs->allocations, 
+	    PJ_NATIVE_TO_STRING(lpszDesc,atemp,sizeof(atemp)));
     if( namesAndGUIDs->items[namesAndGUIDs->count].name == NULL )
     {
         namesAndGUIDs->enumerationError = paInsufficientMemory;
@@ -1023,7 +1026,11 @@ static int PaWinDs_GetMinLatencyFrames( double sampleRate )
     int       minLatencyMsec = 0;
 
     /* Let user determine minimal latency by setting environment variable. */
+#ifdef UNDER_CE
+    hresult = 0;
+#else
     hresult = GetEnvironmentVariable( PA_LATENCY_ENV_NAME, envbuf, PA_ENV_BUF_SIZE );
+#endif
     if( (hresult > 0) && (hresult < PA_ENV_BUF_SIZE) )
     {
         minLatencyMsec = atoi( envbuf );

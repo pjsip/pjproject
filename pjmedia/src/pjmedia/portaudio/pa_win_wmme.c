@@ -105,7 +105,9 @@ Non-critical stuff for the future:
 #include <math.h>
 #include <windows.h>
 #include <mmsystem.h>
+#ifndef UNDER_CE
 #include <process.h>
+#endif
 #include <assert.h>
 /* PLB20010422 - "memory.h" doesn't work on CodeWarrior for PC. Thanks Mike Berry for the mod. */
 #ifndef __MWERKS__
@@ -124,7 +126,12 @@ Non-critical stuff for the future:
 
 #include "pa_win_wmme.h"
 
-#if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
+#include <pj/string.h>
+#include <pj/unicode.h>
+
+#if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) && \
+    !defined(UNDER_CE)
+/* MSC version 6 and above */
 #pragma comment(lib, "winmm.lib")
 #endif
 
@@ -159,8 +166,8 @@ Non-critical stuff for the future:
 
 #define PA_MME_MIN_TIMEOUT_MSEC_        (1000)
 
-static const char constInputMapperSuffix_[] = " - Input";
-static const char constOutputMapperSuffix_[] = " - Output";
+static const pj_char_t constInputMapperSuffix_[] = PJ_T(" - Input");
+static const pj_char_t constOutputMapperSuffix_[] = PJ_T(" - Output");
 
 /********************************************************************/
 
@@ -552,6 +559,7 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     MMRESULT mmresult;
     WAVEINCAPS wic;
     PaDeviceInfo *deviceInfo = &winMmeDeviceInfo->inheritedDeviceInfo;
+    PJ_DECL_ANSI_TEMP_BUF(abuf,128)
     
     *success = 0;
 
@@ -574,26 +582,27 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     if( winMmeInputDeviceId == WAVE_MAPPER )
     {
         /* Append I/O suffix to WAVE_MAPPER device. */
-        deviceName = (char *)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, strlen( wic.szPname ) + 1 + sizeof(constInputMapperSuffix_) );
+        deviceName = (char*)PaUtil_GroupAllocateMemory(
+                    winMmeHostApi->allocations, 
+		    pj_native_strlen( wic.szPname ) + sizeof(pj_char_t) + sizeof(constInputMapperSuffix_) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
             goto error;
         }
-        strcpy( deviceName, wic.szPname );
-        strcat( deviceName, constInputMapperSuffix_ );
+        strcpy( deviceName, PJ_NATIVE_TO_STRING(wic.szPname,abuf,sizeof(abuf)) );
+        strcat( deviceName, PJ_NATIVE_TO_STRING(constInputMapperSuffix_,abuf,sizeof(abuf)) );
     }
     else
     {
         deviceName = (char*)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, strlen( wic.szPname ) + 1 );
+                    winMmeHostApi->allocations, pj_native_strlen( wic.szPname ) + sizeof(pj_char_t) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
             goto error;
         }
-        strcpy( deviceName, wic.szPname  );
+        strcpy( deviceName, PJ_NATIVE_TO_STRING(wic.szPname,abuf,sizeof(abuf))  );
     }
     deviceInfo->name = deviceName;
 
@@ -628,6 +637,7 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
     MMRESULT mmresult;
     WAVEOUTCAPS woc;
     PaDeviceInfo *deviceInfo = &winMmeDeviceInfo->inheritedDeviceInfo;
+    PJ_DECL_ANSI_TEMP_BUF(abuf,128)
     
     *success = 0;
 
@@ -651,25 +661,25 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
     {
         /* Append I/O suffix to WAVE_MAPPER device. */
         deviceName = (char *)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, strlen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_) );
+                    winMmeHostApi->allocations, pj_native_strlen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
             goto error;
         }
-        strcpy( deviceName, woc.szPname );
-        strcat( deviceName, constOutputMapperSuffix_ );
+        strcpy( deviceName, PJ_NATIVE_TO_STRING(woc.szPname,abuf,sizeof(abuf)) );
+        strcat( deviceName, PJ_NATIVE_TO_STRING(constOutputMapperSuffix_,abuf,sizeof(abuf)) );
     }
     else
     {
         deviceName = (char*)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, strlen( woc.szPname ) + 1 );
+                    winMmeHostApi->allocations, pj_native_strlen( woc.szPname ) + 1 );
         if( !deviceName )
         {
             result = paInsufficientMemory;
             goto error;
         }
-        strcpy( deviceName, woc.szPname  );
+        strcpy( deviceName, PJ_NATIVE_TO_STRING(woc.szPname,abuf,sizeof(abuf))  );
     }
     deviceInfo->name = deviceName;
 
