@@ -35,6 +35,14 @@ PJ_BEGIN_DECL
  * @defgroup PJMED_CODEC Codec framework.
  * @ingroup PJMEDIA
  * @{
+ *
+ * The codec manager is used to manage all codec capabilities in the endpoint.
+ * Library implementors can extend PJMEDIA codec capabilities by creating 
+ * a codec factory for a new codec, and register the codec factory to
+ * codec manager so that the codec can be used by the rest of application.
+ *
+ * When used with media endpoint (pjmedia_endpt), application can retrieve
+ * the codec manager instance by calling #pjmedia_endpt_get_codec_mgr().
  */
 
 

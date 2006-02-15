@@ -32,7 +32,7 @@
  * @{
  *
  * The basic SDP session descriptor and elements are described in header
- * file <pre><pjmedia/sdp.h></pre>. This file contains declaration for
+ * file <b><pjmedia/sdp.h></b>. This file contains declaration for
  * SDP session descriptor and SDP media descriptor, along with their
  * attributes. This file also declares functions to parse SDP message.
  */

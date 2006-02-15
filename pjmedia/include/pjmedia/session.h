@@ -44,6 +44,11 @@ PJ_BEGIN_DECL
  *
  * This module provides functions to create and manage multimedia
  * sessions.
+ *
+ * Application creates the media session by calling #pjmedia_session_create(),
+ * normally after it has completed negotiating both SDP offer and answer.
+ * The session creation function creates the media session (including
+ * media streams) based on the content of local and remote SDP.
  */
 
 
@@ -62,7 +67,7 @@ struct pjmedia_session_info
 
 
 /**
- * Create new session offering based on the local and remote SDP.
+ * Create media session based on the local and remote SDP.
  * The session will start immediately.
  *
  * @param endpt		The PJMEDIA endpoint instance.

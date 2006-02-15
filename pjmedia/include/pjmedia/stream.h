@@ -44,6 +44,11 @@ PJ_BEGIN_DECL
  * A media stream consists of two unidirectional channels:
  *  - encoding channel, which transmits unidirectional media to remote, and
  *  - decoding channel, which receives unidirectional media from remote.
+ *
+ * Application normally does not need to create the stream directly; it 
+ * creates media session instead. The media session will create the media
+ * streams as necessary, according to the media descriptors that present
+ * in local and remote SDP.
  */
 
 /**

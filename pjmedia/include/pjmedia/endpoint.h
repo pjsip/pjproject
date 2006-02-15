@@ -34,8 +34,7 @@
  * in the endpoint and a sound device factory.
  *
  * A reference to media endpoint instance is required when application wants
- * to create a media session (#pj_media_session_create or 
- * #pj_media_session_create_from_sdp).
+ * to create a media session (#pjmedia_session_create()).
  */
 
 #include <pjmedia/sound.h>
