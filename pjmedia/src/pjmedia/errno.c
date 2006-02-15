@@ -79,12 +79,28 @@ static const struct
 
     /* Codec errors. */
     { PJMEDIA_CODEC_EUNSUP,	    "Unsupported media codec" },
+    { PJMEDIA_CODEC_EFAILED,	    "Codec internal creation error" },
+    { PJMEDIA_CODEC_EFRMTOOSHORT,   "Codec frame is too short" },
+    { PJMEDIA_CODEC_EPCMTOOSHORT,   "PCM frame is too short" },
 
     /* Media errors. */
     { PJMEDIA_EINVALIDIP,	    "Invalid remote media (IP) address" },
     { PJMEDIA_EASYMCODEC,	    "Asymetric media codec is not supported" },
     { PJMEDIA_EINVALIDPT,	    "Invalid media payload type" },
     { PJMEDIA_EMISSINGRTPMAP,	    "Missing rtpmap in media description" },
+    { PJMEDIA_EINVALIMEDIATYPE,	    "Invalid media type" },
+
+    /* RTP session errors. */
+    { PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" },
+    { PJMEDIA_RTP_EINPACK,	    "Invalid RTP packing (internal error)" },
+    { PJMEDIA_RTP_EINVER,	    "Invalid RTP version" },
+    { PJMEDIA_RTP_EINSSRC,	    "RTP packet SSRC id mismatch" },
+    { PJMEDIA_RTP_EINPT,	    "RTP packet payload type mismatch" },
+    { PJMEDIA_RTP_EINLEN,	    "Invalid RTP packet length" },
+    { PJMEDIA_RTP_ESESSRESTART,	    "RTP session restarted" },
+    { PJMEDIA_RTP_ESESSPROBATION,   "RTP session in probation" },
+    { PJMEDIA_RTP_EBADSEQ,	    "Bad sequence number in RTP packet" },
+
 };
 
 

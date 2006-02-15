@@ -43,33 +43,33 @@ PJ_BEGIN_DECL
  */
 enum pjmedia_rtp_pt
 {
-    PJMEDIA_RTP_PT_PCMU = 0,	    /* audio PCMU			    */
-    PJMEDIA_RTP_PT_GSM  = 3,	    /* audio GSM			    */
-    PJMEDIA_RTP_PT_G723 = 4,	    /* audio G723			    */
-    PJMEDIA_RTP_PT_DVI4_8K = 5,	    /* audio DVI4 8KHz			    */
-    PJMEDIA_RTP_PT_DVI4_16K = 6,    /* audio DVI4 16Khz			    */
-    PJMEDIA_RTP_PT_LPC = 7,	    /* audio LPC			    */
-    PJMEDIA_RTP_PT_PCMA = 8,	    /* audio PCMA			    */
-    PJMEDIA_RTP_PT_G722 = 9,	    /* audio G722			    */
-    PJMEDIA_RTP_PT_L16_2 = 10,	    /* audio 16bit linear 44.1KHz stereo    */
-    PJMEDIA_RTP_PT_L16_1 = 11,	    /* audio 16bit linear 44.1KHz mono	    */
-    PJMEDIA_RTP_PT_QCELP = 12,	    /* audio QCELP			    */
-    PJMEDIA_RTP_PT_CN = 13,	    /* audio Comfort Noise		    */
-    PJMEDIA_RTP_PT_MPA = 14,	    /* audio MPEG1/MPEG2 elementary streams */
-    PJMEDIA_RTP_PT_G728 = 15,	    /* audio G728			    */
-    PJMEDIA_RTP_PT_DVI4_11K = 16,   /* audio DVI4 11.025KHz mono	    */
-    PJMEDIA_RTP_PT_DVI4_22K = 17,   /* audio DVI4 22.050KHz mono	    */
-    PJMEDIA_RTP_PT_G729 = 18,	    /* audio G729			    */
+    PJMEDIA_RTP_PT_PCMU = 0,	    /**< audio PCMU			    */
+    PJMEDIA_RTP_PT_GSM  = 3,	    /**< audio GSM			    */
+    PJMEDIA_RTP_PT_G723 = 4,	    /**< audio G723			    */
+    PJMEDIA_RTP_PT_DVI4_8K = 5,	    /**< audio DVI4 8KHz		    */
+    PJMEDIA_RTP_PT_DVI4_16K = 6,    /**< audio DVI4 16Khz		    */
+    PJMEDIA_RTP_PT_LPC = 7,	    /**< audio LPC			    */
+    PJMEDIA_RTP_PT_PCMA = 8,	    /**< audio PCMA			    */
+    PJMEDIA_RTP_PT_G722 = 9,	    /**< audio G722			    */
+    PJMEDIA_RTP_PT_L16_2 = 10,	    /**< audio 16bit linear 44.1KHz stereo  */
+    PJMEDIA_RTP_PT_L16_1 = 11,	    /**< audio 16bit linear 44.1KHz mono    */
+    PJMEDIA_RTP_PT_QCELP = 12,	    /**< audio QCELP			    */
+    PJMEDIA_RTP_PT_CN = 13,	    /**< audio Comfort Noise		    */
+    PJMEDIA_RTP_PT_MPA = 14,	    /**< audio MPEG1/MPEG2 elemetr. streams */
+    PJMEDIA_RTP_PT_G728 = 15,	    /**< audio G728			    */
+    PJMEDIA_RTP_PT_DVI4_11K = 16,   /**< audio DVI4 11.025KHz mono	    */
+    PJMEDIA_RTP_PT_DVI4_22K = 17,   /**< audio DVI4 22.050KHz mono	    */
+    PJMEDIA_RTP_PT_G729 = 18,	    /**< audio G729			    */
 
-    PJMEDIA_RTP_PT_CELB = 25,	    /* video/comb Cell-B by Sun (RFC 2029)  */
-    PJMEDIA_RTP_PT_JPEG = 26,	    /* video JPEG			    */
-    PJMEDIA_RTP_PT_NV = 28,	    /* video NV  by nv program by Xerox	    */
-    PJMEDIA_RTP_PT_H261 = 31,	    /* video H261			    */
-    PJMEDIA_RTP_PT_MPV = 32,	    /* video MPEG1 or MPEG2 elementary	    */
-    PJMEDIA_RTP_PT_MP2T = 33,	    /* video MPEG2 transport		    */
-    PJMEDIA_RTP_PT_H263 = 34,	    /* video H263			    */
+    PJMEDIA_RTP_PT_CELB = 25,	    /**< video/comb Cell-B by Sun (RFC2029) */
+    PJMEDIA_RTP_PT_JPEG = 26,	    /**< video JPEG			    */
+    PJMEDIA_RTP_PT_NV = 28,	    /**< video NV  by nv program by Xerox   */
+    PJMEDIA_RTP_PT_H261 = 31,	    /**< video H261			    */
+    PJMEDIA_RTP_PT_MPV = 32,	    /**< video MPEG1 or MPEG2 elementary    */
+    PJMEDIA_RTP_PT_MP2T = 33,	    /**< video MPEG2 transport		    */
+    PJMEDIA_RTP_PT_H263 = 34,	    /**< video H263			    */
 
-    PJMEDIA_RTP_PT_DYNAMIC = 96,    /* start of dynamic RTP payload	    */
+    PJMEDIA_RTP_PT_DYNAMIC = 96,    /**< start of dynamic RTP payload	    */
 
 };
 
@@ -361,8 +361,13 @@ struct pjmedia_codec_factory
  */
 struct pjmedia_codec_mgr
 {
+    /** List of codec factories registered to codec manager. */
     pjmedia_codec_factory   factory_list;
+
+    /** Number of supported codesc. */
     unsigned		    codec_cnt;
+
+    /** Array of codec info. */
     pjmedia_codec_info	    codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
 };
 

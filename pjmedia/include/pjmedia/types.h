@@ -132,10 +132,10 @@ typedef struct pjmedia_endpt pjmedia_endpt;
 typedef struct pjmedia_sock_info
 {
 
-    pj_sock_t	    rtp_sock;
-    pj_sockaddr_in  rtp_addr_name;
-    pj_sock_t	    rtcp_sock;
-    pj_sockaddr_in  rtcp_addr_name;
+    pj_sock_t	    rtp_sock;	    /**< Socket for RTP.		    */
+    pj_sockaddr_in  rtp_addr_name;  /**< Local RTP address to be advertised.*/
+    pj_sock_t	    rtcp_sock;	    /**< Socket for RTCP.		    */
+    pj_sockaddr_in  rtcp_addr_name; /**< Local RTCP addr to be advertised.  */
 
 } pjmedia_sock_info;
 

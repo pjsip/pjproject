@@ -390,12 +390,12 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(unsigned) pjmedia_jbuf_get_prefetch_size(pjmedia_jbuf *jb)
+PJ_DEF(unsigned) pjmedia_jbuf_get_min_delay_size(pjmedia_jbuf *jb)
 {
     return jb->jb_prefetch;
 }
 
-PJ_DEF(unsigned) pjmedia_jbuf_get_current_size(pjmedia_jbuf *jb)
+PJ_DEF(unsigned) pjmedia_jbuf_get_delay(pjmedia_jbuf *jb)
 {
     return jb_framelist_size(&jb->jb_framelist);
 }

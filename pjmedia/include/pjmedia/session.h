@@ -35,6 +35,15 @@ PJ_BEGIN_DECL
  * @defgroup PJMED_SES Media session
  * @ingroup PJMEDIA
  * @{
+ *
+ * A media session represents multimedia communication between two
+ * parties. A media session represents the multimedia session that
+ * is described by SDP session descriptor. A media session consists 
+ * of one or more media streams (pjmedia_stream), where each stream 
+ * represents one media line (m= line) in SDP.
+ *
+ * This module provides functions to create and manage multimedia
+ * sessions.
  */
 
 
@@ -44,8 +53,11 @@ PJ_BEGIN_DECL
  */
 struct pjmedia_session_info
 {
+    /** Number of streams. */
     unsigned		stream_cnt;
-    pjmedia_stream_info	stream_info[PJSDP_MAX_MEDIA];
+
+    /** Individual stream info. */
+    pjmedia_stream_info	stream_info[PJMEDIA_MAX_SDP_MEDIA];
 };
 
 
@@ -68,12 +80,13 @@ struct pjmedia_session_info
  * @return		PJ_SUCCESS if media session can be created 
  *			successfully.
  */
-PJ_DECL(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt, 
-					     unsigned stream_cnt,
-					     const pjmedia_sock_info skinfo[],
-					     const pjmedia_sdp_session *local_sdp,
-					     const pjmedia_sdp_session *rem_sdp,
-					     pjmedia_session **p_session );
+PJ_DECL(pj_status_t) 
+pjmedia_session_create( pjmedia_endpt *endpt, 
+			unsigned stream_cnt,
+			const pjmedia_sock_info skinfo[],
+			const pjmedia_sdp_session *local_sdp,
+			const pjmedia_sdp_session *rem_sdp,
+			pjmedia_session **p_session );
 
 
 /**
@@ -150,9 +163,10 @@ PJ_DECL(pj_status_t) pjmedia_session_resume_stream(pjmedia_session *session,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
-						  unsigned *count, 
-						  pjmedia_stream_info strm_info[]);
+PJ_DECL(pj_status_t) 
+pjmedia_session_enum_streams( const pjmedia_session *session,
+			      unsigned *count, 
+			      pjmedia_stream_info strm_info[]);
 
 
 /**
@@ -161,13 +175,13 @@ PJ_DECL(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session
  *
  * @param session	The media session.
  * @param index		Stream index.
- * @param stat		Stream statistic.
+ * @param sta		Stream statistic.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
-						     pjmedia_stream_stat *stat);
+						     pjmedia_stream_stat *sta);
 
 /**
  * Destroy media session.

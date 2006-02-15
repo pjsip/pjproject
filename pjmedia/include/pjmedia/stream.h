@@ -22,7 +22,7 @@
 
 /**
  * @file stream.h
- * @brief Stream of media.
+ * @brief Media Stream.
  */
 
 #include <pjmedia/sound.h>
@@ -34,9 +34,16 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_SES Media session
+ * @defgroup PJMED_STRM Media Stream
  * @ingroup PJMEDIA
  * @{
+ *
+ * A media stream is a bidirectional multimedia communication between two
+ * endpoints. It corresponds to a media description (m= line) in SDP.
+ *
+ * A media stream consists of two unidirectional channels:
+ *  - encoding channel, which transmits unidirectional media to remote, and
+ *  - decoding channel, which receives unidirectional media from remote.
  */
 
 /**
@@ -138,7 +145,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
 /**
  * Pause the individual channel in the stream.
  *
- * @param channel	The media channel.
+ * @param stream	The media channel.
  * @param dir		Which direction to pause.
  *
  * @return		PJ_SUCCESS on success.
@@ -149,7 +156,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
 /**
  * Resume the individual channel in the stream.
  *
- * @param channel	The media channel.
+ * @param stream	The media channel.
  * @param dir		Which direction to resume.
  *
  * @return		PJ_SUCCESS on success;

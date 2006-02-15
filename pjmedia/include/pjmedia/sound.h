@@ -55,11 +55,11 @@ typedef struct pj_snd_dev_info
  */
 typedef struct pj_snd_stream_info
 {
-    unsigned samples_per_sec;		/* Sampling rate.	    */
-    unsigned bits_per_sample;		/* No of bits per sample.   */
-    unsigned samples_per_frame;		/* No of samples per frame. */
-    unsigned bytes_per_frame;		/* No of bytes per frame.   */
-    unsigned frames_per_packet;		/* No of frames per packet. */
+    unsigned samples_per_sec;		/**< Sampling rate.		*/
+    unsigned bits_per_sample;		/**< No of bits per sample.	*/
+    unsigned samples_per_frame;		/**< No of samples per frame.	*/
+    unsigned bytes_per_frame;		/**< No of bytes per frame.	*/
+    unsigned frames_per_packet;		/**< No of frames per packet.	*/
 } pj_snd_stream_info;
 
 /** 

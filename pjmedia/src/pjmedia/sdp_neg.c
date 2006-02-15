@@ -578,7 +578,7 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 	      found_matching_telephone_event = 0,
 	      found_matching_other = 0;
     unsigned pt_answer_count = 0;
-    pj_str_t pt_answer[PJSDP_MAX_FMT];
+    pj_str_t pt_answer[PJMEDIA_MAX_SDP_FMT];
     pjmedia_sdp_media *answer;
 
     /* With the addition of telephone-event and dodgy MS RTC SDP, 
@@ -756,7 +756,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
     pj_status_t status;
     pj_bool_t has_active = PJ_FALSE;
     pjmedia_sdp_session *answer;
-    char media_used[PJSDP_MAX_MEDIA];
+    char media_used[PJMEDIA_MAX_SDP_MEDIA];
     unsigned i;
 
     /* Validate remote offer. 

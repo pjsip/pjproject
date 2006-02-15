@@ -21,11 +21,11 @@
 
 
 /**
- * @file mediamgr.h
- * @brief Media Manager.
+ * @file endpoint.h
+ * @brief Media endpoint.
  */
 /**
- * @defgroup PJMED_ENDPT Media Endpoint
+ * @defgroup PJMED_ENDPT Multimedia Endpoint
  * @ingroup PJMEDIA
  * @{
  *
@@ -91,7 +91,7 @@ PJ_DECL(pj_pool_t*) pjmedia_endpt_create_pool( pjmedia_endpt *endpt,
  * @return		The instance of codec manager belonging to
  *			this media endpoint.
  */
-PJ_DECL(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *mgr);
+PJ_DECL(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt);
 
 
 /**

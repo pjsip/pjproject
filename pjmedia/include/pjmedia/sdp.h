@@ -20,37 +20,57 @@
 #define __PJMEDIA_SDP_H__
 
 /**
- * @defgroup PJSDP SDP Library
- */
-/**
  * @file sdp.h
  * @brief SDP header file.
  */
+#include <pjmedia/types.h>
+
+
 /**
- * @defgroup PJ_SDP_H SDP stack.
- * @ingroup PJSDP
+ * @defgroup PJ_SDP SDP Parsing and Data Structure
+ * @ingroup PJMEDIA
  * @{
  *
- * This SDP module consists of SDP parser, SDP structure, and function to
- * print back the structure as SDP message.
+ * The basic SDP session descriptor and elements are described in header
+ * file <pre><pjmedia/sdp.h></pre>. This file contains declaration for
+ * SDP session descriptor and SDP media descriptor, along with their
+ * attributes. This file also declares functions to parse SDP message.
  */
 
-#include <pjmedia/types.h>
 
 PJ_BEGIN_DECL
 
-#define PJSDP_MAX_FMT	32
-#define PJSDP_MAX_ATTR	32
-#define PJSDP_MAX_MEDIA	16
+/**
+ * The PJMEDIA_MAX_SDP_FMT macro defines maximum format in a media line.
+ */
+#ifndef PJMEDIA_MAX_SDP_FMT
+#   define PJMEDIA_MAX_SDP_FMT		16
+#endif
+
+/**
+ * The PJMEDIA_MAX_SDP_ATTR macro defines maximum SDP attributes in media and
+ * session descriptor.
+ */
+#ifndef PJMEDIA_MAX_SDP_ATTR
+#   define PJMEDIA_MAX_SDP_ATTR		(PJMEDIA_MAX_SDP_FMT*2 + 4)
+#endif
+
+/**
+ * The PJMEDIA_MAX_SDP_MEDIA macro defines maximum SDP media lines in a
+ * SDP session descriptor.
+ */
+#ifndef PJMEDIA_MAX_SDP_MEDIA
+#   define PJMEDIA_MAX_SDP_MEDIA	16
+#endif
 
 
-/****************************************************************************
+/* **************************************************************************
  * SDP ATTRIBUTES
- ****************************************************************************
+ ***************************************************************************
  */
 
 /** 
- * SDP generic attribute.
+ * Generic representation of attribute.
  */
 struct pjmedia_sdp_attr
 {
@@ -90,11 +110,13 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool,
  * @param attr_array	Array of attributes.
  * @param name		Attribute name to find.
  * @param fmt		Optional string to indicate which payload format
- *			to find for rtpmap and fmt attributes.
+ *			to find for \a rtpmap and \a fmt attributes. For other
+ *			types of attributes, the value should be NULL.
  *
  * @return		The specified attribute, or NULL if it can't be found.
  *
- * @see pjmedia_sdp_attr_find2, pjmedia_sdp_media_find_attr
+ * @see pjmedia_sdp_attr_find2, pjmedia_sdp_media_find_attr, 
+ *	pjmedia_sdp_media_find_attr2
  */
 PJ_DECL(pjmedia_sdp_attr*) 
 pjmedia_sdp_attr_find(unsigned count, 
@@ -108,11 +130,13 @@ pjmedia_sdp_attr_find(unsigned count,
  * @param attr_array	Array of attributes.
  * @param name		Attribute name to find.
  * @param fmt		Optional string to indicate which payload format
- *			to find for rtpmap and fmt attributes.
+ *			to find for \a rtpmap and \a fmt attributes. For other
+ *			types of attributes, the value should be NULL.
  *
  * @return		The specified attribute, or NULL if it can't be found.
  *
- * @see pjmedia_sdp_attr_find, pjmedia_sdp_media_find_attr2
+ * @see pjmedia_sdp_attr_find, pjmedia_sdp_media_find_attr,
+ *	pjmedia_sdp_media_find_attr2
  */
 PJ_DECL(pjmedia_sdp_attr*) 
 pjmedia_sdp_attr_find2(unsigned count, 
@@ -135,7 +159,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
 					  pjmedia_sdp_attr *attr);
 
 /**
- * Remove all attributes with the specified name when they present.
+ * Remove all attributes with the specified name in array of attributes.
  *
  * @param count		Number of attributes in the array.
  * @param attr_array	Array of attributes.
@@ -155,7 +179,7 @@ PJ_DECL(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
  *
  * @param count		Number of attributes in the array.
  * @param attr_array	Array of attributes.
- * @param name		Attribute name to find.
+ * @param attr		The attribute instance to remove.
  *
  * @return		PJ_SUCCESS when attribute has been removed, or 
  *			PJ_ENOTFOUND when the attribute can not be found.
@@ -168,7 +192,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_remove(unsigned *count,
 
 
 /**
- * SDP \a rtpmap attribute.
+ * This structure declares SDP \a rtpmap attribute.
  */
 struct pjmedia_sdp_rtpmap
 {
@@ -180,14 +204,18 @@ struct pjmedia_sdp_rtpmap
 
 
 /**
- * Convert generic attribute to SDP rtpmap.
+ * Convert generic attribute to SDP \a rtpmap. This function allocates
+ * a new attribute and call #pjmedia_sdp_attr_get_rtpmap().
  *
  * @param pool		Pool used to create the rtpmap attribute.
  * @param attr		Generic attribute to be converted to rtpmap, which
  *			name must be "rtpmap".
  * @param p_rtpmap	Pointer to receive SDP rtpmap attribute.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS if the attribute can be successfully
+ *			converted to \a rtpmap type.
+ *
+ * @see pjmedia_sdp_attr_get_rtpmap
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
 						const pjmedia_sdp_attr *attr,
@@ -199,30 +227,34 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
  *
  * @param attr		Generic attribute to be converted to rtpmap, which
  *			name must be "rtpmap".
- * @param rtpmap	SDP rtpmap attribute to be initialized.
+ * @param rtpmap	SDP \a rtpmap attribute to be initialized.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS if the attribute can be successfully
+ *			converted to \a rtpmap attribute.
+ *
+ * @see pjmedia_sdp_attr_to_rtpmap
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_rtpmap(const pjmedia_sdp_attr *attr,
 						 pjmedia_sdp_rtpmap *rtpmap);
 
 
 /**
- * Convert rtpmap attribute to generic attribute.
+ * Convert \a rtpmap attribute to generic attribute.
  *
  * @param pool		Pool to be used.
- * @param rtpmap	The rtpmap attribute.
+ * @param rtpmap	The \a rtpmap attribute.
  * @param p_attr	Pointer to receive the generic SDP attribute.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
-						const pjmedia_sdp_rtpmap *rtpmap,
-						pjmedia_sdp_attr **p_attr);
+PJ_DECL(pj_status_t) 
+pjmedia_sdp_rtpmap_to_attr( pj_pool_t *pool,
+			    const pjmedia_sdp_rtpmap *rtpmap,
+			    pjmedia_sdp_attr **p_attr);
 
 
 /**
- * SDP \a fmtp attribute.
+ * This structure describes SDP \a fmtp attribute.
  */
 struct pjmedia_sdp_fmtp
 {
@@ -244,13 +276,13 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_fmtp(const pjmedia_sdp_attr *attr,
 					       pjmedia_sdp_fmtp *fmtp);
 
 
-/****************************************************************************
+/* **************************************************************************
  * SDP CONNECTION INFO
  ****************************************************************************
  */
 
 /**
- * SDP connection info.
+ * This structure describes SDP connection info ("c=" line). 
  */
 struct pjmedia_sdp_conn
 {
@@ -261,28 +293,31 @@ struct pjmedia_sdp_conn
 
 
 /** 
- *Clone connection info. 
+ * Clone connection info. 
  * 
  * @param pool	    Pool to allocate memory for the new connection info.
  * @param rhs	    The connection into to clone.
  *
- * @return the new connection info.
+ * @return	    The new connection info.
  */
 PJ_DECL(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone(pj_pool_t *pool, 
 						  const pjmedia_sdp_conn *rhs);
 
 
 
-/****************************************************************************
+/* **************************************************************************
  * SDP MEDIA INFO/LINE
  ****************************************************************************
  */
 
 /**
- * SDP media description.
+ * This structure describes SDP media descriptor. A SDP media descriptor
+ * starts with "m=" line and contains the media attributes and optional
+ * connection line.
  */
 struct pjmedia_sdp_media
 {
+    /** Media descriptor line ("m=" line) */
     struct
     {
 	pj_str_t    media;		/**< Media type ("audio", "video")  */
@@ -290,12 +325,12 @@ struct pjmedia_sdp_media
 	unsigned    port_count;		/**< Port count, used only when >2  */
 	pj_str_t    transport;		/**< Transport ("RTP/AVP")	    */
 	unsigned    fmt_count;		/**< Number of formats.		    */
-	pj_str_t    fmt[PJSDP_MAX_FMT];	/**< Media formats.		    */
+	pj_str_t    fmt[PJMEDIA_MAX_SDP_FMT];	/**< Media formats.	    */
     } desc;
 
     pjmedia_sdp_conn *conn;		/**< Optional connection info.	    */
     unsigned	     attr_count;	/**< Number of attributes.	    */
-    pjmedia_sdp_attr*attr[PJSDP_MAX_ATTR];  /**< Attributes.		    */
+    pjmedia_sdp_attr*attr[PJMEDIA_MAX_SDP_ATTR];  /**< Attributes.	    */
 
 };
 
@@ -306,20 +341,22 @@ struct pjmedia_sdp_media
  * @param pool	    Pool to allocate memory for the new media description.
  * @param rhs	    The media descriptin to clone.
  *
- * @return a new media description.
+ * @return	    New media description.
  */
 PJ_DECL(pjmedia_sdp_media*) 
 pjmedia_sdp_media_clone( pj_pool_t *pool, 
 			 const pjmedia_sdp_media *rhs);
 
 /**
- * Find the first occurence of the specified attribute name.
+ * Find the first occurence of the specified attribute name in the media 
+ * descriptor. Optionally the format may be specified.
  *
  * @param m		The SDP media description.
  * @param name		Attribute name to find.
- * @param fmt		Optional payload format type to find in the
- *			attribute list. The payload format type will be
- *			compared for attributes such as rtpmap and fmtp.
+ * @param fmt		Optional payload type to match in the
+ *			attribute list, when the attribute is \a rtpmap
+ *			or \a fmtp. For other types of SDP attributes, this
+ *			value should be NULL.
  *
  * @return		The first instance of the specified attribute or NULL.
  */
@@ -329,13 +366,15 @@ pjmedia_sdp_media_find_attr(const pjmedia_sdp_media *m,
 
 
 /**
- * Find the first occurence of the specified attribute name.
+ * Find the first occurence of the specified attribute name in the SDP media 
+ * descriptor. Optionally the format may be specified.
  *
  * @param m		The SDP media description.
  * @param name		Attribute name to find.
- * @param fmt		Optional payload format type to find in the
- *			attribute list. The payload format type will be
- *			compared for attributes such as rtpmap and fmtp.
+ * @param fmt		Optional payload type to match in the
+ *			attribute list, when the attribute is \a rtpmap
+ *			or \a fmtp. For other types of SDP attributes, this
+ *			value should be NULL.
  *
  * @return		The first instance of the specified attribute or NULL.
  */
@@ -347,7 +386,7 @@ pjmedia_sdp_media_find_attr2(const pjmedia_sdp_media *m,
  * Add new attribute to the media descriptor.
  *
  * @param m		The SDP media description.
- * @param name		Attribute to add.
+ * @param attr		Attribute to add.
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
@@ -355,7 +394,8 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_add_attr(pjmedia_sdp_media *m,
 						pjmedia_sdp_attr *attr);
 
 /**
- * Remove all attributes with the specified name.
+ * Remove all attributes with the specified name from the SDP media
+ * descriptor.
  *
  * @param m		The SDP media description.
  * @param name		Attribute name to remove.
@@ -368,7 +408,14 @@ pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
 
 
 /**
- * Remove the occurence of the specified attribute.
+ * Remove the occurence of the specified attribute from the SDP media
+ * descriptor.
+ *
+ * @param m		The SDP media descriptor.
+ * @param attr		The attribute to find and remove.
+ *
+ * @return		PJ_SUCCESS if the attribute can be found and has
+ *			been removed from the array.
  */
 PJ_DECL(pj_status_t)
 pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
@@ -380,9 +427,11 @@ pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
  *
  * @param sd1	    The first SDP media to compare.
  * @param sd2	    The second SDP media to compare.
- * @param option    Comparison option.
+ * @param option    Comparison option, which should be zero for now.
  *
- * @return	    PJ_SUCCESS when both SDP medias are equal.
+ * @return	    PJ_SUCCESS when both SDP medias are equal, or the
+ *		    appropriate status code describing which part of
+ *		    the descriptors that are not equal.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_media_cmp(const pjmedia_sdp_media *sd1,
 					   const pjmedia_sdp_media *sd2,
@@ -390,18 +439,20 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_cmp(const pjmedia_sdp_media *sd1,
 
 
 
-/****************************************************************************
+/* **************************************************************************
  * SDP SESSION DESCRIPTION
  ****************************************************************************
  */
 
 
 /**
- * This structure describes SDP session description.
+ * This structure describes SDP session description. A SDP session descriptor
+ * contains complete information about a session, and normally is exchanged
+ * with remote media peer using signaling protocol such as SIP.
  */
 struct pjmedia_sdp_session
 {
-    /** Origin (o= line) */
+    /** Session origin (o= line) */
     struct
     {
 	pj_str_t    user;	    /**< User 				*/
@@ -423,10 +474,10 @@ struct pjmedia_sdp_session
     } time;
 
     unsigned	       attr_count;		/**< Number of attributes.  */
-    pjmedia_sdp_attr  *attr[PJSDP_MAX_ATTR];	/**< Attributes array.	    */
+    pjmedia_sdp_attr  *attr[PJMEDIA_MAX_SDP_ATTR]; /**< Attributes array.   */
 
     unsigned	       media_count;		/**< Number of media.	    */
-    pjmedia_sdp_media *media[PJSDP_MAX_MEDIA];	/**< Media array.	    */
+    pjmedia_sdp_media *media[PJMEDIA_MAX_SDP_MEDIA];	/**< Media array.   */
 
 };
 
@@ -434,11 +485,13 @@ struct pjmedia_sdp_session
 /**
  * Parse SDP message.
  *
+ * @param pool	    The pool to allocate SDP session description.
  * @param buf	    The message buffer.
  * @param len	    The length of the message.
- * @param pool	    The pool to allocate SDP session description.
+ * @param p_sdp	    Pointer to receive the SDP session descriptor.
  *
- * @return SDP session description.
+ * @return	    PJ_SUCCESS if message was successfully parsed into
+ *		    SDP session descriptor.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 				        char *buf, pj_size_t len, 
@@ -447,33 +500,42 @@ PJ_DECL(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 /**
  * Print SDP description to a buffer.
  *
+ * @param sdp	    The SDP session description.
  * @param buf	    The buffer.
  * @param size	    The buffer length.
- * @param desc	    The SDP session description.
  *
- * @return the length printed, or -1.
+ * @return	    the length printed, or -1 if the buffer is too
+ *		    short.
  */
-PJ_DECL(int) pjmedia_sdp_print( const pjmedia_sdp_session *desc, 
+PJ_DECL(int) pjmedia_sdp_print( const pjmedia_sdp_session *sdp, 
 				char *buf, pj_size_t size);
 
 
 /**
- * Validate SDP descriptor.
+ * Perform semantic validation for the specified SDP session descriptor.
+ * This function perform validation beyond just syntactic verification,
+ * such as to verify the value of network type and address type, check
+ * the connection line, and verify that \a rtpmap attribute is present
+ * when dynamic payload type is used.
+ *
+ * @param sdp	    The SDP session descriptor to validate.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp);
 
 
 /**
- * Clone SDP session.
+ * Clone SDP session descriptor.
  *
  * @param pool	    The pool used to clone the session.
- * @param sess	    The SDP session to clone.
+ * @param sdp	    The SDP session to clone.
  *
  * @return	    New SDP session.
  */
 PJ_DECL(pjmedia_sdp_session*) 
 pjmedia_sdp_session_clone( pj_pool_t *pool,
-			   const pjmedia_sdp_session *sess);
+			   const pjmedia_sdp_session *sdp);
 
 
 /**
@@ -481,8 +543,11 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
  *
  * @param sd1	    The first SDP session to compare.
  * @param sd2	    The second SDP session to compare.
+ * @param option    Must be zero for now.
  *
- * @return	    PJ_SUCCESS when both SDPs are equal.
+ * @return	    PJ_SUCCESS when both SDPs are equal, or otherwise
+ *		    the status code indicates which part of the session
+ *		    descriptors are not equal.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_session_cmp(const pjmedia_sdp_session *sd1,
 					     const pjmedia_sdp_session *sd2,

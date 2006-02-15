@@ -31,8 +31,8 @@ struct pjmedia_session
     pj_pool_t		   *pool;
     pjmedia_endpt	   *endpt;
     unsigned		    stream_cnt;
-    pjmedia_stream_info	    stream_info[PJSDP_MAX_MEDIA];
-    pjmedia_stream	   *stream[PJSDP_MAX_MEDIA];
+    pjmedia_stream_info	    stream_info[PJMEDIA_MAX_SDP_MEDIA];
+    pjmedia_stream	   *stream[PJMEDIA_MAX_SDP_MEDIA];
 };
 
 #define THIS_FILE		"session.c"

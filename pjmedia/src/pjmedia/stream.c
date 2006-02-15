@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/stream.h>
+#include <pjmedia/errno.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
@@ -58,7 +59,7 @@ struct pjmedia_channel
     void		   *out_pkt;	    /**< Output buffer.		    */
     unsigned		    pcm_buf_size;   /**< Size of PCM buffer.	    */
     void		   *pcm_buf;	    /**< PCM buffer.		    */
-    pj_rtp_session	    rtp;	    /**< RTP session.		    */
+    pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 };
 
 
@@ -195,9 +196,9 @@ static pj_status_t rec_callback( /* in */ void *user_data,
     frame_in.type = PJMEDIA_TYPE_AUDIO;
     frame_in.buf = (void*)frame;
     frame_in.size = size;
-    frame_out.buf = ((char*)channel->out_pkt) + sizeof(pj_rtp_hdr);
+    frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
     status = stream->codec->op->encode( stream->codec, &frame_in, 
-					channel->out_pkt_size - sizeof(pj_rtp_hdr), 
+					channel->out_pkt_size - sizeof(pjmedia_rtp_hdr), 
 					&frame_out);
     if (status != 0) {
 	TRACE_((THIS_FILE, "Codec encode() has returned error status %d", 
@@ -207,7 +208,7 @@ static pj_status_t rec_callback( /* in */ void *user_data,
 
     /* Encapsulate. */
     ts_len = size / (channel->snd_info.bits_per_sample / 8);
-    status = pj_rtp_encode_rtp( &channel->rtp, 
+    status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 				channel->pt, 0, 
 				frame_out.size, ts_len, 
 				(const void**)&rtphdr, &rtphdrlen);
@@ -217,17 +218,17 @@ static pj_status_t rec_callback( /* in */ void *user_data,
 	return status;
     }
 
-    if (rtphdrlen != sizeof(pj_rtp_hdr)) {
+    if (rtphdrlen != sizeof(pjmedia_rtp_hdr)) {
 	/* We don't support RTP with extended header yet. */
 	PJ_TODO(SUPPORT_SENDING_RTP_WITH_EXTENDED_HEADER);
 	TRACE_((THIS_FILE, "Unsupported extended RTP header for transmission"));
 	return 0;
     }
 
-    pj_memcpy(channel->out_pkt, rtphdr, sizeof(pj_rtp_hdr));
+    pj_memcpy(channel->out_pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
 
     /* Send. */
-    sent = frame_out.size+sizeof(pj_rtp_hdr);
+    sent = frame_out.size+sizeof(pjmedia_rtp_hdr);
     status = pj_sock_sendto(stream->skinfo.rtp_sock, channel->out_pkt, &sent, 0, 
 			    &stream->rem_rtp_addr, sizeof(stream->rem_rtp_addr));
     if (status != PJ_SUCCESS)
@@ -235,7 +236,7 @@ static pj_status_t rec_callback( /* in */ void *user_data,
 
     /* Update stat */
     stream->stat.enc.pkt++;
-    stream->stat.enc.bytes += frame_out.size+sizeof(pj_rtp_hdr);
+    stream->stat.enc.bytes += frame_out.size+sizeof(pjmedia_rtp_hdr);
 
     return 0;
 }
@@ -253,7 +254,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 
     while (!stream->quit_flag) {
 	pj_ssize_t len;
-	const pj_rtp_hdr *hdr;
+	const pjmedia_rtp_hdr *hdr;
 	const void *payload;
 	unsigned payloadlen;
 	int status;
@@ -299,7 +300,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	    continue;
 
 	/* Update RTP and RTCP session. */
-	status = pj_rtp_decode_rtp(&channel->rtp, channel->in_pkt, len, 
+	status = pjmedia_rtp_decode_rtp(&channel->rtp, channel->in_pkt, len, 
 				   &hdr, &payload, &payloadlen);
 	if (status != PJ_SUCCESS) {
 	    TRACE_((THIS_FILE, "RTP decode_rtp() has returned error status %d",
@@ -307,10 +308,10 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	    continue;
 	}
 
-	status = pj_rtp_session_update(&channel->rtp, hdr);
+	status = pjmedia_rtp_session_update(&channel->rtp, hdr);
 	if (status != 0 && 
-	    status != PJMEDIA_RTP_ERR_SESSION_PROBATION && 
-	    status != PJMEDIA_RTP_ERR_SESSION_RESTARTED) 
+	    status != PJMEDIA_RTP_ESESSPROBATION && 
+	    status != PJMEDIA_RTP_ESESSRESTART) 
 	{
 	    TRACE_((THIS_FILE, 
 		    "RTP session_update() has returned error status %d", 
@@ -392,7 +393,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     
     /* Allocate buffer for outgoing packet. */
 
-    channel->out_pkt_size = sizeof(pj_rtp_hdr) + 
+    channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
 			    codec_param->avg_bps/8 * 
 			    PJMEDIA_MAX_FRAME_DURATION_MS / 
 			    1000;
@@ -415,7 +416,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Create RTP and RTCP sessions: */
 
-    status = pj_rtp_session_init(&channel->rtp, param->fmt.pt, 
+    status = pjmedia_rtp_session_init(&channel->rtp, param->fmt.pt, 
 				 param->ssrc);
     if (status != PJ_SUCCESS)
 	return status;

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/rtcp.h>
+#include <pjmedia/errno.h>
 #include <pj/os.h>	/* pj_gettimeofday */
 #include <pj/sock.h>	/* pj_htonx, pj_ntohx */
 #include <pj/string.h>	/* pj_memset */
@@ -79,7 +80,7 @@ static void rtcp_init_seq(pj_rtcp_session *s, pj_uint16_t  seq)
     s->transit = 0;
     s->jitter = 0;
 
-    pj_rtp_seq_restart(&s->seq_ctrl, seq);
+    pjmedia_rtp_seq_restart(&s->seq_ctrl, seq);
 }
 
 PJ_DEF(void) pj_rtcp_rx_rtp(pj_rtcp_session *s, pj_uint16_t seq, pj_uint32_t rtp_ts)
@@ -91,8 +92,8 @@ PJ_DEF(void) pj_rtcp_rx_rtp(pj_rtcp_session *s, pj_uint16_t seq, pj_uint32_t rtp
     int status;
 
     /* Update sequence numbers (received, lost, etc). */
-    status = pj_rtp_seq_update(&s->seq_ctrl, seq);
-    if (status == PJMEDIA_RTP_ERR_SESSION_RESTARTED) {
+    status = pjmedia_rtp_seq_update(&s->seq_ctrl, seq);
+    if (status == PJMEDIA_RTP_ESESSRESTART) {
 	rtcp_init_seq(s, seq);
 	status = 0;
     }

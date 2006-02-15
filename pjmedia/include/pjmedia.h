@@ -19,6 +19,11 @@
 #ifndef __PJMEDIA_H__
 #define __PJMEDIA_H__
 
+/**
+ * @file pjmedia.h
+ * @brief PJMEDIA main header file.
+ */
+
 #include <pjmedia/types.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/codec.h>

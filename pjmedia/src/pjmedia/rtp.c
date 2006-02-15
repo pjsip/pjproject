@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/rtp.h>
+#include <pjmedia/errno.h>
 #include <pj/log.h>
 #include <pj/os.h>	/* pj_gettimeofday() */
 #include <pj/sock.h>	/* pj_htonx, pj_htonx */
@@ -34,16 +35,16 @@
 #define MIN_SEQUENTIAL  ((pj_int16_t)2)
 
 
-PJ_DEF(pj_status_t) pj_rtp_session_init( pj_rtp_session *ses,
+PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 					 int default_pt, pj_uint32_t sender_ssrc )
 {
-    PJ_LOG(4, (THIS_FILE, "pj_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
+    PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
 	       ses, default_pt, sender_ssrc));
 
     /* Check RTP header packing. */
-    if (sizeof(struct pj_rtp_hdr) != 12) {
+    if (sizeof(struct pjmedia_rtp_hdr) != 12) {
 	pj_assert(!"Wrong RTP header packing!");
-	return PJMEDIA_RTP_ERR_RTP_PACKING;
+	return PJMEDIA_RTP_EINPACK;
     }
 
     /* If sender_ssrc is not specified, create from time value. */
@@ -81,14 +82,14 @@ PJ_DEF(pj_status_t) pj_rtp_session_init( pj_rtp_session *ses,
 }
 
 
-PJ_DEF(pj_status_t) pj_rtp_encode_rtp( pj_rtp_session *ses, int pt, int m,
+PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, int pt, int m,
 				       int payload_len, int ts_len,
 				       const void **rtphdr, int *hdrlen )
 {
     PJ_UNUSED_ARG(payload_len)
 
     PJ_LOG(6, (THIS_FILE, 
-	      "pj_rtp_encode_rtp: ses=%p, pt=%d, m=%d, pt_len=%d, ts_len=%d",
+	      "pjmedia_rtp_encode_rtp: ses=%p, pt=%d, m=%d, pt_len=%d, ts_len=%d",
 	      ses, pt, m, payload_len, ts_len));
 
     /* Update session. */
@@ -102,15 +103,15 @@ PJ_DEF(pj_status_t) pj_rtp_encode_rtp( pj_rtp_session *ses, int pt, int m,
 
     /* Return values */
     *rtphdr = &ses->out_hdr;
-    *hdrlen = sizeof(pj_rtp_hdr);
+    *hdrlen = sizeof(pjmedia_rtp_hdr);
 
     return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_status_t) pj_rtp_decode_rtp( pj_rtp_session *ses, 
+PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses, 
 				       const void *pkt, int pkt_len,
-				       const pj_rtp_hdr **hdr,
+				       const pjmedia_rtp_hdr **hdr,
 				       const void **payload,
 				       unsigned *payloadlen)
 {
@@ -119,30 +120,30 @@ PJ_DEF(pj_status_t) pj_rtp_decode_rtp( pj_rtp_session *ses,
     PJ_UNUSED_ARG(ses)
 
     PJ_LOG(6, (THIS_FILE, 
-	      "pj_rtp_decode_rtp: ses=%p, pkt=%p, pkt_len=%d",
+	      "pjmedia_rtp_decode_rtp: ses=%p, pkt=%p, pkt_len=%d",
 	      ses, pkt, pkt_len));
 
     /* Assume RTP header at the start of packet. We'll verify this later. */
-    *hdr = (pj_rtp_hdr*)pkt;
+    *hdr = (pjmedia_rtp_hdr*)pkt;
 
     /* Check RTP header sanity. */
     if ((*hdr)->v != RTP_VERSION) {
 	PJ_LOG(4, (THIS_FILE, "  invalid RTP version!"));
-	return PJMEDIA_RTP_ERR_INVALID_VERSION;
+	return PJMEDIA_RTP_EINVER;
     }
 
     /* Payload is located right after header plus CSRC */
-    offset = sizeof(pj_rtp_hdr) + ((*hdr)->cc * sizeof(pj_uint32_t));
+    offset = sizeof(pjmedia_rtp_hdr) + ((*hdr)->cc * sizeof(pj_uint32_t));
 
     /* Adjust offset if RTP extension is used. */
     if ((*hdr)->x) {
-	pj_rtp_ext_hdr *ext = (pj_rtp_ext_hdr*) (((pj_uint8_t*)pkt) + offset);
+	pjmedia_rtp_ext_hdr *ext = (pjmedia_rtp_ext_hdr*) (((pj_uint8_t*)pkt) + offset);
 	offset += (pj_ntohs(ext->length) * sizeof(pj_uint32_t));
     }
 
     /* Check that offset is less than packet size */
     if (offset >= pkt_len)
-	return PJMEDIA_RTP_ERR_INVALID_PACKET;
+	return PJMEDIA_RTP_EINLEN;
 
     /* Find and set payload. */
     *payload = ((pj_uint8_t*)pkt) + offset;
@@ -152,7 +153,7 @@ PJ_DEF(pj_status_t) pj_rtp_decode_rtp( pj_rtp_session *ses,
 }
 
 
-PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr *hdr)
+PJ_DEF(pj_status_t) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, const pjmedia_rtp_hdr *hdr)
 {
     int status;
 
@@ -160,29 +161,29 @@ PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr
     if (ses->peer_ssrc == 0) ses->peer_ssrc = pj_ntohl(hdr->ssrc);
     /*
     if (pj_ntohl(ses->peer_ssrc) != hdr->ssrc) {
-	PJ_LOG(4, (THIS_FILE, "pj_rtp_session_update: ses=%p, invalid ssrc 0x%p (!=0x%p)",
+	PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_update: ses=%p, invalid ssrc 0x%p (!=0x%p)",
 		   ses, pj_ntohl(hdr->ssrc), ses->peer_ssrc));
-	return PJMEDIA_RTP_ERR_INVALID_SSRC;
+	return PJMEDIA_RTP_EINSSRC;
     }
     */
 
     /* Check payload type. */
     if (hdr->pt != ses->out_pt) {
-	PJ_LOG(4, (THIS_FILE, "pj_rtp_session_update: ses=%p, invalid payload type %d (!=%d)",
+	PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_update: ses=%p, invalid payload type %d (!=%d)",
 		   ses, hdr->pt, ses->out_pt));
-	return PJMEDIA_RTP_ERR_INVALID_PT;
+	return PJMEDIA_RTP_EINPT;
     }
 
     /* Initialize sequence number on first packet received. */
     if (ses->received == 0)
-	pj_rtp_seq_init( &ses->seq_ctrl, pj_ntohs(hdr->seq) );
+	pjmedia_rtp_seq_init( &ses->seq_ctrl, pj_ntohs(hdr->seq) );
 
     /* Check sequence number to see if remote session has been restarted. */
-    status = pj_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq));
-    if (status == PJMEDIA_RTP_ERR_SESSION_RESTARTED) {
-	pj_rtp_seq_restart( &ses->seq_ctrl, pj_ntohs(hdr->seq));
+    status = pjmedia_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq));
+    if (status == PJMEDIA_RTP_ESESSRESTART) {
+	pjmedia_rtp_seq_restart( &ses->seq_ctrl, pj_ntohs(hdr->seq));
 	++ses->received;
-    } else if (status == 0 || status == PJMEDIA_RTP_ERR_SESSION_PROBATION) {
+    } else if (status == 0 || status == PJMEDIA_RTP_ESESSPROBATION) {
 	++ses->received;
     }
 
@@ -191,7 +192,7 @@ PJ_DEF(pj_status_t) pj_rtp_session_update( pj_rtp_session *ses, const pj_rtp_hdr
 }
 
 
-void pj_rtp_seq_restart(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
+void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *sctrl, pj_uint16_t seq)
 {
     sctrl->base_seq = seq;
     sctrl->max_seq = seq;
@@ -200,16 +201,17 @@ void pj_rtp_seq_restart(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
 }
 
 
-void pj_rtp_seq_init(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
+void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *sctrl, pj_uint16_t seq)
 {
-    pj_rtp_seq_restart(sctrl, seq);
+    pjmedia_rtp_seq_restart(sctrl, seq);
 
     sctrl->max_seq = (pj_uint16_t) (seq - 1);
     sctrl->probation = MIN_SEQUENTIAL;
 }
 
 
-int pj_rtp_seq_update(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
+pj_status_t pjmedia_rtp_seq_update(pjmedia_rtp_seq_session *sctrl, 
+				   pj_uint16_t seq)
 {
     pj_uint16_t udelta = (pj_uint16_t) (seq - sctrl->max_seq);
     
@@ -223,13 +225,13 @@ int pj_rtp_seq_update(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
 	    sctrl->probation--;
             sctrl->max_seq = seq;
             if (sctrl->probation == 0) {
-                return PJMEDIA_RTP_ERR_SESSION_RESTARTED;
+                return PJMEDIA_RTP_ESESSRESTART;
             }
 	} else {
 	    sctrl->probation = MIN_SEQUENTIAL - 1;
 	    sctrl->max_seq = seq;
         }
-        return PJMEDIA_RTP_ERR_SESSION_PROBATION;
+        return PJMEDIA_RTP_ESESSPROBATION;
 
     } else if (udelta < MAX_DROPOUT) {
 	/* in order, with permissible gap */
@@ -247,17 +249,17 @@ int pj_rtp_seq_update(pj_rtp_seq_session *sctrl, pj_uint16_t seq)
 	     * restarted without telling us so just re-sync
 	     * (i.e., pretend this was the first packet).
 	     */
-	    return PJMEDIA_RTP_ERR_SESSION_RESTARTED;
+	    return PJMEDIA_RTP_ESESSRESTART;
 	}
         else {
 	    sctrl->bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
-            return PJMEDIA_RTP_ERR_BAD_SEQUENCE;
+            return PJMEDIA_RTP_EBADSEQ;
         }
     } else {
 	/* duplicate or reordered packet */
     }
     
-    return 0;
+    return PJ_SUCCESS;
 }
 
 

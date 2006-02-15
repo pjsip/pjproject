@@ -161,6 +161,10 @@ SOURCE=..\include\pjmedia\config.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\doxygen.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\endpoint.h
 # End Source File
 # Begin Source File

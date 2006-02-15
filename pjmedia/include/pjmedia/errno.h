@@ -250,7 +250,7 @@ PJ_BEGIN_DECL
 #define PJMEDIA_CODEC_EUNSUP	    (PJMEDIA_ERRNO_START+80)    /* 220080 */
 /**
  * @hideinitializer
- * Unable to create codec.
+ * Codec internal creation error.
  */
 #define PJMEDIA_CODEC_EFAILED	    (PJMEDIA_ERRNO_START+81)    /* 220081 */
 /**
@@ -297,7 +297,57 @@ PJ_BEGIN_DECL
 
 
 /************************************************************
- * JITTER BUFFER
+ * RTP SESSION ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * General invalid RTP packet error.
+ */
+#define PJMEDIA_RTP_EINPKT	    (PJMEDIA_ERRNO_START+120)    /* 220120 */
+/**
+ * @hideinitializer
+ * Invalid RTP packet packing.
+ */
+#define PJMEDIA_RTP_EINPACK	    (PJMEDIA_ERRNO_START+121)    /* 220121 */
+/**
+ * @hideinitializer
+ * Invalid RTP packet version.
+ */
+#define PJMEDIA_RTP_EINVER	    (PJMEDIA_ERRNO_START+122)    /* 220122 */
+/**
+ * @hideinitializer
+ * RTP SSRC id mismatch.
+ */
+#define PJMEDIA_RTP_EINSSRC	    (PJMEDIA_ERRNO_START+123)    /* 220123 */
+/**
+ * @hideinitializer
+ * RTP payload type mismatch.
+ */
+#define PJMEDIA_RTP_EINPT	    (PJMEDIA_ERRNO_START+124)    /* 220124 */
+/**
+ * @hideinitializer
+ * Invalid RTP packet length.
+ */
+#define PJMEDIA_RTP_EINLEN	    (PJMEDIA_ERRNO_START+125)    /* 220125 */
+/**
+ * @hideinitializer
+ * RTP session restarted.
+ */
+#define PJMEDIA_RTP_ESESSRESTART    (PJMEDIA_ERRNO_START+130)    /* 220130 */
+/**
+ * @hideinitializer
+ * RTP session in probation
+ */
+#define PJMEDIA_RTP_ESESSPROBATION  (PJMEDIA_ERRNO_START+131)    /* 220131 */
+/**
+ * @hideinitializer
+ * Bad RTP sequence number
+ */
+#define PJMEDIA_RTP_EBADSEQ	    (PJMEDIA_ERRNO_START+132)    /* 220132 */
+
+
+/************************************************************
+ * JITTER BUFFER ERRORS
  ***********************************************************/
 
 
