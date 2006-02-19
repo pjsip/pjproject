@@ -43,6 +43,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 
     /* Check RTP header packing. */
     if (sizeof(struct pjmedia_rtp_hdr) != 12) {
+	unsigned sz = sizeof(struct pjmedia_rtp_hdr);
 	pj_assert(!"Wrong RTP header packing!");
 	return PJMEDIA_RTP_EINPACK;
     }

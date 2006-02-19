@@ -1148,19 +1148,27 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 
 	/* Verify payload type. */
 	for (j=0; j<m->desc.fmt_count; ++j) {
-	    unsigned pt = pj_strtoul(&m->desc.fmt[j]);
 
-	    /* Payload type is between 0 and 127. */
-	    CHECK( pt <= 127, PJMEDIA_SDP_EINPT);
-
-	    /* If port is not zero, then for each dynamic payload type, an
-	     * rtpmap attribute must be specified.
+	    /* Arrgh noo!! Payload type can be non-numeric!!
+	     * RTC based programs sends "null" for instant messaging!
 	     */
-	    if (m->desc.port != 0 && pt >= 96) {
-		const pjmedia_sdp_attr *a;
+	    if (pj_isdigit(*m->desc.fmt[j].ptr)) {
+		unsigned pt = pj_strtoul(&m->desc.fmt[j]);
 
-		a = pjmedia_sdp_media_find_attr(m,&STR_RTPMAP,&m->desc.fmt[j]);
-		CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
+		/* Payload type is between 0 and 127. 
+		 */
+		CHECK( pt <= 127, PJMEDIA_SDP_EINPT);
+
+		/* If port is not zero, then for each dynamic payload type, an
+		 * rtpmap attribute must be specified.
+		 */
+		if (m->desc.port != 0 && pt >= 96) {
+		    const pjmedia_sdp_attr *a;
+
+		    a = pjmedia_sdp_media_find_attr(m, &STR_RTPMAP, 
+						    &m->desc.fmt[j]);
+		    CHECK( a != NULL, PJMEDIA_SDP_EMISSINGRTPMAP);
+		}
 	    }
 	}
     }

@@ -70,33 +70,32 @@ PJ_BEGIN_DECL
  */
 
 
-#pragma pack(1)
 
 /**
  * RTP packet header.
  */
+#pragma pack(1)
 struct pjmedia_rtp_hdr
 {
 #if defined(PJ_IS_BIG_ENDIAN) && (PJ_IS_BIG_ENDIAN!=0)
-    int v:2;		/**< packet type/version	    */
-    int p:1;		/**< padding flag		    */
-    int x:1;		/**< extension flag		    */
-    int cc:4;		/**< CSRC count			    */
-    int m:1;		/**< marker bit			    */
-    int pt:7;		/**< payload type		    */
+    pj_uint16_t v:2;		/**< packet type/version	    */
+    pj_uint16_t p:1;		/**< padding flag		    */
+    pj_uint16_t x:1;		/**< extension flag		    */
+    pj_uint16_t cc:4;		/**< CSRC count			    */
+    pj_uint16_t m:1;		/**< marker bit			    */
+    pj_uint16_t pt:7;		/**< payload type		    */
 #else
-    int cc:4;		/**< CSRC count			    */
-    int x:1;		/**< header extension flag	    */ 
-    int p:1;		/**< padding flag		    */
-    int v:2;		/**< packet type/version	    */
-    int pt:7;		/**< payload type		    */
-    int m:1;		/**< marker bit			    */
+    pj_uint16_t cc:4;		/**< CSRC count			    */
+    pj_uint16_t x:1;		/**< header extension flag	    */ 
+    pj_uint16_t p:1;		/**< padding flag		    */
+    pj_uint16_t v:2;		/**< packet type/version	    */
+    pj_uint16_t pt:7;		/**< payload type		    */
+    pj_uint16_t m:1;		/**< marker bit			    */
 #endif
-    pj_uint16_t seq;	/**< sequence number		    */
-    pj_uint32_t ts;	/**< timestamp			    */
-    pj_uint32_t ssrc;	/**< synchronization source	    */
+    pj_uint16_t seq;		/**< sequence number		    */
+    pj_uint32_t ts;		/**< timestamp			    */
+    pj_uint32_t ssrc;		/**< synchronization source	    */
 };
-
 #pragma pack()
 
 /**
