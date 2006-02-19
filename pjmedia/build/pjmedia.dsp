@@ -147,6 +147,10 @@ SOURCE=..\src\pjmedia\session.c
 
 SOURCE=..\src\pjmedia\stream.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\vad.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -210,6 +214,10 @@ SOURCE=..\include\pjmedia\stream.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\vad.h
 # End Source File
 # End Group
 # Begin Group "PortAudio"
