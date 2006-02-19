@@ -98,8 +98,31 @@ static void print_buddy_list(void)
  */
 static void keystroke_help(void)
 {
+    char reg_status[128];
 
-    printf(">>>>\nOnline status: %s\n", 
+    if (pjsua.regc == NULL) {
+	pj_ansi_strcpy(reg_status, " -not registered to server-");
+    } else if (pjsua.regc_last_err != PJ_SUCCESS) {
+	pj_strerror(pjsua.regc_last_err, reg_status, sizeof(reg_status));
+    } else if (pjsua.regc_last_code>=200 && pjsua.regc_last_code<=699) {
+
+	pjsip_regc_info info;
+
+	pjsip_regc_get_info(pjsua.regc, &info);
+
+	pj_snprintf(reg_status, sizeof(reg_status),
+		    "%s (%.*s;expires=%d)",
+		    pjsip_get_status_text(pjsua.regc_last_code)->ptr,
+		    (int)info.server_uri.slen,
+		    info.server_uri.ptr,
+		    info.next_reg);
+
+    } else {
+	pj_sprintf(reg_status, "in progress (%d)", pjsua.regc_last_code);
+    }
+
+    printf(">>>>\nRegistration status: %s\n", reg_status);
+    printf("Online status: %s\n", 
 	   (pjsua.online_status ? "Online" : "Invisible"));
     print_buddy_list();
     
@@ -108,9 +131,9 @@ static void keystroke_help(void)
     puts("|       Call Commands:         |      IM & Presence:      |   Misc:           |");
     puts("|                              |                          |                   |");
     puts("|  m  Make new call            |  i  Send IM              |  o  Send OPTIONS  |");
-    puts("|  a  Answer call              |  s  Subscribe presence   |  d  Dump status   |");
-    puts("|  h  Hangup call              |  u  Unsubscribe presence |  d1 Dump detailed |");
-    puts("|  ]  Select next dialog       |  t  Toggle Online status |                   |");
+    puts("|  a  Answer call              |  s  Subscribe presence   |  R  (Re-)register |");
+    puts("|  h  Hangup call              |  u  Unsubscribe presence |  r  Unregister    |");
+    puts("|  ]  Select next dialog       |  t  Toggle Online status |  d  Dump status   |");
     puts("|  [  Select previous dialog   |                          |                   |");
     puts("+-----------------------------------------------------------------------------+");
     puts("|  q  QUIT                                                                    |");
@@ -223,7 +246,7 @@ static void ui_input_url(const char *title, char *buf, int len,
 	pj_status_t status;
 
 	if ((status=pjsua_verify_sip_url(buf)) != PJ_SUCCESS) {
-	    pjsua_perror("Invalid URL", status);
+	    pjsua_perror(THIS_FILE, "Invalid URL", status);
 	    return;
 	}
 
@@ -290,7 +313,8 @@ static void ui_console_main(void)
 		    status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
 
 		if (status != PJ_SUCCESS)
-		    pjsua_perror("Unable to create/send response", status);
+		    pjsua_perror(THIS_FILE, "Unable to create/send response", 
+				 status);
 	    }
 
 	    break;
@@ -310,13 +334,17 @@ static void ui_console_main(void)
 		status = pjsip_inv_end_session(inv_session->inv, 
 					       PJSIP_SC_DECLINE, NULL, &tdata);
 		if (status != PJ_SUCCESS) {
-		    pjsua_perror("Failed to create end session message", status);
+		    pjsua_perror(THIS_FILE, 
+				 "Failed to create end session message", 
+				 status);
 		    continue;
 		}
 
 		status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
 		if (status != PJ_SUCCESS) {
-		    pjsua_perror("Failed to send end session message", status);
+		    pjsua_perror(THIS_FILE, 
+				 "Failed to send end session message", 
+				 status);
 		    continue;
 		}
 	    }
@@ -352,6 +380,14 @@ static void ui_console_main(void)
 		puts("Sorry, can only subscribe to buddy's presence, not arbitrary URL (for now)");
 	    }
 
+	    break;
+
+	case 'R':
+	    pjsua_regc_update(PJ_TRUE);
+	    break;
+	    
+	case 'r':
+	    pjsua_regc_update(PJ_FALSE);
 	    break;
 
 	case 't':
@@ -500,13 +536,14 @@ void app_logging_shutdown(void)
 /*
  * Display error message for the specified error code.
  */
-void pjsua_perror(const char *title, pj_status_t status)
+void pjsua_perror(const char *sender, const char *title, 
+		  pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
     pj_strerror(status, errmsg, sizeof(errmsg));
 
-    PJ_LOG(1,(THIS_FILE, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_LOG(1,(sender, "%s: %s [code=%d]", title, errmsg, status));
 }
 
 

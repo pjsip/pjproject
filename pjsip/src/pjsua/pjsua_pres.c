@@ -98,7 +98,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata, 
 				   &pjsua.contact_uri, &dlg);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create UAS dialog for subscription", status);
+	pjsua_perror(THIS_FILE, 
+		     "Unable to create UAS dialog for subscription", 
+		     status);
 	return PJ_FALSE;
     }
 
@@ -110,7 +112,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_pres_create_uas( dlg, &pres_cb, rdata, &sub);
     if (status != PJ_SUCCESS) {
 	PJ_TODO(DESTROY_DIALOG);
-	pjsua_perror("Unable to create server subscription", status);
+	pjsua_perror(THIS_FILE, "Unable to create server subscription", 
+		     status);
 	return PJ_FALSE;
     }
 
@@ -134,7 +137,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Create and send 200 (OK) to the SUBSCRIBE request: */
     status = pjsip_pres_accept(sub, rdata, 200, NULL);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to accept presence subscription", status);
+	pjsua_perror(THIS_FILE, "Unable to accept presence subscription", 
+		     status);
 	pj_list_erase(uapres);
 	return PJ_FALSE;
     }
@@ -157,7 +161,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	status = pjsip_pres_send_request( sub, tdata);
 
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create/send NOTIFY", status);
+	pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY", 
+		     status);
 	pj_list_erase(uapres);
 	return PJ_FALSE;
     }
@@ -304,7 +309,8 @@ static void subscribe_buddy_presence(unsigned index)
 				   &pjsua.buddies[index].uri,
 				   NULL, &dlg);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create dialog", status);
+	pjsua_perror(THIS_FILE, "Unable to create dialog", 
+		     status);
 	return;
     }
 
@@ -312,7 +318,8 @@ static void subscribe_buddy_presence(unsigned index)
 				    &pjsua.buddies[index].sub);
     if (status != PJ_SUCCESS) {
 	pjsua.buddies[index].sub = NULL;
-	pjsua_perror("Unable to create presence client", status);
+	pjsua_perror(THIS_FILE, "Unable to create presence client", 
+		     status);
 	return;
     }
 
@@ -322,14 +329,16 @@ static void subscribe_buddy_presence(unsigned index)
     status = pjsip_pres_initiate(pjsua.buddies[index].sub, 60, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua.buddies[index].sub = NULL;
-	pjsua_perror("Unable to create initial SUBSCRIBE", status);
+	pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
+		     status);
 	return;
     }
 
     status = pjsip_pres_send_request(pjsua.buddies[index].sub, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua.buddies[index].sub = NULL;
-	pjsua_perror("Unable to send initial SUBSCRIBE", status);
+	pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
+		     status);
 	return;
     }
 
@@ -364,7 +373,8 @@ static void unsubscribe_buddy_presence(unsigned index)
 	//pjsua.buddies[index].sub = NULL;
 
     } else {
-	pjsua_perror("Unable to unsubscribe presence", status);
+	pjsua_perror(THIS_FILE, "Unable to unsubscribe presence", 
+		     status);
     }
 }
 
@@ -396,7 +406,8 @@ pj_status_t pjsua_pres_init()
 
     status = pjsip_endpt_register_module( pjsua.endpt, &mod_pjsua_pres);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to register pjsua presence module", status);
+	pjsua_perror(THIS_FILE, "Unable to register pjsua presence module", 
+		     status);
     }
 
     return status;

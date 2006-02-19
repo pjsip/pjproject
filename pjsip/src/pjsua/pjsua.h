@@ -127,6 +127,7 @@ struct pjsua
     pjsip_regc	    *regc;
     pj_int32_t	     reg_timeout;
     pj_timer_entry   regc_timer;
+    pj_status_t	     regc_last_err; /**< Last registration error.	*/
     int		     regc_last_code;/**< Last status last register.	*/
 
 
@@ -199,7 +200,8 @@ void pjsua_default(void);
 /**
  * Display error message for the specified error code.
  */
-void pjsua_perror(const char *title, pj_status_t status);
+void pjsua_perror(const char *sender, const char *title, 
+		  pj_status_t status);
 
 
 /**

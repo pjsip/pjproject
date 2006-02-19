@@ -25,11 +25,12 @@
 #include <pjsip/sip_util.h>
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_errno.h>
-#include <pj/pool.h>
-#include <pj/string.h>
-#include <pj/guid.h>
-#include <pj/log.h>
 #include <pj/assert.h>
+#include <pj/guid.h>
+#include <pj/os.h>
+#include <pj/pool.h>
+#include <pj/log.h>
+#include <pj/string.h>
 
 
 #define REFRESH_TIMER		1
@@ -53,6 +54,7 @@ struct pjsip_regc
     pjsip_uri			*srv_url;
     pjsip_cid_hdr		*cid_hdr;
     pjsip_cseq_hdr		*cseq_hdr;
+    pj_str_t			 from_uri;
     pjsip_from_hdr		*from_hdr;
     pjsip_to_hdr		*to_hdr;
     char			*contact_buf;
@@ -68,6 +70,8 @@ struct pjsip_regc
 
     /* Auto refresh registration. */
     pj_bool_t			 auto_reg;
+    pj_time_val			 last_reg;
+    pj_time_val			 next_reg;
     pj_timer_entry		 timer;
 };
 
@@ -110,11 +114,43 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
 
 PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 {
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
     if (regc->pending_tsx) {
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
     } else {
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
+					 pjsip_regc_info *info )
+{
+    PJ_ASSERT_RETURN(regc && info, PJ_EINVAL);
+
+    info->server_uri = regc->str_srv_url;
+    info->client_uri = regc->from_uri;
+    info->is_busy = (regc->pending_tsx != 0);
+    info->auto_reg = regc->auto_reg;
+    info->interval = regc->expires;
+    
+    if (regc->pending_tsx)
+	info->next_reg = 0;
+    else if (regc->auto_reg == 0)
+	info->next_reg = 0;
+    else if (regc->expires < 0)
+	info->next_reg = regc->expires;
+    else {
+	pj_time_val now, next_reg;
+
+	next_reg = regc->next_reg;
+	pj_gettimeofday(&now);
+	PJ_TIME_VAL_SUB(next_reg, now);
+	info->next_reg = next_reg.sec;
     }
 
     return PJ_SUCCESS;
@@ -194,7 +230,8 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     }
 
     /* Set "From" header. */
-    pj_strdup_with_null(regc->pool, &tmp, from_url);
+    pj_strdup_with_null(regc->pool, &regc->from_uri, from_url);
+    tmp = regc->from_uri;
     regc->from_hdr = pjsip_from_hdr_create(regc->pool);
     regc->from_hdr->uri = pjsip_parse_uri(regc->pool, tmp.ptr, tmp.slen, 
 					  PJSIP_PARSE_URI_AS_NAMEADDR);
@@ -325,6 +362,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     pj_status_t status;
     pjsip_tx_data *tdata;
 
+    PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
+
     status = create_request(regc, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
@@ -355,6 +394,8 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
     pjsip_msg *msg;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
+
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	regc->timer.id = 0;
@@ -377,6 +418,7 @@ PJ_DEF(pj_status_t) pjsip_regc_update_contact(  pjsip_regc *regc,
 					        int contact_cnt,
 						const pj_str_t contact[] )
 {
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
     return set_contact( regc, contact_cnt, contact );
 }
 
@@ -384,12 +426,14 @@ PJ_DEF(pj_status_t) pjsip_regc_update_contact(  pjsip_regc *regc,
 PJ_DEF(pj_status_t) pjsip_regc_update_expires(  pjsip_regc *regc,
 					        pj_uint32_t expires )
 {
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
     set_expires( regc, expires );
     return PJ_SUCCESS;
 }
 
 
-static void call_callback(pjsip_regc *regc, int status, const pj_str_t *reason,
+static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code, 
+			  const pj_str_t *reason,
 			  pjsip_rx_data *rdata, pj_int32_t expiration,
 			  int contact_cnt, pjsip_contact_hdr *contact[])
 {
@@ -398,7 +442,8 @@ static void call_callback(pjsip_regc *regc, int status, const pj_str_t *reason,
 
     cbparam.regc = regc;
     cbparam.token = regc->token;
-    cbparam.code = status;
+    cbparam.status = status;
+    cbparam.code = st_code;
     cbparam.reason = *reason;
     cbparam.rdata = rdata;
     cbparam.contact_cnt = contact_cnt;
@@ -427,7 +472,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     } else {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-	call_callback(regc, -1, &reason, NULL, -1, 0, NULL);
+	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
     }
 }
 
@@ -437,11 +482,16 @@ static void tsx_callback(void *token, pjsip_event *event)
     pjsip_regc *regc = token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     
+    /* Decrement pending transaction counter. */
+    --regc->pending_tsx;
+
     /* If registration data has been deleted by user then remove registration 
      * data from transaction's callback, and don't call callback.
      */
     if (regc->_delete_flag) {
-	--regc->pending_tsx;
+
+	/* Nothing to do */
+	;
 
     } else if (tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED ||
 	       tsx->status_code == PJSIP_SC_UNAUTHORIZED)
@@ -455,13 +505,12 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
-	    --regc->pending_tsx;
 	    pjsip_regc_send(regc, tdata);
 	    return;
 	} else {
-	    call_callback(regc, tsx->status_code, &rdata->msg_info.msg->line.status.reason,
+	    call_callback(regc, status, tsx->status_code, 
+			  &rdata->msg_info.msg->line.status.reason,
 			  rdata, -1, 0, NULL);
-	    --regc->pending_tsx;
 	}
     } else {
 	int contact_cnt = 0;
@@ -512,6 +561,9 @@ static void tsx_callback(void *token, pjsip_event *event)
 		regc->timer.id = REFRESH_TIMER;
 		regc->timer.user_data = regc;
 		pjsip_endpt_schedule_timer( regc->endpt, &regc->timer, &delay);
+		pj_gettimeofday(&regc->last_reg);
+		regc->next_reg = regc->last_reg;
+		regc->next_reg.sec += delay.sec;
 	    }
 
 	} else {
@@ -522,13 +574,12 @@ static void tsx_callback(void *token, pjsip_event *event)
 
 	/* Call callback. */
 	if (expiration == 0xFFFF) expiration = -1;
-	call_callback(regc, tsx->status_code, 
+	call_callback(regc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: pjsip_get_status_text(tsx->status_code)),
 		      rdata, expiration, 
 		      contact_cnt, contact);
 
-	--regc->pending_tsx;
     }
 
     /* Delete the record if user destroy regc during the callback. */
@@ -543,10 +594,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 
     /* Make sure we don't have pending transaction. */
     if (regc->pending_tsx) {
-	pj_str_t reason = pj_str("Transaction in progress");
-	call_callback(regc, -1, &reason, NULL, -1, 0, NULL);
 	pjsip_tx_data_dec_ref( tdata );
-	return PJ_EINVALIDOP;
+	return PJSIP_EBUSY;
     }
 
     /* Invalidate message buffer. */
@@ -559,11 +608,6 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
     if (status==PJ_SUCCESS)
 	++regc->pending_tsx;
-    else {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-	call_callback(regc, status, &reason, NULL, -1, 0, NULL);
-    }
 
     return status;
 }

@@ -127,6 +127,8 @@ enum timer_id
      */
     TIMER_TYPE_UAC_WAIT_NOTIFY,
 
+    /* Max nb of timer types. */
+    TIMER_TYPE_MAX
 };
 
 static const char *timer_names[] = 
@@ -136,6 +138,7 @@ static const char *timer_names[] =
     "UAS_TIMEOUT"
     "UAC_TERMINATE",
     "UAC_WAIT_NOTIFY",
+    "INVALID_TIMER"
 };
 
 /*
@@ -249,6 +252,10 @@ static pj_status_t mod_evsub_unload(void)
 PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
 {
     pj_status_t status;
+    pj_str_t method_tags[] = {
+	{ "SUBSCRIBE", 9},
+	{ "NOTIFY", 6}
+    };
 
     PJ_ASSERT_RETURN(endpt != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(mod_evsub.mod.id == -1, PJ_EINVALIDOP);
@@ -275,6 +282,11 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
     /* Register SIP-event specific headers parser: */
     pjsip_evsub_init_parser();
 
+    /* Register new methods SUBSCRIBE and NOTIFY in Allow-ed header */
+    pjsip_endpt_add_capability(endpt, &mod_evsub.mod, PJSIP_H_ALLOW, NULL,
+			       2, method_tags);
+
+    /* Done. */
     return PJ_SUCCESS;
 
 on_error:
@@ -436,6 +448,8 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
 	pj_time_val timeout;
 
 	PJ_ASSERT_ON_FAIL(seconds > 0, return);
+	PJ_ASSERT_ON_FAIL(timer_id>TIMER_TYPE_NONE && timer_id<TIMER_TYPE_MAX,
+			  return);
 
 	timeout.sec = seconds;
 	timeout.msec = 0;

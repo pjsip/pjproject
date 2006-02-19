@@ -53,7 +53,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 				   &pjsua.contact_uri, &dest_uri, &dest_uri,
 				   &dlg);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Dialog creation failed", status);
+	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
 	return status;
     }
 
@@ -62,7 +62,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     status = pjmedia_endpt_create_sdp( pjsua.med_endpt, dlg->pool,
 				       1, &pjsua.med_skinfo, &offer);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("pjmedia unable to create SDP", status);
+	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
     }
 
@@ -70,7 +70,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 
     status = pjsip_inv_create_uac( dlg, offer, 0, &inv);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Invite session creation failed", status);
+	pjsua_perror(THIS_FILE, "Invite session creation failed", status);
 	goto on_error;
     }
 
@@ -99,7 +99,8 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 
     status = pjsip_inv_invite(inv, &tdata);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to create initial INVITE request", status);
+	pjsua_perror(THIS_FILE, "Unable to create initial INVITE request", 
+		     status);
 	goto on_error;
     }
 
@@ -108,7 +109,8 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 
     status = pjsip_inv_send_msg(inv, tdata, NULL);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to send initial INVITE request", status);
+	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
+		     status);
 	goto on_error;
     }
 
@@ -301,7 +303,7 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 
     if (status != PJ_SUCCESS) {
 
-	pjsua_perror("SDP negotiation has failed", status);
+	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 	return;
 
     }
@@ -318,14 +320,18 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 
     status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to retrieve currently active local SDP", status);
+	pjsua_perror(THIS_FILE, 
+		     "Unable to retrieve currently active local SDP", 
+		     status);
 	return;
     }
 
 
     status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Unable to retrieve currently active remote SDP", status);
+	pjsua_perror(THIS_FILE, 
+		     "Unable to retrieve currently active remote SDP", 
+		     status);
 	return;
     }
 
@@ -340,7 +346,8 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 					 local_sdp, remote_sdp, 
 					 &inv_data->session );
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Unable to create media session", status);
+	    pjsua_perror(THIS_FILE, "Unable to create media session", 
+			 status);
 	    return;
 	}
 

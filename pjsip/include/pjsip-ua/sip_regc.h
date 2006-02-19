@@ -59,6 +59,7 @@ struct pjsip_regc_cbparam
     pjsip_regc		*regc;
     void		*token;
     int			 code;
+    pj_status_t		 status;
     pj_str_t		 reason;
     pjsip_rx_data	*rdata;
     int			 contact_cnt;
@@ -69,6 +70,24 @@ struct pjsip_regc_cbparam
 
 /** Type declaration for callback to receive registration result. */
 typedef void pjsip_regc_cb(struct pjsip_regc_cbparam *param);
+
+/**
+ * Client registration information.
+ */
+struct pjsip_regc_info
+{
+    pj_str_t	server_uri; /**< Server URI,				    */
+    pj_str_t	client_uri; /**< Client URI (From header).		    */
+    pj_bool_t	is_busy;    /**< Have pending transaction?		    */
+    pj_bool_t	auto_reg;   /**< Will register automatically?		    */
+    int		interval;   /**< Registration interval (seconds).	    */
+    int		next_reg;   /**< Time until next registration (seconds).    */
+};
+
+/**
+ * @see pjsip_regc_info
+ */
+typedef struct pjsip_regc_info pjsip_regc_info;
 
 
 /**
@@ -104,6 +123,18 @@ PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
+
+/**
+ * Get registration info.
+ *
+ * @param regc	    The client registration structure.
+ * @param info	    Client registration info.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
+					  pjsip_regc_info *info );
+
 
 /**
  * Get the memory pool associated with a registration client handle.

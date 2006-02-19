@@ -72,6 +72,10 @@ void pjsua_default(void)
 
     pjsua.local_uri = pj_str(PJSUA_LOCAL_URI);
 
+    /* Default registration timeout: */
+
+    pjsua.reg_timeout = 55;
+
     /* Init route set list: */
 
     pj_list_init(&pjsua.route_set);
@@ -155,13 +159,13 @@ static pj_status_t init_sockets()
     /* Create and bind SIP UDP socket. */
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[SIP_SOCK]);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("socket() error", status);
+	pjsua_perror(THIS_FILE, "socket() error", status);
 	goto on_error;
     }
     
     status = pj_sock_bind_in(sock[SIP_SOCK], 0, pjsua.sip_port);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("bind() error", status);
+	pjsua_perror(THIS_FILE, "bind() error", status);
 	goto on_error;
     }
 
@@ -174,7 +178,7 @@ static pj_status_t init_sockets()
 	/* Create and bind RTP socket. */
 	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[RTP_SOCK]);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("socket() error", status);
+	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    goto on_error;
 	}
 
@@ -188,7 +192,7 @@ static pj_status_t init_sockets()
 	/* Create and bind RTCP socket. */
 	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[RTCP_SOCK]);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("socket() error", status);
+	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    goto on_error;
 	}
 
@@ -217,7 +221,8 @@ static pj_status_t init_sockets()
 	    addr.sin_family = PJ_AF_INET;
 	    status = pj_sockaddr_in_set_str_addr( &addr, hostname);
 	    if (status != PJ_SUCCESS) {
-		pjsua_perror("Unresolvable local hostname", status);
+		pjsua_perror(THIS_FILE, "Unresolvable local hostname", 
+			     status);
 		goto on_error;
 	    }
 
@@ -234,7 +239,7 @@ static pj_status_t init_sockets()
 					      &pjsua.stun_srv2, pjsua.stun_port2,
 					      mapped_addr);
 	    if (status != PJ_SUCCESS) {
-		pjsua_perror("STUN error", status);
+		pjsua_perror(THIS_FILE, "STUN error", status);
 		goto on_error;
 	    }
 
@@ -310,7 +315,7 @@ static pj_status_t init_stack(void)
 	status = pjsip_endpt_create(&pjsua.cp.factory, endpt_name, 
 				    &pjsua.endpt);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Unable to create SIP endpoint", status);
+	    pjsua_perror(THIS_FILE, "Unable to create SIP endpoint", status);
 	    return status;
 	}
     }
@@ -320,7 +325,8 @@ static pj_status_t init_stack(void)
 
     status = pjsip_tsx_layer_init(pjsua.endpt);
     if (status != PJ_SUCCESS) {
-	pjsua_perror("Transaction layer initialization error", status);
+	pjsua_perror(THIS_FILE, "Transaction layer initialization error", 
+		     status);
 	goto on_error;
     }
 
@@ -328,7 +334,7 @@ static pj_status_t init_stack(void)
 
     status = pjsip_ua_init( pjsua.endpt, NULL );
     if (status != PJ_SUCCESS) {
-	pjsua_perror("UA layer initialization error", status);
+	pjsua_perror(THIS_FILE, "UA layer initialization error", status);
 	goto on_error;
     }
 
@@ -357,7 +363,8 @@ static pj_status_t init_stack(void)
 
 	status = pjsip_endpt_register_module(pjsua.endpt, &pjsua.mod);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Unable to register pjsua module", status);
+	    pjsua_perror(THIS_FILE, "Unable to register pjsua module", 
+			 status);
 	    goto on_error;
 	}
     }
@@ -377,7 +384,8 @@ static pj_status_t init_stack(void)
 	/* Initialize invite session module: */
 	status = pjsip_inv_usage_init(pjsua.endpt, &pjsua.mod, &inv_cb);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Invite usage initialization error", status);
+	    pjsua_perror(THIS_FILE, "Invite usage initialization error", 
+			 status);
 	    goto on_error;
 	}
 
@@ -427,7 +435,7 @@ pj_status_t pjsua_init(void)
 
     status = pj_init();
     if (status != PJ_SUCCESS) {
-	pjsua_perror("pj_init() error", status);
+	pjsua_perror(THIS_FILE, "pj_init() error", status);
 	return status;
     }
 
@@ -445,7 +453,8 @@ pj_status_t pjsua_init(void)
     status = init_stack();
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror("Stack initialization has returned error", status);
+	pjsua_perror(THIS_FILE, "Stack initialization has returned error", 
+		     status);
 	return status;
     }
 
@@ -469,7 +478,9 @@ pj_status_t pjsua_init(void)
     status = pjmedia_endpt_create(&pjsua.cp.factory, &pjsua.med_endpt);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror("Media stack initialization has returned error", status);
+	pjsua_perror(THIS_FILE, 
+		     "Media stack initialization has returned error", 
+		     status);
 	return status;
     }
 
@@ -478,7 +489,9 @@ pj_status_t pjsua_init(void)
     status = pjmedia_codec_init(pjsua.med_endpt);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror("Media codec initialization has returned error", status);
+	pjsua_perror(THIS_FILE, 
+		     "Media codec initialization has returned error", 
+		     status);
 	return status;
     }
 
@@ -503,7 +516,8 @@ pj_status_t pjsua_start(void)
 
     status = init_sockets();
     if (status != PJ_SUCCESS) {
-	pjsua_perror("init_sockets() has returned error", status);
+	pjsua_perror(THIS_FILE, "init_sockets() has returned error", 
+		     status);
 	return status;
     }
 
@@ -527,7 +541,8 @@ pj_status_t pjsua_start(void)
 					     &addr_name, 1, 
 					     &udp_transport);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Unable to start UDP transport", status);
+	    pjsua_perror(THIS_FILE, "Unable to start UDP transport", 
+			 status);
 	    return status;
 	}
     }
@@ -552,7 +567,8 @@ pj_status_t pjsua_start(void)
 	uri = pjsip_parse_uri(pjsua.pool, pjsua.local_uri.ptr, 
 			      pjsua.local_uri.slen, 0);
 	if (uri == NULL) {
-	    pjsua_perror("Invalid local URI", PJSIP_EINVALIDURI);
+	    pjsua_perror(THIS_FILE, "Invalid local URI", 
+			 PJSIP_EINVALIDURI);
 	    return PJSIP_EINVALIDURI;
 	}
 
@@ -560,7 +576,8 @@ pj_status_t pjsua_start(void)
 	/* Local URI MUST be a SIP or SIPS: */
 
 	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri)) {
-	    pjsua_perror("Invalid local URI", PJSIP_EINVALIDSCHEME);
+	    pjsua_perror(THIS_FILE, "Invalid local URI", 
+			 PJSIP_EINVALIDSCHEME);
 	    return PJSIP_EINVALIDSCHEME;
 	}
 
@@ -594,7 +611,7 @@ pj_status_t pjsua_start(void)
 	}
 
 	if (len < 1 || len >= sizeof(contact)) {
-	    pjsua_perror("Invalid Contact", PJSIP_EURITOOLONG);
+	    pjsua_perror(THIS_FILE, "Invalid Contact", PJSIP_EURITOOLONG);
 	    return PJSIP_EURITOOLONG;
 	}
 
@@ -617,7 +634,8 @@ pj_status_t pjsua_start(void)
 				 pjsua.outbound_proxy.slen,
 				   &parsed_len);
 	if (route == NULL) {
-	    pjsua_perror("Invalid outbound proxy URL", PJSIP_EINVALIDURI);
+	    pjsua_perror(THIS_FILE, "Invalid outbound proxy URL", 
+			 PJSIP_EINVALIDURI);
 	    return PJSIP_EINVALIDURI;
 	}
 

@@ -29,6 +29,7 @@ static pj_str_t CLOSED = { "closed", 6 };
 static pj_str_t URI = { "uri", 3 };
 static pj_str_t ATOM = { "atom", 4 };
 static pj_str_t ATOMID = { "atomid", 6 };
+static pj_str_t ID = { "id", 2 };
 static pj_str_t ADDRESS = { "address", 7 };
 static pj_str_t SUBSCRIBE_PARAM = { ";method=SUBSCRIBE", 17 };
 static pj_str_t PRESENTITY = { "presentity", 10 };
@@ -126,20 +127,23 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len)
     /* Validate <presence> */
     if (pj_stricmp(&pres->name, &PRESENCE) != 0)
 	return NULL;
-    if (pj_xml_find_attr(pres, &URI, NULL) == NULL)
-	return NULL;
 
     /* Validate <presentity> */
     node = pj_xml_find_node(pres, &PRESENTITY);
     if (node == NULL)
+	return NULL;
+    if (pj_xml_find_attr(node, &URI, NULL) == NULL)
 	return NULL;
 
     /* Validate <atom> */
     node = pj_xml_find_node(pres, &ATOM);
     if (node == NULL)
 	return NULL;
-    if (pj_xml_find_attr(node, &ATOMID, NULL) == NULL)
+    if (pj_xml_find_attr(node, &ATOMID, NULL) == NULL && 
+	pj_xml_find_attr(node, &ID, NULL) == NULL)
+    {
 	return NULL;
+    }
 
     /* Address */
     node = pj_xml_find_node(node, &ADDRESS);
@@ -246,7 +250,7 @@ PJ_DEF(pj_bool_t) pjxpidf_get_status(pjxpidf_pres *pres)
 	pj_assert(0);
 	return PJ_FALSE;
     }
-    status = pj_xml_find_node(atom, &STATUS);
+    status = pj_xml_find_node(addr, &STATUS);
     if (!status) {
 	pj_assert(0);
 	return PJ_FALSE;
@@ -257,7 +261,7 @@ PJ_DEF(pj_bool_t) pjxpidf_get_status(pjxpidf_pres *pres)
 	return PJ_FALSE;
     }
 
-    return pj_stricmp(&attr->value, &OPEN) ? PJ_TRUE : PJ_FALSE;
+    return pj_stricmp(&attr->value, &OPEN)==0 ? PJ_TRUE : PJ_FALSE;
 }
 
 
