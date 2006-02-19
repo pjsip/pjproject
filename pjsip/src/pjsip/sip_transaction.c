@@ -418,8 +418,6 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt)
 
     PJ_ASSERT_RETURN(mod_tsx_layer.endpt==NULL, PJ_EINVALIDOP);
 
-    PJ_LOG(5,(THIS_FILE, "Initializing transaction layer module"));
-
     /* Initialize TLS ID for transaction lock. */
     status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
     if (status != PJ_SUCCESS)
@@ -467,8 +465,6 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt)
 	pjsip_endpt_release_pool(endpt, pool);
 	return status;
     }
-
-    PJ_LOG(4,(THIS_FILE, "Transaction layer module initialized"));
 
     return PJ_SUCCESS;
 }
@@ -762,6 +758,41 @@ PJ_DEF(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata )
     return rdata->endpt_info.mod_data[mod_tsx_layer.mod.id];
 }
 
+
+/*
+ * Dump transaction layer.
+ */
+PJ_DEF(void) pjsip_tsx_layer_dump(void)
+{
+#if PJ_LOG_MAX_LEVEL >= 3
+    pj_hash_iterator_t itbuf, *it;
+
+    /* Lock mutex. */
+    pj_mutex_lock(mod_tsx_layer.mutex);
+
+    PJ_LOG(3, (THIS_FILE, "Dumping transaction table:"));
+
+    it = pj_hash_first(mod_tsx_layer.htable, &itbuf);
+    if (it == NULL) {
+	PJ_LOG(3, (THIS_FILE, " - none - "));
+    } else {
+	while (it != NULL) {
+	    pjsip_transaction *tsx = pj_hash_this( mod_tsx_layer.htable, it);
+
+	    PJ_LOG(3, (THIS_FILE, " %s %s|%d|%s",
+		       tsx->obj_name,
+		       (tsx->last_tx? pjsip_tx_data_get_info(tsx->last_tx): "none"),
+		       tsx->status_code,
+		       pjsip_tsx_state_str(tsx->state)));
+
+	    it = pj_hash_next(mod_tsx_layer.htable, it);
+	}
+    }
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(mod_tsx_layer.mutex);
+#endif
+}
 
 /*****************************************************************************
  **
@@ -1446,6 +1477,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	if (!*cont) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
+	    tsx->transport_err = -sent;
+
 	    PJ_LOG(4,(tsx->obj_name, 
 		      "Failed to send %s! err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
@@ -1489,6 +1522,8 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	pjsip_transaction *tsx = token;
 	struct tsx_lock_data lck;
 	char errmsg[PJ_ERR_MSG_SIZE];
+
+	tsx->transport_err = -sent;
 
 	PJ_LOG(4,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		  pjsip_tx_data_get_info(tdata), -sent,
@@ -1611,7 +1646,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	
 	/* Check if transaction is terminated. */
 	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
-	    status = PJSIP_ETSXDESTROYED;
+	    status = tsx->transport_err;
 
     } else {
 
@@ -1626,7 +1661,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
 	/* Check if transaction is terminated. */
 	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
-	    status = PJSIP_ETSXDESTROYED;
+	    status = tsx->transport_err;
 
     }
 

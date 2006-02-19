@@ -98,6 +98,7 @@ struct pjsip_transaction
     int				addr_len;	/**< Address length.	    */
     pjsip_response_addr		res_addr;	/**< Response address.	    */
     unsigned			transport_flag;	/**< Miscelaneous flag.	    */
+    pj_status_t			transport_err;	/**< Internal error code.   */
 
     /*
      * Messages and timer.
@@ -278,6 +279,11 @@ PJ_DECL(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata );
 /*
  * Internal.
  */
+
+/*
+ * Dump transaction layer.
+ */
+PJ_DECL(void) pjsip_tsx_layer_dump(void);
 
 /*
  * Get the string name for the state.
