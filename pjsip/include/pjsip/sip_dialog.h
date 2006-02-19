@@ -207,30 +207,29 @@ PJ_DECL(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
  * Attach module specific data to the dialog. Application can also set 
  * the value directly by accessing dlg->mod_data[module_id].
  */
-PJ_INLINE(pj_status_t) pjsip_dlg_set_mod_data( pjsip_dialog *dlg,
-					       int mod_id,
-					       void *data )
-{
-    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
-    PJ_ASSERT_RETURN(mod_id >= 0 && mod_id < PJSIP_MAX_MODULE,
-		     PJ_EINVAL);
-    dlg->mod_data[mod_id] = data;
-    return PJ_SUCCESS;
-}
+PJ_DECL(pj_status_t) pjsip_dlg_set_mod_data( pjsip_dialog *dlg,
+					     int mod_id,
+					     void *data );
 
 /**
  * Get module specific data previously attached to the dialog. Application
  * can also get value directly by accessing dlg->mod_data[module_id].
  */
-PJ_INLINE(void*) pjsip_dlg_get_mod_data(pjsip_dialog *dlg,
-					int mod_id)
-{
-    PJ_ASSERT_RETURN(dlg, NULL);
-    PJ_ASSERT_RETURN(mod_id >= 0 && mod_id < PJSIP_MAX_MODULE,
-		     NULL);
-    return dlg->mod_data[mod_id];
-}
+PJ_DECL(void*) pjsip_dlg_get_mod_data( pjsip_dialog *dlg,
+				       int mod_id);
 
+
+/**
+ * Lock dialog and increment session counter termporarily, to prevent it 
+ * from being destroyed.
+ */
+PJ_DECL(void) pjsip_dlg_inc_lock( pjsip_dialog *dlg );
+
+/**
+ * Unlock dialog and decrement temporary session counter. After this function
+ * is called, dialog may be destroyed.
+ */
+PJ_DECL(void) pjsip_dlg_dec_lock( pjsip_dialog *dlg );
 
 
 /**

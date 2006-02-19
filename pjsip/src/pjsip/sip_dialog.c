@@ -41,12 +41,14 @@ long pjsip_dlg_lock_tls_id;
 
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 {
-    pjsip_method subscribe = { PJSIP_OTHER_METHOD, {"SUBSCRIBE", 10}};
-    pjsip_method refer = { PJSIP_OTHER_METHOD, {"REFER", 5}};
+    const pjsip_method subscribe = { PJSIP_OTHER_METHOD, {"SUBSCRIBE", 9}};
+    const pjsip_method refer = { PJSIP_OTHER_METHOD, {"REFER", 5}};
+    const pjsip_method notify = { PJSIP_OTHER_METHOD, {"NOTIFY", 6}};
 
     return m->id == PJSIP_INVITE_METHOD ||
 	   (pjsip_method_cmp(m, &subscribe)==0) ||
-	   (pjsip_method_cmp(m, &refer)==0);
+	   (pjsip_method_cmp(m, &refer)==0) ||
+	   (pjsip_method_cmp(m, &notify)==0);
 }
 
 static pj_status_t create_dialog( pjsip_user_agent *ua,
@@ -597,33 +599,50 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
 }
 
 /*
+ * Lock dialog and increment session counter temporarily
+ * to prevent it from being deleted.
+ */
+PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
+{
+    pj_mutex_lock(dlg->mutex);
+    dlg->sess_count++;
+}
+
+
+/*
+ * Unlock dialog and decrement session counter.
+ * It may delete the dialog!
+ */
+PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
+{
+    pj_assert(dlg->sess_count > 0);
+    --dlg->sess_count;
+
+    if (dlg->sess_count==0 && dlg->tsx_count==0)
+	unregister_and_destroy_dialog(dlg);
+    else {
+	pj_mutex_unlock(dlg->mutex);
+    }
+}
+
+
+
+/*
  * Decrement session counter.
  */
 PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
 					   pjsip_module *mod)
 {
-    pj_status_t status;
-
     PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
 
     PJ_LOG(5,(dlg->obj_name, "Session count dec to %d by %.*s",
 	      dlg->sess_count-1, (int)mod->name.slen, mod->name.ptr));
 
     pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_dec_lock(dlg);
 
-    pj_assert(dlg->sess_count > 0);
-    --dlg->sess_count;
-
-    if (dlg->sess_count==0 && dlg->tsx_count==0)
-	status = unregister_and_destroy_dialog(dlg);
-    else {
-	pj_mutex_unlock(dlg->mutex);
-	status = PJ_SUCCESS;
-    }
-
-    return status;
+    return PJ_SUCCESS;
 }
-
 
 /*
  * Add usage.
@@ -639,8 +658,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(dlg->usage_cnt < PJSIP_MAX_MODULE, PJ_EBUG);
 
-    PJ_LOG(5,(dlg->obj_name, "Module %.*s added as dialog usage",
-	      (int)mod->name.slen, mod->name.ptr));
+    PJ_LOG(5,(dlg->obj_name, 
+	      "Module %.*s added as dialog usage, data=%p",
+	      (int)mod->name.slen, mod->name.ptr, mod_data));
 
     pj_mutex_lock(dlg->mutex);
 
@@ -674,6 +694,35 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
     pj_mutex_unlock(dlg->mutex);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Attach module specific data to the dialog. Application can also set 
+ * the value directly by accessing dlg->mod_data[module_id].
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_set_mod_data( pjsip_dialog *dlg,
+					    int mod_id,
+					    void *data )
+{
+    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(mod_id >= 0 && mod_id < PJSIP_MAX_MODULE,
+		     PJ_EINVAL);
+    dlg->mod_data[mod_id] = data;
+    return PJ_SUCCESS;
+}
+
+/**
+ * Get module specific data previously attached to the dialog. Application
+ * can also get value directly by accessing dlg->mod_data[module_id].
+ */
+PJ_DEF(void*) pjsip_dlg_get_mod_data( pjsip_dialog *dlg,
+				      int mod_id)
+{
+    PJ_ASSERT_RETURN(dlg, NULL);
+    PJ_ASSERT_RETURN(mod_id >= 0 && mod_id < PJSIP_MAX_MODULE,
+		     NULL);
+    return dlg->mod_data[mod_id];
 }
 
 
@@ -813,8 +862,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
     PJ_LOG(5,(dlg->obj_name, "Sending %s",
 	      pjsip_tx_data_get_info(tdata)));
 
-    /* Update CSeq */
-    pj_mutex_lock(dlg->mutex);
+    /* Lock and increment session */
+    pjsip_dlg_inc_lock(dlg);
 
     /* Update dialog's CSeq and message's CSeq if request is not
      * ACK nor CANCEL.
@@ -869,14 +918,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	    *p_tsx = NULL;
     }
 
-    /* Unlock dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    /* Unlock dialog, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 
 on_error:
-    /* Unlock dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    /* Unlock dialog, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
    
     /* Whatever happen delete the message. */
     pjsip_tx_data_dec_ref( tdata );
@@ -1003,7 +1052,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 		     PJSIP_ENOTRESPONSEMSG);
     PJ_ASSERT_RETURN(st_code >= 100 && st_code <= 699, PJ_EINVAL);
 
-    pj_mutex_lock(dlg->mutex);
+    /* Lock and increment session */
+    pjsip_dlg_inc_lock(dlg);
 
     /* Replace status code and reason */
     tdata->msg->line.status.code = st_code;
@@ -1022,7 +1072,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
     /* Force to re-print message. */
     pjsip_tx_data_invalidate_msg(tdata);
 
-    pj_mutex_unlock(dlg->mutex);
+    /* Unlock dialog and dec session, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -1103,8 +1154,8 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     PJ_LOG(5,(dlg->obj_name, "Received %s",
 	      pjsip_rx_data_get_info(rdata)));
 
-    /* Lock the dialog. */
-    pj_mutex_lock(dlg->mutex);
+    /* Lock dialog and increment session. */
+    pjsip_dlg_inc_lock(dlg);
 
     /* Check CSeq */
     if (rdata->msg_info.cseq->cseq <= dlg->remote.cseq &&
@@ -1114,15 +1165,30 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	/* Invalid CSeq.
 	 * Respond statelessly with 500 (Internal Server Error)
 	 */
-	pj_mutex_unlock(dlg->mutex);
+	pj_str_t warn_text;
+
+	/* Unlock dialog and dec session, may destroy dialog. */
+	pjsip_dlg_dec_lock(dlg);
+
 	pj_assert(pjsip_rdata_get_tsx(rdata) == NULL);
+	warn_text = pj_str("Invalid CSeq");
 	pjsip_endpt_respond_stateless(dlg->endpt,
-				      rdata, 500, NULL, NULL, NULL);
+				      rdata, 500, &warn_text, NULL, NULL);
 	return;
     }
 
     /* Update CSeq. */
     dlg->remote.cseq = rdata->msg_info.cseq->cseq;
+
+    /* Update To tag if necessary.
+     * This only happens if UAS sends a new request before answering
+     * our request (e.g. UAS sends NOTIFY before answering our
+     * SUBSCRIBE request).
+     */
+    if (dlg->remote.info->tag.slen == 0) {
+	pj_strdup(dlg->pool, &dlg->remote.info->tag,
+		  &rdata->msg_info.from->tag);
+    }
 
     /* Create UAS transaction for this request. */
     if (pjsip_rdata_get_tsx(rdata) == NULL && 
@@ -1156,8 +1222,8 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	pjsip_tsx_recv_msg(tsx, rdata);
 
 on_return:
-    /* Unlock dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    /* Unlock dialog and dec session, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
 }
 
 /* This function is called by user agent upon receiving incoming response
@@ -1171,8 +1237,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     PJ_LOG(5,(dlg->obj_name, "Received %s",
 	      pjsip_rx_data_get_info(rdata)));
 
-    /* Lock the dialog. */
-    pj_mutex_lock(dlg->mutex);
+    /* Lock the dialog and inc session. */
+    pjsip_dlg_inc_lock(dlg);
 
     /* Check that rdata already has dialog in mod_data. */
     pj_assert(pjsip_rdata_get_dlg(rdata) == dlg);
@@ -1264,8 +1330,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 		  pjsip_rx_data_get_info(rdata)));
     }
 
-    /* Unlock dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    /* Unlock dialog and dec session, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
 }
 
 /* This function is called by user agent upon receiving transaction
@@ -1280,14 +1346,8 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     PJ_LOG(5,(dlg->obj_name, "Transaction %s state changed to %s",
 	      tsx->obj_name, pjsip_tsx_state_str(tsx->state)));
 
-    /* Lock the dialog. */
-    pj_mutex_lock(dlg->mutex);
-
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
-	--dlg->tsx_count;
-
-    /* Increment session to prevent usages from destroying dialog. */
-    ++dlg->sess_count;
+    /* Lock the dialog and increment session. */
+    pjsip_dlg_inc_lock(dlg);
 
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
@@ -1298,21 +1358,13 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
 	(*dlg->usage[i]->on_tsx_state)(tsx, e);
     }
 
-    /* Decrement temporary session. */
-    --dlg->sess_count;
 
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED && dlg->tsx_count == 0 && 
-	dlg->sess_count == 0) 
-    {
-	/* Unregister this dialog from the transaction. */
+    if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	--dlg->tsx_count;
 	tsx->mod_data[dlg->ua->id] = NULL;
-
-	/* Time to destroy dialog. */
-	unregister_and_destroy_dialog(dlg);
-
-    } else {
-	/* Unlock dialog. */
-	pj_mutex_unlock(dlg->mutex);
     }
+
+    /* Unlock dialog and dec session, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
 }
 
