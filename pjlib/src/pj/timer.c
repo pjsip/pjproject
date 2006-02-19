@@ -446,6 +446,9 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     PJ_ASSERT_RETURN(ht && entry && delay, PJ_EINVAL);
     PJ_ASSERT_RETURN(entry->cb != NULL, PJ_EINVAL);
 
+    /* Prevent same entry from being scheduled more than once */
+    PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
+
     pj_gettimeofday(&expires);
     PJ_TIME_VAL_ADD(expires, *delay);
     
