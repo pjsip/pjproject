@@ -24,15 +24,6 @@
  * @brief Provides string manipulation functions found in ANSI string.h.
  */
 
-/**
- * Native char type, which will be equal to wchar_t for Unicode
- * and char for ANSI.
- */
-#if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
-typedef wchar_t pj_char_t;
-#else
-typedef char pj_char_t;
-#endif
 
 #if defined(PJ_HAS_STRING_H) && PJ_HAS_STRING_H != 0
 #  include <string.h>

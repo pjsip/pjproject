@@ -280,6 +280,8 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 	codec = pj_pool_zalloc(gsm_codec_factory.pool, 
 			       sizeof(pjmedia_codec));
 	PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
+	codec->op = &gsm_op;
+	codec->factory = factory;
     }
 
     pj_mutex_unlock(gsm_codec_factory.mutex);
@@ -413,7 +415,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     if (input->size < 320)
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
-    gsm_encode(codec->codec_data, (const short*)input->buf, 
+    gsm_encode(codec->codec_data, (short*)input->buf, 
 	       (unsigned char*)output->buf);
 
     output->size = 33;
@@ -440,7 +442,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
     gsm_decode(codec->codec_data, 
-	       (const unsigned char*)input->buf, 
+	       (unsigned char*)input->buf, 
 	       (short*)output->buf);
 
     output->size = 320;

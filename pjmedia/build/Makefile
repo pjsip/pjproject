@@ -6,6 +6,7 @@ PJLIB_LIB:=../../pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 
 export PJMEDIA_LIB:=../lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.
@@ -45,6 +46,21 @@ export PJMEDIA_CFLAGS += $(_CFLAGS)
 
 
 ###############################################################################
+# Defines for building PJMEDIA-Codec library
+#
+export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
+export PJMEDIA_CODEC_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			gsm.o pjmedia-codec-lib.o \
+			gsm/add.o gsm/code.o gsm/debug.o gsm/decode.o \
+			gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
+			gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
+			gsm/gsm_option.o gsm/gsm_print.o gsm/long_term.o \
+			gsm/lpc.o gsm/preprocess.o gsm/rpe.o gsm/short_term.o \
+			gsm/table.o
+export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS)
+
+
+###############################################################################
 # Defines for building test application
 #
 export PJMEDIA_TEST_SRCDIR = ../src/test
@@ -60,7 +76,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia 
+TARGETS := pjmedia pjmedia-codec
 #pjmedia-test
 
 all: $(TARGETS)
@@ -71,10 +87,13 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend pjmedia pjmedia-test clean realclean distclean
+.PHONY: dep depend pjmedia pjmedia-codec pjmedia-test clean realclean distclean
 
 pjmedia:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $(PJMEDIA_LIB)
+
+pjmedia-codec:
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $(PJMEDIA_CODEC_LIB)
 
 pjmedia-test: $(PJMEDIA_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $(PJMEDIA_TEST_EXE)
@@ -84,13 +103,20 @@ pjmedia-test: $(PJMEDIA_LIB)
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 
+.PHONY: ../lib/pjmedia-codec.ko
+../lib/pjmedia-codec.ko:
+	echo Making $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
+
 .PHONY: ../lib/pjmedia-test.ko
 ../lib/pjmedia-test.ko:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 
 clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	@if test "$@" == "depend"; then \
 	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB)' >> .pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi

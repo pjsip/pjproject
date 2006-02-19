@@ -8,6 +8,6 @@
 # to all operating systems should go in Makefile instead.
 #
 export PJMEDIA_OBJS += $(PA_DIR)/pa_win_hostapis.o $(PA_DIR)/pa_win_util.o \
-		       $(PA_DIR)/pa_win_ds.o
+		       $(PA_DIR)/pa_win_wmme.o
 
-export OS_CFLAGS += -DPA_NO_ASIO
+export OS_CFLAGS += -DPA_NO_ASIO -DPA_NO_DS

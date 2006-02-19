@@ -49,7 +49,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\lib\pjmedia-codec-vc6.lib"
+# ADD LIB32 /nologo /out:"..\lib\pjmedia-codec-i386-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "pjmedia_codec - Win32 Debug"
 
@@ -72,7 +72,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\lib\pjmedia-codec-vc6d.lib"
+# ADD LIB32 /nologo /out:"..\lib\pjmedia-codec-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 
@@ -89,7 +89,7 @@ SOURCE="..\src\pjmedia-codec\gsm.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjmedia-codec\pjmedia-codec.c"
+SOURCE="..\src\pjmedia-codec\pjmedia-codec-lib.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"

@@ -832,7 +832,7 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
     if (pj_stricmp(&ctype_hdr->media.type, &STR_APPLICATION)==0 &&
 	pj_stricmp(&ctype_hdr->media.subtype, &STR_XPIDF_XML)==0)
     {
-	status = pres_parse_pidf( pres, rdata, &pres->tmp_status);
+	status = pres_parse_xpidf( pres, rdata, &pres->tmp_status);
     }
     else
     {

@@ -568,13 +568,9 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     case TIMER_TYPE_UAC_TERMINATE:
 	{
-	    pjsip_event event;
-	    pj_str_t reason = { "unsubscribing", 13};
-
-	    PJSIP_EVENT_INIT_TIMER(event, entry);
 	    PJ_LOG(5,(sub->obj_name, "Timeout waiting for final NOTIFY. "
 				     "Terminating.."));
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, &event);
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
 	}
 	break;
 
@@ -964,6 +960,7 @@ static pjsip_sub_state_hdr* sub_state_create( pj_pool_t *pool,
 
     /* Fill up the header */
     switch (state) {
+    case PJSIP_EVSUB_STATE_NULL:
     case PJSIP_EVSUB_STATE_SENT:
     case PJSIP_EVSUB_STATE_ACCEPTED:
 	pj_assert(!"Invalid state!");
