@@ -76,14 +76,14 @@ static pj_xml_node *xml_parse_node( pj_pool_t *pool, pj_scanner *scanner)
 	return xml_parse_node(pool, scanner);
     }
 
-    /* Handle comments construct (i.e. "<!--") */
-    if (pj_scan_strcmp(scanner, "<!--", 4) == 0) {
-	pj_scan_advance_n(scanner, 4, PJ_FALSE);
+    /* Handle comments construct (i.e. "<!") */
+    if (pj_scan_strcmp(scanner, "<!", 2) == 0) {
+	pj_scan_advance_n(scanner, 2, PJ_FALSE);
 	for (;;) {
 	    pj_str_t dummy;
-	    pj_scan_get_until_ch(scanner, '-', &dummy);
-	    if (pj_scan_strcmp(scanner, "-->", 3) == 0) {
-		pj_scan_advance_n(scanner, 3, PJ_TRUE);
+	    pj_scan_get_until_ch(scanner, '>', &dummy);
+	    if (pj_scan_strcmp(scanner, ">", 1) == 0) {
+		pj_scan_advance_n(scanner, 1, PJ_TRUE);
 		break;
 	    } else {
 		pj_scan_advance_n(scanner, 1, PJ_FALSE);
