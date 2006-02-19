@@ -250,6 +250,16 @@ PJ_IDECL(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
 
 
 /**
+ * Traverse the list to get the number of elements in the list.
+ *
+ * @param list	    The list head.
+ *
+ * @return	    Number of elements.
+ */
+PJ_IDECL(pj_size_t) pj_list_size(pj_list_type *list);
+
+
+/**
  * @}
  */
 

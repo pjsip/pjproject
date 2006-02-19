@@ -116,3 +116,17 @@ pj_list_search(pj_list_type *list, void *value,
     return p==list ? NULL : p;
 }
 
+
+PJ_IDEF(pj_size_t) pj_list_size(pj_list_type *list)
+{
+    pj_list *node = (pj_list*) ((pj_list*)list)->next;
+    pj_size_t count = 0;
+
+    while (node != list) {
+	++count;
+	node = node->next;
+    }
+
+    return count;
+}
+
