@@ -145,7 +145,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[486], "Busy Here");
     pj_strset2( &status_phrase[487], "Request Terminated");
     pj_strset2( &status_phrase[488], "Not Acceptable Here");
-    pj_strset2( &status_phrase[489], "Unknown Event");
+    pj_strset2( &status_phrase[489], "Bad Event");
     pj_strset2( &status_phrase[490], "Request Updated");
     pj_strset2( &status_phrase[491], "Request Pending");
     pj_strset2( &status_phrase[493], "Undecipherable");

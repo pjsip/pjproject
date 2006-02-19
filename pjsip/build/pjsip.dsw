@@ -93,6 +93,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjsip_simple"=.\pjsip_simple.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjsip_ua"=.\pjsip_ua.dsp - Package Owner=<4>
 
 Package=<5>
@@ -133,6 +145,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjlib_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple
     End Project Dependency
 }}}
 

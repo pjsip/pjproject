@@ -22,7 +22,8 @@
 
 #define THIS_FILE	"main.c"
 
-static pjsip_inv_session *inv_session;
+/* Current dialog */
+static struct pjsua_inv_data *inv_session;
 
 /*
  * Notify UI when invite state has changed.
@@ -35,12 +36,16 @@ void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 	      pjsua_inv_state_names[inv->state]));
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
-	if (inv == inv_session)
-	    inv_session = NULL;
+	if (inv == inv_session->inv) {
+	    inv_session = inv_session->next;
+	    if (inv_session == &pjsua.inv_list)
+		inv_session = pjsua.inv_list.next;
+	}
 
     } else {
 
-	inv_session = inv;
+	if (inv_session == &pjsua.inv_list || inv_session == NULL)
+	    inv_session = inv->mod_data[pjsua.mod.id];
 
     }
 }
@@ -56,24 +61,71 @@ void pjsua_ui_regc_on_state_changed(int code)
 }
 
 
+/*
+ * Print buddy list.
+ */
+static void print_buddy_list(void)
+{
+    unsigned i;
+
+    puts("Buddy list:");
+    //puts("-------------------------------------------------------------------------------");
+    if (pjsua.buddy_cnt == 0)
+	puts(" -none-");
+    else {
+	for (i=0; i<pjsua.buddy_cnt; ++i) {
+	    const char *status;
+
+	    if (pjsua.buddies[i].sub == NULL || 
+		pjsua.buddies[i].status.info_cnt==0)
+	    {
+		status = "   ?   ";
+	    } 
+	    else if (pjsua.buddies[i].status.info[0].basic_open)
+		status = " Online";
+	    else
+		status = "Offline";
+
+	    printf(" [%2d] <%s>  %s\n", 
+		    i+1, status, pjsua.buddies[i].uri.ptr);
+	}
+    }
+    puts("");
+}
 
 /*
  * Show a bit of help.
  */
-static void ui_help(void)
+static void keystroke_help(void)
 {
-    puts("");
-    puts("Console keys:");
-    puts("  m    Make a call/another call");
-    puts("  d    Dump application states");
-    puts("  a    Answer incoming call");
-    puts("  h    Hangup current call");
-    puts("  q    Quit");
-    puts("");
+
+    printf(">>>>\nOnline status: %s\n", 
+	   (pjsua.online_status ? "Online" : "Invisible"));
+    print_buddy_list();
+    
+    //puts("Commands:");
+    puts("+=============================================================================+");
+    puts("|       Call Commands:         |      IM & Presence:      |   Misc:           |");
+    puts("|                              |                          |                   |");
+    puts("|  m  Make new call            |  i  Send IM              |  o  Send OPTIONS  |");
+    puts("|  a  Answer call              |  s  Subscribe presence   |  d  Dump status   |");
+    puts("|  h  Hangup call              |  u  Unsubscribe presence |  d1 Dump detailed |");
+    puts("|  ]  Select next dialog       |  t  Toggle Online status |                   |");
+    puts("|  [  Select previous dialog   |                          |                   |");
+    puts("+-----------------------------------------------------------------------------+");
+    puts("|  q  QUIT                                                                    |");
+    puts("+=============================================================================+");
+    printf(">>> ");
+
+
     fflush(stdout);
 }
 
-static pj_bool_t input(const char *title, char *buf, pj_size_t len)
+
+/*
+ * Input simple string
+ */
+static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
 {
     char *p;
 
@@ -92,48 +144,131 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
     return PJ_TRUE;
 }
 
+
+#define NO_NB	-2
+struct input_result
+{
+    int	  nb_result;
+    char *uri_result;
+};
+
+
+/*
+ * Input URL.
+ */
+static void ui_input_url(const char *title, char *buf, int len, 
+			 struct input_result *result)
+{
+    result->nb_result = NO_NB;
+    result->uri_result = NULL;
+
+    print_buddy_list();
+
+    printf("Choices:\n"
+	   "   0         For current dialog.\n"
+	   "  -1         All %d buddies in buddy list\n"
+	   "  [1 -%2d]    Select from buddy list\n"
+	   "  URL        An URL\n"
+	   "  <Enter>    Empty input (or 'q') to cancel\n"
+	   , pjsua.buddy_cnt, pjsua.buddy_cnt);
+    printf("%s: ", title);
+
+    fflush(stdout);
+    fgets(buf, len, stdin);
+    len = strlen(buf);
+
+    /* Left trim */
+    while (isspace(*buf)) {
+	++buf;
+	--len;
+    }
+
+    /* Remove trailing newlines */
+    while (len && (buf[len-1] == '\r' || buf[len-1] == '\n'))
+	buf[--len] = '\0';
+
+    if (len == 0 || buf[0]=='q')
+	return;
+
+    if (isdigit(*buf) || *buf=='-') {
+	
+	int i;
+	
+	if (*buf=='-')
+	    i = 1;
+	else
+	    i = 0;
+
+	for (; i<len; ++i) {
+	    if (!isdigit(buf[i])) {
+		puts("Invalid input");
+		return;
+	    }
+	}
+
+	result->nb_result = atoi(buf);
+
+	if (result->nb_result > 0 && result->nb_result <= (int)pjsua.buddy_cnt) {
+	    --result->nb_result;
+	    return;
+	}
+	if (result->nb_result == -1)
+	    return;
+
+	puts("Invalid input");
+	result->nb_result = NO_NB;
+	return;
+
+    } else {
+	pj_status_t status;
+
+	if ((status=pjsua_verify_sip_url(buf)) != PJ_SUCCESS) {
+	    pjsua_perror("Invalid URL", status);
+	    return;
+	}
+
+	result->uri_result = buf;
+    }
+}
+
 static void ui_console_main(void)
 {
+    char menuin[10];
     char buf[128];
     pjsip_inv_session *inv;
+    struct input_result result;
 
-    //ui_help();
+    //keystroke_help();
 
     for (;;) {
 
-	ui_help();
-	fgets(buf, sizeof(buf), stdin);
+	keystroke_help();
+	fgets(menuin, sizeof(menuin), stdin);
 
-	switch (buf[0]) {
+	switch (menuin[0]) {
 
 	case 'm':
-	    if (inv_session != NULL) {
-		puts("Can not make call while another one is in progress");
-		fflush(stdout);
-		continue;
-	    }
-
-#if 1
 	    /* Make call! : */
-	    if (!input("Enter URL to call", buf, sizeof(buf)))
-		continue;
-	    pjsua_invite(buf, &inv);
-
-#else
-
-	    pjsua_invite("sip:localhost:5061", &inv);
-#endif
+	    if (pj_list_size(&pjsua.inv_list))
+		printf("(You have %d calls)\n", pj_list_size(&pjsua.inv_list));
+	    
+	    ui_input_url("Make call", buf, sizeof(buf), &result);
+	    if (result.nb_result != NO_NB) {
+		if (result.nb_result == -1)
+		    puts("You can't do that with make call!");
+		else
+		    pjsua_invite(pjsua.buddies[result.nb_result].uri.ptr, &inv);
+	    } else if (result.uri_result)
+		pjsua_invite(result.uri_result, &inv);
+	    
 	    break;
 
-
-	case 'd':
-	    pjsua_dump();
-	    break;
 
 	case 'a':
 
-	    if (inv_session == NULL || inv_session->role != PJSIP_ROLE_UAS ||
-		inv_session->state >= PJSIP_INV_STATE_CONNECTING) 
+	    if (inv_session == &pjsua.inv_list || 
+		inv_session->inv->role != PJSIP_ROLE_UAS ||
+		inv_session->inv->state >= PJSIP_INV_STATE_CONNECTING) 
 	    {
 		puts("No pending incoming call");
 		fflush(stdout);
@@ -143,16 +278,16 @@ static void ui_console_main(void)
 		pj_status_t status;
 		pjsip_tx_data *tdata;
 
-		if (!input("Answer with code (100-699)", buf, sizeof(buf)))
+		if (!simple_input("Answer with code (100-699)", buf, sizeof(buf)))
 		    continue;
 		
 		if (atoi(buf) < 100)
 		    continue;
 
-		status = pjsip_inv_answer(inv_session, atoi(buf), NULL, NULL, 
-					  &tdata);
+		status = pjsip_inv_answer(inv_session->inv, atoi(buf), 
+					  NULL, NULL, &tdata);
 		if (status == PJ_SUCCESS)
-		    status = pjsip_inv_send_msg(inv_session, tdata, NULL);
+		    status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
 
 		if (status != PJ_SUCCESS)
 		    pjsua_perror("Unable to create/send response", status);
@@ -160,9 +295,10 @@ static void ui_console_main(void)
 
 	    break;
 
+
 	case 'h':
 
-	    if (inv_session == NULL) {
+	    if (inv_session == &pjsua.inv_list) {
 		puts("No current call");
 		fflush(stdout);
 		continue;
@@ -171,20 +307,60 @@ static void ui_console_main(void)
 		pj_status_t status;
 		pjsip_tx_data *tdata;
 
-		status = pjsip_inv_end_session(inv_session, PJSIP_SC_DECLINE, 
-					       NULL, &tdata);
+		status = pjsip_inv_end_session(inv_session->inv, 
+					       PJSIP_SC_DECLINE, NULL, &tdata);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror("Failed to create end session message", status);
 		    continue;
 		}
 
-		status = pjsip_inv_send_msg(inv_session, tdata, NULL);
+		status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror("Failed to send end session message", status);
 		    continue;
 		}
 	    }
+	    break;
 
+	case ']':
+	    inv_session = inv_session->next;
+	    if (inv_session == &pjsua.inv_list)
+		inv_session = pjsua.inv_list.next;
+	    break;
+
+	case '[':
+	    inv_session = inv_session->prev;
+	    if (inv_session == &pjsua.inv_list)
+		inv_session = pjsua.inv_list.prev;
+	    break;
+
+	case 's':
+	case 'u':
+	    ui_input_url("Subscribe presence of", buf, sizeof(buf), &result);
+	    if (result.nb_result != NO_NB) {
+		if (result.nb_result == -1) {
+		    unsigned i;
+		    for (i=0; i<pjsua.buddy_cnt; ++i)
+			pjsua.buddies[i].monitor = (menuin[0]=='s');
+		} else {
+		    pjsua.buddies[result.nb_result].monitor = (menuin[0]=='s');
+		}
+
+		pjsua_pres_refresh();
+
+	    } else if (result.uri_result) {
+		puts("Sorry, can only subscribe to buddy's presence, not arbitrary URL (for now)");
+	    }
+
+	    break;
+
+	case 't':
+	    pjsua.online_status = !pjsua.online_status;
+	    pjsua_pres_refresh();
+	    break;
+
+	case 'd':
+	    pjsua_dump();
 	    break;
 
 	case 'q':
@@ -254,7 +430,7 @@ static pj_status_t console_on_tx_msg(pjsip_tx_data *tdata)
 static pjsip_module console_msg_logger = 
 {
     NULL, NULL,				/* prev, next.		*/
-    { "mod-console-msg-logger", 22 },	/* Name.		*/
+    { "mod-pjsua-log", 13 },		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
     NULL,				/* User data.		*/
@@ -383,6 +559,11 @@ int main(int argc, char *argv[])
     /* Sleep for a while, let any messages get printed to console: */
 
     pj_thread_sleep(500);
+
+
+    /* No current call initially: */
+
+    inv_session = &pjsua.inv_list;
 
 
     /* Start UI console main loop: */

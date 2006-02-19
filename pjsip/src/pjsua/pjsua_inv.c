@@ -80,6 +80,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     inv_data = pj_pool_zalloc( dlg->pool, sizeof(struct pjsua_inv_data));
     inv_data->inv = inv;
     dlg->mod_data[pjsua.mod.id] = inv_data;
+    inv->mod_data[pjsua.mod.id] = inv_data;
 
 
     /* Set dialog Route-Set: */
@@ -221,6 +222,7 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 	    inv_data = pj_pool_zalloc(dlg->pool, sizeof(struct pjsua_inv_data));
 	    inv_data->inv = inv;
 	    dlg->mod_data[pjsua.mod.id] = inv_data;
+	    inv->mod_data[pjsua.mod.id] = inv_data;
 
 	    pj_list_push_back(&pjsua.inv_list, inv_data);
 
@@ -345,3 +347,25 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 	PJ_LOG(3,(THIS_FILE,"Media has been started successfully"));
     }
 }
+
+
+/*
+ * Terminate all calls.
+ */
+void pjsua_inv_shutdown()
+{
+    struct pjsua_inv_data *inv_data, *next;
+
+    inv_data = pjsua.inv_list.next;
+    while (inv_data != &pjsua.inv_list) {
+	pjsip_tx_data *tdata;
+
+	next = inv_data->next;
+
+	if (pjsip_inv_end_session(inv_data->inv, 410, NULL, &tdata)==0)
+	    pjsip_inv_send_msg(inv_data->inv, tdata, NULL);
+
+	inv_data = next;
+    }
+}
+

@@ -16,9 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip_simple/pidf.h>
+#include <pjsip-simple/pidf.h>
 #include <pj/string.h>
 #include <pj/pool.h>
+#include <pj/assert.h>
+
 
 struct pjpidf_op_desc pjpidf_op = 
 {
@@ -132,7 +134,7 @@ PJ_DEF(pjpidf_tuple*) pjpidf_pres_find_tuple(pjpidf_pres *pres, const pj_str_t *
 
 PJ_DEF(void) pjpidf_pres_remove_tuple(pjpidf_pres *pres, pjpidf_tuple *t)
 {
-    PJ_UNUSED_ARG(pres)
+    PJ_UNUSED_ARG(pres);
     pj_list_erase(t);
 }
 

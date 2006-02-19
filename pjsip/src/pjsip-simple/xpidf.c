@@ -16,10 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip_simple/xpidf.h>
+#include <pjsip-simple/xpidf.h>
+#include <pj/assert.h>
+#include <pj/guid.h>
 #include <pj/pool.h>
 #include <pj/string.h>
-#include <pj/guid.h>
 
 static pj_str_t PRESENCE = { "presence", 8 };
 static pj_str_t STATUS = { "status", 6 };

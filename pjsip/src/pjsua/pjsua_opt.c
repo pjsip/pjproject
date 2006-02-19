@@ -403,7 +403,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		printf("Error: too many buddies in buddy list.\n");
 		return -1;
 	    }
-	    pjsua.buddies[pjsua.buddy_cnt++] = pj_str(optarg);
+	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(optarg);
 	    break;
 	}
     }
@@ -510,6 +510,7 @@ void pjsua_dump(void)
 
     pjsip_endpt_dump(pjsua.endpt, 1);
     pjmedia_endpt_dump(pjsua.med_endpt);
+    pjsip_tsx_layer_dump();
     pjsip_ua_dump();
 
 
@@ -536,6 +537,9 @@ void pjsua_dump(void)
 	}
     }
 
+    /* Dump presence status */
+    pjsua_pres_dump();
+
     pj_log_set_decor(old_decor);
     PJ_LOG(3,(THIS_FILE, "Dump complete"));
 }
@@ -547,8 +551,9 @@ void pjsua_dump(void)
 pj_status_t pjsua_load_settings(const char *filename)
 {
     int argc = 3;
-    char *argv[] = { "pjsua", "--config-file", (char*)filename, NULL};
+    char *argv[4] = { "pjsua", "--config-file", NULL, NULL};
 
+    argv[3] = (char*)filename;
     return pjsua_parse_args(argc, argv);
 }
 
@@ -654,8 +659,8 @@ pj_status_t pjsua_save_settings(const char *filename)
     /* Add buddies. */
     for (i=0; i<pjsua.buddy_cnt; ++i) {
 	pj_ansi_sprintf(line, "--add-buddy %.*s\n",
-			      (int)pjsua.buddies[i].slen,
-			      pjsua.buddies[i].ptr);
+			      (int)pjsua.buddies[i].uri.slen,
+			      pjsua.buddies[i].uri.ptr);
 	pj_strcat2(&cfg, line);
     }
 

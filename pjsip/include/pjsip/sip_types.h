@@ -92,6 +92,11 @@ typedef struct pjsip_rx_data pjsip_rx_data;
 typedef struct pjsip_msg pjsip_msg;
 
 /**
+ * Forward declaration for message body (sip_msg.h).
+ */
+typedef struct pjsip_msg_body pjsip_msg_body;
+
+/**
  * Forward declaration for header field (sip_msg.h).
  */
 typedef struct pjsip_hdr pjsip_hdr;
@@ -143,8 +148,14 @@ typedef enum pjsip_dialog_state pjsip_dialog_state;
  */
 typedef enum pjsip_role_e
 {
-    PJSIP_ROLE_UAC,	/**< Transaction role is UAC. */
-    PJSIP_ROLE_UAS,	/**< Transaction role is UAS. */
+    PJSIP_ROLE_UAC,	/**< Role is UAC. */
+    PJSIP_ROLE_UAS,	/**< Role is UAS. */
+
+    /* Alias: */
+
+    PJSIP_UAC_ROLE = PJSIP_ROLE_UAC,	/**< Role is UAC. */
+    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS,	/**< Role is UAS. */
+
 } pjsip_role_e;
 
 

@@ -207,6 +207,11 @@ PJ_BEGIN_DECL
  * Transaction has just been destroyed.
  */
 #define PJSIP_ETSXDESTROYED     (PJSIP_ERRNO_START_PJSIP + 70)	/* 171070 */
+/**
+ * @hideinitializer
+ * No transaction.
+ */
+#define PJSIP_ENOTSX		(PJSIP_ERRNO_START_PJSIP + 71)	/* 171071 */
 
 
 /************************************************************

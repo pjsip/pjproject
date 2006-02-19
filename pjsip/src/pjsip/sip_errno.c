@@ -66,6 +66,7 @@ static const struct
 
     /* Transaction errors */
     { PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"},
+    { PJSIP_ENOTSX,		"No transaction (expecting stateful processing)" },
 
     /* Authentication. */
     { PJSIP_EFAILEDCREDENTIAL,	"Credential failed to authenticate"},

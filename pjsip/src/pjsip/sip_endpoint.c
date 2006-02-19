@@ -215,6 +215,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 
     /* Done. */
 
+    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" registered", 
+	      (int)mod->name.slen, mod->name.ptr));
+
 on_return:
     pj_rwmutex_unlock_write(endpt->mod_mutex);
     return status;
@@ -253,6 +256,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
 	if (status != PJ_SUCCESS) goto on_return;
     }
 
+    /* Module MUST NOT set module ID to -1. */
+    pj_assert(mod->id >= 0);
+
     /* Remove module from array. */
     endpt->modules[mod->id] = NULL;
 
@@ -264,6 +270,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
 
     /* Done. */
     status = PJ_SUCCESS;
+
+    PJ_LOG(4,(THIS_FILE, "Module \"%.*s\" unregistered", 
+	      (int)mod->name.slen, mod->name.ptr));
 
 on_return:
     pj_rwmutex_unlock_write(endpt->mod_mutex);

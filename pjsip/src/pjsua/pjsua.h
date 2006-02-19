@@ -31,6 +31,9 @@
 /* Include all PJSIP-UA headers */
 #include <pjsip_ua.h>
 
+/* Include all PJSIP-SIMPLE headers */
+#include <pjsip_simple.h>
+
 /* Include all PJLIB-UTIL headers. */
 #include <pjlib-util.h>
 
@@ -59,6 +62,33 @@ struct pjsua_inv_data
     pjmedia_session	*session;
     void		*mod_data[PJSIP_MAX_MODULE];
 };
+
+
+/**
+ * Buddy data.
+ */
+struct pjsua_buddy
+{
+    pj_str_t		 uri;	    /**< Buddy URI		        */
+    pj_bool_t		 monitor;   /**< Should we monitor?		*/
+    pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
+    pjsip_pres_status	 status;    /**< Buddy presence status.		*/
+};
+
+typedef struct pjsua_buddy pjsua_buddy;
+
+
+/**
+ * Server presence subscription list head.
+ */
+struct pjsua_srv_pres
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_srv_pres);
+    pjsip_evsub	    *sub;
+    char	    *remote;
+};
+
+typedef struct pjsua_srv_pres pjsua_srv_pres;
 
 
 
@@ -141,10 +171,13 @@ struct pjsua
     struct pjsua_inv_data inv_list;
 
 
-    /* Buddy list: */
+    /* SIMPLE and buddy status: */
+
+    pj_bool_t	    online_status;  /**< Out online status.		*/
+    pjsua_srv_pres  pres_srv_list;  /**< Server subscription list.	*/
 
     unsigned	    buddy_cnt;
-    pj_str_t	    buddies[PJSUA_MAX_BUDDIES];
+    pjsua_buddy	    buddies[PJSUA_MAX_BUDDIES];
 };
 
 
@@ -235,6 +268,12 @@ void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e);
 void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status);
 
 
+/**
+ * Terminate all calls.
+ */
+void pjsua_inv_shutdown(void);
+
+
 /*****************************************************************************
  * PJSUA Client Registration API (defined in pjsua_reg.c).
  */
@@ -251,6 +290,33 @@ pj_status_t pjsua_regc_init(void);
  * this will start unregistration process.
  */
 void pjsua_regc_update(pj_bool_t renew);
+
+
+
+
+/*****************************************************************************
+ * PJSUA Presence (pjsua_pres.c)
+ */
+
+/**
+ * Init presence.
+ */
+pj_status_t pjsua_pres_init();
+
+/**
+ * Refresh both presence client and server subscriptions.
+ */
+void pjsua_pres_refresh(void);
+
+/**
+ * Terminate all subscriptions
+ */
+void pjsua_pres_shutdown(void);
+
+/**
+ * Dump presence subscriptions.
+ */
+void pjsua_pres_dump(void);
 
 
 /*****************************************************************************

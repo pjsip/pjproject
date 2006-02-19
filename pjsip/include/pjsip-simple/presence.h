@@ -23,9 +23,9 @@
  * @file presence.h
  * @brief SIP Extension for Presence (RFC 3856)
  */
-#include <pjsip_simple/event_notify.h>
-#include <pjsip_simple/pidf.h>
-#include <pjsip_simple/xpidf.h>
+#include <pjsip-simple/evsub.h>
+#include <pjsip-simple/pidf.h>
+#include <pjsip-simple/xpidf.h>
 
 
 PJ_BEGIN_DECL
@@ -38,185 +38,206 @@ PJ_BEGIN_DECL
  *
  * This module contains the implementation of SIP Presence Extension as 
  * described in RFC 3856. It uses the SIP Event Notification framework
- * (event_notify.h) and extends the framework by implementing "presence"
+ * (evsub.h) and extends the framework by implementing "presence"
  * event package.
  */
 
+
+
 /**
- * Presence message body type.
+ * Initialize the presence module and register it as endpoint module and
+ * package to the event subscription module.
+ *
+ * @param endpt		The endpoint instance.
+ * @param mod_evsub	The event subscription module instance.
+ *
+ * @return		PJ_SUCCESS if the module is successfully 
+ *			initialized and registered to both endpoint
+ *			and the event subscription module.
  */
-typedef enum pjsip_pres_type
+PJ_DECL(pj_status_t) pjsip_pres_init_module(pjsip_endpoint *endpt,
+					    pjsip_module *mod_evsub);
+
+
+/**
+ * Get the presence module instance.
+ *
+ * @return		The presence module instance.
+ */
+PJ_DECL(pjsip_module*) pjsip_pres_instance(void);
+
+
+#define PJSIP_PRES_STATUS_MAX_INFO  8
+
+/**
+ * This structure describes presence status of a presentity.
+ */
+struct pjsip_pres_status
 {
-    PJSIP_PRES_TYPE_PIDF,
-    PJSIP_PRES_TYPE_XPIDF,
-} pjsip_pres_type;
+    unsigned		info_cnt;	/**< Number of info in the status.  */
+    struct {
 
-/**
- * This structure describe a presentity, for both subscriber and notifier.
- */
-typedef struct pjsip_presentity
-{
-    pjsip_event_sub *sub;	    /**< Event subscribtion record.	*/
-    pjsip_pres_type  pres_type;	    /**< Presentity type.		*/
-    pjsip_msg_body  *uas_body;	    /**< Message body (UAS only).	*/
-    union {
-	pjpidf_pres *pidf;
-	pjxpidf_pres *xpidf;
-    }		     uas_data;	    /**< UAS data.			*/
-    pj_str_t	     timestamp;	    /**< Time of last update.		*/
-    void	    *user_data;	    /**< Application data.		*/
-} pjsip_presentity;
+	pj_bool_t	basic_open;	/**< Basic status/availability.	    */
+	pj_str_t	id;		/**< Tuple id.			    */
+	pj_str_t	contact;	/**< Optional contact address.	    */
+
+    } info[PJSIP_PRES_STATUS_MAX_INFO];	/**< Array of info.		    */
+
+    pj_bool_t		_is_valid;	/**< Internal flag.		    */
+};
 
 
 /**
- * This structure describe callback that is registered to receive notification
- * from the presence module.
+ * @see pjsip_pres_status
  */
-typedef struct pjsip_presence_cb
-{
-    /**
-     * This callback is first called when the module receives incoming 
-     * SUBSCRIBE request to determine whether application wants to accept
-     * the request. If it does, then on_presence_request will be called.
-     *
-     * @param rdata	The received message.
-     * @return		Application should return 2xx to accept the request,
-     *			or failure status (>=300) to reject the request.
-     */
-    void (*accept_presence)(pjsip_rx_data *rdata, int *status);
-
-    /**
-     * This callback is called when the module receive the first presence
-     * subscription request.
-     *
-     * @param pres	The presence descriptor.
-     * @param rdata	The incoming request.
-     * @param timeout	Timeout to be set for incoming request. Otherwise
-     *			app can just leave this and accept the default.
-     */
-    void (*on_received_request)(pjsip_presentity *pres, pjsip_rx_data *rdata,
-				int *timeout);
-
-    /**
-     * This callback is called when the module received subscription refresh
-     * request.
-     *
-     * @param pres	The presence descriptor.
-     * @param rdata	The incoming request.
-     */
-    void (*on_received_refresh)(pjsip_presentity *pres, pjsip_rx_data *rdata);
-
-    /**
-     * This callback is called when the module receives incoming NOTIFY
-     * request.
-     *
-     * @param pres	The presence descriptor.
-     * @param open	The latest status of the presentity.
-     */
-    void (*on_received_update)(pjsip_presentity *pres, pj_bool_t open);
-
-    /**
-     * This callback is called when the subscription has terminated.
-     *
-     * @param sub	The subscription instance.
-     * @param reason	The termination reason.
-     */
-    void (*on_terminated)(pjsip_presentity *pres, const pj_str_t *reason);
-
-} pjsip_presence_cb;
+typedef struct pjsip_pres_status pjsip_pres_status;
 
 
 /**
- * Initialize the presence module and register callback.
+ * Create presence client subscription session.
  *
- * @param cb		Callback structure.
+ * @param dlg		The underlying dialog to use.
+ * @param user_cb	Pointer to callbacks to receive presence subscription
+ *			events.
+ * @param p_evsub	Pointer to receive the presence subscription
+ *			session.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_presence_init(const pjsip_presence_cb *cb);
+PJ_DECL(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
+					    const pjsip_evsub_user *user_cb,
+					    pjsip_evsub **p_evsub );
 
 
 /**
- * Create to presence subscription of a presentity URL.
+ * Create presence server subscription session.
  *
- * @param endpt		Endpoint instance.
- * @param local_url	Local URL.
- * @param remote_url	Remote URL which the presence is being subscribed.
- * @param expires	The expiration.
- * @param user_data	User data to attach to presence subscription.
+ * @param dlg		The underlying dialog to use.
+ * @param user_cb	Pointer to callbacks to receive presence subscription
+ *			events.
+ * @param rdata		The incoming SUBSCRIBE request that creates the event 
+ *			subscription.
+ * @param p_evsub	Pointer to receive the presence subscription
+ *			session.
  *
- * @return		The presence structure if successfull, or NULL if
- *			failed.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pjsip_presentity*) pjsip_presence_create( pjsip_endpoint *endpt,
-						  const pj_str_t *local_url,
-						  const pj_str_t *remote_url,
-						  int expires,
-						  void *user_data );
+PJ_DECL(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
+					    const pjsip_evsub_user *user_cb,
+					    pjsip_rx_data *rdata,
+					    pjsip_evsub **p_evsub );
+
 
 /**
- * Set credentials to be used by this presentity for outgoing requests.
+ * Call this function to create request to initiate presence subscription, to 
+ * refresh subcription, or to request subscription termination.
  *
- * @param pres		Presentity instance.
- * @param count		Number of credentials in the array.
- * @param cred		Array of credentials.
+ * @param sub		Client subscription instance.
+ * @param expires	Subscription expiration. If the value is set to zero,
+ *			this will request unsubscription.
+ * @param p_tdata	Pointer to receive the request.
  *
- * @return		Zero on success.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_set_credentials( pjsip_presentity *pres,
-						     int count,
-						     const pjsip_cred_info cred[]);
+PJ_DECL(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
+					  pj_int32_t expires,
+					  pjsip_tx_data **p_tdata);
+
+
 
 /**
- * Set route set for outgoing requests.
+ * Accept the incoming subscription request by sending 2xx response to
+ * incoming SUBSCRIBE request.
  *
- * @param pres		Presentity instance.
- * @param route_set	List of route headers.
+ * @param sub		Server subscription instance.
+ * @param rdata		The incoming subscription request message.
+ * @param st_code	Status code, which MUST be final response.
+ * @param hdr_list	Optional list of headers to be added in the response.
  *
- * @return		Zero on success.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_set_route_set( pjsip_presentity *pres,
-						   const pjsip_route_hdr *hdr );
+PJ_DECL(pj_status_t) pjsip_pres_accept( pjsip_evsub *sub,
+					pjsip_rx_data *rdata,
+				        int st_code,
+					const pjsip_hdr *hdr_list );
+
+
+
 
 /**
- * Send SUBSCRIBE request for the specified presentity.
+ * For notifier, create NOTIFY request to subscriber, and set the state 
+ * of the subscription. Application MUST set the presence status to the
+ * appropriate state (by calling #pjsip_pres_set_status()) before calling
+ * this function.
  *
- * @param pres		The presentity instance.
+ * @param sub		The server subscription (notifier) instance.
+ * @param state		New state to set.
+ * @param state_str	The state string name, if state contains value other
+ *			than active, pending, or terminated. Otherwise this
+ *			argument is ignored.
+ * @param reason	Specify reason if new state is terminated, otherwise
+ *			put NULL.
+ * @param p_tdata	Pointer to receive the request.
  *
- * @return		Zero on success.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_subscribe( pjsip_presentity *pres );
+PJ_DECL(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
+					pjsip_evsub_state state,
+					const pj_str_t *state_str,
+					const pj_str_t *reason,
+					pjsip_tx_data **p_tdata);
+
 
 /**
- * Ceased the presence subscription.
+ * Create NOTIFY request to reflect current subscription status.
  *
- * @param pres		The presence structure.
- * 
- * @return		Zero on success.
+ * @param sub		Server subscription object.
+ * @param p_tdata	Pointer to receive request.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_unsubscribe( pjsip_presentity *pres );
+PJ_DECL(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
+					        pjsip_tx_data **p_tdata );
+
+
 
 /**
- * Notify subscriber about change in local status.
+ * Send request.
  *
- * @param pres		The presence structure.
- * @param state		Set the state of the subscription.
- * @param open		Set the presence status (open or closed).
+ * @param sub		The subscription object.
+ * @param tdata		Request message to be sent.
  *
- * @return		Zero if a NOTIFY request can be sent.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_notify( pjsip_presentity *pres,
-					    pjsip_event_sub_state state,
-					    pj_bool_t open );
+PJ_DECL(pj_status_t) pjsip_pres_send_request( pjsip_evsub *sub,
+					      pjsip_tx_data *tdata );
+
 
 /**
- * Destroy presence structure and the underlying subscription.
+ * Get the presence status. Client normally would call this function
+ * after receiving NOTIFY request from server.
  *
- * @param pres		The presence structure.
+ * @param sub		The client or server subscription.
+ * @param status	The structure to receive presence status.
  *
- * @return		Zero if the subscription was destroyed, or one if
- *			the subscription can not be destroyed immediately
- *			and will be destroyed later, or -1 if failed.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_presence_destroy( pjsip_presentity *pres );
+PJ_DECL(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
+					    pjsip_pres_status *status );
+
+
+/**
+ * Set the presence status. This operation is only valid for server
+ * subscription. After calling this function, application would need to
+ * send NOTIFY request to client.
+ *
+ * @param sub		The server subscription.
+ * @param status	Status to be set.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
+					    const pjsip_pres_status *status );
 
 
 /**

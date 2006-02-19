@@ -79,6 +79,11 @@ void pjsua_default(void)
     /* Init invite session list: */
 
     pj_list_init(&pjsua.inv_list);
+
+    /* Init server presence subscription list: */
+    
+    pj_list_init(&pjsua.pres_srv_list);
+
 }
 
 
@@ -391,14 +396,14 @@ on_error:
 }
 
 
-static int PJ_THREAD_FUNC pjsua_worker_thread(void *arg)
+static int PJ_THREAD_FUNC pjsua_poll(void *arg)
 {
     PJ_UNUSED_ARG(arg);
 
-    while (!pjsua.quit_flag) {
+    do {
 	pj_time_val timeout = { 0, 10 };
 	pjsip_endpt_handle_events (pjsua.endpt, &timeout);
-    }
+    } while (!pjsua.quit_flag);
 
     return 0;
 }
@@ -435,7 +440,7 @@ pj_status_t pjsua_init(void)
     pjsua.pool = pj_pool_create(&pjsua.cp.factory, "pjsua", 4000, 4000, NULL);
 
 
-    /* Init PJSIP and all the modules: */
+    /* Init PJSIP : */
 
     status = init_stack();
     if (status != PJ_SUCCESS) {
@@ -443,6 +448,20 @@ pj_status_t pjsua_init(void)
 	pjsua_perror("Stack initialization has returned error", status);
 	return status;
     }
+
+
+    /* Init core SIMPLE module : */
+
+    pjsip_evsub_init_module(pjsua.endpt);
+
+    /* Init presence module: */
+
+    pjsip_pres_init_module( pjsua.endpt, pjsip_evsub_instance());
+
+
+    /* Init pjsua presence handler: */
+
+    pjsua_pres_init();
 
 
     /* Init media endpoint: */
@@ -609,7 +628,7 @@ pj_status_t pjsua_start(void)
     /* Create worker thread(s), if required: */
 
     for (i=0; i<pjsua.thread_cnt; ++i) {
-	status = pj_thread_create( pjsua.pool, "pjsua", &pjsua_worker_thread,
+	status = pj_thread_create( pjsua.pool, "pjsua", &pjsua_poll,
 				   NULL, 0, 0, &pjsua.threads[i]);
 	if (status != PJ_SUCCESS) {
 	    pjsua.quit_flag = 1;
@@ -635,10 +654,25 @@ pj_status_t pjsua_start(void)
     }
 
 
-
+    PJ_LOG(3,(THIS_FILE, "PJSUA version %s started", PJ_VERSION));
     return PJ_SUCCESS;
 }
 
+
+/* Sleep with polling */
+static void busy_sleep(unsigned msec)
+{
+    pj_time_val timeout, now;
+
+    pj_gettimeofday(&timeout);
+    timeout.msec += msec;
+    pj_time_val_normalize(&timeout);
+
+    do {
+	pjsua_poll(NULL);
+	pj_gettimeofday(&now);
+    } while (PJ_TIME_VAL_LT(now, timeout));
+}
 
 /*
  * Destroy pjsua.
@@ -647,33 +681,10 @@ pj_status_t pjsua_destroy(void)
 {
     int i;
 
-    /* Unregister, if required: */
-    if (pjsua.regc) {
-
-	pjsua_regc_update(0);
-
-	/* Wait for some time to allow unregistration to complete: */
-
-	pj_thread_sleep(500);
-    }
-
     /* Signal threads to quit: */
-
     pjsua.quit_flag = 1;
 
-
-    /* Shutdown pjmedia-codec: */
-
-    pjmedia_codec_deinit();
-
-
-    /* Destroy sound framework: 
-     * (this should be done in pjmedia_shutdown())
-     */
-    pj_snd_deinit();
-
     /* Wait worker threads to quit: */
-
     for (i=0; i<pjsua.thread_cnt; ++i) {
 	
 	if (pjsua.threads[i]) {
@@ -682,6 +693,30 @@ pj_status_t pjsua_destroy(void)
 	    pjsua.threads[i] = NULL;
 	}
     }
+
+
+    /* Terminate all calls. */
+    pjsua_inv_shutdown();
+
+    /* Terminate all presence subscriptions. */
+    pjsua_pres_shutdown();
+
+    /* Unregister, if required: */
+    if (pjsua.regc) {
+	pjsua_regc_update(0);
+    }
+
+    /* Wait for some time to allow unregistration to complete: */
+    PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+    busy_sleep(1000);
+
+    /* Shutdown pjmedia-codec: */
+    pjmedia_codec_deinit();
+
+    /* Destroy sound framework: 
+     * (this should be done in pjmedia_shutdown())
+     */
+    pj_snd_deinit();
 
     /* Destroy endpoint. */
 

@@ -32,16 +32,16 @@ RSC=rc.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "./output/pjsip_simple_Win32_Release"
-# PROP BASE Intermediate_Dir "./output/pjsip_simple_Win32_Release"
+# PROP BASE Output_Dir "./output/pjsip-simple-i386-win32-vc6-release"
+# PROP BASE Intermediate_Dir "./output/pjsip-simple-i386-win32-vc6-release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "./output/pjsip_simple_Win32_Release"
-# PROP Intermediate_Dir "./output/pjsip_simple_Win32_Release"
+# PROP Output_Dir "./output/pjsip-simple-i386-win32-vc6-release"
+# PROP Intermediate_Dir "./output/pjsip-simple-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "../src" /I "../../pjlib/src" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "../include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "NDEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -49,22 +49,22 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_simple_vc6.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-simple-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "pjsip_simple - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "./output/pjsip_simple_Win32_Debug"
-# PROP BASE Intermediate_Dir "./output/pjsip_simple_Win32_Debug"
+# PROP BASE Output_Dir "./output/pjsip-simple-i386-win32-vc6-debug"
+# PROP BASE Intermediate_Dir "./output/pjsip-simple-i386-win32-vc6-debug"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "./output/pjsip_simple_Win32_Debug"
-# PROP Intermediate_Dir "./output/pjsip_simple_Win32_Debug"
+# PROP Output_Dir "./output/pjsip-simple-i386-win32-vc6-debug"
+# PROP Intermediate_Dir "./output/pjsip-simple-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../src" /I "../../pjlib/src" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "_DEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -72,7 +72,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_simple_vc6d.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-simple-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 
@@ -85,27 +85,23 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\event_notify.c
+SOURCE="..\src\pjsip-simple\evsub.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\event_notify_msg.c
+SOURCE="..\src\pjsip-simple\evsub_msg.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\messaging.c
+SOURCE="..\src\pjsip-simple\pidf.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\pidf.c
+SOURCE="..\src\pjsip-simple\presence.c"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\presence.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsip_simple\xpidf.c
+SOURCE="..\src\pjsip-simple\xpidf.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -113,31 +109,35 @@ SOURCE=..\src\pjsip_simple\xpidf.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\event_notify.h
+SOURCE="..\include\pjsip-simple\errno.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\event_notify_msg.h
+SOURCE="..\include\pjsip-simple\evsub.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\messaging.h
+SOURCE="..\include\pjsip-simple\evsub_msg.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\pidf.h
+SOURCE="..\include\pjsip-simple\pidf.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple.h
+SOURCE=..\include\pjsip_simple.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\presence.h
+SOURCE="..\include\pjsip-simple\presence.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsip_simple\xpidf.h
+SOURCE="..\include\pjsip-simple\types.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-simple\xpidf.h"
 # End Source File
 # End Group
 # End Target

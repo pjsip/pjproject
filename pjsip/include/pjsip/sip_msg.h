@@ -411,7 +411,7 @@ typedef enum pjsip_status_code
     PJSIP_SC_BUSY_HERE = 486,
     PJSIP_SC_REQUEST_TERMINATED = 487,
     PJSIP_SC_NOT_ACCEPTABLE_HERE = 488,
-    PJSIP_SC_UNKNOWN_EVENT = 489,
+    PJSIP_SC_BAD_EVENT = 489,
     PJSIP_SC_REQUEST_UPDATED = 490,
     PJSIP_SC_REQUEST_PENDING = 491,
     PJSIP_SC_UNDECIPHERABLE = 493,
@@ -498,7 +498,7 @@ typedef struct pjsip_media_type
  * When application needs to attach message body to outgoing SIP message, it
  * must fill in all members of this structure. 
  */
-typedef struct pjsip_msg_body
+struct pjsip_msg_body
 {
     /** MIME content type. 
      *  For incoming messages, the parser will fill in this member with the
@@ -565,7 +565,7 @@ typedef struct pjsip_msg_body
      */
     void* (*clone_data)(pj_pool_t *pool, const void *data, unsigned len);
 
-} pjsip_msg_body;
+};
 
 /**
  * General purpose function to textual data in a SIP body. Attach this function

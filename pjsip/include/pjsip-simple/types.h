@@ -16,26 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#ifndef __PJSIP_SIMPLE_TYPES_H__
+#define __PJSIP_SIMPLE_TYPES_H__
 
-/**
- * @defgroup PJSIP_SIMPLE SIP Event, Instant Messaging and Presence Extension (SIMPLE)
- */
+#include <pjsip/sip_types.h>
 
-/**
- * @file pjsip_simple.h
- * @brief SIP SIMPLE Extension
- */
 
-/*
- * Include this header file to get all functionalities for SIMPLE extension
- * (SIP for Instant Messaging and Presence Leveraging Extension).
- */
-#ifndef __PJSIP_SIMPLE_H__
-#define __PJSIP_SIMPLE_H__
+#define PJSIP_EVSUB_POOL_LEN	4000
+#define PJSIP_EVSUB_POOL_INC	4000
 
-#include <pjsip-simple/evsub.h>
-#include <pjsip-simple/presence.h>
-#include <pjsip-simple/pidf.h>
-#include <pjsip-simple/xpidf.h>
 
-#endif	/* __PJSIP_SIMPLE_H__ */
+#endif	/* __PJSIP_SIMPLE_TYPES_H__ */
+

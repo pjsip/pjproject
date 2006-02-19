@@ -23,8 +23,8 @@
  * @file pidf.h
  * @brief PIDF/Presence Information Data Format (RFC 3863)
  */
-#include <pj/types.h>
-#include <pj/xml.h>
+#include <pjsip-simple/types.h>
+#include <pjlib-util/xml.h>
 
 PJ_BEGIN_DECL
 

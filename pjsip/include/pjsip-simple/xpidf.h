@@ -23,8 +23,8 @@
  * @file xpidf.h
  * @brief XPIDF/Presence Information Data Format
  */
-#include <pj/types.h>
-#include <pj/xml.h>
+#include <pjsip-simple/types.h>
+#include <pjlib-util/xml.h>
 
 PJ_BEGIN_DECL
 

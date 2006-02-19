@@ -32,13 +32,13 @@ RSC=rc.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir ".\output\pjsip_ua_vc6_Release"
-# PROP BASE Intermediate_Dir ".\output\pjsip_ua_vc6_Release"
+# PROP BASE Output_Dir ".\output\pjsip-ua-i386-win32-vc6-release"
+# PROP BASE Intermediate_Dir ".\output\pjsip-ua-i386-win32-vc6-release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir ".\output\pjsip_ua_vc6_Release"
-# PROP Intermediate_Dir ".\output\pjsip_ua_vc6_Release"
+# PROP Output_Dir ".\output\pjsip-ua-i386-win32-vc6-release"
+# PROP Intermediate_Dir ".\output\pjsip-ua-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjmedia/include" /D "NDEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /FD /c
@@ -50,19 +50,19 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_ua_vc6s.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-ua-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "pjsip_ua - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir ".\output\pjsip_ua_vc6_Debug"
-# PROP BASE Intermediate_Dir ".\output\pjsip_ua_vc6_Debug"
+# PROP BASE Output_Dir ".\output\pjsip-ua-i386-win32-vc6-debug"
+# PROP BASE Intermediate_Dir ".\output\pjsip-ua-i386-win32-vc6-debug"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir ".\output\pjsip_ua_vc6_Debug"
-# PROP Intermediate_Dir ".\output\pjsip_ua_vc6_Debug"
+# PROP Output_Dir ".\output\pjsip-ua-i386-win32-vc6-debug"
+# PROP Intermediate_Dir ".\output\pjsip-ua-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjmedia/include" /D "_DEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /FD /GZ /c
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"../lib/pjsip_ua_vc6sd.lib"
+# ADD LIB32 /nologo /out:"../lib/pjsip-ua-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 
@@ -92,13 +92,6 @@ SOURCE="..\src\pjsip-ua\sip_inv.c"
 # Begin Source File
 
 SOURCE="..\src\pjsip-ua\sip_reg.c"
-
-!IF  "$(CFG)" == "pjsip_ua - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsip_ua - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # End Group
 # Begin Group "Header Files"
