@@ -97,6 +97,17 @@ PJ_DECL(int) pj_xml_print( const pj_xml_node *node, char *buf, pj_size_t len,
 			   pj_bool_t include_prolog);
 
 /**
+ * Clone XML node and all subnodes.
+ *
+ * @param pool	    Pool to allocate memory for new nodes.
+ * @param rhs	    The node to clone.
+ *
+ * @return	    Cloned XML node, or NULL on fail.
+ */
+PJ_DECL(pj_xml_node*) pj_xml_clone( pj_pool_t *pool, const pj_xml_node *rhs);
+
+
+/**
  * Create an empty node.
  *
  * @param pool	    Pool.

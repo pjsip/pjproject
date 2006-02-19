@@ -46,7 +46,7 @@ static pj_xml_node *alloc_node( pj_pool_t *pool )
 
 static pj_xml_attr *alloc_attr( pj_pool_t *pool )
 {
-    return pj_pool_calloc(pool, 1, sizeof(pj_xml_attr));
+    return pj_pool_zalloc(pool, sizeof(pj_xml_attr));
 }
 
 /* This is a recursive function! */
@@ -114,7 +114,7 @@ static pj_xml_node *xml_parse_node( pj_pool_t *pool, pj_scanner *scanner)
 	    attr->value.slen -= 2;
 	}
 	
-	pj_list_insert_before( &node->attr_head, attr );
+	pj_list_push_back( &node->attr_head, attr );
     }
 
     if (*scanner->curptr == '/') {
@@ -131,7 +131,7 @@ static pj_xml_node *xml_parse_node( pj_pool_t *pool, pj_scanner *scanner)
     /* Sub nodes. */
     while (*scanner->curptr == '<' && *(scanner->curptr+1) != '/') {
 	pj_xml_node *sub_node = xml_parse_node(pool, scanner);
-	pj_list_insert_before( &node->node_head, sub_node );
+	pj_list_push_back( &node->node_head, sub_node );
     }
 
     /* Content. */
@@ -331,12 +331,12 @@ PJ_DEF(pj_xml_attr*) pj_xml_attr_new( pj_pool_t *pool, const pj_str_t *name,
 
 PJ_DEF(void) pj_xml_add_node( pj_xml_node *parent, pj_xml_node *node )
 {
-    pj_list_insert_before(&parent->node_head, node);
+    pj_list_push_back(&parent->node_head, node);
 }
 
 PJ_DEF(void) pj_xml_add_attr( pj_xml_node *node, pj_xml_attr *attr )
 {
-    pj_list_insert_before(&node->attr_head, attr);
+    pj_list_push_back(&node->attr_head, attr);
 }
 
 PJ_DEF(pj_xml_node*) pj_xml_find_node(pj_xml_node *parent, const pj_str_t *name)
@@ -409,3 +409,43 @@ PJ_DEF(pj_xml_node*) pj_xml_find( pj_xml_node *parent, const pj_str_t *name,
     return NULL;
 }
 
+
+PJ_DEF(pj_xml_node*) pj_xml_clone( pj_pool_t *pool, const pj_xml_node *rhs)
+{
+    pj_xml_node *node;
+    const pj_xml_attr *r_attr;
+    const pj_xml_node *child;
+
+    node = alloc_node(pool);
+
+    pj_strdup(pool, &node->name, &rhs->name);
+    pj_strdup(pool, &node->content, &rhs->content);
+
+    /* Clone all attributes */
+    r_attr = rhs->attr_head.next;
+    while (r_attr != &rhs->attr_head) {
+
+	pj_xml_attr *attr;
+
+	attr = alloc_attr(pool);
+	pj_strdup(pool, &attr->name, &r_attr->name);
+	pj_strdup(pool, &attr->value, &r_attr->value);
+
+	pj_list_push_back(&node->attr_head, attr);
+
+	r_attr = r_attr->next;
+    }
+
+    /* Clone all child nodes. */
+    child = rhs->node_head.next;
+    while (child != (pj_xml_node*) &rhs->node_head) {
+	pj_xml_node *new_child;
+
+	new_child = pj_xml_clone(pool, child);
+	pj_list_push_back(&node->node_head, new_child);
+
+	child = child->next;
+    }
+
+    return node;
+}
