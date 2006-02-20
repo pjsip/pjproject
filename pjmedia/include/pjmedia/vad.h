@@ -26,9 +26,11 @@
  */
 #include <pjmedia/types.h>
 
+PJ_BEGIN_DECL
+
 
 /**
- * Opaque data type for pjmedia vad.
+ * @see pjmedia_vad
  */
 typedef struct pjmedia_vad  pjmedia_vad;
 
@@ -48,6 +50,41 @@ PJ_DECL(pj_status_t) pjmedia_vad_create( pj_pool_t *pool,
 
 
 /**
+ * Set the vad to operate in adaptive mode.
+ *
+ * @param vad		    The vad
+ * @param frame_size Number of samplse per frame.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vad_set_adaptive( pjmedia_vad *vad,
+					       unsigned frame_size);
+
+
+/**
+ * Set the vad to operate in fixed threshold mode.
+ *
+ * @param vad		    The vad
+ * @param frame_size Number of samplse per frame.
+ * @param threshold	    The silence threshold.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vad_set_fixed( pjmedia_vad *vad,
+					    unsigned frame_size,
+					    unsigned threshold );
+
+/**
+ * Disable the vad.
+ *
+ * @param vad		The vad
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vad_disable( pjmedia_vad *vad );
+
+
+/**
  * Calculate average signal level for the given samples.
  *
  * @param samples	Pointer to 16-bit PCM samples.
@@ -56,8 +93,8 @@ PJ_DECL(pj_status_t) pjmedia_vad_create( pj_pool_t *pool,
  * @return		The average signal level, which simply is total level
  *			divided by number of samples.
  */
-PJ_DECL(pj_uint32_t) pjmedia_vad_calc_avg_signal_level( pj_int16_t samples[],
-							pj_size_t count );
+PJ_DECL(pj_int32_t) pjmedia_vad_calc_avg_signal( const pj_int16_t samples[],
+						 pj_size_t count );
 
 
 /**
@@ -66,18 +103,18 @@ PJ_DECL(pj_uint32_t) pjmedia_vad_calc_avg_signal_level( pj_int16_t samples[],
  * @param vad		The VAD instance.
  * @param samples	Pointer to 16-bit PCM input samples.
  * @param count		Number of samples in the input.
- * @param p_silence	Pointer to receive the silence detection result.
- *			Non-zero value indicates that that input is considered
- *			as silence.
+ * @param p_level	Optional pointer to receive average signal level
+ *			of the input samples.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
-						 pj_int16_t samples[],
-						 pj_size_t count,
-						 pj_bool_t *p_silence);
+PJ_DECL(pj_bool_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
+					       const pj_int16_t samples[],
+					       pj_size_t count,
+					       pj_int32_t *p_level);
 
 
+PJ_END_DECL
 
 #endif	/* __PJMEDIA_VAD_H__ */
 

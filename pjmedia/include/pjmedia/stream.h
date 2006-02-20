@@ -98,6 +98,23 @@ struct pjmedia_stream_stat
 
 
 /**
+ * Stream ports.
+ */
+struct pjmedia_stream_port
+{
+    /**
+     * Sink port.
+     */
+    pj_status_t (*put_frame)(const pj_int16_t *frame, pj_size_t frame_cnt);
+
+    /**
+     * Source port.
+     */
+    pj_status_t (*get_frame)(pj_int16_t *frame, pj_size_t frame_cnt);
+};
+
+
+/**
  * Create a media stream based on the specified stream parameter.
  * All channels in the stream initially will be inactive.
  *

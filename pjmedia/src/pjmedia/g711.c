@@ -34,10 +34,10 @@ PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_
 PJ_DECL(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory);
 
 /* Algorithm prototypes. */
-static unsigned char linear2alaw(int		pcm_val);   /* 2's complement (16-bit range) */
-static int	     alaw2linear(unsigned char	a_val);
-static unsigned char linear2ulaw(int		pcm_val);
-static int	     ulaw2linear(unsigned char	u_val);
+unsigned char linear2alaw(int		pcm_val);   /* 2's complement (16-bit range) */
+int	      alaw2linear(unsigned char	a_val);
+unsigned char linear2ulaw(int		pcm_val);
+int	      ulaw2linear(unsigned char	u_val);
 
 /* Prototypes for G711 factory */
 static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, 
@@ -593,7 +593,7 @@ alaw2linear(
  * For further information see John C. Bellamy's Digital Telephony, 1982,
  * John Wiley & Sons, pps 98-111 and 472-476.
  */
-static unsigned char
+unsigned char
 linear2ulaw(
 	int		pcm_val)	/* 2's complement (16-bit range) */
 {
