@@ -532,6 +532,19 @@ pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 
 
 /**
+ * Call this function when the negotiator is in PJMEDIA_SDP_NEG_STATE_WAIT_NEGO
+ * state to see if it was local who is answering the offer (instead of
+ * remote).
+ *
+ * @param neg		The negotiator.
+ *
+ * @return		PJ_TRUE if it is local is answering an offer, PJ_FALSE
+ *			if remote has answered local offer.
+ */
+PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
+
+
+/**
  * Negotiate local and remote answer. Before calling this function, the
  * SDP negotiator must be in PJMEDIA_SDP_NEG_STATE_WAIT_NEGO state.
  * After calling this function, the negotiator state will move to

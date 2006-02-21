@@ -329,6 +329,13 @@ pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg)
+{
+    pj_assert(neg && neg->state==PJMEDIA_SDP_NEG_STATE_WAIT_NEGO);
+    return !neg->has_remote_answer;
+}
+
+
 /* Swap string. */
 static void str_swap(pj_str_t *str1, pj_str_t *str2)
 {
@@ -693,6 +700,7 @@ static pj_bool_t match_offer(pj_pool_t *pool,
     }
 
     /* See if all types of offer can be matched. */
+#if 0
     if ((offer_has_codec && !found_matching_codec) ||
 	(offer_has_telephone_event && !found_matching_telephone_event) ||
 	(offer_has_other && !found_matching_other))
@@ -700,6 +708,16 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 	/* Some of the payload in the offer has no matching local sdp */
 	return PJ_FALSE;
     }
+#else
+    PJ_TODO(FULL_MATCHING_WITH_TELEPHONE_EVENTS);
+    if (!found_matching_codec &&
+	!found_matching_telephone_event &&
+	!found_matching_other)
+    {
+	/* Some of the payload in the offer has no matching local sdp */
+	return PJ_FALSE;
+    }
+#endif
 
     /* Seems like everything is in order.
      * Build the answer by cloning from local media, but rearrange the payload
@@ -838,6 +856,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
     *p_answer = answer;
 
     return has_active ? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA;
+    //return PJ_SUCCESS;
 }
 
 /* The best bit: SDP negotiation function! */
