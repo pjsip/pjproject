@@ -141,7 +141,7 @@ static pj_status_t init_sockets(pj_bool_t sip,
     enum { 
 	RTP_START_PORT = 4000,
 	RTP_RANDOM_START = 2,
-	RTP_RETRY = 10 
+	RTP_RETRY = 20 
     };
     enum {
 	SIP_SOCK,
@@ -392,6 +392,9 @@ static pj_status_t init_stack(void)
 	inv_cb.on_state_changed = &pjsua_inv_on_state_changed;
 	inv_cb.on_new_session = &pjsua_inv_on_new_session;
 	inv_cb.on_media_update = &pjsua_inv_on_media_update;
+	inv_cb.on_rx_offer = &pjsua_inv_on_rx_offer;
+	inv_cb.on_tsx_state_changed = &pjsua_inv_on_tsx_state_changed;
+
 
 	/* Initialize invite session module: */
 	status = pjsip_inv_usage_init(pjsua.endpt, &pjsua.mod, &inv_cb);
@@ -479,6 +482,9 @@ pj_status_t pjsua_init(void)
 
     pjsip_pres_init_module( pjsua.endpt, pjsip_evsub_instance());
 
+    /* Init xfer/REFER module */
+
+    pjsip_xfer_init_module( pjsua.endpt );
 
     /* Init pjsua presence handler: */
 
@@ -750,6 +756,10 @@ pj_status_t pjsua_destroy(void)
     /* Wait for some time to allow unregistration to complete: */
     PJ_LOG(4,(THIS_FILE, "Shutting down..."));
     busy_sleep(1000);
+
+    /* Destroy conference bridge. */
+    if (pjsua.mconf)
+	pjmedia_conf_destroy(pjsua.mconf);
 
     /* Shutdown pjmedia-codec: */
     pjmedia_codec_deinit();

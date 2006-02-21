@@ -200,10 +200,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
     /* On receipt ACK request, when state is CONNECTING,
      * move state to CONFIRMED.
      */
-    if (method->id == PJSIP_ACK_METHOD && inv &&
-	inv->state != PJSIP_INV_STATE_CONFIRMED)
-    {
-	pjsip_event event;
+    if (method->id == PJSIP_ACK_METHOD && inv) {
 
 	/* Terminate INVITE transaction, if it's still present. */
 	if (inv->invite_tsx && 
@@ -214,8 +211,12 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    inv->invite_tsx = NULL;
 	}
 
-	PJSIP_EVENT_INIT_RX_MSG(event, rdata);
-	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
+	if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	    pjsip_event event;
+
+	    PJSIP_EVENT_INIT_RX_MSG(event, rdata);
+	    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
+	}
     }
 
     return PJ_FALSE;
@@ -250,7 +251,9 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
      * If it is, we need to send ACK.
      */
     if (msg->type == PJSIP_RESPONSE_MSG && msg->line.status.code/100==2 &&
-	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD) {
+	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+	inv->invite_tsx == NULL) 
+    {
 
 	inv_send_ack(inv, rdata);
 	return PJ_TRUE;
@@ -865,13 +868,16 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 {
     pjsip_tx_data *tdata;
     const pjsip_hdr *hdr;
+    pj_bool_t has_sdp;
     pj_status_t status;
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
-    /* State MUST be NULL. */
-    PJ_ASSERT_RETURN(inv->state == PJSIP_INV_STATE_NULL, PJ_EINVAL);
+    /* State MUST be NULL or CONFIRMED. */
+    PJ_ASSERT_RETURN(inv->state == PJSIP_INV_STATE_NULL ||
+		     inv->state == PJSIP_INV_STATE_CONFIRMED, 
+		     PJ_EINVALIDOP);
 
     /* Create the INVITE request. */
     status = pjsip_dlg_create_request(inv->dlg, &pjsip_invite_method, -1,
@@ -879,10 +885,37 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* If this is the first INVITE, then copy the headers from inv_hdr.
+     * These are the headers parsed from the request URI when the
+     * dialog was created.
+     */
+    if (inv->state == PJSIP_INV_STATE_NULL) {
+	hdr = inv->dlg->inv_hdr.next;
+
+	while (hdr != &inv->dlg->inv_hdr) {
+	    pjsip_msg_add_hdr(tdata->msg,
+			      pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
+
+    /* See if we have SDP to send. */
+    if (inv->neg) {
+	pjmedia_sdp_neg_state neg_state;
+
+	neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+
+	has_sdp = (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER ||
+		   (neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
+		    pjmedia_sdp_neg_has_local_answer(inv->neg)));
+
+
+    } else {
+	has_sdp = PJ_FALSE;
+    }
+
     /* Add SDP, if any. */
-    if (inv->neg && 
-	pjmedia_sdp_neg_get_state(inv->neg)==PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
-    {
+    if (has_sdp) {
 	const pjmedia_sdp_session *offer;
 
 	status = pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
@@ -940,9 +973,9 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 /*
  * Check in incoming message for SDP offer/answer.
  */
-static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
-					   pjsip_transaction *tsx,
-					   pjsip_rx_data *rdata)
+static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
+						  pjsip_transaction *tsx,
+						  pjsip_rx_data *rdata)
 {
     struct tsx_inv_data *tsx_inv_data;
     static const pj_str_t str_application = { "application", 11 };
@@ -963,21 +996,21 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
      */
 
     if (tsx_inv_data->sdp_done)
-	return;
+	return PJ_SUCCESS;
 
     /* Check if SDP is present in the message. */
 
     msg = rdata->msg_info.msg;
     if (msg->body == NULL) {
 	/* Message doesn't have body. */
-	return;
+	return PJ_SUCCESS;
     }
 
     if (pj_stricmp(&msg->body->content_type.type, &str_application) ||
 	pj_stricmp(&msg->body->content_type.subtype, &str_sdp))
     {
 	/* Message body is not "application/sdp" */
-	return;
+	return PJMEDIA_SDP_EINSDP;
     }
 
     /* Parse the SDP body. */
@@ -989,7 +1022,7 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	PJ_LOG(4,(THIS_FILE, "Error parsing SDP in %s: %s",
 		  pjsip_rx_data_get_info(rdata), errmsg));
-	return;
+	return PJMEDIA_SDP_EINSDP;
     }
 
     /* The SDP can be an offer or answer, depending on negotiator's state */
@@ -1015,13 +1048,16 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	    pj_strerror(status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, "Error processing SDP offer in %s: %s",
 		      pjsip_rx_data_get_info(rdata), errmsg));
-	    return;
+	    return PJMEDIA_SDP_EINSDP;
 	}
 
 	/* Inform application about remote offer. */
 
-	if (mod_inv.cb.on_rx_offer)
-	    (*mod_inv.cb.on_rx_offer)(inv);
+	if (mod_inv.cb.on_rx_offer) {
+
+	    (*mod_inv.cb.on_rx_offer)(inv, sdp);
+
+	}
 
     } else if (pjmedia_sdp_neg_get_state(inv->neg) == 
 		PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) 
@@ -1041,7 +1077,7 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	    pj_strerror(status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, "Error processing SDP answer in %s: %s",
 		      pjsip_rx_data_get_info(rdata), errmsg));
-	    return;
+	    return PJMEDIA_SDP_EINSDP;
 	}
 
 	/* Negotiate SDP */
@@ -1059,12 +1095,68 @@ static void inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	      pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_get_state(inv->neg))));
     }
 
+    return PJ_SUCCESS;
 }
 
 
+/*
+ * Process INVITE answer, for both initial and subsequent re-INVITE
+ */
+static pj_status_t process_answer( pjsip_inv_session *inv,
+				   int st_code,
+				   pjsip_tx_data *tdata )
+{
+    pj_status_t status;
+    pjmedia_sdp_session *sdp = NULL;
+
+    /* Include SDP for 18x and 2xx response. 
+     * Also if SDP negotiator is ready, start negotiation.
+     */
+    if (st_code/10 == 18 || st_code/10 == 20) {
+
+	pjmedia_sdp_neg_state neg_state;
+
+	neg_state = inv->neg ? pjmedia_sdp_neg_get_state(inv->neg) :
+		    PJMEDIA_SDP_NEG_STATE_NULL;
+
+	if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+
+	    status = pjmedia_sdp_neg_get_neg_local(inv->neg, &sdp);
+
+	} else if (neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
+		   pjmedia_sdp_neg_has_local_answer(inv->neg) )
+	{
+
+	    status = inv_negotiate_sdp(inv);
+	    if (status != PJ_SUCCESS)
+		return status;
+	    
+	    status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
+	}
+
+    }
+
+
+
+    /* Include SDP when it's available.
+     * Subsequent response will include this SDP.
+     */
+    if (sdp) {
+	tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+    }
+
+    /* Remove message body if this is a non-2xx final response */
+    if (st_code >= 300)
+	tdata->msg->body = NULL;
+
+
+    return PJ_SUCCESS;
+}
+
 
 /*
- * Answer initial INVITE.
+ * Answer initial INVITE
+ * Re-INVITE will be answered automatically, and will not use this function.
  */ 
 PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					int st_code,
@@ -1087,7 +1179,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     /* If local_sdp is specified, then we MUST NOT have answered the
      * offer before. 
      */
-    if (local_sdp) {
+    if (local_sdp && (st_code/100==1 || st_code/100==2)) {
 
 	if (inv->neg == NULL) {
 	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, local_sdp,
@@ -1108,47 +1200,43 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 	    return status;
     }
 
-    last_res = inv->invite_tsx->last_tx;
+
+
 
     /* Modify last response. */
+    last_res = inv->invite_tsx->last_tx;
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Include SDP for 18x and 2xx response. 
-     * Also if SDP negotiator is ready, start negotiation.
-     */
-    if (st_code/10 == 18 || st_code/10 == 20) {
 
-	pjmedia_sdp_neg_state neg_state;
-
-	neg_state = inv->neg ? pjmedia_sdp_neg_get_state(inv->neg) :
-		    PJMEDIA_SDP_NEG_STATE_NULL;
-
-	if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER ||
-	    neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
-	{
-	    const pjmedia_sdp_session *local;
-
-	    status = pjmedia_sdp_neg_get_neg_local(inv->neg, &local);
-	    if (status == PJ_SUCCESS)
-		last_res->msg->body = create_sdp_body(last_res->pool, local);
-	}
-
-	/* Start negotiation, if ready. */
-	if (neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO) {
-	    status = inv_negotiate_sdp(inv);
-	    if (status != PJ_SUCCESS) {
-		pjsip_tx_data_dec_ref(last_res);
-		return status;
-	    }
-	}
-    }
+    /* Process SDP in answer */
+    status = process_answer(inv, st_code, last_res);
+    if (status != PJ_SUCCESS)
+	return status;
 
 
     *p_tdata = last_res;
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Set SDP answer.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_set_sdp_answer( pjsip_inv_session *inv,
+					      const pjmedia_sdp_session *sdp )
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(inv && sdp, PJ_EINVAL);
+
+    pjsip_dlg_inc_lock(inv->dlg);
+    status = pjmedia_sdp_neg_set_local_answer( inv->pool, inv->neg, sdp);
+    pjsip_dlg_dec_lock(inv->dlg);
+
+    return status;
 }
 
 
@@ -1205,8 +1293,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	    tdata = inv->invite_tsx->last_tx;
 	    PJ_ASSERT_RETURN(tdata != NULL, PJ_EINVALIDOP);
 
-	    status = pjsip_dlg_modify_response(inv->dlg, tdata, st_code,
-					       st_text);
+	    //status = pjsip_dlg_modify_response(inv->dlg, tdata, st_code,
+	    //				       st_text);
+	    status = pjsip_inv_answer(inv, st_code, st_text, NULL, &tdata);
 	}
 	break;
 
@@ -1247,13 +1336,82 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 					const pjmedia_sdp_session *new_offer,
 					pjsip_tx_data **p_tdata )
 {
-    PJ_UNUSED_ARG(inv);
-    PJ_UNUSED_ARG(new_contact);
-    PJ_UNUSED_ARG(new_offer);
-    PJ_UNUSED_ARG(p_tdata);
+    pj_status_t status;
+    pjsip_contact_hdr *contact_hdr = NULL;
 
-    PJ_TODO(CREATE_REINVITE_REQUEST);
-    return PJ_ENOTSUP;
+    /* Check arguments. */
+    PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
+
+    /* Must NOT have a pending INVITE transaction */
+    PJ_ASSERT_RETURN(inv->invite_tsx==NULL, PJ_EINVALIDOP);
+
+
+    pjsip_dlg_inc_lock(inv->dlg);
+
+    if (new_contact) {
+	pj_str_t tmp;
+	const pj_str_t STR_CONTACT = { "Contact", 7 };
+
+	pj_strdup_with_null(inv->dlg->pool, &tmp, new_contact);
+	contact_hdr = pjsip_parse_hdr(inv->dlg->pool, &STR_CONTACT, 
+				      tmp.ptr, tmp.slen, NULL);
+	if (!contact_hdr) {
+	    status = PJSIP_EINVALIDURI;
+	    goto on_return;
+	}
+    }
+
+
+    if (new_offer) {
+	if (!inv->neg) {
+	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, new_offer,
+							  &inv->neg);
+	    if (status != PJ_SUCCESS)
+		goto on_return;
+
+	} else switch (pjmedia_sdp_neg_get_state(inv->neg)) {
+
+	    case PJMEDIA_SDP_NEG_STATE_NULL:
+		pj_assert(!"Unexpected SDP neg state NULL");
+		status = PJ_EBUG;
+		goto on_return;
+
+	    case PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER:
+		PJ_LOG(4,(inv->obj_name, 
+			  "pjsip_inv_reinvite: already have an offer, new "
+			  "offer is ignored"));
+		break;
+
+	    case PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER:
+		status = pjmedia_sdp_neg_set_local_answer(inv->pool, inv->neg,
+							  new_offer);
+		if (status != PJ_SUCCESS)
+		    goto on_return;
+		break;
+
+	    case PJMEDIA_SDP_NEG_STATE_WAIT_NEGO:
+		PJ_LOG(4,(inv->obj_name, 
+			  "pjsip_inv_reinvite: SDP in WAIT_NEGO state, new "
+			  "offer is ignored"));
+		break;
+
+	    case PJMEDIA_SDP_NEG_STATE_DONE:
+		status = pjmedia_sdp_neg_modify_local_offer(inv->pool,inv->neg,
+							    new_offer);
+		if (status != PJ_SUCCESS)
+		    goto on_return;
+		break;
+	}
+    }
+
+    if (contact_hdr)
+	inv->dlg->local.contact = contact_hdr;
+
+    status = pjsip_inv_invite(inv, p_tdata);
+
+on_return:
+    pjsip_dlg_dec_lock(inv->dlg);
+    return status;
 }
 
 /*
@@ -1907,6 +2065,124 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
 
+    }
+    else if (tsx->method.id == PJSIP_INVITE_METHOD &&
+	     tsx->role == PJSIP_ROLE_UAS)
+    {
+
+	/*
+	 * Handle incoming re-INVITE
+	 */
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    
+	    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
+	    /* Check if we have INVITE pending. */
+	    if (inv->invite_tsx && inv->invite_tsx!=tsx) {
+
+		/* Can not receive re-INVITE while another one is pending. */
+		status = pjsip_dlg_create_response( inv->dlg, rdata, 500, NULL,
+						    &tdata);
+		if (status != PJ_SUCCESS)
+		    return;
+
+		status = pjsip_dlg_send_response( inv->dlg, tsx, tdata);
+		
+
+		return;
+	    }
+
+	    /* Save the invite transaction. */
+	    inv->invite_tsx = tsx;
+
+	    /* Process SDP in incoming message. */
+	    status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
+
+	    if (status != PJ_SUCCESS) {
+
+		/* Not Acceptable */
+		const pjsip_hdr *accept;
+
+		status = pjsip_dlg_create_response(inv->dlg, rdata, 
+						   488, NULL, &tdata);
+		if (status != PJ_SUCCESS)
+		    return;
+
+
+		accept = pjsip_endpt_get_capability(dlg->endpt, PJSIP_H_ACCEPT,
+						    NULL);
+		if (accept) {
+		    pjsip_msg_add_hdr(tdata->msg,
+				      pjsip_hdr_clone(tdata->pool, accept));
+		}
+
+		status = pjsip_dlg_send_response(dlg, tsx, tdata);
+
+		return;
+	    }
+
+	    /* Create 2xx ANSWER */
+	    status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
+	    if (status != PJ_SUCCESS)
+		return;
+
+	    /* Process SDP in the answer */
+	    status = process_answer(inv, 200, tdata);
+	    if (status != PJ_SUCCESS)
+		return;
+
+	    status = pjsip_inv_send_msg(inv, tdata, NULL);
+
+	}
+
+    }
+    else if (tsx->method.id == PJSIP_INVITE_METHOD &&
+	     tsx->role == PJSIP_ROLE_UAC)
+    {
+	/*
+	 * Handle outgoing re-INVITE
+	 */
+	if (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	    tsx->status_code/100 == 2) 
+	{
+
+	    /* Re-INVITE was accepted. */
+
+	    /* Process SDP */
+	    inv_check_sdp_in_incoming_msg(inv, tsx, 
+					  e->body.tsx_state.src.rdata);
+
+	    /* Send ACK */
+	    inv_send_ack(inv, e->body.tsx_state.src.rdata);
+
+	} else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+		   (tsx->status_code==401 || tsx->status_code==407))
+	{
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
+	    /* Handle authentication challenge. */
+	    status = pjsip_auth_clt_reinit_req( &dlg->auth_sess,
+						e->body.tsx_state.src.rdata,
+						tsx->last_tx,
+						&tdata);
+	    if (status != PJ_SUCCESS)
+		return;
+
+	    /* Send re-INVITE */
+	    status = pjsip_inv_send_msg( inv, tdata, NULL);
+
+	} else if (tsx->status_code==PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+		   tsx->status_code==PJSIP_SC_REQUEST_TIMEOUT ||
+		   tsx->status_code >= 700)
+	{
+	    /*
+	     * Handle responses that terminates dialog.
+	     */
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	}
     }
 }
 

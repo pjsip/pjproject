@@ -584,6 +584,22 @@ PJ_DECL(int) pjsip_print_text_body( pjsip_msg_body *msg_body,
 				    char *buf, pj_size_t size);
 
 /**
+ * General purpose function to clone textual data in a SIP body. Attach this
+ * function as "clone_data" member of the SIP body only if the data type
+ * is a text (i.e. C string, not pj_str_t), and the length indicates the
+ * length of the text.
+ *
+ *  @param pool		Pool used to clone the data.
+ *  @param data		Textual data.
+ *  @param len		The length of the string.
+ *
+ *  @return		New text duplicated from the original text.
+ */
+PJ_DECL(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
+				      unsigned len);
+
+
+/**
  * Clone the message body in src_body to the dst_body. This will duplicate
  * the contents of the message body using the \a clone_data member of the
  * source message body.

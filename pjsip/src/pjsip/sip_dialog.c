@@ -78,6 +78,8 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     dlg->endpt = endpt;
     dlg->state = PJSIP_DIALOG_STATE_NULL;
 
+    pj_list_init(&dlg->inv_hdr);
+
     status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -131,10 +133,31 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 	goto on_error;
     }
 
+    /* Put any header param in the target URI into INVITE header list. */
+    if (PJSIP_URI_SCHEME_IS_SIP(dlg->target) ||
+	PJSIP_URI_SCHEME_IS_SIPS(dlg->target))
+    {
+	pjsip_param *param;
+	pjsip_sip_uri *uri = (pjsip_sip_uri*)pjsip_uri_get_uri(dlg->target);
+
+	param = uri->header_param.next;
+	while (param != &uri->header_param) {
+	    pjsip_generic_string_hdr *req_hdr;
+
+	    req_hdr = pjsip_generic_string_hdr_create(dlg->pool, &param->name,
+						      &param->value);
+	    pj_list_push_back(&dlg->inv_hdr, req_hdr);
+
+	    param = param->next;
+	}
+    }
+
     /* Init local info. */
     dlg->local.info = pjsip_from_hdr_create(dlg->pool);
-    pj_strdup_with_null(dlg->pool, &tmp, local_uri);
-    dlg->local.info->uri = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen, 0);
+    pj_strdup_with_null(dlg->pool, &dlg->local.info_str, local_uri);
+    dlg->local.info->uri = pjsip_parse_uri(dlg->pool, 
+					   dlg->local.info_str.ptr, 
+					   dlg->local.info_str.slen, 0);
     if (!dlg->local.info->uri) {
 	status = PJSIP_EINVALIDURI;
 	goto on_error;
@@ -164,8 +187,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Init remote info. */
     dlg->remote.info = pjsip_to_hdr_create(dlg->pool);
-    pj_strdup_with_null(dlg->pool, &tmp, remote_uri);
-    dlg->remote.info->uri = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen, 0);
+    pj_strdup_with_null(dlg->pool, &dlg->remote.info_str, remote_uri);
+    dlg->remote.info->uri = pjsip_parse_uri(dlg->pool, 
+					    dlg->remote.info_str.ptr, 
+					    dlg->remote.info_str.slen, 0);
     if (!dlg->remote.info->uri) {
 	status = PJSIP_EINVALIDURI;
 	goto on_error;
@@ -225,6 +250,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     pjsip_hdr *contact_hdr;
     pjsip_rr_hdr *rr;
     pjsip_transaction *tsx = NULL;
+    pj_str_t tmp;
+    enum { TMP_LEN=128};
+    pj_ssize_t len;
     pjsip_dialog *dlg;
 
     /* Check arguments. */
@@ -249,6 +277,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Temprary string for getting the string representation of
+     * both local and remote URI.
+     */
+    tmp.ptr = pj_pool_alloc(rdata->tp_info.pool, TMP_LEN);
+
     /* Init local info from the To header. */
     dlg->local.info = pjsip_hdr_clone(dlg->pool, rdata->msg_info.to);
     pjsip_fromto_hdr_set_from(dlg->local.info);
@@ -256,9 +289,35 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     /* Generate local tag. */
     pj_create_unique_string(dlg->pool, &dlg->local.info->tag);
 
+
+    /* Print the local info. */
+    len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+			  dlg->local.info->uri, tmp.ptr, TMP_LEN);
+    if (len < 1) {
+	pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
+	tmp.slen = pj_ansi_strlen(tmp.ptr);
+    } else
+	tmp.slen = len;
+
+    /* Save the local info. */
+    pj_strdup(dlg->pool, &dlg->local.info_str, &tmp);
+
     /* Calculate hash value of local tag. */
     dlg->local.tag_hval = pj_hash_calc(0, dlg->local.info->tag.ptr,
 				       dlg->local.info->tag.slen);
+
+    /* Print the local info. */
+    len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+			  dlg->local.info->uri, tmp.ptr, TMP_LEN);
+    if (len < 1) {
+	pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
+	tmp.slen = pj_ansi_strlen(tmp.ptr);
+    } else
+	tmp.slen = len;
+
+    /* Save the local info. */
+    pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+
 
     /* Randomize local cseq */
     dlg->local.first_cseq = pj_rand() % 0x7FFFFFFFL;
@@ -1085,6 +1144,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
 					     pjsip_transaction *tsx,
 					     pjsip_tx_data *tdata)
 {
+    pj_status_t status;
+
     /* Sanity check. */
     PJ_ASSERT_RETURN(dlg && tsx && tdata && tdata->msg, PJ_EINVAL);
     PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_RESPONSE_MSG,
@@ -1107,7 +1168,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
 		      PJ_EINVALIDOP);
 #endif
 
-    return pjsip_tsx_send_msg(tsx, tdata);
+    /* Must acquire dialog first, to prevent deadlock */
+    pjsip_dlg_inc_lock(dlg);
+
+    status = pjsip_tsx_send_msg(tsx, tdata);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    return status;
 }
 
 

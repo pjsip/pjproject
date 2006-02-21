@@ -197,6 +197,7 @@ struct pjsip_evsub
     pjsip_endpoint	 *endpt;	/**< Endpoint instance.		    */
     pjsip_dialog	 *dlg;		/**< Underlying dialog.		    */
     struct evpkg	 *pkg;		/**< The event package.		    */
+    unsigned		  option;	/**< Options.			    */
     pjsip_evsub_user	  user;		/**< Callback.			    */
     pjsip_role_e	  role;		/**< UAC=subscriber, UAS=notifier   */
     pjsip_evsub_state	  state;	/**< Subscription state.	    */
@@ -235,6 +236,7 @@ static const pj_str_t STR_ACTIVE     = { "active", 6 };
 static const pj_str_t STR_PENDING    = { "pending", 7 };
 static const pj_str_t STR_TIMEOUT    = { "timeout", 7};
 
+
 /*
  * On unload module.
  */
@@ -246,6 +248,12 @@ static pj_status_t mod_evsub_unload(void)
     return PJ_SUCCESS;
 }
 
+/* Proto for pjsipsimple_strerror().
+ * Defined in errno.c
+ */
+PJ_DECL(pj_str_t) pjsipsimple_strerror( pj_status_t statcode, 
+				        char *buf, pj_size_t bufsize );
+
 /*
  * Init and register module.
  */
@@ -256,6 +264,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
 	{ "SUBSCRIBE", 9},
 	{ "NOTIFY", 6}
     };
+
+    pj_register_strerror(PJSIP_SIMPLE_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
+			 &pjsipsimple_strerror);
 
     PJ_ASSERT_RETURN(endpt != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(mod_evsub.mod.id == -1, PJ_EINVALIDOP);
@@ -618,6 +629,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 				 pjsip_role_e role,
 				 const pjsip_evsub_user *user_cb,
 				 const pj_str_t *event,
+				 unsigned option,
 				 pjsip_evsub **p_evsub )
 {
     pjsip_evsub *sub;
@@ -640,6 +652,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     sub->dlg = dlg;
     sub->pkg = pkg;
     sub->role = role;
+    sub->option = option;
     sub->state = PJSIP_EVSUB_STATE_NULL;
     sub->state_str = evsub_state_names[sub->state];
     sub->expires = pjsip_expires_hdr_create(sub->pool, pkg->pkg_expires);
@@ -697,6 +710,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 PJ_DEF(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
 					    const pjsip_evsub_user *user_cb,
 					    const pj_str_t *event,
+					    unsigned option,
 					    pjsip_evsub **p_evsub)
 {
     pjsip_evsub *sub;
@@ -705,12 +719,16 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
     PJ_ASSERT_RETURN(dlg && event && p_evsub, PJ_EINVAL);
 
     pjsip_dlg_inc_lock(dlg);
-    status = evsub_create(dlg, PJSIP_UAC_ROLE, user_cb, event, &sub);
+    status = evsub_create(dlg, PJSIP_UAC_ROLE, user_cb, event, option, &sub);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    /* Add unique Id to Event header */
-    pj_create_unique_string(sub->pool, &sub->event->id_param);
+    /* Add unique Id to Event header, only when PJSIP_EVSUB_NO_EVENT_ID
+     * is not specified.
+     */
+    if ((option & PJSIP_EVSUB_NO_EVENT_ID) == 0) {
+	pj_create_unique_string(sub->pool, &sub->event->id_param);
+    }
 
     /* Increment dlg session. */
     pjsip_dlg_inc_session(sub->dlg, &mod_evsub.mod);
@@ -730,6 +748,7 @@ on_return:
 PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
 					    const pjsip_evsub_user *user_cb,
 					    pjsip_rx_data *rdata,
+					    unsigned option,
 					    pjsip_evsub **p_evsub)
 {
     pjsip_evsub *sub;
@@ -757,8 +776,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
     /* Package MUST implement on_rx_refresh */
     PJ_ASSERT_RETURN(user_cb->on_rx_refresh, PJ_EINVALIDOP);
 
-    /* Request MUST have "Event" header: */
-
+    /* Request MUST have "Event" header. We need the Event header to get 
+     * the package name (don't want to add more arguments in the function).
+     */
     event_hdr = (pjsip_event_hdr*) 
 	pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_EVENT, NULL);
     if (event_hdr == NULL) {
@@ -772,7 +792,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
     /* Create the session: */
 
     status = evsub_create(dlg, PJSIP_UAS_ROLE, user_cb, 
-			  &event_hdr->event_type, &sub);
+			  &event_hdr->event_type, option, &sub);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -1147,6 +1167,7 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	return NULL;
     }
 
+
     switch (event->body.tsx_state.type) {
     case PJSIP_EVENT_RX_MSG:
 	msg = event->body.tsx_state.src.rdata->msg_info.msg;
@@ -1163,7 +1184,11 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
     }
     
     if (!msg) {
-	pj_assert(!"First transaction event is not TX or RX!");
+	//Note:
+	// this transaction can be other transaction in the dialog.
+	// The assertion below probably only valid for dialog that
+	// only has one event subscription usage.
+	//pj_assert(!"First transaction event is not TX or RX!");
 	return NULL;
     }
 
@@ -1187,12 +1212,43 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 
     while (dlgsub != dlgsub_head) {
 
-	/* Match event type and Id */
-	if (pj_strcmp(&dlgsub->sub->event->id_param, &event_hdr->id_param)==0 &&
-	    pj_stricmp(&dlgsub->sub->event->event_type, &event_hdr->event_type)==0)
+	if (pj_stricmp(&dlgsub->sub->event->event_type, 
+		       &event_hdr->event_type)==0)
 	{
-	    break;
+	    /* Event type matched. 
+	     * Check if event ID matched too.
+	     */
+	    if (pj_strcmp(&dlgsub->sub->event->id_param, 
+			  &event_hdr->id_param)==0)
+	    {
+		
+		break;
+
+	    }
+	    /*
+	     * Otherwise if it is an UAC subscription, AND
+	     * PJSIP_EVSUB_NO_EVENT_ID flag is set, AND
+	     * the session's event id is NULL, AND
+	     * the incoming request is NOTIFY with event ID, then
+	     * we consider it as a match, and update the
+	     * session's event id.
+	     */
+	    else if (dlgsub->sub->role == PJSIP_ROLE_UAC &&
+		     (dlgsub->sub->option & PJSIP_EVSUB_NO_EVENT_ID)!=0 &&
+		     dlgsub->sub->event->id_param.slen==0 &&
+		     !pjsip_method_cmp(&tsx->method, &pjsip_notify_method))
+	    {
+		/* Update session's event id. */
+		pj_strdup(dlgsub->sub->pool, 
+			  &dlgsub->sub->event->id_param,
+			  &event_hdr->id_param);
+
+		break;
+	    }
 	}
+	
+
+
 	dlgsub = dlgsub->next;
     }
 
@@ -1200,6 +1256,8 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	/* This could be incoming request to create new subscription */
 	PJ_LOG(4,(THIS_FILE, 
 		  "Subscription not found for %.*s, event=%.*s;id=%.*s",
+		  (int)tsx->method.name.slen,
+		  tsx->method.name.ptr,
 		  (int)event_hdr->event_type.slen,
 		  event_hdr->event_type.ptr,
 		  (int)event_hdr->id_param.slen,
@@ -1737,7 +1795,18 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 		/* Can't authenticate. Terminate session (?) */
 		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
 	    }
-	} 
+
+	}
+	/*
+	 * Terminate event usage if we receive 481, 408, and 7 class
+	 * responses.
+	 */
+	if (sub->state != PJSIP_EVSUB_STATE_TERMINATED &&
+	    (tsx->status_code==481 || tsx->status_code==408 ||
+	     tsx->status_code/100 == 7))
+	{
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event);
+	}
 
     } else {
 

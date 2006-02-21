@@ -76,6 +76,19 @@ enum pjsip_evsub_state
 typedef enum pjsip_evsub_state pjsip_evsub_state;
 
 
+/**
+ * Some options for the event subscription.
+ */
+enum
+{
+    /** 
+     * If this flag is set, then outgoing request to create subscription
+     * will not have id in the Event header (e.g. in REFER request). But if 
+     * there is an id in the incoming NOTIFY, that id will be used.
+     */
+    PJSIP_EVSUB_NO_EVENT_ID  = 1,
+};
+
 
 /**
  * This structure describes callback that is registered by application or
@@ -244,6 +257,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
  * @param dlg		The underlying dialog to use.
  * @param user_cb	Callback to receive event subscription notifications.
  * @param event		Event name.
+ * @param option	Bitmask of options.
  * @param p_evsub	Pointer to receive event subscription instance.
  *
  * @return		PJ_SUCCESS on success.
@@ -251,6 +265,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 PJ_DECL(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
 					     const pjsip_evsub_user *user_cb,
 					     const pj_str_t *event,
+					     unsigned option,
 					     pjsip_evsub **p_evsub);
 
 /**
@@ -260,6 +275,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
  * @param user_cb	Callback to receive event subscription notifications.
  * @param rdata		The incoming request that creates the event 
  *			subscription, such as SUBSCRIBE or REFER.
+ * @param option	Bitmask of options.
  * @param p_evsub	Pointer to receive event subscription instance.
  *
  * @return		PJ_SUCCESS on success.
@@ -267,6 +283,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
 PJ_DECL(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
 					     const pjsip_evsub_user *user_cb,
 					     pjsip_rx_data *rdata,
+					     unsigned option,
 					     pjsip_evsub **p_evsub);
 
 
@@ -366,7 +383,10 @@ PJ_DECL(pj_status_t) pjsip_evsub_current_notify( pjsip_evsub *sub,
 
 
 /**
- * Send request message.
+ * Send request message that was previously created with initiate(), notify(),
+ * or current_notify(). Application may also send request created with other
+ * functions, e.g. authentication. But the request MUST be either request
+ * that creates/refresh subscription or NOTIFY request.
  *
  * @param sub		The event subscription object.
  * @param tdata		Request message to be send.

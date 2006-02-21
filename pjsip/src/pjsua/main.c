@@ -113,8 +113,8 @@ static void keystroke_help(void)
 	pj_snprintf(reg_status, sizeof(reg_status),
 		    "%s (%.*s;expires=%d)",
 		    pjsip_get_status_text(pjsua.regc_last_code)->ptr,
-		    (int)info.server_uri.slen,
-		    info.server_uri.ptr,
+		    (int)info.client_uri.slen,
+		    info.client_uri.ptr,
 		    info.next_reg);
 
     } else {
@@ -131,16 +131,16 @@ static void keystroke_help(void)
     puts("|       Call Commands:         |      IM & Presence:      |   Misc:           |");
     puts("|                              |                          |                   |");
     puts("|  m  Make new call            |  i  Send IM              |  o  Send OPTIONS  |");
-    puts("|  a  Answer call              |  s  Subscribe presence   |  R  (Re-)register |");
-    puts("|  h  Hangup call              |  u  Unsubscribe presence |  r  Unregister    |");
-    puts("|  ]  Select next dialog       |  t  Toggle Online status |  d  Dump status   |");
+    puts("|  a  Answer call              |  s  Subscribe presence   | rr  (Re-)register |");
+    puts("|  h  Hangup call              |  u  Unsubscribe presence | ru  Unregister    |");
+    puts("|  ]  Select next dialog       |  t  ToGgle Online status |  d  Dump status   |");
     puts("|  [  Select previous dialog   |                          |                   |");
-    puts("+-----------------------------------------------------------------------------+");
-    puts("|      Conference Command                                                     |");
-    puts("| cl  List ports                                                              |");
-    puts("| cc  Connect port                                                            |");
-    puts("| cd  Disconnect port                                                         |");
-    puts("+-----------------------------------------------------------------------------+");
+    puts("|                              +--------------------------+-------------------+");
+    puts("|  H  Hold call                |     Conference Command   |                   |");
+    puts("|  v  re-inVite (release hold) | cl  List ports           |                   |");
+    puts("|  x  Xfer call                | cc  Connect port         |                   |");
+    puts("|                              | cd  Disconnect port      |                   |");
+    puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
     printf(">>> ");
@@ -283,7 +283,6 @@ static void ui_console_main(void)
 {
     char menuin[10];
     char buf[128];
-    pjsip_inv_session *inv;
     struct input_result result;
 
     //keystroke_help();
@@ -305,9 +304,9 @@ static void ui_console_main(void)
 		if (result.nb_result == -1)
 		    puts("You can't do that with make call!");
 		else
-		    pjsua_invite(pjsua.buddies[result.nb_result].uri.ptr, &inv);
+		    pjsua_invite(pjsua.buddies[result.nb_result].uri.ptr, NULL);
 	    } else if (result.uri_result)
-		pjsua_invite(result.uri_result, &inv);
+		pjsua_invite(result.uri_result, NULL);
 	    
 	    break;
 
@@ -353,43 +352,100 @@ static void ui_console_main(void)
 		continue;
 
 	    } else {
-		pj_status_t status;
-		pjsip_tx_data *tdata;
-
-		status = pjsip_inv_end_session(inv_session->inv, 
-					       PJSIP_SC_DECLINE, NULL, &tdata);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, 
-				 "Failed to create end session message", 
-				 status);
-		    continue;
-		}
-
-		status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, 
-				 "Failed to send end session message", 
-				 status);
-		    continue;
-		}
+		pjsua_inv_hangup(inv_session, PJSIP_SC_DECLINE);
 	    }
 	    break;
 
 	case ']':
-	    inv_session = inv_session->next;
-	    if (inv_session == &pjsua.inv_list)
-		inv_session = pjsua.inv_list.next;
+	case '[':
+	    /*
+	     * Cycle next/prev dialog.
+	     */
+	    if (menuin[0] == ']') {
+		inv_session = inv_session->next;
+		if (inv_session == &pjsua.inv_list)
+		    inv_session = pjsua.inv_list.next;
+
+	    } else {
+		inv_session = inv_session->prev;
+		if (inv_session == &pjsua.inv_list)
+		    inv_session = pjsua.inv_list.prev;
+	    }
+
+	    if (inv_session != &pjsua.inv_list) {
+		char url[PJSIP_MAX_URL_SIZE];
+		int len;
+
+		len = pjsip_uri_print(0, inv_session->inv->dlg->remote.info->uri,
+				      url, sizeof(url)-1);
+		if (len < 1) {
+		    pj_ansi_strcpy(url, "<uri is too long>");
+		} else {
+		    url[len] = '\0';
+		}
+
+		PJ_LOG(3,(THIS_FILE,"Current dialog: %s", url));
+
+	    } else {
+		PJ_LOG(3,(THIS_FILE,"No current dialog"));
+	    }
 	    break;
 
-	case '[':
-	    inv_session = inv_session->prev;
-	    if (inv_session == &pjsua.inv_list)
-		inv_session = pjsua.inv_list.prev;
+	case 'H':
+	    /*
+	     * Hold call.
+	     */
+	    if (inv_session != &pjsua.inv_list) {
+		
+		pjsua_inv_set_hold(inv_session);
+
+	    } else {
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+	    }
+	    break;
+
+	case 'v':
+	    /*
+	     * Send re-INVITE (to release hold, etc).
+	     */
+	    if (inv_session != &pjsua.inv_list) {
+		
+		pjsua_inv_reinvite(inv_session);
+
+	    } else {
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+	    }
+	    break;
+
+	case 'x':
+	    /*
+	     * Transfer call.
+	     */
+	    if (inv_session == &pjsua.inv_list) {
+		
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+
+	    } else {
+		ui_input_url("Transfer to URL", buf, sizeof(buf), &result);
+		if (result.nb_result != NO_NB) {
+		    if (result.nb_result == -1) 
+			puts("You can't do that with transfer call!");
+		    else
+			pjsua_inv_xfer_call( inv_session,
+					     pjsua.buddies[result.nb_result].uri.ptr);
+
+		} else if (result.uri_result) {
+		    pjsua_inv_xfer_call( inv_session, result.uri_result);
+		}
+	    }
 	    break;
 
 	case 's':
 	case 'u':
-	    ui_input_url("Subscribe presence of", buf, sizeof(buf), &result);
+	    /*
+	     * Subscribe/unsubscribe presence.
+	     */
+	    ui_input_url("(un)Subscribe presence of", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
 		if (result.nb_result == -1) {
 		    unsigned i;
@@ -402,19 +458,29 @@ static void ui_console_main(void)
 		pjsua_pres_refresh();
 
 	    } else if (result.uri_result) {
-		puts("Sorry, can only subscribe to buddy's presence, not arbitrary URL (for now)");
+		puts("Sorry, can only subscribe to buddy's presence, "
+		     "not arbitrary URL (for now)");
 	    }
 
 	    break;
 
-	case 'R':
-	    pjsua_regc_update(PJ_TRUE);
+	case 'r':
+	    switch (menuin[1]) {
+	    case 'r':
+		/*
+		 * Re-Register.
+		 */
+		pjsua_regc_update(PJ_TRUE);
+		break;
+	    case 'u':
+		/*
+		 * Unregister
+		 */
+		pjsua_regc_update(PJ_FALSE);
+		break;
+	    }
 	    break;
 	    
-	case 'r':
-	    pjsua_regc_update(PJ_FALSE);
-	    break;
-
 	case 't':
 	    pjsua.online_status = !pjsua.online_status;
 	    pjsua_pres_refresh();
@@ -430,16 +496,31 @@ static void ui_console_main(void)
 		{
 		    char src_port[10], dst_port[10];
 		    pj_status_t status;
+		    const char *src_title, *dst_title;
 
-		    if (!simple_input("Connect src port #:", src_port, sizeof(src_port)))
+		    conf_list();
+
+		    src_title = (menuin[1]=='c'?
+				 "Connect src port #":
+				 "Disconnect src port #");
+		    dst_title = (menuin[1]=='c'?
+				 "To dst port #":
+				 "From dst port #");
+
+		    if (!simple_input(src_title, src_port, sizeof(src_port)))
 			break;
-		    if (!simple_input("To dst port #:", dst_port, sizeof(dst_port)))
+
+		    if (!simple_input(dst_title, dst_port, sizeof(dst_port)))
 			break;
 
 		    if (menuin[1]=='c') {
-			status = pjmedia_conf_connect_port(pjsua.mconf, atoi(src_port), atoi(dst_port));
+			status = pjmedia_conf_connect_port(pjsua.mconf, 
+							   atoi(src_port), 
+							   atoi(dst_port));
 		    } else {
-			status = pjmedia_conf_disconnect_port(pjsua.mconf, atoi(src_port), atoi(dst_port));
+			status = pjmedia_conf_disconnect_port(pjsua.mconf, 
+							      atoi(src_port), 
+							      atoi(dst_port));
 		    }
 		    if (status == PJ_SUCCESS) {
 			puts("Success");

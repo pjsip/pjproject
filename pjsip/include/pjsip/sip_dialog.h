@@ -41,6 +41,7 @@ PJ_BEGIN_DECL
 typedef struct pjsip_dlg_party
 {
     pjsip_fromto_hdr	*info;	    /**< From/To header, inc tag.	*/
+    pj_str_t		 info_str;  /**< String rep of info header.	*/
     pj_uint32_t		 tag_hval;  /**< Hashed value of the tag.	*/
     pjsip_contact_hdr	*contact;   /**< Contact header.		*/
     pj_int32_t		 first_cseq;/**< First CSeq seen.		*/
@@ -76,8 +77,9 @@ struct pjsip_dialog
     void	       *dlg_set;
 
     /* Dialog's session properties. */
-    enum pjsip_dialog_state	state;	    /**< Dialog state.			    */
+    pjsip_dialog_state	state;	    /**< Dialog state.			    */
     pjsip_uri	       *target;	    /**< Current target.		    */
+    pjsip_hdr	        inv_hdr;    /**< Headers from hparam in dest URL    */
     pjsip_dlg_party     local;	    /**< Local party info.		    */
     pjsip_dlg_party     remote;	    /**< Remote party info.		    */
     pjsip_role_e	role;	    /**< Initial role.			    */

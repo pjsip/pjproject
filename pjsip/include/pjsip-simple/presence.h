@@ -202,7 +202,10 @@ PJ_DECL(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
 
 
 /**
- * Send request.
+ * Send request message that was previously created with initiate(), notify(),
+ * or current_notify(). Application may also send request created with other
+ * functions, e.g. authentication. But the request MUST be either request
+ * that creates/refresh subscription or NOTIFY request.
  *
  * @param sub		The subscription object.
  * @param tdata		Request message to be sent.

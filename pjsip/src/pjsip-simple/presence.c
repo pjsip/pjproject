@@ -191,13 +191,14 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Create event subscription */
-    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE, &sub);
+    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE, 0, &sub);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
     /* Create presence */
     pres = pj_pool_zalloc(dlg->pool, sizeof(pjsip_pres));
     pres->dlg = dlg;
+    pres->sub = sub;
     if (user_cb)
 	pj_memcpy(&pres->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
@@ -297,7 +298,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
 
 
     /* Create server subscription */
-    status = pjsip_evsub_create_uas( dlg, &pres_user, rdata, &sub);
+    status = pjsip_evsub_create_uas( dlg, &pres_user, rdata, 0, &sub);
     if (status != PJ_SUCCESS)
 	goto on_return;
 

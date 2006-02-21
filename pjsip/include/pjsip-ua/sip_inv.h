@@ -97,16 +97,13 @@ struct pjsip_inv_callback
     /**
      * This callback is called when the invite session has received 
      * new offer from peer. Application can inspect the remote offer 
-     * by calling negotiator's pjmedia_sdp_neg_get_neg_remote(), and 
-     * optionally specify a modified answer. 
-     *
-     * This callback is optional. When it's not specified, the default 
-     * behavior is nothing. After calling this callback, the negotiator 
-     * will negotiate remote offer with session's initial capability.
+     * in "offer". 
      *
      * @param inv	The invite session.
+     * @param offer	Remote offer.
      */
-    void (*on_rx_offer)(pjsip_inv_session *inv);
+    void (*on_rx_offer)(pjsip_inv_session *inv,
+			const pjmedia_sdp_session *offer);
 
     /**
      * This callback is called after SDP offer/answer session has completed.
@@ -121,7 +118,6 @@ struct pjsip_inv_callback
      */
     void (*on_media_update)(pjsip_inv_session *inv_ses, 
 			    pj_status_t status);
-
 };
 
 
@@ -387,23 +383,20 @@ PJ_DECL(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					pjsip_tx_data **p_tdata );
 
 
-#if 0
- If we implement this, we need to send SDP answer automatically on 
- subsequent request/response. Something like "has_answer" flag.
-
 /**
- * Set local answer to respond to remote SDP offer. By calling this function,
- * application can start SDP negotiation immediately without having to
- * send any request or response message. This function is normally called
- * when on_rx_offer() callback is called.
+ * Set local answer to respond to remote SDP offer, to be carried by 
+ * subsequent response (or request).
  *
  * @param inv		The invite session.
  * @param sdp		The SDP description which will be set as answer
  *			to remote.
+ *
+ * @return		PJ_SUCCESS if local answer can be accepted by
+ *			SDP negotiator.
  */
-PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer( pjsip_inv_session *inv,
-					       const pjmedia_sdp_session *sdp );
-#endif
+PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer(pjsip_inv_session *inv,
+					      const pjmedia_sdp_session *sdp );
+
 
 /**
  * Create a SIP message to initiate invite session termination. Depending on 

@@ -23,47 +23,53 @@
 #include <pjsip/sip_errno.h>
 
 /**
+ * Start of error code relative to PJ_ERRNO_START_USER.
+ */
+#define PJSIP_SIMPLE_ERRNO_START  (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*2)
+
+
+/**
  * @hideinitializer
  * No event package with the specified name.
  */
-#define PJSIP_SIMPLE_ENOPKG	    -1
+#define PJSIP_SIMPLE_ENOPKG	    (PJSIP_SIMPLE_ERRNO_START+1)    /*270001*/
 /**
  * @hideinitializer
  * Event package already exists.
  */
-#define PJSIP_SIMPLE_EPKGEXISTS	    -1
+#define PJSIP_SIMPLE_EPKGEXISTS	    (PJSIP_SIMPLE_ERRNO_START+2)    /*270002*/
 
 
 /**
  * @hideinitializer
  * Expecting SUBSCRIBE request
  */
-#define PJSIP_SIMPLE_ENOTSUBSCRIBE  -1
+#define PJSIP_SIMPLE_ENOTSUBSCRIBE  (PJSIP_SIMPLE_ERRNO_START+20)   /*270020*/
 /**
  * @hideinitializer
  * No presence associated with subscription
  */
-#define PJSIP_SIMPLE_ENOPRESENCE    -1
+#define PJSIP_SIMPLE_ENOPRESENCE    (PJSIP_SIMPLE_ERRNO_START+21)   /*270021*/
 /**
  * @hideinitializer
  * No presence info in server subscription
  */
-#define PJSIP_SIMPLE_ENOPRESENCEINFO -1
+#define PJSIP_SIMPLE_ENOPRESENCEINFO (PJSIP_SIMPLE_ERRNO_START+22)  /*270022*/
 /**
  * @hideinitializer
  * Bad Content-Type
  */
-#define PJSIP_SIMPLE_EBADCONTENT    -1
+#define PJSIP_SIMPLE_EBADCONTENT    (PJSIP_SIMPLE_ERRNO_START+23)   /*270023*/
 /**
  * @hideinitializer
  * Bad PIDF Message
  */
-#define PJSIP_SIMPLE_EBADPIDF	    -1
+#define PJSIP_SIMPLE_EBADPIDF	    (PJSIP_SIMPLE_ERRNO_START+24)   /*270024*/
 /**
  * @hideinitializer
  * Bad XPIDF Message
  */
-#define PJSIP_SIMPLE_EBADXPIDF	    -1
+#define PJSIP_SIMPLE_EBADXPIDF	    (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
 
 
 

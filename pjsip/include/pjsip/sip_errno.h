@@ -171,6 +171,11 @@ PJ_BEGIN_DECL
  * Missing message body.
  */
 #define PJSIP_EMISSINGBODY	(PJSIP_ERRNO_START_PJSIP + 54)	/* 171054 */
+/**
+ * @hideinitializer
+ * Invalid/unexpected method.
+ */
+#define PJSIP_EINVALIDMETHOD	(PJSIP_ERRNO_START_PJSIP + 55)	/* 171055 */
 
 
 /************************************************************
@@ -347,6 +352,17 @@ PJ_BEGIN_DECL
  * Missing From/To tag.
  */
 #define PJSIP_EMISSINGTAG	 (PJSIP_ERRNO_START_PJSIP+120)	/* 171120 */
+/**
+ * @hideinitializer
+ * Expecting REFER method
+ */
+#define PJSIP_ENOTREFER		 (PJSIP_ERRNO_START_PJSIP+121)	/* 171121 */
+/**
+ * @hideinitializer
+ * Not associated with REFER subscription
+ */
+#define PJSIP_ENOREFERSESSION	 (PJSIP_ERRNO_START_PJSIP+122)	/* 171122 */
+
 
 
 

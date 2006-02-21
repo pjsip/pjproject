@@ -93,6 +93,10 @@ SOURCE="..\src\pjsip-ua\sip_inv.c"
 
 SOURCE="..\src\pjsip-ua\sip_reg.c"
 # End Source File
+# Begin Source File
+
+SOURCE="..\src\pjsip-ua\sip_xfer.c"
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -108,6 +112,10 @@ SOURCE="..\include\pjsip-ua\sip_inv.h"
 # Begin Source File
 
 SOURCE="..\include\pjsip-ua\sip_regc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-ua\sip_xfer.h"
 # End Source File
 # End Group
 # End Target

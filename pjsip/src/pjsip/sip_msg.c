@@ -1746,6 +1746,18 @@ PJ_DEF(int) pjsip_print_text_body(pjsip_msg_body *msg_body, char *buf, pj_size_t
     return msg_body->len;
 }
 
+PJ_DEF(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
+				     unsigned len)
+{
+    char *newdata = "";
+
+    if (len) {
+	newdata = pj_pool_alloc(pool, len);
+	pj_memcpy(newdata, data, len);
+    }
+    return newdata;
+}
+
 PJ_DEF(pj_status_t) pjsip_msg_body_clone( pj_pool_t *pool,
 					  pjsip_msg_body *dst_body,
 					  const pjsip_msg_body *src_body )

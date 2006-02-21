@@ -21,6 +21,7 @@
 
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip-ua/sip_regc.h>
+#include <pjsip-ua/sip_xfer.h>
 
 
 #endif	/* __PJSIP_UA_H__ */

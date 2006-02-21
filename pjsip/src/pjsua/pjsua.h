@@ -68,6 +68,8 @@ struct pjsua_inv_data
     pjmedia_session	*session;   /**< The media session.		    */
     unsigned		 conf_slot; /**< Slot # in conference bridge.	    */
     unsigned		 call_slot; /**< RTP media index in med_sock_use[]  */
+    pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
+					 call was triggered by xfer.	    */
 };
 
 
@@ -254,13 +256,38 @@ pj_status_t pjsua_destroy(void);
  * Make outgoing call.
  */
 pj_status_t pjsua_invite(const char *cstr_dest_uri,
-			 pjsip_inv_session **p_inv);
+			 struct pjsua_inv_data **p_inv_data);
 
 
 /**
  * Handle incoming invite request.
  */
 pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata);
+
+
+/**
+ * Hangup call.
+ */
+void pjsua_inv_hangup(struct pjsua_inv_data *inv_session, int code);
+
+
+/**
+ * Put call on-hold.
+ */
+void pjsua_inv_set_hold(struct pjsua_inv_data *inv_session);
+
+
+/**
+ * Send re-INVITE (to release hold).
+ */
+void pjsua_inv_reinvite(struct pjsua_inv_data *inv_session);
+
+
+/**
+ * Transfer call.
+ */
+void pjsua_inv_xfer_call(struct pjsua_inv_data *inv_session,
+			 const char *dest);
 
 
 /**
@@ -283,6 +310,19 @@ void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e);
  */
 void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status);
 
+/**
+ * Callback called when invite session received new offer.
+ */
+void pjsua_inv_on_rx_offer( pjsip_inv_session *inv,
+			    const pjmedia_sdp_session *offer);
+
+/**
+ * Callback to receive transaction state inside invite session or dialog
+ * (e.g. REFER, MESSAGE).
+ */
+void pjsua_inv_on_tsx_state_changed(pjsip_inv_session *inv,
+				    pjsip_transaction *tsx,
+				    pjsip_event *e);
 
 /**
  * Terminate all calls.
