@@ -661,11 +661,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
     if (stream->enc && (stream->dir & PJMEDIA_DIR_ENCODING)) {
 	stream->enc->paused = 0;
 	//pj_snd_stream_start(stream->enc->snd_stream);
+	PJ_LOG(4,(THIS_FILE, "Encoder stream started"));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Encoder stream paused"));
     }
 
     if (stream->dec && (stream->dir & PJMEDIA_DIR_DECODING)) {
 	stream->dec->paused = 0;
 	//pj_snd_stream_start(stream->dec->snd_stream);
+	PJ_LOG(4,(THIS_FILE, "Decoder stream started"));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Decoder stream paused"));
     }
 
     return PJ_SUCCESS;
@@ -694,11 +700,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
 {
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc)
+    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc) {
 	stream->enc->paused = 1;
+	PJ_LOG(4,(THIS_FILE, "Encoder stream paused"));
+    }
 
-    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec)
+    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 1;
+	PJ_LOG(4,(THIS_FILE, "Decoder stream paused"));
+    }
 
     return PJ_SUCCESS;
 }
@@ -712,11 +722,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 {
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc)
+    if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc) {
 	stream->enc->paused = 1;
+	PJ_LOG(4,(THIS_FILE, "Encoder stream resumed"));
+    }
 
-    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec)
+    if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 1;
+	PJ_LOG(4,(THIS_FILE, "Decoder stream resumed"));
+    }
 
     return PJ_SUCCESS;
 }
