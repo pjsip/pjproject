@@ -301,6 +301,14 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 #define PJ_ERRNO_START_USER	(PJ_ERRNO_START_SYS + PJ_ERRNO_SPACE_SIZE)
 
 
+/*
+ * Below are list of error spaces that have been taken so far:
+ *  - PJSIP_ERRNO_START		(PJ_ERRNO_START_USER)
+ *  - PJMEDIA_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE)
+ *  - PJSIP_SIMPLE_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*2)
+ */
+
+
 PJ_END_DECL
 
 #endif	/* __PJ_ERRNO_H__ */

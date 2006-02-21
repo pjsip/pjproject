@@ -42,6 +42,7 @@
 #   define strncasecmp	strnicmp
 #  endif
 #  define snprintf	_snprintf
+#  define snwprintf	_snwprintf
 #  define wcsicmp	_wcsicmp
 #  define wcsnicmp	_wcsnicmp
 #else
@@ -66,6 +67,7 @@
 #define pj_ansi_strncasecmp	strncasecmp
 #define pj_ansi_strnicmp	strncasecmp
 #define pj_ansi_sprintf		sprintf
+#define pj_ansi_snprintf	snprintf
 
 #define pj_unicode_strcmp	wcscmp
 #define pj_unicode_strncmp	wcsncmp
@@ -79,6 +81,7 @@
 #define pj_unicode_strncasecmp	wcsnicmp
 #define pj_unicode_strnicmp	wcsnicmp
 #define pj_unicode_sprintf	swprintf
+#define pj_unicode_snprintf	snwprintf
 
 
 #if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
@@ -94,6 +97,7 @@
 #   define pj_native_strncasecmp    pj_unicode_strncasecmp
 #   define pj_native_strnicmp	    pj_unicode_strnicmp
 #   define pj_native_sprintf	    pj_unicode_sprintf
+#   define pj_native_snprintf	    pj_unicode_snprintf
 #else
 #   define pj_native_strcmp	    pj_ansi_strcmp
 #   define pj_native_strncmp	    pj_ansi_strncmp
@@ -107,6 +111,7 @@
 #   define pj_native_strncasecmp    pj_ansi_strncasecmp
 #   define pj_native_strnicmp	    pj_ansi_strnicmp
 #   define pj_native_sprintf	    pj_ansi_sprintf
+#   define pj_native_snprintf	    pj_ansi_snprintf
 #endif
 
 
