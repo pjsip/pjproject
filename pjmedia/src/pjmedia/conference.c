@@ -362,11 +362,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     PJ_ASSERT_RETURN(conf != NULL, PJ_EINVAL);
 
     suspend_sound(conf);
-
-    pj_snd_stream_close(conf->snd_rec);
-    conf->snd_rec = NULL;
-    pj_snd_stream_close(conf->snd_player);
-    conf->snd_player = NULL;
+    destroy_sound(conf);
 
     return PJ_SUCCESS;
 }
@@ -475,7 +471,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 	if (conf->connect_cnt == 1)
 	    resume_sound(conf);
 
-	PJ_LOG(5,(THIS_FILE,"Port %.*s transmitting to port %.*s",
+	PJ_LOG(4,(THIS_FILE,"Port %.*s transmitting to port %.*s",
 		  (int)src_port->name.slen,
 		  src_port->name.ptr,
 		  (int)dst_port->name.slen,
@@ -510,7 +506,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 	src_port->listeners[sink_slot] = 0;
 	--conf->connect_cnt;
 
-	PJ_LOG(5,(THIS_FILE,"Port %.*s stop transmitting to port %.*s",
+	PJ_LOG(4,(THIS_FILE,"Port %.*s stop transmitting to port %.*s",
 		  (int)src_port->name.slen,
 		  src_port->name.ptr,
 		  (int)dst_port->name.slen,
