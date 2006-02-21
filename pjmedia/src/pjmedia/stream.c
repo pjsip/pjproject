@@ -52,7 +52,7 @@ struct pjmedia_channel
     unsigned		    pt;		    /**< Payload type.		    */
     pj_bool_t		    paused;	    /**< Paused?.		    */
     pj_snd_stream_info	    snd_info;	    /**< Sound stream param.	    */
-    pj_snd_stream	   *snd_stream;	    /**< Sound stream.		    */
+    //pj_snd_stream	   *snd_stream;	    /**< Sound stream.		    */
     unsigned		    in_pkt_size;    /**< Size of input buffer.	    */
     void		   *in_pkt;	    /**< Input buffer.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
@@ -72,6 +72,7 @@ struct pjmedia_channel
  */
 struct pjmedia_stream
 {
+    pjmedia_port	     port;	    /**< Port interface.	    */
     pjmedia_channel	    *enc;	    /**< Encoding channel.	    */
     pjmedia_channel	    *dec;	    /**< Decoding channel.	    */
 
@@ -102,22 +103,20 @@ struct pjmedia_stream
  * This callback is called by sound device's player thread when it
  * needs to feed the player with some frames.
  */
-static pj_status_t play_callback(/* in */   void *user_data,
-				 /* in */   pj_uint32_t timestamp,
-				 /* out */  void *frame,
-				 /*inout*/  unsigned size)
+static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 {
-    pjmedia_channel *channel = user_data;
-    pjmedia_stream *stream = channel->stream;
+    pjmedia_stream *stream = port->user_data;
+    pjmedia_channel *channel = stream->dec;
+    
     char frame_type;
     pj_status_t status;
     struct pjmedia_frame frame_in, frame_out;
 
-    PJ_UNUSED_ARG(timestamp);
-
     /* Do nothing if we're quitting. */
-    if (stream->quit_flag)
-	return -1;
+    if (stream->quit_flag) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
 
     /* Lock jitter buffer mutex */
     pj_mutex_lock( stream->jb_mutex );
@@ -132,8 +131,8 @@ static pj_status_t play_callback(/* in */   void *user_data,
     if (status != PJ_SUCCESS || frame_type == PJMEDIA_JB_ZERO_FRAME ||
 	frame_type == PJMEDIA_JB_MISSING_FRAME) 
     {
-	pj_memset(frame, 0, size);
-	return 0;
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
     }
 
 
@@ -147,20 +146,23 @@ static pj_status_t play_callback(/* in */   void *user_data,
     if (status != 0) {
 	TRACE_((THIS_FILE, "decode() has return error status %d", status));
 
-	pj_memset(frame, 0, size);
-	return 0;
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
     }
 
     /* Put in sound buffer. */
-    if (frame_out.size > size) {
+    if (frame_out.size > frame->size) {
 	TRACE_((THIS_FILE, "Sound playout buffer truncated %d bytes", 
-		frame_out.size - size));
-	frame_out.size = size;
+		frame_out.size - frame->size));
+	frame_out.size = frame->size;
     }
 
-    pj_memcpy(frame, frame_out.buf, size);
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame->size = frame_out.size;
+    frame->timestamp.u64 = 0;
+    pj_memcpy(frame->buf, frame_out.buf, frame_out.size);
 
-    return 0;
+    return PJ_SUCCESS;
 }
 
 
@@ -171,33 +173,26 @@ static pj_status_t play_callback(/* in */   void *user_data,
  * enough audio samples. We will encode the audio samples and
  * send it to remote.
  */
-static pj_status_t rec_callback( /* in */ void *user_data,
-			         /* in */ pj_uint32_t timestamp,
-			         /* in */ const void *frame,
-			         /* in */ unsigned size)
+static pj_status_t put_frame( pjmedia_port *port, 
+			      const pjmedia_frame *frame )
 {
-    pjmedia_channel *channel = user_data;
-    pjmedia_stream *stream = channel->stream;
+    pjmedia_stream *stream = port->user_data;
+    pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
-    struct pjmedia_frame frame_in, frame_out;
+    struct pjmedia_frame frame_out;
     int ts_len;
     void *rtphdr;
     int rtphdrlen;
     pj_ssize_t sent;
 
 
-    PJ_UNUSED_ARG(timestamp);
-
     /* Check if stream is quitting. */
     if (stream->quit_flag)
 	return -1;
 
     /* Encode. */
-    frame_in.type = PJMEDIA_TYPE_AUDIO;
-    frame_in.buf = (void*)frame;
-    frame_in.size = size;
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
-    status = stream->codec->op->encode( stream->codec, &frame_in, 
+    status = stream->codec->op->encode( stream->codec, frame, 
 					channel->out_pkt_size - sizeof(pjmedia_rtp_hdr), 
 					&frame_out);
     if (status != 0) {
@@ -207,7 +202,7 @@ static pj_status_t rec_callback( /* in */ void *user_data,
     }
 
     /* Encapsulate. */
-    ts_len = size / (channel->snd_info.bits_per_sample / 8);
+    ts_len = frame->size / (channel->snd_info.bits_per_sample / 8);
     status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 				channel->pt, 0, 
 				frame_out.size, ts_len, 
@@ -238,7 +233,7 @@ static pj_status_t rec_callback( /* in */ void *user_data,
     stream->stat.enc.pkt++;
     stream->stat.enc.bytes += frame_out.size+sizeof(pjmedia_rtp_hdr);
 
-    return 0;
+    return PJ_SUCCESS;
 }
 
 
@@ -425,6 +420,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     init_snd_param(&channel->snd_info, codec_param);
 
+    /*
     if (dir == PJMEDIA_DIR_ENCODING)
 	channel->snd_stream = pj_snd_open_recorder(-1, &channel->snd_info, 
 						   &rec_callback, channel);
@@ -434,7 +430,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     if (!channel->snd_stream)
 	return -1;
-
+    */
 
     /* Done. */
     *p_channel = channel;
@@ -462,6 +458,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     stream = pj_pool_zalloc(pool, sizeof(pjmedia_stream));
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
+
+    /* Init port. */
+    stream->port.info.name = pj_str("stream");
+    stream->port.info.signature = ('S'<<3 | 'T'<<2 | 'R'<<1 | 'M');
+    stream->port.info.type = PJMEDIA_TYPE_AUDIO;
+    stream->port.info.has_info = 1;
+    stream->port.info.need_info = 0;
+    stream->port.info.pt = info->fmt.pt;
+    pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
+    stream->port.info.sample_rate = info->fmt.sample_rate;
+    stream->port.user_data = stream;
+    stream->port.put_frame = &put_frame;
+    stream->port.get_frame = &get_frame;
 
 
     /* Init stream: */
@@ -493,6 +502,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     status = stream->codec->op->default_attr(stream->codec, &codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
+
+    /* Set additional info. */
+    stream->port.info.bits_per_sample = 0;
+    stream->port.info.samples_per_frame = info->fmt.sample_rate*codec_param.ptime/1000;
+    stream->port.info.bytes_per_frame = codec_param.avg_bps/8 * codec_param.ptime/1000;
 
 
     /* Open the codec: */
@@ -575,6 +589,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     /* Close encoding sound stream. */
     
+    /*
     if (stream->enc && stream->enc->snd_stream) {
 
 	pj_snd_stream_stop(stream->enc->snd_stream);
@@ -582,9 +597,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 	stream->enc->snd_stream = NULL;
 
     }
+    */
 
     /* Close decoding sound stream. */
 
+    /*
     if (stream->dec && stream->dec->snd_stream) {
 
 	pj_snd_stream_stop(stream->dec->snd_stream);
@@ -592,6 +609,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 	stream->dec->snd_stream = NULL;
 
     }
+    */
 
     /* Wait for jitter buffer thread to quit: */
 
@@ -622,6 +640,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
 
 /*
+ * Get the port interface.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_port( pjmedia_stream *stream,
+					     pjmedia_port **p_port )
+{
+    *p_port = &stream->port;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Start stream.
  */
 PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
@@ -631,12 +660,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 
     if (stream->enc && (stream->dir & PJMEDIA_DIR_ENCODING)) {
 	stream->enc->paused = 0;
-	pj_snd_stream_start(stream->enc->snd_stream);
+	//pj_snd_stream_start(stream->enc->snd_stream);
     }
 
     if (stream->dec && (stream->dir & PJMEDIA_DIR_DECODING)) {
 	stream->dec->paused = 0;
-	pj_snd_stream_start(stream->dec->snd_stream);
+	//pj_snd_stream_start(stream->dec->snd_stream);
     }
 
     return PJ_SUCCESS;

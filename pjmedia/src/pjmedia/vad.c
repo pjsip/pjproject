@@ -56,7 +56,8 @@ struct pjmedia_vad
 
 
 
-unsigned char linear2ulaw(int		pcm_val);
+unsigned char linear2ulaw(int pcm_val);
+
 
 PJ_DEF(pj_status_t) pjmedia_vad_create( pj_pool_t *pool,
 					pjmedia_vad **p_vad)
@@ -87,9 +88,9 @@ PJ_DEF(pj_status_t) pjmedia_vad_set_adaptive( pjmedia_vad *vad,
 
     vad->frame_size = frame_size;
     vad->mode = VAD_MODE_ADAPTIVE;
-    vad->min_signal_cnt = 3;
-    vad->min_silence_cnt = 20;
-    vad->recalc_cnt = 30;
+    vad->min_signal_cnt = 10;
+    vad->min_silence_cnt = 64;
+    vad->recalc_cnt = 250;
     vad->cur_threshold = 20;
 
     return PJ_SUCCESS;
@@ -227,7 +228,7 @@ PJ_DEF(pj_bool_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
 	     * Increase silence threshold.
 	     */
 	    vad->cur_threshold += (vad->weakest_signal - vad->cur_threshold)/4;
-	    PJ_LOG(5,(THIS_FILE, "Vad cur_threshold increased to %d",
+	    PJ_LOG(6,(THIS_FILE, "Vad cur_threshold increased to %d",
 		      vad->cur_threshold));
 	}
 	else if (vad->silence_cnt >= vad->recalc_cnt) {
@@ -235,7 +236,7 @@ PJ_DEF(pj_bool_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
 	     * Decrease silence threshold.
 	     */
 	    vad->cur_threshold = (vad->cur_threshold+vad->loudest_silence)/2+1;
-	    PJ_LOG(5,(THIS_FILE, "Vad cur_threshold decreased to %d",
+	    PJ_LOG(6,(THIS_FILE, "Vad cur_threshold decreased to %d",
 		      vad->cur_threshold));
 	}
 	else { 
@@ -250,7 +251,7 @@ PJ_DEF(pj_bool_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
 		updated = PJ_FALSE;
 
 	    if (updated) {
-		PJ_LOG(5,(THIS_FILE,
+		PJ_LOG(6,(THIS_FILE,
 			  "Vad cur_threshold updated to %d",
 			  vad->cur_threshold));
 	    }

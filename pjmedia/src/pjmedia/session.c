@@ -384,6 +384,14 @@ PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_session_get_port(  pjmedia_session *session,
+					       unsigned index,
+					       pjmedia_port **p_port)
+{
+    return pjmedia_stream_get_port( session->stream[index], p_port);
+}
+
 /**
  * Get statistics
  */

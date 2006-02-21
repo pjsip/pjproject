@@ -135,7 +135,8 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
 /* 
  * Initialize sockets and optionally get the public address via STUN. 
  */
-static pj_status_t init_sockets()
+static pj_status_t init_sockets(pj_bool_t sip,
+				pjmedia_sock_info *skinfo)
 {
     enum { 
 	RTP_START_PORT = 4000,
@@ -151,22 +152,24 @@ static pj_status_t init_sockets()
     pj_uint16_t rtp_port;
     pj_sock_t sock[3];
     pj_sockaddr_in mapped_addr[3];
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     for (i=0; i<3; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
 
-    /* Create and bind SIP UDP socket. */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[SIP_SOCK]);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "socket() error", status);
-	goto on_error;
-    }
+    if (sip) {
+	/* Create and bind SIP UDP socket. */
+	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[SIP_SOCK]);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "socket() error", status);
+	    goto on_error;
+	}
     
-    status = pj_sock_bind_in(sock[SIP_SOCK], 0, pjsua.sip_port);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "bind() error", status);
-	goto on_error;
+	status = pj_sock_bind_in(sock[SIP_SOCK], 0, pjsua.sip_port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "bind() error", status);
+	    goto on_error;
+	}
     }
 
     /* Initialize start of RTP port to try. */
@@ -229,7 +232,10 @@ static pj_status_t init_sockets()
 	    for (i=0; i<3; ++i)
 		pj_memcpy(&mapped_addr[i], &addr, sizeof(addr));
 
-	    mapped_addr[SIP_SOCK].sin_port = pj_htons((pj_uint16_t)pjsua.sip_port);
+	    if (sip)
+		mapped_addr[SIP_SOCK].sin_port = pj_htons((pj_uint16_t)pjsua.sip_port);
+	    else
+		mapped_addr[RTP_SOCK].sin_port = pj_htons((pj_uint16_t)rtp_port);
 	    mapped_addr[RTP_SOCK].sin_port = pj_htons((pj_uint16_t)rtp_port);
 	    mapped_addr[RTCP_SOCK].sin_port = pj_htons((pj_uint16_t)(rtp_port+1));
 	    break;
@@ -256,31 +262,37 @@ static pj_status_t init_sockets()
 	goto on_error;
     }
 
-    pjsua.sip_sock = sock[SIP_SOCK];
-    pj_memcpy(&pjsua.sip_sock_name, &mapped_addr[SIP_SOCK], sizeof(pj_sockaddr_in));
+    if (sip) {
+	pjsua.sip_sock = sock[SIP_SOCK];
+	pj_memcpy(&pjsua.sip_sock_name, &mapped_addr[SIP_SOCK], sizeof(pj_sockaddr_in));
+    }
 
-    pjsua.med_skinfo.rtp_sock = sock[RTP_SOCK];
-    pj_memcpy(&pjsua.med_skinfo.rtp_addr_name, 
+    skinfo->rtp_sock = sock[RTP_SOCK];
+    pj_memcpy(&skinfo->rtp_addr_name, 
 	      &mapped_addr[RTP_SOCK], sizeof(pj_sockaddr_in));
 
-    pjsua.med_skinfo.rtcp_sock = sock[RTCP_SOCK];
-    pj_memcpy(&pjsua.med_skinfo.rtcp_addr_name, 
+    skinfo->rtcp_sock = sock[RTCP_SOCK];
+    pj_memcpy(&skinfo->rtcp_addr_name, 
 	      &mapped_addr[RTCP_SOCK], sizeof(pj_sockaddr_in));
 
-    PJ_LOG(4,(THIS_FILE, "SIP UDP socket reachable at %s:%d",
-	      pj_inet_ntoa(pjsua.sip_sock_name.sin_addr), 
-	      pj_ntohs(pjsua.sip_sock_name.sin_port)));
+    if (sip) {
+	PJ_LOG(4,(THIS_FILE, "SIP UDP socket reachable at %s:%d",
+		  pj_inet_ntoa(pjsua.sip_sock_name.sin_addr), 
+		  pj_ntohs(pjsua.sip_sock_name.sin_port)));
+    }
     PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s:%d",
-	      pj_inet_ntoa(pjsua.med_skinfo.rtp_addr_name.sin_addr), 
-	      pj_ntohs(pjsua.med_skinfo.rtp_addr_name.sin_port)));
+	      pj_inet_ntoa(skinfo->rtp_addr_name.sin_addr), 
+	      pj_ntohs(skinfo->rtp_addr_name.sin_port)));
     PJ_LOG(4,(THIS_FILE, "RTCP UDP socket reachable at %s:%d",
-	      pj_inet_ntoa(pjsua.med_skinfo.rtcp_addr_name.sin_addr), 
-	      pj_ntohs(pjsua.med_skinfo.rtcp_addr_name.sin_port)));
+	      pj_inet_ntoa(skinfo->rtcp_addr_name.sin_addr), 
+	      pj_ntohs(skinfo->rtcp_addr_name.sin_port)));
 
     return PJ_SUCCESS;
 
 on_error:
     for (i=0; i<3; ++i) {
+	if (sip && i==0)
+	    continue;
 	if (sock[i] != PJ_INVALID_SOCKET)
 	    pj_sock_close(sock[i]);
     }
@@ -484,6 +496,17 @@ pj_status_t pjsua_init(void)
 	return status;
     }
 
+    /* Init conference bridge. */
+
+    status = pjmedia_conf_create(pjsua.pool, 8, 8000, 160, 16, &pjsua.mconf);
+    if (status != PJ_SUCCESS) {
+	pj_caching_pool_destroy(&pjsua.cp);
+	pjsua_perror(THIS_FILE, 
+		     "Media stack initialization has returned error", 
+		     status);
+	return status;
+    }
+
     /* Init pjmedia-codecs: */
 
     status = pjmedia_codec_init(pjsua.med_endpt);
@@ -510,17 +533,17 @@ pj_status_t pjsua_start(void)
 {
     int i;  /* Must be signed */
     pjsip_transport *udp_transport;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Init sockets (STUN etc): */
-
-    status = init_sockets();
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "init_sockets() has returned error", 
-		     status);
-	return status;
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.med_sock_info); ++i) {
+	status = init_sockets(i==0, &pjsua.med_sock_info[i]);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "init_sockets() has returned error", 
+			 status);
+	    return status;
+	}
     }
-
 
     /* Add UDP transport: */
 

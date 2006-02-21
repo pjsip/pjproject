@@ -344,11 +344,57 @@ PJ_BEGIN_DECL
  * Bad RTP sequence number
  */
 #define PJMEDIA_RTP_EBADSEQ	    (PJMEDIA_ERRNO_START+132)    /* 220132 */
+/**
+ * @hideinitializer
+ * RTP media port destination is not configured
+ */
+#define PJMEDIA_RTP_EBADDEST	    (PJMEDIA_ERRNO_START+133)    /* 220133 */
+/**
+ * @hideinitializer
+ * RTP is not configured.
+ */
+#define PJMEDIA_RTP_ENOCONFIG	    (PJMEDIA_ERRNO_START+134)    /* 220134 */
 
 
 /************************************************************
  * JITTER BUFFER ERRORS
  ***********************************************************/
+
+
+/************************************************************
+ * PORT ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Generic incompatible port error.
+ */
+#define PJMEDIA_ENOTCOMPATIBLE	    (PJMEDIA_ERRNO_START+160)    /* 220160 */
+/**
+ * @hideinitializer
+ * Incompatible clock rate
+ */
+#define PJMEDIA_ENCCLOCKRATE	    (PJMEDIA_ERRNO_START+161)    /* 220161 */
+/**
+ * @hideinitializer
+ * Incompatible samples per frame
+ */
+#define PJMEDIA_ENCSAMPLESPFRAME    (PJMEDIA_ERRNO_START+162)    /* 220162 */
+/**
+ * @hideinitializer
+ * Incompatible media type
+ */
+#define PJMEDIA_ENCTYPE		    (PJMEDIA_ERRNO_START+163)    /* 220163 */
+/**
+ * @hideinitializer
+ * Incompatible bits per sample
+ */
+#define PJMEDIA_ENCBITS		    (PJMEDIA_ERRNO_START+164)    /* 220164 */
+/**
+ * @hideinitializer
+ * Incompatible bytes per frame
+ */
+#define PJMEDIA_ENCBYTES	    (PJMEDIA_ERRNO_START+165)    /* 220165 */
+
 
 
 PJ_END_DECL

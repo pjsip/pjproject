@@ -136,6 +136,11 @@ static void keystroke_help(void)
     puts("|  ]  Select next dialog       |  t  Toggle Online status |  d  Dump status   |");
     puts("|  [  Select previous dialog   |                          |                   |");
     puts("+-----------------------------------------------------------------------------+");
+    puts("|      Conference Command                                                     |");
+    puts("| cl  List ports                                                              |");
+    puts("| cc  Connect port                                                            |");
+    puts("| cd  Disconnect port                                                         |");
+    puts("+-----------------------------------------------------------------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
     printf(">>> ");
@@ -253,6 +258,26 @@ static void ui_input_url(const char *title, char *buf, int len,
 	result->uri_result = buf;
     }
 }
+
+static void conf_list(void)
+{
+    pjmedia_conf_port_info info;
+    struct pjsua_inv_data *inv_data;
+
+    printf("Conference ports:\n");
+
+    inv_data = pjsua.inv_list.next;
+    while (inv_data != &pjsua.inv_list) {
+	
+	pjmedia_conf_get_port_info(pjsua.mconf, inv_data->conf_slot, &info);
+
+	printf("Port %2d %.*s\n", inv_data->conf_slot, 
+				  (int)info.name.slen, info.name.ptr);
+
+	inv_data = inv_data->next;
+    }
+}
+
 
 static void ui_console_main(void)
 {
@@ -393,6 +418,37 @@ static void ui_console_main(void)
 	case 't':
 	    pjsua.online_status = !pjsua.online_status;
 	    pjsua_pres_refresh();
+	    break;
+
+	case 'c':
+	    switch (menuin[1]) {
+	    case 'l':
+		conf_list();
+		break;
+	    case 'c':
+	    case 'd':
+		{
+		    char src_port[10], dst_port[10];
+		    pj_status_t status;
+
+		    if (!simple_input("Connect src port #:", src_port, sizeof(src_port)))
+			break;
+		    if (!simple_input("To dst port #:", dst_port, sizeof(dst_port)))
+			break;
+
+		    if (menuin[1]=='c') {
+			status = pjmedia_conf_connect_port(pjsua.mconf, atoi(src_port), atoi(dst_port));
+		    } else {
+			status = pjmedia_conf_disconnect_port(pjsua.mconf, atoi(src_port), atoi(dst_port));
+		    }
+		    if (status == PJ_SUCCESS) {
+			puts("Success");
+		    } else {
+			puts("ERROR!!");
+		    }
+		}
+		break;
+	    }
 	    break;
 
 	case 'd':

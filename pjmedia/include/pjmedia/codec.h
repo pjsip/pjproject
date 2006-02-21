@@ -119,26 +119,6 @@ struct pjmedia_codec_param
 };
 
 
-/** 
- * Types of media frame. 
- */
-enum pjmedia_frame_type
-{
-    PJMEDIA_FRAME_TYPE_SILENCE_AUDIO,	/**< Silence audio frame.	*/
-    PJMEDIA_FRAME_TYPE_AUDIO,		/**< Normal audio frame.	*/
-
-};
-
-/** 
- * This structure describes a media frame. 
- */
-struct pjmedia_frame
-{
-    pjmedia_frame_type	 type;	/**< Frame type.		    */
-    void		*buf;	/**< Pointer to buffer.		    */
-    pj_size_t		 size;	/**< Frame size in bytes.	    */
-};
-
 /**
  * This structure describes codec operations. Each codec MUST implement
  * all of these functions.

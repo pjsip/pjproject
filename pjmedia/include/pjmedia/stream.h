@@ -28,6 +28,7 @@
 #include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/port.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
@@ -97,22 +98,6 @@ struct pjmedia_stream_stat
 };
 
 
-/**
- * Stream ports.
- */
-struct pjmedia_stream_port
-{
-    /**
-     * Sink port.
-     */
-    pj_status_t (*put_frame)(const pj_int16_t *frame, pj_size_t frame_cnt);
-
-    /**
-     * Source port.
-     */
-    pj_status_t (*get_frame)(pj_int16_t *frame, pj_size_t frame_cnt);
-};
-
 
 /**
  * Create a media stream based on the specified stream parameter.
@@ -140,6 +125,18 @@ PJ_DECL(pj_status_t) pjmedia_stream_create(pjmedia_endpt *endpt,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_stream_destroy(pjmedia_stream *stream);
+
+/**
+ * Get the port interface of the stream.
+ *
+ * @param stream	The media stream.
+ * @param p_port	Pointer to receive the port interface.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_port(pjmedia_stream *stream,
+					     pjmedia_port **p_port );
+
 
 /**
  * Start the media stream. This will start the appropriate channels

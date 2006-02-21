@@ -175,6 +175,14 @@ pjmedia_session_enum_streams( const pjmedia_session *session,
 
 
 /**
+ * Get the port interface for the specified stream.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
+					       unsigned index,
+					       pjmedia_port **p_port);
+
+
+/**
  * Get session statistics. The stream statistic shows various
  * indicators such as packet count, packet lost, jitter, delay, etc.
  *

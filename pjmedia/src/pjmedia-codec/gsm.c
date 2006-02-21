@@ -20,6 +20,7 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/port.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>

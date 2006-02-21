@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir ".\output\pjmedia-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /D "_DEBUG" /D "PA_NO_ASIO" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /D "_DEBUG" /D "PA_NO_ASIO" /D "PA_NO_WIN_DS" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -87,11 +87,11 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjmedia\audio_conf.c
+SOURCE=..\src\pjmedia\codec.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\codec.c
+SOURCE=..\src\pjmedia\conference.c
 # End Source File
 # Begin Source File
 
@@ -125,11 +125,19 @@ SOURCE=..\src\pjmedia\pasound.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\rtcp.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pjmedia\rtp.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\rtp_port.c
 # End Source File
 # Begin Source File
 
@@ -161,11 +169,11 @@ SOURCE=..\src\pjmedia\vad.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\include\pjmedia\audio_conf.h
+SOURCE=..\include\pjmedia\codec.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjmedia\codec.h
+SOURCE=..\include\pjmedia\conference.h
 # End Source File
 # Begin Source File
 
@@ -193,11 +201,19 @@ SOURCE=..\include\pjmedia.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\port.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\rtcp.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\include\pjmedia\rtp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\rtp_port.h
 # End Source File
 # Begin Source File
 

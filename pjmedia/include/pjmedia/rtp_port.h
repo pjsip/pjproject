@@ -16,27 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_H__
-#define __PJMEDIA_H__
+#ifndef __PJMEDIA_RTP_PORT_H__
+#define __PJMEDIA_RTP_PORT_H__
+
 
 /**
- * @file pjmedia.h
- * @brief PJMEDIA main header file.
+ * @file rtp_port.h
+ * @brief RTP media port.
  */
-
-#include <pjmedia/types.h>
-#include <pjmedia/codec.h>
-#include <pjmedia/conference.h>
-#include <pjmedia/endpoint.h>
-#include <pjmedia/errno.h>
-#include <pjmedia/jbuf.h>
 #include <pjmedia/port.h>
-#include <pjmedia/rtcp.h>
-#include <pjmedia/rtp.h>
-#include <pjmedia/sdp.h>
-#include <pjmedia/sdp_neg.h>
-#include <pjmedia/session.h>
-#include <pjmedia/sound.h>
 
-#endif	/* __PJMEDIA_H__ */
 
+PJ_BEGIN_DECL
+
+
+/**
+ * Create RTP port.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtp_port_create(pj_pool_t *pool,
+					     pjmedia_sock_info *sock_info,
+					     pjmedia_port **p_port);
+
+
+/**
+ * Set RTP destination info.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtp_port_configure(pjmedia_port *rtp,
+						const pj_sockaddr_in *rem_rtp,
+						const pj_sockaddr_in *rem_rtcp);
+
+
+
+PJ_END_DECL
+
+
+#endif	/* __PJMEDIA_RTP_PORT_H__ */

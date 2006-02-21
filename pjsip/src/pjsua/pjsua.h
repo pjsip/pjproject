@@ -49,6 +49,12 @@ PJ_BEGIN_DECL
  */
 #define PJSUA_MAX_BUDDIES   32
 
+/**
+ * Max simultaneous calls.
+ */
+#define PJSUA_MAX_CALLS	    8
+
+
 /** 
  * Structure to be attached to all dialog. 
  * Given a dialog "dlg", application can retrieve this structure
@@ -58,9 +64,10 @@ struct pjsua_inv_data
 {
     PJ_DECL_LIST_MEMBER(struct pjsua_inv_data);
 
-    pjsip_inv_session	*inv;
-    pjmedia_session	*session;
-    void		*mod_data[PJSIP_MAX_MODULE];
+    pjsip_inv_session	*inv;	    /**< The invite session.		    */
+    pjmedia_session	*session;   /**< The media session.		    */
+    unsigned		 conf_slot; /**< Slot # in conference bridge.	    */
+    unsigned		 call_slot; /**< RTP media index in med_sock_use[]  */
 };
 
 
@@ -105,9 +112,16 @@ struct pjsua
 
     /* Media:  */
 
-    pjmedia_endpt   *med_endpt;    /**< Media endpoint.		*/
-    pj_bool_t	     null_audio;
-    pjmedia_sock_info med_skinfo;
+    pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
+    pjmedia_conf    *mconf;	    /**< Media conference.		*/
+    pj_bool_t	     null_audio;    /**< Null audio flag.		*/
+
+
+    /* Since we support simultaneous calls, we need to have multiple
+     * RTP sockets.
+     */
+    pjmedia_sock_info med_sock_info[PJSUA_MAX_CALLS];
+    pj_bool_t	      med_sock_use[PJSUA_MAX_CALLS];
 
     /* User info: */
 
@@ -137,7 +151,7 @@ struct pjsua
     pjsip_cred_info  cred_info[4];
 
 
-    /* Threading: */
+    /* Threading (optional): */
 
     int		     thread_cnt;    /**< Thread count.			*/
     pj_thread_t	    *threads[8];    /**< Thread instances.		*/

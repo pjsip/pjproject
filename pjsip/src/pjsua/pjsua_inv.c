@@ -41,11 +41,25 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     pjsip_inv_session *inv;
     struct pjsua_inv_data *inv_data;
     pjsip_tx_data *tdata;
+    int med_sk_index = 0;
     pj_status_t status;
 
     /* Convert cstr_dest_uri to dest_uri */
     
     dest_uri = pj_str((char*)cstr_dest_uri);
+
+    /* Find free socket. */
+    for (med_sk_index=0; med_sk_index<PJSUA_MAX_CALLS; ++med_sk_index) {
+	if (!pjsua.med_sock_use[med_sk_index])
+	    break;
+    }
+
+    if (med_sk_index == PJSUA_MAX_CALLS) {
+	PJ_LOG(3,(THIS_FILE, "Error: too many calls!"));
+	return PJ_ETOOMANY;
+    }
+
+    pjsua.med_sock_use[med_sk_index] = 1;
 
     /* Create outgoing dialog: */
 
@@ -60,7 +74,8 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     /* Get media capability from media endpoint: */
 
     status = pjmedia_endpt_create_sdp( pjsua.med_endpt, dlg->pool,
-				       1, &pjsua.med_skinfo, &offer);
+				       1, &pjsua.med_sock_info[med_sk_index], 
+				       &offer);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
@@ -79,6 +94,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 
     inv_data = pj_pool_zalloc( dlg->pool, sizeof(struct pjsua_inv_data));
     inv_data->inv = inv;
+    inv_data->call_slot = med_sk_index;
     dlg->mod_data[pjsua.mod.id] = inv_data;
     inv->mod_data[pjsua.mod.id] = inv_data;
 
@@ -129,6 +145,7 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
 on_error:
 
     PJ_TODO(DESTROY_DIALOG_ON_FAIL);
+    pjsua.med_sock_use[med_sk_index] = 0;
     return status;
 }
 
@@ -182,16 +199,33 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_inv_session *inv;
 	    struct pjsua_inv_data *inv_data;
 	    pjmedia_sdp_session *answer;
+	    int med_sk_index;
 
+
+	    /* Find free socket. */
+	    for (med_sk_index=0; med_sk_index<PJSUA_MAX_CALLS; ++med_sk_index) {
+		if (!pjsua.med_sock_use[med_sk_index])
+		    break;
+	    }
+
+	    if (med_sk_index == PJSUA_MAX_CALLS) {
+		PJ_LOG(3,(THIS_FILE, "Error: too many calls!"));
+		return PJ_TRUE;
+	    }
+
+
+	    pjsua.med_sock_use[med_sk_index] = 1;
 
 	    /* Get media capability from media endpoint: */
 
 	    status = pjmedia_endpt_create_sdp( pjsua.med_endpt, rdata->tp_info.pool,
-					       1, &pjsua.med_skinfo, &answer );
+					       1, &pjsua.med_sock_info[med_sk_index], 
+					       &answer );
 	    if (status != PJ_SUCCESS) {
 
 		pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
 					      NULL, NULL);
+		pjsua.med_sock_use[med_sk_index] = 0;
 		return PJ_TRUE;
 	    }
 
@@ -199,8 +233,10 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 
 	    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
 					   &pjsua.contact_uri, &dlg);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		pjsua.med_sock_use[med_sk_index] = 0;
 		return PJ_TRUE;
+	    }
 
 
 	    /* Create invite session: */
@@ -214,6 +250,7 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 		    status = pjsip_dlg_send_response(dlg, 
 						     pjsip_rdata_get_tsx(rdata),
 						     response);
+		pjsua.med_sock_use[med_sk_index] = 0;
 		return PJ_TRUE;
 
 	    }
@@ -223,6 +260,7 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 
 	    inv_data = pj_pool_zalloc(dlg->pool, sizeof(struct pjsua_inv_data));
 	    inv_data->inv = inv;
+	    inv_data->call_slot = inv_data->call_slot = med_sk_index;
 	    dlg->mod_data[pjsua.mod.id] = inv_data;
 	    inv->mod_data[pjsua.mod.id] = inv_data;
 
@@ -260,7 +298,9 @@ void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 	pj_assert(inv_data != NULL);
 
 	if (inv_data && inv_data->session) {
+	    pjmedia_conf_remove_port(pjsua.mconf, inv_data->conf_slot);
 	    pjmedia_session_destroy(inv_data->session);
+	    pjsua.med_sock_use[inv_data->call_slot] = 0;
 	    inv_data->session = NULL;
 
 	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
@@ -312,7 +352,9 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 
     inv_data = inv->dlg->mod_data[pjsua.mod.id];
     if (inv_data && inv_data->session) {
+	pjmedia_conf_remove_port(pjsua.mconf, inv_data->conf_slot);
 	pjmedia_session_destroy(inv_data->session);
+	pjsua.med_sock_use[inv_data->call_slot] = 0;
 	inv_data->session = NULL;
     }
 
@@ -335,14 +377,17 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 	return;
     }
 
-
     /* Create new media session. 
      * The media session is active immediately.
      */
 
     if (!pjsua.null_audio) {
+	pjmedia_port *media_port;
+	pj_str_t port_name;
+	char tmp[PJSIP_MAX_URL_SIZE];
 
-	status = pjmedia_session_create( pjsua.med_endpt, 1, &pjsua.med_skinfo,
+	status = pjmedia_session_create( pjsua.med_endpt, 1, 
+					 &pjsua.med_sock_info[inv_data->call_slot],
 					 local_sdp, remote_sdp, 
 					 &inv_data->session );
 	if (status != PJ_SUCCESS) {
@@ -350,6 +395,30 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 			 status);
 	    return;
 	}
+
+	pjmedia_session_get_port(inv_data->session, 0, &media_port);
+
+	port_name.ptr = tmp;
+	port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+					 inv_data->inv->dlg->remote.info->uri,
+					 tmp, sizeof(tmp));
+	if (port_name.slen < 1) {
+	    port_name = pj_str("call");
+	}
+	status = pjmedia_conf_add_port( pjsua.mconf, inv->pool,
+					media_port, 
+					&port_name,
+					&inv_data->conf_slot);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create conference slot", 
+			 status);
+	    pjmedia_session_destroy(inv_data->session);
+	    inv_data->session = NULL;
+	    return;
+	}
+
+	pjmedia_conf_connect_port( pjsua.mconf, 0, inv_data->conf_slot);
+	pjmedia_conf_connect_port( pjsua.mconf, inv_data->conf_slot, 0);
 
 	PJ_LOG(3,(THIS_FILE,"Media has been started successfully"));
     }

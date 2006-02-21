@@ -151,11 +151,6 @@ typedef struct pjmedia_stream_info pjmedia_stream_info;
 typedef struct pjmedia_stream_stat pjmedia_stream_stat;
 
 /**
- * @see pjmedia_stream_port
- */
-typedef struct pjmedia_stream_port pjmedia_stream_port;
-
-/**
  * Typedef for media stream.
  */
 typedef struct pjmedia_stream pjmedia_stream;

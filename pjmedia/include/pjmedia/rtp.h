@@ -69,6 +69,9 @@ PJ_BEGIN_DECL
  *
  */
 
+#ifdef _MSC_VER
+#   pragma warning(disable:4214)    // bit field types other than int
+#endif
 
 
 /**
