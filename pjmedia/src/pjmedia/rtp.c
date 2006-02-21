@@ -38,7 +38,7 @@
 PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 					 int default_pt, pj_uint32_t sender_ssrc )
 {
-    PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
+    PJ_LOG(5, (THIS_FILE, "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
 	       ses, default_pt, sender_ssrc));
 
     /* Check RTP header packing. */
