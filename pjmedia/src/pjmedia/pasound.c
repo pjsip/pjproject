@@ -253,7 +253,7 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_recorder( int index,
 	return NULL;
     }
 
-    PJ_LOG(4,(THIS_FILE, "%s opening device %s for recording, sample rate=%d, "
+    PJ_LOG(5,(THIS_FILE, "%s opening device %s for recording, sample rate=%d, "
 			 "%d bits per sample, %d samples per buffer",
 			 (err==0 ? "Success" : "Error"),
 			 paDevInfo->name, param->samples_per_sec, 
@@ -332,7 +332,7 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
 	return NULL;
     }
 
-    PJ_LOG(4,(THIS_FILE, "%s opening device %s for playing, sample rate=%d, "
+    PJ_LOG(5,(THIS_FILE, "%s opening device %s for playing, sample rate=%d, "
 			 "%d bits per sample, %d samples per buffer",
 			 (err==0 ? "Success" : "Error"),
 			 paDevInfo->name, param->samples_per_sec, 
@@ -348,7 +348,7 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
  */
 PJ_DEF(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream)
 {
-    PJ_LOG(4,(THIS_FILE, "Starting stream.."));
+    PJ_LOG(5,(THIS_FILE, "Starting stream.."));
     return Pa_StartStream(stream->stream);
 }
 
@@ -365,7 +365,7 @@ PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
 
     pj_thread_sleep(1);
 
-    PJ_LOG(4,(THIS_FILE, "Stopping stream.."));
+    PJ_LOG(5,(THIS_FILE, "Stopping stream.."));
 
     err = Pa_StopStream(stream->stream);
     return err;
@@ -387,7 +387,7 @@ PJ_DEF(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream)
 
     paDevInfo = Pa_GetDeviceInfo(stream->dev_index);
 
-    PJ_LOG(4,(THIS_FILE, "Closing %s: %lu underflow, %lu overflow",
+    PJ_LOG(5,(THIS_FILE, "Closing %s: %lu underflow, %lu overflow",
 			 paDevInfo->name,
 			 stream->underflow, stream->overflow));
 
