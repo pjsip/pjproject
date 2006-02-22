@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "./output/pjlib-util-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /Zi /O2 /Oy /Ob2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /Zi /O2 /Ob2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -85,6 +85,10 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\errno.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\md5.c"
 # End Source File
 # Begin Source File
@@ -125,6 +129,10 @@ SOURCE="..\src\pjlib-util\xml.c"
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\errno.h"
+# End Source File
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\md5.h"

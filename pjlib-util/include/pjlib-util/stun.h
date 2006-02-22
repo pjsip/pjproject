@@ -118,22 +118,11 @@ PJ_DECL(pj_status_t) pj_stun_parse_msg( void *buf, pj_size_t len,
 				        pj_stun_msg *msg);
 PJ_DECL(void*) pj_stun_msg_find_attr( pj_stun_msg *msg, pj_stun_attr_type t);
 
-/* STUN simple client API (stun_client.c) */
-enum pj_stun_err_code {
-    PJ_STUN_ERR_MEMORY		= (-2),
-    PJ_STUN_ERR_RESOLVE		= (-3),
-    PJ_STUN_ERR_TRANSPORT	= (-4),
-    PJ_STUN_ERR_INVALID_MSG	= (-5),
-    PJ_STUN_ERR_NO_RESPONSE	= (-6),
-    PJ_STUN_ERR_SYMETRIC	= (-7),
-};
-
 PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 					      int sock_cnt, pj_sock_t sock[],
 					      const pj_str_t *srv1, int port1,
 					      const pj_str_t *srv2, int port2,
 					      pj_sockaddr_in mapped_addr[]);
-PJ_DECL(const char*) pj_stun_get_err_msg(pj_status_t status);
 
 PJ_END_DECL
 

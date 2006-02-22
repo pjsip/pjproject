@@ -16,7 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#ifndef __PJLIB_UTIL_H__
+#define __PJLIB_UTIL_H__
+
+#include <pjlib-util/errno.h>
 #include <pjlib-util/md5.h>
 #include <pjlib-util/scanner.h>
 #include <pjlib-util/stun.h>
 #include <pjlib-util/xml.h>
+
+
+PJ_BEGIN_DECL
+
+/**
+ * Initialize PJLIB UTIL (defined in errno.c)
+ *
+ * @return PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjlib_util_init(void);
+
+
+PJ_END_DECL
+
+
+#endif	/* __PJLIB_UTIL_H__ */
