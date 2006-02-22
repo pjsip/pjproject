@@ -80,6 +80,7 @@ struct pjmedia_session_info
  *			created in the session.
  * @param local_sdp	The SDP describing local capability.
  * @param rem_sdp	The SDP describing remote capability.
+ * @param user_data	Arbitrary user data to be kept in the session.
  * @param p_session	Pointer to receive the media session.
  *
  * @return		PJ_SUCCESS if media session can be created 
@@ -91,6 +92,7 @@ pjmedia_session_create( pjmedia_endpt *endpt,
 			const pjmedia_sock_info skinfo[],
 			const pjmedia_sdp_session *local_sdp,
 			const pjmedia_sdp_session *rem_sdp,
+			void *user_data,
 			pjmedia_session **p_session );
 
 
@@ -195,6 +197,51 @@ PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
 PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
 						     pjmedia_stream_stat *sta);
+
+/**
+ * Dial DTMF digit to the stream, using RFC 2833 mechanism.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ * @param ascii_digits	String of ASCII digits (i.e. 0-9*#A-B).
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_dial_dtmf( pjmedia_session *session,
+					        unsigned index,
+						const pj_str_t *ascii_digits );
+
+
+/**
+ * Check if the specified stream has received DTMF digits.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ *
+ * @return		Non-zero (PJ_TRUE) if the stream has DTMF digits.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_check_dtmf( pjmedia_session *session,
+					         unsigned index);
+
+
+/**
+ * Retrieve DTMF digits from the specified stream.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ * @param ascii_digits	Buffer to receive the digits. The length of this
+ *			buffer is indicated in the "size" argument.
+ * @param size		On input, contains the maximum digits to be copied
+ *			to the buffer.
+ *			On output, it contains the actual digits that has
+ *			been copied to the buffer.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
+					       unsigned index,
+					       char *ascii_digits,
+					       unsigned *size );
 
 /**
  * Destroy media session.

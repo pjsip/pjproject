@@ -716,6 +716,7 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
     status = pjmedia_session_create( pjsua.med_endpt, 1, 
 				     &pjsua.med_sock_info[inv_data->call_slot],
 				     local_sdp, remote_sdp, 
+				     inv_data,
 				     &inv_data->session );
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 

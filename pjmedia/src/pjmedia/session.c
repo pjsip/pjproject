@@ -33,6 +33,7 @@ struct pjmedia_session
     unsigned		    stream_cnt;
     pjmedia_stream_info	    stream_info[PJMEDIA_MAX_SDP_MEDIA];
     pjmedia_stream	   *stream[PJMEDIA_MAX_SDP_MEDIA];
+    void		   *user_data;
 };
 
 #define THIS_FILE		"session.c"
@@ -47,6 +48,7 @@ static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };
 static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
+static const pj_str_t ID_TELEPHONE_EVENT = { "telephone-event", 15 };
 
 static const pj_str_t STR_INACTIVE = { "inactive", 8 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
@@ -66,6 +68,7 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
 {
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap *rtpmap;
+    unsigned i;
     pj_status_t status;
 
 
@@ -151,7 +154,8 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
      * For this version of PJMEDIA, we do not support static payload
      * type without rtpmap.
      */
-    attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, NULL);
+    attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
+				       &local_m->desc.fmt[0]);
     if (attr == NULL)
 	return PJMEDIA_EMISSINGRTPMAP;
 
@@ -165,6 +169,39 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
     si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
     pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
     si->fmt.sample_rate = rtpmap->clock_rate;
+
+    /* Get local DTMF payload type */
+    si->tx_event_pt = -1;
+    for (i=0; i<local_m->attr_count; ++i) {
+	pjmedia_sdp_rtpmap r;
+
+	attr = local_m->attr[i];
+	if (pj_strcmp(&attr->name, &ID_RTPMAP) != 0)
+	    continue;
+	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
+	    continue;
+	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
+	    si->tx_event_pt = pj_strtoul(&r.pt);
+	    break;
+	}
+    }
+
+    /* Get remote DTMF payload type */
+    si->rx_event_pt = -1;
+    for (i=0; i<rem_m->attr_count; ++i) {
+	pjmedia_sdp_rtpmap r;
+
+	attr = rem_m->attr[i];
+	if (pj_strcmp(&attr->name, &ID_RTPMAP) != 0)
+	    continue;
+	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
+	    continue;
+	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
+	    si->rx_event_pt = pj_strtoul(&r.pt);
+	    break;
+	}
+    }
+
 
     /* Leave SSRC to zero. */
 
@@ -182,6 +219,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 					    const pjmedia_sock_info skinfo[],
 					    const pjmedia_sdp_session *local_sdp,
 					    const pjmedia_sdp_session *rem_sdp,
+					    void *user_data,
 					    pjmedia_session **p_session )
 {
     pj_pool_t *pool;
@@ -203,6 +241,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     session->pool = pool;
     session->endpt = endpt;
     session->stream_cnt = stream_cnt;
+    session->user_data = user_data;
     
     /* Stream count is the lower number of stream_cnt or SDP m= lines count */
     if (stream_cnt < local_sdp->media_count)
@@ -239,6 +278,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 
 	status = pjmedia_stream_create(endpt, session->pool,
 				       &session->stream_info[i],
+				       session,
 				       &session->stream[i]);
 	if (status == PJ_SUCCESS)
 	    status = pjmedia_stream_start(session->stream[i]);
@@ -385,6 +425,9 @@ PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
 }
 
 
+/*
+ * Get the port interface.
+ */
 PJ_DEF(pj_status_t) pjmedia_session_get_port(  pjmedia_session *session,
 					       unsigned index,
 					       pjmedia_port **p_port)
@@ -392,7 +435,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_port(  pjmedia_session *session,
     return pjmedia_stream_get_port( session->stream[index], p_port);
 }
 
-/**
+/*
  * Get statistics
  */
 PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
@@ -406,3 +449,37 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
 }
 
 
+/*
+ * Dial DTMF digit to the stream, using RFC 2833 mechanism.
+ */
+PJ_DEF(pj_status_t) pjmedia_session_dial_dtmf( pjmedia_session *session,
+					       unsigned index,
+					       const pj_str_t *ascii_digits )
+{
+    PJ_ASSERT_RETURN(session && ascii_digits, PJ_EINVAL);
+    return pjmedia_stream_dial_dtmf(session->stream[index], ascii_digits);
+}
+
+/*
+ * Check if the specified stream has received DTMF digits.
+ */
+PJ_DEF(pj_status_t) pjmedia_session_check_dtmf( pjmedia_session *session,
+					        unsigned index )
+{
+    PJ_ASSERT_RETURN(session, PJ_EINVAL);
+    return pjmedia_stream_check_dtmf(session->stream[index]);
+}
+
+
+/*
+ * Retrieve DTMF digits from the specified stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
+					      unsigned index,
+					      char *ascii_digits,
+					      unsigned *size )
+{
+    PJ_ASSERT_RETURN(session && ascii_digits && size, PJ_EINVAL);
+    return pjmedia_stream_get_dtmf(session->stream[index], ascii_digits,
+				   size);
+}

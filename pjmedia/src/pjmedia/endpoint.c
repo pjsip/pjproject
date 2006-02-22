@@ -263,9 +263,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     m->attr[m->attr_count++] = attr;
 
 #if 1
-    //
-    // Test: add telephony events
-    //
+    /*
+     * Add support telephony event
+     */
     m->desc.fmt[m->desc.fmt_count++] = pj_str("101");
     /* Add rtpmap. */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));

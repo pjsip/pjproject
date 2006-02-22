@@ -89,6 +89,8 @@ static const struct
     { PJMEDIA_EINVALIDPT,	    "Invalid media payload type" },
     { PJMEDIA_EMISSINGRTPMAP,	    "Missing rtpmap in media description" },
     { PJMEDIA_EINVALIMEDIATYPE,	    "Invalid media type" },
+    { PJMEDIA_EREMOTENODTMF,	    "Remote does not support DTMF" },
+    { PJMEDIA_RTP_EINDTMF,	    "Invalid DTMF digit" },
 
     /* RTP session errors. */
     { PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" },
@@ -100,7 +102,16 @@ static const struct
     { PJMEDIA_RTP_ESESSRESTART,	    "RTP session restarted" },
     { PJMEDIA_RTP_ESESSPROBATION,   "RTP session in probation" },
     { PJMEDIA_RTP_EBADSEQ,	    "Bad sequence number in RTP packet" },
-
+    { PJMEDIA_RTP_EBADDEST,	    "RTP media port destination is not configured" },
+    { PJMEDIA_RTP_ENOCONFIG,	    "RTP is not configured" },
+    
+    /* Media port errors: */
+    { PJMEDIA_ENOTCOMPATIBLE,	    "Media ports are not compatible" },
+    { PJMEDIA_ENCCLOCKRATE,	    "Media ports have incompatible clock rate" },
+    { PJMEDIA_ENCSAMPLESPFRAME,	    "Media ports have incompatible samples per frame" },
+    { PJMEDIA_ENCTYPE,		    "Media ports have incompatible media type" },
+    { PJMEDIA_ENCBITS,		    "Media ports have incompatible bits per sample" },
+    { PJMEDIA_ENCBYTES,		    "Media ports have incompatible bytes per frame" },
 };
 
 

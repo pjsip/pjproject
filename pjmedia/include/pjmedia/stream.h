@@ -71,8 +71,8 @@ struct pjmedia_stream_info
     pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
     pjmedia_codec_info	fmt;	    /**< Codec format info.		    */
-    unsigned		tx_event_pt;/**< Outgoing pt for telephone-events.  */
-    unsigned		rx_event_pt;/**< Incoming pt for telephone-events.  */
+    int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
+    int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
     int			jb_min;	    /**< Jitter buffer min delay.	    */
     int			jb_max;	    /**< Jitter buffer max delay.	    */
@@ -110,6 +110,7 @@ struct pjmedia_stream_stat
  *			number of memory may be needed because jitter
  *			buffer needs to preallocate some storage.
  * @param info		Stream information.
+ * @param user_data	Arbitrary user data (for future callback feature).
  * @param p_stream	Pointer to receive the media stream.
  *
  * @return		PJ_SUCCESS on success.
@@ -117,6 +118,7 @@ struct pjmedia_stream_stat
 PJ_DECL(pj_status_t) pjmedia_stream_create(pjmedia_endpt *endpt,
 					   pj_pool_t *pool,
 					   const pjmedia_stream_info *info,
+					   void *user_data,
 					   pjmedia_stream **p_stream);
 
 /**
@@ -191,13 +193,46 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
  * only valid for audio stream.
  *
  * @param stream	The media stream.
- * @param digit		A single digit ('0123456789*#ABCD').
+ * @param ascii_digit	String containing digits to be sent to remote.
+ *			Currently the maximum number of digits are 32.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf(pjmedia_stream *stream,
-					      const pj_str_t *digit_char);
+					      const pj_str_t *ascii_digit);
 
+
+/**
+ * Check if the stream has incoming DTMF digits in the incoming DTMF
+ * queue. Incoming DTMF digits received via RFC 2833 mechanism are
+ * saved in the incoming digits queue.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		Non-zero (PJ_TRUE) if the stream has received DTMF
+ *			digits in the .
+ */
+PJ_DECL(pj_bool_t) pjmedia_stream_check_dtmf(pjmedia_stream *stream);
+
+
+/**
+ * Retrieve the incoming DTMF digits from the stream. Note that the digits
+ * buffer will not be NULL terminated.
+ *
+ * @param stream	The media stream.
+ * @param ascii_digits	Buffer to receive the digits. The length of this
+ *			buffer is indicated in the "size" argument.
+ * @param size		On input, contains the maximum digits to be copied
+ *			to the buffer.
+ *			On output, it contains the actual digits that has
+ *			been copied to the buffer.
+ *
+ * @return		Non-zero (PJ_TRUE) if the stream has received DTMF
+ *			digits in the .
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
+					      char *ascii_digits,
+					      unsigned *size);
 
 
 /**

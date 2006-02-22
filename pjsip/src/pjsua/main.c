@@ -139,7 +139,7 @@ static void keystroke_help(void)
     puts("|  H  Hold call                |     Conference Command   |                   |");
     puts("|  v  re-inVite (release hold) | cl  List ports           |                   |");
     puts("|  x  Xfer call                | cc  Connect port         |                   |");
-    puts("|                              | cd  Disconnect port      |                   |");
+    puts("|  #  Send DTMF string         | cd  Disconnect port      |                   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
@@ -436,6 +436,37 @@ static void ui_console_main(void)
 
 		} else if (result.uri_result) {
 		    pjsua_inv_xfer_call( inv_session, result.uri_result);
+		}
+	    }
+	    break;
+
+	case '#':
+	    /*
+	     * Send DTMF strings.
+	     */
+	    if (inv_session == &pjsua.inv_list) {
+		
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+
+	    } else if (inv_session->session == NULL) {
+
+		PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
+
+	    } else {
+		pj_str_t digits;
+		pj_status_t status;
+
+		if (!simple_input("DTMF strings to send (0-9*#A-B)", buf, 
+				  sizeof(buf)))
+			break;
+
+		digits = pj_str(buf);
+		status = pjmedia_session_dial_dtmf(inv_session->session, 0, 
+						   &digits);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Unable to send DTMF", status);
+		} else {
+		    puts("DTMF digits enqueued for transmission");
 		}
 	    }
 	    break;

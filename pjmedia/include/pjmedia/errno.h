@@ -293,6 +293,16 @@ PJ_BEGIN_DECL
  * Invalid media type.
  */
 #define PJMEDIA_EINVALIMEDIATYPE    (PJMEDIA_ERRNO_START+104)    /* 220104 */
+/**
+ * @hideinitializer
+ * Remote does not support DTMF.
+ */
+#define PJMEDIA_EREMOTENODTMF	    (PJMEDIA_ERRNO_START+105)    /* 220105 */
+/**
+ * @hideinitializer
+ * Invalid DTMF digit.
+ */
+#define PJMEDIA_RTP_EINDTMF	    (PJMEDIA_ERRNO_START+106)    /* 220106 */
 
 
 
@@ -354,11 +364,6 @@ PJ_BEGIN_DECL
  * RTP is not configured.
  */
 #define PJMEDIA_RTP_ENOCONFIG	    (PJMEDIA_ERRNO_START+134)    /* 220134 */
-/**
- * @hideinitializer
- * Invalid DTMF digit.
- */
-#define PJMEDIA_RTP_EINDTMF	    (PJMEDIA_ERRNO_START+135)    /* 220135 */
 
 
 /************************************************************
