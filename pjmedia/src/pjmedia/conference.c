@@ -746,6 +746,13 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	if (!conf_port)
 	    continue;
 
+	//
+	// TODO:
+	//  When there's no source, not transmit the frame, but instead
+	//  transmit a 'silence' frame. This is to allow the 'port' to
+	//  do some processing, such as updating timestamp for RTP session
+	//  or transmit signal when it's in the middle of transmitting DTMF.
+	//
 
 	target_buf = (conf_port->cur_tx_buf==conf_port->tx_buf1?
 			conf_port->tx_buf2 : conf_port->tx_buf1);

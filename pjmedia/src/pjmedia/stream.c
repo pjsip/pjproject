@@ -22,6 +22,7 @@
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
 #include <pj/os.h>
+#include <pj/ctype.h>
 #include <pj/log.h>
 #include <pj/string.h>	    /* memcpy() */
 #include <pj/pool.h>
@@ -39,7 +40,7 @@
 #define PJMEDIA_MAX_FRAME_DURATION_MS   200
 #define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
 #define PJMEDIA_MAX_MTU			1500
-
+#define PJMEDIA_DTMF_DURATION		1600	/* in timestamp */
 
 
 /**
@@ -62,6 +63,13 @@ struct pjmedia_channel
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 };
 
+
+struct dtmf
+{
+    int		    event;
+    pj_uint32_t	    start_ts;
+    pj_uint32_t	    end_ts;
+};
 
 /**
  * This structure describes media stream.
@@ -93,6 +101,10 @@ struct pjmedia_stream
 
     pj_bool_t		     quit_flag;	    /**< To signal thread exit.	    */
     pj_thread_t		    *thread;	    /**< Jitter buffer's thread.    */
+
+    /* RFC 2833 DTMF transmission queue: */
+    int			     dtmf_count;    /**< # of digits in queue.	    */
+    struct dtmf		     dtmf_queue[32];/**< Outgoing dtmf queue.	    */
 };
 
 
@@ -178,6 +190,24 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 }
 
 
+/*
+ * Transmit DTMF
+ */
+static void transmit_dtmf(pjmedia_stream *stream, 
+			  struct pjmedia_frame *frame_out)
+{
+    pjmedia_rtp_dtmf_event *event;
+    struct dtmf *digit = &stream->dtmf_queue[0];
+    pj_uint32_t cur_ts;
+
+    event = frame_out->buf;
+    cur_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+
+    event->event = (pj_uint8_t)digit->event;
+    event->e_vol = 10;
+    event->duration = pj_htonl(cur_ts - digit->start_ts);
+}
+
 /**
  * rec_callback()
  *
@@ -202,18 +232,31 @@ static pj_status_t put_frame( pjmedia_port *port,
     if (stream->quit_flag)
 	return -1;
 
-    /* Encode. */
+    /* Number of samples in the frame */
+    ts_len = frame->size / (channel->snd_info.bits_per_sample / 8);
+
+    /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
-    status = stream->codec->op->encode( stream->codec, frame, 
-					channel->out_pkt_size - sizeof(pjmedia_rtp_hdr), 
-					&frame_out);
-    if (status != 0) {
-	TRACE_((THIS_FILE, "Codec encode() error", status));
-	return status;
+
+    /* If we have DTMF digits in the queue, transmit the digits. 
+     * Otherwise encode the PCM buffer.
+     */
+    if (stream->dtmf_count) {
+	transmit_dtmf(stream, &frame_out);
+    } else {
+	unsigned max_size;
+
+	max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr);
+	status = stream->codec->op->encode( stream->codec, frame, 
+					    max_size, 
+					    &frame_out);
+	if (status != 0) {
+	    TRACE_((THIS_FILE, "Codec encode() error", status));
+	    return status;
+	}
     }
 
     /* Encapsulate. */
-    ts_len = frame->size / (channel->snd_info.bits_per_sample / 8);
     status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 				channel->pt, 0, 
 				frame_out.size, ts_len, 
@@ -246,6 +289,29 @@ static pj_status_t put_frame( pjmedia_port *port,
     return PJ_SUCCESS;
 }
 
+
+static void dump_bin(const char *buf, unsigned len)
+{
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "begin dump"));
+    for (i=0; i<len; ++i) {
+	int j;
+	char bits[9];
+	unsigned val = buf[i] & 0xFF;
+
+	bits[8] = '\0';
+	for (j=0; j<8; ++j) {
+	    if (val & (1 << (7-j)))
+		bits[j] = '1';
+	    else
+		bits[j] = '0';
+	}
+
+	PJ_LOG(3,(THIS_FILE, "%2d %s [%d]", i, bits, val));
+    }
+    PJ_LOG(3,(THIS_FILE, "end dump"));
+}
 
 /*
  * This thread will poll the socket for incoming packets, and put
@@ -309,6 +375,13 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	    TRACE_((THIS_FILE, "RTP decode error", status));
 	    continue;
 	}
+
+#if 1
+	if (hdr->pt == 101) {
+	    dump_bin((char*)payload, payloadlen);
+	    continue;
+	}
+#endif
 
 	status = pjmedia_rtp_session_update(&channel->rtp, hdr);
 	if (status != 0 && 
@@ -736,5 +809,87 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
     }
 
     return PJ_SUCCESS;
+}
+
+/*
+ * Dial DTMF
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
+					      const pj_str_t *digit_char)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    /* By convention we use jitter buffer mutex to access DTMF
+     * queue.
+     */
+    PJ_ASSERT_RETURN(stream && digit_char, PJ_EINVAL);
+
+    pj_mutex_lock(stream->jb_mutex);
+    
+    if (stream->dtmf_count+digit_char->slen >=
+	PJ_ARRAY_SIZE(stream->dtmf_queue))
+    {
+	status = PJ_ETOOMANY;
+    } else {
+	int i;
+
+	/* convert ASCII digits into payload type first, to make sure
+	 * that all digits are valid. 
+	 */
+	for (i=0; i<digit_char->slen; ++i) {
+	    unsigned pt;
+
+	    if (digit_char->ptr[i] >= '0' &&
+		digit_char->ptr[i] <= '9')
+	    {
+		pt = digit_char->ptr[i] - '0';
+	    } 
+	    else if (pj_tolower(digit_char->ptr[i]) >= 'a' &&
+		     pj_tolower(digit_char->ptr[i]) <= 'd')
+	    {
+		pt = pj_tolower(digit_char->ptr[i]) - 'a' + 12;
+	    }
+	    else if (digit_char->ptr[i] == '*')
+	    {
+		pt = 10;
+	    }
+	    else if (digit_char->ptr[i] == '#')
+	    {
+		pt = 11;
+	    }
+	    else
+	    {
+		status = PJMEDIA_RTP_EINDTMF;
+		break;
+	    }
+
+	    stream->dtmf_queue[stream->dtmf_count+1].event = pt;
+	    stream->dtmf_queue[stream->dtmf_count+1].start_ts = start_ts;
+	    stream->dtmf_queue[stream->dtmf_count+1].end_ts = 
+		start_ts + PJMEDIA_DTMF_DURATION;
+
+	    start_ts += PJMEDIA_DTMF_DURATION + 320;
+	}
+
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+
+	if (stream->dtmf_count ==0) {
+	    pj_uint32_t start_ts;
+
+	    start_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+	    stream->dtmf_queue[0].start_ts = start_ts;
+	    stream->dtmf_queue[0].end_ts = start_ts + PJMEDIA_DTMF_DURATION;
+	}
+
+	/* Increment digit count only if all digits are valid. */
+	stream->dtmf_count += digit_char->slen;
+
+    }
+
+on_return:
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return status;
 }
 

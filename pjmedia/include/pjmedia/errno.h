@@ -354,6 +354,11 @@ PJ_BEGIN_DECL
  * RTP is not configured.
  */
 #define PJMEDIA_RTP_ENOCONFIG	    (PJMEDIA_ERRNO_START+134)    /* 220134 */
+/**
+ * @hideinitializer
+ * Invalid DTMF digit.
+ */
+#define PJMEDIA_RTP_EINDTMF	    (PJMEDIA_ERRNO_START+135)    /* 220135 */
 
 
 /************************************************************

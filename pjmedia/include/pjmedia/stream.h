@@ -71,6 +71,8 @@ struct pjmedia_stream_info
     pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
     pjmedia_codec_info	fmt;	    /**< Codec format info.		    */
+    unsigned		tx_event_pt;/**< Outgoing pt for telephone-events.  */
+    unsigned		rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
     int			jb_min;	    /**< Jitter buffer min delay.	    */
     int			jb_max;	    /**< Jitter buffer max delay.	    */
@@ -182,6 +184,20 @@ PJ_DECL(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
  */
 PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
 					   pjmedia_dir dir);
+
+/**
+ * Transmit DTMF to this stream. The DTMF will be transmitted uisng
+ * RTP telephone-events as described in RFC 2833. This operation is
+ * only valid for audio stream.
+ *
+ * @param stream	The media stream.
+ * @param digit		A single digit ('0123456789*#ABCD').
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf(pjmedia_stream *stream,
+					      const pj_str_t *digit_char);
+
 
 
 /**

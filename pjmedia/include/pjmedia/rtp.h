@@ -122,6 +122,26 @@ struct pjmedia_rtp_ext_hdr
 typedef struct pjmedia_rtp_ext_hdr pjmedia_rtp_ext_hdr;
 
 
+#pragma pack(1)
+
+/**
+ * Declaration for DTMF telephony-events (RFC2833).
+ */
+struct pjmedia_rtp_dtmf_event
+{
+    pj_uint8_t	event;
+    pj_uint8_t	e_vol;
+    pj_uint16_t	duration;
+};
+
+/**
+ * @see pjmedia_rtp_dtmf_event
+ */
+typedef struct pjmedia_rtp_dtmf_event pjmedia_rtp_dtmf_event;
+
+#pragma pack()
+
+
 /**
  * A generic sequence number management, used by both RTP and RTCP.
  */
