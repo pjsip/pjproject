@@ -283,6 +283,8 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
     status = pjsip_dlg_create_response(dlg, rdata, 100, NULL, &response);
     if (status != PJ_SUCCESS) {
 	
+	pjsua_perror(THIS_FILE, "Unable to create 100 response", status);
+
 	pjsip_dlg_respond(dlg, rdata, 500, NULL);
 
 	/* Free call socket. */
@@ -293,8 +295,19 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
     } else {
 	status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), 
 					 response);
+	if (status != PJ_SUCCESS)
+	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
     }
 
+    PJ_LOG(3,(THIS_FILE,
+	      "\nIncoming call!!\n"
+	      "From: %.*s\n"
+	      "To:   %.*s\n"
+	      "(press 'a' to answer, 'h' to decline)",
+	      (int)dlg->remote.info_str.slen,
+	      dlg->remote.info_str.ptr,
+	      (int)dlg->local.info_str.slen,
+	      dlg->local.info_str.ptr));
     /* This INVITE request has been handled. */
     return PJ_TRUE;
 }
