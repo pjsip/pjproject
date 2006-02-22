@@ -30,6 +30,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/log.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 
@@ -266,7 +267,7 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
 
     /* Set "CSeq" header. */
     regc->cseq_hdr = pjsip_cseq_hdr_create(regc->pool);
-    regc->cseq_hdr->cseq = 0;
+    regc->cseq_hdr->cseq = pj_rand() % 0xFFFF;
     pjsip_method_set( &regc->cseq_hdr->method, PJSIP_REGISTER_METHOD);
 
     /* Create "Contact" header used in unregistration. */
@@ -591,6 +592,8 @@ static void tsx_callback(void *token, pjsip_event *event)
 PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 {
     pj_status_t status;
+    pjsip_cseq_hdr *cseq_hdr;
+    pj_uint32_t cseq;
 
     /* Make sure we don't have pending transaction. */
     if (regc->pending_tsx) {
@@ -602,7 +605,9 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pjsip_tx_data_invalidate_msg(tdata);
 
     /* Increment CSeq */
-    regc->cseq_hdr->cseq++;
+    cseq = ++regc->cseq_hdr->cseq;
+    cseq_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+    cseq_hdr->cseq = cseq;
 
     /* Send. */
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
