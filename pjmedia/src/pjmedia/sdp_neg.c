@@ -700,7 +700,7 @@ static pj_bool_t match_offer(pj_pool_t *pool,
     }
 
     /* See if all types of offer can be matched. */
-#if 0
+#if 1
     if ((offer_has_codec && !found_matching_codec) ||
 	(offer_has_telephone_event && !found_matching_telephone_event) ||
 	(offer_has_other && !found_matching_other))
