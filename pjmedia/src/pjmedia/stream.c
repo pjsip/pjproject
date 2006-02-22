@@ -34,7 +34,7 @@
 
 #define THIS_FILE			"stream.c"
 #define ERRLEVEL			1
-#define TRACE_(expr)			PJ_LOG(3,expr)
+#define TRACE_(expr)			stream_perror expr
 
 #define PJMEDIA_MAX_FRAME_DURATION_MS   200
 #define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
@@ -96,6 +96,18 @@ struct pjmedia_stream
 };
 
 
+/*
+ * Print error.
+ */
+static void stream_perror(const char *sender, const char *title,
+			  pj_status_t status)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    pj_strerror(status, errmsg, sizeof(errmsg));
+    PJ_LOG(3,(sender, "%s: %s [err:%d]", title, errmsg, status));
+}
+
 
 /*
  * play_callback()
@@ -144,7 +156,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     status = stream->codec->op->decode( stream->codec, &frame_in,
 					channel->pcm_buf_size, &frame_out);
     if (status != 0) {
-	TRACE_((THIS_FILE, "decode() has return error status %d", status));
+	TRACE_((THIS_FILE, "codec decode() error", status));
 
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
@@ -152,8 +164,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
     /* Put in sound buffer. */
     if (frame_out.size > frame->size) {
-	TRACE_((THIS_FILE, "Sound playout buffer truncated %d bytes", 
-		frame_out.size - frame->size));
+	PJ_LOG(4,(THIS_FILE, "Sound playout buffer truncated %d bytes", 
+		  frame_out.size - frame->size));
 	frame_out.size = frame->size;
     }
 
@@ -196,8 +208,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 					channel->out_pkt_size - sizeof(pjmedia_rtp_hdr), 
 					&frame_out);
     if (status != 0) {
-	TRACE_((THIS_FILE, "Codec encode() has returned error status %d", 
-		status));
+	TRACE_((THIS_FILE, "Codec encode() error", status));
 	return status;
     }
 
@@ -208,15 +219,14 @@ static pj_status_t put_frame( pjmedia_port *port,
 				frame_out.size, ts_len, 
 				(const void**)&rtphdr, &rtphdrlen);
     if (status != 0) {
-	TRACE_((THIS_FILE, "RTP encode_rtp() has returned error status %d", 
-			   status));
+	TRACE_((THIS_FILE, "RTP encode_rtp() error", status));
 	return status;
     }
 
     if (rtphdrlen != sizeof(pjmedia_rtp_hdr)) {
 	/* We don't support RTP with extended header yet. */
 	PJ_TODO(SUPPORT_SENDING_RTP_WITH_EXTENDED_HEADER);
-	TRACE_((THIS_FILE, "Unsupported extended RTP header for transmission"));
+	//TRACE_((THIS_FILE, "Unsupported extended RTP header for transmission"));
 	return 0;
     }
 
@@ -266,10 +276,8 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	/* Wait with timeout. */
 	status = pj_sock_select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
 	if (status < 0) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(pj_get_netos_error(), errmsg, sizeof(errmsg));
-	    TRACE_((THIS_FILE, "Jitter buffer select() error: %s",
-		    errmsg));
+	    TRACE_((THIS_FILE, "Jitter buffer select() error", 
+		    pj_get_netos_error()));
 	    pj_thread_sleep(500);
 	    continue;
 	} else if (status == 0)
@@ -298,8 +306,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	status = pjmedia_rtp_decode_rtp(&channel->rtp, channel->in_pkt, len, 
 				   &hdr, &payload, &payloadlen);
 	if (status != PJ_SUCCESS) {
-	    TRACE_((THIS_FILE, "RTP decode_rtp() has returned error status %d",
-		    status));
+	    TRACE_((THIS_FILE, "RTP decode error", status));
 	    continue;
 	}
 
@@ -308,9 +315,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	    status != PJMEDIA_RTP_ESESSPROBATION && 
 	    status != PJMEDIA_RTP_ESESSRESTART) 
 	{
-	    TRACE_((THIS_FILE, 
-		    "RTP session_update() has returned error status %d", 
-		    status));
+	    TRACE_((THIS_FILE, "RTP session_update error", status));
 	    continue;
 	}
 	pj_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
@@ -325,9 +330,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	pj_mutex_unlock( stream->jb_mutex );
 
 	if (status != 0) {
-	    TRACE_((THIS_FILE, 
-		    "Jitter buffer put() has returned error status %d", 
-		    status));
+	    TRACE_((THIS_FILE, "Jitter buffer put() error", status));
 	    continue;
 	}
     }
