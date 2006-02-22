@@ -149,7 +149,7 @@ static pj_status_t init_sockets(pj_bool_t sip,
 	RTCP_SOCK,
     };
     int i;
-    pj_uint16_t rtp_port;
+    static pj_uint16_t rtp_port = RTP_START_PORT;
     pj_sock_t sock[3];
     pj_sockaddr_in mapped_addr[3];
     pj_status_t status = PJ_SUCCESS;
@@ -157,23 +157,27 @@ static pj_status_t init_sockets(pj_bool_t sip,
     for (i=0; i<3; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
 
+    /* Create and bind SIP UDP socket. */
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[SIP_SOCK]);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "socket() error", status);
+	goto on_error;
+    }
+
     if (sip) {
-	/* Create and bind SIP UDP socket. */
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[SIP_SOCK]);
+	status = pj_sock_bind_in(sock[SIP_SOCK], 0, pjsua.sip_port);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "socket() error", status);
+	    pjsua_perror(THIS_FILE, "bind() error", status);
 	    goto on_error;
 	}
-    
-	status = pj_sock_bind_in(sock[SIP_SOCK], 0, pjsua.sip_port);
+    } else {
+	status = pj_sock_bind_in(sock[SIP_SOCK], 0, 0);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "bind() error", status);
 	    goto on_error;
 	}
     }
 
-    /* Initialize start of RTP port to try. */
-    rtp_port = (pj_uint16_t)(RTP_START_PORT + (pj_rand() % RTP_RANDOM_START) / 2);
 
     /* Loop retry to bind RTP and RTCP sockets. */
     for (i=0; i<RTP_RETRY; ++i, rtp_port += 2) {
@@ -234,8 +238,6 @@ static pj_status_t init_sockets(pj_bool_t sip,
 
 	    if (sip)
 		mapped_addr[SIP_SOCK].sin_port = pj_htons((pj_uint16_t)pjsua.sip_port);
-	    else
-		mapped_addr[RTP_SOCK].sin_port = pj_htons((pj_uint16_t)rtp_port);
 	    mapped_addr[RTP_SOCK].sin_port = pj_htons((pj_uint16_t)rtp_port);
 	    mapped_addr[RTCP_SOCK].sin_port = pj_htons((pj_uint16_t)(rtp_port+1));
 	    break;
@@ -265,6 +267,8 @@ static pj_status_t init_sockets(pj_bool_t sip,
     if (sip) {
 	pjsua.sip_sock = sock[SIP_SOCK];
 	pj_memcpy(&pjsua.sip_sock_name, &mapped_addr[SIP_SOCK], sizeof(pj_sockaddr_in));
+    } else {
+	pj_sock_close(sock[0]);
     }
 
     skinfo->rtp_sock = sock[RTP_SOCK];
@@ -287,6 +291,7 @@ static pj_status_t init_sockets(pj_bool_t sip,
 	      pj_inet_ntoa(skinfo->rtcp_addr_name.sin_addr), 
 	      pj_ntohs(skinfo->rtcp_addr_name.sin_port)));
 
+    rtp_port += 2;
     return PJ_SUCCESS;
 
 on_error:
@@ -451,6 +456,14 @@ pj_status_t pjsua_init(void)
     status = pj_init();
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pj_init() error", status);
+	return status;
+    }
+
+    /* Init PJLIB-UTIL: */
+
+    status = pjlib_util_init();
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "pjlib_util_init() error", status);
 	return status;
     }
 

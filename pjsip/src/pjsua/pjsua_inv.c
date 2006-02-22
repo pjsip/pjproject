@@ -832,6 +832,13 @@ void pjsua_inv_hangup(struct pjsua_inv_data *inv_session, int code)
 	return;
     }
 
+    /* pjsip_inv_end_session may return PJ_SUCCESS with NULL 
+     * as p_tdata when INVITE transaction has not been answered
+     * with any provisional responses.
+     */
+    if (tdata == NULL)
+	return;
+
     status = pjsip_inv_send_msg(inv_session->inv, tdata, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -974,8 +981,10 @@ void pjsua_inv_shutdown()
 
 	next = inv_data->next;
 
-	if (pjsip_inv_end_session(inv_data->inv, 410, NULL, &tdata)==0)
-	    pjsip_inv_send_msg(inv_data->inv, tdata, NULL);
+	if (pjsip_inv_end_session(inv_data->inv, 410, NULL, &tdata)==0) {
+	    if (tdata)
+		pjsip_inv_send_msg(inv_data->inv, tdata, NULL);
+	}
 
 	inv_data = next;
     }

@@ -1274,8 +1274,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	    if (inv->invite_tsx->status_code < 100) {
 
 		pjsip_tsx_terminate(inv->invite_tsx, 487);
-
-		return PJSIP_ETSXDESTROYED;
+		*p_tdata = NULL;
+		return PJ_SUCCESS;
 	    }
 
 	    /* The CSeq here assumes that the dialog is started with an
