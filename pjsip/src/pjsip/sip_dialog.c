@@ -142,14 +142,23 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
 	param = uri->header_param.next;
 	while (param != &uri->header_param) {
-	    pjsip_generic_string_hdr *req_hdr;
+	    pjsip_hdr *hdr;
 
-	    req_hdr = pjsip_generic_string_hdr_create(dlg->pool, &param->name,
-						      &param->value);
-	    pj_list_push_back(&dlg->inv_hdr, req_hdr);
+	    hdr = pjsip_parse_hdr(dlg->pool, &param->name, param->value.ptr,
+				  param->value.slen, NULL);
+	    if (hdr == NULL) {
+		status = PJSIP_EINVALIDURI;
+		goto on_error;
+	    }
+	    pj_list_push_back(&dlg->inv_hdr, hdr);
 
 	    param = param->next;
 	}
+
+	/* Now must remove any header params from URL, since that would
+	 * create another header in pjsip_endpt_create_request().
+	 */
+	pj_list_init(&uri->header_param);
     }
 
     /* Init local info. */
