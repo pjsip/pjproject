@@ -40,6 +40,7 @@ typedef struct pjmedia_conf pjmedia_conf;
  */
 typedef struct pjmedia_conf_port_info
 {
+    unsigned		slot;
     pj_str_t		name;
     pjmedia_port_op	tx_setting;
     pjmedia_port_op	rx_setting;
@@ -150,10 +151,32 @@ PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
 /**
  * Get port info.
+ *
+ * @param conf		The conference bridge.
+ * @param slot		Port index.
+ * @param info		Pointer to receive the info.
+ *
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
 						 unsigned slot,
 						 pjmedia_conf_port_info *info);
+
+
+/**
+ * Get occupied ports info.
+ *
+ * @param conf		The conference bridge.
+ * @param size		On input, contains maximum number of infos
+ *			to be retrieved. On output, contains the actual
+ *			number of infos that have been copied.
+ * @param info		Array of info.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
+						 unsigned *size,
+						 pjmedia_conf_port_info info[]);
 
 
 PJ_END_DECL

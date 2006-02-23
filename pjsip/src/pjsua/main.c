@@ -261,21 +261,34 @@ static void ui_input_url(const char *title, char *buf, int len,
 
 static void conf_list(void)
 {
-    pjmedia_conf_port_info info;
-    struct pjsua_inv_data *inv_data;
+    unsigned i, count;
+    pjmedia_conf_port_info info[16];
 
     printf("Conference ports:\n");
 
-    inv_data = pjsua.inv_list.next;
-    while (inv_data != &pjsua.inv_list) {
+    count = PJ_ARRAY_SIZE(info);
+    pjmedia_conf_get_ports_info(pjsua.mconf, &count, info);
+    for (i=0; i<count; ++i) {
+	char txlist[80];
+	unsigned j;
+	pjmedia_conf_port_info *port_info = &info[i];	
 	
-	pjmedia_conf_get_port_info(pjsua.mconf, inv_data->conf_slot, &info);
+	txlist[0] = '\0';
+	for (j=0; j<pjsua.max_ports; ++j) {
+	    char s[10];
+	    if (port_info->listener[j]) {
+		pj_sprintf(s, "#%d ", j);
+		pj_ansi_strcat(txlist, s);
+	    }
+	}
+	printf("Port #%02d %20.*s  tx to: %s\n", 
+	       port_info->slot, 
+	       (int)port_info->name.slen, 
+	       port_info->name.ptr,
+	       txlist);
 
-	printf("Port %2d %.*s\n", inv_data->conf_slot, 
-				  (int)info.name.slen, info.name.ptr);
-
-	inv_data = inv_data->next;
     }
+    puts("");
 }
 
 

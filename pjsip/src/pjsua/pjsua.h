@@ -115,8 +115,11 @@ struct pjsua
     /* Media:  */
 
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
+    unsigned	     max_ports;	    /**< Max ports in conf.		*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
+    char	    *wav_file;	    /**< WAV file name to play.		*/
+    unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
 
 
     /* Since we support simultaneous calls, we need to have multiple

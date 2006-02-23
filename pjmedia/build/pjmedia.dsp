@@ -108,6 +108,10 @@ SOURCE=..\src\pjmedia\errno.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\file_port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\g711.c
 # End Source File
 # Begin Source File
@@ -193,6 +197,10 @@ SOURCE=..\include\pjmedia\errno.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\file_port.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\jbuf.h
 # End Source File
 # Begin Source File
@@ -242,6 +250,10 @@ SOURCE=..\include\pjmedia\types.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\vad.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\wave.h
 # End Source File
 # End Group
 # Begin Group "PortAudio"

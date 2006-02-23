@@ -112,6 +112,11 @@ static const struct
     { PJMEDIA_ENCTYPE,		    "Media ports have incompatible media type" },
     { PJMEDIA_ENCBITS,		    "Media ports have incompatible bits per sample" },
     { PJMEDIA_ENCBYTES,		    "Media ports have incompatible bytes per frame" },
+
+    /* Media file errors: */
+    { PJMEDIA_ENOTVALIDWAVE,	    "Not a valid WAVE file" },
+    { PJMEDIA_EWAVEUNSUPP,	    "Unsupported WAVE file format" },
+    { PJMEDIA_EWAVETOOSHORT,	    "WAVE file too short" },
 };
 
 

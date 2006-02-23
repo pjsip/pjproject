@@ -406,6 +406,25 @@ PJ_BEGIN_DECL
 #define PJMEDIA_ENCBYTES	    (PJMEDIA_ERRNO_START+165)    /* 220165 */
 
 
+/************************************************************
+ * FILE ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Not a valid WAVE file.
+ */
+#define PJMEDIA_ENOTVALIDWAVE	    (PJMEDIA_ERRNO_START+180)    /* 220180 */
+/**
+ * @hideinitializer
+ * Unsupported WAVE file.
+ */
+#define PJMEDIA_EWAVEUNSUPP	    (PJMEDIA_ERRNO_START+181)    /* 220181 */
+/**
+ * @hideinitializer
+ * Wave file too short.
+ */
+#define PJMEDIA_EWAVETOOSHORT	    (PJMEDIA_ERRNO_START+182)    /* 220182 */
+
 
 PJ_END_DECL
 

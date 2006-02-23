@@ -55,6 +55,8 @@ static void usage(void)
     puts("");
     puts("Media options:");
     puts("  --null-audio        Use NULL audio device");
+    puts("  --wav-file=file     Play WAV file in conference bridge");
+    puts("");
     //puts("");
     //puts("User Agent options:");
     //puts("  --auto-answer=sec   Auto-answer all incoming calls after sec seconds.");
@@ -196,7 +198,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP};
+	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_WAV_FILE};
     struct option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
 	{ "log-file",	1, 0, OPT_LOG_FILE},
@@ -222,6 +224,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "no-presence", 0, 0, OPT_NO_PRESENCE},
 	{ "auto-answer",1, 0, OPT_AUTO_ANSWER},
 	{ "auto-hangup",1, 0, OPT_AUTO_HANGUP},
+	{ "wav-file",  1, 0, OPT_WAV_FILE},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -404,6 +407,10 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		return -1;
 	    }
 	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(optarg);
+	    break;
+
+	case OPT_WAV_FILE:
+	    pjsua.wav_file = optarg;
 	    break;
 	}
     }

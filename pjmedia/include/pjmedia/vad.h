@@ -22,7 +22,7 @@
 
 /**
  * @file vad.h
- * @brief Voice Activity Detector.
+ * @brief Simple, adaptive silence detector.
  */
 #include <pjmedia/types.h>
 

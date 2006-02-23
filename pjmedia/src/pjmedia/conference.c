@@ -599,11 +599,33 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
 
     conf_port = conf->ports[slot];
 
+    info->slot = slot;
     info->name = conf_port->name;
     info->tx_setting = conf_port->tx_setting;
     info->rx_setting = conf_port->rx_setting;
     info->listener = conf_port->listeners;
 
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
+						unsigned *size,
+						pjmedia_conf_port_info info[])
+{
+    unsigned i, count=0;
+
+    PJ_ASSERT_RETURN(conf && size && info, PJ_EINVAL);
+
+    for (i=0; i<conf->max_ports && count<*size; ++i) {
+	if (!conf->ports[i])
+	    continue;
+
+	pjmedia_conf_get_port_info(conf, i, &info[count]);
+	++count;
+    }
+
+    *size = count;
     return PJ_SUCCESS;
 }
 

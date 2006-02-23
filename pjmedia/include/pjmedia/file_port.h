@@ -16,29 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_H__
-#define __PJMEDIA_H__
+#ifndef __PJMEDIA_FILE_PORT_H__
+#define __PJMEDIA_FILE_PORT_H__
 
 /**
- * @file pjmedia.h
- * @brief PJMEDIA main header file.
+ * @file file_port.h
+ * @brief File player and recorder.
  */
-
-#include <pjmedia/types.h>
-#include <pjmedia/codec.h>
-#include <pjmedia/conference.h>
-#include <pjmedia/endpoint.h>
-#include <pjmedia/errno.h>
-#include <pjmedia/file_port.h>
-#include <pjmedia/jbuf.h>
 #include <pjmedia/port.h>
-#include <pjmedia/rtcp.h>
-#include <pjmedia/rtp.h>
-#include <pjmedia/sdp.h>
-#include <pjmedia/sdp_neg.h>
-#include <pjmedia/session.h>
-#include <pjmedia/sound.h>
-#include <pjmedia/wave.h>
 
-#endif	/* __PJMEDIA_H__ */
 
+PJ_BEGIN_DECL
+
+
+/**
+ * Create file player port.
+ */
+PJ_DECL(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
+						      const char *filename,
+						      unsigned flags,
+						      pj_ssize_t buff_size,
+						      void *user_data,
+						      pjmedia_port **p_port );
+
+
+
+PJ_END_DECL
+
+
+#endif	/* __PJMEDIA_FILE_PORT_H__ */

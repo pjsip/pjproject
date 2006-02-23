@@ -76,6 +76,10 @@ void pjsua_default(void)
 
     pjsua.reg_timeout = 55;
 
+    /* Default maximum conference ports: */
+
+    pjsua.max_ports = 8;
+
     /* Init route set list: */
 
     pj_list_init(&pjsua.route_set);
@@ -517,7 +521,8 @@ pj_status_t pjsua_init(void)
 
     /* Init conference bridge. */
 
-    status = pjmedia_conf_create(pjsua.pool, 8, 8000, 160, 16, &pjsua.mconf);
+    status = pjmedia_conf_create(pjsua.pool, pjsua.max_ports, 
+				 8000, 160, 16, &pjsua.mconf);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror(THIS_FILE, 
@@ -553,6 +558,35 @@ pj_status_t pjsua_start(void)
     int i;  /* Must be signed */
     pjsip_transport *udp_transport;
     pj_status_t status = PJ_SUCCESS;
+
+    /* Create WAV file player if required: */
+
+    if (pjsua.wav_file) {
+	pjmedia_port *port;
+	pj_str_t port_name;
+
+	/* Create the file player port. */
+	status = pjmedia_file_player_port_create( pjsua.pool, pjsua.wav_file,
+						  0, -1, NULL, &port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, 
+			 "Error playing media file", 
+			 status);
+	    return status;
+	}
+
+	/* Add port to conference bridge: */
+	status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, port, 
+				       pj_cstr(&port_name, pjsua.wav_file),
+				       &pjsua.wav_slot);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, 
+			 "Unable to add file player to conference bridge", 
+			 status);
+	    return status;
+	}
+    }
+
 
     /* Init sockets (STUN etc): */
     for (i=0; i<PJ_ARRAY_SIZE(pjsua.med_sock_info); ++i) {
