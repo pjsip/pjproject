@@ -744,10 +744,10 @@ static pj_status_t play_cb( /* in */  void *user_data,
 					     &level);
 
 	/* Skip if we don't have signal. */
-	//if (silence) {
-	//    TRACE_(("sil:%d ", i));
-	//    continue;
-	//}
+	if (silence) {
+	    TRACE_(("sil:%d ", i));
+	    continue;
+	}
 
 	/* Convert the buffer to unsigned value */
 	for (j=0; j<conf->samples_per_frame; ++j)
