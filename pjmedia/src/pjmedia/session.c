@@ -139,13 +139,6 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
 	return PJMEDIA_EINVALIDIP;
     }
 
-    /* For this version of PJMEDIA, send and receive media must use
-     * the same codec.
-     */
-    if (pj_strcmp(&local_m->desc.fmt[0], &rem_m->desc.fmt[0]) != 0)
-	return PJMEDIA_EASYMCODEC;
-
-
     /* And codec must be numeric! */
     if (!pj_isdigit(*local_m->desc.fmt[0].ptr))
 	return PJMEDIA_EINVALIDPT;
