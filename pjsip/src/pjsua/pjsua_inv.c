@@ -121,18 +121,23 @@ pj_status_t pjsua_invite(const char *cstr_dest_uri,
     }
 
 
+    /* Add invite session to the list. */
+    
+    pj_list_push_back(&pjsua.inv_list, inv_data);
+
+
     /* Send initial INVITE: */
 
     status = pjsip_inv_send_msg(inv, tdata, NULL);
     if (status != PJ_SUCCESS) {
+	/*
+	 * Note:
+	 *  inv_data will be removed from the list in the callback
+	 */
 	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
 		     status);
 	goto on_error;
     }
-
-    /* Add invite session to the list. */
-    
-    pj_list_push_back(&pjsua.inv_list, inv_data);
 
 
     /* Done. */

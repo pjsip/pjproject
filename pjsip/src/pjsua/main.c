@@ -344,6 +344,17 @@ static void ui_console_main(void)
 		if (atoi(buf) < 100)
 		    continue;
 
+		/*
+		 * Must check again!
+		 * Call may have been disconnected while we're waiting for 
+		 * keyboard input.
+		 */
+		if (inv_session == &pjsua.inv_list) {
+		    puts("Call has been disconnected");
+		    fflush(stdout);
+		    continue;
+		}
+
 		status = pjsip_inv_answer(inv_session->inv, atoi(buf), 
 					  NULL, NULL, &tdata);
 		if (status == PJ_SUCCESS)
@@ -439,7 +450,17 @@ static void ui_console_main(void)
 		PJ_LOG(3,(THIS_FILE, "No current call"));
 
 	    } else {
+		struct pjsua_inv_data *cur = inv_session;
+
 		ui_input_url("Transfer to URL", buf, sizeof(buf), &result);
+
+		/* Check if call is still there. */
+
+		if (cur != inv_session) {
+		    puts("Call has been disconnected");
+		    continue;
+		}
+
 		if (result.nb_result != NO_NB) {
 		    if (result.nb_result == -1) 
 			puts("You can't do that with transfer call!");
@@ -467,11 +488,19 @@ static void ui_console_main(void)
 
 	    } else {
 		pj_str_t digits;
+		struct pjsua_inv_data *cur = inv_session;
 		pj_status_t status;
 
 		if (!simple_input("DTMF strings to send (0-9*#A-B)", buf, 
 				  sizeof(buf)))
+		{
 			break;
+		}
+
+		if (cur != inv_session) {
+		    puts("Call has been disconnected");
+		    continue;
+		}
 
 		digits = pj_str(buf);
 		status = pjmedia_session_dial_dtmf(inv_session->session, 0, 
