@@ -53,6 +53,7 @@ struct conf_port
     pjmedia_port	*port;		/**< get_frame() and put_frame()    */
     pjmedia_port_op	 rx_setting;	/**< Can we receive from this port  */
     pjmedia_port_op	 tx_setting;	/**< Can we transmit to this port   */
+    int			 listener_cnt;	/**< Number of listeners.	    */
     pj_bool_t		*listeners;	/**< Array of listeners.	    */
     pjmedia_vad		*vad;		/**< VAD for this port.		    */
 
@@ -467,6 +468,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     if (src_port->listeners[sink_slot] == 0) {
 	src_port->listeners[sink_slot] = 1;
 	++conf->connect_cnt;
+	++src_port->listener_cnt;
 
 	if (conf->connect_cnt == 1)
 	    resume_sound(conf);
@@ -505,6 +507,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     if (src_port->listeners[sink_slot] != 0) {
 	src_port->listeners[sink_slot] = 0;
 	--conf->connect_cnt;
+	--src_port->listener_cnt;
 
 	PJ_LOG(4,(THIS_FILE,"Port %.*s stop transmitting to port %.*s",
 		  (int)src_port->name.slen,
@@ -556,6 +559,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
 	if (conf_port->listeners[port] != 0) {
 	    --conf->connect_cnt;
+	    --conf_port->listener_cnt;
 	    conf_port->listeners[port] = 0;
 	}
     }
@@ -563,8 +567,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     /* Remove all ports listening from this port. */
     conf_port = conf->ports[port];
     for (i=0; i<conf->max_ports; ++i) {
-	if (conf_port->listeners[i])
+	if (conf_port->listeners[i]) {
 	    --conf->connect_cnt;
+	    --conf_port->listener_cnt;
+	}
     }
 
     /* Remove the port. */
@@ -693,20 +699,24 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	}
 
 	/* Get frame from this port. 
-	 * If port has rx_buffer, then get the frame from the rx_buffer
-	 * instead.
+	 * If port has rx_buffer (e.g. sound port), then get the frame 
+	 * from the rx_buffer instead.
 	 */
-	if (i==0/*conf_port->cur_rx_buf*/) {
+	if (i==0) {
 	    pj_int16_t *rx_buf;
 
-	    if (conf_port->rx_read == conf_port->rx_write)
-		conf_port->rx_read = (conf_port->rx_write+RX_BUF_COUNT-RX_BUF_COUNT/2) % RX_BUF_COUNT;
+	    if (conf_port->rx_read == conf_port->rx_write) {
+		conf_port->rx_read = 
+		    (conf_port->rx_write+RX_BUF_COUNT-RX_BUF_COUNT/2) % 
+			RX_BUF_COUNT;
+	    }
 
 	    rx_buf = conf_port->rx_buf[conf_port->rx_read];
 	    for (j=0; j<conf->samples_per_frame; ++j) {
 		((pj_int16_t*)output)[j] = rx_buf[j];
 	    }
 	    conf_port->rx_read = (conf_port->rx_read+1) % RX_BUF_COUNT;
+
 	} else {
 	    pjmedia_frame frame;
 
@@ -714,10 +724,17 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    frame.buf = output;
 	    frame.size = size;
 	    pjmedia_port_get_frame(conf_port->port, &frame);
+
+	    if (frame.type == PJMEDIA_FRAME_TYPE_NONE)
+		continue;
 	}
 
 	/* Skip (after receiving the frame) if this port is muted. */
 	if (conf_port->rx_setting == PJMEDIA_PORT_MUTE)
+	    continue;
+
+	/* Also skip if this port doesn't have listeners. */
+	if (conf_port->listener_cnt == 0)
 	    continue;
 
 	/* Do we have signal? */
@@ -727,10 +744,10 @@ static pj_status_t play_cb( /* in */  void *user_data,
 					     &level);
 
 	/* Skip if we don't have signal. */
-	if (silence) {
-	    TRACE_(("sil:%d ", i));
-	    continue;
-	}
+	//if (silence) {
+	//    TRACE_(("sil:%d ", i));
+	//    continue;
+	//}
 
 	/* Convert the buffer to unsigned value */
 	for (j=0; j<conf->samples_per_frame; ++j)
@@ -742,7 +759,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    pj_uint32_t *sum_buf;
 	    unsigned k;
 
-	    if (conf_port->listeners[j] == 0)
+	    if (listener == 0)
 		continue;
 
 	    /* Skip if this listener doesn't want to receive audio */
@@ -768,6 +785,20 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	if (!conf_port)
 	    continue;
 
+	if (conf_port->tx_setting == PJMEDIA_PORT_MUTE) {
+	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame.buf = NULL;
+	    frame.size = 0;
+	    
+	    if (conf_port->port)
+		pjmedia_port_put_frame(conf_port->port, &frame);
+
+	    continue;
+
+	} else if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE) {
+	    continue;
+	}
+
 	//
 	// TODO:
 	//  When there's no source, not transmit the frame, but instead
@@ -779,10 +810,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	target_buf = (conf_port->cur_tx_buf==conf_port->tx_buf1?
 			conf_port->tx_buf2 : conf_port->tx_buf1);
 
-	if (!conf_port->sources) {
-	    for (j=0; j<conf->samples_per_frame; ++j)
-		target_buf[j] = 0;
-	} else {
+	if (conf_port->sources) {
 	    for (j=0; j<conf->samples_per_frame; ++j) {
 		target_buf[j] = unsigned2pcm(conf_port->sum_buf[j] / conf_port->sources);
 	    }
@@ -791,11 +819,12 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	/* Switch buffer. */
 	conf_port->cur_tx_buf = target_buf;
 
-	if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE)
-	    continue;
-
 	pj_memset(&frame, 0, sizeof(frame));
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	if (conf_port->sources)
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	else
+	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
+
 	frame.buf = conf_port->cur_tx_buf;
 	frame.size = conf->samples_per_frame * conf->bits_per_sample / 8;
 	frame.timestamp.u64 = timestamp;

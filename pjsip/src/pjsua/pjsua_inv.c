@@ -278,9 +278,13 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
     pj_list_push_back(&pjsua.inv_list, inv_data);
 
 
-    /* Answer with 100 (using the dialog, not invite): */
-
-    status = pjsip_dlg_create_response(dlg, rdata, 100, NULL, &response);
+    /* Must answer with some response to initial INVITE.
+     * If auto-answer flag is set, send 200 straight away, otherwise send 100.
+     */
+    
+    status = pjsip_inv_initial_answer(inv, rdata, 
+				      (pjsua.auto_answer ? 200 : 100), 
+				      NULL, NULL, &response);
     if (status != PJ_SUCCESS) {
 	
 	pjsua_perror(THIS_FILE, "Unable to create 100 response", status);
@@ -293,21 +297,32 @@ pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata)
 	// TODO: Need to delete dialog
 
     } else {
-	status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), 
-					 response);
+	status = pjsip_inv_send_msg(inv, response, NULL);
 	if (status != PJ_SUCCESS)
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
     }
 
-    PJ_LOG(3,(THIS_FILE,
-	      "\nIncoming call!!\n"
-	      "From: %.*s\n"
-	      "To:   %.*s\n"
-	      "(press 'a' to answer, 'h' to decline)",
-	      (int)dlg->remote.info_str.slen,
-	      dlg->remote.info_str.ptr,
-	      (int)dlg->local.info_str.slen,
-	      dlg->local.info_str.ptr));
+    if (pjsua.auto_answer < 200) {
+	PJ_LOG(3,(THIS_FILE,
+		  "\nIncoming call!!\n"
+		  "From: %.*s\n"
+		  "To:   %.*s\n"
+		  "(press 'a' to answer, 'h' to decline)",
+		  (int)dlg->remote.info_str.slen,
+		  dlg->remote.info_str.ptr,
+		  (int)dlg->local.info_str.slen,
+		  dlg->local.info_str.ptr));
+    } else {
+	PJ_LOG(3,(THIS_FILE,
+		  "Call From:%.*s To:%.*s was answered with %d (%s)",
+		  (int)dlg->remote.info_str.slen,
+		  dlg->remote.info_str.ptr,
+		  (int)dlg->local.info_str.slen,
+		  dlg->local.info_str.ptr,
+		  pjsua.auto_answer,
+		  pjsip_get_status_text(pjsua.auto_answer)->ptr ));
+    }
+
     /* This INVITE request has been handled. */
     return PJ_TRUE;
 }
@@ -766,11 +781,23 @@ void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status)
 	return;
     }
 
-    /* Connect new call to the sound device port (port zero) in the
-     * main conference bridge.
+    /* If auto-play is configured, connect the call to the file player 
+     * port 
      */
-    pjmedia_conf_connect_port( pjsua.mconf, 0, inv_data->conf_slot);
-    pjmedia_conf_connect_port( pjsua.mconf, inv_data->conf_slot, 0);
+    if (pjsua.wav_file && inv->role == PJSIP_ROLE_UAS) {
+
+	pjmedia_conf_connect_port( pjsua.mconf, pjsua.wav_slot, 
+				   inv_data->conf_slot);
+
+    } else {
+
+	/* Connect new call to the sound device port (port zero) in the
+	 * main conference bridge.
+	 */
+	pjmedia_conf_connect_port( pjsua.mconf, 0, inv_data->conf_slot);
+	pjmedia_conf_connect_port( pjsua.mconf, inv_data->conf_slot, 0);
+    }
+
 
     /* Done. */
     {

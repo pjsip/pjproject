@@ -278,7 +278,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
-    } else {
+    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
 	unsigned max_size;
 
 	max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr);
@@ -296,6 +296,16 @@ static pj_status_t put_frame( pjmedia_port *port,
 					 frame_out.size, ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
+    } else {
+
+	/* Just update RTP session's timestamp. */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
+					 0, 0, 
+					 0, ts_len, 
+					 (const void**)&rtphdr, 
+					 &rtphdrlen);
+	return PJ_SUCCESS;
+
     }
 
     if (status != 0) {

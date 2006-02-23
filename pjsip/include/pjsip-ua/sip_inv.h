@@ -350,6 +350,18 @@ PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 
 
 /**
+ * Create the initial response message for the incoming INVITE request in
+ * rdata with  status code st_code and optional status text st_text. Use
+ * #pjsip_answer() to create subsequent response message.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
+						pjsip_rx_data *rdata,
+						int st_code,
+						const pj_str_t *st_text,
+						const pjmedia_sdp_session *sdp,
+						pjsip_tx_data **p_tdata);
+
+/**
  * Create a response message to the initial INVITE request. This function
  * can only be called for the initial INVITE request, as subsequent
  * re-INVITE request will be answered automatically.

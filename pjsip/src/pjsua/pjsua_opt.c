@@ -41,49 +41,50 @@ const char *pjsua_inv_state_names[] =
 static void usage(void)
 {
     puts("Usage:");
-    puts("  pjsua [options] [sip-url]");
+    puts("  pjsua [options]");
     puts("");
     puts("  [sip-url]   Default URL to invite.");
     puts("");
     puts("General options:");
+    puts("  --help              Display this help screen");
+    puts("  --version           Display version info");
+    puts("");
+    puts("Logging options:");
     puts("  --config-file=file  Read the config/arguments from file.");
     puts("  --log-file=fname    Log to filename (default stderr)");
     puts("  --log-level=N       Set log max level to N (0(none) to 6(trace))");
     puts("  --app-log-level=N   Set log max level for stdout display to N");
-    puts("  --help              Display this help screen");
-    puts("  --version           Display version info");
-    puts("");
-    puts("Media options:");
-    puts("  --null-audio        Use NULL audio device");
-    puts("  --wav-file=file     Play WAV file in conference bridge");
-    puts("");
-    //puts("");
-    //puts("User Agent options:");
-    //puts("  --auto-answer=sec   Auto-answer all incoming calls after sec seconds.");
-    //puts("  --auto-hangup=sec   Auto-hangup all calls after sec seconds.");
-    puts("");
-    puts("SIP options:");
-    puts("  --local-port=port   Set TCP/UDP port");
-    puts("  --id=url            Set the URL of local ID (used in From header)");
-    puts("  --contact=url       Override the Contact information");
-    puts("  --proxy=url         Set the URL of proxy server");
-    puts("  --outbound=url      Set the URL of outbound proxy server");
-    puts("  --registrar=url     Set the URL of registrar server");
-    puts("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
     puts("");
     puts("Authentication options:");
     puts("  --realm=string      Set realm");
     puts("  --username=string   Set authentication username");
     puts("  --password=string   Set authentication password");
     puts("");
-    puts("STUN options (all must be specified):");
+    puts("SIP options:");
+    puts("  --id=url            Set the URL of local ID (used in From header)");
+    puts("  --contact=url       Override the Contact information");
+    puts("  --proxy=url         Set the URL of proxy server");
+    //puts("  --outbound=url      Set the URL of outbound proxy server");
+    puts("");
+    puts("Registration Options:");
+    puts("  --registrar=url     Set the URL of registrar server");
+    puts("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
+    puts("");
+    puts("Transport Options:");
+    puts("  --local-port=port   Set TCP/UDP port");
     puts("  --use-stun1=host[:port]");
     puts("  --use-stun2=host[:port]  Use STUN and set host name and port of STUN servers");
     puts("");
-    puts("SIMPLE options (may be specified more than once):");
+    puts("Media Options:");
+    puts("  --null-audio        Use NULL audio device");
+    //puts("  --wav-file=file     Play WAV file in conference bridge");
+    puts("");
+    puts("Buddy List (can be more than one):");
     puts("  --add-buddy url     Add the specified URL to the buddy list.");
-    //puts("  --offer-x-ms-msg    Offer \"x-ms-message\" in outgoing INVITE");
-    //puts("  --no-presence	Do not subscribe presence of buddies");
+    puts("");
+    puts("User Agent options:");
+    puts("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
+    puts("  --auto-play=file    Automatically play WAVE file to incoming calls");
     puts("");
     fflush(stdout);
 }
@@ -198,7 +199,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_WAV_FILE};
+	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY};
     struct option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
 	{ "log-file",	1, 0, OPT_LOG_FILE},
@@ -224,7 +225,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "no-presence", 0, 0, OPT_NO_PRESENCE},
 	{ "auto-answer",1, 0, OPT_AUTO_ANSWER},
 	{ "auto-hangup",1, 0, OPT_AUTO_HANGUP},
-	{ "wav-file",  1, 0, OPT_WAV_FILE},
+	{ "auto-play",  1, 0, OPT_AUTO_PLAY},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -409,8 +410,16 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(optarg);
 	    break;
 
-	case OPT_WAV_FILE:
+	case OPT_AUTO_PLAY:
 	    pjsua.wav_file = optarg;
+	    break;
+
+	case OPT_AUTO_ANSWER:
+	    pjsua.auto_answer = atoi(optarg);
+	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
+		puts("Error: invalid code in --auto-answer (expecting 100-699");
+		return -1;
+	    }
 	    break;
 	}
     }

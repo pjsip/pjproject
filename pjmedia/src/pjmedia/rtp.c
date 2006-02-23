@@ -92,9 +92,17 @@ PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, int pt, in
 	      "pjmedia_rtp_encode_rtp: ses=%p, pt=%d, m=%d, pt_len=%d, ts_len=%d",
 	      ses, pt, m, payload_len, ts_len));
 
+    /* Update timestamp */
+    ses->out_hdr.ts = pj_htonl(pj_ntohl(ses->out_hdr.ts)+ts_len);
+
+    /* If payload_len is zero, bail out.
+     * This is a clock frame; we're not really transmitting anything.
+     */
+    if (payload_len == 0)
+	return PJ_SUCCESS;
+
     /* Update session. */
     ses->out_extseq++;
-    ses->out_hdr.ts = pj_htonl(pj_ntohl(ses->out_hdr.ts)+ts_len);
 
     /* Create outgoing header. */
     ses->out_hdr.pt = (pj_uint8_t) ((pt == -1) ? ses->out_pt : pt);

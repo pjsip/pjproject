@@ -121,6 +121,10 @@ struct pjsua
     char	    *wav_file;	    /**< WAV file name to play.		*/
     unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
 
+    /* User Agent behaviour: */
+
+    int		     auto_answer;   /**< Automatically answer in calls.	*/
+
 
     /* Since we support simultaneous calls, we need to have multiple
      * RTP sockets.
@@ -178,7 +182,7 @@ struct pjsua
     int		     stun_port2;
 
 
-    /* Misc: */
+    /* Logging: */
     
     int		     log_level;	    /**< Logging verbosity.		*/
     int		     app_log_level; /**< stdout log verbosity.		*/
