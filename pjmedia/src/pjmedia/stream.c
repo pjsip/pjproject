@@ -116,6 +116,12 @@ struct pjmedia_stream
 };
 
 
+/* RFC 2833 digit */
+static const char digitmap[16] = { '0', '1', '2', '3', 
+				   '4', '5', '6', '7', 
+				   '8', '9', '*', '#',
+				   'A', 'B', 'C', 'D'};
+
 /*
  * Print error.
  */
@@ -230,7 +236,16 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 
 	stream->tx_dtmf_buf[0].start_ts = cur_ts;
 	pj_mutex_unlock(stream->jb_mutex);
+
+	if (stream->tx_dtmf_count)
+	    PJ_LOG(5,(THIS_FILE,"Sending DTMF digit id %c", 
+		      digitmap[stream->tx_dtmf_buf[0].event]));
+
+    } else if (duration == 0) {
+	PJ_LOG(5,(THIS_FILE,"Sending DTMF digit id %c", 
+		  digitmap[digit->event]));
     }
+
 
     frame_out->size = 4;
 }
@@ -367,10 +382,6 @@ static void dump_bin(const char *buf, unsigned len)
 static void handle_incoming_dtmf( pjmedia_stream *stream, 
 				  const void *payload, unsigned payloadlen)
 {
-    static const char digitmap[16] = { '0', '1', '2', '3', 
-				       '4', '5', '6', '7', 
-				       '8', '9', '*', '#',
-				       'A', 'B', 'C', 'D'};
     const pjmedia_rtp_dtmf_event *event = payload;
 
     /* Check compiler packing. */

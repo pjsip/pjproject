@@ -892,30 +892,6 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
 
 /**
- * This structure represents high resolution (64bit) time value. The time
- * values represent time in cycles, which is retrieved by calling
- * #pj_get_timestamp().
- */
-typedef union pj_timestamp
-{
-    struct
-    {
-#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
-#else
-	pj_uint32_t hi;     /**< high 32-bit value of the 64-bit value. */
-	pj_uint32_t lo;     /**< Low 32-bit value of the 64-bit value. */
-#endif
-    } u32;                  /**< The 64-bit value as two 32-bit values. */
-
-#if PJ_HAS_INT64
-    pj_uint64_t u64;        /**< The whole 64-bit value, where available. */
-#endif
-} pj_timestamp;
-
-
-/**
  * Acquire high resolution timer value. The time value are stored
  * in cycles.
  *

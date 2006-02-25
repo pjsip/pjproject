@@ -16,6 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+/*
+ * Based on implementation kindly contributed by Switchlab, Ltd.
+ */
 #ifndef __PJMEDIA_JBUF_H__
 #define __PJMEDIA_JBUF_H__
 

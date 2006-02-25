@@ -161,11 +161,11 @@ SOURCE=..\src\pjmedia\session.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\stream.c
+SOURCE=..\src\pjmedia\silencedet.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\vad.c
+SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -237,6 +237,10 @@ SOURCE=..\include\pjmedia\session.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\silencedet.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\sound.h
 # End Source File
 # Begin Source File
@@ -246,10 +250,6 @@ SOURCE=..\include\pjmedia\stream.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\types.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\vad.h
 # End Source File
 # Begin Source File
 

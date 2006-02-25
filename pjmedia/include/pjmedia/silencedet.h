@@ -16,13 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_VAD_H__
-#define __PJMEDIA_VAD_H__
+#ifndef __PJMEDIA_SILENCE_DET_H__
+#define __PJMEDIA_SILENCE_DET_H__
 
 
 /**
- * @file vad.h
- * @brief Simple, adaptive silence detector.
+ * @file silencedet.h
+ * @brief Adaptive silence detector.
  */
 #include <pjmedia/types.h>
 
@@ -30,9 +30,9 @@ PJ_BEGIN_DECL
 
 
 /**
- * @see pjmedia_vad
+ * Opaque declaration for silence detector.
  */
-typedef struct pjmedia_vad  pjmedia_vad;
+typedef struct pjmedia_silence_det pjmedia_silence_det;
 
 
 /**
@@ -41,47 +41,47 @@ typedef struct pjmedia_vad  pjmedia_vad;
  * dynamically based on current input level.
  *
  * @param pool		Pool for allocating the structure.
- * @param p_vad		Pointer to receive the VAD instance.
+ * @param p_sd		Pointer to receive the silence detector instance.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vad_create( pj_pool_t *pool,
-					 pjmedia_vad **p_vad );
+PJ_DECL(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
+						 pjmedia_silence_det **p_sd );
 
 
 /**
- * Set the vad to operate in adaptive mode.
+ * Set the sd to operate in adaptive mode.
  *
- * @param vad		    The vad
- * @param frame_size Number of samplse per frame.
+ * @param sd	        The silence detector
+ * @param frame_size	Number of samples per frame.
  *
- * @return		    PJ_SUCCESS on success.
+ * @return	        PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vad_set_adaptive( pjmedia_vad *vad,
-					       unsigned frame_size);
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive( pjmedia_silence_det *sd,
+						       unsigned frame_size);
 
 
 /**
- * Set the vad to operate in fixed threshold mode.
+ * Set the sd to operate in fixed threshold mode.
  *
- * @param vad		    The vad
+ * @param sd		    The silence detector
  * @param frame_size Number of samplse per frame.
  * @param threshold	    The silence threshold.
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vad_set_fixed( pjmedia_vad *vad,
-					    unsigned frame_size,
-					    unsigned threshold );
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_fixed( pjmedia_silence_det *sd,
+						    unsigned frame_size,
+						    unsigned threshold );
 
 /**
- * Disable the vad.
+ * Disable the silence detector.
  *
- * @param vad		The vad
+ * @param sd		The silence detector
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vad_disable( pjmedia_vad *vad );
+PJ_DECL(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd );
 
 
 /**
@@ -93,14 +93,14 @@ PJ_DECL(pj_status_t) pjmedia_vad_disable( pjmedia_vad *vad );
  * @return		The average signal level, which simply is total level
  *			divided by number of samples.
  */
-PJ_DECL(pj_int32_t) pjmedia_vad_calc_avg_signal( const pj_int16_t samples[],
-						 pj_size_t count );
+PJ_DECL(pj_int32_t) pjmedia_silence_det_calc_avg_signal( const pj_int16_t samples[],
+							 pj_size_t count );
 
 
 /**
  * Perform voice activity detection on the given input samples.
  *
- * @param vad		The VAD instance.
+ * @param sd		The silence detector instance.
  * @param samples	Pointer to 16-bit PCM input samples.
  * @param count		Number of samples in the input.
  * @param p_level	Optional pointer to receive average signal level
@@ -108,13 +108,13 @@ PJ_DECL(pj_int32_t) pjmedia_vad_calc_avg_signal( const pj_int16_t samples[],
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_bool_t) pjmedia_vad_detect_silence( pjmedia_vad *vad,
-					       const pj_int16_t samples[],
-					       pj_size_t count,
-					       pj_int32_t *p_level);
+PJ_DECL(pj_bool_t) pjmedia_silence_det_detect_silence( pjmedia_silence_det *sd,
+						       const pj_int16_t samples[],
+						       pj_size_t count,
+						       pj_int32_t *p_level);
 
 
 PJ_END_DECL
 
-#endif	/* __PJMEDIA_VAD_H__ */
+#endif	/* __PJMEDIA_SILENCE_DET_H__ */
 

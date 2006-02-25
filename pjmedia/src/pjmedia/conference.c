@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/conference.h>
-#include <pjmedia/vad.h>
+#include <pjmedia/silencedet.h>
 #include <pjmedia/stream.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/errno.h>
@@ -55,7 +55,7 @@ struct conf_port
     pjmedia_port_op	 tx_setting;	/**< Can we transmit to this port   */
     int			 listener_cnt;	/**< Number of listeners.	    */
     pj_bool_t		*listeners;	/**< Array of listeners.	    */
-    pjmedia_vad		*vad;		/**< VAD for this port.		    */
+    pjmedia_silence_det	*vad;		/**< VAD for this port.		    */
 
     /* Tx buffer contains the frame to be "transmitted" to this port
      * (i.e. for put_frame()).
@@ -139,11 +139,11 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
 
     /* Create and init vad. */
-    status = pjmedia_vad_create( pool, &conf_port->vad);
+    status = pjmedia_silence_det_create( pool, &conf_port->vad);
     if (status != PJ_SUCCESS)
 	return status;
 
-    pjmedia_vad_set_adaptive(conf_port->vad, conf->samples_per_frame);
+    pjmedia_silence_det_set_adaptive(conf_port->vad, conf->samples_per_frame);
 
 
     /* Create TX buffers. */
@@ -738,10 +738,10 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    continue;
 
 	/* Do we have signal? */
-	silence = pjmedia_vad_detect_silence(conf_port->vad,
-					     output, 
-					     conf->samples_per_frame,
-					     &level);
+	silence = pjmedia_silence_det_detect_silence(conf_port->vad,
+						     output, 
+						     conf->samples_per_frame,
+						     &level);
 
 	/* Skip if we don't have signal. */
 	if (silence) {
@@ -789,7 +789,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame.buf = NULL;
 	    frame.size = 0;
-	    
+
 	    if (conf_port->port)
 		pjmedia_port_put_frame(conf_port->port, &frame);
 

@@ -173,9 +173,9 @@ struct pjsip_evsub_user
      * This callback is called when it is time for the client to refresh
      * the subscription.
      *
-     * This callback is OPTIONAL. When it is not implemented, the default 
-     * behavior is to refresh subscription by sending SUBSCRIBE with the
-     * interval set to current/last interval.
+     * This callback is OPTIONAL when PJSIP package such as presence or 
+     * refer is used; the event package will refresh subscription by sending
+     * SUBSCRIBE with the interval set to current/last interval.
      *
      * @param sub	The subscription instance.
      */
@@ -185,8 +185,9 @@ struct pjsip_evsub_user
      * This callback is called when server doesn't receive subscription 
      * refresh after the specified subscription interval.
      *
-     * This callback is OPTIONAL. When it is not implemented, the default
-     * behavior is to send NOTIFY to terminate the subscription.
+     * This callback is OPTIONAL when PJSIP package such as presence or 
+     * refer is used; the event package send NOTIFY to terminate the 
+     * subscription.
      */
     void (*on_server_timeout)(pjsip_evsub *sub);
 
@@ -399,7 +400,8 @@ PJ_DECL(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
 
 
 /**
- * Get the event subscription instance in the transaction.
+ * Get the event subscription instance associated with the specified 
+ * transaction.
  *
  * @param tsx		The transaction.
  *
