@@ -91,6 +91,7 @@ struct pjmedia_conf
     unsigned		  connect_cnt;	/**< Total number of connections    */
     pj_snd_stream	 *snd_rec;	/**< Sound recorder stream.	    */
     pj_snd_stream	 *snd_player;	/**< Sound player stream.	    */
+    pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
     pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
     unsigned		  sampling_rate;	/**< Sampling rate.	    */
@@ -99,6 +100,9 @@ struct pjmedia_conf
     pj_snd_stream_info	  snd_info;
 };
 
+
+/* Extern */
+unsigned char linear2ulaw(int pcm_val);
 
 /* Prototypes */
 static pj_status_t play_cb( /* in */  void *user_data,
@@ -260,6 +264,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     /* Create temporary buffer. */
     conf->uns_buf = pj_pool_zalloc(pool, samples_per_frame *
 					 sizeof(conf->uns_buf[0]));
+
+    /* Create mutex. */
+    status = pj_mutex_create_simple(pool, "conf", &conf->mutex);
+    if (status != PJ_SUCCESS)
+	return status;
+
+
     /* Done */
 
     *p_conf = conf;
@@ -364,6 +375,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 
     suspend_sound(conf);
     destroy_sound(conf);
+    pj_mutex_destroy(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -385,8 +397,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf && pool && strm_port && port_name && p_port, 
 		     PJ_EINVAL);
 
+    pj_mutex_lock(conf->mutex);
+
     if (conf->port_cnt >= conf->max_ports) {
 	pj_assert(!"Too many ports");
+	pj_mutex_unlock(conf->mutex);
 	return PJ_ETOOMANY;
     }
 
@@ -400,8 +415,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 
     /* Create port structure. */
     status = create_conf_port(pool, conf, port_name, &conf_port);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(conf->mutex);
 	return status;
+    }
 
     /* Set the port */
     conf_port->port = strm_port;
@@ -412,6 +429,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 
     /* Done. */
     *p_port = index;
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -462,6 +481,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf->ports[src_slot] != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(conf->ports[sink_slot] != NULL, PJ_EINVAL);
 
+    pj_mutex_lock(conf->mutex);
+
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
 
@@ -479,6 +500,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 		  (int)dst_port->name.slen,
 		  dst_port->name.ptr));
     }
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -501,6 +524,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf->ports[src_slot] != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(conf->ports[sink_slot] != NULL, PJ_EINVAL);
 
+    pj_mutex_lock(conf->mutex);
+
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
 
@@ -520,6 +545,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 	    destroy_sound(conf);
 	}
     }
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -544,7 +571,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
      * Don't want to remove port while port is being accessed by sound
      * device's threads!
      */
-    //suspend_sound(conf);
+
+    pj_mutex_lock(conf->mutex);
 
     conf_port = conf->ports[port];
     conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
@@ -577,14 +605,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     conf->ports[port] = NULL;
     --conf->port_cnt;
 
-    /* Reactivate sound device if there are connections */
-    if (conf->connect_cnt != 0) {
-    	//resume_sound(conf);
-    } else {
+    /* Stop sound if there's no connection. */
+    if (conf->connect_cnt == 0) {
 	destroy_sound(conf);
     }
 
-    pj_thread_sleep(60);
+    pj_mutex_unlock(conf->mutex);
+
     return PJ_SUCCESS;
 }
 
@@ -658,20 +685,25 @@ static pj_status_t play_cb( /* in */  void *user_data,
 {
     pjmedia_conf *conf = user_data;
     pj_int16_t *output_buf = output;
-    unsigned i, j;
+    unsigned ci, cj, i, j;
     
     PJ_UNUSED_ARG(timestamp);
     PJ_UNUSED_ARG(size);
 
     TRACE_(("p"));
 
-    /* Clear all port's tmp buffers. */
-    for (i=0; i<conf->max_ports; ++i) {
+    pj_mutex_lock(conf->mutex);
+
+    /* Zero all port's temporary buffers. */
+    for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
 	pj_uint32_t *sum_buf;
 
+	/* Skip empty slot. */
 	if (!conf_port)
 	    continue;
+
+	++ci;
 
 	conf_port->sources = 0;
 	sum_buf = conf_port->sum_buf;
@@ -680,27 +712,27 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    sum_buf[j] = 0;
     }
 
-    /* Get frames from all ports, and "add" the signal 
+    /* Get frames from all ports, and "mix" the signal 
      * to sum_buf of all listeners of the port.
      */
-    for (i=0; i<conf->max_ports; ++i) {
+    for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
 	pj_int32_t level;
-	pj_bool_t silence;
 
 	/* Skip empty port. */
 	if (!conf_port)
 	    continue;
 
+	++ci;
+
 	/* Skip if we're not allowed to receive from this port. */
 	if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
-	    TRACE_(("rxdis:%d ", i));
 	    continue;
 	}
 
 	/* Get frame from this port. 
-	 * If port has rx_buffer (e.g. sound port), then get the frame 
-	 * from the rx_buffer instead.
+	 * For port zero (sound port), get the frame  from the rx_buffer
+	 * instead.
 	 */
 	if (i==0) {
 	    pj_int16_t *rx_buf;
@@ -709,6 +741,17 @@ static pj_status_t play_cb( /* in */  void *user_data,
 		conf_port->rx_read = 
 		    (conf_port->rx_write+RX_BUF_COUNT-RX_BUF_COUNT/2) % 
 			RX_BUF_COUNT;
+	    }
+
+	    /* Skip if this port is muted/disabled. */
+	    if (conf_port->rx_setting != PJMEDIA_PORT_ENABLE) {
+		continue;
+	    }
+
+
+	    /* Skip if no port is listening to the microphone */
+	    if (conf_port->listener_cnt == 0) {
+		continue;
 	    }
 
 	    rx_buf = conf_port->rx_buf[conf_port->rx_read];
@@ -725,7 +768,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    frame.size = size;
 	    pjmedia_port_get_frame(conf_port->port, &frame);
 
-	    if (frame.type == PJMEDIA_FRAME_TYPE_NONE)
+	   if (frame.type == PJMEDIA_FRAME_TYPE_NONE)
 		continue;
 	}
 
@@ -737,24 +780,21 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	if (conf_port->listener_cnt == 0)
 	    continue;
 
-	/* Do we have signal? */
-	silence = pjmedia_silence_det_detect_silence(conf_port->vad,
-						     output, 
-						     conf->samples_per_frame,
-						     &level);
+	/* Get the signal level. */
+	level = pjmedia_calc_avg_signal(output, conf->samples_per_frame);
 
-	/* Skip if we don't have signal. */
-	if (silence) {
-	    TRACE_(("sil:%d ", i));
-	    continue;
-	}
+	/* Convert level to 8bit complement ulaw */
+	level = linear2ulaw(level) ^ 0xff;
 
-	/* Convert the buffer to unsigned value */
+	/* Convert the buffer to unsigned 16bit value */
 	for (j=0; j<conf->samples_per_frame; ++j)
 	    conf->uns_buf[j] = pcm2unsigned(((pj_int16_t*)output)[j]);
 
 	/* Add the signal to all listeners. */
-	for (j=0; j<conf->max_ports; ++j) {
+	for (j=0, cj=0; 
+	     j<conf->max_ports && cj<(unsigned)conf_port->listener_cnt;
+	     ++j) 
+	{
 	    struct conf_port *listener = conf->ports[j];
 	    pj_uint32_t *sum_buf;
 	    unsigned k;
@@ -762,28 +802,35 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    if (listener == 0)
 		continue;
 
+	    /* Skip if this is not the listener. */
+	    if (!conf_port->listeners[j])
+		continue;
+
+	    ++cj;
+
 	    /* Skip if this listener doesn't want to receive audio */
 	    if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
 		continue;
 
-	    //TRACE_(("mix:%d->%d ", i, j));
-
+	    /* Mix the buffer */
 	    sum_buf = listener->sum_buf;
 	    for (k=0; k<conf->samples_per_frame; ++k)
-		sum_buf[k] += conf->uns_buf[k];
+		sum_buf[k] += (conf->uns_buf[k] * level);
 
-	    listener->sources++;
+	    listener->sources += level;
 	}
     }
 
     /* For all ports, calculate avg signal. */
-    for (i=0; i<conf->max_ports; ++i) {
+    for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
 	pjmedia_frame frame;
 	pj_int16_t *target_buf;
 
 	if (!conf_port)
 	    continue;
+
+	++ci;
 
 	if (conf_port->tx_setting == PJMEDIA_PORT_MUTE) {
 	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
@@ -799,20 +846,13 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    continue;
 	}
 
-	//
-	// TODO:
-	//  When there's no source, not transmit the frame, but instead
-	//  transmit a 'silence' frame. This is to allow the 'port' to
-	//  do some processing, such as updating timestamp for RTP session
-	//  or transmit signal when it's in the middle of transmitting DTMF.
-	//
-
 	target_buf = (conf_port->cur_tx_buf==conf_port->tx_buf1?
 			conf_port->tx_buf2 : conf_port->tx_buf1);
 
 	if (conf_port->sources) {
 	    for (j=0; j<conf->samples_per_frame; ++j) {
-		target_buf[j] = unsigned2pcm(conf_port->sum_buf[j] / conf_port->sources);
+		target_buf[j] = unsigned2pcm(conf_port->sum_buf[j] / 
+					     conf_port->sources);
 	    }
 	}
 
@@ -820,9 +860,21 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	conf_port->cur_tx_buf = target_buf;
 
 	pj_memset(&frame, 0, sizeof(frame));
-	if (conf_port->sources)
-	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	else
+	if (conf_port->sources) {
+
+	    pj_bool_t is_silence = PJ_FALSE;
+
+	    /* Apply silence detection. */
+#if 0
+	    is_silence = pjmedia_silence_det_detect(conf_port->vad,
+						    target_buf,
+						    conf->samples_per_frame,
+						    NULL);
+#endif
+	    frame.type = is_silence ? PJMEDIA_FRAME_TYPE_NONE : 
+				      PJMEDIA_FRAME_TYPE_AUDIO;
+
+	} else
 	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
 
 	frame.buf = conf_port->cur_tx_buf;
@@ -835,8 +887,15 @@ static pj_status_t play_cb( /* in */  void *user_data,
     }
 
     /* Return sound playback frame. */
-    for (j=0; j<conf->samples_per_frame; ++j)
-	output_buf[j] = conf->ports[0]->cur_tx_buf[j];
+    if (conf->ports[0]->sources) {
+	for (j=0; j<conf->samples_per_frame; ++j)
+	    output_buf[j] = conf->ports[0]->cur_tx_buf[j];
+    } else {
+	for (j=0; j<conf->samples_per_frame; ++j)
+	    output_buf[j] = 0;
+    }
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -862,6 +921,14 @@ static pj_status_t rec_cb(  /* in */  void *user_data,
     if (size != conf->samples_per_frame*2) {
 	TRACE_(("rxerr "));
     }
+
+    /* Skip if this port is muted/disabled. */
+    if (snd_port->rx_setting != PJMEDIA_PORT_ENABLE)
+	return PJ_SUCCESS;
+
+    /* Skip if no port is listening to the microphone */
+    if (snd_port->listener_cnt == 0)
+	return PJ_SUCCESS;
 
 
     /* Determine which rx_buffer to fill in */

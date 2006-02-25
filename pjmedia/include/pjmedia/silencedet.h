@@ -85,20 +85,9 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd );
 
 
 /**
- * Calculate average signal level for the given samples.
- *
- * @param samples	Pointer to 16-bit PCM samples.
- * @param count		Number of samples in the input.
- *
- * @return		The average signal level, which simply is total level
- *			divided by number of samples.
- */
-PJ_DECL(pj_int32_t) pjmedia_silence_det_calc_avg_signal( const pj_int16_t samples[],
-							 pj_size_t count );
-
-
-/**
- * Perform voice activity detection on the given input samples.
+ * Perform voice activity detection on the given input samples. This
+ * function uses #pjmedia_calc_avg_signal() and #pjmedia_silence_det_apply()
+ * for its calculation.
  *
  * @param sd		The silence detector instance.
  * @param samples	Pointer to 16-bit PCM input samples.
@@ -108,10 +97,37 @@ PJ_DECL(pj_int32_t) pjmedia_silence_det_calc_avg_signal( const pj_int16_t sample
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_bool_t) pjmedia_silence_det_detect_silence( pjmedia_silence_det *sd,
-						       const pj_int16_t samples[],
-						       pj_size_t count,
-						       pj_int32_t *p_level);
+PJ_DECL(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
+					       const pj_int16_t samples[],
+					       pj_size_t count,
+					       pj_int32_t *p_level);
+
+
+/**
+ * Calculate average signal level for the given samples.
+ *
+ * @param samples	Pointer to 16-bit PCM samples.
+ * @param count		Number of samples in the input.
+ *
+ * @return		The average signal level, which simply is total level
+ *			divided by number of samples.
+ */
+PJ_DECL(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
+					     pj_size_t count );
+
+
+
+/**
+ * Perform voice activity detection, given the specified average signal
+ * level.
+ *
+ * @param sd		The silence detector instance.
+ * @param level		Signal level.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
+					      pj_uint32_t level);
 
 
 PJ_END_DECL

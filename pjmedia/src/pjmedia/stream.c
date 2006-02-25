@@ -305,6 +305,8 @@ static pj_status_t put_frame( pjmedia_port *port,
 	    return status;
 	}
 
+	//printf("p"); fflush(stdout);
+
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 channel->pt, 0, 

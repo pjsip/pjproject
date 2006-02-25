@@ -23,8 +23,11 @@
 #include <pjmedia/errno.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/string.h>
 
+
+#define THIS_FILE   "jbuf.c"
 
 
 struct jb_framelist
@@ -54,6 +57,7 @@ struct pjmedia_jbuf
     int		    jb_last_jitter;	  // last jitter calculated
     int		    jb_max_hist_jitter;   // max jitter	during the last	jitter calculations
     int		    jb_stable_hist;	  // num of times the delay has	been lower then	the prefetch num
+    unsigned	    jb_op_count;	  // of of operations.
     int		    jb_last_op;		  // last operation executed on	the framelist->flist_buffer (put/get)
     int		    jb_last_seq_no;	  // seq no. of	the last frame inserted	to the framelist->flist_buffer
     int		    jb_prefetch;	  // no. of frame to insert before removing some
@@ -292,8 +296,9 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     jb->jb_last_jitter = PJ_ABS(jb->jb_level-jb->jb_last_level);
     jb->jb_last_level = jb->jb_level;
     jb->jb_max_hist_jitter = PJ_MAX(jb->jb_max_hist_jitter,jb->jb_last_jitter);
-    
-    if (jb->jb_last_jitter< jb->jb_prefetch) {
+    jb->jb_op_count++;
+
+    if (jb->jb_last_jitter < jb->jb_prefetch) {
 	jb->jb_stable_hist += jb->jb_last_jitter;
 	if (jb->jb_stable_hist > STABLE_HISTORY_LIMIT) {
 	    int seq_diff = (jb->jb_prefetch - jb->jb_max_hist_jitter)/3;
@@ -304,11 +309,35 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 
 	    jb->jb_stable_hist = 0;
 	    jb->jb_max_hist_jitter = 0;
+
+	    if (jb->jb_op_count >= 100 &&
+		(int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) 
+	    {
+		jb_framelist_remove_head(&jb->jb_framelist,1);
+
+		PJ_LOG(5,(THIS_FILE, "jbuf prefetch: %d, size=%d", 
+				 jb->jb_prefetch,
+				 jb_framelist_size(&jb->jb_framelist)));
+		jb->jb_op_count = 0;
+	    }
+
 	}
     } else {
 	jb->jb_prefetch = PJ_MIN(jb->jb_last_jitter,(int)(jb->jb_max_count*4/5));
 	jb->jb_stable_hist = 0;
 	jb->jb_max_hist_jitter = 0;
+
+	if (jb->jb_op_count >= 100) {
+	    if ((int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) {
+		jb_framelist_remove_head(&jb->jb_framelist,1);
+
+		PJ_LOG(5,(THIS_FILE, "jbuf prefetch: %d, size=%d", 
+				 jb->jb_prefetch,
+				 jb_framelist_size(&jb->jb_framelist)));
+	    }
+
+	    jb->jb_op_count = 0;
+	}
     }
 }
 

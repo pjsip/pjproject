@@ -119,8 +119,8 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd )
 }
 
 
-PJ_DEF(pj_int32_t) pjmedia_silence_det_calc_avg_signal(const pj_int16_t samples[],
-						       pj_size_t count)
+PJ_DEF(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
+					    pj_size_t count)
 {
     pj_uint32_t sum = 0;
     
@@ -140,27 +140,14 @@ PJ_DEF(pj_int32_t) pjmedia_silence_det_calc_avg_signal(const pj_int16_t samples[
     return (pj_int32_t)(sum / count);
 }
 
-PJ_DEF(pj_bool_t) pjmedia_silence_det_detect_silence( pjmedia_silence_det *sd,
-						      const pj_int16_t samples[],
-						      pj_size_t count,
-						      pj_int32_t *p_level)
+PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
+					     pj_uint32_t level)
 {
-    pj_uint32_t level;
     pj_bool_t have_signal;
 
     /* Always return false if VAD is disabled */
-    if (sd->mode == VAD_MODE_NONE) {
-	if (p_level)
-	    *p_level = -1;
+    if (sd->mode == VAD_MODE_NONE)
 	return PJ_FALSE;
-    }
-    
-    /* Calculate average signal level. */
-    level = pjmedia_silence_det_calc_avg_signal(samples, count);
-    
-    /* Report to caller, if required. */
-    if (p_level)
-	*p_level = level;
 
     /* Convert PCM level to ulaw */
     level = linear2ulaw(level) ^ 0xff;
@@ -265,5 +252,24 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_detect_silence( pjmedia_silence_det *sd,
     }
     
     return !sd->in_talk;
+
+}
+
+
+PJ_DEF(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
+					      const pj_int16_t samples[],
+					      pj_size_t count,
+					      pj_int32_t *p_level)
+{
+    pj_uint32_t level;
+    
+    /* Calculate average signal level. */
+    level = pjmedia_calc_avg_signal(samples, count);
+    
+    /* Report to caller, if required. */
+    if (p_level)
+	*p_level = level;
+
+    return pjmedia_silence_det_apply(sd, level);
 }
 
