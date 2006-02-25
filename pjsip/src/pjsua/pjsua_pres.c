@@ -43,7 +43,6 @@ static pjsip_module mod_pjsua_pres =
     { "mod-pjsua-pres", 14 },		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION,	/* Priority	        */
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

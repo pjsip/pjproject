@@ -45,15 +45,12 @@ PJ_BEGIN_DECL
  *  - it manages the allocation/deallocation of memory pools for all objects.
  *  - it manages listeners and transports, and how they are used by 
  *    transactions.
- *  - it owns transaction hash table.
  *  - it receives incoming messages from transport layer and automatically
  *    dispatches them to the correct transaction (or create a new one).
  *  - it has a single instance of timer management (timer heap).
  *  - it manages modules, which is the primary means of extending the library.
  *  - it provides single polling function for all objects and distributes 
  *    events.
- *  - it provides SIP policy such as which outbound proxy to use for all
- *    outgoing SIP request messages.
  *  - it automatically handles incoming requests which can not be handled by
  *    existing modules (such as when incoming request has unsupported method).
  *  - and so on..
@@ -141,18 +138,6 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
  */
 PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
 					pj_timer_entry *entry );
-
-
-/**
- * Dump endpoint status to the log. This will print the status to the log
- * with log level 3.
- *
- * @param endpt		The endpoint.
- * @param detail	If non zero, then it will dump a detailed output.
- *			BEWARE that this option may crash the system because
- *			it tries to access all memory pools.
- */
-PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
 
 
 /**
@@ -394,6 +379,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
 
 /**
  * Get list of additional headers to be put in outgoing request message.
+ * Currently only Max-Forwards are defined.
  *
  * @param e	    The endpoint.
  *
@@ -403,35 +389,17 @@ PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *e);
 
 
 /**
- * Set list of SIP proxies to be visited for all outbound request messages.
- * Application can call this function to specify how outgoing request messages
- * should be routed. For example, if outgoing requests should go through an
- * outbound proxy, then application can specify the URL of the proxy when
- * calling this function. More than one proxy can be specified, and the
- * order of which proxy is specified when calling this function specifies
- * the order of which proxy will be visited first by the request messages.
+ * Dump endpoint status to the log. This will print the status to the log
+ * with log level 3.
  *
- * @param endpt	    The endpoint instance.
- * @param url_cnt   Number of proxies/URLs in the array.
- * @param url	    Array of proxy URL, which specifies the order of which
- *		    proxy will be visited first (e.g. url[0] will be visited
- *		    before url[1]).
- *
- * @return	    Zero on success.
+ * @param endpt		The endpoint.
+ * @param detail	If non zero, then it will dump a detailed output.
+ *			BEWARE that this option may crash the system because
+ *			it tries to access all memory pools.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_set_proxies( pjsip_endpoint *endpt,
-					      int url_cnt, const pj_str_t url[]);
+PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
 
-/**
- * Get the list of "Route" header that are configured for this endpoint.
- * The "Route" header specifies how outbound request messages will be sent,
- * and is built when application sets the outbound proxy.
- *
- * @param endpt	    The endpoint instance.
- *
- * @return	    List of "Route" header.
- */
-PJ_DECL(const pjsip_route_hdr*) pjsip_endpt_get_routing( pjsip_endpoint *endpt );
+
 
 /**
  * Log an error.

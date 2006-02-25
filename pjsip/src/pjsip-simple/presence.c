@@ -41,8 +41,7 @@ static struct pjsip_module mod_presence =
     NULL, NULL,			    /* prev, next.			*/
     { "mod-presence", 12 },	    /* Name.				*/
     -1,				    /* Id				*/
-    PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority			*/
-    NULL,			    /* User data.			*/
+    PJSIP_MOD_PRIORITY_DIALOG_USAGE,/* Priority				*/
     NULL,			    /* load()				*/
     NULL,			    /* start()				*/
     NULL,			    /* stop()				*/

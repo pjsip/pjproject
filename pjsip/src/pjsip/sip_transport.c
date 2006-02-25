@@ -47,7 +47,6 @@ static pjsip_module mod_msg_print =
     { "mod-msg-print", 13},		/* Name.			    */
     -1,					/* Id				    */
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,	/* Priority			    */
-    NULL,				/* User data.			    */
     NULL,				/* load()			    */
     NULL,				/* start()			    */
     NULL,				/* stop()			    */

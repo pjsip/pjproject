@@ -169,20 +169,19 @@ static struct mod_evsub
 } mod_evsub = 
 {
     {
-	NULL, NULL,		    /* prev, next.			*/
-	{ "mod-evsub", 9 },	    /* Name.				*/
-	-1,			    /* Id				*/
-	PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
-	NULL,			    /* User data.			*/
-	NULL,			    /* load()				*/
-	NULL,			    /* start()				*/
-	NULL,			    /* stop()				*/
-	&mod_evsub_unload,	    /* unload()				*/
-	NULL,			    /* on_rx_request()			*/
-	NULL,			    /* on_rx_response()			*/
-	NULL,			    /* on_tx_request.			*/
-	NULL,			    /* on_tx_response()			*/
-	&mod_evsub_on_tsx_state,    /* on_tsx_state()			*/
+	NULL, NULL,			    /* prev, next.		*/
+	{ "mod-evsub", 9 },		    /* Name.			*/
+	-1,				    /* Id			*/
+	PJSIP_MOD_PRIORITY_DIALOG_USAGE,    /* Priority			*/
+	NULL,				    /* load()			*/
+	NULL,				    /* start()			*/
+	NULL,				    /* stop()			*/
+	&mod_evsub_unload,		    /* unload()			*/
+	NULL,				    /* on_rx_request()		*/
+	NULL,				    /* on_rx_response()		*/
+	NULL,				    /* on_tx_request.		*/
+	NULL,				    /* on_tx_response()		*/
+	&mod_evsub_on_tsx_state,	    /* on_tsx_state()		*/
     }
 };
 

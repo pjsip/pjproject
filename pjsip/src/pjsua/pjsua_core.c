@@ -344,7 +344,7 @@ static pj_status_t init_stack(void)
 
     /* Initialize transaction layer: */
 
-    status = pjsip_tsx_layer_init(pjsua.endpt);
+    status = pjsip_tsx_layer_init_module(pjsua.endpt);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Transaction layer initialization error", 
 		     status);
@@ -353,7 +353,7 @@ static pj_status_t init_stack(void)
 
     /* Initialize UA layer module: */
 
-    status = pjsip_ua_init( pjsua.endpt, NULL );
+    status = pjsip_ua_init_module( pjsua.endpt, NULL );
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "UA layer initialization error", status);
 	goto on_error;
@@ -368,7 +368,6 @@ static pj_status_t init_stack(void)
 	{ "mod-pjsua", 9 },	    /* Name.				*/
 	-1,			    /* Id				*/
 	PJSIP_MOD_PRIORITY_APPLICATION,	/* Priority			*/
-	NULL,			    /* User data.			*/
 	NULL,			    /* load()				*/
 	NULL,			    /* start()				*/
 	NULL,			    /* stop()				*/

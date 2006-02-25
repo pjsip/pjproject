@@ -281,7 +281,7 @@ static void conf_list(void)
 		pj_ansi_strcat(txlist, s);
 	    }
 	}
-	printf("Port #%02d %20.*s  tx to: %s\n", 
+	printf("Port #%02d %20.*s  transmitting to: %s\n", 
 	       port_info->slot, 
 	       (int)port_info->name.slen, 
 	       port_info->name.ptr,
@@ -679,7 +679,6 @@ static pjsip_module console_msg_logger =
     { "mod-pjsua-log", 13 },		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/
@@ -764,6 +763,7 @@ void pjsua_perror(const char *sender, const char *title,
  */
 int main(int argc, char *argv[])
 {
+
     /* Init default settings. */
 
     pjsua_default();

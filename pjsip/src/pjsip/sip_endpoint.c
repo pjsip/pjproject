@@ -77,9 +77,6 @@ struct pjsip_endpoint
     /** Module list, sorted by priority. */
     pjsip_module	 module_list;
 
-    /** Route header list. */
-    pjsip_route_hdr	 route_hdr_list;
-
     /** Capability header list. */
     pjsip_hdr		 cap_hdr;
 
@@ -370,49 +367,6 @@ PJ_DEF(const pjsip_hdr*) pjsip_endpt_get_request_headers(pjsip_endpoint *endpt)
     return &endpt->req_hdr;
 }
 
-PJ_DEF(pj_status_t) pjsip_endpt_set_proxies( pjsip_endpoint *endpt,
-					     int url_cnt, const pj_str_t url[])
-{
-    int i;
-    pjsip_route_hdr *hdr;
-    pj_str_t str_ROUTE = { "Route", 5 };
-
-    /* Lock endpoint mutex. */
-    pj_mutex_lock(endpt->mutex);
-
-    pj_list_init(&endpt->route_hdr_list);
-
-    for (i=0; i<url_cnt; ++i) {
-	int len = url[i].slen;
-	char *dup = pj_pool_alloc(endpt->pool, len + 1);
-	pj_memcpy(dup, url[i].ptr, len);
-	dup[len] = '\0';
-
-	hdr = pjsip_parse_hdr(endpt->pool, &str_ROUTE, dup, len, NULL);
-	if (!hdr) {
-	    pj_mutex_unlock(endpt->mutex);
-	    PJ_LOG(4,(THIS_FILE, "Invalid URL %s in proxy URL", dup));
-	    return -1;
-	}
-
-	pj_assert(hdr->type == PJSIP_H_ROUTE);
-	pj_list_insert_before(&endpt->route_hdr_list, hdr);
-    }
-
-    /* Unlock endpoint mutex. */
-    pj_mutex_unlock(endpt->mutex);
-
-    return 0;
-}
-
-/*
- * Get "Route" header list.
- */
-PJ_DEF(const pjsip_route_hdr*) pjsip_endpt_get_routing( pjsip_endpoint *endpt )
-{
-    return &endpt->route_hdr_list;
-}
-
 
 /*
  * Initialize endpoint.
@@ -520,9 +474,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 
     /* Initialize request headers. */
     pj_list_init(&endpt->req_hdr);
-
-    /* Initialist "Route" header list. */
-    pj_list_init(&endpt->route_hdr_list);
 
     /* Add "Max-Forwards" for request header. */
     mf_hdr = pjsip_max_fwd_hdr_create(endpt->pool,

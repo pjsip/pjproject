@@ -70,20 +70,19 @@ static struct mod_inv
 } mod_inv = 
 {
     {
-	NULL, NULL,		    /* prev, next.			*/
-	{ "mod-invite", 10 },	    /* Name.				*/
-	-1,			    /* Id				*/
-	PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
-	NULL,			    /* User data.			*/
-	&mod_inv_load,		    /* load()				*/
-	NULL,			    /* start()				*/
-	NULL,			    /* stop()				*/
-	&mod_inv_unload,	    /* unload()				*/
-	&mod_inv_on_rx_request,	    /* on_rx_request()			*/
-	&mod_inv_on_rx_response,    /* on_rx_response()			*/
-	NULL,			    /* on_tx_request.			*/
-	NULL,			    /* on_tx_response()			*/
-	&mod_inv_on_tsx_state,	    /* on_tsx_state()			*/
+	NULL, NULL,			    /* prev, next.		*/
+	{ "mod-invite", 10 },		    /* Name.			*/
+	-1,				    /* Id			*/
+	PJSIP_MOD_PRIORITY_DIALOG_USAGE,    /* Priority			*/
+	&mod_inv_load,			    /* load()			*/
+	NULL,				    /* start()			*/
+	NULL,				    /* stop()			*/
+	&mod_inv_unload,		    /* unload()			*/
+	&mod_inv_on_rx_request,		    /* on_rx_request()		*/
+	&mod_inv_on_rx_response,	    /* on_rx_response()		*/
+	NULL,				    /* on_tx_request.		*/
+	NULL,				    /* on_tx_response()		*/
+	&mod_inv_on_tsx_state,		    /* on_tsx_state()		*/
     }
 };
 

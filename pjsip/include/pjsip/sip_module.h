@@ -63,12 +63,6 @@ struct pjsip_module
     int priority;
 
     /**
-     * Opaque data which can be used by a module to identify a resource within
-     * the module itself.
-     */
-    void *user_data;
-
-    /**
      * Pointer to function to be called to initialize the module.
      *
      * @param endpt	The endpoint instance.
@@ -166,6 +160,7 @@ enum pjsip_module_priority
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER	= 8,
     PJSIP_MOD_PRIORITY_TSX_LAYER	= 16,
     PJSIP_MOD_PRIORITY_UA_PROXY_LAYER	= 32,
+    PJSIP_MOD_PRIORITY_DIALOG_USAGE	= 48,
     PJSIP_MOD_PRIORITY_APPLICATION	= 64,
 };
 

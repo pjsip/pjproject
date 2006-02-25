@@ -120,7 +120,7 @@ struct pjsip_transaction
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt);
+PJ_DECL(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt);
 
 /**
  * Get the instance of the transaction layer module.

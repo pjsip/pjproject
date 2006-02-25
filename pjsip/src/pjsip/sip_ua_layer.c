@@ -89,7 +89,6 @@ static struct user_agent
     { "mod-ua", 6 },	    /* Name.				*/
     -1,			    /* Id				*/
     PJSIP_MOD_PRIORITY_UA_PROXY_LAYER,	/* Priority		*/
-    NULL,		    /* User data.			*/
     &mod_ua_load,	    /* load()				*/
     NULL,		    /* start()				*/
     NULL,		    /* stop()				*/
@@ -182,8 +181,8 @@ static void mod_ua_on_tsx_state( pjsip_transaction *tsx, pjsip_event *e)
 /*
  * Init user agent module and register it to the endpoint.
  */
-PJ_DEF(pj_status_t) pjsip_ua_init( pjsip_endpoint *endpt,
-				   const pjsip_ua_init_param *prm)
+PJ_DEF(pj_status_t) pjsip_ua_init_module( pjsip_endpoint *endpt,
+					  const pjsip_ua_init_param *prm)
 {
     pj_status_t status;
 

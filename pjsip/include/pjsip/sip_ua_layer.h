@@ -55,8 +55,8 @@ typedef struct pjsip_ua_init_param
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_ua_init(pjsip_endpoint *endpt,
-				   const pjsip_ua_init_param *prm);
+PJ_DECL(pj_status_t) pjsip_ua_init_module(pjsip_endpoint *endpt,
+					  const pjsip_ua_init_param *prm);
 
 /**
  * Get the instance of the user agent.

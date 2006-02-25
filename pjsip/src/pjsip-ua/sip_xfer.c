@@ -33,20 +33,19 @@
  */
 static struct pjsip_module mod_xfer = 
 {
-    NULL, NULL,			    /* prev, next.			*/
-    { "mod-refer", 9 },		    /* Name.				*/
-    -1,				    /* Id				*/
-    PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority			*/
-    NULL,			    /* User data.			*/
-    NULL,			    /* load()				*/
-    NULL,			    /* start()				*/
-    NULL,			    /* stop()				*/
-    NULL,			    /* unload()				*/
-    NULL,			    /* on_rx_request()			*/
-    NULL,			    /* on_rx_response()			*/
-    NULL,			    /* on_tx_request.			*/
-    NULL,			    /* on_tx_response()			*/
-    NULL,			    /* on_tsx_state()			*/
+    NULL, NULL,				/* prev, next.			*/
+    { "mod-refer", 9 },			/* Name.			*/
+    -1,					/* Id				*/
+    PJSIP_MOD_PRIORITY_DIALOG_USAGE,	/* Priority			*/
+    NULL,				/* load()			*/
+    NULL,				/* start()			*/
+    NULL,				/* stop()			*/
+    NULL,				/* unload()			*/
+    NULL,				/* on_rx_request()		*/
+    NULL,				/* on_rx_response()		*/
+    NULL,				/* on_tx_request.		*/
+    NULL,				/* on_tx_response()		*/
+    NULL,				/* on_tsx_state()		*/
 };
 
 

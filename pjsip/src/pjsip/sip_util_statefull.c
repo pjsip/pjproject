@@ -41,7 +41,6 @@ pjsip_module mod_stateful_util =
     { "mod-stateful-util", 17 },    /* Name.				*/
     -1,				    /* Id				*/
     PJSIP_MOD_PRIORITY_APPLICATION, /* Priority				*/
-    NULL,			    /* User data.			*/
     NULL,			    /* load()				*/
     NULL,			    /* start()				*/
     NULL,			    /* stop()				*/

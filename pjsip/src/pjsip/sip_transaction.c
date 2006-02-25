@@ -67,7 +67,6 @@ static struct mod_tsx_layer
 	{ "mod-tsx-layer", 13 },	/* Module name.		    */
 	-1,				/* Module ID		    */
 	PJSIP_MOD_PRIORITY_TSX_LAYER,	/* Priority.		    */
-	NULL,				/* User_data.		    */
 	mod_tsx_layer_load,		/* load().		    */
 	mod_tsx_layer_start,		/* start()		    */
 	mod_tsx_layer_stop,		/* stop()		    */
@@ -410,7 +409,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
 /*
  * Create transaction layer module and registers it to the endpoint.
  */
-PJ_DEF(pj_status_t) pjsip_tsx_layer_init(pjsip_endpoint *endpt)
+PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
 {
     pj_pool_t *pool;
     pj_status_t status;
