@@ -354,18 +354,6 @@ on_error:
 }
 
 
-/*
- * Suspend sound device
- */
-static void suspend_sound( pjmedia_conf *conf )
-{
-    if (conf->snd_rec)
-	pj_snd_stream_stop(conf->snd_rec);
-    if (conf->snd_player)
-	pj_snd_stream_stop(conf->snd_player);
-}
-
-
 /**
  * Destroy conference bridge.
  */
@@ -373,7 +361,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 {
     PJ_ASSERT_RETURN(conf != NULL, PJ_EINVAL);
 
-    suspend_sound(conf);
+    //suspend_sound(conf);
     destroy_sound(conf);
     pj_mutex_destroy(conf->mutex);
 
@@ -540,13 +528,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 		  (int)dst_port->name.slen,
 		  dst_port->name.ptr));
 
-	if (conf->connect_cnt == 0) {
-	    suspend_sound(conf);
-	    destroy_sound(conf);
-	}
+	
     }
 
     pj_mutex_unlock(conf->mutex);
+
+    if (conf->connect_cnt == 0) {
+	destroy_sound(conf);
+    }
 
     return PJ_SUCCESS;
 }
@@ -605,12 +594,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     conf->ports[port] = NULL;
     --conf->port_cnt;
 
+    pj_mutex_unlock(conf->mutex);
+
+
     /* Stop sound if there's no connection. */
     if (conf->connect_cnt == 0) {
 	destroy_sound(conf);
     }
-
-    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
