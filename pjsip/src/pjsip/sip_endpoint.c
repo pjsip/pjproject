@@ -674,9 +674,19 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}
 	local_addr = &rdata->tp_info.transport->local_name.host;
-	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, local_addr) != 0)
+
+	if (pj_strcmp(&rdata->msg_info.via->sent_by.host, local_addr) != 0) {
+
+	    /* The RFC says that we should drop response when sent-by
+	     * address mismatch. But it could happen (e.g. with SER) when
+	     * endpoint with private IP is sending request to public
+	     * server.
+
 	    mismatch = PJ_TRUE;
-	else if (port != rdata->tp_info.transport->local_name.port) {
+
+	     */
+
+	} else if (port != rdata->tp_info.transport->local_name.port) {
 	    /* Port or address mismatch, we should discard response */
 	    /* But we saw one implementation (we don't want to name it to 
 	     * protect the innocence) which put wrong sent-by port although
