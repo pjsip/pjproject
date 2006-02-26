@@ -56,6 +56,10 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.create_pool = &cpool_create_pool;
     cp->factory.release_pool = &cpool_release_pool;
     cp->factory.dump_status = &cpool_dump_status;
+
+    cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 128, 
+				  0, NULL);
+    i = pj_mutex_create_simple(cp->pool, "cachingpool", &cp->mutex);
 }
 
 PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
@@ -84,6 +88,8 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
 	pj_pool_destroy_int(pool);
 	pool = next;
     }
+
+    pj_mutex_destroy(cp->mutex);
 }
 
 static pj_pool_t* cpool_create_pool(pj_pool_factory *pf, 
@@ -97,6 +103,8 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
     int idx;
 
     PJ_CHECK_STACK();
+
+    pj_mutex_lock(cp->mutex);
 
     /* Use pool factory's policy when callback is NULL */
     if (callback == NULL) {
@@ -123,8 +131,10 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 	/* Create new pool */
 	pool = pj_pool_create_int(&cp->factory, name, initial_size, 
 				  increment_sz, callback);
-	if (!pool)
+	if (!pool) {
+	    pj_mutex_unlock(cp->mutex);
 	    return NULL;
+	}
 
     } else {
 	/* Get one pool from the list. */
@@ -145,6 +155,8 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 
     /* Increment used count. */
     ++cp->used_count;
+
+    pj_mutex_unlock(cp->mutex);
     return pool;
 }
 
@@ -154,6 +166,8 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     int i;
 
     PJ_CHECK_STACK();
+
+    pj_mutex_lock(cp->mutex);
 
     /* Erase from the used list. */
     pj_list_erase(pool);
@@ -169,6 +183,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 	cp->capacity + pool->capacity > cp->max_capacity)
     {
 	pj_pool_destroy_int(pool);
+	pj_mutex_unlock(cp->mutex);
 	return;
     }
 
@@ -188,17 +203,23 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     if (i == PJ_CACHING_POOL_ARRAY_SIZE) {
 	/* Something has gone wrong with the pool. */
 	pj_pool_destroy_int(pool);
+	pj_mutex_unlock(cp->mutex);
 	return;
     }
 
     pj_list_insert_after(&cp->free_list[i], pool);
     cp->capacity += pool->capacity;
+
+    pj_mutex_unlock(cp->mutex);
 }
 
 static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 {
 #if PJ_LOG_MAX_LEVEL >= 3
     pj_caching_pool *cp = (pj_caching_pool*)factory;
+
+    pj_mutex_lock(cp->mutex);
+
     PJ_LOG(3,("cachpool", " Dumping caching pool:"));
     PJ_LOG(3,("cachpool", "   Capacity=%u, max_capacity=%u, used_cnt=%u", \
 			     cp->capacity, cp->max_capacity, cp->used_count));
@@ -218,6 +239,8 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 			      total_used, total_capacity,
 			      total_used * 100 / total_capacity));
     }
+
+    pj_mutex_unlock(cp->mutex);
 #else
     PJ_UNUSED_ARG(factory);
     PJ_UNUSED_ARG(detail);

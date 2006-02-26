@@ -542,6 +542,16 @@ struct pj_caching_pool
      * List of pools currently allocated by applications.
      */
     pj_list	    used_list;
+
+    /**
+     * Internal pool.
+     */
+    pj_pool_t	   *pool;
+
+    /**
+     * Mutex.
+     */
+    pj_mutex_t	   *mutex;
 };
 
 
