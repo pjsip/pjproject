@@ -251,8 +251,13 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 
     /* If a thread descriptor has been registered before, just return it. */
     if (pj_thread_local_get (thread_tls_id) != 0) {
-	*ptr_thread = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
-	return PJ_SUCCESS;
+	// 2006-02-26 bennylp:
+	//  This wouldn't work in all cases!.
+	//  If thread is created by external module (e.g. sound thread),
+	//  thread may be reused while the pool used for the thread descriptor
+	//  has been deleted by application.
+	//*thread_ptr = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
+        //return PJ_SUCCESS;
     }
 
     /* Initialize and set the thread entry. */
