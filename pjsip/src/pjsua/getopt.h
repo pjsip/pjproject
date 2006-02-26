@@ -127,11 +127,6 @@ int getopt_long_only (int argc, char *const *argv,
 			     const char *shortopts,
 		             const struct option *longopts, int *longind);
 
-/* Internal only.  Users should not call this directly.  */
-int _getopt_internal (int argc, char *const *argv,
-			     const char *shortopts,
-		             const struct option *longopts, int *longind,
-			     int long_only);
 
 #ifdef	__cplusplus
 }

@@ -17,13 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#ifdef _MSC_VER
-/* in VC this file will generate a lot of warning about old style function
- * declarations.
- */
-# pragma warning(push, 3)
-#endif
-
 /* 
  * getopt entry points
  *
@@ -32,13 +25,15 @@
  * $Id$
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
+#include "getopt.h"
 #include <pj/string.h>
 
-#ifndef HAVE_GETOPT_LONG
+/* Internal only.  Users should not call this directly.  */
+static
+int _getopt_internal (int argc, char *const *argv,
+		      const char *shortopts,
+		      const struct option *longopts, int *longind,
+		      int long_only);
 
 /* getopt_long and getopt_long_only entry points for GNU getopt.
    Copyright (C) 1987,88,89,90,91,92,93,94,96,97 Free Software Foundation, Inc.
@@ -59,10 +54,6 @@
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
    Boston, MA 02111-1307, USA.  */
 
-#include "getopt.h"
-
-
-#include <stdio.h>
 
 /* Comment out all this code if we are using the GNU C Library, and are not
    actually compiling the library itself.  This code is part of the GNU C
@@ -72,26 +63,8 @@
    program understand `configure --with-gnu-libc' and omit the object files,
    it is simpler to just do this in the source for each such file.  */
 
-#define GETOPT_INTERFACE_VERSION 2
-#if !defined (_LIBC) && defined (__GLIBC__) && __GLIBC__ >= 2
-#include <gnu-versions.h>
-#if _GNU_GETOPT_INTERFACE_VERSION == GETOPT_INTERFACE_VERSION
-#define ELIDE_CODE
-#endif
-#endif
+#   define GETOPT_INTERFACE_VERSION 2
 
-#ifndef ELIDE_CODE
-
-
-/* This needs to come after some library #include
-   to get __GNU_LIBRARY__ defined.  */
-#ifdef __GNU_LIBRARY__
-#include <stdlib.h>
-#endif
-
-#ifndef	NULL
-#define NULL 0
-#endif
 
 int
 getopt_long (int argc, char *const *argv, const char *options, 
@@ -106,17 +79,6 @@ getopt_long (int argc, char *const *argv, const char *options,
    instead.  */
  
 int
-getopt_long_only (argc, argv, options, long_options, opt_index)
-     int argc;
-     char *const *argv;
-     const char *options;
-     const struct option *long_options;
-     int *opt_index;
-{
-  return _getopt_internal (argc, argv, options, long_options, opt_index, 1);
-}
-
-int
 getopt (int argc, char * const * argv, const char * optstring)
 {
   return _getopt_internal (argc, argv, optstring,
@@ -125,67 +87,8 @@ getopt (int argc, char * const * argv, const char * optstring)
 			   0);
 }
 
-#endif	/* Not ELIDE_CODE.  */
 
-
-#ifndef _NO_PROTO
-#define _NO_PROTO
-#endif
-
-
-//#include <strings.h>
-
-/* Comment out all this code if we are using the GNU C Library, and are not
-   actually compiling the library itself.  This code is part of the GNU C
-   Library, but also included in many other GNU distributions.  Compiling
-   and linking in this code is a waste when using the GNU C library
-   (especially if it is a shared library).  Rather than having every GNU
-   program understand `configure --with-gnu-libc' and omit the object files,
-   it is simpler to just do this in the source for each such file.  */
-
-#define GETOPT_INTERFACE_VERSION 2
-#if !defined (_LIBC) && defined (__GLIBC__) && __GLIBC__ >= 2
-#include <gnu-versions.h>
-#if _GNU_GETOPT_INTERFACE_VERSION == GETOPT_INTERFACE_VERSION
-#define ELIDE_CODE
-#endif
-#endif
-
-#ifndef ELIDE_CODE
-
-
-/* This needs to come after some library #include
-   to get __GNU_LIBRARY__ defined.  */
-#ifdef	__GNU_LIBRARY__
-/* Don't include stdlib.h for non-GNU C libraries because some of them
-   contain conflicting prototypes for getopt.  */
-#include <stdlib.h>
-#include <unistd.h>
-#endif	/* GNU C library.  */
-
-#ifdef VMS
-#include <unixlib.h>
-#if HAVE_STRING_H - 0
-#include <string.h>
-#endif
-#endif
-
-#if defined (WIN32) && !defined (__CYGWIN32__)
-/* It's not Unix, really.  See?  Capital letters.  */
-#include <windows.h>
-#define getpid() GetCurrentProcessId()
-#endif
-
-#ifndef _
-/* This is for other GNU distributions with internationalized messages.
-   When compiling libc, the _ macro is predefined.  */
-#ifdef HAVE_LIBINTL_H
-# include <libintl.h>
-# define _(msgid)	gettext (msgid)
-#else
-# define _(msgid)	(msgid)
-#endif
-#endif
+#define _(msgid)	(msgid)
 
 /* This version of `getopt' appears to the caller like standard Unix `getopt'
    but it behaves differently for the user, since it allows the user
@@ -200,8 +103,6 @@ getopt (int argc, char * const * argv, const char * optstring)
 
    GNU application programs can use a third alternative mode in which
    they can distinguish the relative order of options and other arguments.  */
-
-#include "getopt.h"
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,
@@ -240,11 +141,6 @@ int __getopt_initialized = 0;
    by advancing to the next ARGV-element.  */
 
 static char *nextchar;
-
-/* Callers store zero here to inhibit the error message
-   for unrecognized options.  */
-
-int opterr = 1;
 
 /* Set to an option character which was unrecognized.
    This must be initialized on some systems to avoid linking in the
@@ -289,15 +185,6 @@ static enum
 /* Value of POSIXLY_CORRECT environment variable.  */
 static char *posixly_correct;
 
-#ifdef	__GNU_LIBRARY__
-/* We want to avoid inclusion of string.h with non-GNU libraries
-   because there are many ways it can cause trouble.
-   On some systems, it contains special magic macros that don't work
-   in GCC.  */
-#include <string.h>
-#define	my_index	pj_ansi_strchr
-#else
-
 static char *
 my_index (const char *str, int chr)
 {
@@ -310,19 +197,6 @@ my_index (const char *str, int chr)
   return 0;
 }
 
-/* If using GCC, we can safely declare strlen this way.
-   If not using GCC, it is ok not to declare it.  */
-#ifdef __GNUC__
-/* Note that Motorola Delta 68k R3V7 comes with GCC but not stddef.h.
-   That was relevant to code that was here before.  */
-#if !defined (__STDC__) || !__STDC__
-/* gcc with -traditional declares the built-in strlen to return int,
-   and has done so at least since version 2.4.5. -- rms.  */
-extern int strlen (const char *);
-#endif /* not __STDC__ */
-#endif /* __GNUC__ */
-
-#endif /* not __GNU_LIBRARY__ */
 
 /* Handle permutation of arguments.  */
 
@@ -333,45 +207,7 @@ extern int strlen (const char *);
 static int first_nonopt;
 static int last_nonopt;
 
-#ifdef _LIBC
-/* Bash 2.0 gives us an environment variable containing flags
-   indicating ARGV elements that should not be considered arguments.  */
-
-/* Defined in getopt_init.c  */
-extern char *__getopt_nonoption_flags;
-
-static int nonoption_flags_max_len;
-static int nonoption_flags_len;
-
-static int original_argc;
-static char *const *original_argv;
-
-extern pid_t __libc_pid;
-
-/* Make sure the environment variable bash 2.0 puts in the environment
-   is valid for the getopt call we must make sure that the ARGV passed
-   to getopt is that one passed to the process.  */
-static void
-__attribute__ ((unused))
-store_args_and_env (int argc, char *const *argv)
-{
-  /* XXX This is no good solution.  We should rather copy the args so
-     that we can compare them later.  But we must not use malloc(3).  */
-  original_argc = argc;
-  original_argv = argv;
-}
-text_set_element (__libc_subinit, store_args_and_env);
-
-# define SWAP_FLAGS(ch1, ch2) \
-  if (nonoption_flags_len > 0)						      \
-    {									      \
-      char __tmp = __getopt_nonoption_flags[ch1];			      \
-      __getopt_nonoption_flags[ch1] = __getopt_nonoption_flags[ch2];	      \
-      __getopt_nonoption_flags[ch2] = __tmp;				      \
-    }
-#else	/* !_LIBC */
-# define SWAP_FLAGS(ch1, ch2)
-#endif	/* _LIBC */
+#   define SWAP_FLAGS(ch1, ch2)
 
 /* Exchange two adjacent subsequences of ARGV.
    One subsequence is elements [first_nonopt,last_nonopt)
@@ -382,13 +218,8 @@ text_set_element (__libc_subinit, store_args_and_env);
    `first_nonopt' and `last_nonopt' are relocated so that they describe
    the new indices of the non-options in ARGV after they are moved.  */
 
-#if defined (__STDC__) && __STDC__
-static void exchange (char **);
-#endif
-
 static void
-exchange (argv)
-     char **argv;
+exchange (char **argv)
 {
   int bottom = first_nonopt;
   int middle = last_nonopt;
@@ -399,28 +230,6 @@ exchange (argv)
      That puts the shorter segment into the right place.
      It leaves the longer segment in the right place overall,
      but it consists of two parts that need to be swapped next.  */
-
-#ifdef _LIBC
-  /* First make sure the handling of the `__getopt_nonoption_flags'
-     string can work normally.  Our top argument must be in the range
-     of the string.  */
-  if (nonoption_flags_len > 0 && top >= nonoption_flags_max_len)
-    {
-      /* We must extend the array.  The user plays games with us and
-	 presents new arguments.  */
-      char *new_str = malloc (top + 1);
-      if (new_str == NULL)
-	nonoption_flags_len = nonoption_flags_max_len = 0;
-      else
-	{
-	  memcpy (new_str, __getopt_nonoption_flags, nonoption_flags_max_len);
-	  memset (&new_str[nonoption_flags_max_len], '\0',
-		  top + 1 - nonoption_flags_max_len);
-	  nonoption_flags_max_len = top + 1;
-	  __getopt_nonoption_flags = new_str;
-	}
-    }
-#endif
 
   while (top > middle && middle > bottom)
     {
@@ -468,15 +277,12 @@ exchange (argv)
 
 /* Initialize the internal data when the first call is made.  */
 
-#if defined (__STDC__) && __STDC__
-static const char *_getopt_initialize (int, char *const *, const char *);
-#endif
-static const char *
-_getopt_initialize (argc, argv, optstring)
-     int argc;
-     char *const *argv;
-     const char *optstring;
+static const char *_getopt_initialize (int argc, char *const *argv, 
+				       const char *optstring)
 {
+    PJ_UNUSED_ARG(argc);
+    PJ_UNUSED_ARG(argv);
+
   /* Start processing options with ARGV-element 1 (since ARGV-element 0
      is the program name); the sequence of previously skipped
      non-option ARGV-elements is empty.  */
@@ -504,39 +310,6 @@ _getopt_initialize (argc, argv, optstring)
     ordering = REQUIRE_ORDER;
   else
     ordering = PERMUTE;
-
-#ifdef _LIBC
-  if (posixly_correct == NULL
-      && argc == original_argc && argv == original_argv)
-    {
-      if (nonoption_flags_max_len == 0)
-	{
-	  if (__getopt_nonoption_flags == NULL
-	      || __getopt_nonoption_flags[0] == '\0')
-	    nonoption_flags_max_len = -1;
-	  else
-	    {
-	      const char *orig_str = __getopt_nonoption_flags;
-	      int len = nonoption_flags_max_len = strlen (orig_str);
-	      if (nonoption_flags_max_len < argc)
-		nonoption_flags_max_len = argc;
-	      __getopt_nonoption_flags =
-		(char *) malloc (nonoption_flags_max_len);
-	      if (__getopt_nonoption_flags == NULL)
-		nonoption_flags_max_len = -1;
-	      else
-		{
-		  memcpy (__getopt_nonoption_flags, orig_str, len);
-		  memset (&__getopt_nonoption_flags[len], '\0',
-			  nonoption_flags_max_len - len);
-		}
-	    }
-	}
-      nonoption_flags_len = nonoption_flags_max_len;
-    }
-  else
-    nonoption_flags_len = 0;
-#endif
 
   return optstring;
 }
@@ -597,14 +370,10 @@ _getopt_initialize (argc, argv, optstring)
    If LONG_ONLY is nonzero, '-' as well as '--' can introduce
    long-named options.  */
 
-int
-_getopt_internal (argc, argv, optstring, longopts, longind, long_only)
-     int argc;
-     char *const *argv;
-     const char *optstring;
-     const struct option *longopts;
-     int *longind;
-     int long_only;
+static int
+_getopt_internal (int argc, char *const *argv, const char *optstring, 
+		  const struct option *longopts, int *longind, 
+		  int long_only)
 {
   optarg = NULL;
 
@@ -620,13 +389,7 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
      Either it does not have option syntax, or there is an environment flag
      from the shell indicating it is not an option.  The later information
      is only used when the used in the GNU libc.  */
-#ifdef _LIBC
-#define NONOPTION_P (argv[optind][0] != '-' || argv[optind][1] == '\0'	      \
-		     || (optind < nonoption_flags_len			      \
-			 && __getopt_nonoption_flags[optind] == '1'))
-#else
 #define NONOPTION_P (argv[optind][0] != '-' || argv[optind][1] == '\0')
-#endif
 
   if (nextchar == NULL || *nextchar == '\0')
     {
@@ -762,9 +525,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 
       if (ambig && !exact)
 	{
-	  if (opterr)
-	    fprintf (stderr, _("%s: option `%s' is ambiguous\n"),
-		     argv[0], argv[optind]);
 	  nextchar += strlen (nextchar);
 	  optind++;
 	  optopt = 0;
@@ -783,21 +543,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 		optarg = nameend + 1;
 	      else
 		{
-		  if (opterr)
-		   {
-		   if (argv[optind - 1][1] == '-')
-		    /* --option */
-		    fprintf (stderr,
-		     _("%s: option `--%s' doesn't allow an argument\n"),
-		     argv[0], pfound->name);
-		   else
-		      {	
-		    /* +option or -option */
-		    fprintf (stderr,
-		     _("%s: option `%c%s' doesn't allow an argument\n"),
-		     argv[0], argv[optind - 1][0], pfound->name);
-                      }
-		    }
 		  nextchar += strlen (nextchar);
 
 		  optopt = pfound->val;
@@ -810,10 +555,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 		optarg = argv[optind++];
 	      else
 		{
-		  if (opterr)
-		    fprintf (stderr,
-			   _("%s: option `%s' requires an argument\n"),
-			   argv[0], argv[optind - 1]);
 		  nextchar += strlen (nextchar);
 		  optopt = pfound->val;
 		  return optstring[0] == ':' ? ':' : '?';
@@ -837,17 +578,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
       if (!long_only || argv[optind][1] == '-'
 	  || my_index (optstring, *nextchar) == NULL)
 	{
-	  if (opterr)
-	    {
-	      if (argv[optind][1] == '-')
-		/* --option */
-		fprintf (stderr, _("%s: unrecognized option `--%s'\n"),
-			 argv[0], nextchar);
-	      else
-		/* +option or -option */
-		fprintf (stderr, _("%s: unrecognized option `%c%s'\n"),
-			 argv[0], argv[optind][0], nextchar);
-	    }
 	  nextchar = (char *) "";
 	  optind++;
 	  optopt = 0;
@@ -867,16 +597,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 
     if (temp == NULL || c == ':')
       {
-	if (opterr)
-	  {
-	    if (posixly_correct)
-	      /* 1003.2 specifies the format of this message.  */
-	      fprintf (stderr, _("%s: illegal option -- %c\n"),
-		       argv[0], c);
-	    else
-	      fprintf (stderr, _("%s: invalid option -- %c\n"),
-		       argv[0], c);
-	  }
 	optopt = c;
 	return '?';
       }
@@ -901,12 +621,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 	  }
 	else if (optind == argc)
 	  {
-	    if (opterr)
-	      {
-		/* 1003.2 specifies the format of this message.  */
-		fprintf (stderr, _("%s: option requires an argument -- %c\n"),
-			 argv[0], c);
-	      }
 	    optopt = c;
 	    if (optstring[0] == ':')
 	      c = ':';
@@ -950,9 +664,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 	    }
 	if (ambig && !exact)
 	  {
-	    if (opterr)
-	      fprintf (stderr, _("%s: option `-W %s' is ambiguous\n"),
-		       argv[0], argv[optind]);
 	    nextchar += strlen (nextchar);
 	    optind++;
 	    return '?';
@@ -968,11 +679,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 		  optarg = nameend + 1;
 		else
 		  {
-		    if (opterr)
-		      fprintf (stderr, _("\
-%s: option `-W %s' doesn't allow an argument\n"),
-			       argv[0], pfound->name);
-
 		    nextchar += strlen (nextchar);
 		    return '?';
 		  }
@@ -983,10 +689,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 		  optarg = argv[optind++];
 		else
 		  {
-		    if (opterr)
-		      fprintf (stderr,
-			       _("%s: option `%s' requires an argument\n"),
-			       argv[0], argv[optind - 1]);
 		    nextchar += strlen (nextchar);
 		    return optstring[0] == ':' ? ':' : '?';
 		  }
@@ -1030,13 +732,6 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
 	      }
 	    else if (optind == argc)
 	      {
-		if (opterr)
-		  {
-		    /* 1003.2 specifies the format of this message.  */
-		    fprintf (stderr,
-			   _("%s: option requires an argument -- %c\n"),
-			   argv[0], c);
-		  }
 		optopt = c;
 		if (optstring[0] == ':')
 		  c = ':';
@@ -1053,12 +748,4 @@ _getopt_internal (argc, argv, optstring, longopts, longind, long_only)
     return c;
   }
 }
-
-#endif	/* Not ELIDE_CODE.  */
-
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
