@@ -98,11 +98,11 @@ SOURCE=..\src\pjsua\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsua\pjsua_core.c
+SOURCE=..\src\pjsua\pjsua_call.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjsua\pjsua_inv.c
+SOURCE=..\src\pjsua\pjsua_core.c
 # End Source File
 # Begin Source File
 

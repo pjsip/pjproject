@@ -79,6 +79,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
  */
 static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 {
+    int acc_index;
     pjsip_method *req_method = &rdata->msg_info.msg->line.req.method;
     pjsua_srv_pres *uapres;
     pjsip_evsub *sub;
@@ -93,9 +94,13 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Incoming SUBSCRIBE: */
 
+    /* Find which account for the incoming request. */
+    acc_index = pjsua_find_account_for_incoming(rdata);
+
     /* Create UAS dialog: */
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata, 
-				   &pjsua.contact_uri, &dlg);
+				   &pjsua.acc[acc_index].contact_uri, 
+				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to create UAS dialog for subscription", 
@@ -130,7 +135,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsip_evsub_set_mod_data(sub, pjsua.mod.id, uapres);
 
     /* Add server subscription to the list: */
-    pj_list_push_back(&pjsua.pres_srv_list, uapres);
+    pj_list_push_back(&pjsua.acc[acc_index].pres_srv_list, uapres);
 
 
     /* Create and send 200 (OK) to the SUBSCRIBE request: */
@@ -146,7 +151,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Set our online status: */
     pj_memset(&pres_status, 0, sizeof(pres_status));
     pres_status.info_cnt = 1;
-    pres_status.info[0].basic_open = pjsua.online_status;
+    pres_status.info[0].basic_open = pjsua.acc[acc_index].online_status;
     //Both pjsua.local_uri and pjsua.contact_uri are enclosed in "<" and ">"
     //causing XML parsing to fail.
     //pres_status.info[0].contact = pjsua.local_uri;
@@ -174,20 +179,20 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
 
 /* Refresh subscription (e.g. when our online status has changed) */
-static void refresh_server_subscription()
+static void refresh_server_subscription(int acc_index)
 {
     pjsua_srv_pres *uapres;
 
-    uapres = pjsua.pres_srv_list.next;
+    uapres = pjsua.acc[acc_index].pres_srv_list.next;
 
-    while (uapres != &pjsua.pres_srv_list) {
+    while (uapres != &pjsua.acc[acc_index].pres_srv_list) {
 	
 	pjsip_pres_status pres_status;
 	pjsip_tx_data *tdata;
 
 	pjsip_pres_get_status(uapres->sub, &pres_status);
-	if (pres_status.info[0].basic_open != pjsua.online_status) {
-	    pres_status.info[0].basic_open = pjsua.online_status;
+	if (pres_status.info[0].basic_open != pjsua.acc[acc_index].online_status) {
+	    pres_status.info[0].basic_open = pjsua.acc[acc_index].online_status;
 	    pjsip_pres_set_status(uapres->sub, &pres_status);
 
 	    if (pjsua.quit_flag) {
@@ -298,13 +303,16 @@ static pjsip_evsub_user pres_callback =
 /* It does what it says.. */
 static void subscribe_buddy_presence(unsigned index)
 {
+    int acc_index;
     pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
+    acc_index = pjsua.buddies[index].acc_index;
+
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
-				   &pjsua.local_uri,
-				   &pjsua.contact_uri,
+				   &pjsua.acc[acc_index].local_uri,
+				   &pjsua.acc[acc_index].contact_uri,
 				   &pjsua.buddies[index].uri,
 				   NULL, &dlg);
     if (status != PJ_SUCCESS) {
@@ -325,7 +333,7 @@ static void subscribe_buddy_presence(unsigned index)
     pjsip_evsub_set_mod_data(pjsua.buddies[index].sub, pjsua.mod.id,
 			     &pjsua.buddies[index]);
 
-    status = pjsip_pres_initiate(pjsua.buddies[index].sub, 60, &tdata);
+    status = pjsip_pres_initiate(pjsua.buddies[index].sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua.buddies[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
@@ -381,7 +389,7 @@ static void unsubscribe_buddy_presence(unsigned index)
 /* It does what it says.. */
 static void refresh_client_subscription(void)
 {
-    unsigned i;
+    int i;
 
     for (i=0; i<pjsua.buddy_cnt; ++i) {
 
@@ -415,10 +423,10 @@ pj_status_t pjsua_pres_init()
 /*
  * Refresh presence
  */
-void pjsua_pres_refresh(void)
+void pjsua_pres_refresh(int acc_index)
 {
     refresh_client_subscription();
-    refresh_server_subscription();
+    refresh_server_subscription(acc_index);
 }
 
 
@@ -427,13 +435,20 @@ void pjsua_pres_refresh(void)
  */
 void pjsua_pres_shutdown(void)
 {
-    unsigned i;
+    int acc_index;
+    int i;
 
-    pjsua.online_status = 0;
+    for (acc_index=0; acc_index<pjsua.acc_cnt; ++acc_index) {
+	pjsua.acc[acc_index].online_status = 0;
+    }
+
     for (i=0; i<pjsua.buddy_cnt; ++i) {
 	pjsua.buddies[i].monitor = 0;
     }
-    pjsua_pres_refresh();
+
+    for (acc_index=0; acc_index<pjsua.acc_cnt; ++acc_index) {
+	pjsua_pres_refresh(acc_index);
+    }
 }
 
 /*
@@ -441,22 +456,30 @@ void pjsua_pres_shutdown(void)
  */
 void pjsua_pres_dump(void)
 {
-    unsigned i;
+    int acc_index;
+    int i;
 
     PJ_LOG(3,(THIS_FILE, "Dumping pjsua server subscriptions:"));
-    if (pj_list_empty(&pjsua.pres_srv_list)) {
-	PJ_LOG(3,(THIS_FILE, "  - none - "));
-    } else {
-	struct pjsua_srv_pres *uapres;
+    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
 
-	uapres = pjsua.pres_srv_list.next;
-	while (uapres != &pjsua.pres_srv_list) {
-	
-	    PJ_LOG(3,(THIS_FILE, "  %10s %s",
-		      pjsip_evsub_get_state_name(uapres->sub),
-		      uapres->remote));
+	PJ_LOG(3,(THIS_FILE, "  %.*s",
+		  (int)pjsua.acc[acc_index].local_uri.slen,
+		  pjsua.acc[acc_index].local_uri.ptr));
 
-	    uapres = uapres->next;
+	if (pj_list_empty(&pjsua.acc[acc_index].pres_srv_list)) {
+	    PJ_LOG(3,(THIS_FILE, "  - none - "));
+	} else {
+	    struct pjsua_srv_pres *uapres;
+
+	    uapres = pjsua.acc[acc_index].pres_srv_list.next;
+	    while (uapres != &pjsua.acc[acc_index].pres_srv_list) {
+	    
+		PJ_LOG(3,(THIS_FILE, "    %10s %s",
+			  pjsip_evsub_get_state_name(uapres->sub),
+			  uapres->remote));
+
+		uapres = uapres->next;
+	    }
 	}
     }
 

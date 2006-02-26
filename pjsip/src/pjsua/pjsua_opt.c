@@ -43,8 +43,6 @@ static void usage(void)
     puts("Usage:");
     puts("  pjsua [options]");
     puts("");
-    puts("  [sip-url]   Default URL to invite.");
-    puts("");
     puts("General options:");
     puts("  --help              Display this help screen");
     puts("  --version           Display version info");
@@ -55,36 +53,43 @@ static void usage(void)
     puts("  --log-level=N       Set log max level to N (0(none) to 6(trace))");
     puts("  --app-log-level=N   Set log max level for stdout display to N");
     puts("");
+    puts("SIP Account options:");
+    puts("  --id=url            Set the URL of local ID (used in From header)");
+    puts("  --contact=url       Override the Contact information");
+    puts("  --proxy=url         Set the URL of proxy server");
+    puts("");
+    puts("SIP Account Registration Options:");
+    puts("  --registrar=url     Set the URL of registrar server");
+    puts("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
+    puts("");
+    puts("SIP Account Control:");
+    puts("  --next-account      Add more account");
+    puts("");
     puts("Authentication options:");
     puts("  --realm=string      Set realm");
     puts("  --username=string   Set authentication username");
     puts("  --password=string   Set authentication password");
-    puts("");
-    puts("SIP options:");
-    puts("  --id=url            Set the URL of local ID (used in From header)");
-    puts("  --contact=url       Override the Contact information");
-    puts("  --proxy=url         Set the URL of proxy server");
-    //puts("  --outbound=url      Set the URL of outbound proxy server");
-    puts("");
-    puts("Registration Options:");
-    puts("  --registrar=url     Set the URL of registrar server");
-    puts("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
+    puts("  --next-cred         Add more credential");
     puts("");
     puts("Transport Options:");
-    puts("  --local-port=port   Set TCP/UDP port");
+    puts("  --local-port=port        Set TCP/UDP port");
+    puts("  --outbound=url           Set the URL of outbound proxy server");
     puts("  --use-stun1=host[:port]");
-    puts("  --use-stun2=host[:port]  Use STUN and set host name and port of STUN servers");
+    puts("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
     puts("");
     puts("Media Options:");
     puts("  --null-audio        Use NULL audio device");
-    //puts("  --wav-file=file     Play WAV file in conference bridge");
+    puts("  --play-file=file    Play WAV file in conference bridge");
+    puts("  --auto-play         Automatically play the file (to incoming calls only)");
+    puts("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
+    puts("  --auto-conf         Automatically put incoming calls to conference");
     puts("");
     puts("Buddy List (can be more than one):");
     puts("  --add-buddy url     Add the specified URL to the buddy list.");
     puts("");
     puts("User Agent options:");
     puts("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
-    puts("  --auto-play=file    Automatically play WAVE file to incoming calls");
+    puts("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
     puts("");
     fflush(stdout);
 }
@@ -199,7 +204,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY};
+	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
+	   OPT_AUTO_CONF,
+	   OPT_PLAY_FILE,
+	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
+    };
     struct option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
 	{ "log-file",	1, 0, OPT_LOG_FILE},
@@ -225,10 +234,18 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "no-presence", 0, 0, OPT_NO_PRESENCE},
 	{ "auto-answer",1, 0, OPT_AUTO_ANSWER},
 	{ "auto-hangup",1, 0, OPT_AUTO_HANGUP},
-	{ "auto-play",  1, 0, OPT_AUTO_PLAY},
+	{ "auto-play",  0, 0, OPT_AUTO_PLAY},
+	{ "auto-loop",  0, 0, OPT_AUTO_LOOP},
+	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
+	{ "play-file",  1, 0, OPT_PLAY_FILE},
+	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
+	{ "next-cred",	0, 0, OPT_NEXT_CRED},
+	{ "max-calls",	1, 0, OPT_MAX_CALLS},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
+    pjsua_acc *cur_acc;
+    pjsip_cred_info *cur_cred;
     char *config_file = NULL;
 
     /* Run getopt once to see if user specifies config file to read. */
@@ -247,6 +264,10 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	if (status != 0)
 	    return status;
     }
+
+
+    cur_acc = &pjsua.acc[0];
+    cur_cred = &pjsua.cred_info[0];
 
 
     /* Reinitialize and re-run getopt again, possibly with new arguments
@@ -307,7 +328,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		printf("Error: invalid SIP URL '%s' in proxy argument\n", optarg);
 		return PJ_EINVAL;
 	    }
-	    pjsua.proxy = pj_str(optarg);
+	    cur_acc->proxy = pj_str(optarg);
 	    break;
 
 	case OPT_OUTBOUND_PROXY:   /* outbound proxy */
@@ -323,12 +344,12 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		printf("Error: invalid SIP URL '%s' in registrar argument\n", optarg);
 		return PJ_EINVAL;
 	    }
-	    pjsua.registrar_uri = pj_str(optarg);
+	    cur_acc->reg_uri = pj_str(optarg);
 	    break;
 
 	case OPT_REG_TIMEOUT:   /* reg-timeout */
-	    pjsua.reg_timeout = pj_strtoul(pj_cstr(&tmp,optarg));
-	    if (pjsua.reg_timeout < 1 || pjsua.reg_timeout > 3600) {
+	    cur_acc->reg_timeout = pj_strtoul(pj_cstr(&tmp,optarg));
+	    if (cur_acc->reg_timeout < 1 || cur_acc->reg_timeout > 3600) {
 		printf("Error: invalid value for --reg-timeout (expecting 1-3600)\n");
 		return PJ_EINVAL;
 	    }
@@ -339,7 +360,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		printf("Error: invalid SIP URL '%s' in local id argument\n", optarg);
 		return PJ_EINVAL;
 	    }
-	    pjsua.local_uri = pj_str(optarg);
+	    cur_acc->local_uri = pj_str(optarg);
 	    break;
 
 	case OPT_CONTACT:   /* contact */
@@ -347,23 +368,33 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		printf("Error: invalid SIP URL '%s' in contact argument\n", optarg);
 		return PJ_EINVAL;
 	    }
-	    pjsua.contact_uri = pj_str(optarg);
+	    cur_acc->contact_uri = pj_str(optarg);
+	    break;
+
+	case OPT_NEXT_ACCOUNT: /* Add more account. */
+	    pjsua.acc_cnt++;
+	    cur_acc = &pjsua.acc[pjsua.acc_cnt - 1];
 	    break;
 
 	case OPT_USERNAME:   /* Default authentication user */
-	    if (!pjsua.cred_count) pjsua.cred_count = 1;
-	    pjsua.cred_info[0].username = pj_str(optarg);
+	    if (pjsua.cred_count==0) pjsua.cred_count=1;
+	    cur_cred->username = pj_str(optarg);
 	    break;
 
 	case OPT_REALM:	    /* Default authentication realm. */
-	    if (!pjsua.cred_count) pjsua.cred_count = 1;
-	    pjsua.cred_info[0].realm = pj_str(optarg);
+	    if (pjsua.cred_count==0) pjsua.cred_count=1;
+	    cur_cred->realm = pj_str(optarg);
 	    break;
 
 	case OPT_PASSWORD:   /* authentication password */
-	    if (!pjsua.cred_count) pjsua.cred_count = 1;
-	    pjsua.cred_info[0].data_type = 0;
-	    pjsua.cred_info[0].data = pj_str(optarg);
+	    if (pjsua.cred_count==0) pjsua.cred_count=1;
+	    cur_cred->data_type = 0;
+	    cur_cred->data = pj_str(optarg);
+	    break;
+
+	case OPT_NEXT_CRED: /* Next credential */
+	    pjsua.cred_count++;
+	    cur_cred = &pjsua.cred_info[pjsua.cred_count - 1];
 	    break;
 
 	case OPT_USE_STUN1:   /* STUN server 1 */
@@ -411,6 +442,18 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_AUTO_PLAY:
+	    pjsua.auto_play = 1;
+	    break;
+
+	case OPT_AUTO_LOOP:
+	    pjsua.auto_loop = 1;
+	    break;
+
+	case OPT_AUTO_CONF:
+	    pjsua.auto_conf = 1;
+	    break;
+
+	case OPT_PLAY_FILE:
 	    pjsua.wav_file = optarg;
 	    break;
 
@@ -418,6 +461,14 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.auto_answer = atoi(optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
 		puts("Error: invalid code in --auto-answer (expecting 100-699");
+		return -1;
+	    }
+	    break;
+
+	case OPT_MAX_CALLS:
+	    pjsua.max_calls = atoi(optarg);
+	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
+		puts("Too many calls for max-calls (1-255)");
 		return -1;
 	    }
 	    break;
@@ -429,21 +480,17 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	return PJ_EINVAL;
     }
 
-    if (pjsua.reg_timeout == 0)
-	pjsua.reg_timeout = 3600;
-
-
     return PJ_SUCCESS;
 }
 
 
 
-static void print_invite_session(const char *title,
-				 struct pjsua_inv_data *inv_data, 
-				 char *buf, pj_size_t size)
+static void print_call(const char *title,
+		       int call_index, 
+		       char *buf, pj_size_t size)
 {
     int len;
-    pjsip_inv_session *inv = inv_data->inv;
+    pjsip_inv_session *inv = pjsua.calls[call_index].inv;
     pjsip_dialog *dlg = inv->dlg;
     char userinfo[128];
 
@@ -515,7 +562,6 @@ static void dump_media_session(pjmedia_session *session)
  */
 void pjsua_dump(void)
 {
-    struct pjsua_inv_data *inv_data;
     char buf[128];
     unsigned old_decor;
 
@@ -533,23 +579,23 @@ void pjsua_dump(void)
     /* Dump all invite sessions: */
     PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
 
-    if (pj_list_empty(&pjsua.inv_list)) {
+    if (pjsua.call_cnt == 0) {
 
 	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
 
     } else {
+	int i;
 
-	inv_data = pjsua.inv_list.next;
+	for (i=0; i<pjsua.max_calls; ++i) {
 
-	while (inv_data != &pjsua.inv_list) {
+	    if (pjsua.calls[i].inv == NULL)
+		continue;
 
-	    print_invite_session("  ", inv_data, buf, sizeof(buf));
+	    print_call("  ", i, buf, sizeof(buf));
 	    PJ_LOG(3,(THIS_FILE, "%s", buf));
 
-	    if (inv_data->session)
-		dump_media_session(inv_data->session);
-
-	    inv_data = inv_data->next;
+	    if (pjsua.calls[i].session)
+		dump_media_session(pjsua.calls[i].session);
 	}
     }
 
@@ -575,40 +621,96 @@ pj_status_t pjsua_load_settings(const char *filename)
 
 
 /*
- * Save settings.
+ * Save account settings
  */
-pj_status_t pjsua_save_settings(const char *filename)
+static void save_account_settings(int acc_index, pj_str_t *result)
 {
-    unsigned i;
-    pj_str_t cfg;
     char line[128];
-    pj_pool_t *pool;
-    FILE *fhnd;
+    pjsua_acc *acc = &pjsua.acc[acc_index];
 
-    /* Create pool for temporary buffer. */
-    pool = pj_pool_create(&pjsua.cp.factory, "settings", 4000, 0, NULL);
-    if (!pool)
-	return PJ_ENOMEM;
-
-
-    cfg.ptr = pj_pool_alloc(pool, 3800);
-    if (!cfg.ptr) {
-	pj_pool_release(pool);
-	return PJ_EBUG;
-    }
-    cfg.slen = 0;
+    
+    pj_ansi_sprintf(line, "#\n# Account %d:\n#\n", acc_index);
+    pj_strcat2(result, line);
 
 
     /* Identity */
-    if (pjsua.local_uri.slen) {
+    if (acc->local_uri.slen) {
 	pj_ansi_sprintf(line, "--id %.*s\n", 
-			(int)pjsua.local_uri.slen, 
-			pjsua.local_uri.ptr);
+			(int)acc->local_uri.slen, 
+			acc->local_uri.ptr);
+	pj_strcat2(result, line);
+    }
+
+    /* Registrar server */
+    if (acc->reg_uri.slen) {
+	pj_ansi_sprintf(line, "--registrar %.*s\n",
+			      (int)acc->reg_uri.slen,
+			      acc->reg_uri.ptr);
+	pj_strcat2(result, line);
+
+	pj_ansi_sprintf(line, "--reg-timeout %u\n",
+			      acc->reg_timeout);
+	pj_strcat2(result, line);
+    }
+
+
+    /* Proxy */
+    if (acc->proxy.slen) {
+	pj_ansi_sprintf(line, "--proxy %.*s\n",
+			      (int)acc->proxy.slen,
+			      acc->proxy.ptr);
+	pj_strcat2(result, line);
+    }
+}
+
+
+
+/*
+ * Dump settings.
+ */
+int pjsua_dump_settings(char *buf, pj_size_t max)
+{
+    int acc_index;
+    int i;
+    pj_str_t cfg;
+    char line[128];
+
+    cfg.ptr = buf;
+    cfg.slen = 0;
+
+
+    /* Logging. */
+    pj_strcat2(&cfg, "#\n# Logging options:\n#\n");
+    pj_ansi_sprintf(line, "--log-level %d\n",
+		    pjsua.log_level);
+    pj_strcat2(&cfg, line);
+
+    pj_ansi_sprintf(line, "--app-log-level %d\n",
+		    pjsua.app_log_level);
+    pj_strcat2(&cfg, line);
+
+    if (pjsua.log_filename) {
+	pj_ansi_sprintf(line, "--log-file %s\n",
+			pjsua.log_filename);
 	pj_strcat2(&cfg, line);
+    }
+
+
+    /* Save account settings. */
+    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+	
+	save_account_settings(acc_index, &cfg);
+
+	if (acc_index < pjsua.acc_cnt-1)
+	    pj_strcat2(&cfg, "--next-account\n");
     }
 
     /* Credentials. */
     for (i=0; i<pjsua.cred_count; ++i) {
+
+	pj_ansi_sprintf(line, "#\n# Credential %d:\n#\n", i);
+	pj_strcat2(&cfg, line);
+
 	if (pjsua.cred_info[i].realm.slen) {
 	    pj_ansi_sprintf(line, "--realm %.*s\n",
 				  (int)pjsua.cred_info[i].realm.slen,
@@ -625,16 +727,13 @@ pj_status_t pjsua_save_settings(const char *filename)
 			      (int)pjsua.cred_info[i].data.slen,
 			      pjsua.cred_info[i].data.ptr);
 	pj_strcat2(&cfg, line);
+
+	if (i < pjsua.cred_count-1)
+	    pj_strcat2(&cfg, "--next-cred\n");
     }
 
-    /* Registrar server */
-    if (pjsua.registrar_uri.slen) {
-	pj_ansi_sprintf(line, "--registrar %.*s\n",
-			      (int)pjsua.registrar_uri.slen,
-			      pjsua.registrar_uri.ptr);
-	pj_strcat2(&cfg, line);
-    }
 
+    pj_strcat2(&cfg, "#\n# Network settings:\n#\n");
 
     /* Outbound proxy */
     if (pjsua.outbound_proxy.slen) {
@@ -643,10 +742,6 @@ pj_status_t pjsua_save_settings(const char *filename)
 			      pjsua.outbound_proxy.ptr);
 	pj_strcat2(&cfg, line);
     }
-
-    /* Media */
-    if (pjsua.null_audio)
-	pj_strcat2(&cfg, "--null-audio\n");
 
 
     /* Transport. */
@@ -672,12 +767,81 @@ pj_status_t pjsua_save_settings(const char *filename)
     }
 
 
+    pj_strcat2(&cfg, "#\n# Media settings:\n#\n");
+
+
+    /* Media */
+    if (pjsua.null_audio)
+	pj_strcat2(&cfg, "--null-audio\n");
+    if (pjsua.auto_play)
+	pj_strcat2(&cfg, "--auto-play\n");
+    if (pjsua.auto_loop)
+	pj_strcat2(&cfg, "--auto-loop\n");
+    if (pjsua.auto_conf)
+	pj_strcat2(&cfg, "--auto-conf\n");
+    if (pjsua.wav_file) {
+	pj_ansi_sprintf(line, "--play-file %s\n",
+			pjsua.wav_file);
+	pj_strcat2(&cfg, line);
+    }
+
+
+    pj_strcat2(&cfg, "#\n# User agent:\n#\n");
+
+    /* Auto-answer. */
+    if (pjsua.auto_answer != 0) {
+	pj_ansi_sprintf(line, "--auto-answer %d\n",
+			pjsua.auto_answer);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Max calls. */
+    pj_ansi_sprintf(line, "--max-calls %d\n",
+		    pjsua.max_calls);
+    pj_strcat2(&cfg, line);
+
+
+    pj_strcat2(&cfg, "#\n# Buddies:\n#\n");
+
     /* Add buddies. */
     for (i=0; i<pjsua.buddy_cnt; ++i) {
 	pj_ansi_sprintf(line, "--add-buddy %.*s\n",
 			      (int)pjsua.buddies[i].uri.slen,
 			      pjsua.buddies[i].uri.ptr);
 	pj_strcat2(&cfg, line);
+    }
+
+
+    *(cfg.ptr + cfg.slen) = '\0';
+    return cfg.slen;
+}
+
+/*
+ * Save settings.
+ */
+pj_status_t pjsua_save_settings(const char *filename)
+{
+    pj_str_t cfg;
+    pj_pool_t *pool;
+    FILE *fhnd;
+
+    /* Create pool for temporary buffer. */
+    pool = pj_pool_create(&pjsua.cp.factory, "settings", 4000, 0, NULL);
+    if (!pool)
+	return PJ_ENOMEM;
+
+
+    cfg.ptr = pj_pool_alloc(pool, 3800);
+    if (!cfg.ptr) {
+	pj_pool_release(pool);
+	return PJ_EBUG;
+    }
+
+
+    cfg.slen = pjsua_dump_settings(cfg.ptr, 3800);
+    if (cfg.slen < 1) {
+	pj_pool_release(pool);
+	return PJ_ENOMEM;
     }
 
 

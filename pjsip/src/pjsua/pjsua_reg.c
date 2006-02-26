@@ -34,66 +34,81 @@
  */
 static void regc_cb(struct pjsip_regc_cbparam *param)
 {
+
+    pjsua_acc *acc = param->token;
+
     /*
      * Print registration status.
      */
     if (param->status!=PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "SIP registration error", 
 		     param->status);
-	pjsua.regc = NULL;
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
 	
     } else if (param->code < 0 || param->code >= 300) {
 	PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%s)", 
 		   param->code, 
 		   pjsip_get_status_text(param->code)->ptr));
-	pjsua.regc = NULL;
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
 
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
-	PJ_LOG(3, (THIS_FILE, "SIP registration success, status=%d (%s), "
-			      "will re-register in %d seconds", 
-			      param->code,
-			      pjsip_get_status_text(param->code)->ptr,
-			      param->expiration));
+
+	if (param->expiration < 1) {
+	    pjsip_regc_destroy(acc->regc);
+	    acc->regc = NULL;
+	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
+		      acc->local_uri.ptr));
+	} else {
+	    PJ_LOG(3, (THIS_FILE, 
+		       "%s: registration success, status=%d (%s), "
+		       "will re-register in %d seconds", 
+		       acc->local_uri.ptr,
+		       param->code,
+		       pjsip_get_status_text(param->code)->ptr,
+		       param->expiration));
+	}
 
     } else {
 	PJ_LOG(4, (THIS_FILE, "SIP registration updated status=%d", param->code));
     }
 
-    pjsua.regc_last_err = param->status;
-    pjsua.regc_last_code = param->code;
+    acc->reg_last_err = param->status;
+    acc->reg_last_code = param->code;
 
-    pjsua_ui_regc_on_state_changed(pjsua.regc_last_code);
+    pjsua_ui_regc_on_state_changed(acc->index);
 }
 
 
 /*
  * Update registration. If renew is false, then unregistration will be performed.
  */
-void pjsua_regc_update(pj_bool_t renew)
+void pjsua_regc_update(int acc_index, pj_bool_t renew)
 {
     pj_status_t status;
     pjsip_tx_data *tdata;
 
     if (renew) {
-	if (pjsua.regc == NULL) {
-	    status = pjsua_regc_init();
+	if (pjsua.acc[acc_index].regc == NULL) {
+	    status = pjsua_regc_init(acc_index);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Unable to create registration", 
 			     status);
 		return;
 	    }
 	}
-	status = pjsip_regc_register(pjsua.regc, 1, &tdata);
+	status = pjsip_regc_register(pjsua.acc[acc_index].regc, 1, &tdata);
     } else {
-	if (pjsua.regc == NULL) {
+	if (pjsua.acc[acc_index].regc == NULL) {
 	    PJ_LOG(3,(THIS_FILE, "Currently not registered"));
 	    return;
 	}
-	status = pjsip_regc_unregister(pjsua.regc, &tdata);
+	status = pjsip_regc_unregister(pjsua.acc[acc_index].regc, &tdata);
     }
 
     if (status == PJ_SUCCESS)
-	status = pjsip_regc_send( pjsua.regc, tdata );
+	status = pjsip_regc_send( pjsua.acc[acc_index].regc, tdata );
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create/send REGISTER", 
@@ -107,14 +122,17 @@ void pjsua_regc_update(pj_bool_t renew)
 /*
  * Initialize client registration.
  */
-pj_status_t pjsua_regc_init(void)
+pj_status_t pjsua_regc_init(int acc_index)
 {
     pj_status_t status;
 
     /* initialize SIP registration if registrar is configured */
-    if (pjsua.registrar_uri.slen) {
+    if (pjsua.acc[acc_index].reg_uri.slen) {
 
-	status = pjsip_regc_create( pjsua.endpt, NULL, &regc_cb, &pjsua.regc);
+	status = pjsip_regc_create( pjsua.endpt, 
+				    &pjsua.acc[acc_index], 
+				    &regc_cb, 
+				    &pjsua.acc[acc_index].regc);
 
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create client registration", 
@@ -123,11 +141,12 @@ pj_status_t pjsua_regc_init(void)
 	}
 
 
-	status = pjsip_regc_init( pjsua.regc, &pjsua.registrar_uri, 
-				  &pjsua.local_uri, 
-				  &pjsua.local_uri,
-				  1, &pjsua.contact_uri, 
-				  pjsua.reg_timeout);
+	status = pjsip_regc_init( pjsua.acc[acc_index].regc, 
+				  &pjsua.acc[acc_index].reg_uri, 
+				  &pjsua.acc[acc_index].local_uri, 
+				  &pjsua.acc[acc_index].local_uri,
+				  1, &pjsua.acc[acc_index].contact_uri, 
+				  pjsua.acc[acc_index].reg_timeout);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, 
 			 "Client registration initialization error", 
@@ -135,10 +154,12 @@ pj_status_t pjsua_regc_init(void)
 	    return status;
 	}
 
-	pjsip_regc_set_credentials( pjsua.regc, pjsua.cred_count, 
+	pjsip_regc_set_credentials( pjsua.acc[acc_index].regc, 
+				    pjsua.cred_count, 
 				    pjsua.cred_info );
 
-	pjsip_regc_set_route_set( pjsua.regc, &pjsua.route_set );
+	pjsip_regc_set_route_set( pjsua.acc[acc_index].regc, 
+				  &pjsua.acc[acc_index].route_set );
     }
 
     return PJ_SUCCESS;

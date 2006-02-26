@@ -45,6 +45,8 @@ struct pjsua pjsua;
  */
 void pjsua_default(void)
 {
+    unsigned i;
+
 
     /* Normally need another thread for console application, because main 
      * thread will be blocked in fgets().
@@ -53,44 +55,38 @@ void pjsua_default(void)
 
 
     /* Default transport settings: */
-
     pjsua.sip_port = 5060;
 
 
     /* Default logging settings: */
-
     pjsua.log_level = 5;
     pjsua.app_log_level = 4;
     pjsua.log_decor = PJ_LOG_HAS_SENDER | PJ_LOG_HAS_TIME | 
 		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE;
 
-    /* Default: do not use STUN: */
 
+    /* Default: do not use STUN: */
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
 
-    /* Default URIs: */
+    /* Init accounts: */
+    pjsua.acc_cnt = 1;
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
+	pjsua.acc[i].index = i;
+	pjsua.acc[i].local_uri = pj_str(PJSUA_LOCAL_URI);
+	pjsua.acc[i].reg_timeout = 55;
+	pj_list_init(&pjsua.acc[i].route_set);
+	pj_list_init(&pjsua.acc[i].pres_srv_list);
+    }
 
-    pjsua.local_uri = pj_str(PJSUA_LOCAL_URI);
+    /* Init call array: */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.calls); ++i)
+	pjsua.calls[i].index = i;
 
-    /* Default registration timeout: */
-
-    pjsua.reg_timeout = 55;
-
-    /* Default maximum conference ports: */
-
-    pjsua.max_ports = 8;
-
-    /* Init route set list: */
-
-    pj_list_init(&pjsua.route_set);
-
-    /* Init invite session list: */
-
-    pj_list_init(&pjsua.inv_list);
+    /* Default max nb of calls. */
+    pjsua.max_calls = 4;
 
     /* Init server presence subscription list: */
     
-    pj_list_init(&pjsua.pres_srv_list);
 
 }
 
@@ -110,8 +106,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
 
-	return pjsua_inv_on_incoming(rdata);
-
+	return pjsua_call_on_incoming(rdata);
     }
 
     return PJ_FALSE;
@@ -145,7 +140,7 @@ static pj_status_t init_sockets(pj_bool_t sip,
     enum { 
 	RTP_START_PORT = 4000,
 	RTP_RANDOM_START = 2,
-	RTP_RETRY = 20 
+	RTP_RETRY = 100
     };
     enum {
 	SIP_SOCK,
@@ -240,37 +235,49 @@ static pj_status_t init_sockets(pj_bool_t sip,
 	    for (i=0; i<3; ++i)
 		pj_memcpy(&mapped_addr[i], &addr, sizeof(addr));
 
-	    if (sip)
-		mapped_addr[SIP_SOCK].sin_port = pj_htons((pj_uint16_t)pjsua.sip_port);
-	    mapped_addr[RTP_SOCK].sin_port = pj_htons((pj_uint16_t)rtp_port);
-	    mapped_addr[RTCP_SOCK].sin_port = pj_htons((pj_uint16_t)(rtp_port+1));
+	    if (sip) {
+		mapped_addr[SIP_SOCK].sin_port = 
+		    pj_htons((pj_uint16_t)pjsua.sip_port);
+	    }
+	    mapped_addr[RTP_SOCK].sin_port=pj_htons((pj_uint16_t)rtp_port);
+	    mapped_addr[RTCP_SOCK].sin_port=pj_htons((pj_uint16_t)(rtp_port+1));
 	    break;
+
 	} else {
-	    status = pj_stun_get_mapped_addr( &pjsua.cp.factory, 3, sock,
-					      &pjsua.stun_srv1, pjsua.stun_port1,
-					      &pjsua.stun_srv2, pjsua.stun_port2,
-					      mapped_addr);
+	    status=pj_stun_get_mapped_addr(&pjsua.cp.factory, 3, sock,
+					   &pjsua.stun_srv1, pjsua.stun_port1,
+					   &pjsua.stun_srv2, pjsua.stun_port2,
+					   mapped_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "STUN error", status);
 		goto on_error;
 	    }
 
-	    if (pj_ntohs(mapped_addr[2].sin_port) == pj_ntohs(mapped_addr[1].sin_port)+1)
+	    if (pj_ntohs(mapped_addr[2].sin_port) == 
+		pj_ntohs(mapped_addr[1].sin_port)+1)
+	    {
 		break;
+	    }
 
-	    pj_sock_close(sock[RTP_SOCK]); sock[RTP_SOCK] = PJ_INVALID_SOCKET;
-	    pj_sock_close(sock[RTCP_SOCK]); sock[RTCP_SOCK] = PJ_INVALID_SOCKET;
+	    pj_sock_close(sock[RTP_SOCK]); 
+	    sock[RTP_SOCK] = PJ_INVALID_SOCKET;
+
+	    pj_sock_close(sock[RTCP_SOCK]); 
+	    sock[RTCP_SOCK] = PJ_INVALID_SOCKET;
 	}
     }
 
     if (sock[RTP_SOCK] == PJ_INVALID_SOCKET) {
-	PJ_LOG(1,(THIS_FILE, "Unable to find appropriate RTP/RTCP ports combination"));
+	PJ_LOG(1,(THIS_FILE, 
+		  "Unable to find appropriate RTP/RTCP ports combination"));
 	goto on_error;
     }
 
     if (sip) {
 	pjsua.sip_sock = sock[SIP_SOCK];
-	pj_memcpy(&pjsua.sip_sock_name, &mapped_addr[SIP_SOCK], sizeof(pj_sockaddr_in));
+	pj_memcpy(&pjsua.sip_sock_name, 
+		  &mapped_addr[SIP_SOCK], 
+		  sizeof(pj_sockaddr_in));
     } else {
 	pj_sock_close(sock[0]);
     }
@@ -391,29 +398,12 @@ static pj_status_t init_stack(void)
 
     /* Initialize invite session module: */
 
-    {
-	
-	/* Initialize invite session callback. */
-	pjsip_inv_callback inv_cb;
-
-	pj_memset(&inv_cb, 0, sizeof(inv_cb));
-	inv_cb.on_state_changed = &pjsua_inv_on_state_changed;
-	inv_cb.on_new_session = &pjsua_inv_on_new_session;
-	inv_cb.on_media_update = &pjsua_inv_on_media_update;
-	inv_cb.on_rx_offer = &pjsua_inv_on_rx_offer;
-	inv_cb.on_tsx_state_changed = &pjsua_inv_on_tsx_state_changed;
-
-
-	/* Initialize invite session module: */
-	status = pjsip_inv_usage_init(pjsua.endpt, &pjsua.mod, &inv_cb);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Invite usage initialization error", 
-			 status);
-	    goto on_error;
-	}
-
+    status = pjsua_call_init();
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Invite usage initialization error", 
+		     status);
+	goto on_error;
     }
-
 
     /* Done */
 
@@ -520,7 +510,8 @@ pj_status_t pjsua_init(void)
 
     /* Init conference bridge. */
 
-    status = pjmedia_conf_create(pjsua.pool, pjsua.max_ports, 
+    status = pjmedia_conf_create(pjsua.pool, 
+				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
 				 8000, 160, 16, &pjsua.mconf);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
@@ -546,6 +537,67 @@ pj_status_t pjsua_init(void)
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Find account for incoming request.
+ */
+int pjsua_find_account_for_incoming(pjsip_rx_data *rdata)
+{
+    pjsip_uri *uri;
+    pjsip_sip_uri *sip_uri;
+    int acc_index;
+
+    uri = rdata->msg_info.to->uri;
+
+    /* Just return account #0 if To URI is not SIP: */
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+    {
+	return 0;
+    }
+
+
+    sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+
+    /* Find account which has matching username and domain. */
+    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+
+	pjsua_acc *acc = &pjsua.acc[acc_index];
+
+	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
+	    pj_stricmp(&acc->host_part, &sip_uri->host)==0) 
+	{
+	    /* Match ! */
+	    return acc_index;
+	}
+    }
+
+    /* No matching, try match domain part only. */
+    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+
+	pjsua_acc *acc = &pjsua.acc[acc_index];
+
+	if (pj_stricmp(&acc->host_part, &sip_uri->host)==0) {
+	    /* Match ! */
+	    return acc_index;
+	}
+    }
+
+    /* Still no match, just return account #0 */
+    return 0;
+}
+
+
+/*
+ * Find account for outgoing request.
+ */
+int pjsua_find_account_for_outgoing(const pj_str_t *url)
+{
+    PJ_UNUSED_ARG(url);
+
+    /* Just use account #0 */
+    return 0;
+}
 
 
 /*
@@ -588,11 +640,18 @@ pj_status_t pjsua_start(void)
 
 
     /* Init sockets (STUN etc): */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua.med_sock_info); ++i) {
-	status = init_sockets(i==0, &pjsua.med_sock_info[i]);
+    for (i=0; i<(int)pjsua.max_calls; ++i) {
+	status = init_sockets(i==0, &pjsua.calls[i].skinfo);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "init_sockets() has returned error", 
 			 status);
+	    --i;
+	    if (i >= 0)
+		pj_sock_close(pjsua.sip_sock);
+	    while (i >= 0) {
+		pj_sock_close(pjsua.calls[i].skinfo.rtp_sock);
+		pj_sock_close(pjsua.calls[i].skinfo.rtcp_sock);
+	    }
 	    return status;
 	}
     }
@@ -623,34 +682,26 @@ pj_status_t pjsua_start(void)
     }
 
     /* Initialize Contact URI, if one is not specified: */
-
-    if (pjsua.contact_uri.slen == 0 && pjsua.local_uri.slen) {
+    for (i=0; i<pjsua.acc_cnt; ++i) {
 
 	pjsip_uri *uri;
 	pjsip_sip_uri *sip_uri;
-	char contact[128];
-	int len;
 
-	/* The local Contact is the username@ip-addr, where
-	 *  - username is taken from the local URI,
-	 *  - ip-addr in UDP transport's address name (which may have been
-	 *    resolved from STUN.
-	 */
-	
 	/* Need to parse local_uri to get the elements: */
 
-	uri = pjsip_parse_uri(pjsua.pool, pjsua.local_uri.ptr, 
-			      pjsua.local_uri.slen, 0);
+	uri = pjsip_parse_uri(pjsua.pool, pjsua.acc[i].local_uri.ptr,
+			      pjsua.acc[i].local_uri.slen, 0);
 	if (uri == NULL) {
 	    pjsua_perror(THIS_FILE, "Invalid local URI", 
 			 PJSIP_EINVALIDURI);
 	    return PJSIP_EINVALIDURI;
 	}
 
-
 	/* Local URI MUST be a SIP or SIPS: */
 
-	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri)) {
+	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+	    !PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+	{
 	    pjsua_perror(THIS_FILE, "Invalid local URI", 
 			 PJSIP_EINVALIDSCHEME);
 	    return PJSIP_EINVALIDSCHEME;
@@ -661,39 +712,54 @@ pj_status_t pjsua_start(void)
 
 	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
 
-	
-	/* Build temporary contact string. */
+	pjsua.acc[i].user_part = sip_uri->user;
+	pjsua.acc[i].host_part = sip_uri->host;
 
-	if (sip_uri->user.slen) {
+	if (pjsua.acc[i].contact_uri.slen == 0 && 
+	    pjsua.acc[i].local_uri.slen) 
+	{
+	    char contact[128];
+	    int len;
 
-	    /* With the user part. */
-	    len = pj_snprintf(contact, sizeof(contact),
-			      "<sip:%.*s@%.*s:%d>",
-			      (int)sip_uri->user.slen,
-			      sip_uri->user.ptr,
-			      (int)udp_transport->local_name.host.slen,
-			      udp_transport->local_name.host.ptr,
-			      udp_transport->local_name.port);
-	} else {
+	    /* The local Contact is the username@ip-addr, where
+	     *  - username is taken from the local URI,
+	     *  - ip-addr in UDP transport's address name (which may have been
+	     *    resolved from STUN.
+	     */
+	    
+	    /* Build temporary contact string. */
 
-	    /* Without user part */
+	    if (sip_uri->user.slen) {
 
-	    len = pj_snprintf(contact, sizeof(contact),
-			      "<sip:%.*s:%d>",
-			      (int)udp_transport->local_name.host.slen,
-			      udp_transport->local_name.host.ptr,
-			      udp_transport->local_name.port);
+		/* With the user part. */
+		len = pj_snprintf(contact, sizeof(contact),
+				  "<sip:%.*s@%.*s:%d>",
+				  (int)sip_uri->user.slen,
+				  sip_uri->user.ptr,
+				  (int)udp_transport->local_name.host.slen,
+				  udp_transport->local_name.host.ptr,
+				  udp_transport->local_name.port);
+	    } else {
+
+		/* Without user part */
+
+		len = pj_snprintf(contact, sizeof(contact),
+				  "<sip:%.*s:%d>",
+				  (int)udp_transport->local_name.host.slen,
+				  udp_transport->local_name.host.ptr,
+				  udp_transport->local_name.port);
+	    }
+
+	    if (len < 1 || len >= sizeof(contact)) {
+		pjsua_perror(THIS_FILE, "Invalid Contact", PJSIP_EURITOOLONG);
+		return PJSIP_EURITOOLONG;
+	    }
+
+	    /* Duplicate Contact uri. */
+
+	    pj_strdup2(pjsua.pool, &pjsua.acc[i].contact_uri, contact);
+
 	}
-
-	if (len < 1 || len >= sizeof(contact)) {
-	    pjsua_perror(THIS_FILE, "Invalid Contact", PJSIP_EURITOOLONG);
-	    return PJSIP_EURITOOLONG;
-	}
-
-	/* Duplicate Contact uri. */
-
-	pj_strdup2(pjsua.pool, &pjsua.contact_uri, contact);
-
     }
 
     /* If outbound_proxy is specified, put it in the route_set: */
@@ -714,7 +780,9 @@ pj_status_t pjsua_start(void)
 	    return PJSIP_EINVALIDURI;
 	}
 
-	pj_list_push_back(&pjsua.route_set, route);
+	for (i=0; i<pjsua.acc_cnt; ++i) {
+	    pj_list_push_front(&pjsua.acc[i].route_set, route);
+	}
     }
 
 
@@ -736,14 +804,22 @@ pj_status_t pjsua_start(void)
     /* Start registration: */
 
     /* Create client registration session: */
+    for (i=0; i<pjsua.acc_cnt; ++i) {
+	status = pjsua_regc_init(i);
+	if (status != PJ_SUCCESS)
+	    return status;
 
-    status = pjsua_regc_init();
-    if (status != PJ_SUCCESS)
-	return status;
+	/* Perform registration, if required. */
+	if (pjsua.acc[i].regc) {
+	    pjsua_regc_update(i, 1);
+	}
+    }
 
-    /* Perform registration, if required. */
-    if (pjsua.regc) {
-	pjsua_regc_update(1);
+
+    /* Find account for outgoing preence subscription */
+    for (i=0; i<pjsua.buddy_cnt; ++i) {
+	pjsua.buddies[i].acc_index = 
+	    pjsua_find_account_for_outgoing(&pjsua.buddies[i].uri);
     }
 
 
@@ -777,6 +853,19 @@ pj_status_t pjsua_destroy(void)
     /* Signal threads to quit: */
     pjsua.quit_flag = 1;
 
+    /* Terminate all calls. */
+    pjsua_inv_shutdown();
+
+    /* Terminate all presence subscriptions. */
+    pjsua_pres_shutdown();
+
+    /* Unregister, if required: */
+    for (i=0; i<pjsua.acc_cnt; ++i) {
+	if (pjsua.acc[i].regc) {
+	    pjsua_regc_update(i, 0);
+	}
+    }
+
     /* Wait worker threads to quit: */
     for (i=0; i<pjsua.thread_cnt; ++i) {
 	
@@ -787,17 +876,6 @@ pj_status_t pjsua_destroy(void)
 	}
     }
 
-
-    /* Terminate all calls. */
-    pjsua_inv_shutdown();
-
-    /* Terminate all presence subscriptions. */
-    pjsua_pres_shutdown();
-
-    /* Unregister, if required: */
-    if (pjsua.regc) {
-	pjsua_regc_update(0);
-    }
 
     /* Wait for some time to allow unregistration to complete: */
     PJ_LOG(4,(THIS_FILE, "Shutting down..."));

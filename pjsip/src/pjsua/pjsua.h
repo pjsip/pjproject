@@ -47,30 +47,62 @@ PJ_BEGIN_DECL
 /**
  * Max buddies in buddy list.
  */
-#define PJSUA_MAX_BUDDIES   32
+#ifndef PJSUA_MAX_BUDDIES
+#   define PJSUA_MAX_BUDDIES	    32
+#endif
+
 
 /**
  * Max simultaneous calls.
  */
-#define PJSUA_MAX_CALLS	    8
+#ifndef PJSUA_MAX_CALLS
+#   define PJSUA_MAX_CALLS	    256
+#endif
+
+
+/**
+ * Aditional ports to be allocated in the conference ports for non-call
+ * streams.
+ */
+#define PJSUA_CONF_MORE_PORTS	    2
+
+
+/**
+ * Maximum accounts.
+ */
+#ifndef PJSUA_MAX_ACC
+#   define PJSUA_MAX_ACC	    8
+#endif
+
+
+/**
+ * Maximum credentials.
+ */
+#ifndef PJSUA_MAX_CRED
+#   define PJSUA_MAX_CRED	    PJSUA_MAX_ACC
+#endif
 
 
 /** 
- * Structure to be attached to all dialog. 
+ * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
  */
-struct pjsua_inv_data
+struct pjsua_call
 {
-    PJ_DECL_LIST_MEMBER(struct pjsua_inv_data);
-
+    unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
+    int			 acc_index; /**< Account index being used.	    */
     pjmedia_session	*session;   /**< The media session.		    */
     unsigned		 conf_slot; /**< Slot # in conference bridge.	    */
-    unsigned		 call_slot; /**< RTP media index in med_sock_use[]  */
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
+    pjmedia_sock_info	 skinfo;    /**< Preallocated media sockets.	    */
+
+    void		*app_data;  /**< Application data.		    */
 };
+
+typedef struct pjsua_call pjsua_call;
 
 
 /**
@@ -79,6 +111,7 @@ struct pjsua_inv_data
 struct pjsua_buddy
 {
     pj_str_t		 uri;	    /**< Buddy URI		        */
+    int			 acc_index; /**< Which account to use.		*/
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
@@ -100,12 +133,41 @@ struct pjsua_srv_pres
 typedef struct pjsua_srv_pres pjsua_srv_pres;
 
 
+/**
+ * Account
+ */
+struct pjsua_acc
+{
+    int		     index;	    /**< Index in accounts array.	*/
+    pj_str_t	     local_uri;	    /**< Uri in From: header.		*/
+    pj_str_t	     user_part;	    /**< User part of local URI.	*/
+    pj_str_t	     host_part;	    /**< Host part of local URI.	*/
+    pj_str_t	     contact_uri;   /**< Uri in Contact: header.	*/
+
+    pj_str_t	     reg_uri;	    /**< Registrar URI.			*/
+    pjsip_regc	    *regc;	    /**< Client registration session.   */
+    pj_int32_t	     reg_timeout;   /**< Default timeout.		*/
+    pj_timer_entry   reg_timer;	    /**< Registration timer.		*/
+    pj_status_t	     reg_last_err;  /**< Last registration error.	*/
+    int		     reg_last_code; /**< Last status last register.	*/
+
+    pj_str_t	     proxy;	    /**< Proxy URL.			*/
+    pjsip_route_hdr  route_set;	    /**< Route set.			*/
+
+    pj_bool_t	     online_status; /**< Our online status.		*/
+    pjsua_srv_pres   pres_srv_list; /**< Server subscription list.	*/
+
+    void	    *app_data;	    /**< Application data.		*/
+};
+
+
+typedef struct pjsua_acc pjsua_acc;
+
 
 /* PJSUA application variables. */
 struct pjsua
 {
     /* Control: */
-
     pj_caching_pool  cp;	    /**< Global pool factory.		*/
     pjsip_endpoint  *endpt;	    /**< Global endpoint.		*/
     pj_pool_t	    *pool;	    /**< pjsua's private pool.		*/
@@ -113,95 +175,66 @@ struct pjsua
     
 
     /* Media:  */
-
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
-    unsigned	     max_ports;	    /**< Max ports in conf.		*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
     char	    *wav_file;	    /**< WAV file name to play.		*/
     unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
+    pj_bool_t	     auto_play;	    /**< Auto play file for calls?	*/
+    pj_bool_t	     auto_loop;	    /**< Auto loop RTP stream?		*/
+    pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/
+
 
     /* User Agent behaviour: */
-
     int		     auto_answer;   /**< Automatically answer in calls.	*/
 
-
-    /* Since we support simultaneous calls, we need to have multiple
-     * RTP sockets.
-     */
-    pjmedia_sock_info med_sock_info[PJSUA_MAX_CALLS];
-    pj_bool_t	      med_sock_use[PJSUA_MAX_CALLS];
-
-    /* User info: */
-
-    pj_str_t	     local_uri;	    /**< Uri in From: header.		*/
-    pj_str_t	     contact_uri;   /**< Uri in Contact: header.	*/
-
-    /* Proxy URLs: */
-
-    pj_str_t	     proxy;
-    pj_str_t	     outbound_proxy;
-    pjsip_route_hdr  route_set;
-
-
-    /* Registration: */
-
-    pj_str_t	     registrar_uri;
-    pjsip_regc	    *regc;
-    pj_int32_t	     reg_timeout;
-    pj_timer_entry   regc_timer;
-    pj_status_t	     regc_last_err; /**< Last registration error.	*/
-    int		     regc_last_code;/**< Last status last register.	*/
+    /* Account: */
+    int		     acc_cnt;	    /**< Number of client registrations	*/
+    pjsua_acc	     acc[PJSUA_MAX_ACC];    /** Client regs array.	*/
 
 
     /* Authentication credentials: */
 
-    unsigned	     cred_count;
-    pjsip_cred_info  cred_info[4];
+    int		     cred_count;    /**< Number of credentials.		*/
+    pjsip_cred_info  cred_info[10]; /**< Array of credentials.		*/
 
 
     /* Threading (optional): */
-
     int		     thread_cnt;    /**< Thread count.			*/
     pj_thread_t	    *threads[8];    /**< Thread instances.		*/
     pj_bool_t	     quit_flag;	    /**< To signal thread to quit.	*/
 
     /* Transport (UDP): */
-
     pj_uint16_t	     sip_port;	    /**< SIP signaling port.		*/
     pj_sock_t	     sip_sock;	    /**< SIP UDP socket.		*/
     pj_sockaddr_in   sip_sock_name; /**< Public/STUN UDP socket addr.	*/
 
+    pj_str_t	     outbound_proxy;/**< Outbound proxy.		*/
 
 
     /* STUN: */
-
     pj_str_t	     stun_srv1;
     int		     stun_port1;
     pj_str_t	     stun_srv2;
     int		     stun_port2;
 
 
-    /* Logging: */
-    
+    /* Logging: */    
     int		     log_level;	    /**< Logging verbosity.		*/
     int		     app_log_level; /**< stdout log verbosity.		*/
     unsigned	     log_decor;	    /**< Log decoration.		*/
     char	    *log_filename;  /**< Log filename.			*/
 
 
-    /* List of invite sessions: */
-
-    struct pjsua_inv_data inv_list;
+    /* PJSUA Calls: */
+    int		     max_calls;	    /**< Max nb of calls.		*/
+    int		     call_cnt;	    /**< Number of calls.		*/
+    pjsua_call	     calls[PJSUA_MAX_CALLS];	/** Calls array.	*/
 
 
     /* SIMPLE and buddy status: */
-
-    pj_bool_t	    online_status;  /**< Out online status.		*/
-    pjsua_srv_pres  pres_srv_list;  /**< Server subscription list.	*/
-
-    unsigned	    buddy_cnt;
-    pjsua_buddy	    buddies[PJSUA_MAX_BUDDIES];
+    int		     buddy_cnt;
+    pjsua_buddy	     buddies[PJSUA_MAX_BUDDIES];
 };
 
 
@@ -255,81 +288,69 @@ pj_status_t pjsua_start(void);
 pj_status_t pjsua_destroy(void);
 
 
-/*****************************************************************************
- * PJSUA Invite session API (defined in pjsua_inv.c).
+/**
+ * Find account for incoming request.
  */
+int pjsua_find_account_for_incoming(pjsip_rx_data *rdata);
+
+
+/**
+ * Find account for outgoing request.
+ */
+int pjsua_find_account_for_outgoing(const pj_str_t *url);
+
+
+/*****************************************************************************
+ * PJSUA Call API (defined in pjsua_call.c).
+ */
+
+/**
+ * Init pjsua call module.
+ */
+pj_status_t pjsua_call_init(void);
 
 /**
  * Make outgoing call.
  */
-pj_status_t pjsua_invite(const char *cstr_dest_uri,
-			 struct pjsua_inv_data **p_inv_data);
+pj_status_t pjsua_make_call(int acc_index,
+			    const char *cstr_dest_uri,
+			    int *p_call_index);
 
 
 /**
  * Handle incoming invite request.
  */
-pj_bool_t pjsua_inv_on_incoming(pjsip_rx_data *rdata);
+pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 
+
+/**
+ * Answer call.
+ */
+void pjsua_call_answer(int call_index, int code);
 
 /**
  * Hangup call.
  */
-void pjsua_inv_hangup(struct pjsua_inv_data *inv_session, int code);
+void pjsua_call_hangup(int call_index, int code);
 
 
 /**
  * Put call on-hold.
  */
-void pjsua_inv_set_hold(struct pjsua_inv_data *inv_session);
+void pjsua_call_set_hold(int call_index);
 
 
 /**
  * Send re-INVITE (to release hold).
  */
-void pjsua_inv_reinvite(struct pjsua_inv_data *inv_session);
+void pjsua_call_reinvite(int call_index);
 
 
 /**
  * Transfer call.
  */
-void pjsua_inv_xfer_call(struct pjsua_inv_data *inv_session,
-			 const char *dest);
+void pjsua_call_xfer(int call_index, const char *dest);
 
-
-/**
- * Callback to be called by session when invite session's state has changed.
- */
-void pjsua_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
-
-
-/**
- * Callback to be called by session when outgoing dialog has forked.
- * This function will create a forked dialog.
- */
-void pjsua_inv_on_new_session(pjsip_inv_session *inv, pjsip_event *e);
-
-
-/**
- * Callback to be called when SDP offer/answer negotiation has just completed
- * in the session. This function will start/update media if negotiation
- * has succeeded.
- */
-void pjsua_inv_on_media_update(pjsip_inv_session *inv, pj_status_t status);
-
-/**
- * Callback called when invite session received new offer.
- */
-void pjsua_inv_on_rx_offer( pjsip_inv_session *inv,
-			    const pjmedia_sdp_session *offer);
-
-/**
- * Callback to receive transaction state inside invite session or dialog
- * (e.g. REFER, MESSAGE).
- */
-void pjsua_inv_on_tsx_state_changed(pjsip_inv_session *inv,
-				    pjsip_transaction *tsx,
-				    pjsip_event *e);
 
 /**
  * Terminate all calls.
@@ -346,13 +367,13 @@ void pjsua_inv_shutdown(void);
  *
  * @param app_callback	Optional callback
  */
-pj_status_t pjsua_regc_init(void);
+pj_status_t pjsua_regc_init(int acc_index);
 
 /**
  * Update registration or perform unregistration. If renew argument is zero,
  * this will start unregistration process.
  */
-void pjsua_regc_update(pj_bool_t renew);
+void pjsua_regc_update(int acc_index, pj_bool_t renew);
 
 
 
@@ -369,7 +390,7 @@ pj_status_t pjsua_pres_init();
 /**
  * Refresh both presence client and server subscriptions.
  */
-void pjsua_pres_refresh(void);
+void pjsua_pres_refresh(int acc_index);
 
 /**
  * Terminate all subscriptions
@@ -392,12 +413,12 @@ void pjsua_pres_dump(void);
 /**
  * Notify UI when invite state has changed.
  */
-void pjsua_ui_inv_on_state_changed(pjsip_inv_session *inv, pjsip_event *e);
+void pjsua_ui_inv_on_state_changed(int call_index, pjsip_event *e);
 
 /**
  * Notify UI when registration status has changed.
  */
-void pjsua_ui_regc_on_state_changed(int code);
+void pjsua_ui_regc_on_state_changed(int acc_index);
 
 
 /*****************************************************************************
@@ -417,6 +438,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[]);
  * Load settings from a file.
  */
 pj_status_t pjsua_load_settings(const char *filename);
+
+/**
+ * Dump settings.
+ */
+int pjsua_dump_settings(char *buf, pj_size_t max);
 
 /**
  * Save settings to a file.
