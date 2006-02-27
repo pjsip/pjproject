@@ -32,6 +32,7 @@ static struct snd_mgr
 struct pj_snd_stream
 {
     pj_pool_t	    *pool;
+    pj_str_t	     name;
     PaStream	    *stream;
     int		     dev_index;
     int		     bytes_per_sample;
@@ -69,6 +70,7 @@ static int PaRecorderCallback(const void *input,
     if (stream->thread_initialized == 0) {
 	status = pj_thread_register("pa_rec", stream->thread_desc, &stream->thread);
 	stream->thread_initialized = 1;
+	PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
 
     if (statusFlags & paInputUnderflow)
@@ -109,6 +111,7 @@ static int PaPlayerCallback( const void *input,
     if (stream->thread_initialized == 0) {
 	status = pj_thread_register("pa_rec", stream->thread_desc, &stream->thread);
 	stream->thread_initialized = 1;
+	PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
     if (statusFlags & paInputUnderflow)
@@ -229,6 +232,7 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_recorder( int index,
 
     stream = pj_pool_calloc(pool, 1, sizeof(*stream));
     stream->pool = pool;
+    stream->name = pj_str("recorder");
     stream->user_data = user_data;
     stream->dev_index = index;
     stream->samples_per_sec = param->samples_per_frame;
@@ -308,6 +312,7 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
 
     stream = pj_pool_calloc(pool, 1, sizeof(*stream));
     stream->pool = pool;
+    stream->name = pj_str("player");
     stream->user_data = user_data;
     stream->samples_per_sec = param->samples_per_frame;
     stream->bytes_per_sample = param->bits_per_sample / 8;
@@ -348,8 +353,15 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
  */
 PJ_DEF(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream)
 {
-    PJ_LOG(5,(THIS_FILE, "Starting stream.."));
-    return Pa_StartStream(stream->stream);
+    pj_status_t status;
+
+    PJ_LOG(5,(THIS_FILE, "Starting %s stream..", stream->name.ptr));
+
+    status = Pa_StartStream(stream->stream);
+
+    PJ_LOG(5,(THIS_FILE, "Done, status=%d", status));
+
+    return status;
 }
 
 /*
@@ -368,6 +380,9 @@ PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
     PJ_LOG(5,(THIS_FILE, "Stopping stream.."));
 
     err = Pa_StopStream(stream->stream);
+
+    PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
+
     return err;
 }
 
