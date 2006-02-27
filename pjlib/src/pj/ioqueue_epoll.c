@@ -471,6 +471,12 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         }
     }
 
+    /* Special case:
+     * When epoll returns > 0 but no descriptors are actually set!
+     */
+    if (count > 0 && !processed && msec > 0) {
+	pj_thread_sleep(msec);
+    }
     return processed;
 }
 
