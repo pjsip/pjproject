@@ -16,9 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "pjsua.h"
-#include "getopt.h"
-#include <stdlib.h>
+#include <pjsua-lib/pjsua.h>
+#include <pjsua-lib/getopt.h>
 
 #define THIS_FILE   "pjsua_opt.c"
 
@@ -189,6 +188,12 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
     *app_argv = argv;
     return 0;
 
+}
+
+static int my_atoi(const char *cs)
+{
+    pj_str_t s;
+    return pj_strtoul(pj_cstr(&s, cs));
 }
 
 
@@ -458,7 +463,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_AUTO_ANSWER:
-	    pjsua.auto_answer = atoi(optarg);
+	    pjsua.auto_answer = my_atoi(optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
 		puts("Error: invalid code in --auto-answer (expecting 100-699");
 		return -1;
@@ -466,7 +471,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_MAX_CALLS:
-	    pjsua.max_calls = atoi(optarg);
+	    pjsua.max_calls = my_atoi(optarg);
 	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
 		puts("Too many calls for max-calls (1-255)");
 		return -1;

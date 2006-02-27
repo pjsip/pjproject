@@ -90,44 +90,12 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjsua\getopt.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjsua\main.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua_call.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua_core.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua_opt.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua_pres.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua_reg.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=..\src\pjsua\getopt.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjsua\pjsua.h
-# End Source File
 # End Group
 # Begin Group "Resource Files"
 

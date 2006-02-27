@@ -25,7 +25,7 @@
  * $Id$
  */
 
-#include "getopt.h"
+#include <pjsua-lib/getopt.h>
 #include <pj/string.h>
 
 /* Internal only.  Users should not call this directly.  */
