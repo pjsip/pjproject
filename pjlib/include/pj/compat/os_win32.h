@@ -28,7 +28,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define PJ_WIN32_WINNT		    0x0400
-#define _WIN32_WINNT		    PJ_WIN32_WINNT
+#ifndef _WIN32_WINNT
+#  define _WIN32_WINNT		    PJ_WIN32_WINNT
+#endif
 
 #define PJ_HAS_ARPA_INET_H	    0
 #define PJ_HAS_ASSERT_H		    1
