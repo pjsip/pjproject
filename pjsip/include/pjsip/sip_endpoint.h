@@ -108,9 +108,11 @@ PJ_DECL(const pj_str_t*) pjsip_endpt_name(const pjsip_endpoint *endpt);
  * @param endpt		The endpoint.
  * @param max_timeout	Maximum time to wait for events, or NULL to wait forever
  *			until event is received.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt, 
-					 const pj_time_val *max_timeout);
+PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt, 
+					        const pj_time_val *max_timeout);
 
 
 /**

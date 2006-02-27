@@ -65,6 +65,9 @@ struct pjsip_endpoint
     /** Ioqueue. */
     pj_ioqueue_t	*ioqueue;
 
+    /** Last ioqueue err */
+    pj_status_t		 ioq_last_err;
+
     /** DNS Resolver. */
     pjsip_resolver_t	*resolver;
 
@@ -589,8 +592,8 @@ PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
 /*
  * Handle events.
  */
-PJ_DEF(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
-					const pj_time_val *max_timeout)
+PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
+					      const pj_time_val *max_timeout)
 {
     /* timeout is 'out' var. This just to make compiler happy. */
     pj_time_val timeout = { 0, 0};
@@ -611,7 +614,12 @@ PJ_DEF(void) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
     }
 
     /* Poll ioqueue. */
-    pj_ioqueue_poll( endpt->ioqueue, &timeout);
+    if (pj_ioqueue_poll( endpt->ioqueue, &timeout) < 0) {
+	pj_thread_sleep(1);
+	return pj_get_netos_error();
+    } else {
+	return PJ_SUCCESS;
+    }
 }
 
 /*
