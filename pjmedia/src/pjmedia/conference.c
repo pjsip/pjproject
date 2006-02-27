@@ -30,7 +30,7 @@
 //#define CONF_DEBUG
 #ifdef CONF_DEBUG
 #   include <stdio.h>
-#   define TRACE_(x)   printf x
+#   define TRACE_(x)   {printf x; fflush(stdout); }
 #else
 #   define TRACE_(x)
 #endif
@@ -266,7 +266,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					 sizeof(conf->uns_buf[0]));
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(pool, "conf", &conf->mutex);
+    status = pj_mutex_create_recursive(pool, "conf", &conf->mutex);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -460,6 +460,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 					       unsigned sink_slot )
 {
     struct conf_port *src_port, *dst_port;
+    pj_bool_t start_sound = PJ_FALSE;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports && 
@@ -480,7 +481,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 	++src_port->listener_cnt;
 
 	if (conf->connect_cnt == 1)
-	    resume_sound(conf);
+	    start_sound = 1;
 
 	PJ_LOG(4,(THIS_FILE,"Port %.*s transmitting to port %.*s",
 		  (int)src_port->name.slen,
@@ -490,6 +491,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     }
 
     pj_mutex_unlock(conf->mutex);
+
+    /* Sound device must be started without mutex, otherwise the
+     * sound thread will deadlock (?)
+     */
+    if (start_sound)
+	resume_sound(conf);
 
     return PJ_SUCCESS;
 }
@@ -680,9 +687,9 @@ static pj_status_t play_cb( /* in */  void *user_data,
     PJ_UNUSED_ARG(timestamp);
     PJ_UNUSED_ARG(size);
 
-    TRACE_(("p"));
-
     pj_mutex_lock(conf->mutex);
+
+    TRACE_(("p"));
 
     /* Zero all port's temporary buffers. */
     for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
@@ -913,12 +920,14 @@ static pj_status_t rec_cb(  /* in */  void *user_data,
     }
 
     /* Skip if this port is muted/disabled. */
-    if (snd_port->rx_setting != PJMEDIA_PORT_ENABLE)
+    if (snd_port->rx_setting != PJMEDIA_PORT_ENABLE) {
 	return PJ_SUCCESS;
+    }
 
     /* Skip if no port is listening to the microphone */
-    if (snd_port->listener_cnt == 0)
+    if (snd_port->listener_cnt == 0) {
 	return PJ_SUCCESS;
+    }
 
 
     /* Determine which rx_buffer to fill in */
