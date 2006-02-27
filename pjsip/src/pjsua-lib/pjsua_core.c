@@ -419,11 +419,19 @@ on_error:
 
 static int PJ_THREAD_FUNC pjsua_poll(void *arg)
 {
+    pj_status_t last_err = 0;
+
     PJ_UNUSED_ARG(arg);
 
     do {
 	pj_time_val timeout = { 0, 10 };
-	pjsip_endpt_handle_events (pjsua.endpt, &timeout);
+	pj_status_t status;
+	
+	status = pjsip_endpt_handle_events (pjsua.endpt, &timeout);
+	if (status != last_err) {
+	    last_err = status;
+	    pjsua_perror(THIS_FILE, "handle_events() returned error", status);
+	}
     } while (!pjsua.quit_flag);
 
     return 0;
@@ -500,19 +508,6 @@ pj_status_t pjsua_init(void)
     /* Init media endpoint: */
 
     status = pjmedia_endpt_create(&pjsua.cp.factory, &pjsua.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror(THIS_FILE, 
-		     "Media stack initialization has returned error", 
-		     status);
-	return status;
-    }
-
-    /* Init conference bridge. */
-
-    status = pjmedia_conf_create(pjsua.pool, 
-				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
-				 8000, 160, 16, &pjsua.mconf);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror(THIS_FILE, 
@@ -609,6 +604,19 @@ pj_status_t pjsua_start(void)
     int i;  /* Must be signed */
     pjsip_transport *udp_transport;
     pj_status_t status = PJ_SUCCESS;
+
+    /* Init conference bridge. */
+
+    status = pjmedia_conf_create(pjsua.pool, 
+				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
+				 8000, 160, 16, &pjsua.mconf);
+    if (status != PJ_SUCCESS) {
+	pj_caching_pool_destroy(&pjsua.cp);
+	pjsua_perror(THIS_FILE, 
+		     "Media stack initialization has returned error", 
+		     status);
+	return status;
+    }
 
     /* Create WAV file player if required: */
 
