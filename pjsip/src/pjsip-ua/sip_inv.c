@@ -1114,7 +1114,7 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *local_sdp)
 {
     pj_status_t status;
-    pjmedia_sdp_session *sdp = NULL;
+    const pjmedia_sdp_session *sdp = NULL;
 
     /* If local_sdp is specified, then we MUST NOT have answered the
      * offer before. 

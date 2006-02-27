@@ -853,7 +853,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	    len = pj_ansi_sprintf( info+info_len,
 				   ", stream #%d: %.*s (%s)", i,
 				   (int)strm_info->fmt.encoding_name.slen,
-				   (int)strm_info->fmt.encoding_name.ptr,
+				   strm_info->fmt.encoding_name.ptr,
 				   dir);
 	    if (len > 0)
 		info_len += len;

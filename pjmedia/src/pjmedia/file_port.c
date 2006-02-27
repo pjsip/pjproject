@@ -43,7 +43,6 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
-static pj_status_t read_buffer(struct file_port *port);
 
 static struct file_port *create_file_port(pj_pool_t *pool)
 {

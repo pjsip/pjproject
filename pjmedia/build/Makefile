@@ -29,9 +29,10 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 PA_DIR:=portaudio
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			codec.o endpoint.o errno.o g711.o jbuf.o rtcp.o \
-			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o stream.o \
-			pasound.o \
+			codec.o conference.o endpoint.o errno.o file_port.o \
+			g711.o jbuf.o pasound.o port.o rtcp.o \
+			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
+			stream.o \
 		      	$(PA_DIR)/pa_allocation.o \
 			$(PA_DIR)/pa_converters.o \
 			$(PA_DIR)/pa_cpuload.o \
@@ -51,10 +52,10 @@ export PJMEDIA_CFLAGS += $(_CFLAGS)
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			gsm.o pjmedia-codec-lib.o \
-			gsm/add.o gsm/code.o gsm/debug.o gsm/decode.o \
+			gsm/add.o gsm/code.o gsm/decode.o \
 			gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
 			gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
-			gsm/gsm_option.o gsm/gsm_print.o gsm/long_term.o \
+			gsm/gsm_option.o gsm/long_term.o \
 			gsm/lpc.o gsm/preprocess.o gsm/rpe.o gsm/short_term.o \
 			gsm/table.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS)

@@ -10,6 +10,7 @@ PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)
 export PJSIP_LIB:=../lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 export PJSIP_UA_LIB:=../lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 export PJSIP_SIMPLE_LIB:=../lib/libpjsip-simple-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+export PJSUA_LIB_LIB=../lib/libpjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 
 
 ###############################################################################
@@ -20,7 +21,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib-util/include $(CC_INC)../../pjmedia/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
+export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_SIMPLE_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
@@ -49,7 +51,7 @@ export PJSIP_CFLAGS += $(_CFLAGS)
 #
 export PJSIP_UA_SRCDIR = ../src/pjsip-ua
 export PJSIP_UA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			sip_inv.o sip_reg.o
+			sip_inv.o sip_reg.o sip_xfer.o
 export PJSIP_UA_CFLAGS += $(_CFLAGS)
 
 
@@ -63,12 +65,21 @@ export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 
 
 ###############################################################################
+# Defines for building PJSUA-LIB library
+#
+export PJSUA_LIB_SRCDIR = ../src/pjsua-lib
+export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			pjsua_reg.o pjsua_call.o pjsua_pres.o pjsua_opt.o \
+			pjsua_core.o
+export PJSUA_LIB_CFLAGS += $(_CFLAGS)
+
+
+###############################################################################
 # Defines for building PJSUA
 #
 export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			main.o pjsua_reg.o pjsua_inv.o pjsua_pres.o pjsua_opt.o \
-			pjsua_core.o
+			main.o 
 export PJSUA_CFLAGS += $(_CFLAGS)
 export PJSUA_LDFLAGS += $(_LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
@@ -80,7 +91,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 # Main entry
 #
 #
-TARGETS := pjsip pjsip-ua pjsip-simple pjsua
+TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsua
 
 all: $(TARGETS)
 
@@ -90,7 +101,7 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend pjsip pjsip-ua pjsua clean realclean distclean
+.PHONY: dep depend pjsip pjsip-ua pjsua-lib pjsua clean realclean distclean
 
 pjsip:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $(PJSIP_LIB)
@@ -101,7 +112,10 @@ pjsip-ua:
 pjsip-simple:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $(PJSIP_SIMPLE_LIB)
 
-pjsua: $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB)
+pjsua-lib:
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
+
+pjsua: $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) $(PJSUA_LIB_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
 .PHONY: ../lib/pjsip.ko
@@ -119,6 +133,11 @@ pjsua: $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB)
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 
+.PHONY: ../lib/pjsua-lib.ko
+../lib/pjsua-lib.ko:
+	echo Making $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+
 .PHONY: ../lib/pjsua.ko
 ../lib/pjsua.ko:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
@@ -127,9 +146,10 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	@if test "$@" == "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi
 
 
