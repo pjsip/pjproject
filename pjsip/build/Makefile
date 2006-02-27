@@ -93,6 +93,8 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsua
 
+.PHONY: $(TARGETS)
+
 all: $(TARGETS)
 
 doc:
@@ -112,10 +114,10 @@ pjsip-ua:
 pjsip-simple:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $(PJSIP_SIMPLE_LIB)
 
-pjsua-lib:
+pjsua-lib: 
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
 
-pjsua: $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) $(PJSUA_LIB_LIB)
+pjsua:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
 .PHONY: ../lib/pjsip.ko
@@ -149,7 +151,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	@if test "$@" == "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi
 
 
