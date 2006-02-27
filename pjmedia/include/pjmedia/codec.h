@@ -25,7 +25,7 @@
  * @brief Codec framework.
  */
 
-#include <pjmedia/types.h>
+#include <pjmedia/port.h>
 #include <pj/list.h>
 
 PJ_BEGIN_DECL
