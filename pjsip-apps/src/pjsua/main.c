@@ -209,13 +209,13 @@ static void keystroke_help(void)
     puts("|  m  Make new call            |  i  Send IM              |  o  Send OPTIONS  |");
     puts("|  M  Make multiple calls      |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  a  Answer call              |  u  Unsubscribe presence | ru  Unregister    |");
-    puts("|  h  Hangup call              |  t  ToGgle Online status |  d  Dump status   |");
-    puts("|  H  Hold call                |                          | dc  Dump config   |");
+    puts("|  h  Hangup call  (ha=all)    |  t  ToGgle Online status |                   |");
+    puts("|  H  Hold call                |                          |                   |");
     puts("|  v  re-inVite (release hold) +--------------------------+-------------------+");
     puts("|  ]  Select next dialog       |     Conference Command   |                   |");
-    puts("|  [  Select previous dialog   | cl  List ports           |                   |");
-    puts("|  x  Xfer call                | cc  Connect port         |                   |");
-    puts("|  #  Send DTMF string         | cd  Disconnect port      |                   |");
+    puts("|  [  Select previous dialog   | cl  List ports           |  d  Dump status   |");
+    puts("|  x  Xfer call                | cc  Connect port         | dd  Dump detailed |");
+    puts("|  #  Send DTMF string         | cd  Disconnect port      | dc  Dump config   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
@@ -404,6 +404,13 @@ static void ui_console_main(void)
 	    /* Make multiple calls! : */
 	    printf("(You currently have %d calls)\n", pjsua.call_cnt);
 	    
+	    if (!simple_input("Number of calls", menuin, sizeof(menuin)))
+		continue;
+
+	    count = atoi(menuin);
+	    if (count < 1)
+		continue;
+
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
 		if (result.nb_result == -1) {
@@ -414,13 +421,6 @@ static void ui_console_main(void)
 	    } else {
 		uri =  result.uri_result;
 	    }
-
-	    if (!simple_input("Number of calls", menuin, sizeof(menuin)))
-		continue;
-
-	    count = atoi(menuin);
-	    if (count < 1)
-		continue;
 
 	    for (i=0; i<atoi(menuin); ++i) {
 		pj_status_t status;
@@ -484,7 +484,14 @@ static void ui_console_main(void)
 		fflush(stdout);
 		continue;
 
+	    } else if (menuin[1] == 'a') {
+		
+		/* Hangup all calls */
+		pjsua_call_hangup_all();
+
 	    } else {
+
+		/* Hangup current calls */
 		pjsua_call_hangup(current_call, PJSIP_SC_DECLINE);
 	    }
 	    break;
@@ -725,7 +732,7 @@ static void ui_console_main(void)
 			      "Dumping configuration (%d bytes):\n%s\n",
 			      len, settings));
 	    } else {
-		pjsua_dump();
+		pjsua_dump(menuin[1]=='d');
 	    }
 	    break;
 
