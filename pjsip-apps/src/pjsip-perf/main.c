@@ -20,7 +20,7 @@
 #include <pjsua-lib/getopt.h>
 #include <stdlib.h>		/* atoi */
 
-#define THIS_FILE   "main.c"
+//#define THIS_FILE   "main.c"
 
 pjsip_perf_settings settings;
 
@@ -39,7 +39,7 @@ static void init_settings(void)
 {
     pj_status_t status;
 
-    settings.stateless = 1;
+    settings.stateless = 0;
     settings.start_rate = 10;
     settings.max_capacity = 64;
     settings.duration = 0;
@@ -537,16 +537,32 @@ static void completion_cb(void *token, pj_bool_t success)
 	/* Spawn time */
 	PJ_TIME_VAL_SUB(batch->spawned_time, batch->start_time);
 
-	PJ_LOG(3,(THIS_FILE, "%02d:%02d:%02d: %d tasks in %d.%ds (%d tasks/sec), "
-			     "spawn=time=%d.%d",
-			     (sess_elapsed.sec / 3600),
-			     (sess_elapsed.sec % 3600) / 60,
-			     (sess_elapsed.sec % 60),
-			     batch->rate,
-			     elapsed.sec, elapsed.msec,
-			     batch->rate * 1000 / msec,
-			     batch->spawned_time.sec,
-			     batch->spawned_time.msec));
+	if (batch->failed) {
+	    PJ_LOG(2,(THIS_FILE, 
+		      "%02d:%02d:%02d: %d tasks in %d.%ds (%d tasks/sec), "
+		      "spawn=time=%d.%d, FAILED=%d",
+		      (sess_elapsed.sec / 3600),
+		      (sess_elapsed.sec % 3600) / 60,
+		      (sess_elapsed.sec % 60),
+		      batch->rate,
+		      elapsed.sec, elapsed.msec,
+		      batch->rate * 1000 / msec,
+		      batch->spawned_time.sec,
+		      batch->spawned_time.msec,
+		      batch->failed));
+	} else {
+	    PJ_LOG(3,(THIS_FILE, 
+		      "%02d:%02d:%02d: %d tasks in %d.%ds (%d tasks/sec), "
+		      "spawn=time=%d.%d",
+		      (sess_elapsed.sec / 3600),
+		      (sess_elapsed.sec % 3600) / 60,
+		      (sess_elapsed.sec % 60),
+		      batch->rate,
+		      elapsed.sec, elapsed.msec,
+		      batch->rate * 1000 / msec,
+		      batch->spawned_time.sec,
+		      batch->spawned_time.msec));
+	}
 
 	if (!settings.session->stopping) {
 	    pj_time_val interval;
@@ -623,10 +639,12 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
     pj_gettimeofday(&batch->spawned_time);
 
     /// 
+#if 0
     elapsed = batch->spawned_time;
     PJ_TIME_VAL_SUB(elapsed, batch->start_time);
     PJ_LOG(2,(THIS_FILE, "%d requests sent in %d ms", batch->started,
 			 PJ_TIME_VAL_MSEC(elapsed)));
+#endif
 
     sess->total_created += batch->started;
     
