@@ -283,7 +283,7 @@ PJ_DECL(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata );
 /*
  * Dump transaction layer.
  */
-PJ_DECL(void) pjsip_tsx_layer_dump(void);
+PJ_DECL(void) pjsip_tsx_layer_dump(pj_bool_t detail);
 
 /*
  * Get the string name for the state.

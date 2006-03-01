@@ -761,7 +761,7 @@ PJ_DEF(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata )
 /*
  * Dump transaction layer.
  */
-PJ_DEF(void) pjsip_tsx_layer_dump(void)
+PJ_DEF(void) pjsip_tsx_layer_dump(pj_bool_t detail)
 {
 #if PJ_LOG_MAX_LEVEL >= 3
     pj_hash_iterator_t itbuf, *it;
@@ -770,21 +770,27 @@ PJ_DEF(void) pjsip_tsx_layer_dump(void)
     pj_mutex_lock(mod_tsx_layer.mutex);
 
     PJ_LOG(3, (THIS_FILE, "Dumping transaction table:"));
+    PJ_LOG(3, (THIS_FILE, " Total %d transactions", 
+			  pj_hash_count(mod_tsx_layer.htable)));
 
-    it = pj_hash_first(mod_tsx_layer.htable, &itbuf);
-    if (it == NULL) {
-	PJ_LOG(3, (THIS_FILE, " - none - "));
-    } else {
-	while (it != NULL) {
-	    pjsip_transaction *tsx = pj_hash_this( mod_tsx_layer.htable, it);
+    if (detail) {
+	it = pj_hash_first(mod_tsx_layer.htable, &itbuf);
+	if (it == NULL) {
+	    PJ_LOG(3, (THIS_FILE, " - none - "));
+	} else {
+	    while (it != NULL) {
+		pjsip_transaction *tsx = pj_hash_this(mod_tsx_layer.htable,it);
 
-	    PJ_LOG(3, (THIS_FILE, " %s %s|%d|%s",
-		       tsx->obj_name,
-		       (tsx->last_tx? pjsip_tx_data_get_info(tsx->last_tx): "none"),
-		       tsx->status_code,
-		       pjsip_tsx_state_str(tsx->state)));
+		PJ_LOG(3, (THIS_FILE, " %s %s|%d|%s",
+			   tsx->obj_name,
+			   (tsx->last_tx? 
+				pjsip_tx_data_get_info(tsx->last_tx): 
+				"none"),
+			   tsx->status_code,
+			   pjsip_tsx_state_str(tsx->state)));
 
-	    it = pj_hash_next(mod_tsx_layer.htable, it);
+		it = pj_hash_next(mod_tsx_layer.htable, it);
+	    }
 	}
     }
 

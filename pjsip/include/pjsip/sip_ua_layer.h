@@ -74,8 +74,10 @@ PJ_DECL(pj_status_t) pjsip_ua_destroy(void);
 
 /**
  * Dump user agent contents (e.g. all dialogs).
+ *
+ * @param detail	If non-zero, list of dialogs will be printed.
  */
-PJ_DEF(void) pjsip_ua_dump(void);
+PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail);
 
 /**
  * Get the endpoint instance of a user agent module.

@@ -606,6 +606,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
     timeout.sec = timeout.msec = 0;
     pj_timer_heap_poll( endpt->timer_heap, &timeout );
 
+    /* timer_heap_poll should never ever returns negative value, or otherwise
+     * ioqueue_poll() will block forever!
+     */
+    pj_assert(timeout.sec >= 0 && timeout.msec >= 0);
+
     /* If caller specifies maximum time to wait, then compare the value with
      * the timeout to wait from timer, and use the minimum value.
      */

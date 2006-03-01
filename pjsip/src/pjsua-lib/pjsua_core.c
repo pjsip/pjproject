@@ -58,6 +58,10 @@ void pjsua_default(void)
     pjsua.sip_port = 5060;
 
 
+    /* Default we start RTP at port 4000 */
+    pjsua.start_rtp_port = 4000;
+
+
     /* Default logging settings: */
     pjsua.log_level = 5;
     pjsua.app_log_level = 4;
@@ -138,8 +142,6 @@ static pj_status_t init_sockets(pj_bool_t sip,
 				pjmedia_sock_info *skinfo)
 {
     enum { 
-	RTP_START_PORT = 4000,
-	RTP_RANDOM_START = 2,
 	RTP_RETRY = 100
     };
     enum {
@@ -148,10 +150,13 @@ static pj_status_t init_sockets(pj_bool_t sip,
 	RTCP_SOCK,
     };
     int i;
-    static pj_uint16_t rtp_port = RTP_START_PORT;
+    static pj_uint16_t rtp_port;
     pj_sock_t sock[3];
     pj_sockaddr_in mapped_addr[3];
     pj_status_t status = PJ_SUCCESS;
+
+    if (rtp_port == 0)
+	rtp_port = (pj_uint16_t)pjsua.start_rtp_port;
 
     for (i=0; i<3; ++i)
 	sock[i] = PJ_INVALID_SOCKET;

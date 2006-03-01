@@ -777,7 +777,7 @@ static void print_dialog( const char *title,
 /*
  * Dump user agent contents (e.g. all dialogs).
  */
-PJ_DEF(void) pjsip_ua_dump(void)
+PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail)
 {
 #if PJ_LOG_MAX_LEVEL >= 3
     pj_hash_iterator_t itbuf, *it;
@@ -785,33 +785,36 @@ PJ_DEF(void) pjsip_ua_dump(void)
 
     pj_mutex_lock(mod_ua.mutex);
 
-    PJ_LOG(3, (THIS_FILE, "Number of dialog sets: %u", pj_hash_count(mod_ua.dlg_table)));
-    PJ_LOG(3, (THIS_FILE, "Dumping dialog sets:"));
+    PJ_LOG(3, (THIS_FILE, "Number of dialog sets: %u", 
+			  pj_hash_count(mod_ua.dlg_table)));
 
-    it = pj_hash_first(mod_ua.dlg_table, &itbuf);
-    for (; it != NULL; it = pj_hash_next(mod_ua.dlg_table, it))  {
-	struct dlg_set *dlg_set;
-	pjsip_dialog *dlg;
-	const char *title;
+    if (detail && pj_hash_count(mod_ua.dlg_table)) {
+	PJ_LOG(3, (THIS_FILE, "Dumping dialog sets:"));
+	it = pj_hash_first(mod_ua.dlg_table, &itbuf);
+	for (; it != NULL; it = pj_hash_next(mod_ua.dlg_table, it))  {
+	    struct dlg_set *dlg_set;
+	    pjsip_dialog *dlg;
+	    const char *title;
 
-	dlg_set = pj_hash_this(mod_ua.dlg_table, it);
-	if (!dlg_set || pj_list_empty(&dlg_set->dlg_list)) continue;
+	    dlg_set = pj_hash_this(mod_ua.dlg_table, it);
+	    if (!dlg_set || pj_list_empty(&dlg_set->dlg_list)) continue;
 
-	/* First dialog in dialog set. */
-	dlg = dlg_set->dlg_list.next;
-	if (dlg->role == PJSIP_ROLE_UAC)
-	    title = "  [out] ";
-	else
-	    title = "  [in]  ";
+	    /* First dialog in dialog set. */
+	    dlg = dlg_set->dlg_list.next;
+	    if (dlg->role == PJSIP_ROLE_UAC)
+		title = "  [out] ";
+	    else
+		title = "  [in]  ";
 
-	print_dialog(title, dlg, dlginfo, sizeof(dlginfo));
-	PJ_LOG(3,(THIS_FILE, "%s", dlginfo));
+	    print_dialog(title, dlg, dlginfo, sizeof(dlginfo));
+	    PJ_LOG(3,(THIS_FILE, "%s", dlginfo));
 
-	/* Next dialog in dialog set (forked) */
-	dlg = dlg->next;
-	while (dlg != (pjsip_dialog*) &dlg_set->dlg_list) {
-	    print_dialog("    [forked] ", dlg, dlginfo, sizeof(dlginfo));
+	    /* Next dialog in dialog set (forked) */
 	    dlg = dlg->next;
+	    while (dlg != (pjsip_dialog*) &dlg_set->dlg_list) {
+		print_dialog("    [forked] ", dlg, dlginfo, sizeof(dlginfo));
+		dlg = dlg->next;
+	    }
 	}
     }
 

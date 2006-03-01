@@ -82,6 +82,7 @@ static void usage(void)
     puts("  --auto-play         Automatically play the file (to incoming calls only)");
     puts("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts("  --auto-conf         Automatically put incoming calls to conference");
+    puts("  --rtp-port=N	Base port to try for RTP");
     puts("");
     puts("Buddy List (can be more than one):");
     puts("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -211,7 +212,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF,
-	   OPT_PLAY_FILE,
+	   OPT_PLAY_FILE, OPT_RTP_PORT,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
     };
     struct option long_options[] = {
@@ -243,6 +244,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "auto-loop",  0, 0, OPT_AUTO_LOOP},
 	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
 	{ "play-file",  1, 0, OPT_PLAY_FILE},
+	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -462,10 +464,19 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.wav_file = optarg;
 	    break;
 
+	case OPT_RTP_PORT:
+	    pjsua.start_rtp_port = my_atoi(optarg);
+	    if (pjsua.start_rtp_port < 1 || pjsua.start_rtp_port > 65535) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: rtp-port argument value (expecting 1-65535"));
+		return -1;
+	    }
+
 	case OPT_AUTO_ANSWER:
 	    pjsua.auto_answer = my_atoi(optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
-		puts("Error: invalid code in --auto-answer (expecting 100-699");
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid code in --auto-answer (expecting 100-699"));
 		return -1;
 	    }
 	    break;
@@ -473,7 +484,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_MAX_CALLS:
 	    pjsua.max_calls = my_atoi(optarg);
 	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
-		puts("Too many calls for max-calls (1-255)");
+		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
 		return -1;
 	    }
 	    break;
@@ -577,8 +588,8 @@ void pjsua_dump(void)
 
     pjsip_endpt_dump(pjsua.endpt, 1);
     pjmedia_endpt_dump(pjsua.med_endpt);
-    pjsip_tsx_layer_dump();
-    pjsip_ua_dump();
+    pjsip_tsx_layer_dump(1);
+    pjsip_ua_dump(1);
 
 
     /* Dump all invite sessions: */

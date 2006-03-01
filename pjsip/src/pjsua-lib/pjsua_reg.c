@@ -86,8 +86,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
  */
 void pjsua_regc_update(int acc_index, pj_bool_t renew)
 {
-    pj_status_t status;
-    pjsip_tx_data *tdata;
+    pj_status_t status = 0;
+    pjsip_tx_data *tdata = 0;
 
     if (renew) {
 	if (pjsua.acc[acc_index].regc == NULL) {
@@ -98,7 +98,12 @@ void pjsua_regc_update(int acc_index, pj_bool_t renew)
 		return;
 	    }
 	}
-	status = pjsip_regc_register(pjsua.acc[acc_index].regc, 1, &tdata);
+	if (!pjsua.acc[acc_index].regc)
+	    return;
+
+	status = pjsip_regc_register(pjsua.acc[acc_index].regc, 1, 
+				     &tdata);
+
     } else {
 	if (pjsua.acc[acc_index].regc == NULL) {
 	    PJ_LOG(3,(THIS_FILE, "Currently not registered"));
@@ -126,41 +131,44 @@ pj_status_t pjsua_regc_init(int acc_index)
 {
     pj_status_t status;
 
-    /* initialize SIP registration if registrar is configured */
-    if (pjsua.acc[acc_index].reg_uri.slen) {
-
-	status = pjsip_regc_create( pjsua.endpt, 
-				    &pjsua.acc[acc_index], 
-				    &regc_cb, 
-				    &pjsua.acc[acc_index].regc);
-
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create client registration", 
-			 status);
-	    return status;
-	}
-
-
-	status = pjsip_regc_init( pjsua.acc[acc_index].regc, 
-				  &pjsua.acc[acc_index].reg_uri, 
-				  &pjsua.acc[acc_index].local_uri, 
-				  &pjsua.acc[acc_index].local_uri,
-				  1, &pjsua.acc[acc_index].contact_uri, 
-				  pjsua.acc[acc_index].reg_timeout);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, 
-			 "Client registration initialization error", 
-			 status);
-	    return status;
-	}
-
-	pjsip_regc_set_credentials( pjsua.acc[acc_index].regc, 
-				    pjsua.cred_count, 
-				    pjsua.cred_info );
-
-	pjsip_regc_set_route_set( pjsua.acc[acc_index].regc, 
-				  &pjsua.acc[acc_index].route_set );
+    if (pjsua.acc[acc_index].reg_uri.slen == 0) {
+	PJ_LOG(3,(THIS_FILE, "Registrar URI is not specified"));
+	return PJ_SUCCESS;
     }
+
+    /* initialize SIP registration if registrar is configured */
+
+    status = pjsip_regc_create( pjsua.endpt, 
+				&pjsua.acc[acc_index], 
+				&regc_cb, 
+				&pjsua.acc[acc_index].regc);
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create client registration", 
+		     status);
+	return status;
+    }
+
+
+    status = pjsip_regc_init( pjsua.acc[acc_index].regc, 
+			      &pjsua.acc[acc_index].reg_uri, 
+			      &pjsua.acc[acc_index].local_uri, 
+			      &pjsua.acc[acc_index].local_uri,
+			      1, &pjsua.acc[acc_index].contact_uri, 
+			      pjsua.acc[acc_index].reg_timeout);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, 
+		     "Client registration initialization error", 
+		     status);
+	return status;
+    }
+
+    pjsip_regc_set_credentials( pjsua.acc[acc_index].regc, 
+				pjsua.cred_count, 
+				pjsua.cred_info );
+
+    pjsip_regc_set_route_set( pjsua.acc[acc_index].regc, 
+			      &pjsua.acc[acc_index].route_set );
 
     return PJ_SUCCESS;
 }

@@ -74,24 +74,12 @@ export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSUA_LIB_CFLAGS += $(_CFLAGS)
 
 
-###############################################################################
-# Defines for building PJSUA
-#
-export PJSUA_SRCDIR = ../src/pjsua
-export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			main.o 
-export PJSUA_CFLAGS += $(_CFLAGS)
-export PJSUA_LDFLAGS += $(_LDFLAGS)
-export PJSUA_EXE:=../bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
-
-
-
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
 #
 #
-TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsua
+TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib
 
 .PHONY: $(TARGETS)
 
@@ -103,7 +91,7 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend pjsip pjsip-ua pjsua-lib pjsua clean realclean distclean
+.PHONY: dep depend pjsip pjsip-ua pjsua-lib clean realclean distclean
 
 pjsip:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $(PJSIP_LIB)
@@ -116,9 +104,6 @@ pjsip-simple:
 
 pjsua-lib: 
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
-
-pjsua:
-	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
 .PHONY: ../lib/pjsip.ko
 ../lib/pjsip.ko:
@@ -140,19 +125,11 @@ pjsua:
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
-.PHONY: ../lib/pjsua.ko
-../lib/pjsua.ko:
-	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
-
 clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
-	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
-	@if test "$@" == "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
-	fi
 
 
 
