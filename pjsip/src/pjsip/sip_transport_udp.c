@@ -41,6 +41,34 @@ struct udp_transport
 
 
 /*
+ * Initialize transport's receive buffer from the specified pool.
+ */
+static void init_rdata(struct udp_transport *tp, unsigned rdata_index,
+		       pj_pool_t *pool, pjsip_rx_data **p_rdata)
+{
+    pjsip_rx_data *rdata;
+
+    /* Reset pool. */
+    pj_pool_reset(pool);
+
+    rdata = pj_pool_zalloc(pool, sizeof(pjsip_rx_data));
+
+    /* Init tp_info part. */
+    rdata->tp_info.pool = pool;
+    rdata->tp_info.transport = &tp->base;
+    rdata->tp_info.tp_data = (void*) rdata_index;
+    rdata->tp_info.op_key.rdata = rdata;
+    pj_ioqueue_op_key_init(&rdata->tp_info.op_key.op_key, 
+			   sizeof(pj_ioqueue_op_key_t));
+
+    tp->rdata[rdata_index] = rdata;
+
+    if (p_rdata)
+	*p_rdata = rdata;
+}
+
+
+/*
  * udp_on_read_complete()
  *
  * This is callback notification from ioqueue that a pending recvfrom()
@@ -115,6 +143,13 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	} else {
 	    flags = 0;
 	}
+
+	/* Reset pool. */
+	pj_pool_reset(rdata->tp_info.pool);
+	init_rdata((struct udp_transport*)rdata->tp_info.transport,
+		   (unsigned)rdata->tp_info.tp_data,
+		   rdata->tp_info.pool,
+		   &rdata);
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet);
@@ -412,15 +447,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 	    return PJ_ENOMEM;
 	}
 
-	tp->rdata[i] = pj_pool_zalloc(rdata_pool, sizeof(pjsip_rx_data));
-
-	/* Init tp_info part. */
-	tp->rdata[i]->tp_info.pool = rdata_pool;
-	tp->rdata[i]->tp_info.transport = &tp->base;
-	tp->rdata[i]->tp_info.op_key.rdata = tp->rdata[i];
-	pj_ioqueue_op_key_init(&tp->rdata[i]->tp_info.op_key.op_key, 
-			       sizeof(pj_ioqueue_op_key_t));
-
+	init_rdata(tp, i, rdata_pool, NULL);
 	tp->rdata_cnt++;
     }
 

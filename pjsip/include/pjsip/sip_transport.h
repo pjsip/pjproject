@@ -164,6 +164,9 @@ struct pjsip_rx_data
 	/** The transport object which received this packet. */
 	pjsip_transport		*transport;
 
+	/** Other transport specific data to be attached to this buffer. */
+	void			*tp_data;
+
 	/** Ioqueue key. */
 	pjsip_rx_data_op_key	 op_key;
 
