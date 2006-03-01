@@ -356,7 +356,7 @@ void pjsua_call_xfer(int call_index, const char *dest);
 /**
  * Terminate all calls.
  */
-void pjsua_inv_shutdown(void);
+void pjsua_call_hangup_all(void);
 
 
 /*****************************************************************************
@@ -401,7 +401,7 @@ void pjsua_pres_shutdown(void);
 /**
  * Dump presence subscriptions.
  */
-void pjsua_pres_dump(void);
+void pjsua_pres_dump(pj_bool_t detail);
 
 
 /*****************************************************************************
@@ -460,7 +460,7 @@ pj_status_t pjsua_verify_sip_url(const char *c_url);
 /*
  * Dump application states.
  */
-void pjsua_dump(void);
+void pjsua_dump(pj_bool_t detail);
 
 
 PJ_END_DECL

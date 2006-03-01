@@ -867,7 +867,7 @@ pj_status_t pjsua_destroy(void)
     pjsua.quit_flag = 1;
 
     /* Terminate all calls. */
-    pjsua_inv_shutdown();
+    pjsua_call_hangup_all();
 
     /* Terminate all presence subscriptions. */
     pjsua_pres_shutdown();

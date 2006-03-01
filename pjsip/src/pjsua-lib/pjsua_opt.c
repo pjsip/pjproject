@@ -576,7 +576,7 @@ static void dump_media_session(pjmedia_session *session)
 /*
  * Dump application states.
  */
-void pjsua_dump(void)
+void pjsua_dump(pj_bool_t detail)
 {
     char buf[128];
     unsigned old_decor;
@@ -586,37 +586,39 @@ void pjsua_dump(void)
     old_decor = pj_log_get_decor();
     pj_log_set_decor(old_decor & (PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
 
-    pjsip_endpt_dump(pjsua.endpt, 1);
+    pjsip_endpt_dump(pjsua.endpt, detail);
     pjmedia_endpt_dump(pjsua.med_endpt);
-    pjsip_tsx_layer_dump(1);
-    pjsip_ua_dump(1);
+    pjsip_tsx_layer_dump(detail);
+    pjsip_ua_dump(detail);
 
 
     /* Dump all invite sessions: */
-    PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
+    if (detail) {
+	PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
 
-    if (pjsua.call_cnt == 0) {
+	if (pjsua.call_cnt == 0) {
 
-	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
+	    PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
 
-    } else {
-	int i;
+	} else {
+	    int i;
 
-	for (i=0; i<pjsua.max_calls; ++i) {
+	    for (i=0; i<pjsua.max_calls; ++i) {
 
-	    if (pjsua.calls[i].inv == NULL)
-		continue;
+		if (pjsua.calls[i].inv == NULL)
+		    continue;
 
-	    print_call("  ", i, buf, sizeof(buf));
-	    PJ_LOG(3,(THIS_FILE, "%s", buf));
+		print_call("  ", i, buf, sizeof(buf));
+		PJ_LOG(3,(THIS_FILE, "%s", buf));
 
-	    if (pjsua.calls[i].session)
-		dump_media_session(pjsua.calls[i].session);
+		if (pjsua.calls[i].session)
+		    dump_media_session(pjsua.calls[i].session);
+	    }
 	}
     }
 
     /* Dump presence status */
-    pjsua_pres_dump();
+    pjsua_pres_dump(detail);
 
     pj_log_set_decor(old_decor);
     PJ_LOG(3,(THIS_FILE, "Dump complete"));

@@ -1048,7 +1048,7 @@ void pjsua_call_xfer(int call_index, const char *dest)
 /*
  * Terminate all calls.
  */
-void pjsua_inv_shutdown()
+void pjsua_call_hangup_all()
 {
     int i;
 

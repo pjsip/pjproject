@@ -454,12 +454,55 @@ void pjsua_pres_shutdown(void)
 /*
  * Dump presence status.
  */
-void pjsua_pres_dump(void)
+void pjsua_pres_dump(pj_bool_t detail)
 {
     int acc_index;
     int i;
 
+
+    /*
+     * When no detail is required, just dump number of server and client
+     * subscriptions.
+     */
+    if (detail == PJ_FALSE) {
+	
+	int count = 0;
+
+	for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+
+	    if (!pj_list_empty(&pjsua.acc[acc_index].pres_srv_list)) {
+		struct pjsua_srv_pres *uapres;
+
+		uapres = pjsua.acc[acc_index].pres_srv_list.next;
+		while (uapres != &pjsua.acc[acc_index].pres_srv_list) {
+		    ++count;
+		    uapres = uapres->next;
+		}
+	    }
+	}
+
+	PJ_LOG(3,(THIS_FILE, "Number of server/UAS subscriptions: %d", 
+		  count));
+
+	count = 0;
+
+	for (i=0; i<pjsua.buddy_cnt; ++i) {
+	    if (pjsua.buddies[i].sub) {
+		++count;
+	    }
+	}
+
+	PJ_LOG(3,(THIS_FILE, "Number of client/UAC subscriptions: %d", 
+		  count));
+	return;
+    }
+    
+
+    /*
+     * Dumping all server (UAS) subscriptions
+     */
     PJ_LOG(3,(THIS_FILE, "Dumping pjsua server subscriptions:"));
+
     for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
 
 	PJ_LOG(3,(THIS_FILE, "  %.*s",
@@ -467,7 +510,9 @@ void pjsua_pres_dump(void)
 		  pjsua.acc[acc_index].local_uri.ptr));
 
 	if (pj_list_empty(&pjsua.acc[acc_index].pres_srv_list)) {
+
 	    PJ_LOG(3,(THIS_FILE, "  - none - "));
+
 	} else {
 	    struct pjsua_srv_pres *uapres;
 
@@ -483,9 +528,15 @@ void pjsua_pres_dump(void)
 	}
     }
 
+    /*
+     * Dumping all client (UAC) subscriptions
+     */
     PJ_LOG(3,(THIS_FILE, "Dumping pjsua client subscriptions:"));
+
     if (pjsua.buddy_cnt == 0) {
+
 	PJ_LOG(3,(THIS_FILE, "  - no buddy list - "));
+
     } else {
 	for (i=0; i<pjsua.buddy_cnt; ++i) {
 
