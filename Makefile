@@ -1,7 +1,7 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 
-DIRS = pjlib pjlib-util pjmedia pjsip
+DIRS = pjlib pjlib-util pjmedia pjsip pjsip-apps
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
@@ -21,9 +21,12 @@ all clean dep depend distclean doc print realclean:
 LIBS = 	pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
 	pjmedia/lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjmedia/lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
        	pjsip/lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjsip/lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a
-BINS = 	pjsip/bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE) 
+	pjsip/lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjsip/lib/libpjsip-simple-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
+	pjsip/lib/libpjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a
+BINS = 	pjsip-apps/bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '
