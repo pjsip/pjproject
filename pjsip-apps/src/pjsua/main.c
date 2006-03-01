@@ -846,7 +846,7 @@ static void app_log_writer(int level, const char *buffer, int len)
 }
 
 
-void app_logging_init(void)
+pj_status_t app_logging_init(void)
 {
     /* Redirect log function to ours */
 
@@ -854,8 +854,16 @@ void app_logging_init(void)
 
     /* If output log file is desired, create the file: */
 
-    if (pjsua.log_filename)
+    if (pjsua.log_filename) {
 	log_file = fopen(pjsua.log_filename, "wt");
+	if (log_file == NULL) {
+	    PJ_LOG(1,(THIS_FILE, "Unable to open log file %s", 
+		      pjsua.log_filename));   
+	    return -1;
+	}
+    }
+
+    return PJ_SUCCESS;
 }
 
 
@@ -911,7 +919,8 @@ int main(int argc, char *argv[])
 
 
     /* Init logging: */
-    app_logging_init();
+    if (app_logging_init() != PJ_SUCCESS)
+	return 1;
 
 
     /* Register message logger to print incoming and outgoing
