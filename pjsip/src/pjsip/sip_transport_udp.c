@@ -19,13 +19,29 @@
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
+#include <pj/addr_resolv.h>
+#include <pj/assert.h>
+#include <pj/lock.h>
+#include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
-#include <pj/addr_resolv.h>
-#include <pj/os.h>
-#include <pj/lock.h>
 #include <pj/string.h>
-#include <pj/assert.h>
+
+
+#define THIS_FILE   "sip_transport_udp.c"
+
+/**
+ * These are the values for socket send and receive buffer sizes,
+ * respectively. They will be applied to UDP socket with setsockopt().
+ */
+#ifndef PJSIP_UDP_SO_SNDBUF_SIZE
+#   define PJSIP_UDP_SO_SNDBUF_SIZE	(4*1024*1024)
+#endif
+
+#ifndef PJSIP_UDP_SO_RCVBUF_SIZE
+#   define PJSIP_UDP_SO_RCVBUF_SIZE	(4*1024*1024)
+#endif
 
 
 /* Struct udp_transport "inherits" struct pjsip_transport */
@@ -329,11 +345,35 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     struct udp_transport *tp;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback ioqueue_cb;
+    long sobuf_size;
     unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(endpt && sock!=PJ_INVALID_SOCKET && a_name && async_cnt>0,
 		     PJ_EINVAL);
+
+
+    /* Adjust socket rcvbuf size */
+    sobuf_size = PJSIP_UDP_SO_RCVBUF_SIZE;
+    status = pj_sock_setsockopt(sock, PJ_SOL_SOCKET, PJ_SO_RCVBUF,
+				&sobuf_size, sizeof(sobuf_size));
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(4,(THIS_FILE, "Error setting SO_RCVBUF: %s [%d]", errmsg,
+		  status));
+    }
+
+    /* Adjust socket sndbuf size */
+    sobuf_size = PJSIP_UDP_SO_SNDBUF_SIZE;
+    status = pj_sock_setsockopt(sock, PJ_SOL_SOCKET, PJ_SO_SNDBUF,
+				&sobuf_size, sizeof(sobuf_size));
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(4,(THIS_FILE, "Error setting SO_SNDBUF: %s [%d]", errmsg,
+		  status));
+    }
 
     /* Create pool. */
     pool = pjsip_endpt_create_pool(endpt, "udp%p", PJSIP_POOL_LEN_TRANSPORT, 
