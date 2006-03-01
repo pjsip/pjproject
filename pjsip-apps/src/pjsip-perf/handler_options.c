@@ -113,6 +113,8 @@ pj_status_t options_spawn_test(const pj_str_t *target,
     struct callback_data *cb_data;
     pjsip_tx_data *tdata;
 
+    PJ_LOG(5,(THIS_FILE,"Sending OPTIONS request.."));
+
     status = pjsip_endpt_create_request( settings.endpt, 
 					 &pjsip_options_method,
 					 target,

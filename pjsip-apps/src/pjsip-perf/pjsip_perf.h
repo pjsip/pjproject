@@ -35,13 +35,15 @@ struct batch
 {
     PJ_DECL_LIST_MEMBER(struct batch);
 
-    unsigned	 rate;
-    unsigned	 started;
-    unsigned	 success;
-    unsigned	 failed;
-    pj_time_val	 start_time;
-    pj_time_val	 spawned_time;
-    pj_time_val	 end_time;
+    unsigned	 rate;		/**< How many tasks to perform		    */
+
+    unsigned	 started;	/**< # of tasks started.		    */
+    unsigned	 success;	/**< # of tasks completed successfully.	    */
+    unsigned	 failed;	/**< # of failed tasks.			    */
+
+    pj_time_val	 start_time;	/**< Start time of the tests.		    */
+    pj_time_val	 spawned_time;	/**< Time when all tasks has been started.  */
+    pj_time_val	 end_time;	/**< Time when all tasks has completed.	    */
 };
 
 /**
@@ -112,6 +114,11 @@ struct pjsip_perf_settings
     pjsip_endpoint  *endpt;
     pj_mutex_t	    *mutex;
 
+    /* Misc: */
+    int		     log_level;
+    int		     app_log_level;
+    char	    *log_file;
+
     /* Network: */
     int		     local_port;
 
@@ -146,6 +153,12 @@ struct pjsip_perf_settings
     /* Test control: */
     session	    *session;
     pj_timer_entry   timer;
+
+    /* Counters: */
+    pj_uint32_t	     tx_req;
+    pj_uint32_t	     tx_res;
+    pj_uint32_t	     rx_req;
+    pj_uint32_t	     rx_res;
 };
 
 

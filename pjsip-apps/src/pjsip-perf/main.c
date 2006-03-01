@@ -45,6 +45,8 @@ static void init_settings(void)
     settings.duration = 0;
     settings.thread_cnt = 1;
     settings.local_port = 5060;
+    settings.log_level = 3;
+    settings.app_log_level = 3;
 
     pjsip_method_set(&settings.method, PJSIP_OPTIONS_METHOD);
 
@@ -88,12 +90,140 @@ static int PJ_THREAD_FUNC poll_pjsip(void *arg)
     return 0;
 }
 
+/*****************************************************************************
+ * This is a simple module to count and log messages 
+ */
+static void on_rx_msg(pjsip_rx_data *rdata)
+{
+    PJ_LOG(5,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
+			 "%s\n"
+			 "--end msg--",
+			 rdata->msg_info.len,
+			 pjsip_rx_data_get_info(rdata),
+			 rdata->pkt_info.src_name,
+			 rdata->pkt_info.src_port,
+			 rdata->msg_info.msg_buf));
+}
+
+static void on_tx_msg(pjsip_tx_data *tdata)
+{
+    PJ_LOG(5,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
+			 "%s\n"
+			 "--end msg--",
+			 (tdata->buf.cur - tdata->buf.start),
+			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.dst_name,
+			 tdata->tp_info.dst_port,
+			 tdata->buf.start));
+}
+
+static pj_bool_t mod_counter_on_rx_request(pjsip_rx_data *rdata)
+{
+    settings.rx_req++;
+    on_rx_msg(rdata);
+    return PJ_FALSE;
+}
+
+static pj_bool_t mod_counter_on_rx_response(pjsip_rx_data *rdata)
+{
+    settings.rx_res++;
+    on_rx_msg(rdata);
+    return PJ_FALSE;
+}
+
+static pj_status_t mod_counter_on_tx_request(pjsip_tx_data *tdata)
+{
+    settings.tx_req++;
+    on_tx_msg(tdata);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t mod_counter_on_tx_response(pjsip_tx_data *tdata)
+{
+    settings.tx_res++;
+    on_tx_msg(tdata);
+    return PJ_SUCCESS;
+}
+
+static pjsip_module mod_counter = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-counter", 11 },		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &mod_counter_on_rx_request,		/* on_rx_request()	*/
+    &mod_counter_on_rx_response,	/* on_rx_response()	*/
+    &mod_counter_on_tx_request,		/* on_tx_request.	*/
+    &mod_counter_on_tx_response,	/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
+
+
+/*****************************************************************************
+ * Console application custom logging:
+ */
+
+
+static FILE *log_file;
+static void app_log_writer(int level, const char *buffer, int len)
+{
+    /* Write to both stdout and file. */
+    if (level <= settings.app_log_level)
+	pj_log_write(level, buffer, len);
+
+    if (log_file) {
+	fwrite(buffer, len, 1, log_file);
+	fflush(log_file);
+    }
+}
+
+
+static pj_status_t app_logging_init(void)
+{
+    /* Redirect log function to ours */
+
+    pj_log_set_log_func( &app_log_writer );
+
+    /* If output log file is desired, create the file: */
+
+    if (settings.log_file) {
+	log_file = fopen(settings.log_file, "wt");
+	if (log_file == NULL) {
+	    PJ_LOG(1,(THIS_FILE, "Unable to open log file %s", 
+		      settings.log_file));   
+	    return -1;
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+void app_logging_shutdown(void)
+{
+    /* Close logging file, if any: */
+    if (log_file) {
+	fclose(log_file);
+	log_file = NULL;
+    }
+}
+
+
 /* Initialize */
 static pj_status_t initialize(void)
 {
     pj_sockaddr_in addr;
     int i;
     pj_status_t status;
+
+    /* Init logging */
+    if (app_logging_init() != PJ_SUCCESS)
+	return -1;
 
     /* Create UDP transport. */
     pj_memset(&addr, 0, sizeof(addr));
@@ -150,6 +280,13 @@ static pj_status_t initialize(void)
     }
 
 
+    /* Register message counter module. */
+    status = pjsip_endpt_register_module(settings.endpt, &mod_counter);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Unable to register module", status);
+	return status;
+    }
+
     /* Start worker thread. */
     for (i=0; i<settings.thread_cnt; ++i) {
 	status = pj_thread_create(settings.pool, "pjsip-perf", &poll_pjsip,
@@ -160,7 +297,7 @@ static pj_status_t initialize(void)
 	}
     }
 
-    pj_log_set_level(3);
+    pj_log_set_level(settings.log_level);
     return PJ_SUCCESS;
 }
 
@@ -221,6 +358,11 @@ static void usage(void)
     puts("  --help              Display this help screen");
     puts("  --version           Display version info");
     puts("");
+    puts("Logging options:");
+    puts("  --log-level=N       Set log verbosity (default=3)");
+    puts("  --app-log-level=N   Set screen log verbosity (default=3)");
+    puts("  --log-file=FILE     Save log to FILE");
+    puts("");
     puts("SIP options:");
     puts("  --local-port=N      SIP local port");
     puts("  --stateless		Handle incoming request statelessly if possible");
@@ -244,6 +386,9 @@ static pj_status_t parse_options(int argc, char *argv[])
     enum {
 	OPT_HELP,
 	OPT_VERSION,
+	OPT_LOG_LEVEL,
+	OPT_APP_LOG_LEVEL,
+	OPT_LOG_FILE,
 	OPT_LOCAL_PORT,
 	OPT_STATELESS,
 	OPT_THREAD_CNT,
@@ -254,6 +399,9 @@ static pj_status_t parse_options(int argc, char *argv[])
     struct option long_opts[] = {
 	{ "help",	    0, 0, OPT_HELP},
 	{ "version",	    0, 0, OPT_VERSION},
+	{ "log-level",	    1, 0, OPT_LOG_LEVEL},
+	{ "app-log-level",  1, 0, OPT_APP_LOG_LEVEL},
+	{ "log-file",	    1, 0, OPT_LOG_FILE},
 	{ "local-port",	    1, 0, OPT_LOCAL_PORT},
 	{ "stateless",	    0, 0, OPT_STATELESS},
 	{ "thread-cnt",	    1, 0, OPT_THREAD_CNT},
@@ -275,6 +423,18 @@ static pj_status_t parse_options(int argc, char *argv[])
 	case OPT_VERSION:
 	    pj_dump_config();
 	    return PJ_EINVAL;
+
+	case OPT_LOG_LEVEL:
+	    settings.log_level = atoi(optarg);
+	    break;
+
+	case OPT_APP_LOG_LEVEL:
+	    settings.app_log_level = atoi(optarg);
+	    break;
+
+	case OPT_LOG_FILE:
+	    settings.log_file = optarg;
+	    break;
 
 	case OPT_LOCAL_PORT:
 	    settings.local_port = atoi(optarg);
@@ -416,6 +576,7 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
     batch *batch;
     pj_status_t status = PJ_SUCCESS;
     pjsip_cred_info cred_info[1];
+    pj_time_val elapsed;
 
     unsigned i;
 
@@ -432,6 +593,7 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
     batch->success = 0;
     batch->failed = 0;
     pj_gettimeofday(&batch->start_time);
+    batch->spawned_time = batch->start_time;
 
     pj_list_push_back(&sess->active_list, batch);
 
@@ -453,9 +615,18 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
 	    break;
 
 	batch->started++;
+
+	elapsed.sec = elapsed.msec = 0;
+	pjsip_endpt_handle_events(settings.endpt, &elapsed);
     }
 
     pj_gettimeofday(&batch->spawned_time);
+
+    /// 
+    elapsed = batch->spawned_time;
+    PJ_TIME_VAL_SUB(elapsed, batch->start_time);
+    PJ_LOG(2,(THIS_FILE, "%d requests sent in %d ms", batch->started,
+			 PJ_TIME_VAL_MSEC(elapsed)));
 
     sess->total_created += batch->started;
     
@@ -479,7 +650,7 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
 /* Start new session */
 static void start_session(pj_bool_t auto_repeat)
 {
-    pj_time_val interval = { 1, 0 };
+    pj_time_val interval = { 0, 0 };
     pj_pool_t *pool;
     session *sess;
 
@@ -500,7 +671,8 @@ static void start_session(pj_bool_t auto_repeat)
 
     settings.session = sess;
 
-    spawn_batch(NULL, NULL);
+    settings.timer.cb = &spawn_batch;
+    pjsip_endpt_schedule_timer( settings.endpt, &settings.timer, &interval);
 }
 
 
@@ -522,6 +694,10 @@ static void help_screen(void)
     printf("|                                                     Call Duration: %-7d |\n",
 	    settings.duration);
 
+    printf("| Total tx requests:  %-7u rx requests:  %-7u                          |\n",
+	   settings.tx_req, settings.rx_req);
+    printf("|       tx responses: %-7u rx responses: %-7u                          |\n",
+	   settings.tx_res, settings.rx_res);
     puts  ("+--------------------------------------+-------------------------------------+");
     puts  ("|          Test Settings               |           Misc Commands:            |");
     puts  ("|                                      |                                     |");
@@ -531,7 +707,7 @@ static void help_screen(void)
     puts  ("+--------------------------------------+-------------------------------------+");
     puts  ("|                              Test Commands                                 |");
     puts  ("|                                                                            |");
-    puts  ("|  s   Start single test batch                                               |");
+    puts  ("|  s   Start single test batch             c  Clear counters                 |");
     puts  ("| sc   Start continuous test               x  Stop continuous tests          |");
     puts  ("+----------------------------------------------------------------------------+");
     puts  ("|  q:  Quit                                                                  |");
@@ -591,9 +767,17 @@ static void test_main(void)
 	case 'x':
 	    if (settings.session) {
 		settings.session->stopping = 1;
+		puts("Stopping sessions...");
 	    } else {
 		PJ_LOG(3,(THIS_FILE,"Error: no sessions"));
 	    }
+	    break;
+
+	case 'c':
+	    /* Clear counters */
+	    settings.rx_req = settings.rx_res = settings.tx_req = 
+		settings.tx_res = 0;
+	    puts("Counters cleared");
 	    break;
 
 	case 'm':
