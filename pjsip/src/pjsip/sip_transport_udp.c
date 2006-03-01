@@ -32,15 +32,28 @@
 #define THIS_FILE   "sip_transport_udp.c"
 
 /**
- * These are the values for socket send and receive buffer sizes,
+ * These are the target values for socket send and receive buffer sizes,
  * respectively. They will be applied to UDP socket with setsockopt().
+ * When transport failed to set these size, it will decrease it until
+ * sufficiently large number has been successfully set.
+ *
+ * The buffer size is important, especially in WinXP/2000 machines.
+ * Basicly the lower the size, the more packets will be lost (dropped?)
+ * when we're sending (receiving?) packets in large volumes.
+ * 
+ * The figure here is taken based on my experiment on WinXP/2000 machine,
+ * and with this value, the rate of dropped packet is about 8% when
+ * sending 1800 requests simultaneously (percentage taken as average
+ * after 50K requests or so).
+ *
+ * More experiments are needed probably.
  */
 #ifndef PJSIP_UDP_SO_SNDBUF_SIZE
-#   define PJSIP_UDP_SO_SNDBUF_SIZE	(4*1024*1024)
+#   define PJSIP_UDP_SO_SNDBUF_SIZE	(24*1024*1024)
 #endif
 
 #ifndef PJSIP_UDP_SO_RCVBUF_SIZE
-#   define PJSIP_UDP_SO_RCVBUF_SIZE	(4*1024*1024)
+#   define PJSIP_UDP_SO_RCVBUF_SIZE	(24*1024*1024)
 #endif
 
 
