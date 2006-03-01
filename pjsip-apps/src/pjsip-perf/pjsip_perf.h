@@ -40,6 +40,7 @@ struct batch
     unsigned	 success;
     unsigned	 failed;
     pj_time_val	 start_time;
+    pj_time_val	 spawned_time;
     pj_time_val	 end_time;
 };
 

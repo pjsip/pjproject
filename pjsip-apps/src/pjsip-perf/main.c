@@ -366,18 +366,27 @@ static void completion_cb(void *token, pj_bool_t success)
 	pj_gettimeofday(&batch->end_time);
 	elapsed = sess_elapsed = batch->end_time;
 
+	/* Batch time. */
 	PJ_TIME_VAL_SUB(elapsed, batch->start_time);
-	PJ_TIME_VAL_SUB(sess_elapsed, settings.session->start_time);
 	msec = PJ_TIME_VAL_MSEC(elapsed);
 	if (msec == 0) msec = 1;
 
-	PJ_LOG(3,(THIS_FILE, "%02d:%02d:%02d: %d tasks in %d.%ds (%d tasks/sec)",
+	/* Session time */
+	PJ_TIME_VAL_SUB(sess_elapsed, settings.session->start_time);
+
+	/* Spawn time */
+	PJ_TIME_VAL_SUB(batch->spawned_time, batch->start_time);
+
+	PJ_LOG(3,(THIS_FILE, "%02d:%02d:%02d: %d tasks in %d.%ds (%d tasks/sec), "
+			     "spawn=time=%d.%d",
 			     (sess_elapsed.sec / 3600),
 			     (sess_elapsed.sec % 3600) / 60,
 			     (sess_elapsed.sec % 60),
 			     batch->rate,
 			     elapsed.sec, elapsed.msec,
-			     batch->rate * 1000 / msec));
+			     batch->rate * 1000 / msec,
+			     batch->spawned_time.sec,
+			     batch->spawned_time.msec));
 
 	if (!settings.session->stopping) {
 	    pj_time_val interval;
@@ -407,7 +416,6 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
     batch *batch;
     pj_status_t status = PJ_SUCCESS;
     pjsip_cred_info cred_info[1];
-    pj_time_val now, spawn_time, sess_time;
 
     unsigned i;
 
@@ -423,6 +431,7 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
     batch->started = 0;
     batch->success = 0;
     batch->failed = 0;
+    pj_gettimeofday(&batch->start_time);
 
     pj_list_push_back(&sess->active_list, batch);
 
@@ -446,10 +455,7 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
 	batch->started++;
     }
 
-    pj_gettimeofday(&now);
-    spawn_time = sess_time = now;
-    PJ_TIME_VAL_SUB(spawn_time, batch->start_time);
-    PJ_TIME_VAL_SUB(sess_time, sess->start_time);
+    pj_gettimeofday(&batch->spawned_time);
 
     sess->total_created += batch->started;
     
