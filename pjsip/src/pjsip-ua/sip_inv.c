@@ -210,7 +210,11 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    inv->invite_tsx = NULL;
 	}
 
-	if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	/* On receipt of ACK, only set state to confirmed when state
+	 * is CONNECTING (e.g. we don't want to set the state to confirmed
+	 * when we receive ACK retransmission after sending non-2xx!)
+	 */
+	if (inv->state == PJSIP_INV_STATE_CONNECTING) {
 	    pjsip_event event;
 
 	    PJSIP_EVENT_INIT_RX_MSG(event, rdata);
