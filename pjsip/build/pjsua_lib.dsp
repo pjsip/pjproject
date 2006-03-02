@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir ".\output\pjsua-lib-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjmedia/include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "_DEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjmedia/include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "_DEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -99,7 +99,7 @@ SOURCE="..\src\pjsua-lib\pjsua_core.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjsua-lib\pjsua_opt.c"
+SOURCE="..\src\pjsua-lib\pjsua_im.c"
 # End Source File
 # Begin Source File
 
@@ -108,6 +108,10 @@ SOURCE="..\src\pjsua-lib\pjsua_pres.c"
 # Begin Source File
 
 SOURCE="..\src\pjsua-lib\pjsua_reg.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjsua-lib\pjsua_settings.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"

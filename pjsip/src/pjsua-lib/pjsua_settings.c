@@ -19,6 +19,12 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/getopt.h>
 
+/*
+ * pjsua_settings.c
+ *
+ * Anything to do with configuration and state dump.
+ */
+
 #define THIS_FILE   "pjsua_opt.c"
 
 

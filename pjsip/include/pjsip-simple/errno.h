@@ -28,6 +28,9 @@
 #define PJSIP_SIMPLE_ERRNO_START  (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*2)
 
 
+/************************************************************
+ * EVENT PACKAGE ERRORS
+ ***********************************************************/
 /**
  * @hideinitializer
  * No event package with the specified name.
@@ -40,6 +43,9 @@
 #define PJSIP_SIMPLE_EPKGEXISTS	    (PJSIP_SIMPLE_ERRNO_START+2)    /*270002*/
 
 
+/************************************************************
+ * PRESENCE ERROR
+ ***********************************************************/
 /**
  * @hideinitializer
  * Expecting SUBSCRIBE request
@@ -71,6 +77,15 @@
  */
 #define PJSIP_SIMPLE_EBADXPIDF	    (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
 
+
+/************************************************************
+ * ISCOMPOSING ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Bad isComposing XML message.
+ */
+#define PJSIP_SIMPLE_EBADISCOMPOSE  (PJSIP_SIMPLE_ERRNO_START+40)   /*270040*/
 
 
 #endif	/* __PJSIP_SIMPLE_ERRNO_H__ */

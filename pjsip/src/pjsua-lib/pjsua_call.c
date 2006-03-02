@@ -21,9 +21,9 @@
 
 
 /*
- * pjsua_inv.c
+ * pjsua_call.c
  *
- * Invite session specific functionalities.
+ * Call (INVITE) related stuffs.
  */
 
 #define THIS_FILE   "pjsua_inv.c"
@@ -259,7 +259,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &inv);
     if (status != PJ_SUCCESS) {
 
-	pjsip_dlg_respond(dlg, rdata, 500, NULL);
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 
 	// TODO: Need to delete dialog
 	return PJ_TRUE;
@@ -285,7 +285,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	
 	pjsua_perror(THIS_FILE, "Unable to create 100 response", status);
 
-	pjsip_dlg_respond(dlg, rdata, 500, NULL);
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 
 	// TODO: Need to delete dialog
 
@@ -385,7 +385,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     }
 
 
-    pjsua_ui_inv_on_state_changed(call->index, e);
+    pjsua_ui_on_call_state(call->index, e);
 
     /* call->inv may be NULL now */
 
@@ -463,7 +463,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	 * No Refer-To header!
 	 */
 	PJ_LOG(4,(THIS_FILE, "Received REFER without Refer-To header!"));
-	pjsip_dlg_respond( inv->dlg, rdata, 400, NULL);
+	pjsip_dlg_respond( inv->dlg, rdata, 400, NULL, NULL, NULL);
 	return;
     }
 
@@ -481,7 +481,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
     status = pjsip_xfer_create_uas( inv->dlg, &xfer_cb, rdata, &sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create xfer uas", status);
-	pjsip_dlg_respond( inv->dlg, rdata, 500, NULL);
+	pjsip_dlg_respond( inv->dlg, rdata, 500, NULL, NULL, NULL);
 	return;
     }
 
@@ -545,7 +545,9 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
 /*
  * This callback is called when transaction state has changed in INVITE
- * session. We use this to trap incoming REFER request.
+ * session. We use this to trap:
+ *  - incoming REFER request.
+ *  - incoming MESSAGE request.
  */
 static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
@@ -561,7 +563,48 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	 * Incoming REFER request.
 	 */
 	on_call_transfered(call->inv, e->body.tsx_state.src.rdata);
+
     }
+    else if (tsx->role==PJSIP_ROLE_UAS &&
+	     tsx->state==PJSIP_TSX_STATE_TRYING &&
+	     pjsip_method_cmp(&tsx->method, &pjsip_message_method)==0)
+    {
+	/*
+	 * Incoming MESSAGE request!
+	 */
+	pjsip_rx_data *rdata;
+	pjsip_msg *msg;
+	pjsip_accept_hdr *accept_hdr;
+	pj_status_t status;
+
+	rdata = e->body.tsx_state.src.rdata;
+	msg = rdata->msg_info.msg;
+
+	/* Request MUST have message body, with Content-Type equal to
+	 * "text/plain".
+	 */
+	if (pjsua_im_accept_pager(rdata, &accept_hdr) == PJ_FALSE) {
+
+	    pjsip_hdr hdr_list;
+
+	    pj_list_init(&hdr_list);
+	    pj_list_push_back(&hdr_list, accept_hdr);
+
+	    pjsip_dlg_respond( inv->dlg, rdata, PJSIP_SC_NOT_ACCEPTABLE_HERE, 
+			       NULL, &hdr_list, NULL );
+	    return;
+	}
+
+	/* Respond with 200 first, so that remote doesn't retransmit in case
+	 * the UI takes too long to process the message. 
+	 */
+	status = pjsip_dlg_respond( inv->dlg, rdata, 200, NULL, NULL, NULL);
+
+	/* Process MESSAGE request */
+	pjsua_im_process_pager(call->index, &inv->dlg->remote.info_str,
+			       &inv->dlg->local.info_str, rdata);
+    }
+
 }
 
 
@@ -1043,6 +1086,104 @@ void pjsua_call_xfer(int call_index, const char *dest)
      * may want to hold the INVITE, or terminate the invite, or whatever.
      */
 }
+
+
+/**
+ * Send instant messaging inside INVITE session.
+ */
+void pjsua_call_send_im(int call_index, const char *str)
+{
+    pjsua_call *call;
+    const pj_str_t mime_text = pj_str("text");
+    const pj_str_t mime_plain = pj_str("plain");
+    pj_str_t text;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    call = &pjsua.calls[call_index];
+
+    if (!call->inv) {
+	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
+	return;
+    }
+
+    /* Lock dialog. */
+    pjsip_dlg_inc_lock(call->inv->dlg);
+    
+    /* Create request message. */
+    status = pjsip_dlg_create_request( call->inv->dlg, &pjsip_message_method,
+				       -1, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create MESSAGE request", status);
+	goto on_return;
+    }
+
+    /* Add accept header. */
+    pjsip_msg_add_hdr( tdata->msg, 
+		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
+
+    /* Create "text/plain" message body. */
+    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &mime_text,
+					      &mime_plain, 
+					      pj_cstr(&text, str));
+    if (tdata->msg->body == NULL) {
+	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
+	pjsip_tx_data_dec_ref(tdata);
+	goto on_return;
+    }
+
+    /* Send the request. */
+    status = pjsip_dlg_send_request( call->inv->dlg, tdata, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send MESSAGE request", status);
+	goto on_return;
+    }
+
+on_return:
+    pjsip_dlg_dec_lock(call->inv->dlg);
+}
+
+
+/**
+ * Send IM typing indication inside INVITE session.
+ */
+void pjsua_call_typing(int call_index, pj_bool_t is_typing)
+{
+    pjsua_call *call;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    call = &pjsua.calls[call_index];
+
+    if (!call->inv) {
+	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
+	return;
+    }
+
+    /* Lock dialog. */
+    pjsip_dlg_inc_lock(call->inv->dlg);
+    
+    /* Create request message. */
+    status = pjsip_dlg_create_request( call->inv->dlg, &pjsip_message_method,
+				       -1, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create MESSAGE request", status);
+	goto on_return;
+    }
+
+    /* Create "application/im-iscomposing+xml" msg body. */
+    tdata->msg->body = pjsip_iscomposing_create_body(tdata->pool, is_typing,
+						     NULL, NULL, -1);
+
+    /* Send the request. */
+    status = pjsip_dlg_send_request( call->inv->dlg, tdata, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send MESSAGE request", status);
+	goto on_return;
+    }
+
+on_return:
+    pjsip_dlg_dec_lock(call->inv->dlg);}
 
 
 /*

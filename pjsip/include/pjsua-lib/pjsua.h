@@ -354,6 +354,17 @@ void pjsua_call_xfer(int call_index, const char *dest);
 
 
 /**
+ * Send instant messaging inside INVITE session.
+ */
+void pjsua_call_send_im(int call_index, const char *text);
+
+
+/**
+ * Send IM typing indication inside INVITE session.
+ */
+void pjsua_call_typing(int call_index, pj_bool_t is_typing);
+
+/**
  * Terminate all calls.
  */
 void pjsua_call_hangup_all(void);
@@ -405,6 +416,57 @@ void pjsua_pres_dump(pj_bool_t detail);
 
 
 /*****************************************************************************
+ * PJSUA Instant Messaging (pjsua_im.c)
+ */
+
+/**
+ * The MESSAGE method (defined in pjsua_im.c)
+ */
+extern const pjsip_method pjsip_message_method;
+
+
+/**
+ * Init IM module handler to handle incoming MESSAGE outside dialog.
+ */
+pj_status_t pjsua_im_init();
+
+
+/**
+ * Create Accept header for MESSAGE.
+ */
+pjsip_accept_hdr* pjsua_im_create_accept(pj_pool_t *pool);
+
+/**
+ * Send IM outside dialog.
+ */
+pj_status_t pjsua_im_send(int acc_index, const char *dst_uri, 
+			  const char *text);
+
+
+/**
+ * Send typing indication outside dialog.
+ */
+pj_status_t pjsua_im_typing(int acc_index, const char *dst_uri, 
+			    pj_bool_t is_typing);
+
+
+/**
+ * Private: check if we can accept the message.
+ *	    If not, then p_accept header will be filled with a valid
+ *	    Accept header.
+ */
+pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
+				const pjsip_accept_hdr **p_accept_hdr);
+
+/**
+ * Private: process pager message.
+ *	    This may trigger pjsua_ui_on_pager() or pjsua_ui_on_typing().
+ */
+void pjsua_im_process_pager(int call_id, const pj_str_t *from,
+			    const pj_str_t *to, pjsip_rx_data *rdata);
+
+
+/*****************************************************************************
  * User Interface API.
  *
  * The UI API specifies functions that will be called by pjsua upon
@@ -414,12 +476,27 @@ void pjsua_pres_dump(pj_bool_t detail);
 /**
  * Notify UI when invite state has changed.
  */
-void pjsua_ui_inv_on_state_changed(int call_index, pjsip_event *e);
+void pjsua_ui_on_call_state(int call_index, pjsip_event *e);
 
 /**
  * Notify UI when registration status has changed.
  */
-void pjsua_ui_regc_on_state_changed(int acc_index);
+void pjsua_ui_on_reg_state(int acc_index);
+
+/**
+ * Notify UI on incoming pager (i.e. MESSAGE request).
+ * Argument call_index will be -1 if MESSAGE request is not related to an 
+ * existing call.
+ */
+void pjsua_ui_on_pager(int call_index, const pj_str_t *from,
+		       const pj_str_t *to, const pj_str_t *txt);
+
+
+/**
+ * Notify UI about typing indication.
+ */
+void pjsua_ui_on_typing(int call_index, const pj_str_t *from,
+		        const pj_str_t *to, pj_bool_t is_typing);
 
 
 /*****************************************************************************

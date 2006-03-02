@@ -29,15 +29,20 @@ static const struct
     const char *msg;
 } err_str[] = 
 {
+    /* Event errors */
     { PJSIP_SIMPLE_ENOPKG,	    "No SIP event package with the specified name" },
     { PJSIP_SIMPLE_EPKGEXISTS,	    "SIP event package already exist" },
 
+    /* Presence errors */
     { PJSIP_SIMPLE_ENOTSUBSCRIBE,   "Expecting SUBSCRIBE request" },
     { PJSIP_SIMPLE_ENOPRESENCE,	    "No presence associated with the subscription" },
     { PJSIP_SIMPLE_ENOPRESENCEINFO, "No presence info in the server subscription" },
     { PJSIP_SIMPLE_EBADCONTENT,	    "Bad Content-Type for presence" },
     { PJSIP_SIMPLE_EBADPIDF,	    "Bad PIDF content for presence" },
     { PJSIP_SIMPLE_EBADXPIDF,	    "Bad XPIDF content for presence" },
+
+    /* isComposing errors. */
+    { PJSIP_SIMPLE_EBADISCOMPOSE,   "Bad isComposing indication/XML message" },
 };
 
 

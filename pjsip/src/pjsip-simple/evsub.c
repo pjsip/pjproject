@@ -956,6 +956,15 @@ PJ_DEF(pj_status_t) pjsip_evsub_accept( pjsip_evsub *sub,
     pjsip_msg_add_hdr( tdata->msg,
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->expires));
 
+    /* Add additional header, if any. */
+    if (hdr_list) {
+	const pjsip_hdr *hdr = hdr_list->next;
+	while (hdr != hdr_list) {
+	    pjsip_msg_add_hdr( tdata->msg,
+			       pjsip_hdr_clone(tdata->pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
 
     /* Send the response: */
     status = pjsip_dlg_send_response( sub->dlg, tsx, tdata );
@@ -1324,13 +1333,11 @@ static pj_status_t create_response( pjsip_evsub *sub,
 
     /* Add msg body, if any */
     if (body) {
-	tdata->msg->body = pj_pool_zalloc(tdata->pool, 
-					  sizeof(pjsip_msg_body));
-	status = pjsip_msg_body_clone(tdata->pool, 
-				      tdata->msg->body, 
-				      body);
-	if (status != PJ_SUCCESS) {
-	    tdata->msg->body = NULL;
+	tdata->msg->body = pjsip_msg_body_clone(tdata->pool, body);
+	if (tdata->msg->body == NULL) {
+
+	    PJ_LOG(4,(THIS_FILE, "Error: unable to clone msg body"));
+
 	    /* Ignore */
 	    return PJ_SUCCESS;
 	}

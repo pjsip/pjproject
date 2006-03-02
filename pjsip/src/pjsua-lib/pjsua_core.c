@@ -509,6 +509,10 @@ pj_status_t pjsua_init(void)
 
     pjsua_pres_init();
 
+    /* Init out-of-dialog MESSAGE request handler. */
+
+    pjsua_im_init();
+
 
     /* Init media endpoint: */
 

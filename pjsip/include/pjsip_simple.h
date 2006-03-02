@@ -34,6 +34,7 @@
 #define __PJSIP_SIMPLE_H__
 
 #include <pjsip-simple/evsub.h>
+#include <pjsip-simple/iscomposing.h>
 #include <pjsip-simple/presence.h>
 #include <pjsip-simple/pidf.h>
 #include <pjsip-simple/xpidf.h>

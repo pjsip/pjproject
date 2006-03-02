@@ -786,21 +786,22 @@ static pj_status_t pres_parse_xpidf( pjsip_pres *pres,
 
 
 /*
- * Called when NOTIFY is received.
+ * Process the content of incoming NOTIFY request and update temporary
+ * status.
+ *
+ * return PJ_SUCCESS if incoming request is acceptable. If return value
+ *	  is not PJ_SUCCESS, res_hdr may be added with Warning header.
  */
-static void pres_on_evsub_rx_notify( pjsip_evsub *sub, 
-				     pjsip_rx_data *rdata,
-				     int *p_st_code,
-				     pj_str_t **p_st_text,
-				     pjsip_hdr *res_hdr,
-				     pjsip_msg_body **p_body)
+static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
+					   pjsip_rx_data *rdata, 
+					   int *p_st_code,
+					   pj_str_t **p_st_text,
+					   pjsip_hdr *res_hdr)
 {
     pjsip_ctype_hdr *ctype_hdr;
-    pjsip_pres *pres;
     pj_status_t status;
 
-    pres = pjsip_evsub_get_mod_data(sub, mod_presence.id);
-    PJ_ASSERT_ON_FAIL(pres!=NULL, {return;});
+    *p_st_text = NULL;
 
     /* Check Content-Type and msg body are present. */
     ctype_hdr = rdata->msg_info.ctype;
@@ -818,7 +819,7 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 					    &warn_text);
 	pj_list_push_back(res_hdr, warn_hdr);
 
-	return;
+	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
     }
 
     /* Parse content. */
@@ -859,13 +860,51 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 				    status);
 	pj_list_push_back(res_hdr, warn_hdr);
 
-	return;
+	return status;
     }
 
     /* If application calls pres_get_status(), redirect the call to
      * retrieve the temporary status.
      */
     pres->tmp_status._is_valid = PJ_TRUE;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Called when NOTIFY is received.
+ */
+static void pres_on_evsub_rx_notify( pjsip_evsub *sub, 
+				     pjsip_rx_data *rdata,
+				     int *p_st_code,
+				     pj_str_t **p_st_text,
+				     pjsip_hdr *res_hdr,
+				     pjsip_msg_body **p_body)
+{
+    pjsip_pres *pres;
+    pj_status_t status;
+
+    pres = pjsip_evsub_get_mod_data(sub, mod_presence.id);
+    PJ_ASSERT_ON_FAIL(pres!=NULL, {return;});
+
+    /* Only process the message body if it exists, otherwise treat as
+     * presence status is closed. 
+     */
+    if (rdata->msg_info.msg->body) {
+	status = pres_process_rx_notify( pres, rdata, p_st_code, p_st_text,
+					 res_hdr );
+	if (status != PJ_SUCCESS)
+	    return;
+
+    } else {
+	unsigned i;
+
+	/* Subscription is terminated. Consider contact is offline */
+	pres->tmp_status._is_valid = PJ_TRUE;
+	for (i=0; i<pres->tmp_status.info_cnt; ++i)
+	    pres->tmp_status.info[i].basic_open = PJ_FALSE;
+    }
 
     /* Notify application. */
     if (pres->user_cb.on_rx_notify) {

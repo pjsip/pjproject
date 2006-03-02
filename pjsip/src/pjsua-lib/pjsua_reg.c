@@ -77,7 +77,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     acc->reg_last_err = param->status;
     acc->reg_last_code = param->code;
 
-    pjsua_ui_regc_on_state_changed(acc->index);
+    pjsua_ui_on_reg_state(acc->index);
 }
 
 
