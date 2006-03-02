@@ -44,6 +44,8 @@ static const struct
     { PJLIB_UTIL_ESTUNNOTRESPOND,   "Received no response from STUN server" },
     { PJLIB_UTIL_ESTUNSYMMETRIC,    "Symetric NAT detected by STUN" },
 
+    /* XML errors */
+    { PJLIB_UTIL_EINXML,	    "Invalid XML message" },
 };
 
 

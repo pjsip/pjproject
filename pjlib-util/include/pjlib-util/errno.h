@@ -90,4 +90,14 @@
 
 
 
+/************************************************************
+ * XML ERROR
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * General invalid XML message.
+ */
+#define PJLIB_UTIL_EINXML	    (PJLIB_UTIL_ERRNO_START+20)
+
+
 #endif	/* __PJLIB_UTIL_ERRNO_H__ */
