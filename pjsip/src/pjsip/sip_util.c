@@ -1235,9 +1235,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
 
     /* Add the message body, if any. */
     if (body) {
-	tdata->msg->body = pj_pool_alloc(tdata->pool, sizeof(pjsip_msg_body));
-	status = pjsip_msg_body_clone( tdata->pool, tdata->msg->body, body );
-	if (status != PJ_SUCCESS) {
+	tdata->msg->body = pjsip_msg_body_clone( tdata->pool, body );
+	if (tdata->msg->body == NULL) {
 	    pjsip_tx_data_dec_ref(tdata);
 	    return status;
 	}
@@ -1295,9 +1294,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
 
     /* Add the message body, if any. */
     if (body) {
-	tdata->msg->body = pj_pool_alloc(tdata->pool, sizeof(pjsip_msg_body));
-	status = pjsip_msg_body_clone( tdata->pool, tdata->msg->body, body );
-	if (status != PJ_SUCCESS) {
+	tdata->msg->body = pjsip_msg_body_clone( tdata->pool, body );
+	if (tdata->msg->body == NULL) {
 	    pjsip_tx_data_dec_ref(tdata);
 	    return status;
 	}
@@ -1317,7 +1315,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
     status = pjsip_tsx_send_msg(tsx, tdata);
     if (status != PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);
-    } else {
+    } else if (p_tsx) {
 	*p_tsx = tsx;
     }
 

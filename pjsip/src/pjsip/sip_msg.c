@@ -1758,9 +1758,9 @@ PJ_DEF(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
     return newdata;
 }
 
-PJ_DEF(pj_status_t) pjsip_msg_body_clone( pj_pool_t *pool,
-					  pjsip_msg_body *dst_body,
-					  const pjsip_msg_body *src_body )
+PJ_DEF(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
+					 pjsip_msg_body *dst_body,
+					 const pjsip_msg_body *src_body )
 {
     /* First check if clone_data field is initialized. */
     PJ_ASSERT_RETURN( src_body->clone_data!=NULL, PJ_EINVAL );
@@ -1785,5 +1785,47 @@ PJ_DEF(pj_status_t) pjsip_msg_body_clone( pj_pool_t *pool,
     dst_body->clone_data = src_body->clone_data;
 
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pjsip_msg_body*) pjsip_msg_body_clone( pj_pool_t *pool,
+					      const pjsip_msg_body *body )
+{
+    pjsip_msg_body *new_body;
+    pj_status_t status;
+
+    new_body = pj_pool_alloc(pool, sizeof(pjsip_msg_body));
+    PJ_ASSERT_RETURN(new_body, NULL);
+
+    status = pjsip_msg_body_copy(pool, new_body, body);
+
+    return (status==PJ_SUCCESS) ? new_body : NULL;
+}
+
+
+PJ_DEF(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
+					       const pj_str_t *type,
+					       const pj_str_t *subtype,
+					       const pj_str_t *text )
+{
+    pjsip_msg_body *body;
+
+    PJ_ASSERT_RETURN(pool && type && subtype && text, NULL);
+
+    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
+    PJ_ASSERT_RETURN(body != NULL, NULL);
+
+    pj_strdup(pool, &body->content_type.type, type);
+    pj_strdup(pool, &body->content_type.subtype, subtype);
+    body->content_type.param.slen = 0;
+
+    body->data = pj_pool_alloc(pool, text->slen);
+    pj_memcpy(body->data, text->ptr, text->slen);
+    body->len = text->slen;
+
+    body->clone_data = &pjsip_clone_text_data;
+    body->print_body = &pjsip_print_text_body;
+
+    return body;
 }
 

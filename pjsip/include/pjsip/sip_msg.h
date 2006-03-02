@@ -610,10 +610,42 @@ PJ_DECL(void*) pjsip_clone_text_data( pj_pool_t *pool, const void *data,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_msg_body_clone(pj_pool_t *pool,
+PJ_DECL(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
 					  pjsip_msg_body *dst_body,
 					  const pjsip_msg_body *src_body );
 					   
+
+/**
+ * Create cloned message body. This will duplicate the contents of the message
+ * body using the \a clone_data member of the source message body.
+ *
+ * @param pool		Pool to use to duplicate the message body.
+ * @param body		Source message body to duplicate.
+ *
+ * @return		The cloned message body on successfull.
+ */
+PJ_DECL(pjsip_msg_body*) pjsip_msg_body_clone( pj_pool_t *pool,
+					       const pjsip_msg_body *body );
+					   
+
+/**
+ * Create a text message body. Use this function to create message body when
+ * the content is a simple text. For non-text message body (e.g. 
+ * pjmedia_sdp_session or pj_xml_node), application must construct the message
+ * manually.
+ *
+ * @param pool		Pool to allocate message body and its contents.
+ * @param type		MIME type (e.g. "text").
+ * @param subtype	MIME subtype (e.g. "plain").
+ * @param text		The text content to be put in the message body.
+ *
+ * @return		A new message body with the specified Content-Type and
+ *			text.
+ */
+PJ_DECL(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
+					        const pj_str_t *type,
+						const pj_str_t *subtype,
+						const pj_str_t *text );
 
 /**
  * @}
