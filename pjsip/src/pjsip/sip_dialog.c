@@ -1194,7 +1194,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
 PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
 					pjsip_rx_data *rdata,
 					int st_code,
-					const pj_str_t *st_text )
+					const pj_str_t *st_text,
+					const pjsip_hdr *hdr_list,
+					const pjsip_msg_body *body )
 {
     pj_status_t status;
     pjsip_tx_data *tdata;
@@ -1213,6 +1215,23 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
     status = pjsip_dlg_create_response(dlg, rdata, st_code, st_text, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Add additional header, if any */
+    if (hdr_list) {
+	const pjsip_hdr *hdr;
+
+	hdr = hdr_list->next;
+	while (hdr != hdr_list) {
+	    pjsip_msg_add_hdr(tdata->msg,
+			      pjsip_hdr_clone(tdata->pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
+
+    /* Add the message body, if any. */
+    if (body) {
+	tdata->msg->body = pjsip_msg_body_clone( tdata->pool, body);
+    }
 
     /* Send the response. */
     return pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);

@@ -321,9 +321,9 @@ PJ_DECL(pj_status_t) pjsip_dlg_send_response(	pjsip_dialog *dlg,
 
 /**
  * This composite function sends response message statefully to an incoming
- * request message.
+ * request message inside dialog.
  *
- * @param endpt	    The endpoint instance.
+ * @param dlg	    The endpoint instance.
  * @param rdata	    The incoming request message.
  * @param st_code   Status code of the response.
  * @param st_text   Optional status text of the response.
@@ -336,7 +336,9 @@ PJ_DECL(pj_status_t) pjsip_dlg_send_response(	pjsip_dialog *dlg,
 PJ_DECL(pj_status_t) pjsip_dlg_respond( pjsip_dialog *dlg,
 					pjsip_rx_data *rdata,
 					int st_code,
-					const pj_str_t *st_text);
+					const pj_str_t *st_text,
+					const pjsip_hdr *hdr_list,
+					const pjsip_msg_body *body );
 
 /* 
  * Internal (called by sip_ua_layer.c)
