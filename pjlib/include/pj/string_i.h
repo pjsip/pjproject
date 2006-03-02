@@ -43,11 +43,9 @@ PJ_IDEF(pj_str_t*) pj_strdup_with_null( pj_pool_t *pool,
 					pj_str_t *dst,
 					const pj_str_t *src)
 {
+    dst->ptr = (char*)pj_pool_alloc(pool, src->slen+1);
     if (src->slen) {
-	dst->ptr = (char*)pj_pool_alloc(pool, src->slen+1);
 	pj_memcpy(dst->ptr, src->ptr, src->slen);
-    } else {
-	dst->ptr = (char*)pj_pool_alloc(pool, 1);
     }
     dst->slen = src->slen;
     dst->ptr[dst->slen] = '\0';
@@ -68,6 +66,18 @@ PJ_IDEF(pj_str_t*) pj_strdup2(pj_pool_t *pool,
     return dst;
 }
 
+PJ_IDEF(pj_str_t*) pj_strdup2_with_null( pj_pool_t *pool,
+					 pj_str_t *dst,
+					 const char *src)
+{
+    dst->slen = src ? pj_ansi_strlen(src) : 0;
+    dst->ptr = (char*)pj_pool_alloc(pool, dst->slen+1);
+    if (dst->slen) {
+	pj_memcpy(dst->ptr, src, dst->slen);
+    }
+    dst->ptr[dst->slen] = '\0';
+    return dst;
+}
 
 PJ_IDEF(pj_str_t) pj_strdup3(pj_pool_t *pool, const char *src)
 {

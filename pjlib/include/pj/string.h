@@ -215,9 +215,11 @@ PJ_IDECL(pj_str_t*) pj_strdup(pj_pool_t *pool,
 /**
  * Duplicate string and NULL terminate the destination string.
  *
- * @param pool
- * @param dst
- * @param src
+ * @param pool	    The pool.
+ * @param dst	    The string result.
+ * @param src	    The string to duplicate.
+ *
+ * @return	    The string result.
  */
 PJ_IDECL(pj_str_t*) pj_strdup_with_null(pj_pool_t *pool,
 					pj_str_t *dst,
@@ -235,6 +237,20 @@ PJ_IDECL(pj_str_t*) pj_strdup_with_null(pj_pool_t *pool,
 PJ_IDECL(pj_str_t*) pj_strdup2(pj_pool_t *pool,
 			       pj_str_t *dst,
 			       const char *src);
+
+/**
+ * Duplicate string and NULL terminate the destination string.
+ *
+ * @param pool	    The pool.
+ * @param dst	    The string result.
+ * @param src	    The string to duplicate.
+ *
+ * @return	    The string result.
+ */
+PJ_IDECL(pj_str_t*) pj_strdup2_with_null(pj_pool_t *pool,
+					 pj_str_t *dst,
+					 const char *src);
+
 
 /**
  * Duplicate string.
