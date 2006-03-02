@@ -567,7 +567,7 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
     pj_strdup (pool, &m->desc.transport, &rhs->desc.transport);
     m->desc.fmt_count = rhs->desc.fmt_count;
     for (i=0; i<rhs->desc.fmt_count; ++i)
-	m->desc.fmt[i] = rhs->desc.fmt[i];
+	pj_strdup(pool, &m->desc.fmt[i], &rhs->desc.fmt[i]);
 
     if (rhs->conn) {
 	m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
@@ -678,6 +678,16 @@ static int print_session(const pjmedia_sdp_session *ses,
     *p++ = '\r';
     *p++ = '\n';
 
+    /* Connection line (c=) if exist. */
+    if (ses->conn) {
+	printed = print_connection_info(ses->conn, p, end-p);
+	if (printed < 1) {
+	    return -1;
+	}
+	p += printed;
+    }
+
+
     /* Time */
     if ((end-p) < 24) {
 	return -1;
@@ -691,15 +701,6 @@ static int print_session(const pjmedia_sdp_session *ses,
     p += printed;
     *p++ = '\r';
     *p++ = '\n';
-
-    /* Connection line (c=) if exist. */
-    if (ses->conn) {
-	printed = print_connection_info(ses->conn, p, end-p);
-	if (printed < 1) {
-	    return -1;
-	}
-	p += printed;
-    }
 
     /* Print all attribute (a=) lines. */
     for (i=0; i<ses->attr_count; ++i) {

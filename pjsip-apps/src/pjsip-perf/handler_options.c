@@ -115,6 +115,10 @@ pj_status_t options_spawn_test(const pj_str_t *target,
 
     PJ_LOG(5,(THIS_FILE,"Sending OPTIONS request.."));
 
+    PJ_UNUSED_ARG(route_set);
+    PJ_UNUSED_ARG(cred_cnt);
+    PJ_UNUSED_ARG(cred);
+
     status = pjsip_endpt_create_request( settings.endpt, 
 					 &pjsip_options_method,
 					 target,
