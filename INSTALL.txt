@@ -1,1 +1,40 @@
-Left empty for now.
+[Last update: 2006/03/01]
+
+-= INTRO=-
+
+This top level projects:
+
+ - pjlib:       portability and basic framework library
+ - pjlib-util:  lexical scanner, XML, STUN, MD5, etc.
+ - pjmedia:     media framework and codecs
+ - pjsip:       SIP stacks (core, UA layer, SIMPLE, etc.)
+ - pjsip-apps:  SIP apps (pjsua, pjsip-perf)
+
+
+-= OBJECTIVE =-
+
+Currently we only have two working applications:
+
+ - pjsua:       Console based SIP UA
+ - pjsip-perf:  SIP performance measurement
+
+
+-= COMPILING =-
+
+On Windows:
+ - Open pjsip-apps/build/pjsip_apps.dsw
+ - Build pjsua and pjsip_perf project
+
+With Makefile:
+ - on top level dir (e.g. ~/pjproject)
+ - ./configure && make dep && make clean && make
+
+Binaries will be in pjsip-apps/bin.
+
+
+-= PORTING =-
+
+ - Just need to port pjlib.
+ - PJLIB doc has detailed info how to do this.
+ - Must pass pjlib-test!
+
