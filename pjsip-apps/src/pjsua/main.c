@@ -83,7 +83,7 @@ static pj_bool_t find_prev_call(void)
 /*
  * Notify UI when invite state has changed.
  */
-void pjsua_ui_inv_on_state_changed(int call_index, pjsip_event *e)
+void pjsua_ui_on_call_state(int call_index, pjsip_event *e)
 {
     pjsua_call *call = &pjsua.calls[call_index];
 
@@ -110,11 +110,42 @@ void pjsua_ui_inv_on_state_changed(int call_index, pjsip_event *e)
 /**
  * Notify UI when registration status has changed.
  */
-void pjsua_ui_regc_on_state_changed(int code)
+void pjsua_ui_on_reg_state(int acc_index)
 {
-    PJ_UNUSED_ARG(code);
+    PJ_UNUSED_ARG(acc_index);
 
     // Log already written.
+}
+
+
+/**
+ * Incoming IM message (i.e. MESSAGE request)!
+ */
+void pjsua_ui_on_pager(int call_index, const pj_str_t *from, 
+		       const pj_str_t *to, const pj_str_t *text)
+{
+    /* Note: call index may be -1 */
+    PJ_UNUSED_ARG(call_index);
+    PJ_UNUSED_ARG(to);
+
+    PJ_LOG(3,(THIS_FILE,"MESSAGE from %.*s: %.*s",
+	      (int)from->slen, from->ptr,
+	      (int)text->slen, text->ptr));
+}
+
+
+/**
+ * Typing indication
+ */
+void pjsua_ui_on_typing(int call_index, const pj_str_t *from,
+		        const pj_str_t *to, pj_bool_t is_typing)
+{
+    PJ_UNUSED_ARG(call_index);
+    PJ_UNUSED_ARG(to);
+
+    PJ_LOG(3,(THIS_FILE, "IM indication: %.*s %s",
+	      (int)from->slen, from->ptr,
+	      (is_typing?"is typing..":"has stopped typing")));
 }
 
 
@@ -308,8 +339,8 @@ static void ui_input_url(const char *title, char *buf, int len,
 
 	result->nb_result = atoi(buf);
 
-	if (result->nb_result > 0 && result->nb_result <= (int)pjsua.buddy_cnt) {
-	    --result->nb_result;
+	if (result->nb_result >= 0 && result->nb_result <= (int)pjsua.buddy_cnt) {
+	    result->nb_result;
 	    return;
 	}
 	if (result->nb_result == -1)
@@ -368,6 +399,7 @@ static void ui_console_main(void)
 {
     char menuin[10];
     char buf[128];
+    char text[128];
     int i, count;
     char *uri;
     struct input_result result;
@@ -387,17 +419,22 @@ static void ui_console_main(void)
 	    /* Make call! : */
 	    printf("(You currently have %d calls)\n", pjsua.call_cnt);
 	    
+	    uri = NULL;
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
-		if (result.nb_result == -1)
+
+		if (result.nb_result == -1 || result.nb_result == 0) {
 		    puts("You can't do that with make call!");
-		else
-		    pjsua_make_call( current_acc, 
-				     pjsua.buddies[result.nb_result].uri.ptr, 
-				     NULL);
-	    } else if (result.uri_result)
-		pjsua_make_call( current_acc, result.uri_result, NULL);
+		    continue;
+		} else {
+		    uri = pjsua.buddies[result.nb_result-1].uri.ptr;
+		}
+
+	    } else if (result.uri_result) {
+		uri = result.uri_result;
+	    }
 	    
+	    pjsua_make_call( current_acc, uri, NULL);
 	    break;
 
 	case 'M':
@@ -413,11 +450,11 @@ static void ui_console_main(void)
 
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
-		if (result.nb_result == -1) {
+		if (result.nb_result == -1 || result.nb_result == 0) {
 		    puts("You can't do that with make call!");
 		    continue;
 		}
-		uri = pjsua.buddies[result.nb_result].uri.ptr;
+		uri = pjsua.buddies[result.nb_result-1].uri.ptr;
 	    } else {
 		uri =  result.uri_result;
 	    }
@@ -429,6 +466,63 @@ static void ui_console_main(void)
 		if (status != PJ_SUCCESS)
 		    break;
 	    }
+	    break;
+
+	case 'i':
+	    /* Send instant messaeg */
+
+	    /* i is for call index to send message, if any */
+	    i = -1;
+    
+	    /* Make compiler happy. */
+	    uri = NULL;
+
+	    /* Input destination. */
+	    ui_input_url("Send IM to", buf, sizeof(buf), &result);
+	    if (result.nb_result != NO_NB) {
+
+		if (result.nb_result == -1) {
+		    puts("You can't send broadcast IM like that!");
+		    continue;
+
+		} else if (result.nb_result == 0) {
+    
+		    i = current_call;
+
+		} else {
+		    uri = pjsua.buddies[result.nb_result-1].uri.ptr;
+		}
+
+	    } else if (result.uri_result) {
+		uri = result.uri_result;
+	    }
+	    
+
+	    /* Send typing indication. */
+	    if (i != -1)
+		pjsua_call_typing(i, PJ_TRUE);
+	    else
+		pjsua_im_typing(current_acc, uri, PJ_TRUE);
+
+	    /* Input the IM . */
+	    if (!simple_input("Message", text, sizeof(text))) {
+		/*
+		 * Cancelled.
+		 * Send typing notification too, saying we're not typing.
+		 */
+		if (i != -1)
+		    pjsua_call_typing(i, PJ_FALSE);
+		else
+		    pjsua_im_typing(current_acc, uri, PJ_FALSE);
+		continue;
+	    }
+
+	    /* Send the IM */
+	    if (i != -1)
+		pjsua_call_send_im(i, text);
+	    else
+		pjsua_im_send(current_acc, uri, text);
+
 	    break;
 
 	case 'a':
@@ -575,11 +669,11 @@ static void ui_console_main(void)
 		}
 
 		if (result.nb_result != NO_NB) {
-		    if (result.nb_result == -1) 
+		    if (result.nb_result == -1 || result.nb_result == 0)
 			puts("You can't do that with transfer call!");
 		    else
 			pjsua_call_xfer( current_call,
-					 pjsua.buddies[result.nb_result].uri.ptr);
+					 pjsua.buddies[result.nb_result-1].uri.ptr);
 
 		} else if (result.uri_result) {
 		    pjsua_call_xfer( current_call, result.uri_result);
@@ -637,8 +731,11 @@ static void ui_console_main(void)
 		    int i;
 		    for (i=0; i<pjsua.buddy_cnt; ++i)
 			pjsua.buddies[i].monitor = (menuin[0]=='s');
+		} else if (result.nb_result == 0) {
+		    puts("Sorry, can only subscribe to buddy's presence, "
+			 "not from existing call");
 		} else {
-		    pjsua.buddies[result.nb_result].monitor = (menuin[0]=='s');
+		    pjsua.buddies[result.nb_result-1].monitor = (menuin[0]=='s');
 		}
 
 		pjsua_pres_refresh(current_acc);
@@ -670,6 +767,9 @@ static void ui_console_main(void)
 	case 't':
 	    pjsua.acc[current_acc].online_status = 
 		!pjsua.acc[current_acc].online_status;
+	    printf("Setting %s online status to %s\n",
+		   pjsua.acc[current_acc].local_uri.ptr,
+		   (pjsua.acc[current_acc].online_status?"online":"offline"));
 	    pjsua_pres_refresh(current_acc);
 	    break;
 
@@ -740,6 +840,9 @@ static void ui_console_main(void)
 	    goto on_exit;
 
 	default:
+	    if (menuin[0] != '\n' && menuin[0] != '\r') {
+		printf("Invalid input %s", menuin);
+	    }
 	    keystroke_help();
 	    break;
 	}
