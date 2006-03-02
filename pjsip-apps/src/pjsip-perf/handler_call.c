@@ -133,7 +133,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
     /* Create dialog. */
     status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, NULL, &dlg);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_respond(dlg, rdata, 500, NULL);
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 	return PJ_TRUE;
     }
 
@@ -141,7 +141,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_inv_create_uas( dlg, rdata, local_sdp, 0, &inv);
     if (status != PJ_SUCCESS) {
 
-	pjsip_dlg_respond(dlg, rdata, 500, NULL);
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 
 	// TODO: Need to delete dialog
 	return PJ_TRUE;
@@ -160,7 +160,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 	
 	app_perror(THIS_FILE, "Unable to create 200 response", status);
 
-	pjsip_dlg_respond(dlg, rdata, 500, NULL);
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 
 	// TODO: Need to delete dialog
 
@@ -271,6 +271,9 @@ static void bye_callback( pj_timer_heap_t *ht, pj_timer_entry *e)
     pjsip_tx_data *tdata;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(ht);
+    PJ_UNUSED_ARG(e);
+
     e->id = 0;
 
     status = pjsip_inv_end_session(call_data->inv, PJSIP_SC_REQUEST_TIMEOUT, 
@@ -295,6 +298,8 @@ static void bye_callback( pj_timer_heap_t *ht, pj_timer_entry *e)
 static void call_on_state_changed( pjsip_inv_session *inv, pjsip_event *e)
 {
     struct call_data *call_data;
+
+    PJ_UNUSED_ARG(e);
 
     call_data = inv->mod_data[mod_call.id];
     if (call_data == NULL)

@@ -596,6 +596,9 @@ static void spawn_batch( pj_timer_heap_t *timer_heap,
 
     unsigned i;
 
+    PJ_UNUSED_ARG(timer_heap);
+    PJ_UNUSED_ARG(entry);
+
     if (!pj_list_empty(&sess->free_list)) {
 	batch = sess->free_list.next;
 	pj_list_erase(batch);
