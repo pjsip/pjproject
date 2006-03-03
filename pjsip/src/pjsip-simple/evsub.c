@@ -211,6 +211,7 @@ struct pjsip_evsub
     pj_time_val		  refresh_time;	/**< Time to refresh.		    */
     pj_timer_entry	  timer;	/**< Internal timer.		    */
     int			  pending_tsx;	/**< Number of pending transactions.*/
+    pjsip_transaction	 *pending_sub;	/**< Pending UAC SUBSCRIBE tsx.	    */
 
     void		 *mod_data[PJSIP_MAX_MODULE];	/**< Module data.   */
 };
@@ -1297,6 +1298,42 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
     tsx->mod_data[mod_evsub.mod.id] = sub;
     sub->pending_tsx++;
 
+    /* Special case for outgoing/UAC SUBSCRIBE/REFER transaction. 
+     * We can only have one pending UAC SUBSCRIBE/REFER, so if another 
+     * transaction is started while previous one still alive, terminate
+     * the older one.
+     *
+     * Sample scenario:
+     *	- subscribe sent to destination that doesn't exist, transaction
+     *	  is still retransmitting request, then unsubscribe is sent.
+     */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+	tsx->state == PJSIP_TSX_STATE_CALLING &&
+	pjsip_method_cmp(&tsx->method, &sub->method) == 0) 
+    {
+
+	if (sub->pending_sub && 
+	    sub->pending_sub->state < PJSIP_TSX_STATE_COMPLETED) 
+	{
+	    PJ_LOG(4,(sub->obj_name, 
+		      "Cancelling pending %.*s request",
+		      (int)sub->method.name.slen, sub->method.name.ptr));
+
+	    /* By convention, we use 490 (Request Updated) status code.
+	     * When transaction handler (below) see this status code, it
+	     * will ignore the transaction.
+	     */
+	    pjsip_tsx_terminate(sub->pending_sub, PJSIP_SC_REQUEST_UPDATED);
+	}
+
+	sub->pending_sub = tsx;
+
+    } else if (tsx == sub->pending_sub &&
+	       tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+    {
+	sub->pending_sub = NULL;
+    }
+
     return sub;
 }
 
@@ -1504,6 +1541,14 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	    if (sub->state == PJSIP_EVSUB_STATE_TERMINATED) {
 		/* Ignore, has been handled before */
+		return;
+	    }
+
+	    /* Ignore 490 (Request Updated) status. 
+	     * This happens when application sends SUBSCRIBE/REFER while 
+	     * another one is still in progress.
+	     */
+	    if (tsx->status_code == PJSIP_SC_REQUEST_UPDATED) {
 		return;
 	    }
 
