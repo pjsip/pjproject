@@ -117,6 +117,27 @@ pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr,
 }
 
 /*
+ * Get codec info for static payload type.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_codec_info(pjmedia_codec_mgr *mgr,
+						     unsigned pt,
+						     pjmedia_codec_info *inf)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(mgr && inf && pt>=0 && pt < 96, PJ_EINVAL);
+
+    for (i=0; i<mgr->codec_cnt; ++i) {
+	if (mgr->codecs[i].pt == pt) {
+	    pj_memcpy(inf, &mgr->codecs[i], sizeof(pjmedia_codec_info));
+	    return PJ_SUCCESS;
+	}
+    }
+
+    return PJMEDIA_CODEC_EUNSUP;
+}
+
+/*
  * Allocate one codec.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr, 

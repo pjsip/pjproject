@@ -413,6 +413,19 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_enum_codecs( pjmedia_codec_mgr *mgr,
 						    pjmedia_codec_info info[]);
 
 /**
+ * Get codec info for the specified static payload type.
+ *
+ * @param mgr	    The codec manager.
+ * @param pt	    Static payload type/number.
+ * @param inf	    Pointer to receive codec info.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_get_codec_info(pjmedia_codec_mgr *mgr,
+						      unsigned pt,
+						      pjmedia_codec_info *inf);
+
+/**
  * Get default codec param for the specified codec info.
  *
  * @param mgr	    The codec manager.
