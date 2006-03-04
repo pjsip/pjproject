@@ -72,6 +72,9 @@ void pjsua_default(void)
     /* Default: do not use STUN: */
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
 
+    /* Default: sampling rate is 8000 */
+    pjsua.clock_rate = 8000;
+
     /* Init accounts: */
     pjsua.acc_cnt = 1;
     for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
@@ -618,7 +621,9 @@ pj_status_t pjsua_start(void)
 
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
-				 8000, 160, 16, &pjsua.mconf);
+				 pjsua.clock_rate, 
+				 pjsua.clock_rate * 20 / 1000, 16, 
+				 &pjsua.mconf);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror(THIS_FILE, 

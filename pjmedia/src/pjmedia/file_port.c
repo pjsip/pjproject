@@ -27,7 +27,6 @@
 
 
 #define SIGNATURE	('F'<<24|'I'<<16|'L'<<8|'E')
-#define BUF_SIZE	(320*10)
 
 struct file_port
 {
@@ -59,14 +58,19 @@ static struct file_port *create_file_port(pj_pool_t *pool)
     port->base.info.need_info = PJ_FALSE;
     port->base.info.pt = 0xFF;
     port->base.info.encoding_name = pj_str("pcm");
-    port->base.info.sample_rate = 8000;
-    port->base.info.bits_per_sample = 16;
-    port->base.info.samples_per_frame = 160;
-    port->base.info.bytes_per_frame = 320;
 
     port->base.put_frame = &file_put_frame;
     port->base.get_frame = &file_get_frame;
     port->base.on_destroy = &file_on_destroy;
+
+
+    /* Put in default values.
+     * These will be overriden once the file is read.
+     */
+    port->base.info.sample_rate = 8000;
+    port->base.info.bits_per_sample = 16;
+    port->base.info.samples_per_frame = 160;
+    port->base.info.bytes_per_frame = 320;
 
     return port;
 }
@@ -136,10 +140,8 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
     if (wave_hdr.fmt_hdr.fmt_tag != 1 ||
 	wave_hdr.fmt_hdr.nchan != 1 ||
-	wave_hdr.fmt_hdr.sample_rate != 8000 ||
-	wave_hdr.fmt_hdr.bytes_per_sec != 16000 ||
-	wave_hdr.fmt_hdr.block_align != 2 ||
-	wave_hdr.fmt_hdr.bits_per_sample != 16)
+	wave_hdr.fmt_hdr.bits_per_sample != 16 ||
+	wave_hdr.fmt_hdr.block_align != 2)
     {
 	pj_file_close(fd);
 	return PJMEDIA_EWAVEUNSUPP;
@@ -166,6 +168,16 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
     /* Initialize */
     file_port->base.user_data = user_data;
+
+    /* Update port info. */
+    file_port->base.info.sample_rate = wave_hdr.fmt_hdr.sample_rate;
+    file_port->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
+    file_port->base.info.samples_per_frame = file_port->base.info.sample_rate *
+					     20 / 1000;
+    file_port->base.info.bytes_per_frame = 
+	file_port->base.info.samples_per_frame * 
+	file_port->base.info.bits_per_sample / 8;
+
 
     /* For this version, we only support reading the whole
      * contents of the file.
@@ -222,17 +234,19 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 				  pjmedia_frame *frame)
 {
     struct file_port *port = (struct file_port*)this_port;
-
+    unsigned frame_size;
     pj_assert(port->base.info.signature == SIGNATURE);
+
+    frame_size = port->base.info.bytes_per_frame;
 
     /* Copy frame from buffer. */
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frame->size = 320;
+    frame->size = frame_size;
     frame->timestamp.u64 = 0;
 
-    if (port->readpos + 320 <= port->buf + port->bufsize) {
-	pj_memcpy(frame->buf, port->readpos, 320);
-	port->readpos += 320;
+    if (port->readpos + frame_size <= port->buf + port->bufsize) {
+	pj_memcpy(frame->buf, port->readpos, frame_size);
+	port->readpos += frame_size;
 	if (port->readpos == port->buf + port->bufsize)
 	    port->readpos = port->buf;
     } else {
@@ -240,15 +254,15 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 
 	endread = (port->buf+port->bufsize) - port->readpos;
 	pj_memcpy(frame->buf, port->readpos, endread);
-	pj_memcpy(((char*)frame->buf)+endread, port->buf, 320-endread);
-	port->readpos = port->buf + (320-endread);
+	pj_memcpy(((char*)frame->buf)+endread, port->buf, frame_size-endread);
+	port->readpos = port->buf + (frame_size - endread);
     }
 
     return PJ_SUCCESS;
 }
 
 /*
- *
+ * Destroy port.
  */
 static pj_status_t file_on_destroy(pjmedia_port *this_port)
 {

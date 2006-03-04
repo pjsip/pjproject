@@ -17,11 +17,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/conference.h>
-#include <pjmedia/silencedet.h>
-#include <pjmedia/stream.h>
-#include <pjmedia/sound.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
+#include <pjmedia/resample.h>
+#include <pjmedia/silencedet.h>
+#include <pjmedia/sound.h>
+#include <pjmedia/stream.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
@@ -39,6 +40,8 @@
 #define THIS_FILE	"conference.c"
 #define RX_BUF_COUNT	8
 
+#define BYTES_PER_SAMPLE    2
+
 /*
  * DON'T GET CONFUSED!!
  *
@@ -47,6 +50,9 @@
  */
 
 
+/**
+ * This is a port connected to conference bridge.
+ */
 struct conf_port
 {
     pj_str_t		 name;		/**< Port name.			    */
@@ -57,27 +63,62 @@ struct conf_port
     pj_bool_t		*listeners;	/**< Array of listeners.	    */
     pjmedia_silence_det	*vad;		/**< VAD for this port.		    */
 
-    /* Tx buffer contains the frame to be "transmitted" to this port
-     * (i.e. for put_frame()).
-     * We use dual buffer since the port may be accessed by two threads,
-     * and we don't want to use mutex for synchronization.
+    /* Shortcut for port info. */
+    unsigned		 clock_rate;	/**< Port's clock rate.		    */
+    unsigned		 samples_per_frame; /**< Port's samples per frame.  */
+
+    /* Resample, for converting clock rate, if they're different. */
+    pjmedia_resample	*rx_resample;
+    pjmedia_resample	*tx_resample;
+
+    /* RX buffer is temporary buffer to be used when there is mismatch
+     * between port's sample rate or ptime with conference's sample rate
+     * or ptime. When both sample rate and ptime of the port match the
+     * conference settings, this buffer will not be used.
+     * 
+     * This buffer contains samples at port's clock rate.
+     * The size of this buffer is the sum between port's samples per frame
+     * and bridge's samples per frame.
      */
-    pj_int16_t		*cur_tx_buf;	/**< Buffer for put_frame().	    */
-    pj_int16_t		*tx_buf1;	/**< Buffer 1.			    */
-    pj_int16_t		*tx_buf2;	/**< Buffer 2.			    */
+    pj_int16_t		*rx_buf;	/**< The RX buffer.		    */
+    unsigned		 rx_buf_cap;	/**< Max size, in samples	    */
+    unsigned		 rx_buf_count;	/**< # of samples in the buf.	    */
 
-    /* Rx buffers is a special buffer for sound device port (port 0). 
-     * It's not used by other ports.
-     */
-    int			 rx_write, rx_read;
-    pj_int16_t		*rx_buf[RX_BUF_COUNT];	/**< Buffer 			    */
-
-
-    /* Sum buf is a temporary buffer used to calculate the average signal
+    /* Mix buf is a temporary buffer used to calculate the average signal
      * received by this port from all other ports.
+     *
+     * This buffer contains samples at bridge's clock rate.
+     * The size of this buffer is equal to samples per frame of the bridge.
+     *
+     * Note that the samples here are unsigned 32bit.
      */
     unsigned		 sources;	/**< Number of sources.		    */
-    pj_uint32_t		*sum_buf;	/**< Total sum of signal.	    */
+    pj_uint32_t		*mix_buf;	/**< Total sum of signal.	    */
+
+    /* Tx buffer is a temporary buffer to be used when there's mismatch 
+     * between port's clock rate or ptime with conference's sample rate
+     * or ptime. When both sample rate and ptime of the port match the
+     * conference's settings, this buffer will not be used.
+     * 
+     * This buffer contains samples at port's clock rate.
+     * The size of this buffer is the sum between port's samples per frame
+     * and bridge's samples per frame.
+     */
+    pj_int16_t		*tx_buf;	/**< Tx buffer.			    */
+    unsigned		 tx_buf_cap;	/**< Max size, in samples.	    */
+    unsigned		 tx_buf_count;	/**< # of samples in the buffer.    */
+
+    /* Snd buffers is a special buffer for sound device port (port 0). 
+     * It's not used by other ports.
+     *
+     * There are multiple numbers of this buffer, because we can not expect
+     * the mic and speaker thread to run equally after one another. In most
+     * systems, each thread will run multiple times before the other thread
+     * gains execution time. For example, in my system, mic thread is called
+     * three times, then speaker thread is called three times, and so on.
+     */
+    int			 snd_write_pos, snd_read_pos;
+    pj_int16_t		*snd_buf[RX_BUF_COUNT];	/**< Buffer 		    */
 };
 
 
@@ -94,10 +135,10 @@ struct pjmedia_conf
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
     pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
-    unsigned		  sampling_rate;	/**< Sampling rate.	    */
+    unsigned		  clock_rate;	/**< Sampling rate.	    */
     unsigned		  samples_per_frame;	/**< Samples per frame.	    */
     unsigned		  bits_per_sample;	/**< Bits per sample.	    */
-    pj_snd_stream_info	  snd_info;
+    pj_snd_stream_info	  snd_info;	/**< Sound device parameter.	    */
 };
 
 
@@ -119,6 +160,7 @@ static pj_status_t rec_cb(  /* in */  void *user_data,
  */
 static pj_status_t create_conf_port( pj_pool_t *pool,
 				     pjmedia_conf *conf,
+				     pjmedia_port *port,
 				     const pj_str_t *name,
 				     struct conf_port **p_conf_port)
 {
@@ -149,26 +191,82 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
     pjmedia_silence_det_set_adaptive(conf_port->vad, conf->samples_per_frame);
 
+    /* Save some port's infos, for convenience. */
+    if (port) {
+	conf_port->port = port;
+	conf_port->clock_rate = port->info.sample_rate;
+	conf_port->samples_per_frame = port->info.samples_per_frame;
+    } else {
+	conf_port->port = NULL;
+	conf_port->clock_rate = conf->clock_rate;
+	conf_port->samples_per_frame = conf->samples_per_frame;
+    }
 
-    /* Create TX buffers. */
-    conf_port->tx_buf1 = pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->tx_buf1[0]));
-    PJ_ASSERT_RETURN(conf_port->tx_buf1, PJ_ENOMEM);
-
-    conf_port->tx_buf2 = pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->tx_buf2[0]));
-    PJ_ASSERT_RETURN(conf_port->tx_buf2, PJ_ENOMEM);
-
-    /* Set initial TX buffer */
-    conf_port->cur_tx_buf = conf_port->tx_buf1;
-
-    /* Create temporary buffer to calculate average signal received by
-     * this port.
+    /* If port's clock rate is different than conference's clock rate,
+     * create a resample sessions.
      */
-    conf_port->sum_buf = pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->sum_buf[0]));
+    if (conf_port->clock_rate != conf->clock_rate) {
 
-    
+	double factor;
+
+	factor = 1.0 * conf_port->clock_rate / conf->clock_rate;
+
+	/* Create resample for rx buffer. */
+	status = pjmedia_resample_create( pool, 
+					  PJ_TRUE,  /* High quality */
+					  PJ_TRUE,  /* Large filter */
+					  conf_port->clock_rate,/* Rate in */
+					  conf->clock_rate, /* Rate out */
+					  (unsigned)(conf->samples_per_frame * 
+						     factor),
+					  &conf_port->rx_resample);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+
+	/* Create resample for tx buffer. */
+	status = pjmedia_resample_create(pool,
+					 PJ_TRUE,   /* High quality */
+					 PJ_TRUE,   /* Large filter */
+					 conf->clock_rate,  /* Rate in */
+					 conf_port->clock_rate, /* Rate out */
+					 conf->samples_per_frame,
+					 &conf_port->tx_resample);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /*
+     * Initialize rx and tx buffer, only when port's samples per frame or 
+     * port's clock rate is different then the conference bridge settings.
+     */
+    if (conf_port->clock_rate != conf->clock_rate ||
+	conf_port->samples_per_frame != conf->samples_per_frame)
+    {
+	/* Create RX buffer. */
+	conf_port->rx_buf_cap = (unsigned)(conf_port->samples_per_frame +
+					   conf->samples_per_frame * 
+					   conf_port->clock_rate * 1.0 /
+					   conf->clock_rate);
+	conf_port->rx_buf_count = 0;
+	conf_port->rx_buf = pj_pool_alloc(pool, conf_port->rx_buf_cap *
+						sizeof(conf_port->rx_buf[0]));
+	PJ_ASSERT_RETURN(conf_port->rx_buf, PJ_ENOMEM);
+
+	/* Create TX buffer. */
+	conf_port->tx_buf_cap = conf_port->rx_buf_cap;
+	conf_port->tx_buf_count = 0;
+	conf_port->tx_buf = pj_pool_alloc(pool, conf_port->tx_buf_cap *
+						sizeof(conf_port->tx_buf[0]));
+	PJ_ASSERT_RETURN(conf_port->tx_buf, PJ_ENOMEM);
+    }
+
+
+    /* Create mix buffer. */
+    conf_port->mix_buf = pj_pool_zalloc(pool, conf->samples_per_frame *
+					      sizeof(conf_port->mix_buf[0]));
+    PJ_ASSERT_RETURN(conf_port->mix_buf, PJ_ENOMEM);
+
 
     /* Done */
     *p_conf_port = conf_port;
@@ -189,7 +287,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 
     /* Init default sound device parameters. */
     pj_memset(&conf->snd_info, 0, sizeof(conf->snd_info));
-    conf->snd_info.samples_per_sec = conf->sampling_rate;
+    conf->snd_info.samples_per_sec = conf->clock_rate;
     conf->snd_info.bits_per_sample = conf->bits_per_sample;
     conf->snd_info.samples_per_frame = conf->samples_per_frame;
     conf->snd_info.bytes_per_frame = conf->samples_per_frame * 
@@ -198,21 +296,21 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     
 
     /* Create port */
-    status = create_conf_port(pool, conf, &name, &conf_port);
+    status = create_conf_port(pool, conf, NULL, &name, &conf_port);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /* Sound device has rx buffers. */
     for (i=0; i<RX_BUF_COUNT; ++i) {
-	conf_port->rx_buf[i] = pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->rx_buf[0][0]));
-	if (conf_port->rx_buf[i] == NULL) {
+	conf_port->snd_buf[i] = pj_pool_zalloc(pool, conf->samples_per_frame *
+					      sizeof(conf_port->snd_buf[0][0]));
+	if (conf_port->snd_buf[i] == NULL) {
 	    status = PJ_ENOMEM;
 	    goto on_error;
 	}
     }
-    conf_port->rx_write = 0;
-    conf_port->rx_read = 0;
+    conf_port->snd_write_pos = 0;
+    conf_port->snd_read_pos = 0;
 
 
      /* Set to port zero */
@@ -232,13 +330,16 @@ on_error:
  */
 PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					 unsigned max_ports,
-					 unsigned sampling_rate,
+					 unsigned clock_rate,
 					 unsigned samples_per_frame,
 					 unsigned bits_per_sample,
 					 pjmedia_conf **p_conf )
 {
     pjmedia_conf *conf;
     pj_status_t status;
+
+    /* Can only accept 16bits per sample, for now.. */
+    PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
     PJ_LOG(5,(THIS_FILE, "Creating conference bridge with %d ports",
 	      max_ports));
@@ -251,7 +352,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(conf->ports, PJ_ENOMEM);
 
     conf->max_ports = max_ports;
-    conf->sampling_rate = sampling_rate;
+    conf->clock_rate = clock_rate;
     conf->samples_per_frame = samples_per_frame;
     conf->bits_per_sample = bits_per_sample;
 
@@ -402,14 +503,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     pj_assert(index != conf->max_ports);
 
     /* Create port structure. */
-    status = create_conf_port(pool, conf, port_name, &conf_port);
+    status = create_conf_port(pool, conf, strm_port, port_name, &conf_port);
     if (status != PJ_SUCCESS) {
 	pj_mutex_unlock(conf->mutex);
 	return status;
     }
-
-    /* Set the port */
-    conf_port->port = strm_port;
 
     /* Put the port. */
     conf->ports[index] = conf_port;
@@ -634,6 +732,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->tx_setting = conf_port->tx_setting;
     info->rx_setting = conf_port->rx_setting;
     info->listener = conf_port->listeners;
+    info->clock_rate = conf_port->clock_rate;
+    info->samples_per_frame = conf_port->samples_per_frame;
 
     return PJ_SUCCESS;
 }
@@ -672,6 +772,214 @@ static pj_int16_t unsigned2pcm(pj_uint32_t uns)
     return (pj_int16_t)(uns - 32767);
 }
 
+/* Copy samples */
+PJ_INLINE(void) copy_samples(pj_int16_t *dst, 
+				const pj_int16_t *src,
+				unsigned count)
+{
+    unsigned i;
+    for (i=0; i<count; ++i)
+	dst[i] = src[i];
+}
+
+/* Zero samples. */
+PJ_INLINE(void) zero_samples(pj_int16_t *buf, unsigned count)
+{
+    unsigned i;
+    for (i=0; i<count; ++i)
+	buf[i] = 0;
+}
+
+
+/*
+ * Read from port.
+ */
+static pj_status_t read_port( pjmedia_conf *conf,
+			      struct conf_port *cport, pj_int16_t *frame,
+			      pj_size_t count, pjmedia_frame_type *type )
+{
+
+    pj_assert(count == conf->samples_per_frame);
+
+    /* If port's samples per frame and sampling rate matches conference
+     * bridge's settings, get the frame directly from the port.
+     */
+    if (cport->rx_buf_cap == 0) {
+	pjmedia_frame f;
+	pj_status_t status;
+
+	f.buf = frame;
+	f.size = count * BYTES_PER_SAMPLE;
+
+	status = (cport->port->get_frame)(cport->port, &f);
+
+	*type = f.type;
+
+	return status;
+
+    } else {
+
+	/*
+	 * If we don't have enough samples in rx_buf, read from the port 
+	 * first. Remember that rx_buf may be in different clock rate!
+	 */
+	while (cport->rx_buf_count < count * 1.0 *
+		cport->clock_rate / conf->clock_rate) {
+
+	    pjmedia_frame f;
+	    pj_status_t status;
+
+	    f.buf = cport->rx_buf + cport->rx_buf_count;
+	    f.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
+
+	    status = pjmedia_port_get_frame(cport->port, &f);
+
+	    if (status != PJ_SUCCESS) {
+		/* Fatal error! */
+		return status;
+	    }
+
+	    if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+		zero_samples( cport->rx_buf + cport->rx_buf_count,
+			      cport->samples_per_frame);
+	    }
+
+	    cport->rx_buf_count += cport->samples_per_frame;
+
+	    pj_assert(cport->rx_buf_count <= cport->rx_buf_cap);
+	}
+
+	/*
+	 * If port's clock_rate is different, resample.
+	 * Otherwise just copy.
+	 */
+	if (cport->clock_rate != conf->clock_rate) {
+	    
+	    unsigned src_count;
+
+	    pjmedia_resample_run( cport->rx_resample,cport->rx_buf, frame);
+
+	    src_count = (unsigned)(count * 1.0 * cport->clock_rate / 
+				   conf->clock_rate);
+	    cport->rx_buf_count -= src_count;
+	    if (cport->rx_buf_count) {
+		copy_samples(cport->rx_buf, cport->rx_buf+src_count,
+			     cport->rx_buf_count);
+	    }
+
+	} else {
+
+	    copy_samples(frame, cport->rx_buf, count);
+	    cport->rx_buf_count -= count;
+	    if (cport->rx_buf_count) {
+		copy_samples(cport->rx_buf, cport->rx_buf+count,
+			     cport->rx_buf_count);
+	    }
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Write the mixed signal to the port.
+ */
+static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
+			      pj_uint32_t timestamp)
+{
+    pj_int16_t *buf;
+    unsigned j;
+
+    /* If port is muted or nobody is transmitting to this port, 
+     * transmit NULL frame. 
+     */
+    if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->sources==0) {
+
+	pjmedia_frame frame;
+
+	frame.type = PJMEDIA_FRAME_TYPE_NONE;
+	frame.buf = NULL;
+	frame.size = 0;
+
+	if (cport->port)
+	    pjmedia_port_put_frame(cport->port, &frame);
+
+	return PJ_SUCCESS;
+
+    } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+	return PJ_SUCCESS;
+    }
+
+    /* If there are sources in the mix buffer, convert the mixed samples
+     * to the mixed samples itself. This is possible because mixed sample
+     * is 32bit.
+     */
+    buf = (pj_int16_t*)cport->mix_buf;
+    for (j=0; j<conf->samples_per_frame; ++j) {
+	buf[j] = unsigned2pcm(cport->mix_buf[j] / cport->sources);
+    }
+
+    /* If port has the same clock_date and samples_per_frame settings as
+     * the conference bridge, transmit the frame as is.
+     */
+    if (cport->clock_rate == conf->clock_rate &&
+	cport->samples_per_frame == conf->samples_per_frame)
+    {
+	pjmedia_frame frame;
+
+	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame.buf = (pj_int16_t*)cport->mix_buf;
+	frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
+	frame.timestamp.u64 = timestamp;
+
+	if (cport->port != NULL)
+	    return pjmedia_port_put_frame(cport->port, &frame);
+	else
+	    return PJ_SUCCESS;
+    }
+
+    /* If it has different clock_rate, must resample. */
+    if (cport->clock_rate != conf->clock_rate) {
+
+	unsigned dst_count;
+
+	pjmedia_resample_run( cport->tx_resample, buf, 
+			      cport->tx_buf + cport->tx_buf_count );
+
+	dst_count = (unsigned)(conf->samples_per_frame * 1.0 *
+			       cport->clock_rate / conf->clock_rate);
+	cport->tx_buf_count += dst_count;
+
+    } else {
+	/* Same clock rate.
+	 * Just copy the samples to tx_buffer.
+	 */
+	copy_samples( cport->tx_buf + cport->tx_buf_count,
+		      buf, conf->samples_per_frame );
+	cport->tx_buf_count += conf->samples_per_frame;
+    }
+
+    /* Transmit once we have enough frame in the tx_buf. */
+    if (cport->tx_buf_count >= cport->samples_per_frame) {
+	
+	pjmedia_frame frame;
+
+	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame.buf = cport->tx_buf;
+	frame.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
+	frame.timestamp.u64 = timestamp;
+
+	if (cport->port)
+	    return pjmedia_port_put_frame(cport->port, &frame);
+	else
+	    return PJ_SUCCESS;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Player callback.
  */
@@ -681,7 +989,6 @@ static pj_status_t play_cb( /* in */  void *user_data,
 			    /* out */ unsigned size)
 {
     pjmedia_conf *conf = user_data;
-    pj_int16_t *output_buf = output;
     unsigned ci, cj, i, j;
     
     PJ_UNUSED_ARG(timestamp);
@@ -694,7 +1001,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
     /* Zero all port's temporary buffers. */
     for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
-	pj_uint32_t *sum_buf;
+	pj_uint32_t *mix_buf;
 
 	/* Skip empty slot. */
 	if (!conf_port)
@@ -703,14 +1010,14 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	++ci;
 
 	conf_port->sources = 0;
-	sum_buf = conf_port->sum_buf;
+	mix_buf = conf_port->mix_buf;
 
 	for (j=0; j<conf->samples_per_frame; ++j)
-	    sum_buf[j] = 0;
+	    mix_buf[j] = 0;
     }
 
     /* Get frames from all ports, and "mix" the signal 
-     * to sum_buf of all listeners of the port.
+     * to mix_buf of all listeners of the port.
      */
     for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
@@ -732,11 +1039,11 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	 * instead.
 	 */
 	if (i==0) {
-	    pj_int16_t *rx_buf;
+	    pj_int16_t *snd_buf;
 
-	    if (conf_port->rx_read == conf_port->rx_write) {
-		conf_port->rx_read = 
-		    (conf_port->rx_write+RX_BUF_COUNT-RX_BUF_COUNT/2) % 
+	    if (conf_port->snd_read_pos == conf_port->snd_write_pos) {
+		conf_port->snd_read_pos = 
+		    (conf_port->snd_write_pos+RX_BUF_COUNT-RX_BUF_COUNT/2) % 
 			RX_BUF_COUNT;
 	    }
 
@@ -751,27 +1058,30 @@ static pj_status_t play_cb( /* in */  void *user_data,
 		continue;
 	    }
 
-	    rx_buf = conf_port->rx_buf[conf_port->rx_read];
+	    snd_buf = conf_port->snd_buf[conf_port->snd_read_pos];
 	    for (j=0; j<conf->samples_per_frame; ++j) {
-		((pj_int16_t*)output)[j] = rx_buf[j];
+		((pj_int16_t*)output)[j] = snd_buf[j];
 	    }
-	    conf_port->rx_read = (conf_port->rx_read+1) % RX_BUF_COUNT;
+	    conf_port->snd_read_pos = (conf_port->snd_read_pos+1) % RX_BUF_COUNT;
 
 	} else {
-	    pjmedia_frame frame;
 
-	    pj_memset(&frame, 0, sizeof(frame));
-	    frame.buf = output;
-	    frame.size = size;
-	    pjmedia_port_get_frame(conf_port->port, &frame);
+	    pj_status_t status;
+	    pjmedia_frame_type frame_type;
 
-	   if (frame.type == PJMEDIA_FRAME_TYPE_NONE)
+	    status = read_port(conf, conf_port, output, 
+			       conf->samples_per_frame, &frame_type);
+	    
+	    if (status != PJ_SUCCESS) {
+		PJ_LOG(4,(THIS_FILE, "Port %.*s get_frame() returned %d. "
+				     "Port is now disabled",
+				     (int)conf_port->name.slen,
+				     conf_port->name.ptr,
+				     status));
+		conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 		continue;
+	    }
 	}
-
-	/* Skip (after receiving the frame) if this port is muted. */
-	if (conf_port->rx_setting == PJMEDIA_PORT_MUTE)
-	    continue;
 
 	/* Also skip if this port doesn't have listeners. */
 	if (conf_port->listener_cnt == 0)
@@ -793,7 +1103,7 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	     ++j) 
 	{
 	    struct conf_port *listener = conf->ports[j];
-	    pj_uint32_t *sum_buf;
+	    pj_uint32_t *mix_buf;
 	    unsigned k;
 
 	    if (listener == 0)
@@ -810,9 +1120,9 @@ static pj_status_t play_cb( /* in */  void *user_data,
 		continue;
 
 	    /* Mix the buffer */
-	    sum_buf = listener->sum_buf;
+	    mix_buf = listener->mix_buf;
 	    for (k=0; k<conf->samples_per_frame; ++k)
-		sum_buf[k] += (conf->uns_buf[k] * level);
+		mix_buf[k] += (conf->uns_buf[k] * level);
 
 	    listener->sources += level;
 	}
@@ -821,75 +1131,31 @@ static pj_status_t play_cb( /* in */  void *user_data,
     /* For all ports, calculate avg signal. */
     for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
-	pjmedia_frame frame;
-	pj_int16_t *target_buf;
+	pj_status_t status;
 
 	if (!conf_port)
 	    continue;
 
 	++ci;
 
-	if (conf_port->tx_setting == PJMEDIA_PORT_MUTE) {
-	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
-	    frame.buf = NULL;
-	    frame.size = 0;
-
-	    if (conf_port->port)
-		pjmedia_port_put_frame(conf_port->port, &frame);
-
-	    continue;
-
-	} else if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE) {
+	status = write_port( conf, conf_port, timestamp);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
+				 "Port is now disabled",
+				 (int)conf_port->name.slen,
+				 conf_port->name.ptr,
+				 status));
+	    conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
 	    continue;
 	}
-
-	target_buf = (conf_port->cur_tx_buf==conf_port->tx_buf1?
-			conf_port->tx_buf2 : conf_port->tx_buf1);
-
-	if (conf_port->sources) {
-	    for (j=0; j<conf->samples_per_frame; ++j) {
-		target_buf[j] = unsigned2pcm(conf_port->sum_buf[j] / 
-					     conf_port->sources);
-	    }
-	}
-
-	/* Switch buffer. */
-	conf_port->cur_tx_buf = target_buf;
-
-	pj_memset(&frame, 0, sizeof(frame));
-	if (conf_port->sources) {
-
-	    pj_bool_t is_silence = PJ_FALSE;
-
-	    /* Apply silence detection. */
-#if 0
-	    is_silence = pjmedia_silence_det_detect(conf_port->vad,
-						    target_buf,
-						    conf->samples_per_frame,
-						    NULL);
-#endif
-	    frame.type = is_silence ? PJMEDIA_FRAME_TYPE_NONE : 
-				      PJMEDIA_FRAME_TYPE_AUDIO;
-
-	} else
-	    frame.type = PJMEDIA_FRAME_TYPE_NONE;
-
-	frame.buf = conf_port->cur_tx_buf;
-	frame.size = conf->samples_per_frame * conf->bits_per_sample / 8;
-	frame.timestamp.u64 = timestamp;
-
-	if (conf_port->port)
-	    pjmedia_port_put_frame(conf_port->port, &frame);
-
     }
 
     /* Return sound playback frame. */
     if (conf->ports[0]->sources) {
-	for (j=0; j<conf->samples_per_frame; ++j)
-	    output_buf[j] = conf->ports[0]->cur_tx_buf[j];
+	copy_samples( output, (pj_int16_t*)conf->ports[0]->mix_buf, 
+		      conf->samples_per_frame);
     } else {
-	for (j=0; j<conf->samples_per_frame; ++j)
-	    output_buf[j] = 0;
+	zero_samples( output, conf->samples_per_frame ); 
     }
 
     pj_mutex_unlock(conf->mutex);
@@ -908,7 +1174,7 @@ static pj_status_t rec_cb(  /* in */  void *user_data,
 {
     pjmedia_conf *conf = user_data;
     struct conf_port *snd_port = conf->ports[0];
-    pj_int16_t *target_rx_buf;
+    pj_int16_t *target_snd_buf;
     unsigned i;
 
     PJ_UNUSED_ARG(timestamp);
@@ -931,29 +1197,17 @@ static pj_status_t rec_cb(  /* in */  void *user_data,
 
 
     /* Determine which rx_buffer to fill in */
-    target_rx_buf = snd_port->rx_buf[snd_port->rx_write];
+    target_snd_buf = snd_port->snd_buf[snd_port->snd_write_pos];
     
     /* Copy samples from audio device to target rx_buffer */
     for (i=0; i<conf->samples_per_frame; ++i) {
-	target_rx_buf[i] = ((pj_int16_t*)input)[i];
+	target_snd_buf[i] = ((pj_int16_t*)input)[i];
     }
 
     /* Switch buffer */
-    snd_port->rx_write = (snd_port->rx_write+1)%RX_BUF_COUNT;
+    snd_port->snd_write_pos = (snd_port->snd_write_pos+1)%RX_BUF_COUNT;
 
 
-    /* Time for all ports (except sound port) to transmit frames */
-    /*
-    for (i=1; i<conf->max_ports; ++i) {
-	struct conf_port *conf_port = conf->ports[i];
-	pjmedia_frame frame;
-
-	if (!conf_port)
-	    continue;
-
-    }
-    */
-    
     return PJ_SUCCESS;
 }
 

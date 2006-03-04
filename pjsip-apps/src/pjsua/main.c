@@ -384,8 +384,10 @@ static void conf_list(void)
 		pj_ansi_strcat(txlist, s);
 	    }
 	}
-	printf("Port #%02d %20.*s  transmitting to: %s\n", 
+	printf("Port #%02d[%2dKHz/%dms] %20.*s  transmitting to: %s\n", 
 	       port_info->slot, 
+	       port_info->clock_rate/1000,
+	       port_info->samples_per_frame * 1000 / port_info->clock_rate,
 	       (int)port_info->name.slen, 
 	       port_info->name.ptr,
 	       txlist);

@@ -83,6 +83,8 @@ static void usage(void)
     puts("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
     puts("");
     puts("Media Options:");
+    puts("  --wb                Enable wideband codecs (16KHz)");
+    puts("  --uwb               Enable ultra-wideband codecs (32KHz)");
     puts("  --null-audio        Use NULL audio device");
     puts("  --play-file=file    Play WAV file in conference bridge");
     puts("  --auto-play         Automatically play the file (to incoming calls only)");
@@ -218,7 +220,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF,
-	   OPT_PLAY_FILE, OPT_RTP_PORT,
+	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
     };
     struct option long_options[] = {
@@ -228,6 +230,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "app-log-level",1,0,OPT_APP_LOG_LEVEL},
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
+	{ "wb",		0, 0, OPT_WB},
+	{ "uwb",	0, 0, OPT_UWB},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "proxy",	1, 0, OPT_PROXY},
@@ -325,6 +329,14 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_NULL_AUDIO:
 	    pjsua.null_audio = 1;
+	    break;
+
+	case OPT_WB:
+	    pjsua.clock_rate = 16000;
+	    break;
+
+	case OPT_UWB:
+	    pjsua.clock_rate = 32000;
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */

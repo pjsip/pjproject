@@ -45,6 +45,8 @@ typedef struct pjmedia_conf_port_info
     pjmedia_port_op	tx_setting;
     pjmedia_port_op	rx_setting;
     pj_bool_t	       *listener;
+    unsigned		clock_rate;
+    unsigned		samples_per_frame;
 } pjmedia_conf_port_info;
 
 

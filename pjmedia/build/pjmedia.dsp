@@ -133,6 +133,10 @@ SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\resample.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\rtcp.c
 # End Source File
 # Begin Source File
@@ -213,6 +217,10 @@ SOURCE=..\include\pjmedia\port.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\resample.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\rtcp.h
 # End Source File
 # Begin Source File
@@ -256,7 +264,7 @@ SOURCE=..\include\pjmedia\types.h
 SOURCE=..\include\pjmedia\wave.h
 # End Source File
 # End Group
-# Begin Group "PortAudio"
+# Begin Group "PortAudio Files"
 
 # PROP Default_Filter ""
 # Begin Source File
@@ -393,6 +401,18 @@ SOURCE=..\src\pjmedia\portaudio\pa_x86_plain_converters.h
 # Begin Source File
 
 SOURCE=..\src\pjmedia\portaudio\portaudio.h
+# End Source File
+# End Group
+# Begin Group "Resample Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\src\pjmedia\largefilter.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\smallfilter.h
 # End Source File
 # End Group
 # End Target

@@ -177,6 +177,7 @@ struct pjsua
     /* Media:  */
     int		     start_rtp_port;/**< Start of RTP port to try.	*/
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
+    unsigned	     clock_rate;    /**< Internal clock rate.		*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
     char	    *wav_file;	    /**< WAV file name to play.		*/
