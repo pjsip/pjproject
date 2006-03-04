@@ -30,5 +30,13 @@
 #endif
 
 
+/*
+ * Include Speex codec?
+ */
+#ifndef PJMEDIA_CODEC_HAS_SPEEX
+#   define PJMEDIA_CODEC_HAS_SPEEX    1
+#endif
+
+
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */

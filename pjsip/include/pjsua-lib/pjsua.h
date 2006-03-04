@@ -186,6 +186,10 @@ struct pjsua
     pj_bool_t	     auto_loop;	    /**< Auto loop RTP stream?		*/
     pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/
 
+    /* Codec arguments: */
+    int		     codec_cnt;	    /**< Number of --add-codec args.	*/
+    pj_str_t	     codec_arg[32]; /**< Array of --add-codec args.	*/
+    pj_status_t	    (*codec_deinit[32])(void);	/**< Array of funcs.	*/
 
     /* User Agent behaviour: */
     int		     auto_answer;   /**< Automatically answer in calls.	*/

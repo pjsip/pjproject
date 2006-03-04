@@ -20,6 +20,7 @@
  * notice in the second half of this file.
  */
 #include <pjmedia/codec.h>
+#include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
 #include <pj/pool.h>
@@ -100,11 +101,14 @@ static pjmedia_codec_factory_op g711_factory_op =
 };
 
 /* G711 factory private data */
-struct g711_factory_private
+static struct g711_factory
 {
-    pj_pool_t  *pool;
-    pjmedia_codec	codec_list;
-};
+    pjmedia_codec_factory	base;
+    pjmedia_endpt	       *endpt;
+    pj_pool_t		       *pool;
+    pj_mutex_t		       *mutex;
+    pjmedia_codec		codec_list;
+} g711_factory;
 
 /* G711 codec private data. */
 struct g711_private
@@ -113,41 +117,107 @@ struct g711_private
 };
 
 
-PJ_DEF(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool)
+PJ_DEF(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory)
 {
-    struct g711_factory_private *priv;
-    //enum { CODEC_MEM_SIZE = sizeof(pjmedia_codec) + sizeof(struct g711_private) + 4 };
+    PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
 
-    /* Create pool. */
-    /*
-    pool = pj_pool_pool_create_pool(pp, "g711ftry", 
-					G711_CODEC_CNT*CODEC_MEM_SIZE + 
-					sizeof(struct g711_factory_private),
-				        CODEC_MEM_SIZE, NULL);
-    if (!pool)
-	return -1;
-    */
-
-    priv = pj_pool_alloc(pool, sizeof(struct g711_factory_private));
-    if (!priv)
-	return -1;
-
-    factory->factory_data = priv;
-    factory->op = &g711_factory_op;
-
-    priv->pool = pool;
-    pj_list_init(&priv->codec_list);
+    /* Invalidate member to help detect errors */
+    g711_factory.codec_list.next = g711_factory.codec_list.prev = NULL;
     return 0;
 }
 
-PJ_DEF(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory)
+PJ_DEF(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt)
 {
-    struct g711_factory_private *priv = factory->factory_data;
+    pjmedia_codec_mgr *codec_mgr;
+    pj_status_t status;
 
-    /* Invalidate member to help detect errors */
-    priv->pool = NULL;
-    priv->codec_list.next = priv->codec_list.prev = NULL;
-    return 0;
+    if (g711_factory.endpt != NULL) {
+	/* Already initialized. */
+	return PJ_SUCCESS;
+    }
+
+    /* Init factory */
+    g711_factory.base.op = &g711_factory_op;
+    g711_factory.base.factory_data = NULL;
+    g711_factory.endpt = endpt;
+
+    pj_list_init(&g711_factory.codec_list);
+
+    /* Create pool */
+    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 4000, 4000);
+    if (!g711_factory.pool)
+	return PJ_ENOMEM;
+
+    /* Create mutex. */
+    status = pj_mutex_create_simple(g711_factory.pool, "g611", 
+				    &g711_factory.mutex);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Get the codec manager. */
+    codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
+    if (!codec_mgr) {
+	return PJ_EINVALIDOP;
+    }
+
+    /* Register codec factory to endpoint. */
+    status = pjmedia_codec_mgr_register_factory(codec_mgr, 
+						&g711_factory.base);
+    if (status != PJ_SUCCESS)
+	return status;
+
+
+    return PJ_SUCCESS;
+
+on_error:
+    if (g711_factory.mutex) {
+	pj_mutex_destroy(g711_factory.mutex);
+	g711_factory.mutex = NULL;
+    }
+    if (g711_factory.pool) {
+	pj_pool_release(g711_factory.pool);
+	g711_factory.pool = NULL;
+    }
+    return status;
+}
+
+PJ_DEF(pj_status_t) pjmedia_codec_g711_deinit(void)
+{
+    pjmedia_codec_mgr *codec_mgr;
+    pj_status_t status;
+
+    if (g711_factory.endpt == NULL) {
+	/* Not registered. */
+	return PJ_SUCCESS;
+    }
+
+    /* Lock mutex. */
+    pj_mutex_lock(g711_factory.mutex);
+
+    /* Get the codec manager. */
+    codec_mgr = pjmedia_endpt_get_codec_mgr(g711_factory.endpt);
+    if (!codec_mgr) {
+	g711_factory.endpt = NULL;
+	pj_mutex_unlock(g711_factory.mutex);
+	return PJ_EINVALIDOP;
+    }
+
+    /* Unregister G711 codec factory. */
+    status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
+						  &g711_factory.base);
+    g711_factory.endpt = NULL;
+
+    /* Destroy mutex. */
+    pj_mutex_destroy(g711_factory.mutex);
+    g711_factory.mutex = NULL;
+
+
+    /* Release pool. */
+    pj_pool_release(g711_factory.pool);
+    g711_factory.pool = NULL;
+
+
+    return status;
 }
 
 static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, const pjmedia_codec_info *id )
@@ -208,17 +278,23 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 				     const pjmedia_codec_info *id,
 				     pjmedia_codec **p_codec)
 {
-    struct g711_factory_private *priv = factory->factory_data;
     pjmedia_codec *codec = NULL;
 
+    PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
+
+    /* Lock mutex. */
+    pj_mutex_lock(g711_factory.mutex);
+
     /* Allocate new codec if no more is available */
-    if (pj_list_empty(&priv->codec_list)) {
+    if (pj_list_empty(&g711_factory.codec_list)) {
 	struct g711_private *codec_priv;
 
-	codec = pj_pool_alloc(priv->pool, sizeof(pjmedia_codec));
-	codec_priv = pj_pool_alloc(priv->pool, sizeof(struct g711_private));
-	if (!codec || !codec_priv)
+	codec = pj_pool_alloc(g711_factory.pool, sizeof(pjmedia_codec));
+	codec_priv = pj_pool_alloc(g711_factory.pool, sizeof(struct g711_private));
+	if (!codec || !codec_priv) {
+	    pj_mutex_unlock(g711_factory.mutex);
 	    return PJ_ENOMEM;
+	}
 
 	codec_priv->pt = id->pt;
 
@@ -226,7 +302,7 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 	codec->op = &g711_op;
 	codec->codec_data = codec_priv;
     } else {
-	codec = priv->codec_list.next;
+	codec = g711_factory.codec_list.next;
 	pj_list_erase(codec);
     }
 
@@ -234,12 +310,17 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
     codec->next = codec->prev = NULL;
 
     *p_codec = codec;
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(g711_factory.mutex);
+
     return PJ_SUCCESS;
 }
 
 static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, pjmedia_codec *codec )
 {
-    struct g711_factory_private *priv = factory->factory_data;
+    
+    PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
 
     /* Check that this node has not been deallocated before */
     pj_assert (codec->next==NULL && codec->prev==NULL);
@@ -247,8 +328,14 @@ static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory, pjmedia_c
 	return PJ_EINVALIDOP;
     }
 
+    /* Lock mutex. */
+    pj_mutex_lock(g711_factory.mutex);
+
     /* Insert at the back of the list */
-    pj_list_insert_before(&priv->codec_list, codec);
+    pj_list_insert_before(&g711_factory.codec_list, codec);
+
+    /* Unlock mutex. */
+    pj_mutex_unlock(g711_factory.mutex);
 
     return PJ_SUCCESS;
 }

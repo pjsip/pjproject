@@ -38,8 +38,6 @@ static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
 
 
-PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool);
-PJ_DECL(pj_status_t) g711_deinit_factory (pjmedia_codec_factory *factory);
 
 /* Flag to indicate whether pjmedia error subsystem has been registered
  * to pjlib.
@@ -89,7 +87,6 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
 {
     pj_pool_t *pool;
     pjmedia_endpt *endpt;
-    pjmedia_codec_factory *factory;
     pj_status_t status;
 
     if (!error_subsys_registered) {
@@ -119,6 +116,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     }
 
     /* Init and register G.711 codec. */
+#if 0
+    // Starting from 0.5.4, codec factory is registered by applications.
     factory = pj_pool_alloc (endpt->pool, sizeof(pjmedia_codec_factory));
 
     status = g711_init_factory (factory, endpt->pool);
@@ -132,6 +131,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
 	pj_snd_deinit();
 	goto on_error;
     }
+#endif
 
     *p_endpt = endpt;
     return PJ_SUCCESS;
@@ -326,10 +326,11 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 	}
 
 	PJ_LOG(3,(THIS_FILE, 
-		  "   %s codec #%2d: pt=%d (%.*s, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
+		  "   %s codec #%2d: pt=%d (%.*s @%dKHz, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
 		  type, i, codec_info[i].pt,
 		  (int)codec_info[i].encoding_name.slen,
 		  codec_info[i].encoding_name.ptr,
+		  codec_info[i].sample_rate/1000,
 		  param.avg_bps, param.ptime,
 		  param.vad_enabled,
 		  param.cng_enabled));

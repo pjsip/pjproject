@@ -21,6 +21,7 @@
 /* Include factories: */
 #include <pjmedia-codec/config.h>
 #include <pjmedia-codec/gsm.h>
+#include <pjmedia-codec/speex.h>
 
 
 static pjmedia_endpt *the_endpt;
@@ -33,6 +34,10 @@ static struct codec_list
 
 #if PJMEDIA_CODEC_HAS_GSM
     { &pjmedia_codec_gsm_init, &pjmedia_codec_gsm_deinit},
+#endif
+
+#if PJMEDIA_CODEC_HAS_SPEEX
+    { &pjmedia_codec_speex_init_default, &pjmedia_codec_speex_deinit},
 #endif
 
     { NULL, NULL }

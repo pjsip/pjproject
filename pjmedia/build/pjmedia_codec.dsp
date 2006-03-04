@@ -41,7 +41,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\output\pjmedia-codec-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /O2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /YX /FD /c
+# ADD CPP /nologo /MD /W4 /GX- /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -64,7 +65,8 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir ".\output\pjmedia-codec-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX- /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -91,6 +93,10 @@ SOURCE="..\src\pjmedia-codec\gsm.c"
 
 SOURCE="..\src\pjmedia-codec\pjmedia-codec-lib.c"
 # End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex_codec.c"
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -106,6 +112,10 @@ SOURCE="..\include\pjmedia-codec\gsm.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\speex.h"
 # End Source File
 # Begin Source File
 
@@ -203,6 +213,330 @@ SOURCE="..\src\pjmedia-codec\gsm\toast.h"
 
 SOURCE="..\src\pjmedia-codec\gsm\unproto.h"
 # End Source File
+# End Group
+# Begin Group "Speex Codec"
+
+# PROP Default_Filter ""
+# Begin Group "Speex Header Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\arch.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\cb_search.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\cb_search_arm4.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\cb_search_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\cb_search_sse.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filters.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filters_arm4.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filters_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filters_sse.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fixed_arm4.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fixed_arm5e.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fixed_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fixed_debug.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fixed_generic.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lpc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lpc_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lsp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\ltp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\ltp_arm4.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\ltp_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\ltp_sse.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\math_approx.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\misc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\misc_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\modes.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\nb_celp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\pseudofloat.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\quant_lsp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\sb_celp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\smallft.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_bits.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_callbacks.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_echo.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_header.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_jitter.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_preprocess.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_stereo.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_types.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\stack_alloc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vbr.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vq.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vq_arm4.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vq_bfin.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vq_sse.h"
+# End Source File
+# End Group
+# Begin Group "Speex Source Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\bits.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\cb_search.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_10_16_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_10_32_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_20_32_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_5_256_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_5_64_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\exc_8_128_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filters.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\gain_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\gain_table_lbr.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\hexc_10_32_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\hexc_table.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\high_lsp_tables.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lpc_spx.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lsp.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\lsp_tables_nb.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\ltp.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\math_approx.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\misc.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\modes.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\nb_celp.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\preprocess_spx.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\quant_lsp.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\sb_celp.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\smallft.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_callbacks.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\speex_header.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\stereo.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vbr.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\vq.c"
+# End Source File
+# End Group
 # End Group
 # End Target
 # End Project

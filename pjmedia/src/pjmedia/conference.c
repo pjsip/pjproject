@@ -889,6 +889,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 			      pj_uint32_t timestamp)
 {
     pj_int16_t *buf;
+    pj_bool_t sent = PJ_FALSE;
     unsigned j;
 
     /* If port is muted or nobody is transmitting to this port, 
@@ -964,6 +965,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     if (cport->tx_buf_count >= cport->samples_per_frame) {
 	
 	pjmedia_frame frame;
+	pj_status_t status;
 
 	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frame.buf = cport->tx_buf;
@@ -971,9 +973,18 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	frame.timestamp.u64 = timestamp;
 
 	if (cport->port)
-	    return pjmedia_port_put_frame(cport->port, &frame);
+	    status = pjmedia_port_put_frame(cport->port, &frame);
 	else
-	    return PJ_SUCCESS;
+	    status = PJ_SUCCESS;
+
+	cport->tx_buf_count -= cport->samples_per_frame;
+	if (cport->tx_buf_count) {
+	    copy_samples(cport->tx_buf, 
+			 cport->tx_buf + cport->samples_per_frame,
+			 cport->tx_buf_count);
+	}
+
+	return status;
     }
 
     return PJ_SUCCESS;

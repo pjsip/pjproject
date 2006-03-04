@@ -90,7 +90,8 @@ static void usage(void)
     puts("  --auto-play         Automatically play the file (to incoming calls only)");
     puts("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts("  --auto-conf         Automatically put incoming calls to conference");
-    puts("  --rtp-port=N	Base port to try for RTP");
+    puts("  --rtp-port=N        Base port to try for RTP");
+    puts("  --add-codec=name    Specify alternate codec order");
     puts("");
     puts("Buddy List (can be more than one):");
     puts("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -220,7 +221,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF,
-	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT,
+	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
     };
     struct option long_options[] = {
@@ -255,6 +256,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
 	{ "play-file",  1, 0, OPT_PLAY_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
+	{ "add-codec",  1, 0, OPT_ADD_CODEC},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -489,6 +491,10 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "Error: rtp-port argument value (expecting 1-65535"));
 		return -1;
 	    }
+
+	case OPT_ADD_CODEC:
+	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(optarg);
+	    break;
 
 	case OPT_AUTO_ANSWER:
 	    pjsua.auto_answer = my_atoi(optarg);

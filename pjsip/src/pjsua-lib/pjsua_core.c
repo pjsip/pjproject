@@ -528,18 +528,6 @@ pj_status_t pjsua_init(void)
 	return status;
     }
 
-    /* Init pjmedia-codecs: */
-
-    status = pjmedia_codec_init(pjsua.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pj_caching_pool_destroy(&pjsua.cp);
-	pjsua_perror(THIS_FILE, 
-		     "Media codec initialization has returned error", 
-		     status);
-	return status;
-    }
-
-
     /* Done. */
     return PJ_SUCCESS;
 }
@@ -608,14 +596,129 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url)
 
 
 /*
- * Start pjsua stack.
- * This will start the registration process, if registration is configured.
+ * Init media.
  */
-pj_status_t pjsua_start(void)
+static pj_status_t init_media(void)
 {
-    int i;  /* Must be signed */
-    pjsip_transport *udp_transport;
-    pj_status_t status = PJ_SUCCESS;
+
+    pj_status_t status;
+
+    /* If user doesn't specify any codecs, register all of them. */
+    if (pjsua.codec_cnt == 0) {
+
+	unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
+
+	/* Register speex. */
+	if (pjsua.clock_rate >= 16000)
+	    option &= ~(PJMEDIA_SPEEX_NO_WB);
+	if (pjsua.clock_rate >= 32000)
+	    option &= ~(PJMEDIA_SPEEX_NO_UWB);
+
+	status = pjmedia_codec_speex_init(pjsua.med_endpt, option, -1, -1);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing Speex codec",
+		         status);
+	    return status;
+	}
+
+	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("speex");
+	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_speex_deinit;
+	pjsua.codec_cnt++;
+
+	/* Register GSM */
+	status = pjmedia_codec_gsm_init(pjsua.med_endpt);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing GSM codec",
+		         status);
+	    return status;
+	}
+
+	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("gsm");
+	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_gsm_deinit;
+	pjsua.codec_cnt++;
+
+	/* Register PCMA and PCMU */
+	status = pjmedia_codec_g711_init(pjsua.med_endpt);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing G711 codec",
+		         status);
+	    return status;
+	}
+
+	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("pcmu");
+	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_g711_deinit;
+	pjsua.codec_cnt++;
+	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("pcma");
+	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_g711_deinit;
+	pjsua.codec_cnt++;
+
+    } else {
+
+	/* If user specifies the exact codec to be used, then create only
+	 * those codecs.
+	 */
+	int i;
+
+	for (i=0; i<pjsua.codec_cnt; ++i) {
+	
+	    /* Is it speex? */
+	    if (!pj_stricmp2(&pjsua.codec_arg[i], "speex")) {
+
+		unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
+
+		/* Register speex. */
+		if (pjsua.clock_rate >= 16000)
+		    option &= ~(PJMEDIA_SPEEX_NO_WB);
+		if (pjsua.clock_rate >= 32000)
+		    option &= ~(PJMEDIA_SPEEX_NO_UWB);
+
+		status = pjmedia_codec_speex_init(pjsua.med_endpt, option,
+						  -1, -1);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error initializing Speex codec",
+			         status);
+		    return status;
+		}
+
+		pjsua.codec_deinit[i] = &pjmedia_codec_speex_deinit;
+	    }
+	    /* Is it gsm? */
+	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "gsm")) {
+
+		status = pjmedia_codec_gsm_init(pjsua.med_endpt);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error initializing GSM codec",
+			         status);
+		    return status;
+		}
+
+		pjsua.codec_deinit[i] = &pjmedia_codec_gsm_deinit;
+
+	    }
+	    /* Is it pcma/pcmu? */
+	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "pcmu") ||
+		     !pj_stricmp2(&pjsua.codec_arg[i], "pcma"))
+	    {
+
+		status = pjmedia_codec_g711_init(pjsua.med_endpt);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error initializing G711 codec",
+			         status);
+		    return status;
+		}
+
+		pjsua.codec_deinit[i] = &pjmedia_codec_g711_deinit;
+
+	    }
+	    /* Don't know about this codec... */
+	    else {
+
+		PJ_LOG(1,(THIS_FILE, "Error: unsupported codecs %s",
+			  pjsua.codec_arg[i].ptr));
+		return PJMEDIA_CODEC_EUNSUP;
+	    }
+	}
+    }
 
     /* Init conference bridge. */
 
@@ -660,6 +763,27 @@ pj_status_t pjsua_start(void)
 	}
     }
 
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Start pjsua stack.
+ * This will start the registration process, if registration is configured.
+ */
+pj_status_t pjsua_start(void)
+{
+    int i;  /* Must be signed */
+    pjsip_transport *udp_transport;
+    pj_status_t status = PJ_SUCCESS;
+
+    /*
+     * Init media subsystem (codecs, conference bridge, et all).
+     */
+    status = init_media();
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Init sockets (STUN etc): */
     for (i=0; i<(int)pjsua.max_calls; ++i) {
@@ -870,7 +994,7 @@ static void busy_sleep(unsigned msec)
  */
 pj_status_t pjsua_destroy(void)
 {
-    int i;
+    int i;  /* Must be signed */
 
     /* Signal threads to quit: */
     pjsua.quit_flag = 1;
@@ -907,13 +1031,19 @@ pj_status_t pjsua_destroy(void)
     if (pjsua.mconf)
 	pjmedia_conf_destroy(pjsua.mconf);
 
-    /* Shutdown pjmedia-codec: */
-    pjmedia_codec_deinit();
-
     /* Destroy sound framework: 
      * (this should be done in pjmedia_shutdown())
      */
     pj_snd_deinit();
+
+    /* Shutdown all codecs: */
+    for (i = pjsua.codec_cnt-1; i >= 0; --i) {
+	(*pjsua.codec_deinit[i])();
+    }
+
+    /* Destroy media endpoint. */
+
+    pjmedia_endpt_destroy(pjsua.med_endpt);
 
     /* Destroy endpoint. */
 

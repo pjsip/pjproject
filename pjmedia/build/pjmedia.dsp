@@ -205,6 +205,10 @@ SOURCE=..\include\pjmedia\file_port.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\g711.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\jbuf.h
 # End Source File
 # Begin Source File

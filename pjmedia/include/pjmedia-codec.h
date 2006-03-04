@@ -19,14 +19,18 @@
 #ifndef __PJMEDIA_CODEC1_H__
 #define __PJMEDIA_CODEC1_H__
 
-#include <pjmedia-codec/types.h>
+#include <pjmedia-codec/gsm.h>
+#include <pjmedia-codec/speex.h>
+
 
 PJ_BEGIN_DECL
 
 
 /**
  * Initialize pjmedia-codec library, and register all codec factories
- * in this library.
+ * in this library. If application wants to controll the order of
+ * the codec, it MUST NOT call this function, but instead register
+ * each codec individually.
  *
  * @param endpt	    The pjmedia endpoint.
  *
