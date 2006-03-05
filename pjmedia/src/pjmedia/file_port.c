@@ -22,8 +22,17 @@
 #include <pj/assert.h>
 #include <pj/file_access.h>
 #include <pj/file_io.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+
+
+#define THIS_FILE   "file_port.c"
+
+
+#ifndef PJMEDIA_FILE_PORT_BUFSIZE
+#   define PJMEDIA_FILE_PORT_BUFSIZE    4000
+#endif
 
 
 #define SIGNATURE	('F'<<24|'I'<<16|'L'<<8|'E')
@@ -34,6 +43,11 @@ struct file_port
     pj_size_t	     bufsize;
     char	    *buf;
     char	    *readpos;
+
+    pj_off_t	     fsize;
+    pj_off_t	     fpos;
+    pj_oshandle_t    fd;
+
 };
 
 
@@ -76,6 +90,48 @@ static struct file_port *create_file_port(pj_pool_t *pool)
 }
 
 /*
+ * Fill buffer.
+ */
+static pj_status_t fill_buffer(struct file_port *fport)
+{
+    pj_ssize_t size_left = fport->bufsize;
+    unsigned size_to_read;
+    pj_ssize_t size;
+    pj_status_t status;
+
+    while (size_left > 0) {
+
+	/* Calculate how many bytes to read in this run. */
+	size = size_to_read = size_left;
+	status = pj_file_read(fport->fd, 
+			      &fport->buf[fport->bufsize-size_left], 
+			      &size);
+	if (status != PJ_SUCCESS)
+	    return status;
+	if (size < 0) {
+	    /* Should return more appropriate error code here.. */
+	    return PJ_ECANCELLED;
+	}
+
+	size_left -= size;
+	fport->fpos += size;
+
+	/* If size is less than size_to_read, it indicates that we've
+	 * encountered EOF. Rewind the file.
+	 */
+	if (size < (pj_ssize_t)size_to_read) {
+	    PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
+		      (int)fport->base.info.name.slen,
+		      fport->base.info.name.ptr));
+	    fport->fpos = sizeof(struct pjmedia_wave_hdr);
+	    pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Create WAVE player port.
  */
 PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
@@ -85,11 +141,9 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 						     void *user_data,
 						     pjmedia_port **p_port )
 {
-    pj_off_t file_size;
-    pj_oshandle_t fd = NULL;
     pjmedia_wave_hdr wave_hdr;
     pj_ssize_t size_read;
-    struct file_port *file_port;
+    struct file_port *fport;
     pj_status_t status;
 
 
@@ -104,28 +158,35 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	return PJ_ENOTFOUND;
     }
 
+    /* Create fport instance. */
+    fport = create_file_port(pool);
+    if (!fport) {
+	return PJ_ENOMEM;
+    }
+
+
     /* Get the file size. */
-    file_size = pj_file_size(filename);
+    fport->fsize = pj_file_size(filename);
 
     /* Size must be more than WAVE header size */
-    if (file_size <= sizeof(pjmedia_wave_hdr)) {
+    if (fport->fsize <= sizeof(pjmedia_wave_hdr)) {
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
     /* Open file. */
-    status = pj_file_open( pool, filename, PJ_O_RDONLY, &fd);
+    status = pj_file_open( pool, filename, PJ_O_RDONLY, &fport->fd);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Read the WAVE header. */
     size_read = sizeof(wave_hdr);
-    status = pj_file_read( fd, &wave_hdr, &size_read);
+    status = pj_file_read( fport->fd, &wave_hdr, &size_read);
     if (status != PJ_SUCCESS) {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return status;
     }
     if (size_read != sizeof(wave_hdr)) {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
@@ -134,7 +195,7 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
 	wave_hdr.fmt_hdr.fmt != PJMEDIA_FMT_TAG)
     {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
@@ -143,74 +204,73 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	wave_hdr.fmt_hdr.bits_per_sample != 16 ||
 	wave_hdr.fmt_hdr.block_align != 2)
     {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
 
     /* Validate length. */
-    if (wave_hdr.data_hdr.len != file_size-sizeof(pjmedia_wave_hdr)) {
-	pj_file_close(fd);
+    if (wave_hdr.data_hdr.len != fport->fsize-sizeof(pjmedia_wave_hdr)) {
+	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
     if (wave_hdr.data_hdr.len < 400) {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVETOOSHORT;
     }
 
     /* It seems like we have a valid WAVE file. */
 
-    /* Create file_port instance. */
-    file_port = create_file_port(pool);
-    if (!file_port) {
-	pj_file_close(fd);
-	return PJ_ENOMEM;
-    }
-
     /* Initialize */
-    file_port->base.user_data = user_data;
+    fport->base.user_data = user_data;
 
     /* Update port info. */
-    file_port->base.info.sample_rate = wave_hdr.fmt_hdr.sample_rate;
-    file_port->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
-    file_port->base.info.samples_per_frame = file_port->base.info.sample_rate *
+    fport->base.info.sample_rate = wave_hdr.fmt_hdr.sample_rate;
+    fport->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
+    fport->base.info.samples_per_frame = fport->base.info.sample_rate *
 					     20 / 1000;
-    file_port->base.info.bytes_per_frame = 
-	file_port->base.info.samples_per_frame * 
-	file_port->base.info.bits_per_sample / 8;
+    fport->base.info.bytes_per_frame = 
+	fport->base.info.samples_per_frame * 
+	fport->base.info.bits_per_sample / 8;
 
+    pj_strdup2(pool, &fport->base.info.name, filename);
 
-    /* For this version, we only support reading the whole
-     * contents of the file.
+    /* Create file buffer.
      */
-    file_port->bufsize = wave_hdr.data_hdr.len - 8;
+    fport->bufsize = PJMEDIA_FILE_PORT_BUFSIZE;
+
 
     /* Create buffer. */
-    file_port->buf = pj_pool_alloc(pool, file_port->bufsize);
-    if (!file_port->buf) {
-	pj_file_close(fd);
+    fport->buf = pj_pool_alloc(pool, fport->bufsize);
+    if (!fport->buf) {
+	pj_file_close(fport->fd);
 	return PJ_ENOMEM;
     }
 
-    file_port->readpos = file_port->buf;
+    fport->readpos = fport->buf;
 
-    /* Read the the file. */
-    size_read = file_port->bufsize;
-    status = pj_file_read(fd, file_port->buf, &size_read);
+    /* Set initial position of the file. */
+    fport->fpos = sizeof(struct pjmedia_wave_hdr);
+
+    /* Fill up the buffer. */
+    status = fill_buffer(fport);
     if (status != PJ_SUCCESS) {
-	pj_file_close(fd);
+	pj_file_close(fport->fd);
 	return status;
     }
 
-    if (size_read != (pj_ssize_t)file_port->bufsize) {
-	pj_file_close(fd);
-	return PJMEDIA_ENOTVALIDWAVE;
-    }
-
-
     /* Done. */
-    pj_file_close(fd);
 
-    *p_port = &file_port->base;
+    *p_port = &fport->base;
+
+
+    PJ_LOG(4,(THIS_FILE, 
+	      "File port '%.*s' created: clock=%dKHz, bufsize=%uKB, "
+	      "filesize=%luKB",
+	      (int)fport->base.info.name.slen,
+	      fport->base.info.name.ptr,
+	      fport->base.info.sample_rate/1000,
+	      fport->bufsize / 1000,
+	      (unsigned long)(fport->fsize / 1000)));
 
     return PJ_SUCCESS;
 }
@@ -233,29 +293,52 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame)
 {
-    struct file_port *port = (struct file_port*)this_port;
+    struct file_port *fport = (struct file_port*)this_port;
     unsigned frame_size;
-    pj_assert(port->base.info.signature == SIGNATURE);
+    pj_status_t status;
 
-    frame_size = port->base.info.bytes_per_frame;
+    pj_assert(fport->base.info.signature == SIGNATURE);
+
+    frame_size = fport->base.info.bytes_per_frame;
+    pj_assert(frame->size == frame_size);
 
     /* Copy frame from buffer. */
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = frame_size;
     frame->timestamp.u64 = 0;
 
-    if (port->readpos + frame_size <= port->buf + port->bufsize) {
-	pj_memcpy(frame->buf, port->readpos, frame_size);
-	port->readpos += frame_size;
-	if (port->readpos == port->buf + port->bufsize)
-	    port->readpos = port->buf;
+    if (fport->readpos + frame_size <= fport->buf + fport->bufsize) {
+
+	/* Read contiguous buffer. */
+	pj_memcpy(frame->buf, fport->readpos, frame_size);
+
+	/* Fill up the buffer if all has been read. */
+	fport->readpos += frame_size;
+	if (fport->readpos == fport->buf + fport->bufsize) {
+	    fport->readpos = fport->buf;
+
+	    status = fill_buffer(fport);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
     } else {
 	unsigned endread;
 
-	endread = (port->buf+port->bufsize) - port->readpos;
-	pj_memcpy(frame->buf, port->readpos, endread);
-	pj_memcpy(((char*)frame->buf)+endread, port->buf, frame_size-endread);
-	port->readpos = port->buf + (frame_size - endread);
+	/* Split read.
+	 * First stage: read until end of buffer. 
+	 */
+	endread = (fport->buf+fport->bufsize) - fport->readpos;
+	pj_memcpy(frame->buf, fport->readpos, endread);
+
+	/* Second stage: fill up buffer, and read from the start of buffer. */
+	status = fill_buffer(fport);
+	if (status != PJ_SUCCESS) {
+	    pj_memset(((char*)frame->buf)+endread, 0, frame_size-endread);
+	    return status;
+	}
+
+	pj_memcpy(((char*)frame->buf)+endread, fport->buf, frame_size-endread);
+	fport->readpos = fport->buf + (frame_size - endread);
     }
 
     return PJ_SUCCESS;
@@ -266,9 +349,10 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
  */
 static pj_status_t file_on_destroy(pjmedia_port *this_port)
 {
-    PJ_UNUSED_ARG(this_port);
+    struct file_port *fport = (struct file_port*) this_port;
 
     pj_assert(this_port->info.signature == SIGNATURE);
 
+    pj_file_close(fport->fd);
     return PJ_SUCCESS;
 }
