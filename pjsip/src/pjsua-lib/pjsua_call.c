@@ -37,9 +37,9 @@ pj_status_t pjsua_make_call(int acc_index,
 			    int *p_call_index)
 {
     pj_str_t dest_uri;
-    pjsip_dialog *dlg;
+    pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
-    pjsip_inv_session *inv;
+    pjsip_inv_session *inv = NULL;
     int call_index = -1;
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -141,7 +141,12 @@ pj_status_t pjsua_make_call(int acc_index,
 
 
 on_error:
-    PJ_TODO(DESTROY_DIALOG_ON_FAIL);
+    if (inv != NULL) {
+	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+    } else {
+	pjsip_dlg_terminate(dlg);
+    }
+
     if (call_index != -1) {
 	pjsua.calls[call_index].inv = NULL;
     }
@@ -159,7 +164,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_tx_data *response = NULL;
     unsigned options = 0;
-    pjsip_inv_session *inv;
+    pjsip_inv_session *inv = NULL;
     int acc_index;
     int call_index = -1;
     pjmedia_sdp_session *answer;
@@ -260,8 +265,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 
 	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
-
-	// TODO: Need to delete dialog
+	pjsip_dlg_terminate(dlg);
 	return PJ_TRUE;
     }
 
@@ -286,8 +290,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsua_perror(THIS_FILE, "Unable to create 100 response", status);
 
 	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
-
-	// TODO: Need to delete dialog
+	pjsip_inv_terminate(inv, 500, PJ_FALSE);
 
     } else {
 	status = pjsip_inv_send_msg(inv, response, NULL);
@@ -722,6 +725,21 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
 }
 
+/* Disconnect call */
+static void call_disconnect(pjsip_inv_session *inv,
+			    int st_code)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    status = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+	status = pjsip_inv_send_msg(inv, tdata, NULL);
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to disconnect call", status);
+    }
+}
 
 /*
  * Callback to be called when SDP offer/answer negotiation has just completed
@@ -743,6 +761,11 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
+
+	/* Disconnect call if this is not a re-INVITE */
+	if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	}
 	return;
 
     }
@@ -762,6 +785,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, 
 		     "Unable to retrieve currently active local SDP", 
 		     status);
+	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -771,6 +795,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, 
 		     "Unable to retrieve currently active remote SDP", 
 		     status);
+	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -788,6 +813,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
+	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -817,6 +843,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 		     status);
 	pjmedia_session_destroy(call->session);
 	call->session = NULL;
+	call_disconnect(inv, PJSIP_SC_INTERNAL_SERVER_ERROR);
 	return;
     }
 
@@ -909,9 +936,10 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 /*
  * Hangup call.
  */
-void pjsua_call_hangup(int call_index, int code)
+void pjsua_call_hangup(int call_index)
 {
     pjsua_call *call;
+    int code;
     pj_status_t status;
     pjsip_tx_data *tdata;
 
@@ -922,6 +950,13 @@ void pjsua_call_hangup(int call_index, int code)
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
 	return;
     }
+
+    if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
+	code = PJSIP_SC_OK;
+    else if (call->inv->role == PJSIP_ROLE_UAS)
+	code = PJSIP_SC_DECLINE;
+    else
+	code = PJSIP_SC_REQUEST_TERMINATED;
 
     status = pjsip_inv_end_session(call->inv, code, NULL, &tdata);
     if (status != PJ_SUCCESS) {
@@ -1189,12 +1224,13 @@ on_return:
 /*
  * Terminate all calls.
  */
-void pjsua_call_hangup_all()
+void pjsua_call_hangup_all(void)
 {
     int i;
 
     for (i=0; i<pjsua.max_calls; ++i) {
 	pjsip_tx_data *tdata;
+	int st_code;
 	pjsua_call *call;
 
 	if (pjsua.calls[i].inv == NULL)
@@ -1202,7 +1238,13 @@ void pjsua_call_hangup_all()
 
 	call = &pjsua.calls[i];
 
-	if (pjsip_inv_end_session(call->inv, 410, NULL, &tdata)==0) {
+	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+	    st_code = 200;
+	} else {
+	    st_code = PJSIP_SC_GONE;
+	}
+
+	if (pjsip_inv_end_session(call->inv, st_code, NULL, &tdata)==0) {
 	    if (tdata)
 		pjsip_inv_send_msg(call->inv, tdata, NULL);
 	}

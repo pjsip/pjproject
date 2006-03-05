@@ -45,61 +45,63 @@ const char *pjsua_inv_state_names[] =
 /* Show usage */
 static void usage(void)
 {
-    puts("Usage:");
-    puts("  pjsua [options]");
-    puts("");
-    puts("General options:");
-    puts("  --help              Display this help screen");
-    puts("  --version           Display version info");
-    puts("");
-    puts("Logging options:");
-    puts("  --config-file=file  Read the config/arguments from file.");
-    puts("  --log-file=fname    Log to filename (default stderr)");
-    puts("  --log-level=N       Set log max level to N (0(none) to 6(trace))");
-    puts("  --app-log-level=N   Set log max level for stdout display to N");
-    puts("");
-    puts("SIP Account options:");
-    puts("  --id=url            Set the URL of local ID (used in From header)");
-    puts("  --contact=url       Override the Contact information");
-    puts("  --proxy=url         Set the URL of proxy server");
-    puts("");
-    puts("SIP Account Registration Options:");
-    puts("  --registrar=url     Set the URL of registrar server");
-    puts("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
-    puts("");
-    puts("SIP Account Control:");
-    puts("  --next-account      Add more account");
-    puts("");
-    puts("Authentication options:");
-    puts("  --realm=string      Set realm");
-    puts("  --username=string   Set authentication username");
-    puts("  --password=string   Set authentication password");
-    puts("  --next-cred         Add more credential");
-    puts("");
-    puts("Transport Options:");
-    puts("  --local-port=port        Set TCP/UDP port");
-    puts("  --outbound=url           Set the URL of outbound proxy server");
-    puts("  --use-stun1=host[:port]");
-    puts("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
-    puts("");
-    puts("Media Options:");
-    puts("  --wb                Enable wideband codecs (16KHz)");
-    puts("  --uwb               Enable ultra-wideband codecs (32KHz)");
-    puts("  --null-audio        Use NULL audio device");
-    puts("  --play-file=file    Play WAV file in conference bridge");
-    puts("  --auto-play         Automatically play the file (to incoming calls only)");
-    puts("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
-    puts("  --auto-conf         Automatically put incoming calls to conference");
-    puts("  --rtp-port=N        Base port to try for RTP");
-    puts("  --add-codec=name    Specify alternate codec order");
-    puts("");
-    puts("Buddy List (can be more than one):");
-    puts("  --add-buddy url     Add the specified URL to the buddy list.");
-    puts("");
-    puts("User Agent options:");
-    puts("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
-    puts("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
-    puts("");
+    puts  ("Usage:");
+    puts  ("  pjsua [options]");
+    puts  ("");
+    puts  ("General options:");
+    puts  ("  --help              Display this help screen");
+    puts  ("  --version           Display version info");
+    puts  ("");
+    puts  ("Logging options:");
+    puts  ("  --config-file=file  Read the config/arguments from file.");
+    puts  ("  --log-file=fname    Log to filename (default stderr)");
+    puts  ("  --log-level=N       Set log max level to N (0(none) to 6(trace)) (default=5)");
+    puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
+    puts  ("");
+    puts  ("SIP Account options:");
+    puts  ("  --id=url            Set the URL of local ID (used in From header)");
+    puts  ("  --contact=url       Override the Contact information");
+    puts  ("  --proxy=url         Set the URL of proxy server");
+    puts  ("");
+    puts  ("SIP Account Registration Options:");
+    puts  ("  --registrar=url     Set the URL of registrar server");
+    puts  ("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
+    puts  ("");
+    puts  ("SIP Account Control:");
+    puts  ("  --next-account      Add more account");
+    puts  ("");
+    puts  ("Authentication options:");
+    puts  ("  --realm=string      Set realm");
+    puts  ("  --username=string   Set authentication username");
+    puts  ("  --password=string   Set authentication password");
+    puts  ("  --next-cred         Add more credential");
+    puts  ("");
+    puts  ("Transport Options:");
+    puts  ("  --local-port=port        Set TCP/UDP port");
+    puts  ("  --outbound=url           Set the URL of outbound proxy server");
+    puts  ("  --use-stun1=host[:port]");
+    puts  ("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
+    puts  ("");
+    puts  ("Media Options:");
+    puts  ("  --wb                Enable wideband codecs and set clock-rate to 16KHz");
+    puts  ("  --uwb               Enable ultra-wideband codecs and set clock-rate to 32KHz");
+    puts  ("  --null-audio        Use NULL audio device");
+    puts  ("  --play-file=file    Play WAV file in conference bridge");
+    puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
+    puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
+    puts  ("  --auto-conf         Automatically put incoming calls to conference");
+    puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
+    puts  ("  --add-codec=name    Specify alternate codec order");
+    puts  ("  --complexity=N      Specify encoding complexity (0-10, default=4)");
+    puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
+    puts  ("");
+    puts  ("Buddy List (can be more than one):");
+    puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
+    puts  ("");
+    puts  ("User Agent options:");
+    puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
+    puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
+    puts  ("");
     fflush(stdout);
 }
 
@@ -222,6 +224,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF,
 	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT, OPT_ADD_CODEC,
+	   OPT_COMPLEXITY, OPT_QUALITY,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
     };
     struct option long_options[] = {
@@ -257,6 +260,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "play-file",  1, 0, OPT_PLAY_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
+	{ "complexity",	1, 0, OPT_COMPLEXITY},
+	{ "quality",	1, 0, OPT_QUALITY},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -494,6 +499,24 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_ADD_CODEC:
 	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(optarg);
+	    break;
+
+	case OPT_COMPLEXITY:
+	    pjsua.complexity = my_atoi(optarg);
+	    if (pjsua.complexity < 0 || pjsua.complexity > 10) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --complexity (expecting 0-10"));
+		return -1;
+	    }
+	    break;
+
+	case OPT_QUALITY:
+	    pjsua.quality = my_atoi(optarg);
+	    if (pjsua.quality < 0 || pjsua.quality > 10) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --quality (expecting 0-10"));
+		return -1;
+	    }
 	    break;
 
 	case OPT_AUTO_ANSWER:

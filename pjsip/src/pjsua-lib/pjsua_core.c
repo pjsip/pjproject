@@ -72,8 +72,11 @@ void pjsua_default(void)
     /* Default: do not use STUN: */
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
 
-    /* Default: sampling rate is 8000 */
+    /* Default for media: */
     pjsua.clock_rate = 8000;
+    pjsua.complexity = 4;
+    pjsua.quality = 4;
+
 
     /* Init accounts: */
     pjsua.acc_cnt = 1;
@@ -614,7 +617,8 @@ static pj_status_t init_media(void)
 	if (pjsua.clock_rate >= 32000)
 	    option &= ~(PJMEDIA_SPEEX_NO_UWB);
 
-	status = pjmedia_codec_speex_init(pjsua.med_endpt, option, -1, -1);
+	status = pjmedia_codec_speex_init(pjsua.med_endpt, option, 
+					  pjsua.quality, pjsua.complexity );
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing Speex codec",
 		         status);

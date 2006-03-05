@@ -115,7 +115,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Create server presence subscription: */
     status = pjsip_pres_create_uas( dlg, &pres_cb, rdata, &sub);
     if (status != PJ_SUCCESS) {
-	PJ_TODO(DESTROY_DIALOG);
+	pjsip_dlg_terminate(dlg);
 	pjsua_perror(THIS_FILE, "Unable to create server subscription", 
 		     status);
 	return PJ_FALSE;
@@ -144,6 +144,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	pjsua_perror(THIS_FILE, "Unable to accept presence subscription", 
 		     status);
 	pj_list_erase(uapres);
+	pjsip_pres_terminate(sub, PJ_FALSE);
 	return PJ_FALSE;
     }
 
@@ -168,6 +169,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY", 
 		     status);
 	pj_list_erase(uapres);
+	pjsip_pres_terminate(sub, PJ_FALSE);
 	return PJ_FALSE;
     }
 
@@ -327,6 +329,7 @@ static void subscribe_buddy_presence(unsigned index)
 	pjsua.buddies[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create presence client", 
 		     status);
+	pjsip_dlg_terminate(dlg);
 	return;
     }
 
@@ -335,6 +338,7 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_initiate(pjsua.buddies[index].sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
+	pjsip_pres_terminate(pjsua.buddies[index].sub, PJ_FALSE);
 	pjsua.buddies[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
 		     status);
@@ -343,13 +347,12 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_send_request(pjsua.buddies[index].sub, tdata);
     if (status != PJ_SUCCESS) {
+	pjsip_pres_terminate(pjsua.buddies[index].sub, PJ_FALSE);
 	pjsua.buddies[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
 		     status);
 	return;
     }
-
-    PJ_TODO(DESTROY_DIALOG_ON_ERROR);
 }
 
 
@@ -373,13 +376,10 @@ static void unsubscribe_buddy_presence(unsigned index)
     if (status == PJ_SUCCESS)
 	status = pjsip_pres_send_request( pjsua.buddies[index].sub, tdata );
 
-    if (status == PJ_SUCCESS) {
+    if (status != PJ_SUCCESS) {
 
-	//pjsip_evsub_set_mod_data(pjsua.buddies[index].sub, pjsua.mod.id,
-	//				 NULL);
-	//pjsua.buddies[index].sub = NULL;
-
-    } else {
+	pjsip_pres_terminate(pjsua.buddies[index].sub, PJ_FALSE);
+	pjsua.buddies[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to unsubscribe presence", 
 		     status);
     }

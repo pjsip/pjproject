@@ -185,6 +185,9 @@ struct pjsua
     pj_bool_t	     auto_play;	    /**< Auto play file for calls?	*/
     pj_bool_t	     auto_loop;	    /**< Auto loop RTP stream?		*/
     pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/
+    int		     complexity;    /**< Codec complexity.		*/
+    int		     quality;	    /**< Codec quality.			*/
+
 
     /* Codec arguments: */
     int		     codec_cnt;	    /**< Number of --add-codec args.	*/
@@ -337,7 +340,7 @@ void pjsua_call_answer(int call_index, int code);
 /**
  * Hangup call.
  */
-void pjsua_call_hangup(int call_index, int code);
+void pjsua_call_hangup(int call_index);
 
 
 /**
