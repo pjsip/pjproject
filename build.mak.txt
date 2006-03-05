@@ -1,3 +1,9 @@
+#
+# This file contains all possible values for the build.mak. Select
+# the appropriate settings, and put it in build.mak.
+#
+# (Just in case "./configure" fails to detect the appropriate values).
+#
 # Build configurations:
 #
 # MACHINE_NAME values: 
