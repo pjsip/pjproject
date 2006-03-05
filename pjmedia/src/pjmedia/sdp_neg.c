@@ -367,7 +367,7 @@ static void update_media_direction(pj_pool_t *pool,
 	a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
 	pjmedia_sdp_media_add_attr(local, a);
 
-    } else if (pjmedia_sdp_media_find_attr2(remote, "sendonly", NULL) != NULL) {
+    } else if(pjmedia_sdp_media_find_attr2(remote, "sendonly", NULL) != NULL) {
 	/* If remote has "a=sendonly", then set local to "recvonly" if
 	 * it is currently "sendrecv".
 	 */
@@ -379,7 +379,7 @@ static void update_media_direction(pj_pool_t *pool,
 	a = pjmedia_sdp_attr_create(pool, "recvonly", NULL);
 	pjmedia_sdp_media_add_attr(local, a);
 
-    } else if (pjmedia_sdp_media_find_attr2(remote, "recvonly", NULL) != NULL) {
+    } else if(pjmedia_sdp_media_find_attr2(remote, "recvonly", NULL) != NULL) {
 	/* If remote has "a=recvonly", then set local to "sendonly" if
 	 * it is currently "sendrecv".
 	 */
@@ -391,7 +391,7 @@ static void update_media_direction(pj_pool_t *pool,
 	a = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
 	pjmedia_sdp_media_add_attr(local, a);
 
-    } else if (pjmedia_sdp_media_find_attr2(remote, "sendrecv", NULL) != NULL) {
+    } else if(pjmedia_sdp_media_find_attr2(remote, "sendrecv", NULL) != NULL) {
 
 	pjmedia_sdp_attr *a;
 
@@ -637,7 +637,8 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 		pj_bool_t is_codec;
 
 		/* Get the rtpmap for the payload type in the offer. */
-		a = pjmedia_sdp_media_find_attr2(offer, "rtpmap", &offer->desc.fmt[i]);
+		a = pjmedia_sdp_media_find_attr2(offer, "rtpmap", 
+						 &offer->desc.fmt[i]);
 		if (!a) {
 		    pj_assert(!"Bug! Offer should have been validated");
 		    return PJ_FALSE;
@@ -657,14 +658,19 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 		}
 		
 		/* Find paylaod in our initial SDP with matching 
-		 * encoding name.
+		 * encoding name and clock rate.
 		 */
 		for (j=0; j<local->desc.fmt_count; ++j) {
-		    a = pjmedia_sdp_media_find_attr2(local, "rtpmap", &local->desc.fmt[j]);
+		    a = pjmedia_sdp_media_find_attr2(local, "rtpmap", 
+						     &local->desc.fmt[j]);
 		    if (a) {
 			pjmedia_sdp_rtpmap lr;
 			pjmedia_sdp_attr_get_rtpmap(a, &lr);
-			if (!pj_strcmp(&or.enc_name, &lr.enc_name)) {
+
+			/* See if encoding name and clock rate match */
+			if (!pj_strcmp(&or.enc_name, &lr.enc_name) &&
+			    or.clock_rate == lr.clock_rate) 
+			{
 			    /* Match! */
 			    if (is_codec)
 				found_matching_codec = 1;
