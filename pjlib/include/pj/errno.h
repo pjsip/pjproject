@@ -263,6 +263,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Object already exists.
  */
 #define PJ_EEXISTS          (PJ_ERRNO_START_STATUS + 15)/* 70015 */
+/**
+ * @hideinitializer
+ * End of file.
+ */
+#define PJ_EEOF		    (PJ_ERRNO_START_STATUS + 16)/* 70016 */
 
 /** @} */   /* pj_errnum */
 

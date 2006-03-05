@@ -60,7 +60,8 @@ static const struct
     { PJ_ENOTSUP,	"Option/operation is not supported"},
     { PJ_EINVALIDOP,	"Invalid operation"},
     { PJ_ECANCELLED,    "Operation cancelled"},
-    { PJ_EEXISTS,       "Object already exists" }
+    { PJ_EEXISTS,       "Object already exists" },
+    { PJ_EEOF,		"End of file" },
 };
 
 /*
