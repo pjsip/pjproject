@@ -38,6 +38,9 @@
  *  - move FilterUp() and FilterUD() from filterkit.c
  *  - move stddefs.h and resample.h to this file.
  *  - const correctness.
+ *  - fixed SrcLinear() may write pass output buffer.
+ *  - assume the same for SrcUp() and SrcUD(), so put the same
+ *    protection.
  */
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
@@ -203,7 +206,7 @@ static int
     HWORD iconst;
     UWORD time = 0;
     const HWORD *xp;
-    HWORD *Ystart;
+    HWORD *Ystart, *Yend;
     WORD v,x1,x2;
     
     double dt;                  /* Step through input signal */ 
@@ -214,8 +217,9 @@ static int
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
+    Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime)
+    while (time < endTime && Y < Yend)	/* bennylp fix: added Y < Yend */
     {
 	iconst = (time) & Pmask;
 	xp = &X[(time)>>Np];      /* Ptr to current input sample */
@@ -340,7 +344,7 @@ static int SrcUp(const HWORD X[], HWORD Y[], double pFactor,
 		 const HWORD pImp[], const HWORD pImpD[], BOOL Interp)
 {
     const HWORD *xp;
-    HWORD *Ystart;
+    HWORD *Ystart, *Yend;
     WORD v;
     
     double dt;                  /* Step through input signal */ 
@@ -352,8 +356,9 @@ static int SrcUp(const HWORD X[], HWORD Y[], double pFactor,
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
+    Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime)
+    while (time < endTime && Y < Yend)	/* bennylp fix: protect Y */
     {
 	xp = &X[time>>Np];      /* Ptr to current input sample */
 	/* Perform left-wing inner product */
@@ -379,7 +384,7 @@ static int SrcUD(const HWORD X[], HWORD Y[], double pFactor,
 		 const HWORD pImp[], const HWORD pImpD[], BOOL Interp)
 {
     const HWORD *xp;
-    HWORD *Ystart;
+    HWORD *Ystart, *Yend;
     WORD v;
     
     double dh;                  /* Step through filter impulse response */
@@ -395,8 +400,9 @@ static int SrcUD(const HWORD X[], HWORD Y[], double pFactor,
     dhb = dh*(1<<Na) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
+    Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime)
+    while (time < endTime && Y < Yend) /* bennylp fix: protect Y */
     {
 	xp = &X[time>>Np];	/* Ptr to current input sample */
 	v = FilterUD(pImp, pImpD, pNwing, Interp, xp, (HWORD)(time&Pmask),
