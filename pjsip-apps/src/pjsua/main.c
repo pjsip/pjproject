@@ -89,17 +89,23 @@ void pjsua_ui_on_call_state(int call_index, pjsip_event *e)
 
     PJ_UNUSED_ARG(e);
 
-    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
-	      call_index,
-	      pjsua_inv_state_names[call->inv->state]));
-
     if (call->inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+
+	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
+		  call_index,
+		  call->inv->cause,
+		  pjsip_get_status_text(call->inv->cause)->ptr));
+
 	call->inv = NULL;
 	if ((int)call->index == current_call) {
 	    find_next_call();
 	}
 
     } else {
+
+	PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
+		  call_index,
+		  pjsua_inv_state_names[call->inv->state]));
 
 	if (call && current_call==-1)
 	    current_call = call->index;
@@ -588,7 +594,7 @@ static void ui_console_main(void)
 	    } else {
 
 		/* Hangup current calls */
-		pjsua_call_hangup(current_call, PJSIP_SC_DECLINE);
+		pjsua_call_hangup(current_call);
 	    }
 	    break;
 
