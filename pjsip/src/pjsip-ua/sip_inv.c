@@ -124,12 +124,25 @@ static pj_status_t mod_inv_unload(void)
 void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 		   pjsip_event *e)
 {
+    pjsip_inv_state prev_state = inv->state;
+
+    /* Set state. */
     inv->state = state;
-    if (mod_inv.cb.on_state_changed)
+
+    /* If state is DISCONNECTED, cause code MUST have been set. */
+    pj_assert(inv->state != PJSIP_INV_STATE_DISCONNECTED ||
+	      inv->cause != 0);
+
+    /* Call on_state_changed() callback. */
+    if (mod_inv.cb.on_state_changed && inv->notify)
 	(*mod_inv.cb.on_state_changed)(inv, e);
 
-    if (inv->state == PJSIP_INV_STATE_DISCONNECTED)
+    /* Only decrement when previous state is not already DISCONNECTED */
+    if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
+	prev_state != PJSIP_INV_STATE_DISCONNECTED) 
+    {
 	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
+    }
 }
 
 
@@ -290,7 +303,7 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     (*inv_state_handler[inv->state])(inv, e);
 
     /* Call on_tsx_state */
-    if (mod_inv.cb.on_tsx_state_changed)
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
 	(*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
 
     /* Clear invite transaction when tsx is terminated. */
@@ -378,6 +391,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv->state = PJSIP_INV_STATE_NULL;
     inv->dlg = dlg;
     inv->options = options;
+    inv->notify = PJ_TRUE;
+    inv->cause = 0;
 
     /* Object name will use the same dialog pointer. */
     pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
@@ -774,6 +789,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->state = PJSIP_INV_STATE_NULL;
     inv->dlg = dlg;
     inv->options = options;
+    inv->notify = PJ_TRUE;
+    inv->cause = 0;
 
     /* Object name will use the same dialog pointer. */
     pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
@@ -832,6 +849,50 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     return PJ_SUCCESS;
 }
+
+/*
+ * Forcefully terminate the session.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
+				         int st_code,
+					 pj_bool_t notify)
+{
+    PJ_ASSERT_RETURN(inv, PJ_EINVAL);
+
+    /* Lock dialog. */
+    pjsip_dlg_inc_lock(inv->dlg);
+
+    /* Set callback notify flag. */
+    inv->notify = notify;
+
+    /* If there's pending transaction, terminate the transaction. 
+     * This may subsequently set the INVITE session state to
+     * disconnected.
+     */
+    if (inv->invite_tsx && 
+	inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
+    {
+	pjsip_tsx_terminate(inv->invite_tsx, st_code);
+
+    }
+
+    /* Set cause. */
+    inv->cause = st_code;
+
+    /* Forcefully terminate the session if state is not DISCONNECTED */
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED) {
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
+    }
+
+    /* Done.
+     * The dec_lock() below will actually destroys the dialog if it
+     * has no other session.
+     */
+    pjsip_dlg_dec_lock(inv->dlg);
+
+    return PJ_SUCCESS;
+}
+
 
 static void *clone_sdp(pj_pool_t *pool, const void *data, unsigned len)
 {
@@ -974,7 +1035,7 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 
     PJ_LOG(5,(inv->obj_name, "SDP negotiation done, status=%d", status));
 
-    if (mod_inv.cb.on_media_update)
+    if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
 
     return status;
@@ -1063,7 +1124,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	/* Inform application about remote offer. */
 
-	if (mod_inv.cb.on_rx_offer) {
+	if (mod_inv.cb.on_rx_offer && inv->notify) {
 
 	    (*mod_inv.cb.on_rx_offer)(inv, sdp);
 
@@ -1304,6 +1365,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
+    /* Set cause code. */
+    if (inv->cause==0) inv->cause = st_code;
+
     /* Create appropriate message. */
     switch (inv->state) {
     case PJSIP_INV_STATE_CALLING:
@@ -1358,8 +1422,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     case PJSIP_INV_STATE_DISCONNECTED:
 	/* No need to do anything. */
-	PJ_TODO(RETURN_A_PROPER_STATUS_CODE_HERE);
-	return PJ_EINVALIDOP;
+	return PJSIP_ESESSIONTERMINATED;
 
     default:
 	pj_assert("!Invalid operation!");
@@ -1612,8 +1675,10 @@ static void inv_respond_incoming_bye( pjsip_inv_session *inv,
 
     /* Terminate session: */
 
-    if (inv->state != PJSIP_INV_STATE_DISCONNECTED)
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED) {
+	if (inv->cause==0) inv->cause=PJSIP_SC_OK;
 	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+    }
 }
 
 /*
@@ -1627,6 +1692,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
     pj_status_t status;
     
     if (e->body.tsx_state.type != PJSIP_EVENT_RX_MSG) {
+	if (inv->cause==0) inv->cause=PJSIP_SC_OK;
 	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	return;
     }
@@ -1646,6 +1712,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
 	    /* Does not have proper credentials. 
 	     * End the session anyway.
 	     */
+	    if (inv->cause==0) inv->cause=PJSIP_SC_OK;
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    
 	} else {
@@ -1656,7 +1723,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
     } else {
 
 	/* End the session. */
-
+	if (inv->cause==0) inv->cause=PJSIP_SC_OK;
 	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
     }
 
@@ -1774,6 +1841,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		    /* Does not have proper credentials. 
 		     * End the session.
 		     */
+		    if (inv->cause==0) inv->cause = tsx->status_code;
 		    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
 		} else {
@@ -1788,6 +1856,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 
 	    } else {
 
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
 	    }
@@ -1815,6 +1884,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 
 
 	    } else  {
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
@@ -1837,6 +1907,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    PJSIP_SC_TSX_TRANSPORT_ERROR)
 	{
+	    if (inv->cause==0) inv->cause = tsx->status_code;
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	}
     }
@@ -1877,10 +1948,12 @@ static void inv_on_state_incoming( pjsip_inv_session *inv, pjsip_event *e)
 	    /*
 	     * Transaction sent final response.
 	     */
-	    if (tsx->status_code/100 == 2)
+	    if (tsx->status_code/100 == 2) {
 		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
-	    else
+	    } else {
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    }
 	    break;
 
 	case PJSIP_TSX_STATE_TERMINATED:
@@ -1888,6 +1961,7 @@ static void inv_on_state_incoming( pjsip_inv_session *inv, pjsip_event *e)
 	     * This happens on transport error (e.g. failed to send
 	     * response)
 	     */
+	    if (inv->cause==0) inv->cause = tsx->status_code;
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    break;
 
@@ -1948,8 +2022,10 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 						  e->body.tsx_state.src.rdata);
 		}
 
-	    } else
+	    } else {
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    }
 	    break;
 
 	case PJSIP_TSX_STATE_CONFIRMED:
@@ -1981,6 +2057,7 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		}
 
 	    } else  {
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
@@ -2016,6 +2093,7 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    PJSIP_SC_TSX_TRANSPORT_ERROR)
 	{
+	    if (inv->cause==0) inv->cause = tsx->status_code;
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	}
     }
@@ -2049,6 +2127,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	     * error.
 	     */
 	    if (tsx->status_code/100 != 2) {
+		if (inv->cause==0) inv->cause = tsx->status_code;
 		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    }
 	    break;
@@ -2240,6 +2319,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /*
 	     * Handle responses that terminates dialog.
 	     */
+	    if (inv->cause==0) inv->cause = tsx->status_code;
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	}
     }

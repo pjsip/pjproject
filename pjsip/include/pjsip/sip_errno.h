@@ -363,6 +363,15 @@ PJ_BEGIN_DECL
  */
 #define PJSIP_ENOREFERSESSION	 (PJSIP_ERRNO_START_PJSIP+122)	/* 171122 */
 
+/************************************************************
+ * INVITE SESSIONS ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Session already terminated.
+ */
+#define PJSIP_ESESSIONTERMINATED (PJSIP_ERRNO_START_PJSIP+140)	/* 171140 */
+
 
 
 

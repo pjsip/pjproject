@@ -80,9 +80,10 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
     pj_xml_add_node(doc, node);
 
     /* Add lastactive, if any. */
-    if (!is_composing && lst_actv) {
-	PJ_TODO(IMPLEMENT_LAST_ACTIVE_ATTRIBUTE);
-    }
+    PJ_UNUSED_ARG(lst_actv);
+    //if (!is_composing && lst_actv) {
+    //	PJ_TODO(IMPLEMENT_LAST_ACTIVE_ATTRIBUTE);
+    //}
 
     /* Add contenttype, if any. */
     if (content_tp) {

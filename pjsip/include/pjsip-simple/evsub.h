@@ -287,6 +287,21 @@ PJ_DECL(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
 					     unsigned option,
 					     pjsip_evsub **p_evsub);
 
+/**
+ * Forcefully destroy the subscription session. This function should only
+ * be called on special condition, such as when the subscription 
+ * initialization has failed. For other conditions, application MUST terminate
+ * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
+ *
+ * @param sub		The event subscription.
+ * @param notify	Specify whether the state notification callback
+ *			should be called.
+ *
+ * @return		PJ_SUCCESS if subscription session has been destroyed.
+ */
+PJ_DECL(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
+					    pj_bool_t notify );
+
 
 /**
  * Get subscription state.

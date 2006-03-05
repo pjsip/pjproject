@@ -322,6 +322,15 @@ on_return:
 
 
 /*
+ * Forcefully terminate presence.
+ */
+PJ_DEF(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
+					  pj_bool_t notify )
+{
+    return pjsip_evsub_terminate(sub, notify);
+}
+
+/*
  * Create SUBSCRIBE
  */
 PJ_DEF(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,

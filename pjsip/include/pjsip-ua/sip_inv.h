@@ -169,6 +169,8 @@ struct pjsip_inv_session
     char		 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification. */
     pj_pool_t		*pool;			    /**< Dialog's pool.	    */
     pjsip_inv_state	 state;			    /**< Invite sess state. */
+    pjsip_status_code	 cause;			    /**< Disconnect cause.  */
+    pj_bool_t		 notify;		    /**< Internal.	    */
     pjsip_dialog	*dlg;			    /**< Underlying dialog. */
     pjsip_role_e	 role;			    /**< Invite role.	    */
     unsigned		 options;		    /**< Options in use.    */
@@ -330,6 +332,29 @@ PJ_DECL(pj_status_t) pjsip_inv_create_uas(pjsip_dialog *dlg,
 					  const pjmedia_sdp_session *local_sdp,
 					  unsigned options,
 					  pjsip_inv_session **p_inv);
+
+
+/**
+ * Forcefully terminate and destroy INVITE session, regardless of
+ * the state of the session. Note that this function should only be used
+ * when there is failure in the INVITE session creation. After the
+ * invite session has been created and initialized, normally application
+ * SHOULD use #pjsip_inv_end_session() to end the INVITE session instead.
+ *
+ * Note also that this function may terminate the underlying dialog, if
+ * there are no other sessions in the dialog.
+ *
+ * @param inv		The invite session.
+ * @param st_code	Status code for the reason of the termination.
+ * @param notify	If set to non-zero, then on_state_changed() 
+ *			callback will be called.
+ *
+ * @return		PJ_SUCCESS if the INVITE session has been
+ *			terminated.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
+				          int st_code,
+					  pj_bool_t notify );
 
 
 /**

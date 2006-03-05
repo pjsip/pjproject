@@ -59,7 +59,19 @@ enum pjsip_dialog_state
 };
 
 /**
- * This structure describes the dialog structure.
+ * This structure describes the dialog structure. Application MUST NOT
+ * try to SET the values here directly, but instead it MUST use the
+ * appropriate dialog API. The dialog declaration only needs to be made 
+ * visible because other PJSIP modules need to see it (e.g. INVITE session,
+ * the event framework, etc.).
+ *
+ * Application MAY READ the dialog contents directly after it acquires
+ * dialog lock.
+ *
+ * To acquire dialog lock, use #pjsip_dlg_inc_lock(), and to release it,
+ * use #pjsip_dlg_dec_lock(). DO NOT USE pj_mutex_lock()/pj_mutex_unlock()
+ * on the dialog's mutex directly, because this will not protect against
+ * dialog being destroyed.
  */
 struct pjsip_dialog
 {
@@ -69,7 +81,8 @@ struct pjsip_dialog
     /* Dialog's system properties. */
     char		obj_name[PJ_MAX_OBJ_NAME];  /**< Standard id.	    */
     pj_pool_t	       *pool;	    /**< Dialog's pool.			    */
-    pj_mutex_t	       *mutex;	    /**< Dialog's mutex.		    */
+    pj_mutex_t	       *mutex;	    /**< Dialog's mutex. Do not call!!
+					 Use pjsip_dlg_inc_lock() instead!  */
     pjsip_user_agent   *ua;	    /**< User agent instance.		    */
     pjsip_endpoint     *endpt;	    /**< Endpoint instance.		    */
 
@@ -89,17 +102,18 @@ struct pjsip_dialog
     pjsip_auth_clt_sess	auth_sess;  /**< Client authentication session.	    */
 
     /** Session counter. */
-    int			sess_count;
+    int			sess_count; /**< Number of sessions.		    */
 
     /** Transaction counter. */
-    int			tsx_count;
+    int			tsx_count;  /**< Number of pending transactions.    */
 
     /* Dialog usages. */
     unsigned		usage_cnt;  /**< Number of registered usages.	    */
-    pjsip_module       *usage[PJSIP_MAX_MODULE]; /**< Array of usages, priority sorted   */
+    pjsip_module       *usage[PJSIP_MAX_MODULE]; /**< Array of usages, 
+					 priority sorted		    */
 
     /** Module specific data. */
-    void	       *mod_data[PJSIP_MAX_MODULE];
+    void	       *mod_data[PJSIP_MAX_MODULE]; /**< Module data.	    */
 };
 
 
@@ -107,6 +121,10 @@ struct pjsip_dialog
  * This utility function returns PJ_TRUE if the specified method is a
  * dialog creating request. This method property is used to determine
  * whether Contact header should be included in outgoing request.
+ *
+ * @param m		The SIP method.
+ *
+ * @return		PJ_TRUE if the method creates a dialog.
  */
 PJ_DECL(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m);
 
@@ -124,6 +142,19 @@ PJ_DECL(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m);
  *
  * Note that initially, the session count in the dialog will be initialized 
  * to zero.
+ *
+ * @param ua		    The user agent module instance.
+ * @param local_uri	    Dialog local URI (i.e. From header).
+ * @param local_contact_uri Optional dialog local Contact URI. 
+ *			    If this argument is NULL, the Contact will be
+ *			    taken from the local URI.
+ * @param remote_uri	    Dialog remote URI (i.e. To header).
+ * @param target	    Optional initial remote target. If this argument
+ *			    is NULL, the initial target will be set to
+ *			    remote URI.
+ * @param p_dlg		    Pointer to receive the dialog.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 					   const pj_str_t *local_uri,
@@ -146,6 +177,18 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
  *
  * Note that initially, the session count in the dialog will be initialized 
  * to zero.
+ *
+ *
+ * @param ua		    The user agent module instance.
+ * @param rdata		    The incoming request that creates the dialog,
+ *			    such as INVITE, SUBSCRIBE, or REFER.
+ * @param contact	    Optional URI to be used as local Contact. If
+ *			    this argument is NULL, the local contact will be
+ *			    initialized from the value of To header in the
+ *			    request.
+ * @param p_dlg		    Pointer to receive the dialog.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_create_uas(  pjsip_user_agent *ua,
 					    pjsip_rx_data *rdata,
@@ -162,10 +205,31 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uas(  pjsip_user_agent *ua,
  *
  * Note that initially, the session count in the dialog will be initialized 
  * to zero.
+ *
+ * @param original_dlg	    The original UAC dialog.
+ * @param rdata		    The incoming forked response message.
+ * @param new_dlg	    Pointer to receive the new dialog.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_fork(const pjsip_dialog *original_dlg,
 				    const pjsip_rx_data *rdata,
 				    pjsip_dialog **new_dlg );
+
+/**
+ * Forcefully terminate the dialog. Application can only call this function
+ * when there is no session associated to the dialog. If there are sessions
+ * that use this dialog, this function will refuse to terminate the dialog.
+ * For this case, application MUST call the appropriate termination function 
+ * for each dialog session (e.g. #pjsip_inv_terminate() to terminate INVITE
+ * session).
+ *
+ * @param dlg		    The dialog.
+ *
+ * @return		    PJ_SUCCESS if dialog has been terminated.
+ */
+PJ_DECL(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg );
+
 
 /**
  * Set dialog's initial route set to route_set list. This can only be called
@@ -177,6 +241,11 @@ PJ_DECL(pj_status_t) pjsip_dlg_fork(const pjsip_dialog *original_dlg,
  *
  * The route_set argument is standard list of Route headers (i.e. with 
  * sentinel).
+ *
+ * @param dlg		    The UAC dialog.
+ * @param route_set	    List of Route header.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
 					      const pjsip_route_hdr *route_set );
@@ -184,6 +253,11 @@ PJ_DECL(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
 /**
  * Increment the number of sessions in the dialog. Note that initially 
  * (after created) the dialog has the session counter set to zero.
+ *
+ * @param dlg		    The dialog.
+ * @param mod		    The module that increments the session counter.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
 					    pjsip_module *mod);
@@ -194,12 +268,24 @@ PJ_DECL(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
  * reach zero and there is no pending transaction, the dialog will be 
  * destroyed. Note that this function may destroy the dialog immediately 
  * if there is no pending transaction when this function is called.
+ *
+ * @param dlg		    The dialog.
+ * @param mod		    The module that decrements the session counter.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
 					    pjsip_module *mod);
 
 /**
  * Add a module as dialog usage, and optionally set the module specific data.
+ *
+ * @param dlg		    The dialog.
+ * @param module	    The module to be registered as dialog usage.
+ * @param mod_data	    Optional arbitrary data to be attached to dialog's
+ *			    mod_data array at the module's index.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
 					  pjsip_module *module,
@@ -208,6 +294,13 @@ PJ_DECL(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
 /**
  * Attach module specific data to the dialog. Application can also set 
  * the value directly by accessing dlg->mod_data[module_id].
+ *
+ * @param dlg		    The dialog
+ * @param mod_id	    The ID of the module from which the data is to be
+ *			    set to the dialog.
+ * @param data		    Arbitrary data.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_set_mod_data( pjsip_dialog *dlg,
 					     int mod_id,
@@ -216,6 +309,12 @@ PJ_DECL(pj_status_t) pjsip_dlg_set_mod_data( pjsip_dialog *dlg,
 /**
  * Get module specific data previously attached to the dialog. Application
  * can also get value directly by accessing dlg->mod_data[module_id].
+ *
+ * @param dlg		    The dialog
+ * @param mod_id	    The ID of the module from which the data is to be
+ *			    retrieved from the dialog.
+ *
+ * @return		    The data that was previously set, or NULL.
  */
 PJ_DECL(void*) pjsip_dlg_get_mod_data( pjsip_dialog *dlg,
 				       int mod_id);
@@ -224,12 +323,16 @@ PJ_DECL(void*) pjsip_dlg_get_mod_data( pjsip_dialog *dlg,
 /**
  * Lock dialog and increment session counter termporarily, to prevent it 
  * from being destroyed.
+ *
+ * @param dlg		    The dialog.
  */
 PJ_DECL(void) pjsip_dlg_inc_lock( pjsip_dialog *dlg );
 
 /**
  * Unlock dialog and decrement temporary session counter. After this function
  * is called, dialog may be destroyed.
+ *
+ * @param dlg		    The dialog.
  */
 PJ_DECL(void) pjsip_dlg_dec_lock( pjsip_dialog *dlg );
 
@@ -239,11 +342,26 @@ PJ_DECL(void) pjsip_dlg_dec_lock( pjsip_dialog *dlg );
  * matches an existing dialog, the user agent must have put the matching 
  * dialog instance in the rdata, or otherwise this function will return 
  * NULL if the message didn't match any existing dialog.
+ *
+ * This function can only be called after endpoint distributes the message
+ * to the transaction layer or UA layer. In other words, application can
+ * only call this function in the context of module that runs in priority
+ * number higher than PJSIP_MOD_PRIORITY_UA_PROXY_LAYER.
+ *
+ * @param rdata		    Incoming message buffer.
+ *
+ * @return		    The dialog instance that "owns" the message.
  */
 PJ_DECL(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata );
 
 /**
- * Get the associated dialog in a transaction.
+ * Get the associated dialog for the specified transaction, if any.
+ *
+ * @param tsx		    The transaction.
+ *
+ * @return		    The dialog instance which has been registered
+ *			    to the transaction as transaction user, or
+ *			    NULL if the transaction is outside any dialogs.
  */
 PJ_DECL(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx );
 
@@ -256,6 +374,16 @@ PJ_DECL(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx );
  * INVITE request as the parameter. 
  *
  * This function will also put Contact header where appropriate.
+ *
+ * @param dlg		    The dialog instance.
+ * @param method	    The method of the request.
+ * @param cseq		    Optional CSeq, which only needs to be specified
+ *			    when creating ACK and CANCEL. For other requests,
+ *			    specify -1 to use dialog's internal counter.
+ * @param tdata		    Pointer to receive the request's transmit
+ *			    data buffer.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_create_request(	pjsip_dialog *dlg,
 						const pjsip_method *method,
@@ -277,6 +405,13 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_request(	pjsip_dialog *dlg,
  *
  * This function will decrement the transmit data's reference counter
  * regardless the status of the operation.
+ *
+ * @param dlg		    The dialog.
+ * @param tdata		    The request message to be sent.
+ * @param p_tsx		    Optional argument to receive the transaction 
+ *			    instance used to send the request.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_send_request (	pjsip_dialog *dlg,
 						pjsip_tx_data *tdata,
@@ -289,6 +424,16 @@ PJ_DECL(pj_status_t) pjsip_dlg_send_request (	pjsip_dialog *dlg,
  * than endpoint's API #pjsip_endpt_create_response() in that the dialog 
  * function adds Contact header and Record-Routes headers in the response 
  * where appropriate.
+ *
+ * @param dlg		    The dialog.
+ * @param rdata		    The incoming request message for which the
+ *			    response will be created.
+ * @param st_code	    Status code.
+ * @param st_text	    Optional string for custom status reason text.
+ * @param tdata		    Pointer to receive the response message transmit
+ *			    data buffer.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 						pjsip_rx_data *rdata,
@@ -300,6 +445,14 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 /**
  * Modify previously sent response with other status code. Contact header 
  * will be added when appropriate.
+ *
+ * @param dlg		    The dialog.
+ * @param tdata		    The transmit data buffer containing response
+ *			    message to be modified.
+ * @param st_code	    New status code to be set.
+ * @param st_text	    Optional string for custom status reason text.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 						pjsip_tx_data *tdata,
@@ -313,6 +466,17 @@ PJ_DECL(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
  *
  * This function decrements the transmit data's reference counter regardless
  * the status of the operation.
+ *
+ * @param dlg		    The dialog.
+ * @param tsx		    The UAS transaction associated with the incoming
+ *			    request. If the request is within a dialog, or
+ *			    a dialog has been created for the request that
+ *			    creates the dialog, application can get the
+ *			    transaction instance for the request by calling
+ *			    #pjsip_rdata_get_tsx().
+ * @param tdata		    Response message to be sent.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_send_response(	pjsip_dialog *dlg,
 						pjsip_transaction *tsx,
@@ -340,6 +504,11 @@ PJ_DECL(pj_status_t) pjsip_dlg_respond( pjsip_dialog *dlg,
 					const pjsip_hdr *hdr_list,
 					const pjsip_msg_body *body );
 
+
+/**
+ * @}
+ */
+
 /* 
  * Internal (called by sip_ua_layer.c)
  */
@@ -356,9 +525,6 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg,
 			       pjsip_rx_data *rdata );
 
 
-/**
- * @}
- */
 
 PJ_END_DECL
 

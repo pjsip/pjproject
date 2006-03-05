@@ -613,6 +613,21 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg )
 
 
 /*
+ * Forcefully terminate dialog.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg )
+{
+    /* Number of sessions must be zero. */
+    PJ_ASSERT_RETURN(dlg->sess_count==0, PJ_EINVALIDOP);
+
+    /* MUST not have pending transactions. */
+    PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
+
+    return unregister_and_destroy_dialog(dlg);
+}
+
+
+/*
  * Set route_set
  */
 PJ_DEF(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,

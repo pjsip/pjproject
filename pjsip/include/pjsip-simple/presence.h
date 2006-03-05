@@ -129,6 +129,23 @@ PJ_DECL(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
 
 
 /**
+ * Forcefully destroy the presence subscription. This function should only
+ * be called on special condition, such as when the subscription 
+ * initialization has failed. For other conditions, application MUST terminate
+ * the subscription by sending the appropriate un(SUBSCRIBE) or NOTIFY.
+ *
+ * @param sub		The presence subscription.
+ * @param notify	Specify whether the state notification callback
+ *			should be called.
+ *
+ * @return		PJ_SUCCESS if subscription session has been destroyed.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
+					   pj_bool_t notify );
+
+
+
+/**
  * Call this function to create request to initiate presence subscription, to 
  * refresh subcription, or to request subscription termination.
  *

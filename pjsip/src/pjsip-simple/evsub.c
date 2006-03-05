@@ -198,6 +198,7 @@ struct pjsip_evsub
     struct evpkg	 *pkg;		/**< The event package.		    */
     unsigned		  option;	/**< Options.			    */
     pjsip_evsub_user	  user;		/**< Callback.			    */
+    pj_bool_t		  call_cb;	/**< Notify callback?		    */
     pjsip_role_e	  role;		/**< UAC=subscriber, UAS=notifier   */
     pjsip_evsub_state	  state;	/**< Subscription state.	    */
     pj_str_t		  state_str;	/**< String describing the state.   */
@@ -509,6 +510,7 @@ static void evsub_destroy( pjsip_evsub *sub )
 static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
 		       const pj_str_t *state_str, pjsip_event *event)
 {
+    pjsip_evsub_state prev_state = sub->state;
     pj_str_t old_state_str = sub->state_str;
 
     sub->state = state;
@@ -525,11 +527,12 @@ static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
 	      (int)sub->state_str.slen,
 	      sub->state_str.ptr));
 
-    if (sub->user.on_evsub_state)
+    if (sub->user.on_evsub_state && sub->call_cb)
 	(*sub->user.on_evsub_state)(sub, event);
 
-    if (state == PJSIP_EVSUB_STATE_TERMINATED) {
-	
+    if (state == PJSIP_EVSUB_STATE_TERMINATED &&
+	prev_state != PJSIP_EVSUB_STATE_TERMINATED) 
+    {
 	if (sub->pending_tsx == 0) {
 	    evsub_destroy(sub);
 	}
@@ -559,7 +562,7 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     case TIMER_TYPE_UAC_REFRESH:
 	/* Time for UAC to refresh subscription */
-	if (sub->user.on_client_refresh) {
+	if (sub->user.on_client_refresh && sub->call_cb) {
 	    (*sub->user.on_client_refresh)(sub);
 	} else {
 	    pjsip_tx_data *tdata;
@@ -576,7 +579,7 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     case TIMER_TYPE_UAS_TIMEOUT:
 	/* Refresh from UAC has not been received */
-	if (sub->user.on_server_timeout) {
+	if (sub->user.on_server_timeout && sub->call_cb) {
 	    (*sub->user.on_server_timeout)(sub);
 	} else {
 	    pjsip_tx_data *tdata;
@@ -652,6 +655,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     sub->dlg = dlg;
     sub->pkg = pkg;
     sub->role = role;
+    sub->call_cb = PJ_TRUE;
     sub->option = option;
     sub->state = PJSIP_EVSUB_STATE_NULL;
     sub->state_str = evsub_state_names[sub->state];
@@ -837,6 +841,29 @@ on_return:
     return status;
 }
 
+
+/*
+ * Forcefully destroy subscription.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
+					   pj_bool_t notify )
+{
+    PJ_ASSERT_RETURN(sub, PJ_EINVAL);
+
+    pjsip_dlg_inc_lock(sub->dlg);
+
+    if (sub->pending_tsx) {
+	pj_assert(!"Unable to terminate when there's pending tsx");
+	pjsip_dlg_dec_lock(sub->dlg);
+	return PJ_EINVALIDOP;
+    }
+
+    sub->call_cb = notify;
+    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+
+    pjsip_dlg_dec_lock(sub->dlg);
+    return PJ_SUCCESS;
+}
 
 /*
  * Get subscription state.
@@ -1613,7 +1640,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Call application registered callback to handle incoming NOTIFY,
 	 * if any.
 	 */
-	if (st_code==200 && sub->user.on_rx_notify) {
+	if (st_code==200 && sub->user.on_rx_notify && sub->call_cb) {
 	    (*sub->user.on_rx_notify)(sub, rdata, &st_code, &st_text, 
 				      &res_hdr, &body);
 
@@ -1781,8 +1808,10 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	 */
 	pj_list_init(&res_hdr);
 
-	(*sub->user.on_rx_refresh)(sub, rdata, &st_code, &st_text, 
-				   &res_hdr, &body);
+	if (sub->user.on_rx_refresh && sub->call_cb) {
+	    (*sub->user.on_rx_refresh)(sub, rdata, &st_code, &st_text, 
+				       &res_hdr, &body);
+	}
 
 	/* Application MUST specify final response! */
 	PJ_ASSERT_ON_FAIL(st_code >= 200, {st_code=200; });
@@ -1886,7 +1915,7 @@ static void mod_evsub_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 
 
     /* Call on_tsx_state callback, if any. */
-    if (sub->user.on_tsx_state)
+    if (sub->user.on_tsx_state && sub->call_cb)
 	(*sub->user.on_tsx_state)(sub, tsx, event);
 
 

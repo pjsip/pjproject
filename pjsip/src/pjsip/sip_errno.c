@@ -82,7 +82,12 @@ static const struct
     { PJSIP_EAUTHINVALIDDIGEST,	"Invalid authorization digest" },
 
     /* UA/dialog layer. */
-    { PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" }
+    { PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" },
+    { PJSIP_ENOTREFER,		"Expecting REFER request"} ,
+    { PJSIP_ENOREFERSESSION,	"Not associated with REFER subscription"},
+
+    /* Invite session. */
+    { PJSIP_ESESSIONTERMINATED,	"Session already terminated" },
 };
 
 
