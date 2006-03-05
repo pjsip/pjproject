@@ -889,7 +889,6 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 			      pj_uint32_t timestamp)
 {
     pj_int16_t *buf;
-    pj_bool_t sent = PJ_FALSE;
     unsigned j;
 
     /* If port is muted or nobody is transmitting to this port, 

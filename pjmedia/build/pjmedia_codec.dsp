@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\output\pjmedia-codec-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX- /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FD /c
+# ADD CPP /nologo /MD /W4 /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir ".\output\pjmedia-codec-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX- /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -411,130 +411,162 @@ SOURCE="..\src\pjmedia-codec\speex\vq_sse.h"
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\bits.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\cb_search.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_10_16_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_10_32_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_20_32_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_5_256_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_5_64_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\exc_8_128_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\filters.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\gain_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\gain_table_lbr.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\hexc_10_32_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\hexc_table.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\high_lsp_tables.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\lpc_spx.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\lsp.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\lsp_tables_nb.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\ltp.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\math_approx.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\misc.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\modes.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\nb_celp.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\preprocess_spx.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\quant_lsp.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\sb_celp.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\smallft.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\speex.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\speex_callbacks.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\speex_header.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\stereo.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\vbr.c"
+# ADD CPP /W4
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\vq.c"
+# ADD CPP /W4
 # End Source File
 # End Group
 # End Group
