@@ -97,9 +97,10 @@ static struct gsm_codec_factory
 } gsm_codec_factory;
 
 /* GSM codec private data. */
-struct gsm_private
+struct gsm_data
 {
-    int dummy;
+    void    *encoder;
+    void    *decoder;
 };
 
 
@@ -266,6 +267,7 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 				    pjmedia_codec **p_codec)
 {
     pjmedia_codec *codec;
+    struct gsm_data *gsm_data;
 
     PJ_ASSERT_RETURN(factory && id && p_codec, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &gsm_codec_factory.base, PJ_EINVAL);
@@ -283,11 +285,13 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 	PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
 	codec->op = &gsm_op;
 	codec->factory = factory;
+
+	gsm_data = pj_pool_zalloc(gsm_codec_factory.pool, 
+				  sizeof(struct gsm_data));
+	codec->codec_data = gsm_data;
     }
 
     pj_mutex_unlock(gsm_codec_factory.mutex);
-
-    pj_assert(codec->codec_data == NULL);
 
     *p_codec = codec;
     return PJ_SUCCESS;
@@ -299,14 +303,15 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory, 
 				      pjmedia_codec *codec )
 {
+    struct gsm_data *gsm_data;
+
     PJ_ASSERT_RETURN(factory && codec, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &gsm_codec_factory.base, PJ_EINVAL);
 
+    gsm_data = codec->codec_data;
+
     /* Close codec, if it's not closed. */
-    if (codec->codec_data != NULL) {
-	gsm_destroy(codec->codec_data);
-	codec->codec_data = NULL;
-    }
+    gsm_codec_close(codec);
 
     /* Put in the free list. */
     pj_mutex_lock(gsm_codec_factory.mutex);
@@ -342,12 +347,19 @@ static pj_status_t gsm_codec_init( pjmedia_codec *codec,
 static pj_status_t gsm_codec_open( pjmedia_codec *codec, 
 				   pjmedia_codec_param *attr )
 {
-    pj_assert(codec->codec_data == NULL);
+    struct gsm_data *gsm_data = codec->codec_data;
+
+    pj_assert(gsm_data != NULL);
+    pj_assert(gsm_data->encoder == NULL && gsm_data->decoder == NULL);
 
     PJ_UNUSED_ARG(attr);
 
-    codec->codec_data = gsm_create();
-    if (!codec->codec_data)
+    gsm_data->encoder = gsm_create();
+    if (!gsm_data->encoder)
+	return PJMEDIA_CODEC_EFAILED;
+
+    gsm_data->decoder = gsm_create();
+    if (!gsm_data->decoder)
 	return PJMEDIA_CODEC_EFAILED;
 
     return PJ_SUCCESS;
@@ -358,11 +370,17 @@ static pj_status_t gsm_codec_open( pjmedia_codec *codec,
  */
 static pj_status_t gsm_codec_close( pjmedia_codec *codec )
 {
-    pj_assert(codec->codec_data != NULL);
+    struct gsm_data *gsm_data = codec->codec_data;
 
-    if (codec->codec_data) {
-	gsm_destroy(codec->codec_data);
-	codec->codec_data = NULL;
+    pj_assert(gsm_data != NULL);
+
+    if (gsm_data->encoder) {
+	gsm_destroy(gsm_data->encoder);
+	gsm_data->encoder = NULL;
+    }
+    if (gsm_data->decoder) {
+	gsm_destroy(gsm_data->decoder);
+	gsm_data->decoder = NULL;
     }
 
     return PJ_SUCCESS;
@@ -407,8 +425,10 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 				     unsigned output_buf_len, 
 				     struct pjmedia_frame *output)
 {
-    PJ_ASSERT_RETURN(codec && codec->codec_data && input && output,
-		     PJ_EINVAL);
+    struct gsm_data *gsm_data = codec->codec_data;
+
+    pj_assert(gsm_data != NULL);
+    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
 
     if (output_buf_len < 33)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
@@ -416,7 +436,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     if (input->size < 320)
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
-    gsm_encode(codec->codec_data, (short*)input->buf, 
+    gsm_encode(gsm_data->encoder, (short*)input->buf, 
 	       (unsigned char*)output->buf);
 
     output->size = 33;
@@ -433,8 +453,10 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 				     unsigned output_buf_len, 
 				     struct pjmedia_frame *output)
 {
-    PJ_ASSERT_RETURN(codec && codec->codec_data && input && output,
-		     PJ_EINVAL);
+    struct gsm_data *gsm_data = codec->codec_data;
+
+    pj_assert(gsm_data != NULL);
+    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
 
     if (output_buf_len < 320)
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
@@ -442,7 +464,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
     if (input->size < 33)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
-    gsm_decode(codec->codec_data, 
+    gsm_decode(gsm_data->decoder, 
 	       (unsigned char*)input->buf, 
 	       (short*)output->buf);
 
