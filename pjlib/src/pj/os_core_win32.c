@@ -39,6 +39,8 @@
 #  include <winsock2.h>
 #endif
 
+#define THIS_FILE	"os_core_win32.c"
+
 /*
  * Implementation of pj_thread_t.
  */
@@ -128,6 +130,9 @@ PJ_DEF(pj_status_t) pj_init(void)
     char dummy_guid[32]; /* use maximum GUID length */
     pj_str_t guid;
     pj_status_t rc;
+
+    PJ_LOG(4,(THIS_FILE, "Initializing pjlib %s for win32",
+	      PJ_VERSION));
 
     /* Init Winsock.. */
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {

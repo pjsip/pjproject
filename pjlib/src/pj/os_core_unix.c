@@ -37,7 +37,7 @@
 
 #include <pthread.h>
 
-#define THIS_FILE   "osunix"
+#define THIS_FILE   "os_core_unix.c"
 
 struct pj_thread_t
 {
@@ -111,7 +111,8 @@ PJ_DEF(pj_status_t) pj_init(void)
     pj_str_t guid;
     pj_status_t rc;
 
-    PJ_LOG(5, ("pj_init", "Initializing PJ Library.."));
+    PJ_LOG(4, (THIS_FILE, "Initializing pjlib %s for Unix..",
+	       PJ_VERSION));
 
 #if PJ_HAS_THREADS
     /* Init this thread's TLS. */
