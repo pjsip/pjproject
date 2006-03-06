@@ -111,9 +111,6 @@ PJ_DEF(pj_status_t) pj_init(void)
     pj_str_t guid;
     pj_status_t rc;
 
-    PJ_LOG(4, (THIS_FILE, "Initializing pjlib %s for Unix..",
-	       PJ_VERSION));
-
 #if PJ_HAS_THREADS
     /* Init this thread's TLS. */
     if ((rc=pj_thread_init()) != 0) {
@@ -156,6 +153,9 @@ PJ_DEF(pj_status_t) pj_init(void)
 	}
     }
 #endif   
+
+    PJ_LOG(4,(THIS_FILE, "pjlib %s for Unix initialized",
+	      PJ_VERSION));
 
     return PJ_SUCCESS;
 }

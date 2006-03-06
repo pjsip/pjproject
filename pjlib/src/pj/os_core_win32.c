@@ -131,9 +131,6 @@ PJ_DEF(pj_status_t) pj_init(void)
     pj_str_t guid;
     pj_status_t rc;
 
-    PJ_LOG(4,(THIS_FILE, "Initializing pjlib %s for win32",
-	      PJ_VERSION));
-
     /* Init Winsock.. */
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {
 	return PJ_RETURN_OS_ERROR(WSAGetLastError());
@@ -174,6 +171,9 @@ PJ_DEF(pj_status_t) pj_init(void)
 	}
     }
 #endif   
+
+    PJ_LOG(4,(THIS_FILE, "pjlib %s for win32 initialized",
+	      PJ_VERSION));
 
     return PJ_SUCCESS;
 }
