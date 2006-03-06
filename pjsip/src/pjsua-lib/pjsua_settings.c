@@ -227,7 +227,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_COMPLEXITY, OPT_QUALITY,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
     };
-    struct option long_options[] = {
+    struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
 	{ "log-file",	1, 0, OPT_LOG_FILE},
 	{ "log-level",	1, 0, OPT_LOG_LEVEL},
@@ -272,11 +272,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
     pjsip_cred_info *cur_cred;
     char *config_file = NULL;
 
-    /* Run getopt once to see if user specifies config file to read. */
-    while ((c=getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
+    /* Run pj_getopt once to see if user specifies config file to read. */ 
+    while ((c=pj_getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
 	switch (c) {
 	case OPT_CONFIG_FILE:
-	    config_file = optarg;
+	    config_file = pj_optarg;
 	    break;
 	}
 	if (config_file)
@@ -294,11 +294,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
     cur_cred = &pjsua.cred_info[0];
 
 
-    /* Reinitialize and re-run getopt again, possibly with new arguments
+    /* Reinitialize and re-run pj_getopt again, possibly with new arguments
      * read from config file.
      */
-    optind = 0;
-    while ((c=getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
+    pj_optind = 0;
+    while((c=pj_getopt_long(argc, argv, "", long_options, &option_index))!=-1) {
 	char *p;
 	pj_str_t tmp;
 	long lval;
@@ -306,11 +306,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	switch (c) {
 
 	case OPT_LOG_FILE:
-	    pjsua.log_filename = optarg;
+	    pjsua.log_filename = pj_optarg;
 	    break;
 
 	case OPT_LOG_LEVEL:
-	    c = pj_strtoul(pj_cstr(&tmp, optarg));
+	    c = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (c < 0 || c > 6) {
 		printf("Error: expecting integer value 0-6 for --log-level\n");
 		return PJ_EINVAL;
@@ -319,7 +319,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_APP_LOG_LEVEL:
-	    pjsua.app_log_level = pj_strtoul(pj_cstr(&tmp, optarg));
+	    pjsua.app_log_level = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (pjsua.app_log_level < 0 || pjsua.app_log_level > 6) {
 		printf("Error: expecting integer value 0-6 for --app-log-level\n");
 		return PJ_EINVAL;
@@ -347,7 +347,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */
-	    lval = pj_strtoul(pj_cstr(&tmp, optarg));
+	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 1 || lval > 65535) {
 		printf("Error: expecting integer value for --local-port\n");
 		return PJ_EINVAL;
@@ -356,31 +356,31 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_PROXY:   /* proxy */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in proxy argument\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid SIP URL '%s' in proxy argument\n", pj_optarg);
 		return PJ_EINVAL;
 	    }
-	    cur_acc->proxy = pj_str(optarg);
+	    cur_acc->proxy = pj_str(pj_optarg);
 	    break;
 
 	case OPT_OUTBOUND_PROXY:   /* outbound proxy */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in outbound proxy argument\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid SIP URL '%s' in outbound proxy argument\n", pj_optarg);
 		return PJ_EINVAL;
 	    }
-	    pjsua.outbound_proxy = pj_str(optarg);
+	    pjsua.outbound_proxy = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REGISTRAR:   /* registrar */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in registrar argument\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid SIP URL '%s' in registrar argument\n", pj_optarg);
 		return PJ_EINVAL;
 	    }
-	    cur_acc->reg_uri = pj_str(optarg);
+	    cur_acc->reg_uri = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REG_TIMEOUT:   /* reg-timeout */
-	    cur_acc->reg_timeout = pj_strtoul(pj_cstr(&tmp,optarg));
+	    cur_acc->reg_timeout = pj_strtoul(pj_cstr(&tmp,pj_optarg));
 	    if (cur_acc->reg_timeout < 1 || cur_acc->reg_timeout > 3600) {
 		printf("Error: invalid value for --reg-timeout (expecting 1-3600)\n");
 		return PJ_EINVAL;
@@ -388,20 +388,20 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_ID:   /* id */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in local id argument\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid SIP URL '%s' in local id argument\n", pj_optarg);
 		return PJ_EINVAL;
 	    }
-	    cur_acc->local_uri = pj_str(optarg);
+	    cur_acc->local_uri = pj_str(pj_optarg);
 	    pjsua.has_acc = 1;
 	    break;
 
 	case OPT_CONTACT:   /* contact */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in contact argument\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid SIP URL '%s' in contact argument\n", pj_optarg);
 		return PJ_EINVAL;
 	    }
-	    cur_acc->contact_uri = pj_str(optarg);
+	    cur_acc->contact_uri = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
@@ -411,18 +411,18 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_USERNAME:   /* Default authentication user */
 	    if (pjsua.cred_count==0) pjsua.cred_count=1;
-	    cur_cred->username = pj_str(optarg);
+	    cur_cred->username = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REALM:	    /* Default authentication realm. */
 	    if (pjsua.cred_count==0) pjsua.cred_count=1;
-	    cur_cred->realm = pj_str(optarg);
+	    cur_cred->realm = pj_str(pj_optarg);
 	    break;
 
 	case OPT_PASSWORD:   /* authentication password */
 	    if (pjsua.cred_count==0) pjsua.cred_count=1;
 	    cur_cred->data_type = 0;
-	    cur_cred->data = pj_str(optarg);
+	    cur_cred->data = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NEXT_CRED: /* Next credential */
@@ -431,10 +431,10 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_USE_STUN1:   /* STUN server 1 */
-	    p = pj_ansi_strchr(optarg, ':');
+	    p = pj_ansi_strchr(pj_optarg, ':');
 	    if (p) {
 		*p = '\0';
-		pjsua.stun_srv1 = pj_str(optarg);
+		pjsua.stun_srv1 = pj_str(pj_optarg);
 		pjsua.stun_port1 = pj_strtoul(pj_cstr(&tmp, p+1));
 		if (pjsua.stun_port1 < 1 || pjsua.stun_port1 > 65535) {
 		    printf("Error: expecting port number with option --use-stun1\n");
@@ -442,15 +442,15 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		}
 	    } else {
 		pjsua.stun_port1 = 3478;
-		pjsua.stun_srv1 = pj_str(optarg);
+		pjsua.stun_srv1 = pj_str(pj_optarg);
 	    }
 	    break;
 
 	case OPT_USE_STUN2:   /* STUN server 2 */
-	    p = pj_ansi_strchr(optarg, ':');
+	    p = pj_ansi_strchr(pj_optarg, ':');
 	    if (p) {
 		*p = '\0';
-		pjsua.stun_srv2 = pj_str(optarg);
+		pjsua.stun_srv2 = pj_str(pj_optarg);
 		pjsua.stun_port2 = pj_strtoul(pj_cstr(&tmp,p+1));
 		if (pjsua.stun_port2 < 1 || pjsua.stun_port2 > 65535) {
 		    printf("Error: expecting port number with option --use-stun2\n");
@@ -458,20 +458,20 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		}
 	    } else {
 		pjsua.stun_port2 = 3478;
-		pjsua.stun_srv2 = pj_str(optarg);
+		pjsua.stun_srv2 = pj_str(pj_optarg);
 	    }
 	    break;
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
-	    if (pjsua_verify_sip_url(optarg) != 0) {
-		printf("Error: invalid URL '%s' in --add-buddy option\n", optarg);
+	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+		printf("Error: invalid URL '%s' in --add-buddy option\n", pj_optarg);
 		return -1;
 	    }
 	    if (pjsua.buddy_cnt == PJSUA_MAX_BUDDIES) {
 		printf("Error: too many buddies in buddy list.\n");
 		return -1;
 	    }
-	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(optarg);
+	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(pj_optarg);
 	    break;
 
 	case OPT_AUTO_PLAY:
@@ -487,11 +487,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_PLAY_FILE:
-	    pjsua.wav_file = optarg;
+	    pjsua.wav_file = pj_optarg;
 	    break;
 
 	case OPT_RTP_PORT:
-	    pjsua.start_rtp_port = my_atoi(optarg);
+	    pjsua.start_rtp_port = my_atoi(pj_optarg);
 	    if (pjsua.start_rtp_port < 1 || pjsua.start_rtp_port > 65535) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: rtp-port argument value (expecting 1-65535"));
@@ -499,11 +499,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    }
 
 	case OPT_ADD_CODEC:
-	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(optarg);
+	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_COMPLEXITY:
-	    pjsua.complexity = my_atoi(optarg);
+	    pjsua.complexity = my_atoi(pj_optarg);
 	    if (pjsua.complexity < 0 || pjsua.complexity > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --complexity (expecting 0-10"));
@@ -512,7 +512,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_QUALITY:
-	    pjsua.quality = my_atoi(optarg);
+	    pjsua.quality = my_atoi(pj_optarg);
 	    if (pjsua.quality < 0 || pjsua.quality > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --quality (expecting 0-10"));
@@ -521,7 +521,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_AUTO_ANSWER:
-	    pjsua.auto_answer = my_atoi(optarg);
+	    pjsua.auto_answer = my_atoi(pj_optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid code in --auto-answer (expecting 100-699"));
@@ -530,7 +530,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_MAX_CALLS:
-	    pjsua.max_calls = my_atoi(optarg);
+	    pjsua.max_calls = my_atoi(pj_optarg);
 	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
 		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
 		return -1;
@@ -539,8 +539,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	}
     }
 
-    if (optind != argc) {
-	printf("Error: unknown options %s\n", argv[optind]);
+    if (pj_optind != argc) {
+	printf("Error: unknown options %s\n", argv[pj_optind]);
 	return PJ_EINVAL;
     }
 

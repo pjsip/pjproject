@@ -465,7 +465,7 @@ pj_status_t pjsua_im_typing(int acc_index, const char *dst_uri,
  *	    Accept header.
  */
 pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
-				const pjsip_accept_hdr **p_accept_hdr);
+				pjsip_accept_hdr **p_accept_hdr);
 
 /**
  * Private: process pager message.

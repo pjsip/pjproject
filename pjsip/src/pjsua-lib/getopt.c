@@ -18,7 +18,7 @@
  */
 
 /* 
- * getopt entry points
+ * pj_getopt entry points
  *
  * modified by Mike Borella <mike_borella@mw.3com.com>
  *
@@ -32,10 +32,10 @@
 static
 int _getopt_internal (int argc, char *const *argv,
 		      const char *shortopts,
-		      const struct option *longopts, int *longind,
+		      const struct pj_getopt_option *longopts, int *longind,
 		      int long_only);
 
-/* getopt_long and getopt_long_only entry points for GNU getopt.
+/* pj_getopt_long and pj_getopt_long_only entry points for GNU pj_getopt.
    Copyright (C) 1987,88,89,90,91,92,93,94,96,97 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
@@ -67,22 +67,22 @@ int _getopt_internal (int argc, char *const *argv,
 
 
 int
-getopt_long (int argc, char *const *argv, const char *options, 
-	     const struct option *long_options, int *opt_index)
+pj_getopt_long (int argc, char *const *argv, const char *options, 
+	     const struct pj_getopt_option *long_options, int *opt_index)
 {
   return _getopt_internal (argc, argv, options, long_options, opt_index, 0);
 }
 
-/* Like getopt_long, but '-' as well as '--' can indicate a long option.
+/* Like pj_getopt_long, but '-' as well as '--' can indicate a long option.
    If an option that starts with '-' (not '--') doesn't match a long option,
    but does match a short option, it is parsed as a short option
    instead.  */
  
 int
-getopt (int argc, char * const * argv, const char * optstring)
+pj_getopt (int argc, char * const * argv, const char * optstring)
 {
   return _getopt_internal (argc, argv, optstring,
-			   (const struct option *) 0,
+			   (const struct pj_getopt_option *) 0,
 			   (int *) 0,
 			   0);
 }
@@ -90,11 +90,11 @@ getopt (int argc, char * const * argv, const char * optstring)
 
 #define _(msgid)	(msgid)
 
-/* This version of `getopt' appears to the caller like standard Unix `getopt'
+/* This version of `pj_getopt' appears to the caller like standard Unix `pj_getopt'
    but it behaves differently for the user, since it allows the user
    to intersperse the options with the other arguments.
 
-   As `getopt' works, it permutes the elements of ARGV so that,
+   As `pj_getopt' works, it permutes the elements of ARGV so that,
    when it is done, all the options precede everything else.  Thus
    all application programs are extended to handle flexible argument order.
 
@@ -104,31 +104,31 @@ getopt (int argc, char * const * argv, const char * optstring)
    GNU application programs can use a third alternative mode in which
    they can distinguish the relative order of options and other arguments.  */
 
-/* For communication from `getopt' to the caller.
-   When `getopt' finds an option that takes an argument,
+/* For communication from `pj_getopt' to the caller.
+   When `pj_getopt' finds an option that takes an argument,
    the argument value is returned here.
    Also, when `ordering' is RETURN_IN_ORDER,
    each non-option ARGV-element is returned here.  */
 
-char *optarg = NULL;
+char *pj_optarg = NULL;
 
 /* Index in ARGV of the next element to be scanned.
    This is used for communication to and from the caller
-   and for communication between successive calls to `getopt'.
+   and for communication between successive calls to `pj_getopt'.
 
-   On entry to `getopt', zero means this is the first call; initialize.
+   On entry to `pj_getopt', zero means this is the first call; initialize.
 
-   When `getopt' returns -1, this is the index of the first of the
+   When `pj_getopt' returns -1, this is the index of the first of the
    non-option elements that the caller should itself scan.
 
-   Otherwise, `optind' communicates from one call to the next
+   Otherwise, `pj_optind' communicates from one call to the next
    how much of ARGV has been scanned so far.  */
 
 /* 1003.2 says this must be 1 before any call.  */
-int optind = 1;
+int pj_optind = 1;
 
-/* Formerly, initialization of getopt depended on optind==0, which
-   causes problems with re-calling getopt as programs generally don't
+/* Formerly, initialization of pj_getopt depended on pj_optind==0, which
+   causes problems with re-calling pj_getopt as programs generally don't
    know that. */
 
 int __getopt_initialized = 0;
@@ -144,9 +144,9 @@ static char *nextchar;
 
 /* Set to an option character which was unrecognized.
    This must be initialized on some systems to avoid linking in the
-   system's own getopt implementation.  */
+   system's own pj_getopt implementation.  */
 
-int optopt = '?';
+int pj_optopt = '?';
 
 /* Describe how to deal with options that follow non-option ARGV-elements.
 
@@ -175,7 +175,7 @@ int optopt = '?';
 
    The special argument `--' forces an end of option-scanning regardless
    of the value of `ordering'.  In the case of RETURN_IN_ORDER, only
-   `--' can cause `getopt' to return -1 with `optind' != ARGC.  */
+   `--' can cause `pj_getopt' to return -1 with `pj_optind' != ARGC.  */
 
 static enum
 {
@@ -212,7 +212,7 @@ static int last_nonopt;
 /* Exchange two adjacent subsequences of ARGV.
    One subsequence is elements [first_nonopt,last_nonopt)
    which contains all the non-options that have been skipped so far.
-   The other is elements [last_nonopt,optind), which contains all
+   The other is elements [last_nonopt,pj_optind), which contains all
    the options processed since those non-options were skipped.
 
    `first_nonopt' and `last_nonopt' are relocated so that they describe
@@ -223,7 +223,7 @@ exchange (char **argv)
 {
   int bottom = first_nonopt;
   int middle = last_nonopt;
-  int top = optind;
+  int top = pj_optind;
   char *tem;
 
   /* Exchange the shorter segment with the far end of the longer segment.
@@ -271,8 +271,8 @@ exchange (char **argv)
 
   /* Update records for the slots the non-options now occupy.  */
 
-  first_nonopt += (optind - last_nonopt);
-  last_nonopt = optind;
+  first_nonopt += (pj_optind - last_nonopt);
+  last_nonopt = pj_optind;
 }
 
 /* Initialize the internal data when the first call is made.  */
@@ -287,7 +287,7 @@ static const char *_getopt_initialize (int argc, char *const *argv,
      is the program name); the sequence of previously skipped
      non-option ARGV-elements is empty.  */
 
-  first_nonopt = last_nonopt = optind;
+  first_nonopt = last_nonopt = pj_optind;
 
   nextchar = NULL;
 
@@ -319,29 +319,29 @@ static const char *_getopt_initialize (int argc, char *const *argv,
 
    If an element of ARGV starts with '-', and is not exactly "-" or "--",
    then it is an option element.  The characters of this element
-   (aside from the initial '-') are option characters.  If `getopt'
+   (aside from the initial '-') are option characters.  If `pj_getopt'
    is called repeatedly, it returns successively each of the option characters
    from each of the option elements.
 
-   If `getopt' finds another option character, it returns that character,
-   updating `optind' and `nextchar' so that the next call to `getopt' can
+   If `pj_getopt' finds another option character, it returns that character,
+   updating `pj_optind' and `nextchar' so that the next call to `pj_getopt' can
    resume the scan with the following option character or ARGV-element.
 
-   If there are no more option characters, `getopt' returns -1.
-   Then `optind' is the index in ARGV of the first ARGV-element
+   If there are no more option characters, `pj_getopt' returns -1.
+   Then `pj_optind' is the index in ARGV of the first ARGV-element
    that is not an option.  (The ARGV-elements have been permuted
    so that those that are not options now come last.)
 
    OPTSTRING is a string containing the legitimate option characters.
    If an option character is seen that is not listed in OPTSTRING,
-   return '?' after printing an error message.  If you set `opterr' to
+   return '?' after printing an error message.  If you set `pj_opterr' to
    zero, the error message is suppressed but we still return '?'.
 
    If a char in OPTSTRING is followed by a colon, that means it wants an arg,
    so the following text in the same ARGV-element, or the text of the following
-   ARGV-element, is returned in `optarg'.  Two colons mean an option that
+   ARGV-element, is returned in `pj_optarg'.  Two colons mean an option that
    wants an optional arg; if there is text in the current ARGV-element,
-   it is returned in `optarg', otherwise `optarg' is set to zero.
+   it is returned in `pj_optarg', otherwise `pj_optarg' is set to zero.
 
    If OPTSTRING starts with `-' or `+', it requests different methods of
    handling the non-option ARGV-elements.
@@ -352,7 +352,7 @@ static const char *_getopt_initialize (int argc, char *const *argv,
    or is an exact match for some defined option.  If they have an
    argument, it follows the option name in the same ARGV-element, separated
    from the option name by a `=', or else the in next ARGV-element.
-   When `getopt' finds a long-named option, it returns 0 if that option's
+   When `pj_getopt' finds a long-named option, it returns 0 if that option's
    `flag' field is nonzero, the value of the option's `val' field
    if the `flag' field is zero.
 
@@ -360,7 +360,7 @@ static const char *_getopt_initialize (int argc, char *const *argv,
    But we pretend they're const in the prototype to be compatible
    with other systems.
 
-   LONGOPTS is a vector of `struct option' terminated by an
+   LONGOPTS is a vector of `struct pj_getopt_option' terminated by an
    element containing a name which is zero.
 
    LONGIND returns the index in LONGOPT of the long-named option found.
@@ -372,24 +372,24 @@ static const char *_getopt_initialize (int argc, char *const *argv,
 
 static int
 _getopt_internal (int argc, char *const *argv, const char *optstring, 
-		  const struct option *longopts, int *longind, 
+		  const struct pj_getopt_option *longopts, int *longind, 
 		  int long_only)
 {
-  optarg = NULL;
+  pj_optarg = NULL;
 
-  if (optind == 0 || !__getopt_initialized)
+  if (pj_optind == 0 || !__getopt_initialized)
     {
-      if (optind == 0)
-	optind = 1;	/* Don't scan ARGV[0], the program name.  */
+      if (pj_optind == 0)
+	pj_optind = 1;	/* Don't scan ARGV[0], the program name.  */
       optstring = _getopt_initialize (argc, argv, optstring);
       __getopt_initialized = 1;
     }
 
-  /* Test whether ARGV[optind] points to a non-option argument.
+  /* Test whether ARGV[pj_optind] points to a non-option argument.
      Either it does not have option syntax, or there is an environment flag
      from the shell indicating it is not an option.  The later information
      is only used when the used in the GNU libc.  */
-#define NONOPTION_P (argv[optind][0] != '-' || argv[optind][1] == '\0')
+#define NONOPTION_P (argv[pj_optind][0] != '-' || argv[pj_optind][1] == '\0')
 
   if (nextchar == NULL || *nextchar == '\0')
     {
@@ -397,27 +397,27 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 
       /* Give FIRST_NONOPT & LAST_NONOPT rational values if OPTIND has been
 	 moved back by the user (who may also have changed the arguments).  */
-      if (last_nonopt > optind)
-	last_nonopt = optind;
-      if (first_nonopt > optind)
-	first_nonopt = optind;
+      if (last_nonopt > pj_optind)
+	last_nonopt = pj_optind;
+      if (first_nonopt > pj_optind)
+	first_nonopt = pj_optind;
 
       if (ordering == PERMUTE)
 	{
 	  /* If we have just processed some options following some non-options,
 	     exchange them so that the options come first.  */
 
-	  if (first_nonopt != last_nonopt && last_nonopt != optind)
+	  if (first_nonopt != last_nonopt && last_nonopt != pj_optind)
 	    exchange ((char **) argv);
-	  else if (last_nonopt != optind)
-	    first_nonopt = optind;
+	  else if (last_nonopt != pj_optind)
+	    first_nonopt = pj_optind;
 
 	  /* Skip any additional non-options
 	     and extend the range of non-options previously skipped.  */
 
-	  while (optind < argc && NONOPTION_P)
-	    optind++;
-	  last_nonopt = optind;
+	  while (pj_optind < argc && NONOPTION_P)
+	    pj_optind++;
+	  last_nonopt = pj_optind;
 	}
 
       /* The special ARGV-element `--' means premature end of options.
@@ -425,28 +425,28 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	 then exchange with previous non-options as if it were an option,
 	 then skip everything else like a non-option.  */
 
-      if (optind != argc && !pj_ansi_strcmp(argv[optind], "--"))
+      if (pj_optind != argc && !pj_ansi_strcmp(argv[pj_optind], "--"))
 	{
-	  optind++;
+	  pj_optind++;
 
-	  if (first_nonopt != last_nonopt && last_nonopt != optind)
+	  if (first_nonopt != last_nonopt && last_nonopt != pj_optind)
 	    exchange ((char **) argv);
 	  else if (first_nonopt == last_nonopt)
-	    first_nonopt = optind;
+	    first_nonopt = pj_optind;
 	  last_nonopt = argc;
 
-	  optind = argc;
+	  pj_optind = argc;
 	}
 
       /* If we have done all the ARGV-elements, stop the scan
 	 and back over any non-options that we skipped and permuted.  */
 
-      if (optind == argc)
+      if (pj_optind == argc)
 	{
 	  /* Set the next-arg-index to point at the non-options
 	     that we previously skipped, so the caller will digest them.  */
 	  if (first_nonopt != last_nonopt)
-	    optind = first_nonopt;
+	    pj_optind = first_nonopt;
 	  return -1;
 	}
 
@@ -457,15 +457,15 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	{
 	  if (ordering == REQUIRE_ORDER)
 	    return -1;
-	  optarg = argv[optind++];
+	  pj_optarg = argv[pj_optind++];
 	  return 1;
 	}
 
       /* We have found another option-ARGV-element.
 	 Skip the initial punctuation.  */
 
-      nextchar = (argv[optind] + 1
-		  + (longopts != NULL && argv[optind][1] == '-'));
+      nextchar = (argv[pj_optind] + 1
+		  + (longopts != NULL && argv[pj_optind][1] == '-'));
     }
 
   /* Decode the current option-ARGV-element.  */
@@ -484,12 +484,12 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
      This distinction seems to be the most useful approach.  */
 
   if (longopts != NULL
-      && (argv[optind][1] == '-'
-	  || (long_only && (argv[optind][2] || !my_index (optstring, argv[optind][1])))))
+      && (argv[pj_optind][1] == '-'
+	  || (long_only && (argv[pj_optind][2] || !my_index (optstring, argv[pj_optind][1])))))
     {
       char *nameend;
-      const struct option *p;
-      const struct option *pfound = NULL;
+      const struct pj_getopt_option *p;
+      const struct pj_getopt_option *pfound = NULL;
       int exact = 0;
       int ambig = 0;
       int indfound = -1;
@@ -526,37 +526,37 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
       if (ambig && !exact)
 	{
 	  nextchar += strlen (nextchar);
-	  optind++;
-	  optopt = 0;
+	  pj_optind++;
+	  pj_optopt = 0;
 	  return '?';
 	}
 
       if (pfound != NULL)
 	{
 	  option_index = indfound;
-	  optind++;
+	  pj_optind++;
 	  if (*nameend)
 	    {
 	      /* Don't test has_arg with >, because some C compilers don't
 		 allow it to be used on enums.  */
 	      if (pfound->has_arg)
-		optarg = nameend + 1;
+		pj_optarg = nameend + 1;
 	      else
 		{
 		  nextchar += strlen (nextchar);
 
-		  optopt = pfound->val;
+		  pj_optopt = pfound->val;
 		  return '?';
 		}
 	    }
 	  else if (pfound->has_arg == 1)
 	    {
-	      if (optind < argc)
-		optarg = argv[optind++];
+	      if (pj_optind < argc)
+		pj_optarg = argv[pj_optind++];
 	      else
 		{
 		  nextchar += strlen (nextchar);
-		  optopt = pfound->val;
+		  pj_optopt = pfound->val;
 		  return optstring[0] == ':' ? ':' : '?';
 		}
 	    }
@@ -571,16 +571,16 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	  return pfound->val;
 	}
 
-      /* Can't find it as a long option.  If this is not getopt_long_only,
+      /* Can't find it as a long option.  If this is not pj_getopt_long_only,
 	 or the option starts with '--' or is not a valid short
 	 option, then it's an error.
 	 Otherwise interpret it as a short option.  */
-      if (!long_only || argv[optind][1] == '-'
+      if (!long_only || argv[pj_optind][1] == '-'
 	  || my_index (optstring, *nextchar) == NULL)
 	{
 	  nextchar = (char *) "";
-	  optind++;
-	  optopt = 0;
+	  pj_optind++;
+	  pj_optopt = 0;
 	  return '?';
 	}
     }
@@ -591,21 +591,21 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
     char c = *nextchar++;
     char *temp = my_index (optstring, c);
 
-    /* Increment `optind' when we start to process its last character.  */
+    /* Increment `pj_optind' when we start to process its last character.  */
     if (*nextchar == '\0')
-      ++optind;
+      ++pj_optind;
 
     if (temp == NULL || c == ':')
       {
-	optopt = c;
+	pj_optopt = c;
 	return '?';
       }
     /* Convenience. Treat POSIX -W foo same as long option --foo */
     if (temp[0] == 'W' && temp[1] == ';')
       {
 	char *nameend;
-	const struct option *p;
-	const struct option *pfound = NULL;
+	const struct pj_getopt_option *p;
+	const struct pj_getopt_option *pfound = NULL;
 	int exact = 0;
 	int ambig = 0;
 	int indfound = 0;
@@ -614,14 +614,14 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	/* This is an option that requires an argument.  */
 	if (*nextchar != '\0')
 	  {
-	    optarg = nextchar;
+	    pj_optarg = nextchar;
 	    /* If we end this ARGV-element by taking the rest as an arg,
 	       we must advance to the next element now.  */
-	    optind++;
+	    pj_optind++;
 	  }
-	else if (optind == argc)
+	else if (pj_optind == argc)
 	  {
-	    optopt = c;
+	    pj_optopt = c;
 	    if (optstring[0] == ':')
 	      c = ':';
 	    else
@@ -629,14 +629,14 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	    return c;
 	  }
 	else
-	  /* We already incremented `optind' once;
+	  /* We already incremented `pj_optind' once;
 	     increment it again when taking next ARGV-elt as argument.  */
-	  optarg = argv[optind++];
+	  pj_optarg = argv[pj_optind++];
 
-	/* optarg is now the argument, see if it's in the
+	/* pj_optarg is now the argument, see if it's in the
 	   table of longopts.  */
 
-	for (nextchar = nameend = optarg; *nameend && *nameend != '='; nameend++)
+	for (nextchar = nameend = pj_optarg; *nameend && *nameend != '='; nameend++)
 	  /* Do nothing.  */ ;
 
 	/* Test all long options for either exact match
@@ -665,7 +665,7 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	if (ambig && !exact)
 	  {
 	    nextchar += strlen (nextchar);
-	    optind++;
+	    pj_optind++;
 	    return '?';
 	  }
 	if (pfound != NULL)
@@ -676,7 +676,7 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 		/* Don't test has_arg with >, because some C compilers don't
 		   allow it to be used on enums.  */
 		if (pfound->has_arg)
-		  optarg = nameend + 1;
+		  pj_optarg = nameend + 1;
 		else
 		  {
 		    nextchar += strlen (nextchar);
@@ -685,8 +685,8 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	      }
 	    else if (pfound->has_arg == 1)
 	      {
-		if (optind < argc)
-		  optarg = argv[optind++];
+		if (pj_optind < argc)
+		  pj_optarg = argv[pj_optind++];
 		else
 		  {
 		    nextchar += strlen (nextchar);
@@ -713,11 +713,11 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	    /* This is an option that accepts an argument optionally.  */
 	    if (*nextchar != '\0')
 	      {
-		optarg = nextchar;
-		optind++;
+		pj_optarg = nextchar;
+		pj_optind++;
 	      }
 	    else
-	      optarg = NULL;
+	      pj_optarg = NULL;
 	    nextchar = NULL;
 	  }
 	else
@@ -725,23 +725,23 @@ _getopt_internal (int argc, char *const *argv, const char *optstring,
 	    /* This is an option that requires an argument.  */
 	    if (*nextchar != '\0')
 	      {
-		optarg = nextchar;
+		pj_optarg = nextchar;
 		/* If we end this ARGV-element by taking the rest as an arg,
 		   we must advance to the next element now.  */
-		optind++;
+		pj_optind++;
 	      }
-	    else if (optind == argc)
+	    else if (pj_optind == argc)
 	      {
-		optopt = c;
+		pj_optopt = c;
 		if (optstring[0] == ':')
 		  c = ':';
 		else
 		  c = '?';
 	      }
 	    else
-	      /* We already incremented `optind' once;
+	      /* We already incremented `pj_optind' once;
 		 increment it again when taking next ARGV-elt as argument.  */
-	      optarg = argv[optind++];
+	      pj_optarg = argv[pj_optind++];
 	    nextchar = NULL;
 	  }
       }

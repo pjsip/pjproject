@@ -107,7 +107,7 @@ pjsip_accept_hdr* pjsua_im_create_accept(pj_pool_t *pool)
  * Private: check if we can accept the message.
  */
 pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
-				const pjsip_accept_hdr **p_accept_hdr)
+				pjsip_accept_hdr **p_accept_hdr)
 {
     pjsip_ctype_hdr *ctype;
     pjsip_msg *msg;
