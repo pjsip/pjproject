@@ -120,7 +120,7 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool,
  */
 PJ_DECL(pjmedia_sdp_attr*) 
 pjmedia_sdp_attr_find(unsigned count, 
-		      const pjmedia_sdp_attr *const attr_array[],
+		      pjmedia_sdp_attr *const attr_array[],
 		      const pj_str_t *name, const pj_str_t *fmt);
 
 /** 
@@ -140,7 +140,7 @@ pjmedia_sdp_attr_find(unsigned count,
  */
 PJ_DECL(pjmedia_sdp_attr*) 
 pjmedia_sdp_attr_find2(unsigned count, 
-		       const pjmedia_sdp_attr *const attr_array[],
+		       pjmedia_sdp_attr *const attr_array[],
 		       const char *name, const pj_str_t *fmt);
 
 /**

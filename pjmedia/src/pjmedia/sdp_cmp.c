@@ -43,9 +43,9 @@ static pj_status_t compare_conn(const pjmedia_sdp_conn *c1,
 
 /* Compare attributes array. */
 static pj_status_t compare_attr_imp(unsigned count1,
-				    const pjmedia_sdp_attr *const attr1[],
+				    pjmedia_sdp_attr *const attr1[],
 				    unsigned count2,
-				    const pjmedia_sdp_attr *const attr2[])
+				    pjmedia_sdp_attr *const attr2[])
 {
     pj_status_t status;
     unsigned i;
@@ -137,9 +137,9 @@ static pj_status_t compare_attr_imp(unsigned count1,
 
 /* Compare attributes array. */
 static pj_status_t compare_attr(unsigned count1,
-				const pjmedia_sdp_attr *const attr1[],
+				pjmedia_sdp_attr *const attr1[],
 				unsigned count2,
-				const pjmedia_sdp_attr *const attr2[])
+				pjmedia_sdp_attr *const attr2[])
 {
     pj_status_t status;
 
