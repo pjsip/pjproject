@@ -131,7 +131,7 @@ static void stream_perror(const char *sender, const char *title,
     char errmsg[PJ_ERR_MSG_SIZE];
 
     pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(3,(sender, "%s: %s [err:%d]", title, errmsg, status));
+    PJ_LOG(4,(sender, "%s: %s [err:%d]", title, errmsg, status));
 }
 
 
@@ -509,7 +509,10 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	    status != PJMEDIA_RTP_ESESSPROBATION && 
 	    status != PJMEDIA_RTP_ESESSRESTART) 
 	{
-	    TRACE_((THIS_FILE, "RTP session_update error", status));
+	    TRACE_((THIS_FILE, "RTP session_update error (details follows)", 
+		    status));
+	    PJ_LOG(4,(THIS_FILE,"RTP packet detail: pt=%d, seq=%d",
+		      hdr->pt, pj_ntohs(hdr->seq)));
 	    continue;
 	}
 	pj_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
@@ -557,6 +560,7 @@ static void init_snd_param( pj_snd_stream_info *snd_param,
 static pj_status_t create_channel( pj_pool_t *pool,
 				   pjmedia_stream *stream,
 				   pjmedia_dir dir,
+				   unsigned pt,
 				   const pjmedia_stream_info *param,
 				   const pjmedia_codec_param *codec_param,
 				   pjmedia_channel **p_channel)
@@ -574,7 +578,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->stream = stream;
     channel->dir = dir;
     channel->paused = 1;
-    channel->pt = param->fmt.pt;
+    channel->pt = pt;
 
     /* Allocate buffer for incoming packet. */
 
@@ -608,8 +612,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Create RTP and RTCP sessions: */
 
-    status = pjmedia_rtp_session_init(&channel->rtp, param->fmt.pt, 
-				 param->ssrc);
+    status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -748,16 +751,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Create decoder channel: */
 
-    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, info,
-			     &codec_param, &stream->dec);
+    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, 
+			     info->fmt.pt, info, &codec_param, &stream->dec);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
 
     /* Create encoder channel: */
 
-    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING, info,
-			     &codec_param, &stream->enc);
+    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING, 
+			     info->tx_pt, info, &codec_param, &stream->enc);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 

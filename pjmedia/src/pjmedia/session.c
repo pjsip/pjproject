@@ -95,7 +95,7 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
     } else {
 
 	si->type = PJMEDIA_TYPE_UNKNOWN;
-
+	return PJMEDIA_EINVALIMEDIATYPE;
     }
 
     /* Media direction: */
@@ -141,10 +141,13 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
     }
 
     /* And codec must be numeric! */
-    if (!pj_isdigit(*local_m->desc.fmt[0].ptr))
+    if (!pj_isdigit(*local_m->desc.fmt[0].ptr) || 
+	!pj_isdigit(*rem_m->desc.fmt[0].ptr))
+    {
 	return PJMEDIA_EINVALIDPT;
+    }
 
-    /* Get the payload number. */
+    /* Get the payload number for receive channel. */
     pt = pj_strtoul(&local_m->desc.fmt[0]);
 
     /* Get codec info.
@@ -161,8 +164,10 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
 	if (status != PJ_SUCCESS)
 	    return status;
 
-    } else {
+	/* For static payload type, pt's are symetric */
+	si->tx_pt = pt;
 
+    } else {
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
 					   &local_m->desc.fmt[0]);
 	if (attr == NULL)
@@ -178,7 +183,42 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
 	si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
 	pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
 	si->fmt.sample_rate = rtpmap->clock_rate;
+
+	/* Determine payload type for outgoing channel, by finding
+	 * dynamic payload type in remote SDP that matches the answer.
+	 */
+	si->tx_pt = 0xFFFF;
+	for (i=0; i<rem_m->desc.fmt_count; ++i) {
+	    unsigned rpt;
+	    pjmedia_sdp_attr *r_attr;
+	    pjmedia_sdp_rtpmap r_rtpmap;
+
+	    rpt = pj_strtoul(&rem_m->desc.fmt[i]);
+	    if (rpt < 96)
+		continue;
+
+	    r_attr = pjmedia_sdp_media_find_attr(rem_m, &ID_RTPMAP,
+						 &rem_m->desc.fmt[i]);
+	    if (!r_attr)
+		continue;
+
+	    if (pjmedia_sdp_attr_get_rtpmap(attr, &r_rtpmap) != PJ_SUCCESS)
+		continue;
+
+	    if (!pj_stricmp(&rtpmap->enc_name, &r_rtpmap.enc_name) &&
+		rtpmap->clock_rate == r_rtpmap.clock_rate)
+	    {
+		/* Found matched codec. */
+		si->tx_pt = rpt;
+		break;
+	    }
+	}
+
+	if (si->tx_pt == 0xFFFF)
+	    return PJMEDIA_EMISSINGRTPMAP;
     }
+
+  
 
     /* Get local DTMF payload type */
     si->tx_event_pt = -1;

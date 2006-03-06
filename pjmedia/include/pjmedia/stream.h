@@ -70,7 +70,8 @@ struct pjmedia_stream_info
     pjmedia_dir		dir;	    /**< Media direction.		    */
     pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
-    pjmedia_codec_info	fmt;	    /**< Codec format info.		    */
+    pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
+    unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
     int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
     int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
