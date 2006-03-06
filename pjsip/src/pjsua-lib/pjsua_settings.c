@@ -101,6 +101,8 @@ static void usage(void)
     puts  ("User Agent options:");
     puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
+    puts  ("  --uas-refresh=N     Interval in UAS to send re-INVITE (default:-1)");
+    puts  ("  --uas-duration=N    Maximum duration of incoming call (default:-1)");
     puts  ("");
     fflush(stdout);
 }
@@ -225,7 +227,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_AUTO_CONF,
 	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY,
-	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
+	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, OPT_UAS_REFRESH,
+	   OPT_UAS_DURATION,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -265,6 +268,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
+	{ "uas-refresh",1, 0, OPT_UAS_REFRESH},
+	{ "uas-duration",1,0, OPT_UAS_DURATION},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -533,6 +538,22 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.max_calls = my_atoi(pj_optarg);
 	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
 		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
+		return -1;
+	    }
+	    break;
+
+	case OPT_UAS_REFRESH:
+	    pjsua.uas_refresh = my_atoi(pj_optarg);
+	    if (pjsua.uas_refresh < 1) {
+		PJ_LOG(1,(THIS_FILE,"Invalid value for --uas-refresh (must be >0)"));
+		return -1;
+	    }
+	    break;
+
+	case OPT_UAS_DURATION:
+	    pjsua.uas_duration = my_atoi(pj_optarg);
+	    if (pjsua.uas_duration < 1) {
+		PJ_LOG(1,(THIS_FILE,"Invalid value for --uas-duration (must be >0)"));
 		return -1;
 	    }
 	    break;
@@ -915,6 +936,19 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 		    pjsua.max_calls);
     pj_strcat2(&cfg, line);
 
+    /* Uas-refresh. */
+    if (pjsua.uas_refresh > 0) {
+	pj_ansi_sprintf(line, "--uas-refresh %d\n",
+			pjsua.uas_refresh);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Uas-duration. */
+    if (pjsua.uas_duration > 0) {
+	pj_ansi_sprintf(line, "--uas-duration %d\n",
+			pjsua.uas_duration);
+	pj_strcat2(&cfg, line);
+    }
 
     pj_strcat2(&cfg, "#\n# Buddies:\n#\n");
 

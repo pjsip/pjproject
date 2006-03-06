@@ -69,6 +69,10 @@ void pjsua_default(void)
 		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE;
 
 
+    /* Default call settings. */
+    pjsua.uas_refresh = -1;
+    pjsua.uas_duration = -1;
+
     /* Default: do not use STUN: */
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
 
@@ -90,8 +94,11 @@ void pjsua_default(void)
     }
 
     /* Init call array: */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua.calls); ++i)
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.calls); ++i) {
 	pjsua.calls[i].index = i;
+	pjsua.calls[i].refresh_tm._timer_id = -1;
+	pjsua.calls[i].hangup_tm._timer_id = -1;
+    }
 
     /* Default max nb of calls. */
     pjsua.max_calls = 4;

@@ -100,6 +100,8 @@ struct pjsua_call
     pjmedia_sock_info	 skinfo;    /**< Preallocated media sockets.	    */
 
     void		*app_data;  /**< Application data.		    */
+    pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
+    pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */
 };
 
 typedef struct pjsua_call pjsua_call;
@@ -196,6 +198,8 @@ struct pjsua
 
     /* User Agent behaviour: */
     int		     auto_answer;   /**< Automatically answer in calls.	*/
+    int		     uas_refresh;   /**< Time to re-INVITE.		*/
+    int		     uas_duration;  /**< Max call duration.		*/
 
     /* Account: */
     pj_bool_t	     has_acc;	    /**< Any --id cmdline?		*/

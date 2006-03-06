@@ -29,6 +29,74 @@
 #define THIS_FILE   "pjsua_inv.c"
 
 
+#define REFRESH_CALL_TIMER	0x63
+#define HANGUP_CALL_TIMER	0x64
+
+/* Proto */
+static void schedule_call_timer( pjsua_call *call, pj_timer_entry *e,
+				 int timer_type, int duration );
+
+/*
+ * Timer callback when UAS needs to send re-INVITE to see if remote
+ * is still there.
+ */
+static void call_on_timer(pj_timer_heap_t *ht, pj_timer_entry *e)
+{
+    pjsua_call *call = e->user_data;
+
+    PJ_UNUSED_ARG(ht);
+
+    if (e->id == REFRESH_CALL_TIMER) {
+
+	/* If call is still not connected, hangup. */
+	if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	    PJ_LOG(3,(THIS_FILE, "Refresh call timer is called when "
+		      "invite is still not confirmed. Call %d will "
+		      "disconnect.", call->index));
+	    pjsua_call_hangup(call->index);
+	} else {
+	    PJ_LOG(3,(THIS_FILE, "Refreshing call %d", call->index));
+	    schedule_call_timer(call,e,REFRESH_CALL_TIMER,pjsua.uas_refresh);
+	    pjsua_call_reinvite(call->index);
+	}
+
+    } else if (e->id == HANGUP_CALL_TIMER) {
+	PJ_LOG(3,(THIS_FILE, "Call %d duration exceeded, disconnecting call",
+			     call->index));
+	pjsua_call_hangup(call->index);
+
+    }
+}
+
+/*
+ * Schedule call timer.
+ */
+static void schedule_call_timer( pjsua_call *call, pj_timer_entry *e,
+				 int timer_type, int duration )
+{
+    pj_time_val timeout;
+
+    if (duration == 0) {
+	/* Cancel timer. */
+	if (e->id != 0) {
+	    pjsip_endpt_cancel_timer(pjsua.endpt, e);
+	    e->id = 0;
+	}
+
+    } else {
+	/* Schedule timer. */
+	timeout.sec = duration;
+	timeout.msec = 0;
+
+	e->cb = &call_on_timer;
+	e->id = timer_type;
+	e->user_data = call;
+
+	pjsip_endpt_schedule_timer( pjsua.endpt, e, &timeout);
+    }
+}
+
+
 /**
  * Make outgoing call.
  */
@@ -334,6 +402,22 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     ++pjsua.call_cnt;
 
+    /* Schedule timer to refresh. */
+    if (pjsua.uas_refresh > 0) {
+	schedule_call_timer( &pjsua.calls[call_index], 
+			     &pjsua.calls[call_index].refresh_tm,
+			     REFRESH_CALL_TIMER,
+			     pjsua.uas_refresh);
+    }
+
+    /* Schedule timer to hangup call. */
+    if (pjsua.uas_duration > 0) {
+	schedule_call_timer( &pjsua.calls[call_index], 
+			     &pjsua.calls[call_index].hangup_tm,
+			     HANGUP_CALL_TIMER,
+			     pjsua.uas_duration);
+    }
+
     /* This INVITE request has been handled. */
     return PJ_TRUE;
 }
@@ -418,6 +502,11 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
 	}
 
+	/* Remove timers. */
+	schedule_call_timer(call, &call->refresh_tm, REFRESH_CALL_TIMER, 0);
+	schedule_call_timer(call, &call->hangup_tm, HANGUP_CALL_TIMER, 0);
+
+	/* Free call */
 	call->inv = NULL;
 	--pjsua.call_cnt;
     }
