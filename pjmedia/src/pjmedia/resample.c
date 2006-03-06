@@ -89,9 +89,9 @@ typedef unsigned int   UWORD;
 
 #ifdef DEBUG
 #define INLINE
-#else DEBUG
+#else
 #define INLINE inline
-#endif DEBUG
+#endif
 
 /*
  * Taken from resample.h
