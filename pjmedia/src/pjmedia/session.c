@@ -202,7 +202,7 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
 	    if (!r_attr)
 		continue;
 
-	    if (pjmedia_sdp_attr_get_rtpmap(attr, &r_rtpmap) != PJ_SUCCESS)
+	    if (pjmedia_sdp_attr_get_rtpmap(r_attr, &r_rtpmap) != PJ_SUCCESS)
 		continue;
 
 	    if (!pj_stricmp(&rtpmap->enc_name, &r_rtpmap.enc_name) &&
