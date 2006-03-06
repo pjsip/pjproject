@@ -346,7 +346,6 @@ static void ui_input_url(const char *title, char *buf, int len,
 	result->nb_result = atoi(buf);
 
 	if (result->nb_result >= 0 && result->nb_result <= (int)pjsua.buddy_cnt) {
-	    result->nb_result;
 	    return;
 	}
 	if (result->nb_result == -1)
