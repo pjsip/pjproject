@@ -28,8 +28,8 @@
 #include <pj/string.h>
 #include <pj/os.h>
 
-#define DEFAULT_QUALITY	    8
-#define DEFAULT_COMPLEXITY  8
+#define DEFAULT_QUALITY	    4
+#define DEFAULT_COMPLEXITY  -1
 
 
 /* Prototypes for Speex factory */
@@ -102,15 +102,15 @@ enum
 /* Speex default parameter */
 struct speex_param
 {
-    int	    enabled;	/* Is this mode enabled?		*/
-    const SpeexMode *mode;  /* Speex mode.			*/
-    int	    pt;		/* Payload type.			*/
-    unsigned clock_rate;/* Default sampling rate to be used.	*/
-    int	    quality;	/* Default encoder quality to be used.	*/
-    int	    complexity;	/* Default encoder complexity.		*/
-    int	    samples_per_frame;	/* Samples per frame.		*/
-    int	    framesize;	/* Frame size for current mode.		*/
-    int	    bitrate;	/* Bit rate for current mode.		*/
+    int		     enabled;		/* Is this mode enabled?	    */
+    const SpeexMode *mode;		/* Speex mode.			    */
+    int		     pt;		/* Payload type.		    */
+    unsigned	     clock_rate;	/* Default sampling rate to be used.*/
+    int		     quality;		/* Default encoder quality.	    */
+    int		     complexity;	/* Default encoder complexity.	    */
+    int		     samples_per_frame;	/* Samples per frame.		    */
+    int		     framesize;		/* Frame size for current mode.	    */
+    int		     bitrate;		/* Bit rate for current mode.	    */
 };
 
 /* Speex factory */
@@ -128,8 +128,6 @@ static struct spx_factory
 /* Speex codec private data. */
 struct spx_private
 {
-    //pjmedia_codec_info	 info;		    /**< Codec info.		*/
-
     int			 param_id;	    /**< Index to speex param.	*/
 
     void		*enc;		    /**< Encoder state.		*/
@@ -153,17 +151,19 @@ static pj_status_t get_speex_info( struct speex_param *p )
 	return PJMEDIA_CODEC_EFAILED;
 
     /* Set the quality */
-    speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
+    if (p->quality != -1)
+	speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
 
     /* Sampling rate. */
     speex_encoder_ctl(state, SPEEX_SET_SAMPLING_RATE, &p->clock_rate);
 
-    /* VAD */
-    tmp = 1;
+    /* VAD off to have max bitrate */
+    tmp = 0;
     speex_encoder_ctl(state, SPEEX_SET_VAD, &tmp);
 
     /* Complexity. */
-    speex_encoder_ctl(state, SPEEX_SET_COMPLEXITY, &p->complexity);
+    if (p->complexity != -1)
+	speex_encoder_ctl(state, SPEEX_SET_COMPLEXITY, &p->complexity);
 
     /* Now get the frame size */
     speex_encoder_ctl(state, SPEEX_GET_FRAME_SIZE, &p->samples_per_frame);
@@ -392,7 +392,9 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     attr->hpf_enabled = 1;
     attr->lpf_enabled =1 ;
     attr->penh_enabled =1 ;
-    attr->vad_enabled = 1;
+
+    /* Default, set VAD off as it caused voice chip off */
+    attr->vad_enabled = 0;
 
     return PJ_SUCCESS;
 }
@@ -557,8 +559,10 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
     speex_bits_init(&spx->enc_bits);
 
     /* Set the quality*/
-    speex_encoder_ctl(spx->enc, SPEEX_SET_QUALITY, 
-		      &spx_factory.speex_param[id].quality);
+    if (spx_factory.speex_param[id].quality != -1) {
+	speex_encoder_ctl(spx->enc, SPEEX_SET_QUALITY, 
+			  &spx_factory.speex_param[id].quality);
+    }
 
     /* Sampling rate. */
     tmp = attr->sample_rate;
@@ -570,12 +574,10 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
     speex_encoder_ctl(spx->enc, SPEEX_SET_VAD, &tmp);
 
     /* Complexity */
-    speex_encoder_ctl(spx->enc, SPEEX_SET_BITRATE, 
-		      &spx_factory.speex_param[id].complexity);
-
-    /* Bitrate */
-    speex_encoder_ctl(spx->enc, SPEEX_SET_BITRATE, 
-		      &spx_factory.speex_param[id].bitrate);
+    if (spx_factory.speex_param[id].complexity != -1) {
+	speex_encoder_ctl(spx->enc, SPEEX_SET_COMPLEXITY, 
+			  &spx_factory.speex_param[id].complexity);
+    }
 
     /* 
      * Create and initialize decoder. 
