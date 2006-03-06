@@ -30,7 +30,7 @@ PA_DIR:=portaudio
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			codec.o conference.o endpoint.o errno.o file_port.o \
-			g711.o jbuf.o pasound.o port.o rtcp.o \
+			g711.o jbuf.o pasound.o port.o resample.o rtcp.o \
 			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
 			stream.o \
 		      	$(PA_DIR)/pa_allocation.o \
@@ -49,16 +49,31 @@ export PJMEDIA_CFLAGS += $(_CFLAGS)
 ###############################################################################
 # Defines for building PJMEDIA-Codec library
 #
+GSM_OBJS := 	gsm/add.o gsm/code.o gsm/decode.o \
+		gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
+		gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
+		gsm/gsm_option.o gsm/long_term.o \
+		gsm/lpc.o gsm/preprocess.o gsm/rpe.o gsm/short_term.o \
+		gsm/table.o
+GSM_CFLAGS :=
+
+SPEEX_OBJS :=	speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
+		speex/exc_10_32_table.o speex/exc_20_32_table.o speex/exc_5_256_table.o \
+		speex/exc_5_64_table.o speex/exc_8_128_table.o speex/filters.o \
+		speex/gain_table.o speex/gain_table_lbr.o speex/hexc_10_32_table.o \
+		speex/hexc_table.o speex/high_lsp_tables.o speex/lpc_spx.o \
+		speex/lsp.o speex/lsp_tables_nb.o speex/ltp.o speex/math_approx.o \
+		speex/misc.o speex/modes.o speex/nb_celp.o speex/preprocess_spx.o \
+		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o speex/speex.o \
+		speex/speex_callbacks.o speex/speex_header.o speex/stereo.o \
+		speex/vbr.o speex/vq.o
+SPEEX_CFLAGS := -DHAVE_CONFIG=1 -I../src/pjmedia-codec
+
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			gsm.o pjmedia-codec-lib.o \
-			gsm/add.o gsm/code.o gsm/decode.o \
-			gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
-			gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
-			gsm/gsm_option.o gsm/long_term.o \
-			gsm/lpc.o gsm/preprocess.o gsm/rpe.o gsm/short_term.o \
-			gsm/table.o
-export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS)
+			gsm.o speex_codec.o pjmedia-codec-lib.o \
+			$(GSM_OBJS) $(SPEEX_OBJS)
+export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS)
 
 
 ###############################################################################

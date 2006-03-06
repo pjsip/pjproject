@@ -60,7 +60,8 @@ export PJSIP_UA_CFLAGS += $(_CFLAGS)
 #
 export PJSIP_SIMPLE_SRCDIR = ../src/pjsip-simple
 export PJSIP_SIMPLE_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			errno.o evsub.o evsub_msg.o pidf.o presence.o xpidf.o
+			errno.o evsub.o evsub_msg.o iscomposing.o pidf.o presence.o \
+			xpidf.o
 export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 
 
@@ -69,8 +70,9 @@ export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 #
 export PJSUA_LIB_SRCDIR = ../src/pjsua-lib
 export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			pjsua_reg.o pjsua_call.o pjsua_pres.o pjsua_opt.o \
-			pjsua_core.o
+			pjsua_call.o pjsua_core.o pjsua_im.o pjsua_pres.o pjsua_reg.o \
+			pjsua_settings.o \
+			
 export PJSUA_LIB_CFLAGS += $(_CFLAGS)
 
 
