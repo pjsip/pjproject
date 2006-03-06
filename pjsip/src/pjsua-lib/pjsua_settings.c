@@ -92,7 +92,7 @@ static void usage(void)
     puts  ("  --auto-conf         Automatically put incoming calls to conference");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --add-codec=name    Specify alternate codec order");
-    puts  ("  --complexity=N      Specify encoding complexity (0-10, default=4)");
+    puts  ("  --complexity=N      Specify encoding complexity (0-10, default=none(-1))");
     puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
     puts  ("");
     puts  ("Buddy List (can be more than one):");
@@ -393,6 +393,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		return PJ_EINVAL;
 	    }
 	    cur_acc->local_uri = pj_str(optarg);
+	    pjsua.has_acc = 1;
 	    break;
 
 	case OPT_CONTACT:   /* contact */
@@ -576,6 +577,23 @@ static void print_call(const char *title,
 	buf[len] = '\0';
 }
 
+static const char *good_number(char *buf, pj_int32_t val)
+{
+    if (val < 1000) {
+	pj_ansi_sprintf(buf, "%d", val);
+    } else if (val < 1000000) {
+	pj_ansi_sprintf(buf, "%d.%dK", 
+			val / 1000,
+			(val % 1000) / 100);
+    } else {
+	pj_ansi_sprintf(buf, "%d.%02dM", 
+			val / 1000000,
+			(val % 1000000) / 10000);
+    }
+
+    return buf;
+}
+
 static void dump_media_session(pjmedia_session *session)
 {
     unsigned i;
@@ -588,6 +606,7 @@ static void dump_media_session(pjmedia_session *session)
 	const char *rem_addr;
 	int rem_port;
 	const char *dir;
+	char stxpkt[10], stxoct[10], srxpkt[10], srxoct[10];
 
 	pjmedia_session_get_stream_stat(session, i, &strm_stat);
 	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
@@ -604,18 +623,23 @@ static void dump_media_session(pjmedia_session *session)
 
 	
 	PJ_LOG(3,(THIS_FILE, 
-		  "%s[Media strm#%d] %.*s, %s, peer=%s:%d",
+		  "%s#%d %.*s @%dKHz, %s, peer=%s:%d",
 		  "               ",
 		  i,
 		  info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
+		  info.stream_info[i].fmt.sample_rate / 1000,
 		  dir,
 		  rem_addr, rem_port));
 	PJ_LOG(3,(THIS_FILE, 
-		  "%s tx {pkt=%u, bytes=%u} rx {pkt=%u, bytes=%u}",
-		  "                             ",
-		  strm_stat.enc.pkt, strm_stat.enc.bytes,
-		  strm_stat.dec.pkt, strm_stat.dec.bytes));
+		  "%s tx{pt=%d,pkt=%s,oct=%s} rx{pt=%d,pkt=%s,oct=%s}",
+		  "                 ",
+		  info.stream_info[i].tx_pt,
+		  good_number(stxpkt, strm_stat.enc.pkt), 
+		  good_number(stxoct, strm_stat.enc.bytes),
+		  info.stream_info[i].fmt.pt,
+		  good_number(srxpkt, strm_stat.dec.pkt), 
+		  good_number(srxoct, strm_stat.dec.bytes)));
 
     }
 }
@@ -762,12 +786,14 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 
 
     /* Save account settings. */
-    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
-	
-	save_account_settings(acc_index, &cfg);
+    if (pjsua.has_acc) {
+	for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+	    
+	    save_account_settings(acc_index, &cfg);
 
-	if (acc_index < pjsua.acc_cnt-1)
-	    pj_strcat2(&cfg, "--next-account\n");
+	    if (acc_index < pjsua.acc_cnt-1)
+		pj_strcat2(&cfg, "--next-account\n");
+	}
     }
 
     /* Credentials. */
@@ -849,7 +875,31 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 			pjsua.wav_file);
 	pj_strcat2(&cfg, line);
     }
+    /* Media clock rate. */
+    if (pjsua.clock_rate >= 32000)
+	pj_strcat2(&cfg, "--uwb\n");
+    else if (pjsua.clock_rate >= 16000)
+	pj_strcat2(&cfg, "--wb\n");
 
+    /* Encoding quality and complexity */
+    pj_ansi_sprintf(line, "--quality %d\n",
+		    pjsua.quality);
+    pj_strcat2(&cfg, line);
+    pj_ansi_sprintf(line, "--complexity %d\n",
+		    pjsua.complexity);
+    pj_strcat2(&cfg, line);
+
+    /* Start RTP port. */
+    pj_ansi_sprintf(line, "--rtp-port %d\n",
+		    pjsua.start_rtp_port);
+    pj_strcat2(&cfg, line);
+
+    /* Add codec. */
+    for (i=0; i<pjsua.codec_cnt; ++i) {
+	pj_ansi_sprintf(line, "--add-codec %s\n",
+		    pjsua.codec_arg[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
 
     pj_strcat2(&cfg, "#\n# User agent:\n#\n");
 

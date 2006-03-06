@@ -198,6 +198,7 @@ struct pjsua
     int		     auto_answer;   /**< Automatically answer in calls.	*/
 
     /* Account: */
+    pj_bool_t	     has_acc;	    /**< Any --id cmdline?		*/
     int		     acc_cnt;	    /**< Number of client registrations	*/
     pjsua_acc	     acc[PJSUA_MAX_ACC];    /** Client regs array.	*/
 

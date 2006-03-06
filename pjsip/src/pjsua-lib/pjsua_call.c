@@ -283,14 +283,27 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     
     status = pjsip_inv_initial_answer(inv, rdata, 
-				      (pjsua.auto_answer ? 200 : 100), 
+				      (pjsua.auto_answer ? pjsua.auto_answer 
+					: 100), 
 				      NULL, NULL, &response);
     if (status != PJ_SUCCESS) {
 	
-	pjsua_perror(THIS_FILE, "Unable to create 100 response", status);
+	int st_code;
 
-	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
-	pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	pjsua_perror(THIS_FILE, "Unable to send answer to incoming INVITE", 
+		     status);
+
+	/* If failed to send 2xx response, there's a good chance that it is
+	 * because SDP negotiation has failed.
+	 */
+	if (pjsua.auto_answer/100 == 2)
+	    st_code = PJSIP_SC_UNSUPPORTED_MEDIA_TYPE;
+	else
+	    st_code = 500;
+
+	pjsip_dlg_respond(dlg, rdata, st_code, NULL, NULL, NULL);
+	pjsip_inv_terminate(inv, st_code, PJ_FALSE);
+	return PJ_TRUE;
 
     } else {
 	status = pjsip_inv_send_msg(inv, response, NULL);
@@ -762,8 +775,12 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
-	/* Disconnect call if this is not a re-INVITE */
-	if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	/* Disconnect call if we're not in the middle of initializing an
+	 * UAS dialog and if this is not a re-INVITE 
+	 */
+	if (inv->state != PJSIP_INV_STATE_NULL &&
+	    inv->state != PJSIP_INV_STATE_CONFIRMED) 
+	{
 	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 	return;

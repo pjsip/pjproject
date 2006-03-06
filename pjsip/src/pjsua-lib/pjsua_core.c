@@ -74,7 +74,7 @@ void pjsua_default(void)
 
     /* Default for media: */
     pjsua.clock_rate = 8000;
-    pjsua.complexity = 4;
+    pjsua.complexity = -1;
     pjsua.quality = 4;
 
 
@@ -84,6 +84,7 @@ void pjsua_default(void)
 	pjsua.acc[i].index = i;
 	pjsua.acc[i].local_uri = pj_str(PJSUA_LOCAL_URI);
 	pjsua.acc[i].reg_timeout = 55;
+	pjsua.acc[i].online_status = PJ_TRUE;
 	pj_list_init(&pjsua.acc[i].route_set);
 	pj_list_init(&pjsua.acc[i].pres_srv_list);
     }
