@@ -24,13 +24,15 @@
 #include <pjmedia/port.h>
 #include <speex/speex.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
 
+#define THIS_FILE   "speex_codec.c"
+
 #define DEFAULT_QUALITY	    4
 #define DEFAULT_COMPLEXITY  -1
-
 
 /* Prototypes for Speex factory */
 static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory, 
@@ -243,6 +245,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_UWB].clock_rate = 32000;
     spx_factory.speex_param[PARAM_UWB].quality = quality;
     spx_factory.speex_param[PARAM_UWB].complexity = complexity;
+
+    /* Somehow quality <=4 is broken in linux. */
+    if (quality <= 4) {
+	PJ_LOG(4,(THIS_FILE, "Adjusting quality to 5 for uwb"));
+	spx_factory.speex_param[PARAM_UWB].quality = 5;
+    }
 
     /* Get codec framesize and avg bitrate for each mode. */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
