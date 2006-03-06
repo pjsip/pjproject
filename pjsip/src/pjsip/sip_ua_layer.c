@@ -444,7 +444,10 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 	    dlg = tsx->mod_data[mod_ua.mod.id];
 	    pj_mutex_unlock(tsx->mutex);
 
-	    return dlg->dlg_set;
+	    /* Dlg may be NULL on some extreme condition
+	     * (e.g. during debugging where initially there is a dialog)
+	     */
+	    return dlg ? dlg->dlg_set : NULL;
 
 	} else {
 	    return NULL;
