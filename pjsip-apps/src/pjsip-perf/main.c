@@ -396,7 +396,7 @@ static pj_status_t parse_options(int argc, char *argv[])
 	OPT_MAX_CAPACITY,
 	OPT_DURATION
     };
-    struct option long_opts[] = {
+    struct pj_getopt_option long_opts[] = {
 	{ "help",	    0, 0, OPT_HELP},
 	{ "version",	    0, 0, OPT_VERSION},
 	{ "log-level",	    1, 0, OPT_LOG_LEVEL},
@@ -412,8 +412,8 @@ static pj_status_t parse_options(int argc, char *argv[])
     };
     int c, option_index;
 
-    optind = 0;
-    while ((c=getopt_long(argc, argv, "", long_opts, &option_index)) != -1) {
+    pj_optind = 0;
+    while ((c=pj_getopt_long(argc, argv, "", long_opts, &option_index)) != -1) {
 	switch (c) {
 
 	case OPT_HELP:
@@ -425,21 +425,21 @@ static pj_status_t parse_options(int argc, char *argv[])
 	    return PJ_EINVAL;
 
 	case OPT_LOG_LEVEL:
-	    settings.log_level = atoi(optarg);
+	    settings.log_level = atoi(pj_optarg);
 	    break;
 
 	case OPT_APP_LOG_LEVEL:
-	    settings.app_log_level = atoi(optarg);
+	    settings.app_log_level = atoi(pj_optarg);
 	    break;
 
 	case OPT_LOG_FILE:
-	    settings.log_file = optarg;
+	    settings.log_file = pj_optarg;
 	    break;
 
 	case OPT_LOCAL_PORT:
-	    settings.local_port = atoi(optarg);
+	    settings.local_port = atoi(pj_optarg);
 	    if (settings.local_port < 1 || settings.local_port > 65535) {
-		PJ_LOG(1,(THIS_FILE,"Invalid --local-port %s", optarg));
+		PJ_LOG(1,(THIS_FILE,"Invalid --local-port %s", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    break;
@@ -449,37 +449,37 @@ static pj_status_t parse_options(int argc, char *argv[])
 	    break;
 
 	case OPT_THREAD_CNT:
-	    settings.thread_cnt = atoi(optarg);
+	    settings.thread_cnt = atoi(pj_optarg);
 	    if (settings.thread_cnt < 1 || 
 		settings.thread_cnt > PJ_ARRAY_SIZE(settings.thread)) 
 	    {
-		PJ_LOG(1,(THIS_FILE,"Invalid --thread-cnt %s", optarg));
+		PJ_LOG(1,(THIS_FILE,"Invalid --thread-cnt %s", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    break;
 
 	case OPT_START_RATE:
-	    settings.start_rate = atoi(optarg);
+	    settings.start_rate = atoi(pj_optarg);
 	    if (settings.start_rate < 1 || settings.start_rate > 1000000) {
-		PJ_LOG(1,(THIS_FILE,"Invalid --start-rate %s", optarg));
+		PJ_LOG(1,(THIS_FILE,"Invalid --start-rate %s", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    break;
 
 	case OPT_MAX_CAPACITY:
-	    settings.max_capacity = atoi(optarg);
+	    settings.max_capacity = atoi(pj_optarg);
 	    if (settings.max_capacity < 1 || settings.max_capacity > 65000) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Invalid --max-capacity %s (range=1-65000)", 
-			  optarg));
+			  pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    break;
 
 	case OPT_DURATION:
-	    settings.duration = atoi(optarg);
+	    settings.duration = atoi(pj_optarg);
 	    if (settings.duration < 0 || settings.duration > 1000000) {
-		PJ_LOG(1,(THIS_FILE,"Invalid --duration %s", optarg));
+		PJ_LOG(1,(THIS_FILE,"Invalid --duration %s", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    break;
@@ -487,18 +487,18 @@ static pj_status_t parse_options(int argc, char *argv[])
 	}
     }
 
-    if (optind != argc) {
-	if (verify_sip_url(argv[optind]) != PJ_SUCCESS) {
-	    PJ_LOG(3,(THIS_FILE, "Invalid SIP URL %s", argv[optind]));
+    if (pj_optind != argc) {
+	if (verify_sip_url(argv[pj_optind]) != PJ_SUCCESS) {
+	    PJ_LOG(3,(THIS_FILE, "Invalid SIP URL %s", argv[pj_optind]));
 	    return PJ_EINVAL;
 	}
 	
-	settings.target = pj_str(argv[optind]);
-	++optind;
+	settings.target = pj_str(argv[pj_optind]);
+	++pj_optind;
     }
 
-    if (optind != argc) {
-	printf("Error: unknown options %s\n", argv[optind]);
+    if (pj_optind != argc) {
+	printf("Error: unknown options %s\n", argv[pj_optind]);
 	return PJ_EINVAL;
     }
 
@@ -724,7 +724,7 @@ static void help_screen(void)
     puts  ("|                                      |                                     |");
     puts  ("|   m  Change mode                     |                                     |");
     puts  ("| + -  Increment/decrement rate by 10  |   d   Dump status                   |");
-    puts  ("| * /  Increment/decrement rate by 100 |   d1  Dump detailed (e.g. tables)   |");
+    puts  ("| * /  Increment/decrement rate by 100 |   dd  Dump detailed (e.g. tables)   |");
     puts  ("+--------------------------------------+-------------------------------------+");
     puts  ("|                              Test Commands                                 |");
     puts  ("|                                                                            |");
@@ -815,7 +815,7 @@ static void test_main(void)
 	    break;
 
 	case 'd':
-	    dump(menuin[1]=='1');
+	    dump(menuin[1]=='d');
 	    break;
 
 	case '+':
