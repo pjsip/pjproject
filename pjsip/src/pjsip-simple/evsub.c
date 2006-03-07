@@ -1874,6 +1874,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    if (status != PJ_SUCCESS) {
 		/* Can't authenticate. Terminate session (?) */
 		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+		return;
 	    }
 
 	}
@@ -1886,6 +1887,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	     tsx->status_code/100 == 7))
 	{
 	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event);
+	    return;
 	}
 
     } else {
