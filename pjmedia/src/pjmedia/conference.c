@@ -127,6 +127,7 @@ struct conf_port
  */
 struct pjmedia_conf
 {
+    unsigned		  options;	/**< Bitmask options.		    */
     unsigned		  max_ports;	/**< Maximum ports.		    */
     unsigned		  port_cnt;	/**< Current number of ports.	    */
     unsigned		  connect_cnt;	/**< Total number of connections    */
@@ -333,6 +334,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					 unsigned clock_rate,
 					 unsigned samples_per_frame,
 					 unsigned bits_per_sample,
+					 unsigned options,
 					 pjmedia_conf **p_conf )
 {
     pjmedia_conf *conf;
@@ -351,6 +353,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     conf->ports = pj_pool_zalloc(pool, max_ports*sizeof(void*));
     PJ_ASSERT_RETURN(conf->ports, PJ_ENOMEM);
 
+    conf->options = options;
     conf->max_ports = max_ports;
     conf->clock_rate = clock_rate;
     conf->samples_per_frame = samples_per_frame;
@@ -385,16 +388,21 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
  */
 static pj_status_t create_sound( pjmedia_conf *conf )
 {
-    /* Open recorder. */
-    conf->snd_rec = pj_snd_open_recorder(-1 ,&conf->snd_info, &rec_cb, conf);
-    if (conf->snd_rec == NULL) {
-	return -1;
+    /* Open recorder only if mic is not disabled. */
+    if ((conf->options & PJMEDIA_CONF_NO_MIC) == 0) {
+	conf->snd_rec = pj_snd_open_recorder(-1 ,&conf->snd_info, 
+					     &rec_cb, conf);
+	if (conf->snd_rec == NULL) {
+	    return -1;
+	}
     }
 
     /* Open player */
     conf->snd_player = pj_snd_open_player(-1, &conf->snd_info, &play_cb, conf);
     if (conf->snd_player == NULL) {
-	pj_snd_stream_close(conf->snd_rec);
+	if (conf->snd_rec) {
+	    pj_snd_stream_close(conf->snd_rec);
+	}
 	return -1;
     }
 
@@ -425,7 +433,7 @@ static pj_status_t resume_sound( pjmedia_conf *conf )
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_status_t status;
 
-    if (conf->snd_rec == NULL) {
+    if (conf->snd_player == NULL) {
 	status = create_sound(conf);
 	if (status != PJ_SUCCESS)
 	    return status;

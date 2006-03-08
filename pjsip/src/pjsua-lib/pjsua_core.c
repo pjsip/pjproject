@@ -611,7 +611,7 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url)
  */
 static pj_status_t init_media(void)
 {
-
+    unsigned options;
     pj_status_t status;
 
     /* If user doesn't specify any codecs, register all of them. */
@@ -732,12 +732,18 @@ static pj_status_t init_media(void)
 	}
     }
 
+    /* Init options for conference bridge. */
+    options = 0;
+    if (pjsua.no_mic)
+	options |= PJMEDIA_CONF_NO_MIC;
+
     /* Init conference bridge. */
 
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
 				 pjsua.clock_rate, 
 				 pjsua.clock_rate * 20 / 1000, 16, 
+				 options,
 				 &pjsua.mconf);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);

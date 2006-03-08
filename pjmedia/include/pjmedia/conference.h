@@ -40,29 +40,68 @@ typedef struct pjmedia_conf pjmedia_conf;
  */
 typedef struct pjmedia_conf_port_info
 {
-    unsigned		slot;
-    pj_str_t		name;
-    pjmedia_port_op	tx_setting;
-    pjmedia_port_op	rx_setting;
-    pj_bool_t	       *listener;
-    unsigned		clock_rate;
-    unsigned		samples_per_frame;
+    unsigned		slot;		    /**< Slot number.		    */
+    pj_str_t		name;		    /**< Port name.		    */
+    pjmedia_port_op	tx_setting;	    /**< Transmit settings.	    */
+    pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
+    pj_bool_t	       *listener;	    /**< Array of listeners.	    */
+    unsigned		clock_rate;	    /**< Clock rate of the port.    */
+    unsigned		samples_per_frame;  /**< Samples per frame	    */
 } pjmedia_conf_port_info;
 
 
 /**
- * Create conference bridge.
+ * Conference port options. The values here can be combined in bitmask to
+ * be specified when the conference bridge is created.
+ */
+enum pjmedia_conf_option
+{
+    PJMEDIA_CONF_NO_MIC  = 1,	/**< Disable audio streams from the
+				     microphone device.			    */
+};
+
+
+/**
+ * Create conference bridge. This normally will also create instances of
+ * sound device to be attached to the port zero of the bridge.
+ *
+ * @param pool		    Pool to use to allocate the bridge and 
+ *			    additional buffers for the sound device.
+ * @param max_slots	    Maximum number of slots/ports to be created in
+ *			    the bridge. Note that the bridge internally uses
+ *			    one port for the sound device, so the actual 
+ *			    maximum number of ports will be less one than
+ *			    this value.
+ * @param sampling_rate	    Set the sampling rate of the bridge. This value
+ *			    is also used to set the sampling rate of the
+ *			    sound device.
+ * @param samples_per_frame Set the number of samples per frame. This value
+ *			    is also used to set the sound device.
+ * @param bits_per_sample   Set the number of bits per sample. This value
+ *			    is also used to set the sound device. Currently
+ *			    only 16bit per sample is supported.
+ * @param options	    Bitmask options to be set for the bridge. The
+ *			    options are constructed from #pjmedia_conf_option
+ *			    enumeration.
+ * @param p_conf	    Pointer to receive the conference bridge instance.
+ *
+ * @return		    PJ_SUCCESS if conference bridge can be created.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					  unsigned max_slots,
 					  unsigned sampling_rate,
 					  unsigned samples_per_frame,
 					  unsigned bits_per_sample,
+					  unsigned options,
 					  pjmedia_conf **p_conf );
 
 
 /**
  * Destroy conference bridge.
+ *
+ * @param conf		    The conference bridge.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
 

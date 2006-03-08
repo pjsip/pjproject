@@ -86,6 +86,7 @@ static void usage(void)
     puts  ("  --wb                Enable wideband codecs and set clock-rate to 16KHz");
     puts  ("  --uwb               Enable ultra-wideband codecs and set clock-rate to 32KHz");
     puts  ("  --null-audio        Use NULL audio device");
+    puts  ("  --no-mic            Disable microphone device");
     puts  ("  --play-file=file    Play WAV file in conference bridge");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
@@ -217,7 +218,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
-	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO,
+	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_NO_MIC,
 	   OPT_LOCAL_PORT, OPT_PROXY, OPT_OUTBOUND_PROXY, OPT_REGISTRAR,
 	   OPT_REG_TIMEOUT, OPT_ID, OPT_CONTACT, 
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
@@ -240,6 +241,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "wb",		0, 0, OPT_WB},
 	{ "uwb",	0, 0, OPT_UWB},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
+	{ "no-mic",	0, 0, OPT_NO_MIC},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "proxy",	1, 0, OPT_PROXY},
 	{ "outbound",	1, 0, OPT_OUTBOUND_PROXY},
@@ -341,6 +343,10 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_NULL_AUDIO:
 	    pjsua.null_audio = 1;
+	    break;
+
+	case OPT_NO_MIC:
+	    pjsua.no_mic = 1;
 	    break;
 
 	case OPT_WB:

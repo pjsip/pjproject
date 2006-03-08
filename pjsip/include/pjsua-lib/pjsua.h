@@ -182,6 +182,7 @@ struct pjsua
     unsigned	     clock_rate;    /**< Internal clock rate.		*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
+    pj_bool_t	     no_mic;	    /**< Disable microphone.		*/
     char	    *wav_file;	    /**< WAV file name to play.		*/
     unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
     pj_bool_t	     auto_play;	    /**< Auto play file for calls?	*/
