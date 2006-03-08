@@ -145,10 +145,6 @@ SOURCE=..\src\pjmedia\rtp.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\rtp_port.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\sdp.c
 # End Source File
 # Begin Source File
@@ -230,10 +226,6 @@ SOURCE=..\include\pjmedia\rtcp.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\rtp.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\rtp_port.h
 # End Source File
 # Begin Source File
 

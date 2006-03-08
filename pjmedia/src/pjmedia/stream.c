@@ -41,6 +41,7 @@
 #define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
 #define PJMEDIA_MAX_MTU			1500
 #define PJMEDIA_DTMF_DURATION		1600	/* in timestamp */
+#define PJMEDIA_RTP_NAT_PROBATION_CNT	10
 
 
 /**
@@ -96,6 +97,9 @@ struct pjmedia_stream
     pjmedia_sock_info	     skinfo;	    /**< Transport info.	    */
     pj_sockaddr_in	     rem_rtp_addr;  /**< Remote RTP address.	    */
     pj_sockaddr_in	     rem_rtcp_addr; /**< Remote RTCP address.	    */
+
+    pj_sockaddr_in	     rem_src_rtp;   /**< addr of src pkt from remote*/
+    unsigned		     rem_src_cnt;   /**< if different, # of pkt rcv */
 
     pj_rtcp_session	     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -450,6 +454,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	const pjmedia_rtp_hdr *hdr;
 	const void *payload;
 	unsigned payloadlen;
+	int addrlen;
 	int status;
 
 	/* Wait for packet. */
@@ -473,8 +478,10 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 
 	/* Get packet from socket. */
 	len = channel->in_pkt_size;
-	status = pj_sock_recv(stream->skinfo.rtp_sock, 
-			      channel->in_pkt, &len, 0);
+	addrlen = sizeof(stream->rem_src_rtp);
+	status = pj_sock_recvfrom(stream->skinfo.rtp_sock, 
+			          channel->in_pkt, &len, 0,
+				  &stream->rem_src_rtp, &addrlen);
 	if (len < 1 || status != PJ_SUCCESS) {
 	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) {
 		/* On Win2K SP2 (or above) and WinXP, recv() will get 
@@ -520,6 +527,26 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 	/* Update stat */
 	stream->stat.dec.pkt++;
 	stream->stat.dec.bytes += len;
+
+	/* See if source address of RTP packet is different than the 
+	 * configured address.
+	 */
+	if ((stream->rem_rtp_addr.sin_addr.s_addr != 
+	     stream->rem_src_rtp.sin_addr.s_addr) ||
+	    (stream->rem_rtp_addr.sin_port != stream->rem_src_rtp.sin_port))
+	{
+	    stream->rem_src_cnt++;
+
+	    if (stream->rem_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) {
+	    
+		stream->rem_rtp_addr = stream->rem_src_rtp;
+		stream->rem_src_cnt = 0;
+
+		PJ_LOG(4,(THIS_FILE,"Remote RTP address switched to %s:%d",
+		          pj_inet_ntoa(stream->rem_src_rtp.sin_addr),
+			  pj_ntohs(stream->rem_src_rtp.sin_port)));
+	    }
+	}
 
 	/* Put to jitter buffer. */
 	pj_mutex_lock( stream->jb_mutex );
