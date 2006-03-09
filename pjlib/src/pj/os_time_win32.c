@@ -103,13 +103,13 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
     LARGE_INTEGER li;
 
     pj_memset(&st, 0, sizeof(st));
-    st.wYear = pt->year;
-    st.wMonth = pt->mon + 1;
-    st.wDay = pt->day;
-    st.wHour = pt->hour;
-    st.wMinute = pt->min;
-    st.wSecond = pt->sec;
-    st.wMilliseconds = pt->msec;
+    st.wYear = (pj_uint16_t) pt->year;
+    st.wMonth = (pj_uint16_t) (pt->mon + 1);
+    st.wDay = (pj_uint16_t) pt->day;
+    st.wHour = (pj_uint16_t) pt->hour;
+    st.wMinute = (pj_uint16_t) pt->min;
+    st.wSecond = (pj_uint16_t) pt->sec;
+    st.wMilliseconds = (pj_uint16_t) pt->msec;
     
     SystemTimeToFileTime(&st, &ft);
 

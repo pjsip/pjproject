@@ -265,7 +265,7 @@ SOURCE=..\src\pj\os_error_win32.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\os_time_ansi.c
+SOURCE=..\src\pj\os_time_win32.c
 # End Source File
 # Begin Source File
 
