@@ -666,8 +666,8 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     sub->timer.cb = &on_timer;
 
     /* Set name. */
-    pj_snprintf(sub->obj_name, PJ_ARRAY_SIZE(sub->obj_name),
-		"evsub%p", sub);
+    pj_ansi_snprintf(sub->obj_name, PJ_ARRAY_SIZE(sub->obj_name),
+		     "evsub%p", sub);
 
 
     /* Copy callback, if any: */

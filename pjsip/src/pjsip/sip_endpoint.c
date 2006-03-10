@@ -900,12 +900,12 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
 	pj_str_t errstr;
 
 	pj_ansi_strcpy(newformat, format);
-	pj_snprintf(newformat+len, sizeof(newformat)-len-1,
-		    ": [err %d] ", error_code);
+	pj_ansi_snprintf(newformat+len, sizeof(newformat)-len-1,
+			 ": [err %d] ", error_code);
 	len += pj_ansi_strlen(newformat+len);
 
-	errstr = pjsip_strerror(error_code, newformat+len, 
-				sizeof(newformat)-len-1);
+	errstr = pj_strerror( error_code, newformat+len, 
+			      sizeof(newformat)-len-1);
 
 	len += errstr.slen;
 	newformat[len] = '\0';

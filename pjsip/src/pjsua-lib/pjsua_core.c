@@ -896,7 +896,7 @@ pj_status_t pjsua_start(void)
 	    if (sip_uri->user.slen) {
 
 		/* With the user part. */
-		len = pj_snprintf(contact, sizeof(contact),
+		len = pj_ansi_snprintf(contact, sizeof(contact),
 				  "<sip:%.*s@%.*s:%d>",
 				  (int)sip_uri->user.slen,
 				  sip_uri->user.ptr,
@@ -907,7 +907,7 @@ pj_status_t pjsua_start(void)
 
 		/* Without user part */
 
-		len = pj_snprintf(contact, sizeof(contact),
+		len = pj_ansi_snprintf(contact, sizeof(contact),
 				  "<sip:%.*s:%d>",
 				  (int)udp_transport->local_name.host.slen,
 				  udp_transport->local_name.host.ptr,

@@ -20,7 +20,7 @@
 #include <pjsua-lib/getopt.h>
 #include <stdlib.h>		/* atoi */
 
-//#define THIS_FILE   "main.c"
+#define THIS_FILE   "main.c"
 
 pjsip_perf_settings settings;
 

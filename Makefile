@@ -15,7 +15,7 @@ all clean dep depend distclean doc print realclean:
 		else \
 		    exit 1; \
 		fi; \
-	   fi \
+	   fi; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \

@@ -19,8 +19,6 @@
 #include <pj/errno.h>
 #include <pj/assert.h>
 #include <pj/compat/stdarg.h>
-#include <pj/compat/sprintf.h>
-#include <pj/compat/vsprintf.h>
 #include <pj/unicode.h>
 #include <pj/string.h>
 
@@ -179,7 +177,8 @@ int platform_strerror( pj_os_err_type os_errcode,
     }
 
     if (!len) {
-	len = snprintf( buf, bufsize, "Unknown native error %u", (unsigned)os_errcode);
+	len = pj_ansi_snprintf( buf, bufsize, "Unknown native error %u", 
+				(unsigned)os_errcode);
 	buf[len] = '\0';
     }
 

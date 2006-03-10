@@ -765,9 +765,9 @@ static void print_dialog( const char *title,
     else
 	userinfo[len] = '\0';
     
-    len = pj_snprintf(buf, size, "%s[%s]  %s",
-		      title,
-		      (dlg->state==PJSIP_DIALOG_STATE_NULL ? " - " :
+    len = pj_ansi_snprintf(buf, size, "%s[%s]  %s",
+			   title,
+			   (dlg->state==PJSIP_DIALOG_STATE_NULL ? " - " :
 							     "est"),
 		      userinfo);
     if (len < 1 || len >= (int)size) {

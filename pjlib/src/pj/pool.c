@@ -21,7 +21,6 @@
 #include <pj/except.h>
 #include <pj/assert.h>
 #include <pj/os.h>
-#include <pj/compat/sprintf.h>
 
 /* Include inline definitions when inlining is disabled. */
 #if !PJ_FUNCTIONS_ARE_INLINED
@@ -148,9 +147,9 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
 
     if (name) {
 	if (strchr(name, '%') != NULL) {
-	    sprintf(pool->obj_name, name, pool);
+	    pj_ansi_sprintf(pool->obj_name, name, pool);
 	} else {
-	    strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
+	    pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
 	}
     } else {
 	pool->obj_name[0] = '\0';

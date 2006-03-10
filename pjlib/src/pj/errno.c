@@ -19,7 +19,6 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 #include <pj/assert.h>
-#include <pj/compat/sprintf.h>
 
 /* Prototype for platform specific error message, which will be defined 
  * in separate file.
@@ -141,7 +140,7 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
     pj_assert(buf && bufsize);
 
     if (statcode < PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE) {
-        len = pj_snprintf( buf, bufsize, "Unknown error %d", statcode);
+        len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
 
     } else if (statcode < PJ_ERRNO_START_STATUS + PJ_ERRNO_SPACE_SIZE) {
         len = pjlib_error(statcode, buf, bufsize);

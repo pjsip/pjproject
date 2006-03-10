@@ -290,7 +290,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
     /* Get the clock rate. */
     token.ptr = (char*)p;
-    while (pj_isdigit(*p) && p != end)
+    while (p != end && pj_isdigit(*p))
 	++p;
     token.slen = p - token.ptr;
     if (token.slen == 0)

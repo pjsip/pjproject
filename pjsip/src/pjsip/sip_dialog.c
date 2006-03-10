@@ -73,7 +73,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     PJ_ASSERT_RETURN(dlg != NULL, PJ_ENOMEM);
 
     dlg->pool = pool;
-    pj_sprintf(dlg->obj_name, "dlg%p", dlg);
+    pj_ansi_sprintf(dlg->obj_name, "dlg%p", dlg);
     dlg->ua = ua;
     dlg->endpt = endpt;
     dlg->state = PJSIP_DIALOG_STATE_NULL;

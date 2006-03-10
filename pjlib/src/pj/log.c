@@ -20,7 +20,6 @@
 #include <pj/log.h>
 #include <pj/string.h>
 #include <pj/os.h>
-#include <pj/compat/vsprintf.h>
 #include <pj/compat/stdarg.h>
 
 #if PJ_LOG_MAX_LEVEL >= 1
@@ -88,7 +87,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     if (log_decor & PJ_LOG_HAS_DAY_NAME) {
 	static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
 				       "Thu", "Fri", "Sat"};
-	strcpy(pre, wdays[ptime.wday]);
+	pj_ansi_strcpy(pre, wdays[ptime.wday]);
 	pre += 3;
     }
     if (log_decor & PJ_LOG_HAS_YEAR) {
@@ -137,10 +136,11 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     len = pre - log_buffer;
 
     /* Print the whole message to the string log_buffer. */
-    print_len = vsnprintf(pre, sizeof(log_buffer)-len, format, marker);
+    print_len = pj_ansi_vsnprintf(pre, sizeof(log_buffer)-len, format, 
+				  marker);
     if (print_len < 0) {
-	print_len = pj_snprintf(pre, sizeof(log_buffer)-len, 
-				"<logging error: msg too long>");
+	print_len = pj_ansi_snprintf(pre, sizeof(log_buffer)-len, 
+				     "<logging error: msg too long>");
     }
     len = len + print_len;
     if (len > 0 && len < sizeof(log_buffer)-2) {

@@ -395,7 +395,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv->cause = 0;
 
     /* Object name will use the same dialog pointer. */
-    pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+    pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
 
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
@@ -793,7 +793,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->cause = 0;
 
     /* Object name will use the same dialog pointer. */
-    pj_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+    pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
 
     /* Parse SDP in message body, if present. */
     if (msg->body) {

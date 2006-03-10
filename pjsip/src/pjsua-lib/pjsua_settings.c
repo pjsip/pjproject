@@ -18,6 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/getopt.h>
+#include <stdio.h>
 
 /*
  * pjsua_settings.c
@@ -593,10 +594,10 @@ static void print_call(const char *title,
     else
 	userinfo[len] = '\0';
     
-    len = pj_snprintf(buf, size, "%s[%s] %s",
-		      title,
-		      pjsua_inv_state_names[inv->state],
-		      userinfo);
+    len = pj_ansi_snprintf(buf, size, "%s[%s] %s",
+			   title,
+			   pjsua_inv_state_names[inv->state],
+			   userinfo);
     if (len < 1 || len >= (int)size) {
 	pj_ansi_strcpy(buf, "<--uri too long-->");
 	len = 18;

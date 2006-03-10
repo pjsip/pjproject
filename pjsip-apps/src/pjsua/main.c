@@ -18,7 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <stdlib.h>		/* atoi */
-
+#include <stdio.h>
 
 #define THIS_FILE	"main.c"
 
@@ -205,19 +205,21 @@ static void print_acc_status(int acc_index)
 	       pjsua.acc[acc_index].reg_last_code<=699) {
 
 	pjsip_regc_info info;
+	const pj_str_t *status_str;
 
 	pjsip_regc_get_info(pjsua.acc[acc_index].regc, &info);
 
-	pj_snprintf(reg_status, sizeof(reg_status),
-		    "%s (%.*s;expires=%d)",
-		    pjsip_get_status_text(pjsua.acc[acc_index].reg_last_code)->ptr,
-		    (int)info.client_uri.slen,
-		    info.client_uri.ptr,
-		    info.next_reg);
+	status_str = pjsip_get_status_text(pjsua.acc[acc_index].reg_last_code);
+	pj_ansi_snprintf(reg_status, sizeof(reg_status),
+			 "%s (%.*s;expires=%d)",
+			 status_str->ptr,
+			 (int)info.client_uri.slen,
+			 info.client_uri.ptr,
+			 info.next_reg);
 
     } else {
-	pj_sprintf(reg_status, "in progress (%d)", 
-		   pjsua.acc[acc_index].reg_last_code);
+	pj_ansi_sprintf(reg_status, "in progress (%d)", 
+		        pjsua.acc[acc_index].reg_last_code);
     }
 
     printf("[%2d] Registration status: %s\n", acc_index, reg_status);
@@ -385,7 +387,7 @@ static void conf_list(void)
 	for (j=0; j<pjsua.max_calls+PJSUA_CONF_MORE_PORTS; ++j) {
 	    char s[10];
 	    if (port_info->listener[j]) {
-		pj_sprintf(s, "#%d ", j);
+		pj_ansi_sprintf(s, "#%d ", j);
 		pj_ansi_strcat(txlist, s);
 	    }
 	}

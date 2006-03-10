@@ -21,6 +21,7 @@
 #include <pj/string.h>
 #include <pj/sock.h>
 #include <pj/log.h>
+#include <stdio.h>
 
 extern int param_echo_sock_type;
 extern const char *param_echo_server;

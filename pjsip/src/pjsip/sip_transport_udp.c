@@ -401,7 +401,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->base.pool = pool;
 
     /* Object name. */
-    pj_sprintf(tp->base.obj_name, "udp%p", tp);
+    pj_ansi_sprintf(tp->base.obj_name, "udp%p", tp);
 
     /* Init reference counter. */
     status = pj_atomic_create(pool, 0, &tp->base.ref_cnt);
@@ -445,11 +445,12 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 
     /* Transport info. */
     tp->base.info = pj_pool_alloc(pool, 80);
-    pj_sprintf(tp->base.info, "udp %s:%d [published as %s:%d]",
-			      pj_inet_ntoa(((pj_sockaddr_in*)&tp->base.local_addr)->sin_addr),
-			      pj_ntohs(((pj_sockaddr_in*)&tp->base.local_addr)->sin_port),
-			      tp->base.local_name.host.ptr,
-			      tp->base.local_name.port);
+    pj_ansi_sprintf( 
+	tp->base.info, "udp %s:%d [published as %s:%d]",
+	pj_inet_ntoa(((pj_sockaddr_in*)&tp->base.local_addr)->sin_addr),
+	pj_ntohs(((pj_sockaddr_in*)&tp->base.local_addr)->sin_port),
+	tp->base.local_name.host.ptr,
+	tp->base.local_name.port);
 
     /* Set endpoint. */
     tp->base.endpt = endpt;

@@ -33,6 +33,11 @@
 #define PJ_CC_VER_2	    (_MSC_VER%100)
 #define PJ_CC_VER_3	    0
 
+/* Disable CRT deprecation warnings. */
+#if PJ_CC_VER_1 >= 8
+#   define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 #pragma warning(disable: 4127) // conditional expression is constant
 #pragma warning(disable: 4611) // not wise to mix setjmp with C++
 #pragma warning(disable: 4514) // unref. inline function has been removed

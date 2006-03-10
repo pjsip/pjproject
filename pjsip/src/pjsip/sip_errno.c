@@ -147,9 +147,9 @@ PJ_DEF(pj_str_t) pjsip_strerror( pj_status_t statcode,
 	} else {
 	    /* Error not found. */
 	    errstr.ptr = buf;
-	    errstr.slen = pj_snprintf(buf, bufsize, 
-				      "Unknown error %d",
-				      statcode);
+	    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+					   "Unknown error %d",
+					   statcode);
 
 	    return errstr;
 	}

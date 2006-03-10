@@ -228,7 +228,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	 */
 	cred->qop = pjsip_AUTH_STR;
 	cred->nc.ptr = pj_pool_alloc(pool, 16);
-	pj_snprintf(cred->nc.ptr, 16, "%06u", nc);
+	pj_ansi_snprintf(cred->nc.ptr, 16, "%06u", nc);
 
 	if (cnonce && cnonce->slen) {
 	    pj_strdup(pool, &cred->cnonce, cnonce);

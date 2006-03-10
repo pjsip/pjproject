@@ -23,8 +23,6 @@
 #include <pj/guid.h>
 #include <pj/rand.h>
 #include <pj/assert.h>
-#include <pj/compat/vsprintf.h>
-#include <pj/compat/sprintf.h>
 #include <pj/errno.h>
 #include <pj/except.h>
 #include <stddef.h>
@@ -230,9 +228,9 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 #endif
 
     if (cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
-	pj_sprintf(thread->obj_name, cstr_thread_name, thread->idthread);
+	pj_ansi_sprintf(thread->obj_name, cstr_thread_name, thread->idthread);
     else
-	pj_sprintf(thread->obj_name, "thr%p", (void*)thread->idthread);
+	pj_ansi_sprintf(thread->obj_name, "thr%p", (void*)thread->idthread);
     
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)
@@ -309,9 +307,9 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 	thread_name = "thr%p";
 
     if (strchr(thread_name, '%')) {
-	pj_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
+	pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
-	strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
+	pj_ansi_strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
 	rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 
@@ -688,9 +686,9 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
 	name = "mtx%p";
     }
     if (strchr(name, '%')) {
-	pj_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
+	pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
-	strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
+	pj_ansi_strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
 	mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 
@@ -1044,9 +1042,9 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 	name = "sem%p";
     }
     if (strchr(name, '%')) {
-	pj_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
+	pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
-	strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
+	pj_ansi_strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
 	sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 
@@ -1174,9 +1172,9 @@ PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool,
 	name = "evt%p";
     }
     if (strchr(name, '%')) {
-	pj_snprintf(event->obj_name, PJ_MAX_OBJ_NAME, name, event);
+	pj_ansi_snprintf(event->obj_name, PJ_MAX_OBJ_NAME, name, event);
     } else {
-	strncpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
+	pj_ansi_strncpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
 	event->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 

@@ -235,7 +235,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     tdata = pj_pool_zalloc(pool, sizeof(pjsip_tx_data));
     tdata->pool = pool;
     tdata->mgr = mgr;
-    pj_snprintf(tdata->obj_name, PJ_MAX_OBJ_NAME, "tdta%p", tdata);
+    pj_ansi_snprintf(tdata->obj_name, PJ_MAX_OBJ_NAME, "tdta%p", tdata);
 
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);
     if (status != PJ_SUCCESS) {
@@ -317,18 +317,18 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     PJ_ASSERT_RETURN(cseq != NULL, "INVALID MSG");
 
     if (msg->type == PJSIP_REQUEST_MSG) {
-	len = pj_snprintf(info_buf, sizeof(info_buf), 
-			  "Request msg %.*s/cseq=%d (%s)",
-			  (int)msg->line.req.method.name.slen,
-			  msg->line.req.method.name.ptr,
-			  cseq->cseq, obj_name);
+	len = pj_ansi_snprintf(info_buf, sizeof(info_buf), 
+			       "Request msg %.*s/cseq=%d (%s)",
+			       (int)msg->line.req.method.name.slen,
+			       msg->line.req.method.name.ptr,
+			       cseq->cseq, obj_name);
     } else {
-	len = pj_snprintf(info_buf, sizeof(info_buf),
-			  "Response msg %d/%.*s/cseq=%d (%s)",
-			  msg->line.status.code,
-			  (int)cseq->method.name.slen,
-			  cseq->method.name.ptr,
-			  cseq->cseq, obj_name);
+	len = pj_ansi_snprintf(info_buf, sizeof(info_buf),
+			       "Response msg %d/%.*s/cseq=%d (%s)",
+			       msg->line.status.code,
+			       (int)cseq->method.name.slen,
+			       cseq->method.name.ptr,
+			       cseq->cseq, obj_name);
     }
 
     if (len < 1 || len >= sizeof(info_buf)) {
@@ -367,7 +367,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
 	return rdata->msg_info.info;
 
     pj_ansi_strcpy(obj_name, "rdata");
-    pj_sprintf(obj_name+5, "%p", rdata);
+    pj_ansi_sprintf(obj_name+5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
 					rdata->msg_info.msg);
