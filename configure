@@ -78,7 +78,13 @@ echo "export HOST_NAME := $HOST_NAME" >> build.mak
 echo "export CC_NAME := $CC_NAME" >> build.mak
 echo "export LINUX_POLL := $LINUX_POLL" >> build.mak
 
+touch user.mak
+
 echo
-echo "You may review build.mak if you wish"
-echo "Done."
+echo "The configuration for current host has been written to 'build.mak'."
+echo "Customizations can be put in:"
+echo "  - 'user.mak'"
+echo "  - 'pjlib/include/pj/config_site.h'"
+echo
+echo "Next, run 'make dep && make clean && make'"
 
