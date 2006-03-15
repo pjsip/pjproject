@@ -53,8 +53,6 @@ struct pjmedia_channel
     pjmedia_dir		    dir;	    /**< Channel direction.	    */
     unsigned		    pt;		    /**< Payload type.		    */
     pj_bool_t		    paused;	    /**< Paused?.		    */
-    pj_snd_stream_info	    snd_info;	    /**< Sound stream param.	    */
-    //pj_snd_stream	   *snd_stream;	    /**< Sound stream.		    */
     unsigned		    in_pkt_size;    /**< Size of input buffer.	    */
     void		   *in_pkt;	    /**< Input buffer.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
@@ -278,7 +276,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	return -1;
 
     /* Number of samples in the frame */
-    ts_len = frame->size / (channel->snd_info.bits_per_sample / 8);
+    ts_len = frame->size / 2;
 
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
@@ -564,24 +562,6 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 
 
 /*
- * Create sound stream parameter from codec attributes.
- */
-static void init_snd_param( pj_snd_stream_info *snd_param,
-			    const pjmedia_codec_param *codec_param)
-{
-    pj_memset(snd_param, 0, sizeof(*snd_param));
-
-    snd_param->bits_per_sample	 = codec_param->pcm_bits_per_sample;
-    snd_param->bytes_per_frame   = 2;
-    snd_param->frames_per_packet = codec_param->sample_rate * 
-				   codec_param->ptime / 
-				   1000;
-    snd_param->samples_per_frame = 1;
-    snd_param->samples_per_sec   = codec_param->sample_rate;
-}
-
-
-/*
  * Create media channel.
  */
 static pj_status_t create_channel( pj_pool_t *pool,
@@ -642,22 +622,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
     status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
     if (status != PJ_SUCCESS)
 	return status;
-
-    /* Create and initialize sound device */
-
-    init_snd_param(&channel->snd_info, codec_param);
-
-    /*
-    if (dir == PJMEDIA_DIR_ENCODING)
-	channel->snd_stream = pj_snd_open_recorder(-1, &channel->snd_info, 
-						   &rec_callback, channel);
-    else
-	channel->snd_stream = pj_snd_open_player(-1, &channel->snd_info, 
-						 &play_callback, channel);
-
-    if (!channel->snd_stream)
-	return -1;
-    */
 
     /* Done. */
     *p_channel = channel;

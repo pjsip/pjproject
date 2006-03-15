@@ -49,19 +49,6 @@ typedef struct pj_snd_dev_info
     unsigned	default_samples_per_sec;/**< Default sampling rate.	    */
 } pj_snd_dev_info;
 
-/**
- * Sound device parameter, to be specified when calling #pj_snd_open_recorder
- * or #pj_snd_open_player.
- */
-typedef struct pj_snd_stream_info
-{
-    unsigned samples_per_sec;		/**< Sampling rate.		*/
-    unsigned bits_per_sample;		/**< No of bits per sample.	*/
-    unsigned samples_per_frame;		/**< No of samples per frame.	*/
-    unsigned bytes_per_frame;		/**< No of bytes per frame.	*/
-    unsigned frames_per_packet;		/**< No of frames per packet.	*/
-} pj_snd_stream_info;
-
 /** 
  * This callback is called by player stream when it needs additional data
  * to be played by the device. Application must fill in the whole of output 
@@ -134,10 +121,14 @@ PJ_DECL(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index);
  *
  * @return		Audio stream, or NULL if failed.
  */
-PJ_DECL(pj_snd_stream*) pj_snd_open_recorder(int index,
-					     const pj_snd_stream_info *param,
-					     pj_snd_rec_cb rec_cb,
-					     void *user_data);
+PJ_DECL(pj_status_t) pj_snd_open_recorder( int index,
+					   unsigned clock_rate,
+					   unsigned channel_count,
+					   unsigned samples_per_frame,
+					   unsigned bits_per_sample,
+					   pj_snd_rec_cb rec_cb,
+					   void *user_data,
+					   pj_snd_stream **p_snd_strm);
 
 /**
  * Create a new audio stream for playing audio samples.
@@ -150,10 +141,14 @@ PJ_DECL(pj_snd_stream*) pj_snd_open_recorder(int index,
  *
  * @return		Audio stream, or NULL if failed.
  */
-PJ_DECL(pj_snd_stream*) pj_snd_open_player(int index,
-					   const pj_snd_stream_info *param,
-					   pj_snd_play_cb play_cb,
-					   void *user_data);
+PJ_DECL(pj_status_t) pj_snd_open_player( int index,
+					 unsigned clock_rate,
+					 unsigned channel_count,
+					 unsigned samples_per_frame,
+					 unsigned bits_per_sample,
+					 pj_snd_play_cb play_cb,
+					 void *user_data,
+					 pj_snd_stream **p_snd_strm );
 
 /**
  * Start the stream.

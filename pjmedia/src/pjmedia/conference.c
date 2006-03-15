@@ -139,7 +139,6 @@ struct pjmedia_conf
     unsigned		  clock_rate;	/**< Sampling rate.	    */
     unsigned		  samples_per_frame;	/**< Samples per frame.	    */
     unsigned		  bits_per_sample;	/**< Bits per sample.	    */
-    pj_snd_stream_info	  snd_info;	/**< Sound device parameter.	    */
 };
 
 
@@ -286,15 +285,6 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     pj_status_t status;
 
 
-    /* Init default sound device parameters. */
-    pj_memset(&conf->snd_info, 0, sizeof(conf->snd_info));
-    conf->snd_info.samples_per_sec = conf->clock_rate;
-    conf->snd_info.bits_per_sample = conf->bits_per_sample;
-    conf->snd_info.samples_per_frame = conf->samples_per_frame;
-    conf->snd_info.bytes_per_frame = conf->samples_per_frame * 
-			       conf->bits_per_sample / 8;
-    conf->snd_info.frames_per_packet = 1;
-    
 
     /* Create port */
     status = create_conf_port(pool, conf, NULL, &name, &conf_port);
@@ -388,22 +378,32 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
  */
 static pj_status_t create_sound( pjmedia_conf *conf )
 {
+    pj_status_t status;
+
     /* Open recorder only if mic is not disabled. */
     if ((conf->options & PJMEDIA_CONF_NO_MIC) == 0) {
-	conf->snd_rec = pj_snd_open_recorder(-1 ,&conf->snd_info, 
-					     &rec_cb, conf);
-	if (conf->snd_rec == NULL) {
-	    return -1;
+	status = pj_snd_open_recorder(-1, conf->clock_rate, 1, 
+				      conf->samples_per_frame,
+				      conf->bits_per_sample,
+				      &rec_cb, conf, &conf->snd_rec);
+	if (status != PJ_SUCCESS) {
+	    conf->snd_rec = NULL;
+	    return status;
 	}
     }
 
     /* Open player */
-    conf->snd_player = pj_snd_open_player(-1, &conf->snd_info, &play_cb, conf);
-    if (conf->snd_player == NULL) {
+    status = pj_snd_open_player(-1, conf->clock_rate, 1,
+			        conf->samples_per_frame,
+				conf->bits_per_sample, 
+				&play_cb, conf, &conf->snd_player);
+    if (status != PJ_SUCCESS) {
 	if (conf->snd_rec) {
 	    pj_snd_stream_close(conf->snd_rec);
+	    conf->snd_rec = NULL;
 	}
-	return -1;
+	conf->snd_player = NULL;
+	return status;
     }
 
     return PJ_SUCCESS;

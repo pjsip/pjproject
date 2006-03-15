@@ -30,6 +30,17 @@ PJ_BEGIN_DECL
 #define PJMEDIA_ERRNO_START       (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE)
 
 
+/*
+ * Mapping from PortAudio error codes to pjmedia error space.
+ */
+#define PJMEDIA_PORTAUDIO_ERRNO_START (PJMEDIA_ERRNO_START+PJ_ERRNO_SPACE_SIZE-1000)
+
+/*
+ * Convert PortAudio error code to PJMEDIA error code.
+ */
+#define PJMEDIA_ERRNO_FROM_PORTAUDIO(err)   (err+PJMEDIA_PORTAUDIO_ERRNO_START)
+
+
 /************************************************************
  * GENERIC/GENERAL PJMEDIA ERRORS
  ***********************************************************/

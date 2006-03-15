@@ -17,9 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound.h>
-#include <pj/string.h>
-#include <pj/os.h>
+#include <pjmedia/errno.h>
 #include <pj/log.h>
+#include <pj/os.h>
+#include <pj/string.h>
 #include <portaudio.h>
 
 #define THIS_FILE	"pasound.c"
@@ -37,6 +38,7 @@ struct pj_snd_stream
     int		     dev_index;
     int		     bytes_per_sample;
     pj_uint32_t	     samples_per_sec;
+    int		     channel_count;
     pj_uint32_t	     timestamp;
     pj_uint32_t	     underflow;
     pj_uint32_t	     overflow;
@@ -188,10 +190,14 @@ PJ_DEF(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index)
 /*
  * Open stream.
  */
-PJ_DEF(pj_snd_stream*) pj_snd_open_recorder( int index,
-					     const pj_snd_stream_info *param,
-					     pj_snd_rec_cb rec_cb,
-					     void *user_data)
+PJ_DEF(pj_status_t) pj_snd_open_recorder( int index,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned samples_per_frame,
+					  unsigned bits_per_sample,
+					  pj_snd_rec_cb rec_cb,
+					  void *user_data,
+					  pj_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
     pj_snd_stream *stream;
@@ -208,70 +214,75 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_recorder( int index,
 		break;
 	}
 	if (index == count) {
-	    PJ_LOG(2,(THIS_FILE, "Error: unable to find recorder device"));
-	    return NULL;
+	    /* No such device. */
+	    return PJ_ENOTFOUND;
 	}
     } else {
 	paDevInfo = Pa_GetDeviceInfo(index);
-	if (!paDevInfo)
-	    return NULL;
+	if (!paDevInfo) {
+	    /* Assumed it is "No such device" error. */
+	    return PJ_ENOTFOUND;
+	}
     }
 
-    if (param->bits_per_sample == 8)
+    if (bits_per_sample == 8)
 	sampleFormat = paUInt8;
-    else if (param->bits_per_sample == 16)
+    else if (bits_per_sample == 16)
 	sampleFormat = paInt16;
-    else if (param->bits_per_sample == 32)
+    else if (bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return NULL;
+	return PJ_ENOTSUP;
     
     pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
     if (!pool)
-	return NULL;
+	return PJ_ENOMEM;
 
-    stream = pj_pool_calloc(pool, 1, sizeof(*stream));
+    stream = pj_pool_zalloc(pool, sizeof(*stream));
     stream->pool = pool;
-    stream->name = pj_str("recorder");
+    stream->name = pj_str("snd-rec");
     stream->user_data = user_data;
     stream->dev_index = index;
-    stream->samples_per_sec = param->samples_per_frame;
-    stream->bytes_per_sample = param->bits_per_sample / 8;
+    stream->samples_per_sec = samples_per_frame;
+    stream->bytes_per_sample = bits_per_sample / 8;
+    stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
 
     pj_memset(&inputParam, 0, sizeof(inputParam));
     inputParam.device = index;
-    inputParam.channelCount = 1;
+    inputParam.channelCount = channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
     err = Pa_OpenStream( &stream->stream, &inputParam, NULL,
-			 param->samples_per_sec, 
-			 param->samples_per_frame * param->frames_per_packet, 
-			 0,
-			 &PaRecorderCallback, stream );
+			 clock_rate, samples_per_frame, 
+			 0, &PaRecorderCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	PJ_LOG(2,(THIS_FILE, "Error opening player: %s", Pa_GetErrorText(err)));
-	return NULL;
+	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
     PJ_LOG(5,(THIS_FILE, "%s opening device %s for recording, sample rate=%d, "
+			 "channel count=%d, "
 			 "%d bits per sample, %d samples per buffer",
 			 (err==0 ? "Success" : "Error"),
-			 paDevInfo->name, param->samples_per_sec, 
-			 param->bits_per_sample,
-			 param->samples_per_frame * param->frames_per_packet));
+			 paDevInfo->name, clock_rate, channel_count,
+			 bits_per_sample, samples_per_frame));
 
-    return stream;
+    *p_snd_strm = stream;
+    return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
-					   const pj_snd_stream_info *param,
-					   pj_snd_play_cb play_cb,
-					   void *user_data)
+PJ_DEF(pj_status_t) pj_snd_open_player( int index,
+					unsigned clock_rate,
+					unsigned channel_count,
+					unsigned samples_per_frame,
+					unsigned bits_per_sample,
+					pj_snd_play_cb play_cb,
+					void *user_data,
+					pj_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
     pj_snd_stream *stream;
@@ -288,63 +299,65 @@ PJ_DEF(pj_snd_stream*) pj_snd_open_player(int index,
 		break;
 	}
 	if (index == count) {
-	    PJ_LOG(2,(THIS_FILE, "Error: unable to find player device"));
-	    return NULL;
+	    /* No such device. */
+	    return PJ_ENOTFOUND;
 	}
     } else {
 	paDevInfo = Pa_GetDeviceInfo(index);
-	if (!paDevInfo)
-	    return NULL;
+	if (!paDevInfo) {
+	    /* Assumed it is "No such device" error. */
+	    return PJ_ENOTFOUND;
+	}
     }
 
-    if (param->bits_per_sample == 8)
+    if (bits_per_sample == 8)
 	sampleFormat = paUInt8;
-    else if (param->bits_per_sample == 16)
+    else if (bits_per_sample == 16)
 	sampleFormat = paInt16;
-    else if (param->bits_per_sample == 32)
+    else if (bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return NULL;
+	return PJ_ENOTSUP;
     
     pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
     if (!pool)
-	return NULL;
+	return PJ_ENOMEM;
 
     stream = pj_pool_calloc(pool, 1, sizeof(*stream));
     stream->pool = pool;
     stream->name = pj_str("player");
     stream->user_data = user_data;
-    stream->samples_per_sec = param->samples_per_frame;
-    stream->bytes_per_sample = param->bits_per_sample / 8;
+    stream->samples_per_sec = samples_per_frame;
+    stream->bytes_per_sample = bits_per_sample / 8;
+    stream->channel_count = channel_count;
     stream->dev_index = index;
     stream->play_cb = play_cb;
 
     pj_memset(&outputParam, 0, sizeof(outputParam));
     outputParam.device = index;
-    outputParam.channelCount = 1;
+    outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
     outputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
     err = Pa_OpenStream( &stream->stream, NULL, &outputParam,
-			 param->samples_per_sec, 
-			 param->samples_per_frame * param->frames_per_packet, 
-			 0,
-			 &PaPlayerCallback, stream );
+			 clock_rate,  samples_per_frame, 
+			 0, &PaPlayerCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	PJ_LOG(2,(THIS_FILE, "Error opening player: %s", Pa_GetErrorText(err)));
-	return NULL;
+	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
     PJ_LOG(5,(THIS_FILE, "%s opening device %s for playing, sample rate=%d, "
+			 "channel count=%d, "
 			 "%d bits per sample, %d samples per buffer",
 			 (err==0 ? "Success" : "Error"),
-			 paDevInfo->name, param->samples_per_sec, 
-		 	 param->bits_per_sample,
-			 param->samples_per_frame * param->frames_per_packet));
+			 paDevInfo->name, clock_rate, channel_count,
+		 	 bits_per_sample, samples_per_frame));
 
-    return stream;
+    *p_snd_strm = stream;
+
+    return PJ_SUCCESS;
 }
 
 

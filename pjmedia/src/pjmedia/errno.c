@@ -18,6 +18,7 @@
  */
 #include <pjmedia/errno.h>
 #include <pj/string.h>
+#include <portaudio.h>
 
 
 
@@ -129,8 +130,23 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 {
     pj_str_t errstr;
 
-    if (statcode >= PJMEDIA_ERRNO_START && 
-	statcode < PJMEDIA_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
+    /* See if the error comes from PortAudio. */
+    if (statcode >= PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized) &&
+	statcode <  PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized + 10000))
+    {
+
+	int pa_err = statcode - PJMEDIA_ERRNO_FROM_PORTAUDIO(0);
+	pj_str_t msg;
+	
+	msg.ptr = (char*)Pa_GetErrorText(pa_err);
+	msg.slen = pj_ansi_strlen(msg.ptr);
+
+	errstr.ptr = buf;
+	pj_strncpy_with_null(&errstr, &msg, bufsize);
+	return errstr;
+
+    } else if (statcode >= PJMEDIA_ERRNO_START && 
+	       statcode < PJMEDIA_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
     {
 	/* Find the error in the table.
 	 * Use binary search!
