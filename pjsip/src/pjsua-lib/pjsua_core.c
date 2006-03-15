@@ -753,15 +753,22 @@ static pj_status_t init_media(void)
 	return status;
     }
 
+    /* Add NULL port to the bridge. */
+    status = pjmedia_null_port_create( pjsua.pool, pjsua.clock_rate, 
+				       pjsua.clock_rate * 20 / 1000, 16,
+				       &pjsua.null_port);
+    pjmedia_conf_add_port( pjsua.mconf, pjsua.pool, pjsua.null_port, 
+			   &pjsua.null_port->info.name, NULL );
+
     /* Create WAV file player if required: */
 
     if (pjsua.wav_file) {
-	pjmedia_port *port;
 	pj_str_t port_name;
 
 	/* Create the file player port. */
 	status = pjmedia_file_player_port_create( pjsua.pool, pjsua.wav_file,
-						  0, -1, NULL, &port);
+						  0, -1, NULL, 
+						  &pjsua.file_port);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, 
 			 "Error playing media file", 
@@ -770,7 +777,8 @@ static pj_status_t init_media(void)
 	}
 
 	/* Add port to conference bridge: */
-	status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, port, 
+	status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, 
+				       pjsua.file_port, 
 				       pj_cstr(&port_name, pjsua.wav_file),
 				       &pjsua.wav_slot);
 	if (status != PJ_SUCCESS) {
@@ -1048,6 +1056,13 @@ pj_status_t pjsua_destroy(void)
     /* Destroy conference bridge. */
     if (pjsua.mconf)
 	pjmedia_conf_destroy(pjsua.mconf);
+
+    /* Destroy file port */
+    pjmedia_port_destroy(pjsua.file_port);
+
+    /* Destroy null port. */
+    pjmedia_port_destroy(pjsua.null_port);
+
 
     /* Destroy sound framework: 
      * (this should be done in pjmedia_shutdown())

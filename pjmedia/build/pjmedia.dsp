@@ -120,6 +120,10 @@ SOURCE=..\src\pjmedia\jbuf.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\null_port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\nullsound.c
 # PROP Exclude_From_Build 1
 # End Source File
@@ -206,6 +210,10 @@ SOURCE=..\include\pjmedia\g711.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\jbuf.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\null_port.h
 # End Source File
 # Begin Source File
 

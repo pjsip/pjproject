@@ -16,31 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_H__
-#define __PJMEDIA_H__
+#ifndef __PJMEDIA_NULL_PORT_H__
+#define __PJMEDIA_NULL_PORT_H__
 
 /**
- * @file pjmedia.h
- * @brief PJMEDIA main header file.
+ * @file null_port.h
+ * @brief Null media port.
  */
-
-#include <pjmedia/types.h>
-#include <pjmedia/codec.h>
-#include <pjmedia/conference.h>
-#include <pjmedia/endpoint.h>
-#include <pjmedia/errno.h>
-#include <pjmedia/file_port.h>
-#include <pjmedia/g711.h>
-#include <pjmedia/jbuf.h>
-#include <pjmedia/null_port.h>
 #include <pjmedia/port.h>
-#include <pjmedia/rtcp.h>
-#include <pjmedia/rtp.h>
-#include <pjmedia/sdp.h>
-#include <pjmedia/sdp_neg.h>
-#include <pjmedia/session.h>
-#include <pjmedia/sound.h>
-#include <pjmedia/wave.h>
 
-#endif	/* __PJMEDIA_H__ */
 
+PJ_BEGIN_DECL
+
+
+/**
+ * Create Null port. 
+ *
+ * @param sampling_rate		Sampling rate of the port.
+ * @param samples_per_frame	Number of samples per frame.
+ * @param bits_per_sample	Number of bits per sample.
+ * @param p_port		Pointer to receive the port instance.
+ *
+ * @return			PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
+					       unsigned sampling_rate,
+					       unsigned samples_per_frame,
+					       unsigned bits_per_sample,
+					       pjmedia_port **p_port );
+
+
+
+PJ_END_DECL
+
+
+#endif	/* __PJMEDIA_NULL_PORT_H__ */

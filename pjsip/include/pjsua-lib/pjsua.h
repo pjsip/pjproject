@@ -64,7 +64,7 @@ PJ_BEGIN_DECL
  * Aditional ports to be allocated in the conference ports for non-call
  * streams.
  */
-#define PJSUA_CONF_MORE_PORTS	    2
+#define PJSUA_CONF_MORE_PORTS	    3
 
 
 /**
@@ -185,6 +185,8 @@ struct pjsua
     pj_bool_t	     no_mic;	    /**< Disable microphone.		*/
     char	    *wav_file;	    /**< WAV file name to play.		*/
     unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
+    pjmedia_port    *file_port;	    /**< WAV player port.		*/
+    pjmedia_port    *null_port;	    /**< NULL port.			*/
     pj_bool_t	     auto_play;	    /**< Auto play file for calls?	*/
     pj_bool_t	     auto_loop;	    /**< Auto loop RTP stream?		*/
     pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/

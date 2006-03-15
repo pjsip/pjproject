@@ -491,8 +491,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(conf && pool && strm_port && port_name && p_port, 
-		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && pool && strm_port && port_name, PJ_EINVAL);
 
     pj_mutex_lock(conf->mutex);
 
@@ -522,7 +521,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     conf->port_cnt++;
 
     /* Done. */
-    *p_port = index;
+    if (p_port) {
+	*p_port = index;
+    }
 
     pj_mutex_unlock(conf->mutex);
 
@@ -1052,6 +1053,10 @@ static pj_status_t play_cb( /* in */  void *user_data,
 	    continue;
 	}
 
+	/* Also skip if this port doesn't have listeners. */
+	if (conf_port->listener_cnt == 0)
+	    continue;
+
 	/* Get frame from this port. 
 	 * For port zero (sound port), get the frame  from the rx_buffer
 	 * instead.
@@ -1100,10 +1105,6 @@ static pj_status_t play_cb( /* in */  void *user_data,
 		continue;
 	    }
 	}
-
-	/* Also skip if this port doesn't have listeners. */
-	if (conf_port->listener_cnt == 0)
-	    continue;
 
 	/* Get the signal level. */
 	level = pjmedia_calc_avg_signal(output, conf->samples_per_frame);
