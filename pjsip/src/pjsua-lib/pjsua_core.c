@@ -760,6 +760,7 @@ static pj_status_t init_media(void)
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
 				 pjsua.clock_rate, 
+				 1, /* mono */
 				 pjsua.clock_rate * 20 / 1000, 16, 
 				 options,
 				 &pjsua.mconf);
@@ -773,6 +774,7 @@ static pj_status_t init_media(void)
 
     /* Add NULL port to the bridge. */
     status = pjmedia_null_port_create( pjsua.pool, pjsua.clock_rate, 
+				       1, /* mono */
 				       pjsua.clock_rate * 20 / 1000, 16,
 				       &pjsua.null_port);
     pjmedia_conf_add_port( pjsua.mconf, pjsua.pool, pjsua.null_port, 

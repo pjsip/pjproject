@@ -75,6 +75,11 @@ enum pjmedia_conf_option
  * @param sampling_rate	    Set the sampling rate of the bridge. This value
  *			    is also used to set the sampling rate of the
  *			    sound device.
+ * @param channel_count	    Number of channels in the PCM stream. Normally
+ *			    the value will be 1 for mono, but application may
+ *			    specify a value of 2 for stereo. Note that all
+ *			    ports that will be connected to the bridge MUST 
+ *			    have the same number of channels as the bridge.
  * @param samples_per_frame Set the number of samples per frame. This value
  *			    is also used to set the sound device.
  * @param bits_per_sample   Set the number of bits per sample. This value
@@ -90,6 +95,7 @@ enum pjmedia_conf_option
 PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					  unsigned max_slots,
 					  unsigned sampling_rate,
+					  unsigned channel_count,
 					  unsigned samples_per_frame,
 					  unsigned bits_per_sample,
 					  unsigned options,

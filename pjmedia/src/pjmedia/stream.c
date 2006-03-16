@@ -659,6 +659,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->port.info.need_info = 0;
     stream->port.info.pt = info->fmt.pt;
     pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
+    stream->port.info.channel_count = 1;
     stream->port.info.sample_rate = info->fmt.sample_rate;
     stream->port.user_data = stream;
     stream->port.put_frame = &put_frame;

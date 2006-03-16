@@ -33,6 +33,7 @@ PJ_BEGIN_DECL
  * Create Null port. 
  *
  * @param sampling_rate		Sampling rate of the port.
+ * @param channel_count		Number of channels.
  * @param samples_per_frame	Number of samples per frame.
  * @param bits_per_sample	Number of bits per sample.
  * @param p_port		Pointer to receive the port instance.
@@ -41,6 +42,7 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 					       unsigned sampling_rate,
+					       unsigned channel_count,
 					       unsigned samples_per_frame,
 					       unsigned bits_per_sample,
 					       pjmedia_port **p_port );

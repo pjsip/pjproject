@@ -32,6 +32,7 @@ static pj_status_t null_on_destroy(pjmedia_port *this_port);
 
 PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 					      unsigned sampling_rate,
+					      unsigned channel_count,
 					      unsigned samples_per_frame,
 					      unsigned bits_per_sample,
 					      pjmedia_port **p_port )
@@ -52,6 +53,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
     port->info.pt = 0xFF;
     port->info.sample_rate = sampling_rate;
     port->info.samples_per_frame = samples_per_frame;
+    port->info.channel_count = channel_count;
     port->info.signature = 0x2411;
     port->info.type = PJMEDIA_TYPE_AUDIO;
 

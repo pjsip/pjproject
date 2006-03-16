@@ -200,7 +200,6 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
     }
 
     if (wave_hdr.fmt_hdr.fmt_tag != 1 ||
-	wave_hdr.fmt_hdr.nchan != 1 ||
 	wave_hdr.fmt_hdr.bits_per_sample != 16 ||
 	wave_hdr.fmt_hdr.block_align != 2)
     {
@@ -224,6 +223,7 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
     fport->base.user_data = user_data;
 
     /* Update port info. */
+    fport->base.info.channel_count = wave_hdr.fmt_hdr.nchan;
     fport->base.info.sample_rate = wave_hdr.fmt_hdr.sample_rate;
     fport->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
     fport->base.info.samples_per_frame = fport->base.info.sample_rate *

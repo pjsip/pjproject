@@ -136,7 +136,8 @@ struct pjmedia_conf
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
     pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
-    unsigned		  clock_rate;	/**< Sampling rate.	    */
+    unsigned		  clock_rate;	/**< Sampling rate.		    */
+    unsigned		  channel_count;/**< Number of channels (1=mono).   */
     unsigned		  samples_per_frame;	/**< Samples per frame.	    */
     unsigned		  bits_per_sample;	/**< Bits per sample.	    */
 };
@@ -322,6 +323,7 @@ on_error:
 PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					 unsigned max_ports,
 					 unsigned clock_rate,
+					 unsigned channel_count,
 					 unsigned samples_per_frame,
 					 unsigned bits_per_sample,
 					 unsigned options,
@@ -492,6 +494,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(conf && pool && strm_port && port_name, PJ_EINVAL);
+
+    /* For this version of PJMEDIA, port MUST have the same number of
+     * PCM channels.
+     */
+    if (strm_port->info.channel_count != conf->channel_count) {
+	pj_assert(!"Number of channels mismatch");
+	return PJMEDIA_ENCCHANNEL;
+    }
 
     pj_mutex_lock(conf->mutex);
 
