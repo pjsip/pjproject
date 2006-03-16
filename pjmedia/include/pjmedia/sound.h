@@ -36,18 +36,18 @@ PJ_BEGIN_DECL
  */
 
 /** Opaque data type for audio stream. */
-typedef struct pj_snd_stream pj_snd_stream;
+typedef struct pjmedia_snd_stream pjmedia_snd_stream;
 
 /**
- * Device information structure returned by #pj_snd_get_dev_info.
+ * Device information structure returned by #pjmedia_snd_get_dev_info.
  */
-typedef struct pj_snd_dev_info
+typedef struct pjmedia_snd_dev_info
 {
     char	name[64];	        /**< Device name.		    */
     unsigned	input_count;	        /**< Max number of input channels.  */
     unsigned	output_count;	        /**< Max number of output channels. */
     unsigned	default_samples_per_sec;/**< Default sampling rate.	    */
-} pj_snd_dev_info;
+} pjmedia_snd_dev_info;
 
 /** 
  * This callback is called by player stream when it needs additional data
@@ -62,7 +62,7 @@ typedef struct pj_snd_dev_info
  *
  * @return		Non-zero to stop the stream.
  */
-typedef pj_status_t (*pj_snd_play_cb)(/* in */   void *user_data,
+typedef pj_status_t (*pjmedia_snd_play_cb)(/* in */   void *user_data,
 				      /* in */   pj_uint32_t timestamp,
 				      /* out */  void *output,
 				      /* out */  unsigned size);
@@ -78,7 +78,7 @@ typedef pj_status_t (*pj_snd_play_cb)(/* in */   void *user_data,
  *
  * @return		Non-zero to stop the stream.
  */
-typedef pj_status_t (*pj_snd_rec_cb)(/* in */   void *user_data,
+typedef pj_status_t (*pjmedia_snd_rec_cb)(/* in */   void *user_data,
 				     /* in */   pj_uint32_t timestamp,
 				     /* in */   const void *input,
 				     /* in*/    unsigned size);
@@ -90,7 +90,7 @@ typedef pj_status_t (*pj_snd_rec_cb)(/* in */   void *user_data,
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pj_snd_init(pj_pool_factory *factory);
+PJ_DECL(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory);
 
 
 /**
@@ -98,57 +98,72 @@ PJ_DECL(pj_status_t) pj_snd_init(pj_pool_factory *factory);
  *
  * @return		Number of devices.
  */
-PJ_DECL(int) pj_snd_get_dev_count(void);
+PJ_DECL(int) pjmedia_snd_get_dev_count(void);
 
 
 /**
  * Get device info.
  *
  * @param index		The index of the device, which should be in the range
- *			from zero to #pj_snd_get_dev_count - 1.
+ *			from zero to #pjmedia_snd_get_dev_count - 1.
  */
-PJ_DECL(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index);
+PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
 
 
 /**
  * Create a new audio stream for audio capture purpose.
  *
- * @param index		Device index, or -1 to let the library choose the first
- *			available device, or -2 to use NULL device.
- * @param param		Stream parameters.
- * @param rec_cb	Callback to handle captured audio samples.
- * @param user_data	User data to be associated with the stream.
+ * @param index		    Device index, or -1 to let the library choose the 
+ *			    first available device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param rec_cb	    Callback to handle captured audio samples.
+ * @param user_data	    User data to be associated with the stream.
+ * @param p_snd_strm	    Pointer to receive the stream instance.
  *
- * @return		Audio stream, or NULL if failed.
+ * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_snd_open_recorder( int index,
+PJ_DECL(pj_status_t) pjmedia_snd_open_recorder( int index,
 					   unsigned clock_rate,
 					   unsigned channel_count,
 					   unsigned samples_per_frame,
 					   unsigned bits_per_sample,
-					   pj_snd_rec_cb rec_cb,
+					   pjmedia_snd_rec_cb rec_cb,
 					   void *user_data,
-					   pj_snd_stream **p_snd_strm);
+					   pjmedia_snd_stream **p_snd_strm);
 
 /**
  * Create a new audio stream for playing audio samples.
  *
- * @param index		Device index, or -1 to let the library choose the first
- *			available device, or -2 to use NULL device.
- * @param param		Stream parameters.
- * @param play_cb	Callback to supply audio samples.
- * @param user_data	User data to be associated with the stream.
+ * @param index		    Device index, or -1 to let the library choose the 
+ *			    first available device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param play_cb	    Callback to be called when the sound player needs
+ *			    more audio samples to play.
+ * @param user_data	    User data to be associated with the stream.
+ * @param p_snd_strm	    Pointer to receive the stream instance.
  *
- * @return		Audio stream, or NULL if failed.
+ * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_snd_open_player( int index,
+PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
 					 unsigned clock_rate,
 					 unsigned channel_count,
 					 unsigned samples_per_frame,
 					 unsigned bits_per_sample,
-					 pj_snd_play_cb play_cb,
+					 pjmedia_snd_play_cb play_cb,
 					 void *user_data,
-					 pj_snd_stream **p_snd_strm );
+					 pjmedia_snd_stream **p_snd_strm );
 
 /**
  * Start the stream.
@@ -157,7 +172,7 @@ PJ_DECL(pj_status_t) pj_snd_open_player( int index,
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream);
+PJ_DECL(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream);
 
 /**
  * Stop the stream.
@@ -166,7 +181,7 @@ PJ_DECL(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream);
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream);
+PJ_DECL(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream);
 
 /**
  * Destroy the stream.
@@ -175,14 +190,14 @@ PJ_DECL(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream);
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream);
+PJ_DECL(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream);
 
 /**
  * Deinitialize sound library.
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pj_snd_deinit(void);
+PJ_DECL(pj_status_t) pjmedia_snd_deinit(void);
 
 
 

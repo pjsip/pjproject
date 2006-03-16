@@ -131,8 +131,8 @@ struct pjmedia_conf
     unsigned		  max_ports;	/**< Maximum ports.		    */
     unsigned		  port_cnt;	/**< Current number of ports.	    */
     unsigned		  connect_cnt;	/**< Total number of connections    */
-    pj_snd_stream	 *snd_rec;	/**< Sound recorder stream.	    */
-    pj_snd_stream	 *snd_player;	/**< Sound player stream.	    */
+    pjmedia_snd_stream	 *snd_rec;	/**< Sound recorder stream.	    */
+    pjmedia_snd_stream	 *snd_player;	/**< Sound player stream.	    */
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
     pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
@@ -382,7 +382,7 @@ static pj_status_t create_sound( pjmedia_conf *conf )
 
     /* Open recorder only if mic is not disabled. */
     if ((conf->options & PJMEDIA_CONF_NO_MIC) == 0) {
-	status = pj_snd_open_recorder(-1, conf->clock_rate, 1, 
+	status = pjmedia_snd_open_recorder(-1, conf->clock_rate, 1, 
 				      conf->samples_per_frame,
 				      conf->bits_per_sample,
 				      &rec_cb, conf, &conf->snd_rec);
@@ -393,13 +393,13 @@ static pj_status_t create_sound( pjmedia_conf *conf )
     }
 
     /* Open player */
-    status = pj_snd_open_player(-1, conf->clock_rate, 1,
+    status = pjmedia_snd_open_player(-1, conf->clock_rate, 1,
 			        conf->samples_per_frame,
 				conf->bits_per_sample, 
 				&play_cb, conf, &conf->snd_player);
     if (status != PJ_SUCCESS) {
 	if (conf->snd_rec) {
-	    pj_snd_stream_close(conf->snd_rec);
+	    pjmedia_snd_stream_close(conf->snd_rec);
 	    conf->snd_rec = NULL;
 	}
 	conf->snd_player = NULL;
@@ -415,11 +415,11 @@ static pj_status_t create_sound( pjmedia_conf *conf )
 static pj_status_t destroy_sound( pjmedia_conf *conf )
 {
     if (conf->snd_rec) {
-	pj_snd_stream_close(conf->snd_rec);
+	pjmedia_snd_stream_close(conf->snd_rec);
 	conf->snd_rec = NULL;
     }
     if (conf->snd_player) {
-	pj_snd_stream_close(conf->snd_player);
+	pjmedia_snd_stream_close(conf->snd_player);
 	conf->snd_player = NULL;
     }
     return PJ_SUCCESS;
@@ -441,14 +441,14 @@ static pj_status_t resume_sound( pjmedia_conf *conf )
 
     /* Start recorder. */
     if (conf->snd_rec) {
-	status = pj_snd_stream_start(conf->snd_rec);
+	status = pjmedia_snd_stream_start(conf->snd_rec);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
 
     /* Start player. */
     if (conf->snd_player) {
-	status = pj_snd_stream_start(conf->snd_player);
+	status = pjmedia_snd_stream_start(conf->snd_player);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }

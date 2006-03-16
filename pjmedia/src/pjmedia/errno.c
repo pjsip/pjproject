@@ -113,6 +113,7 @@ static const struct
     { PJMEDIA_ENCTYPE,		    "Media ports have incompatible media type" },
     { PJMEDIA_ENCBITS,		    "Media ports have incompatible bits per sample" },
     { PJMEDIA_ENCBYTES,		    "Media ports have incompatible bytes per frame" },
+    { PJMEDIA_ENCCHANNEL,	    "Media ports have incompatible number of channels" },
 
     /* Media file errors: */
     { PJMEDIA_ENOTVALIDWAVE,	    "Not a valid WAVE file" },

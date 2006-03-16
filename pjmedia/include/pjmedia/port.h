@@ -78,6 +78,7 @@ struct pjmedia_port_info
     unsigned	    pt;			/**< Payload type (can be dynamic). */
     pj_str_t	    encoding_name;	/**< Encoding name.		    */
     unsigned	    sample_rate;	/**< Sampling rate.		    */
+    unsigned	    channel_count;	/**< Number of channels.	    */
     unsigned	    bits_per_sample;	/**< Bits/sample		    */
     unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
     unsigned	    bytes_per_frame;	/**< No of samples per frame.	    */

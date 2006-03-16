@@ -415,6 +415,11 @@ PJ_BEGIN_DECL
  * Incompatible bytes per frame
  */
 #define PJMEDIA_ENCBYTES	    (PJMEDIA_ERRNO_START+165)    /* 220165 */
+/**
+ * @hideinitializer
+ * Incompatible number of channels
+ */
+#define PJMEDIA_ENCCHANNEL	    (PJMEDIA_ERRNO_START+166)    /* 220166 */
 
 
 /************************************************************

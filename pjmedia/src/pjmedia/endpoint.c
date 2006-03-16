@@ -106,12 +106,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt->pf = pf;
 
     /* Sound */
-    pj_snd_init(pf);
+    pjmedia_snd_init(pf);
 
     /* Init codec manager. */
     status = pjmedia_codec_mgr_init(&endpt->codec_mgr);
     if (status != PJ_SUCCESS) {
-	pj_snd_deinit();
+	pjmedia_snd_deinit();
 	goto on_error;
     }
 
@@ -122,13 +122,13 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
 
     status = g711_init_factory (factory, endpt->pool);
     if (status != PJ_SUCCESS) {
-	pj_snd_deinit();
+	pjmedia_snd_deinit();
 	goto on_error;
     }
 
     status = pjmedia_codec_mgr_register_factory (&endpt->codec_mgr, factory);
     if (status != PJ_SUCCESS)  {
-	pj_snd_deinit();
+	pjmedia_snd_deinit();
 	goto on_error;
     }
 #endif
@@ -158,7 +158,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 
     endpt->pf = NULL;
 
-    pj_snd_deinit();
+    pjmedia_snd_deinit();
     pj_pool_release (endpt->pool);
 
     return PJ_SUCCESS;

@@ -21,7 +21,7 @@
 
 #if defined(PJMEDIA_HAS_NULL_SOUND) && PJMEDIA_HAS_NULL_SOUND!=0
 
-static pj_snd_dev_info null_info = 
+static pjmedia_snd_dev_info null_info = 
 {
     "Null Device",
     1,
@@ -30,31 +30,31 @@ static pj_snd_dev_info null_info =
 };
 
 
-PJ_DEF(pj_status_t) pj_snd_init(pj_pool_factory *factory)
+PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
     PJ_UNUSED_ARG(factory);
     return PJ_SUCCESS;
 }
 
-PJ_DEF(int) pj_snd_get_dev_count(void)
+PJ_DEF(int) pjmedia_snd_get_dev_count(void)
 {
     return 1;
 }
 
-PJ_DEF(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index)
+PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
     PJ_ASSERT_RETURN(index==0, NULL);
     return &null_info;
 }
 
-PJ_DEF(pj_status_t) pj_snd_open_recorder( int index,
+PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
 					  unsigned clock_rate,
 					  unsigned channel_count,
 					  unsigned samples_per_frame,
 					  unsigned bits_per_sample,
-					  pj_snd_rec_cb rec_cb,
+					  pjmedia_snd_rec_cb rec_cb,
 					  void *user_data,
-					  pj_snd_stream **p_snd_strm)
+					  pjmedia_snd_stream **p_snd_strm)
 {
     PJ_UNUSED_ARG(index);
     PJ_UNUSED_ARG(clock_rate);
@@ -69,14 +69,14 @@ PJ_DEF(pj_status_t) pj_snd_open_recorder( int index,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_snd_open_player( int index,
+PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 					unsigned clock_rate,
 					unsigned channel_count,
 					unsigned samples_per_frame,
 					unsigned bits_per_sample,
-					pj_snd_play_cb play_cb,
+					pjmedia_snd_play_cb play_cb,
 					void *user_data,
-					pj_snd_stream **p_snd_strm )
+					pjmedia_snd_stream **p_snd_strm )
 {
     PJ_UNUSED_ARG(index);
     PJ_UNUSED_ARG(clock_rate);
@@ -91,25 +91,25 @@ PJ_DEF(pj_status_t) pj_snd_open_player( int index,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 {
     PJ_UNUSED_ARG(stream);
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
 {
     PJ_UNUSED_ARG(stream);
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 {
     PJ_UNUSED_ARG(stream);
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_snd_deinit(void)
+PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 {
     return PJ_SUCCESS;
 }

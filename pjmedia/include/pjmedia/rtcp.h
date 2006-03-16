@@ -39,7 +39,7 @@ PJ_BEGIN_DECL
 /**
  * RTCP sender report.
  */
-struct pj_rtcp_sr
+struct pjmedia_rtcp_sr
 {
     pj_uint32_t	    ssrc;	    /**< SSRC identification.		*/
     pj_uint32_t	    ntp_sec;	    /**< NTP time, seconds part.	*/
@@ -50,14 +50,14 @@ struct pj_rtcp_sr
 };
 
 /**
- * @see pj_rtcp_sr
+ * @see pjmedia_rtcp_sr
  */
-typedef struct pj_rtcp_sr pj_rtcp_sr;
+typedef struct pjmedia_rtcp_sr pjmedia_rtcp_sr;
 
 /**
  * RTCP receiver report.
  */
-struct pj_rtcp_rr
+struct pjmedia_rtcp_rr
 {
     pj_uint32_t	    ssrc;	    /**< SSRC identification.		*/
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
@@ -78,15 +78,15 @@ struct pj_rtcp_rr
 };
 
 /**
- * @see pj_rtcp_rr
+ * @see pjmedia_rtcp_rr
  */
-typedef struct pj_rtcp_rr pj_rtcp_rr;
+typedef struct pjmedia_rtcp_rr pjmedia_rtcp_rr;
 
 
 /**
  * RTCP common header.
  */
-struct pj_rtcp_common
+struct pjmedia_rtcp_common
 {
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
     unsigned	    version:2;	/**< packet type            */
@@ -103,48 +103,48 @@ struct pj_rtcp_common
 };
 
 /**
- * @see pj_rtcp_common
+ * @see pjmedia_rtcp_common
  */
-typedef struct pj_rtcp_common pj_rtcp_common;
+typedef struct pjmedia_rtcp_common pjmedia_rtcp_common;
 
 /**
  * RTCP packet.
  */
-struct pj_rtcp_pkt
+struct pjmedia_rtcp_pkt
 {
-    pj_rtcp_common  common;	/**< Common header.	    */
-    pj_rtcp_sr	    sr;		/**< Sender report.	    */
-    pj_rtcp_rr	    rr;		/**< variable-length list   */
+    pjmedia_rtcp_common  common;	/**< Common header.	    */
+    pjmedia_rtcp_sr sr;		/**< Sender report.	    */
+    pjmedia_rtcp_rr rr;		/**< variable-length list   */
 };
 
 /**
- * @see pj_rtcp_pkt
+ * @see pjmedia_rtcp_pkt
  */
-typedef struct pj_rtcp_pkt pj_rtcp_pkt;
+typedef struct pjmedia_rtcp_pkt pjmedia_rtcp_pkt;
 
 
 /**
  * NTP time representation.
  */
-struct pj_rtcp_ntp_rec
+struct pjmedia_rtcp_ntp_rec
 {
     pj_uint32_t	    hi;		/**< High order 32-bit part.	*/
     pj_uint32_t	    lo;		/**< Lo order 32-bit part.	*/
 };
 
 /**
- * @see pj_rtcp_ntp_rec
+ * @see pjmedia_rtcp_ntp_rec
  */
-typedef struct pj_rtcp_ntp_rec pj_rtcp_ntp_rec;
+typedef struct pjmedia_rtcp_ntp_rec pjmedia_rtcp_ntp_rec;
 
 
 
 /**
  * RTCP session.
  */
-struct pj_rtcp_session
+struct pjmedia_rtcp_session
 {
-    pj_rtcp_pkt	    rtcp_pkt;	    /**< Cached RTCP packet.		    */
+    pjmedia_rtcp_pkt	    rtcp_pkt;	/**< Cached RTCP packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
 
@@ -154,16 +154,16 @@ struct pj_rtcp_session
     pj_int32_t	    transit;        /**< Relative trans time for prev pkt   */
     pj_uint32_t	    jitter;	    /**< Estimated jitter		    */
     
-    pj_rtcp_ntp_rec rtcp_lsr;	    /**< NTP ts in last SR received	    */
-    unsigned 	    rtcp_lsr_time;  /**< Time when last SR is received.	    */
-    pj_uint32_t	    peer_ssrc;	    /**< Peer SSRC			    */
+    pjmedia_rtcp_ntp_rec rtcp_lsr;	 /**< NTP ts in last SR received    */
+    unsigned 		 rtcp_lsr_time;  /**< Time when last SR is received.*/
+    pj_uint32_t		 peer_ssrc;	 /**< Peer SSRC			    */
     
 };
 
 /**
- * @see pj_rtcp_session
+ * @see pjmedia_rtcp_session
  */
-typedef struct pj_rtcp_session pj_rtcp_session;
+typedef struct pjmedia_rtcp_session pjmedia_rtcp_session;
 
 
 /**
@@ -172,7 +172,8 @@ typedef struct pj_rtcp_session pj_rtcp_session;
  * @param session   The session
  * @param ssrc	    The SSRC used in to identify the session.
  */
-PJ_DECL(void) pj_rtcp_init( pj_rtcp_session *session, pj_uint32_t ssrc );
+PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session, 
+				 pj_uint32_t ssrc );
 
 
 /**
@@ -180,7 +181,7 @@ PJ_DECL(void) pj_rtcp_init( pj_rtcp_session *session, pj_uint32_t ssrc );
  *
  * @param session   The session.
  */
-PJ_DECL(void) pj_rtcp_fini( pj_rtcp_session *session);
+PJ_DECL(void) pjmedia_rtcp_fini( pjmedia_rtcp_session *session);
 
 
 /**
@@ -191,8 +192,9 @@ PJ_DECL(void) pj_rtcp_fini( pj_rtcp_session *session);
  * @param seq	    The RTP packet sequence number, in host byte order.
  * @param ts	    The RTP packet timestamp, in host byte order.
  */
-PJ_DECL(void) pj_rtcp_rx_rtp( pj_rtcp_session *session, pj_uint16_t seq, 
-			      pj_uint32_t ts );
+PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session, 
+				   pj_uint16_t seq, 
+				   pj_uint32_t ts );
 
 
 /**
@@ -203,7 +205,8 @@ PJ_DECL(void) pj_rtcp_rx_rtp( pj_rtcp_session *session, pj_uint16_t seq,
  * @param ptsize    The payload size of the RTP packet (ie packet minus
  *		    RTP header) in bytes.
  */
-PJ_DECL(void) pj_rtcp_tx_rtp( pj_rtcp_session *session, pj_uint16_t ptsize );
+PJ_DECL(void) pjmedia_rtcp_tx_rtp( pjmedia_rtcp_session *session, 
+				   pj_uint16_t ptsize );
 
 
 /**
@@ -215,9 +218,9 @@ PJ_DECL(void) pj_rtcp_tx_rtp( pj_rtcp_session *session, pj_uint16_t ptsize );
  * @param len	    [output] Upon return, it will indicate the size of 
  *		    the RTCP packet.
  */
-PJ_DECL(void) pj_rtcp_build_rtcp( pj_rtcp_session *session, 
-				  pj_rtcp_pkt **rtcp_pkt, 
-				  int *len );
+PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
+				       pjmedia_rtcp_pkt **rtcp_pkt, 
+				       int *len );
 
 
 /**

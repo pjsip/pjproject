@@ -99,7 +99,7 @@ struct pjmedia_stream
     pj_sockaddr_in	     rem_src_rtp;   /**< addr of src pkt from remote*/
     unsigned		     rem_src_cnt;   /**< if different, # of pkt rcv */
 
-    pj_rtcp_session	     rtcp;	    /**< RTCP for incoming RTP.	    */
+    pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
     pj_bool_t		     quit_flag;	    /**< To signal thread exit.	    */
     pj_thread_t		    *thread;	    /**< Jitter buffer's thread.    */
@@ -520,7 +520,7 @@ static int PJ_THREAD_FUNC jitter_buffer_thread (void*arg)
 		      hdr->pt, pj_ntohs(hdr->seq)));
 	    continue;
 	}
-	pj_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
+	pjmedia_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq), pj_ntohl(hdr->ts));
 
 	/* Update stat */
 	stream->stat.dec.pkt++;
@@ -720,7 +720,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Init RTCP session: */
 
-    pj_rtcp_init(&stream->rtcp, info->ssrc);
+    pjmedia_rtcp_init(&stream->rtcp, info->ssrc);
 
 
     /* Create jitter buffer: */
@@ -789,8 +789,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /*
     if (stream->enc && stream->enc->snd_stream) {
 
-	pj_snd_stream_stop(stream->enc->snd_stream);
-	pj_snd_stream_close(stream->enc->snd_stream);
+	pjmedia_snd_stream_stop(stream->enc->snd_stream);
+	pjmedia_snd_stream_close(stream->enc->snd_stream);
 	stream->enc->snd_stream = NULL;
 
     }
@@ -801,8 +801,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /*
     if (stream->dec && stream->dec->snd_stream) {
 
-	pj_snd_stream_stop(stream->dec->snd_stream);
-	pj_snd_stream_close(stream->dec->snd_stream);
+	pjmedia_snd_stream_stop(stream->dec->snd_stream);
+	pjmedia_snd_stream_close(stream->dec->snd_stream);
 	stream->dec->snd_stream = NULL;
 
     }
@@ -857,7 +857,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 
     if (stream->enc && (stream->dir & PJMEDIA_DIR_ENCODING)) {
 	stream->enc->paused = 0;
-	//pj_snd_stream_start(stream->enc->snd_stream);
+	//pjmedia_snd_stream_start(stream->enc->snd_stream);
 	PJ_LOG(4,(THIS_FILE, "Encoder stream started"));
     } else {
 	PJ_LOG(4,(THIS_FILE, "Encoder stream paused"));
@@ -865,7 +865,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 
     if (stream->dec && (stream->dir & PJMEDIA_DIR_DECODING)) {
 	stream->dec->paused = 0;
-	//pj_snd_stream_start(stream->dec->snd_stream);
+	//pjmedia_snd_stream_start(stream->dec->snd_stream);
 	PJ_LOG(4,(THIS_FILE, "Decoder stream started"));
     } else {
 	PJ_LOG(4,(THIS_FILE, "Decoder stream paused"));

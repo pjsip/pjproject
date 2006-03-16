@@ -168,6 +168,10 @@ SOURCE=..\src\pjmedia\silencedet.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\sound_port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # End Group
@@ -253,6 +257,10 @@ SOURCE=..\include\pjmedia\silencedet.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\sound.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\sound_port.h
 # End Source File
 # Begin Source File
 

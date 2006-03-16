@@ -31,7 +31,7 @@
 /*
  * Get NTP time.
  */
-static void rtcp_get_ntp_time(struct pj_rtcp_ntp_rec *ntp)
+static void rtcp_get_ntp_time(struct pjmedia_rtcp_ntp_rec *ntp)
 {
     pj_time_val tv;
 
@@ -44,11 +44,12 @@ static void rtcp_get_ntp_time(struct pj_rtcp_ntp_rec *ntp)
 }
 
 
-PJ_DEF(void) pj_rtcp_init(pj_rtcp_session *s, pj_uint32_t ssrc)
+PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s, 
+			       pj_uint32_t ssrc)
 {
-    pj_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
+    pjmedia_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
     
-    pj_memset(rtcp_pkt, 0, sizeof(pj_rtcp_pkt));
+    pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
     
     /* Init time */
     s->rtcp_lsr.hi = s->rtcp_lsr.lo = 0;
@@ -66,13 +67,13 @@ PJ_DEF(void) pj_rtcp_init(pj_rtcp_session *s, pj_uint32_t ssrc)
     /* RR will be initialized on receipt of the first RTP packet. */
 }
 
-PJ_DEF(void) pj_rtcp_fini(pj_rtcp_session *session)
+PJ_DEF(void) pjmedia_rtcp_fini(pjmedia_rtcp_session *session)
 {
     /* Nothing to do. */
     PJ_UNUSED_ARG(session);
 }
 
-static void rtcp_init_seq(pj_rtcp_session *s, pj_uint16_t  seq)
+static void rtcp_init_seq(pjmedia_rtcp_session *s, pj_uint16_t  seq)
 {
     s->received = 0;
     s->expected_prior = 0;
@@ -83,7 +84,9 @@ static void rtcp_init_seq(pj_rtcp_session *s, pj_uint16_t  seq)
     pjmedia_rtp_seq_restart(&s->seq_ctrl, seq);
 }
 
-PJ_DEF(void) pj_rtcp_rx_rtp(pj_rtcp_session *s, pj_uint16_t seq, pj_uint32_t rtp_ts)
+PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *s, 
+				 pj_uint16_t seq, 
+				 pj_uint32_t rtp_ts)
 {   
     pj_uint32_t arrival;
     pj_int32_t transit;
@@ -129,19 +132,21 @@ PJ_DEF(void) pj_rtcp_rx_rtp(pj_rtcp_session *s, pj_uint16_t seq, pj_uint32_t rtp
     }
 }
 
-PJ_DEF(void) pj_rtcp_tx_rtp(pj_rtcp_session *s, pj_uint16_t  bytes_payload_size)
+PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *s, 
+				 pj_uint16_t  bytes_payload_size)
 {
-    pj_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
+    pjmedia_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
     rtcp_pkt->sr.sender_pcount = pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_pcount) + 1);
     rtcp_pkt->sr.sender_bcount = pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_bcount) + bytes_payload_size );
 }
 
-static void rtcp_build_rtcp(pj_rtcp_session *s, pj_uint32_t receiver_ssrc)
+static void rtcp_build_rtcp(pjmedia_rtcp_session *s, 
+			    pj_uint32_t receiver_ssrc)
 {   
     pj_uint32_t expected;
     pj_uint32_t u32;
     pj_uint32_t expected_interval, received_interval, lost_interval;
-    pj_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
+    pjmedia_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
     
     /* SSRC and last_seq */
     rtcp_pkt->rr.ssrc = pj_htonl(receiver_ssrc);
@@ -175,10 +180,12 @@ static void rtcp_build_rtcp(pj_rtcp_session *s, pj_uint32_t receiver_ssrc)
     }
 }
 
-PJ_DEF(void) pj_rtcp_build_rtcp(pj_rtcp_session *session, pj_rtcp_pkt **ret_p_pkt, int *len)
+PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session, 
+				     pjmedia_rtcp_pkt **ret_p_pkt, 
+				     int *len)
 {
-    pj_rtcp_pkt *rtcp_pkt = &session->rtcp_pkt;
-    pj_rtcp_ntp_rec ntp;
+    pjmedia_rtcp_pkt *rtcp_pkt = &session->rtcp_pkt;
+    pjmedia_rtcp_ntp_rec ntp;
     pj_time_val now;
     
     rtcp_build_rtcp(session, session->peer_ssrc);
@@ -213,6 +220,6 @@ PJ_DEF(void) pj_rtcp_build_rtcp(pj_rtcp_session *session, pj_rtcp_pkt **ret_p_pk
     
     /* Return pointer. */
     *ret_p_pkt = rtcp_pkt;
-    *len = sizeof(pj_rtcp_pkt);
+    *len = sizeof(pjmedia_rtcp_pkt);
 }
 

@@ -1084,11 +1084,6 @@ pj_status_t pjsua_destroy(void)
 	pjmedia_port_destroy(pjsua.null_port);
 
 
-    /* Destroy sound framework: 
-     * (this should be done in pjmedia_shutdown())
-     */
-    pj_snd_deinit();
-
     /* Shutdown all codecs: */
     for (i = pjsua.codec_cnt-1; i >= 0; --i) {
 	(*pjsua.codec_deinit[i])();

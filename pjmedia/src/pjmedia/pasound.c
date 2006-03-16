@@ -32,7 +32,7 @@ static struct snd_mgr
     pj_pool_factory *factory;
 } snd_mgr;
 
-struct pj_snd_stream
+struct pjmedia_snd_stream
 {
     pj_pool_t	    *pool;
     pj_str_t	     name;
@@ -45,8 +45,8 @@ struct pj_snd_stream
     pj_uint32_t	     underflow;
     pj_uint32_t	     overflow;
     void	    *user_data;
-    pj_snd_rec_cb    rec_cb;
-    pj_snd_play_cb   play_cb;
+    pjmedia_snd_rec_cb    rec_cb;
+    pjmedia_snd_play_cb   play_cb;
     pj_bool_t	     quit_flag;
     pj_bool_t	     thread_has_exited;
     pj_bool_t	     thread_initialized;
@@ -62,7 +62,7 @@ static int PaRecorderCallback(const void *input,
 			      PaStreamCallbackFlags statusFlags,
 			      void *userData )
 {
-    pj_snd_stream *stream = userData;
+    pjmedia_snd_stream *stream = userData;
     pj_status_t status;
 
     PJ_UNUSED_ARG(output);
@@ -102,7 +102,7 @@ static int PaPlayerCallback( const void *input,
 			     PaStreamCallbackFlags statusFlags,
 			     void *userData )
 {
-    pj_snd_stream *stream = userData;
+    pjmedia_snd_stream *stream = userData;
     pj_status_t status;
     unsigned size = frameCount * stream->bytes_per_sample;
 
@@ -140,7 +140,7 @@ on_break:
 /*
  * Init sound library.
  */
-PJ_DEF(pj_status_t) pj_snd_init(pj_pool_factory *factory)
+PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
     int err;
 
@@ -151,16 +151,16 @@ PJ_DEF(pj_status_t) pj_snd_init(pj_pool_factory *factory)
     PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
 			 Pa_GetHostApiCount()));
     PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
-			 pj_snd_get_dev_count()));
+			 pjmedia_snd_get_dev_count()));
 
-    return err;
+    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
 /*
  * Get device count.
  */
-PJ_DEF(int) pj_snd_get_dev_count(void)
+PJ_DEF(int) pjmedia_snd_get_dev_count(void)
 {
     return Pa_GetDeviceCount();
 }
@@ -169,9 +169,9 @@ PJ_DEF(int) pj_snd_get_dev_count(void)
 /*
  * Get device info.
  */
-PJ_DEF(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index)
+PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
-    static pj_snd_dev_info info;
+    static pjmedia_snd_dev_info info;
     const PaDeviceInfo *pa_info;
 
     pa_info = Pa_GetDeviceInfo(index);
@@ -192,17 +192,17 @@ PJ_DEF(const pj_snd_dev_info*) pj_snd_get_dev_info(unsigned index)
 /*
  * Open stream.
  */
-PJ_DEF(pj_status_t) pj_snd_open_recorder( int index,
+PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
 					  unsigned clock_rate,
 					  unsigned channel_count,
 					  unsigned samples_per_frame,
 					  unsigned bits_per_sample,
-					  pj_snd_rec_cb rec_cb,
+					  pjmedia_snd_rec_cb rec_cb,
 					  void *user_data,
-					  pj_snd_stream **p_snd_strm)
+					  pjmedia_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pj_snd_stream *stream;
+    pjmedia_snd_stream *stream;
     PaStreamParameters inputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
@@ -277,17 +277,17 @@ PJ_DEF(pj_status_t) pj_snd_open_recorder( int index,
 }
 
 
-PJ_DEF(pj_status_t) pj_snd_open_player( int index,
+PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 					unsigned clock_rate,
 					unsigned channel_count,
 					unsigned samples_per_frame,
 					unsigned bits_per_sample,
-					pj_snd_play_cb play_cb,
+					pjmedia_snd_play_cb play_cb,
 					void *user_data,
-					pj_snd_stream **p_snd_strm)
+					pjmedia_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pj_snd_stream *stream;
+    pjmedia_snd_stream *stream;
     PaStreamParameters outputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
@@ -366,23 +366,23 @@ PJ_DEF(pj_status_t) pj_snd_open_player( int index,
 /*
  * Start stream.
  */
-PJ_DEF(pj_status_t) pj_snd_stream_start(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 {
-    pj_status_t status;
+    pj_status_t err;
 
     PJ_LOG(5,(THIS_FILE, "Starting %s stream..", stream->name.ptr));
 
-    status = Pa_StartStream(stream->stream);
+    err = Pa_StartStream(stream->stream);
 
-    PJ_LOG(5,(THIS_FILE, "Done, status=%d", status));
+    PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return status;
+    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 /*
  * Stop stream.
  */
-PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
 {
     int i, err;
 
@@ -398,13 +398,13 @@ PJ_DEF(pj_status_t) pj_snd_stream_stop(pj_snd_stream *stream)
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return err;
+    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 /*
  * Destroy stream.
  */
-PJ_DEF(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream)
+PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 {
     int i, err;
     const PaDeviceInfo *paDevInfo;
@@ -423,17 +423,22 @@ PJ_DEF(pj_status_t) pj_snd_stream_close(pj_snd_stream *stream)
 
     err = Pa_CloseStream(stream->stream);
     pj_pool_release(stream->pool);
-    return err;
+
+    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 /*
  * Deinitialize sound library.
  */
-PJ_DEF(pj_status_t) pj_snd_deinit(void)
+PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 {
+    int err;
+
     PJ_LOG(4,(THIS_FILE, "PortAudio sound library shutting down.."));
 
-    return Pa_Terminate();
+    err = Pa_Terminate();
+
+    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
