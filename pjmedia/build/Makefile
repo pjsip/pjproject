@@ -1,3 +1,19 @@
+
+# Before we include local os-mak, set default sound framework to use
+# PortAudio.
+export SOUND_OBJS = $(PORTAUDIO_OBJS)
+
+# Also set default codec files to be included
+# If these codecs are to be excluded, then the appropriate PJMEDIA_HAS_XXX_CODEC macros 
+# MUST be set too in pj/config_site.h, to inform applications about the codec 
+# availability.
+#
+# E.g., to exclude Speex, we need to exclude SPEEX_OBJS from CODEC_OBJS, AND specify
+#       "#define PJMEDIA_HAS_SPEEX_CODEC 0" in pj/config_site.h.
+#
+export CODEC_OBJS = $(GSM_OBJS) $(SPEEX_OBJS)
+
+
 include ../../build/common.mak
 
 RULES_MAK := ../../build/rules.mak
@@ -7,6 +23,26 @@ PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(
 
 export PJMEDIA_LIB:=../lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
 export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+
+###############################################################################
+# Sound frameworks
+# These are activated by setting SOUND_OBJS var, e.g.:
+#  export SOUND_OBJS = $(PORTAUDIO_OBJS), or
+#  export SOUND_OBJS = $(NULLSOUND_OBJS)
+#
+PA_DIR:=portaudio
+PORTAUDIO_OBJS := pasound.o \
+		  $(PA_DIR)/pa_allocation.o \
+		  $(PA_DIR)/pa_converters.o \
+		  $(PA_DIR)/pa_cpuload.o \
+		  $(PA_DIR)/pa_dither.o \
+		  $(PA_DIR)/pa_front.o \
+		  $(PA_DIR)/pa_process.o \
+		  $(PA_DIR)/pa_skeleton.o \
+		  $(PA_DIR)/pa_stream.o \
+		  $(PA_DIR)/pa_trace.o
+
+NULLSOUND_OBJS := nullsound.o
 
 ###############################################################################
 # Gather all flags.
@@ -26,22 +62,12 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 ###############################################################################
 # Defines for building PJMEDIA library
 #
-PA_DIR:=portaudio
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			codec.o conference.o endpoint.o errno.o file_port.o \
-			g711.o jbuf.o pasound.o port.o resample.o rtcp.o \
+			g711.o jbuf.o null_port.o pasound.o port.o resample.o rtcp.o \
 			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
-			stream.o \
-		      	$(PA_DIR)/pa_allocation.o \
-			$(PA_DIR)/pa_converters.o \
-			$(PA_DIR)/pa_cpuload.o \
-			$(PA_DIR)/pa_dither.o \
-			$(PA_DIR)/pa_front.o \
-			$(PA_DIR)/pa_process.o \
-			$(PA_DIR)/pa_skeleton.o \
-			$(PA_DIR)/pa_stream.o \
-			$(PA_DIR)/pa_trace.o
+			stream.o $(SOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
 
@@ -49,7 +75,8 @@ export PJMEDIA_CFLAGS += $(_CFLAGS)
 ###############################################################################
 # Defines for building PJMEDIA-Codec library
 #
-GSM_OBJS := 	gsm/add.o gsm/code.o gsm/decode.o \
+GSM_OBJS := 	gsm.o \
+		gsm/add.o gsm/code.o gsm/decode.o \
 		gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
 		gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
 		gsm/gsm_option.o gsm/long_term.o \
@@ -57,7 +84,8 @@ GSM_OBJS := 	gsm/add.o gsm/code.o gsm/decode.o \
 		gsm/table.o
 GSM_CFLAGS :=
 
-SPEEX_OBJS :=	speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
+SPEEX_OBJS :=	speex_codec.o \
+		speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
 		speex/exc_10_32_table.o speex/exc_20_32_table.o speex/exc_5_256_table.o \
 		speex/exc_5_64_table.o speex/exc_8_128_table.o speex/filters.o \
 		speex/gain_table.o speex/gain_table_lbr.o speex/hexc_10_32_table.o \
@@ -71,8 +99,7 @@ SPEEX_CFLAGS := -DHAVE_CONFIG=1 -I../src/pjmedia-codec
 
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			gsm.o speex_codec.o pjmedia-codec-lib.o \
-			$(GSM_OBJS) $(SPEEX_OBJS)
+			$(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS)
 
 
@@ -134,7 +161,9 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	@if test "$@" == "depend"; then \
-	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB)' >> .pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJMEDIA_LIB): .pjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend' >> .pjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend' >> .pjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi
 
 

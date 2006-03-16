@@ -617,6 +617,7 @@ static pj_status_t init_media(void)
     /* If user doesn't specify any codecs, register all of them. */
     if (pjsua.codec_cnt == 0) {
 
+#if PJMEDIA_HAS_SPEEX_CODEC
 	unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
 
 	/* Register speex. */
@@ -636,7 +637,9 @@ static pj_status_t init_media(void)
 	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("speex");
 	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_speex_deinit;
 	pjsua.codec_cnt++;
+#endif /* PJMEDIA_HAS_SPEEX_CODEC */
 
+#if PJMEDIA_HAS_GSM_CODEC
 	/* Register GSM */
 	status = pjmedia_codec_gsm_init(pjsua.med_endpt);
 	if (status != PJ_SUCCESS) {
@@ -648,7 +651,9 @@ static pj_status_t init_media(void)
 	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("gsm");
 	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_gsm_deinit;
 	pjsua.codec_cnt++;
+#endif /* PJMEDIA_HAS_GSM_CODEC */
 
+#if PJMEDIA_HAS_G711_CODEC
 	/* Register PCMA and PCMU */
 	status = pjmedia_codec_g711_init(pjsua.med_endpt);
 	if (status != PJ_SUCCESS) {
@@ -663,6 +668,7 @@ static pj_status_t init_media(void)
 	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("pcma");
 	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_g711_deinit;
 	pjsua.codec_cnt++;
+#endif	/* PJMEDIA_HAS_G711_CODEC */
 
     } else {
 
@@ -673,8 +679,12 @@ static pj_status_t init_media(void)
 
 	for (i=0; i<pjsua.codec_cnt; ++i) {
 	
+	    if (0) {
+		/* Dummy */
+	    }
+#if PJMEDIA_HAS_SPEEX_CODEC
 	    /* Is it speex? */
-	    if (!pj_stricmp2(&pjsua.codec_arg[i], "speex")) {
+	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "speex")) {
 
 		unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
 
@@ -694,6 +704,9 @@ static pj_status_t init_media(void)
 
 		pjsua.codec_deinit[i] = &pjmedia_codec_speex_deinit;
 	    }
+#endif	/* PJMEDIA_HAS_SPEEX_CODEC */
+
+#if PJMEDIA_HAS_GSM_CODEC
 	    /* Is it gsm? */
 	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "gsm")) {
 
@@ -707,6 +720,9 @@ static pj_status_t init_media(void)
 		pjsua.codec_deinit[i] = &pjmedia_codec_gsm_deinit;
 
 	    }
+#endif	/* PJMEDIA_HAS_GSM_CODEC */
+
+#if PJMEDIA_HAS_G711_CODEC
 	    /* Is it pcma/pcmu? */
 	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "pcmu") ||
 		     !pj_stricmp2(&pjsua.codec_arg[i], "pcma"))
@@ -722,6 +738,8 @@ static pj_status_t init_media(void)
 		pjsua.codec_deinit[i] = &pjmedia_codec_g711_deinit;
 
 	    }
+#endif	/* PJMEDIA_HAS_G711_CODEC */
+
 	    /* Don't know about this codec... */
 	    else {
 
@@ -1058,10 +1076,12 @@ pj_status_t pjsua_destroy(void)
 	pjmedia_conf_destroy(pjsua.mconf);
 
     /* Destroy file port */
-    pjmedia_port_destroy(pjsua.file_port);
+    if (pjsua.file_port)
+	pjmedia_port_destroy(pjsua.file_port);
 
     /* Destroy null port. */
-    pjmedia_port_destroy(pjsua.null_port);
+    if (pjsua.null_port)
+	pjmedia_port_destroy(pjsua.null_port);
 
 
     /* Destroy sound framework: 

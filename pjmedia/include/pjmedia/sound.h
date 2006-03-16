@@ -24,7 +24,7 @@
  * @file sound.h
  * @brief Sound player and recorder device framework.
  */
-
+#include <pjmedia/types.h>
 #include <pj/pool.h>
 
 PJ_BEGIN_DECL

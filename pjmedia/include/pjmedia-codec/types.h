@@ -19,7 +19,7 @@
 #ifndef __PJMEDIA_CODEC_TYPES_H__
 #define __PJMEDIA_CODEC_TYPES_H__
 
-#include <pjmedia/types.h>
+#include <pjmedia-codec/config.h>
 
 
 #endif	/* __PJMEDIA_CODEC_TYPES_H__ */

@@ -22,19 +22,19 @@
 #include <pjmedia/types.h>
 
 
-/*
- * Include GSM codec?
+/**
+ * Unless specified otherwise, GSM codec is included by default.
  */
-#ifndef PJMEDIA_CODEC_HAS_GSM
-#   define PJMEDIA_CODEC_HAS_GSM    1
+#ifndef PJMEDIA_HAS_GSM_CODEC
+#   define PJMEDIA_HAS_GSM_CODEC    1
 #endif
 
 
-/*
- * Include Speex codec?
+/**
+ * Unless specified otherwise, Speex codec is included by default.
  */
-#ifndef PJMEDIA_CODEC_HAS_SPEEX
-#   define PJMEDIA_CODEC_HAS_SPEEX    1
+#ifndef PJMEDIA_HAS_SPEEX_CODEC
+#   define PJMEDIA_HAS_SPEEX_CODEC    1
 #endif
 
 

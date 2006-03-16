@@ -228,6 +228,21 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
  */
 #  define pj_log_set_decor(decor)
 
+/**
+ * Get current maximum log verbositylevel.
+ *
+ * @return	    Current log maximum level.
+ */
+#  define pj_log_get_level()	0
+
+/**
+ * Get current log decoration flag.
+ *
+ * @return	    Log decoration flag.
+ */
+#  define pj_log_get_decor()	0
+
+
 #endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 /** 

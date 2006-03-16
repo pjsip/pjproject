@@ -78,12 +78,6 @@ Package=<4>
     Project_Dep_Name pjlib_util
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name pjmedia
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name pjmedia_codec
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name pjsip_core
     End Project Dependency
     Begin Project Dependency
@@ -94,6 +88,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjsua_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
     End Project Dependency
 }}}
 

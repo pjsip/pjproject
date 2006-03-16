@@ -16,8 +16,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMED_CONFIG_H__
-#define __PJMED_CONFIG_H__
+#ifndef __PJMEDIA_CONFIG_H__
+#define __PJMEDIA_CONFIG_H__
+
+#include <pj/config.h>
+
+/**
+ * Unless specified otherwise, PortAudio is enabled by default.
+ */
+#ifndef PJMEDIA_HAS_PORTAUDIO_SOUND
+#   define PJMEDIA_HAS_PORTAUDIO_SOUND	    1
+#endif
 
 
-#endif	/* __PJMED_CONFIG_H__ */
+/**
+ * Unless specified otherwise, Null sound is disabled.
+ * This option is mutually exclusive with PortAudio sound, or otherwise
+ * duplicate symbols error will occur.
+ */
+#ifndef PJMEDIA_HAS_NULL_SOUND
+#   define PJMEDIA_HAS_NULL_SOUND	    0
+#endif
+
+
+/**
+ * Unless specified otherwise, G711 codec is included by default.
+ */
+#ifndef PJMEDIA_HAS_G711_CODEC
+#   define PJMEDIA_HAS_G711_CODEC	    1
+#endif
+
+
+#endif	/* __PJMEDIA_CONFIG_H__ */

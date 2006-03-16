@@ -44,12 +44,24 @@ export PJSUA_EXE:=../bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
 
 
 
+###############################################################################
+# Defines for building PJSIP-PERF
+#
+export PJSIPPERF_SRCDIR = ../src/pjsip-perf
+export PJSIPPERF_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			 handler_call.o handler_options.o main.o
+export PJSIPPERF_CFLAGS += $(_CFLAGS)
+export PJSIPPERF_LDFLAGS += $(_LDFLAGS)
+export PJSIPPERF_EXE:=../bin/pjsip-perf-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
+
+
+
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
 #
 #
-TARGETS := pjsua
+TARGETS := pjsua pjsip-perf
 
 .PHONY: $(TARGETS)
 
@@ -66,14 +78,20 @@ distclean: realclean
 pjsua:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
+pjsip-perf:
+	$(MAKE) -f $(RULES_MAK) APP=PJSIPPERF app=pjsip-perf $(PJSUA_EXE)
+
+
 .PHONY: ../lib/pjsua.ko
 ../lib/pjsua.ko:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 
 clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIPPERF app=pjsip-perf $@
 	@if test "$@" == "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB) Makefile' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(PJSIPPERF_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjsip-perf-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi
 
 

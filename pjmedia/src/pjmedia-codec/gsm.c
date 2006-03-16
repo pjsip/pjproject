@@ -27,6 +27,12 @@
 #include <pj/os.h>
 #include "gsm/gsm.h"
 
+/*
+ * Only build this file if PJMEDIA_HAS_GSM_CODEC != 0
+ */
+#if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
+
+
 /* Prototypes for GSM factory */
 static pj_status_t gsm_test_alloc( pjmedia_codec_factory *factory, 
 				   const pjmedia_codec_info *id );
@@ -473,3 +479,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 
     return PJ_SUCCESS;
 }
+
+
+#endif	/* PJMEDIA_HAS_GSM_CODEC */
+

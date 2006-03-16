@@ -27,6 +27,8 @@
 #include <pj/string.h>
 #include <pj/assert.h>
 
+#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
+
 
 #define G711_BPS	64000
 #define G711_CODEC_CNT	0	/* number of codec to preallocate in memory */
@@ -472,6 +474,9 @@ static pj_status_t  g711_decode( pjmedia_codec *codec, const struct pjmedia_fram
 }
 
 
+#endif	/* PJMEDIA_HAS_G711_CODEC */
+
+
 /*
  * This source code is a product of Sun Microsystems, Inc. and is provided
  * for unrestricted use.  Users may copy or modify this source code without
@@ -761,6 +766,7 @@ ulaw2alaw(
 	return ((uval & 0x80) ? (0xD5 ^ (_u2a[0xFF ^ uval] - 1)) :
 	    (0x55 ^ (_u2a[0x7F ^ uval] - 1)));
 }
+
 
 
 

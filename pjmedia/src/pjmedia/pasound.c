@@ -23,6 +23,8 @@
 #include <pj/string.h>
 #include <portaudio.h>
 
+#if defined(PJMEDIA_HAS_PORTAUDIO_SOUND) && PJMEDIA_HAS_PORTAUDIO_SOUND!=0
+
 #define THIS_FILE	"pasound.c"
 
 static struct snd_mgr
@@ -434,3 +436,5 @@ PJ_DEF(pj_status_t) pj_snd_deinit(void)
     return Pa_Terminate();
 }
 
+
+#endif	/* PJMEDIA_HAS_PORTAUDIO_SOUND */

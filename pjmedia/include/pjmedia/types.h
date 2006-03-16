@@ -19,9 +19,8 @@
 #ifndef __PJMEDIA_TYPES_H__
 #define __PJMEDIA_TYPES_H__
 
-#include <pj/types.h>
+#include <pjmedia/config.h>
 #include <pj/sock.h>
-
 
 /** 
  * Top most media type. 

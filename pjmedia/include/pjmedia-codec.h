@@ -16,40 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_CODEC1_H__
-#define __PJMEDIA_CODEC1_H__
+#ifndef __PJMEDIA_CODEC_PJMEDIA_CODEC_H__
+#define __PJMEDIA_CODEC_PJMEDIA_CODEC_H__
 
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/speex.h>
 
 
-PJ_BEGIN_DECL
-
-
-/**
- * Initialize pjmedia-codec library, and register all codec factories
- * in this library. If application wants to controll the order of
- * the codec, it MUST NOT call this function, but instead register
- * each codec individually.
- *
- * @param endpt	    The pjmedia endpoint.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_init(pjmedia_endpt *endpt);
-
-
-/**
- * Deinitialize pjmedia-codec library, and unregister all codec factories
- * in this library.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_deinit(void);
-
-
-PJ_END_DECL
-
-
-#endif	/* __PJMEDIA_CODEC_H__ */
+#endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */
 

@@ -29,6 +29,12 @@
 #include <pj/string.h>
 #include <pj/os.h>
 
+/*
+ * Only build this file if PJMEDIA_HAS_SPEEX_CODEC != 0
+ */
+#if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
+
+
 #define THIS_FILE   "speex_codec.c"
 
 #define DEFAULT_QUALITY	    4
@@ -777,3 +783,6 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 
     return PJ_SUCCESS;
 }
+
+
+#endif	/* PJMEDIA_HAS_SPEEX_CODEC */

@@ -91,10 +91,6 @@ SOURCE="..\src\pjmedia-codec\gsm.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjmedia-codec\pjmedia-codec-lib.c"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\pjmedia-codec\speex_codec.c"
 # End Source File
 # End Group
