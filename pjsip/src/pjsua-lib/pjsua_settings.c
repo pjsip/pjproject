@@ -509,6 +509,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "Error: rtp-port argument value (expecting 1-65535"));
 		return -1;
 	    }
+	    break;
 
 	case OPT_ADD_CODEC:
 	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(pj_optarg);
