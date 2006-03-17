@@ -40,6 +40,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/session.h>
 #include <pjmedia/sound.h>
+#include <pjmedia/sound_port.h>
 #include <pjmedia/wave.h>
 
 #endif	/* __PJMEDIA_H__ */

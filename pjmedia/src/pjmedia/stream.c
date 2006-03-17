@@ -702,7 +702,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
     /* Set additional info. */
-    stream->port.info.bits_per_sample = 0;
+    stream->port.info.bits_per_sample = 16;
     stream->port.info.samples_per_frame = info->fmt.sample_rate*codec_param.ptime/1000;
     stream->port.info.bytes_per_frame = codec_param.avg_bps/8 * codec_param.ptime/1000;
 
