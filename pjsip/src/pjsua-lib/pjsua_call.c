@@ -961,19 +961,19 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     {
 
 	pjmedia_conf_connect_port( pjsua.mconf, pjsua.wav_slot, 
-				   call->conf_slot);
+				   call->conf_slot, 0);
 
     } else if (pjsua.auto_loop && call->inv->role == PJSIP_ROLE_UAS) {
 
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 
-				   call->conf_slot);
+				   call->conf_slot, 0);
 
     } else if (pjsua.auto_conf) {
 
 	int i;
 
-	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot);
-	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0);
+	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
+	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0, 0);
 
 	for (i=0; i < pjsua.max_calls; ++i) {
 
@@ -981,9 +981,9 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 		continue;
 
 	    pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 
-				       pjsua.calls[i].conf_slot);
+				       pjsua.calls[i].conf_slot, 0);
 	    pjmedia_conf_connect_port( pjsua.mconf, pjsua.calls[i].conf_slot,
-				       call->conf_slot);
+				       call->conf_slot, 0);
 	}
 
     } else {
@@ -991,8 +991,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	/* Connect new call to the sound device port (port zero) in the
 	 * main conference bridge.
 	 */
-	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot);
-	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0);
+	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
+	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0, 0);
     }
 
 

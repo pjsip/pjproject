@@ -812,7 +812,8 @@ static void ui_console_main(void)
 		    if (menuin[1]=='c') {
 			status = pjmedia_conf_connect_port(pjsua.mconf, 
 							   atoi(src_port), 
-							   atoi(dst_port));
+							   atoi(dst_port),
+							   0);
 		    } else {
 			status = pjmedia_conf_disconnect_port(pjsua.mconf, 
 							      atoi(src_port), 

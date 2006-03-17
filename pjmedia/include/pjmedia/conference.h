@@ -58,12 +58,36 @@ enum pjmedia_conf_option
 {
     PJMEDIA_CONF_NO_MIC  = 1,	/**< Disable audio streams from the
 				     microphone device.			    */
+    PJMEDIA_CONF_NO_DEVICE = 2,	/**< Do not create sound device.	    */
 };
 
 
 /**
- * Create conference bridge. This normally will also create instances of
- * sound device to be attached to the port zero of the bridge.
+ * Create conference bridge with the specified parameters. The sampling rate,
+ * samples per frame, and bits per sample will be used for the internal
+ * operation of the bridge (e.g. when mixing audio frames). However, ports 
+ * with different configuration may be connected to the bridge. In this case,
+ * the bridge is able to perform sampling rate conversion, and buffering in 
+ * case the samples per frame is different.
+ *
+ * For this version of PJMEDIA, only 16bits per sample is supported.
+ *
+ * For this version of PJMEDIA, the channel count of the ports MUST match
+ * the channel count of the bridge.
+ *
+ * Under normal operation (i.e. when PJMEDIA_CONF_NO_DEVICE option is NOT
+ * specified), the bridge internally create an instance of sound device
+ * and connect the sound device to port zero of the bridge. 
+ *
+ * If PJMEDIA_CONF_NO_DEVICE options is specified, no sound device will
+ * be created in the conference bridge. Application MUST acquire the port
+ * interface of the bridge by calling #pjmedia_conf_get_master_port(), and
+ * connect this port interface to a sound device port by calling
+ * #pjmedia_snd_port_connect().
+ *
+ * The sound device is crucial for the bridge's operation, because it provides
+ * the bridge with necessary clock to process the audio frames periodically.
+ * Internally, the bridge runs when get_frame() to port zero is called.
  *
  * @param pool		    Pool to use to allocate the bridge and 
  *			    additional buffers for the sound device.
@@ -110,6 +134,27 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
+
+
+/**
+ * Get the master port interface of the conference bridge. The master port
+ * corresponds to the port zero of the bridge. This is only usefull when 
+ * application wants to manage the sound device by itself, instead of 
+ * allowing the bridge to automatically create a sound device implicitly.
+ *
+ * This function will only return a port interface if PJMEDIA_CONF_NO_DEVICE
+ * option was specified when the bridge was created.
+ *
+ * Application can connect the port returned by this function to a 
+ * sound device by calling #pjmedia_snd_port_connect().
+ *
+ * @param conf		    The conference bridge.
+ *
+ * @return		    The port interface of port zero of the bridge,
+ *			    only when PJMEDIA_CONF_NO_DEVICE options was
+ *			    specified when the bridge was created.
+ */
+PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
 
 
 /**
@@ -160,12 +205,17 @@ PJ_DECL(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
  * @param conf		The conference bridge.
  * @param src_slot	Source slot.
  * @param sink_slot	Sink slot.
+ * @param level		This argument is reserved for future improvements
+ *			where it is possible to adjust the level of signal
+ *			transmitted in a specific connection. For now,
+ *			this argument MUST be zero.
  *
  * @return		PJ_SUCCES on success.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 						unsigned src_slot,
-						unsigned sink_slot );
+						unsigned sink_slot,
+						int level );
 
 
 /**
@@ -223,7 +273,75 @@ PJ_DECL(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
  */
 PJ_DECL(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
 						 unsigned *size,
-						 pjmedia_conf_port_info info[]);
+						 pjmedia_conf_port_info info[]
+						 );
+
+
+/**
+ * Get last signal level transmitted to or received from the specified port.
+ * The signal level is an integer value in zero to 255, with zero indicates
+ * no signal, and 255 indicates the loudest signal level.
+ *
+ * @param conf		The conference bridge.
+ * @param slot		Slot number.
+ * @param tx_level	Optional argument to receive the level of signal
+ *			transmitted to the specified port (i.e. the direction
+ *			is from the bridge to the port).
+ * @param rx_level	Optional argument to receive the level of signal
+ *			received from the port (i.e. the direction is from the
+ *			port to the bridge).
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_get_signal_level(pjmedia_conf *conf,
+						   unsigned slot,
+						   unsigned *tx_level,
+						   unsigned *rx_level);
+
+
+/**
+ * Adjust the level of signal received from the specified port.
+ * Application may adjust the level to make the signal received from the port
+ * either louder or more quiet, by giving the value from +127 to -128. The
+ * value zero indicates no adjustment, the value -128 will mute the signal, 
+ * and the value of +127 will make the signal twice as loud.
+ *
+ * @param conf		The conference bridge.
+ * @param slot		Slot number.
+ * @param adj_level	Adjustment level, with valid values are from -128
+ *			to +127. A value of zero means there is no level
+ *			adjustment to be made, the value -128 will mute the 
+ *			signal, and the value of +127 will make the signal 
+ *			twice as loud.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
+						   unsigned slot,
+						   int adj_level );
+
+
+/**
+ * Adjust the level of signal to be transmitted to the specified port.
+ * Application may adjust the level to make the signal transmitted to the port
+ * either louder or more quiet, by giving the value from +127 to -128. The
+ * value zero indicates no adjustment, the value -128 will mute the signal, 
+ * and the value of +127 will make the signal twice as loud.
+ *
+ * @param conf		The conference bridge.
+ * @param slot		Slot number.
+ * @param adj_level	Adjustment level, with valid values are from -128
+ *			to +127. A value of zero means there is no level
+ *			adjustment to be made, the value -128 will mute the 
+ *			signal, and the value of +127 will make the signal 
+ *			twice as loud.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
+						   unsigned slot,
+						   int adj_level );
+
 
 
 PJ_END_DECL

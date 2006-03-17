@@ -19,18 +19,38 @@
 
 /*
  * Based on:
- * resample-1.2.tar.Z (from ftp://ccrma-ftp.stanford.edu/pub/NeXT)
+ * resample-1.8.tar.gz from the 
+ * Digital Audio Resampling Home Page located at
+ * http://www-ccrma.stanford.edu/~jos/resample/.
+ *
  * SOFTWARE FOR SAMPLING-RATE CONVERSION AND FIR DIGITAL FILTER DESIGN
  *
- * COPYING
+ * Snippet from the resample.1 man page:
  * 
- * This software package is Copyright 1994 by Julius O. Smith
- * (jos@ccrma.stanford.edu), all rights reserved.  Permission to use and copy
- * is granted subject to the terms of the "GNU Software General Public
- * License" (see ftp://prep.ai.mit.edu/pub/gnu/COPYING).  In addition, we
- * request that a copy of any modified files be sent by email to
- * jos@ccrma.stanford.edu so that we may incorporate them in the CCRMA
- * version.
+ * HISTORY
+ *
+ * The first version of this software was written by Julius O. Smith III
+ * <jos@ccrma.stanford.edu> at CCRMA <http://www-ccrma.stanford.edu> in
+ * 1981.  It was called SRCONV and was written in SAIL for PDP-10
+ * compatible machines.  The algorithm was first published in
+ * 
+ * Smith, Julius O. and Phil Gossett. ``A Flexible Sampling-Rate
+ * Conversion Method,'' Proceedings (2): 19.4.1-19.4.4, IEEE Conference
+ * on Acoustics, Speech, and Signal Processing, San Diego, March 1984.
+ * 
+ * An expanded tutorial based on this paper is available at the Digital
+ * Audio Resampling Home Page given above.
+ * 
+ * Circa 1988, the SRCONV program was translated from SAIL to C by
+ * Christopher Lee Fraley working with Roger Dannenberg at CMU.
+ * 
+ * Since then, the C version has been maintained by jos.
+ * 
+ * Sndlib support was added 6/99 by John Gibson <jgg9c@virginia.edu>.
+ * 
+ * The resample program is free software distributed in accordance
+ * with the Lesser GNU Public License (LGPL).  There is NO warranty; not
+ * even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
 /* PJMEDIA modification:
