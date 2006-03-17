@@ -186,13 +186,11 @@ struct pjsip_inv_session
  * occurences of events in invite sessions.
  *
  * @param endpt		The endpoint instance.
- * @param app_module	Application module.
  * @param callback	Callback structure.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_inv_usage_init(pjsip_endpoint *endpt,
-					  pjsip_module *app_module,
 					  const pjsip_inv_callback *cb);
 
 /**
@@ -518,11 +516,6 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  *
  * @param inv		The invite session.
  * @param tdata		The message to be sent.
- * @param token		The token is an arbitrary application data that 
- *			will be put in the transaction's mod_data array, 
- *			at application module's index. Application can inspect
- *			this value when the framework reports the completion
- *			of the transaction that sends this message.
  *
  * @return		PJ_SUCCESS if transaction can be initiated 
  *			successfully to send this message. Note that the
@@ -531,8 +524,7 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  *			callback.
  */
 PJ_DECL(pj_status_t) pjsip_inv_send_msg(pjsip_inv_session *inv,
-					pjsip_tx_data *tdata,
-					void *token );
+					pjsip_tx_data *tdata);
 
 
 
@@ -557,6 +549,15 @@ PJ_DECL(pjsip_inv_session*) pjsip_dlg_get_inv_session(pjsip_dialog *dlg);
  */
 PJ_DECL(pjsip_inv_session*) pjsip_tsx_get_inv_session(pjsip_transaction *tsx);
 
+
+/**
+ * Get state names for INVITE session state.
+ *
+ * @param state		The invite state.
+ *
+ * @return		String describing the state.
+ */
+PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 
 
 PJ_END_DECL

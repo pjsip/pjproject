@@ -570,7 +570,7 @@ static void ui_console_main(void)
 					  NULL, NULL, &tdata);
 		if (status == PJ_SUCCESS)
 		    status = pjsip_inv_send_msg(pjsua.calls[current_call].inv,
-						tdata, NULL);
+						tdata);
 
 		if (status != PJ_SUCCESS)
 		    pjsua_perror(THIS_FILE, "Unable to create/send response", 

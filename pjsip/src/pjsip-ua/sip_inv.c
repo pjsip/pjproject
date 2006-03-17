@@ -33,6 +33,18 @@
 
 #define THIS_FILE	"sip_invite_session.c"
 
+static const char *inv_state_names[] =
+{
+    "NULL      ",
+    "CALLING   ",
+    "INCOMING  ",
+    "EARLY     ",
+    "CONNECTING",
+    "CONFIRMED ",
+    "DISCONNCTD",
+    "TERMINATED",
+};
+
 /*
  * Static prototypes.
  */
@@ -66,7 +78,6 @@ static struct mod_inv
     pjsip_module	 mod;
     pjsip_endpoint	*endpt;
     pjsip_inv_callback	 cb;
-    pjsip_module	*app_user;
 } mod_inv = 
 {
     {
@@ -316,13 +327,12 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
  * Initialize the invite module.
  */
 PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
-					  pjsip_module *app_module,
 					  const pjsip_inv_callback *cb)
 {
     pj_status_t status;
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(endpt && app_module && cb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && cb, PJ_EINVAL);
 
     /* Some callbacks are mandatory */
     PJ_ASSERT_RETURN(cb->on_state_changed && cb->on_new_session, PJ_EINVAL);
@@ -334,7 +344,6 @@ PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
     pj_memcpy(&mod_inv.cb, cb, sizeof(pjsip_inv_callback));
 
     mod_inv.endpt = endpt;
-    mod_inv.app_user = app_module;
 
     /* Register the module. */
     status = pjsip_endpt_register_module(endpt, &mod_inv.mod);
@@ -360,6 +369,18 @@ PJ_DEF(pjsip_inv_session*) pjsip_dlg_get_inv_session(pjsip_dialog *dlg)
     return dlg->mod_data[mod_inv.mod.id];
 }
 
+
+/*
+ * Get INVITE state name.
+ */
+PJ_DEF(const char *) pjsip_inv_state_name(pjsip_inv_state state)
+{
+    PJ_ASSERT_RETURN(state >= PJSIP_INV_STATE_NULL && 
+		     state <= PJSIP_INV_STATE_DISCONNECTED,
+		     "??");
+
+    return inv_state_names[state];
+}
 
 /*
  * Create UAC invite session.
@@ -1548,8 +1569,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  * Send a request or response message.
  */
 PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
-					pjsip_tx_data *tdata,
-					void *token )
+					pjsip_tx_data *tdata)
 {
     pj_status_t status;
 
@@ -1571,7 +1591,6 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	tsx_inv_data->inv = inv;
 
 	tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-	tsx->mod_data[mod_inv.app_user->id] = token;
 
     } else {
 	pjsip_cseq_hdr *cseq;
@@ -1717,7 +1736,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
 	    
 	} else {
 	    /* Re-send BYE. */
-	    status = pjsip_inv_send_msg(inv, tdata, NULL );
+	    status = pjsip_inv_send_msg(inv, tdata);
 	}
 
     } else {
@@ -1851,7 +1870,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		    inv->invite_tsx = NULL;
 
 		    /* Send the request. */
-		    status = pjsip_inv_send_msg(inv, tdata, NULL );
+		    status = pjsip_inv_send_msg(inv, tdata);
 		}
 
 	    } else {
@@ -2271,7 +2290,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    if (status != PJ_SUCCESS)
 		return;
 
-	    status = pjsip_inv_send_msg(inv, tdata, NULL);
+	    status = pjsip_inv_send_msg(inv, tdata);
 
 	}
 
@@ -2310,7 +2329,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		return;
 
 	    /* Send re-INVITE */
-	    status = pjsip_inv_send_msg( inv, tdata, NULL);
+	    status = pjsip_inv_send_msg( inv, tdata);
 
 	} else if (tsx->status_code==PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
 		   tsx->status_code==PJSIP_SC_REQUEST_TIMEOUT ||

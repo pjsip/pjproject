@@ -190,7 +190,7 @@ pj_status_t pjsua_make_call(int acc_index,
 
     /* Send initial INVITE: */
 
-    status = pjsip_inv_send_msg(inv, tdata, NULL);
+    status = pjsip_inv_send_msg(inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
 		     status);
@@ -374,7 +374,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
 
     } else {
-	status = pjsip_inv_send_msg(inv, response, NULL);
+	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS)
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
     }
@@ -836,7 +836,7 @@ static void call_disconnect(pjsip_inv_session *inv,
 
     status = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
     if (status == PJ_SUCCESS)
-	status = pjsip_inv_send_msg(inv, tdata, NULL);
+	status = pjsip_inv_send_msg(inv, tdata);
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to disconnect call", status);
@@ -870,7 +870,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	if (inv->state != PJSIP_INV_STATE_NULL &&
 	    inv->state != PJSIP_INV_STATE_CONFIRMED) 
 	{
-	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	    //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 	return;
 
@@ -891,7 +891,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, 
 		     "Unable to retrieve currently active local SDP", 
 		     status);
-	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -901,7 +901,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, 
 		     "Unable to retrieve currently active remote SDP", 
 		     status);
-	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -919,7 +919,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
-	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	return;
     }
 
@@ -949,7 +949,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 		     status);
 	pjmedia_session_destroy(call->session);
 	call->session = NULL;
-	call_disconnect(inv, PJSIP_SC_INTERNAL_SERVER_ERROR);
+	//call_disconnect(inv, PJSIP_SC_INTERNAL_SERVER_ERROR);
 	return;
     }
 
@@ -1079,7 +1079,7 @@ void pjsua_call_hangup(int call_index)
     if (tdata == NULL)
 	return;
 
-    status = pjsip_inv_send_msg(call->inv, tdata, NULL);
+    status = pjsip_inv_send_msg(call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Failed to send end session message", 
@@ -1122,7 +1122,7 @@ void pjsua_call_set_hold(int call_index)
 	return;
     }
 
-    status = pjsip_inv_send_msg( call->inv, tdata, NULL);
+    status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
 	return;
@@ -1169,7 +1169,7 @@ void pjsua_call_reinvite(int call_index)
 	return;
     }
 
-    status = pjsip_inv_send_msg( call->inv, tdata, NULL);
+    status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
 	return;
@@ -1352,7 +1352,7 @@ void pjsua_call_hangup_all(void)
 
 	if (pjsip_inv_end_session(call->inv, st_code, NULL, &tdata)==0) {
 	    if (tdata)
-		pjsip_inv_send_msg(call->inv, tdata, NULL);
+		pjsip_inv_send_msg(call->inv, tdata);
 	}
     }
 }
@@ -1373,7 +1373,7 @@ pj_status_t pjsua_call_init(void)
 
 
     /* Initialize invite session module: */
-    status = pjsip_inv_usage_init(pjsua.endpt, &pjsua.mod, &inv_cb);
+    status = pjsip_inv_usage_init(pjsua.endpt, &inv_cb);
     
     return status;
 }
