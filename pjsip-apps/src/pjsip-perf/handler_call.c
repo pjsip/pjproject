@@ -165,7 +165,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 	// TODO: Need to delete dialog
 
     } else {
-	status = pjsip_inv_send_msg(inv, response, NULL);
+	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS)
 	    app_perror(THIS_FILE, "Unable to send 100 response", status);
     }
@@ -247,7 +247,7 @@ pj_status_t call_spawn_test( const pj_str_t *target,
 
 
     /* Send initial INVITE: */
-    status = pjsip_inv_send_msg(inv, tdata, NULL);
+    status = pjsip_inv_send_msg(inv, tdata);
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to send initial INVITE request", 
 		    status);
@@ -283,7 +283,7 @@ static void bye_callback( pj_timer_heap_t *ht, pj_timer_entry *e)
 	return;
     }
 
-    status = pjsip_inv_send_msg(call_data->inv, tdata, NULL);
+    status = pjsip_inv_send_msg(call_data->inv, tdata);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to send BYE", status);
 	return;
@@ -391,7 +391,7 @@ pj_status_t call_handler_init(void)
     inv_cb.on_new_session = &call_on_forked;
 
     /* Initialize invite session module: */
-    status = pjsip_inv_usage_init(settings.endpt, &mod_call, &inv_cb);
+    status = pjsip_inv_usage_init(settings.endpt, &inv_cb);
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to initialize INVITE session module", 
 		    status);
