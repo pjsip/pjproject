@@ -34,8 +34,10 @@
 
 #endif
 
+/* For sprintf family */
+#include <stdio.h>
+
 #if defined(_MSC_VER)
-#   include <stdio.h>
 #   define strcasecmp	_stricmp
 #   define strncasecmp	_strnicmp
 #   define snprintf	_snprintf
