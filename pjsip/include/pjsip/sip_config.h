@@ -21,13 +21,69 @@
 
 #include <pj/config.h>
 
+/**
+ * Specify maximum transaction count in transaction hash table.
+ * Default value is 16*1024
+ */
+#ifndef PJSIP_MAX_TSX_COUNT
+#   define PJSIP_MAX_TSX_COUNT		(16*1024)
+#endif
+
+/**
+ * Specify maximum number of dialogs in the dialog hash table.
+ * Default value is 16*1024.
+ */
+#ifndef PJSIP_MAX_DIALOG_COUNT
+#   define PJSIP_MAX_DIALOG_COUNT	(16*1024)
+#endif
+
+
+/**
+ * Specify maximum number of transports.
+ * Default value is equal to maximum number of handles in ioqueue.
+ * See also PJSIP_TPMGR_HTABLE_SIZE.
+ */
+#ifndef PJSIP_MAX_TRANSPORTS
+#   define PJSIP_MAX_TRANSPORTS		(PJ_IOQUEUE_MAX_HANDLES)
+#endif
+
+
+/**
+ * Transport manager hash table size (must be 2^n-1). 
+ * See also PJSIP_MAX_TRANSPORTS
+ */
+#ifndef PJSIP_TPMGR_HTABLE_SIZE
+#   define PJSIP_TPMGR_HTABLE_SIZE	31
+#endif
+
+
+/**
+ * Specify maximum URL size.
+ * This constant is used mainly when printing the URL for logging purpose 
+ * only.
+ */
+#ifndef PJSIP_MAX_URL_SIZE
+#   define PJSIP_MAX_URL_SIZE		256
+#endif
+
+
+/**
+ * Specify maximum number of modules.
+ * This mainly affects the size of mod_data array in various components.
+ */
+#ifndef PJSIP_MAX_MODULE
+#   define PJSIP_MAX_MODULE		16
+#endif
+
+
+
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
-#define PJSIP_POOL_LEN_ENDPT		(2048+64*PJSIP_MAX_TSX_COUNT)
-#define PJSIP_POOL_INC_ENDPT		(1024)
+#define PJSIP_POOL_LEN_ENDPT		(4000)
+#define PJSIP_POOL_INC_ENDPT		(4000)
 
 /* Transport related constants. */
-#define PJSIP_MAX_TRANSPORTS		(PJ_IOQUEUE_MAX_HANDLES)
+
 #define PJSIP_MAX_PKT_LEN		1500
 #define PJSIP_POOL_RDATA_LEN		4000
 #define PJSIP_POOL_RDATA_INC		4000
@@ -35,8 +91,8 @@
 #define PJSIP_POOL_INC_TRANSPORT	512
 #define PJSIP_POOL_LEN_TDATA		4000
 #define PJSIP_POOL_INC_TDATA		4000
-#define PJSIP_POOL_LEN_UA		(64 + 32*PJSIP_MAX_DIALOG_COUNT)
-#define PJSIP_POOL_INC_UA		0
+#define PJSIP_POOL_LEN_UA		4000
+#define PJSIP_POOL_INC_UA		4000
 #define PJSIP_TRANSPORT_CLOSE_TIMEOUT	30
 #define PJSIP_MAX_TRANSPORT_USAGE	16
 
@@ -48,7 +104,6 @@
 /* Transaction related constants. */
 #define PJSIP_POOL_TSX_LAYER_LEN	4000
 #define PJSIP_POOL_TSX_LAYER_INC	4000
-#define PJSIP_MAX_TSX_COUNT		(16*1024)
 #define PJSIP_POOL_TSX_LEN		1536 //768
 #define PJSIP_POOL_TSX_INC		256
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
@@ -61,25 +116,17 @@
 #define PJSIP_MAX_CALL_ID_LEN		PJ_GUID_STRING_LENGTH
 #define PJSIP_MAX_TAG_LEN		PJ_GUID_STRING_LENGTH
 #define PJSIP_MAX_BRANCH_LEN		(PJSIP_RFC3261_BRANCH_LEN + PJ_GUID_STRING_LENGTH)
-#define PJSIP_MAX_URL_SIZE		256
 #define PJSIP_MAX_HNAME_LEN		64
 
 /* Dialog related constants. */
-#define PJSIP_MAX_DIALOG_COUNT		(16*1024)
 #define PJSIP_POOL_LEN_DIALOG		1200
 #define PJSIP_POOL_INC_DIALOG		512
-
-/* Transport manager hash table size (must be 2^n-1). */
-#define PJSIP_TPMGR_HTABLE_SIZE		31
 
 /* Transport idle timeout before it's destroyed. */
 #define PJSIP_TRANSPORT_IDLE_TIME	30
 
 /* Max entries to process in timer heap per poll. */
 #define PJSIP_MAX_TIMED_OUT_ENTRIES	10
-
-/* Module related constants. */
-#define PJSIP_MAX_MODULE		16
 
 /* Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES		64

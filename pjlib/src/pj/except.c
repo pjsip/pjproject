@@ -133,7 +133,7 @@ PJ_DEF(pj_status_t) pj_exception_id_alloc( const char *name,
 {
     PJ_ASSERT_RETURN(last_exception_id < PJ_MAX_EXCEPTION_ID-1, PJ_ETOOMANY);
 
-    *id = last_exception_id++
+    *id = last_exception_id++;
     return PJ_SUCCESS;
 }
 

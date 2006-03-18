@@ -102,6 +102,7 @@
 #   undef PJ_HAS_EVENT_OBJ
 #   undef PJ_ENABLE_EXTRA_CHECK
 #   undef PJ_EXCEPTION_USE_WIN32_SEH
+#   undef PJ_HAS_ERROR_STRING
 #endif
 
 /**
@@ -245,10 +246,14 @@
  * maximum number of socket handles passed to select() (i.e. FD_SETSIZE will 
  * be set to this value).
  *
- * Default: 256
+ * Default: 256 (64 for WinCE)
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
-#  define PJ_IOQUEUE_MAX_HANDLES    (256)
+#   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+#	define PJ_IOQUEUE_MAX_HANDLES	(64)
+#   else
+#	define PJ_IOQUEUE_MAX_HANDLES	(256)
+#   endif
 #endif
 
 /**
@@ -342,6 +347,16 @@
  */
 #ifndef PJ_TIMESTAMP_USE_RDTSC
 #   define PJ_TIMESTAMP_USE_RDTSC   0
+#endif
+
+/**
+ * Include error message string in the library (pj_strerror()).
+ * This is very much desirable!
+ *
+ * Default: 1
+ */
+#ifndef PJ_HAS_ERROR_STRING
+#   define PJ_HAS_ERROR_STRING	    1
 #endif
 
 
