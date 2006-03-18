@@ -319,6 +319,50 @@ int main(int argc, char *argv[])
 	    return 1;
 	}
 
+	/* If we expect the outgoing INVITE to be challenged, then we should
+	 * put the credentials in the dialog here, with something like this:
+	 *
+	    {
+		pjsip_cred_info	cred[1];
+
+		cred[0].realm	  = pj_str("sip.server.realm");
+		cred[0].username  = pj_str("theuser");
+		cred[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+		cred[0].data      = pj_str("thepassword");
+
+		pjsip_auth_clt_set_credentials( &dlg->auth_sess, 1, cred);
+	    }
+	 *
+	 */
+
+
+	/* If we want the initial INVITE to travel to specific SIP proxies,
+	 * then we should put the initial dialog's route set here. The final
+	 * route set will be updated once a dialog has been established.
+	 * To set the dialog's initial route set, we do it with something
+	 * like this:
+	 *
+	    {
+		pjsip_route_hdr route_set;
+		pjsip_route_hdr *route;
+		const pj_str_t hname = { "Route", 5 };
+		char *uri = "sip:proxy.server;lr";
+
+		pj_list_init(&route_set);
+
+		route = pjsip_parse_hdr( dlg->pool, &hname, 
+					 uri, strlen(uri),
+					 NULL);
+		PJ_ASSERT_RETURN(route != NULL, 1);
+		pj_list_push_back(&route_set, route);
+
+		pjsip_dlg_set_route_set(dlg, &route_set);
+	    }
+	 *
+	 * Note that Route URI SHOULD have an ";lr" parameter!
+	 */
+
+
 	/* Get the SDP body to be put in the outgoing INVITE, by asking
 	 * media endpoint to create one for us. The SDP will contain all
 	 * codecs that have been registered to it (in this case, only
@@ -338,7 +382,6 @@ int main(int argc, char *argv[])
 	 */
 	status = pjsip_inv_create_uac( dlg, local_sdp, 0, &g_inv);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-
 
 
 	/* Create initial INVITE request.
@@ -370,6 +413,25 @@ int main(int argc, char *argv[])
     for (;!g_complete;) {
 	pj_time_val timeout = {0, 10};
 	pjsip_endpt_handle_events(g_endpt, &timeout);
+    }
+
+    /* On exit, dump memory usage: */
+    {
+	pj_pool_t   *p;
+	unsigned     total_alloc = 0;
+	unsigned     total_used = 0;
+
+	/* Accumulate memory usage in active list. */
+	p = cp.used_list.next;
+	while (p != (pj_pool_t*) &cp.used_list) {
+	    total_alloc += pj_pool_get_capacity(p);
+	    total_used += pj_pool_get_used_size(p);
+	    p = p->next;
+	}
+
+	printf("Total pool memory allocated=%d KB, used=%d KB\n",
+		total_alloc / 1000,
+		total_used / 1000);
     }
 
     return 0;
