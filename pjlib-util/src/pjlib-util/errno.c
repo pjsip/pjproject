@@ -25,6 +25,7 @@
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
+#if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
 static const struct 
 {
     int code;
@@ -47,7 +48,7 @@ static const struct
     /* XML errors */
     { PJLIB_UTIL_EINXML,	    "Invalid XML message" },
 };
-
+#endif	/* PJ_HAS_ERROR_STRING */
 
 
 /*
@@ -57,6 +58,8 @@ PJ_DEF(pj_str_t) pjlib_util_strerror( pj_status_t statcode,
 				      char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     if (statcode >= PJLIB_UTIL_ERRNO_START && 
 	statcode < PJLIB_UTIL_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
@@ -96,10 +99,13 @@ PJ_DEF(pj_str_t) pjlib_util_strerror( pj_status_t statcode,
 	} 
     }
 
+#endif	/* PJ_HAS_ERROR_STRING */
+
+
     /* Error not found. */
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown error %d",
+				   "Unknown pjlib-util error %d",
 				   statcode);
 
     return errstr;

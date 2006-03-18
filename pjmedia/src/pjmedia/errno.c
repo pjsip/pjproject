@@ -26,6 +26,9 @@
  * MUST KEEP THIS ARRAY SORTED!!
  * Message must be limited to 64 chars!
  */
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
+
 static const struct 
 {
     int code;
@@ -121,6 +124,8 @@ static const struct
     { PJMEDIA_EWAVETOOSHORT,	    "WAVE file too short" },
 };
 
+#endif	/* PJ_HAS_ERROR_STRING */
+
 
 
 /*
@@ -130,6 +135,8 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 				   char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     /* See if the error comes from PortAudio. */
     if (statcode >= PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized) &&
@@ -184,10 +191,12 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 	} 
     }
 
+#endif	/* PJ_HAS_ERROR_STRING */
+
     /* Error not found. */
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown error %d",
+				   "Unknown pjmedia error %d",
 				   statcode);
 
     return errstr;

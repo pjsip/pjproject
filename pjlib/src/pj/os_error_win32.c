@@ -33,6 +33,8 @@
 /*
  * From Apache's APR:
  */
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING!=0)
+
 static const struct {
     pj_os_err_type code;
     const char *msg;
@@ -88,6 +90,9 @@ static const struct {
     {WSANO_DATA,         "No host data of that type was found"},
     {0,                  NULL}
 };
+
+#endif	/* PJ_HAS_ERROR_STRING */
+
 
 
 PJ_DEF(pj_status_t) pj_get_os_error(void)
@@ -155,6 +160,8 @@ int platform_strerror( pj_os_err_type os_errcode,
 #endif
 
     if (!len) {
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING!=0)
 	int i;
         for (i = 0; gaErrorList[i].msg; ++i) {
             if (gaErrorList[i].code == os_errcode) {
@@ -167,6 +174,7 @@ int platform_strerror( pj_os_err_type os_errcode,
                 break;
             }
         }
+#endif	/* PJ_HAS_ERROR_STRING */
 
     } else {
 	/* Remove trailing newlines. */

@@ -39,6 +39,7 @@ static struct err_msg_hnd
 } err_msg_hnd[PJLIB_MAX_ERR_MSG_HANDLER];
 
 /* PJLIB's own error codes/messages */
+#if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
 static const struct 
 {
     int code;
@@ -62,6 +63,8 @@ static const struct
     { PJ_EEXISTS,       "Object already exists" },
     { PJ_EEOF,		"End of file" },
 };
+#endif	/* PJ_HAS_ERROR_STRING */
+
 
 /*
  * pjlib_error()
@@ -70,6 +73,7 @@ static const struct
  */
 static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 {
+#if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
     unsigned i;
 
     for (i=0; i<sizeof(err_str)/sizeof(err_str[0]); ++i) {
@@ -81,12 +85,9 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
             return len;
         }
     }
+#endif
 
-    *buf++ = '?';
-    *buf++ = '?';
-    *buf++ = '?';
-    *buf++ = '\0';
-    return 3;
+    return pj_ansi_snprintf( buf, size, "Unknown pjlib error %d", code);
 }
 
 #define IN_RANGE(val,start,end)	    ((val)>=(start) && (val)<(end))

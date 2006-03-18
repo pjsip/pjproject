@@ -24,6 +24,9 @@
 /* PJSIP's own error codes/messages 
  * MUST KEEP THIS ARRAY SORTED!!
  */
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
+
 static const struct 
 {
     int code;
@@ -91,6 +94,9 @@ static const struct
 };
 
 
+#endif	/* PJ_HAS_ERROR_STRING */
+
+
 /*
  * pjsip_strerror()
  */
@@ -98,6 +104,8 @@ PJ_DEF(pj_str_t) pjsip_strerror( pj_status_t statcode,
 				 char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
+
+#if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     if (statcode >= PJSIP_ERRNO_START && statcode < PJSIP_ERRNO_START+800) 
     {
@@ -144,20 +152,18 @@ PJ_DEF(pj_str_t) pjsip_strerror( pj_status_t statcode,
 	    pj_strncpy_with_null(&errstr, &msg, bufsize);
 	    return errstr;
 
-	} else {
-	    /* Error not found. */
-	    errstr.ptr = buf;
-	    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-					   "Unknown error %d",
-					   statcode);
+	} 
+    }
 
-	    return errstr;
-	}
-    }
-    else {
-	/* Not our code. Give it to PJLIB. */
-	return pj_strerror(statcode, buf, bufsize);
-    }
+#endif	/* PJ_HAS_ERROR_STRING */
+
+    /* Error not found. */
+    errstr.ptr = buf;
+    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+				   "Unknown pjsip error %d",
+				   statcode);
+
+    return errstr;
 
 }
 
