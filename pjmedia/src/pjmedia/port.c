@@ -103,6 +103,7 @@ PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
 					    pjmedia_frame *frame )
 {
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->get_frame, PJ_EINVALIDOP);
 
     return port->get_frame(port, frame);
 }
@@ -116,6 +117,7 @@ PJ_DEF(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 					    const pjmedia_frame *frame )
 {
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->put_frame, PJ_EINVALIDOP);
 
     return port->put_frame(port, frame);
 
@@ -141,7 +143,10 @@ PJ_DEF(pj_status_t) pjmedia_port_destroy( pjmedia_port *port )
 	pjmedia_port_disconnect(port, port->downstream_port);
     }
 
-    status = port->on_destroy(port);
+    if (port->on_destroy)
+	status = port->on_destroy(port);
+    else
+	status = PJ_SUCCESS;
 
     return status;
 }
