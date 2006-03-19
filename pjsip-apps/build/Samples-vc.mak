@@ -37,7 +37,8 @@ OBJDIR = .\output\samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
 BINDIR = ..\bin\samples
 
 
-SAMPLES = $(BINDIR)\simpleua.exe
+SAMPLES = $(BINDIR)\simpleua.exe $(BINDIR)\playfile.exe $(BINDIR)\playsine.exe \
+	  $(BINDIR)\confsample.exe
 
 all: $(OBJDIR) $(SAMPLES)
 

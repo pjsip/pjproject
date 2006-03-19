@@ -43,6 +43,7 @@ CFG=samples - Win32 Debug
 # PROP Intermediate_Dir "./output/samples-i386-win32-vc6-release"
 # PROP Cmd_Line "nmake /f Samples-vc.mak BUILD_MODE=release"
 # PROP Rebuild_Opt "/a"
+# PROP Target_File "All samples built successfully"
 # PROP Bsc_Name ""
 # PROP Target_Dir ""
 
@@ -63,7 +64,7 @@ CFG=samples - Win32 Debug
 # PROP Intermediate_Dir "./output/samples-i386-win32-vc6-debug"
 # PROP Cmd_Line "nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug"
 # PROP Rebuild_Opt "/a"
-# PROP Target_File "../bin/samples/simpleua.exe"
+# PROP Target_File "All samples built successfully"
 # PROP Bsc_Name ""
 # PROP Target_Dir ""
 
@@ -83,6 +84,18 @@ CFG=samples - Win32 Debug
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=..\src\samples\confsample.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\playfile.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\playsine.c
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\samples\simpleua.c
