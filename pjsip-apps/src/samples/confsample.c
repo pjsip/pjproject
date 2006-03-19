@@ -39,14 +39,13 @@
  *
  * DESCRIPTION:
  *
- *  Here we create a conference bridge, with at least two ports:
- *  - port zero is for the sound device (capture and play), 
- *  - port one is to play a generated sine wave.
+ *  Here we create a conference bridge, with at least one port (port zero
+ *  is always created for the sound device).
  *
  *  If WAV files are specified, the WAV file player ports will be connected
- *  to slot starting from number two in the bridge. The WAV files can have 
- *  arbitrary sampling rate; the bridge will convert the samples to its clock
- *  rate. However, the files MUST have a single audio channel only (i.e. mono).
+ *  to slot starting from number one in the bridge. The WAV files can have 
+ *  arbitrary sampling rate; the bridge will convert it to its clock rate. 
+ *  However, the files MUST have a single audio channel only (i.e. mono).
  */
 
 #include <pjmedia.h>
@@ -83,109 +82,6 @@ static int app_perror( const char *sender, const char *title,
 }
 
 
-/* Struct attached to sine generator */
-typedef struct
-{
-    pj_int16_t	*samples;	/* Sine samples.    */
-} port_data;
-
-
-/* This callback is called to feed sine wave samples from the sine 
- * generator. 
- */
-static pj_status_t sine_get_frame( pjmedia_port *port, 
-				   pjmedia_frame *frame)
-{
-    port_data *sine = port->user_data;
-    pj_int16_t *samples = frame->buf;
-    unsigned i, count, left, right;
-
-    /* Get number of samples */
-    count = frame->size / 2 / port->info.channel_count;
-
-    left = 0;
-    right = 0;
-
-    for (i=0; i<count; ++i) {
-	*samples++ = sine->samples[left];
-	++left;
-
-	if (port->info.channel_count == 2) {
-	    *samples++ = sine->samples[right];
-	    right += 2; /* higher pitch so we can distinguish left and right. */
-	    if (right >= count)
-		right = 0;
-	}
-    }
-
-    /* Must set frame->type correctly, otherwise the sound device
-     * will refuse to play.
-     */
-    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-
-    return PJ_SUCCESS;
-}
-
-#ifndef M_PI
-#define M_PI  (3.14159265)
-#endif
-
-/*
- * Create a media port to generate sine wave samples.
- */
-static pj_status_t create_sine_port(pj_pool_t *pool,
-				    unsigned sampling_rate,
-				    unsigned channel_count,
-				    pjmedia_port **p_port)
-{
-    pjmedia_port *port;
-    unsigned i;
-    unsigned count;
-    port_data *sine;
-
-    PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2, 
-		     PJ_EINVAL);
-
-    port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
-    PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
-
-    /* Fill in port info. */
-    port->info.bits_per_sample = 16;
-    port->info.channel_count = channel_count;
-    port->info.encoding_name = pj_str("pcm");
-    port->info.has_info = 1;
-    port->info.name = pj_str("sine generator");
-    port->info.need_info = 0;
-    port->info.pt = 0xFF;
-    port->info.sample_rate = sampling_rate;
-    port->info.samples_per_frame = sampling_rate * 20 / 1000 * channel_count;
-    port->info.bytes_per_frame = port->info.samples_per_frame * 2;
-    port->info.type = PJMEDIA_TYPE_AUDIO;
-    
-    /* Set the function to feed frame */
-    port->get_frame = &sine_get_frame;
-
-    /* Create sine port data */
-    port->user_data = sine = pj_pool_zalloc(pool, sizeof(port_data));
-
-    /* Create samples */
-    count = port->info.samples_per_frame / channel_count;
-    sine->samples = pj_pool_alloc(pool, count * sizeof(pj_int16_t));
-    PJ_ASSERT_RETURN(sine->samples != NULL, PJ_ENOMEM);
-
-    /* initialise sinusoidal wavetable */
-    for( i=0; i<count; i++ )
-    {
-        sine->samples[i] = (pj_int16_t) (8000.0 * 
-		sin(((double)i/(double)count) * M_PI * 8.) );
-    }
-
-    *p_port = port;
-
-    return PJ_SUCCESS;
-}
-
-
 /* Show usage */
 static void usage(void)
 {
@@ -201,7 +97,7 @@ static void usage(void)
 
 
 /* Input simple string */
-static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
+static pj_bool_t input(const char *title, char *buf, pj_size_t len)
 {
     char *p;
 
@@ -230,9 +126,8 @@ int main(int argc, char *argv[])
     pjmedia_endpt *med_endpt;
     pj_pool_t *pool;
     pjmedia_conf *conf;
-    pjmedia_port *sine_port;
 
-    int i, file_count;
+    int i, port_count, file_count;
     pjmedia_port **file_port;	/* Array of file ports */
 
     char tmp[10];
@@ -269,12 +164,15 @@ int main(int argc, char *argv[])
 			   );
 
 
+    file_count = argc-1;
+    port_count = file_count + 1;
+
     /* Create the conference bridge. 
      * With default options (zero), the bridge will create an instance of
      * sound capture and playback device and connect them to slot zero.
      */
     status = pjmedia_conf_create( pool,	    /* pool to use	    */
-				  2+argc-1, /* number of ports	    */
+				  port_count,/* number of ports	    */
 				  16000,    /* sampling rate	    */
 				  1,	    /* # of channels.	    */
 				  320,	    /* samples per frame    */
@@ -288,28 +186,7 @@ int main(int argc, char *argv[])
     }
 
 
-    /* Create a media port to generate sine wave samples. */
-    status = create_sine_port( pool,	    /* memory pool	    */
-			       11025,	    /* sampling rate	    */
-			       1,	    /* # of channels	    */
-			       &sine_port   /* returned port	    */
-		             );
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-
-
-    /* Add the sine generator port to the conference bridge. */
-    status = pjmedia_conf_add_port(conf,	/* the conference bridge    */
-				   pool,	/* pool			    */
-				   sine_port,	/* the sine generator	    */
-				   NULL,	/* use port's name	    */
-				   NULL		/* ptr to receive slot #    */
-				   );
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-
-
-
     /* Create file ports. */
-    file_count = argc-1;
     file_port = pj_pool_alloc(pool, file_count * sizeof(pjmedia_port*));
 
     for (i=0; i<file_count; ++i) {
@@ -390,18 +267,18 @@ int main(int argc, char *argv[])
 	case 'c':
 	    puts("");
 	    puts("Connect source port to destination port");
-	    if (!simple_input("Enter source port number", tmp1, sizeof(tmp1)) )
+	    if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
 		continue;
 	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src > file_count+2) {
+	    if (*err || src < 0 || src >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
 
-	    if (!simple_input("Enter destination port number", tmp2, sizeof(tmp2)) )
+	    if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
 		continue;
 	    dst = strtol(tmp2, &err, 10);
-	    if (*err || dst < 0 || dst >= file_count+2) {
+	    if (*err || dst < 0 || dst >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
@@ -415,18 +292,18 @@ int main(int argc, char *argv[])
 	case 'd':
 	    puts("");
 	    puts("Disconnect port connection");
-	    if (!simple_input("Enter source port number", tmp1, sizeof(tmp1)) )
+	    if (!input("Enter source port number", tmp1, sizeof(tmp1)) )
 		continue;
 	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src > file_count+2) {
+	    if (*err || src < 0 || src >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
 
-	    if (!simple_input("Enter destination port number", tmp2, sizeof(tmp2)) )
+	    if (!input("Enter destination port number", tmp2, sizeof(tmp2)) )
 		continue;
 	    dst = strtol(tmp2, &err, 10);
-	    if (*err || dst < 0 || dst >= file_count+2) {
+	    if (*err || dst < 0 || dst >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
@@ -441,15 +318,15 @@ int main(int argc, char *argv[])
 	case 't':
 	    puts("");
 	    puts("Adjust transmit level of a port");
-	    if (!simple_input("Enter port number", tmp1, sizeof(tmp1)) )
+	    if (!input("Enter port number", tmp1, sizeof(tmp1)) )
 		continue;
 	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src > file_count+2) {
+	    if (*err || src < 0 || src >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
 
-	    if (!simple_input("Enter level (-128 to +127, 0 for normal)", 
+	    if (!input("Enter level (-128 to +127, 0 for normal)", 
 			      tmp2, sizeof(tmp2)) )
 		continue;
 	    level = strtol(tmp2, &err, 10);
@@ -467,15 +344,15 @@ int main(int argc, char *argv[])
 	case 'r':
 	    puts("");
 	    puts("Adjust receive level of a port");
-	    if (!simple_input("Enter port number", tmp1, sizeof(tmp1)) )
+	    if (!input("Enter port number", tmp1, sizeof(tmp1)) )
 		continue;
 	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src > file_count+2) {
+	    if (*err || src < 0 || src >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
 
-	    if (!simple_input("Enter level (-128 to +127, 0 for normal)", 
+	    if (!input("Enter level (-128 to +127, 0 for normal)", 
 			      tmp2, sizeof(tmp2)) )
 		continue;
 	    level = strtol(tmp2, &err, 10);
@@ -492,22 +369,22 @@ int main(int argc, char *argv[])
 	case 'v':
 	    puts("");
 	    puts("Display VU meter");
-	    if (!simple_input("Enter port number to monitor", tmp1, sizeof(tmp1)) )
+	    if (!input("Enter port number to monitor", tmp1, sizeof(tmp1)) )
 		continue;
 	    src = strtol(tmp1, &err, 10);
-	    if (*err || src < 0 || src > file_count+2) {
+	    if (*err || src < 0 || src >= port_count) {
 		puts("Invalid slot number");
 		continue;
 	    }
 
-	    if (!simple_input("Enter r for rx level or t for tx level", tmp2, sizeof(tmp2)))
+	    if (!input("Enter r for rx level or t for tx level", tmp2, sizeof(tmp2)))
 		continue;
 	    if (tmp2[0] != 'r' && tmp2[0] != 't') {
 		puts("Invalid option");
 		continue;
 	    }
 
-	    if (!simple_input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
+	    if (!input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
 		continue;
 	    strtol(tmp1, &err, 10);
 	    if (*err) {
@@ -541,10 +418,6 @@ on_quit:
 	status = pjmedia_port_destroy( file_port[i]);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
-
-    /* Destroy sine generator port */
-    status = pjmedia_port_destroy( sine_port );
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* Release application pool */
     pj_pool_release( pool );
@@ -635,21 +508,27 @@ static void conf_list(pjmedia_conf *conf, int detail)
  */
 static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur)
 {
-    enum { SLEEP = 100};
+    enum { SLEEP = 20, SAMP_CNT = 2};
     pj_status_t status;
-    int i, count;
+    int i, total_count;
+    unsigned level, samp_cnt;
+
 
     puts("");
     printf("Displaying VU meter for port %d for about %d seconds\n",
 	   slot, dur);
 
-    count = dur * 1000 / SLEEP;
+    total_count = dur * 1000 / SLEEP;
 
-    for (i=0; i<count; ++i) {
+    level = 0;
+    samp_cnt = 0;
+
+    for (i=0; i<total_count; ++i) {
 	unsigned tx_level, rx_level;
-	int j, level;
+	int j, length;
 	char meter[21];
 
+	/* Poll the volume every 20 msec */
 	status = pjmedia_conf_get_signal_level(conf, slot, 
 					       &tx_level, &rx_level);
 	if (status != PJ_SUCCESS) {
@@ -657,15 +536,32 @@ static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur)
 	    return;
 	}
 
-	level = 20 * (dir=='r'?rx_level:tx_level) / 255;
-	for (j=0; j<level; ++j)
+	level += (dir=='r' ? rx_level : tx_level);
+	++samp_cnt;
+
+	/* Accumulate until we have enough samples */
+	if (samp_cnt < SAMP_CNT) {
+	    pj_thread_sleep(SLEEP);
+	    continue;
+	}
+
+	/* Get average */
+	level = level / samp_cnt;
+
+	/* Draw bar */
+	length = 20 * level / 255;
+	for (j=0; j<length; ++j)
 	    meter[j] = '#';
 	for (; j<20; ++j)
 	    meter[j] = ' ';
 	meter[20] = '\0';
 
-	printf("Port #%02d %cx level: [%s]\r",
-	       slot, dir, meter);
+	printf("Port #%02d %cx level: [%s] %d  \r",
+	       slot, dir, meter, level);
+
+	/* Next.. */
+	samp_cnt = 0;
+	level = 0;
 
 	pj_thread_sleep(SLEEP);
     }
