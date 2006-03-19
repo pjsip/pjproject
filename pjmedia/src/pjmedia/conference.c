@@ -42,8 +42,11 @@
 
 #define BYTES_PER_SAMPLE    2
 
+#define NORMAL_LEVEL	    128
+
+
 /*
- * DON'T GET CONFUSED!!
+ * DON'T GET CONFUSED WITH TX/RX!!
  *
  * TX and RX directions are always viewed from the conference bridge's point
  * of view, and NOT from the port's point of view. So TX means the bridge
@@ -75,7 +78,7 @@ struct conf_port
     unsigned		 rx_level;	/**< Last rx level from this port.  */
 
     /* The normalized signal level adjustment.
-     * A value of 128 means there's no adjustment.
+     * A value of 128 (NORMAL_LEVEL) means there's no adjustment.
      */
     unsigned		 tx_adj_level;	/**< Adjustment for TX.		    */
     unsigned		 rx_adj_level;	/**< Adjustment for RX.		    */
@@ -202,8 +205,8 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     conf_port->tx_setting = PJMEDIA_PORT_ENABLE;
 
     /* Default level adjustment is 128 (which means no adjustment) */
-    conf_port->tx_adj_level = 128;
-    conf_port->rx_adj_level = 128;
+    conf_port->tx_adj_level = NORMAL_LEVEL;
+    conf_port->rx_adj_level = NORMAL_LEVEL;
 
     /* Create transmit flag array */
     conf_port->listeners = pj_pool_zalloc(pool, 
@@ -560,7 +563,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(conf && pool && strm_port && port_name, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && pool && strm_port, PJ_EINVAL);
+
+    /* If port_name is not specified, use the port's name */
+    if (!port_name)
+	port_name = &strm_port->info.name;
 
     /* For this version of PJMEDIA, port MUST have the same number of
      * PCM channels.
@@ -824,6 +831,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->listener = conf_port->listeners;
     info->clock_rate = conf_port->clock_rate;
     info->samples_per_frame = conf_port->samples_per_frame;
+    info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
+    info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
 
     return PJ_SUCCESS;
 }
@@ -901,7 +910,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Set normalized adjustment level. */
-    conf_port->rx_adj_level = adj_level + 128;
+    conf_port->rx_adj_level = adj_level + NORMAL_LEVEL;
 
     return PJ_SUCCESS;
 }
@@ -928,7 +937,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Set normalized adjustment level. */
-    conf_port->tx_adj_level = adj_level + 128;
+    conf_port->tx_adj_level = adj_level + NORMAL_LEVEL;
 
     return PJ_SUCCESS;
 }
@@ -1076,7 +1085,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	frame.buf = NULL;
 	frame.size = 0;
 
-	if (cport->port)
+	if (cport->port && cport->port->put_frame)
 	    pjmedia_port_put_frame(cport->port, &frame);
 
 	cport->tx_level = 0;
@@ -1096,7 +1105,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      */
     buf = (pj_int16_t*)cport->mix_buf;
 
-    if (cport->tx_adj_level != 128) {
+    if (cport->tx_adj_level != NORMAL_LEVEL) {
 
 	unsigned adj_level = cport->tx_adj_level;
 
@@ -1110,7 +1119,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    itemp = unsigned2pcm(cport->mix_buf[j] / cport->sources);
 
 	    /* Adjust the level */
-	    itemp = itemp * adj_level / 128;
+	    itemp = itemp * adj_level / NORMAL_LEVEL;
 
 	    /* Clip the signal if it's too loud */
 	    if (itemp > 32767) itemp = 32767;
@@ -1155,16 +1164,16 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     if (cport->clock_rate == conf->clock_rate &&
 	cport->samples_per_frame == conf->samples_per_frame)
     {
-	pjmedia_frame frame;
+	if (cport->port != NULL) {
+	    pjmedia_frame frame;
 
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame.buf = (pj_int16_t*)cport->mix_buf;
-	frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
-	frame.timestamp.u64 = timestamp;
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = (pj_int16_t*)cport->mix_buf;
+	    frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
+	    frame.timestamp.u64 = timestamp;
 
-	if (cport->port != NULL)
 	    return pjmedia_port_put_frame(cport->port, &frame);
-	else
+	} else
 	    return PJ_SUCCESS;
     }
 
@@ -1192,17 +1201,19 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     /* Transmit once we have enough frame in the tx_buf. */
     if (cport->tx_buf_count >= cport->samples_per_frame) {
 	
-	pjmedia_frame frame;
 	pj_status_t status;
 
-	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame.buf = cport->tx_buf;
-	frame.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
-	frame.timestamp.u64 = timestamp;
+	if (cport->port) {
+	    pjmedia_frame frame;
 
-	if (cport->port)
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = cport->tx_buf;
+	    frame.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
+	    frame.timestamp.u64 = timestamp;
+
 	    status = pjmedia_port_put_frame(cport->port, &frame);
-	else
+
+	} else
 	    status = PJ_SUCCESS;
 
 	cport->tx_buf_count -= cport->samples_per_frame;
@@ -1329,7 +1340,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	 * and calculate the average level at the same time.
 	 * Otherwise just calculate the averate level.
 	 */
-	if (conf_port->rx_adj_level != 128) {
+	if (conf_port->rx_adj_level != NORMAL_LEVEL) {
 	    pj_int16_t *input = frame->buf;
 	    pj_int32_t adj = conf_port->rx_adj_level;
 
@@ -1342,7 +1353,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		 * 16bit sample storage.
 		 */
 		itemp = input[j];
-		itemp = itemp * adj / 128;
+		itemp = itemp * adj / NORMAL_LEVEL;
 
 		/* Clip the signal if it's too loud */
 		if (itemp > 32767) itemp = 32767;
@@ -1433,6 +1444,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     } else {
 	zero_samples( frame->buf, conf->samples_per_frame ); 
     }
+
+    /* MUST set frame type */
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     pj_mutex_unlock(conf->mutex);
 

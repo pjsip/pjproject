@@ -47,6 +47,8 @@ typedef struct pjmedia_conf_port_info
     pj_bool_t	       *listener;	    /**< Array of listeners.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */
+    int			tx_adj_level;	    /**< Tx level adjustment.	    */
+    int			rx_adj_level;	    /**< Rx level adjustment.	    */
 } pjmedia_conf_port_info;
 
 
@@ -168,7 +170,9 @@ PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
  * @param conf		The conference bridge.
  * @param pool		Pool to allocate buffers for this port.
  * @param strm_port	Stream port interface.
- * @param name		Port name.
+ * @param name		Optional name for the port. If this value is NULL,
+ *			the name will be taken from the name in the port 
+ *			info.
  * @param p_slot	Pointer to receive the slot index of the port in
  *			the conference bridge.
  *
