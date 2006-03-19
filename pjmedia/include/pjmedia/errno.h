@@ -442,6 +442,32 @@ PJ_BEGIN_DECL
 #define PJMEDIA_EWAVETOOSHORT	    (PJMEDIA_ERRNO_START+182)    /* 220182 */
 
 
+/************************************************************
+ * SOUND DEVICE ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * No suitable audio capture device.
+ */
+#define PJMEDIA_ENOSNDREC	    (PJMEDIA_ERRNO_START+200)    /* 220200 */
+/**
+ * @hideinitializer
+ * No suitable audio playback device.
+ */
+#define PJMEDIA_ENOSNDPLAY	    (PJMEDIA_ERRNO_START+201)    /* 220201 */
+/**
+ * @hideinitializer
+ * Invalid sound device ID.
+ */
+#define PJMEDIA_ESNDINDEVID	    (PJMEDIA_ERRNO_START+202)    /* 220202 */
+/**
+ * @hideinitializer
+ * Invalid sample format for sound device.
+ */
+#define PJMEDIA_ESNDINSAMPLEFMT	    (PJMEDIA_ERRNO_START+203)    /* 220203 */
+
+
+
 PJ_END_DECL
 
 #endif	/* __PJMEDIA_ERRNO_H__ */

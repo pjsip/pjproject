@@ -122,6 +122,12 @@ static const struct
     { PJMEDIA_ENOTVALIDWAVE,	    "Not a valid WAVE file" },
     { PJMEDIA_EWAVEUNSUPP,	    "Unsupported WAVE file format" },
     { PJMEDIA_EWAVETOOSHORT,	    "WAVE file too short" },
+
+    /* Sound device errors: */
+    { PJMEDIA_ENOSNDREC,	    "No suitable sound capture device" },
+    { PJMEDIA_ENOSNDPLAY,	    "No suitable sound playback device" },
+    { PJMEDIA_ESNDINDEVID,	    "Invalid sound device ID" },
+    { PJMEDIA_ESNDINSAMPLEFMT,	    "Invalid sample format for sound device" },
 };
 
 #endif	/* PJ_HAS_ERROR_STRING */

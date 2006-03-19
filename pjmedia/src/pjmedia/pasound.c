@@ -85,7 +85,8 @@ static int PaRecorderCallback(const void *input,
     stream->timestamp += frameCount;
 
     status = (*stream->rec_cb)(stream->user_data, stream->timestamp, 
-			       input, frameCount * stream->bytes_per_sample);
+			       input, frameCount * stream->bytes_per_sample *
+			       stream->channel_count);
     
     if (status==0) 
 	return paContinue;
@@ -104,7 +105,8 @@ static int PaPlayerCallback( const void *input,
 {
     pjmedia_snd_stream *stream = userData;
     pj_status_t status;
-    unsigned size = frameCount * stream->bytes_per_sample;
+    unsigned size = frameCount * stream->bytes_per_sample *
+		    stream->channel_count;
 
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(timeInfo);
@@ -206,6 +208,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
     PaStreamParameters inputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
+    unsigned paFrames;
     PaError err;
 
     if (index == -1) {
@@ -217,13 +220,13 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
 	}
 	if (index == count) {
 	    /* No such device. */
-	    return PJ_ENOTFOUND;
+	    return PJMEDIA_ENOSNDREC;
 	}
     } else {
 	paDevInfo = Pa_GetDeviceInfo(index);
 	if (!paDevInfo) {
 	    /* Assumed it is "No such device" error. */
-	    return PJ_ENOTFOUND;
+	    return PJMEDIA_ESNDINDEVID;
 	}
     }
 
@@ -234,7 +237,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
     else if (bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJ_ENOTSUP;
+	return PJMEDIA_ESNDINSAMPLEFMT;
     
     pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
     if (!pool)
@@ -257,9 +260,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
+    /* Frames in PortAudio is number of samples in a single channel */
+    paFrames = samples_per_frame / channel_count;
+
     err = Pa_OpenStream( &stream->stream, &inputParam, NULL,
-			 clock_rate, samples_per_frame, 
-			 0, &PaRecorderCallback, stream );
+			 clock_rate, paFrames, 
+			 paClipOff, &PaRecorderCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
@@ -291,6 +297,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     PaStreamParameters outputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
+    unsigned paFrames;
     PaError err;
 
     if (index == -1) {
@@ -302,13 +309,13 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 	}
 	if (index == count) {
 	    /* No such device. */
-	    return PJ_ENOTFOUND;
+	    return PJMEDIA_ENOSNDPLAY;
 	}
     } else {
 	paDevInfo = Pa_GetDeviceInfo(index);
 	if (!paDevInfo) {
 	    /* Assumed it is "No such device" error. */
-	    return PJ_ENOTFOUND;
+	    return PJMEDIA_ESNDINDEVID;
 	}
     }
 
@@ -319,7 +326,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     else if (bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJ_ENOTSUP;
+	return PJMEDIA_ESNDINSAMPLEFMT;
     
     pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
     if (!pool)
@@ -342,9 +349,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     outputParam.sampleFormat = sampleFormat;
     outputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
+    /* Frames in PortAudio is number of samples in a single channel */
+    paFrames = samples_per_frame / channel_count;
+
     err = Pa_OpenStream( &stream->stream, NULL, &outputParam,
-			 clock_rate,  samples_per_frame, 
-			 0, &PaPlayerCallback, stream );
+			 clock_rate,  paFrames, 
+			 paClipOff, &PaPlayerCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
@@ -352,7 +362,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 
     PJ_LOG(5,(THIS_FILE, "%s opening device %s for playing, sample rate=%d, "
 			 "channel count=%d, "
-			 "%d bits per sample, %d samples per buffer",
+			 "%d bits per sample, %d samples per frame",
 			 (err==0 ? "Success" : "Error"),
 			 paDevInfo->name, clock_rate, channel_count,
 		 	 bits_per_sample, samples_per_frame));
