@@ -77,9 +77,15 @@ void pjsua_default(void)
     pjsua.stun_port1 = pjsua.stun_port2 = 0;
 
     /* Default for media: */
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    pjsua.clock_rate = 44100;
+#else
     pjsua.clock_rate = 8000;
+#endif
     pjsua.complexity = -1;
     pjsua.quality = 4;
+    pjsua.has_wb = 0;
+    pjsua.has_uwb = 0;
 
 
     /* Init accounts: */
@@ -621,10 +627,10 @@ static pj_status_t init_media(void)
 	unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
 
 	/* Register speex. */
-	if (pjsua.clock_rate >= 16000)
-	    option &= ~(PJMEDIA_SPEEX_NO_WB);
-	if (pjsua.clock_rate >= 32000)
-	    option &= ~(PJMEDIA_SPEEX_NO_UWB);
+	if (pjsua.has_wb)
+	    option &= ~PJMEDIA_SPEEX_NO_WB;
+	if (pjsua.has_uwb)
+	    option &= ~PJMEDIA_SPEEX_NO_UWB;
 
 	status = pjmedia_codec_speex_init(pjsua.med_endpt, option, 
 					  pjsua.quality, pjsua.complexity );
@@ -689,9 +695,9 @@ static pj_status_t init_media(void)
 		unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
 
 		/* Register speex. */
-		if (pjsua.clock_rate >= 16000)
+		if (pjsua.has_wb)
 		    option &= ~(PJMEDIA_SPEEX_NO_WB);
-		if (pjsua.clock_rate >= 32000)
+		if (pjsua.has_uwb)
 		    option &= ~(PJMEDIA_SPEEX_NO_UWB);
 
 		status = pjmedia_codec_speex_init(pjsua.med_endpt, option,

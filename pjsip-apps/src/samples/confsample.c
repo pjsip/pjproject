@@ -19,34 +19,33 @@
 
 #include <pjmedia.h>
 
-/*
- * FILE:
- *
- *  confsample.c
- *
- * PURPOSE:
- *
- *  Demonstrate how to use conference bridge.
- *
- * USAGE:
- *
- *  confsample [file1.wav] [file2.wav] ...
- *
- * where:
- *  fileN.wav are optional WAV files to be connected to the conference
- *  bridge. The WAV files MUST have single channel (mono) and 16 bit PCM
- *  samples. It can have arbitrary sampling rate.
- *
- * DESCRIPTION:
- *
- *  Here we create a conference bridge, with at least one port (port zero
- *  is always created for the sound device).
- *
- *  If WAV files are specified, the WAV file player ports will be connected
- *  to slot starting from number one in the bridge. The WAV files can have 
- *  arbitrary sampling rate; the bridge will convert it to its clock rate. 
- *  However, the files MUST have a single audio channel only (i.e. mono).
- */
+static const char *desc = 
+ " FILE:								    \n"
+ "									    \n"
+ "  confsample.c							    \n"
+ "									    \n"
+ " PURPOSE:								    \n"
+ "									    \n"
+ "  Demonstrate how to use conference bridge.				    \n"
+ "									    \n"
+ " USAGE:								    \n"
+ "									    \n"
+ "  confsample [file1.wav] [file2.wav] ...				    \n"
+ "									    \n"
+ " where:								    \n"
+ "  fileN.wav are optional WAV files to be connected to the conference      \n"
+ "  bridge. The WAV files MUST have single channel (mono) and 16 bit PCM    \n"
+ "  samples. It can have arbitrary sampling rate.			    \n"
+ "									    \n"
+ " DESCRIPTION:								    \n"
+ "									    \n"
+ "  Here we create a conference bridge, with at least one port (port zero   \n"
+ "  is always created for the sound device).				    \n"
+ "									    \n"
+ "  If WAV files are specified, the WAV file player ports will be connected \n"
+ "  to slot starting from number one in the bridge. The WAV files can have  \n"
+ "  arbitrary sampling rate; the bridge will convert it to its clock rate.  \n"
+ "  However, the files MUST have a single audio channel only (i.e. mono).   \n";
 
 #include <pjmedia.h>
 #include <pjlib.h>
@@ -58,6 +57,13 @@
 /* For logging purpose. */
 #define THIS_FILE   "confsample.c"
 
+/* Constants */
+#define CLOCK_RATE	44100
+#define NSAMPLES	(CLOCK_RATE * 20 / 1000)
+#define NCHANNELS	1
+#define NBITS		16
+
+ 
 /* 
  * Prototypes: 
  */
@@ -173,10 +179,10 @@ int main(int argc, char *argv[])
      */
     status = pjmedia_conf_create( pool,	    /* pool to use	    */
 				  port_count,/* number of ports	    */
-				  16000,    /* sampling rate	    */
-				  1,	    /* # of channels.	    */
-				  320,	    /* samples per frame    */
-				  16,	    /* bits per sample	    */
+				  CLOCK_RATE,/* sampling rate	    */
+				  NCHANNELS,/* # of channels.	    */
+				  NSAMPLES, /* samples per frame    */
+				  NBITS,    /* bits per sample	    */
 				  0,	    /* options		    */
 				  &conf	    /* result		    */
 				  );

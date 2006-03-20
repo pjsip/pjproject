@@ -180,6 +180,8 @@ struct pjsua
     int		     start_rtp_port;/**< Start of RTP port to try.	*/
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
     unsigned	     clock_rate;    /**< Internal clock rate.		*/
+    pj_bool_t	     has_wb;	    /**< Include wideband codecs	*/
+    pj_bool_t	     has_uwb;	    /**< Include ultra-wideband codecs	*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
     pj_bool_t	     no_mic;	    /**< Disable microphone.		*/

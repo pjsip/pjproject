@@ -86,6 +86,7 @@ static void usage(void)
     puts  ("Media Options:");
     puts  ("  --wb                Enable wideband codecs and set clock-rate to 16KHz");
     puts  ("  --uwb               Enable ultra-wideband codecs and set clock-rate to 32KHz");
+    puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --no-mic            Disable microphone device");
     puts  ("  --play-file=file    Play WAV file in conference bridge");
@@ -226,7 +227,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
-	   OPT_AUTO_CONF,
+	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, OPT_UAS_REFRESH,
@@ -241,6 +242,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "version",	0, 0, OPT_VERSION},
 	{ "wb",		0, 0, OPT_WB},
 	{ "uwb",	0, 0, OPT_UWB},
+	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "no-mic",	0, 0, OPT_NO_MIC},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
@@ -351,11 +353,20 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_WB:
-	    pjsua.clock_rate = 16000;
+	    pjsua.has_wb = 1;
 	    break;
 
 	case OPT_UWB:
-	    pjsua.clock_rate = 32000;
+	    pjsua.has_uwb = 1;
+	    break;
+
+	case OPT_CLOCK_RATE:
+	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (lval < 8000 || lval > 48000) {
+		printf("Error: expecting value between 8000-48000 for clock rate\n");
+		return PJ_EINVAL;
+	    }
+	    pjsua.clock_rate = (int)lval; 
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */
@@ -572,6 +583,12 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	printf("Error: unknown options %s\n", argv[pj_optind]);
 	return PJ_EINVAL;
     }
+
+    /* Adjust clock rate */
+    if (pjsua.clock_rate == 8000 && pjsua.has_uwb)
+	pjsua.clock_rate = 32000;
+    else if (pjsua.clock_rate == 8000 && pjsua.has_wb)
+	pjsua.clock_rate = 16000;
 
     return PJ_SUCCESS;
 }
@@ -905,10 +922,16 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 	pj_strcat2(&cfg, line);
     }
     /* Media clock rate. */
-    if (pjsua.clock_rate >= 32000)
+    if (pjsua.has_uwb)
 	pj_strcat2(&cfg, "--uwb\n");
-    else if (pjsua.clock_rate >= 16000)
+
+    if (pjsua.has_wb)
 	pj_strcat2(&cfg, "--wb\n");
+
+    pj_ansi_sprintf(line, "--clock-rate %d\n",
+		    pjsua.clock_rate);
+    pj_strcat2(&cfg, line);
+
 
     /* Encoding quality and complexity */
     pj_ansi_sprintf(line, "--quality %d\n",
