@@ -16,26 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_COMPAT_TIME_H__
-#define __PJ_COMPAT_TIME_H__
+#ifndef __PJ_COMPAT_M_POWERPC_H__
+#define __PJ_COMPAT_M_POWERPC_H__
 
 /**
- * @file time.h
- * @brief Provides ftime() and localtime() etc functions.
+ * @file m_ppc.h
+ * @brief Describes PowerPC family processor specifics.
  */
 
-#if defined(PJ_HAS_TIME_H) && PJ_HAS_TIME_H != 0
-#  include <time.h>
-#endif
+#define PJ_M_NAME		"powerpc"
 
-#if defined(PJ_HAS_SYS_TIME_H) && PJ_HAS_SYS_TIME_H != 0
-#  include <sys/time.h>
-#endif
-
-#if defined(PJ_HAS_SYS_TIMEB_H) && PJ_HAS_SYS_TIMEB_H != 0
-#  include <sys/timeb.h>
-#endif
+#define PJ_HAS_PENTIUM		0
+#define PJ_IS_LITTLE_ENDIAN	0
+#define PJ_IS_BIG_ENDIAN	1
 
 
-#endif	/* __PJ_COMPAT_TIME_H__ */
+#endif	/* __PJ_COMPAT_M_POWERPC_H__ */
 

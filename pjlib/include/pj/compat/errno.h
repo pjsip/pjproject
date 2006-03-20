@@ -26,9 +26,7 @@
 #   define pj_get_native_os_error()	    GetLastError()
 #   define pj_get_native_netos_error()	    WSAGetLastError()
 
-#elif (defined(PJ_LINUX) && PJ_LINUX != 0) || \
-      (defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0) || \
-      (defined(PJ_SUNOS) && PJ_SUNOS != 0)
+#elif defined(PJ_HAS_ERRNO_VAR) && PJ_HAS_ERRNO_VAR!= 0
 
     typedef int pj_os_err_type;
 #   define pj_get_native_os_error()	    (errno)
@@ -36,7 +34,7 @@
 
 #else
 
-#   error "Please define pj_os_err_type for this platform here!"
+#   error "Please define how to get errno for this platform here!"
 
 #endif
 

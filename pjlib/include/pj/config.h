@@ -51,6 +51,8 @@
 #  include <pj/compat/os_palmos.h>
 #elif defined(PJ_SUNOS) && PJ_SUNOS!=0
 #  include <pj/compat/os_sunos.h>
+#elif defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+#  include <pj/compat/os_darwinos.h>
 #else
 #  error "Please specify target os."
 #endif
@@ -69,6 +71,8 @@
 #   include <pj/compat/m_sparc.h>
 #elif defined (PJ_M_ARMV4) && PJ_M_ARMV4 != 0
 #   include <pj/compat/m_armv4.h>
+#elif defined (PJ_M_POWERPC) && PJ_M_POWERPC != 0
+#   include <pj/compat/m_powerpc.h>
 #else
 #  error "Please specify target machine."
 #endif
@@ -246,7 +250,8 @@
  * maximum number of socket handles passed to select() (i.e. FD_SETSIZE will 
  * be set to this value).
  *
- * Default: 256 (64 for WinCE)
+ * Default: if FD_SETSIZE is defined and the value is greather than 256,
+ *          then it will be used.  Otherwise 256 (64 for WinCE).
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
 #   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0

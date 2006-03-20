@@ -24,7 +24,6 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 #include <pj/guid.h>
-#include <pj/compat/sprintf.h>
 #include <pj/except.h>
 #include <pj/errno.h>
 
@@ -204,9 +203,9 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->thread = pthread_self();
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
-	pj_sprintf(thread->obj_name, cstr_thread_name, thread->thread);
+	pj_ansi_sprintf(thread->obj_name, cstr_thread_name, thread->thread);
     else
-	pj_sprintf(thread->obj_name, "thr%p", (void*)thread->thread);
+	pj_ansi_sprintf(thread->obj_name, "thr%p", (void*)thread->thread);
     
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)
@@ -314,7 +313,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 	thread_name = "thr%p";
     
     if (strchr(thread_name, '%')) {
-	pj_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
+	pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
 	strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
 	rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
@@ -804,7 +803,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 	name = "mtx%p";
     }
     if (strchr(name, '%')) {
-	pj_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
+	pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
 	strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
 	mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
@@ -1125,7 +1124,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 	name = "sem%p";
     }
     if (strchr(name, '%')) {
-	pj_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
+	pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
 	strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
 	sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';

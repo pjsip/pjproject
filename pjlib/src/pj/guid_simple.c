@@ -20,7 +20,6 @@
 #include <pj/os.h>
 #include <pj/rand.h>
 #include <pj/string.h>
-#include <pj/compat/sprintf.h>
 
 const unsigned PJ_GUID_STRING_LENGTH=20;
 

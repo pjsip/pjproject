@@ -21,18 +21,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
-{
-    struct timeb tb;
-
-    PJ_CHECK_STACK();
-
-    ftime(&tb);
-    tv->sec = tb.time;
-    tv->msec = tb.millitm;
-    return PJ_SUCCESS;
-}
-
 PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 {
     struct tm *local_time;

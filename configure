@@ -3,7 +3,7 @@
 #
 # Detect machine
 #
-MACHINE=`uname -m`
+MACHINE=`uname -p`
 
 if echo $MACHINE | grep sun4u > /dev/null; then
     MACHINE_NAME=sparc
@@ -11,8 +11,10 @@ elif echo $MACHINE | grep i.86 > /dev/null; then
     MACHINE_NAME=i386
 elif echo $MACHINE | grep alpha > /dev/null; then
     MACHINE_NAME=alpha
+elif echo $MACHINE | grep powerpc > /dev/null; then
+    MACHINE_NAME=powerpc
 else
-    echo "Unable to detect processor type ('uname -m' == '$MACHINE')"
+    echo "Unable to detect processor type ('uname -p' == '$MACHINE')"
     exit 1
 fi
 
@@ -44,6 +46,9 @@ elif echo $SYSTEM | grep -i mingw > /dev/null; then
 elif echo $SYSTEM | grep -i cygwin > /dev/null; then
     OS_NAME=win32
     HOST_NAME=mingw
+elif echo $SYSTEM | grep -i darwin > /dev/null; then
+    OS_NAME=darwinos
+    HOST_NAME=unix
 else
     echo "Unable to detect system type ('uname -s' == '$SYSTEM')"
     exit 1

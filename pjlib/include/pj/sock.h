@@ -156,10 +156,20 @@ typedef enum pj_socket_sd_type
 
 /**
  * Structure describing a generic socket address.
+ * If PJ_SOCKADDR_HAS_LEN is not zero, then sa_zero_len member is added
+ * to this struct. As far the application is concerned, the value of
+ * this member will always be zero. Internally, PJLIB may modify the value
+ * before calling OS socket API, and reset the value back to zero before
+ * returning the struct to application.
  */
 typedef struct pj_sockaddr
 {
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+    pj_uint8_t  sa_zero_len;
+    pj_uint8_t  sa_family;
+#else
     pj_uint16_t	sa_family;	/**< Common data: address family.   */
+#endif
     char	sa_data[14];	/**< Address data.		    */
 } pj_sockaddr;
 
@@ -175,10 +185,20 @@ typedef struct pj_in_addr
 
 /**
  * This structure describes Internet socket address.
+ * If PJ_SOCKADDR_HAS_LEN is not zero, then sin_zero_len member is added
+ * to this struct. As far the application is concerned, the value of
+ * this member will always be zero. Internally, PJLIB may modify the value
+ * before calling OS socket API, and reset the value back to zero before
+ * returning the struct to application.
  */
 struct pj_sockaddr_in
 {
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+    pj_uint8_t  sin_zero_len;	/**< Just ignore this.		    */
+    pj_uint8_t  sin_family;	/**< Address family.		    */
+#else
     pj_uint16_t	sin_family;	/**< Address family.		    */
+#endif
     pj_uint16_t	sin_port;	/**< Transport layer port number.   */
     pj_in_addr	sin_addr;	/**< IP address.		    */
     char	sin_zero[8];	/**< Padding.			    */
@@ -212,10 +232,20 @@ typedef struct pj_in6_addr
 
 /**
  * This structure describes IPv6 socket address.
+ * If PJ_SOCKADDR_HAS_LEN is not zero, then sin_zero_len member is added
+ * to this struct. As far the application is concerned, the value of
+ * this member will always be zero. Internally, PJLIB may modify the value
+ * before calling OS socket API, and reset the value back to zero before
+ * returning the struct to application.
  */
 typedef struct pj_sockaddr_in6
 {
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+    pj_uint8_t  sin_zero_len;	    /**< Just ignore this.	   */
+    pj_uint8_t  sin_family;	    /**< Address family.	   */
+#else
     pj_uint16_t	sin6_family;	    /**< Address family		    */
+#endif
     pj_uint16_t	sin6_port;	    /**< Transport layer port number. */
     pj_uint32_t	sin6_flowinfo;	    /**< IPv6 flow information	    */
     pj_in6_addr sin6_addr;	    /**< IPv6 address.		    */

@@ -57,7 +57,7 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.release_pool = &cpool_release_pool;
     cp->factory.dump_status = &cpool_dump_status;
 
-    cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 128, 
+    cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 256, 
 				  0, NULL);
     i = pj_mutex_create_simple(cp->pool, "cachingpool", &cp->mutex);
 }

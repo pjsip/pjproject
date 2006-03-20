@@ -16,26 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_COMPAT_TIME_H__
-#define __PJ_COMPAT_TIME_H__
+#include <pj/os.h>
+#include <pj/compat/time.h>
 
-/**
- * @file time.h
- * @brief Provides ftime() and localtime() etc functions.
- */
-
-#if defined(PJ_HAS_TIME_H) && PJ_HAS_TIME_H != 0
-#  include <time.h>
+#if defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H!=0
+#    include <unistd.h>
 #endif
 
-#if defined(PJ_HAS_SYS_TIME_H) && PJ_HAS_SYS_TIME_H != 0
-#  include <sys/time.h>
-#endif
+///////////////////////////////////////////////////////////////////////////////
 
-#if defined(PJ_HAS_SYS_TIMEB_H) && PJ_HAS_SYS_TIMEB_H != 0
-#  include <sys/timeb.h>
-#endif
+PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *p_tv)
+{
+    struct timeval tv;
 
+    PJ_CHECK_STACK();
 
-#endif	/* __PJ_COMPAT_TIME_H__ */
+    gettimeofday(&tv, NULL);
+    p_tv->sec = tv.tv_sec;
+    p_tv->msec = tv.tv_usec / 1000;
+    return PJ_SUCCESS;
+}
 

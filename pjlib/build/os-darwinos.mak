@@ -1,5 +1,5 @@
 #
-# PJLIB OS specific configuration for SunOS target. 
+# PJLIB OS specific configuration for Darwin/MacOSX target. 
 #
 
 #
@@ -11,11 +11,12 @@ export PJLIB_OBJS += 	addr_resolv_sock.o guid_simple.o \
 			log_writer_stdout.o os_core_unix.o \
 			os_error_unix.o os_time_unix.o \
 			os_timestamp_common.o os_timestamp_linux.o \
-			os_time_ansi.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
 export PJLIB_OBJS += ioqueue_select.o 
 #export PJLIB_OBJS += ioqueue_epoll.o
+
+export PJLIB_OBJS += file_access_unistd.o file_io_ansi.o
 
 #
 # TEST_OBJS are operating system specific object files to be included in
@@ -26,7 +27,7 @@ export TEST_OBJS +=	main.o
 #
 # Additional LDFLAGS for pjlib-test
 #
-export TEST_LDFLAGS += -lm
+export TEST_LDFLAGS += -lm 
 
 #
 # TARGETS are make targets in the Makefile, to be executed for this given

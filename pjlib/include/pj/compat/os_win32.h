@@ -49,6 +49,7 @@
 #define PJ_HAS_SYS_IOCTL_H	    0
 #define PJ_HAS_SYS_SELECT_H	    0
 #define PJ_HAS_SYS_SOCKET_H	    0
+#define PJ_HAS_SYS_TIME_H	    0
 #define PJ_HAS_SYS_TIMEB_H	    1
 #define PJ_HAS_SYS_TYPES_H	    1
 #define PJ_HAS_TIME_H		    1
@@ -59,6 +60,11 @@
 #define PJ_HAS_WINSOCK2_H	    1
 
 #define PJ_SOCK_HAS_INET_ATON	    0
+#define PJ_SOCKADDR_HAS_LEN	    0
+
+/* Is errno a good way to retrieve OS errors? (No)
+ */
+#define PJ_HAS_ERRNO_VAR	    0
 
 /* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
  * the status of non-blocking connect() operation.

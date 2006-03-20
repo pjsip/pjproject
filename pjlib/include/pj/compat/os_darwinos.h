@@ -16,22 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_COMPAT_OS_SUNOS_H__
-#define __PJ_COMPAT_OS_SUNOS_H__
+#ifndef __PJ_COMPAT_OS_DARWINOS_H__
+#define __PJ_COMPAT_OS_DARWINOS_H__
 
 /**
- * @file os_sunos.h
- * @brief Describes SunOS/Solaris operating system specifics.
+ * @file os_darwinos.h
+ * @brief Describes Darwin/MacOSX operating system specifics.
  */
 
-#define PJ_OS_NAME		    "sunos"
+#define PJ_OS_NAME		    "darwin"
 
 #define PJ_HAS_ARPA_INET_H	    1
 #define PJ_HAS_ASSERT_H		    1
 #define PJ_HAS_CTYPE_H		    1
 #define PJ_HAS_ERRNO_H		    1
 #define PJ_HAS_LINUX_SOCKET_H	    0
-#define PJ_HAS_MALLOC_H		    1
+#define PJ_HAS_MALLOC_H		    0
 #define PJ_HAS_NETDB_H		    1
 #define PJ_HAS_NETINET_IN_H	    1
 #define PJ_HAS_SETJMP_H		    1
@@ -43,7 +43,7 @@
 #define PJ_HAS_SYS_IOCTL_H	    1
 #define PJ_HAS_SYS_SELECT_H	    1
 #define PJ_HAS_SYS_SOCKET_H	    1
-#define PJ_HAS_SYS_TIME_H	    0
+#define PJ_HAS_SYS_TIME_H	    1
 #define PJ_HAS_SYS_TIMEB_H	    1
 #define PJ_HAS_SYS_TYPES_H	    1
 #define PJ_HAS_TIME_H		    1
@@ -53,17 +53,18 @@
 #define PJ_HAS_WINSOCK_H	    0
 #define PJ_HAS_WINSOCK2_H	    0
 
-#define PJ_SOCK_HAS_INET_ATON	    0
-#define PJ_SOCKADDR_HAS_LEN	    0
-
 /* Is errno a good way to retrieve OS errors?
  */
 #define PJ_HAS_ERRNO_VAR	    1
 
+/* Has inet_aton() ?
+ */   
+#define PJ_SOCK_HAS_INET_ATON	    1
+
 /* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
  * the status of non-blocking connect() operation.
  */
-#define PJ_HAS_SO_ERROR             0
+#define PJ_HAS_SO_ERROR             1
 
 /* This value specifies the value set in errno by the OS when a non-blocking
  * socket recv() can not return immediate daata.
@@ -89,8 +90,21 @@
 
 #define PJ_ATOMIC_VALUE_TYPE		long
 
-/* Get BSD related identifers in Sun's include files */
-#define BSD_COMP
+/*
+ * Socket related
+ */
+typedef int socklen_t;
+#define PJ_SOCKADDR_HAS_LEN		1
 
-#endif	/* __PJ_COMPAT_OS_SUNOS_H__ */
+/*
+ * gcc complains that it can not use precompiled header because
+ * the value of FD_SETSIZE that we declare in pj/config.h is
+ * different than the value in /usr/include/sys/types.h.
+ *
+ * This changes the default value for Darwin.
+ */
+#define PJ_IOQUEUE_MAX_HANDLES		1024
+
+
+#endif	/* __PJ_COMPAT_OS_DARWINOS_H__ */
 

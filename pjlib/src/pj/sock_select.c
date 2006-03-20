@@ -26,6 +26,10 @@
 #   include <string.h>
 #endif
 
+#if defined(PJ_HAS_SYS_TIME_H) && PJ_HAS_SYS_TIME_H!=0
+#   include <sys/time.h>
+#endif
+
 #ifdef _MSC_VER
 #   pragma warning(disable: 4018)    // Signed/unsigned mismatch in FD_*
 #   pragma warning(disable: 4389)    // Signed/unsigned mismatch in FD_*

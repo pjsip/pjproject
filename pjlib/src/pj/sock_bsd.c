@@ -82,6 +82,15 @@ const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
 
 
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+#   define SET_LEN(addr,len) (((pj_sockaddr*)(addr))->sa_zero_len=(len))
+#   define RESET_LEN(addr)   (((pj_sockaddr*)(addr))->sa_zero_len=0)
+#else
+#   define SET_LEN(addr,len) 
+#   define RESET_LEN(addr)
+#endif
+
+
 /*
  * Convert 16-bit value from network byte order to host byte order.
  */
@@ -190,6 +199,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
     PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
                      (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
 
+    RESET_LEN(addr);
     addr->sin_family = AF_INET;
 
     if (str_addr && str_addr->slen) {
@@ -226,6 +236,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 {
     PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
 
+    RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
     pj_sockaddr_in_set_port(addr, port);
     return pj_sockaddr_in_set_str_addr(addr, str_addr);
@@ -346,6 +357,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     PJ_CHECK_STACK();
 
+    SET_LEN(&addr, sizeof(pj_sockaddr_in));
     addr.sin_family = PJ_AF_INET;
     addr.sin_addr.s_addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);
@@ -385,8 +397,10 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
     PJ_CHECK_STACK();
     if (getpeername(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
+    else {
+	RESET_LEN(addr);
 	return PJ_SUCCESS;
+    }
 }
 
 /*
@@ -399,8 +413,10 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
     PJ_CHECK_STACK();
     if (getsockname(sock, (struct sockaddr*)addr, (socklen_t*)namelen) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
+    else {
+	RESET_LEN(addr);
 	return PJ_SUCCESS;
+    }
 }
 
 /*
@@ -483,8 +499,10 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
 
     if (*len < 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
+    else {
+	RESET_LEN(from);
 	return PJ_SUCCESS;
+    }
 }
 
 /*
@@ -574,11 +592,25 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(newsock != NULL, PJ_EINVAL);
 
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+    if (addr) {
+	SET_LEN(addr, *addrlen);
+    }
+#endif
+    
     *newsock = accept(serverfd, (struct sockaddr*)addr, (socklen_t*)addrlen);
     if (*newsock==PJ_INVALID_SOCKET)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
+    else {
+	
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+	if (addr) {
+	    RESET_LEN(addr);
+	}
+#endif
+	    
 	return PJ_SUCCESS;
+    }
 }
 #endif	/* PJ_HAS_TCP */
 
