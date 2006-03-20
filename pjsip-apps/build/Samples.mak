@@ -41,7 +41,7 @@ BINDIR := ../bin/samples
 CFLAGS = $(_CFLAGS)
 LDFLAGS = $(_LDFLAGS)
 
-SAMPLES := simpleua playfile playsine confsample sndinfo
+SAMPLES := simpleua playfile playsine confsample sndinfo level
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE))
 
