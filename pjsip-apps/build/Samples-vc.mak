@@ -38,7 +38,7 @@ BINDIR = ..\bin\samples
 
 
 SAMPLES = $(BINDIR)\simpleua.exe $(BINDIR)\playfile.exe $(BINDIR)\playsine.exe \
-	  $(BINDIR)\confsample.exe
+	  $(BINDIR)\confsample.exe $(BINDIR)\sndinfo.exe
 
 all: $(OBJDIR) $(SAMPLES)
 

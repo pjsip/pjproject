@@ -61,7 +61,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 # Main entry
 #
 #
-TARGETS := pjsua pjsip-perf
+TARGETS := pjsua pjsip-perf samples
 
 .PHONY: $(TARGETS)
 
@@ -81,6 +81,8 @@ pjsua:
 pjsip-perf:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIPPERF app=pjsip-perf $(PJSUA_EXE)
 
+samples:
+	$(MAKE) -f Samples.mak
 
 .PHONY: ../lib/pjsua.ko
 ../lib/pjsua.ko:
@@ -89,6 +91,7 @@ pjsip-perf:
 clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIPPERF app=pjsip-perf $@
+	$(MAKE) -f Samples.mak $@
 	@if test "$@" == "depend"; then \
 	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB) Makefile' >> .pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	  echo '$(PJSIPPERF_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjsip-perf-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
