@@ -65,7 +65,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			codec.o conference.o endpoint.o errno.o file_port.o \
-			g711.o jbuf.o null_port.o pasound.o port.o resample.o rtcp.o \
+			g711.o jbuf.o null_port.o port.o resample.o rtcp.o \
 			rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
 			sound_port.o stream.o $(SOUND_OBJS) $(NULLSOUND_OBJS)
 

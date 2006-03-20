@@ -29,15 +29,9 @@
 
 PJ_BEGIN_DECL
 
-#if PJ_IS_BIG_ENDIAN
-#   define PJMEDIA_RIFF_TAG	('R'<<24|'I'<<16|'F'<<8|'F')
-#   define PJMEDIA_WAVE_TAG	('W'<<24|'A'<<16|'V'<<8|'E')
-#   define PJMEDIA_FMT_TAG	('f'<<24|'m'<<16|'t'<<8|' ')
-#else
-#   define PJMEDIA_RIFF_TAG	('F'<<24|'F'<<16|'I'<<8|'R')
-#   define PJMEDIA_WAVE_TAG	('E'<<24|'V'<<16|'A'<<8|'W')
-#   define PJMEDIA_FMT_TAG	(' '<<24|'t'<<16|'m'<<8|'f')
-#endif
+#define PJMEDIA_RIFF_TAG	('F'<<24|'F'<<16|'I'<<8|'R')
+#define PJMEDIA_WAVE_TAG	('E'<<24|'V'<<16|'A'<<8|'W')
+#define PJMEDIA_FMT_TAG		(' '<<24|'t'<<16|'m'<<8|'f')
 
 
 /**
@@ -78,3 +72,4 @@ typedef struct pjmedia_wave_hdr pjmedia_wave_hdr;
 PJ_END_DECL
 
 #endif	/* __PJMEDIA_WAVE_H__ */
+

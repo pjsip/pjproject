@@ -49,8 +49,12 @@
 #endif  /* _WIN32 */
 
 #include "portaudio.h"
-#include "pa_host.h"
+//#include "pa_host.h"
 #include "pa_trace.h"
+
+typedef PaDeviceIndex PaDeviceID;
+typedef PaStream      PortAudioStream;
+#define DLL_API
 
 /* The reason we might NOT want to validate the rate before opening the stream
  * is because many DirectSound drivers lie about the rates they actually support.

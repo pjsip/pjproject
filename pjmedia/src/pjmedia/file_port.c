@@ -37,6 +37,47 @@
 
 #define SIGNATURE	('F'<<24|'I'<<16|'L'<<8|'E')
 
+#if 1
+#   define TRACE_(x)	PJ_LOG(4,x)
+#else
+#   define TRACE_(x)
+#endif
+
+#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
+    PJ_INLINE(pj_int16_t) swap16(pj_int16_t val)
+    {
+	pj_uint8_t *p = (pj_uint8_t*)&val;
+	pj_uint8_t tmp = *p;
+	*p = *(p+1);
+	*(p+1) = tmp;
+	return val;
+    }
+    PJ_INLINE(pj_int32_t) swap32(pj_int32_t val)
+    {
+	pj_uint8_t *p = (pj_uint8_t*)&val;
+	pj_uint8_t tmp = *p;
+	*p = *(p+3);
+	*(p+3) = tmp;
+	tmp = *(p+1);
+	*(p+1) = *(p+2);
+	*(p+2) = tmp;
+	return val;
+    }
+#   define SWAP16(val16)	swap16(val16)
+#   define SWAP32(val32)	swap32(val32)
+    static void samples_to_host(pj_int16_t *samples, unsigned count)
+    {
+	unsigned i;
+	for (i=0; i<count; ++i) {
+	    samples[i] = SWAP16(samples[i]);
+	}
+    }
+#else
+#   define SWAP16(val16)	(val16)
+#   define SWAP32(val32)	(val32)
+#   define samples_to_host(samples,count)
+#endif
+
 struct file_port
 {
     pjmedia_port     base;
@@ -128,8 +169,40 @@ static pj_status_t fill_buffer(struct file_port *fport)
 	}
     }
 
+    /* Convert samples to host rep */
+    samples_to_host((pj_int16_t*)fport->buf, fport->bufsize/2);
+
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Change the endianness of WAVE header fields.
+ */
+void pjmedia_wave_hdr_swap_bytes( pjmedia_wave_hdr *hdr )
+{
+    hdr->riff_hdr.riff		    = SWAP32(hdr->riff_hdr.riff);
+    hdr->riff_hdr.file_len	    = SWAP32(hdr->riff_hdr.file_len);
+    hdr->riff_hdr.wave		    = SWAP32(hdr->riff_hdr.wave);
+    
+    hdr->fmt_hdr.fmt		    = SWAP32(hdr->fmt_hdr.fmt);
+    hdr->fmt_hdr.len		    = SWAP32(hdr->fmt_hdr.len);
+    hdr->fmt_hdr.fmt_tag	    = SWAP16(hdr->fmt_hdr.fmt_tag);
+    hdr->fmt_hdr.nchan		    = SWAP16(hdr->fmt_hdr.nchan);
+    hdr->fmt_hdr.sample_rate	    = SWAP32(hdr->fmt_hdr.sample_rate);
+    hdr->fmt_hdr.bytes_per_sec	    = SWAP32(hdr->fmt_hdr.bytes_per_sec);
+    hdr->fmt_hdr.block_align	    = SWAP16(hdr->fmt_hdr.block_align);
+    hdr->fmt_hdr.bits_per_sample    = SWAP16(hdr->fmt_hdr.bits_per_sample);
+    
+    hdr->data_hdr.data		    = SWAP32(hdr->data_hdr.data);
+    hdr->data_hdr.len		    = SWAP32(hdr->data_hdr.len);
+}
+
+
+#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
+#   define normalize_wave_hdr(hdr)  pjmedia_wave_hdr_swap_bytes(hdr)
+#endif
+
 
 /*
  * Create WAVE player port.
@@ -190,12 +263,20 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
+    /* Normalize WAVE header fields value (only used in big-endian hosts) */
+    normalize_wave_hdr(&wave_hdr);
+    
     /* Validate WAVE file. */
     if (wave_hdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
 	wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
 	wave_hdr.fmt_hdr.fmt != PJMEDIA_FMT_TAG)
     {
 	pj_file_close(fport->fd);
+	TRACE_((THIS_FILE, 
+		"actual value|expected riff=%x|%x, wave=%x|%x fmt=%x|%x",
+		wave_hdr.riff_hdr.riff, PJMEDIA_RIFF_TAG,
+		wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG,
+		wave_hdr.fmt_hdr.fmt, PJMEDIA_FMT_TAG));
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 

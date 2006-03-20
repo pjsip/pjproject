@@ -148,8 +148,8 @@ static PaError conv_err(OSStatus error)
             result = paInvalidDevice; break;
         case kAudioHardwareBadStreamError:
             result = paBadStreamPtr; break;
-        case kAudioHardwareUnsupportedOperationError:
-            result = paInternalError; break;
+//        case kAudioHardwareUnsupportedOperationError:
+//            result = paInternalError; break;
         case kAudioDeviceUnsupportedFormatError:
             result = paSampleFormatNotSupported; break;
         case kAudioDevicePermissionsError:
@@ -410,6 +410,7 @@ static OSStatus CopyInputData(PaMacClientData* destination, const AudioBufferLis
         coreAudioBuffer += sizeof(Float32);
         portAudioBuffer += Pa_GetSampleSize(destination->inputSampleFormat) * channelSpacing;
     }
+    return 0;
 }
 
 static OSStatus CopyOutputData(AudioBufferList* destination, PaMacClientData *source, unsigned long frameCount)
@@ -439,6 +440,7 @@ static OSStatus CopyOutputData(AudioBufferList* destination, PaMacClientData *so
         coreAudioBuffer += sizeof(Float32);
         portAudioBuffer += Pa_GetSampleSize(source->outputSampleFormat) * channelSpacing;
     }    
+    return 0;
 }
 
 static OSStatus AudioIOProc( AudioDeviceID inDevice,
@@ -470,6 +472,7 @@ static OSStatus AudioIOProc( AudioDeviceID inDevice,
     if (result == paComplete || result == paAbort) {
         Pa_StopStream(clientData->stream);
     }
+    return 0;
 }
 
 // This is not for input-only streams, this is for streams where the input device is different from the output device
@@ -494,6 +497,7 @@ static OSStatus AudioInputProc( AudioDeviceID inDevice,
     clientData->callback(clientData->inputBuffer, NULL, frameCount, timeInfo, paNoFlag, clientData->userData);
     
     PaUtil_EndCpuLoadMeasurement( &clientData->stream->cpuLoadMeasurer, frameCount );
+    return 0;
 }
 
 // This is not for output-only streams, this is for streams where the input device is different from the output device
@@ -518,6 +522,7 @@ static OSStatus AudioOutputProc( AudioDeviceID inDevice,
     CopyOutputData(outOutputData, clientData, frameCount);
 
     PaUtil_EndCpuLoadMeasurement( &clientData->stream->cpuLoadMeasurer, frameCount );
+    return 0;
 }
 
 static PaError SetSampleRate(AudioDeviceID device, double sampleRate, int isInput)

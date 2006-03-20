@@ -1,5 +1,5 @@
 #
-# OS specific configuration for Win32 OS target. 
+# OS specific configuration for Linux OS target. 
 #
 
 #
