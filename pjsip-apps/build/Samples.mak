@@ -38,9 +38,6 @@ SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
 BINDIR := ../bin/samples
 
-CFLAGS = $(_CFLAGS)
-LDFLAGS = $(_LDFLAGS)
-
 SAMPLES := simpleua playfile playsine confsample sndinfo level
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE))
@@ -53,7 +50,7 @@ $(BINDIR)/%-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEX
 	    $(_LDFLAGS)
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) \
+	$(CC) $(_CFLAGS) \
 	  $(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 	  $(subst /,$(HOST_PSEP),$<) 
 
