@@ -9,7 +9,7 @@
 #
 export PJLIB_OBJS += 	addr_resolv_sock.o guid_win32.o  \
 			log_writer_stdout.o os_core_win32.o \
-			os_error_win32.o os_time_ansi.o os_timestamp_common.o \
+			os_error_win32.o os_time_bsd.o os_timestamp_common.o \
 			os_timestamp_win32.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 

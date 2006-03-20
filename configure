@@ -4,6 +4,9 @@
 # Detect machine
 #
 MACHINE=`uname -p`
+if echo $MACHINE | grep unknown > /dev/null; then
+    MACHINE=`uname -m`
+fi;
 
 if echo $MACHINE | grep sun4u > /dev/null; then
     MACHINE_NAME=sparc

@@ -201,6 +201,8 @@ void pjmedia_wave_hdr_swap_bytes( pjmedia_wave_hdr *hdr )
 
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
 #   define normalize_wave_hdr(hdr)  pjmedia_wave_hdr_swap_bytes(hdr)
+#else
+#   define normalize_wave_hdr(hdr)
 #endif
 
 
