@@ -90,6 +90,10 @@ SOURCE=..\src\samples\confsample.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\level.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\playfile.c
 # End Source File
 # Begin Source File
@@ -99,6 +103,10 @@ SOURCE=..\src\samples\playsine.c
 # Begin Source File
 
 SOURCE=..\src\samples\simpleua.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\sndinfo.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

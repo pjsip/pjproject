@@ -237,18 +237,21 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
      */
     if (conf_port->clock_rate != conf->clock_rate) {
 
-	double factor;
+	pj_bool_t high_quality;
+	pj_bool_t large_filter;
 
-	factor = 1.0 * conf_port->clock_rate / conf->clock_rate;
+	high_quality = ((conf->options & PJMEDIA_CONF_USE_LINEAR)==0);
+	large_filter = ((conf->options & PJMEDIA_CONF_SMALL_FILTER)==0);
 
 	/* Create resample for rx buffer. */
 	status = pjmedia_resample_create( pool, 
-					  PJ_TRUE,  /* High quality */
-					  PJ_TRUE,  /* Large filter */
+					  high_quality,
+					  large_filter,
 					  conf_port->clock_rate,/* Rate in */
 					  conf->clock_rate, /* Rate out */
-					  (unsigned)(conf->samples_per_frame * 
-						     factor),
+					  conf->samples_per_frame * 
+					    conf_port->clock_rate /
+					    conf->clock_rate,
 					  &conf_port->rx_resample);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -256,8 +259,8 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
 	/* Create resample for tx buffer. */
 	status = pjmedia_resample_create(pool,
-					 PJ_TRUE,   /* High quality */
-					 PJ_TRUE,   /* Large filter */
+					 high_quality,
+					 large_filter,
 					 conf->clock_rate,  /* Rate in */
 					 conf_port->clock_rate, /* Rate out */
 					 conf->samples_per_frame,

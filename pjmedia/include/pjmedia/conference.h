@@ -61,6 +61,9 @@ enum pjmedia_conf_option
     PJMEDIA_CONF_NO_MIC  = 1,	/**< Disable audio streams from the
 				     microphone device.			    */
     PJMEDIA_CONF_NO_DEVICE = 2,	/**< Do not create sound device.	    */
+    PJMEDIA_CONF_SMALL_FILTER=4,/**< Use small filter table when resampling */
+    PJMEDIA_CONF_USE_LINEAR=8,	/**< Use linear resampling instead of filter
+				     based.				    */
 };
 
 

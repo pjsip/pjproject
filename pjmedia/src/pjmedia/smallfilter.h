@@ -2,7 +2,7 @@
 #define SMALL_FILTER_NMULT ((HWORD)13)
 #define SMALL_FILTER_SCALE 13128 /* Unity-gain scale factor */
 #define SMALL_FILTER_NWING 1536 /* Filter table length */
-static HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
+static const HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
 32767,
 32766,
 32764,
@@ -1541,7 +1541,7 @@ static HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
 -1
 };
 
-static HWORD SMALL_FILTER_IMPD[] = {
+static const HWORD SMALL_FILTER_IMPD[] = {
 -1,
 -2,
 -4,

@@ -41,10 +41,32 @@
 
 /**
  * Unless specified otherwise, G711 codec is included by default.
+ * Note that there are parts of G711 codec (such as linear2ulaw) that are 
+ * needed by other PJMEDIA components (e.g. silence detector, conference).
+ * Thus disabling G711 is generally not a good idea.
  */
 #ifndef PJMEDIA_HAS_G711_CODEC
 #   define PJMEDIA_HAS_G711_CODEC	    1
 #endif
 
 
+/**
+ * Include small filter table in resample.
+ * This adds about 9KB in rdata.
+ */
+#ifndef PJMEDIA_HAS_SMALL_FILTER
+#   define PJMEDIA_HAS_SMALL_FILTER	    1
+#endif
+
+
+/**
+ * Include large filter table in resample.
+ * This adds about 32KB in rdata.
+ */
+#ifndef PJMEDIA_HAS_LARGE_FILTER
+#   define PJMEDIA_HAS_LARGE_FILTER	    1
+#endif
+
+
 #endif	/* __PJMEDIA_CONFIG_H__ */
+

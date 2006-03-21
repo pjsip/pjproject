@@ -65,8 +65,11 @@
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 
+
+#define THIS_FILE   "resample.c"
 
 
 /*
@@ -191,8 +194,26 @@ typedef unsigned int   UWORD;
 #   pragma warning(disable: 4761)   // integral size mismatch in argument; conversion supplied
 #endif
 
-#include "smallfilter.h"
-#include "largefilter.h"
+#if defined(PJMEDIA_HAS_SMALL_FILTER) && PJMEDIA_HAS_SMALL_FILTER!=0
+#   include "smallfilter.h"
+#else
+#   define SMALL_FILTER_NMULT	0
+#   define SMALL_FILTER_SCALE	0
+#   define SMALL_FILTER_NWING	0
+#   define SMALL_FILTER_IMP	NULL
+#   define SMALL_FILTER_IMPD	NULL
+#endif
+
+#if defined(PJMEDIA_HAS_LARGE_FILTER) && PJMEDIA_HAS_LARGE_FILTER!=0
+#   include "largefilter.h"
+#else
+#   define LARGE_FILTER_NMULT	0
+#   define LARGE_FILTER_SCALE	0
+#   define LARGE_FILTER_NWING	0
+#   define LARGE_FILTER_IMP	NULL
+#   define LARGE_FILTER_IMPD	NULL
+#endif
+
 
 #undef INLINE
 #define INLINE
@@ -479,6 +500,31 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     if (rate_out < rate_in) {
 	high_quality = 0;
     }
+
+#if !defined(PJMEDIA_HAS_LARGE_FILTER) || PJMEDIA_HAS_LARGE_FILTER==0
+    /*
+     * If large filter is excluded in the build, then prevent application
+     * from using it.
+     */
+    if (high_quality && large_filter) {
+	large_filter = PJ_FALSE;
+	PJ_LOG(5,(THIS_FILE, 
+		  "Resample uses small filter because large filter is "
+		  "disabled"));
+    }
+#endif
+
+#if !defined(PJMEDIA_HAS_SMALL_FILTER) || PJMEDIA_HAS_SMALL_FILTER==0
+    /*
+     * If small filter is excluded in the build and application wants to
+     * use it, then drop to linear conversion.
+     */
+    if (high_quality && large_filter == 0) {
+	high_quality = PJ_FALSE;
+	PJ_LOG(4,(THIS_FILE, 
+		  "Resample uses linear because small filter is disabled"));
+    }
+#endif
 
     resample->factor = rate_out * 1.0 / rate_in;
     resample->large_filter = large_filter;

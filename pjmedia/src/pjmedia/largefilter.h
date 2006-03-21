@@ -2,7 +2,7 @@
 #define LARGE_FILTER_NMULT ((HWORD)65)
 #define LARGE_FILTER_SCALE 14746 /* Unity-gain scale factor */
 #define LARGE_FILTER_NWING 8192 /* Filter table length */
-static HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
+static const HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
 32767,
 32766,
 32764,
@@ -8196,7 +8196,7 @@ static HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
 0,
 0};
 
-static HWORD LARGE_FILTER_IMPD[] /* Impulse response differences */ = {
+static const HWORD LARGE_FILTER_IMPD[] /* Impulse response differences */ = {
 -1,
 -2,
 -3,
