@@ -125,7 +125,16 @@ static int simple_thread(const char *title, unsigned flags)
 	return -1010;
     }
 
+    pj_thread_sleep(500);
+
     if (flags & PJ_THREAD_SUSPENDED) {
+
+	/* Check that counter is still zero */
+	if (counter != 0) {
+	    PJ_LOG(3,(THIS_FILE, "...error: thread is not suspended"));
+	    return -1015;
+	}
+	
 	rc = pj_thread_resume(thread);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("...error: resume thread error", rc);
@@ -135,11 +144,18 @@ static int simple_thread(const char *title, unsigned flags)
     
     PJ_LOG(3,(THIS_FILE, "..waiting for thread to quit.."));
 
+    pj_thread_sleep(500);
+
     quit_flag = 1;
     pj_thread_join(thread);
 
     pj_pool_release(pool);
 
+    if (counter == 0) {
+	PJ_LOG(3,(THIS_FILE, "...error: thread is not running"));
+	return -1025;
+    }
+    
     PJ_LOG(3,(THIS_FILE, "...%s success", title));
     return PJ_SUCCESS;
 }

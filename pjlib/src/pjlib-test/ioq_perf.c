@@ -84,12 +84,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         if (bytes_read < 0) {
             pj_status_t rc = -bytes_read;
-            char errmsg[128];
+            char errmsg[PJ_ERR_MSG_SIZE];
 
 	    if (rc != last_error) {
 	        //last_error = rc;
 	        pj_strerror(rc, errmsg, sizeof(errmsg));
-	        PJ_LOG(3,(THIS_FILE, "...error: read error, bytes_read=%d (%s)", 
+	        PJ_LOG(3,(THIS_FILE,"...error: read error, bytes_read=%d (%s)", 
 		          bytes_read, errmsg));
 	        PJ_LOG(3,(THIS_FILE, 
 		          ".....additional info: total read=%u, total sent=%u",
@@ -178,19 +178,33 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     }
 }
 
-/* The worker thread. */
-static int worker_thread(void *arg)
+struct thread_arg
 {
-    pj_ioqueue_t *ioqueue = arg;
+    int		  id;
+    pj_ioqueue_t *ioqueue;
+    unsigned	  counter;
+};
+
+/* The worker thread. */
+static int worker_thread(void *p)
+{
+    struct thread_arg *arg = p;
     const pj_time_val timeout = {0, 100};
     int rc;
 
     while (!thread_quit_flag) {
-        rc = pj_ioqueue_poll(ioqueue, &timeout);
+
+	++arg->counter;
+        rc = pj_ioqueue_poll(arg->ioqueue, &timeout);
 	//TRACE_((THIS_FILE, "     thread: poll returned rc=%d", rc));
         if (rc < 0) {
-            app_perror("...error in pj_ioqueue_poll()", pj_get_netos_error());
-            return -1;
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(-rc, errmsg, sizeof(errmsg));
+            PJ_LOG(3, (THIS_FILE, 
+		       "...error in pj_ioqueue_poll() in thread %d "
+		       "after %d loop: %s [pj_status_t=%d]", 
+		       arg->id, arg->counter, errmsg, -rc));
+            //return -1;
         }
     }
     return 0;
@@ -315,9 +329,16 @@ static int perform_test(int sock_type, const char *type_name,
 
     /* Create the threads. */
     for (i=0; i<thread_cnt; ++i) {
+	struct thread_arg *arg;
+
+	arg = pj_pool_zalloc(pool, sizeof(*arg));
+	arg->id = i;
+	arg->ioqueue = ioqueue;
+	arg->counter = 0;
+
         rc = pj_thread_create( pool, NULL, 
                                &worker_thread, 
-                               ioqueue, 
+                               arg, 
                                PJ_THREAD_DEFAULT_STACK_SIZE, 
                                PJ_THREAD_SUSPENDED, &thread[i] );
         if (rc != PJ_SUCCESS) {
@@ -382,6 +403,11 @@ static int perform_test(int sock_type, const char *type_name,
         pj_sock_close(items[i].client_fd);
     }
 
+    /* Destroy threads */
+    for (i=0; i<thread_cnt; ++i) {
+        pj_thread_destroy(thread[i]);
+    }
+
     /* Destroy ioqueue. */
     TRACE_((THIS_FILE, "     destroying ioqueue.."));
     pj_ioqueue_destroy(ioqueue);
@@ -402,9 +428,8 @@ static int perform_test(int sock_type, const char *type_name,
     
     *p_bandwidth = (pj_uint32_t)bandwidth;
 
-    PJ_LOG(3,(THIS_FILE, "   %.4s    %d         %d        %3d us  %8d KB/s",
+    PJ_LOG(3,(THIS_FILE, "   %.4s    %d         %d        %8d KB/s",
               type_name, thread_cnt, sockpair_cnt,
-              -1 /*total_elapsed_usec/sockpair_cnt*/,
               *p_bandwidth));
 
     /* Done. */
@@ -440,6 +465,7 @@ int ioqueue_perf_test(void)
         { PJ_SOCK_DGRAM, "udp", 4, 2},
         { PJ_SOCK_DGRAM, "udp", 4, 4},
         { PJ_SOCK_DGRAM, "udp", 4, 8},
+        { PJ_SOCK_DGRAM, "udp", 4, 16},
         { PJ_SOCK_STREAM, "tcp", 1, 1},
         { PJ_SOCK_STREAM, "tcp", 1, 2},
         { PJ_SOCK_STREAM, "tcp", 1, 4},
@@ -452,14 +478,33 @@ int ioqueue_perf_test(void)
         { PJ_SOCK_STREAM, "tcp", 4, 2},
         { PJ_SOCK_STREAM, "tcp", 4, 4},
         { PJ_SOCK_STREAM, "tcp", 4, 8},
+        { PJ_SOCK_STREAM, "tcp", 4, 16},
+/*
+	{ PJ_SOCK_DGRAM, "udp", 32, 1},
+	{ PJ_SOCK_DGRAM, "udp", 32, 1},
+	{ PJ_SOCK_DGRAM, "udp", 32, 1},
+	{ PJ_SOCK_DGRAM, "udp", 32, 1},
+	{ PJ_SOCK_DGRAM, "udp", 1, 32},
+	{ PJ_SOCK_DGRAM, "udp", 1, 32},
+	{ PJ_SOCK_DGRAM, "udp", 1, 32},
+	{ PJ_SOCK_DGRAM, "udp", 1, 32},
+	{ PJ_SOCK_STREAM, "tcp", 32, 1},
+	{ PJ_SOCK_STREAM, "tcp", 32, 1},
+	{ PJ_SOCK_STREAM, "tcp", 32, 1},
+	{ PJ_SOCK_STREAM, "tcp", 32, 1},
+	{ PJ_SOCK_STREAM, "tcp", 1, 32},
+	{ PJ_SOCK_STREAM, "tcp", 1, 32},
+	{ PJ_SOCK_STREAM, "tcp", 1, 32},
+	{ PJ_SOCK_STREAM, "tcp", 1, 32},
+*/
     };
     pj_size_t best_bandwidth;
     int best_index = 0;
 
     PJ_LOG(3,(THIS_FILE, "   Benchmarking %s ioqueue:", pj_ioqueue_name()));
-    PJ_LOG(3,(THIS_FILE, "   ==============================================="));
-    PJ_LOG(3,(THIS_FILE, "   Type  Threads  Skt.Pairs  Avg.Time    Bandwidth"));
-    PJ_LOG(3,(THIS_FILE, "   ==============================================="));
+    PJ_LOG(3,(THIS_FILE, "   ======================================="));
+    PJ_LOG(3,(THIS_FILE, "   Type  Threads  Skt.Pairs      Bandwidth"));
+    PJ_LOG(3,(THIS_FILE, "   ======================================="));
 
     best_bandwidth = 0;
     for (i=0; i<sizeof(test_param)/sizeof(test_param[0]); ++i) {
@@ -477,7 +522,9 @@ int ioqueue_perf_test(void)
         if (bandwidth > best_bandwidth)
             best_bandwidth = bandwidth, best_index = i;
 
-        /* Give it a rest before next test. */
+        /* Give it a rest before next test, to allow system to close the
+	 * sockets properly. 
+	 */
         pj_thread_sleep(500);
     }
 
