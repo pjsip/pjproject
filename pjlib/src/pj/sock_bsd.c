@@ -185,6 +185,15 @@ PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
 }
 
 /*
+ * Convert address string with numbers and dots to binary IP address.
+ */ 
+PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
+{
+    pj_str_t str = pj_str((char*)cp);
+    return pj_inet_addr(&str);
+}
+
+/*
  * Set the IP address of an IP socket address from string address, 
  * with resolving the host if necessary. The string address may be in a
  * standard numbers and dots notation or may be a hostname. If hostname

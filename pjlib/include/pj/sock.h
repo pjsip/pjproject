@@ -327,6 +327,19 @@ PJ_DECL(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp);
  */
 PJ_DECL(pj_in_addr) pj_inet_addr(const pj_str_t *cp);
 
+/**
+ * Convert address string with numbers and dots to binary IP address.
+ * 
+ * @param cp	    The IP address in numbers and dots notation.
+ * @return	    If success, the IP address is returned in network
+ *		    byte order. If failed, PJ_INADDR_NONE will be
+ *		    returned.
+ * @remark
+ * This is an obsolete interface to #pj_inet_aton(); it is obsolete
+ * because -1 is a valid address (255.255.255.255), and #pj_inet_aton()
+ * provides a cleaner way to indicate error return.
+ */
+PJ_DECL(pj_in_addr) pj_inet_addr2(const char *cp);
 
 /**
  * Get the transport layer port number of an Internet socket address.
