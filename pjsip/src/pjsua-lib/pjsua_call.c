@@ -97,6 +97,73 @@ static void schedule_call_timer( pjsua_call *call, pj_timer_entry *e,
 }
 
 
+/* Close and reopen socket. */
+static pj_status_t reopen_sock( pj_sock_t *sock)
+{
+    pj_sockaddr_in addr;
+    int addrlen;
+    pj_status_t status;
+
+    addrlen = sizeof(pj_sockaddr_in);
+    status = pj_sock_getsockname(*sock, &addr, &addrlen);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error getting RTP/RTCP socket name", status);
+	return status;
+    }
+
+    pj_sock_close(*sock);
+
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, sock);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create socket", status);
+	return status;
+    }
+
+    status = pj_sock_bind(*sock, &addr, sizeof(pj_sockaddr_in));
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to re-bind RTP/RTCP socket", status);
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Destroy the call's media
+ */
+static pj_status_t call_destroy_media(int call_index)
+{
+    pjsua_call *call = &pjsua.calls[call_index];
+
+    if (call->conf_slot > 0) {
+	pjmedia_conf_remove_port(pjsua.mconf, call->conf_slot);
+	call->conf_slot = 0;
+    }
+
+    if (call->session) {
+
+	/* Close and reopen RTP socket.
+	 * This is necessary to get the socket unregistered from ioqueue,
+	 * when IOCompletionPort is used.
+	 */
+	reopen_sock(&call->skinfo.rtp_sock);
+
+	/* Close and reopen RTCP socket too. */
+	reopen_sock(&call->skinfo.rtcp_sock);
+
+	/* Must destroy session after socket is closed. */
+	pjmedia_session_destroy(call->session);
+	call->session = NULL;
+
+    }
+
+    PJ_LOG(3,(THIS_FILE, "Media session for call %d is destroyed", 
+			 call_index));
+
+    return PJ_SUCCESS;
+}
+
+
 /**
  * Make outgoing call.
  */
@@ -494,13 +561,8 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
 	pj_assert(call != NULL);
 
-	if (call && call->session) {
-	    pjmedia_conf_remove_port(pjsua.mconf, call->conf_slot);
-	    pjmedia_session_destroy(call->session);
-	    call->session = NULL;
-
-	    PJ_LOG(3,(THIS_FILE,"Media session is destroyed"));
-	}
+	if (call)
+	    call_destroy_media(call->index);
 
 	/* Remove timers. */
 	schedule_call_timer(call, &call->refresh_tm, REFRESH_CALL_TIMER, 0);
@@ -878,11 +940,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     /* Destroy existing media session, if any. */
 
-    if (call && call->session) {
-	pjmedia_conf_remove_port(pjsua.mconf, call->conf_slot);
-	pjmedia_session_destroy(call->session);
-	call->session = NULL;
-    }
+    if (call)
+	call_destroy_media(call->index);
 
     /* Get local and remote SDP */
 
@@ -947,8 +1006,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create conference slot", 
 		     status);
-	pjmedia_session_destroy(call->session);
-	call->session = NULL;
+	call_destroy_media(call->index);
 	//call_disconnect(inv, PJSIP_SC_INTERNAL_SERVER_ERROR);
 	return;
     }

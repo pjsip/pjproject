@@ -19,12 +19,13 @@
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/sdp.h>
-#include <pj/sock.h>
-#include <pj/pool.h>
-#include <pj/string.h>
 #include <pj/assert.h>
-#include <pj/os.h>
+#include <pj/ioqueue.h>
 #include <pj/log.h>
+#include <pj/os.h>
+#include <pj/pool.h>
+#include <pj/sock.h>
+#include <pj/string.h>
 
 
 #define THIS_FILE   "endpoint.c"
@@ -65,6 +66,12 @@ PJ_DECL(pj_str_t) pjmedia_strerror( pj_status_t status, char *buffer,
 				    pj_size_t bufsize);
 
 
+/* Worker thread proc. */
+static int PJ_THREAD_FUNC worker_proc(void*);
+
+
+#define MAX_THREADS	16
+
 
 /** Concrete declaration of media endpoint. */
 struct pjmedia_endpt
@@ -77,16 +84,34 @@ struct pjmedia_endpt
 
     /** Codec manager. */
     pjmedia_codec_mgr	  codec_mgr;
+
+    /** IOqueue instance. */
+    pj_ioqueue_t 	 *ioqueue;
+
+    /** Do we own the ioqueue? */
+    pj_bool_t		  own_ioqueue;
+
+    /** Number of threads. */
+    unsigned		  thread_cnt;
+
+    /** IOqueue polling thread, if any. */
+    pj_thread_t		 *thread[MAX_THREADS];
+
+    /** To signal polling thread to quit. */
+    pj_bool_t		  quit_flag;
 };
 
 /**
  * Initialize and get the instance of media endpoint.
  */
 PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
+					 pj_ioqueue_t *ioqueue,
+					 unsigned worker_cnt,
 					 pjmedia_endpt **p_endpt)
 {
     pj_pool_t *pool;
     pjmedia_endpt *endpt;
+    unsigned i;
     pj_status_t status;
 
     if (!error_subsys_registered) {
@@ -104,39 +129,59 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt = pj_pool_zalloc(pool, sizeof(struct pjmedia_endpt));
     endpt->pool = pool;
     endpt->pf = pf;
+    endpt->ioqueue = ioqueue;
+    endpt->thread_cnt = worker_cnt;
 
     /* Sound */
     pjmedia_snd_init(pf);
 
     /* Init codec manager. */
     status = pjmedia_codec_mgr_init(&endpt->codec_mgr);
-    if (status != PJ_SUCCESS) {
-	pjmedia_snd_deinit();
+    if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Create ioqueue if none is specified. */
+    if (endpt->ioqueue == NULL) {
+	
+	endpt->own_ioqueue = PJ_TRUE;
+
+	status = pj_ioqueue_create( endpt->pool, PJ_IOQUEUE_MAX_HANDLES,
+				    &endpt->ioqueue);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	if (worker_cnt == 0) {
+	    PJ_LOG(4,(THIS_FILE, "Warning: no worker thread is created in"  
+				 "media endpoint for internal ioqueue"));
+	}
     }
 
-    /* Init and register G.711 codec. */
-#if 0
-    // Starting from 0.5.4, codec factory is registered by applications.
-    factory = pj_pool_alloc (endpt->pool, sizeof(pjmedia_codec_factory));
-
-    status = g711_init_factory (factory, endpt->pool);
-    if (status != PJ_SUCCESS) {
-	pjmedia_snd_deinit();
-	goto on_error;
+    /* Create worker threads if asked. */
+    for (i=0; i<worker_cnt; ++i) {
+	status = pj_thread_create( endpt->pool, "media", &worker_proc,
+				   endpt, 0, 0, &endpt->thread[i]);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
     }
 
-    status = pjmedia_codec_mgr_register_factory (&endpt->codec_mgr, factory);
-    if (status != PJ_SUCCESS)  {
-	pjmedia_snd_deinit();
-	goto on_error;
-    }
-#endif
 
     *p_endpt = endpt;
     return PJ_SUCCESS;
 
 on_error:
+
+    /* Destroy threads */
+    for (i=0; i<endpt->thread_cnt; ++i) {
+	if (endpt->thread[i]) {
+	    pj_thread_destroy(endpt->thread[i]);
+	}
+    }
+
+    /* Destroy internal ioqueue */
+    if (endpt->ioqueue && endpt->own_ioqueue)
+	pj_ioqueue_destroy(endpt->ioqueue);
+
+    pjmedia_snd_deinit();
     pj_pool_release(pool);
     return status;
 }
@@ -154,7 +199,26 @@ PJ_DEF(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt)
  */
 PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 {
+    unsigned i;
+
     PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
+
+    endpt->quit_flag = 1;
+
+    /* Destroy threads */
+    for (i=0; i<endpt->thread_cnt; ++i) {
+	if (endpt->thread[i]) {
+	    pj_thread_join(endpt->thread[i]);
+	    pj_thread_destroy(endpt->thread[i]);
+	    endpt->thread[i] = NULL;
+	}
+    }
+
+    /* Destroy internal ioqueue */
+    if (endpt->ioqueue && endpt->own_ioqueue) {
+	pj_ioqueue_destroy(endpt->ioqueue);
+	endpt->ioqueue = NULL;
+    }
 
     endpt->pf = NULL;
 
@@ -162,6 +226,32 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
     pj_pool_release (endpt->pool);
 
     return PJ_SUCCESS;
+}
+
+
+/**
+ * Get the ioqueue instance of the media endpoint.
+ */
+PJ_DEF(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt)
+{
+    PJ_ASSERT_RETURN(endpt, NULL);
+    return endpt->ioqueue;
+}
+
+
+/**
+ * Worker thread proc.
+ */
+static int PJ_THREAD_FUNC worker_proc(void *arg)
+{
+    pjmedia_endpt *endpt = arg;
+
+    while (!endpt->quit_flag) {
+	pj_time_val timeout = { 0, 500 };
+	pj_ioqueue_poll(endpt->ioqueue, &timeout);
+    }
+
+    return 0;
 }
 
 /**

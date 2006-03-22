@@ -104,6 +104,7 @@ void pjsua_default(void)
 	pjsua.calls[i].index = i;
 	pjsua.calls[i].refresh_tm._timer_id = -1;
 	pjsua.calls[i].hangup_tm._timer_id = -1;
+	pjsua.calls[i].conf_slot = 0;
     }
 
     /* Default max nb of calls. */
@@ -536,7 +537,9 @@ pj_status_t pjsua_init(void)
 
     /* Init media endpoint: */
 
-    status = pjmedia_endpt_create(&pjsua.cp.factory, &pjsua.med_endpt);
+    status = pjmedia_endpt_create(&pjsua.cp.factory, 
+				  pjsip_endpt_get_ioqueue(pjsua.endpt), 0,
+				  &pjsua.med_endpt);
     if (status != PJ_SUCCESS) {
 	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror(THIS_FILE, 

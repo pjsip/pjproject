@@ -98,7 +98,6 @@ struct pjsua_call
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
     pjmedia_sock_info	 skinfo;    /**< Preallocated media sockets.	    */
-
     void		*app_data;  /**< Application data.		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */

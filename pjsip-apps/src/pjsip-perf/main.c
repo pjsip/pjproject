@@ -258,7 +258,9 @@ static pj_status_t initialize(void)
     pjsip_xfer_init_module( settings.endpt );
 
     /* Init multimedia endpoint. */
-    status = pjmedia_endpt_create(&settings.cp.factory, &settings.med_endpt);
+    status = pjmedia_endpt_create(&settings.cp.factory, 
+				  pjsip_endpt_get_ioqueue(settings.endpt), 0,
+				  &settings.med_endpt);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create media endpoint", 
 		   status);

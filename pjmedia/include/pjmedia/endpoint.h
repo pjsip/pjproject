@@ -44,17 +44,24 @@
 PJ_BEGIN_DECL
 
 
-
 /**
  * Create an instance of media endpoint.
  *
  * @param pf		Pool factory, which will be used by the media endpoint
  *			throughout its lifetime.
+ * @param ioqueue	Optional ioqueue instance to be registered to the 
+ *			endpoint. The ioqueue instance is used to poll all RTP
+ *			and RTCP sockets. If this argument is NULL, the 
+ *			endpoint will create an internal ioqueue instance.
+ * @param worker_cnt	Specify the number of worker threads to be created
+ *			to poll the ioqueue.
  * @param p_endpt	Pointer to receive the endpoint instance.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_endpt_create( pj_pool_factory *pf,
+					   pj_ioqueue_t *ioqueue,
+					   unsigned worker_cnt,
 					   pjmedia_endpt **p_endpt);
 
 /**
@@ -65,6 +72,17 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create( pj_pool_factory *pf,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt);
+
+
+
+/**
+ * Get the ioqueue instance of the media endpoint.
+ *
+ * @param endpt		The media endpoint instance.
+ *
+ * @return		The ioqueue instance of the media endpoint.
+ */
+PJ_DECL(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt);
 
 
 /**

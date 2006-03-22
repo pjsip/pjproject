@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
-    status = pjmedia_endpt_create(&cp.factory, &g_med_endpt);
+    status = pjmedia_endpt_create(&cp.factory, NULL, 1, &g_med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* 
