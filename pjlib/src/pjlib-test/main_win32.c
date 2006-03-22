@@ -55,7 +55,7 @@ static void write_log(int level, const char *data, int len)
     PJ_UNUSED_ARG(level);
     PJ_UNUSED_ARG(len);
     SendMessage(hwndLog, EM_REPLACESEL, FALSE, 
-		(LPARAM)PJ_STRING_TO_NATIVE(data,wdata));
+		(LPARAM)PJ_STRING_TO_NATIVE(data,wdata,256));
 }
 
 

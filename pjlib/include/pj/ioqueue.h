@@ -327,6 +327,11 @@ PJ_DECL(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
  * Note that asynchronous connect operation will automatically be 
  * cancelled during the unregistration.
  *
+ * Also note that when I/O Completion Port backend is used, application
+ * MUST close the handle immediately after unregistering the key. This is
+ * because there is no unregistering API for IOCP. The only way to
+ * unregister the handle from IOCP is to close the handle.
+ *
  * @param key	    The key that was previously obtained from registration.
  *
  * @return          PJ_SUCCESS on success or the error code.

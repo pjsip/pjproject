@@ -313,6 +313,173 @@ on_error:
 
 }
 
+
+static void on_read_complete(pj_ioqueue_key_t *key, 
+                             pj_ioqueue_op_key_t *op_key, 
+                             pj_ssize_t bytes_read)
+{
+    unsigned *p_packet_cnt = pj_ioqueue_get_user_data(key);
+
+    PJ_UNUSED_ARG(op_key);
+    PJ_UNUSED_ARG(bytes_read);
+
+    (*p_packet_cnt)++;
+}
+
+/*
+ * unregister_test()
+ * Check if callback is still called after socket has been unregistered or 
+ * closed.
+ */ 
+static int unregister_test(void)
+{
+    enum { RPORT = 50000, SPORT = 50001 };
+    pj_pool_t *pool;
+    pj_ioqueue_t *ioqueue;
+    pj_sock_t ssock;
+    pj_sock_t rsock;
+    int addrlen;
+    pj_sockaddr_in addr;
+    pj_ioqueue_key_t *key;
+    pj_ioqueue_op_key_t opkey;
+    pj_ioqueue_callback cb;
+    unsigned packet_cnt;
+    char sendbuf[10], recvbuf[10];
+    pj_ssize_t bytes;
+    pj_time_val timeout;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "test", 4000, 4000, NULL);
+    if (!pool) {
+	app_perror("Unable to create pool", PJ_ENOMEM);
+	return -100;
+    }
+
+    status = pj_ioqueue_create(pool, 16, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error creating ioqueue", status);
+	return -110;
+    }
+
+    /* Create sender socket */
+    status = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, SPORT, &ssock);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error initializing socket", status);
+	return -120;
+    }
+
+    /* Create receiver socket. */
+    status = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, RPORT, &rsock);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error initializing socket", status);
+	return -130;
+    }
+
+    /* Register rsock to ioqueue. */
+    pj_memset(&cb, 0, sizeof(cb));
+    cb.on_read_complete = &on_read_complete;
+    packet_cnt = 0;
+    status = pj_ioqueue_register_sock(pool, ioqueue, rsock, &packet_cnt,
+				      &cb, &key);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error registering to ioqueue", status);
+	return -140;
+    }
+
+    /* Init operation key. */
+    pj_ioqueue_op_key_init(&opkey, sizeof(opkey));
+
+    /* Start reading. */
+    bytes = sizeof(recvbuf);
+    status = pj_ioqueue_recv( key, &opkey, recvbuf, &bytes, 0);
+    if (status != PJ_EPENDING) {
+	app_perror("Expecting PJ_EPENDING, but got this", status);
+	return -150;
+    }
+
+    /* Init destination address. */
+    addrlen = sizeof(addr);
+    status = pj_sock_getsockname(rsock, &addr, &addrlen);
+    if (status != PJ_SUCCESS) {
+	app_perror("getsockname error", status);
+	return -160;
+    }
+
+    /* Override address with 127.0.0.1, since getsockname will return
+     * zero in the address field.
+     */
+    addr.sin_addr = pj_inet_addr2("127.0.0.1");
+
+    /* Init buffer to send */
+    pj_ansi_strcpy(sendbuf, "Hello0123");
+
+    /* Send one packet. */
+    bytes = sizeof(sendbuf);
+    status = pj_sock_sendto(ssock, sendbuf, &bytes, 0,
+			    &addr, sizeof(addr));
+
+    if (status != PJ_SUCCESS) {
+	app_perror("sendto error", status);
+	return -170;
+    }
+
+    /* Check if packet is received. */
+    timeout.sec = 1; timeout.msec = 0;
+    pj_ioqueue_poll(ioqueue, &timeout);
+
+    if (packet_cnt != 1) {
+	return -180;
+    }
+
+    /* Just to make sure things are settled.. */
+    pj_thread_sleep(100);
+
+    /* Start reading again. */
+    bytes = sizeof(recvbuf);
+    status = pj_ioqueue_recv( key, &opkey, recvbuf, &bytes, 0);
+    if (status != PJ_EPENDING) {
+	app_perror("Expecting PJ_EPENDING, but got this", status);
+	return -190;
+    }
+
+    /* Reset packet counter */
+    packet_cnt = 0;
+
+    /* Send one packet. */
+    bytes = sizeof(sendbuf);
+    status = pj_sock_sendto(ssock, sendbuf, &bytes, 0,
+			    &addr, sizeof(addr));
+
+    if (status != PJ_SUCCESS) {
+	app_perror("sendto error", status);
+	return -200;
+    }
+
+    /* Now unregister and close socket. */
+    pj_ioqueue_unregister(key);
+    pj_sock_close(rsock);
+
+    /* Poll ioqueue. */
+    timeout.sec = 1; timeout.msec = 0;
+    pj_ioqueue_poll(ioqueue, &timeout);
+
+    /* Must NOT receive any packets after socket is closed! */
+    if (packet_cnt > 0) {
+	PJ_LOG(3,(THIS_FILE, "....errror: not expecting to receive packet "
+			     "after socket has been closed"));
+	return -210;
+    }
+
+    /* Success */
+    pj_sock_close(ssock);
+    pj_ioqueue_destroy(ioqueue);
+
+    pj_pool_release(pool);
+
+    return 0;
+}
+
+
 /*
  * Testing with many handles.
  * This will just test registering PJ_IOQUEUE_MAX_HANDLES count
@@ -624,6 +791,13 @@ int udp_ioqueue_test()
 	return status;
     }
     PJ_LOG(3, (THIS_FILE, "....compliance test ok"));
+
+
+    PJ_LOG(3, (THIS_FILE, "...unregister test (%s)", pj_ioqueue_name()));
+    if ((status=unregister_test()) != 0) {
+	return status;
+    }
+    PJ_LOG(3, (THIS_FILE, "....unregister test ok"));
 
     if ((status=many_handles_test()) != 0) {
 	return status;
