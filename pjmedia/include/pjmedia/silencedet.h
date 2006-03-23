@@ -130,7 +130,14 @@ PJ_DECL(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 					      pj_uint32_t level);
 
 
+/**
+ * Declaration linear2ulaw
+ */
+unsigned char linear2ulaw(int pcm_val);
+
+
 PJ_END_DECL
+
 
 #endif	/* __PJMEDIA_SILENCE_DET_H__ */
 

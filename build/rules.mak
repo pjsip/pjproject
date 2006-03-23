@@ -153,7 +153,7 @@ depend:
 	$(subst @@,$(DEP_FILE),$(HOST_RM))
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
-	     echo -n "$(OBJDIR)/" >> $(DEP_FILE); \
+	     echo "$(OBJDIR)/" | tr -d '\n' >> $(DEP_FILE); \
 	     if gcc -M $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
 		true; \
 	     else \

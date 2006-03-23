@@ -13,8 +13,9 @@ export PJMEDIA_OBJS += $(PA_DIR)/pa_win_hostapis.o $(PA_DIR)/pa_win_util.o \
 export OS_CFLAGS += -DPA_NO_ASIO -DPA_NO_DS
 
 # Example:
-#  to activate Null sound, uncomment this line below.
+#  to activate Null sound, uncomment these two lines below.
 #export SOUND_OBJS = $(NULLSOUND_OBJS)
+#export OS_CFLAGS += $(CC_DEF)PJMEDIA_HAS_NULL_SOUND
 
 # Example:
 #  to include only GSM and exclude Speex codec, uncomment the "export" line below.

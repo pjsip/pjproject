@@ -38,6 +38,7 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
+#include <pjmedia/silencedet.h>
 #include <pjmedia/session.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>

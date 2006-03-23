@@ -71,7 +71,7 @@ pjlib-util-test: $(PJLIB_LIB)
 clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
-	@if test "$@" == "depend"; then \
+	@if test "$@" = "depend"; then \
 	  echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	fi
 

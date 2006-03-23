@@ -160,7 +160,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
-	@if test "$@" == "depend"; then \
+	@if test "$@" = "depend"; then \
 	  echo '$(PJMEDIA_LIB): .pjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend' >> .pjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	  echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend' >> .pjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
 	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \

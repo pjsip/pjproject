@@ -317,7 +317,7 @@ static void ui_input_url(const char *title, char *buf, int len,
     len = strlen(buf);
 
     /* Left trim */
-    while (isspace(*buf)) {
+    while (pj_isspace(*buf)) {
 	++buf;
 	--len;
     }
@@ -329,7 +329,7 @@ static void ui_input_url(const char *title, char *buf, int len,
     if (len == 0 || buf[0]=='q')
 	return;
 
-    if (isdigit(*buf) || *buf=='-') {
+    if (pj_isdigit(*buf) || *buf=='-') {
 	
 	int i;
 	
@@ -339,7 +339,7 @@ static void ui_input_url(const char *title, char *buf, int len,
 	    i = 0;
 
 	for (; i<len; ++i) {
-	    if (!isdigit(buf[i])) {
+	    if (!pj_isdigit(buf[i])) {
 		puts("Invalid input");
 		return;
 	    }
