@@ -23,7 +23,8 @@
 
 struct pjmedia_snd_port
 {
-    int			 snd_index;
+    int			 rec_id;
+    int			 play_id;
     pjmedia_snd_stream	*snd_stream;
     pjmedia_dir		 dir;
     pjmedia_port	*port;
@@ -123,17 +124,18 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
 	return PJ_SUCCESS;
 
     /* Open sound stream. */
-    if (snd_port->dir == PJMEDIA_DIR_ENCODING) {
-	status = pjmedia_snd_open_recorder( snd_port->snd_index, 
-					    snd_port->clock_rate,
-					    snd_port->channel_count,
-					    snd_port->samples_per_frame,
-					    snd_port->bits_per_sample,
-					    &rec_cb,
-					    snd_port,
-					    &snd_port->snd_stream);
-    } else {
-	status = pjmedia_snd_open_player( snd_port->snd_index, 
+    if (snd_port->dir == PJMEDIA_DIR_CAPTURE) {
+	status = pjmedia_snd_open_rec( snd_port->rec_id, 
+				       snd_port->clock_rate,
+				       snd_port->channel_count,
+				       snd_port->samples_per_frame,
+				       snd_port->bits_per_sample,
+				       &rec_cb,
+				       snd_port,
+				       &snd_port->snd_stream);
+
+    } else if (snd_port->dir == PJMEDIA_DIR_PLAYBACK) {
+	status = pjmedia_snd_open_player( snd_port->play_id, 
 					  snd_port->clock_rate,
 					  snd_port->channel_count,
 					  snd_port->samples_per_frame,
@@ -141,6 +143,21 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
 					  &play_cb,
 					  snd_port,
 					  &snd_port->snd_stream);
+
+    } else if (snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
+	status = pjmedia_snd_open( snd_port->rec_id, 
+				   snd_port->play_id,
+				   snd_port->clock_rate,
+				   snd_port->channel_count,
+				   snd_port->samples_per_frame,
+				   snd_port->bits_per_sample,
+				   &rec_cb,
+				   &play_cb,
+				   snd_port,
+				   &snd_port->snd_stream);
+    } else {
+	pj_assert(!"Invalid dir");
+	status = PJ_EBUG;
     }
 
     if (status != PJ_SUCCESS)
@@ -176,10 +193,49 @@ static pj_status_t stop_sound_device( pjmedia_snd_port *snd_port )
 
 
 /*
+ * Create bidirectional port.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
+					     int rec_id,
+					     int play_id,
+					     unsigned clock_rate,
+					     unsigned channel_count,
+					     unsigned samples_per_frame,
+					     unsigned bits_per_sample,
+					     unsigned options,
+					     pjmedia_snd_port **p_port)
+{
+    pjmedia_snd_port *snd_port;
+
+    PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
+
+    snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
+    PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
+
+    snd_port->rec_id = rec_id;
+    snd_port->play_id = play_id;
+    snd_port->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    snd_port->clock_rate = clock_rate;
+    snd_port->channel_count = channel_count;
+    snd_port->samples_per_frame = samples_per_frame;
+    snd_port->bits_per_sample = bits_per_sample;
+
+    *p_port = snd_port;
+
+    /* Start sound device immediately.
+     * If there's no port connected, the sound callback will return
+     * empty signal.
+     */
+    return start_sound_device( snd_port );
+
+}
+
+/*
  * Create sound recorder port.
  */
 PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
-						 int index,
+						 int dev_id,
 						 unsigned clock_rate,
 						 unsigned channel_count,
 						 unsigned samples_per_frame,
@@ -195,8 +251,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
     snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
-    snd_port->snd_index = index;
-    snd_port->dir = PJMEDIA_DIR_ENCODING;
+    snd_port->rec_id = dev_id;
+    snd_port->dir = PJMEDIA_DIR_CAPTURE;
     snd_port->clock_rate = clock_rate;
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
@@ -216,7 +272,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
  * Create sound player port.
  */
 PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
-						    int index,
+						    int dev_id,
 						    unsigned clock_rate,
 						    unsigned channel_count,
 						    unsigned samples_per_frame,
@@ -232,8 +288,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
     snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
-    snd_port->snd_index = index;
-    snd_port->dir = PJMEDIA_DIR_DECODING;
+    snd_port->play_id = dev_id;
+    snd_port->dir = PJMEDIA_DIR_PLAYBACK;
     snd_port->clock_rate = clock_rate;
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
@@ -257,6 +313,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port *snd_port)
     PJ_ASSERT_RETURN(snd_port, PJ_EINVAL);
 
     return stop_sound_device(snd_port);
+}
+
+
+/*
+ * Retrieve the sound stream associated by this sound device port.
+ */
+PJ_DEF(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
+						pjmedia_snd_port *snd_port)
+{
+    PJ_ASSERT_RETURN(snd_port, NULL);
+    return snd_port->snd_stream;
 }
 
 

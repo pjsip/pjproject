@@ -92,12 +92,7 @@ static int app_perror( const char *sender, const char *title,
 static void usage(void)
 {
     puts("");
-    puts("Usage: confsample [file1.wav] [file2.wav] ...");
-    puts("");
-    puts("where:");
-    puts("  fileN.WAV are optional WAV files to be connected to the conference");
-    puts("  bridge. The WAV files MUST have single channel (mono) and 16 bit PCM");
-    puts("  samples. They can have arbitrary/different sampling rate.");
+    puts(desc);
 }
 
 

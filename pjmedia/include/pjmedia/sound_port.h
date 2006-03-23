@@ -41,9 +41,42 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_snd_port pjmedia_snd_port;
 
+
 /**
- * Create sound device port for capturing audio streams from the sound device
- * with the specified parameters.
+ * Create bidirectional sound port for both capturing and playback of
+ * audio samples.
+ *
+ * @param pool		    Pool to allocate sound port structure.
+ * @param rec_id	    Device index for recorder/capture stream, or
+ *			    -1 to use the first capable device.
+ * @param play_id	    Device index for playback stream, or -1 to use 
+ *			    the first capable device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param options	    Options flag, currently must be zero.
+ * @param p_port	    Pointer to receive the sound device port instance.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
+					      int rec_id,
+					      int play_id,
+					      unsigned clock_rate,
+					      unsigned channel_count,
+					      unsigned samples_per_frame,
+					      unsigned bits_per_sample,
+					      unsigned options,
+					      pjmedia_snd_port **p_port);
+
+/**
+ * Create unidirectional sound device port for capturing audio streams from 
+ * the sound device with the specified parameters.
  *
  * @param pool		    Pool to allocate sound port structure.
  * @param index		    Device index, or -1 to let the library choose the 
@@ -71,8 +104,8 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_rec(pj_pool_t *pool,
 						 pjmedia_snd_port **p_port);
 					      
 /**
- * Create sound device port for playing audio streams with the specified 
- * parameters.
+ * Create unidirectional sound device port for playing audio streams with the 
+ * specified parameters.
  *
  * @param pool		    Pool to allocate sound port structure.
  * @param index		    Device index, or -1 to let the library choose the 
@@ -112,9 +145,20 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port *snd_port);
 
 
 /**
- * Connect a port to the sound device port. If the sound device port is a
+ * Retrieve the sound stream associated by this sound device port.
+ *
+ * @param snd_port	    The sound device port.
+ *
+ * @return		    The sound stream instance.
+ */
+PJ_DECL(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
+						pjmedia_snd_port *snd_port);
+
+
+/**
+ * Connect a port to the sound device port. If the sound device port has a
  * sound recorder device, then this will start periodic function call to
- * the port's put_frame() function. If the sound device is a sound player
+ * the port's put_frame() function. If the sound device has a sound player
  * device, then this will start periodic function call to the port's
  * get_frame() function.
  *

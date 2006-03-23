@@ -47,7 +47,7 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
     return &null_info;
 }
 
-PJ_DEF(pj_status_t) pjmedia_snd_open_recorder( int index,
+PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 					  unsigned clock_rate,
 					  unsigned channel_count,
 					  unsigned samples_per_frame,
@@ -90,6 +90,33 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 
     return PJ_SUCCESS;
 }
+
+PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
+				      int play_id,
+				      unsigned clock_rate,
+				      unsigned channel_count,
+				      unsigned samples_per_frame,
+				      unsigned bits_per_sample,
+				      pjmedia_snd_rec_cb rec_cb,
+				      pjmedia_snd_play_cb play_cb,
+				      void *user_data,
+				      pjmedia_snd_stream **p_snd_strm)
+{
+    PJ_UNUSED_ARG(rec_id);
+    PJ_UNUSED_ARG(play_id);
+    PJ_UNUSED_ARG(clock_rate);
+    PJ_UNUSED_ARG(channel_count);
+    PJ_UNUSED_ARG(samples_per_frame);
+    PJ_UNUSED_ARG(bits_per_sample);
+    PJ_UNUSED_ARG(rec_cb);
+    PJ_UNUSED_ARG(play_cb);
+    PJ_UNUSED_ARG(user_data);
+
+    *p_snd_strm = (void*)1;
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 {

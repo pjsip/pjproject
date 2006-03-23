@@ -111,7 +111,45 @@ PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
 
 
 /**
- * Create a new audio stream for audio capture purpose.
+ * Create sound stream for both capturing audio and audio playback,  from the 
+ * same device. This is the recommended way to create simultaneous recorder 
+ * and player streams, because it should work on backends that does not allow
+ * a device to be opened more than once.
+ *
+ * @param rec_id	    Device index for recorder/capture stream, or
+ *			    -1 to use the first capable device.
+ * @param play_id	    Device index for playback stream, or -1 to use 
+ *			    the first capable device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param rec_cb	    Callback to handle captured audio samples.
+ * @param play_cb	    Callback to be called when the sound player needs
+ *			    more audio samples to play.
+ * @param user_data	    User data to be associated with the stream.
+ * @param p_snd_strm	    Pointer to receive the stream instance.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_open(int rec_id,
+				      int play_id,
+				      unsigned clock_rate,
+				      unsigned channel_count,
+				      unsigned samples_per_frame,
+				      unsigned bits_per_sample,
+				      pjmedia_snd_rec_cb rec_cb,
+				      pjmedia_snd_play_cb play_cb,
+				      void *user_data,
+				      pjmedia_snd_stream **p_snd_strm);
+
+
+/**
+ * Create a unidirectional audio stream for capturing audio samples from
+ * the sound device.
  *
  * @param index		    Device index, or -1 to let the library choose the 
  *			    first available device.
@@ -128,7 +166,7 @@ PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_open_recorder( int index,
+PJ_DECL(pj_status_t) pjmedia_snd_open_rec( int index,
 					   unsigned clock_rate,
 					   unsigned channel_count,
 					   unsigned samples_per_frame,
@@ -138,7 +176,8 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_recorder( int index,
 					   pjmedia_snd_stream **p_snd_strm);
 
 /**
- * Create a new audio stream for playing audio samples.
+ * Create a unidirectional audio stream for playing audio samples to the
+ * sound device.
  *
  * @param index		    Device index, or -1 to let the library choose the 
  *			    first available device.
@@ -164,6 +203,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
 					 pjmedia_snd_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_snd_stream **p_snd_strm );
+
 
 /**
  * Start the stream.

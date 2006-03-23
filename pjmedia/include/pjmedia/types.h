@@ -63,6 +63,23 @@ enum pjmedia_dir
 
 };
 
+/* Alternate names for media direction: */
+
+/**
+ * Direction is capturing audio frames.
+ */
+#define PJMEDIA_DIR_CAPTURE	PJMEDIA_DIR_ENCODING
+
+/**
+ * Direction is playback of audio frames.
+ */
+#define PJMEDIA_DIR_PLAYBACK	PJMEDIA_DIR_DECODING
+
+/**
+ * Direction is both capture and playback.
+ */
+#define PJMEDIA_DIR_CAPTURE_PLAYBACK	PJMEDIA_DIR_ENCODING_DECODING
+
 
 /**
  * Top level media type.

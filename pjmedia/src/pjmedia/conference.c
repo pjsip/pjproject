@@ -158,8 +158,7 @@ struct pjmedia_conf
     unsigned		  max_ports;	/**< Maximum ports.		    */
     unsigned		  port_cnt;	/**< Current number of ports.	    */
     unsigned		  connect_cnt;	/**< Total number of connections    */
-    pjmedia_snd_port	 *snd_rec;	/**< Sound recorder stream.	    */
-    pjmedia_snd_port	 *snd_player;	/**< Sound player stream.	    */
+    pjmedia_snd_port	 *snd_dev_port;	/**< Sound device port.		    */
     pjmedia_port	 *master_port;	/**< Port zero's port.		    */
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
@@ -342,40 +341,33 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     conf->port_cnt++;
 
 
-    /* Create sound devices: */
+    /* Create sound device port: */
 
-    /* Create recorder only if mic is not disabled. */
-    if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0 &&
-	(conf->options & PJMEDIA_CONF_NO_MIC) == 0) 
-    {
-	status = pjmedia_snd_port_create_rec( pool, -1, conf->clock_rate, 
+    if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0) {
+
+	/*
+	 * If capture is disabled then create player only port.
+	 * Otherwise create bidirectional sound device port.
+	 */
+	if (conf->options & PJMEDIA_CONF_NO_MIC)  {
+	    status = pjmedia_snd_port_create_player(pool, -1, conf->clock_rate,
+						    conf->channel_count,
+						    conf->samples_per_frame,
+						    conf->bits_per_sample, 
+						    0,	/* options */
+						    &conf->snd_dev_port);
+
+	} else {
+	    status = pjmedia_snd_port_create( pool, -1, -1, conf->clock_rate, 
 					      conf->channel_count, 
 					      conf->samples_per_frame,
 					      conf->bits_per_sample,
 					      0,    /* Options */
-					      &conf->snd_rec);
-	if (status != PJ_SUCCESS) {
-	    conf->snd_rec = NULL;
-	    return status;
+					      &conf->snd_dev_port);
 	}
-    }
 
-    /* Create player device */
-    if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0) {
-	status = pjmedia_snd_port_create_player(pool, -1, conf->clock_rate, 
-						conf->channel_count,
-						conf->samples_per_frame,
-						conf->bits_per_sample, 
-						0,	/* options */
-						&conf->snd_player);
-	if (status != PJ_SUCCESS) {
-	    if (conf->snd_rec) {
-		pjmedia_snd_port_destroy(conf->snd_rec);
-		conf->snd_rec = NULL;
-	    }
-	    conf->snd_player = NULL;
+	if (status != PJ_SUCCESS)
 	    return status;
-	}
     }
 
 
@@ -433,7 +425,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     conf->master_port->info.channel_count = channel_count;
     conf->master_port->info.encoding_name = pj_str("pcm");
     conf->master_port->info.has_info = 1;
-    conf->master_port->info.name = pj_str("master port");
+    conf->master_port->info.name = pj_str("sound-dev");
     conf->master_port->info.need_info = 0;
     conf->master_port->info.pt = 0xFF;
     conf->master_port->info.sample_rate = clock_rate;
@@ -464,18 +456,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     /* If sound device was created, connect sound device to the
      * master port.
      */
-    if (conf->snd_player) {
-	status = pjmedia_snd_port_connect( conf->snd_player, 
+    if (conf->snd_dev_port) {
+	status = pjmedia_snd_port_connect( conf->snd_dev_port, 
 					   conf->master_port );
-	if (status != PJ_SUCCESS) {
-	    pjmedia_conf_destroy(conf);
-	    return status;
-	}
-    }
-
-    if (conf->snd_rec) {
-	status = pjmedia_snd_port_connect( conf->snd_rec,
-					   conf->master_port);
 	if (status != PJ_SUCCESS) {
 	    pjmedia_conf_destroy(conf);
 	    return status;
@@ -519,14 +502,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 {
     PJ_ASSERT_RETURN(conf != NULL, PJ_EINVAL);
 
-    /* Destroy sound devices. */
-    if (conf->snd_rec) {
-	pjmedia_snd_port_destroy(conf->snd_rec);
-	conf->snd_rec = NULL;
-    }
-    if (conf->snd_player) {
-	pjmedia_snd_port_destroy(conf->snd_player);
-	conf->snd_player = NULL;
+    /* Destroy sound device port. */
+    if (conf->snd_dev_port) {
+	pjmedia_snd_port_destroy(conf->snd_dev_port);
+	conf->snd_dev_port = NULL;
     }
 
     /* Destroy mutex */
