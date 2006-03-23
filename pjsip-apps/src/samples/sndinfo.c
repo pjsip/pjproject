@@ -24,7 +24,7 @@ static const char *desc =
  "  Print sound device info and test open device.			    \n"
  "									    \n"
  " USAGE:								    \n"
- "  sndinfo [id r/p clockrate nchan bits]				    \n"
+ "  sndinfo [id rec/play/both clockrate nchan bits]			    \n"
  "									    \n"
  " DESCRIPTION:								    \n"
  "  When invoked without any arguments, it displays information about all   \n"
@@ -32,11 +32,11 @@ static const char *desc =
  "									    \n"
  "  When invoked with arguments, the program tests if device can be opened  \n"
  "  with the specified arguments. All these arguments must be specified:    \n"
- "  - id         The device ID (-1 for the first capable device)	    \n"
- "  - r/p        Specify r for recording/capture, p for playing.	    \n"
- "  - clockrate  Specify clock rate (e.g. 8000, 11025, etc.)		    \n"
- "  - nchan      Number of channels (1=mono, 2=stereo).			    \n"
- "  - bits       Number of bits per sample (normally 16).		    \n";
+ "  - id             The device ID (-1 for the first capable device)	    \n"
+ "  - rec/play/both  Specify which streams to open.			    \n"
+ "  - clockrate      Specify clock rate (e.g. 8000, 11025, etc.)	    \n"
+ "  - nchan	     Number of channels (1=mono, 2=stereo).		    \n"
+ "  - bits	     Number of bits per sample (normally 16).		    \n";
 
 #include <pjmedia.h>
 #include <pjlib.h>
@@ -69,58 +69,102 @@ static void enum_devices(void)
 		i, info->name, info->input_count, info->output_count,
 		info->default_samples_per_sec);
     }
+    puts("");
+    puts("Run with -h to get more options");
 }
 
+static int play_counter;
+static int rec_counter;
 
 static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 			   void *output, unsigned size)
 {
+    ++play_counter;
     return PJ_SUCCESS;
 }
 
 static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 			  const void *input, unsigned size)
 {
+    ++rec_counter;
     return PJ_SUCCESS;
 }
 
-static int open_device(int dev_id, int capturing, int clock_rate, 
-		       int nchannel, int bits)
+static void app_perror(const char *title, pj_status_t status)
 {
-    pj_status_t status;
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    pj_strerror(status, errmsg, sizeof(errmsg));	
+    printf( "%s: %s (err=%d)\n",
+	    title, errmsg, status);
+}
+		
+static int open_device(int dev_id, pjmedia_dir dir,
+		       int clock_rate, int nchannel, int bits)
+{
+    pj_status_t status = PJ_SUCCESS;
     unsigned nsamples;
     pjmedia_snd_stream *strm;
+    const char *dirtype;
 
+    switch (dir) {
+    case PJMEDIA_DIR_CAPTURE:
+	dirtype = "capture"; break;    
+    case PJMEDIA_DIR_PLAYBACK:
+	dirtype = "playback"; break;    
+    case PJMEDIA_DIR_CAPTURE_PLAYBACK:
+	dirtype = "capture/playback"; break;    
+    default:
+	return 1;
+    }
+    
     nsamples = clock_rate * 20 / 1000;
 
-    printf( "Opening device %d: clockrate=%d, nchannel=%d, bits=%d, "
-	    "nsamples=%d..\n",
-	    dev_id, clock_rate, nchannel, bits, nsamples);
+    printf( "Opening device %d for %s: clockrate=%d, nchannel=%d, "
+	    "bits=%d, nsamples=%d..\n",
+	    dev_id, dirtype, clock_rate, nchannel, bits, nsamples);
 
-    if (capturing) {
-	status = pjmedia_snd_open_recorder( dev_id, clock_rate, nchannel,
-					    nsamples, bits, &rec_cb, NULL,
-					    &strm);
-    } else {
+    if (dir == PJMEDIA_DIR_CAPTURE) {
+	status = pjmedia_snd_open_rec( dev_id, clock_rate, nchannel,
+				       nsamples, bits, &rec_cb, NULL,
+				       &strm);
+    } else if (dir == PJMEDIA_DIR_PLAYBACK) {
 	status = pjmedia_snd_open_player( dev_id, clock_rate, nchannel,
 					  nsamples, bits, &play_cb, NULL,
 					  &strm);
+    } else {
+	status = pjmedia_snd_open( dev_id, dev_id, clock_rate, nchannel,
+				   nsamples, bits, &rec_cb, &play_cb, NULL,
+				   &strm);
     }
     
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));	
-	printf( "Error: unable to open device %d for %s: %s (err=%d)\n",
-		dev_id, (capturing ? "capture" : "playback"),
-		errmsg, status);
-	return 1;
-	
-    } else {
-	puts("Device opened successfully");
+        app_perror("Unable to open device for capture", status);
+        return 1;
     }
 
+    status = pjmedia_snd_stream_start(strm);
+    if (status != PJ_SUCCESS) {
+        app_perror("Unable to start capture stream", status);
+        return 1;
+    }
+    
+    /* Let playback/capture runs for a while */
+    pj_thread_sleep(1000);
+
     pjmedia_snd_stream_close(strm);
+
+    if ((dir & PJMEDIA_DIR_CAPTURE) && rec_counter==0) {
+	printf("Error: capture stream was not running\n");
+	return 1;
+    }
+
+    if ((dir & PJMEDIA_DIR_PLAYBACK) && play_counter==0) {
+	printf("Error: playback stream was not running\n");
+	return 1;
+    }
+
+    puts("Success.");
     return 0;
 }
 
@@ -152,18 +196,25 @@ int main(int argc, char *argv[])
     } else if (argc == 6) {
 	
 	int dev_id;
-	int capturing;
+	pjmedia_dir dir;
 	int clock_rate;
 	int nchannel;
 	int bits;
 
 	dev_id = atoi(argv[1]);
-	capturing = (strcmp(argv[2], "r") == 0);
+
+	if (strcmp(argv[2], "rec")==0)
+	    dir = PJMEDIA_DIR_CAPTURE;
+	else if (strcmp(argv[2], "play")==0)
+	    dir = PJMEDIA_DIR_PLAYBACK;
+	else if (strcmp(argv[2], "both")==0)
+	    dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+
 	clock_rate = atoi(argv[3]);
 	nchannel = atoi(argv[4]);
 	bits = atoi(argv[5]);
 
-	return open_device(dev_id, capturing, clock_rate, nchannel, bits);
+	return open_device(dev_id, dir, clock_rate, nchannel, bits);
 
     } else {
 	puts("Error: invalid arguments");
