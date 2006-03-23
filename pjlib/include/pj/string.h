@@ -369,8 +369,12 @@ PJ_IDECL(int) pj_stricmp(const pj_str_t *str1, const pj_str_t *str2);
  *      - 0	    if str1 is equal to str2
  *      - (-1)	    if not equal.
  */
+#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM!=0
 PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
 			     int len);
+#else
+#define strnicmp_alnum	strnicmp
+#endif
 
 /**
  * Perform lowercase comparison to the strings which consists of only
@@ -387,7 +391,11 @@ PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
  *      - 0	    if str1 is equal to str2
  *      - (-1)	    if not equal.
  */
+#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM!=0
 PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
+#else
+#define pj_stricmp_alnum    pj_stricmp
+#endif
 
 /**
  * Perform lowercase comparison to the strings.

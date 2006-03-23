@@ -7,11 +7,11 @@
 # (the library) for this specific operating system. Object files common 
 # to all operating systems should go in Makefile instead.
 #
-export PJLIB_OBJS += 	addr_resolv_sock.o guid_simple.o \
+export PJLIB_OBJS += 	addr_resolv_sock.o file_access_unistd.o \
+			file_io_ansi.o guid_simple.o \
 			log_writer_stdout.o os_core_unix.o \
 			os_error_unix.o os_time_unix.o \
 			os_timestamp_common.o os_timestamp_linux.o \
-			os_time_ansi.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
 export PJLIB_OBJS += ioqueue_select.o 

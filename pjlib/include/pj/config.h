@@ -365,6 +365,19 @@
 #endif
 
 
+/**
+ * Include pj_stricmp_alnum() and pj_strnicmp_alnum(), i.e. custom
+ * functions to compare alnum strings. On some systems, they're faster
+ * then stricmp/strcasecmp, but they can be slower on other systems.
+ * When disabled, pjlib will fallback to stricmp/strnicmp.
+ * 
+ * Default: 0
+ */
+#ifndef PJ_HAS_STRICMP_ALNUM
+#   define PJ_HAS_STRICMP_ALNUM	    0
+#endif
+
+
 /** @} */
 
 /********************************************************************

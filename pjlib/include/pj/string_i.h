@@ -195,6 +195,7 @@ PJ_IDEF(int) pj_stricmp( const pj_str_t *str1, const pj_str_t *str2)
     }
 }
 
+#if defined(PJ_HAS_STRICMP_ALNUM) && PJ_HAS_STRICMP_ALNUM!=0
 PJ_IDEF(int) strnicmp_alnum( const char *str1, const char *str2,
 			     int len)
 {
@@ -263,6 +264,7 @@ PJ_IDEF(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2)
 	    return 0;
     }
 }
+#endif	/* PJ_HAS_STRICMP_ALNUM */
 
 PJ_IDEF(int) pj_stricmp2( const pj_str_t *str1, const char *str2)
 {
