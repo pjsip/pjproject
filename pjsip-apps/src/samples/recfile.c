@@ -17,49 +17,47 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+
 #include <pjmedia.h>
-#include <pjlib-util.h>
 #include <pjlib.h>
+
 #include <stdio.h>
-#include <stdlib.h>
-
-#include "util.h"
-
-
-/*
- * playfile.c
- *
- * PURPOSE:
- *  Play a WAV file to sound player device.
- *
- * USAGE:
- *  playfile FILE.WAV
- *
- *  The WAV file could have mono or stereo channels with arbitrary
- *  sampling rate, but MUST contain uncompressed (i.e. 16bit) PCM.
- *
- */
-
 
 /* For logging purpose. */
-#define THIS_FILE   "playfile.c"
+#define THIS_FILE   "recfile.c"
+
+/* Configs */
+#define CLOCK_RATE	    44100
+#define SAMPLES_PER_FRAME   (CLOCK_RATE * 20 / 1000)
+#define NCHANNELS	    2
+#define BITS_PER_SAMPLE	    16
 
 
 static const char *desc = 
-" FILE		    						    \n"
-"		    						    \n"
-"  playfile.c	    						    \n"
-"		    						    \n"
-" PURPOSE	    						    \n"
-"		    						    \n"
-"  Demonstrate how to play a WAV file.				    \n"
-"		    						    \n"
-" USAGE		    						    \n"
-"		    						    \n"
-"  playfile FILE.WAV						    \n"
-"		    						    \n"
-"  The WAV file could have mono or stereo channels with arbitrary   \n"
-"  sampling rate, but MUST contain uncompressed (i.e. 16bit) PCM.   \n";
+ " FILE					    \n"
+ "  recfile.c				    \n"
+ "					    \n"
+ " PURPOSE:				    \n"
+ "  Record microphone to WAVE file.	    \n"
+ "					    \n"
+ " USAGE:				    \n"
+ "  recfile FILE.WAV			    \n"
+ "";
+
+
+/* Util to display the error message for the specified error code  */
+static int app_perror( const char *sender, const char *title, 
+		       pj_status_t status)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    PJ_UNUSED_ARG(sender);
+
+    pj_strerror(status, errmsg, sizeof(errmsg));
+
+    printf("%s: %s [code=%d]\n", title, errmsg, status);
+    return 1;
+}
 
 
 /*
@@ -75,6 +73,13 @@ int main(int argc, char *argv[])
     char tmp[10];
     pj_status_t status;
 
+
+    /* Verify cmd line arguments. */
+    if (argc != 2) {
+	puts("");
+	puts(desc);
+	return 0;
+    }
 
     /* Must init PJLIB first: */
     status = pj_init();
@@ -92,27 +97,27 @@ int main(int argc, char *argv[])
 
     /* Create memory pool for our file player */
     pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
-			   "wav",	    /* pool name.	    */
+			   "app",	    /* pool name.	    */
 			   4000,	    /* init size	    */
 			   4000,	    /* increment size	    */
 			   NULL		    /* callback on error    */
 			   );
 
-    /* Create file media port from the WAV file */
-    status = pjmedia_file_player_port_create( pool,	/* memory pool	    */
-					      argv[1],	/* file to play	    */
-					      0,	/* flags	    */
-					      0,	/* default buffer   */
-					      NULL,	/* user data	    */
-					      &file_port/* returned port    */
-					      );
+    /* Create WAVE file writer port. */
+    status = pjmedia_file_writer_port_create( pool, argv[1],
+					      CLOCK_RATE,
+					      NCHANNELS,
+					      SAMPLES_PER_FRAME,
+					      BITS_PER_SAMPLE,
+					      0, 0, NULL,
+					      &file_port);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to use WAV file", status);
+	app_perror(THIS_FILE, "Unable to open WAV file for writing", status);
 	return 1;
     }
 
     /* Create sound player port. */
-    status = pjmedia_snd_port_create_player( 
+    status = pjmedia_snd_port_create_rec( 
 		 pool,				    /* pool		    */
 		 -1,				    /* use default dev.	    */
 		 file_port->info.sample_rate,	    /* clock rate.	    */
@@ -136,17 +141,17 @@ int main(int argc, char *argv[])
 
 
     /* 
-     * File should be playing and looping now, using sound device's thread. 
+     * Recording should be started now. 
      */
 
 
     /* Sleep to allow log messages to flush */
-    pj_thread_sleep(100);
+    pj_thread_sleep(10);
 
 
-    printf("Playing %s..\n", argv[1]);
+    printf("Recodring %s..\n", argv[1]);
     puts("");
-    puts("Press <ENTER> to stop playing and quit");
+    puts("Press <ENTER> to stop recording and quit");
 
     fgets(tmp, sizeof(tmp), stdin);
 

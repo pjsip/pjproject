@@ -18,6 +18,21 @@
  */
 
 #include <pjmedia.h>
+#include <pjlib-util.h>	/* pj_getopt */
+#include <pjlib.h>
+
+#include <stdlib.h>	/* atoi() */
+#include <stdio.h>
+
+#include "util.h"
+
+/* For logging purpose. */
+#define THIS_FILE   "confsample.c"
+
+
+/* Shall we put recorder in the conference */
+#define RECORDER    1
+
 
 static const char *desc = 
  " FILE:								    \n"
@@ -30,9 +45,11 @@ static const char *desc =
  "									    \n"
  " USAGE:								    \n"
  "									    \n"
- "  confsample [file1.wav] [file2.wav] ...				    \n"
+ "  confsample [options] [file1.wav] [file2.wav] ...			    \n"
  "									    \n"
- " where:								    \n"
+ " options:								    \n"
+ SND_USAGE
+ "									    \n"
  "  fileN.wav are optional WAV files to be connected to the conference      \n"
  "  bridge. The WAV files MUST have single channel (mono) and 16 bit PCM    \n"
  "  samples. It can have arbitrary sampling rate.			    \n"
@@ -45,23 +62,8 @@ static const char *desc =
  "  If WAV files are specified, the WAV file player ports will be connected \n"
  "  to slot starting from number one in the bridge. The WAV files can have  \n"
  "  arbitrary sampling rate; the bridge will convert it to its clock rate.  \n"
- "  However, the files MUST have a single audio channel only (i.e. mono).   \n";
+ "  However, the files MUST have a single audio channel only (i.e. mono).  \n";
 
-#include <pjmedia.h>
-#include <pjlib.h>
-
-#include <stdlib.h>	/* atoi() */
-#include <stdio.h>
-
-
-/* For logging purpose. */
-#define THIS_FILE   "confsample.c"
-
-/* Constants */
-#define CLOCK_RATE	44100
-#define NSAMPLES	(CLOCK_RATE * 20 / 1000)
-#define NCHANNELS	1
-#define NBITS		16
 
  
 /* 
@@ -73,19 +75,6 @@ static void conf_list(pjmedia_conf *conf, pj_bool_t detail);
 
 /* Display VU meter */
 static void monitor_level(pjmedia_conf *conf, int slot, int dir, int dur);
-
-
-/* Util to display the error message for the specified error code  */
-static int app_perror( const char *sender, const char *title, 
-		       pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    printf("%s: %s [code=%d]\n", title, errmsg, status);
-    return 1;
-}
 
 
 /* Show usage */
@@ -123,6 +112,12 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
  */
 int main(int argc, char *argv[])
 {
+    int dev_id = -1;
+    int clock_rate = CLOCK_RATE;
+    int channel_count = NCHANNELS;
+    int samples_per_frame = NSAMPLES;
+    int bits_per_sample = NBITS;
+
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
     pj_pool_t *pool;
@@ -130,21 +125,23 @@ int main(int argc, char *argv[])
 
     int i, port_count, file_count;
     pjmedia_port **file_port;	/* Array of file ports */
+    pjmedia_port *rec_port = NULL;  /* Wav writer port */
 
     char tmp[10];
     pj_status_t status;
 
 
-    /* Just in case user needs help */
-    if (argc > 1 && (*argv[1]=='-' || *argv[1]=='/' || *argv[1]=='?')) {
-	usage();
-	return 1;
-    }
-
-
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
+    /* Get command line options. */
+    if (get_snd_options(THIS_FILE, argc, argv, &dev_id, &clock_rate,
+			&channel_count, &samples_per_frame, &bits_per_sample))
+    {
+	usage();
+	return 1;
+    }
 
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
@@ -165,8 +162,8 @@ int main(int argc, char *argv[])
 			   );
 
 
-    file_count = argc-1;
-    port_count = file_count + 1;
+    file_count = argc - pj_optind;
+    port_count = file_count + 1 + RECORDER;
 
     /* Create the conference bridge. 
      * With default options (zero), the bridge will create an instance of
@@ -174,10 +171,10 @@ int main(int argc, char *argv[])
      */
     status = pjmedia_conf_create( pool,	    /* pool to use	    */
 				  port_count,/* number of ports	    */
-				  CLOCK_RATE,/* sampling rate	    */
-				  NCHANNELS,/* # of channels.	    */
-				  NSAMPLES, /* samples per frame    */
-				  NBITS,    /* bits per sample	    */
+				  clock_rate,
+				  channel_count,
+				  samples_per_frame,
+				  bits_per_sample,
 				  0,	    /* options		    */
 				  &conf	    /* result		    */
 				  );
@@ -186,6 +183,20 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+#if RECORDER
+    status = pjmedia_file_writer_port_create( pool, "confrecord.wav",
+					      clock_rate, channel_count,
+					      samples_per_frame, 
+					      bits_per_sample, 0, 0, NULL,
+					      &rec_port);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Unable to create WAV writer", status);
+	return 1;
+    }
+
+    pjmedia_conf_add_port(conf, pool, rec_port, NULL, NULL);
+#endif
+
 
     /* Create file ports. */
     file_port = pj_pool_alloc(pool, file_count * sizeof(pjmedia_port*));
@@ -193,16 +204,17 @@ int main(int argc, char *argv[])
     for (i=0; i<file_count; ++i) {
 
 	/* Load the WAV file to file port. */
-	status = pjmedia_file_player_port_create( pool,	    /* pool.	    */
-						  argv[i+1],/* filename	    */
-						  0,	    /* flags	    */
-						  0,	    /* buf size	    */
-						  NULL,	    /* user data    */
-						  &file_port[i]	/* result   */
-						  );
+	status = pjmedia_file_player_port_create( 
+			pool,		    /* pool.	    */
+			argv[i+pj_optind],  /* filename	    */
+			0,		    /* flags	    */
+			0,		    /* buf size	    */
+			NULL,		    /* user data    */
+			&file_port[i]	    /* result	    */
+			);
 	if (status != PJ_SUCCESS) {
 	    char title[80];
-	    pj_ansi_sprintf(title, "Unable to use %s", argv[i+1]);
+	    pj_ansi_sprintf(title, "Unable to use %s", argv[i+pj_optind]);
 	    app_perror(THIS_FILE, title, status);
 	    usage();
 	    return 1;
@@ -213,7 +225,7 @@ int main(int argc, char *argv[])
 					pool,		/* pool		    */
 					file_port[i],	/* port to connect  */
 					NULL,		/* Use port's name  */
-					NULL		/* ptr to receive slot # */
+					NULL		/* ptr for slot #   */
 					);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to add conference port", status);
@@ -228,6 +240,9 @@ int main(int argc, char *argv[])
      * "connected". User must connect the port manually.
      */
 
+
+    /* Dump memory usage */
+    dump_pool_usage(THIS_FILE, &cp);
 
     /* Sleep to allow log messages to flush */
     pj_thread_sleep(100);
@@ -420,6 +435,10 @@ on_quit:
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
 
+    /* Destroy recorder port */
+    if (rec_port)
+	pjmedia_port_destroy(rec_port);
+
     /* Release application pool */
     pj_pool_release( pool );
 
@@ -483,6 +502,7 @@ static void conf_list(pjmedia_conf *conf, int detail)
 	    printf("Port #%02d:\n"
 		   "  Name                    : %.*s\n"
 		   "  Sampling rate           : %d Hz\n"
+		   "  Samples per frame       : %d\n"
 		   "  Frame time              : %d ms\n"
 		   "  Signal level adjustment : tx=%d, rx=%d\n"
 		   "  Current signal level    : tx=%u, rx=%u\n"
@@ -491,6 +511,7 @@ static void conf_list(pjmedia_conf *conf, int detail)
 		   (int)port_info->name.slen,
 		   port_info->name.ptr,
 		   port_info->clock_rate,
+		   port_info->samples_per_frame,
 		   port_info->samples_per_frame*1000/port_info->clock_rate,
 		   port_info->tx_adj_level,
 		   port_info->rx_adj_level,

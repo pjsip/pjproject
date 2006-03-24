@@ -102,6 +102,14 @@ SOURCE=..\src\samples\playsine.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\recfile.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\resampleplay.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\simpleua.c
 # End Source File
 # Begin Source File

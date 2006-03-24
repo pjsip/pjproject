@@ -61,6 +61,7 @@
 /* For logging purpose. */
 #define THIS_FILE   "simpleua.c"
 
+#include "util.h"
 
 /*
  * Static variables.
@@ -123,20 +124,6 @@ static pjsip_module mod_simpleua =
     NULL,			    /* on_tsx_state()		*/
 };
 
-
-/* 
- * Util to display the error message for the specified error code  
- */
-static int app_perror( const char *sender, const char *title, 
-		       pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(1,(sender, "%s: %s [code=%d]", title, errmsg, status));
-    return 1;
-}
 
 
 /*
@@ -415,24 +402,8 @@ int main(int argc, char *argv[])
 	pjsip_endpt_handle_events(g_endpt, &timeout);
     }
 
-    /* On exit, dump memory usage: */
-    {
-	pj_pool_t   *p;
-	unsigned     total_alloc = 0;
-	unsigned     total_used = 0;
-
-	/* Accumulate memory usage in active list. */
-	p = cp.used_list.next;
-	while (p != (pj_pool_t*) &cp.used_list) {
-	    total_alloc += pj_pool_get_capacity(p);
-	    total_used += pj_pool_get_used_size(p);
-	    p = p->next;
-	}
-
-	printf("Total pool memory allocated=%d KB, used=%d KB\n",
-		total_alloc / 1000,
-		total_used / 1000);
-    }
+    /* On exit, dump current memory usage: */
+    dump_pool_usage(THIS_FILE, &cp);
 
     return 0;
 }

@@ -38,7 +38,7 @@ SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
 BINDIR := ../bin/samples
 
-SAMPLES := simpleua playfile playsine confsample sndinfo level
+SAMPLES := simpleua playfile playsine confsample sndinfo level recfile resampleplay
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE))
 

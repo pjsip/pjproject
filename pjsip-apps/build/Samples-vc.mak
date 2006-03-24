@@ -39,11 +39,13 @@ BINDIR = ..\bin\samples
 
 SAMPLES = $(BINDIR)\simpleua.exe $(BINDIR)\playfile.exe $(BINDIR)\playsine.exe \
 	  $(BINDIR)\confsample.exe $(BINDIR)\sndinfo.exe \
-	  $(BINDIR)\level.exe
+	  $(BINDIR)\level.exe $(BINDIR)\recfile.exe  \
+	  $(BINDIR)\resampleplay.exe
+
 
 all: $(OBJDIR) $(SAMPLES)
 
-$(SAMPLES): $(SRCDIR)\$(@B).c $(LIBS) Samples-vc.mak
+$(SAMPLES): $(SRCDIR)\$(@B).c $(LIBS) $(SRCDIR)\util.h Samples-vc.mak
 	cl -nologo -c $(SRCDIR)\$(@B).c /Fo$(OBJDIR)\$(@B).obj $(CFLAGS) 
 	cl /nologo $(OBJDIR)\$(@B).obj /Fe$@ /Fm$(OBJDIR)\$(@B).map $(LDFLAGS)
 

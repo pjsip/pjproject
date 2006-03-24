@@ -1,38 +1,6 @@
 
-/* Include all PJSIP core headers. */
-#include <pjsip.h>
 
-/* Include all PJMEDIA headers. */
-#include <pjmedia.h>
-
-/* Include all PJMEDIA-CODEC headers. */
-#include <pjmedia-codec.h>
-
-/* Include all PJSIP-UA headers */
-#include <pjsip_ua.h>
-
-/* Include all PJSIP-SIMPLE headers */
-#include <pjsip_simple.h>
-
-/* Include all PJLIB-UTIL headers. */
-#include <pjlib-util.h>
-
-/* Include all PJLIB headers. */
-#include <pjlib.h>
-
-
-/* Global endpoint instance. */
-static pjsip_endpoint *g_endpt;
-
-/* Global caching pool factory. */
-static pj_caching_pool cp;
-
-/* Global media endpoint. */
-static pjmedia_endpt *g_med_endpt;
-
-/* 
- * Show error.
- */
+/* Util to display the error message for the specified error code  */
 static int app_perror( const char *sender, const char *title, 
 		       pj_status_t status)
 {
@@ -40,84 +8,145 @@ static int app_perror( const char *sender, const char *title,
 
     pj_strerror(status, errmsg, sizeof(errmsg));
 
-    PJ_LOG(1,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
     return 1;
 }
 
+
+
+/* Constants */
+#define CLOCK_RATE	44100
+#define NSAMPLES	(CLOCK_RATE * 20 / 1000)
+#define NCHANNELS	1
+#define NBITS		16
+
 /*
- * Perform the very basic initialization:
- *  - init PJLIB.
- *  - init memory pool
- *  - create SIP endpoint instance.
+ * Common sound options.
  */
-static pj_status_t util_init(void)
+#define SND_USAGE   \
+"  -d, --dev=NUM        Sound device use device id NUM (default=-1)	 \n"\
+"  -r, --rate=HZ        Set clock rate in samples per sec (default=44100)\n"\
+"  -c, --channel=NUM    Set # of channels (default=1 for mono).		 \n"\
+"  -f, --frame=NUM      Set # of samples per frame (default equival 20ms)\n"\
+"  -b, --bit=NUM        Set # of bits per sample (default=16)		 \n"
+
+
+/*
+ * This utility function parses the command line and look for
+ * common sound options.
+ */
+static pj_status_t get_snd_options( const char *app_name,
+				    int argc, 
+				    char *argv[],
+				    int *dev_id,
+				    int *clock_rate,
+				    int *channel_count,
+				    int *samples_per_frame,
+				    int *bits_per_sample)
 {
-    pj_status_t status;
+    struct pj_getopt_option long_options[] = {
+	{ "dev",	1, 0, 'd' },
+	{ "rate",	1, 0, 'r' },
+	{ "channel",	1, 0, 'c' },
+	{ "frame",	1, 0, 'f' },
+	{ "bit",	1, 0, 'b' },
+	{ NULL, 0, 0, 0 },
+    };
+    int c;
+    int option_index;
+    long val;
+    char *err;
 
-    /* Init PJLIB */
-    status = pj_init();
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "pj_init() error", status);
-	return status;
-    }
+    *samples_per_frame = 0;
 
-    /* Init PJLIB-UTIL: */
-    status = pjlib_util_init();
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "pjlib_util_init() error", status);
-	return status;
-    }
-
-    /* Init memory pool: */
-
-    /* Init caching pool. */
-    pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
-
-    /* Create global endpoint: */
-
+    pj_optind = 0;
+    while((c=pj_getopt_long(argc,argv, "d:r:c:f:b:", 
+			    long_options, &option_index))!=-1) 
     {
-	const pj_str_t *hostname;
-	const char *endpt_name;
 
-	/* Endpoint MUST be assigned a globally unique name.
-	 * The name will be used as the hostname in Warning header.
-	 */
+	switch (c) {
+	case 'd':
+	    /* device */
+	    val = strtol(pj_optarg, &err, 10);
+	    if (*err) {
+		PJ_LOG(3,(app_name, "Error: invalid value for device id"));
+		return PJ_EINVAL;
+	    }
+	    *dev_id = val;
+	    break;
 
-	/* For this implementation, we'll use hostname for simplicity */
-	hostname = pj_gethostname();
-	endpt_name = hostname->ptr;
+	case 'r':
+	    /* rate */
+	    val = strtol(pj_optarg, &err, 10);
+	    if (*err) {
+		PJ_LOG(3,(app_name, "Error: invalid value for clock rate"));
+		return PJ_EINVAL;
+	    }
+	    *clock_rate = val;
+	    break;
 
-	/* Create the endpoint: */
+	case 'c':
+	    /* channel count */
+	    val = strtol(pj_optarg, &err, 10);
+	    if (*err) {
+		PJ_LOG(3,(app_name, "Error: invalid channel count"));
+		return PJ_EINVAL;
+	    }
+	    *channel_count = val;
+	    break;
 
-	status = pjsip_endpt_create(&cp.factory, endpt_name, 
-				    &g_endpt);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to create SIP endpoint", status);
-	    return status;
+	case 'f':
+	    /* frame count/samples per frame */
+	    val = strtol(pj_optarg, &err, 10);
+	    if (*err) {
+		PJ_LOG(3,(app_name, "Error: invalid samples per frame"));
+		return PJ_EINVAL;
+	    }
+	    *samples_per_frame = val;
+	    break;
+
+	case 'b':
+	    /* bit per sample */
+	    val = strtol(pj_optarg, &err, 10);
+	    if (*err) {
+		PJ_LOG(3,(app_name, "Error: invalid samples bits per sample"));
+		return PJ_EINVAL;
+	    }
+	    *bits_per_sample = val;
+	    break;
+
+	default:
+	    /* Unknown options */
+	    PJ_LOG(3,(app_name, "Error: unknown options '%c'", pj_optopt));
+	    return PJ_EINVAL;
 	}
+
     }
 
-    return PJ_SUCCESS;
+    if (*samples_per_frame == 0) {
+	*samples_per_frame = *clock_rate * *channel_count * 20 / 1000;
+    }
+
+    return 0;
 }
 
-/*
- * Add UDP transport to endpoint.
- */
-static pj_status_t util_add_udp_transport(int port)
+
+/* Dump memory pool usage. */
+static void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
 {
-    pj_sockaddr_in addr;
-    pj_status_t status;
-    
-    addr.sin_family = PJ_AF_INET;
-    addr.sin_addr.s_addr = 0;
-    addr.sin_port = port;
+    pj_pool_t   *p;
+    unsigned     total_alloc = 0;
+    unsigned     total_used = 0;
 
-    status = pjsip_udp_transport_start( g_endpt, &addr, NULL, 1, NULL);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to start UDP transport", status);
-	return status;
+    /* Accumulate memory usage in active list. */
+    p = cp->used_list.next;
+    while (p != (pj_pool_t*) &cp->used_list) {
+	total_alloc += pj_pool_get_capacity(p);
+	total_used += pj_pool_get_used_size(p);
+	p = p->next;
     }
 
-    return status;
+    PJ_LOG(3, (app_name, "Total pool memory allocated=%d KB, used=%d KB",
+	       total_alloc / 1000,
+	       total_used / 1000));
 }
-
