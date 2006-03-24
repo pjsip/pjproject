@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua-lib/pjsua.h>
-#include <pjsua-lib/getopt.h>
 #include <stdio.h>
 
 /*
@@ -702,6 +701,9 @@ void pjsua_dump(pj_bool_t detail)
 
     old_decor = pj_log_get_decor();
     pj_log_set_decor(old_decor & (PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
+
+    if (detail)
+	pj_dump_config();
 
     pjsip_endpt_dump(pjsua.endpt, detail);
     pjmedia_endpt_dump(pjsua.med_endpt);
