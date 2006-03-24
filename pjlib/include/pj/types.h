@@ -294,6 +294,41 @@ typedef int pj_exception_id_t;
  */
 PJ_DECL(pj_status_t) pj_init(void);
 
+/**
+ * Swap the byte order of an 16bit data.
+ *
+ * @param val16	    The 16bit data.
+ *
+ * @return	    An 16bit data with swapped byte order.
+ */
+PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
+{
+    pj_uint8_t *p = (pj_uint8_t*)&val16;
+    pj_uint8_t tmp = *p;
+    *p = *(p+1);
+    *(p+1) = tmp;
+    return val16;
+}
+
+/**
+ * Swap the byte order of an 32bit data.
+ *
+ * @param val16	    The 32bit data.
+ *
+ * @return	    An 32bit data with swapped byte order.
+ */
+PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
+{
+    pj_uint8_t *p = (pj_uint8_t*)&val32;
+    pj_uint8_t tmp = *p;
+    *p = *(p+3);
+    *(p+3) = tmp;
+    tmp = *(p+1);
+    *(p+1) = *(p+2);
+    *(p+2) = tmp;
+    return val32;
+}
+
 
 /**
  * @}
