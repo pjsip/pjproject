@@ -89,6 +89,10 @@ SOURCE="..\src\pjlib-util\errno.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\getopt.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\md5.c"
 # End Source File
 # Begin Source File
@@ -132,6 +136,10 @@ SOURCE="..\src\pjlib-util\xml.c"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\errno.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\getopt.h"
 # End Source File
 # Begin Source File
 

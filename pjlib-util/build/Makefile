@@ -22,7 +22,8 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 #
 export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-		errno.o md5.o scanner.o stun.o string.o stun.o stun_client.o xml.o
+		errno.o getopt.o md5.o scanner.o stun.o string.o stun.o stun_client.o \
+		xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 
 ###############################################################################
