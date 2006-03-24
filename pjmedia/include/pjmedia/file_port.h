@@ -26,11 +26,23 @@
 #include <pjmedia/port.h>
 
 
+
 PJ_BEGIN_DECL
 
 
 /**
- * Create file player port.
+ * Create a media port to play streams from a WAV file.
+ *
+ * @param pool		Pool to create memory buffers for this port.
+ * @param filename	File name to open.
+ * @param flags		Port creation flags.
+ * @param buf_size	Buffer size to be allocated. If the value is zero or
+ *			negative, the port will use default buffer size (which
+ *			is about 4KB).
+ * @param user_data	User data to be associated with the file player port.
+ * @param p_port	Pointer to receive the file port instance.
+ *
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 						      const char *filename,
@@ -38,6 +50,36 @@ PJ_DECL(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 						      pj_ssize_t buff_size,
 						      void *user_data,
 						      pjmedia_port **p_port );
+
+
+
+/**
+ * Create a media port to record streams to a WAV file. Note that the port
+ * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
+ * header can be filled with correct values (such as the file length).
+ *
+ * @param pool		Pool to create memory buffers for this port.
+ * @param filename	File name.
+ * @param flags		Port creation flags.
+ * @param buf_size	Buffer size to be allocated. If the value is zero or
+ *			negative, the port will use default buffer size (which
+ *			is about 4KB).
+ * @param user_data	User data to be associated with the file writer port.
+ * @param p_port	Pointer to receive the file port instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
+						      const char *filename,
+						      unsigned sampling_rate,
+						      unsigned channel_count,
+						      unsigned samples_per_frame,
+						      unsigned bits_per_sample,
+						      unsigned flags,
+						      pj_ssize_t buff_size,
+						      void *user_data,
+						      pjmedia_port **p_port );
+
 
 
 

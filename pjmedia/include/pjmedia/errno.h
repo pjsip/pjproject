@@ -440,6 +440,11 @@ PJ_BEGIN_DECL
  * Wave file too short.
  */
 #define PJMEDIA_EWAVETOOSHORT	    (PJMEDIA_ERRNO_START+182)    /* 220182 */
+/**
+ * @hideinitializer
+ * Sound frame is too large for file buffer.
+ */
+#define PJMEDIA_EFRMFILETOOBIG	    (PJMEDIA_ERRNO_START+183)    /* 220183 */
 
 
 /************************************************************

@@ -498,7 +498,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
      * to yield the same performance.
      */
     if (rate_out < rate_in) {
-	high_quality = 0;
+	//high_quality = 0;
     }
 
 #if !defined(PJMEDIA_HAS_LARGE_FILTER) || PJMEDIA_HAS_LARGE_FILTER==0
@@ -579,8 +579,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
          *     0    xoff  2*xoff       size+2*xoff 
 	 */
 	dst_buf = resample->buffer + resample->xoff*2;
-	for (i=0; i<resample->frame_size; ++i)
-	    dst_buf[i] = input[i];
+	for (i=0; i<resample->frame_size; ++i) dst_buf[i] = input[i];
 	    
 	if (resample->factor >= 1) {
 
@@ -632,3 +631,10 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 	SrcLinear( input, output, resample->factor, resample->frame_size);
     }
 }
+
+PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample)
+{
+    PJ_ASSERT_RETURN(resample != NULL, 0);
+    return resample->frame_size;
+}
+

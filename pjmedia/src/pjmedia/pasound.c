@@ -131,9 +131,9 @@ static int PaPlayerCallback( const void *input,
 	PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
-    if (statusFlags & paInputUnderflow)
+    if (statusFlags & paOutputUnderflow)
 	++stream->underflow;
-    if (statusFlags & paInputOverflow)
+    if (statusFlags & paOutputOverflow)
 	++stream->overflow;
 
     stream->timestamp += frameCount;
@@ -239,6 +239,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     PaStreamParameters inputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
+    const PaHostApiInfo *paHostApiInfo = NULL;
     unsigned paFrames;
     PaError err;
 
@@ -291,6 +292,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
+    paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
+
     /* Frames in PortAudio is number of samples in a single channel */
     paFrames = samples_per_frame / channel_count;
 
@@ -302,11 +305,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
-    PJ_LOG(5,(THIS_FILE, "%s opening device %s for recording, sample rate=%d, "
-			 "channel count=%d, "
-			 "%d bits per sample, %d samples per buffer",
+    PJ_LOG(5,(THIS_FILE, "%s opening device %s (%s) for recording, sample "
+			 "rate=%d, ch=%d, "
+			 "bits=%d, %d samples per frame",
 			 (err==0 ? "Success" : "Error"),
-			 paDevInfo->name, clock_rate, channel_count,
+			 paDevInfo->name, paHostApiInfo->name,
+			 clock_rate, channel_count,
 			 bits_per_sample, samples_per_frame));
 
     *p_snd_strm = stream;
@@ -328,6 +332,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     PaStreamParameters outputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
+    const PaHostApiInfo *paHostApiInfo = NULL;
     unsigned paFrames;
     PaError err;
 
@@ -380,6 +385,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     outputParam.sampleFormat = sampleFormat;
     outputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
 
+    paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
+
     /* Frames in PortAudio is number of samples in a single channel */
     paFrames = samples_per_frame / channel_count;
 
@@ -391,11 +398,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
-    PJ_LOG(5,(THIS_FILE, "%s opening device %s for playing, sample rate=%d, "
-			 "channel count=%d, "
-			 "%d bits per sample, %d samples per frame",
+    PJ_LOG(5,(THIS_FILE, "%s opening device %s(%s) for playing, sample rate=%d"
+			 ", ch=%d, "
+			 "bits=%d, %d samples per frame",
 			 (err==0 ? "Success" : "Error"),
-			 paDevInfo->name, clock_rate, channel_count,
+			 paDevInfo->name, paHostApiInfo->name, 
+			 clock_rate, channel_count,
 		 	 bits_per_sample, samples_per_frame));
 
     *p_snd_strm = stream;
@@ -425,6 +433,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     int sampleFormat;
     const PaDeviceInfo *paRecDevInfo = NULL;
     const PaDeviceInfo *paPlayDevInfo = NULL;
+    const PaHostApiInfo *paRecHostApiInfo = NULL;
+    const PaHostApiInfo *paPlayHostApiInfo = NULL;
     unsigned paFrames;
     PaError err;
 
@@ -497,12 +507,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paRecDevInfo->defaultLowInputLatency;
 
+    paRecHostApiInfo = Pa_GetHostApiInfo(paRecDevInfo->hostApi);
+
     pj_memset(&outputParam, 0, sizeof(outputParam));
     outputParam.device = play_id;
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = paPlayDevInfo->defaultLowInputLatency;
+    outputParam.suggestedLatency = paPlayDevInfo->defaultLowOutputLatency;
+
+    paPlayHostApiInfo = Pa_GetHostApiInfo(paPlayDevInfo->hostApi);
 
     /* Frames in PortAudio is number of samples in a single channel */
     paFrames = samples_per_frame / channel_count;
@@ -515,11 +529,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
-    PJ_LOG(5,(THIS_FILE, "%s opening device %s/%s for recording and playback, "
-			 "sample rate=%d, channel count=%d, "
-			 "%d bits per sample, %d samples per buffer",
+    PJ_LOG(5,(THIS_FILE, "%s opening device %s(%s)/%s(%s) for recording and "
+			 "playback, sample rate=%d, ch=%d, "
+			 "bits=%d, %d samples per frame",
 			 (err==0 ? "Success" : "Error"),
-			 paRecDevInfo->name, paPlayDevInfo->name,
+			 paRecDevInfo->name, paRecHostApiInfo->name,
+			 paPlayDevInfo->name, paPlayHostApiInfo->name,
 			 clock_rate, channel_count,
 			 bits_per_sample, samples_per_frame));
 

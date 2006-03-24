@@ -68,5 +68,13 @@
 #endif
 
 
+/**
+ * Default file player/writer buffer size.
+ */
+#ifndef PJMEDIA_FILE_PORT_BUFSIZE
+#   define PJMEDIA_FILE_PORT_BUFSIZE    4000
+#endif
+
+
 #endif	/* __PJMEDIA_CONFIG_H__ */
 

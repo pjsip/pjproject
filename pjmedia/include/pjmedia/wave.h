@@ -32,6 +32,7 @@ PJ_BEGIN_DECL
 #define PJMEDIA_RIFF_TAG	('F'<<24|'F'<<16|'I'<<8|'R')
 #define PJMEDIA_WAVE_TAG	('E'<<24|'V'<<16|'A'<<8|'W')
 #define PJMEDIA_FMT_TAG		(' '<<24|'t'<<16|'m'<<8|'f')
+#define PJMEDIA_DATA_TAG	('a'<<24|'t'<<16|'a'<<8|'d')
 
 
 /**
@@ -67,6 +68,32 @@ struct pjmedia_wave_hdr
  * @see pjmedia_wave_hdr
  */
 typedef struct pjmedia_wave_hdr pjmedia_wave_hdr;
+
+
+/**
+ * On big-endian hosts, this function swaps the byte order of the values
+ * in the WAVE header fields. On little-endian hosts, this function does 
+ * nothing.
+ *
+ * Application SHOULD call this function after reading the WAVE header
+ * chunks from a file.
+ *
+ * @param hdr	    The WAVE header.
+ */
+PJ_DECL(void) pjmedia_wave_hdr_file_to_host( pjmedia_wave_hdr *hdr );
+
+
+/**
+ * On big-endian hosts, this function swaps the byte order of the values
+ * in the WAVE header fields. On little-endian hosts, this function does 
+ * nothing.
+ *
+ * Application SHOULD call this function before writing the WAVE header
+ * to a file.
+ *
+ * @param hdr	    The WAVE header.
+ */
+PJ_DECL(void) pjmedia_wave_hdr_host_to_file( pjmedia_wave_hdr *hdr );
 
 
 PJ_END_DECL

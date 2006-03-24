@@ -28,12 +28,26 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+/* CONF_DEBUG enables detailed operation of the conference bridge.
+ * Beware that it prints large amounts of logs (several lines per frame).
+ */
 //#define CONF_DEBUG
 #ifdef CONF_DEBUG
 #   include <stdio.h>
-#   define TRACE_(x)   {printf x; fflush(stdout); }
+#   define TRACE_(x)   PJ_LOG(5,x)
 #else
 #   define TRACE_(x)
+#endif
+
+
+/* REC_FILE macro enables recording of the samples written to the sound
+ * device. The file contains RAW PCM data with no header, and has the
+ * same settings (clock rate etc) as the conference bridge.
+ * This should only be enabled when debugging audio quality *only*.
+ */
+//#define REC_FILE    "confrec.pcm"
+#ifdef REC_FILE
+static FILE *fhnd_rec;
 #endif
 
 
@@ -966,6 +980,10 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
     pj_assert(count == conf->samples_per_frame);
 
+    TRACE_((THIS_FILE, "read_port %.*s: count=%d", 
+		       (int)cport->name.slen, cport->name.ptr,
+		       count));
+
     /* If port's samples per frame and sampling rate matches conference
      * bridge's settings, get the frame directly from the port.
      */
@@ -975,6 +993,10 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
 	f.buf = frame;
 	f.size = count * BYTES_PER_SAMPLE;
+
+	TRACE_((THIS_FILE, "  get_frame %.*s: count=%d", 
+		   (int)cport->name.slen, cport->name.ptr,
+		   count));
 
 	status = (cport->port->get_frame)(cport->port, &f);
 
@@ -997,6 +1019,9 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	    f.buf = cport->rx_buf + cport->rx_buf_count;
 	    f.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
 
+	    TRACE_((THIS_FILE, "  get_frame, count=%d", 
+		       cport->samples_per_frame));
+
 	    status = pjmedia_port_get_frame(cport->port, &f);
 
 	    if (status != PJ_SUCCESS) {
@@ -1005,11 +1030,15 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	    }
 
 	    if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+		TRACE_((THIS_FILE, "  get_frame returned non-audio"));
 		zero_samples( cport->rx_buf + cport->rx_buf_count,
 			      cport->samples_per_frame);
 	    }
 
 	    cport->rx_buf_count += cport->samples_per_frame;
+
+	    TRACE_((THIS_FILE, "  rx buffer size is now %d",
+		    cport->rx_buf_count));
 
 	    pj_assert(cport->rx_buf_count <= cport->rx_buf_cap);
 	}
@@ -1022,6 +1051,9 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	    
 	    unsigned src_count;
 
+	    TRACE_((THIS_FILE, "  resample, input count=%d", 
+		    pjmedia_resample_get_input_size(cport->rx_resample)));
+
 	    pjmedia_resample_run( cport->rx_resample,cport->rx_buf, frame);
 
 	    src_count = (unsigned)(count * 1.0 * cport->clock_rate / 
@@ -1031,6 +1063,9 @@ static pj_status_t read_port( pjmedia_conf *conf,
 		copy_samples(cport->rx_buf, cport->rx_buf+src_count,
 			     cport->rx_buf_count);
 	    }
+
+	    TRACE_((THIS_FILE, "  rx buffer size is now %d",
+		    cport->rx_buf_count));
 
 	} else {
 
@@ -1067,8 +1102,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	frame.buf = NULL;
 	frame.size = 0;
 
-	if (cport->port && cport->port->put_frame)
+	if (cport->port && cport->port->put_frame) {
 	    pjmedia_port_put_frame(cport->port, &frame);
+	}
 
 	cport->tx_level = 0;
 	return PJ_SUCCESS;
@@ -1111,11 +1147,15 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    buf[j] = (pj_int16_t) itemp;
 	}
 
-    } else {
+    } else if (cport->sources) {
 	/* No need to adjust signal level. */
 	for (j=0; j<conf->samples_per_frame; ++j) {
 	    buf[j] = unsigned2pcm(cport->mix_buf[j] / cport->sources);
 	}
+    } else {
+	// Not necessarry. Buffer has been zeroed before.
+	// zero_samples(buf, conf->samples_per_frame);
+	pj_assert(buf[0] == 0);
     }
 
     /* Calculate TX level if we need to do so. 
@@ -1154,6 +1194,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
 	    frame.timestamp.u64 = timestamp;
 
+	    TRACE_((THIS_FILE, "put_frame %.*s, count=%d", 
+			       (int)cport->name.slen, cport->name.ptr,
+			       frame.size / BYTES_PER_SAMPLE));
+
 	    return pjmedia_port_put_frame(cport->port, &frame);
 	} else
 	    return PJ_SUCCESS;
@@ -1185,6 +1229,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	
 	pj_status_t status;
 
+	TRACE_((THIS_FILE, "write_port %.*s: count=%d", 
+			   (int)cport->name.slen, cport->name.ptr,
+			   cport->samples_per_frame));
+
 	if (cport->port) {
 	    pjmedia_frame frame;
 
@@ -1192,6 +1240,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    frame.buf = cport->tx_buf;
 	    frame.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
 	    frame.timestamp.u64 = timestamp;
+
+	    TRACE_((THIS_FILE, "put_frame %.*s, count=%d", 
+			       (int)cport->name.slen, cport->name.ptr,
+			       frame.size / BYTES_PER_SAMPLE));
 
 	    status = pjmedia_port_put_frame(cport->port, &frame);
 
@@ -1204,6 +1256,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 			 cport->tx_buf + cport->samples_per_frame,
 			 cport->tx_buf_count);
 	}
+
+	TRACE_((THIS_FILE, " tx_buf count now is %d", 
+			   cport->tx_buf_count));
 
 	return status;
     }
@@ -1221,14 +1276,14 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pjmedia_conf *conf = this_port->user_data;
     unsigned ci, cj, i, j;
     
+    TRACE_((THIS_FILE, "- clock -"));
+
     /* Check that correct size is specified. */
     pj_assert(frame->size == conf->samples_per_frame *
 			     conf->bits_per_sample / 8);
 
     /* Must lock mutex (must we??) */
     pj_mutex_lock(conf->mutex);
-
-    TRACE_(("p"));
 
     /* Zero all port's temporary buffers. */
     for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
@@ -1244,8 +1299,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	conf_port->sources = 0;
 	mix_buf = conf_port->mix_buf;
 
-	for (j=0; j<conf->samples_per_frame; ++j)
-	    mix_buf[j] = 0;
+	for (j=0; j<conf->samples_per_frame; ++j) mix_buf[j] = 0;
     }
 
     /* Get frames from all ports, and "mix" the signal 
@@ -1421,6 +1475,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
     /* Return sound playback frame. */
     if (conf->ports[0]->sources) {
+	TRACE_((THIS_FILE, "write to audio, count=%d", 
+			   conf->samples_per_frame));
+
 	copy_samples( frame->buf, (pj_int16_t*)conf->ports[0]->mix_buf, 
 		      conf->samples_per_frame);
     } else {
@@ -1431,6 +1488,13 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     pj_mutex_unlock(conf->mutex);
+
+#ifdef REC_FILE
+    if (fhnd_rec == NULL)
+	fhnd_rec = fopen(REC_FILE, "wb");
+    if (fhnd_rec)
+	fwrite(frame->buf, frame->size, 1, fhnd_rec);
+#endif
 
     return PJ_SUCCESS;
 }
@@ -1447,8 +1511,6 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     const pj_int16_t *input = frame->buf;
     pj_int16_t *target_snd_buf;
     unsigned i;
-
-    TRACE_(("r"));
 
     /* Check for correct size. */
     PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *

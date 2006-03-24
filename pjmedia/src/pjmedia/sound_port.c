@@ -70,6 +70,9 @@ static pj_status_t play_cb(/* in */   void *user_data,
     if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
 	goto no_frame;
 
+    /* Must supply the required samples */
+    pj_assert(frame.size == size);
+
     return PJ_SUCCESS;
 
 no_frame:

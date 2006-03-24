@@ -30,12 +30,9 @@
 #define THIS_FILE   "file_port.c"
 
 
-#ifndef PJMEDIA_FILE_PORT_BUFSIZE
-#   define PJMEDIA_FILE_PORT_BUFSIZE    4000
-#endif
+#define SIGNATURE	    ('F'<<24|'P'<<16|'L'<<8|'Y')
+#define BYTES_PER_SAMPLE    2
 
-
-#define SIGNATURE	('F'<<24|'I'<<16|'L'<<8|'E')
 
 #if 1
 #   define TRACE_(x)	PJ_LOG(4,x)
@@ -44,37 +41,14 @@
 #endif
 
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
-    PJ_INLINE(pj_int16_t) swap16(pj_int16_t val)
-    {
-	pj_uint8_t *p = (pj_uint8_t*)&val;
-	pj_uint8_t tmp = *p;
-	*p = *(p+1);
-	*(p+1) = tmp;
-	return val;
-    }
-    PJ_INLINE(pj_int32_t) swap32(pj_int32_t val)
-    {
-	pj_uint8_t *p = (pj_uint8_t*)&val;
-	pj_uint8_t tmp = *p;
-	*p = *(p+3);
-	*(p+3) = tmp;
-	tmp = *(p+1);
-	*(p+1) = *(p+2);
-	*(p+2) = tmp;
-	return val;
-    }
-#   define SWAP16(val16)	swap16(val16)
-#   define SWAP32(val32)	swap32(val32)
     static void samples_to_host(pj_int16_t *samples, unsigned count)
     {
 	unsigned i;
 	for (i=0; i<count; ++i) {
-	    samples[i] = SWAP16(samples[i]);
+	    samples[i] = pj_swap16(samples[i]);
 	}
     }
 #else
-#   define SWAP16(val16)	(val16)
-#   define SWAP32(val32)	(val32)
 #   define samples_to_host(samples,count)
 #endif
 
@@ -170,40 +144,10 @@ static pj_status_t fill_buffer(struct file_port *fport)
     }
 
     /* Convert samples to host rep */
-    samples_to_host((pj_int16_t*)fport->buf, fport->bufsize/2);
+    samples_to_host((pj_int16_t*)fport->buf, fport->bufsize/BYTES_PER_SAMPLE);
 
     return PJ_SUCCESS;
 }
-
-
-/*
- * Change the endianness of WAVE header fields.
- */
-void pjmedia_wave_hdr_swap_bytes( pjmedia_wave_hdr *hdr )
-{
-    hdr->riff_hdr.riff		    = SWAP32(hdr->riff_hdr.riff);
-    hdr->riff_hdr.file_len	    = SWAP32(hdr->riff_hdr.file_len);
-    hdr->riff_hdr.wave		    = SWAP32(hdr->riff_hdr.wave);
-    
-    hdr->fmt_hdr.fmt		    = SWAP32(hdr->fmt_hdr.fmt);
-    hdr->fmt_hdr.len		    = SWAP32(hdr->fmt_hdr.len);
-    hdr->fmt_hdr.fmt_tag	    = SWAP16(hdr->fmt_hdr.fmt_tag);
-    hdr->fmt_hdr.nchan		    = SWAP16(hdr->fmt_hdr.nchan);
-    hdr->fmt_hdr.sample_rate	    = SWAP32(hdr->fmt_hdr.sample_rate);
-    hdr->fmt_hdr.bytes_per_sec	    = SWAP32(hdr->fmt_hdr.bytes_per_sec);
-    hdr->fmt_hdr.block_align	    = SWAP16(hdr->fmt_hdr.block_align);
-    hdr->fmt_hdr.bits_per_sample    = SWAP16(hdr->fmt_hdr.bits_per_sample);
-    
-    hdr->data_hdr.data		    = SWAP32(hdr->data_hdr.data);
-    hdr->data_hdr.len		    = SWAP32(hdr->data_hdr.len);
-}
-
-
-#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
-#   define normalize_wave_hdr(hdr)  pjmedia_wave_hdr_swap_bytes(hdr)
-#else
-#   define normalize_wave_hdr(hdr)
-#endif
 
 
 /*
@@ -223,7 +167,6 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
 
     PJ_UNUSED_ARG(flags);
-    PJ_UNUSED_ARG(buff_size);
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
@@ -265,8 +208,10 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
-    /* Normalize WAVE header fields value (only used in big-endian hosts) */
-    normalize_wave_hdr(&wave_hdr);
+    /* Normalize WAVE header fields values from little-endian to host
+     * byte order.
+     */
+    pjmedia_wave_hdr_file_to_host(&wave_hdr);
     
     /* Validate WAVE file. */
     if (wave_hdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
@@ -291,7 +236,7 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
     }
 
     /* Block align must be 2*nchannels */
-    if (wave_hdr.fmt_hdr.block_align != wave_hdr.fmt_hdr.nchan*2) {
+    if (wave_hdr.fmt_hdr.block_align != wave_hdr.fmt_hdr.nchan*BYTES_PER_SAMPLE) {
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
@@ -326,7 +271,8 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
     /* Create file buffer.
      */
-    fport->bufsize = PJMEDIA_FILE_PORT_BUFSIZE;
+    if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
+    fport->bufsize = buff_size;
 
 
     /* Create buffer. */
@@ -354,11 +300,12 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
 
     PJ_LOG(4,(THIS_FILE, 
-	      "File port '%.*s' created: clock=%dKHz, bufsize=%uKB, "
+	      "File player '%.*s' created: samp.rate=%d, ch=%d, bufsize=%uKB, "
 	      "filesize=%luKB",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.sample_rate/1000,
+	      fport->base.info.sample_rate,
+	      fport->base.info.channel_count,
 	      fport->bufsize / 1000,
 	      (unsigned long)(fport->fsize / 1000)));
 
@@ -389,8 +336,9 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 
     pj_assert(fport->base.info.signature == SIGNATURE);
 
-    frame_size = fport->base.info.bytes_per_frame;
-    pj_assert(frame->size == frame_size);
+    //frame_size = fport->base.info.bytes_per_frame;
+    //pj_assert(frame->size == frame_size);
+    frame_size = frame->size;
 
     /* Copy frame from buffer. */
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;

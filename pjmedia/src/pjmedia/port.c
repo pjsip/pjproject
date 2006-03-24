@@ -35,6 +35,7 @@ PJ_DEF(pj_status_t) pjmedia_port_connect( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && upstream_port && downstream_port, PJ_EINVAL);
 
+#if 0
     /* They both MUST have the same media type. */
     PJ_ASSERT_RETURN(upstream_port->info.type ==
 		     downstream_port->info.type, PJMEDIA_ENCTYPE);
@@ -57,17 +58,22 @@ PJ_DEF(pj_status_t) pjmedia_port_connect( pj_pool_t *pool,
     PJ_ASSERT_RETURN(upstream_port->info.bytes_per_frame ==
 		     downstream_port->info.bytes_per_frame, 
 		     PJMEDIA_ENCBYTES);
+#endif
 
     /* Create mutual attachment. */
-    status = upstream_port->on_downstream_connect( pool, upstream_port,
-						   downstream_port );
-    if (status != PJ_SUCCESS)
-	return status;
+    if (upstream_port->on_downstream_connect) {
+	status = upstream_port->on_downstream_connect( pool, upstream_port,
+						       downstream_port );
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
-    status = downstream_port->on_upstream_connect( pool, downstream_port,
-						   upstream_port );
-    if (status != PJ_SUCCESS)
-	return status;
+    if (downstream_port->on_upstream_connect) {
+	status = downstream_port->on_upstream_connect( pool, downstream_port,
+						       upstream_port );
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Save the attachment. */
     upstream_port->downstream_port = downstream_port;
