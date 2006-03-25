@@ -391,7 +391,6 @@ static int perform_test(int sock_type, const char *type_name,
     for (i=0; i<thread_cnt; ++i) {
 	TRACE_((THIS_FILE, "      join thread %d..", i));
         pj_thread_join(thread[i]);
-        pj_thread_destroy(thread[i]);
     }
 
     /* Close all sockets. */
@@ -428,7 +427,7 @@ static int perform_test(int sock_type, const char *type_name,
     
     *p_bandwidth = (pj_uint32_t)bandwidth;
 
-    PJ_LOG(3,(THIS_FILE, "   %.4s    %d         %d        %8d KB/s",
+    PJ_LOG(3,(THIS_FILE, "   %.4s    %2d        %2d       %8d KB/s",
               type_name, thread_cnt, sockpair_cnt,
               *p_bandwidth));
 

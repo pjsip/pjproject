@@ -91,6 +91,8 @@ union operation_key
     PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t);   \
     pj_ioqueue_t           *ioqueue;                \
     pj_mutex_t             *mutex;                  \
+    pj_bool_t		    inside_callback;	    \
+    pj_bool_t		    destroy_requested;	    \
     pj_sock_t		    fd;                     \
     int                     fd_type;                \
     void		   *user_data;              \
