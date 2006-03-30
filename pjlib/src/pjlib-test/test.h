@@ -48,6 +48,7 @@
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_IOQUEUE_PERF_TEST   GROUP_NETWORK
+#define INCLUDE_IOQUEUE_UNREG_TEST  GROUP_NETWORK
 #define INCLUDE_FILE_TEST           GROUP_FILE
 
 #define INCLUDE_ECHO_SERVER         0
@@ -82,6 +83,7 @@ extern int sock_test(void);
 extern int sock_perf_test(void);
 extern int select_test(void);
 extern int udp_ioqueue_test(void);
+extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test(void);
 extern int file_test(void);

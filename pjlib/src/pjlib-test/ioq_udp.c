@@ -457,7 +457,6 @@ static int unregister_test(void)
 
     /* Now unregister and close socket. */
     pj_ioqueue_unregister(key);
-    pj_sock_close(rsock);
 
     /* Poll ioqueue. */
     timeout.sec = 1; timeout.msec = 0;
@@ -538,10 +537,6 @@ static int many_handles_test(void)
 	rc = pj_ioqueue_unregister(key[i]);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("...error in pj_ioqueue_unregister", rc);
-	}
-	rc = pj_sock_close(sock[i]);
-	if (rc != PJ_SUCCESS) {
-	    app_perror("...error in pj_sock_close", rc);
 	}
     }
 

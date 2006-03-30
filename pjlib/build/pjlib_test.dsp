@@ -123,6 +123,10 @@ SOURCE="..\src\pjlib-test\ioq_udp.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-test\ioq_unreg.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-test\list.c"
 # End Source File
 # Begin Source File

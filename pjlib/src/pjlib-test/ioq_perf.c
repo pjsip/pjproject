@@ -398,8 +398,6 @@ static int perform_test(int sock_type, const char *type_name,
     for (i=0; i<sockpair_cnt; ++i) {
         pj_ioqueue_unregister(items[i].server_key);
         pj_ioqueue_unregister(items[i].client_key);
-        pj_sock_close(items[i].server_fd);
-        pj_sock_close(items[i].client_fd);
     }
 
     /* Destroy threads */

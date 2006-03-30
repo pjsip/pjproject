@@ -145,6 +145,10 @@ int test_inner(void)
     DO_TEST( ioqueue_perf_test() );
 #endif
 
+#if INCLUDE_IOQUEUE_UNREG_TEST
+    DO_TEST( udp_ioqueue_unreg_test() );
+#endif
+
 #if INCLUDE_FILE_TEST
     DO_TEST( file_test() );
 #endif

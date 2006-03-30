@@ -233,6 +233,13 @@ SOURCE=..\src\pj\ioqueue_common_abs.h
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_select.c
+
+!IF  "$(CFG)" == "pjlib - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -285,7 +292,7 @@ SOURCE=..\src\pj\pool_caching.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\pool_dbg_win32.c
+SOURCE=..\src\pj\pool_dbg.c
 # End Source File
 # Begin Source File
 
@@ -522,6 +529,10 @@ SOURCE=..\include\pjlib.h
 # Begin Source File
 
 SOURCE=..\include\pj\pool.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\pool_alt.h
 # End Source File
 # Begin Source File
 

@@ -87,6 +87,16 @@ union operation_key
 #endif
 };
 
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+#   define UNREG_FIELDS			\
+	unsigned	    ref_count;	\
+	pj_bool_t	    closing;	\
+	pj_time_val	    free_time;	\
+	
+#else
+#   define UNREG_FIELDS
+#endif
+
 #define DECLARE_COMMON_KEY                          \
     PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t);   \
     pj_ioqueue_t           *ioqueue;                \
@@ -100,7 +110,8 @@ union operation_key
     int                     connecting;             \
     struct read_operation   read_list;              \
     struct write_operation  write_list;             \
-    struct accept_operation accept_list;
+    struct accept_operation accept_list;	    \
+    UNREG_FIELDS
 
 
 #define DECLARE_COMMON_IOQUEUE                      \
