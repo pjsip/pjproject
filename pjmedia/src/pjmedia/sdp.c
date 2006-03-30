@@ -299,10 +299,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
     rtpmap->clock_rate = pj_strtoul(&token);
 
     /* Expecting either '/' or EOF */
-    if (*p != '/' && p != end)
+    if (p != end && *p != '/')
 	return PJMEDIA_SDP_EINRTPMAP;
 
-    if (*p == '/') {
+    if (p != end) {
 	++p;
 	token.ptr = (char*)p;
 	token.slen = end-p;
