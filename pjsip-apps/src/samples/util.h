@@ -134,6 +134,7 @@ static pj_status_t get_snd_options( const char *app_name,
 /* Dump memory pool usage. */
 static void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
 {
+#if !defined(PJ_HAS_POOL_ALT_API) || PJ_HAS_POOL_ALT_API==0
     pj_pool_t   *p;
     unsigned     total_alloc = 0;
     unsigned     total_used = 0;
@@ -149,4 +150,5 @@ static void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
     PJ_LOG(3, (app_name, "Total pool memory allocated=%d KB, used=%d KB",
 	       total_alloc / 1000,
 	       total_used / 1000));
+#endif
 }

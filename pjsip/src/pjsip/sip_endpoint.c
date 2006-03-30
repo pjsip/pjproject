@@ -939,7 +939,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     PJ_LOG(3, (THIS_FILE, "Dumping endpoint %p:", endpt));
     
     /* Dumping pool factory. */
-    (*endpt->pf->dump_status)(endpt->pf, detail);
+    pj_pool_factory_dump(endpt->pf, detail);
 
     /* Pool health. */
     PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%u, used_size=%u",
