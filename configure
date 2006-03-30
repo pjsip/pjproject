@@ -41,7 +41,8 @@ elif echo $SYSTEM | grep -i linux > /dev/null; then
     elif echo $KERNEL_VER | grep '^2\.0' > /dev/null; then
 	LINUX_EPOLL=select
     else
-	LINUX_POLL=epoll
+#	LINUX_POLL=epoll
+	LINUX_POLL=select
     fi
 elif echo $SYSTEM | grep -i mingw > /dev/null; then
     OS_NAME=win32

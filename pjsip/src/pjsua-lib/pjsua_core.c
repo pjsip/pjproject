@@ -454,7 +454,7 @@ static int PJ_THREAD_FUNC pjsua_poll(void *arg)
 	pj_status_t status;
 	
 	status = pjsip_endpt_handle_events (pjsua.endpt, &timeout);
-	if (status != last_err) {
+	if (status != PJ_SUCCESS && status != last_err) {
 	    last_err = status;
 	    pjsua_perror(THIS_FILE, "handle_events() returned error", status);
 	}
