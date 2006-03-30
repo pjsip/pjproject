@@ -21,6 +21,8 @@
 #include <pj/os.h>
 #include <pj/compat/malloc.h>
 
+#if !PJ_HAS_POOL_ALT_API
+
 /*
  * This file contains pool default policy definition and implementation.
  */
@@ -60,3 +62,5 @@ pj_pool_factory_policy pj_pool_factory_default_policy =
     &default_pool_callback,
     0
 };
+
+#endif	/* PJ_HAS_POOL_ALT_API */

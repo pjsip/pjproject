@@ -22,6 +22,9 @@
 #include <pj/assert.h>
 #include <pj/os.h>
 
+#if !PJ_HAS_POOL_ALT_API
+
+
 /* Include inline definitions when inlining is disabled. */
 #if !PJ_FUNCTIONS_ARE_INLINED
 #  include <pj/pool_i.h>
@@ -260,4 +263,6 @@ PJ_DEF(void) pj_pool_destroy_int(pj_pool_t *pool)
     (*pool->factory->policy.block_free)(pool->factory, pool, initial_size);
 }
 
+
+#endif	/* PJ_HAS_POOL_ALT_API */
 

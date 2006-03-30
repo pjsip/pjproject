@@ -208,14 +208,29 @@
 #  define PJ_TERM_HAS_COLOR	    1
 #endif
 
+
 /**
- * Pool debugging.
+ * If pool debugging is used, then each memory allocation from the pool
+ * will call malloc(), and pool will release all memory chunks when it
+ * is destroyed. This works better when memory verification programs
+ * such as Rational Purify is used.
  *
  * Default: 0
  */
 #ifndef PJ_POOL_DEBUG
 #  define PJ_POOL_DEBUG		    0
 #endif
+
+
+/**
+ * Do we have alternate pool implementation?
+ *
+ * Default: 0
+ */
+#ifndef PJ_HAS_POOL_ALT_API
+#   define PJ_HAS_POOL_ALT_API	    PJ_POOL_DEBUG
+#endif
+
 
 /**
  * \def PJ_HAS_TCP
@@ -260,6 +275,42 @@
 #	define PJ_IOQUEUE_MAX_HANDLES	(256)
 #   endif
 #endif
+
+
+/**
+ * If PJ_IOQUEUE_HAS_SAFE_UNREG macro is defined, then ioqueue will do more
+ * things to ensure thread safety of handle unregistration operation by
+ * employing reference counter to each handle.
+ *
+ * In addition, the ioqueue will preallocate memory for the handles, 
+ * according to the maximum number of handles that is specified during 
+ * ioqueue creation.
+ *
+ * All applications would normally want this enabled, but you may disable
+ * this if:
+ *  - there is no dynamic unregistration to all ioqueues.
+ *  - there is no threading, or there is no preemptive multitasking.
+ *
+ * Default: 1
+ */
+#ifndef PJ_IOQUEUE_HAS_SAFE_UNREG
+#   define PJ_IOQUEUE_HAS_SAFE_UNREG	1
+#endif
+
+
+/**
+ * When safe unregistration (PJ_IOQUEUE_HAS_SAFE_UNREG) is configured in
+ * ioqueue, the PJ_IOQUEUE_KEY_FREE_DELAY macro specifies how long the
+ * ioqueue key is kept in closing state before it can be reused.
+ *
+ * The value is in miliseconds.
+ *
+ * Default: 500 msec.
+ */
+#ifndef PJ_IOQUEUE_KEY_FREE_DELAY
+#   define PJ_IOQUEUE_KEY_FREE_DELAY	500
+#endif
+
 
 /**
  * Overrides FD_SETSIZE so it is consistent throughout the library.

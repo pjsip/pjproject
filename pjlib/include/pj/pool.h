@@ -16,6 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+
+#include <pj/list.h>
+
+/* See if we use pool's alternate API.
+ * The alternate API is used e.g. to implement pool debugging.
+ */
+#if PJ_HAS_POOL_ALT_API
+#  include <pj/pool_alt.h>
+#endif
+
+
 #ifndef __PJ_POOL_H__
 #define __PJ_POOL_H__
 
@@ -23,8 +34,6 @@
  * @file pool.h
  * @brief Memory Pool.
  */
-
-#include <pj/list.h>
 
 PJ_BEGIN_DECL
 
@@ -472,6 +481,17 @@ PJ_DECL(void) pj_pool_init_int( pj_pool_t *pool,
  */
 PJ_DECL(void) pj_pool_destroy_int( pj_pool_t *pool );
 
+
+/**
+ * Dump pool factory state.
+ * @param pf	    The pool factory.
+ * @param detail    Detail state required.
+ */
+PJ_INLINE(void) pj_pool_factory_dump( pj_pool_factory *pf,
+				      pj_bool_t detail )
+{
+    (*pf->dump_status)(pf, detail);
+}
 
 /**
  *  @}	// PJ_POOL_FACTORY
