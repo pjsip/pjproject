@@ -173,12 +173,26 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    flags = 0;
 	}
 
-	/* Reset pool. */
-	pj_pool_reset(rdata->tp_info.pool);
-	init_rdata((struct udp_transport*)rdata->tp_info.transport,
-		   (unsigned)rdata->tp_info.tp_data,
-		   rdata->tp_info.pool,
-		   &rdata);
+	/* Reset pool. 
+	 * Need to copy rdata fields to temp variable because they will
+	 * be invalid after pj_pool_reset().
+	 */
+	{
+	    pj_pool_t *rdata_pool = rdata->tp_info.pool;
+	    struct udp_transport *rdata_tp ;
+	    unsigned rdata_index;
+
+	    rdata_tp = (struct udp_transport*)rdata->tp_info.transport;
+	    rdata_index = (unsigned)rdata->tp_info.tp_data;
+
+	    pj_pool_reset(rdata_pool);
+	    init_rdata(rdata_tp, rdata_index, rdata_pool, &rdata);
+
+	    /* Change some vars to point to new location after
+	     * pool reset.
+	     */
+	    op_key = &rdata->tp_info.op_key.op_key;
+	}
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet);

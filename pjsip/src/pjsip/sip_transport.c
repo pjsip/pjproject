@@ -431,8 +431,8 @@ static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
 	    return PJSIP_EMSGTOOLONG;
 	}
 	pj_assert(size != 0);
-	tdata->buf.cur += size;
 	tdata->buf.cur[size] = '\0';
+	tdata->buf.cur += size;
     }
 
     return PJ_SUCCESS;
