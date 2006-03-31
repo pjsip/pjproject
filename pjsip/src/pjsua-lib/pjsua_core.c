@@ -774,7 +774,6 @@ static pj_status_t init_media(void)
 				 options,
 				 &pjsua.mconf);
     if (status != PJ_SUCCESS) {
-	pj_caching_pool_destroy(&pjsua.cp);
 	pjsua_perror(THIS_FILE, 
 		     "Media stack initialization has returned error", 
 		     status);
