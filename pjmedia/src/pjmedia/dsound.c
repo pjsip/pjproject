@@ -16,498 +16,300 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifdef _MSC_VER
-//# pragma warning(disable: 4201)   // non-standard extension: nameless struct/union
-# pragma warning(push, 3)
-#endif
-#include <pj/config.h>
-#include <pj/os.h>
-#include <pj/log.h>
-
-#include <dsound.h>
-#include <stdio.h>
-#include <assert.h>
 #include <pjmedia/sound.h>
+#include <pjmedia/errno.h>
+#include <pj/assert.h>
+#include <pj/log.h>
+#include <pj/os.h>
+#include <pj/string.h>
 
-#define THIS_FILE   "dsound.c"
+#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_WIN32_DIRECT_SOUND
 
-/*
- * Constants
- */
-#define PACKET_BUFFER_COUNT 4
+#ifdef _MSC_VER
+#   pragma warning(push, 3)
+#endif
 
-typedef struct PJ_Direct_Sound_Device PJ_Direct_Sound_Device;
+#include <windows.h>
+#include <mmsystem.h>
+#include <dsound.h>
 
-
-/*
- * DirectSound Factory Operations
- */
-static pj_status_t dsound_init(void);
-static const char *dsound_get_name(void);
-static pj_status_t dsound_destroy(void);
-static pj_status_t dsound_enum_devices(int *count, char *dev_names[]);
-static pj_status_t dsound_create_dev(const char *dev_name, pj_snd_dev *dev);
-static pj_status_t dsound_destroy_dev(pj_snd_dev *dev);
-
-
-/*
- * DirectSound Device Operations
- */
-static pj_status_t dsound_dev_open( pj_snd_dev *dev, pj_snd_role_t role );
-static pj_status_t dsound_dev_close( pj_snd_dev *dev );
-static pj_status_t dsound_dev_play( pj_snd_dev *dev );
-static pj_status_t dsound_dev_record( pj_snd_dev *dev );
-
-/*
- * Utils.
- */
-static pj_status_t dsound_destroy_dsound_dev( PJ_Direct_Sound_Device *dsDev );
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif
 
 
-static pj_snd_dev_factory dsound_factory = 
+
+#define THIS_FILE	    "dsound.c"
+#define BITS_PER_SAMPLE	    16
+#define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
+
+#define MAX_PACKET_BUFFER_COUNT	    32
+#define DEFAULT_BUFFER_COUNT	    5
+
+
+
+/* Individual DirectSound capture/playback stream descriptor */
+struct dsound_stream
 {
-    &dsound_init,
-    &dsound_get_name,
-    &dsound_destroy,
-    &dsound_enum_devices,
-    &dsound_create_dev,
-    &dsound_destroy_dev
+    union 
+    {
+	struct
+	{
+	    LPDIRECTSOUND	    lpDs;
+	    LPDIRECTSOUNDBUFFER	    lpDsBuffer;
+	} play;
+
+	struct
+	{
+	    LPDIRECTSOUNDCAPTURE	lpDs;
+	    LPDIRECTSOUNDCAPTUREBUFFER	lpDsBuffer;
+	} capture;
+    } ds;
+
+    HANDLE		    hEvent;
+    LPDIRECTSOUNDNOTIFY	    lpDsNotify;
+    DWORD		    dwBytePos;
+    DWORD		    dwDsBufferSize;
+    pj_timestamp	    timestamp;
 };
 
-static struct pj_snd_dev_op dsound_dev_op = 
+
+/* Sound stream.    */
+struct pjmedia_snd_stream
 {
-    &dsound_dev_open,
-    &dsound_dev_close,
-    &dsound_dev_play,
-    &dsound_dev_record
+    pjmedia_dir		    dir;		/**< Sound direction.	    */
+    pj_pool_t		   *pool;		/**< Memory pool.	    */
+  
+    pjmedia_snd_rec_cb	    rec_cb;		/**< Capture callback.	    */
+    pjmedia_snd_play_cb	    play_cb;		/**< Playback callback.	    */
+    void		   *user_data;		/**< Application data.	    */
+
+    struct dsound_stream    play_strm;		/**< Playback stream.	    */
+    struct dsound_stream    rec_strm;		/**< Capture stream.	    */
+
+    void		   *buffer;		/**< Temp. frame buffer.    */
+    unsigned		    samples_per_frame;	/**< Samples per frame.	    */
+
+    pj_thread_t		   *thread;		/**< Thread handle.	    */
+    pj_bool_t		    thread_quit_flag;	/**< Quit signal to thread  */
 };
 
-#define DSOUND_TYPE_PLAYER	1
-#define DSOUND_TYPE_RECORDER	2
 
-typedef struct Direct_Sound_Descriptor
+static pj_pool_factory *pool_factory;
+
+
+static void init_waveformatex (PCMWAVEFORMAT *pcmwf, 
+			       unsigned clock_rate,
+			       unsigned channel_count)
 {
-    int			type;
-
-    LPDIRECTSOUND	lpDsPlay;
-    LPDIRECTSOUNDBUFFER	lpDsPlayBuffer;
-
-    LPDIRECTSOUNDCAPTURE	lpDsCapture;
-    LPDIRECTSOUNDCAPTUREBUFFER	lpDsCaptureBuffer;
-
-    LPDIRECTSOUNDNOTIFY	lpDsNotify;
-    HANDLE		hEvent;
-    HANDLE		hThread;
-    HANDLE		hStartEvent;
-    DWORD		dwThreadQuitFlag;
-    pj_thread_desc	thread_desc;
-    pj_thread_t	       *thread;
-} Direct_Sound_Descriptor;
-
-struct PJ_Direct_Sound_Device
-{
-    Direct_Sound_Descriptor playDesc;
-    Direct_Sound_Descriptor recDesc;
-};
-
-struct Thread_Param
-{
-    pj_snd_dev	    *dev;
-    Direct_Sound_Descriptor *desc;
-};
-
-PJ_DEF(pj_snd_dev_factory*) pj_dsound_get_factory()
-{
-    return &dsound_factory;
-}
-
-/*
- * Init DirectSound.
- */
-static pj_status_t dsound_init(void)
-{
-    /* Nothing to do. */
-    return 0;
-}
-
-/*
- * Get the name of the factory.
- */
-static const char *dsound_get_name(void)
-{
-    return "DirectSound";
-}
-
-/*
- * Destroy DirectSound.
- */
-static pj_status_t dsound_destroy(void)
-{
-    /* TODO: clean up devices in case application haven't done it. */
-    return 0;
-}
-
-/*
- * Enum devices in the system.
- */
-static pj_status_t dsound_enum_devices(int *count, char *dev_names[])
-{
-    dev_names[0] = "DirectSound Default Device";
-    *count = 1;
-    return 0;
-}
-
-/*
- * Create DirectSound device.
- */
-static pj_status_t dsound_create_dev(const char *dev_name, pj_snd_dev *dev)
-{
-    PJ_Direct_Sound_Device *dsDev;
-
-    /* TODO: create based on the name. */
-    PJ_TODO(DSOUND_CREATE_DEVICE_BY_NAME);
-    
-    /* Create DirectSound structure. */
-    dsDev = malloc(sizeof(*dsDev));
-    if (!dsDev) {
-	PJ_LOG(1,(THIS_FILE, "No memory to allocate device!"));
-	return -1;
-    }
-    memset(dsDev, 0, sizeof(*dsDev));
-
-    /* Associate DirectSound device with device. */
-    dev->device = dsDev;
-    dev->op = &dsound_dev_op;
-
-    return 0;
-}
-
-/*
- * Destroy DirectSound device.
- */
-static pj_status_t dsound_destroy_dev( pj_snd_dev *dev )
-{
-    if (dev->device) {
-	free(dev->device);
-	dev->device = NULL;
-    }
-    return 0;
-}
-
-static void dsound_release_descriptor(Direct_Sound_Descriptor *desc)
-{
-    if (desc->lpDsNotify)
-	IDirectSoundNotify_Release( desc->lpDsNotify );
-    
-    if (desc->hEvent)
-	CloseHandle(desc->hEvent);
-
-    if (desc->lpDsPlayBuffer)
-	IDirectSoundBuffer_Release( desc->lpDsPlayBuffer );
-
-    if (desc->lpDsPlay)
-	IDirectSound_Release( desc->lpDsPlay );
-
-    if (desc->lpDsCaptureBuffer)
-	IDirectSoundCaptureBuffer_Release(desc->lpDsCaptureBuffer);
-
-    if (desc->lpDsCapture)
-	IDirectSoundCapture_Release(desc->lpDsCapture);
-}
-
-/*
- * Destroy DirectSound resources.
- */
-static pj_status_t dsound_destroy_dsound_dev( PJ_Direct_Sound_Device *dsDev )
-{
-    dsound_release_descriptor( &dsDev->playDesc );
-    dsound_release_descriptor( &dsDev->recDesc );
-    memset(dsDev, 0, sizeof(*dsDev));
-    return 0;
-}
-
-static void init_waveformatex (PCMWAVEFORMAT *pcmwf, pj_snd_dev *dev)
-{
-    memset(pcmwf, 0, sizeof(PCMWAVEFORMAT)); 
+    pj_memset(pcmwf, 0, sizeof(PCMWAVEFORMAT)); 
     pcmwf->wf.wFormatTag = WAVE_FORMAT_PCM; 
-    pcmwf->wf.nChannels = 1;
-    pcmwf->wf.nSamplesPerSec = dev->param.samples_per_sec;
-    pcmwf->wf.nBlockAlign = dev->param.bytes_per_frame;
-    pcmwf->wf.nAvgBytesPerSec = 
-	dev->param.samples_per_sec * dev->param.bytes_per_frame;
-    pcmwf->wBitsPerSample = dev->param.bits_per_sample;
+    pcmwf->wf.nChannels = (pj_uint16_t)channel_count;
+    pcmwf->wf.nSamplesPerSec = clock_rate;
+    pcmwf->wf.nBlockAlign = (pj_uint16_t)(channel_count * BYTES_PER_SAMPLE);
+    pcmwf->wf.nAvgBytesPerSec = clock_rate * channel_count * BYTES_PER_SAMPLE;
+    pcmwf->wBitsPerSample = BITS_PER_SAMPLE;
 }
+
 
 /*
  * Initialize DirectSound player device.
  */
-static pj_status_t dsound_init_player (pj_snd_dev *dev)
+static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
+				       unsigned clock_rate,
+				       unsigned channel_count,
+				       unsigned samples_per_frame,
+				       unsigned buffer_count)
 {
     HRESULT hr;
     HWND hwnd;
     PCMWAVEFORMAT pcmwf; 
     DSBUFFERDESC dsbdesc;
-    DSBPOSITIONNOTIFY dsPosNotify[PACKET_BUFFER_COUNT];
+    DSBPOSITIONNOTIFY dsPosNotify[MAX_PACKET_BUFFER_COUNT];
+    unsigned bytes_per_frame;
     unsigned i;
-    PJ_Direct_Sound_Device *dsDev = dev->device;
 
-    /*
-     * Check parameters.
-     */
-    if (dev->play_cb == NULL) {
-	assert(0);
-	return -1;
-    }
-    if (dev->device == NULL) {
-	assert(0);
-	return -1;
-    }
 
-    PJ_LOG(4,(THIS_FILE, "Creating DirectSound player device"));
+    PJ_ASSERT_RETURN(buffer_count <= MAX_PACKET_BUFFER_COUNT, PJ_EINVAL);
 
     /*
      * Create DirectSound device.
      */
-    hr = DirectSoundCreate(NULL, &dsDev->playDesc.lpDsPlay, NULL);
+    hr = DirectSoundCreate(NULL, &ds_strm->ds.play.lpDs, NULL);
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
     hwnd = GetForegroundWindow();
     if (hwnd == NULL) {
 	hwnd = GetDesktopWindow();
     }    
-    hr = IDirectSound_SetCooperativeLevel( dsDev->playDesc.lpDsPlay, hwnd, 
+    hr = IDirectSound_SetCooperativeLevel( ds_strm->ds.play.lpDs, hwnd, 
 					   DSSCL_PRIORITY);
     if FAILED(hr)
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
     
     /*
-     * Create DirectSound play buffer.
-     */    
-    // Set up wave format structure. 
-    init_waveformatex (&pcmwf, dev);
+     * Set up wave format structure for initialize DirectSound play
+     * buffer. 
+     */
+    init_waveformatex(&pcmwf, clock_rate, channel_count);
+    bytes_per_frame = samples_per_frame * BYTES_PER_SAMPLE;
 
-    // Set up DSBUFFERDESC structure. 
-    memset(&dsbdesc, 0, sizeof(DSBUFFERDESC)); 
+    /* Set up DSBUFFERDESC structure. */
+    pj_memset(&dsbdesc, 0, sizeof(DSBUFFERDESC)); 
     dsbdesc.dwSize = sizeof(DSBUFFERDESC); 
-    dsbdesc.dwFlags = DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPOSITIONNOTIFY |
-		      DSBCAPS_GETCURRENTPOSITION2;
+    dsbdesc.dwFlags = DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPOSITIONNOTIFY;
+    /* DSBCAPS_GETCURRENTPOSITION2 */
 
-    dsbdesc.dwBufferBytes = 
-	(PACKET_BUFFER_COUNT * dev->param.bytes_per_frame * 
-	 dev->param.frames_per_packet); 
+    dsbdesc.dwBufferBytes = buffer_count * bytes_per_frame;
     dsbdesc.lpwfxFormat = (LPWAVEFORMATEX)&pcmwf; 
 
-    // Create buffer. 
-    hr = IDirectSound_CreateSoundBuffer(dsDev->playDesc.lpDsPlay, &dsbdesc, 
-					&dsDev->playDesc.lpDsPlayBuffer, NULL); 
+    /*
+     * Create DirectSound playback buffer. 
+     */
+    hr = IDirectSound_CreateSoundBuffer(ds_strm->ds.play.lpDs, &dsbdesc, 
+					&ds_strm->ds.play.lpDsBuffer, NULL); 
     if (FAILED(hr) )
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
     /*
      * Create event for play notification.
      */
-    dsDev->playDesc.hEvent = CreateEvent( NULL, FALSE, FALSE, NULL);
-    if (dsDev->playDesc.hEvent == NULL)
-	goto on_error;
+    ds_strm->hEvent = CreateEvent( NULL, FALSE, FALSE, NULL);
+    if (ds_strm->hEvent == NULL)
+	return pj_get_os_error();
 
     /*
      * Setup notification for play.
      */
-    hr = IDirectSoundBuffer_QueryInterface( dsDev->playDesc.lpDsPlayBuffer, 
+    hr = IDirectSoundBuffer_QueryInterface( ds_strm->ds.play.lpDsBuffer, 
 					    &IID_IDirectSoundNotify, 
-					    (LPVOID *)&dsDev->playDesc.lpDsNotify); 
+					    (LPVOID *)&ds_strm->lpDsNotify); 
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
     
-    for (i=0; i<PACKET_BUFFER_COUNT; ++i) {
-	dsPosNotify[i].dwOffset = i * dev->param.bytes_per_frame * 
-				  dev->param.frames_per_packet;
-	dsPosNotify[i].hEventNotify = dsDev->playDesc.hEvent;
+    for (i=0; i<buffer_count; ++i) {
+	dsPosNotify[i].dwOffset = i * bytes_per_frame;
+	dsPosNotify[i].hEventNotify = ds_strm->hEvent;
     }
     
-    hr = IDirectSoundNotify_SetNotificationPositions( dsDev->playDesc.lpDsNotify, 
-						      PACKET_BUFFER_COUNT, 
+    hr = IDirectSoundNotify_SetNotificationPositions( ds_strm->lpDsNotify, 
+						      buffer_count, 
 						      dsPosNotify);
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
+
+
+    hr = IDirectSoundBuffer_SetCurrentPosition(ds_strm->ds.play.lpDsBuffer, 0);
+    if (FAILED(hr))
+	return PJ_RETURN_OS_ERROR(hr);
+
+
+    ds_strm->dwBytePos = 0;
+    ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
+    ds_strm->timestamp.u64 = 0;
+
 
     /* Done setting up play device. */
-    PJ_LOG(4,(THIS_FILE, "DirectSound player device created"));
+    PJ_LOG(5,(THIS_FILE, " DirectSound player stream initialized"));
 
-    return 0;
-
-on_error:
-    PJ_LOG(2,(THIS_FILE, "Error creating player device, hresult=0x%x", hr));
-    dsound_destroy_dsound_dev(dsDev);
-    return -1;
+    return PJ_SUCCESS;
 }
+
 
 /*
  * Initialize DirectSound recorder device
  */
-static pj_status_t dsound_init_recorder (pj_snd_dev *dev)
+static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
+				        unsigned clock_rate,
+				        unsigned channel_count,
+				        unsigned samples_per_frame,
+				        unsigned buffer_count)
 {
     HRESULT hr;
     PCMWAVEFORMAT pcmwf; 
     DSCBUFFERDESC dscbdesc;
-    DSBPOSITIONNOTIFY dsPosNotify[PACKET_BUFFER_COUNT];
+    DSBPOSITIONNOTIFY dsPosNotify[MAX_PACKET_BUFFER_COUNT];
+    unsigned bytes_per_frame;
     unsigned i;
-    PJ_Direct_Sound_Device *dsDev = dev->device;
 
-    /*
-     * Check parameters.
-     */
-    if (dev->rec_cb == NULL) {
-	assert(0);
-	return -1;
-    }
-    if (dev->device == NULL) {
-	assert(0);
-	return -1;
-    }
 
-    PJ_LOG(4,(THIS_FILE, "Creating DirectSound recorder device"));
+    PJ_ASSERT_RETURN(buffer_count <= MAX_PACKET_BUFFER_COUNT, PJ_EINVAL);
+
 
     /*
      * Creating recorder device.
      */
-    hr = DirectSoundCaptureCreate(NULL, &dsDev->recDesc.lpDsCapture, NULL);
+    hr = DirectSoundCaptureCreate(NULL, &ds_strm->ds.capture.lpDs, NULL);
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
-    /* Init wave format */
-    init_waveformatex (&pcmwf, dev);
+
+    /* Init wave format to initialize buffer */
+    init_waveformatex( &pcmwf, clock_rate, channel_count);
+    bytes_per_frame = samples_per_frame * BYTES_PER_SAMPLE;
 
     /* 
      * Setup capture buffer using sound buffer structure that was passed
      * to play buffer creation earlier.
      */
-    memset(&dscbdesc, 0, sizeof(DSCBUFFERDESC));
+    pj_memset(&dscbdesc, 0, sizeof(DSCBUFFERDESC));
     dscbdesc.dwSize = sizeof(DSCBUFFERDESC); 
     dscbdesc.dwFlags = DSCBCAPS_WAVEMAPPED ;
-    dscbdesc.dwBufferBytes = 
-	(PACKET_BUFFER_COUNT * dev->param.bytes_per_frame * 
-	 dev->param.frames_per_packet); 
+    dscbdesc.dwBufferBytes = buffer_count * bytes_per_frame; 
     dscbdesc.lpwfxFormat = (LPWAVEFORMATEX)&pcmwf; 
 
-    hr = IDirectSoundCapture_CreateCaptureBuffer( dsDev->recDesc.lpDsCapture,
+    hr = IDirectSoundCapture_CreateCaptureBuffer( ds_strm->ds.capture.lpDs,
 						  &dscbdesc, 
-						  &dsDev->recDesc.lpDsCaptureBuffer, 
+						  &ds_strm->ds.capture.lpDsBuffer,
 						  NULL);
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
     /*
      * Create event for play notification.
      */
-    dsDev->recDesc.hEvent = CreateEvent( NULL, FALSE, FALSE, NULL);
-    if (dsDev->recDesc.hEvent == NULL)
-	goto on_error;
+    ds_strm->hEvent = CreateEvent( NULL, FALSE, FALSE, NULL);
+    if (ds_strm->hEvent == NULL)
+	return pj_get_os_error();
 
     /*
      * Setup notifications for recording.
      */
-    hr = IDirectSoundCaptureBuffer_QueryInterface( dsDev->recDesc.lpDsCaptureBuffer, 
+    hr = IDirectSoundCaptureBuffer_QueryInterface( ds_strm->ds.capture.lpDsBuffer, 
 						   &IID_IDirectSoundNotify, 
-						   (LPVOID *)&dsDev->recDesc.lpDsNotify); 
+						   (LPVOID *)&ds_strm->lpDsNotify); 
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
 
     
-    for (i=0; i<PACKET_BUFFER_COUNT; ++i) {
-	dsPosNotify[i].dwOffset = i * dev->param.bytes_per_frame * 
-				  dev->param.frames_per_packet;
-	dsPosNotify[i].hEventNotify = dsDev->recDesc.hEvent;
+    for (i=0; i<buffer_count; ++i) {
+	dsPosNotify[i].dwOffset = i * bytes_per_frame;
+	dsPosNotify[i].hEventNotify = ds_strm->hEvent;
     }
     
-    hr = IDirectSoundNotify_SetNotificationPositions( dsDev->recDesc.lpDsNotify, 
-						      PACKET_BUFFER_COUNT, 
+    hr = IDirectSoundNotify_SetNotificationPositions( ds_strm->lpDsNotify, 
+						      buffer_count, 
 						      dsPosNotify);
     if (FAILED(hr))
-	goto on_error;
+	return PJ_RETURN_OS_ERROR(hr);
+
+    hr = IDirectSoundCaptureBuffer_GetCurrentPosition( ds_strm->ds.capture.lpDsBuffer, 
+						       NULL, &ds_strm->dwBytePos );
+    if (FAILED(hr))
+	return PJ_RETURN_OS_ERROR(hr);
+
+    ds_strm->timestamp.u64 = 0;
+    ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
 
     /* Done setting up recorder device. */
-    PJ_LOG(4,(THIS_FILE, "DirectSound recorder device created"));
+    PJ_LOG(5,(THIS_FILE, " DirectSound capture stream initialized"));
 
-    return 0;
-
-on_error:
-    PJ_LOG(4,(THIS_FILE, "Error creating device, hresult=%d", hr));
-    dsound_destroy_dsound_dev(dsDev);
-    return -1;
+    return PJ_SUCCESS;
 }
 
-/*
- * Initialize DirectSound device.
- */
-static pj_status_t dsound_dev_open( pj_snd_dev *dev, pj_snd_role_t role )
-{
-    PJ_Direct_Sound_Device *dsDev = dev->device;
-    pj_status_t status;
 
-    dsDev->playDesc.type = DSOUND_TYPE_PLAYER;
-    dsDev->recDesc.type = DSOUND_TYPE_RECORDER;
-
-    if (role & PJ_SOUND_PLAYER) {
-	status = dsound_init_player (dev);
-	if (status != 0)
-	    return status;
-    }
-
-    if (role & PJ_SOUND_RECORDER) {
-	status = dsound_init_recorder (dev);
-	if (status != 0)
-	    return status;
-    }
-
-    return 0;
-}
-
-/*
- * Close DirectSound device.
- */
-static pj_status_t dsound_dev_close( pj_snd_dev *dev )
-{
-    PJ_LOG(4,(THIS_FILE, "Closing DirectSound device"));
-
-    if (dev->device) {
-	PJ_Direct_Sound_Device *dsDev = dev->device;
-
-	if (dsDev->playDesc.hThread) {
-	    PJ_LOG(4,(THIS_FILE, "Stopping DirectSound player"));
-	    dsDev->playDesc.dwThreadQuitFlag = 1;
-	    SetEvent(dsDev->playDesc.hEvent);
-	    if (WaitForSingleObject(dsDev->playDesc.hThread, 1000) != WAIT_OBJECT_0) {
-		PJ_LOG(4,(THIS_FILE, "Timed out waiting player thread to quit"));
-		TerminateThread(dsDev->playDesc.hThread, -1);
-		IDirectSoundBuffer_Stop( dsDev->playDesc.lpDsPlayBuffer );
-	    }
-	    
-	    pj_thread_destroy (dsDev->playDesc.thread);
-	}
-
-	if (dsDev->recDesc.hThread) {
-	    PJ_LOG(4,(THIS_FILE, "Stopping DirectSound recorder"));
-	    dsDev->recDesc.dwThreadQuitFlag = 1;
-	    SetEvent(dsDev->recDesc.hEvent);
-	    if (WaitForSingleObject(dsDev->recDesc.hThread, 1000) != WAIT_OBJECT_0) {
-		PJ_LOG(4,(THIS_FILE, "Timed out waiting recorder thread to quit"));
-		TerminateThread(dsDev->recDesc.hThread, -1);
-		IDirectSoundCaptureBuffer_Stop( dsDev->recDesc.lpDsCaptureBuffer );
-	    }
-	    
-	    pj_thread_destroy (dsDev->recDesc.thread);
-	}
-
-	dsound_destroy_dsound_dev( dev->device );
-	dev->op = NULL;
-    }
-
-    PJ_LOG(4,(THIS_FILE, "DirectSound device closed"));
-    return 0;
-}
 
 static BOOL AppReadDataFromBuffer(LPDIRECTSOUNDCAPTUREBUFFER lpDsb, // The buffer.
 				  DWORD dwOffset,		    // Our own write cursor.
@@ -583,295 +385,417 @@ static BOOL AppWriteDataToBuffer(LPDIRECTSOUNDBUFFER lpDsb,  // The buffer.
 /*
  * Player thread.
  */
-static DWORD WINAPI dsound_dev_thread(void *arg)
+static int dsound_dev_thread(void *arg)
 {
-    struct Thread_Param *param = arg;
-    pj_snd_dev *dev = param->dev;
-    Direct_Sound_Descriptor *desc = param->desc;
-    unsigned bytes_per_pkt = dev->param.bytes_per_frame *
-			     dev->param.frames_per_packet;
-    unsigned samples_per_pkt = dev->param.samples_per_frame *
-			       dev->param.frames_per_packet;
-    void *buffer = NULL;
-    DWORD size;
+    pjmedia_snd_stream *strm = arg;
+    HANDLE events[2];
+    unsigned eventCount;
     pj_status_t status;
-    DWORD sample_pos;
-    DWORD byte_pos;
-    DWORD buffer_size = 
-	(PACKET_BUFFER_COUNT * dev->param.bytes_per_frame * 
-	 dev->param.frames_per_packet);
-    HRESULT hr;
 
-    PJ_LOG(4,(THIS_FILE, "DirectSound thread starting"));
 
-    /* Allocate buffer for sound data */
-    buffer = malloc(bytes_per_pkt);
-    if (!buffer) {
-	PJ_LOG(1,(THIS_FILE, "Unable to allocate packet buffer!"));
-	return (DWORD)-1;
-    }
+    eventCount = 0;
+    if (strm->dir & PJMEDIA_DIR_PLAYBACK)
+	events[eventCount++] = strm->play_strm.hEvent;
+    if (strm->dir & PJMEDIA_DIR_CAPTURE)
+	events[eventCount++] = strm->rec_strm.hEvent;
 
-    desc->thread = pj_thread_register ("dsound", desc->thread_desc);
-    if (desc->thread == NULL)
-	return (DWORD)-1;
 
-    /*
-     * Start playing or recording!
-     */
-    if (desc->type == DSOUND_TYPE_PLAYER) {
-	hr = IDirectSoundBuffer_SetCurrentPosition( desc->lpDsPlayBuffer, 0);
-	if (FAILED(hr)) {
-	    PJ_LOG(1,(THIS_FILE, "DirectSound play: SetCurrentPosition() error %d", hr));
-	    goto on_error;
-	}
-
-	hr = IDirectSoundBuffer_Play(desc->lpDsPlayBuffer, 0, 0, DSBPLAY_LOOPING);
-	if (FAILED(hr)) {
-	    PJ_LOG(1,(THIS_FILE, "DirectSound: Play() error %d", hr));
-	    goto on_error;
-	}
-    } else {
-	hr = IDirectSoundCaptureBuffer_Start(desc->lpDsCaptureBuffer, DSCBSTART_LOOPING );
-	if (FAILED(hr)) {
-	    PJ_LOG(1,(THIS_FILE, "DirectSound: Record() error %d", hr));
-	    goto on_error;
-	}
-    }
-
-    /*
-     * Reset initial positions.
-     */
-    byte_pos = 0xFFFFFFFF;
-    sample_pos = 0;
-
-    /*
-     * Wait to get the first notification.
-     */
-    if (WaitForSingleObject(desc->hEvent, 100) != WAIT_OBJECT_0) {
-	PJ_LOG(1,(THIS_FILE, "DirectSound: error getting notification"));
-	goto on_error;
-    }
-
-	
-    /* Get initial byte position. */
-    if (desc->type == DSOUND_TYPE_PLAYER) {
-	hr = IDirectSoundBuffer_GetCurrentPosition( desc->lpDsPlayBuffer, 
-						    NULL, &byte_pos );
-	if (FAILED(hr)) {
-	    PJ_LOG(1,(THIS_FILE, "DirectSound: unable to get "
-				 "position, err %d", hr));
-	    goto on_error;
-	}
-    } else {
-	hr = IDirectSoundCaptureBuffer_GetCurrentPosition( desc->lpDsCaptureBuffer, 
-							   NULL, &byte_pos );
-	if (FAILED(hr)) {
-	    PJ_LOG(1,(THIS_FILE, "DirectSound: unable to get "
-				 "position, err %d", hr));
-	    goto on_error;
-	}
-    }
-
-    /* Signal main thread that we're running. */
-    assert( desc->hStartEvent );
-    SetEvent( desc->hStartEvent );
+    /* Raise self priority */
+    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     /*
      * Loop while not signalled to quit, wait for event object to be signalled
      * by DirectSound play buffer, then request for sound data from the 
      * application and write it to DirectSound buffer.
      */
-    do {
+    while (!strm->thread_quit_flag) {
 	
-	/* Call callback to get sound data */
-	if (desc->type == DSOUND_TYPE_PLAYER) {
-	    size = bytes_per_pkt;
-	    status = (*dev->play_cb)(dev, sample_pos, buffer, &size);
+	DWORD rc;
+	pjmedia_dir signalled_dir;
+	struct dsound_stream *dsound_strm;
 
-	    /* Quit thread on error. */
-	    if (status != 0)
+	rc = WaitForMultipleObjects(eventCount, events, FALSE, 100);
+	if (rc < WAIT_OBJECT_0 || rc >= WAIT_OBJECT_0+eventCount)
+	    continue;
+
+
+	if (rc == WAIT_OBJECT_0) {
+	    if (events[0] == strm->play_strm.hEvent)
+		signalled_dir = PJMEDIA_DIR_PLAYBACK;
+	    else
+		signalled_dir = PJMEDIA_DIR_CAPTURE;
+	} else {
+	    if (events[1] == strm->play_strm.hEvent)
+		signalled_dir = PJMEDIA_DIR_PLAYBACK;
+	    else
+		signalled_dir = PJMEDIA_DIR_CAPTURE;
+	}
+
+
+	if (signalled_dir == PJMEDIA_DIR_PLAYBACK) {
+	    
+	    dsound_strm = &strm->play_strm;
+
+	    /* Get frame from application. */
+	    status = (*strm->play_cb)(strm->user_data, 
+				      dsound_strm->timestamp.u32.lo,
+				      strm->buffer,
+				      strm->samples_per_frame * 
+					BYTES_PER_SAMPLE);
+	    if (status != PJ_SUCCESS)
 		break;
 
-	    /* Write zeroes when we've got nothing from application. */
-	    if (size == 0) {
-		memset(buffer, 0, bytes_per_pkt);
-		size = bytes_per_pkt;
-	    }
-
 	    /* Write to DirectSound buffer. */
-	    AppWriteDataToBuffer( desc->lpDsPlayBuffer, byte_pos,
-				  (LPBYTE)buffer, size);
+	    AppWriteDataToBuffer( dsound_strm->ds.play.lpDsBuffer, 
+				  dsound_strm->dwBytePos,
+				  (LPBYTE)strm->buffer, 
+				  strm->samples_per_frame * BYTES_PER_SAMPLE);
 
 	} else {
-	    /* Capture from DirectSound buffer. */
-	    size = bytes_per_pkt;
-	    if (AppReadDataFromBuffer( desc->lpDsCaptureBuffer, byte_pos,
-				       (LPBYTE)buffer, size)) {
+	    BOOL rc;
 
-	    } else {
-		memset(buffer, 0, size);
+	    dsound_strm = &strm->rec_strm;
+
+	    /* Capture from DirectSound buffer. */
+	    rc = AppReadDataFromBuffer(dsound_strm->ds.capture.lpDsBuffer, 
+				       dsound_strm->dwBytePos,
+				       (LPBYTE)strm->buffer, 
+				       strm->samples_per_frame * 
+					BYTES_PER_SAMPLE);
+	    
+	    if (!rc) {
+		pj_memset(strm->buffer, 0, strm->samples_per_frame * 
+					    BYTES_PER_SAMPLE);
 	    }
 
 	    /* Call callback */
-	    status = (*dev->rec_cb)(dev, sample_pos, buffer, size);
+	    status = (*strm->rec_cb)(strm->user_data, 
+				     dsound_strm->timestamp.u32.lo, 
+				     strm->buffer, 
+				     strm->samples_per_frame * 
+					BYTES_PER_SAMPLE);
 
 	    /* Quit thread on error. */
-	    if (status != 0)
+	    if (status != PJ_SUCCESS)
 		break;
+
 	}
 
 	/* Increment position. */
-	byte_pos += size;
-	if (byte_pos >= buffer_size)
-	    byte_pos -= buffer_size;
-	sample_pos += samples_per_pkt;
+	dsound_strm->dwBytePos += strm->samples_per_frame * BYTES_PER_SAMPLE;
+	if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
+	    dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
+	dsound_strm->timestamp.u64 += strm->samples_per_frame;
+    }
 
-	while (WaitForSingleObject(desc->hEvent, 500) != WAIT_OBJECT_0 &&
-	       (!desc->dwThreadQuitFlag)) 
-	{
-	    Sleep(1);
+
+    PJ_LOG(5,(THIS_FILE, "DirectSound: thread stopping.."));
+
+    return 0;
+}
+
+
+
+/*
+ * Init sound library.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
+{
+    pool_factory = factory;
+    return PJ_SUCCESS;
+}
+
+/*
+ * Deinitialize sound library.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
+{
+    return PJ_SUCCESS;
+}
+
+/*
+ * Get device count.
+ */
+PJ_DEF(int) pjmedia_snd_get_dev_count(void)
+{
+    return 1;
+}
+
+/*
+ * Get device info.
+ */
+PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
+{
+    static pjmedia_snd_dev_info info;
+
+    PJ_UNUSED_ARG(index);
+
+    pj_memset(&info, 0, sizeof(info));
+
+    info.default_samples_per_sec = 44100;
+    info.input_count = 1;
+    info.output_count = 1;
+    pj_ansi_strcpy(info.name, "Default DirectSound Device");
+
+    return &info;
+}
+
+
+/*
+ * Open stream.
+ */
+static pj_status_t open_stream( pjmedia_dir dir,
+			        int rec_id,
+				int play_id,
+				unsigned clock_rate,
+				unsigned channel_count,
+				unsigned samples_per_frame,
+				unsigned bits_per_sample,
+				pjmedia_snd_rec_cb rec_cb,
+				pjmedia_snd_play_cb play_cb,
+				void *user_data,
+				pjmedia_snd_stream **p_snd_strm)
+{
+    pj_pool_t *pool;
+    pjmedia_snd_stream *strm;
+    pj_status_t status;
+
+
+    /* Make sure sound subsystem has been initialized with
+     * pjmedia_snd_init()
+     */
+    PJ_ASSERT_RETURN( pool_factory != NULL, PJ_EINVALIDOP );
+
+
+    /* Can only support 16bits per sample */
+    PJ_ASSERT_RETURN(bits_per_sample == BITS_PER_SAMPLE, PJ_EINVAL);
+
+    /* Don't support device at present */
+    PJ_UNUSED_ARG(rec_id);
+    PJ_UNUSED_ARG(play_id);
+    
+
+    /* Create and Initialize stream descriptor */
+    pool = pj_pool_create(pool_factory, "dsound-dev", 1000, 1000, NULL);
+    PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
+
+    strm = pj_pool_zalloc(pool, sizeof(pjmedia_snd_stream));
+    strm->dir = dir;
+    strm->pool = pool;
+    strm->rec_cb = rec_cb;
+    strm->play_cb = play_cb;
+    strm->user_data = user_data;
+
+    strm->samples_per_frame = samples_per_frame;
+    strm->buffer = pj_pool_alloc(pool, samples_per_frame * BYTES_PER_SAMPLE);
+    if (!strm->buffer) {
+	pj_pool_release(pool);
+	return PJ_ENOMEM;
+    }
+
+    /* Create player stream */
+    if (dir & PJMEDIA_DIR_PLAYBACK) {
+	status = init_player_stream( &strm->play_strm, clock_rate,
+				     channel_count, samples_per_frame,
+				     DEFAULT_BUFFER_COUNT );
+	if (status != PJ_SUCCESS) {
+	    pjmedia_snd_stream_close(strm);
+	    return status;
 	}
-    } while (!desc->dwThreadQuitFlag);
-
-
-    PJ_LOG(4,(THIS_FILE, "DirectSound: stopping.."));
-
-    free(buffer);
-    if (desc->type == DSOUND_TYPE_PLAYER) {
-	IDirectSoundBuffer_Stop( desc->lpDsPlayBuffer );
-    } else {
-	IDirectSoundCaptureBuffer_Stop( desc->lpDsCaptureBuffer );
     }
-    return 0;
 
-on_error:
-    PJ_LOG(4,(THIS_FILE, "DirectSound play stopping"));
-
-    if (buffer) 
-	free(buffer);
-    if (desc->type == DSOUND_TYPE_PLAYER) {
-	IDirectSoundBuffer_Stop( desc->lpDsPlayBuffer );
-    } else {
-	IDirectSoundCaptureBuffer_Stop( desc->lpDsCaptureBuffer );
+    /* Create capture stream */
+    if (dir & PJMEDIA_DIR_CAPTURE) {
+	status = init_capture_stream( &strm->rec_strm, clock_rate,
+				      channel_count, samples_per_frame,
+				      DEFAULT_BUFFER_COUNT);
+	if (status != PJ_SUCCESS) {
+	    pjmedia_snd_stream_close(strm);
+	    return status;
+	}
     }
-    desc->dwThreadQuitFlag = 1;
 
-    /* Signal main thread that we failed to initialize */
-    assert( desc->hStartEvent );
-    SetEvent( desc->hStartEvent );
-    return -1;
+
+    /* Create and start the thread */
+    status = pj_thread_create(pool, "dsound", &dsound_dev_thread, strm,
+			      0, 0, &strm->thread);
+    if (status != PJ_SUCCESS) {
+	pjmedia_snd_stream_close(strm);
+	return status;
+    }
+
+    *p_snd_strm = strm;
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Open stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned samples_per_frame,
+					  unsigned bits_per_sample,
+					  pjmedia_snd_rec_cb rec_cb,
+					  void *user_data,
+					  pjmedia_snd_stream **p_snd_strm)
+{
+    PJ_ASSERT_RETURN(rec_cb && p_snd_strm, PJ_EINVAL);
+
+    return open_stream( PJMEDIA_DIR_CAPTURE, index, -1,
+			clock_rate, channel_count, samples_per_frame,
+			bits_per_sample, rec_cb, NULL, user_data,
+			p_snd_strm);
+}
+
+PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
+					unsigned clock_rate,
+					unsigned channel_count,
+					unsigned samples_per_frame,
+					unsigned bits_per_sample,
+					pjmedia_snd_play_cb play_cb,
+					void *user_data,
+					pjmedia_snd_stream **p_snd_strm)
+{
+    PJ_ASSERT_RETURN(play_cb && p_snd_strm, PJ_EINVAL);
+
+    return open_stream( PJMEDIA_DIR_PLAYBACK, -1, index,
+			clock_rate, channel_count, samples_per_frame,
+			bits_per_sample, NULL, play_cb, user_data,
+			p_snd_strm);
+}
+
+/*
+ * Open both player and recorder.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
+				      int play_id,
+				      unsigned clock_rate,
+				      unsigned channel_count,
+				      unsigned samples_per_frame,
+				      unsigned bits_per_sample,
+				      pjmedia_snd_rec_cb rec_cb,
+				      pjmedia_snd_play_cb play_cb,
+				      void *user_data,
+				      pjmedia_snd_stream **p_snd_strm)
+{
+    PJ_ASSERT_RETURN(rec_cb && play_cb && p_snd_strm, PJ_EINVAL);
+
+    return open_stream( PJMEDIA_DIR_CAPTURE_PLAYBACK, rec_id, play_id,
+			clock_rate, channel_count, samples_per_frame,
+			bits_per_sample, rec_cb, play_cb, user_data,
+			p_snd_strm );
+}
+
+/*
+ * Start stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
+{
+    HRESULT hr;
+
+    PJ_UNUSED_ARG(stream);
+
+    if (stream->play_strm.ds.play.lpDsBuffer) {
+	hr = IDirectSoundBuffer_Play(stream->play_strm.ds.play.lpDsBuffer, 
+				     0, 0, DSBPLAY_LOOPING);
+	if (FAILED(hr))
+	    return PJ_RETURN_OS_ERROR(hr);
+    }
+    
+    if (stream->rec_strm.ds.capture.lpDsBuffer) {
+	hr = IDirectSoundCaptureBuffer_Start(stream->rec_strm.ds.capture.lpDsBuffer,
+					     DSCBSTART_LOOPING );
+	if (FAILED(hr))
+	    return PJ_RETURN_OS_ERROR(hr);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Stop stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
+{
+    PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
+
+    if (stream->play_strm.ds.play.lpDsBuffer) {
+	PJ_LOG(5,(THIS_FILE, "Stopping DirectSound playback stream"));
+	IDirectSoundBuffer_Stop( stream->play_strm.ds.play.lpDsBuffer );
+    }
+
+    if (stream->rec_strm.ds.capture.lpDsBuffer) {
+	PJ_LOG(5,(THIS_FILE, "Stopping DirectSound capture stream"));
+	IDirectSoundCaptureBuffer_Stop(stream->rec_strm.ds.capture.lpDsBuffer);
+    }
+
+    return PJ_SUCCESS;
 }
 
 
 /*
- * Generic starter for play/record.
+ * Destroy stream.
  */
-static pj_status_t dsound_dev_play_record( pj_snd_dev *dev,
-					   Direct_Sound_Descriptor *desc )
+PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 {
-    DWORD threadId;
-    int op_type = desc->type;
-    const char *op_name = (op_type == DSOUND_TYPE_PLAYER) ? "play" : "record";
-    struct Thread_Param param;
+    PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "DirectSound %s()", op_name));
+    pjmedia_snd_stream_stop(stream);
 
-    /*
-     * Create event for the thread to signal us that it is starting or
-     * quitting during startup.
-     */
-    desc->hStartEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (desc->hStartEvent == NULL) {
-	PJ_LOG(1,(THIS_FILE, "DirectSound %s: unable to create event", op_name));
-	return -1;
+    if (stream->play_strm.lpDsNotify) {
+	IDirectSoundNotify_Release( stream->play_strm.lpDsNotify );
+	stream->play_strm.lpDsNotify = NULL;
+    }
+    
+    if (stream->play_strm.hEvent) {
+	CloseHandle(stream->play_strm.hEvent);
+	stream->play_strm.hEvent = NULL;
     }
 
-    param.dev = dev;
-    param.desc = desc;
-
-    /*
-     * Create thread to handle feeding up data to player/recorder.
-     */
-    desc->hThread = NULL;
-    desc->dwThreadQuitFlag = 0;
-    desc->hThread = CreateThread( NULL, 0, &dsound_dev_thread, &param, 
-					    CREATE_SUSPENDED, &threadId);
-    if (!desc->hThread) {
-	PJ_LOG(1,(THIS_FILE, "DirectSound %s(): unable to create thread", op_name));
-	return -1;
+    if (stream->play_strm.ds.play.lpDsBuffer) {
+	IDirectSoundBuffer_Release( stream->play_strm.ds.play.lpDsBuffer );
+	stream->play_strm.ds.play.lpDsBuffer = NULL;
     }
 
-    SetThreadPriority( desc->hThread, THREAD_PRIORITY_HIGHEST);
-
-    /*
-     * Resume thread.
-     */
-    if (ResumeThread(desc->hThread) == (DWORD)-1) {
-	PJ_LOG(1,(THIS_FILE, "DirectSound %s(): unable to resume thread", op_name));
-	goto on_error;
+    if (stream->play_strm.ds.play.lpDs) {
+	IDirectSound_Release( stream->play_strm.ds.play.lpDs );
+	stream->play_strm.ds.play.lpDs = NULL;
     }
 
-    /*
-     * Wait until we've got signal from the thread that it has successfully
-     * started, or when it is quitting.
-     */
-    WaitForSingleObject( desc->hStartEvent, INFINITE);
-
-    /* We can destroy the event now. */
-    CloseHandle( desc->hStartEvent );
-    desc->hStartEvent = NULL;
-
-    /* Examine thread status. */
-    if (desc->dwThreadQuitFlag != 0) {
-	/* Thread failed to initialize */
-	WaitForSingleObject(desc->hThread, INFINITE);
-	CloseHandle(desc->hThread);
-	desc->hThread = NULL;
-	return -1;
+    if (stream->rec_strm.lpDsNotify) {
+	IDirectSoundNotify_Release( stream->rec_strm.lpDsNotify );
+	stream->rec_strm.lpDsNotify = NULL;
+    }
+    
+    if (stream->rec_strm.hEvent) {
+	CloseHandle(stream->rec_strm.hEvent);
+	stream->rec_strm.hEvent = NULL;
     }
 
-    return 0;
+    if (stream->rec_strm.ds.capture.lpDsBuffer) {
+	IDirectSoundCaptureBuffer_Release( stream->rec_strm.ds.capture.lpDsBuffer );
+	stream->rec_strm.ds.capture.lpDsBuffer = NULL;
+    }
 
-on_error:
-    TerminateThread(desc->hThread, -1);
-    CloseHandle(desc->hThread);
-    desc->hThread = NULL;
-    return -1;
+    if (stream->rec_strm.ds.capture.lpDs) {
+	IDirectSoundCapture_Release( stream->rec_strm.ds.capture.lpDs );
+	stream->rec_strm.ds.capture.lpDs = NULL;
+    }
+
+    if (stream->thread) {
+	stream->thread_quit_flag = 1;
+	pj_thread_join(stream->thread);
+	pj_thread_destroy(stream->thread);
+	stream->thread = NULL;
+    }
+
+    pj_pool_release(stream->pool);
+
+    return PJ_SUCCESS;
 }
 
-/*
- * Start playing.
- */
-static pj_status_t dsound_dev_play( pj_snd_dev *dev )
-{
-    PJ_Direct_Sound_Device *dsDev = dev->device;
 
-    assert(dsDev);
-    if (!dsDev) {
-	assert(0);
-	return -1;
-    }
+#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
 
-    return dsound_dev_play_record( dev, &dsDev->playDesc );
-}
-
-/*
- * Start recording.
- */
-static pj_status_t dsound_dev_record( pj_snd_dev *dev )
-{
-    PJ_Direct_Sound_Device *dsDev = dev->device;
-
-    assert(dsDev);
-    if (!dsDev) {
-	assert(0);
-	return -1;
-    }
-
-    return dsound_dev_play_record( dev, &dsDev->recDesc );
-}
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-# pragma warning(disable: 4514)	// unreferenced inline function has been removed
-#endif

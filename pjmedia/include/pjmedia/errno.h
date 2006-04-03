@@ -19,6 +19,7 @@
 #ifndef __PJMEDIA_ERRNO_H__
 #define __PJMEDIA_ERRNO_H__
 
+#include <pjmedia/types.h>
 #include <pj/errno.h>
 
 PJ_BEGIN_DECL

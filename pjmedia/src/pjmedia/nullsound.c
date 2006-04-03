@@ -19,7 +19,7 @@
 #include <pjmedia/sound.h>
 #include <pj/assert.h>
 
-#if defined(PJMEDIA_HAS_NULL_SOUND) && PJMEDIA_HAS_NULL_SOUND!=0
+#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_NULL_SOUND
 
 static pjmedia_snd_dev_info null_info = 
 {
@@ -142,4 +142,4 @@ PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 }
 
 
-#endif	/* PJMEDIA_HAS_NULL_SOUND */
+#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */

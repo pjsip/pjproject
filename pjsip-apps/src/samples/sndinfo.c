@@ -75,11 +75,37 @@ static void enum_devices(void)
 
 static int play_counter;
 static int rec_counter;
+static int min_delay = 0xFFFF, max_delay;
+static char play_delays[1000];
 
 static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 			   void *output, unsigned size)
 {
+    static pj_time_val last_cb;
+
     ++play_counter;
+
+    if (last_cb.sec == 0 && last_cb.msec == 0) {
+	pj_gettimeofday(&last_cb);
+    } else {
+	pj_time_val now, saved;
+	int delay;
+
+	pj_gettimeofday(&now);
+	saved = now;
+	PJ_TIME_VAL_SUB(now, last_cb);
+	delay = PJ_TIME_VAL_MSEC(now);
+
+	if (delay < min_delay)
+	    min_delay = delay;
+	if (delay > max_delay)
+	    max_delay = delay;
+
+	last_cb = saved;
+
+	play_delays[play_counter-1] = delay;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -98,7 +124,7 @@ static void app_perror(const char *title, pj_status_t status)
     printf( "%s: %s (err=%d)\n",
 	    title, errmsg, status);
 }
-		
+
 static int open_device(int dev_id, pjmedia_dir dir,
 		       int clock_rate, int nchannel, int bits)
 {
@@ -106,6 +132,7 @@ static int open_device(int dev_id, pjmedia_dir dir,
     unsigned nsamples;
     pjmedia_snd_stream *strm;
     const char *dirtype;
+    unsigned i;
 
     switch (dir) {
     case PJMEDIA_DIR_CAPTURE:
@@ -165,6 +192,18 @@ static int open_device(int dev_id, pjmedia_dir dir,
     }
 
     puts("Success.");
+
+    printf("Delay: ");
+    for (i=0; i<play_counter; ++i)
+	printf("%d ", play_delays[i]);
+
+    puts("");
+    if (dir & PJMEDIA_DIR_PLAYBACK) {
+	printf("Callback interval: min interval=%d ms, max interval=%d ms\n",
+	       min_delay, max_delay);
+    }
+    
+
     return 0;
 }
 

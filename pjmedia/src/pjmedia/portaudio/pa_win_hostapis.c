@@ -58,12 +58,12 @@ PaError PaWinWdm_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
 PaUtilHostApiInitializer *paHostApiInitializers[] =
     {
 
-#ifndef PA_NO_WMME
-        PaWinMme_Initialize,
-#endif
-
 #ifndef PA_NO_DS
         PaWinDs_Initialize,
+#endif
+
+#ifndef PA_NO_WMME
+        PaWinMme_Initialize,
 #endif
 
 #ifndef PA_NO_ASIO

@@ -27,5 +27,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "resampleplay.c"
+#include "playfile.c"
 

@@ -23,7 +23,7 @@
 #include <pj/string.h>
 #include <portaudio.h>
 
-#if defined(PJMEDIA_HAS_PORTAUDIO_SOUND) && PJMEDIA_HAS_PORTAUDIO_SOUND!=0
+#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
 
 #define THIS_FILE	"pasound.c"
 
@@ -280,7 +280,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE;
     stream->user_data = user_data;
-    stream->samples_per_sec = samples_per_frame;
+    stream->samples_per_sec = clock_rate;
     stream->bytes_per_sample = bits_per_sample / 8;
     stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
@@ -373,7 +373,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = stream->dir = PJMEDIA_DIR_PLAYBACK;
     stream->user_data = user_data;
-    stream->samples_per_sec = samples_per_frame;
+    stream->samples_per_sec = clock_rate;
     stream->bytes_per_sample = bits_per_sample / 8;
     stream->channel_count = channel_count;
     stream->play_cb = play_cb;
@@ -383,7 +383,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
+    outputParam.suggestedLatency = 1.0 * samples_per_frame / clock_rate;;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
@@ -398,11 +398,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
     }
 
-    PJ_LOG(5,(THIS_FILE, "%s opening device %s(%s) for playing, sample rate=%d"
+    PJ_LOG(5,(THIS_FILE, "%s opening device %d: %s(%s) for playing, sample rate=%d"
 			 ", ch=%d, "
 			 "bits=%d, %d samples per frame",
 			 (err==0 ? "Success" : "Error"),
-			 paDevInfo->name, paHostApiInfo->name, 
+			 index, paDevInfo->name, paHostApiInfo->name, 
 			 clock_rate, channel_count,
 		 	 bits_per_sample, samples_per_frame));
 
@@ -494,7 +494,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     pj_strdup2_with_null(pool, &stream->name, paRecDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     stream->user_data = user_data;
-    stream->samples_per_sec = samples_per_frame;
+    stream->samples_per_sec = clock_rate;
     stream->bytes_per_sample = bits_per_sample / 8;
     stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
@@ -620,4 +620,4 @@ PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 }
 
 
-#endif	/* PJMEDIA_HAS_PORTAUDIO_SOUND */
+#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */

@@ -147,7 +147,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     /* See if the error comes from PortAudio. */
-#if defined(PJMEDIA_HAS_PORTAUDIO_SOUND) && PJMEDIA_HAS_PORTAUDIO_SOUND!=0
+#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
     if (statcode >= PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized) &&
 	statcode <  PJMEDIA_ERRNO_FROM_PORTAUDIO(paNotInitialized + 10000))
     {
@@ -163,7 +163,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 	return errstr;
 
     } else 
-#endif	/* PJMEDIA_HAS_PORTAUDIO_SOUND */
+#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
     if (statcode >= PJMEDIA_ERRNO_START && 
 	       statcode < PJMEDIA_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
     {

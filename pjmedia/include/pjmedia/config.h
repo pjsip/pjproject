@@ -21,21 +21,20 @@
 
 #include <pj/config.h>
 
-/**
- * Unless specified otherwise, PortAudio is enabled by default.
+/*
+ * Types of sound stream backends.
  */
-#ifndef PJMEDIA_HAS_PORTAUDIO_SOUND
-#   define PJMEDIA_HAS_PORTAUDIO_SOUND	    1
-#endif
+#define PJMEDIA_SOUND_NULL_SOUND	    0
+#define PJMEDIA_SOUND_PORTAUDIO_SOUND	    1
+#define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
 
 
 /**
- * Unless specified otherwise, Null sound is disabled.
- * This option is mutually exclusive with PortAudio sound, or otherwise
- * duplicate symbols error will occur.
+ * Unless specified otherwise, sound device uses PortAudio implementation
+ * by default.
  */
-#ifndef PJMEDIA_HAS_NULL_SOUND
-#   define PJMEDIA_HAS_NULL_SOUND	    0
+#ifndef PJMEDIA_SOUND_IMPLEMENTATION
+#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
 #endif
 
 
