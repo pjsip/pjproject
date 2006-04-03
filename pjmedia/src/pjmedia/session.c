@@ -59,24 +59,42 @@ static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 /*
  * Create stream info from SDP media line.
  */
-static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
-					       pjmedia_endpt *endpt,
-					       pjmedia_stream_info *si,
-					       const pjmedia_sdp_conn *local_conn,
-					       const pjmedia_sdp_conn *rem_conn,
-					       const pjmedia_sdp_media *local_m,
-					       const pjmedia_sdp_media *rem_m)
+PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
+					   pjmedia_stream_info *si,
+					   pj_pool_t *pool,
+					   pjmedia_endpt *endpt,
+					   const pjmedia_sdp_session *local,
+					   const pjmedia_sdp_session *remote,
+					   unsigned stream_idx)
 {
     const pjmedia_sdp_attr *attr;
+    const pjmedia_sdp_media *local_m;
+    const pjmedia_sdp_media *rem_m;
+    const pjmedia_sdp_conn *local_conn;
+    const pjmedia_sdp_conn *rem_conn;
     pjmedia_sdp_rtpmap *rtpmap;
     unsigned i, pt;
     pj_status_t status;
 
 
+    
     /* Validate arguments: */
+    PJ_ASSERT_RETURN(pool && si && local && remote, PJ_EINVAL);
+    PJ_ASSERT_RETURN(stream_idx < local->media_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(stream_idx < remote->media_count, PJ_EINVAL);
 
-    PJ_ASSERT_RETURN(pool && si && local_conn && rem_conn &&
-		     local_m && rem_m, PJ_EINVAL);
+
+    local_m = local->media[stream_idx];
+    rem_m = remote->media[stream_idx];
+
+    local_conn = local_m->conn ? local_m->conn : local->conn;
+    if (local_conn == NULL)
+	return PJMEDIA_SDP_EMISSINGCONN;
+
+    rem_conn = rem_m->conn ? rem_m->conn : remote->conn;
+    if (rem_conn == NULL)
+	return PJMEDIA_SDP_EMISSINGCONN;
+
 
     /* Reset: */
 
@@ -155,14 +173,38 @@ static pj_status_t create_stream_info_from_sdp(pj_pool_t *pool,
      * For dynamic payload types, MUST get the rtpmap.
      */
     if (pt < 96) {
-	
-	pjmedia_codec_mgr *mgr;
+	pj_bool_t has_rtpmap;
 
-	mgr = pjmedia_endpt_get_codec_mgr(endpt);
+	rtpmap = NULL;
+	has_rtpmap = PJ_TRUE;
 
-	status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &si->fmt);
-	if (status != PJ_SUCCESS)
-	    return status;
+	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
+					   &local_m->desc.fmt[0]);
+	if (attr == NULL) {
+	    has_rtpmap = PJ_FALSE;
+	}
+	if (attr != NULL) {
+	    status = pjmedia_sdp_attr_to_rtpmap(pool, attr, &rtpmap);
+	    if (status != PJ_SUCCESS)
+		has_rtpmap = PJ_FALSE;
+	}
+
+	/* Build codec format info: */
+	if (has_rtpmap) {
+	    si->fmt.type = si->type;
+	    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
+	    pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
+	    si->fmt.sample_rate = rtpmap->clock_rate;
+
+	} else {
+	    pjmedia_codec_mgr *mgr;
+
+	    mgr = pjmedia_endpt_get_codec_mgr(endpt);
+
+	    status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &si->fmt);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
 
 	/* For static payload type, pt's are symetric */
 	si->tx_pt = pt;
@@ -303,17 +345,10 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     for (i=0; i<(int)stream_cnt; ++i) {
 
 	pjmedia_stream_info *si = &session->stream_info[i];
-	const pjmedia_sdp_media *local_m = local_sdp->media[i];
-	const pjmedia_sdp_media *rem_m = rem_sdp->media[i];
-	pjmedia_sdp_conn *local_conn, *rem_conn;
 
 	/* Build stream info based on media line in local SDP */
-	local_conn = local_m->conn ? local_m->conn : local_sdp->conn;
-	rem_conn = rem_m->conn ? rem_m->conn : rem_sdp->conn;
-
-	status = create_stream_info_from_sdp(session->pool, endpt, si,
-					     local_conn, rem_conn,
-					     local_m, rem_m);
+	status = pjmedia_stream_info_from_sdp(si, session->pool, endpt,
+					      local_sdp, rem_sdp, i);
 	if (status != PJ_SUCCESS)
 	    return status;
 

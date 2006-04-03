@@ -67,6 +67,27 @@ struct pjmedia_session_info
 
 
 /**
+ * Initialize stream info from SDP media lines.
+ *
+ * @param si		Stream info structure to be initialized.
+ * @param pool		Pool.
+ * @param endpt		Pjmedia endpoint.
+ * @param local		Local SDP session descriptor.
+ * @param remote	Remote SDP session descriptor.
+ * @param stream_idx	Media stream index in the session descriptor.
+ *
+ * @return		PJ_SUCCESS if stream info is successfully initialized.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_info_from_sdp( 
+					   pjmedia_stream_info *si,
+					   pj_pool_t *pool,
+					   pjmedia_endpt *endpt,
+					   const pjmedia_sdp_session *local,
+					   const pjmedia_sdp_session *remote,
+					   unsigned stream_idx);
+
+
+/**
  * Create media session based on the local and remote SDP.
  * The session will start immediately.
  *
