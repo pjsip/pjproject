@@ -158,8 +158,8 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     /* Set up DSBUFFERDESC structure. */
     pj_memset(&dsbdesc, 0, sizeof(DSBUFFERDESC)); 
     dsbdesc.dwSize = sizeof(DSBUFFERDESC); 
-    dsbdesc.dwFlags = DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPOSITIONNOTIFY;
-    /* DSBCAPS_GETCURRENTPOSITION2 */
+    dsbdesc.dwFlags = DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPOSITIONNOTIFY |
+		      DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS;
 
     dsbdesc.dwBufferBytes = buffer_count * bytes_per_frame;
     dsbdesc.lpwfxFormat = (LPWAVEFORMATEX)&pcmwf; 
