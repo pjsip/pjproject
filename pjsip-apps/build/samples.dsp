@@ -114,6 +114,10 @@ SOURCE=..\src\samples\simpleua.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\siprtp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\sndinfo.c
 # End Source File
 # End Group
