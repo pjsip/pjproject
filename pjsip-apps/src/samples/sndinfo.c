@@ -81,27 +81,25 @@ static char play_delays[1000];
 static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 			   void *output, unsigned size)
 {
-    static pj_time_val last_cb;
+    static pj_timestamp last_cb;
 
     ++play_counter;
 
-    if (last_cb.sec == 0 && last_cb.msec == 0) {
-	pj_gettimeofday(&last_cb);
+    if (last_cb.u64 == 0) {
+	pj_get_timestamp(&last_cb);
     } else {
-	pj_time_val now, saved;
+	pj_timestamp now;
 	int delay;
 
-	pj_gettimeofday(&now);
-	saved = now;
-	PJ_TIME_VAL_SUB(now, last_cb);
-	delay = PJ_TIME_VAL_MSEC(now);
-
+	pj_get_timestamp(&now);
+	
+	delay = pj_elapsed_msec(&last_cb, &now);
 	if (delay < min_delay)
 	    min_delay = delay;
 	if (delay > max_delay)
 	    max_delay = delay;
 
-	last_cb = saved;
+	last_cb = now;
 
 	play_delays[play_counter-1] = delay;
     }
