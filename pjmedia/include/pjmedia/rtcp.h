@@ -37,6 +37,8 @@ PJ_BEGIN_DECL
  * @{
  */
 
+#pragma pack(1)
+
 /**
  * RTCP sender report.
  */
@@ -100,7 +102,7 @@ struct pjmedia_rtcp_common
     unsigned	    version:2;	/**< packet type            */
     unsigned	    pt:8;	/**< payload type           */
 #endif
-    pj_uint16_t	    length;	/**< packet length          */
+    unsigned	    length:16;	/**< packet length          */
 };
 
 /**
@@ -122,6 +124,9 @@ struct pjmedia_rtcp_pkt
  * @see pjmedia_rtcp_pkt
  */
 typedef struct pjmedia_rtcp_pkt pjmedia_rtcp_pkt;
+
+
+#pragma pack()
 
 
 /**

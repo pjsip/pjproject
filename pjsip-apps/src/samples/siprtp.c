@@ -1105,8 +1105,10 @@ static int media_thread(void *arg)
 	    if (status != PJ_SUCCESS)
 		app_perror(THIS_FILE, "Error receiving RTCP packet", status);
 	    else {
-		if (size > sizeof(strm->rem_rtcp)) {
-		    PJ_LOG(3,(THIS_FILE, "Error: RTCP packet too large"));
+		if (size != sizeof(strm->rem_rtcp)) {
+		    PJ_LOG(3,(THIS_FILE, "Error: RTCP packet size mismatch "
+					 "(recv %d bytes, expecting %d)",
+					 size, sizeof(strm->rem_rtcp)));
 		    status = -1;
 		} else {
 		    pj_memcpy(&strm->rem_rtcp, packet, size);
