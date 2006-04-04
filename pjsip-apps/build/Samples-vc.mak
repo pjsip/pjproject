@@ -40,7 +40,7 @@ BINDIR = ..\bin\samples
 SAMPLES = $(BINDIR)\simpleua.exe $(BINDIR)\playfile.exe $(BINDIR)\playsine.exe \
 	  $(BINDIR)\confsample.exe $(BINDIR)\sndinfo.exe \
 	  $(BINDIR)\level.exe $(BINDIR)\recfile.exe  \
-	  $(BINDIR)\resampleplay.exe
+	  $(BINDIR)\resampleplay.exe $(BINDIR)\siprtp.exe
 
 
 all: $(OBJDIR) $(SAMPLES)
