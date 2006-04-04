@@ -26,6 +26,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
+#include <pj/compat/socket.h>
 #include <pj/string.h>
 
 
@@ -156,8 +157,14 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    rdata->pkt_info.len = 0;
 
 	} else if (bytes_read == 0) {
+
 	    /* TODO: */
-	} else {
+
+	} else if (-bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
+		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
+		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+	{
+
 	    /* Report error to endpoint. */
 	    PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
 				   rdata->tp_info.transport->obj_name,
@@ -213,11 +220,19 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	} else {
 
 	    if (i < MAX_IMMEDIATE_PACKET) {
-		/* Report error to endpoint. */
-		PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
-				       rdata->tp_info.transport->obj_name,
-				       status, 
-				       "Warning: pj_ioqueue_recvfrom error"));
+
+		/* Report error to endpoint if this is not EWOULDBLOCK error.*/
+		if (status != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
+		    status != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
+		    status != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+		{
+
+		    PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
+					   rdata->tp_info.transport->obj_name,
+					   status, 
+					   "Warning: pj_ioqueue_recvfrom"));
+		}
+
 		/* Continue loop. */
 		bytes_read = 0;
 	    } else {
