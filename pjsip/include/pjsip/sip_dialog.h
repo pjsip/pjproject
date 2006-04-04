@@ -408,14 +408,18 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_request(	pjsip_dialog *dlg,
  *
  * @param dlg		    The dialog.
  * @param tdata		    The request message to be sent.
- * @param p_tsx		    Optional argument to receive the transaction 
- *			    instance used to send the request.
+ * @param mod_data_id	    Optional module data index to put an optional data
+ *			    into the transaction. If no module data is to be
+ *			    attached, this value should be -1.
+ * @param mod_data	    Optional module data to be attached to the 
+ *			    transaction at mod_data_id index.
  *
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_dlg_send_request (	pjsip_dialog *dlg,
 						pjsip_tx_data *tdata,
-						pjsip_transaction **p_tsx );
+						int mod_data_id,
+						void *mod_data);
 
 
 /**

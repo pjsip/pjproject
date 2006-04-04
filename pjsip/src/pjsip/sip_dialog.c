@@ -931,7 +931,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
  */
 PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 					    pjsip_tx_data *tdata,
-					    pjsip_transaction **p_tsx )
+					    int mod_data_id,
+					    void *mod_data)
 {
     pjsip_transaction *tsx;
     pjsip_msg *msg = tdata->msg;
@@ -978,6 +979,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	 */
 	tsx->mod_data[dlg->ua->id] = dlg;
 
+	/* Copy optional caller's mod_data, if present */
+	if (mod_data_id >= 0 && mod_data_id < PJSIP_MAX_MODULE)
+	    tsx->mod_data[mod_data_id] = mod_data;
+
 	/* Increment transaction counter. */
 	++dlg->tsx_count;
 
@@ -988,17 +993,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	    goto on_error;
 	}
 
-	if (p_tsx)
-	    *p_tsx = tsx;
-
     } else {
 	status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata, 
 						    NULL, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	if (p_tsx)
-	    *p_tsx = NULL;
     }
 
     /* Unlock dialog, may destroy dialog. */
@@ -1013,8 +1013,6 @@ on_error:
     /* Whatever happen delete the message. */
     pjsip_tx_data_dec_ref( tdata );
 
-    if (p_tsx)
-	*p_tsx = NULL;
     return status;
 }
 

@@ -1148,7 +1148,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
     pjsip_dlg_inc_lock(sub->dlg);
 
     /* Send the request. */
-    status = pjsip_dlg_send_request(sub->dlg, tdata, NULL);
+    status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -1482,7 +1482,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 					       event->body.tsx_state.src.rdata,
 					       tsx->last_tx, &tdata);
 	    if (status == PJ_SUCCESS) 
-		status = pjsip_dlg_send_request(sub->dlg, tdata, NULL);
+		status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
 	    
 	    if (status != PJ_SUCCESS) {
 		/* Authentication failed! */
@@ -1869,7 +1869,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    status = pjsip_auth_clt_reinit_req( &sub->dlg->auth_sess, rdata, 
 						tsx->last_tx, &tdata);
 	    if (status == PJ_SUCCESS)
-		status = pjsip_dlg_send_request( sub->dlg, tdata, NULL );
+		status = pjsip_dlg_send_request( sub->dlg, tdata, -1, NULL );
 
 	    if (status != PJ_SUCCESS) {
 		/* Can't authenticate. Terminate session (?) */

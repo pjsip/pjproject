@@ -1330,7 +1330,7 @@ void pjsua_call_send_im(int call_index, const char *str)
     }
 
     /* Send the request. */
-    status = pjsip_dlg_send_request( call->inv->dlg, tdata, NULL);
+    status = pjsip_dlg_send_request( call->inv->dlg, tdata, -1, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send MESSAGE request", status);
 	goto on_return;
@@ -1373,7 +1373,7 @@ void pjsua_call_typing(int call_index, pj_bool_t is_typing)
 						     NULL, NULL, -1);
 
     /* Send the request. */
-    status = pjsip_dlg_send_request( call->inv->dlg, tdata, NULL);
+    status = pjsip_dlg_send_request( call->inv->dlg, tdata, -1, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send MESSAGE request", status);
 	goto on_return;

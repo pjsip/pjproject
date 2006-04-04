@@ -176,7 +176,7 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
 	return status;
     }
 
-    status = pjsip_dlg_send_request(inv->dlg, tdata, NULL);
+    status = pjsip_dlg_send_request(inv->dlg, tdata, -1, NULL);
     if (status != PJ_SUCCESS) {
 	/* Better luck next time */
 	pj_assert(!"Unable to send ACK!");
@@ -1580,17 +1580,19 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	      pjsip_tx_data_get_info(tdata)));
 
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
-	pjsip_transaction *tsx;
 	struct tsx_inv_data *tsx_inv_data;
 
-	status = pjsip_dlg_send_request(inv->dlg, tdata, &tsx);
-	if (status != PJ_SUCCESS)
-	    return status;
+	pjsip_dlg_inc_lock(inv->dlg);
 
-	tsx_inv_data = pj_pool_zalloc(tsx->pool, sizeof(struct tsx_inv_data));
+	tsx_inv_data = pj_pool_zalloc(inv->pool, sizeof(struct tsx_inv_data));
 	tsx_inv_data->inv = inv;
 
-	tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+	pjsip_dlg_dec_lock(inv->dlg);
+
+	status = pjsip_dlg_send_request(inv->dlg, tdata, mod_inv.mod.id, 
+					tsx_inv_data);
+	if (status != PJ_SUCCESS)
+	    return status;
 
     } else {
 	pjsip_cseq_hdr *cseq;
