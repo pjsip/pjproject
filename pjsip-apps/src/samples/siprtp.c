@@ -1279,7 +1279,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
 
     pjmedia_rtp_session_init(&audio->out_sess, audio->si.tx_pt, 
-			     (pj_uint32_t)audio);
+			     pj_rand());
     pjmedia_rtp_session_init(&audio->in_sess, audio->si.fmt.pt, 0);
     pjmedia_rtcp_init(&audio->rtcp, 0);
 
