@@ -738,7 +738,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Init RTCP session: */
 
-    pjmedia_rtcp_init(&stream->rtcp, info->ssrc);
+    pjmedia_rtcp_init(&stream->rtcp, info->fmt.sample_rate, info->ssrc);
 
 
     /* Create jitter buffer: */

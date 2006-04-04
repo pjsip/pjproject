@@ -29,6 +29,11 @@
 
 #include <stdlib.h>
 
+
+#if PJ_HAS_HIGH_RES_TIMER==0
+#   error "High resolution timer is needed for this sample"
+#endif
+
 #define THIS_FILE	"siprtp.c"
 #define MAX_CALLS	1024
 #define RTP_START_PORT	44100
@@ -988,35 +993,46 @@ static pj_status_t create_sdp( pj_pool_t *pool,
  */
 static int media_thread(void *arg)
 {
+    enum { RTCP_INTERVAL = 5 };
     struct media_stream *strm = arg;
     char packet[1500];
-    pj_time_val next_rtp, next_rtcp;
+    unsigned msec_interval;
+    pj_timestamp freq, next_rtp, next_rtcp;
 
-    pj_gettimeofday(&next_rtp);
-    next_rtp.msec += strm->samples_per_frame * 1000 / strm->clock_rate;
-    pj_time_val_normalize(&next_rtp);
+    msec_interval = strm->samples_per_frame * 1000 / strm->clock_rate;
+    pj_get_timestamp_freq(&freq);
+
+    pj_get_timestamp(&next_rtp);
+    next_rtp.u64 += (freq.u64 * msec_interval / 1000);
 
     next_rtcp = next_rtp;
-    next_rtcp.sec += 5;
+    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
 
 
     while (!strm->thread_quit_flag) {
 	pj_fd_set_t set;
-	pj_time_val now, lesser, timeout;
+	pj_timestamp now, lesser;
+	pj_time_val timeout;
 	int rc;
 
 	/* Determine how long to sleep */
-	if (PJ_TIME_VAL_LT(next_rtp, next_rtcp))
+	if (next_rtp.u64 < next_rtcp.u64)
 	    lesser = next_rtp;
 	else
 	    lesser = next_rtcp;
 
-	pj_gettimeofday(&now);
-	if (PJ_TIME_VAL_LTE(lesser, now))
+	pj_get_timestamp(&now);
+	if (lesser.u64 <= now.u64) {
 	    timeout.sec = timeout.msec = 0;
-	else {
-	    timeout = lesser;
-	    PJ_TIME_VAL_SUB(timeout, now);
+	    //printf("immediate "); fflush(stdout);
+	} else {
+	    pj_uint64_t tick_delay;
+	    tick_delay = lesser.u64 - now.u64;
+	    timeout.sec = 0;
+	    timeout.msec = (pj_uint32_t)(tick_delay * 1000 / freq.u64);
+	    pj_time_val_normalize(&timeout);
+
+	    //printf("%d:%03d ", timeout.sec, timeout.msec); fflush(stdout);
 	}
 
 	PJ_FD_ZERO(&set);
@@ -1025,7 +1041,7 @@ static int media_thread(void *arg)
 
 	rc = pj_sock_select(FD_SETSIZE, &set, NULL, NULL, &timeout);
 
-	if (PJ_FD_ISSET(strm->rtp_sock, &set)) {
+	if (rc > 0 && PJ_FD_ISSET(strm->rtp_sock, &set)) {
 
 	    /*
 	     * Process incoming RTP packet.
@@ -1074,7 +1090,9 @@ static int media_thread(void *arg)
 	    pjmedia_rtcp_rx_rtp(&strm->rtcp, pj_ntohs(hdr->seq),
 				pj_ntohl(hdr->ts));
 
-	} else if (PJ_FD_ISSET(strm->rtcp_sock, &set)) {
+	} 
+	
+	if (rc > 0 && PJ_FD_ISSET(strm->rtcp_sock, &set)) {
 
 	    /*
 	     * Process incoming RTCP
@@ -1114,9 +1132,9 @@ static int media_thread(void *arg)
 	}
 
 
-	pj_gettimeofday(&now);
+	pj_get_timestamp(&now);
 
-	if (PJ_TIME_VAL_LTE(next_rtp, now)) {
+	if (next_rtp.u64 <= now.u64) {
 	    /*
 	     * Time to send RTP packet.
 	     */
@@ -1154,8 +1172,7 @@ static int media_thread(void *arg)
 	    pjmedia_rtcp_tx_rtp( &strm->rtcp, (pj_uint16_t)strm->bytes_per_frame);
 
 	    /* Schedule next send */
-	    next_rtp.msec += strm->samples_per_frame * 1000 / strm->clock_rate;
-	    pj_time_val_normalize(&next_rtp);
+	    next_rtp.u64 += (msec_interval * freq.u64 / 1000);
 
 	    /* Update stats */
 	    strm->tx_stat.pkt++;
@@ -1163,7 +1180,7 @@ static int media_thread(void *arg)
 	}
 
 
-	if (PJ_TIME_VAL_LTE(next_rtcp, now)) {
+	if (next_rtcp.u64 <= now.u64) {
 	    /*
 	     * Time to send RTCP packet.
 	     */
@@ -1208,7 +1225,7 @@ static int media_thread(void *arg)
 		strm->rx_stat.rtcp_cnt++;
 	    }
 
-	    next_rtcp.sec += 5;
+	    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
 	}
 
     }
@@ -1281,7 +1298,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     pjmedia_rtp_session_init(&audio->out_sess, audio->si.tx_pt, 
 			     pj_rand());
     pjmedia_rtp_session_init(&audio->in_sess, audio->si.fmt.pt, 0);
-    pjmedia_rtcp_init(&audio->rtcp, 0);
+    pjmedia_rtcp_init(&audio->rtcp, audio->clock_rate, 0);
 
 
     /* Clear media statistics */
@@ -1779,6 +1796,12 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+    /* Start worker threads */
+    for (i=0; i<app.thread_count; ++i) {
+	pj_thread_create( app.pool, "app", &worker_thread, NULL,
+			  0, 0, &app.thread[i]);
+    }
+
     /* If URL is specified, then make call immediately */
     if (app.uri_to_call.slen) {
 	unsigned i;
@@ -1798,12 +1821,6 @@ int main(int argc, char *argv[])
 
 	PJ_LOG(3,(THIS_FILE, "Ready for incoming calls (max=%d)", 
 		  app.max_calls));
-    }
-
-    /* Start worker threads */
-    for (i=0; i<app.thread_count; ++i) {
-	pj_thread_create( app.pool, "app", &worker_thread, NULL,
-			  0, 0, &app.thread[i]);
     }
 
     /* Start user interface loop */

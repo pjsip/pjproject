@@ -27,6 +27,8 @@
 #define RTCP_RR   201
 
 
+#define USE_TIMESTAMP	PJ_HAS_HIGH_RES_TIMER
+
 
 /*
  * Get NTP time.
@@ -45,12 +47,16 @@ static void rtcp_get_ntp_time(struct pjmedia_rtcp_ntp_rec *ntp)
 
 
 PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s, 
+			       unsigned clock_rate,
 			       pj_uint32_t ssrc)
 {
     pjmedia_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
     
     pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
     
+    /* Set clock rate */
+    s->clock_rate = clock_rate;
+
     /* Init time */
     s->rtcp_lsr.hi = s->rtcp_lsr.lo = 0;
     s->rtcp_lsr_time = 0;
@@ -64,6 +70,11 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s,
     /* Init SR */
     rtcp_pkt->sr.ssrc = pj_htonl(ssrc);
     
+    /* Get timestamp frequency */
+#if USE_TIMESTAMP
+    pj_get_timestamp_freq(&s->ts_freq);
+#endif
+
     /* RR will be initialized on receipt of the first RTP packet. */
 }
 
@@ -90,8 +101,6 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *s,
 {   
     pj_uint32_t arrival;
     pj_int32_t transit;
-    unsigned long timer_tick;
-    pj_time_val tv;
     int status;
 
     /* Update sequence numbers (received, lost, etc). */
@@ -106,15 +115,32 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *s,
 
     ++s->received;
 
-    pj_gettimeofday(&tv);
-    timer_tick = tv.sec * 1000 + tv.msec;
-    
     /*
      * Calculate jitter (s->jitter is in timer tick unit)
      */
-    PJ_TODO(SUPPORT_JITTER_CALCULATION_FOR_NON_8KHZ_SAMPLE_RATE)
+#if USE_TIMESTAMP
+    {
+	pj_timestamp ts;
 
-    arrival = timer_tick << 3;	// 8 samples per ms.
+	pj_get_timestamp(&ts);
+
+	/* Convert timestamp to samples */
+	ts.u64 = ts.u64 * s->clock_rate / s->ts_freq.u64;
+	arrival = (pj_uint32_t)ts.u64;
+    }
+#else
+    {
+	pj_time_val tv;
+	unsigned long timer_tick;
+
+	pj_gettimeofday(&tv);
+	timer_tick = tv.sec * 1000 + tv.msec;
+
+	/* Convert timer tick to samples */
+	arrival = timer_tick * s->clock_rate / 1000;
+    }
+#endif
+
     transit = arrival - rtp_ts;
     
     if (s->transit == 0) {

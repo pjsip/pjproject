@@ -27,6 +27,7 @@
 #include <pjmedia/types.h>
 #include <pjmedia/rtp.h>
 
+
 PJ_BEGIN_DECL
 
 
@@ -148,12 +149,14 @@ struct pjmedia_rtcp_session
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
 
+    unsigned	    clock_rate;	    /**< Clock rate.			    */
     pj_uint32_t	    received;       /**< # pkts received		    */
     pj_uint32_t	    expected_prior; /**< # pkts expected at last interval   */
     pj_uint32_t	    received_prior; /**< # pkts received at last interval   */
     pj_int32_t	    transit;        /**< Relative trans time for prev pkt   */
     pj_uint32_t	    jitter;	    /**< Estimated jitter		    */
-    
+    pj_timestamp    ts_freq;	    /**< System timestamp frequency.	    */
+
     pjmedia_rtcp_ntp_rec rtcp_lsr;	 /**< NTP ts in last SR received    */
     unsigned 		 rtcp_lsr_time;  /**< Time when last SR is received.*/
     pj_uint32_t		 peer_ssrc;	 /**< Peer SSRC			    */
@@ -173,6 +176,7 @@ typedef struct pjmedia_rtcp_session pjmedia_rtcp_session;
  * @param ssrc	    The SSRC used in to identify the session.
  */
 PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session, 
+				 unsigned clock_rate,
 				 pj_uint32_t ssrc );
 
 
