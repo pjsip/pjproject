@@ -160,6 +160,7 @@ static void rtcp_build_rtcp(pjmedia_rtcp_session *s,
     /* Total lost. */
     expected = pj_ntohl(rtcp_pkt->rr.last_seq) - s->seq_ctrl.base_seq + 1;
     u32 = expected - s->received;
+    if (u32 == 1) u32 = 0;
     rtcp_pkt->rr.total_lost_2 = (u32 >> 16) & 0x00FF;
     rtcp_pkt->rr.total_lost_1 = (u32 >> 8) & 0x00FF;
     rtcp_pkt->rr.total_lost_0 = u32 & 0x00FF;
