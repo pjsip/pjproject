@@ -23,7 +23,10 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#if defined(PJ_HAS_PENTIUM) && PJ_HAS_PENTIUM!=0
+#if defined(PJ_HAS_PENTIUM) && PJ_HAS_PENTIUM!=0 && \
+    defined(PJ_TIMESTAMP_USE_RDTSC) && PJ_TIMESTAMP_USE_RDTSC!=0 && \
+    defined(PJ_M_I386) && PJ_M_I386!=0 && \
+    defined(PJ_LINUX) && PJ_LINUX!=0
 static int machine_speed_mhz;
 static pj_timestamp machine_speed;
 

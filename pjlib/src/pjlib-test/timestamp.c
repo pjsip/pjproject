@@ -99,6 +99,9 @@ static int timestamp_accuracy()
 			     "%d msec", 
 			     (pj_uint32_t)(diff * 1000000 / freq.u64), 
 			     msec));
+    } else {
+	PJ_LOG(3,(THIS_FILE, "....good. Timestamp is accurate down to"
+			     " nearest usec."));
     }
 
     return 0;
