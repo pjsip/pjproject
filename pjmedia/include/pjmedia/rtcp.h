@@ -116,8 +116,8 @@ typedef struct pjmedia_rtcp_common pjmedia_rtcp_common;
 struct pjmedia_rtcp_pkt
 {
     pjmedia_rtcp_common  common;	/**< Common header.	    */
-    pjmedia_rtcp_sr sr;		/**< Sender report.	    */
-    pjmedia_rtcp_rr rr;		/**< variable-length list   */
+    pjmedia_rtcp_sr	 sr;		/**< Sender report.	    */
+    pjmedia_rtcp_rr	 rr;		/**< variable-length list   */
 };
 
 /**
@@ -146,7 +146,8 @@ typedef struct pjmedia_rtcp_ntp_rec pjmedia_rtcp_ntp_rec;
 
 
 /**
- * RTCP session.
+ * RTCP session is used to monitor the RTP session of one endpoint. There
+ * should only be one RTCP session for a bidirectional RTP streams.
  */
 struct pjmedia_rtcp_session
 {
@@ -154,18 +155,18 @@ struct pjmedia_rtcp_session
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
 
-    unsigned	    clock_rate;	    /**< Clock rate.			    */
-    pj_uint32_t	    received;       /**< # pkts received		    */
-    pj_uint32_t	    expected_prior; /**< # pkts expected at last interval   */
-    pj_uint32_t	    received_prior; /**< # pkts received at last interval   */
-    pj_int32_t	    transit;        /**< Relative trans time for prev pkt   */
-    pj_uint32_t	    jitter;	    /**< Estimated jitter		    */
-    pj_timestamp    ts_freq;	    /**< System timestamp frequency.	    */
+    unsigned		    clock_rate;	/**< Clock rate of the stream	    */
+    pj_uint32_t		    received;   /**< # pkt received		    */
+    pj_uint32_t		    exp_prior;	/**< # pkt expected at last interval*/
+    pj_uint32_t		    rx_prior;	/**< # pkt received at last interval*/
+    pj_int32_t		    transit;    /**< Rel transit time for prev pkt  */
+    pj_uint32_t		    jitter;	/**< Scaled jitter		    */
+    pj_timestamp	    ts_freq;	/**< System timestamp frequency.    */
 
-    pjmedia_rtcp_ntp_rec rtcp_lsr;	 /**< NTP ts in last SR received    */
-    unsigned 		 rtcp_lsr_time;  /**< Time when last SR is received.*/
-    pj_uint32_t		 peer_ssrc;	 /**< Peer SSRC			    */
-    
+    pjmedia_rtcp_ntp_rec    rtcp_lsr;	 /**< NTP ts in last SR received    */
+    pj_timestamp	    rtcp_lsr_time;/**< Time when last SR is received*/
+    pj_uint32_t		    peer_ssrc;	 /**< Peer SSRC			    */
+    unsigned		    ee_delay;	/**< End-to-end delay, in msec.	    */
 };
 
 /**
@@ -219,17 +220,33 @@ PJ_DECL(void) pjmedia_rtcp_tx_rtp( pjmedia_rtcp_session *session,
 
 
 /**
- * Build a RTCP SR/RR packet to be transmitted to remote RTP peer.
- * @param session The session.
+ * Call this function when an RTCP packet is received from remote peer.
+ * This RTCP packet received from remote is used to calculate the end-to-
+ * end delay of the network.
  *
- * @param rtcp_pkt  [output] Upon return, it will contain pointer to the 
+ * @param session   RTCP session.
+ * @param rtcp_pkt  The received RTCP packet.
+ * @param size	    Size of the incoming packet.
+ */
+PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
+				    const void *rtcp_pkt,
+				    pj_size_t size);
+
+
+/**
+ * Build a RTCP SR+RR packet to be transmitted to remote RTP peer.
+ * Note that this function will reset the interval counters (such as
+ * the ones to calculate fraction lost) in the session.
+ *
+ * @param session   The RTCP session.
+ * @param rtcp_pkt  Upon return, it will contain pointer to the 
  *		    RTCP packet.
- * @param len	    [output] Upon return, it will indicate the size of 
+ * @param len	    Upon return, it will indicate the size of 
  *		    the RTCP packet.
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
 				       pjmedia_rtcp_pkt **rtcp_pkt, 
-				       int *len );
+				       int *len);
 
 
 /**

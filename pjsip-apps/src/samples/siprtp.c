@@ -1113,6 +1113,9 @@ static int media_thread(void *arg)
 		} else {
 		    pj_memcpy(&strm->rem_rtcp, packet, size);
 		    status = PJ_SUCCESS;
+
+		    /* Report receipt of RTCP to RTCP session */
+		    pjmedia_rtcp_rx_rtcp(&strm->rtcp, packet, size);
 		}
 	    }
 
@@ -1523,6 +1526,8 @@ static void print_call(int call_index)
 	   (audio->tx_stat.rtcp_cnt ? pj_ntohl(audio->rem_rtcp.rr.jitter)*1000/audio->clock_rate : -1),
 	   ""
 	   );
+
+    printf("              End to end delay: %u ms\n", audio->rtcp.ee_delay);
 
 }
 

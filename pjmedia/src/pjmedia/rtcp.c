@@ -18,31 +18,42 @@
  */
 #include <pjmedia/rtcp.h>
 #include <pjmedia/errno.h>
-#include <pj/os.h>	/* pj_gettimeofday */
-#include <pj/sock.h>	/* pj_htonx, pj_ntohx */
-#include <pj/string.h>	/* pj_memset */
+#include <pj/assert.h>
+#include <pj/os.h>
+#include <pj/sock.h>
+#include <pj/string.h>
 
 
 #define RTCP_SR   200
 #define RTCP_RR   201
 
 
-#define USE_TIMESTAMP	PJ_HAS_HIGH_RES_TIMER
+#if PJ_HAS_HIGH_RES_TIMER==0
+#   error "High resolution timer needs to be enabled"
+#endif
 
 
 /*
  * Get NTP time.
  */
-static void rtcp_get_ntp_time(struct pjmedia_rtcp_ntp_rec *ntp)
+static void rtcp_get_ntp_time(const pjmedia_rtcp_session *s, 
+			      struct pjmedia_rtcp_ntp_rec *ntp)
 {
     pj_time_val tv;
+    pj_timestamp ts;
 
     pj_gettimeofday(&tv);
+    pj_get_timestamp(&ts);
     
+    /* Fill up the high 32bit part */
     ntp->hi = tv.sec;
-    tv.msec = tv.msec % 1000;
-    ntp->lo = tv.msec * 0xFFFF / 1000;
-    ntp->lo <<= 16;
+    
+    /* Calculate second fractions */
+    ts.u64 %= s->ts_freq.u64;
+    ts.u64 = (ts.u64 << 32) / s->ts_freq.u64;
+
+    /* Fill up the low 32bit part */
+    ntp->lo = ts.u32.lo;
 }
 
 
@@ -59,7 +70,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s,
 
     /* Init time */
     s->rtcp_lsr.hi = s->rtcp_lsr.lo = 0;
-    s->rtcp_lsr_time = 0;
+    s->rtcp_lsr_time.u64 = 0;
     
     /* Init common RTCP header */
     rtcp_pkt->common.version = 2;
@@ -71,12 +82,11 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s,
     rtcp_pkt->sr.ssrc = pj_htonl(ssrc);
     
     /* Get timestamp frequency */
-#if USE_TIMESTAMP
     pj_get_timestamp_freq(&s->ts_freq);
-#endif
 
     /* RR will be initialized on receipt of the first RTP packet. */
 }
+
 
 PJ_DEF(void) pjmedia_rtcp_fini(pjmedia_rtcp_session *session)
 {
@@ -87,8 +97,8 @@ PJ_DEF(void) pjmedia_rtcp_fini(pjmedia_rtcp_session *session)
 static void rtcp_init_seq(pjmedia_rtcp_session *s, pj_uint16_t  seq)
 {
     s->received = 0;
-    s->expected_prior = 0;
-    s->received_prior = 0;
+    s->exp_prior = 0;
+    s->rx_prior = 0;
     s->transit = 0;
     s->jitter = 0;
 
@@ -99,6 +109,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *s,
 				 pj_uint16_t seq, 
 				 pj_uint32_t rtp_ts)
 {   
+    pj_timestamp ts;
     pj_uint32_t arrival;
     pj_int32_t transit;
     int status;
@@ -116,45 +127,27 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *s,
     ++s->received;
 
     /*
-     * Calculate jitter (s->jitter is in timer tick unit)
+     * Calculate jitter (see RFC 3550 section A.8)
      */
-#if USE_TIMESTAMP
-    {
-	pj_timestamp ts;
-
-	pj_get_timestamp(&ts);
-
-	/* Convert timestamp to samples */
-	ts.u64 = ts.u64 * s->clock_rate / s->ts_freq.u64;
-	arrival = (pj_uint32_t)ts.u64;
-    }
-#else
-    {
-	pj_time_val tv;
-	unsigned long timer_tick;
-
-	pj_gettimeofday(&tv);
-	timer_tick = tv.sec * 1000 + tv.msec;
-
-	/* Convert timer tick to samples */
-	arrival = timer_tick * s->clock_rate / 1000;
-    }
-#endif
+    
+    /* Get arrival time and convert timestamp to samples */
+    pj_get_timestamp(&ts);
+    ts.u64 = ts.u64 * s->clock_rate / s->ts_freq.u64;
+    arrival = ts.u32.lo;
 
     transit = arrival - rtp_ts;
     
     if (s->transit == 0) {
 	s->transit = transit;
     } else {
-	pj_int32_t d, jitter = s->jitter;
+	pj_int32_t d;
 	
 	d = transit - s->transit;
 	s->transit = transit;
 	if (d < 0) 
 	    d = -d;
 	
-	jitter += d - ((jitter + 8) >> 4);
-	s->jitter = jitter;
+	s->jitter += d - ((s->jitter + 8) >> 4);
     }
 }
 
@@ -162,9 +155,65 @@ PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *s,
 				 pj_uint16_t  bytes_payload_size)
 {
     pjmedia_rtcp_pkt *rtcp_pkt = &s->rtcp_pkt;
-    rtcp_pkt->sr.sender_pcount = pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_pcount) + 1);
-    rtcp_pkt->sr.sender_bcount = pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_bcount) + bytes_payload_size );
+
+    /* Update number of packets */
+    rtcp_pkt->sr.sender_pcount = 
+	pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_pcount) + 1);
+
+    /* Update number of bytes */
+    rtcp_pkt->sr.sender_bcount = 
+	pj_htonl( pj_ntohl(rtcp_pkt->sr.sender_bcount) + bytes_payload_size );
 }
+
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
+				   const void *pkt,
+				   pj_size_t size)
+{
+    const struct pjmedia_rtcp_pkt *rtcp = pkt;
+
+    /* Must at least contain SR */
+    pj_assert(size >= sizeof(pjmedia_rtcp_common)+sizeof(pjmedia_rtcp_sr));
+
+    /* Save NTP timestamp */
+    session->rtcp_lsr.hi = pj_ntohl(rtcp->sr.ntp_sec);
+    session->rtcp_lsr.lo = pj_ntohl(rtcp->sr.ntp_frac);
+
+    /* Calculate SR arrival time for DLSR */
+    pj_get_timestamp(&session->rtcp_lsr_time);
+
+    /* Calculate ee_delay if it has RR */
+    if (size >= sizeof(pjmedia_rtcp_pkt)) {
+	
+	/* Can only calculate if LSR and DLSR is present in RR */
+	if (rtcp->rr.lsr && rtcp->rr.dlsr) {
+	    pj_uint32_t lsr, now, dlsr, eedelay;
+	    pjmedia_rtcp_ntp_rec ntp;
+
+	    /* LSR is the middle 32bit of NTP. It has 1/65536 second 
+	     * resolution 
+	     */
+	    lsr = pj_ntohl(rtcp->rr.lsr);
+
+	    /* DLSR is delay since LSR, also in 1/65536 resolution */
+	    dlsr = pj_ntohl(rtcp->rr.dlsr);
+
+	    /* Get current time, and convert to 1/65536 resolution */
+	    rtcp_get_ntp_time(session, &ntp);
+	    now = ((ntp.hi & 0xFFFF) << 16) + 
+		  (ntp.lo >> 16);
+
+	    /* End-to-end delay is (now-lsr-dlsr) */
+	    eedelay = now - lsr - dlsr;
+
+	    /* Convert end to end delay to msec: 
+	     *   session->ee_delay = (eedelay * 1000) / 65536;
+	     */
+	    session->ee_delay = (eedelay * 1000) >> 16;
+	}
+    }
+}
+
 
 static void rtcp_build_rtcp(pjmedia_rtcp_session *s, 
 			    pj_uint32_t receiver_ssrc)
@@ -184,19 +233,18 @@ static void rtcp_build_rtcp(pjmedia_rtcp_session *s,
     rtcp_pkt->rr.jitter = pj_htonl(s->jitter >> 4);
     
     /* Total lost. */
-    expected = pj_ntohl(rtcp_pkt->rr.last_seq) - s->seq_ctrl.base_seq + 1;
+    expected = pj_ntohl(rtcp_pkt->rr.last_seq) - s->seq_ctrl.base_seq;
     u32 = expected - s->received;
-    if (u32 == 1) u32 = 0;
     rtcp_pkt->rr.total_lost_2 = (u32 >> 16) & 0x00FF;
     rtcp_pkt->rr.total_lost_1 = (u32 >> 8) & 0x00FF;
     rtcp_pkt->rr.total_lost_0 = u32 & 0x00FF;
 
     /* Fraction lost calculation */
-    expected_interval = expected - s->expected_prior;
-    s->expected_prior = expected;
+    expected_interval = expected - s->exp_prior;
+    s->exp_prior = expected;
     
-    received_interval = s->received - s->received_prior;
-    s->received_prior = s->received;
+    received_interval = s->received - s->rx_prior;
+    s->rx_prior = s->received;
     
     lost_interval = expected_interval - received_interval;
     
@@ -213,22 +261,21 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
 {
     pjmedia_rtcp_pkt *rtcp_pkt = &session->rtcp_pkt;
     pjmedia_rtcp_ntp_rec ntp;
-    pj_time_val now;
     
     rtcp_build_rtcp(session, session->peer_ssrc);
     
     /* Get current NTP time. */
-    rtcp_get_ntp_time(&ntp);
+    rtcp_get_ntp_time(session, &ntp);
     
     /* Fill in NTP timestamp in SR. */
     rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
     rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
     
-    if (session->rtcp_lsr_time == 0 || session->rtcp_lsr.lo == 0) {
+    if (session->rtcp_lsr_time.u64 == 0 || session->rtcp_lsr.lo == 0) {
 	rtcp_pkt->rr.lsr = 0;
 	rtcp_pkt->rr.dlsr = 0;
     } else {
-	unsigned msec_elapsed;
+	pj_timestamp ts;
 	
 	/* Fill in LSR.
 	   LSR is the middle 32bit of the last SR NTP time received.
@@ -240,13 +287,19 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
 	/* Fill in DLSR.
 	   DLSR is Delay since Last SR, in 1/65536 seconds.
 	 */
-	pj_gettimeofday(&now);
-	msec_elapsed = (now.msec - session->rtcp_lsr_time);
-	rtcp_pkt->rr.dlsr = pj_htonl((msec_elapsed * 65536) / 1000);
+	pj_get_timestamp(&ts);
+
+	/* Convert interval to 1/65536 seconds value */
+	ts.u64 = ((ts.u64 - session->rtcp_lsr_time.u64) << 16) / 
+		    session->ts_freq.u64;
+
+	rtcp_pkt->rr.dlsr = pj_htonl( (pj_uint32_t)ts.u64 );
     }
     
+
     /* Return pointer. */
     *ret_p_pkt = rtcp_pkt;
     *len = sizeof(pjmedia_rtcp_pkt);
 }
 
+ 
