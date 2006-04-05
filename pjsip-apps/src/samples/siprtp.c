@@ -58,7 +58,7 @@ struct stream_stat
     pj_uint32_t	    discard, reorder;
     unsigned	    loss_min, loss_avg, loss_max;
     char	   *loss_type;
-    unsigned	    jitter_min, jitter_avg, jitter_max;
+    unsigned	    jitter_min_us, jitter_avg_us, jitter_max_us;
     unsigned	    rtcp_cnt;
 };
 
@@ -253,15 +253,25 @@ static pj_status_t init_sip()
     /* Add UDP transport. */
     {
 	pj_sockaddr_in addr;
+	pjsip_host_port addrname;
 
+	pj_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = PJ_AF_INET;
 	addr.sin_addr.s_addr = 0;
 	addr.sin_port = pj_htons((pj_uint16_t)app.sip_port);
 
-	status = pjsip_udp_transport_start( app.sip_endpt, &addr, NULL, 
+	if (app.local_addr) {
+	    addrname.host = pj_str(app.local_addr);
+	    addrname.port = app.sip_port;
+	}
+
+	status = pjsip_udp_transport_start( app.sip_endpt, &addr, 
+					    (app.local_addr ? &addrname:NULL), 
 					    1, NULL);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to start UDP transport", status);
 	    return status;
+	}
     }
 
     /* 
@@ -364,7 +374,6 @@ static pj_status_t init_media()
 		  app.local_addr));
 	return -1;
     }
-
 
     /* RTP port counter */
     rtp_port = (pj_uint16_t)(app.rtp_start_port & 0xFFFE);
@@ -1123,14 +1132,15 @@ static int media_thread(void *arg)
 		/* Process RTCP stats */
 		unsigned jitter;
 		
-		jitter = pj_ntohl(strm->rem_rtcp.rr.jitter) * 1000 /
-			 strm->clock_rate;
-		if (jitter < strm->tx_stat.jitter_min)
-		    strm->tx_stat.jitter_min = jitter;
-		if (jitter > strm->tx_stat.jitter_max)
-		    strm->tx_stat.jitter_max = jitter;
-		strm->tx_stat.jitter_avg = (strm->tx_stat.jitter_avg * strm->tx_stat.rtcp_cnt +
-					    jitter) / (strm->tx_stat.rtcp_cnt + 1);
+		jitter = (unsigned)(pj_ntohl(strm->rem_rtcp.rr.jitter) * 
+                                    1000000.0 / strm->clock_rate);
+		if (jitter < strm->tx_stat.jitter_min_us)
+		    strm->tx_stat.jitter_min_us = jitter;
+		if (jitter > strm->tx_stat.jitter_max_us)
+		    strm->tx_stat.jitter_max_us = jitter;
+		strm->tx_stat.jitter_avg_us = 
+			(strm->tx_stat.jitter_avg_us * strm->tx_stat.rtcp_cnt +
+			 jitter) / (strm->tx_stat.rtcp_cnt + 1);
 
 		strm->tx_stat.rtcp_cnt++;
 	    }
@@ -1218,21 +1228,21 @@ static int media_thread(void *arg)
 	    {
 		unsigned jitter;
 		
-		jitter = pj_ntohl(rtcp_pkt->rr.jitter) * 1000 /
-			 strm->clock_rate;
-		if (jitter < strm->rx_stat.jitter_min)
-		    strm->rx_stat.jitter_min = jitter;
-		if (jitter > strm->rx_stat.jitter_max)
-		    strm->rx_stat.jitter_max = jitter;
-		strm->rx_stat.jitter_avg = (strm->rx_stat.jitter_avg * strm->rx_stat.rtcp_cnt +
-					    jitter) / (strm->rx_stat.rtcp_cnt + 1);
+		jitter = (unsigned) (pj_ntohl(rtcp_pkt->rr.jitter) * 
+				     1000000.0 / strm->clock_rate);
+		if (jitter < strm->rx_stat.jitter_min_us)
+		    strm->rx_stat.jitter_min_us = jitter;
+		if (jitter > strm->rx_stat.jitter_max_us)
+		    strm->rx_stat.jitter_max_us = jitter;
+		strm->rx_stat.jitter_avg_us = 
+			(strm->rx_stat.jitter_avg_us * strm->rx_stat.rtcp_cnt +
+			 jitter) / (strm->rx_stat.rtcp_cnt + 1);
 
 		strm->rx_stat.rtcp_cnt++;
 	    }
 
 	    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
 	}
-
     }
 
     return 0;
@@ -1246,7 +1256,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     struct call *call;
     pj_pool_t *pool;
     struct media_stream *audio;
-    pjmedia_sdp_session *local_sdp, *remote_sdp;
+    const pjmedia_sdp_session *local_sdp, *remote_sdp;
     struct codec *codec_desc = NULL;
     unsigned i;
 
@@ -1407,7 +1417,7 @@ static void print_call(int call_index)
 	pj_gettimeofday(&now);
 	PJ_TIME_VAL_SUB(now, call->connect_time);
 
-	sprintf(duration, " [duration: %02d:%02d:%02d.%03d]",
+	sprintf(duration, " [duration: %02ld:%02ld:%02ld.%03ld]",
 		now.sec / 3600,
 		(now.sec % 3600) / 60,
 		(now.sec % 60),
@@ -1443,7 +1453,7 @@ static void print_call(int call_index)
 	if (call->response_time.sec) {
 	    t = call->response_time;
 	    PJ_TIME_VAL_SUB(t, call->start_time);
-	    sprintf(pdd, "got 1st response in %d ms", PJ_TIME_VAL_MSEC(t));
+	    sprintf(pdd, "got 1st response in %ld ms", PJ_TIME_VAL_MSEC(t));
 	} else {
 	    pdd[0] = '\0';
 	}
@@ -1451,7 +1461,8 @@ static void print_call(int call_index)
 	if (call->connect_time.sec) {
 	    t = call->connect_time;
 	    PJ_TIME_VAL_SUB(t, call->start_time);
-	    sprintf(connectdelay, ", connected after: %d ms", PJ_TIME_VAL_MSEC(t));
+	    sprintf(connectdelay, ", connected after: %ld ms", 
+		    PJ_TIME_VAL_MSEC(t));
 	} else {
 	    connectdelay[0] = '\0';
 	}
@@ -1464,13 +1475,13 @@ static void print_call(int call_index)
 	return;
     }
 
-    printf("   Stream #0: audio %.*s@%dHz, %dms/frame, %sbps (%sbps +IP hdr)\n",
-	   (int)audio->si.fmt.encoding_name.slen,
-	   audio->si.fmt.encoding_name.ptr,
-	   audio->clock_rate,
-	   audio->samples_per_frame * 1000 / audio->clock_rate,
-	   good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
-	   good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame));
+    printf("   Stream #0: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
+   	(int)audio->si.fmt.encoding_name.slen,
+	audio->si.fmt.encoding_name.ptr,
+	audio->clock_rate,
+	audio->samples_per_frame * 1000 / audio->clock_rate,
+	good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
+	good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame));
 
     total_loss = (audio->rtcp.rtcp_pkt.rr.total_lost_2 << 16) +
 	         (audio->rtcp.rtcp_pkt.rr.total_lost_1 << 8) +
@@ -1478,8 +1489,8 @@ static void print_call(int call_index)
 
     printf("              RX total %s packets %sB received (%sB +IP hdr)%s\n"
 	   "                 pkt discards=%d (%3.1f%%), loss=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%d ms, avg=%d ms, max=%d ms%s\n"
-	   "                 jitter min=%d ms, avg=%d ms, max=%d ms, current=%d ms%s\n",
+	   "                 loss period min=%dms, avg=%dms, max=%dms%s\n"
+	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, curr=%5.3f ms%s\n",
 	   good_number(packets, audio->rx_stat.pkt),
 	   good_number(bytes, audio->rx_stat.payload),
 	   good_number(ipbytes, audio->rx_stat.payload + audio->rx_stat.pkt * 32),
@@ -1492,10 +1503,10 @@ static void print_call(int call_index)
 	   "",
 	   -1, -1, -1, 
 	   "",
-	   (audio->rx_stat.rtcp_cnt ? audio->rx_stat.jitter_min : -1), 
-	   (audio->rx_stat.rtcp_cnt ? audio->rx_stat.jitter_avg : -1),
-	   (audio->rx_stat.rtcp_cnt ? audio->rx_stat.jitter_max : -1),
-	   (audio->rx_stat.rtcp_cnt ? pj_ntohl(audio->rtcp.rtcp_pkt.rr.jitter)*1000/audio->clock_rate : -1),
+	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_min_us/1000.0 : -1.),
+	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_avg_us/1000.0 : -1.),
+	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_max_us/1000.0 : -1.),
+	   (audio->rx_stat.rtcp_cnt? pj_ntohl(audio->rtcp.rtcp_pkt.rr.jitter)*1000.0/audio->clock_rate : -1.),
 	   ""
 	   );
 
@@ -1506,8 +1517,8 @@ static void print_call(int call_index)
 
     printf("              TX total %s packets %sB sent (%sB +IP hdr)%s\n"
 	   "                 pkt discards=%d (%3.1f%%), loss=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%d ms, avg=%d ms, max=%d ms%s\n"
-	   "                 jitter min=%d ms, avg=%d ms, max=%d ms, current=%d ms%s\n",
+	   "                 loss period min=%dms, avg=%dms, max=%dms%s\n"
+	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, curr=%5.3f ms%s\n",
 	   good_number(packets, audio->tx_stat.pkt),
 	   good_number(bytes, audio->tx_stat.payload),
 	   good_number(ipbytes, audio->tx_stat.payload + audio->tx_stat.pkt * 32),
@@ -1520,14 +1531,15 @@ static void print_call(int call_index)
 	   "",
 	   -1, -1, -1, 
 	   "",
-	   (audio->tx_stat.rtcp_cnt ? audio->tx_stat.jitter_min : -1), 
-	   (audio->tx_stat.rtcp_cnt ? audio->tx_stat.jitter_avg : -1),
-	   (audio->tx_stat.rtcp_cnt ? audio->tx_stat.jitter_max : -1),
-	   (audio->tx_stat.rtcp_cnt ? pj_ntohl(audio->rem_rtcp.rr.jitter)*1000/audio->clock_rate : -1),
+	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_min_us/1000.0 : -1.),
+	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_avg_us/1000.0 : -1.),
+	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_max_us/1000.0 : -1.),
+	   (audio->tx_stat.rtcp_cnt? pj_ntohl(audio->rem_rtcp.rr.jitter)*1000.0/audio->clock_rate : -1.),
 	   ""
 	   );
 
-    printf("              End to end delay: %u ms\n", audio->rtcp.ee_delay);
+    printf("              End to end delay: %5.3f ms\n", 
+	   audio->rtcp.rtt_us / 1000.0);
 
 }
 

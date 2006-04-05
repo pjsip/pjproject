@@ -19,10 +19,12 @@
 #include <pjmedia/rtcp.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/os.h>
 #include <pj/sock.h>
 #include <pj/string.h>
 
+#define THIS_FILE "rtcp.c"
 
 #define RTCP_SR   200
 #define RTCP_RR   201
@@ -32,6 +34,11 @@
 #   error "High resolution timer needs to be enabled"
 #endif
 
+#if 0
+#   define TRACE_(x)	PJ_LOG(3,x)
+#else
+#   define TRACE_(x)
+#endif
 
 /*
  * Get NTP time.
@@ -182,12 +189,13 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
     /* Calculate SR arrival time for DLSR */
     pj_get_timestamp(&session->rtcp_lsr_time);
 
-    /* Calculate ee_delay if it has RR */
+    /* Calculate RTT if it has RR */
     if (size >= sizeof(pjmedia_rtcp_pkt)) {
 	
 	/* Can only calculate if LSR and DLSR is present in RR */
 	if (rtcp->rr.lsr && rtcp->rr.dlsr) {
-	    pj_uint32_t lsr, now, dlsr, eedelay;
+	    pj_uint32_t lsr, now, dlsr;
+	    pj_uint64_t eedelay;
 	    pjmedia_rtcp_ntp_rec ntp;
 
 	    /* LSR is the middle 32bit of NTP. It has 1/65536 second 
@@ -206,10 +214,25 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
 	    /* End-to-end delay is (now-lsr-dlsr) */
 	    eedelay = now - lsr - dlsr;
 
-	    /* Convert end to end delay to msec: 
+	    /* Convert end to end delay to usec (keeping the calculation in
+             * 64bit space)::
 	     *   session->ee_delay = (eedelay * 1000) / 65536;
 	     */
-	    session->ee_delay = (eedelay * 1000) >> 16;
+	    eedelay = (eedelay * 1000000) >> 16;
+
+	    TRACE_((THIS_FILE, "Rx RTCP: lsr=%p, dlsr=%p (%d:%03dms), "
+			       "now=%p, rtt=%p",
+		    lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
+		    now, (pj_uint32_t)eedelay));
+	    
+	    /* Only save calculation if "now" is greater than lsr, or
+	     * otherwise rtt will be invalid 
+	     */
+	    if (now-dlsr >= lsr) {
+		session->rtt_us = (pj_uint32_t)eedelay;
+	    } else {
+		TRACE_((THIS_FILE, "NTP clock running backwards?"));
+	    }
 	}
     }
 }
@@ -271,7 +294,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
     rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
     rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
     
-    if (session->rtcp_lsr_time.u64 == 0 || session->rtcp_lsr.lo == 0) {
+    if (session->rtcp_lsr_time.u64 == 0) {
 	rtcp_pkt->rr.lsr = 0;
 	rtcp_pkt->rr.dlsr = 0;
     } else {
@@ -288,6 +311,9 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
 	   DLSR is Delay since Last SR, in 1/65536 seconds.
 	 */
 	pj_get_timestamp(&ts);
+
+	/* Calculate DLSR */
+	ts.u64 -= session->rtcp_lsr_time.u64;
 
 	/* Convert interval to 1/65536 seconds value */
 	ts.u64 = ((ts.u64 - session->rtcp_lsr_time.u64) << 16) / 

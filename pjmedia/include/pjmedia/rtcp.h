@@ -163,10 +163,10 @@ struct pjmedia_rtcp_session
     pj_uint32_t		    jitter;	/**< Scaled jitter		    */
     pj_timestamp	    ts_freq;	/**< System timestamp frequency.    */
 
-    pjmedia_rtcp_ntp_rec    rtcp_lsr;	 /**< NTP ts in last SR received    */
+    pjmedia_rtcp_ntp_rec    rtcp_lsr;	/**< NTP ts in last SR received    */
     pj_timestamp	    rtcp_lsr_time;/**< Time when last SR is received*/
-    pj_uint32_t		    peer_ssrc;	 /**< Peer SSRC			    */
-    unsigned		    ee_delay;	/**< End-to-end delay, in msec.	    */
+    pj_uint32_t		    peer_ssrc;	/**< Peer SSRC			    */
+    unsigned		    rtt_us;	/**< End-to-end delay, in usec.	    */
 };
 
 /**
