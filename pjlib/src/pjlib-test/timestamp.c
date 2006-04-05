@@ -47,6 +47,64 @@
 
 #define THIS_FILE   "timestamp"
 
+static int timestamp_accuracy()
+{
+    pj_timestamp freq, t1, t2;
+    pj_time_val tv1, tv2, tvtmp;
+    pj_uint32_t msec, tics;
+    pj_int64_t diff;
+
+    PJ_LOG(3,(THIS_FILE, "...testing frequency accuracy (pls wait)"));
+
+    pj_get_timestamp_freq(&freq);
+
+    /* Get the start time */
+    pj_gettimeofday(&tvtmp);
+    do {
+	pj_gettimeofday(&tv1);
+    } while (PJ_TIME_VAL_EQ(tvtmp, tv1));
+    pj_get_timestamp(&t1);
+
+    /* Sleep for 5 seconds */
+    pj_thread_sleep(10000);
+
+    /* Get end time */
+    pj_gettimeofday(&tvtmp);
+    do {
+	pj_gettimeofday(&tv2);
+    } while (PJ_TIME_VAL_EQ(tvtmp, tv2));
+    pj_get_timestamp(&t2);
+
+    /* Get the elapsed time */
+    PJ_TIME_VAL_SUB(tv2, tv1);
+    msec = PJ_TIME_VAL_MSEC(tv2);
+
+    /* Check that the frequency match the elapsed time */
+    tics = (unsigned)(t2.u64 - t1.u64);
+    diff = tics - (msec * freq.u64 / 1000);
+    if (diff < 0)
+	diff = -diff;
+
+    /* Only allow 1 msec mismatch */
+    if (diff > (pj_int64_t)(freq.u64 / 1000)) {
+	PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
+			     "%d msec", 
+			     (pj_uint32_t)(diff * 1000000 / freq.u64), 
+			     msec));
+	return -2000;
+
+    /* Otherwise just print warning if timestamp drifted by >1 usec */
+    } else if (diff > (pj_int64_t)(freq.u64 / 1000000)) {
+	PJ_LOG(3,(THIS_FILE, "....warning: timestamp drifted by %d usec after "
+			     "%d msec", 
+			     (pj_uint32_t)(diff * 1000000 / freq.u64), 
+			     msec));
+    }
+
+    return 0;
+}
+
+
 int timestamp_test(void)
 {
     enum { CONSECUTIVE_LOOP = 100 };
@@ -146,6 +204,12 @@ int timestamp_test(void)
 			     t1.u32.hi, t1.u32.lo, t2.u32.hi, t2.u32.lo));
 	return -1030;
     }
+
+    /* Testing time/timestamp accuracy */
+    rc = timestamp_accuracy();
+    if (rc != 0)
+	return rc;
+
     return 0;
 }
 
