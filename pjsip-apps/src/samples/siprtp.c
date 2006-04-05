@@ -175,7 +175,8 @@ static void destroy_call_media(unsigned call_index);
 static void app_perror(const char *sender, const char *title, 
 		       pj_status_t status);
 
-
+/* Print call */
+static void print_call(int call_index);
 
 
 /* This is a PJSIP module to be registered by application to handle
@@ -675,6 +676,13 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 	
 	pj_time_val null_time = {0, 0};
 
+	PJ_LOG(3,(THIS_FILE, "Call #%d disconnected. Reason=%s",
+		  call->index,
+		  pjsip_get_status_text(inv->cause)->ptr));
+	PJ_LOG(3,(THIS_FILE, "Call #%d statistics:", call->index));
+	print_call(call->index);
+
+
 	call->inv = NULL;
 	inv->mod_data[mod_siprtp.id] = NULL;
 
@@ -684,9 +692,6 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 	call->response_time = null_time;
 	call->connect_time = null_time;
 
-	PJ_LOG(3,(THIS_FILE, "Call #%d disconnected. Reason=%s",
-		  call->index,
-		  pjsip_get_status_text(inv->cause)->ptr));
 
     } else if (inv->state == PJSIP_INV_STATE_CONFIRMED) {
 
@@ -1471,7 +1476,7 @@ static void print_call(int call_index)
     }
 
 
-    if (call->media[0].thread == NULL) {
+    if (call->inv == NULL || call->inv->state < PJSIP_INV_STATE_CONFIRMED) {
 	return;
     }
 

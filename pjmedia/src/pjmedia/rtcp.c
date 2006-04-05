@@ -37,7 +37,7 @@
 #if 0
 #   define TRACE_(x)	PJ_LOG(3,x)
 #else
-#   define TRACE_(x)
+#   define TRACE_(x)	;
 #endif
 
 /*
@@ -189,6 +189,10 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
     /* Calculate SR arrival time for DLSR */
     pj_get_timestamp(&session->rx_lsr_time);
 
+    TRACE_((THIS_FILE, "Rx RTCP SR: ntp-ts=%p, time=%p", 
+	    session->rx_lsr,
+	    (pj_uint32_t)(session->rx_lsr_time.u64*65536/session->ts_freq.u64)));
+
     /* Calculate RTT if it has RR */
     if (size >= sizeof(pjmedia_rtcp_pkt)) {
 	
@@ -220,7 +224,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
 	     */
 	    eedelay = (eedelay * 1000000) >> 16;
 
-	    TRACE_((THIS_FILE, "Rx RTCP: lsr=%p, dlsr=%p (%d:%03dms), "
+	    TRACE_((THIS_FILE, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
 			       "now=%p, rtt=%p",
 		    lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
 		    now, (pj_uint32_t)eedelay));
@@ -231,7 +235,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
 	    if (now-dlsr >= lsr) {
 		session->rtt_us = (pj_uint32_t)eedelay;
 	    } else {
-		TRACE_((THIS_FILE, "NTP clock running backwards?"));
+		PJ_LOG(3, (THIS_FILE, "Internal NTP clock skew detected"));
 	    }
 	}
     }
@@ -301,7 +305,11 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
 	pj_timestamp ts;
 	pj_uint32_t lsr = session->rx_lsr;
 	pj_uint64_t lsr_time = session->rx_lsr_time.u64;
+	pj_uint32_t dlsr;
 	
+	/* Convert LSR time to 1/65536 seconds resolution */
+	lsr_time = (lsr_time << 16) / session->ts_freq.u64;
+
 	/* Fill in LSR.
 	   LSR is the middle 32bit of the last SR NTP time received.
 	 */
@@ -313,9 +321,20 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
 	pj_get_timestamp(&ts);
 
 	/* Convert interval to 1/65536 seconds value */
-	ts.u64 = ((ts.u64 - lsr_time) << 16) / session->ts_freq.u64;
+	ts.u64 = (ts.u64 << 16) / session->ts_freq.u64;
 
-	rtcp_pkt->rr.dlsr = pj_htonl( (pj_uint32_t)ts.u64 );
+	/* Get DLSR */
+	dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
+	rtcp_pkt->rr.dlsr = pj_htonl(dlsr);
+
+	TRACE_((THIS_FILE, "Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
+			   "(%ds:%03dms)",
+			   lsr, 
+			   (pj_uint32_t)lsr_time,
+			   (pj_uint32_t)ts.u64, 
+			   dlsr,
+			   dlsr/65536,
+			   (dlsr%65536)*1000/65536 ));
     }
     
 
