@@ -76,8 +76,8 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *s,
     s->clock_rate = clock_rate;
 
     /* Init time */
-    s->rtcp_lsr.hi = s->rtcp_lsr.lo = 0;
-    s->rtcp_lsr_time.u64 = 0;
+    s->rx_lsr = 0;
+    s->rx_lsr_time.u64 = 0;
     
     /* Init common RTCP header */
     rtcp_pkt->common.version = 2;
@@ -182,12 +182,12 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
     /* Must at least contain SR */
     pj_assert(size >= sizeof(pjmedia_rtcp_common)+sizeof(pjmedia_rtcp_sr));
 
-    /* Save NTP timestamp */
-    session->rtcp_lsr.hi = pj_ntohl(rtcp->sr.ntp_sec);
-    session->rtcp_lsr.lo = pj_ntohl(rtcp->sr.ntp_frac);
+    /* Save LSR from NTP timestamp of RTCP packet */
+    session->rx_lsr = ((pj_ntohl(rtcp->sr.ntp_sec) & 0x0000FFFF) << 16) | 
+			 ((pj_ntohl(rtcp->sr.ntp_frac) >> 16) & 0xFFFF);
 
     /* Calculate SR arrival time for DLSR */
-    pj_get_timestamp(&session->rtcp_lsr_time);
+    pj_get_timestamp(&session->rx_lsr_time);
 
     /* Calculate RTT if it has RR */
     if (size >= sizeof(pjmedia_rtcp_pkt)) {
@@ -294,30 +294,26 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *session,
     rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
     rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
     
-    if (session->rtcp_lsr_time.u64 == 0) {
+    if (session->rx_lsr_time.u64 == 0 || session->rx_lsr == 0) {
 	rtcp_pkt->rr.lsr = 0;
 	rtcp_pkt->rr.dlsr = 0;
     } else {
 	pj_timestamp ts;
+	pj_uint32_t lsr = session->rx_lsr;
+	pj_uint64_t lsr_time = session->rx_lsr_time.u64;
 	
 	/* Fill in LSR.
 	   LSR is the middle 32bit of the last SR NTP time received.
 	 */
-	rtcp_pkt->rr.lsr = ((session->rtcp_lsr.hi & 0x0000FFFF) << 16) | 
-			   ((session->rtcp_lsr.lo >> 16) & 0xFFFF);
-	rtcp_pkt->rr.lsr = pj_htonl(rtcp_pkt->rr.lsr);
+	rtcp_pkt->rr.lsr = pj_htonl(lsr);
 	
 	/* Fill in DLSR.
 	   DLSR is Delay since Last SR, in 1/65536 seconds.
 	 */
 	pj_get_timestamp(&ts);
 
-	/* Calculate DLSR */
-	ts.u64 -= session->rtcp_lsr_time.u64;
-
 	/* Convert interval to 1/65536 seconds value */
-	ts.u64 = ((ts.u64 - session->rtcp_lsr_time.u64) << 16) / 
-		    session->ts_freq.u64;
+	ts.u64 = ((ts.u64 - lsr_time) << 16) / session->ts_freq.u64;
 
 	rtcp_pkt->rr.dlsr = pj_htonl( (pj_uint32_t)ts.u64 );
     }
