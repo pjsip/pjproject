@@ -1416,7 +1416,7 @@ static void print_call(int call_index)
 
 
     /* Print duration */
-    if (inv->state == PJSIP_INV_STATE_CONFIRMED) {
+    if (inv->state >= PJSIP_INV_STATE_CONFIRMED) {
 	pj_time_val now;
 
 	pj_gettimeofday(&now);
