@@ -1365,6 +1365,13 @@ static void print_call(int call_index)
     printf("   %s\n", userinfo);
 
 
+    if (call->inv == NULL || call->inv->state < PJSIP_INV_STATE_CONFIRMED ||
+	call->connect_time.sec == 0) 
+    {
+	return;
+    }
+
+
     /* Signaling quality */
     {
 	char pdd[64], connectdelay[64];
@@ -1390,10 +1397,6 @@ static void print_call(int call_index)
 	printf("   Signaling quality: %s%s\n", pdd, connectdelay);
     }
 
-
-    if (call->inv == NULL || call->inv->state < PJSIP_INV_STATE_CONFIRMED) {
-	return;
-    }
 
     printf("   Stream #0: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
    	(int)audio->si.fmt.encoding_name.slen,
