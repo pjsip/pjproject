@@ -29,6 +29,7 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/port.h>
+#include <pjmedia/rtcp.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
@@ -79,27 +80,6 @@ struct pjmedia_stream_info
     int			jb_max;	    /**< Jitter buffer max delay.	    */
     int			jb_maxcnt;  /**< Jitter buffer max delay.	    */
 };
-
-
-/**
- * Individual channel statistic.
- */
-struct pjmedia_channel_stat
-{
-    pj_uint32_t pkt;	    /**< Total number of packets.		    */
-    pj_uint32_t bytes;	    /**< Total number of bytes, including RTP hdr.  */
-    pj_uint32_t lost;	    /**< Total number of packet lost		    */
-};
-
-/**
- * Stream statistic.
- */
-struct pjmedia_stream_stat
-{
-    pjmedia_channel_stat    enc;    /**< Encoder statistics.		    */
-    pjmedia_channel_stat    dec;    /**< Decoder statistics.		    */
-};
-
 
 
 /**
@@ -164,7 +144,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
-					      pjmedia_stream_stat *stat);
+					      pjmedia_rtcp_stat *stat);
 
 /**
  * Pause the individual channel in the stream.

@@ -146,6 +146,73 @@ typedef struct pjmedia_rtcp_ntp_rec pjmedia_rtcp_ntp_rec;
 
 
 /**
+ * Unidirectional RTP stream statistics.
+ */
+struct pjmedia_rtcp_stream_stat
+{
+    pj_time_val	    update;	/**< Time of last update.		    */
+    unsigned	    update_cnt;	/**< Number of updates (to calculate avg)   */
+    pj_uint32_t	    pkt;	/**< Total number of packets		    */
+    pj_uint32_t	    bytes;	/**< Total number of payload/bytes	    */
+    unsigned	    discard;	/**< Number of discarded packets.	    */
+    unsigned	    loss;	/**< Number of packets lost		    */
+    unsigned	    reorder;	/**< Number of out of order packets	    */
+    unsigned	    dup;	/**< Number of duplicates packets	    */
+
+    struct {
+	unsigned    min;	/**< Minimum loss period (in usec)	    */
+	unsigned    avg;	/**< Average loss period (in usec)	    */
+	unsigned    max;	/**< Maximum loss period (in usec)	    */
+	unsigned    last;	/**< Last loss period (in usec)		    */
+    } loss_period;		/**< Lost period history.		    */
+
+    struct {
+	unsigned    burst:1;	/**< Burst/sequential packet lost detected  */
+    	unsigned    random:1;	/**< Random packet lost detected.	    */
+    } loss_type;		/**< Types of loss detected.		    */
+
+    struct {
+	unsigned    min;	/**< Minimum jitter (in usec)		    */
+	unsigned    avg;	/**< Average jitter (in usec)		    */
+	unsigned    max;	/**< Maximum jitter (in usec)		    */
+	unsigned    last;	/**< Last jitter (in usec)		    */
+    } jitter;			/**< Jitter history.			    */
+};
+
+
+/**
+ * @see pjmedia_rtcp_stream_stat
+ */
+typedef struct pjmedia_rtcp_stream_stat pjmedia_rtcp_stream_stat;
+
+
+
+/**
+ * Bidirectional RTP stream statistics.
+ */
+struct pjmedia_rtcp_stat
+{
+    pjmedia_rtcp_stream_stat	tx; /**< Encoder stream statistics.	    */
+    pjmedia_rtcp_stream_stat	rx; /**< Decoder stream statistics.	    */
+    
+    struct {
+	unsigned    min;	    /**< Minimum round-trip delay (in usec) */
+	unsigned    avg;	    /**< Average round-trip delay (in usec) */
+	unsigned    max;	    /**< Maximum round-trip delay (in usec) */
+	unsigned    last;	    /**< Last round-trip delay (in usec)    */
+    } rtt;			    /**< Round trip delay history.	    */
+
+    unsigned	    rtt_update_cnt; /**< Nb of times rtt is updated.	    */
+};
+
+
+/**
+ * @see pjmedia_rtcp_stat
+ */
+typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
+
+
+/**
  * RTCP session is used to monitor the RTP session of one endpoint. There
  * should only be one RTCP session for a bidirectional RTP streams.
  */
@@ -156,6 +223,7 @@ struct pjmedia_rtcp_session
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
 
     unsigned		    clock_rate;	/**< Clock rate of the stream	    */
+    unsigned		    pkt_size;	/**< Avg pkt size, in samples.	    */
     pj_uint32_t		    received;   /**< # pkt received		    */
     pj_uint32_t		    exp_prior;	/**< # pkt expected at last interval*/
     pj_uint32_t		    rx_prior;	/**< # pkt received at last interval*/
@@ -166,7 +234,8 @@ struct pjmedia_rtcp_session
     pj_uint32_t		    rx_lsr;	/**< NTP ts in last SR received	    */
     pj_timestamp	    rx_lsr_time;/**< Time when last SR is received  */
     pj_uint32_t		    peer_ssrc;	/**< Peer SSRC			    */
-    unsigned		    rtt_us;	/**< End-to-end delay, in usec.	    */
+    
+    pjmedia_rtcp_stat	    stat;	/**< Bidirectional stream stat.	    */
 };
 
 /**
@@ -178,11 +247,14 @@ typedef struct pjmedia_rtcp_session pjmedia_rtcp_session;
 /**
  * Initialize RTCP session.
  *
- * @param session   The session
- * @param ssrc	    The SSRC used in to identify the session.
+ * @param session	    The session
+ * @param clock_rate	    Codec clock rate in samples per second.
+ * @param samples_per_frame Average number of samples per frame.
+ * @param ssrc		    The SSRC used in to identify the session.
  */
 PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session, 
 				 unsigned clock_rate,
+				 unsigned samples_per_frame,
 				 pj_uint32_t ssrc );
 
 
@@ -201,10 +273,12 @@ PJ_DECL(void) pjmedia_rtcp_fini( pjmedia_rtcp_session *session);
  * @param session   The session.
  * @param seq	    The RTP packet sequence number, in host byte order.
  * @param ts	    The RTP packet timestamp, in host byte order.
+ * @param payload   Size of the payload.
  */
 PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session, 
-				   pj_uint16_t seq, 
-				   pj_uint32_t ts );
+				   unsigned seq, 
+				   unsigned ts,
+				   unsigned payload);
 
 
 /**
@@ -216,7 +290,7 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
  *		    RTP header) in bytes.
  */
 PJ_DECL(void) pjmedia_rtcp_tx_rtp( pjmedia_rtcp_session *session, 
-				   pj_uint16_t ptsize );
+				   unsigned ptsize );
 
 
 /**

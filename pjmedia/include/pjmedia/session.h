@@ -217,7 +217,7 @@ PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
  */
 PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
-						     pjmedia_stream_stat *sta);
+						     pjmedia_rtcp_stat *stat);
 
 /**
  * Dial DTMF digit to the stream, using RFC 2833 mechanism.

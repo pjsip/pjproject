@@ -34,6 +34,9 @@
 #define MAX_MISORDER 	((pj_int16_t)100)
 #define MIN_SEQUENTIAL  ((pj_int16_t)2)
 
+static void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *seq_ctrl, 
+				    pj_uint16_t seq);
+
 
 PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 					 int default_pt, pj_uint32_t sender_ssrc )
@@ -161,9 +164,11 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, const pjmedia_rtp_hdr *hdr)
+PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
+					 const pjmedia_rtp_hdr *hdr,
+					 pjmedia_rtp_status *p_seq_st)
 {
-    int status;
+    pjmedia_rtp_status seq_st;
 
     /* Check SSRC. */
     if (ses->peer_ssrc == 0) ses->peer_ssrc = pj_ntohl(hdr->ssrc);
@@ -175,11 +180,21 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, const 
     }
     */
 
+    /* Init status */
+    seq_st.status.value = 0;
+    seq_st.diff = 0;
+
     /* Check payload type. */
     if (hdr->pt != ses->out_pt) {
-	PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_update: ses=%p, invalid payload type %d (!=%d)",
+	PJ_LOG(4, (THIS_FILE, 
+		   "pjmedia_rtp_session_update: ses=%p, invalid payload "
+		   "type %d (expecting %d)",
 		   ses, hdr->pt, ses->out_pt));
-	return PJMEDIA_RTP_EINPT;
+	if (p_seq_st) {
+	    p_seq_st->status.flag.bad = 1;
+	    p_seq_st->status.flag.badpt = 1;
+	}
+	return;
     }
 
     /* Initialize sequence number on first packet received. */
@@ -187,87 +202,125 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, const 
 	pjmedia_rtp_seq_init( &ses->seq_ctrl, pj_ntohs(hdr->seq) );
 
     /* Check sequence number to see if remote session has been restarted. */
-    status = pjmedia_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq));
-    if (status == PJMEDIA_RTP_ESESSRESTART) {
-	pjmedia_rtp_seq_restart( &ses->seq_ctrl, pj_ntohs(hdr->seq));
+    pjmedia_rtp_seq_update( &ses->seq_ctrl, pj_ntohs(hdr->seq), &seq_st);
+    if (seq_st.status.flag.restart) {
 	++ses->received;
-    } else if (status == 0 || status == PJMEDIA_RTP_ESESSPROBATION) {
+
+    } else if (!seq_st.status.flag.bad) {
 	++ses->received;
     }
 
-
-    return status;
+    if (p_seq_st) {
+	p_seq_st->status.value = seq_st.status.value;
+	p_seq_st->diff = seq_st.diff;
+    }
 }
 
 
-void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *sctrl, pj_uint16_t seq)
+void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *sess, pj_uint16_t seq)
 {
-    sctrl->base_seq = seq;
-    sctrl->max_seq = seq;
-    sctrl->bad_seq = RTP_SEQ_MOD + 1;
-    sctrl->cycles = 0;
+    sess->base_seq = seq;
+    sess->max_seq = seq;
+    sess->bad_seq = RTP_SEQ_MOD + 1;
+    sess->cycles = 0;
 }
 
 
-void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *sctrl, pj_uint16_t seq)
+void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *sess, pj_uint16_t seq)
 {
-    pjmedia_rtp_seq_restart(sctrl, seq);
+    pjmedia_rtp_seq_restart(sess, seq);
 
-    sctrl->max_seq = (pj_uint16_t) (seq - 1);
-    sctrl->probation = MIN_SEQUENTIAL;
+    sess->max_seq = (pj_uint16_t) (seq - 1);
+    sess->probation = MIN_SEQUENTIAL;
 }
 
 
-pj_status_t pjmedia_rtp_seq_update(pjmedia_rtp_seq_session *sctrl, 
-				   pj_uint16_t seq)
+void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess, 
+			     pj_uint16_t seq,
+			     pjmedia_rtp_status *seq_status)
 {
-    pj_uint16_t udelta = (pj_uint16_t) (seq - sctrl->max_seq);
+    pj_uint16_t udelta = (pj_uint16_t) (seq - sess->max_seq);
+    pjmedia_rtp_status st;
     
+    /* Init status */
+    st.status.value = 0;
+    st.diff = 0;
+
     /*
      * Source is not valid until MIN_SEQUENTIAL packets with
      * sequential sequence numbers have been received.
      */
-    if (sctrl->probation) {
-	/* packet is in sequence */
-        if (seq == sctrl->max_seq+ 1) {
-	    sctrl->probation--;
-            sctrl->max_seq = seq;
-            if (sctrl->probation == 0) {
-                return PJMEDIA_RTP_ESESSRESTART;
+    if (sess->probation) {
+
+	st.status.flag.probation = 1;
+	
+        if (seq == sess->max_seq+ 1) {
+	    /* packet is in sequence */
+	    st.diff = 1;
+	    sess->probation--;
+            sess->max_seq = seq;
+            if (sess->probation == 0) {
+		st.status.flag.probation = 0;
             }
 	} else {
-	    sctrl->probation = MIN_SEQUENTIAL - 1;
-	    sctrl->max_seq = seq;
+
+	    st.diff = 0;
+
+	    st.status.flag.bad = 1;
+	    if (seq == sess->max_seq)
+		st.status.flag.dup = 1;
+	    else
+		st.status.flag.outorder = 1;
+
+	    sess->probation = MIN_SEQUENTIAL - 1;
+	    sess->max_seq = seq;
         }
-        return PJMEDIA_RTP_ESESSPROBATION;
+
+
+    } else if (udelta == 0) {
+
+	st.status.flag.dup = 1;
 
     } else if (udelta < MAX_DROPOUT) {
 	/* in order, with permissible gap */
-	if (seq < sctrl->max_seq) {
+	if (seq < sess->max_seq) {
 	    /* Sequence number wrapped - count another 64K cycle. */
-	    sctrl->cycles += RTP_SEQ_MOD;
+	    sess->cycles += RTP_SEQ_MOD;
         }
-        sctrl->max_seq = seq;
+        sess->max_seq = seq;
+
+	st.diff = udelta;
 
     } else if (udelta <= (RTP_SEQ_MOD - MAX_MISORDER)) {
 	/* the sequence number made a very large jump */
-        if (seq == sctrl->bad_seq) {
+        if (seq == sess->bad_seq) {
 	    /*
 	     * Two sequential packets -- assume that the other side
 	     * restarted without telling us so just re-sync
 	     * (i.e., pretend this was the first packet).
 	     */
-	    return PJMEDIA_RTP_ESESSRESTART;
+	    pjmedia_rtp_seq_restart(sess, seq);
+	    st.status.flag.restart = 1;
+	    st.status.flag.probation = 1;
+	    st.diff = 1;
 	}
         else {
-	    sctrl->bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
-            return PJMEDIA_RTP_EBADSEQ;
+	    sess->bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
+            st.status.flag.bad = 1;
+	    st.status.flag.outorder = 1;
         }
     } else {
-	/* duplicate or reordered packet */
+	/* old duplicate or reordered packet.
+	 * Not necessarily bad packet (?)
+	 */
+	st.status.flag.outorder = 1;
     }
     
-    return PJ_SUCCESS;
+
+    if (seq_status) {
+	seq_status->diff = st.diff;
+	seq_status->status.value = st.status.value;
+    }
 }
 
 

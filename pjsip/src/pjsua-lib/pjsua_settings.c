@@ -647,13 +647,15 @@ static void dump_media_session(pjmedia_session *session)
     pjmedia_session_get_info(session, &info);
 
     for (i=0; i<info.stream_cnt; ++i) {
-	pjmedia_stream_stat strm_stat;
+	pjmedia_rtcp_stat stat;
 	const char *rem_addr;
 	int rem_port;
 	const char *dir;
-	char stxpkt[10], stxoct[10], srxpkt[10], srxoct[10];
+	char last_update[40];
+	char packets[16], bytes[16], ipbytes[16];
+	pj_time_val now;
 
-	pjmedia_session_get_stream_stat(session, i, &strm_stat);
+	pjmedia_session_get_stream_stat(session, i, &stat);
 	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
 	rem_port = pj_ntohs(info.stream_info[i].rem_addr.sin_port);
 
@@ -676,15 +678,105 @@ static void dump_media_session(pjmedia_session *session)
 		  info.stream_info[i].fmt.sample_rate / 1000,
 		  dir,
 		  rem_addr, rem_port));
+
+	if (stat.rx.update_cnt == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, stat.rx.update);
+	    sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
 	PJ_LOG(3,(THIS_FILE, 
-		  "%s tx{pt=%d,pkt=%s,oct=%s} rx{pt=%d,pkt=%s,oct=%s}",
-		  "                 ",
-		  info.stream_info[i].tx_pt,
-		  good_number(stxpkt, strm_stat.enc.pkt), 
-		  good_number(stxoct, strm_stat.enc.bytes),
-		  info.stream_info[i].fmt.pt,
-		  good_number(srxpkt, strm_stat.dec.pkt), 
-		  good_number(srxoct, strm_stat.dec.bytes)));
+	       "                  RX pt=%d, stat last update: %s\n"
+	       "                     total %s packets %sB received (%sB +IP hdr)%s\n"
+	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
+	       "                           (msec)    min     avg     max     last\n"
+	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
+	       "                     jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       info.stream_info[i].fmt.pt,
+	       last_update,
+	       good_number(packets, stat.rx.pkt),
+	       good_number(bytes, stat.rx.bytes),
+	       good_number(ipbytes, stat.rx.bytes + stat.rx.pkt * 32),
+	       "",
+	       stat.rx.loss,
+	       stat.rx.loss * 100.0 / stat.rx.pkt,
+	       stat.rx.dup, 
+	       stat.rx.dup * 100.0 / stat.rx.pkt,
+	       stat.rx.reorder, 
+	       stat.rx.reorder * 100.0 / stat.rx.pkt,
+	       "",
+	       stat.rx.loss_period.min / 1000.0, 
+	       stat.rx.loss_period.avg / 1000.0, 
+	       stat.rx.loss_period.max / 1000.0,
+	       stat.rx.loss_period.last / 1000.0,
+	       "",
+	       stat.rx.jitter.min / 1000.0,
+	       stat.rx.jitter.avg / 1000.0,
+	       stat.rx.jitter.max / 1000.0,
+	       stat.rx.jitter.last / 1000.0,
+	       ""
+	       ));
+
+
+	if (stat.tx.update_cnt == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, stat.tx.update);
+	    sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
+	PJ_LOG(3,(THIS_FILE,
+	       "                  TX pt=%d, stat last update: %s\n"
+	       "                     total %s packets %sB received (%sB +IP hdr)%s\n"
+	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
+	       "                           (msec)    min     avg     max     last\n"
+	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
+	       "                     jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       info.stream_info[i].tx_pt,
+	       last_update,
+	       good_number(packets, stat.tx.pkt),
+	       good_number(bytes, stat.tx.bytes),
+	       good_number(ipbytes, stat.tx.bytes + stat.tx.pkt * 32),
+	       "",
+	       stat.tx.loss,
+	       stat.tx.loss * 100.0 / stat.tx.pkt,
+	       stat.tx.dup, 
+	       stat.tx.dup * 100.0 / stat.tx.pkt,
+	       stat.tx.reorder, 
+	       stat.tx.reorder * 100.0 / stat.tx.pkt,
+	       "",
+	       stat.tx.loss_period.min / 1000.0, 
+	       stat.tx.loss_period.avg / 1000.0, 
+	       stat.tx.loss_period.max / 1000.0,
+	       stat.tx.loss_period.last / 1000.0,
+	       "",
+	       stat.tx.jitter.min / 1000.0,
+	       stat.tx.jitter.avg / 1000.0,
+	       stat.tx.jitter.max / 1000.0,
+	       stat.tx.jitter.last / 1000.0,
+	       ""
+	       ));
+
+
+	PJ_LOG(3,(THIS_FILE,
+	       "                 RTT msec       : %7.3f %7.3f %7.3f %7.3f%s", 
+	       stat.rtt.min / 1000.0,
+	       stat.rtt.avg / 1000.0,
+	       stat.rtt.max / 1000.0,
+	       stat.rtt.last / 1000.0,
+	       ""
+	       ));
 
     }
 }
@@ -712,27 +804,25 @@ void pjsua_dump(pj_bool_t detail)
 
 
     /* Dump all invite sessions: */
-    if (detail) {
-	PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
+    PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
 
-	if (pjsua.call_cnt == 0) {
+    if (pjsua.call_cnt == 0) {
 
-	    PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
+	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
 
-	} else {
-	    int i;
+    } else {
+	int i;
 
-	    for (i=0; i<pjsua.max_calls; ++i) {
+	for (i=0; i<pjsua.max_calls; ++i) {
 
-		if (pjsua.calls[i].inv == NULL)
-		    continue;
+	    if (pjsua.calls[i].inv == NULL)
+		continue;
 
-		print_call("  ", i, buf, sizeof(buf));
-		PJ_LOG(3,(THIS_FILE, "%s", buf));
+	    print_call("  ", i, buf, sizeof(buf));
+	    PJ_LOG(3,(THIS_FILE, "%s", buf));
 
-		if (pjsua.calls[i].session)
-		    dump_media_session(pjsua.calls[i].session);
-	    }
+	    if (pjsua.calls[i].session)
+		dump_media_session(pjsua.calls[i].session);
 	}
     }
 

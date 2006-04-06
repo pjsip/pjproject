@@ -180,6 +180,48 @@ typedef struct pjmedia_rtp_session pjmedia_rtp_session;
 
 
 /**
+ * This structure is used to receive additional information about the
+ * state of incoming RTP packet.
+ */
+struct pjmedia_rtp_status
+{
+    union {
+	struct flag {
+	    int	bad:1;	    /**< General flag to indicate that sequence is
+				 bad, and application should not process
+				 this packet. More information will be given
+				 in other flags.			    */
+	    int badpt:1;    /**< Bad payload type.			    */
+	    int	dup:1;	    /**< Indicates duplicate packet		    */
+	    int	outorder:1; /**< Indicates out of order packet		    */
+	    int	probation:1;/**< Indicates that session is in probation
+				 until more packets are received.	    */
+	    int	restart:1;  /**< Indicates that sequence number has made
+				 a large jump, and internal base sequence
+				 number has been adjusted.		    */
+	} flag;		    /**< Status flags.				    */
+
+	pj_uint16_t value;  /**< Status value, to conveniently address all
+				 flags.					    */
+
+    } status;		    /**< Status information union.		    */
+
+    pj_uint16_t	diff;	    /**< Sequence number difference from previous
+				 packet. Normally the value should be 1.    
+				 Value greater than one may indicate packet
+				 loss. If packet with lower sequence is
+				 received, the value will be set to zero.
+				 If base sequence has been restarted, the
+				 value will be one.			    */
+};
+
+/**
+ * @see pjmedia_rtp_status
+ */
+typedef struct pjmedia_rtp_status pjmedia_rtp_status;
+
+
+/**
  * This function will initialize the RTP session according to given parameters.
  *
  * @param ses		The session.
@@ -241,12 +283,12 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
  *
  * @param ses	    The session.
  * @param hdr	    The RTP header of the incoming packet.
- *
- * @return	    PJ_SUCCESS if the packet is valid and can be processed, 
- *		    otherwise will return the appropriate status code.
+ * @param seq_st    Optional structure to receive the status of the RTP packet
+ *		    processing.
  */
-PJ_DECL(pj_status_t) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
-						 const pjmedia_rtp_hdr *hdr);
+PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses, 
+					  const pjmedia_rtp_hdr *hdr,
+					  pjmedia_rtp_status *seq_st);
 
 
 /*
@@ -265,25 +307,16 @@ void pjmedia_rtp_seq_init(pjmedia_rtp_seq_session *seq_ctrl,
 
 
 /** 
- * Internal function to restart the sequence number control, shared by RTCP 
- * implementation. 
- *
- * @param seq_ctrl  The sequence control instance.
- * @param seq	    Sequence number to restart.
- */
-void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *seq_ctrl, 
-			     pj_uint16_t seq);
-
-/** 
  * Internal function update sequence control, shared by RTCP implementation.
  *
- * @param seq_ctrl  The sequence control instance.
- * @param seq	    Sequence number to update.
- *
- * @return	    PJ_SUCCESS if the sequence number can be accepted.
+ * @param seq_ctrl	The sequence control instance.
+ * @param seq		Sequence number to update.
+ * @param seq_status	Optional structure to receive additional information 
+ *			about the packet.
  */
-pj_status_t pjmedia_rtp_seq_update(pjmedia_rtp_seq_session *seq_ctrl, 
-				   pj_uint16_t seq);
+void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *seq_ctrl, 
+			     pj_uint16_t seq,
+			     pjmedia_rtp_status *seq_status);
 
 /**
  * @}

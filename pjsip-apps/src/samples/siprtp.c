@@ -51,18 +51,6 @@ struct codec
 };
 
 
-/* Unidirectional media stat: */
-struct stream_stat
-{
-    pj_uint32_t	    pkt, payload;
-    pj_uint32_t	    discard, reorder;
-    unsigned	    loss_min, loss_avg, loss_max;
-    char	   *loss_type;
-    unsigned	    jitter_min_us, jitter_avg_us, jitter_max_us;
-    unsigned	    rtcp_cnt;
-};
-
-
 /* A bidirectional media stream */
 struct media_stream
 {
@@ -87,11 +75,6 @@ struct media_stream
 
     /* RTCP stats: */
     pjmedia_rtcp_session rtcp;		    /* incoming RTCP session.	*/
-    pjmedia_rtcp_pkt	 rem_rtcp;	    /* received RTCP stat.	*/
-
-    /* More stats: */
-    struct stream_stat	 rx_stat;	    /* incoming stream stat	*/
-    struct stream_stat	 tx_stat;	    /* outgoing stream stat.	*/
 
     /* Thread: */
     pj_bool_t		 thread_quit_flag;  /* worker thread quit flag	*/
@@ -1073,8 +1056,6 @@ static int media_thread(void *arg)
 		continue;
 	    }
 
-	    ++strm->rx_stat.pkt;
-	    strm->rx_stat.payload += (size - 12);
 
 	    /* Decode RTP packet. */
 	    status = pjmedia_rtp_decode_rtp(&strm->in_sess, 
@@ -1083,27 +1064,15 @@ static int media_thread(void *arg)
 					    &payload, &payload_len);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "RTP decode error", status);
-		strm->rx_stat.discard++;
-		continue;
-	    }
-
-	    /* Update RTP session */
-	    status = pjmedia_rtp_session_update(&strm->in_sess, hdr);
-	    if (status != PJ_SUCCESS && 
-		status != PJMEDIA_RTP_ESESSPROBATION && 
-		status != PJMEDIA_RTP_ESESSRESTART) 
-	    {
-		app_perror(THIS_FILE, "RTP update error", status);
-		PJ_LOG(3,(THIS_FILE,"RTP packet detail: pt=%d, seq=%d",
-			  hdr->pt, pj_ntohs(hdr->seq)));
-		strm->rx_stat.discard++;
 		continue;
 	    }
 
 	    /* Update the RTCP session. */
 	    pjmedia_rtcp_rx_rtp(&strm->rtcp, pj_ntohs(hdr->seq),
-				pj_ntohl(hdr->ts));
+				pj_ntohl(hdr->ts), payload_len);
 
+	    /* Update RTP session */
+	    pjmedia_rtp_session_update(&strm->in_sess, hdr, NULL);
 	} 
 	
 	if (rc > 0 && PJ_FD_ISSET(strm->rtcp_sock, &set)) {
@@ -1118,37 +1087,8 @@ static int media_thread(void *arg)
 	    status = pj_sock_recv( strm->rtcp_sock, packet, &size, 0);
 	    if (status != PJ_SUCCESS)
 		app_perror(THIS_FILE, "Error receiving RTCP packet", status);
-	    else {
-		if (size != sizeof(strm->rem_rtcp)) {
-		    PJ_LOG(3,(THIS_FILE, "Error: RTCP packet size mismatch "
-					 "(recv %d bytes, expecting %d)",
-					 size, sizeof(strm->rem_rtcp)));
-		    status = -1;
-		} else {
-		    pj_memcpy(&strm->rem_rtcp, packet, size);
-		    status = PJ_SUCCESS;
-
-		    /* Report receipt of RTCP to RTCP session */
-		    pjmedia_rtcp_rx_rtcp(&strm->rtcp, packet, size);
-		}
-	    }
-
-	    if (status == PJ_SUCCESS) {
-		/* Process RTCP stats */
-		unsigned jitter;
-		
-		jitter = (unsigned)(pj_ntohl(strm->rem_rtcp.rr.jitter) * 
-                                    1000000.0 / strm->clock_rate);
-		if (jitter < strm->tx_stat.jitter_min_us)
-		    strm->tx_stat.jitter_min_us = jitter;
-		if (jitter > strm->tx_stat.jitter_max_us)
-		    strm->tx_stat.jitter_max_us = jitter;
-		strm->tx_stat.jitter_avg_us = 
-			(strm->tx_stat.jitter_avg_us * strm->tx_stat.rtcp_cnt +
-			 jitter) / (strm->tx_stat.rtcp_cnt + 1);
-
-		strm->tx_stat.rtcp_cnt++;
-	    }
+	    else
+		pjmedia_rtcp_rx_rtcp(&strm->rtcp, packet, size);
 	}
 
 
@@ -1193,10 +1133,6 @@ static int media_thread(void *arg)
 
 	    /* Schedule next send */
 	    next_rtp.u64 += (msec_interval * freq.u64 / 1000);
-
-	    /* Update stats */
-	    strm->tx_stat.pkt++;
-	    strm->tx_stat.payload += strm->bytes_per_frame;
 	}
 
 
@@ -1228,24 +1164,7 @@ static int media_thread(void *arg)
 		app_perror(THIS_FILE, "Error sending RTCP packet", status);
 	    }
 	    
-
-	    /* Process RTCP stats */
-	    {
-		unsigned jitter;
-		
-		jitter = (unsigned) (pj_ntohl(rtcp_pkt->rr.jitter) * 
-				     1000000.0 / strm->clock_rate);
-		if (jitter < strm->rx_stat.jitter_min_us)
-		    strm->rx_stat.jitter_min_us = jitter;
-		if (jitter > strm->rx_stat.jitter_max_us)
-		    strm->rx_stat.jitter_max_us = jitter;
-		strm->rx_stat.jitter_avg_us = 
-			(strm->rx_stat.jitter_avg_us * strm->rx_stat.rtcp_cnt +
-			 jitter) / (strm->rx_stat.rtcp_cnt + 1);
-
-		strm->rx_stat.rtcp_cnt++;
-	    }
-
+	    /* Schedule next send */
 	    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
 	}
     }
@@ -1318,12 +1237,9 @@ static void call_on_media_update( pjsip_inv_session *inv,
     pjmedia_rtp_session_init(&audio->out_sess, audio->si.tx_pt, 
 			     pj_rand());
     pjmedia_rtp_session_init(&audio->in_sess, audio->si.fmt.pt, 0);
-    pjmedia_rtcp_init(&audio->rtcp, audio->clock_rate, 0);
+    pjmedia_rtcp_init(&audio->rtcp, audio->clock_rate, 
+		      audio->samples_per_frame, 0);
 
-
-    /* Clear media statistics */
-    pj_memset(&audio->rx_stat, 0, sizeof(audio->rx_stat));
-    pj_memset(&audio->tx_stat, 0, sizeof(audio->tx_stat));
 
 
     /* Start media thread. */
@@ -1410,16 +1326,15 @@ static void print_call(int call_index)
     pjsip_dialog *dlg = inv->dlg;
     struct media_stream *audio = &call->media[0];
     char userinfo[128];
-    char duration[80];
+    char duration[80], last_update[80];
     char bps[16], ipbps[16], packets[16], bytes[16], ipbytes[16];
-    pj_uint32_t total_loss;
+    pj_time_val now;
 
+    pj_gettimeofday(&now);
 
     /* Print duration */
     if (inv->state >= PJSIP_INV_STATE_CONFIRMED) {
-	pj_time_val now;
 
-	pj_gettimeofday(&now);
 	PJ_TIME_VAL_SUB(now, call->connect_time);
 
 	sprintf(duration, " [duration: %02ld:%02ld:%02ld.%03ld]",
@@ -1488,63 +1403,97 @@ static void print_call(int call_index)
 	good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
 	good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame));
 
-    total_loss = (audio->rtcp.rtcp_pkt.rr.total_lost_2 << 16) +
-	         (audio->rtcp.rtcp_pkt.rr.total_lost_1 << 8) +
-		 audio->rtcp.rtcp_pkt.rr.total_lost_0;
+    if (audio->rtcp.stat.rx.update_cnt == 0)
+	strcpy(last_update, "never");
+    else {
+	pj_gettimeofday(&now);
+	PJ_TIME_VAL_SUB(now, audio->rtcp.stat.rx.update);
+	sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+		now.sec / 3600,
+		(now.sec % 3600) / 60,
+		now.sec % 60,
+		now.msec);
+    }
 
-    printf("              RX total %s packets %sB received (%sB +IP hdr)%s\n"
-	   "                 pkt discards=%d (%3.1f%%), loss=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%dms, avg=%dms, max=%dms%s\n"
-	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, curr=%5.3f ms%s\n",
-	   good_number(packets, audio->rx_stat.pkt),
-	   good_number(bytes, audio->rx_stat.payload),
-	   good_number(ipbytes, audio->rx_stat.payload + audio->rx_stat.pkt * 32),
+    printf("              RX stat last update: %s\n"
+	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
+	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
+	   "                 loss period min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3f%s\n"
+	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n",
+	   last_update,
+	   good_number(packets, audio->rtcp.stat.rx.pkt),
+	   good_number(bytes, audio->rtcp.stat.rx.bytes),
+	   good_number(ipbytes, audio->rtcp.stat.rx.bytes + audio->rtcp.stat.rx.pkt * 32),
 	   "",
-	   audio->rx_stat.discard, 
-	   audio->rx_stat.discard * 100.0 / audio->rx_stat.pkt,
-	   total_loss,
-	   total_loss * 100.0 / audio->rx_stat.pkt,
-	   0, 0.0,
+	   audio->rtcp.stat.rx.loss,
+	   audio->rtcp.stat.rx.loss * 100.0 / audio->rtcp.stat.rx.pkt,
+	   audio->rtcp.stat.rx.dup, 
+	   audio->rtcp.stat.rx.dup * 100.0 / audio->rtcp.stat.rx.pkt,
+	   audio->rtcp.stat.rx.reorder, 
+	   audio->rtcp.stat.rx.reorder * 100.0 / audio->rtcp.stat.rx.pkt,
 	   "",
-	   -1, -1, -1, 
+	   audio->rtcp.stat.rx.loss_period.min / 1000.0, 
+	   audio->rtcp.stat.rx.loss_period.avg / 1000.0, 
+	   audio->rtcp.stat.rx.loss_period.max / 1000.0,
+	   audio->rtcp.stat.rx.loss_period.last / 1000.0,
 	   "",
-	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_min_us/1000.0 : -1.),
-	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_avg_us/1000.0 : -1.),
-	   (audio->rx_stat.rtcp_cnt? audio->rx_stat.jitter_max_us/1000.0 : -1.),
-	   (audio->rx_stat.rtcp_cnt? pj_ntohl(audio->rtcp.rtcp_pkt.rr.jitter)*1000.0/audio->clock_rate : -1.),
+	   audio->rtcp.stat.rx.jitter.min / 1000.0,
+	   audio->rtcp.stat.rx.jitter.avg / 1000.0,
+	   audio->rtcp.stat.rx.jitter.max / 1000.0,
+	   audio->rtcp.stat.rx.jitter.last / 1000.0,
 	   ""
 	   );
 
 
-    total_loss = (audio->rem_rtcp.rr.total_lost_2 << 16) +
-	         (audio->rem_rtcp.rr.total_lost_1 << 8) +
-		  audio->rem_rtcp.rr.total_lost_0;
+    if (audio->rtcp.stat.tx.update_cnt == 0)
+	strcpy(last_update, "never");
+    else {
+	pj_gettimeofday(&now);
+	PJ_TIME_VAL_SUB(now, audio->rtcp.stat.tx.update);
+	sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+		now.sec / 3600,
+		(now.sec % 3600) / 60,
+		now.sec % 60,
+		now.msec);
+    }
 
-    printf("              TX total %s packets %sB sent (%sB +IP hdr)%s\n"
-	   "                 pkt discards=%d (%3.1f%%), loss=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%dms, avg=%dms, max=%dms%s\n"
-	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, curr=%5.3f ms%s\n",
-	   good_number(packets, audio->tx_stat.pkt),
-	   good_number(bytes, audio->tx_stat.payload),
-	   good_number(ipbytes, audio->tx_stat.payload + audio->tx_stat.pkt * 32),
+    printf("              TX stat last update: %s\n"
+	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
+	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
+	   "                 loss period min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3f%s\n"
+	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n",
+	   last_update,
+	   good_number(packets, audio->rtcp.stat.tx.pkt),
+	   good_number(bytes, audio->rtcp.stat.tx.bytes),
+	   good_number(ipbytes, audio->rtcp.stat.tx.bytes + audio->rtcp.stat.tx.pkt * 32),
 	   "",
-	   audio->tx_stat.discard, 
-	   audio->tx_stat.discard * 100.0 / audio->tx_stat.pkt,
-	   total_loss,
-	   total_loss * 100.0 / audio->tx_stat.pkt,
-	   0, 0.0,
+	   audio->rtcp.stat.tx.loss,
+	   audio->rtcp.stat.tx.loss * 100.0 / audio->rtcp.stat.tx.pkt,
+	   audio->rtcp.stat.tx.dup, 
+	   audio->rtcp.stat.tx.dup * 100.0 / audio->rtcp.stat.tx.pkt,
+	   audio->rtcp.stat.tx.reorder, 
+	   audio->rtcp.stat.tx.reorder * 100.0 / audio->rtcp.stat.tx.pkt,
 	   "",
-	   -1, -1, -1, 
+	   audio->rtcp.stat.tx.loss_period.min / 1000.0, 
+	   audio->rtcp.stat.tx.loss_period.avg / 1000.0, 
+	   audio->rtcp.stat.tx.loss_period.max / 1000.0,
+	   audio->rtcp.stat.tx.loss_period.last / 1000.0,
 	   "",
-	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_min_us/1000.0 : -1.),
-	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_avg_us/1000.0 : -1.),
-	   (audio->tx_stat.rtcp_cnt? audio->tx_stat.jitter_max_us/1000.0 : -1.),
-	   (audio->tx_stat.rtcp_cnt? pj_ntohl(audio->rem_rtcp.rr.jitter)*1000.0/audio->clock_rate : -1.),
+	   audio->rtcp.stat.tx.jitter.min / 1000.0,
+	   audio->rtcp.stat.tx.jitter.avg / 1000.0,
+	   audio->rtcp.stat.tx.jitter.max / 1000.0,
+	   audio->rtcp.stat.tx.jitter.last / 1000.0,
 	   ""
 	   );
 
-    printf("              End to end delay: %5.3f ms\n", 
-	   audio->rtcp.rtt_us / 1000.0);
+
+    printf("             RTT min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n", 
+	   audio->rtcp.stat.rtt.min / 1000.0,
+	   audio->rtcp.stat.rtt.avg / 1000.0,
+	   audio->rtcp.stat.rtt.max / 1000.0,
+	   audio->rtcp.stat.rtt.last / 1000.0,
+	   ""
+	   );
 
 }
 

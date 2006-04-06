@@ -525,7 +525,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_port(  pjmedia_session *session,
  */
 PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
 						     unsigned index,
-						     pjmedia_stream_stat *stat)
+						     pjmedia_rtcp_stat *stat)
 {
     PJ_ASSERT_RETURN(session && stat && index < session->stream_cnt, 
 		     PJ_EINVAL);
