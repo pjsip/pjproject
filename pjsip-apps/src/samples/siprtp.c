@@ -1421,8 +1421,9 @@ static void print_call(int call_index)
     printf("              RX stat last update: %s\n"
 	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
 	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3f%s\n"
-	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n",
+	   "                       (msec)    min     avg     max     last\n"
+	   "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
+	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
 	   last_update,
 	   good_number(packets, audio->rtcp.stat.rx.pkt),
 	   good_number(bytes, audio->rtcp.stat.rx.bytes),
@@ -1463,8 +1464,9 @@ static void print_call(int call_index)
     printf("              TX stat last update: %s\n"
 	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
 	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "                 loss period min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3f%s\n"
-	   "                 jitter min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n",
+	   "                       (msec)    min     avg     max     last\n"
+	   "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
+	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
 	   last_update,
 	   good_number(packets, audio->rtcp.stat.tx.pkt),
 	   good_number(bytes, audio->rtcp.stat.tx.bytes),
@@ -1490,7 +1492,7 @@ static void print_call(int call_index)
 	   );
 
 
-    printf("             RTT min=%5.3fms, avg=%5.3fms, max=%5.3fms, last=%5.3fms%s\n", 
+    printf("             RTT msec       : %7.3f %7.3f %7.3f %7.3f%s\n", 
 	   audio->rtcp.stat.rtt.min / 1000.0,
 	   audio->rtcp.stat.rtt.avg / 1000.0,
 	   audio->rtcp.stat.rtt.max / 1000.0,
