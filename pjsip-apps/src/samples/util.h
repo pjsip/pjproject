@@ -1,4 +1,5 @@
 
+#include <stdlib.h>	/* strtol() */
 
 /* Util to display the error message for the specified error code  */
 static int app_perror( const char *sender, const char *title, 

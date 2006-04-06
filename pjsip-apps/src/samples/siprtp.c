@@ -1411,7 +1411,7 @@ static void print_call(int call_index)
     else {
 	pj_gettimeofday(&now);
 	PJ_TIME_VAL_SUB(now, audio->rtcp.stat.rx.update);
-	sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+	sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
 		now.sec / 3600,
 		(now.sec % 3600) / 60,
 		now.sec % 60,
@@ -1454,7 +1454,7 @@ static void print_call(int call_index)
     else {
 	pj_gettimeofday(&now);
 	PJ_TIME_VAL_SUB(now, audio->rtcp.stat.tx.update);
-	sprintf(last_update, "%02dh:%02dm:%02d.%03ds ago",
+	sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
 		now.sec / 3600,
 		(now.sec % 3600) / 60,
 		now.sec % 60,
