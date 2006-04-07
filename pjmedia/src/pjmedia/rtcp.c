@@ -339,9 +339,11 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 
 	    } else {
 		PJ_LOG(3, (THIS_FILE, "Internal NTP clock skew detected: "
-				       "lsr=%p, now=%p, dlsr=%p (%d:%03dms)",
+				       "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+				       "diff=%d",
 				       lsr, now, dlsr, dlsr/65536,
-				       (dlsr%65536)*1000/65536));
+				       (dlsr%65536)*1000/65536,
+				       dlsr-(now-lsr)));
 	    }
 	}
 

@@ -38,13 +38,6 @@
 #define ERRLEVEL			1
 #define TRACE_(expr)			stream_perror expr
 #define TRC_(expr)			PJ_LOG(4,expr)
-#define PJMEDIA_MAX_FRAME_DURATION_MS   200
-#define PJMEDIA_MAX_BUFFER_SIZE_MS	2000
-#define PJMEDIA_MAX_MTU			1500
-#define PJMEDIA_DTMF_DURATION		1600	/* in timestamp */
-#define PJMEDIA_RTP_NAT_PROBATION_CNT	10
-#define PJMEDIA_RTCP_INTERVAL		5	/* seconds	*/
-
 
 /**
  * Media channel.
@@ -341,13 +334,17 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     /* Check if this is the time to transmit RTCP packet */
     if (stream->rtcp_tx_time == 0) {
+	unsigned first_interval;
+
+	first_interval = PJMEDIA_RTCP_INTERVAL + (pj_rand() % 2000);
 	stream->rtcp_tx_time = pj_ntohl(channel->rtp.out_hdr.ts) +
-			       PJMEDIA_RTCP_INTERVAL * 
-			       stream->port.info.sample_rate;
+			       first_interval* stream->port.info.sample_rate /
+			       1000;
     } else if (pj_ntohl(channel->rtp.out_hdr.ts) >= stream->rtcp_tx_time) {
 	
 	pjmedia_rtcp_pkt *rtcp_pkt;
 	pj_ssize_t size;
+	unsigned interval;
 	int len;
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
@@ -355,13 +352,20 @@ static pj_status_t put_frame( pjmedia_port *port,
 	status = pj_sock_sendto(stream->skinfo.rtcp_sock, rtcp_pkt, &size, 0,
 				&stream->rem_rtcp_addr, 
 				sizeof(stream->rem_rtcp_addr));
+#if 0
 	if (status != PJ_SUCCESS) {
-	    ;
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    PJ_LOG(4,(THIS_FILE, "Error sending RTCP: %s [%d]",
+				 errmsg, status));
 	}
-	
+#endif
+
+	interval = PJMEDIA_RTCP_INTERVAL + (pj_rand() % 500);
 	stream->rtcp_tx_time = pj_ntohl(channel->rtp.out_hdr.ts) +
-			       PJMEDIA_RTCP_INTERVAL * 
-			       stream->port.info.sample_rate;
+			       interval * stream->port.info.sample_rate /
+			       1000;
     }
 
     /* Do nothing if we have nothing to transmit */

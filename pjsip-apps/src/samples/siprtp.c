@@ -990,7 +990,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
  */
 static int media_thread(void *arg)
 {
-    enum { RTCP_INTERVAL = 5 };
+    enum { RTCP_INTERVAL = 5000, RTCP_RAND = 2000 };
     struct media_stream *strm = arg;
     char packet[1500];
     unsigned msec_interval;
@@ -1003,7 +1003,7 @@ static int media_thread(void *arg)
     next_rtp.u64 += (freq.u64 * msec_interval / 1000);
 
     next_rtcp = next_rtp;
-    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
+    next_rtcp.u64 += (freq.u64 * (RTCP_INTERVAL+(pj_rand()%RTCP_RAND)) / 1000);
 
 
     while (!strm->thread_quit_flag) {
@@ -1165,7 +1165,8 @@ static int media_thread(void *arg)
 	    }
 	    
 	    /* Schedule next send */
-	    next_rtcp.u64 += (freq.u64 * RTCP_INTERVAL);
+    	    next_rtcp.u64 += (freq.u64 * (RTCP_INTERVAL+(pj_rand()%RTCP_RAND)) /
+			      1000);
 	}
     }
 

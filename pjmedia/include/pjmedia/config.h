@@ -75,5 +75,48 @@
 #endif
 
 
+/**
+ * Maximum frame duration (in msec) to be supported.
+ */
+#ifndef PJMEDIA_MAX_FRAME_DURATION_MS   
+#   define PJMEDIA_MAX_FRAME_DURATION_MS   	200
+#endif
+
+
+/**
+ * Max packet size to support.
+ */
+#ifndef PJMEDIA_MAX_MTU			
+#  define PJMEDIA_MAX_MTU			1500
+#endif
+
+
+/**
+ * DTMF/telephone-event duration, in timestamp.
+ */
+#ifndef PJMEDIA_DTMF_DURATION		
+#  define PJMEDIA_DTMF_DURATION			1600	/* in timestamp */
+#endif
+
+
+/**
+ * Number of packets received from different source IP address from the
+ * remote address required to make the stream switch transmission
+ * to the source address.
+ */
+#ifndef PJMEDIA_RTP_NAT_PROBATION_CNT	
+#  define PJMEDIA_RTP_NAT_PROBATION_CNT		10
+#endif
+
+
+/**
+ * Interval to send RTCP packets, in msec
+ */
+#ifndef PJMEDIA_RTCP_INTERVAL
+#	define PJMEDIA_RTCP_INTERVAL		5000	/* msec*/
+#endif
+
+
 #endif	/* __PJMEDIA_CONFIG_H__ */
+
 
