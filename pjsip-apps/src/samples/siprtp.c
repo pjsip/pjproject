@@ -1463,7 +1463,7 @@ static void print_call(int call_index)
     }
 
     printf("              TX stat last update: %s\n"
-	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
+	   "                 total %s packets %sB sent (%sB +IP hdr)%s\n"
 	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	   "                       (msec)    min     avg     max     last\n"
 	   "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
@@ -1493,7 +1493,7 @@ static void print_call(int call_index)
 	   );
 
 
-    printf("             RTT msec       : %7.3f %7.3f %7.3f %7.3f%s\n", 
+    printf("             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n", 
 	   audio->rtcp.stat.rtt.min / 1000.0,
 	   audio->rtcp.stat.rtt.avg / 1000.0,
 	   audio->rtcp.stat.rtt.max / 1000.0,
