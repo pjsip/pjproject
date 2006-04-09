@@ -92,6 +92,10 @@ struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
+    pj_time_val		 start_time;/**< First INVITE sent/received.	    */
+    pj_time_val		 res_time;  /**< First response sent/received.	    */
+    pj_time_val		 conn_time; /**< Connected/confirmed time.	    */
+    pj_time_val		 dis_time;  /**< Disconnect time.		    */
     int			 acc_index; /**< Account index being used.	    */
     pjmedia_session	*session;   /**< The media session.		    */
     unsigned		 conf_slot; /**< Slot # in conference bridge.	    */

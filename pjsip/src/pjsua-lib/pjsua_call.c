@@ -192,8 +192,13 @@ pj_status_t pjsua_make_call(int acc_index,
 	return PJ_ETOOMANY;
     }
 
-    /* Create outgoing dialog: */
+    /* Mark call start time. */
+    pj_gettimeofday(&pjsua.calls[call_index].start_time);
 
+    /* Reset first response time */
+    pjsua.calls[call_index].res_time.sec = 0;
+
+    /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				   &pjsua.acc[acc_index].local_uri,
 				   &pjsua.acc[acc_index].contact_uri, 
@@ -358,6 +363,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* Mark call start time. */
+    pj_gettimeofday(&pjsua.calls[call_index].start_time);
+
+    /* Reset first response time */
+    pjsua.calls[call_index].res_time.sec = 0;
 
     /* Get media capability from media endpoint: */
 
@@ -497,10 +507,28 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 {
     pjsua_call *call = inv->dlg->mod_data[pjsua.mod.id];
 
+    if (!call)
+	return;
+
+    /* Get call times */
+    switch (inv->state) {
+	case PJSIP_INV_STATE_EARLY:
+	case PJSIP_INV_STATE_CONNECTING:
+	    if (call->res_time.sec == 0)
+		pj_gettimeofday(&call->res_time);
+	    break;
+	case PJSIP_INV_STATE_CONFIRMED:
+	    pj_gettimeofday(&call->conn_time);
+	    break;
+	case PJSIP_INV_STATE_DISCONNECTED:
+	    pj_gettimeofday(&call->dis_time);
+	    break;
+    }
+
     /* If this is an outgoing INVITE that was created because of
      * REFER/transfer, send NOTIFY to transferer.
      */
-    if (call && call->xfer_sub && e->type==PJSIP_EVENT_TSX_STATE)  {
+    if (call->xfer_sub && e->type==PJSIP_EVENT_TSX_STATE)  {
 	int st_code = -1;
 	pjsip_evsub_state ev_state = PJSIP_EVSUB_STATE_ACTIVE;
 	

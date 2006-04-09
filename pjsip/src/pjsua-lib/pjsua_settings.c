@@ -693,7 +693,7 @@ static void dump_media_session(pjmedia_session *session)
 
 	PJ_LOG(3,(THIS_FILE, 
 	       "                  RX pt=%d, stat last update: %s\n"
-	       "                     total %s packets %sB received (%sB +IP hdr)%s\n"
+	       "                     total %spkt %sB (%sB +IP hdr)%s\n"
 	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	       "                           (msec)    min     avg     max     last\n"
 	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
@@ -738,7 +738,7 @@ static void dump_media_session(pjmedia_session *session)
 
 	PJ_LOG(3,(THIS_FILE,
 	       "                  TX pt=%d, stat last update: %s\n"
-	       "                     total %s packets %sB received (%sB +IP hdr)%s\n"
+	       "                     total %spkt %sB (%sB +IP hdr)%s\n"
 	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	       "                           (msec)    min     avg     max     last\n"
 	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
@@ -815,14 +815,47 @@ void pjsua_dump(pj_bool_t detail)
 
 	for (i=0; i<pjsua.max_calls; ++i) {
 
-	    if (pjsua.calls[i].inv == NULL)
+	    pjsua_call *call = &pjsua.calls[i];
+	    pj_time_val duration, res_delay, con_delay;
+
+	    if (call->inv == NULL)
 		continue;
 
 	    print_call("  ", i, buf, sizeof(buf));
 	    PJ_LOG(3,(THIS_FILE, "%s", buf));
 
-	    if (pjsua.calls[i].session)
-		dump_media_session(pjsua.calls[i].session);
+	    /* Calculate call duration */
+	    if (call->inv->state >= PJSIP_INV_STATE_CONFIRMED) {
+		pj_gettimeofday(&duration);
+		PJ_TIME_VAL_SUB(duration, call->conn_time);
+		con_delay = call->conn_time;
+		PJ_TIME_VAL_SUB(con_delay, call->start_time);
+	    } else {
+		duration.sec = duration.msec = 0;
+		con_delay.sec = con_delay.msec = 0;
+	    }
+
+	    /* Calculate first response delay */
+	    if (call->inv->state >= PJSIP_INV_STATE_EARLY) {
+		res_delay = call->res_time;
+		PJ_TIME_VAL_SUB(res_delay, call->start_time);
+	    } else {
+		res_delay.sec = res_delay.msec = 0;
+	    }
+
+	    /* Print duration */
+	    PJ_LOG(3,(THIS_FILE, 
+		      "               Call time: %02dh:%02dm:%02ds, "
+		      "1st res in %d ms, conn in %dms",
+		      (duration.sec / 3600),
+		      ((duration.sec % 3600)/60),
+		      (duration.sec % 60),
+		      PJ_TIME_VAL_MSEC(res_delay), 
+		      PJ_TIME_VAL_MSEC(con_delay)));
+
+	    /* Dump session statistics */
+	    if (call->session)
+		dump_media_session(call->session);
 	}
     }
 
