@@ -205,6 +205,29 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	return;
     }
 
+    /* Calculate loss periods. */
+    if (seq_st.diff > 1) {
+	unsigned count = seq_st.diff - 1;
+	unsigned period;
+
+	period = count * sess->pkt_size * 1000 / sess->clock_rate;
+	period *= 1000;
+
+	/* Update loss period stat */
+	if (sess->stat.rx.loss_period.count == 0 ||
+	    period < sess->stat.rx.loss_period.min)
+	{
+	    sess->stat.rx.loss_period.min = period;
+	}
+	if (period > sess->stat.rx.loss_period.max)
+	    sess->stat.rx.loss_period.max = period;
+	sess->stat.rx.loss_period.avg = 
+	    (sess->stat.rx.loss_period.avg * sess->stat.rx.loss_period.count +
+	     period) / (sess->stat.rx.loss_period.count + 1);
+	sess->stat.rx.loss_period.last = period;
+	++sess->stat.rx.loss_period.count;
+    }
+
 
     /* Only mark "good" packets */
     ++sess->received;

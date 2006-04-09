@@ -160,6 +160,7 @@ struct pjmedia_rtcp_stream_stat
     unsigned	    dup;	/**< Number of duplicates packets	    */
 
     struct {
+	unsigned    count;	/**< Number of period samples(to calc avg)  */
 	unsigned    min;	/**< Minimum loss period (in usec)	    */
 	unsigned    avg;	/**< Average loss period (in usec)	    */
 	unsigned    max;	/**< Maximum loss period (in usec)	    */
