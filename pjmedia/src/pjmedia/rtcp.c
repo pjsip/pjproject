@@ -34,33 +34,93 @@
 #   error "High resolution timer needs to be enabled"
 #endif
 
+
+
 #if 0
 #   define TRACE_(x)	PJ_LOG(3,x)
 #else
 #   define TRACE_(x)	;
 #endif
 
+
 /*
  * Get NTP time.
  */
-static void rtcp_get_ntp_time(const pjmedia_rtcp_session *sess, 
-			      struct pjmedia_rtcp_ntp_rec *ntp)
+PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
+					      pjmedia_rtcp_ntp_rec *ntp)
 {
-    pj_time_val tv;
+/* Seconds between 1900-01-01 to 1970-01-01 */
+#define NTP_DIFF    ((70 * 365 + 17) * 86400UL)
     pj_timestamp ts;
+    pj_status_t status;
 
-    pj_gettimeofday(&tv);
-    pj_get_timestamp(&ts);
-    
+    status = pj_get_timestamp(&ts);
+
     /* Fill up the high 32bit part */
-    ntp->hi = tv.sec;
-    
-    /* Calculate second fractions */
+    ntp->hi = (pj_uint32_t)((ts.u64 - sess->ts_base.u64) / sess->ts_freq.u64)
+	      + sess->tv_base.sec + NTP_DIFF;
+
+    /* Calculate seconds fractions */
     ts.u64 %= sess->ts_freq.u64;
+    pj_assert(ts.u64 < sess->ts_freq.u64);
     ts.u64 = (ts.u64 << 32) / sess->ts_freq.u64;
 
     /* Fill up the low 32bit part */
     ntp->lo = ts.u32.lo;
+
+
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
+
+    /* On Win32, since we use QueryPerformanceCounter() as the backend
+     * timestamp API, we need to protect against this bug:
+     *   Performance counter value may unexpectedly leap forward
+     *   http://support.microsoft.com/default.aspx?scid=KB;EN-US;Q274323
+     */
+    {
+	/*
+	 * Compare elapsed time reported by timestamp with actual elapsed 
+	 * time. If the difference is too excessive, then we use system
+	 * time instead.
+	 */
+
+	/* MIN_DIFF needs to be large enough so that "normal" diff caused
+	 * by system activity or context switch doesn't trigger the time
+	 * correction.
+	 */
+	enum { MIN_DIFF = 400 };
+
+	pj_time_val ts_time, elapsed, diff;
+
+	pj_gettimeofday(&elapsed);
+
+	ts_time.sec = ntp->hi - sess->tv_base.sec - NTP_DIFF;
+	ts_time.msec = (long)(ntp->lo * 1000.0 / 0xFFFFFFFF);
+
+	PJ_TIME_VAL_SUB(elapsed, sess->tv_base);
+
+	if (PJ_TIME_VAL_LT(ts_time, elapsed)) {
+	    diff = elapsed;
+	    PJ_TIME_VAL_SUB(diff, ts_time);
+	} else {
+	    diff = ts_time;
+	    PJ_TIME_VAL_SUB(diff, elapsed);
+	}
+
+	if (PJ_TIME_VAL_MSEC(diff) >= MIN_DIFF) {
+
+	    TRACE_((THIS_FILE, "NTP timestamp corrected by %d ms",
+		    PJ_TIME_VAL_MSEC(diff)));
+
+
+	    ntp->hi = elapsed.sec + sess->tv_base.sec + NTP_DIFF;
+	    ntp->lo = (elapsed.msec * 65536 / 1000) << 16;
+	}
+
+    }
+#endif
+
+    return status;
 }
 
 
@@ -90,7 +150,9 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     /* Init SR */
     rtcp_pkt->sr.ssrc = pj_htonl(ssrc);
     
-    /* Get timestamp frequency */
+    /* Get time and timestamp base and frequency */
+    pj_gettimeofday(&sess->tv_base);
+    pj_get_timestamp(&sess->ts_base);
     pj_get_timestamp_freq(&sess->ts_freq);
 
     /* RR will be initialized on receipt of the first RTP packet. */
@@ -207,6 +269,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 				   pj_size_t size)
 {
     const struct pjmedia_rtcp_pkt *rtcp = pkt;
+    pj_uint32_t last_loss, jitter_samp, jitter;
 
     /* Must at least contain SR */
     pj_assert(size >= sizeof(pjmedia_rtcp_common)+sizeof(pjmedia_rtcp_sr));
@@ -218,138 +281,150 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     /* Calculate SR arrival time for DLSR */
     pj_get_timestamp(&sess->rx_lsr_time);
 
-    TRACE_((THIS_FILE, "Rx RTCP SR: ntp-ts=%p, time=%p", 
+    TRACE_((THIS_FILE, "Rx RTCP SR: ntp_ts=%p", 
 	    sess->rx_lsr,
 	    (pj_uint32_t)(sess->rx_lsr_time.u64*65536/sess->ts_freq.u64)));
 
-    /* Calculate RTT if it has RR */
-    if (size >= sizeof(pjmedia_rtcp_pkt)) {
+    /* Nothing more to do if this is an SR only RTCP packet */
+    if (size < sizeof(pjmedia_rtcp_pkt))
+	return;
 	
-	pj_uint32_t last_loss, jitter_samp, jitter;
 
-	last_loss = sess->stat.tx.loss;
+    last_loss = sess->stat.tx.loss;
 
-	/* Get packet loss */
-	sess->stat.tx.loss = (rtcp->rr.total_lost_2 << 16) +
-			     (rtcp->rr.total_lost_1 << 8) +
-			      rtcp->rr.total_lost_0;
-	
-	/* We can't calculate the exact loss period for TX, so just give the
-	 * best estimation.
-	 */
-	if (sess->stat.tx.loss > last_loss) {
-	    unsigned period;
+    /* Get packet loss */
+    sess->stat.tx.loss = (rtcp->rr.total_lost_2 << 16) +
+			 (rtcp->rr.total_lost_1 << 8) +
+			  rtcp->rr.total_lost_0;
+    
+    /* We can't calculate the exact loss period for TX, so just give the
+     * best estimation.
+     */
+    if (sess->stat.tx.loss > last_loss) {
+	unsigned period;
 
-	    /* Loss period in msec */
-	    period = (sess->stat.tx.loss - last_loss) * sess->pkt_size *
-		     1000 / sess->clock_rate;
+	/* Loss period in msec */
+	period = (sess->stat.tx.loss - last_loss) * sess->pkt_size *
+		 1000 / sess->clock_rate;
 
-	    /* Loss period in usec */
-	    period *= 1000;
+	/* Loss period in usec */
+	period *= 1000;
 
-	    if (sess->stat.tx.update_cnt==0||sess->stat.tx.loss_period.min==0)
-		sess->stat.tx.loss_period.min = period;
-	    if (period < sess->stat.tx.loss_period.min)
-		sess->stat.tx.loss_period.min = period;
-	    if (period > sess->stat.tx.loss_period.max)
-		sess->stat.tx.loss_period.max = period;
+	if (sess->stat.tx.update_cnt==0||sess->stat.tx.loss_period.min==0)
+	    sess->stat.tx.loss_period.min = period;
+	if (period < sess->stat.tx.loss_period.min)
+	    sess->stat.tx.loss_period.min = period;
+	if (period > sess->stat.tx.loss_period.max)
+	    sess->stat.tx.loss_period.max = period;
 
-	    sess->stat.tx.loss_period.avg = 
-		(sess->stat.tx.loss_period.avg*sess->stat.tx.update_cnt+period)
-		/ (sess->stat.tx.update_cnt + 1);
-	    sess->stat.tx.loss_period.last = period;
-	}
-
-	/* Get jitter value in usec */
-	jitter_samp = pj_ntohl(rtcp->rr.jitter);
-	/* Calculate jitter in usec, avoiding overflows */
-	if (jitter_samp <= 4294)
-	    jitter = jitter_samp * 1000000 / sess->clock_rate;
-	else {
-	    jitter = jitter_samp * 1000 / sess->clock_rate;
-	    jitter *= 1000;
-	}
-
-	/* Update jitter statistics */
-	if (sess->stat.tx.update_cnt == 0)
-	    sess->stat.tx.jitter.min = jitter;
-	if (jitter < sess->stat.tx.jitter.min && jitter)
-	    sess->stat.tx.jitter.min = jitter;
-	if (jitter > sess->stat.tx.jitter.max)
-	    sess->stat.tx.jitter.max = jitter;
-	sess->stat.tx.jitter.avg = 
-	    (sess->stat.tx.jitter.avg * sess->stat.tx.update_cnt + jitter) /
-	    (sess->stat.tx.update_cnt + 1);
-	sess->stat.tx.jitter.last = jitter;
-
-
-	/* Can only calculate if LSR and DLSR is present in RR */
-	if (rtcp->rr.lsr && rtcp->rr.dlsr) {
-	    pj_uint32_t lsr, now, dlsr;
-	    pj_uint64_t eedelay;
-	    pjmedia_rtcp_ntp_rec ntp;
-
-	    /* LSR is the middle 32bit of NTP. It has 1/65536 second 
-	     * resolution 
-	     */
-	    lsr = pj_ntohl(rtcp->rr.lsr);
-
-	    /* DLSR is delay since LSR, also in 1/65536 resolution */
-	    dlsr = pj_ntohl(rtcp->rr.dlsr);
-
-	    /* Get current time, and convert to 1/65536 resolution */
-	    rtcp_get_ntp_time(sess, &ntp);
-	    now = ((ntp.hi & 0xFFFF) << 16) + 
-		  (ntp.lo >> 16);
-
-	    /* End-to-end delay is (now-lsr-dlsr) */
-	    eedelay = now - lsr - dlsr;
-
-	    /* Convert end to end delay to usec (keeping the calculation in
-             * 64bit space)::
-	     *   sess->ee_delay = (eedelay * 1000) / 65536;
-	     */
-	    eedelay = (eedelay * 1000000) >> 16;
-
-	    TRACE_((THIS_FILE, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
-			       "now=%p, rtt=%p",
-		    lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
-		    now, (pj_uint32_t)eedelay));
-	    
-	    /* Only save calculation if "now" is greater than lsr, or
-	     * otherwise rtt will be invalid 
-	     */
-	    if (now-dlsr >= lsr) {
-		unsigned rtt = (pj_uint32_t)eedelay;
-		
-		if (sess->stat.rtt_update_cnt == 0)
-		    sess->stat.rtt.min = rtt;
-
-		if (rtt < sess->stat.rtt.min && rtt)
-		    sess->stat.rtt.min = rtt;
-		if (rtt > sess->stat.rtt.max)
-		    sess->stat.rtt.max = rtt;
-
-		sess->stat.rtt.avg = 
-		    (sess->stat.rtt.avg * sess->stat.rtt_update_cnt + rtt) / 
-		    (sess->stat.rtt_update_cnt + 1);
-
-		sess->stat.rtt.last = rtt;
-		sess->stat.rtt_update_cnt++;
-
-	    } else {
-		PJ_LOG(3, (THIS_FILE, "Internal NTP clock skew detected: "
-				       "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
-				       "diff=%d",
-				       lsr, now, dlsr, dlsr/65536,
-				       (dlsr%65536)*1000/65536,
-				       dlsr-(now-lsr)));
-	    }
-	}
-
-	pj_gettimeofday(&sess->stat.tx.update);
-	sess->stat.tx.update_cnt++;
+	sess->stat.tx.loss_period.avg = 
+	    (sess->stat.tx.loss_period.avg*sess->stat.tx.update_cnt+period)
+	    / (sess->stat.tx.update_cnt + 1);
+	sess->stat.tx.loss_period.last = period;
     }
+
+    /* Get jitter value in usec */
+    jitter_samp = pj_ntohl(rtcp->rr.jitter);
+    /* Calculate jitter in usec, avoiding overflows */
+    if (jitter_samp <= 4294)
+	jitter = jitter_samp * 1000000 / sess->clock_rate;
+    else {
+	jitter = jitter_samp * 1000 / sess->clock_rate;
+	jitter *= 1000;
+    }
+
+    /* Update jitter statistics */
+    if (sess->stat.tx.update_cnt == 0)
+	sess->stat.tx.jitter.min = jitter;
+    if (jitter < sess->stat.tx.jitter.min && jitter)
+	sess->stat.tx.jitter.min = jitter;
+    if (jitter > sess->stat.tx.jitter.max)
+	sess->stat.tx.jitter.max = jitter;
+    sess->stat.tx.jitter.avg = 
+	(sess->stat.tx.jitter.avg * sess->stat.tx.update_cnt + jitter) /
+	(sess->stat.tx.update_cnt + 1);
+    sess->stat.tx.jitter.last = jitter;
+
+
+    /* Can only calculate if LSR and DLSR is present in RR */
+    if (rtcp->rr.lsr && rtcp->rr.dlsr) {
+	pj_uint32_t lsr, now, dlsr;
+	pj_uint64_t eedelay;
+	pjmedia_rtcp_ntp_rec ntp;
+
+	/* LSR is the middle 32bit of NTP. It has 1/65536 second 
+	 * resolution 
+	 */
+	lsr = pj_ntohl(rtcp->rr.lsr);
+
+	/* DLSR is delay since LSR, also in 1/65536 resolution */
+	dlsr = pj_ntohl(rtcp->rr.dlsr);
+
+	/* Get current time, and convert to 1/65536 resolution */
+	pjmedia_rtcp_get_ntp_time(sess, &ntp);
+	now = ((ntp.hi & 0xFFFF) << 16) + (ntp.lo >> 16);
+
+	/* End-to-end delay is (now-lsr-dlsr) */
+	eedelay = now - lsr - dlsr;
+
+	/* Convert end to end delay to usec (keeping the calculation in
+         * 64bit space)::
+	 *   sess->ee_delay = (eedelay * 1000) / 65536;
+	 */
+	if (eedelay < 4294) {
+	    eedelay = (eedelay * 1000000) >> 16;
+	} else {
+	    eedelay = (eedelay * 1000) >> 16;
+	    eedelay *= 1000;
+	}
+
+	TRACE_((THIS_FILE, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
+			   "now=%p, rtt=%p",
+		lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
+		now, (pj_uint32_t)eedelay));
+	
+	/* Only save calculation if "now" is greater than lsr, or
+	 * otherwise rtt will be invalid 
+	 */
+	if (now-dlsr >= lsr) {
+	    unsigned rtt = (pj_uint32_t)eedelay;
+	    
+	    TRACE_((THIS_FILE, "RTT is set to %d usec", rtt));
+
+	    if (rtt >= 1000000) {
+		pjmedia_rtcp_ntp_rec ntp2;
+		pj_thread_sleep(50);
+		pjmedia_rtcp_get_ntp_time(sess, &ntp2);
+		ntp2.lo = ntp2.lo;
+	    }
+
+	    if (sess->stat.rtt_update_cnt == 0)
+		sess->stat.rtt.min = rtt;
+
+	    if (rtt < sess->stat.rtt.min && rtt)
+		sess->stat.rtt.min = rtt;
+	    if (rtt > sess->stat.rtt.max)
+		sess->stat.rtt.max = rtt;
+
+	    sess->stat.rtt.avg = 
+		(sess->stat.rtt.avg * sess->stat.rtt_update_cnt + rtt) / 
+		(sess->stat.rtt_update_cnt + 1);
+
+	    sess->stat.rtt.last = rtt;
+	    sess->stat.rtt_update_cnt++;
+
+	} else {
+	    PJ_LOG(5, (THIS_FILE, "Internal NTP clock skew detected: "
+				   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+				   "diff=%d",
+				   lsr, now, dlsr, dlsr/65536,
+				   (dlsr%65536)*1000/65536,
+				   dlsr-(now-lsr)));
+	}
+    }
+
+    pj_gettimeofday(&sess->stat.tx.update);
+    sess->stat.tx.update_cnt++;
 }
 
 
@@ -360,6 +435,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     pj_uint32_t expected, expected_interval, received_interval, lost_interval;
     pj_uint32_t jitter_samp, jitter;
     pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
+    pj_timestamp ts_now;
     pjmedia_rtcp_ntp_rec ntp;
     
     /* Packet count */
@@ -416,12 +492,17 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     }
     
     /* Get current NTP time. */
-    rtcp_get_ntp_time(sess, &ntp);
+    pj_get_timestamp(&ts_now);
+    pjmedia_rtcp_get_ntp_time(sess, &ntp);
     
     /* Fill in NTP timestamp in SR. */
     rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
     rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
-    
+
+    TRACE_((THIS_FILE, "TX RTCP SR: ntp_ts=%p", 
+		       ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
+			    >> 16)));
+
     if (sess->rx_lsr_time.u64 == 0 || sess->rx_lsr == 0) {
 	rtcp_pkt->rr.lsr = 0;
 	rtcp_pkt->rr.dlsr = 0;
@@ -442,7 +523,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	/* Fill in DLSR.
 	   DLSR is Delay since Last SR, in 1/65536 seconds.
 	 */
-	pj_get_timestamp(&ts);
+	ts.u64 = ts_now.u64;
 
 	/* Convert interval to 1/65536 seconds value */
 	ts.u64 = (ts.u64 << 16) / sess->ts_freq.u64;

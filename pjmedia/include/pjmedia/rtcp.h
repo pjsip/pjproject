@@ -229,6 +229,8 @@ struct pjmedia_rtcp_session
     pj_uint32_t		    rx_prior;	/**< # pkt received at last interval*/
     pj_int32_t		    transit;    /**< Rel transit time for prev pkt  */
     pj_uint32_t		    jitter;	/**< Scaled jitter		    */
+    pj_time_val		    tv_base;	/**< Base time, in seconds.	    */
+    pj_timestamp	    ts_base;	/**< Base system timestamp.	    */
     pj_timestamp	    ts_freq;	/**< System timestamp frequency.    */
 
     pj_uint32_t		    rx_lsr;	/**< NTP ts in last SR received	    */
@@ -256,6 +258,18 @@ PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session,
 				 unsigned clock_rate,
 				 unsigned samples_per_frame,
 				 pj_uint32_t ssrc );
+
+
+/**
+ * Utility function to retrieve current NTP timestamp.
+ *
+ * @param sess		    RTCP session.
+ * @param ntp		    NTP record.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
+					      pjmedia_rtcp_ntp_rec *ntp);
 
 
 /**
