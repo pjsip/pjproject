@@ -399,8 +399,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
     if (cred_cnt == 0) {
 	sess->cred_cnt = 0;
     } else {
+	int i;
 	sess->cred_info = pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
-	pj_memcpy(sess->cred_info, c, cred_cnt * sizeof(*c));
+	for (i=0; i<cred_cnt; ++i) {
+	    sess->cred_info[i].data_type = c[i].data_type;
+	    pj_strdup(sess->pool, &sess->cred_info[i].scheme, &c[i].scheme);
+	    pj_strdup(sess->pool, &sess->cred_info[i].realm, &c[i].realm);
+	    pj_strdup(sess->pool, &sess->cred_info[i].username, &c[i].username);
+	    pj_strdup(sess->pool, &sess->cred_info[i].data, &c[i].data);
+	}
 	sess->cred_cnt = cred_cnt;
     }
 
