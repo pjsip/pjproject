@@ -508,6 +508,8 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	if (bytes_read == 0)
 	    goto read_next_packet;
 
+	if (bytes_read < 0)
+	    goto read_next_packet;
 
 	/* Update RTP and RTCP session. */
 	status = pjmedia_rtp_decode_rtp(&channel->rtp, 
@@ -589,13 +591,19 @@ read_next_packet:
 				      &stream->rtp_src_addr, 
 				      &stream->rtp_addrlen);
 
-    } while (status == PJ_SUCCESS);
+	if (status != PJ_SUCCESS) {
+	    bytes_read = -status;
+	}
+
+    } while (status == PJ_SUCCESS ||
+	     status == PJ_STATUS_FROM_OS(OSERR_ECONNRESET));
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(THIS_FILE, "Error reading RTP packet: %s [status=%d]",
+	PJ_LOG(4,(THIS_FILE, "Error reading RTP packet: %s [status=%d]. "
+			     "RTP stream thread quitting!",
 			     errmsg, status));
     }
 }
