@@ -46,7 +46,7 @@ static const struct
     { PJSIP_EMSGTOOLONG,	"Message too long" },
     { PJSIP_EPARTIALMSG,	"Partial message" },
 
-    { PJSIP_EINVALIDSTATUS,	"Invalid status code"},
+    { PJSIP_EINVALIDSTATUS,	"Invalid/unexpected SIP status code"},
 
     { PJSIP_EINVALIDURI,	"Invalid URI" },
     { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
@@ -60,6 +60,7 @@ static const struct
     { PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" },
 
     { PJSIP_EMISSINGBODY,	"Missing message body" },
+    { PJSIP_EINVALIDMETHOD,	"Invalid/unexpected method" },
 
     /* Transport errors */
     { PJSIP_EUNSUPTRANSPORT,	"Unsupported transport"},
@@ -69,7 +70,22 @@ static const struct
 
     /* Transaction errors */
     { PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"},
-    { PJSIP_ENOTSX,		"No transaction (expecting stateful processing)" },
+    { PJSIP_ENOTSX,		"No transaction is associated with the object "
+			        "(expecting stateful processing)" },
+
+    /* URI comparison status */
+    { PJSIP_ECMPSCHEME,		"URI scheme mismatch" },
+    { PJSIP_ECMPUSER,		"URI user part mismatch" },
+    { PJSIP_ECMPPASSWD,		"URI password part mismatch" },
+    { PJSIP_ECMPHOST,		"URI host part mismatch" },
+    { PJSIP_ECMPPORT,		"URI port mismatch" },
+    { PJSIP_ECMPTRANSPORTPRM,	"URI transport param mismatch" },
+    { PJSIP_ECMPTTLPARAM,	"URI ttl param mismatch" },
+    { PJSIP_ECMPUSERPARAM,	"URI user param mismatch" },
+    { PJSIP_ECMPMETHODPARAM,	"URI method param mismatch" },
+    { PJSIP_ECMPMADDRPARAM,	"URI maddr param mismatch" },
+    { PJSIP_ECMPOTHERPARAM,	"URI other param mismatch" },
+    { PJSIP_ECMPHEADERPARAM,	"URI header parameter mismatch" },
 
     /* Authentication. */
     { PJSIP_EFAILEDCREDENTIAL,	"Credential failed to authenticate"},
