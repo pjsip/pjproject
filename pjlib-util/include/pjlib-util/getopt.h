@@ -48,11 +48,6 @@ extern char *pj_optarg;
 
 extern int pj_optind;
 
-/* Callers store zero here to inhibit the error message `pj_getopt' prints
-   for unrecognized options.  */
-
-extern int pj_opterr;
-
 /* Set to an option character which was unrecognized.  */
 
 extern int pj_optopt;
