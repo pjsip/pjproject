@@ -39,7 +39,7 @@ OBJDIR := ./output/samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
 BINDIR := ../bin/samples
 
 SAMPLES := simpleua playfile playsine confsample sndinfo level recfile resampleplay \
-	   siprtp
+	   siprtp stream
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE))
 

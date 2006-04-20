@@ -120,6 +120,10 @@ SOURCE=..\src\samples\siprtp.c
 
 SOURCE=..\src\samples\sndinfo.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\stream.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -136,6 +140,10 @@ SOURCE=..\src\samples\util.h
 # Begin Source File
 
 SOURCE=".\Samples-vc.mak"
+# End Source File
+# Begin Source File
+
+SOURCE=.\Samples.mak
 # End Source File
 # End Target
 # End Project

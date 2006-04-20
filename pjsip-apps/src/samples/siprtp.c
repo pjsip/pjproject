@@ -18,6 +18,43 @@
  */
 
 
+
+
+/* Usage */
+static const char *USAGE = 
+" PURPOSE:								    \n"
+"   This program establishes SIP INVITE session and media, and calculate    \n"
+"   the media quality (packet lost, jitter, rtt, etc.). Unlike normal	    \n"
+"   pjmedia applications, this program bypasses all pjmedia stream	    \n"
+"   framework and transmit encoded RTP packets manually using own thread.   \n"
+"\n"
+" USAGE:\n"
+"   siprtp [options]        => to start in server mode\n"
+"   siprtp [options] URL    => to start in client mode\n"
+"\n"
+" Program options:\n"
+"   --count=N,        -c    Set number of calls to create (default:1) \n"
+"\n"
+" Address and ports options:\n"
+"   --local-port=PORT,-p    Set local SIP port (default: 5060)\n"
+"   --rtp-port=PORT,  -r    Set start of RTP port (default: 4000)\n"
+"   --ip-addr=IP,     -i    Set local IP address to use (otherwise it will\n"
+"                           try to determine local IP address from hostname)\n"
+"\n"
+" Logging Options:\n"
+"   --log-level=N,    -l    Set log verbosity level (default=5)\n"
+"   --app-log-level=N       Set app screen log verbosity (default=3)\n"
+"   --log-file=FILE         Write log to file FILE\n"
+"\n"
+" Codec Options:\n"
+"   --a-pt=PT               Set audio payload type to PT (default=0)\n"
+"   --a-name=NAME           Set audio codec name to NAME (default=pcmu)\n"
+"   --a-clock=RATE          Set audio codec rate to RATE Hz (default=8000Hz)\n"
+"   --a-bitrate=BPS         Set audio codec bitrate to BPS (default=64000bps)\n"
+"   --a-ptime=MS            Set audio frame time to MS msec (default=20ms)\n"
+;
+
+
 /* Include all headers. */
 #include <pjsip.h>
 #include <pjmedia.h>
@@ -723,35 +760,6 @@ static int worker_thread(void *arg)
 
     return 0;
 }
-
-
-/* Usage */
-static const char *USAGE = 
-"Usage:\n"
-"   siprtp [options]        => to start in server mode\n"
-"   siprtp [options] URL    => to start in client mode\n"
-"\n"
-"Program options:\n"
-"   --count=N,        -c    Set number of calls to create (default:1) \n"
-"\n"
-"Address and ports options:\n"
-"   --local-port=PORT,-p    Set local SIP port (default: 5060)\n"
-"   --rtp-port=PORT,  -r    Set start of RTP port (default: 4000)\n"
-"   --ip-addr=IP,     -i    Set local IP address to use (otherwise it will\n"
-"                           try to determine local IP address from hostname)\n"
-"\n"
-"Logging Options:\n"
-"   --log-level=N,    -l    Set log verbosity level (default=5)\n"
-"   --app-log-level=N       Set app screen log verbosity (default=3)\n"
-"   --log-file=FILE         Write log to file FILE\n"
-"\n"
-"Codec Options:\n"
-"   --a-pt=PT               Set audio payload type to PT (default=0)\n"
-"   --a-name=NAME           Set audio codec name to NAME (default=pcmu)\n"
-"   --a-clock=RATE          Set audio codec rate to RATE Hz (default=8000 Hz)\n"
-"   --a-bitrate=BPS         Set audio codec bitrate to BPS (default=64000 bps)\n"
-"   --a-ptime=MS            Set audio frame time to MS msec (default=20 msec)\n"
-;
 
 
 /* Init application options */

@@ -36,14 +36,14 @@ static int app_perror( const char *sender, const char *title,
  * This utility function parses the command line and look for
  * common sound options.
  */
-static pj_status_t get_snd_options( const char *app_name,
-				    int argc, 
-				    char *argv[],
-				    int *dev_id,
-				    int *clock_rate,
-				    int *channel_count,
-				    int *samples_per_frame,
-				    int *bits_per_sample)
+pj_status_t get_snd_options(const char *app_name,
+			    int argc, 
+			    char *argv[],
+			    int *dev_id,
+			    int *clock_rate,
+			    int *channel_count,
+			    int *samples_per_frame,
+			    int *bits_per_sample)
 {
     struct pj_getopt_option long_options[] = {
 	{ "dev",	1, 0, 'd' },
@@ -133,7 +133,7 @@ static pj_status_t get_snd_options( const char *app_name,
 
 
 /* Dump memory pool usage. */
-static void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
+void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
 {
 #if !defined(PJ_HAS_POOL_ALT_API) || PJ_HAS_POOL_ALT_API==0
     pj_pool_t   *p;
