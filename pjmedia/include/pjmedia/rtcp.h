@@ -193,8 +193,10 @@ typedef struct pjmedia_rtcp_stream_stat pjmedia_rtcp_stream_stat;
  */
 struct pjmedia_rtcp_stat
 {
-    pjmedia_rtcp_stream_stat	tx; /**< Encoder stream statistics.	    */
-    pjmedia_rtcp_stream_stat	rx; /**< Decoder stream statistics.	    */
+    pj_time_val		     start; /**< Time when session was created	    */
+
+    pjmedia_rtcp_stream_stat tx;    /**< Encoder stream statistics.	    */
+    pjmedia_rtcp_stream_stat rx;    /**< Decoder stream statistics.	    */
     
     struct {
 	unsigned    min;	    /**< Minimum round-trip delay (in usec) */

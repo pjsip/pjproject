@@ -130,6 +130,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
 			       pj_uint32_t ssrc)
 {
     pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
+    pj_time_val now;
     
     pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
     
@@ -151,7 +152,9 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     rtcp_pkt->sr.ssrc = pj_htonl(ssrc);
     
     /* Get time and timestamp base and frequency */
-    pj_gettimeofday(&sess->tv_base);
+    pj_gettimeofday(&now);
+    sess->tv_base = now;
+    sess->stat.start = now;
     pj_get_timestamp(&sess->ts_base);
     pj_get_timestamp_freq(&sess->ts_freq);
 
