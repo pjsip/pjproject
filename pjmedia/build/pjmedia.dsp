@@ -87,6 +87,10 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=..\src\pjmedia\clock_thread.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\codec.c
 # End Source File
 # Begin Source File
@@ -123,6 +127,10 @@ SOURCE=..\src\pjmedia\jbuf.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\master_port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
@@ -132,13 +140,6 @@ SOURCE=..\src\pjmedia\nullsound.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\pasound.c
-
-!IF  "$(CFG)" == "pjmedia - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjmedia - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -198,6 +199,10 @@ SOURCE=..\src\pjmedia\wave.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=..\include\pjmedia\clock.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\codec.h
 # End Source File
 # Begin Source File
@@ -231,6 +236,10 @@ SOURCE=..\include\pjmedia\g711.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\jbuf.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\master_port.h
 # End Source File
 # Begin Source File
 

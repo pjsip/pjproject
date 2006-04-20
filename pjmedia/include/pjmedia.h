@@ -25,6 +25,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/clock.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/conference.h>
 #include <pjmedia/endpoint.h>
@@ -32,6 +33,7 @@
 #include <pjmedia/file_port.h>
 #include <pjmedia/g711.h>
 #include <pjmedia/jbuf.h>
+#include <pjmedia/master_port.h>
 #include <pjmedia/null_port.h>
 #include <pjmedia/port.h>
 #include <pjmedia/resample.h>
