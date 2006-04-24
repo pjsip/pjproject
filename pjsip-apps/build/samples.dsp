@@ -122,7 +122,7 @@ SOURCE=..\src\samples\sndinfo.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\samples\stream.c
+SOURCE=..\src\samples\streamutil.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
