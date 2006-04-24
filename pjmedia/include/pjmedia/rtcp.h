@@ -221,6 +221,7 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
  */
 struct pjmedia_rtcp_session
 {
+    char		   *name;	/**< Name identification.	    */
     pjmedia_rtcp_pkt	    rtcp_pkt;	/**< Cached RTCP packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
@@ -253,11 +254,14 @@ typedef struct pjmedia_rtcp_session pjmedia_rtcp_session;
  * Initialize RTCP session.
  *
  * @param session	    The session
+ * @param name		    Optional name to identify the session (for
+ *			    logging purpose).
  * @param clock_rate	    Codec clock rate in samples per second.
  * @param samples_per_frame Average number of samples per frame.
  * @param ssrc		    The SSRC used in to identify the session.
  */
 PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session, 
+				 char *name,
 				 unsigned clock_rate,
 				 unsigned samples_per_frame,
 				 pj_uint32_t ssrc );

@@ -19,9 +19,9 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/errno.h>
 #include <pj/log.h>
-#include <pj/os.h>	/* pj_gettimeofday() */
 #include <pj/sock.h>	/* pj_htonx, pj_htonx */
 #include <pj/assert.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 
@@ -39,9 +39,11 @@ static void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *seq_ctrl,
 
 
 PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
-					 int default_pt, pj_uint32_t sender_ssrc )
+					      int default_pt, 
+					      pj_uint32_t sender_ssrc )
 {
-    PJ_LOG(5, (THIS_FILE, "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
+    PJ_LOG(5, (THIS_FILE, 
+	       "pjmedia_rtp_session_init: ses=%p, default_pt=%d, ssrc=0x%x",
 	       ses, default_pt, sender_ssrc));
 
     /* Check RTP header packing. */
@@ -50,21 +52,22 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 	return PJMEDIA_RTP_EINPACK;
     }
 
-    /* If sender_ssrc is not specified, create from time value. */
+    /* If sender_ssrc is not specified, create from random value. */
     if (sender_ssrc == 0 || sender_ssrc == (pj_uint32_t)-1) {
-	pj_time_val tv;
-
-	pj_gettimeofday(&tv);
-	sender_ssrc  = (pj_uint32_t) pj_htonl(tv.sec);
+	sender_ssrc = pj_htonl(pj_rand());
     } else {
 	sender_ssrc = pj_htonl(sender_ssrc);
     }
 
-    /* Initialize session. */
-    ses->out_extseq = 0;
+    /* Initialize session. 
+     * Initial sequence number SHOULD be random, according to RFC 3550.
+     */
+    ses->out_extseq = pj_rand();
     ses->peer_ssrc = 0;
     
-    /* Sequence number will be initialized when the first RTP packet is receieved. */
+    /* Sequence number will be initialized when the first RTP packet 
+     * is receieved.
+     */
 
     /* Build default header for outgoing RTP packet. */
     pj_memset(ses, 0, sizeof(*ses));
@@ -85,15 +88,12 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, int pt, int m,
-				       int payload_len, int ts_len,
-				       const void **rtphdr, int *hdrlen )
+PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, 
+					    int pt, int m,
+					    int payload_len, int ts_len,
+					    const void **rtphdr, int *hdrlen )
 {
-    PJ_UNUSED_ARG(payload_len)
-
-    PJ_LOG(6, (THIS_FILE, 
-	      "pjmedia_rtp_encode_rtp: ses=%p, pt=%d, m=%d, pt_len=%d, ts_len=%d",
-	      ses, pt, m, payload_len, ts_len));
+    PJ_UNUSED_ARG(payload_len);
 
     /* Update timestamp */
     ses->out_hdr.ts = pj_htonl(pj_ntohl(ses->out_hdr.ts)+ts_len);
@@ -121,25 +121,20 @@ PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, int pt, in
 
 
 PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses, 
-				       const void *pkt, int pkt_len,
-				       const pjmedia_rtp_hdr **hdr,
-				       const void **payload,
-				       unsigned *payloadlen)
+					    const void *pkt, int pkt_len,
+					    const pjmedia_rtp_hdr **hdr,
+					    const void **payload,
+					    unsigned *payloadlen)
 {
     int offset;
 
-    PJ_UNUSED_ARG(ses)
-
-    PJ_LOG(6, (THIS_FILE, 
-	      "pjmedia_rtp_decode_rtp: ses=%p, pkt=%p, pkt_len=%d",
-	      ses, pkt, pkt_len));
+    PJ_UNUSED_ARG(ses);
 
     /* Assume RTP header at the start of packet. We'll verify this later. */
     *hdr = (pjmedia_rtp_hdr*)pkt;
 
     /* Check RTP header sanity. */
     if ((*hdr)->v != RTP_VERSION) {
-	PJ_LOG(4, (THIS_FILE, "  invalid RTP version!"));
 	return PJMEDIA_RTP_EINVER;
     }
 
@@ -148,7 +143,8 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 
     /* Adjust offset if RTP extension is used. */
     if ((*hdr)->x) {
-	pjmedia_rtp_ext_hdr *ext = (pjmedia_rtp_ext_hdr*) (((pj_uint8_t*)pkt) + offset);
+	pjmedia_rtp_ext_hdr *ext = (pjmedia_rtp_ext_hdr*) 
+				    (((pj_uint8_t*)pkt) + offset);
 	offset += (pj_ntohs(ext->length) * sizeof(pj_uint32_t));
     }
 
@@ -170,27 +166,22 @@ PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
 {
     pjmedia_rtp_status seq_st;
 
-    /* Check SSRC. */
-    if (ses->peer_ssrc == 0) ses->peer_ssrc = pj_ntohl(hdr->ssrc);
-    /*
-    if (pj_ntohl(ses->peer_ssrc) != hdr->ssrc) {
-	PJ_LOG(4, (THIS_FILE, "pjmedia_rtp_session_update: ses=%p, invalid ssrc 0x%p (!=0x%p)",
-		   ses, pj_ntohl(hdr->ssrc), ses->peer_ssrc));
-	return PJMEDIA_RTP_EINSSRC;
-    }
-    */
-
     /* Init status */
     seq_st.status.value = 0;
     seq_st.diff = 0;
 
+    /* Check SSRC. */
+    if (ses->peer_ssrc == 0) ses->peer_ssrc = pj_ntohl(hdr->ssrc);
+
+    if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
+	seq_st.status.flag.badssrc = 1;
+	ses->peer_ssrc = pj_ntohl(hdr->ssrc);
+    }
+
     /* Check payload type. */
     if (hdr->pt != ses->out_pt) {
-	PJ_LOG(4, (THIS_FILE, 
-		   "pjmedia_rtp_session_update: ses=%p, invalid payload "
-		   "type %d (expecting %d)",
-		   ses, hdr->pt, ses->out_pt));
 	if (p_seq_st) {
+	    p_seq_st->status.value = seq_st.status.value;
 	    p_seq_st->status.flag.bad = 1;
 	    p_seq_st->status.flag.badpt = 1;
 	}

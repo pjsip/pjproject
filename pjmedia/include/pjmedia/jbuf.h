@@ -63,6 +63,8 @@ enum pjmedia_jb_frame_type
  * memory to keep the frames in the buffer.
  *
  * @param pool		The pool to allocate memory.
+ * @param name		Name to identify the jitter buffer for logging
+ *			purpose.
  * @param frame_size	The size of each frame that will be kept in the
  *			jitter buffer. The value here normaly corresponds
  *			to the RTP payload size according to the codec
@@ -73,11 +75,12 @@ enum pjmedia_jb_frame_type
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool, 
-					int frame_size, 
-					int init_delay, 
-					int max_count,
-					pjmedia_jbuf **p_jb);
+PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
+					 const pj_str_t *name,
+					 int frame_size, 
+					 int init_delay, 
+					 int max_count,
+					 pjmedia_jbuf **p_jb);
 
 /**
  * Destroy jitter buffer instance.
@@ -87,6 +90,17 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb);
+
+
+/**
+ * Restart jitter. This function flushes all packets in the buffer and
+ * reset the internal sequence number.
+ *
+ * @param jb		The jitter buffer.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
 
 
 /**

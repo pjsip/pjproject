@@ -47,6 +47,7 @@ typedef struct jb_framelist jb_framelist;
 
 struct pjmedia_jbuf
 {
+    pj_str_t	    name;		  // jitter buffer name
     jb_framelist    jb_framelist;
     pj_size_t	    jb_frame_size;	  // frame size	
     pj_size_t	    jb_max_count;	  // max frames in the jitter framelist->flist_buffer
@@ -93,12 +94,11 @@ static pj_status_t jb_framelist_init( pj_pool_t *pool,
 					     framelist->flist_frame_size * 
 					     framelist->flist_max_count);
 
-    framelist->flist_frame_type = pj_pool_zalloc(pool, 
-						 sizeof(framelist->flist_frame_type[0]) * 
-						 framelist->flist_max_count);
+    framelist->flist_frame_type = 
+	pj_pool_zalloc(pool, sizeof(framelist->flist_frame_type[0]) * 
+				framelist->flist_max_count);
 
     framelist->flist_empty = 1;
-    framelist->flist_head = framelist->flist_tail = framelist->flist_origin = 0;
 
     return PJ_SUCCESS;
 
@@ -128,16 +128,20 @@ static pj_bool_t jb_framelist_get(jb_framelist *framelist,
 {
     if (!framelist->flist_empty) {
 	pj_memcpy(frame, 
-		  framelist->flist_buffer + framelist->flist_head * framelist->flist_frame_size,
+		  framelist->flist_buffer + 
+		    framelist->flist_head * framelist->flist_frame_size,
 		  framelist->flist_frame_size);
-	*p_type = (pjmedia_jb_frame_type) framelist->flist_frame_type[framelist->flist_head];
+	*p_type = (pjmedia_jb_frame_type) 
+		  framelist->flist_frame_type[framelist->flist_head];
 
-	pj_memset(framelist->flist_buffer + framelist->flist_head * framelist->flist_frame_size,
+	pj_memset(framelist->flist_buffer + 
+		    framelist->flist_head * framelist->flist_frame_size,
 		  0, framelist->flist_frame_size);
 	framelist->flist_frame_type[framelist->flist_head] = 0;
 
 	framelist->flist_origin++;
-	framelist->flist_head = ++framelist->flist_head % framelist->flist_max_count;
+	framelist->flist_head = (framelist->flist_head + 1 ) % 
+				framelist->flist_max_count;
 	if (framelist->flist_head == framelist->flist_tail) 
 	    framelist->flist_empty = PJ_TRUE;
 	
@@ -172,7 +176,8 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 	    step2 = 0;
 	}
 
-	pj_memset(framelist->flist_buffer + framelist->flist_head * framelist->flist_frame_size,
+	pj_memset(framelist->flist_buffer + 
+		    framelist->flist_head * framelist->flist_frame_size,
 	          0,
 	          step1*framelist->flist_frame_size);
 	pj_memset(framelist->flist_frame_type+framelist->flist_head,
@@ -190,7 +195,8 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 
 	// update pointers
 	framelist->flist_origin += count;
-	framelist->flist_head = (framelist->flist_head+count) % framelist->flist_max_count;
+	framelist->flist_head = (framelist->flist_head + count) % 
+			        framelist->flist_max_count;
 	if (framelist->flist_head == framelist->flist_tail) 
 	    framelist->flist_empty = PJ_TRUE;
     }
@@ -204,31 +210,36 @@ static pj_bool_t jb_framelist_put_at(jb_framelist *framelist,
 {
     unsigned where;
 
-    // too late
-    if (index < framelist->flist_origin) 
-	return PJ_FALSE;
-
-    // too soon
-    if ((index > (framelist->flist_origin + framelist->flist_max_count - 1)) && !framelist->flist_empty) 
-	return PJ_FALSE;
-
     assert(frame_size <= framelist->flist_frame_size);
 
     if (!framelist->flist_empty) {
+	unsigned max_index;
 	unsigned cur_size;
 
-	where = (index - framelist->flist_origin + framelist->flist_head) % framelist->flist_max_count;
+	// too late
+	if (index < framelist->flist_origin) 
+	    return PJ_FALSE;
+
+	// too soon
+	max_index = framelist->flist_origin + framelist->flist_max_count - 1;
+	if (index > max_index)
+	    return PJ_FALSE;
+
+	where = (index - framelist->flist_origin + framelist->flist_head) % 
+	        framelist->flist_max_count;
 
 	// update framelist->flist_tail pointer
 	cur_size = jb_framelist_size(framelist);
 	if (index >= framelist->flist_origin + cur_size) {
 	    unsigned diff = (index - (framelist->flist_origin + cur_size));
-	    framelist->flist_tail = (framelist->flist_tail + diff + 1) % framelist->flist_max_count;
+	    framelist->flist_tail = (framelist->flist_tail + diff + 1) % 
+				    framelist->flist_max_count;
 	}
     } else {
 	where = framelist->flist_tail;
 	framelist->flist_origin = index;
-	framelist->flist_tail = (++framelist->flist_tail % framelist->flist_max_count);
+	framelist->flist_tail = (framelist->flist_tail + 1) % 
+				framelist->flist_max_count;
 	framelist->flist_empty = PJ_FALSE;
     }
 
@@ -251,6 +262,7 @@ enum pjmedia_jb_op
 
 
 PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool, 
+					const pj_str_t *name,
 					int frame_size, 
 					int initial_prefetch, 
 					int max_count,
@@ -265,6 +277,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+    pj_strdup_with_null(pool, &jb->name, name);
     jb->jb_frame_size	 = frame_size;
     jb->jb_last_seq_no	 = -1;
     jb->jb_level	 = 0;
@@ -279,6 +292,24 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_max_count	 = max_count;
 
     *p_jb = jb;
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
+{
+    jb->jb_last_seq_no	 = -1;
+    jb->jb_level	 = 0;
+    jb->jb_last_level	 = 0;
+    jb->jb_last_jitter	 = 0;
+    jb->jb_last_op	 = JB_OP_INIT;
+    jb->jb_prefetch_cnt	 = 0;
+    jb->jb_stable_hist	 = 0;
+    jb->jb_status	 = JB_STATUS_INITIALIZING;
+    jb->jb_max_hist_jitter = 0;
+
+    jb_framelist_remove_head(&jb->jb_framelist, 
+			     jb_framelist_size(&jb->jb_framelist));
     return PJ_SUCCESS;
 }
 
@@ -311,29 +342,33 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    jb->jb_max_hist_jitter = 0;
 
 	    if (jb->jb_op_count >= 100 &&
-		(int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) 
+		(int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2)
 	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);
 
-		PJ_LOG(5,(THIS_FILE, "jbuf prefetch: %d, size=%d", 
-				 jb->jb_prefetch,
-				 jb_framelist_size(&jb->jb_framelist)));
+		PJ_LOG(5,(jb->name.ptr, 
+			  "jbuf optimizing, prefetch: %d, size=%d", 
+			  jb->jb_prefetch,
+			  jb_framelist_size(&jb->jb_framelist)));
 		jb->jb_op_count = 0;
 	    }
 
 	}
     } else {
-	jb->jb_prefetch = PJ_MIN(jb->jb_last_jitter,(int)(jb->jb_max_count*4/5));
+	jb->jb_prefetch = PJ_MIN(jb->jb_last_jitter,
+				 (int)(jb->jb_max_count*4/5));
 	jb->jb_stable_hist = 0;
 	jb->jb_max_hist_jitter = 0;
 
 	if (jb->jb_op_count >= 100) {
-	    if ((int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) {
+	    if ((int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) 
+	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);
 
-		PJ_LOG(5,(THIS_FILE, "jbuf prefetch: %d, size=%d", 
-				 jb->jb_prefetch,
-				 jb_framelist_size(&jb->jb_framelist)));
+		PJ_LOG(5,(jb->name.ptr, 
+			  "jbuf optimizing prefetch: %d, size=%d",
+			  jb->jb_prefetch,
+			  jb_framelist_size(&jb->jb_framelist)));
 	    }
 
 	    jb->jb_op_count = 0;
@@ -377,8 +412,11 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb,
     min_frame_size = PJ_MIN(frame_size, jb->jb_frame_size);
     if (seq_diff > 0) {
 
-	while (!jb_framelist_put_at(&jb->jb_framelist,frame_seq,frame,min_frame_size)) {
-	    jb_framelist_remove_head(&jb->jb_framelist,PJ_MAX(jb->jb_max_count/4,1));
+	while (jb_framelist_put_at(&jb->jb_framelist,
+				   frame_seq,frame,min_frame_size) ==PJ_FALSE)
+	{
+	    jb_framelist_remove_head(&jb->jb_framelist,
+				     PJ_MAX(jb->jb_max_count/4,1) );
 	}
 
 	if (jb->jb_prefetch_cnt < jb->jb_prefetch)	
@@ -407,7 +445,9 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	jb->jb_prefetch_cnt = 0;
     }
 
-    if ((jb->jb_prefetch_cnt < jb->jb_prefetch) || !jb_framelist_get(&jb->jb_framelist,frame,&ftype)) {
+    if ((jb->jb_prefetch_cnt < jb->jb_prefetch) || 
+	jb_framelist_get(&jb->jb_framelist,frame,&ftype) == PJ_FALSE) 
+    {
 	pj_memset(frame, 0, jb->jb_frame_size);
 	*p_frame_type = PJMEDIA_JB_ZERO_FRAME;
 	return PJ_SUCCESS;

@@ -192,6 +192,7 @@ struct pjmedia_rtp_status
 				 this packet. More information will be given
 				 in other flags.			    */
 	    int badpt:1;    /**< Bad payload type.			    */
+	    int badssrc:1;  /**< Bad SSRC				    */
 	    int	dup:1;	    /**< Indicates duplicate packet		    */
 	    int	outorder:1; /**< Indicates out of order packet		    */
 	    int	probation:1;/**< Indicates that session is in probation

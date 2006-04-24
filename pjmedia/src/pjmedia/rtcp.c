@@ -109,7 +109,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 
 	if (PJ_TIME_VAL_MSEC(diff) >= MIN_DIFF) {
 
-	    TRACE_((THIS_FILE, "NTP timestamp corrected by %d ms",
+	    TRACE_((sess->name, "RTCP NTP timestamp corrected by %d ms",
 		    PJ_TIME_VAL_MSEC(diff)));
 
 
@@ -125,6 +125,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 
 
 PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess, 
+			       char *name,
 			       unsigned clock_rate,
 			       unsigned samples_per_frame,
 			       pj_uint32_t ssrc)
@@ -134,6 +135,9 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     
     pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
     
+    /* Name */
+    sess->name = name ? name : THIS_FILE,
+
     /* Set clock rate */
     sess->clock_rate = clock_rate;
     sess->pkt_size = samples_per_frame;
@@ -237,47 +241,48 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 
 
     /*
-     * Calculate jitter (see RFC 3550 section A.8)
+     * Calculate jitter only when sequence is good (see RFC 3550 section A.8)
      */
-    
-    /* Get arrival time and convert timestamp to samples */
-    pj_get_timestamp(&ts);
-    ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
-    arrival = ts.u32.lo;
+    if (seq_st.diff == 1) {
+	/* Get arrival time and convert timestamp to samples */
+	pj_get_timestamp(&ts);
+	ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
+	arrival = ts.u32.lo;
 
-    transit = arrival - rtp_ts;
+	transit = arrival - rtp_ts;
     
-    /* Ignore the first N packets as they normally have bad jitter
-     * due to other threads working to establish the call
-     */
-    if (sess->transit == 0 || sess->received < 25 ) {
-	sess->transit = transit;
-	sess->stat.rx.jitter.min = 2000;
-    } else {
-	pj_int32_t d;
-	pj_uint32_t jitter;
-	
-	d = transit - sess->transit;
-	sess->transit = transit;
-	if (d < 0) 
-	    d = -d;
-	
-	sess->jitter += d - ((sess->jitter + 8) >> 4);
+	/* Ignore the first N packets as they normally have bad jitter
+	 * due to other threads working to establish the call
+	 */
+	if (sess->transit == 0 || sess->received < 25 ) {
+	    sess->transit = transit;
+	    sess->stat.rx.jitter.min = 2000;
+	} else {
+	    pj_int32_t d;
+	    pj_uint32_t jitter;
+	    
+	    d = transit - sess->transit;
+	    sess->transit = transit;
+	    if (d < 0) 
+		d = -d;
+	    
+	    sess->jitter += d - ((sess->jitter + 8) >> 4);
 
-	/* Get jitter in usec */
-	if (d < 4294)
-	    jitter = d * 1000000 / sess->clock_rate;
-	else {
-	    jitter = d * 1000 / sess->clock_rate;
-	    jitter *= 1000;
+	    /* Get jitter in usec */
+	    if (d < 4294)
+		jitter = d * 1000000 / sess->clock_rate;
+	    else {
+		jitter = d * 1000 / sess->clock_rate;
+		jitter *= 1000;
+	    }
+
+	    /* Update jitter stat */
+	    if (jitter < sess->stat.rx.jitter.min)
+		sess->stat.rx.jitter.min = jitter;
+	    if (jitter > sess->stat.rx.jitter.max)
+		sess->stat.rx.jitter.max = jitter;
+	    sess->stat.rx.jitter.last = jitter;
 	}
-
-	/* Update jitter stat */
-	if (jitter < sess->stat.rx.jitter.min)
-	    sess->stat.rx.jitter.min = jitter;
-	if (jitter > sess->stat.rx.jitter.max)
-	    sess->stat.rx.jitter.max = jitter;
-	sess->stat.rx.jitter.last = jitter;
     }
 }
 
@@ -307,7 +312,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     /* Calculate SR arrival time for DLSR */
     pj_get_timestamp(&sess->rx_lsr_time);
 
-    TRACE_((THIS_FILE, "Rx RTCP SR: ntp_ts=%p", 
+    TRACE_((sess->name, "Rx RTCP SR: ntp_ts=%p", 
 	    sess->rx_lsr,
 	    (pj_uint32_t)(sess->rx_lsr_time.u64*65536/sess->ts_freq.u64)));
 
@@ -404,7 +409,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	    eedelay *= 1000;
 	}
 
-	TRACE_((THIS_FILE, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
+	TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
 			   "now=%p, rtt=%p",
 		lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
 		now, (pj_uint32_t)eedelay));
@@ -415,7 +420,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	if (now-dlsr >= lsr) {
 	    unsigned rtt = (pj_uint32_t)eedelay;
 	    
-	    TRACE_((THIS_FILE, "RTT is set to %d usec", rtt));
+	    TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
 
 	    if (rtt >= 1000000) {
 		pjmedia_rtcp_ntp_rec ntp2;
@@ -440,7 +445,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	    sess->stat.rtt_update_cnt++;
 
 	} else {
-	    PJ_LOG(5, (THIS_FILE, "Internal NTP clock skew detected: "
+	    PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
 				   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
 				   "diff=%d",
 				   lsr, now, dlsr, dlsr/65536,
@@ -525,7 +530,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
     rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
 
-    TRACE_((THIS_FILE, "TX RTCP SR: ntp_ts=%p", 
+    TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
 		       ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
 			    >> 16)));
 
@@ -558,7 +563,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
 	rtcp_pkt->rr.dlsr = pj_htonl(dlsr);
 
-	TRACE_((THIS_FILE, "Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
+	TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
 			   "(%ds:%03dms)",
 			   lsr, 
 			   (pj_uint32_t)lsr_time,

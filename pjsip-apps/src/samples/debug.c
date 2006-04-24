@@ -27,5 +27,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "stream.c"
+#include "streamutil.c"
 

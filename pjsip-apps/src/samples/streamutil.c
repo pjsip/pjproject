@@ -19,7 +19,7 @@
 
 
 static const char *desc = 
- " stream.c								\n"
+ " streamutil								\n"
  "									\n"
  " PURPOSE:								\n"
  "  Demonstrate how to use pjmedia stream component to transmit/receive \n"
@@ -27,7 +27,7 @@ static const char *desc =
  "\n"
  "\n"
  " USAGE:								\n"
- "  stream [options]                                                    \n"
+ "  streamutil [options]                                                \n"
  "\n"
  "\n"
  " Options:\n"
