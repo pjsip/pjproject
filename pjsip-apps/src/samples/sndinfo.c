@@ -73,10 +73,12 @@ static void enum_devices(void)
     puts("Run with -h to get more options");
 }
 
+static int clock_rate;
 static int play_counter;
 static int rec_counter;
 static int min_delay = 0xFFFF, max_delay;
 static char play_delays[1000];
+static pj_uint32_t last_play_timestamp, last_rec_timestamp;
 
 static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 			   void *output, unsigned size)
@@ -84,10 +86,11 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
     static pj_timestamp last_cb;
 
     ++play_counter;
+    last_play_timestamp = timestamp;
 
     if (last_cb.u64 == 0) {
 	pj_get_timestamp(&last_cb);
-    } else {
+    } else if (play_counter <= PJ_ARRAY_SIZE(play_delays)) {
 	pj_timestamp now;
 	int delay;
 
@@ -111,6 +114,14 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 			  const void *input, unsigned size)
 {
     ++rec_counter;
+
+    if (timestamp - last_rec_timestamp >= clock_rate) {
+	int diff;
+	diff = last_play_timestamp - timestamp;
+	printf("Play timestamp=%u, capture timestamp=%u, diff=%d\n",
+	       last_play_timestamp, timestamp, diff);
+	last_rec_timestamp = timestamp;
+    }
     return PJ_SUCCESS;
 }
 
@@ -124,12 +135,13 @@ static void app_perror(const char *title, pj_status_t status)
 }
 
 static int open_device(int dev_id, pjmedia_dir dir,
-		       int clock_rate, int nchannel, int bits)
+		       int nchannel, int bits)
 {
     pj_status_t status = PJ_SUCCESS;
     unsigned nsamples;
     pjmedia_snd_stream *strm;
     const char *dirtype;
+    char tmp[10];
     unsigned i;
 
     switch (dir) {
@@ -175,7 +187,10 @@ static int open_device(int dev_id, pjmedia_dir dir,
     }
     
     /* Let playback/capture runs for a while */
-    pj_thread_sleep(1000);
+    //pj_thread_sleep(1000);
+    puts("Press <ENTER> to stop");
+    fgets(tmp, sizeof(tmp), stdin);
+
 
     pjmedia_snd_stream_close(strm);
 
@@ -234,7 +249,6 @@ int main(int argc, char *argv[])
 	
 	int dev_id;
 	pjmedia_dir dir;
-	int clock_rate;
 	int nchannel;
 	int bits;
 
@@ -251,7 +265,7 @@ int main(int argc, char *argv[])
 	nchannel = atoi(argv[4]);
 	bits = atoi(argv[5]);
 
-	return open_device(dev_id, dir, clock_rate, nchannel, bits);
+	return open_device(dev_id, dir, nchannel, bits);
 
     } else {
 	puts("Error: invalid arguments");
