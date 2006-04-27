@@ -88,9 +88,15 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_from_sdp(
 
 
 /**
- * Create media session based on the local and remote SDP.
- * The session will start immediately.
+ * Create media session based on the local and remote SDP. After the session
+ * has been created, application normally would want to get the media port 
+ * interface of each streams, by calling #pjmedia_session_get_port(). The 
+ * media port interface exports put_frame() and get_frame() function, used
+ * to transmit and receive media frames from the stream.
  *
+ * Without application calling put_frame() and get_frame(), there will be 
+ * no media frames transmitted or received by the session.
+ * 
  * @param endpt		The PJMEDIA endpoint instance.
  * @param stream_cnt	Maximum number of streams to be created. This
  *			also denotes the number of elements in the
@@ -118,7 +124,7 @@ pjmedia_session_create( pjmedia_endpt *endpt,
 
 
 /**
- * Get session info.
+ * Get media session info of the session.
  *
  * @param session	The session which info is being queried.
  * @param info		Pointer to receive session info.
@@ -131,6 +137,8 @@ PJ_DECL(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
 
 /**
  * Activate all streams in media session for the specified direction.
+ * Application only needs to call this function if it previously paused
+ * the session.
  *
  * @param session	The media session.
  * @param dir		The direction to activate.
@@ -198,7 +206,17 @@ pjmedia_session_enum_streams( const pjmedia_session *session,
 
 
 /**
- * Get the port interface for the specified stream.
+ * Get the media port interface of the specified stream. The media port
+ * interface declares put_frame() and get_frame() function, which is the 
+ * only  way for application to transmit and receive media frames from the
+ * stream.
+ *
+ * @param session	The media session.
+ * @param index		Stream index.
+ * @param p_port	Pointer to receive the media port interface for
+ *			the specified stream.
+ *
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
 					       unsigned index,

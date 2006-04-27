@@ -83,8 +83,14 @@ struct pjmedia_stream_info
 
 
 /**
- * Create a media stream based on the specified stream parameter.
- * All channels in the stream initially will be inactive.
+ * Create a media stream based on the specified parameter. After the stream
+ * has been created, application normally would want to get the media port 
+ * interface of the streams, by calling pjmedia_stream_get_port(). The 
+ * media port interface exports put_frame() and get_frame() function, used
+ * to transmit and receive media frames from the stream.
+ *
+ * Without application calling put_frame() and get_frame(), there will be 
+ * no media frames transmitted or received by the stream.
  *
  * @param endpt		Media endpoint.
  * @param pool		Pool to allocate memory for the stream. A large
@@ -111,8 +117,12 @@ PJ_DECL(pj_status_t) pjmedia_stream_create(pjmedia_endpt *endpt,
  */
 PJ_DECL(pj_status_t) pjmedia_stream_destroy(pjmedia_stream *stream);
 
+
 /**
- * Get the port interface of the stream.
+ * Get the media port interface of the stream. The media port interface
+ * declares put_frame() and get_frame() function, which is the only 
+ * way for application to transmit and receive media frames from the
+ * stream.
  *
  * @param stream	The media stream.
  * @param p_port	Pointer to receive the port interface.
