@@ -5,9 +5,9 @@ CC_NAME = vc6-$(BUILD_MODE)
 LIBEXT = .lib
 
 !if "$(BUILD_MODE)" == "debug"
-BUILD_FLAGS = /MTd /Od /Zi
+BUILD_FLAGS = /MTd /Od /Zi /W4
 !else
-BUILD_FLAGS = /Ox /MD /DNDEBUG
+BUILD_FLAGS = /Ox /MD /DNDEBUG /W4
 !endif
 
 PJLIB_LIB = ..\..\pjlib\lib\pjlib-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)

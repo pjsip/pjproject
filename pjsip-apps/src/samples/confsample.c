@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     }
 
 #if RECORDER
-    status = pjmedia_file_writer_port_create( pool, "confrecord.wav",
+    status = pjmedia_wav_writer_port_create(  pool, "confrecord.wav",
 					      clock_rate, channel_count,
 					      samples_per_frame, 
 					      bits_per_sample, 0, 0, NULL,
@@ -204,9 +204,10 @@ int main(int argc, char *argv[])
     for (i=0; i<file_count; ++i) {
 
 	/* Load the WAV file to file port. */
-	status = pjmedia_file_player_port_create( 
+	status = pjmedia_wav_player_port_create( 
 			pool,		    /* pool.	    */
 			argv[i+pj_optind],  /* filename	    */
+			0,		    /* use default ptime */
 			0,		    /* flags	    */
 			0,		    /* buf size	    */
 			NULL,		    /* user data    */

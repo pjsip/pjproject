@@ -1238,7 +1238,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
 	}
     }
 
-    audio->clock_rate = audio->si.fmt.sample_rate;
+    audio->clock_rate = audio->si.fmt.clock_rate;
     audio->samples_per_frame = audio->clock_rate * codec_desc->ptime / 1000;
     audio->bytes_per_frame = codec_desc->bit_rate * codec_desc->ptime / 1000 / 8;
 

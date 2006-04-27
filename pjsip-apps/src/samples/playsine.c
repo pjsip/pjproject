@@ -48,6 +48,8 @@ static int app_perror( const char *sender, const char *title,
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
+    PJ_UNUSED_ARG(sender);
+
     pj_strerror(status, errmsg, sizeof(errmsg));
 
     printf("%s: %s [code=%d]\n", title, errmsg, status);
@@ -127,7 +129,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     port->info.name = pj_str("sine generator");
     port->info.need_info = 0;
     port->info.pt = 0xFF;
-    port->info.sample_rate = sampling_rate;
+    port->info.clock_rate = sampling_rate;
     port->info.samples_per_frame = sampling_rate * 20 / 1000 * channel_count;
     port->info.bytes_per_frame = port->info.samples_per_frame * 2;
     port->info.type = PJMEDIA_TYPE_AUDIO;
@@ -229,7 +231,7 @@ int main(int argc, char *argv[])
     status = pjmedia_snd_port_create_player( 
 		 pool,				    /* pool		    */
 		 -1,				    /* use default dev.	    */
-		 sine_port->info.sample_rate,	    /* clock rate.	    */
+		 sine_port->info.clock_rate,	    /* clock rate.	    */
 		 sine_port->info.channel_count,	    /* # of channels.	    */
 		 sine_port->info.samples_per_frame, /* samples per frame.   */
 		 sine_port->info.bits_per_sample,   /* bits per sample.	    */

@@ -108,8 +108,8 @@ int main(int argc, char *argv[])
 			   );
 
     /* Create the file port. */
-    status = pjmedia_file_player_port_create( pool, argv[pj_optind], 0,
-					      0, 0, &file_port);
+    status = pjmedia_wav_player_port_create( pool, argv[pj_optind], 0, 0,
+					     0, 0, &file_port);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to open file", status);
 	return 1;
@@ -128,12 +128,12 @@ int main(int argc, char *argv[])
 
     /* Create the resample port. */
     status = pjmedia_resample_port_create( pool, 1, 1,
-					   file_port->info.sample_rate,
+					   file_port->info.clock_rate,
 					   sampling_rate,
 					   channel_count,
 					   (unsigned)(
 					   samples_per_frame * 1.0 *
-					    file_port->info.sample_rate / 
+					    file_port->info.clock_rate / 
 					    sampling_rate),
 					   &resample_port);
     if (status != PJ_SUCCESS) {
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 
 
     printf("Playing %s at sampling rate %d (original file sampling rate=%d)\n",
-	   argv[pj_optind], sampling_rate, file_port->info.sample_rate);
+	   argv[pj_optind], sampling_rate, file_port->info.clock_rate);
     puts("");
     puts("Press <ENTER> to stop playing and quit");
 

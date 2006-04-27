@@ -675,7 +675,7 @@ static void dump_media_session(pjmedia_session *session)
 		  i,
 		  info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
-		  info.stream_info[i].fmt.sample_rate / 1000,
+		  info.stream_info[i].fmt.clock_rate / 1000,
 		  dir,
 		  rem_addr, rem_port));
 

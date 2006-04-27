@@ -76,6 +76,9 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
 
+    PJ_UNUSED_ARG(argc);
+
+
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -99,8 +102,9 @@ int main(int argc, char *argv[])
 			   );
 
     /* Create file media port from the WAV file */
-    status = pjmedia_file_player_port_create( pool,	/* memory pool	    */
+    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
 					      argv[1],	/* file to play	    */
+					      20,	/* ptime.	    */
 					      0,	/* flags	    */
 					      0,	/* default buffer   */
 					      NULL,	/* user data	    */
@@ -115,7 +119,7 @@ int main(int argc, char *argv[])
     status = pjmedia_snd_port_create_player( 
 		 pool,				    /* pool		    */
 		 -1,				    /* use default dev.	    */
-		 file_port->info.sample_rate,	    /* clock rate.	    */
+		 file_port->info.clock_rate,	    /* clock rate.	    */
 		 file_port->info.channel_count,	    /* # of channels.	    */
 		 file_port->info.samples_per_frame, /* samples per frame.   */
 		 file_port->info.bits_per_sample,   /* bits per sample.	    */

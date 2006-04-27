@@ -31,9 +31,7 @@ static const char *desc =
  "\n"
  "\n"
  " Options:\n"
- "  --codec=CODEC         Set the codec name. Valid codec names are:	\n"
- "                        pcma, pcmu, gsm, speexnb, speexwb, speexuwb.	\n"
- "                        (default: pcma).				\n"
+ "  --codec=CODEC         Set the codec name.                           \n"
  "  --local-port=PORT     Set local RTP port (default=4000)		\n"
  "  --remote=IP:PORT      Set the remote peer. If this option is set,	\n"
  "                        the program will transmit RTP audio to the	\n"
@@ -64,22 +62,6 @@ static const char *desc =
 #define THIS_FILE	"stream.c"
 
 
-struct codec
-{
-    char    *name;
-    char    *encoding_name;
-    int	     pt;
-    int	     clock_rate;
-} codec[] = 
-{
-    { "pcma",	  "pcma",  PJMEDIA_RTP_PT_PCMA, 8000 },
-    { "pcmu",	  "pcmu",  PJMEDIA_RTP_PT_PCMU, 8000 },
-    { "gsm",	  "gsm",   PJMEDIA_RTP_PT_GSM, 8000 },
-    { "speexnb",  "speex", 120, 8000 },
-    { "speexwb",  "speex", 121, 16000 },
-    { "speexuwb", "speex", 122, 32000 },
-};
-
 
 /* Prototype */
 static void print_stream_stat(pjmedia_stream *stream);
@@ -101,6 +83,9 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
     status = pjmedia_codec_speex_init(med_endpt, 0, -1, -1);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    status = pjmedia_codec_l16_init(med_endpt, 0);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
     return PJ_SUCCESS;
 }
 
@@ -110,7 +95,7 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
  */
 static pj_status_t create_stream( pj_pool_t *pool,
 				  pjmedia_endpt *med_endpt,
-				  unsigned codec_index,
+				  const pjmedia_codec_info *codec_info,
 				  pjmedia_dir dir,
 				  pj_uint16_t local_port,
 				  const pj_sockaddr_in *rem_addr,
@@ -127,11 +112,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
     /* Initialize stream info formats */
     info.type = PJMEDIA_TYPE_AUDIO;
     info.dir = dir;
-    info.fmt.encoding_name = pj_str(codec[codec_index].encoding_name);
-    info.fmt.type = PJMEDIA_TYPE_AUDIO;
-    info.fmt.sample_rate = codec[codec_index].clock_rate;
-    info.fmt.pt = codec[codec_index].pt;
-    info.tx_pt = codec[codec_index].pt;
+    pj_memcpy(&info.fmt, codec_info, sizeof(pjmedia_codec_info));
+    info.tx_pt = codec_info->pt;
     info.ssrc = pj_rand();
     
 
@@ -200,6 +182,14 @@ static pj_status_t create_stream( pj_pool_t *pool,
 
 
 /*
+ * usage()
+ */
+static void usage()
+{
+    puts(desc);
+}
+
+/*
  * main()
  */
 int main(int argc, char *argv[])
@@ -217,10 +207,11 @@ int main(int argc, char *argv[])
 
 
     /* Default values */
-    int codec_index = 0;
+    const pjmedia_codec_info *codec_info;
     pjmedia_dir dir = PJMEDIA_DIR_DECODING;
     pj_sockaddr_in remote_addr;
     pj_uint16_t local_port = 4000;
+    char *codec_id = NULL;
     char *rec_file = NULL;
     char *play_file = NULL;
 
@@ -233,6 +224,7 @@ int main(int argc, char *argv[])
 	OPT_SEND_RECV	= 'b',
 	OPT_SEND_ONLY	= 's',
 	OPT_RECV_ONLY	= 'i',
+	OPT_HELP	= 'h',
     };
 
     struct pj_getopt_option long_options[] = {
@@ -244,6 +236,7 @@ int main(int argc, char *argv[])
 	{ "send-recv",      0, 0, OPT_SEND_RECV },
 	{ "send-only",      0, 0, OPT_SEND_ONLY },
 	{ "recv-only",      0, 0, OPT_RECV_ONLY },
+	{ "help",	    0, 0, OPT_HELP },
 	{ NULL, 0, 0, 0 },
     };
 
@@ -261,25 +254,11 @@ int main(int argc, char *argv[])
 
     /* Parse arguments */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "", long_options, &option_index))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "h", long_options, &option_index))!=-1) {
 
 	switch (c) {
 	case OPT_CODEC:
-	    {
-		unsigned i;
-		for (i=0; i<PJ_ARRAY_SIZE(codec); ++i) {
-		    if (pj_ansi_stricmp(pj_optarg, codec[i].name)==0) {
-			break;
-		    }
-		}
-
-		if (i == PJ_ARRAY_SIZE(codec)) {
-		    printf("Error: unknown codec %s\n", pj_optarg);
-		    return 1;
-		}
-
-		codec_index = i;
-	    }
+	    codec_id = pj_optarg;
 	    break;
 
 	case OPT_LOCAL_PORT:
@@ -322,6 +301,10 @@ int main(int argc, char *argv[])
 	case OPT_RECV_ONLY:
 	    dir = PJMEDIA_DIR_DECODING;
 	    break;
+
+	case OPT_HELP:
+	    usage();
+	    return 1;
 
 	default:
 	    printf("Invalid options %s\n", argv[pj_optind]);
@@ -369,8 +352,26 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
 
+    /* Find which codec to use. */
+    if (codec_id) {
+	unsigned count = 1;
+	pj_str_t str_codec_id = pj_str(codec_id);
+	pjmedia_codec_mgr *codec_mgr = pjmedia_endpt_get_codec_mgr(med_endpt);
+	status = pjmedia_codec_mgr_find_codecs_by_id( codec_mgr,
+						      &str_codec_id, &count,
+						      &codec_info, NULL);
+	if (status != PJ_SUCCESS) {
+	    printf("Error: unable to find codec %s\n", codec_id);
+	    return 1;
+	}
+    } else {
+	/* Default to pcmu */
+	pjmedia_codec_mgr_get_codec_info( pjmedia_endpt_get_codec_mgr(med_endpt),
+					  0, &codec_info);
+    }
+
     /* Create stream based on program arguments */
-    status = create_stream(pool, med_endpt, codec_index, dir, local_port, 
+    status = create_stream(pool, med_endpt, codec_info, dir, local_port, 
 			   &remote_addr, &stream);
     if (status != PJ_SUCCESS)
 	goto on_exit;
@@ -382,9 +383,12 @@ int main(int argc, char *argv[])
 
 
     if (play_file) {
+	unsigned wav_ptime;
 
-	status = pjmedia_file_player_port_create(pool, play_file, 0,
-						 -1, NULL, &play_file_port);
+	wav_ptime = stream_port->info.samples_per_frame * 1000 /
+		    stream_port->info.clock_rate;
+	status = pjmedia_wav_player_port_create(pool, play_file, wav_ptime,
+						0, -1, NULL, &play_file_port);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to use file", status);
 	    goto on_exit;
@@ -409,21 +413,21 @@ int main(int argc, char *argv[])
 	/* Create sound device port. */
 	if (dir == PJMEDIA_DIR_ENCODING_DECODING)
 	    status = pjmedia_snd_port_create(pool, -1, -1, 
-					stream_port->info.sample_rate,
+					stream_port->info.clock_rate,
 					stream_port->info.channel_count,
 					stream_port->info.samples_per_frame,
 					stream_port->info.bits_per_sample,
 					0, &snd_port);
 	else if (dir == PJMEDIA_DIR_ENCODING)
 	    status = pjmedia_snd_port_create_rec(pool, -1, 
-					stream_port->info.sample_rate,
+					stream_port->info.clock_rate,
 					stream_port->info.channel_count,
 					stream_port->info.samples_per_frame,
 					stream_port->info.bits_per_sample,
 					0, &snd_port);
 	else
 	    status = pjmedia_snd_port_create_player(pool, -1, 
-					stream_port->info.sample_rate,
+					stream_port->info.clock_rate,
 					stream_port->info.channel_count,
 					stream_port->info.samples_per_frame,
 					stream_port->info.bits_per_sample,
@@ -576,12 +580,12 @@ static void print_stream_stat(pjmedia_stream *stream)
     printf(" Info: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
    	(int)port->info.encoding_name.slen,
 	port->info.encoding_name.ptr,
-	port->info.sample_rate,
-	port->info.samples_per_frame * 1000 / port->info.sample_rate,
-	good_number(bps, port->info.bytes_per_frame * port->info.sample_rate /
-		    port->info.sample_rate),
+	port->info.clock_rate,
+	port->info.samples_per_frame * 1000 / port->info.clock_rate,
+	good_number(bps, port->info.bytes_per_frame * port->info.clock_rate /
+		    port->info.samples_per_frame),
 	good_number(ipbps, (port->info.bytes_per_frame+32) * 
-			    port->info.sample_rate / port->info.sample_rate));
+			    port->info.clock_rate / port->info.clock_rate));
 
     if (stat.rx.update_cnt == 0)
 	strcpy(last_update, "never");

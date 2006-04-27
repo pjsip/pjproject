@@ -73,10 +73,10 @@ static void enum_devices(void)
     puts("Run with -h to get more options");
 }
 
-static int clock_rate;
-static int play_counter;
-static int rec_counter;
-static int min_delay = 0xFFFF, max_delay;
+static unsigned clock_rate;
+static unsigned play_counter;
+static unsigned rec_counter;
+static unsigned min_delay = 0xFFFF, max_delay;
 static char play_delays[1000];
 static pj_uint32_t last_play_timestamp, last_rec_timestamp;
 
@@ -85,6 +85,12 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 {
     static pj_timestamp last_cb;
 
+
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(output);
+    PJ_UNUSED_ARG(size);
+
+
     ++play_counter;
     last_play_timestamp = timestamp;
 
@@ -92,7 +98,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 	pj_get_timestamp(&last_cb);
     } else if (play_counter <= PJ_ARRAY_SIZE(play_delays)) {
 	pj_timestamp now;
-	int delay;
+	unsigned delay;
 
 	pj_get_timestamp(&now);
 	
@@ -104,7 +110,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 
 	last_cb = now;
 
-	play_delays[play_counter-1] = delay;
+	play_delays[play_counter-1] = (char)delay;
     }
 
     return PJ_SUCCESS;
@@ -113,6 +119,12 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 			  const void *input, unsigned size)
 {
+
+    PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(input);
+    PJ_UNUSED_ARG(user_data);
+
+
     ++rec_counter;
 
     if (timestamp - last_rec_timestamp >= clock_rate) {
@@ -248,7 +260,7 @@ int main(int argc, char *argv[])
     } else if (argc == 6) {
 	
 	int dev_id;
-	pjmedia_dir dir;
+	pjmedia_dir dir = PJMEDIA_DIR_NONE;
 	int nchannel;
 	int bits;
 

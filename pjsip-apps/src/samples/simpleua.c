@@ -419,6 +419,8 @@ int main(int argc, char *argv[])
 static void call_on_state_changed( pjsip_inv_session *inv, 
 				   pjsip_event *e)
 {
+    PJ_UNUSED_ARG(e);
+
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	PJ_LOG(3,(THIS_FILE, "Call DISCONNECTED [reason=%d (%s)]", 
@@ -441,6 +443,8 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e)
 {
     /* To be done... */
+    PJ_UNUSED_ARG(inv);
+    PJ_UNUSED_ARG(e);
 }
 
 
@@ -633,7 +637,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_snd_port_create_player( 
 		    inv->pool,				/* pool		    */
 		    -1,					/* sound dev id	    */
-		    media_port->info.sample_rate,	/* clock rate	    */
+		    media_port->info.clock_rate,	/* clock rate	    */
 		    media_port->info.channel_count,	/* channel count    */
 		    media_port->info.samples_per_frame, /* samples per frame*/
 		    media_port->info.bits_per_sample,   /* bits per sample  */
@@ -642,7 +646,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to create sound player", status);
 	PJ_LOG(3,(THIS_FILE, "%d %d %d %d",
-	    	    media_port->info.sample_rate,	/* clock rate	    */
+	    	    media_port->info.clock_rate,	/* clock rate	    */
 		    media_port->info.channel_count,	/* channel count    */
 		    media_port->info.samples_per_frame, /* samples per frame*/
 		    media_port->info.bits_per_sample    /* bits per sample  */
@@ -659,7 +663,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_snd_port_create_rec( 
 		    inv->pool,				/* pool		    */
 		    -1,					/* sound dev id	    */
-		    media_port->info.sample_rate,	/* clock rate	    */
+		    media_port->info.clock_rate,	/* clock rate	    */
 		    media_port->info.channel_count,	/* channel count    */
 		    media_port->info.samples_per_frame, /* samples per frame*/
 		    media_port->info.bits_per_sample,   /* bits per sample  */

@@ -662,6 +662,21 @@ static pj_status_t init_media(void)
 	pjsua.codec_cnt++;
 #endif /* PJMEDIA_HAS_GSM_CODEC */
 
+#if PJMEDIA_HAS_L16_CODEC
+	/* Register L16 */
+	status = pjmedia_codec_l16_init(pjsua.med_endpt, 0);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing L16 codec",
+		         status);
+	    return status;
+	}
+
+	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("l16");
+	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_l16_deinit;
+	pjsua.codec_cnt++;
+#endif /* PJMEDIA_HAS_L16_CODEC */
+
+
 #if PJMEDIA_HAS_G711_CODEC
 	/* Register PCMA and PCMU */
 	status = pjmedia_codec_g711_init(pjsua.med_endpt);
@@ -731,6 +746,23 @@ static pj_status_t init_media(void)
 	    }
 #endif	/* PJMEDIA_HAS_GSM_CODEC */
 
+#if PJMEDIA_HAS_L16_CODEC
+	    /* Is it l16? */
+	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "l16")) {
+
+		status = pjmedia_codec_l16_init(pjsua.med_endpt, 0);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error initializing L16 codec",
+			         status);
+		    return status;
+		}
+
+		pjsua.codec_deinit[i] = &pjmedia_codec_l16_deinit;
+
+		pjsua.clock_rate = 44100;
+	    }
+#endif	/* PJMEDIA_HAS_L16_CODEC */
+
 #if PJMEDIA_HAS_G711_CODEC
 	    /* Is it pcma/pcmu? */
 	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "pcmu") ||
@@ -794,8 +826,8 @@ static pj_status_t init_media(void)
 	pj_str_t port_name;
 
 	/* Create the file player port. */
-	status = pjmedia_file_player_port_create( pjsua.pool, pjsua.wav_file,
-						  0, -1, NULL, 
+	status = pjmedia_wav_player_port_create(  pjsua.pool, pjsua.wav_file,
+						  0, 0, -1, NULL, 
 						  &pjsua.file_port);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, 

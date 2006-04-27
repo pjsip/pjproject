@@ -45,6 +45,8 @@ static int app_perror( const char *sender, const char *title,
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
+    PJ_UNUSED_ARG(sender);
+
     pj_strerror(status, errmsg, sizeof(errmsg));
 
     printf("%s: %s [code=%d]\n", title, errmsg, status);
@@ -96,8 +98,9 @@ int main(int argc, char *argv[])
 			   );
 
     /* Create file media port from the WAV file */
-    status = pjmedia_file_player_port_create( pool,	/* memory pool	    */
+    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
 					      argv[1],	/* file to play	    */
+					      0,	/* use default ptime*/
 					      0,	/* flags	    */
 					      0,	/* default buffer   */
 					      NULL,	/* user data	    */

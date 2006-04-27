@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 			   );
 
     /* Create WAVE file writer port. */
-    status = pjmedia_file_writer_port_create( pool, argv[1],
+    status = pjmedia_wav_writer_port_create(  pool, argv[1],
 					      CLOCK_RATE,
 					      NCHANNELS,
 					      SAMPLES_PER_FRAME,
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     status = pjmedia_snd_port_create_rec( 
 		 pool,				    /* pool		    */
 		 -1,				    /* use default dev.	    */
-		 file_port->info.sample_rate,	    /* clock rate.	    */
+		 file_port->info.clock_rate,	    /* clock rate.	    */
 		 file_port->info.channel_count,	    /* # of channels.	    */
 		 file_port->info.samples_per_frame, /* samples per frame.   */
 		 file_port->info.bits_per_sample,   /* bits per sample.	    */
