@@ -103,7 +103,8 @@ SPEEX_OBJS :=	speex_codec.o \
 SPEEX_CFLAGS := -DHAVE_CONFIG=1 -I../src/pjmedia-codec
 
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
-export PJMEDIA_CODEC_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+export PJMEDIA_CODEC_OBJS += l16.o \
+			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			$(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS)
 
