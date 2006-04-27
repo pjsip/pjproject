@@ -133,8 +133,12 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
     pj_time_val now;
     
+    /* Reset packet */
     pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
     
+    /* Reset statistics */
+    pj_memset(&sess->stat, 0, sizeof(pjmedia_rtcp_stat));
+
     /* Name */
     sess->name = name ? name : THIS_FILE,
 

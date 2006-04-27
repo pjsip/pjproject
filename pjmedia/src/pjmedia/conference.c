@@ -237,7 +237,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     /* Save some port's infos, for convenience. */
     if (port) {
 	conf_port->port = port;
-	conf_port->clock_rate = port->info.sample_rate;
+	conf_port->clock_rate = port->info.clock_rate;
 	conf_port->samples_per_frame = port->info.samples_per_frame;
     } else {
 	conf_port->port = NULL;
@@ -442,7 +442,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     conf->master_port->info.name = pj_str("sound-dev");
     conf->master_port->info.need_info = 0;
     conf->master_port->info.pt = 0xFF;
-    conf->master_port->info.sample_rate = clock_rate;
+    conf->master_port->info.clock_rate = clock_rate;
     conf->master_port->info.samples_per_frame = samples_per_frame;
     conf->master_port->info.signature = 0;
     conf->master_port->info.type = PJMEDIA_TYPE_AUDIO;
@@ -1090,6 +1090,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 {
     pj_int16_t *buf;
     unsigned j;
+    pj_status_t status;
 
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
@@ -1180,7 +1181,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	cport->tx_level = 0;
     }
 
-    /* If port has the same clock_date and samples_per_frame settings as
+    /* If port has the same clock_rate and samples_per_frame settings as
      * the conference bridge, transmit the frame as is.
      */
     if (cport->clock_rate == conf->clock_rate &&
@@ -1224,11 +1225,12 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	cport->tx_buf_count += conf->samples_per_frame;
     }
 
-    /* Transmit once we have enough frame in the tx_buf. */
-    if (cport->tx_buf_count >= cport->samples_per_frame) {
+    /* Transmit while we have enough frame in the tx_buf. */
+    status = PJ_SUCCESS;
+    while (cport->tx_buf_count >= cport->samples_per_frame &&
+	   status == PJ_SUCCESS) 
+    {
 	
-	pj_status_t status;
-
 	TRACE_((THIS_FILE, "write_port %.*s: count=%d", 
 			   (int)cport->name.slen, cport->name.ptr,
 			   cport->samples_per_frame));
@@ -1259,11 +1261,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
 	TRACE_((THIS_FILE, " tx_buf count now is %d", 
 			   cport->tx_buf_count));
-
-	return status;
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia/file_port.h>
+#include <pjmedia/wav_port.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
@@ -27,7 +27,7 @@
 #include <pj/string.h>
 
 
-#define THIS_FILE   "file_port.c"
+#define THIS_FILE   "wav_player.c"
 
 
 #define SIGNATURE	    ('F'<<24|'P'<<16|'L'<<8|'Y')
@@ -96,7 +96,7 @@ static struct file_port *create_file_port(pj_pool_t *pool)
     /* Put in default values.
      * These will be overriden once the file is read.
      */
-    port->base.info.sample_rate = 8000;
+    port->base.info.clock_rate = 8000;
     port->base.info.bits_per_sample = 16;
     port->base.info.samples_per_frame = 160;
     port->base.info.bytes_per_frame = 320;
@@ -153,8 +153,9 @@ static pj_status_t fill_buffer(struct file_port *fport)
 /*
  * Create WAVE player port.
  */
-PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     const char *filename,
+						     unsigned ptime,
 						     unsigned flags,
 						     pj_ssize_t buff_size,
 						     void *user_data,
@@ -175,6 +176,10 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
     if (!pj_file_exists(filename)) {
 	return PJ_ENOTFOUND;
     }
+
+    /* Normalize ptime */
+    if (ptime == 0)
+	ptime = 20;
 
     /* Create fport instance. */
     fport = create_file_port(pool);
@@ -258,11 +263,11 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 
     /* Update port info. */
     fport->base.info.channel_count = wave_hdr.fmt_hdr.nchan;
-    fport->base.info.sample_rate = wave_hdr.fmt_hdr.sample_rate;
+    fport->base.info.clock_rate = wave_hdr.fmt_hdr.sample_rate;
     fport->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
-    fport->base.info.samples_per_frame = fport->base.info.sample_rate *
+    fport->base.info.samples_per_frame = fport->base.info.clock_rate *
 					 wave_hdr.fmt_hdr.nchan *
-					 20 / 1000;
+					 ptime / 1000;
     fport->base.info.bytes_per_frame = 
 	fport->base.info.samples_per_frame * 
 	fport->base.info.bits_per_sample / 8;
@@ -304,7 +309,7 @@ PJ_DEF(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
 	      "filesize=%luKB",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.sample_rate,
+	      fport->base.info.clock_rate,
 	      fport->base.info.channel_count,
 	      fport->bufsize / 1000,
 	      (unsigned long)(fport->fsize / 1000)));

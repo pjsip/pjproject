@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia/file_port.h>
+#include <pjmedia/wav_port.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
@@ -27,7 +27,7 @@
 #include <pj/string.h>
 
 
-#define THIS_FILE	    "file_writer.c"
+#define THIS_FILE	    "wav_writer.c"
 #define SIGNATURE	    ('F'<<24|'W'<<16|'R'<<8|'T')
 #define BYTES_PER_SAMPLE    2
 
@@ -52,7 +52,7 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port);
 /*
  * Create file writer port.
  */
-PJ_DEF(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 						     const char *filename,
 						     unsigned sampling_rate,
 						     unsigned channel_count,
@@ -93,7 +93,7 @@ PJ_DEF(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
     pj_strdup2(pool, &fport->base.info.name, filename);
     fport->base.info.need_info = 0;
     fport->base.info.pt = 0xFF;
-    fport->base.info.sample_rate = sampling_rate;
+    fport->base.info.clock_rate = sampling_rate;
     fport->base.info.samples_per_frame = samples_per_frame;
     fport->base.info.signature = SIGNATURE;
     fport->base.info.type = PJMEDIA_TYPE_AUDIO;
@@ -169,7 +169,7 @@ PJ_DEF(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
 	      "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.sample_rate,
+	      fport->base.info.clock_rate,
 	      fport->bufsize / 1000));
 
 

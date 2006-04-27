@@ -329,18 +329,43 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
     for (i=0; i<endpt->codec_mgr.codec_cnt; ++i) {
 
-	pjmedia_codec_info *codec_info = &endpt->codec_mgr.codecs[i];
+	pjmedia_codec_info *codec_info;
 	pjmedia_sdp_rtpmap rtpmap;
+	char tmp_param[3];
 	pjmedia_sdp_attr *attr;
-	pj_str_t *fmt = &m->desc.fmt[m->desc.fmt_count++];
+	pj_str_t *fmt;
+
+	if (endpt->codec_mgr.codec_desc[i].prio == PJMEDIA_CODEC_PRIO_DISABLED)
+	    break;
+
+	codec_info = &endpt->codec_mgr.codec_desc[i].info;
+	fmt = &m->desc.fmt[m->desc.fmt_count++];
 
 	fmt->ptr = pj_pool_alloc(pool, 8);
 	fmt->slen = pj_utoa(codec_info->pt, fmt->ptr);
 
 	rtpmap.pt = *fmt;
-	rtpmap.clock_rate = codec_info->sample_rate;
+	rtpmap.clock_rate = codec_info->clock_rate;
 	rtpmap.enc_name = codec_info->encoding_name;
-	rtpmap.param.slen = 0;
+	
+	/* For audio codecs, rtpmap parameters denotes the number
+	 * of channels, which can be omited if the value is 1.
+	 */
+	if (codec_info->type == PJMEDIA_TYPE_AUDIO &&
+	    codec_info->channel_cnt > 1)
+	{
+	    /* Can only support one digit channel count */
+	    pj_assert(codec_info->channel_cnt < 10);
+
+	    tmp_param[0] = '/';
+	    tmp_param[1] = (char)('0' + codec_info->channel_cnt);
+
+	    rtpmap.param.ptr = tmp_param;
+	    rtpmap.param.slen = 2;
+
+	} else {
+	    rtpmap.param.slen = 0;
+	}
 
 	pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
 	m->attr[m->attr_count++] = attr;
@@ -388,7 +413,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 
     count = PJ_ARRAY_SIZE(codec_info);
     if (pjmedia_codec_mgr_enum_codecs(&endpt->codec_mgr, 
-				      &count, codec_info) != PJ_SUCCESS)
+				      &count, codec_info, NULL) != PJ_SUCCESS)
     {
 	PJ_LOG(3,(THIS_FILE, " -error: failed to enum codecs"));
 	return PJ_SUCCESS;
@@ -416,14 +441,15 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 	}
 
 	PJ_LOG(3,(THIS_FILE, 
-		  "   %s codec #%2d: pt=%d (%.*s @%dKHz, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
+		  "   %s codec #%2d: pt=%d (%.*s @%dKHz/%d, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
 		  type, i, codec_info[i].pt,
 		  (int)codec_info[i].encoding_name.slen,
 		  codec_info[i].encoding_name.ptr,
-		  codec_info[i].sample_rate/1000,
+		  codec_info[i].clock_rate/1000,
+		  codec_info[i].channel_cnt,
 		  param.avg_bps, param.ptime,
-		  param.vad_enabled,
-		  param.cng_enabled));
+		  param.vad,
+		  param.cng));
     }
 #endif
 

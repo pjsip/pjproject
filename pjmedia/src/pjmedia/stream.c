@@ -158,6 +158,12 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     pj_status_t status;
     struct pjmedia_frame frame_in, frame_out;
 
+    /* Return no frame is channel is paused */
+    if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
+
     /* Lock jitter buffer mutex */
     pj_mutex_lock( stream->jb_mutex );
 
@@ -174,7 +180,6 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
-
 
     /* Decode */
     frame_in.buf = channel->out_pkt;
@@ -320,6 +325,12 @@ static pj_status_t put_frame( pjmedia_port *port,
     void *rtphdr;
     int rtphdrlen;
     pj_ssize_t sent;
+
+
+    /* Don't do anything if stream is paused */
+    if (channel->paused)
+	return PJ_SUCCESS;
+
 
     /* Number of samples in the frame */
     ts_len = frame->size / 2;
@@ -757,7 +768,8 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Allocate buffer for decoding to PCM: */
 
-    channel->pcm_buf_size = codec_param->sample_rate * 
+    channel->pcm_buf_size = codec_param->clock_rate * 
+			    codec_param->channel_cnt *
 			    codec_param->pcm_bits_per_sample / 8 *
 			    PJMEDIA_MAX_FRAME_DURATION_MS / 1000;
     channel->pcm_buf = pj_pool_alloc (pool, channel->pcm_buf_size);
@@ -790,6 +802,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pjmedia_codec_param codec_param;
     pj_ioqueue_callback ioqueue_cb;
     pj_uint16_t rtcp_port;
+    unsigned jbuf_init, jbuf_max;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
@@ -813,8 +826,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->port.info.need_info = 0;
     stream->port.info.pt = info->fmt.pt;
     pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
-    stream->port.info.channel_count = 1;
-    stream->port.info.sample_rate = info->fmt.sample_rate;
+    stream->port.info.clock_rate = info->fmt.clock_rate;
+    stream->port.info.channel_count = info->fmt.channel_cnt;
     stream->port.user_data = stream;
     stream->port.put_frame = &put_frame;
     stream->port.get_frame = &get_frame;
@@ -831,7 +844,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->rem_rtcp_addr = stream->rem_rtp_addr;
     stream->rem_rtcp_addr.sin_port = pj_htons(rtcp_port);
     stream->rtcp_interval = (PJMEDIA_RTCP_INTERVAL + (pj_rand() % 8000)) * 
-			    info->fmt.sample_rate / 1000;
+			    info->fmt.clock_rate / 1000;
 
     stream->tx_event_pt = info->tx_event_pt ? info->tx_event_pt : -1;
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
@@ -855,13 +868,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Get default codec param: */
 
-    status = stream->codec->op->default_attr(stream->codec, &codec_param);
+    //status = stream->codec->op->default_attr(stream->codec, &codec_param);
+    status = pjmedia_codec_mgr_get_default_param( stream->codec_mgr, 
+						  &info->fmt, &codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
     /* Set additional info. */
     stream->port.info.bits_per_sample = 16;
-    stream->port.info.samples_per_frame = info->fmt.sample_rate*codec_param.ptime/1000;
+    stream->port.info.samples_per_frame = info->fmt.clock_rate*codec_param.ptime/1000;
     stream->port.info.bytes_per_frame = codec_param.avg_bps/8 * codec_param.ptime/1000;
 
 
@@ -880,15 +895,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Init RTCP session: */
 
     pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
-		      info->fmt.sample_rate, 
+		      info->fmt.clock_rate, 
 		      stream->port.info.samples_per_frame, 
 		      info->ssrc);
 
 
     /* Create jitter buffer: */
-
+    jbuf_init = 100 / (stream->port.info.samples_per_frame * 1000 / 
+		       info->fmt.clock_rate);
+    jbuf_max = 600 / (stream->port.info.samples_per_frame * 1000 / 
+		       info->fmt.clock_rate);
     status = pjmedia_jbuf_create(pool, &stream->port.info.name,
-				 stream->frame_size, 15, 100,
+				 stream->frame_size, 
+				 jbuf_init, jbuf_max,
 				 &stream->jb);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;

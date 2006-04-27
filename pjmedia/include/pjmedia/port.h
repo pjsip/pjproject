@@ -77,7 +77,7 @@ struct pjmedia_port_info
     pj_bool_t	    need_info;		/**< Need info on connect?	    */
     unsigned	    pt;			/**< Payload type (can be dynamic). */
     pj_str_t	    encoding_name;	/**< Encoding name.		    */
-    unsigned	    sample_rate;	/**< Sampling rate.		    */
+    unsigned	    clock_rate;		/**< Sampling rate.		    */
     unsigned	    channel_count;	/**< Number of channels.	    */
     unsigned	    bits_per_sample;	/**< Bits/sample		    */
     unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
@@ -101,6 +101,13 @@ enum pjmedia_frame_type
 
 };
 
+
+/** 
+ * @see pjmedia_frame_type
+ */
+typedef enum pjmedia_frame_type pjmedia_frame_type;
+
+
 /** 
  * This structure describes a media frame. 
  */
@@ -111,6 +118,13 @@ struct pjmedia_frame
     pj_size_t		 size;	    /**< Frame size in bytes.	    */
     pj_timestamp	 timestamp; /**< Frame timestamp.	    */
 };
+
+
+/** 
+ * @see pjmedia_frame
+ */
+typedef struct pjmedia_frame pjmedia_frame;
+
 
 /**
  * For future graph.

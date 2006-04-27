@@ -322,7 +322,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 
 static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 {
-    enum { STABLE_HISTORY_LIMIT = (500/20) };
+    enum { STABLE_HISTORY_LIMIT = (100*2) };
 
     jb->jb_last_jitter = PJ_ABS(jb->jb_level-jb->jb_last_level);
     jb->jb_last_level = jb->jb_level;
@@ -341,7 +341,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    jb->jb_stable_hist = 0;
 	    jb->jb_max_hist_jitter = 0;
 
-	    if (jb->jb_op_count >= 100 &&
+	    if (jb->jb_op_count >= STABLE_HISTORY_LIMIT*2 &&
 		(int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2)
 	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);
@@ -360,7 +360,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	jb->jb_stable_hist = 0;
 	jb->jb_max_hist_jitter = 0;
 
-	if (jb->jb_op_count >= 100) {
+	if (jb->jb_op_count >= STABLE_HISTORY_LIMIT * 2) {
 	    if ((int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) 
 	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);

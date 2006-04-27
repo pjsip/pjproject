@@ -75,7 +75,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     rport->base.info.name = pj_str("resample");
     rport->base.info.need_info = 0;
     rport->base.info.pt = 0xFF;
-    rport->base.info.sample_rate = upstream_rate;
+    rport->base.info.clock_rate = upstream_rate;
     rport->base.info.samples_per_frame = upstream_samples_per_frame;
     rport->base.info.signature = 0;
     rport->base.info.type = PJMEDIA_TYPE_AUDIO;

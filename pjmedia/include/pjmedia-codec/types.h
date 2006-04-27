@@ -22,4 +22,35 @@
 #include <pjmedia-codec/config.h>
 
 
+/**
+ * These are the dynamic payload types that are used by codecs in
+ * this library. Also see the header file <pjmedia/codec.h> for list
+ * of static payload types.
+ */
+enum
+{
+    /* Telephone events must have pt=101, or otherwise some code needs
+     * to be updated (this would not affect outgoing pt).
+     */
+    PJMEDIA_RTP_PT_TELEPHONE_EVENTS = 101,	/**< telephone-events	    */
+
+    PJMEDIA_RTP_PT_SPEEX_NB,			/**< Speex narrowband/8KHz  */
+    PJMEDIA_RTP_PT_SPEEX_WB,			/**< Speex wideband/16KHz   */
+    PJMEDIA_RTP_PT_SPEEX_UWB,			/**< Speex 32KHz	    */
+    PJMEDIA_RTP_PT_L16_8KHZ_MONO,		/**< L16 @ 8KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_8KHZ_STEREO,		/**< L16 @ 8KHz, stereo     */
+    PJMEDIA_RTP_PT_L16_11KHZ_MONO,		/**< L16 @ 11KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_11KHZ_STEREO,		/**< L16 @ 11KHz, stereo    */
+    PJMEDIA_RTP_PT_L16_16KHZ_MONO,		/**< L16 @ 16KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_16KHZ_STEREO,		/**< L16 @ 16KHz, stereo    */
+    PJMEDIA_RTP_PT_L16_22KHZ_MONO,		/**< L16 @ 22KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_22KHZ_STEREO,		/**< L16 @ 22KHz, stereo    */
+    PJMEDIA_RTP_PT_L16_32KHZ_MONO,		/**< L16 @ 32KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_32KHZ_STEREO,		/**< L16 @ 32KHz, stereo    */
+    PJMEDIA_RTP_PT_L16_48KHZ_MONO,		/**< L16 @ 48KHz, mono	    */
+    PJMEDIA_RTP_PT_L16_48KHZ_STEREO,		/**< L16 @ 48KHz, stereo    */
+};
+
+
+
 #endif	/* __PJMEDIA_CODEC_TYPES_H__ */

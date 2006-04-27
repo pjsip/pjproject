@@ -39,6 +39,7 @@
 
 #include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
+#include <pjmedia/sdp.h>
 
 
 PJ_BEGIN_DECL

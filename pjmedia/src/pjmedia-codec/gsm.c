@@ -49,8 +49,6 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 				      pjmedia_codec *codec );
 
 /* Prototypes for GSM implementation. */
-static pj_status_t  gsm_codec_default_attr(pjmedia_codec *codec, 
-					   pjmedia_codec_param *attr);
 static pj_status_t  gsm_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  gsm_codec_open( pjmedia_codec *codec, 
@@ -73,7 +71,6 @@ static pj_status_t  gsm_codec_decode( pjmedia_codec *codec,
 /* Definition for GSM codec operations. */
 static pjmedia_codec_op gsm_op = 
 {
-    &gsm_codec_default_attr,
     &gsm_codec_init,
     &gsm_codec_open,
     &gsm_codec_close,
@@ -233,7 +230,8 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(id);
 
     pj_memset(attr, 0, sizeof(pjmedia_codec_param));
-    attr->sample_rate = 8000;
+    attr->clock_rate = 8000;
+    attr->channel_cnt = 1;
     attr->avg_bps = 13200;
     attr->pcm_bits_per_sample = 16;
     attr->ptime = 20;
@@ -258,7 +256,8 @@ static pj_status_t gsm_enum_codecs(pjmedia_codec_factory *factory,
     codecs[0].encoding_name = pj_str("GSM");
     codecs[0].pt = PJMEDIA_RTP_PT_GSM;
     codecs[0].type = PJMEDIA_TYPE_AUDIO;
-    codecs[0].sample_rate = 8000;
+    codecs[0].clock_rate = 8000;
+    codecs[0].channel_cnt = 1;
 
     *count = 1;
 
@@ -325,15 +324,6 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
     pj_mutex_unlock(gsm_codec_factory.mutex);
 
     return PJ_SUCCESS;
-}
-
-/*
- * Get codec default attributes.
- */
-static pj_status_t gsm_codec_default_attr( pjmedia_codec *codec, 
-					   pjmedia_codec_param *attr)
-{
-    return gsm_default_attr( codec->factory, NULL, attr);
 }
 
 /*

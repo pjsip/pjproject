@@ -344,7 +344,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
      * port.
      */
     pinfo = &port->info;
-    if (pinfo->sample_rate != snd_port->clock_rate)
+    if (pinfo->clock_rate != snd_port->clock_rate)
 	return PJMEDIA_ENCCLOCKRATE;
 
     if (pinfo->samples_per_frame != snd_port->samples_per_frame)

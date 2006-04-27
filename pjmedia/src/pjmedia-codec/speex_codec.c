@@ -56,8 +56,6 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
 				      pjmedia_codec *codec );
 
 /* Prototypes for Speex implementation. */
-static pj_status_t  spx_codec_default_attr(pjmedia_codec *codec, 
-					   pjmedia_codec_param *attr);
 static pj_status_t  spx_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  spx_codec_open( pjmedia_codec *codec, 
@@ -80,7 +78,6 @@ static pj_status_t  spx_codec_decode( pjmedia_codec *codec,
 /* Definition for Speex codec operations. */
 static pjmedia_codec_op spx_op = 
 {
-    &spx_codec_default_attr,
     &spx_codec_init,
     &spx_codec_open,
     &spx_codec_close,
@@ -230,7 +227,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     /* Initialize default Speex parameter. */
     spx_factory.speex_param[PARAM_NB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_NB) == 0);
-    spx_factory.speex_param[PARAM_NB].pt = 102;
+    spx_factory.speex_param[PARAM_NB].pt = PJMEDIA_RTP_PT_SPEEX_NB;
     spx_factory.speex_param[PARAM_NB].mode = &speex_nb_mode;
     spx_factory.speex_param[PARAM_NB].clock_rate = 8000;
     spx_factory.speex_param[PARAM_NB].quality = quality;
@@ -238,7 +235,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
 
     spx_factory.speex_param[PARAM_WB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_WB) == 0);
-    spx_factory.speex_param[PARAM_WB].pt = 103;
+    spx_factory.speex_param[PARAM_WB].pt = PJMEDIA_RTP_PT_SPEEX_WB;
     spx_factory.speex_param[PARAM_WB].mode = &speex_wb_mode;
     spx_factory.speex_param[PARAM_WB].clock_rate = 16000;
     spx_factory.speex_param[PARAM_WB].quality = quality;
@@ -246,7 +243,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
 
     spx_factory.speex_param[PARAM_UWB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_UWB) == 0);
-    spx_factory.speex_param[PARAM_UWB].pt = 104;
+    spx_factory.speex_param[PARAM_UWB].pt = PJMEDIA_RTP_PT_SPEEX_UWB;
     spx_factory.speex_param[PARAM_UWB].mode = &speex_uwb_mode;
     spx_factory.speex_param[PARAM_UWB].clock_rate = 32000;
     spx_factory.speex_param[PARAM_UWB].quality = quality;
@@ -358,7 +355,7 @@ static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory,
 
     /* Check clock-rate */
     for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
-	if (info->sample_rate == spx_factory.speex_param[i].clock_rate) {
+	if (info->clock_rate == spx_factory.speex_param[i].clock_rate) {
 	    /* Okay, let's Speex! */
 	    return PJ_SUCCESS;
 	}
@@ -381,18 +378,19 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
 
     pj_memset(attr, 0, sizeof(pjmedia_codec_param));
     attr->pt = id->pt;
+    attr->channel_cnt = 1;
 
-    if (id->sample_rate <= 8000) {
-	attr->sample_rate = spx_factory.speex_param[PARAM_NB].clock_rate;
+    if (id->clock_rate <= 8000) {
+	attr->clock_rate = spx_factory.speex_param[PARAM_NB].clock_rate;
 	attr->avg_bps = spx_factory.speex_param[PARAM_NB].bitrate;
 
-    } else if (id->sample_rate <= 16000) {
-	attr->sample_rate = spx_factory.speex_param[PARAM_WB].clock_rate;
+    } else if (id->clock_rate <= 16000) {
+	attr->clock_rate = spx_factory.speex_param[PARAM_WB].clock_rate;
 	attr->avg_bps = spx_factory.speex_param[PARAM_WB].bitrate;
 
     } else {
 	/* Wow.. somebody is doing ultra-wideband. Cool...! */
-	attr->sample_rate = spx_factory.speex_param[PARAM_UWB].clock_rate;
+	attr->clock_rate = spx_factory.speex_param[PARAM_UWB].clock_rate;
 	attr->avg_bps = spx_factory.speex_param[PARAM_UWB].bitrate;
     }
 
@@ -401,14 +399,14 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     attr->pt = id->pt;
 
     /* Default flags. */
-    attr->cng_enabled = 1;
-    attr->concl_enabled = 1;
-    attr->hpf_enabled = 1;
-    attr->lpf_enabled =1 ;
-    attr->penh_enabled =1 ;
+    attr->cng = 1;
+    attr->concl = 1;
+    attr->hpf = 1;
+    attr->lpf =1 ;
+    attr->penh =1 ;
 
     /* Default, set VAD off as it caused voice chip off */
-    attr->vad_enabled = 0;
+    attr->vad = 0;
 
     return PJ_SUCCESS;
 }
@@ -442,7 +440,8 @@ static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory,
 	codecs[*count].encoding_name = pj_str("speex");
 	codecs[*count].pt = spx_factory.speex_param[i].pt;
 	codecs[*count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[*count].sample_rate = spx_factory.speex_param[i].clock_rate;
+	codecs[*count].clock_rate = spx_factory.speex_param[i].clock_rate;
+	codecs[*count].channel_cnt = 1;
 
 	++*count;
     }
@@ -486,9 +485,9 @@ static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory,
     spx->enc = NULL;
     spx->dec = NULL;
 
-    if (id->sample_rate <= 8000)
+    if (id->clock_rate <= 8000)
 	spx->param_id = PARAM_NB;
-    else if (id->sample_rate <= 16000)
+    else if (id->clock_rate <= 16000)
 	spx->param_id = PARAM_WB;
     else
 	spx->param_id = PARAM_UWB;
@@ -520,25 +519,6 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
     pj_mutex_unlock(spx_factory.mutex);
 
     return PJ_SUCCESS;
-}
-
-/*
- * Get codec default attributes.
- */
-static pj_status_t spx_codec_default_attr( pjmedia_codec *codec, 
-					   pjmedia_codec_param *attr)
-{
-    struct spx_private *spx;
-    pjmedia_codec_info info;
-
-    spx = (struct spx_private*) codec->codec_data;
-
-    info.encoding_name = pj_str("speex");
-    info.pt = 200;  /* Don't care */
-    info.sample_rate = spx_factory.speex_param[spx->param_id].clock_rate;
-    info.type = PJMEDIA_TYPE_AUDIO;
-
-    return spx_default_attr( codec->factory, &info, attr);
 }
 
 /*
@@ -579,12 +559,12 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
     }
 
     /* Sampling rate. */
-    tmp = attr->sample_rate;
+    tmp = attr->clock_rate;
     speex_encoder_ctl(spx->enc, SPEEX_SET_SAMPLING_RATE, 
 		      &spx_factory.speex_param[id].clock_rate);
 
     /* VAD */
-    tmp = attr->vad_enabled;
+    tmp = attr->vad;
     speex_encoder_ctl(spx->enc, SPEEX_SET_VAD, &tmp);
 
     /* Complexity */
@@ -608,7 +588,7 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
 		      &spx_factory.speex_param[id].clock_rate);
 
     /* PENH */
-    tmp = attr->penh_enabled;
+    tmp = attr->penh;
     speex_decoder_ctl(spx->dec, SPEEX_SET_ENH, &tmp);
 
     return PJ_SUCCESS;

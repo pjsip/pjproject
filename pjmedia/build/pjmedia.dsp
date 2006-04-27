@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir ".\output\pjmedia-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /D "_DEBUG" /D "PA_NO_ASIO" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /D "_DEBUG" /D "PA_NO_ASIO" /D "PA_NO_WMME" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -108,14 +108,6 @@ SOURCE=..\src\pjmedia\endpoint.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\errno.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\file_player.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\file_writer.c
 # End Source File
 # Begin Source File
 
@@ -191,6 +183,14 @@ SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\wav_player.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\wav_writer.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\wave.c
 # End Source File
 # End Group
@@ -224,10 +224,6 @@ SOURCE=..\include\pjmedia\endpoint.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\errno.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\file_port.h
 # End Source File
 # Begin Source File
 
@@ -296,6 +292,10 @@ SOURCE=..\include\pjmedia\stream.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\wav_port.h
 # End Source File
 # Begin Source File
 

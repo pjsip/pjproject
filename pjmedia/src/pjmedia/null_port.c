@@ -51,7 +51,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
     port->info.name = pj_str("null-port");
     port->info.need_info = 0;
     port->info.pt = 0xFF;
-    port->info.sample_rate = sampling_rate;
+    port->info.clock_rate = sampling_rate;
     port->info.samples_per_frame = samples_per_frame;
     port->info.channel_count = channel_count;
     port->info.signature = 0x2411;

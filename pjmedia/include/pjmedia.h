@@ -30,7 +30,6 @@
 #include <pjmedia/conference.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
-#include <pjmedia/file_port.h>
 #include <pjmedia/g711.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/master_port.h>
@@ -45,6 +44,7 @@
 #include <pjmedia/session.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>
+#include <pjmedia/wav_port.h>
 #include <pjmedia/wave.h>
 
 #endif	/* __PJMEDIA_H__ */

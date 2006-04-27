@@ -233,7 +233,7 @@
  *
  */
 
-#include <pjmedia/types.h>
+#include <pjmedia/sdp.h>
 
 PJ_BEGIN_DECL
 
@@ -273,6 +273,18 @@ enum pjmedia_sdp_neg_state
      */
     PJMEDIA_SDP_NEG_STATE_DONE,
 };
+
+
+/**
+ * @see pjmedia_sdp_neg_state
+ */
+typedef enum pjmedia_sdp_neg_state pjmedia_sdp_neg_state;
+
+
+/**
+ * Opaque declaration of SDP negotiator.
+ */
+typedef struct pjmedia_sdp_neg pjmedia_sdp_neg;
 
 
 /**

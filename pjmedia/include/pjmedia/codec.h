@@ -48,6 +48,8 @@ PJ_BEGIN_DECL
 
 /** 
  * Standard RTP static payload types, as defined by RFC 3551. 
+ * The header file <pjmedia-codec/types.h> also declares dynamic payload
+ * types that are supported by pjmedia-codec library.
  */
 enum pjmedia_rtp_pt
 {
@@ -91,8 +93,15 @@ struct pjmedia_codec_info
     pjmedia_type    type;	    /**< Media type.			*/
     unsigned	    pt;		    /**< Payload type (can be dynamic). */
     pj_str_t	    encoding_name;  /**< Encoding name.			*/
-    unsigned	    sample_rate;    /**< Sampling rate.			*/
+    unsigned	    clock_rate;	    /**< Sampling rate.			*/
+    unsigned	    channel_cnt;    /**< Channel count.			*/
 };
+
+
+/**
+ * @see pjmedia_codec_info
+ */
+typedef struct pjmedia_codec_info pjmedia_codec_info;
 
 
 /** 
@@ -101,22 +110,34 @@ struct pjmedia_codec_info
  */
 struct pjmedia_codec_param
 {
-    pj_uint32_t	sample_rate;	    /**< Sampling rate in Hz		*/
+    unsigned	clock_rate;	    /**< Sampling rate in Hz		*/
+    unsigned	channel_cnt;	    /**< Channel count.			*/
     pj_uint32_t	avg_bps;	    /**< Average bandwidth in bits/sec	*/
 
-    pj_uint8_t	pcm_bits_per_sample;/**< Bits/sample in the PCM side	*/
     pj_uint16_t	ptime;		    /**< Packet time in miliseconds	*/
+    pj_uint8_t	pcm_bits_per_sample;/**< Bits/sample in the PCM side	*/
 
     unsigned	pt:8;		    /**< Payload type.			*/
-    unsigned    vad_enabled:1;	    /**< Voice Activity Detector.	*/
-    unsigned    cng_enabled:1;	    /**< Comfort Noise Generator.	*/
-    unsigned    lpf_enabled:1;	    /**< Low pass filter		*/
-    unsigned    hpf_enabled:1;	    /**< High pass filter		*/
-    unsigned    penh_enabled:1;	    /**< Perceptual Enhancement		*/
-    unsigned    concl_enabled:1;    /**< Packet loss concealment	*/
-    unsigned    reserved_bit:1;	    /**< Reserved, must be NULL.	*/
+    unsigned    vad:1;		    /**< Voice Activity Detector.	*/
+    unsigned    cng:1;		    /**< Comfort Noise Generator.	*/
+    unsigned    lpf:1;		    /**< Low pass filter		*/
+    unsigned    hpf:1;		    /**< High pass filter		*/
+    unsigned    penh:1;		    /**< Perceptual Enhancement		*/
+    unsigned    concl:1;	    /**< Packet loss concealment	*/
+    unsigned    reserved:1;	    /**< Reserved, must be NULL.	*/
 
 };
+
+/**
+ * @see pjmedia_codec_param
+ */
+typedef struct pjmedia_codec_param pjmedia_codec_param;
+
+
+/**
+ * @see pjmedia_codec
+ */
+typedef struct pjmedia_codec pjmedia_codec;
 
 
 /**
@@ -125,17 +146,6 @@ struct pjmedia_codec_param
  */
 struct pjmedia_codec_op
 {
-    /** 
-     * Get default attributes for this codec. 
-     *
-     * @param codec	The codec instance.
-     * @param attr	Pointer to receive default codec attributes.
-     *
-     * @return		PJ_SUCCESS on success.
-     */
-    pj_status_t (*default_attr)(pjmedia_codec *codec, 
-				pjmedia_codec_param *attr);
-
     /** 
      * Initialize codec using the specified attribute.
      *
@@ -225,6 +235,18 @@ struct pjmedia_codec_op
 
 
 /**
+ * Codec operation.
+ */
+typedef struct pjmedia_codec_op pjmedia_codec_op;
+
+
+/**
+ * @see pjmedia_codec_factory
+ */
+typedef struct pjmedia_codec_factory pjmedia_codec_factory;
+
+
+/**
  * This structure describes a codec instance. 
  */
 struct pjmedia_codec
@@ -233,14 +255,15 @@ struct pjmedia_codec
     PJ_DECL_LIST_MEMBER(struct pjmedia_codec);
 
     /** Codec's private data. */
-    void	*codec_data;
+    void		    *codec_data;
 
     /** Codec factory where this codec was allocated. */
-    pjmedia_codec_factory *factory;
+    pjmedia_codec_factory   *factory;
 
     /** Operations to codec. */
-    pjmedia_codec_op	*op;
+    pjmedia_codec_op	    *op;
 };
+
 
 
 /**
@@ -273,8 +296,8 @@ struct pjmedia_codec_factory_op
      * @return		PJ_SUCCESS if success.
      */
     pj_status_t (*default_attr)(pjmedia_codec_factory *factory, 
-				const pjmedia_codec_info *info,
-				pjmedia_codec_param *attr );
+    				const pjmedia_codec_info *info,
+    				pjmedia_codec_param *attr );
 
     /** 
      * Enumerate supported codecs that can be created using this factory.
@@ -322,6 +345,12 @@ struct pjmedia_codec_factory_op
 
 
 /**
+ * @see pjmedia_codec_factory_op
+ */
+typedef struct pjmedia_codec_factory_op pjmedia_codec_factory_op;
+
+
+/**
  * Codec factory describes a module that is able to create codec with specific
  * capabilities. These capabilities can be queried by codec manager to create
  * instances of codec.
@@ -339,30 +368,108 @@ struct pjmedia_codec_factory
 
 };
 
+
 /**
  * Declare maximum codecs
  */
 #define PJMEDIA_CODEC_MGR_MAX_CODECS	    32
 
+
 /**
- * Codec manager maintains codec factory etc.
+ * Specify these values to set the codec priority, by calling
+ * #pjmedia_codec_mgr_set_codec_priority().
+ */
+enum pjmedia_codec_priority
+{
+    /**
+     * This priority makes the codec the highest in the order.
+     * The last codec specified with this priority will get the
+     * highest place in the order, and will change the priority
+     * of previously highest priority codec to NEXT_HIGHER.
+     */
+    PJMEDIA_CODEC_PRIO_HIGHEST,
+
+    /**
+     * This priority will put the codec as the next codec after
+     * codecs with this same priority.
+     */
+    PJMEDIA_CODEC_PRIO_NEXT_HIGHER,
+
+    /**
+     * This is the initial codec priority when it is registered to
+     * codec manager by codec factory.
+     */
+    PJMEDIA_CODEC_PRIO_NORMAL,
+
+    /**
+     * This priority makes the codec the lowest in the order.
+     * The last codec specified with this priority will be put
+     * in the last place in the order.
+     */
+    PJMEDIA_CODEC_PRIO_LOWEST,
+
+    /**
+     * This priority will prevent the codec from being listed in the
+     * SDP created by media endpoint, thus should prevent the codec
+     * from being used in the sessions. However, the codec will still
+     * be listed by #pjmedia_codec_mgr_enum_codecs() and other codec
+     * query functions.
+     */
+    PJMEDIA_CODEC_PRIO_DISABLED,
+};
+
+
+/**
+ * @see pjmedia_codec_priority
+ */
+typedef enum pjmedia_codec_priority pjmedia_codec_priority;
+
+
+/** Fully qualified codec name  (e.g. "pcmu/8000/1") */
+typedef char pjmedia_codec_id[32];
+
+
+/** 
+ * Codec manager maintains array of these structs for each supported
+ * codec.
+ */
+struct pjmedia_codec_desc
+{
+    pjmedia_codec_info	    info;	/**< Codec info.	    */
+    pjmedia_codec_id	    id;		/**< Fully qualified name   */
+    pjmedia_codec_priority  prio;	/**< Priority.		    */
+    pjmedia_codec_factory  *factory;	/**< The factory.	    */
+};
+
+
+/**
+ * The declaration for codec manager. Application doesn't normally need
+ * to see this declaration, but nevertheless this declaration is needed
+ * by media endpoint to instantiate the codec manager.
  */
 struct pjmedia_codec_mgr
 {
     /** List of codec factories registered to codec manager. */
-    pjmedia_codec_factory   factory_list;
+    pjmedia_codec_factory	factory_list;
 
     /** Number of supported codesc. */
-    unsigned		    codec_cnt;
+    unsigned			codec_cnt;
 
-    /** Array of codec info. */
-    pjmedia_codec_info	    codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+    /** Array of codec descriptor. */
+    struct pjmedia_codec_desc	codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 };
+
+
+/**
+ * @see pjmedia_codec_mgr
+ */
+typedef struct pjmedia_codec_mgr pjmedia_codec_mgr;
 
 
 
 /**
- * Initialize codec manager.
+ * Initialize codec manager. Normally this function is called by pjmedia
+ * endpoint's initialization code.
  *
  * @param mgr	    Codec manager instance.
  *
@@ -372,9 +479,11 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr);
 
 
 /** 
- * Register codec factory to codec manager. 
+ * Register codec factory to codec manager. This will also register
+ * all supported codecs in the factory to the codec manager.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param factory   The codec factory to be registered.
  *
  * @return	    PJ_SUCCESS on success.
@@ -384,9 +493,12 @@ pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 				    pjmedia_codec_factory *factory);
 
 /**
- * Unregister codec factory from the codec manager.
+ * Unregister codec factory from the codec manager. This will also
+ * remove all the codecs registered by the codec factory from the
+ * codec manager's list of supported codecs.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param factory   The codec factory to be unregistered.
  *
  * @return	    PJ_SUCCESS on success.
@@ -396,39 +508,111 @@ pjmedia_codec_mgr_unregister_factory( pjmedia_codec_mgr *mgr,
 				      pjmedia_codec_factory *factory);
 
 /**
- * Enumerate all supported codec.
+ * Enumerate all supported codecs that have been registered to the
+ * codec manager by codec factories.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param count	    On input, specifies the number of elements in
  *		    the array. On output, the value will be set to
  *		    the number of elements that have been initialized
  *		    by this function.
  * @param info	    The codec info array, which contents will be 
  *		    initialized upon return.
+ * @param prio	    Optional pointer to receive array of codec priorities.
  *
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_mgr_enum_codecs( pjmedia_codec_mgr *mgr, 
 						    unsigned *count, 
-						    pjmedia_codec_info info[]);
+						    pjmedia_codec_info info[],
+						    unsigned *prio);
 
 /**
- * Get codec info for the specified static payload type.
+ * Get codec info for the specified static payload type. Note that
+ * this can only find codec with static payload types. This function can
+ * be used to find codec info for a payload type inside SDP which doesn't
+ * have the corresponding rtpmap attribute.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param pt	    Static payload type/number.
  * @param inf	    Pointer to receive codec info.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_mgr_get_codec_info(pjmedia_codec_mgr *mgr,
-						      unsigned pt,
-						      pjmedia_codec_info *inf);
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
+				  unsigned pt,
+				  const pjmedia_codec_info **inf);
+
+/**
+ * Convert codec info struct into a unique codec identifier.
+ * A codec identifier looks something like "L16/44100/2".
+ *
+ * @param info	    The codec info
+ * @param id	    Buffer to put the codec info string.
+ * @param max_len   The length of the buffer.
+ *
+ * @return	    The null terminated codec info string, or NULL if
+ *		    the buffer is not long enough.
+ */
+PJ_DECL(char*) pjmedia_codec_info_to_id(const pjmedia_codec_info *info,
+				        char *id, unsigned max_len );
+
+
+/**
+ * Find codecs by the unique codec identifier. This function will find
+ * all codecs that match the codec identifier prefix. For example, if
+ * "L16" is specified, then it will find "L16/8000/1", "L16/16000/1",
+ * and so on, up to the maximum count specified in the argument.
+ *
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
+ * @param codec_id  The full codec ID or codec ID prefix. If an empty
+ *		    string is given, it will match all codecs.
+ * @param count	    Maximum number of codecs to find. On return, it
+ *		    contains the actual number of codecs found.
+ * @param p_info    Array of pointer to codec info to be filled. This
+ *		    argument may be NULL, which in this case, only
+ *		    codec count will be returned.
+ * @param prio	    Optional array of codec priorities.
+ *
+ * @return	    PJ_SUCCESS if at least one codec info is found.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
+				     const pj_str_t *codec_id,
+				     unsigned *count,
+				     const pjmedia_codec_info *p_info[],
+				     unsigned prio[]);
+
+
+/**
+ * Set codec priority. The codec priority determines the order of
+ * the codec in the SDP created by the endpoint. If more than one codecs
+ * are found with the same codec_id prefix, then the function sets the
+ * priorities of all those codecs.
+ *
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
+ * @param codec_id  The full codec ID or codec ID prefix. If an empty
+ *		    string is given, it will match all codecs.
+ * @param prio	    Priority to be set.
+ *
+ * @return	    PJ_SUCCESS if at least one codec info is found.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_codec_mgr_set_codec_priority(pjmedia_codec_mgr *mgr, 
+				     const pj_str_t *codec_id,
+				     pjmedia_codec_priority prio);
+
 
 /**
  * Get default codec param for the specified codec info.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param info	    The codec info, which default parameter's is being
  *		    queried.
  * @param param	    On return, will be filled with the default codec
@@ -436,36 +620,44 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_get_codec_info(pjmedia_codec_mgr *mgr,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_mgr_get_default_param(pjmedia_codec_mgr *mgr,
-							 const pjmedia_codec_info *info,
-							 pjmedia_codec_param *param );
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
+				     const pjmedia_codec_info *info,
+				     pjmedia_codec_param *param );
 
 /**
  * Request the codec manager to allocate one instance of codec with the
  * specified codec info. The codec will enumerate all codec factories
  * until it finds factory that is able to create the specified codec.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param info	    The information about the codec to be created.
  * @param p_codec   Pointer to receive the codec instance.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr, 
-						   const pjmedia_codec_info *info,
-						   pjmedia_codec **p_codec);
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_alloc_codec( pjmedia_codec_mgr *mgr, 
+			       const pjmedia_codec_info *info,
+			       pjmedia_codec **p_codec);
 
 /**
  * Deallocate the specified codec instance. The codec manager will return
  * the instance of the codec back to its factory.
  *
- * @param mgr	    The codec manager.
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param codec	    The codec instance.
  *
  * @return	    PJ_SUCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr, 
 						     pjmedia_codec *codec);
+
+
+
+
 
 /**
  * @}

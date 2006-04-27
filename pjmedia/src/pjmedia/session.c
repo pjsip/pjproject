@@ -194,16 +194,37 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    si->fmt.type = si->type;
 	    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
 	    pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
-	    si->fmt.sample_rate = rtpmap->clock_rate;
+	    si->fmt.clock_rate = rtpmap->clock_rate;
+	    
+	    /* For audio codecs, rtpmap parameters denotes the number of
+	     * channels.
+	     */
+	    if (si->type == PJMEDIA_TYPE_AUDIO && rtpmap->param.slen) {
+		
+		if (rtpmap->param.slen == 2) {
+		    si->fmt.channel_cnt = rtpmap->param.ptr[1] - '0';
+		} else {
+		    pj_str_t cnt;
+		    cnt.ptr = rtpmap->param.ptr + 1;
+		    cnt.slen = rtpmap->param.slen - 1;
+		    si->fmt.channel_cnt = (unsigned) pj_strtoul(&cnt);
+		}
+
+	    } else {
+		si->fmt.channel_cnt = 1;
+	    }
 
 	} else {
 	    pjmedia_codec_mgr *mgr;
+	    pjmedia_codec_info *p_info;
 
 	    mgr = pjmedia_endpt_get_codec_mgr(endpt);
 
-	    status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &si->fmt);
+	    status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &p_info);
 	    if (status != PJ_SUCCESS)
 		return status;
+
+	    pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
 	}
 
 	/* For static payload type, pt's are symetric */
@@ -224,7 +245,25 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	si->fmt.type = si->type;
 	si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
 	pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
-	si->fmt.sample_rate = rtpmap->clock_rate;
+	si->fmt.clock_rate = rtpmap->clock_rate;
+
+	/* For audio codecs, rtpmap parameters denotes the number of
+	 * channels.
+	 */
+	if (si->type == PJMEDIA_TYPE_AUDIO && rtpmap->param.slen) {
+	    
+	    if (rtpmap->param.slen == 2) {
+		si->fmt.channel_cnt = rtpmap->param.ptr[1] - '0';
+	    } else {
+		pj_str_t cnt;
+		cnt.ptr = rtpmap->param.ptr + 1;
+		cnt.slen = rtpmap->param.slen - 1;
+		si->fmt.channel_cnt = (unsigned) pj_strtoul(&cnt);
+	    }
+
+	} else {
+	    si->fmt.channel_cnt = 1;
+	}
 
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.

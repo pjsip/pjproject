@@ -78,6 +78,11 @@ struct pjmedia_sdp_attr
     pj_str_t		value;	    /**< Attribute value.   */
 };
 
+/**
+ * @see pjmedia_sdp_attr
+ */
+typedef struct pjmedia_sdp_attr pjmedia_sdp_attr;
+
 
 /**
  * Create SDP attribute.
@@ -202,6 +207,11 @@ struct pjmedia_sdp_rtpmap
     pj_str_t		param;	    /**< Parameter.	    */
 };
 
+/**
+ * @see pjmedia_sdp_rtpmap
+ */
+typedef struct pjmedia_sdp_rtpmap pjmedia_sdp_rtpmap;
+
 
 /**
  * Convert generic attribute to SDP \a rtpmap. This function allocates
@@ -264,6 +274,13 @@ struct pjmedia_sdp_fmtp
 
 
 /**
+ * @see pjmedia_sdp_fmtp
+ */
+typedef struct pjmedia_sdp_fmtp pjmedia_sdp_fmtp;
+
+
+
+/**
  * Get the fmtp representation of the same SDP attribute.
  *
  * @param attr		Generic attribute to be converted to fmtp, which
@@ -290,6 +307,12 @@ struct pjmedia_sdp_conn
     pj_str_t	addr_type;	/**< Address type ("IP4", "IP6").	*/
     pj_str_t	addr;		/**< The address.			*/
 };
+
+
+/**
+ * @see pjmedia_sdp_conn
+ */
+typedef struct pjmedia_sdp_conn pjmedia_sdp_conn;
 
 
 /** 
@@ -333,6 +356,12 @@ struct pjmedia_sdp_media
     pjmedia_sdp_attr*attr[PJMEDIA_MAX_SDP_ATTR];  /**< Attributes.	    */
 
 };
+
+
+/**
+ * @see pjmedia_sdp_media
+ */
+typedef struct pjmedia_sdp_media pjmedia_sdp_media;
 
 
 /** 
@@ -480,6 +509,12 @@ struct pjmedia_sdp_session
     pjmedia_sdp_media *media[PJMEDIA_MAX_SDP_MEDIA];	/**< Media array.   */
 
 };
+
+/**
+ * @see pjmedia_sdp_session
+ */
+typedef struct pjmedia_sdp_session pjmedia_sdp_session;
+
 
 
 /**

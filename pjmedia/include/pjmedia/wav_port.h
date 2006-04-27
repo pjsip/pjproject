@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_FILE_PORT_H__
-#define __PJMEDIA_FILE_PORT_H__
+#ifndef __PJMEDIA_WAV_PORT_H__
+#define __PJMEDIA_WAV_PORT_H__
 
 /**
- * @file file_port.h
- * @brief File player and recorder.
+ * @file wav_port.h
+ * @brief WAV file player and writer.
  */
 #include <pjmedia/port.h>
 
@@ -35,6 +35,9 @@ PJ_BEGIN_DECL
  *
  * @param pool		Pool to create memory buffers for this port.
  * @param filename	File name to open.
+ * @param ptime		The duration (in miliseconds) of each frame read
+ *			from this port. If the value is zero, the default
+ *			duration (20ms) will be used.
  * @param flags		Port creation flags.
  * @param buf_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
@@ -44,13 +47,13 @@ PJ_BEGIN_DECL
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
-						      const char *filename,
-						      unsigned flags,
-						      pj_ssize_t buff_size,
-						      void *user_data,
-						      pjmedia_port **p_port );
-
+PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
+						     const char *filename,
+						     unsigned ptime,
+						     unsigned flags,
+						     pj_ssize_t buff_size,
+						     void *user_data,
+						     pjmedia_port **p_port );
 
 
 /**
@@ -69,7 +72,7 @@ PJ_DECL(pj_status_t) pjmedia_file_player_port_create( pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
+PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 						      const char *filename,
 						      unsigned sampling_rate,
 						      unsigned channel_count,
@@ -86,4 +89,4 @@ PJ_DECL(pj_status_t) pjmedia_file_writer_port_create( pj_pool_t *pool,
 PJ_END_DECL
 
 
-#endif	/* __PJMEDIA_FILE_PORT_H__ */
+#endif	/* __PJMEDIA_WAV_PORT_H__ */

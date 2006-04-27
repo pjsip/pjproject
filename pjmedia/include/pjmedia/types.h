@@ -43,6 +43,12 @@ enum pjmedia_type
 
 };
 
+/**
+ * @see pjmedia_type
+ */
+typedef enum pjmedia_type pjmedia_type;
+
+
 
 /** 
  * Media direction. 
@@ -63,6 +69,12 @@ enum pjmedia_dir
 
 };
 
+/**
+ * @see pjmedia_dir
+ */
+typedef enum pjmedia_dir pjmedia_dir;
+
+
 /* Alternate names for media direction: */
 
 /**
@@ -80,61 +92,6 @@ enum pjmedia_dir
  */
 #define PJMEDIA_DIR_CAPTURE_PLAYBACK	PJMEDIA_DIR_ENCODING_DECODING
 
-
-/**
- * Top level media type.
- */
-typedef enum pjmedia_type pjmedia_type;
-
-/**
- * Media direction.
- */
-typedef enum pjmedia_dir pjmedia_dir;
-
-/**
- * Codec info.
- */
-typedef struct pjmedia_codec_info pjmedia_codec_info;
-
-/**
- * Codec initialization parameter.
- */
-typedef struct pjmedia_codec_param pjmedia_codec_param;
-
-/** 
- * Types of media frames. 
- */
-typedef enum pjmedia_frame_type pjmedia_frame_type;
-
-/** 
- * This structure describes a media frame. 
- */
-typedef struct pjmedia_frame pjmedia_frame;
-
-/**
- * Codec instance.
- */
-typedef struct pjmedia_codec pjmedia_codec;
-
-/**
- * Codec factory.
- */
-typedef struct pjmedia_codec_factory pjmedia_codec_factory;
-
-/**
- * Codec operation.
- */
-typedef struct pjmedia_codec_op pjmedia_codec_op;
-
-/**
- * Codec factory operation.
- */
-typedef struct pjmedia_codec_factory_op pjmedia_codec_factory_op;
-
-/**
- * Codec manager.
- */
-typedef struct pjmedia_codec_mgr pjmedia_codec_mgr;
 
 /** 
  * Opague declaration of media endpoint. 
@@ -185,46 +142,6 @@ typedef struct pjmedia_session pjmedia_session;
  * Media session info.
  */
 typedef struct pjmedia_session_info pjmedia_session_info;
-
-/**
- * Forward declaration for SDP attribute (sdp.h)
- */
-typedef struct pjmedia_sdp_attr pjmedia_sdp_attr;
-
-/**
- * Forward declaration for SDP rtpmap attribute (sdp.h)
- */
-typedef struct pjmedia_sdp_rtpmap pjmedia_sdp_rtpmap;
-
-/**
- * Forward declaration for SDP fmtp attribute (sdp.h)
- */
-typedef struct pjmedia_sdp_fmtp pjmedia_sdp_fmtp;
-
-/**
- * Forward declaration for SDP connection info (sdp.h)
- */
-typedef struct pjmedia_sdp_conn pjmedia_sdp_conn;
-
-/**
- * Forward declaration for SDP media line (sdp.h)
- */
-typedef struct pjmedia_sdp_media pjmedia_sdp_media;
-
-/**
- * Forward declaration for SDP session (sdp.h)
- */
-typedef struct pjmedia_sdp_session pjmedia_sdp_session;
-
-/**
- * Forward declaration for SDP negotiator state (sdp_neg.h).
- */
-typedef enum pjmedia_sdp_neg_state pjmedia_sdp_neg_state;
-
-/**
- * Forward declaration for SDP negotiator (sdp_neg.h).
- */
-typedef struct pjmedia_sdp_neg pjmedia_sdp_neg;
 
 /**
  * Types of frame returned from jitter buffer (jbuf.h).

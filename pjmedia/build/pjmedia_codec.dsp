@@ -91,6 +91,10 @@ SOURCE="..\src\pjmedia-codec\gsm.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\l16.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\speex_codec.c"
 # End Source File
 # End Group
@@ -104,6 +108,10 @@ SOURCE="..\include\pjmedia-codec\config.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\gsm.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\l16.h"
 # End Source File
 # Begin Source File
 

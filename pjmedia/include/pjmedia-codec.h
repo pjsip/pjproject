@@ -19,6 +19,7 @@
 #ifndef __PJMEDIA_CODEC_PJMEDIA_CODEC_H__
 #define __PJMEDIA_CODEC_PJMEDIA_CODEC_H__
 
+#include <pjmedia-codec/l16.h>
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/speex.h>
 

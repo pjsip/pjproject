@@ -59,13 +59,13 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 
 
     /* Both ports MUST have the equal ptime */
-    PJ_ASSERT_RETURN(u_port->info.sample_rate/u_port->info.samples_per_frame==
-		     d_port->info.sample_rate/d_port->info.samples_per_frame,
+    PJ_ASSERT_RETURN(u_port->info.clock_rate/u_port->info.samples_per_frame==
+		     d_port->info.clock_rate/d_port->info.samples_per_frame,
 		     PJMEDIA_ENCSAMPLESPFRAME);
 
 
     /* Get clock_rate and samples_per_frame from one of the port. */
-    clock_rate = u_port->info.sample_rate;
+    clock_rate = u_port->info.clock_rate;
     samples_per_frame = u_port->info.samples_per_frame;
 
 

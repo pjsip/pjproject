@@ -64,11 +64,12 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			codec.o conference.o endpoint.o errno.o file_player.o \
-			file_writer.o \
-			g711.o jbuf.o null_port.o port.o resample.o resample_port.o \
-			rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
-			sound_port.o stream.o wave.o $(SOUND_OBJS) $(NULLSOUND_OBJS)
+			clock_thread.o codec.o conference.o endpoint.o errno.o \
+			wav_player.o wav_writer.o g711.o jbuf.o \
+			master_port.o null_port.o port.o resample.o \
+			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
+			session.o silencedet.o sound_port.o stream.o wave.o \
+			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
 
@@ -87,15 +88,18 @@ GSM_CFLAGS :=
 
 SPEEX_OBJS :=	speex_codec.o \
 		speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
-		speex/exc_10_32_table.o speex/exc_20_32_table.o speex/exc_5_256_table.o \
-		speex/exc_5_64_table.o speex/exc_8_128_table.o speex/filters.o \
-		speex/gain_table.o speex/gain_table_lbr.o speex/hexc_10_32_table.o \
-		speex/hexc_table.o speex/high_lsp_tables.o speex/lpc_spx.o \
-		speex/lsp.o speex/lsp_tables_nb.o speex/ltp.o speex/math_approx.o \
-		speex/misc.o speex/modes.o speex/nb_celp.o speex/preprocess_spx.o \
-		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o speex/speex.o \
-		speex/speex_callbacks.o speex/speex_header.o speex/stereo.o \
-		speex/vbr.o speex/vq.o
+		speex/exc_10_32_table.o speex/exc_20_32_table.o \
+		speex/exc_5_256_table.o speex/exc_5_64_table.o \
+		speex/exc_8_128_table.o speex/filters.o \
+		speex/gain_table.o speex/gain_table_lbr.o \
+		speex/hexc_10_32_table.o speex/hexc_table.o \
+		speex/high_lsp_tables.o speex/lpc_spx.o \
+		speex/lsp.o speex/lsp_tables_nb.o speex/ltp.o \
+		speex/math_approx.o speex/misc.o speex/modes.o \
+		speex/nb_celp.o speex/preprocess_spx.o \
+		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o \
+		speex/speex.o speex/speex_callbacks.o speex/speex_header.o \
+		speex/stereo.o speex/vbr.o speex/vq.o
 SPEEX_CFLAGS := -DHAVE_CONFIG=1 -I../src/pjmedia-codec
 
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec

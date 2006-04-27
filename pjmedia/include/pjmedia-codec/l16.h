@@ -16,35 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_CODEC_CONFIG_H__
-#define __PJMEDIA_CODEC_CONFIG_H__
+#ifndef __PJMEDIA_CODEC_L16_H__
+#define __PJMEDIA_CODEC_L16_H__
 
-#include <pjmedia/types.h>
+#include <pjmedia-codec/types.h>
 
 
-/**
- * Unless specified otherwise, L16 codec is included by default.
- */
-#ifndef PJMEDIA_HAS_L16_CODEC
-#   define PJMEDIA_HAS_L16_CODEC    1
-#endif
+PJ_BEGIN_DECL
 
 
 /**
- * Unless specified otherwise, GSM codec is included by default.
+ * Initialize and register L16 codec factory to pjmedia endpoint.
+ *
+ * @param endpt	    The pjmedia endpoint.
+ * @param options   Must be zero for now.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-#ifndef PJMEDIA_HAS_GSM_CODEC
-#   define PJMEDIA_HAS_GSM_CODEC    1
-#endif
+PJ_DECL(pj_status_t) pjmedia_codec_l16_init( pjmedia_endpt *endpt,
+					     unsigned options);
+
 
 
 /**
- * Unless specified otherwise, Speex codec is included by default.
+ * Unregister L16 codec factory from pjmedia endpoint.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-#ifndef PJMEDIA_HAS_SPEEX_CODEC
-#   define PJMEDIA_HAS_SPEEX_CODEC    1
-#endif
+PJ_DECL(pj_status_t) pjmedia_codec_l16_deinit(void);
 
 
+PJ_END_DECL
 
-#endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
+
+#endif	/* __PJMEDIA_CODEC_L16_H__ */
+
