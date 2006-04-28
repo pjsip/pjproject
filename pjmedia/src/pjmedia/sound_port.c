@@ -19,7 +19,24 @@
 #include <pjmedia/sound_port.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/log.h>
+#include <pj/rand.h>
 #include <pj/string.h>	    /* pj_memset() */
+
+
+//#define SIMULATE_LOST_PCT   10
+
+
+#define THIS_FILE	    "sound_port.c"
+
+enum
+{
+    PJMEDIA_PLC_ENABLED	    = 1,
+};
+
+#define DEFAULT_OPTIONS	PJMEDIA_PLC_ENABLED
+
+
 
 struct pjmedia_snd_port
 {
@@ -28,6 +45,11 @@ struct pjmedia_snd_port
     pjmedia_snd_stream	*snd_stream;
     pjmedia_dir		 dir;
     pjmedia_port	*port;
+    unsigned		 options;
+
+    void		*last_frame;
+    unsigned		 last_frame_size;
+    unsigned		 last_replay_count;
 
     unsigned		 clock_rate;
     unsigned		 channel_count;
@@ -73,10 +95,67 @@ static pj_status_t play_cb(/* in */   void *user_data,
     /* Must supply the required samples */
     pj_assert(frame.size == size);
 
+#ifdef SIMULATE_LOST_PCT
+    /* Simulate packet lost */
+    if (pj_rand() % 100 < SIMULATE_LOST_PCT) {
+	PJ_LOG(4,(THIS_FILE, "Frame dropped"));
+	goto no_frame;
+    }
+#endif
+
+    /* Keep frame if PLC is enabled. */
+    if (snd_port->options & PJMEDIA_PLC_ENABLED) {
+	/* Must have the same length as last_frame_size */
+	pj_assert(frame.size == snd_port->last_frame_size);
+
+	/* Copy frame to last_frame */
+	pj_memcpy(snd_port->last_frame, output, snd_port->last_frame_size);
+
+	snd_port->last_replay_count = 0;
+    }
+
     return PJ_SUCCESS;
 
 no_frame:
-    pj_memset(output, 0, size);
+
+    /* Replay last frame if PLC is enabled */
+    if ((snd_port->options & PJMEDIA_PLC_ENABLED) &&
+	snd_port->last_replay_count < 8) 
+    {
+
+	/* Must have the same length as last_frame_size */
+	pj_assert(size == snd_port->last_frame_size);
+
+	/* Replay last frame */
+	pj_memcpy(output, snd_port->last_frame, snd_port->last_frame_size);
+
+	/* Reduce replay frame signal level to half */
+	if (snd_port->bits_per_sample == 16) {
+	    unsigned i, count;
+	    pj_int16_t *samp;
+
+	    count = snd_port->last_frame_size / 2;
+	    samp = (pj_int16_t *) snd_port->last_frame;
+
+	    for (i=0; i<count; ++i)
+		samp[i] = (pj_int16_t) (samp[i] >> 2);
+
+	}
+
+#ifdef SIMULATE_LOST_PCT
+	PJ_LOG(4,(THIS_FILE, "Frame replayed"));
+#endif
+
+	++snd_port->last_replay_count;
+
+    } else {
+
+	/* Just zero the frame */
+	pj_memset(output, 0, size);
+
+    }
+
+
     return PJ_SUCCESS;
 }
 
@@ -118,7 +197,8 @@ static pj_status_t rec_cb(/* in */   void *user_data,
  * Start the sound stream.
  * This may be called even when the sound stream has already been started.
  */
-static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
+static pj_status_t start_sound_device( pj_pool_t *pool,
+				       pjmedia_snd_port *snd_port )
 {
     pj_status_t status;
 
@@ -166,6 +246,22 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
     if (status != PJ_SUCCESS)
 	return status;
 
+
+    /* If we have player components, allocate buffer to save the last
+     * frame played to the speaker. The last frame is used for packet
+     * lost concealment (PLC) algorithm.
+     */
+    if ((snd_port->dir & PJMEDIA_DIR_PLAYBACK) &&
+	(snd_port->options & PJMEDIA_PLC_ENABLED)) 
+    {
+
+	snd_port->last_frame_size = snd_port->samples_per_frame *
+				    snd_port->channel_count *
+				    snd_port->bits_per_sample / 8;
+	snd_port->last_frame = pj_pool_zalloc(pool, 
+					      snd_port->last_frame_size);
+    }
+
     /* Start sound stream. */
     status = pjmedia_snd_stream_start(snd_port->snd_stream);
     if (status != PJ_SUCCESS) {
@@ -211,7 +307,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     pjmedia_snd_port *snd_port;
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
@@ -219,6 +314,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     snd_port->rec_id = rec_id;
     snd_port->play_id = play_id;
     snd_port->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    snd_port->options = options | DEFAULT_OPTIONS;
     snd_port->clock_rate = clock_rate;
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
@@ -226,11 +322,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 
     *p_port = snd_port;
 
+
     /* Start sound device immediately.
      * If there's no port connected, the sound callback will return
      * empty signal.
      */
-    return start_sound_device( snd_port );
+    return start_sound_device( pool, snd_port );
 
 }
 
@@ -249,13 +346,13 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
     pjmedia_snd_port *snd_port;
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
     snd_port->rec_id = dev_id;
     snd_port->dir = PJMEDIA_DIR_CAPTURE;
+    snd_port->options = options | DEFAULT_OPTIONS;
     snd_port->clock_rate = clock_rate;
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
@@ -267,7 +364,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
      * If there's no port connected, the sound callback will return
      * empty signal.
      */
-    return start_sound_device( snd_port );
+    return start_sound_device( pool, snd_port );
 }
 
 
@@ -286,13 +383,13 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
     pjmedia_snd_port *snd_port;
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
     snd_port->play_id = dev_id;
     snd_port->dir = PJMEDIA_DIR_PLAYBACK;
+    snd_port->options = options | DEFAULT_OPTIONS;
     snd_port->clock_rate = clock_rate;
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
@@ -304,7 +401,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
      * If there's no port connected, the sound callback will return
      * empty signal.
      */
-    return start_sound_device( snd_port );
+    return start_sound_device( pool, snd_port );
 }
 
 
