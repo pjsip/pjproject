@@ -44,7 +44,7 @@ PJ_BEGIN_DECL
  * The PJMEDIA_MAX_SDP_FMT macro defines maximum format in a media line.
  */
 #ifndef PJMEDIA_MAX_SDP_FMT
-#   define PJMEDIA_MAX_SDP_FMT		16
+#   define PJMEDIA_MAX_SDP_FMT		32
 #endif
 
 /**

@@ -283,8 +283,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     pjmedia_sdp_media *m;
     pjmedia_sdp_attr *attr;
 
+    /* Sanity check arguments */
     PJ_ASSERT_RETURN(endpt && pool && p_sdp && stream_cnt, PJ_EINVAL);
 
+    /* Check that there are not too many codecs */
+    PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
+		     PJ_ETOOMANY);
 
     /* Create and initialize basic SDP session */
     sdp = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_session));
