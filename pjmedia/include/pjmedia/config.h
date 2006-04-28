@@ -117,6 +117,16 @@
 #endif
 
 
+/**
+ * G.711 Appendix I Packet Lost Concealment (PLC).
+ * Enabled only when floating point is enabled.
+ */
+#ifndef PJMEDIA_HAS_G711_PLC
+#   define PJMEDIA_HAS_G711_PLC			PJ_HAS_FLOATING_POINT
+#endif
+
+
+
 #endif	/* __PJMEDIA_CONFIG_H__ */
 
 

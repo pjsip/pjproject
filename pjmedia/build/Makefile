@@ -66,7 +66,8 @@ export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			clock_thread.o codec.o conference.o endpoint.o errno.o \
 			wav_player.o wav_writer.o g711.o jbuf.o \
-			master_port.o null_port.o port.o resample.o \
+			master_port.o null_port.o plc_common.o plc_g711.o \
+			port.o resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o wave.o \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)

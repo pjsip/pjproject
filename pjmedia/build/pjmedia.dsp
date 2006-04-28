@@ -135,6 +135,14 @@ SOURCE=..\src\pjmedia\pasound.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\plc_common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\plc_g711.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
@@ -244,6 +252,10 @@ SOURCE=..\include\pjmedia\null_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\plc.h
 # End Source File
 # Begin Source File
 

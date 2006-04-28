@@ -18,13 +18,14 @@
  */
 #include <pjmedia/sound_port.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/plc.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/rand.h>
 #include <pj/string.h>	    /* pj_memset() */
 
 
-//#define SIMULATE_LOST_PCT   10
+//#define SIMULATE_LOST_PCT   20
 
 
 #define THIS_FILE	    "sound_port.c"
@@ -34,8 +35,8 @@ enum
     PJMEDIA_PLC_ENABLED	    = 1,
 };
 
-#define DEFAULT_OPTIONS	PJMEDIA_PLC_ENABLED
-
+//#define DEFAULT_OPTIONS	PJMEDIA_PLC_ENABLED
+#define DEFAULT_OPTIONS	    0
 
 
 struct pjmedia_snd_port
@@ -47,9 +48,7 @@ struct pjmedia_snd_port
     pjmedia_port	*port;
     unsigned		 options;
 
-    void		*last_frame;
-    unsigned		 last_frame_size;
-    unsigned		 last_replay_count;
+    pjmedia_plc		*plc;
 
     unsigned		 clock_rate;
     unsigned		 channel_count;
@@ -103,56 +102,20 @@ static pj_status_t play_cb(/* in */   void *user_data,
     }
 #endif
 
-    /* Keep frame if PLC is enabled. */
-    if (snd_port->options & PJMEDIA_PLC_ENABLED) {
-	/* Must have the same length as last_frame_size */
-	pj_assert(frame.size == snd_port->last_frame_size);
-
-	/* Copy frame to last_frame */
-	pj_memcpy(snd_port->last_frame, output, snd_port->last_frame_size);
-
-	snd_port->last_replay_count = 0;
-    }
+    if (snd_port->plc)
+	pjmedia_plc_save(snd_port->plc, output);
 
     return PJ_SUCCESS;
 
 no_frame:
 
-    /* Replay last frame if PLC is enabled */
-    if ((snd_port->options & PJMEDIA_PLC_ENABLED) &&
-	snd_port->last_replay_count < 8) 
-    {
+    /* Apply PLC */
+    if (snd_port->plc) {
 
-	/* Must have the same length as last_frame_size */
-	pj_assert(size == snd_port->last_frame_size);
-
-	/* Replay last frame */
-	pj_memcpy(output, snd_port->last_frame, snd_port->last_frame_size);
-
-	/* Reduce replay frame signal level to half */
-	if (snd_port->bits_per_sample == 16) {
-	    unsigned i, count;
-	    pj_int16_t *samp;
-
-	    count = snd_port->last_frame_size / 2;
-	    samp = (pj_int16_t *) snd_port->last_frame;
-
-	    for (i=0; i<count; ++i)
-		samp[i] = (pj_int16_t) (samp[i] >> 2);
-
-	}
-
+	pjmedia_plc_generate(snd_port->plc, output);
 #ifdef SIMULATE_LOST_PCT
-	PJ_LOG(4,(THIS_FILE, "Frame replayed"));
+	PJ_LOG(4,(THIS_FILE, "Lost frame generated"));
 #endif
-
-	++snd_port->last_replay_count;
-
-    } else {
-
-	/* Just zero the frame */
-	pj_memset(output, 0, size);
-
     }
 
 
@@ -254,12 +217,12 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     if ((snd_port->dir & PJMEDIA_DIR_PLAYBACK) &&
 	(snd_port->options & PJMEDIA_PLC_ENABLED)) 
     {
-
-	snd_port->last_frame_size = snd_port->samples_per_frame *
-				    snd_port->channel_count *
-				    snd_port->bits_per_sample / 8;
-	snd_port->last_frame = pj_pool_zalloc(pool, 
-					      snd_port->last_frame_size);
+	status = pjmedia_plc_create(pool, snd_port->clock_rate, 
+				    snd_port->samples_per_frame * 
+					snd_port->channel_count,
+				    0, &snd_port->plc);
+	if (status != PJ_SUCCESS)
+	    snd_port->plc = NULL;
     }
 
     /* Start sound stream. */

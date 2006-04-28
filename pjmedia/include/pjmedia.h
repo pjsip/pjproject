@@ -34,6 +34,7 @@
 #include <pjmedia/jbuf.h>
 #include <pjmedia/master_port.h>
 #include <pjmedia/null_port.h>
+#include <pjmedia/plc.h>
 #include <pjmedia/port.h>
 #include <pjmedia/resample.h>
 #include <pjmedia/rtcp.h>
