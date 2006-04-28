@@ -287,9 +287,9 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 		     dlg->local.tag_hval != 0, PJ_EBUG);
 
     /* For UAS dialog, remote tag (inc hash) must have been initialized. */
-    PJ_ASSERT_RETURN(dlg->role==PJSIP_ROLE_UAC ||
-		     (dlg->role==PJSIP_ROLE_UAS && dlg->remote.info->tag.slen
-		      && dlg->remote.tag_hval != 0), PJ_EBUG);
+    //PJ_ASSERT_RETURN(dlg->role==PJSIP_ROLE_UAC ||
+    //		     (dlg->role==PJSIP_ROLE_UAS && dlg->remote.info->tag.slen
+    //		      && dlg->remote.tag_hval != 0), PJ_EBUG);
 
     /* Lock the user agent. */
     pj_mutex_lock(mod_ua.mutex);
@@ -511,7 +511,8 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Dialog set has been found.
-     * Find the dialog in the dialog set based on the content of the From tag.
+     * Find the dialog in the dialog set based on the content of the remote 
+     * tag.
      */
     from_tag = &rdata->msg_info.from->tag;
     dlg = dlg_set->dlg_list.next;
