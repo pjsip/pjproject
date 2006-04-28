@@ -315,6 +315,11 @@ PJ_BEGIN_DECL
  * Invalid DTMF digit.
  */
 #define PJMEDIA_RTP_EINDTMF	    (PJMEDIA_ERRNO_START+106)    /* 220106 */
+/**
+ * @hideinitializer
+ * Remote does not support RFC 2833
+ */
+#define PJMEDIA_RTP_EREMNORFC2833   (PJMEDIA_ERRNO_START+107)    /* 220107 */
 
 
 

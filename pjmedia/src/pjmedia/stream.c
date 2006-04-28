@@ -1135,7 +1135,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 
     /* Check that remote can receive DTMF events. */
     if (stream->tx_event_pt < 0) {
-	return PJMEDIA_RTP_EINDTMF;
+	return PJMEDIA_RTP_EREMNORFC2833;
     }
     
     pj_mutex_lock(stream->jb_mutex);

@@ -96,6 +96,7 @@ static const struct
     { PJMEDIA_EINVALIMEDIATYPE,	    "Invalid media type" },
     { PJMEDIA_EREMOTENODTMF,	    "Remote does not support DTMF" },
     { PJMEDIA_RTP_EINDTMF,	    "Invalid DTMF digit" },
+    { PJMEDIA_RTP_EREMNORFC2833,    "Remote does not support RFC 2833" },
 
     /* RTP session errors. */
     { PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" },
