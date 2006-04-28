@@ -422,6 +422,8 @@ void* pjmedia_plc_g711_create(pj_pool_t *pool, unsigned clock_rate,
 {
     LowcFE *o;
 
+    PJ_UNUSED_ARG(clock_rate);
+
     pj_assert(clock_rate == 8000 && (samples_per_frame % FRAMESZ) == 0);
 
     o = pj_pool_zalloc(pool, sizeof(LowcFE));
