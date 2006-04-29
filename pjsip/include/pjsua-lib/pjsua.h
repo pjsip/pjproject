@@ -183,8 +183,6 @@ struct pjsua
     int		     start_rtp_port;/**< Start of RTP port to try.	*/
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
     unsigned	     clock_rate;    /**< Internal clock rate.		*/
-    pj_bool_t	     has_wb;	    /**< Include wideband codecs	*/
-    pj_bool_t	     has_uwb;	    /**< Include ultra-wideband codecs	*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
     pj_bool_t	     null_audio;    /**< Null audio flag.		*/
     pj_bool_t	     no_mic;	    /**< Disable microphone.		*/
@@ -249,6 +247,7 @@ struct pjsua
 
 
     /* PJSUA Calls: */
+    pj_str_t	     uri_to_call;   /**< URI to call.			*/
     int		     max_calls;	    /**< Max nb of calls.		*/
     int		     call_cnt;	    /**< Number of calls.		*/
     pjsua_call	     calls[PJSUA_MAX_CALLS];	/** Calls array.	*/

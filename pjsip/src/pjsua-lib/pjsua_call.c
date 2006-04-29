@@ -1047,13 +1047,14 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjmedia_conf_connect_port( pjsua.mconf, pjsua.wav_slot, 
 				   call->conf_slot, 0);
 
-    } else if (pjsua.auto_loop && call->inv->role == PJSIP_ROLE_UAS) {
+    }
+    if (pjsua.auto_loop && call->inv->role == PJSIP_ROLE_UAS) {
 
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 
 				   call->conf_slot, 0);
 
-    } else if (pjsua.auto_conf) {
-
+    }
+    if (pjsua.auto_conf) {
 	int i;
 
 	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
@@ -1070,11 +1071,14 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				       call->conf_slot, 0);
 	}
 
-    } else {
-
-	/* Connect new call to the sound device port (port zero) in the
-	 * main conference bridge.
-	 */
+    } 
+    
+    /* Normal operation: if no auto_xx is given, connect new call to 
+     * the sound device port (port zero) in the main conference bridge.
+     */
+    if (pjsua.auto_play == 0 && pjsua.auto_loop == 0 &&
+	pjsua.auto_conf == 0)
+    {
 	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0, 0);
     }

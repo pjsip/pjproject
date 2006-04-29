@@ -79,13 +79,9 @@ void pjsua_default(void)
     /* Default for media: */
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     pjsua.clock_rate = 44100;
-#else
-    pjsua.clock_rate = 8000;
 #endif
     pjsua.complexity = -1;
     pjsua.quality = 4;
-    pjsua.has_wb = 0;
-    pjsua.has_uwb = 0;
 
 
     /* Init accounts: */
@@ -620,176 +616,93 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url)
  */
 static pj_status_t init_media(void)
 {
+    int i;
     unsigned options;
+    unsigned clock_rate;
+    unsigned samples_per_frame;
+    pj_str_t codec_id;
     pj_status_t status;
 
-    /* If user doesn't specify any codecs, register all of them. */
-    if (pjsua.codec_cnt == 0) {
-
+    /* Register all codecs */
 #if PJMEDIA_HAS_SPEEX_CODEC
-	unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
+    /* Register speex. */
+    status = pjmedia_codec_speex_init(pjsua.med_endpt, 
+				      PJMEDIA_SPEEX_NO_UWB,
+				      pjsua.quality, pjsua.complexity );
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing Speex codec",
+		     status);
+	return status;
+    }
 
-	/* Register speex. */
-	if (pjsua.has_wb)
-	    option &= ~PJMEDIA_SPEEX_NO_WB;
-	if (pjsua.has_uwb)
-	    option &= ~PJMEDIA_SPEEX_NO_UWB;
+    /* Set "speex/16000/1" to have highest priority */
+    codec_id = pj_str("speex/16000/1");
+    pjmedia_codec_mgr_set_codec_priority( 
+	pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
+	&codec_id, 
+	PJMEDIA_CODEC_PRIO_HIGHEST);
 
-	status = pjmedia_codec_speex_init(pjsua.med_endpt, option, 
-					  pjsua.quality, pjsua.complexity );
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing Speex codec",
-		         status);
-	    return status;
-	}
-
-	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("speex");
-	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_speex_deinit;
-	pjsua.codec_cnt++;
 #endif /* PJMEDIA_HAS_SPEEX_CODEC */
 
 #if PJMEDIA_HAS_GSM_CODEC
-	/* Register GSM */
-	status = pjmedia_codec_gsm_init(pjsua.med_endpt);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing GSM codec",
-		         status);
-	    return status;
-	}
-
-	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("gsm");
-	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_gsm_deinit;
-	pjsua.codec_cnt++;
+    /* Register GSM */
+    status = pjmedia_codec_gsm_init(pjsua.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing GSM codec",
+		     status);
+	return status;
+    }
 #endif /* PJMEDIA_HAS_GSM_CODEC */
 
-#if PJMEDIA_HAS_L16_CODEC
-	/* Register L16 */
-	status = pjmedia_codec_l16_init(pjsua.med_endpt, 0);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing L16 codec",
-		         status);
-	    return status;
-	}
-
-	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("l16");
-	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_l16_deinit;
-	pjsua.codec_cnt++;
-#endif /* PJMEDIA_HAS_L16_CODEC */
-
-
 #if PJMEDIA_HAS_G711_CODEC
-	/* Register PCMA and PCMU */
-	status = pjmedia_codec_g711_init(pjsua.med_endpt);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing G711 codec",
-		         status);
-	    return status;
-	}
-
-	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("pcmu");
-	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_g711_deinit;
-	pjsua.codec_cnt++;
-	pjsua.codec_arg[pjsua.codec_cnt] = pj_str("pcma");
-	pjsua.codec_deinit[pjsua.codec_cnt] = &pjmedia_codec_g711_deinit;
-	pjsua.codec_cnt++;
+    /* Register PCMA and PCMU */
+    status = pjmedia_codec_g711_init(pjsua.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing G711 codec",
+		     status);
+	return status;
+    }
 #endif	/* PJMEDIA_HAS_G711_CODEC */
 
-    } else {
-
-	/* If user specifies the exact codec to be used, then create only
-	 * those codecs.
-	 */
-	int i;
-
-	for (i=0; i<pjsua.codec_cnt; ++i) {
-	
-	    if (0) {
-		/* Dummy */
-	    }
-#if PJMEDIA_HAS_SPEEX_CODEC
-	    /* Is it speex? */
-	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "speex")) {
-
-		unsigned option = PJMEDIA_SPEEX_NO_WB | PJMEDIA_SPEEX_NO_UWB;
-
-		/* Register speex. */
-		if (pjsua.has_wb)
-		    option &= ~(PJMEDIA_SPEEX_NO_WB);
-		if (pjsua.has_uwb)
-		    option &= ~(PJMEDIA_SPEEX_NO_UWB);
-
-		status = pjmedia_codec_speex_init(pjsua.med_endpt, option,
-						  -1, -1);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error initializing Speex codec",
-			         status);
-		    return status;
-		}
-
-		pjsua.codec_deinit[i] = &pjmedia_codec_speex_deinit;
-	    }
-#endif	/* PJMEDIA_HAS_SPEEX_CODEC */
-
-#if PJMEDIA_HAS_GSM_CODEC
-	    /* Is it gsm? */
-	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "gsm")) {
-
-		status = pjmedia_codec_gsm_init(pjsua.med_endpt);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error initializing GSM codec",
-			         status);
-		    return status;
-		}
-
-		pjsua.codec_deinit[i] = &pjmedia_codec_gsm_deinit;
-
-	    }
-#endif	/* PJMEDIA_HAS_GSM_CODEC */
-
 #if PJMEDIA_HAS_L16_CODEC
-	    /* Is it l16? */
-	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "l16")) {
+    /* Register L16 family codecs, but disable all */
+    status = pjmedia_codec_l16_init(pjsua.med_endpt, 0);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing L16 codecs",
+		     status);
+	return status;
+    }
 
-		status = pjmedia_codec_l16_init(pjsua.med_endpt, 0);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error initializing L16 codec",
-			         status);
-		    return status;
-		}
+    /* Disable ALL L16 codecs */
+    codec_id = pj_str("L16");
+    pjmedia_codec_mgr_set_codec_priority( 
+	pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
+	&codec_id, 
+	PJMEDIA_CODEC_PRIO_DISABLED);
 
-		pjsua.codec_deinit[i] = &pjmedia_codec_l16_deinit;
-
-		pjsua.clock_rate = 44100;
-	    }
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
-#if PJMEDIA_HAS_G711_CODEC
-	    /* Is it pcma/pcmu? */
-	    else if (!pj_stricmp2(&pjsua.codec_arg[i], "pcmu") ||
-		     !pj_stricmp2(&pjsua.codec_arg[i], "pcma"))
-	    {
 
-		status = pjmedia_codec_g711_init(pjsua.med_endpt);
-		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error initializing G711 codec",
-			         status);
-		    return status;
-		}
-
-		pjsua.codec_deinit[i] = &pjmedia_codec_g711_deinit;
-
-	    }
-#endif	/* PJMEDIA_HAS_G711_CODEC */
-
-	    /* Don't know about this codec... */
-	    else {
-
-		PJ_LOG(1,(THIS_FILE, "Error: unsupported codecs %s",
-			  pjsua.codec_arg[i].ptr));
-		return PJMEDIA_CODEC_EUNSUP;
-	    }
-	}
+    /* If user specifies the exact codec to be used, then disable all codecs
+     * and only enable those specific codecs.
+     */
+    if (pjsua.codec_cnt != 0) {
+	codec_id = pj_str("");
+	pjmedia_codec_mgr_set_codec_priority( 
+	    pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
+	    &codec_id, 
+	    PJMEDIA_CODEC_PRIO_DISABLED);
     }
+
+	
+
+    for (i=0; i<pjsua.codec_cnt; ++i) {
+	pjmedia_codec_mgr_set_codec_priority( 
+	    pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
+	    &pjsua.codec_arg[i], 
+	    PJMEDIA_CODEC_PRIO_NEXT_HIGHER);
+    }
+
 
     /* Init options for conference bridge. */
     options = 0;
@@ -797,12 +710,14 @@ static pj_status_t init_media(void)
 	options |= PJMEDIA_CONF_NO_MIC;
 
     /* Init conference bridge. */
-
+    clock_rate = pjsua.clock_rate ? pjsua.clock_rate : 16000;
+    samples_per_frame = clock_rate * 20 / 1000;
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
-				 pjsua.clock_rate, 
+				 clock_rate, 
 				 1, /* mono */
-				 pjsua.clock_rate * 20 / 1000, 16, 
+				 samples_per_frame, 
+				 16, 
 				 options,
 				 &pjsua.mconf);
     if (status != PJ_SUCCESS) {
@@ -813,9 +728,9 @@ static pj_status_t init_media(void)
     }
 
     /* Add NULL port to the bridge. */
-    status = pjmedia_null_port_create( pjsua.pool, pjsua.clock_rate, 
+    status = pjmedia_null_port_create( pjsua.pool, clock_rate, 
 				       1, /* mono */
-				       pjsua.clock_rate * 20 / 1000, 16,
+				       samples_per_frame, 16,
 				       &pjsua.null_port);
     pjmedia_conf_add_port( pjsua.mconf, pjsua.pool, pjsua.null_port, 
 			   &pjsua.null_port->info.name, NULL );
@@ -1127,9 +1042,21 @@ pj_status_t pjsua_destroy(void)
 
 
     /* Shutdown all codecs: */
-    for (i = pjsua.codec_cnt-1; i >= 0; --i) {
-	(*pjsua.codec_deinit[i])();
-    }
+#if PJMEDIA_HAS_SPEEX_CODEC
+    pjmedia_codec_speex_deinit();
+#endif /* PJMEDIA_HAS_SPEEX_CODEC */
+
+#if PJMEDIA_HAS_GSM_CODEC
+    pjmedia_codec_gsm_deinit();
+#endif /* PJMEDIA_HAS_GSM_CODEC */
+
+#if PJMEDIA_HAS_G711_CODEC
+    pjmedia_codec_g711_deinit();
+#endif	/* PJMEDIA_HAS_G711_CODEC */
+
+#if PJMEDIA_HAS_L16_CODEC
+    pjmedia_codec_l16_deinit();
+#endif	/* PJMEDIA_HAS_L16_CODEC */
 
     /* Destroy media endpoint. */
 

@@ -83,8 +83,7 @@ static void usage(void)
     puts  ("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
     puts  ("");
     puts  ("Media Options:");
-    puts  ("  --wb                Enable wideband codecs and set clock-rate to 16KHz");
-    puts  ("  --uwb               Enable ultra-wideband codecs and set clock-rate to 32KHz");
+    puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --no-mic            Disable microphone device");
@@ -93,7 +92,6 @@ static void usage(void)
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put incoming calls to conference");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
-    puts  ("  --add-codec=name    Specify alternate codec order");
     puts  ("  --complexity=N      Specify encoding complexity (0-10, default=none(-1))");
     puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
     puts  ("");
@@ -158,7 +156,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
     /* Open config file. */
     fhnd = fopen(filename, "rt");
     if (!fhnd) {
-	printf("Unable to open config file %s\n", filename);
+	PJ_LOG(1,(THIS_FILE, "Unable to open config file %s", filename));
 	fflush(stdout);
 	return -1;
     }
@@ -191,7 +189,8 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 	argv[argc++] = (*app_argv)[i];
 
     if (argc == MAX_ARGS && (i!=*app_argc || !feof(fhnd))) {
-	printf("Too many arguments specified in cmd line/config file\n");
+	PJ_LOG(1,(THIS_FILE, 
+		  "Too many arguments specified in cmd line/config file"));
 	fflush(stdout);
 	fclose(fhnd);
 	return -1;
@@ -227,7 +226,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
-	   OPT_PLAY_FILE, OPT_WB, OPT_UWB, OPT_RTP_PORT, OPT_ADD_CODEC,
+	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, OPT_UAS_REFRESH,
 	   OPT_UAS_DURATION,
@@ -239,8 +238,6 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "app-log-level",1,0,OPT_APP_LOG_LEVEL},
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
-	{ "wb",		0, 0, OPT_WB},
-	{ "uwb",	0, 0, OPT_UWB},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "no-mic",	0, 0, OPT_NO_MIC},
@@ -321,7 +318,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_LOG_LEVEL:
 	    c = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (c < 0 || c > 6) {
-		printf("Error: expecting integer value 0-6 for --log-level\n");
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: expecting integer value 0-6 "
+			  "for --log-level"));
 		return PJ_EINVAL;
 	    }
 	    pj_log_set_level( c );
@@ -330,7 +329,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_APP_LOG_LEVEL:
 	    pjsua.app_log_level = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (pjsua.app_log_level < 0 || pjsua.app_log_level > 6) {
-		printf("Error: expecting integer value 0-6 for --app-log-level\n");
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: expecting integer value 0-6 "
+			  "for --app-log-level"));
 		return PJ_EINVAL;
 	    }
 	    break;
@@ -351,18 +352,11 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.no_mic = 1;
 	    break;
 
-	case OPT_WB:
-	    pjsua.has_wb = 1;
-	    break;
-
-	case OPT_UWB:
-	    pjsua.has_uwb = 1;
-	    break;
-
 	case OPT_CLOCK_RATE:
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 8000 || lval > 48000) {
-		printf("Error: expecting value between 8000-48000 for clock rate\n");
+		PJ_LOG(1,(THIS_FILE, "Error: expecting value between "
+				     "8000-48000 for clock rate"));
 		return PJ_EINVAL;
 	    }
 	    pjsua.clock_rate = (int)lval; 
@@ -371,7 +365,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_LOCAL_PORT:   /* local-port */
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 1 || lval > 65535) {
-		printf("Error: expecting integer value for --local-port\n");
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: expecting integer value for "
+			  "--local-port"));
 		return PJ_EINVAL;
 	    }
 	    pjsua.sip_port = (pj_uint16_t)lval;
@@ -379,7 +375,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_PROXY:   /* proxy */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in proxy argument\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid SIP URL '%s' "
+			  "in proxy argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    cur_acc->proxy = pj_str(pj_optarg);
@@ -387,7 +385,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_OUTBOUND_PROXY:   /* outbound proxy */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in outbound proxy argument\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid SIP URL '%s' "
+			  "in outbound proxy argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    pjsua.outbound_proxy = pj_str(pj_optarg);
@@ -395,7 +395,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_REGISTRAR:   /* registrar */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in registrar argument\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid SIP URL '%s' in "
+			  "registrar argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    cur_acc->reg_uri = pj_str(pj_optarg);
@@ -404,14 +406,18 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_REG_TIMEOUT:   /* reg-timeout */
 	    cur_acc->reg_timeout = pj_strtoul(pj_cstr(&tmp,pj_optarg));
 	    if (cur_acc->reg_timeout < 1 || cur_acc->reg_timeout > 3600) {
-		printf("Error: invalid value for --reg-timeout (expecting 1-3600)\n");
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid value for --reg-timeout "
+			  "(expecting 1-3600)"));
 		return PJ_EINVAL;
 	    }
 	    break;
 
 	case OPT_ID:   /* id */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in local id argument\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid SIP URL '%s' "
+			  "in local id argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    cur_acc->local_uri = pj_str(pj_optarg);
@@ -420,7 +426,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_CONTACT:   /* contact */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid SIP URL '%s' in contact argument\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid SIP URL '%s' "
+			  "in contact argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
 	    cur_acc->contact_uri = pj_str(pj_optarg);
@@ -459,7 +467,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		pjsua.stun_srv1 = pj_str(pj_optarg);
 		pjsua.stun_port1 = pj_strtoul(pj_cstr(&tmp, p+1));
 		if (pjsua.stun_port1 < 1 || pjsua.stun_port1 > 65535) {
-		    printf("Error: expecting port number with option --use-stun1\n");
+		    PJ_LOG(1,(THIS_FILE, 
+			      "Error: expecting port number with "
+			      "option --use-stun1"));
 		    return PJ_EINVAL;
 		}
 	    } else {
@@ -475,7 +485,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 		pjsua.stun_srv2 = pj_str(pj_optarg);
 		pjsua.stun_port2 = pj_strtoul(pj_cstr(&tmp,p+1));
 		if (pjsua.stun_port2 < 1 || pjsua.stun_port2 > 65535) {
-		    printf("Error: expecting port number with option --use-stun2\n");
+		    PJ_LOG(1,(THIS_FILE, 
+			      "Error: expecting port number with "
+			      "option --use-stun2"));
 		    return PJ_EINVAL;
 		}
 	    } else {
@@ -486,11 +498,14 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		printf("Error: invalid URL '%s' in --add-buddy option\n", pj_optarg);
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid URL '%s' in "
+			  "--add-buddy option", pj_optarg));
 		return -1;
 	    }
 	    if (pjsua.buddy_cnt == PJSUA_MAX_BUDDIES) {
-		printf("Error: too many buddies in buddy list.\n");
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: too many buddies in buddy list."));
 		return -1;
 	    }
 	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(pj_optarg);
@@ -516,7 +531,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.start_rtp_port = my_atoi(pj_optarg);
 	    if (pjsua.start_rtp_port < 1 || pjsua.start_rtp_port > 65535) {
 		PJ_LOG(1,(THIS_FILE,
-			  "Error: rtp-port argument value (expecting 1-65535"));
+			  "Error: rtp-port argument value "
+			  "(expecting 1-65535"));
 		return -1;
 	    }
 	    break;
@@ -547,7 +563,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    pjsua.auto_answer = my_atoi(pj_optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
 		PJ_LOG(1,(THIS_FILE,
-			  "Error: invalid code in --auto-answer (expecting 100-699"));
+			  "Error: invalid code in --auto-answer "
+			  "(expecting 100-699"));
 		return -1;
 	    }
 	    break;
@@ -563,7 +580,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_UAS_REFRESH:
 	    pjsua.uas_refresh = my_atoi(pj_optarg);
 	    if (pjsua.uas_refresh < 1) {
-		PJ_LOG(1,(THIS_FILE,"Invalid value for --uas-refresh (must be >0)"));
+		PJ_LOG(1,(THIS_FILE,
+			  "Invalid value for --uas-refresh (must be >0)"));
 		return -1;
 	    }
 	    break;
@@ -571,7 +589,9 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	case OPT_UAS_DURATION:
 	    pjsua.uas_duration = my_atoi(pj_optarg);
 	    if (pjsua.uas_duration < 1) {
-		PJ_LOG(1,(THIS_FILE,"Invalid value for --uas-duration (must be >0)"));
+		PJ_LOG(1,(THIS_FILE,
+			  "Invalid value for --uas-duration "
+			  "(must be >0)"));
 		return -1;
 	    }
 	    break;
@@ -579,15 +599,29 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
     }
 
     if (pj_optind != argc) {
-	printf("Error: unknown options %s\n", argv[pj_optind]);
-	return PJ_EINVAL;
+	int i;
+
+	if (pjsua_verify_sip_url(argv[pj_optind]) != PJ_SUCCESS) {
+	    PJ_LOG(1,(THIS_FILE, "Invalid SIP URI %s", argv[pj_optind]));
+	    return -1;
+	}
+	pjsua.uri_to_call = pj_str(argv[pj_optind]);
+	pj_optind++;
+
+	/* Add URI to call to buddy list if it's not already there */
+	for (i=0; i<pjsua.buddy_cnt; ++i) {
+	    if (pj_stricmp(&pjsua.buddies[i].uri, &pjsua.uri_to_call)==0)
+		break;
+	}
+	if (i == pjsua.buddy_cnt && pjsua.buddy_cnt < PJSUA_MAX_BUDDIES) {
+	    pjsua.buddies[pjsua.buddy_cnt++].uri = pjsua.uri_to_call;
+	}
     }
 
-    /* Adjust clock rate */
-    if (pjsua.clock_rate == 8000 && pjsua.has_uwb)
-	pjsua.clock_rate = 32000;
-    else if (pjsua.clock_rate == 8000 && pjsua.has_wb)
-	pjsua.clock_rate = 16000;
+    if (pj_optind != argc) {
+	PJ_LOG(1,(THIS_FILE, "Error: unknown options %s", argv[pj_optind]));
+	return PJ_EINVAL;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1047,15 +1081,11 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 	pj_strcat2(&cfg, line);
     }
     /* Media clock rate. */
-    if (pjsua.has_uwb)
-	pj_strcat2(&cfg, "--uwb\n");
-
-    if (pjsua.has_wb)
-	pj_strcat2(&cfg, "--wb\n");
-
-    pj_ansi_sprintf(line, "--clock-rate %d\n",
-		    pjsua.clock_rate);
-    pj_strcat2(&cfg, line);
+    if (pjsua.clock_rate) {
+	pj_ansi_sprintf(line, "--clock-rate %d\n",
+			pjsua.clock_rate);
+	pj_strcat2(&cfg, line);
+    }
 
 
     /* Encoding quality and complexity */

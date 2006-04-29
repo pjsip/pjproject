@@ -413,6 +413,12 @@ static void ui_console_main(void)
     char *uri;
     struct input_result result;
 
+
+    /* If user specifies URI to call, then call the URI */
+    if (pjsua.uri_to_call.slen) {
+	pjsua_make_call( current_acc, pjsua.uri_to_call.ptr, NULL);
+    }
+
     keystroke_help();
 
     for (;;) {
