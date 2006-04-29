@@ -387,26 +387,26 @@ enum pjmedia_codec_priority
      * highest place in the order, and will change the priority
      * of previously highest priority codec to NEXT_HIGHER.
      */
-    PJMEDIA_CODEC_PRIO_HIGHEST,
+    PJMEDIA_CODEC_PRIO_HIGHEST = 16,
 
     /**
      * This priority will put the codec as the next codec after
      * codecs with this same priority.
      */
-    PJMEDIA_CODEC_PRIO_NEXT_HIGHER,
+    PJMEDIA_CODEC_PRIO_NEXT_HIGHER = 12,
 
     /**
      * This is the initial codec priority when it is registered to
      * codec manager by codec factory.
      */
-    PJMEDIA_CODEC_PRIO_NORMAL,
+    PJMEDIA_CODEC_PRIO_NORMAL = 8,
 
     /**
      * This priority makes the codec the lowest in the order.
      * The last codec specified with this priority will be put
      * in the last place in the order.
      */
-    PJMEDIA_CODEC_PRIO_LOWEST,
+    PJMEDIA_CODEC_PRIO_LOWEST = 4,
 
     /**
      * This priority will prevent the codec from being listed in the
@@ -415,7 +415,7 @@ enum pjmedia_codec_priority
      * be listed by #pjmedia_codec_mgr_enum_codecs() and other codec
      * query functions.
      */
-    PJMEDIA_CODEC_PRIO_DISABLED,
+    PJMEDIA_CODEC_PRIO_DISABLED = 0,
 };
 
 

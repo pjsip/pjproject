@@ -406,6 +406,26 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 }
 
 
+
+#if PJ_LOG_MAX_LEVEL >= 3
+static const char *good_number(char *buf, pj_int32_t val)
+{
+    if (val < 1000) {
+	pj_ansi_sprintf(buf, "%d", val);
+    } else if (val < 1000000) {
+	pj_ansi_sprintf(buf, "%d.%dK", 
+			val / 1000,
+			(val % 1000) / 100);
+    } else {
+	pj_ansi_sprintf(buf, "%d.%02dM", 
+			val / 1000000,
+			(val % 1000000) / 10000);
+    }
+
+    return buf;
+}
+#endif
+
 PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 {
 
@@ -427,6 +447,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
     for (i=0; i<count; ++i) {
 	const char *type;
 	pjmedia_codec_param param;
+	char bps[16];
 
 	switch (codec_info[i].type) {
 	case PJMEDIA_TYPE_AUDIO:
@@ -445,13 +466,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 	}
 
 	PJ_LOG(3,(THIS_FILE, 
-		  "   %s codec #%2d: pt=%d (%.*s @%dKHz/%d, %d bps, ptime=%d ms, vad=%d, cng=%d)", 
+		  "   %s codec #%2d: pt=%d (%.*s @%dKHz/%d, %sbps, ptime=%d ms, vad=%d, cng=%d)", 
 		  type, i, codec_info[i].pt,
 		  (int)codec_info[i].encoding_name.slen,
 		  codec_info[i].encoding_name.ptr,
 		  codec_info[i].clock_rate/1000,
 		  codec_info[i].channel_cnt,
-		  param.avg_bps, param.ptime,
+		  good_number(bps, param.avg_bps), 
+		  param.ptime,
 		  param.vad,
 		  param.cng));
     }
