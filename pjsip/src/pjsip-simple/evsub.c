@@ -1355,10 +1355,6 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 
 	sub->pending_sub = tsx;
 
-    } else if (tsx == sub->pending_sub &&
-	       tsx->state >= PJSIP_TSX_STATE_COMPLETED)
-    {
-	sub->pending_sub = NULL;
     }
 
     return sub;
@@ -1467,6 +1463,10 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	{
 	    return;
 	}
+
+	/* Clear pending subscription */
+	if (tsx == sub->pending_sub)
+	    sub->pending_sub = NULL;
 
 	/* Handle authentication. */
 	if (tsx->status_code==401 || tsx->status_code==407) {

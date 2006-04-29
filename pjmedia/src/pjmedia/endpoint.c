@@ -432,12 +432,13 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 #if PJ_LOG_MAX_LEVEL >= 3
     unsigned i, count;
     pjmedia_codec_info codec_info[32];
+    unsigned prio[32];
 
     PJ_LOG(3,(THIS_FILE, "Dumping PJMEDIA capabilities:"));
 
     count = PJ_ARRAY_SIZE(codec_info);
     if (pjmedia_codec_mgr_enum_codecs(&endpt->codec_mgr, 
-				      &count, codec_info, NULL) != PJ_SUCCESS)
+				      &count, codec_info, prio) != PJ_SUCCESS)
     {
 	PJ_LOG(3,(THIS_FILE, " -error: failed to enum codecs"));
 	return PJ_SUCCESS;
@@ -466,7 +467,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 	}
 
 	PJ_LOG(3,(THIS_FILE, 
-		  "   %s codec #%2d: pt=%d (%.*s @%dKHz/%d, %sbps, ptime=%d ms, vad=%d, cng=%d)", 
+		  "   %s codec #%2d: pt=%d (%.*s @%dKHz/%d, %sbps, %dms%s%s%s%s%s)",
 		  type, i, codec_info[i].pt,
 		  (int)codec_info[i].encoding_name.slen,
 		  codec_info[i].encoding_name.ptr,
@@ -474,8 +475,11 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 		  codec_info[i].channel_cnt,
 		  good_number(bps, param.avg_bps), 
 		  param.ptime,
-		  param.vad,
-		  param.cng));
+		  (param.vad ? " vad" : ""),
+		  (param.cng ? " cng" : ""),
+		  (param.concl ? " plc" : ""),
+		  (param.penh ? " penh" : ""),
+		  (prio[i]==PJMEDIA_CODEC_PRIO_DISABLED?" disabled":"")));
     }
 #endif
 

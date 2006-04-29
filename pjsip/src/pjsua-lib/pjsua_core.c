@@ -683,19 +683,9 @@ static pj_status_t init_media(void)
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
 
-    /* If user specifies the exact codec to be used, then disable all codecs
-     * and only enable those specific codecs.
+    /* Enable those codecs that user put with "--add-codec", and move
+     * the priority to top
      */
-    if (pjsua.codec_cnt != 0) {
-	codec_id = pj_str("");
-	pjmedia_codec_mgr_set_codec_priority( 
-	    pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
-	    &codec_id, 
-	    PJMEDIA_CODEC_PRIO_DISABLED);
-    }
-
-	
-
     for (i=0; i<pjsua.codec_cnt; ++i) {
 	pjmedia_codec_mgr_set_codec_priority( 
 	    pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),

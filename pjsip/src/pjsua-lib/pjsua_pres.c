@@ -323,6 +323,9 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
+    pjsip_auth_clt_set_credentials( &dlg->auth_sess, pjsua.cred_count,
+				    pjsua.cred_info);
+
     status = pjsip_pres_create_uac( dlg, &pres_callback, 
 				    &pjsua.buddies[index].sub);
     if (status != PJ_SUCCESS) {
