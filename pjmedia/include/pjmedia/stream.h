@@ -76,9 +76,8 @@ struct pjmedia_stream_info
     int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
     int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
-    int			jb_min;	    /**< Jitter buffer min delay.	    */
-    int			jb_max;	    /**< Jitter buffer max delay.	    */
-    int			jb_maxcnt;  /**< Jitter buffer max delay.	    */
+    int			jb_init;    /**< Jitter buffer init delay in msec.  */
+    int			jb_max;	    /**< Jitter buffer max delay in msec.   */
 };
 
 

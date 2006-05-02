@@ -901,10 +901,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 
     /* Create jitter buffer: */
-    jbuf_init = 100 / (stream->port.info.samples_per_frame * 1000 / 
-		       info->fmt.clock_rate);
-    jbuf_max = 600 / (stream->port.info.samples_per_frame * 1000 / 
-		       info->fmt.clock_rate);
+    if (info->jb_init)
+	jbuf_init = info->jb_init;
+    else
+	jbuf_init = 60 / (stream->port.info.samples_per_frame * 1000 / 
+			  info->fmt.clock_rate);
+
+    if (info->jb_max)
+	jbuf_max = info->jb_max;
+    else
+	jbuf_max = 240 / (stream->port.info.samples_per_frame * 1000 / 
+			   info->fmt.clock_rate);
     status = pjmedia_jbuf_create(pool, &stream->port.info.name,
 				 stream->frame_size, 
 				 jbuf_init, jbuf_max,

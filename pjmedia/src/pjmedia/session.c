@@ -24,6 +24,7 @@
 #include <pj/string.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
+#include <pj/rand.h>
 
 
 struct pjmedia_session
@@ -334,7 +335,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     }
 
 
-    /* Leave SSRC to zero. */
+    /* Leave SSRC to random. */
+    si->ssrc = pj_rand();
 
     /* Leave jitter buffer parameter. */
     
