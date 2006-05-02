@@ -70,9 +70,9 @@ struct pjmedia_rtcp_rr
     pj_uint32_t	    total_lost_0:8; /**< Total lost, bit 0-7.		*/
 #else
     pj_uint32_t	    fract_lost:8;   /**< Fraction lost.			*/
-    pj_uint32_t	    total_lost_0:8; /**< Total lost, bit 0-7.		*/
+    pj_uint32_t	    total_lost_2:8; /**< Total lost, bit 0-7.		*/
     pj_uint32_t	    total_lost_1:8; /**< Total lost, bit 8-15.		*/
-    pj_uint32_t	    total_lost_2:8; /**< Total lost, bit 16-23.		*/
+    pj_uint32_t	    total_lost_0:8; /**< Total lost, bit 16-23.		*/
 #endif	
     pj_uint32_t	    last_seq;	    /**< Last sequence number.		*/
     pj_uint32_t	    jitter;	    /**< Jitter.			*/
@@ -111,7 +111,9 @@ struct pjmedia_rtcp_common
 typedef struct pjmedia_rtcp_common pjmedia_rtcp_common;
 
 /**
- * RTCP packet.
+ * This structure declares default RTCP packet (SR) that is sent by pjmedia.
+ * Incoming RTCP packet may have different format, and must be parsed
+ * manually by application.
  */
 struct pjmedia_rtcp_pkt
 {
