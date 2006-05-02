@@ -32,6 +32,8 @@
 
 #define G711_BPS	64000
 #define G711_CODEC_CNT	0	/* number of codec to preallocate in memory */
+#define PTIME		20
+#define FRAME_SIZE	(8000 * PTIME / 1000)
 
 /* These are the only public functions exported to applications */
 PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, pj_pool_t *pool);
@@ -229,7 +231,7 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
     attr->channel_cnt = 1;
     attr->avg_bps = G711_BPS;
     attr->pcm_bits_per_sample = 16;
-    attr->ptime = 20;
+    attr->ptime = PTIME;
     attr->pt = id->pt;
 
     /* Default all flag bits disabled. */
@@ -370,13 +372,13 @@ static pj_status_t  g711_get_frames(pjmedia_codec *codec,
     PJ_UNUSED_ARG(codec);
     PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
 
-    while (pkt_size >= 160 && count < *frame_cnt) {
+    while (pkt_size >= FRAME_SIZE && count < *frame_cnt) {
 	frames[0].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[0].buf = pkt;
-	frames[0].size = 160;
+	frames[0].size = FRAME_SIZE;
 
-	pkt = ((char*)pkt) + 160;
-	pkt_size -= 160;
+	pkt = ((char*)pkt) + FRAME_SIZE;
+	pkt_size -= FRAME_SIZE;
 
 	++count;
     }
