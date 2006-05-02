@@ -1362,12 +1362,15 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 			       conf->samples_per_frame, &frame_type);
 	    
 	    if (status != PJ_SUCCESS) {
+		/* bennylp: why do we need this????
+		 * Also see comments on similar issue with write_port().
 		PJ_LOG(4,(THIS_FILE, "Port %.*s get_frame() returned %d. "
 				     "Port is now disabled",
 				     (int)conf_port->name.slen,
 				     conf_port->name.ptr,
 				     status));
 		conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
+		 */
 		continue;
 	    }
 	}
@@ -1463,12 +1466,19 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	status = write_port( conf, conf_port, frame->timestamp.u32.lo);
 	if (status != PJ_SUCCESS) {
+	    /* bennylp: why do we need this????
+	       One thing for sure, put_frame()/write_port() may return
+	       non-successfull status on Win32 if there's temporary glitch
+	       on network interface, so disabling the port here does not
+	       sound like a good idea.
+
 	    PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
 				 "Port is now disabled",
 				 (int)conf_port->name.slen,
 				 conf_port->name.ptr,
 				 status));
 	    conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
+	    */
 	    continue;
 	}
     }
