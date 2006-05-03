@@ -34,6 +34,8 @@ static const char *USAGE =
 "\n"
 " Program options:\n"
 "   --count=N,        -c    Set number of calls to create (default:1) \n"
+"   --duration=SEC,   -d    Set maximum call duration (default:unlimited) \n"
+"   --auto-quit,      -q    Quit when calls have been completed (default:no)\n"
 "\n"
 " Address and ports options:\n"
 "   --local-port=PORT,-p    Set local SIP port (default: 5060)\n"
@@ -128,12 +130,17 @@ struct call
     pj_time_val		 start_time;
     pj_time_val		 response_time;
     pj_time_val		 connect_time;
+
+    pj_timer_entry	 d_timer;	    /**< Disconnect timer.	*/
 };
 
 
 static struct app
 {
     unsigned		 max_calls;
+    unsigned		 uac_calls;
+    unsigned		 duration;
+    pj_bool_t		 auto_quit;
     unsigned		 thread_count;
     int			 sip_port;
     int			 rtp_start_port;
@@ -187,6 +194,9 @@ static int worker_thread(void *arg);
 static pj_status_t create_sdp( pj_pool_t *pool,
 			       struct call *call,
 			       pjmedia_sdp_session **p_sdp);
+
+/* Hangup call */
+static void hangup_call(unsigned index);
 
 /* Destroy the call's media */
 static void destroy_call_media(unsigned call_index);
@@ -523,8 +533,10 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
 				   dst_uri,		/* remote URI	    */
 				   dst_uri,		/* remote target    */
 				   &dlg);		/* dialog	    */
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	++app.uac_calls;
 	return status;
+    }
 
     /* Create SDP */
     create_sdp( dlg->pool, call, &sdp);
@@ -533,6 +545,7 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
     status = pjsip_inv_create_uac( dlg, sdp, 0, &call->inv);
     if (status != PJ_SUCCESS) {
 	pjsip_dlg_terminate(dlg);
+	++app.uac_calls;
 	return status;
     }
 
@@ -681,6 +694,19 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 }
 
 
+/* Callback timer to disconnect call (limiting call duration) */
+static void timer_disconnect_call( pj_timer_heap_t *timer_heap,
+				   struct pj_timer_entry *entry)
+{
+    struct call *call = entry->user_data;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    entry->id = 0;
+    hangup_call(call->index);
+}
+
+
 /* Callback to be called when invite session's state has changed: */
 static void call_on_state_changed( pjsip_inv_session *inv, 
 				   pjsip_event *e)
@@ -695,6 +721,11 @@ static void call_on_state_changed( pjsip_inv_session *inv,
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 	
 	pj_time_val null_time = {0, 0};
+
+	if (call->d_timer.id != 0) {
+	    pjsip_endpt_cancel_timer(app.sip_endpt, &call->d_timer);
+	    call->d_timer.id = 0;
+	}
 
 	PJ_LOG(3,(THIS_FILE, "Call #%d disconnected. Reason=%s",
 		  call->index,
@@ -712,6 +743,7 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 	call->response_time = null_time;
 	call->connect_time = null_time;
 
+	++app.uac_calls;
 
     } else if (inv->state == PJSIP_INV_STATE_CONFIRMED) {
 
@@ -726,6 +758,17 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 
 	PJ_LOG(3,(THIS_FILE, "Call #%d connected in %d ms", call->index,
 		  PJ_TIME_VAL_MSEC(t)));
+
+	if (app.duration != 0) {
+	    call->d_timer.id = 1;
+	    call->d_timer.user_data = call;
+	    call->d_timer.cb = &timer_disconnect_call;
+
+	    t.sec = app.duration;
+	    t.msec = 0;
+
+	    pjsip_endpt_schedule_timer(app.sip_endpt, &call->d_timer, &t);
+	}
 
     } else if (	inv->state == PJSIP_INV_STATE_EARLY ||
 		inv->state == PJSIP_INV_STATE_CONNECTING) {
@@ -774,6 +817,8 @@ static pj_status_t init_options(int argc, char *argv[])
 
     struct pj_getopt_option long_options[] = {
 	{ "count",	    1, 0, 'c' },
+	{ "duration",	    1, 0, 'd' },
+	{ "auto-quit",	    0, 0, 'q' },
 	{ "local-port",	    1, 0, 'p' },
 	{ "rtp-port",	    1, 0, 'r' },
 	{ "ip-addr",	    1, 0, 'i' },
@@ -819,7 +864,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
     /* Parse options */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "c:p:r:i:l:", 
+    while((c=pj_getopt_long(argc,argv, "c:d:p:r:i:l:q", 
 			    long_options, &option_index))!=-1) 
     {
 	switch (c) {
@@ -830,6 +875,13 @@ static pj_status_t init_options(int argc, char *argv[])
 		return 1;
 	    }
 	    break;
+	case 'd':
+	    app.duration = atoi(pj_optarg);
+	    break;
+	case 'q':
+	    app.auto_quit = 1;
+	    break;
+
 	case 'p':
 	    app.sip_port = atoi(pj_optarg);
 	    break;
@@ -1759,6 +1811,15 @@ int main(int argc, char *argv[])
     if (status != PJ_SUCCESS)
 	return 1;
 
+    /* Verify options: */
+
+    /* Auto-quit can not be specified for UAS */
+    if (app.auto_quit && app.uri_to_call.slen == 0) {
+	printf("Error: --auto-quit option only valid for outgoing "
+	       "mode (UAC) only\n");
+	return 1;
+    }
+
     /* Init logging */
     status = app_logging_init();
     if (status != PJ_SUCCESS)
@@ -1804,14 +1865,25 @@ int main(int argc, char *argv[])
 	    }
 	}
 
+	if (app.auto_quit) {
+	    /* Wait for calls to complete */
+	    while (app.uac_calls < app.max_calls)
+		pj_thread_sleep(100);
+	    pj_thread_sleep(200);
+	} else {
+	    /* Start user interface loop */
+	    console_main();
+	}
+
     } else {
 
 	PJ_LOG(3,(THIS_FILE, "Ready for incoming calls (max=%d)", 
 		  app.max_calls));
-    }
 
-    /* Start user interface loop */
-    console_main();
+	/* Start user interface loop */
+	console_main();
+
+    }
 
     
     /* Shutting down... */
