@@ -18,15 +18,15 @@ all clean dep depend distclean doc print realclean:
 	   fi; \
 	done
 
-LIBS = 	pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjmedia/lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjmedia/lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-       	pjsip/lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjsip/lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjsip/lib/libpjsip-simple-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a \
-	pjsip/lib/libpjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).a
-BINS = 	pjsip-apps/bin/pjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE) 
+LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
+	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
+	pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
+	pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
+       	pjsip/lib/libpjsip-$(TARGET_NAME).a \
+	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
+	pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
+	pjsip/lib/libpjsua-$(TARGET_NAME).a
+BINS = 	pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '
