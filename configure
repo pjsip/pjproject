@@ -68,6 +68,12 @@ else
     exit 1
 fi
 
+#
+# TARGET
+#
+TARGET_NAME=$MACHINE_NAME-$OS_NAME-$CC_NAME
+
+
 if test -f build.mak; then
   echo 'Saving build.mak --> build.mak.old'
   cp -f build.mak build.mak.old
@@ -78,6 +84,7 @@ echo " MACHINE_NAME = $MACHINE_NAME"
 echo " OS_NAME      = $OS_NAME"
 echo " HOST_NAME    = $HOST_NAME"
 echo " CC_NAME      = $CC_NAME"
+echo " TARGET_NAME  = $TARGET_NAME"
 echo " LINUX_POLL   = $LINUX_POLL"
 
 echo "# Auto-generated build.mak" > build.mak
@@ -85,6 +92,7 @@ echo "export MACHINE_NAME := $MACHINE_NAME" >> build.mak
 echo "export OS_NAME := $OS_NAME" >> build.mak
 echo "export HOST_NAME := $HOST_NAME" >> build.mak
 echo "export CC_NAME := $CC_NAME" >> build.mak
+echo "export TARGET_NAME := $TARGET_NAME" >> build.mak
 echo "export LINUX_POLL := $LINUX_POLL" >> build.mak
 
 touch user.mak

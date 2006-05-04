@@ -2,8 +2,8 @@ include ../../build/common.mak
 
 RULES_MAK := ../../build/rules.mak
 
-PJLIB_LIB:=../../pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-export PJLIB_UTIL_LIB:=../lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
+export PJLIB_UTIL_LIB:=../lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.
@@ -33,7 +33,7 @@ export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
 export UTIL_TEST_OBJS += xml.o test.o main.o
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_LDFLAGS += $(_LDFLAGS)
-export UTIL_TEST_EXE:=../bin/pjlib-util-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
+export UTIL_TEST_EXE:=../bin/pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)
 
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
@@ -73,7 +73,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
 	@if test "$@" = "depend"; then \
-	  echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend; \
+	  echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
 	fi
 
 

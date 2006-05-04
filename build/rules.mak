@@ -19,7 +19,7 @@ SRCDIR = $($(APP)_SRCDIR)
 #
 # Output directory for object files (i.e. output/target)
 #
-OBJDIR = output/$(app)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
+OBJDIR = output/$(app)-$(TARGET_NAME)
 
 ifeq ($(OS_NAME),linux-kernel)
 export $(APP)_CFLAGS += -DKBUILD_MODNAME=$(app) -DKBUILD_BASENAME=$(app)
@@ -44,7 +44,7 @@ FULL_SRCS = $(foreach file, $($(APP)_OBJS), $(SRCDIR)/$(basename $(file)).c $(SR
 DEPFLAGS = $($(APP)_CXXFLAGS) $($(APP)_CFLAGS)
 
 # Dependency file
-DEP_FILE := .$(app)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend
+DEP_FILE := .$(app)-$(TARGET_NAME).depend
 
 
 print_common:

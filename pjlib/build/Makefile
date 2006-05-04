@@ -3,7 +3,7 @@ include ../../build/common.mak
 RULES_MAK := ../../build/rules.mak
 
 
-export PJLIB_LIB := ../lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+export PJLIB_LIB := ../lib/libpj-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.
@@ -42,7 +42,7 @@ export TEST_OBJS += atomic.o echo_clt.o errno.o exception.o \
 		    util.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_LDFLAGS += $(_LDFLAGS)
-export TEST_EXE := ../bin/pjlib-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE)
+export TEST_EXE := ../bin/pjlib-test-$(TARGET_NAME)$(HOST_EXE)
 
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
@@ -64,7 +64,7 @@ print:
 depend: ../include/pj/config_site.h
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib depend
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test depend
-	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .pjlib-test-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME).depend
+	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .pjlib-test-$(TARGET_NAME).depend
 
 
 .PHONY: dep depend pjlib pjlib-test clean realclean distclean
