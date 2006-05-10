@@ -40,6 +40,11 @@ int param_echo_port = ECHO_SERVER_START_PORT;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
 		      PJ_LOG_HAS_MICRO_SEC;
 
+int null_func()
+{
+    return 0;
+}
+
 int test_inner(void)
 {
     pj_caching_pool caching_pool;
@@ -58,15 +63,11 @@ int test_inner(void)
 	return rc;
     }
     
-    pj_dump_config();
+    //pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
 #if INCLUDE_ERRNO_TEST
     DO_TEST( errno_test() );
-#endif
-
-#if INCLUDE_TIMESTAMP_TEST
-    DO_TEST( timestamp_test() );
 #endif
 
 #if INCLUDE_EXCEPTION_TEST
@@ -99,6 +100,10 @@ int test_inner(void)
 
 #if INCLUDE_RBTREE_TEST
     DO_TEST( rbtree_test() );
+#endif
+
+#if INCLUDE_TIMESTAMP_TEST
+    DO_TEST( timestamp_test() );
 #endif
 
 #if INCLUDE_ATOMIC_TEST

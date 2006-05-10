@@ -1,14 +1,13 @@
 #!/bin/sh
 
 #
-# Detect machine
+# Detect machine, unless the choice has been made already.
 #
-MACHINE=`uname -p`
-if echo $MACHINE | grep unknown > /dev/null; then
-    MACHINE=`uname -m`
-fi;
+if [ "$MACHINE" = "" ]; then
+	MACHINE=`uname -m`
+fi	
 
-if echo $MACHINE | grep sparc > /dev/null; then
+if echo $MACHINE | grep sun4u > /dev/null; then
     MACHINE_NAME=sparc
 elif echo $MACHINE | grep i.86 > /dev/null; then
     MACHINE_NAME=i386
@@ -17,14 +16,17 @@ elif echo $MACHINE | grep alpha > /dev/null; then
 elif echo $MACHINE | grep powerpc > /dev/null; then
     MACHINE_NAME=powerpc
 else
-    echo "Unable to detect processor type ('uname -p' == '$MACHINE')"
+    echo "Unable to detect processor type ('uname -m' == '$MACHINE')"
     exit 1
 fi
 
 #
-# Detect OS and host
+# Detect OS and host, unless the choice has been made already
 #
-SYSTEM=`uname -s`
+if [ "$SYSTEM" = "" ]; then
+    SYSTEM=`uname -s`
+fi	
+ 
 
 if echo $SYSTEM | grep -i sunos > /dev/null; then
     OS_NAME=sunos
@@ -53,25 +55,33 @@ elif echo $SYSTEM | grep -i cygwin > /dev/null; then
 elif echo $SYSTEM | grep -i darwin > /dev/null; then
     OS_NAME=darwinos
     HOST_NAME=unix
+elif echo $SYSTEM | grep -i rtems > /dev/null; then
+    OS_NAME=rtems
+    HOST_NAME=unix
 else
     echo "Unable to detect system type ('uname -s' == '$SYSTEM')"
     exit 1
 fi
 
 #
-# Detect gcc
+# Detect gcc, unless it has been chosen already
 #
-if gcc --version 2>&1 > /dev/null; then
-    CC_NAME=gcc
-else
-    echo "Unable to find gcc"
-    exit 1
-fi
+if [ "$CC_NAME" = "" ]; then
+	if gcc --version 2>&1 > /dev/null; then
+		CC_NAME=gcc
+	else
+		echo "Unable to find gcc"
+		exit 1
+	fi
+fi	
+ 
 
 #
-# TARGET
+# Specify TARGET_NAME, if not already choosen.
 #
-TARGET_NAME=$MACHINE_NAME-$OS_NAME-$CC_NAME
+if [ "$TARGET_NAME" = "" ]; then
+   TARGET_NAME=$MACHINE_NAME-$OS_NAME-$CC_NAME
+fi
 
 
 if test -f build.mak; then
@@ -85,6 +95,7 @@ echo " OS_NAME      = $OS_NAME"
 echo " HOST_NAME    = $HOST_NAME"
 echo " CC_NAME      = $CC_NAME"
 echo " TARGET_NAME  = $TARGET_NAME"
+echo " CROSS_COMPILE= $CROSS_COMPILE"
 echo " LINUX_POLL   = $LINUX_POLL"
 
 echo "# Auto-generated build.mak" > build.mak
@@ -93,6 +104,7 @@ echo "export OS_NAME := $OS_NAME" >> build.mak
 echo "export HOST_NAME := $HOST_NAME" >> build.mak
 echo "export CC_NAME := $CC_NAME" >> build.mak
 echo "export TARGET_NAME := $TARGET_NAME" >> build.mak
+echo "export CROSS_COMPILE := $CROSS_COMPILE" >> build.mak
 echo "export LINUX_POLL := $LINUX_POLL" >> build.mak
 
 touch user.mak

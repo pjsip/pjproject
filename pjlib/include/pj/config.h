@@ -53,6 +53,8 @@
 #  include <pj/compat/os_sunos.h>
 #elif defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 #  include <pj/compat/os_darwinos.h>
+#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+#  include <pj/compat/os_rtems.h>
 #else
 #  error "Please specify target os."
 #endif
@@ -219,6 +221,17 @@
  */
 #ifndef PJ_POOL_DEBUG
 #  define PJ_POOL_DEBUG		    0
+#endif
+
+
+/**
+ * Specify this as \a stack_size argument in #pj_thread_create() to specify
+ * that thread should use default stack size for the current platform.
+ *
+ * Default: 8192
+ */
+#ifndef PJ_THREAD_DEFAULT_STACK_SIZE 
+#  define PJ_THREAD_DEFAULT_STACK_SIZE    8192
 #endif
 
 
@@ -556,7 +569,17 @@
 #  error "PJ_IS_BIG_ENDIAN is not defined!"
 #endif
 
+#if !defined(PJ_EMULATE_RWMUTEX)
+#  error "PJ_EMULATE_RWMUTEX should be defined in compat/os_xx.h"
+#endif
 
+#if !defined(PJ_THREAD_SET_STACK_SIZE)
+#  error "PJ_THREAD_SET_STACK_SIZE should be defined in compat/os_xx.h"
+#endif
+
+#if !defined(PJ_THREAD_ALLOCATE_STACK)
+#  error "PJ_THREAD_ALLOCATE_STACK should be defined in compat/os_xx.h"
+#endif
 
 PJ_BEGIN_DECL
 

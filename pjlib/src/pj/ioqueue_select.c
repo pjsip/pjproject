@@ -93,6 +93,12 @@ PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
 */
 #define VALIDATE_FD_SET     0
 
+#if 0
+#  define TRACE__(args)	PJ_LOG(3,args)
+#else
+#  define TRACE__(args)
+#endif
+
 /*
  * This describes each key.
  */
@@ -108,8 +114,9 @@ struct pj_ioqueue_t
 {
     DECLARE_COMMON_IOQUEUE
 
-    unsigned		max, count;
-    pj_ioqueue_key_t	active_list;
+    unsigned		max, count;	/* Max and current key count	    */
+    int			nfds;		/* The largest fd value (for select)*/
+    pj_ioqueue_key_t	active_list;	/* List of active keys.		    */
     pj_fd_set_t		rfdset;
     pj_fd_set_t		wfdset;
 #if PJ_HAS_TCP
@@ -135,6 +142,32 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
 {
     return "select";
 }
+
+/* 
+ * Scan the socket descriptor sets for the largest descriptor.
+ * This value is needed by select().
+ */
+#if defined(PJ_SELECT_NEEDS_NFDS) && PJ_SELECT_NEEDS_NFDS!=0
+static void rescan_fdset(pj_ioqueue_t *ioqueue)
+{
+    pj_ioqueue_key_t *key = ioqueue->active_list.next;
+    int max = 0;
+
+    while (key != &ioqueue->active_list) {
+	if (key->fd > max)
+	    max = key->fd;
+	key = key->next;
+    }
+
+    ioqueue->nfds = max;
+}
+#else
+static void rescan_fdset(pj_ioqueue_t *ioqueue)
+{
+    ioqueue->nfds = FD_SETSIZE-1;
+}
+#endif
+
 
 /*
  * pj_ioqueue_create()
@@ -171,6 +204,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     PJ_FD_ZERO(&ioqueue->xfdset);
 #endif
     pj_list_init(&ioqueue->active_list);
+
+    rescan_fdset(ioqueue);
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* When safe unregistration is used (the default), we pre-create
@@ -332,6 +367,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     pj_list_insert_before(&ioqueue->active_list, key);
     ++ioqueue->count;
 
+    /* Rescan fdset to get max descriptor */
+    rescan_fdset(ioqueue);
+
 on_return:
     /* On error, socket may be left in non-blocking mode. */
     *p_key = key;
@@ -368,6 +406,8 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 	pj_lock_acquire(key->ioqueue->lock);
 	pj_list_erase(key);
 	pj_list_push_back(&key->ioqueue->closing_list, key);
+	/* Rescan fdset to get max descriptor */
+	rescan_fdset(key->ioqueue);
 	pj_lock_release(key->ioqueue->lock);
     }
     pj_mutex_unlock(key->ioqueue->ref_cnt_mutex);
@@ -611,6 +651,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	scan_closing_keys(ioqueue);
 #endif
 	pj_lock_release(ioqueue->lock);
+	TRACE__((THIS_FILE, "     poll: no fd is set"));
         if (timeout)
             pj_thread_sleep(PJ_TIME_VAL_MSEC(*timeout));
         return 0;
@@ -632,7 +673,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     /* Unlock ioqueue before select(). */
     pj_lock_release(ioqueue->lock);
 
-    count = pj_sock_select(FD_SETSIZE, &rfdset, &wfdset, &xfdset, timeout);
+    count = pj_sock_select(ioqueue->nfds+1, &rfdset, &wfdset, &xfdset, 
+			   timeout);
     
     if (count <= 0)
 	return -pj_get_netos_error();

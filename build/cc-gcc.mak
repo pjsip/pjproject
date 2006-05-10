@@ -1,5 +1,5 @@
 export CC = $(CROSS_COMPILE)gcc -c
-export AR = $(CROSS_COMPILE)ar r 
+export AR = $(CROSS_COMPILE)ar rv 
 export LD = $(CROSS_COMPILE)gcc
 export LDOUT = -o 
 export RANLIB = $(CROSS_COMPILE)ranlib

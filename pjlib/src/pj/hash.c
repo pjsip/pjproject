@@ -49,20 +49,21 @@ struct pj_hash_table_t
 
 
 
-PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key, unsigned keylen)
+PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key, 
+				 unsigned keylen)
 {
     PJ_CHECK_STACK();
 
     if (keylen==PJ_HASH_KEY_STRING) {
 	const unsigned char *p = key;
 	for ( ; *p; ++p ) {
-	    hash = hash * PJ_HASH_MULTIPLIER + *p;
+	    hash = (hash * PJ_HASH_MULTIPLIER) + *p;
 	}
     } else {
 	const unsigned char *p = key,
 			    *end = p + keylen;
 	for ( ; p!=end; ++p) {
-	    hash = hash * PJ_HASH_MULTIPLIER + *p;
+	    hash = (hash * PJ_HASH_MULTIPLIER) + *p;
 	}
     }
     return hash;

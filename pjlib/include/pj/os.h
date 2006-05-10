@@ -59,12 +59,6 @@ typedef enum pj_thread_create_flags
 
 
 /**
- * Specify this as \a stack_size argument in #pj_thread_create() to specify
- * that thread should use default stack size for the current platform.
- */
-#define PJ_THREAD_DEFAULT_STACK_SIZE    0
-
-/**
  * Type of thread entry function.
  */
 typedef int (PJ_THREAD_FUNC pj_thread_proc)(void*);
@@ -161,12 +155,13 @@ PJ_DECL(pj_status_t) pj_thread_resume(pj_thread_t *thread);
 PJ_DECL(pj_thread_t*) pj_thread_this(void);
 
 /**
- * Join thread.
- * This function will block the caller thread until the specified thread exits.
+ * Join thread, and block the caller thread until the specified thread exits.
+ * If the specified thread has already been dead, or it does not exist,
+ * the function will return immediately with successfull status.
  *
  * @param thread    The thread handle.
  *
- * @return zero on success.
+ * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_thread_join(pj_thread_t *thread);
 

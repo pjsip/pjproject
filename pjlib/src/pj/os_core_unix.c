@@ -16,6 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+/*
+ * Contributors:
+ * - Thanks for Zetron, Inc. (Phil Torre, ptorre@zetron.com) for donating
+ *   the RTEMS port.
+ */
 #define _GNU_SOURCE
 #include <pj/os.h>
 #include <pj/assert.h>
@@ -153,7 +158,7 @@ PJ_DEF(pj_status_t) pj_init(void)
     }
 #endif   
 
-    PJ_LOG(4,(THIS_FILE, "pjlib %s for Unix initialized",
+    PJ_LOG(4,(THIS_FILE, "pjlib %s for POSIX initialized",
 	      PJ_VERSION));
 
     return PJ_SUCCESS;
@@ -196,6 +201,8 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 	//  has been deleted by application.
 	//*thread_ptr = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
         //return PJ_SUCCESS;
+	PJ_LOG(4,(THIS_FILE, "Info: possibly re-registering existing "
+			     "thread"));
     }
 
     /* Initialize and set the thread entry. */
@@ -281,6 +288,7 @@ static void *thread_main(void *param)
 
     /* Done. */
     PJ_LOG(6,(rec->obj_name, "Thread quitting"));
+
     return result;
 }
 #endif
@@ -298,15 +306,18 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 {
 #if PJ_HAS_THREADS
     pj_thread_t *rec;
+    pthread_attr_t thread_attr;
+    void *stack_addr;
     int rc;
+
+    PJ_UNUSED_ARG(stack_addr);
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && proc && ptr_thread, PJ_EINVAL);
 
     /* Create thread record and assign name for the thread */
     rec = (struct pj_thread_t*) pj_pool_zalloc(pool, sizeof(pj_thread_t));
-    if (!rec)
-	return PJ_ENOMEM;
+    PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
     
     /* Set name. */
     if (!thread_name) 
@@ -319,32 +330,61 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 	rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 
+    /* Set default stack size */
+    if (stack_size == 0)
+	stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
+
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    rec->stk_size = stack_size ? stack_size : 0xFFFFFFFFUL;
+    rec->stk_size = stack_size;
     rec->stk_max_usage = 0;
 #endif
 
     /* Emulate suspended thread with mutex. */
     if (flags & PJ_THREAD_SUSPENDED) {
 	rc = pj_mutex_create_simple(pool, NULL, &rec->suspended_mutex);
-	if (rc != PJ_SUCCESS)
+	if (rc != PJ_SUCCESS) {
 	    return rc;
+	}
 
 	pj_mutex_lock(rec->suspended_mutex);
     } else {
 	pj_assert(rec->suspended_mutex == NULL);
     }
     
-    PJ_LOG(6, (rec->obj_name, "Thread created"));
+
+    /* Init thread attributes */
+    pthread_attr_init(&thread_attr);
+
+#if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
+    /* Set thread's stack size */
+    rc = pthread_attr_setstacksize(&thread_attr, stack_size);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+#endif	/* PJ_THREAD_SET_STACK_SIZE */
+
+
+#if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
+    /* Allocate memory for the stack */
+    stack_addr = pj_pool_alloc(pool, stack_size);
+    PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
+
+    rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+#endif	/* PJ_THREAD_ALLOCATE_STACK */
+
 
     /* Create the thread. */
     rec->proc = proc;
     rec->arg = arg;
-    rc = pthread_create( &rec->thread, NULL, thread_main, rec);
-    if (rc != 0)
+    rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
+    if (rc != 0) {
 	return PJ_RETURN_OS_ERROR(rc);
+    }
 
     *ptr_thread = rec;
+
+    PJ_LOG(6, (rec->obj_name, "Thread created"));
     return PJ_SUCCESS;
 #else
     pj_assert(!"Threading is disabled!");
@@ -423,8 +463,13 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 
     if (result == 0)
 	return PJ_SUCCESS;
-    else
-	return PJ_RETURN_OS_ERROR(result);
+    else {
+	/* Calling pthread_join() on a thread that no longer exists and 
+	 * getting back ESRCH isn't an error (in this context). 
+	 * Thanks Phil Torre <ptorre@zetron.com>.
+	 */
+	return result==ESRCH ? PJ_SUCCESS : PJ_RETURN_OS_ERROR(result);
+    }
 #else
     PJ_CHECK_STACK();
     pj_assert(!"No multithreading support!");
@@ -437,10 +482,14 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
-    /* This function is used to destroy thread handle in other platforms.
-     * I suppose there's nothing to do here..
-     */
     PJ_CHECK_STACK();
+
+    /* Destroy mutex used to suspend thread */
+    if (p->suspended_mutex) {
+	pj_mutex_destroy(p->suspended_mutex);
+	p->suspended_mutex = NULL;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -449,8 +498,26 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
  */
 PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 {
+/* TODO: should change this to something like PJ_OS_HAS_NANOSLEEP */
+#if defined(PJ_RTEMS) && PJ_RTEMS!=0
+    enum { NANOSEC_PER_MSEC = 1000000 };
+    struct timespec req;
+
     PJ_CHECK_STACK();
-    return usleep(msec * 1000);
+    req.tv_sec = msec / 1000;
+    req.tv_nsec = (msec % 1000) * NANOSEC_PER_MSEC;
+
+    if (nanosleep(&req, NULL) == 0)
+	return PJ_SUCCESS;
+
+    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+#else
+    PJ_CHECK_STACK();
+    if (usleep(msec * 1000) == 0)
+	return PJ_SUCCESS;
+
+    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+#endif	/* PJ_RTEMS */
 }
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
@@ -513,8 +580,7 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 {
     pj_status_t rc;
     pj_atomic_t *atomic_var = pj_pool_calloc(pool, 1, sizeof(pj_atomic_t));
-    if (!atomic_var)
-	return PJ_ENOMEM;
+    PJ_ASSERT_RETURN(atomic_var, PJ_ENOMEM);
     
 #if PJ_HAS_THREADS
     rc = pj_mutex_create(pool, "atm%p", PJ_MUTEX_SIMPLE, &atomic_var->mutex);
@@ -765,12 +831,16 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 
     PJ_CHECK_STACK();
 
-    pthread_mutexattr_init(&attr);
+    rc = pthread_mutexattr_init(&attr);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
 
     if (type == PJ_MUTEX_SIMPLE) {
 #if defined(PJ_LINUX) && PJ_LINUX!=0
 	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
+#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+	/* Nothing to do, default is simple */
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
@@ -778,6 +848,13 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 #if defined(PJ_LINUX) && PJ_LINUX!=0
 	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+	// Phil Torre <ptorre@zetron.com>:
+	// The RTEMS implementation of POSIX mutexes doesn't include 
+	// pthread_mutexattr_settype(), so what follows is a hack
+	// until I get RTEMS patched to support the set/get functions.
+	PJ_TODO(FIX_RTEMS_RECURSIVE_MUTEX_TYPE)
+	attr.recursive = 1;
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 #endif
@@ -831,7 +908,7 @@ PJ_DEF(pj_status_t) pj_mutex_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && ptr_mutex, PJ_EINVAL);
 
     mutex = pj_pool_alloc(pool, sizeof(*mutex));
-    if (!mutex) return PJ_ENOMEM;
+    PJ_ASSERT_RETURN(mutex, PJ_ENOMEM);
 
     if ((rc=init_mutex(mutex, name, type)) != PJ_SUCCESS)
 	return rc;
@@ -1002,6 +1079,13 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+/*
+ * Include Read/Write mutex emulation for POSIX platforms that lack it (e.g.
+ * RTEMS). Otherwise use POSIX rwlock.
+ */
+#if defined(PJ_EMULATE_RWMUTEX) && PJ_EMULATE_RWMUTEX!=0
+#  include "os_rwmutex.c"
+#else
 struct pj_rwmutex_t
 {
     pthread_rwlock_t rwlock;
@@ -1095,6 +1179,9 @@ PJ_DEF(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex)
     return PJ_SUCCESS;
 }
 
+#endif	/* PJ_EMULATE_RWMUTEX */
+
+
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
 
@@ -1113,8 +1200,8 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool != NULL && ptr_sem != NULL, PJ_EINVAL);
 
-    sem = pj_pool_alloc(pool, sizeof(*sem));    
-    if (!sem) return PJ_ENOMEM;
+    sem = pj_pool_alloc(pool, sizeof(*sem));
+    PJ_ASSERT_RETURN(sem, PJ_ENOMEM);
 
     if (sem_init( &sem->sem, 0, initial) != 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());

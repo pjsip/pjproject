@@ -18,6 +18,17 @@
  */
 #include "test.h"
 
+ 
+/* Any tests that want to build a linked executable for RTEMS must include
+   this header to get a default config for the network stack. */
+#if defined(PJ_RTEMS) 
+#   include <bsp.h>
+#   include <rtems.h>
+#   include <rtems/rtems_bsdnet.h>
+#   include "../../../pjlib/include/rtems-network-config.h"
+#endif
+
+
 int main()
 {
     int rc;

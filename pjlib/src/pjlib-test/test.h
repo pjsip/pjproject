@@ -21,11 +21,11 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  1
-#define GROUP_OS                    1
-#define GROUP_DATA_STRUCTURE        1
-#define GROUP_NETWORK               1
-#define GROUP_FILE                  1
+#define GROUP_LIBC                  0
+#define GROUP_OS                    0
+#define GROUP_DATA_STRUCTURE        0
+#define GROUP_NETWORK               0
+#define GROUP_FILE                  0
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
@@ -48,7 +48,7 @@
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_IOQUEUE_PERF_TEST   GROUP_NETWORK
-#define INCLUDE_IOQUEUE_UNREG_TEST  GROUP_NETWORK
+#define INCLUDE_IOQUEUE_UNREG_TEST  1	// GROUP_NETWORK
 #define INCLUDE_FILE_TEST           GROUP_FILE
 
 #define INCLUDE_ECHO_SERVER         0
@@ -103,9 +103,11 @@ extern pj_status_t  app_socket(int family, int type, int proto, int port,
                                pj_sock_t *ptr_sock);
 extern pj_status_t  app_socketpair(int family, int type, int protocol,
                                    pj_sock_t *server, pj_sock_t *client);
+extern int	    null_func(void);
 
 //#define TRACE_(expr) PJ_LOG(3,expr)
 #define TRACE_(expr)
+#define HALT(msg)   { PJ_LOG(3,(THIS_FILE,"%s halted",msg)); for(;;) sleep(1); }
 
 PJ_END_DECL
 

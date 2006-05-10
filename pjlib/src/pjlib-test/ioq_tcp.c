@@ -343,6 +343,13 @@ static int compliance_test_0(void)
                 callback_connect_status = -2;
             }
 
+	    if (status > pending_op) {
+		PJ_LOG(3,(THIS_FILE,
+			  "...error: pj_ioqueue_poll() returned %d "
+			  "(only expecting %d)",
+			  status, pending_op));
+		return -52;
+	    }
 	    pending_op -= status;
 
 	    if (pending_op == 0) {
@@ -476,6 +483,14 @@ static int compliance_test_1(void)
 		    status = -50;
 		    goto on_error;
 		}
+	    }
+
+	    if (status > pending_op) {
+		PJ_LOG(3,(THIS_FILE,
+			  "...error: pj_ioqueue_poll() returned %d "
+			  "(only expecting %d)",
+			  status, pending_op));
+		return -552;
 	    }
 
 	    pending_op -= status;

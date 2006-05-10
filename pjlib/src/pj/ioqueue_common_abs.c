@@ -237,7 +237,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	    socklen_t addrlen = sizeof(addr);
 
 	    gp_rc = getpeername(h->fd, (struct sockaddr*)&addr, &addrlen);
-	    bytes_transfered = gp_rc;
+	    bytes_transfered = (gp_rc < 0) ? gp_rc : -gp_rc;
 	}
 #endif
 

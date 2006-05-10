@@ -188,8 +188,14 @@ int timestamp_test(void)
     }
 
     /* Loop.. */
-    for (i=0; i<1000000; ++i)
-	;
+    for (i=0; i<1000000; ++i) {
+	/* Try to do something so that smart compilers wont
+	 * remove this silly loop.
+	 */
+	null_func();
+    }
+
+    sleep(0);
 
     /* Mark end time. */
     pj_get_timestamp(&t2);
@@ -198,8 +204,10 @@ int timestamp_test(void)
     elapsed = pj_elapsed_usec(&t1, &t2);
     PJ_LOG(3,(THIS_FILE, "....elapsed: %u usec", (unsigned)elapsed));
 
-    /* See if elapsed time is reasonable. */
-    if (elapsed < 1 || elapsed > 100000) {
+    /* See if elapsed time is "reasonable". 
+     * This should be good even on 50Mhz embedded powerpc.
+     */
+    if (elapsed < 1 || elapsed > 1000000) {
 	PJ_LOG(3,(THIS_FILE, "....error: elapsed time outside window (%u, "
 			     "t1.u32.hi=%u, t1.u32.lo=%u, "
 			     "t2.u32.hi=%u, t2.u32.lo=%u)",

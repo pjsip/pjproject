@@ -41,6 +41,7 @@
 #define THIS_FILE	    "test_udp"
 #define PORT		    51233
 #define LOOP		    100
+///#define LOOP		    2
 #define BUF_MIN_SIZE	    32
 #define BUF_MAX_SIZE	    2048
 #define SOCK_INACTIVE_MIN   (1)
@@ -49,6 +50,13 @@
 
 #undef TRACE_
 #define TRACE_(msg)	    PJ_LOG(3,(THIS_FILE,"....." msg))
+
+#if 0
+#  define TRACE__(args)	    PJ_LOG(3,args)
+#else
+#  define TRACE__(args)
+#endif
+
 
 static pj_ssize_t            callback_read_size,
                              callback_write_size,
@@ -69,6 +77,8 @@ static void on_ioqueue_read(pj_ioqueue_key_t *key,
     callback_read_key = key;
     callback_read_op = op_key;
     callback_read_size = bytes_read;
+    TRACE__((THIS_FILE, "     callback_read_key = %p, bytes=%d", 
+	     key, bytes_read));
 }
 
 static void on_ioqueue_write(pj_ioqueue_key_t *key, 
@@ -254,7 +264,7 @@ static int compliance_test(void)
 	    PJ_LOG(1,(THIS_FILE, "...ERROR: timed out..."));
 	    status=-45; goto on_error;
         } else if (rc < 0) {
-            app_perror("...ERROR in ioqueue_poll()", rc);
+            app_perror("...ERROR in ioqueue_poll()", -rc);
 	    status=-50; goto on_error;
 	}
 
@@ -492,7 +502,7 @@ static int many_handles_test(void)
     pj_sock_t *sock;
     pj_ioqueue_key_t **key;
     pj_status_t rc;
-    int count, i;
+    int count, i; /* must be signed */
 
     PJ_LOG(3,(THIS_FILE,"...testing with so many handles"));
 
@@ -533,7 +543,19 @@ static int many_handles_test(void)
 
     /* Now deregister and close all handles. */ 
 
-    for (i=0; i<count; ++i) {
+    /* NOTE for RTEMS:
+     *  It seems that the order of close(sock) is pretty important here.
+     *  If we close the sockets with the same order as when they were created,
+     *  RTEMS doesn't seem to reuse the sockets, thus next socket created
+     *  will have descriptor higher than the last socket created.
+     *  If we close the sockets in the reverse order, then the descriptor will
+     *  get reused.
+     *  This used to cause problem with select ioqueue, since the ioqueue
+     *  always gives FD_SETSIZE for the first select() argument. This ioqueue
+     *  behavior can be changed with setting PJ_SELECT_NEEDS_NFDS macro.
+     */
+    for (i=count-1; i>=0; --i) {
+    ///for (i=0; i<count; ++i) {
 	rc = pj_ioqueue_unregister(key[i]);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("...error in pj_ioqueue_unregister", rc);
@@ -570,9 +592,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
     pj_ioqueue_t *ioque = NULL;
     pj_ioqueue_key_t *skey, *ckey, *key;
     pj_timestamp t1, t2, t_elapsed;
-    int rc=0, i;
+    int rc=0, i;    /* i must be signed */
     pj_str_t temp;
-    char errbuf[128];
+    char errbuf[PJ_ERR_MSG_SIZE];
+
+    TRACE__((THIS_FILE, "   bench test %d", inactive_sock_count));
 
     // Create pool.
     pool = pj_pool_create(mem, NULL, POOL_SIZE, 4000, NULL);
@@ -691,8 +715,14 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	rc = pj_ioqueue_sendto(ckey, &write_op, send_buf, &bytes, 0,
 			       &addr, sizeof(addr));
 	if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
-	    app_perror("...error: pj_ioqueue_write()", bytes);
+	    app_perror("...error: pj_ioqueue_write()", rc);
 	    break;
+	}
+	if (rc == PJ_SUCCESS) {
+	    if (bytes < 0) {
+		app_perror("...error: pj_ioqueue_sendto()", -bytes);
+		break;
+	    }
 	}
 
 	// Begin time.
@@ -701,8 +731,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	// Poll the queue until we've got completion event in the server side.
         callback_read_key = NULL;
         callback_read_size = 0;
+	TRACE__((THIS_FILE, "     waiting for key = %p", skey));
 	do {
-	    rc = pj_ioqueue_poll(ioque, NULL);
+	    pj_time_val timeout = { 1, 0 };
+	    rc = pj_ioqueue_poll(ioque, &timeout);
+	    TRACE__((THIS_FILE, "     poll rc=%d", rc));
 	} while (rc >= 0 && callback_read_key != skey);
 
 	// End time.
@@ -749,10 +782,13 @@ static int bench_test(int bufsize, int inactive_sock_count)
     }
 
     // Cleaning up.
-    for (i=0; i<inactive_sock_count; ++i)
+    for (i=inactive_sock_count-1; i>=0; --i) {
 	pj_sock_close(inactive_sock[i]);
+    }
+
     pj_sock_close(ssock);
     pj_sock_close(csock);
+
 
     pj_ioqueue_destroy(ioque);
     pj_pool_release( pool);

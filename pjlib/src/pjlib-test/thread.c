@@ -52,7 +52,14 @@
 
 #define THIS_FILE   "thread_test"
 
-static int quit_flag=0;
+static volatile int quit_flag=0;
+
+#if 0
+#   define TRACE__(args)	PJ_LOG(3,args)
+#else
+#   define TRACE__(args)
+#endif
+
 
 /*
  * The thread's entry point.
@@ -65,7 +72,10 @@ static void* thread_proc(pj_uint32_t *pcounter)
     /* Test that pj_thread_register() works. */
     pj_thread_desc desc;
     pj_thread_t *this_thread;
+    unsigned id = *pcounter;
     pj_status_t rc;
+
+    TRACE__((THIS_FILE, "     thread %d running..", id));
 
     rc = pj_thread_register("thread", desc, &this_thread);
     if (rc != PJ_SUCCESS) {
@@ -90,9 +100,10 @@ static void* thread_proc(pj_uint32_t *pcounter)
     for (;!quit_flag;) {
 	(*pcounter)++;
         //Must sleep if platform doesn't do time-slicing.
-	pj_thread_sleep(0);
+	//pj_thread_sleep(0);
     }
 
+    TRACE__((THIS_FILE, "     thread %d quitting..", id));
     return NULL;
 }
 
@@ -114,6 +125,7 @@ static int simple_thread(const char *title, unsigned flags)
 
     quit_flag = 0;
 
+    TRACE__((THIS_FILE, "    Creating thread 0.."));
     rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc,
 			  &counter,
 			  PJ_THREAD_DEFAULT_STACK_SIZE,
@@ -125,7 +137,9 @@ static int simple_thread(const char *title, unsigned flags)
 	return -1010;
     }
 
-    pj_thread_sleep(500);
+    TRACE__((THIS_FILE, "    Main thread waiting.."));
+    pj_thread_sleep(1500);
+    TRACE__((THIS_FILE, "    Main thread resuming.."));
 
     if (flags & PJ_THREAD_SUSPENDED) {
 
@@ -144,7 +158,7 @@ static int simple_thread(const char *title, unsigned flags)
     
     PJ_LOG(3,(THIS_FILE, "..waiting for thread to quit.."));
 
-    pj_thread_sleep(500);
+    pj_thread_sleep(1500);
 
     quit_flag = 1;
     pj_thread_join(thread);
@@ -175,7 +189,7 @@ static int timeslice_test(void)
 
     quit_flag = 0;
 
-    pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
+    pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     if (!pool)
         return -10;
 
@@ -183,7 +197,7 @@ static int timeslice_test(void)
 
     /* Create all threads in suspended mode. */
     for (i=0; i<NUM_THREADS; ++i) {
-        counter[i] = 0;
+        counter[i] = i;
         rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc, 
 			      &counter[i], 
                               PJ_THREAD_DEFAULT_STACK_SIZE, 
@@ -198,11 +212,13 @@ static int timeslice_test(void)
     /* Sleep for 1 second.
      * The purpose of this is to test whether all threads are suspended.
      */
+    TRACE__((THIS_FILE, "    Main thread waiting.."));
     pj_thread_sleep(1000);
+    TRACE__((THIS_FILE, "    Main thread resuming.."));
 
     /* Check that all counters are still zero. */
     for (i=0; i<NUM_THREADS; ++i) {
-        if (counter[i] != 0) {
+        if (counter[i] > i) {
             PJ_LOG(3,(THIS_FILE, "....ERROR! Thread %d-th is not suspended!", 
 		      i));
             return -30;
@@ -211,6 +227,7 @@ static int timeslice_test(void)
 
     /* Now resume all threads. */
     for (i=0; i<NUM_THREADS; ++i) {
+	TRACE__((THIS_FILE, "    Resuming thread %d [%p]..", i, thread[i]));
         rc = pj_thread_resume(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_resume()", rc);
@@ -222,24 +239,31 @@ static int timeslice_test(void)
      * The longer we sleep, the more accurate the calculation will be,
      * but it'll make user waits for longer for the test to finish.
      */
+    TRACE__((THIS_FILE, "    Main thread waiting (5s).."));
     pj_thread_sleep(5000);
+    TRACE__((THIS_FILE, "    Main thread resuming.."));
 
     /* Signal all threads to quit. */
     quit_flag = 1;
 
     /* Wait until all threads quit, then destroy. */
     for (i=0; i<NUM_THREADS; ++i) {
+	TRACE__((THIS_FILE, "    Main thread joining thread %d [%p]..", 
+			    i, thread[i]));
         rc = pj_thread_join(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_join()", rc);
             return -50;
         }
+	TRACE__((THIS_FILE, "    Destroying thread %d [%p]..", i, thread[i]));
         rc = pj_thread_destroy(thread[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_destroy()", rc);
             return -60;
         }
     }
+
+    TRACE__((THIS_FILE, "    Main thread calculating time slices.."));
 
     /* Now examine the value of the counters.
      * Check that all threads had equal proportion of processing.
@@ -263,9 +287,11 @@ static int timeslice_test(void)
      */
     diff = (highest-lowest)*100 / ((highest+lowest)/2);
     if ( diff >= 50) {
-        PJ_LOG(3,(THIS_FILE, "...ERROR: thread didn't have equal timeslice!"));
-        PJ_LOG(3,(THIS_FILE, ".....lowest counter=%u, highest counter=%u, diff=%u%%",
-                             lowest, highest, diff));
+        PJ_LOG(3,(THIS_FILE, 
+		  "...ERROR: thread didn't have equal timeslice!"));
+        PJ_LOG(3,(THIS_FILE, 
+		  ".....lowest counter=%u, highest counter=%u, diff=%u%%",
+                  lowest, highest, diff));
         return -80;
     } else {
         PJ_LOG(3,(THIS_FILE, 
@@ -273,6 +299,7 @@ static int timeslice_test(void)
                   diff));
     }
 
+    pj_pool_release(pool);
     return 0;
 }
 

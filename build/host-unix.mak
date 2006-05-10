@@ -2,7 +2,7 @@ export HOST_MV := mv
 export HOST_RM := rm -f @@
 export HOST_RMR := rm -rf @@
 export HOST_RMDIR := rm -rf @@
-export HOST_MKDIR := mkdir @@
+export HOST_MKDIR := mkdir -p @@
 export HOST_EXE := 
 export HOST_PSEP := /
 

@@ -173,6 +173,11 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 
     PJ_CHECK_STACK();
 
+    /* If callback is NULL, set calback from the policy */
+    if (callback == NULL)
+	callback = f->policy.callback;
+
+    /* Allocate initial block */
     buffer = (*f->policy.block_alloc)(f, initial_size);
     if (!buffer)
 	return NULL;

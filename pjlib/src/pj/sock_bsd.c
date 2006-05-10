@@ -26,7 +26,7 @@
 
 /*
  * Address families conversion.
- * The values here are indexed based on pj_addr_family-0xFF00.
+ * The values here are indexed based on pj_addr_family.
  */
 const pj_uint16_t PJ_AF_UNIX	= AF_UNIX;
 const pj_uint16_t PJ_AF_INET	= AF_INET;
@@ -44,7 +44,7 @@ const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
 
 /*
  * Socket types conversion.
- * The values here are indexed based on pj_sock_type-0xFF00
+ * The values here are indexed based on pj_sock_type
  */
 const pj_uint16_t PJ_SOCK_STREAM	= SOCK_STREAM;
 const pj_uint16_t PJ_SOCK_DGRAM	= SOCK_DGRAM;
@@ -346,7 +346,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 {
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(addr && len > 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr && len >= sizeof(struct sockaddr_in), PJ_EINVAL);
 
     if (bind(sock, (struct sockaddr*)addr, len) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());

@@ -63,14 +63,20 @@
 #define UDP_PORT	51234
 #define TCP_PORT        (UDP_PORT+10)
 #define BIG_DATA_LEN	9000
+#define ADDRESS		"127.0.0.1"
+#define A0		127
+#define A1		0
+#define A2		0
+#define A3		1
+
 
 static char bigdata[BIG_DATA_LEN];
 static char bigbuffer[BIG_DATA_LEN];
 
 static int format_test(void)
 {
-    pj_str_t s = pj_str("127.0.0.1");
-    char *p;
+    pj_str_t s = pj_str(ADDRESS);
+    unsigned char *p;
     pj_in_addr addr;
     const pj_str_t *hostname;
 
@@ -81,9 +87,13 @@ static int format_test(void)
 	return -10;
     
     /* Check the result. */
-    p = (char*)&addr;
-    if (p[0]!=127 || p[1]!=0 || p[2]!=0 || p[3]!=1)
+    p = (unsigned char*)&addr;
+    if (p[0]!=A0 || p[1]!=A1 || p[2]!=A2 || p[3]!=A3) {
+	PJ_LOG(3,("test", "  error: mismatched address. p0=%d, p1=%d, "
+			  "p2=%d, p3=%d", p[0] & 0xFF, p[1] & 0xFF, 
+			   p[2] & 0xFF, p[3] & 0xFF));
 	return -15;
+    }
 
     /* pj_inet_ntoa() */
     p = pj_inet_ntoa(addr);
@@ -97,6 +107,9 @@ static int format_test(void)
     hostname = pj_gethostname();
     if (!hostname || !hostname->ptr || !hostname->slen)
 	return -40;
+
+    PJ_LOG(3,("test", "....hostname is %.*s", 
+	      (int)hostname->slen, hostname->ptr));
 
     /* pj_gethostaddr() */
 
@@ -313,10 +326,10 @@ static int udp_test(void)
     pj_memset(&dstaddr, 0, sizeof(dstaddr));
     dstaddr.sin_family = PJ_AF_INET;
     dstaddr.sin_port = pj_htons(UDP_PORT);
-    dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
+    dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
     
     if ((rc=pj_sock_bind(ss, &dstaddr, sizeof(dstaddr))) != 0) {
-	app_perror("...bind error", rc);
+	app_perror("...bind error udp:"ADDRESS, rc);
 	rc = -120; goto on_error;
     }
 
@@ -324,7 +337,7 @@ static int udp_test(void)
     pj_memset(&srcaddr, 0, sizeof(srcaddr));
     srcaddr.sin_family = PJ_AF_INET;
     srcaddr.sin_port = pj_htons(UDP_PORT-1);
-    srcaddr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
+    srcaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
 
     if ((rc=pj_sock_bind(cs, &srcaddr, sizeof(srcaddr))) != 0) {
 	app_perror("...bind error", rc);

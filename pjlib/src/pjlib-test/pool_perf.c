@@ -32,9 +32,11 @@
 #define LOOP	    10
 #define COUNT	    1024
 static unsigned	    sizes[COUNT];
+static char	   *p[COUNT];
 #define MIN_SIZE    4
 #define MAX_SIZE    512
 static unsigned total_size;
+
 
 static int pool_test_pool()
 {
@@ -45,8 +47,12 @@ static int pool_test_pool()
 
     for (i=0; i<COUNT; ++i) {
 	char *p;
-	if ( (p=(char*)pj_pool_alloc(pool, sizes[i])) == NULL)
+	if ( (p=(char*)pj_pool_alloc(pool, sizes[i])) == NULL) {
+	    PJ_LOG(3,(THIS_FILE,"   error: pool failed to allocate %d bytes",
+		      sizes[i]));
+	    pj_pool_release(pool);
 	    return -1;
+	}
 	*p = '\0';
     }
 
@@ -56,13 +62,16 @@ static int pool_test_pool()
 
 static int pool_test_malloc_free()
 {
-    char *p[COUNT];
-    int i;
+    int i; /* must be signed */
 
     for (i=0; i<COUNT; ++i) {
 	p[i] = (char*)malloc(sizes[i]);
 	if (!p[i]) {
-	    // Don't care for memory leak in this test
+	    PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+		      sizes[i]));
+	    --i;
+	    while (i >= 0)
+		free(p[i]), --i;
 	    return -1;
 	}
 	*p[i] = '\0';
@@ -82,15 +91,18 @@ int pool_perf_test()
     pj_timestamp start, end;
     pj_uint32_t best, worst;
 
-    // Initialize sizes.
+    /* Initialize size of chunks to allocate in for the test. */
     for (i=0; i<COUNT; ++i) {
-	sizes[i] = MIN_SIZE + pj_rand() % MAX_SIZE;
+	sizes[i] = MIN_SIZE + (pj_rand() % MAX_SIZE);
 	total_size += sizes[i];
     }
 
+    /* Add some more for pool admin area */
+    total_size += 512;
+
     PJ_LOG(3, (THIS_FILE, "Benchmarking pool.."));
 
-    // Warmup
+    /* Warmup */
     pool_test_pool();
     pool_test_malloc_free();
 
@@ -117,11 +129,11 @@ int pool_perf_test()
 	pool_time2 += (end.u32.lo - start.u32.lo);
     }
 
-    PJ_LOG(4, (THIS_FILE, "..LOOP count:                        %u", LOOP));
-    PJ_LOG(4, (THIS_FILE, "..number of alloc/dealloc per loop:  %u", COUNT));
-    PJ_LOG(4, (THIS_FILE, "..pool allocation/deallocation time: %u", pool_time));
-    PJ_LOG(4, (THIS_FILE, "..malloc/free time:                  %u", malloc_time));
-    PJ_LOG(4, (THIS_FILE, "..pool again, second invocation:     %u", pool_time2));
+    PJ_LOG(4,(THIS_FILE,"..LOOP count:                        %u",LOOP));
+    PJ_LOG(4,(THIS_FILE,"..number of alloc/dealloc per loop:  %u",COUNT));
+    PJ_LOG(4,(THIS_FILE,"..pool allocation/deallocation time: %u",pool_time));
+    PJ_LOG(4,(THIS_FILE,"..malloc/free time:                  %u",malloc_time));
+    PJ_LOG(4,(THIS_FILE,"..pool again, second invocation:     %u",pool_time2));
 
     if (pool_time2==0) pool_time2=1;
     if (pool_time < pool_time2)
@@ -129,7 +141,7 @@ int pool_perf_test()
     else
 	best = pool_time2, worst = pool_time;
 
-    PJ_LOG(3, (THIS_FILE, "..malloc Speedup best=%dx, worst=%dx", 
+    PJ_LOG(3, (THIS_FILE, "..pool speedup over malloc best=%dx, worst=%dx", 
 			  (int)(malloc_time/best),
 			  (int)(malloc_time/worst)));
     return 0;

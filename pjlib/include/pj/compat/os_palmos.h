@@ -52,7 +52,23 @@
 #define PJ_HAS_WINSOCK2_H	    0
 
 #define PJ_SOCK_HAS_INET_ATON	    0
+
+/* Set 1 if native sockaddr_in has sin_len member. 
+ * Default: 0
+ */
 #define PJ_SOCKADDR_HAS_LEN	    0
+
+/**
+ * If this macro is set, it tells select I/O Queue that select() needs to
+ * be given correct value of nfds (i.e. largest fd + 1). This requires
+ * select ioqueue to re-scan the descriptors on each registration and
+ * unregistration.
+ * If this macro is not set, then ioqueue will always give FD_SETSIZE for
+ * nfds argument when calling select().
+ *
+ * Default: 0
+ */
+#define PJ_SELECT_NEEDS_NFDS	    0
 
 /* Is errno a good way to retrieve OS errors?
  */
@@ -83,4 +99,20 @@
 #   define PJ_OS_HAS_CHECK_STACK	0
 #define PJ_NATIVE_STRING_IS_UNICODE	0
 
+/* If 1, use Read/Write mutex emulation for platforms that don't support it */
+#define PJ_EMULATE_RWMUTEX		1
+
+/* If 1, pj_thread_create() should enforce the stack size when creating 
+ * threads.
+ * Default: 0 (let OS decide the thread's stack size).
+ */
+#define PJ_THREAD_SET_STACK_SIZE    	0
+
+/* If 1, pj_thread_create() should allocate stack from the pool supplied.
+ * Default: 0 (let OS allocate memory for thread's stack).
+ */
+#define PJ_THREAD_ALLOCATE_STACK    	0
+
+
 #endif	/* __PJ_COMPAT_OS_PALMOS_H__ */
+

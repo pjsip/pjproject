@@ -19,14 +19,16 @@
 #include "test.h"
 #include <pjlib.h>
 
+#define THIS_FILE "util.c"
+
 void app_perror(const char *msg, pj_status_t rc)
 {
-    char errbuf[256];
+    char errbuf[PJ_ERR_MSG_SIZE];
 
     PJ_CHECK_STACK();
 
     pj_strerror(rc, errbuf, sizeof(errbuf));
-    PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+    PJ_LOG(3,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 }
 
 #define SERVER 0
