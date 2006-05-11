@@ -64,6 +64,8 @@ struct pjmedia_jbuf
     int		    jb_prefetch;	  // no. of frame to insert before removing some
 					  // (at the beginning of the framelist->flist_buffer operation)
     int		    jb_prefetch_cnt;	  // prefetch counter
+    int		    jb_min_prefetch;	  // Minimum allowable prefetch
+    int		    jb_max_prefetch;	  // Maximum allowable prefetch
     int		    jb_status;		  // status is 'init' until the	first 'put' operation
 
 
@@ -137,7 +139,8 @@ static pj_bool_t jb_framelist_get(jb_framelist *framelist,
 	pj_memset(framelist->flist_buffer + 
 		    framelist->flist_head * framelist->flist_frame_size,
 		  0, framelist->flist_frame_size);
-	framelist->flist_frame_type[framelist->flist_head] = 0;
+	framelist->flist_frame_type[framelist->flist_head] = 
+	    PJMEDIA_JB_MISSING_FRAME;
 
 	framelist->flist_origin++;
 	framelist->flist_head = (framelist->flist_head + 1 ) % 
@@ -181,7 +184,7 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 	          0,
 	          step1*framelist->flist_frame_size);
 	pj_memset(framelist->flist_frame_type+framelist->flist_head,
-		  0,
+		  PJMEDIA_JB_MISSING_FRAME,
 		  step1*sizeof(framelist->flist_frame_type[0]));
 
 	if (step2) {
@@ -189,7 +192,7 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 		      0,
 		      step2*framelist->flist_frame_size);
 	    pj_memset(framelist->flist_frame_type,
-		      0,
+		      PJMEDIA_JB_MISSING_FRAME,
 		      step2*sizeof(framelist->flist_frame_type[0]));
 	}
 
@@ -263,9 +266,8 @@ enum pjmedia_jb_op
 
 PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool, 
 					const pj_str_t *name,
-					int frame_size, 
-					int initial_prefetch, 
-					int max_count,
+					unsigned frame_size, 
+					unsigned max_count,
 					pjmedia_jbuf **p_jb)
 {
     pjmedia_jbuf *jb;
@@ -284,14 +286,57 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_last_level	 = 0;
     jb->jb_last_jitter	 = 0;
     jb->jb_last_op	 = JB_OP_INIT;
-    jb->jb_prefetch	 = PJ_MIN(initial_prefetch, max_count*4/5);
+    jb->jb_prefetch	 = PJ_MIN(PJMEDIA_JB_DEFAULT_INIT_DELAY,max_count*4/5);
     jb->jb_prefetch_cnt	 = 0;
+    jb->jb_min_prefetch  = 0;
+    jb->jb_max_prefetch  = max_count*4/5;
     jb->jb_stable_hist	 = 0;
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_max_hist_jitter = 0;
     jb->jb_max_count	 = max_count;
 
     *p_jb = jb;
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Set the jitter buffer to fixed delay mode. The default behavior
+ * is to adapt the delay with actual packet delay.
+ *
+ */
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
+					    unsigned prefetch)
+{
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(prefetch <= jb->jb_max_count, PJ_EINVAL);
+
+    jb->jb_min_prefetch = jb->jb_max_prefetch = 
+	jb->jb_prefetch = prefetch;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Set the jitter buffer to adaptive mode.
+ */
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
+					       unsigned prefetch,
+					       unsigned min_prefetch,
+					       unsigned max_prefetch)
+{
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(min_prefetch < max_prefetch &&
+		     prefetch >= min_prefetch &&
+		     prefetch <= max_prefetch &&
+		     max_prefetch <= jb->jb_max_count,
+		     PJ_EINVAL);
+
+    jb->jb_prefetch = prefetch;
+    jb->jb_min_prefetch = min_prefetch;
+    jb->jb_max_prefetch = max_prefetch;
+
     return PJ_SUCCESS;
 }
 
@@ -336,7 +381,8 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    if (seq_diff<1) seq_diff = 1;
 
 	    jb->jb_prefetch -= seq_diff;
-	    if (jb->jb_prefetch < 1) jb->jb_prefetch = 1;
+	    if (jb->jb_prefetch < jb->jb_min_prefetch) 
+		jb->jb_prefetch = jb->jb_min_prefetch;
 
 	    jb->jb_stable_hist = 0;
 	    jb->jb_max_hist_jitter = 0;
@@ -357,6 +403,8 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     } else {
 	jb->jb_prefetch = PJ_MIN(jb->jb_last_jitter,
 				 (int)(jb->jb_max_count*4/5));
+	if (jb->jb_prefetch > jb->jb_max_prefetch)
+	    jb->jb_prefetch = jb->jb_max_prefetch;
 	jb->jb_stable_hist = 0;
 	jb->jb_max_hist_jitter = 0;
 
@@ -431,6 +479,9 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb,
     return PJ_SUCCESS;
 }
 
+/*
+ * Get frame from jitter buffer.
+ */
 PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
 					    void *frame, 
 					    char *p_frame_type)
@@ -445,14 +496,31 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	jb->jb_prefetch_cnt = 0;
     }
 
-    if ((jb->jb_prefetch_cnt < jb->jb_prefetch) || 
-	jb_framelist_get(&jb->jb_framelist,frame,&ftype) == PJ_FALSE) 
-    {
+    if ((jb->jb_prefetch_cnt < jb->jb_prefetch)) {
+	/* Can't return frame because jitter buffer is filling up
+	 * minimum prefetch.
+	 */
 	pj_memset(frame, 0, jb->jb_frame_size);
-	*p_frame_type = PJMEDIA_JB_ZERO_FRAME;
+	if (jb_framelist_size(&jb->jb_framelist) == 0)
+	    *p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
+	else
+	    *p_frame_type = PJMEDIA_JB_ZERO_PREFETCH_FRAME;
+
 	return PJ_SUCCESS;
     }
 
+    /* Retrieve a frame from frame list */
+    if (jb_framelist_get(&jb->jb_framelist,frame,&ftype) == PJ_FALSE) {
+	/* Can't return frame because jitter buffer is empty! */
+	pj_memset(frame, 0, jb->jb_frame_size);
+	*p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
+
+	return PJ_SUCCESS;
+    }
+
+    /* We've successfully retrieved a frame from the frame list, but
+     * the frame could be a blank frame!
+     */
     if (ftype == PJMEDIA_JB_NORMAL_FRAME) {
 	*p_frame_type	= PJMEDIA_JB_NORMAL_FRAME;
     } else {
@@ -462,14 +530,20 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(unsigned) pjmedia_jbuf_get_min_delay_size(pjmedia_jbuf *jb)
+/*
+ * Get jitter buffer state.
+ */
+PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
+					    pjmedia_jb_state *state )
 {
-    return jb->jb_prefetch;
-}
+    PJ_ASSERT_RETURN(jb && state, PJ_EINVAL);
 
-PJ_DEF(unsigned) pjmedia_jbuf_get_delay(pjmedia_jbuf *jb)
-{
-    return jb_framelist_size(&jb->jb_framelist);
-}
+    state->frame_size = jb->jb_frame_size;
+    state->prefetch = jb->jb_prefetch;
+    state->min_prefetch = jb->jb_min_prefetch;
+    state->max_prefetch = jb->jb_max_prefetch;
+    state->size = jb_framelist_size(&jb->jb_framelist);
 
+    return PJ_SUCCESS;
+}
 

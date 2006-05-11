@@ -174,9 +174,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     /* Unlock jitter buffer mutex. */
     pj_mutex_unlock( stream->jb_mutex );
 
-    if (status != PJ_SUCCESS || frame_type == PJMEDIA_JB_ZERO_FRAME ||
-	frame_type == PJMEDIA_JB_MISSING_FRAME) 
-    {
+    if (status != PJ_SUCCESS || frame_type != PJMEDIA_JB_NORMAL_FRAME) {
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
@@ -627,8 +625,10 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    PJ_LOG(4,(stream->port.info.name.ptr, "Jitter buffer reset"));
 
 	} else {
+	    unsigned ext_seq;
+	    ext_seq = channel->rtp.seq_ctrl.cycles | pj_ntohs(hdr->seq);
 	    status = pjmedia_jbuf_put_frame(stream->jb, payload, payloadlen,
-					    pj_ntohs(hdr->seq));
+					    ext_seq);
 	}
 	pj_mutex_unlock( stream->jb_mutex );
 
@@ -914,11 +914,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			   info->fmt.clock_rate);
     status = pjmedia_jbuf_create(pool, &stream->port.info.name,
 				 stream->frame_size, 
-				 jbuf_init, jbuf_max,
-				 &stream->jb);
+				 jbuf_max, &stream->jb);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+    /* Set jitter buffer to adaptive */
+    pjmedia_jbuf_set_adaptive( stream->jb, jbuf_init, 1, jbuf_max * 4 / 5);
 
     /* Create decoder channel: */
 

@@ -45,10 +45,32 @@ PJ_BEGIN_DECL
  */
 enum pjmedia_jb_frame_type 
 {
-    PJMEDIA_JB_MISSING_FRAME   = 0, /**< No frame because it's missing.	    */
-    PJMEDIA_JB_NORMAL_FRAME    = 1, /**< Normal frame is being returned.    */
-    PJMEDIA_JB_ZERO_FRAME      = 2, /**< Zero frame is being returned.	    */
+    PJMEDIA_JB_MISSING_FRAME	   = 0, /**< No frame because it's missing  */
+    PJMEDIA_JB_NORMAL_FRAME	   = 1, /**< Normal frame is being returned */
+    PJMEDIA_JB_ZERO_PREFETCH_FRAME = 2, /**< Zero frame is being returned  
+					     because JB is bufferring.	    */
+    PJMEDIA_JB_ZERO_EMPTY_FRAME	   = 3	/**< Zero frame is being returned
+					     because JB is empty.	    */
 };
+
+
+/**
+ * This structure describes jitter buffer current status.
+ */
+struct pjmedia_jb_state
+{
+    unsigned	frame_size;	    /**< Individual frame size, in bytes.   */
+    unsigned	prefetch;	    /**< Current prefetch value, in frames  */
+    unsigned	min_prefetch;	    /**< Minimum allowed prefetch, in frms. */
+    unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
+    unsigned	size;		    /**< Current buffer size, in frames.    */
+};
+
+
+/**
+ * @see pjmedia_jb_state
+ */
+typedef struct pjmedia_jb_state pjmedia_jb_state;
 
 
 /**
@@ -59,28 +81,68 @@ enum pjmedia_jb_frame_type
 
 
 /**
- * Create the jitter buffer. This function may allocate large chunk of
- * memory to keep the frames in the buffer.
+ * Create an adaptive jitter buffer according to the specification. If
+ * application wants to have a fixed jitter buffer, it may call
+ * #pjmedia_jbuf_set_fixed() after the jitter buffer is created.
+ *
+ * This function may allocate large chunk of memory to keep the frames in 
+ * the buffer.
  *
  * @param pool		The pool to allocate memory.
  * @param name		Name to identify the jitter buffer for logging
  *			purpose.
  * @param frame_size	The size of each frame that will be kept in the
- *			jitter buffer. The value here normaly corresponds
- *			to the RTP payload size according to the codec
- *			being used.
- * @param init_delay	Initial jitter buffer delay, in number of frames.
- * @param max_count	Maximum jitter buffer delay, in number of frames.
+ *			jitter buffer, in bytes. This should correspond
+ *			to the minimum frame size supported by the codec.
+ *			For example, a 10ms frame (80 bytes) would be 
+ *			recommended for G.711 codec.
+ * @param max_count	Maximum number of frames that can be kept in the
+ *			jitter buffer. This effectively means the maximum
+ *			delay that may be introduced by this jitter 
+ *			buffer.
  * @param p_jb		Pointer to receive jitter buffer instance.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 					 const pj_str_t *name,
-					 int frame_size, 
-					 int init_delay, 
-					 int max_count,
+					 unsigned frame_size,
+					 unsigned max_count,
 					 pjmedia_jbuf **p_jb);
+
+/**
+ * Set the jitter buffer to fixed delay mode. The default behavior
+ * is to adapt the delay with actual packet delay.
+ *
+ * @param jb		The jitter buffer
+ * @param prefetch	The fixed delay value, in number of frames.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
+					     unsigned prefetch);
+
+
+/**
+ * Set the jitter buffer to adaptive mode.
+ *
+ * @param jb		The jitter buffer.
+ * @param prefetch	The prefetch value to be applied to the jitter
+ *			buffer.
+ * @param min_prefetch	The minimum delay that must be applied to each
+ *			incoming packets, in number of frames. The
+ *			default value is zero.
+ * @param max_prefetch	The maximum allowable value for prefetch delay,
+ *			in number of frames. The default value is equal
+ *			to the size of the jitter buffer.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
+					        unsigned prefetch,
+					        unsigned min_prefetch,
+						unsigned max_prefetch);
+
 
 /**
  * Destroy jitter buffer instance.
@@ -155,28 +217,17 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 					     void *frame, 
 					     char *p_frm_type);
 
-/**
- * Retrieve the current value of jitter buffer minimum delay, in number
- * of frames.
- *
- * @param jb		The jitter buffer.
- *
- * @return		Number of frames, indicating the minimum delay that 
- *			will be applied by the jitter buffer between frame
- *			arrival and frame retrieval.
- */
-PJ_DECL(unsigned)    pjmedia_jbuf_get_min_delay_size(pjmedia_jbuf *jb);
-
 
 /**
- * Retrieve the current delay value, in number of frames.
+ * Get jitter buffer state.
  *
  * @param jb		The jitter buffer.
+ * @param state		Buffer to receive jitter buffer state.
  *
- * @return		Number of frames, indicating the delay between frame
- *			arrival and frame retrieval.
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(unsigned)    pjmedia_jbuf_get_delay(pjmedia_jbuf *jb);
+PJ_DECL(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
+					     pjmedia_jb_state *state );
 
 
 

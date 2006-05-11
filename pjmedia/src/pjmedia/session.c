@@ -302,8 +302,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
   
 
-    /* Get local DTMF payload type */
-    si->tx_event_pt = -1;
+    /* Get incomming payload type for telephone-events */
+    si->rx_event_pt = -1;
     for (i=0; i<local_m->attr_count; ++i) {
 	pjmedia_sdp_rtpmap r;
 
@@ -313,13 +313,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
-	    si->tx_event_pt = pj_strtoul(&r.pt);
+	    si->rx_event_pt = pj_strtoul(&r.pt);
 	    break;
 	}
     }
 
-    /* Get remote DTMF payload type */
-    si->rx_event_pt = -1;
+    /* Get outgoing payload type for telephone-events */
+    si->tx_event_pt = -1;
     for (i=0; i<rem_m->attr_count; ++i) {
 	pjmedia_sdp_rtpmap r;
 
@@ -329,7 +329,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
-	    si->rx_event_pt = pj_strtoul(&r.pt);
+	    si->tx_event_pt = pj_strtoul(&r.pt);
 	    break;
 	}
     }
