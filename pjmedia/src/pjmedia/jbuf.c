@@ -521,11 +521,11 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
     /* We've successfully retrieved a frame from the frame list, but
      * the frame could be a blank frame!
      */
-    if (ftype == PJMEDIA_JB_NORMAL_FRAME) {
+    if (ftype == PJMEDIA_JB_NORMAL_FRAME) 
 	*p_frame_type	= PJMEDIA_JB_NORMAL_FRAME;
-    } else {
+    else 
 	*p_frame_type	= PJMEDIA_JB_MISSING_FRAME;
-    }
+    
 
     return PJ_SUCCESS;
 }

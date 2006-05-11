@@ -219,7 +219,7 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 
 
 /**
- * Get jitter buffer state.
+ * Get jitter buffer current state/settings.
  *
  * @param jb		The jitter buffer.
  * @param state		Buffer to receive jitter buffer state.
