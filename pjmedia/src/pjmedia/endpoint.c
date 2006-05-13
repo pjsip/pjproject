@@ -473,12 +473,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 		  codec_info[i].encoding_name.ptr,
 		  codec_info[i].clock_rate/1000,
 		  codec_info[i].channel_cnt,
-		  good_number(bps, param.avg_bps), 
-		  param.ptime,
-		  (param.vad ? " vad" : ""),
-		  (param.cng ? " cng" : ""),
-		  (param.concl ? " plc" : ""),
-		  (param.penh ? " penh" : ""),
+		  good_number(bps, param.info.avg_bps), 
+		  param.info.frm_ptime * param.setting.frm_per_pkt,
+		  (param.setting.vad ? " vad" : ""),
+		  (param.setting.cng ? " cng" : ""),
+		  (param.setting.plc ? " plc" : ""),
+		  (param.setting.penh ? " penh" : ""),
 		  (prio[i]==PJMEDIA_CODEC_PRIO_DISABLED?" disabled":"")));
     }
 #endif

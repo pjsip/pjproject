@@ -114,44 +114,20 @@ typedef struct pjmedia_sock_info
 
 
 /**
- * Typedef for media stream information.
+ * This is a general purpose function set PCM samples to zero.
+ * Since this function is needed by many parts of the library, it is important
+ * that the library should select the best performance for this.
+ *
+ * @param samples	The 16bit PCM samples.
+ * @param count		Number of samples.
  */
-typedef struct pjmedia_stream_info pjmedia_stream_info;
+PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
+{
+    unsigned i;
+    for (i=0; i<count; ++i)
+	samples[i] = 0;
+}
 
-/**
- * Typedef for media stream statistic.
- */
-typedef struct pjmedia_stream_stat pjmedia_stream_stat;
-
-/**
- * Typedef for media stream.
- */
-typedef struct pjmedia_stream pjmedia_stream;
-
-/**
- * Individual channel statistic.
- */
-typedef struct pjmedia_channel_stat pjmedia_channel_stat;
-
-/** 
- * Opaque declaration of media session. 
- */
-typedef struct pjmedia_session pjmedia_session;
-
-/**
- * Media session info.
- */
-typedef struct pjmedia_session_info pjmedia_session_info;
-
-/**
- * Types of frame returned from jitter buffer (jbuf.h).
- */
-typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
-
-/**
- * Opaque declaration for jitter buffer.
- */
-typedef struct pjmedia_jbuf pjmedia_jbuf;
 
 #endif	/* __PJMEDIA_TYPES_H__ */
 

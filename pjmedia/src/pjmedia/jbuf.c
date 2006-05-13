@@ -432,10 +432,10 @@ static void jbuf_update(pjmedia_jbuf *jb, int oper)
     }
 }
 
-PJ_DEF(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb, 
-					   const void *frame, 
-					   pj_size_t frame_size, 
-					   int frame_seq)
+PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
+				     const void *frame, 
+				     pj_size_t frame_size, 
+				     int frame_seq)
 {
     pj_size_t min_frame_size;
     int seq_diff;
@@ -475,16 +475,14 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb,
     {
 	jb_framelist_put_at(&jb->jb_framelist,frame_seq,frame,min_frame_size);
     }
-
-    return PJ_SUCCESS;
 }
 
 /*
  * Get frame from jitter buffer.
  */
-PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
-					    void *frame, 
-					    char *p_frame_type)
+PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
+				     void *frame, 
+				     char *p_frame_type)
 {
     pjmedia_jb_frame_type ftype;
 
@@ -506,7 +504,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	else
 	    *p_frame_type = PJMEDIA_JB_ZERO_PREFETCH_FRAME;
 
-	return PJ_SUCCESS;
+	return;
     }
 
     /* Retrieve a frame from frame list */
@@ -515,7 +513,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	pj_memset(frame, 0, jb->jb_frame_size);
 	*p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
 
-	return PJ_SUCCESS;
+	return;
     }
 
     /* We've successfully retrieved a frame from the frame list, but
@@ -525,9 +523,6 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	*p_frame_type	= PJMEDIA_JB_NORMAL_FRAME;
     else 
 	*p_frame_type	= PJMEDIA_JB_MISSING_FRAME;
-    
-
-    return PJ_SUCCESS;
 }
 
 /*

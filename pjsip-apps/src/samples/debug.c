@@ -27,5 +27,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "streamutil.c"
+#include "sndinfo.c"
 

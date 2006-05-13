@@ -1168,7 +1168,7 @@ static int media_thread(void *arg)
 					     0, /* marker bit */
 					     strm->bytes_per_frame, 
 					     strm->samples_per_frame,
-					     &hdr, &hdrlen);
+					     (const void**)&hdr, &hdrlen);
 	    if (status == PJ_SUCCESS) {
 
 		/* Copy RTP header to packet */
@@ -1266,7 +1266,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
 
     status = pjmedia_stream_info_from_sdp(&audio->si, inv->pool, app.med_endpt,
-					  local_sdp, remote_sdp, 0);
+					  NULL, local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Error creating stream info from SDP", status);
 	return;

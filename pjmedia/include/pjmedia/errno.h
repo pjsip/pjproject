@@ -275,6 +275,11 @@ PJ_BEGIN_DECL
  * PCM buffer is too short.
  */
 #define PJMEDIA_CODEC_EPCMTOOSHORT  (PJMEDIA_ERRNO_START+83)    /* 220083 */
+/**
+ * @hideinitializer
+ * Invalid codec frame length.
+ */
+#define PJMEDIA_CODEC_EFRMINLEN	    (PJMEDIA_ERRNO_START+84)    /* 220084 */
 
 
 /************************************************************

@@ -26,7 +26,7 @@
  * Call (INVITE) related stuffs.
  */
 
-#define THIS_FILE   "pjsua_inv.c"
+#define THIS_FILE   "pjsua_call.c"
 
 
 #define REFRESH_CALL_TIMER	0x63
@@ -153,10 +153,10 @@ static pj_status_t call_destroy_media(int call_index)
 
 	call->session = NULL;
 
-    }
+	PJ_LOG(3,(THIS_FILE, "Media session for call %d is destroyed", 
+			     call_index));
 
-    PJ_LOG(3,(THIS_FILE, "Media session for call %d is destroyed", 
-			 call_index));
+    }
 
     return PJ_SUCCESS;
 }
@@ -523,6 +523,11 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    pj_gettimeofday(&call->dis_time);
 	    break;
+	default:
+	    /* Nothing to do. Just to keep gcc from complaining about
+	     * unused enums.
+	     */ 
+	    break;
     }
 
     /* If this is an outgoing INVITE that was created because of
@@ -556,6 +561,12 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    st_code = e->body.tsx_state.tsx->status_code;
 	    ev_state = PJSIP_EVSUB_STATE_TERMINATED;
+	    break;
+
+	default:
+	    /* Nothing to do. Just to keep gcc from complaining about
+	     * unused enums.
+	     */
 	    break;
 	}
 
@@ -915,6 +926,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
 }
 
+#if 0
 /* Disconnect call */
 static void call_disconnect(pjsip_inv_session *inv,
 			    int st_code)
@@ -930,6 +942,7 @@ static void call_disconnect(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, "Unable to disconnect call", status);
     }
 }
+#endif
 
 /*
  * Callback to be called when SDP offer/answer negotiation has just completed
@@ -940,6 +953,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				       pj_status_t status)
 {
     pjsua_call *call;
+    pjmedia_session_info sess_info;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
     pjmedia_port *media_port;
@@ -990,17 +1004,38 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-    /* Create new media session. 
-     * The media session is active immediately.
-     */
     if (pjsua.null_audio)
 	return;
-    
-    status = pjmedia_session_create( pjsua.med_endpt, 1, 
-				     &call->skinfo,
-				     local_sdp, remote_sdp, 
-				     call,
-				     &call->session );
+
+    /* Create media session info based on SDP parameters. 
+     * We only support one stream per session at the moment
+     */    
+    status = pjmedia_session_info_from_sdp( call->inv->dlg->pool, 
+					    pjsua.med_endpt, 1,
+					    &sess_info, &call->skinfo,
+					    local_sdp, remote_sdp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create media session", 
+		     status);
+	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	return;
+    }
+
+    /* Override ptime, if this option is specified. */
+    if (pjsua.ptime) {
+	sess_info.stream_info[0].param->setting.frm_per_pkt = (pj_uint8_t)
+	    (pjsua.ptime / sess_info.stream_info[0].param->info.frm_ptime);
+	if (sess_info.stream_info[0].param->setting.frm_per_pkt==0)
+	    sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
+    }
+
+    /* Optionally, application may modify other stream settings here
+     * (such as jitter buffer parameters, codec ptime, etc.)
+     */
+
+    /* Create session based on session info. */
+    status = pjmedia_session_create( pjsua.med_endpt, &sess_info,
+				     call, &call->session );
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);

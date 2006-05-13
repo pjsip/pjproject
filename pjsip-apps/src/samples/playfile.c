@@ -76,7 +76,11 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
 
-    PJ_UNUSED_ARG(argc);
+    if (argc != 2) {
+    	puts("Error: filename required");
+	puts(desc);
+	return 1;
+    }
 
 
     /* Must init PJLIB first: */

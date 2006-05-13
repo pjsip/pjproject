@@ -1,14 +1,14 @@
 
 include ../../build/common.mak
 
-PJLIB_LIB:=../../pjlib/lib/libpj-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_LIB:=../../pjsip/lib/libpjsip-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_SIMPLE_LIB:=../../pjsip/lib/libpjsip-simple-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSUA_LIB_LIB=../../pjsip/lib/libpjsua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET)$(LIBEXT)
+PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET)$(LIBEXT)
+PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(TARGET)$(LIBEXT)
+PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(TARGET)$(LIBEXT)
+PJSIP_LIB:=../../pjsip/lib/libpjsip-$(TARGET)$(LIBEXT)
+PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(TARGET)$(LIBEXT)
+PJSIP_SIMPLE_LIB:=../../pjsip/lib/libpjsip-simple-$(TARGET)$(LIBEXT)
+PJSUA_LIB_LIB=../../pjsip/lib/libpjsua-$(TARGET)$(LIBEXT)
 
 
 ###############################################################################
@@ -35,17 +35,17 @@ export _LDFLAGS := $(LIBS) \
 		   $(LDFLAGS) -lm
 
 SRCDIR := ../src/samples
-OBJDIR := ./output/samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
+OBJDIR := ./output/samples-$(TARGET)
 BINDIR := ../bin/samples
 
 SAMPLES := simpleua playfile playsine confsample sndinfo level recfile resampleplay \
 	   siprtp streamutil
 
-EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE))
+EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET)$(HOST_EXE))
 
 all: $(OBJDIR) $(EXES)
 
-$(BINDIR)/%-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
+$(BINDIR)/%-$(TARGET)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
 	    $(subst /,$(HOST_PSEP),$<) \
 	    $(_LDFLAGS)

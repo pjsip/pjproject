@@ -53,8 +53,6 @@ struct pjmedia_channel
     void		   *in_pkt;	    /**< Input buffer.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
     void		   *out_pkt;	    /**< Output buffer.		    */
-    unsigned		    pcm_buf_size;   /**< Size of PCM buffer.	    */
-    void		   *pcm_buf;	    /**< PCM buffer.		    */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 };
 
@@ -85,7 +83,8 @@ struct pjmedia_stream
     void		    *user_data;	    /**< User data.		    */
 
     pjmedia_codec	    *codec;	    /**< Codec instance being used. */
-    pj_size_t		     frame_size;    /**< Size of encoded frame.	    */
+    pjmedia_codec_param	     codec_param;   /**< Codec param.		    */
+    unsigned		     frame_size;    /**< Size of encoded base frame.*/
     pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
 
@@ -154,9 +153,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_stream *stream = port->user_data;
     pjmedia_channel *channel = stream->dec;
     
-    char frame_type;
     pj_status_t status;
-    struct pjmedia_frame frame_in, frame_out;
+    unsigned samples_count, samples_per_frame, samples_required;
+    pj_int16_t *p_out_samp;
 
     /* Return no frame is channel is paused */
     if (channel->paused) {
@@ -164,47 +163,107 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	return PJ_SUCCESS;
     }
 
-    /* Lock jitter buffer mutex */
+    /* Repeat get frame from the jitter buffer and decode the frame
+     * until we have enough frames according to codec's ptime.
+     */
+
+    /* Lock jitter buffer mutex first */
     pj_mutex_lock( stream->jb_mutex );
 
-    /* Get frame from jitter buffer. */
-    status = pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt,
-				    &frame_type);
+    samples_required = stream->port.info.samples_per_frame;
+    samples_per_frame = stream->codec_param.info.frm_ptime *
+			stream->codec_param.info.clock_rate *
+			stream->codec_param.info.channel_cnt / 
+			1000;
+    p_out_samp = frame->buf;
+
+    for (samples_count=0; samples_count < samples_required; 
+	 samples_count += samples_per_frame) 
+    {
+	 char frame_type;
+
+	/* Get frame from jitter buffer. */
+	pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt, &frame_type);
+	
+	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
+	    
+	    /* Activate PLC */
+	    if (stream->codec->op->recover && 
+		stream->codec_param.setting.plc) 
+	    {
+		pjmedia_frame frame_out;
+
+		frame_out.buf = p_out_samp + samples_count;
+		frame_out.size = frame->size - samples_count*2;
+		status = (*stream->codec->op->recover)(stream->codec,
+						       frame_out.size,
+						       &frame_out);
+	    } else {
+		status = -1;
+	    }
+
+	    if (status != PJ_SUCCESS) {
+		/* Either PLC failed or PLC not supported/enabled */
+		pjmedia_zero_samples(p_out_samp + samples_count,
+				     samples_required - samples_count);
+	    }
+	    
+	} else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
+
+	    /* Jitter buffer is empty, zero the remaining samples and break
+	     * the loop.
+	     */
+	    pjmedia_zero_samples(p_out_samp + samples_count,
+				 samples_required - samples_count);
+	    break;
+
+	} else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
+
+	    /* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
+	    pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
+
+	    /* Zero frame returned. We should zero the PCM buffer then.. */
+	    pjmedia_zero_samples(p_out_samp + samples_count, 
+				 samples_per_frame);
+
+	} else {
+	    /* Got "NORMAL" frame from jitter buffer */
+	    pjmedia_frame frame_in, frame_out;
+
+	    /* Decode */
+	    frame_in.buf = channel->out_pkt;
+	    frame_in.size = stream->frame_size;
+	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
+
+	    frame_out.buf = p_out_samp + samples_count;
+	    frame_out.size = frame->size - samples_count*2;
+	    status = stream->codec->op->decode( stream->codec, &frame_in,
+						frame_out.size, &frame_out);
+	    if (status != 0) {
+		LOGERR_((port->info.name.ptr, "codec decode() error", 
+			 status));
+
+		pjmedia_zero_samples(p_out_samp + samples_count, 
+				     samples_per_frame);
+	    }
+	}
+    }
+
 
     /* Unlock jitter buffer mutex. */
     pj_mutex_unlock( stream->jb_mutex );
 
-    if (status != PJ_SUCCESS || frame_type != PJMEDIA_JB_NORMAL_FRAME) {
+    /* Return PJMEDIA_FRAME_TYPE_NONE if we have no frames at all
+     * (it can happen when jitter buffer returns PJMEDIA_JB_ZERO_EMPTY_FRAME).
+     */
+    if (samples_count == 0) {
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
+	frame->size = 0;
+    } else {
+	frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame->size = samples_count * 2;
+	frame->timestamp.u64 = 0;
     }
-
-    /* Decode */
-    frame_in.buf = channel->out_pkt;
-    frame_in.size = stream->frame_size;
-    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
-    frame_out.buf = channel->pcm_buf;
-    status = stream->codec->op->decode( stream->codec, &frame_in,
-					channel->pcm_buf_size, &frame_out);
-    if (status != 0) {
-	LOGERR_((port->info.name.ptr, "codec decode() error", status));
-
-	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
-    }
-
-    /* Put in sound buffer. */
-    if (frame_out.size > frame->size) {
-	PJ_LOG(4,(port->info.name.ptr, 
-		  "Sound playout buffer truncated %d bytes", 
-		  frame_out.size - frame->size));
-	frame_out.size = frame->size;
-    }
-
-    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frame->size = frame_out.size;
-    frame->timestamp.u64 = 0;
-    pj_memcpy(frame->buf, frame_out.buf, frame_out.size);
 
     return PJ_SUCCESS;
 }
@@ -318,7 +377,7 @@ static pj_status_t put_frame( pjmedia_port *port,
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     struct pjmedia_frame frame_out;
-    int ts_len;
+    unsigned ts_len;
     pj_bool_t has_tx;
     void *rtphdr;
     int rtphdrlen;
@@ -355,17 +414,37 @@ static pj_status_t put_frame( pjmedia_port *port,
 					 &rtphdrlen);
 
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
-	unsigned max_size;
+	unsigned ts, samples_per_frame;
 
 	has_tx = PJ_TRUE;
-	max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr);
-	status = stream->codec->op->encode( stream->codec, frame, 
-					    max_size, 
-					    &frame_out);
-	if (status != 0) {
-	    LOGERR_((stream->port.info.name.ptr, 
-		    "Codec encode() error", status));
-	    return status;
+
+	/* Repeatedly call encode if there are multiple frames to be
+	 * sent.
+	 */
+	samples_per_frame = stream->codec_param.info.frm_ptime *
+			    stream->codec_param.info.clock_rate *
+			    stream->codec_param.info.channel_cnt /
+			    1000;
+
+	for (ts=0; ts<ts_len; ts += samples_per_frame) {
+	    pjmedia_frame tmp_frame;
+	    unsigned max_size;
+
+	    tmp_frame.buf = ((char*)frame_out.buf) + frame_out.size;
+
+	    max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr) -
+		       frame_out.size;
+
+	    status = stream->codec->op->encode( stream->codec, frame, 
+						max_size, 
+						&tmp_frame);
+	    if (status != PJ_SUCCESS) {
+		LOGERR_((stream->port.info.name.ptr, 
+			"Codec encode() error", status));
+		return status;
+	    }
+
+	    frame_out.size += tmp_frame.size;
 	}
 
 	//printf("p"); fflush(stdout);
@@ -625,10 +704,43 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    PJ_LOG(4,(stream->port.info.name.ptr, "Jitter buffer reset"));
 
 	} else {
-	    unsigned ext_seq;
-	    ext_seq = channel->rtp.seq_ctrl.cycles | pj_ntohs(hdr->seq);
-	    status = pjmedia_jbuf_put_frame(stream->jb, payload, payloadlen,
-					    ext_seq);
+	    /*
+	     * Packets may contain more than one frames, while the jitter
+	     * buffer can only take one frame per "put" operation. So we need
+	     * to ask the codec to "parse" the payload into multiple frames.
+	     */
+	    enum { MAX = 16 };
+	    pj_timestamp ts;
+	    unsigned i, count;
+	    pjmedia_frame frames[MAX];
+
+	    /* Get the timestamp of the first sample */
+	    ts.u64 = pj_ntohl(hdr->ts);
+
+	    /* Parse the payload. */
+	    status = (*stream->codec->op->parse)(stream->codec,
+						 (void*)payload,
+						 payloadlen,
+						 &ts,
+						 &count,
+						 frames);
+	    if (status != PJ_SUCCESS) {
+		LOGERR_((stream->port.info.name.ptr, 
+			 "Codec parse() error", 
+			 status));
+		count = 0;
+	    }
+
+	    /* Put each frame to jitter buffer. */
+	    for (i=0; i<count; ++i) {
+		unsigned ext_seq;
+
+		ext_seq = (unsigned)(frames[i].timestamp.u64 /
+				     stream->port.info.samples_per_frame);
+		pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
+				       frames[i].size, ext_seq);
+
+	    }
 	}
 	pj_mutex_unlock( stream->jb_mutex );
 
@@ -727,7 +839,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
 				   pjmedia_dir dir,
 				   unsigned pt,
 				   const pjmedia_stream_info *param,
-				   const pjmedia_codec_param *codec_param,
 				   pjmedia_channel **p_channel)
 {
     pjmedia_channel *channel;
@@ -755,7 +866,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     /* Allocate buffer for outgoing packet. */
 
     channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
-			    codec_param->avg_bps/8 * 
+			    stream->codec_param.info.avg_bps/8 * 
 			    PJMEDIA_MAX_FRAME_DURATION_MS / 
 			    1000;
 
@@ -765,15 +876,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->out_pkt = pj_pool_alloc(pool, channel->out_pkt_size);
     PJ_ASSERT_RETURN(channel->out_pkt != NULL, PJ_ENOMEM);
 
-
-    /* Allocate buffer for decoding to PCM: */
-
-    channel->pcm_buf_size = codec_param->clock_rate * 
-			    codec_param->channel_cnt *
-			    codec_param->pcm_bits_per_sample / 8 *
-			    PJMEDIA_MAX_FRAME_DURATION_MS / 1000;
-    channel->pcm_buf = pj_pool_alloc (pool, channel->pcm_buf_size);
-    PJ_ASSERT_RETURN(channel->pcm_buf != NULL, PJ_ENOMEM);
 
 
     /* Create RTP and RTCP sessions: */
@@ -799,10 +901,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 {
     pjmedia_stream *stream;
-    pjmedia_codec_param codec_param;
     pj_ioqueue_callback ioqueue_cb;
     pj_uint16_t rtcp_port;
-    unsigned jbuf_init, jbuf_max;
+    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
@@ -866,31 +967,44 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
 
-    /* Get default codec param: */
+    /* Get codec param: */
+    if (info->param)
+	stream->codec_param = *info->param;
+    else {
+	status = pjmedia_codec_mgr_get_default_param(stream->codec_mgr, 
+						     &info->fmt, 
+						     &stream->codec_param);
+	if (status != PJ_SUCCESS)
+	    goto err_cleanup;
+    }
 
-    //status = stream->codec->op->default_attr(stream->codec, &codec_param);
-    status = pjmedia_codec_mgr_get_default_param( stream->codec_mgr, 
-						  &info->fmt, &codec_param);
-    if (status != PJ_SUCCESS)
-	goto err_cleanup;
+    /* Check for invalid frame per packet. */
+    if (stream->codec_param.setting.frm_per_pkt < 1)
+	stream->codec_param.setting.frm_per_pkt = 1;
 
     /* Set additional info. */
     stream->port.info.bits_per_sample = 16;
-    stream->port.info.samples_per_frame = info->fmt.clock_rate*codec_param.ptime/1000;
-    stream->port.info.bytes_per_frame = codec_param.avg_bps/8 * codec_param.ptime/1000;
+    stream->port.info.samples_per_frame = info->fmt.clock_rate * 
+					  stream->codec_param.info.frm_ptime *
+					  stream->codec_param.setting.frm_per_pkt /
+					  1000;
+    stream->port.info.bytes_per_frame = stream->codec_param.info.avg_bps/8 * 
+					stream->codec_param.info.frm_ptime *
+					stream->codec_param.setting.frm_per_pkt /
+					1000;
 
 
     /* Open the codec: */
 
-    status = stream->codec->op->open(stream->codec, &codec_param);
+    status = stream->codec->op->open(stream->codec, &stream->codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
 
     /* Get the frame size: */
 
-    stream->frame_size = (codec_param.avg_bps / 8) * codec_param.ptime / 1000;
-
+    stream->frame_size = (stream->codec_param.info.avg_bps / 8) * 
+			  stream->codec_param.info.frm_ptime / 1000;
 
     /* Init RTCP session: */
 
@@ -900,31 +1014,44 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 		      info->ssrc);
 
 
-    /* Create jitter buffer: */
-    if (info->jb_init)
-	jbuf_init = info->jb_init;
+    /* Init jitter buffer parameters: */
+    if (info->jb_max > 0)
+	jb_max = info->jb_max;
     else
-	jbuf_init = 60 / (stream->port.info.samples_per_frame * 1000 / 
-			  info->fmt.clock_rate);
-
-    if (info->jb_max)
-	jbuf_max = info->jb_max;
-    else
-	jbuf_max = 240 / (stream->port.info.samples_per_frame * 1000 / 
+	jb_max = 240 / (stream->port.info.samples_per_frame * 1000 / 
 			   info->fmt.clock_rate);
+
+    if (info->jb_min_pre >= 0)
+	jb_min_pre = info->jb_min_pre;
+    else
+	jb_min_pre = 0;
+
+    if (info->jb_max_pre > 0)
+	jb_max_pre = info->jb_max_pre;
+    else
+	jb_max_pre = jb_max * 4 / 5;
+
+    if (info->jb_init >= 0)
+	jb_init = info->jb_init;
+    else
+	jb_init = jb_min_pre;
+
+
+    /* Create jitter buffer */
     status = pjmedia_jbuf_create(pool, &stream->port.info.name,
 				 stream->frame_size, 
-				 jbuf_max, &stream->jb);
+				 jb_max, &stream->jb);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
-    /* Set jitter buffer to adaptive */
-    pjmedia_jbuf_set_adaptive( stream->jb, jbuf_init, 1, jbuf_max * 4 / 5);
+
+    /* Set up jitter buffer */
+    pjmedia_jbuf_set_adaptive( stream->jb, jb_init, jb_min_pre, jb_max_pre);
 
     /* Create decoder channel: */
 
     status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, 
-			     info->fmt.pt, info, &codec_param, &stream->dec);
+			     info->fmt.pt, info, &stream->dec);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -932,7 +1059,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Create encoder channel: */
 
     status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING, 
-			     info->tx_pt, info, &codec_param, &stream->enc);
+			     info->tx_pt, info, &stream->enc);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 

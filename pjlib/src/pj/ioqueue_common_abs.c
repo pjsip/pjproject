@@ -71,6 +71,8 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
     pj_status_t rc;
     int optlen;
 
+    PJ_UNUSED_ARG(pool);
+
     key->ioqueue = ioqueue;
     key->fd = sock;
     key->user_data = user_data;

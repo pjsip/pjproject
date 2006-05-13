@@ -64,10 +64,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 					   pjmedia_stream_info *si,
 					   pj_pool_t *pool,
 					   pjmedia_endpt *endpt,
+					   const pjmedia_sock_info *skinfo,
 					   const pjmedia_sdp_session *local,
 					   const pjmedia_sdp_session *remote,
 					   unsigned stream_idx)
 {
+    pjmedia_codec_mgr *mgr;
     const pjmedia_sdp_attr *attr;
     const pjmedia_sdp_media *local_m;
     const pjmedia_sdp_media *rem_m;
@@ -85,6 +87,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     PJ_ASSERT_RETURN(stream_idx < remote->media_count, PJ_EINVAL);
 
 
+    /* Get codec manager. */
+    mgr = pjmedia_endpt_get_codec_mgr(endpt);
+
+    /* Keep SDP shortcuts */
     local_m = local->media[stream_idx];
     rem_m = remote->media[stream_idx];
 
@@ -215,11 +221,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 		si->fmt.channel_cnt = 1;
 	    }
 
-	} else {
-	    pjmedia_codec_mgr *mgr;
-	    pjmedia_codec_info *p_info;
-
-	    mgr = pjmedia_endpt_get_codec_mgr(endpt);
+	} else {	    
+	    const pjmedia_codec_info *p_info;
 
 	    status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &p_info);
 	    if (status != PJ_SUCCESS)
@@ -301,6 +304,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     }
 
   
+    /* Now that we have codec info, get the codec param. */
+    si->param = pj_pool_alloc(pool, sizeof(*si->param));
+    status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt, si->param);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Get incomming payload type for telephone-events */
     si->rx_event_pt = -1;
@@ -334,12 +342,52 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	}
     }
 
+    /* Copy skinfo */
+    if (skinfo)
+	si->sock_info = *skinfo;
 
     /* Leave SSRC to random. */
     si->ssrc = pj_rand();
 
-    /* Leave jitter buffer parameter. */
-    
+    /* Set default jitter buffer parameter. */
+    si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Initialize session info from SDP session descriptors.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_session_info_from_sdp( pj_pool_t *pool,
+			       pjmedia_endpt *endpt,
+			       unsigned max_streams,
+			       pjmedia_session_info *si,
+			       const pjmedia_sock_info skinfo[],
+			       const pjmedia_sdp_session *local,
+			       const pjmedia_sdp_session *remote)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(pool && endpt && si && local && remote, PJ_EINVAL);
+
+    si->stream_cnt = max_streams;
+    if (si->stream_cnt > local->media_count)
+	si->stream_cnt = local->media_count;
+
+    for (i=0; i<si->stream_cnt; ++i) {
+	pj_status_t status;
+
+	status = pjmedia_stream_info_from_sdp( &si->stream_info[i], pool,
+					       endpt, 
+					       (skinfo ? &skinfo[i] : NULL),
+					       local, remote, i);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -348,10 +396,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
  * Create new session.
  */
 PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt, 
-					    unsigned stream_cnt,
-					    const pjmedia_sock_info skinfo[],
-					    const pjmedia_sdp_session *local_sdp,
-					    const pjmedia_sdp_session *rem_sdp,
+					    const pjmedia_session_info *si,
 					    void *user_data,
 					    pjmedia_session **p_session )
 {
@@ -361,8 +406,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     pj_status_t status;
 
     /* Verify arguments. */
-    PJ_ASSERT_RETURN(endpt && stream_cnt && skinfo &&
-		     local_sdp && rem_sdp && p_session, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && si && p_session, PJ_EINVAL);
 
     /* Create pool for the session. */
     pool = pjmedia_endpt_create_pool( endpt, "session", 
@@ -373,35 +417,19 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     session = pj_pool_zalloc(pool, sizeof(pjmedia_session));
     session->pool = pool;
     session->endpt = endpt;
-    session->stream_cnt = stream_cnt;
+    session->stream_cnt = si->stream_cnt;
     session->user_data = user_data;
-    
-    /* Stream count is the lower number of stream_cnt or SDP m= lines count */
-    if (stream_cnt < local_sdp->media_count)
-	stream_cnt = local_sdp->media_count;
 
-    /* 
-     * Create streams: 
-     */
-    for (i=0; i<(int)stream_cnt; ++i) {
-
-	pjmedia_stream_info *si = &session->stream_info[i];
-
-	/* Build stream info based on media line in local SDP */
-	status = pjmedia_stream_info_from_sdp(si, session->pool, endpt,
-					      local_sdp, rem_sdp, i);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	/* Assign sockinfo */
-	si->sock_info = skinfo[i];
-    }
+    /* Copy stream info (this simple memcpy may break sometime) */
+    pj_memcpy(session->stream_info, si->stream_info,
+	      si->stream_cnt * sizeof(pjmedia_session_info));
 
     /*
      * Now create and start the stream!
      */
-    for (i=0; i<(int)stream_cnt; ++i) {
+    for (i=0; i<(int)si->stream_cnt; ++i) {
 
+	/* Create the stream */
 	status = pjmedia_stream_create(endpt, session->pool,
 				       &session->stream_info[i],
 				       session,

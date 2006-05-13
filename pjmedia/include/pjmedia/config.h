@@ -77,6 +77,8 @@
 
 /**
  * Maximum frame duration (in msec) to be supported.
+ * This (among other thing) will affect the size of buffers to be allocated
+ * for outgoing packets.
  */
 #ifndef PJMEDIA_MAX_FRAME_DURATION_MS   
 #   define PJMEDIA_MAX_FRAME_DURATION_MS   	200

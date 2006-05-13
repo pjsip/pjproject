@@ -72,13 +72,31 @@ struct pjmedia_stream_info
     pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
+    pjmedia_codec_param *param;	    /**< Optional codec param.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
     int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
     int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
-    int			jb_init;    /**< Jitter buffer init delay in msec.  */
+    int			jb_init;    /**< Jitter buffer init delay in msec.  
+					 (-1 for default).		    */
+    int			jb_min_pre; /**< Jitter buffer minimum prefetch
+					 delay in msec (-1 for default).    */
+    int			jb_max_pre; /**< Jitter buffer maximum prefetch
+					 delay in msec (-1 for default).    */
     int			jb_max;	    /**< Jitter buffer max delay in msec.   */
 };
+
+
+/**
+ * @see pjmedia_stream_info.
+ */
+typedef struct pjmedia_stream_info pjmedia_stream_info;
+
+
+/**
+ * Opaque declaration for media stream.
+ */
+typedef struct pjmedia_stream pjmedia_stream;
 
 
 /**

@@ -94,6 +94,7 @@ static void usage(void)
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --complexity=N      Specify encoding complexity (0-10, default=none(-1))");
     puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
+    puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("");
     puts  ("Buddy List (can be more than one):");
     puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -227,7 +228,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
-	   OPT_COMPLEXITY, OPT_QUALITY,
+	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, OPT_UAS_REFRESH,
 	   OPT_UAS_DURATION,
     };
@@ -266,6 +267,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
 	{ "complexity",	1, 0, OPT_COMPLEXITY},
 	{ "quality",	1, 0, OPT_QUALITY},
+	{ "ptime",      1, 0, OPT_PTIME},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -559,6 +561,15 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    }
 	    break;
 
+	case OPT_PTIME:
+	    pjsua.ptime = my_atoi(pj_optarg);
+	    if (pjsua.ptime < 10 || pjsua.ptime > 1000) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --ptime option"));
+		return -1;
+	    }
+	    break;
+
 	case OPT_AUTO_ANSWER:
 	    pjsua.auto_answer = my_atoi(pj_optarg);
 	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
@@ -771,13 +782,15 @@ static void dump_media_session(pjmedia_session *session)
 	}
 
 	PJ_LOG(3,(THIS_FILE,
-	       "                  TX pt=%d, stat last update: %s\n"
+	       "                  TX pt=%d, ptime=%dms, stat last update: %s\n"
 	       "                     total %spkt %sB (%sB +IP hdr)%s\n"
 	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	       "                           (msec)    min     avg     max     last\n"
 	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
 	       "                     jitter     : %7.3f %7.3f %7.3f %7.3f%s",
 	       info.stream_info[i].tx_pt,
+	       info.stream_info[i].param->info.frm_ptime *
+		info.stream_info[i].param->setting.frm_per_pkt,
 	       last_update,
 	       good_number(packets, stat.tx.pkt),
 	       good_number(bytes, stat.tx.bytes),
@@ -969,6 +982,8 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
     pj_str_t cfg;
     char line[128];
 
+    PJ_UNUSED_ARG(max);
+
     cfg.ptr = buf;
     cfg.slen = 0;
 
@@ -1095,6 +1110,13 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
     pj_ansi_sprintf(line, "--complexity %d\n",
 		    pjsua.complexity);
     pj_strcat2(&cfg, line);
+
+    /* ptime */
+    if (pjsua.ptime) {
+	pj_ansi_sprintf(line, "--ptime %d\n",
+			pjsua.ptime);
+	pj_strcat2(&cfg, line);
+    }
 
     /* Start RTP port. */
     pj_ansi_sprintf(line, "--rtp-port %d\n",

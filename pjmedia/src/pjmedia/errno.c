@@ -87,6 +87,7 @@ static const struct
     { PJMEDIA_CODEC_EFAILED,	    "Codec internal creation error" },
     { PJMEDIA_CODEC_EFRMTOOSHORT,   "Codec frame is too short" },
     { PJMEDIA_CODEC_EPCMTOOSHORT,   "PCM frame is too short" },
+    { PJMEDIA_CODEC_EFRMINLEN,	    "Invalid codec frame length" },
 
     /* Media errors. */
     { PJMEDIA_EINVALIDIP,	    "Invalid remote media (IP) address" },

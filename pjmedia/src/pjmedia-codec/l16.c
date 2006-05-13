@@ -61,11 +61,12 @@ static pj_status_t  l16_init( pjmedia_codec *codec,
 static pj_status_t  l16_open( pjmedia_codec *codec, 
 			       pjmedia_codec_param *attr );
 static pj_status_t  l16_close( pjmedia_codec *codec );
-static pj_status_t  l16_get_frames(pjmedia_codec *codec,
-				    void *pkt,
-				    pj_size_t pkt_size,
-				    unsigned *frame_cnt,
-				    pjmedia_frame frames[]);
+static pj_status_t  l16_parse(pjmedia_codec *codec,
+			      void *pkt,
+			      pj_size_t pkt_size,
+			      const pj_timestamp *ts,
+			      unsigned *frame_cnt,
+			      pjmedia_frame frames[]);
 static pj_status_t  l16_encode( pjmedia_codec *codec, 
 				 const struct pjmedia_frame *input,
 				 unsigned output_buf_len, 
@@ -81,7 +82,7 @@ static pjmedia_codec_op l16_op =
     &l16_init,
     &l16_open,
     &l16_close,
-    &l16_get_frames,
+    &l16_parse,
     &l16_encode,
     &l16_decode
 };
@@ -234,16 +235,18 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(factory);
 
     pj_memset(attr, 0, sizeof(pjmedia_codec_param));
-    attr->pt = id->pt;
-    attr->clock_rate = id->clock_rate;
-    attr->channel_cnt = id->channel_cnt;
-    attr->avg_bps = id->clock_rate * id->channel_cnt * 16;
-    attr->pcm_bits_per_sample = 16;
+    attr->info.pt = (pj_uint8_t)id->pt;
+    attr->info.clock_rate = id->clock_rate;
+    attr->info.channel_cnt = id->channel_cnt;
+    attr->info.avg_bps = id->clock_rate * id->channel_cnt * 16;
+    attr->info.pcm_bits_per_sample = 16;
 
     /* To keep frame size below 1400 MTU, set ptime to 10ms for
      * sampling rate > 35 KHz
      */
-    attr->ptime = GET_PTIME(id->clock_rate);
+    attr->info.frm_ptime = GET_PTIME(id->clock_rate);
+
+    attr->setting.frm_per_pkt = 1;
 
     /* Default all flag bits disabled. */
 
@@ -498,11 +501,12 @@ static pj_status_t l16_close( pjmedia_codec *codec )
     return PJ_SUCCESS;
 }
 
-static pj_status_t  l16_get_frames( pjmedia_codec *codec,
-				    void *pkt,
-				    pj_size_t pkt_size,
-				    unsigned *frame_cnt,
-				    pjmedia_frame frames[])
+static pj_status_t  l16_parse( pjmedia_codec *codec,
+			       void *pkt,
+			       pj_size_t pkt_size,
+			       const pj_timestamp *ts,
+			       unsigned *frame_cnt,
+			       pjmedia_frame frames[])
 {
     unsigned count = 0;
     struct l16_data *data = (struct l16_data*) codec->codec_data;
@@ -511,9 +515,10 @@ static pj_status_t  l16_get_frames( pjmedia_codec *codec,
     PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
 
     while (pkt_size >= data->frame_size && count < *frame_cnt) {
-	frames[0].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[0].buf = pkt;
-	frames[0].size = data->frame_size;
+	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frames[count].buf = pkt;
+	frames[count].size = data->frame_size;
+	frames[count].timestamp.u64 = ts->u64 + (count * data->frame_size);
 
 	pkt = ((char*)pkt) + data->frame_size;
 	pkt_size -= data->frame_size;

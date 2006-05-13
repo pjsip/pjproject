@@ -66,26 +66,73 @@ struct pjmedia_session_info
 };
 
 
+/** 
+ * Opaque declaration of media session. 
+ */
+typedef struct pjmedia_session pjmedia_session;
+
+
 /**
- * Initialize stream info from SDP media lines.
+ * @see pjmedia_session_info.
+ */
+typedef struct pjmedia_session_info pjmedia_session_info;
+
+
+/**
+ * This function will initialize the session info based on information
+ * in both SDP session descriptors. The remaining information will be
+ * taken from default codec parameters. If socket info array is specified,
+ * the socket will be copied to the session info as well.
  *
- * @param si		Stream info structure to be initialized.
- * @param pool		Pool.
+ * @param pool		Pool to allocate memory.
  * @param endpt		Pjmedia endpoint.
+ * @param max_streams	Maximum number of stream infos to be created.
+ * @param si		Session info structure to be initialized.
+ * @param skinfo	Optional array of media socket info to be copied
+ *			to the stream info. If this argument is specified,
+ *			the array must contain sufficient elements for
+ *			each stream to be initialized.
  * @param local		Local SDP session descriptor.
  * @param remote	Remote SDP session descriptor.
  * @param stream_idx	Media stream index in the session descriptor.
  *
  * @return		PJ_SUCCESS if stream info is successfully initialized.
  */
-PJ_DECL(pj_status_t) pjmedia_stream_info_from_sdp( 
-					   pjmedia_stream_info *si,
-					   pj_pool_t *pool,
-					   pjmedia_endpt *endpt,
-					   const pjmedia_sdp_session *local,
-					   const pjmedia_sdp_session *remote,
-					   unsigned stream_idx);
+PJ_DECL(pj_status_t)
+pjmedia_session_info_from_sdp( pj_pool_t *pool,
+			       pjmedia_endpt *endpt,
+			       unsigned max_streams,
+			       pjmedia_session_info *si,
+			       const pjmedia_sock_info skinfo[],
+			       const pjmedia_sdp_session *local,
+			       const pjmedia_sdp_session *remote);
 
+
+/*
+ * This function will initialize the stream info based on information
+ * in both SDP session descriptors for the specified stream index. 
+ * The remaining information will be taken from default codec parameters. 
+ * If socket info array is specified, the socket will be copied to the 
+ * session info as well.
+ *
+ * @param si		Stream info structure to be initialized.
+ * @param pool		Pool to allocate memory.
+ * @param endpt		PJMEDIA endpoint instance.
+ * @param skinfo	Optional socket info to be copied to the stream info.
+ * @param local		Local SDP session descriptor.
+ * @param remote	Remote SDP session descriptor.
+ * @param stream_idx	Media stream index in the session descriptor.
+ *
+ * @return		PJ_SUCCESS if stream info is successfully initialized.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
+			      pj_pool_t *pool,
+			      pjmedia_endpt *endpt,
+			      const pjmedia_sock_info *skinfo,
+			      const pjmedia_sdp_session *local,
+			      const pjmedia_sdp_session *remote,
+			      unsigned stream_idx);
 
 /**
  * Create media session based on the local and remote SDP. After the session
@@ -101,10 +148,6 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_from_sdp(
  * @param stream_cnt	Maximum number of streams to be created. This
  *			also denotes the number of elements in the
  *			socket information.
- * @param skinfo	Array of socket informations. The argument stream_cnt
- *			specifies the number of elements in this array. One
- *			element is needed for each media stream to be
- *			created in the session.
  * @param local_sdp	The SDP describing local capability.
  * @param rem_sdp	The SDP describing remote capability.
  * @param user_data	Arbitrary user data to be kept in the session.
@@ -115,10 +158,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_from_sdp(
  */
 PJ_DECL(pj_status_t) 
 pjmedia_session_create( pjmedia_endpt *endpt, 
-			unsigned stream_cnt,
-			const pjmedia_sock_info skinfo[],
-			const pjmedia_sdp_session *local_sdp,
-			const pjmedia_sdp_session *rem_sdp,
+			const pjmedia_session_info *si,
 			void *user_data,
 			pjmedia_session **p_session );
 

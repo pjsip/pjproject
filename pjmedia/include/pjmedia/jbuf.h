@@ -55,6 +55,12 @@ enum pjmedia_jb_frame_type
 
 
 /**
+ * @see pjmedia_jb_frame_type.
+ */
+typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
+
+
+/**
  * This structure describes jitter buffer current status.
  */
 struct pjmedia_jb_state
@@ -78,6 +84,11 @@ typedef struct pjmedia_jb_state pjmedia_jb_state;
  * buffer prefetch count during jitter buffer creation.
  */
 #define PJMEDIA_JB_DEFAULT_INIT_DELAY    15
+
+/**
+ * Opaque declaration for jitter buffer.
+ */
+typedef struct pjmedia_jbuf pjmedia_jbuf;
 
 
 /**
@@ -181,10 +192,10 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb, 
-					    const void *frame, 
-					    pj_size_t size, 
-					    int frame_seq);
+PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
+				      const void *frame, 
+				      pj_size_t size, 
+				      int frame_seq);
 
 /**
  * Get a frame from the jitter buffer. The jitter buffer will return the
@@ -210,12 +221,10 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_put_frame(pjmedia_jbuf *jb,
  *			frame will be copied. If there is a frame, the jitter
  *			buffer will copy the frame to the buffer, and frame
  *			type will be set to PJMEDIA_JB_NORMAL_FRAME.
- *
- * @return		Always returns PJ_SUCCESS.
  */
-PJ_DECL(pj_status_t) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
-					     void *frame, 
-					     char *p_frm_type);
+PJ_DECL(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb, 
+				      void *frame, 
+				      char *p_frm_type);
 
 
 /**

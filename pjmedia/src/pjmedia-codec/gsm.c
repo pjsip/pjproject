@@ -54,11 +54,12 @@ static pj_status_t  gsm_codec_init( pjmedia_codec *codec,
 static pj_status_t  gsm_codec_open( pjmedia_codec *codec, 
 				    pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_close( pjmedia_codec *codec );
-static pj_status_t  gsm_codec_get_frames( pjmedia_codec *codec,
-					  void *pkt,
-					  pj_size_t pkt_size,
-					  unsigned *frame_cnt,
-					  pjmedia_frame frames[]);
+static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
+				     void *pkt,
+				     pj_size_t pkt_size,
+				     const pj_timestamp *ts,
+				     unsigned *frame_cnt,
+				     pjmedia_frame frames[]);
 static pj_status_t  gsm_codec_encode( pjmedia_codec *codec, 
 				      const struct pjmedia_frame *input,
 				      unsigned output_buf_len, 
@@ -74,7 +75,7 @@ static pjmedia_codec_op gsm_op =
     &gsm_codec_init,
     &gsm_codec_open,
     &gsm_codec_close,
-    &gsm_codec_get_frames,
+    &gsm_codec_parse,
     &gsm_codec_encode,
     &gsm_codec_decode
 };
@@ -230,12 +231,14 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(id);
 
     pj_memset(attr, 0, sizeof(pjmedia_codec_param));
-    attr->clock_rate = 8000;
-    attr->channel_cnt = 1;
-    attr->avg_bps = 13200;
-    attr->pcm_bits_per_sample = 16;
-    attr->ptime = 20;
-    attr->pt = PJMEDIA_RTP_PT_GSM;
+    attr->info.clock_rate = 8000;
+    attr->info.channel_cnt = 1;
+    attr->info.avg_bps = 13200;
+    attr->info.pcm_bits_per_sample = 16;
+    attr->info.frm_ptime = 20;
+    attr->info.pt = PJMEDIA_RTP_PT_GSM;
+
+    attr->setting.frm_per_pkt = 1;
 
     /* Default all flag bits disabled. */
 
@@ -386,11 +389,12 @@ static pj_status_t gsm_codec_close( pjmedia_codec *codec )
 /*
  * Get frames in the packet.
  */
-static pj_status_t  gsm_codec_get_frames( pjmedia_codec *codec,
-					  void *pkt,
-					  pj_size_t pkt_size,
-					  unsigned *frame_cnt,
-					  pjmedia_frame frames[])
+static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
+				     void *pkt,
+				     pj_size_t pkt_size,
+				     const pj_timestamp *ts,
+				     unsigned *frame_cnt,
+				     pjmedia_frame frames[])
 {
     unsigned count = 0;
 
@@ -399,9 +403,10 @@ static pj_status_t  gsm_codec_get_frames( pjmedia_codec *codec,
     PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
 
     while (pkt_size >= 33 && count < *frame_cnt) {
-	frames[0].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[0].buf = pkt;
-	frames[0].size = 33;
+	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frames[count].buf = pkt;
+	frames[count].size = 33;
+	frames[count].timestamp.u64 = ts->u64 + count * 160;
 
 	pkt = ((char*)pkt) + 33;
 	pkt_size -= 33;

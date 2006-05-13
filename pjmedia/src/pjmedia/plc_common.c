@@ -27,10 +27,6 @@ static void* plc_replay_create(pj_pool_t*, unsigned c, unsigned f);
 static void  plc_replay_save(void*, pj_int16_t*);
 static void  plc_replay_generate(void*, pj_int16_t*);
 
-static void* noplc_create(pj_pool_t*, unsigned c, unsigned f);
-static void  noplc_save(void*, pj_int16_t*);
-static void  noplc_generate(void*, pj_int16_t*);
-
 extern void* pjmedia_plc_g711_create(pj_pool_t*, unsigned c, unsigned f);
 extern void  pjmedia_plc_g711_save(void*, pj_int16_t*);
 extern void  pjmedia_plc_g711_generate(void*, pj_int16_t*);
@@ -62,14 +58,6 @@ static struct plc_alg plc_replay =
     &plc_replay_create,
     &plc_replay_save,
     &plc_replay_generate
-};
-
-
-static struct plc_alg no_plc =
-{
-    &noplc_create,
-    &noplc_save,
-    &noplc_generate
 };
 
 
@@ -200,28 +188,4 @@ static void plc_replay_generate(void *plc, pj_int16_t *frame)
 }
 
 
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * No PLC
- */
-static void* noplc_create(pj_pool_t *pool, unsigned clock_rate, 
-			  unsigned samples_per_sec)
-{
-    PJ_UNUSED_ARG(pool);    
-    PJ_UNUSED_ARG(clock_rate);
-    return (void*) samples_per_sec;
-}
-
-static void noplc_save(void *plc, pj_int16_t *frame)
-{
-    PJ_UNUSED_ARG(plc);
-    PJ_UNUSED_ARG(frame);
-}
-
-static void  noplc_generate(void *plc, pj_int16_t *frame)
-{
-    unsigned samples_per_sec = (unsigned)plc;
-    pj_memset(frame, 0, samples_per_sec);
-}
 

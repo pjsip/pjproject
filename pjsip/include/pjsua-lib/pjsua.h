@@ -195,6 +195,7 @@ struct pjsua
     pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/
     int		     complexity;    /**< Codec complexity.		*/
     int		     quality;	    /**< Codec quality.			*/
+    int		     ptime;	    /**< Codec ptime in msec.		*/
 
 
     /* Codec arguments: */

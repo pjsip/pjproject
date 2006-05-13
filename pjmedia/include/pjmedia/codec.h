@@ -110,22 +110,38 @@ typedef struct pjmedia_codec_info pjmedia_codec_info;
  */
 struct pjmedia_codec_param
 {
-    unsigned	clock_rate;	    /**< Sampling rate in Hz		*/
-    unsigned	channel_cnt;	    /**< Channel count.			*/
-    pj_uint32_t	avg_bps;	    /**< Average bandwidth in bits/sec	*/
+    /**
+     * The "info" part of codec param describes the capability of the codec,
+     * and the value should NOT be changed by application.
+     */
+    struct {
+       unsigned	   clock_rate;		/**< Sampling rate in Hz	    */
+       unsigned	   channel_cnt;		/**< Channel count.		    */
+       pj_uint32_t avg_bps;		/**< Average bandwidth in bits/sec  */
+       pj_uint16_t frm_ptime;		/**< Base frame ptime in msec.	    */
+       pj_uint8_t  pcm_bits_per_sample;	/**< Bits/sample in the PCM side    */
+       pj_uint8_t  pt;			/**< Payload type.		    */
+    } info;
 
-    pj_uint16_t	ptime;		    /**< Packet time in miliseconds	*/
-    pj_uint8_t	pcm_bits_per_sample;/**< Bits/sample in the PCM side	*/
-
-    unsigned	pt:8;		    /**< Payload type.			*/
-    unsigned    vad:1;		    /**< Voice Activity Detector.	*/
-    unsigned    cng:1;		    /**< Comfort Noise Generator.	*/
-    unsigned    lpf:1;		    /**< Low pass filter		*/
-    unsigned    hpf:1;		    /**< High pass filter		*/
-    unsigned    penh:1;		    /**< Perceptual Enhancement		*/
-    unsigned    concl:1;	    /**< Packet loss concealment	*/
-    unsigned    reserved:1;	    /**< Reserved, must be NULL.	*/
-
+    /**
+     * The "setting" part of codec param describes various settings to be
+     * applied to the codec. When the codec param is retrieved from the codec
+     * or codec factory, the values of these will be filled by the capability
+     * of the codec. Any features that are supported by the codec (e.g. vad
+     * or plc) will be turned on, so that application can query which 
+     * capabilities are supported by the codec. Application may change the
+     * settings here before instantiating the codec/stream.
+     */
+    struct {
+	pj_uint8_t  frm_per_pkt;    /**< Number of frames per packet.	*/
+	unsigned    vad:1;	    /**< Voice Activity Detector.	*/
+	unsigned    cng:1;	    /**< Comfort Noise Generator.	*/
+	unsigned    lpf:1;	    /**< Low pass filter		*/
+	unsigned    hpf:1;	    /**< High pass filter		*/
+	unsigned    penh:1;	    /**< Perceptual Enhancement		*/
+	unsigned    plc:1;	    /**< Packet loss concealment	*/
+	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
+    } setting;
 };
 
 /**
@@ -182,11 +198,14 @@ struct pjmedia_codec_op
 
     /**
      * Instruct the codec to inspect the specified payload/packet and
-     * split the packet info individual frames.
+     * split the packet into individual base frames. Each output frames will
+     * have ptime that is equal to basic frame ptime (i.e. the value of
+     * info.frm_ptime in #pjmedia_codec_param).
      *
      * @param codec	The codec instance
      * @param pkt	The input packet.
      * @param pkt_size	Size of the packet.
+     * @param timestamp	The timestamp of the first sample in the packet.
      * @param frame_cnt	On input, specifies the maximum number of frames
      *			in the array. On output, the codec must fill
      *			with number of frames detected in the packet.
@@ -195,14 +214,17 @@ struct pjmedia_codec_op
      *
      * @return		PJ_SUCCESS on success.
      */
-    pj_status_t (*get_frames)(pjmedia_codec *codec,
-			      void *pkt,
-			      pj_size_t pkt_size,
-			      unsigned *frame_cnt,
-			      pjmedia_frame frames[]);
+    pj_status_t (*parse)( pjmedia_codec *codec,
+			  void *pkt,
+			  pj_size_t pkt_size,
+			  const pj_timestamp *timestamp,
+			  unsigned *frame_cnt,
+			  pjmedia_frame frames[]);
 
     /** 
-     * Instruct the codec to encode the specified input frame.
+     * Instruct the codec to encode the specified input frame. The input
+     * PCM samples MUST have ptime that is exactly equal to base frame
+     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
      *
      * @param codec	The codec instance.
      * @param input	The input frame.
@@ -217,7 +239,11 @@ struct pjmedia_codec_op
 			  struct pjmedia_frame *output);
 
     /** 
-     * Instruct the codec to decode the specified input frame.
+     * Instruct the codec to decode the specified input frame. The input
+     * frame MUST have ptime that is exactly equal to base frame
+     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+     * Application can achieve this by parsing the packet into base
+     * frames before decoding each frame.
      *
      * @param codec	The codec instance.
      * @param input	The input frame.
@@ -231,6 +257,19 @@ struct pjmedia_codec_op
 			  unsigned out_size, 
 			  struct pjmedia_frame *output);
 
+    /**
+     * Instruct the codec to recover a missing frame. Not all codec has
+     * this capability, so this function may be NULL.
+     *
+     * @param codec	The codec instance.
+     * @param out_size	The length of buffer in the output frame.
+     * @param output	The output frame.
+     *
+     * @return		PJ_SUCCESS on success;
+     */
+    pj_status_t (*recover)(pjmedia_codec *codec,
+			   unsigned out_size,
+			   struct pjmedia_frame *output);
 };
 
 

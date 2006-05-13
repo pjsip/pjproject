@@ -585,6 +585,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 static void call_on_media_update( pjsip_inv_session *inv,
 				  pj_status_t status)
 {
+    pjmedia_session_info sess_info;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
     pjmedia_port *media_port;
@@ -607,13 +608,27 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
 
 
+    /* Create session info based on the two SDPs. 
+     * We only support one stream per session for now.
+     */
+    status = pjmedia_session_info_from_sdp(inv->dlg->pool, g_med_endpt, 1,
+					   &sess_info, &g_med_skinfo,
+					   local_sdp, remote_sdp);
+    if (status != PJ_SUCCESS) {
+	app_perror( THIS_FILE, "Unable to create media session", status);
+	return;
+    }
+
+    /* If required, we can also change some settings in the session info,
+     * (such as jitter buffer settings, codec settings, etc) before we
+     * create the session.
+     */
+
     /* Create new media session, passing the two SDPs, and also the
      * media socket that we created earlier.
      * The media session is active immediately.
      */
-    status = pjmedia_session_create( g_med_endpt, 1, 
-				     &g_med_skinfo,
-				     local_sdp, remote_sdp, 
+    status = pjmedia_session_create( g_med_endpt, &sess_info,
 				     NULL, &g_med_session );
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to create media session", status);
