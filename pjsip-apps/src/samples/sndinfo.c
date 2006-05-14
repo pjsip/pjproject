@@ -127,7 +127,7 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 
     ++rec_counter;
 
-    if (timestamp - last_rec_timestamp >= clock_rate) {
+    if (timestamp - last_rec_timestamp >= clock_rate && last_play_timestamp) {
 	int diff;
 	diff = last_play_timestamp - timestamp;
 	printf("Play timestamp=%u, capture timestamp=%u, diff=%d\n",
