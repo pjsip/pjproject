@@ -701,7 +701,7 @@ static pj_status_t init_media(void)
 
     /* Init conference bridge. */
     clock_rate = pjsua.clock_rate ? pjsua.clock_rate : 16000;
-    samples_per_frame = clock_rate * 20 / 1000;
+    samples_per_frame = clock_rate * 10 / 1000;
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.max_calls+PJSUA_CONF_MORE_PORTS, 
 				 clock_rate, 

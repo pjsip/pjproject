@@ -44,7 +44,7 @@
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
 
 #define MAX_PACKET_BUFFER_COUNT	    32
-#define DEFAULT_BUFFER_COUNT	    5
+#define DEFAULT_BUFFER_COUNT	    8
 
 
 
@@ -212,7 +212,10 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
 
 
     /* Done setting up play device. */
-    PJ_LOG(5,(THIS_FILE, " DirectSound player stream initialized"));
+    PJ_LOG(5,(THIS_FILE, 
+	      " DirectSound player stream initialized (clock_rate=%d, "
+	      "channel_count=%d, samples_per_frame=%d",
+	      clock_rate, channel_count, samples_per_frame));
 
     return PJ_SUCCESS;
 }
@@ -304,7 +307,10 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
     ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
 
     /* Done setting up recorder device. */
-    PJ_LOG(5,(THIS_FILE, " DirectSound capture stream initialized"));
+    PJ_LOG(5,(THIS_FILE, 
+	      " DirectSound capture stream initialized (clock_rate=%d, "
+	      "channel_count=%d, samples_per_frame=%d",
+	      clock_rate, channel_count, samples_per_frame));
 
     return PJ_SUCCESS;
 }
