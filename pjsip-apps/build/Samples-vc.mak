@@ -1,7 +1,5 @@
 
-MACHINE_NAME = i386
-OS_NAME = win32
-CC_NAME = vc6-$(BUILD_MODE)
+TARGET = i386-win32-vc6-$(BUILD_MODE)
 LIBEXT = .lib
 
 !if "$(BUILD_MODE)" == "debug"
@@ -10,14 +8,14 @@ BUILD_FLAGS = /MTd /Od /Zi /W4
 BUILD_FLAGS = /Ox /MD /DNDEBUG /W4
 !endif
 
-PJLIB_LIB = ..\..\pjlib\lib\pjlib-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJLIB_UTIL_LIB = ..\..\pjlib-util\lib\pjlib-util-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJMEDIA_LIB = ..\..\pjmedia\lib\pjmedia-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJMEDIA_CODEC_LIB = ..\..\pjmedia\lib\pjmedia-codec-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_LIB = ..\..\pjsip\lib\pjsip-core-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_UA_LIB = ..\..\pjsip\lib\pjsip-ua-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
-PJSUA_LIB_LIB = ..\..\pjsip\lib\pjsua-lib-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)$(LIBEXT)
+PJLIB_LIB = ..\..\pjlib\lib\pjlib-$(TARGET)$(LIBEXT)
+PJLIB_UTIL_LIB = ..\..\pjlib-util\lib\pjlib-util-$(TARGET)$(LIBEXT)
+PJMEDIA_LIB = ..\..\pjmedia\lib\pjmedia-$(TARGET)$(LIBEXT)
+PJMEDIA_CODEC_LIB = ..\..\pjmedia\lib\pjmedia-codec-$(TARGET)$(LIBEXT)
+PJSIP_LIB = ..\..\pjsip\lib\pjsip-core-$(TARGET)$(LIBEXT)
+PJSIP_UA_LIB = ..\..\pjsip\lib\pjsip-ua-$(TARGET)$(LIBEXT)
+PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
+PJSUA_LIB_LIB = ..\..\pjsip\lib\pjsua-lib-$(TARGET)$(LIBEXT)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) \
@@ -33,7 +31,7 @@ LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
 	  mswsock.lib ws2_32.lib 
 
 SRCDIR = ..\src\samples
-OBJDIR = .\output\samples-$(MACHINE_NAME)-$(OS_NAME)-$(CC_NAME)
+OBJDIR = .\output\samples-$(TARGET)
 BINDIR = ..\bin\samples
 
 
