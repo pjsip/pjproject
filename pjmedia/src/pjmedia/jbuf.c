@@ -50,6 +50,7 @@ struct pjmedia_jbuf
     pj_str_t	    name;		  // jitter buffer name
     jb_framelist    jb_framelist;
     pj_size_t	    jb_frame_size;	  // frame size	
+    unsigned	    jb_frame_ptime;	  // frame duration.
     pj_size_t	    jb_max_count;	  // max frames in the jitter framelist->flist_buffer
 
     int		    jb_level;		  // delay between source & destination
@@ -79,6 +80,15 @@ struct pjmedia_jbuf
 #define	PJ_MAX(x, y)	((x > y) ? (x) : (y))
 #define	PJ_MIN(x, y)	((x < y) ? (x) : (y))
 
+
+/* Enabling this would log the jitter buffer state about once per 
+ * second.
+ */
+#if 0
+#  define TRACE__(args)	    PJ_LOG(4,args)
+#else
+#  define TRACE__(args)
+#endif
 
 
 static pj_status_t jb_framelist_init( pj_pool_t *pool,
@@ -267,6 +277,7 @@ enum pjmedia_jb_op
 PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool, 
 					const pj_str_t *name,
 					unsigned frame_size, 
+					unsigned ptime,
 					unsigned max_count,
 					pjmedia_jbuf **p_jb)
 {
@@ -281,6 +292,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 
     pj_strdup_with_null(pool, &jb->name, name);
     jb->jb_frame_size	 = frame_size;
+    jb->jb_frame_ptime   = ptime;
     jb->jb_last_seq_no	 = -1;
     jb->jb_level	 = 0;
     jb->jb_last_level	 = 0;
@@ -367,7 +379,9 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 
 static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 {
-    enum { STABLE_HISTORY_LIMIT = (100*2) };
+    unsigned stable_history_limit;
+
+    stable_history_limit = 1000 / jb->jb_frame_ptime;
 
     jb->jb_last_jitter = PJ_ABS(jb->jb_level-jb->jb_last_level);
     jb->jb_last_level = jb->jb_level;
@@ -376,7 +390,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 
     if (jb->jb_last_jitter < jb->jb_prefetch) {
 	jb->jb_stable_hist += jb->jb_last_jitter;
-	if (jb->jb_stable_hist > STABLE_HISTORY_LIMIT) {
+	if (jb->jb_stable_hist > (int)stable_history_limit) {
 	    int seq_diff = (jb->jb_prefetch - jb->jb_max_hist_jitter)/3;
 	    if (seq_diff<1) seq_diff = 1;
 
@@ -387,7 +401,12 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    jb->jb_stable_hist = 0;
 	    jb->jb_max_hist_jitter = 0;
 
-	    if (jb->jb_op_count >= STABLE_HISTORY_LIMIT*2 &&
+	    TRACE__((THIS_FILE,"jb updated(1), prefetch=%d, size=%d", 
+		     jb->jb_prefetch, jb_framelist_size(&jb->jb_framelist)));
+
+	    /* These code is used to shorten the delay in the jitter buffer.
+
+	    if (jb->jb_op_count >= stable_history_limit*2 &&
 		(int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2)
 	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);
@@ -398,6 +417,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 			  jb_framelist_size(&jb->jb_framelist)));
 		jb->jb_op_count = 0;
 	    }
+	    */
 
 	}
     } else {
@@ -408,7 +428,15 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	jb->jb_stable_hist = 0;
 	jb->jb_max_hist_jitter = 0;
 
-	if (jb->jb_op_count >= STABLE_HISTORY_LIMIT * 2) {
+	TRACE__((THIS_FILE,"jb updated(2), prefetch=%d, size=%d", 
+	         jb->jb_prefetch, jb_framelist_size(&jb->jb_framelist)));
+
+	/* These code is used to shorten the delay in the jitter buffer
+	   when the current size is larger than the prefetch. But it does
+	   not really work when the stream supports multiple frames, since
+	   the size may grow only temporarily.
+
+	if (jb->jb_op_count >= stable_history_limit * 2) {
 	    if ((int)jb_framelist_size(&jb->jb_framelist) > jb->jb_prefetch+2) 
 	    {
 		jb_framelist_remove_head(&jb->jb_framelist,1);
@@ -421,6 +449,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 
 	    jb->jb_op_count = 0;
 	}
+	*/
     }
 }
 

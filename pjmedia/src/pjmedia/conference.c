@@ -1095,6 +1095,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
      */
+    /* note:
+     *  the "cport->sources==0" checking will cause discontinuous
+     *  transmission for RTP stream.
+     */
     if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->sources==0) {
 
 	pjmedia_frame frame;
@@ -1124,7 +1128,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      */
     buf = (pj_int16_t*)cport->mix_buf;
 
-    if (cport->tx_adj_level != NORMAL_LEVEL) {
+    if (cport->tx_adj_level != NORMAL_LEVEL && cport->sources) {
 
 	unsigned adj_level = cport->tx_adj_level;
 
@@ -1168,7 +1172,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      * for VU meter display. By doing it here, it should give the acceptable
      * indication of the signal level of the port.
      */
-    if (cport->need_tx_level) {
+    if (cport->need_tx_level && cport->sources) {
 	pj_uint32_t level;
 
 	/* Get the signal level. */

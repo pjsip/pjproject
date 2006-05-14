@@ -111,6 +111,8 @@ typedef struct pjmedia_jbuf pjmedia_jbuf;
  *			jitter buffer. This effectively means the maximum
  *			delay that may be introduced by this jitter 
  *			buffer.
+ * @param ptime		Indication of frame duration, used to calculate 
+ *			the interval between jitter recalculation.
  * @param p_jb		Pointer to receive jitter buffer instance.
  *
  * @return		PJ_SUCCESS on success.
@@ -118,6 +120,7 @@ typedef struct pjmedia_jbuf pjmedia_jbuf;
 PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 					 const pj_str_t *name,
 					 unsigned frame_size,
+					 unsigned ptime,
 					 unsigned max_count,
 					 pjmedia_jbuf **p_jb);
 

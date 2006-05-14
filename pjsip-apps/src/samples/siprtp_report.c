@@ -59,7 +59,7 @@ static void print_call(int call_index)
     pj_gettimeofday(&now);
 
     /* Print duration */
-    if (inv->state >= PJSIP_INV_STATE_CONFIRMED) {
+    if (inv->state >= PJSIP_INV_STATE_CONFIRMED && call->connect_time) {
 
 	PJ_TIME_VAL_SUB(now, call->connect_time);
 
