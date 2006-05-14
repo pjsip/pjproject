@@ -427,24 +427,29 @@ static pj_status_t put_frame( pjmedia_port *port,
 			    1000;
 
 	for (ts=0; ts<ts_len; ts += samples_per_frame) {
-	    pjmedia_frame tmp_frame;
-	    unsigned max_size;
+	    pjmedia_frame tmp_out_frame, tmp_in_frame;
+	    unsigned bytes_per_sample, max_size;
 
-	    tmp_frame.buf = ((char*)frame_out.buf) + frame_out.size;
+	    bytes_per_sample = stream->codec_param.info.pcm_bits_per_sample/8;
+
+	    tmp_in_frame.buf = ((char*)frame->buf) + ts * bytes_per_sample;
+	    tmp_in_frame.size = samples_per_frame * bytes_per_sample;
+	    tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+	    tmp_out_frame.buf = ((char*)frame_out.buf) + frame_out.size;
 
 	    max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr) -
 		       frame_out.size;
 
-	    status = stream->codec->op->encode( stream->codec, frame, 
-						max_size, 
-						&tmp_frame);
+	    status = stream->codec->op->encode( stream->codec, &tmp_in_frame, 
+						max_size, &tmp_out_frame);
 	    if (status != PJ_SUCCESS) {
 		LOGERR_((stream->port.info.name.ptr, 
 			"Codec encode() error", status));
 		return status;
 	    }
 
-	    frame_out.size += tmp_frame.size;
+	    frame_out.size += tmp_out_frame.size;
 	}
 
 	//printf("p"); fflush(stdout);
@@ -711,7 +716,8 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	     */
 	    enum { MAX = 16 };
 	    pj_timestamp ts;
-	    unsigned i, count;
+	    unsigned i, count = MAX;
+	    unsigned samples_per_frame;
 	    pjmedia_frame frames[MAX];
 
 	    /* Get the timestamp of the first sample */
@@ -732,11 +738,16 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    }
 
 	    /* Put each frame to jitter buffer. */
+	    samples_per_frame = stream->codec_param.info.frm_ptime * 
+				stream->codec_param.info.clock_rate *
+				stream->codec_param.info.channel_cnt /
+				1000;
+				
 	    for (i=0; i<count; ++i) {
 		unsigned ext_seq;
 
 		ext_seq = (unsigned)(frames[i].timestamp.u64 /
-				     stream->port.info.samples_per_frame);
+				     samples_per_frame);
 		pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
 				       frames[i].size, ext_seq);
 
