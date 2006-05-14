@@ -48,12 +48,16 @@ static const char *USAGE =
 "   --app-log-level=N       Set app screen log verbosity (default=3)\n"
 "   --log-file=FILE         Write log to file FILE\n"
 "\n"
+/* Don't support this anymore, because codec is properly examined in
+   pjmedia_session_info_from_sdp() function.
+
 " Codec Options:\n"
 "   --a-pt=PT               Set audio payload type to PT (default=0)\n"
 "   --a-name=NAME           Set audio codec name to NAME (default=pcmu)\n"
 "   --a-clock=RATE          Set audio codec rate to RATE Hz (default=8000Hz)\n"
 "   --a-bitrate=BPS         Set audio codec bitrate to BPS (default=64000bps)\n"
 "   --a-ptime=MS            Set audio frame time to MS msec (default=20ms)\n"
+*/
 ;
 
 
@@ -394,6 +398,9 @@ static pj_status_t init_media()
 				  &app.med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+
+    /* Add G711 codec */
+    pjmedia_codec_g711_init(app.med_endpt);
 
     /* Determine address to bind socket */
     pj_memset(&addr, 0, sizeof(addr));
@@ -826,11 +833,14 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "log-level",	    1, 0, 'l' },
 	{ "app-log-level",  1, 0, OPT_APP_LOG_LEVEL },
 	{ "log-file",	    1, 0, OPT_LOG_FILE },
+
+	/* Don't support this anymore, see comments in USAGE above.
 	{ "a-pt",	    1, 0, OPT_A_PT },
 	{ "a-name",	    1, 0, OPT_A_NAME },
 	{ "a-clock",	    1, 0, OPT_A_CLOCK },
 	{ "a-bitrate",	    1, 0, OPT_A_BITRATE },
 	{ "a-ptime",	    1, 0, OPT_A_PTIME },
+	*/
 
 	{ NULL, 0, 0, 0 },
     };
