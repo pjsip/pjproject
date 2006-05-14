@@ -690,7 +690,7 @@ static pj_status_t init_media(void)
 	pjmedia_codec_mgr_set_codec_priority( 
 	    pjmedia_endpt_get_codec_mgr(pjsua.med_endpt),
 	    &pjsua.codec_arg[i], 
-	    PJMEDIA_CODEC_PRIO_NEXT_HIGHER);
+	    PJMEDIA_CODEC_PRIO_HIGHEST);
     }
 
 
