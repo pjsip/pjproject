@@ -315,18 +315,6 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     dlg->local.tag_hval = pj_hash_calc(0, dlg->local.info->tag.ptr,
 				       dlg->local.info->tag.slen);
 
-    /* Print the local info. */
-    len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
-			  dlg->local.info->uri, tmp.ptr, TMP_LEN);
-    if (len < 1) {
-	pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
-	tmp.slen = pj_ansi_strlen(tmp.ptr);
-    } else
-	tmp.slen = len;
-
-    /* Save the local info. */
-    pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
-
 
     /* Randomize local cseq */
     dlg->local.first_cseq = pj_rand() % 0x7FFFFFFFL;
@@ -361,6 +349,19 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     /* Init remote info from the From header. */
     dlg->remote.info = pjsip_hdr_clone(dlg->pool, rdata->msg_info.from);
     pjsip_fromto_hdr_set_to(dlg->remote.info);
+
+    /* Print the remote info. */
+    len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+			  dlg->remote.info->uri, tmp.ptr, TMP_LEN);
+    if (len < 1) {
+	pj_ansi_strcpy(tmp.ptr, "<-error: uri too long->");
+	tmp.slen = pj_ansi_strlen(tmp.ptr);
+    } else
+	tmp.slen = len;
+
+    /* Save the local info. */
+    pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+
 
     /* Init remote's contact from Contact header. */
     contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
