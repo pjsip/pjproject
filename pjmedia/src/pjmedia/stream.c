@@ -290,9 +290,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 		} while (samples_count < samples_required);
 
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer is bufferring with plc (prefetch=%d)",
-			  jb_state.prefetch));
+		if (channel->last_frm_type != frame_type) {
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
+			      "Jitter buffer is bufferring with plc (prefetch=%d)",
+			      jb_state.prefetch));
+		}
 
 	    } 
 
