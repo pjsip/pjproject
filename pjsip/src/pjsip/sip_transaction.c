@@ -39,6 +39,10 @@
 #endif
 
 
+/* Defined in sip_util_statefull.c */
+extern pjsip_module mod_stateful_util;
+
+
 /*****************************************************************************
  **
  ** Declarations and static variable definitions section.
@@ -462,6 +466,12 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
     if (status != PJ_SUCCESS) {
 	pj_mutex_destroy(mod_tsx_layer.mutex);
 	pjsip_endpt_release_pool(endpt, pool);
+	return status;
+    }
+
+    /* Register mod_stateful_util module (sip_util_statefull.c) */
+    status = pjsip_endpt_register_module(endpt, &mod_stateful_util);
+    if (status != PJ_SUCCESS) {
 	return status;
     }
 

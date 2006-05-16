@@ -74,17 +74,25 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
 {
     pj_status_t status;
 
+#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
     status = pjmedia_codec_g711_init(med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
+#if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC!=0
     status = pjmedia_codec_gsm_init(med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
+#if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
     status = pjmedia_codec_speex_init(med_endpt, 0, -1, -1);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
+#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
     status = pjmedia_codec_l16_init(med_endpt, 0);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
     return PJ_SUCCESS;
 }

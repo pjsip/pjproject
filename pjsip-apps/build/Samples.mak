@@ -38,8 +38,17 @@ SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(TARGET)
 BINDIR := ../bin/samples
 
-SAMPLES := simpleua playfile playsine confsample sndinfo level recfile resampleplay \
-	   siprtp streamutil
+SAMPLES := confsample \
+	   level \
+	   playfile \
+	   playsine \
+	   recfile \
+	   resampleplay \
+	   simpleua \
+	   siprtp \
+	   sipstateless \
+	   sndinfo \
+	   streamutil
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET)$(HOST_EXE))
 

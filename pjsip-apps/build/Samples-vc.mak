@@ -35,10 +35,16 @@ OBJDIR = .\output\samples-$(TARGET)
 BINDIR = ..\bin\samples
 
 
-SAMPLES = $(BINDIR)\simpleua.exe $(BINDIR)\playfile.exe $(BINDIR)\playsine.exe\
-	  $(BINDIR)\confsample.exe $(BINDIR)\sndinfo.exe \
-	  $(BINDIR)\level.exe $(BINDIR)\recfile.exe  \
-	  $(BINDIR)\resampleplay.exe $(BINDIR)\siprtp.exe \
+SAMPLES = $(BINDIR)\confsample.exe \
+	  $(BINDIR)\level.exe \
+	  $(BINDIR)\playfile.exe \
+	  $(BINDIR)\playsine.exe\
+	  $(BINDIR)\recfile.exe  \
+	  $(BINDIR)\resampleplay.exe \
+	  $(BINDIR)\simpleua.exe \
+	  $(BINDIR)\siprtp.exe \
+	  $(BINDIR)\sipstateless.exe \
+	  $(BINDIR)\sndinfo.exe \
 	  $(BINDIR)\streamutil.exe
 
 

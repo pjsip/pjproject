@@ -89,6 +89,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     PJ_ASSERT_RETURN(endpt && tdata && (timeout==-1 || timeout>0), PJ_EINVAL);
 
+    /* Check that transaction layer module is registered to endpoint */
+    PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
+
+
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);
@@ -104,4 +108,72 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     return pjsip_tsx_send_msg(tsx, NULL);
 }
+
+
+/*
+ * Send response statefully.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
+					  pjsip_module *tsx_user,
+					  pjsip_rx_data *rdata,
+					  int st_code,
+					  const pj_str_t *st_text,
+					  const pjsip_hdr *hdr_list,
+					  const pjsip_msg_body *body,
+					  pjsip_transaction **p_tsx )
+{
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
+
+    /* Validate arguments. */
+    PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
+
+    if (p_tsx) *p_tsx = NULL;
+
+    /* Create response message */
+    status = pjsip_endpt_create_response( endpt, rdata, st_code, st_text, 
+					  &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Add the message headers, if any */
+    if (hdr_list) {
+	const pjsip_hdr *hdr = hdr_list->next;
+	while (hdr != hdr_list) {
+	    pjsip_msg_add_hdr( tdata->msg, pjsip_hdr_clone(tdata->pool, hdr) );
+	    hdr = hdr->next;
+	}
+    }
+
+    /* Add the message body, if any. */
+    if (body) {
+	tdata->msg->body = pjsip_msg_body_clone( tdata->pool, body );
+	if (tdata->msg->body == NULL) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
+    }
+
+    /* Create UAS transaction. */
+    status = pjsip_tsx_create_uas(tsx_user, rdata, &tsx);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
+    /* Feed the request to the transaction. */
+    pjsip_tsx_recv_msg(tsx, rdata);
+
+    /* Send the message. */
+    status = pjsip_tsx_send_msg(tsx, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+    } else if (p_tsx) {
+	*p_tsx = tsx;
+    }
+
+    return status;
+}
+
 

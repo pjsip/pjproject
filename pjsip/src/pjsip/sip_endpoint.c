@@ -103,9 +103,6 @@ void init_sip_parser(void);
 /* Defined in sip_tel_uri.c */
 pj_status_t pjsip_tel_uri_subsys_init(void);
 
-/* Defined in sip_util_statefull.c */
-extern pjsip_module mod_stateful_util;
-
 
 /* Specifies whether error subsystem has been registered to pjlib. */
 static int error_subsys_initialized;
@@ -486,10 +483,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Initialize capability header list. */
     pj_list_init(&endpt->cap_hdr);
 
-    /* Register mod_stateful_util module (sip_util_statefull.c) */
-    status = pjsip_endpt_register_module(endpt, &mod_stateful_util);
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
     /* Done. */
     *p_endpt = endpt;

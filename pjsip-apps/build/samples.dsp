@@ -122,6 +122,10 @@ SOURCE=..\src\samples\siprtp_report.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\sipstateless.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\sndinfo.c
 # End Source File
 # Begin Source File
