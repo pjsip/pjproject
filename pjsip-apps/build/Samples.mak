@@ -1,14 +1,14 @@
 
 include ../../build/common.mak
 
-PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET)$(LIBEXT)
-PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET)$(LIBEXT)
-PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(TARGET)$(LIBEXT)
-PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(TARGET)$(LIBEXT)
-PJSIP_LIB:=../../pjsip/lib/libpjsip-$(TARGET)$(LIBEXT)
-PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(TARGET)$(LIBEXT)
-PJSIP_SIMPLE_LIB:=../../pjsip/lib/libpjsip-simple-$(TARGET)$(LIBEXT)
-PJSUA_LIB_LIB=../../pjsip/lib/libpjsua-$(TARGET)$(LIBEXT)
+PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
+PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
+PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
+PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
+PJSIP_LIB:=../../pjsip/lib/libpjsip-$(TARGET_NAME)$(LIBEXT)
+PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(TARGET_NAME)$(LIBEXT)
+PJSIP_SIMPLE_LIB:=../../pjsip/lib/libpjsip-simple-$(TARGET_NAME)$(LIBEXT)
+PJSUA_LIB_LIB=../../pjsip/lib/libpjsua-$(TARGET_NAME)$(LIBEXT)
 
 
 ###############################################################################
@@ -35,7 +35,7 @@ export _LDFLAGS := $(LIBS) \
 		   $(LDFLAGS) -lm
 
 SRCDIR := ../src/samples
-OBJDIR := ./output/samples-$(TARGET)
+OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples
 
 SAMPLES := confsample \
@@ -50,11 +50,11 @@ SAMPLES := confsample \
 	   sndinfo \
 	   streamutil
 
-EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET)$(HOST_EXE))
+EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))
 
 all: $(OBJDIR) $(EXES)
 
-$(BINDIR)/%-$(TARGET)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
+$(BINDIR)/%-$(TARGET_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
 	    $(subst /,$(HOST_PSEP),$<) \
 	    $(_LDFLAGS)
