@@ -69,7 +69,6 @@ struct pjmedia_stream_info
 {
     pjmedia_type	type;	    /**< Media type (audio, video)	    */
     pjmedia_dir		dir;	    /**< Media direction.		    */
-    pjmedia_sock_info	sock_info;  /**< Media transport (RTP/RTCP sockets) */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
@@ -100,6 +99,80 @@ typedef struct pjmedia_stream pjmedia_stream;
 
 
 /**
+ * @see pjmedia_transport_op.
+ */
+typedef struct pjmedia_transport pjmedia_transport;
+
+
+/**
+ * This structure describes the operations for the stream transport.
+ */
+struct pjmedia_transport_op
+{
+    /**
+     * This function is called by the stream when the transport is about
+     * to be used by the stream for the first time, and it tells the transport
+     * about remote RTP address to send the packet and some callbacks to be 
+     * called for incoming packets.
+     */
+    pj_status_t (*attach)(pjmedia_transport *tp,
+			  pjmedia_stream *strm,
+			  const pj_sockaddr_t *rem_addr,
+			  unsigned addr_len,
+			  void (*rtp_cb)(pjmedia_stream*,
+					 const void*,
+					 pj_ssize_t),
+			  void (*rtcp_cb)(pjmedia_stream*,
+					  const void*,
+					  pj_ssize_t));
+
+    /**
+     * This function is called by the stream when the stream is no longer
+     * need the transport (normally when the stream is about to be closed).
+     */
+    void (*detach)(pjmedia_transport *tp,
+		   pjmedia_stream *strm);
+
+    /**
+     * This function is called by the stream to send RTP packet using the 
+     * transport.
+     */
+    pj_status_t (*send_rtp)(pjmedia_transport *tp,
+			    const void *pkt,
+			    pj_size_t size);
+
+    /**
+     * This function is called by the stream to send RTCP packet using the
+     * transport.
+     */
+    pj_status_t (*send_rtcp)(pjmedia_transport *tp,
+			     const void *pkt,
+			     pj_size_t size);
+
+};
+
+
+/**
+ * @see pjmedia_transport_op.
+ */
+typedef struct pjmedia_transport_op pjmedia_transport_op;
+
+
+/**
+ * This structure declares stream transport. A stream transport is called
+ * by the stream to transmit a packet, and will notify stream when
+ * incoming packet is arrived.
+ */
+struct pjmedia_transport
+{
+    char		  name[PJ_MAX_OBJ_NAME];
+
+    pjmedia_transport_op *op;
+};
+
+
+
+/**
  * Create a media stream based on the specified parameter. After the stream
  * has been created, application normally would want to get the media port 
  * interface of the streams, by calling pjmedia_stream_get_port(). The 
@@ -114,6 +187,9 @@ typedef struct pjmedia_stream pjmedia_stream;
  *			number of memory may be needed because jitter
  *			buffer needs to preallocate some storage.
  * @param info		Stream information.
+ * @param tp		Stream transport instance used to transmit 
+ *			and receive RTP/RTCP packets to/from the underlying 
+ *			transport. 
  * @param user_data	Arbitrary user data (for future callback feature).
  * @param p_stream	Pointer to receive the media stream.
  *
@@ -122,6 +198,7 @@ typedef struct pjmedia_stream pjmedia_stream;
 PJ_DECL(pj_status_t) pjmedia_stream_create(pjmedia_endpt *endpt,
 					   pj_pool_t *pool,
 					   const pjmedia_stream_info *info,
+					   pjmedia_transport *tp,
 					   void *user_data,
 					   pjmedia_stream **p_stream);
 
@@ -148,6 +225,16 @@ PJ_DECL(pj_status_t) pjmedia_stream_destroy(pjmedia_stream *stream);
  */
 PJ_DECL(pj_status_t) pjmedia_stream_get_port(pjmedia_stream *stream,
 					     pjmedia_port **p_port );
+
+
+/**
+ * Get the media transport object associated with this stream.
+ *
+ * @param st		The media stream.
+ *
+ * @return		The transport object being used by the stream.
+ */
+PJ_DECL(pjmedia_transport*) pjmedia_stream_get_transport(pjmedia_stream *st);
 
 
 /**
@@ -224,8 +311,9 @@ PJ_DECL(pj_bool_t) pjmedia_stream_check_dtmf(pjmedia_stream *stream);
 
 
 /**
- * Retrieve the incoming DTMF digits from the stream. Note that the digits
- * buffer will not be NULL terminated.
+ * Retrieve the incoming DTMF digits from the stream, and remove the digits
+ * from stream's DTMF buffer. Note that the digits buffer will not be NULL 
+ * terminated.
  *
  * @param stream	The media stream.
  * @param ascii_digits	Buffer to receive the digits. The length of this

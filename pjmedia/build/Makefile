@@ -69,7 +69,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			master_port.o null_port.o plc_common.o plc_g711.o \
 			port.o resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
-			session.o silencedet.o sound_port.o stream.o wave.o \
+			session.o silencedet.o sound_port.o stream.o \
+			transport_udp.o wave.o \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)

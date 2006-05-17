@@ -73,6 +73,7 @@ static pj_caching_pool	     cp;	    /* Global pool factory.	*/
 
 static pjmedia_endpt	    *g_med_endpt;   /* Media endpoint.		*/
 static pjmedia_sock_info     g_med_skinfo;  /* Socket info for media	*/
+static pjmedia_transport    *g_med_transport;/* Media stream transport	*/
 
 /* Call variables: */
 static pjsip_inv_session    *g_inv;	    /* Current invite session.	*/
@@ -280,6 +281,14 @@ int main(int argc, char *argv[])
     g_med_skinfo.rtcp_addr_name = g_med_skinfo.rtp_addr_name;
 
     
+    /* Create media transport */
+    status = pjmedia_transport_udp_attach(g_med_endpt, NULL, &g_med_skinfo,
+					  &g_med_transport);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Unable to create media transport", status);
+	return 1;
+    }
+
     /*
      * If URL is specified, then make call immediately.
      */
@@ -611,8 +620,8 @@ static void call_on_media_update( pjsip_inv_session *inv,
     /* Create session info based on the two SDPs. 
      * We only support one stream per session for now.
      */
-    status = pjmedia_session_info_from_sdp(inv->dlg->pool, g_med_endpt, 1,
-					   &sess_info, &g_med_skinfo,
+    status = pjmedia_session_info_from_sdp(inv->dlg->pool, g_med_endpt, 
+					   1, &sess_info, 
 					   local_sdp, remote_sdp);
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to create media session", status);
@@ -629,7 +638,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
      * The media session is active immediately.
      */
     status = pjmedia_session_create( g_med_endpt, &sess_info,
-				     NULL, &g_med_session );
+				     &g_med_transport, NULL, &g_med_session );
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to create media session", status);
 	return;

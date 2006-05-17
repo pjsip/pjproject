@@ -97,26 +97,6 @@ static void schedule_call_timer( pjsua_call *call, pj_timer_entry *e,
 }
 
 
-/* Close and reopen socket. */
-static pj_status_t reopen_sock( pj_sock_t *sock, pj_sockaddr_in *addr)
-{
-    pj_status_t status;
-
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, sock);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create socket", status);
-	return status;
-    }
-
-    status = pj_sock_bind(*sock, addr, sizeof(pj_sockaddr_in));
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to re-bind RTP/RTCP socket", status);
-	return status;
-    }
-
-    return PJ_SUCCESS;
-}
-
 /*
  * Destroy the call's media
  */
@@ -130,27 +110,8 @@ static pj_status_t call_destroy_media(int call_index)
     }
 
     if (call->session) {
-	pj_sockaddr_in rtp_addr, rtcp_addr;
-	int addrlen;
-
-	addrlen = sizeof(rtp_addr);
-	pj_sock_getsockname(call->skinfo.rtp_sock, &rtp_addr, &addrlen);
-
-	addrlen = sizeof(rtcp_addr);
-	pj_sock_getsockname(call->skinfo.rtcp_sock, &rtcp_addr, &addrlen);
-
 	/* Destroy session (this will also close RTP/RTCP sockets). */
 	pjmedia_session_destroy(call->session);
-
-	/* Close and reopen RTP socket.
-	 * This is necessary to get the socket unregistered from ioqueue,
-	 * when IOCompletionPort is used.
-	 */
-	reopen_sock(&call->skinfo.rtp_sock, &rtp_addr);
-
-	/* Close and reopen RTCP socket too. */
-	reopen_sock(&call->skinfo.rtcp_sock, &rtcp_addr);
-
 	call->session = NULL;
 
 	PJ_LOG(3,(THIS_FILE, "Media session for call %d is destroyed", 
@@ -1011,8 +972,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
      * We only support one stream per session at the moment
      */    
     status = pjmedia_session_info_from_sdp( call->inv->dlg->pool, 
-					    pjsua.med_endpt, 1,
-					    &sess_info, &call->skinfo,
+					    pjsua.med_endpt, 
+					    1,&sess_info, 
 					    local_sdp, remote_sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
@@ -1035,6 +996,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     /* Create session based on session info. */
     status = pjmedia_session_create( pjsua.med_endpt, &sess_info,
+				     &call->med_tp,
 				     call, &call->session );
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 

@@ -43,6 +43,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/silencedet.h>
 #include <pjmedia/session.h>
+#include <pjmedia/transport_udp.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/wav_port.h>

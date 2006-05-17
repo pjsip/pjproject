@@ -110,6 +110,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
 				  pjmedia_stream **p_stream )
 {
     pjmedia_stream_info info;
+    pjmedia_transport *transport;
     pj_status_t status;
 
 
@@ -129,58 +130,23 @@ static pj_status_t create_stream( pj_pool_t *pool,
     pj_memcpy(&info.rem_addr, rem_addr, sizeof(pj_sockaddr_in));
 
 
-    /* Create RTP socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 
-			    &info.sock_info.rtp_sock);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-
-
-    /* Bind RTP socket to local port */
-    info.sock_info.rtp_addr_name.sin_family = PJ_AF_INET;
-    info.sock_info.rtp_addr_name.sin_port = pj_htons(local_port);
-
-    status = pj_sock_bind(info.sock_info.rtp_sock, 
-			  &info.sock_info.rtp_addr_name,
-			  sizeof(pj_sockaddr_in));
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to bind RTP socket", status);
-	pj_sock_close(info.sock_info.rtp_sock);
+    /* Create media transport */
+    status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
+					  &transport);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
-
-
-    /* Create RTCP socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0,
-			    &info.sock_info.rtcp_sock);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-
-
-    /* Bind RTP socket to local port + 1 */
-    ++local_port;
-    info.sock_info.rtcp_addr_name.sin_family = PJ_AF_INET;
-    info.sock_info.rtcp_addr_name.sin_port = pj_htons(local_port);
-
-    status = pj_sock_bind(info.sock_info.rtcp_sock, 
-			  &info.sock_info.rtcp_addr_name,
-			  sizeof(pj_sockaddr_in));
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to bind RTCP socket", status);
-	pj_sock_close(info.sock_info.rtp_sock);
-	pj_sock_close(info.sock_info.rtcp_sock);
-	return status;
-    }
 
 
     /* Now that the stream info is initialized, we can create the 
      * stream.
      */
 
-    status = pjmedia_stream_create( med_endpt, pool, &info, NULL, p_stream);
+    status = pjmedia_stream_create( med_endpt, pool, &info, 
+				    transport, NULL, p_stream);
 
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Error creating stream", status);
-	pj_sock_close(info.sock_info.rtp_sock);
-	pj_sock_close(info.sock_info.rtcp_sock);
+	pjmedia_transport_udp_close(transport);
 	return status;
     }
 
@@ -211,7 +177,7 @@ int main(int argc, char *argv[])
     pjmedia_stream *stream = NULL;
     pjmedia_port *stream_port;
     char tmp[10];
-    pj_status_t status;
+    pj_status_t status; 
 
 
     /* Default values */
@@ -513,7 +479,11 @@ on_exit:
 
     /* Destroy stream */
     if (stream) {
+	pjmedia_transport *tp;
+
+	tp = pjmedia_stream_get_transport(stream);
 	pjmedia_stream_destroy(stream);
+	pjmedia_transport_udp_close(tp);
     }
 
     /* Destroy file ports */

@@ -320,7 +320,7 @@ static pj_status_t init_sockets(pj_bool_t sip,
     PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s:%d",
 	      pj_inet_ntoa(skinfo->rtp_addr_name.sin_addr), 
 	      pj_ntohs(skinfo->rtp_addr_name.sin_port)));
-    PJ_LOG(4,(THIS_FILE, "RTCP UDP socket reachable at %s:%d",
+    PJ_LOG(4,(THIS_FILE, "RTCP socket reachable at %s:%d",
 	      pj_inet_ntoa(skinfo->rtcp_addr_name.sin_addr), 
 	      pj_ntohs(skinfo->rtcp_addr_name.sin_port)));
 
@@ -779,6 +779,10 @@ pj_status_t pjsua_start(void)
     /* Init sockets (STUN etc): */
     for (i=0; i<(int)pjsua.max_calls; ++i) {
 	status = init_sockets(i==0, &pjsua.calls[i].skinfo);
+	if (status == PJ_SUCCESS)
+	    status = pjmedia_transport_udp_attach(pjsua.med_endpt, NULL,
+						  &pjsua.calls[i].skinfo,
+						  &pjsua.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "init_sockets() has returned error", 
 			 status);
@@ -786,8 +790,7 @@ pj_status_t pjsua_start(void)
 	    if (i >= 0)
 		pj_sock_close(pjsua.sip_sock);
 	    while (i >= 0) {
-		pj_sock_close(pjsua.calls[i].skinfo.rtp_sock);
-		pj_sock_close(pjsua.calls[i].skinfo.rtcp_sock);
+		pjmedia_transport_udp_close(pjsua.calls[i].med_tp);
 	    }
 	    return status;
 	}
@@ -1047,6 +1050,12 @@ pj_status_t pjsua_destroy(void)
 #if PJMEDIA_HAS_L16_CODEC
     pjmedia_codec_l16_deinit();
 #endif	/* PJMEDIA_HAS_L16_CODEC */
+
+
+    /* Close transports */
+    for (i=0; i<pjsua.call_cnt; ++i) {
+	pjmedia_transport_udp_close(pjsua.calls[i].med_tp);
+    }
 
     /* Destroy media endpoint. */
 

@@ -64,7 +64,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 					   pjmedia_stream_info *si,
 					   pj_pool_t *pool,
 					   pjmedia_endpt *endpt,
-					   const pjmedia_sock_info *skinfo,
 					   const pjmedia_sdp_session *local,
 					   const pjmedia_sdp_session *remote,
 					   unsigned stream_idx)
@@ -342,10 +341,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	}
     }
 
-    /* Copy skinfo */
-    if (skinfo)
-	si->sock_info = *skinfo;
-
     /* Leave SSRC to random. */
     si->ssrc = pj_rand();
 
@@ -364,7 +359,6 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
 			       pjmedia_endpt *endpt,
 			       unsigned max_streams,
 			       pjmedia_session_info *si,
-			       const pjmedia_sock_info skinfo[],
 			       const pjmedia_sdp_session *local,
 			       const pjmedia_sdp_session *remote)
 {
@@ -381,7 +375,6 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
 
 	status = pjmedia_stream_info_from_sdp( &si->stream_info[i], pool,
 					       endpt, 
-					       (skinfo ? &skinfo[i] : NULL),
 					       local, remote, i);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -397,6 +390,7 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt, 
 					    const pjmedia_session_info *si,
+					    pjmedia_transport *transports[],
 					    void *user_data,
 					    pjmedia_session **p_session )
 {
@@ -432,6 +426,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 	/* Create the stream */
 	status = pjmedia_stream_create(endpt, session->pool,
 				       &session->stream_info[i],
+				       (transports?transports[i]:NULL),
 				       session,
 				       &session->stream[i]);
 	if (status == PJ_SUCCESS)

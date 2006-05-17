@@ -191,6 +191,10 @@ SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\transport_udp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\wav_player.c
 # End Source File
 # Begin Source File
@@ -300,6 +304,10 @@ SOURCE=..\include\pjmedia\sound_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\stream.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_udp.h
 # End Source File
 # Begin Source File
 

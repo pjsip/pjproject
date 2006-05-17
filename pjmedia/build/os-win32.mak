@@ -10,7 +10,8 @@
 export PJMEDIA_OBJS += $(PA_DIR)/pa_win_hostapis.o $(PA_DIR)/pa_win_util.o \
 		       $(PA_DIR)/pa_win_wmme.o
 
-export OS_CFLAGS += -DPA_NO_ASIO -DPA_NO_DS
+export OS_CFLAGS += -DPA_NO_ASIO -DPA_NO_DS \
+		    -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_PORTAUDIO_SOUND
 
 # Example:
 #  to activate Null sound, uncomment these two lines below.

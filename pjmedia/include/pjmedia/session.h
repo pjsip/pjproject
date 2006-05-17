@@ -88,10 +88,6 @@ typedef struct pjmedia_session_info pjmedia_session_info;
  * @param endpt		Pjmedia endpoint.
  * @param max_streams	Maximum number of stream infos to be created.
  * @param si		Session info structure to be initialized.
- * @param skinfo	Optional array of media socket info to be copied
- *			to the stream info. If this argument is specified,
- *			the array must contain sufficient elements for
- *			each stream to be initialized.
  * @param local		Local SDP session descriptor.
  * @param remote	Remote SDP session descriptor.
  * @param stream_idx	Media stream index in the session descriptor.
@@ -103,7 +99,6 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
 			       pjmedia_endpt *endpt,
 			       unsigned max_streams,
 			       pjmedia_session_info *si,
-			       const pjmedia_sock_info skinfo[],
 			       const pjmedia_sdp_session *local,
 			       const pjmedia_sdp_session *remote);
 
@@ -118,7 +113,6 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
  * @param si		Stream info structure to be initialized.
  * @param pool		Pool to allocate memory.
  * @param endpt		PJMEDIA endpoint instance.
- * @param skinfo	Optional socket info to be copied to the stream info.
  * @param local		Local SDP session descriptor.
  * @param remote	Remote SDP session descriptor.
  * @param stream_idx	Media stream index in the session descriptor.
@@ -129,7 +123,6 @@ PJ_DECL(pj_status_t)
 pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
 			      pj_pool_t *pool,
 			      pjmedia_endpt *endpt,
-			      const pjmedia_sock_info *skinfo,
 			      const pjmedia_sdp_session *local,
 			      const pjmedia_sdp_session *remote,
 			      unsigned stream_idx);
@@ -145,11 +138,11 @@ pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
  * no media frames transmitted or received by the session.
  * 
  * @param endpt		The PJMEDIA endpoint instance.
- * @param stream_cnt	Maximum number of streams to be created. This
- *			also denotes the number of elements in the
- *			socket information.
- * @param local_sdp	The SDP describing local capability.
- * @param rem_sdp	The SDP describing remote capability.
+ * @param si		Session info containing stream count and array of
+ *			stream info. The stream count indicates how many
+ *			streams to be created in the session.
+ * @param transports	Array of media stream transports, with 
+ *			sufficient number of elements (one for each stream).
  * @param user_data	Arbitrary user data to be kept in the session.
  * @param p_session	Pointer to receive the media session.
  *
@@ -159,6 +152,7 @@ pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
 PJ_DECL(pj_status_t) 
 pjmedia_session_create( pjmedia_endpt *endpt, 
 			const pjmedia_session_info *si,
+			pjmedia_transport *transports[],
 			void *user_data,
 			pjmedia_session **p_session );
 
