@@ -175,6 +175,7 @@ struct pjmedia_rtcp_stream_stat
     } loss_type;		/**< Types of loss detected.		    */
 
     struct {
+	unsigned    count;	/**< Number of updates.			    */
 	unsigned    min;	/**< Minimum jitter (in usec)		    */
 	unsigned    avg;	/**< Average jitter (in usec)		    */
 	unsigned    max;	/**< Maximum jitter (in usec)		    */
@@ -217,6 +218,13 @@ struct pjmedia_rtcp_stat
 typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
 
 
+#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+  typedef double PJMEDIA_AVG_JITTER_TYPE;
+#else
+  typedef pj_uint32_t PJMEDIA_AVG_JITTER_TYPE;
+#endif;
+
+
 /**
  * RTCP session is used to monitor the RTP session of one endpoint. There
  * should only be one RTCP session for a bidirectional RTP streams.
@@ -244,6 +252,11 @@ struct pjmedia_rtcp_session
     pj_uint32_t		    peer_ssrc;	/**< Peer SSRC			    */
     
     pjmedia_rtcp_stat	    stat;	/**< Bidirectional stream stat.	    */
+
+    /* Keep jitter calculation in floating point to prevent the values
+     * from being rounded-down to nearest integer.
+     */
+    PJMEDIA_AVG_JITTER_TYPE avg_jitter;	/**< Average RX jitter.		    */
 };
 
 /**

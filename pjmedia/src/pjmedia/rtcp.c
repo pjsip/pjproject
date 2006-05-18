@@ -138,6 +138,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     
     /* Reset statistics */
     pj_memset(&sess->stat, 0, sizeof(pjmedia_rtcp_stat));
+    sess->avg_jitter = 0;
 
     /* Name */
     sess->name = name ? name : THIS_FILE,
@@ -285,11 +286,19 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 		jitter *= 1000;
 	    }
 
+	    /* Add to average */
+	    sess->avg_jitter = 
+		(jitter + sess->avg_jitter * sess->stat.rx.jitter.count) /
+		(sess->stat.rx.jitter.count + 1);
+	    sess->stat.rx.jitter.avg = (unsigned)sess->avg_jitter;
+	    ++sess->stat.rx.jitter.count;
+
 	    /* Update jitter stat */
 	    if (jitter < sess->stat.rx.jitter.min)
 		sess->stat.rx.jitter.min = jitter;
 	    if (jitter > sess->stat.rx.jitter.max)
 		sess->stat.rx.jitter.max = jitter;
+
 	    sess->stat.rx.jitter.last = jitter;
 	}
     }
@@ -393,15 +402,16 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     }
 
     /* Update jitter statistics */
-    if (sess->stat.tx.update_cnt == 0)
+    if (sess->stat.tx.jitter.count == 0)
 	sess->stat.tx.jitter.min = jitter;
     if (jitter < sess->stat.tx.jitter.min && jitter)
 	sess->stat.tx.jitter.min = jitter;
     if (jitter > sess->stat.tx.jitter.max)
 	sess->stat.tx.jitter.max = jitter;
     sess->stat.tx.jitter.avg = 
-	(sess->stat.tx.jitter.avg * sess->stat.tx.update_cnt + jitter) /
-	(sess->stat.tx.update_cnt + 1);
+	(sess->stat.tx.jitter.avg * sess->stat.tx.jitter.count + jitter) /
+	(sess->stat.tx.jitter.count + 1);
+    ++sess->stat.tx.jitter.count;
     sess->stat.tx.jitter.last = jitter;
 
 
@@ -508,7 +518,6 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 				     int *len)
 {
     pj_uint32_t expected, expected_interval, received_interval, lost_interval;
-    pj_uint32_t jitter_samp, jitter;
     pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
     pj_timestamp ts_now;
     pjmedia_rtcp_ntp_rec ntp;
@@ -527,21 +536,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 
 
     /* Jitter */
-    jitter_samp = (sess->jitter >> 4);
-    rtcp_pkt->rr.jitter = pj_htonl(jitter_samp);
+    rtcp_pkt->rr.jitter = pj_htonl(sess->jitter >> 4);
     
-    /* Calculate jitter in usec, avoiding overflows */
-    if (jitter_samp <= 4294)
-	jitter = jitter_samp * 1000000 / sess->clock_rate;
-    else {
-	jitter = jitter_samp * 1000 / sess->clock_rate;
-	jitter *= 1000;
-    }
-
-    /* Update jitter statistics */
-    sess->stat.rx.jitter.avg = 
-	(sess->stat.rx.jitter.avg * sess->stat.rx.update_cnt + jitter) /
-	(sess->stat.rx.update_cnt + 1);
     
     /* Total lost. */
     expected = pj_ntohl(rtcp_pkt->rr.last_seq) - sess->seq_ctrl.base_seq;
