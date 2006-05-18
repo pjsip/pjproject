@@ -47,6 +47,7 @@ static const char *USAGE =
 "   --log-level=N,    -l    Set log verbosity level (default=5)\n"
 "   --app-log-level=N       Set app screen log verbosity (default=3)\n"
 "   --log-file=FILE         Write log to file FILE\n"
+"   --report-file=FILE      Write report to file FILE\n"
 "\n"
 /* Don't support this anymore, because codec is properly examined in
    pjmedia_session_info_from_sdp() function.
@@ -155,6 +156,7 @@ static struct app
     int			 app_log_level;
     int			 log_level;
     char		*log_filename;
+    char		*report_filename;
 
     struct codec	 audio_codec;
 
@@ -820,7 +822,8 @@ static pj_status_t init_options(int argc, char *argv[])
 
     enum { OPT_START,
 	   OPT_APP_LOG_LEVEL, OPT_LOG_FILE, 
-	   OPT_A_PT, OPT_A_NAME, OPT_A_CLOCK, OPT_A_BITRATE, OPT_A_PTIME };
+	   OPT_A_PT, OPT_A_NAME, OPT_A_CLOCK, OPT_A_BITRATE, OPT_A_PTIME,
+	   OPT_REPORT_FILE };
 
     struct pj_getopt_option long_options[] = {
 	{ "count",	    1, 0, 'c' },
@@ -833,6 +836,8 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "log-level",	    1, 0, 'l' },
 	{ "app-log-level",  1, 0, OPT_APP_LOG_LEVEL },
 	{ "log-file",	    1, 0, OPT_LOG_FILE },
+
+	{ "report-file",    1, 0, OPT_REPORT_FILE },
 
 	/* Don't support this anymore, see comments in USAGE above.
 	{ "a-pt",	    1, 0, OPT_A_PT },
@@ -926,6 +931,9 @@ static pj_status_t init_options(int argc, char *argv[])
 	    break;
 	case OPT_A_PTIME:
 	    app.audio_codec.ptime = atoi(pj_optarg);
+	    break;
+	case OPT_REPORT_FILE:
+	    app.report_filename = pj_optarg;
 	    break;
 
 	default:

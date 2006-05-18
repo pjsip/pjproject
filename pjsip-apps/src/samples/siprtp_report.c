@@ -58,6 +58,9 @@ static void print_call(int call_index)
 
     pj_gettimeofday(&now);
 
+    if (app.report_filename)
+	puts(app.report_filename);
+
     /* Print duration */
     if (inv->state >= PJSIP_INV_STATE_CONFIRMED && call->connect_time.sec) {
 
