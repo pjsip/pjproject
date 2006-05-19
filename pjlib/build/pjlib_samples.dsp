@@ -23,8 +23,8 @@ CFG=pjlib_samples - Win32 Debug
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
-# PROP Scc_ProjName ""$/pjproject-0.3/pjlib/build", EJDAAAAA"
-# PROP Scc_LocalPath "."
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
 
 !IF  "$(CFG)" == "pjlib_samples - Win32 Release"
 

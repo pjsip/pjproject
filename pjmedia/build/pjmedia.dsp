@@ -23,8 +23,8 @@ CFG=pjmedia - Win32 Debug
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
-# PROP Scc_ProjName ""$/pjproject/pjsip/build", RIAAAAAA"
-# PROP Scc_LocalPath "..\..\pjsip\build"
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
 CPP=cl.exe
 RSC=rc.exe
 
