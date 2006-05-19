@@ -20,7 +20,9 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/plc.h>
 #include <pjmedia/port.h>
+#include <pjmedia/silencedet.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -68,6 +70,9 @@ static pj_status_t  gsm_codec_decode( pjmedia_codec *codec,
 				      const struct pjmedia_frame *input,
 				      unsigned output_buf_len, 
 				      struct pjmedia_frame *output);
+static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
+				      unsigned output_buf_len,
+				      struct pjmedia_frame *output);
 
 /* Definition for GSM codec operations. */
 static pjmedia_codec_op gsm_op = 
@@ -77,7 +82,8 @@ static pjmedia_codec_op gsm_op =
     &gsm_codec_close,
     &gsm_codec_parse,
     &gsm_codec_encode,
-    &gsm_codec_decode
+    &gsm_codec_decode,
+    &gsm_codec_recover
 };
 
 /* Definition for GSM codec factory operations. */
@@ -100,11 +106,16 @@ static struct gsm_codec_factory
     pjmedia_codec	     codec_list;
 } gsm_codec_factory;
 
+
 /* GSM codec private data. */
 struct gsm_data
 {
-    void    *encoder;
-    void    *decoder;
+    void		*encoder;
+    void		*decoder;
+    pj_bool_t		 plc_enabled;
+    pjmedia_plc		*plc;
+    pj_bool_t		 vad_enabled;
+    pjmedia_silence_det	*vad;
 };
 
 
@@ -239,8 +250,10 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
     attr->info.pt = PJMEDIA_RTP_PT_GSM;
 
     attr->setting.frm_per_pkt = 1;
+    attr->setting.vad = 1;
+    attr->setting.plc = 1;
 
-    /* Default all flag bits disabled. */
+    /* Default all other flag bits disabled. */
 
     return PJ_SUCCESS;
 }
@@ -276,6 +289,7 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 {
     pjmedia_codec *codec;
     struct gsm_data *gsm_data;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(factory && id && p_codec, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &gsm_codec_factory.base, PJ_EINVAL);
@@ -297,6 +311,23 @@ static pj_status_t gsm_alloc_codec( pjmedia_codec_factory *factory,
 	gsm_data = pj_pool_zalloc(gsm_codec_factory.pool, 
 				  sizeof(struct gsm_data));
 	codec->codec_data = gsm_data;
+
+	/* Create PLC */
+	status = pjmedia_plc_create(gsm_codec_factory.pool, 8000, 
+				    160, 0, &gsm_data->plc);
+	if (status != PJ_SUCCESS) {
+	    pj_mutex_unlock(gsm_codec_factory.mutex);
+	    return status;
+	}
+
+	/* Create silence detector */
+	status = pjmedia_silence_det_create(gsm_codec_factory.pool,
+					    8000, 160,
+					    &gsm_data->vad);
+	if (status != PJ_SUCCESS) {
+	    pj_mutex_unlock(gsm_codec_factory.mutex);
+	    return status;
+	}
     }
 
     pj_mutex_unlock(gsm_codec_factory.mutex);
@@ -360,6 +391,9 @@ static pj_status_t gsm_codec_open( pjmedia_codec *codec,
     gsm_data->decoder = gsm_create();
     if (!gsm_data->decoder)
 	return PJMEDIA_CODEC_EFAILED;
+
+    gsm_data->vad_enabled = (attr->setting.vad != 0);
+    gsm_data->plc_enabled = (attr->setting.plc != 0);
 
     return PJ_SUCCESS;
 }
@@ -437,6 +471,24 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     if (input->size < 320)
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
+    /* Detect silence */
+    if (gsm_data->vad_enabled) {
+	pj_bool_t is_silence;
+
+	is_silence = pjmedia_silence_det_detect(gsm_data->vad, 
+					        input->buf,
+						input->size / 2,
+						NULL);
+	if (is_silence) {
+	    output->type = PJMEDIA_FRAME_TYPE_NONE;
+	    output->buf = NULL;
+	    output->size = 0;
+	    output->timestamp.u64 = input->timestamp.u64;
+	    return PJ_SUCCESS;
+	}
+    }
+
+    /* Encode */
     gsm_encode(gsm_data->encoder, (short*)input->buf, 
 	       (unsigned char*)output->buf);
 
@@ -471,6 +523,29 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 
     output->size = 320;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+    if (gsm_data->plc_enabled)
+	pjmedia_plc_save( gsm_data->plc, output->buf);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Recover lost frame.
+ */
+static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
+				      unsigned output_buf_len,
+				      struct pjmedia_frame *output)
+{
+    struct gsm_data *gsm_data = codec->codec_data;
+
+    PJ_ASSERT_RETURN(gsm_data->plc_enabled, PJ_EINVALIDOP);
+
+    PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
+
+    pjmedia_plc_generate(gsm_data->plc, output->buf);
+    output->size = 320;
 
     return PJ_SUCCESS;
 }

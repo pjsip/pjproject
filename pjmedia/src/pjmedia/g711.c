@@ -24,6 +24,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
 #include <pjmedia/plc.h>
+#include <pjmedia/silencedet.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/assert.h>
@@ -121,9 +122,11 @@ static struct g711_factory
 /* G711 codec private data. */
 struct g711_private
 {
-    unsigned	    pt;
-    pj_bool_t	    plc_enabled;
-    pjmedia_plc	   *plc;
+    unsigned		 pt;
+    pj_bool_t		 plc_enabled;
+    pjmedia_plc		*plc;
+    pj_bool_t		 vad_enabled;
+    pjmedia_silence_det *vad;
 };
 
 
@@ -250,7 +253,10 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
     /* Enable plc by default. */
     attr->setting.plc = 1;
 
-    /* Default all flag bits disabled. */
+    /* Enable VAD by default. */
+    attr->setting.vad = 1;
+
+    /* Default all other flag bits disabled. */
 
     return PJ_SUCCESS;
 }
@@ -302,8 +308,8 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 	struct g711_private *codec_priv;
 
 	codec = pj_pool_alloc(g711_factory.pool, sizeof(pjmedia_codec));
-	codec_priv = pj_pool_alloc(g711_factory.pool, 
-				   sizeof(struct g711_private));
+	codec_priv = pj_pool_zalloc(g711_factory.pool, 
+				    sizeof(struct g711_private));
 	if (!codec || !codec_priv) {
 	    pj_mutex_unlock(g711_factory.mutex);
 	    return PJ_ENOMEM;
@@ -315,6 +321,15 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 	/* Create PLC, always with 10ms ptime */
 	status = pjmedia_plc_create(g711_factory.pool, 8000, 80,
 				    0, &codec_priv->plc);
+	if (status != PJ_SUCCESS) {
+	    pj_mutex_unlock(g711_factory.mutex);
+	    return status;
+	}
+
+	/* Create VAD */
+	status = pjmedia_silence_det_create(g711_factory.pool,
+					    8000, 80,
+					    &codec_priv->vad);
 	if (status != PJ_SUCCESS) {
 	    pj_mutex_unlock(g711_factory.mutex);
 	    return status;
@@ -378,6 +393,7 @@ static pj_status_t g711_open(pjmedia_codec *codec,
     struct g711_private *priv = codec->codec_data;
     priv->pt = attr->info.pt;
     priv->plc_enabled = (attr->setting.plc != 0);
+    priv->vad_enabled = (attr->setting.vad != 0);
     return PJ_SUCCESS;
 }
 
@@ -428,6 +444,21 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
     /* Check output buffer length */
     if (output_buf_len < input->size / 2)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
+
+    /* Detect silence if VAD is enabled */
+    if (priv->vad_enabled) {
+	pj_bool_t is_silence;
+
+	is_silence = pjmedia_silence_det_detect(priv->vad, input->buf, 
+						input->size / 2, NULL);
+	if (is_silence) {
+	    output->type = PJMEDIA_FRAME_TYPE_NONE;
+	    output->buf = NULL;
+	    output->size = 0;
+	    output->timestamp.u64 = input->timestamp.u64;
+	    return PJ_SUCCESS;
+	}
+    }
 
     /* Encode */
     if (priv->pt == PJMEDIA_RTP_PT_PCMA) {

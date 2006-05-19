@@ -228,11 +228,14 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
 
     /* Create and init vad. */
-    status = pjmedia_silence_det_create( pool, &conf_port->vad);
+    status = pjmedia_silence_det_create( pool, 
+					 port->info.clock_rate,
+					 port->info.samples_per_frame,
+					 &conf_port->vad);
     if (status != PJ_SUCCESS)
 	return status;
 
-    pjmedia_silence_det_set_adaptive(conf_port->vad, conf->samples_per_frame);
+    pjmedia_silence_det_set_fixed(conf_port->vad, 2);
 
     /* Save some port's infos, for convenience. */
     if (port) {

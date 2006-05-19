@@ -36,43 +36,83 @@ typedef struct pjmedia_silence_det pjmedia_silence_det;
 
 
 /**
+ * Suggested or default threshold to be set for fixed silence detection
+ * or as starting threshold for adaptive silence detection. The threshold
+ * has the range from zero to 255.
+ */
+#define PJMEDIA_SILENCE_DET_THRESHOLD	4
+
+
+/**
  * Create voice activity detector with default settings. The default settings
- * are to perform adaptive silence detection, which adjusts the noise level
- * dynamically based on current input level.
+ * are set to adaptive silence detection with the default threshold.
  *
- * @param pool		Pool for allocating the structure.
- * @param p_sd		Pointer to receive the silence detector instance.
+ * @param pool		    Pool for allocating the structure.
+ * @param clock_rate	    Clock rate.
+ * @param samples_per_frame Number of samples per frame. The clock_rate and
+ *			    samples_per_frame is only used to calculate the
+ *			    frame time, from which some timing parameters
+ *			    are calculated from.
+ * @param p_sd		    Pointer to receive the silence detector instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
+						 unsigned clock_rate,
+						 unsigned samples_per_frame,
 						 pjmedia_silence_det **p_sd );
 
 
 /**
- * Set the sd to operate in adaptive mode.
- *
- * @param sd	        The silence detector
- * @param frame_size	Number of samples per frame.
- *
- * @return	        PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive( pjmedia_silence_det *sd,
-						       unsigned frame_size);
-
-
-/**
- * Set the sd to operate in fixed threshold mode.
+ * Set the sd to operate in fixed threshold mode. With fixed threshold mode,
+ * the threshold will not be changed adaptively.
  *
  * @param sd		    The silence detector
- * @param frame_size Number of samplse per frame.
- * @param threshold	    The silence threshold.
+ * @param threshold	    The silence threshold, or -1 to use default
+ *			    threshold.
  *
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_silence_det_set_fixed( pjmedia_silence_det *sd,
-						    unsigned frame_size,
-						    unsigned threshold );
+						    int threshold );
+
+/**
+ * Set the sd to operate in adaptive mode. This is the default mode
+ * when the silence detector is created.
+ *
+ * @param sd		    The silence detector
+ * @param threshold	    Initial threshold to be set, or -1 to use default
+ *			    threshold.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
+						      int threshold);
+
+/**
+ * Set other silence detector parameters.
+ *
+ * @param sd		    The silence detector
+ * @param min_silence	    Minimum duration of silence (in msec) before 
+ *			    silence is reported. If -1 is specified, then
+ *			    the default value will be used. The default is
+ *			    400 msec.
+ * @param min_signal	    Minimum duration of signal (in msec) before
+ *			    signal is reported. If -1 is specified, then
+ *			    the default value will be used. The default is
+ *			    one frame.
+ * @param recalc_time	    The interval to recalculate signal and silence
+ *			    proportion and to readjust the silence threshold
+ *			    when adaptive silence detection is set. If -1
+ *			    is specified, then the default value will be used.
+ *			    The default value is 5000 (msec).
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
+						     int min_silence,
+						     int min_signal,
+						     int recalc_time);
 
 /**
  * Disable the silence detector.

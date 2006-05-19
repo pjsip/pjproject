@@ -32,14 +32,14 @@ typedef enum pjmedia_silence_det_mode {
 } pjmedia_silence_det_mode;
 
 
+
 /**
  * This structure holds the silence detector state.
  */
 struct pjmedia_silence_det
 {
     int	      mode;		/**< VAD mode.				    */
-    unsigned  frame_size;	/**< Samples per frame.			    */
-
+    unsigned  ptime;		/**< Frame time, in msec.		    */
 
     unsigned  min_signal_cnt;	/**< # of signal frames.before talk burst   */
     unsigned  min_silence_cnt;	/**< # of silence frames before silence.    */
@@ -60,6 +60,8 @@ unsigned char linear2ulaw(int pcm_val);
 
 
 PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
+						unsigned clock_rate,
+						unsigned samples_per_frame,
 						pjmedia_silence_det **p_sd)
 {
     pjmedia_silence_det *sd;
@@ -68,46 +70,72 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
 
     sd = pj_pool_zalloc(pool, sizeof(struct pjmedia_silence_det));
 
-    sd->weakest_signal = 0xFFFFFFFFUL;
-    sd->loudest_silence = 0;
+    sd->ptime = samples_per_frame * 1000 / clock_rate;
     sd->signal_cnt = 0;
     sd->silence_cnt = 0;
-    
-    /* Restart in adaptive, silent mode */
+    sd->weakest_signal = 0xFFFFFFFFUL;
+    sd->loudest_silence = 0;
+     
+    /* Default settings */
+    pjmedia_silence_det_set_params(sd, -1, -1, -1);
+
+    /* Restart in fixed, silent mode */
     sd->in_talk = PJ_FALSE;
-    pjmedia_silence_det_set_adaptive( sd, 160 );
+    pjmedia_silence_det_set_adaptive( sd, -1 );
 
     *p_sd = sd;
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_silence_det_set_adaptive( pjmedia_silence_det *sd,
-						      unsigned frame_size)
+PJ_DEF(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
+						     int threshold)
 {
-    PJ_ASSERT_RETURN(sd && frame_size, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sd, PJ_EINVAL);
 
-    sd->frame_size = frame_size;
+    if (threshold < 0)
+	threshold = PJMEDIA_SILENCE_DET_THRESHOLD;
+
     sd->mode = VAD_MODE_ADAPTIVE;
-    sd->min_signal_cnt = 10;
-    sd->min_silence_cnt = 64;
-    sd->recalc_cnt = 250;
-    sd->cur_threshold = 20;
+    sd->cur_threshold = threshold;
 
     return PJ_SUCCESS;
 }
 
 PJ_DEF(pj_status_t) pjmedia_silence_det_set_fixed( pjmedia_silence_det *sd,
-						   unsigned frame_size,
-						   unsigned threshold )
+						   int threshold )
 {
-    PJ_ASSERT_RETURN(sd && frame_size, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sd, PJ_EINVAL);
+
+    if (threshold < 0)
+	threshold = PJMEDIA_SILENCE_DET_THRESHOLD;
 
     sd->mode = VAD_MODE_FIXED;
-    sd->frame_size = frame_size;
     sd->cur_threshold = threshold;
 
     return PJ_SUCCESS;
 }
+
+PJ_DEF(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
+						    int min_silence,
+						    int min_signal,
+						    int recalc_time)
+{
+    PJ_ASSERT_RETURN(sd, PJ_EINVAL);
+
+    if (min_silence == -1)
+	min_silence = 500;
+    if (min_signal < 0)
+	min_signal = sd->ptime;
+    if (recalc_time < 0)
+	recalc_time = 5000;
+
+    sd->min_signal_cnt = min_signal / sd->ptime;
+    sd->min_silence_cnt = min_silence / sd->ptime;
+    sd->recalc_cnt = recalc_time / sd->ptime;
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd )
 {
@@ -184,11 +212,6 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 	sd->cur_cnt = 0;
     }
     
-    /* For fixed threshold sd, everything is done. */
-    if (sd->mode == VAD_MODE_FIXED) {
-	return !sd->in_talk;
-    }
-    
 
     /* Count the number of silent and signal frames and calculate min/max */
     if (have_signal) {
@@ -207,39 +230,29 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
      */
     if ((sd->signal_cnt + sd->silence_cnt) > sd->recalc_cnt) {
 	
-	/* Adjust silence threshold by looking at the proportions of
-	 * signal and silence frames.
-	 */
-	if (sd->signal_cnt >= sd->recalc_cnt) {
-	    /* All frames where signal frames.
-	     * Increase silence threshold.
-	     */
-	    sd->cur_threshold += (sd->weakest_signal - sd->cur_threshold)/4;
-	    PJ_LOG(6,(THIS_FILE, "Vad cur_threshold increased to %d",
-		      sd->cur_threshold));
-	}
-	else if (sd->silence_cnt >= sd->recalc_cnt) {
-	    /* All frames where silence frames.
-	     * Decrease silence threshold.
-	     */
-	    sd->cur_threshold = (sd->cur_threshold+sd->loudest_silence)/2+1;
-	    PJ_LOG(6,(THIS_FILE, "Vad cur_threshold decreased to %d",
-		      sd->cur_threshold));
-	}
-	else { 
+	if (sd->mode == VAD_MODE_ADAPTIVE) {
 	    pj_bool_t updated = PJ_TRUE;
+	    unsigned pct_signal;
+
+	    /* Get percentage of signal */
+	    pct_signal = sd->signal_cnt * 100 / 
+		        (sd->signal_cnt + sd->silence_cnt);
 
 	    /* Adjust according to signal/silence proportions. */
-	    if (sd->signal_cnt > sd->silence_cnt * 2)
+	    if (pct_signal > 95) {
+		sd->cur_threshold += (sd->weakest_signal - sd->cur_threshold)/4;
+	    } else if (pct_signal < 5) {
+		sd->cur_threshold = (sd->cur_threshold+sd->loudest_silence)/2+1;
+	    } else if (pct_signal > 90) {
 		sd->cur_threshold++;
-	    else if (sd->silence_cnt >  sd->signal_cnt* 2)
+	    } else if (pct_signal < 10) {
 		sd->cur_threshold--;
-	    else
+	    } else {
 		updated = PJ_FALSE;
+	    }
 
 	    if (updated) {
-		PJ_LOG(6,(THIS_FILE,
-			  "Vad cur_threshold updated to %d",
+		PJ_LOG(5,(THIS_FILE, "Vad cur_threshold updated to %d",
 			  sd->cur_threshold));
 	    }
 	}

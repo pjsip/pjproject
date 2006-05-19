@@ -397,11 +397,6 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && strm && rem_addr && addr_len, PJ_EINVAL);
 
-    /* Remote address must be Internet address */
-    PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) &&
-		     ((pj_sockaddr_in*)rem_addr)->sin_family == PJ_AF_INET,
-		     PJ_EINVAL);
-
     /* Must not be "attached" to existing stream */
     PJ_ASSERT_RETURN(udp->stream == NULL, PJ_EINVALIDOP);
 

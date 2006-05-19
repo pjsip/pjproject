@@ -56,7 +56,6 @@ struct pjmedia_channel
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
     void		   *out_pkt;	    /**< Output buffer.		    */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
-    char		    last_frm_type;  /**< Last frame type from jb    */
 };
 
 
@@ -90,8 +89,13 @@ struct pjmedia_stream
     pjmedia_codec	    *codec;	    /**< Codec instance being used. */
     pjmedia_codec_param	     codec_param;   /**< Codec param.		    */
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
+    pj_bool_t		     is_streaming;  /**< Currently streaming?. This
+						 is used to put RTP marker
+						 bit.			    */
+
     pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
+    char		     jb_last_frm;   /**< Last frame type from jb    */
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -209,7 +213,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	     * activate PLC to smoothen the fade-out, otherwise zero
 	     * the frame. 
 	     */
-	    if (frame_type != channel->last_frm_type) {
+	    if (frame_type != stream->jb_last_frm) {
 		pjmedia_jb_state jb_state;
 
 		/* Activate PLC to smoothen the missing frame */
@@ -243,9 +247,10 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    if (samples_count < samples_required) {
 		pjmedia_zero_samples(p_out_samp + samples_count,
 				     samples_required - samples_count);
+		samples_count = samples_required;
 	    }
 
-	    channel->last_frm_type = frame_type;
+	    stream->jb_last_frm = frame_type;
 	    break;
 
 	} else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
@@ -276,7 +281,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 		} while (samples_count < samples_required);
 
-		if (channel->last_frm_type != frame_type) {
+		if (stream->jb_last_frm != frame_type) {
 		    PJ_LOG(5,(stream->port.info.name.ptr, 
 			      "Jitter buffer is bufferring with plc (prefetch=%d)",
 			      jb_state.prefetch));
@@ -287,12 +292,13 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    if (samples_count < samples_required) {
 		pjmedia_zero_samples(p_out_samp + samples_count,
 				     samples_required - samples_count);
+		samples_count = samples_required;
 		PJ_LOG(5,(stream->port.info.name.ptr, 
 			  "Jitter buffer is bufferring (prefetch=%d)..", 
 			  jb_state.prefetch));
 	    }
 
-	    channel->last_frm_type = frame_type;
+	    stream->jb_last_frm = frame_type;
 	    break;
 
 	} else {
@@ -317,7 +323,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    }
 	}
 
-	channel->last_frm_type = frame_type;
+	stream->jb_last_frm = frame_type;
     }
 
 
@@ -437,10 +443,8 @@ static pj_status_t put_frame( pjmedia_port *port,
     pj_status_t status = 0;
     struct pjmedia_frame frame_out;
     unsigned ts_len;
-    pj_bool_t has_tx;
     void *rtphdr;
     int rtphdrlen;
-    pj_ssize_t sent;
 
 
     /* Don't do anything if stream is paused */
@@ -453,16 +457,14 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
-
-    /* Make compiler happy */
     frame_out.size = 0;
+
 
     /* If we have DTMF digits in the queue, transmit the digits. 
      * Otherwise encode the PCM buffer.
      */
     if (stream->tx_dtmf_count) {
 
-	has_tx = PJ_TRUE;
 	create_dtmf_payload(stream, &frame_out);
 
 	/* Encapsulate. */
@@ -474,8 +476,6 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
 	unsigned ts, samples_per_frame;
-
-	has_tx = PJ_TRUE;
 
 	/* Repeatedly call encode if there are multiple frames to be
 	 * sent.
@@ -489,17 +489,21 @@ static pj_status_t put_frame( pjmedia_port *port,
 	    pjmedia_frame tmp_out_frame, tmp_in_frame;
 	    unsigned bytes_per_sample, max_size;
 
+	    /* Nb of bytes in PCM sample */
 	    bytes_per_sample = stream->codec_param.info.pcm_bits_per_sample/8;
 
+	    /* Split original PCM input frame into base frame size */
 	    tmp_in_frame.buf = ((char*)frame->buf) + ts * bytes_per_sample;
 	    tmp_in_frame.size = samples_per_frame * bytes_per_sample;
 	    tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 
+	    /* Set output frame position */
 	    tmp_out_frame.buf = ((char*)frame_out.buf) + frame_out.size;
 
 	    max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr) -
 		       frame_out.size;
 
+	    /* Encode! */
 	    status = stream->codec->op->encode( stream->codec, &tmp_in_frame, 
 						max_size, &tmp_out_frame);
 	    if (status != PJ_SUCCESS) {
@@ -508,10 +512,19 @@ static pj_status_t put_frame( pjmedia_port *port,
 		return status;
 	    }
 
+	    /* tmp_out_frame.size may be zero for silence frame. */
 	    frame_out.size += tmp_out_frame.size;
-	}
 
-	//printf("p"); fflush(stdout);
+	    /* Stop processing next PCM frame when encode() returns either 
+	     * CNG frame or NULL frame.
+	     */
+	    if (tmp_out_frame.type!=PJMEDIA_FRAME_TYPE_AUDIO || 
+		tmp_out_frame.size==0) 
+	    {
+		break;
+	    }
+
+	}
 
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
@@ -522,7 +535,6 @@ static pj_status_t put_frame( pjmedia_port *port,
     } else {
 
 	/* Just update RTP session's timestamp. */
-	has_tx = PJ_FALSE;
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 0, 0, 
 					 0, ts_len, 
@@ -546,23 +558,34 @@ static pj_status_t put_frame( pjmedia_port *port,
     }
 
     /* Do nothing if we have nothing to transmit */
-    if (!has_tx)
-	return PJ_SUCCESS;
-
-    if (rtphdrlen != sizeof(pjmedia_rtp_hdr)) {
-	/* We don't support RTP with extended header yet. */
-	PJ_TODO(SUPPORT_SENDING_RTP_WITH_EXTENDED_HEADER);
+    if (frame_out.size == 0) {
+	if (stream->is_streaming) {
+	    PJ_LOG(5,(stream->port.info.name.ptr,"Starting silence"));
+	    stream->is_streaming = PJ_FALSE;
+	}
 	return PJ_SUCCESS;
     }
 
+
+    /* Copy RTP header to the beginning of packet */
     pj_memcpy(channel->out_pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
 
 
-    /* Send. */
-    sent = frame_out.size+sizeof(pjmedia_rtp_hdr);
+    /* Set RTP marker bit if currently not streaming */
+    if (stream->is_streaming == PJ_FALSE) {
+	pjmedia_rtp_hdr *rtp = channel->out_pkt;
 
+	rtp->m = 1;
+	PJ_LOG(5,(stream->port.info.name.ptr,"Start talksprut.."));
+    }
+
+    stream->is_streaming = PJ_TRUE;
+
+    /* Send the RTP packet to the transport. */
     (*stream->transport->op->send_rtp)(stream->transport,
-				       channel->out_pkt, sent);
+				       channel->out_pkt, 
+				       frame_out.size + 
+					    sizeof(pjmedia_rtp_hdr));
 
 
     /* Update stat */

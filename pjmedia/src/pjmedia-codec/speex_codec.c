@@ -37,8 +37,8 @@
 
 #define THIS_FILE   "speex_codec.c"
 
-#define DEFAULT_QUALITY	    4
-#define DEFAULT_COMPLEXITY  -1
+#define DEFAULT_QUALITY	    10
+#define DEFAULT_COMPLEXITY  10
 
 /* Prototypes for Speex factory */
 static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory, 
@@ -255,8 +255,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_UWB].complexity = complexity;
 
     /* Somehow quality <=4 is broken in linux. */
-    if (quality <= 4) {
-	PJ_LOG(4,(THIS_FILE, "Adjusting quality to 5 for uwb"));
+    if (quality <= 4 && quality >= 0) {
+	PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
 	spx_factory.speex_param[PARAM_UWB].quality = 5;
     }
 
@@ -411,9 +411,7 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     attr->setting.hpf = 1;
     attr->setting.lpf =1 ;
     attr->setting.penh =1 ;
-
-    /* Default, set VAD off as it caused voice chip off */
-    attr->setting.vad = 0;
+    attr->setting.vad = 1;
 
     return PJ_SUCCESS;
 }
@@ -571,8 +569,9 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
 		      &spx_factory.speex_param[id].clock_rate);
 
     /* VAD */
-    tmp = attr->setting.vad;
+    tmp = (attr->setting.vad != 0);
     speex_encoder_ctl(spx->enc, SPEEX_SET_VAD, &tmp);
+    speex_encoder_ctl(spx->enc, SPEEX_SET_DTX, &tmp);
 
     /* Complexity */
     if (spx_factory.speex_param[id].complexity != -1) {
@@ -687,6 +686,7 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
     float tmp[642]; /* 20ms at 32KHz + 2 */
     pj_int16_t *samp_in;
     unsigned i, samp_count, sz;
+    int tx;
 
     spx = (struct spx_private*) codec->codec_data;
 
@@ -710,7 +710,16 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
     speex_bits_reset(&spx->enc_bits);
 
     /* Encode the frame */
-    speex_encode(spx->enc, tmp, &spx->enc_bits);
+    tx = speex_encode(spx->enc, tmp, &spx->enc_bits);
+
+    /* Check if we need not to transmit the frame (DTX) */
+    if (tx == 0) {
+	output->buf = NULL;
+	output->size = 0;
+	output->timestamp.u64 = input->timestamp.u64;
+	output->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
 
     /* Check size. */
     sz = speex_bits_nbytes(&spx->enc_bits);
