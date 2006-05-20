@@ -46,6 +46,17 @@
 #define MAX_PACKET_BUFFER_COUNT	    32
 #define DEFAULT_BUFFER_COUNT	    8
 
+#define MAX_HARDWARE		    16
+
+struct dsound_dev_info
+{
+    pjmedia_snd_dev_info    info;
+    LPGUID		    lpGuid;
+};
+
+static unsigned dev_count;
+static struct dsound_dev_info dev_info[MAX_HARDWARE];
+
 
 
 /* Individual DirectSound capture/playback stream descriptor */
@@ -116,6 +127,7 @@ static void init_waveformatex (PCMWAVEFORMAT *pcmwf,
  * Initialize DirectSound player device.
  */
 static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
+				       int dev_id,
 				       unsigned clock_rate,
 				       unsigned channel_count,
 				       unsigned samples_per_frame,
@@ -132,10 +144,17 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
 
     PJ_ASSERT_RETURN(buffer_count <= MAX_PACKET_BUFFER_COUNT, PJ_EINVAL);
 
+    /* Check device ID */
+    if (dev_id == -1)
+	dev_id = 0;
+
+    PJ_ASSERT_RETURN(dev_id>=0 && dev_id < (int)dev_count, PJ_EINVAL);
+
     /*
      * Create DirectSound device.
      */
-    hr = DirectSoundCreate(NULL, &ds_strm->ds.play.lpDs, NULL);
+    hr = DirectSoundCreate(dev_info[dev_id].lpGuid, &ds_strm->ds.play.lpDs, 
+			   NULL);
     if (FAILED(hr))
 	return PJ_RETURN_OS_ERROR(hr);
 
@@ -225,6 +244,7 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
  * Initialize DirectSound recorder device
  */
 static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
+				        int dev_id,
 				        unsigned clock_rate,
 				        unsigned channel_count,
 				        unsigned samples_per_frame,
@@ -241,10 +261,17 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
     PJ_ASSERT_RETURN(buffer_count <= MAX_PACKET_BUFFER_COUNT, PJ_EINVAL);
 
 
+    /* Check device id */
+    if (dev_id == -1)
+	dev_id = 0;
+
+    PJ_ASSERT_RETURN(dev_id>=0 && dev_id < (int)dev_count, PJ_EINVAL);
+
     /*
      * Creating recorder device.
      */
-    hr = DirectSoundCaptureCreate(NULL, &ds_strm->ds.capture.lpDs, NULL);
+    hr = DirectSoundCaptureCreate(dev_info[dev_id].lpGuid, 
+				  &ds_strm->ds.capture.lpDs, NULL);
     if (FAILED(hr))
 	return PJ_RETURN_OS_ERROR(hr);
 
@@ -501,13 +528,78 @@ static int dsound_dev_thread(void *arg)
 }
 
 
+/* DirectSound enum device callback */
+static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCSTR lpcstrDescription,  
+				     LPCSTR lpcstrModule, LPVOID lpContext)
+{
+    unsigned index, max = sizeof(dev_info[index].info.name);
+    pj_bool_t is_capture_device = (lpContext != NULL);
+
+
+    PJ_UNUSED_ARG(lpcstrModule);
+
+
+    /* Put the capture and playback of the same devices to the same 
+     * dev_info item, by looking at the GUID.
+     */
+    for (index=0; index<dev_count; ++index) {
+	if (dev_info[index].lpGuid == lpGuid)
+	    break;
+    }
+
+    if (index == dev_count)
+	++dev_count;
+    else if (dev_count >= MAX_HARDWARE) {
+	pj_assert(!"Too many DirectSound hardware found");
+	PJ_LOG(4,(THIS_FILE, "Too many hardware found, some devices will "
+			     "not be listed"));
+	return FALSE;
+    }
+
+    strncpy(dev_info[index].info.name, lpcstrDescription, max);
+    dev_info[index].info.name[max-1] = '\0';
+    dev_info[index].lpGuid = lpGuid;
+    dev_info[index].info.default_samples_per_sec = 44100;
+    
+    /* Just assumed that device supports stereo capture/playback */
+    if (is_capture_device)
+	dev_info[index].info.input_count+=2;
+    else
+	dev_info[index].info.output_count+=2;
+
+    return TRUE;
+}
+
 
 /*
  * Init sound library.
  */
 PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
+    HRESULT hr;
+    unsigned i;
+
     pool_factory = factory;
+
+    /* Enumerate sound playback devices */
+    hr = DirectSoundEnumerate(&DSEnumCallback, NULL);
+    if (FAILED(hr))
+	return PJ_RETURN_OS_ERROR(hr);
+
+    /* Enumerate sound capture devices */
+    hr = DirectSoundEnumerate(&DSEnumCallback, (void*)1);
+    if (FAILED(hr))
+	return PJ_RETURN_OS_ERROR(hr);
+
+    PJ_LOG(4,(THIS_FILE, "DirectSound initialized, found %d devices:",
+	      dev_count));
+    for (i=0; i<dev_count; ++i) {
+	PJ_LOG(4,(THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)", 
+		  i, dev_info[i].info.name, 
+		  dev_info[i].info.input_count, 
+		  dev_info[i].info.output_count));
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -524,7 +616,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
  */
 PJ_DEF(int) pjmedia_snd_get_dev_count(void)
 {
-    return 1;
+    return dev_count;
 }
 
 /*
@@ -532,18 +624,9 @@ PJ_DEF(int) pjmedia_snd_get_dev_count(void)
  */
 PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
-    static pjmedia_snd_dev_info info;
+    PJ_ASSERT_RETURN(index < dev_count, NULL);
 
-    PJ_UNUSED_ARG(index);
-
-    pj_memset(&info, 0, sizeof(info));
-
-    info.default_samples_per_sec = 44100;
-    info.input_count = 1;
-    info.output_count = 1;
-    pj_ansi_strcpy(info.name, "Default DirectSound Device");
-
-    return &info;
+    return &dev_info[index].info;
 }
 
 
@@ -576,11 +659,6 @@ static pj_status_t open_stream( pjmedia_dir dir,
     /* Can only support 16bits per sample */
     PJ_ASSERT_RETURN(bits_per_sample == BITS_PER_SAMPLE, PJ_EINVAL);
 
-    /* Don't support device at present */
-    PJ_UNUSED_ARG(rec_id);
-    PJ_UNUSED_ARG(play_id);
-    
-
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(pool_factory, "dsound-dev", 1000, 1000, NULL);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
@@ -601,7 +679,7 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Create player stream */
     if (dir & PJMEDIA_DIR_PLAYBACK) {
-	status = init_player_stream( &strm->play_strm, clock_rate,
+	status = init_player_stream( &strm->play_strm, play_id, clock_rate,
 				     channel_count, samples_per_frame,
 				     DEFAULT_BUFFER_COUNT );
 	if (status != PJ_SUCCESS) {
@@ -612,7 +690,7 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Create capture stream */
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	status = init_capture_stream( &strm->rec_strm, clock_rate,
+	status = init_capture_stream( &strm->rec_strm, rec_id, clock_rate,
 				      channel_count, samples_per_frame,
 				      DEFAULT_BUFFER_COUNT);
 	if (status != PJ_SUCCESS) {
@@ -708,6 +786,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 				     0, 0, DSBPLAY_LOOPING);
 	if (FAILED(hr))
 	    return PJ_RETURN_OS_ERROR(hr);
+	PJ_LOG(5,(THIS_FILE, "DirectSound playback stream started"));
     }
     
     if (stream->rec_strm.ds.capture.lpDsBuffer) {
@@ -715,6 +794,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 					     DSCBSTART_LOOPING );
 	if (FAILED(hr))
 	    return PJ_RETURN_OS_ERROR(hr);
+	PJ_LOG(5,(THIS_FILE, "DirectSound capture stream started"));
     }
 
     return PJ_SUCCESS;
