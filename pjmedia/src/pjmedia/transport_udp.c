@@ -429,6 +429,8 @@ static void transport_detach( pjmedia_transport *tp,
 
     pj_assert(tp && strm);
 
+    PJ_UNUSED_ARG(strm);
+
     /* Clear up stream infos from transport */
     udp->stream = NULL;
     udp->rtp_cb = NULL;
