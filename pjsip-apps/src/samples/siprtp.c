@@ -80,7 +80,7 @@ static const char *USAGE =
 
 #define THIS_FILE	"siprtp.c"
 #define MAX_CALLS	1024
-#define RTP_START_PORT	44100
+#define RTP_START_PORT	4000
 
 
 /* Codec descriptor: */
@@ -367,12 +367,6 @@ static void destroy_sip()
 	pjsip_endpt_destroy(app.sip_endpt);
 	app.sip_endpt = NULL;
     }
-
-    if (app.pool) {
-	pj_pool_release(app.pool);
-	app.pool = NULL;
-	pj_caching_pool_destroy(&app.cp);
-    }
 }
 
 
@@ -430,11 +424,10 @@ static pj_status_t init_media()
 	 * to current port number.
 	 */
 	retry = 0;
-	do {
+	status = -1;
+	for (retry=0; status!=PJ_SUCCESS && retry<100; ++retry,rtp_port+=2) {
 	    struct media_stream *m = &app.call[i].media[0];
 
-	    ++retry;
-	    rtp_port += 2;
 	    m->port = rtp_port;
 
 	    /* Create and bind RTP socket */
@@ -465,7 +458,7 @@ static pj_status_t init_media()
 		continue;
 	    }
 
-	} while (status != PJ_SUCCESS && retry < 100);
+	}
 
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -868,7 +861,7 @@ static pj_status_t init_options(int argc, char *argv[])
     app.max_calls = 1;
     app.thread_count = 1;
     app.sip_port = 5060;
-    app.rtp_start_port = 4000;
+    app.rtp_start_port = RTP_START_PORT;
     app.local_addr = ip_addr;
     app.log_level = 5;
     app.app_log_level = 3;
@@ -1061,6 +1054,18 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 }
 
 
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+#include <windows.h>
+static void boost_priority(void)
+{
+    SetPriorityClass( GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+}
+
+#else
+#  define boost_priority()
+#endif
+
 /* 
  * Media thread 
  *
@@ -1073,6 +1078,11 @@ static int media_thread(void *arg)
     char packet[1500];
     unsigned msec_interval;
     pj_timestamp freq, next_rtp, next_rtcp;
+
+
+    /* Boost thread priority if necessary */
+    boost_priority();
+
 
     msec_interval = strm->samples_per_frame * 1000 / strm->clock_rate;
     pj_get_timestamp_freq(&freq);
@@ -1116,6 +1126,11 @@ static int media_thread(void *arg)
 
 	rc = pj_sock_select(FD_SETSIZE, &set, NULL, NULL, &timeout);
 
+	if (rc < 0) {
+	    pj_thread_sleep(10);
+	    continue;
+	}
+
 	if (rc > 0 && PJ_FD_ISSET(strm->rtp_sock, &set)) {
 
 	    /*
@@ -1131,6 +1146,7 @@ static int media_thread(void *arg)
 	    status = pj_sock_recv(strm->rtp_sock, packet, &size, 0);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "RTP recv() error", status);
+		pj_thread_sleep(10);
 		continue;
 	    }
 
@@ -1163,9 +1179,10 @@ static int media_thread(void *arg)
 
 	    size = sizeof(packet);
 	    status = pj_sock_recv( strm->rtcp_sock, packet, &size, 0);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Error receiving RTCP packet", status);
-	    else
+		pj_thread_sleep(10);
+	    } else
 		pjmedia_rtcp_rx_rtcp(&strm->rtcp, packet, size);
 	}
 
@@ -1704,8 +1721,15 @@ int main(int argc, char *argv[])
 
     
     /* Shutting down... */
-    destroy_media();
     destroy_sip();
+    destroy_media();
+
+    if (app.pool) {
+	pj_pool_release(app.pool);
+	app.pool = NULL;
+	pj_caching_pool_destroy(&app.cp);
+    }
+
     app_logging_shutdown();
 
 
