@@ -227,16 +227,6 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     PJ_ASSERT_RETURN(conf_port->listeners, PJ_ENOMEM);
 
 
-    /* Create and init vad. */
-    status = pjmedia_silence_det_create( pool, 
-					 port->info.clock_rate,
-					 port->info.samples_per_frame,
-					 &conf_port->vad);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    pjmedia_silence_det_set_fixed(conf_port->vad, 2);
-
     /* Save some port's infos, for convenience. */
     if (port) {
 	conf_port->port = port;
@@ -247,6 +237,18 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 	conf_port->clock_rate = conf->clock_rate;
 	conf_port->samples_per_frame = conf->samples_per_frame;
     }
+
+    /* Create and init vad. */
+    status = pjmedia_silence_det_create( pool, 
+					 conf_port->clock_rate,
+					 conf_port->samples_per_frame,
+					 &conf_port->vad);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Set fixed */
+    pjmedia_silence_det_set_fixed(conf_port->vad, 2);
+
 
     /* If port's clock rate is different than conference's clock rate,
      * create a resample sessions.
