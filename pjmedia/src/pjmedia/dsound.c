@@ -44,7 +44,7 @@
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
 
 #define MAX_PACKET_BUFFER_COUNT	    32
-#define DEFAULT_BUFFER_COUNT	    8
+#define DEFAULT_BUFFER_COUNT	    16
 
 #define MAX_HARDWARE		    16
 
