@@ -566,7 +566,8 @@ static int dsound_dev_thread(void *arg)
 		    dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
 		dsound_strm->timestamp.u64 += strm->samples_per_frame;
 
-	    } while (dsound_captured_size(dsound_strm) >= bytes_per_frame);
+		/* Fetch while we have more than 1 frame */
+	    } while (dsound_captured_size(dsound_strm) > bytes_per_frame);
 	}
     }
 
