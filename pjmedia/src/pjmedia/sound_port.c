@@ -116,6 +116,8 @@ no_frame:
 #ifdef SIMULATE_LOST_PCT
 	PJ_LOG(4,(THIS_FILE, "Lost frame generated"));
 #endif
+    } else {
+	pj_memset(output, 0, size);
     }
 
 
