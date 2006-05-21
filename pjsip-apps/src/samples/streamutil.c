@@ -419,6 +419,9 @@ int main(int argc, char *argv[])
 
     }
 
+    /* Start streaming */
+    pjmedia_stream_start(stream);
+
 
     /* Done */
 

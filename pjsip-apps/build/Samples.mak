@@ -48,6 +48,7 @@ SAMPLES := confsample \
 	   siprtp \
 	   sipstateless \
 	   sndinfo \
+	   sndtest \
 	   streamutil
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))

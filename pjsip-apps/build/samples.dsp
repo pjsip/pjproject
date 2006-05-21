@@ -130,6 +130,10 @@ SOURCE=..\src\samples\sndinfo.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\sndtest.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\streamutil.c
 # End Source File
 # End Group

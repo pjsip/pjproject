@@ -45,6 +45,7 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\siprtp.exe \
 	  $(BINDIR)\sipstateless.exe \
 	  $(BINDIR)\sndinfo.exe \
+	  $(BINDIR)\sndtest.exe \
 	  $(BINDIR)\streamutil.exe
 
 
