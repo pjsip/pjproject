@@ -13,7 +13,7 @@ elif echo $MACHINE | grep i.86 > /dev/null; then
     MACHINE_NAME=i386
 elif echo $MACHINE | grep alpha > /dev/null; then
     MACHINE_NAME=alpha
-elif echo $MACHINE | grep powerpc > /dev/null; then
+elif echo $MACHINE | grep Mac > /dev/null; then
     MACHINE_NAME=powerpc
 else
     echo "Unable to detect processor type ('uname -m' == '$MACHINE')"
