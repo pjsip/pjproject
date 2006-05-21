@@ -205,6 +205,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 	    sd->loudest_silence = 0;
 	    sd->signal_cnt = 0;
 	    sd->silence_cnt = 0;
+	    sd->cur_cnt = 0;
 	}
 
     } else {
