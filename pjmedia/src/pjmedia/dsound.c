@@ -462,8 +462,10 @@ static int dsound_dev_thread(void *arg)
 	events[eventCount++] = strm->rec_strm.hEvent;
 
 
-    /* Raise self priority */
-    //SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    /* Raise self priority. We don't want the audio to be distorted by
+     * system activity.
+     */
+    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     /* Calculate bytes per frame */
     bytes_per_frame = strm->samples_per_frame * BYTES_PER_SAMPLE;

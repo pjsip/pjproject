@@ -36,7 +36,10 @@
 /* Test duration in msec */
 #define DURATION	    10000
 
-/* Max frames per sec. */
+/* Skip the first msec from the calculation */
+#define SKIP_DURATION	    1000
+
+/* Max frames per sec (to calculate number of delays to keep). */
 #define MAX_FRAMES_PER_SEC  100
 
 /* Number of frame durations to keep */
@@ -133,15 +136,18 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
     struct test_data *test_data = user_data;
     struct stream_data *strm_data = &test_data->playback_data;
 
+    /* Skip frames when test is not started or test has finished */
     if (!test_data->running) {
 	pj_memset(output, 0, size);
 	return PJ_SUCCESS;
     }
 
+    /* Save last timestamp seen (to calculate drift) */
     strm_data->last_timestamp = timestamp;
 
     if (strm_data->last_called.u64 == 0) {
 	pj_get_timestamp(&strm_data->last_called);
+	/* Init min_delay to one frame */
 	strm_data->min_delay = test_data->samples_per_frame * 1000000 /
 			       test_data->clock_rate;
 	strm_data->first_timestamp = timestamp;
@@ -152,6 +158,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 
 	pj_get_timestamp(&now);
 	
+	/* Calculate frame interval */
 	delay = pj_elapsed_usec(&strm_data->last_called, &now);
 	if (delay < strm_data->min_delay)
 	    strm_data->min_delay = delay;
@@ -160,8 +167,15 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 
 	strm_data->last_called = now;
 
+	/* Save the frame interval for later calculation */
 	strm_data->delay[strm_data->counter] = delay;
 	++strm_data->counter;
+
+    } else {
+
+	/* No space, can't take anymore frames */
+	test_data->running = 0;
+
     }
 
     pj_memset(output, 0, size);
@@ -178,14 +192,17 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(size);
 
+    /* Skip frames when test is not started or test has finished */
     if (!test_data->running) {
 	return PJ_SUCCESS;
     }
 
+    /* Save last timestamp seen (to calculate drift) */
     strm_data->last_timestamp = timestamp;
 
     if (strm_data->last_called.u64 == 0) {
 	pj_get_timestamp(&strm_data->last_called);
+	/* Init min_delay to one frame */
 	strm_data->min_delay = test_data->samples_per_frame * 1000000 /
 			       test_data->clock_rate;
 	strm_data->first_timestamp = timestamp;
@@ -195,7 +212,8 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 	unsigned delay;
 
 	pj_get_timestamp(&now);
-	
+
+	/* Calculate frame interval */
 	delay = pj_elapsed_usec(&strm_data->last_called, &now);
 	if (delay < strm_data->min_delay)
 	    strm_data->min_delay = delay;
@@ -204,8 +222,15 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 
 	strm_data->last_called = now;
 
+	/* Save the frame interval for later calculation */
 	strm_data->delay[strm_data->counter] = delay;
 	++strm_data->counter;
+
+    } else {
+
+	/* No space, can't take anymore frames */
+	test_data->running = 0;
+
     }
 
     return PJ_SUCCESS;
@@ -227,7 +252,7 @@ static void print_stream_data(const char *title,
 			      int verbose)
 {
     unsigned i, dur;
-    unsigned min_jitter, max_jitter, avg_jitter=0;
+    unsigned min_jitter, max_jitter, sum_jitter, avg_jitter=0;
 
     PJ_LOG(3,(THIS_FILE, "  %s stream report:", title));
 
@@ -275,6 +300,7 @@ static void print_stream_data(const char *title,
     /* Calculate jitter */
     min_jitter = 0xFFFFF;
     max_jitter = 0;
+    sum_jitter = 0;
 
     for (i=1; i<strm_data->counter; ++i) {
 	int jitter;
@@ -284,8 +310,11 @@ static void print_stream_data(const char *title,
 	if (jitter < (int)min_jitter) min_jitter = jitter;
 	if (jitter > (int)max_jitter) max_jitter = jitter;
 
-	avg_jitter = ((i-1) * avg_jitter + jitter) / i;
+	sum_jitter += jitter;
     }
+
+    avg_jitter = (sum_jitter) / (strm_data->counter - 1);
+
     if (max_jitter < WARN_JITTER_USEC) {
 	PJ_LOG(3,(THIS_FILE, 
 		  "   Jitter: min=%d.%03dms, avg=%d.%03dms, max=%d.%03dms",
@@ -346,7 +375,7 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
     }
 
     /* Sleep for a while to let sound device "settles" */
-    pj_thread_sleep(100);
+    pj_thread_sleep(200);
 
 
     /*
@@ -358,10 +387,14 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
         return status;
     }
 
-    /* Let the stream runs for 1 second to get stable result.
+    PJ_LOG(3,(THIS_FILE,
+	      " Please wait while test is in progress (~%d secs)..",
+	      (DURATION+SKIP_DURATION)/1000));
+
+    /* Let the stream runs for few msec/sec to get stable result.
      * (capture normally begins with frames available simultaneously).
      */
-    pj_thread_sleep(1000);
+    pj_thread_sleep(SKIP_DURATION);
 
 
     /* Begin gather data */
@@ -370,9 +403,6 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
     /* 
      * Let the test runs for a while.
      */
-    PJ_LOG(3,(THIS_FILE,
-	      " Please wait while test is in progress (~%d secs)..",
-	      (DURATION/1000)));
     pj_thread_sleep(DURATION);
 
 
@@ -426,7 +456,7 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
 
 	    PJ_LOG(2,(THIS_FILE, 
 		      "   Sound capture is %d samples %s than playback "
-		      "at the end of the test (at the rate about %d samples"
+		      "at the end of the test (average is %d samples"
 		      " per second)",
 		      drift, which, 
 		      drift * 1000 / msec_dur));
