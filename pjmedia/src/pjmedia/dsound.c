@@ -882,6 +882,23 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 
     pjmedia_snd_stream_stop(stream);
 
+    if (stream->thread) {
+	stream->thread_quit_flag = 1;
+	pj_thread_join(stream->thread);
+	pj_thread_destroy(stream->thread);
+	stream->thread = NULL;
+    }
+
+    if (stream->play_strm.lpDsNotify) {
+	IDirectSoundNotify_Release( stream->play_strm.lpDsNotify );
+	stream->play_strm.lpDsNotify = NULL;
+    }
+    
+    if (stream->play_strm.hEvent) {
+	CloseHandle(stream->play_strm.hEvent);
+	stream->play_strm.hEvent = NULL;
+    }
+
     if (stream->play_strm.ds.play.lpDsBuffer) {
 	IDirectSoundBuffer_Release( stream->play_strm.ds.play.lpDsBuffer );
 	stream->play_strm.ds.play.lpDsBuffer = NULL;
@@ -892,17 +909,15 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 	stream->play_strm.ds.play.lpDs = NULL;
     }
 
-    if (stream->play_strm.lpDsNotify) {
-	//No need?
-	//IDirectSoundNotify_Release( stream->play_strm.lpDsNotify );
-	stream->play_strm.lpDsNotify = NULL;
+    if (stream->rec_strm.lpDsNotify) {
+	IDirectSoundNotify_Release( stream->rec_strm.lpDsNotify );
+	stream->rec_strm.lpDsNotify = NULL;
     }
     
-    if (stream->play_strm.hEvent) {
-	CloseHandle(stream->play_strm.hEvent);
-	stream->play_strm.hEvent = NULL;
+    if (stream->rec_strm.hEvent) {
+	CloseHandle(stream->rec_strm.hEvent);
+	stream->rec_strm.hEvent = NULL;
     }
-
 
     if (stream->rec_strm.ds.capture.lpDsBuffer) {
 	IDirectSoundCaptureBuffer_Release( stream->rec_strm.ds.capture.lpDsBuffer );
@@ -914,23 +929,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 	stream->rec_strm.ds.capture.lpDs = NULL;
     }
 
-    if (stream->rec_strm.lpDsNotify) {
-	//No need?
-	//IDirectSoundNotify_Release( stream->rec_strm.lpDsNotify );
-	stream->rec_strm.lpDsNotify = NULL;
-    }
-    
-    if (stream->rec_strm.hEvent) {
-	CloseHandle(stream->rec_strm.hEvent);
-	stream->rec_strm.hEvent = NULL;
-    }
-
-    if (stream->thread) {
-	stream->thread_quit_flag = 1;
-	pj_thread_join(stream->thread);
-	pj_thread_destroy(stream->thread);
-	stream->thread = NULL;
-    }
 
     pj_pool_release(stream->pool);
 
