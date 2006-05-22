@@ -252,6 +252,7 @@ static void print_stream_data(const char *title,
 			      int verbose)
 {
     unsigned i, dur;
+    int ptime;
     unsigned min_jitter, max_jitter, sum_jitter, avg_jitter=0;
 
     PJ_LOG(3,(THIS_FILE, "  %s stream report:", title));
@@ -297,16 +298,36 @@ static void print_stream_data(const char *title,
 	pj_log_set_decor(decor);
     }
 
+    /* Calculate frame ptime in usec */
+    ptime = test_data->samples_per_frame * 1000000 /
+	    test_data->clock_rate;
+
     /* Calculate jitter */
     min_jitter = 0xFFFFF;
     max_jitter = 0;
     sum_jitter = 0;
 
     for (i=1; i<strm_data->counter; ++i) {
-	int jitter;
-	jitter = strm_data->delay[i] - strm_data->delay[i-1];
-	if (jitter < 0) jitter = -jitter;
+	int jitter1, jitter2, jitter;
+
+	/* jitter1 is interarrival difference */
+	jitter1 = strm_data->delay[i] - strm_data->delay[i-1];
+	if (jitter1 < 0) jitter1 = -jitter1;
 	
+	/* jitter2 is difference between actual and scheduled arrival.
+	 * This is intended to capture situation when frames are coming
+	 * instantaneously, which will calculate as zero jitter with
+	 * jitter1 calculation.
+	 */
+	jitter2 = ptime - strm_data->delay[i];
+	if (jitter2 < 0) jitter2 = -jitter2;
+
+	/* Set jitter as the maximum of the two jitter calculations. 
+	 * This is intended to show the worst result.
+	 */
+	jitter = (jitter1>jitter2) ? jitter1 : jitter2;
+
+	/* Calculate min, max, avg jitter */
 	if (jitter < (int)min_jitter) min_jitter = jitter;
 	if (jitter > (int)max_jitter) max_jitter = jitter;
 
