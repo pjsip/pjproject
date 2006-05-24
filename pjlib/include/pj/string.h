@@ -89,7 +89,7 @@ PJ_IDECL(pj_str_t) pj_str(char *str);
 PJ_INLINE(const pj_str_t*) pj_cstr(pj_str_t *str, const char *s)
 {
     str->ptr = (char*)s;
-    str->slen = s ? strlen(s) : 0;
+    str->slen = s ? (pj_ssize_t)strlen(s) : 0;
     return str;
 }
 
@@ -105,7 +105,7 @@ PJ_INLINE(const pj_str_t*) pj_cstr(pj_str_t *str, const char *s)
 PJ_INLINE(pj_str_t*) pj_strset( pj_str_t *str, char *ptr, pj_size_t length)
 {
     str->ptr = ptr;
-    str->slen = length;
+    str->slen = (pj_ssize_t)length;
     return str;
 }
 
@@ -121,7 +121,7 @@ PJ_INLINE(pj_str_t*) pj_strset( pj_str_t *str, char *ptr, pj_size_t length)
 PJ_INLINE(pj_str_t*) pj_strset2( pj_str_t *str, char *src)
 {
     str->ptr = src;
-    str->slen = src ? strlen(src) : 0;
+    str->slen = src ? (pj_ssize_t)strlen(src) : 0;
     return str;
 }
 
@@ -137,7 +137,7 @@ PJ_INLINE(pj_str_t*) pj_strset2( pj_str_t *str, char *src)
 PJ_INLINE(pj_str_t*) pj_strset3( pj_str_t *str, char *begin, char *end )
 {
     str->ptr = begin;
-    str->slen = end-begin;
+    str->slen = (pj_ssize_t)(end-begin);
     return str;
 }
 

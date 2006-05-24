@@ -513,7 +513,7 @@ PJ_DECL(void) pj_scan_restore_state( pj_scanner *scanner,
  */
 PJ_INLINE(int) pj_scan_get_col( const pj_scanner *scanner )
 {
-    return scanner->curptr - scanner->start_line;
+    return (int)(scanner->curptr - scanner->start_line);
 }
 
 /**
