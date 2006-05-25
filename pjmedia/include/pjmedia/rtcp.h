@@ -222,7 +222,7 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
   typedef double PJMEDIA_AVG_JITTER_TYPE;
 #else
   typedef pj_uint32_t PJMEDIA_AVG_JITTER_TYPE;
-#endif;
+#endif
 
 
 /**
