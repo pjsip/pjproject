@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua-lib/pjsua.h>
+#include "pjsua_imp.h"
 
 /*
  * pjsua_pres.c
@@ -80,6 +81,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
 static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 {
     int acc_index;
+    pjsua_acc_config *acc_config;
     pjsip_method *req_method = &rdata->msg_info.msg->line.req.method;
     pjsua_srv_pres *uapres;
     pjsip_evsub *sub;
@@ -96,11 +98,12 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Find which account for the incoming request. */
     acc_index = pjsua_find_account_for_incoming(rdata);
+    acc_config = &pjsua.config.acc_config[acc_index];
 
     /* Create UAS dialog: */
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata, 
-				   &pjsua.acc[acc_index].contact_uri, 
-				   &dlg);
+    status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
+				  &acc_config->contact,
+				  &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to create UAS dialog for subscription", 
@@ -306,15 +309,17 @@ static pjsip_evsub_user pres_callback =
 static void subscribe_buddy_presence(unsigned index)
 {
     int acc_index;
+    pjsua_acc_config *acc_config;
     pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     acc_index = pjsua.buddies[index].acc_index;
+    acc_config = &pjsua.config.acc_config[acc_index];
 
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
-				   &pjsua.acc[acc_index].local_uri,
-				   &pjsua.acc[acc_index].contact_uri,
+				   &acc_config->id,
+				   &acc_config->contact,
 				   &pjsua.buddies[index].uri,
 				   NULL, &dlg);
     if (status != PJ_SUCCESS) {
@@ -323,8 +328,11 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
-    pjsip_auth_clt_set_credentials( &dlg->auth_sess, pjsua.cred_count,
-				    pjsua.cred_info);
+    if (acc_config->cred_count) {
+	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
+					acc_config->cred_count,
+					acc_config->cred_info);
+    }
 
     status = pjsip_pres_create_uac( dlg, &pres_callback, 
 				    &pjsua.buddies[index].sub);
@@ -426,7 +434,7 @@ pj_status_t pjsua_pres_init()
 /*
  * Refresh presence
  */
-void pjsua_pres_refresh(int acc_index)
+PJ_DEF(void) pjsua_pres_refresh(int acc_index)
 {
     refresh_client_subscription();
     refresh_server_subscription(acc_index);
@@ -441,7 +449,7 @@ void pjsua_pres_shutdown(void)
     int acc_index;
     int i;
 
-    for (acc_index=0; acc_index<pjsua.acc_cnt; ++acc_index) {
+    for (acc_index=0; acc_index<(int)pjsua.config.acc_cnt; ++acc_index) {
 	pjsua.acc[acc_index].online_status = 0;
     }
 
@@ -449,7 +457,7 @@ void pjsua_pres_shutdown(void)
 	pjsua.buddies[i].monitor = 0;
     }
 
-    for (acc_index=0; acc_index<pjsua.acc_cnt; ++acc_index) {
+    for (acc_index=0; acc_index<(int)pjsua.config.acc_cnt; ++acc_index) {
 	pjsua_pres_refresh(acc_index);
     }
 }
@@ -471,7 +479,7 @@ void pjsua_pres_dump(pj_bool_t detail)
 	
 	int count = 0;
 
-	for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+	for (acc_index=0; acc_index < (int)pjsua.config.acc_cnt; ++acc_index) {
 
 	    if (!pj_list_empty(&pjsua.acc[acc_index].pres_srv_list)) {
 		struct pjsua_srv_pres *uapres;
@@ -506,11 +514,11 @@ void pjsua_pres_dump(pj_bool_t detail)
      */
     PJ_LOG(3,(THIS_FILE, "Dumping pjsua server subscriptions:"));
 
-    for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
+    for (acc_index=0; acc_index < (int)pjsua.config.acc_cnt; ++acc_index) {
 
 	PJ_LOG(3,(THIS_FILE, "  %.*s",
-		  (int)pjsua.acc[acc_index].local_uri.slen,
-		  pjsua.acc[acc_index].local_uri.ptr));
+		  (int)pjsua.config.acc_config[acc_index].id.slen,
+		  pjsua.config.acc_config[acc_index].id.ptr));
 
 	if (pj_list_empty(&pjsua.acc[acc_index].pres_srv_list)) {
 

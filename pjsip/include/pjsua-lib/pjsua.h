@@ -48,7 +48,7 @@ PJ_BEGIN_DECL
  * Max buddies in buddy list.
  */
 #ifndef PJSUA_MAX_BUDDIES
-#   define PJSUA_MAX_BUDDIES	    32
+#   define PJSUA_MAX_BUDDIES	    256
 #endif
 
 
@@ -61,26 +61,12 @@ PJ_BEGIN_DECL
 
 
 /**
- * Aditional ports to be allocated in the conference ports for non-call
- * streams.
- */
-#define PJSUA_CONF_MORE_PORTS	    3
-
-
-/**
  * Maximum accounts.
  */
 #ifndef PJSUA_MAX_ACC
-#   define PJSUA_MAX_ACC	    8
+#   define PJSUA_MAX_ACC	    32
 #endif
 
-
-/**
- * Maximum credentials.
- */
-#ifndef PJSUA_MAX_CRED
-#   define PJSUA_MAX_CRED	    PJSUA_MAX_ACC
-#endif
 
 
 /** 
@@ -140,24 +126,54 @@ typedef struct pjsua_srv_pres pjsua_srv_pres;
 
 
 /**
+ * Account configuration.
+ */
+struct pjsua_acc_config
+{
+    /** SIP URL for account ID (mandatory) */
+    pj_str_t	    id;
+
+    /** Registrar URI (mandatory) */
+    pj_str_t	    reg_uri;
+
+    /** Optional contact URI */
+    pj_str_t	    contact;
+
+    /** Service proxy (default: none) */
+    pj_str_t	    proxy;
+
+    /** Default timeout (mandatory) */
+    pj_int32_t	    reg_timeout;
+
+    /** Number of credentials. */
+    unsigned	    cred_count;
+
+    /** Array of credentials. */
+    pjsip_cred_info cred_info[4];
+
+};
+
+
+/**
+ * @see pjsua_acc_config
+ */
+typedef struct pjsua_acc_config pjsua_acc_config;
+
+
+/**
  * Account
  */
 struct pjsua_acc
 {
     int		     index;	    /**< Index in accounts array.	*/
-    pj_str_t	     local_uri;	    /**< Uri in From: header.		*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
     pj_str_t	     host_part;	    /**< Host part of local URI.	*/
-    pj_str_t	     contact_uri;   /**< Uri in Contact: header.	*/
 
-    pj_str_t	     reg_uri;	    /**< Registrar URI.			*/
     pjsip_regc	    *regc;	    /**< Client registration session.   */
-    pj_int32_t	     reg_timeout;   /**< Default timeout.		*/
     pj_timer_entry   reg_timer;	    /**< Registration timer.		*/
     pj_status_t	     reg_last_err;  /**< Last registration error.	*/
     int		     reg_last_code; /**< Last status last register.	*/
 
-    pj_str_t	     proxy;	    /**< Proxy URL.			*/
     pjsip_route_hdr  route_set;	    /**< Route set.			*/
 
     pj_bool_t	     online_status; /**< Our online status.		*/
@@ -167,7 +183,191 @@ struct pjsua_acc
 };
 
 
+/**
+ * @see pjsua_acc
+ */
 typedef struct pjsua_acc pjsua_acc;
+
+
+/**
+ * PJSUA settings.
+ */
+struct pjsua_config
+{
+    /** SIP UDP signaling port. Set to zero to disable UDP signaling,
+     * which in this case application must manually add a transport
+     * to SIP endpoint.
+     * (default: 5060) 
+     */
+    unsigned	udp_port;
+
+    /** Optional hostname or IP address to publish as the host part of
+     *  Contact header. This must be specified if UDP transport is
+     *  disabled.
+     *  (default: NULL)
+     */
+    pj_str_t	sip_host;
+
+    /** Optional port number to publish in the port part of Contact header.
+     *  This must be specified if UDP transport is disabled.
+     *  (default: 0)
+     */
+    unsigned	sip_port;
+
+    /** Start of RTP port. Set to zero to prevent pjsua from creating
+     *  media transports, which in this case application must manually
+     *  create media transport for each calls.
+     *  (default: 4000) 
+     */
+    unsigned	start_rtp_port;
+
+    /** Maximum calls to support (default: 4) */
+    unsigned	max_calls;
+
+    /** Maximum slots in the conference bridge (default: 0/calculated
+     *  as max_calls*2
+     */
+    unsigned	conf_ports;
+
+    /** Number of worker threads (default: 1) */
+    unsigned	thread_cnt;
+
+    /** First STUN server IP address. When STUN is configured, then the
+     *  two STUN server settings must be fully set.
+     *  (default: none) 
+     */
+    pj_str_t	stun_srv1;
+
+    /** First STUN port number */
+    unsigned	stun_port1;
+
+    /** Second STUN server IP address */
+    pj_str_t	stun_srv2;
+
+    /** Second STUN server port number */
+    unsigned	stun_port2;
+
+    /** Internal clock rate (to be applied to sound devices and conference
+     *  bridge, default is 0/follows the codec, or 44100 for MacOS).
+     */
+    unsigned	clock_rate;
+
+    /** Do not use sound device (default: 0). */
+    pj_bool_t	null_audio;
+
+    /** WAV file to load for auto_play (default: NULL) */
+    pj_str_t	wav_file;
+
+    /** Auto play WAV file for calls? (default: no) */
+    pj_bool_t	auto_play;
+
+    /** Auto loopback calls? (default: no) */
+    pj_bool_t	auto_loop;
+
+    /** Automatically put calls to conference? (default: no) */
+    pj_bool_t	auto_conf;
+
+    /** Speex codec complexity? (default: 10) */
+    unsigned	complexity;
+
+    /** Speex codec quality? (default: 10) */
+    unsigned	quality;
+
+    /** Codec ptime? (default: 0 (follows the codec)) */
+    unsigned	ptime;
+
+    /** Number of additional codecs/"--add-codec" with pjsua (default: 0) */
+    unsigned	codec_cnt;
+
+    /** Additional codecs/"--add-codec" options */
+    pj_str_t	codec_arg[32];
+
+    /** SIP status code to be automatically sent to incoming calls
+     *  (default: 100).
+     */
+    unsigned	auto_answer;
+
+    /** Periodic time to refresh call with re-INVITE (default: 0)
+     */
+    unsigned	uas_refresh;
+
+    /** Maximum incoming call duration (default: 3600) */
+    unsigned	uas_duration;
+
+    /** Outbound proxy (default: none) */
+    pj_str_t	outbound_proxy;
+
+    /** URI to call.			*/
+    pj_str_t	uri_to_call;
+
+    /** Number of SIP accounts */
+    unsigned	acc_cnt;
+
+    /** SIP accounts configuration */
+    pjsua_acc_config	acc_config[32];
+
+    /** Logging verbosity (default: 5).	*/
+    unsigned	log_level;
+
+    /** Logging to be displayed to stdout (default: 4) */
+    unsigned	app_log_level;
+
+    /** Log decoration */
+    unsigned	log_decor;
+
+    /** Optional log filename (default: NULL) */
+    pj_str_t	log_filename;
+
+    /** Number of buddies in address book (default: 0) */
+    unsigned	buddy_cnt;
+
+    /** Buddies URI */
+    pj_str_t	buddy_uri[256];
+};
+
+
+/**
+ * @see pjsua_config
+ */
+typedef struct pjsua_config pjsua_config;
+
+
+
+/**
+ * Application callbacks.
+ */
+struct pjsua_callback
+{
+    /**
+     * Notify UI when invite state has changed.
+     */
+    void (*on_call_state)(int call_index, pjsip_event *e);
+
+    /**
+     * Notify UI when registration status has changed.
+     */
+    void (*on_reg_state)(int acc_index);
+
+    /**
+     * Notify UI on incoming pager (i.e. MESSAGE request).
+     * Argument call_index will be -1 if MESSAGE request is not related to an 
+     * existing call.
+     */
+    void (*on_pager)(int call_index, const pj_str_t *from,
+		     const pj_str_t *to, const pj_str_t *txt);
+
+    /**
+     * Notify UI about typing indication.
+     */
+    void (*on_typing)(int call_index, const pj_str_t *from,
+		      const pj_str_t *to, pj_bool_t is_typing);
+
+};
+
+/**
+ * @see pjsua_callback
+ */
+typedef struct pjsua_callback pjsua_callback;
 
 
 /* PJSUA application variables. */
@@ -178,79 +378,35 @@ struct pjsua
     pjsip_endpoint  *endpt;	    /**< Global endpoint.		*/
     pj_pool_t	    *pool;	    /**< pjsua's private pool.		*/
     pjsip_module     mod;	    /**< pjsua's PJSIP module.		*/
+
     
+    /* Config: */
+    pjsua_config    config;	    /**< PJSUA configs			*/
+
+    /* Application callback: */
+    pjsua_callback  cb;		    /**< Application callback.		*/
 
     /* Media:  */
-    int		     start_rtp_port;/**< Start of RTP port to try.	*/
     pjmedia_endpt   *med_endpt;	    /**< Media endpoint.		*/
-    unsigned	     clock_rate;    /**< Internal clock rate.		*/
     pjmedia_conf    *mconf;	    /**< Media conference.		*/
-    pj_bool_t	     null_audio;    /**< Null audio flag.		*/
-    pj_bool_t	     no_mic;	    /**< Disable microphone.		*/
-    char	    *wav_file;	    /**< WAV file name to play.		*/
     unsigned	     wav_slot;	    /**< WAV player slot in bridge	*/
     pjmedia_port    *file_port;	    /**< WAV player port.		*/
-    pjmedia_port    *null_port;	    /**< NULL port.			*/
-    pj_bool_t	     auto_play;	    /**< Auto play file for calls?	*/
-    pj_bool_t	     auto_loop;	    /**< Auto loop RTP stream?		*/
-    pj_bool_t	     auto_conf;	    /**< Auto put to conference?	*/
-    int		     complexity;    /**< Codec complexity.		*/
-    int		     quality;	    /**< Codec quality.			*/
-    int		     ptime;	    /**< Codec ptime in msec.		*/
 
-
-    /* Codec arguments: */
-    int		     codec_cnt;	    /**< Number of --add-codec args.	*/
-    pj_str_t	     codec_arg[32]; /**< Array of --add-codec args.	*/
-    pj_status_t	    (*codec_deinit[32])(void);	/**< Array of funcs.	*/
-
-    /* User Agent behaviour: */
-    int		     auto_answer;   /**< Automatically answer in calls.	*/
-    int		     uas_refresh;   /**< Time to re-INVITE.		*/
-    int		     uas_duration;  /**< Max call duration.		*/
 
     /* Account: */
-    pj_bool_t	     has_acc;	    /**< Any --id cmdline?		*/
-    int		     acc_cnt;	    /**< Number of client registrations	*/
     pjsua_acc	     acc[PJSUA_MAX_ACC];    /** Client regs array.	*/
 
 
-    /* Authentication credentials: */
-
-    int		     cred_count;    /**< Number of credentials.		*/
-    pjsip_cred_info  cred_info[10]; /**< Array of credentials.		*/
-
-
     /* Threading (optional): */
-    int		     thread_cnt;    /**< Thread count.			*/
     pj_thread_t	    *threads[8];    /**< Thread instances.		*/
     pj_bool_t	     quit_flag;	    /**< To signal thread to quit.	*/
 
     /* Transport (UDP): */
-    pj_uint16_t	     sip_port;	    /**< SIP signaling port.		*/
     pj_sock_t	     sip_sock;	    /**< SIP UDP socket.		*/
     pj_sockaddr_in   sip_sock_name; /**< Public/STUN UDP socket addr.	*/
 
-    pj_str_t	     outbound_proxy;/**< Outbound proxy.		*/
-
-
-    /* STUN: */
-    pj_str_t	     stun_srv1;
-    int		     stun_port1;
-    pj_str_t	     stun_srv2;
-    int		     stun_port2;
-
-
-    /* Logging: */    
-    int		     log_level;	    /**< Logging verbosity.		*/
-    int		     app_log_level; /**< stdout log verbosity.		*/
-    unsigned	     log_decor;	    /**< Log decoration.		*/
-    char	    *log_filename;  /**< Log filename.			*/
-
 
     /* PJSUA Calls: */
-    pj_str_t	     uri_to_call;   /**< URI to call.			*/
-    int		     max_calls;	    /**< Max nb of calls.		*/
     int		     call_cnt;	    /**< Number of calls.		*/
     pjsua_call	     calls[PJSUA_MAX_CALLS];	/** Calls array.	*/
 
@@ -273,26 +429,35 @@ extern struct pjsua pjsua;
 /**
  * Initialize pjsua settings with default parameters.
  */
-void pjsua_default(void);
+PJ_DECL(void) pjsua_default_config(pjsua_config *cfg);
 
 
 /**
- * Display error message for the specified error code.
+ * Test configuration.
  */
-void pjsua_perror(const char *sender, const char *title, 
-		  pj_status_t status);
+PJ_DECL(pj_status_t) pjsua_test_config(const pjsua_config *cfg,
+				       char *errmsg,
+				       int len);
 
 
 /**
- * Initialize pjsua application. Application can call this before parsing
- * application settings.
+ * Create pjsua application.
+ * This initializes pjlib/pjlib-util, and creates memory pool factory to
+ * be used by application.
+ */
+PJ_DECL(pj_status_t) pjsua_create(void);
+
+
+/**
+ * Initialize pjsua application with the specified settings.
  *
  * This will initialize all libraries, create endpoint instance, and register
- * pjsip modules. Transport will NOT be created however.
+ * pjsip modules. 
  *
  * Application may register module after calling this function.
  */
-pj_status_t pjsua_init(void);
+PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
+				const pjsua_callback *cb);
 
 
 /**
@@ -302,25 +467,13 @@ pj_status_t pjsua_init(void);
  * This will start the transport, worker threads (if any), and registration 
  * process, if registration is configured.
  */
-pj_status_t pjsua_start(void);
+PJ_DECL(pj_status_t) pjsua_start(void);
 
 
 /**
  * Destroy pjsua.
  */
-pj_status_t pjsua_destroy(void);
-
-
-/**
- * Find account for incoming request.
- */
-int pjsua_find_account_for_incoming(pjsip_rx_data *rdata);
-
-
-/**
- * Find account for outgoing request.
- */
-int pjsua_find_account_for_outgoing(const pj_str_t *url);
+PJ_DECL(pj_status_t) pjsua_destroy(void);
 
 
 /*****************************************************************************
@@ -328,68 +481,57 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url);
  */
 
 /**
- * Init pjsua call module.
- */
-pj_status_t pjsua_call_init(void);
-
-/**
  * Make outgoing call.
  */
-pj_status_t pjsua_make_call(int acc_index,
-			    const char *cstr_dest_uri,
-			    int *p_call_index);
-
-
-/**
- * Handle incoming invite request.
- */
-pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
+PJ_DECL(pj_status_t) pjsua_make_call(int acc_index,
+				     const char *cstr_dest_uri,
+				     int *p_call_index);
 
 
 /**
  * Answer call.
  */
-void pjsua_call_answer(int call_index, int code);
+PJ_DECL(void) pjsua_call_answer(int call_index, int code);
 
 /**
  * Hangup call.
  */
-void pjsua_call_hangup(int call_index);
+PJ_DECL(void) pjsua_call_hangup(int call_index);
 
 
 /**
  * Put call on-hold.
  */
-void pjsua_call_set_hold(int call_index);
+PJ_DECL(void) pjsua_call_set_hold(int call_index);
 
 
 /**
  * Send re-INVITE (to release hold).
  */
-void pjsua_call_reinvite(int call_index);
+PJ_DECL(void) pjsua_call_reinvite(int call_index);
 
 
 /**
  * Transfer call.
  */
-void pjsua_call_xfer(int call_index, const char *dest);
+PJ_DECL(void) pjsua_call_xfer(int call_index, const char *dest);
 
 
 /**
  * Send instant messaging inside INVITE session.
  */
-void pjsua_call_send_im(int call_index, const char *text);
+PJ_DECL(void) pjsua_call_send_im(int call_index, const char *text);
 
 
 /**
  * Send IM typing indication inside INVITE session.
  */
-void pjsua_call_typing(int call_index, pj_bool_t is_typing);
+PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing);
 
 /**
  * Terminate all calls.
  */
-void pjsua_call_hangup_all(void);
+PJ_DECL(void) pjsua_call_hangup_all(void);
 
 
 /*****************************************************************************
@@ -397,17 +539,10 @@ void pjsua_call_hangup_all(void);
  */
 
 /**
- * Initialize client registration session.
- *
- * @param app_callback	Optional callback
- */
-pj_status_t pjsua_regc_init(int acc_index);
-
-/**
  * Update registration or perform unregistration. If renew argument is zero,
  * this will start unregistration process.
  */
-void pjsua_regc_update(int acc_index, pj_bool_t renew);
+PJ_DECL(void) pjsua_regc_update(int acc_index, pj_bool_t renew);
 
 
 
@@ -417,24 +552,14 @@ void pjsua_regc_update(int acc_index, pj_bool_t renew);
  */
 
 /**
- * Init presence.
- */
-pj_status_t pjsua_pres_init();
-
-/**
  * Refresh both presence client and server subscriptions.
  */
-void pjsua_pres_refresh(int acc_index);
-
-/**
- * Terminate all subscriptions
- */
-void pjsua_pres_shutdown(void);
+PJ_DECL(void) pjsua_pres_refresh(int acc_index);
 
 /**
  * Dump presence subscriptions.
  */
-void pjsua_pres_dump(pj_bool_t detail);
+PJ_DECL(void) pjsua_pres_dump(pj_bool_t detail);
 
 
 /*****************************************************************************
@@ -447,78 +572,20 @@ void pjsua_pres_dump(pj_bool_t detail);
 extern const pjsip_method pjsip_message_method;
 
 
-/**
- * Init IM module handler to handle incoming MESSAGE outside dialog.
- */
-pj_status_t pjsua_im_init();
-
-
-/**
- * Create Accept header for MESSAGE.
- */
-pjsip_accept_hdr* pjsua_im_create_accept(pj_pool_t *pool);
 
 /**
  * Send IM outside dialog.
  */
-pj_status_t pjsua_im_send(int acc_index, const char *dst_uri, 
-			  const char *text);
+PJ_DECL(pj_status_t) pjsua_im_send(int acc_index, const char *dst_uri, 
+				   const char *text);
 
 
 /**
  * Send typing indication outside dialog.
  */
-pj_status_t pjsua_im_typing(int acc_index, const char *dst_uri, 
-			    pj_bool_t is_typing);
+PJ_DECL(pj_status_t) pjsua_im_typing(int acc_index, const char *dst_uri, 
+				     pj_bool_t is_typing);
 
-
-/**
- * Private: check if we can accept the message.
- *	    If not, then p_accept header will be filled with a valid
- *	    Accept header.
- */
-pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
-				pjsip_accept_hdr **p_accept_hdr);
-
-/**
- * Private: process pager message.
- *	    This may trigger pjsua_ui_on_pager() or pjsua_ui_on_typing().
- */
-void pjsua_im_process_pager(int call_id, const pj_str_t *from,
-			    const pj_str_t *to, pjsip_rx_data *rdata);
-
-
-/*****************************************************************************
- * User Interface API.
- *
- * The UI API specifies functions that will be called by pjsua upon
- * occurence of various events.
- */
-
-/**
- * Notify UI when invite state has changed.
- */
-void pjsua_ui_on_call_state(int call_index, pjsip_event *e);
-
-/**
- * Notify UI when registration status has changed.
- */
-void pjsua_ui_on_reg_state(int acc_index);
-
-/**
- * Notify UI on incoming pager (i.e. MESSAGE request).
- * Argument call_index will be -1 if MESSAGE request is not related to an 
- * existing call.
- */
-void pjsua_ui_on_pager(int call_index, const pj_str_t *from,
-		       const pj_str_t *to, const pj_str_t *txt);
-
-
-/**
- * Notify UI about typing indication.
- */
-void pjsua_ui_on_typing(int call_index, const pj_str_t *from,
-		        const pj_str_t *to, pj_bool_t is_typing);
 
 
 /*****************************************************************************
@@ -532,34 +599,46 @@ extern const char *pjsua_inv_state_names[];
 /**
  * Parse arguments (pjsua_opt.c).
  */
-pj_status_t pjsua_parse_args(int argc, char *argv[]);
+PJ_DECL(pj_status_t) pjsua_parse_args(int argc, char *argv[],
+				      pjsua_config *cfg);
 
 /**
  * Load settings from a file.
  */
-pj_status_t pjsua_load_settings(const char *filename);
+PJ_DECL(pj_status_t) pjsua_load_settings(const char *filename,
+					 pjsua_config *cfg);
 
 /**
  * Dump settings.
  */
-int pjsua_dump_settings(char *buf, pj_size_t max);
+PJ_DECL(int) pjsua_dump_settings(const pjsua_config *cfg,
+				 char *buf, pj_size_t max);
 
 /**
  * Save settings to a file.
  */
-pj_status_t pjsua_save_settings(const char *filename);
+PJ_DECL(pj_status_t) pjsua_save_settings(const char *filename,
+					 const pjsua_config *cfg);
 
 
 /*
  * Verify that valid SIP url is given.
  * @return  PJ_SUCCESS if valid.
  */
-pj_status_t pjsua_verify_sip_url(const char *c_url);
+PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *c_url);
 
 /*
  * Dump application states.
  */
-void pjsua_dump(pj_bool_t detail);
+PJ_DECL(void) pjsua_dump(pj_bool_t detail);
+
+/**
+ * Display error message for the specified error code.
+ */
+PJ_DECL(void) pjsua_perror(const char *sender, const char *title, 
+			   pj_status_t status);
+
+
 
 
 PJ_END_DECL

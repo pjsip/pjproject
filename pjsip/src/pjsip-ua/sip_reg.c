@@ -484,6 +484,7 @@ static void tsx_callback(void *token, pjsip_event *event)
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     
     /* Decrement pending transaction counter. */
+    pj_assert(regc->pending_tsx > 0);
     --regc->pending_tsx;
 
     /* If registration data has been deleted by user then remove registration 
@@ -609,10 +610,13 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     cseq_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
 
-    /* Send. */
+    /* Increment pending transaction first, since transaction callback
+     * may be called even before send_request() returns!
+     */
+    ++regc->pending_tsx;
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
-    if (status==PJ_SUCCESS)
-	++regc->pending_tsx;
+    if (status!=PJ_SUCCESS)
+	--regc->pending_tsx;
 
     return status;
 }

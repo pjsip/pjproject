@@ -59,22 +59,17 @@ static void usage(void)
     puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
     puts  ("");
     puts  ("SIP Account options:");
-    puts  ("  --id=url            Set the URL of local ID (used in From header)");
-    puts  ("  --contact=url       Override the Contact information");
-    puts  ("  --proxy=url         Set the URL of proxy server");
-    puts  ("");
-    puts  ("SIP Account Registration Options:");
     puts  ("  --registrar=url     Set the URL of registrar server");
-    puts  ("  --reg-timeout=secs  Set registration interval to secs (default 3600)");
-    puts  ("");
-    puts  ("SIP Account Control:");
-    puts  ("  --next-account      Add more account");
-    puts  ("");
-    puts  ("Authentication options:");
+    puts  ("  --id=url            Set the URL of local ID (used in From header)");
+    puts  ("  --contact=url       Optionally override the Contact information");
+    puts  ("  --proxy=url         Optional URL of proxy server to visit");
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
-    puts  ("  --next-cred         Add more credential");
+    puts  ("  --reg-timeout=SEC   Optional registration interval (default 55)");
+    puts  ("");
+    puts  ("SIP Account Control:");
+    puts  ("  --next-account      Add more account");
     puts  ("");
     puts  ("Transport Options:");
     puts  ("  --local-port=port        Set TCP/UDP port");
@@ -86,7 +81,6 @@ static void usage(void)
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
-    puts  ("  --no-mic            Disable microphone device");
     puts  ("  --play-file=file    Play WAV file in conference bridge");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
@@ -113,7 +107,7 @@ static void usage(void)
 /*
  * Verify that valid SIP url is given.
  */
-pj_status_t pjsua_verify_sip_url(const char *c_url)
+PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
 {
     pjsip_uri *p;
     pj_pool_t *pool;
@@ -214,12 +208,13 @@ static int my_atoi(const char *cs)
 
 
 /* Parse arguments. */
-pj_status_t pjsua_parse_args(int argc, char *argv[])
+PJ_DEF(pj_status_t) pjsua_parse_args(int argc, char *argv[],
+				     pjsua_config *cfg)
 {
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
-	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_NO_MIC,
+	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
 	   OPT_LOCAL_PORT, OPT_PROXY, OPT_OUTBOUND_PROXY, OPT_REGISTRAR,
 	   OPT_REG_TIMEOUT, OPT_ID, OPT_CONTACT, 
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
@@ -229,7 +224,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME,
-	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, OPT_UAS_REFRESH,
+	   OPT_NEXT_ACCOUNT, OPT_MAX_CALLS, OPT_UAS_REFRESH,
 	   OPT_UAS_DURATION,
     };
     struct pj_getopt_option long_options[] = {
@@ -241,7 +236,6 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
-	{ "no-mic",	0, 0, OPT_NO_MIC},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "proxy",	1, 0, OPT_PROXY},
 	{ "outbound",	1, 0, OPT_OUTBOUND_PROXY},
@@ -269,19 +263,21 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
-	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
 	{ "uas-refresh",1, 0, OPT_UAS_REFRESH},
 	{ "uas-duration",1,0, OPT_UAS_DURATION},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
-    pjsua_acc *cur_acc;
-    pjsip_cred_info *cur_cred;
+    pjsua_acc_config *cur_acc;
+    char errmsg[80];
     char *config_file = NULL;
+    unsigned i;
 
     /* Run pj_getopt once to see if user specifies config file to read. */ 
-    while ((c=pj_getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
+    while ((c=pj_getopt_long(argc, argv, "", long_options, 
+			     &option_index)) != -1) 
+    {
 	switch (c) {
 	case OPT_CONFIG_FILE:
 	    config_file = pj_optarg;
@@ -297,16 +293,15 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    return status;
     }
 
-
-    cur_acc = &pjsua.acc[0];
-    cur_cred = &pjsua.cred_info[0];
+    cfg->acc_cnt = 0;
+    cur_acc = &cfg->acc_config[0];
 
 
     /* Reinitialize and re-run pj_getopt again, possibly with new arguments
      * read from config file.
      */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc, argv, "", long_options, &option_index))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "", long_options,&option_index))!=-1) {
 	char *p;
 	pj_str_t tmp;
 	long lval;
@@ -314,7 +309,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	switch (c) {
 
 	case OPT_LOG_FILE:
-	    pjsua.log_filename = pj_optarg;
+	    cfg->log_filename = pj_str(pj_optarg);
 	    break;
 
 	case OPT_LOG_LEVEL:
@@ -325,12 +320,13 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "for --log-level"));
 		return PJ_EINVAL;
 	    }
+	    cfg->log_level = c;
 	    pj_log_set_level( c );
 	    break;
 
 	case OPT_APP_LOG_LEVEL:
-	    pjsua.app_log_level = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (pjsua.app_log_level < 0 || pjsua.app_log_level > 6) {
+	    cfg->app_log_level = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (cfg->app_log_level < 0 || cfg->app_log_level > 6) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: expecting integer value 0-6 "
 			  "for --app-log-level"));
@@ -347,11 +343,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    return PJ_EINVAL;
 
 	case OPT_NULL_AUDIO:
-	    pjsua.null_audio = 1;
-	    break;
-
-	case OPT_NO_MIC:
-	    pjsua.no_mic = 1;
+	    cfg->null_audio = 1;
 	    break;
 
 	case OPT_CLOCK_RATE:
@@ -361,7 +353,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 				     "8000-48000 for clock rate"));
 		return PJ_EINVAL;
 	    }
-	    pjsua.clock_rate = (int)lval; 
+	    cfg->clock_rate = lval; 
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */
@@ -372,7 +364,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "--local-port"));
 		return PJ_EINVAL;
 	    }
-	    pjsua.sip_port = (pj_uint16_t)lval;
+	    cfg->udp_port = (pj_uint16_t)lval;
 	    break;
 
 	case OPT_PROXY:   /* proxy */
@@ -392,7 +384,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "in outbound proxy argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
-	    pjsua.outbound_proxy = pj_str(pj_optarg);
+	    cfg->outbound_proxy = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REGISTRAR:   /* registrar */
@@ -422,8 +414,7 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "in local id argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
-	    cur_acc->local_uri = pj_str(pj_optarg);
-	    pjsua.has_acc = 1;
+	    cur_acc->id = pj_str(pj_optarg);
 	    break;
 
 	case OPT_CONTACT:   /* contact */
@@ -433,50 +424,42 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "in contact argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
-	    cur_acc->contact_uri = pj_str(pj_optarg);
+	    cur_acc->contact = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
-	    pjsua.acc_cnt++;
-	    cur_acc = &pjsua.acc[pjsua.acc_cnt - 1];
+	    cfg->acc_cnt++;
+	    cur_acc = &cfg->acc_config[cfg->acc_cnt - 1];
 	    break;
 
 	case OPT_USERNAME:   /* Default authentication user */
-	    if (pjsua.cred_count==0) pjsua.cred_count=1;
-	    cur_cred->username = pj_str(pj_optarg);
+	    cur_acc->cred_info[0].username = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REALM:	    /* Default authentication realm. */
-	    if (pjsua.cred_count==0) pjsua.cred_count=1;
-	    cur_cred->realm = pj_str(pj_optarg);
+	    cur_acc->cred_info[0].realm = pj_str(pj_optarg);
 	    break;
 
 	case OPT_PASSWORD:   /* authentication password */
-	    if (pjsua.cred_count==0) pjsua.cred_count=1;
-	    cur_cred->data_type = 0;
-	    cur_cred->data = pj_str(pj_optarg);
-	    break;
-
-	case OPT_NEXT_CRED: /* Next credential */
-	    pjsua.cred_count++;
-	    cur_cred = &pjsua.cred_info[pjsua.cred_count - 1];
+	    cur_acc->cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+	    cur_acc->cred_info[0].data = pj_str(pj_optarg);
 	    break;
 
 	case OPT_USE_STUN1:   /* STUN server 1 */
 	    p = pj_ansi_strchr(pj_optarg, ':');
 	    if (p) {
 		*p = '\0';
-		pjsua.stun_srv1 = pj_str(pj_optarg);
-		pjsua.stun_port1 = pj_strtoul(pj_cstr(&tmp, p+1));
-		if (pjsua.stun_port1 < 1 || pjsua.stun_port1 > 65535) {
+		cfg->stun_srv1 = pj_str(pj_optarg);
+		cfg->stun_port1 = pj_strtoul(pj_cstr(&tmp, p+1));
+		if (cfg->stun_port1 < 1 || cfg->stun_port1 > 65535) {
 		    PJ_LOG(1,(THIS_FILE, 
 			      "Error: expecting port number with "
 			      "option --use-stun1"));
 		    return PJ_EINVAL;
 		}
 	    } else {
-		pjsua.stun_port1 = 3478;
-		pjsua.stun_srv1 = pj_str(pj_optarg);
+		cfg->stun_port1 = 3478;
+		cfg->stun_srv1 = pj_str(pj_optarg);
 	    }
 	    break;
 
@@ -484,17 +467,17 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    p = pj_ansi_strchr(pj_optarg, ':');
 	    if (p) {
 		*p = '\0';
-		pjsua.stun_srv2 = pj_str(pj_optarg);
-		pjsua.stun_port2 = pj_strtoul(pj_cstr(&tmp,p+1));
-		if (pjsua.stun_port2 < 1 || pjsua.stun_port2 > 65535) {
+		cfg->stun_srv2 = pj_str(pj_optarg);
+		cfg->stun_port2 = pj_strtoul(pj_cstr(&tmp,p+1));
+		if (cfg->stun_port2 < 1 || cfg->stun_port2 > 65535) {
 		    PJ_LOG(1,(THIS_FILE, 
 			      "Error: expecting port number with "
 			      "option --use-stun2"));
 		    return PJ_EINVAL;
 		}
 	    } else {
-		pjsua.stun_port2 = 3478;
-		pjsua.stun_srv2 = pj_str(pj_optarg);
+		cfg->stun_port2 = 3478;
+		cfg->stun_srv2 = pj_str(pj_optarg);
 	    }
 	    break;
 
@@ -505,33 +488,33 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 			  "--add-buddy option", pj_optarg));
 		return -1;
 	    }
-	    if (pjsua.buddy_cnt == PJSUA_MAX_BUDDIES) {
+	    if (cfg->buddy_cnt == PJSUA_MAX_BUDDIES) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: too many buddies in buddy list."));
 		return -1;
 	    }
-	    pjsua.buddies[pjsua.buddy_cnt++].uri = pj_str(pj_optarg);
+	    cfg->buddy_uri[cfg->buddy_cnt++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_AUTO_PLAY:
-	    pjsua.auto_play = 1;
+	    cfg->auto_play = 1;
 	    break;
 
 	case OPT_AUTO_LOOP:
-	    pjsua.auto_loop = 1;
+	    cfg->auto_loop = 1;
 	    break;
 
 	case OPT_AUTO_CONF:
-	    pjsua.auto_conf = 1;
+	    cfg->auto_conf = 1;
 	    break;
 
 	case OPT_PLAY_FILE:
-	    pjsua.wav_file = pj_optarg;
+	    cfg->wav_file = pj_str(pj_optarg);
 	    break;
 
 	case OPT_RTP_PORT:
-	    pjsua.start_rtp_port = my_atoi(pj_optarg);
-	    if (pjsua.start_rtp_port < 1 || pjsua.start_rtp_port > 65535) {
+	    cfg->start_rtp_port = my_atoi(pj_optarg);
+	    if (cfg->start_rtp_port < 1 || cfg->start_rtp_port > 65535) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: rtp-port argument value "
 			  "(expecting 1-65535"));
@@ -540,12 +523,12 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_ADD_CODEC:
-	    pjsua.codec_arg[pjsua.codec_cnt++] = pj_str(pj_optarg);
+	    cfg->codec_arg[cfg->codec_cnt++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_COMPLEXITY:
-	    pjsua.complexity = my_atoi(pj_optarg);
-	    if (pjsua.complexity < 0 || pjsua.complexity > 10) {
+	    cfg->complexity = my_atoi(pj_optarg);
+	    if (cfg->complexity < 0 || cfg->complexity > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --complexity (expecting 0-10"));
 		return -1;
@@ -553,8 +536,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_QUALITY:
-	    pjsua.quality = my_atoi(pj_optarg);
-	    if (pjsua.quality < 0 || pjsua.quality > 10) {
+	    cfg->quality = my_atoi(pj_optarg);
+	    if (cfg->quality < 0 || cfg->quality > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --quality (expecting 0-10"));
 		return -1;
@@ -562,8 +545,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_PTIME:
-	    pjsua.ptime = my_atoi(pj_optarg);
-	    if (pjsua.ptime < 10 || pjsua.ptime > 1000) {
+	    cfg->ptime = my_atoi(pj_optarg);
+	    if (cfg->ptime < 10 || cfg->ptime > 1000) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --ptime option"));
 		return -1;
@@ -571,8 +554,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_AUTO_ANSWER:
-	    pjsua.auto_answer = my_atoi(pj_optarg);
-	    if (pjsua.auto_answer < 100 || pjsua.auto_answer > 699) {
+	    cfg->auto_answer = my_atoi(pj_optarg);
+	    if (cfg->auto_answer < 100 || cfg->auto_answer > 699) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid code in --auto-answer "
 			  "(expecting 100-699"));
@@ -581,16 +564,16 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_MAX_CALLS:
-	    pjsua.max_calls = my_atoi(pj_optarg);
-	    if (pjsua.max_calls < 1 || pjsua.max_calls > 255) {
+	    cfg->max_calls = my_atoi(pj_optarg);
+	    if (cfg->max_calls < 1 || cfg->max_calls > 255) {
 		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
 		return -1;
 	    }
 	    break;
 
 	case OPT_UAS_REFRESH:
-	    pjsua.uas_refresh = my_atoi(pj_optarg);
-	    if (pjsua.uas_refresh < 1) {
+	    cfg->uas_refresh = my_atoi(pj_optarg);
+	    if (cfg->uas_refresh < 1) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Invalid value for --uas-refresh (must be >0)"));
 		return -1;
@@ -598,8 +581,8 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
 	    break;
 
 	case OPT_UAS_DURATION:
-	    pjsua.uas_duration = my_atoi(pj_optarg);
-	    if (pjsua.uas_duration < 1) {
+	    cfg->uas_duration = my_atoi(pj_optarg);
+	    if (cfg->uas_duration < 1) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Invalid value for --uas-duration "
 			  "(must be >0)"));
@@ -610,28 +593,44 @@ pj_status_t pjsua_parse_args(int argc, char *argv[])
     }
 
     if (pj_optind != argc) {
-	int i;
 
 	if (pjsua_verify_sip_url(argv[pj_optind]) != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "Invalid SIP URI %s", argv[pj_optind]));
 	    return -1;
 	}
-	pjsua.uri_to_call = pj_str(argv[pj_optind]);
+	cfg->uri_to_call = pj_str(argv[pj_optind]);
 	pj_optind++;
 
 	/* Add URI to call to buddy list if it's not already there */
-	for (i=0; i<pjsua.buddy_cnt; ++i) {
-	    if (pj_stricmp(&pjsua.buddies[i].uri, &pjsua.uri_to_call)==0)
+	for (i=0; i<cfg->buddy_cnt; ++i) {
+	    if (pj_stricmp(&cfg->buddy_uri[i], &cfg->uri_to_call)==0)
 		break;
 	}
-	if (i == pjsua.buddy_cnt && pjsua.buddy_cnt < PJSUA_MAX_BUDDIES) {
-	    pjsua.buddies[pjsua.buddy_cnt++].uri = pjsua.uri_to_call;
+	if (i == cfg->buddy_cnt && cfg->buddy_cnt < PJSUA_MAX_BUDDIES) {
+	    cfg->buddy_uri[cfg->buddy_cnt++] = cfg->uri_to_call;
 	}
     }
 
     if (pj_optind != argc) {
 	PJ_LOG(1,(THIS_FILE, "Error: unknown options %s", argv[pj_optind]));
 	return PJ_EINVAL;
+    }
+
+    if (cfg->acc_config[0].id.slen && cfg->acc_cnt==0)
+	cfg->acc_cnt = 1;
+
+    for (i=0; i<cfg->acc_cnt; ++i) {
+	if (cfg->acc_config[i].cred_info[0].username.slen ||
+	    cfg->acc_config[i].cred_info[0].realm.slen)
+	{
+	    cfg->acc_config[i].cred_count = 1;
+	    cfg->acc_config[i].cred_info[0].scheme = pj_str("digest");
+	}
+    }
+
+    if (pjsua_test_config(cfg, errmsg, sizeof(errmsg)) != PJ_SUCCESS) {
+	PJ_LOG(1,(THIS_FILE, "Error: %s", errmsg));
+	return -1;
     }
 
     return PJ_SUCCESS;
@@ -831,7 +830,7 @@ static void dump_media_session(pjmedia_session *session)
 /*
  * Dump application states.
  */
-void pjsua_dump(pj_bool_t detail)
+PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 {
     char buf[128];
     unsigned old_decor;
@@ -858,9 +857,9 @@ void pjsua_dump(pj_bool_t detail)
 	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
 
     } else {
-	int i;
+	unsigned i;
 
-	for (i=0; i<pjsua.max_calls; ++i) {
+	for (i=0; i<pjsua.config.max_calls; ++i) {
 
 	    pjsua_call *call = &pjsua.calls[i];
 	    pj_time_val duration, res_delay, con_delay;
@@ -917,13 +916,14 @@ void pjsua_dump(pj_bool_t detail)
 /*
  * Load settings.
  */
-pj_status_t pjsua_load_settings(const char *filename)
+PJ_DECL(pj_status_t) pjsua_load_settings(const char *filename,
+					 pjsua_config *cfg)
 {
     int argc = 3;
     char *argv[4] = { "pjsua", "--config-file", NULL, NULL};
 
     argv[3] = (char*)filename;
-    return pjsua_parse_args(argc, argv);
+    return pjsua_parse_args(argc, argv, cfg);
 }
 
 
@@ -933,7 +933,7 @@ pj_status_t pjsua_load_settings(const char *filename)
 static void save_account_settings(int acc_index, pj_str_t *result)
 {
     char line[128];
-    pjsua_acc *acc = &pjsua.acc[acc_index];
+    pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[acc_index];
 
     
     pj_ansi_sprintf(line, "#\n# Account %d:\n#\n", acc_index);
@@ -941,33 +941,55 @@ static void save_account_settings(int acc_index, pj_str_t *result)
 
 
     /* Identity */
-    if (acc->local_uri.slen) {
+    if (acc_cfg->id.slen) {
 	pj_ansi_sprintf(line, "--id %.*s\n", 
-			(int)acc->local_uri.slen, 
-			acc->local_uri.ptr);
+			(int)acc_cfg->id.slen, 
+			acc_cfg->id.ptr);
 	pj_strcat2(result, line);
     }
 
     /* Registrar server */
-    if (acc->reg_uri.slen) {
+    if (acc_cfg->reg_uri.slen) {
 	pj_ansi_sprintf(line, "--registrar %.*s\n",
-			      (int)acc->reg_uri.slen,
-			      acc->reg_uri.ptr);
+			      (int)acc_cfg->reg_uri.slen,
+			      acc_cfg->reg_uri.ptr);
 	pj_strcat2(result, line);
 
 	pj_ansi_sprintf(line, "--reg-timeout %u\n",
-			      acc->reg_timeout);
+			      acc_cfg->reg_timeout);
 	pj_strcat2(result, line);
     }
 
 
     /* Proxy */
-    if (acc->proxy.slen) {
+    if (acc_cfg->proxy.slen) {
 	pj_ansi_sprintf(line, "--proxy %.*s\n",
-			      (int)acc->proxy.slen,
-			      acc->proxy.ptr);
+			      (int)acc_cfg->proxy.slen,
+			      acc_cfg->proxy.ptr);
 	pj_strcat2(result, line);
     }
+
+    if (acc_cfg->cred_info[0].realm.slen) {
+	pj_ansi_sprintf(line, "--realm %.*s\n",
+			      (int)acc_cfg->cred_info[0].realm.slen,
+			      acc_cfg->cred_info[0].realm.ptr);
+	pj_strcat2(result, line);
+    }
+
+    if (acc_cfg->cred_info[0].username.slen) {
+	pj_ansi_sprintf(line, "--username %.*s\n",
+			      (int)acc_cfg->cred_info[0].username.slen,
+			      acc_cfg->cred_info[0].username.ptr);
+	pj_strcat2(result, line);
+    }
+
+    if (acc_cfg->cred_info[0].data.slen) {
+	pj_ansi_sprintf(line, "--password %.*s\n",
+			      (int)acc_cfg->cred_info[0].data.slen,
+			      acc_cfg->cred_info[0].data.ptr);
+	pj_strcat2(result, line);
+    }
+
 }
 
 
@@ -975,10 +997,11 @@ static void save_account_settings(int acc_index, pj_str_t *result)
 /*
  * Dump settings.
  */
-int pjsua_dump_settings(char *buf, pj_size_t max)
+PJ_DEF(int) pjsua_dump_settings(const pjsua_config *config,
+				char *buf, pj_size_t max)
 {
-    int acc_index;
-    int i;
+    unsigned acc_index;
+    unsigned i;
     pj_str_t cfg;
     char line[128];
 
@@ -991,89 +1014,60 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
     /* Logging. */
     pj_strcat2(&cfg, "#\n# Logging options:\n#\n");
     pj_ansi_sprintf(line, "--log-level %d\n",
-		    pjsua.log_level);
+		    config->log_level);
     pj_strcat2(&cfg, line);
 
     pj_ansi_sprintf(line, "--app-log-level %d\n",
-		    pjsua.app_log_level);
+		    config->app_log_level);
     pj_strcat2(&cfg, line);
 
-    if (pjsua.log_filename) {
+    if (config->log_filename.slen) {
 	pj_ansi_sprintf(line, "--log-file %s\n",
-			pjsua.log_filename);
+			config->log_filename.ptr);
 	pj_strcat2(&cfg, line);
     }
 
 
     /* Save account settings. */
-    if (pjsua.has_acc) {
-	for (acc_index=0; acc_index < pjsua.acc_cnt; ++acc_index) {
-	    
-	    save_account_settings(acc_index, &cfg);
+    for (acc_index=0; acc_index < config->acc_cnt; ++acc_index) {
+	
+	save_account_settings(acc_index, &cfg);
 
-	    if (acc_index < pjsua.acc_cnt-1)
-		pj_strcat2(&cfg, "--next-account\n");
-	}
-    }
-
-    /* Credentials. */
-    for (i=0; i<pjsua.cred_count; ++i) {
-
-	pj_ansi_sprintf(line, "#\n# Credential %d:\n#\n", i);
-	pj_strcat2(&cfg, line);
-
-	if (pjsua.cred_info[i].realm.slen) {
-	    pj_ansi_sprintf(line, "--realm %.*s\n",
-				  (int)pjsua.cred_info[i].realm.slen,
-				  pjsua.cred_info[i].realm.ptr);
-	    pj_strcat2(&cfg, line);
-	}
-
-	pj_ansi_sprintf(line, "--username %.*s\n",
-			      (int)pjsua.cred_info[i].username.slen,
-			      pjsua.cred_info[i].username.ptr);
-	pj_strcat2(&cfg, line);
-
-	pj_ansi_sprintf(line, "--password %.*s\n",
-			      (int)pjsua.cred_info[i].data.slen,
-			      pjsua.cred_info[i].data.ptr);
-	pj_strcat2(&cfg, line);
-
-	if (i < pjsua.cred_count-1)
-	    pj_strcat2(&cfg, "--next-cred\n");
+	if (acc_index < config->acc_cnt-1)
+	    pj_strcat2(&cfg, "--next-account\n");
     }
 
 
     pj_strcat2(&cfg, "#\n# Network settings:\n#\n");
 
     /* Outbound proxy */
-    if (pjsua.outbound_proxy.slen) {
+    if (config->outbound_proxy.slen) {
 	pj_ansi_sprintf(line, "--outbound %.*s\n",
-			      (int)pjsua.outbound_proxy.slen,
-			      pjsua.outbound_proxy.ptr);
+			      (int)config->outbound_proxy.slen,
+			      config->outbound_proxy.ptr);
 	pj_strcat2(&cfg, line);
     }
 
 
     /* Transport. */
-    pj_ansi_sprintf(line, "--local-port %d\n", pjsua.sip_port);
+    pj_ansi_sprintf(line, "--local-port %d\n", config->udp_port);
     pj_strcat2(&cfg, line);
 
 
     /* STUN */
-    if (pjsua.stun_port1) {
+    if (config->stun_port1) {
 	pj_ansi_sprintf(line, "--use-stun1 %.*s:%d\n",
-			(int)pjsua.stun_srv1.slen, 
-			pjsua.stun_srv1.ptr, 
-			pjsua.stun_port1);
+			(int)config->stun_srv1.slen, 
+			config->stun_srv1.ptr, 
+			config->stun_port1);
 	pj_strcat2(&cfg, line);
     }
 
-    if (pjsua.stun_port2) {
+    if (config->stun_port2) {
 	pj_ansi_sprintf(line, "--use-stun2 %.*s:%d\n",
-			(int)pjsua.stun_srv2.slen, 
-			pjsua.stun_srv2.ptr, 
-			pjsua.stun_port2);
+			(int)config->stun_srv2.slen, 
+			config->stun_srv2.ptr, 
+			config->stun_port2);
 	pj_strcat2(&cfg, line);
     }
 
@@ -1082,89 +1076,89 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 
 
     /* Media */
-    if (pjsua.null_audio)
+    if (config->null_audio)
 	pj_strcat2(&cfg, "--null-audio\n");
-    if (pjsua.auto_play)
+    if (config->auto_play)
 	pj_strcat2(&cfg, "--auto-play\n");
-    if (pjsua.auto_loop)
+    if (config->auto_loop)
 	pj_strcat2(&cfg, "--auto-loop\n");
-    if (pjsua.auto_conf)
+    if (config->auto_conf)
 	pj_strcat2(&cfg, "--auto-conf\n");
-    if (pjsua.wav_file) {
+    if (config->wav_file.slen) {
 	pj_ansi_sprintf(line, "--play-file %s\n",
-			pjsua.wav_file);
+			config->wav_file.ptr);
 	pj_strcat2(&cfg, line);
     }
     /* Media clock rate. */
-    if (pjsua.clock_rate) {
+    if (config->clock_rate) {
 	pj_ansi_sprintf(line, "--clock-rate %d\n",
-			pjsua.clock_rate);
+			config->clock_rate);
 	pj_strcat2(&cfg, line);
     }
 
 
     /* Encoding quality and complexity */
     pj_ansi_sprintf(line, "--quality %d\n",
-		    pjsua.quality);
+		    config->quality);
     pj_strcat2(&cfg, line);
     pj_ansi_sprintf(line, "--complexity %d\n",
-		    pjsua.complexity);
+		    config->complexity);
     pj_strcat2(&cfg, line);
 
     /* ptime */
-    if (pjsua.ptime) {
+    if (config->ptime) {
 	pj_ansi_sprintf(line, "--ptime %d\n",
-			pjsua.ptime);
+			config->ptime);
 	pj_strcat2(&cfg, line);
     }
 
     /* Start RTP port. */
     pj_ansi_sprintf(line, "--rtp-port %d\n",
-		    pjsua.start_rtp_port);
+		    config->start_rtp_port);
     pj_strcat2(&cfg, line);
 
     /* Add codec. */
-    for (i=0; i<pjsua.codec_cnt; ++i) {
+    for (i=0; i<config->codec_cnt; ++i) {
 	pj_ansi_sprintf(line, "--add-codec %s\n",
-		    pjsua.codec_arg[i].ptr);
+		    config->codec_arg[i].ptr);
 	pj_strcat2(&cfg, line);
     }
 
     pj_strcat2(&cfg, "#\n# User agent:\n#\n");
 
     /* Auto-answer. */
-    if (pjsua.auto_answer != 0) {
+    if (config->auto_answer != 0) {
 	pj_ansi_sprintf(line, "--auto-answer %d\n",
-			pjsua.auto_answer);
+			config->auto_answer);
 	pj_strcat2(&cfg, line);
     }
 
     /* Max calls. */
     pj_ansi_sprintf(line, "--max-calls %d\n",
-		    pjsua.max_calls);
+		    config->max_calls);
     pj_strcat2(&cfg, line);
 
     /* Uas-refresh. */
-    if (pjsua.uas_refresh > 0) {
+    if (config->uas_refresh > 0) {
 	pj_ansi_sprintf(line, "--uas-refresh %d\n",
-			pjsua.uas_refresh);
+			config->uas_refresh);
 	pj_strcat2(&cfg, line);
     }
 
     /* Uas-duration. */
-    if (pjsua.uas_duration > 0) {
+    if (config->uas_duration > 0) {
 	pj_ansi_sprintf(line, "--uas-duration %d\n",
-			pjsua.uas_duration);
+			config->uas_duration);
 	pj_strcat2(&cfg, line);
     }
 
     pj_strcat2(&cfg, "#\n# Buddies:\n#\n");
 
     /* Add buddies. */
-    for (i=0; i<pjsua.buddy_cnt; ++i) {
+    for (i=0; i<config->buddy_cnt; ++i) {
 	pj_ansi_sprintf(line, "--add-buddy %.*s\n",
-			      (int)pjsua.buddies[i].uri.slen,
-			      pjsua.buddies[i].uri.ptr);
+			      (int)config->buddy_uri[i].slen,
+			      config->buddy_uri[i].ptr);
 	pj_strcat2(&cfg, line);
     }
 
@@ -1176,7 +1170,8 @@ int pjsua_dump_settings(char *buf, pj_size_t max)
 /*
  * Save settings.
  */
-pj_status_t pjsua_save_settings(const char *filename)
+PJ_DEF(pj_status_t) pjsua_save_settings(const char *filename,
+					const pjsua_config *config)
 {
     pj_str_t cfg;
     pj_pool_t *pool;
@@ -1195,7 +1190,7 @@ pj_status_t pjsua_save_settings(const char *filename)
     }
 
 
-    cfg.slen = pjsua_dump_settings(cfg.ptr, 3800);
+    cfg.slen = pjsua_dump_settings(config, cfg.ptr, 3800);
     if (cfg.slen < 1) {
 	pj_pool_release(pool);
 	return PJ_ENOMEM;

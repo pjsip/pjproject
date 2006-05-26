@@ -91,11 +91,19 @@ SOURCE="..\src\pjsua-lib\pjsua_call.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsua-lib\pjsua_console_app.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsua-lib\pjsua_core.c"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjsua-lib\pjsua_im.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjsua-lib\pjsua_imp.h"
 # End Source File
 # Begin Source File
 
@@ -116,6 +124,10 @@ SOURCE="..\src\pjsua-lib\pjsua_settings.c"
 # Begin Source File
 
 SOURCE="..\include\pjsua-lib\pjsua.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsua-lib\pjsua_console_app.h"
 # End Source File
 # End Group
 # End Target

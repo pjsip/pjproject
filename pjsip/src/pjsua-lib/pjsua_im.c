@@ -152,7 +152,8 @@ void pjsua_im_process_pager(int call_index, const pj_str_t *from,
 	text.ptr = rdata->msg_info.msg->body->data;
 	text.slen = rdata->msg_info.msg->body->len;
 
-	pjsua_ui_on_pager(call_index, from, to, &text);
+	if (pjsua.cb.on_pager)
+	    (*pjsua.cb.on_pager)(call_index, from, to, &text);
 
     } else {
 
@@ -169,7 +170,8 @@ void pjsua_im_process_pager(int call_index, const pj_str_t *from,
 	    return;
 	}
 
-	pjsua_ui_on_typing(call_index, from, to, is_typing);
+	if (pjsua.cb.on_typing)
+	    (*pjsua.cb.on_typing)(call_index, from, to, is_typing);
     }
 
 }
@@ -269,8 +271,8 @@ static void im_callback(void *token, pjsip_event *e)
 /**
  * Send IM outside dialog.
  */
-pj_status_t pjsua_im_send(int acc_index, const char *dst_uri, 
-			  const char *str)
+PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const char *dst_uri, 
+				  const char *str)
 {
     pjsip_tx_data *tdata;
     const pj_str_t STR_CONTACT = { "Contact", 7 };
@@ -281,9 +283,10 @@ pj_status_t pjsua_im_send(int acc_index, const char *dst_uri,
     pj_status_t status;
 
     /* Create request. */
-    status = pjsip_endpt_create_request( pjsua.endpt, &pjsip_message_method,
-					 &dst, &pjsua.acc[acc_index].local_uri,
-					 &dst, NULL, NULL, -1, NULL, &tdata);
+    status = pjsip_endpt_create_request(pjsua.endpt, &pjsip_message_method,
+					&dst, 
+					&pjsua.config.acc_config[acc_index].id,
+					&dst, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;
@@ -295,9 +298,9 @@ pj_status_t pjsua_im_send(int acc_index, const char *dst_uri,
 
     /* Add contact. */
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
-		       pjsip_generic_string_hdr_create(tdata->pool, 
-						       &STR_CONTACT,
-						       &pjsua.acc[acc_index].contact_uri));
+	pjsip_generic_string_hdr_create(tdata->pool, 
+					&STR_CONTACT,
+					&pjsua.config.acc_config[acc_index].contact));
 
     /* Duplicate text.
      * We need to keep the text because we will display it when we fail to
@@ -330,8 +333,8 @@ pj_status_t pjsua_im_send(int acc_index, const char *dst_uri,
 /**
  * Send typing indication outside dialog.
  */
-pj_status_t pjsua_im_typing(int acc_index, const char *dst_uri, 
-			    pj_bool_t is_typing)
+PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const char *dst_uri, 
+				    pj_bool_t is_typing)
 {
     const pj_str_t dst = pj_str((char*)dst_uri);
     pjsip_tx_data *tdata;
@@ -339,7 +342,8 @@ pj_status_t pjsua_im_typing(int acc_index, const char *dst_uri,
 
     /* Create request. */
     status = pjsip_endpt_create_request( pjsua.endpt, &pjsip_message_method,
-					 &dst, &pjsua.acc[acc_index].local_uri,
+					 &dst, 
+					 &pjsua.config.acc_config[acc_index].id,
 					 &dst, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);

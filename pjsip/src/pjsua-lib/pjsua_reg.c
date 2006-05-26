@@ -59,12 +59,12 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
 	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
-		      acc->local_uri.ptr));
+		      pjsua.config.acc_config[acc->index].id.ptr));
 	} else {
 	    PJ_LOG(3, (THIS_FILE, 
 		       "%s: registration success, status=%d (%s), "
 		       "will re-register in %d seconds", 
-		       acc->local_uri.ptr,
+		       pjsua.config.acc_config[acc->index].id.ptr,
 		       param->code,
 		       pjsip_get_status_text(param->code)->ptr,
 		       param->expiration));
@@ -77,14 +77,15 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     acc->reg_last_err = param->status;
     acc->reg_last_code = param->code;
 
-    pjsua_ui_on_reg_state(acc->index);
+    if (pjsua.cb.on_reg_state)
+	(*pjsua.cb.on_reg_state)(acc->index);
 }
 
 
 /*
  * Update registration. If renew is false, then unregistration will be performed.
  */
-void pjsua_regc_update(int acc_index, pj_bool_t renew)
+PJ_DECL(void) pjsua_regc_update(int acc_index, pj_bool_t renew)
 {
     pj_status_t status = 0;
     pjsip_tx_data *tdata = 0;
@@ -129,9 +130,12 @@ void pjsua_regc_update(int acc_index, pj_bool_t renew)
  */
 pj_status_t pjsua_regc_init(int acc_index)
 {
+    pjsua_acc_config *acc_config;
     pj_status_t status;
 
-    if (pjsua.acc[acc_index].reg_uri.slen == 0) {
+    acc_config = &pjsua.config.acc_config[acc_index];
+
+    if (acc_config->reg_uri.slen == 0) {
 	PJ_LOG(3,(THIS_FILE, "Registrar URI is not specified"));
 	return PJ_SUCCESS;
     }
@@ -151,11 +155,11 @@ pj_status_t pjsua_regc_init(int acc_index)
 
 
     status = pjsip_regc_init( pjsua.acc[acc_index].regc, 
-			      &pjsua.acc[acc_index].reg_uri, 
-			      &pjsua.acc[acc_index].local_uri, 
-			      &pjsua.acc[acc_index].local_uri,
-			      1, &pjsua.acc[acc_index].contact_uri, 
-			      pjsua.acc[acc_index].reg_timeout);
+			      &acc_config->reg_uri, 
+			      &acc_config->id, 
+			      &acc_config->id,
+			      1, &acc_config->contact, 
+			      acc_config->reg_timeout);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Client registration initialization error", 
@@ -163,9 +167,11 @@ pj_status_t pjsua_regc_init(int acc_index)
 	return status;
     }
 
-    pjsip_regc_set_credentials( pjsua.acc[acc_index].regc, 
-				pjsua.cred_count, 
-				pjsua.cred_info );
+    if (acc_config->cred_count) {
+	pjsip_regc_set_credentials( pjsua.acc[acc_index].regc, 
+				    acc_config->cred_count, 
+				    acc_config->cred_info );
+    }
 
     pjsip_regc_set_route_set( pjsua.acc[acc_index].regc, 
 			      &pjsua.acc[acc_index].route_set );

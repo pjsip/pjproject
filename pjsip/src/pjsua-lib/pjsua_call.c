@@ -18,7 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pj/log.h>
-
+#include "pjsua_imp.h"
 
 /*
  * pjsua_call.c
@@ -56,7 +56,8 @@ static void call_on_timer(pj_timer_heap_t *ht, pj_timer_entry *e)
 	    pjsua_call_hangup(call->index);
 	} else {
 	    PJ_LOG(3,(THIS_FILE, "Refreshing call %d", call->index));
-	    schedule_call_timer(call,e,REFRESH_CALL_TIMER,pjsua.uas_refresh);
+	    schedule_call_timer(call,e,REFRESH_CALL_TIMER,
+				pjsua.config.uas_refresh);
 	    pjsua_call_reinvite(call->index);
 	}
 
@@ -126,15 +127,15 @@ static pj_status_t call_destroy_media(int call_index)
 /**
  * Make outgoing call.
  */
-pj_status_t pjsua_make_call(int acc_index,
-			    const char *cstr_dest_uri,
-			    int *p_call_index)
+PJ_DEF(pj_status_t) pjsua_make_call(int acc_index,
+				    const char *cstr_dest_uri,
+				    int *p_call_index)
 {
     pj_str_t dest_uri;
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
     pjsip_inv_session *inv = NULL;
-    int call_index = -1;
+    unsigned call_index;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -143,12 +144,12 @@ pj_status_t pjsua_make_call(int acc_index,
     dest_uri = pj_str((char*)cstr_dest_uri);
 
     /* Find free call slot. */
-    for (call_index=0; call_index<pjsua.max_calls; ++call_index) {
+    for (call_index=0; call_index<pjsua.config.max_calls; ++call_index) {
 	if (pjsua.calls[call_index].inv == NULL)
 	    break;
     }
 
-    if (call_index == pjsua.max_calls) {
+    if (call_index == pjsua.config.max_calls) {
 	PJ_LOG(3,(THIS_FILE, "Error: too many calls!"));
 	return PJ_ETOOMANY;
     }
@@ -161,8 +162,8 @@ pj_status_t pjsua_make_call(int acc_index,
 
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
-				   &pjsua.acc[acc_index].local_uri,
-				   &pjsua.acc[acc_index].contact_uri, 
+				   &pjsua.config.acc_config[acc_index].id,
+				   &pjsua.config.acc_config[acc_index].contact,
 				   &dest_uri, &dest_uri,
 				   &dlg);
     if (status != PJ_SUCCESS) {
@@ -204,9 +205,12 @@ pj_status_t pjsua_make_call(int acc_index,
 
 
     /* Set credentials: */
-
-    pjsip_auth_clt_set_credentials( &dlg->auth_sess, pjsua.cred_count, 
-				    pjsua.cred_info);
+    if (pjsua.config.acc_config[acc_index].cred_count) {
+	pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[acc_index];
+	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
+					acc_cfg->cred_count,
+					acc_cfg->cred_info);
+    }
 
 
     /* Create initial INVITE: */
@@ -225,6 +229,12 @@ pj_status_t pjsua_make_call(int acc_index,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
 		     status);
+
+	/* Upon failure to send first request, both dialog and invite 
+	 * session would have been cleared.
+	 */
+	inv = NULL;
+	dlg = NULL;
 	goto on_error;
     }
 
@@ -242,7 +252,7 @@ pj_status_t pjsua_make_call(int acc_index,
 on_error:
     if (inv != NULL) {
 	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
-    } else {
+    } else if (dlg) {
 	pjsip_dlg_terminate(dlg);
     }
 
@@ -250,6 +260,36 @@ on_error:
 	pjsua.calls[call_index].inv = NULL;
     }
     return status;
+}
+
+
+/**
+ * Answer call.
+ */
+PJ_DEF(void) pjsua_call_answer(int call_index, int code)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_ON_FAIL(call_index >= 0 && 
+		      call_index < (int)pjsua.config.max_calls,
+		      return);
+
+    if (pjsua.calls[call_index].inv == NULL) {
+	PJ_LOG(3,(THIS_FILE, "Call %d already disconnected"));
+	return;
+    }
+
+    status = pjsip_inv_answer(pjsua.calls[call_index].inv,
+			      code, NULL, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+	status = pjsip_inv_send_msg(pjsua.calls[call_index].inv,
+				    tdata);
+
+    if (status != PJ_SUCCESS)
+	pjsua_perror(THIS_FILE, "Unable to create/send response", 
+		     status);
+
 }
 
 
@@ -265,7 +305,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     unsigned options = 0;
     pjsip_inv_session *inv = NULL;
     int acc_index;
-    int call_index = -1;
+    unsigned call_index;
     pjmedia_sdp_session *answer;
     pj_status_t status;
 
@@ -312,7 +352,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
 
     /* Find free call slot. */
-    for (call_index=0; call_index < pjsua.max_calls; ++call_index) {
+    for (call_index=0; call_index < pjsua.config.max_calls; ++call_index) {
 	if (pjsua.calls[call_index].inv == NULL)
 	    break;
     }
@@ -353,7 +393,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Create dialog: */
 
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &pjsua.acc[acc_index].contact_uri, 
+				   &pjsua.config.acc_config[acc_index].contact,
 				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 500, NULL,
@@ -387,8 +427,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     
     status = pjsip_inv_initial_answer(inv, rdata, 
-				      (pjsua.auto_answer ? pjsua.auto_answer 
-					: 100), 
+				      (pjsua.config.auto_answer ? 
+				      pjsua.config.auto_answer : 100), 
 				      NULL, NULL, &response);
     if (status != PJ_SUCCESS) {
 	
@@ -400,7 +440,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/* If failed to send 2xx response, there's a good chance that it is
 	 * because SDP negotiation has failed.
 	 */
-	if (pjsua.auto_answer/100 == 2)
+	if (pjsua.config.auto_answer/100 == 2)
 	    st_code = PJSIP_SC_UNSUPPORTED_MEDIA_TYPE;
 	else
 	    st_code = 500;
@@ -415,7 +455,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
     }
 
-    if (pjsua.auto_answer < 200) {
+    if (pjsua.config.auto_answer < 200) {
 	PJ_LOG(3,(THIS_FILE,
 		  "\nIncoming call!!\n"
 		  "From: %.*s\n"
@@ -432,26 +472,26 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 		  dlg->remote.info_str.ptr,
 		  (int)dlg->local.info_str.slen,
 		  dlg->local.info_str.ptr,
-		  pjsua.auto_answer,
-		  pjsip_get_status_text(pjsua.auto_answer)->ptr ));
+		  pjsua.config.auto_answer,
+		  pjsip_get_status_text(pjsua.config.auto_answer)->ptr ));
     }
 
     ++pjsua.call_cnt;
 
     /* Schedule timer to refresh. */
-    if (pjsua.uas_refresh > 0) {
+    if (pjsua.config.uas_refresh > 0) {
 	schedule_call_timer( &pjsua.calls[call_index], 
 			     &pjsua.calls[call_index].refresh_tm,
 			     REFRESH_CALL_TIMER,
-			     pjsua.uas_refresh);
+			     pjsua.config.uas_refresh);
     }
 
     /* Schedule timer to hangup call. */
-    if (pjsua.uas_duration > 0) {
+    if (pjsua.config.uas_duration > 0) {
 	schedule_call_timer( &pjsua.calls[call_index], 
 			     &pjsua.calls[call_index].hangup_tm,
 			     HANGUP_CALL_TIMER,
-			     pjsua.uas_duration);
+			     pjsua.config.uas_duration);
     }
 
     /* This INVITE request has been handled. */
@@ -550,7 +590,8 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     }
 
 
-    pjsua_ui_on_call_state(call->index, e);
+    if (pjsua.cb.on_call_state)
+	(*pjsua.cb.on_call_state)(call->index, e);
 
     /* call->inv may be NULL now */
 
@@ -965,7 +1006,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-    if (pjsua.null_audio)
+    if (pjsua.config.null_audio)
 	return;
 
     /* Create media session info based on SDP parameters. 
@@ -983,9 +1024,10 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     }
 
     /* Override ptime, if this option is specified. */
-    if (pjsua.ptime) {
+    if (pjsua.config.ptime) {
 	sess_info.stream_info[0].param->setting.frm_per_pkt = (pj_uint8_t)
-	    (pjsua.ptime / sess_info.stream_info[0].param->info.frm_ptime);
+	    (pjsua.config.ptime / 
+	      sess_info.stream_info[0].param->info.frm_ptime);
 	if (sess_info.stream_info[0].param->setting.frm_per_pkt==0)
 	    sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
     }
@@ -1037,7 +1079,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     /* If auto-play is configured, connect the call to the file player 
      * port 
      */
-    if (pjsua.auto_play && pjsua.wav_file && 
+    if (pjsua.config.auto_play && pjsua.config.wav_file.slen && 
 	call->inv->role == PJSIP_ROLE_UAS) 
     {
 
@@ -1045,19 +1087,19 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				   call->conf_slot, 0);
 
     }
-    if (pjsua.auto_loop && call->inv->role == PJSIP_ROLE_UAS) {
+    if (pjsua.config.auto_loop && call->inv->role == PJSIP_ROLE_UAS) {
 
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 
 				   call->conf_slot, 0);
 
     }
-    if (pjsua.auto_conf) {
-	int i;
+    if (pjsua.config.auto_conf) {
+	unsigned i;
 
 	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0, 0);
 
-	for (i=0; i < pjsua.max_calls; ++i) {
+	for (i=0; i < pjsua.config.max_calls; ++i) {
 
 	    if (!pjsua.calls[i].session)
 		continue;
@@ -1073,8 +1115,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     /* Normal operation: if no auto_xx is given, connect new call to 
      * the sound device port (port zero) in the main conference bridge.
      */
-    if (pjsua.auto_play == 0 && pjsua.auto_loop == 0 &&
-	pjsua.auto_conf == 0)
+    if (pjsua.config.auto_play == 0 && pjsua.config.auto_loop == 0 &&
+	pjsua.config.auto_conf == 0)
     {
 	pjmedia_conf_connect_port( pjsua.mconf, 0, call->conf_slot, 0);
 	pjmedia_conf_connect_port( pjsua.mconf, call->conf_slot, 0, 0);
@@ -1127,7 +1169,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 /*
  * Hangup call.
  */
-void pjsua_call_hangup(int call_index)
+PJ_DEF(void) pjsua_call_hangup(int call_index)
 {
     pjsua_call *call;
     int code;
@@ -1177,7 +1219,7 @@ void pjsua_call_hangup(int call_index)
 /*
  * Put call on-Hold.
  */
-void pjsua_call_set_hold(int call_index)
+PJ_DEF(void) pjsua_call_set_hold(int call_index)
 {
     pjmedia_sdp_session *sdp;
     pjsua_call *call;
@@ -1218,7 +1260,7 @@ void pjsua_call_set_hold(int call_index)
 /*
  * re-INVITE.
  */
-void pjsua_call_reinvite(int call_index)
+PJ_DEF(void) pjsua_call_reinvite(int call_index)
 {
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
@@ -1265,7 +1307,7 @@ void pjsua_call_reinvite(int call_index)
 /*
  * Transfer call.
  */
-void pjsua_call_xfer(int call_index, const char *dest)
+PJ_DEF(void) pjsua_call_xfer(int call_index, const char *dest)
 {
     pjsip_evsub *sub;
     pjsip_tx_data *tdata;
@@ -1317,7 +1359,7 @@ void pjsua_call_xfer(int call_index, const char *dest)
 /**
  * Send instant messaging inside INVITE session.
  */
-void pjsua_call_send_im(int call_index, const char *str)
+PJ_DECL(void) pjsua_call_send_im(int call_index, const char *str)
 {
     pjsua_call *call;
     const pj_str_t mime_text = pj_str("text");
@@ -1373,7 +1415,7 @@ on_return:
 /**
  * Send IM typing indication inside INVITE session.
  */
-void pjsua_call_typing(int call_index, pj_bool_t is_typing)
+PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing)
 {
     pjsua_call *call;
     pjsip_tx_data *tdata;
@@ -1415,11 +1457,11 @@ on_return:
 /*
  * Terminate all calls.
  */
-void pjsua_call_hangup_all(void)
+PJ_DEF(void) pjsua_call_hangup_all(void)
 {
-    int i;
+    unsigned i;
 
-    for (i=0; i<pjsua.max_calls; ++i) {
+    for (i=0; i<pjsua.config.max_calls; ++i) {
 	pjsip_tx_data *tdata;
 	int st_code;
 	pjsua_call *call;
