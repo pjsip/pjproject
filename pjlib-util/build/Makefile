@@ -69,11 +69,19 @@ pjlib-util-test: $(PJLIB_LIB)
 ../lib/pjlib-util-test.ko:
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
 
-clean depend realclean:
+clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
-	@if test "$@" = "depend"; then \
-	  echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
-	fi
+
+realclean:
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjlib-util-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjlib-util-test-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
+	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
+
+depend:
+	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
+	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
+	echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
 
 

@@ -94,6 +94,8 @@ clean:
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test clean
 
 realclean:
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjlib-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjlib-test-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib realclean
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test realclean
 

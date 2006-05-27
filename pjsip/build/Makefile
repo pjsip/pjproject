@@ -133,5 +133,15 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
+realclean:
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-ua-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-simple-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsua-lib-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+
 
 

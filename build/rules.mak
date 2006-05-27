@@ -154,7 +154,7 @@ depend:
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
 	     echo "$(OBJDIR)/" | tr -d '\n' >> $(DEP_FILE); \
-	     if $(CC_NAME) -M $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
+	     if $(CC) -M $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
 		true; \
 	     else \
 		echo 'err:' >> $(DEP_FILE); \

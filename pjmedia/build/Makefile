@@ -163,15 +163,26 @@ pjmedia-test: $(PJMEDIA_LIB)
 ../lib/pjmedia-test.ko:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 
-clean depend realclean:
+clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+
+realclean:
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-codec-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-test-$(TARGET_NAME).depend),$(HOST_RMR))
+	
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
-	@if test "$@" = "depend"; then \
-	  echo '$(PJMEDIA_LIB): .pjmedia-$(TARGET_NAME).depend' >> .pjmedia-$(TARGET_NAME).depend; \
-	  echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(TARGET_NAME).depend' >> .pjmedia-codec-$(TARGET_NAME).depend; \
-	  echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend; \
-	fi
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+
+depend:
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+	echo '$(PJMEDIA_LIB): .pjmedia-$(TARGET_NAME).depend' >> .pjmedia-$(TARGET_NAME).depend; \
+	echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(TARGET_NAME).depend' >> .pjmedia-codec-$(TARGET_NAME).depend; \
+	echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend; \
 
 
