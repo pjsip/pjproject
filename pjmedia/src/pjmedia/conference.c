@@ -192,6 +192,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 			     const pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
+static pj_status_t destroy_port(pjmedia_port *this_port);
 
 
 /*
@@ -454,6 +455,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 
     conf->master_port->get_frame = &get_frame;
     conf->master_port->put_frame = &put_frame;
+    conf->master_port->on_destroy = &destroy_port;
 
     conf->master_port->user_data = conf;
 
@@ -531,6 +533,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     pj_mutex_destroy(conf->mutex);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Destroy the master port (will destroy the conference)
+ */
+static pj_status_t destroy_port(pjmedia_port *this_port)
+{
+    pjmedia_conf *conf = this_port->user_data;
+    return pjmedia_conf_destroy(conf);
 }
 
 

@@ -243,7 +243,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     unsigned paFrames;
     PaError err;
 
-    if (index == -1) {
+    if (index <= 0) {
 	int count = Pa_GetDeviceCount();
 	for (index=0; index<count; ++index) {
 	    paDevInfo = Pa_GetDeviceInfo(index);
@@ -336,7 +336,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     unsigned paFrames;
     PaError err;
 
-    if (index == -1) {
+    if (index <= 0) {
 	int count = Pa_GetDeviceCount();
 	for (index=0; index<count; ++index) {
 	    paDevInfo = Pa_GetDeviceInfo(index);
@@ -438,7 +438,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     unsigned paFrames;
     PaError err;
 
-    if (rec_id == -1) {
+    if (rec_id <= 0) {
 	int count = Pa_GetDeviceCount();
 	for (rec_id=0; rec_id<count; ++rec_id) {
 	    paRecDevInfo = Pa_GetDeviceInfo(rec_id);
@@ -457,7 +457,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 	}
     }
 
-    if (play_id == -1) {
+    if (play_id <= 0) {
 	int count = Pa_GetDeviceCount();
 	for (play_id=0; play_id<count; ++play_id) {
 	    paPlayDevInfo = Pa_GetDeviceInfo(play_id);
