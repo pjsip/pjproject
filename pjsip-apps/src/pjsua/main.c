@@ -27,7 +27,6 @@
  */
 int main(int argc, char *argv[])
 {
-
     pjsua_config cfg;
 
     /* Init default settings. */
@@ -55,13 +54,12 @@ int main(int argc, char *argv[])
     /* Register message logger to print incoming and outgoing
      * messages.
      */
-    pjsip_endpt_register_module(pjsua.endpt, 
+    pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
 				&pjsua_console_app_msg_logger);
 
 
     /* Start pjsua! */
     if (pjsua_start() != PJ_SUCCESS) {
-
 	pjsua_destroy();
 	return 1;
     }
@@ -76,6 +74,11 @@ int main(int argc, char *argv[])
 
 
     /* Destroy pjsua: */
+    pjsua_destroy();
+
+    /* This is for internal testing, to make sure that pjsua_destroy()
+     * can be called multiple times. 
+     */
     pjsua_destroy();
 
 

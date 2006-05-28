@@ -18,6 +18,8 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <stdio.h>
+#include "pjsua_imp.h"
+
 
 /*
  * pjsua_settings.c
@@ -1007,6 +1009,9 @@ PJ_DEF(int) pjsua_dump_settings(const pjsua_config *config,
 
     PJ_UNUSED_ARG(max);
 
+    if (config == NULL)
+	config = &pjsua.config;
+
     cfg.ptr = buf;
     cfg.slen = 0;
 
@@ -1210,3 +1215,12 @@ PJ_DEF(pj_status_t) pjsua_save_settings(const char *filename,
     pj_pool_release(pool);
     return PJ_SUCCESS;
 }
+
+/**
+ * Get pjsua running config.
+ */
+PJ_DEF(const pjsua_config*) pjsua_get_config(void)
+{
+    return &pjsua.config;
+}
+

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua-lib/pjsua.h>
+#include "pjsua_imp.h"
 
 
 /*
@@ -82,10 +83,56 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 }
 
 
+/**
+ * Get number of accounts.
+ */
+PJ_DEF(unsigned) pjsua_get_acc_count(void)
+{
+    return pjsua.config.acc_cnt;
+}
+
+
+/**
+ * Get account info.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_get_info( unsigned acc_index,
+					pjsua_acc_info *info)
+{
+    pjsua_acc *acc = &pjsua.acc[acc_index];
+    pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[acc_index];
+
+    PJ_ASSERT_RETURN(acc_index < pjsua.config.acc_cnt, PJ_EINVAL);
+
+    pj_memset(info, 0, sizeof(pjsua_acc_info));
+
+    info->index = acc_index;
+    info->acc_id = acc_cfg->id;
+    info->has_registration = (acc->regc != NULL);
+    info->online_status = acc->online_status;
+    
+    if (acc->reg_last_err) {
+	info->status = acc->reg_last_err;
+	pj_strerror(acc->reg_last_err, info->buf, sizeof(info->buf));
+	info->status_text = pj_str(info->buf);
+    } else {
+	info->status = acc->reg_last_code;
+	info->status_text = *pjsip_get_status_text(acc->reg_last_code);
+    }
+    
+    if (acc->regc) {
+	pjsip_regc_info regc_info;
+	pjsip_regc_get_info(acc->regc, &regc_info);
+	info->expires = regc_info.next_reg;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Update registration. If renew is false, then unregistration will be performed.
  */
-PJ_DECL(void) pjsua_regc_update(int acc_index, pj_bool_t renew)
+PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
 {
     pj_status_t status = 0;
     pjsip_tx_data *tdata = 0;

@@ -34,17 +34,18 @@ static int current_call = -1;
  */
 static pj_bool_t find_next_call(void)
 {
-    int i;
+    int i, max;
 
-    for (i=current_call+1; i<(int)pjsua.config.max_calls; ++i) {
-	if (pjsua.calls[i].inv != NULL) {
+    max = pjsua_get_max_calls();
+    for (i=current_call+1; i<max; ++i) {
+	if (pjsua_call_is_active(i)) {
 	    current_call = i;
 	    return PJ_TRUE;
 	}
     }
 
     for (i=0; i<current_call; ++i) {
-	if (pjsua.calls[i].inv != NULL) {
+	if (pjsua_call_is_active(i)) {
 	    current_call = i;
 	    return PJ_TRUE;
 	}
@@ -60,17 +61,18 @@ static pj_bool_t find_next_call(void)
  */
 static pj_bool_t find_prev_call(void)
 {
-    int i;
+    int i, max;
 
+    max = pjsua_get_max_calls();
     for (i=current_call-1; i>=0; --i) {
-	if (pjsua.calls[i].inv != NULL) {
+	if (pjsua_call_is_active(i)) {
 	    current_call = i;
 	    return PJ_TRUE;
 	}
     }
 
-    for (i=pjsua.config.max_calls-1; i>current_call; --i) {
-	if (pjsua.calls[i].inv != NULL) {
+    for (i=max-1; i>current_call; --i) {
+	if (pjsua_call_is_active(i)) {
 	    current_call = i;
 	    return PJ_TRUE;
 	}
@@ -87,19 +89,20 @@ static pj_bool_t find_prev_call(void)
  */
 static void console_on_call_state(int call_index, pjsip_event *e)
 {
-    pjsua_call *call = &pjsua.calls[call_index];
+    pjsua_call_info call_info;
 
     PJ_UNUSED_ARG(e);
 
-    if (call->inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+    pjsua_get_call_info(call_index, &call_info);
+
+    if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
 		  call_index,
-		  call->inv->cause,
-		  pjsip_get_status_text(call->inv->cause)->ptr));
+		  call_info.cause,
+		  call_info.cause_text.ptr));
 
-	call->inv = NULL;
-	if ((int)call->index == current_call) {
+	if ((int)call_index == current_call) {
 	    find_next_call();
 	}
 
@@ -107,10 +110,10 @@ static void console_on_call_state(int call_index, pjsip_event *e)
 
 	PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
 		  call_index,
-		  pjsua_inv_state_names[call->inv->state]));
+		  call_info.state_text.ptr));
 
-	if (call && current_call==-1)
-	    current_call = call->index;
+	if (current_call==-1)
+	    current_call = call_index;
 
     }
 }
@@ -123,6 +126,22 @@ static void console_on_reg_state(int acc_index)
     PJ_UNUSED_ARG(acc_index);
 
     // Log already written.
+}
+
+
+/**
+ * Notify UI on buddy state changed.
+ */
+static void console_on_buddy_state(int buddy_index)
+{
+    pjsua_buddy_info info;
+    pjsua_buddy_get_info(buddy_index, &info);
+
+    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s",
+	      (int)info.uri.slen,
+	      info.uri.ptr,
+	      (int)info.status_text.slen,
+	      info.status_text.ptr));
 }
 
 
@@ -162,28 +181,28 @@ static void console_on_typing(int call_index, const pj_str_t *from,
  */
 static void print_buddy_list(void)
 {
-    int i;
+    int i, count;
 
     puts("Buddy list:");
 
-    if (pjsua.buddy_cnt == 0)
+    count = pjsua_get_buddy_count();
+
+    if (count == 0)
 	puts(" -none-");
     else {
-	for (i=0; i<pjsua.buddy_cnt; ++i) {
-	    const char *status;
+	for (i=0; i<count; ++i) {
+	    pjsua_buddy_info info;
 
-	    if (pjsua.buddies[i].sub == NULL || 
-		pjsua.buddies[i].status.info_cnt==0)
-	    {
-		status = "   ?   ";
-	    } 
-	    else if (pjsua.buddies[i].status.info[0].basic_open)
-		status = " Online";
-	    else
-		status = "Offline";
+	    if (pjsua_buddy_get_info(i, &info) != PJ_SUCCESS)
+		continue;
 
-	    printf(" [%2d] <%s>  %s\n", 
-		    i+1, status, pjsua.buddies[i].uri.ptr);
+	    if (!info.is_valid)
+		continue;
+
+	    printf(" [%2d] <%7s>  %.*s\n", 
+		    i+1, info.status_text.ptr, 
+		    (int)info.uri.slen,
+		    info.uri.ptr);
 	}
     }
     puts("");
@@ -195,38 +214,28 @@ static void print_buddy_list(void)
  */
 static void print_acc_status(int acc_index)
 {
-    char reg_status[128];
+    char buf[80];
+    pjsua_acc_info info;
 
-    if (pjsua.acc[acc_index].regc == NULL) {
-	pj_ansi_strcpy(reg_status, " -not registered to server-");
+    pjsua_acc_get_info(acc_index, &info);
 
-    } else if (pjsua.acc[acc_index].reg_last_err != PJ_SUCCESS) {
-	pj_strerror(pjsua.acc[acc_index].reg_last_err, reg_status, sizeof(reg_status));
-
-    } else if (pjsua.acc[acc_index].reg_last_code>=200 && 
-	       pjsua.acc[acc_index].reg_last_code<=699) {
-
-	pjsip_regc_info info;
-	const pj_str_t *status_str;
-
-	pjsip_regc_get_info(pjsua.acc[acc_index].regc, &info);
-
-	status_str = pjsip_get_status_text(pjsua.acc[acc_index].reg_last_code);
-	pj_ansi_snprintf(reg_status, sizeof(reg_status),
-			 "%s (%.*s;expires=%d)",
-			 status_str->ptr,
-			 (int)info.client_uri.slen,
-			 info.client_uri.ptr,
-			 info.next_reg);
+    if (!info.has_registration) {
+	pj_ansi_strcpy(buf, " -not registered to server-");
 
     } else {
-	pj_ansi_sprintf(reg_status, "in progress (%d)", 
-		        pjsua.acc[acc_index].reg_last_code);
+	pj_ansi_snprintf(buf, sizeof(buf),
+			 "%.*s (%.*s;expires=%d)",
+			 (int)info.status_text.slen,
+			 info.status_text.ptr,
+			 (int)info.acc_id.slen,
+			 info.acc_id.ptr,
+			 info.expires);
+
     }
 
-    printf("[%2d] Registration status: %s\n", acc_index, reg_status);
+    printf("[%2d] Registration status: %s\n", acc_index, buf);
     printf("     Online status: %s\n", 
-	   (pjsua.acc[acc_index].online_status ? "Online" : "Invisible"));
+	   (info.online_status ? "Online" : "Invisible"));
 }
 
 /*
@@ -238,7 +247,7 @@ static void keystroke_help(void)
 
     printf(">>>>\n");
 
-    for (i=0; i<(int)pjsua.config.acc_cnt; ++i)
+    for (i=0; i<(int)pjsua_get_acc_count(); ++i)
 	print_acc_status(i);
 
     print_buddy_list();
@@ -311,7 +320,7 @@ static void ui_input_url(const char *title, char *buf, int len,
 	   "  [1 -%2d]    Select from buddy list\n"
 	   "  URL        An URL\n"
 	   "  <Enter>    Empty input (or 'q') to cancel\n"
-	   , pjsua.buddy_cnt, pjsua.buddy_cnt);
+	   , pjsua_get_buddy_count(), pjsua_get_buddy_count());
     printf("%s: ", title);
 
     fflush(stdout);
@@ -349,7 +358,9 @@ static void ui_input_url(const char *title, char *buf, int len,
 
 	result->nb_result = atoi(buf);
 
-	if (result->nb_result >= 0 && result->nb_result <= (int)pjsua.buddy_cnt) {
+	if (result->nb_result >= 0 && 
+	    result->nb_result <= (int)pjsua_get_buddy_count()) 
+	{
 	    return;
 	}
 	if (result->nb_result == -1)
@@ -379,7 +390,7 @@ static void conf_list(void)
     printf("Conference ports:\n");
 
     count = PJ_ARRAY_SIZE(info);
-    pjmedia_conf_get_ports_info(pjsua.mconf, &count, info);
+    pjsua_conf_enum_ports(&count, info);
     for (i=0; i<count; ++i) {
 	char txlist[PJSUA_MAX_CALLS*4+10];
 	int j;
@@ -413,12 +424,16 @@ void pjsua_console_app_main(void)
     char text[128];
     int i, count;
     char *uri;
+    pj_str_t tmp;
     struct input_result result;
+    pjsua_call_info call_info;
+    pjsua_acc_info acc_info;
 
 
     /* If user specifies URI to call, then call the URI */
-    if (pjsua.config.uri_to_call.slen) {
-	pjsua_make_call( current_acc, pjsua.config.uri_to_call.ptr, NULL);
+    if (pjsua_get_config()->uri_to_call.slen) {
+	pjsua_make_call( current_acc, &pjsua_get_config()->uri_to_call, 
+			 NULL);
     }
 
     keystroke_help();
@@ -434,7 +449,7 @@ void pjsua_console_app_main(void)
 
 	case 'm':
 	    /* Make call! : */
-	    printf("(You currently have %d calls)\n", pjsua.call_cnt);
+	    printf("(You currently have %d calls)\n", pjsua_get_call_count());
 	    
 	    uri = NULL;
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
@@ -444,19 +459,22 @@ void pjsua_console_app_main(void)
 		    puts("You can't do that with make call!");
 		    continue;
 		} else {
-		    uri = pjsua.buddies[result.nb_result-1].uri.ptr;
+		    pjsua_buddy_info binfo;
+		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
+		    uri = binfo.uri.ptr;
 		}
 
 	    } else if (result.uri_result) {
 		uri = result.uri_result;
 	    }
 	    
-	    pjsua_make_call( current_acc, uri, NULL);
+	    tmp = pj_str(uri);
+	    pjsua_make_call( current_acc, &tmp, NULL);
 	    break;
 
 	case 'M':
 	    /* Make multiple calls! : */
-	    printf("(You currently have %d calls)\n", pjsua.call_cnt);
+	    printf("(You currently have %d calls)\n", pjsua_get_call_count());
 	    
 	    if (!simple_input("Number of calls", menuin, sizeof(menuin)))
 		continue;
@@ -467,19 +485,22 @@ void pjsua_console_app_main(void)
 
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
+		pjsua_buddy_info binfo;
 		if (result.nb_result == -1 || result.nb_result == 0) {
 		    puts("You can't do that with make call!");
 		    continue;
 		}
-		uri = pjsua.buddies[result.nb_result-1].uri.ptr;
+		pjsua_buddy_get_info(result.nb_result-1, &binfo);
+		uri = binfo.uri.ptr;
 	    } else {
 		uri =  result.uri_result;
 	    }
 
 	    for (i=0; i<atoi(menuin); ++i) {
 		pj_status_t status;
-
-		status = pjsua_make_call(current_acc, uri, NULL);
+	    
+		tmp = pj_str(uri);
+		status = pjsua_make_call(current_acc, &tmp, NULL);
 		if (status != PJ_SUCCESS)
 		    break;
 	    }
@@ -507,7 +528,9 @@ void pjsua_console_app_main(void)
 		    i = current_call;
 
 		} else {
-		    uri = pjsua.buddies[result.nb_result-1].uri.ptr;
+		    pjsua_buddy_info binfo;
+		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
+		    uri = binfo.uri.ptr;
 		}
 
 	    } else if (result.uri_result) {
@@ -518,8 +541,10 @@ void pjsua_console_app_main(void)
 	    /* Send typing indication. */
 	    if (i != -1)
 		pjsua_call_typing(i, PJ_TRUE);
-	    else
-		pjsua_im_typing(current_acc, uri, PJ_TRUE);
+	    else {
+		pj_str_t tmp_uri = pj_str(uri);
+		pjsua_im_typing(current_acc, &tmp_uri, PJ_TRUE);
+	    }
 
 	    /* Input the IM . */
 	    if (!simple_input("Message", text, sizeof(text))) {
@@ -529,24 +554,40 @@ void pjsua_console_app_main(void)
 		 */
 		if (i != -1)
 		    pjsua_call_typing(i, PJ_FALSE);
-		else
-		    pjsua_im_typing(current_acc, uri, PJ_FALSE);
+		else {
+		    pj_str_t tmp_uri = pj_str(uri);
+		    pjsua_im_typing(current_acc, &tmp_uri, PJ_FALSE);
+		}
 		continue;
 	    }
 
+	    tmp = pj_str(text);
+
 	    /* Send the IM */
 	    if (i != -1)
-		pjsua_call_send_im(i, text);
-	    else
-		pjsua_im_send(current_acc, uri, text);
+		pjsua_call_send_im(i, &tmp);
+	    else {
+		pj_str_t tmp_uri = pj_str(uri);
+		pjsua_im_send(current_acc, &tmp_uri, &tmp);
+	    }
 
 	    break;
 
 	case 'a':
 
+	    if (current_call != -1) {
+		pjsua_get_call_info(current_call, &call_info);
+	    } else {
+		/* Make compiler happy */
+		call_info.active = 0;
+		call_info.role = PJSIP_ROLE_UAC;
+		call_info.state = PJSIP_INV_STATE_DISCONNECTED;
+	    }
+
 	    if (current_call == -1 || 
-		pjsua.calls[current_call].inv->role != PJSIP_ROLE_UAS ||
-		pjsua.calls[current_call].inv->state >= PJSIP_INV_STATE_CONNECTING)
+		call_info.active==0 ||
+		call_info.role != PJSIP_ROLE_UAS ||
+		call_info.state >= PJSIP_INV_STATE_CONNECTING)
 	    {
 		puts("No pending incoming call");
 		fflush(stdout);
@@ -608,19 +649,11 @@ void pjsua_console_app_main(void)
 	    }
 
 	    if (current_call != -1) {
-		char url[PJSIP_MAX_URL_SIZE];
-		int len;
-		const pjsip_uri *u;
-
-		u = pjsua.calls[current_call].inv->dlg->remote.info->uri;
-		len = pjsip_uri_print(0, u, url, sizeof(url)-1);
-		if (len < 1) {
-		    pj_ansi_strcpy(url, "<uri is too long>");
-		} else {
-		    url[len] = '\0';
-		}
-
-		PJ_LOG(3,(THIS_FILE,"Current dialog: %s", url));
+		
+		pjsua_get_call_info(current_call, &call_info);
+		PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s", 
+			  (int)call_info.remote_info.slen, 
+			  call_info.remote_info.ptr));
 
 	    } else {
 		PJ_LOG(3,(THIS_FILE,"No current dialog"));
@@ -676,12 +709,17 @@ void pjsua_console_app_main(void)
 		if (result.nb_result != NO_NB) {
 		    if (result.nb_result == -1 || result.nb_result == 0)
 			puts("You can't do that with transfer call!");
-		    else
+		    else {
+			pjsua_buddy_info binfo;
+			pjsua_buddy_get_info(result.nb_result-1, &binfo);
 			pjsua_call_xfer( current_call,
-					 pjsua.buddies[result.nb_result-1].uri.ptr);
+					 &binfo.uri);
+		    }
 
 		} else if (result.uri_result) {
-		    pjsua_call_xfer( current_call, result.uri_result);
+		    pj_str_t tmp;
+		    tmp = pj_str(result.uri_result);
+		    pjsua_call_xfer( current_call, &tmp);
 		}
 	    }
 	    break;
@@ -694,7 +732,7 @@ void pjsua_console_app_main(void)
 		
 		PJ_LOG(3,(THIS_FILE, "No current call"));
 
-	    } else if (pjsua.calls[current_call].session == NULL) {
+	    } else if (!pjsua_call_has_media(current_call)) {
 
 		PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
 
@@ -715,8 +753,7 @@ void pjsua_console_app_main(void)
 		}
 
 		digits = pj_str(buf);
-		status = pjmedia_session_dial_dtmf(pjsua.calls[current_call].session, 0, 
-						   &digits);
+		status = pjsua_call_dial_dtmf(current_call, &digits);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror(THIS_FILE, "Unable to send DTMF", status);
 		} else {
@@ -733,14 +770,15 @@ void pjsua_console_app_main(void)
 	    ui_input_url("(un)Subscribe presence of", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
 		if (result.nb_result == -1) {
-		    int i;
-		    for (i=0; i<pjsua.buddy_cnt; ++i)
-			pjsua.buddies[i].monitor = (menuin[0]=='s');
+		    int i, count;
+		    count = pjsua_get_buddy_count();
+		    for (i=0; i<count; ++i)
+			pjsua_buddy_subscribe_pres(i, menuin[0]=='s');
 		} else if (result.nb_result == 0) {
 		    puts("Sorry, can only subscribe to buddy's presence, "
 			 "not from existing call");
 		} else {
-		    pjsua.buddies[result.nb_result-1].monitor = (menuin[0]=='s');
+		    pjsua_buddy_subscribe_pres(result.nb_result-1, (menuin[0]=='s'));
 		}
 
 		pjsua_pres_refresh(current_acc);
@@ -758,23 +796,24 @@ void pjsua_console_app_main(void)
 		/*
 		 * Re-Register.
 		 */
-		pjsua_regc_update(current_acc, PJ_TRUE);
+		pjsua_acc_set_registration(current_acc, PJ_TRUE);
 		break;
 	    case 'u':
 		/*
 		 * Unregister
 		 */
-		pjsua_regc_update(current_acc, PJ_FALSE);
+		pjsua_acc_set_registration(current_acc, PJ_FALSE);
 		break;
 	    }
 	    break;
 	    
 	case 't':
-	    pjsua.acc[current_acc].online_status = 
-		!pjsua.acc[current_acc].online_status;
+	    pjsua_acc_get_info(current_acc, &acc_info);
+	    acc_info.online_status = !acc_info.online_status;
+	    pjsua_acc_set_online_status(current_acc, acc_info.online_status);
 	    printf("Setting %s online status to %s\n",
-		   pjsua.config.acc_config[current_acc].id.ptr,
-		   (pjsua.acc[current_acc].online_status?"online":"offline"));
+		   acc_info.acc_id.ptr,
+		   (acc_info.online_status?"online":"offline"));
 	    pjsua_pres_refresh(current_acc);
 	    break;
 
@@ -806,14 +845,11 @@ void pjsua_console_app_main(void)
 			break;
 
 		    if (menuin[1]=='c') {
-			status = pjmedia_conf_connect_port(pjsua.mconf, 
-							   atoi(src_port), 
-							   atoi(dst_port),
-							   0);
+			status = pjsua_conf_connect(atoi(src_port), 
+						    atoi(dst_port));
 		    } else {
-			status = pjmedia_conf_disconnect_port(pjsua.mconf, 
-							      atoi(src_port), 
-							      atoi(dst_port));
+			status = pjsua_conf_disconnect(atoi(src_port), 
+						       atoi(dst_port));
 		    }
 		    if (status == PJ_SUCCESS) {
 			puts("Success");
@@ -830,7 +866,7 @@ void pjsua_console_app_main(void)
 		char settings[2000];
 		int len;
 
-		len = pjsua_dump_settings(&pjsua.config, settings, 
+		len = pjsua_dump_settings(NULL, settings, 
 					  sizeof(settings));
 		if (len < 1)
 		    PJ_LOG(3,(THIS_FILE, "Error: not enough buffer"));
@@ -946,7 +982,7 @@ static void app_log_writer(int level, const char *buffer, int len)
 {
     /* Write to both stdout and file. */
 
-    if (level <= (int)pjsua.config.app_log_level)
+    if (level <= (int)pjsua_get_config()->app_log_level)
 	pj_log_write(level, buffer, len);
 
     if (log_file) {
@@ -1009,7 +1045,9 @@ void pjsua_perror(const char *sender, const char *title,
 pjsua_callback console_callback = 
 {
     &console_on_call_state,
+    NULL,   /* default accept transfer */
     &console_on_reg_state,
+    &console_on_buddy_state,
     &console_on_pager,
     &console_on_typing,
 };

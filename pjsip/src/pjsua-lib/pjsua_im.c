@@ -18,6 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pj/log.h>
+#include "pjsua_imp.h"
 
 /*
  * pjsua_im.c
@@ -271,22 +272,21 @@ static void im_callback(void *token, pjsip_event *e)
 /**
  * Send IM outside dialog.
  */
-PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const char *dst_uri, 
-				  const char *str)
+PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const pj_str_t *dst_uri, 
+				  const pj_str_t *str)
 {
     pjsip_tx_data *tdata;
     const pj_str_t STR_CONTACT = { "Contact", 7 };
     const pj_str_t mime_text = pj_str("text");
     const pj_str_t mime_plain = pj_str("plain");
     pj_str_t *text;
-    const pj_str_t dst = pj_str((char*)dst_uri);
     pj_status_t status;
 
     /* Create request. */
     status = pjsip_endpt_create_request(pjsua.endpt, &pjsip_message_method,
-					&dst, 
+					dst_uri, 
 					&pjsua.config.acc_config[acc_index].id,
-					&dst, NULL, NULL, -1, NULL, &tdata);
+					dst_uri, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;
@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const char *dst_uri,
      * send the message.
      */
     text = pj_pool_alloc(tdata->pool, sizeof(pj_str_t));
-    pj_strdup2_with_null(tdata->pool, text, str);
+    pj_strdup_with_null(tdata->pool, text, str);
 
     /* Add message body */
     tdata->msg->body = pjsip_msg_body_create( tdata->pool, &mime_text,
@@ -333,18 +333,17 @@ PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const char *dst_uri,
 /**
  * Send typing indication outside dialog.
  */
-PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const char *dst_uri, 
+PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const pj_str_t *dst_uri, 
 				    pj_bool_t is_typing)
 {
-    const pj_str_t dst = pj_str((char*)dst_uri);
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     /* Create request. */
     status = pjsip_endpt_create_request( pjsua.endpt, &pjsip_message_method,
-					 &dst, 
+					 dst_uri, 
 					 &pjsua.config.acc_config[acc_index].id,
-					 &dst, NULL, NULL, -1, NULL, &tdata);
+					 dst_uri, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;

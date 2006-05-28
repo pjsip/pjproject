@@ -84,6 +84,7 @@ PJ_DEF(void) pjsua_default_config(pjsua_config *cfg)
     for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
 	cfg->acc_config[i].reg_timeout = 55;
     }
+
 }
 
 
@@ -525,8 +526,6 @@ static pj_status_t init_media(void)
 {
     int i;
     unsigned options;
-    unsigned clock_rate;
-    unsigned samples_per_frame;
     pj_str_t codec_id;
     pj_status_t status;
 
@@ -603,7 +602,7 @@ static pj_status_t init_media(void)
 
 
     /* Init options for conference bridge. */
-    options = 0;
+    options = PJMEDIA_CONF_NO_DEVICE;
 
     /* Calculate maximum number of ports, if it's not specified */
     if (pjsua.config.conf_ports == 0) {
@@ -611,13 +610,13 @@ static pj_status_t init_media(void)
     }
 
     /* Init conference bridge. */
-    clock_rate = pjsua.config.clock_rate ? pjsua.config.clock_rate : 16000;
-    samples_per_frame = clock_rate * 10 / 1000;
+    pjsua.clock_rate = pjsua.config.clock_rate ? pjsua.config.clock_rate : 16000;
+    pjsua.samples_per_frame = pjsua.clock_rate * 10 / 1000;
     status = pjmedia_conf_create(pjsua.pool, 
 				 pjsua.config.conf_ports, 
-				 clock_rate, 
+				 pjsua.clock_rate, 
 				 1, /* mono */
-				 samples_per_frame, 
+				 pjsua.samples_per_frame, 
 				 16, 
 				 options,
 				 &pjsua.mconf);
@@ -628,32 +627,58 @@ static pj_status_t init_media(void)
 	return status;
     }
 
-    /* Create WAV file player if required: */
+    if (pjsua.config.null_audio == PJ_FALSE) {
+	pjmedia_port *conf_port;
 
-    if (pjsua.config.wav_file.slen) {
-	pj_str_t port_name;
-
-	/* Create the file player port. */
-	status = pjmedia_wav_player_port_create(  pjsua.pool, 
-						  pjsua.config.wav_file.ptr,
-						  0, 0, -1, NULL, 
-						  &pjsua.file_port);
+	/* Create sound device port */
+	status = pjmedia_snd_port_create(pjsua.pool, 
+					 pjsua.config.snd_capture_id,
+					 pjsua.config.snd_player_id, 
+					 pjsua.clock_rate, 1 /* mono */,
+					 pjsua.samples_per_frame, 16,
+					 0, &pjsua.snd_port);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, 
-			 "Error playing media file", 
-			 status);
+	    pjsua_perror(THIS_FILE, "Unable to create sound device", status);
 	    return status;
 	}
 
-	/* Add port to conference bridge: */
-	port_name = pjsua.config.wav_file;
-	status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, 
-				       pjsua.file_port, 
-				       &port_name,
-				       &pjsua.wav_slot);
+	/* Get the port interface of the conference bridge */
+	conf_port = pjmedia_conf_get_master_port(pjsua.mconf);
+
+	/* Connect conference port interface to sound port */
+	pjmedia_snd_port_connect( pjsua.snd_port, conf_port);
+
+    } else {
+	pjmedia_port *null_port, *conf_port;
+
+	/* Create NULL port */
+	status = pjmedia_null_port_create(pjsua.pool, pjsua.clock_rate,
+					  1, pjsua.samples_per_frame, 16,
+					  &null_port);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, 
-			 "Unable to add file player to conference bridge", 
+	    pjsua_perror(THIS_FILE, "Unable to create NULL port", status);
+	    return status;
+	}
+
+	/* Get the port interface of the conference bridge */
+	conf_port = pjmedia_conf_get_master_port(pjsua.mconf);
+
+	/* Create master port to control conference bridge's clock */
+	status = pjmedia_master_port_create(pjsua.pool, null_port, conf_port,
+					    0, &pjsua.master_port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create master port", status);
+	    return status;
+	}
+    }
+
+    /* Create WAV file player if required: */
+
+    if (pjsua.config.wav_file.slen) {
+
+	status = pjsua_player_create(&pjsua.config.wav_file, NULL);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create file player", 
 			 status);
 	    return status;
 	}
@@ -661,6 +686,33 @@ static pj_status_t init_media(void)
 
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Copy account configuration.
+ */
+static void copy_acc_config(pj_pool_t *pool,
+			    pjsua_acc_config *dst_acc,
+			    const pjsua_acc_config *src_acc)
+{
+    unsigned j;
+
+    pj_strdup_with_null(pool, &dst_acc->id, &src_acc->id);
+    pj_strdup_with_null(pool, &dst_acc->reg_uri, &src_acc->reg_uri);
+    pj_strdup_with_null(pool, &dst_acc->contact, &src_acc->contact);
+    pj_strdup_with_null(pool, &dst_acc->proxy, &src_acc->proxy);
+
+    for (j=0; j<src_acc->cred_count; ++j) {
+	pj_strdup_with_null(pool, &dst_acc->cred_info[j].realm, 
+			    &src_acc->cred_info[j].realm);
+	pj_strdup_with_null(pool, &dst_acc->cred_info[j].scheme, 
+			    &src_acc->cred_info[j].scheme);
+	pj_strdup_with_null(pool, &dst_acc->cred_info[j].username, 
+			    &src_acc->cred_info[j].username);
+	pj_strdup_with_null(pool, &dst_acc->cred_info[j].data, 
+			    &src_acc->cred_info[j].data);
+    }
 }
 
 
@@ -691,23 +743,7 @@ static void copy_config(pj_pool_t *pool, pjsua_config *dst,
     for (i=0; i<src->acc_cnt; ++i) {
 	pjsua_acc_config *dst_acc = &dst->acc_config[i];
 	const pjsua_acc_config *src_acc = &src->acc_config[i];
-	unsigned j;
-
-	pj_strdup_with_null(pool, &dst_acc->id, &src_acc->id);
-	pj_strdup_with_null(pool, &dst_acc->reg_uri, &src_acc->reg_uri);
-	pj_strdup_with_null(pool, &dst_acc->contact, &src_acc->contact);
-	pj_strdup_with_null(pool, &dst_acc->proxy, &src_acc->proxy);
-
-	for (j=0; j<src_acc->cred_count; ++j) {
-	    pj_strdup_with_null(pool, &dst_acc->cred_info[j].realm, 
-				&src_acc->cred_info[j].realm);
-	    pj_strdup_with_null(pool, &dst_acc->cred_info[j].scheme, 
-				&src_acc->cred_info[j].scheme);
-	    pj_strdup_with_null(pool, &dst_acc->cred_info[j].username, 
-				&src_acc->cred_info[j].username);
-	    pj_strdup_with_null(pool, &dst_acc->cred_info[j].data, 
-				&src_acc->cred_info[j].data);
-	}
+	copy_acc_config(pool, dst_acc, src_acc);
     }
 
     pj_strdup_with_null(pool, &dst->log_filename, &src->log_filename);
@@ -747,6 +783,11 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
 	pjsua.calls[i].conf_slot = 0;
     }
 
+    /* Init buddies array */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.buddies); ++i) {
+	pjsua.buddies[i].index = i;
+    }
+
     /* Copy configuration */
     copy_config(pjsua.pool, &pjsua.config, cfg);
 
@@ -756,7 +797,8 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
     /* Test configuration */
     if (pjsua_test_config(&pjsua.config, errmsg, sizeof(errmsg))) {
 	PJ_LOG(1,(THIS_FILE, "Error in configuration: %s", errmsg));
-	return -1;
+	status = -1;
+	goto on_error;
     }
 
 
@@ -773,7 +815,7 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
 				      &pjsua.sip_sock,
 				      &pjsua.sip_sock_name);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
     
 	pj_strdup2_with_null(pjsua.pool, &pjsua.config.sip_host,
 			     pj_inet_ntoa(pjsua.sip_sock_name.sin_addr));
@@ -785,7 +827,8 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
 	if (cfg->sip_host.slen == 0 || cfg->sip_port == 0) {
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Error: sip_host and sip_port must be specified"));
-	    return PJ_EINVAL;
+	    status = PJ_EINVAL;
+	    goto on_error;
 	}
 
 	pjsua.sip_sock = PJ_INVALID_SOCKET;
@@ -795,7 +838,7 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
     /* Init media endpoint */
     status = init_media();
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_error;
 
 
     /* Init RTP sockets, only when UDP transport is enabled */
@@ -804,9 +847,10 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
 	if (status != PJ_SUCCESS) {
 	    unsigned j;
 	    for (j=0; j<i; ++j) {
-		pjmedia_transport_udp_close(pjsua.calls[j].med_tp);
+		if (pjsua.calls[i].med_tp)
+		    pjsua.calls[i].med_tp->op->destroy(pjsua.calls[i].med_tp);
 	    }
-	    return status;
+	    goto on_error;
 	}
 	status = pjmedia_transport_udp_attach(pjsua.med_endpt, NULL,
 					      &pjsua.calls[i].skinfo,
@@ -896,7 +940,7 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
     return PJ_SUCCESS;
 
 on_error:
-    pj_caching_pool_destroy(&pjsua.cp);
+    pjsua_destroy();
     return status;
 }
 
@@ -963,6 +1007,144 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url)
 }
 
 
+/*
+ * Init account
+ */
+static pj_status_t init_acc(unsigned acc_index)
+{
+    pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[acc_index];
+    pjsua_acc *acc = &pjsua.acc[acc_index];
+    pjsip_uri *uri;
+    pjsip_sip_uri *sip_uri;
+
+    /* Need to parse local_uri to get the elements: */
+
+    uri = pjsip_parse_uri(pjsua.pool, acc_cfg->id.ptr,
+			  acc_cfg->id.slen, 0);
+    if (uri == NULL) {
+	pjsua_perror(THIS_FILE, "Invalid local URI", 
+		     PJSIP_EINVALIDURI);
+	return PJSIP_EINVALIDURI;
+    }
+
+    /* Local URI MUST be a SIP or SIPS: */
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+    {
+	pjsua_perror(THIS_FILE, "Invalid local URI", 
+		     PJSIP_EINVALIDSCHEME);
+	return PJSIP_EINVALIDSCHEME;
+    }
+
+
+    /* Get the SIP URI object: */
+
+    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+
+    acc->user_part = sip_uri->user;
+    acc->host_part = sip_uri->host;
+
+    /* Build Contact header */
+
+    if (acc_cfg->contact.slen == 0)  {
+	char contact[128];
+	const char *addr;
+	int port;
+	int len;
+
+	addr = pjsua.config.sip_host.ptr;
+	port = pjsua.config.sip_port;
+
+	/* The local Contact is the username@ip-addr, where
+	 *  - username is taken from the local URI,
+	 *  - ip-addr in UDP transport's address name (which may have been
+	 *    resolved from STUN.
+	 */
+	
+	/* Build temporary contact string. */
+
+	if (sip_uri->user.slen) {
+
+	    /* With the user part. */
+	    len = pj_ansi_snprintf(contact, sizeof(contact),
+			      "<sip:%.*s@%s:%d>",
+			      (int)sip_uri->user.slen,
+			      sip_uri->user.ptr,
+			      addr, port);
+	} else {
+
+	    /* Without user part */
+
+	    len = pj_ansi_snprintf(contact, sizeof(contact),
+			      "<sip:%s:%d>",
+			      addr, port);
+	}
+
+	if (len < 1 || len >= sizeof(contact)) {
+	    pjsua_perror(THIS_FILE, "Invalid Contact", PJSIP_EURITOOLONG);
+	    return PJSIP_EURITOOLONG;
+	}
+
+	/* Duplicate Contact uri. */
+
+	pj_strdup2(pjsua.pool, &acc_cfg->contact, contact);
+
+    }
+
+
+    /* Build route-set for this account */
+    if (pjsua.config.outbound_proxy.slen) {
+	pj_str_t hname = { "Route", 5};
+	pjsip_route_hdr *r;
+	pj_str_t tmp;
+
+	pj_strdup_with_null(pjsua.pool, &tmp, &pjsua.config.outbound_proxy);
+	r = pjsip_parse_hdr(pjsua.pool, &hname, tmp.ptr, tmp.slen, NULL);
+	pj_list_push_back(&acc->route_set, r);
+    }
+
+    if (acc_cfg->proxy.slen) {
+	pj_str_t hname = { "Route", 5};
+	pjsip_route_hdr *r;
+	pj_str_t tmp;
+
+	pj_strdup_with_null(pjsua.pool, &tmp, &acc_cfg->proxy);
+	r = pjsip_parse_hdr(pjsua.pool, &hname, tmp.ptr, tmp.slen, NULL);
+	pj_list_push_back(&acc->route_set, r);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Add a new account.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
+				   int *acc_index)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(pjsua.config.acc_cnt<PJ_ARRAY_SIZE(pjsua.config.acc_config),
+		     PJ_ETOOMANY);
+
+    copy_acc_config(pjsua.pool, &pjsua.config.acc_config[pjsua.config.acc_cnt], cfg);
+    
+    status = init_acc(pjsua.config.acc_cnt);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error adding account", status);
+	return status;
+    }
+
+    if (acc_index)
+	*acc_index = pjsua.config.acc_cnt;
+
+    pjsua.config.acc_cnt++;
+
+    return PJ_SUCCESS;
+}
+
+
 
 /*
  * Start pjsua stack.
@@ -971,6 +1153,7 @@ int pjsua_find_account_for_outgoing(const pj_str_t *url)
 PJ_DEF(pj_status_t) pjsua_start(void)
 {
     int i;  /* Must be signed */
+    unsigned count;
     pj_status_t status = PJ_SUCCESS;
 
 
@@ -994,135 +1177,42 @@ PJ_DEF(pj_status_t) pjsua_start(void)
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to start UDP transport", 
 			 status);
-	    return status;
+	    goto on_error;
 	}
     }
 
-    /* The last account is default account to be used when nothing match 
-     * any configured accounts.
+    /* Initialize all unused accounts with default id and contact.
      */
     {
 	char buf[80];
-	pj_str_t tmp;
-	pjsua_acc_config *acc_cfg = 
-	    &pjsua.config.acc_config[pjsua.config.acc_cnt];
+	pj_str_t tmp, id;
 
 	tmp.ptr = buf;
 	tmp.slen = pj_ansi_sprintf(tmp.ptr, "<sip:%s:%d>", 
 				   pjsua.config.sip_host.ptr,
 				   pjsua.config.sip_port);
+	pj_strdup_with_null( pjsua.pool, &id, &tmp);
 
-	pj_strdup_with_null( pjsua.pool, &acc_cfg->id, &tmp);
-	acc_cfg->contact = acc_cfg->id;
+	for (i=pjsua.config.acc_cnt; i<PJ_ARRAY_SIZE(pjsua.config.acc_config);
+	     ++i)
+	{
+	    pjsua_acc_config *acc_cfg = 
+		&pjsua.config.acc_config[pjsua.config.acc_cnt];
+
+	    acc_cfg->id = id;
+	    acc_cfg->contact = id;
+	}
     }
     
 
     /* Initialize accounts: */
     for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
-
-	pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[i];
-	pjsua_acc *acc = &pjsua.acc[i];
-	pjsip_uri *uri;
-	pjsip_sip_uri *sip_uri;
-
-	/* Need to parse local_uri to get the elements: */
-
-	uri = pjsip_parse_uri(pjsua.pool, acc_cfg->id.ptr,
-			      acc_cfg->id.slen, 0);
-	if (uri == NULL) {
-	    pjsua_perror(THIS_FILE, "Invalid local URI", 
-			 PJSIP_EINVALIDURI);
-	    return PJSIP_EINVALIDURI;
-	}
-
-	/* Local URI MUST be a SIP or SIPS: */
-
-	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
-	    !PJSIP_URI_SCHEME_IS_SIPS(uri)) 
-	{
-	    pjsua_perror(THIS_FILE, "Invalid local URI", 
-			 PJSIP_EINVALIDSCHEME);
-	    return PJSIP_EINVALIDSCHEME;
-	}
-
-
-	/* Get the SIP URI object: */
-
-	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
-
-	acc->user_part = sip_uri->user;
-	acc->host_part = sip_uri->host;
-
-	/* Build Contact header */
-
-	if (acc_cfg->contact.slen == 0)  {
-	    char contact[128];
-	    const char *addr;
-	    int port;
-	    int len;
-
-	    addr = pjsua.config.sip_host.ptr;
-	    port = pjsua.config.sip_port;
-
-	    /* The local Contact is the username@ip-addr, where
-	     *  - username is taken from the local URI,
-	     *  - ip-addr in UDP transport's address name (which may have been
-	     *    resolved from STUN.
-	     */
-	    
-	    /* Build temporary contact string. */
-
-	    if (sip_uri->user.slen) {
-
-		/* With the user part. */
-		len = pj_ansi_snprintf(contact, sizeof(contact),
-				  "<sip:%.*s@%s:%d>",
-				  (int)sip_uri->user.slen,
-				  sip_uri->user.ptr,
-				  addr, port);
-	    } else {
-
-		/* Without user part */
-
-		len = pj_ansi_snprintf(contact, sizeof(contact),
-				  "<sip:%s:%d>",
-				  addr, port);
-	    }
-
-	    if (len < 1 || len >= sizeof(contact)) {
-		pjsua_perror(THIS_FILE, "Invalid Contact", PJSIP_EURITOOLONG);
-		return PJSIP_EURITOOLONG;
-	    }
-
-	    /* Duplicate Contact uri. */
-
-	    pj_strdup2(pjsua.pool, &acc_cfg->contact, contact);
-
-	}
-
-
-	/* Build route-set for this account */
-	if (pjsua.config.outbound_proxy.slen) {
-	    pj_str_t hname = { "Route", 5};
-	    pjsip_route_hdr *r;
-	    pj_str_t tmp;
-
-	    pj_strdup_with_null(pjsua.pool, &tmp, &pjsua.config.outbound_proxy);
-	    r = pjsip_parse_hdr(pjsua.pool, &hname, tmp.ptr, tmp.slen, NULL);
-	    pj_list_push_back(&acc->route_set, r);
-	}
-
-	if (acc_cfg->proxy.slen) {
-	    pj_str_t hname = { "Route", 5};
-	    pjsip_route_hdr *r;
-	    pj_str_t tmp;
-
-	    pj_strdup_with_null(pjsua.pool, &tmp, &acc_cfg->proxy);
-	    r = pjsip_parse_hdr(pjsua.pool, &hname, tmp.ptr, tmp.slen, NULL);
-	    pj_list_push_back(&acc->route_set, r);
+	status = init_acc(i);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing account", status);
+	    goto on_error;
 	}
     }
-
 
 
 
@@ -1137,7 +1227,7 @@ PJ_DEF(pj_status_t) pjsua_start(void)
 		pj_thread_join(pjsua.threads[i]);
 		pj_thread_destroy(pjsua.threads[i]);
 	    }
-	    return status;
+	    goto on_error;
 	}
     }
 
@@ -1147,30 +1237,31 @@ PJ_DEF(pj_status_t) pjsua_start(void)
     for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
 	status = pjsua_regc_init(i);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
 
 	/* Perform registration, if required. */
 	if (pjsua.acc[i].regc) {
-	    pjsua_regc_update(i, 1);
+	    pjsua_acc_set_registration(i, PJ_TRUE);
 	}
     }
 
 
-    /* Init buddies */
-    for (i=0; i<(int)pjsua.config.buddy_cnt; ++i) {
-	pjsua.buddies[i].uri = pjsua.config.buddy_uri[i];
+    /* Re-init buddies */
+    count = pjsua.config.buddy_cnt;
+    pjsua.config.buddy_cnt = 0;
+    for (i=0; i<(int)count; ++i) {
+	pj_str_t uri = pjsua.config.buddy_uri[i];
+	pjsua_buddy_add(&uri, NULL);
     }
-    pjsua.buddy_cnt = pjsua.config.buddy_cnt;
 
-    /* Find account for outgoing preence subscription */
-    for (i=0; i<pjsua.buddy_cnt; ++i) {
-	pjsua.buddies[i].acc_index = 
-	    pjsua_find_account_for_outgoing(&pjsua.buddies[i].uri);
-    }
 
 
     PJ_LOG(3,(THIS_FILE, "PJSUA version %s started", PJ_VERSION));
     return PJ_SUCCESS;
+
+on_error:
+    pjsua_destroy();
+    return status;
 }
 
 
@@ -1188,6 +1279,237 @@ static void busy_sleep(unsigned msec)
 	pj_gettimeofday(&now);
     } while (PJ_TIME_VAL_LT(now, timeout));
 }
+
+/**
+ * Get maxinum number of conference ports.
+ */
+PJ_DEF(unsigned) pjsua_conf_max_ports(void)
+{
+    return pjsua.config.conf_ports;
+}
+
+
+/**
+ * Enum all conference ports.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_enum_ports( unsigned *count,
+					   pjmedia_conf_port_info info[])
+{
+    return pjmedia_conf_get_ports_info(pjsua.mconf, count, info);
+}
+
+
+
+
+/**
+ * Connect conference port.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_connect( unsigned src_port,
+					unsigned dst_port)
+{
+    return pjmedia_conf_connect_port(pjsua.mconf, src_port, dst_port, 0);
+}
+
+
+/**
+ * Connect conference port connection.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_disconnect( unsigned src_port,
+					   unsigned dst_port)
+{
+    return pjmedia_conf_disconnect_port(pjsua.mconf, src_port, dst_port);
+}
+
+
+
+/**
+ * Create a file player.
+ */
+PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
+					 pjsua_player_id *id)
+{
+    unsigned slot;
+    char path[128];
+    pjmedia_port *port;
+    pj_status_t status;
+
+    if (pjsua.player_cnt >= PJ_ARRAY_SIZE(pjsua.player))
+	return PJ_ETOOMANY;
+
+    pj_memcpy(path, filename->ptr, filename->slen);
+    path[filename->slen] = '\0';
+    status = pjmedia_wav_player_port_create(pjsua.pool, path,
+					    pjsua.samples_per_frame *
+					       1000 / pjsua.clock_rate,
+					    0, 0, NULL,
+					    &port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, 
+				   port, filename, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	return status;
+    }
+
+    pjsua.player[pjsua.player_cnt].port = port;
+    pjsua.player[pjsua.player_cnt].slot = slot;
+
+    if (*id)
+	*id = pjsua.player_cnt;
+
+    ++pjsua.player_cnt;
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Get conference port associated with player.
+ */
+PJ_DEF(unsigned) pjsua_player_get_conf_port(pjsua_player_id id)
+{
+    PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.player), PJ_EINVAL);
+    return pjsua.player[id].slot;
+}
+
+
+/**
+ * Re-wind playback.
+ */
+PJ_DEF(pj_status_t) pjsua_player_set_pos(pjsua_player_id id,
+					 pj_uint32_t samples)
+{
+    PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua.player[id].port != NULL, PJ_EINVALIDOP);
+
+    return pjmedia_wav_player_port_set_pos(pjsua.player[id].port, samples);
+}
+
+
+/**
+ * Get conference port associated with player.
+ */
+PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
+{
+    PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.player), PJ_EINVAL);
+
+    if (pjsua.player[id].port) {
+	pjmedia_port_destroy(pjsua.player[id].port);
+	pjsua.player[id].port = NULL;
+	pjsua.player[id].slot = 0xFFFF;
+	pjsua.player_cnt--;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Create a file recorder.
+ */
+PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
+					   pjsua_recorder_id *id)
+{
+    unsigned slot;
+    char path[128];
+    pjmedia_port *port;
+    pj_status_t status;
+
+    if (pjsua.recorder_cnt >= PJ_ARRAY_SIZE(pjsua.recorder))
+	return PJ_ETOOMANY;
+
+    pj_memcpy(path, filename->ptr, filename->slen);
+    path[filename->slen] = '\0';
+    status = pjmedia_wav_writer_port_create(pjsua.pool, path,
+					    pjsua.clock_rate, 1,
+					    pjsua.samples_per_frame,
+					    16, 0, 0, NULL,
+					    &port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjmedia_conf_add_port(pjsua.mconf, pjsua.pool, 
+				   port, filename, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	return status;
+    }
+
+    pjsua.recorder[pjsua.recorder_cnt].port = port;
+    pjsua.recorder[pjsua.recorder_cnt].slot = slot;
+
+    if (*id)
+	*id = pjsua.recorder_cnt;
+
+    ++pjsua.recorder_cnt;
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Get conference port associated with recorder.
+ */
+PJ_DEF(unsigned) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
+{
+    PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.recorder), PJ_EINVAL);
+    return pjsua.recorder[id].slot;
+}
+
+
+/**
+ * Destroy recorder (will complete recording).
+ */
+PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
+{
+    PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.recorder), PJ_EINVAL);
+
+    if (pjsua.recorder[id].port) {
+	pjmedia_port_destroy(pjsua.recorder[id].port);
+	pjsua.recorder[id].port = NULL;
+	pjsua.recorder[id].slot = 0xFFFF;
+	pjsua.recorder_cnt--;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/**
+ * Enum sound devices.
+ */
+PJ_DEF(pj_status_t) pjsua_enum_snd_devices( unsigned *count,
+					    pjmedia_snd_dev_info info[])
+{
+    int i, dev_count;
+
+    dev_count = pjmedia_snd_get_dev_count();
+    if (dev_count > (int)*count)
+	dev_count = *count;
+
+    for (i=0; i<dev_count; ++i) {
+	const pjmedia_snd_dev_info *dev_info;
+	dev_info = pjmedia_snd_get_dev_info(i);
+	pj_memcpy(&info[i], dev_info, sizeof(pjmedia_snd_dev_info));
+    }
+
+    *count = dev_count;
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Select or change sound device.
+ */
+PJ_DEF(pj_status_t) pjsua_set_snd_dev( int snd_capture_id,
+				       int snd_player_id)
+{
+    pjsua.config.snd_capture_id = snd_capture_id;
+    pjsua.config.snd_player_id = snd_player_id;
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Destroy pjsua.
@@ -1208,7 +1530,7 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     /* Unregister, if required: */
     for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
 	if (pjsua.acc[i].regc) {
-	    pjsua_regc_update(i, 0);
+	    pjsua_acc_set_registration(i, PJ_FALSE);
 	}
     }
 
@@ -1224,57 +1546,110 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
 
     /* Wait for some time to allow unregistration to complete: */
-    PJ_LOG(4,(THIS_FILE, "Shutting down..."));
-    busy_sleep(1000);
+    if (pjsua.endpt) {
+	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+	busy_sleep(1000);
+    }
 
-    /* Destroy conference bridge. */
-    if (pjsua.mconf)
-	pjmedia_conf_destroy(pjsua.mconf);
+    /* If we have master port, destroying master port will recursively
+     * destroy conference bridge, otherwise must destroy it manually. 
+     */
+    if (pjsua.master_port) {
+	pjmedia_master_port_destroy(pjsua.master_port);
+	pjsua.master_port = NULL;
+    } else {
+	if (pjsua.snd_port) {
+	    pjmedia_snd_port_destroy(pjsua.snd_port);
+	    pjsua.snd_port = NULL;
+	}
+	if (pjsua.mconf) {
+	    pjmedia_conf_destroy(pjsua.mconf);
+	    pjsua.mconf = NULL;
+	}
+    }
 
-    /* Destroy file port */
-    if (pjsua.file_port)
-	pjmedia_port_destroy(pjsua.file_port);
+    /* Destroy file players */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.player); ++i) {
+	if (pjsua.player[i].port) {
+	    pjmedia_port_destroy(pjsua.player[i].port);
+	    pjsua.player[i].port = NULL;
+	}
+    }
 
 
-    /* Shutdown all codecs: */
-#if PJMEDIA_HAS_SPEEX_CODEC
-    pjmedia_codec_speex_deinit();
-#endif /* PJMEDIA_HAS_SPEEX_CODEC */
-
-#if PJMEDIA_HAS_GSM_CODEC
-    pjmedia_codec_gsm_deinit();
-#endif /* PJMEDIA_HAS_GSM_CODEC */
-
-#if PJMEDIA_HAS_G711_CODEC
-    pjmedia_codec_g711_deinit();
-#endif	/* PJMEDIA_HAS_G711_CODEC */
-
-#if PJMEDIA_HAS_L16_CODEC
-    pjmedia_codec_l16_deinit();
-#endif	/* PJMEDIA_HAS_L16_CODEC */
+    /* Destroy file recorders */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.recorder); ++i) {
+	if (pjsua.recorder[i].port) {
+	    pjmedia_port_destroy(pjsua.recorder[i].port);
+	    pjsua.recorder[i].port = NULL;
+	}
+    }
 
 
     /* Close transports */
-    for (i=0; pjsua.config.start_rtp_port && i<(int)pjsua.config.max_calls; ++i) {
-	pjmedia_transport_udp_close(pjsua.calls[i].med_tp);
+    for (i=0; i<(int)pjsua.config.max_calls; ++i) {
+	if (pjsua.calls[i].med_tp) {
+	    (*pjsua.calls[i].med_tp->op->destroy)(pjsua.calls[i].med_tp);
+	    pjsua.calls[i].med_tp = NULL;
+	}
     }
 
     /* Destroy media endpoint. */
+    if (pjsua.med_endpt) {
 
-    pjmedia_endpt_destroy(pjsua.med_endpt);
+	/* Shutdown all codecs: */
+#	if PJMEDIA_HAS_SPEEX_CODEC
+	    pjmedia_codec_speex_deinit();
+#	endif /* PJMEDIA_HAS_SPEEX_CODEC */
+
+#	if PJMEDIA_HAS_GSM_CODEC
+	    pjmedia_codec_gsm_deinit();
+#	endif /* PJMEDIA_HAS_GSM_CODEC */
+
+#	if PJMEDIA_HAS_G711_CODEC
+	    pjmedia_codec_g711_deinit();
+#	endif	/* PJMEDIA_HAS_G711_CODEC */
+
+#	if PJMEDIA_HAS_L16_CODEC
+	    pjmedia_codec_l16_deinit();
+#	endif	/* PJMEDIA_HAS_L16_CODEC */
+
+
+	pjmedia_endpt_destroy(pjsua.med_endpt);
+	pjsua.med_endpt = NULL;
+    }
 
     /* Destroy endpoint. */
-
-    pjsip_endpt_destroy(pjsua.endpt);
-    pjsua.endpt = NULL;
+    if (pjsua.endpt) {
+	pjsip_endpt_destroy(pjsua.endpt);
+	pjsua.endpt = NULL;
+    }
 
     /* Destroy caching pool. */
-
     pj_caching_pool_destroy(&pjsua.cp);
 
 
     /* Done. */
 
     return PJ_SUCCESS;
+}
+
+
+/**
+ * Get SIP endpoint instance.
+ * Only valid after pjsua_init().
+ */
+PJ_DEF(pjsip_endpoint*) pjsua_get_pjsip_endpt(void)
+{
+    return pjsua.endpt;
+}
+
+/**
+ * Get media endpoint instance.
+ * Only valid after pjsua_init().
+ */
+PJ_DEF(pjmedia_endpt*) pjsua_get_pjmedia_endpt(void)
+{
+    return pjsua.med_endpt;
 }
 

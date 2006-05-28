@@ -125,13 +125,130 @@ static pj_status_t call_destroy_media(int call_index)
 
 
 /**
+ * Get maximum number of calls configured in pjsua.
+ */
+PJ_DEF(unsigned) pjsua_get_max_calls(void)
+{
+    return pjsua.config.max_calls;
+}
+
+
+/**
+ * Get current number of active calls.
+ */
+PJ_DEF(unsigned) pjsua_get_call_count(void)
+{
+    return pjsua.call_cnt;
+}
+
+
+/**
+ * Check if the specified call is active.
+ */
+PJ_DEF(pj_bool_t) pjsua_call_is_active(unsigned call_index)
+{
+    PJ_ASSERT_RETURN(call_index < pjsua.config.max_calls,
+		     PJ_EINVAL);
+    return pjsua.calls[call_index].inv != NULL &&
+	   pjsua.calls[call_index].inv->state != PJSIP_INV_STATE_DISCONNECTED;
+}
+
+/**
+ * Check if call has a media session.
+ */
+PJ_DEF(pj_bool_t) pjsua_call_has_media(unsigned call_index)
+{
+    PJ_ASSERT_RETURN(call_index < pjsua.config.max_calls, PJ_EINVAL);
+    return pjsua.calls[call_index].session != NULL;
+}
+
+
+/**
+ * Get call info.
+ */
+PJ_DEF(pj_status_t) pjsua_get_call_info( unsigned call_index,
+					 pjsua_call_info *info)
+{
+    pjsua_call *call;
+
+    PJ_ASSERT_RETURN(call_index < pjsua.config.max_calls,
+		     PJ_EINVAL);
+
+    pj_memset(info, 0, sizeof(pjsua_call_info));
+
+    call = &pjsua.calls[call_index];
+    info->active = pjsua_call_is_active(call_index);
+
+    if (call->inv == NULL)
+	return PJ_SUCCESS;
+
+    info->index = call_index;
+    info->role = call->inv->role;
+    info->local_info = call->inv->dlg->local.info_str;
+    info->remote_info = call->inv->dlg->remote.info_str;
+    info->state = call->inv->state;
+    info->state_text = pj_str((char*)pjsip_inv_state_name(info->state));
+    
+    if (info->state >= PJSIP_INV_STATE_DISCONNECTED) {
+
+	info->total_duration = call->dis_time;
+	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
+
+	if (call->conn_time.sec) {
+	    info->connect_duration = call->dis_time;
+	    PJ_TIME_VAL_SUB(info->total_duration, call->conn_time);
+	}
+
+    } else if (info->state == PJSIP_INV_STATE_CONFIRMED) {
+
+	pj_gettimeofday(&info->total_duration);
+	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
+
+	pj_gettimeofday(&info->connect_duration);
+	PJ_TIME_VAL_SUB(info->connect_duration, call->conn_time);
+
+    } else {
+	pj_gettimeofday(&info->total_duration);
+	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
+    }
+
+    info->cause = call->inv->cause;
+    info->cause_text = *pjsip_get_status_text(info->cause);
+
+    info->has_media = (call->session != NULL);
+    info->conf_slot = call->conf_slot;
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Duplicate call info.
+ */
+PJ_DEF(void) pjsua_dup_call_info( pj_pool_t *pool,
+				  pjsua_call_info *dst_info,
+				  const pjsua_call_info *src_info)
+{
+    PJ_ASSERT_ON_FAIL(pool && dst_info && src_info, return);
+
+    pj_memcpy(dst_info, src_info, sizeof(pjsua_call_info));
+
+    pj_strdup(pool, &dst_info->local_info, &src_info->local_info);
+    pj_strdup(pool, &dst_info->remote_info, &src_info->remote_info);
+    
+    /* state_text and cause_text belong to pjsip, so don't need to be
+     * duplicated because they'll always be available.
+     */
+}
+
+
+/**
  * Make outgoing call.
  */
-PJ_DEF(pj_status_t) pjsua_make_call(int acc_index,
-				    const char *cstr_dest_uri,
+PJ_DEF(pj_status_t) pjsua_make_call(unsigned acc_index,
+				    const pj_str_t *dest_uri,
 				    int *p_call_index)
 {
-    pj_str_t dest_uri;
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
     pjsip_inv_session *inv = NULL;
@@ -139,9 +256,10 @@ PJ_DEF(pj_status_t) pjsua_make_call(int acc_index,
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    /* Convert cstr_dest_uri to dest_uri */
-    
-    dest_uri = pj_str((char*)cstr_dest_uri);
+
+    PJ_ASSERT_RETURN(acc_index==0 || acc_index < pjsua.config.acc_cnt, 
+		     PJ_EINVAL);
+
 
     /* Find free call slot. */
     for (call_index=0; call_index<pjsua.config.max_calls; ++call_index) {
@@ -164,7 +282,7 @@ PJ_DEF(pj_status_t) pjsua_make_call(int acc_index,
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				   &pjsua.config.acc_config[acc_index].id,
 				   &pjsua.config.acc_config[acc_index].contact,
-				   &dest_uri, &dest_uri,
+				   dest_uri, dest_uri,
 				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
@@ -655,7 +773,9 @@ static void on_call_transfered( pjsip_inv_session *inv,
     const pj_str_t str_refer_to = { "Refer-To", 8};
     pjsip_generic_string_hdr *refer_to;
     char *uri;
+    pj_str_t tmp;
     struct pjsip_evsub_user xfer_cb;
+    pjsip_status_code code;
     pjsip_evsub *sub;
 
     existing_call = inv->dlg->mod_data[pjsua.mod.id];
@@ -670,6 +790,20 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	 */
 	PJ_LOG(4,(THIS_FILE, "Received REFER without Refer-To header!"));
 	pjsip_dlg_respond( inv->dlg, rdata, 400, NULL, NULL, NULL);
+	return;
+    }
+
+    /* Notify callback */
+    code = PJSIP_SC_OK;
+    if (pjsua.cb.on_call_transfered)
+	(*pjsua.cb.on_call_transfered)(existing_call->index,
+				       &refer_to->hvalue, &code);
+
+    if (code < 200)
+	code = 200;
+    if (code >= 300) {
+	/* Application rejects call transfer request */
+	pjsip_dlg_respond( inv->dlg, rdata, code, NULL, NULL, NULL);
 	return;
     }
 
@@ -692,7 +826,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
     }
 
     /* Accept the REFER request, send 200 (OK). */
-    pjsip_xfer_accept(sub, rdata, 200, NULL);
+    pjsip_xfer_accept(sub, rdata, code, NULL);
 
     /* Create initial NOTIFY request */
     status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_ACTIVE,
@@ -718,7 +852,8 @@ static void on_call_transfered( pjsip_inv_session *inv,
     uri[refer_to->hvalue.slen] = '\0';
 
     /* Now make the outgoing call. */
-    status = pjsua_make_call(existing_call->acc_index, uri, &new_call);
+    tmp = pj_str(uri);
+    status = pjsua_make_call(existing_call->acc_index, &tmp, &new_call);
     if (status != PJ_SUCCESS) {
 
 	/* Notify xferer about the error */
@@ -1083,7 +1218,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	call->inv->role == PJSIP_ROLE_UAS) 
     {
 
-	pjmedia_conf_connect_port( pjsua.mconf, pjsua.wav_slot, 
+	pjmedia_conf_connect_port( pjsua.mconf, pjsua.player[0].slot, 
 				   call->conf_slot, 0);
 
     }
@@ -1307,12 +1442,11 @@ PJ_DEF(void) pjsua_call_reinvite(int call_index)
 /*
  * Transfer call.
  */
-PJ_DEF(void) pjsua_call_xfer(int call_index, const char *dest)
+PJ_DEF(void) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
 {
     pjsip_evsub *sub;
     pjsip_tx_data *tdata;
     pjsua_call *call;
-    pj_str_t tmp;
     pj_status_t status;
 
     
@@ -1336,7 +1470,7 @@ PJ_DEF(void) pjsua_call_xfer(int call_index, const char *dest)
     /*
      * Create REFER request.
      */
-    status = pjsip_xfer_initiate(sub, pj_cstr(&tmp, dest), &tdata);
+    status = pjsip_xfer_initiate(sub, dest, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create REFER request", status);
 	return;
@@ -1357,14 +1491,32 @@ PJ_DEF(void) pjsua_call_xfer(int call_index, const char *dest)
 
 
 /**
+ * Dial DTMF.
+ */
+PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( unsigned call_index, 
+					  const pj_str_t *digits)
+{
+    pjsua_call *call = &pjsua.calls[call_index];
+
+    PJ_ASSERT_RETURN(call_index < pjsua.config.max_calls, PJ_EINVAL);
+
+    if (!call->session) {
+	PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
+	return -1;
+    }
+
+    return pjmedia_session_dial_dtmf( call->session, 0, digits);
+}
+
+
+/**
  * Send instant messaging inside INVITE session.
  */
-PJ_DECL(void) pjsua_call_send_im(int call_index, const char *str)
+PJ_DECL(void) pjsua_call_send_im(int call_index, const pj_str_t *str)
 {
     pjsua_call *call;
     const pj_str_t mime_text = pj_str("text");
     const pj_str_t mime_plain = pj_str("plain");
-    pj_str_t text;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -1392,8 +1544,7 @@ PJ_DECL(void) pjsua_call_send_im(int call_index, const char *str)
 
     /* Create "text/plain" message body. */
     tdata->msg->body = pjsip_msg_body_create( tdata->pool, &mime_text,
-					      &mime_plain, 
-					      pj_cstr(&text, str));
+					      &mime_plain, str);
     if (tdata->msg->body == NULL) {
 	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
 	pjsip_tx_data_dec_ref(tdata);
@@ -1503,4 +1654,23 @@ pj_status_t pjsua_call_init(void)
     status = pjsip_inv_usage_init(pjsua.endpt, &inv_cb);
     
     return status;
+}
+
+/**
+ * Replace media transport.
+ */
+PJ_DEF(pj_status_t) pjsua_set_call_media_transport( unsigned call_index,
+						    const pjmedia_sock_info *i,
+						    pjmedia_transport *tp)
+{
+    pjsua_call *call = &pjsua.calls[call_index];
+
+    if (i)
+	pj_memcpy(&call->skinfo, i, sizeof(pjmedia_sock_info));
+    
+    if (call->med_tp)
+	(*call->med_tp->op->destroy)(call->med_tp);
+
+    call->med_tp = tp;
+    return PJ_SUCCESS;
 }
