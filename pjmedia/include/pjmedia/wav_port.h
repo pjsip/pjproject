@@ -57,13 +57,29 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /**
+ * Set the play position of WAV player.
+ *
+ * @param port		The file player port.
+ * @param samples	Sample position (zero as start of file).
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
+						      pj_uint32_t samples );
+
+
+/**
  * Create a media port to record streams to a WAV file. Note that the port
  * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
  * header can be filled with correct values (such as the file length).
  *
  * @param pool		Pool to create memory buffers for this port.
  * @param filename	File name.
- * @param flags		Port creation flags.
+ * @param clock_rate	The sampling rate.
+ * @param channel_count	Number of channels.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sampe Number of bits per sample (eg 16).
+ * @param flags		Port creation flags (must be 0 at present).
  * @param buf_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
  *			is about 4KB).
@@ -72,16 +88,16 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
-						      const char *filename,
-						      unsigned sampling_rate,
-						      unsigned channel_count,
-						      unsigned samples_per_frame,
-						      unsigned bits_per_sample,
-						      unsigned flags,
-						      pj_ssize_t buff_size,
-						      void *user_data,
-						      pjmedia_port **p_port );
+PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
+						    const char *filename,
+						    unsigned clock_rate,
+						    unsigned channel_count,
+						    unsigned samples_per_frame,
+						    unsigned bits_per_sample,
+						    unsigned flags,
+						    pj_ssize_t buff_size,
+						    void *user_data,
+						    pjmedia_port **p_port );
 
 
 

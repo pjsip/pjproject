@@ -319,6 +319,29 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /*
+ * Set position.
+ */
+PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
+						    pj_uint32_t samples )
+{
+    struct file_port *fport;
+
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+
+    fport = (struct file_port*) port;
+
+    PJ_ASSERT_RETURN(samples*BYTES_PER_SAMPLE < fport->fsize -
+		      sizeof(pjmedia_wave_hdr), PJ_EINVAL);
+
+    fport->fpos = sizeof(struct pjmedia_wave_hdr) + 
+		    samples * BYTES_PER_SAMPLE;
+    pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
+
+    return fill_buffer(fport);
+}
+
+
+/*
  * Put frame to file.
  */
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
