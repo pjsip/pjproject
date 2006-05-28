@@ -149,6 +149,10 @@ struct pjmedia_transport_op
 			     const void *pkt,
 			     pj_size_t size);
 
+    /**
+     * This function can be called to destroy this transport.
+     */
+    pj_status_t (*destroy)(pjmedia_transport *tp);
 };
 
 

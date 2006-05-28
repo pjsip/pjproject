@@ -98,6 +98,7 @@ static pjmedia_transport_op transport_udp_op =
     &transport_detach,
     &transport_send_rtp,
     &transport_send_rtcp,
+    &pjmedia_transport_udp_close
 };
 
 
