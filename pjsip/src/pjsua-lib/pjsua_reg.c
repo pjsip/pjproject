@@ -132,7 +132,7 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( unsigned acc_index,
 /*
  * Update registration. If renew is false, then unregistration will be performed.
  */
-PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
+PJ_DECL(pj_status_t) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
 {
     pj_status_t status = 0;
     pjsip_tx_data *tdata = 0;
@@ -143,11 +143,11 @@ PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Unable to create registration", 
 			     status);
-		return;
+		return PJ_EINVALIDOP;
 	    }
 	}
 	if (!pjsua.acc[acc_index].regc)
-	    return;
+	    return PJ_EINVALIDOP;
 
 	status = pjsip_regc_register(pjsua.acc[acc_index].regc, 1, 
 				     &tdata);
@@ -155,7 +155,7 @@ PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
     } else {
 	if (pjsua.acc[acc_index].regc == NULL) {
 	    PJ_LOG(3,(THIS_FILE, "Currently not registered"));
-	    return;
+	    return PJ_EINVALIDOP;
 	}
 	status = pjsip_regc_unregister(pjsua.acc[acc_index].regc, &tdata);
     }
@@ -170,6 +170,8 @@ PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
 	PJ_LOG(3,(THIS_FILE, "%s sent",
 	         (renew? "Registration" : "Unregistration")));
     }
+
+    return status;
 }
 
 /*

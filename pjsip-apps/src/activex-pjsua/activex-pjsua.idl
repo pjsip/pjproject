@@ -1,0 +1,112 @@
+// ActivePJSUA.idl : IDL source for ActivePJSUA.dll
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (ActivePJSUA.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "../src/activex-pjsua/pjsua-structs.idl";
+
+
+	[
+		object,
+		uuid(93462247-DA4E-4602-817B-26BA0C824E23),
+		dual,
+		helpstring("IApp Interface"),
+		pointer_default(unique)
+	]
+	interface IApp : IDispatch
+	{
+		[id(1), helpstring("method app_create")] HRESULT app_create([out,retval] Pj_Status *retStatus);
+		[id(2), helpstring("method app_default_config")] HRESULT app_default_config([out] Pjsua_Config *pConfig);
+		[id(3), helpstring("method app_test_config")] HRESULT app_test_config([in] Pjsua_Config *pConfig, [out,retval] BSTR *errmsg);
+		[id(4), helpstring("method app_init")] HRESULT app_init([in] Pjsua_Config *pConfig, [out,retval] Pj_Status *pStatus);
+		[id(5), helpstring("method app_start")] HRESULT app_start([out,retval] Pj_Status *retStatus);
+		[id(6), helpstring("method app_destroy")] HRESULT app_destroy([out,retval] Pj_Status *retStatus);
+		[id(7), helpstring("method call_get_max_count")] HRESULT call_get_max_count([out,retval] int *retCount);
+		[id(8), helpstring("method call_get_count")] HRESULT call_get_count([out,retval] int *retCount);
+		[id(9), helpstring("method call_is_active")] HRESULT call_is_active([in] int call_index, [out,retval] Pj_Bool *retVal);
+		[id(10), helpstring("method call_has_media")] HRESULT call_has_media([in] int call_index, [out,retval] Pj_Bool *pRet);
+		[id(11), helpstring("method call_get_info")] HRESULT call_get_info([in] int call_index, [out] Pjsua_Call_Info *pInfo, [out,retval] Pj_Status *pRet);
+		[id(12), helpstring("method call_make_call")] HRESULT call_make_call([in] int acc_index, [in,string] Pj_String dst_uri, [out] int *call_index, [out,retval] Pj_Status *pRet);
+		[id(13), helpstring("method call_answer")] HRESULT call_answer([in] int call_index, [in] int status_code, [out,retval] Pj_Status *pRet);
+		[id(14), helpstring("method call_hangup")] HRESULT call_hangup([in] int call_index, [out,retval] Pj_Status *pRet);
+		[id(15), helpstring("method call_set_hold")] HRESULT call_set_hold([in] int call_index, [out,retval] Pj_Status *pRet);
+		[id(16), helpstring("method call_release_hold")] HRESULT call_release_hold([in] int call_index, [out,retval] Pj_Status *pRet);
+		[id(17), helpstring("method call_xfer")] HRESULT call_xfer([in] int call_index, [in,string] Pj_String dst_uri, [out,retval] Pj_Status *pRet);
+		[id(18), helpstring("method call_dial_dtmf")] HRESULT call_dial_dtmf([in] int call_index, [in,string] Pj_String digits, [out,retval] Pj_Status *pRet);
+		[id(19), helpstring("method call_send_im")] HRESULT call_send_im([in] int call_index, [in,string] Pj_String text, [out,retval] Pj_Status *pRet);
+		[id(20), helpstring("method call_typing")] HRESULT call_typing([in] int call_index, [in] int is_typing, [out,retval] Pj_Status *pRet);
+		[id(21), helpstring("method call_hangup_all")] HRESULT call_hangup_all();
+		[id(22), helpstring("method acc_get_count")] HRESULT acc_get_count([out,retval] int *pCount);
+		[id(23), helpstring("method acc_get_info")] HRESULT acc_get_info([in] int acc_index, [out] Pjsua_Acc_Info *pInfo, [out,retval] Pj_Status *pRet);
+		[id(24), helpstring("method acc_add")] HRESULT acc_add([in] Pjsua_Acc_Config *pConfig, [out] int *pAcc_Index, [out,retval] Pj_Status *pRet);
+		[id(25), helpstring("method acc_set_online_status")] HRESULT acc_set_online_status([in] int acc_index, [in] int is_online, [out,retval] Pj_Status *pRet);
+		[id(26), helpstring("method acc_set_registration")] HRESULT acc_set_registration([in] int acc_index, [in] int reg_active, [out,retval] Pj_Status *pRet);
+		[id(27), helpstring("method buddy_get_count")] HRESULT buddy_get_count([out,retval] int *pCount);
+		[id(28), helpstring("method buddy_get_info")] HRESULT buddy_get_info([in] int buddy_index, [out] Pjsua_Buddy_Info *pInfo, [out,retval] Pj_Status *pRet);
+		[id(29), helpstring("method buddy_add")] HRESULT buddy_add([in,string] Pj_String uri, [out] int *pBuddy_Index, [out,retval] Pj_Status *pRet);
+		[id(30), helpstring("method buddy_subscribe_pres")] HRESULT buddy_subscribe_pres([in] int buddy_index, [in] int subscribe, [out,retval] Pj_Status *pRet);
+		[id(31), helpstring("method im_send_text")] HRESULT im_send_text([in] int acc_index, [in,string] Pj_String dst_uri, [in,string] Pj_String text, [out,retval] Pj_Status *pRet);
+		[id(32), helpstring("method im_typing")] HRESULT im_typing([in] int acc_index, [in,string] Pj_URI dst_uri, [in] int is_typing, [out,retval] Pj_Status *pRet);
+		[id(33), helpstring("method conf_connect")] HRESULT conf_connect([in] int src_port, [in] int sink_port, [out,retval] Pj_Status *pRet);
+		[id(34), helpstring("method conf_disconnect")] HRESULT conf_disconnect([in] int src_port, [in] int sink_port, [out,retval] Pj_Status *pRet);
+		[id(35), helpstring("method player_create")] HRESULT player_create([in,string] Pj_String filename, [out] int *pPlayer_Id, [out,retval] Pj_Status *pRet);
+		[id(36), helpstring("method player_get_conf_port")] HRESULT player_get_conf_port([in] int player_id, [out,retval] int *pPort);
+		[id(37), helpstring("method player_set_pos")] HRESULT player_set_pos([in] int player_id, [in] int sample_pos, [out,retval] Pj_Status *pRet);
+		[id(38), helpstring("method player_destroy")] HRESULT player_destroy([in] int player_id, [out,retval] Pj_Status *pRet);
+		[id(39), helpstring("method recorder_create")] HRESULT recorder_create([in,string] Pj_String filename, [out] int *pRecorder_Id, [out,retval] Pj_Status *pRet);
+		[id(40), helpstring("method recorder_get_conf_port")] HRESULT recorder_get_conf_port([in] int recorder_id, [out,retval] int *pPort);
+		[id(41), helpstring("method recorder_destroy")] HRESULT recorder_destroy([in] int recorder_id, [out,retval] Pj_Status *pRet);
+		[id(42), helpstring("method app_load_config")] HRESULT app_load_config([in,string] Pj_String filename, [out] Pjsua_Config *pConfig, [out,retval] Pj_Status *pRet);
+		[id(43), helpstring("method app_save_config")] HRESULT app_save_config([in,string] Pj_String filename, [in] Pjsua_Config *pConfig, [out,retval] Pj_Status *pRet);
+		[id(44), helpstring("method app_get_current_config")] HRESULT app_get_current_config([out,retval] Pjsua_Config *pConfig);
+		[id(45), helpstring("method app_get_error_msg")] HRESULT app_get_error_msg([in] Pj_Status status, [out,retval] BSTR *errmsg);
+		[id(46), helpstring("method app_verify_sip_url")] HRESULT app_verify_sip_url([in,string] Pj_String uri, [out,retval] Pj_Status *pRet);
+		[id(47), helpstring("method call_get_textstat")] HRESULT call_get_textstat([in] int call_index, [out,retval] BSTR *textstat);
+		[id(48), helpstring("method app_handle_events")] HRESULT app_handle_events([in] int msec_timeout, [out,retval] int *pEvCount);
+	};
+
+[
+	uuid(11E70413-8434-41B6-A5B6-F7DF79FEFC1A),
+	version(1.0),
+	helpstring("ActivePJSUA 1.0 Type Library")
+]
+library ACTIVEPJSUALib
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	struct Pjsip_Cred_Info;
+	struct Pjsua_Acc_Config;
+	struct Pjsua_Config;
+	struct Pjsua_Call_Info;
+	struct Pjsua_Buddy_Info;
+	struct Pjsua_Acc_Info;
+
+	[
+	    uuid(DC91CBCE-4B9E-4369-80B9-39341EEFD814),
+	    helpstring("_IPjsuaEvents Interface")
+	]
+	dispinterface _IPjsuaEvents
+	{
+	    properties:
+	    methods:
+		[id(1), helpstring("method OnCallState")] void OnCallState([in] int call_index, [in] Pjsua_Call_Info *pInfo);
+		[id(2), helpstring("method OnRegState")] void OnRegState([in] int acc_index);
+		[id(3), helpstring("method OnBuddyState")] void OnBuddyState([in] int buddy_index);
+		[id(4), helpstring("method OnIncomingPager")] void OnIncomingPager([in] int call_index, [in] BSTR fromUri, [in] BSTR toURI, [in] BSTR pagerText);
+		[id(5), helpstring("method OnTypingIndication")] void OnTypingIndication([in] int call_index, [in] BSTR fromUri, [in] BSTR toURI, [in] int isTyping);
+	};
+
+	[
+		uuid(F89DA516-42E5-43A0-8EF7-A960BA386CAB),
+		helpstring("App Class")
+	]
+	coclass App
+	{
+		[default] interface IApp;
+		[default, source] dispinterface _IPjsuaEvents;
+	};
+};

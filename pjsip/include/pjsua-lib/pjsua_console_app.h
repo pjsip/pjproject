@@ -20,9 +20,6 @@
 #define __PJSUA_CONSOLE_APP_H__
 
 
-pj_status_t pjsua_console_app_logging_init(const pjsua_config *cfg);
-void pjsua_console_app_logging_shutdown(void);
-
 void pjsua_console_app_main(void);
 
 extern pjsip_module pjsua_console_app_msg_logger;

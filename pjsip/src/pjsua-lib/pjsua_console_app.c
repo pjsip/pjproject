@@ -781,7 +781,7 @@ void pjsua_console_app_main(void)
 		    pjsua_buddy_subscribe_pres(result.nb_result-1, (menuin[0]=='s'));
 		}
 
-		pjsua_pres_refresh(current_acc);
+		pjsua_pres_refresh();
 
 	    } else if (result.uri_result) {
 		puts("Sorry, can only subscribe to buddy's presence, "
@@ -814,7 +814,7 @@ void pjsua_console_app_main(void)
 	    printf("Setting %s online status to %s\n",
 		   acc_info.acc_id.ptr,
 		   (acc_info.online_status?"online":"offline"));
-	    pjsua_pres_refresh(current_acc);
+	    pjsua_pres_refresh();
 	    break;
 
 	case 'c':
@@ -969,59 +969,6 @@ pjsip_module pjsua_console_app_msg_logger =
 };
 
 
-
-/*****************************************************************************
- * Console application custom logging:
- */
-
-
-static FILE *log_file;
-
-
-static void app_log_writer(int level, const char *buffer, int len)
-{
-    /* Write to both stdout and file. */
-
-    if (level <= (int)pjsua_get_config()->app_log_level)
-	pj_log_write(level, buffer, len);
-
-    if (log_file) {
-	fwrite(buffer, len, 1, log_file);
-	fflush(log_file);
-    }
-}
-
-
-pj_status_t pjsua_console_app_logging_init(const pjsua_config *cfg)
-{
-    /* Redirect log function to ours */
-
-    pj_log_set_log_func( &app_log_writer );
-
-    /* If output log file is desired, create the file: */
-
-    if (cfg->log_filename.slen) {
-	log_file = fopen(cfg->log_filename.ptr, "wt");
-	if (log_file == NULL) {
-	    PJ_LOG(1,(THIS_FILE, "Unable to open log file %s", 
-		      cfg->log_filename.ptr));   
-	    return -1;
-	}
-    }
-
-    return PJ_SUCCESS;
-}
-
-
-void pjsua_console_app_logging_shutdown(void)
-{
-    /* Close logging file, if any: */
-
-    if (log_file) {
-	fclose(log_file);
-	log_file = NULL;
-    }
-}
 
 /*****************************************************************************
  * Error display:

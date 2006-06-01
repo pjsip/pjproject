@@ -471,6 +471,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info(unsigned index,
 	info->status_text = pj_str("Offline");
     }
 
+    info->acc_index = buddy->acc_index;
     return PJ_SUCCESS;
 }
 
@@ -549,10 +550,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status( unsigned acc_index,
 /*
  * Refresh presence
  */
-PJ_DEF(void) pjsua_pres_refresh(int acc_index)
+PJ_DEF(void) pjsua_pres_refresh()
 {
+    unsigned i;
+
     refresh_client_subscription();
-    refresh_server_subscription(acc_index);
+
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i)
+	refresh_server_subscription(i);
 }
 
 
@@ -572,9 +577,7 @@ void pjsua_pres_shutdown(void)
 	pjsua.buddies[i].monitor = 0;
     }
 
-    for (acc_index=0; acc_index<(int)pjsua.config.acc_cnt; ++acc_index) {
-	pjsua_pres_refresh(acc_index);
-    }
+    pjsua_pres_refresh();
 }
 
 /*

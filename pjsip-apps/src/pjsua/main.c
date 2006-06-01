@@ -42,11 +42,6 @@ int main(int argc, char *argv[])
 	return 1;
 
 
-    /* Init logging: */
-    if (pjsua_console_app_logging_init(&cfg) != PJ_SUCCESS)
-	return 1;
-
-
     /* Init pjsua */
     if (pjsua_init(&cfg, &console_callback) != PJ_SUCCESS)
 	return 1;
@@ -80,10 +75,6 @@ int main(int argc, char *argv[])
      * can be called multiple times. 
      */
     pjsua_destroy();
-
-
-    /* Close logging: */
-    pjsua_console_app_logging_shutdown();
 
 
     /* Exit... */

@@ -685,9 +685,13 @@ static const char *good_number(char *buf, pj_int32_t val)
     return buf;
 }
 
-static void dump_media_session(pjmedia_session *session)
+static void dump_media_session(const char *indent, 
+			       char *buf, unsigned maxlen,
+			       pjmedia_session *session)
 {
     unsigned i;
+    char *p = buf, *end = buf+maxlen;
+    int len;
     pjmedia_session_info info;
 
     pjmedia_session_get_info(session, &info);
@@ -715,15 +719,22 @@ static void dump_media_session(pjmedia_session *session)
 	    dir = "inactive";
 
 	
-	PJ_LOG(3,(THIS_FILE, 
-		  "%s#%d %.*s @%dKHz, %s, peer=%s:%d",
-		  "               ",
-		  i,
+	len = pj_ansi_snprintf(buf, end-p, 
+		  "%s  #%d %.*s @%dKHz, %s, peer=%s:%d",
+		  indent, i,
 		  info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
 		  info.stream_info[i].fmt.clock_rate / 1000,
 		  dir,
-		  rem_addr, rem_port));
+		  rem_addr, rem_port);
+	if (len < 1 || len > end-p) {
+	    *p = '\0';
+	    return;
+	}
+
+	p += len;
+	*p++ = '\n';
+	*p = '\0';
 
 	if (stat.rx.update_cnt == 0)
 	    strcpy(last_update, "never");
@@ -737,39 +748,48 @@ static void dump_media_session(pjmedia_session *session)
 		    now.msec);
 	}
 
-	PJ_LOG(3,(THIS_FILE, 
-	       "                  RX pt=%d, stat last update: %s\n"
-	       "                     total %spkt %sB (%sB +IP hdr)%s\n"
-	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	       "                           (msec)    min     avg     max     last\n"
-	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	       "                     jitter     : %7.3f %7.3f %7.3f %7.3f%s",
-	       info.stream_info[i].fmt.pt,
+	len = pj_ansi_snprintf(p, end-p,
+	       "%s     RX pt=%d, stat last update: %s\n"
+	       "%s        total %spkt %sB (%sB +IP hdr)\n"
+	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
+	       "%s              (msec)    min     avg     max     last\n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       indent, info.stream_info[i].fmt.pt,
 	       last_update,
+	       indent,
 	       good_number(packets, stat.rx.pkt),
 	       good_number(bytes, stat.rx.bytes),
 	       good_number(ipbytes, stat.rx.bytes + stat.rx.pkt * 32),
-	       "",
+	       indent,
 	       stat.rx.loss,
 	       stat.rx.loss * 100.0 / stat.rx.pkt,
 	       stat.rx.dup, 
 	       stat.rx.dup * 100.0 / stat.rx.pkt,
 	       stat.rx.reorder, 
 	       stat.rx.reorder * 100.0 / stat.rx.pkt,
-	       "",
+	       indent, indent,
 	       stat.rx.loss_period.min / 1000.0, 
 	       stat.rx.loss_period.avg / 1000.0, 
 	       stat.rx.loss_period.max / 1000.0,
 	       stat.rx.loss_period.last / 1000.0,
-	       "",
+	       indent,
 	       stat.rx.jitter.min / 1000.0,
 	       stat.rx.jitter.avg / 1000.0,
 	       stat.rx.jitter.max / 1000.0,
 	       stat.rx.jitter.last / 1000.0,
 	       ""
-	       ));
+	       );
 
+	if (len < 1 || len > end-p) {
+	    *p = '\0';
+	    return;
+	}
 
+	p += len;
+	*p++ = '\n';
+	*p = '\0';
+	
 	if (stat.tx.update_cnt == 0)
 	    strcpy(last_update, "never");
 	else {
@@ -782,51 +802,143 @@ static void dump_media_session(pjmedia_session *session)
 		    now.msec);
 	}
 
-	PJ_LOG(3,(THIS_FILE,
-	       "                  TX pt=%d, ptime=%dms, stat last update: %s\n"
-	       "                     total %spkt %sB (%sB +IP hdr)%s\n"
-	       "                     pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	       "                           (msec)    min     avg     max     last\n"
-	       "                     loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	       "                     jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	len = pj_ansi_snprintf(p, end-p,
+	       "%s     TX pt=%d, ptime=%dms, stat last update: %s\n"
+	       "%s        total %spkt %sB (%sB +IP hdr)\n"
+	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
+	       "%s              (msec)    min     avg     max     last\n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       indent,
 	       info.stream_info[i].tx_pt,
 	       info.stream_info[i].param->info.frm_ptime *
 		info.stream_info[i].param->setting.frm_per_pkt,
 	       last_update,
+
+	       indent,
 	       good_number(packets, stat.tx.pkt),
 	       good_number(bytes, stat.tx.bytes),
 	       good_number(ipbytes, stat.tx.bytes + stat.tx.pkt * 32),
-	       "",
+
+	       indent,
 	       stat.tx.loss,
 	       stat.tx.loss * 100.0 / stat.tx.pkt,
 	       stat.tx.dup, 
 	       stat.tx.dup * 100.0 / stat.tx.pkt,
 	       stat.tx.reorder, 
 	       stat.tx.reorder * 100.0 / stat.tx.pkt,
-	       "",
+
+	       indent, indent,
 	       stat.tx.loss_period.min / 1000.0, 
 	       stat.tx.loss_period.avg / 1000.0, 
 	       stat.tx.loss_period.max / 1000.0,
 	       stat.tx.loss_period.last / 1000.0,
-	       "",
+	       indent,
 	       stat.tx.jitter.min / 1000.0,
 	       stat.tx.jitter.avg / 1000.0,
 	       stat.tx.jitter.max / 1000.0,
 	       stat.tx.jitter.last / 1000.0,
 	       ""
-	       ));
+	       );
 
+	if (len < 1 || len > end-p) {
+	    *p = '\0';
+	    return;
+	}
 
-	PJ_LOG(3,(THIS_FILE,
-	       "                 RTT msec       : %7.3f %7.3f %7.3f %7.3f%s", 
+	p += len;
+	*p++ = '\n';
+	*p = '\0';
+
+	len = pj_ansi_snprintf(p, end-p,
+	       "%s    RTT msec       : %7.3f %7.3f %7.3f %7.3f", 
+	       indent,
 	       stat.rtt.min / 1000.0,
 	       stat.rtt.avg / 1000.0,
 	       stat.rtt.max / 1000.0,
-	       stat.rtt.last / 1000.0,
-	       ""
-	       ));
+	       stat.rtt.last / 1000.0
+	       );
+	if (len < 1 || len > end-p) {
+	    *p = '\0';
+	    return;
+	}
 
+	p += len;
+	*p++ = '\n';
+	*p = '\0';
     }
+}
+
+PJ_DEF(void) pjsua_dump_call(int call_index, int with_media, 
+			     char *buffer, unsigned maxlen,
+			     const char *indent)
+{
+    pjsua_call *call = &pjsua.calls[call_index];
+    pj_time_val duration, res_delay, con_delay;
+    char tmp[128];
+    char *p, *end;
+    int len;
+
+    *buffer = '\0';
+    p = buffer;
+    end = buffer + maxlen;
+    len = 0;
+
+    PJ_ASSERT_ON_FAIL(call_index >= 0 && 
+		      call_index < PJ_ARRAY_SIZE(pjsua.calls), return);
+
+    if (call->inv == NULL)
+	return;
+
+    print_call(indent, call_index, tmp, sizeof(tmp));
+    
+    len = pj_ansi_strlen(tmp);
+    pj_ansi_strcpy(buffer, tmp);
+
+    p += len;
+    *p++ = '\r';
+    *p++ = '\n';
+
+    /* Calculate call duration */
+    if (call->inv->state >= PJSIP_INV_STATE_CONFIRMED) {
+	pj_gettimeofday(&duration);
+	PJ_TIME_VAL_SUB(duration, call->conn_time);
+	con_delay = call->conn_time;
+	PJ_TIME_VAL_SUB(con_delay, call->start_time);
+    } else {
+	duration.sec = duration.msec = 0;
+	con_delay.sec = con_delay.msec = 0;
+    }
+
+    /* Calculate first response delay */
+    if (call->inv->state >= PJSIP_INV_STATE_EARLY) {
+	res_delay = call->res_time;
+	PJ_TIME_VAL_SUB(res_delay, call->start_time);
+    } else {
+	res_delay.sec = res_delay.msec = 0;
+    }
+
+    /* Print duration */
+    len = pj_ansi_snprintf(p, end-p, 
+		           "%s  Call time: %02dh:%02dm:%02ds, "
+		           "1st res in %d ms, conn in %dms",
+			   indent,
+		           (duration.sec / 3600),
+		           ((duration.sec % 3600)/60),
+		           (duration.sec % 60),
+		           PJ_TIME_VAL_MSEC(res_delay), 
+		           PJ_TIME_VAL_MSEC(con_delay));
+    
+    if (len > 0 && len < end-p) {
+	p += len;
+	*p++ = '\n';
+	*p = '\0';
+    }
+
+    /* Dump session statistics */
+    if (with_media && call->session)
+	dump_media_session(indent, p, end-p, call->session);
+
 }
 
 /*
@@ -834,8 +946,8 @@ static void dump_media_session(pjmedia_session *session)
  */
 PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 {
-    char buf[128];
     unsigned old_decor;
+    char buf[1024];
 
     PJ_LOG(3,(THIS_FILE, "Start dumping application states:"));
 
@@ -862,48 +974,10 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 	unsigned i;
 
 	for (i=0; i<pjsua.config.max_calls; ++i) {
-
-	    pjsua_call *call = &pjsua.calls[i];
-	    pj_time_val duration, res_delay, con_delay;
-
-	    if (call->inv == NULL)
-		continue;
-
-	    print_call("  ", i, buf, sizeof(buf));
-	    PJ_LOG(3,(THIS_FILE, "%s", buf));
-
-	    /* Calculate call duration */
-	    if (call->inv->state >= PJSIP_INV_STATE_CONFIRMED) {
-		pj_gettimeofday(&duration);
-		PJ_TIME_VAL_SUB(duration, call->conn_time);
-		con_delay = call->conn_time;
-		PJ_TIME_VAL_SUB(con_delay, call->start_time);
-	    } else {
-		duration.sec = duration.msec = 0;
-		con_delay.sec = con_delay.msec = 0;
+	    if (pjsua.calls[i].inv) {
+		pjsua_dump_call(i, detail, buf, sizeof(buf), "  ");
+		PJ_LOG(3,(THIS_FILE, "%s", buf));
 	    }
-
-	    /* Calculate first response delay */
-	    if (call->inv->state >= PJSIP_INV_STATE_EARLY) {
-		res_delay = call->res_time;
-		PJ_TIME_VAL_SUB(res_delay, call->start_time);
-	    } else {
-		res_delay.sec = res_delay.msec = 0;
-	    }
-
-	    /* Print duration */
-	    PJ_LOG(3,(THIS_FILE, 
-		      "               Call time: %02dh:%02dm:%02ds, "
-		      "1st res in %d ms, conn in %dms",
-		      (duration.sec / 3600),
-		      ((duration.sec % 3600)/60),
-		      (duration.sec % 60),
-		      PJ_TIME_VAL_MSEC(res_delay), 
-		      PJ_TIME_VAL_MSEC(con_delay)));
-
-	    /* Dump session statistics */
-	    if (call->session)
-		dump_media_session(call->session);
 	}
     }
 
@@ -924,7 +998,7 @@ PJ_DECL(pj_status_t) pjsua_load_settings(const char *filename,
     int argc = 3;
     char *argv[4] = { "pjsua", "--config-file", NULL, NULL};
 
-    argv[3] = (char*)filename;
+    argv[2] = (char*)filename;
     return pjsua_parse_args(argc, argv, cfg);
 }
 
@@ -1103,12 +1177,16 @@ PJ_DEF(int) pjsua_dump_settings(const pjsua_config *config,
 
 
     /* Encoding quality and complexity */
-    pj_ansi_sprintf(line, "--quality %d\n",
-		    config->quality);
-    pj_strcat2(&cfg, line);
-    pj_ansi_sprintf(line, "--complexity %d\n",
-		    config->complexity);
-    pj_strcat2(&cfg, line);
+    if (config->quality > 0) {
+	pj_ansi_sprintf(line, "--quality %d\n",
+			config->quality);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->complexity > 0) {
+	pj_ansi_sprintf(line, "--complexity %d\n",
+			config->complexity);
+	pj_strcat2(&cfg, line);
+    }
 
     /* ptime */
     if (config->ptime) {

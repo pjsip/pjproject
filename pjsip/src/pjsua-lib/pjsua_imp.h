@@ -126,6 +126,9 @@ struct pjsua
     /* Config: */
     pjsua_config    config;	    /**< PJSUA configs			*/
 
+    /* Log file: */
+    FILE	   *log_file;	    /**< Log file.			*/
+
     /* Application callback
     : */
     pjsua_callback  cb;		    /**< Application callback.		*/

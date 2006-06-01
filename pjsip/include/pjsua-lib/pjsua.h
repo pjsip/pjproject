@@ -143,8 +143,14 @@ struct pjsua_config
      */
     unsigned	conf_ports;
 
-    /** Number of worker threads (default: 1) */
+    /** Number of worker threads (value >=0, default: 1) */
     unsigned	thread_cnt;
+
+    /** Separate ioqueue for media? (default: yes) */
+    pj_bool_t	media_has_ioqueue;
+
+    /** Number of worker thread for media (value >=0, default: 1) */
+    unsigned	media_thread_cnt;
 
     /** First STUN server IP address. When STUN is configured, then the
      *  two STUN server settings must be fully set.
@@ -359,6 +365,7 @@ struct pjsua_buddy_info
     pjsua_buddy_status	status;
     pj_str_t		status_text;
     pj_bool_t		monitor;
+    int			acc_index;
 };
 
 typedef struct pjsua_buddy_info pjsua_buddy_info;
@@ -437,6 +444,12 @@ PJ_DECL(pj_status_t) pjsua_start(void);
  * Destroy pjsua.
  */
 PJ_DECL(pj_status_t) pjsua_destroy(void);
+
+/**
+ * Poll pjsua.
+ */
+PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout);
+
 
 /**
  * Get SIP endpoint instance.
@@ -560,6 +573,14 @@ PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing);
 PJ_DECL(void) pjsua_call_hangup_all(void);
 
 
+/**
+ * Dump call and media statistics to string.
+ */
+PJ_DECL(void) pjsua_dump_call(int call_index, int with_media, 
+			      char *buffer, unsigned maxlen,
+			      const char *indent);
+
+
 /*****************************************************************************
  * PJSUA Account and Client Registration API (defined in pjsua_reg.c).
  */
@@ -598,7 +619,7 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status(unsigned acc_index,
  * Update registration or perform unregistration. If renew argument is zero,
  * this will start unregistration process.
  */
-PJ_DECL(void) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew);
+PJ_DECL(pj_status_t) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew);
 
 
 
@@ -637,7 +658,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(unsigned buddy_index,
 /**
  * Refresh both presence client and server subscriptions.
  */
-PJ_DECL(void) pjsua_pres_refresh(int acc_index);
+PJ_DECL(void) pjsua_pres_refresh(void);
 
 /**
  * Dump presence subscriptions.
@@ -712,7 +733,7 @@ PJ_DECL(pj_status_t) pjsua_player_create(const pj_str_t *filename,
 /**
  * Get conference port associated with player.
  */
-PJ_DECL(unsigned) pjsua_player_get_conf_port(pjsua_player_id id);
+PJ_DECL(int) pjsua_player_get_conf_port(pjsua_player_id id);
 
 
 /**
@@ -739,7 +760,7 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
 /**
  * Get conference port associated with recorder.
  */
-PJ_DECL(unsigned) pjsua_recorder_get_conf_port(pjsua_recorder_id id);
+PJ_DECL(int) pjsua_recorder_get_conf_port(pjsua_recorder_id id);
 
 
 /**

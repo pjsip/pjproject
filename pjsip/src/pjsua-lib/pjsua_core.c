@@ -51,6 +51,8 @@ PJ_DEF(void) pjsua_default_config(pjsua_config *cfg)
     pj_memset(cfg, 0, sizeof(pjsua_config));
 
     cfg->thread_cnt = 1;
+    cfg->media_has_ioqueue = 1;
+    cfg->media_thread_cnt = 1;
     cfg->udp_port = 5060;
     cfg->start_rtp_port = 4000;
     cfg->max_calls = 4;
@@ -246,6 +248,25 @@ static int PJ_THREAD_FUNC pjsua_poll(void *arg)
     return 0;
 }
 
+/**
+ * Poll pjsua.
+ */
+PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout)
+{
+    unsigned count = 0;
+    pj_time_val tv;
+    pj_status_t status;
+
+    tv.sec = 0;
+    tv.msec = msec_timeout;
+    pj_time_val_normalize(&tv);
+
+    status = pjsip_endpt_handle_events2(pjsua.endpt, &tv, &count);
+    if (status != PJ_SUCCESS)
+	return -status;
+
+    return count;
+}
 
 
 #define pjsua_has_stun()    (pjsua.config.stun_port1 && \
@@ -504,7 +525,9 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 
     /* Must create media endpoint too */
     status = pjmedia_endpt_create(&pjsua.cp.factory, 
-				  pjsip_endpt_get_ioqueue(pjsua.endpt), 0,
+				  pjsua.config.media_has_ioqueue? NULL :
+				       pjsip_endpt_get_ioqueue(pjsua.endpt), 
+				  pjsua.config.media_thread_cnt,
 				  &pjsua.med_endpt);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -754,6 +777,57 @@ static void copy_config(pj_pool_t *pool, pjsua_config *dst,
 }
 
 
+/*****************************************************************************
+ * Console application custom logging:
+ */
+
+
+static void log_writer(int level, const char *buffer, int len)
+{
+    /* Write to both stdout and file. */
+
+    if (level <= (int)pjsua.config.app_log_level)
+	pj_log_write(level, buffer, len);
+
+    if (pjsua.log_file) {
+	fwrite(buffer, len, 1, pjsua.log_file);
+	fflush(pjsua.log_file);
+    }
+}
+
+
+static pj_status_t logging_init()
+{
+    /* Redirect log function to ours */
+
+    pj_log_set_log_func( &log_writer );
+
+    /* If output log file is desired, create the file: */
+
+    if (pjsua.config.log_filename.slen) {
+	pjsua.log_file = fopen(pjsua.config.log_filename.ptr, "wt");
+	if (pjsua.log_file == NULL) {
+	    PJ_LOG(1,(THIS_FILE, "Unable to open log file %s", 
+		      pjsua.config.log_filename.ptr));   
+	    return -1;
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+static void logging_shutdown(void)
+{
+    /* Close logging file, if any: */
+
+    if (pjsua.log_file) {
+	fclose(pjsua.log_file);
+	pjsua.log_file = NULL;
+    }
+}
+
+
 /*
  * Initialize pjsua application.
  * This will initialize all libraries, create endpoint instance, and register
@@ -807,6 +881,10 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
     pj_log_set_level(pjsua.config.log_level);
     pj_log_set_decor(pjsua.config.log_decor);
 
+    status = logging_init();
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
 
     /* Create SIP UDP socket */
     if (pjsua.config.udp_port) {
@@ -853,7 +931,7 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
 	    goto on_error;
 	}
 	status = pjmedia_transport_udp_attach(pjsua.med_endpt, NULL,
-					      &pjsua.calls[i].skinfo,
+					      &pjsua.calls[i].skinfo, 0,
 					      &pjsua.calls[i].med_tp);
     }
 
@@ -1368,7 +1446,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 /**
  * Get conference port associated with player.
  */
-PJ_DEF(unsigned) pjsua_player_get_conf_port(pjsua_player_id id)
+PJ_DEF(int) pjsua_player_get_conf_port(pjsua_player_id id)
 {
     PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.player), PJ_EINVAL);
     return pjsua.player[id].slot;
@@ -1452,7 +1530,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 /**
  * Get conference port associated with recorder.
  */
-PJ_DEF(unsigned) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
+PJ_DEF(int) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
 {
     PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.recorder), PJ_EINVAL);
     return pjsua.recorder[id].slot;
@@ -1521,19 +1599,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     /* Signal threads to quit: */
     pjsua.quit_flag = 1;
 
-    /* Terminate all calls. */
-    pjsua_call_hangup_all();
-
-    /* Terminate all presence subscriptions. */
-    pjsua_pres_shutdown();
-
-    /* Unregister, if required: */
-    for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
-	if (pjsua.acc[i].regc) {
-	    pjsua_acc_set_registration(i, PJ_FALSE);
-	}
-    }
-
     /* Wait worker threads to quit: */
     for (i=0; i<(int)pjsua.config.thread_cnt; ++i) {
 	
@@ -1544,9 +1609,22 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	}
     }
 
-
-    /* Wait for some time to allow unregistration to complete: */
+    
     if (pjsua.endpt) {
+	/* Terminate all calls. */
+	pjsua_call_hangup_all();
+
+	/* Terminate all presence subscriptions. */
+	pjsua_pres_shutdown();
+
+	/* Unregister, if required: */
+	for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
+	    if (pjsua.acc[i].regc) {
+		pjsua_acc_set_registration(i, PJ_FALSE);
+	    }
+	}
+
+	/* Wait for some time to allow unregistration to complete: */
 	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
 	busy_sleep(1000);
     }
@@ -1628,6 +1706,11 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     /* Destroy caching pool. */
     pj_caching_pool_destroy(&pjsua.cp);
 
+
+    PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
+
+    /* End logging */
+    logging_shutdown();
 
     /* Done. */
 
