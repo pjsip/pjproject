@@ -116,6 +116,21 @@ PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
 
 
 /**
+ * Handle events with additional info about number of events that
+ * have been handled.
+ *
+ * @param endpt		The endpoint.
+ * @param max_timeout	Maximum time to wait for events, or NULL to wait forever
+ *			until event is received.
+ * @param count		Optional argument to receive the number of events that
+ *			have been handled by the function.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
+					        const pj_time_val *max_timeout,
+					        unsigned *count);
+/**
  * Schedule timer to endpoint's timer heap. Application must poll the endpoint
  * periodically (by calling #pjsip_endpt_handle_events) to ensure that the
  * timer events are handled in timely manner. When the timeout for the timer

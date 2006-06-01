@@ -582,14 +582,15 @@ PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
     pj_mutex_unlock(endpt->mutex);
 }
 
-/*
- * Handle events.
- */
-PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
-					      const pj_time_val *max_timeout)
+
+PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
+					       const pj_time_val *max_timeout,
+					       unsigned *p_count)
 {
     /* timeout is 'out' var. This just to make compiler happy. */
     pj_time_val timeout = { 0, 0};
+    unsigned count = 0;
+    int c;
 
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_handle_events()"));
 
@@ -597,7 +598,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
      * granularity, so we don't need to lock end endpoint. 
      */
     timeout.sec = timeout.msec = 0;
-    pj_timer_heap_poll( endpt->timer_heap, &timeout );
+    c = pj_timer_heap_poll( endpt->timer_heap, &timeout );
+    if (c > 0)
+	count += c;
 
     /* timer_heap_poll should never ever returns negative value, or otherwise
      * ioqueue_poll() will block forever!
@@ -612,12 +615,27 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
     }
 
     /* Poll ioqueue. */
-    if (pj_ioqueue_poll( endpt->ioqueue, &timeout) < 0) {
+    c = pj_ioqueue_poll( endpt->ioqueue, &timeout);
+    if (c < 0) {
 	pj_thread_sleep(1);
+	if (p_count)
+	    *p_count = count;
 	return pj_get_netos_error();
     } else {
+	count += c;
+	if (p_count)
+	    *p_count = count;
 	return PJ_SUCCESS;
     }
+}
+
+/*
+ * Handle events.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
+					      const pj_time_val *max_timeout)
+{
+    return pjsip_endpt_handle_events2(endpt, max_timeout, NULL);
 }
 
 /*
