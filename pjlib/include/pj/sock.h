@@ -174,6 +174,8 @@ typedef struct pj_sockaddr
 } pj_sockaddr;
 
 
+#undef s_addr
+
 /**
  * This structure describes Internet address.
  */
