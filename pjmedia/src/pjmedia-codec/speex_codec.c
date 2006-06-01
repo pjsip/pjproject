@@ -208,8 +208,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     }
 
     /* Get defaults */
-    if (quality < 0) quality = DEFAULT_QUALITY;
-    if (complexity < 0) complexity = DEFAULT_COMPLEXITY;
+    if (quality <= 0) quality = DEFAULT_QUALITY;
+    if (complexity <= 0) complexity = DEFAULT_COMPLEXITY;
 
     /* Create Speex codec factory. */
     spx_factory.base.op = &spx_factory_op;
