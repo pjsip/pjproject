@@ -132,7 +132,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
 
     /* Create media transport */
     status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
-					  &transport);
+					  0, &transport);
     if (status != PJ_SUCCESS)
 	return status;
 

@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
     
     /* Create media transport */
     status = pjmedia_transport_udp_attach(g_med_endpt, NULL, &g_med_skinfo,
-					  &g_med_transport);
+					  0, &g_med_transport);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create media transport", status);
 	return 1;

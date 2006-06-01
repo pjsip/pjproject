@@ -36,7 +36,7 @@ struct transport_udp
     pjmedia_transport	base;		/**< Base transport.		    */
 
     pj_pool_t	       *pool;		/**< Memory pool		    */
-
+    unsigned		options;	/**< Transport options.		    */
     pjmedia_stream     *stream;		/**< Stream user (may be NULL)	    */
     pj_sockaddr_in	rem_rtp_addr;	/**< Remote RTP address		    */
     pj_sockaddr_in	rem_rtcp_addr;	/**< Remote RTCP address	    */
@@ -108,6 +108,7 @@ static pjmedia_transport_op transport_udp_op =
 PJ_DEF(pj_status_t) pjmedia_transport_udp_create( pjmedia_endpt *endpt,
 						  const char *name,
 						  int port,
+						  unsigned options,
 						  pjmedia_transport **p_tp)
 {
     pjmedia_sock_info si;
@@ -152,7 +153,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create( pjmedia_endpt *endpt,
 
     
     /* Create UDP transport by attaching socket info */
-    return pjmedia_transport_udp_attach( endpt, name, &si, p_tp);
+    return pjmedia_transport_udp_attach( endpt, name, &si, options, p_tp);
 
 
 on_error:
@@ -170,6 +171,7 @@ on_error:
 PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 						  const char *name,
 						  const pjmedia_sock_info *si,
+						  unsigned options,
 						  pjmedia_transport **p_tp)
 {
     struct transport_udp *tp;
@@ -198,6 +200,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
     tp = pj_pool_zalloc(pool, sizeof(struct transport_udp));
     tp->pool = pool;
+    tp->options = options;
     pj_ansi_strcpy(tp->base.name, name);
     tp->base.op = &transport_udp_op;
 
@@ -319,24 +322,40 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    (*cb)(stream, udp->rtp_pkt, bytes_read);
 
 	/* See if source address of RTP packet is different than the 
-	 * configured address.
+	 * configured address, and switch RTP remote address to 
+	 * source packet address after several consecutive packets
+	 * have been received.
 	 */
-	if ((udp->rem_rtp_addr.sin_addr.s_addr != 
-	     udp->rtp_src_addr.sin_addr.s_addr) ||
-	    (udp->rem_rtp_addr.sin_port != 
-	     udp->rtp_src_addr.sin_port))
-	{
-	    udp->rtp_src_cnt++;
+	if ((udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0) {
+	    if ((udp->rem_rtp_addr.sin_addr.s_addr != 
+		 udp->rtp_src_addr.sin_addr.s_addr) ||
+		(udp->rem_rtp_addr.sin_port != 
+		 udp->rtp_src_addr.sin_port))
+	    {
+		udp->rtp_src_cnt++;
 
-	    if (udp->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) {
-	    
-		udp->rem_rtp_addr = udp->rtp_src_addr;
-		udp->rtp_src_cnt = 0;
+		if (udp->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) {
+		
+		    pj_uint16_t port;
 
-		PJ_LOG(4,(udp->base.name,
-			  "Remote RTP address switched to %s:%d",
-			  pj_inet_ntoa(udp->rtp_src_addr.sin_addr),
-			  pj_ntohs(udp->rtp_src_addr.sin_port)));
+		    /* Set remote RTP address to source address */
+		    udp->rem_rtp_addr = udp->rtp_src_addr;
+
+		    /* Also update remote RTCP address */
+		    pj_memcpy(&udp->rem_rtcp_addr, &udp->rem_rtp_addr, 
+			      sizeof(pj_sockaddr_in));
+		    port = (pj_uint16_t)
+			   (pj_ntohs(udp->rem_rtp_addr.sin_port)+1);
+		    udp->rem_rtcp_addr.sin_port = pj_htons(port);
+
+		    /* Reset counter */
+		    udp->rtp_src_cnt = 0;
+
+		    PJ_LOG(4,(udp->base.name,
+			      "Remote RTP address switched to %s:%d",
+			      pj_inet_ntoa(udp->rtp_src_addr.sin_addr),
+			      pj_ntohs(udp->rtp_src_addr.sin_port)));
+		}
 	    }
 	}
 
