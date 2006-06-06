@@ -106,7 +106,8 @@ static const struct
     { PJSIP_ENOREFERSESSION,	"Not associated with REFER subscription"},
 
     /* Invite session. */
-    { PJSIP_ESESSIONTERMINATED,	"Session already terminated" },
+    { PJSIP_ESESSIONTERMINATED,	"INVITE session already terminated" },
+    { PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" },
 };
 
 

@@ -264,7 +264,7 @@ static pj_status_t init_parser()
     /*
      * Syntax error exception number.
      */
-    status = pj_exception_id_alloc("PJSIP: syntax error", 
+    status = pj_exception_id_alloc("PJSIP syntax error", 
 				   &PJSIP_SYN_ERR_EXCEPTION);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
@@ -909,7 +909,8 @@ parse_headers:
 	    err_info = pj_pool_alloc(pool, sizeof(*err_info));
 	    err_info->except_code = PJ_GET_EXCEPTION();
 	    err_info->line = scanner->line;
-	    err_info->col = pj_scan_get_col(scanner);
+	    /* Scanner's column is zero based, so add 1 */
+	    err_info->col = pj_scan_get_col(scanner) + 1;
 	    if (parsing_headers)
 		err_info->hname = hname;
 	    else

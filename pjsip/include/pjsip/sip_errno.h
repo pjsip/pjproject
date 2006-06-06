@@ -371,6 +371,11 @@ PJ_BEGIN_DECL
  * Session already terminated.
  */
 #define PJSIP_ESESSIONTERMINATED (PJSIP_ERRNO_START_PJSIP+140)	/* 171140 */
+/**
+ * @hideinitializer
+ * Invalid session state for the specified operation.
+ */
+#define PJSIP_ESESSIONSTATE	 (PJSIP_ERRNO_START_PJSIP+141)	/* 171141 */
 
 
 

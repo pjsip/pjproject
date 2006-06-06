@@ -671,13 +671,42 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     pjsip_msg *msg = rdata->msg_info.msg;
 
     if (status != PJ_SUCCESS) {
-	PJSIP_ENDPT_LOG_ERROR((endpt, "transport", status,
-			       "Error processing packet from %s:%d, packet:--\n"
-			       "%s\n"
-			       "-- end of packet.",
-			       rdata->pkt_info.src_name, 
-			       rdata->pkt_info.src_port, 
-			       rdata->msg_info.msg_buf));
+	char info[30];
+	char errmsg[PJ_ERR_MSG_SIZE];
+
+	info[0] = '\0';
+
+	if (status == PJSIP_EMISSINGHDR) {
+	    pj_str_t p;
+
+	    p.ptr = info; p.slen = 0;
+
+	    if (rdata->msg_info.cid == NULL || rdata->msg_info.cid->id.slen)
+		pj_strcpy2(&p, "Call-ID");
+	    if (rdata->msg_info.from == NULL)
+		pj_strcpy2(&p, " From");
+	    if (rdata->msg_info.to == NULL)
+		pj_strcpy2(&p, " To");
+	    if (rdata->msg_info.via == NULL)
+		pj_strcpy2(&p, " Via");
+	    if (rdata->msg_info.cseq == NULL) 
+		pj_strcpy2(&p, " CSeq");
+
+	    p.ptr[p.slen] = '\0';
+	}
+
+	pj_strerror(status, errmsg, sizeof(errmsg));
+
+	PJ_LOG(1, (THIS_FILE, 
+		  "Error processing packet from %s:%d: %s %s [code %d]:\n"
+		  "%s\n"
+		  "-- end of packet.",
+		  rdata->pkt_info.src_name, 
+		  rdata->pkt_info.src_port,
+		  errmsg,
+		  info,
+		  status,
+		  rdata->msg_info.msg_buf));
 	return;
     }
 

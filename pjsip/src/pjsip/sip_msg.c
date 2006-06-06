@@ -364,7 +364,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
     /* Process message body. */
     if (msg->body) {
-	enum { CLEN_SPACE = 12 };
+	enum { CLEN_SPACE = 5 };
 	char *clen_pos = NULL;
 
 	/* Automaticly adds Content-Type and Content-Length headers, only
@@ -393,7 +393,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	    pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
 	    p += clen_hdr.slen;
 	    
-	    /* Print blanks after "Content-Type:", this is where we'll put
+	    /* Print blanks after "Content-Length:", this is where we'll put
 	     * the content length value after we know the length of the
 	     * body.
 	     */
@@ -419,8 +419,9 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	 * Content-Length header.
 	 */
 	if (clen_pos) {
-	    char tmp[CLEN_SPACE];
+	    char tmp[16];
 	    len = pj_utoa(len, tmp);
+	    if (len > CLEN_SPACE) len = CLEN_SPACE;
 	    pj_memcpy(clen_pos+CLEN_SPACE-len, tmp, len);
 	}
 
@@ -433,6 +434,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	}
 	pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
 	p += clen_hdr.slen;
+	*p++ = ' ';
 	*p++ = '0';
 	*p++ = '\r';
 	*p++ = '\n';

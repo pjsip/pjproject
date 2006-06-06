@@ -23,6 +23,7 @@
 #include <pjsip/sip_private.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_module.h>
+#include <pj/except.h>
 #include <pj/os.h>
 #include <pj/log.h>
 #include <pj/ioqueue.h>
@@ -875,6 +876,41 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    pjsip_parse_rdata( current_pkt, msg_fragment_size, rdata);
 	if (msg == NULL) {
 	    mgr->on_rx_msg(mgr->endpt, PJSIP_EINVALIDMSG, rdata);
+	    goto finish_process_fragment;
+	}
+
+	/* Check for parsing syntax error */
+	if (!pj_list_empty(&rdata->msg_info.parse_err)) {
+	    pjsip_parser_err_report *err;
+	    char buf[128];
+	    pj_str_t tmp;
+
+	    /* Gather syntax error information */
+	    tmp.ptr = buf; tmp.slen = 0;
+	    err = rdata->msg_info.parse_err.next;
+	    while (err != &rdata->msg_info.parse_err) {
+		int len;
+		len = pj_ansi_snprintf(tmp.ptr+tmp.slen, sizeof(buf)-tmp.slen,
+				       ": %s exception when parsing %.*s "
+				       "header on line %d col %d",
+				       pj_exception_id_name(err->except_code),
+				       (int)err->hname.slen, err->hname.ptr,
+				       err->line, err->col);
+		if (len > 0 && len < (int) (sizeof(buf)-tmp.slen)) {
+		    tmp.slen += len;
+		}
+		err = err->next;
+	    }
+
+	    PJ_LOG(1, (THIS_FILE, 
+		      "Error processing packet from %s:%d %.*s:\n"
+		      "%s\n"
+		      "-- end of packet.",
+		      rdata->pkt_info.src_name, 
+		      rdata->pkt_info.src_port,
+		      (int)tmp.slen, tmp.ptr,
+		      rdata->msg_info.msg_buf));
+
 	    goto finish_process_fragment;
 	}
 
