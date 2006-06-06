@@ -13,6 +13,10 @@
 static const GUID IID_Pjsip_Cred_Info = 
 { 0x9ce3052a, 0x7a32, 0x4229, { 0xb3, 0x1c, 0x5e, 0x2, 0xe0, 0x66, 0x7a, 0x77 } };
 
+// {7F6CFF0F-C5B3-41e8-B278-61CD584C1F34}
+static const GUID IID_Pjsip_Sip_Uri = 
+{ 0x7f6cff0f, 0xc5b3, 0x41e8, { 0xb2, 0x78, 0x61, 0xcd, 0x58, 0x4c, 0x1f, 0x34 } };
+
 // {3B12B04F-6E48-46a7-B9E0-6C4BF1594A96}
 static const GUID IID_Pjsua_Acc_Config = 
 { 0x3b12b04f, 0x6e48, 0x46a7, { 0xb9, 0xe0, 0x6c, 0x4b, 0xf1, 0x59, 0x4a, 0x96 } };
@@ -32,6 +36,11 @@ static const GUID IID_Pjsua_Buddy_Info =
 // {8D345956-10B7-4450-8A06-A80D2F319EFD}
 static const GUID IID_Pjsua_Acc_Info = 
 { 0x8d345956, 0x10b7, 0x4450, { 0x8a, 0x6, 0xa8, 0xd, 0x2f, 0x31, 0x9e, 0xfd } };
+
+// {0D05907A-3E1F-4c92-9FD0-26CB6E1CC56A}
+static const GUID IID_Pjsua_Conf_Port_Info = 
+{ 0xd05907a, 0x3e1f, 0x4c92, { 0x9f, 0xd0, 0x26, 0xcb, 0x6e, 0x1c, 0xc5, 0x6a } };
+
 
 #define SA_SIZE(lbound,ubound)	(ubound-lbound)
 
@@ -117,7 +126,7 @@ static void SafeStringArray2pjstrarray(pj_pool_t *pool,
 	else {
 	    *count = 0;
 	    for (i=0; i<sa->cbElements; ++i) {
-		BSTR str;
+		BSTR str = NULL;
 		long rg = lbound + i;
 		hr = SafeArrayGetElement(sa, &rg, &str);
 		if (FAILED(hr))
@@ -174,6 +183,7 @@ static void AccConfig2accconfig(pj_pool_t *pool,
 	    for (i=0; i<c1->cred_info->cbElements; ++i) {
 		Pjsip_Cred_Info cred_info;
 		long rg = lbound + i;
+		pj_memset(&cred_info, 0, sizeof(cred_info));
 		hr = SafeArrayGetElement(c1->cred_info, &rg, &cred_info);
 		if (FAILED(hr))
 		    break;
@@ -244,6 +254,7 @@ static HRESULT Config2config(pj_pool_t *pool, Pjsua_Config *c1, pjsua_config *c2
     c2->sip_host = Pj_str(pool, c1->sip_host);
     c2->sip_port = c1->sip_port;
     c2->start_rtp_port = c1->rtp_port;
+    c2->msg_logging = c1->msg_logging;
     c2->max_calls = c1->max_calls;
     c2->conf_ports = c1->conf_ports;
     c2->thread_cnt = c1->thread_cnt;
@@ -280,6 +291,7 @@ static HRESULT Config2config(pj_pool_t *pool, Pjsua_Config *c1, pjsua_config *c2
 	    for (i=0; i<c1->acc_config->cbElements; ++i) {
 		Pjsua_Acc_Config acc_config;
 		long rg = lbound + i;
+		pj_memset(&acc_config, 0, sizeof(acc_config));
 		hr = SafeArrayGetElement(c1->acc_config, &rg, &acc_config);
 		if (FAILED(hr))
 		    break;
@@ -311,6 +323,7 @@ static HRESULT config2Config(pjsua_config *c1, Pjsua_Config *c2)
     Cp(c2->sip_host, &c1->sip_host);
     c2->sip_port = c1->sip_port;
     c2->rtp_port = c1->start_rtp_port;
+    c2->msg_logging = c1->msg_logging;
     c2->max_calls = c1->max_calls;
     c2->conf_ports = c1->conf_ports;
     c2->thread_cnt = c1->thread_cnt;
@@ -386,8 +399,8 @@ static void callinfo2CallInfo(pjsua_call_info *c1, Pjsua_Call_Info *c2)
     Cp(c2->state_text, &c1->state_text);
     c2->connect_duration = c1->connect_duration.sec;
     c2->total_duration = c1->total_duration.sec;
-    c2->cause = c1->cause;
-    Cp(c2->cause_text, &c1->cause_text);
+    c2->last_status = c1->last_status;
+    Cp(c2->last_status_text, &c1->last_status_text);
     c2->has_media = c1->has_media;
     c2->conf_slot = c1->conf_slot;
 }
@@ -397,7 +410,7 @@ static void accinfo2AccInfo(pjsua_acc_info *info1, Pjsua_Acc_Info *info2)
     pj_memset(info2, 0, sizeof(Pjsua_Acc_Info));
 
     info2->index = info1->index;
-    Cp(info2->acc_id, &info1->acc_id);
+    Cp(info2->acc_uri, &info1->acc_id);
     info2->has_registration = info1->has_registration;
     info2->expires = info1->expires;
     info2->status_code = info1->status;
@@ -419,7 +432,6 @@ static void buddyinfo2BuddyInfo(pjsua_buddy_info *info1, Pjsua_Buddy_Info *info2
     info2->status = (Pjsua_Buddy_State)info1->status;
     Cp(info2->status_text, &info1->status_text);
     info2->monitor = info1->monitor;
-    info2->acc_index = info1->acc_index;
 }
 
 static CApp *CApp_Instance;
@@ -463,15 +475,21 @@ static void on_call_state(int call_index, pjsip_event *e)
     pjsua_call_info call_info;
     Pjsua_Call_Info *Call_Info = new Pjsua_Call_Info;
 
-    pjsua_get_call_info(call_index, &call_info);
+    pjsua_call_get_info(call_index, &call_info);
     callinfo2CallInfo(&call_info, Call_Info);
 
     CApp_Instance->Fire_OnCallState(call_index, Call_Info);
 }
 
-static void on_reg_state(int acc_index)
+static void on_incoming_call(int acc_id, int call_index,
+			     pjsip_rx_data *rdata)
 {
-    CApp_Instance->Fire_OnRegState(acc_index);
+    CApp_Instance->Fire_OnIncomingCall(call_index);
+}
+
+static void on_reg_state(int acc_id)
+{
+    CApp_Instance->Fire_OnRegState(acc_id);
 }
 
 static void on_buddy_state(int buddy_index)
@@ -512,6 +530,7 @@ STDMETHODIMP CApp::app_init(Pjsua_Config *pConfig, Pj_Status *pStatus)
 
     pj_memset(&cb, 0, sizeof(cb));
     cb.on_call_state = &on_call_state;
+    cb.on_incoming_call = &on_incoming_call;
     cb.on_reg_state = &on_reg_state;
     cb.on_buddy_state = &on_buddy_state;
     cb.on_pager = &on_pager;
@@ -539,13 +558,13 @@ STDMETHODIMP CApp::app_destroy(Pj_Status *retStatus)
 
 STDMETHODIMP CApp::call_get_max_count(int *retCount)
 {
-    *retCount = pjsua_get_max_calls();
+    *retCount = pjsua_call_get_max_count();
     return S_OK;
 }
 
 STDMETHODIMP CApp::call_get_count(int *retCount)
 {
-    *retCount = pjsua_get_call_count();
+    *retCount = pjsua_call_get_count();
     return S_OK;
 }
 
@@ -564,24 +583,23 @@ STDMETHODIMP CApp::call_has_media(int call_index, Pj_Bool *pRet)
 STDMETHODIMP CApp::call_get_info(int call_index, Pjsua_Call_Info *pInfo, Pj_Status *pRet)
 {
     pjsua_call_info info;
-    *pRet = pjsua_get_call_info(call_index, &info);
+    *pRet = pjsua_call_get_info(call_index, &info);
     callinfo2CallInfo(&info, pInfo);
     return S_OK;
 }
 
-STDMETHODIMP CApp::call_make_call(int acc_index, Pj_String dst_uri, int *call_index, Pj_Status *pRet)
+STDMETHODIMP CApp::call_make_call(int acc_id, Pj_String dst_uri, int *call_index, Pj_Status *pRet)
 {
     Temp_Pool tp;
     pj_str_t tmp = Pj_str(tp.get_pool(), dst_uri);
 
-    *pRet = pjsua_make_call(acc_index, &tmp, call_index);
+    *pRet = pjsua_call_make_call(acc_id, &tmp, call_index);
     return S_OK;
 }
 
 STDMETHODIMP CApp::call_answer(int call_index, int status_code, Pj_Status *pRet)
 {
-    pjsua_call_answer(call_index, status_code);
-    *pRet = PJ_SUCCESS;
+    *pRet = pjsua_call_answer(call_index, status_code);
     return S_OK;
 }
 
@@ -601,8 +619,7 @@ STDMETHODIMP CApp::call_set_hold(int call_index, Pj_Status *pRet)
 
 STDMETHODIMP CApp::call_release_hold(int call_index, Pj_Status *pRet)
 {
-    pjsua_call_reinvite(call_index);
-    *pRet = PJ_SUCCESS;
+    *pRet = pjsua_call_reinvite(call_index);
     return S_OK;
 }
 
@@ -610,8 +627,7 @@ STDMETHODIMP CApp::call_xfer(int call_index, Pj_String dst_uri, Pj_Status *pRet)
 {
     Temp_Pool tp;
     pj_str_t tmp = Pj_str(tp.get_pool(), dst_uri);
-    pjsua_call_xfer(call_index, &tmp);
-    *pRet = PJ_SUCCESS;
+    *pRet = pjsua_call_xfer(call_index, &tmp);
     return S_OK;
 }
 
@@ -627,15 +643,13 @@ STDMETHODIMP CApp::call_send_im(int call_index, Pj_String text, Pj_Status *pRet)
 {
     Temp_Pool tp;
     pj_str_t tmp = Pj_str(tp.get_pool(), text);
-    pjsua_call_send_im(call_index, &tmp);
-    *pRet = PJ_SUCCESS;
+    *pRet = pjsua_call_send_im(call_index, &tmp);
     return S_OK;
 }
 
 STDMETHODIMP CApp::call_typing(int call_index, int is_typing, Pj_Status *pRet)
 {
-    pjsua_call_typing(call_index, is_typing);
-    *pRet = PJ_SUCCESS;
+    *pRet = pjsua_call_send_typing_ind(call_index, is_typing);
     return S_OK;
 }
 
@@ -648,7 +662,7 @@ STDMETHODIMP CApp::call_hangup_all()
 STDMETHODIMP CApp::call_get_textstat(int call_index, BSTR *textstat)
 {
     char buf[1024];
-    pjsua_dump_call(call_index, 1, buf, sizeof(buf), "");
+    pjsua_call_dump(call_index, 1, buf, sizeof(buf), "");
 
     OLECHAR wbuf[1024];
     pj_ansi_to_unicode(buf, strlen(buf), wbuf, PJ_ARRAY_SIZE(wbuf));
@@ -663,10 +677,10 @@ STDMETHODIMP CApp::acc_get_count(int *pCount)
     return S_OK;
 }
 
-STDMETHODIMP CApp::acc_get_info(int acc_index, Pjsua_Acc_Info *pInfo, Pj_Status *pRet)
+STDMETHODIMP CApp::acc_get_info(int acc_id, Pjsua_Acc_Info *pInfo, Pj_Status *pRet)
 {
     pjsua_acc_info info;
-    *pRet = pjsua_acc_get_info(acc_index, &info);
+    *pRet = pjsua_acc_get_info(acc_id, &info);
     accinfo2AccInfo(&info, pInfo);
     return S_OK;
 }
@@ -680,15 +694,15 @@ STDMETHODIMP CApp::acc_add(Pjsua_Acc_Config *pConfig, int *pAcc_Index, Pj_Status
     return S_OK;
 }
 
-STDMETHODIMP CApp::acc_set_online_status(int acc_index, int is_online, Pj_Status *pRet)
+STDMETHODIMP CApp::acc_set_online_status(int acc_id, int is_online, Pj_Status *pRet)
 {
-    *pRet = pjsua_acc_set_online_status(acc_index, is_online);
+    *pRet = pjsua_acc_set_online_status(acc_id, is_online);
     return S_OK;
 }
 
-STDMETHODIMP CApp::acc_set_registration(int acc_index, int reg_active, Pj_Status *pRet)
+STDMETHODIMP CApp::acc_set_registration(int acc_id, int reg_active, Pj_Status *pRet)
 {
-    *pRet = pjsua_acc_set_registration(acc_index, reg_active);
+    *pRet = pjsua_acc_set_registration(acc_id, reg_active);
     return S_OK;
 }
 
@@ -717,24 +731,23 @@ STDMETHODIMP CApp::buddy_add(Pj_String uri, int *pBuddy_Index, Pj_Status *pRet)
 STDMETHODIMP CApp::buddy_subscribe_pres(int buddy_index, int subscribe, Pj_Status *pRet)
 {
     *pRet = pjsua_buddy_subscribe_pres(buddy_index, subscribe);
-    pjsua_pres_refresh();
     return S_OK;
 }
 
-STDMETHODIMP CApp::im_send_text(int acc_index, Pj_String dst_uri, Pj_String text, Pj_Status *pRet)
+STDMETHODIMP CApp::im_send_text(int acc_id, Pj_String dst_uri, Pj_String text, Pj_Status *pRet)
 {
     Temp_Pool tp;
     pj_str_t tmp_uri = Pj_str(tp.get_pool(), dst_uri);
     pj_str_t tmp_text = Pj_str(tp.get_pool(), text);
-    *pRet = pjsua_im_send(acc_index, &tmp_uri, &tmp_text);
+    *pRet = pjsua_im_send(acc_id, &tmp_uri, &tmp_text);
     return S_OK;
 }
 
-STDMETHODIMP CApp::im_typing(int acc_index, Pj_URI dst_uri, int is_typing, Pj_Status *pRet)
+STDMETHODIMP CApp::im_typing(int acc_id, Pj_URI dst_uri, int is_typing, Pj_Status *pRet)
 {
     Temp_Pool tp;
     pj_str_t tmp_uri = Pj_str(tp.get_pool(), dst_uri);
-    *pRet = pjsua_im_typing(acc_index, &tmp_uri, is_typing);
+    *pRet = pjsua_im_typing(acc_id, &tmp_uri, is_typing);
     return S_OK;
 }
 
@@ -802,7 +815,7 @@ STDMETHODIMP CApp::app_load_config(Pj_String filename, Pjsua_Config *pConfig, Pj
     Temp_Pool tp;
     pj_str_t tmp = Pj_str(tp.get_pool(), filename);
     pjsua_default_config(&config);
-    *pRet = pjsua_load_settings(tmp.ptr, &config);
+    *pRet = pjsua_load_settings(tmp.ptr, &config, NULL);
     if (*pRet == PJ_SUCCESS)
 	*pRet = config2Config(&config, pConfig);
     return S_OK;
@@ -825,9 +838,11 @@ STDMETHODIMP CApp::app_save_config(Pj_String filename, Pjsua_Config *pConfig, Pj
 
 STDMETHODIMP CApp::app_get_current_config(Pjsua_Config *pConfig)
 {
-    pjsua_config *config;
-    config = (pjsua_config*) pjsua_get_config();
-    return config2Config(config, pConfig);
+    Temp_Pool tp;
+    pjsua_config config;
+
+    pjsua_get_config(tp.get_pool(), &config);
+    return config2Config(&config, pConfig);
 }
 
 STDMETHODIMP CApp::app_get_error_msg(Pj_Status status, BSTR * pRet)
@@ -856,3 +871,195 @@ STDMETHODIMP CApp::app_handle_events(int msec_timeout, int *pEvCount)
     *pEvCount = pjsua_handle_events(msec_timeout);
     return S_OK;
 }
+
+STDMETHODIMP CApp::app_parse_uri(BSTR uriString, Pjsip_Sip_Uri *pSipUri, Pj_Status *pStatus)
+{
+    Temp_Pool tp;
+    pj_str_t tmp = Pj_str(tp.get_pool(), uriString);
+    pjsip_name_addr *addr;
+    char buf[1024];
+    pj_str_t s;
+
+    addr = (pjsip_name_addr*)
+	pjsip_parse_uri(tp.get_pool(), tmp.ptr, tmp.slen, PJSIP_PARSE_URI_AS_NAMEADDR);
+    if (addr == NULL) {
+	*pStatus = PJSIP_EINVALIDURI;
+	return S_OK;
+    }
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(addr) && !PJSIP_URI_SCHEME_IS_SIPS(addr)) {
+	*pStatus = PJSIP_EINVALIDSCHEME;
+	return S_OK;
+    }
+
+    pjsip_sip_uri *sip = (pjsip_sip_uri*)addr->uri;
+
+    Cp2(&pSipUri->display, &addr->display);
+    Cp2(&pSipUri->user, &sip->user);
+    Cp2(&pSipUri->passwd, &sip->passwd);
+    Cp2(&pSipUri->host, &sip->host);
+    pSipUri->port = sip->port;
+    Cp2(&pSipUri->param_user, &sip->user_param);
+    Cp2(&pSipUri->param_method, &sip->method_param);
+    Cp2(&pSipUri->param_transport, &sip->transport_param);
+    pSipUri->param_ttl = sip->ttl_param;
+    pSipUri->param_lr = sip->lr_param;
+    Cp2(&pSipUri->param_maddr, &sip->maddr_param);
+
+    s.ptr = buf;
+    s.slen = pjsip_param_print_on(&sip->other_param, buf, sizeof(buf), 
+				  &pjsip_PARAM_CHAR_SPEC, &pjsip_PARAM_CHAR_SPEC, ';');
+    Cp2(&pSipUri->param_other, &s);
+
+    s.slen = pjsip_param_print_on(&sip->header_param, buf, sizeof(buf), 
+				  &pjsip_HDR_CHAR_SPEC, &pjsip_HDR_CHAR_SPEC, '?');
+    Cp2(&pSipUri->param_header, &s);
+
+    *pStatus = PJ_SUCCESS;
+    return S_OK;
+}
+
+STDMETHODIMP CApp::app_print_uri(Pjsip_Sip_Uri *pSipURI, Pjsip_Uri_Context context, BSTR *uriText)
+{
+    Temp_Pool tp;
+    pjsip_name_addr *addr;
+    pj_str_t tmp;
+    char buf[1024];
+    pjsip_sip_uri *sip;
+
+    addr = pjsip_name_addr_create(tp.get_pool());
+    sip = pjsip_sip_uri_create(tp.get_pool(), PJ_FALSE);
+    addr->uri = (pjsip_uri*)sip;
+
+    addr->display = Pj_str(tp.get_pool(), pSipURI->display);
+    sip->user = Pj_str(tp.get_pool(), pSipURI->user);
+    sip->passwd = Pj_str(tp.get_pool(), pSipURI->passwd);
+    sip->host = Pj_str(tp.get_pool(), pSipURI->host);
+    sip->port = pSipURI->port;
+    sip->user_param = Pj_str(tp.get_pool(), pSipURI->param_user);
+    sip->method_param = Pj_str(tp.get_pool(), pSipURI->param_method);
+    sip->transport_param = Pj_str(tp.get_pool(), pSipURI->param_transport);
+    sip->ttl_param = pSipURI->param_ttl;
+    sip->lr_param = pSipURI->param_lr;
+    sip->maddr_param = Pj_str(tp.get_pool(), pSipURI->param_maddr);
+    
+    /* Unfortunately can't transport params yet (no parsing function) */
+
+    tmp.ptr = buf;
+    tmp.slen = pjsip_uri_print((pjsip_uri_context_e)context, addr, buf, sizeof(buf));
+
+    Cp2(uriText, &tmp);
+    return S_OK;
+}
+
+STDMETHODIMP CApp::app_compare_uri_string(Pjsip_Uri_Context context, BSTR uri1, BSTR uri2, Pj_Status *pStatus)
+{
+    Temp_Pool tp;
+
+    pj_str_t tmp_uri1 = Pj_str(tp.get_pool(), uri1);
+    pj_str_t tmp_uri2 = Pj_str(tp.get_pool(), uri2);
+
+    pjsip_uri *u1, *u2;
+
+    u1 = pjsip_parse_uri(tp.get_pool(), tmp_uri1.ptr, tmp_uri1.slen, PJSIP_PARSE_URI_AS_NAMEADDR);
+    if (u1 == NULL) {
+	*pStatus = PJSIP_EINVALIDURI;
+	return S_OK;
+    }
+
+    u2 = pjsip_parse_uri(tp.get_pool(), tmp_uri2.ptr, tmp_uri2.slen, PJSIP_PARSE_URI_AS_NAMEADDR);
+    if (u2 == NULL) {
+	*pStatus = PJSIP_EINVALIDURI;
+	return S_OK;
+    }
+    
+    *pStatus = pjsip_uri_cmp((pjsip_uri_context_e)context, u1, u2);
+    return S_OK;
+}
+
+STDMETHODIMP CApp::buddy_del(int buddy_index, Pj_Status *pRet)
+{
+    *pRet = pjsua_buddy_del(buddy_index);
+    return S_OK;
+}
+
+STDMETHODIMP CApp::acc_del(int acc_id, Pj_Status *pRet)
+{
+    *pRet = pjsua_acc_del(acc_id);
+    return S_OK;
+}
+
+STDMETHODIMP CApp::acc_find_for_outgoing(BSTR url, int *acc_id)
+{
+    Temp_Pool tp;
+
+    pj_str_t tmp_uri = Pj_str(tp.get_pool(), url);
+
+    *acc_id = pjsua_acc_find_for_outgoing(&tmp_uri);
+
+    return S_OK;
+}
+
+STDMETHODIMP CApp::acc_enum_id(SAFEARRAY **accIdArray)
+{
+    int id[32];
+    unsigned count = PJ_ARRAY_SIZE(id);
+    unsigned i;
+
+    pjsua_acc_enum_id(id, &count);
+
+    *accIdArray = SafeArrayCreateVector(VT_INT, 0, count);
+
+    for (i=0; i<count; ++i) {
+	long rg = i;
+	SafeArrayPutElement(*accIdArray, &rg, &id[i]);
+    }
+
+    return S_OK;
+}
+
+STDMETHODIMP CApp::conf_enum_ports(SAFEARRAY **pPortsArray)
+{
+    int id[128];
+    unsigned count = PJ_ARRAY_SIZE(id);
+    unsigned i;
+
+    pjsua_conf_enum_port_ids(id, &count);
+
+    *pPortsArray = SafeArrayCreateVector(VT_INT, 0, count);
+
+    for (i=0; i<count; ++i) {
+	long rg = i;
+	SafeArrayPutElement(*pPortsArray, &rg, &id[i]);
+    }
+
+    return S_OK;
+}
+
+STDMETHODIMP CApp::conf_get_port_info(int port_id, Pjsua_Conf_Port_Info *pInfo, Pj_Status *pRet)
+{
+    unsigned i;
+    pjsua_conf_port_info info;
+
+    *pRet = pjsua_conf_get_port_info(port_id, &info);
+    if (*pRet != PJ_SUCCESS)
+	return S_OK;
+
+    pInfo->slot_id = info.slot_id;
+    Cp2(&pInfo->name, &info.name);
+    pInfo->clock_rate = info.clock_rate;
+    pInfo->channel_count = info.channel_count;
+    pInfo->samples_per_frame = info.samples_per_frame;
+    pInfo->bits_per_sample = info.bits_per_sample;
+    
+
+    pInfo->listeners = SafeArrayCreateVector(VT_INT, 0, info.listener_cnt);
+
+    for (i=0; i<info.listener_cnt; ++i) {
+	long rg = i;
+	SafeArrayPutElement(pInfo->listeners, &rg, &info.listeners[i]);
+    }
+
+    return S_OK;
+}
+

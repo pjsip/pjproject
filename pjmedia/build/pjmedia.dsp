@@ -303,6 +303,10 @@ SOURCE=..\include\pjmedia\sound_port.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\splitcomb.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\stream.h
 # End Source File
 # Begin Source File

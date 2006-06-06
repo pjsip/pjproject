@@ -55,6 +55,7 @@ PJ_DEF(void) pjsua_default_config(pjsua_config *cfg)
     cfg->media_thread_cnt = 1;
     cfg->udp_port = 5060;
     cfg->start_rtp_port = 4000;
+    cfg->msg_logging = PJ_TRUE;
     cfg->max_calls = 4;
     cfg->conf_ports = 0;
 
@@ -721,6 +722,8 @@ static void copy_acc_config(pj_pool_t *pool,
 {
     unsigned j;
 
+    pj_memcpy(dst_acc, src_acc, sizeof(pjsua_acc_config));
+
     pj_strdup_with_null(pool, &dst_acc->id, &src_acc->id);
     pj_strdup_with_null(pool, &dst_acc->reg_uri, &src_acc->reg_uri);
     pj_strdup_with_null(pool, &dst_acc->contact, &src_acc->contact);
@@ -742,7 +745,7 @@ static void copy_acc_config(pj_pool_t *pool,
 /*
  * Copy configuration.
  */
-static void copy_config(pj_pool_t *pool, pjsua_config *dst, 
+void pjsua_copy_config( pj_pool_t *pool, pjsua_config *dst, 
 			const pjsua_config *src)
 {
     unsigned i;
@@ -761,7 +764,7 @@ static void copy_config(pj_pool_t *pool, pjsua_config *dst,
     }
 
     pj_strdup_with_null(pool, &dst->outbound_proxy, &src->outbound_proxy);
-    pj_strdup_with_null(pool, &dst->uri_to_call, &src->uri_to_call);
+    //pj_strdup_with_null(pool, &dst->uri_to_call, &src->uri_to_call);
 
     for (i=0; i<src->acc_cnt; ++i) {
 	pjsua_acc_config *dst_acc = &dst->acc_config[i];
@@ -813,6 +816,10 @@ static pj_status_t logging_init()
 	}
     }
 
+    /* Enable SIP message logging */
+    if (pjsua.config.msg_logging)
+	pjsip_endpt_register_module(pjsua.endpt, &pjsua_msg_logger);
+
     return PJ_SUCCESS;
 }
 
@@ -863,7 +870,7 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *cfg,
     }
 
     /* Copy configuration */
-    copy_config(pjsua.pool, &pjsua.config, cfg);
+    pjsua_copy_config(pjsua.pool, &pjsua.config, cfg);
 
     /* Copy callback */
     pj_memcpy(&pjsua.cb, cb, sizeof(pjsua_callback));
@@ -1026,7 +1033,7 @@ on_error:
 /*
  * Find account for incoming request.
  */
-int pjsua_find_account_for_incoming(pjsip_rx_data *rdata)
+PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 {
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
@@ -1034,11 +1041,11 @@ int pjsua_find_account_for_incoming(pjsip_rx_data *rdata)
 
     uri = rdata->msg_info.to->uri;
 
-    /* Just return last account if To URI is not SIP: */
+    /* Just return default account if To URI is not SIP: */
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
 	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
     {
-	return pjsua.config.acc_cnt;
+	return pjsua.default_acc;
     }
 
 
@@ -1068,20 +1075,60 @@ int pjsua_find_account_for_incoming(pjsip_rx_data *rdata)
 	}
     }
 
-    /* Still no match, just return last account */
-    return pjsua.config.acc_cnt;
+    /* Still no match, use default account */
+    return pjsua.default_acc;
 }
 
 
 /*
  * Find account for outgoing request.
  */
-int pjsua_find_account_for_outgoing(const pj_str_t *url)
+PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *str_url)
 {
-    PJ_UNUSED_ARG(url);
+    pj_str_t tmp;
+    pjsip_uri *uri;
+    pjsip_sip_uri *sip_uri;
+    unsigned i;
 
-    /* Just use account #0 */
-    return 0;
+    pj_strdup_with_null(pjsua.pool, &tmp, str_url);
+
+    uri = pjsip_parse_uri(pjsua.pool, tmp.ptr, tmp.slen, 0);
+    if (!uri)
+	return pjsua.config.acc_cnt-1;
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+    {
+	/* Return the first account with proxy */
+	for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
+	    if (!pjsua.acc[i].valid)
+		continue;
+	    if (pjsua.config.acc_config[i].proxy.slen)
+		break;
+	}
+
+	if (i != PJ_ARRAY_SIZE(pjsua.acc))
+	    return i;
+
+	/* Not found, use default account */
+	return pjsua.default_acc;
+    }
+
+    sip_uri = pjsip_uri_get_uri(uri);
+
+    /* Find matching domain */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
+	if (!pjsua.acc[i].valid)
+	    continue;
+	if (pj_stricmp(&pjsua.acc[i].host_part, &sip_uri->host)==0)
+	    break;
+    }
+
+    if (i != PJ_ARRAY_SIZE(pjsua.acc))
+	return i;
+
+    /* Just use default account */
+    return pjsua.default_acc;
 }
 
 
@@ -1192,6 +1239,10 @@ static pj_status_t init_acc(unsigned acc_index)
 	pj_list_push_back(&acc->route_set, r);
     }
 
+    /* Mark account as valid */
+    pjsua.acc[acc_index].valid = PJ_TRUE;
+
+
     return PJ_SUCCESS;
 }
 
@@ -1199,29 +1250,59 @@ static pj_status_t init_acc(unsigned acc_index)
  * Add a new account.
  */
 PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
-				   int *acc_index)
+				   pjsua_acc_id *acc_index)
 {
+    unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pjsua.config.acc_cnt<PJ_ARRAY_SIZE(pjsua.config.acc_config),
+    PJ_ASSERT_RETURN(pjsua.config.acc_cnt < 
+			PJ_ARRAY_SIZE(pjsua.config.acc_config),
 		     PJ_ETOOMANY);
 
-    copy_acc_config(pjsua.pool, &pjsua.config.acc_config[pjsua.config.acc_cnt], cfg);
+    /* Find empty account index. */
+    for (index=0; index < PJ_ARRAY_SIZE(pjsua.acc); ++index) {
+	if (pjsua.acc[index].valid == PJ_FALSE)
+	    break;
+    }
+
+    /* Expect to find a slot */
+    PJ_ASSERT_RETURN(index < PJ_ARRAY_SIZE(pjsua.acc), PJ_EBUG);
+
+    copy_acc_config(pjsua.pool, &pjsua.config.acc_config[index], cfg);
     
-    status = init_acc(pjsua.config.acc_cnt);
+    status = init_acc(index);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error adding account", status);
 	return status;
     }
 
     if (acc_index)
-	*acc_index = pjsua.config.acc_cnt;
+	*acc_index = index;
 
     pjsua.config.acc_cnt++;
 
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Delete account.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_index)
+{
+    PJ_ASSERT_RETURN(acc_index < (int)pjsua.config.acc_cnt, 
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua.acc[acc_index].valid, PJ_EINVALIDOP);
+
+    /* Delete registration */
+    if (pjsua.acc[acc_index].regc != NULL) 
+	pjsua_acc_set_registration(acc_index, PJ_FALSE);
+
+    /* Invalidate */
+    pjsua.acc[acc_index].valid = PJ_FALSE;
+
+    return PJ_SUCCESS;
+}
 
 
 /*
@@ -1266,7 +1347,7 @@ PJ_DEF(pj_status_t) pjsua_start(void)
 	pj_str_t tmp, id;
 
 	tmp.ptr = buf;
-	tmp.slen = pj_ansi_sprintf(tmp.ptr, "<sip:%s:%d>", 
+	tmp.slen = pj_ansi_sprintf(tmp.ptr, "Local <sip:%s:%d>", 
 				   pjsua.config.sip_host.ptr,
 				   pjsua.config.sip_port);
 	pj_strdup_with_null( pjsua.pool, &id, &tmp);
@@ -1283,6 +1364,17 @@ PJ_DEF(pj_status_t) pjsua_start(void)
     }
     
 
+    /* Add another account as the last one. 
+     * This account corresponds to local endpoint, and is user-less.
+     * This is also the default account.
+     */
+    if (pjsua.config.acc_cnt < PJ_ARRAY_SIZE(pjsua.config.acc_config)) {
+	pjsua.default_acc = pjsua.config.acc_cnt;
+	pjsua.acc[pjsua.default_acc].auto_gen = 1;
+	pjsua.config.acc_cnt++;
+    }
+
+
     /* Initialize accounts: */
     for (i=0; i<(int)pjsua.config.acc_cnt; ++i) {
 	status = init_acc(i);
@@ -1291,7 +1383,6 @@ PJ_DEF(pj_status_t) pjsua_start(void)
 	    goto on_error;
 	}
     }
-
 
 
     /* Create worker thread(s), if required: */
@@ -1333,6 +1424,9 @@ PJ_DEF(pj_status_t) pjsua_start(void)
     }
 
 
+    /* Refresh presence */
+    pjsua_pres_refresh();
+
 
     PJ_LOG(3,(THIS_FILE, "PJSUA version %s started", PJ_VERSION));
     return PJ_SUCCESS;
@@ -1368,22 +1462,55 @@ PJ_DEF(unsigned) pjsua_conf_max_ports(void)
 
 
 /**
- * Enum all conference ports.
+ * Enum all conference port ID.
  */
-PJ_DEF(pj_status_t) pjsua_conf_enum_ports( unsigned *count,
-					   pjmedia_conf_port_info info[])
+PJ_DEF(pj_status_t) pjsua_conf_enum_port_ids( pjsua_conf_port_id id[],
+					      unsigned *count)
 {
-    return pjmedia_conf_get_ports_info(pjsua.mconf, count, info);
+    return pjmedia_conf_enum_ports( pjsua.mconf, (unsigned*)id, count);
 }
 
 
+
+/**
+ * Get information about the specified conference port
+ */
+PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
+					      pjsua_conf_port_info *info)
+{
+    pjmedia_conf_port_info cinfo;
+    unsigned i, count;
+    pj_status_t status;
+
+    status = pjmedia_conf_get_port_info( pjsua.mconf, id, &cinfo);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_memset(info, 0, sizeof(*info));
+    info->slot_id = id;
+    info->name = cinfo.name;
+    info->clock_rate = cinfo.clock_rate;
+    info->channel_count = cinfo.channel_count;
+    info->samples_per_frame = cinfo.samples_per_frame;
+    info->bits_per_sample = cinfo.bits_per_sample;
+
+    /* Build array of listeners */
+    count = pjsua.config.conf_ports;
+    for (i=0; i<count; ++i) {
+	if (cinfo.listener[i]) {
+	    info->listeners[info->listener_cnt++] = i;
+	}
+    }
+
+    return PJ_SUCCESS;
+}
 
 
 /**
  * Connect conference port.
  */
-PJ_DEF(pj_status_t) pjsua_conf_connect( unsigned src_port,
-					unsigned dst_port)
+PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id src_port,
+					pjsua_conf_port_id dst_port)
 {
     return pjmedia_conf_connect_port(pjsua.mconf, src_port, dst_port, 0);
 }
@@ -1392,8 +1519,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( unsigned src_port,
 /**
  * Connect conference port connection.
  */
-PJ_DEF(pj_status_t) pjsua_conf_disconnect( unsigned src_port,
-					   unsigned dst_port)
+PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id src_port,
+					   pjsua_conf_port_id dst_port)
 {
     return pjmedia_conf_disconnect_port(pjsua.mconf, src_port, dst_port);
 }
@@ -1434,7 +1561,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pjsua.player[pjsua.player_cnt].port = port;
     pjsua.player[pjsua.player_cnt].slot = slot;
 
-    if (*id)
+    if (id)
 	*id = pjsua.player_cnt;
 
     ++pjsua.player_cnt;
@@ -1446,7 +1573,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 /**
  * Get conference port associated with player.
  */
-PJ_DEF(int) pjsua_player_get_conf_port(pjsua_player_id id)
+PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 {
     PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.player), PJ_EINVAL);
     return pjsua.player[id].slot;
@@ -1530,7 +1657,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 /**
  * Get conference port associated with recorder.
  */
-PJ_DEF(int) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
+PJ_DEF(pjsua_conf_port_id) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
 {
     PJ_ASSERT_RETURN(id>=0 && id < PJ_ARRAY_SIZE(pjsua.recorder), PJ_EINVAL);
     return pjsua.recorder[id].slot;

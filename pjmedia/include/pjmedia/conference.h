@@ -46,7 +46,9 @@ typedef struct pjmedia_conf_port_info
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
     pj_bool_t	       *listener;	    /**< Array of listeners.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
+    unsigned		channel_count;	    /**< Number of channels.	    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */
+    unsigned		bits_per_sample;    /**< Bits per sample.	    */
     int			tx_adj_level;	    /**< Tx level adjustment.	    */
     int			rx_adj_level;	    /**< Rx level adjustment.	    */
 } pjmedia_conf_port_info;
@@ -251,6 +253,22 @@ PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 					       unsigned slot );
 
+
+
+/**
+ * Enumerate occupied ports in the bridge.
+ *
+ * @param conf		The conference bridge.
+ * @param ports		Array of port numbers to be filled in.
+ * @param count		On input, specifies the maximum number of ports
+ *			in the array. On return, it will be filled with
+ *			the actual number of ports.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
+					      unsigned ports[],
+					      unsigned *count );
 
 
 /**

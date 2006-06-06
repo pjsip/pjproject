@@ -185,6 +185,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_str_t from, to;
     pjsip_accept_hdr *accept_hdr;
+    pjsip_contact_hdr *contact_hdr;
     pjsip_msg *msg;
     pj_status_t status;
 
@@ -221,11 +222,23 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
     status = pjsip_endpt_respond( pjsua.endpt, NULL, rdata, 200, NULL,
 				  NULL, NULL, NULL);
 
-    /* Build the From text. */
+    /* For the source URI, we use Contact header if present, since
+     * Contact header contains the port number information. If this is
+     * not available, then use From header.
+     */
     from.ptr = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-    from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
-				rdata->msg_info.from->uri,
-				from.ptr, PJSIP_MAX_URL_SIZE);
+    contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg,
+				     PJSIP_H_CONTACT, NULL);
+    if (contact_hdr) {
+	from.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+				    contact_hdr->uri, 
+				    from.ptr, PJSIP_MAX_URL_SIZE);
+    } else {
+	from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
+				    rdata->msg_info.from->uri,
+				    from.ptr, PJSIP_MAX_URL_SIZE);
+    }
+
     if (from.slen < 1)
 	from = pj_str("<--URI is too long-->");
 
@@ -336,6 +349,7 @@ PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const pj_str_t *dst_uri,
 PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const pj_str_t *dst_uri, 
 				    pj_bool_t is_typing)
 {
+    const pj_str_t STR_CONTACT = { "Contact", 7 };
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -348,6 +362,18 @@ PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const pj_str_t *dst_uri,
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;
     }
+
+
+    /* Add accept header. */
+    pjsip_msg_add_hdr( tdata->msg, 
+		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
+
+
+    /* Add contact. */
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
+	pjsip_generic_string_hdr_create(tdata->pool, 
+					&STR_CONTACT,
+					&pjsua.config.acc_config[acc_index].contact));
 
 
     /* Create "application/im-iscomposing+xml" msg body. */

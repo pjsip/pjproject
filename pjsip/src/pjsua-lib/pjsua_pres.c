@@ -97,7 +97,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Incoming SUBSCRIBE: */
 
     /* Find which account for the incoming request. */
-    acc_index = pjsua_find_account_for_incoming(rdata);
+    acc_index = pjsua_acc_find_for_incoming(rdata);
     acc_config = &pjsua.config.acc_config[acc_index];
 
     /* Create UAS dialog: */
@@ -310,7 +310,8 @@ static void subscribe_buddy_presence(unsigned index)
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    acc_index = pjsua.buddies[index].acc_index;
+    acc_index = pjsua_acc_find_for_outgoing(&pjsua.config.buddy_uri[index]);
+
     acc_config = &pjsua.config.acc_config[acc_index];
 
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
@@ -439,12 +440,13 @@ PJ_DEF(unsigned) pjsua_get_buddy_count(void)
 /**
  * Get buddy info.
  */
-PJ_DEF(pj_status_t) pjsua_buddy_get_info(unsigned index,
+PJ_DEF(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id index,
 					 pjsua_buddy_info *info)
 {
     pjsua_buddy *buddy;
 
-    PJ_ASSERT_RETURN(index < pjsua.config.buddy_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index < (int)PJ_ARRAY_SIZE(pjsua.config.buddy_uri), 
+		     PJ_EINVAL);
 
     pj_memset(info, 0, sizeof(pjsua_buddy_info));
 
@@ -471,7 +473,6 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info(unsigned index,
 	info->status_text = pj_str("Offline");
     }
 
-    info->acc_index = buddy->acc_index;
     return PJ_SUCCESS;
 }
 
@@ -480,17 +481,27 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info(unsigned index,
  * Add new buddy.
  */
 PJ_DEF(pj_status_t) pjsua_buddy_add( const pj_str_t *uri,
-				     int *buddy_index)
+				     pjsua_buddy_id *buddy_index)
 {
     pjsip_name_addr *url;
     pjsip_sip_uri *sip_uri;
     int index;
     pj_str_t tmp;
 
-    PJ_ASSERT_RETURN(pjsua.config.buddy_cnt <= PJ_ARRAY_SIZE(pjsua.config.buddy_uri),
+    PJ_ASSERT_RETURN(pjsua.config.buddy_cnt <= 
+			PJ_ARRAY_SIZE(pjsua.config.buddy_uri),
 		     PJ_ETOOMANY);
 
-    index = pjsua.config.buddy_cnt;
+    /* Find empty slot */
+    for (index=0; index<PJ_ARRAY_SIZE(pjsua.config.buddy_uri); ++index) {
+	if (pjsua.config.buddy_uri[index].slen == 0)
+	    break;
+    }
+
+    /* Expect to find an empty slot */
+    PJ_ASSERT_RETURN(index < PJ_ARRAY_SIZE(pjsua.config.buddy_uri),
+		     PJ_ETOOMANY);
+
 
     /* Get name and display name for buddy */
     pj_strdup_with_null(pjsua.pool, &tmp, uri);
@@ -511,10 +522,6 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pj_str_t *uri,
     if (pjsua.buddies[index].port == 0)
 	pjsua.buddies[index].port = 5060;
 
-    /* Find account for outgoing preence subscription */
-    pjsua.buddies[index].acc_index = 
-	pjsua_find_account_for_outgoing(&pjsua.config.buddy_uri[index]);
-
     if (buddy_index)
 	*buddy_index = index;
 
@@ -525,24 +532,52 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pj_str_t *uri,
 
 
 
-PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( unsigned index,
-						pj_bool_t monitor)
+/**
+ * Delete buddy.
+ */
+PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id index)
 {
-    pjsua_buddy *buddy;
+    PJ_ASSERT_RETURN(index < (int)PJ_ARRAY_SIZE(pjsua.config.buddy_uri), 
+		     PJ_EINVAL);
 
-    PJ_ASSERT_RETURN(index < pjsua.config.buddy_cnt, PJ_EINVAL);
+    if (pjsua.config.buddy_uri[index].slen == 0)
+	return PJ_SUCCESS;
 
-    buddy = &pjsua.buddies[index];
-    buddy->monitor = monitor;
+    /* Unsubscribe presence */
+    pjsua_buddy_subscribe_pres(index, PJ_FALSE);
+
+    /* Remove buddy */
+    pjsua.config.buddy_uri[index].slen = 0;
+    pjsua.config.buddy_cnt--;
+
     return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_status_t) pjsua_acc_set_online_status( unsigned acc_index,
+PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id index,
+						pj_bool_t monitor)
+{
+    pjsua_buddy *buddy;
+
+    PJ_ASSERT_RETURN(index < (int)PJ_ARRAY_SIZE(pjsua.config.buddy_uri),
+		     PJ_EINVAL);
+
+    buddy = &pjsua.buddies[index];
+    buddy->monitor = monitor;
+    pjsua_pres_refresh();
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsua_acc_set_online_status( pjsua_acc_id acc_index,
 						 pj_bool_t is_online)
 {
-    PJ_ASSERT_RETURN(acc_index < pjsua.config.acc_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(acc_index < (int)PJ_ARRAY_SIZE(pjsua.acc), 
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua.acc[acc_index].valid, PJ_EINVALIDOP);
+
     pjsua.acc[acc_index].online_status = is_online;
+    pjsua_pres_refresh();
     return PJ_SUCCESS;
 }
 

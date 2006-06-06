@@ -36,7 +36,7 @@ static pj_bool_t find_next_call(void)
 {
     int i, max;
 
-    max = pjsua_get_max_calls();
+    max = pjsua_call_get_max_count();
     for (i=current_call+1; i<max; ++i) {
 	if (pjsua_call_is_active(i)) {
 	    current_call = i;
@@ -63,7 +63,7 @@ static pj_bool_t find_prev_call(void)
 {
     int i, max;
 
-    max = pjsua_get_max_calls();
+    max = pjsua_call_get_max_count();
     for (i=current_call-1; i>=0; --i) {
 	if (pjsua_call_is_active(i)) {
 	    current_call = i;
@@ -93,14 +93,14 @@ static void console_on_call_state(int call_index, pjsip_event *e)
 
     PJ_UNUSED_ARG(e);
 
-    pjsua_get_call_info(call_index, &call_info);
+    pjsua_call_get_info(call_index, &call_info);
 
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
 		  call_index,
-		  call_info.cause,
-		  call_info.cause_text.ptr));
+		  call_info.last_status,
+		  call_info.last_status_text.ptr));
 
 	if ((int)call_index == current_call) {
 	    find_next_call();
@@ -385,31 +385,32 @@ static void ui_input_url(const char *title, char *buf, int len,
 static void conf_list(void)
 {
     unsigned i, count;
-    pjmedia_conf_port_info info[PJSUA_MAX_CALLS];
+    pjsua_conf_port_id id[PJSUA_MAX_CALLS];
 
     printf("Conference ports:\n");
 
-    count = PJ_ARRAY_SIZE(info);
-    pjsua_conf_enum_ports(&count, info);
+    count = PJ_ARRAY_SIZE(id);
+    pjsua_conf_enum_port_ids(id, &count);
+
     for (i=0; i<count; ++i) {
 	char txlist[PJSUA_MAX_CALLS*4+10];
-	int j;
-	pjmedia_conf_port_info *port_info = &info[i];	
-	
+	unsigned j;
+	pjsua_conf_port_info info;
+
+	pjsua_conf_get_port_info(id[i], &info);
+
 	txlist[0] = '\0';
-	for (j=0; j<(int)count; ++j) {
+	for (j=0; j<info.listener_cnt; ++j) {
 	    char s[10];
-	    if (port_info->listener[j]) {
-		pj_ansi_sprintf(s, "#%d ", j);
-		pj_ansi_strcat(txlist, s);
-	    }
+	    pj_ansi_sprintf(s, "#%d ", info.listeners[j]);
+	    pj_ansi_strcat(txlist, s);
 	}
 	printf("Port #%02d[%2dKHz/%dms] %20.*s  transmitting to: %s\n", 
-	       port_info->slot, 
-	       port_info->clock_rate/1000,
-	       port_info->samples_per_frame * 1000 / port_info->clock_rate,
-	       (int)port_info->name.slen, 
-	       port_info->name.ptr,
+	       info.slot_id, 
+	       info.clock_rate/1000,
+	       info.samples_per_frame * 1000 / info.clock_rate,
+	       (int)info.name.slen, 
+	       info.name.ptr,
 	       txlist);
 
     }
@@ -417,7 +418,7 @@ static void conf_list(void)
 }
 
 
-void pjsua_console_app_main(void)
+void pjsua_console_app_main(const pj_str_t *uri_to_call)
 {
     char menuin[10];
     char buf[128];
@@ -431,9 +432,8 @@ void pjsua_console_app_main(void)
 
 
     /* If user specifies URI to call, then call the URI */
-    if (pjsua_get_config()->uri_to_call.slen) {
-	pjsua_make_call( current_acc, &pjsua_get_config()->uri_to_call, 
-			 NULL);
+    if (uri_to_call->slen) {
+	pjsua_call_make_call( current_acc, uri_to_call, NULL);
     }
 
     keystroke_help();
@@ -449,7 +449,8 @@ void pjsua_console_app_main(void)
 
 	case 'm':
 	    /* Make call! : */
-	    printf("(You currently have %d calls)\n", pjsua_get_call_count());
+	    printf("(You currently have %d calls)\n", 
+		     pjsua_call_get_count());
 	    
 	    uri = NULL;
 	    ui_input_url("Make call", buf, sizeof(buf), &result);
@@ -469,12 +470,13 @@ void pjsua_console_app_main(void)
 	    }
 	    
 	    tmp = pj_str(uri);
-	    pjsua_make_call( current_acc, &tmp, NULL);
+	    pjsua_call_make_call( current_acc, &tmp, NULL);
 	    break;
 
 	case 'M':
 	    /* Make multiple calls! : */
-	    printf("(You currently have %d calls)\n", pjsua_get_call_count());
+	    printf("(You currently have %d calls)\n", 
+		   pjsua_call_get_count());
 	    
 	    if (!simple_input("Number of calls", menuin, sizeof(menuin)))
 		continue;
@@ -500,7 +502,7 @@ void pjsua_console_app_main(void)
 		pj_status_t status;
 	    
 		tmp = pj_str(uri);
-		status = pjsua_make_call(current_acc, &tmp, NULL);
+		status = pjsua_call_make_call(current_acc, &tmp, NULL);
 		if (status != PJ_SUCCESS)
 		    break;
 	    }
@@ -540,7 +542,7 @@ void pjsua_console_app_main(void)
 
 	    /* Send typing indication. */
 	    if (i != -1)
-		pjsua_call_typing(i, PJ_TRUE);
+		pjsua_call_send_typing_ind(i, PJ_TRUE);
 	    else {
 		pj_str_t tmp_uri = pj_str(uri);
 		pjsua_im_typing(current_acc, &tmp_uri, PJ_TRUE);
@@ -553,7 +555,7 @@ void pjsua_console_app_main(void)
 		 * Send typing notification too, saying we're not typing.
 		 */
 		if (i != -1)
-		    pjsua_call_typing(i, PJ_FALSE);
+		    pjsua_call_send_typing_ind(i, PJ_FALSE);
 		else {
 		    pj_str_t tmp_uri = pj_str(uri);
 		    pjsua_im_typing(current_acc, &tmp_uri, PJ_FALSE);
@@ -576,7 +578,7 @@ void pjsua_console_app_main(void)
 	case 'a':
 
 	    if (current_call != -1) {
-		pjsua_get_call_info(current_call, &call_info);
+		pjsua_call_get_info(current_call, &call_info);
 	    } else {
 		/* Make compiler happy */
 		call_info.active = 0;
@@ -650,7 +652,7 @@ void pjsua_console_app_main(void)
 
 	    if (current_call != -1) {
 		
-		pjsua_get_call_info(current_call, &call_info);
+		pjsua_call_get_info(current_call, &call_info);
 		PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s", 
 			  (int)call_info.remote_info.slen, 
 			  call_info.remote_info.ptr));
@@ -781,8 +783,6 @@ void pjsua_console_app_main(void)
 		    pjsua_buddy_subscribe_pres(result.nb_result-1, (menuin[0]=='s'));
 		}
 
-		pjsua_pres_refresh();
-
 	    } else if (result.uri_result) {
 		puts("Sorry, can only subscribe to buddy's presence, "
 		     "not arbitrary URL (for now)");
@@ -814,7 +814,6 @@ void pjsua_console_app_main(void)
 	    printf("Setting %s online status to %s\n",
 		   acc_info.acc_id.ptr,
 		   (acc_info.online_status?"online":"offline"));
-	    pjsua_pres_refresh();
 	    break;
 
 	case 'c':
@@ -897,80 +896,6 @@ on_exit:
 
 
 /*****************************************************************************
- * This is a very simple PJSIP module, whose sole purpose is to display
- * incoming and outgoing messages to log. This module will have priority
- * higher than transport layer, which means:
- *
- *  - incoming messages will come to this module first before reaching
- *    transaction layer.
- *
- *  - outgoing messages will come to this module last, after the message
- *    has been 'printed' to contiguous buffer by transport layer and
- *    appropriate transport instance has been decided for this message.
- *
- */
-
-/* Notification on incoming messages */
-static pj_bool_t console_on_rx_msg(pjsip_rx_data *rdata)
-{
-    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
-			 "%s\n"
-			 "--end msg--",
-			 rdata->msg_info.len,
-			 pjsip_rx_data_get_info(rdata),
-			 rdata->pkt_info.src_name,
-			 rdata->pkt_info.src_port,
-			 rdata->msg_info.msg_buf));
-    
-    /* Always return false, otherwise messages will not get processed! */
-    return PJ_FALSE;
-}
-
-/* Notification on outgoing messages */
-static pj_status_t console_on_tx_msg(pjsip_tx_data *tdata)
-{
-    
-    /* Important note:
-     *	tp_info field is only valid after outgoing messages has passed
-     *	transport layer. So don't try to access tp_info when the module
-     *	has lower priority than transport layer.
-     */
-
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
-			 "%s\n"
-			 "--end msg--",
-			 (tdata->buf.cur - tdata->buf.start),
-			 pjsip_tx_data_get_info(tdata),
-			 tdata->tp_info.dst_name,
-			 tdata->tp_info.dst_port,
-			 tdata->buf.start));
-
-    /* Always return success, otherwise message will not get sent! */
-    return PJ_SUCCESS;
-}
-
-/* The module instance. */
-pjsip_module pjsua_console_app_msg_logger = 
-{
-    NULL, NULL,				/* prev, next.		*/
-    { "mod-pjsua-log", 13 },		/* Name.		*/
-    -1,					/* Id			*/
-    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    &console_on_rx_msg,			/* on_rx_request()	*/
-    &console_on_rx_msg,			/* on_rx_response()	*/
-    &console_on_tx_msg,			/* on_tx_request.	*/
-    &console_on_tx_msg,			/* on_tx_response()	*/
-    NULL,				/* on_tsx_state()	*/
-
-};
-
-
-
-/*****************************************************************************
  * Error display:
  */
 
@@ -992,7 +917,8 @@ void pjsua_perror(const char *sender, const char *title,
 pjsua_callback console_callback = 
 {
     &console_on_call_state,
-    NULL,   /* default accept transfer */
+    NULL,   /* on_incoming_call		*/
+    NULL,   /* default accept transfer	*/
     &console_on_reg_state,
     &console_on_buddy_state,
     &console_on_pager,

@@ -211,7 +211,8 @@ static int my_atoi(const char *cs)
 
 /* Parse arguments. */
 PJ_DEF(pj_status_t) pjsua_parse_args(int argc, char *argv[],
-				     pjsua_config *cfg)
+				     pjsua_config *cfg,
+				     pj_str_t *uri_to_call)
 {
     int c;
     int option_index;
@@ -595,22 +596,29 @@ PJ_DEF(pj_status_t) pjsua_parse_args(int argc, char *argv[],
     }
 
     if (pj_optind != argc) {
+	pj_str_t uri_arg;
 
 	if (pjsua_verify_sip_url(argv[pj_optind]) != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "Invalid SIP URI %s", argv[pj_optind]));
 	    return -1;
 	}
-	cfg->uri_to_call = pj_str(argv[pj_optind]);
+	uri_arg = pj_str(argv[pj_optind]);
+	if (uri_to_call)
+	    *uri_to_call = uri_arg;
 	pj_optind++;
 
 	/* Add URI to call to buddy list if it's not already there */
 	for (i=0; i<cfg->buddy_cnt; ++i) {
-	    if (pj_stricmp(&cfg->buddy_uri[i], &cfg->uri_to_call)==0)
+	    if (pj_stricmp(&cfg->buddy_uri[i], &uri_arg)==0)
 		break;
 	}
 	if (i == cfg->buddy_cnt && cfg->buddy_cnt < PJSUA_MAX_BUDDIES) {
-	    cfg->buddy_uri[cfg->buddy_cnt++] = cfg->uri_to_call;
+	    cfg->buddy_uri[cfg->buddy_cnt++] = uri_arg;
 	}
+
+    } else {
+	if (uri_to_call)
+	    uri_to_call->slen = 0;
     }
 
     if (pj_optind != argc) {
@@ -869,7 +877,7 @@ static void dump_media_session(const char *indent,
     }
 }
 
-PJ_DEF(void) pjsua_dump_call(int call_index, int with_media, 
+PJ_DEF(void) pjsua_call_dump(int call_index, int with_media, 
 			     char *buffer, unsigned maxlen,
 			     const char *indent)
 {
@@ -975,7 +983,7 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 
 	for (i=0; i<pjsua.config.max_calls; ++i) {
 	    if (pjsua.calls[i].inv) {
-		pjsua_dump_call(i, detail, buf, sizeof(buf), "  ");
+		pjsua_call_dump(i, detail, buf, sizeof(buf), "  ");
 		PJ_LOG(3,(THIS_FILE, "%s", buf));
 	    }
 	}
@@ -993,13 +1001,14 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
  * Load settings.
  */
 PJ_DECL(pj_status_t) pjsua_load_settings(const char *filename,
-					 pjsua_config *cfg)
+					 pjsua_config *cfg,
+					 pj_str_t *uri_to_call)
 {
     int argc = 3;
     char *argv[4] = { "pjsua", "--config-file", NULL, NULL};
 
     argv[2] = (char*)filename;
-    return pjsua_parse_args(argc, argv, cfg);
+    return pjsua_parse_args(argc, argv, cfg, uri_to_call);
 }
 
 
@@ -1297,8 +1306,130 @@ PJ_DEF(pj_status_t) pjsua_save_settings(const char *filename,
 /**
  * Get pjsua running config.
  */
-PJ_DEF(const pjsua_config*) pjsua_get_config(void)
+PJ_DEF(void) pjsua_get_config(pj_pool_t *pool,
+			      pjsua_config *cfg)
 {
-    return &pjsua.config;
+    unsigned i;
+
+    pjsua_copy_config(pool, cfg, &pjsua.config);
+
+    /* Compact buddy uris. */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.config.buddy_uri)-1; ++i) {
+	if (pjsua.config.buddy_uri[i].slen == 0) {
+	    unsigned j;
+
+	    for (j=i+1; j<PJ_ARRAY_SIZE(pjsua.config.buddy_uri); ++j) {
+		if (pjsua.config.buddy_uri[j].slen != 0)
+		    break;
+	    }
+	
+	    if (j == PJ_ARRAY_SIZE(pjsua.config.buddy_uri))
+		break;
+	    else
+		pjsua.config.buddy_uri[i] = pjsua.config.buddy_uri[j];
+	}
+    }
+
+    /* Compact accounts. */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.config.acc_config)-1; ++i) {
+
+	if (pjsua.acc[i].valid == PJ_FALSE || pjsua.acc[i].auto_gen) {
+	    unsigned j;
+
+	    for (j=i+1; j<PJ_ARRAY_SIZE(pjsua.config.acc_config); ++j) {
+		if (pjsua.acc[j].valid && !pjsua.acc[j].auto_gen)
+		    break;
+	    }
+	
+	    if (j == PJ_ARRAY_SIZE(pjsua.config.acc_config)) {
+		break;
+	    } else {
+		pj_memcpy(&pjsua.config.acc_config[i] ,
+			  &pjsua.config.acc_config[j],
+			  sizeof(pjsua_acc_config));
+	    }
+	}
+
+    }
+
+    /* Remove auto generated account from config */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua.config.acc_config); ++i) {
+	if (pjsua.acc[i].auto_gen)
+	    --cfg->acc_cnt;
+    }
 }
+
+
+
+/*****************************************************************************
+ * This is a very simple PJSIP module, whose sole purpose is to display
+ * incoming and outgoing messages to log. This module will have priority
+ * higher than transport layer, which means:
+ *
+ *  - incoming messages will come to this module first before reaching
+ *    transaction layer.
+ *
+ *  - outgoing messages will come to this module last, after the message
+ *    has been 'printed' to contiguous buffer by transport layer and
+ *    appropriate transport instance has been decided for this message.
+ *
+ */
+
+/* Notification on incoming messages */
+static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
+{
+    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
+			 "%s\n"
+			 "--end msg--",
+			 rdata->msg_info.len,
+			 pjsip_rx_data_get_info(rdata),
+			 rdata->pkt_info.src_name,
+			 rdata->pkt_info.src_port,
+			 rdata->msg_info.msg_buf));
+    
+    /* Always return false, otherwise messages will not get processed! */
+    return PJ_FALSE;
+}
+
+/* Notification on outgoing messages */
+static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
+{
+    
+    /* Important note:
+     *	tp_info field is only valid after outgoing messages has passed
+     *	transport layer. So don't try to access tp_info when the module
+     *	has lower priority than transport layer.
+     */
+
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
+			 "%s\n"
+			 "--end msg--",
+			 (tdata->buf.cur - tdata->buf.start),
+			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.dst_name,
+			 tdata->tp_info.dst_port,
+			 tdata->buf.start));
+
+    /* Always return success, otherwise message will not get sent! */
+    return PJ_SUCCESS;
+}
+
+/* The module instance. */
+pjsip_module pjsua_msg_logger = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-pjsua-log", 13 },		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &logging_on_rx_msg,			/* on_rx_request()	*/
+    &logging_on_rx_msg,			/* on_rx_response()	*/
+    &logging_on_tx_msg,			/* on_tx_request.	*/
+    &logging_on_tx_msg,			/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
 

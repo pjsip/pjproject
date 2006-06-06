@@ -23,6 +23,39 @@ typedef struct Pjsip_Cred_Info
 
 
 [
+    uuid(7F6CFF0F-C5B3-41e8-B278-61CD584C1F34),
+    version(1.0),
+    helpstring("PJSIP SIP URI"),
+]
+typedef struct Pjsip_Sip_Uri
+{
+    Pj_String   display;
+    Pj_String	user;
+    Pj_String	passwd;
+    Pj_String	host;
+    int		port;
+    Pj_String	param_user;
+    Pj_String	param_method;
+    Pj_String	param_transport;
+    int		param_ttl;
+    int		param_lr;
+    Pj_String	param_maddr;
+    Pj_String	param_other;
+    Pj_String	param_header;
+} Pjsip_Sip_Uri;
+
+
+typedef enum Pjsip_Uri_Context
+{
+    PJSIPX_URI_IN_REQ_URI,
+    PJSIPX_URI_IN_FROMTO_HDR,
+    PJSIPX_URI_IN_CONTACT_HDR,
+    PJSIPX_URI_IN_ROUTING_HDR,
+    PJSIPX_URI_IN_OTHER
+} Pjsip_Uri_Context;
+
+
+[
     uuid(3B12B04F-6E48-46a7-B9E0-6C4BF1594A96),
     version(1.0),
     helpstring("PJSUA Account configuration"),
@@ -44,33 +77,34 @@ typedef struct Pjsua_Acc_Config
 ]
 typedef struct Pjsua_Config
 {
-    unsigned int		udp_port;
-    Pj_String			sip_host;
-    unsigned int		sip_port;
-    unsigned int		rtp_port;
-    unsigned int		max_calls;
-    unsigned int		conf_ports;
-    unsigned int		thread_cnt;
-    Pj_String			stun_srv1;
-    unsigned int		stun_port1;
-    Pj_String			stun_srv2;
-    unsigned int		stun_port2;
-    unsigned int		snd_player_id;
-    unsigned int		snd_capture_id;
-    unsigned int		clock_rate;
-    Pj_Bool			null_audio;
-    unsigned int		quality;
-    unsigned int		complexity;
-    SAFEARRAY(Pj_String)	codec_arg;
-    unsigned int		auto_answer;
-    unsigned int		uas_refresh;
-    Pj_String			outbound_proxy;
+    int			    udp_port;
+    Pj_String		    sip_host;
+    int			    sip_port;
+    int			    rtp_port;
+    int			    msg_logging;
+    int			    max_calls;
+    int			    conf_ports;
+    int			    thread_cnt;
+    Pj_String		    stun_srv1;
+    int			    stun_port1;
+    Pj_String		    stun_srv2;
+    int			    stun_port2;
+    int			    snd_player_id;
+    int			    snd_capture_id;
+    int			    clock_rate;
+    Pj_Bool		    null_audio;
+    int			    quality;
+    int			    complexity;
+    SAFEARRAY(Pj_String)    codec_arg;
+    int			    auto_answer;
+    int			    uas_refresh;
+    Pj_String		    outbound_proxy;
     SAFEARRAY(Pjsua_Acc_Config) acc_config;
-    unsigned int		log_level;
-    unsigned int		app_log_level;
-    unsigned long		log_decor;
-    Pj_String			log_filename;
-    SAFEARRAY(Pj_String)	buddy_uri;
+    int			    log_level;
+    int			    app_log_level;
+    long		    log_decor;
+    Pj_String		    log_filename;
+    SAFEARRAY(Pj_String)    buddy_uri;
 } Pjsua_Config;
 
 
@@ -93,19 +127,19 @@ typedef enum Pjsua_Call_State
 ]
 typedef struct Pjsua_Call_Info
 {
-    unsigned int	index;
+    int			index;
     Pj_Bool		active;
     Pj_Bool		is_uac;
     Pj_String		local_info;
     Pj_String		remote_info;
     Pjsua_Call_State	state;
     Pj_String		state_text;
-    unsigned int	connect_duration;
-    unsigned int	total_duration;
-    unsigned int	cause;
-    Pj_String		cause_text;
+    int			connect_duration;
+    int			total_duration;
+    int			last_status;
+    Pj_String		last_status_text;
     Pj_Bool		has_media;
-    unsigned int	conf_slot;
+    int			conf_slot;
 } Pjsua_Call_Info;
 
 
@@ -124,17 +158,16 @@ typedef enum Pjsua_Buddy_State
 ]
 typedef struct Pjsua_Buddy_Info
 {
-    unsigned int	index;
+    int	index;
     Pj_Bool		is_valid;
     Pj_String		name;
     Pj_String		display;
     Pj_String		host;
-    unsigned int  	port;
+    int  		port;
     Pj_URI		uri;
     Pjsua_Buddy_State	status;
     Pj_String		status_text;
     Pj_Bool		monitor;
-    int			acc_index;
 } Pjsua_Buddy_Info;
 
 
@@ -145,12 +178,30 @@ typedef struct Pjsua_Buddy_Info
 ]
 typedef struct Pjsua_Acc_Info
 {
-    unsigned int	index;
-    Pj_URI		acc_id;
+    int			index;
+    Pj_URI		acc_uri;
     Pj_Bool		has_registration;
     int			expires;
-    unsigned int	status_code;
+    int			status_code;
     Pj_String		status_text;
     Pj_Bool		online_status;
 } Pjsua_Acc_Info;
+
+
+
+[
+    uuid(0D05907A-3E1F-4c92-9FD0-26CB6E1CC56A),
+    version(1.0),
+    helpstring("PJSUA Conference Port Information"),
+]
+typedef struct Pjsua_Conf_Port_Info
+{
+    int			slot_id;
+    Pj_String		name;
+    int			clock_rate;
+    int			channel_count;
+    int			samples_per_frame;
+    int			bits_per_sample;
+    SAFEARRAY(int)	listeners;
+} Pjsua_Conf_Port_Info;
 

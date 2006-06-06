@@ -32,6 +32,7 @@ struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
+    pjsip_status_code	 last_code; /**<Last status code seen.		    */
     pj_time_val		 start_time;/**< First INVITE sent/received.	    */
     pj_time_val		 res_time;  /**< First response sent/received.	    */
     pj_time_val		 conn_time; /**< Connected/confirmed time.	    */
@@ -61,7 +62,6 @@ struct pjsua_buddy
     pj_str_t		 display;   /**< Buddy display name.		*/
     pj_str_t		 host;	    /**< Buddy host.			*/
     unsigned		 port;	    /**< Buddy port.			*/
-    int			 acc_index; /**< Which account to use.		*/
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
@@ -89,6 +89,8 @@ typedef struct pjsua_srv_pres pjsua_srv_pres;
  */
 struct pjsua_acc
 {
+    pj_bool_t	     valid;	    /**< Is this account valid?		*/
+    pj_bool_t	     auto_gen;	    /**< Is this account generated.	*/
     int		     index;	    /**< Index in accounts array.	*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
     pj_str_t	     host_part;	    /**< Host part of local URI.	*/
@@ -159,6 +161,7 @@ struct pjsua
     } recorder[32];
 
     /* Account: */
+    int		     default_acc;   /**< Default account to use.	*/
     pjsua_acc	     acc[PJSUA_MAX_ACC];    /** Client regs array.	*/
 
 
@@ -175,7 +178,6 @@ struct pjsua
     unsigned	     call_cnt;	    /**< Number of calls.		*/
     pjsua_call	     calls[PJSUA_MAX_CALLS];	/** Calls array.	*/
 
-
     /* SIMPLE and buddy status: */
     pjsua_buddy	     buddies[PJSUA_MAX_BUDDIES];
 };
@@ -185,17 +187,8 @@ struct pjsua
 extern struct pjsua pjsua;
 
 
-
-/**
- * Find account for incoming request.
- */
-int pjsua_find_account_for_incoming(pjsip_rx_data *rdata);
-
-
-/**
- * Find account for outgoing request.
- */
-int pjsua_find_account_for_outgoing(const pj_str_t *url);
+void pjsua_copy_config( pj_pool_t *pool, pjsua_config *dst, 
+			const pjsua_config *src);
 
 
 /**
@@ -223,6 +216,11 @@ pj_status_t pjsua_regc_init(int acc_index);
  */
 pj_status_t pjsua_pres_init();
 
+
+/**
+ * Refresh both presence client and server subscriptions.
+ */
+void pjsua_pres_refresh(void);
 
 /**
  * Terminate all subscriptions
@@ -255,6 +253,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 			    const pj_str_t *to, pjsip_rx_data *rdata);
 
 
+extern pjsip_module pjsua_msg_logger;
 
 #endif	/* __PJSUA_IMP_H__ */
 

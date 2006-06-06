@@ -20,7 +20,7 @@
 #define __PJSUA_CONSOLE_APP_H__
 
 
-void pjsua_console_app_main(void);
+void pjsua_console_app_main(const pj_str_t *uri_to_call);
 
 extern pjsip_module pjsua_console_app_msg_logger;
 extern pjsua_callback console_callback;

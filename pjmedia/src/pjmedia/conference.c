@@ -820,6 +820,29 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Enum ports.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
+					     unsigned ports[],
+					     unsigned *p_count )
+{
+    unsigned i, count=0;
+
+    PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
+
+    for (i=0; i<conf->max_ports && count<*p_count; ++i) {
+	if (!conf->ports[i])
+	    continue;
+
+	ports[count++] = i;
+    }
+
+    *p_count = count;
+    return PJ_SUCCESS;
+}
+
 /*
  * Get port info
  */
@@ -843,7 +866,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->rx_setting = conf_port->rx_setting;
     info->listener = conf_port->listeners;
     info->clock_rate = conf_port->clock_rate;
+    info->channel_count = conf->channel_count;
     info->samples_per_frame = conf_port->samples_per_frame;
+    info->bits_per_sample = conf->bits_per_sample;
     info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
     info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
 

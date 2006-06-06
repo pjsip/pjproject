@@ -29,7 +29,7 @@ import "../src/activex-pjsua/pjsua-structs.idl";
 		[id(9), helpstring("method call_is_active")] HRESULT call_is_active([in] int call_index, [out,retval] Pj_Bool *retVal);
 		[id(10), helpstring("method call_has_media")] HRESULT call_has_media([in] int call_index, [out,retval] Pj_Bool *pRet);
 		[id(11), helpstring("method call_get_info")] HRESULT call_get_info([in] int call_index, [out] Pjsua_Call_Info *pInfo, [out,retval] Pj_Status *pRet);
-		[id(12), helpstring("method call_make_call")] HRESULT call_make_call([in] int acc_index, [in,string] Pj_String dst_uri, [out] int *call_index, [out,retval] Pj_Status *pRet);
+		[id(12), helpstring("method call_make_call")] HRESULT call_make_call([in] int acc_id, [in,string] Pj_String dst_uri, [out] int *call_index, [out,retval] Pj_Status *pRet);
 		[id(13), helpstring("method call_answer")] HRESULT call_answer([in] int call_index, [in] int status_code, [out,retval] Pj_Status *pRet);
 		[id(14), helpstring("method call_hangup")] HRESULT call_hangup([in] int call_index, [out,retval] Pj_Status *pRet);
 		[id(15), helpstring("method call_set_hold")] HRESULT call_set_hold([in] int call_index, [out,retval] Pj_Status *pRet);
@@ -40,16 +40,16 @@ import "../src/activex-pjsua/pjsua-structs.idl";
 		[id(20), helpstring("method call_typing")] HRESULT call_typing([in] int call_index, [in] int is_typing, [out,retval] Pj_Status *pRet);
 		[id(21), helpstring("method call_hangup_all")] HRESULT call_hangup_all();
 		[id(22), helpstring("method acc_get_count")] HRESULT acc_get_count([out,retval] int *pCount);
-		[id(23), helpstring("method acc_get_info")] HRESULT acc_get_info([in] int acc_index, [out] Pjsua_Acc_Info *pInfo, [out,retval] Pj_Status *pRet);
+		[id(23), helpstring("method acc_get_info")] HRESULT acc_get_info([in] int acc_id, [out] Pjsua_Acc_Info *pInfo, [out,retval] Pj_Status *pRet);
 		[id(24), helpstring("method acc_add")] HRESULT acc_add([in] Pjsua_Acc_Config *pConfig, [out] int *pAcc_Index, [out,retval] Pj_Status *pRet);
-		[id(25), helpstring("method acc_set_online_status")] HRESULT acc_set_online_status([in] int acc_index, [in] int is_online, [out,retval] Pj_Status *pRet);
-		[id(26), helpstring("method acc_set_registration")] HRESULT acc_set_registration([in] int acc_index, [in] int reg_active, [out,retval] Pj_Status *pRet);
+		[id(25), helpstring("method acc_set_online_status")] HRESULT acc_set_online_status([in] int acc_id, [in] int is_online, [out,retval] Pj_Status *pRet);
+		[id(26), helpstring("method acc_set_registration")] HRESULT acc_set_registration([in] int acc_id, [in] int reg_active, [out,retval] Pj_Status *pRet);
 		[id(27), helpstring("method buddy_get_count")] HRESULT buddy_get_count([out,retval] int *pCount);
 		[id(28), helpstring("method buddy_get_info")] HRESULT buddy_get_info([in] int buddy_index, [out] Pjsua_Buddy_Info *pInfo, [out,retval] Pj_Status *pRet);
 		[id(29), helpstring("method buddy_add")] HRESULT buddy_add([in,string] Pj_String uri, [out] int *pBuddy_Index, [out,retval] Pj_Status *pRet);
 		[id(30), helpstring("method buddy_subscribe_pres")] HRESULT buddy_subscribe_pres([in] int buddy_index, [in] int subscribe, [out,retval] Pj_Status *pRet);
-		[id(31), helpstring("method im_send_text")] HRESULT im_send_text([in] int acc_index, [in,string] Pj_String dst_uri, [in,string] Pj_String text, [out,retval] Pj_Status *pRet);
-		[id(32), helpstring("method im_typing")] HRESULT im_typing([in] int acc_index, [in,string] Pj_URI dst_uri, [in] int is_typing, [out,retval] Pj_Status *pRet);
+		[id(31), helpstring("method im_send_text")] HRESULT im_send_text([in] int acc_id, [in,string] Pj_String dst_uri, [in,string] Pj_String text, [out,retval] Pj_Status *pRet);
+		[id(32), helpstring("method im_typing")] HRESULT im_typing([in] int acc_id, [in,string] Pj_URI dst_uri, [in] int is_typing, [out,retval] Pj_Status *pRet);
 		[id(33), helpstring("method conf_connect")] HRESULT conf_connect([in] int src_port, [in] int sink_port, [out,retval] Pj_Status *pRet);
 		[id(34), helpstring("method conf_disconnect")] HRESULT conf_disconnect([in] int src_port, [in] int sink_port, [out,retval] Pj_Status *pRet);
 		[id(35), helpstring("method player_create")] HRESULT player_create([in,string] Pj_String filename, [out] int *pPlayer_Id, [out,retval] Pj_Status *pRet);
@@ -66,6 +66,15 @@ import "../src/activex-pjsua/pjsua-structs.idl";
 		[id(46), helpstring("method app_verify_sip_url")] HRESULT app_verify_sip_url([in,string] Pj_String uri, [out,retval] Pj_Status *pRet);
 		[id(47), helpstring("method call_get_textstat")] HRESULT call_get_textstat([in] int call_index, [out,retval] BSTR *textstat);
 		[id(48), helpstring("method app_handle_events")] HRESULT app_handle_events([in] int msec_timeout, [out,retval] int *pEvCount);
+		[id(49), helpstring("method app_parse_uri")] HRESULT app_parse_uri([in] BSTR uriString, [out] Pjsip_Sip_Uri *pSipUri, [out,retval] Pj_Status *pStatus);
+		[id(50), helpstring("method app_print_uri")] HRESULT app_print_uri([in] Pjsip_Sip_Uri *pSipURI, [in] Pjsip_Uri_Context context, [out,retval] BSTR *uriText);
+		[id(51), helpstring("method app_compare_uri_string")] HRESULT app_compare_uri_string([in] Pjsip_Uri_Context context, [in] BSTR uri1, [in] BSTR uri2, [out,retval] Pj_Status *pStatus);
+		[id(52), helpstring("method buddy_del")] HRESULT buddy_del([in] int buddy_index, [out,retval] Pj_Status *pRet);
+		[id(53), helpstring("method acc_del")] HRESULT acc_del([in] int acc_id, [out,retval] Pj_Status *pRet);
+		[id(54), helpstring("method acc_find_for_outgoing")] HRESULT acc_find_for_outgoing([in] BSTR url, [out,retval] int *acc_id);
+		[id(55), helpstring("method acc_enum_id")] HRESULT acc_enum_id([out,retval] SAFEARRAY(int) *accIdArray);
+		[id(56), helpstring("method conf_enum_ports")] HRESULT conf_enum_ports([out,retval] SAFEARRAY(int) *pPortsArray);
+		[id(57), helpstring("method conf_get_port_info")] HRESULT conf_get_port_info([in] int port_id, [out] Pjsua_Conf_Port_Info *pInfo, [out,retval] Pj_Status *pRet);
 	};
 
 [
@@ -84,6 +93,7 @@ library ACTIVEPJSUALib
 	struct Pjsua_Call_Info;
 	struct Pjsua_Buddy_Info;
 	struct Pjsua_Acc_Info;
+	struct Pjsua_Conf_Port_Info;
 
 	[
 	    uuid(DC91CBCE-4B9E-4369-80B9-39341EEFD814),
@@ -94,10 +104,11 @@ library ACTIVEPJSUALib
 	    properties:
 	    methods:
 		[id(1), helpstring("method OnCallState")] void OnCallState([in] int call_index, [in] Pjsua_Call_Info *pInfo);
-		[id(2), helpstring("method OnRegState")] void OnRegState([in] int acc_index);
+		[id(2), helpstring("method OnRegState")] void OnRegState([in] int acc_id);
 		[id(3), helpstring("method OnBuddyState")] void OnBuddyState([in] int buddy_index);
 		[id(4), helpstring("method OnIncomingPager")] void OnIncomingPager([in] int call_index, [in] BSTR fromUri, [in] BSTR toURI, [in] BSTR pagerText);
 		[id(5), helpstring("method OnTypingIndication")] void OnTypingIndication([in] int call_index, [in] BSTR fromUri, [in] BSTR toURI, [in] int isTyping);
+		[id(6), helpstring("method OnIncomingCall")] void OnIncomingCall([in] int call_index);
 	};
 
 	[

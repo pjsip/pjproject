@@ -127,7 +127,7 @@ static pj_status_t call_destroy_media(int call_index)
 /**
  * Get maximum number of calls configured in pjsua.
  */
-PJ_DEF(unsigned) pjsua_get_max_calls(void)
+PJ_DEF(unsigned) pjsua_call_get_max_count(void)
 {
     return pjsua.config.max_calls;
 }
@@ -136,7 +136,7 @@ PJ_DEF(unsigned) pjsua_get_max_calls(void)
 /**
  * Get current number of active calls.
  */
-PJ_DEF(unsigned) pjsua_get_call_count(void)
+PJ_DEF(unsigned) pjsua_call_get_count(void)
 {
     return pjsua.call_cnt;
 }
@@ -166,7 +166,7 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(unsigned call_index)
 /**
  * Get call info.
  */
-PJ_DEF(pj_status_t) pjsua_get_call_info( unsigned call_index,
+PJ_DEF(pj_status_t) pjsua_call_get_info( unsigned call_index,
 					 pjsua_call_info *info)
 {
     pjsua_call *call;
@@ -212,8 +212,8 @@ PJ_DEF(pj_status_t) pjsua_get_call_info( unsigned call_index,
 	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
     }
 
-    info->cause = call->inv->cause;
-    info->cause_text = *pjsip_get_status_text(info->cause);
+    info->last_status = call->last_code;
+    info->last_status_text = *pjsip_get_status_text(info->last_status);
 
     info->has_media = (call->session != NULL);
     info->conf_slot = call->conf_slot;
@@ -225,7 +225,7 @@ PJ_DEF(pj_status_t) pjsua_get_call_info( unsigned call_index,
 /**
  * Duplicate call info.
  */
-PJ_DEF(void) pjsua_dup_call_info( pj_pool_t *pool,
+PJ_DEF(void) pjsua_call_info_dup( pj_pool_t *pool,
 				  pjsua_call_info *dst_info,
 				  const pjsua_call_info *src_info)
 {
@@ -245,9 +245,9 @@ PJ_DEF(void) pjsua_dup_call_info( pj_pool_t *pool,
 /**
  * Make outgoing call.
  */
-PJ_DEF(pj_status_t) pjsua_make_call(unsigned acc_index,
-				    const pj_str_t *dest_uri,
-				    int *p_call_index)
+PJ_DEF(pj_status_t) pjsua_call_make_call(unsigned acc_index,
+					 const pj_str_t *dest_uri,
+					 int *p_call_index)
 {
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
@@ -384,18 +384,18 @@ on_error:
 /**
  * Answer call.
  */
-PJ_DEF(void) pjsua_call_answer(int call_index, int code)
+PJ_DEF(pj_status_t) pjsua_call_answer(int call_index, int code)
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-    PJ_ASSERT_ON_FAIL(call_index >= 0 && 
+    PJ_ASSERT_RETURN( call_index >= 0 && 
 		      call_index < (int)pjsua.config.max_calls,
-		      return);
+		      PJ_EINVAL);
 
     if (pjsua.calls[call_index].inv == NULL) {
 	PJ_LOG(3,(THIS_FILE, "Call %d already disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
 
     status = pjsip_inv_answer(pjsua.calls[call_index].inv,
@@ -408,6 +408,7 @@ PJ_DEF(void) pjsua_call_answer(int call_index, int code)
 	pjsua_perror(THIS_FILE, "Unable to create/send response", 
 		     status);
 
+    return status;
 }
 
 
@@ -612,6 +613,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 			     pjsua.config.uas_duration);
     }
 
+    /* Notify application */
+    if (pjsua.cb.on_incoming_call)
+	pjsua.cb.on_incoming_call(acc_index, call_index, rdata);
+
+
     /* This INVITE request has been handled. */
     return PJ_TRUE;
 }
@@ -635,17 +641,19 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_CONNECTING:
 	    if (call->res_time.sec == 0)
 		pj_gettimeofday(&call->res_time);
+	    call->last_code = e->body.tsx_state.tsx->status_code;
 	    break;
 	case PJSIP_INV_STATE_CONFIRMED:
 	    pj_gettimeofday(&call->conn_time);
 	    break;
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    pj_gettimeofday(&call->dis_time);
+	    if (e->body.tsx_state.tsx->status_code > call->last_code) {
+		call->last_code = e->body.tsx_state.tsx->status_code;
+	    }
 	    break;
 	default:
-	    /* Nothing to do. Just to keep gcc from complaining about
-	     * unused enums.
-	     */ 
+	    call->last_code = e->body.tsx_state.tsx->status_code;
 	    break;
     }
 
@@ -682,7 +690,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    ev_state = PJSIP_EVSUB_STATE_TERMINATED;
 	    break;
 
-	default:
+	case PJSIP_INV_STATE_INCOMING:
 	    /* Nothing to do. Just to keep gcc from complaining about
 	     * unused enums.
 	     */
@@ -853,7 +861,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     /* Now make the outgoing call. */
     tmp = pj_str(uri);
-    status = pjsua_make_call(existing_call->acc_index, &tmp, &new_call);
+    status = pjsua_call_make_call(existing_call->acc_index, &tmp, &new_call);
     if (status != PJ_SUCCESS) {
 
 	/* Notify xferer about the error */
@@ -1354,7 +1362,7 @@ PJ_DEF(void) pjsua_call_hangup(int call_index)
 /*
  * Put call on-Hold.
  */
-PJ_DEF(void) pjsua_call_set_hold(int call_index)
+PJ_DEF(pj_status_t) pjsua_call_set_hold(int call_index)
 {
     pjmedia_sdp_session *sdp;
     pjsua_call *call;
@@ -1365,37 +1373,39 @@ PJ_DEF(void) pjsua_call_set_hold(int call_index)
     
     if (!call->inv) {
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not hold call that is not confirmed"));
-	return;
+	return PJSIP_ESESSIONSTATE;
     }
 
     status = create_inactive_sdp(call, &sdp);
     if (status != PJ_SUCCESS)
-	return;
+	return status;
 
     /* Send re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	return;
+	return status;
     }
 
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	return;
+	return status;
     }
+
+    return PJ_SUCCESS;
 }
 
 
 /*
  * re-INVITE.
  */
-PJ_DEF(void) pjsua_call_reinvite(int call_index)
+PJ_DEF(pj_status_t) pjsua_call_reinvite(int call_index)
 {
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
@@ -1406,13 +1416,13 @@ PJ_DEF(void) pjsua_call_reinvite(int call_index)
 
     if (!call->inv) {
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
 
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not re-INVITE call that is not confirmed"));
-	return;
+	return PJSIP_ESESSIONSTATE;
     }
 
     /* Create SDP */
@@ -1421,28 +1431,30 @@ PJ_DEF(void) pjsua_call_reinvite(int call_index)
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
-	return;
+	return status;
     }
 
     /* Send re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	return;
+	return status;
     }
 
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	return;
+	return status;
     }
+
+    return PJ_SUCCESS;
 }
 
 
 /*
  * Transfer call.
  */
-PJ_DEF(void) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
+PJ_DEF(pj_status_t) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
 {
     pjsip_evsub *sub;
     pjsip_tx_data *tdata;
@@ -1454,7 +1466,7 @@ PJ_DEF(void) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
 
     if (!call->inv) {
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
    
     /* Create xfer client subscription.
@@ -1464,7 +1476,7 @@ PJ_DEF(void) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
     status = pjsip_xfer_create_uac(call->inv->dlg, NULL, &sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create xfer", status);
-	return;
+	return status;
     }
 
     /*
@@ -1473,20 +1485,22 @@ PJ_DEF(void) pjsua_call_xfer(unsigned call_index, const pj_str_t *dest)
     status = pjsip_xfer_initiate(sub, dest, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create REFER request", status);
-	return;
+	return status;
     }
 
     /* Send. */
     status = pjsip_xfer_send_request(sub, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send REFER request", status);
-	return;
+	return status;
     }
 
     /* For simplicity (that's what this program is intended to be!), 
      * leave the original invite session as it is. More advanced application
      * may want to hold the INVITE, or terminate the invite, or whatever.
      */
+
+    return PJ_SUCCESS;
 }
 
 
@@ -1512,7 +1526,7 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( unsigned call_index,
 /**
  * Send instant messaging inside INVITE session.
  */
-PJ_DECL(void) pjsua_call_send_im(int call_index, const pj_str_t *str)
+PJ_DEF(pj_status_t) pjsua_call_send_im(int call_index, const pj_str_t *str)
 {
     pjsua_call *call;
     const pj_str_t mime_text = pj_str("text");
@@ -1524,7 +1538,7 @@ PJ_DECL(void) pjsua_call_send_im(int call_index, const pj_str_t *str)
 
     if (!call->inv) {
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
 
     /* Lock dialog. */
@@ -1560,13 +1574,15 @@ PJ_DECL(void) pjsua_call_send_im(int call_index, const pj_str_t *str)
 
 on_return:
     pjsip_dlg_dec_lock(call->inv->dlg);
+    return status;
 }
 
 
 /**
  * Send IM typing indication inside INVITE session.
  */
-PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing)
+PJ_DEF(pj_status_t) pjsua_call_send_typing_ind(int call_index, 
+					       pj_bool_t is_typing)
 {
     pjsua_call *call;
     pjsip_tx_data *tdata;
@@ -1576,7 +1592,7 @@ PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing)
 
     if (!call->inv) {
 	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	return;
+	return PJSIP_ESESSIONTERMINATED;
     }
 
     /* Lock dialog. */
@@ -1602,7 +1618,9 @@ PJ_DECL(void) pjsua_call_typing(int call_index, pj_bool_t is_typing)
     }
 
 on_return:
-    pjsip_dlg_dec_lock(call->inv->dlg);}
+    pjsip_dlg_dec_lock(call->inv->dlg);
+    return status;
+}
 
 
 /*

@@ -4,7 +4,7 @@
 #define __APP_H_
 
 #include "resource.h"       // main symbols
-#include "..\activex-pjsua\activex-pjsuaCP.h"
+#include "activex-pjsuaCP.h"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -37,6 +37,15 @@ END_CONNECTION_POINT_MAP()
 
 // IApp
 public:
+	STDMETHOD(app_destroy)(/*[out,retval]*/ Pj_Status *retStatus);
+	STDMETHOD(app_start)(/*[out,retval]*/ Pj_Status *retStatus);
+	STDMETHOD(app_init)(/*[in]*/ Pjsua_Config *pConfig, /*[out,retval]*/ Pj_Status *pStatus);
+	STDMETHOD(app_test_config)(/*[in]*/ Pjsua_Config *pConfig, /*[out,retval,string]*/ BSTR *retmsg);
+	STDMETHOD(app_default_config)(/*[in,out]*/ Pjsua_Config *pConfig);
+	STDMETHOD(app_create)(/*[out,retval]*/ Pj_Status *ret);
+	STDMETHOD(app_compare_uri_string)(/*[in]*/ Pjsip_Uri_Context context, /*[in]*/ BSTR uri1, /*[in]*/ BSTR uri2, /*[out,retval]*/ Pj_Status *pStatus);
+	STDMETHOD(app_print_uri)(/*[in]*/ Pjsip_Sip_Uri *pSipURI, Pjsip_Uri_Context context, /*[out,retval]*/ BSTR *uriText);
+	STDMETHOD(app_parse_uri)(/*[in]*/ BSTR uriString, /*[out]*/ Pjsip_Sip_Uri *pSipUri, /*[out,retval]*/ Pj_Status *pStatus);
 	STDMETHOD(app_handle_events)(/*[in]*/ int msec_timeout, /*[out,retval]*/ int *pEvCount);
 	STDMETHOD(app_verify_sip_url)(/*[in,string]*/ Pj_String uri, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(app_get_error_msg)(/*[in]*/ Pj_Status status, /*[out,retval]*/ BSTR * errmsg);
@@ -52,17 +61,23 @@ public:
 	STDMETHOD(player_create)(/*[in,string]*/ Pj_String filename, /*[out]*/ int *pPlayer_Id, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(conf_disconnect)(/*[in]*/ int src_port, /*[in]*/ int sink_port, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(conf_connect)(/*[in]*/ int src_port, /*[in]*/ int sink_port, /*[out,retval]*/ Pj_Status *pRet);
+	STDMETHOD(conf_enum_ports)(SAFEARRAY **pPortsArray);
+	STDMETHOD(conf_get_port_info)(int port_id, Pjsua_Conf_Port_Info *pInfo, Pj_Status *pRet);
 	STDMETHOD(im_typing)(/*[in]*/ int acc_index, /*[in,string]*/ Pj_URI dst_uri, /*[in]*/ int is_typing, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(im_send_text)(/*[in]*/ int acc_index, /*[in,string]*/ Pj_String dst_uri, /*[in,string]*/ Pj_String text, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(buddy_subscribe_pres)(/*[in]*/ int buddy_index, /*[in]*/ int subscribe, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(buddy_add)(/*[in,string]*/ Pj_String uri, /*[out]*/ int *pBuddy_Index, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(buddy_get_info)(/*[in]*/ int buddy_index, /*[out]*/ Pjsua_Buddy_Info *pInfo, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(buddy_get_count)(/*[out,retval]*/ int *pCount);
+	STDMETHOD(buddy_del)(/*[in]*/ int buddy_index, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(acc_set_registration)(/*[in]*/ int acc_index, /*[in]*/ int reg_active, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(acc_set_online_status)(/*[in]*/ int acc_index, /*[in]*/ int is_online, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(acc_add)(/*[in]*/ Pjsua_Acc_Config *pConfig, /*[out]*/ int *pAcc_Index, /*[out,retval]*/ Pj_Status *pRet);
+	STDMETHOD(acc_del)(/*[out,retval]*/ int acc_index, Pj_Status *pRet);
 	STDMETHOD(acc_get_info)(/*[in]*/ int acc_index, /*[out]*/ Pjsua_Acc_Info *pInfo, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(acc_get_count)(/*[out,retval]*/ int *pCount);
+	STDMETHOD(acc_enum_id)(SAFEARRAY **accIdArray);
+	STDMETHOD(acc_find_for_outgoing)(/*[in]*/ BSTR url, /*[out,retval]*/ int *acc_index);
 	STDMETHOD(call_hangup_all)();
 	STDMETHOD(call_typing)(/*[in]*/ int call_index, /*[in]*/ int is_typing, /*[out,retval]*/ Pj_Status *pRet);
 	STDMETHOD(call_send_im)(/*[in]*/ int call_index, /*[in,string]*/ Pj_String text, /*[out,retval]*/ Pj_Status *pRet);
@@ -78,12 +93,6 @@ public:
 	STDMETHOD(call_is_active)(/*[in]*/ int call_index, /*[out,retval]*/ Pj_Bool *retVal);
 	STDMETHOD(call_get_count)(/*[out,retval]*/ int *retCount);
 	STDMETHOD(call_get_max_count)(/*[out,retval]*/ int *retCount);
-	STDMETHOD(app_destroy)(/*[out,retval]*/ Pj_Status *retStatus);
-	STDMETHOD(app_start)(/*[out,retval]*/ Pj_Status *retStatus);
-	STDMETHOD(app_init)(/*[in]*/ Pjsua_Config *pConfig, /*[out,retval]*/ Pj_Status *pStatus);
-	STDMETHOD(app_test_config)(/*[in]*/ Pjsua_Config *pConfig, /*[out,retval,string]*/ BSTR *retmsg);
-	STDMETHOD(app_default_config)(/*[in,out]*/ Pjsua_Config *pConfig);
-	STDMETHOD(app_create)(/*[out,retval]*/ Pj_Status *ret);
 	STDMETHOD(call_get_textstat)(/* [in] */ int call_index,    /* [retval][out] */ BSTR *textstat);
 
 };

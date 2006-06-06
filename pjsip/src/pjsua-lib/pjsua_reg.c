@@ -95,16 +95,21 @@ PJ_DEF(unsigned) pjsua_get_acc_count(void)
 /**
  * Get account info.
  */
-PJ_DEF(pj_status_t) pjsua_acc_get_info( unsigned acc_index,
+PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_index,
 					pjsua_acc_info *info)
 {
     pjsua_acc *acc = &pjsua.acc[acc_index];
     pjsua_acc_config *acc_cfg = &pjsua.config.acc_config[acc_index];
 
-    PJ_ASSERT_RETURN(acc_index < pjsua.config.acc_cnt, PJ_EINVAL);
-
+    PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
+    
     pj_memset(info, 0, sizeof(pjsua_acc_info));
 
+    PJ_ASSERT_RETURN(acc_index < (int)pjsua.config.acc_cnt, 
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua.acc[acc_index].valid, PJ_EINVALIDOP);
+
+    
     info->index = acc_index;
     info->acc_id = acc_cfg->id;
     info->has_registration = (acc->regc != NULL);
@@ -114,9 +119,12 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( unsigned acc_index,
 	info->status = acc->reg_last_err;
 	pj_strerror(acc->reg_last_err, info->buf, sizeof(info->buf));
 	info->status_text = pj_str(info->buf);
-    } else {
+    } else if (acc->reg_last_code) {
 	info->status = acc->reg_last_code;
 	info->status_text = *pjsip_get_status_text(acc->reg_last_code);
+    } else {
+	info->status = 0;
+	info->status_text = pj_str("In Progress");
     }
     
     if (acc->regc) {
@@ -129,13 +137,56 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( unsigned acc_index,
 }
 
 
+PJ_DEF(pj_status_t) pjsua_acc_enum_info( pjsua_acc_info info[],
+					 unsigned *count )
+{
+    unsigned i, c;
+
+    for (i=0, c=0; c<*count && i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
+	if (!pjsua.acc[i].valid)
+	    continue;
+
+	pjsua_acc_get_info(i, &info[c]);
+	++c;
+    }
+
+    *count = c;
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Enum accounts id.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_enum_id( pjsua_acc_id ids[],
+				       unsigned *count )
+{
+    unsigned i, c;
+
+    for (i=0, c=0; c<*count && i<PJ_ARRAY_SIZE(pjsua.acc); ++i) {
+	if (!pjsua.acc[i].valid)
+	    continue;
+	ids[c] = i;
+	++c;
+    }
+
+    *count = c;
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Update registration. If renew is false, then unregistration will be performed.
  */
-PJ_DECL(pj_status_t) pjsua_acc_set_registration(unsigned acc_index, pj_bool_t renew)
+PJ_DECL(pj_status_t) pjsua_acc_set_registration(pjsua_acc_id acc_index, 
+						pj_bool_t renew)
 {
     pj_status_t status = 0;
     pjsip_tx_data *tdata = 0;
+
+    PJ_ASSERT_RETURN(acc_index < (int)pjsua.config.acc_cnt, 
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua.acc[acc_index].valid, PJ_EINVALIDOP);
 
     if (renew) {
 	if (pjsua.acc[acc_index].regc == NULL) {

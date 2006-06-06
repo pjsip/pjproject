@@ -2,6 +2,7 @@
 #define _ACTIVEXPJSUACP_H_
 
 //#import "C:\project\pjproject\pjsip-apps\src\activex-pjsua\activex-pjsua.tlb" raw_interfaces_only, raw_native_types, no_namespace, named_guids	//"Import typelib"
+
 template <class T>
 class CProxy_IPjsuaEvents : public IConnectionPointImpl<T, &DIID__IPjsuaEvents, CComDynamicUnkArray>
 {
@@ -142,6 +143,29 @@ public:
 				pvars[0] = isTyping;
 				DISPPARAMS disp = { pvars, NULL, 4, 0 };
 				pDispatch->Invoke(0x5, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &disp, NULL, NULL, NULL);
+			}
+		}
+		delete[] pvars;
+	
+	}
+	VOID Fire_OnIncomingCall(INT call_index)
+	{
+		T* pT = static_cast<T*>(this);
+		int nConnectionIndex;
+		CComVariant* pvars = new CComVariant[1];
+		int nConnections = m_vec.GetSize();
+		
+		for (nConnectionIndex = 0; nConnectionIndex < nConnections; nConnectionIndex++)
+		{
+			pT->Lock();
+			CComPtr<IUnknown> sp = m_vec.GetAt(nConnectionIndex);
+			pT->Unlock();
+			IDispatch* pDispatch = reinterpret_cast<IDispatch*>(sp.p);
+			if (pDispatch != NULL)
+			{
+				pvars[0] = call_index;
+				DISPPARAMS disp = { pvars, NULL, 1, 0 };
+				pDispatch->Invoke(0x6, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &disp, NULL, NULL, NULL);
 			}
 		}
 		delete[] pvars;

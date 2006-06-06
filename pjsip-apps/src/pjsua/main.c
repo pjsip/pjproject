@@ -28,6 +28,7 @@
 int main(int argc, char *argv[])
 {
     pjsua_config cfg;
+    pj_str_t uri_to_call = { NULL, 0 };
 
     /* Init default settings. */
     pjsua_default_config(&cfg);
@@ -38,19 +39,13 @@ int main(int argc, char *argv[])
 
 
     /* Parse command line arguments: */
-    if (pjsua_parse_args(argc, argv, &cfg) != PJ_SUCCESS)
+    if (pjsua_parse_args(argc, argv, &cfg, &uri_to_call) != PJ_SUCCESS)
 	return 1;
 
 
     /* Init pjsua */
     if (pjsua_init(&cfg, &console_callback) != PJ_SUCCESS)
 	return 1;
-
-    /* Register message logger to print incoming and outgoing
-     * messages.
-     */
-    pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
-				&pjsua_console_app_msg_logger);
 
 
     /* Start pjsua! */
@@ -65,7 +60,7 @@ int main(int argc, char *argv[])
 
 
     /* Start UI console main loop: */
-    pjsua_console_app_main();
+    pjsua_console_app_main(&uri_to_call);
 
 
     /* Destroy pjsua: */
