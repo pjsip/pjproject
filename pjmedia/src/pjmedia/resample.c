@@ -529,12 +529,23 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     resample->factor = rate_out * 1.0 / rate_in;
     resample->large_filter = large_filter;
     resample->high_quality = high_quality;
-    resample->xoff = large_filter ? 32 : 6;
     resample->frame_size = samples_per_frame;
 
     if (high_quality) {
 	unsigned size;
 	unsigned i;
+
+	/* This is a bug in xoff calculation, thanks Stephane Lussier
+	 * of Macadamian dot com.
+	 *   resample->xoff = large_filter ? 32 : 6;
+	 */
+	if (large_filter)
+	    resample->xoff = (LARGE_FILTER_NMULT + 1) / 2.0  *  
+			     MAX(1.0, 1.0/resample->factor);
+	else
+	    resample->xoff = (SMALL_FILTER_NMULT + 1) / 2.0  *  
+			     MAX(1.0, 1.0/resample->factor);
+
 
 	size = (samples_per_frame + 2*resample->xoff) * sizeof(pj_int16_t);
 	resample->buffer = pj_pool_alloc(pool, size);
@@ -543,6 +554,10 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 	for (i=0; i<resample->xoff*2; ++i) {
 	    resample->buffer[i] = 0;
 	}
+
+
+    } else {
+	resample->xoff = 0;
     }
 
     *p_resample = resample;
@@ -562,7 +577,29 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 	pj_int16_t *dst_buf;
 	const pj_int16_t *src_buf;
 
-	/* Buffer layout:
+	/* Okay chaps, here's how we do resampling.
+	 *
+	 * The original resample algorithm requires xoff samples *before* the
+	 * input buffer as history, and another xoff samples *after* the
+	 * end of the input buffer as lookahead. Since application can only
+	 * supply framesize buffer on each run, PJMEDIA needs to arrange the
+	 * buffer to meet these requirements.
+	 *
+	 * So here comes the trick.
+	 *
+	 * First of all, because of the history and lookahead requirement, 
+	 * resample->buffer need to accomodate framesize+2*xoff samples in its
+	 * buffer. This is done when the buffer is created.
+	 *
+	 * On the first run, the input frame (supplied by application) is
+	 * copied to resample->buffer at 2*xoff position. The first 2*xoff
+	 * samples are initially zeroed (in the initialization). The resample
+	 * algorithm then invoked at resample->buffer+xoff ONLY, thus giving
+	 * it one xoff at the beginning as zero, and one xoff at the end
+	 * as the end of the original input. The resample algorithm will see
+	 * that the first xoff samples in the input as zero.
+	 *
+	 * So here's the layout of resample->buffer on the first run.
 	 *
 	 * run 0 
 	 *     +------+------+--------------+
@@ -571,12 +608,40 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 	 *     ^      ^      ^              ^
          *     0    xoff  2*xoff       size+2*xoff 
          *
-	 * run 01
+	 * (Note again: resample algorithm is called at resample->buffer+xoff)
+	 *
+	 * At the end of the run, 2*xoff samples from the end of 
+	 * resample->buffer are copied to the beginning of resample->buffer.
+	 * The first xoff part of this will be used as history for the next
+	 * run, and the second xoff part of this is actually the start of
+	 * resampling for the next run.
+	 *
+	 * And the first run completes, the function returns.
+	 *
+	 * 
+	 * On the next run, the input frame supplied by application is again
+	 * copied at 2*xoff position in the resample->buffer, and the 
+	 * resample algorithm is again invoked at resample->buffer+xoff 
+	 * position. So effectively, the resample algorithm will start its
+	 * operation on the last xoff from the previous frame, and gets the
+	 * history from the last 2*xoff of the previous frame, and the look-
+	 * ahead from the last xoff of current frame.
+	 *
+	 * So on this run, the buffer layout is:
+	 *
+	 * run 1
 	 *     +------+------+--------------+
 	 *     | frm0 | frm0 |  frame1...   |
 	 *     +------+------+--------------+
 	 *     ^      ^      ^              ^
          *     0    xoff  2*xoff       size+2*xoff 
+	 *
+	 * As you can see from above diagram, the resampling algorithm is
+	 * actually called from the last xoff part of previous frame (frm0).
+	 *
+	 * And so on the process continues for the next frame, and the next,
+	 * and the next, ...
+	 *
 	 */
 	dst_buf = resample->buffer + resample->xoff*2;
 	for (i=0; i<resample->frame_size; ++i) dst_buf[i] = input[i];
