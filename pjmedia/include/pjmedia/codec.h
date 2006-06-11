@@ -426,26 +426,26 @@ enum pjmedia_codec_priority
      * highest place in the order, and will change the priority
      * of previously highest priority codec to NEXT_HIGHER.
      */
-    PJMEDIA_CODEC_PRIO_HIGHEST = 16,
+    PJMEDIA_CODEC_PRIO_HIGHEST = 255,
 
     /**
      * This priority will put the codec as the next codec after
      * codecs with this same priority.
      */
-    PJMEDIA_CODEC_PRIO_NEXT_HIGHER = 12,
+    PJMEDIA_CODEC_PRIO_NEXT_HIGHER = 254,
 
     /**
      * This is the initial codec priority when it is registered to
      * codec manager by codec factory.
      */
-    PJMEDIA_CODEC_PRIO_NORMAL = 8,
+    PJMEDIA_CODEC_PRIO_NORMAL = 128,
 
     /**
      * This priority makes the codec the lowest in the order.
      * The last codec specified with this priority will be put
      * in the last place in the order.
      */
-    PJMEDIA_CODEC_PRIO_LOWEST = 4,
+    PJMEDIA_CODEC_PRIO_LOWEST = 1,
 
     /**
      * This priority will prevent the codec from being listed in the
@@ -637,14 +637,16 @@ pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
  *		    instance by calling #pjmedia_endpt_get_codec_mgr().
  * @param codec_id  The full codec ID or codec ID prefix. If an empty
  *		    string is given, it will match all codecs.
- * @param prio	    Priority to be set.
+ * @param prio	    Priority to be set. The priority can have any value
+ *		    between 1 to 255. When the priority is set to zero,
+ *		    the codec will be disabled.
  *
  * @return	    PJ_SUCCESS if at least one codec info is found.
  */
 PJ_DECL(pj_status_t)
 pjmedia_codec_mgr_set_codec_priority(pjmedia_codec_mgr *mgr, 
 				     const pj_str_t *codec_id,
-				     pjmedia_codec_priority prio);
+				     pj_uint8_t prio);
 
 
 /**

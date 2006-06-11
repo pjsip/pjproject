@@ -77,6 +77,13 @@
  */
 #define PJ_SELECT_NEEDS_NFDS	    0
 
+/* Is errno a good way to retrieve OS errors?
+ * (probably no for linux kernel) 
+ * If you answer no here, you'll need to tell pjlib how to get OS
+ * error (a compile error will tell you exactly where)
+ */
+#define PJ_HAS_ERRNO_VAR	    0
+
 /* This value specifies the value set in errno by the OS when a non-blocking
  * socket recv() can not return immediate daata.
  */
@@ -114,6 +121,7 @@
 #define PJ_HAS_HIGH_RES_TIMER	    1
 #ifndef PJ_OS_HAS_CHECK_STACK
 #   define PJ_OS_HAS_CHECK_STACK    0
+#endif
 #define PJ_TERM_HAS_COLOR	    0
 #define PJ_NATIVE_STRING_IS_UNICODE 0
 

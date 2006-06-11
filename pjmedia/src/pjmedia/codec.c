@@ -309,7 +309,7 @@ static void sort_codecs(pjmedia_codec_mgr *mgr)
 PJ_DEF(pj_status_t)
 pjmedia_codec_mgr_set_codec_priority(pjmedia_codec_mgr *mgr, 
 				     const pj_str_t *codec_id,
-				     pjmedia_codec_priority prio)
+				     pj_uint8_t prio)
 {
     unsigned i, found = 0;
 
