@@ -19,6 +19,7 @@
 #include <pjmedia/clock.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/lock.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 
@@ -41,6 +42,7 @@ struct pjmedia_clock
     pj_thread_t		    *thread;
     pj_bool_t		     running;
     pj_bool_t		     quitting;
+    pj_lock_t		    *lock;
 };
 
 
@@ -82,10 +84,17 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     clock->running = PJ_FALSE;
     clock->quitting = PJ_FALSE;
     
-    status = pj_thread_create(pool, "clock", &clock_thread, clock,
-			      0, 0, &clock->thread);
+    /* I don't think we need a mutex, so we'll use null. */
+    status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
     if (status != PJ_SUCCESS)
 	return status;
+
+    status = pj_thread_create(pool, "clock", &clock_thread, clock,
+			      0, 0, &clock->thread);
+    if (status != PJ_SUCCESS) {
+	pj_lock_destroy(clock->lock);
+	return status;
+    }
 
 
     *p_clock = clock;
@@ -104,12 +113,17 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
 
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
 
+    if (clock->running)
+	return PJ_SUCCESS;
+
     status = pj_get_timestamp(&now);
     if (status != PJ_SUCCESS)
 	return status;
 
+    pj_lock_acquire(clock->lock);
     clock->next_tick.u64 = now.u64 + clock->interval.u64;
     clock->running = PJ_TRUE;
+    pj_lock_release(clock->lock);
 
     return status;
 }
@@ -205,6 +219,8 @@ static int clock_thread(void *arg)
 	if (!clock->running)
 	    continue;
 
+	pj_lock_acquire(clock->lock);
+
 	/* Call callback, if any */
 	if (clock->cb)
 	    (*clock->cb)(&clock->timestamp, clock->user_data);
@@ -215,7 +231,7 @@ static int clock_thread(void *arg)
 	/* Calculate next tick */
 	clock->next_tick.u64 += clock->interval.u64;
 
-
+	pj_lock_release(clock->lock);
     }
 
     return 0;
@@ -238,10 +254,12 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 	clock->thread = NULL;
     }
 
+    if (clock->lock) {
+	pj_lock_destroy(clock->lock);
+	clock->lock = NULL;
+    }
+
     return PJ_SUCCESS;
 }
-
-
-
 
 
