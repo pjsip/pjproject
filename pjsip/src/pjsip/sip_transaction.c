@@ -1326,6 +1326,20 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
 
 /*
+ * Set transaction status code and reason.
+ */
+static tsx_set_status_code(pjsip_transaction *tsx,
+			   int code, const pj_str_t *reason)
+{
+    tsx->status_code = code;
+    if (reason)
+	pj_strdup(tsx->pool, &tsx->status_text, reason);
+    else
+	tsx->status_text = *pjsip_get_status_text(code);
+}
+
+
+/*
  * Forcely terminate transaction.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
@@ -1341,7 +1355,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 	return PJ_SUCCESS;
 
     lock_tsx(tsx, &lck);
-    tsx->status_code = code;
+    tsx_set_status_code(tsx, code, NULL);
     tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER, NULL);
     unlock_tsx(tsx, &lck);
 
@@ -1491,13 +1505,16 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	if (!*cont) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_str_t err;
 
 	    tsx->transport_err = -sent;
+
+	    err =pj_strerror(-sent, errmsg, sizeof(errmsg));
 
 	    PJ_LOG(4,(tsx->obj_name, 
 		      "Failed to send %s! err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
-		      pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+		      errmsg));
 
 	    /* Clear pending transport flag. */
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
@@ -1506,7 +1523,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
 	    /* Terminate transaction, if it's not already terminated. */
-	    tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
+	    tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 	    if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
 		tsx->state != PJSIP_TSX_STATE_DESTROYED)
 	    {
@@ -1537,12 +1554,14 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	pjsip_transaction *tsx = token;
 	struct tsx_lock_data lck;
 	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_str_t err;
 
 	tsx->transport_err = -sent;
 
+	err = pj_strerror(-sent, errmsg, sizeof(errmsg));
+
 	PJ_LOG(4,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
-		  pjsip_tx_data_get_info(tdata), -sent,
-		  pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+		  pjsip_tx_data_get_info(tdata), -sent, errmsg));
 
 	lock_tsx(tsx, &lck);
 
@@ -1551,7 +1570,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	tsx->transport = NULL;
 
 	/* Terminate transaction. */
-	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
+	tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
 		       PJSIP_EVENT_TRANSPORT_ERROR, tdata );
 
@@ -1621,6 +1640,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
     if (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER) {
 	
 	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_str_t err;
 
 	if (status == PJ_SUCCESS) {
 	    pj_assert(!"Unexpected status!");
@@ -1630,13 +1650,14 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	/* We have resolved the server!.
 	 * Treat this as permanent transport error.
 	 */
+	err = pj_strerror(status, errmsg, sizeof(errmsg));
+
 	PJ_LOG(4,(tsx->obj_name, 
 		  "Transport error, terminating transaction. "
 		  "Err=%d (%s)",
-		  status, 
-		  pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
+		  status, errmsg));
 
-	tsx->status_code = PJSIP_SC_TSX_TRANSPORT_ERROR;
+	tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
 		       PJSIP_EVENT_TRANSPORT_ERROR, NULL );
 
@@ -1859,7 +1880,7 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	/* Set status code */
-	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
+	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 	/* Inform TU. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
@@ -2001,7 +2022,8 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	PJ_ASSERT_RETURN(msg->type==PJSIP_RESPONSE_MSG, PJSIP_ENOTRESPONSEMSG);
 
 	/* Update last status */
-	tsx->status_code = msg->line.status.code;
+	tsx_set_status_code(tsx, msg->line.status.code, 
+			    &msg->line.status.reason);
 
 	/* Discard the saved last response (it will be updated later as
 	 * necessary).
@@ -2163,7 +2185,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	/* Timeout timer. should not happen? */
 	pj_assert(!"Should not happen(?)");
 
-	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
+	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
                        PJSIP_EVENT_TIMER, &tsx->timeout_timer);
@@ -2210,9 +2232,11 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    return PJSIP_ENOTRESPONSEMSG;
 	}
 
-	tsx->status_code = msg->line.status.code;
+	tsx_set_status_code(tsx, msg->line.status.code, 
+			    &msg->line.status.reason);
+
     } else {
-	tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
+	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
     }
 
     if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 100)) {
@@ -2440,7 +2464,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 		 * Set state to Terminated, and inform TU.
 		 */
 
-		tsx->status_code = PJSIP_SC_TSX_TIMEOUT;
+		tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
                                PJSIP_EVENT_TIMER, &tsx->timeout_timer );

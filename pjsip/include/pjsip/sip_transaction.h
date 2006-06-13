@@ -82,6 +82,7 @@ struct pjsip_transaction
      * State and status.
      */
     int				status_code;    /**< Last status code seen. */
+    pj_str_t			status_text;	/**< Last reason phrase.    */
     pjsip_tsx_state_e		state;          /**< State.                 */
     int				handle_200resp; /**< UAS 200/INVITE  retrsm.*/
     int                         tracing;        /**< Tracing enabled?       */
