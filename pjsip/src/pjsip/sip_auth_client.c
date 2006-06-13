@@ -610,16 +610,19 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 			pjsip_authorization_hdr *hauth;
 			hauth = pjsip_hdr_shallow_clone(tdata->pool, entry->hdr);
 			pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
-		    } else {
-#			if defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
-			   PJSIP_AUTH_AUTO_SEND_NEXT!=0
-			{
-			    new_auth_for_req( tdata, sess, auth, NULL);
-			}
-#			endif
+			break;
 		    }
 		    entry = entry->next;
 		}
+
+#		if defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
+			   PJSIP_AUTH_AUTO_SEND_NEXT!=0
+		{
+		    if (entry == &auth->cached_hdr)
+			new_auth_for_req( tdata, sess, auth, NULL);
+		}
+#		endif
+
 	    }
 #	    elif defined(PJSIP_AUTH_AUTO_SEND_NEXT) && \
 		 PJSIP_AUTH_AUTO_SEND_NEXT!=0
@@ -824,6 +827,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     /* Remove branch param in Via header. */
     via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->branch_param.slen = 0;
+
+    /* Must invalidate the message! */
+    pjsip_tx_data_invalidate_msg(tdata);
 
     /* Increment reference counter. */
     pjsip_tx_data_add_ref(tdata);
