@@ -392,6 +392,22 @@ PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
 				   const pjmedia_sdp_session **remote);
 
+
+/**
+ * Determine whether remote sent answer (as opposed to offer) on the
+ * last negotiation. This function can only be called in state
+ * PJMEDIA_SDP_NEG_STATE_DONE.
+ *
+ * @param neg		The SDP negotiator instance.
+ *
+ * @return		Non-zero if it was remote who sent answer,
+ *			otherwise zero if it was local who supplied
+ *			answer.
+ */
+PJ_DECL(pj_bool_t)
+pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg);
+
+
 /**
  * Get the current remote SDP offer or answer. Application can only 
  * call this function in state PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER or

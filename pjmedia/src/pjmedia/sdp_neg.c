@@ -32,6 +32,7 @@ struct pjmedia_sdp_neg
 {
     pjmedia_sdp_neg_state state;	    /**< Negotiator state.	     */
     pj_bool_t		  has_remote_answer;
+    pj_bool_t		  answer_was_remote;
 
     pjmedia_sdp_session	*initial_sdp,	    /**< Initial local SDP	     */
 			*active_local_sdp,  /**< Currently active local SDP. */
@@ -174,6 +175,16 @@ pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_bool_t)
+pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg)
+{
+    PJ_ASSERT_RETURN(neg, PJ_FALSE);
+
+    return neg->answer_was_remote;
+}
+
+
 PJ_DEF(pj_status_t)
 pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
 				const pjmedia_sdp_session **remote)
@@ -274,7 +285,7 @@ pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
 
     /* We're ready to negotiate. */
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
-    neg->has_remote_answer = 1;
+    neg->has_remote_answer = PJ_TRUE;
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
  
     return PJ_SUCCESS;
@@ -917,9 +928,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     /* State is DONE regardless */
     neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
 
+    /* Save state */
+    neg->answer_was_remote = neg->has_remote_answer;
+
     /* Clear temporary SDP */
     neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
-    neg->has_remote_answer = 0;
+    neg->has_remote_answer = PJ_FALSE;
 
     return status;
 }
