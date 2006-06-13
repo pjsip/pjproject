@@ -92,6 +92,10 @@ LINK32=link.exe
 
 SOURCE=..\src\pjsua\main.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjsua\pjsua.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 

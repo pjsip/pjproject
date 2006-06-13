@@ -17,17 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua-lib/pjsua.h>
-#include <pj/log.h>
-#include "pjsua_imp.h"
+#include <pjsua-lib/pjsua_internal.h>
 
-/*
- * pjsua_im.c
- *
- * To handle incoming MESSAGE outside dialog.
- * Incoming MESSAGE inside dialog is hanlded in pjsua_call.c.
- */
 
-#define THIS_FILE   "pjsua_im.c"
+#define THIS_FILE   "pjsua_im.h"
 
 
 /* Declare MESSAGE method */
@@ -49,6 +42,7 @@ const pjsip_method pjsip_message_method =
 
 /* Proto */
 static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata);
+
 
 /* The module instance. */
 static pjsip_module mod_pjsua_im = 
@@ -136,30 +130,48 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
  * Private: process pager message.
  *	    This may trigger pjsua_ui_on_pager() or pjsua_ui_on_typing().
  */
-void pjsua_im_process_pager(int call_index, const pj_str_t *from,
+void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 			    const pj_str_t *to, pjsip_rx_data *rdata)
 {
+    pjsip_contact_hdr *contact_hdr;
+    pj_str_t contact;
     pjsip_msg_body *body = rdata->msg_info.msg->body;
 
     /* Body MUST have been checked before */
     pj_assert(body != NULL);
 
+
+    /* Build remote contact */
+    contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+				     NULL);
+    if (contact_hdr) {
+	contact.ptr = pj_pool_alloc(rdata->tp_info.pool, 
+				    PJSIP_MAX_URL_SIZE);
+	contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+				       contact_hdr->uri, contact.ptr,
+				       PJSIP_MAX_URL_SIZE);
+    } else {
+	contact.slen = 0;
+    }
+
+
     if (pj_stricmp(&body->content_type.type, &STR_MIME_TEXT)==0 &&
 	pj_stricmp(&body->content_type.subtype, &STR_MIME_PLAIN)==0)
     {
-	pj_str_t text;
+	const pj_str_t mime_text_plain = pj_str("text/plain");
+	pj_str_t text_body;
+	
+	/* Save text body */
+	text_body.ptr = rdata->msg_info.msg->body->data;
+	text_body.slen = rdata->msg_info.msg->body->len;
 
-	/* Build the text. */
-	text.ptr = rdata->msg_info.msg->body->data;
-	text.slen = rdata->msg_info.msg->body->len;
-
-	if (pjsua.cb.on_pager)
-	    (*pjsua.cb.on_pager)(call_index, from, to, &text);
+	if (pjsua_var.ua_cfg.cb.on_pager) {
+	    (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
+					    &mime_text_plain, &text_body);
+	}
 
     } else {
-
 	/* Expecting typing indication */
-
 	pj_status_t status;
 	pj_bool_t is_typing;
 
@@ -171,8 +183,10 @@ void pjsua_im_process_pager(int call_index, const pj_str_t *from,
 	    return;
 	}
 
-	if (pjsua.cb.on_typing)
-	    (*pjsua.cb.on_typing)(call_index, from, to, is_typing);
+	if (pjsua_var.ua_cfg.cb.on_typing) {
+	    (*pjsua_var.ua_cfg.cb.on_typing)(call_id, from, to, &contact,
+					     is_typing);
+	}
     }
 
 }
@@ -210,7 +224,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 	pj_list_init(&hdr_list);
 	pj_list_push_back(&hdr_list, accept_hdr);
 
-	pjsip_endpt_respond_stateless(pjsua.endpt, rdata, 
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
 				      PJSIP_SC_NOT_ACCEPTABLE_HERE, NULL, 
 				      &hdr_list, NULL);
 	return PJ_TRUE;
@@ -219,7 +233,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
     /* Respond with 200 first, so that remote doesn't retransmit in case
      * the UI takes too long to process the message. 
      */
-    status = pjsip_endpt_respond( pjsua.endpt, NULL, rdata, 200, NULL,
+    status = pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
 				  NULL, NULL, NULL);
 
     /* For the source URI, we use Contact header if present, since
@@ -261,45 +275,158 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 /* Outgoing IM callback. */
 static void im_callback(void *token, pjsip_event *e)
 {
-    pj_str_t *text = token;
+    pjsua_im_data *im_data = token;
 
     if (e->type == PJSIP_EVENT_TSX_STATE) {
 
 	pjsip_transaction *tsx = e->body.tsx_state.tsx;
 
+	/* Ignore provisional response, if any */
+	if (tsx->status_code < 200)
+	    return;
+
+
+	/* Handle authentication challenges */
+	if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
+	    (tsx->status_code == 401 || tsx->status_code == 407)) 
+	{
+	    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	    pjsip_tx_data *tdata;
+	    pjsip_auth_clt_sess auth;
+	    pj_status_t status;
+
+	    PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
+
+	    /* Create temporary authentication session */
+	    pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
+    
+	    pjsip_auth_clt_set_credentials(&auth, 
+		pjsua_var.acc[im_data->acc_id].cred_cnt,
+		pjsua_var.acc[im_data->acc_id].cred);
+
+	    status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
+					       &tdata);
+	    if (status == PJ_SUCCESS) {
+		pjsua_im_data *im_data2;
+
+		/* Must duplicate im_data */
+		im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
+
+		/* Re-send request */
+		status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
+						   im_data2, &im_callback);
+		if (status == PJ_SUCCESS) {
+		    /* Done */
+		    return;
+		}
+	    }
+	}
+
 	if (tsx->status_code/100 == 2) {
 	    PJ_LOG(4,(THIS_FILE, 
 		      "Message \'%s\' delivered successfully",
-		      text->ptr));
+		      im_data->body.ptr));
 	} else {
 	    PJ_LOG(3,(THIS_FILE, 
-		      "Failed to deliver message \'%s\': %s [st_code=%d]",
-		      text->ptr,
-		      pjsip_get_status_text(tsx->status_code)->ptr,
-		      tsx->status_code));
+		      "Failed to deliver message \'%s\': %d/%.*s",
+		      im_data->body.ptr,
+		      tsx->status_code,
+		      (int)tsx->status_text.slen,
+		      tsx->status_text.ptr));
 	}
+
+	if (pjsua_var.ua_cfg.cb.on_pager_status)
+	    pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id, 
+					        &im_data->to,
+						&im_data->body,
+						im_data->user_data,
+						tsx->status_code,
+						&tsx->status_text);
     }
 }
 
 
-/**
- * Send IM outside dialog.
+/* Outgoing typing indication callback. 
+ * (used to reauthenticate request)
  */
-PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const pj_str_t *dst_uri, 
-				  const pj_str_t *str)
+static void typing_callback(void *token, pjsip_event *e)
+{
+    pjsua_im_data *im_data = token;
+
+    if (e->type == PJSIP_EVENT_TSX_STATE) {
+
+	pjsip_transaction *tsx = e->body.tsx_state.tsx;
+
+	/* Ignore provisional response, if any */
+	if (tsx->status_code < 200)
+	    return;
+
+	/* Handle authentication challenges */
+	if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
+	    (tsx->status_code == 401 || tsx->status_code == 407)) 
+	{
+	    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	    pjsip_tx_data *tdata;
+	    pjsip_auth_clt_sess auth;
+	    pj_status_t status;
+
+	    PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
+
+	    /* Create temporary authentication session */
+	    pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
+    
+	    pjsip_auth_clt_set_credentials(&auth, 
+		pjsua_var.acc[im_data->acc_id].cred_cnt,
+		pjsua_var.acc[im_data->acc_id].cred);
+
+	    status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
+					       &tdata);
+	    if (status == PJ_SUCCESS) {
+		pjsua_im_data *im_data2;
+
+		/* Must duplicate im_data */
+		im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
+
+		/* Re-send request */
+		status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
+						   im_data2, &typing_callback);
+		if (status == PJ_SUCCESS) {
+		    /* Done */
+		    return;
+		}
+	    }
+	}
+
+    }
+}
+
+
+/*
+ * Send instant messaging outside dialog, using the specified account for
+ * route set and authentication.
+ */
+PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id, 
+				   const pj_str_t *to,
+				   const pj_str_t *mime_type,
+				   const pj_str_t *content,
+				   const pjsua_msg_data *msg_data,
+				   void *user_data)
 {
     pjsip_tx_data *tdata;
+    const pj_str_t mime_text_plain = pj_str("text/plain");
     const pj_str_t STR_CONTACT = { "Contact", 7 };
-    const pj_str_t mime_text = pj_str("text");
-    const pj_str_t mime_plain = pj_str("plain");
-    pj_str_t *text;
+    pjsip_media_type media_type;
+    pjsua_im_data *im_data;
     pj_status_t status;
 
+    /* To and message body must be specified. */
+    PJ_ASSERT_RETURN(to && content, PJ_EINVAL);
+
     /* Create request. */
-    status = pjsip_endpt_create_request(pjsua.endpt, &pjsip_message_method,
-					dst_uri, 
-					&pjsua.config.acc_config[acc_index].id,
-					dst_uri, NULL, NULL, -1, NULL, &tdata);
+    status = pjsip_endpt_create_request(pjsua_var.endpt, 
+					&pjsip_message_method, to, 
+					&pjsua_var.acc[acc_id].cfg.id,
+					to, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;
@@ -313,27 +440,46 @@ PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const pj_str_t *dst_uri,
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
 					&STR_CONTACT,
-					&pjsua.config.acc_config[acc_index].contact));
+					&pjsua_var.acc[acc_id].cfg.contact));
 
-    /* Duplicate text.
-     * We need to keep the text because we will display it when we fail to
-     * send the message.
+    /* Create IM data to keep message details and give it back to
+     * application on the callback
      */
-    text = pj_pool_alloc(tdata->pool, sizeof(pj_str_t));
-    pj_strdup_with_null(tdata->pool, text, str);
+    im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
+    im_data->acc_id = acc_id;
+    im_data->call_id = PJSUA_INVALID_ID;
+    pj_strdup_with_null(tdata->pool, &im_data->to, to);
+    pj_strdup_with_null(tdata->pool, &im_data->body, content);
+    im_data->user_data = user_data;
+
+
+    /* Set default media type if none is specified */
+    if (mime_type == NULL) {
+	mime_type = &mime_text_plain;
+    }
+
+    /* Parse MIME type */
+    pjsua_parse_media_type(tdata->pool, mime_type, &media_type);
 
     /* Add message body */
-    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &mime_text,
-					      &mime_plain, text);
+    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
+					      &media_type.subtype, 
+					      &im_data->body);
     if (tdata->msg->body == NULL) {
 	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
 	pjsip_tx_data_dec_ref(tdata);
 	return PJ_ENOMEM;
     }
 
+    /* Add additional headers etc. */
+    pjsua_process_msg_data(tdata, msg_data);
+
+    /* Add route set */
+    pjsua_set_msg_route_set(tdata, &pjsua_var.acc[acc_id].route_set);
+
     /* Send request (statefully) */
-    status = pjsip_endpt_send_request( pjsua.endpt, tdata, -1, 
-				       text, &im_callback);
+    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
+				       im_data, &im_callback);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send request", status);
 	return status;
@@ -343,21 +489,23 @@ PJ_DEF(pj_status_t) pjsua_im_send(int acc_index, const pj_str_t *dst_uri,
 }
 
 
-/**
+/*
  * Send typing indication outside dialog.
  */
-PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const pj_str_t *dst_uri, 
-				    pj_bool_t is_typing)
+PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id, 
+				     const pj_str_t *to, 
+				     pj_bool_t is_typing,
+				     const pjsua_msg_data *msg_data)
 {
     const pj_str_t STR_CONTACT = { "Contact", 7 };
+    pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     /* Create request. */
-    status = pjsip_endpt_create_request( pjsua.endpt, &pjsip_message_method,
-					 dst_uri, 
-					 &pjsua.config.acc_config[acc_index].id,
-					 dst_uri, NULL, NULL, -1, NULL, &tdata);
+    status = pjsip_endpt_create_request( pjsua_var.endpt, &pjsip_message_method,
+					 to, &pjsua_var.acc[acc_id].cfg.id,
+					 to, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
 	return status;
@@ -373,16 +521,23 @@ PJ_DEF(pj_status_t) pjsua_im_typing(int acc_index, const pj_str_t *dst_uri,
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
 					&STR_CONTACT,
-					&pjsua.config.acc_config[acc_index].contact));
+					&pjsua_var.acc[acc_id].cfg.contact));
 
 
     /* Create "application/im-iscomposing+xml" msg body. */
     tdata->msg->body = pjsip_iscomposing_create_body( tdata->pool, is_typing,
 						      NULL, NULL, -1);
 
+    /* Add additional headers etc. */
+    pjsua_process_msg_data(tdata, msg_data);
+
+    /* Create data to reauthenticate */
+    im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
+    im_data->acc_id = acc_id;
+
     /* Send request (statefully) */
-    status = pjsip_endpt_send_request( pjsua.endpt, tdata, -1, 
-				       NULL, NULL);
+    status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
+				       im_data, &typing_callback);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send request", status);
 	return status;
@@ -401,12 +556,12 @@ pj_status_t pjsua_im_init(void)
     pj_status_t status;
 
     /* Register module */
-    status = pjsip_endpt_register_module(pjsua.endpt, &mod_pjsua_im);
+    status = pjsip_endpt_register_module(pjsua_var.endpt, &mod_pjsua_im);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Register support for MESSAGE method. */
-    pjsip_endpt_add_capability( pjsua.endpt, &mod_pjsua_im, PJSIP_H_ALLOW,
+    pjsip_endpt_add_capability( pjsua_var.endpt, &mod_pjsua_im, PJSIP_H_ALLOW,
 				NULL, 1, &msg_tag);
 
     return PJ_SUCCESS;

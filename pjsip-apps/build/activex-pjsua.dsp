@@ -323,7 +323,7 @@ SOURCE="..\src\activex-pjsua\app.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\activex-pjsua\pjsua.h"
+SOURCE="..\src\activex-pjsua\pjsua-structs.h"
 # End Source File
 # Begin Source File
 

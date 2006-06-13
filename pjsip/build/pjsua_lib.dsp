@@ -87,11 +87,11 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\src\pjsua-lib\pjsua_call.c"
+SOURCE="..\src\pjsua-lib\pjsua_acc.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjsua-lib\pjsua_console_app.c"
+SOURCE="..\src\pjsua-lib\pjsua_call.c"
 # End Source File
 # Begin Source File
 
@@ -103,19 +103,11 @@ SOURCE="..\src\pjsua-lib\pjsua_im.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjsua-lib\pjsua_imp.h"
+SOURCE="..\src\pjsua-lib\pjsua_media.c"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjsua-lib\pjsua_pres.c"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjsua-lib\pjsua_reg.c"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjsua-lib\pjsua_settings.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -127,7 +119,7 @@ SOURCE="..\include\pjsua-lib\pjsua.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\include\pjsua-lib\pjsua_console_app.h"
+SOURCE="..\include\pjsua-lib\pjsua_internal.h"
 # End Source File
 # End Group
 # End Target
