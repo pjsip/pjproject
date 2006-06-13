@@ -600,8 +600,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 	pjsip_msg_add_hdr(cancel_tdata->msg, 
 			  pjsip_hdr_clone(cancel_tdata->pool, hdr));
 	hdr = hdr->next;
-	if (hdr != &cancel_tdata->msg->hdr)
-	    hdr = pjsip_msg_find_hdr(cancel_tdata->msg, PJSIP_H_ROUTE, hdr);
+	if (hdr != &req_tdata->msg->hdr)
+	    hdr = pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_ROUTE, hdr);
 	else
 	    break;
     }
