@@ -87,13 +87,10 @@ static pj_status_t null_put_frame(pjmedia_port *this_port,
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame)
 {
-    unsigned i, count;
-    pj_int16_t *samples = frame->buf;
-
-    count = this_port->info.samples_per_frame;
-    for (i=0; i<count; ++i) {
-	samples[i] = 0;
-    }
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame->size = this_port->info.samples_per_frame * 2;
+    frame->timestamp.u32.lo += this_port->info.samples_per_frame;
+    pjmedia_zero_samples(frame->buf, this_port->info.samples_per_frame);
 
     return PJ_SUCCESS;
 }

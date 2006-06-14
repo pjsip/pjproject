@@ -115,8 +115,9 @@ typedef struct pjmedia_sock_info
 
 /**
  * This is a general purpose function set PCM samples to zero.
- * Since this function is needed by many parts of the library, it is important
- * that the library should select the best performance for this.
+ * Since this function is needed by many parts of the library, 
+ * by putting this functionality in one place, it enables some.
+ * clever people to optimize this function.
  *
  * @param samples	The 16bit PCM samples.
  * @param count		Number of samples.
@@ -126,6 +127,21 @@ PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
     unsigned i;
     for (i=0; i<count; ++i)
 	samples[i] = 0;
+}
+
+
+/**
+ * This is a general purpose function to copy samples from/to buffers with
+ * equal size. Since this function is needed by many parts of the library, 
+ * by putting this functionality in one place, it enables some.
+ * clever people to optimize this function.
+ */
+PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
+				     unsigned count)
+{
+    unsigned i;
+    for (i=0; i<count; ++i)
+	dst[i] = src[i];
 }
 
 

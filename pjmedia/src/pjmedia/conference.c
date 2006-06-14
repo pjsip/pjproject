@@ -332,7 +332,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 				      pjmedia_conf *conf )
 {
     struct conf_port *conf_port;
-    pj_str_t name = { "sound-device", 12 };
+    pj_str_t name = { "Master/sound", 12 };
     unsigned i;
     pj_status_t status;
 
@@ -993,24 +993,6 @@ static pj_int16_t unsigned2pcm(pj_uint32_t uns)
     return (pj_int16_t)(uns - 32767);
 }
 
-/* Copy samples */
-PJ_INLINE(void) copy_samples(pj_int16_t *dst, 
-				const pj_int16_t *src,
-				unsigned count)
-{
-    unsigned i;
-    for (i=0; i<count; ++i)
-	dst[i] = src[i];
-}
-
-/* Zero samples. */
-PJ_INLINE(void) zero_samples(pj_int16_t *buf, unsigned count)
-{
-    unsigned i;
-    for (i=0; i<count; ++i)
-	buf[i] = 0;
-}
-
 
 /*
  * Read from port.
@@ -1073,8 +1055,8 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
 	    if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
 		TRACE_((THIS_FILE, "  get_frame returned non-audio"));
-		zero_samples( cport->rx_buf + cport->rx_buf_count,
-			      cport->samples_per_frame);
+		pjmedia_zero_samples( cport->rx_buf + cport->rx_buf_count,
+				      cport->samples_per_frame);
 	    }
 
 	    cport->rx_buf_count += cport->samples_per_frame;
@@ -1102,8 +1084,8 @@ static pj_status_t read_port( pjmedia_conf *conf,
 				   conf->clock_rate);
 	    cport->rx_buf_count -= src_count;
 	    if (cport->rx_buf_count) {
-		copy_samples(cport->rx_buf, cport->rx_buf+src_count,
-			     cport->rx_buf_count);
+		pjmedia_copy_samples(cport->rx_buf, cport->rx_buf+src_count,
+				     cport->rx_buf_count);
 	    }
 
 	    TRACE_((THIS_FILE, "  rx buffer size is now %d",
@@ -1111,11 +1093,11 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
 	} else {
 
-	    copy_samples(frame, cport->rx_buf, count);
+	    pjmedia_copy_samples(frame, cport->rx_buf, count);
 	    cport->rx_buf_count -= count;
 	    if (cport->rx_buf_count) {
-		copy_samples(cport->rx_buf, cport->rx_buf+count,
-			     cport->rx_buf_count);
+		pjmedia_copy_samples(cport->rx_buf, cport->rx_buf+count,
+				     cport->rx_buf_count);
 	    }
 	}
     }
@@ -1201,7 +1183,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	}
     } else {
 	// Not necessarry. Buffer has been zeroed before.
-	// zero_samples(buf, conf->samples_per_frame);
+	// pjmedia_zero_samples(buf, conf->samples_per_frame);
 	pj_assert(buf[0] == 0);
     }
 
@@ -1266,8 +1248,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	/* Same clock rate.
 	 * Just copy the samples to tx_buffer.
 	 */
-	copy_samples( cport->tx_buf + cport->tx_buf_count,
-		      buf, conf->samples_per_frame );
+	pjmedia_copy_samples( cport->tx_buf + cport->tx_buf_count,
+			      buf, conf->samples_per_frame );
 	cport->tx_buf_count += conf->samples_per_frame;
     }
 
@@ -1300,9 +1282,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
 	cport->tx_buf_count -= cport->samples_per_frame;
 	if (cport->tx_buf_count) {
-	    copy_samples(cport->tx_buf, 
-			 cport->tx_buf + cport->samples_per_frame,
-			 cport->tx_buf_count);
+	    pjmedia_copy_samples(cport->tx_buf, 
+				 cport->tx_buf + cport->samples_per_frame,
+				 cport->tx_buf_count);
 	}
 
 	TRACE_((THIS_FILE, " tx_buf count now is %d", 
@@ -1345,7 +1327,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	conf_port->sources = 0;
 	mix_buf = conf_port->mix_buf;
 
-	for (j=0; j<conf->samples_per_frame; ++j) mix_buf[j] = 0;
+	pj_memset(mix_buf, 0, conf->samples_per_frame*sizeof(mix_buf[0]));
     }
 
     /* Get frames from all ports, and "mix" the signal 
@@ -1394,9 +1376,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    }
 
 	    snd_buf = conf_port->snd_buf[conf_port->snd_read_pos];
-	    for (j=0; j<conf->samples_per_frame; ++j) {
-		((pj_int16_t*)frame->buf)[j] = snd_buf[j];
-	    }
+	    pjmedia_copy_samples(frame->buf, snd_buf, conf->samples_per_frame);
 	    conf_port->snd_read_pos = (conf_port->snd_read_pos+1) % RX_BUF_COUNT;
 
 	} else {
@@ -1534,10 +1514,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	TRACE_((THIS_FILE, "write to audio, count=%d", 
 			   conf->samples_per_frame));
 
-	copy_samples( frame->buf, (pj_int16_t*)conf->ports[0]->mix_buf, 
-		      conf->samples_per_frame);
+	pjmedia_copy_samples( frame->buf, (pj_int16_t*)conf->ports[0]->mix_buf, 
+			      conf->samples_per_frame);
     } else {
-	zero_samples( frame->buf, conf->samples_per_frame ); 
+	pjmedia_zero_samples( frame->buf, conf->samples_per_frame ); 
     }
 
     /* MUST set frame type */
@@ -1566,7 +1546,6 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     struct conf_port *snd_port = conf->ports[0];
     const pj_int16_t *input = frame->buf;
     pj_int16_t *target_snd_buf;
-    unsigned i;
 
     /* Check for correct size. */
     PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *
@@ -1588,9 +1567,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     target_snd_buf = snd_port->snd_buf[snd_port->snd_write_pos];
     
     /* Copy samples from audio device to target rx_buffer */
-    for (i=0; i<conf->samples_per_frame; ++i) {
-	target_snd_buf[i] = ((pj_int16_t*)input)[i];
-    }
+    pjmedia_copy_samples(target_snd_buf, input, conf->samples_per_frame);
 
     /* Switch buffer */
     snd_port->snd_write_pos = (snd_port->snd_write_pos+1)%RX_BUF_COUNT;
