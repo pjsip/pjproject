@@ -37,7 +37,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
 #
 export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			main.o 
+			main.o pjsua_app.o
 export PJSUA_CFLAGS += $(_CFLAGS)
 export PJSUA_LDFLAGS += $(_LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)

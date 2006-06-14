@@ -1328,8 +1328,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 /*
  * Set transaction status code and reason.
  */
-static tsx_set_status_code(pjsip_transaction *tsx,
-			   int code, const pj_str_t *reason)
+static void tsx_set_status_code(pjsip_transaction *tsx,
+			   	int code, const pj_str_t *reason)
 {
     tsx->status_code = code;
     if (reason)

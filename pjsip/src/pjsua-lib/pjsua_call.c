@@ -1259,7 +1259,7 @@ static void dump_media_session(const char *indent,
 	len = pj_ansi_snprintf(buf, end-p, 
 		  "%s  #%d %.*s @%dKHz, %s, peer=%s:%d",
 		  indent, i,
-		  info.stream_info[i].fmt.encoding_name.slen,
+		  (int)info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
 		  info.stream_info[i].fmt.clock_rate / 1000,
 		  dir,
@@ -1502,11 +1502,11 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 		           "%s  Call time: %02dh:%02dm:%02ds, "
 		           "1st res in %d ms, conn in %dms",
 			   indent,
-		           (duration.sec / 3600),
-		           ((duration.sec % 3600)/60),
-		           (duration.sec % 60),
-		           PJ_TIME_VAL_MSEC(res_delay), 
-		           PJ_TIME_VAL_MSEC(con_delay));
+		           (int)(duration.sec / 3600),
+		           (int)((duration.sec % 3600)/60),
+		           (int)(duration.sec % 60),
+		           (int)PJ_TIME_VAL_MSEC(res_delay), 
+		           (int)PJ_TIME_VAL_MSEC(con_delay));
     
     if (len > 0 && len < end-p) {
 	p += len;

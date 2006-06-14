@@ -70,9 +70,8 @@ export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 #
 export PJSUA_LIB_SRCDIR = ../src/pjsua-lib
 export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			pjsua_call.o pjsua_core.o pjsua_im.o \
-			pjsua_pres.o pjsua_reg.o pjsua_settings.o \
-			pjsua_console_app.o
+			pjsua_acc.o pjsua_call.o pjsua_core.o \
+			pjsua_im.o pjsua_media.o pjsua_pres.o
 export PJSUA_LIB_CFLAGS += $(_CFLAGS)
 
 
