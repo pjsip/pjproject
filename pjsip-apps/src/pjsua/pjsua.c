@@ -586,6 +586,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_DURATION:
 	    cfg->duration = my_atoi(pj_optarg);
 	    break;
+
+	default:
+	    PJ_LOG(1,(THIS_FILE, "Invalid argument %s", argv[pj_optind-1]));
+	    return -1;
 	}
     }
 
@@ -2068,6 +2072,8 @@ pj_status_t app_init(int argc, char *argv[])
 				     &app_config.wav_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
     }
 
     /* Add UDP transport */
@@ -2107,6 +2113,13 @@ pj_status_t app_init(int argc, char *argv[])
     status = pjsua_media_transports_create(&app_config.rtp_cfg);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Use null sound device? */
+    if (app_config.null_audio) {
+	status = pjsua_set_null_snd_dev();
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     return PJ_SUCCESS;
 

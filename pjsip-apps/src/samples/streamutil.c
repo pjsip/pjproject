@@ -475,7 +475,7 @@ on_exit:
      * in this case are file_port and stream_port).
      */
     if (master_port) {
-	pjmedia_master_port_destroy(master_port);
+	pjmedia_master_port_destroy(master_port, PJ_TRUE);
 	play_file_port = NULL;
 	stream = NULL;
     }

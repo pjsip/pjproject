@@ -326,7 +326,7 @@ pj_status_t pjsua_media_subsys_start(void)
     }
 
     /* Create sound port if none is created yet */
-    if (pjsua_var.snd_port == NULL) {
+    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL) {
 	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
 	if (status != PJ_SUCCESS) {
 	    /* Error opening sound device, use null device */
