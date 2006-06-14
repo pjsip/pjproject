@@ -453,7 +453,8 @@ static pj_status_t put_frame( pjmedia_port *port,
 
 
     /* Number of samples in the frame */
-    ts_len = frame->size / 2;
+    //ts_len = frame->size / 2;
+    ts_len = port->info.samples_per_frame;
 
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
@@ -939,15 +940,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
     stream->last_dtmf = -1;
 
-    /* Attach transport */
-    status = (*tp->op->attach)(tp, stream, &info->rem_addr, 
-			       sizeof(info->rem_addr), &on_rx_rtp,
-			       &on_rx_rtcp);
-    if (status != PJ_SUCCESS)
-	goto err_cleanup;
-
-    stream->transport = tp;
-
 
     /* Create mutex to protect jitter buffer: */
 
@@ -1060,6 +1052,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+
+    /* Only attach transport when stream is ready. */
+    status = (*tp->op->attach)(tp, stream, &info->rem_addr, 
+			       sizeof(info->rem_addr), &on_rx_rtp,
+			       &on_rx_rtcp);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+    stream->transport = tp;
 
 
     /* Success! */
