@@ -319,6 +319,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	switch (c) {
 
+	case OPT_CONFIG_FILE:
+	    /* Ignore as this has been processed before */
+	    break;
+	
 	case OPT_LOG_FILE:
 	    cfg->log_cfg.log_filename = pj_str(pj_optarg);
 	    break;
