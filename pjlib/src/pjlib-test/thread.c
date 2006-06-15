@@ -72,9 +72,10 @@ static void* thread_proc(pj_uint32_t *pcounter)
     /* Test that pj_thread_register() works. */
     pj_thread_desc desc;
     pj_thread_t *this_thread;
-    unsigned id = *pcounter;
+    unsigned id;
     pj_status_t rc;
 
+    id = *pcounter;
     TRACE__((THIS_FILE, "     thread %d running..", id));
 
     rc = pj_thread_register("thread", desc, &this_thread);

@@ -904,7 +904,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
 	}
     } else {
-	pjmedia_sdp_session *answer;
+	pjmedia_sdp_session *answer = NULL;
 
 	status = create_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
 			       &answer);

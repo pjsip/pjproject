@@ -149,6 +149,7 @@ static int worker_thread(void *arg)
         timeout.sec = 0; timeout.msec = 10;
         rc = pj_ioqueue_poll(ioqueue, &timeout);
     }
+    return 0;
 }
 
 int udp_echo_srv_ioqueue(void)

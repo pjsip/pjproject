@@ -96,11 +96,11 @@ static int format_test(void)
     }
 
     /* pj_inet_ntoa() */
-    p = pj_inet_ntoa(addr);
+    p = (unsigned char*) pj_inet_ntoa(addr);
     if (!p)
 	return -20;
 
-    if (pj_strcmp2(&s, p) != 0)
+    if (pj_strcmp2(&s, (char*)p) != 0)
 	return -30;
 
     /* pj_gethostname() */

@@ -649,19 +649,17 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
     pj_sock_t sock;
     pj_status_t status;
 
-    PJSUA_LOCK();
-
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "socket() error", status);
-	goto on_return;
+	return status;
     }
 
     status = pj_sock_bind_in(sock, bound_addr.s_addr, (pj_uint16_t)port);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "bind() error", status);
 	pj_sock_close(sock);
-	goto on_return;
+	return status;
     }
 
     /* Copy and normalize STUN param */
@@ -685,7 +683,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving with STUN", status);
 	    pj_sock_close(sock);
-	    goto on_return;
+	    return status;
 	}
 
     } else {
@@ -697,7 +695,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to resolve local host", status);
 	    pj_sock_close(sock);
-	    goto on_return;
+	    return status;
 	}
 
 	pj_memset(p_pub_addr, 0, sizeof(pj_sockaddr_in));
@@ -708,15 +706,11 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 
     *p_sock = sock;
 
-on_return:
-
-    PJSUA_UNLOCK();
-
     PJ_LOG(4,(THIS_FILE, "SIP UDP socket reachable at %s:%d",
 	      pj_inet_ntoa(p_pub_addr->sin_addr),
 	      (int)pj_ntohs(p_pub_addr->sin_port)));
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 
@@ -749,7 +743,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
     if (type == PJSIP_TRANSPORT_UDP) {
 
 	pjsua_transport_config config;
-	pj_sock_t sock;
+	pj_sock_t sock = PJ_INVALID_SOCKET;
 	pj_sockaddr_in pub_addr;
 	pjsip_host_port addr_name;
 
@@ -797,7 +791,7 @@ on_return:
 
     PJSUA_UNLOCK();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 

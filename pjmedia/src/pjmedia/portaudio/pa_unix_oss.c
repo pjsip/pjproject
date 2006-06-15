@@ -961,7 +961,7 @@ static PaError PaOssStreamComponent_Configure( PaOssStreamComponent *component, 
     PaError result = paNoError;
     int temp, nativeFormat;
     int sr = (int)sampleRate;
-    PaSampleFormat availableFormats, hostFormat;
+    PaSampleFormat availableFormats = 0, hostFormat;
     int chans = component->userChannelCount;
     int frgmt;
     int numBufs;
@@ -1164,7 +1164,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     PaSampleFormat inputSampleFormat = 0, outputSampleFormat = 0, inputHostFormat = 0, outputHostFormat = 0;
     const PaDeviceInfo *inputDeviceInfo = 0, *outputDeviceInfo = 0;
     int bpInitialized = 0;
-    double inLatency, outLatency;
+    double inLatency=0, outLatency=0;
 
     /* validate platform specific flags */
     if( (streamFlags & paPlatformSpecificFlags) != 0 )
@@ -1522,7 +1522,7 @@ static void *PaOSS_AudioThreadProc( void *userData )
 {
     PaError result = paNoError;
     PaOssStream *stream = (PaOssStream*)userData;
-    unsigned long framesAvail, framesProcessed;
+    unsigned long framesAvail=0, framesProcessed;
     int callbackResult = paContinue;
     int triggered = stream->triggered;  /* See if SNDCTL_DSP_TRIGGER has been issued already */
     int initiateProcessing = triggered;    /* Already triggered? */

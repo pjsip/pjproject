@@ -195,7 +195,7 @@ int timestamp_test(void)
 	null_func();
     }
 
-    sleep(0);
+    pj_thread_sleep(0);
 
     /* Mark end time. */
     pj_get_timestamp(&t2);
