@@ -439,7 +439,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
 static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 {
     int acc_id;
-    pjsua_acc_config *acc_config;
+    pjsua_acc *acc;
     pjsip_method *req_method = &rdata->msg_info.msg->line.req.method;
     pjsua_srv_pres *uapres;
     pjsip_evsub *sub;
@@ -458,11 +458,14 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Find which account for the incoming request. */
     acc_id = pjsua_acc_find_for_incoming(rdata);
-    acc_config = &pjsua_var.acc[acc_id].cfg;
+    acc = &pjsua_var.acc[acc_id];
 
+    PJ_LOG(4,(THIS_FILE, "Creating server subscription, using account %d",
+	      acc_id));
+    
     /* Create UAS dialog: */
     status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
-				  &acc_config->contact,
+				  &acc->cfg.contact,
 				  &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -471,6 +474,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
+
+    /* Set credentials. */
+    pjsip_auth_clt_set_credentials(&dlg->auth_sess, acc->cred_cnt, acc->cred);
 
     /* Init callback: */
     pj_memset(&pres_cb, 0, sizeof(pres_cb));
