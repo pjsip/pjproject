@@ -1615,7 +1615,7 @@ error:
 static PaError TerminateWaveHandles( PaWinMmeSingleDirectionHandlesAndBuffers *handlesAndBuffers, int isInput, int currentlyProcessingAnError )
 {
     PaError result = paNoError;
-    MMRESULT mmresult;
+    MMRESULT mmresult = 0;
     signed int i;
     
     if( handlesAndBuffers->waveHandles )
@@ -1972,7 +1972,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     unsigned long hostInputBufferCount;
     unsigned long framesPerHostOutputBuffer;
     unsigned long hostOutputBufferCount;
-    unsigned long framesPerBufferProcessorCall;
+    unsigned long framesPerBufferProcessorCall=0;
     PaWinMmeDeviceAndChannelCount *inputDevices = 0;  /* contains all devices and channel counts as local host api ids, even when PaWinMmeUseMultipleDevices is not used */
     unsigned long inputDeviceCount = 0;            
     PaWinMmeDeviceAndChannelCount *outputDevices = 0;
