@@ -368,9 +368,9 @@ static BOOL AppReadDataFromBuffer(LPDIRECTSOUNDCAPTUREBUFFER lpDsb, // The buffe
     
     if SUCCEEDED(hr) { 
 	// Read from pointers. 
-	CopyMemory(lpbSoundData, lpvPtr1, dwBytes1); 
+	pj_memcpy(lpbSoundData, lpvPtr1, dwBytes1); 
 	if (lpvPtr2 != NULL)
-	    CopyMemory(lpbSoundData+dwBytes1, lpvPtr2, dwBytes2); 
+	    pj_memcpy(lpbSoundData+dwBytes1, lpvPtr2, dwBytes2); 
 	
 	// Release the data back to DirectSound. 
 	hr = IDirectSoundCaptureBuffer_Unlock(lpDsb, lpvPtr1, dwBytes1, lpvPtr2, dwBytes2); 
@@ -407,9 +407,9 @@ static BOOL AppWriteDataToBuffer(LPDIRECTSOUNDBUFFER lpDsb,  // The buffer.
 				      &lpvPtr1, &dwBytes1, &lpvPtr2, &dwBytes2, 0); 
     } 
     if SUCCEEDED(hr) { 
-	CopyMemory(lpvPtr1, lpbSoundData, dwBytes1); 
+	pj_memcpy(lpvPtr1, lpbSoundData, dwBytes1); 
 	if (NULL != lpvPtr2) 
-	    CopyMemory(lpvPtr2, lpbSoundData+dwBytes1, dwBytes2); 
+	    pj_memcpy(lpvPtr2, lpbSoundData+dwBytes1, dwBytes2); 
 	
 	hr = IDirectSoundBuffer_Unlock(lpDsb, lpvPtr1, dwBytes1, lpvPtr2, dwBytes2); 
 	if SUCCEEDED(hr)

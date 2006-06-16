@@ -34,12 +34,12 @@
  *
  * @section intro_sec What is PJLIB
  *
- * PJLIB is a small foundation library written in C for making scalable 
- * applications. Because of its small footprint, it can be used in embedded 
- * applications (we hope so!), but yet the library is also aimed for 
- * facilitating high performance protocol stacks.
+ * PJLIB is an Open Source, small footprint framework library written in C for 
+ * making scalable applications. Because of its small footprint, it can be used
+ * in embedded applications (we hope so!), but yet the library is also aimed for
+ * facilitating the creation of high performance protocol stacks.
  *
- * PJLIB is released under LGPL terms.
+ * PJLIB is released under GPL terms.
  *
  * @section download_sec Download
  *
@@ -55,7 +55,7 @@
  *
  * @subsection doc_ver_subsec Version
  *
- * This document corresponds to PJLIB version 0.3-pre2.
+ * This document corresponds to PJLIB version 0.5.6.
  *
  *
  * @subsection find_samples_subsec How to Read This Document
@@ -114,10 +114,8 @@
  *
  * @subsection open_source_feat It's Open Source!
  *
- * PJLIB is currently released on LGPL license. We may release PJLIB under
- * additional schemes in the future (such as GPL or MPL) to incorporate
- * linking with specific application, however, one thing for sure is
- * we will NEVER be able to make PJLIB a proprietary software.
+ * PJLIB is currently released on GPL license, but other arrangements
+ * can be made with the author.
  *
  * @subsection extreme_portable_feat Extreme Portability
  *
@@ -127,18 +125,18 @@
  * floating point. Multi-threading or not.
  * It can even run in environment where no ANSI LIBC is available. 
  *
- * Currently PJLIB is being ported to:
- *  - x86, Win32 (Win95/98/ME, NT/2000/XP/2003, mingw).
- *  - x86, Linux (user mode and as <b>kernel module</b>(!)).
- *  - alpha, Linux
- * And coming up:
- *  - x86, eCos
- *  - ultra-II, Solaris.
- *  - powerpc, MacOS
- *  - m68k, PalmOS.
- *  - arm, PocketPC
+ * Currently PJLIB is known to run on these platforms:
+ *  - Win32/x86 (Win95/98/ME, NT/2000/XP/2003, mingw).
+ *  - arm, WinCE and Windows Mobile.
+ *  - Linux/x86, (user mode and as <b>kernel module</b>(!)).
+ *  - Linux/alpha
+ *  - Solaris/ultra.
+ *  - MacOS X/powerpc
+ *  - RTEMS (x86 and powerpc).
  *
- * No other library is known to have this extreme portability!
+ * And efforts is under way to port PJLIB on:
+ *  - Symbian OS
+ *
  *
  * @subsection small_size_feat Small in Size
  *
@@ -150,6 +148,13 @@
  * to get the desired size/performance/functionality balance.
  *
  * For more info, please see @ref pj_config.
+ *
+ *
+ * @subsection big_perform_feat Big in Performance
+ *
+ * Almost everything in PJLIB is designed to achieve the highest possible
+ * performance out of the target platform. 
+ *
  *
  * @subsection no_dyn_mem No Dynamic Memory Allocations
  *
@@ -164,8 +169,9 @@
  *  - no \a free() is required. All chunks will be deleted when the pool is 
  *    destroyed.
  *
- * The performance gained on some systems can be as high as 10x speed up
- * against \a malloc() and \a free().
+ * The performance gained on some systems can be as high as 30x speed up
+ * against \a malloc() and \a free() on certain configurations, but of
+ * course your mileage may vary. 
  *
  * For more information, see \ref PJ_POOL_GROUP
  *
@@ -383,11 +389,11 @@
  * @subsubsection mem_alloc_subsubsec Use Pool for Memory Allocations
  *
  * You MUST NOT use \a malloc() or any other memory allocation functions.
- * Use PJLIB pool instead! It's faster and most portable.
+ * Use PJLIB @ref PJ_POOL_GROUP instead! It's faster and most portable.
  *
  * @subsection logging_subsubsec Use Logging for Text Display
  *
- * DO NOT use <stdio.h> for text output. Use PJLIB logging instead.
+ * DO NOT use <stdio.h> for text output. Use PJLIB @ref PJ_LOG instead.
  *
  *
  * @section porting_pjlib_sec0 Porting PJLIB

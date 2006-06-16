@@ -58,9 +58,6 @@
  *  - move FilterUp() and FilterUD() from filterkit.c
  *  - move stddefs.h and resample.h to this file.
  *  - const correctness.
- *  - fixed SrcLinear() may write pass output buffer.
- *  - assume the same for SrcUp() and SrcUD(), so put the same
- *    protection.
  */
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
@@ -260,7 +257,7 @@ static int
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime && Y < Yend)	/* bennylp fix: added Y < Yend */
+    while (time < endTime)
     {
 	iconst = (time) & Pmask;
 	xp = &X[(time)>>Np];      /* Ptr to current input sample */
@@ -399,7 +396,7 @@ static int SrcUp(const HWORD X[], HWORD Y[], double pFactor,
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime && Y < Yend)	/* bennylp fix: protect Y */
+    while (time < endTime)
     {
 	xp = &X[time>>Np];      /* Ptr to current input sample */
 	/* Perform left-wing inner product */
@@ -443,7 +440,7 @@ static int SrcUD(const HWORD X[], HWORD Y[], double pFactor,
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
     endTime = time + (1<<Np)*(WORD)nx;
-    while (time < endTime && Y < Yend) /* bennylp fix: protect Y */
+    while (time < endTime)
     {
 	xp = &X[time>>Np];	/* Ptr to current input sample */
 	v = FilterUD(pImp, pImpD, pNwing, Interp, xp, (HWORD)(time&Pmask),
@@ -495,9 +492,11 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     /*
      * If we're downsampling, always use the fast algorithm since it seems
-     * to yield the same performance.
+     * to yield the same quality.
      */
     if (rate_out < rate_in) {
+	//no this is not a good idea. It sounds pretty good with speech,
+	//but very poor with background noise etc.
 	//high_quality = 0;
     }
 
@@ -533,7 +532,6 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     if (high_quality) {
 	unsigned size;
-	unsigned i;
 
 	/* This is a bug in xoff calculation, thanks Stephane Lussier
 	 * of Macadamian dot com.
@@ -551,9 +549,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 	resample->buffer = pj_pool_alloc(pool, size);
 	PJ_ASSERT_RETURN(resample->buffer, PJ_ENOMEM);
 
-	for (i=0; i<resample->xoff*2; ++i) {
-	    resample->buffer[i] = 0;
-	}
+	pjmedia_zero_samples(resample->buffer, resample->xoff*2);
 
 
     } else {
@@ -561,6 +557,12 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     }
 
     *p_resample = resample;
+
+    PJ_LOG(5,(THIS_FILE, "resample created: %s qualiy, %s filter, in/out "
+			  "rate=%d/%d", 
+			  (high_quality?"high":"low"),
+			  (large_filter?"large":"small"),
+			  rate_in, rate_out));
     return PJ_SUCCESS;
 }
 
@@ -573,7 +575,6 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
     PJ_ASSERT_ON_FAIL(resample, return);
 
     if (resample->high_quality) {
-	unsigned i;
 	pj_int16_t *dst_buf;
 	const pj_int16_t *src_buf;
 
@@ -644,7 +645,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 	 *
 	 */
 	dst_buf = resample->buffer + resample->xoff*2;
-	for (i=0; i<resample->frame_size; ++i) dst_buf[i] = input[i];
+	pjmedia_copy_samples(dst_buf, input, resample->frame_size);
 	    
 	if (resample->factor >= 1) {
 
@@ -688,9 +689,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 
 	dst_buf = resample->buffer;
 	src_buf = input + resample->frame_size - resample->xoff*2;
-	for (i=0; i<resample->xoff * 2; ++i) {
-	    dst_buf[i] = src_buf[i];
-	}
+	pjmedia_copy_samples(dst_buf, src_buf, resample->xoff * 2);
 
     } else {
 	SrcLinear( input, output, resample->factor, resample->frame_size);

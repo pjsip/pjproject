@@ -44,7 +44,8 @@ typedef struct pjmedia_conf_port_info
     pj_str_t		name;		    /**< Port name.		    */
     pjmedia_port_op	tx_setting;	    /**< Transmit settings.	    */
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
-    pj_bool_t	       *listener;	    /**< Array of listeners.	    */
+    unsigned		listener_cnt;	    /**< Number of listeners.	    */
+    unsigned	       *listener_slots;	    /**< Array of listeners.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
     unsigned		channel_count;	    /**< Number of channels.	    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */

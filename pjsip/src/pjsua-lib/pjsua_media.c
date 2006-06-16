@@ -548,11 +548,9 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
     info->bits_per_sample = cinfo.bits_per_sample;
 
     /* Build array of listeners */
-    count = pjsua_var.media_cfg.max_media_ports;
-    for (i=0; i<count; ++i) {
-	if (cinfo.listener[i]) {
-	    info->listeners[info->listener_cnt++] = i;
-	}
+    info->listener_cnt = cinfo.listener_cnt;
+    for (i=0; i<cinfo.listener_cnt; ++i) {
+	info->listeners[i] = cinfo.listener_slots[i];
     }
 
     return PJ_SUCCESS;

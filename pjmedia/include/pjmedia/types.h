@@ -20,7 +20,9 @@
 #define __PJMEDIA_TYPES_H__
 
 #include <pjmedia/config.h>
-#include <pj/sock.h>
+#include <pj/sock.h>	    /* pjmedia_sock_info	*/
+#include <pj/string.h>	    /* pj_memcpy(), pj_memset() */
+
 
 /** 
  * Top most media type. 
@@ -124,9 +126,16 @@ typedef struct pjmedia_sock_info
  */
 PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 {
+#if 1
+    pj_memset(samples, 0, count*sizeof(pj_int16_t));
+#elif 0
     unsigned i;
-    for (i=0; i<count; ++i)
-	samples[i] = 0;
+    for (i=0; i<count; ++i) samples[i] = 0;
+#else
+    unsigned i;
+    count >>= 1;
+    for (i=0; i<count; ++i) ((pj_int32_t*)samples)[i] = (pj_int32_t)0;
+#endif
 }
 
 
@@ -139,9 +148,17 @@ PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 				     unsigned count)
 {
+#if 1
+    pj_memcpy(dst, src, count*sizeof(pj_int16_t));
+#elif 0
     unsigned i;
-    for (i=0; i<count; ++i)
-	dst[i] = src[i];
+    for (i=0; i<count; ++i) dst[i] = src[i];
+#else
+    unsigned i;
+    count >>= 1;
+    for (i=0; i<count; ++i) 
+	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
+#endif
 }
 
 

@@ -475,12 +475,11 @@ static void conf_list(pjmedia_conf *conf, int detail)
 	pjmedia_conf_port_info *port_info = &info[i];	
 	
 	txlist[0] = '\0';
-	for (j=0; j<count; ++j) {
+	for (j=0; j<port_info->listener_cnt; ++j) {
 	    char s[10];
-	    if (port_info->listener[j]) {
-		pj_ansi_sprintf(s, "#%d ", j);
-		pj_ansi_strcat(txlist, s);
-	    }
+	    pj_ansi_sprintf(s, "#%d ", port_info->listener_slots[j]);
+	    pj_ansi_strcat(txlist, s);
+
 	}
 
 	if (txlist[0] == '\0') {
