@@ -22,6 +22,12 @@
 #include <pj/types.h>
 
 
+/**
+ * @defgroup PJ_UNICODE Unicode Support
+ * @ingroup PJ_MISC
+ * @{
+ */
+
 PJ_BEGIN_DECL
 
 
@@ -60,20 +66,64 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_size_t len,
 
 #if defined(PJ_NATIVE_STRING_IS_UNICODE) && PJ_NATIVE_STRING_IS_UNICODE!=0
 
+/**
+ * This macro is used to declare temporary Unicode buffer for ANSI to 
+ * Unicode conversion, and should be put in declaration section of a block.
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * macro will expand to nothing.
+ */
 #   define PJ_DECL_UNICODE_TEMP_BUF(buf,size)   wchar_t buf[size];
+
+/**
+ * This macro will convert ANSI string to native, when the platform's
+ * native string is Unicode (PJ_NATIVE_STRING_IS_UNICODE is non-zero).
+ */
 #   define PJ_STRING_TO_NATIVE(s,buf,max)	pj_ansi_to_unicode( \
 						    s, strlen(s), \
 						    buf, max)
+
+/**
+ * This macro is used to declare temporary ANSI buffer for Unicode to 
+ * ANSI conversion, and should be put in declaration section of a block.
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * macro will expand to nothing.
+ */
 #   define PJ_DECL_ANSI_TEMP_BUF(buf,size)	char buf[size];
+
+
+/**
+ * This macro will convert Unicode string to ANSI, when the platform's
+ * native string is Unicode (PJ_NATIVE_STRING_IS_UNICODE is non-zero).
+ */
 #   define PJ_NATIVE_TO_STRING(cs,buf,max)	pj_unicode_to_ansi( \
 						    cs, wcslen(cs), \
 						    buf, max)
 
 #else
 
+/**
+ * This macro is used to declare temporary Unicode buffer for ANSI to 
+ * Unicode conversion, and should be put in declaration section of a block.
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * macro will expand to nothing.
+ */
 #   define PJ_DECL_UNICODE_TEMP_BUF(var,size)
+/**
+ * This macro will convert ANSI string to native, when the platform's
+ * native string is Unicode (PJ_NATIVE_STRING_IS_UNICODE is non-zero).
+ */
 #   define PJ_STRING_TO_NATIVE(s,buf,max)	((char*)s)
+/**
+ * This macro is used to declare temporary ANSI buffer for Unicode to 
+ * ANSI conversion, and should be put in declaration section of a block.
+ * When PJ_NATIVE_STRING_IS_UNICODE macro is not defined, this 
+ * macro will expand to nothing.
+ */
 #   define PJ_DECL_ANSI_TEMP_BUF(buf,size)
+/**
+ * This macro will convert Unicode string to ANSI, when the platform's
+ * native string is Unicode (PJ_NATIVE_STRING_IS_UNICODE is non-zero).
+ */
 #   define PJ_NATIVE_TO_STRING(cs,buf,max)	((char*)(const char*)cs)
 
 #endif
@@ -81,6 +131,10 @@ PJ_DECL(char*) pj_unicode_to_ansi(const wchar_t *wstr, pj_size_t len,
 
 
 PJ_END_DECL
+
+/*
+ * @}
+ */
 
 
 #endif	/* __PJ_UNICODE_H__ */

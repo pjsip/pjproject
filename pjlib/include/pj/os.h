@@ -509,6 +509,13 @@ PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
  * readers can acquire the mutex, but only a single writer can acquire the 
  * mutex.
  */
+
+/**
+ * Opaque declaration for reader/writer mutex.
+ * Reader/writer mutex is a classic synchronization object where multiple
+ * readers can acquire the mutex, but only a single writer can acquire the 
+ * mutex.
+ */
 typedef struct pj_rwmutex_t pj_rwmutex_t;
 
 /**

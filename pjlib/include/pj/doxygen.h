@@ -234,22 +234,6 @@
  *    implemented with various back-end.
  *
  *
- * @subsection hl_network_io_sec High-Level Network I/O
- *
- * At higher abstraction, PJLIB provides @ref PJ_IOQUEUE, 
- * which promotes creating high performance network
- * applications by managing asynchronous I/O. This is a passive framework
- * that utilizes the most effective way to manage asynchronous I/O
- * on a given platform, such as:
- *  - IoCompletionPort on WinNT,
- *  - on Linux it can use either /dev/epoll or aio.
- *  - or to fall back to use @a select()
- *
- * At even a higher abstraction, PJLIB provides @ref PJ_EQUEUE, which
- * combines asynchronous I/O with timer management and thread management 
- * to fasilitate creating trully high performance, event driven
- * application.
- * 
  *
  * @subsection timer_mgmt_sec Timer Management
  *
@@ -484,16 +468,16 @@
  * the \a workspace file in the corresponding \b \c build directory. You have
  * several choices on which \a dsw file to open:
  \verbatim
- $PJPROJECT/build/pjproject.dsw
- $PJPROJECT/pjlib/build/pjlib.dsw
- $PJPROJECT/pjsip/build/pjsip.dsw
+  $PJPROJECT/pjlib/build/pjlib.dsw
+  $PJPROJECT/pjsip/build/pjsip.dsw
  ..etc
  \endverbatim
  *
- * The easiest way is to open <tt>pjproject.dsw</tt> file in \b \c $PJPROJECT/build
- * directory. However this will only build the required projects, not
- * the complete projects. For example, the PJLIB test and samples projects 
- * are not included in this workspace. To build the complete projects, you must
+ * The easiest way is to open <tt>pjsip_apps.dsw</tt> file in \b \c $PJPROJECT/pjsip-apps/build
+ * directory, and build pjsua project or the samples project. 
+ * However this will not build the complete projects. 
+ * For example, the PJLIB test is not included in this workspace. 
+ * To build the complete projects, you must
  * open and build each \a dsw file in \c build directory in each
  * subprojects. For example, to open the complete PJLIB workspace, open
  * <tt>pjlib.dsw</tt> in <tt>$PJPROJECT/pjlib/build</tt> directory.
@@ -567,52 +551,27 @@
  * Generally, steps required to build the PJLIB are:
  *
  \verbatim
-   $ cd /home/user/pjproject         # <-- go to $PJPROJECT
-   $ vi build.mak                    # <-- set build target etc
+   $ cd /home/user/pjproject
+   $ ./configure
    $ touch pjlib/include/pj/config_site.h
-   $ cd pjlib/build                  # <-- go to projet's build dir
-   $ make                            # <-- build the project
+   $ make dep
+   $ make
  \endverbatim
  *
- * For other project, \a cd to <tt>build</tt> directory in the project
- * and execute \a make from there.
+ * The above process will build all static libraries and all applications.
+ *
+ * \note the <tt>configure</tt> script is not a proper autoconf script,
+ * but rather a simple shell script to detect current host. This script
+ * currently does not support cross-compilation.
  *
  * \note For Linux kernel target, there are additional steps required, which
  * will be explained in section \ref linux_kern_target_subsec.
  *
- * @subsubsection build_mak_sec Editing build.mak
+ * @subsubsection build_mak_sec Cross Compilation
  * 
- * The \c build.mak file in \c $PJPROJECT root directory is used to
- * specify the build configuration. This file is expected to export
- * the following \a make variables:
- *
- *  - <tt><b>MACHINE_NAME</b></tt>
- *\n
- *    Target machine/processor, one of: <b>{ i386 | alpha | sparc }</b>.
- *
- *  - <tt><b>OS_NAME</b></tt>
- *\n
- *    Target operating system, one of: <b>{ win32 | linux | 
- *      linux-kernel | sunos }</b>.
- *
- *  - <tt><b>CC_NAME</b></tt>
- *\n
- *    Compiler name: <b>{ gcc | vc }</b>\n
- *    (Note that support for Visual C (vc) compiler with the \c make system is
- *    experimental, and it will only work when run inside a DOS shell
- *    (i.e. <tt>"HOST_NAME=win32"</tt>)).
- *
- *  - <tt><b>HOST_NAME</b></tt>
- *\n
- *    Build host: <b>{ unix | mingw | win32 }</b>\n
- *    (Note: win32 host means a DOS command prompt. Support for this type
- *    of development host is experimental).
- *
- * These variables will cause the correct configuration file in 
- * \c $PJPROJECT/build directory to be executed by \a make. For 
- * example, specifying \c OS_NAME=linux will cause file \c os-linux.mak
- * in \c build directory to be executed. These files contain specific
- * configuration for the option that is selected.
+ * For cross compilation, you will need to edit the \c build.mak file in 
+ * \c $PJPROJECT root directory manually. Please see <b>README-configure</b> file
+ * in the root directory for more information.
  *
  * For Linux kernel target, you are also required to declare the following
  * variables in this file:

@@ -313,7 +313,7 @@ PJ_INLINE(pj_int16_t) pj_swap16(pj_int16_t val16)
 /**
  * Swap the byte order of an 32bit data.
  *
- * @param val16	    The 32bit data.
+ * @param val32	    The 32bit data.
  *
  * @return	    An 32bit data with swapped byte order.
  */
