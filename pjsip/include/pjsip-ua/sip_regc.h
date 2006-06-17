@@ -26,17 +26,21 @@
 
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_auth.h>
-//#include <pjsip/sip_ua.h>
 
-PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSUA_REGC SIP Registration Client
- * @ingroup PJSUA
+ * @defgroup PJSUA_REGC Client Registration
+ * @ingroup PJSIP_HIGH_UA
+ * @brief High Layer API for performing client registration.
  * @{
- * \brief
- *   API for performing registration for user agent.
+ *
+ * This provides API for performing client registration. Application must
+ * link with  <b>pjsip-ua</b> static library to use this API.
+
  */
+
+
+PJ_BEGIN_DECL
 
 /** Typedef for client registration data. */
 typedef struct pjsip_regc pjsip_regc;
@@ -56,15 +60,15 @@ typedef struct pjsip_regc pjsip_regc;
  */
 struct pjsip_regc_cbparam
 {
-    pjsip_regc		*regc;
-    void		*token;
-    int			 code;
-    pj_status_t		 status;
-    pj_str_t		 reason;
-    pjsip_rx_data	*rdata;
-    int			 contact_cnt;
-    int			 expiration;
-    pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT];
+    pjsip_regc		*regc;	    /**< Client registration structure.	    */
+    void		*token;	    /**< Arbitrary token.		    */
+    pj_status_t		 status;    /**< Error status.			    */
+    int			 code;	    /**< SIP status code received.	    */
+    pj_str_t		 reason;    /**< SIP reason phrase received.	    */
+    pjsip_rx_data	*rdata;	    /**< The complete received response.    */
+    int			 expiration;/**< Next expiration interval.	    */
+    int			 contact_cnt;/**<Number of contacts in response.    */
+    pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
 };
 
 
@@ -149,6 +153,7 @@ PJ_DECL(pj_pool_t*) pjsip_regc_get_pool(pjsip_regc *regc);
  * perform the registration.
  *
  * @param regc	    The client registration structure.
+ * @param srv_url   Server URL.
  * @param from_url  The person performing the registration, must be a SIP URL type.
  * @param to_url    The address of record for which the registration is targetd, must
  *		    be a SIP/SIPS URL.
@@ -258,5 +263,9 @@ PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_REG_H__ */

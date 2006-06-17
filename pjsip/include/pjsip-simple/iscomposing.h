@@ -26,6 +26,15 @@
 #include <pjsip-simple/types.h>
 #include <pjlib-util/xml.h>
 
+/**
+ * @defgroup PJSIP_ISCOMPOSING Message Composition Indication (RFC 3994)
+ * @ingroup PJSIP_SIMPLE
+ * @brief Support for Indication of Message Composition (RFC 3994)
+ * @{
+ *
+ * This implements message composition indication, as described in
+ * RFC 3994.
+ */
 
 PJ_BEGIN_DECL
 
@@ -112,6 +121,10 @@ PJ_DECL(pj_status_t) pjsip_iscomposing_parse( pj_pool_t *pool,
 					      pj_str_t **p_content_type,
 					      int *p_refresh );
 
+
+/**
+ * @}
+ */
 
 
 PJ_END_DECL

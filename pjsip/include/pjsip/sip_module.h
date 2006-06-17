@@ -29,16 +29,26 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_MOD SIP Modules
- * @ingroup PJSIP
+ * @defgroup PJSIP_MOD Modules
+ * @ingroup PJSIP_CORE_CORE
+ * @brief Modules are the primary means to extend PJSIP!
  * @{
+ * Modules are the primary means to extend PJSIP. Without modules, PJSIP
+ * would not know how to handle messages, and will simply discard all
+ * incoming messages.
+ *
+ * Modules are registered by creating and initializing #pjsip_module 
+ * structure, and register the structure to PJSIP with 
+ * #pjsip_endpt_register_module().
+ *
+ * The <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * has a thorough discussion on this subject, and readers are encouraged
+ * to read the document for more information.
  */
 
 /**
- * Module registration structure, which is passed by the module to the
- * endpoint during the module registration process. This structure enables
- * the endpoint to query the module capability and to further communicate
- * with the module.
+ * The declaration for SIP module. This structure would be passed to
+ * #pjsip_endpt_register_module() to register the module to PJSIP.
  */
 struct pjsip_module
 {
@@ -46,12 +56,16 @@ struct pjsip_module
     PJ_DECL_LIST_MEMBER(struct pjsip_module);
 
     /**
-     * Module name.
+     * Module name to identify the module.
+     *
+     * This field MUST be initialized before registering the module.
      */
     pj_str_t name;
 
     /**
-     * Module ID.
+     * Module ID. Application must initialize this field with -1 before
+     * registering the module to PJSIP. After the module is registered,
+     * this field will contain a unique ID to identify the module.
      */
     int id;
 
@@ -59,11 +73,15 @@ struct pjsip_module
      * Integer number to identify module initialization and start order with
      * regard to other modules. Higher number will make the module gets
      * initialized later.
+     *
+     * This field MUST be initialized before registering the module.
      */
     int priority;
 
     /**
-     * Pointer to function to be called to initialize the module.
+     * Optional function to be called to initialize the module. This function
+     * will be called by endpoint during module registration. If the value
+     * is NULL, then it's equal to returning PJ_SUCCESS.
      *
      * @param endpt	The endpoint instance.
      * @return		Module should return PJ_SUCCESS to indicate success.
@@ -71,23 +89,29 @@ struct pjsip_module
     pj_status_t (*load)(pjsip_endpoint *endpt);
 
     /**
-     * Pointer to function to be called to start the module.
+     * Optional function to be called to start the module. This function
+     * will be called by endpoint during module registration. If the value
+     * is NULL, then it's equal to returning PJ_SUCCESS.
      *
      * @return		Module should return zero to indicate success.
      */
     pj_status_t (*start)(void);
 
     /**
-     * Pointer to function to be called to deinitialize the module before
-     * it is unloaded.
+     * Optional function to be called to deinitialize the module before
+     * it is unloaded. This function will be called by endpoint during 
+     * module unregistration. If the value is NULL, then it's equal to 
+     * returning PJ_SUCCESS.
      *
      * @return		Module should return PJ_SUCCESS to indicate success.
      */
     pj_status_t (*stop)(void);
 
     /**
-     * Pointer to function to be called to deinitialize the module before
-     * it is unloaded.
+     * Optional function to be called to deinitialize the module before
+     * it is unloaded. This function will be called by endpoint during 
+     * module unregistration. If the value is NULL, then it's equal to 
+     * returning PJ_SUCCESS.
      *
      * @param mod	The module.
      *
@@ -96,7 +120,7 @@ struct pjsip_module
     pj_status_t (*unload)(void);
 
     /**
-     * Called to process incoming request.
+     * Optional function to be called to process incoming request message.
      *
      * @param rdata	The incoming message.
      *
@@ -107,7 +131,7 @@ struct pjsip_module
     pj_bool_t (*on_rx_request)(pjsip_rx_data *rdata);
 
     /**
-     * Called to processed incoming response.
+     * Optional function to be called to process incoming response message.
      *
      * @param rdata	The incoming message.
      *
@@ -118,7 +142,8 @@ struct pjsip_module
     pj_bool_t (*on_rx_response)(pjsip_rx_data *rdata);
 
     /**
-     * Called to process outgoing request.
+     * Optional function to be called when transport layer is about to
+     * transmit outgoing request message.
      *
      * @param tdata	The outgoing request message.
      *
@@ -129,7 +154,8 @@ struct pjsip_module
     pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
 
     /**
-     * Called to process outgoing response message.
+     * Optional function to be called when transport layer is about to
+     * transmit outgoing response message.
      *
      * @param tdata	The outgoing response message.
      *
@@ -140,8 +166,9 @@ struct pjsip_module
     pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);
 
     /**
-     * Called when this module is acting as transaction user for the specified
-     * transaction, when the transaction's state has changed.
+     * Optional function to be called when this module is acting as 
+     * transaction user for the specified transaction, when the 
+     * transaction's state has changed.
      *
      * @param tsx	The transaction.
      * @param event	The event which has caused the transaction state
@@ -157,10 +184,29 @@ struct pjsip_module
  */
 enum pjsip_module_priority
 {
+    /** 
+     * This is the priority used by transport layer.
+     */
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER	= 8,
+
+    /**
+     * This is the priority used by transaction layer.
+     */
     PJSIP_MOD_PRIORITY_TSX_LAYER	= 16,
+
+    /**
+     * This is the priority used by the user agent and proxy layer.
+     */
     PJSIP_MOD_PRIORITY_UA_PROXY_LAYER	= 32,
+
+    /**
+     * This is the priority used by the dialog usages.
+     */
     PJSIP_MOD_PRIORITY_DIALOG_USAGE	= 48,
+
+    /**
+     * This is the recommended priority to be used by applications.
+     */
     PJSIP_MOD_PRIORITY_APPLICATION	= 64,
 };
 

@@ -29,20 +29,34 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSUA SIP User Agent Stack
+ * @defgroup PJSIP_UA Base User Agent Layer/Common Dialog Layer
+ * @ingroup PJSIP
+ * @brief Dialog management.
+ *
+ * This module provides basic dialog management, which is used by higher
+ * layer dialog usages such as INVITE sessions and SIP Event Subscription
+ * framework (RFC 3265). Application should link  with <b>pjsip-core</b> 
+ * library to use this base UA layer. The base UA layer module is initialized
+ * with #pjsip_ua_init_module().
  */
 
 /**
  * @defgroup PJSUA_UA SIP User Agent Module
- * @ingroup PJSUA
+ * @ingroup PJSIP_UA
+ * @brief Provides dialog management.
  * @{
- * \brief
- *   User Agent manages the interactions between application and SIP dialogs.
+ *
+ * Application MUST initialize the user agent layer module by calling
+ * #pjsip_ua_init_module() before using any of the dialog API, and link
+ * the application with with <b>pjsip-core</b> library.
  */
 
 /** User agent initialization parameter. */
 typedef struct pjsip_ua_init_param
 {
+    /** Callback to be called when the UA layer detects that outgoing
+     *  dialog has forked.
+     */
     pjsip_dialog* (*on_dlg_forked)(pjsip_dialog *first_set, pjsip_rx_data *res);
 } pjsip_ua_init_param;
 
@@ -90,6 +104,11 @@ PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail);
 PJ_DECL(pjsip_endpoint*) pjsip_ua_get_endpt(pjsip_user_agent *ua);
 
 
+/**
+ * @}
+ */
+
+
 /*
  * Internal (called by sip_dialog.c).
  */
@@ -99,10 +118,6 @@ PJ_DECL(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 PJ_DECL(pj_status_t) pjsip_ua_unregister_dlg(pjsip_user_agent *ua,
 					     pjsip_dialog *dlg );
 
-
-/**
- * @}
- */
 
 PJ_END_DECL
 

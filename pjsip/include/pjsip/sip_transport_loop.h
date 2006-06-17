@@ -19,7 +19,25 @@
 #ifndef __PJSIP_TRANSPORT_LOOP_H__
 #define __PJSIP_TRANSPORT_LOOP_H__
 
+
+/**
+ * @file sip_transport_loop.h
+ * @brief 
+ * Loopback transport (for debugging)
+ */
+
+
 #include <pjsip/sip_transport.h>
+
+/**
+ * @defgroup PJSIP_TRANSPORT_LOOP Loop Transport
+ * @ingroup PJSIP_TRANSPORT
+ * @brief Loopback transport (for testing purposes).
+ * @{
+ * The loopback transport simply bounce back outgoing messages as
+ * incoming messages. This feature is used mostly during automated
+ * testing, to provide controlled behavior.
+ */
 
 PJ_BEGIN_DECL
 
@@ -120,6 +138,9 @@ PJ_DECL(pj_status_t) pjsip_loop_set_delay( pjsip_transport *tp,
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_TRANSPORT_LOOP_H__ */
 

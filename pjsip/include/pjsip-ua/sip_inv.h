@@ -19,21 +19,73 @@
 #ifndef __SIP_INVITE_SESSION_H__
 #define __SIP_INVITE_SESSION_H__
 
+/**
+ * @file sip_inv.h
+ * @brief INVITE sessions
+ */
+
+
 #include <pjsip/sip_dialog.h>
 #include <pjmedia/sdp_neg.h>
 
 
+/**
+ * @defgroup PJSIP_HIGH_UA User Agent Library
+ * @ingroup PJSIP
+ * @brief Mid-level User Agent Library.
+ *
+ * This is the high level user agent library, which consists of:
+ *  - @ref PJSIP_INV, to encapsulate INVITE sessions and SDP
+ *    negotiation in the session,
+ *  - @ref PJSUA_REGC, high level client registration API, and
+ *  - @ref PJSUA_XFER.
+ *
+ * More detailed information is explained in
+ * <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * PDF document, and readers are encouraged to read the document to
+ * get the concept behind dialog, dialog usages, and INVITE sessions.
+ *
+ * The User Agent Library is implemented in <b>pjsip-ua</b> static
+ * library.
+ */
+
+/**
+ * @defgroup PJSIP_INV INVITE Session
+ * @ingroup PJSIP_HIGH_UA
+ * @brief Provides INVITE session management.
+ * @{
+ *
+ * The INVITE session uses the @ref PJSIP_DIALOG framework to manage
+ * the underlying dialog, and is one type of usages that can use
+ * a particular dialog instance (other usages are event subscription,
+ * discussed in @ref PJSIP_EVENT_NOT). The INVITE session manages
+ * the life-time of the session, and also manages the SDP negotiation.
+ *
+ * Application must link with  <b>pjsip-ua</b> static library to use this API.
+ *
+ * More detailed information is explained in
+ * <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * PDF document, and readers are encouraged to read the document to
+ * get the concept behind dialog, dialog usages, and INVITE sessions.
+ *
+ * The INVITE session does NOT manage media. If application wants to
+ * use API that encapsulates both signaling and media in a very easy
+ * to use API, it can use @ref PJSUA_LIB for this purpose.
+ */
+
 PJ_BEGIN_DECL
 
 
-typedef enum pjsip_inv_state pjsip_inv_state;
+/**
+ * @see pjsip_inv_session
+ */
 typedef struct pjsip_inv_session pjsip_inv_session;
-typedef struct pjsip_inv_callback pjsip_inv_callback;
+
 
 /**
  * This enumeration describes invite session state.
  */
-enum pjsip_inv_state
+typedef enum pjsip_inv_state
 {
     PJSIP_INV_STATE_NULL,	    /**< Before INVITE is sent or received  */
     PJSIP_INV_STATE_CALLING,	    /**< After INVITE is sent		    */
@@ -42,14 +94,14 @@ enum pjsip_inv_state
     PJSIP_INV_STATE_CONNECTING,	    /**< After 2xx is sent/received.	    */
     PJSIP_INV_STATE_CONFIRMED,	    /**< After ACK is sent/received.	    */
     PJSIP_INV_STATE_DISCONNECTED,   /**< Session is terminated.		    */
-};
+} pjsip_inv_state;
 
 /**
  * This structure contains callbacks to be registered by application to 
  * receieve notifications from the framework about various events in
  * the invite session.
  */
-struct pjsip_inv_callback
+typedef struct pjsip_inv_callback
 {
     /**
      * This callback is called when the invite sesion state has changed. 
@@ -118,7 +170,9 @@ struct pjsip_inv_callback
      */
     void (*on_media_update)(pjsip_inv_session *inv_ses, 
 			    pj_status_t status);
-};
+
+} pjsip_inv_callback;
+
 
 
 /**
@@ -187,7 +241,7 @@ struct pjsip_inv_session
  * occurences of events in invite sessions.
  *
  * @param endpt		The endpoint instance.
- * @param callback	Callback structure.
+ * @param cb		Callback structure.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -310,7 +364,7 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
  *			in rdata. The invite session needs to inspect the 
  *			received request to see if the request contains 
  *			features that it supports.
- * @param sdp		If application has determined its media capability, 
+ * @param local_sdp	If application has determined its media capability, 
  *			it can specify this capability in this argument. 
  *			If SDP is received in the initial INVITE, the UAS 
  *			capability specified in this argument doesn't have to
@@ -563,6 +617,9 @@ PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 
 #endif	/* __SIP_INVITE_SESSION_H__ */

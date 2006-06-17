@@ -32,9 +32,14 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_RESOLVE SIP Server Resolver
- * @ingroup PJSIP
+ * @defgroup PJSIP_RESOLVE Server Resolution
+ * @ingroup PJSIP_TRANSPORT
+ * @brief Framework to resolve SIP servers based on RFC 3263.
  * @{
+ * This is the server resolution framework, which is modelled after 
+ * RFC 3263 - Locating SIP Servers document. The server resolution
+ * framework is asynchronous; callback will be called once the server 
+ * address has been resolved (successfully or with errors).
  */
 
 /** 
@@ -42,12 +47,10 @@ PJ_BEGIN_DECL
  */
 #define PJSIP_MAX_RESOLVED_ADDRESSES	8
 
-typedef struct pjsip_server_addresses pjsip_server_addresses;
-
 /**
  * The server addresses returned by the resolver.
  */
-struct pjsip_server_addresses
+typedef struct pjsip_server_addresses
 {
     /** Number of address records. */
     unsigned	count;
@@ -66,7 +69,8 @@ struct pjsip_server_addresses
 
     } entry[PJSIP_MAX_RESOLVED_ADDRESSES];
 
-};
+} pjsip_server_addresses;
+
 
 /**
  * The type of callback function to be called when resolver finishes the job.

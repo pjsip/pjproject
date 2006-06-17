@@ -31,6 +31,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJSIP_SIMPLE_XPIDF XPIDF/Presence Information Data Format
  * @ingroup PJSIP_SIMPLE
+ * @brief Support for XPIDF/Presence Information Data Format
  * @{
  *
  * This is an old presence data format as described in:

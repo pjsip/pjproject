@@ -31,9 +31,28 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_TRANSACT SIP Transaction
+ * @defgroup PJSIP_TRANSACT Transaction Layer
  * @ingroup PJSIP
+ * @brief Provides statefull message processing.
+ *
+ * This module provides stateful processing to incoming or outgoing SIP
+ * messages. 
+ * Before performing any stateful operations, application must register the
+ * transaction layer module by calling #pjsip_tsx_layer_init_module().
+ *
+ * Application should link with <b>pjsip-core</b> library to
+ * use the transaction layer.
+ */
+
+/**
+ * @defgroup PJSIP_TRANSACT_TRANSACTION Transaction
+ * @ingroup PJSIP_TRANSACT
+ * @brief Transaction instance for all types of SIP transactions.
  * @{
+ * The pjsip_transaction describes SIP transaction, and is used for
+ * both INVITE and non-INVITE, UAC or UAS. Application must register the
+ * transaction layer module with #pjsip_tsx_layer_init_module() before
+ * performing any stateful operations.
  */
 
 /**
@@ -257,7 +276,7 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool,
  * @param code      The status code to report.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
-					  int st_code );
+					  int code );
 
 
 /**

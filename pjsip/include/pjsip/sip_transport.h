@@ -34,12 +34,17 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_TRANSPORT SIP Transport
- * @ingroup PJSIP
+ * @defgroup PJSIP_TRANSPORT Transport
+ * @ingroup PJSIP_CORE
+ * @brief This is the transport framework.
  *
- * This is the low-level transport layer. Application normally won't need to 
- * use this function, but instead can use transaction or higher layer API to
- * send and receive messages.
+ * The transport framework is fully extensible. Please see
+ * <A HREF="/docs.htm">PJSIP Developer's Guide</A> PDF
+ * document for more information.
+ *
+ * Application MUST register at least one transport to PJSIP before any
+ * messages can be sent or received. Please see @ref PJSIP_TRANSPORT_UDP
+ * on how to create/register UDP transport to the transport framework.
  *
  * @{
  */
@@ -137,8 +142,8 @@ PJ_DECL(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e t);
  */
 typedef struct pjsip_rx_data_op_key
 {
-    pj_ioqueue_op_key_t		op_key;
-    pjsip_rx_data	       *rdata;
+    pj_ioqueue_op_key_t		op_key;	/**< ioqueue op_key.		*/
+    pjsip_rx_data	       *rdata;	/**< rdata associated with this */
 } pjsip_rx_data_op_key;
 
 
@@ -303,9 +308,18 @@ PJ_DECL(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata);
  */
 typedef struct pjsip_tx_data_op_key
 {
+    /** ioqueue pending operation key. */
     pj_ioqueue_op_key_t	    key;
+
+    /** Transmit data associated with this key. */
     pjsip_tx_data	   *tdata;
+
+    /** Arbitrary token (attached by transport) */
     void		   *token;
+
+    /** Callback to be called when pending transmit operation has
+        completed.
+     */
     void		  (*callback)(pjsip_transport*,void*,pj_ssize_t);
 } pjsip_tx_data_op_key;
 
@@ -376,6 +390,8 @@ struct pjsip_tx_data
 
     /** Transport manager internal. */
     void		*token;
+
+    /** Callback to be called when this tx_data has been transmitted.	*/
     void	       (*cb)(void*, pjsip_tx_data*, pj_ssize_t);
 
     /** Transport information, only valid during on_tx_request() and 
@@ -592,18 +608,18 @@ typedef struct pjsip_tpfactory pjsip_tpfactory;
  */
 struct pjsip_tpfactory
 {
-    /* This list is managed by transport manager. */
+    /** This list is managed by transport manager. */
     PJ_DECL_LIST_MEMBER(struct pjsip_tpfactory);
 
-    pj_pool_t		   *pool;
-    pj_lock_t		   *lock;
+    pj_pool_t		   *pool;	    /**< Owned memory pool.	*/
+    pj_lock_t		   *lock;	    /**< Lock object.		*/
 
-    pjsip_transport_type_e  type;
-    char		    type_name[8];
-    unsigned		    flag;
+    pjsip_transport_type_e  type;	    /**< Transport type.	*/
+    char		    type_name[8];   /**< Type string name.	*/
+    unsigned		    flag;	    /**< Transport flag.	*/
 
-    pj_sockaddr		    local_addr;
-    pjsip_host_port	    addr_name;
+    pj_sockaddr		    local_addr;	    /**< Bound address.		*/
+    pjsip_host_port	    addr_name;	    /**< Published name.	*/
 
     /**
      * Create new outbound connection.
@@ -628,7 +644,7 @@ struct pjsip_tpfactory
  * Register a transport factory.
  *
  * @param mgr		The transport manager.
- * @param factory	Transport factory.
+ * @param tpf		Transport factory.
  *
  * @return		PJ_SUCCESS if listener was successfully created.
  */
@@ -637,6 +653,11 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_register_tpfactory(pjsip_tpmgr *mgr,
 
 /**
  * Unregister factory.
+ *
+ * @param mgr		The transport manager.
+ * @param tpf		Transport factory.
+ *
+ * @return		PJ_SUCCESS is sucessfully unregistered.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
 						      pjsip_tpfactory *tpf);

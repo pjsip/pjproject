@@ -182,10 +182,6 @@ SOURCE=..\src\pj\ctype.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pj\equeue_winnt.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pj\errno.c
 # End Source File
 # Begin Source File
@@ -233,13 +229,6 @@ SOURCE=..\src\pj\ioqueue_common_abs.h
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_select.c
-
-!IF  "$(CFG)" == "pjlib - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

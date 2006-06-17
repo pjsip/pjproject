@@ -18,7 +18,8 @@
  */
 
 /**
- * @defgroup PJSIP_SIMPLE SIP Event, Instant Messaging and Presence Extension (SIMPLE)
+ * @defgroup PJSIP_SIMPLE Event and Presence Framework
+ * @ingroup PJSIP
  */
 
 /**

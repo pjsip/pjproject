@@ -34,6 +34,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJSIP_SIMPLE_PRES SIP Extension for Presence (RFC 3856)
  * @ingroup PJSIP_SIMPLE
+ * @brief Support for SIP Extension for Presence (RFC 3856)
  * @{
  *
  * This module contains the implementation of SIP Presence Extension as 
@@ -67,6 +68,9 @@ PJ_DECL(pj_status_t) pjsip_pres_init_module(pjsip_endpoint *endpt,
 PJ_DECL(pjsip_module*) pjsip_pres_instance(void);
 
 
+/**
+ * Maximum presence status info.
+ */
 #define PJSIP_PRES_STATUS_MAX_INFO  8
 
 /**

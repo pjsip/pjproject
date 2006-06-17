@@ -31,8 +31,9 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_PARSER SIP Message Parser
- * @ingroup PJSIP
+ * @defgroup PJSIP_PARSER Parser
+ * @ingroup PJSIP_MSG
+ * @brief Message and message elements parsing.
  * @{
  */
 
@@ -66,6 +67,7 @@ extern int PJSIP_SYN_ERR_EXCEPTION;
  */
 typedef struct pjsip_parser_err_report
 {
+    /** Standard header fields. */
     PJ_DECL_LIST_MEMBER(struct pjsip_parser_err_report);
     int		except_code;	/**< Error exception (e.g. PJSIP_SYN_ERR_EXCEPTION) */
     int		line;		/**< Line number. */
@@ -134,6 +136,7 @@ PJ_DECL(pj_status_t) pjsip_register_hdr_parser( const char *hname,
  *
  * @param hname		The header name registered.
  * @param hshortname	The short header name registered, or NULL.
+ * @param fptr		Previously registered function to parse the header.
  *
  * @return		zero if unregistration was successfull.
  */
@@ -185,7 +188,7 @@ PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
  */
 PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool, 
 				     char *buf, pj_size_t size,
-				     unsigned option);
+				     unsigned options);
 
 /**
  * Parse a packet buffer and build a full SIP message from the packet. This
@@ -237,6 +240,7 @@ PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
  *
  * @param buf		The input buffer, which must be NULL terminated.
  * @param size		The buffer size.
+ * @param is_datagram	Put non-zero if transport is datagram oriented.
  * @param msg_size	[out] If message is valid, this parameter will contain
  *			the size of the SIP message (including body, if any).
  *
@@ -278,17 +282,24 @@ PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
  * a newline (as in SIP message) or ampersand mark (as in URI). This separator
  * however is optional for the last header.
  *
- * @param pool the pool.
- * @param buf the input text to parse.
- * @param size the text length.
- * @param hlist the header list to store the parsed headers. This list must
- *              have been initialized before calling this function.
- * @return zero if successfull, or -1 if error is encountered. Upon error,
- *              the \a hlist argument MAY contain successfully parsed headers.
+ * @param pool		the pool.
+ * @param input		the input text to parse.
+ * @param size		the text length.
+ * @param hlist		the header list to store the parsed headers. 
+ *			This list must have been initialized before calling 
+ *			this function.
+ * @return		zero if successfull, or -1 if error is encountered. 
+ *			Upon error, the \a hlist argument MAY contain 
+ *			successfully parsed headers.
  */
 PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool,
 					  char *input, pj_size_t size,
 					  pj_list *hlist );
+
+
+/**
+ * @}
+ */
 
 
 /*
@@ -316,20 +327,22 @@ extern pj_cis_t
 /*
  * Various string constants.
  */
-extern const pj_str_t pjsip_USER_STR,
-		      pjsip_METHOD_STR,
-		      pjsip_TRANSPORT_STR,
-		      pjsip_MADDR_STR,
-		      pjsip_LR_STR,
-		      pjsip_SIP_STR,
-		      pjsip_SIPS_STR,
-		      pjsip_TEL_STR,
-		      pjsip_BRANCH_STR,
-		      pjsip_TTL_STR,
-		      pjsip_PNAME_STR,
-		      pjsip_Q_STR,
-		      pjsip_EXPIRES_STR,
-		      pjsip_TAG_STR;
+extern const pj_str_t pjsip_USER_STR,	    /**< "user" string constant.    */
+		      pjsip_METHOD_STR,	    /**< "method" string constant   */
+		      pjsip_TRANSPORT_STR,  /**< "transport" string const.  */
+		      pjsip_MADDR_STR,	    /**< "maddr" string const.	    */
+		      pjsip_LR_STR,	    /**< "lr" string const.	    */
+		      pjsip_SIP_STR,	    /**< "sip" string constant.	    */
+		      pjsip_SIPS_STR,	    /**< "sips" string constant.    */
+		      pjsip_TEL_STR,	    /**< "tel" string constant.	    */
+		      pjsip_BRANCH_STR,	    /**< "branch" string constant.  */
+		      pjsip_TTL_STR,	    /**< "ttl" string constant.	    */
+		      pjsip_RECEIVED_STR,   /**< "received" string const.   */
+		      pjsip_Q_STR,	    /**< "q" string constant.	    */
+		      pjsip_EXPIRES_STR,    /**< "expires" string constant. */
+		      pjsip_TAG_STR,	    /**< "tag" string constant.	    */
+		      pjsip_RPORT_STR;	    /**< "rport" string const.	    */
+
 
 /*
  * Parser utilities.
@@ -345,10 +358,6 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 void pjsip_concat_param_imp( pj_str_t *param, pj_pool_t *pool, 
 			 const pj_str_t *pname, const pj_str_t *pvalue, int sepchar);
 void pjsip_parse_end_hdr_imp ( pj_scanner *scanner );
-
-/**
- * @}
- */
 
 PJ_END_DECL
 

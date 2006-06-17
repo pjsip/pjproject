@@ -19,16 +19,39 @@
 #ifndef __PJSIP_SIP_TYPES_H__
 #define __PJSIP_SIP_TYPES_H__
 
+
+/*
+ * My note: Doxygen PJSIP and PJSIP_CORE group is declared in
+ *          sip_config.h
+ */
+
+/**
+ * @file sip_types.h
+ * @brief Basic PJSIP types.
+ */
+
 #include <pjsip/sip_config.h>
 #include <pj/types.h>
 
 /**
- * Opaque data structure for transports (sip_transport.h).
+ * @addtogroup PJSIP_BASE
+ */
+
+/* @defgroup PJSIP_TYPES Basic Data Types
+ * @ingroup PJSIP_BASE
+ * @brief Basic data types.
+ * @{
+ */
+
+
+
+/**
+ * Forward declaration for SIP transport.
  */
 typedef struct pjsip_transport pjsip_transport;
 
 /**
- * Opaque data type for transport manager (sip_transport.h).
+ * Forward declaration for transport manager.
  */
 typedef struct pjsip_tpmgr pjsip_tpmgr;
 
@@ -216,6 +239,11 @@ PJ_DECL(pj_status_t) pjsip_exception_to_status(int exception_id);
  * Attributes to inform that the function may throw exceptions.
  */
 #define PJSIP_THROW_SPEC(list)
+
+
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_SIP_TYPES_H__ */
 

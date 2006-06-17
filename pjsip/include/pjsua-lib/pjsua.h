@@ -19,6 +19,12 @@
 #ifndef __PJSUA_H__
 #define __PJSUA_H__
 
+/**
+ * @file pjsua.h
+ * @brief PJSUA API.
+ */
+
+
 /* Include all PJSIP core headers. */
 #include <pjsip.h>
 
@@ -41,64 +47,138 @@
 #include <pjlib.h>
 
 
+/**
+ * @defgroup PJSUA_LIB PJSUA API
+ * @ingroup PJSIP
+ * @brief Very high level API for constructing SIP UA applications.
+ * @{
+ *
+ * PJSUA API is very high level API for constructing SIP user agent
+ * applications. It wraps together the signaling and media functionalities
+ * into an easy to use call API, provides account management, buddy
+ * management, presence, instant messaging, along with multimedia
+ * features such as conferencing, file streaming, local playback,
+ * voice recording, and so on.
+ *
+ * Application must link with <b>pjsua-lib</b> to use this API. In addition,
+ * this library depends on the following libraries:
+ *  - <b>pjsip-ua</b>, 
+ *  - <b>pjsip-simple</b>, 
+ *  - <b>pjsip-core</b>, 
+ *  - <b>pjmedia</b>,
+ *  - <b>pjmedia-codec</b>, 
+ *  - <b>pjlib-util</b>, and
+ *  - <b>pjlib</b>, 
+ *
+ * so application must also link with these libraries as well.
+ *
+ * @section root_using_pjsua_lib Using PJSUA API
+ *
+ * Please refer to @ref using_pjsua_lib on how to use PJSUA API.
+ */ 
+
 PJ_BEGIN_DECL
 
 
-/**
- * Max buddies in buddy list.
+/** Forward declaration */
+typedef struct pjsua_media_config pjsua_media_config;
+
+
+/*****************************************************************************
+ * BASE API
  */
-#ifndef PJSUA_MAX_BUDDIES
-#   define PJSUA_MAX_BUDDIES	    256
-#endif
-
-
-/**
- * Max simultaneous calls.
- */
-#ifndef PJSUA_MAX_CALLS
-#   define PJSUA_MAX_CALLS	    32
-#endif
-
 
 /**
- * Max ports in the conference bridge.
+ * @defgroup PJSUA_LIB_BASE Base API
+ * @ingroup PJSUA_LIB
+ * @brief Basic application creation/initialization, logging configuration, etc.
+ * @{
+ *
+ * The base PJSUA API controls PJSUA creation, initialization, and startup, and
+ * also provides various auxiliary functions.
+ *
+ * @section using_pjsua_lib Using PJSUA Library
+ *
+ * @subsection creating_pjsua_lib Creating PJSUA
+ *
+ * Before anything else, application must create PJSUA by calling #pjsua_create().
+ * This, among other things, will initialize PJLIB, which is crucial before 
+ * any PJLIB functions can be called.
+ *
+ * @subsection init_pjsua_lib Initializing PJSUA
+ *
+ * After PJSUA is created, application can initialize PJSUA by calling
+ * #pjsua_init(). This function takes several configuration settings in the
+ * argument, so application normally would want to set these configuration
+ * before passing them to #pjsua_init().
+ *
+ * Sample code to initialize PJSUA:
+ \code
+
+    pjsua_config	 ua_cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_media_config   media_cfg;
+
+    // Initialize configs with default settings.
+    pjsua_config_default(&ua_cfg);
+    pjsua_logging_config_default(&log_cfg);
+    pjsua_media_config_default(&media_cfg);
+
+    // At the very least, application would want to override
+    // the call callbacks in pjsua_config:
+    ua_cfg.cb.on_incoming_call = ...
+    ua_cfg.cb.on_call_state = ..
+    ...
+
+    // Customize other settings (or initialize them from application specific
+    // configuration file):
+    ...
+
+    // Initialize pjsua
+    status = pjsua_init(&ua_cfg, &log_cfg, &media_cfg);
+    if (status != PJ_SUCCESS) {
+          pjsua_perror(THIS_FILE, "Error initializing pjsua", status);
+	  return status;
+    }
+    ..
+
+ \endcode
+ *
+ * @subsection other_init_pjsua_lib Other Initialization
+ *
+ * After PJSUA is initialized with #pjsua_init(), application will normally
+ * need/want to perform the following tasks:
+ *
+ *  - create SIP transport with #pjsua_transport_create(). Please see
+ *    @ref PJSUA_LIB_TRANSPORT section for more info.
+ *  - create one or more SIP accounts with #pjsua_acc_add() or
+ *    #pjsua_acc_add_local(). Please see @ref PJSUA_LIB_ACC for more info.
+ *  - add one or more buddies with #pjsua_buddy_add(). Please see
+ *    @ref PJSUA_LIB_BUDDY section for more info.
+ *  - optionally configure the sound device, codec settings, and other
+ *    media settings. Please see @ref PJSUA_LIB_MEDIA for more info.
+ *
+ *
+ * @subsection starting_pjsua_lib Starting PJSUA
+ *
+ * After all initializations have been done, application must call
+ * #pjsua_start() to start PJSUA. This function will check that all settings
+ * are properly configured, and apply default settings when it's not, or
+ * report error status when it is unable to recover from missing setting.
+ *
+ * Most settings can be changed during run-time. For example, application
+ * may add, modify, or delete accounts, buddies, or change media settings
+ * during run-time.
  */
-#ifndef PJSUA_MAX_CONF_PORTS
-#   define PJSUA_MAX_CONF_PORTS	    254
-#endif
 
-
-/**
- * Maximum accounts.
- */
-#ifndef PJSUA_MAX_ACC
-#   define PJSUA_MAX_ACC	    8
-#endif
-
-
-/**
- * Maximum proxies in account.
- */
-#ifndef PJSUA_ACC_MAX_PROXIES
-#   define PJSUA_ACC_MAX_PROXIES    8
-#endif
-
-/**
- * Default registration interval.
- */
-#ifndef PJSUA_REG_INTERVAL
-#   define PJSUA_REG_INTERVAL	    55
-#endif
-
-
-/** Account identification */
-typedef int pjsua_acc_id;
+/** Constant to identify invalid ID for all sorts of IDs. */
+#define PJSUA_INVALID_ID	    (-1)
 
 /** Call identification */
 typedef int pjsua_call_id;
 
-/** SIP transport identification */
-typedef int pjsua_transport_id;
+/** Account identification */
+typedef int pjsua_acc_id;
 
 /** Buddy identification */
 typedef int pjsua_buddy_id;
@@ -113,400 +193,13 @@ typedef int pjsua_recorder_id;
 typedef int pjsua_conf_port_id;
 
 
-/** Constant to identify invalid ID for all sorts of IDs. */
-#define PJSUA_INVALID_ID	    (-1)
-
-
 
 /**
- * Account configuration.
+ * Maximum proxies in account.
  */
-typedef struct pjsua_acc_config
-{
-    /** 
-     * The full SIP URL for the account. The value can take name address or 
-     * URL format, and will look something like "sip:account@serviceprovider".
-     *
-     * This field is mandatory.
-     */
-    pj_str_t	    id;
-
-    /** 
-     * This is the URL to be put in the request URI for the registration,
-     * and will look something like "sip:serviceprovider".
-     *
-     * This field should be specified if registration is desired. If the
-     * value is empty, no account registration will be performed.
-     */
-    pj_str_t	    reg_uri;
-
-    /** 
-     * Optional URI to be put as Contact for this account. It is recommended
-     * that this field is left empty, so that the value will be calculated
-     * automatically based on the transport address.
-     */
-    pj_str_t	    contact;
-
-    /**
-     * Number of proxies in the proxy array below.
-     */
-    unsigned	    proxy_cnt;
-
-    /** 
-     * Optional URI of the proxies to be visited for all outgoing requests 
-     * that are using this account (REGISTER, INVITE, etc). Application need 
-     * to specify these proxies if the service provider requires that requests
-     * destined towards its network should go through certain proxies first
-     * (for example, border controllers).
-     *
-     * These proxies will be put in the route set for this account, with 
-     * maintaining the orders (the first proxy in the array will be visited
-     * first).
-     */
-    pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
-
-    /** 
-     * Optional interval for registration, in seconds. If the value is zero, 
-     * default interval will be used (PJSUA_REG_INTERVAL, 55 seconds).
-     */
-    unsigned	    reg_timeout;
-
-    /** 
-     * Number of credentials in the credential array.
-     */
-    unsigned	    cred_count;
-
-    /** 
-     * Array of credentials. If registration is desired, normally there should
-     * be at least one credential specified, to successfully authenticate
-     * against the service provider. More credentials can be specified, for
-     * example when the requests are expected to be challenged by the
-     * proxies in the route set.
-     */
-    pjsip_cred_info cred_info[PJSUA_ACC_MAX_PROXIES];
-
-} pjsua_acc_config;
-
-
-/**
- * Call this function to initialize account config with default values.
- *
- * @param cfg	    The account config to be initialized.
- */
-PJ_INLINE(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
-{
-    pj_memset(cfg, 0, sizeof(*cfg));
-
-    cfg->reg_timeout = PJSUA_REG_INTERVAL;
-}
-
-
-
-/**
- * Account info. Application can query account info by calling 
- * #pjsua_acc_get_info().
- */
-typedef struct pjsua_acc_info
-{
-    /** 
-     * The account ID. 
-     */
-    pjsua_acc_id	id;
-
-    /**
-     * Flag to indicate whether this is the default account.
-     */
-    pj_bool_t		is_default;
-
-    /** 
-     * Account URI 
-     */
-    pj_str_t		acc_uri;
-
-    /** 
-     * Flag to tell whether this account has registration setting
-     * (reg_uri is not empty).
-     */
-    pj_bool_t		has_registration;
-
-    /**
-     * An up to date expiration interval for account registration session.
-     */
-    int			expires;
-
-    /**
-     * Last registration status code. If status code is zero, the account
-     * is currently not registered. Any other value indicates the SIP
-     * status code of the registration.
-     */
-    pjsip_status_code	status;
-
-    /**
-     * String describing the registration status.
-     */
-    pj_str_t		status_text;
-
-    /**
-     * Presence online status for this account.
-     */
-    pj_bool_t		online_status;
-
-    /**
-     * Buffer that is used internally to store the status text.
-     */
-    char		buf_[PJ_ERR_MSG_SIZE];
-
-} pjsua_acc_info;
-
-
-
-/**
- * STUN configuration.
- */
-typedef struct pjsua_stun_config
-{
-    /**
-     * The first STUN server IP address or hostname.
-     */
-    pj_str_t	stun_srv1;
-
-    /**
-     * Port number of the first STUN server.
-     * If zero, default STUN port will be used.
-     */
-    unsigned	stun_port1;
-    
-    /**
-     * Optional second STUN server IP address or hostname, for which the
-     * result of the mapping request will be compared to. If the value
-     * is empty, only one STUN server will be used.
-     */
-    pj_str_t	stun_srv2;
-
-    /**
-     * Port number of the second STUN server.
-     * If zero, default STUN port will be used.
-     */
-    unsigned	stun_port2;
-
-} pjsua_stun_config;
-
-
-
-/**
- * Call this function to initialize STUN config with default values.
- *
- * @param cfg	    The STUN config to be initialized.
- */
-PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
-{
-    pj_memset(cfg, 0, sizeof(*cfg));
-}
-
-
-/**
- * Transport configuration for creating UDP transports for both SIP
- * and media.
- */
-typedef struct pjsua_transport_config
-{
-    /**
-     * UDP port number to bind locally. This setting MUST be specified
-     * even when default port is desired. If the value is zero, the
-     * transport will be bound to any available port, and application
-     * can query the port by querying the transport info.
-     */
-    unsigned		port;
-
-    /**
-     * Optional address where the socket should be bound.
-     */
-    pj_in_addr		ip_addr;
-
-    /**
-     * Flag to indicate whether STUN should be used.
-     */
-    pj_bool_t		use_stun;
-
-    /**
-     * STUN configuration, must be specified when STUN is used.
-     */
-    pjsua_stun_config	stun_config;
-
-} pjsua_transport_config;
-
-
-/**
- * Call this function to initialize UDP config with default values.
- *
- * @param cfg	    The UDP config to be initialized.
- */
-PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
-{
-    pj_memset(cfg, 0, sizeof(*cfg));
-}
-
-
-/**
- * Normalize STUN config.
- */
-PJ_INLINE(void) pjsua_normalize_stun_config( pjsua_stun_config *cfg )
-{
-    if (cfg->stun_srv1.slen) {
-
-	if (cfg->stun_port1 == 0)
-	    cfg->stun_port1 = 3478;
-
-	if (cfg->stun_srv2.slen == 0) {
-	    cfg->stun_srv2 = cfg->stun_srv1;
-	    cfg->stun_port2 = cfg->stun_port1;
-	} else {
-	    if (cfg->stun_port2 == 0)
-		cfg->stun_port2 = 3478;
-	}
-
-    } else {
-	cfg->stun_port1 = 0;
-	cfg->stun_srv2.slen = 0;
-	cfg->stun_port2 = 0;
-    }
-}
-
-
-/**
- * Duplicate transport config.
- */
-PJ_INLINE(void) pjsua_transport_config_dup(pj_pool_t *pool,
-					   pjsua_transport_config *dst,
-					   const pjsua_transport_config *src)
-{
-    pj_memcpy(dst, src, sizeof(*src));
-
-    if (src->stun_config.stun_srv1.slen) {
-	pj_strdup_with_null(pool, &dst->stun_config.stun_srv1,
-			    &src->stun_config.stun_srv1);
-    }
-
-    if (src->stun_config.stun_srv2.slen) {
-	pj_strdup_with_null(pool, &dst->stun_config.stun_srv2,
-			    &src->stun_config.stun_srv2);
-    }
-
-    pjsua_normalize_stun_config(&dst->stun_config);
-}
-
-
-
-/**
- * Transport info.
- */
-typedef struct pjsua_transport_info
-{
-    /**
-     * PJSUA transport identification.
-     */
-    pjsua_transport_id	    id;
-
-    /**
-     * Transport type.
-     */
-    pjsip_transport_type_e  type;
-
-    /**
-     * Transport type name.
-     */
-    pj_str_t		    type_name;
-
-    /**
-     * Transport string info/description.
-     */
-    pj_str_t		    info;
-
-    /**
-     * Transport flag (see ##pjsip_transport_flags_e).
-     */
-    unsigned		    flag;
-
-    /**
-     * Local address length.
-     */
-    unsigned		    addr_len;
-
-    /**
-     * Local/bound address.
-     */
-    pj_sockaddr		    local_addr;
-
-    /**
-     * Published address (or transport address name).
-     */
-    pjsip_host_port	    local_name;
-
-    /**
-     * Current number of objects currently referencing this transport.
-     */
-    unsigned		    usage_count;
-
-
-} pjsua_transport_info;
-
-
-/**
- * Media configuration.
- */
-typedef struct pjsua_media_config
-{
-    /**
-     * Clock rate to be applied to the conference bridge.
-     * If value is zero, default clock rate will be used (16KHz).
-     */
-    unsigned		clock_rate;
-
-    /**
-     * Specify maximum number of media ports to be created in the
-     * conference bridge. Since all media terminate in the bridge
-     * (calls, file player, file recorder, etc), the value must be
-     * large enough to support all of them. However, the larger
-     * the value, the more computations are performed.
-     */
-    unsigned		max_media_ports;
-
-    /**
-     * Specify whether the media manager should manage its own
-     * ioqueue for the RTP/RTCP sockets. If yes, ioqueue will be created
-     * and at least one worker thread will be created too. If no,
-     * the RTP/RTCP sockets will share the same ioqueue as SIP sockets,
-     * and no worker thread is needed.
-     *
-     * Normally application would say yes here, unless it wants to
-     * run everything from a single thread.
-     */
-    pj_bool_t		has_ioqueue;
-
-    /**
-     * Specify the number of worker threads to handle incoming RTP
-     * packets. A value of one is recommended for most applications.
-     */
-    unsigned		thread_cnt;
-
-
-} pjsua_media_config;
-
-
-/**
- * Use this function to initialize media config.
- *
- * @param cfg	The media config to be initialized.
- */
-PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
-{
-    pj_memset(cfg, 0, sizeof(*cfg));
-
-    cfg->clock_rate = 16000;
-    cfg->max_media_ports = 32;
-    cfg->has_ioqueue = PJ_TRUE;
-    cfg->thread_cnt = 1;
-}
+#ifndef PJSUA_ACC_MAX_PROXIES
+#   define PJSUA_ACC_MAX_PROXIES    8
+#endif
 
 
 
@@ -582,116 +275,6 @@ PJ_INLINE(void) pjsua_logging_config_dup(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->log_filename, &src->log_filename);
 }
 
-
-/**
- * Buddy configuration.
- */
-typedef struct pjsua_buddy_config
-{
-    /**
-     * Buddy URL or name address.
-     */
-    pj_str_t	uri;
-
-    /**
-     * Specify whether presence subscription should start immediately.
-     */
-    pj_bool_t	subscribe;
-
-} pjsua_buddy_config;
-
-
-/**
- * Buddy's online status.
- */
-typedef enum pjsua_buddy_status
-{
-    /**
-     * Online status is unknown (possibly because no presence subscription
-     * has been established).
-     */
-    PJSUA_BUDDY_STATUS_UNKNOWN,
-
-    /**
-     * Buddy is known to be offline.
-     */
-    PJSUA_BUDDY_STATUS_ONLINE,
-
-    /**
-     * Buddy is offline.
-     */
-    PJSUA_BUDDY_STATUS_OFFLINE,
-
-} pjsua_buddy_status;
-
-
-
-/**
- * Buddy info.
- */
-typedef struct pjsua_buddy_info
-{
-    /**
-     * The buddy ID.
-     */
-    pjsua_buddy_id	id;
-
-    /**
-     * The full URI of the buddy, as specified in the configuration.
-     */
-    pj_str_t		uri;
-
-    /**
-     * Buddy's Contact, only available when presence subscription has
-     * been established to the buddy.
-     */
-    pj_str_t		contact;
-
-    /**
-     * Buddy's online status.
-     */
-    pjsua_buddy_status	status;
-
-    /**
-     * Text to describe buddy's online status.
-     */
-    pj_str_t		status_text;
-
-    /**
-     * Flag to indicate that we should monitor the presence information for
-     * this buddy (normally yes, unless explicitly disabled).
-     */
-    pj_bool_t		monitor_pres;
-
-    /**
-     * Internal buffer.
-     */
-    char		buf_[256];
-
-} pjsua_buddy_info;
-
-
-/**
- * Codec config.
- */
-typedef struct pjsua_codec_info
-{
-    /**
-     * Codec unique identification.
-     */
-    pj_str_t		codec_id;
-
-    /**
-     * Codec priority (integer 0-255).
-     */
-    pj_uint8_t		priority;
-
-    /**
-     * Internal buffer.
-     */
-    char		buf_[32];
-
-} pjsua_codec_info;
 
 
 /**
@@ -888,141 +471,6 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
 }
 
 
-/**
- * Call media status.
- */
-typedef enum pjsua_call_media_status
-{
-    PJSUA_CALL_MEDIA_NONE,
-    PJSUA_CALL_MEDIA_ACTIVE,
-    PJSUA_CALL_MEDIA_LOCAL_HOLD,
-    PJSUA_CALL_MEDIA_REMOTE_HOLD,
-} pjsua_call_media_status;
-
-
-/**
- * Call info.
- */
-typedef struct pjsua_call_info
-{
-    /** Call identification. */
-    pjsua_call_id	id;
-
-    /** Initial call role (UAC == caller) */
-    pjsip_role_e	role;
-
-    /** Local URI */
-    pj_str_t		local_info;
-
-    /** Local Contact */
-    pj_str_t		local_contact;
-
-    /** Remote URI */
-    pj_str_t		remote_info;
-
-    /** Remote contact */
-    pj_str_t		remote_contact;
-
-    /** Dialog Call-ID string. */
-    pj_str_t		call_id;
-
-    /** Call state */
-    pjsip_inv_state	state;
-
-    /** Text describing the state */
-    pj_str_t		state_text;
-
-    /** Last status code heard, which can be used as cause code */
-    pjsip_status_code	last_status;
-
-    /** The reason phrase describing the status. */
-    pj_str_t		last_status_text;
-
-    /** Call media status. */
-    pjsua_call_media_status media_status;
-
-    /** Media direction */
-    pjmedia_dir		media_dir;
-
-    /** The conference port number for the call */
-    pjsua_conf_port_id	conf_slot;
-
-    /** Up-to-date call connected duration (zero when call is not 
-     *  established)
-     */
-    pj_time_val		connect_duration;
-
-    /** Total call duration, including set-up time */
-    pj_time_val		total_duration;
-
-    /** Internal */
-    struct {
-	char	local_info[128];
-	char	local_contact[128];
-	char	remote_info[128];
-	char	remote_contact[128];
-	char	call_id[128];
-	char	last_status_text[128];
-    } buf_;
-
-} pjsua_call_info;
-
-
-
-
-/**
- * Conference port info.
- */
-typedef struct pjsua_conf_port_info
-{
-    /** Conference port number. */
-    pjsua_conf_port_id	slot_id;
-
-    /** Port name. */
-    pj_str_t		name;
-
-    /** Clock rate. */
-    unsigned		clock_rate;
-
-    /** Number of channels. */
-    unsigned		channel_count;
-
-    /** Samples per frame */
-    unsigned		samples_per_frame;
-
-    /** Bits per sample */
-    unsigned		bits_per_sample;
-
-    /** Number of listeners in the array. */
-    unsigned		listener_cnt;
-
-    /** Array of listeners (in other words, ports where this port is 
-     *  transmitting to.
-     */
-    pjsua_conf_port_id	listeners[PJSUA_MAX_CONF_PORTS];
-
-} pjsua_conf_port_info;
-
-
-/**
- * This structure holds information about custom media transport to
- * be registered to pjsua.
- */
-typedef struct pjsua_media_transport
-{
-    /**
-     * Media socket information containing the address information
-     * of the RTP and RTCP socket.
-     */
-    pjmedia_sock_info	 skinfo;
-
-    /**
-     * The media transport instance.
-     */
-    pjmedia_transport	*transport;
-
-} pjsua_media_transport;
-
 
 /**
  * This structure describes additional information to be sent with
@@ -1059,10 +507,6 @@ PJ_INLINE(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
     pj_list_init(&msg_data->hdr_list);
 }
 
-
-/*****************************************************************************
- * PJSUA Core API
- */
 
 
 /**
@@ -1129,7 +573,7 @@ PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout);
  * Create memory pool.
  *
  * @param name		Optional pool name.
- * @param size		Initial size of the pool.
+ * @param init_size	Initial size of the pool.
  * @param increment	Increment size.
  *
  * @return		The pool, or NULL when there's no memory.
@@ -1168,8 +612,247 @@ PJ_DECL(pjmedia_endpt*) pjsua_get_pjmedia_endpt(void);
 
 
 /*****************************************************************************
- * PJSUA SIP Transport API.
+ * Utilities.
+ *
  */
+
+/**
+ * Verify that valid SIP url is given.
+ *
+ * @param c_url		The URL, as NULL terminated string.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *c_url);
+
+
+/**
+ * Display error message for the specified error code.
+ *
+ * @param sender	The log sender field.
+ * @param title		Message title for the error.
+ * @param status	Status code.
+ */
+PJ_DECL(void) pjsua_perror(const char *sender, const char *title, 
+			   pj_status_t status);
+
+
+
+
+/**
+ * @}
+ */
+
+
+
+/*****************************************************************************
+ * TRANSPORT API
+ */
+
+/**
+ * @defgroup PJSUA_LIB_TRANSPORT Signaling Transport
+ * @ingroup PJSUA_LIB
+ * @brief API for managing SIP transports
+ * @{
+ * SIP transport must be created before adding an account. SIP transport is
+ * created by calling #pjsua_transport_create() function.
+ */
+
+
+/** SIP transport identification */
+typedef int pjsua_transport_id;
+
+
+/**
+ * STUN configuration.
+ */
+typedef struct pjsua_stun_config
+{
+    /**
+     * The first STUN server IP address or hostname.
+     */
+    pj_str_t	stun_srv1;
+
+    /**
+     * Port number of the first STUN server.
+     * If zero, default STUN port will be used.
+     */
+    unsigned	stun_port1;
+    
+    /**
+     * Optional second STUN server IP address or hostname, for which the
+     * result of the mapping request will be compared to. If the value
+     * is empty, only one STUN server will be used.
+     */
+    pj_str_t	stun_srv2;
+
+    /**
+     * Port number of the second STUN server.
+     * If zero, default STUN port will be used.
+     */
+    unsigned	stun_port2;
+
+} pjsua_stun_config;
+
+
+
+/**
+ * Call this function to initialize STUN config with default values.
+ *
+ * @param cfg	    The STUN config to be initialized.
+ */
+PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
+{
+    pj_memset(cfg, 0, sizeof(*cfg));
+}
+
+
+/**
+ * Transport configuration for creating UDP transports for both SIP
+ * and media.
+ */
+typedef struct pjsua_transport_config
+{
+    /**
+     * UDP port number to bind locally. This setting MUST be specified
+     * even when default port is desired. If the value is zero, the
+     * transport will be bound to any available port, and application
+     * can query the port by querying the transport info.
+     */
+    unsigned		port;
+
+    /**
+     * Optional address where the socket should be bound.
+     */
+    pj_in_addr		ip_addr;
+
+    /**
+     * Flag to indicate whether STUN should be used.
+     */
+    pj_bool_t		use_stun;
+
+    /**
+     * STUN configuration, must be specified when STUN is used.
+     */
+    pjsua_stun_config	stun_config;
+
+} pjsua_transport_config;
+
+
+/**
+ * Call this function to initialize UDP config with default values.
+ *
+ * @param cfg	    The UDP config to be initialized.
+ */
+PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
+{
+    pj_memset(cfg, 0, sizeof(*cfg));
+}
+
+
+/**
+ * Normalize STUN config.
+ */
+PJ_INLINE(void) pjsua_normalize_stun_config( pjsua_stun_config *cfg )
+{
+    if (cfg->stun_srv1.slen) {
+
+	if (cfg->stun_port1 == 0)
+	    cfg->stun_port1 = 3478;
+
+	if (cfg->stun_srv2.slen == 0) {
+	    cfg->stun_srv2 = cfg->stun_srv1;
+	    cfg->stun_port2 = cfg->stun_port1;
+	} else {
+	    if (cfg->stun_port2 == 0)
+		cfg->stun_port2 = 3478;
+	}
+
+    } else {
+	cfg->stun_port1 = 0;
+	cfg->stun_srv2.slen = 0;
+	cfg->stun_port2 = 0;
+    }
+}
+
+
+/**
+ * Duplicate transport config.
+ */
+PJ_INLINE(void) pjsua_transport_config_dup(pj_pool_t *pool,
+					   pjsua_transport_config *dst,
+					   const pjsua_transport_config *src)
+{
+    pj_memcpy(dst, src, sizeof(*src));
+
+    if (src->stun_config.stun_srv1.slen) {
+	pj_strdup_with_null(pool, &dst->stun_config.stun_srv1,
+			    &src->stun_config.stun_srv1);
+    }
+
+    if (src->stun_config.stun_srv2.slen) {
+	pj_strdup_with_null(pool, &dst->stun_config.stun_srv2,
+			    &src->stun_config.stun_srv2);
+    }
+
+    pjsua_normalize_stun_config(&dst->stun_config);
+}
+
+
+
+/**
+ * Transport info.
+ */
+typedef struct pjsua_transport_info
+{
+    /**
+     * PJSUA transport identification.
+     */
+    pjsua_transport_id	    id;
+
+    /**
+     * Transport type.
+     */
+    pjsip_transport_type_e  type;
+
+    /**
+     * Transport type name.
+     */
+    pj_str_t		    type_name;
+
+    /**
+     * Transport string info/description.
+     */
+    pj_str_t		    info;
+
+    /**
+     * Transport flag (see ##pjsip_transport_flags_e).
+     */
+    unsigned		    flag;
+
+    /**
+     * Local address length.
+     */
+    unsigned		    addr_len;
+
+    /**
+     * Local/bound address.
+     */
+    pj_sockaddr		    local_addr;
+
+    /**
+     * Published address (or transport address name).
+     */
+    pjsip_host_port	    local_name;
+
+    /**
+     * Current number of objects currently referencing this transport.
+     */
+    unsigned		    usage_count;
+
+
+} pjsua_transport_info;
+
 
 /**
  * Create SIP transport.
@@ -1253,48 +936,480 @@ PJ_DECL(pj_status_t) pjsua_transport_set_enable(pjsua_transport_id id,
 PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 					    pj_bool_t force );
 
-
-/*****************************************************************************
- * PJSUA Media Transport.
- */
-
 /**
- * Create UDP media transports for all the calls. This function creates
- * one UDP media transport for each call.
- *
- * @param cfg		Media transport configuration. The "port" field in the
- *			configuration is used as the start port to bind the
- *			sockets.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @}
  */
-PJ_DECL(pj_status_t) 
-pjsua_media_transports_create(const pjsua_transport_config *cfg);
 
-
-/**
- * Register custom media transports to be used by calls. There must
- * enough media transports for all calls.
- *
- * @param tp		The media transport array.
- * @param count		Number of elements in the array. This number MUST
- *			match the number of maximum calls configured when
- *			pjsua is created.
- * @param auto_delete	Flag to indicate whether the transports should be
- *			destroyed when pjsua is shutdown.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) 
-pjsua_media_transports_attach( pjsua_media_transport tp[],
-			       unsigned count,
-			       pj_bool_t auto_delete);
 
 
 
 /*****************************************************************************
- * PJSUA Call API.
+ * ACCOUNT API
  */
+
+
+/**
+ * @defgroup PJSUA_LIB_ACC Account Management
+ * @ingroup PJSUA_LIB
+ * @brief PJSUA supports multiple accounts..
+ * @{
+ * PJSUA accounts provide identity (or identities) of the user who is currently
+ * using the application. More than one account maybe created with PJSUA.
+ *
+ * Account may or may not have client registration associated with it.
+ * An account is also associated with <b>route set</b> and some <b>authentication
+ * credentials</b>, which are used when sending SIP request messages using the
+ * account. An account also has presence's <b>online status</b>, which
+ * will be reported to remote peer when the subscribe to the account's
+ * presence.
+ *
+ * At least one account MUST be created in the application. If no user
+ * association is required, application can create a userless account by
+ * calling #pjsua_acc_add_local(). A userless account identifies local endpoint
+ * instead of a particular user.
+ *
+ * Also one account must be set as the <b>default account</b>, which is used as
+ * the account to use when PJSUA fails to match a request with any other
+ * accounts.
+ *
+ * When sending outgoing SIP requests (such as making calls or sending
+ * instant messages), normally PJSUA requires the application to specify
+ * which account to use for the request. If no account is specified,
+ * PJSUA may be able to select the account by matching the destination
+ * domain name, and fall back to default account when no match is found.
+ */
+
+/**
+ * Maximum accounts.
+ */
+#ifndef PJSUA_MAX_ACC
+#   define PJSUA_MAX_ACC	    8
+#endif
+
+
+/**
+ * Default registration interval.
+ */
+#ifndef PJSUA_REG_INTERVAL
+#   define PJSUA_REG_INTERVAL	    55
+#endif
+
+
+/**
+ * Account configuration.
+ */
+typedef struct pjsua_acc_config
+{
+    /** 
+     * The full SIP URL for the account. The value can take name address or 
+     * URL format, and will look something like "sip:account@serviceprovider".
+     *
+     * This field is mandatory.
+     */
+    pj_str_t	    id;
+
+    /** 
+     * This is the URL to be put in the request URI for the registration,
+     * and will look something like "sip:serviceprovider".
+     *
+     * This field should be specified if registration is desired. If the
+     * value is empty, no account registration will be performed.
+     */
+    pj_str_t	    reg_uri;
+
+    /** 
+     * Optional URI to be put as Contact for this account. It is recommended
+     * that this field is left empty, so that the value will be calculated
+     * automatically based on the transport address.
+     */
+    pj_str_t	    contact;
+
+    /**
+     * Number of proxies in the proxy array below.
+     */
+    unsigned	    proxy_cnt;
+
+    /** 
+     * Optional URI of the proxies to be visited for all outgoing requests 
+     * that are using this account (REGISTER, INVITE, etc). Application need 
+     * to specify these proxies if the service provider requires that requests
+     * destined towards its network should go through certain proxies first
+     * (for example, border controllers).
+     *
+     * These proxies will be put in the route set for this account, with 
+     * maintaining the orders (the first proxy in the array will be visited
+     * first).
+     */
+    pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
+
+    /** 
+     * Optional interval for registration, in seconds. If the value is zero, 
+     * default interval will be used (PJSUA_REG_INTERVAL, 55 seconds).
+     */
+    unsigned	    reg_timeout;
+
+    /** 
+     * Number of credentials in the credential array.
+     */
+    unsigned	    cred_count;
+
+    /** 
+     * Array of credentials. If registration is desired, normally there should
+     * be at least one credential specified, to successfully authenticate
+     * against the service provider. More credentials can be specified, for
+     * example when the requests are expected to be challenged by the
+     * proxies in the route set.
+     */
+    pjsip_cred_info cred_info[PJSUA_ACC_MAX_PROXIES];
+
+} pjsua_acc_config;
+
+
+/**
+ * Call this function to initialize account config with default values.
+ *
+ * @param cfg	    The account config to be initialized.
+ */
+PJ_INLINE(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
+{
+    pj_memset(cfg, 0, sizeof(*cfg));
+
+    cfg->reg_timeout = PJSUA_REG_INTERVAL;
+}
+
+
+
+/**
+ * Account info. Application can query account info by calling 
+ * #pjsua_acc_get_info().
+ */
+typedef struct pjsua_acc_info
+{
+    /** 
+     * The account ID. 
+     */
+    pjsua_acc_id	id;
+
+    /**
+     * Flag to indicate whether this is the default account.
+     */
+    pj_bool_t		is_default;
+
+    /** 
+     * Account URI 
+     */
+    pj_str_t		acc_uri;
+
+    /** 
+     * Flag to tell whether this account has registration setting
+     * (reg_uri is not empty).
+     */
+    pj_bool_t		has_registration;
+
+    /**
+     * An up to date expiration interval for account registration session.
+     */
+    int			expires;
+
+    /**
+     * Last registration status code. If status code is zero, the account
+     * is currently not registered. Any other value indicates the SIP
+     * status code of the registration.
+     */
+    pjsip_status_code	status;
+
+    /**
+     * String describing the registration status.
+     */
+    pj_str_t		status_text;
+
+    /**
+     * Presence online status for this account.
+     */
+    pj_bool_t		online_status;
+
+    /**
+     * Buffer that is used internally to store the status text.
+     */
+    char		buf_[PJ_ERR_MSG_SIZE];
+
+} pjsua_acc_info;
+
+
+
+/**
+ * Get number of current accounts.
+ *
+ * @return		Current number of accounts.
+ */
+PJ_DECL(unsigned) pjsua_acc_get_count(void);
+
+
+/**
+ * Check if the specified account ID is valid.
+ *
+ * @param acc_id	Account ID to check.
+ *
+ * @return		Non-zero if account ID is valid.
+ */
+PJ_DECL(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id);
+
+
+/**
+ * Add a new account to pjsua. PJSUA must have been initialized (with
+ * #pjsua_init()) before calling this function.
+ *
+ * @param cfg		Account configuration.
+ * @param is_default	If non-zero, this account will be set as the default
+ *			account. The default account will be used when sending
+ *			outgoing requests (e.g. making call) when no account is
+ *			specified, and when receiving incoming requests when the
+ *			request does not match any accounts. It is recommended
+ *			that default account is set to local/LAN account.
+ * @param p_acc_id	Pointer to receive account ID of the new account.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_add(const pjsua_acc_config *cfg,
+				   pj_bool_t is_default,
+				   pjsua_acc_id *p_acc_id);
+
+
+/**
+ * Add a local account. A local account is used to identify local endpoint
+ * instead of a specific user, and for this reason, a transport ID is needed
+ * to obtain the local address information.
+ *
+ * @param tid		Transport ID to generate account address.
+ * @param is_default	If non-zero, this account will be set as the default
+ *			account. The default account will be used when sending
+ *			outgoing requests (e.g. making call) when no account is
+ *			specified, and when receiving incoming requests when the
+ *			request does not match any accounts. It is recommended
+ *			that default account is set to local/LAN account.
+ * @param p_acc_id	Pointer to receive account ID of the new account.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_add_local(pjsua_transport_id tid,
+					 pj_bool_t is_default,
+					 pjsua_acc_id *p_acc_id);
+
+/**
+ * Delete account.
+ *
+ * @param acc_id	Id of the account to be deleted.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
+
+
+/**
+ * Modify account information.
+ *
+ * @param acc_id	Id of the account to be modified.
+ * @param cfg		New account configuration.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
+				      const pjsua_acc_config *cfg);
+
+
+/**
+ * Modify account's presence status to be advertised to remote/presence
+ * subscribers.
+ *
+ * @param acc_id	The account ID.
+ * @param is_online	True of false.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_online_status(pjsua_acc_id acc_id,
+						 pj_bool_t is_online);
+
+
+/**
+ * Update registration or perform unregistration. 
+ *
+ * @param acc_id	The account ID.
+ * @param renew		If renew argument is zero, this will start 
+ *			unregistration process.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_registration(pjsua_acc_id acc_id, 
+						pj_bool_t renew);
+
+
+/**
+ * Get account information.
+ *
+ * @param acc_id	Account identification.
+ * @param info		Pointer to receive account information.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_get_info(pjsua_acc_id acc_id,
+					pjsua_acc_info *info);
+
+
+/**
+ * Enum accounts all account ids.
+ *
+ * @param ids		Array of account IDs to be initialized.
+ * @param count		In input, specifies the maximum number of elements.
+ *			On return, it contains the actual number of elements.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_enum_accs(pjsua_acc_id ids[],
+				     unsigned *count );
+
+
+/**
+ * Enum accounts info.
+ *
+ * @param info		Array of account infos to be initialized.
+ * @param count		In input, specifies the maximum number of elements.
+ *			On return, it contains the actual number of elements.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_enum_info( pjsua_acc_info info[],
+					  unsigned *count );
+
+
+/**
+ * This is an internal function to find the most appropriate account to
+ * used to reach to the specified URL.
+ *
+ * @param url		The remote URL to reach.
+ *
+ * @return		Account id.
+ */
+PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url);
+
+
+/**
+ * This is an internal function to find the most appropriate account to be
+ * used to handle incoming calls.
+ *
+ * @param rdata		The incoming request message.
+ *
+ * @return		Account id.
+ */
+PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata);
+
+
+
+/**
+ * @}
+ */
+
+
+/*****************************************************************************
+ * CALLS API
+ */
+
+
+/**
+ * @defgroup PJSUA_LIB_CALL Calls
+ * @ingroup PJSUA_LIB
+ * @brief Call manipulation.
+ * @{
+ */
+
+/**
+ * Max simultaneous calls.
+ */
+#ifndef PJSUA_MAX_CALLS
+#   define PJSUA_MAX_CALLS	    32
+#endif
+
+
+
+/**
+ * Call media status.
+ */
+typedef enum pjsua_call_media_status
+{
+    PJSUA_CALL_MEDIA_NONE,
+    PJSUA_CALL_MEDIA_ACTIVE,
+    PJSUA_CALL_MEDIA_LOCAL_HOLD,
+    PJSUA_CALL_MEDIA_REMOTE_HOLD,
+} pjsua_call_media_status;
+
+
+/**
+ * Call info.
+ */
+typedef struct pjsua_call_info
+{
+    /** Call identification. */
+    pjsua_call_id	id;
+
+    /** Initial call role (UAC == caller) */
+    pjsip_role_e	role;
+
+    /** Local URI */
+    pj_str_t		local_info;
+
+    /** Local Contact */
+    pj_str_t		local_contact;
+
+    /** Remote URI */
+    pj_str_t		remote_info;
+
+    /** Remote contact */
+    pj_str_t		remote_contact;
+
+    /** Dialog Call-ID string. */
+    pj_str_t		call_id;
+
+    /** Call state */
+    pjsip_inv_state	state;
+
+    /** Text describing the state */
+    pj_str_t		state_text;
+
+    /** Last status code heard, which can be used as cause code */
+    pjsip_status_code	last_status;
+
+    /** The reason phrase describing the status. */
+    pj_str_t		last_status_text;
+
+    /** Call media status. */
+    pjsua_call_media_status media_status;
+
+    /** Media direction */
+    pjmedia_dir		media_dir;
+
+    /** The conference port number for the call */
+    pjsua_conf_port_id	conf_slot;
+
+    /** Up-to-date call connected duration (zero when call is not 
+     *  established)
+     */
+    pj_time_val		connect_duration;
+
+    /** Total call duration, including set-up time */
+    pj_time_val		total_duration;
+
+    /** Internal */
+    struct {
+	char	local_info[128];
+	char	local_contact[128];
+	char	remote_info[128];
+	char	remote_contact[128];
+	char	call_id[128];
+	char	last_status_text[128];
+    } buf_;
+
+} pjsua_call_info;
+
+
 
 /**
  * Get maximum number of calls configured in pjsua.
@@ -1327,7 +1442,6 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
  * Make outgoing call to the specified URI using the specified account.
  *
  * @param acc_id	The account to be used.
- * @param target	URI to be put in the request URI.
  * @param dst_uri	URI to be put in the To header (normally is the same
  *			as the target URI).
  * @param options	Options (must be zero at the moment).
@@ -1564,182 +1678,118 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 				     unsigned maxlen,
 				     const char *indent);
 
-
-/*****************************************************************************
- * PJSUA Account and Client Registration API.
- */
-
-
 /**
- * Get number of current accounts.
- *
- * @return		Current number of accounts.
+ * @}
  */
-PJ_DECL(unsigned) pjsua_acc_get_count(void);
-
-
-/**
- * Check if the specified account ID is valid.
- *
- * @param acc_id	Account ID to check.
- *
- * @return		Non-zero if account ID is valid.
- */
-PJ_DECL(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id);
-
-
-/**
- * Add a new account to pjsua. PJSUA must have been initialized (with
- * #pjsua_init()) before calling this function.
- *
- * @param cfg		Account configuration.
- * @param is_default	If non-zero, this account will be set as the default
- *			account. The default account will be used when sending
- *			outgoing requests (e.g. making call) when no account is
- *			specified, and when receiving incoming requests when the
- *			request does not match any accounts. It is recommended
- *			that default account is set to local/LAN account.
- * @param p_acc_id	Pointer to receive account ID of the new account.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_add(const pjsua_acc_config *cfg,
-				   pj_bool_t is_default,
-				   pjsua_acc_id *p_acc_id);
-
-
-/**
- * Add a local account. A local account is used to identify local endpoint
- * instead of a specific user, and for this reason, a transport ID is needed
- * to obtain the local address information.
- *
- * @param tid		Transport ID to generate account address.
- * @param is_default	If non-zero, this account will be set as the default
- *			account. The default account will be used when sending
- *			outgoing requests (e.g. making call) when no account is
- *			specified, and when receiving incoming requests when the
- *			request does not match any accounts. It is recommended
- *			that default account is set to local/LAN account.
- * @param p_acc_id	Pointer to receive account ID of the new account.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_add_local(pjsua_transport_id tid,
-					 pj_bool_t is_default,
-					 pjsua_acc_id *p_acc_id);
-
-/**
- * Delete account.
- *
- * @param acc_id	Id of the account to be deleted.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
-
-
-/**
- * Modify account information.
- *
- * @param acc_id	Id of the account to be modified.
- * @param cfg		New account configuration.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
-				      const pjsua_acc_config *cfg);
-
-
-/**
- * Modify account's presence status to be advertised to remote/presence
- * subscribers.
- *
- * @param acc_id	The account ID.
- * @param is_online	True of false.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_set_online_status(pjsua_acc_id acc_id,
-						 pj_bool_t is_online);
-
-
-/**
- * Update registration or perform unregistration. 
- *
- * @param acc_id	The account ID.
- * @param renew		If renew argument is zero, this will start 
- *			unregistration process.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_set_registration(pjsua_acc_id acc_id, 
-						pj_bool_t renew);
-
-
-/**
- * Get account information.
- *
- * @param acc_id	Account identification.
- * @param info		Pointer to receive account information.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_get_info(pjsua_acc_id acc_id,
-					pjsua_acc_info *info);
-
-
-/**
- * Enum accounts all account ids.
- *
- * @param ids		Array of account IDs to be initialized.
- * @param count		In input, specifies the maximum number of elements.
- *			On return, it contains the actual number of elements.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_enum_accs(pjsua_acc_id ids[],
-				     unsigned *count );
-
-
-/**
- * Enum accounts info.
- *
- * @param info		Array of account infos to be initialized.
- * @param count		In input, specifies the maximum number of elements.
- *			On return, it contains the actual number of elements.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_acc_enum_info( pjsua_acc_info info[],
-					  unsigned *count );
-
-
-/**
- * This is an internal function to find the most appropriate account to
- * used to reach to the specified URL.
- *
- * @param url		The remote URL to reach.
- *
- * @return		Account id.
- */
-PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url);
-
-
-/**
- * This is an internal function to find the most appropriate account to be
- * used to handle incoming calls.
- *
- * @param rdata		The incoming request message.
- *
- * @return		Account id.
- */
-PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata);
-
 
 
 /*****************************************************************************
- * PJSUA Presence (pjsua_pres.c)
+ * BUDDY API
  */
+
+
+/**
+ * @defgroup PJSUA_LIB_BUDDY Buddy, Presence, and Instant Messaging
+ * @ingroup PJSUA_LIB
+ * @brief Buddy management, buddy's presence, and instant messaging.
+ * @{
+ */
+
+/**
+ * Max buddies in buddy list.
+ */
+#ifndef PJSUA_MAX_BUDDIES
+#   define PJSUA_MAX_BUDDIES	    256
+#endif
+
+
+/**
+ * Buddy configuration.
+ */
+typedef struct pjsua_buddy_config
+{
+    /**
+     * Buddy URL or name address.
+     */
+    pj_str_t	uri;
+
+    /**
+     * Specify whether presence subscription should start immediately.
+     */
+    pj_bool_t	subscribe;
+
+} pjsua_buddy_config;
+
+
+/**
+ * Buddy's online status.
+ */
+typedef enum pjsua_buddy_status
+{
+    /**
+     * Online status is unknown (possibly because no presence subscription
+     * has been established).
+     */
+    PJSUA_BUDDY_STATUS_UNKNOWN,
+
+    /**
+     * Buddy is known to be offline.
+     */
+    PJSUA_BUDDY_STATUS_ONLINE,
+
+    /**
+     * Buddy is offline.
+     */
+    PJSUA_BUDDY_STATUS_OFFLINE,
+
+} pjsua_buddy_status;
+
+
+
+/**
+ * Buddy info.
+ */
+typedef struct pjsua_buddy_info
+{
+    /**
+     * The buddy ID.
+     */
+    pjsua_buddy_id	id;
+
+    /**
+     * The full URI of the buddy, as specified in the configuration.
+     */
+    pj_str_t		uri;
+
+    /**
+     * Buddy's Contact, only available when presence subscription has
+     * been established to the buddy.
+     */
+    pj_str_t		contact;
+
+    /**
+     * Buddy's online status.
+     */
+    pjsua_buddy_status	status;
+
+    /**
+     * Text to describe buddy's online status.
+     */
+    pj_str_t		status_text;
+
+    /**
+     * Flag to indicate that we should monitor the presence information for
+     * this buddy (normally yes, unless explicitly disabled).
+     */
+    pj_bool_t		monitor_pres;
+
+    /**
+     * Internal buffer.
+     */
+    char		buf_[256];
+
+} pjsua_buddy_info;
+
 
 /**
  * Get total number of buddies.
@@ -1826,10 +1876,6 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
 PJ_DECL(void) pjsua_pres_dump(pj_bool_t verbose);
 
 
-/*****************************************************************************
- * PJSUA Instant Messaging (pjsua_im.c)
- */
-
 /**
  * The MESSAGE method (defined in pjsua_im.c)
  */
@@ -1881,9 +1927,215 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 
-/*****************************************************************************
- * Conference bridge manipulation.
+/**
+ * @}
  */
+
+
+/*****************************************************************************
+ * MEDIA API
+ */
+
+
+/**
+ * @defgroup PJSUA_LIB_MEDIA Media
+ * @ingroup PJSUA_LIB
+ * @brief Media manipulation.
+ * @{
+ *
+ * PJSUA has rather powerful media features, which are built around the
+ * PJMEDIA conference bridge. Basically, all media termination (such as
+ * calls, file players, file recorders, sound device, tone generators, etc)
+ * are terminated in the conference bridge, and application can manipulate
+ * the interconnection between these terminations freely. If more than
+ * one media terminations are terminated in the same slot, the conference
+ * bridge will mix the signal automatically.
+ *
+ * Application connects one media termination/slot to another by calling
+ * #pjsua_conf_connect() function. This will establish <b>unidirectional</b>
+ * media flow from the source termination to the sink termination. For
+ * example, to stream a WAV file to remote call, application may use
+ * the following steps:
+ *
+ \code
+  
+  pj_status_t stream_to_call( pjsua_call_id call_id )
+  {
+     pjsua_player_id player_id;
+     
+     status = pjsua_player_create("mysong.wav", 0, NULL, &player_id);
+     if (status != PJ_SUCCESS)
+        return status;
+
+     status = pjsua_conf_connect( pjsua_player_get_conf_port(),
+				  pjsua_call_get_conf_port() );
+  }
+ \endcode
+ *
+ *
+ * Other features of PJSUA media:
+ *  - efficient N to M interconnections between media terminations.
+ *  - media termination can be connected to itself to create loopback
+ *    media.
+ *  - the media termination may have different clock rates, and resampling
+ *    will be done automatically by conference bridge.
+ *  - media terminations may also have different frame time; the
+ *    conference bridge will perform the necessary bufferring to adjust
+ *    the difference between terminations.
+ *  - interconnections are removed automatically when media termination
+ *    is removed from the bridge.
+ *  - sound device may be changed even when there are active media 
+ *    interconnections.
+ *  - correctly report call's media quality (in #pjsua_call_dump()) from
+ *    RTCP packet exchange.
+ */
+
+/**
+ * Max ports in the conference bridge.
+ */
+#ifndef PJSUA_MAX_CONF_PORTS
+#   define PJSUA_MAX_CONF_PORTS	    254
+#endif
+
+
+
+/**
+ * Media configuration.
+ */
+struct pjsua_media_config
+{
+    /**
+     * Clock rate to be applied to the conference bridge.
+     * If value is zero, default clock rate will be used (16KHz).
+     */
+    unsigned		clock_rate;
+
+    /**
+     * Specify maximum number of media ports to be created in the
+     * conference bridge. Since all media terminate in the bridge
+     * (calls, file player, file recorder, etc), the value must be
+     * large enough to support all of them. However, the larger
+     * the value, the more computations are performed.
+     */
+    unsigned		max_media_ports;
+
+    /**
+     * Specify whether the media manager should manage its own
+     * ioqueue for the RTP/RTCP sockets. If yes, ioqueue will be created
+     * and at least one worker thread will be created too. If no,
+     * the RTP/RTCP sockets will share the same ioqueue as SIP sockets,
+     * and no worker thread is needed.
+     *
+     * Normally application would say yes here, unless it wants to
+     * run everything from a single thread.
+     */
+    pj_bool_t		has_ioqueue;
+
+    /**
+     * Specify the number of worker threads to handle incoming RTP
+     * packets. A value of one is recommended for most applications.
+     */
+    unsigned		thread_cnt;
+
+
+};
+
+
+/**
+ * Use this function to initialize media config.
+ *
+ * @param cfg	The media config to be initialized.
+ */
+PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
+{
+    pj_memset(cfg, 0, sizeof(*cfg));
+
+    cfg->clock_rate = 16000;
+    cfg->max_media_ports = 32;
+    cfg->has_ioqueue = PJ_TRUE;
+    cfg->thread_cnt = 1;
+}
+
+
+
+/**
+ * Codec config.
+ */
+typedef struct pjsua_codec_info
+{
+    /**
+     * Codec unique identification.
+     */
+    pj_str_t		codec_id;
+
+    /**
+     * Codec priority (integer 0-255).
+     */
+    pj_uint8_t		priority;
+
+    /**
+     * Internal buffer.
+     */
+    char		buf_[32];
+
+} pjsua_codec_info;
+
+
+/**
+ * Conference port info.
+ */
+typedef struct pjsua_conf_port_info
+{
+    /** Conference port number. */
+    pjsua_conf_port_id	slot_id;
+
+    /** Port name. */
+    pj_str_t		name;
+
+    /** Clock rate. */
+    unsigned		clock_rate;
+
+    /** Number of channels. */
+    unsigned		channel_count;
+
+    /** Samples per frame */
+    unsigned		samples_per_frame;
+
+    /** Bits per sample */
+    unsigned		bits_per_sample;
+
+    /** Number of listeners in the array. */
+    unsigned		listener_cnt;
+
+    /** Array of listeners (in other words, ports where this port is 
+     *  transmitting to.
+     */
+    pjsua_conf_port_id	listeners[PJSUA_MAX_CONF_PORTS];
+
+} pjsua_conf_port_info;
+
+
+/**
+ * This structure holds information about custom media transport to
+ * be registered to pjsua.
+ */
+typedef struct pjsua_media_transport
+{
+    /**
+     * Media socket information containing the address information
+     * of the RTP and RTCP socket.
+     */
+    pjmedia_sock_info	 skinfo;
+
+    /**
+     * The media transport instance.
+     */
+    pjmedia_transport	*transport;
+
+} pjsua_media_transport;
+
+
+
 
 /**
  * Get maxinum number of conference ports.
@@ -1968,7 +2220,9 @@ PJ_DECL(pj_status_t) pjsua_conf_disconnect(pjsua_conf_port_id source,
  * the conference bridge.
  *
  * @param filename	The filename to be played. Currently only
- *			WAV files are supported.
+ *			WAV files are supported, and the WAV file MUST be
+ *			formatted as 16bit PCM mono/single channel (any
+ *			clock rate is supported).
  * @param options	Options (currently zero).
  * @param user_data	Arbitrary user data to be associated with the player.
  * @param p_id		Pointer to receive player ID.
@@ -2165,36 +2419,51 @@ PJ_DECL(pj_status_t) pjsua_codec_set_param( const pj_str_t *id,
 
 
 
-
-/*****************************************************************************
- * Utilities.
+/**
+ * Create UDP media transports for all the calls. This function creates
+ * one UDP media transport for each call.
  *
- */
-
-/*
- * Verify that valid SIP url is given.
- *
- * @param c_url		The URL, as NULL terminated string.
+ * @param cfg		Media transport configuration. The "port" field in the
+ *			configuration is used as the start port to bind the
+ *			sockets.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *c_url);
+PJ_DECL(pj_status_t) 
+pjsua_media_transports_create(const pjsua_transport_config *cfg);
 
 
 /**
- * Display error message for the specified error code.
+ * Register custom media transports to be used by calls. There must
+ * enough media transports for all calls.
  *
- * @param sender	The log sender field.
- * @param title		Message title for the error.
- * @param status	Status code.
+ * @param tp		The media transport array.
+ * @param count		Number of elements in the array. This number MUST
+ *			match the number of maximum calls configured when
+ *			pjsua is created.
+ * @param auto_delete	Flag to indicate whether the transports should be
+ *			destroyed when pjsua is shutdown.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(void) pjsua_perror(const char *sender, const char *title, 
-			   pj_status_t status);
+PJ_DECL(pj_status_t) 
+pjsua_media_transports_attach( pjsua_media_transport tp[],
+			       unsigned count,
+			       pj_bool_t auto_delete);
 
+
+/**
+ * @}
+ */
 
 
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJSUA_H__ */

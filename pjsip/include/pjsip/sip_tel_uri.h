@@ -26,6 +26,13 @@
 
 #include <pjsip/sip_uri.h>
 
+/**
+ * @addtogroup PJSIP_TEL_URI tel URI Scheme
+ * @ingroup PJSIP_URI
+ * @brief Support for "tel:" URI scheme.
+ * @{
+ */
+
 
 PJ_BEGIN_DECL
 
@@ -66,6 +73,11 @@ PJ_DECL(int) pjsip_tel_nb_cmp(const pj_str_t *nb1, const pj_str_t *nb2);
 
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJSIP_TEL_URI_H__ */

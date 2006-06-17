@@ -19,7 +19,42 @@
 #ifndef __PJSIP_SIP_CONFIG_H__
 #define __PJSIP_SIP_CONFIG_H__
 
+/**
+ * @file sip_config.h
+ * @brief Compile time configuration.
+ */
 #include <pj/config.h>
+
+/**
+ * @defgroup PJSIP PJSIP Library Collection
+ */
+
+/**
+ * @defgroup PJSIP_CORE Core SIP Library
+ * @ingroup PJSIP
+ * @brief The core framework from which all other SIP components depends on.
+ * 
+ * The PJSIP Core library only provides transport framework, event
+ * dispatching/module framework, and SIP message representation and
+ * parsing. It doesn't do anything usefull in itself!
+ *
+ * If application wants the stack to do anything usefull at all,
+ * it must registers @ref PJSIP_MOD to the core library. Examples
+ * of modules are @ref PJSIP_TRANSACT and @ref PJSUA_UA.
+ */
+
+/**
+ * @defgroup PJSIP_BASE Base Types
+ * @ingroup PJSIP_CORE
+ * @brief Basic PJSIP types and configurations.
+ */
+
+/**
+ * @defgroup PJSIP_CONFIG Compile Time Configuration
+ * @ingroup PJSIP_BASE
+ * @brief PJSIP compile time configurations.
+ * @{
+ */
 
 /**
  * Specify maximum transaction count in transaction hash table.
@@ -76,6 +111,14 @@
 #endif
 
 
+/**
+ * Maximum packet length.
+ */
+#ifndef PJSIP_MAX_PKT_LEN
+#   define PJSIP_MAX_PKT_LEN		1500
+#endif
+
+
 
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
@@ -84,7 +127,6 @@
 
 /* Transport related constants. */
 
-#define PJSIP_MAX_PKT_LEN		1500
 #define PJSIP_POOL_RDATA_LEN		4000
 #define PJSIP_POOL_RDATA_INC		4000
 #define PJSIP_POOL_LEN_TRANSPORT	512
@@ -141,22 +183,22 @@
 //#define PJSIP_T1_TIMEOUT	15000
 //#define PJSIP_T2_TIMEOUT	60000
 
-/* T1 timeout value. */
+/** Transaction T1 timeout value. */
 #if !defined(PJSIP_T1_TIMEOUT)
 #  define PJSIP_T1_TIMEOUT	500
 #endif
 
-/* T2 timeout value. */
+/** Transaction T2 timeout value. */
 #if !defined(PJSIP_T2_TIMEOUT)
 #  define PJSIP_T2_TIMEOUT	4000
 #endif
 
-/* Completed timer for non-INVITE */
+/** Transaction completed timer for non-INVITE */
 #if !defined(PJSIP_T4_TIMEOUT)
 #  define PJSIP_T4_TIMEOUT	5000
 #endif
 
-/* Completed timer for INVITE */
+/** Transaction completed timer for INVITE */
 #if !defined(PJSIP_TD_TIMEOUT)
 #  define PJSIP_TD_TIMEOUT	32000
 #endif
@@ -166,7 +208,7 @@
  *  Authorization
  */
 
-/*
+/**
  * If this flag is set, the stack will keep the Authorization/Proxy-Authorization
  * headers that are sent in a cache. Future requests with the same realm and
  * the same method will use the headers in the cache (as long as no qop is
@@ -182,7 +224,7 @@
 #   define PJSIP_AUTH_HEADER_CACHING	    1
 #endif
 
-/*
+/**
  * If this flag is set, the stack will proactively send Authorization/Proxy-
  * Authorization header for next requests. If next request has the same method
  * with any of previous requests, then the last header which is saved in
@@ -203,7 +245,7 @@
 #   define PJSIP_AUTH_AUTO_SEND_NEXT	    1
 #endif
 
-/*
+/**
  * Support qop="auth" directive.
  * This option also requires client to cache the last challenge offered by
  * server.
@@ -214,6 +256,10 @@
 #   define PJSIP_AUTH_QOP_SUPPORT	    1
 #endif
 
+
+/**
+ * @}
+ */
 
 #include <pj/config.h>
 

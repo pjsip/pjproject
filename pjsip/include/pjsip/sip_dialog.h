@@ -31,6 +31,30 @@
 #include <pj/sock.h>
 #include <pj/assert.h>
 
+
+/**
+ * @defgroup PJSIP_DIALOG Base Dialog
+ * @ingroup PJSIP_UA
+ * @brief The base dialog framework to support dialog usages.
+ * @{
+ *
+ * The base dialog framework provides management for base dialog
+ * properties such as <b>From</b> header, <b>To</b> header, <b>CSeq</b>
+ * sequencing, <b>Call-ID</b> header, <b>Contact</b> header management, 
+ * dialog <b>route-set</b> management, and common <b>authentication</b>. 
+ * This basic dialog functionality will be shared by all <b>dialog
+ * usages</b> of a particular dialog.
+ *
+ * More detailed information is explained in
+ * <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * PDF document, and readers are encouraged to read the document to
+ * get the concept behind dialog, dialog usages, and INVITE sessions.
+ *
+ * Application MUST initialize the user agent layer module by calling
+ * #pjsip_ua_init_module() before using any of the dialog API, and link
+ * the application with with <b>pjsip-core</b> library.
+ */
+
 PJ_BEGIN_DECL
 
 
@@ -54,7 +78,10 @@ typedef struct pjsip_dlg_party
  */
 enum pjsip_dialog_state
 {
+    /** Dialog is not established. */
     PJSIP_DIALOG_STATE_NULL,
+
+    /** Dialog has been established (probably early) */
     PJSIP_DIALOG_STATE_ESTABLISHED,
 };
 
@@ -86,7 +113,7 @@ struct pjsip_dialog
     pjsip_user_agent   *ua;	    /**< User agent instance.		    */
     pjsip_endpoint     *endpt;	    /**< Endpoint instance.		    */
 
-    /* The dialog set. */
+    /** The dialog set which this dialog belongs (opaque type). */
     void	       *dlg_set;
 
     /* Dialog's session properties. */

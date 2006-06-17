@@ -26,6 +26,7 @@
 #include <pjsip/sip_msg.h>
 
 /**
+ * @defgroup PJSIP_EVENT_HDRS Additional Header Fields
  * @ingroup PJSIP_EVENT_NOT
  * @{
  */
@@ -41,7 +42,9 @@ PJ_BEGIN_DECL
  */
 typedef struct pjsip_event_hdr
 {
+    /** Standard header fields. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_event_hdr);
+
     pj_str_t	    event_type;	    /**< Event name. */
     pj_str_t	    id_param;	    /**< Optional event ID parameter. */
     pjsip_param	    other_param;    /**< Other parameter. */
@@ -66,11 +69,12 @@ typedef pjsip_generic_array_hdr pjsip_allow_events_hdr;
 /**
  * Create a new Allow-Events header.
  *
- * @param pool.	    The pool.
+ * @param pool	    The pool.
  *
  * @return	    Allow-Events header.
  */
-PJ_DECL(pjsip_allow_events_hdr*) pjsip_allow_events_hdr_create(pj_pool_t *pool);
+PJ_DECL(pjsip_allow_events_hdr*) 
+pjsip_allow_events_hdr_create(pj_pool_t *pool);
 
 
 /**
@@ -78,7 +82,9 @@ PJ_DECL(pjsip_allow_events_hdr*) pjsip_allow_events_hdr_create(pj_pool_t *pool);
  */
 typedef struct pjsip_sub_state_hdr
 {
+    /** Standard header fields. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_sub_state_hdr);
+
     pj_str_t	    sub_state;		/**< Subscription state. */
     pj_str_t	    reason_param;	/**< Optional termination reason. */
     int		    expires_param;	/**< Expires param, or -1. */

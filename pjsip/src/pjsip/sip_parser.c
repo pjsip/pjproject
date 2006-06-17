@@ -97,7 +97,7 @@ const pj_str_t  pjsip_SIPS_STR      = { "sips", 4 };
 const pj_str_t  pjsip_TEL_STR       = { "tel", 3 };
 const pj_str_t  pjsip_BRANCH_STR    = { "branch", 6 };
 const pj_str_t  pjsip_TTL_STR       = { "ttl", 3 };
-const pj_str_t  pjsip_PNAME_STR     = { "received", 8 };
+const pj_str_t  pjsip_RECEIVED_STR  = { "received", 8 };
 const pj_str_t  pjsip_Q_STR         = { "q", 1 };
 const pj_str_t  pjsip_EXPIRES_STR   = { "expires", 7 };
 const pj_str_t  pjsip_TAG_STR       = { "tag", 3 };
@@ -1656,7 +1656,7 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	} else if (!parser_stricmp(pname, pjsip_MADDR_STR) && pvalue.slen) {
 	    hdr->maddr_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_PNAME_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pjsip_RECEIVED_STR) && pvalue.slen) {
 	    hdr->recvd_param = pvalue;
 
 	} else if (!parser_stricmp(pname, pjsip_RPORT_STR)) {

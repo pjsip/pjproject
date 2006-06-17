@@ -27,8 +27,9 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_EVENT SIP Event
- * @ingroup PJSIP
+ * @defgroup PJSIP_EVENT Event
+ * @ingroup PJSIP_CORE_CORE
+ * @brief Representation of events as they are distributed among modules.
  * @{
  */
 #include <pj/types.h>
@@ -64,8 +65,7 @@ typedef enum pjsip_event_id_e
 
 
 /**
- * \struct
- * \brief Event descriptor to fully identify a SIP event.
+ * This structure describe event descriptor to fully identify a SIP event.
  *
  * Events are the only way for a lower layer object to inform something
  * to higher layer objects. Normally this is achieved by means of callback,
@@ -85,8 +85,8 @@ struct pjsip_event
      */
     pjsip_event_id_e type;
 
-    /*
-     * The event body.
+    /**
+     * The event body as union, which fields depends on the event type.
      * By convention, the first member of each struct in the union must be
      * the pointer which is relevant to the event.
      */
@@ -216,7 +216,7 @@ struct pjsip_event
 /**
  * Get the event string from the event ID.
  * @param e the event ID.
- * @notes defined in sip_util.c
+ * @note defined in sip_util.c
  */
 PJ_DEF(const char *) pjsip_event_str(pjsip_event_id_e e);
 

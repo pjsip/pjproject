@@ -32,6 +32,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJSIP_SIMPLE_PIDF PIDF/Presence Information Data Format (RFC 3863)
  * @ingroup PJSIP_SIMPLE
+ * @brief Support for PIDF/Presence Information Data Format (RFC 3863)
  * @{
  *
  * This file provides tools for manipulating Presence Information Data 

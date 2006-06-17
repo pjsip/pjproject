@@ -30,6 +30,7 @@
 /**
  * @defgroup PJSIP_EVENT_NOT SIP Event Notification (RFC 3265) Module
  * @ingroup PJSIP_SIMPLE
+ * @brief Core Event Subscription framework, used by presence, call transfer, etc.
  * @{
  *
  * This module provides the implementation of SIP Extension for SIP Specific
@@ -430,7 +431,7 @@ PJ_DECL(pjsip_evsub*) pjsip_tsx_get_evsub(pjsip_transaction *tsx);
  * Set event subscription's module data.
  *
  * @param sub		The event subscription.
- * @param index		The module id.
+ * @param mod_id	The module id.
  * @param data		Arbitrary data.
  */
 PJ_DECL(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,

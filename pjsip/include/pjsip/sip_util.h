@@ -25,8 +25,9 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_ENDPT SIP Endpoint
- * @ingroup PJSIP
+ * @defgroup PJSIP_ENDPT_STATELESS Message Creation and Stateless Operations
+ * @ingroup PJSIP_CORE_CORE
+ * @brief Utilities to create various messages and base function to send messages.
  * @{
  */
 
@@ -238,6 +239,10 @@ typedef struct pjsip_send_state
  *
  * @param endpt	    The endpoint instance.
  * @param tdata	    The transmit data to be sent.
+ * @param token	    Arbitrary token to be given back on the callback.
+ * @param cb	    Optional callback to notify transmission status (also
+ *		    gives chance for application to discontinue retrying
+ *		    sending to alternate address).
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */
@@ -349,6 +354,16 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond_stateless(pjsip_endpoint *endpt,
 						   const pjsip_hdr *hdr_list,
 						   const pjsip_msg_body *body);
 						    
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PJSIP_TRANSACT_UTIL Stateful Operations
+ * @ingroup PJSIP_TRANSACT
+ * @brief Utility function to send requests/responses statefully.
+ * @{
+ */
 
 /**
  * This composite function creates and sends response statefully for the

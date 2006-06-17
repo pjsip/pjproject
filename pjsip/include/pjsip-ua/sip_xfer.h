@@ -28,6 +28,19 @@
 #include <pjsip-simple/evsub.h>
 #include <pjsip/sip_msg.h>
 
+/**
+ * @defgroup PJSUA_XFER Call Transfer
+ * @ingroup PJSIP_HIGH_UA
+ * @brief Provides call transfer functionality.
+ * @{
+ *
+ * This implements call transfer functionality to INVITE sessions. The call
+ * transfer functionality uses SIP Event Subscription framework for
+ * managing call transfer status.
+ *
+ * Application must link with <b>pjsip-ua</b> AND <b>pjsip-simple</b> static
+ * libraries to use call transfer functionality.
+ */
 
 
 PJ_BEGIN_DECL
@@ -168,8 +181,11 @@ PJ_DECL(pj_status_t) pjsip_xfer_send_request( pjsip_evsub *sub,
 					      pjsip_tx_data *tdata);
 
 
-
 PJ_END_DECL
+
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_XFER_H__ */
 

@@ -27,18 +27,18 @@
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_resolve.h>
 
+/**
+ * @defgroup PJSIP_CORE_CORE At the Very Core
+ * @ingroup PJSIP_CORE
+ * @brief The very core of PJSIP.
+ */
+
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP SIP Stack Core
- * Implementation of core SIP protocol stack processing.
- */
-
-/**
- * @defgroup PJSIP_ENDPT SIP Endpoint
- * @ingroup PJSIP
- * @brief
- * Representation of SIP node instance.
+ * @defgroup PJSIP_ENDPT Endpoint
+ * @ingroup PJSIP_CORE_CORE
+ * @brief The master, owner of all objects
  *
  * SIP Endpoint instance (pjsip_endpoint) can be viewed as the master/owner of
  * all SIP objects in an application. It performs the following roles:
@@ -286,7 +286,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
  *
  * Note: at the moment we don't have implementation of RFC 3263 yet!
  *
- * @param resolver  The resolver engine.
+ * @param endpt	    The endpoint instance.
  * @param pool	    The pool to allocate resolver job.
  * @param target    The target specification to be resolved.
  * @param token	    A user defined token to be passed back to callback function.
@@ -419,6 +419,11 @@ PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
 
 
 /**
+ * @}
+ */
+
+
+/**
  * Log an error.
  */
 PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
@@ -435,10 +440,6 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
                 if ((tracing))          \
                     PJ_LOG(4,expr);     \
             } while (0)
-
-/**
- * @}
- */
 
 /*
  * Internal functions.

@@ -1,4 +1,4 @@
-/* $Id: $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
  *
@@ -19,9 +19,23 @@
 #ifndef __PJSIP_TRANSPORT_UDP_H__
 #define __PJSIP_TRANSPORT_UDP_H__
 
+/**
+ * @file sip_transport_udp.h
+ * @brief SIP UDP Transport.
+ */
+
 #include <pjsip/sip_transport.h>
 
 PJ_BEGIN_DECL
+
+/**
+ * @defgroup PJSIP_TRANSPORT_UDP UDP transport
+ * @ingroup PJSIP_TRANSPORT
+ * @brief API to create and register UDP transport.
+ * @{
+ * The functions below are used to create UDP transport and register 
+ * the transport to the framework.
+ */
 
 /**
  * Start UDP transport.
@@ -67,5 +81,8 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_attach(pjsip_endpoint *endpt,
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_TRANSPORT_UDP_H__ */

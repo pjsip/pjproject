@@ -19,9 +19,21 @@
 #ifndef __PJSIP_SIP_ERRNO_H__
 #define __PJSIP_SIP_ERRNO_H__
 
+/**
+ * @file sip_errno.h
+ * @brief PJSIP Specific Error Code
+ */
+
 #include <pj/errno.h>
 
 PJ_BEGIN_DECL
+
+/**
+ * @defgroup PJSIP_CORE_ERRNO PJSIP Specific Error Code
+ * @ingroup PJSIP_BASE
+ * @brief PJSIP specific error constants.
+ * @{
+ */
 
 /*
  * PJSIP error codes occupies 170000 - 219000, and mapped as follows:
@@ -381,5 +393,10 @@ PJ_BEGIN_DECL
 
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 #endif	/* __PJSIP_SIP_ERRNO_H__ */

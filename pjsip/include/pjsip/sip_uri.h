@@ -33,9 +33,15 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJSIP_URL URL Structures
- * @brief SIP Url, tel: Url, and generic URI.
+ * @defgroup PJSIP_URI URI
+ * @brief URI types and manipulations.
  * @ingroup PJSIP_MSG
+ */
+
+/**
+ * @addtogroup PJSIP_URI_PARAM URI Parameter Container
+ * @ingroup PJSIP_URI
+ * @brief Generic parameter elements container.
  * @{
  */
 
@@ -117,6 +123,17 @@ PJ_DECL(pj_ssize_t) pjsip_param_print_on(const pjsip_param *param_list,
 					 const pj_cis_t *pname_unres,
 					 const pj_cis_t *pvalue_unres,
 					 int sep);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PJSIP_URI_GENERIC Generic URI
+ * @ingroup PJSIP_URI
+ * @brief Generic representation for all types of URI.
+ * @{
+ */
 
 /**
  * URI context.
@@ -222,45 +239,6 @@ struct pjsip_uri
 
 
 /**
- * SIP and SIPS URL scheme.
- */
-typedef struct pjsip_sip_uri
-{
-    pjsip_uri_vptr *vptr;		/**< Pointer to virtual function table.*/
-    pj_str_t	    user;		/**< Optional user part. */
-    pj_str_t	    passwd;		/**< Optional password part. */
-    pj_str_t	    host;		/**< Host part, always exists. */
-    int		    port;		/**< Optional port number, or zero. */
-    pj_str_t	    user_param;		/**< Optional user parameter */
-    pj_str_t	    method_param;	/**< Optional method parameter. */
-    pj_str_t	    transport_param;	/**< Optional transport parameter. */
-    int		    ttl_param;		/**< Optional TTL param, or -1. */
-    int		    lr_param;		/**< Optional loose routing param, or zero */
-    pj_str_t	    maddr_param;	/**< Optional maddr param */
-    pjsip_param	    other_param;	/**< Other parameters grouped together. */
-    pjsip_param	    header_param;	/**< Optional header parameter. */
-} pjsip_sip_uri;
-
-
-/**
- * SIP name-addr, which typically appear in From, To, and Contact header.
- * The SIP name-addr contains a generic URI and a display name.
- */
-typedef struct pjsip_name_addr
-{
-    /** Pointer to virtual function table. */
-    pjsip_uri_vptr  *vptr;
-
-    /** Optional display name. */
-    pj_str_t	     display;
-
-    /** URI part. */
-    pjsip_uri	    *uri;
-
-} pjsip_name_addr;
-
-
-/**
  * Generic function to get the URI scheme.
  * @param uri	    the URI object.
  * @return	    the URI scheme.
@@ -326,6 +304,58 @@ PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
 }
 
 
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PJSIP_SIP_URI SIP URI Scheme and Name address
+ * @ingroup PJSIP_URI
+ * @brief SIP URL structure ("sip:" and "sips:")
+ * @{
+ */
+
+
+/**
+ * SIP and SIPS URL scheme.
+ */
+typedef struct pjsip_sip_uri
+{
+    pjsip_uri_vptr *vptr;		/**< Pointer to virtual function table.*/
+    pj_str_t	    user;		/**< Optional user part. */
+    pj_str_t	    passwd;		/**< Optional password part. */
+    pj_str_t	    host;		/**< Host part, always exists. */
+    int		    port;		/**< Optional port number, or zero. */
+    pj_str_t	    user_param;		/**< Optional user parameter */
+    pj_str_t	    method_param;	/**< Optional method parameter. */
+    pj_str_t	    transport_param;	/**< Optional transport parameter. */
+    int		    ttl_param;		/**< Optional TTL param, or -1. */
+    int		    lr_param;		/**< Optional loose routing param, or zero */
+    pj_str_t	    maddr_param;	/**< Optional maddr param */
+    pjsip_param	    other_param;	/**< Other parameters grouped together. */
+    pjsip_param	    header_param;	/**< Optional header parameter. */
+} pjsip_sip_uri;
+
+
+/**
+ * SIP name-addr, which typically appear in From, To, and Contact header.
+ * The SIP name-addr contains a generic URI and a display name.
+ */
+typedef struct pjsip_name_addr
+{
+    /** Pointer to virtual function table. */
+    pjsip_uri_vptr  *vptr;
+
+    /** Optional display name. */
+    pj_str_t	     display;
+
+    /** URI part. */
+    pjsip_uri	    *uri;
+
+} pjsip_name_addr;
+
+
 /**
  * Create new SIP URL and initialize all fields with zero or NULL.
  * @param pool	    The pool.
@@ -344,6 +374,7 @@ PJ_DECL(pjsip_sip_uri*) pjsip_sips_uri_create( pj_pool_t *pool );
 /**
  * Initialize SIP URL (all fields are set to NULL or zero).
  * @param url	    The URL.
+ * @param secure    Create sips URI?
  */
 PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, int secure);
 

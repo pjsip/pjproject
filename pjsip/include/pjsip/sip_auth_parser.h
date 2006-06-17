@@ -29,16 +29,12 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_AUTH_PARSER_MODULE Authorization Parser Module
- * @ingroup PJSIP_AUTH
- * @{
- */
-
-/**
  * Initialize and register authorization parser module.
  * This will register parser handler for various Authorization related headers
  * such as Authorization, WWW-Authenticate, Proxy-Authorizization, and 
  * Proxy-Authenticate headers.
+ *
+ * This function is called automatically by the main SIP parser.
  *
  * @return      PJ_SUCCESS or the appropriate status code.
  */
@@ -50,36 +46,25 @@ PJ_DECL(pj_status_t) pjsip_auth_init_parser(void);
 PJ_DECL(void) pjsip_auth_deinit_parser();
 
 
-extern const pj_str_t	pjsip_USERNAME_STR,
-			pjsip_REALM_STR,
-			pjsip_NONCE_STR,
-			pjsip_URI_STR,
-			pjsip_RESPONSE_STR,
-			pjsip_ALGORITHM_STR,
-			pjsip_DOMAIN_STR,
-			pjsip_STALE_STR,
-			pjsip_QOP_STR,
-			pjsip_CNONCE_STR,
-			pjsip_OPAQUE_STR,
-			pjsip_NC_STR,
-			pjsip_TRUE_STR,
-			pjsip_FALSE_STR,
-			pjsip_DIGEST_STR,
-			pjsip_PGP_STR,
-			pjsip_MD5_STR,
-			pjsip_AUTH_STR;
-/*
-extern const pj_str_t	pjsip_QUOTED_TRUE_STR,
-			pjsip_QUOTED_FALSE_STR,
-			pjsip_QUOTED_DIGEST_STR,
-			pjsip_QUOTED_PGP_STR,
-			pjsip_QUOTED_MD5_STR,
-			pjsip_QUOTED_AUTH_STR;
-*/
 
-/**
- * @}
- */
+extern const pj_str_t	pjsip_USERNAME_STR, /**< "username" string const.   */
+			pjsip_REALM_STR,    /**< "realm" string const.	    */
+			pjsip_NONCE_STR,    /**< "nonce" string const.	    */
+			pjsip_URI_STR,	    /**< "uri" string const.	    */
+			pjsip_RESPONSE_STR, /**< "response" string const.   */
+			pjsip_ALGORITHM_STR,/**< "algorithm" string const.  */
+			pjsip_DOMAIN_STR,   /**< "domain" string const.	    */
+			pjsip_STALE_STR,    /**< "stale" string const.	    */
+			pjsip_QOP_STR,	    /**< "qop" string const.	    */
+			pjsip_CNONCE_STR,   /**< "cnonce" string const.	    */
+			pjsip_OPAQUE_STR,   /**< "opaque" string const.	    */
+			pjsip_NC_STR,	    /**< "nc" string const.	    */
+			pjsip_TRUE_STR,	    /**< "true" string const.	    */
+			pjsip_FALSE_STR,    /**< "false" string const.	    */
+			pjsip_DIGEST_STR,   /**< "digest" string const.	    */
+			pjsip_PGP_STR,	    /**< "pgp" string const.	    */
+			pjsip_MD5_STR,	    /**< "md5" string const.	    */
+			pjsip_AUTH_STR;	    /**< "auth" string const.	    */
 
 PJ_END_DECL
 

@@ -319,6 +319,10 @@ SOURCE=..\include\pjsip\sip_ua_layer.h
 # End Group
 # Begin Source File
 
+SOURCE=..\docs\doxygen.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjsip.h
 # End Source File
 # End Group

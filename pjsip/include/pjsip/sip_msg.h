@@ -20,7 +20,7 @@
 #define __PJSIP_SIP_MSG_H__
 
 /**
- * @file sip_msg.h
+ * @file pjsip/sip_msg.h
  * @brief SIP Message Structure.
  */
 
@@ -31,8 +31,9 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_MSG SIP Message Structure
- * @ingroup PJSIP
+ * @defgroup PJSIP_MSG Messaging Elements
+ * @ingroup PJSIP_CORE
+ * @brief Various SIP message elements such as methods, headers, URIs, etc.
  * @{
  */
 
@@ -154,8 +155,8 @@ PJ_DECL(int) pjsip_method_cmp( const pjsip_method *m1, const pjsip_method *m2);
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * @defgroup PJSIP_MSG_HDR Header Fields General Structure.
- * @brief General Header Fields Structure.
+ * @defgroup PJSIP_MSG_HDR Header Fields
+ * @brief Declarations for various SIP header fields.
  * @ingroup PJSIP_MSG
  * @{
  */
@@ -461,8 +462,8 @@ PJ_DECL(const pj_str_t*) pjsip_get_status_text(int status_code);
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @addtogroup PJSIP_MSG_MEDIA Media Type
- * @brief Media type definitions and manipulations.
+ * @addtogroup PJSIP_MSG_MEDIA Media/MIME Type
+ * @brief Media/MIME type declaration and manipulations.
  * @ingroup PJSIP_MSG
  * @{
  */
@@ -654,7 +655,7 @@ PJ_DECL(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * @defgroup PJSIP_MSG_MSG Message Structure
- * @brief Message structure and operations.
+ * @brief SIP message (request and response) structure and operations.
  * @ingroup PJSIP_MSG
  * @{
  */
@@ -845,9 +846,7 @@ PJ_DECL(pj_ssize_t) pjsip_msg_print(const pjsip_msg *msg,
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @addtogroup PJSIP_MSG_HDR_GEN Header Field: Generic
- * @brief Generic header field which contains header name and value.
- * @ingroup PJSIP_MSG
+ * @addtogroup PJSIP_MSG_HDR
  * @{
  */
 
@@ -904,17 +903,8 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
 			       const pj_str_t *hvalue);
 
 
-/**
- * @}
- */
 
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @addtogroup PJSIP_MSG_HDR_GEN_INT Header Field: Generic Integer
- * @brief Generic header field which contains header name and value.
- * @ingroup PJSIP_MSG
- * @{
- */
 
 /**
  * Generic SIP header, which contains hname and a string hvalue.
@@ -964,26 +954,25 @@ PJ_DECL(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_init( pj_pool_t *pool,
 							    const pj_str_t *hname,
 							    int value );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_GENERIC_LIST Header Field: Generic string list.
- * @brief Header with list of strings separated with comma
- * @ingroup PJSIP_MSG
- * @{
- */
 
 /** Maximum elements in the header array. */
 #define PJSIP_GENERIC_ARRAY_MAX_COUNT	32
 
+/**
+ * Generic array of string header.
+ */
 typedef struct pjsip_generic_array_hdr
 {
+    /** Standard header fields. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_array_hdr);
-    unsigned	count;					/**< Number of elements. */
-    pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];	/**< Elements.		 */
+
+    /** Number of tags/elements. */
+    unsigned	count;
+
+    /**< Tags/elements. */
+    pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];
+
 } pjsip_generic_array_hdr;
 
 /**
@@ -1018,17 +1007,8 @@ PJ_DECL(pjsip_generic_array_hdr*) pjsip_generic_array_hdr_init(pj_pool_t *pool,
 							       const pj_str_t *hname);
 
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_ACCEPT Header Field: Accept
- * @brief Accept header field.
- * @ingroup PJSIP_MSG
- * @{
- */
+
 /** Accept header. */
 typedef pjsip_generic_array_hdr pjsip_accept_hdr;
 
@@ -1061,16 +1041,11 @@ PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_create(pj_pool_t *pool);
 PJ_DECL(pjsip_accept_hdr*) pjsip_accept_hdr_init( pj_pool_t *pool,
 						  void *mem );
 
-/**
- * @}
- */
 
 ///////////////////////////////////////////////////////////////////////////////
+
 /**
- * @defgroup PJSIP_MSG_HDR_ALLOW Header Field: Allow
- * @brief Allow header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Allow header.
  */
 typedef pjsip_generic_array_hdr pjsip_allow_hdr;
 
@@ -1102,17 +1077,8 @@ PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_create(pj_pool_t *pool);
 PJ_DECL(pjsip_allow_hdr*) pjsip_allow_hdr_init( pj_pool_t *pool,
 						void *mem );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_CID Header Field: Call-ID
- * @brief Call-ID header field.
- * @ingroup PJSIP_MSG
- * @{
- */
+
 /**
  * Call-ID header.
  */
@@ -1151,17 +1117,8 @@ PJ_DECL(pjsip_cid_hdr*) pjsip_cid_hdr_init( pj_pool_t *pool,
 					    void *mem );
 
 
-/**
- * @}
- */
 
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_CLEN Header Field: Content-Length
- * @brief Content-Length header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * Content-Length header.
  */
@@ -1197,17 +1154,7 @@ PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_init( pj_pool_t *pool,
 					      void *mem );
 
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_CSEQ Header Field: CSeq
- * @brief CSeq header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * CSeq header.
  */
@@ -1243,17 +1190,7 @@ PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_create( pj_pool_t *pool );
 PJ_DECL(pjsip_cseq_hdr*) pjsip_cseq_hdr_init( pj_pool_t *pool,
 					      void *mem );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_CONTACT Header Field: Contact
- * @brief Contact header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * Contact header.
  * In this library, contact header only contains single URI. If a message has
@@ -1296,17 +1233,8 @@ PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool );
 PJ_DECL(pjsip_contact_hdr*) pjsip_contact_hdr_init( pj_pool_t *pool,
 						    void *mem );
 
-/**
- * @}
- */
 
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_CTYPE Header Field: Content-Type
- * @brief Content-Type header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * Content-Type.
  */
@@ -1342,17 +1270,7 @@ PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_create( pj_pool_t *pool );
 PJ_DECL(pjsip_ctype_hdr*) pjsip_ctype_hdr_init( pj_pool_t *pool,
 						void *mem );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_EXPIRES Header Field: Expires
- * @brief Expires header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /** Expires header. */
 typedef pjsip_generic_int_hdr pjsip_expires_hdr;
 
@@ -1387,17 +1305,8 @@ PJ_DECL(pjsip_expires_hdr*) pjsip_expires_hdr_init( pj_pool_t *pool,
 						    int value );
 
 
-/**
- * @}
- */
 
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_FROMTO Header Field: From/To
- * @brief From and To header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * To or From header.
  */
@@ -1468,30 +1377,23 @@ PJ_DECL(pjsip_to_hdr*) pjsip_to_hdr_init( pj_pool_t *pool,
 /**
  * Convert the header to a From header.
  *
- * @param pool	The pool.
- * @return	"From" header.
+ * @param hdr	    The generic from/to header.
+ * @return	    "From" header.
  */
 PJ_DECL(pjsip_from_hdr*) pjsip_fromto_hdr_set_from( pjsip_fromto_hdr *hdr );
 
 /**
  * Convert the header to a To header.
  *
- * @param pool	The pool.
- * @return	"To" header.
+ * @param hdr	    The generic from/to header.
+ * @return	    "To" header.
  */
 PJ_DECL(pjsip_to_hdr*)   pjsip_fromto_hdr_set_to( pjsip_fromto_hdr *hdr );
-
-/**
- * @}
- */
 
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_MAX_FORWARDS Header Field: Max-Forwards
- * @brief Max-Forwards header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Max-Forwards header.
  */
 typedef pjsip_generic_int_hdr pjsip_max_fwd_hdr;
 
@@ -1525,17 +1427,10 @@ pjsip_max_fwd_hdr_create(pj_pool_t *pool, int value);
 PJ_DECL(pjsip_max_fwd_hdr*) 
 pjsip_max_fwd_hdr_init( pj_pool_t *pool, void *mem, int value );
 
-/**
- * @}
- */
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_MIN_EXPIRES Header Field: Min-Expires
- * @brief Min-Expires header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Min-Expires header.
  */
 typedef pjsip_generic_int_hdr pjsip_min_expires_hdr;
 
@@ -1570,18 +1465,8 @@ PJ_DECL(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_init( pj_pool_t *pool,
 							    void *mem,
 							    int value );
 
-/**
- * @}
- */
-
 
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_ROUTING Header Field: Record-Route/Route
- * @brief Record-Route and Route header fields.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * Record-Route and Route headers.
  */
@@ -1589,7 +1474,7 @@ typedef struct pjsip_routing_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_routing_hdr);  /**< Generic header fields. */
     pjsip_name_addr  name_addr;	  /**< The URL in the Route/Record-Route header. */
-    pjsip_param	     other_param; /** Other parameter. */
+    pjsip_param	     other_param; /**< Other parameter. */
 } pjsip_routing_hdr;
 
 /** Alias for Record-Route header. */
@@ -1665,16 +1550,9 @@ PJ_DECL(pjsip_rr_hdr*)	    pjsip_routing_hdr_set_rr( pjsip_routing_hdr *r );
  */
 PJ_DECL(pjsip_route_hdr*)   pjsip_routing_hdr_set_route( pjsip_routing_hdr *r );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_REQUIRE Header Field: Require
- * @brief Require header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Require header.
  */
 typedef pjsip_generic_array_hdr pjsip_require_hdr;
 
@@ -1704,17 +1582,10 @@ PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t *pool);
 PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init( pj_pool_t *pool,
 						    void *mem );
 
-/**
- * @}
- */
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_RETRY_AFTER Header Field: Retry-After
- * @brief Retry-After header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Retry-After header.
  */
 typedef pjsip_generic_int_hdr pjsip_retry_after_hdr;
 
@@ -1744,16 +1615,9 @@ PJ_DECL(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_init( pj_pool_t *pool,
 							    int value );
 
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_SUPPORTED Header Field: Supported
- * @brief Supported header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Supported header.
  */
 typedef pjsip_generic_array_hdr pjsip_supported_hdr;
 
@@ -1778,16 +1642,9 @@ PJ_DECL(pjsip_supported_hdr*) pjsip_supported_hdr_create(pj_pool_t *pool);
 PJ_DECL(pjsip_supported_hdr*) pjsip_supported_hdr_init( pj_pool_t *pool,
 							void *mem );
 
-/**
- * @}
- */
-
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup PJSIP_MSG_HDR_UNSUPPORTED Header Field: Unsupported
- * @brief Unsupported header field.
- * @ingroup PJSIP_MSG
- * @{
+ * Unsupported header.
  */
 typedef pjsip_generic_array_hdr pjsip_unsupported_hdr;
 
@@ -1812,18 +1669,7 @@ PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_create(pj_pool_t *pool);
 PJ_DECL(pjsip_unsupported_hdr*) pjsip_unsupported_hdr_init( pj_pool_t *pool,
 							    void *mem );
 
-/**
- * @}
- */
-
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_VIA Header Field: Via
- * @brief Via header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * SIP Via header.
  * In this implementation, Via header can only have one element in each header.
@@ -1865,18 +1711,7 @@ PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_create( pj_pool_t *pool );
 PJ_DECL(pjsip_via_hdr*) pjsip_via_hdr_init( pj_pool_t *pool,
 					    void *mem );
 
-/**
- * @}
- */
-
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_WARNING Header Field: Warning
- * @brief Warning header field.
- * @ingroup PJSIP_MSG
- * @{
- */
 /**
  * SIP Warning header.
  * In this version, Warning header is just a typedef for generic string 
@@ -1917,25 +1752,7 @@ pjsip_warning_hdr_create_from_status( pj_pool_t *pool,
 				      const pj_str_t *host,
 				      pj_status_t status);
 
-/**
- * @}
- */
-
-/**
- * @bug Once a header is put in the message, the header CAN NOT be put in
- *      other list. Solution:
- *	- always clone header in the message.
- *	- create a list node for each header in the message.
- */
-
-
 ///////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup PJSIP_MSG_HDR_UNIMP Unimplemented Header Fields
- * @brief Unimplemented header fields.
- * @ingroup PJSIP_MSG
- * @{
- */
 /** Accept-Encoding header. */
 typedef pjsip_generic_string_hdr pjsip_accept_encoding_hdr;
 

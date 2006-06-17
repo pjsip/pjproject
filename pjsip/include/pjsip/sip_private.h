@@ -26,21 +26,6 @@
 
 #include <pjsip/sip_types.h>
 
-PJ_BEGIN_DECL
-
-/**
- * @defgroup PJSIP_PRIVATE Private structures and functions (PJSIP internals)
- * @ingroup PJSIP
- * @{
- */
-
-
-
-/** 
- * @}
- */
-
-PJ_END_DECL
 
 #endif /* __PJSIP_PRIVATE_I_H__ */
 

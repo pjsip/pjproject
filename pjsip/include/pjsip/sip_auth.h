@@ -29,14 +29,20 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * @addtogroup PJSIP_AUTH Authentication Framework
+ * @ingroup PJSIP_CORE
+ * @brief Client and server side authentication framework.
+ */
 
 /**
- * @defgroup PJSIP_AUTH_API Authorization API's
+ * @defgroup PJSIP_AUTH_API Authentication API's
  * @ingroup PJSIP_AUTH
+ * @brief Structures and functions to perform authentication.
  * @{
  */
 
-/* Length of digest string. */
+/** Length of digest string. */
 #define PJSIP_MD5STRLEN 32
 
 
@@ -80,6 +86,7 @@ struct pjsip_cred_info
  */
 typedef struct pjsip_cached_auth_hdr
 {
+    /** Standard list member */
     PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth_hdr);
 
     pjsip_method	     method;	/**< To quickly see the method. */
@@ -100,6 +107,7 @@ typedef struct pjsip_cached_auth_hdr
  */
 typedef struct pjsip_cached_auth
 {
+    /** Standard list member */
     PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth);
 
     pj_str_t			 realm;	    /**< Realm.			    */
