@@ -9,16 +9,6 @@
 #ifndef	PROTO_H
 #define	PROTO_H
 
-#ifdef _MSC_VER
-#   pragma warning(push, 3)
-#   pragma warning(disable: 4131)	// .. uses old-style declarato
-#   pragma warning(disable: 4244)	// conversion from 'x ' to 'y', possible loss of data
-#   pragma warning(disable: 4761)	// integral size mismatch
-#endif
-
-#define NeedFunctionPrototypes	1
-
-
 #if __cplusplus
 #	define	NeedFunctionPrototypes	1
 #endif

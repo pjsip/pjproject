@@ -16,10 +16,6 @@
 	extern char	* memcpy P((char *, char *, int));
 #endif
 
-#ifdef HAS_STRING_H
-#include <string.h>
-#endif
-
 #include	"private.h"
 #include	"gsm.h"
 #include	"proto.h"
@@ -63,8 +59,6 @@ void Gsm_Coder P8((S,s,LARc,Nc,bc,Mc,xmaxc,xMc),
 	word	* dp  = S->dp0 + 120;	/* [ -120...-1 ] */
 	word	* dpp = dp;		/* [ 0...39 ]	 */
 
-	static word e[50];
-
 	word	so[160];
 
 	Gsm_Preprocess			(S, s, so);
@@ -76,23 +70,23 @@ void Gsm_Coder P8((S,s,LARc,Nc,bc,Mc,xmaxc,xMc),
 		Gsm_Long_Term_Predictor	( S,
 					 so+k*40, /* d      [0..39] IN	*/
 					 dp,	  /* dp  [-120..-1] IN	*/
-					e + 5,	  /* e      [0..39] OUT	*/
+					S->e + 5, /* e      [0..39] OUT	*/
 					dpp,	  /* dpp    [0..39] OUT */
 					 Nc++,
 					 bc++);
 
 		Gsm_RPE_Encoding	( S,
-					e + 5,	/* e	  ][0..39][ IN/OUT */
+					S->e + 5,/* e	  ][0..39][ IN/OUT */
 					  xmaxc++, Mc++, xMc );
 		/*
 		 * Gsm_Update_of_reconstructed_short_time_residual_signal
-		 *			( dpp, e + 5, dp );
+		 *			( dpp, S->e + 5, dp );
 		 */
 
 		{ register int i;
 		  register longword ltmp;
 		  for (i = 0; i <= 39; i++)
-			dp[ i ] = GSM_ADD( e[5 + i], dpp[i] );
+			dp[ i ] = GSM_ADD( S->e[5 + i], dpp[i] );
 		}
 		dp  += 40;
 		dpp += 40;

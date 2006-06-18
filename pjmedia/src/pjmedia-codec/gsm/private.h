@@ -18,6 +18,7 @@ typedef unsigned long		ulongword;	/* unsigned longword	*/
 struct gsm_state {
 
 	word		dp0[ 280 ];
+	word		e[ 50 ];	/* code.c 			*/
 
 	word		z1;		/* preprocessing.c, Offset_com. */
 	longword	L_z2;		/*                  Offset_com. */
