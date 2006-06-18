@@ -21,11 +21,21 @@
 
 
 /**
- * @file stream_transport_udp.h
+ * @file transport_udp.h
  * @brief Stream transport with UDP.
  */
 
 #include <pjmedia/stream.h>
+
+
+/**
+ * @defgroup PJMEDIA_TRANSPORT_UDP UDP Socket Transport
+ * @ingroup PJMEDIA_TRANSPORT_H
+ * @brief Implementation of media transport with UDP sockets.
+ * @{
+ */
+
+PJ_BEGIN_DECL
 
 
 /**
@@ -91,6 +101,13 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_attach(pjmedia_endpt *endpt,
 PJ_DECL(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp);
 
 
+
+PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_TRANSPORT_UDP_H__ */

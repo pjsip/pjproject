@@ -19,8 +19,22 @@
 #ifndef __PJMEDIA_G711_H__
 #define __PJMEDIA_G711_H__
 
+/**
+ * @file g711.h
+ * @brief G711 Codec
+ */
+
 #include <pjmedia-codec/types.h>
 
+/**
+ * @defgroup PJMED_G711 G711
+ * @ingroup PJMEDIA_CODEC
+ * @brief Standard G.711/PCMA and PCMU codec.
+ * @{
+ * This section describes functions to register and register G.711 codec
+ * factory to the codec manager. After the codec factory has been registered,
+ * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ */
 
 PJ_BEGIN_DECL
 
@@ -47,6 +61,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_g711_deinit(void);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_G711_H__ */
 

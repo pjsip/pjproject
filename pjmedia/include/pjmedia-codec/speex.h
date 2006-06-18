@@ -19,8 +19,27 @@
 #ifndef __PJMEDIA_CODEC_SPEEX_H__
 #define __PJMEDIA_CODEC_SPEEX_H__
 
+/**
+ * @file speex.h
+ * @brief Speex codec header.
+ */
+
 #include <pjmedia-codec/types.h>
 
+/**
+ * @defgroup PJMED_SPEEX Speex
+ * @ingroup PJMEDIA_CODEC
+ * @brief Implementation of Speex codecs (narrow/wide/ultrawide-band).
+ * @{
+ * This section describes functions to register and register speex codec
+ * factory to the codec manager. After the codec factory has been registered,
+ * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * By default, the speex codec factory registers three Speex codecs:
+ * "speex/8000" narrowband codec, "speex/16000" wideband codec, and 
+ * "speex/32000" ultra-wideband codec. This behavior can be changed by
+ * specifying #pjmedia_speex_options flags during initialization.
+ */
 
 PJ_BEGIN_DECL
 
@@ -59,11 +78,6 @@ PJ_DECL(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
  * pjmedia endpoint.
  *
  * @param endpt		The pjmedia endpoint.
- * @param options	Bitmask of pjmedia_speex_options (default=0).
- * @param quality	Specify encoding quality, or use -1 for default 
- *			(default=8).
- * @param complexity	Specify encoding complexity , or use -1 for default 
- *			(default=8).
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -82,6 +96,9 @@ PJ_DECL(pj_status_t) pjmedia_codec_speex_deinit(void);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_CODEC_SPEEX_H__ */
 

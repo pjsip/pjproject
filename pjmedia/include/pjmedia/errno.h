@@ -19,8 +19,21 @@
 #ifndef __PJMEDIA_ERRNO_H__
 #define __PJMEDIA_ERRNO_H__
 
+/**
+ * @file errno.h Error Codes
+ * @brief PJMEDIA specific error codes.
+ */
+
 #include <pjmedia/types.h>
 #include <pj/errno.h>
+
+/**
+ * @defgroup PJMEDIA_ERRNO Error Codes
+ * @ingroup PJMEDIA_BASE
+ * @brief PJMEDIA specific error codes.
+ * @{
+ */
+
 
 PJ_BEGIN_DECL
 
@@ -31,12 +44,12 @@ PJ_BEGIN_DECL
 #define PJMEDIA_ERRNO_START       (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE)
 
 
-/*
+/**
  * Mapping from PortAudio error codes to pjmedia error space.
  */
 #define PJMEDIA_PORTAUDIO_ERRNO_START (PJMEDIA_ERRNO_START+PJ_ERRNO_SPACE_SIZE-1000)
 
-/*
+/**
  * Convert PortAudio error code to PJMEDIA error code.
  */
 #define PJMEDIA_ERRNO_FROM_PORTAUDIO(err)   (err+PJMEDIA_PORTAUDIO_ERRNO_START)
@@ -389,11 +402,6 @@ PJ_BEGIN_DECL
 
 
 /************************************************************
- * JITTER BUFFER ERRORS
- ***********************************************************/
-
-
-/************************************************************
  * PORT ERRORS
  ***********************************************************/
 /**
@@ -485,6 +493,11 @@ PJ_BEGIN_DECL
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
+
 
 #endif	/* __PJMEDIA_ERRNO_H__ */
 

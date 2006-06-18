@@ -19,8 +19,22 @@
 #ifndef __PJMEDIA_CODEC_GSM_H__
 #define __PJMEDIA_CODEC_GSM_H__
 
+/**
+ * @file pjmedia-codec/gsm.h
+ * @brief GSM 06.10 codec.
+ */
+
 #include <pjmedia-codec/types.h>
 
+/**
+ * @defgroup PJMED_GSM GSM 06.10
+ * @ingroup PJMEDIA_CODEC
+ * @brief Implementation of GSM FR based on GSM 06.10 library
+ * @{
+ * This section describes functions to register and register GSM codec
+ * factory to the codec manager. After the codec factory has been registered,
+ * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ */
 
 PJ_BEGIN_DECL
 
@@ -47,6 +61,10 @@ PJ_DECL(pj_status_t) pjmedia_codec_gsm_deinit(void);
 
 PJ_END_DECL
 
+
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_CODEC_GSM_H__ */
 

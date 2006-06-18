@@ -27,8 +27,8 @@
 
 
 /**
- * @defgroup PJ_SDP SDP Parsing and Data Structure
- * @ingroup PJMEDIA
+ * @defgroup PJMEDIA_SDP SDP Parsing and Data Structure
+ * @ingroup PJMEDIA_SESSION
  * @{
  *
  * The basic SDP session descriptor and elements are described in header

@@ -26,22 +26,40 @@
  */
 #include <pjmedia/port.h>
 
+/**
+ * @defgroup PJMEDIA_MASTER_PORT Master Port
+ * @ingroup PJMEDIA_PORT_CLOCK
+ * @brief Provides media clock for media ports.
+ * @{
+ * A master port has two media ports connected to it, and by convention
+ * thay are called downstream and upstream ports. The media stream flowing to
+ * the downstream port is called encoding or send direction, and media stream 
+ * flowing to the upstream port is called decoding or receive direction
+ * (imagine the downstream as stream to remote endpoint, and upstream as
+ * local media port; media flowing to remote endpoint (downstream) will need
+ * to be encoded before it is transmitted to remote endpoint).
+ *
+ * A master port internally has an instance of @ref PJMEDIA_CLOCK, which
+ * provides the essensial timing for the master port. The @ref PJMEDIA_CLOCK
+ * runs asynchronously, and whenever a clock <b>tick</b> expires, a callback
+ * will be called, and the master port performs the following tasks:
+ *  - it calls <b><tt>get_frame()</tt></b> from the downstream port,
+ *    when give the frame to the upstream port by calling <b><tt>put_frame
+ *    </tt></b> to the upstream port, and
+ *  - performs the same task, but on the reverse direction (i.e. get the stream
+ *    from upstream port and give it to the downstream port).
+ *
+ * Because master port enables media stream to flow automatically, it is
+ * said that the master port supplies @ref PJMEDIA_PORT_CLOCK to the 
+ * media ports interconnection.
+ *
+ */
 
 PJ_BEGIN_DECL
 
 
 /**
  * Opaque declaration for master port.
- * A master port has two media ports connected to it, i.e. downstream and
- * upstream ports. The media stream flowing to the downstream port is called
- * encoding or send direction, and media stream flowing to the upstream port
- * is called decoding or receive direction.
- *
- * A master port has a "clock" that periodically passes the media frame from 
- * downstream to upstream ports, and vice versa. In each run, it retrieves 
- * media frame from one side with #pjmedia_port_get_frame(), and passes the 
- * media frame to the other side with #pjmedia_port_put_frame(). In each run,
- * this process is done for twice, i.e. one for each direction.
  */
 typedef struct pjmedia_master_port pjmedia_master_port;
 
@@ -148,6 +166,10 @@ PJ_DECL(pj_status_t) pjmedia_master_port_destroy(pjmedia_master_port *m,
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_MASTER_PORT_H__ */

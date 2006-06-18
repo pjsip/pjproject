@@ -26,6 +26,12 @@
  */
 #include <pjmedia/port.h>
 
+/**
+ * @defgroup PJMEDIA_CONF Conference Bridge
+ * @ingroup PJMEDIA_PORT
+ * @brief The implementation of conference bridge
+ * @{
+ */
 
 PJ_BEGIN_DECL
 
@@ -236,7 +242,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
  * @param src_slot	Source slot.
  * @param sink_slot	Sink slot.
  *
- * @reutrn		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 						   unsigned src_slot,
@@ -371,6 +377,11 @@ PJ_DECL(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
 
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_CONF_H__ */

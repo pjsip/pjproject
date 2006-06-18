@@ -30,9 +30,34 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJMED_SND Sound device abstraction.
- * @ingroup PJMEDIA
+ * @defgroup PJMED_SND Sound Hardware Abstraction
+ * @ingroup PJMED_SND_PORT
+ * @brief PJMEDIA abstraction for sound device hardware
  * @{
+ *
+ * This section describes lower level abstraction for sound device
+ * hardware. Application normally uses the higher layer @ref
+ * PJMED_SND_PORT abstraction since it works seamlessly with 
+ * @ref PJMEDIA_PORT_CONCEPT.
+ *
+ * The sound hardware abstraction basically runs <b>asychronously</b>,
+ * and application must register callbacks to be called to receive/
+ * supply audio frames from/to the sound hardware.
+ *
+ * A full duplex sound stream (created with #pjmedia_snd_open()) 
+ * requires application to supply two callbacks:
+ *  - <b><tt>rec_cb</tt></b> callback to be called when it has finished
+ *    capturing one media frame, and 
+ *  - <b><tt>play_cb</tt></b> callback to be called when it needs media 
+ *    frame to be played to the sound playback hardware.
+ *
+ * Half duplex sound stream (created with #pjmedia_snd_open_rec() or
+ * #pjmedia_snd_open_player()) will only need one of the callback to
+ * be specified.
+ *
+ * After sound stream is created, application need to call
+ * #pjmedia_snd_stream_start() to start capturing/playing back media
+ * frames from/to the sound device.
  */
 
 /** Opaque data type for audio stream. */
@@ -113,7 +138,8 @@ PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
 /**
  * Create sound stream for both capturing audio and audio playback,  from the 
  * same device. This is the recommended way to create simultaneous recorder 
- * and player streams, because it should work on backends that does not allow
+ * and player streams (instead of creating separate capture and playback
+ * streams), because it works on backends that does not allow
  * a device to be opened more than once.
  *
  * @param rec_id	    Device index for recorder/capture stream, or

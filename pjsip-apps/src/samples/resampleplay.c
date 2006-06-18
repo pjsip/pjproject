@@ -127,24 +127,11 @@ int main(int argc, char *argv[])
     //ptime = samples_per_frame * 1000 / sampling_rate;
 
     /* Create the resample port. */
-    status = pjmedia_resample_port_create( pool, 1, 1,
-					   file_port->info.clock_rate,
-					   sampling_rate,
-					   channel_count,
-					   (unsigned)(
-					   samples_per_frame * 1.0 *
-					    file_port->info.clock_rate / 
-					    sampling_rate),
+    status = pjmedia_resample_port_create( pool, file_port,
+					   sampling_rate, 0,
 					   &resample_port);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create resample port", status);
-	return 1;
-    }
-
-    /* Connect resample port to file port */
-    status = pjmedia_port_connect( pool, resample_port, file_port);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error connecting ports", status);
 	return 1;
     }
 

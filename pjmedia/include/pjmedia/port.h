@@ -27,6 +27,206 @@
 #include <pj/os.h>
 
 
+/**
+  @defgroup PJMEDIA_PORT_CONCEPT Media Ports
+  @ingroup PJMEDIA
+  @brief Extensible framework for media terminations
+  
+  @section media_port_intro Concepts
+  
+  @subsection The Media Port
+  A media port (represented with pjmedia_port "class") provides a generic
+  and extensible framework for implementing media terminations. A media
+  port interface basically has the following properties:
+  - media port information (pjmedia_port_info) to describe the
+  media port properties (sampling rate, number of channels, etc.),
+  - pointer to function to acquire frames from the port (<tt>get_frame()
+  </tt> interface), which will be called by #pjmedia_port_get_frame()
+  public API, and
+  - pointer to function to store frames to the port (<tt>put_frame()</tt>
+  interface) which will be called by #pjmedia_port_put_frame() public
+  API.
+  
+  Media ports are passive "objects". Applications (or other PJMEDIA 
+  components) must actively calls #pjmedia_port_get_frame() or 
+  #pjmedia_port_put_frame() from/to the media port in order to retrieve/
+  store media frames.
+  
+  Some media ports (such as @ref PJMEDIA_CONF and @ref PJMEDIA_RESAMPLE_PORT)
+  may be interconnected with each other, while some
+  others represent the ultimate source/sink termination for the media. 
+  The  #pjmedia_port_connect() and #pjmedia_port_disconnect() are used to
+  connect and disconnect media ports respectively. But even when ports
+  are connected with each other ports, they still remain passive.
+
+
+  @subsection port_clock_ex1 Example: Manual Resampling
+
+  For example, suppose application wants to convert the sampling rate
+  of one WAV file to another. In this case, application would create and
+  arrange media ports connection as follows:
+
+    \image html sample-manual-resampling.jpg
+
+  Application would setup the media ports using the following pseudo-
+  code:
+
+  \code
+  
+      pjmedia_port *player, *resample, *writer;
+      pj_status_t status;
+  
+      // Create the file player port.
+      status = pjmedia_wav_player_port_create(pool, 
+  					      "Input.WAV",	    // file name
+  					      20,		    // ptime.
+  					      PJMEDIA_FILE_NO_LOOP, // flags
+  					      0,		    // buffer size
+  					      NULL,		    // user data.
+  					      &player );
+      PJ_ASSERT_RETURN(status==PJ_SUCCESS, PJ_SUCCESS);
+  
+      // Create the resample port with specifying the target sampling rate, 
+      // and with the file port as the source. This will effectively
+      // connect the resample port with the player port.
+      status = pjmedia_resample_port_create( pool, player, 8000, 
+  					     0, &resample);
+      PJ_ASSERT_RETURN(status==PJ_SUCCESS, PJ_SUCCESS);
+  
+      // Create the file writer, specifying the resample port's configuration
+      // as the WAV parameters.
+      status pjmedia_wav_writer_port_create(pool, 
+  					    "Output.WAV",  // file name.
+  					    resample->info.clock_rate,
+  					    resample->info.channel_count,
+  					    resample->info.samples_per_frame,
+  					    resample->info.bits_per_sample,
+  					    0,		// flags
+  					    0,		// buffer size
+  					    NULL,	// user data.
+  					    &writer);
+  
+  \endcode
+
+  
+  After the ports have been set up, application can perform the conversion
+  process by running this loop:
+ 
+  \code
+  
+  	pj_int16_t samplebuf[MAX_FRAME];
+  	
+  	while (1) {
+  	    pjmedia_frame frame;
+  	    pj_status_t status;
+  
+  	    frame.buf = samplebuf;
+  	    frame.size = sizeof(samplebuf);
+  
+  	    // Get the frame from resample port.
+  	    status = pjmedia_port_get_frame(resample, &frame);
+  	    if (status != PJ_SUCCESS || frame.type == PJMEDIA_FRAME_TYPE_NONE) {
+  		// End-of-file, end the conversion.
+  		break;
+  	    }
+  
+  	    // Put the frame to write port.
+  	    status = pjmedia_port_put_frame(writer, &frame);
+  	    if (status != PJ_SUCCESS) {
+  		// Error in writing the file.
+  		break;
+  	    }
+  	}
+  
+  \endcode
+ 
+  For the sake of completeness, after the resampling process is done, 
+  application would need to destroy the ports:
+  
+  \code
+	// Note: by default, destroying resample port will destroy the
+	//	 the downstream port too.
+  	pjmedia_port_destroy(resample);
+  	pjmedia_port_destroy(writer);
+  \endcode
+ 
+ 
+  The above steps are okay for our simple purpose of changing file's sampling
+  rate. But for other purposes, the process of reading and writing frames
+  need to be done in timely manner (for example, sending RTP packets to
+  remote stream). And more over, as the application's scope goes bigger,
+  the same pattern of manually reading/writing frames comes up more and more often,
+  thus perhaps it would be better if PJMEDIA provides mechanism to 
+  automate this process.
+  
+  And indeed PJMEDIA does provide such mechanism, which is described in 
+  @ref PJMEDIA_PORT_CLOCK section.
+
+
+  @subsection media_port_autom Automating Media Flow
+
+  PJMEDIA provides few mechanisms to make media flows automatically
+  among media ports. This concept is described in @ref PJMEDIA_PORT_CLOCK 
+  section.
+
+ */
+
+
+/**
+ * @defgroup PJMEDIA_PORT_INTERFACE Media Port Interface
+ * @ingroup PJMEDIA_PORT_CONCEPT
+ * @brief Declares the media port interface.
+ */
+
+/**
+ * @defgroup PJMEDIA_PORT Ports
+ * @ingroup PJMEDIA_PORT_CONCEPT
+ * @brief Contains various types of media ports/terminations.
+ * @{
+ * This page lists all types of media ports currently implemented
+ * in PJMEDIA. The media port concept is explained in @ref PJMEDIA_PORT_CONCEPT.
+ * @}
+ */
+
+/**
+ @defgroup PJMEDIA_PORT_CLOCK Clock/Timing
+ @ingroup PJMEDIA_PORT_CONCEPT
+ @brief Various types of classes that provide timing.
+ @{
+
+ The media clock/timing extends the media port concept that is explained 
+ in @ref PJMEDIA_PORT_CONCEPT. When clock is present in the ports 
+ interconnection, media will flow automatically (and with correct timing too!)
+ from one media port to another.
+ 
+ There are few objects in PJMEDIA that are able to provide clock/timing
+ to media ports interconnection:
+
+ - @ref PJMED_SND_PORT\n
+   The sound device makes a good candidate as the clock source, and
+   PJMEDIA @ref PJMED_SND is designed so that it is able to invoke
+   operations according to timing driven by the sound hardware clock
+   (this may sound complicated, but actually it just means that
+   the sound device abstraction provides callbacks to be called when
+   it has/wants media frames).\n
+   See @ref PJMED_SND_PORT for more details.
+
+ - @ref PJMEDIA_MASTER_PORT\n
+   The master port uses @ref PJMEDIA_CLOCK as the clock source. By using
+   @ref PJMEDIA_MASTER_PORT, it is possible to interconnect passive
+   media ports and let the frames flow automatically in timely manner.\n
+   Please see @ref PJMEDIA_MASTER_PORT for more details.
+
+ @}
+ */
+
+/**
+ * @addtogroup PJMEDIA_PORT_INTERFACE
+ * @{
+ * This page contains the media port interface declarations. The media port
+ * concept is explained in @ref PJMEDIA_PORT_CONCEPT.
+ */
+
 PJ_BEGIN_DECL
 
 
@@ -68,7 +268,7 @@ typedef enum pjmedia_port_op pjmedia_port_op;
 /**
  * Port info.
  */
-struct pjmedia_port_info
+typedef struct pjmedia_port_info
 {
     pj_str_t	    name;		/**< Port name.			    */
     pj_uint32_t	    signature;		/**< Port signature.		    */
@@ -82,30 +282,19 @@ struct pjmedia_port_info
     unsigned	    bits_per_sample;	/**< Bits/sample		    */
     unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
     unsigned	    bytes_per_frame;	/**< No of samples per frame.	    */
-};
-
-/**
- * @see pjmedia_port_info
- */
-typedef struct pjmedia_port_info pjmedia_port_info;
+} pjmedia_port_info;
 
 
 /** 
  * Types of media frame. 
  */
-enum pjmedia_frame_type
+typedef enum pjmedia_frame_type
 {
     PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
     PJMEDIA_FRAME_TYPE_CNG,	    /**< Silence audio frame.	*/
     PJMEDIA_FRAME_TYPE_AUDIO,	    /**< Normal audio frame.	*/
 
-};
-
-
-/** 
- * @see pjmedia_frame_type
- */
-typedef enum pjmedia_frame_type pjmedia_frame_type;
+} pjmedia_frame_type;
 
 
 /** 
@@ -142,25 +331,8 @@ typedef struct pjmedia_port pjmedia_port;
  */
 struct pjmedia_port
 {
-    pjmedia_port_info	 info;
-    pjmedia_graph	*graph;
-    pjmedia_port	*upstream_port;
-    pjmedia_port	*downstream_port;
-    void		*user_data;
-
-    /**
-     * Called when this port is connected to an upstream port.
-     */
-    pj_status_t (*on_upstream_connect)(pj_pool_t *pool,
-				       pjmedia_port *this_port,
-				       pjmedia_port *upstream);
-
-    /**
-     * Called when this port is connected to a downstream port.
-     */
-    pj_status_t (*on_downstream_connect)(pj_pool_t *pool,
-					 pjmedia_port *this_port,
-				         pjmedia_port *upstream);
+    pjmedia_port_info	 info;		    /**< Port information.  */
+    void		*user_data;	    /**< User data.	    */
 
     /**
      * Sink interface. 
@@ -181,21 +353,6 @@ struct pjmedia_port
      */
     pj_status_t (*on_destroy)(pjmedia_port *this_port);
 };
-
-
-
-/**
- * Connect two ports.
- */
-PJ_DECL(pj_status_t) pjmedia_port_connect( pj_pool_t *pool,
-					   pjmedia_port *upstream_port,
-					   pjmedia_port *downstream_port);
-
-/**
- * Disconnect ports.
- */
-PJ_DECL(pj_status_t) pjmedia_port_disconnect( pjmedia_port *upstream_port,
-					      pjmedia_port *downstream_port);
 
 
 /**
@@ -220,6 +377,9 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_PORT_H__ */
 

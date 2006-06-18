@@ -32,24 +32,165 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_CODEC Codec framework.
+ * @defgroup PJMEDIA_CODEC Codec Framework
  * @ingroup PJMEDIA
+ * @brief Media codec framework and management
  * @{
  *
- * The codec manager is used to manage all codec capabilities in the endpoint.
- * Library implementors can extend PJMEDIA codec capabilities by creating 
- * a codec factory for a new codec, and register the codec factory to
- * codec manager so that the codec can be used by the rest of application.
+ * @section codec_mgmt_sec Codec Management
+ * @subsection codec_fact_sec Codec Manager
  *
+ * The codec manager is used to manage all codec capabilities in the endpoint.
  * When used with media endpoint (pjmedia_endpt), application can retrieve
  * the codec manager instance by calling #pjmedia_endpt_get_codec_mgr().
+ *
+ * @subsection reg_new_codec Registering New Codec
+ *
+ * New codec types can be registered to PJMEDIA (or to be precise, to the 
+ * codec manager) during run-time. 
+ * To do this, application needs to initialize an instance of
+ * codec factory (#pjmedia_codec_factory) and registers this codec factory
+ * by calling #pjmedia_codec_mgr_register_factory().
+ *
+ * For codecs implemented/supported by PJMEDIA, this process is normally
+ * concealed in an easy to use function such as #pjmedia_codec_g711_init().
+ *
+ * @subsection codec_factory Codec Factory
+ *
+ * A codec factory (#pjmedia_codec_factory) is registered to codec manager, 
+ * and it is used to create and release codec instance.
+ *
+ * The most important member of the codec factory is the "virtual" function
+ * table #pjmedia_codec_factory_op, where it contains, among other thing, 
+ * pointer to functions to allocate and deallocate codec instance.
+ *
+ * @subsection codec_inst Codec Instance
+ *
+ * Application allocates codec instance by calling #pjmedia_codec_mgr_alloc_codec().
+ * One codec instance (#pjmedia_codec) can be used for simultaneous encoding
+ * and decoding.
+ *
+ * The most important member of the codec instance is the "virtual" function
+ * table #pjmedia_codec_op, where it holds pointer to functions to
+ * encode/decode media frames.
+ *
+ * @subsection codec_ident Codec Identification
+ *
+ * A particular codec type in PJMEDIA can be uniquely identified by two
+ * keys: by #pjmedia_codec_info, or by #pjmedia_codec_id string. A fully
+ * qualified codec ID string consists of codec name, sampling rate, and
+ * number of channels. However, application may use only first parts of
+ * the tokens as long as it will make to codec ID unique. For example, "gsm"
+ * is a fully qualified codec name, since it will always have 8000 clock
+ * rate and 1 channel. Other examples of fully qualified codec ID strings
+ * are "pcma", "speex/8000", "speex/16000", and "L16/16000/1". A codec
+ * id "speex" (without clock rate) is not fully qualified, since it will
+ * match the narrowband, wideband, and ultrawideband Speex codec.
+ *
+ * The two keys can be converted to one another, with
+ * #pjmedia_codec_info_to_id() and #pjmedia_codec_mgr_find_codecs_by_id()
+ * functions.
+ *
+ * Codec ID string is not case sensitive.
+ *
+ *
+ * @section using_codec Using the Codec Framework
+ * @subsection init_alloc_codec Allocating Codec
+ *
+ * Application needs to allocate one codec instance for encoding and decoding
+ * media frames. One codec instance can be used to perform both encoding
+ * and decoding.
+ *
+ * Application allocates codec by calling #pjmedia_codec_mgr_alloc_codec().
+ * This function takes #pjmedia_codec_info argument, which is used to locate
+ * the particular codec factory to be used to allocate the codec.
+ *
+ * Application can build #pjmedia_codec_info structure manually for
+ * the specific codec, or alternatively it may get the #pjmedia_codec_info
+ * from the codec ID string, by using #pjmedia_codec_mgr_find_codecs_by_id()
+ * function.
+ *
+ * The following snippet shows an example to allocate a codec:
+ *
+ \code
+    pj_str_t codec_id;
+    pjmedia_codec_info *codec_info;
+    unsigned count = 1;
+    pjmedia_codec *codec;
+
+    codec_id = pj_str("pcma");
+
+    // Find codec info for the specified coded ID (i.e. "pcma").
+    status = pjmedia_codec_mgr_find_codecs_by_id( codec_mgr, &codec_id,
+						  &count, &codec_info, NULL);
+
+    // Allocate the codec.
+    status = pjmedia_codec_mgr_alloc_codec( codec_mgr, codec_info, &codec );
+
+ \endcode
+ *
+ *
+ * @subsection opening_codec Initializing Codec
+ *
+ * Once codec is allocated, application needs to initialize the codec
+ * by calling <b><tt>open</tt></b> member of the codec. This function
+ * takes #pjmedia_codec_param as the argument, which contains the
+ * settings for the codec.
+ *
+ * Application shoud use #pjmedia_codec_mgr_get_default_param() function
+ * to initiaize #pjmedia_codec_param. The <tt>setting</tt> part of
+ * #pjmedia_codec_param then can be tuned to suit the application's
+ * requirements.
+ *
+ * The following snippet shows an example to initialize codec:
+ *
+ \code
+    pjmedia_codec_param param;
+
+    // Retrieve default codec param for the specified codec.
+    pjmedia_codec_mgr_get_default_param(codec_mgr, codec_info
+					&param);
+
+    // Application may change the "settings" part of codec param,
+    // for example, to disable VAD
+    param.setting.vad = 0;
+
+    // Open the codec using the specified settings.
+    codec->op->open( codec, &param );
+
+ \endcode
+ *
+ *
+ * @subsection enc_dec_codec Encoding and Decoding Media Frames
+ *
+ * Application encodes and decodes media frames by calling
+ * <tt>encode</tt> and <tt>decode</tt> member of the codec's "virtual"
+ * function table (#pjmedia_codec_op).
+ *
+ * @subsection plc_codec Concealing Lost Frames
+ *
+ * All codecs has Packet Lost Concealment (PLC) feature, and application
+ * can activate the PLC to conceal lost frames by calling <tt>recover</tt>
+ * member of the codec's "virtual" function table (#pjmedia_codec_op).
+ *
+ * If the codec's algorithm supports PLC, the <tt>recover</tt> function
+ * will use the codec's PLC. Otherwise for codecs that don't have
+ * intrinsic PLC, PJMEDIA will suply the PLC implementation from the
+ * @ref PJMED_PLC implementation.
+ *
+ * @subsection close_codec Closing and Releasing the Codec
+ *
+ * The codec must be closed by calling <tt>close</tt> member of the codec's
+ * operation. Then it must be released by calling 
+ * #pjmedia_codec_mgr_dealloc_codec().
  */
 
 
 /** 
  * Standard RTP static payload types, as defined by RFC 3551. 
  * The header file <pjmedia-codec/types.h> also declares dynamic payload
- * types that are supported by pjmedia-codec library.
+ * type numbers that are used by PJMEDIA when advertising the capability
+ * for example in SDP message.
  */
 enum pjmedia_rtp_pt
 {
@@ -88,27 +229,21 @@ enum pjmedia_rtp_pt
  * Identification used to search for codec factory that supports specific 
  * codec specification. 
  */
-struct pjmedia_codec_info
+typedef struct pjmedia_codec_info
 {
     pjmedia_type    type;	    /**< Media type.			*/
     unsigned	    pt;		    /**< Payload type (can be dynamic). */
     pj_str_t	    encoding_name;  /**< Encoding name.			*/
     unsigned	    clock_rate;	    /**< Sampling rate.			*/
     unsigned	    channel_cnt;    /**< Channel count.			*/
-};
-
-
-/**
- * @see pjmedia_codec_info
- */
-typedef struct pjmedia_codec_info pjmedia_codec_info;
+} pjmedia_codec_info;
 
 
 /** 
  * Detailed codec attributes used both to configure a codec and to query
  * the capability of codec factories.
  */
-struct pjmedia_codec_param
+typedef struct pjmedia_codec_param
 {
     /**
      * The "info" part of codec param describes the capability of the codec,
@@ -142,16 +277,12 @@ struct pjmedia_codec_param
 	unsigned    plc:1;	    /**< Packet loss concealment	*/
 	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
     } setting;
-};
-
-/**
- * @see pjmedia_codec_param
- */
-typedef struct pjmedia_codec_param pjmedia_codec_param;
+} pjmedia_codec_param;
 
 
-/**
- * @see pjmedia_codec
+
+/*
+ * Forward declaration for pjmedia_codec.
  */
 typedef struct pjmedia_codec pjmedia_codec;
 
@@ -160,7 +291,7 @@ typedef struct pjmedia_codec pjmedia_codec;
  * This structure describes codec operations. Each codec MUST implement
  * all of these functions.
  */
-struct pjmedia_codec_op
+typedef struct pjmedia_codec_op
 {
     /** 
      * Initialize codec using the specified attribute.
@@ -258,29 +389,24 @@ struct pjmedia_codec_op
 			  struct pjmedia_frame *output);
 
     /**
-     * Instruct the codec to recover a missing frame. Not all codec has
-     * this capability, so this function may be NULL.
+     * Instruct the codec to recover a missing frame.
      *
      * @param codec	The codec instance.
      * @param out_size	The length of buffer in the output frame.
-     * @param output	The output frame.
+     * @param output	The output frame where generated signal
+     *			will be placed.
      *
      * @return		PJ_SUCCESS on success;
      */
     pj_status_t (*recover)(pjmedia_codec *codec,
 			   unsigned out_size,
 			   struct pjmedia_frame *output);
-};
+} pjmedia_codec_op;
 
 
-/**
- * Codec operation.
- */
-typedef struct pjmedia_codec_op pjmedia_codec_op;
 
-
-/**
- * @see pjmedia_codec_factory
+/*
+ * Forward declaration for pjmedia_codec_factory.
  */
 typedef struct pjmedia_codec_factory pjmedia_codec_factory;
 
@@ -309,7 +435,7 @@ struct pjmedia_codec
  * This structure describes operations that must be supported by codec 
  * factories.
  */
-struct pjmedia_codec_factory_op
+typedef struct pjmedia_codec_factory_op
 {
     /** 
      * Check whether the factory can create codec with the specified 
@@ -380,13 +506,8 @@ struct pjmedia_codec_factory_op
     pj_status_t (*dealloc_codec)(pjmedia_codec_factory *factory, 
 				 pjmedia_codec *codec );
 
-};
+} pjmedia_codec_factory_op;
 
-
-/**
- * @see pjmedia_codec_factory_op
- */
-typedef struct pjmedia_codec_factory_op pjmedia_codec_factory_op;
 
 
 /**
@@ -418,7 +539,7 @@ struct pjmedia_codec_factory
  * Specify these values to set the codec priority, by calling
  * #pjmedia_codec_mgr_set_codec_priority().
  */
-enum pjmedia_codec_priority
+typedef enum pjmedia_codec_priority
 {
     /**
      * This priority makes the codec the highest in the order.
@@ -455,16 +576,14 @@ enum pjmedia_codec_priority
      * query functions.
      */
     PJMEDIA_CODEC_PRIO_DISABLED = 0,
-};
+
+} pjmedia_codec_priority;
 
 
-/**
- * @see pjmedia_codec_priority
+/** 
+ * Codec identification (e.g. "pcmu/8000/1").
+ * See @ref codec_ident for more info.
  */
-typedef enum pjmedia_codec_priority pjmedia_codec_priority;
-
-
-/** Fully qualified codec name  (e.g. "pcmu/8000/1") */
 typedef char pjmedia_codec_id[32];
 
 
@@ -486,7 +605,7 @@ struct pjmedia_codec_desc
  * to see this declaration, but nevertheless this declaration is needed
  * by media endpoint to instantiate the codec manager.
  */
-struct pjmedia_codec_mgr
+typedef struct pjmedia_codec_mgr
 {
     /** List of codec factories registered to codec manager. */
     pjmedia_codec_factory	factory_list;
@@ -496,13 +615,8 @@ struct pjmedia_codec_mgr
 
     /** Array of codec descriptor. */
     struct pjmedia_codec_desc	codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
-};
 
-
-/**
- * @see pjmedia_codec_mgr
- */
-typedef struct pjmedia_codec_mgr pjmedia_codec_mgr;
+} pjmedia_codec_mgr;
 
 
 

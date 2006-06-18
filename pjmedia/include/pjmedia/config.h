@@ -19,13 +19,35 @@
 #ifndef __PJMEDIA_CONFIG_H__
 #define __PJMEDIA_CONFIG_H__
 
+/**
+ * @file pjmedia/config.h Compile time config
+ * @brief Contains some compile time constants.
+ */
 #include <pj/config.h>
+
+/**
+ * @defgroup PJMEDIA_BASE Base Types and Configurations
+ * @ingroup PJMEDIA
+ */
+
+/**
+ * @defgroup PJMEDIA_CONFIG Compile time configuration
+ * @ingroup PJMEDIA_BASE
+ * @brief Some compile time configuration settings.
+ * @{
+ */
 
 /*
  * Types of sound stream backends.
  */
+
+/** Constant for NULL sound backend. */
 #define PJMEDIA_SOUND_NULL_SOUND	    0
+
+/** Constant for PortAudio sound backend. */
 #define PJMEDIA_SOUND_PORTAUDIO_SOUND	    1
+
+/** Constant for Win32 DirectSound sound backend. */
 #define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
 
 
@@ -131,6 +153,10 @@
 #   define PJMEDIA_HAS_G711_PLC			PJ_HAS_FLOATING_POINT
 #endif
 
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_CONFIG_H__ */

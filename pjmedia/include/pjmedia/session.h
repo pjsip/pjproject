@@ -32,8 +32,13 @@
 PJ_BEGIN_DECL 
 
 /**
- * @defgroup PJMED_SES Media session
+ * @defgroup PJMEDIA_SESSION Sessions
  * @ingroup PJMEDIA
+ */
+
+/**
+ * @defgroup PJMED_SES Media session
+ * @ingroup PJMEDIA_SESSION
  * @{
  *
  * A media session represents multimedia communication between two
@@ -90,7 +95,6 @@ typedef struct pjmedia_session_info pjmedia_session_info;
  * @param si		Session info structure to be initialized.
  * @param local		Local SDP session descriptor.
  * @param remote	Remote SDP session descriptor.
- * @param stream_idx	Media stream index in the session descriptor.
  *
  * @return		PJ_SUCCESS if stream info is successfully initialized.
  */
@@ -103,7 +107,7 @@ pjmedia_session_info_from_sdp( pj_pool_t *pool,
 			       const pjmedia_sdp_session *remote);
 
 
-/*
+/**
  * This function will initialize the stream info based on information
  * in both SDP session descriptors for the specified stream index. 
  * The remaining information will be taken from default codec parameters. 
@@ -263,7 +267,7 @@ PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
  *
  * @param session	The media session.
  * @param index		Stream index.
- * @param sta		Stream statistic.
+ * @param stat		Stream statistic.
  *
  * @return		PJ_SUCCESS on success.
  */

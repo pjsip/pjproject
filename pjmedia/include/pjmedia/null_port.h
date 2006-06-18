@@ -26,12 +26,22 @@
 #include <pjmedia/port.h>
 
 
+
+/**
+ * @defgroup PJMEDIA_NULL_PORT Null Port
+ * @ingroup PJMEDIA_PORT
+ * @brief Null port is the simplest type of port.
+ * @{
+ */
+
+
 PJ_BEGIN_DECL
 
 
 /**
  * Create Null port. 
  *
+ * @param pool			Pool to allocate memory.
  * @param sampling_rate		Sampling rate of the port.
  * @param channel_count		Number of channels.
  * @param samples_per_frame	Number of samples per frame.
@@ -50,6 +60,10 @@ PJ_DECL(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_NULL_PORT_H__ */

@@ -311,6 +311,10 @@ SOURCE=..\include\pjmedia\stream.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\transport.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\transport_udp.h
 # End Source File
 # Begin Source File

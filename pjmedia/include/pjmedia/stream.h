@@ -30,27 +30,48 @@
 #include <pjmedia/endpoint.h>
 #include <pjmedia/port.h>
 #include <pjmedia/rtcp.h>
+#include <pjmedia/transport.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_STRM Media Stream
- * @ingroup PJMEDIA
+ * @defgroup PJMED_STRM Streams
+ * @ingroup PJMEDIA_PORT
+ * @brief Media port for communicating with remote peer via the network.
  * @{
  *
  * A media stream is a bidirectional multimedia communication between two
- * endpoints. It corresponds to a media description (m= line) in SDP.
+ * endpoints. It corresponds to a media description (m= line) in SDP
+ * session descriptor.
  *
  * A media stream consists of two unidirectional channels:
  *  - encoding channel, which transmits unidirectional media to remote, and
  *  - decoding channel, which receives unidirectional media from remote.
  *
- * Application normally does not need to create the stream directly; it 
- * creates media session instead. The media session will create the media
- * streams as necessary, according to the media descriptors that present
- * in local and remote SDP.
+ * A media stream exports media port interface (see @ref PJMEDIA_PORT_CONCEPT)
+ * and application normally uses this interface to interconnect the stream
+ * to other PJMEDIA components.
+ *
+ * A media stream internally manages the following objects:
+ *  - an instance of media codec (see @ref PJMEDIA_CODEC),
+ *  - an @ref PJMED_JBUF,
+ *  - two instances of RTP sessions (#pjmedia_rtp_session, one for each
+ *    direction),
+ *  - one instance of RTCP session (#pjmedia_rtcp_session),
+ *  - and a reference to media transport to send and receive packets
+ *    to/from the network (see @ref PJMEDIA_TRANSPORT_H).
+ *
+ * Streams are created by calling #pjmedia_stream_create(), specifying
+ * #pjmedia_stream_info structure in the parameter. Application can construct
+ * the #pjmedia_stream_info structure manually, or use 
+ * #pjmedia_stream_info_from_sdp() or #pjmedia_session_info_from_sdp() 
+ * functions to construct the #pjmedia_stream_info from local and remote 
+ * SDP session descriptors.
+ *
+ * Application can also use @ref PJMEDIA_SESSION to indirectly create the
+ * streams.
  */
 
 /**
@@ -90,89 +111,6 @@ struct pjmedia_stream_info
  * @see pjmedia_stream_info.
  */
 typedef struct pjmedia_stream_info pjmedia_stream_info;
-
-
-/**
- * Opaque declaration for media stream.
- */
-typedef struct pjmedia_stream pjmedia_stream;
-
-
-/**
- * @see pjmedia_transport_op.
- */
-typedef struct pjmedia_transport pjmedia_transport;
-
-
-/**
- * This structure describes the operations for the stream transport.
- */
-struct pjmedia_transport_op
-{
-    /**
-     * This function is called by the stream when the transport is about
-     * to be used by the stream for the first time, and it tells the transport
-     * about remote RTP address to send the packet and some callbacks to be 
-     * called for incoming packets.
-     */
-    pj_status_t (*attach)(pjmedia_transport *tp,
-			  pjmedia_stream *strm,
-			  const pj_sockaddr_t *rem_addr,
-			  unsigned addr_len,
-			  void (*rtp_cb)(pjmedia_stream*,
-					 const void*,
-					 pj_ssize_t),
-			  void (*rtcp_cb)(pjmedia_stream*,
-					  const void*,
-					  pj_ssize_t));
-
-    /**
-     * This function is called by the stream when the stream is no longer
-     * need the transport (normally when the stream is about to be closed).
-     */
-    void (*detach)(pjmedia_transport *tp,
-		   pjmedia_stream *strm);
-
-    /**
-     * This function is called by the stream to send RTP packet using the 
-     * transport.
-     */
-    pj_status_t (*send_rtp)(pjmedia_transport *tp,
-			    const void *pkt,
-			    pj_size_t size);
-
-    /**
-     * This function is called by the stream to send RTCP packet using the
-     * transport.
-     */
-    pj_status_t (*send_rtcp)(pjmedia_transport *tp,
-			     const void *pkt,
-			     pj_size_t size);
-
-    /**
-     * This function can be called to destroy this transport.
-     */
-    pj_status_t (*destroy)(pjmedia_transport *tp);
-};
-
-
-/**
- * @see pjmedia_transport_op.
- */
-typedef struct pjmedia_transport_op pjmedia_transport_op;
-
-
-/**
- * This structure declares stream transport. A stream transport is called
- * by the stream to transmit a packet, and will notify stream when
- * incoming packet is arrived.
- */
-struct pjmedia_transport
-{
-    char		  name[PJ_MAX_OBJ_NAME];
-
-    pjmedia_transport_op *op;
-};
 
 
 

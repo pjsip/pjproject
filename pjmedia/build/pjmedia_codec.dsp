@@ -226,6 +226,10 @@ SOURCE="..\src\pjmedia-codec\gsm\unproto.h"
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\speex\_kiss_fft_guts.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\speex\arch.h"
 # End Source File
 # Begin Source File
@@ -247,6 +251,10 @@ SOURCE="..\src\pjmedia-codec\speex\cb_search_sse.h"
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\fftwrap.h"
 # End Source File
 # Begin Source File
 
@@ -283,6 +291,14 @@ SOURCE="..\src\pjmedia-codec\speex\fixed_debug.h"
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\speex\fixed_generic.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\kiss_fft.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\kiss_fftr.h"
 # End Source File
 # Begin Source File
 
@@ -454,6 +470,10 @@ SOURCE="..\src\pjmedia-codec\speex\exc_8_128_table.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\speex\fftwrap.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\speex\filters.c"
 # ADD CPP /W4
 # End Source File
@@ -484,6 +504,18 @@ SOURCE="..\src\pjmedia-codec\speex\high_lsp_tables.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\speex\jitter.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\kiss_fft.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\kiss_fftr.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\speex\lpc_spx.c"
 # ADD CPP /W4
 # End Source File
@@ -506,6 +538,10 @@ SOURCE="..\src\pjmedia-codec\speex\ltp.c"
 
 SOURCE="..\src\pjmedia-codec\speex\math_approx.c"
 # ADD CPP /W4
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\mdf.c"
 # End Source File
 # Begin Source File
 

@@ -26,6 +26,15 @@
  */
 #include <pjmedia/types.h>
 
+
+/**
+ * @defgroup PJMEDIA_SILENCEDET Adaptive Silence Detection
+ * @ingroup PJMEDIA_FRAME_OP
+ * @brief Adaptive Silence Detector
+ * @{
+ */
+
+
 PJ_BEGIN_DECL
 
 
@@ -177,6 +186,11 @@ unsigned char linear2ulaw(int pcm_val);
 
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_SILENCE_DET_H__ */

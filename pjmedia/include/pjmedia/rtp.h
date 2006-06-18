@@ -31,15 +31,16 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_RTP RTP Packet and RTP Session Management
- * @ingroup PJMEDIA
+ * @defgroup PJMED_RTP RTP Session
+ * @ingroup PJMEDIA_TRANSPORT
  * @{
  *
  * The RTP module is designed to be dependent only to PJLIB, it does not depend
  * on any other parts of PJMEDIA library. The RTP module does not even depend
  * on any transports (sockets), to promote even more use.
  *
- * An RTCP implementation is available, in separate module.
+ * An RTCP implementation is available, in separate module. Please see 
+ * @ref PJMED_RTCP.
  *
  * The functions that are provided by this module:
  *  - creating RTP header for each outgoing packet.
@@ -129,9 +130,9 @@ typedef struct pjmedia_rtp_ext_hdr pjmedia_rtp_ext_hdr;
  */
 struct pjmedia_rtp_dtmf_event
 {
-    pj_uint8_t	event;
-    pj_uint8_t	e_vol;
-    pj_uint16_t	duration;
+    pj_uint8_t	event;	    /**< Event type ID.	    */
+    pj_uint8_t	e_vol;	    /**< Event volume.	    */
+    pj_uint16_t	duration;   /**< Event duration.    */
 };
 
 /**

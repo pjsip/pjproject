@@ -26,6 +26,23 @@
 #include <pjmedia/types.h>
 
 
+/**
+ * @addtogroup PJMEDIA_CLOCK Clock Generator
+ * @ingroup PJMEDIA_PORT_CLOCK
+ * @brief Interface for generating clock.
+ * @{
+ * 
+ * The clock generator provides the application with media timing,
+ * and it is used by the @ref PJMEDIA_MASTER_PORT for its sound clock.
+ *
+ * The clock generator may be configured to run <b>asynchronously</b> 
+ * (the default behavior) or <b>synchronously</b>. When it is run 
+ * asynchronously, it will call the application's callback every time
+ * the clock <b>tick</b> expires. When it is run synchronously, 
+ * application must continuously polls the clock generator to synchronize
+ * the timing.
+ */
+
 PJ_BEGIN_DECL
 
 
@@ -35,10 +52,19 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_clock pjmedia_clock;
 
 
+/**
+ * Options when creating the clock.
+ */
 enum pjmedia_clock_options
 {
+    /**
+     * Prevents the clock from running asynchronously. In this case,
+     * application must poll the clock continuously by calling
+     * #pjmedia_clock_wait() in order to synchronize timing.
+     */
     PJMEDIA_CLOCK_NO_ASYNC  = 1,
 };
+
 
 /**
  * Type of media clock callback.
@@ -137,6 +163,9 @@ PJ_DECL(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_CLOCK_H__ */

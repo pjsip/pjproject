@@ -29,9 +29,36 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJMED_SND_PORT Media Port Connection Abstraction to Sound Device
- * @ingroup PJMEDIA
- * @{
+ * @defgroup PJMED_SND_PORT Sound Device Port
+ * @ingroup PJMEDIA_PORT_CLOCK
+ * @brief Media Port Connection Abstraction to the Sound Device
+ @{
+
+ As explained in @ref PJMED_SND, the sound hardware abstraction provides
+ some callbacks for its user:
+ - it calls <b><tt>rec_cb</tt></b> callback when it has finished capturing
+   one media frame, and 
+ - it calls <b><tt>play_cb</tt></b> when it needs media frame to be 
+   played to the sound playback hardware.
+
+ The @ref PJMED_SND_PORT (the object being explained here) add a
+ thin wrapper to the hardware abstraction:
+ - it will call downstream port's <tt>put_frame()</tt>
+   when <b><tt>rec_cb()</tt></b> is called (i.e. when the sound hardware 
+   has finished capturing frame), and 
+ - it will call downstream port's <tt>get_frame()</tt> when 
+   <b><tt>play_cb()</tt></b> is called (i.e. every time the 
+   sound hardware needs more frames to be played to the playback hardware).
+
+ This simple abstraction enables media to flow automatically (and
+ in timely manner) from the downstream media port to the sound device.
+ In other words, the sound device port supplies media clock to
+ the ports. The media clock concept is explained in @ref PJMEDIA_PORT_CLOCK
+ section.
+
+ Application registers downstream port to the sound device port by
+ calling #pjmedia_snd_port_connect();
+ 
  */
 
 /**
@@ -168,6 +195,7 @@ PJ_DECL(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
  * samples per frame, and bits per sample as the sound device port.
  *
  * @param snd_port	    The sound device port.
+ * @param port		    The media port to be connected.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.

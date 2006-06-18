@@ -31,6 +31,26 @@ PJ_BEGIN_DECL
 
 
 /**
+ * @defgroup PJMEDIA_FILE_PLAY File Player
+ * @ingroup PJMEDIA_PORT
+ * @brief WAV File Player
+ * @{
+ */
+
+/**
+ * WAV file player options.
+ */
+enum pjmedia_file_player_option
+{
+    /**
+     * Tell the file player to return NULL frame when the whole
+     * file has been played.
+     */
+    PJMEDIA_FILE_NO_LOOP = 1,
+};
+
+
+/**
  * Create a media port to play streams from a WAV file.
  *
  * @param pool		Pool to create memory buffers for this port.
@@ -39,7 +59,7 @@ PJ_BEGIN_DECL
  *			from this port. If the value is zero, the default
  *			duration (20ms) will be used.
  * @param flags		Port creation flags.
- * @param buf_size	Buffer size to be allocated. If the value is zero or
+ * @param buff_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
  *			is about 4KB).
  * @param user_data	User data to be associated with the file player port.
@@ -69,18 +89,32 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
 
 
 /**
+ * @}
+ */
+
+
+/**
+ * @defgroup PJMEDIA_FILE_REC File Writer (Recorder)
+ * @ingroup PJMEDIA_PORT
+ * @brief WAV File Writer (Recorder)
+ * @{
+ */
+
+
+
+/**
  * Create a media port to record streams to a WAV file. Note that the port
  * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
  * header can be filled with correct values (such as the file length).
  *
- * @param pool		Pool to create memory buffers for this port.
- * @param filename	File name.
- * @param clock_rate	The sampling rate.
- * @param channel_count	Number of channels.
+ * @param pool		    Pool to create memory buffers for this port.
+ * @param filename	    File name.
+ * @param clock_rate	    The sampling rate.
+ * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
- * @param bits_per_sampe Number of bits per sample (eg 16).
- * @param flags		Port creation flags (must be 0 at present).
- * @param buf_size	Buffer size to be allocated. If the value is zero or
+ * @param bits_per_sample   Number of bits per sample (eg 16).
+ * @param flags		    Port creation flags (must be 0 at present).
+ * @param buff_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
  *			is about 4KB).
  * @param user_data	User data to be associated with the file writer port.
@@ -100,6 +134,10 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
 						    pjmedia_port **p_port );
 
 
+
+/**
+ * @}
+ */
 
 
 PJ_END_DECL

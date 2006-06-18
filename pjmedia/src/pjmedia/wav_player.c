@@ -55,6 +55,8 @@
 struct file_port
 {
     pjmedia_port     base;
+    unsigned	     options;
+    pj_bool_t	     eof;
     pj_size_t	     bufsize;
     char	    *buf;
     char	    *readpos;
@@ -114,6 +116,10 @@ static pj_status_t fill_buffer(struct file_port *fport)
     pj_ssize_t size;
     pj_status_t status;
 
+    if (fport->eof) {
+	return PJ_EEOF;
+    }
+
     while (size_left > 0) {
 
 	/* Calculate how many bytes to read in this run. */
@@ -135,11 +141,19 @@ static pj_status_t fill_buffer(struct file_port *fport)
 	 * encountered EOF. Rewind the file.
 	 */
 	if (size < (pj_ssize_t)size_to_read) {
-	    PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
-		      (int)fport->base.info.name.slen,
-		      fport->base.info.name.ptr));
-	    fport->fpos = sizeof(struct pjmedia_wave_hdr);
-	    pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
+	    if (fport->options & PJMEDIA_FILE_NO_LOOP) {
+		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
+			  (int)fport->base.info.name.slen,
+			  fport->base.info.name.ptr));
+		fport->eof = PJ_TRUE;
+		return PJ_EEOF;
+	    } else {
+		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
+			  (int)fport->base.info.name.slen,
+			  fport->base.info.name.ptr));
+		fport->fpos = sizeof(struct pjmedia_wave_hdr);
+		pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
+	    }
 	}
     }
 
@@ -156,7 +170,7 @@ static pj_status_t fill_buffer(struct file_port *fport)
 PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     const char *filename,
 						     unsigned ptime,
-						     unsigned flags,
+						     unsigned options,
 						     pj_ssize_t buff_size,
 						     void *user_data,
 						     pjmedia_port **p_port )
@@ -166,8 +180,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     struct file_port *fport;
     pj_status_t status;
 
-
-    PJ_UNUSED_ARG(flags);
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
@@ -260,6 +272,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     /* Initialize */
     fport->base.user_data = user_data;
+    fport->options = options;
 
     /* Update port info. */
     fport->base.info.channel_count = wave_hdr.fmt_hdr.nchan;
@@ -337,6 +350,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
 		    samples * BYTES_PER_SAMPLE;
     pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
 
+    fport->eof = PJ_FALSE;
     return fill_buffer(fport);
 }
 
@@ -384,8 +398,11 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	    fport->readpos = fport->buf;
 
 	    status = fill_buffer(fport);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		frame->size = 0;
 		return status;
+	    }
 	}
     } else {
 	unsigned endread;

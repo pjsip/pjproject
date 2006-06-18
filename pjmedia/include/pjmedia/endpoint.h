@@ -25,7 +25,7 @@
  * @brief Media endpoint.
  */
 /**
- * @defgroup PJMED_ENDPT Multimedia Endpoint
+ * @defgroup PJMED_ENDPT The Endpoint
  * @ingroup PJMEDIA
  * @{
  *

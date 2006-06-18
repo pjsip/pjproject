@@ -27,11 +27,35 @@
 #include <pjmedia/types.h>
 
 
+/**
+ * @defgroup PJMEDIA_WAVE WAVE Header
+ * @ingroup PJMEDIA_MISC
+ * @{
+ *
+ * Supports for simple/canonical Microsoft RIFF WAVE format.
+ */
+
+
 PJ_BEGIN_DECL
 
+/**
+ * Standard RIFF tag to identify RIFF file format in the WAVE header.
+ */
 #define PJMEDIA_RIFF_TAG	('F'<<24|'F'<<16|'I'<<8|'R')
+
+/**
+ * Standard WAVE tag to identify WAVE header.
+ */
 #define PJMEDIA_WAVE_TAG	('E'<<24|'V'<<16|'A'<<8|'W')
+
+/**
+ * Standard FMT tag to identify format chunks.
+ */
 #define PJMEDIA_FMT_TAG		(' '<<24|'t'<<16|'m'<<8|'f')
+
+/**
+ * Standard DATA tag to identify data chunks.
+ */
 #define PJMEDIA_DATA_TAG	('a'<<24|'t'<<16|'a'<<8|'d')
 
 
@@ -41,26 +65,29 @@ PJ_BEGIN_DECL
  */
 struct pjmedia_wave_hdr
 {
+    /** This structure describes RIFF WAVE file header */
     struct {
-	pj_uint32_t riff;
-	pj_uint32_t file_len;
-	pj_uint32_t wave;
+	pj_uint32_t riff;		/**< "RIFF" ASCII tag.		*/
+	pj_uint32_t file_len;		/**< File length minus 8 bytes	*/
+	pj_uint32_t wave;		/**< "WAVE" ASCII tag.		*/
     } riff_hdr;
 
+    /** This structure describes format chunks/header  */
     struct {
-	pj_uint32_t fmt;
-	pj_uint32_t len;
-	pj_uint16_t fmt_tag;
-	pj_uint16_t nchan;
-	pj_uint32_t sample_rate;
-	pj_uint32_t bytes_per_sec;
-	pj_uint16_t block_align;
-	pj_uint16_t bits_per_sample;
+	pj_uint32_t fmt;		/**< "fmt " ASCII tag.		*/
+	pj_uint32_t len;		/**< 16 for PCM.		*/
+	pj_uint16_t fmt_tag;		/**< 1 for PCM			*/
+	pj_uint16_t nchan;		/**< Number of channels.	*/
+	pj_uint32_t sample_rate;	/**< Sampling rate.		*/
+	pj_uint32_t bytes_per_sec;	/**< Average bytes per second.	*/
+	pj_uint16_t block_align;	/**< nchannels * bits / 8	*/
+	pj_uint16_t bits_per_sample;	/**< Bits per sample.		*/
     } fmt_hdr;
 
+    /** The data header preceeds the actual data in the file. */
     struct {
-	pj_uint32_t data;
-	pj_uint32_t len;
+	pj_uint32_t data;		/**< "data" ASCII tag.		*/
+	pj_uint32_t len;		/**< Data length.		*/
     } data_hdr;
 };
 
@@ -97,6 +124,11 @@ PJ_DECL(void) pjmedia_wave_hdr_host_to_file( pjmedia_wave_hdr *hdr );
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
+
 
 #endif	/* __PJMEDIA_WAVE_H__ */
 

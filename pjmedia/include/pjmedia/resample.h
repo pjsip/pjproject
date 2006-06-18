@@ -22,12 +22,21 @@
 
 
 /**
- * @file reample.h
+ * @file resample.h
  * @brief Sample rate converter.
  */
 #include <pjmedia/types.h>
 #include <pjmedia/port.h>
 
+/**
+ * @defgroup PJMEDIA_RESAMPLE Resampling Algorithm
+ * @ingroup PJMEDIA_FRAME_OP
+ * @brief Functions to alter frame's clock rate.
+ * @{
+ * This section describes the base resampling functions. In addition to this,
+ * application can use the @ref PJMEDIA_RESAMPLE_PORT which provides
+ * media port abstraction for the base resampling algorithm.
+ */
 
 PJ_BEGIN_DECL
 
@@ -98,45 +107,82 @@ PJ_DECL(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample);
 
 
 /**
+ * @}
+ */
+
+/**
+ * @defgroup PJMEDIA_RESAMPLE_PORT Resample Port
+ * @ingroup PJMEDIA_PORT
+ * @brief Media port interface to change media stream's sampling rate.
+ * @{
+ * This section describes media port abstractoin for @ref PJMEDIA_RESAMPLE.
+ */
+
+
+/**
+ * Option flags that can be specified when creating resample port.
+ */
+enum pjmedia_resample_port_options
+{
+    /**
+     * Do not use high quality resampling algorithm, but use linear
+     * algorithm instead.
+     */
+    PJMEDIA_RESAMPLE_USE_LINEAR = 1,
+
+    /**
+     * Use small filter workspace when high quality resampling is
+     * used.
+     */
+    PJMEDIA_RESAMPLE_USE_SMALL_FILTER = 2,
+
+    /**
+     * Do not destroy downstream port when resample port is destroyed.
+     */
+    PJMEDIA_RESAMPLE_DONT_DESTROY_DN = 4,
+};
+
+
+
+/**
  * Create a resample port. This creates a bidirectional resample session,
  * which will resample frames when the port's get_frame() and put_frame()
  * is called.
  *
  * When the resample port's get_frame() is called, this port will get
- * a frame from the downstream port and resample the frame to the upstream
- * port's clock rate before returning it to the caller.
+ * a frame from the downstream port and resample the frame to the target
+ * clock rate before returning it to the caller.
  *
  * When the resample port's put_frame() is called, this port will resample
- * the frame to the downstream's port clock rate before giving the frame
+ * the frame to the downstream port's clock rate before giving the frame
  * to the downstream port.
  *
  * @param pool			Pool to allocate the structure and buffers.
- * @param high_quality		If true, then high quality conversion will be
- *				used, at the expense of more CPU and memory,
- *				because temporary buffer needs to be created.
- * @param large_filter		If true, large filter size will be used.
- * @param downstream_rate	The sampling rate of the downstream port.
- * @param upstream_rate		The sampling rate of the upstream port.
- * @param channel_count		The number of channels. This argument is only
- *				used for the port information. It does not
- *				change the behavior of the resample port.
- * @param samples_per_frame	Number of samples per frame from the downstream
- *				port.
+ * @param dn_port		The downstream port, which clock rate is to
+ *				be converted to the target clock rate.
+ * @param clock_rate		Target clock rate.
+ * @param options		Flags from #pjmedia_resample_port_options.
+ *				When this flag is zero, the default behavior
+ *				is to use high quality resampling with
+ *				large filter, and to destroy downstream port
+ *				when resample port is destroyed.
  * @param p_port		Pointer to receive the resample port instance.
  *
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
-						   pj_bool_t high_quality,
-						   pj_bool_t large_filter,
-						   unsigned downstream_rate,
-						   unsigned upstream_rate,
-						   unsigned channel_count,
-						   unsigned samples_per_frame,
+						   pjmedia_port *dn_port,
+						   unsigned clock_rate,
+						   unsigned options,
 						   pjmedia_port **p_port );
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
+
 
 #endif	/* __PJMEDIA_RESAMPLE_H__ */
 

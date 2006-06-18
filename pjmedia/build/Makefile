@@ -92,12 +92,13 @@ SPEEX_OBJS :=	speex_codec.o \
 		speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
 		speex/exc_10_32_table.o speex/exc_20_32_table.o \
 		speex/exc_5_256_table.o speex/exc_5_64_table.o \
-		speex/exc_8_128_table.o speex/filters.o \
+		speex/exc_8_128_table.o speex/fftwrap.c speex/filters.o \
 		speex/gain_table.o speex/gain_table_lbr.o \
 		speex/hexc_10_32_table.o speex/hexc_table.o \
-		speex/high_lsp_tables.o speex/lpc_spx.o \
+		speex/high_lsp_tables.o speex/jitter.c \
+		speex/kiss_fft.c speex/kiss_fftr.c speex/lpc_spx.o \
 		speex/lsp.o speex/lsp_tables_nb.o speex/ltp.o \
-		speex/math_approx.o speex/misc.o speex/modes.o \
+		speex/math_approx.o speex/misc.o speex/mdf.c speex/modes.o \
 		speex/nb_celp.o speex/preprocess_spx.o \
 		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o \
 		speex/speex.o speex/speex_callbacks.o speex/speex_header.o \

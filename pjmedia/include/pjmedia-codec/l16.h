@@ -22,6 +22,20 @@
 #include <pjmedia-codec/types.h>
 
 
+/**
+ * @defgroup PJMED_L16 L16 Family
+ * @ingroup PJMEDIA_CODEC
+ * @brief 16bit linear codecs (useful for debugging)
+ * @{
+ * This section describes functions to register and register L16 codec
+ * factory to the codec manager. After the codec factory has been registered,
+ * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * Note that the L16 codec factory registers several (about fourteen!) 
+ * L16 codec types to codec manager (different combinations of clock
+ * rate and number of channels).
+ */
+
 PJ_BEGIN_DECL
 
 

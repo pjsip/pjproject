@@ -19,15 +19,37 @@
 #ifndef __PJMEDIA_TYPES_H__
 #define __PJMEDIA_TYPES_H__
 
+/**
+ * @file pjmedia/types.h Basic Types
+ * @brief Basic PJMEDIA types.
+ */
+
 #include <pjmedia/config.h>
 #include <pj/sock.h>	    /* pjmedia_sock_info	*/
 #include <pj/string.h>	    /* pj_memcpy(), pj_memset() */
 
 
+/**
+ * @defgroup PJMEDIA_FRAME_OP Frame Operations
+ * @ingroup PJMEDIA
+ */
+
+/**
+ * @defgroup PJMEDIA_MISC Misc
+ * @ingroup PJMEDIA
+ */
+
+/**
+ * @defgroup PJMEDIA_TYPES Basic Types
+ * @ingroup PJMEDIA_BASE
+ * @brief Basic PJMEDIA types and operations.
+ * @{
+ */
+
 /** 
  * Top most media type. 
  */
-enum pjmedia_type
+typedef enum pjmedia_type
 {
     /** No type. */
     PJMEDIA_TYPE_NONE = 0,
@@ -43,19 +65,14 @@ enum pjmedia_type
      */
     PJMEDIA_TYPE_UNKNOWN = 3,
 
-};
-
-/**
- * @see pjmedia_type
- */
-typedef enum pjmedia_type pjmedia_type;
+} pjmedia_type;
 
 
 
 /** 
  * Media direction. 
  */
-enum pjmedia_dir
+typedef enum pjmedia_dir
 {
     /** None */
     PJMEDIA_DIR_NONE = 0,
@@ -69,12 +86,8 @@ enum pjmedia_dir
     /** Incoming and outgoing stream. */
     PJMEDIA_DIR_ENCODING_DECODING = 3,
 
-};
+} pjmedia_dir;
 
-/**
- * @see pjmedia_dir
- */
-typedef enum pjmedia_dir pjmedia_dir;
 
 
 /* Alternate names for media direction: */
@@ -95,22 +108,50 @@ typedef enum pjmedia_dir pjmedia_dir;
 #define PJMEDIA_DIR_CAPTURE_PLAYBACK	PJMEDIA_DIR_ENCODING_DECODING
 
 
+/**
+ * Create 32bit port signature from ASCII characters.
+ */
+#define PJMEDIA_PORT_SIGNATURE(a,b,c,d)	    \
+	    (a<<24 | b<<16 | c<<8 | d)
+
+
 /** 
  * Opague declaration of media endpoint. 
  */
 typedef struct pjmedia_endpt pjmedia_endpt;
 
 
+/*
+ * Forward declaration for stream (needed by transport).
+ */
+typedef struct pjmedia_stream pjmedia_stream;
+
+
 /** 
- * Media socket info. 
+ * Media socket info is used to describe the underlying sockets
+ * to be used as media transport.
  */
 typedef struct pjmedia_sock_info
 {
+    /** The RTP socket handle */
+    pj_sock_t	    rtp_sock;
 
-    pj_sock_t	    rtp_sock;	    /**< Socket for RTP.		    */
-    pj_sockaddr_in  rtp_addr_name;  /**< Local RTP address to be advertised.*/
-    pj_sock_t	    rtcp_sock;	    /**< Socket for RTCP.		    */
-    pj_sockaddr_in  rtcp_addr_name; /**< Local RTCP addr to be advertised.  */
+    /** Address to be advertised as the local address for the RTP
+     *  socket, which does not need to be equal as the bound
+     *  address (for example, this address can be the address resolved
+     *  with STUN).
+     */
+    pj_sockaddr_in  rtp_addr_name;
+
+    /** The RTCP socket handle. */
+    pj_sock_t	    rtcp_sock;
+
+    /** Address to be advertised as the local address for the RTCP
+     *  socket, which does not need to be equal as the bound
+     *  address (for example, this address can be the address resolved
+     *  with STUN).
+     */
+    pj_sockaddr_in  rtcp_addr_name;
 
 } pjmedia_sock_info;
 
@@ -160,6 +201,11 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
 #endif
 }
+
+
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_TYPES_H__ */
