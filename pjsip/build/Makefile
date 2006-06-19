@@ -126,7 +126,7 @@ pjsua-lib:
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
-clean depend realclean:
+clean depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@

@@ -43,7 +43,6 @@ static struct app_config
 
     unsigned		    codec_cnt;
     pj_str_t		    codec_arg[32];
-    unsigned		    clock_rate;
     pj_bool_t		    null_audio;
     pj_str_t		    wav_file;
     pjsua_player_id	    wav_id;
@@ -51,8 +50,6 @@ static struct app_config
     pj_bool_t		    auto_play;
     pj_bool_t		    auto_loop;
     unsigned		    ptime;
-    unsigned		    quality;
-    unsigned		    complexity;
     unsigned		    auto_answer;
     unsigned		    duration;
 } app_config;
@@ -112,9 +109,8 @@ static void usage(void)
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
+    puts  ("  --quality=N	  Specify media quality (0-10, default=10)");
     /*
-    puts  ("  --complexity=N      Specify encoding complexity (0-10, default=none(-1))");
-    puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     */
     puts  ("");
@@ -561,15 +557,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
-	case OPT_QUALITY:
-	    cfg->quality = my_atoi(pj_optarg);
-	    if (cfg->quality < 0 || cfg->quality > 10) {
-		PJ_LOG(1,(THIS_FILE,
-			  "Error: invalid --quality (expecting 0-10"));
-		return -1;
-	    }
-	    break;
-
 	case OPT_DURATION:
 	    cfg->duration = my_atoi(pj_optarg);
 	    break;
@@ -584,6 +571,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	*/
+
+	case OPT_QUALITY:
+	    cfg->media_cfg.quality = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.quality < 0 || cfg->media_cfg.quality > 10) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --quality (expecting 0-10"));
+		return -1;
+	    }
+	    break;
 
 	case OPT_AUTO_ANSWER:
 	    cfg->auto_answer = my_atoi(pj_optarg);
@@ -831,24 +827,17 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
     /* Media clock rate. */
-    if (config->clock_rate) {
+    if (config->media_cfg.clock_rate) {
 	pj_ansi_sprintf(line, "--clock-rate %d\n",
-			config->clock_rate);
+			config->media_cfg.clock_rate);
 	pj_strcat2(&cfg, line);
     }
-
-
-    /* Encoding quality and complexity */
-    if (config->quality > 0) {
+    if (config->media_cfg.quality != 10) {
 	pj_ansi_sprintf(line, "--quality %d\n",
-			config->quality);
+			config->media_cfg.quality);
 	pj_strcat2(&cfg, line);
     }
-    if (config->complexity > 0) {
-	pj_ansi_sprintf(line, "--complexity %d\n",
-			config->complexity);
-	pj_strcat2(&cfg, line);
-    }
+
 
     /* ptime */
     if (config->ptime) {

@@ -2037,7 +2037,17 @@ struct pjsua_media_config
      */
     unsigned		thread_cnt;
 
-
+    /**
+     * Media quality, 0-10, according to this table:
+     *   8-10: resampling use large filter,
+     *   3-7:  resampling use small filter,
+     *   1-2:  resampling use linear.
+     * The media quality also sets speex codec quality/complexity to the
+     * number.
+     *
+     * Default: 10.
+     */
+    unsigned		quality;
 };
 
 
@@ -2054,6 +2064,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
+    cfg->quality = 10;
 }
 
 

@@ -37,6 +37,7 @@ static void close_snd_dev(void);
 pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 {
     pj_str_t codec_id;
+    unsigned opt;
     pj_status_t status;
 
     /* Copy configuration */
@@ -75,7 +76,8 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     /* Register speex. */
     status = pjmedia_codec_speex_init(pjsua_var.med_endpt, 
 				      PJMEDIA_SPEEX_NO_UWB,
-				      -1, -1);
+				      pjsua_var.media_cfg.quality, 
+				      pjsua_var.media_cfg.quality);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing Speex codec",
 		     status);
@@ -129,6 +131,18 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     pjsua_var.mconf_cfg.channel_count = 1;
     pjsua_var.mconf_cfg.bits_per_sample = 16;
 
+    /* Init options for conference bridge. */
+    opt = PJMEDIA_CONF_NO_DEVICE;
+    if (pjsua_var.media_cfg.quality >= 3 &&
+	pjsua_var.media_cfg.quality <= 7)
+    {
+	opt |= PJMEDIA_CONF_SMALL_FILTER;
+    }
+    else if (pjsua_var.media_cfg.quality < 3) {
+	opt |= PJMEDIA_CONF_USE_LINEAR;
+    }
+	
+
     /* Init conference bridge. */
     status = pjmedia_conf_create(pjsua_var.pool, 
 				 pjsua_var.media_cfg.max_media_ports,
@@ -136,8 +150,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 				 pjsua_var.mconf_cfg.channel_count,
 				 pjsua_var.mconf_cfg.samples_per_frame, 
 				 pjsua_var.mconf_cfg.bits_per_sample, 
-				 PJMEDIA_CONF_NO_DEVICE,
-				 &pjsua_var.mconf);
+				 opt, &pjsua_var.mconf);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Media stack initialization has returned error", 
@@ -532,7 +545,7 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
 					      pjsua_conf_port_info *info)
 {
     pjmedia_conf_port_info cinfo;
-    unsigned i, count;
+    unsigned i;
     pj_status_t status;
 
     status = pjmedia_conf_get_port_info( pjsua_var.mconf, id, &cinfo);
