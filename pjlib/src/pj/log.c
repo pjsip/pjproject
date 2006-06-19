@@ -139,6 +139,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     print_len = pj_ansi_vsnprintf(pre, sizeof(log_buffer)-len, format, 
 				  marker);
     if (print_len < 0) {
+	level = 1;
 	print_len = pj_ansi_snprintf(pre, sizeof(log_buffer)-len, 
 				     "<logging error: msg too long>");
     }
