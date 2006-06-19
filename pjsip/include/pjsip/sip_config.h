@@ -112,10 +112,11 @@
 
 
 /**
- * Maximum packet length.
+ * Maximum packet length. We set it more than MTU since a SIP PDU
+ * containing presence information can be quite large (>1500).
  */
 #ifndef PJSIP_MAX_PKT_LEN
-#   define PJSIP_MAX_PKT_LEN		1500
+#   define PJSIP_MAX_PKT_LEN		2000
 #endif
 
 
