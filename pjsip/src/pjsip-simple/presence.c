@@ -897,9 +897,6 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
     pres = pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_ON_FAIL(pres!=NULL, {return;});
 
-    /* Only process the message body if it exists, otherwise treat as
-     * presence status is closed. 
-     */
     if (rdata->msg_info.msg->body) {
 	status = pres_process_rx_notify( pres, rdata, p_st_code, p_st_text,
 					 res_hdr );
@@ -907,12 +904,20 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 	    return;
 
     } else {
+	/* This has just been changed. Previously, we treat incoming NOTIFY
+	 * with no message body as having the presence subscription closed.
+	 * Now we treat it as no change in presence status (ref: EyeBeam).
+	 */
+#if 1
+	*p_st_code = 200;
+	return;
+#else
 	unsigned i;
-
 	/* Subscription is terminated. Consider contact is offline */
 	pres->tmp_status._is_valid = PJ_TRUE;
 	for (i=0; i<pres->tmp_status.info_cnt; ++i)
 	    pres->tmp_status.info[i].basic_open = PJ_FALSE;
+#endif
     }
 
     /* Notify application. */
