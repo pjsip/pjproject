@@ -604,7 +604,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	default:
-	    PJ_LOG(1,(THIS_FILE, "Invalid argument %s", argv[pj_optind-1]));
+	    PJ_LOG(1,(THIS_FILE, 
+		      "Argument \"--%s\" is not valid. Use --help to see help",
+		      long_options[option_index].name));
 	    return -1;
 	}
     }
