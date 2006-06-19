@@ -491,12 +491,57 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
     } else {
 	/* Remove all format in the offer that has no matching answer */
 	for (i=0; i<offer->desc.fmt_count;) {
-	    unsigned j;
+	    unsigned pt;
+	    pj_uint32_t j;
 	    pj_str_t *fmt = &offer->desc.fmt[i];
+	    
 
-	    for (j=0; j<answer->desc.fmt_count; ++j) {
-		if (pj_strcmp(fmt, &answer->desc.fmt[j])==0)
-		    break;
+	    /* Find matching answer */
+	    pt = pj_strtoul(fmt);
+
+	    if (pt < 96) {
+		for (j=0; j<answer->desc.fmt_count; ++j) {
+		    if (pj_strcmp(fmt, &answer->desc.fmt[j])==0)
+			break;
+		}
+	    } else {
+		/* This is dynamic payload type.
+		 * For dynamic payload type, we must look the rtpmap and
+		 * compare the encoding name.
+		 */
+		const pjmedia_sdp_attr *a;
+		pjmedia_sdp_rtpmap or;
+
+		/* Get the rtpmap for the payload type in the offer. */
+		a = pjmedia_sdp_media_find_attr2(offer, "rtpmap", fmt);
+		if (!a) {
+		    pj_assert(!"Bug! Offer should have been validated");
+		    return PJ_EBUG;
+		}
+		pjmedia_sdp_attr_get_rtpmap(a, &or);
+
+		/* Find paylaod in answer SDP with matching 
+		 * encoding name and clock rate.
+		 */
+		for (j=0; j<answer->desc.fmt_count; ++j) {
+		    a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", 
+						     &answer->desc.fmt[j]);
+		    if (a) {
+			pjmedia_sdp_rtpmap ar;
+			pjmedia_sdp_attr_get_rtpmap(a, &ar);
+
+			/* See if encoding name, clock rate, and channel
+			 * count match 
+			 */
+			if (!pj_strcmp(&or.enc_name, &ar.enc_name) &&
+			    or.clock_rate == ar.clock_rate &&
+			    pj_strcmp(&or.param, &ar.param)==0)
+			{
+			    /* Match! */
+			    break;
+			}
+		    }
+		}
 	    }
 
 	    if (j == answer->desc.fmt_count) {
@@ -678,9 +723,12 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 			pjmedia_sdp_rtpmap lr;
 			pjmedia_sdp_attr_get_rtpmap(a, &lr);
 
-			/* See if encoding name and clock rate match */
+			/* See if encoding name, clock rate, and
+			 * channel count  match 
+			 */
 			if (!pj_strcmp(&or.enc_name, &lr.enc_name) &&
-			    or.clock_rate == lr.clock_rate) 
+			    or.clock_rate == lr.clock_rate &&
+			    pj_strcmp(&or.param, &lr.param)==0) 
 			{
 			    /* Match! */
 			    if (is_codec)
