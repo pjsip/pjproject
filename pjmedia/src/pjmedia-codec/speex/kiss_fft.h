@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <memory.h>
-#include <malloc.h>
+//Not available in gcc MacOS X (bennylp)
+//#include <malloc.h>
 
 #ifdef __cplusplus
 extern "C" {
