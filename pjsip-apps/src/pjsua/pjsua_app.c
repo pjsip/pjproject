@@ -88,10 +88,11 @@ static void usage(void)
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --proxy=url         Optional URL of proxy server to visit");
     puts  ("                      May be specified multiple times");
+    puts  ("  --reg-timeout=SEC   Optional registration interval (default 55)");
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
-    puts  ("  --reg-timeout=SEC   Optional registration interval (default 55)");
+    puts  ("  --next-cred	  Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
     puts  ("  --next-account      Add more account");
@@ -111,9 +112,11 @@ static void usage(void)
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
+    /*
     puts  ("  --complexity=N      Specify encoding complexity (0-10, default=none(-1))");
     puts  ("  --quality=N         Specify encoding quality (0-10, default=4)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
+    */
     puts  ("");
     puts  ("Buddy List (can be more than one):");
     puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -121,7 +124,9 @@ static void usage(void)
     puts  ("User Agent options:");
     puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
+    /*
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
+    */
     puts  ("");
     fflush(stdout);
 }
@@ -237,7 +242,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME,
-	   OPT_NEXT_ACCOUNT, OPT_MAX_CALLS, 
+	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION,
     };
     struct pj_getopt_option long_options[] = {
@@ -276,6 +281,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
+	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
 	{ "duration",1,0, OPT_DURATION},
 	{ NULL, 0, 0, 0}
@@ -448,19 +454,21 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_USERNAME:   /* Default authentication user */
-	    cur_acc->cred_count = 1;
-	    cur_acc->cred_info[0].username = pj_str(pj_optarg);
+	    cur_acc->cred_info[cur_acc->cred_count].username = pj_str(pj_optarg);
+	    cur_acc->cred_info[cur_acc->cred_count].scheme = pj_str("digest");
 	    break;
 
 	case OPT_REALM:	    /* Default authentication realm. */
-	    cur_acc->cred_count = 1;
-	    cur_acc->cred_info[0].realm = pj_str(pj_optarg);
+	    cur_acc->cred_info[cur_acc->cred_count].realm = pj_str(pj_optarg);
 	    break;
 
 	case OPT_PASSWORD:   /* authentication password */
-	    cur_acc->cred_count = 1;
-	    cur_acc->cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
-	    cur_acc->cred_info[0].data = pj_str(pj_optarg);
+	    cur_acc->cred_info[cur_acc->cred_count].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+	    cur_acc->cred_info[cur_acc->cred_count].data = pj_str(pj_optarg);
+	    break;
+
+	case OPT_NEXT_CRED: /* next credential */
+	    cur_acc->cred_count++;
 	    break;
 
 	case OPT_USE_STUN1:   /* STUN server 1 */
@@ -542,6 +550,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->codec_arg[cfg->codec_cnt++] = pj_str(pj_optarg);
 	    break;
 
+	/* These options were no longer valid after new pjsua */
+	/*
 	case OPT_COMPLEXITY:
 	    cfg->complexity = my_atoi(pj_optarg);
 	    if (cfg->complexity < 0 || cfg->complexity > 10) {
@@ -560,6 +570,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
+	case OPT_DURATION:
+	    cfg->duration = my_atoi(pj_optarg);
+	    break;
+
 	case OPT_PTIME:
 	    cfg->ptime = my_atoi(pj_optarg);
 	    if (cfg->ptime < 10 || cfg->ptime > 1000) {
@@ -568,6 +582,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return -1;
 	    }
 	    break;
+
+	*/
 
 	case OPT_AUTO_ANSWER:
 	    cfg->auto_answer = my_atoi(pj_optarg);
@@ -585,10 +601,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
 		return -1;
 	    }
-	    break;
-
-	case OPT_DURATION:
-	    cfg->duration = my_atoi(pj_optarg);
 	    break;
 
 	default:
@@ -632,11 +644,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	cfg->acc_cnt = 1;
 
     for (i=0; i<cfg->acc_cnt; ++i) {
-	if (cfg->acc_cfg[i].cred_info[0].username.slen ||
-	    cfg->acc_cfg[i].cred_info[0].realm.slen)
+	if (cfg->acc_cfg[i].cred_info[cfg->acc_cfg[i].cred_count].username.slen)
 	{
-	    cfg->acc_cfg[i].cred_count = 1;
-	    cfg->acc_cfg[i].cred_info[0].scheme = pj_str("digest");
+	    cfg->acc_cfg[i].cred_count++;
 	}
     }
 
@@ -717,6 +727,9 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 				  acc_cfg->cred_info[i].data.ptr);
 	    pj_strcat2(result, line);
 	}
+
+	if (i != acc_cfg->cred_count - 1)
+	    pj_strcat2(result, "--next-cred\n");
     }
 
 }
