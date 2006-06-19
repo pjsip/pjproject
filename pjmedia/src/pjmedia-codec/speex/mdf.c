@@ -416,7 +416,7 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
    M_1 = 1.f/M;
 #endif
 
-   filter_dc_notch16(ref, st->notch_radius, st->d, st->frame_size, st->notch_mem);
+   filter_dc_notch16((spx_int16_t*)ref, st->notch_radius, st->d, st->frame_size, st->notch_mem);
    /* Copy input data to buffer */
    for (i=0;i<st->frame_size;i++)
    {

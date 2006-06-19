@@ -220,7 +220,7 @@ void speex_jitter_get(SpeexJitter *jitter, short *out, int *current_timestamp)
       jitter->shortterm_margin[0] = 0;
       jitter->longterm_margin[0] = 0;            
       /*fprintf (stderr, "interpolate frame\n");*/
-      speex_decode_int(jitter->dec, NULL, out);
+      speex_decode_int(jitter->dec, NULL, (spx_int16_t*)out);
       if (current_timestamp)
          *current_timestamp = jitter->pointer_timestamp;
       return;
@@ -268,7 +268,7 @@ void speex_jitter_get(SpeexJitter *jitter, short *out, int *current_timestamp)
       if (jitter->valid_bits)
       {
          /* Try decoding last received packet */
-         ret = speex_decode_int(jitter->dec, &jitter->current_packet, out);
+         ret = speex_decode_int(jitter->dec, &jitter->current_packet, (spx_int16_t*)out);
          if (ret == 0)
          {
             jitter->lost_count = 0;
@@ -280,7 +280,7 @@ void speex_jitter_get(SpeexJitter *jitter, short *out, int *current_timestamp)
 
       /*fprintf (stderr, "lost/late frame %d\n", jitter->pointer_timestamp);*/
       /*Packet is late or lost*/
-      speex_decode_int(jitter->dec, NULL, out);
+      speex_decode_int(jitter->dec, NULL, (spx_int16_t*)out);
       jitter->lost_count++;
       if (jitter->lost_count>=25)
       {
@@ -295,7 +295,7 @@ void speex_jitter_get(SpeexJitter *jitter, short *out, int *current_timestamp)
       speex_bits_read_from(&jitter->current_packet, jitter->buf[i], jitter->len[i]);
       jitter->len[i]=-1;
       /* Decode packet */
-      ret = speex_decode_int(jitter->dec, &jitter->current_packet, out);
+      ret = speex_decode_int(jitter->dec, &jitter->current_packet, (spx_int16_t*)out);
       if (ret == 0)
       {
          jitter->valid_bits = 1;

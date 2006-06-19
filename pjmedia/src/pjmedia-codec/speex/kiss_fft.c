@@ -87,7 +87,7 @@ static void kf_bfly4(
     if (!st->inverse) {
        int i;
        kiss_fft_cpx *x=Fout;
-       for (i=0;i<4*m;i++)
+       for (i=0;i<(int)(4*m);i++)
        {
           x[i].r = PSHR16(x[i].r,2);
           x[i].i = PSHR16(x[i].i,2);

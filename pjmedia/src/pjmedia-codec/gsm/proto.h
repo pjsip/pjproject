@@ -21,6 +21,11 @@
 #	undef	NeedFunctionPrototypes
 #endif
 
+/* PJMEDIA: always use NeedFunctionPrototypes */
+#ifndef NeedFunctionPrototypes
+#	define NeedFunctionPrototypes	1
+#endif
+
 #undef	P	/* gnu stdio.h actually defines this... 	*/
 #undef	P0
 #undef	P1
