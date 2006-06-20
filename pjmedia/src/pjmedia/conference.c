@@ -1055,7 +1055,7 @@ static pj_status_t read_port( pjmedia_conf *conf,
 		   (int)cport->name.slen, cport->name.ptr,
 		   count));
 
-	status = (cport->port->get_frame)(cport->port, &f);
+	status = pjmedia_port_get_frame(cport->port, &f);
 
 	*type = f.type;
 
@@ -1460,6 +1460,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		 */
 		continue;
 	    }
+
+	    /* Check that the port is not removed when we call get_frame() */
+	    if (conf->ports[i] == NULL)
+		continue;
 	}
 
 	/* If we need to adjust the RX level from this port, adjust the level

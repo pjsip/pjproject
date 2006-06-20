@@ -17,6 +17,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+/**
+ * \page page_pjmedia_samples_sndtest_c Samples: Sound Card Benchmark
+ *
+ * This example can be used to benchmark the quality of the sound card
+ * installed in the system. At the end of the test, it will report
+ * the jitter and clock drifts of the device.
+ *
+ * This file is pjsip-apps/src/samples/sndtest.c
+ *
+ * Screenshots on WinXP: \image html sndtest.jpg
+ *
+ * \includelineno sndtest.c
+ */
+
+
 #include <pjmedia.h>
 #include <pjlib.h>
 #include <pjlib-util.h>

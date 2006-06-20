@@ -103,20 +103,13 @@ int main()
 
     /* Create global endpoint: */
     {
-	const pj_str_t *hostname;
-	const char *endpt_name;
-
 	/* Endpoint MUST be assigned a globally unique name.
-	 * The name will be used as the hostname in Warning header.
+	 * Ideally we should put hostname or public IP address, but
+	 * we'll just use an arbitrary name here.
 	 */
 
-	/* For this implementation, we'll use hostname for simplicity */
-	hostname = pj_gethostname();
-	endpt_name = hostname->ptr;
-
 	/* Create the endpoint: */
-
-	status = pjsip_endpt_create(&cp.factory, endpt_name, 
+	status = pjsip_endpt_create(&cp.factory, "sipstateless", 
 				    &sip_endpt);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }

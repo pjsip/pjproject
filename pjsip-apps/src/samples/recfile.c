@@ -17,6 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+/**
+ * \page page_pjmedia_samples_recfile_c Samples: Capturing Audio to WAV File
+ *
+ * In this example, we capture audio from the sound device and save it to
+ * WAVE file.
+ *
+ * @see page_pjmedia_samples_playfile_c
+ *
+ * This file is pjsip-apps/src/samples/recfile.c
+ *
+ * \includelineno recfile.c
+ */
 
 #include <pjmedia.h>
 #include <pjlib.h>
@@ -25,6 +37,7 @@
 
 /* For logging purpose. */
 #define THIS_FILE   "recfile.c"
+
 
 /* Configs */
 #define CLOCK_RATE	    44100

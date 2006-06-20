@@ -30,7 +30,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJMED_SND Sound Hardware Abstraction
+ * @defgroup PJMED_SND Portable Sound Hardware Abstraction
  * @ingroup PJMED_SND_PORT
  * @brief PJMEDIA abstraction for sound device hardware
  * @{

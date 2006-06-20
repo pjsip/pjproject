@@ -27,7 +27,7 @@
 #include <pjmedia-codec/types.h>
 
 /**
- * @defgroup PJMED_SPEEX Speex
+ * @defgroup PJMED_SPEEX Speex Codec Family
  * @ingroup PJMEDIA_CODEC
  * @brief Implementation of Speex codecs (narrow/wide/ultrawide-band).
  * @{

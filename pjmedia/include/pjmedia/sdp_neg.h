@@ -25,8 +25,9 @@
  * @brief SDP negotiator header file.
  */
 /**
- * @defgroup PJMEDIA_SDP_NEG SDP Negotiator
+ * @defgroup PJMEDIA_SDP_NEG SDP Negotiation
  * @ingroup PJMEDIA_SESSION
+ * @brief Abstraction to perform SDP negotiation
  * @{
  *
  * The header file <b><pjmedia/sdp_neg.h></b> contains the declaration

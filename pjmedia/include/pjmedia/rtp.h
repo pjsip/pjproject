@@ -37,7 +37,8 @@ PJ_BEGIN_DECL
  *
  * The RTP module is designed to be dependent only to PJLIB, it does not depend
  * on any other parts of PJMEDIA library. The RTP module does not even depend
- * on any transports (sockets), to promote even more use.
+ * on any transports (sockets), to promote even more use, such as in DSP
+ * development (where transport may be handled by different processor).
  *
  * An RTCP implementation is available, in separate module. Please see 
  * @ref PJMED_RTCP.

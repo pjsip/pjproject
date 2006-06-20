@@ -181,3 +181,96 @@
 */
 
 
+/**
+ @page page_pjsip_samples PJSIP Samples
+
+ I wish I could write more samples, but for now here are some samples or
+ working applications that are available from the source tree:
+
+  - @ref page_pjsip_sample_sipstateless_c\n
+    This is about the simplest SIP application with PJSIP, all it does is
+    respond all incoming requests with 501 (Not Implemented) response
+    statelessly.
+
+  - @ref page_pjsip_sample_simple_ua_c\n
+    This is a very simple SIP User Agent application that only use PJSIP
+    (without PJSIP-UA). It's able to make and receive call, and play
+    media to the sound device.
+    
+  - @ref page_pjsip_samples_pjsua\n
+    This is the reference implementation for PJSIP and PJMEDIA.
+    PJSUA is a console based application, designed to be simple enough
+    to be readble, but powerful enough to demonstrate all features
+    available in PJSIP and PJMEDIA.\n
+    Screenshot on WinXP: \image html pjsua.jpg "pjsua on WinXP"
+
+  - @ref page_pjmedia_samples_siprtp_c\n
+    This is a useful program (integrated with PJSIP) to actively measure 
+    the network quality/impairment parameters by making one or more SIP 
+    calls (or receiving one or more SIP calls) and display the network
+    impairment of each stream direction at the end of the call.
+    The program is able to measure network quality parameters such as
+    jitter, packet lost/reorder/duplicate, round trip time, etc.\n
+    Note that the remote peer MUST support RTCP so that network quality
+    of each direction can be calculated. Using siprtp for both endpoints
+    is recommended.\n
+    Screenshots on WinXP: \image html siprtp.jpg "siprtp screenshot on WinXP"
+
+ */
+
+/**
+ * \page page_pjsip_samples_pjsua PJSUA
+ *
+ * This is the reference implementation for PJSIP and PJMEDIA.
+ * PJSUA is a console based application, designed to be simple enough
+ * to be readble, but powerful enough to demonstrate all features
+ * available in PJSIP and PJMEDIA.
+ *
+ * This file is pjsip-apps/src/pjsua/pjsua_app.c
+ *
+ * Screenshot on WinXP: \image html pjsua.jpg "pjsua on WinXP"
+ *
+ * \includelineno pjsua_app.c
+ */
+
+/**
+ * \page page_pjsip_sample_simple_ua_c Samples: Simple UA
+ *
+ * This is a very simple SIP User Agent application that only use PJSIP
+ * (without PJSIP-UA). It's able to make and receive call, and play
+ * media to the sound device.
+ *
+ * \includelineno simpleua.c
+ */
+
+/**
+ * \page page_pjsip_sample_sipstateless_c Samples: Stateless SIP Endpoint
+ *
+ * This is about the simplest SIP application with PJSIP, all it does is
+ * respond all incoming requests with 501 (Not Implemented) response
+ * statelessly.
+ *
+ * \includelineno sipstateless.c
+ */
+
+/**
+ * \page page_pjmedia_samples_siprtp_c Samples: Using SIP and Custom RTP/RTCP to Monitor Quality
+ *
+ * This source is an example to demonstrate using SIP and RTP/RTCP framework
+ * to measure the network quality/impairment from the SIP call. This
+ * program can be used to make calls or to receive calls from other
+ * SIP endpoint (or other siprtp program), and to display the media
+ * quality statistics at the end of the call.
+ *
+ * Note that the remote peer must support RTCP.
+ *
+ * The layout of the program has been designed so that custom reporting
+ * can be generated instead of plain human readable text.
+ *
+ * The source code of the file is pjsip-apps/src/samples/siprtp.c
+ *
+ * Screenshots on WinXP: \image html siprtp.jpg
+ *
+ * \includelineno siprtp.c
+ */
+

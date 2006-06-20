@@ -17,10 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-/*
+
+/**
+ * \page page_pjmedia_samples_confbench_c Samples: Benchmarking Conference Bridge
+ *
  * Benchmarking pjmedia (conference bridge+resample). For my use only,
  * and it only works in Win32.
+ *
+ * This file is pjsip-apps/src/samples/confbench.c
+ *
+ * \includelineno confbench.c
  */
+
 
 #include <pjmedia.h>
 #include <pjlib-util.h>	/* pj_getopt */
@@ -38,8 +46,8 @@
  *   HAS_RESAMPLE will activate resampling on about half
  *     the port.
  */
-#define TEST_SET	    SMALL_SET
-#define HAS_RESAMPLE	    1
+#define TEST_SET	    LARGE_SET
+#define HAS_RESAMPLE	    0
 
 
 #define SMALL_SET	    16
@@ -265,7 +273,10 @@ int main()
 	return 1;
     }
 
+    printf("Resampling is %s\n", (HAS_RESAMPLE?"active":"disabled"));
+
     /* Create Null ports */
+    printf("Creating %d null ports..\n", NULL_COUNT);
     for (i=0; i<NULL_COUNT; ++i) {
 	status = pjmedia_null_port_create(pool, CLOCK_RATE, 1, SAMPLES_PER_FRAME*2, 16, &nulls[i]);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -275,6 +286,7 @@ int main()
     }
 
     /* Create sine ports. */
+    printf("Creating %d sine generator ports..\n", SINE_COUNT);
     for (i=0; i<SINE_COUNT; ++i) {
 	unsigned j, slot;
 
@@ -304,6 +316,7 @@ int main()
     }
 
     /* Create idle ports */
+    printf("Creating %d idle ports..\n", IDLE_COUNT);
     for (i=0; i<IDLE_COUNT; ++i) {
 	pjmedia_port *dummy;
 	status = pjmedia_null_port_create(pool, CLOCK_RATE, 1, SAMPLES_PER_FRAME, 16, &dummy);

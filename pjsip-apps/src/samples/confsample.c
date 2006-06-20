@@ -26,6 +26,18 @@
 
 #include "util.h"
 
+/**
+ * \page page_pjmedia_samples_confsample_c Samples: Using Conference Bridge
+ *
+ * Sample to mix multiple files in the conference bridge and play the
+ * result to sound device.
+ *
+ * This file is pjsip-apps/src/samples/confsample.c
+ *
+ * \includelineno confsample.c
+ */
+
+
 /* For logging purpose. */
 #define THIS_FILE   "confsample.c"
 

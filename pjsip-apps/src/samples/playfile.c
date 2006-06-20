@@ -26,6 +26,22 @@
 #include "util.h"
 
 
+/**
+ * \page page_pjmedia_samples_playfile_c Samples: Playing WAV File to Sound Device
+ *
+ * This is a very simple example to use the @ref PJMEDIA_FILE_PLAY and
+ * @ref PJMED_SND_PORT. In this example, we open both the file and sound
+ * device, and connect the two of them, and voila! Sound will be playing
+ * the contents of the file.
+ *
+ * @see page_pjmedia_samples_recfile_c
+ *
+ * This file is pjsip-apps/src/samples/playfile.c
+ *
+ * \includelineno playfile.c
+ */
+
+
 /*
  * playfile.c
  *

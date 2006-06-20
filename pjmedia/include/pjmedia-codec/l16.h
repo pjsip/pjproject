@@ -23,7 +23,7 @@
 
 
 /**
- * @defgroup PJMED_L16 L16 Family
+ * @defgroup PJMED_L16 L16 Codec Family
  * @ingroup PJMEDIA_CODEC
  * @brief 16bit linear codecs (useful for debugging)
  * @{

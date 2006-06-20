@@ -27,7 +27,7 @@
 #include <pjmedia-codec/types.h>
 
 /**
- * @defgroup PJMED_GSM GSM 06.10
+ * @defgroup PJMED_GSM GSM 06.10 Codec
  * @ingroup PJMEDIA_CODEC
  * @brief Implementation of GSM FR based on GSM 06.10 library
  * @{

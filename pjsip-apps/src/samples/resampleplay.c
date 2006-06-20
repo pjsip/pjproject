@@ -16,6 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+
+/**
+ * \page page_pjmedia_samples_resampleplay_c Samples: Using Resample Port
+ *
+ * This example demonstrates how to use @ref PJMEDIA_RESAMPLE_PORT to
+ * change the sampling rate of the media streams.
+ *
+ * This file is pjsip-apps/src/samples/resampleplay.c
+ *
+ * \includelineno resampleplay.c
+ */
+
 #include <pjmedia.h>
 #include <pjlib-util.h>
 #include <pjlib.h>

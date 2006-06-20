@@ -61,9 +61,63 @@
  * PJMEDIA-CODEC.
  *
  * \n
+ * @section main_page_get_start_sec Getting Started
+ *
+ * For those who likes to just get start coding, the @ref getting_started_pjmedia
+ * may be a good place to start.
+ *
+ * The @ref page_pjmedia_samples page describes some examples that are available
+ * in the source tree.
+ *
+ *
+ * \n
  * @section pjmedia_lic Copying and Acknowledgements
  *
- * Please see @ref lic_stuffs page for the details.
+ * PJMEDIA and PJMEDIA-CODEC contains various parts obtained from other
+ * places, and each of these would have their own licensing terms.
+ * Please see @ref lic_stuffs page for details.
+ *
+ */
+
+/**
+ * @page pjmed_keywords_page Features Index
+ * @section pjmed_keywords Features Index
+ *
+ * <b>PJMEDIA features</b>, in no particular order (click to go to the relevant
+ * documentation): 
+ * @ref lic_stuffs "Open Source media stack", 
+ * @ref PJMEDIA_CLOCK, 
+ * @ref PJMEDIA_CODEC,
+ * @ref enc_dec_codec,
+ * @ref plc_codec, 
+ * @ref PJMEDIA_CONF, 
+ * @ref PJMED_G711 "G711/G.711 (PCMA/PCMU) codec with PLC",
+ * @ref PJMED_GSM "GSM codec with PLC", 
+ * @ref PJMED_L16 "linear codecs (multiple clockrate, stereo support, etc)",
+ * @ref PJMED_SPEEX "Speex codec (narrowband, wideband, ultra-wideband)",
+ * @ref PJMED_JBUF "portable, adaptive jitter buffer with PLC support",
+ * @ref PJMEDIA_MASTER_PORT, 
+ * @ref PJMEDIA_NULL_PORT,
+ * @ref PJMED_PLC, 
+ * @ref PJMEDIA_PORT_CONCEPT, 
+ * @ref PJMEDIA_PORT_CLOCK,
+ * @ref PJMEDIA_RESAMPLE "high quality resampling/sampling rate conversion",
+ * @ref PJMEDIA_RESAMPLE_PORT, 
+ * @ref PJMED_RTCP "small footprint, portable RTCP with media quality statistics",
+ * @ref PJMED_RTP "very small footprint, modular, DSP ready RTP implementation", 
+ * @ref PJMEDIA_SDP "modular, small footprint, open source SDP implementation", 
+ * @ref PJMEDIA_SDP_NEG "modular SDP negotiation/negotiator abstraction",
+ * @ref PJMED_SES "media session abstraction",
+ * @ref PJMEDIA_SILENCEDET,
+ * @ref PJMED_SND "portable audio/sound hardware/device abstraction for Linux, Unix, Windows, DirectSound, WinCE, Windows Mobile, MacOS X, etc.", 
+ * @ref PJMED_SND_PORT,
+ * @ref PJMEDIA_SPLITCOMB, 
+ * @ref PJMED_STRM "remote stream", 
+ * @ref PJMEDIA_TRANSPORT_H "custom media transport abstraction",
+ * @ref PJMEDIA_TRANSPORT_UDP, 
+ * @ref PJMEDIA_FILE_PLAY "WAV/WAVE file playback", 
+ * @ref PJMEDIA_FILE_REC "WAV/WAVE file recording/capture",
+ * @ref PJMEDIA_WAVE "portable WAV/WAVE header manipulation"
  */
 
 
@@ -325,4 +379,141 @@
  *
  */
 
+
+/**
+ @page getting_started_pjmedia Getting Started with PJMEDIA
+ 
+ @section getstart_init_setup_build Setting-up the Build System
+
+ @subsection subsec_build_pjmedia Building PJMEDIA and PJMEDIA-CODEC
+
+ The PJMEDIA and PJMEDIA-CODEC libraries are normally bundled in PJPROJECT
+ source tarball, and they are located in <tt><b>pjmedia</b></tt> sub-directory
+ tree.
+
+ Please follow the instructions in <tt><b>INSTALL.txt</b></tt> in the root
+ PJPROJECT directory to build all projects, including PJMEDIA and PJMEDIA-CODEC.
+
+ @subsection subsec_config_build Setting Up the Build Environment
+
+ In your project, you will need to configure the following.
+ - Add <tt><b>$pjproject/pjmedia/include</b></tt> in the search path for
+   include files.
+ - Add <tt><b>$pjproject/pjmedia/lib</b></tt> in the search path for
+   library files.
+ - Add PJMEDIA and PJMEDIA static libraries in the link command.
+
+ @subsection subsec_inc_pjmedia Include PJMEDIA and PJMEDIA-CODEC in Source Files
+
+ To include all features from PJMEDIA and PJMEDIA-CODEC, use the following:
+
+ \code
+   #include <pjlib.h>
+   #include <pjmedia.h>
+   #include <pjmedia-codec.h>
+ \endcode
+
+ Alternatively, you may include only specific parts of the library (for example
+ to speed up compilation by just a fraction), for example:
+
+ \code
+   #include <pjmedia/conference.h>
+   #include <pjmedia/jbuf.h>
+   #include <pjmedia-codec/speex.h>
+ \endcode
+
+  Note that you need to give <b>"pjmedia/"</b> and <b>"pjmedia-codec/"</b> 
+  prefix to include specific files.
+
+
+ @section getstart_using Using PJMEDIA
+
+  I wish I could explain more, but for now, please have a look at the 
+  @ref page_pjmedia_samples page on some examples.
+ */
+
+/**
+  @page page_pjmedia_samples PJMEDIA and PJMEDIA-CODEC Examples
+
+  @section pjmedia_samples_sec PJMEDIA and PJMEDIA-CODEC Examples
+
+  Please find below some PJMEDIA related examples that may help in giving
+  some more info:
+
+  - @ref page_pjmedia_samples_level_c\n
+    This is a good place to start learning about @ref PJMEDIA_PORT_CONCEPT,
+    as it shows that @ref PJMEDIA_PORT_CONCEPT are only "passive" objects
+    with <tt>get_frame()</tt> and <tt>put_frame()</tt> interface, and
+    someone has to call these to retrieve/store media frames.
+
+  - @ref page_pjmedia_samples_playfile_c\n
+    This example shows that when application connects a media port (in this
+    case a @ref PJMEDIA_FILE_PLAY) to @ref PJMED_SND_PORT, media will flow
+    automatically since the @ref PJMED_SND_PORT provides @ref PJMEDIA_PORT_CLOCK.
+
+  - @ref page_pjmedia_samples_recfile_c\n
+    Demonstrates how to capture audio from microphone to WAV file.
+
+  - @ref page_pjmedia_samples_playsine_c\n
+    Demonstrates how to create a custom @ref PJMEDIA_PORT_CONCEPT (in this
+    case a sine wave generator) and integrate it to PJMEDIA.
+
+  - @ref page_pjmedia_samples_confsample_c\n
+    This demonstrates how to use the @ref PJMEDIA_CONF. The sample program can 
+    open multiple WAV files, and instruct the conference bridge to mix the
+    signal before playing it to the sound device.
+
+  - @ref page_pjmedia_samples_confbench_c\n
+    I use this to benchmark/optimize the conference bridge algorithm, but
+    readers may find the source useful.
+
+  - @ref page_pjmedia_samples_resampleplay_c\n
+    Demonstrates how to use @ref PJMEDIA_RESAMPLE_PORT to change the
+    sampling rate of a media port (in this case, a @ref PJMEDIA_FILE_PLAY).
+
+  - @ref page_pjmedia_samples_sndtest_c\n
+    This program performs some tests to the sound device to get some
+    quality parameters (such as sound jitter and clock drifts).\n
+    Screenshots on WinXP: \image html sndtest.jpg "sndtest screenshot on WinXP"
+
+  - @ref page_pjmedia_samples_streamutil_c\n
+    This example mainly demonstrates how to stream media (in this case a
+    @ref PJMEDIA_FILE_PLAY) to remote peer using RTP.
+
+  - @ref page_pjmedia_samples_siprtp_c\n
+    This is a useful program (integrated with PJSIP) to actively measure 
+    the network quality/impairment parameters by making one or more SIP 
+    calls (or receiving one or more SIP calls) and display the network
+    impairment of each stream direction at the end of the call.
+    The program is able to measure network quality parameters such as
+    jitter, packet lost/reorder/duplicate, round trip time, etc.\n
+    Note that the remote peer MUST support RTCP so that network quality
+    of each direction can be calculated. Using siprtp for both endpoints
+    is recommended.\n
+    Screenshots on WinXP: \image html siprtp.jpg "siprtp screenshot on WinXP"
+
+ */
+
+/**
+ * \page page_pjmedia_samples_siprtp_c Samples: Using SIP and Custom RTP/RTCP to Monitor Quality
+ *
+ * This source is an example to demonstrate using SIP and RTP/RTCP framework
+ * to measure the network quality/impairment from the SIP call. This
+ * program can be used to make calls or to receive calls from other
+ * SIP endpoint (or other siprtp program), and to display the media
+ * quality statistics at the end of the call.
+ *
+ * Note that the remote peer must support RTCP.
+ *
+ * The layout of the program has been designed so that custom reporting
+ * can be generated instead of plain human readable text.
+ *
+ * The source code of the file is pjsip-apps/src/samples/siprtp.c
+ *
+ * Screenshots on WinXP: \image html siprtp.jpg
+ *
+ * \includelineno siprtp.c
+ */
+
 #endif /* __PJMEDIA_DOXYGEN_H__ */
+

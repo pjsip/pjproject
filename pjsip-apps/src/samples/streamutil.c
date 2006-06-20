@@ -18,6 +18,18 @@
  */
 
 
+/**
+ * \page page_pjmedia_samples_streamutil_c Samples: Remote Streaming
+ *
+ * This example mainly demonstrates how to stream media file to remote
+ * peer using RTP.
+ *
+ * This file is pjsip-apps/src/samples/streamutil.c
+ *
+ * \includelineno streamutil.c
+ */
+
+
 static const char *desc = 
  " streamutil								\n"
  "									\n"

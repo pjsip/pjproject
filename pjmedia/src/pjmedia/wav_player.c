@@ -30,7 +30,7 @@
 #define THIS_FILE   "wav_player.c"
 
 
-#define SIGNATURE	    ('F'<<24|'P'<<16|'L'<<8|'Y')
+#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'P', 'l', 'y')
 #define BYTES_PER_SAMPLE    2
 
 
@@ -65,6 +65,7 @@ struct file_port
     pj_off_t	     fpos;
     pj_oshandle_t    fd;
 
+    pj_status_t	   (*cb)(pjmedia_port*, void*);
 };
 
 
@@ -116,9 +117,9 @@ static pj_status_t fill_buffer(struct file_port *fport)
     pj_ssize_t size;
     pj_status_t status;
 
-    if (fport->eof) {
+    /* Can't read file if EOF and loop flag is disabled */
+    if (fport->eof)
 	return PJ_EEOF;
-    }
 
     while (size_left > 0) {
 
@@ -141,6 +142,27 @@ static pj_status_t fill_buffer(struct file_port *fport)
 	 * encountered EOF. Rewind the file.
 	 */
 	if (size < (pj_ssize_t)size_to_read) {
+	    /* Call callback, if any. */
+	    if (fport->cb) {
+		PJ_LOG(5,(THIS_FILE, 
+			  "File port %.*s EOF, calling callback",
+			  (int)fport->base.info.name.slen,
+			  fport->base.info.name.ptr));
+
+		fport->eof = PJ_TRUE;
+		status = (*fport->cb)(&fport->base, fport->base.user_data);
+		if (status != PJ_SUCCESS) {
+		    /* This will crash if file port is destroyed in the 
+		     * callback, that's why we set the eof flag before
+		     * calling the callback:
+		     fport->eof = PJ_TRUE;
+		    */
+		    return status;
+		}
+		
+		fport->eof = PJ_FALSE;
+	    }
+
 	    if (fport->options & PJMEDIA_FILE_NO_LOOP) {
 		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
 			  (int)fport->base.info.name.slen,
@@ -335,23 +357,79 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
  * Set position.
  */
 PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
-						    pj_uint32_t samples )
+						    pj_uint32_t bytes )
 {
     struct file_port *fport;
 
-    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
 
     fport = (struct file_port*) port;
 
-    PJ_ASSERT_RETURN(samples*BYTES_PER_SAMPLE < fport->fsize -
-		      sizeof(pjmedia_wave_hdr), PJ_EINVAL);
+    PJ_ASSERT_RETURN(bytes < fport->fsize - sizeof(pjmedia_wave_hdr), 
+		     PJ_EINVAL);
 
-    fport->fpos = sizeof(struct pjmedia_wave_hdr) + 
-		    samples * BYTES_PER_SAMPLE;
+    fport->fpos = sizeof(struct pjmedia_wave_hdr) + bytes;
     pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
 
     fport->eof = PJ_FALSE;
     return fill_buffer(fport);
+}
+
+
+/*
+ * Get the file play position of WAV player.
+ */
+PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
+{
+    struct file_port *fport;
+    pj_size_t payload_pos;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    payload_pos = (pj_size_t)(fport->fpos - sizeof(pjmedia_wave_hdr));
+    if (payload_pos >= fport->bufsize)
+	return payload_pos - fport->bufsize + (fport->readpos - fport->buf);
+    else
+	return (fport->readpos - fport->buf) % payload_pos;
+}
+
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of file.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
+			       void *user_data,
+			       pj_status_t (*cb)(pjmedia_port *port,
+						 void *usr_data))
+{
+    struct file_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    fport->base.user_data = user_data;
+    fport->cb = cb;
+
+    return PJ_SUCCESS;
 }
 
 

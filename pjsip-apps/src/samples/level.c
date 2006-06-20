@@ -17,6 +17,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+
+/**
+ * \page page_pjmedia_samples_level_c Samples: Reading from WAV File
+ *
+ * This is a very simple example to use the @ref PJMEDIA_FILE_PLAY, to
+ * directly read the samples from the file.
+ *
+ * This file is pjsip-apps/src/samples/level.c
+ *
+ * \includelineno level.c
+ */
+
+
 static const char *desc = 
  " FILE:								    \n"
  "  level.c								    \n"

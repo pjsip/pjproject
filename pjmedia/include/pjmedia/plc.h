@@ -27,7 +27,7 @@
 #include <pjmedia/types.h>
 
 /**
- * @defgroup PJMED_PLC Packet Lost Concealment
+ * @defgroup PJMED_PLC Packet Lost Concealment (PLC)
  * @ingroup PJMEDIA_FRAME_OP
  * @{
  * This section describes PJMEDIA's implementation of Packet Lost

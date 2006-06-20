@@ -21,6 +21,25 @@
 
 
 /**
+ * @file splitcomb.h
+ * @brief Media channel splitter/combiner port.
+ */
+#include <pjmedia/types.h>
+
+
+/**
+ * @addtogroup PJMEDIA_SPLITCOMB Media channel splitter/combiner
+ * @ingroup PJMEDIA_PORT
+ * @brief Split and combine media channels in media streams
+ * @{
+ * This section describes media port to split and combine media
+ * channels in the stream.
+ */
+
+PJ_BEGIN_DECL
+
+
+/**
  * Create a media splitter/combiner with the specified parameters.
  * A splitter/combiner splits a single stereo/multichannel audio frame into
  * multiple mono audio frames to each channel when put_frame() is called, 
@@ -107,6 +126,11 @@ pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 
 
 
+PJ_END_DECL
+
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_SPLITCOMB_H__ */
 

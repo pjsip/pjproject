@@ -17,6 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+
+/**
+ * \page page_pjmedia_samples_playsine_c Samples: Using Custom Ports (Sine Wave Generator)
+ *
+ * This example demonstrate how to create a custom media port (in this case, a
+ * sine wave generator) and connect it to the sound device.
+ *
+ * This file is pjsip-apps/src/samples/playsine.c
+ *
+ * \includelineno playsine.c
+ */
+
 /*
  * playsine.c
  *

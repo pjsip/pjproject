@@ -28,7 +28,7 @@
 
 
 #define THIS_FILE	    "wav_writer.c"
-#define SIGNATURE	    ('F'<<24|'W'<<16|'R'<<8|'T')
+#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'W', 'R', 'T')
 #define BYTES_PER_SAMPLE    2
 
 
@@ -38,8 +38,12 @@ struct file_port
     pj_size_t	     bufsize;
     char	    *buf;
     char	    *writepos;
+    pj_size_t	     total;
 
     pj_oshandle_t    fd;
+
+    pj_size_t	     cb_size;
+    pj_status_t	   (*cb)(pjmedia_port*, void*);
 };
 
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
@@ -177,6 +181,54 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 }
 
 
+
+/*
+ * Get current writing position. 
+ */
+PJ_DEF(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port )
+{
+    struct file_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a writer port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    return fport->total;
+}
+
+
+/*
+ * Register callback.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
+				pj_size_t pos,
+				void *user_data,
+			        pj_status_t (*cb)(pjmedia_port *port,
+						  void *usr_data))
+{
+    struct file_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port && cb, PJ_EINVAL);
+
+    /* Check that this is really a writer port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    fport->cb_size = pos;
+    fport->base.user_data = user_data;
+    fport->cb = cb;
+
+    return PJ_SUCCESS;
+}
+
+
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
     static void swap_samples(pj_int16_t *samples, unsigned count)
     {
@@ -233,6 +285,19 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
     /* Copy frame to buffer. */
     pj_memcpy(fport->writepos, frame->buf, frame->size);
     fport->writepos += frame->size;
+
+    /* Increment total written, and check if we need to call callback */
+    fport->total += frame->size;
+    if (fport->cb && fport->total >= fport->cb_size) {
+	pj_status_t (*cb)(pjmedia_port*, void*);
+	pj_status_t status;
+
+	cb = fport->cb;
+	fport->cb = NULL;
+
+	status = (*cb)(this_port, this_port->user_data);
+	return status;
+    }
 
     return PJ_SUCCESS;
 }

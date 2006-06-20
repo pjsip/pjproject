@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMEDIA_FILE_PLAY File Player
+ * @defgroup PJMEDIA_FILE_PLAY WAV File Player
  * @ingroup PJMEDIA_PORT
  * @brief WAV File Player
  * @{
@@ -77,16 +77,50 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /**
- * Set the play position of WAV player.
+ * Set the file play position of WAV player.
  *
  * @param port		The file player port.
- * @param samples	Sample position (zero as start of file).
+ * @param offset	Playback position in bytes, relative to the start of
+ *			the payload.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
-						      pj_uint32_t samples );
+						      pj_uint32_t offset );
 
+
+/**
+ * Get the file play position of WAV player.
+ *
+ * @param port		The file player port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port );
+
+
+/**
+ * Register a callback to be called when the file reading has reached the
+ * end of file. If the file is set to play repeatedly, then the callback
+ * will be called multiple times. Note that only one callback can be 
+ * registered for each file port.
+ *
+ * @param port		The file player port.
+ * @param user_data	User data to be specified in the callback. Note that
+ *			this overwrites the user data previously set when
+ *			the file port is created.
+ * @param cb		Callback to be called. If the callback returns non-
+ *			PJ_SUCCESS, the playback will stop. Note that if
+ *			application destroys the file port in the callback,
+ *			it must return non-PJ_SUCCESS here.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
+			       void *user_data,
+			       pj_status_t (*cb)(pjmedia_port *port,
+						 void *usr_data));
 
 /**
  * @}
@@ -114,13 +148,13 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample (eg 16).
  * @param flags		    Port creation flags (must be 0 at present).
- * @param buff_size	Buffer size to be allocated. If the value is zero or
- *			negative, the port will use default buffer size (which
- *			is about 4KB).
- * @param user_data	User data to be associated with the file writer port.
- * @param p_port	Pointer to receive the file port instance.
+ * @param buff_size	    Buffer size to be allocated. If the value is 
+ *			    zero or negative, the port will use default buffer
+ *			    size (which is about 4KB).
+ * @param user_data	    User data to be associated with the file port.
+ * @param p_port	    Pointer to receive the file port instance.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
 						    const char *filename,
@@ -133,6 +167,44 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
 						    void *user_data,
 						    pjmedia_port **p_port );
 
+
+/**
+ * Get current writing position. Note that this does not necessarily match
+ * the size written to the file, since the WAV writer employs some internal
+ * buffering. Also the value reported here only indicates the payload size
+ * (it does not include the size of the WAV header),
+ *
+ * @param port		The file writer port.
+ *
+ * @return		Positive value to indicate the position (in bytes), 
+ *			or negative value containing the error code.
+ */
+PJ_DECL(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port );
+
+
+/**
+ * Register the callback to be called when the file writing has reached
+ * certain size. Application can use this callback, for example, to limit
+ * the size of the output file.
+ *
+ * @param port		The file writer port.
+ * @param pos		The file position on which the callback will be called.
+ * @param user_data	User data to be specified in the callback. Note that
+ *			this overwrites the user data previously set when
+ *			the file port is created.
+ * @param cb		Callback to be called. If the callback returns non-
+ *			PJ_SUCCESS, the writing will stop. Note that if 
+ *			application destroys the port in the callback, it must
+ *			return non-PJ_SUCCESS here.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
+				pj_size_t pos,
+				void *user_data,
+				pj_status_t (*cb)(pjmedia_port *port,
+						  void *usr_data));
 
 
 /**
