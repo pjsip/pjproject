@@ -156,10 +156,10 @@ struct pjmedia_rtcp_stream_stat
     unsigned	    update_cnt;	/**< Number of updates (to calculate avg)   */
     pj_uint32_t	    pkt;	/**< Total number of packets		    */
     pj_uint32_t	    bytes;	/**< Total number of payload/bytes	    */
-    unsigned	    discard;	/**< Number of discarded packets.	    */
-    unsigned	    loss;	/**< Number of packets lost		    */
-    unsigned	    reorder;	/**< Number of out of order packets	    */
-    unsigned	    dup;	/**< Number of duplicates packets	    */
+    unsigned	    discard;	/**< Total number of discarded packets.	    */
+    unsigned	    loss;	/**< Total number of packets lost	    */
+    unsigned	    reorder;	/**< Total number of out of order packets   */
+    unsigned	    dup;	/**< Total number of duplicates packets	    */
 
     struct {
 	unsigned    count;	/**< Number of period samples(to calc avg)  */

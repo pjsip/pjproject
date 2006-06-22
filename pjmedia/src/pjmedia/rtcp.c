@@ -207,13 +207,19 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	rtcp_init_seq(sess);
     }
     
-    if (seq_st.status.flag.dup)
+    if (seq_st.status.flag.dup) {
 	sess->stat.rx.dup++;
-    if (seq_st.status.flag.outorder)
+	TRACE_((sess->name, "Duplicate packet detected"));
+    }
+
+    if (seq_st.status.flag.outorder) {
 	sess->stat.rx.reorder++;
+	TRACE_((sess->name, "Out-of-order packet detected"));
+    }
 
     if (seq_st.status.flag.bad) {
 	sess->stat.rx.discard++;
+	TRACE_((sess->name, "Bad packet discarded"));
 	return;
     }
 
@@ -233,6 +239,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	 * outbound RTCP RR.
 	 */
 	sess->stat.rx.loss += (seq_st.diff - 1);
+	TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
 
 	/* Update loss period stat */
 	if (sess->stat.rx.loss_period.count == 0 ||
@@ -541,10 +548,13 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     
     /* Total lost. */
     expected = pj_ntohl(rtcp_pkt->rr.last_seq) - sess->seq_ctrl.base_seq;
+
+    /* This is bug: total lost already calculated on each incoming RTP!
     if (expected >= sess->received)
 	sess->stat.rx.loss = expected - sess->received;
     else
 	sess->stat.rx.loss = 0;
+    */
 
     rtcp_pkt->rr.total_lost_2 = (sess->stat.rx.loss >> 16) & 0xFF;
     rtcp_pkt->rr.total_lost_1 = (sess->stat.rx.loss >> 8) & 0xFF;
