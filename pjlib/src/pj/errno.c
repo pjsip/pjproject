@@ -40,28 +40,30 @@ static struct err_msg_hnd
 
 /* PJLIB's own error codes/messages */
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
+
 static const struct 
 {
     int code;
     const char *msg;
 } err_str[] = 
 {
-    { PJ_EUNKNOWN,      "Unknown Error" },
-    { PJ_EPENDING,      "Pending operation" },
-    { PJ_ETOOMANYCONN,  "Too many connecting sockets" },
-    { PJ_EINVAL,        "Invalid value or argument" },
-    { PJ_ENAMETOOLONG,  "Name too long" },
-    { PJ_ENOTFOUND,     "Not found" },
-    { PJ_ENOMEM,        "Not enough memory" },
-    { PJ_EBUG,          "BUG DETECTED!" },
-    { PJ_ETIMEDOUT,     "Operation timed out" },
-    { PJ_ETOOMANY,      "Too many objects of the specified type"},
-    { PJ_EBUSY,         "Object is busy"},
-    { PJ_ENOTSUP,	"Option/operation is not supported"},
-    { PJ_EINVALIDOP,	"Invalid operation"},
-    { PJ_ECANCELLED,    "Operation cancelled"},
-    { PJ_EEXISTS,       "Object already exists" },
-    { PJ_EEOF,		"End of file" },
+    PJ_BUILD_ERR(PJ_EUNKNOWN,      "Unknown Error" ),
+    PJ_BUILD_ERR(PJ_EPENDING,      "Pending operation" ),
+    PJ_BUILD_ERR(PJ_ETOOMANYCONN,  "Too many connecting sockets" ),
+    PJ_BUILD_ERR(PJ_EINVAL,        "Invalid value or argument" ),
+    PJ_BUILD_ERR(PJ_ENAMETOOLONG,  "Name too long" ),
+    PJ_BUILD_ERR(PJ_ENOTFOUND,     "Not found" ),
+    PJ_BUILD_ERR(PJ_ENOMEM,        "Not enough memory" ),
+    PJ_BUILD_ERR(PJ_EBUG,          "BUG DETECTED!" ),
+    PJ_BUILD_ERR(PJ_ETIMEDOUT,     "Operation timed out" ),
+    PJ_BUILD_ERR(PJ_ETOOMANY,      "Too many objects of the specified type"),
+    PJ_BUILD_ERR(PJ_EBUSY,         "Object is busy"),
+    PJ_BUILD_ERR(PJ_ENOTSUP,	   "Option/operation is not supported"),
+    PJ_BUILD_ERR(PJ_EINVALIDOP,	   "Invalid operation"),
+    PJ_BUILD_ERR(PJ_ECANCELLED,    "Operation cancelled"),
+    PJ_BUILD_ERR(PJ_EEXISTS,       "Object already exists" ),
+    PJ_BUILD_ERR(PJ_EEOF,	   "End of file" ),
+    PJ_BUILD_ERR(PJ_ETOOBIG,	   "Size is too big"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

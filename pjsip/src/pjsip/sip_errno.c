@@ -34,80 +34,80 @@ static const struct
 } err_str[] = 
 {
     /* Generic SIP errors */
-    { PJSIP_EBUSY,		"Object is busy" },
-    { PJSIP_ETYPEEXISTS ,	"Object with the same type exists" },
-    { PJSIP_ESHUTDOWN,		"SIP stack shutting down" },
-    { PJSIP_ENOTINITIALIZED,	"SIP object is not initialized." },
+    PJ_BUILD_ERR( PJSIP_EBUSY,		"Object is busy" ),
+    PJ_BUILD_ERR( PJSIP_ETYPEEXISTS ,	"Object with the same type exists" ),
+    PJ_BUILD_ERR( PJSIP_ESHUTDOWN,	"SIP stack shutting down" ),
+    PJ_BUILD_ERR( PJSIP_ENOTINITIALIZED,"SIP object is not initialized." ),
 
     /* Messaging errors */
-    { PJSIP_EINVALIDMSG,	"Invalid message/syntax error" },
-    { PJSIP_ENOTREQUESTMSG,	"Expecting request message"},
-    { PJSIP_ENOTRESPONSEMSG,	"Expecting response message"},
-    { PJSIP_EMSGTOOLONG,	"Message too long" },
-    { PJSIP_EPARTIALMSG,	"Partial message" },
+    PJ_BUILD_ERR( PJSIP_EINVALIDMSG,	"Invalid message/syntax error" ),
+    PJ_BUILD_ERR( PJSIP_ENOTREQUESTMSG,	"Expecting request message"),
+    PJ_BUILD_ERR( PJSIP_ENOTRESPONSEMSG,"Expecting response message"),
+    PJ_BUILD_ERR( PJSIP_EMSGTOOLONG,	"Message too long" ),
+    PJ_BUILD_ERR( PJSIP_EPARTIALMSG,	"Partial message" ),
 
-    { PJSIP_EINVALIDSTATUS,	"Invalid/unexpected SIP status code"},
+    PJ_BUILD_ERR( PJSIP_EINVALIDSTATUS,	"Invalid/unexpected SIP status code"),
 
-    { PJSIP_EINVALIDURI,	"Invalid URI" },
-    { PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" },
-    { PJSIP_EMISSINGREQURI,	"Missing Request-URI" },
-    { PJSIP_EINVALIDREQURI,	"Invalid Request URI" },
-    { PJSIP_EURITOOLONG,	"URI is too long" }, 
+    PJ_BUILD_ERR( PJSIP_EINVALIDURI,	"Invalid URI" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDSCHEME,	"Invalid URI scheme" ),
+    PJ_BUILD_ERR( PJSIP_EMISSINGREQURI,	"Missing Request-URI" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDREQURI,	"Invalid Request URI" ),
+    PJ_BUILD_ERR( PJSIP_EURITOOLONG,	"URI is too long" ), 
 
-    { PJSIP_EMISSINGHDR,	"Missing required header(s)" },
-    { PJSIP_EINVALIDHDR,	"Invalid header field"},
-    { PJSIP_EINVALIDVIA,	"Invalid Via header" },
-    { PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" },
+    PJ_BUILD_ERR( PJSIP_EMISSINGHDR,	"Missing required header(s)" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDHDR,	"Invalid header field"),
+    PJ_BUILD_ERR( PJSIP_EINVALIDVIA,	"Invalid Via header" ),
+    PJ_BUILD_ERR( PJSIP_EMULTIPLEVIA,	"Multiple Via headers in response" ),
 
-    { PJSIP_EMISSINGBODY,	"Missing message body" },
-    { PJSIP_EINVALIDMETHOD,	"Invalid/unexpected method" },
+    PJ_BUILD_ERR( PJSIP_EMISSINGBODY,	"Missing message body" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDMETHOD,	"Invalid/unexpected method" ),
 
     /* Transport errors */
-    { PJSIP_EUNSUPTRANSPORT,	"Unsupported transport"},
-    { PJSIP_EPENDINGTX,		"Transmit buffer already pending"},
-    { PJSIP_ERXOVERFLOW,	"Rx buffer overflow"},
-    { PJSIP_EBUFDESTROYED,	"Buffer destroyed"},
+    PJ_BUILD_ERR( PJSIP_EUNSUPTRANSPORT,"Unsupported transport"),
+    PJ_BUILD_ERR( PJSIP_EPENDINGTX,	"Transmit buffer already pending"),
+    PJ_BUILD_ERR( PJSIP_ERXOVERFLOW,	"Rx buffer overflow"),
+    PJ_BUILD_ERR( PJSIP_EBUFDESTROYED,	"Buffer destroyed"),
 
     /* Transaction errors */
-    { PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"},
-    { PJSIP_ENOTSX,		"No transaction is associated with the object "
-			        "(expecting stateful processing)" },
+    PJ_BUILD_ERR( PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"),
+    PJ_BUILD_ERR( PJSIP_ENOTSX,		"No transaction is associated with the object "
+					"(expecting stateful processing)" ),
 
     /* URI comparison status */
-    { PJSIP_ECMPSCHEME,		"URI scheme mismatch" },
-    { PJSIP_ECMPUSER,		"URI user part mismatch" },
-    { PJSIP_ECMPPASSWD,		"URI password part mismatch" },
-    { PJSIP_ECMPHOST,		"URI host part mismatch" },
-    { PJSIP_ECMPPORT,		"URI port mismatch" },
-    { PJSIP_ECMPTRANSPORTPRM,	"URI transport param mismatch" },
-    { PJSIP_ECMPTTLPARAM,	"URI ttl param mismatch" },
-    { PJSIP_ECMPUSERPARAM,	"URI user param mismatch" },
-    { PJSIP_ECMPMETHODPARAM,	"URI method param mismatch" },
-    { PJSIP_ECMPMADDRPARAM,	"URI maddr param mismatch" },
-    { PJSIP_ECMPOTHERPARAM,	"URI other param mismatch" },
-    { PJSIP_ECMPHEADERPARAM,	"URI header parameter mismatch" },
+    PJ_BUILD_ERR( PJSIP_ECMPSCHEME,	"URI scheme mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPUSER,	"URI user part mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPPASSWD,	"URI password part mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPHOST,	"URI host part mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPPORT,	"URI port mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPTRANSPORTPRM,"URI transport param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPTTLPARAM,	"URI ttl param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPUSERPARAM,	"URI user param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPMETHODPARAM,"URI method param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPMADDRPARAM,	"URI maddr param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPOTHERPARAM,	"URI other param mismatch" ),
+    PJ_BUILD_ERR( PJSIP_ECMPHEADERPARAM,"URI header parameter mismatch" ),
 
     /* Authentication. */
-    { PJSIP_EFAILEDCREDENTIAL,	"Credential failed to authenticate"},
-    { PJSIP_ENOCREDENTIAL,	"No suitable credential"},
-    { PJSIP_EINVALIDALGORITHM,	"Invalid/unsupported digest algorithm" },
-    { PJSIP_EINVALIDQOP,	"Invalid/unsupported digest qop" },
-    { PJSIP_EINVALIDAUTHSCHEME,	"Unsupported authentication scheme" },
-    { PJSIP_EAUTHNOPREVCHAL,	"No previous challenge" },
-    { PJSIP_EAUTHNOAUTH,	"No suitable authorization header" },
-    { PJSIP_EAUTHACCNOTFOUND,	"Account or credential not found" },
-    { PJSIP_EAUTHACCDISABLED,	"Account or credential is disabled" },
-    { PJSIP_EAUTHINVALIDREALM,	"Invalid authorization realm"},
-    { PJSIP_EAUTHINVALIDDIGEST,	"Invalid authorization digest" },
+    PJ_BUILD_ERR( PJSIP_EFAILEDCREDENTIAL, "Credential failed to authenticate"),
+    PJ_BUILD_ERR( PJSIP_ENOCREDENTIAL,	   "No suitable credential"),
+    PJ_BUILD_ERR( PJSIP_EINVALIDALGORITHM, "Invalid/unsupported digest algorithm" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDQOP,	   "Invalid/unsupported digest qop" ),
+    PJ_BUILD_ERR( PJSIP_EINVALIDAUTHSCHEME,"Unsupported authentication scheme" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHNOPREVCHAL,   "No previous challenge" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHNOAUTH,	   "No suitable authorization header" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHACCNOTFOUND,  "Account or credential not found" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHACCDISABLED,  "Account or credential is disabled" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHINVALIDREALM, "Invalid authorization realm"),
+    PJ_BUILD_ERR( PJSIP_EAUTHINVALIDDIGEST,"Invalid authorization digest" ),
 
     /* UA/dialog layer. */
-    { PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" },
-    { PJSIP_ENOTREFER,		"Expecting REFER request"} ,
-    { PJSIP_ENOREFERSESSION,	"Not associated with REFER subscription"},
+    PJ_BUILD_ERR( PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" ),
+    PJ_BUILD_ERR( PJSIP_ENOTREFER,	"Expecting REFER request") ,
+    PJ_BUILD_ERR( PJSIP_ENOREFERSESSION,"Not associated with REFER subscription"),
 
     /* Invite session. */
-    { PJSIP_ESESSIONTERMINATED,	"INVITE session already terminated" },
-    { PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" },
+    PJ_BUILD_ERR( PJSIP_ESESSIONTERMINATED, "INVITE session already terminated" ),
+    PJ_BUILD_ERR( PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" ),
 };
 
 

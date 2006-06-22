@@ -33,20 +33,20 @@ static const struct
 } err_str[] = 
 {
     /* STUN errors */
-    { PJLIB_UTIL_ESTUNRESOLVE,	    "Unable to resolve STUN server" },
-    { PJLIB_UTIL_ESTUNINMSGTYPE,    "Unknown STUN message type" },
-    { PJLIB_UTIL_ESTUNINMSGLEN,	    "Invalid STUN message length" },
-    { PJLIB_UTIL_ESTUNINATTRLEN,    "STUN attribute length error" },
-    { PJLIB_UTIL_ESTUNINATTRTYPE,   "Invalid STUN attribute type" },
-    { PJLIB_UTIL_ESTUNININDEX,	    "Invalid STUN server/socket index" },
-    { PJLIB_UTIL_ESTUNNOBINDRES,    "No STUN binding response in the message" },
-    { PJLIB_UTIL_ESTUNRECVERRATTR,  "Received STUN error attribute" },
-    { PJLIB_UTIL_ESTUNNOMAP,	    "No STUN mapped address attribute" },
-    { PJLIB_UTIL_ESTUNNOTRESPOND,   "Received no response from STUN server" },
-    { PJLIB_UTIL_ESTUNSYMMETRIC,    "Symetric NAT detected by STUN" },
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNRESOLVE,	"Unable to resolve STUN server" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINMSGTYPE,	"Unknown STUN message type" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINMSGLEN,	"Invalid STUN message length" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINATTRLEN,	"STUN attribute length error" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINATTRTYPE,	"Invalid STUN attribute type" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNININDEX,	"Invalid STUN server/socket index" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOBINDRES,	"No STUN binding response in the message" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNRECVERRATTR,	"Received STUN error attribute" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOMAP,	"No STUN mapped address attribute" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOTRESPOND,	"Received no response from STUN server" ),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNSYMMETRIC,	"Symetric NAT detected by STUN" ),
 
     /* XML errors */
-    { PJLIB_UTIL_EINXML,	    "Invalid XML message" },
+    PJ_BUILD_ERR( PJLIB_UTIL_EINXML,		"Invalid XML message" ),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 
