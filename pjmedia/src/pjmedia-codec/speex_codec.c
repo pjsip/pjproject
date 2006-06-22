@@ -797,6 +797,9 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
     pj_int16_t *dst_buf;
     unsigned i, count;
 
+    /* output_buf_len is unreferenced when building in Release mode */
+    PJ_UNUSED_ARG(output_buf_len);
+
     spx = (struct spx_private*) codec->codec_data;
 
     count = spx_factory.speex_param[spx->param_id].clock_rate * 20 / 1000;
