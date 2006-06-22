@@ -27,6 +27,8 @@
  * This file is NOT supposed to be compiled as stand-alone source.
  */
 
+#define PENDING_RETRY	2
+
 static void ioqueue_init( pj_ioqueue_t *ioqueue )
 {
     ioqueue->lock = NULL;
@@ -280,16 +282,22 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
          */
         sent = write_op->size - write_op->written;
         if (write_op->op == PJ_IOQUEUE_OP_SEND) {
-	    write_op->op = 0;
             send_rc = pj_sock_send(h->fd, write_op->buf+write_op->written,
                                    &sent, write_op->flags);
+	    /* Can't do this. We only clear "op" after we're finished sending
+	     * the whole buffer.
+	     */
+	    //write_op->op = 0;
         } else if (write_op->op == PJ_IOQUEUE_OP_SEND_TO) {
-	    write_op->op = 0;
             send_rc = pj_sock_sendto(h->fd, 
                                      write_op->buf+write_op->written,
                                      &sent, write_op->flags,
                                      &write_op->rmt_addr, 
                                      write_op->rmt_addrlen);
+	    /* Can't do this. We only clear "op" after we're finished sending
+	     * the whole buffer.
+	     */
+	    //write_op->op = 0;
         } else {
             pj_assert(!"Invalid operation type!");
 	    write_op->op = 0;
@@ -308,10 +316,12 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
             write_op->written == (pj_ssize_t)write_op->size ||
             h->fd_type == PJ_SOCK_DGRAM) 
         {
+
+	    write_op->op = 0;
+
             if (h->fd_type != PJ_SOCK_DGRAM) {
                 /* Write completion of the whole stream. */
                 pj_list_erase(write_op);
-                write_op->op = 0;
 
                 /* Clear operation if there's no more data to send. */
                 if (pj_list_empty(&h->write_list))
@@ -662,6 +672,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
 {
     struct write_operation *write_op;
     pj_status_t status;
+    unsigned retry;
     pj_ssize_t sent;
 
     PJ_ASSERT_RETURN(key && op_key && data && length, PJ_EINVAL);
@@ -670,9 +681,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     /* Check if key is closing. */
     if (key->closing)
 	return PJ_ECANCELLED;
-
-    write_op = (struct write_operation*)op_key;
-    write_op->op = 0;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write. */
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -714,6 +722,35 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     /*
      * Schedule asynchronous send.
      */
+    write_op = (struct write_operation*)op_key;
+
+    /* Spin if write_op has pending operation */
+    for (retry=0; write_op->op != 0 && retry<PENDING_RETRY; ++retry)
+	pj_thread_sleep(0);
+
+    /* Last chance */
+    if (write_op->op) {
+	/* Unable to send packet because there is already pending write in the
+	 * write_op. We could not put the operation into the write_op
+	 * because write_op already contains a pending operation! And
+	 * we could not send the packet directly with send() either,
+	 * because that will break the order of the packet. So we can
+	 * only return error here.
+	 *
+	 * This could happen for example in multithreads program,
+	 * where polling is done by one thread, while other threads are doing
+	 * the sending only. If the polling thread runs on lower priority
+	 * than the sending thread, then it's possible that the pending
+	 * write flag is not cleared in-time because clearing is only done
+	 * during polling. 
+	 *
+	 * Aplication should specify multiple write operation keys on
+	 * situation like this.
+	 */
+	//pj_assert(!"ioqueue: there is pending operation on this key!");
+	return PJ_EBUSY;
+    }
+
     write_op->op = PJ_IOQUEUE_OP_SEND;
     write_op->buf = (void*)data;
     write_op->size = *length;
@@ -743,6 +780,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 			               int addrlen)
 {
     struct write_operation *write_op;
+    unsigned retry;
     pj_status_t status;
     pj_ssize_t sent;
 
@@ -752,9 +790,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     /* Check if key is closing. */
     if (key->closing)
 	return PJ_ECANCELLED;
-
-    write_op = (struct write_operation*)op_key;
-    write_op->op = 0;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write */
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -790,6 +825,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
             if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
                 return status;
             }
+	    status = status;
         }
     }
 
@@ -801,6 +837,35 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     /*
      * Schedule asynchronous send.
      */
+    write_op = (struct write_operation*)op_key;
+    
+    /* Spin if write_op has pending operation */
+    for (retry=0; write_op->op != 0 && retry<PENDING_RETRY; ++retry)
+	pj_thread_sleep(0);
+
+    /* Last chance */
+    if (write_op->op) {
+	/* Unable to send packet because there is already pending write on the
+	 * write_op. We could not put the operation into the write_op
+	 * because write_op already contains a pending operation! And
+	 * we could not send the packet directly with sendto() either,
+	 * because that will break the order of the packet. So we can
+	 * only return error here.
+	 *
+	 * This could happen for example in multithreads program,
+	 * where polling is done by one thread, while other threads are doing
+	 * the sending only. If the polling thread runs on lower priority
+	 * than the sending thread, then it's possible that the pending
+	 * write flag is not cleared in-time because clearing is only done
+	 * during polling. 
+	 *
+	 * Aplication should specify multiple write operation keys on
+	 * situation like this.
+	 */
+	//pj_assert(!"ioqueue: there is pending operation on this key!");
+	return PJ_EBUSY;
+    }
+
     write_op->op = PJ_IOQUEUE_OP_SEND_TO;
     write_op->buf = (void*)data;
     write_op->size = *length;
