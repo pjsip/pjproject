@@ -56,7 +56,20 @@ enum pjmedia_transport_udp_options
 
 
 /**
- * Create an RTP and RTCP sockets and bind RTP the socket to the specified
+ * UDP transport info.
+ */
+typedef struct pjmedia_transport_udp_info
+{
+    /**
+     * Media socket info.
+     */
+    pjmedia_sock_info	skinfo;
+
+} pjmedia_transport_udp_info;
+
+
+/**
+ * Create an RTP and RTCP sockets and bind the sockets to the specified
  * port to create media transport.
  *
  * @param endpt	    The media endpoint instance.
@@ -76,15 +89,39 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create(pjmedia_endpt *endpt,
 
 
 /**
- * Get media socket info from the specified UDP transport.
+ * Create an RTP and RTCP sockets and bind the sockets to the specified
+ * address and port to create media transport.
  *
- * @param tp	    The UDP transport interface.
- * @param i	    Media socket info to be initialized.
+ * @param endpt	    The media endpoint instance.
+ * @param name	    Optional name to be assigned to the transport.
+ * @param addr	    Optional local address to bind the sockets to. If this
+ *		    argument is NULL or empty, the sockets will be bound
+ *		    to all interface.
+ * @param port	    UDP port number for the RTP socket. The RTCP port number
+ *		    will be set to one above RTP port.
+ * @param options   Options, bitmask of #pjmedia_transport_udp_options.
+ * @param p_tp	    Pointer to receive the transport instance.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_get_sock_info(pjmedia_transport *tp,
-							 pjmedia_sock_info *i);
+PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
+						   const char *name,
+						   const pj_str_t *addr,
+						   int port,
+						   unsigned options,
+						   pjmedia_transport **p_tp);
+
+/**
+ * Get media socket info from the specified UDP transport.
+ *
+ * @param tp	    The UDP transport interface.
+ * @param info	    Media socket info to be initialized.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_transport_udp_get_info( pjmedia_transport *tp,
+				pjmedia_transport_udp_info *info);
 
 
 /**
