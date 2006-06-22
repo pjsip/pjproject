@@ -1277,7 +1277,7 @@ static void keystroke_help(void)
     puts("|  [  Select previous dialog   +--------------------------+-------------------+");
     puts("|  x  Xfer call                |      Media Commands:     |  Status & Config: |");
     puts("|  #  Send DTMF string         |                          |                   |");
-    puts("|                              | cl  List ports           |  d  Dump status   |");
+    puts("| dq  Dump curr. call quality  | cl  List ports           |  d  Dump status   |");
     puts("|                              | cc  Connect port         | dd  Dump detailed |");
     puts("|                              | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |                          |  f  Save config   |");
@@ -1975,6 +1975,18 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    PJ_LOG(3,(THIS_FILE, 
 			      "Dumping configuration (%d bytes):\n%s\n",
 			      len, settings));
+
+	    } else if (menuin[1] == 'q') {
+
+		if (current_call != PJSUA_INVALID_ID) {
+		    char buf[1024];
+		    pjsua_call_dump(current_call, PJ_TRUE, buf, 
+				    sizeof(buf), "  ");
+		    PJ_LOG(3,(THIS_FILE, "\n%s", buf));
+		} else {
+		    PJ_LOG(3,(THIS_FILE, "No current call"));
+		}
+
 	    } else {
 		app_dump(menuin[1]=='d');
 	    }
