@@ -27,5 +27,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "sndtest.c"
+#include "siprtp.c"
 

@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 
     /* Create the file port. */
     status = pjmedia_wav_player_port_create( pool, argv[pj_optind], 0, 0,
-					     0, 0, &file_port);
+					     0, &file_port);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to open file", status);
 	return 1;

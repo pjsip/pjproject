@@ -116,7 +116,6 @@ int main(int argc, char *argv[])
 					      0,	/* use default ptime*/
 					      0,	/* flags	    */
 					      0,	/* default buffer   */
-					      NULL,	/* user data	    */
 					      &file_port/* returned port    */
 					      );
     if (status != PJ_SUCCESS) {

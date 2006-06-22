@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 	wav_ptime = stream_port->info.samples_per_frame * 1000 /
 		    stream_port->info.clock_rate;
 	status = pjmedia_wav_player_port_create(pool, play_file, wav_ptime,
-						0, -1, NULL, &play_file_port);
+						0, -1, &play_file_port);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to use file", status);
 	    goto on_exit;

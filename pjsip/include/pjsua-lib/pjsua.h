@@ -2235,14 +2235,12 @@ PJ_DECL(pj_status_t) pjsua_conf_disconnect(pjsua_conf_port_id source,
  *			formatted as 16bit PCM mono/single channel (any
  *			clock rate is supported).
  * @param options	Options (currently zero).
- * @param user_data	Arbitrary user data to be associated with the player.
  * @param p_id		Pointer to receive player ID.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_player_create(const pj_str_t *filename,
 					 unsigned options,
-					 void *user_data,
 					 pjsua_player_id *p_id);
 
 
@@ -2297,8 +2295,6 @@ PJ_DECL(pj_status_t) pjsua_player_destroy(pjsua_player_id id);
  * @param max_size	Maximum file size. Specify -1 to remove size
  *			limitation.
  * @param options	Optional options.
- * @param user_data	Arbitrary user data which will be given in the 
- *			callback once the recording complete.
  * @param p_id		Pointer to receive the recorder instance.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -2308,7 +2304,6 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
 					   const pj_str_t *encoding,
 					   pj_ssize_t max_size,
 					   unsigned options,
-					   void *user_data,
 					   pjsua_recorder_id *p_id);
 
 

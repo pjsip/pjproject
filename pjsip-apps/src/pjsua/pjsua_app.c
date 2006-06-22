@@ -2076,7 +2076,7 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Optionally registers WAV file */
     if (app_config.wav_file.slen) {
-	status = pjsua_player_create(&app_config.wav_file, 0, NULL,
+	status = pjsua_player_create(&app_config.wav_file, 0, 
 				     &app_config.wav_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;

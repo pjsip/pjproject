@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     status = pjmedia_wav_writer_port_create(  pool, "confrecord.wav",
 					      clock_rate, channel_count,
 					      samples_per_frame, 
-					      bits_per_sample, 0, 0, NULL,
+					      bits_per_sample, 0, 0, 
 					      &rec_port);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create WAV writer", status);
@@ -222,7 +222,6 @@ int main(int argc, char *argv[])
 			0,		    /* use default ptime */
 			0,		    /* flags	    */
 			0,		    /* buf size	    */
-			NULL,		    /* user data    */
 			&file_port[i]	    /* result	    */
 			);
 	if (status != PJ_SUCCESS) {

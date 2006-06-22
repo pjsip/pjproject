@@ -600,7 +600,6 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
  */
 PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 					 unsigned options,
-					 void *user_data,
 					 pjsua_player_id *p_id)
 {
     unsigned slot, file_id;
@@ -630,7 +629,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     status = pjmedia_wav_player_port_create(pjsua_var.pool, path,
 					    pjsua_var.mconf_cfg.samples_per_frame *
 					      1000 / pjsua_var.media_cfg.clock_rate, 
-					    0, 0, user_data, &port);
+					    0, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for playback", status);
@@ -721,7 +720,6 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 					   const pj_str_t *encoding,
 					   pj_ssize_t max_size,
 					   unsigned options,
-					   void *user_data,
 					   pjsua_recorder_id *p_id)
 {
     unsigned slot, file_id;
@@ -753,7 +751,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 					    pjsua_var.mconf_cfg.channel_count,
 					    pjsua_var.mconf_cfg.samples_per_frame,
 					    pjsua_var.mconf_cfg.bits_per_sample, 
-					    0, 0, user_data, &port);
+					    0, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for recording", status);
