@@ -336,12 +336,16 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
     */
 
     /* Unregister from ioqueue. */
-    if (tp->key)
+    if (tp->key) {
 	pj_ioqueue_unregister(tp->key);
-
-    /* Close socket. */
-    if (tp->sock && tp->sock != PJ_INVALID_SOCKET)
-	pj_sock_close(tp->sock);
+	tp->key = NULL;
+    } else {
+	/* Close socket. */
+	if (tp->sock && tp->sock != PJ_INVALID_SOCKET) {
+	    pj_sock_close(tp->sock);
+	    tp->sock = PJ_INVALID_SOCKET;
+	}
+    }
 
     /* Must poll ioqueue because IOCP calls the callback when socket
      * is closed. We poll the ioqueue until all pending callbacks 
