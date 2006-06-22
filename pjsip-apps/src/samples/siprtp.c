@@ -397,7 +397,7 @@ static pj_status_t init_media()
      * initialized.
      */
     status = pjmedia_endpt_create(&app.cp.factory, 
-				  pjsip_endpt_get_ioqueue(app.sip_endpt), 1, 
+				  pjsip_endpt_get_ioqueue(app.sip_endpt), 0, 
 				  &app.med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
