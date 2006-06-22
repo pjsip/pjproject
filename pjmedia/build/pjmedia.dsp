@@ -123,6 +123,14 @@ SOURCE=..\src\pjmedia\master_port.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\mem_capture.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\mem_player.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
@@ -248,6 +256,10 @@ SOURCE=..\include\pjmedia\jbuf.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\master_port.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\mem_port.h
 # End Source File
 # Begin Source File
 

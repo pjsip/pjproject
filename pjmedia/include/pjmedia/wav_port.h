@@ -62,7 +62,6 @@ enum pjmedia_file_player_option
  * @param buff_size	Buffer size to be allocated. If the value is zero or
  *			negative, the port will use default buffer size (which
  *			is about 4KB).
- * @param user_data	User data to be associated with the file player port.
  * @param p_port	Pointer to receive the file port instance.
  *
  * @return		PJ_SUCCESS on success.
@@ -72,7 +71,6 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     unsigned ptime,
 						     unsigned flags,
 						     pj_ssize_t buff_size,
-						     void *user_data,
 						     pjmedia_port **p_port );
 
 
@@ -106,9 +104,7 @@ PJ_DECL(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port );
  * registered for each file port.
  *
  * @param port		The file player port.
- * @param user_data	User data to be specified in the callback. Note that
- *			this overwrites the user data previously set when
- *			the file port is created.
+ * @param user_data	User data to be specified in the callback
  * @param cb		Callback to be called. If the callback returns non-
  *			PJ_SUCCESS, the playback will stop. Note that if
  *			application destroys the file port in the callback,
@@ -151,8 +147,7 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
  * @param buff_size	    Buffer size to be allocated. If the value is 
  *			    zero or negative, the port will use default buffer
  *			    size (which is about 4KB).
- * @param user_data	    User data to be associated with the file port.
- * @param p_port	    Pointer to receive the file port instance.
+  * @param p_port	    Pointer to receive the file port instance.
  *
  * @return		    PJ_SUCCESS on success.
  */
@@ -164,7 +159,6 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
 						    unsigned bits_per_sample,
 						    unsigned flags,
 						    pj_ssize_t buff_size,
-						    void *user_data,
 						    pjmedia_port **p_port );
 
 
@@ -189,9 +183,8 @@ PJ_DECL(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port );
  *
  * @param port		The file writer port.
  * @param pos		The file position on which the callback will be called.
- * @param user_data	User data to be specified in the callback. Note that
- *			this overwrites the user data previously set when
- *			the file port is created.
+ * @param user_data	User data to be specified in the callback, and will be
+ *			given on the callback.
  * @param cb		Callback to be called. If the callback returns non-
  *			PJ_SUCCESS, the writing will stop. Note that if 
  *			application destroys the port in the callback, it must

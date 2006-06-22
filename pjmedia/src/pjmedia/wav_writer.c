@@ -64,7 +64,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 						     unsigned bits_per_sample,
 						     unsigned flags,
 						     pj_ssize_t buff_size,
-						     void *user_data,
 						     pjmedia_port **p_port )
 {
     struct file_port *fport;
@@ -73,7 +72,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     pj_status_t status;
 
     PJ_UNUSED_ARG(flags);
-    PJ_UNUSED_ARG(user_data);
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);

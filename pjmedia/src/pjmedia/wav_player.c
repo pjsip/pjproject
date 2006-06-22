@@ -194,7 +194,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     unsigned ptime,
 						     unsigned options,
 						     pj_ssize_t buff_size,
-						     void *user_data,
 						     pjmedia_port **p_port )
 {
     pjmedia_wave_hdr wave_hdr;
@@ -293,7 +292,6 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* It seems like we have a valid WAVE file. */
 
     /* Initialize */
-    fport->base.user_data = user_data;
     fport->options = options;
 
     /* Update port info. */
