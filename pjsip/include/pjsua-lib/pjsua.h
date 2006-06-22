@@ -2045,7 +2045,7 @@ struct pjsua_media_config
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 10.
+     * Default: 3.
      */
     unsigned		quality;
 };
@@ -2064,7 +2064,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
-    cfg->quality = 10;
+    cfg->quality = 3;
 }
 
 
