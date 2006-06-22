@@ -695,6 +695,12 @@ static void on_rx_rtp( pjmedia_stream *stream,
     pj_status_t status;
 
 
+    /* Check for errors */
+    if (bytes_read < 0) {
+	LOGERR_((stream->port.info.name.ptr, "RTP recv() error", -bytes_read));
+	return;
+    }
+
     /* Update RTP and RTCP session. */
     status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, bytes_read,
 				    &hdr, &payload, &payloadlen);
@@ -822,6 +828,13 @@ static void on_rx_rtcp( pjmedia_stream *stream,
                         const void *pkt, 
                         pj_ssize_t bytes_read)
 {
+    /* Check for errors */
+    if (bytes_read < 0) {
+	LOGERR_((stream->port.info.name.ptr, "RTCP recv() error", 
+		 -bytes_read));
+	return;
+    }
+
     pjmedia_rtcp_rx_rtcp(&stream->rtcp, pkt, bytes_read);
 }
 
