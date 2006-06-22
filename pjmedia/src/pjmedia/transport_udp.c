@@ -48,6 +48,7 @@ struct transport_udp
 			pj_ssize_t);
 
     pj_sock_t	        rtp_sock;	/**< RTP socket			    */
+    pj_sockaddr_in	rtp_addr_name;	/**< Published RTP address.	    */
     pj_ioqueue_key_t   *rtp_key;	/**< RTP socket key in ioqueue	    */
     pj_ioqueue_op_key_t	rtp_read_op;	/**< Pending read operation	    */
     pj_ioqueue_op_key_t	rtp_write_op;	/**< Pending write operation	    */
@@ -57,6 +58,7 @@ struct transport_udp
     char		rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
 
     pj_sock_t		rtcp_sock;	/**< RTCP socket		    */
+    pj_sockaddr_in	rtcp_addr_name;	/**< Published RTCP address.	    */
     pj_ioqueue_key_t   *rtcp_key;	/**< RTCP socket key in ioqueue	    */
     pj_ioqueue_op_key_t rtcp_read_op;	/**< Pending read operation	    */
     pj_ioqueue_op_key_t rtcp_write_op;	/**< Pending write operation	    */
@@ -206,7 +208,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
     /* Copy socket infos */
     tp->rtp_sock = si->rtp_sock;
+    tp->rtp_addr_name = si->rtp_addr_name;
     tp->rtcp_sock = si->rtcp_sock;
+    tp->rtcp_addr_name = si->rtcp_addr_name;
 
 
     /* Setup RTP socket with the ioqueue */
@@ -260,6 +264,24 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 on_error:
     pjmedia_transport_udp_close(&tp->base);
     return status;
+}
+
+
+/*
+ * Get media socket info.
+ */
+PJ_DEF(pj_status_t) pjmedia_transport_udp_get_sock_info(pjmedia_transport *tp,
+							pjmedia_sock_info *inf)
+{
+    struct transport_udp *udp = (struct transport_udp*)tp;
+    PJ_ASSERT_RETURN(tp && inf, PJ_EINVAL);
+
+    inf->rtp_sock = udp->rtp_sock;
+    inf->rtp_addr_name = udp->rtp_addr_name;
+    inf->rtcp_sock = udp->rtcp_sock;
+    inf->rtcp_addr_name = udp->rtcp_addr_name;
+
+    return PJ_SUCCESS;
 }
 
 

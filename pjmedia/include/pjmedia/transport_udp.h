@@ -76,6 +76,18 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create(pjmedia_endpt *endpt,
 
 
 /**
+ * Get media socket info from the specified UDP transport.
+ *
+ * @param tp	    The UDP transport interface.
+ * @param i	    Media socket info to be initialized.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_udp_get_sock_info(pjmedia_transport *tp,
+							 pjmedia_sock_info *i);
+
+
+/**
  * Create UDP stream transport from existing sockets. Use this function when
  * the sockets have previously been created.
  *
