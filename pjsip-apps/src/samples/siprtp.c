@@ -122,9 +122,9 @@ struct media_stream
     /* RTCP stats: */
     pjmedia_rtcp_session rtcp;		    /* incoming RTCP session.	*/
 
-    /* Thread: */
-    pj_bool_t		 thread_quit_flag;  /* Stop media thread.	*/
-    pj_thread_t		*thread;	    /* Media thread.		*/
+    /* Timer to send RTP and RTCP: */
+    pj_timer_entry	 rtp_timer;	    /* timer to send RTP pkt.	*/
+    pj_timer_entry	 rtcp_timer;	    /* timer to send RTCP pkt.	*/
 };
 
 
@@ -221,6 +221,15 @@ static void on_rx_rtp(void *user_data, const void *pkt, pj_ssize_t size);
 
 /* This callback is called by media transport on receipt of RTCP packet. */
 static void on_rx_rtcp(void *user_data, const void *pkt, pj_ssize_t size);
+
+/* This callback is called when it's time to send RTP packet */
+static void on_tx_rtp( pj_timer_heap_t *timer_heap,
+		       struct pj_timer_entry *entry);
+
+/* This callback is called when it's time to send RTCP packet. */
+static void on_tx_rtcp(pj_timer_heap_t *timer_heap,
+		       struct pj_timer_entry *entry);
+
 
 /* Display error */
 static void app_perror(const char *sender, const char *title, 
@@ -387,7 +396,9 @@ static pj_status_t init_media()
     /* Initialize media endpoint so that at least error subsystem is properly
      * initialized.
      */
-    status = pjmedia_endpt_create(&app.cp.factory, NULL, 1, &app.med_endpt);
+    status = pjmedia_endpt_create(&app.cp.factory, 
+				  pjsip_endpt_get_ioqueue(app.sip_endpt), 1, 
+				  &app.med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 
@@ -407,10 +418,18 @@ static pj_status_t init_media()
 	    /* Repeat binding media socket to next port when fails to bind
 	     * to current port number.
 	     */
+	    struct media_stream *m = &app.call[i].media[j];
 	    int retry;
 
-	    app.call[i].media[j].call_index = i;
-	    app.call[i].media[j].media_index = j;
+	    m->call_index = i;
+	    m->media_index = j;
+
+	    m->rtp_timer.user_data = m;
+	    m->rtp_timer.cb = &on_tx_rtp;
+
+	    m->rtcp_timer.user_data = m;
+	    m->rtcp_timer.cb = &on_tx_rtcp;
+
 
 	    status = -1;
 	    for (retry=0; retry<100; ++retry,rtp_port+=2)  {
@@ -756,13 +775,28 @@ static void app_perror(const char *sender, const char *title,
 }
 
 
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+#include <windows.h>
+static void boost_priority(void)
+{
+    SetPriorityClass( GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+}
+
+#else
+#  define boost_priority()
+#endif
+
+
 /* Worker thread for SIP */
 static int sip_worker_thread(void *arg)
 {
     PJ_UNUSED_ARG(arg);
 
+    boost_priority();
+
     while (!app.thread_quit) {
-	pj_time_val timeout = {0, 10};
+	pj_time_val timeout = {0, 1};
 	pjsip_endpt_handle_events(app.sip_endpt, &timeout);
     }
 
@@ -1021,19 +1055,6 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 }
 
 
-#if defined(PJ_WIN32) && PJ_WIN32 != 0
-#include <windows.h>
-static void boost_priority(void)
-{
-    SetPriorityClass( GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-}
-
-#else
-#  define boost_priority()
-#endif
-
-
 /*
  * This callback is called by media transport on receipt of RTP packet.
  */
@@ -1077,6 +1098,62 @@ static void on_rx_rtp(void *user_data, const void *pkt, pj_ssize_t size)
 
 }
 
+/* This callback is called when it's time to send RTP packet */
+static void on_tx_rtp( pj_timer_heap_t *timer_heap,
+		       struct pj_timer_entry *entry)
+{
+    pj_status_t status;
+    const pjmedia_rtp_hdr *hdr;
+    pj_ssize_t size;
+    int hdrlen;
+    pj_time_val interval;
+    char packet[512];
+    struct media_stream *strm = entry->user_data;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    if (!strm->active)
+	return;
+
+    /* Format RTP header */
+    status = pjmedia_rtp_encode_rtp( &strm->out_sess, strm->si.tx_pt,
+				     0, /* marker bit */
+				     strm->bytes_per_frame, 
+				     strm->samples_per_frame,
+				     (const void**)&hdr, &hdrlen);
+    if (status == PJ_SUCCESS) {
+
+	//PJ_LOG(4,(THIS_FILE, "\t\tTx seq=%d", pj_ntohs(hdr->seq)));
+
+	/* Copy RTP header to packet */
+	pj_memcpy(packet, hdr, hdrlen);
+
+	/* Zero the payload */
+	pj_memset(packet+hdrlen, 0, strm->bytes_per_frame);
+
+	/* Send RTP packet */
+	size = hdrlen + strm->bytes_per_frame;
+	status = pjmedia_transport_send_rtp(strm->transport, 
+					    packet, size);
+	if (status != PJ_SUCCESS)
+	    app_perror(THIS_FILE, "Error sending RTP packet", status);
+
+    } else {
+	pj_assert(!"RTP encode() error");
+    }
+
+    /* Update RTCP SR */
+    pjmedia_rtcp_tx_rtp( &strm->rtcp, (pj_uint16_t)strm->bytes_per_frame);
+
+    /* Schedule next send */
+    interval.sec = 0;
+    interval.msec = strm->samples_per_frame * 1000 / strm->clock_rate;
+    pj_time_val_normalize(&interval);
+
+    pjsip_endpt_schedule_timer(app.sip_endpt, &strm->rtp_timer, &interval);
+}
+
+
 /*
  * This callback is called by media transport on receipt of RTCP packet.
  */
@@ -1101,149 +1178,39 @@ static void on_rx_rtcp(void *user_data, const void *pkt, pj_ssize_t size)
 }
 
 
-/* 
- * Media thread 
- *
- * This is the thread to send and receive both RTP and RTCP packets.
- */
-static int media_thread(void *arg)
+/* This callback is called when it's time to send RTCP packet. */
+static void on_tx_rtcp(pj_timer_heap_t *timer_heap,
+		       struct pj_timer_entry *entry)
 {
-    enum { RTCP_INTERVAL = 5000, RTCP_RAND = 2000 };
-    struct media_stream *strm = arg;
-    char packet[1500];
-    unsigned msec_interval;
-    pj_timestamp freq, next_rtp, next_rtcp;
+    pjmedia_rtcp_pkt *rtcp_pkt;
+    int rtcp_len;
+    pj_ssize_t size;
+    pj_status_t status;
+    pj_time_val interval;
+    struct media_stream *strm = entry->user_data;
 
+    PJ_UNUSED_ARG(timer_heap);
 
-    /* Boost thread priority if necessary */
-    boost_priority();
+    if (!strm->active)
+	return;
 
-    /* Let things settle */
-    pj_thread_sleep(1000);
+    /* Build RTCP packet */
+    pjmedia_rtcp_build_rtcp(&strm->rtcp, &rtcp_pkt, &rtcp_len);
 
-    msec_interval = strm->samples_per_frame * 1000 / strm->clock_rate;
-    pj_get_timestamp_freq(&freq);
-
-    pj_get_timestamp(&next_rtp);
-    next_rtp.u64 += (freq.u64 * msec_interval / 1000);
-
-    next_rtcp = next_rtp;
-    next_rtcp.u64 += (freq.u64 * (RTCP_INTERVAL+(pj_rand()%RTCP_RAND)) / 1000);
-
-
-    while (!strm->thread_quit_flag) {
-	pj_timestamp now, lesser;
-	pj_time_val timeout;
-	pj_bool_t send_rtp, send_rtcp;
-
-	send_rtp = send_rtcp = PJ_FALSE;
-
-	/* Determine how long to sleep */
-	if (next_rtp.u64 < next_rtcp.u64) {
-	    lesser = next_rtp;
-	    send_rtp = PJ_TRUE;
-	} else {
-	    lesser = next_rtcp;
-	    send_rtcp = PJ_TRUE;
-	}
-
-	pj_get_timestamp(&now);
-	if (lesser.u64 <= now.u64) {
-	    timeout.sec = timeout.msec = 0;
-	    //printf("immediate "); fflush(stdout);
-	} else {
-	    pj_uint64_t tick_delay;
-	    tick_delay = lesser.u64 - now.u64;
-	    timeout.sec = 0;
-	    timeout.msec = (pj_uint32_t)(tick_delay * 1000 / freq.u64);
-	    pj_time_val_normalize(&timeout);
-
-	    //printf("%d:%03d ", timeout.sec, timeout.msec); fflush(stdout);
-	}
-
-	/* Wait for next interval */
-	//if (timeout.sec!=0 && timeout.msec!=0) {
-	    pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
-	    if (strm->thread_quit_flag)
-		break;
-	//}
-
-	pj_get_timestamp(&now);
-
-	if (send_rtp || next_rtp.u64 <= now.u64) {
-	    /*
-	     * Time to send RTP packet.
-	     */
-	    pj_status_t status;
-	    const pjmedia_rtp_hdr *hdr;
-	    pj_ssize_t size;
-	    int hdrlen;
-
-	    /* Format RTP header */
-	    status = pjmedia_rtp_encode_rtp( &strm->out_sess, strm->si.tx_pt,
-					     0, /* marker bit */
-					     strm->bytes_per_frame, 
-					     strm->samples_per_frame,
-					     (const void**)&hdr, &hdrlen);
-	    if (status == PJ_SUCCESS) {
-
-		//PJ_LOG(4,(THIS_FILE, "\t\tTx seq=%d", pj_ntohs(hdr->seq)));
-
-		/* Copy RTP header to packet */
-		pj_memcpy(packet, hdr, hdrlen);
-
-		/* Zero the payload */
-		pj_memset(packet+hdrlen, 0, strm->bytes_per_frame);
-
-		/* Send RTP packet */
-		size = hdrlen + strm->bytes_per_frame;
-		status = pjmedia_transport_send_rtp(strm->transport, 
-						    packet, size);
-		if (status != PJ_SUCCESS)
-		    app_perror(THIS_FILE, "Error sending RTP packet", status);
-
-	    } else {
-		pj_assert(!"RTP encode() error");
-	    }
-
-	    /* Update RTCP SR */
-	    pjmedia_rtcp_tx_rtp( &strm->rtcp, (pj_uint16_t)strm->bytes_per_frame);
-
-	    /* Schedule next send */
-	    next_rtp.u64 += (msec_interval * freq.u64 / 1000);
-	}
-
-
-	if (send_rtcp || next_rtcp.u64 <= now.u64) {
-	    /*
-	     * Time to send RTCP packet.
-	     */
-	    pjmedia_rtcp_pkt *rtcp_pkt;
-	    int rtcp_len;
-	    pj_ssize_t size;
-	    pj_status_t status;
-
-	    /* Build RTCP packet */
-	    pjmedia_rtcp_build_rtcp(&strm->rtcp, &rtcp_pkt, &rtcp_len);
-
-    
-	    /* Send packet */
-	    size = rtcp_len;
-	    status = pjmedia_transport_send_rtcp(strm->transport,
-						 rtcp_pkt, size);
-	    if (status != PJ_SUCCESS) {
-		app_perror(THIS_FILE, "Error sending RTCP packet", status);
-	    }
-	    
-	    /* Schedule next send */
-    	    next_rtcp.u64 += (freq.u64 * (RTCP_INTERVAL+(pj_rand()%RTCP_RAND)) /
-			      1000);
-	}
+    /* Send packet */
+    size = rtcp_len;
+    status = pjmedia_transport_send_rtcp(strm->transport,
+					 rtcp_pkt, size);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Error sending RTCP packet", status);
     }
+    
+    /* Schedule next send */
+    interval.sec = 5;
+    interval.msec = (pj_rand() % 500);
+    pjsip_endpt_schedule_timer(app.sip_endpt, &strm->rtcp_timer, &interval);
 
-    return 0;
 }
-
 
 /* Callback to be called when SDP negotiation is done in the call: */
 static void call_on_media_update( pjsip_inv_session *inv,
@@ -1254,6 +1221,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     struct media_stream *audio;
     const pjmedia_sdp_session *local_sdp, *remote_sdp;
     struct codec *codec_desc = NULL;
+    pj_time_val interval;
     unsigned i;
 
     call = inv->mod_data[mod_siprtp.id];
@@ -1261,7 +1229,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     audio = &call->media[0];
 
     /* If this is a mid-call media update, then destroy existing media */
-    if (audio->thread != NULL)
+    if (audio->active)
 	destroy_call_media(call->index);
 
 
@@ -1324,17 +1292,19 @@ static void call_on_media_update( pjsip_inv_session *inv,
 	return;
     }
 
-    /* Start media thread. */
-    audio->thread_quit_flag = 0;
-    status = pj_thread_create( inv->pool, "media", &media_thread, audio,
-			       0, 0, &audio->thread);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Error creating media thread", status);
-	return;
-    }
-
     /* Set the media as active */
     audio->active = PJ_TRUE;
+
+    /* Immediately schedule to send the first RTP packet. */
+    audio->rtp_timer.id = 1;
+    interval.sec = interval.msec = 0;
+    pjsip_endpt_schedule_timer(app.sip_endpt, &audio->rtp_timer, &interval);
+
+    /* And schedule the first RTCP packet */
+    audio->rtcp_timer.id = 1;
+    interval.sec = 4;
+    interval.msec = (pj_rand() % 1000);
+    pjsip_endpt_schedule_timer(app.sip_endpt, &audio->rtcp_timer, &interval);
 }
 
 
@@ -1344,15 +1314,19 @@ static void destroy_call_media(unsigned call_index)
 {
     struct media_stream *audio = &app.call[call_index].media[0];
 
-    if (audio->thread) {
+    if (audio->active) {
 
 	audio->active = PJ_FALSE;
 
-	audio->thread_quit_flag = 1;
-	pj_thread_join(audio->thread);
-	pj_thread_destroy(audio->thread);
-	audio->thread = NULL;
-	audio->thread_quit_flag = 0;
+	if (audio->rtp_timer.id) {
+	    audio->rtp_timer.id = 0;
+	    pjsip_endpt_cancel_timer(app.sip_endpt, &audio->rtp_timer);
+	}
+
+	if (audio->rtcp_timer.id) {
+	    audio->rtcp_timer.id = 0;
+	    pjsip_endpt_cancel_timer(app.sip_endpt, &audio->rtcp_timer);
+	}
 
 	pjmedia_transport_detach(audio->transport, audio);
     }
@@ -1694,8 +1668,8 @@ int main(int argc, char *argv[])
 
     
     /* Shutting down... */
-    destroy_sip();
     destroy_media();
+    destroy_sip();
 
     if (app.pool) {
 	pj_pool_release(app.pool);
