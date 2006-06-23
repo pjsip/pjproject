@@ -100,7 +100,6 @@ static pjsip_module my_module =
     { "Transport-Test", 14},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TSX_LAYER-1,	/* Priority		*/
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/
@@ -302,7 +301,6 @@ static pjsip_module rt_module =
     { "Transport-RT-Test", 17},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TSX_LAYER-1,	/* Priority		*/
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

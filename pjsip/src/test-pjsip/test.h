@@ -29,6 +29,7 @@ extern pjsip_endpoint *endpt;
 /* The tests */
 int uri_test(void);
 int msg_test(void);
+int msg_err_test(void);
 int txdata_test(void);
 int transport_udp_test(void);
 int transport_loop_test(void);

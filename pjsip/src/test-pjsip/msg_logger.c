@@ -63,7 +63,6 @@ static pjsip_module mod_msg_logger =
     { "mod-msg-logger", 14},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority		*/
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

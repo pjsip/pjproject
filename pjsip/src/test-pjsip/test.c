@@ -36,7 +36,7 @@
 
 
 pjsip_endpoint *endpt;
-int log_level = 5;
+int log_level = 3;
 
 void app_perror(const char *msg, pj_status_t rc)
 {
@@ -44,7 +44,7 @@ void app_perror(const char *msg, pj_status_t rc)
 
     PJ_CHECK_STACK();
 
-    pjsip_strerror(rc, errbuf, sizeof(errbuf));
+    pj_strerror(rc, errbuf, sizeof(errbuf));
     PJ_LOG(3,(THIS_FILE, "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 
 }
@@ -111,7 +111,7 @@ int test_main(void)
     msg_logger_set_enabled(1);
 
     /* Start transaction layer module. */
-    rc = pjsip_tsx_layer_init(endpt);
+    rc = pjsip_tsx_layer_init_module(endpt);
     if (rc != PJ_SUCCESS) {
 	app_perror("   Error initializing transaction module", rc);
 	goto on_return;
@@ -125,13 +125,14 @@ int test_main(void)
 	goto on_return;
     }
 
-    //DO_TEST(uri_test());
-    //DO_TEST(msg_test());
-    //DO_TEST(txdata_test());
-    //DO_TEST(transport_udp_test());
-    //DO_TEST(transport_loop_test());
-    //DO_TEST(tsx_basic_test());
-    //DO_TEST(tsx_uac_test());
+    DO_TEST(uri_test());
+    DO_TEST(msg_test());
+    DO_TEST(msg_err_test());
+    DO_TEST(txdata_test());
+    DO_TEST(transport_udp_test());
+    DO_TEST(transport_loop_test());
+    DO_TEST(tsx_basic_test());
+    DO_TEST(tsx_uac_test());
     DO_TEST(tsx_uas_test());
 
 on_return:
@@ -150,6 +151,6 @@ on_return:
     else
 	PJ_LOG(3,(THIS_FILE, "Test completed with error(s)"));
 
-    return 0;
+    return rc;
 }
 

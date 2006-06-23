@@ -141,7 +141,6 @@ static pjsip_module tsx_user =
     { "Tsx-UAS-User", 12},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/
@@ -160,7 +159,6 @@ static pjsip_module msg_sender =
     { "Msg-Sender", 10},		/* Name.		*/
     -1,					/* Id			*/
     PJSIP_MOD_PRIORITY_APPLICATION-1,	/* Priority		*/
-    NULL,				/* User data.		*/
     NULL,				/* load()		*/
     NULL,				/* start()		*/
     NULL,				/* stop()		*/

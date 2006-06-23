@@ -97,6 +97,10 @@ SOURCE="..\src\test-pjsip\main.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\msg_err_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\msg_logger.c"
 # End Source File
 # Begin Source File
