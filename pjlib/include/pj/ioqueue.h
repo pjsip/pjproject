@@ -447,7 +447,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
  */
 PJ_DECL(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
                                         pj_ioqueue_op_key_t *op_key,
-					pj_sock_t *sock,
+					pj_sock_t *new_sock,
 					pj_sockaddr_t *local,
 					pj_sockaddr_t *remote,
 					int *addrlen );
