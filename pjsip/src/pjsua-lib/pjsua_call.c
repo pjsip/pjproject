@@ -472,7 +472,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 
     /* Must answer with some response to initial INVITE.
-     * If auto-answer flag is set, send 200 straight away, otherwise send 100.
      */
     status = pjsip_inv_initial_answer(inv, rdata, 
 				      100, NULL, NULL, &response);
@@ -712,6 +711,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 	PJSUA_UNLOCK();
 	return PJSIP_ESESSIONTERMINATED;
     }
+
+    if (call->res_time.sec == 0)
+	pj_gettimeofday(&call->res_time);
 
     /* Create response message */
     status = pjsip_inv_answer(call->inv, code, reason, NULL, &tdata);
@@ -1587,6 +1589,8 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    break;
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    pj_gettimeofday(&call->dis_time);
+	    if (call->res_time.sec == 0)
+		pj_gettimeofday(&call->res_time);
 	    if (e->body.tsx_state.tsx->status_code > call->last_code) {
 		call->last_code = e->body.tsx_state.tsx->status_code;
 		pj_strncpy(&call->last_text, 
