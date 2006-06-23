@@ -102,7 +102,7 @@ int transport_udp_test(void)
     pjsip_transport_dec_ref(udp_tp);
 
     /* Force destroy this transport. */
-    status = pjsip_transport_unregister( pjsip_endpt_get_tpmgr(endpt), udp_tp);
+    status = pjsip_transport_destroy(udp_tp);
     if (status != PJ_SUCCESS)
 	return -90;
 

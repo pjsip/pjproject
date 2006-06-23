@@ -516,7 +516,7 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
     PJ_UNUSED_ARG(timer_heap);
 
     entry->id = PJ_FALSE;
-    pjsip_transport_unregister(tp->tpmgr, tp);
+    pjsip_transport_destroy(tp);
 }
 
 /*
@@ -554,7 +554,18 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 	pj_lock_acquire(tp->tpmgr->lock);
 	/* Verify again. */
 	if (pj_atomic_get(tp->ref_cnt) == 0) {
-	    pj_time_val delay = { PJSIP_TRANSPORT_IDLE_TIME, 0 };
+	    pj_time_val delay;
+	    
+	    /* If transport is in graceful shutdown, then this is the
+	     * last user who uses the transport. Schedule to destroy the
+	     * transport immediately. Otherwise schedule idle timer.
+	     */
+	    if (tp->is_shutdown) {
+		delay.sec = delay.msec = 0;
+	    } else {
+		delay.sec = PJSIP_TRANSPORT_IDLE_TIME;
+		delay.msec = 0;
+	    }
 
 	    pj_assert(tp->idle_timer.id == 0);
 	    tp->idle_timer.id = PJ_TRUE;
@@ -623,17 +634,53 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     return tp->destroy(tp);
 }
 
+
+/*
+ * Start graceful shutdown procedure for this transport. 
+ */
+PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
+{
+    pjsip_tpmgr *mgr;
+    pj_status_t status;
+
+    pj_lock_acquire(tp->lock);
+
+    mgr = tp->tpmgr;
+    pj_lock_acquire(mgr->lock);
+
+    /* Do nothing if transport is being shutdown already */
+    if (tp->is_shutdown) {
+	pj_lock_release(tp->lock);
+	pj_lock_release(mgr->lock);
+	return PJ_SUCCESS;
+    }
+
+    status = PJ_SUCCESS;
+
+    /* Instruct transport to shutdown itself */
+    if (tp->do_shutdown)
+	status = tp->do_shutdown(tp);
+    
+    if (status == PJ_SUCCESS)
+	tp->is_shutdown = PJ_TRUE;
+
+    pj_lock_release(tp->lock);
+    pj_lock_release(mgr->lock);
+
+    return status;
+}
+
+
 /**
  * Unregister transport.
  */
-PJ_DEF(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
-						pjsip_transport *tp)
+PJ_DEF(pj_status_t) pjsip_transport_destroy( pjsip_transport *tp)
 {
     /* Must have no user. */
     PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
 
     /* Destroy. */
-    return destroy_transport(mgr, tp);
+    return destroy_transport(tp->tpmgr, tp);
 }
 
 
@@ -1029,7 +1076,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	}
     }
     
-    if (transport != NULL) {
+    if (transport!=NULL && !transport->is_shutdown) {
 	/*
 	 * Transport found!
 	 */

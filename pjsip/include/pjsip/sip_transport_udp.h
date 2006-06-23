@@ -29,7 +29,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJSIP_TRANSPORT_UDP UDP transport
+ * @defgroup PJSIP_TRANSPORT_UDP UDP Transport
  * @ingroup PJSIP_TRANSPORT
  * @brief API to create and register UDP transport.
  * @{

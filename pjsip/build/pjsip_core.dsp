@@ -146,6 +146,11 @@ SOURCE=..\src\pjsip\sip_transport_loop.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_transport_tcp.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_transport_udp.c
 # End Source File
 # End Group
@@ -275,6 +280,10 @@ SOURCE=..\include\pjsip\sip_transport.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_transport_loop.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_transport_tcp.h
 # End Source File
 # Begin Source File
 

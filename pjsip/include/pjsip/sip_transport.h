@@ -492,7 +492,8 @@ struct pjsip_transport
     pj_pool_t		   *pool;	    /**< Pool used by transport.    */
     pj_atomic_t		   *ref_cnt;	    /**< Reference counter.	    */
     pj_lock_t		   *lock;	    /**< Lock object.		    */
-    int			    tracing;	    /**< Tracing enabled?	    */
+    pj_bool_t		    tracing;	    /**< Tracing enabled?	    */
+    pj_bool_t		    is_shutdown;    /**< Being shutdown?	    */
 
     /** Key for indexing this transport in hash table. */
     struct {
@@ -549,7 +550,28 @@ struct pjsip_transport
 					     pj_ssize_t sent_bytes));
 
     /**
-     * Destroy this transport.
+     * Instruct the transport to initiate graceful shutdown procedure.
+     * After all objects release their reference to this transport,
+     * the transport will be deleted.
+     *
+     * Note that application MUST use #pjsip_transport_shutdown() instead.
+     *
+     * @param transport	    The transport.
+     *
+     * @return		    PJ_SUCCESS on success.
+     */
+    pj_status_t (*do_shutdown)(pjsip_transport *transport);
+
+    /**
+     * Forcefully destroy this transport regardless whether there are
+     * objects that currently use this transport. This function should only
+     * be called by transport manager or other internal objects (such as the
+     * transport itself) who know what they're doing. Application should use
+     * #pjsip_transport_shutdown() instead.
+     *
+     * @param transport	    The transport.
+     *
+     * @return		    PJ_SUCCESS on success.
      */
     pj_status_t (*destroy)(pjsip_transport *transport);
 
@@ -560,32 +582,93 @@ struct pjsip_transport
 
 
 /**
- * Register a transport.
+ * Register a transport instance to the transport manager. This function
+ * is normally called by the transport instance when it is created
+ * by application.
+ *
+ * @param mgr		The transport manager.
+ * @param tp		The new transport to be registered.
+ *
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 					       pjsip_transport *tp );
 
 
 /**
- * Unregister transport. This will eventually call the transport to
- * destroy itself.
+ * Start graceful shutdown procedure for this transport. After graceful
+ * shutdown has been initiated, no new reference can be obtained for
+ * the transport. However, existing objects that currently uses the
+ * transport may still use this transport to send and receive packets.
+ *
+ * After all objects release their reference to this transport,
+ * the transport will be destroyed immediately.
+ *
+ * @param tp		    The transport.
+ *
+ * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_transport_unregister( pjsip_tpmgr *mgr,
-						 pjsip_transport *tp);
+PJ_DECL(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp);
 
 /**
- * Add ref.
+ * Destroy a transport when there is no object currently uses the transport.
+ * This function is normally called internally by transport manager or the
+ * transport itself. Application should use #pjsip_transport_shutdown()
+ * instead.
+ *
+ * @param tp		The transport instance.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ *			Some of possible errors are PJSIP_EBUSY if the 
+ *			transport's reference counter is not zero.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_destroy( pjsip_transport *tp);
+
+/**
+ * Add reference counter to the specified transport. Any objects that wishes
+ * to keep the reference of the transport MUST increment the transport's
+ * reference counter to prevent it from being destroyed.
+ *
+ * @param tp		The transport instance.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp );
 
 /**
- * Dec ref.
+ * Decrement reference counter of the specified transport. When an object no
+ * longer want to keep the reference to the transport, it must decrement the
+ * reference counter. When the reference counter of the transport reaches 
+ * zero, the transport manager will start the idle timer to destroy the
+ * transport if no objects acquire the reference counter during the idle
+ * interval.
+ *
+ * @param tp		The transport instance.
+ *
+ * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp );
 
 
 /**
- * Call for incoming message.
+ * This function is called by transport instances to report an incoming 
+ * packet to the transport manager. The transport manager then would try to
+ * parse all SIP messages in the packet, and for each parsed SIP message, it
+ * would report the message to the SIP endpoint (#pjsip_endpoint).
+ *
+ * @param mgr		The transport manager instance.
+ * @param rdata		The receive data buffer containing the packet. The
+ *			transport MUST fully initialize tp_info and pkt_info
+ *			member of the rdata.
+ *
+ * @return		The number of bytes successfully processed from the
+ *			packet. If the transport is datagram oriented, the
+ *			value will be equal to the size of the packet. For
+ *			stream oriented transport (e.g. TCP, TLS), the value
+ *			returned may be less than the packet size, if 
+ *			partial message is received. The transport then MUST
+ *			keep the remainder part and report it again to
+ *			this function once more data/packet is received.
  */
 PJ_DECL(pj_ssize_t) pjsip_tpmgr_receive_packet(pjsip_tpmgr *mgr,
 					       pjsip_rx_data *rdata);
@@ -597,14 +680,20 @@ PJ_DECL(pj_ssize_t) pjsip_tpmgr_receive_packet(pjsip_tpmgr *mgr,
  *
  *****************************************************************************/
 
-
-/**
- * Transport factory.
+/*
+ * Forward declaration for transport factory (since it is referenced by
+ * the transport factory itself).
  */
 typedef struct pjsip_tpfactory pjsip_tpfactory;
 
+
 /**
- * Transport factory.
+ * A transport factory is normally used for connection oriented transports
+ * (such as TCP or TLS) to create instances of transports. It registers
+ * a new transport type to the transport manager, and the transport manager
+ * would ask the factory to create a transport instance when it received
+ * command from application to send a SIP message using the specified
+ * transport type.
  */
 struct pjsip_tpfactory
 {

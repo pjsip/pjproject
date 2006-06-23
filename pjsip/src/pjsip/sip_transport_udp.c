@@ -377,6 +377,17 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
 
 
 /*
+ * udp_shutdown()
+ *
+ * Start graceful UDP shutdown.
+ */
+static pj_status_t udp_shutdown(pjsip_transport *transport)
+{
+    return pjsip_transport_dec_ref(transport);
+}
+
+
+/*
  * pjsip_udp_transport_attach()
  *
  * Attach UDP socket and start transport.
@@ -505,6 +516,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 
     /* Set functions. */
     tp->base.send_msg = &udp_send_msg;
+    tp->base.do_shutdown = &udp_shutdown;
     tp->base.destroy = &udp_destroy;
 
     /* This is a permanent transport, so we initialize the ref count
@@ -530,7 +542,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 							PJSIP_POOL_RDATA_INC);
 	if (!rdata_pool) {
 	    pj_atomic_set(tp->base.ref_cnt, 0);
-	    pjsip_transport_unregister(tp->base.tpmgr, &tp->base);
+	    pjsip_transport_destroy(&tp->base);
 	    return PJ_ENOMEM;
 	}
 
@@ -556,7 +568,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 				 size);
 	} else if (status != PJ_EPENDING) {
 	    /* Error! */
-	    pjsip_transport_unregister(tp->base.tpmgr, &tp->base);
+	    pjsip_transport_destroy(&tp->base);
 	    return status;
 	}
     }
