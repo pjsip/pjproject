@@ -39,56 +39,73 @@ static const struct {
     pj_os_err_type code;
     const char *msg;
 } gaErrorList[] = {
-    {WSAEINTR,           "Interrupted system call"},
-    {WSAEBADF,           "Bad file number"},
-    {WSAEACCES,          "Permission denied"},
-    {WSAEFAULT,          "Bad address"},
-    {WSAEINVAL,          "Invalid argument"},
-    {WSAEMFILE,          "Too many open sockets"},
-    {WSAEWOULDBLOCK,     "Operation would block"},
-    {WSAEINPROGRESS,     "Operation now in progress"},
-    {WSAEALREADY,        "Operation already in progress"},
-    {WSAENOTSOCK,        "Socket operation on non-socket"},
-    {WSAEDESTADDRREQ,    "Destination address required"},
-    {WSAEMSGSIZE,        "Message too long"},
-    {WSAEPROTOTYPE,      "Protocol wrong type for socket"},
-    {WSAENOPROTOOPT,     "Bad protocol option"},
-    {WSAEPROTONOSUPPORT, "Protocol not supported"},
-    {WSAESOCKTNOSUPPORT, "Socket type not supported"},
-    {WSAEOPNOTSUPP,      "Operation not supported on socket"},
-    {WSAEPFNOSUPPORT,    "Protocol family not supported"},
-    {WSAEAFNOSUPPORT,    "Address family not supported"},
-    {WSAEADDRINUSE,      "Address already in use"},
-    {WSAEADDRNOTAVAIL,   "Can't assign requested address"},
-    {WSAENETDOWN,        "Network is down"},
-    {WSAENETUNREACH,     "Network is unreachable"},
-    {WSAENETRESET,       "Net connection reset"},
-    {WSAECONNABORTED,    "Software caused connection abort"},
-    {WSAECONNRESET,      "Connection reset by peer"},
-    {WSAENOBUFS,         "No buffer space available"},
-    {WSAEISCONN,         "Socket is already connected"},
-    {WSAENOTCONN,        "Socket is not connected"},
-    {WSAESHUTDOWN,       "Can't send after socket shutdown"},
-    {WSAETOOMANYREFS,    "Too many references, can't splice"},
-    {WSAETIMEDOUT,       "Connection timed out"},
-    {WSAECONNREFUSED,    "Connection refused"},
-    {WSAELOOP,           "Too many levels of symbolic links"},
-    {WSAENAMETOOLONG,    "File name too long"},
-    {WSAEHOSTDOWN,       "Host is down"},
-    {WSAEHOSTUNREACH,    "No route to host"},
-    {WSAENOTEMPTY,       "Directory not empty"},
-    {WSAEPROCLIM,        "Too many processes"},
-    {WSAEUSERS,          "Too many users"},
-    {WSAEDQUOT,          "Disc quota exceeded"},
-    {WSAESTALE,          "Stale NFS file handle"},
-    {WSAEREMOTE,         "Too many levels of remote in path"},
-    {WSASYSNOTREADY,     "Network system is unavailable"},
-    {WSAVERNOTSUPPORTED, "Winsock version out of range"},
-    {WSANOTINITIALISED,  "WSAStartup not yet called"},
-    {WSAEDISCON,         "Graceful shutdown in progress"},
-    {WSAHOST_NOT_FOUND,  "Host not found"},
-    {WSANO_DATA,         "No host data of that type was found"},
-    {0,                  NULL}
+    PJ_BUILD_ERR( WSAEINTR,           "Interrupted system call"),
+    PJ_BUILD_ERR( WSAEBADF,           "Bad file number"),
+    PJ_BUILD_ERR( WSAEACCES,          "Permission denied"),
+    PJ_BUILD_ERR( WSAEFAULT,          "Bad address"),
+    PJ_BUILD_ERR( WSAEINVAL,          "Invalid argument"),
+    PJ_BUILD_ERR( WSAEMFILE,          "Too many open sockets"),
+    PJ_BUILD_ERR( WSAEWOULDBLOCK,     "Operation would block"),
+    PJ_BUILD_ERR( WSAEINPROGRESS,     "Operation now in progress"),
+    PJ_BUILD_ERR( WSAEALREADY,        "Operation already in progress"),
+    PJ_BUILD_ERR( WSAENOTSOCK,        "Socket operation on non-socket"),
+    PJ_BUILD_ERR( WSAEDESTADDRREQ,    "Destination address required"),
+    PJ_BUILD_ERR( WSAEMSGSIZE,        "Message too long"),
+    PJ_BUILD_ERR( WSAEPROTOTYPE,      "Protocol wrong type for socket"),
+    PJ_BUILD_ERR( WSAENOPROTOOPT,     "Bad protocol option"),
+    PJ_BUILD_ERR( WSAEPROTONOSUPPORT, "Protocol not supported"),
+    PJ_BUILD_ERR( WSAESOCKTNOSUPPORT, "Socket type not supported"),
+    PJ_BUILD_ERR( WSAEOPNOTSUPP,      "Operation not supported on socket"),
+    PJ_BUILD_ERR( WSAEPFNOSUPPORT,    "Protocol family not supported"),
+    PJ_BUILD_ERR( WSAEAFNOSUPPORT,    "Address family not supported"),
+    PJ_BUILD_ERR( WSAEADDRINUSE,      "Address already in use"),
+    PJ_BUILD_ERR( WSAEADDRNOTAVAIL,   "Can't assign requested address"),
+    PJ_BUILD_ERR( WSAENETDOWN,        "Network is down"),
+    PJ_BUILD_ERR( WSAENETUNREACH,     "Network is unreachable"),
+    PJ_BUILD_ERR( WSAENETRESET,       "Net connection reset"),
+    PJ_BUILD_ERR( WSAECONNABORTED,    "Software caused connection abort"),
+    PJ_BUILD_ERR( WSAECONNRESET,      "Connection reset by peer"),
+    PJ_BUILD_ERR( WSAENOBUFS,         "No buffer space available"),
+    PJ_BUILD_ERR( WSAEISCONN,         "Socket is already connected"),
+    PJ_BUILD_ERR( WSAENOTCONN,        "Socket is not connected"),
+    PJ_BUILD_ERR( WSAESHUTDOWN,       "Can't send after socket shutdown"),
+    PJ_BUILD_ERR( WSAETOOMANYREFS,    "Too many references, can't splice"),
+    PJ_BUILD_ERR( WSAETIMEDOUT,       "Connection timed out"),
+    PJ_BUILD_ERR( WSAECONNREFUSED,    "Connection refused"),
+    PJ_BUILD_ERR( WSAELOOP,           "Too many levels of symbolic links"),
+    PJ_BUILD_ERR( WSAENAMETOOLONG,    "File name too long"),
+    PJ_BUILD_ERR( WSAEHOSTDOWN,       "Host is down"),
+    PJ_BUILD_ERR( WSAEHOSTUNREACH,    "No route to host"),
+    PJ_BUILD_ERR( WSAENOTEMPTY,       "Directory not empty"),
+    PJ_BUILD_ERR( WSAEPROCLIM,        "Too many processes"),
+    PJ_BUILD_ERR( WSAEUSERS,          "Too many users"),
+    PJ_BUILD_ERR( WSAEDQUOT,          "Disc quota exceeded"),
+    PJ_BUILD_ERR( WSAESTALE,          "Stale NFS file handle"),
+    PJ_BUILD_ERR( WSAEREMOTE,         "Too many levels of remote in path"),
+    PJ_BUILD_ERR( WSASYSNOTREADY,     "Network system is unavailable"),
+    PJ_BUILD_ERR( WSAVERNOTSUPPORTED, "Winsock version out of range"),
+    PJ_BUILD_ERR( WSANOTINITIALISED,  "WSAStartup not yet called"),
+    PJ_BUILD_ERR( WSAEDISCON,         "Graceful shutdown in progress"),
+/*
+#define WSAENOMORE              (WSABASEERR+102)
+#define WSAECANCELLED           (WSABASEERR+103)
+#define WSAEINVALIDPROCTABLE    (WSABASEERR+104)
+#define WSAEINVALIDPROVIDER     (WSABASEERR+105)
+#define WSAEPROVIDERFAILEDINIT  (WSABASEERR+106)
+#define WSASYSCALLFAILURE       (WSABASEERR+107)
+#define WSASERVICE_NOT_FOUND    (WSABASEERR+108)
+#define WSATYPE_NOT_FOUND       (WSABASEERR+109)
+#define WSA_E_NO_MORE           (WSABASEERR+110)
+#define WSA_E_CANCELLED         (WSABASEERR+111)
+#define WSAEREFUSED             (WSABASEERR+112)
+ */
+    PJ_BUILD_ERR( WSAHOST_NOT_FOUND,  "Host not found"),
+/*
+#define WSATRY_AGAIN            (WSABASEERR+1002)
+#define WSANO_RECOVERY          (WSABASEERR+1003)
+ */
+    PJ_BUILD_ERR( WSANO_DATA,         "No host data of that type was found"),
+    {0, NULL}
 };
 
 #endif	/* PJ_HAS_ERROR_STRING */
@@ -185,7 +202,7 @@ int platform_strerror( pj_os_err_type os_errcode,
     }
 
     if (!len) {
-	len = pj_ansi_snprintf( buf, bufsize, "Unknown native error %u", 
+	len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u", 
 				(unsigned)os_errcode);
 	buf[len] = '\0';
     }
