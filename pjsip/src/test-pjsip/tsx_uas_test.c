@@ -444,11 +444,16 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	/*
 	 * TEST4_BRANCH_ID tests receiving retransmissions in TRYING state.
 	 */
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    /* Request is received. */
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
 	    /* Check that status code is status_code. */
 	    if (tsx->status_code != TEST4_STATUS_CODE) {
-		PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
+		PJ_LOG(3,(THIS_FILE, 
+			  "    error: incorrect status code %d "
+			  "(expecting %d)", tsx->status_code,
+			  TEST4_STATUS_CODE));
 		test_complete = -120;
 	    }
 	    
@@ -460,7 +465,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	} else if (tsx->state != PJSIP_TSX_STATE_DESTROYED) 
 	{
-	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (122)",
+		      pjsip_tsx_state_str(tsx->state)));
 	    test_complete = -122;
 
 	}
@@ -471,7 +477,10 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	/*
 	 * TEST5_BRANCH_ID tests receiving retransmissions in PROCEEDING state
 	 */
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    /* Request is received. */
+
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
 	    /* Check that status code is status_code. */
 	    if (tsx->status_code != TEST5_STATUS_CODE) {
@@ -494,7 +503,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	    }
 
 	} else if (tsx->state != PJSIP_TSX_STATE_DESTROYED) {
-	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (133)",
+		      pjsip_tsx_state_str(tsx->state)));
 	    test_complete = -133;
 
 	}
@@ -504,7 +514,10 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	/*
 	 * TEST6_BRANCH_ID tests receiving retransmissions in COMPLETED state
 	 */
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    /* Request is received. */
+
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
 	    /* Check that status code is status_code. */
 	    if (tsx->status_code != TEST6_STATUS_CODE) {
@@ -522,7 +535,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		   tsx->state != PJSIP_TSX_STATE_COMPLETED &&
 		   tsx->state != PJSIP_TSX_STATE_DESTROYED) 
 	{
-	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (142)",
+		      pjsip_tsx_state_str(tsx->state)));
 	    test_complete = -142;
 
 	}
@@ -543,7 +557,10 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	else
 	    code = TEST8_STATUS_CODE;
 
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    /* Request is received. */
+
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
 	    if (test_complete == 0)
 		test_complete = 1;
@@ -576,7 +593,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	} else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)  {
 
-	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state (154)"));
 	    test_complete = -154;
 
 	}
@@ -589,7 +606,10 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	 * must cease when ACK is received.
 	 */
 
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+	if (tsx->state == PJSIP_TSX_STATE_TRYING) {
+	    /* Request is received. */
+
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
 	    if (test_complete == 0)
 		test_complete = 1;
@@ -637,7 +657,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	} else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)  {
 
-	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state"));
+	    PJ_LOG(3,(THIS_FILE, "    error: unexpected state (166)"));
 	    test_complete = -166;
 
 	}
@@ -745,7 +765,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	    status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
 	    if (status != PJ_SUCCESS) {
 		app_perror("    error: unable to create transaction", status);
-		test_complete = -120;
+		test_complete = -116;
 		return PJ_TRUE;
 	    }
 	    pjsip_tsx_recv_msg(tsx, rdata);
@@ -1271,7 +1291,7 @@ static int tsx_basic_provisional_response_test(void)
 {
     int status;
 
-    PJ_LOG(3,(THIS_FILE,"  test1: basic sending 2xx final response"));
+    PJ_LOG(3,(THIS_FILE,"  test3: basic sending 2xx final response"));
 
     status = perform_test("sip:129.0.0.1;transport=loop-dgram",
 		          "sip:129.0.0.1;transport=loop-dgram",

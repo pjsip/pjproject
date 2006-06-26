@@ -946,11 +946,11 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
     status = pjsip_tsx_send_msg(tsx, NULL);
     // Ignore send result. Some tests do deliberately triggers error
     // when sending message.
-    //if (status != PJ_SUCCESS) {
-    //	app_perror("   Error: unable to send request", status);
-    //  pjsip_tx_data_dec_ref(tdata);
-    //	return -120;
-    //}
+    if (status != PJ_SUCCESS) {
+	// app_perror("   Error: unable to send request", status);
+        pjsip_tx_data_dec_ref(tdata);
+	// return -120;
+    }
 
 
     /* Set test completion time. */

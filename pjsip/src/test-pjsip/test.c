@@ -125,15 +125,33 @@ int test_main(void)
 	goto on_return;
     }
 
+#if INCLUDE_URI_TEST
     DO_TEST(uri_test());
+#endif
+
+#if INCLUDE_MSG_TEST
     DO_TEST(msg_test());
     DO_TEST(msg_err_test());
+#endif
+
+#if INCLUDE_TXDATA_TEST
     DO_TEST(txdata_test());
+#endif
+
+#if INCLUDE_UDP_TEST
     DO_TEST(transport_udp_test());
+#endif
+
+#if INCLUDE_LOOP_TEST
     DO_TEST(transport_loop_test());
+#endif
+
+#if INCLUDE_TSX_TEST
     DO_TEST(tsx_basic_test());
     DO_TEST(tsx_uac_test());
     DO_TEST(tsx_uas_test());
+#endif
+
 
 on_return:
 
