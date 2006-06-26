@@ -147,7 +147,6 @@ SOURCE=..\src\pjsip\sip_transport_loop.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transport_tcp.c
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
