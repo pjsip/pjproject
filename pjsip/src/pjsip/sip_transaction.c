@@ -2372,7 +2372,13 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    if (ack_tdata != tsx->last_tx) {
 		pjsip_tx_data_dec_ref(tsx->last_tx);
 		tsx->last_tx = ack_tdata;
+
+		/* This is a bug.
+		   tsx_send_msg() does NOT decrement tdata's reference counter,
+		   so if we add the reference counter here, tdata will have
+		   reference counter 2, causing it to leak.
 		pjsip_tx_data_add_ref(ack_tdata);
+		*/
 	    }
 
 	    if (status != PJ_SUCCESS) {
