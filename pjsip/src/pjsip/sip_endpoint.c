@@ -553,14 +553,18 @@ PJ_DEF(pj_pool_t*) pjsip_endpt_create_pool( pjsip_endpoint *endpt,
     pj_pool_t *pool;
 
     /* Lock endpoint mutex. */
+    /* No need to lock mutex. Factory is thread safe.
     pj_mutex_lock(endpt->mutex);
+     */
 
     /* Create pool */
     pool = pj_pool_create( endpt->pf, pool_name,
 			   initial, increment, &pool_callback);
 
     /* Unlock mutex. */
+    /* No need to lock mutex. Factory is thread safe.
     pj_mutex_unlock(endpt->mutex);
+     */
 
     if (!pool) {
 	PJ_LOG(4, (THIS_FILE, "Unable to create pool %s!", pool_name));
