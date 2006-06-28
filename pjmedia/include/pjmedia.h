@@ -33,6 +33,7 @@
 #include <pjmedia/g711.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/master_port.h>
+#include <pjmedia/mem_port.h>
 #include <pjmedia/null_port.h>
 #include <pjmedia/plc.h>
 #include <pjmedia/port.h>
@@ -41,12 +42,13 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
-#include <pjmedia/silencedet.h>
 #include <pjmedia/session.h>
-#include <pjmedia/transport.h>
-#include <pjmedia/transport_udp.h>
+#include <pjmedia/silencedet.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>
+#include <pjmedia/splitcomb.h>
+#include <pjmedia/transport.h>
+#include <pjmedia/transport_udp.h>
 #include <pjmedia/wav_port.h>
 #include <pjmedia/wave.h>
 

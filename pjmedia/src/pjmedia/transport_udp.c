@@ -51,10 +51,10 @@ struct transport_udp
     pj_bool_t		attached;	/**< Has attachment?		    */
     pj_sockaddr_in	rem_rtp_addr;	/**< Remote RTP address		    */
     pj_sockaddr_in	rem_rtcp_addr;	/**< Remote RTCP address	    */
-    void  (*rtp_cb)(	pjmedia_stream*,/**< To report incoming RTP.	    */
+    void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
 			const void*,
 			pj_ssize_t);
-    void  (*rtcp_cb)(	pjmedia_stream*,/**< To report incoming RTCP.	    */
+    void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
 			const void*,
 			pj_ssize_t);
 
@@ -321,7 +321,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp)
     /* Sanity check */
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    /* Must not close while stream is using this */
+    /* Must not close while application is using this */
     PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
     
 
@@ -448,7 +448,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 }
 
 
-/* Called by stream to initialize the transport */
+/* Called by application to initialize the transport */
 static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
@@ -465,10 +465,10 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
-    /* Must not be "attached" to existing stream */
+    /* Must not be "attached" to existing application */
     PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
 
-    /* "Attach" the stream: */
+    /* "Attach" the application: */
 
     /* Copy remote RTP address */
     pj_memcpy(&udp->rem_rtp_addr, rem_addr, sizeof(pj_sockaddr_in));
@@ -490,7 +490,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 }
 
 
-/* Called by stream when it no longer needs the transport */
+/* Called by application when it no longer needs the transport */
 static void transport_detach( pjmedia_transport *tp,
 			      void *user_data)
 {
@@ -504,17 +504,17 @@ static void transport_detach( pjmedia_transport *tp,
     /* As additional checking, check if the same user data is specified */
     pj_assert(user_data == udp->user_data);
 
-    /* First, mark stream as unattached */
+    /* First, mark transport as unattached */
     udp->attached = PJ_FALSE;
 
-    /* Clear up stream infos from transport */
+    /* Clear up application infos from transport */
     udp->rtp_cb = NULL;
     udp->rtcp_cb = NULL;
     udp->user_data = NULL;
 }
 
 
-/* Called by stream to send RTP packet */
+/* Called by application to send RTP packet */
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size)
@@ -556,7 +556,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     return status;
 }
 
-/* Called by stream to send RTCP packet */
+/* Called by application to send RTCP packet */
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size)
