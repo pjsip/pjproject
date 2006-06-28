@@ -104,8 +104,16 @@ typedef struct pjsua_acc
  */
 typedef struct transport_data
 {
-    int			 index;
-    pjsip_transport	*tp;
+    int			     index;
+    pjsip_transport_type_e   type;
+    pjsip_host_port	     local_name;
+
+    union {
+	pjsip_transport	    *tp;
+	pjsip_tpfactory	    *factory;
+	void		    *ptr;
+    } data;
+
 } transport_data;
 
 

@@ -39,6 +39,7 @@
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_transport_udp.h>
 #include <pjsip/sip_transport_loop.h>
+#include <pjsip/sip_transport_tcp.h>
 #include <pjsip/sip_resolve.h>
 
 /* Authentication. */

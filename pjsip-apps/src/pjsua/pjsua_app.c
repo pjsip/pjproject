@@ -29,6 +29,8 @@ static struct app_config
     pjsua_config	    cfg;
     pjsua_logging_config    log_cfg;
     pjsua_media_config	    media_cfg;
+    pj_bool_t		    no_tcp;
+    pj_bool_t		    no_udp;
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
 
@@ -95,7 +97,11 @@ static void usage(void)
     puts  ("  --next-account      Add more account");
     puts  ("");
     puts  ("Transport Options:");
-    puts  ("  --local-port=port   Set TCP/UDP port");
+    puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
+    puts  ("                      TCP and UDP transports on the specified port, unless");
+    puts  ("                      if TCP or UDP is disabled.");
+    puts  ("  --no-tcp            Disable TCP transport.");
+    puts  ("  --no-udp            Disable UDP transport.");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
     puts  ("                      May be specified multiple times");
     puts  ("  --use-stun1=host[:port]");
@@ -239,7 +245,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
-	   OPT_DURATION,
+	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -251,6 +257,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
+	{ "no-tcp",     0, 0, OPT_NO_TCP},
+	{ "no-udp",     0, 0, OPT_NO_UDP},
 	{ "proxy",	1, 0, OPT_PROXY},
 	{ "outbound",	1, 0, OPT_OUTBOUND_PROXY},
 	{ "registrar",	1, 0, OPT_REGISTRAR},
@@ -382,6 +390,24 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return PJ_EINVAL;
 	    }
 	    cfg->udp_cfg.port = (pj_uint16_t)lval;
+	    break;
+
+	case OPT_NO_UDP: /* no-udp */
+	    if (cfg->no_tcp) {
+	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
+	      return PJ_EINVAL;
+	    }
+
+	    cfg->no_udp = PJ_TRUE;
+	    break;
+
+	case OPT_NO_TCP: /* no-tcp */
+	    if (cfg->no_udp) {
+	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
+	      return PJ_EINVAL;
+	    }
+
+	    cfg->no_tcp = PJ_TRUE;
 	    break;
 
 	case OPT_PROXY:   /* proxy */
@@ -2046,7 +2072,7 @@ on_exit:
 
 pj_status_t app_init(int argc, char *argv[])
 {
-    pjsua_transport_id transport_id;
+    pjsua_transport_id transport_id = -1;
     unsigned i;
     pj_status_t status;
 
@@ -2096,16 +2122,40 @@ pj_status_t app_init(int argc, char *argv[])
 	app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
     }
 
-    /* Add UDP transport */
-    status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
-				    &app_config.udp_cfg, 
-				    &transport_id);
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
-    /* Add local account */
-    pjsua_acc_add_local(transport_id, PJ_TRUE, &current_acc);
-    pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+    /* Add TCP transport unless it's disabled */
+    if (!app_config.no_tcp) {
+	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
+					&app_config.udp_cfg, 
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &current_acc);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+
+    }
+
+
+    /* Add UDP transport unless it's disabled. */
+    if (!app_config.no_udp) {
+	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
+					&app_config.udp_cfg, 
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &current_acc);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+    }
+
+    if (transport_id == -1) {
+	PJ_LOG(3,(THIS_FILE, "Error: no transport is configured"));
+	status = -1;
+	goto on_error;
+    }
 
 
     /* Add accounts */

@@ -29,11 +29,12 @@
  */
 int transport_udp_test(void)
 {
-    enum { SEND_RECV_LOOP = 2 };
+    enum { SEND_RECV_LOOP = 8 };
     pjsip_transport *udp_tp, *tp;
     pj_sockaddr_in addr, rem_addr;
     pj_str_t s;
     pj_status_t status;
+    unsigned rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
 
     pj_sockaddr_in_init(&addr, NULL, TEST_UDP_PORT);
@@ -79,10 +80,21 @@ int transport_udp_test(void)
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
 	status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp, 
-					  "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR);
+					  "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
+					  &rtt[i]);
 	if (status != 0)
 	    return status;
     }
+
+    min_rtt = 0xFFFFFFF;
+    for (i=0; i<SEND_RECV_LOOP; ++i)
+	if (rtt[i] < min_rtt) min_rtt = rtt[i];
+
+    report_ival("udp-rtt-usec", min_rtt, "usec",
+		"Best UDP transport round trip time, in microseconds "
+		"(time from sending request until response is received. "
+		"Tests were performed on local machine only)");
+
 
     /* Multi-threaded round-trip test. */
     status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp, 

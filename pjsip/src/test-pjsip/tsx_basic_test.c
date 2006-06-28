@@ -23,6 +23,10 @@
 
 #define THIS_FILE   "tsx_basic_test.c"
 
+static char TARGET_URI[128];
+static char FROM_URI[128];
+
+
 /* Test transaction layer. */
 static int tsx_layer_test(void)
 {
@@ -33,8 +37,8 @@ static int tsx_layer_test(void)
 
     PJ_LOG(3,(THIS_FILE, "  transaction layer test"));
 
-    target = pj_str("sip:alice@localhost");
-    from = pj_str("sip:bob@localhost");
+    target = pj_str(TARGET_URI);
+    from = pj_str(FROM_URI);
 
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
 					&from, &target, NULL, NULL, -1, NULL,
@@ -77,8 +81,8 @@ static int double_terminate(void)
 
     PJ_LOG(3,(THIS_FILE, "  double terminate test"));
 
-    target = pj_str("sip:alice@localhost;transport=loop-dgram");
-    from = pj_str("sip:bob@localhost");
+    target = pj_str(TARGET_URI);
+    from = pj_str(FROM_URI);
 
     /* Create request. */
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
@@ -131,9 +135,14 @@ static int double_terminate(void)
     return PJ_SUCCESS;
 }
 
-int tsx_basic_test(void)
+int tsx_basic_test(struct tsx_test_param *param)
 {
     int status;
+
+    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
+		    param->port, param->tp_type);
+    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s", 
+		    param->port, param->tp_type);
 
     status = tsx_layer_test();
     if (status != 0)

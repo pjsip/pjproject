@@ -27,13 +27,15 @@ static pj_bool_t msg_log_enabled;
 static pj_bool_t on_rx_msg(pjsip_rx_data *rdata)
 {
     if (msg_log_enabled) {
-	PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
-			     "%s\n"
+	PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%s:%d:\n"
+			     "%.*s\n"
 			     "--end msg--",
 			     rdata->msg_info.len,
 			     pjsip_rx_data_get_info(rdata),
+			     rdata->tp_info.transport->type_name,
 			     rdata->pkt_info.src_name,
 			     rdata->pkt_info.src_port,
+			     rdata->msg_info.len,
 			     rdata->msg_info.msg_buf));
     }
 
@@ -43,13 +45,15 @@ static pj_bool_t on_rx_msg(pjsip_rx_data *rdata)
 static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
 {
     if (msg_log_enabled) {
-	PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
-			     "%s\n"
+	PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%s:%d:\n"
+			     "%.*s\n"
 			     "--end msg--",
 			     (tdata->buf.cur - tdata->buf.start),
 			     pjsip_tx_data_get_info(tdata),
+			     tdata->tp_info.transport->type_name,
 			     tdata->tp_info.dst_name,
 			     tdata->tp_info.dst_port,
+			     (tdata->buf.cur - tdata->buf.start),
 			     tdata->buf.start));
     }
     return PJ_SUCCESS;

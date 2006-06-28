@@ -91,6 +91,10 @@ static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test9";
 #define      TEST4_RETRANSMIT_CNT   3
 #define	     TEST5_RETRANSMIT_CNT   3
 
+static char TARGET_URI[128];
+static char FROM_URI[128];
+static unsigned tp_flag;
+static struct tsx_test_param *test_param;
 
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata);
@@ -140,7 +144,12 @@ static pj_bool_t test_complete;
 static pjsip_transport *loop;
 
 /* General timer entry to be used by tests. */
-static pj_timer_entry timer;
+static struct my_timer
+{
+    pj_timer_entry  entry;
+    char	    key_buf[1024];
+    pj_str_t	    tsx_key;
+} timer;
 
 /*
  * This is the handler to receive state changed notification from the
@@ -165,6 +174,41 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 			  "    error: status code is %d instead of %d",
 			  tsx->status_code, PJSIP_SC_TSX_TIMEOUT));
 		test_complete = -710;
+	    }
+
+
+	    /* If transport is reliable, then there must not be any
+	     * retransmissions.
+	     */
+	    if (tp_flag & PJSIP_TRANSPORT_RELIABLE) {
+		if (recv_count != 1) {
+		    PJ_LOG(3,(THIS_FILE, 
+			   "    error: there were %d (re)transmissions",
+			   recv_count));
+		    test_complete = -715;
+		}
+	    } else {
+		/* Check the number of transmissions, which must be
+		 * 6 for INVITE and 10 for non-INVITE 
+		 */
+		if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count != 7) {
+		    PJ_LOG(3,(THIS_FILE, 
+			   "    error: there were %d (re)transmissions",
+			   recv_count));
+		    test_complete = -716;
+		} else
+		if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count != 11) {
+		    PJ_LOG(3,(THIS_FILE, 
+			   "    error: there were %d (re)transmissions",
+			   recv_count));
+		    test_complete = -717;
+		} else
+		if (tsx->method.id!=PJSIP_INVITE_METHOD && 
+		    tsx->method.id!=PJSIP_OPTIONS_METHOD)
+		{
+		    PJ_LOG(3,(THIS_FILE, "    error: unexpected method"));
+		    test_complete = -718;
+		}
 	    }
 	}
 
@@ -515,7 +559,8 @@ static void send_response_callback( pj_timer_heap_t *timer_heap,
 static void terminate_tsx_callback( pj_timer_heap_t *timer_heap,
 				    struct pj_timer_entry *entry)
 {
-    pjsip_transaction *tsx = entry->user_data;
+    struct my_timer *m = (struct my_timer *)entry;
+    pjsip_transaction *tsx = pjsip_tsx_layer_find_tsx(&m->tsx_key, PJ_FALSE);
     int status_code = entry->id;
 
     if (tsx) {
@@ -720,9 +765,9 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	if (r->res_addr.transport)
 	    pjsip_transport_add_ref(r->res_addr.transport);
 
-	timer.cb = &send_response_callback;
-	timer.user_data = r;
-	pjsip_endpt_schedule_timer(endpt, &timer, &delay);
+	timer.entry.cb = &send_response_callback;
+	timer.entry.user_data = r;
+	pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
 
 	return PJ_TRUE;
 
@@ -768,11 +813,11 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 				     PJSIP_ROLE_UAC, &pjsip_invite_method,
 				     rdata);
 
-		timer.user_data = pjsip_tsx_layer_find_tsx(&key, PJ_FALSE);
-		timer.id = 301;
-		timer.cb = &terminate_tsx_callback;
+		pj_strcpy(&timer.tsx_key, &key);
+		timer.entry.id = 301;
+		timer.entry.cb = &terminate_tsx_callback;
 
-		pjsip_endpt_schedule_timer(endpt, &timer, &delay);
+		pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
 	    }
 
 	    if (recv_count > 2) {
@@ -841,9 +886,9 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	    if (r->res_addr.transport)
 		pjsip_transport_add_ref(r->res_addr.transport);
 
-	    timer.cb = &send_response_callback;
-	    timer.user_data = r;
-	    pjsip_endpt_schedule_timer(endpt, &timer, &delay);
+	    timer.entry.cb = &send_response_callback;
+	    timer.entry.user_data = r;
+	    pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
 
 	} else if (method->id == PJSIP_ACK_METHOD) {
 
@@ -859,11 +904,11 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 				     PJSIP_ROLE_UAC, &pjsip_invite_method,
 				     rdata);
 
-		timer.user_data = pjsip_tsx_layer_find_tsx(&key, PJ_FALSE);
-		timer.id = 302;
-		timer.cb = &terminate_tsx_callback;
+		pj_strcpy(&timer.tsx_key, &key);
+		timer.entry.id = 302;
+		timer.entry.cb = &terminate_tsx_callback;
 
-		pjsip_endpt_schedule_timer(endpt, &timer, &delay);
+		pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
 	    }
 
 	    if (recv_count > 2) {
@@ -980,10 +1025,23 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
 	}
 	pjsip_tx_data_dec_ref(tdata);
 	return test_complete;
-    }
 
-    /* Allow transaction to destroy itself */
-    flush_events(500);
+    } else {
+	pj_time_val now;
+
+	/* Allow transaction to destroy itself */
+	flush_events(500);
+
+	/* Wait until test completes */
+	pj_gettimeofday(&now);
+
+	if (PJ_TIME_VAL_LT(now, timeout)) {
+	    pj_time_val interval;
+	    interval = timeout;
+	    PJ_TIME_VAL_SUB(interval, now);
+	    flush_events(PJ_TIME_VAL_MSEC(interval));
+	}
+    }
 
     /* Make sure transaction has been destroyed. */
     if (pjsip_tsx_layer_find_tsx(&tsx_key, PJ_FALSE) != NULL) {
@@ -1052,8 +1110,7 @@ static int tsx_uac_retransmit_test(void)
 	pjsip_loop_set_recv_delay(loop, sub_test[i].delay, NULL);
 
 	/* Do the test. */
-	status = perform_tsx_test(-500, "sip:bob@127.0.0.1;transport=loop-dgram",
-				  "sip:alice@127.0.0.1;transport=loop-dgram", 
+	status = perform_tsx_test(-500, TARGET_URI, FROM_URI, 
 				  TEST1_BRANCH_ID,
 				  35, sub_test[i].method);
 	if (status != 0)
@@ -1093,9 +1150,8 @@ static int tsx_resolve_error_test(void)
     PJ_LOG(3,(THIS_FILE, "   variant a: immediate resolving error"));
 
     status = perform_tsx_test(-800, 
-			      "sip:bob@unresolved-host;transport=loop-dgram",
-			      "sip:alice@127.0.0.1;transport=loop-dgram", 
-			      TEST2_BRANCH_ID, 10, 
+			      "sip:bob@unresolved-host",
+			      FROM_URI,  TEST2_BRANCH_ID, 10, 
 			      &pjsip_options_method);
     if (status != 0)
 	return status;
@@ -1105,20 +1161,22 @@ static int tsx_resolve_error_test(void)
      */
     PJ_LOG(3,(THIS_FILE, "   variant b: error via callback"));
 
-    /* Set loop transport to return delayed error. */
-    pjsip_loop_set_failure(loop, 2, NULL);
-    pjsip_loop_set_send_callback_delay(loop, 10, NULL);
+    /* This only applies to "loop-dgram" transport */
+    if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+	/* Set loop transport to return delayed error. */
+	pjsip_loop_set_failure(loop, 2, NULL);
+	pjsip_loop_set_send_callback_delay(loop, 10, NULL);
 
-    status = perform_tsx_test(-800, "sip:bob@127.0.0.1;transport=loop-dgram",
-			      "sip:alice@127.0.0.1;transport=loop-dgram", 
-			      TEST2_BRANCH_ID, 2, 
-			      &pjsip_options_method);
-    if (status != 0)
-	return status;
+	status = perform_tsx_test(-800, TARGET_URI, FROM_URI, 
+				  TEST2_BRANCH_ID, 2, 
+				  &pjsip_options_method);
+	if (status != 0)
+	    return status;
 
-    /* Restore loop transport settings. */
-    pjsip_loop_set_failure(loop, 0, NULL);
-    pjsip_loop_set_send_callback_delay(loop, 0, NULL);
+	/* Restore loop transport settings. */
+	pjsip_loop_set_failure(loop, 0, NULL);
+	pjsip_loop_set_send_callback_delay(loop, 0, NULL);
+    }
 
     return status;
 }
@@ -1143,8 +1201,7 @@ static int tsx_terminate_resolving_test(void)
     pjsip_loop_set_send_callback_delay(loop, 100, &prev_delay);
 
     /* Start the test. */
-    status = perform_tsx_test(-900, "sip:127.0.0.1;transport=loop-dgram",
-			      "sip:127.0.0.1;transport=loop-dgram",
+    status = perform_tsx_test(-900, TARGET_URI, FROM_URI,
 			      TEST3_BRANCH_ID, 2, &pjsip_options_method);
 
     /* Restore delay. */
@@ -1186,8 +1243,7 @@ static int tsx_retransmit_fail_test(void)
 	pjsip_loop_set_failure(loop, 0, 0);
 
 	/* Start the test. */
-	status = perform_tsx_test(-1000, "sip:127.0.0.1;transport=loop-dgram",
-				  "sip:127.0.0.1;transport=loop-dgram",
+	status = perform_tsx_test(-1000, TARGET_URI, FROM_URI,
 				  TEST4_BRANCH_ID, 6, &pjsip_options_method);
 
 	if (status != 0)
@@ -1218,8 +1274,7 @@ static int tsx_terminate_after_retransmit_test(void)
     PJ_LOG(3,(THIS_FILE, "  test5: terminate after retransmissions"));
 
     /* Do the test. */
-    status = perform_tsx_test(-1100, "sip:bob@127.0.0.1;transport=loop-dgram",
-			      "sip:alice@127.0.0.1;transport=loop-dgram", 
+    status = perform_tsx_test(-1100, TARGET_URI, FROM_URI, 
 			      TEST5_BRANCH_ID,
 			      6, &pjsip_options_method);
 
@@ -1249,18 +1304,20 @@ static int perform_generic_test( const char *title,
     /* Do the test. */
     for (i=0; i<PJ_ARRAY_SIZE(delay); ++i) {
 	
-	PJ_LOG(3,(THIS_FILE, "   variant %c: with %d ms transport delay",
-			     ('a'+i), delay[i]));
+	if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+	    PJ_LOG(3,(THIS_FILE, "   variant %c: with %d ms transport delay",
+				 ('a'+i), delay[i]));
 
-	pjsip_loop_set_delay(loop, delay[i]);
+	    pjsip_loop_set_delay(loop, delay[i]);
+	}
 
-	status = perform_tsx_test(-1200, 
-				  "sip:bob@127.0.0.1;transport=loop-dgram",
-				  "sip:alice@127.0.0.1;transport=loop-dgram",
-				  branch_id,
-				  10, method);
+	status = perform_tsx_test(-1200, TARGET_URI, FROM_URI,
+				  branch_id, 10, method);
 	if (status != 0)
 	    return status;
+
+	if (test_param->type != PJSIP_TRANSPORT_LOOP_DGRAM)
+	    break;
     }
 
     pjsip_loop_set_delay(loop, 0);
@@ -1276,10 +1333,22 @@ static int perform_generic_test( const char *title,
  **
  *****************************************************************************
  */
-int tsx_uac_test(void)
+int tsx_uac_test(struct tsx_test_param *param)
 {
     pj_sockaddr_in addr;
     pj_status_t status;
+
+    timer.tsx_key.ptr = timer.key_buf;
+
+    test_param = param;
+
+    /* Get transport flag */
+    tp_flag = pjsip_transport_get_flag_from_type(test_param->type);
+
+    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
+		    param->port, param->tp_type);
+    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s", 
+		    param->port, param->tp_type);
 
     /* Check if loop transport is configured. */
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
@@ -1316,15 +1385,23 @@ int tsx_uac_test(void)
     if (status != 0)
 	return status;
 
-    /* TEST4_BRANCH_ID: Transport failed after several retransmissions */
-    status = tsx_retransmit_fail_test();
-    if (status != 0)
-	return status;
+    /* TEST4_BRANCH_ID: Transport failed after several retransmissions.
+     *                  Only applies to loop transport.
+     */
+    if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+	status = tsx_retransmit_fail_test();
+	if (status != 0)
+	    return status;
+    }
 
-    /* TEST5_BRANCH_ID: Terminate transaction after several retransmissions */
-    status = tsx_terminate_after_retransmit_test();
-    if (status != 0)
-	return status;
+    /* TEST5_BRANCH_ID: Terminate transaction after several retransmissions 
+     *			Only applicable to non-reliable transports.
+     */
+    if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
+	status = tsx_terminate_after_retransmit_test();
+	if (status != 0)
+	    return status;
+    }
 
     /* TEST6_BRANCH_ID: Successfull non-invite transaction */
     status = perform_generic_test("test6: successfull non-invite transaction",
@@ -1352,8 +1429,21 @@ int tsx_uac_test(void)
     if (status != 0)
 	return status;
 
-
     pjsip_transport_dec_ref(loop);
+    flush_events(500);
+
+    /* Unregister modules. */
+    status = pjsip_endpt_unregister_module(endpt, &tsx_user);
+    if (status != PJ_SUCCESS) {
+	app_perror("   Error: unable to unregister module", status);
+	return -31;
+    }
+    status = pjsip_endpt_unregister_module(endpt, &msg_receiver);
+    if (status != PJ_SUCCESS) {
+	app_perror("   Error: unable to unregister module", status);
+	return -41;
+    }
+
     return 0;
 }
 

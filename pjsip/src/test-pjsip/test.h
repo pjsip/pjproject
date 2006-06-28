@@ -31,13 +31,22 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_TRANSPORT_GROUP	    1
 #define INCLUDE_TSX_GROUP	    1
 
+/*
+ * Include tests that normally would fail under certain gcc
+ * optimization levels.
+ */
+#ifndef INCLUDE_GCC_TEST
+#   define INCLUDE_GCC_TEST	    0
+#endif
 
 
 #define INCLUDE_URI_TEST	INCLUDE_MESSAGING_GROUP
 #define INCLUDE_MSG_TEST	INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TXDATA_TEST	INCLUDE_MESSAGING_GROUP
+#define INCLUDE_TSX_BENCH	INCLUDE_MESSAGING_GROUP
 #define INCLUDE_UDP_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_LOOP_TEST	INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_TCP_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
 
 
@@ -47,17 +56,28 @@ int uri_test(void);
 int msg_test(void);
 int msg_err_test(void);
 int txdata_test(void);
+int tsx_bench(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
-int tsx_basic_test(void);
-int tsx_uac_test(void);
-int tsx_uas_test(void);
+int transport_tcp_test(void);
+
+struct tsx_test_param
+{
+    int type;
+    int port;
+    char *tp_type;
+};
+
+int tsx_basic_test(struct tsx_test_param *param);
+int tsx_uac_test(struct tsx_test_param *param);
+int tsx_uas_test(struct tsx_test_param *param);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
 			      pjsip_transport *ref_tp,
-			      char *target_url );
+			      char *target_url,
+			      int *p_usec_rtt);
 int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
 		       char *target_url,
@@ -68,9 +88,14 @@ int  test_main(void);
 
 /* Test utilities. */
 void app_perror(const char *msg, pj_status_t status);
-int init_msg_logger(void);
-int msg_logger_set_enabled(pj_bool_t enabled);
+int  init_msg_logger(void);
+int  msg_logger_set_enabled(pj_bool_t enabled);
 void flush_events(unsigned duration);
+
+
+void report_ival(const char *name, int value, const char *valname, const char *desc);
+void report_sval(const char *name, const char* value, const char *valname, const char *desc);
+
 
 /* Settings. */
 extern int log_level;

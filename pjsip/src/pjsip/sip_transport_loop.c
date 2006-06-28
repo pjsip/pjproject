@@ -73,7 +73,8 @@ struct recv_list *create_incoming_packet( struct loop_transport *loop,
     struct recv_list *pkt;
 
     pool = pjsip_endpt_create_pool(loop->base.endpt, "rdata", 
-				   PJSIP_POOL_RDATA_LEN, PJSIP_POOL_RDATA_INC);
+				   PJSIP_POOL_RDATA_LEN, 
+				   PJSIP_POOL_RDATA_INC+5);
     if (!pool)
 	return NULL;
 

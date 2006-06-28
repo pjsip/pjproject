@@ -25,7 +25,6 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_SIMPLE_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
@@ -40,8 +39,10 @@ export PJSIP_SRCDIR = ../src/pjsip
 export PJSIP_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		sip_errno.o sip_msg.o sip_parser.o sip_tel_uri.o sip_uri.o \
 		sip_endpoint.o sip_util.o sip_util_proxy.o \
-		sip_resolve.o sip_transport.o sip_transport_loop.o sip_transport_udp.o \
-		sip_auth_client.o sip_auth_msg.o sip_auth_parser.o sip_auth_server.o \
+		sip_resolve.o sip_transport.o sip_transport_loop.o \
+		sip_transport_udp.o sip_transport_tcp.o \
+		sip_auth_client.o sip_auth_msg.o sip_auth_parser.o \
+		sip_auth_server.o \
 		sip_transaction.o sip_util_statefull.o \
 		sip_dialog.o sip_ua_layer.o
 export PJSIP_CFLAGS += $(_CFLAGS)
@@ -76,11 +77,28 @@ export PJSUA_LIB_CFLAGS += $(_CFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
+
+###############################################################################
+# Defines for building test application
+#
+export TEST_SRCDIR = ../src/test-pjsip
+export TEST_OBJS += dlg_core_test.o msg_err_test.o msg_logger.o msg_test.o \
+		    test.o transport_loop_test.o transport_tcp_test.o \
+		    transport_test.o transport_udp_test.o \
+		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
+		    tsx_uas_test.o txdata_test.o uri_test.o
+export TEST_OBJS += main.o
+export TEST_CFLAGS += $(_CFLAGS)
+export TEST_LDFLAGS += $(_LDFLAGS)
+export TEST_EXE := ../bin/pjsip-test-$(TARGET_NAME)$(HOST_EXE)
+
+	
+export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
 #
 #
-TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib
+TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsip-test
 
 .PHONY: $(TARGETS)
 
@@ -105,6 +123,9 @@ pjsip-simple:
 
 pjsua-lib: 
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
+
+pjsip-test:
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $(TEST_EXE)
 
 .PHONY: ../lib/pjsip.ko
 ../lib/pjsip.ko:
@@ -131,6 +152,7 @@ clean depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-$(TARGET_NAME).depend),$(HOST_RMR))
@@ -140,6 +162,7 @@ realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
 

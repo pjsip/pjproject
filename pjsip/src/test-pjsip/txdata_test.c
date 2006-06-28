@@ -21,9 +21,17 @@
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define HFIND(msg,h,H) ((pjsip_##h##_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_##H, NULL))
 
 #define THIS_FILE   "txdata_test.c"
+
+
+#define HFIND(msg,h,H) ((pjsip_##h##_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_##H, NULL))
+
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#   define LOOP	    10000
+#else
+#   define LOOP	    100000
+#endif
 
 
 /*
@@ -323,28 +331,20 @@ static int core_txdata_test(void)
     return 0;
 }
 
-/* This tests the request creating functions against the following
- * requirements:
- *  - header params in URI creates header in the request.
- *  - method and headers params are correctly shown or hidden in
- *    request URI, From, To, and Contact header.
+
+
+/* 
+ * This test demonstrate the bug as reported in:
+ *  http://bugzilla.pjproject.net/show_bug.cgi?id=49
  */
-static int txdata_test_uri_params(void)
+static int gcc_test()
 {
     char msgbuf[512];
     pj_str_t target = pj_str("sip:alice@wonderland:5061;x-param=param%201"
 			     "?X-Hdr-1=Header%201"
 			     "&X-Empty-Hdr=");
-    pj_str_t pname = pj_str("x-param");
-    pj_str_t hname = pj_str("X-Hdr-1");
-    pj_str_t hemptyname = pj_str("X-Empty-Hdr");
-    pjsip_from_hdr *from_hdr;
-    pjsip_to_hdr *to_hdr;
-    pjsip_contact_hdr *contact_hdr;
-    pjsip_generic_string_hdr *hdr;
     pjsip_tx_data *tdata;
-    pjsip_sip_uri *uri;
-    pjsip_param *param;
+    pjsip_parser_err_report err_list;
     pjsip_msg *msg;
     int len;
     pj_status_t status;
@@ -376,11 +376,111 @@ static int txdata_test_uri_params(void)
 			 "--end-msg--", len, msgbuf));
 
     /* Now parse the message. */
-    msg = pjsip_parse_msg( tdata->pool, msgbuf, len, NULL);
+    pj_list_init(&err_list);
+    msg = pjsip_parse_msg( tdata->pool, msgbuf, len, &err_list);
     if (msg == NULL) {
-	app_perror("   error: parsing message message", status);
+	pjsip_parser_err_report *e;
+
+	PJ_LOG(3,(THIS_FILE, "   error: parsing message message"));
+
+	e = err_list.next;
+	while (e != &err_list) {
+	    PJ_LOG(3,(THIS_FILE, "     %s in line %d col %d hname=%.*s",
+				 pj_exception_id_name(e->except_code), 
+				 e->line, e->col+1,
+				 (int)e->hname.slen,
+				 e->hname.ptr));
+	    e = e->next;
+	}
+
+	pjsip_tx_data_dec_ref(tdata);
+	return -255;
+    }
+
+    pjsip_tx_data_dec_ref(tdata);
+    return 0;
+}
+
+
+/* This tests the request creating functions against the following
+ * requirements:
+ *  - header params in URI creates header in the request.
+ *  - method and headers params are correctly shown or hidden in
+ *    request URI, From, To, and Contact header.
+ */
+static int txdata_test_uri_params(void)
+{
+    char msgbuf[512];
+    pj_str_t target = pj_str("sip:alice@wonderland:5061;x-param=param%201"
+			     "?X-Hdr-1=Header%201"
+			     "&X-Empty-Hdr=");
+    pj_str_t pname = pj_str("x-param");
+    pj_str_t hname = pj_str("X-Hdr-1");
+    pj_str_t hemptyname = pj_str("X-Empty-Hdr");
+    pjsip_from_hdr *from_hdr;
+    pjsip_to_hdr *to_hdr;
+    pjsip_contact_hdr *contact_hdr;
+    pjsip_generic_string_hdr *hdr;
+    pjsip_tx_data *tdata;
+    pjsip_sip_uri *uri;
+    pjsip_param *param;
+    pjsip_via_hdr *via;
+    pjsip_parser_err_report err_list;
+    pjsip_msg *msg;
+    int len;
+    pj_status_t status;
+
+    PJ_LOG(3,(THIS_FILE, "   header param in URI to create request"));
+
+    /* Create request with header param in target URI. */
+    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
+					&target, &target, &target, NULL, -1,
+					NULL, &tdata);
+    if (status != 0) {
+	app_perror("   error: Unable to create request", status);
+	return -200;
+    }
+
+    /* Fill up the Via header to prevent syntax error on parsing */
+    via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+    via->transport = pj_str("TCP");
+    via->sent_by.host = pj_str("127.0.0.1");
+
+    /* Print and parse the request.
+     * We'll check that header params are not present in
+     */
+    len = pjsip_msg_print(tdata->msg, msgbuf, sizeof(msgbuf));
+    if (len < 1) {
+	PJ_LOG(3,(THIS_FILE, "   error: printing message"));
 	pjsip_tx_data_dec_ref(tdata);
 	return -250;
+    }
+    msgbuf[len] = '\0';
+
+    PJ_LOG(5,(THIS_FILE, "%d bytes request created:--begin-msg--\n"
+			 "%s\n"
+			 "--end-msg--", len, msgbuf));
+
+    /* Now parse the message. */
+    pj_list_init(&err_list);
+    msg = pjsip_parse_msg( tdata->pool, msgbuf, len, &err_list);
+    if (msg == NULL) {
+	pjsip_parser_err_report *e;
+
+	PJ_LOG(3,(THIS_FILE, "   error: parsing message message"));
+
+	e = err_list.next;
+	while (e != &err_list) {
+	    PJ_LOG(3,(THIS_FILE, "     %s in line %d col %d hname=%.*s",
+				 pj_exception_id_name(e->except_code), 
+				 e->line, e->col+1,
+				 (int)e->hname.slen,
+				 e->hname.ptr));
+	    e = e->next;
+	}
+
+	pjsip_tx_data_dec_ref(tdata);
+	return -256;
     }
 
     /* Check the existence of port, other_param, and header param.
@@ -512,18 +612,233 @@ static int txdata_test_uri_params(void)
     return 0;
 }
 
+
+/*
+ * create request benchmark
+ */
+static int create_request_bench(pj_timestamp *p_elapsed)
+{
+    enum { COUNT = 100 };
+    unsigned i, j;
+    pjsip_tx_data *tdata[COUNT];
+    pj_timestamp t1, t2, elapsed;
+    pj_status_t status;
+
+    pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
+    pj_str_t str_contact = str_from;
+
+    elapsed.u64 = 0;
+
+    for (i=0; i<LOOP; i+=COUNT) {
+	pj_memset(tdata, 0, sizeof(tdata));
+
+	pj_get_timestamp(&t1);
+
+	for (j=0; j<COUNT; ++j) {
+	    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+						&str_target, &str_from, &str_to,
+						&str_contact, NULL, -1, NULL,
+						&tdata[j]);
+	    if (status != PJ_SUCCESS) {
+		app_perror("    error: unable to create request", status);
+		goto on_error;
+	    }
+	}
+
+	pj_get_timestamp(&t2);
+	pj_sub_timestamp(&t2, &t1);
+	pj_add_timestamp(&elapsed, &t2);
+	
+	for (j=0; j<COUNT; ++j)
+	    pjsip_tx_data_dec_ref(tdata[j]);
+    }
+
+    p_elapsed->u64 = elapsed.u64;
+    return PJ_SUCCESS;
+
+on_error:
+    for (i=0; i<COUNT; ++i) {
+	if (tdata[i])
+	    pjsip_tx_data_dec_ref(tdata[i]);
+    }
+    return -400;
+}
+
+
+
+/*
+ * create response benchmark
+ */
+static int create_response_bench(pj_timestamp *p_elapsed)
+{
+    enum { COUNT = 100 };
+    unsigned i, j;
+    pjsip_via_hdr *via;
+    pjsip_rx_data rdata;
+    pjsip_tx_data *request;
+    pjsip_tx_data *tdata[COUNT];
+    pj_timestamp t1, t2, elapsed;
+    pj_status_t status;
+
+    /* Create the request first. */
+    pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
+    pj_str_t str_contact = str_from;
+
+    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+					&str_target, &str_from, &str_to,
+					&str_contact, NULL, -1, NULL,
+					&request);
+    if (status != PJ_SUCCESS) {
+	app_perror("    error: unable to create request", status);
+	return status;
+    }
+
+    /* Create several Via headers */
+    via = pjsip_via_hdr_create(request->pool);
+    via->sent_by.host = pj_str("192.168.0.7");
+    via->sent_by.port = 5061;
+    via->transport = pj_str("udp");
+    via->rport_param = 0;
+    via->branch_param = pj_str("012345678901234567890123456789");
+    via->recvd_param = pj_str("192.168.0.7");
+    pjsip_msg_insert_first_hdr(request->msg, pjsip_hdr_clone(request->pool, via));
+    pjsip_msg_insert_first_hdr(request->msg, pjsip_hdr_clone(request->pool, via));
+    pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*)via);
+    
+
+    /* Create "dummy" rdata from the tdata */
+    pj_memset(&rdata, 0, sizeof(pjsip_rx_data));
+    rdata.tp_info.pool = request->pool;
+    rdata.msg_info.msg = request->msg;
+    rdata.msg_info.from = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.to = pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
+    rdata.msg_info.cseq = pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.via = via;
+
+    /*
+     * Now benchmark create_response
+     */
+    elapsed.u64 = 0;
+
+    for (i=0; i<LOOP; i+=COUNT) {
+	pj_memset(tdata, 0, sizeof(tdata));
+
+	pj_get_timestamp(&t1);
+
+	for (j=0; j<COUNT; ++j) {
+	    status = pjsip_endpt_create_response(endpt, &rdata, 200, NULL, &tdata[j]);
+	    if (status != PJ_SUCCESS) {
+		app_perror("    error: unable to create request", status);
+		goto on_error;
+	    }
+	}
+
+	pj_get_timestamp(&t2);
+	pj_sub_timestamp(&t2, &t1);
+	pj_add_timestamp(&elapsed, &t2);
+	
+	for (j=0; j<COUNT; ++j)
+	    pjsip_tx_data_dec_ref(tdata[j]);
+    }
+
+    p_elapsed->u64 = elapsed.u64;
+    pjsip_tx_data_dec_ref(request);
+    return PJ_SUCCESS;
+
+on_error:
+    for (i=0; i<COUNT; ++i) {
+	if (tdata[i])
+	    pjsip_tx_data_dec_ref(tdata[i]);
+    }
+    return -400;
+}
+
+
 int txdata_test(void)
 {
+    enum { REPEAT = 4 };
+    unsigned i, msgs;
+    pj_timestamp usec[REPEAT], min, freq;
     int status;
+
+    status = pj_get_timestamp_freq(&freq);
+    if (status != PJ_SUCCESS)
+	return status;
 
     status = core_txdata_test();
     if (status  != 0)
 	return status;
 
+#if INCLUDE_GCC_TEST
+    status = gcc_test();
+    if (status != 0)
+	return status;
+#endif
 
     status = txdata_test_uri_params();
     if (status != 0)
 	return status;
 
+
+    /*
+     * Benchmark create_request()
+     */
+    PJ_LOG(3,(THIS_FILE, "   benchmarking request creation:"));
+    for (i=0; i<REPEAT; ++i) {
+	PJ_LOG(3,(THIS_FILE, "    test %d of %d..",
+		  i+1, REPEAT));
+	status = create_request_bench(&usec[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    min.u64 = PJ_UINT64(0xFFFFFFFFFFFFFFF);
+    for (i=0; i<REPEAT; ++i) {
+	if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
+    }
+
+    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+
+    PJ_LOG(3,(THIS_FILE, "    Requests created at %d requests/sec", msgs));
+
+    report_ival("create-request-per-sec", 
+		msgs, "msg/sec",
+		"Number of typical request messages that can be created "
+		"per second with <tt>pjsip_endpt_create_request()</tt>");
+
+
+    /*
+     * Benchmark create_response()
+     */
+    PJ_LOG(3,(THIS_FILE, "   benchmarking response creation:"));
+    for (i=0; i<REPEAT; ++i) {
+	PJ_LOG(3,(THIS_FILE, "    test %d of %d..",
+		  i+1, REPEAT));
+	status = create_response_bench(&usec[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    min.u64 = PJ_UINT64(0xFFFFFFFFFFFFFFF);
+    for (i=0; i<REPEAT; ++i) {
+	if (usec[i].u64 < min.u64) min.u64 = usec[i].u64;
+    }
+
+    msgs = (unsigned)(freq.u64 * LOOP / min.u64);
+
+    PJ_LOG(3,(THIS_FILE, "    Responses created at %d responses/sec", msgs));
+
+    report_ival("create-response-per-sec", 
+		msgs, "msg/sec",
+		"Number of typical response messages that can be created "
+		"per second with <tt>pjsip_endpt_create_response()</tt>");
+
+
     return 0;
 }
+ 

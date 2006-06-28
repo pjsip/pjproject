@@ -21,7 +21,11 @@
 #include <pjlib.h>
 
 #define POOL_SIZE	8000
-#define LOOP		10000
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#   define LOOP		10000
+#else
+#   define LOOP		100000
+#endif
 #define AVERAGE_MSG_LEN	800
 #define THIS_FILE	"msg_test.c"
 
@@ -34,8 +38,6 @@ static pjsip_msg *create_msg1(pj_pool_t *pool);
 #define FLAG_DETECT_ONLY	1
 #define FLAG_PARSE_ONLY		4
 #define FLAG_PRINT_ONLY		8
-
-static int flag = 0;
 
 struct test_msg
 {
@@ -101,8 +103,12 @@ struct test_msg
 }
 };
 
-static pj_highprec_t detect_len, parse_len, print_len;
-static pj_timestamp  detect_time, parse_time, print_time;
+static struct
+{
+    int flag;
+    pj_highprec_t detect_len, parse_len, print_len;
+    pj_timestamp  detect_time, parse_time, print_time;
+} var;
 
 static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 {
@@ -121,17 +127,17 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 
     entry->len = pj_native_strlen(entry->msg);
 
-    if (flag & FLAG_PARSE_ONLY)
+    if (var.flag & FLAG_PARSE_ONLY)
 	goto parse_msg;
 
-    if (flag & FLAG_PRINT_ONLY) {
+    if (var.flag & FLAG_PRINT_ONLY) {
 	if (print_msg == NULL)
 	    print_msg = entry->creator(pool);
 	goto print_msg;
     }
 
     /* Detect message. */
-    detect_len = detect_len + entry->len;
+    var.detect_len = var.detect_len + entry->len;
     pj_get_timestamp(&t1);
     status = pjsip_find_msg(entry->msg, entry->len, PJ_FALSE, &msg_size);
     if (status != PJ_SUCCESS) {
@@ -148,14 +154,14 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&detect_time, &t2);
+    pj_add_timestamp(&var.detect_time, &t2);
 
-    if (flag & FLAG_DETECT_ONLY)
+    if (var.flag & FLAG_DETECT_ONLY)
 	return PJ_SUCCESS;
     
     /* Parse message. */
 parse_msg:
-    parse_len = parse_len + entry->len;
+    var.parse_len = var.parse_len + entry->len;
     pj_get_timestamp(&t1);
     pj_list_init(&err_list);
     parsed_msg = pjsip_parse_msg(pool, entry->msg, entry->len, &err_list);
@@ -171,9 +177,9 @@ parse_msg:
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&parse_time, &t2);
+    pj_add_timestamp(&var.parse_time, &t2);
 
-    if (flag & FLAG_PARSE_ONLY)
+    if (var.flag & FLAG_PARSE_ONLY)
 	return PJ_SUCCESS;
 
     /* Create reference message. */
@@ -306,9 +312,9 @@ parse_msg:
     
     /* Print message. */
 print_msg:
-    print_len = print_len + entry->len;
+    var.print_len = var.print_len + entry->len;
     pj_get_timestamp(&t1);
-    if (flag && FLAG_PRINT_ONLY)
+    if (var.flag && FLAG_PRINT_ONLY)
 	ref_msg = print_msg;
     len = pjsip_msg_print(ref_msg, msgbuf1, PJSIP_MAX_PKT_LEN);
     if (len < 1) {
@@ -317,7 +323,7 @@ print_msg:
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&print_time, &t2);
+    pj_add_timestamp(&var.print_time, &t2);
 
 
     status = PJ_SUCCESS;
@@ -674,17 +680,14 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 
 /*****************************************************************************/
 
-int msg_test(void)
+static pj_status_t simple_test(void)
 {
+    unsigned i;
     pj_status_t status;
-    pj_pool_t *pool;
-    int i, loop;
-    pj_timestamp zero;
-    pj_time_val elapsed;
-    pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
 
     PJ_LOG(3,(THIS_FILE, "  simple test.."));
     for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
+	pj_pool_t *pool;
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
 	status = test_entry( pool, &test_array[i] );
 	pjsip_endpt_release_pool(endpt, pool);
@@ -693,10 +696,24 @@ int msg_test(void)
 	    return status;
     }
 
-    PJ_LOG(3,(THIS_FILE, "  benchmarking.."));
-    detect_len = parse_len = print_len = 0;
-    zero.u64 = detect_time.u64 = parse_time.u64 = print_time.u64 = 0;
-    
+    return PJ_SUCCESS;
+}
+
+
+static int msg_benchmark(unsigned *p_detect, unsigned *p_parse, 
+			 unsigned *p_print)
+{
+    pj_status_t status;
+    pj_pool_t *pool;
+    int i, loop;
+    pj_timestamp zero;
+    pj_time_val elapsed;
+    pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
+
+
+    pj_memset(&var, 0, sizeof(var));
+    zero.u64 = 0;
+
     for (loop=0; loop<LOOP; ++loop) {
 	for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
 	    pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
@@ -708,52 +725,144 @@ int msg_test(void)
 	}
     }
 
-    kbytes = detect_len;
+    kbytes = var.detect_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &detect_time);
-    avg_detect = pj_elapsed_usec(&zero, &detect_time);
+    elapsed = pj_elapsed_time(&zero, &var.detect_time);
+    avg_detect = pj_elapsed_usec(&zero, &var.detect_time);
     pj_highprec_mul(avg_detect, AVERAGE_MSG_LEN);
-    pj_highprec_div(avg_detect, detect_len);
+    pj_highprec_div(avg_detect, var.detect_len);
     avg_detect = 1000000 / avg_detect;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB detected in %d.%03ds (avg=%d msg detection/sec)", 
-	      (unsigned)(detect_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.detect_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_detect));
+    *p_detect = (unsigned)avg_detect;
 
-    kbytes = parse_len;
+    kbytes = var.parse_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &parse_time);
-    avg_parse = pj_elapsed_usec(&zero, &parse_time);
+    elapsed = pj_elapsed_time(&zero, &var.parse_time);
+    avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
     pj_highprec_mul(avg_parse, AVERAGE_MSG_LEN);
-    pj_highprec_div(avg_parse, parse_len);
+    pj_highprec_div(avg_parse, var.parse_len);
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB parsed in %d.%03ds (avg=%d msg parsing/sec)", 
-	      (unsigned)(parse_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_parse));
+    *p_parse = (unsigned)avg_parse;
 
-    kbytes = print_len;
+    kbytes = var.print_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &print_time);
-    avg_print = pj_elapsed_usec(&zero, &print_time);
+    elapsed = pj_elapsed_time(&zero, &var.print_time);
+    avg_print = pj_elapsed_usec(&zero, &var.print_time);
     pj_highprec_mul(avg_print, AVERAGE_MSG_LEN);
-    pj_highprec_div(avg_print, print_len);
+    pj_highprec_div(avg_print, var.print_len);
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB printed in %d.%03ds (avg=%d msg print/sec)", 
-	      (unsigned)(print_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.print_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_print));
 
+    *p_print = (unsigned)avg_print;
     return status;
 }
 
 /*****************************************************************************/
+
+int msg_test(void)
+{
+    enum { COUNT = 4, DETECT=0, PARSE=1, PRINT=2 };
+    struct {
+	unsigned detect;
+	unsigned parse;
+	unsigned print;
+    } run[COUNT];
+    unsigned i, max, avg_len;
+    char desc[250];
+    pj_status_t status;
+
+
+    status = simple_test();
+    if (status != PJ_SUCCESS)
+	return status;
+
+    for (i=0; i<COUNT; ++i) {
+	PJ_LOG(3,(THIS_FILE, "  benchmarking (%d of %d)..", i+1, COUNT));
+	status = msg_benchmark(&run[i].detect, &run[i].parse, &run[i].print);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Calculate average message length */
+    for (i=0, avg_len=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
+	avg_len += test_array[i].len;
+    }
+    avg_len /= PJ_ARRAY_SIZE(test_array);
+
+
+    /* Print maximum detect/sec */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].detect > max) max = run[i].detect;
+
+    PJ_LOG(3,("", "  Maximum message detection/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP messages "
+			  "can be pre-parse by <tt>pjsip_find_msg()</tt> "
+			  "per second (tested with %d message sets with "
+			  "average message length of "
+			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+    report_ival("msg-detect-per-sec", max, "msg/sec", desc);
+
+    /* Print maximum parse/sec */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].parse > max) max = run[i].parse;
+
+    PJ_LOG(3,("", "  Maximum message parsing/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP messages "
+			  "can be <b>parsed</b> by <tt>pjsip_parse_msg()</tt> "
+			  "per second (tested with %d message sets with "
+			  "average message length of "
+			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+    report_ival("msg-parse-per-sec", max, "msg/sec", desc);
+
+    /* Msg parsing bandwidth */
+    report_ival("msg-parse-bandwidth-mb", avg_len*max/1000000, "MB/sec",
+	        "Message parsing bandwidth in megabytes (number of megabytes"
+		" worth of SIP messages that can be parsed per second). "
+		"The value is derived from msg-parse-per-sec above.");
+
+
+    /* Print maximum print/sec */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].print > max) max = run[i].print;
+
+    PJ_LOG(3,("", "  Maximum message print/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP messages "
+			  "can be <b>printed</b> by <tt>pjsip_msg_print()</tt>"
+			  " per second (tested with %d message sets with "
+			  "average message length of "
+			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+
+    report_ival("msg-print-per-sec", max, "msg/sec", desc);
+
+    /* Msg print bandwidth */
+    report_ival("msg-printed-bandwidth-mb", avg_len*max/1000000, "MB/sec",
+	        "Message print bandwidth in megabytes (total size of "
+		"SIP messages printed per second). "
+		"The value is derived from msg-print-per-sec above.");
+
+
+    return PJ_SUCCESS;
+}
+

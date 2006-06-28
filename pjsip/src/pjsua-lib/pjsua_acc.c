@@ -77,18 +77,18 @@ static void update_acc_contact(unsigned acc_id,
 			       unsigned tp_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
-    pjsip_transport *tp = pjsua_var.tpdata[tp_id].tp;
+    struct transport_data *t = &pjsua_var.tpdata[tp_id];
     char uri[80];
 
     /* Transport must be valid */
-    pj_assert(tp != NULL);
+    pj_assert(t->data.ptr != NULL);
     
     /* Build URI for the account */
     pj_ansi_sprintf(uri, "<sip:%.*s:%d;transport=%s>", 
-			 (int)tp->local_name.host.slen,
-			 tp->local_name.host.ptr,
-			 tp->local_name.port,
-			 pjsip_transport_get_type_name(tp->key.type));
+			 (int)t->local_name.host.slen,
+			 t->local_name.host.ptr,
+			 t->local_name.port,
+			 pjsip_transport_get_type_name(t->type));
 
 
     pj_strdup2(pjsua_var.pool, &acc->real_contact, uri);
@@ -144,7 +144,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     }
 
     PJ_TODO(attach_account_to_transport);
-    if (pjsua_var.tpdata[0].tp)
+    if (pjsua_var.tpdata[0].data.ptr)
 	update_acc_contact(acc_id, 0);
 
     /* Build account route-set from outbound proxies and route set from 
@@ -220,7 +220,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 		     PJ_ETOOMANY);
 
     /* Must have a transport */
-    PJ_ASSERT_RETURN(pjsua_var.tpdata[0].tp != NULL, PJ_EINVALIDOP);
+    PJ_TODO(associate_acc_with_transport);
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[0].data.ptr != NULL, PJ_EINVALIDOP);
 
     PJSUA_LOCK();
 
@@ -281,20 +282,23 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 					 pjsua_acc_id *p_acc_id)
 {
     pjsua_acc_config cfg;
-    pjsip_transport *tp;
+    struct transport_data *t = &pjsua_var.tpdata[tid];
     char uri[62];
 
+    /* ID must be valid */
+    PJ_ASSERT_RETURN(tid>=0 && tid<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+
     /* Transport must be valid */
-    tp = pjsua_var.tpdata[tid].tp;
-    PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(t->data.ptr != NULL, PJ_EINVAL);
     
     pjsua_acc_config_default(&cfg);
 
     /* Build URI for the account */
-    pj_ansi_sprintf(uri, "<sip:%.*s:%d>", 
-			 (int)tp->local_name.host.slen,
-			 tp->local_name.host.ptr,
-			 tp->local_name.port);
+    pj_ansi_sprintf(uri, "<sip:%.*s:%d;transport=%s>", 
+			 (int)t->local_name.host.slen,
+			 t->local_name.host.ptr,
+			 t->local_name.port,
+			 pjsip_transport_get_type_name(t->type));
 
     cfg.id = pj_str(uri);
     

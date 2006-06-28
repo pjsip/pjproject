@@ -32,12 +32,19 @@
 #define PARAM_CHAR  ALPHANUM MARK "[]/:&+$"
 
 #define POOL_SIZE	8000
-#define LOOP_COUNT	10000
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+#   define LOOP_COUNT	10000
+#else
+#   define LOOP_COUNT	40000
+#endif
 #define AVERAGE_URL_LEN	80
 #define THREAD_COUNT	4
 
-static pj_highprec_t parse_len, print_len, cmp_len;
-static pj_timestamp parse_time, print_time, cmp_time;
+static struct
+{
+    pj_highprec_t parse_len, print_len, cmp_len;
+    pj_timestamp  parse_time, print_time, cmp_time;
+} var;
 
 
 /* URI creator functions. */
@@ -686,7 +693,7 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 
     /* Parse URI text. */
     pj_get_timestamp(&t1);
-    parse_len = parse_len + entry->len;
+    var.parse_len = var.parse_len + entry->len;
     parsed_uri = pjsip_parse_uri(pool, entry->str, entry->len, 0);
     if (!parsed_uri) {
 	/* Parsing failed. If the entry says that this is expected, then
@@ -702,7 +709,7 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&parse_time, &t2);
+    pj_add_timestamp(&var.parse_time, &t2);
 
     /* Create the reference URI. */
     ref_uri = entry->creator(pool);
@@ -720,10 +727,10 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     s1.ptr[len] = '\0';
     s1.slen = len;
 
-    print_len = print_len + len;
+    var.print_len = var.print_len + len;
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&print_time, &t2);
+    pj_add_timestamp(&var.print_time, &t2);
 
     len = pjsip_uri_print( PJSIP_URI_IN_OTHER, ref_uri, s2.ptr, PJSIP_MAX_URL_SIZE);
     if (len < 1) {
@@ -755,10 +762,10 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 	}
     }
 
-    cmp_len = cmp_len + len;
+    var.cmp_len = var.cmp_len + len;
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
-    pj_add_timestamp(&cmp_time, &t2);
+    pj_add_timestamp(&var.cmp_time, &t2);
 
     /* Compare text. */
     if (entry->printed) {
@@ -785,16 +792,12 @@ on_return:
     return status;
 }
 
-int uri_test()
+
+static int simple_uri_test(void)
 {
-    unsigned i, loop;
+    unsigned i;
     pj_pool_t *pool;
     pj_status_t status;
-    pj_timestamp zero;
-    pj_time_val elapsed;
-    pj_highprec_t avg_parse, avg_print, avg_cmp, kbytes;
-
-    zero.u32.hi = zero.u32.lo = 0;
 
     PJ_LOG(3,(THIS_FILE, "  simple test"));
     pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
@@ -803,16 +806,31 @@ int uri_test()
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(3,(THIS_FILE, "  error %d when testing entry %d",
 		      status, i));
-	    goto on_return;
+	    return status;
 	}
     }
     pjsip_endpt_release_pool(endpt, pool);
 
-    PJ_LOG(3,(THIS_FILE, "  benchmarking..."));
-    parse_len = print_len = cmp_len = 0;
-    parse_time.u32.hi = parse_time.u32.lo = 0;
-    print_time.u32.hi = print_time.u32.lo = 0;
-    cmp_time.u32.hi = cmp_time.u32.lo = 0;
+    return 0;
+}
+
+static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
+{
+    unsigned i, loop;
+    pj_pool_t *pool;
+    pj_status_t status;
+    pj_timestamp zero;
+    pj_time_val elapsed;
+    pj_highprec_t avg_parse, avg_print, avg_cmp, kbytes;
+
+    pj_memset(&var, 0, sizeof(var));
+
+    zero.u32.hi = zero.u32.lo = 0;
+
+    var.parse_len = var.print_len = var.cmp_len = 0;
+    var.parse_time.u32.hi = var.parse_time.u32.lo = 0;
+    var.print_time.u32.hi = var.print_time.u32.lo = 0;
+    var.cmp_time.u32.hi = var.cmp_time.u32.lo = 0;
     for (loop=0; loop<LOOP_COUNT; ++loop) {
 	pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
 	for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
@@ -827,55 +845,144 @@ int uri_test()
 	pjsip_endpt_release_pool(endpt, pool);
     }
 
-    kbytes = parse_len;
+    kbytes = var.parse_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &parse_time);
-    avg_parse = pj_elapsed_usec(&zero, &parse_time);
+    elapsed = pj_elapsed_time(&zero, &var.parse_time);
+    avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
     pj_highprec_mul(avg_parse, AVERAGE_URL_LEN);
-    pj_highprec_div(avg_parse, parse_len);
+    pj_highprec_div(avg_parse, var.parse_len);
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB of urls parsed in %d.%03ds (avg=%d urls/sec)", 
-	      (unsigned)(parse_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.parse_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_parse));
 
-    kbytes = print_len;
+    *p_parse = (unsigned)avg_parse;
+
+    kbytes = var.print_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &print_time);
-    avg_print = pj_elapsed_usec(&zero, &print_time);
+    elapsed = pj_elapsed_time(&zero, &var.print_time);
+    avg_print = pj_elapsed_usec(&zero, &var.print_time);
     pj_highprec_mul(avg_print, AVERAGE_URL_LEN);
-    pj_highprec_div(avg_print, parse_len);
+    pj_highprec_div(avg_print, var.parse_len);
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB of urls printed in %d.%03ds (avg=%d urls/sec)", 
-	      (unsigned)(print_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.print_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_print));
 
-    kbytes = cmp_len;
+    *p_print = (unsigned)avg_print;
+
+    kbytes = var.cmp_len;
     pj_highprec_mod(kbytes, 1000000);
     pj_highprec_div(kbytes, 100000);
-    elapsed = pj_elapsed_time(&zero, &cmp_time);
-    avg_cmp = pj_elapsed_usec(&zero, &cmp_time);
+    elapsed = pj_elapsed_time(&zero, &var.cmp_time);
+    avg_cmp = pj_elapsed_usec(&zero, &var.cmp_time);
     pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
-    pj_highprec_div(avg_cmp, cmp_len);
+    pj_highprec_div(avg_cmp, var.cmp_len);
     avg_cmp = 1000000 / avg_cmp;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "    %u.%u MB of urls compared in %d.%03ds (avg=%d urls/sec)", 
-	      (unsigned)(cmp_len/1000000), (unsigned)kbytes,
+	      (unsigned)(var.cmp_len/1000000), (unsigned)kbytes,
 	      elapsed.sec, elapsed.msec,
 	      (unsigned)avg_cmp));
 
-    PJ_LOG(3,(THIS_FILE, "  multithreaded test"));
-
+    *p_cmp = (unsigned)avg_cmp;
 
 on_return:
     return status;
+}
+
+
+/*****************************************************************************/
+
+int uri_test(void)
+{
+    enum { COUNT = 4, DETECT=0, PARSE=1, PRINT=2 };
+    struct {
+	unsigned parse;
+	unsigned print;
+	unsigned cmp;
+    } run[COUNT];
+    unsigned i, max, avg_len;
+    char desc[200];
+    pj_status_t status;
+
+    status = simple_uri_test();
+    if (status != PJ_SUCCESS)
+	return status;
+
+    for (i=0; i<COUNT; ++i) {
+	PJ_LOG(3,(THIS_FILE, "  benchmarking (%d of %d)...", i+1, COUNT));
+	status = uri_benchmark(&run[i].parse, &run[i].print, &run[i].cmp);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Calculate average URI length */
+    for (i=0, avg_len=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
+	avg_len += uri_test_array[i].len;
+    }
+    avg_len /= PJ_ARRAY_SIZE(uri_test_array);
+
+
+    /* 
+     * Print maximum parse/sec 
+     */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].parse > max) max = run[i].parse;
+
+    PJ_LOG(3,("", "  Maximum URI parse/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>parsed</B> with "
+			  "<tt>pjsip_parse_uri()</tt> per second "
+			  "(tested with %d URI set, with average length of "
+			  "%d chars)",
+			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+
+    report_ival("uri-parse-per-sec", max, "URI/sec", desc);
+
+    /* URI parsing bandwidth */
+    report_ival("uri-parse-bandwidth-mb", avg_len*max/1000000, "MB/sec",
+	        "URI parsing bandwidth in megabytes (number of megabytes "
+		"worth of URI that can be parsed per second)");
+
+
+    /* Print maximum print/sec */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].print > max) max = run[i].print;
+
+    PJ_LOG(3,("", "  Maximum URI print/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>printed</B> with "
+			  "<tt>pjsip_uri_print()</tt> per second "
+			  "(tested with %d URI set, with average length of "
+			  "%d chars)",
+			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+
+    report_ival("uri-print-per-sec", max, "URI/sec", desc);
+
+    /* Print maximum detect/sec */
+    for (i=0, max=0; i<COUNT; ++i)
+	if (run[i].cmp > max) max = run[i].cmp;
+
+    PJ_LOG(3,("", "  Maximum URI comparison/sec=%u", max));
+
+    pj_ansi_sprintf(desc, "Number of SIP/TEL URIs that can be <B>compared</B> with "
+			  "<tt>pjsip_uri_cmp()</tt> per second "
+			  "(tested with %d URI set, with average length of "
+			  "%d chars)",
+			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+
+    report_ival("uri-cmp-per-sec", max, "URI/sec", desc);
+
+    return PJ_SUCCESS;
 }
 

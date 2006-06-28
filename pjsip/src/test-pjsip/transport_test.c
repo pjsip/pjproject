@@ -173,7 +173,8 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
 /* Test that we receive loopback message. */
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
 			      pjsip_transport *ref_tp,
-			      char *target_url )
+			      char *target_url,
+			      int *p_usec_rtt)
 {
     pj_bool_t msg_log_enabled;
     pj_status_t status;
@@ -220,6 +221,8 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     pj_get_timestamp(&my_send_time);
 
     /* Send the message (statelessly). */
+    PJ_LOG(5,(THIS_FILE, "Sending request to %.*s", 
+			 (int)target.slen, target.ptr));
     status = pjsip_endpt_send_request_stateless( endpt, tdata, NULL,
 					         &send_msg_callback);
     if (status != PJ_SUCCESS) {
@@ -228,9 +231,9 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 	send_status = status;
     }
 
-    /* Set the timeout (1 second from now) */
+    /* Set the timeout (2 seconds from now) */
     pj_gettimeofday(&timeout);
-    timeout.sec += 1;
+    timeout.sec += 2;
 
     /* Loop handling events until we get status */
     do {
@@ -268,7 +271,10 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     if (status == PJ_SUCCESS) {
 	unsigned usec_rt;
 	usec_rt = pj_elapsed_usec(&my_send_time, &my_recv_time);
+
 	PJ_LOG(3,(THIS_FILE, "    round-trip = %d usec", usec_rt));
+
+	*p_usec_rtt = usec_rt;
     }
 
     /* Restore message logging. */
@@ -515,7 +521,6 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     unsigned usec_rt;
     unsigned total_sent;
     unsigned total_recv;
-
 
     PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test (%d threads)...",
 		  THREADS));

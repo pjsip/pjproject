@@ -21,6 +21,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+extern const char *system_name;
+
 static void usage()
 {
     puts("Usage: test-pjsip");
@@ -57,6 +59,15 @@ int main(int argc, char *argv[])
 		return 1;
 	    }
 	    log_level = atoi(*opt_arg);
+	} else 	if (strcmp(*opt_arg, "-s") == 0 ||
+	    strcmp(*opt_arg, "--system") == 0)
+	{
+	    ++opt_arg;
+	    if (!opt_arg) {
+		usage();
+		return 1;
+	    }
+	    system_name = *opt_arg;
 	} else {
 	    usage();
 	    return 1;
@@ -67,9 +78,9 @@ int main(int argc, char *argv[])
 
     retval = test_main();
 
-    if (argc != 1) {
+    if (interractive) {
 	char s[10];
-	printf("<Press ENTER to quit>\n");
+	printf("<Press ENTER to quit>\n"); fflush(stdout);
 	fgets(s, sizeof(s), stdin);
     }
 

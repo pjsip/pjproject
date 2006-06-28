@@ -36,6 +36,12 @@
 
 #define THIS_FILE    "sip_transport.c"
 
+#if 0
+#   define TRACE_(x)	PJ_LOG(5,x)
+#else
+#   define TRACE_(x)
+#endif
+
 /* Prototype. */
 static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
 
@@ -601,6 +607,12 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, tp);
     pj_lock_release(mgr->lock);
 
+    TRACE_((THIS_FILE,"Transport %s registered: type=%s, remote=%s:%d",
+		       tp->obj_name,
+		       pjsip_transport_get_type_name(tp->key.type),
+		       pj_inet_ntoa(((pj_sockaddr_in*)&tp->key.rem_addr)->sin_addr),
+		       pj_ntohs(((pj_sockaddr_in*)&tp->key.rem_addr)->sin_port)));
+
     return PJ_SUCCESS;
 }
 
@@ -609,6 +621,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 				      pjsip_transport *tp )
 {
     int key_len;
+
+    TRACE_((THIS_FILE, "Transport %s is being destroyed", tp->obj_name));
 
     pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
@@ -626,6 +640,7 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
      * Unregister from hash table.
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
+    pj_assert(pj_hash_get(mgr->table, &tp->key, key_len, NULL) != NULL);
     pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, NULL);
 
     pj_lock_release(mgr->lock);
@@ -642,6 +657,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
 {
     pjsip_tpmgr *mgr;
     pj_status_t status;
+
+    TRACE_((THIS_FILE, "Transport %s shutting down", tp->obj_name));
 
     pj_lock_acquire(tp->lock);
 
@@ -807,12 +824,16 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 {
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
+    pjsip_tpfactory *factory;
     pjsip_endpoint *endpt = mgr->endpt;
     
     PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
     pj_lock_acquire(mgr->lock);
 
+    /*
+     * Destroy all transports.
+     */
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr != NULL) {
 	pj_hash_iterator_t *next;
@@ -825,6 +846,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 	destroy_transport(mgr, transport);
 
 	itr = next;
+    }
+
+    /*
+     * Destroy all factories/listeners.
+     */
+    factory = mgr->factory_list.next;
+    while (factory != &mgr->factory_list) {
+	pjsip_tpfactory *next = factory->next;
+	
+	factory->destroy(factory);
+
+	factory = next;
     }
 
     pj_lock_release(mgr->lock);
@@ -842,7 +875,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
      */
     //pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
     if (pj_atomic_get(mgr->tdata_counter) != 0) {
-	PJ_LOG(4,(THIS_FILE, "Warning: %d transmit buffers are not freed!",
+	PJ_LOG(3,(THIS_FILE, "Warning: %d transmit buffer(s) not freed!",
 		  pj_atomic_get(mgr->tdata_counter)));
     }
 #endif
@@ -879,10 +912,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
     current_pkt[remaining_len] = '\0';
 
     /* Process all message fragments. */
-    while (total_processed < remaining_len) {
+    while (remaining_len > 0) {
 
 	pjsip_msg *msg;
-	pj_size_t msg_fragment_size = 0;
+	pj_size_t msg_fragment_size;
 
 	/* Initialize default fragment size. */
 	msg_fragment_size = remaining_len;
@@ -1038,6 +1071,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
     pjsip_tpfactory *factory;
     pj_status_t status;
 
+    TRACE_((THIS_FILE,"Acquiring transport type=%s, remote=%s:%d",
+		       pjsip_transport_get_type_name(type),
+		       pj_inet_ntoa(((pj_sockaddr_in*)remote)->sin_addr),
+		       pj_ntohs(((pj_sockaddr_in*)remote)->sin_port)));
+
     pj_lock_acquire(mgr->lock);
 
     key_len = sizeof(key.type) + addr_len;
@@ -1083,6 +1121,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	pjsip_transport_add_ref(transport);
 	pj_lock_release(mgr->lock);
 	*tp = transport;
+
+	TRACE_((THIS_FILE, "Transport %s acquired", transport->obj_name));
 	return PJ_SUCCESS;
     }
 
@@ -1100,8 +1140,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
     if (factory == &mgr->factory_list) {
 	/* No factory can create the transport! */
 	pj_lock_release(mgr->lock);
+	TRACE_((THIS_FILE, "No suitable factory was found either"));
 	return PJSIP_EUNSUPTRANSPORT;
     }
+
+    TRACE_((THIS_FILE, "%s, creating new one from factory",
+	   (transport?"Transport is shutdown":"No transport found")));
 
     /* Request factory to create transport. */
     status = factory->create_transport(factory, mgr, mgr->endpt,

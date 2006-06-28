@@ -117,6 +117,10 @@ SOURCE="..\src\test-pjsip\transport_loop_test.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\transport_tcp_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\transport_test.c"
 # End Source File
 # Begin Source File
@@ -126,6 +130,10 @@ SOURCE="..\src\test-pjsip\transport_udp_test.c"
 # Begin Source File
 
 SOURCE="..\src\test-pjsip\tsx_basic_test.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\test-pjsip\tsx_bench.c"
 # End Source File
 # Begin Source File
 

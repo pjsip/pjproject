@@ -704,7 +704,7 @@ struct pjsip_tpfactory
     pj_lock_t		   *lock;	    /**< Lock object.		*/
 
     pjsip_transport_type_e  type;	    /**< Transport type.	*/
-    char		    type_name[8];   /**< Type string name.	*/
+    char		   *type_name;      /**< Type string name.	*/
     unsigned		    flag;	    /**< Transport flag.	*/
 
     pj_sockaddr		    local_addr;	    /**< Bound address.		*/
@@ -721,6 +721,11 @@ struct pjsip_tpfactory
 				    const pj_sockaddr *rem_addr,
 				    int addr_len,
 				    pjsip_transport **transport);
+
+    /**
+     * Destroy the listener.
+     */
+    pj_status_t (*destroy)(pjsip_tpfactory *factory);
 
     /*
      * Application may extend this structure..

@@ -729,7 +729,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 
     /* Find empty transport slot */
     for (id=0; id < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++id) {
-	if (pjsua_var.tpdata[id].tp == NULL)
+	if (pjsua_var.tpdata[id].data.ptr == NULL)
 	    break;
     }
 
@@ -741,7 +741,9 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 
     /* Create the transport */
     if (type == PJSIP_TRANSPORT_UDP) {
-
+	/*
+	 * Create UDP transport.
+	 */
 	pjsua_transport_config config;
 	pj_sock_t sock = PJ_INVALID_SOCKET;
 	pj_sockaddr_in pub_addr;
@@ -773,14 +775,56 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	    goto on_return;
 	}
 
+
+	/* Save the transport */
+	pjsua_var.tpdata[id].type = type;
+	pjsua_var.tpdata[id].local_name = tp->local_name;
+	pjsua_var.tpdata[id].data.tp = tp;
+
+    } else if (type == PJSIP_TRANSPORT_TCP) {
+	/*
+	 * Create TCP transport.
+	 */
+	pjsua_transport_config config;
+	pjsip_tpfactory *tcp;
+	pj_sockaddr_in local_addr;
+
+	/* Supply default config if it's not specified */
+	if (cfg == NULL) {
+	    pjsua_transport_config_default(&config);
+	    cfg = &config;
+	}
+
+	/* Init local address */
+	pj_sockaddr_in_init(&local_addr, 0, 0);
+
+	if (cfg->port)
+	    local_addr.sin_port = pj_htons((pj_uint16_t)cfg->port);
+
+	if (cfg->ip_addr.s_addr)
+	    local_addr.sin_addr.s_addr = cfg->ip_addr.s_addr;
+
+	/* Create the TCP transport */
+	status = pjsip_tcp_transport_start(pjsua_var.endpt, &local_addr, 1,
+					   &tcp);
+
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating SIP TCP listener", 
+			 status);
+	    goto on_return;
+	}
+
+	/* Save the transport */
+	pjsua_var.tpdata[id].type = type;
+	pjsua_var.tpdata[id].local_name = tcp->addr_name;
+	pjsua_var.tpdata[id].data.factory = tcp;
+
     } else {
 	status = PJSIP_EUNSUPTRANSPORT;
 	pjsua_perror(THIS_FILE, "Error creating transport", status);
 	goto on_return;
     }
 
-    /* Save the transport */
-    pjsua_var.tpdata[id].tp = tp;
 
     /* Return the ID */
     if (p_id) *p_id = id;
@@ -807,7 +851,7 @@ PJ_DEF(pj_status_t) pjsua_transport_register( pjsip_transport *tp,
 
     /* Find empty transport slot */
     for (id=0; id < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++id) {
-	if (pjsua_var.tpdata[id].tp == NULL)
+	if (pjsua_var.tpdata[id].data.ptr == NULL)
 	    break;
     }
 
@@ -818,7 +862,9 @@ PJ_DEF(pj_status_t) pjsua_transport_register( pjsip_transport *tp,
     }
 
     /* Save the transport */
-    pjsua_var.tpdata[id].tp = tp;
+    pjsua_var.tpdata[id].type = tp->key.type;
+    pjsua_var.tpdata[id].local_name = tp->local_name;
+    pjsua_var.tpdata[id].data.tp = tp;
 
     /* Return the ID */
     if (p_id) *p_id = id;
@@ -842,7 +888,7 @@ PJ_DEF(pj_status_t) pjsua_enum_transports( pjsua_transport_id id[],
     for (i=0, count=0; i<PJ_ARRAY_SIZE(pjsua_var.tpdata) && count<*p_count; 
 	 ++i) 
     {
-	if (!pjsua_var.tpdata[i].tp)
+	if (!pjsua_var.tpdata[i].data.ptr)
 	    continue;
 
 	id[count++] = i;
@@ -862,7 +908,7 @@ PJ_DEF(pj_status_t) pjsua_enum_transports( pjsua_transport_id id[],
 PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 					      pjsua_transport_info *info)
 {
-    pjsip_transport *tp;
+    struct transport_data *t = &pjsua_var.tpdata[id];
 
     pj_memset(info, 0, sizeof(*info));
 
@@ -870,25 +916,50 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
 
     /* Make sure that transport exists */
-    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].tp != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
 
     PJSUA_LOCK();
 
-    tp = pjsua_var.tpdata[id].tp;
-    if (tp == NULL) {
-	PJSUA_UNLOCK();
-	return PJ_EINVALIDOP;
-    }
+    if (pjsua_var.tpdata[id].type == PJSIP_TRANSPORT_UDP) {
+
+	pjsip_transport *tp = t->data.tp;
+
+	if (tp == NULL) {
+	    PJSUA_UNLOCK();
+	    return PJ_EINVALIDOP;
+	}
     
-    info->id = id;
-    info->type = tp->key.type;
-    info->type_name = pj_str(tp->type_name);
-    info->info = pj_str(tp->info);
-    info->flag = tp->flag;
-    info->addr_len = tp->addr_len;
-    info->local_addr = tp->local_addr;
-    info->local_name = tp->local_name;
-    info->usage_count = pj_atomic_get(tp->ref_cnt);
+	info->id = id;
+	info->type = tp->key.type;
+	info->type_name = pj_str(tp->type_name);
+	info->info = pj_str(tp->info);
+	info->flag = tp->flag;
+	info->addr_len = tp->addr_len;
+	info->local_addr = tp->local_addr;
+	info->local_name = tp->local_name;
+	info->usage_count = pj_atomic_get(tp->ref_cnt);
+
+    } else if (pjsua_var.tpdata[id].type == PJSIP_TRANSPORT_TCP) {
+
+	pjsip_tpfactory *factory = t->data.factory;
+
+	if (factory == NULL) {
+	    PJSUA_UNLOCK();
+	    return PJ_EINVALIDOP;
+	}
+    
+	info->id = id;
+	info->type = t->type;
+	info->type_name = pj_str("TCP");
+	info->info = pj_str("TCP transport");
+	info->flag = factory->flag;
+	info->addr_len = sizeof(factory->local_addr);
+	info->local_addr = factory->local_addr;
+	info->local_name = factory->addr_name;
+	info->usage_count = 0;
+
+    }
+
 
     PJSUA_UNLOCK();
 
@@ -906,7 +977,7 @@ PJ_DEF(pj_status_t) pjsua_transport_set_enable( pjsua_transport_id id,
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
 
     /* Make sure that transport exists */
-    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].tp != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
 
 
     /* To be done!! */
@@ -926,7 +997,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
 
     /* Make sure that transport exists */
-    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].tp != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
 
 
     /* To be done!! */

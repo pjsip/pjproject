@@ -1299,6 +1299,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 	pjsip_transport_add_ref(tsx->transport);
 	pj_memcpy(&tsx->addr, &tsx->res_addr.addr, tsx->res_addr.addr_len);
 	tsx->addr_len = tsx->res_addr.addr_len;
+	tsx->is_reliable = PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport);
     }
 
 
@@ -2130,9 +2131,25 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		pjsip_tx_data_add_ref( tdata );
 	    }
 
-	    /* Start timer H for transaction termination */
-	    pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
-                                       &timeout_timer_val);
+	    /* For INVITE, start timer H for transaction termination 
+	     * regardless whether transport is reliable or not.
+	     * For non-INVITE, start timer J with the value of 64*T1 for
+	     * non-reliable transports, and zero for reliable transports.
+	     */
+	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
+		/* Start timer H for INVITE */
+		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
+					   &timeout_timer_val);
+	    } else if (!tsx->is_reliable) {
+		/* Start timer J on 64*T1 seconds for non-INVITE */
+		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
+					   &timeout_timer_val);
+	    } else {
+		/* Start timer J on zero seconds for non-INVITE */
+		pj_time_val zero_time = { 0, 0 };
+		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
+					   &zero_time);
+	    }
 
 	    /* For INVITE, if unreliable transport is used, retransmission 
 	     * timer G will be scheduled (retransmission).

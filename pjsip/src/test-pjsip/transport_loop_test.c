@@ -25,10 +25,13 @@
 
 static int datagram_loop_test()
 {
+    enum { LOOP = 8 };
     pjsip_transport *loop;
     int i, pkt_lost;
     pj_sockaddr_in addr;
     pj_status_t status;
+    long ref_cnt;
+    unsigned rtt[LOOP], min_rtt;
 
     PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
 
@@ -40,18 +43,32 @@ static int datagram_loop_test()
 	return -20;
     }
 
+    /* Get initial reference counter */
+    ref_cnt = pj_atomic_get(loop->ref_cnt);
+
     /* Test basic transport attributes */
     status = generic_transport_test(loop);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Basic transport's send/receive loopback test. */
-    for (i=0; i<2; ++i) {
+    for (i=0; i<LOOP; ++i) {
 	status = transport_send_recv_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
-					  "sip:bob@130.0.0.1;transport=loop-dgram");
+					  "sip:bob@130.0.0.1;transport=loop-dgram",
+					  &rtt[i]);
 	if (status != 0)
 	    return status;
     }
+
+    min_rtt = 0xFFFFFFF;
+    for (i=0; i<LOOP; ++i)
+	if (rtt[i] < min_rtt) min_rtt = rtt[i];
+
+    report_ival("loop-rtt-usec", min_rtt, "usec",
+		"Best Loopback transport round trip time, in microseconds "
+		"(time from sending request until response is received. "
+		"Tests were performed on local machine only)");
+
 
     /* Multi-threaded round-trip test. */
     status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
@@ -84,9 +101,11 @@ static int datagram_loop_test()
     /* Restore delay. */
     pjsip_loop_set_delay(loop, 0);
 
-    /* Check that reference counter is one. */
-    if (pj_atomic_get(loop->ref_cnt) != 1) {
-	return -50;
+    /* Check reference counter. */
+    if (pj_atomic_get(loop->ref_cnt) != ref_cnt) {
+	PJ_LOG(3,(THIS_FILE, "   error: ref counter is not %d (%d)", 
+			     ref_cnt, pj_atomic_get(loop->ref_cnt)));
+	return -51;
     }
 
     /* Decrement reference. */
