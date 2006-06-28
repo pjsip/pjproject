@@ -184,7 +184,6 @@ static void ioqueue_on_accept_complete(ioqueue_accept_rec *accept_overlapped)
     if (accept_overlapped->newsock_ptr)
         *accept_overlapped->newsock_ptr = accept_overlapped->newsock;
     accept_overlapped->operation = 0;
-    accept_overlapped->newsock = PJ_INVALID_SOCKET;
 }
 
 static void erase_connecting_socket( pj_ioqueue_t *ioqueue, unsigned pos)
@@ -632,6 +631,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
                                            (pj_ioqueue_op_key_t*)pOv, 
                                            accept_rec->newsock,
                                            PJ_SUCCESS);
+		accept_rec->newsock = PJ_INVALID_SOCKET;
             }
 	    break;
 	case PJ_IOQUEUE_OP_CONNECT:

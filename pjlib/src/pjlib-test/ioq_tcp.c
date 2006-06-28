@@ -82,11 +82,22 @@ static void on_ioqueue_accept(pj_ioqueue_key_t *key,
                               pj_sock_t sock, 
                               int status)
 {
-    PJ_UNUSED_ARG(sock);
+    if (sock == PJ_INVALID_SOCKET) {
 
-    callback_accept_key = key;
-    callback_accept_op = op_key;
-    callback_accept_status = status;
+	if (status != PJ_SUCCESS) {
+	    /* Ignore. Could be blocking error */
+	    app_perror(".....warning: received error in on_ioqueue_accept() callback",
+		       status);
+	} else {
+	    callback_accept_status = -61;
+	    PJ_LOG(3,("", "..... on_ioqueue_accept() callback was given "
+			  "invalid socket and status is %d", status));
+	}
+    } else {
+	callback_accept_key = key;
+	callback_accept_op = op_key;
+	callback_accept_status = status;
+    }
 }
 
 static void on_ioqueue_connect(pj_ioqueue_key_t *key, int status)
