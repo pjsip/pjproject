@@ -361,6 +361,11 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
 	    break;
     }
 
+    /* Destroy rdata */
+    for (i=0; i<tp->rdata_cnt; ++i) {
+	pj_pool_release(tp->rdata[i]->tp_info.pool);
+    }
+
     /* Destroy reference counter. */
     if (tp->base.ref_cnt)
 	pj_atomic_destroy(tp->base.ref_cnt);
@@ -576,6 +581,13 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     /* Done. */
     if (p_transport)
 	*p_transport = &tp->base;
+
+    PJ_LOG(4,(tp->base.obj_name, 
+	      "SIP UDP transport started, published address is %.*s:%d",
+	      (int)tp->base.local_name.host.slen,
+	      tp->base.local_name.host.ptr,
+	      tp->base.local_name.port));
+
     return PJ_SUCCESS;
 
 on_error:
@@ -589,7 +601,7 @@ on_error:
  * Create a UDP socket in the specified address and start a transport.
  */
 PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
-					       const pj_sockaddr_in *local,
+					       const pj_sockaddr_in *local_a,
 					       const pjsip_host_port *a_name,
 					       unsigned async_cnt,
 					       pjsip_transport **p_transport)
@@ -597,15 +609,21 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
     pj_sock_t sock;
     pj_status_t status;
     char addr_buf[16];
+    pj_sockaddr_in tmp_addr;
     pjsip_host_port bound_name;
 
-    PJ_ASSERT_RETURN(local != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_sock_bind(sock, local, sizeof(*local));
+    if (local_a == NULL) {
+	pj_sockaddr_in_init(&tmp_addr, NULL, 0);
+	local_a = &tmp_addr;
+    }
+
+    status = pj_sock_bind(sock, local_a, sizeof(*local_a));
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
 	return status;
@@ -615,14 +633,23 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 	/* Address name is not specified. 
 	 * Build a name based on bound address.
 	 */
+	int addr_len;
+
+	addr_len = sizeof(tmp_addr);
+	status = pj_sock_getsockname(sock, &tmp_addr, &addr_len);
+	if (status != PJ_SUCCESS) {
+	    pj_sock_close(sock);
+	    return status;
+	}
+
 	a_name = &bound_name;
 	bound_name.host.ptr = addr_buf;
-	bound_name.port = pj_ntohs(local->sin_port);
+	bound_name.port = pj_ntohs(tmp_addr.sin_port);
 
 	/* If bound address specifies "0.0.0.0", get the IP address
 	 * of local hostname.
 	 */
-	if (local->sin_addr.s_addr == PJ_INADDR_ANY) {
+	if (tmp_addr.sin_addr.s_addr == PJ_INADDR_ANY) {
 	    pj_hostent he;
 	    const pj_str_t *hostname = pj_gethostname();
 	    status = pj_gethostbyname(hostname, &he);
@@ -634,7 +661,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 		       pj_inet_ntoa(*(pj_in_addr*)he.h_addr));
 	} else {
 	    /* Otherwise use bound address. */
-	    pj_strcpy2(&bound_name.host, pj_inet_ntoa(local->sin_addr));
+	    pj_strcpy2(&bound_name.host, pj_inet_ntoa(tmp_addr.sin_addr));
 	}
 	
     }

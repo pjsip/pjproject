@@ -41,7 +41,9 @@ PJ_BEGIN_DECL
  * Start UDP transport.
  *
  * @param endpt		The SIP endpoint.
- * @param local		Local address to bind.
+ * @param local		Optional local address to bind. If this argument
+ *			is NULL, the UDP transport will be bound to arbitrary
+ *			UDP port.
  * @param a_name	Published address (only the host and port portion is 
  *			used). If this argument is NULL, then the bound address
  *			will be used as the published address.
