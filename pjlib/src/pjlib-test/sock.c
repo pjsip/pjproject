@@ -78,6 +78,8 @@ static int format_test(void)
     pj_str_t s = pj_str(ADDRESS);
     unsigned char *p;
     pj_in_addr addr;
+    char zero[64];
+    pj_sockaddr_in addr2;
     const pj_str_t *hostname;
 
     PJ_LOG(3,("test", "...format_test()"));
@@ -103,6 +105,14 @@ static int format_test(void)
     if (pj_strcmp2(&s, (char*)p) != 0)
 	return -30;
 
+    /* Test that pj_sockaddr_in_init() initialize the whole structure, 
+     * including sin_zero.
+     */
+    pj_sockaddr_in_init(&addr2, 0, 1000);
+    pj_memset(zero, 0, sizeof(zero));
+    if (pj_memcmp(addr2.sin_zero, zero, sizeof(addr2.sin_zero)) != 0)
+	return -35;
+
     /* pj_gethostname() */
     hostname = pj_gethostname();
     if (!hostname || !hostname->ptr || !hostname->slen)
@@ -112,6 +122,7 @@ static int format_test(void)
 	      (int)hostname->slen, hostname->ptr));
 
     /* pj_gethostaddr() */
+
 
     return 0;
 }
