@@ -62,7 +62,9 @@
 typedef __int64 pj_int64_t;
 typedef unsigned __int64 pj_uint64_t;
 
-#define PJ_INT64_FMT	"I64"
+#define PJ_INT64(val)		val##i64
+#define PJ_UINT64(val)		val##ui64
+#define PJ_INT64_FMT		"I64"
 
 
 #endif	/* __PJ_COMPAT_CC_MSVC_H__ */
