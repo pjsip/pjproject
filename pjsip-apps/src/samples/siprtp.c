@@ -1284,6 +1284,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     /* Attach media to transport */
     status = pjmedia_transport_attach(audio->transport, audio, 
 				      &audio->si.rem_addr, 
+				      &audio->si.rem_rtcp,
 				      sizeof(pj_sockaddr_in),
 				      &on_rx_rtp,
 				      &on_rx_rtcp);

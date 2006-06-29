@@ -140,9 +140,14 @@ PJ_BEGIN_DECL
 #define PJMEDIA_SDP_EINPT	    (PJMEDIA_ERRNO_START+33)    /* 220033 */
 /**
  * @hideinitializer
- * Invalid fmtp attribute.
+ * Invalid SDP "fmtp" attribute.
  */
 #define PJMEDIA_SDP_EINFMTP	    (PJMEDIA_ERRNO_START+34)    /* 220034 */
+/**
+ * @hideinitializer
+ * Invalid SDP "rtcp" attribute.
+ */
+#define PJMEDIA_SDP_EINRTCP	    (PJMEDIA_ERRNO_START+35)    /* 220035 */
 
 
 /************************************************************

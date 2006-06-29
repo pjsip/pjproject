@@ -327,10 +327,26 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     m->desc.port_count = 1;
     pj_strdup (pool, &m->desc.transport, &STR_RTP_AVP);
 
-    /* Add format and rtpmap for each codec. */
+    /* Init media line and attribute list. */
     m->desc.fmt_count = 0;
     m->attr_count = 0;
 
+    /* Add "rtcp" attribute */
+#if 1
+    {
+	attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+	attr->name = pj_str("rtcp");
+	attr->value.ptr = pj_pool_alloc(pool, 80);
+	attr->value.slen = 
+	    pj_ansi_snprintf(attr->value.ptr, 80,
+			    ":%u IN IP4 %s",
+			    pj_ntohs(sock_info[0].rtp_addr_name.sin_port),
+			    pj_inet_ntoa(sock_info[0].rtp_addr_name.sin_addr));
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+    }
+#endif
+
+    /* Add format and rtpmap for each codec */
     for (i=0; i<endpt->codec_mgr.codec_cnt; ++i) {
 
 	pjmedia_codec_info *codec_info;

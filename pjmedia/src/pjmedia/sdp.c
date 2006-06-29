@@ -59,7 +59,7 @@ static pjmedia_sdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner,
 				    parse_context *ctx);
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
 			parse_context *ctx);
-
+static void on_scanner_error(pj_scanner *scanner);
 
 /*
  * Scanner character specification.
@@ -241,79 +241,70 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 						 pjmedia_sdp_rtpmap *rtpmap)
 {
-    const char *p = attr->value.ptr;
-    const char *end = attr->value.ptr + attr->value.slen;
+    pj_scanner scanner;
     pj_str_t token;
+    pj_status_t status = -1;
+    PJ_USE_EXCEPTION;
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtpmap")==0, PJ_EINVALIDOP);
+
+    pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
+		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* rtpmap sample:
      *	a=rtpmap:98 L16/16000/2.
      */
 
-    /* Eat the first ':' */
-    if (*p != ':') return PJMEDIA_SDP_EINRTPMAP;
+    /* Init */
+    rtpmap->pt.slen = rtpmap->param.slen = rtpmap->enc_name.slen = 0;
 
-    /* Get ':' */
-    ++p;
+    /* Parse */
+    PJ_TRY {
+	/* Eat the first ':' */
+	if (pj_scan_get_char(&scanner) != ':') {
+	    status = PJMEDIA_SDP_EINRTPMAP;
+	    goto on_return;
+	}
 
-    /* Get payload type. */
-    token.ptr = (char*)p;
-    while (pj_isdigit(*p) && p!=end)
-	++p;
-    token.slen = p - token.ptr;
-    if (token.slen == 0)
-	return PJMEDIA_SDP_EINRTPMAP;
 
-    rtpmap->pt = token;
+	/* Get payload type. */
+	pj_scan_get(&scanner, &cs_token, &rtpmap->pt);
 
-    /* Expecting space after payload type. */
-    if (*p != ' ') return PJMEDIA_SDP_EINRTPMAP;
 
-    /* Get space. */
-    ++p;
+	/* Get encoding name. */
+	pj_scan_get(&scanner, &cs_token, &rtpmap->enc_name);
 
-    /* Get encoding name. */
-    token.ptr = (char*)p;
-    while (*p != '/' && p != end)
-	++p;
-    token.slen = p - token.ptr;
-    if (token.slen == 0)
-	return PJMEDIA_SDP_EINRTPMAP;
-    rtpmap->enc_name = token;
+	/* Expecting '/' after encoding name. */
+	if (pj_scan_get_char(&scanner) != '/') {
+	    status = PJMEDIA_SDP_EINRTPMAP;
+	    goto on_return;
+	}
 
-    /* Expecting '/' after encoding name. */
-    if (*p != '/') return PJMEDIA_SDP_EINRTPMAP;
 
-    /* Get '/' */
-    ++p;
+	/* Get the clock rate. */
+	pj_scan_get(&scanner, &cs_token, &token);
+	rtpmap->clock_rate = pj_strtoul(&token);
 
-    /* Get the clock rate. */
-    token.ptr = (char*)p;
-    while (p != end && pj_isdigit(*p))
-	++p;
-    token.slen = p - token.ptr;
-    if (token.slen == 0)
-	return PJMEDIA_SDP_EINRTPMAP;
+	/* Expecting either '/' or EOF */
+	if (*scanner.curptr == '/') {
+	    pj_scan_get_char(&scanner);
+	    rtpmap->param.ptr = scanner.curptr;
+	    rtpmap->param.slen = scanner.end - scanner.curptr;
+	} else {
+	    rtpmap->param.slen = 0;
+	}
 
-    rtpmap->clock_rate = pj_strtoul(&token);
-
-    /* Expecting either '/' or EOF */
-    if (p != end && *p != '/')
-	return PJMEDIA_SDP_EINRTPMAP;
-
-    if (p != end) {
-	++p;
-	token.ptr = (char*)p;
-	token.slen = end-p;
-	rtpmap->param = token;
-    } else {
-	rtpmap->param.ptr = NULL;
-	rtpmap->param.slen = 0;
+	status = PJ_SUCCESS;
     }
+    PJ_CATCH(SYNTAX_ERROR) {
+	status = PJMEDIA_SDP_EINRTPMAP;
+    }
+    PJ_END;
 
-    return PJ_SUCCESS;
 
+on_return:
+    pj_scan_fini(&scanner);
+    return status;
 }
 
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
@@ -358,6 +349,70 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
+					      pjmedia_sdp_rtcp_attr *rtcp)
+{
+    pj_scanner scanner;
+    pj_str_t token;
+    pj_status_t status = -1;
+    PJ_USE_EXCEPTION;
+
+    PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtcp")==0, PJ_EINVALIDOP);
+
+    /* fmtp BNF:
+     *	a=rtcp:<port> [nettype addrtype address]
+     */
+
+    pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
+		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
+
+    /* Init */
+    rtcp->net_type.slen = rtcp->addr_type.slen = rtcp->addr.slen = 0;
+
+    /* Parse */
+    PJ_TRY {
+
+	/* Get the first ":" */
+	if (pj_scan_get_char(&scanner) != ':')
+	{
+	    status = PJMEDIA_SDP_EINRTCP;
+	    goto on_return;
+	}
+
+	/* Get the port */
+	pj_scan_get(&scanner, &cs_token, &token);
+	rtcp->port = pj_strtoul(&token);
+
+	/* Have address? */
+	if (!pj_scan_is_eof(&scanner)) {
+
+	    /* Get network type */
+	    pj_scan_get(&scanner, &cs_token, &rtcp->net_type);
+
+	    /* Get address type */
+	    pj_scan_get(&scanner, &cs_token, &rtcp->addr_type);
+
+	    /* Get the address */
+	    pj_scan_get(&scanner, &cs_token, &rtcp->addr);
+
+	}
+
+	status = PJ_SUCCESS;
+
+    }
+    PJ_CATCH(SYNTAX_ERROR) {
+	status = PJMEDIA_SDP_EINRTCP;
+    }
+    PJ_END;
+
+on_return:
+    pj_scan_fini(&scanner);
+    return status;
+}
+
+
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
 					       const pjmedia_sdp_attr *attr,
 					       pjmedia_sdp_rtpmap **p_rtpmap)
@@ -376,8 +431,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 					       pjmedia_sdp_attr **p_attr)
 {
     pjmedia_sdp_attr *attr;
-    char tempbuf[64], *p, *endbuf;
-    int i;
+    char tempbuf[64];
+    int len;
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && rtpmap && p_attr, PJ_EINVAL);
@@ -386,12 +441,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
     PJ_ASSERT_RETURN(rtpmap->enc_name.slen && rtpmap->clock_rate,
 		     PJMEDIA_SDP_EINRTPMAP);
 
-    /* Check size. */
-    i = rtpmap->enc_name.slen + rtpmap->param.slen + 32;
-    if (i >= sizeof(tempbuf)-1) {
-	pj_assert(!"rtpmap attribute is too long");
-	return PJMEDIA_SDP_ERTPMAPTOOLONG;
-    }
 
     attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
     PJ_ASSERT_RETURN(attr != NULL, PJ_ENOMEM);
@@ -399,37 +448,22 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
     attr->name.ptr = "rtpmap";
     attr->name.slen = 6;
 
-    p = tempbuf;
-    endbuf = tempbuf+sizeof(tempbuf);
+    /* Format: ":pt enc_name/clock_rate[/param]" */
+    len = pj_ansi_snprintf(tempbuf, sizeof(tempbuf), 
+			   ":%.*s %.*s/%u%s%.*s",
+			   (int)rtpmap->pt.slen,
+			   rtpmap->pt.ptr,
+			   (int)rtpmap->enc_name.slen,
+			   rtpmap->enc_name.ptr,
+			   rtpmap->clock_rate,
+			   (rtpmap->param.slen ? "/" : ""),
+			   rtpmap->param.slen,
+			   rtpmap->param.ptr);
 
-    /* Add colon */
-    *p++ = ':';
+    if (len < 1 || len > sizeof(tempbuf))
+	return PJMEDIA_SDP_ERTPMAPTOOLONG;
 
-    /* Add payload type. */
-    pj_memcpy(p, rtpmap->pt.ptr, rtpmap->pt.slen);
-    p += rtpmap->pt.slen;
-    *p++ = ' ';
-
-    /* Add encoding name. */
-    for (i=0; i<rtpmap->enc_name.slen; ++i)
-	p[i] = rtpmap->enc_name.ptr[i];
-    p += rtpmap->enc_name.slen;
-    *p++ = '/';
-
-    /* Add clock rate. */
-    p += pj_utoa(rtpmap->clock_rate, p);
-
-    /* Add parameter if necessary. */
-    if (rtpmap->param.slen > 0) {
-	*p++ = '/';
-	for (i=0; i<rtpmap->param.slen; ++i)
-	    p[i] = rtpmap->param.ptr[i];
-	p += rtpmap->param.slen;
-    }
-
-    *p = '\0';
-
-    attr->value.slen = p-tempbuf;
+    attr->value.slen = len;
     attr->value.ptr = pj_pool_alloc(pool, attr->value.slen);
     pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen);
 
@@ -440,26 +474,21 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 
 static int print_connection_info( pjmedia_sdp_conn *c, char *buf, int len)
 {
-    char *p = buf;
+    int printed;
 
-    if (len < 8+c->net_type.slen+c->addr_type.slen+c->addr.slen) {
+    printed = pj_ansi_snprintf(buf, len, "c=%.*s %.*s %.*s\r\n",
+			       (int)c->net_type.slen,
+			       c->net_type.ptr,
+			       (int)c->addr_type.slen,
+			       c->addr_type.ptr,
+			       (int)c->addr.slen,
+			       c->addr.ptr);
+    if (printed < 1 || printed > len)
 	return -1;
-    }
-    *p++ = 'c';
-    *p++ = '=';
-    pj_memcpy(p, c->net_type.ptr, c->net_type.slen);
-    p += c->net_type.slen;
-    *p++ = ' ';
-    pj_memcpy(p, c->addr_type.ptr, c->addr_type.slen);
-    p += c->addr_type.slen;
-    *p++ = ' ';
-    pj_memcpy(p, c->addr.ptr, c->addr.slen);
-    p += c->addr.slen;
-    *p++ = '\r';
-    *p++ = '\n';
 
-    return p-buf;
+    return printed;
 }
+
 
 PJ_DEF(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone (pj_pool_t *pool, 
 						  const pjmedia_sdp_conn *rhs)

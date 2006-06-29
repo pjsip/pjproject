@@ -293,6 +293,32 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_fmtp(const pjmedia_sdp_attr *attr,
 					       pjmedia_sdp_fmtp *fmtp);
 
 
+/**
+ * This structure describes SDP \a rtcp attribute.
+ */
+typedef struct pjmedia_sdp_rtcp_attr
+{
+    unsigned	port;	    /**< RTCP port number.	    */
+    pj_str_t	net_type;   /**< Optional network type.	    */
+    pj_str_t	addr_type;  /**< Optional address type.	    */
+    pj_str_t	addr;	    /**< Optional address.	    */
+} pjmedia_sdp_rtcp_attr;
+
+
+/**
+ * Parse a generic SDP attribute to get SDP rtcp attribute values.
+ *
+ * @param attr		Generic attribute to be converted to rtcp, which
+ *			name must be "rtcp".
+ * @param rtcp		SDP rtcp attribute to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
+					       pjmedia_sdp_rtcp_attr *rtcp);
+
+
+
 /* **************************************************************************
  * SDP CONNECTION INFO
  ****************************************************************************

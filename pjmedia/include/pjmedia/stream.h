@@ -91,6 +91,9 @@ struct pjmedia_stream_info
     pjmedia_type	type;	    /**< Media type (audio, video)	    */
     pjmedia_dir		dir;	    /**< Media direction.		    */
     pj_sockaddr_in	rem_addr;   /**< Remote RTP address		    */
+    pj_sockaddr_in	rem_rtcp;   /**< Optional remote RTCP address. If
+					 sin_family is zero, the RTP address
+					 will be calculated from RTP.	    */
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */

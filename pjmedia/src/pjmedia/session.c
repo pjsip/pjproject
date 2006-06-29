@@ -78,7 +78,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     unsigned i, pt;
     pj_status_t status;
 
-
     
     /* Validate arguments: */
     PJ_ASSERT_RETURN(pool && si && local && remote, PJ_EINVAL);
@@ -155,14 +154,41 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
 
     /* Set remote address: */
-
-    si->rem_addr.sin_family = PJ_AF_INET;
-    si->rem_addr.sin_port = pj_htons(rem_m->desc.port);
-    if (pj_inet_aton(&rem_conn->addr, &si->rem_addr.sin_addr) == 0) {
-
+    status = pj_sockaddr_in_init(&si->rem_addr, &rem_conn->addr, 
+				 rem_m->desc.port);
+    if (status != PJ_SUCCESS) {
 	/* Invalid IP address. */
 	return PJMEDIA_EINVALIDIP;
     }
+
+    /* If "rtcp" attribute is present in the SDP, set the RTCP address
+     * from that attribute. Otherwise, calculate from RTP address.
+     */
+    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+				  "rtcp", NULL);
+    if (attr) {
+	pjmedia_sdp_rtcp_attr rtcp;
+	status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp);
+	if (status == PJ_SUCCESS) {
+	    if (rtcp.addr.slen) {
+		status = pj_sockaddr_in_init(&si->rem_rtcp, &rtcp.addr,
+					     (pj_uint16_t)rtcp.port);
+	    } else {
+		pj_sockaddr_in_init(&si->rem_rtcp, NULL, 
+				    (pj_uint16_t)rtcp.port);
+		si->rem_rtcp.sin_addr.s_addr = si->rem_addr.sin_addr.s_addr;
+	    }
+	}
+    }
+    
+    if (si->rem_rtcp.sin_addr.s_addr == 0) {
+	int rtcp_port;
+
+	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr_in));
+	rtcp_port = pj_ntohs(si->rem_addr.sin_port) + 1;
+	si->rem_rtcp.sin_port = pj_htons((pj_uint16_t)rtcp_port);
+    }
+
 
     /* And codec must be numeric! */
     if (!pj_isdigit(*local_m->desc.fmt[0].ptr) || 

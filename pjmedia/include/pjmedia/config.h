@@ -155,6 +155,16 @@
 
 
 /**
+ * Support for sending and decoding RTCP port in SDP (RFC 3605).
+ * Default is yes.
+ */
+#ifndef PJMEDIA_HAS_RTCP_IN_SDP
+#   define PJMEDIA_HAS_RTCP_IN_SDP		1
+#endif
+
+
+
+/**
  * @}
  */
 

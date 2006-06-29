@@ -73,6 +73,7 @@ struct pjmedia_transport_op
     pj_status_t (*attach)(pjmedia_transport *tp,
 			  void *user_data,
 			  const pj_sockaddr_t *rem_addr,
+			  const pj_sockaddr_t *rem_rtcp,
 			  unsigned addr_len,
 			  void (*rtp_cb)(void *user_data,
 					 const void *pkt,
@@ -154,6 +155,10 @@ struct pjmedia_transport
  * @param user_data Arbitrary user data to be set when the callbacks are 
  *		    called.
  * @param rem_addr  Remote RTP address to send RTP packet to.
+ * @param rem_rtcp  Optional remote RTCP address. If the argument is NULL
+ *		    or if the address is zero, the RTCP address will be
+ *		    calculated from the RTP address (which is RTP port
+ *		    plus one).
  * @param addr_len  Length of the remote address.
  * @param rtp_cb    Callback to be called when RTP packet is received on
  *		    the transport.
@@ -165,6 +170,7 @@ struct pjmedia_transport
 PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 					        void *user_data,
 					        const pj_sockaddr_t *rem_addr,
+						const pj_sockaddr_t *rem_rtcp,
 					        unsigned addr_len,
 					        void (*rtp_cb)(void *user_data,
 							       const void *pkt,
@@ -173,7 +179,8 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 							        const void*pkt,
 							        pj_ssize_t))
 {
-    return tp->op->attach(tp, user_data, rem_addr, addr_len, rtp_cb, rtcp_cb);
+    return tp->op->attach(tp, user_data, rem_addr, rem_rtcp, addr_len, 
+			  rtp_cb, rtcp_cb);
 }
 
 
