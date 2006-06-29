@@ -682,11 +682,12 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
  * This callback is called by stream transport on receipt of packets
  * in the RTP socket. 
  */
-static void on_rx_rtp( pjmedia_stream *stream, 
+static void on_rx_rtp( void *data, 
 		       const void *pkt,
                        pj_ssize_t bytes_read)
 
 {
+    pjmedia_stream *stream = data;
     pjmedia_channel *channel = stream->dec;
     const pjmedia_rtp_hdr *hdr;
     const void *payload;
@@ -824,10 +825,12 @@ static void on_rx_rtp( pjmedia_stream *stream,
  * This callback is called by stream transport on receipt of packets
  * in the RTCP socket. 
  */
-static void on_rx_rtcp( pjmedia_stream *stream,
+static void on_rx_rtcp( void *data,
                         const void *pkt, 
                         pj_ssize_t bytes_read)
 {
+    pjmedia_stream *stream = data;
+
     /* Check for errors */
     if (bytes_read < 0) {
 	LOGERR_((stream->port.info.name.ptr, "RTCP recv() error", 
@@ -1067,9 +1070,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 
     /* Only attach transport when stream is ready. */
-    status = (*tp->op->attach)(tp, stream, &info->rem_addr, &info->rem_rtcp,
-			       sizeof(info->rem_addr), &on_rx_rtp,
-			       &on_rx_rtcp);
+    status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 
+				      &info->rem_rtcp, sizeof(info->rem_addr), 
+                                      &on_rx_rtp, &on_rx_rtcp);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 

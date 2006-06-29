@@ -133,12 +133,8 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
     pj_time_val now;
     
-    /* Reset packet */
-    pj_memset(rtcp_pkt, 0, sizeof(pjmedia_rtcp_pkt));
-    
-    /* Reset statistics */
-    pj_memset(&sess->stat, 0, sizeof(pjmedia_rtcp_stat));
-    sess->avg_jitter = 0;
+    /* Memset everything */
+    pj_memset(sess, 0, sizeof(pjmedia_rtcp_session));
 
     /* Last RX timestamp in RTP packet */
     sess->rtp_last_ts = (unsigned)-1;
@@ -150,10 +146,6 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     sess->clock_rate = clock_rate;
     sess->pkt_size = samples_per_frame;
 
-    /* Init time */
-    sess->rx_lsr = 0;
-    sess->rx_lsr_time.u64 = 0;
-    
     /* Init common RTCP header */
     rtcp_pkt->common.version = 2;
     rtcp_pkt->common.count = 1;

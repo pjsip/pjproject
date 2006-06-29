@@ -457,7 +457,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 			   rtpmap->enc_name.ptr,
 			   rtpmap->clock_rate,
 			   (rtpmap->param.slen ? "/" : ""),
-			   rtpmap->param.slen,
+			   (int)rtpmap->param.slen,
 			   rtpmap->param.ptr);
 
     if (len < 1 || len > sizeof(tempbuf))
