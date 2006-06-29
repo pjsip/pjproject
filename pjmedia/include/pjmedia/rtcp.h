@@ -239,6 +239,7 @@ struct pjmedia_rtcp_session
     pjmedia_rtcp_pkt	    rtcp_pkt;	/**< Cached RTCP packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
+    unsigned		    rtp_last_ts;/**< Last timestamp in RX RTP pkt.  */
 
     unsigned		    clock_rate;	/**< Clock rate of the stream	    */
     unsigned		    pkt_size;	/**< Avg pkt size, in samples.	    */

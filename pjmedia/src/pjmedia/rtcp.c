@@ -140,6 +140,9 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     pj_memset(&sess->stat, 0, sizeof(pjmedia_rtcp_stat));
     sess->avg_jitter = 0;
 
+    /* Last RX timestamp in RTP packet */
+    sess->rtp_last_ts = (unsigned)-1;
+
     /* Name */
     sess->name = name ? name : THIS_FILE,
 
@@ -197,12 +200,18 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
     pjmedia_rtp_status seq_st;
     unsigned last_seq;
 
+    if (sess->stat.rx.pkt == 0) {
+	/* Init sequence for the first time. */
+	pjmedia_rtp_seq_init(&sess->seq_ctrl, (pj_uint16_t)seq);
+    } 
+
     sess->stat.rx.pkt++;
     sess->stat.rx.bytes += payload;
 
-    /* Update sequence numbers. */
+    /* Process the RTP packet. */
     last_seq = sess->seq_ctrl.max_seq;
     pjmedia_rtp_seq_update(&sess->seq_ctrl, (pj_uint16_t)seq, &seq_st);
+
     if (seq_st.status.flag.restart) {
 	rtcp_init_seq(sess);
     }
@@ -212,7 +221,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	TRACE_((sess->name, "Duplicate packet detected"));
     }
 
-    if (seq_st.status.flag.outorder) {
+    if (seq_st.status.flag.outorder && !seq_st.status.flag.probation) {
 	sess->stat.rx.reorder++;
 	TRACE_((sess->name, "Out-of-order packet detected"));
     }
@@ -258,9 +267,11 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 
 
     /*
-     * Calculate jitter only when sequence is good (see RFC 3550 section A.8)
+     * Calculate jitter only when sequence is good (see RFC 3550 section A.8),
+     * AND only when the timestamp is different than the last packet
+     * (see RTP FAQ).
      */
-    if (seq_st.diff == 1) {
+    if (seq_st.diff == 1 && rtp_ts != sess->rtp_last_ts) {
 	/* Get arrival time and convert timestamp to samples */
 	pj_get_timestamp(&ts);
 	ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
@@ -309,6 +320,9 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	    sess->stat.rx.jitter.last = jitter;
 	}
     }
+
+    /* Update timestamp of last RX RTP packet */
+    sess->rtp_last_ts = rtp_ts;
 }
 
 PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess, 

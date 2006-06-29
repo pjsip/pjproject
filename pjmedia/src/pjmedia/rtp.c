@@ -59,18 +59,14 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 	sender_ssrc = pj_htonl(sender_ssrc);
     }
 
-    /* Initialize session. 
-     * Initial sequence number SHOULD be random, according to RFC 3550.
-     */
+    /* Initialize session. */
+    pj_memset(ses, 0, sizeof(*ses));
+
+    /* Initial sequence number SHOULD be random, according to RFC 3550. */
     ses->out_extseq = pj_rand();
     ses->peer_ssrc = 0;
     
-    /* Sequence number will be initialized when the first RTP packet 
-     * is receieved.
-     */
-
     /* Build default header for outgoing RTP packet. */
-    pj_memset(ses, 0, sizeof(*ses));
     ses->out_hdr.v = RTP_VERSION;
     ses->out_hdr.p = 0;
     ses->out_hdr.x = 0;
