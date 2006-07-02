@@ -409,6 +409,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
 				      PJSIP_SC_BUSY_HERE, NULL,
 				      NULL, NULL);
+	PJ_LOG(2,(THIS_FILE, 
+		  "Unable to accept incoming call (too many calls)"));
 	return PJ_TRUE;
     }
 
@@ -458,8 +460,20 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Create invite session: */
     status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &inv);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
+	pjsip_hdr hdr_list;
+	pjsip_warning_hdr *w;
+
+	w = pjsip_warning_hdr_create_from_status(dlg->pool, 
+						 pjsip_endpt_name(pjsua_var.endpt),
+						 status);
+	pj_list_init(&hdr_list);
+	pj_list_push_back(&hdr_list, w);
+
+	pjsip_dlg_respond(dlg, rdata, 500, NULL, &hdr_list, NULL);
+
+	/* Can't terminate dialog because transaction is in progress.
 	pjsip_dlg_terminate(dlg);
+	 */
 	return PJ_TRUE;
     }
 
@@ -1701,6 +1715,20 @@ static void pjsua_call_on_forked( pjsip_inv_session *inv,
 
 
 /*
+ * Disconnect call upon error.
+ */
+static void call_disconnect( pjsip_inv_session *inv, 
+			     int code )
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    status = pjsip_inv_end_session(inv, code, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+	pjsip_inv_send_msg(inv, tdata);
+}
+
+/*
  * Callback to be called when SDP offer/answer negotiation has just completed
  * in the session. This function will start/update media if negotiation
  * has succeeded.
@@ -1778,7 +1806,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
-	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	PJSUA_UNLOCK();
 	return;
     }
