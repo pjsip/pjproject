@@ -983,12 +983,14 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    }
 
 	    PJ_LOG(1, (THIS_FILE, 
-		      "Error processing packet from %s:%d %.*s:\n"
-		      "%s\n"
+		      "Error processing %d bytes packet from %s:%d %.*s:\n"
+		      "%.*s\n"
 		      "-- end of packet.",
+		      msg_fragment_size,
 		      rdata->pkt_info.src_name, 
 		      rdata->pkt_info.src_port,
 		      (int)tmp.slen, tmp.ptr,
+		      (int)msg_fragment_size,
 		      rdata->msg_info.msg_buf));
 
 	    goto finish_process_fragment;

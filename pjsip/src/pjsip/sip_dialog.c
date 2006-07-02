@@ -702,9 +702,11 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
-    if (dlg->sess_count==0 && dlg->tsx_count==0)
+    if (dlg->sess_count==0 && dlg->tsx_count==0) {
+	pj_mutex_unlock(dlg->mutex);
+	pj_mutex_lock(dlg->mutex);
 	unregister_and_destroy_dialog(dlg);
-    else {
+    } else {
 	pj_mutex_unlock(dlg->mutex);
     }
 }
@@ -971,6 +973,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
      * The transaction user is the user agent module.
      */
     if (msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	int tsx_count;
+
 	status = pjsip_tsx_create_uac(dlg->ua, tdata, &tsx);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -985,12 +989,13 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	    tsx->mod_data[mod_data_id] = mod_data;
 
 	/* Increment transaction counter. */
-	++dlg->tsx_count;
+	tsx_count = ++dlg->tsx_count;
 
 	/* Send the message. */
 	status = pjsip_tsx_send_msg(tsx, tdata);
 	if (status != PJ_SUCCESS) {
-	    pjsip_tsx_terminate(tsx, tsx->status_code);
+	    if (dlg->tsx_count == tsx_count)
+		pjsip_tsx_terminate(tsx, tsx->status_code);
 	    goto on_error;
 	}
 
@@ -1259,6 +1264,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     pj_status_t status;
     pjsip_transaction *tsx = NULL;
+    pj_bool_t processed = PJ_FALSE;
     unsigned i;
 
     PJ_LOG(5,(dlg->obj_name, "Received %s",
@@ -1316,7 +1322,6 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
     /* Report the request to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
-	pj_bool_t processed;
 
 	if (!dlg->usage[i]->on_rx_request)
 	    continue;
@@ -1330,6 +1335,23 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     /* Feed the first request to the transaction. */
     if (tsx)
 	pjsip_tsx_recv_msg(tsx, rdata);
+
+    /* If no dialog usages has claimed the processing of the transaction,
+     * and if transaction has not sent final response, respond with
+     * 500/Internal Server Error.
+     */
+    if (!processed && tsx && tsx->status_code < 200) {
+	pjsip_tx_data *tdata;
+	const pj_str_t reason = { "No session found", 16};
+
+	PJ_LOG(4,(tsx->obj_name, "Incoming request was unhandled by "
+				 "dialog usages, sending 500 response"));
+
+	status = pjsip_dlg_create_response(dlg, rdata, 500, &reason, &tdata);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+	}
+    }
 
 on_return:
     /* Unlock dialog and dec session, may destroy dialog. */

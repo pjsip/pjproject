@@ -232,10 +232,17 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
      */
     method = &rdata->msg_info.msg->line.req.method;
 
-    if (method->id == PJSIP_INVITE_METHOD ||
-	method->id == PJSIP_CANCEL_METHOD ||
-	method->id == PJSIP_BYE_METHOD)
+    if (method->id == PJSIP_INVITE_METHOD) {
+	return PJ_TRUE;
+    }
+
+    /* BYE and CANCEL must have existing invite session */
+    if (method->id == PJSIP_BYE_METHOD ||
+	method->id == PJSIP_CANCEL_METHOD)
     {
+	if (inv == NULL)
+	    return PJ_FALSE;
+
 	return PJ_TRUE;
     }
 
@@ -780,6 +787,13 @@ on_return:
 	}
 
 	*p_tdata = tdata;
+
+	/* Can not return PJ_SUCCESS when response message is produced.
+	 * Ref: PROTOS test ~#2490
+	 */
+	if (status == PJ_SUCCESS)
+	    status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
+
     }
 
     return status;
@@ -2204,7 +2218,26 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	inv_handle_bye_response( inv, tsx, e->body.tsx_state.src.rdata, e);
 
     }
+    else if (tsx->method.id == PJSIP_CANCEL_METHOD &&
+	     tsx->role == PJSIP_ROLE_UAS &&
+	     tsx->status_code < 200 &&
+	     e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+    {
 
+	/*
+	 * Handle strandled incoming CANCEL.
+	 */
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	pjsip_tx_data *tdata;
+	pj_status_t status;
+
+	status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
+	if (status != PJ_SUCCESS) return;
+
+	status = pjsip_dlg_send_response(dlg, tsx, tdata);
+	if (status != PJ_SUCCESS) return;
+
+    }
 }
 
 /*
@@ -2242,6 +2275,26 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	 */
 
 	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
+
+    }
+    else if (tsx->method.id == PJSIP_CANCEL_METHOD &&
+	     tsx->role == PJSIP_ROLE_UAS &&
+	     tsx->status_code < 200 &&
+	     e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+    {
+
+	/*
+	 * Handle strandled incoming CANCEL.
+	 */
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	pjsip_tx_data *tdata;
+	pj_status_t status;
+
+	status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
+	if (status != PJ_SUCCESS) return;
+
+	status = pjsip_dlg_send_response(dlg, tsx, tdata);
+	if (status != PJ_SUCCESS) return;
 
     }
     else if (tsx->method.id == PJSIP_INVITE_METHOD &&
@@ -2377,18 +2430,31 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
 
     PJ_ASSERT_ON_FAIL(tsx && dlg, return);
 
-    if (tsx->method.id == PJSIP_BYE_METHOD &&
-	tsx->role == PJSIP_ROLE_UAS &&
+    if (tsx->role == PJSIP_ROLE_UAS &&
 	tsx->status_code < 200 &&
 	e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
     {
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 
 	/*
-	 * Be nice, handle incoming BYE.
+	 * Respond BYE with 200/OK
 	 */
+	if (tsx->method.id == PJSIP_BYE_METHOD) {
+	    inv_respond_incoming_bye( inv, tsx, rdata, e );
+	} else if (tsx->method.id == PJSIP_CANCEL_METHOD) {
+	    /*
+	     * Respond CANCEL with 200/OK too.
+	     */
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
 
-	inv_respond_incoming_bye( inv, tsx, e->body.tsx_state.src.rdata, e );
+	    status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
+	    if (status != PJ_SUCCESS) return;
 
+	    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+	    if (status != PJ_SUCCESS) return;
+
+	}
     }
 }
 

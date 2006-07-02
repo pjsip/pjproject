@@ -478,6 +478,7 @@ static pj_status_t int_register_parser( const char *name,
     rec.handler = fptr;
     rec.hname_len = strlen(name);
     if (rec.hname_len >= sizeof(rec.hname)) {
+	pj_assert(!"Header name is too long!");
 	return PJ_ENAMETOOLONG;
     }
     /* Name is copied in lowercase. */
@@ -545,7 +546,7 @@ static pjsip_parse_hdr_func * find_handler(const pj_str_t *hname)
     unsigned	 n;
 
     if (hname->slen >= PJSIP_MAX_HNAME_LEN) {
-        pj_assert(!"Header name is too long!");
+	/* Guaranteed not to be able to find handler. */
         return NULL;
     }
 
@@ -831,6 +832,11 @@ parse_headers:
 	do {
 	    pjsip_parse_hdr_func * handler;
 	    pjsip_hdr *hdr = NULL;
+
+	    /* Init hname just in case parsing fails.
+	     * Ref: PROTOS #2412
+	     */
+	    hname.slen = 0;
 	    
 	    /* Get hname. */
 	    pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &hname);
@@ -913,6 +919,10 @@ parse_headers:
 	    err_info->col = pj_scan_get_col(scanner) + 1;
 	    if (parsing_headers)
 		err_info->hname = hname;
+	    else if (msg && msg->type == PJSIP_REQUEST_MSG)
+		err_info->hname = pj_str("Request Line");
+	    else if (msg && msg->type == PJSIP_RESPONSE_MSG)
+		err_info->hname = pj_str("Status Line");
 	    else
 		err_info->hname.slen = 0;
 	    
@@ -1125,9 +1135,14 @@ static pjsip_uri *int_parse_uri_or_name_addr( pj_scanner *scanner, pj_pool_t *po
 static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool, 
 				pj_bool_t parse_params)
 {
+    /* Bug:
+     * This function should not call back int_parse_name_addr() because
+     * it is called by that function. This would cause stack overflow
+     * with PROTOS test #1223.
     if (*scanner->curptr=='"' || *scanner->curptr=='<') {
 	return (pjsip_uri*)int_parse_name_addr( scanner, pool );
     } else {
+    */
 	pj_str_t scheme;
 	int colon;
 	pjsip_parse_uri_func *func;
@@ -1147,7 +1162,10 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
 	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 	    UNREACHED({ return NULL; /* Not reached. */ })
 	}
+
+    /*
     }
+    */
 }
 
 /* Parse "sip:" and "sips:" URI. 
