@@ -29,10 +29,10 @@
  */
 enum
 {
-    /* Telephone events must have pt=101, or otherwise some code needs
-     * to be updated (this would not affect outgoing pt).
+    /* PJMEDIA_RTP_PT_TELEPHONE_EVENTS is declared in
+     * <pjmedia/config.h>
      */
-    PJMEDIA_RTP_PT_TELEPHONE_EVENTS = 101,	/**< telephone-events	    */
+    PJMEDIA_RTP_PT_START = PJMEDIA_RTP_PT_TELEPHONE_EVENTS,
 
     PJMEDIA_RTP_PT_SPEEX_NB,			/**< Speex narrowband/8KHz  */
     PJMEDIA_RTP_PT_SPEEX_WB,			/**< Speex wideband/16KHz   */

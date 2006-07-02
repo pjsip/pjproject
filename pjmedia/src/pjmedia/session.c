@@ -121,6 +121,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJMEDIA_EINVALIMEDIATYPE;
     }
 
+    /* Transport type must be equal */
+    if (pj_stricmp(&rem_m->desc.transport, 
+		   &local_m->desc.transport) != 0) 
+    {
+	si->type = PJMEDIA_TYPE_UNKNOWN;
+	return PJMEDIA_SDPNEG_EINVANSTP;
+    }
+
     /* Media direction: */
 
     if (local_m->desc.port == 0 || 
@@ -199,6 +207,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Get the payload number for receive channel. */
     pt = pj_strtoul(&local_m->desc.fmt[0]);
+    pj_assert(PJMEDIA_RTP_PT_TELEPHONE_EVENTS==0 ||
+	      pt != PJMEDIA_RTP_PT_TELEPHONE_EVENTS);
 
     /* Get codec info.
      * For static payload types, get the info from codec manager.

@@ -34,6 +34,7 @@ enum {
     SYNTAX_ERROR = 1,
 };
 #define TOKEN		"-.!%*_=`'~"
+//#define TOKEN		"'`-./:?\"#$&*;=@[]^_`{|}+~!"
 #define NTP_OFFSET	((pj_uint32_t)2208988800)
 #define THIS_FILE	"sdp.c"
 
@@ -66,7 +67,7 @@ static void on_scanner_error(pj_scanner *scanner);
  */
 static int is_initialized;
 static pj_cis_buf_t cis_buf;
-static pj_cis_t cs_token;
+static pj_cis_t cs_digit, cs_token;
 
 static void init_sdp_parser(void)
 {
@@ -78,10 +79,14 @@ static void init_sdp_parser(void)
     }
 
     pj_cis_buf_init(&cis_buf);
+
     pj_cis_init(&cis_buf, &cs_token);
     pj_cis_add_alpha(&cs_token);
     pj_cis_add_num(&cs_token);
     pj_cis_add_str(&cs_token, TOKEN);
+
+    pj_cis_init(&cis_buf, &cs_digit);
+    pj_cis_add_num(&cs_digit);
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
@@ -257,6 +262,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
     /* Init */
     rtpmap->pt.slen = rtpmap->param.slen = rtpmap->enc_name.slen = 0;
+    rtpmap->clock_rate = 0;
 
     /* Parse */
     PJ_TRY {
@@ -282,7 +288,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
 
 	/* Get the clock rate. */
-	pj_scan_get(&scanner, &cs_token, &token);
+	pj_scan_get(&scanner, &cs_digit, &token);
 	rtpmap->clock_rate = pj_strtoul(&token);
 
 	/* Expecting either '/' or EOF */
@@ -760,6 +766,18 @@ static void parse_version(pj_scanner *scanner, parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINVER;
 
+    /* check equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return;
+    }
+
+    /* check version is 0 */
+    if (*(scanner->curptr+2) != '0') {
+	on_scanner_error(scanner);
+	return;
+    }
+
     pj_scan_advance_n(scanner, 3, SKIP_WS);
     pj_scan_get_newline(scanner);
 }
@@ -770,6 +788,12 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_str_t str;
 
     ctx->last_error = PJMEDIA_SDP_EINORIGIN;
+
+    /* check equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return;
+    }
 
     /* o= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -810,6 +834,12 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 
     ctx->last_error = PJMEDIA_SDP_EINTIME;
 
+    /* check equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return;
+    }
+
     /* t= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
@@ -831,6 +861,12 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
 			       parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINSDP;
+
+    /* check equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return;
+    }
 
     /* x= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -871,6 +907,12 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     pj_str_t str;
 
     ctx->last_error = PJMEDIA_SDP_EINMEDIA;
+
+    /* check the equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return;
+    }
 
     /* m= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -925,6 +967,12 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
     ctx->last_error = PJMEDIA_SDP_EINATTR;
 
     attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+
+    /* check equal sign */
+    if (*(scanner->curptr+1) != '=') {
+	on_scanner_error(scanner);
+	return NULL;
+    }
 
     /* skip a= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
@@ -1012,7 +1060,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    parse_version(&scanner, &ctx);
 		    break;
 		default:
-		    parse_generic_line(&scanner, &dummy, &ctx);
+		    if (cur_name >= 'a' && cur_name <= 'z')
+			parse_generic_line(&scanner, &dummy, &ctx);
+		    else  {
+			ctx.last_error = PJMEDIA_SDP_EINSDP;
+			on_scanner_error(&scanner);
+		    }
 		    break;
 		}
 	}
@@ -1103,7 +1156,7 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
 
 
 #define CHECK(exp,ret)	do {			\
-			    pj_assert(exp);	\
+			    /*pj_assert(exp);*/	\
 			    if (!(exp))		\
 				return ret;	\
 			} while (0)

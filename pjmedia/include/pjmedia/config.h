@@ -163,6 +163,29 @@
 #endif
 
 
+/**
+ * This macro declares the payload type for telephone-event
+ * that is advertised by PJMEDIA for outgoing SDP. If this macro
+ * is set to zero, telephone events would not be advertised nor
+ * supported.
+ *
+ * If this value is changed to other number, please update the
+ * PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR too.
+ */
+#ifndef PJMEDIA_RTP_PT_TELEPHONE_EVENTS
+#   define PJMEDIA_RTP_PT_TELEPHONE_EVENTS	    101
+#endif
+
+
+/**
+ * Macro to get the string representation of the telephone-event
+ * payload type.
+ */
+#ifndef PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR
+#   define PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR	    "101"
+#endif
+
+
 
 /**
  * @}

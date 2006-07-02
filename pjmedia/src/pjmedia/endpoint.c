@@ -332,7 +332,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     m->attr_count = 0;
 
     /* Add "rtcp" attribute */
-#if 1
+#if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
     {
 	attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
 	attr->name = pj_str("rtcp");
@@ -340,8 +340,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	attr->value.slen = 
 	    pj_ansi_snprintf(attr->value.ptr, 80,
 			    ":%u IN IP4 %s",
-			    pj_ntohs(sock_info[0].rtp_addr_name.sin_port),
-			    pj_inet_ntoa(sock_info[0].rtp_addr_name.sin_addr));
+			    pj_ntohs(sock_info[0].rtcp_addr_name.sin_port),
+			    pj_inet_ntoa(sock_info[0].rtcp_addr_name.sin_addr));
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
     }
 #endif
@@ -397,20 +397,26 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     attr->name = STR_SENDRECV;
     m->attr[m->attr_count++] = attr;
 
-#if 1
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+
     /*
      * Add support telephony event
      */
-    m->desc.fmt[m->desc.fmt_count++] = pj_str("101");
+    m->desc.fmt[m->desc.fmt_count++] = 
+	pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
+
     /* Add rtpmap. */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("rtpmap");
-    attr->value = pj_str(":101 telephone-event/8000");
+    attr->value = pj_str(":" PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR 
+			 " telephone-event/8000");
     m->attr[m->attr_count++] = attr;
+
     /* Add fmtp */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("fmtp");
-    attr->value = pj_str(":101 0-15");
+    attr->value = pj_str(":" PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
     m->attr[m->attr_count++] = attr;
 #endif
 
