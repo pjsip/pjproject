@@ -101,7 +101,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
     pj_strdup2(pool, &attr->name, name);
 
     if (value)
-	pj_strdup(pool, &attr->value, value);
+	pj_strdup_with_null(pool, &attr->value, value);
     else {
 	attr->value.ptr = NULL;
 	attr->value.slen = 0;
@@ -120,7 +120,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool,
     attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
 
     pj_strdup(pool, &attr->name, &rhs->name);
-    pj_strdup(pool, &attr->value, &rhs->value);
+    pj_strdup_with_null(pool, &attr->value, &rhs->value);
 
     return attr;
 }
@@ -249,9 +249,26 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
     pj_scanner scanner;
     pj_str_t token;
     pj_status_t status = -1;
+    char term = 0;
     PJ_USE_EXCEPTION;
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtpmap")==0, PJ_EINVALIDOP);
+
+    PJ_ASSERT_RETURN(attr->value.slen != 0, PJMEDIA_SDP_EINATTR);
+
+    /* Check if input is null terminated, and null terminate if
+     * necessary. Unfortunately this may crash the application if
+     * attribute was allocated from a read-only memory location.
+     * But this shouldn't happen as attribute's value normally is
+     * null terminated.
+     */
+    if (attr->value.ptr[attr->value.slen] != 0 &&
+	attr->value.ptr[attr->value.slen] != '\r')
+    {
+	pj_assert(!"Shouldn't happen");
+	term = attr->value.ptr[attr->value.slen];
+	attr->value.ptr[attr->value.slen] = '\0';
+    }
 
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
 		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
@@ -310,6 +327,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
 on_return:
     pj_scan_fini(&scanner);
+    if (term) {
+	attr->value.ptr[attr->value.slen] = term;
+    }
     return status;
 }
 
