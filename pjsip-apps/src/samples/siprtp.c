@@ -566,7 +566,7 @@ static pj_status_t make_call(const pj_str_t *dst_uri)
  */
 static void process_incoming_call(pjsip_rx_data *rdata)
 {
-    unsigned i;
+    unsigned i, options;
     struct call *call;
     pjsip_dialog *dlg;
     pjmedia_sdp_session *sdp;
@@ -586,6 +586,33 @@ static void process_incoming_call(pjsip_rx_data *rdata)
 				       NULL, NULL);
 	return;
     }
+
+    /* Verify that we can handle the request. */
+    options = 0;
+    status = pjsip_inv_verify_request(rdata, &options, NULL, NULL,
+				      app.sip_endpt, &tdata);
+    if (status != PJ_SUCCESS) {
+
+	/*
+	 * No we can't handle the incoming INVITE request.
+	 */
+
+	if (tdata) {
+	    pjsip_response_addr res_addr;
+
+	    pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
+	    pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata, 
+				      NULL, NULL);
+
+	} else {
+
+	    /* Respond with 500 (Internal Server Error) */
+	    pjsip_endpt_respond_stateless(app.sip_endpt, rdata, 500, NULL,
+					  NULL, NULL);
+	}
+
+	return;
+    } 
 
     call = &app.call[i];
 
