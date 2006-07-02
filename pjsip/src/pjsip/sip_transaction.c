@@ -1230,6 +1230,16 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     if (rdata->msg_info.via == NULL)
 	return PJSIP_EMISSINGHDR;
 
+    /* Check that method in CSeq header match request method.
+     * Reference: PROTOS #1922
+     */
+    if (pjsip_method_cmp(&msg->line.req.method, 
+			 &rdata->msg_info.cseq->method) != 0)
+    {
+	PJ_LOG(4,(THIS_FILE, "Error: CSeq header contains different "
+			     "method than the request line"));
+	return PJSIP_EINVALIDHDR;
+    }
 
     /* 
      * Create transaction instance. 
