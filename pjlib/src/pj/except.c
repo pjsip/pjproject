@@ -21,6 +21,7 @@
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/errno.h>
+#include <pj/string.h>
 
 static long thread_local_id = -1;
 
@@ -42,7 +43,8 @@ PJ_DEF(void) pj_throw_exception_(int exception_id)
 
     handler = pj_thread_local_get(thread_local_id);
     if (handler == NULL) {
-        PJ_LOG(1,("except.c", "!!!FATAL: unhandled exception %d!\n", exception_id));
+        PJ_LOG(1,("except.c", "!!!FATAL: unhandled exception %s!\n", 
+		   pj_exception_id_name(exception_id)));
         pj_assert(handler != NULL);
         /* This will crash the system! */
     }
@@ -115,14 +117,18 @@ PJ_DEF(pj_status_t) pj_exception_id_free( pj_exception_id_t id )
 
 PJ_DEF(const char*) pj_exception_id_name(pj_exception_id_t id)
 {
+    static char unknown_name[32];
+
     /*
      * Start from 1 (not 0)!!!
      * Exception 0 is reserved for normal path of setjmp()!!!
      */
     PJ_ASSERT_RETURN(id>0 && id<PJ_MAX_EXCEPTION_ID, "<Invalid ID>");
 
-    if (exception_id_names[id] == NULL)
-        return "<Unallocated ID>";
+    if (exception_id_names[id] == NULL) {
+        pj_ansi_sprintf(unknown_name, "exception %d", id);
+	return unknown_name;
+    }
 
     return exception_id_names[id];
 }
