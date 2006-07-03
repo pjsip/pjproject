@@ -315,10 +315,14 @@ extern pj_cis_t
     pjsip_HEX_SPEC,	        /**< Hexadecimal digits. */
     pjsip_PARAM_CHAR_SPEC,      /**< For scanning pname (or pvalue when it's 
 				     not quoted.) */
+    pjsip_PARAM_CHAR_SPEC_ESC,	/**< Variant without the escape ('%') char */
     pjsip_HDR_CHAR_SPEC,	/**< Chars in hname/havalue in URL. */
+    pjsip_HDR_CHAR_SPEC_ESC,	/**< Variant without the escape ('%') char */
     pjsip_PROBE_USER_HOST_SPEC, /**< Hostname characters. */
     pjsip_PASSWD_SPEC,		/**< Password. */
+    pjsip_PASSWD_SPEC_ESC,	/**< Variant without the escape ('%') char */
     pjsip_USER_SPEC,		/**< User */
+    pjsip_USER_SPEC_ESC,	/**< Variant without the escape ('%') char */
     pjsip_NOT_NEWLINE,		/**< For eating up header, basicly any chars
 				     except newlines or zero. */
     pjsip_NOT_COMMA_OR_NEWLINE, /**< Array elements. */

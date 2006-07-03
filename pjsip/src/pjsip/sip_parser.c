@@ -115,10 +115,14 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 	    pjsip_HEX_SPEC,	        /* Hexadecimal digits. */
 	    pjsip_PARAM_CHAR_SPEC,      /* For scanning pname (or pvalue when
                                          * it's not quoted.) */
+	    pjsip_PARAM_CHAR_SPEC_ESC,	/* The variant without escaped char */
 	    pjsip_HDR_CHAR_SPEC,	/* Chars in hname or hvalue */
+	    pjsip_HDR_CHAR_SPEC_ESC,	/* Variant without escaped char */
 	    pjsip_PROBE_USER_HOST_SPEC, /* Hostname characters. */
 	    pjsip_PASSWD_SPEC,	        /* Password. */
+	    pjsip_PASSWD_SPEC_ESC,	/* Variant without escaped char */
 	    pjsip_USER_SPEC,	        /* User */
+	    pjsip_USER_SPEC_ESC,	/* Variant without escaped char */
 	    pjsip_NOT_COMMA_OR_NEWLINE, /* Array separator. */
 	    pjsip_NOT_NEWLINE,		/* For eating up header.*/
 	    pjsip_DISPLAY_SPEC;         /* Used when searching for display name
@@ -201,7 +205,26 @@ static unsigned long pj_strtoul_mindigit(const pj_str_t *str,
 }
 
 /* Case insensitive comparison */
-#define parser_stricmp(s1, s2)  (pj_stricmp_alnum(&s1, &s2))
+#define parser_stricmp(s1, s2)  (s1.slen!=s2.slen || pj_stricmp_alnum(&s1, &s2))
+
+
+/* Get a token and unescape */
+PJ_INLINE(void) parser_get_and_unescape(pj_scanner *scanner, pj_pool_t *pool,
+					const pj_cis_t *spec, 
+					const pj_cis_t *unesc_spec,
+					pj_str_t *token)
+{
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(spec);
+    pj_scan_get_unescape(scanner, unesc_spec, token);
+#else
+    PJ_UNUSED_ARG(unesc_spec);
+    pj_scan_get(scanner, spec, token);
+    *token = pj_str_unescape(pool, token);
+#endif
+}
+
 
 
 /* Syntax error handler for parser. */
@@ -313,17 +336,33 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str(&pjsip_PARAM_CHAR_SPEC, PARAM_CHAR);
 
+    status = pj_cis_dup(&pjsip_PARAM_CHAR_SPEC_ESC, &pjsip_PARAM_CHAR_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_del_str(&pjsip_PARAM_CHAR_SPEC_ESC, ESCAPED);
+
     status = pj_cis_dup(&pjsip_HDR_CHAR_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str(&pjsip_HDR_CHAR_SPEC, HDR_CHAR);
+
+    status = pj_cis_dup(&pjsip_HDR_CHAR_SPEC_ESC, &pjsip_HDR_CHAR_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_del_str(&pjsip_HDR_CHAR_SPEC_ESC, ESCAPED);
 
     status = pj_cis_dup(&pjsip_USER_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pjsip_USER_SPEC, UNRESERVED ESCAPED USER_UNRESERVED );
 
+    status = pj_cis_dup(&pjsip_USER_SPEC_ESC, &pjsip_USER_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_del_str( &pjsip_USER_SPEC_ESC, ESCAPED);
+
     status = pj_cis_dup(&pjsip_PASSWD_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pjsip_PASSWD_SPEC, UNRESERVED ESCAPED PASS);
+
+    status = pj_cis_dup(&pjsip_PASSWD_SPEC_ESC, &pjsip_PASSWD_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_del_str( &pjsip_PASSWD_SPEC, ESCAPED);
 
     status = pj_cis_init(&cis_buf, &pjsip_PROBE_USER_HOST_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -459,7 +498,7 @@ PJ_INLINE(int) compare_handler( const handler_rec *r1,
      */
 
     /* Equal length and equal hash. compare the strings. */
-    return pj_ansi_strcmp(r1->hname, name);
+    return pj_memcmp(r1->hname, name, name_len);
 }
 
 /* Register one handler for one header name. */
@@ -468,9 +507,9 @@ static pj_status_t int_register_parser( const char *name,
 {
     unsigned	pos;
     handler_rec rec;
-    unsigned	i;
 
     if (handler_count >= PJ_ARRAY_SIZE(handler)) {
+	pj_assert(!"Too many handlers!");
 	return PJ_ETOOMANY;
     }
 
@@ -481,13 +520,12 @@ static pj_status_t int_register_parser( const char *name,
 	pj_assert(!"Header name is too long!");
 	return PJ_ENAMETOOLONG;
     }
-    /* Name is copied in lowercase. */
-    for (i=0; i<rec.hname_len; ++i) {
-	rec.hname[i] = (char)pj_tolower(name[i]);
-    }
-    rec.hname[i] = '\0';
-    /* Hash value is calculated from the lowercase name. */
-    rec.hname_hash = pj_hash_calc(0, rec.hname, PJ_HASH_KEY_STRING);
+    /* Copy name. */
+    pj_memcpy(rec.hname, name, rec.hname_len);
+    rec.hname[rec.hname_len] = '\0';
+
+    /* Calculate hash value. */
+    rec.hname_hash = pj_hash_calc(0, rec.hname, rec.hname_len);
 
     /* Get the pos to insert the new handler. */
     for (pos=0; pos < handler_count; ++pos) {
@@ -522,12 +560,37 @@ PJ_DEF(pj_status_t) pjsip_register_hdr_parser( const char *hname,
 					       const char *hshortname,
 					       pjsip_parse_hdr_func *fptr)
 {
+    unsigned i, len;
+    char hname_lcase[PJSIP_MAX_HNAME_LEN+1];
     pj_status_t status;
 
+    /* Check that name is not too long */
+    len = pj_ansi_strlen(hname);
+    if (len > PJSIP_MAX_HNAME_LEN) {
+	pj_assert(!"Header name is too long!");
+	return PJ_ENAMETOOLONG;
+    }
+
+    /* Register the normal Mixed-Case name */
     status = int_register_parser(hname, fptr);
     if (status != PJ_SUCCESS) {
 	return status;
     }
+
+    /* Get the lower-case name */
+    for (i=0; i<len; ++i) {
+	hname_lcase[i] = (char)pj_tolower(hname[i]);
+    }
+    hname_lcase[len] = '\0';
+
+    /* Register the lower-case version of the name */
+    status = int_register_parser(hname_lcase, fptr);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+    
+
+    /* Register the shortname version of the name */
     if (hshortname) {
         status = int_register_parser(hshortname, fptr);
         if (status != PJ_SUCCESS) 
@@ -536,25 +599,14 @@ PJ_DEF(pj_status_t) pjsip_register_hdr_parser( const char *hname,
     return PJ_SUCCESS;
 }
 
+
 /* Find handler to parse the header name. */
-static pjsip_parse_hdr_func * find_handler(const pj_str_t *hname)
+static pjsip_parse_hdr_func * find_handler_imp(pj_uint32_t  hash, 
+					       const pj_str_t *hname)
 {
     handler_rec *first;
-    char	 hname_copy[PJSIP_MAX_HNAME_LEN];
-    pj_uint32_t  hash;
     int		 comp;
     unsigned	 n;
-
-    if (hname->slen >= PJSIP_MAX_HNAME_LEN) {
-	/* Guaranteed not to be able to find handler. */
-        return NULL;
-    }
-
-    /* Calculate hash value while converting the header to lowercase. 
-     * Don't assume that 'hname' is NULL terminated.
-     */
-    hash = pj_hash_calc_tolower(0, hname_copy, hname);
-    hname_copy[hname->slen] = '\0';
 
     /* Binary search for the handler. */
     comp = -1;
@@ -564,7 +616,7 @@ static pjsip_parse_hdr_func * find_handler(const pj_str_t *hname)
 	unsigned half = n / 2;
 	handler_rec *mid = first + half;
 
-	comp = compare_handler(mid, hname_copy, hname->slen, hash);
+	comp = compare_handler(mid, hname->ptr, hname->slen, hash);
 	if (comp < 0) {
 	    first = ++mid;
 	    n -= half + 1;
@@ -579,12 +631,43 @@ static pjsip_parse_hdr_func * find_handler(const pj_str_t *hname)
     return comp==0 ? first->handler : NULL;
 }
 
+
+/* Find handler to parse the header name. */
+static pjsip_parse_hdr_func* find_handler(const pj_str_t *hname)
+{
+    pj_uint32_t hash;
+    char hname_copy[PJSIP_MAX_HNAME_LEN];
+    pj_str_t tmp;
+    pjsip_parse_hdr_func *handler;
+
+    if (hname->slen >= PJSIP_MAX_HNAME_LEN) {
+	/* Guaranteed not to be able to find handler. */
+        return NULL;
+    }
+
+    /* First, common case, try to find handler with exact name */
+    hash = pj_hash_calc(0, hname->ptr, hname->slen);
+    handler = find_handler_imp(hash, hname);
+    if (handler)
+	return handler;
+
+
+    /* If not found, try converting the header name to lowercase and
+     * search again.
+     */
+    hash = pj_hash_calc_tolower(0, hname_copy, hname);
+    tmp.ptr = hname_copy;
+    tmp.slen = hname->slen;
+    return find_handler_imp(hash, &tmp);
+}
+
+
 /* Find URI handler. */
 static pjsip_parse_uri_func* find_uri_handler(const pj_str_t *scheme)
 {
     unsigned i;
     for (i=0; i<uri_handler_count; ++i) {
-	if (pj_stricmp_alnum(&uri_handler[i].scheme, scheme)==0)
+	if (parser_stricmp(uri_handler[i].scheme, (*scheme))==0)
 	    return uri_handler[i].parse;
     }
     return NULL;
@@ -961,8 +1044,8 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 			     unsigned option)
 {
     /* pname */
-    pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pname);
-    *pname = pj_str_unescape(pool, pname);
+    parser_get_and_unescape(scanner, pool, &pjsip_PARAM_CHAR_SPEC,
+			    &pjsip_PARAM_CHAR_SPEC_ESC, pname);
 
     /* init pvalue */
     pvalue->ptr = NULL;
@@ -980,8 +1063,8 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 		    pvalue->slen -= 2;
 		}
 	    } else if(pj_cis_match(&pjsip_PARAM_CHAR_SPEC, *scanner->curptr)) {
-		pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, pvalue);
-		*pvalue = pj_str_unescape(pool, pvalue);
+		parser_get_and_unescape(scanner, pool, &pjsip_PARAM_CHAR_SPEC, 
+					&pjsip_PARAM_CHAR_SPEC_ESC, pvalue);
 	    }
 	}
     }
@@ -1007,8 +1090,8 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     pj_scan_get_char(scanner);
 
     /* hname */
-    pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hname);
-    *hname = pj_str_unescape(pool, hname);
+    parser_get_and_unescape(scanner, pool, &pjsip_HDR_CHAR_SPEC, 
+			    &pjsip_HDR_CHAR_SPEC_ESC, hname);
 
     /* Init hvalue */
     hvalue->ptr = NULL;
@@ -1020,8 +1103,8 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
 	if (!pj_scan_is_eof(scanner) && 
 	    pj_cis_match(&pjsip_HDR_CHAR_SPEC, *scanner->curptr))
 	{
-	    pj_scan_get(scanner, &pjsip_HDR_CHAR_SPEC, hvalue);
-	    *hvalue = pj_str_unescape(pool, hvalue);
+	    parser_get_and_unescape(scanner, pool, &pjsip_HDR_CHAR_SPEC,
+				    &pjsip_HDR_CHAR_SPEC, hvalue);
 	}
     }
 }
@@ -1063,13 +1146,13 @@ static int int_is_next_user(pj_scanner *scanner)
 static void int_parse_user_pass( pj_scanner *scanner, pj_pool_t *pool,
 				 pj_str_t *user, pj_str_t *pass)
 {
-    pj_scan_get( scanner, &pjsip_USER_SPEC, user);
-    *user = pj_str_unescape(pool, user);
+    parser_get_and_unescape(scanner, pool, &pjsip_USER_SPEC, 
+			    &pjsip_USER_SPEC_ESC, user);
 
     if ( *scanner->curptr == ':') {
 	pj_scan_get_char( scanner );
-	pj_scan_get( scanner, &pjsip_PASSWD_SPEC, pass);
-	*pass = pj_str_unescape(pool, pass);
+	parser_get_and_unescape(scanner, pool, &pjsip_PASSWD_SPEC,
+				&pjsip_PASSWD_SPEC_ESC, pass);
     } else {
 	pass->ptr = NULL;
 	pass->slen = 0;
@@ -1435,7 +1518,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 
 	int_parse_param( scanner, pool, &pname, &pvalue);
 	if (!parser_stricmp(pname, pjsip_Q_STR) && pvalue.slen) {
-	    char *dot_pos = memchr(pvalue.ptr, '.', pvalue.slen);
+	    char *dot_pos = pj_memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
 		hdr->q1000 = pj_strtoul(&pvalue);
 	    } else {

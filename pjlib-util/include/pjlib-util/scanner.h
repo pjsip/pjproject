@@ -332,6 +332,19 @@ PJ_DECL(void) pj_scan_get( pj_scanner *scanner,
 
 
 /** 
+ * Just like #pj_scan_get(), but additionally performs unescaping when
+ * escaped ('%') character is found. The input spec MUST NOT contain the
+ * specification for '%' characted.
+ *
+ * @param scanner   The scanner.
+ * @param spec	    The spec to match input string.
+ * @param out	    String to store the result.
+ */
+PJ_DECL(void) pj_scan_get_unescape( pj_scanner *scanner,
+				    const pj_cis_t *spec, pj_str_t *out);
+
+
+/** 
  * Get characters between quotes. If current input doesn't match begin_quote,
  * syntax error will be thrown. Note that the resulting string will contain
  * the enclosing quote.

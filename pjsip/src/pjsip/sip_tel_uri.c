@@ -373,8 +373,12 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     uri = pjsip_tel_uri_create(pool);
 
     /* Get the phone number. */
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+    pj_scan_get_unescape(scanner, &pjsip_TEL_NUMBER_SPEC, &uri->number);
+#else
     pj_scan_get(scanner, &pjsip_TEL_NUMBER_SPEC, &uri->number);
     uri->number = pj_str_unescape(pool, &uri->number);
+#endif
 
     /* Get all parameters. */
     if (parse_params && *scanner->curptr==';') {

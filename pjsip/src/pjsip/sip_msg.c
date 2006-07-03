@@ -196,7 +196,9 @@ PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 {
     int i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
-	if (pj_stricmp(str, method_names[i])==0) {
+	if (pj_memcmp(str->ptr, method_names[i]->ptr, str->slen)==0 || 
+	    pj_stricmp(str, method_names[i])==0) 
+	{
 	    m->id = (pjsip_method_e)i;
 	    m->name = *method_names[i];
 	    return;

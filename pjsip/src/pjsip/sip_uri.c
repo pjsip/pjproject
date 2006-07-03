@@ -103,6 +103,8 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
     startbuf = buf;
     endbuf = buf + size;
 
+    PJ_UNUSED_ARG(pname_spec);
+
     do {
 	*buf++ = (char)sep;
 	copy_advance_escape(buf, p->name, (*pname_spec));

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/scanner.h>
+#include <pj/ctype.h>
 #include <pj/string.h>
 #include <pj/except.h>
 #include <pj/os.h>
@@ -275,6 +276,64 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
     pj_strset3(out, scanner->curptr, s);
 
     scanner->curptr = s;
+
+    if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
+	pj_scan_skip_whitespace(scanner);    
+    }
+}
+
+
+PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
+				   const pj_cis_t *spec, pj_str_t *out)
+{
+    register char *s = scanner->curptr;
+    char *dst = s;
+
+    pj_assert(pj_cis_match(spec,0)==0);
+
+    /* Must not match character '%' */
+    pj_assert(pj_cis_match(spec,'%')==0);
+
+    /* EOF is detected implicitly */
+    if (!pj_cis_match(spec, *s) && *s != '%') {
+	pj_scan_syntax_err(scanner);
+	return;
+    }
+
+    out->ptr = s;
+    do {
+	if (*s == '%') {
+	    if (s+3 <= scanner->end) {
+		/* This doesn't check if the hex digits are valid.
+		 * If they dont' it will produce garbage characters, but
+		 * no harm is done to the application (e.g. no illegal
+		 * memory access.
+		 */
+		*dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(s+1)) << 4) +
+				      pj_hex_digit_to_val(*(s+2)));
+		++dst;
+		s += 3;
+	    } else {
+		*dst++ = *s++;
+		*dst++ = *s++;
+		break;
+	    }
+	}
+	
+	if (pj_cis_match(spec, *s)) {
+	    char *start = s;
+	    do {
+		++s;
+	    } while (pj_cis_match(spec, *s));
+
+	    if (dst != start) pj_memmove(dst, start, s-start);
+	    dst += (s-start);
+	} 
+	
+    } while (*s == '%');
+
+    scanner->curptr = s;
+    out->slen = (dst - out->ptr);
 
     if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
 	pj_scan_skip_whitespace(scanner);    

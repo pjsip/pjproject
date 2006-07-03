@@ -130,6 +130,23 @@
 #endif
 
 
+/**
+ * If non-zero, SIP parser will unescape the escape characters ('%')
+ * in the original message, which means that it will modify the
+ * original message. Otherwise the parser will create a copy of
+ * the string and store the unescaped string to the new location.
+ *
+ * Unescaping in-place is faster, but less elegant (and it may
+ * break certain applications). So normally it's disabled, unless
+ * when benchmarking (to show off big performance).
+ *
+ * Default: 0
+ */
+#ifndef PJSIP_UNESCAPE_IN_PLACE
+#   define PJSIP_UNESCAPE_IN_PLACE	0
+#endif
+
+
 
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)

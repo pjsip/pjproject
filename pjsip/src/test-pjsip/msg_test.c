@@ -50,7 +50,7 @@ struct test_msg
 {
     /* 'Normal' message with all headers. */
     "INVITE sip:user@foo SIP/2.0\n"
-    "From: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=123457890123456\r"
+    "from: Hi I'm Joe <sip:joe.user@bar.otherdomain.com>;tag=123457890123456\r"
     "To: Fellow User <sip:user@foo.bar.domain.com>\r\n"
     "Call-ID: 12345678901234567890@bar\r\n"
     "Content-Length: 0\r\n"
@@ -789,7 +789,6 @@ int msg_test(void)
     unsigned i, max, avg_len;
     char desc[250];
     pj_status_t status;
-
 
     status = simple_test();
     if (status != PJ_SUCCESS)
