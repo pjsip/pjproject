@@ -127,7 +127,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
 
 
     /* Reset stream info. */
-    pj_memset(&info, 0, sizeof(info));
+    pj_bzero(&info, sizeof(info));
 
 
     /* Initialize stream info formats */
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
     int option_index;
 
 
-    pj_memset(&remote_addr, 0, sizeof(remote_addr));
+    pj_bzero(&remote_addr, sizeof(remote_addr));
 
 
     /* init PJLIB : */

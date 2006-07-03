@@ -206,7 +206,7 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
 
 PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, int secure)
 {
-    pj_memset(url, 0, sizeof(*url));
+    pj_bzero(url, sizeof(*url));
     url->ttl_param = -1;
     url->vptr = secure ? &sips_url_vptr : &sip_url_vptr;
     pj_list_init(&url->other_param);

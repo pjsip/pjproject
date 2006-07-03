@@ -176,7 +176,7 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
     if (!mem)
 	return NULL;
 
-    pj_memset(mem, 0, cnt*elemsz);
+    pj_bzero(mem, cnt*elemsz);
     return mem;
 }
 

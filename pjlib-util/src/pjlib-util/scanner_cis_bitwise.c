@@ -24,7 +24,7 @@
 
 PJ_DEF(void) pj_cis_buf_init( pj_cis_buf_t *cis_buf)
 {
-    pj_memset(cis_buf->cis_buf, 0, sizeof(cis_buf->cis_buf));
+    pj_bzero(cis_buf->cis_buf, sizeof(cis_buf->cis_buf));
     cis_buf->use_mask = 0;
 }
 

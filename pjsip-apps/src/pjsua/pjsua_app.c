@@ -1739,7 +1739,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    break;
 		}
 
-		pj_memset(&buddy_cfg, 0, sizeof(pjsua_buddy_config));
+		pj_bzero(&buddy_cfg, sizeof(pjsua_buddy_config));
 
 		buddy_cfg.uri = pj_str(buf);
 		buddy_cfg.subscribe = PJ_TRUE;

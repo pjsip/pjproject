@@ -1532,8 +1532,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	     */
 	    mix_buf = listener->mix_buf;
 	    if (listener->src_level == 0) {
-		pj_memset(mix_buf, 0, 
-			  conf->samples_per_frame*sizeof(mix_buf[0]));
+		pj_bzero( mix_buf, conf->samples_per_frame*sizeof(mix_buf[0]));
 	    }
 
 	    /* A little bit of optimization:

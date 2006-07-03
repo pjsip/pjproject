@@ -151,15 +151,15 @@ PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
     /* Pad out to 56 mod 64 */
     if (count < 8) {
 	/* Two lots of padding:  Pad the first block to 64 bytes */
-	pj_memset(p, 0, count);
+	pj_bzero(p, count);
 	byteReverse(ctx->in, 16);
 	MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
 
 	/* Now fill the next block with 56 bytes */
-	pj_memset(ctx->in, 0, 56);
+	pj_bzero(ctx->in, 56);
     } else {
 	/* Pad block to 56 bytes */
-	pj_memset(p, 0, count - 8);
+	pj_bzero(p, count - 8);
     }
     byteReverse(ctx->in, 14);
 
@@ -170,7 +170,7 @@ PJ_DEF(void) pj_md5_final(pj_md5_context *ctx, unsigned char digest[16])
     MD5Transform(ctx->buf, (pj_uint32_t *) ctx->in);
     byteReverse((unsigned char *) ctx->buf, 4);
     pj_memcpy(digest, ctx->buf, 16);
-    pj_memset(ctx, 0, sizeof(ctx));	/* In case it's sensitive */
+    pj_bzero(ctx, sizeof(ctx));	/* In case it's sensitive */
 }
 
 #ifndef ASM_MD5

@@ -51,7 +51,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     /* Create transaction array */
     tsx = pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
 
-    pj_memset(&mod_tsx_user, 0, sizeof(mod_tsx_user));
+    pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
 
     /* Benchmark */
@@ -121,7 +121,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     
 
     /* Create "dummy" rdata from the tdata */
-    pj_memset(&rdata, 0, sizeof(pjsip_rx_data));
+    pj_bzero(&rdata, sizeof(pjsip_rx_data));
     rdata.tp_info.pool = request->pool;
     rdata.msg_info.msg = request->msg;
     rdata.msg_info.from = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
@@ -143,7 +143,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     /* Create transaction array */
     tsx = pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
 
-    pj_memset(&mod_tsx_user, 0, sizeof(mod_tsx_user));
+    pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
 
 

@@ -30,7 +30,7 @@ PJ_DEF(void) pj_cis_buf_init( pj_cis_buf_t *cis_buf)
 
 PJ_DEF(pj_status_t) pj_cis_init(pj_cis_buf_t *cis_buf, pj_cis_t *cis)
 {
-    pj_memset(cis->cis_buf, 0, sizeof(cis->cis_buf));
+    pj_bzero(cis->cis_buf, sizeof(cis->cis_buf));
     return PJ_SUCCESS;
 }
 

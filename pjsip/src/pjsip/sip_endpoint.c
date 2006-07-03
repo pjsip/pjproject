@@ -842,7 +842,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     /* Must clear mod_data before returning rdata to transport, since
      * rdata may be reused.
      */
-    pj_memset(&rdata->endpt_info, 0, sizeof(rdata->endpt_info));
+    pj_bzero(&rdata->endpt_info, sizeof(rdata->endpt_info));
 }
 
 /*

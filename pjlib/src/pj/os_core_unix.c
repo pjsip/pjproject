@@ -206,7 +206,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     }
 
     /* Initialize and set the thread entry. */
-    pj_memset(desc, 0, sizeof(struct pj_thread_t));
+    pj_bzero(desc, sizeof(struct pj_thread_t));
     thread->thread = pthread_self();
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)

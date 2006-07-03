@@ -162,7 +162,7 @@ int udp_echo_srv_ioqueue(void)
     pj_thread_t *thread[ECHO_SERVER_MAX_THREADS];
     pj_status_t rc;
 
-    pj_memset(&callback, 0, sizeof(callback));
+    pj_bzero(&callback, sizeof(callback));
     callback.on_read_complete = &on_read_complete;
     callback.on_write_complete = &on_write_complete;
 

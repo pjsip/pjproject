@@ -164,7 +164,7 @@ static int compliance_test(void)
 
     // Bind server socket.
     TRACE_("bind socket...");
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
@@ -201,7 +201,7 @@ static int compliance_test(void)
 
     // Register reading from ioqueue.
     TRACE_("start recvfrom...");
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addrlen = sizeof(addr);
     bytes = bufsize;
     rc = pj_ioqueue_recvfrom(skey, &read_op, recv_buf, &bytes, 0,
@@ -386,7 +386,7 @@ static int unregister_test(void)
     }
 
     /* Register rsock to ioqueue. */
-    pj_memset(&cb, 0, sizeof(cb));
+    pj_bzero(&cb, sizeof(cb));
     cb.on_read_complete = &on_read_complete;
     packet_cnt = 0;
     status = pj_ioqueue_register_sock(pool, ioqueue, rsock, &packet_cnt,
@@ -617,7 +617,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
     }
 
     // Bind server socket.
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr)))
@@ -638,7 +638,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 				    inactive_sock_count*sizeof(pj_sock_t));
     inactive_read_op = (pj_ioqueue_op_key_t*)pj_pool_alloc(pool,
                               inactive_sock_count*sizeof(pj_ioqueue_op_key_t));
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     for (i=0; i<inactive_sock_count; ++i) {
         pj_ssize_t bytes;

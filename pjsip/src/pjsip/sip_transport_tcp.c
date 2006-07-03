@@ -270,7 +270,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 
 
     /* Register socket to ioqeuue */
-    pj_memset(&listener_cb, 0, sizeof(listener_cb));
+    pj_bzero(&listener_cb, sizeof(listener_cb));
     listener_cb.on_accept_complete = &on_accept_complete;
     status = pj_ioqueue_register_sock(pool, pjsip_endpt_get_ioqueue(endpt),
 				      listener->sock, listener,
@@ -474,7 +474,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
 
     /* Register socket to ioqueue */
-    pj_memset(&tcp_callback, 0, sizeof(pj_ioqueue_callback));
+    pj_bzero(&tcp_callback, sizeof(pj_ioqueue_callback));
     tcp_callback.on_read_complete = &on_read_complete;
     tcp_callback.on_write_complete = &on_write_complete;
     tcp_callback.on_connect_complete = &on_connect_complete;

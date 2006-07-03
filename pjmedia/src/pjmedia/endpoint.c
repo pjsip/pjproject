@@ -485,7 +485,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 						&codec_info[i],
 						&param) != PJ_SUCCESS)
 	{
-	    pj_memset(&param, 0, sizeof(pjmedia_codec_param));
+	    pj_bzero(&param, sizeof(pjmedia_codec_param));
 	}
 
 	PJ_LOG(3,(THIS_FILE, 

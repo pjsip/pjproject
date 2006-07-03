@@ -968,7 +968,7 @@ PJ_DEF(pjsip_contact_hdr*) pjsip_contact_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    pj_memset(mem, 0, sizeof(pjsip_contact_hdr));
+    pj_bzero(mem, sizeof(pjsip_contact_hdr));
     init_hdr(hdr, PJSIP_H_CONTACT, &contact_hdr_vptr);
     hdr->expires = -1;
     pj_list_init(&hdr->other_param);
@@ -1097,7 +1097,7 @@ PJ_DEF(pjsip_ctype_hdr*) pjsip_ctype_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    pj_memset(mem, 0, sizeof(pjsip_ctype_hdr));
+    pj_bzero(mem, sizeof(pjsip_ctype_hdr));
     init_hdr(hdr, PJSIP_H_CONTENT_TYPE, &ctype_hdr_vptr);
     return hdr;
 
@@ -1213,7 +1213,7 @@ PJ_DEF(pjsip_from_hdr*) pjsip_from_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    pj_memset(mem, 0, sizeof(pjsip_from_hdr));
+    pj_bzero(mem, sizeof(pjsip_from_hdr));
     init_hdr(hdr, PJSIP_H_FROM, &fromto_hdr_vptr);
     pj_list_init(&hdr->other_param);
     return hdr;
@@ -1232,7 +1232,7 @@ PJ_DEF(pjsip_to_hdr*) pjsip_to_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    pj_memset(mem, 0, sizeof(pjsip_to_hdr));
+    pj_bzero(mem, sizeof(pjsip_to_hdr));
     init_hdr(hdr, PJSIP_H_TO, &fromto_hdr_vptr);
     pj_list_init(&hdr->other_param);
     return hdr;
@@ -1595,7 +1595,7 @@ PJ_DEF(pjsip_via_hdr*) pjsip_via_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    pj_memset(mem, 0, sizeof(pjsip_via_hdr));
+    pj_bzero(mem, sizeof(pjsip_via_hdr));
     init_hdr(hdr, PJSIP_H_VIA, &via_hdr_vptr);
     hdr->ttl_param = -1;
     hdr->rport_param = -1;

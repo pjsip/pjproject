@@ -711,7 +711,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
 
 
-    pj_memset(&var, 0, sizeof(var));
+    pj_bzero(&var, sizeof(var));
     zero.u64 = 0;
 
     for (loop=0; loop<LOOP; ++loop) {

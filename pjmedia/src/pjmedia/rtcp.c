@@ -134,7 +134,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     pj_time_val now;
     
     /* Memset everything */
-    pj_memset(sess, 0, sizeof(pjmedia_rtcp_session));
+    pj_bzero(sess, sizeof(pjmedia_rtcp_session));
 
     /* Last RX timestamp in RTP packet */
     sess->rtp_last_ts = (unsigned)-1;

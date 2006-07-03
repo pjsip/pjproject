@@ -98,7 +98,7 @@ static pj_status_t jb_framelist_init( pj_pool_t *pool,
 {
     PJ_ASSERT_RETURN(pool && framelist, PJ_EINVAL);
 
-    pj_memset(framelist, 0, sizeof(jb_framelist));
+    pj_bzero(framelist, sizeof(jb_framelist));
 
     framelist->flist_frame_size = frame_size;
     framelist->flist_max_count = max_count;
@@ -146,9 +146,9 @@ static pj_bool_t jb_framelist_get(jb_framelist *framelist,
 	*p_type = (pjmedia_jb_frame_type) 
 		  framelist->flist_frame_type[framelist->flist_head];
 
-	pj_memset(framelist->flist_buffer + 
+	pj_bzero(framelist->flist_buffer + 
 		    framelist->flist_head * framelist->flist_frame_size,
-		  0, framelist->flist_frame_size);
+		  framelist->flist_frame_size);
 	framelist->flist_frame_type[framelist->flist_head] = 
 	    PJMEDIA_JB_MISSING_FRAME;
 
@@ -161,7 +161,7 @@ static pj_bool_t jb_framelist_get(jb_framelist *framelist,
 	return PJ_TRUE;
 
     } else {
-	pj_memset(frame, 0, framelist->flist_frame_size);
+	pj_bzero(frame, framelist->flist_frame_size);
 	return PJ_FALSE;
     }
 }
@@ -189,17 +189,15 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 	    step2 = 0;
 	}
 
-	pj_memset(framelist->flist_buffer + 
+	pj_bzero(framelist->flist_buffer + 
 		    framelist->flist_head * framelist->flist_frame_size,
-	          0,
 	          step1*framelist->flist_frame_size);
 	pj_memset(framelist->flist_frame_type+framelist->flist_head,
 		  PJMEDIA_JB_MISSING_FRAME,
 		  step1*sizeof(framelist->flist_frame_type[0]));
 
 	if (step2) {
-	    pj_memset(framelist->flist_buffer,
-		      0,
+	    pj_bzero( framelist->flist_buffer,
 		      step2*framelist->flist_frame_size);
 	    pj_memset(framelist->flist_frame_type,
 		      PJMEDIA_JB_MISSING_FRAME,
@@ -527,7 +525,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 	/* Can't return frame because jitter buffer is filling up
 	 * minimum prefetch.
 	 */
-	pj_memset(frame, 0, jb->jb_frame_size);
+	pj_bzero(frame, jb->jb_frame_size);
 	if (jb_framelist_size(&jb->jb_framelist) == 0)
 	    *p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
 	else
@@ -539,7 +537,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
     /* Retrieve a frame from frame list */
     if (jb_framelist_get(&jb->jb_framelist,frame,&ftype) == PJ_FALSE) {
 	/* Can't return frame because jitter buffer is empty! */
-	pj_memset(frame, 0, jb->jb_frame_size);
+	pj_bzero(frame, jb->jb_frame_size);
 	*p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
 
 	return;

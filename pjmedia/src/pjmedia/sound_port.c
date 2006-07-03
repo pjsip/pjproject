@@ -117,7 +117,7 @@ no_frame:
 	PJ_LOG(4,(THIS_FILE, "Lost frame generated"));
 #endif
     } else {
-	pj_memset(output, 0, size);
+	pj_bzero(output, size);
     }
 
 

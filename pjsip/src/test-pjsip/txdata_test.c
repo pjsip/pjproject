@@ -265,7 +265,7 @@ static int core_txdata_test(void)
     }
 
     /* Modify dummy_rdata to simulate receiving response. */
-    pj_memset(&dummy_rdata, 0, sizeof(dummy_rdata));
+    pj_bzero(&dummy_rdata, sizeof(dummy_rdata));
     dummy_rdata.msg_info.msg = response->msg;
     dummy_rdata.msg_info.to = HFIND(response->msg, to, TO);
 
@@ -632,7 +632,7 @@ static int create_request_bench(pj_timestamp *p_elapsed)
     elapsed.u64 = 0;
 
     for (i=0; i<LOOP; i+=COUNT) {
-	pj_memset(tdata, 0, sizeof(tdata));
+	pj_bzero(tdata, sizeof(tdata));
 
 	pj_get_timestamp(&t1);
 
@@ -711,7 +711,7 @@ static int create_response_bench(pj_timestamp *p_elapsed)
     
 
     /* Create "dummy" rdata from the tdata */
-    pj_memset(&rdata, 0, sizeof(pjsip_rx_data));
+    pj_bzero(&rdata, sizeof(pjsip_rx_data));
     rdata.tp_info.pool = request->pool;
     rdata.msg_info.msg = request->msg;
     rdata.msg_info.from = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
@@ -726,7 +726,7 @@ static int create_response_bench(pj_timestamp *p_elapsed)
     elapsed.u64 = 0;
 
     for (i=0; i<LOOP; i+=COUNT) {
-	pj_memset(tdata, 0, sizeof(tdata));
+	pj_bzero(tdata, sizeof(tdata));
 
 	pj_get_timestamp(&t1);
 

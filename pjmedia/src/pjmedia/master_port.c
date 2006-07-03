@@ -149,7 +149,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
     pj_lock_acquire(m->lock);
 
     /* Get frame from upstream port and pass it to downstream port */
-    pj_memset(&frame, 0, sizeof(frame));
+    pj_bzero(&frame, sizeof(frame));
     frame.buf = m->buff;
     frame.size = m->buff_size;
     frame.timestamp.u64 = ts->u64;
@@ -161,7 +161,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
     status = pjmedia_port_put_frame(m->d_port, &frame);
 
     /* Get frame from downstream port and pass it to upstream port */
-    pj_memset(&frame, 0, sizeof(frame));
+    pj_bzero(&frame, sizeof(frame));
     frame.buf = m->buff;
     frame.size = m->buff_size;
     frame.timestamp.u64 = ts->u64;

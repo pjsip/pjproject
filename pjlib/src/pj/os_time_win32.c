@@ -102,7 +102,7 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
     FILETIME ft;
     LARGE_INTEGER li;
 
-    pj_memset(&st, 0, sizeof(st));
+    pj_bzero(&st, sizeof(st));
     st.wYear = (pj_uint16_t) pt->year;
     st.wMonth = (pj_uint16_t) (pt->mon + 1);
     st.wDay = (pj_uint16_t) pt->day;

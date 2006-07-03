@@ -142,7 +142,7 @@ static pj_status_t file_time_to_time_val(const FILETIME *file_time,
     //if (!SystemTimeToTzSpecificLocalTime(NULL, &systemTime, &localTime))
     //    return PJ_RETURN_OS_ERROR(GetLastError());
 
-    pj_memset(&pt, 0, sizeof(pt));
+    pj_bzero(&pt, sizeof(pt));
     pt.year = localTime.wYear;
     pt.mon = localTime.wMonth-1;
     pt.day = localTime.wDay;

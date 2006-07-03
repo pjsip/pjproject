@@ -45,7 +45,7 @@ pj_status_t app_socket(int family, int type, int proto, int port,
     if (rc != PJ_SUCCESS)
         return rc;
 
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = (pj_uint16_t)family;
     addr.sin_port = (short)(port!=-1 ? pj_htons((pj_uint16_t)port) : 0);
     rc = pj_sock_bind(sock, &addr, sizeof(addr));
@@ -85,7 +85,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
     }
 
     /* Retry bind */
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     for (i=0; i<5; ++i) {
         addr.sin_port = pj_htons(port++);

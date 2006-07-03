@@ -548,7 +548,7 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
 
     PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
     
-    pj_memset(info, 0, sizeof(pjsua_acc_info));
+    pj_bzero(info, sizeof(pjsua_acc_info));
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc), 
 		     PJ_EINVAL);

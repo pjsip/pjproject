@@ -552,7 +552,11 @@ PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
  */
 PJ_INLINE(void) pj_bzero(void *dst, pj_size_t size)
 {
+#if defined(PJ_HAS_BZERO) && PJ_HAS_BZERO!=0
     bzero(dst, size);
+#else
+    memset(dst, 0, size);
+#endif
 }
 
 

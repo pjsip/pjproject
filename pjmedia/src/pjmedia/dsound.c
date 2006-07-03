@@ -114,7 +114,7 @@ static void init_waveformatex (PCMWAVEFORMAT *pcmwf,
 			       unsigned clock_rate,
 			       unsigned channel_count)
 {
-    pj_memset(pcmwf, 0, sizeof(PCMWAVEFORMAT)); 
+    pj_bzero(pcmwf, sizeof(PCMWAVEFORMAT)); 
     pcmwf->wf.wFormatTag = WAVE_FORMAT_PCM; 
     pcmwf->wf.nChannels = (pj_uint16_t)channel_count;
     pcmwf->wf.nSamplesPerSec = clock_rate;
@@ -176,7 +176,7 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     bytes_per_frame = samples_per_frame * BYTES_PER_SAMPLE;
 
     /* Set up DSBUFFERDESC structure. */
-    pj_memset(&dsbdesc, 0, sizeof(DSBUFFERDESC)); 
+    pj_bzero(&dsbdesc, sizeof(DSBUFFERDESC)); 
     dsbdesc.dwSize = sizeof(DSBUFFERDESC); 
     dsbdesc.dwFlags = DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLPOSITIONNOTIFY |
 		      DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS;
@@ -287,7 +287,7 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
      * Setup capture buffer using sound buffer structure that was passed
      * to play buffer creation earlier.
      */
-    pj_memset(&dscbdesc, 0, sizeof(DSCBUFFERDESC));
+    pj_bzero(&dscbdesc, sizeof(DSCBUFFERDESC));
     dscbdesc.dwSize = sizeof(DSCBUFFERDESC); 
     dscbdesc.dwFlags = DSCBCAPS_WAVEMAPPED ;
     dscbdesc.dwBufferBytes = buffer_count * bytes_per_frame; 
@@ -548,7 +548,7 @@ static int dsound_dev_thread(void *arg)
 					   bytes_per_frame);
 		
 		if (!rc) {
-		    pj_memset(strm->buffer, 0, bytes_per_frame);
+		    pj_bzero(strm->buffer, bytes_per_frame);
 		}
 
 		/* Call callback */

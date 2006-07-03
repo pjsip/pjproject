@@ -168,7 +168,7 @@ typedef struct pjmedia_sock_info
 PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 {
 #if 1
-    pj_memset(samples, 0, count*sizeof(pj_int16_t));
+    pj_bzero(samples, count*sizeof(pj_int16_t));
 #elif 0
     unsigned i;
     for (i=0; i<count; ++i) samples[i] = 0;

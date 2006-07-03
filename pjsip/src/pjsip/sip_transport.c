@@ -595,7 +595,7 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 
     /* Init. */
     tp->tpmgr = mgr;
-    pj_memset(&tp->idle_timer, 0, sizeof(tp->idle_timer));
+    pj_bzero(&tp->idle_timer, sizeof(tp->idle_timer));
     tp->idle_timer.user_data = tp;
     tp->idle_timer.cb = &transport_idle_callback;
 
@@ -926,7 +926,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	 * Endpoint might inspect the values there when we call the callback
 	 * to report some errors.
 	 */
-	pj_memset(&rdata->msg_info, 0, sizeof(rdata->msg_info));
+	pj_bzero(&rdata->msg_info, sizeof(rdata->msg_info));
 	pj_list_init(&rdata->msg_info.parse_err);
 	rdata->msg_info.msg_buf = current_pkt;
 	rdata->msg_info.len = remaining_len;
@@ -1097,7 +1097,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	{
 	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
 
-	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
+	    pj_bzero(addr, sizeof(pj_sockaddr_in));
 	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
 	    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
 	}
@@ -1108,7 +1108,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	{
 	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
 
-	    pj_memset(addr, 0, sizeof(pj_sockaddr_in));
+	    pj_bzero(addr, sizeof(pj_sockaddr_in));
 	    addr->sin_family = PJ_AF_INET;
 
 	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);

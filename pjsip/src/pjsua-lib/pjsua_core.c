@@ -667,7 +667,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	pj_memcpy(&stun, stun_param, sizeof(*stun_param));
 	pjsua_normalize_stun_config(&stun);
     } else {
-	pj_memset(&stun, 0, sizeof(pjsua_stun_config));
+	pj_bzero(&stun, sizeof(pjsua_stun_config));
     }
 
     /* Get the published address, either by STUN or by resolving
@@ -698,7 +698,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	    return status;
 	}
 
-	pj_memset(p_pub_addr, 0, sizeof(pj_sockaddr_in));
+	pj_bzero(p_pub_addr, sizeof(pj_sockaddr_in));
 	p_pub_addr->sin_family = PJ_AF_INET;
 	p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
 	p_pub_addr->sin_addr = *(pj_in_addr*)he.h_addr;
@@ -910,7 +910,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 {
     struct transport_data *t = &pjsua_var.tpdata[id];
 
-    pj_memset(info, 0, sizeof(*info));
+    pj_bzero(info, sizeof(*info));
 
     /* Make sure id is in range. */
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
@@ -1076,7 +1076,7 @@ void pjsua_parse_media_type( pj_pool_t *pool,
     pj_str_t tmp;
     char *pos;
 
-    pj_memset(media_type, 0, sizeof(*media_type));
+    pj_bzero(media_type, sizeof(*media_type));
 
     pj_strdup_with_null(pool, &tmp, mime);
 

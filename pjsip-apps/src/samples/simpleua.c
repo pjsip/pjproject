@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 	pjsip_inv_callback inv_cb;
 
 	/* Init the callback for INVITE session: */
-	pj_memset(&inv_cb, 0, sizeof(inv_cb));
+	pj_bzero(&inv_cb, sizeof(inv_cb));
 	inv_cb.on_state_changed = &call_on_state_changed;
 	inv_cb.on_new_session = &call_on_forked;
 	inv_cb.on_media_update = &call_on_media_update;

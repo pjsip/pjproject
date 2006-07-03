@@ -184,7 +184,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 
     /* Set pool administrative data. */
     pool = (pj_pool_t*)buffer;
-    pj_memset(pool, 0, sizeof(*pool));
+    pj_bzero(pool, sizeof(*pool));
 
     pj_list_init(&pool->block_list);
     pool->factory = f;

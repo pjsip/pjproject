@@ -239,7 +239,7 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
 {
     PJ_UNUSED_ARG(factory);
 
-    pj_memset(attr, 0, sizeof(pjmedia_codec_param));
+    pj_bzero(attr, sizeof(pjmedia_codec_param));
     attr->info.clock_rate = 8000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = G711_BPS;

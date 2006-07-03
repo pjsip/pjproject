@@ -104,7 +104,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
     /* Initialize invite session callback. */
-    pj_memset(&inv_cb, 0, sizeof(inv_cb));
+    pj_bzero(&inv_cb, sizeof(inv_cb));
     inv_cb.on_state_changed = &pjsua_call_on_state_changed;
     inv_cb.on_new_session = &pjsua_call_on_forked;
     inv_cb.on_media_update = &pjsua_call_on_media_update;
@@ -562,7 +562,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    pj_memset(info, 0, sizeof(*info));
+    pj_bzero(info, sizeof(*info));
 
     PJSUA_LOCK();
 
@@ -2128,7 +2128,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	      refer_to->hvalue.ptr));
 
     /* Init callback */
-    pj_memset(&xfer_cb, 0, sizeof(xfer_cb));
+    pj_bzero(&xfer_cb, sizeof(xfer_cb));
     xfer_cb.on_evsub_state = &xfer_on_evsub_state;
 
     /* Create transferee event subscription */

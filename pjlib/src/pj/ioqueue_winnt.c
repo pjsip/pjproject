@@ -177,8 +177,8 @@ static void ioqueue_on_accept_complete(ioqueue_accept_rec *accept_overlapped)
         pj_memcpy(accept_overlapped->local, local, locallen);
         pj_memcpy(accept_overlapped->remote, remote, locallen);
     } else {
-        pj_memset(accept_overlapped->local, 0, *accept_overlapped->addrlen);
-        pj_memset(accept_overlapped->remote, 0, *accept_overlapped->addrlen);
+        pj_bzero(accept_overlapped->local, *accept_overlapped->addrlen);
+        pj_bzero(accept_overlapped->remote, *accept_overlapped->addrlen);
     }
     *accept_overlapped->addrlen = locallen;
     if (accept_overlapped->newsock_ptr)
@@ -833,7 +833,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
      * No immediate data available.
      * Register overlapped Recv() operation.
      */
-    pj_memset(&op_key_rec->overlapped.overlapped, 0,
+    pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
 
@@ -909,7 +909,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
      * No immediate data available.
      * Register overlapped Recv() operation.
      */
-    pj_memset(&op_key_rec->overlapped.overlapped, 0,
+    pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
 
@@ -1002,7 +1002,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
      * Data can't be sent immediately.
      * Schedule asynchronous WSASend().
      */
-    pj_memset(&op_key_rec->overlapped.overlapped, 0,
+    pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_SEND;
 
@@ -1099,7 +1099,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     op_key_rec->accept.local = local;
     op_key_rec->accept.remote = remote;
     op_key_rec->accept.newsock_ptr = new_sock;
-    pj_memset(&op_key_rec->accept.overlapped, 0, 
+    pj_bzero( &op_key_rec->accept.overlapped, 
 	      sizeof(op_key_rec->accept.overlapped));
 
     rc = AcceptEx( (SOCKET)key->hnd, (SOCKET)op_key_rec->accept.newsock,
@@ -1206,7 +1206,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
 				     pj_size_t size )
 {
-    pj_memset(op_key, 0, size);
+    pj_bzero(op_key, size);
 }
 
 PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,

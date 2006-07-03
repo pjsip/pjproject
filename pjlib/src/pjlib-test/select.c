@@ -124,7 +124,7 @@ int select_test()
     }
 
     // Bind one of the UDP socket.
-    pj_memset(&udp_addr, 0, sizeof(udp_addr));
+    pj_bzero(&udp_addr, sizeof(udp_addr));
     udp_addr.sin_family = PJ_AF_INET;
     udp_addr.sin_port = UDP_PORT;
     udp_addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));

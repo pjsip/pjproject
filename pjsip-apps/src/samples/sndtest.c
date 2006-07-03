@@ -153,7 +153,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 
     /* Skip frames when test is not started or test has finished */
     if (!test_data->running) {
-	pj_memset(output, 0, size);
+	pj_bzero(output, size);
 	return PJ_SUCCESS;
     }
 
@@ -193,7 +193,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 
     }
 
-    pj_memset(output, 0, size);
+    pj_bzero(output, size);
     return PJ_SUCCESS;
 }
 
@@ -380,7 +380,7 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
     /*
      * Init test parameters
      */
-    pj_memset(&test_data, 0, sizeof(test_data));
+    pj_bzero(&test_data, sizeof(test_data));
     test_data.dir = dir;
     test_data.clock_rate = clock_rate;
     test_data.samples_per_frame = samples_per_frame;

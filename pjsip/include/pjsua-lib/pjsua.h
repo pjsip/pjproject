@@ -251,7 +251,7 @@ typedef struct pjsua_logging_config
  */
 PJ_INLINE(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 
     cfg->msg_logging = PJ_TRUE;
     cfg->level = 5;
@@ -427,7 +427,7 @@ typedef struct pjsua_config
  */
 PJ_INLINE(void) pjsua_config_default(pjsua_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 
     cfg->max_calls = 4;
     cfg->thread_cnt = 1;
@@ -503,7 +503,7 @@ typedef struct pjsua_msg_data
  */
 PJ_INLINE(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
 {
-    pj_memset(msg_data, 0, sizeof(*msg_data));
+    pj_bzero(msg_data, sizeof(*msg_data));
     pj_list_init(&msg_data->hdr_list);
 }
 
@@ -703,7 +703,7 @@ typedef struct pjsua_stun_config
  */
 PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 }
 
 
@@ -746,7 +746,7 @@ typedef struct pjsua_transport_config
  */
 PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 }
 
 
@@ -1072,7 +1072,7 @@ typedef struct pjsua_acc_config
  */
 PJ_INLINE(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
 }
@@ -2058,7 +2058,7 @@ struct pjsua_media_config
  */
 PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
 {
-    pj_memset(cfg, 0, sizeof(*cfg));
+    pj_bzero(cfg, sizeof(*cfg));
 
     cfg->clock_rate = 16000;
     cfg->max_media_ports = 32;

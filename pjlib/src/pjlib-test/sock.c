@@ -109,7 +109,7 @@ static int format_test(void)
      * including sin_zero.
      */
     pj_sockaddr_in_init(&addr2, 0, 1000);
-    pj_memset(zero, 0, sizeof(zero));
+    pj_bzero(zero, sizeof(zero));
     if (pj_memcmp(addr2.sin_zero, zero, sizeof(addr2.sin_zero)) != 0)
 	return -35;
 
@@ -196,7 +196,7 @@ static int send_recv_test(int sock_type,
 	pj_sockaddr_in addr;
 	int srclen = sizeof(addr);
 	
-	pj_memset(&addr, 0, sizeof(addr));
+	pj_bzero(&addr, sizeof(addr));
 
         received = DATA_LEN;
 	rc = pj_sock_recvfrom(ss, recvdata, &received, 0, &addr, &srclen);
@@ -334,7 +334,7 @@ static int udp_test(void)
 	return -110;
 
     /* Bind server socket. */
-    pj_memset(&dstaddr, 0, sizeof(dstaddr));
+    pj_bzero(&dstaddr, sizeof(dstaddr));
     dstaddr.sin_family = PJ_AF_INET;
     dstaddr.sin_port = pj_htons(UDP_PORT);
     dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
@@ -345,7 +345,7 @@ static int udp_test(void)
     }
 
     /* Bind client socket. */
-    pj_memset(&srcaddr, 0, sizeof(srcaddr));
+    pj_bzero(&srcaddr, sizeof(srcaddr));
     srcaddr.sin_family = PJ_AF_INET;
     srcaddr.sin_port = pj_htons(UDP_PORT-1);
     srcaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));

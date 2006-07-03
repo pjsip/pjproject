@@ -47,7 +47,7 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
 
     PJ_CHECK_STACK();
 
-    pj_memset(cp, 0, sizeof(*cp));
+    pj_bzero(cp, sizeof(*cp));
     
     cp->max_capacity = max_capacity;
     pj_list_init(&cp->used_list);

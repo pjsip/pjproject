@@ -110,8 +110,7 @@ static int xml_parse_print_test(const char *doc)
 	return -10;
     }
 
-    output = (char*)pj_pool_alloc(pool, msg.slen + 512);
-    pj_memset(output, 0, msg.slen+512);
+    output = (char*)pj_pool_zalloc(pool, msg.slen + 512);
     output_len = pj_xml_print(root, output, msg.slen+512, PJ_TRUE);
     if (output_len < 1) {
 	PJ_LOG(1, (THIS_FILE, "  Error: buffer too small to print XML file"));

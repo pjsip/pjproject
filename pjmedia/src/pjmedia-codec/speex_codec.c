@@ -381,7 +381,7 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
 
     PJ_ASSERT_RETURN(factory==&spx_factory.base, PJ_EINVAL);
 
-    pj_memset(attr, 0, sizeof(pjmedia_codec_param));
+    pj_bzero(attr, sizeof(pjmedia_codec_param));
     attr->info.pt = (pj_uint8_t)id->pt;
     attr->info.channel_cnt = 1;
 
@@ -441,7 +441,7 @@ static pj_status_t spx_enum_codecs(pjmedia_codec_factory *factory,
 	if (!spx_factory.speex_param[i].enabled)
 	    continue;
 
-	pj_memset(&codecs[*count], 0, sizeof(pjmedia_codec_info));
+	pj_bzero(&codecs[*count], sizeof(pjmedia_codec_info));
 	codecs[*count].encoding_name = pj_str("speex");
 	codecs[*count].pt = spx_factory.speex_param[i].pt;
 	codecs[*count].type = PJMEDIA_TYPE_AUDIO;
@@ -750,7 +750,7 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     spx = (struct spx_private*) codec->codec_data;
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	pj_memset(output->buf, 0, output_buf_len);
+	pj_bzero(output->buf, output_buf_len);
 	output->size = 320;
 	output->timestamp.u64 = input->timestamp.u64;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;

@@ -103,7 +103,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Reset: */
 
-    pj_memset(si, 0, sizeof(*si));
+    pj_bzero(si, sizeof(*si));
 
     /* Media type: */
 

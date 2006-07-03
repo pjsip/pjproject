@@ -170,7 +170,7 @@ static pj_status_t record_file (const char *filename)
 	return -1;
 #endif
 
-    pj_memset(&info, 0, sizeof(info));
+    pj_bzero(&info, sizeof(info));
     info.bits_per_sample = 16;
     info.bytes_per_frame = 2;
     info.frames_per_packet = 160;
@@ -217,7 +217,7 @@ static pj_status_t play_file (const char *filename)
     if (!fhnd)
 	return -1;
 
-    pj_memset(&info, 0, sizeof(info));
+    pj_bzero(&info, sizeof(info));
     info.bits_per_sample = 16;
     info.bytes_per_frame = 2;
     info.frames_per_packet = 160;
@@ -263,7 +263,7 @@ static int create_ses_by_remote_sdp(int local_port, char *sdp)
 	return -1;
     }
 
-    pj_memset(&skinfo, 0, sizeof(skinfo));
+    pj_bzero(&skinfo, sizeof(skinfo));
     skinfo.rtp_sock = skinfo.rtcp_sock = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 0);
     if (skinfo.rtp_sock == PJ_INVALID_SOCKET) {
 	PJ_LOG(1,(THIS_FILE, "Unable to create socket"));

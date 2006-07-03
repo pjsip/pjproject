@@ -150,7 +150,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(endpt && port && p_tp, PJ_EINVAL);
 
 
-    pj_memset(&si, 0, sizeof(pjmedia_sock_info));
+    pj_bzero(&si, sizeof(pjmedia_sock_info));
     si.rtp_sock = si.rtcp_sock = PJ_INVALID_SOCKET;
 
     /* Create RTP socket */
@@ -240,7 +240,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
 
     /* Setup RTP socket with the ioqueue */
-    pj_memset(&rtp_cb, 0, sizeof(rtp_cb));
+    pj_bzero(&rtp_cb, sizeof(rtp_cb));
     rtp_cb.on_read_complete = &on_rx_rtp;
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtp_sock, tp,
@@ -264,7 +264,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
 
     /* Setup RTCP socket with ioqueue */
-    pj_memset(&rtcp_cb, 0, sizeof(rtcp_cb));
+    pj_bzero(&rtcp_cb, sizeof(rtcp_cb));
     rtcp_cb.on_read_complete = &on_rx_rtcp;
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtcp_sock, tp,

@@ -705,7 +705,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
     /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
      * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
      */
-    pj_memset(dest_info, 0, sizeof(*dest_info));
+    pj_bzero(dest_info, sizeof(*dest_info));
 
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;

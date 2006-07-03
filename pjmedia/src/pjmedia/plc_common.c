@@ -183,7 +183,7 @@ static void plc_replay_generate(void *plc, pj_int16_t *frame)
 	for (i=0; i<count; ++i)
 	    samp[i] = (pj_int16_t)(samp[i] >> 1);
     } else {
-	pj_memset(frame, 0, o->size);
+	pj_bzero(frame, o->size);
     }
 }
 

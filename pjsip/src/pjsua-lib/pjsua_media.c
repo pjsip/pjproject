@@ -266,7 +266,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    /* Get local IP address. */
 	    hostname = pj_gethostname();
 
-	    pj_memset( &addr, 0, sizeof(addr));
+	    pj_bzero( &addr, sizeof(addr));
 	    addr.sin_family = PJ_AF_INET;
 	    status = pj_sockaddr_in_set_str_addr( &addr, hostname);
 	    if (status != PJ_SUCCESS) {
@@ -552,7 +552,7 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    pj_memset(info, 0, sizeof(*info));
+    pj_bzero(info, sizeof(*info));
     info->slot_id = id;
     info->name = cinfo.name;
     info->clock_rate = cinfo.clock_rate;

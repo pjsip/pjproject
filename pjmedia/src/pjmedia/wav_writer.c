@@ -114,7 +114,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 	return status;
 
     /* Initialize WAVE header */
-    pj_memset(&wave_hdr, 0, sizeof(pjmedia_wave_hdr));
+    pj_bzero(&wave_hdr, sizeof(pjmedia_wave_hdr));
     wave_hdr.riff_hdr.riff = PJMEDIA_RIFF_TAG;
     wave_hdr.riff_hdr.file_len = 0; /* will be filled later */
     wave_hdr.riff_hdr.wave = PJMEDIA_WAVE_TAG;

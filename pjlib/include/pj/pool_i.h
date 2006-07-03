@@ -68,7 +68,7 @@ PJ_IDEF(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count, pj_size_t size)
 {
     void *buf = pj_pool_alloc( pool, size*count);
     if (buf)
-	pj_memset(buf, 0, size * count);
+	pj_bzero(buf, size * count);
     return buf;
 }
 

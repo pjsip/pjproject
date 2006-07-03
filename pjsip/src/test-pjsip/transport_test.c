@@ -554,7 +554,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	char buf[1];
 	pj_str_t str_id = { buf, 1 };
 
-	pj_memset(&rt_test_data[i], 0, sizeof(rt_test_data[i]));
+	pj_bzero(&rt_test_data[i], sizeof(rt_test_data[i]));
 
 	/* Init timer entry */
 	rt_test_data[i].tx_timer.id = i;
@@ -613,8 +613,8 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     }
 
     /* Gather statistics. */
-    pj_memset(&total_time, 0, sizeof(total_time));
-    pj_memset(&zero_time, 0, sizeof(zero_time));
+    pj_bzero(&total_time, sizeof(total_time));
+    pj_bzero(&zero_time, sizeof(zero_time));
     usec_rt = total_sent = total_recv = 0;
     for (i=0; i<THREADS; ++i) {
 	total_sent += rt_test_data[i].sent_request_count;

@@ -823,7 +823,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     pj_time_val elapsed;
     pj_highprec_t avg_parse, avg_print, avg_cmp, kbytes;
 
-    pj_memset(&var, 0, sizeof(var));
+    pj_bzero(&var, sizeof(var));
 
     zero.u32.hi = zero.u32.lo = 0;
 

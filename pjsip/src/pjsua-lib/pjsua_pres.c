@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 
     PJSUA_LOCK();
 
-    pj_memset(info, 0, sizeof(pjsua_buddy_info));
+    pj_bzero(info, sizeof(pjsua_buddy_info));
 
     buddy = &pjsua_var.buddy[buddy_id];
     info->id = buddy->index;
@@ -129,7 +129,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
  */
 static void reset_buddy(pjsua_buddy_id id)
 {
-    pj_memset(&pjsua_var.buddy[id], 0, sizeof(pjsua_var.buddy[id]));
+    pj_bzero(&pjsua_var.buddy[id], sizeof(pjsua_var.buddy[id]));
     pjsua_var.buddy[id].index = id;
 }
 
@@ -479,7 +479,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsip_auth_clt_set_credentials(&dlg->auth_sess, acc->cred_cnt, acc->cred);
 
     /* Init callback: */
-    pj_memset(&pres_cb, 0, sizeof(pres_cb));
+    pj_bzero(&pres_cb, sizeof(pres_cb));
     pres_cb.on_evsub_state = &pres_evsub_on_srv_state;
 
     /* Create server presence subscription: */
@@ -522,7 +522,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
 
     /* Set our online status: */
-    pj_memset(&pres_status, 0, sizeof(pres_status));
+    pj_bzero(&pres_status, sizeof(pres_status));
     pres_status.info_cnt = 1;
     pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
     //Both pjsua_var.local_uri and pjsua_var.contact_uri are enclosed in "<" and ">"

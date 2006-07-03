@@ -60,7 +60,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
     }
 
     /* Initialize session. */
-    pj_memset(ses, 0, sizeof(*ses));
+    pj_bzero(ses, sizeof(*ses));
 
     /* Initial sequence number SHOULD be random, according to RFC 3550. */
     ses->out_extseq = pj_rand();

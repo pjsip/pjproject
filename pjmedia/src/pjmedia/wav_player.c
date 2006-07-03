@@ -492,7 +492,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	/* Second stage: fill up buffer, and read from the start of buffer. */
 	status = fill_buffer(fport);
 	if (status != PJ_SUCCESS) {
-	    pj_memset(((char*)frame->buf)+endread, 0, frame_size-endread);
+	    pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
 	    return status;
 	}
 

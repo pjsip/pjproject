@@ -165,7 +165,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 	    return -12;
 	}
 
-	pj_memset(&callback, 0, sizeof(callback));
+	pj_bzero(&callback, sizeof(callback));
 	status = pj_ioqueue_register_sock(test_pool, ioqueue, osd.sock,
 					  NULL, &callback, &osd.key);
 	if (status != PJ_SUCCESS) {
@@ -226,7 +226,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     }
 
     /* Register socket to ioqueue */
-    pj_memset(&callback, 0, sizeof(callback));
+    pj_bzero(&callback, sizeof(callback));
     callback.on_read_complete = &on_read_complete;
     status = pj_ioqueue_register_sock(sock_data.pool, ioqueue, sock_data.sock,
 				      NULL, &callback, &sock_data.key);

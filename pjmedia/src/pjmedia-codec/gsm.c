@@ -241,7 +241,7 @@ static pj_status_t gsm_default_attr (pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(factory);
     PJ_UNUSED_ARG(id);
 
-    pj_memset(attr, 0, sizeof(pjmedia_codec_param));
+    pj_bzero(attr, sizeof(pjmedia_codec_param));
     attr->info.clock_rate = 8000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = 13200;
@@ -268,7 +268,7 @@ static pj_status_t gsm_enum_codecs(pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(factory);
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
 
-    pj_memset(&codecs[0], 0, sizeof(pjmedia_codec_info));
+    pj_bzero(&codecs[0], sizeof(pjmedia_codec_info));
     codecs[0].encoding_name = pj_str("GSM");
     codecs[0].pt = PJMEDIA_RTP_PT_GSM;
     codecs[0].type = PJMEDIA_TYPE_AUDIO;

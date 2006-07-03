@@ -171,7 +171,7 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
 
     /* Return silence if we don't have downstream port */
     if (rport->dn_port == NULL) {
-	pj_memset(frame->buf, frame->size, 0);
+	pj_bzero(frame->buf, frame->size);
 	return PJ_SUCCESS;
     }
 

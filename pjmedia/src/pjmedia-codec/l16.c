@@ -234,7 +234,7 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
 {
     PJ_UNUSED_ARG(factory);
 
-    pj_memset(attr, 0, sizeof(pjmedia_codec_param));
+    pj_bzero(attr, sizeof(pjmedia_codec_param));
     attr->info.pt = (pj_uint8_t)id->pt;
     attr->info.clock_rate = id->clock_rate;
     attr->info.channel_cnt = id->channel_cnt;

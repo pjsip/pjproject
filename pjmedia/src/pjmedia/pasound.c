@@ -211,7 +211,7 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
     if (!pa_info)
 	return NULL;
 
-    pj_memset(&info, 0, sizeof(info));
+    pj_bzero(&info, sizeof(info));
     strncpy(info.name, pa_info->name, sizeof(info.name));
     info.name[sizeof(info.name)-1] = '\0';
     info.input_count = pa_info->maxInputChannels;
@@ -285,7 +285,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
 
-    pj_memset(&inputParam, 0, sizeof(inputParam));
+    pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = index;
     inputParam.channelCount = channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
@@ -378,7 +378,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     stream->channel_count = channel_count;
     stream->play_cb = play_cb;
 
-    pj_memset(&outputParam, 0, sizeof(outputParam));
+    pj_bzero(&outputParam, sizeof(outputParam));
     outputParam.device = index;
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
@@ -500,7 +500,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     stream->rec_cb = rec_cb;
     stream->play_cb = play_cb;
 
-    pj_memset(&inputParam, 0, sizeof(inputParam));
+    pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = rec_id;
     inputParam.channelCount = channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
@@ -509,7 +509,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     paRecHostApiInfo = Pa_GetHostApiInfo(paRecDevInfo->hostApi);
 
-    pj_memset(&outputParam, 0, sizeof(outputParam));
+    pj_bzero(&outputParam, sizeof(outputParam));
     outputParam.device = play_id;
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;

@@ -855,7 +855,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 
     answer->media_count = 0;
 
-    pj_memset(media_used, 0, sizeof(media_used));
+    pj_bzero(media_used, sizeof(media_used));
 
     /* For each media line, create our answer based on our initial
      * capability.
