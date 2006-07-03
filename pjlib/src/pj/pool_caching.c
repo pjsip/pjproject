@@ -198,6 +198,8 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 	       pj_pool_get_used_size(pool)*100/pool_capacity));
     pj_pool_reset(pool);
 
+    pool_capacity = pj_pool_get_capacity(pool);
+
     /*
      * Otherwise put the pool in our recycle list.
      */

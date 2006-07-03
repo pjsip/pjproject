@@ -543,6 +543,19 @@ PJ_DECL(int) pj_utoa(unsigned long val, char *buf);
  */
 PJ_DECL(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad);
 
+
+/**
+ * Fill the memory location with zero.
+ *
+ * @param dst	    The destination buffer.
+ * @param size	    The number of bytes.
+ */
+PJ_INLINE(void) pj_bzero(void *dst, pj_size_t size)
+{
+    bzero(dst, size);
+}
+
+
 /**
  * Fill the memory location with value.
  *

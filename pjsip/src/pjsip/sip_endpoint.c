@@ -88,6 +88,15 @@ struct pjsip_endpoint
 };
 
 
+#if defined(PJSIP_SAFE_MODULE) && PJSIP_SAFE_MODULE!=0
+#   define LOCK_MODULE_ACCESS(ept)	pj_rwmutex_lock_read(ept->mod_mutex)
+#   define UNLOCK_MODULE_ACCESS(ept)	pj_rwmutex_unlock_read(ept->mod_mutex)
+#else
+#   define LOCK_MODULE_ACCESS(endpt)
+#   define UNLOCK_MODULE_ACCESS(endpt)
+#endif
+
+
 
 /*
  * Prototypes.
@@ -581,9 +590,14 @@ PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
 {
     PJ_LOG(6, (THIS_FILE, "Releasing pool %s", pj_pool_getobjname(pool)));
 
-    pj_mutex_lock(endpt->mutex);
+    /* Don't need to acquire mutex since pool factory is thread safe
+       pj_mutex_lock(endpt->mutex);
+     */
     pj_pool_release( pool );
+
+    /*
     pj_mutex_unlock(endpt->mutex);
+     */
 }
 
 
@@ -776,7 +790,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 
 
     /* Distribute to modules, starting from modules with highest priority */
-    pj_rwmutex_lock_read(endpt->mod_mutex);
+    LOCK_MODULE_ACCESS(endpt);
 
     if (msg->type == PJSIP_REQUEST_MSG) {
 	pjsip_module *mod;
@@ -823,7 +837,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 	}
     }
 
-    pj_rwmutex_unlock_read(endpt->mod_mutex);
+    UNLOCK_MODULE_ACCESS(endpt);
 
     /* Must clear mod_data before returning rdata to transport, since
      * rdata may be reused.
@@ -842,7 +856,7 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
     pjsip_module *mod;
 
     /* Distribute to modules, starting from modules with LOWEST priority */
-    pj_rwmutex_lock_read(endpt->mod_mutex);
+    LOCK_MODULE_ACCESS(endpt);
 
     mod = endpt->module_list.prev;
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
@@ -864,7 +878,7 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
 	}
     }
 
-    pj_rwmutex_unlock_read(endpt->mod_mutex);
+    UNLOCK_MODULE_ACCESS(endpt);
 
     return status;
 }

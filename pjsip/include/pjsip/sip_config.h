@@ -120,6 +120,16 @@
 #endif
 
 
+/**
+ * Allow SIP modules removal or insertions during operation?
+ * If yes, then locking will be employed when endpoint need to
+ * access module.
+ */
+#ifndef PJSIP_SAFE_MODULE
+#   define PJSIP_SAFE_MODULE		1
+#endif
+
+
 
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)

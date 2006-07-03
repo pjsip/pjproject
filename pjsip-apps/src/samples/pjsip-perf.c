@@ -66,9 +66,19 @@
 #include <pjlib.h>
 #include <stdio.h>
 
-#define THIS_FILE	"pjsip-perf.c"
-#define DEFAULT_COUNT	(PJSIP_MAX_TSX_COUNT/2>10000?10000:PJSIP_MAX_TSX_COUNT/2)
-#define JOB_WINDOW	DEFAULT_COUNT
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+#  include <windows.h>
+#endif
+
+#define THIS_FILE	    "pjsip-perf.c"
+#define DEFAULT_COUNT	    (PJSIP_MAX_TSX_COUNT/2>10000?10000:PJSIP_MAX_TSX_COUNT/2)
+#define JOB_WINDOW	    DEFAULT_COUNT
+#define TERMINATE_TSX(x,c)
+
+
+#ifndef CACHING_POOL_SIZE
+#   define CACHING_POOL_SIZE   (256*1024*1024)
+#endif
 
 
 /* Static message body for INVITE, when stateful processing is
@@ -138,6 +148,7 @@ struct app
 			     job_submitted, 
 			     job_finished,
 			     job_window;
+	unsigned	     stat_max_window;
 	pj_time_val	     first_request;
 	pj_time_val	     last_completion;
 	unsigned	     total_responses;
@@ -587,7 +598,8 @@ static pj_status_t create_app(void)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Must create a pool factory before we can allocate any memory. */
-    pj_caching_pool_init(&app.cp, &pj_pool_factory_default_policy, 0);
+    pj_caching_pool_init(&app.cp, &pj_pool_factory_default_policy, 
+			 CACHING_POOL_SIZE);
 
     /* Create application pool for misc. */
     app.pool = pj_pool_create(&app.cp.factory, "app", 1000, 1000, NULL);
@@ -632,7 +644,7 @@ static pj_status_t init_sip()
 	    pjsip_tpfactory *tpfactory;
 	    
 	    transport_type = "tcp";
-	    pj_sockaddr_in_init(&local_addr, 0, app.local_port);
+	    pj_sockaddr_in_init(&local_addr, 0, (pj_uint16_t)app.local_port);
 	    status = pjsip_tcp_transport_start(app.sip_endpt, &local_addr,
 					       app.thread_count, &tpfactory);
 	    if (status == PJ_SUCCESS) {
@@ -975,6 +987,7 @@ static void usage(void)
 	"   --thread-count=N        Set number of worker threads (default=1)\n"
 	"   --stateless, -s         Set client to operate in stateless mode\n"
 	"                           (default: stateful)\n"
+	"   --window=COUNT, -w      Set maximum outstanding job in client (default: %d)\n"
 	"   --real-sdp              Generate real SDP from pjmedia, and also perform\n"
 	"                           proper SDP negotiation (default: dummy)\n"
 	"   --timeout=SEC, -t       Set client timeout (default=60 sec)\n"
@@ -985,7 +998,7 @@ static void usage(void)
 	"   - sip:0@server-addr     To handle requests statelessly (non-INVITE only)\n"
 	"   - sip:1@server-addr     To handle requests statefully (INVITE and non-INVITE)\n"
 	"   - sip:2@server-addr     To handle INVITE call (INVITE only)\n",
-	DEFAULT_COUNT);
+	DEFAULT_COUNT, JOB_WINDOW);
 }
 
 
@@ -1010,6 +1023,7 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "real-sdp",	    0, 0, OPT_REAL_SDP },
 	{ "verbose",        0, 0, 'v' },
 	{ "use-tcp",	    0, 0, 'T' },
+	{ "window",	    1, 0, 'w' },
 	{ NULL, 0, 0, 0 },
     };
     int c;
@@ -1026,7 +1040,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
     /* Parse options */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "p:c:m:t:hsv", 
+    while((c=pj_getopt_long(argc,argv, "p:c:m:t:w:hsv", 
 			    long_options, &option_index))!=-1) 
     {
 	switch (c) {
@@ -1086,6 +1100,14 @@ static pj_status_t init_options(int argc, char *argv[])
 	    app.client.timeout = my_atoi(pj_optarg);
 	    if (app.client.timeout < 0 || app.client.timeout > 600) {
 		PJ_LOG(3,(THIS_FILE, "Invalid --timeout %s", pj_optarg));
+		return -1;
+	    }
+	    break;
+
+	case 'w':
+	    app.client.job_window = my_atoi(pj_optarg);
+	    if (app.client.job_window <= 0) {
+		PJ_LOG(3,(THIS_FILE, "Invalid --window %s", pj_optarg));
 		return -1;
 	    }
 	    break;
@@ -1183,7 +1205,7 @@ static void tsx_completion_cb(void *token, pjsip_event *event)
 	report_completion(tsx->status_code);
 	tsx->mod_data[mod_test.id] = (void*)1;
 
-	pjsip_tsx_terminate(tsx, tsx->status_code);
+	TERMINATE_TSX(tsx, tsx->status_code);
     }
 }
 
@@ -1219,6 +1241,7 @@ static pj_status_t submit_job(void)
 /* Client worker thread */
 static int client_thread(void *arg)
 {
+    unsigned last_timeout_check = 0;
     pj_time_val end_time, now;
 
     PJ_UNUSED_ARG(arg);
@@ -1239,15 +1262,23 @@ static int client_thread(void *arg)
 	int outstanding;
 	pj_status_t status;
 
+	/* Calculate current outstanding job */
+	outstanding = app.client.job_submitted - app.client.job_finished;
+
+	/* Update stats on max outstanding jobs */
+	if (outstanding > (int)app.client.stat_max_window)
+	    app.client.stat_max_window = outstanding;
+
 	/* Wait if there are more pending jobs than allowed in the
 	 * window.
 	 */
-	outstanding = app.client.job_submitted - app.client.job_finished;
-	while (outstanding >= (int)app.client.job_window) {
+	for (i=0; outstanding > (int)app.client.job_window && i<100; ++i) {
 	    pjsip_endpt_handle_events(app.sip_endpt, &timeout);
 	    outstanding = app.client.job_submitted - app.client.job_finished;
 	}
 
+
+	/* Submit one job */
 	if (app.client.method.id == PJSIP_INVITE_METHOD) {
 	    status = make_call(&app.client.dst_uri);
 	} else if (app.client.stateless) {
@@ -1258,11 +1289,15 @@ static int client_thread(void *arg)
 
 	++app.client.job_submitted;
 
-	for (i=0; i<2; ++i) {
-	    unsigned cnt=0;
-	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, &cnt);
-	    if (cnt==0)
+	/* Handle event */
+	pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
+
+	/* Check for time out */
+	if (app.client.job_submitted - last_timeout_check >= 2000) {
+	    pj_gettimeofday(&now);
+	    if (PJ_TIME_VAL_GTE(now, end_time))
 		break;
+	    last_timeout_check = app.client.job_submitted;
 	}
     }
 
@@ -1271,11 +1306,8 @@ static int client_thread(void *arg)
 	pj_time_val timeout = { 0, 0 };
 	unsigned i;
 
-	for (i=0; i<2; ++i) {
-	    unsigned cnt=0;
-	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, &cnt);
-	    if (cnt==0)
-		break;
+	for (i=0; i<2000; ++i) {
+	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
 	}
 
 	pj_gettimeofday(&now);
@@ -1352,7 +1384,7 @@ static int server_thread(void *arg)
 		good_number(str_stateful, app.server.cur_state.stateful_cnt);
 		good_number(str_call, app.server.cur_state.call_cnt);
 
-		printf("Total(rate): stateless:%s (%d/s), statefull:%s (%d/s), call:%s (%d/s)\r",
+		printf("Total(rate): stateless:%s (%d/s), statefull:%s (%d/s), call:%s (%d/s)       \r",
 		       str_stateless, stateless*1000/msec,
 		       str_stateful, stateful*1000/msec,
 		       str_call, call*1000/msec);
@@ -1366,8 +1398,20 @@ static int server_thread(void *arg)
     return 0;
 }
 
+static void write_report(const char *msg)
+{
+    puts(msg);
+
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+    OutputDebugString(msg);
+    OutputDebugString("\n");
+#endif
+}
+
+
 int main(int argc, char *argv[])
 {
+    static char report[1024];
 
     if (create_app() != 0)
 	return 1;
@@ -1458,24 +1502,33 @@ int main(int argc, char *argv[])
 
 	if (msec == 0) msec = 1;
 
-	printf("Total %d %s sent, %d responses received in %d msec:\n"
-	       " - 2xx responses:  %7d (rate=%d/sec)\n"
-	       " - 3xx responses:  %7d (rate=%d/sec)\n"
-	       " - 4xx responses:  %7d (rate=%d/sec)\n"
-	       " - 5xx responses:  %7d (rate=%d/sec)\n"
-	       " - 6xx responses:  %7d (rate=%d/sec)\n"
-	       " - 7xx responses:  %7d (rate=%d/sec)\n"
-	       "                       ----------------\n"
-	       " TOTAL responses:  %7d (rate=%d/sec)\n",
-	       app.client.job_submitted, test_type,
-	       app.client.total_responses, msec,
-	       app.client.status_class[2], app.client.status_class[2]*1000/msec,
-	       app.client.status_class[3], app.client.status_class[3]*1000/msec,
-	       app.client.status_class[4], app.client.status_class[4]*1000/msec,
-	       app.client.status_class[5], app.client.status_class[5]*1000/msec,
-	       app.client.status_class[6], app.client.status_class[6]*1000/msec,
-	       app.client.status_class[7], app.client.status_class[7]*1000/msec,
-	       app.client.total_responses, app.client.total_responses*1000/msec);
+	pj_ansi_snprintf(
+	    report, sizeof(report),
+	    "Total %d %s sent, %d responses received in %d ms:\n"
+	    " - 2xx responses:  %7d (rate=%d/sec)\n"
+	    " - 3xx responses:  %7d (rate=%d/sec)\n"
+	    " - 4xx responses:  %7d (rate=%d/sec)\n"
+	    " - 5xx responses:  %7d (rate=%d/sec)\n"
+	    " - 6xx responses:  %7d (rate=%d/sec)\n"
+	    " - 7xx responses:  %7d (rate=%d/sec)\n"
+	    "                       ----------------\n"
+	    " TOTAL responses:  %7d (rate=%d/sec)\n",
+	    app.client.job_submitted, test_type,
+	    app.client.total_responses, msec,
+	    app.client.status_class[2], app.client.status_class[2]*1000/msec,
+	    app.client.status_class[3], app.client.status_class[3]*1000/msec,
+	    app.client.status_class[4], app.client.status_class[4]*1000/msec,
+	    app.client.status_class[5], app.client.status_class[5]*1000/msec,
+	    app.client.status_class[6], app.client.status_class[6]*1000/msec,
+	    app.client.status_class[7], app.client.status_class[7]*1000/msec,
+	    app.client.total_responses, app.client.total_responses*1000/msec);
+
+	write_report(report);
+
+	pj_ansi_sprintf(report, "Maximum outstanding job: %d", 
+			app.client.stat_max_window);
+	write_report(report);
+
 
     } else {
 	/* Server mode */
