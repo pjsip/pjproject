@@ -111,6 +111,7 @@ struct app
 {
     pj_caching_pool	 cp;
     pj_pool_t		*pool;
+    pj_bool_t		 use_tcp;
     pj_str_t		 local_addr;
     int			 local_port;
     pjsip_endpoint	*sip_endpt;
@@ -608,11 +609,11 @@ static pj_status_t init_sip()
 {
     pj_status_t status;
 
-    /* Add UDP transport. */
+    /* Add UDP/TCP transport. */
     {
 	pj_sockaddr_in addr;
 	pjsip_host_port addrname;
-	pjsip_transport *tp;
+	const char *transport_type;
 
 	pj_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = PJ_AF_INET;
@@ -622,27 +623,47 @@ static pj_status_t init_sip()
 	if (app.local_addr.slen) {
 	    addrname.host = app.local_addr;
 	    addrname.port = 5060;
-	}
+	} 
 	if (app.local_port != 0)
 	    addrname.port = app.local_port;
 
-	status = pjsip_udp_transport_start( app.sip_endpt, &addr, 
-					    (app.local_addr.slen ? &addrname:NULL),
-					    1, &tp);
+	if (app.use_tcp) {
+	    pj_sockaddr_in local_addr;
+	    pjsip_tpfactory *tpfactory;
+	    
+	    transport_type = "tcp";
+	    pj_sockaddr_in_init(&local_addr, 0, app.local_port);
+	    status = pjsip_tcp_transport_start(app.sip_endpt, &local_addr,
+					       app.thread_count, &tpfactory);
+	    if (status == PJ_SUCCESS) {
+		app.local_addr = tpfactory->addr_name.host;
+		app.local_port = tpfactory->addr_name.port;
+	    }
+	} else {
+	    pjsip_transport *tp;
+
+	    transport_type = "udp";
+	    status = pjsip_udp_transport_start(app.sip_endpt, &addr, 
+					       (app.local_addr.slen ? &addrname:NULL),
+					       app.thread_count, &tp);
+	    if (status == PJ_SUCCESS) {
+		app.local_addr = tp->local_name.host;
+		app.local_port = tp->local_name.port;
+	    }
+
+	}
 	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to start UDP transport", status);
+	    app_perror(THIS_FILE, "Unable to start transport", status);
 	    return status;
 	}
 
-	app.local_addr = tp->local_name.host;
-	app.local_port = tp->local_name.port;
-
 	app.local_uri.ptr = pj_pool_alloc(app.pool, 128);
 	app.local_uri.slen = pj_ansi_sprintf(app.local_uri.ptr, 
-				    	     "<sip:pjsip-perf@%.*s:%d>",
-					     (int)tp->local_name.host.slen,
-					     tp->local_name.host.ptr,
-					     tp->local_name.port);
+				    	     "<sip:pjsip-perf@%.*s:%d;transport=%s>",
+					     (int)app.local_addr.slen,
+					     app.local_addr.ptr,
+					     app.local_port,
+					     transport_type);
 
 	app.local_contact = app.local_uri;
     }
@@ -950,6 +971,7 @@ static void usage(void)
 	"                           (client only, default=%d)\n"
 	"   --method=METHOD, -m     Set the test method (default: OPTIONS)\n"
 	"   --local-port=PORT, -p   Set local port [default: 5060]\n"
+	"   --use-tcp, -T           Use TCP instead of UDP (default: no)\n"
 	"   --thread-count=N        Set number of worker threads (default=1)\n"
 	"   --stateless, -s         Set client to operate in stateless mode\n"
 	"                           (default: stateful)\n"
@@ -987,6 +1009,7 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "timeout",	    1, 0, 't' },
 	{ "real-sdp",	    0, 0, OPT_REAL_SDP },
 	{ "verbose",        0, 0, 'v' },
+	{ "use-tcp",	    0, 0, 'T' },
 	{ NULL, 0, 0, 0 },
     };
     int c;
@@ -1065,6 +1088,10 @@ static pj_status_t init_options(int argc, char *argv[])
 		PJ_LOG(3,(THIS_FILE, "Invalid --timeout %s", pj_optarg));
 		return -1;
 	    }
+	    break;
+
+	case 'T':
+	    app.use_tcp = PJ_TRUE;
 	    break;
 
 	default:
@@ -1341,7 +1368,6 @@ static int server_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-    pj_log_set_level(3);
 
     if (create_app() != 0)
 	return 1;
@@ -1358,6 +1384,8 @@ int main(int argc, char *argv[])
     if (app.verbose) {
 	pj_log_set_level(4);
 	pjsip_endpt_register_module(app.sip_endpt, &msg_logger);
+    } else {
+        pj_log_set_level(3);
     }
 
 
@@ -1366,12 +1394,15 @@ int main(int argc, char *argv[])
 	if (app.client.method.id == PJSIP_INVITE_METHOD &&
 	    app.client.stateless)
 	{
-	    PJ_LOG(3,(THIS_FILE, "Info: --stateless option makes no sense for INVITE, ignored."));
+	    PJ_LOG(3,(THIS_FILE, 
+		      "Info: --stateless option makes no sense for INVITE, "
+                      "ignored."));
 	}
     }
 
     if (app.real_sdp) {
-	PJ_LOG(3,(THIS_FILE, "Info: client/server using real SDP from PJMEDIA"));
+	PJ_LOG(3,(THIS_FILE, 
+                  "Info: client/server using real SDP from PJMEDIA"));
     } else {
 	PJ_LOG(3,(THIS_FILE, "Info: client/server using dummy SDP"));
     }
@@ -1398,8 +1429,9 @@ int main(int argc, char *argv[])
 	}
 	
 
-	PJ_LOG(3,(THIS_FILE, "Starting %d %s, please wait..", 
-		  app.client.job_count, test_type));
+	PJ_LOG(3,(THIS_FILE, "Sending %d %s to %.*s, please wait..", 
+		  app.client.job_count, test_type,
+		  (int)app.client.dst_uri.slen, app.client.dst_uri.ptr));
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &client_thread, NULL,
@@ -1455,18 +1487,21 @@ int main(int argc, char *argv[])
 	puts("pjsip-perf started in server-mode");
 
 	printf("Receiving requests on the following URIs:\n"
-	       "  sip:0@%.*s:%d    for stateless handling (non-INVITE only)\n"
-	       "  sip:1@%.*s:%d    for stateful handling (INVITE and non-INVITE)\n"
-	       "  sip:2@%.*s:%d    for call handling (INVITE only)\n",
+	       "  sip:0@%.*s:%d;transport=%s    for stateless handling (non-INVITE only)\n"
+	       "  sip:1@%.*s:%d;transport=%s    for stateful handling (INVITE and non-INVITE)\n"
+	       "  sip:2@%.*s:%d;transport=%s    for call handling (INVITE only)\n",
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
 	       app.local_port,
+	       (app.use_tcp ? "tcp" : "udp"),
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
 	       app.local_port,
+	       (app.use_tcp ? "tcp" : "udp"),
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
-	       app.local_port);
+	       app.local_port,
+	       (app.use_tcp ? "tcp" : "udp"));
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &server_thread, (void*)i,
