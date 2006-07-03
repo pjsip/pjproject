@@ -40,6 +40,7 @@ BINDIR := ../bin/samples
 
 SAMPLES := confsample \
 	   level \
+	   pjsip-perf \
 	   playfile \
 	   playsine \
 	   recfile \
