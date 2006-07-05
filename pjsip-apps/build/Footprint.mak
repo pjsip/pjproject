@@ -49,3 +49,5 @@ all:
 clean:
 	rm -f $(EXE)
 
+print_name:
+	@echo $(MACHINE_NAME) $(OS_NAME) $(CC_NAME) `$(CC_NAME) -dumpversion`

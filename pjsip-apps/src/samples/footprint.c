@@ -32,13 +32,16 @@
 #include <pjmedia-codec.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
-
+#include <stdlib.h>
 
 /* All flags: */
 #if 0
+#define HAS_PJLIB
+
 #define HAS_PJLIB_STUN
 #define HAS_PJLIB_GETOPT
 #define HAS_PJLIB_XML
+#define HAS_PJLIB_SCANNER
 
 #define HAS_PJSIP_CORE
 #define HAS_PJSIP_UDP_TRANSPORT
@@ -81,7 +84,11 @@
 int dummy_function()
 {
     pj_caching_pool cp;
-
+ 
+    sprintf(NULL, "%d", 0);
+    rand();
+    
+#ifdef HAS_PJLIB
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
     pj_array_erase(NULL, 0, 0, 0);
@@ -93,6 +100,7 @@ int dummy_function()
     pj_ioqueue_register_sock(NULL, NULL, 0, NULL, NULL, NULL);
     pj_pool_alloc(NULL, 0);
     pj_timer_heap_create(NULL, 0, NULL);
+#endif
 
 #ifdef HAS_PJLIB_STUN
     pj_stun_get_mapped_addr(&cp.factory, 0, NULL, NULL, 80, NULL, 80, NULL);
@@ -116,6 +124,31 @@ int dummy_function()
     pj_xml_find(NULL, NULL, NULL, NULL);
 #endif
 
+#ifdef HAS_PJLIB_SCANNER
+    pj_cis_buf_init(NULL);
+    pj_cis_init(NULL, NULL);
+    pj_cis_dup(NULL, NULL);
+    pj_cis_add_alpha(NULL);
+    pj_cis_add_str(NULL, NULL);
+
+    pj_scan_init(NULL, NULL, 0, 0, NULL);
+    pj_scan_fini(NULL);
+    pj_scan_peek(NULL, NULL, NULL);
+    pj_scan_peek_n(NULL, 0, NULL);
+    pj_scan_peek_until(NULL, NULL, NULL);
+    pj_scan_get(NULL, NULL, NULL);
+    pj_scan_get_unescape(NULL, NULL, NULL);
+    pj_scan_get_quote(NULL, 0, 0, NULL);
+    pj_scan_get_n(NULL, 0, NULL);
+    pj_scan_get_char(NULL);
+    pj_scan_get_until(NULL, NULL, NULL);
+    pj_scan_strcmp(NULL, NULL, 0);
+    pj_scan_stricmp(NULL, NULL, 0);
+    pj_scan_stricmp_alnum(NULL, NULL, 0);
+    pj_scan_get_newline(NULL);
+    pj_scan_restore_state(NULL, NULL);
+#endif
+    
 #ifdef HAS_PJSIP_CORE
     pjsip_endpt_create(NULL, NULL, NULL);
 
