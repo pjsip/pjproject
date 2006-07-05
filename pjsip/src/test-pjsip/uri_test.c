@@ -685,16 +685,26 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 {
     pj_status_t status;
     int len;
+    char *input;
     pjsip_uri *parsed_uri, *ref_uri;
     pj_str_t s1 = {NULL, 0}, s2 = {NULL, 0};
     pj_timestamp t1, t2;
 
-    entry->len = pj_native_strlen(entry->str);
+    if (entry->len == 0)
+	entry->len = pj_native_strlen(entry->str);
+
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+    input = pj_pool_alloc(pool, entry->len + 1);
+    pj_memcpy(input, entry->str, entry->len);
+    input[entry->len] = '\0';
+#else
+    input = entry->str;
+#endif
 
     /* Parse URI text. */
     pj_get_timestamp(&t1);
     var.parse_len = var.parse_len + entry->len;
-    parsed_uri = pjsip_parse_uri(pool, entry->str, entry->len, 0);
+    parsed_uri = pjsip_parse_uri(pool, input, entry->len, 0);
     if (!parsed_uri) {
 	/* Parsing failed. If the entry says that this is expected, then
 	 * return OK.
@@ -703,7 +713,7 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
 	if (status != 0) {
 	    PJ_LOG(3,(THIS_FILE, "   uri parse error!\n"
 				 "   uri='%s'\n",
-				 entry->str));
+				 input));
 	}
 	goto on_return;
     }

@@ -362,7 +362,7 @@ static pj_status_t init_parser()
 
     status = pj_cis_dup(&pjsip_PASSWD_SPEC_ESC, &pjsip_PASSWD_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str( &pjsip_PASSWD_SPEC, ESCAPED);
+    pj_cis_del_str( &pjsip_PASSWD_SPEC_ESC, ESCAPED);
 
     status = pj_cis_init(&cis_buf, &pjsip_PROBE_USER_HOST_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -1104,7 +1104,7 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
 	    pj_cis_match(&pjsip_HDR_CHAR_SPEC, *scanner->curptr))
 	{
 	    parser_get_and_unescape(scanner, pool, &pjsip_HDR_CHAR_SPEC,
-				    &pjsip_HDR_CHAR_SPEC, hvalue);
+				    &pjsip_HDR_CHAR_SPEC_ESC, hvalue);
 	}
     }
 }
