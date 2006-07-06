@@ -157,6 +157,9 @@ struct pj_pool_t
     /** Pool factory. */
     pj_pool_factory *factory;
 
+    /** Data put by factory */
+    void	    *factory_data;
+
     /** Current capacity allocated by the pool. */
     pj_size_t	    capacity;
 

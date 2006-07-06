@@ -38,6 +38,11 @@ static pj_size_t pool_sizes[PJ_CACHING_POOL_ARRAY_SIZE] =
     20480, 24576, 28672, 32768, 40960, 49152, 57344, 65536
 };
 
+/* Index where the search for size should begin.
+ * Start with pool_sizes[5], which is 8192.
+ */
+#define START_SIZE  5
+
 
 PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp, 
 				   const pj_pool_factory_policy *policy,
@@ -118,10 +123,19 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
      * is only a few elements. Binary search I suspect will be less efficient
      * for this purpose.
      */
-    for (idx=0; 
-	 idx < PJ_CACHING_POOL_ARRAY_SIZE && pool_sizes[idx] < initial_size; 
-	 ++idx)
-	;
+    if (initial_size <= pool_sizes[START_SIZE]) {
+	for (idx=START_SIZE-1; 
+	     idx >= 0 && pool_sizes[idx] >= initial_size;
+	     --idx)
+	    ;
+	++idx;
+    } else {
+	for (idx=START_SIZE+1; 
+	     idx < PJ_CACHING_POOL_ARRAY_SIZE && 
+		  pool_sizes[idx] < initial_size;
+	     ++idx)
+	    ;
+    }
 
     /* Check whether there's a pool in the list. */
     if (idx==PJ_CACHING_POOL_ARRAY_SIZE || pj_list_empty(&cp->free_list[idx])) {
@@ -155,6 +169,9 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
     /* Put in used list. */
     pj_list_insert_before( &cp->used_list, pool );
 
+    /* Mark factory data */
+    pool->factory_data = (void*) idx;
+
     /* Increment used count. */
     ++cp->used_count;
 
@@ -166,7 +183,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 {
     pj_caching_pool *cp = (pj_caching_pool*)pf;
     unsigned pool_capacity;
-    int i;
+    unsigned i;
 
     PJ_CHECK_STACK();
 
@@ -203,11 +220,10 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     /*
      * Otherwise put the pool in our recycle list.
      */
-    for (i=0; i < PJ_CACHING_POOL_ARRAY_SIZE && pool_sizes[i] != pool_capacity; ++i)
-	;
+    i = (unsigned)pool->factory_data;
 
-    pj_assert( i != PJ_CACHING_POOL_ARRAY_SIZE );
-    if (i == PJ_CACHING_POOL_ARRAY_SIZE) {
+    pj_assert(i<PJ_CACHING_POOL_ARRAY_SIZE);
+    if (i >= PJ_CACHING_POOL_ARRAY_SIZE ) {
 	/* Something has gone wrong with the pool. */
 	pj_pool_destroy_int(pool);
 	pj_mutex_unlock(cp->mutex);
