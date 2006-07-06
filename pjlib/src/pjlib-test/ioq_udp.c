@@ -817,6 +817,8 @@ int udp_ioqueue_test()
     int status;
     int bufsize, sock_count;
 
+    goto pass1;
+
     PJ_LOG(3, (THIS_FILE, "...compliance test (%s)", pj_ioqueue_name()));
     if ((status=compliance_test()) != 0) {
 	return status;
@@ -838,22 +840,26 @@ int udp_ioqueue_test()
     PJ_LOG(4, (THIS_FILE, "... note: buf=bytes sent, fds=# of fds, "
 			  "elapsed=in timer ticks"));
 
+pass1:
     PJ_LOG(3, (THIS_FILE, "...Benchmarking poll times for %s:", pj_ioqueue_name()));
     PJ_LOG(3, (THIS_FILE, "...====================================="));
     PJ_LOG(3, (THIS_FILE, "...Buf.size   #inactive-socks  Time/poll"));
     PJ_LOG(3, (THIS_FILE, "... (bytes)                    (nanosec)"));
     PJ_LOG(3, (THIS_FILE, "...====================================="));
 
+    goto pass2;
+
     for (bufsize=BUF_MIN_SIZE; bufsize <= BUF_MAX_SIZE; bufsize *= 2) {
 	if ((status=bench_test(bufsize, SOCK_INACTIVE_MIN)) != 0)
 	    return status;
     }
+pass2:
     bufsize = 512;
     for (sock_count=SOCK_INACTIVE_MIN+2; 
 	 sock_count<=SOCK_INACTIVE_MAX+2; 
 	 sock_count *= 2) 
     {
-	//PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
+	PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
 	if ((status=bench_test(bufsize, sock_count-2)) != 0)
 	    return status;
     }

@@ -141,8 +141,8 @@
 
 #define THIS_FILE   "ioq_epoll"
 
-//#define TRACE_(expr) PJ_LOG(3,expr)
-#define TRACE_(expr)
+#define TRACE_(expr) PJ_LOG(3,expr)
+//#define TRACE_(expr)
 
 /*
  * Include common ioqueue abstraction.
@@ -297,12 +297,20 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
 	goto on_return;
     }
 
+    /* Create key's mutex */
+    rc = pj_mutex_create_recursive(pool, NULL, &key->mutex);
+    if (rc != PJ_SUCCESS) {
+	key = NULL;
+	goto on_return;
+    }
+
     /* os_epoll_ctl. */
     ev.events = EPOLLIN | EPOLLOUT | EPOLLERR;
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
 	rc = pj_get_os_error();
+	pj_mutex_destroy(key->mutex);
 	key = NULL;
 	TRACE_((THIS_FILE, 
                 "pj_ioqueue_register_sock error: os_epoll_ctl rc=%d", 
@@ -353,7 +361,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     pj_lock_release(ioqueue->lock);
 
     /* Destroy the key. */
-    ioqueue_destroy_key(key);
+    pj_sock_close(key->fd);
+    pj_mutex_destroy(key->mutex);
 
     return PJ_SUCCESS;
 }

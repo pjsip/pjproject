@@ -38,7 +38,7 @@ extern pjsip_endpoint *endpt;
 
 #define INCLUDE_MESSAGING_GROUP	    1
 #define INCLUDE_TRANSPORT_GROUP	    1
-#define INCLUDE_TSX_GROUP	    1
+#define INCLUDE_TSX_GROUP	    0
 
 /*
  * Include tests that normally would fail under certain gcc
