@@ -26,6 +26,15 @@ extern pjsip_endpoint *endpt;
 #define TEST_UDP_PORT	    15060
 #define TEST_UDP_PORT_STR   "15060"
 
+/**
+ * Memory size to use in caching pool.
+ * Default: 2MB
+ */
+#ifndef PJSIP_TEST_MEM_SIZE
+#  define PJSIP_TEST_MEM_SIZE	    (2*1024*1024)
+#endif
+
+
 
 #define INCLUDE_MESSAGING_GROUP	    1
 #define INCLUDE_TRANSPORT_GROUP	    1

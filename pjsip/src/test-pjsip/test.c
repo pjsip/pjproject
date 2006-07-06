@@ -243,7 +243,8 @@ int test_main(void)
 
     pj_dump_config();
 
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 
+			  PJSIP_TEST_MEM_SIZE );
 
     rc = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
     if (rc != PJ_SUCCESS) {
@@ -340,6 +341,20 @@ int test_main(void)
 
 on_return:
     flush_events(500);
+
+    /* Dumping memory pool usage */
+    {
+	pj_pool_t *p;
+	unsigned sz = 0;
+	p = caching_pool.used_list.next;
+	while (p != (pj_pool_t*)&caching_pool.used_list) {
+	    sz += pj_pool_get_capacity(p);
+	    p = p->next;
+	}
+	PJ_LOG(3,(THIS_FILE, "Caching pool total capacity=%u",
+			      caching_pool.capacity + sz));
+    }
+
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
 

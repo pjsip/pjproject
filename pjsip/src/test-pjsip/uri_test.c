@@ -810,16 +810,16 @@ static int simple_uri_test(void)
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  simple test"));
-    pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
     for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
+	pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
 	status = do_uri_test(pool, &uri_test_array[i]);
+	pjsip_endpt_release_pool(endpt, pool);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(3,(THIS_FILE, "  error %d when testing entry %d",
 		      status, i));
 	    return status;
 	}
     }
-    pjsip_endpt_release_pool(endpt, pool);
 
     return 0;
 }
@@ -827,7 +827,6 @@ static int simple_uri_test(void)
 static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
 {
     unsigned i, loop;
-    pj_pool_t *pool;
     pj_status_t status;
     pj_timestamp zero;
     pj_time_val elapsed;
@@ -842,9 +841,11 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     var.print_time.u32.hi = var.print_time.u32.lo = 0;
     var.cmp_time.u32.hi = var.cmp_time.u32.lo = 0;
     for (loop=0; loop<LOOP_COUNT; ++loop) {
-	pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
 	for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
+	    pj_pool_t *pool;
+	    pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
 	    status = do_uri_test(pool, &uri_test_array[i]);
+	    pjsip_endpt_release_pool(endpt, pool);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(3,(THIS_FILE, "  error %d when testing entry %d",
 			  status, i));
@@ -852,7 +853,6 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
 		goto on_return;
 	    }
 	}
-	pjsip_endpt_release_pool(endpt, pool);
     }
 
     kbytes = var.parse_len;
