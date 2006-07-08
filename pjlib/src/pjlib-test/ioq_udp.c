@@ -40,7 +40,7 @@
 
 #define THIS_FILE	    "test_udp"
 #define PORT		    51233
-#define LOOP		    100
+#define LOOP		    2
 ///#define LOOP		    2
 #define BUF_MIN_SIZE	    32
 #define BUF_MAX_SIZE	    2048
@@ -817,7 +817,7 @@ int udp_ioqueue_test()
     int status;
     int bufsize, sock_count;
 
-    goto pass1;
+    //goto pass1;
 
     PJ_LOG(3, (THIS_FILE, "...compliance test (%s)", pj_ioqueue_name()));
     if ((status=compliance_test()) != 0) {
@@ -836,6 +836,8 @@ int udp_ioqueue_test()
 	return status;
     }
     
+    //return 0;
+
     PJ_LOG(4, (THIS_FILE, "...benchmarking different buffer size:"));
     PJ_LOG(4, (THIS_FILE, "... note: buf=bytes sent, fds=# of fds, "
 			  "elapsed=in timer ticks"));
@@ -847,7 +849,7 @@ pass1:
     PJ_LOG(3, (THIS_FILE, "... (bytes)                    (nanosec)"));
     PJ_LOG(3, (THIS_FILE, "...====================================="));
 
-    goto pass2;
+    //goto pass2;
 
     for (bufsize=BUF_MIN_SIZE; bufsize <= BUF_MAX_SIZE; bufsize *= 2) {
 	if ((status=bench_test(bufsize, SOCK_INACTIVE_MIN)) != 0)
@@ -859,7 +861,7 @@ pass2:
 	 sock_count<=SOCK_INACTIVE_MAX+2; 
 	 sock_count *= 2) 
     {
-	PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
+	//PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
 	if ((status=bench_test(bufsize, sock_count-2)) != 0)
 	    return status;
     }

@@ -141,8 +141,8 @@
 
 #define THIS_FILE   "ioq_epoll"
 
-#define TRACE_(expr) PJ_LOG(3,expr)
-//#define TRACE_(expr)
+//#define TRACE_(expr) PJ_LOG(3,expr)
+#define TRACE_(expr)
 
 /*
  * Include common ioqueue abstraction.
@@ -157,6 +157,12 @@ struct pj_ioqueue_key_t
     DECLARE_COMMON_KEY
 };
 
+struct queue
+{
+    pj_ioqueue_key_t	    *key;
+    enum ioqueue_event_type  event_type;
+};
+
 /*
  * This describes the I/O queue.
  */
@@ -167,6 +173,8 @@ struct pj_ioqueue_t
     unsigned		max, count;
     pj_ioqueue_key_t	hlist;
     int			epfd;
+    struct epoll_event *events;
+    struct queue       *queue;
 };
 
 /* Include implementation for common abstraction after we declare
@@ -229,6 +237,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
     
+    ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
+    PJ_ASSERT_RETURN(ioqueue->events != NULL, PJ_ENOMEM);
+
+    ioqueue->queue = pj_pool_calloc(pool, max_fd, sizeof(struct queue));
+    PJ_ASSERT_RETURN(ioqueue->queue != NULL, PJ_ENOMEM);
+
     PJ_LOG(4, ("pjlib", "epoll I/O Queue created (%p)", ioqueue));
 
     *p_ioqueue = ioqueue;
@@ -305,7 +319,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     }
 
     /* os_epoll_ctl. */
-    ev.events = EPOLLIN | EPOLLOUT | EPOLLERR;
+    ev.events = EPOLLIN | EPOLLERR;
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
@@ -321,6 +335,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     /* Register */
     pj_list_insert_before(&ioqueue->hlist, key);
     ++ioqueue->count;
+
+    //TRACE_((THIS_FILE, "socket registered, count=%d", ioqueue->count));
 
 on_return:
     *p_key = key;
@@ -373,9 +389,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
  * set for the specified event.
  */
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
-                                     pj_sock_t fd, 
+                                     pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type)
 {
+    if (event_type == WRITEABLE_EVENT) {
+	struct epoll_event ev;
+
+	ev.events = EPOLLIN | EPOLLERR;
+	ev.epoll_data = (epoll_data_type)key;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+    }	
 }
 
 /*
@@ -385,9 +408,16 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
-                                pj_sock_t fd,
+                                pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
+    if (event_type == WRITEABLE_EVENT) {
+	struct epoll_event ev;
+
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLERR;
+	ev.epoll_data = (epoll_data_type)key;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+    }	
 }
 
 /*
@@ -397,22 +427,31 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
 PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 {
     int i, count, processed;
-    struct epoll_event events[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
     int msec;
-    struct queue {
-	pj_ioqueue_key_t	*key;
-	enum ioqueue_event_type	 event_type;
-    } queue[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
+    struct epoll_event *events = ioqueue->events;
+    struct queue *queue = ioqueue->queue;
+    pj_timestamp t1, t2;
     
     PJ_CHECK_STACK();
 
     msec = timeout ? PJ_TIME_VAL_MSEC(*timeout) : 9000;
-    
-    count = os_epoll_wait( ioqueue->epfd, events, PJ_ARRAY_SIZE(events), msec);
-    if (count == 0)
+
+    TRACE_((THIS_FILE, "start os_epoll_wait, msec=%d", msec));
+    pj_get_timestamp(&t1);
+ 
+    count = os_epoll_wait( ioqueue->epfd, events, ioqueue->max, msec);
+    if (count == 0) {
+	TRACE_((THIS_FILE, "os_epoll_wait timed out"));
 	return count;
-    else if (count < 0)
+    }
+    else if (count < 0) {
+	TRACE_((THIS_FILE, "os_epoll_wait error"));
 	return -pj_get_netos_error();
+    }
+
+    pj_get_timestamp(&t2);
+    TRACE_((THIS_FILE, "os_epoll_wait returns %d, time=%d usec",
+		       count, pj_elapsed_usec(&t1, &t2)));
 
     /* Lock ioqueue. */
     pj_lock_acquire(ioqueue->lock);
@@ -420,6 +459,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     for (processed=0, i=0; i<count; ++i) {
 	pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
 				events[i].epoll_data;
+
+	TRACE_((THIS_FILE, "event %d: events=%d", i, events[i].events));
 
 	/*
 	 * Check readability.
@@ -486,6 +527,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     if (count > 0 && !processed && msec > 0) {
 	pj_thread_sleep(msec);
     }
+
+    pj_get_timestamp(&t1);
+    TRACE_((THIS_FILE, "ioqueue_poll() returns %d, time=%d usec",
+		       processed, pj_elapsed_usec(&t2, &t1)));
+
     return processed;
 }
 

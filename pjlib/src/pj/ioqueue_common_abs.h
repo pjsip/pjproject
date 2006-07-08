@@ -128,9 +128,9 @@ enum ioqueue_event_type
 };
 
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
-                                pj_sock_t fd,
+                                pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type );
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
-                                     pj_sock_t fd, 
+                                     pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type);
 

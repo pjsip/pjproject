@@ -542,17 +542,17 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
-                                     pj_sock_t fd, 
+                                     pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type)
 {
     pj_lock_acquire(ioqueue->lock);
 
     if (event_type == READABLE_EVENT)
-        PJ_FD_CLR((pj_sock_t)fd, &ioqueue->rfdset);
+        PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->rfdset);
     else if (event_type == WRITEABLE_EVENT)
-        PJ_FD_CLR((pj_sock_t)fd, &ioqueue->wfdset);
+        PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->wfdset);
     else if (event_type == EXCEPTION_EVENT)
-        PJ_FD_CLR((pj_sock_t)fd, &ioqueue->xfdset);
+        PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->xfdset);
     else
         pj_assert(0);
 
@@ -566,17 +566,17 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
-                                pj_sock_t fd,
+                                pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
     pj_lock_acquire(ioqueue->lock);
 
     if (event_type == READABLE_EVENT)
-        PJ_FD_SET((pj_sock_t)fd, &ioqueue->rfdset);
+        PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->rfdset);
     else if (event_type == WRITEABLE_EVENT)
-        PJ_FD_SET((pj_sock_t)fd, &ioqueue->wfdset);
+        PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->wfdset);
     else if (event_type == EXCEPTION_EVENT)
-        PJ_FD_SET((pj_sock_t)fd, &ioqueue->xfdset);
+        PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->xfdset);
     else
         pj_assert(0);
 

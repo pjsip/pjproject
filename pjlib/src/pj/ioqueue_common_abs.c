@@ -196,8 +196,8 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	/* Clear operation. */
 	h->connecting = 0;
 
-        ioqueue_remove_from_set(ioqueue, h->fd, WRITEABLE_EVENT);
-        ioqueue_remove_from_set(ioqueue, h->fd, EXCEPTION_EVENT);
+        ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
+        ioqueue_remove_from_set(ioqueue, h, EXCEPTION_EVENT);
 
 
 #if (defined(PJ_HAS_SO_ERROR) && PJ_HAS_SO_ERROR!=0)
@@ -272,7 +272,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
             pj_list_erase(write_op);
 
             if (pj_list_empty(&h->write_list))
-                ioqueue_remove_from_set(ioqueue, h->fd, WRITEABLE_EVENT);
+                ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
 
         }
 
@@ -325,7 +325,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 
                 /* Clear operation if there's no more data to send. */
                 if (pj_list_empty(&h->write_list))
-                    ioqueue_remove_from_set(ioqueue, h->fd, WRITEABLE_EVENT);
+                    ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
 
             }
 
@@ -378,7 +378,7 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
 
 	/* Clear bit in fdset if there is no more pending accept */
         if (pj_list_empty(&h->accept_list))
-            ioqueue_remove_from_set(ioqueue, h->fd, READABLE_EVENT);
+            ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
 
 	rc=pj_sock_accept(h->fd, accept_op->accept_fd, 
                           accept_op->rmt_addr, accept_op->addrlen);
@@ -411,7 +411,7 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
 
         /* Clear fdset if there is no pending read. */
         if (pj_list_empty(&h->read_list))
-            ioqueue_remove_from_set(ioqueue, h->fd, READABLE_EVENT);
+            ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
 
         bytes_read = read_op->size;
 
@@ -518,8 +518,8 @@ void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
     /* Clear operation. */
     h->connecting = 0;
 
-    ioqueue_remove_from_set(ioqueue, h->fd, WRITEABLE_EVENT);
-    ioqueue_remove_from_set(ioqueue, h->fd, EXCEPTION_EVENT);
+    ioqueue_remove_from_set(ioqueue, h, WRITEABLE_EVENT);
+    ioqueue_remove_from_set(ioqueue, h, EXCEPTION_EVENT);
 
     pj_mutex_unlock(h->mutex);
 
@@ -585,7 +585,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 
     pj_mutex_lock(key->mutex);
     pj_list_insert_before(&key->read_list, read_op);
-    ioqueue_add_to_set(key->ioqueue, key->fd, READABLE_EVENT);
+    ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
 
     return PJ_EPENDING;
@@ -653,7 +653,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 
     pj_mutex_lock(key->mutex);
     pj_list_insert_before(&key->read_list, read_op);
-    ioqueue_add_to_set(key->ioqueue, key->fd, READABLE_EVENT);
+    ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
 
     return PJ_EPENDING;
@@ -759,7 +759,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     
     pj_mutex_lock(key->mutex);
     pj_list_insert_before(&key->write_list, write_op);
-    ioqueue_add_to_set(key->ioqueue, key->fd, WRITEABLE_EVENT);
+    ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_mutex_unlock(key->mutex);
 
     return PJ_EPENDING;
@@ -827,6 +827,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
             }
 	    status = status;
         }
+	PJ_LOG(3,(THIS_FILE, "pending write operation!!"));
     }
 
     /*
@@ -876,7 +877,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     
     pj_mutex_lock(key->mutex);
     pj_list_insert_before(&key->write_list, write_op);
-    ioqueue_add_to_set(key->ioqueue, key->fd, WRITEABLE_EVENT);
+    ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_mutex_unlock(key->mutex);
 
     return PJ_EPENDING;
@@ -945,7 +946,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 
     pj_mutex_lock(key->mutex);
     pj_list_insert_before(&key->accept_list, accept_op);
-    ioqueue_add_to_set(key->ioqueue, key->fd, READABLE_EVENT);
+    ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
 
     return PJ_EPENDING;
@@ -981,8 +982,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 	    /* Pending! */
             pj_mutex_lock(key->mutex);
 	    key->connecting = PJ_TRUE;
-            ioqueue_add_to_set(key->ioqueue, key->fd, WRITEABLE_EVENT);
-            ioqueue_add_to_set(key->ioqueue, key->fd, EXCEPTION_EVENT);
+            ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
+            ioqueue_add_to_set(key->ioqueue, key, EXCEPTION_EVENT);
             pj_mutex_unlock(key->mutex);
 	    return PJ_EPENDING;
 	} else {

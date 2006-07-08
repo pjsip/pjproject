@@ -38,7 +38,6 @@
 #if PJ_HAS_TCP
 
 #define THIS_FILE	    "test_tcp"
-#define PORT		    50000
 #define NON_EXISTANT_PORT   50123
 #define LOOP		    100
 #define BUF_MIN_SIZE	    32
@@ -257,13 +256,20 @@ static int compliance_test_0(void)
     }
 
     // Bind server socket.
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
-    addr.sin_port = pj_htons(PORT);
-    if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
+    pj_sockaddr_in_init(&addr, 0, 0);
+    if ((rc=pj_sock_bind(ssock, &addr, sizeof(addr))) != 0 ) {
         app_perror("...bind error", rc);
 	status=-10; goto on_error;
     }
+
+    // Get server address.
+    client_addr_len = sizeof(addr);
+    rc = pj_sock_getsockname(ssock, &addr, &client_addr_len);
+    if (rc != PJ_SUCCESS) {
+        app_perror("...ERROR in pj_sock_getsockname()", rc);
+	status=-15; goto on_error;
+    }
+    addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 
     // Create I/O Queue.
     rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
@@ -301,12 +307,6 @@ static int compliance_test_0(void)
     if (status==PJ_EPENDING) {
 	++pending_op;
     }
-
-    // Initialize remote address.
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
-    addr.sin_port = pj_htons(PORT);
-    addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 
     // Client socket connect()
     status = pj_ioqueue_connect(ckey1, &addr, sizeof(addr));
@@ -461,10 +461,7 @@ static int compliance_test_1(void)
     }
 
     // Initialize remote address.
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
-    addr.sin_port = pj_htons(NON_EXISTANT_PORT);
-    addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
+    pj_sockaddr_in_init(&addr, pj_cstr(&s, "127.0.0.1"), NON_EXISTANT_PORT);
 
     // Client socket connect()
     status = pj_ioqueue_connect(ckey1, &addr, sizeof(addr));
