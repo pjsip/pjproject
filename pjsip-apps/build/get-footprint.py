@@ -33,7 +33,7 @@ compile_flags = [
     ['', 			'Subtotal: empty application size on this platform'],
 
     ['HAS_PJLIB', 		'PJLIB (pool, data structures, hash tables, ioqueue, socket, timer heap, etc.)'],
-    ['', 			'Subtotal: Minimum PJLIB application size (linked with OS libraries)'],
+    ['', 			'Subtotal: Minimal PJLIB application size'],
 
     # PJLIB-UTIL
     ['HAS_PJLIB_STUN',		'PJLIB-UTIL STUN client'],
@@ -42,15 +42,18 @@ compile_flags = [
     ['HAS_PJLIB_XML',		'PJLIB-UTIL tiny XML (parsing and API) (needs text scanner)'],
 
     # PJSIP
-    ['HAS_PJSIP_CORE',		'PJSIP Core (endpoint, transport manager, parser, message elements, module mgmt, etc.)'],
+    ['HAS_PJSIP_CORE_MSG_ELEM',	'PJSIP Core - Messaging Elements and Parsing (message, headers, SIP URI, TEL URI/RFC 3966, etc.)'],
+    ['HAS_PJSIP_CORE',		'PJSIP Core - Endpoint (transport management, module management, event distribution, etc.)'],
+    ['HAS_PJSIP_CORE_MSG_UTIL',	'PJSIP Core - Stateless operations, server resolution and fail-over'],
     ['HAS_PJSIP_UDP_TRANSPORT',	'PJSIP UDP transport'],
     ['',			'Subtotal: A very minimum SIP application (parsing, UDP transport+STUN, no transaction)'],
    
     ['HAS_PJSIP_TCP_TRANSPORT',	'PJSIP TCP transport'],
     ['HAS_PJSIP_INFO',		'PJSIP INFO support (RFC 2976) (no special treatment, thus the zero size)'],
     ['HAS_PJSIP_TRANSACTION',	'PJSIP transaction and stateful API'],
+    ['HAS_PJSIP_AUTH_CLIENT',	'PJSIP digest authentication client'],
     ['HAS_PJSIP_UA_LAYER',	'PJSIP User agent layer and base dialog and usage management (draft-ietf-sipping-dialogusage-01)'],
-    ['HAS_PJMEDIA_SDP',		'PJMEDIA SDP API (RFC 2327), needed by SDP negotiator'],
+    ['HAS_PJMEDIA_SDP',		'PJMEDIA SDP Parsing and API (RFC 2327), needed by SDP negotiator'],
     ['HAS_PJMEDIA_SDP_NEGOTIATOR','PJMEDIA SDP negotiator (RFC 3264), needed by INVITE session'],
     ['HAS_PJSIP_INV_SESSION',	'PJSIP INVITE session API'],
     ['HAS_PJSIP_REGC',		'PJSIP client registration API'],
@@ -74,7 +77,7 @@ compile_flags = [
     ['HAS_PJMEDIA',		'PJMEDIA endpoint'],
     ['HAS_PJMEDIA_PLC',		'PJMEDIA Packet Lost Concealment implementation (needed by G.711, GSM, and sound device port)'],
     ['HAS_PJMEDIA_SND_PORT',	'PJMEDIA sound device media port'],
-    ['HAS_PJMEDIA_RESAMPLE',	'PJMEDIA high quality resampling implementation (can be fine tuned with PJMEDIA_HAS_LARGE_FILTER and PJMEDIA_HAS_SMALL_FILTER)'],
+    ['HAS_PJMEDIA_RESAMPLE',	'PJMEDIA resampling algorithm (large filter disabled)'],
     ['HAS_PJMEDIA_G711_CODEC',	'PJMEDIA G.711 codec (PCMA/PCMU, including PLC) (may have already been linked by other module)'],
     ['HAS_PJMEDIA_CONFERENCE',	'PJMEDIA conference bridge (needs resampling and silence detector)'],
     ['HAS_PJMEDIA_MASTER_PORT',	'PJMEDIA master port'],

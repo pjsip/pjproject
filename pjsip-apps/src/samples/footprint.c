@@ -43,13 +43,17 @@
 #define HAS_PJLIB_XML
 #define HAS_PJLIB_SCANNER
 
+#define HAS_PJSIP_CORE_MSG_ELEM
 #define HAS_PJSIP_CORE
+#define HAS_PJSIP_CORE_MSG_UTIL
+
 #define HAS_PJSIP_UDP_TRANSPORT
 #define HAS_PJSIP_TCP_TRANSPORT
 #define HAS_PJSIP_TRANSACTION
 #define HAS_PJSIP_UA_LAYER
 #define HAS_PJMEDIA_SDP
 #define HAS_PJMEDIA_SDP_NEGOTIATOR
+#define HAS_PJSIP_AUTH_CLIENT
 #define HAS_PJSIP_INV_SESSION
 #define HAS_PJSIP_REGC
 #define HAS_PJSIP_EVENT_FRAMEWORK
@@ -148,10 +152,58 @@ int dummy_function()
     pj_scan_get_newline(NULL);
     pj_scan_restore_state(NULL, NULL);
 #endif
-    
+
+#ifdef HAS_PJSIP_CORE_MSG_ELEM
+    /* Parameter container */
+    pjsip_param_find(NULL, NULL);
+    pjsip_param_print_on(NULL, NULL, 0, NULL, NULL, 0);
+
+    /* SIP URI */
+    pjsip_sip_uri_create(NULL, 0);
+    pjsip_name_addr_create(NULL);
+
+    /* TEL URI */
+    pjsip_tel_uri_create(NULL);
+
+    /* Message and headers */
+    pjsip_msg_create(NULL, PJSIP_REQUEST_MSG);
+    pjsip_msg_print(NULL, NULL, 0);
+    pjsip_accept_hdr_create(NULL);
+    pjsip_allow_hdr_create(NULL);
+    pjsip_cid_hdr_create(NULL);
+    pjsip_clen_hdr_create(NULL);
+    pjsip_cseq_hdr_create(NULL);
+    pjsip_contact_hdr_create(NULL);
+    pjsip_ctype_hdr_create(NULL);
+    pjsip_expires_hdr_create(NULL, 0);
+    pjsip_from_hdr_create(NULL);
+    pjsip_max_fwd_hdr_create(NULL, 0);
+    pjsip_min_expires_hdr_create(NULL, 0);
+    pjsip_rr_hdr_create(NULL);
+    pjsip_require_hdr_create(NULL);
+    pjsip_retry_after_hdr_create(NULL, 0);
+    pjsip_supported_hdr_create(NULL);
+    pjsip_unsupported_hdr_create(NULL);
+    pjsip_via_hdr_create(NULL);
+    pjsip_warning_hdr_create(NULL, 0, NULL, NULL);
+
+    pjsip_parse_uri(NULL, NULL, 0, 0);
+    pjsip_parse_msg(NULL, NULL, 0, NULL);
+    pjsip_parse_rdata(NULL, 0, NULL);
+    pjsip_find_msg(NULL, 0, 0, NULL);
+#endif
+
 #ifdef HAS_PJSIP_CORE
     pjsip_endpt_create(NULL, NULL, NULL);
 
+    pjsip_tpmgr_create(NULL, NULL, NULL, NULL, NULL);
+    pjsip_tpmgr_destroy(NULL);
+    pjsip_transport_send(NULL, NULL, NULL, 0, NULL, NULL);
+
+
+#endif
+
+#ifdef HAS_PJSIP_CORE_MSG_UTIL
     pjsip_endpt_create_request(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 			       -1, NULL, NULL);
     pjsip_endpt_create_request_from_hdr(NULL, NULL, NULL, NULL, NULL, NULL,
@@ -222,6 +274,14 @@ int dummy_function()
     pjsip_dlg_modify_response(NULL, NULL, -1, NULL);
     pjsip_dlg_send_response(NULL, NULL, NULL);
     pjsip_dlg_respond(NULL, NULL, -1, NULL, NULL, NULL);
+#endif
+
+#ifdef HAS_PJSIP_AUTH_CLIENT
+    pjsip_auth_clt_init(NULL, NULL, NULL, 0);
+    pjsip_auth_clt_clone(NULL, NULL, NULL);
+    pjsip_auth_clt_set_credentials(NULL, 0, NULL);
+    pjsip_auth_clt_init_req(NULL, NULL);
+    pjsip_auth_clt_reinit_req(NULL, NULL, NULL, NULL);
 #endif
 
 #ifdef HAS_PJSIP_INV_SESSION
