@@ -755,6 +755,8 @@ static void destroy_app()
     if (app.pool) {
 	pj_pool_release(app.pool);
 	app.pool = NULL;
+	PJ_LOG(3,(THIS_FILE, "caching pool free capacity: %uMB",
+			     app.cp.capacity / 1000000));
 	pj_caching_pool_destroy(&app.cp);
     }
 }
