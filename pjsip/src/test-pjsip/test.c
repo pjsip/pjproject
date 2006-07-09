@@ -343,17 +343,8 @@ on_return:
     flush_events(500);
 
     /* Dumping memory pool usage */
-    {
-	pj_pool_t *p;
-	unsigned sz = 0;
-	p = caching_pool.used_list.next;
-	while (p != (pj_pool_t*)&caching_pool.used_list) {
-	    sz += pj_pool_get_capacity(p);
-	    p = p->next;
-	}
-	PJ_LOG(3,(THIS_FILE, "Caching pool total capacity=%u",
-			      caching_pool.capacity + sz));
-    }
+    PJ_LOG(3,(THIS_FILE, "Peak memory size=%u MB",
+		         caching_pool.peak_used_size / 1000000));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
