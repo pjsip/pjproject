@@ -954,13 +954,9 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	/* Parse the message. */
 	rdata->msg_info.msg = msg = 
 	    pjsip_parse_rdata( current_pkt, msg_fragment_size, rdata);
-	if (msg == NULL) {
-	    mgr->on_rx_msg(mgr->endpt, PJSIP_EINVALIDMSG, rdata);
-	    goto finish_process_fragment;
-	}
 
 	/* Check for parsing syntax error */
-	if (!pj_list_empty(&rdata->msg_info.parse_err)) {
+	if (msg==NULL || !pj_list_empty(&rdata->msg_info.parse_err)) {
 	    pjsip_parser_err_report *err;
 	    char buf[128];
 	    pj_str_t tmp;

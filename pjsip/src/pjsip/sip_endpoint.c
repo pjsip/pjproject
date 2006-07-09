@@ -717,13 +717,14 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 
 	PJ_LOG(1, (THIS_FILE, 
 		  "Error processing packet from %s:%d: %s %s [code %d]:\n"
-		  "%s\n"
+		  "%.*s\n"
 		  "-- end of packet.",
 		  rdata->pkt_info.src_name, 
 		  rdata->pkt_info.src_port,
 		  errmsg,
 		  info,
 		  status,
+		  (int)rdata->msg_info.len,	
 		  rdata->msg_info.msg_buf));
 	return;
     }
