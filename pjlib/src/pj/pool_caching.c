@@ -31,6 +31,9 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 				    pj_pool_callback *callback);
 static void cpool_release_pool(pj_pool_factory *pf, pj_pool_t *pool);
 static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail );
+static pj_bool_t cpool_on_block_alloc(pj_pool_factory *f, pj_size_t sz);
+static void cpool_on_block_free(pj_pool_factory *f, pj_size_t sz);
+
 
 static pj_size_t pool_sizes[PJ_CACHING_POOL_ARRAY_SIZE] = 
 {
@@ -63,6 +66,8 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.create_pool = &cpool_create_pool;
     cp->factory.release_pool = &cpool_release_pool;
     cp->factory.dump_status = &cpool_dump_status;
+    cp->factory.on_block_alloc = &cpool_on_block_alloc;
+    cp->factory.on_block_free = &cpool_on_block_free;
 
     cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 256, 
 				  0, NULL);
@@ -272,6 +277,34 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
     PJ_UNUSED_ARG(detail);
 #endif
 }
+
+
+static pj_bool_t cpool_on_block_alloc(pj_pool_factory *f, pj_size_t sz)
+{
+    pj_caching_pool *cp = (pj_caching_pool*)f;
+
+    //Can't lock because mutex is not recursive
+    //if (cp->mutex) pj_mutex_lock(cp->mutex);
+
+    cp->used_size += sz;
+    if (cp->used_size > cp->peak_used_size)
+	cp->peak_used_size = cp->used_size;
+
+    //if (cp->mutex) pj_mutex_unlock(cp->mutex);
+
+    return PJ_TRUE;
+}
+
+
+static void cpool_on_block_free(pj_pool_factory *f, pj_size_t sz)
+{
+    pj_caching_pool *cp = (pj_caching_pool*)f;
+
+    //pj_mutex_lock(cp->mutex);
+    cp->used_size -= sz;
+    //pj_mutex_unlock(cp->mutex);
+}
+
 
 #endif	/* PJ_HAS_POOL_ALT_API */
 

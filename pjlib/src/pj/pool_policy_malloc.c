@@ -30,18 +30,34 @@
 
 static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
 {
-    PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
+    void *p;
 
-    return malloc(size);
+    PJ_CHECK_STACK();
+
+    if (factory->on_block_alloc) {
+	int rc;
+	rc = factory->on_block_alloc(factory, size);
+	if (!rc)
+	    return NULL;
+    }
+
+    p = malloc(size);
+
+    if (p == NULL) {
+	if (factory->on_block_free) 
+	    factory->on_block_free(factory, size);
+    }
+
+    return p;
 }
 
-static void default_block_free(pj_pool_factory *factory, void *mem, pj_size_t size)
+static void default_block_free(pj_pool_factory *factory, void *mem, 
+			       pj_size_t size)
 {
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
+
+    if (factory->on_block_free) 
+        factory->on_block_free(factory, size);
 
     free(mem);
 }

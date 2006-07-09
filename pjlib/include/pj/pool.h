@@ -449,6 +449,32 @@ struct pj_pool_factory
      * @param factory	The pool factory.
      */
     void (*dump_status)( pj_pool_factory *factory, pj_bool_t detail );
+
+    /**
+     * This is optional callback to be called by allocation policy when
+     * it allocates a new memory block. The factory may use this callback
+     * for example to keep track of the total number of memory blocks
+     * currently allocated by applications.
+     *
+     * @param factory	    The pool factory.
+     * @param size	    Size requested by application.
+     *
+     * @return		    MUST return PJ_TRUE, otherwise the block
+     *                      allocation is cancelled.
+     */
+    pj_bool_t (*on_block_alloc)(pj_pool_factory *factory, pj_size_t size);
+
+    /**
+     * This is optional callback to be called by allocation policy when
+     * it frees memory block. The factory may use this callback
+     * for example to keep track of the total number of memory blocks
+     * currently allocated by applications.
+     *
+     * @param factory	    The pool factory.
+     * @param size	    Size freed.
+     */
+    void (*on_block_free)(pj_pool_factory *factory, pj_size_t size);
+
 };
 
 /**
@@ -555,6 +581,17 @@ struct pj_caching_pool
      * decremented when #pj_pool_release() is called.
      */
     pj_size_t       used_count;
+
+    /**
+     * Total size of memory currently used by application.
+     */
+    pj_size_t	    used_size;
+
+    /**
+     * The maximum size of memory used by application throughout the life
+     * of the caching pool.
+     */
+    pj_size_t	    peak_used_size;
 
     /**
      * Lists of pools in the cache, indexed by pool size.
