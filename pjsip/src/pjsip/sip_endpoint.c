@@ -607,7 +607,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
 {
     /* timeout is 'out' var. This just to make compiler happy. */
     pj_time_val timeout = { 0, 0};
-    unsigned count = 0;
+    unsigned count = 0, net_event_count = 0;
     int c;
 
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_handle_events()"));
@@ -632,19 +632,37 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
 	timeout = *max_timeout;
     }
 
-    /* Poll ioqueue. */
-    c = pj_ioqueue_poll( endpt->ioqueue, &timeout);
-    if (c < 0) {
-	pj_thread_sleep(1);
-	if (p_count)
-	    *p_count = count;
-	return pj_get_netos_error();
-    } else {
-	count += c;
-	if (p_count)
-	    *p_count = count;
-	return PJ_SUCCESS;
-    }
+    /* Poll ioqueue. 
+     * Repeat polling the ioqueue while we have immediate events, because
+     * timer heap may process more than one events, so if we only process
+     * one network events at a time (such as when IOCP backend is used),
+     * the ioqueue may have trouble keeping up with the request rate.
+     *
+     * For example, for each send() request, one network event will be
+     *   reported by ioqueue for the send() completion. If we don't poll
+     *   the ioqueue often enough, the send() completion will not be
+     *   reported in timely manner.
+     */
+    do {
+	c = pj_ioqueue_poll( endpt->ioqueue, &timeout);
+	if (c < 0) {
+	    pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+	    if (p_count)
+		*p_count = count;
+	    return pj_get_netos_error();
+	} else if (c == 0) {
+	    break;
+	} else {
+	    net_event_count += c;
+	    timeout.sec = timeout.msec = 0;
+	}
+    } while (c > 0 && net_event_count < PJSIP_MAX_TIMED_OUT_ENTRIES*2);
+
+    count += net_event_count;
+    if (p_count)
+	*p_count = count;
+
+    return PJ_SUCCESS;
 }
 
 /*
