@@ -53,6 +53,8 @@ struct pending_accept
 {
     pj_ioqueue_op_key_t	     op_key;
     struct tcp_listener	    *listener;
+    unsigned		     index;
+    pj_pool_t		    *pool;
     pj_sock_t		     new_sock;
     int			     addr_len;
     pj_sockaddr_in	     local_addr;
@@ -74,7 +76,7 @@ struct tcp_listener
     pj_sock_t		     sock;
     pj_ioqueue_key_t	    *key;
     unsigned		     async_cnt;
-    struct pending_accept    accept_op[MAX_ASYNC_CNT];
+    struct pending_accept   *accept_op[MAX_ASYNC_CNT];
 };
 
 
@@ -143,6 +145,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
 /* Common function to create and initialize transport */
 static pj_status_t tcp_create(struct tcp_listener *listener,
+			      pj_pool_t *pool,
 			      pj_sock_t sock, pj_bool_t is_server,
 			      const pj_sockaddr_in *local,
 			      const pj_sockaddr_in *remote,
@@ -297,11 +300,23 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
     listener->async_cnt = async_cnt;
 
     for (i=0; i<async_cnt; ++i) {
-	pj_ioqueue_op_key_init(&listener->accept_op[i].op_key, 
-				sizeof(listener->accept_op[i].op_key));
-	listener->accept_op[i].listener = listener;
+	pj_pool_t *pool;
 
-	on_accept_complete(listener->key, &listener->accept_op[i].op_key,
+	pool = pjsip_endpt_create_pool(endpt, "tcps%p", POOL_TP_INIT, 
+				       POOL_TP_INIT);
+	if (!pool) {
+	    status = PJ_ENOMEM;
+	    goto on_error;
+	}
+
+	listener->accept_op[i] = pj_pool_zalloc(pool, 
+						sizeof(struct pending_accept));
+	pj_ioqueue_op_key_init(&listener->accept_op[i]->op_key, 
+				sizeof(listener->accept_op[i]->op_key));
+	listener->accept_op[i]->listener = listener;
+	listener->accept_op[i]->index = i;
+
+	on_accept_complete(listener->key, &listener->accept_op[i]->op_key,
 			   listener->sock, PJ_EPENDING);
     }
 
@@ -325,6 +340,7 @@ on_error:
 static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 {
     struct tcp_listener *listener = (struct tcp_listener *)factory;
+    unsigned i;
 
     if (listener->is_registered) {
 	pjsip_tpmgr_unregister_tpfactory(listener->tpmgr, &listener->factory);
@@ -345,6 +361,13 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
     if (listener->factory.lock) {
 	pj_lock_destroy(listener->factory.lock);
 	listener->factory.lock = NULL;
+    }
+
+    for (i=0; i<PJ_ARRAY_SIZE(listener->accept_op); ++i) {
+	if (listener->accept_op[i] && listener->accept_op[i]->pool) {
+	    pj_pool_release(listener->accept_op[i]->pool);
+	    listener->accept_op[i]->pool = NULL;
+	}
     }
 
     if (listener->factory.pool) {
@@ -408,13 +431,13 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
  * pending connect() complete.
  */
 static pj_status_t tcp_create( struct tcp_listener *listener,
+			       pj_pool_t *pool,
 			       pj_sock_t sock, pj_bool_t is_server,
 			       const pj_sockaddr_in *local,
 			       const pj_sockaddr_in *remote,
 			       struct tcp_transport **p_tcp)
 {
     struct tcp_transport *tcp;
-    pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback tcp_callback;
     pj_status_t status;
@@ -423,10 +446,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     PJ_ASSERT_RETURN(sock != PJ_INVALID_SOCKET, PJ_EINVAL);
 
 
-    pool = pjsip_endpt_create_pool(listener->endpt, "tcp",
-				   POOL_TP_INIT, POOL_TP_INC);
-    PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
-    
+    if (pool == NULL) {
+	pool = pjsip_endpt_create_pool(listener->endpt, "tcp",
+				       POOL_TP_INIT, POOL_TP_INC);
+	PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
+    }    
 
     /*
      * Create and initialize basic transport structure.
@@ -683,7 +707,8 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
 			     tcp->rdata.pkt_info.packet, &size,
 			     PJ_IOQUEUE_ALWAYS_ASYNC);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	tcp_perror(tcp->base.obj_name, "ioqueue recv() error", status);
+	PJ_LOG(4, (tcp->base.obj_name, "ioqueue recv() error, status=%d", 
+		   status));
 	return status;
     }
 
@@ -744,7 +769,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	((pj_sockaddr_in*)&listener->factory.local_addr)->sin_addr.s_addr;
 
     /* Create the transport descriptor */
-    status = tcp_create(listener, sock, PJ_FALSE, &local_addr, 
+    status = tcp_create(listener, NULL, sock, PJ_FALSE, &local_addr, 
 			(pj_sockaddr_in*)rem_addr, &tcp);
     if (status != PJ_SUCCESS)
 	return status;
@@ -845,12 +870,16 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	    }
 
 	} else {
+	    pj_pool_t *pool;
+	    struct pending_accept *new_op;
 
 	    if (sock == PJ_INVALID_SOCKET) {
 		sock = accept_op->new_sock;
-		PJ_LOG(4,(listener->obj_name, 
-		          "Warning: ioqueue reports -1 in on_accept_complete()"
-			  " sock argument"));
+	    }
+
+	    if (sock == PJ_INVALID_SOCKET) {
+		pj_assert(!"Should not happen. status should be error");
+		goto next_accept;
 	    }
 
 	    PJ_LOG(4,(listener->obj_name, 
@@ -863,11 +892,21 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 		      pj_ntohs(accept_op->remote_addr.sin_port),
 		      sock));
 
+	    /* Create new accept_opt */
+	    pool = pjsip_endpt_create_pool(listener->endpt, "tcps%p", 
+					   POOL_TP_INIT, POOL_TP_INC);
+	    new_op = pj_pool_zalloc(pool, sizeof(struct pending_accept));
+	    new_op->pool = pool;
+	    new_op->listener = listener;
+	    new_op->index = accept_op->index;
+	    pj_ioqueue_op_key_init(&new_op->op_key, sizeof(new_op->op_key));
+	    listener->accept_op[accept_op->index] = new_op;
+
 	    /* 
 	     * Incoming connections!
 	     * Create TCP transport for the new socket.
 	     */
-	    status = tcp_create( listener, sock, PJ_TRUE,
+	    status = tcp_create( listener, accept_op->pool, sock, PJ_TRUE,
 				 &accept_op->local_addr, 
 				 &accept_op->remote_addr, &tcp);
 	    if (status == PJ_SUCCESS) {
@@ -877,8 +916,11 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 		    tcp_destroy(&tcp->base, status);
 		}
 	    }
+
+	    accept_op = new_op;
 	}
 
+next_accept:
 	/*
 	 * Start the next asynchronous accept() operation.
 	 */
@@ -1128,10 +1170,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
 	{
 
-	    /* Report error to endpoint. */
-	    PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
-				   rdata->tp_info.transport->obj_name,
-				   -bytes_read, "TCP recv() error"));
+	    /* Socket error. */
 
 	    /* We can not destroy the transport since high level objects may
 	     * still keep reference to this transport. So we can only 
@@ -1172,10 +1211,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    break;
 
 	} else {
-	    /* Report error to endpoint */
-	    PJSIP_ENDPT_LOG_ERROR((rdata->tp_info.transport->endpt,
-				   rdata->tp_info.transport->obj_name,
-				   status, "tcp recv() error"));
+	    /* Socket error */
 
 	    /* We can not destroy the transport since high level objects may
 	     * still keep reference to this transport. So we can only 

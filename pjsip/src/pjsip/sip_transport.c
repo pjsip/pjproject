@@ -464,6 +464,8 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     /* Is it currently being sent? */
     if (tdata->is_pending) {
 	pj_assert(!"Invalid operation step!");
+	PJ_LOG(2,(THIS_FILE, "Unable to send %s: message is pending", 
+			     pjsip_tx_data_get_info(tdata)));
 	return PJSIP_EPENDINGTX;
     }
 

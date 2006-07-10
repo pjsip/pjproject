@@ -1522,7 +1522,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	    err =pj_strerror(-sent, errmsg, sizeof(errmsg));
 
-	    PJ_LOG(4,(tsx->obj_name, 
+	    PJ_LOG(2,(tsx->obj_name, 
 		      "Failed to send %s! err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
 		      errmsg));
@@ -1545,7 +1545,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	} else {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
-	    PJ_LOG(4,(tsx->obj_name, 
+	    PJ_LOG(2,(tsx->obj_name, 
 		      "Temporary failure in sending %s, "
 		      "will try next server. Err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
@@ -1571,7 +1571,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 
 	err = pj_strerror(-sent, errmsg, sizeof(errmsg));
 
-	PJ_LOG(4,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
+	PJ_LOG(2,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		  pjsip_tx_data_get_info(tdata), -sent, errmsg));
 
 	lock_tsx(tsx, &lck);
@@ -1618,7 +1618,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
-	    PJ_LOG(4,(tsx->obj_name, 
+	    PJ_LOG(2,(tsx->obj_name, 
 		      "Error sending %s: Err=%d (%s)",
 		      pjsip_tx_data_get_info(tdata), status, 
 		      pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
@@ -1663,7 +1663,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	 */
 	err = pj_strerror(status, errmsg, sizeof(errmsg));
 
-	PJ_LOG(4,(tsx->obj_name, 
+	PJ_LOG(2,(tsx->obj_name, 
 		  "Transport error, terminating transaction. "
 		  "Err=%d (%s)",
 		  status, errmsg));
@@ -2414,7 +2414,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	}
 
 	/* Start Timer D with TD/T4 timer if unreliable transport is used. */
-	if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport) == 0) {
+	/* Note: tsx->transport may be NULL! */
+	if ((tsx->transport && PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0)
+	    || ((tsx->transport_flag & PJSIP_TRANSPORT_RELIABLE) == 0)) 
+	{
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		timeout = td_timer_val;
 	    } else {
