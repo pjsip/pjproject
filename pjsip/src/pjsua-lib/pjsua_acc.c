@@ -55,7 +55,7 @@ static void copy_acc_config(pj_pool_t *pool,
 
     pj_strdup_with_null(pool, &dst->id, &src->id);
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
-    pj_strdup_with_null(pool, &dst->contact, &src->contact);
+    pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
 
     dst->proxy_cnt = src->proxy_cnt;
     for (i=0; i<src->proxy_cnt; ++i)
@@ -103,7 +103,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
     pjsip_uri *uri;
-    pjsip_sip_uri *sip_uri;
+    pjsip_sip_uri *sip_uri, *sip_reg_uri;
     unsigned i;
 
     /* Need to parse local_uri to get the elements: */
@@ -128,20 +128,52 @@ static pj_status_t initialize_acc(unsigned acc_id)
 
 
     /* Get the SIP URI object: */
-
     sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+
+
+    /* Parse registrar URI, if any */
+    if (acc_cfg->reg_uri.slen) {
+	pjsip_uri *reg_uri;
+
+	reg_uri = pjsip_parse_uri(pjsua_var.pool, acc_cfg->reg_uri.ptr,
+				  acc_cfg->reg_uri.slen, 0);
+	if (reg_uri == NULL) {
+	    pjsua_perror(THIS_FILE, "Invalid registrar URI", 
+			 PJSIP_EINVALIDURI);
+	    return PJSIP_EINVALIDURI;
+	}
+
+	/* Registrar URI MUST be a SIP or SIPS: */
+	if (!PJSIP_URI_SCHEME_IS_SIP(reg_uri) && 
+	    !PJSIP_URI_SCHEME_IS_SIPS(reg_uri)) 
+	{
+	    pjsua_perror(THIS_FILE, "Invalid registar URI", 
+			 PJSIP_EINVALIDSCHEME);
+	    return PJSIP_EINVALIDSCHEME;
+	}
+
+	sip_reg_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(reg_uri);
+
+    } else {
+	sip_reg_uri = NULL;
+    }
+
 
     /* Save the user and domain part. These will be used when finding an 
      * account for incoming requests.
      */
     acc->user_part = sip_uri->user;
-    acc->host_part = sip_uri->host;
+    acc->srv_domain = sip_uri->host;
+    acc->srv_port = 0;
 
+    if (sip_reg_uri) {
+	acc->srv_port = sip_reg_uri->port;
+    }
 
     /* Create Contact header if not present. */
-    if (acc_cfg->contact.slen == 0) {
-	acc_cfg->contact = acc_cfg->id;
-    }
+    //if (acc_cfg->contact.slen == 0) {
+    //	acc_cfg->contact = acc_cfg->id;
+    //}
 
     PJ_TODO(attach_account_to_transport);
     if (pjsua_var.tpdata[0].data.ptr)
@@ -703,12 +735,24 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 
     sip_uri = pjsip_uri_get_uri(uri);
 
-    /* Find matching domain */
+    /* Find matching domain AND port */
     for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
 	if (!pjsua_var.acc[acc_id].valid)
 	    continue;
-	if (pj_stricmp(&pjsua_var.acc[acc_id].host_part, &sip_uri->host)==0)
+	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
+	    pjsua_var.acc[acc_id].srv_port == sip_uri->port)
 	    break;
+    }
+
+    /* If no match, try to match the domain part only */
+    if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
+	/* Just use default account */
+	for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
+	    if (!pjsua_var.acc[acc_id].valid)
+		continue;
+	    if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0)
+		break;
+	}
     }
 
     if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
@@ -753,7 +797,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
 	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
-	    pj_stricmp(&acc->host_part, &sip_uri->host)==0) 
+	    pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) 
 	{
 	    /* Match ! */
 	    PJSUA_UNLOCK();
@@ -766,7 +810,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-	if (pj_stricmp(&acc->host_part, &sip_uri->host)==0) {
+	if (pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
 	    /* Match ! */
 	    PJSUA_UNLOCK();
 	    return acc_id;

@@ -80,8 +80,10 @@ typedef struct pjsua_acc
 
     int		     index;	    /**< Index in accounts array.	*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
-    pj_str_t	     host_part;	    /**< Host part of local URI.	*/
     pj_str_t	     real_contact;  /**< Real contact address.		*/
+
+    pj_str_t	     srv_domain;    /**< Host part of reg server.	*/
+    int		     srv_port;	    /**< Port number of reg server.	*/
 
     pjsip_regc	    *regc;	    /**< Client registration session.   */
     pj_timer_entry   reg_timer;	    /**< Registration timer.		*/

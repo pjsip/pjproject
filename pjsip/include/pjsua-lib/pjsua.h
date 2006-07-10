@@ -1022,7 +1022,7 @@ typedef struct pjsua_acc_config
      * that this field is left empty, so that the value will be calculated
      * automatically based on the transport address.
      */
-    pj_str_t	    contact;
+    pj_str_t	    force_contact;
 
     /**
      * Number of proxies in the proxy array below.

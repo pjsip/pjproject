@@ -465,7 +465,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     
     /* Create UAS dialog: */
     status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
-				  &acc->cfg.contact,
+				  &acc->real_contact,
 				  &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -770,10 +770,13 @@ static void subscribe_buddy_presence(unsigned index)
 
     acc = &pjsua_var.acc[acc_id];
 
+    PJ_LOG(4,(THIS_FILE, "Using account %d for buddy %d subscription",
+			 acc_id, index));
+
     /* Create UAC dialog */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				   &acc->cfg.id,
-				   &acc->cfg.contact,
+				   &acc->real_contact,
 				   &buddy->uri,
 				   NULL, &dlg);
     if (status != PJ_SUCCESS) {

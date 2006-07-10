@@ -440,7 +440,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
 					&STR_CONTACT,
-					&pjsua_var.acc[acc_id].cfg.contact));
+					&pjsua_var.acc[acc_id].real_contact));
 
     /* Create IM data to keep message details and give it back to
      * application on the callback
@@ -521,7 +521,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
 					&STR_CONTACT,
-					&pjsua_var.acc[acc_id].cfg.contact));
+					&pjsua_var.acc[acc_id].real_contact));
 
 
     /* Create "application/im-iscomposing+xml" msg body. */

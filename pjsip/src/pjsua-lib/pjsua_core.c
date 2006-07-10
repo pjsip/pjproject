@@ -68,13 +68,15 @@ static void init_data()
 /* Notification on incoming messages */
 static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
 {
-    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
-			 "%s\n"
+    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s %s:%d:\n"
+			 "%.*s\n"
 			 "--end msg--",
 			 rdata->msg_info.len,
 			 pjsip_rx_data_get_info(rdata),
+			 rdata->tp_info.transport->type_name,
 			 rdata->pkt_info.src_name,
 			 rdata->pkt_info.src_port,
+			 (int)rdata->msg_info.len,
 			 rdata->msg_info.msg_buf));
     
     /* Always return false, otherwise messages will not get processed! */
@@ -91,13 +93,15 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *	has lower priority than transport layer.
      */
 
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
-			 "%s\n"
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+			 "%.*s\n"
 			 "--end msg--",
 			 (tdata->buf.cur - tdata->buf.start),
 			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.transport->type_name,
 			 tdata->tp_info.dst_name,
 			 tdata->tp_info.dst_port,
+			 (int)(tdata->buf.cur - tdata->buf.start),
 			 tdata->buf.start));
 
     /* Always return success, otherwise message will not get sent! */

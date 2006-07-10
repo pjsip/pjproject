@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
-				   &acc->cfg.id, &acc->cfg.contact,
+				   &acc->cfg.id, &acc->real_contact,
 				   dest_uri, dest_uri, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
@@ -441,7 +441,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Create dialog: */
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &pjsua_var.acc[acc_id].cfg.contact, 
+				   &pjsua_var.acc[acc_id].real_contact, 
 				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,

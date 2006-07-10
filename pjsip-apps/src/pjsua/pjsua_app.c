@@ -467,7 +467,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 			  "in contact argument", pj_optarg));
 		return PJ_EINVAL;
 	    }
-	    cur_acc->contact = pj_str(pj_optarg);
+	    cur_acc->force_contact = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
@@ -714,10 +714,10 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     }
 
     /* Contact */
-    if (acc_cfg->contact.slen) {
+    if (acc_cfg->force_contact.slen) {
 	pj_ansi_sprintf(line, "--contact %.*s\n", 
-			(int)acc_cfg->contact.slen, 
-			acc_cfg->contact.ptr);
+			(int)acc_cfg->force_contact.slen, 
+			acc_cfg->force_contact.ptr);
 	pj_strcat2(result, line);
     }
 
