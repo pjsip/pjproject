@@ -72,7 +72,7 @@
 
 #define THIS_FILE	    "pjsip-perf.c"
 #define DEFAULT_COUNT	    (PJSIP_MAX_TSX_COUNT/2>10000?10000:PJSIP_MAX_TSX_COUNT/2)
-#define JOB_WINDOW	    DEFAULT_COUNT
+#define JOB_WINDOW	    1000
 #define TERMINATE_TSX(x,c)
 
 
@@ -137,7 +137,8 @@ struct app
 
     pj_bool_t		 real_sdp;
     pjmedia_sdp_session *dummy_sdp;
-    pj_bool_t		 verbose;
+
+    int			 log_level;
 
     struct {
 	pjsip_method	     method;
@@ -150,6 +151,7 @@ struct app
 			     job_window;
 	unsigned	     stat_max_window;
 	pj_time_val	     first_request;
+	pj_time_val	     requests_sent;
 	pj_time_val	     last_completion;
 	unsigned	     total_responses;
 	unsigned	     status_class[7];
@@ -468,11 +470,12 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 /* Notification on incoming messages */
 static pj_bool_t logger_on_rx_msg(pjsip_rx_data *rdata)
 {
-    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s:%d:\n"
+    PJ_LOG(3,(THIS_FILE, "RX %d bytes %s from %s %s:%d:\n"
 			 "%.*s\n"
 			 "--end msg--",
 			 rdata->msg_info.len,
 			 pjsip_rx_data_get_info(rdata),
+			 rdata->tp_info.transport->type_name,
 			 rdata->pkt_info.src_name,
 			 rdata->pkt_info.src_port,
 			 (int)rdata->msg_info.len,
@@ -492,11 +495,12 @@ static pj_status_t logger_on_tx_msg(pjsip_tx_data *tdata)
      *	has lower priority than transport layer.
      */
 
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%d:\n"
+    PJ_LOG(3,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
 			 "%.*s\n"
 			 "--end msg--",
 			 (tdata->buf.cur - tdata->buf.start),
 			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.transport->type_name,
 			 tdata->tp_info.dst_name,
 			 tdata->tp_info.dst_port,
 			 (int)(tdata->buf.cur - tdata->buf.start),
@@ -978,28 +982,34 @@ static void usage(void)
 	"   pjsip-perf [OPTIONS] URL    -- to call server (possibly itself)\n"
 	"\n"
 	"where:\n"
-	"   URL                     The URL to be contacted\n"
+	"   URL                     The SIP URL to be contacted.\n"
 	"\n"
-	"and OPTIONS are:\n"
-	"   --count=N, -n           Set number of requests to initiate\n"
-	"                           (client only, default=%d)\n"
-	"   --method=METHOD, -m     Set the test method (default: OPTIONS)\n"
-	"   --local-port=PORT, -p   Set local port [default: 5060]\n"
-	"   --use-tcp, -T           Use TCP instead of UDP (default: no)\n"
-	"   --thread-count=N        Set number of worker threads (default=1)\n"
-	"   --stateless, -s         Set client to operate in stateless mode\n"
-	"                           (default: stateful)\n"
-	"   --window=COUNT, -w      Set maximum outstanding job in client (default: %d)\n"
+	"Client options:\n"
+	"   --method=METHOD, -m     Set the test method [default: OPTIONS]\n"
+	"   --count=N, -n           Set total number of requests to initiate\n"
+	"                           [default=%d]\n"
+	"   --stateless, -s         Set to operate in stateless mode\n"
+	"                           [default: stateful]\n"
+	"   --timeout=SEC, -t       Set client timeout [default=60 sec]\n"
+	"   --window=COUNT, -w      Set maximum outstanding job [default: %d]\n"
+	"\n"
+	"SDP options (client and server):\n"
 	"   --real-sdp              Generate real SDP from pjmedia, and also perform\n"
-	"                           proper SDP negotiation (default: dummy)\n"
-	"   --timeout=SEC, -t       Set client timeout (default=60 sec)\n"
+	"                           proper SDP negotiation [default: dummy]\n"
+	"\n"
+	"Client and Server options:\n"
+	"   --local-port=PORT, -p   Set local port [default: 5060]\n"
+	"   --use-tcp, -T           Use TCP instead of UDP [default: no]\n"
+	"   --thread-count=N        Set number of worker threads [default=1]\n"
+	"\n"
+	"Misc options:\n"
 	"   --help, -h              Display this screen\n"
-	"   --verbose, -v           Display verbose logging\n"
+	"   --verbose, -v           Display verbose logging (can be put more than once)\n"
 	"\n"
 	"When started as server, pjsip-perf can be contacted on the following URIs:\n"
-	"   - sip:0@server-addr     To handle requests statelessly (non-INVITE only)\n"
-	"   - sip:1@server-addr     To handle requests statefully (INVITE and non-INVITE)\n"
-	"   - sip:2@server-addr     To handle INVITE call (INVITE only)\n",
+	"   - sip:0@server-addr     To handle requests statelessly.\n"
+	"   - sip:1@server-addr     To handle requests statefully.\n"
+	"   - sip:2@server-addr     To handle INVITE call.\n",
 	DEFAULT_COUNT, JOB_WINDOW);
 }
 
@@ -1038,6 +1048,7 @@ static pj_status_t init_options(int argc, char *argv[])
     app.client.method = pjsip_options_method;
     app.client.job_window = c = JOB_WINDOW;
     app.client.timeout = 60;
+    app.log_level = 3;
 
 
     /* Parse options */
@@ -1095,7 +1106,7 @@ static pj_status_t init_options(int argc, char *argv[])
 	    break;
 
 	case 'v':
-	    app.verbose = PJ_TRUE;
+	    app.log_level++;
 	    break;
 
 	case 't':
@@ -1259,7 +1270,7 @@ static int client_thread(void *arg)
 
     /* Submit all jobs */
     while (app.client.job_submitted < app.client.job_count && !app.thread_quit) {
-	pj_time_val timeout = { 0, 0 };
+	pj_time_val timeout = { 0, 1 };
 	unsigned i;
 	int outstanding;
 	pj_status_t status;
@@ -1303,20 +1314,26 @@ static int client_thread(void *arg)
 	}
     }
 
+    if (app.client.requests_sent.sec == 0) {
+	pj_gettimeofday(&app.client.requests_sent);
+    }
+
+
     /* Wait until all jobs completes, or timed out */
-    do {
-	pj_time_val timeout = { 0, 0 };
+    pj_gettimeofday(&now);
+    while (now.sec < end_time.sec && 
+	   app.client.job_finished < app.client.job_count && 
+	   !app.thread_quit) 
+    {
+	pj_time_val timeout = { 0, 1 };
 	unsigned i;
 
-	for (i=0; i<2000; ++i) {
+	for (i=0; i<1000; ++i) {
 	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
 	}
 
 	pj_gettimeofday(&now);
-
-    } while (now.sec < end_time.sec && 
-	     app.client.job_finished < app.client.job_count && 
-	     !app.thread_quit);
+    }
 
     return 0;
 }
@@ -1342,7 +1359,7 @@ static const char *good_number(char *buf, pj_int32_t val)
 
 static int server_thread(void *arg)
 {
-    pj_time_val timeout = { 0, 0 };
+    pj_time_val timeout = { 0, 1 };
     unsigned thread_index = (unsigned)arg;
     pj_time_val last_report, next_report;
 
@@ -1427,38 +1444,32 @@ int main(int argc, char *argv[])
     if (init_media() != 0)
 	return 1;
 
-    if (app.verbose) {
-	pj_log_set_level(4);
+    pj_log_set_level(app.log_level);
+
+    if (app.log_level > 3) {
 	pjsip_endpt_register_module(app.sip_endpt, &msg_logger);
-    } else {
-        pj_log_set_level(3);
     }
 
 
     /* Misc infos */
     if (app.client.dst_uri.slen != 0) {
-	if (app.client.method.id == PJSIP_INVITE_METHOD &&
-	    app.client.stateless)
-	{
-	    PJ_LOG(3,(THIS_FILE, 
-		      "Info: --stateless option makes no sense for INVITE, "
-                      "ignored."));
+	if (app.client.method.id == PJSIP_INVITE_METHOD) {
+	    if (app.client.stateless) {
+		PJ_LOG(3,(THIS_FILE, 
+			  "Info: --stateless option makes no sense for INVITE,"
+			  " ignored."));
+	    }
 	}
+
     }
 
-    if (app.real_sdp) {
-	PJ_LOG(3,(THIS_FILE, 
-                  "Info: client/server using real SDP from PJMEDIA"));
-    } else {
-	PJ_LOG(3,(THIS_FILE, "Info: client/server using dummy SDP"));
-    }
 
 
     if (app.client.dst_uri.slen) {
 	/* Client mode */
 	pj_status_t status;
 	char test_type[64];
-	unsigned msec;
+	unsigned msec_req, msec_res;
 	unsigned i;
 
 	/* Get the job name */
@@ -1475,9 +1486,10 @@ int main(int argc, char *argv[])
 	}
 	
 
-	PJ_LOG(3,(THIS_FILE, "Sending %d %s to %.*s, please wait..", 
+	PJ_LOG(3,(THIS_FILE, "Sending %d %s to '%.*s' with %d maximum outstanding jobs, please wait..", 
 		  app.client.job_count, test_type,
-		  (int)app.client.dst_uri.slen, app.client.dst_uri.ptr));
+		  (int)app.client.dst_uri.slen, app.client.dst_uri.ptr,
+		  app.client.job_window));
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &client_thread, NULL,
@@ -1497,16 +1509,29 @@ int main(int argc, char *argv[])
 	    pj_time_val duration;
 	    duration = app.client.last_completion;
 	    PJ_TIME_VAL_SUB(duration, app.client.first_request);
-	    msec = PJ_TIME_VAL_MSEC(duration);
+	    msec_res = PJ_TIME_VAL_MSEC(duration);
 	} else {
-	    msec = app.client.timeout * 1000;
+	    msec_res = app.client.timeout * 1000;
 	}
 
-	if (msec == 0) msec = 1;
+	if (msec_res == 0) msec_res = 1;
+
+	if (app.client.requests_sent.sec) {
+	    pj_time_val duration;
+	    duration = app.client.requests_sent;
+	    PJ_TIME_VAL_SUB(duration, app.client.first_request);
+	    msec_req = PJ_TIME_VAL_MSEC(duration);
+	} else {
+	    msec_req = app.client.timeout * 1000;
+	}
+
+	if (msec_req == 0) msec_req = 1;
+
 
 	pj_ansi_snprintf(
 	    report, sizeof(report),
-	    "Total %d %s sent, %d responses received in %d ms:\n"
+	    "Total %d %s sent in %d ms at rate %d/sec\n"
+	    "Total %d responses receieved in %d ms:\n"
 	    " - 2xx responses:  %7d (rate=%d/sec)\n"
 	    " - 3xx responses:  %7d (rate=%d/sec)\n"
 	    " - 4xx responses:  %7d (rate=%d/sec)\n"
@@ -1515,15 +1540,16 @@ int main(int argc, char *argv[])
 	    " - 7xx responses:  %7d (rate=%d/sec)\n"
 	    "                       ----------------\n"
 	    " TOTAL responses:  %7d (rate=%d/sec)\n",
-	    app.client.job_submitted, test_type,
-	    app.client.total_responses, msec,
-	    app.client.status_class[2], app.client.status_class[2]*1000/msec,
-	    app.client.status_class[3], app.client.status_class[3]*1000/msec,
-	    app.client.status_class[4], app.client.status_class[4]*1000/msec,
-	    app.client.status_class[5], app.client.status_class[5]*1000/msec,
-	    app.client.status_class[6], app.client.status_class[6]*1000/msec,
-	    app.client.status_class[7], app.client.status_class[7]*1000/msec,
-	    app.client.total_responses, app.client.total_responses*1000/msec);
+	    app.client.job_submitted, test_type, msec_req, 
+	    app.client.job_submitted * 1000 / msec_req,
+	    app.client.total_responses, msec_res,
+	    app.client.status_class[2], app.client.status_class[2]*1000/msec_res,
+	    app.client.status_class[3], app.client.status_class[3]*1000/msec_res,
+	    app.client.status_class[4], app.client.status_class[4]*1000/msec_res,
+	    app.client.status_class[5], app.client.status_class[5]*1000/msec_res,
+	    app.client.status_class[6], app.client.status_class[6]*1000/msec_res,
+	    app.client.status_class[7], app.client.status_class[7]*1000/msec_res,
+	    app.client.total_responses, app.client.total_responses*1000/msec_res);
 
 	write_report(report);
 

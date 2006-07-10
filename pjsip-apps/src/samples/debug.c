@@ -27,5 +27,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "footprint.c"
+#include "pjsip-perf.c"
 
