@@ -26,6 +26,7 @@
 #include <pj/log.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/compat/socket.h>
 
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
@@ -173,7 +174,7 @@ static void ioqueue_on_accept_complete(ioqueue_accept_rec *accept_overlapped)
 			  &locallen,
 			  &remote,
 			  &remotelen);
-    if (*accept_overlapped->addrlen > locallen) {
+    if (*accept_overlapped->addrlen >= locallen) {
         pj_memcpy(accept_overlapped->local, local, locallen);
         pj_memcpy(accept_overlapped->remote, remote, locallen);
     } else {
@@ -627,10 +628,18 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 	    ioqueue_on_accept_complete((ioqueue_accept_rec*)pOv);
             if (key->cb.on_accept_complete) {
                 ioqueue_accept_rec *accept_rec = (ioqueue_accept_rec*)pOv;
+		pj_status_t status = PJ_SUCCESS;
+
+		if (accept_rec->newsock == PJ_INVALID_SOCKET) {
+		    int dwError = WSAGetLastError();
+		    if (dwError == 0) dwError = OSERR_ENOTCONN;
+		    status = PJ_RETURN_OS_ERROR(dwError);
+		}
+
 	        key->cb.on_accept_complete(key, 
                                            (pj_ioqueue_op_key_t*)pOv, 
                                            accept_rec->newsock,
-                                           PJ_SUCCESS);
+                                           status);
 		accept_rec->newsock = PJ_INVALID_SOCKET;
             }
 	    break;

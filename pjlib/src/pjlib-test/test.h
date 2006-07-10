@@ -21,11 +21,11 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  0
-#define GROUP_OS                    0
-#define GROUP_DATA_STRUCTURE        0
+#define GROUP_LIBC                  1
+#define GROUP_OS                    1
+#define GROUP_DATA_STRUCTURE        1
 #define GROUP_NETWORK               1
-#define GROUP_FILE                  0
+#define GROUP_FILE                  1
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
