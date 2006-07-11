@@ -154,7 +154,7 @@ struct app
 	pj_time_val	     requests_sent;
 	pj_time_val	     last_completion;
 	unsigned	     total_responses;
-	unsigned	     status_class[7];
+	unsigned	     response_codes[800];
     } client;
 
     struct {
@@ -567,7 +567,8 @@ static pjsip_module mod_test =
 static void report_completion(int status_code)
 {
     app.client.job_finished++;
-    app.client.status_class[status_code/100]++;
+    if (status_code >= 200 && status_code < 800)
+	app.client.response_codes[status_code]++;
     app.client.total_responses++;
     pj_gettimeofday(&app.client.last_completion);
 }
@@ -1257,9 +1258,9 @@ static pj_status_t submit_job(void)
 /* Client worker thread */
 static int client_thread(void *arg)
 {
-    unsigned last_timeout_check = 0;
     pj_time_val end_time, last_report, now;
     unsigned thread_index = (unsigned)arg;
+    unsigned cycle = 0, last_cycle = 0;
 
     pj_thread_sleep(100);
 
@@ -1287,11 +1288,20 @@ static int client_thread(void *arg)
 	    app.client.stat_max_window = outstanding;
 
 	/* Wait if there are more pending jobs than allowed in the
-	 * window.
+	 * window. But spawn a new job anyway if no events are happening
+	 * after we wait for some time.
 	 */
-	for (i=0; outstanding > (int)app.client.job_window && i<100; ++i) {
-	    pjsip_endpt_handle_events(app.sip_endpt, &timeout);
+	for (i=0; outstanding > (int)app.client.job_window && i<1000; ++i) {
+	    pj_time_val wait = { 0, 500 };
+	    unsigned count = 0;
+
+	    pjsip_endpt_handle_events2(app.sip_endpt, &wait, &count);
 	    outstanding = app.client.job_submitted - app.client.job_finished;
+
+	    if (count == 0)
+		break;
+
+	    ++cycle;
 	}
 
 
@@ -1305,17 +1315,18 @@ static int client_thread(void *arg)
 	}
 
 	++app.client.job_submitted;
+	++cycle;
 
 	/* Handle event */
 	pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
 
 	/* Check for time out, also print report */
-	if (app.client.job_submitted - last_timeout_check >= 500) {
+	if (cycle - last_cycle >= 500) {
 	    pj_gettimeofday(&now);
 	    if (PJ_TIME_VAL_GTE(now, end_time)) {
 		break;
 	    }
-	    last_timeout_check = app.client.job_submitted;
+	    last_cycle = cycle;
 
 	    
 	    if (thread_index == 0 && now.sec-last_report.sec >= 2) {
@@ -1360,12 +1371,11 @@ static int client_thread(void *arg)
 	pj_gettimeofday(&now);
     }
 
-    /* Wait couple of seconds if there are still unfinished jobs */
+    /* Wait couple of seconds to let jobs completes (e.g. ACKs to be sent)  */
     pj_gettimeofday(&now);
     end_time = now;
     end_time.sec += 2;
-    while (PJ_TIME_VAL_LT(now, end_time) && 
-	   app.client.job_finished < app.client.job_submitted) 
+    while (PJ_TIME_VAL_LT(now, end_time)) 
     {
 	pj_time_val timeout = { 0, 1 };
 	unsigned i;
@@ -1584,25 +1594,37 @@ int main(int argc, char *argv[])
 	pj_ansi_snprintf(
 	    report, sizeof(report),
 	    "Total %d %s sent in %d ms at rate of %d/sec\n"
-	    "Total %d responses receieved in %d ms:\n"
-	    " - 2xx responses:  %7d (rate=%d/sec)\n"
-	    " - 3xx responses:  %7d (rate=%d/sec)\n"
-	    " - 4xx responses:  %7d (rate=%d/sec)\n"
-	    " - 5xx responses:  %7d (rate=%d/sec)\n"
-	    " - 6xx responses:  %7d (rate=%d/sec)\n"
-	    " - 7xx responses:  %7d (rate=%d/sec)\n"
-	    "                       ----------------\n"
-	    " TOTAL responses:  %7d (rate=%d/sec)\n",
+	    "Total %d responses receieved in %d ms at rate of %d/sec:",
 	    app.client.job_submitted, test_type, msec_req, 
 	    app.client.job_submitted * 1000 / msec_req,
 	    app.client.total_responses, msec_res,
-	    app.client.status_class[2], app.client.status_class[2]*1000/msec_res,
-	    app.client.status_class[3], app.client.status_class[3]*1000/msec_res,
-	    app.client.status_class[4], app.client.status_class[4]*1000/msec_res,
-	    app.client.status_class[5], app.client.status_class[5]*1000/msec_res,
-	    app.client.status_class[6], app.client.status_class[6]*1000/msec_res,
-	    app.client.status_class[7], app.client.status_class[7]*1000/msec_res,
-	    app.client.total_responses, app.client.total_responses*1000/msec_res);
+	    app.client.total_responses*1000/msec_res);
+	write_report(report);
+
+	/* Print detailed response code received */
+	pj_ansi_sprintf(report, "\nDetailed responses received:");
+	write_report(report);
+
+	for (i=0; i<PJ_ARRAY_SIZE(app.client.response_codes); ++i) {
+	    const pj_str_t *reason;
+
+	    if (app.client.response_codes[i] == 0)
+		continue;
+
+	    reason = pjsip_get_status_text(i);
+	    pj_ansi_snprintf( report, sizeof(report),
+			      " - %d responses:  %7d     (%.*s)",
+			      i, app.client.response_codes[i],
+			      (int)reason->slen, reason->ptr);
+	    write_report(report);
+	}
+
+	/* Total responses and rate */
+	pj_ansi_snprintf( report, sizeof(report),
+	    "                    ------\n"
+	    " TOTAL responses:  %7d (rate=%d/sec)\n",
+	    app.client.total_responses, 
+	    app.client.total_responses*1000/msec_res);
 
 	write_report(report);
 
@@ -1617,25 +1639,24 @@ int main(int argc, char *argv[])
 	pj_status_t status;
 	unsigned i;
 
-	puts("");
 	puts("pjsip-perf started in server-mode");
 
 	printf("Receiving requests on the following URIs:\n"
-	       "  sip:0@%.*s:%d;transport=%s    for stateless handling (non-INVITE only)\n"
-	       "  sip:1@%.*s:%d;transport=%s    for stateful handling (INVITE and non-INVITE)\n"
-	       "  sip:2@%.*s:%d;transport=%s    for call handling (INVITE only)\n",
+	       "  sip:0@%.*s:%d%s    for stateless handling\n"
+	       "  sip:1@%.*s:%d%s    for stateful handling\n"
+	       "  sip:2@%.*s:%d%s    for call handling\n",
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
 	       app.local_port,
-	       (app.use_tcp ? "tcp" : "udp"),
+	       (app.use_tcp ? ";transport=tcp" : ""),
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
 	       app.local_port,
-	       (app.use_tcp ? "tcp" : "udp"),
+	       (app.use_tcp ? ";transport=tcp" : ""),
 	       (int)app.local_addr.slen,
 	       app.local_addr.ptr,
 	       app.local_port,
-	       (app.use_tcp ? "tcp" : "udp"));
+	       (app.use_tcp ? ";transport=tcp" : ""));
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &server_thread, (void*)i,
@@ -1646,7 +1667,7 @@ int main(int argc, char *argv[])
 	    }
 	}
 
-	puts("Press <ENTER> to quit");
+	puts("\nPress <ENTER> to quit\n");
 	fflush(stdout);
 	fgets(s, sizeof(s), stdin);
 
@@ -1655,6 +1676,8 @@ int main(int argc, char *argv[])
 	    pj_thread_join(app.thread[i]);
 	    app.thread[i] = NULL;
 	}
+
+	puts("");
     }
 
 
