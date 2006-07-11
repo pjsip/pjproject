@@ -147,6 +147,57 @@
 #endif
 
 
+/**
+ * This macro controls maximum numbers of ioqueue events to be processed
+ * in a single pjsip_endpt_handle_events() poll. When PJSIP detects that
+ * there are probably more events available from the network and total
+ * events so far is less than this value, PJSIP will call pj_ioqueue_poll()
+ * again to get more events.
+ *
+ * Value 1 works best for ioqueue with select() back-end, while for IOCP it is
+ * probably best to set this value equal to PJSIP_MAX_TIMED_OUT_ENTRIES
+ * since IOCP only processes one event at a time.
+ *
+ * Default: 1
+ */
+#ifndef PJSIP_MAX_NET_EVENTS
+#   define PJSIP_MAX_NET_EVENTS		1
+#endif
+
+
+/**
+ * Max entries to process in timer heap per poll. 
+ * 
+ * Default: 10
+ */
+#ifndef PJSIP_MAX_TIMED_OUT_ENTRIES
+#   define PJSIP_MAX_TIMED_OUT_ENTRIES	10
+#endif
+
+
+/**
+ * Idle timeout interval to be applied to transports with no usage
+ * before the transport is destroyed. Value is in seconds.
+ *
+ * Default: 60
+ */
+#ifndef PJSIP_TRANSPORT_IDLE_TIME
+#   define PJSIP_TRANSPORT_IDLE_TIME	60
+#endif
+
+
+/**
+ * Maximum number of usages for a transport before a new transport is
+ * created. This only applies for ephemeral transports such as TCP.
+ *
+ * Currently this is not used.
+ * 
+ * Default: -1
+ */
+#ifndef PJSIP_MAX_TRANSPORT_USAGE
+#   define PJSIP_MAX_TRANSPORT_USAGE	((unsigned)-1)
+#endif
+
 
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
@@ -163,8 +214,6 @@
 #define PJSIP_POOL_INC_TDATA		4000
 #define PJSIP_POOL_LEN_UA		4000
 #define PJSIP_POOL_INC_UA		4000
-#define PJSIP_TRANSPORT_CLOSE_TIMEOUT	30
-#define PJSIP_MAX_TRANSPORT_USAGE	16
 
 #define PJSIP_MAX_FORWARDS_VALUE	70
 
@@ -191,12 +240,6 @@
 /* Dialog related constants. */
 #define PJSIP_POOL_LEN_DIALOG		1200
 #define PJSIP_POOL_INC_DIALOG		512
-
-/* Transport idle timeout before it's destroyed. */
-#define PJSIP_TRANSPORT_IDLE_TIME	30
-
-/* Max entries to process in timer heap per poll. */
-#define PJSIP_MAX_TIMED_OUT_ENTRIES	10
 
 /* Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES		64

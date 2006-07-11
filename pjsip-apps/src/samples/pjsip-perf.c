@@ -985,7 +985,8 @@ static void usage(void)
 	"   URL                     The SIP URL to be contacted.\n"
 	"\n"
 	"Client options:\n"
-	"   --method=METHOD, -m     Set the test method [default: OPTIONS]\n"
+	"   --method=METHOD, -m     Set test method (set to INVITE for call benchmark)\n"
+        "                           [default: OPTIONS]\n"
 	"   --count=N, -n           Set total number of requests to initiate\n"
 	"                           [default=%d]\n"
 	"   --stateless, -s         Set to operate in stateless mode\n"
@@ -999,12 +1000,14 @@ static void usage(void)
 	"\n"
 	"Client and Server options:\n"
 	"   --local-port=PORT, -p   Set local port [default: 5060]\n"
-	"   --use-tcp, -T           Use TCP instead of UDP [default: no]\n"
+	"   --use-tcp, -T           Use TCP instead of UDP. Note that when started as\n"
+	"                           client, you must add ;transport=tcp parameter to URL\n"
+	"                           [default: no]\n"
 	"   --thread-count=N        Set number of worker threads [default=1]\n"
 	"\n"
 	"Misc options:\n"
 	"   --help, -h              Display this screen\n"
-	"   --verbose, -v           Display verbose logging (can be put more than once)\n"
+	"   --verbose, -v           Verbose logging (put more than once for even more)\n"
 	"\n"
 	"When started as server, pjsip-perf can be contacted on the following URIs:\n"
 	"   - sip:0@server-addr     To handle requests statelessly.\n"
@@ -1255,21 +1258,22 @@ static pj_status_t submit_job(void)
 static int client_thread(void *arg)
 {
     unsigned last_timeout_check = 0;
-    pj_time_val end_time, now;
-
-    PJ_UNUSED_ARG(arg);
+    pj_time_val end_time, last_report, now;
+    unsigned thread_index = (unsigned)arg;
 
     pj_thread_sleep(100);
 
     pj_gettimeofday(&end_time);
     end_time.sec += app.client.timeout;
 
+    pj_gettimeofday(&last_report);
+
     if (app.client.first_request.sec == 0) {
 	pj_gettimeofday(&app.client.first_request);
     }
 
     /* Submit all jobs */
-    while (app.client.job_submitted < app.client.job_count && !app.thread_quit) {
+    while (app.client.job_submitted < app.client.job_count && !app.thread_quit){
 	pj_time_val timeout = { 0, 1 };
 	unsigned i;
 	int outstanding;
@@ -1305,12 +1309,21 @@ static int client_thread(void *arg)
 	/* Handle event */
 	pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
 
-	/* Check for time out */
-	if (app.client.job_submitted - last_timeout_check >= 2000) {
+	/* Check for time out, also print report */
+	if (app.client.job_submitted - last_timeout_check >= 500) {
 	    pj_gettimeofday(&now);
-	    if (PJ_TIME_VAL_GTE(now, end_time))
+	    if (PJ_TIME_VAL_GTE(now, end_time)) {
 		break;
+	    }
 	    last_timeout_check = app.client.job_submitted;
+
+	    
+	    if (thread_index == 0 && now.sec-last_report.sec >= 2) {
+		printf("\r%d jobs started, %d completed...   ",
+		       app.client.job_submitted, app.client.job_finished);
+		fflush(stdout);
+		last_report = now;
+	    }
 	}
     }
 
@@ -1319,9 +1332,17 @@ static int client_thread(void *arg)
     }
 
 
+    if (thread_index == 0) {
+	printf("\r%d jobs started, %d completed%s\n",
+	       app.client.job_submitted, app.client.job_finished,
+	       (app.client.job_submitted!=app.client.job_finished ? 
+		", waiting..." : ".") );
+	fflush(stdout);
+    }
+
     /* Wait until all jobs completes, or timed out */
     pj_gettimeofday(&now);
-    while (now.sec < end_time.sec && 
+    while (PJ_TIME_VAL_LT(now, end_time) && 
 	   app.client.job_finished < app.client.job_count && 
 	   !app.thread_quit) 
     {
@@ -1329,7 +1350,32 @@ static int client_thread(void *arg)
 	unsigned i;
 
 	for (i=0; i<1000; ++i) {
-	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, NULL);
+	    unsigned count;
+	    count = 0;
+	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, &count);
+	    if (count == 0)
+		break;
+	}
+
+	pj_gettimeofday(&now);
+    }
+
+    /* Wait couple of seconds if there are still unfinished jobs */
+    pj_gettimeofday(&now);
+    end_time = now;
+    end_time.sec += 2;
+    while (PJ_TIME_VAL_LT(now, end_time) && 
+	   app.client.job_finished < app.client.job_submitted) 
+    {
+	pj_time_val timeout = { 0, 1 };
+	unsigned i;
+
+	for (i=0; i<1000; ++i) {
+	    unsigned count;
+	    count = 0;
+	    pjsip_endpt_handle_events2(app.sip_endpt, &timeout, &count);
+	    if (count == 0)
+		break;
 	}
 
 	pj_gettimeofday(&now);
@@ -1432,6 +1478,9 @@ int main(int argc, char *argv[])
 {
     static char report[1024];
 
+    puts("PJSIP Performance Measurement Tool\n"
+        "(c)2006 pjsip.org\n");
+
     if (create_app() != 0)
 	return 1;
 
@@ -1486,13 +1535,13 @@ int main(int argc, char *argv[])
 	}
 	
 
-	PJ_LOG(3,(THIS_FILE, "Sending %d %s to '%.*s' with %d maximum outstanding jobs, please wait..", 
+	printf("Sending %d %s to '%.*s' with %d maximum outstanding jobs, please wait..\n", 
 		  app.client.job_count, test_type,
 		  (int)app.client.dst_uri.slen, app.client.dst_uri.ptr,
-		  app.client.job_window));
+		  app.client.job_window);
 
 	for (i=0; i<app.thread_count; ++i) {
-	    status = pj_thread_create(app.pool, NULL, &client_thread, NULL,
+	    status = pj_thread_create(app.pool, NULL, &client_thread, (void*)i,
 				      0, 0, &app.thread[i]);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Unable to create thread", status);
@@ -1527,10 +1576,14 @@ int main(int argc, char *argv[])
 
 	if (msec_req == 0) msec_req = 1;
 
+	if (app.client.job_submitted < app.client.job_count)
+	    puts("\ntimed-out!\n");
+	else
+	    puts("\ndone.\n");
 
 	pj_ansi_snprintf(
 	    report, sizeof(report),
-	    "Total %d %s sent in %d ms at rate %d/sec\n"
+	    "Total %d %s sent in %d ms at rate of %d/sec\n"
 	    "Total %d responses receieved in %d ms:\n"
 	    " - 2xx responses:  %7d (rate=%d/sec)\n"
 	    " - 3xx responses:  %7d (rate=%d/sec)\n"

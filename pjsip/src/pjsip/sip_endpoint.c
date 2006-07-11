@@ -656,7 +656,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
 	    net_event_count += c;
 	    timeout.sec = timeout.msec = 0;
 	}
-    } while (c > 0 && net_event_count < PJSIP_MAX_TIMED_OUT_ENTRIES*2);
+    } while (c > 0 && net_event_count < PJSIP_MAX_NET_EVENTS);
 
     count += net_event_count;
     if (p_count)
