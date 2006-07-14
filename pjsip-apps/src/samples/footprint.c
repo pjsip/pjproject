@@ -529,8 +529,17 @@ int dummy_function()
 }
 
 
-int main()
+int test_main()
 {
     return dummy_function();
 }
+
+#if defined(PJ_RTEMS) && PJ_RTEMS!=0
+#  include "../../pjlib/src/pjlib-test/main_rtems.c"
+#else
+int main()
+{
+  return test_main();
+}
+#endif
 

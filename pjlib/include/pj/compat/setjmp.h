@@ -27,8 +27,12 @@
 #if defined(PJ_HAS_SETJMP_H) && PJ_HAS_SETJMP_H != 0
 #  include <setjmp.h>
    typedef jmp_buf pj_jmp_buf;
-#  define pj_setjmp(buf)	setjmp(buf)
-#  define pj_longjmp(buf,d)	longjmp(buf,d)
+#  ifndef pj_setjmp
+#    define pj_setjmp(buf)	setjmp(buf)
+#  endif
+#  ifndef pj_longjmp
+#    define pj_longjmp(buf,d)	longjmp(buf,d)
+#  endif
 
 #elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0 && \
       defined(PJ_M_I386) && PJ_M_I386 != 0

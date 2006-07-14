@@ -1,3 +1,8 @@
+# For common OSes, test's main() is defined in main.c.
+# OS specific configuration may want to put it in different file.
+# For example, see os-rtems.mak in current directory.
+export TEST_OBJS = main.o
+
 include ../../build/common.mak
 
 RULES_MAK := ../../build/rules.mak
@@ -87,7 +92,6 @@ export TEST_OBJS += dlg_core_test.o msg_err_test.o msg_logger.o msg_test.o \
 		    transport_test.o transport_udp_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o
-export TEST_OBJS += main.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_LDFLAGS += $(_LDFLAGS)
 export TEST_EXE := ../bin/pjsip-test-$(TARGET_NAME)$(HOST_EXE)

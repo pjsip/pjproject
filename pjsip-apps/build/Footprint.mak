@@ -44,10 +44,12 @@ export _LDFLAGS := $(LIBS) \
 EXE := footprint.exe
 
 all: 
-	$(CC_NAME) -o $(EXE) ../src/samples/footprint.c $(FCFLAGS) $(_CFLAGS) $(_LDFLAGS)
+	$(CROSS_COMPILE)$(CC_NAME) -o $(EXE) ../src/samples/footprint.c $(FCFLAGS) $(_CFLAGS) $(_LDFLAGS)
+	$(CROSS_COMPILE)strip --strip-all $(EXE)
 
 clean:
 	rm -f $(EXE)
 
 print_name:
-	@echo $(MACHINE_NAME) $(OS_NAME) $(CC_NAME) `$(CC_NAME) -dumpversion`
+	@echo $(MACHINE_NAME) $(OS_NAME) $(CROSS_COMPILE)$(CC_NAME) `$(CROSS_COMPILE)$(CC_NAME) -dumpversion`
+

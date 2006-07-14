@@ -1,3 +1,7 @@
+# By default, the test application includes main.o.
+# OS make file may override this with os-specific files
+export UTIL_TEST_OBJS = main.o
+
 include ../../build/common.mak
 
 RULES_MAK := ../../build/rules.mak
@@ -30,7 +34,7 @@ export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 # Defines for building test application
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
-export UTIL_TEST_OBJS += xml.o test.o main.o
+export UTIL_TEST_OBJS += xml.o test.o 
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_LDFLAGS += $(_LDFLAGS)
 export UTIL_TEST_EXE:=../bin/pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)
