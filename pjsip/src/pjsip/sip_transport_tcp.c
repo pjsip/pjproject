@@ -365,8 +365,9 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 
     for (i=0; i<PJ_ARRAY_SIZE(listener->accept_op); ++i) {
 	if (listener->accept_op[i] && listener->accept_op[i]->pool) {
-	    pj_pool_release(listener->accept_op[i]->pool);
+	    pj_pool_t *pool = listener->accept_op[i]->pool;
 	    listener->accept_op[i]->pool = NULL;
+	    pj_pool_release(pool);
 	}
     }
 

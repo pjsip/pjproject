@@ -362,12 +362,24 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 
     sip_uri = (pjsip_sip_uri*) uri;
 
-    /* Check for matching user part */
-    if (pj_strcmp(&sip_uri->user, &call_user)!=0)
-	return PJ_FALSE;
-
-    /* Only want to handle INVITE requests (for now). */
+    /* Only want to handle INVITE requests. */
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_INVITE_METHOD) {
+	return PJ_FALSE;
+    }
+
+
+    /* Check for matching user part. Incoming requests will be handled 
+     * call-statefully if:
+     *	- user part is "2", or
+     *  - user part is not "0" nor "1" and method is INVITE.
+     */
+    if (pj_strcmp(&sip_uri->user, &call_user) == 0 ||
+	sip_uri->user.slen != 1 ||
+	(*sip_uri->user.ptr != '0' && *sip_uri->user.ptr != '1'))
+    {
+	/* Match */
+
+    } else {
 	return PJ_FALSE;
     }
 
@@ -459,6 +471,45 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
     return PJ_TRUE;
 }
 
+
+
+/**************************************************************************
+ * Default handler when incoming request is not handled by any other
+ * modules.
+ */
+static pj_bool_t mod_responder_on_rx_request(pjsip_rx_data *rdata);
+
+/* Module to handle incoming requests statelessly.
+ */
+static pjsip_module mod_responder =
+{
+    NULL, NULL,			    /* prev, next.		*/
+    { "mod-responder", 13 },	    /* Name.			*/
+    -1,				    /* Id			*/
+    PJSIP_MOD_PRIORITY_APPLICATION+1, /* Priority		*/
+    NULL,			    /* load()			*/
+    NULL,			    /* start()			*/
+    NULL,			    /* stop()			*/
+    NULL,			    /* unload()			*/
+    &mod_responder_on_rx_request,   /* on_rx_request()		*/
+    NULL,			    /* on_rx_response()		*/
+    NULL,			    /* on_tx_request.		*/
+    NULL,			    /* on_tx_response()		*/
+    NULL,			    /* on_tsx_state()		*/
+};
+
+
+static pj_bool_t mod_responder_on_rx_request(pjsip_rx_data *rdata)
+{
+    const pj_str_t reason = pj_str("Not expecting request at this URI");
+
+    /*
+     * Respond any requests with 500.
+     */
+    pjsip_endpt_respond_stateless(app.sip_endpt, rdata, 500, &reason,
+				  NULL, NULL);
+    return PJ_TRUE;
+}
 
 
 
@@ -720,6 +771,9 @@ static pj_status_t init_sip()
     status = pjsip_endpt_register_module( app.sip_endpt, &mod_stateless_server);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Register default responder module */
+    status = pjsip_endpt_register_module( app.sip_endpt, &mod_responder);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Register stateless server module */
     status = pjsip_endpt_register_module( app.sip_endpt, &mod_stateful_server);
@@ -1488,8 +1542,9 @@ int main(int argc, char *argv[])
 {
     static char report[1024];
 
-    puts("PJSIP Performance Measurement Tool\n"
-        "(c)2006 pjsip.org\n");
+    printf("PJSIP Performance Measurement Tool v%s\n"
+           "(c)2006 pjsip.org\n\n",
+	   PJ_VERSION);
 
     if (create_app() != 0)
 	return 1;
@@ -1505,7 +1560,7 @@ int main(int argc, char *argv[])
 
     pj_log_set_level(app.log_level);
 
-    if (app.log_level > 3) {
+    if (app.log_level > 4) {
 	pjsip_endpt_register_module(app.sip_endpt, &msg_logger);
     }
 
@@ -1657,6 +1712,7 @@ int main(int argc, char *argv[])
 	       app.local_addr.ptr,
 	       app.local_port,
 	       (app.use_tcp ? ";transport=tcp" : ""));
+	printf("INVITE with non-matching user part will be handled call-statefully\n");
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &server_thread, (void*)i,
