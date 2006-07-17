@@ -70,8 +70,8 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
     copy_advance_pair(p, ";id=", 4, hdr->id_param);
     
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-				   &pjsip_PARAM_CHAR_SPEC, 
-				   &pjsip_PARAM_CHAR_SPEC, ';');
+				   &pjsip_TOKEN_SPEC, 
+				   &pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return printed;
 
@@ -180,8 +180,8 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     }
     
     printed = pjsip_param_print_on( &hdr->other_param, p, endbuf-p, 
-				    &pjsip_PARAM_CHAR_SPEC,
-				    &pjsip_PARAM_CHAR_SPEC,
+				    &pjsip_TOKEN_SPEC,
+				    &pjsip_TOKEN_SPEC,
 				    ';');
     if (printed < 0)
 	return printed;

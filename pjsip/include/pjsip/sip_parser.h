@@ -314,7 +314,7 @@ extern pj_cis_t
     pjsip_TOKEN_SPEC,		/**< Token. */
     pjsip_HEX_SPEC,	        /**< Hexadecimal digits. */
     pjsip_PARAM_CHAR_SPEC,      /**< For scanning pname (or pvalue when it's 
-				     not quoted.) */
+				     not quoted.) in URI */
     pjsip_PARAM_CHAR_SPEC_ESC,	/**< Variant without the escape ('%') char */
     pjsip_HDR_CHAR_SPEC,	/**< Chars in hname/havalue in URL. */
     pjsip_HDR_CHAR_SPEC_ESC,	/**< Variant without the escape ('%') char */
@@ -356,11 +356,17 @@ enum
     PJSIP_PARSE_REMOVE_QUOTE = 1,
 };
 
+/* Parse parameter in header (matching the character as token) */
 void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
 			     unsigned opt);
+/* Parse parameter in URL (matching the character as paramchar) */
+void pjsip_parse_uri_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
+				 pj_str_t *pname, pj_str_t *pvalue,
+				 unsigned opt);
 void pjsip_concat_param_imp( pj_str_t *param, pj_pool_t *pool, 
-			 const pj_str_t *pname, const pj_str_t *pvalue, int sepchar);
+			     const pj_str_t *pname, const pj_str_t *pvalue, 
+			     int sepchar);
 void pjsip_parse_end_hdr_imp ( pj_scanner *scanner );
 
 PJ_END_DECL

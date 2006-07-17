@@ -40,8 +40,8 @@
 #define ESCAPED		    "%"
 #define USER_UNRESERVED	    "&=+$,;?/"
 #define PASS		    "&=+$,"
-#define TOKEN		    "-.!%*_=`'~+"   /* '+' is because of app/pidf+xml
-					     * in Content-Type! */
+#define TOKEN		    "-.!%*_`'~+"   /* '=' was removed for parsing 
+					    * param */
 #define HOST		    "_-."
 #define HEX_DIGIT	    "abcdefABCDEF"
 #define PARAM_CHAR	    "[]/:&+$" UNRESERVED ESCAPED
@@ -138,6 +138,10 @@ static void	    int_parse_param( pj_scanner *scanner,
 				     pj_pool_t *pool,
 				     pj_str_t *pname, 
 				     pj_str_t *pvalue);
+static void	    int_parse_uri_param( pj_scanner *scanner, 
+					 pj_pool_t *pool,
+					 pj_str_t *pname, 
+					 pj_str_t *pvalue);
 static void	    int_parse_hparam( pj_scanner *scanner,
 				      pj_pool_t *pool,
 				      pj_str_t *hname,
@@ -323,6 +327,9 @@ static pj_status_t init_parser()
     status = pj_cis_dup(&pjsip_TOKEN_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pjsip_TOKEN_SPEC, TOKEN);
+
+    /* TOKEN must not have '%' */
+    pj_assert(pj_cis_match(&pjsip_TOKEN_SPEC, '%')==0);
 
     status = pj_cis_dup(&pjsip_HOST_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -1038,14 +1045,15 @@ parse_headers:
     return msg;
 }
 
+
 /* Parse parameter (pname ["=" pvalue]). */
-void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
+static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
+			     const pj_cis_t *spec, const pj_cis_t *esc_spec,
 			     unsigned option)
 {
     /* pname */
-    parser_get_and_unescape(scanner, pool, &pjsip_PARAM_CHAR_SPEC,
-			    &pjsip_PARAM_CHAR_SPEC_ESC, pname);
+    parser_get_and_unescape(scanner, pool, spec, esc_spec, pname);
 
     /* init pvalue */
     pvalue->ptr = NULL;
@@ -1062,15 +1070,34 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 		    pvalue->ptr++;
 		    pvalue->slen -= 2;
 		}
-	    } else if(pj_cis_match(&pjsip_PARAM_CHAR_SPEC, *scanner->curptr)) {
-		parser_get_and_unescape(scanner, pool, &pjsip_PARAM_CHAR_SPEC, 
-					&pjsip_PARAM_CHAR_SPEC_ESC, pvalue);
+	    } else if(pj_cis_match(spec, *scanner->curptr)) {
+		parser_get_and_unescape(scanner, pool, spec, esc_spec, pvalue);
 	    }
 	}
     }
 }
 
-/* Parse parameter (";" pname ["=" pvalue]). */
+/* Parse parameter (pname ["=" pvalue]) using token. */
+void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
+			     pj_str_t *pname, pj_str_t *pvalue,
+			     unsigned option)
+{
+    parse_param_imp(scanner, pool, pname, pvalue, &pjsip_TOKEN_SPEC,
+		    &pjsip_TOKEN_SPEC, option);
+}
+
+
+/* Parse parameter (pname ["=" pvalue]) using paramchar. */
+void pjsip_parse_uri_param_imp(pj_scanner *scanner, pj_pool_t *pool,
+			       pj_str_t *pname, pj_str_t *pvalue,
+			       unsigned option)
+{
+    parse_param_imp(scanner, pool, pname, pvalue, &pjsip_PARAM_CHAR_SPEC,
+		    &pjsip_PARAM_CHAR_SPEC_ESC, option);
+}
+
+
+/* Parse parameter (";" pname ["=" pvalue]) in header. */
 static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue)
 {
@@ -1081,6 +1108,19 @@ static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_parse_param_imp(scanner, pool, pname, pvalue, 
 			  PJSIP_PARSE_REMOVE_QUOTE);
 }
+
+/* Parse parameter (";" pname ["=" pvalue]) in URI. */
+static void int_parse_uri_param( pj_scanner *scanner, pj_pool_t *pool,
+				 pj_str_t *pname, pj_str_t *pvalue)
+{
+    /* Get ';' character */
+    pj_scan_get_char(scanner);
+
+    /* Get pname and optionally pvalue */
+    pjsip_parse_uri_param_imp(scanner, pool, pname, pvalue, 
+			      PJSIP_PARSE_REMOVE_QUOTE);
+}
+
 
 /* Parse header parameter. */
 static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
@@ -1297,7 +1337,7 @@ static void* int_parse_sip_url( pj_scanner *scanner,
       while (*scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, pool, &pname, &pvalue);
+	int_parse_uri_param( scanner, pool, &pname, &pvalue);
 
 	if (!parser_stricmp(pname, pjsip_USER_STR) && pvalue.slen) {
 	    url->user_param = pvalue;

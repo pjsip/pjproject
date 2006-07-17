@@ -55,7 +55,9 @@ static pj_cis_t pjsip_TEL_URIC_SPEC;
 static pj_cis_t pjsip_TEL_VISUAL_SEP_SPEC;
 static pj_cis_t pjsip_TEL_PNAME_SPEC;
 static pj_cis_t pjsip_TEL_PVALUE_SPEC;
+static pj_cis_t pjsip_TEL_PVALUE_SPEC_ESC;
 static pj_cis_t pjsip_TEL_PARSING_PVALUE_SPEC;
+static pj_cis_t pjsip_TEL_PARSING_PVALUE_SPEC_ESC;
 
 static pj_str_t pjsip_ISUB_STR = { "isub", 4 };
 static pj_str_t pjsip_EXT_STR = { "ext", 3 };
@@ -152,10 +154,17 @@ pj_status_t pjsip_tel_uri_subsys_init(void)
     pj_cis_add_num(&pjsip_TEL_PVALUE_SPEC);
     pj_cis_add_str(&pjsip_TEL_PVALUE_SPEC, PARAM_CHAR);
 
+    status = pj_cis_dup(&pjsip_TEL_PVALUE_SPEC_ESC, &pjsip_TEL_PVALUE_SPEC);
+    pj_cis_del_str(&pjsip_TEL_PVALUE_SPEC_ESC, "%");
+
     status = pj_cis_dup(&pjsip_TEL_PARSING_PVALUE_SPEC, &pjsip_TEL_URIC_SPEC);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     pj_cis_add_cis(&pjsip_TEL_PARSING_PVALUE_SPEC, &pjsip_TEL_PVALUE_SPEC);
     pj_cis_add_str(&pjsip_TEL_PARSING_PVALUE_SPEC, "=");
+
+    status = pj_cis_dup(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC, 
+			&pjsip_TEL_PARSING_PVALUE_SPEC);
+    pj_cis_del_str(&pjsip_TEL_PVALUE_SPEC_ESC, "%");
 
     status = pjsip_register_uri_parser("tel", &tel_uri_parse);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
@@ -393,7 +402,17 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 
 	    if (*scanner->curptr == '=') {
 		pj_scan_get_char(scanner);
-		pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC, &pvalue);
+
+#		if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+		    pj_scan_get_unescape( scanner, 
+					  &pjsip_TEL_PARSING_PVALUE_SPEC_ESC,
+					  &pvalue);
+#		else
+		    pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC, 
+				&pvalue);
+		    *token = pj_str_unescape(pool, &pvalue);
+#		endif
+
 	    } else {
 		pvalue.slen = 0;
 		pvalue.ptr = NULL;

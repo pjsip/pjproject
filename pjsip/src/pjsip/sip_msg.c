@@ -1039,8 +1039,8 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	}
 
 	printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
-				       &pjsip_PARAM_CHAR_SPEC,
-				       &pjsip_PARAM_CHAR_SPEC, ';');
+				       &pjsip_TOKEN_SPEC, &pjsip_TOKEN_SPEC, 
+				       ';');
 	if (printed < 0)
 	    return printed;
 	buf += printed;
@@ -1282,8 +1282,8 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     copy_advance_pair(buf, ";tag=", 5, hdr->tag);
 
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_PARAM_CHAR_SPEC,
-				   &pjsip_PARAM_CHAR_SPEC, ';');
+				   &pjsip_TOKEN_SPEC,
+				   &pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1453,8 +1453,8 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     buf += printed;
 
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_PARAM_CHAR_SPEC, 
-				   &pjsip_PARAM_CHAR_SPEC, ';');
+				   &pjsip_TOKEN_SPEC, 
+				   &pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1672,8 +1672,8 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
     
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_PARAM_CHAR_SPEC,
-				   &pjsip_PARAM_CHAR_SPEC, ';');
+				   &pjsip_TOKEN_SPEC,
+				   &pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
