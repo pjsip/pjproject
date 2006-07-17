@@ -410,7 +410,7 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 #		else
 		    pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC, 
 				&pvalue);
-		    *token = pj_str_unescape(pool, &pvalue);
+		    pvalue = pj_str_unescape(pool, &pvalue);
 #		endif
 
 	    } else {
