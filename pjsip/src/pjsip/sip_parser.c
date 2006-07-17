@@ -112,6 +112,7 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 	    pjsip_ALPHA_SPEC,	        /* Alpha (A-Z, a-z) */
 	    pjsip_ALNUM_SPEC,	        /* Decimal + Alpha. */
 	    pjsip_TOKEN_SPEC,	        /* Token. */
+	    pjsip_TOKEN_SPEC_ESC,	/* Token without '%' character */
 	    pjsip_HEX_SPEC,	        /* Hexadecimal digits. */
 	    pjsip_PARAM_CHAR_SPEC,      /* For scanning pname (or pvalue when
                                          * it's not quoted.) */
@@ -328,8 +329,9 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pjsip_TOKEN_SPEC, TOKEN);
 
-    /* TOKEN must not have '%' */
-    pj_assert(pj_cis_match(&pjsip_TOKEN_SPEC, '%')==0);
+    status = pj_cis_dup(&pjsip_TOKEN_SPEC_ESC, &pjsip_TOKEN_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_del_str(&pjsip_TOKEN_SPEC_ESC, "%");
 
     status = pj_cis_dup(&pjsip_HOST_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -1083,7 +1085,7 @@ void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
 			     unsigned option)
 {
     parse_param_imp(scanner, pool, pname, pvalue, &pjsip_TOKEN_SPEC,
-		    &pjsip_TOKEN_SPEC, option);
+		    &pjsip_TOKEN_SPEC_ESC, option);
 }
 
 

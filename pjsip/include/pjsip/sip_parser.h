@@ -312,6 +312,7 @@ extern pj_cis_t
     pjsip_ALPHA_SPEC,		/**< Alpha (A-Z, a-z) */
     pjsip_ALNUM_SPEC,		/**< Decimal + Alpha. */
     pjsip_TOKEN_SPEC,		/**< Token. */
+    pjsip_TOKEN_SPEC_ESC,	/**< Token without '%' character */
     pjsip_HEX_SPEC,	        /**< Hexadecimal digits. */
     pjsip_PARAM_CHAR_SPEC,      /**< For scanning pname (or pvalue when it's 
 				     not quoted.) in URI */
