@@ -1079,6 +1079,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		case 'v':
 		    parse_version(&scanner, &ctx);
 		    break;
+		case 13:
+		    /* Allow empty newline at the end of the message */
+		    pj_scan_get_char(&scanner);
+		    /* Continue below */
+		case 10:
+		    pj_scan_get_char(&scanner);
+		    if (!pj_scan_is_eof(&scanner)) {
+			on_scanner_error(&scanner);
+		    }
+		    break;
 		default:
 		    if (cur_name >= 'a' && cur_name <= 'z')
 			parse_generic_line(&scanner, &dummy, &ctx);
