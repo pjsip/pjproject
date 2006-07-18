@@ -288,7 +288,7 @@ struct uri_test
 	PJ_SUCCESS,
 	"tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1%21+=",
 	&create_uri30,
-	"tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1%21+%3d"
+	"tel:+1;isub=/:@&$,-_.!~*'()[]/:&$aA1!+%3d"
     },
     {
 	/* 31: extension number parsing and encoding */
@@ -620,7 +620,7 @@ static pjsip_uri *create_uri30(pj_pool_t *pool)
     pjsip_tel_uri *uri = pjsip_tel_uri_create(pool);
 
     uri->number = pj_str("+1");
-    uri->isub_param = pj_str("/:@&$,-_.!~*'()[]/:&$aA1%21+=");
+    uri->isub_param = pj_str("/:@&$,-_.!~*'()[]/:&$aA1!+=");
     return (pjsip_uri*)uri;    
 }
 
