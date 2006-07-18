@@ -137,7 +137,12 @@ static void usage(void)
 /* Set default config. */
 static void default_config(struct app_config *cfg)
 {
+    char tmp[80];
+
     pjsua_config_default(&cfg->cfg);
+    pj_ansi_sprintf(tmp, "PJSUA v%s/%s", PJ_VERSION, PJ_OS_NAME);
+    pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
+
     pjsua_logging_config_default(&cfg->log_cfg);
     pjsua_media_config_default(&cfg->media_cfg);
     pjsua_transport_config_default(&cfg->udp_cfg);
@@ -472,7 +477,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
 	    cfg->acc_cnt++;
-	    cur_acc = &cfg->acc_cfg[cfg->acc_cnt - 1];
+	    cur_acc = &cfg->acc_cfg[cfg->acc_cnt];
 	    break;
 
 	case OPT_USERNAME:   /* Default authentication user */
@@ -664,8 +669,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	return PJ_EINVAL;
     }
 
-    if (cfg->acc_cfg[0].id.slen && cfg->acc_cnt==0)
-	cfg->acc_cnt = 1;
+    if (cfg->acc_cfg[cfg->acc_cnt].id.slen)
+	cfg->acc_cnt++;
 
     for (i=0; i<cfg->acc_cnt; ++i) {
 	if (cfg->acc_cfg[i].cred_info[cfg->acc_cfg[i].cred_count].username.slen)
@@ -1306,7 +1311,7 @@ static void keystroke_help(void)
     puts("| dq  Dump curr. call quality  | cl  List ports           |  d  Dump status   |");
     puts("|                              | cc  Connect port         | dd  Dump detailed |");
     puts("|                              | cd  Disconnect port      | dc  Dump config   |");
-    puts("|                              |                          |  f  Save config   |");
+    puts("|  S  Send arbitrary REQUEST   |                          |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
@@ -1459,6 +1464,42 @@ static void conf_list(void)
 
     }
     puts("");
+}
+
+
+/*
+ * Send arbitrary request to remote host
+ */
+static void send_request(char *cstr_method, const pj_str_t *dst_uri)
+{
+    pj_str_t str_method;
+    pjsip_method method;
+    pjsip_tx_data *tdata;
+    pjsua_acc_info acc_info;
+    pjsip_endpoint *endpt;
+    pj_status_t status;
+
+    endpt = pjsua_get_pjsip_endpt();
+
+    str_method = pj_str(cstr_method);
+    pjsip_method_init_np(&method, &str_method);
+
+    pjsua_acc_get_info(current_acc, &acc_info);
+
+    status = pjsip_endpt_create_request(endpt, &method, dst_uri, 
+					&acc_info.acc_uri, dst_uri,
+					NULL, NULL, -1, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create request", status);
+	return;
+    }
+
+    status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send request", status);
+	pjsip_tx_data_dec_ref(tdata);
+	return;
+    }
 }
 
 
@@ -1891,6 +1932,44 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    puts("DTMF digits enqueued for transmission");
 		}
 	    }
+	    break;
+
+	case 'S':
+	    /*
+	     * Send arbitrary request
+	     */
+	    if (pjsua_acc_get_count() == 0) {
+		puts("Sorry, need at least one account configured");
+		break;
+	    }
+
+	    puts("Send arbitrary request to remote host");
+
+	    /* Input METHOD */
+	    if (!simple_input("Request method:",text,sizeof(text)))
+		break;
+
+	    /* Input destination URI */
+	    uri = NULL;
+	    ui_input_url("Destination URI", buf, sizeof(buf), &result);
+	    if (result.nb_result != NO_NB) {
+
+		if (result.nb_result == -1 || result.nb_result == 0) {
+		    puts("Sorry you can't do that!");
+		    continue;
+		} else {
+		    pjsua_buddy_info binfo;
+		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
+		    uri = binfo.uri.ptr;
+		}
+
+	    } else if (result.uri_result) {
+		uri = result.uri_result;
+	    }
+	    
+	    tmp = pj_str(uri);
+
+	    send_request(text, &tmp);
 	    break;
 
 	case 's':

@@ -1344,8 +1344,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	pjsip_tx_data *tdata;
 	const pj_str_t reason = { "No session found", 16};
 
-	PJ_LOG(4,(tsx->obj_name, "Incoming request was unhandled by "
-				 "dialog usages, sending 500 response"));
+	PJ_LOG(4,(tsx->obj_name, "%s was unhandled by "
+				 "dialog usages, sending 500 response",
+				 pjsip_rx_data_get_info(rdata)));
 
 	status = pjsip_dlg_create_response(dlg, rdata, 500, &reason, &tdata);
 	if (status == PJ_SUCCESS) {
@@ -1457,10 +1458,13 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	    break;
     }
 
+    /* Unhandled response does not necessarily mean error because
+       dialog usages may choose to process the transaction state instead.
     if (i==dlg->usage_cnt) {
-	PJ_LOG(4,(dlg->obj_name, "%s is unhandled by dialog usages",
+	PJ_LOG(4,(dlg->obj_name, "%s was not claimed by any dialog usages",
 		  pjsip_rx_data_get_info(rdata)));
     }
+    */
 
     /* Unlock dialog and dec session, may destroy dialog. */
     pjsip_dlg_dec_lock(dlg);

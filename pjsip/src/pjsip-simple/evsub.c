@@ -420,6 +420,12 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 	++mod_evsub.allow_events_hdr->count;
     }
     
+    /* Add to endpoint's Accept header */
+    pjsip_endpt_add_capability(mod_evsub.endpt, &mod_evsub.mod,
+			       PJSIP_H_ACCEPT, NULL,
+			       pkg->pkg_accept->count,
+			       pkg->pkg_accept->values);
+
 
     /* Done */
 
@@ -430,6 +436,21 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Retrieve Allow-Events header
+ */
+PJ_DEF(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(pjsip_module *m)
+{
+    struct mod_evsub *mod;
+
+    if (m == NULL)
+	m = pjsip_evsub_instance();
+
+    mod = (struct mod_evsub*)m;
+
+    return (pjsip_hdr*) mod->allow_events_hdr;
+}
 
 
 /*

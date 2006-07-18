@@ -112,10 +112,15 @@ struct tsx_inv_data
 static pj_status_t mod_inv_load(pjsip_endpoint *endpt)
 {
     pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6}};
+    pj_str_t accepted = { "application/sdp", 15 };
 
     /* Register supported methods: INVITE, ACK, BYE, CANCEL */
     pjsip_endpt_add_capability(endpt, &mod_inv.mod, PJSIP_H_ALLOW, NULL,
 			       PJ_ARRAY_SIZE(allowed), allowed);
+
+    /* Register "application/sdp" in Accept header */
+    pjsip_endpt_add_capability(endpt, &mod_inv.mod, PJSIP_H_ACCEPT, NULL,
+			       1, &accepted);
 
     return PJ_SUCCESS;
 }
@@ -959,21 +964,42 @@ static int print_sdp(pjsip_msg_body *body, char *buf, pj_size_t len)
     return pjmedia_sdp_print(body->data, buf, len);
 }
 
+
+PJ_DEF(pj_status_t) pjsip_create_sdp_body( pj_pool_t *pool,
+					   pjmedia_sdp_session *sdp,
+					   pjsip_msg_body **p_body)
+{
+    const pj_str_t STR_APPLICATION = { "application", 11};
+    const pj_str_t STR_SDP = { "sdp", 3 };
+    pjsip_msg_body *body;
+
+    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
+    PJ_ASSERT_RETURN(body != NULL, PJ_ENOMEM);
+
+    body->content_type.type = STR_APPLICATION;
+    body->content_type.subtype = STR_SDP;
+    body->data = sdp;
+    body->len = 0;
+    body->clone_data = &clone_sdp;
+    body->print_body = &print_sdp;
+
+    *p_body = body;
+
+    return PJ_SUCCESS;
+}
+
 static pjsip_msg_body *create_sdp_body(pj_pool_t *pool,
 				       const pjmedia_sdp_session *c_sdp)
 {
     pjsip_msg_body *body;
+    pj_status_t status;
 
+    status = pjsip_create_sdp_body(pool, 
+				   pjmedia_sdp_session_clone(pool, c_sdp),
+				   &body);
 
-    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
-    PJ_ASSERT_RETURN(body != NULL, NULL);
-
-    body->content_type.type = pj_str("application");
-    body->content_type.subtype = pj_str("sdp");
-    body->data = pjmedia_sdp_session_clone(pool, c_sdp);
-    body->len = 0;
-    body->clone_data = &clone_sdp;
-    body->print_body = &print_sdp;
+    if (status != PJ_SUCCESS)
+	return NULL;
 
     return body;
 }

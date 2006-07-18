@@ -417,6 +417,11 @@ typedef struct pjsua_config
      */
     pjsua_callback  cb;
 
+    /**
+     * User agent string (default empty)
+     */
+    pj_str_t	    user_agent;
+
 } pjsua_config;
 
 
@@ -468,6 +473,8 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
     for (i=0; i<src->cred_count; ++i) {
 	pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
     }
+
+    pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
 }
 
 
@@ -2080,7 +2087,7 @@ struct pjsua_media_config
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 3.
+     * Default: 5.
      */
     unsigned		quality;
 };
@@ -2099,7 +2106,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
-    cfg->quality = 3;
+    cfg->quality = 5;
 }
 
 

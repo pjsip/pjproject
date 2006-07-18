@@ -129,6 +129,106 @@ static pjsip_module pjsua_msg_logger =
 
 
 /*****************************************************************************
+ * Another simple module to handle incoming OPTIONS request
+ */
+
+/* Notification on incoming request */
+static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_tx_data *tdata;
+    pjsip_response_addr res_addr;
+    pjmedia_sdp_session *sdp;
+    const pjsip_hdr *cap_hdr;
+    pj_status_t status;
+
+    /* Only want to handle OPTIONS requests */
+    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+			 &pjsip_options_method) != 0)
+    {
+	return PJ_FALSE;
+    }
+
+    /* Create basic response. */
+    status = pjsip_endpt_create_response(pjsua_var.endpt, rdata, 200, NULL, 
+					 &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create OPTIONS response", status);
+	return PJ_TRUE;
+    }
+
+    /* Add Allow header */
+    cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ALLOW, NULL);
+    if (cap_hdr) {
+	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+    }
+
+    /* Add Accept header */
+    cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ACCEPT, NULL);
+    if (cap_hdr) {
+	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+    }
+
+    /* Add Supported header */
+    cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_SUPPORTED, NULL);
+    if (cap_hdr) {
+	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+    }
+
+    /* Add Allow-Events header from the evsub module */
+    cap_hdr = pjsip_evsub_get_allow_events_hdr(NULL);
+    if (cap_hdr) {
+	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+    }
+
+    /* Add User-Agent header */
+    if (pjsua_var.ua_cfg.user_agent.slen) {
+	const pj_str_t USER_AGENT = { "User-Agent", 10};
+	pjsip_hdr *h;
+
+	h = (pjsip_hdr*) pjsip_generic_string_hdr_create(tdata->pool,
+							 &USER_AGENT,
+							 &pjsua_var.ua_cfg.user_agent);
+	pjsip_msg_add_hdr(tdata->msg, h);
+    }
+
+    /* Add SDP body, using call0's RTP address */
+    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 1,
+				      &pjsua_var.calls[0].skinfo, &sdp);
+    if (status == PJ_SUCCESS) {
+	pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
+    }
+
+    /* Send response statelessly */
+    pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
+    status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, tdata, NULL, NULL);
+    if (status != PJ_SUCCESS)
+	pjsip_tx_data_dec_ref(tdata);
+
+    return PJ_TRUE;
+}
+
+
+/* The module instance. */
+static pjsip_module pjsua_options_handler = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-pjsua-options", 17 },	/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_APPLICATION,	/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &options_on_rx_request,		/* on_rx_request()	*/
+    NULL,				/* on_rx_response()	*/
+    NULL,				/* on_tx_request.	*/
+    NULL,				/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
+
+
+/*****************************************************************************
  * These two functions are the main callbacks registered to PJSIP stack
  * to receive SIP request and response messages that are outside any
  * dialogs and any transactions.
@@ -234,6 +334,12 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 	}
     }
 
+    /* Unregister OPTIONS handler if it's previously registered */
+    if (pjsua_options_handler.id >= 0) {
+	pjsip_endpt_unregister_module(pjsua_var.endpt, &pjsua_options_handler);
+	pjsua_options_handler.id = -1;
+    }
+
     /* Unregister msg logging if it's previously registered */
     if (pjsua_msg_logger.id >= 0) {
 	pjsip_endpt_unregister_module(pjsua_var.endpt, &pjsua_msg_logger);
@@ -244,6 +350,8 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     if (pjsua_var.log_cfg.msg_logging)
 	pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_msg_logger);
 
+    /* Register OPTIONS handler */
+    pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_options_handler);
 
     return PJ_SUCCESS;
 }
@@ -1023,6 +1131,18 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
 {
     pj_bool_t allow_body;
     const pjsip_hdr *hdr;
+
+    /* Always add User-Agent */
+    if (pjsua_var.ua_cfg.user_agent.slen && 
+	tdata->msg->type == PJSIP_REQUEST_MSG) 
+    {
+	const pj_str_t STR_USER_AGENT = { "User-Agent", 10 };
+	pjsip_hdr *h;
+	h = (pjsip_hdr*)pjsip_generic_string_hdr_create(tdata->pool, 
+							&STR_USER_AGENT, 
+							&pjsua_var.ua_cfg.user_agent);
+	pjsip_msg_add_hdr(tdata->msg, h);
+    }
 
     if (!msg_data)
 	return;

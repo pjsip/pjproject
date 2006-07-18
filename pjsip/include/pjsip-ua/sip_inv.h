@@ -615,6 +615,21 @@ PJ_DECL(pjsip_inv_session*) pjsip_tsx_get_inv_session(pjsip_transaction *tsx);
 PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 
 
+/**
+ * This is a utility function to create SIP body for SDP content.
+ *
+ * @param pool		Pool to allocate memory.
+ * @param sdp		SDP session to be put in the SIP message body.
+ * @param p_body	Pointer to receive SIP message body containing
+ *			the SDP session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_create_sdp_body(pj_pool_t *pool,
+					   pjmedia_sdp_session *sdp,
+					   pjsip_msg_body **p_body);
+
+
 PJ_END_DECL
 
 /**

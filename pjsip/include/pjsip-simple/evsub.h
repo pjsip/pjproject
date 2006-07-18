@@ -252,6 +252,18 @@ PJ_DECL(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 					       unsigned accept_cnt,
 					       const pj_str_t accept[]);
 
+/**
+ * Get the Allow-Events header. This header is built based on the packages
+ * that are registered to the evsub module.
+ *
+ * @param m		Pointer to event subscription module instance, or
+ *			NULL to use default instance (equal to 
+ *			#pjsip_evsub_instance()).
+ *
+ * @return		The Allow-Events header.
+ */
+PJ_DECL(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(pjsip_module *m);
+
 
 /**
  * Create client subscription session.

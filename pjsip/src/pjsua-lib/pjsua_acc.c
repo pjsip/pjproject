@@ -538,8 +538,10 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
 
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
+	pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
+    }
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create/send REGISTER", 
