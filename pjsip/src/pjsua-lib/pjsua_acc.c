@@ -71,46 +71,23 @@ static void copy_acc_config(pj_pool_t *pool,
 
 
 /*
- * Update account's real contact address.
- */
-static void update_acc_contact(unsigned acc_id,
-			       unsigned tp_id)
-{
-    pjsua_acc *acc = &pjsua_var.acc[acc_id];
-    struct transport_data *t = &pjsua_var.tpdata[tp_id];
-    char uri[80];
-
-    /* Transport must be valid */
-    pj_assert(t->data.ptr != NULL);
-    
-    /* Build URI for the account */
-    pj_ansi_sprintf(uri, "<sip:%.*s:%d;transport=%s>", 
-			 (int)t->local_name.host.slen,
-			 t->local_name.host.ptr,
-			 t->local_name.port,
-			 pjsip_transport_get_type_name(t->type));
-
-
-    pj_strdup2(pjsua_var.pool, &acc->real_contact, uri);
-}
-
-
-/*
  * Initialize a new account (after configuration is set).
  */
 static pj_status_t initialize_acc(unsigned acc_id)
 {
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
-    pjsip_uri *uri;
+    pjsip_name_addr *name_addr;
     pjsip_sip_uri *sip_uri, *sip_reg_uri;
     unsigned i;
 
     /* Need to parse local_uri to get the elements: */
 
-    uri = pjsip_parse_uri(pjsua_var.pool, acc_cfg->id.ptr,
-			  acc_cfg->id.slen, 0);
-    if (uri == NULL) {
+    name_addr = (pjsip_name_addr*)
+		    pjsip_parse_uri(pjsua_var.pool, acc_cfg->id.ptr,
+				    acc_cfg->id.slen, 
+				    PJSIP_PARSE_URI_AS_NAMEADDR);
+    if (name_addr == NULL) {
 	pjsua_perror(THIS_FILE, "Invalid local URI", 
 		     PJSIP_EINVALIDURI);
 	return PJSIP_EINVALIDURI;
@@ -118,8 +95,8 @@ static pj_status_t initialize_acc(unsigned acc_id)
 
     /* Local URI MUST be a SIP or SIPS: */
 
-    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
-	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
+    if (!PJSIP_URI_SCHEME_IS_SIP(name_addr) && 
+	!PJSIP_URI_SCHEME_IS_SIPS(name_addr)) 
     {
 	pjsua_perror(THIS_FILE, "Invalid local URI", 
 		     PJSIP_EINVALIDSCHEME);
@@ -128,7 +105,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 
 
     /* Get the SIP URI object: */
-    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(name_addr);
 
 
     /* Parse registrar URI, if any */
@@ -162,6 +139,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     /* Save the user and domain part. These will be used when finding an 
      * account for incoming requests.
      */
+    acc->display = name_addr->display;
     acc->user_part = sip_uri->user;
     acc->srv_domain = sip_uri->host;
     acc->srv_port = 0;
@@ -174,10 +152,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
     //if (acc_cfg->contact.slen == 0) {
     //	acc_cfg->contact = acc_cfg->id;
     //}
-
-    PJ_TODO(attach_account_to_transport);
-    if (pjsua_var.tpdata[0].data.ptr)
-	update_acc_contact(acc_id, 0);
 
     /* Build account route-set from outbound proxies and route set from 
      * account configuration.
@@ -376,6 +350,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 				      const pjsua_acc_config *cfg)
 {
     PJ_TODO(pjsua_acc_modify);
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(cfg);
     return PJ_EINVALIDOP;
 }
 
@@ -461,6 +437,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
+    pj_str_t contact;
     pj_status_t status;
 
     acc = &pjsua_var.acc[acc_id];
@@ -481,11 +458,20 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	return status;
     }
 
+    status = pjsua_acc_create_uac_contact( pjsua_var.pool, &contact,
+					   acc_id, &acc->cfg.reg_uri);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
+				" for registration", 
+		     status);
+	return status;
+    }
+
     status = pjsip_regc_init( acc->regc,
 			      &acc->cfg.reg_uri, 
 			      &acc->cfg.id, 
 			      &acc->cfg.id,
-			      1, &acc->real_contact, 
+			      1, &contact, 
 			      acc->cfg.reg_timeout);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -821,4 +807,177 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     PJSUA_UNLOCK();
     return pjsua_var.default_acc;
 }
+
+
+PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
+						  pj_str_t *contact,
+						  pjsua_acc_id acc_id,
+						  const pj_str_t *suri)
+{
+    pjsua_acc *acc;
+    pjsip_sip_uri *sip_uri;
+    pj_status_t status;
+    pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    pj_str_t local_addr;
+    unsigned flag;
+    int secure;
+    int local_port;
+    
+    acc = &pjsua_var.acc[acc_id];
+
+    /* If route-set is configured for the account, then URI is the 
+     * first entry of the route-set.
+     */
+    if (!pj_list_empty(&acc->route_set)) {
+	sip_uri = (pjsip_sip_uri*) acc->route_set.next->name_addr.uri;
+    } else {
+	pj_str_t tmp;
+	pjsip_uri *uri;
+
+	pj_strdup_with_null(pool, &tmp, suri);
+
+	uri = pjsip_parse_uri(pool, tmp.ptr, tmp.slen, 0);
+	if (uri == NULL)
+	    return PJSIP_EINVALIDURI;
+
+	/* For non-SIP scheme, route set should be configured */
+	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+	    return PJSIP_EINVALIDREQURI;
+
+	sip_uri = (pjsip_sip_uri*)uri;
+    }
+
+    /* Get transport type of the URI */
+    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri))
+	tp_type = PJSIP_TRANSPORT_TLS;
+    else if (sip_uri->transport_param.slen == 0) {
+	tp_type = PJSIP_TRANSPORT_UDP;
+    } else
+	tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
+    
+    if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
+	return PJSIP_EUNSUPTRANSPORT;
+
+    flag = pjsip_transport_get_flag_from_type(tp_type);
+    secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
+
+    /* Get local address suitable to send request from */
+    status = pjsip_tpmgr_find_local_addr(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+					 pool, tp_type, &local_addr, &local_port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create the contact header */
+    contact->ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+    contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
+				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     (int)acc->display.slen,
+				     acc->display.ptr,
+				     (acc->display.slen?" " : ""),
+				     (secure ? "sips" : "sip"),
+				     (int)acc->user_part.slen,
+				     acc->user_part.ptr,
+				     (acc->user_part.slen?"@":""),
+				     (int)local_addr.slen,
+				     local_addr.ptr,
+				     local_port,
+				     pjsip_transport_get_type_name(tp_type));
+
+    return PJ_SUCCESS;
+}
+
+
+
+PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
+						  pj_str_t *contact,
+						  pjsua_acc_id acc_id,
+						  pjsip_rx_data *rdata )
+{
+    /* 
+     *  Section 12.1.1, paragraph about using SIPS URI in Contact.
+     *  If the request that initiated the dialog contained a SIPS URI 
+     *  in the Request-URI or in the top Record-Route header field value, 
+     *  if there was any, or the Contact header field if there was no 
+     *  Record-Route header field, the Contact header field in the response
+     *  MUST be a SIPS URI.
+     */
+    pjsua_acc *acc;
+    pjsip_sip_uri *sip_uri;
+    pj_status_t status;
+    pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    pj_str_t local_addr;
+    unsigned flag;
+    int secure;
+    int local_port;
+    
+    acc = &pjsua_var.acc[acc_id];
+
+    /* If Record-Route is present, then URI is the top Record-Route. */
+    if (rdata->msg_info.record_route) {
+	sip_uri = (pjsip_sip_uri*) rdata->msg_info.record_route->name_addr.uri;
+    } else {
+	pjsip_contact_hdr *h_contact;
+	pjsip_uri *uri = NULL;
+
+	/* Otherwise URI is Contact URI */
+	h_contact = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+				       NULL);
+	if (h_contact)
+	    uri = pjsip_uri_get_uri(h_contact->uri);
+	
+
+	/* Or if Contact URI is not present, take the remote URI from
+	 * the From URI.
+	 */
+	if (uri == NULL)
+	    uri = pjsip_uri_get_uri(rdata->msg_info.from->uri);
+
+
+	/* Can only do sip/sips scheme at present. */
+	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+	    return PJSIP_EINVALIDREQURI;
+
+	sip_uri = (pjsip_sip_uri*)uri;
+    }
+
+    /* Get transport type of the URI */
+    if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri))
+	tp_type = PJSIP_TRANSPORT_TLS;
+    else if (sip_uri->transport_param.slen == 0) {
+	tp_type = PJSIP_TRANSPORT_UDP;
+    } else
+	tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
+    
+    if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
+	return PJSIP_EUNSUPTRANSPORT;
+
+    flag = pjsip_transport_get_flag_from_type(tp_type);
+    secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
+
+    /* Get local address suitable to send request from */
+    status = pjsip_tpmgr_find_local_addr(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+					 pool, tp_type, &local_addr, &local_port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create the contact header */
+    contact->ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+    contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
+				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     (int)acc->display.slen,
+				     acc->display.ptr,
+				     (acc->display.slen?" " : ""),
+				     (secure ? "sips" : "sip"),
+				     (int)acc->user_part.slen,
+				     acc->user_part.ptr,
+				     (acc->user_part.slen?"@":""),
+				     (int)local_addr.slen,
+				     local_addr.ptr,
+				     local_port,
+				     pjsip_transport_get_type_name(tp_type));
+
+    return PJ_SUCCESS;
+}
+
+
 

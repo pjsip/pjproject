@@ -191,6 +191,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     pjsua_acc *acc;
     pjsua_call *call;
     unsigned call_id;
+    pj_str_t contact;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -232,9 +233,18 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Reset first response time */
     call->res_time.sec = 0;
 
+    /* Create suitable Contact header */
+    status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+					  acc_id, dest_uri);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	PJSUA_UNLOCK();
+	return status;
+    }
+
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
-				   &acc->cfg.id, &acc->real_contact,
+				   &acc->cfg.id, &contact,
 				   dest_uri, dest_uri, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
@@ -345,6 +355,7 @@ on_error:
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 {
+    pj_str_t contact;
     pjsip_dialog *dlg = pjsip_rdata_get_dlg(rdata);
     pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
     pjsip_msg *msg = rdata->msg_info.msg;
@@ -439,10 +450,19 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     acc_id = pjsua_acc_find_for_incoming(rdata);
 
+    /* Get suitable Contact header */
+    status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
+					  acc_id, rdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+				      NULL, NULL);
+	return PJ_TRUE;
+    }
+
     /* Create dialog: */
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &pjsua_var.acc[acc_id].real_contact, 
-				   &dlg);
+				   &contact, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
@@ -921,6 +941,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     }
 
     /* Create SDP */
+    PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
     status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, call->inv->pool, 
 				       1, &call->skinfo, &sdp);
     if (status != PJ_SUCCESS) {

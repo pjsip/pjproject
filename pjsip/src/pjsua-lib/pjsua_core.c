@@ -986,6 +986,7 @@ PJ_DEF(pj_status_t) pjsua_transport_set_enable( pjsua_transport_id id,
 
     /* To be done!! */
     PJ_TODO(pjsua_transport_set_enable);
+    PJ_UNUSED_ARG(enabled);
 
     return PJ_EINVALIDOP;
 }

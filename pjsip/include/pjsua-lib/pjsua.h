@@ -1303,6 +1303,41 @@ PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url);
 PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata);
 
 
+/**
+ * Create a suitable URI to be put as Contact based on the specified
+ * target URI for the specified account.
+ *
+ * @param pool		Pool to allocate memory for the string.
+ * @param contact	The string where the Contact URI will be stored.
+ * @param acc_id	Account ID.
+ * @param uri		Destination URI of the request.
+ *
+ * @return		PJ_SUCCESS on success, other on error.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
+						   pj_str_t *contact,
+						   pjsua_acc_id acc_id,
+						   const pj_str_t *uri);
+							   
+
+
+/**
+ * Create a suitable URI to be put as Contact based on the information
+ * in the incoming request.
+ *
+ * @param pool		Pool to allocate memory for the string.
+ * @param contact	The string where the Contact URI will be stored.
+ * @param acc_id	Account ID.
+ * @param rdata		Incoming request.
+ *
+ * @return		PJ_SUCCESS on success, other on error.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
+						   pj_str_t *contact,
+						   pjsua_acc_id acc_id,
+						   pjsip_rx_data *rdata );
+							   
+
 
 /**
  * @}

@@ -81,6 +81,13 @@ struct pjsip_tpmgr
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
 };
 
+/* Key for looking up hash table */
+struct transport_key
+{
+    pjsip_transport_type_e  type;
+    pj_sockaddr		    addr;
+};
+
 /*****************************************************************************
  *
  * GENERAL TRANSPORT (NAMES, TYPES, ETC.)
@@ -817,6 +824,76 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+
+
+/*
+ * Find out the appropriate local address info (IP address and port) to
+ * advertise in Contact header based on the remote address to be 
+ * contacted. The local address info would be the address name of the
+ * transport or listener which will be used to send the request.
+ *
+ * In this implementation, it will only select the transport based on
+ * the transport type in the request.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
+						 pj_pool_t *pool,
+						 pjsip_transport_type_e type,
+						 pj_str_t *ip_addr,
+						 int *port)
+{
+    pj_status_t status = PJSIP_EUNSUPTRANSPORT;
+    unsigned flag;
+
+    /* Sanity checks */
+    PJ_ASSERT_RETURN(tpmgr && pool && ip_addr && port, PJ_EINVAL);
+
+    ip_addr->slen = 0;
+    *port = 0;
+
+    flag = pjsip_transport_get_flag_from_type(type);
+
+    if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
+	
+	pj_sockaddr_in remote;
+	pjsip_transport *tp;
+
+	pj_sockaddr_in_init(&remote, NULL, 0);
+	status = pjsip_tpmgr_acquire_transport(tpmgr, type, &remote,
+					       sizeof(remote), &tp);
+
+	if (status == PJ_SUCCESS) {
+	    pj_strdup(pool, ip_addr, &tp->local_name.host);
+	    *port = tp->local_name.port;
+	    status = PJ_SUCCESS;
+
+	    pjsip_transport_dec_ref(tp);
+	}
+
+    } else {
+	/* For connection oriented transport, enum the factories */
+	pjsip_tpfactory *f;
+
+	pj_lock_acquire(tpmgr->lock);
+
+	f = tpmgr->factory_list.next;
+	while (f != &tpmgr->factory_list) {
+	    if (f->type == type)
+		break;
+	    f = f->next;
+	}
+
+	if (f != &tpmgr->factory_list) {
+	    pj_strdup(pool, ip_addr, &f->addr_name.host);
+	    *port = f->addr_name.port;
+	    status = PJ_SUCCESS;
+	}
+	pj_lock_release(tpmgr->lock);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * pjsip_tpmgr_destroy()
  *
@@ -1061,11 +1138,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						  int addr_len,
 						  pjsip_transport **tp)
 {
-    struct transport_key
-    {
-	pjsip_transport_type_e	type;
-	pj_sockaddr		addr;
-    } key;
+    struct transport_key key;
     int key_len;
     pjsip_transport *transport;
     pjsip_tpfactory *factory;

@@ -79,8 +79,8 @@ typedef struct pjsua_acc
     pj_bool_t	     valid;	    /**< Is this account valid?		*/
 
     int		     index;	    /**< Index in accounts array.	*/
+    pj_str_t	     display;	    /**< Display name, if any.		*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
-    pj_str_t	     real_contact;  /**< Real contact address.		*/
 
     pj_str_t	     srv_domain;    /**< Host part of reg server.	*/
     int		     srv_port;	    /**< Port number of reg server.	*/

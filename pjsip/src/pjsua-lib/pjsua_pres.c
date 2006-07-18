@@ -440,6 +440,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 {
     int acc_id;
     pjsua_acc *acc;
+    pj_str_t contact;
     pjsip_method *req_method = &rdata->msg_info.msg->line.req.method;
     pjsua_srv_pres *uapres;
     pjsip_evsub *sub;
@@ -463,10 +464,18 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     PJ_LOG(4,(THIS_FILE, "Creating server subscription, using account %d",
 	      acc_id));
     
+    /* Create suitable Contact header */
+    status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
+					  acc_id, rdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
     /* Create UAS dialog: */
     status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
-				  &acc->real_contact,
-				  &dlg);
+				  &contact, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to create UAS dialog for subscription", 
@@ -761,6 +770,7 @@ static void subscribe_buddy_presence(unsigned index)
     pjsua_buddy *buddy;
     int acc_id;
     pjsua_acc *acc;
+    pj_str_t contact;
     pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
@@ -773,10 +783,18 @@ static void subscribe_buddy_presence(unsigned index)
     PJ_LOG(4,(THIS_FILE, "Using account %d for buddy %d subscription",
 			 acc_id, index));
 
+    /* Generate suitable Contact header */
+    status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+					  acc_id, &buddy->uri);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	return;
+    }
+
     /* Create UAC dialog */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				   &acc->cfg.id,
-				   &acc->real_contact,
+				   &contact,
 				   &buddy->uri,
 				   NULL, &dlg);
     if (status != PJ_SUCCESS) {

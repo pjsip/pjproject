@@ -359,24 +359,27 @@ typedef struct pjsip_name_addr
 /**
  * Create new SIP URL and initialize all fields with zero or NULL.
  * @param pool	    The pool.
- * @param secure    Tlag to indicate whether secure transport should be used.
+ * @param secure    Flag to indicate whether secure transport should be used.
  * @return SIP URL.
  */
-PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, int secure );
+PJ_DECL(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, 
+					      pj_bool_t secure );
 
 /**
- * Create new SIPS URL and initialize all fields with zero or NULL.
- * @param pool	    The pool.
- * @return	    SIPS URL.
+ * Change the SIP URI scheme to sip or sips based on the secure flag.
+ * This would not change anything except the scheme.
+ * @param uri	    The URI
+ * @param secure    Non-zero if sips is wanted.
  */
-PJ_DECL(pjsip_sip_uri*) pjsip_sips_uri_create( pj_pool_t *pool );
+PJ_DECL(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *uri, 
+				        pj_bool_t secure );
 
 /**
  * Initialize SIP URL (all fields are set to NULL or zero).
  * @param url	    The URL.
  * @param secure    Create sips URI?
  */
-PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, int secure);
+PJ_DECL(void)  pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure);
 
 /**
  * Perform full assignment to the SIP URL.

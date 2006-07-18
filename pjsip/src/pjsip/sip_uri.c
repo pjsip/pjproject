@@ -206,16 +206,23 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
     return name->uri;
 }
 
-PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, int secure)
+PJ_DEF(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *url, 
+				       pj_bool_t secure )
+{
+    url->vptr = secure ? &sips_url_vptr : &sip_url_vptr;
+}
+
+PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure)
 {
     pj_bzero(url, sizeof(*url));
     url->ttl_param = -1;
-    url->vptr = secure ? &sips_url_vptr : &sip_url_vptr;
+    pjsip_sip_uri_set_secure(url, secure);
     pj_list_init(&url->other_param);
     pj_list_init(&url->header_param);
 }
 
-PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, int secure )
+PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, 
+					     pj_bool_t secure )
 {
     pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
     pjsip_sip_uri_init(url, secure);

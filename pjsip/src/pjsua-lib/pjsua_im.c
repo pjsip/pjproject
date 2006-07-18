@@ -417,6 +417,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     const pj_str_t STR_CONTACT = { "Contact", 7 };
     pjsip_media_type media_type;
     pjsua_im_data *im_data;
+    pj_str_t contact;
     pj_status_t status;
 
     /* To and message body must be specified. */
@@ -437,10 +438,16 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
     /* Add contact. */
+    status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
-					&STR_CONTACT,
-					&pjsua_var.acc[acc_id].real_contact));
+					&STR_CONTACT, &contact));
 
     /* Create IM data to keep message details and give it back to
      * application on the callback
@@ -500,6 +507,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     const pj_str_t STR_CONTACT = { "Contact", 7 };
     pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
+    pj_str_t contact;
     pj_status_t status;
 
     /* Create request. */
@@ -518,10 +526,16 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
 
 
     /* Add contact. */
+    status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 	pjsip_generic_string_hdr_create(tdata->pool, 
-					&STR_CONTACT,
-					&pjsua_var.acc[acc_id].real_contact));
+					&STR_CONTACT, &contact));
 
 
     /* Create "application/im-iscomposing+xml" msg body. */

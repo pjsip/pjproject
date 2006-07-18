@@ -62,7 +62,9 @@ enum pjsip_transport_flags_e
 {
     PJSIP_TRANSPORT_RELIABLE	    = 1,    /**< Transport is reliable.	    */
     PJSIP_TRANSPORT_SECURE	    = 2,    /**< Transport is secure.	    */
-    PJSIP_TRANSPORT_DATAGRAM	    = 4,    /**< Datagram based transport.  */
+    PJSIP_TRANSPORT_DATAGRAM	    = 4,    /**< Datagram based transport.  
+					         (it's also assumed to be 
+						 connectionless)	    */
 };
 
 /**
@@ -783,6 +785,30 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					 pj_status_t (*tx_cb)(pjsip_endpoint*,
 							      pjsip_tx_data*),
 					 pjsip_tpmgr **p_mgr);
+
+
+/**
+ * Find out the appropriate local address info (IP address and port) to
+ * advertise in Contact header based on the remote address to be 
+ * contacted. The local address info would be the address name of the
+ * transport or listener which will be used to send the request.
+ *
+ * In this implementation, it will only select the transport based on
+ * the transport type in the request.
+ *
+ * @param tpmgr	    The transport manager.
+ * @param pool	    Pool to allocate memory for the IP address.
+ * @param h	    Destination address to contact.
+ * @param ip_addr   Pointer to receive the IP address.
+ * @param port	    Pointer to receive the port number.
+ *
+ * @return	    PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
+						  pj_pool_t *pool,
+						  pjsip_transport_type_e type,
+						  pj_str_t *ip_addr,
+						  int *port);
 
 
 /**
