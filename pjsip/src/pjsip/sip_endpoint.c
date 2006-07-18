@@ -282,6 +282,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
 
 on_return:
     pj_rwmutex_unlock_write(endpt->mod_mutex);
+
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(3,(THIS_FILE, "Module \"%.*s\" can not be unregistered: %s",
+		  (int)mod->name.slen, mod->name.ptr, errmsg));
+    }
+
     return status;
 }
 
@@ -526,8 +535,11 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
 
     /* Unregister modules. */
-    while ((mod=endpt->module_list.prev) != &endpt->module_list) {
+    mod = endpt->module_list.prev;
+    while (mod != &endpt->module_list) {
+	pjsip_module *prev = mod->prev;
 	pjsip_endpt_unregister_module(endpt, mod);
+	mod = prev;
     }
 
     /* Shutdown and destroy all transports. */
@@ -595,6 +607,7 @@ PJ_DEF(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt, pj_pool_t *pool )
      */
     pj_pool_release( pool );
 
+    PJ_UNUSED_ARG(endpt);
     /*
     pj_mutex_unlock(endpt->mutex);
      */

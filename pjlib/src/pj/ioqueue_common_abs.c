@@ -209,8 +209,8 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	{
 	  int value;
 	  socklen_t vallen = sizeof(value);
-	  int gs_rc = getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
-                               &value, &vallen);
+	  int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
+					 &value, &vallen);
 	  if (gs_rc != 0) {
 	    /* Argh!! What to do now??? 
 	     * Just indicate that the socket is connected. The
@@ -524,8 +524,20 @@ void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
     pj_mutex_unlock(h->mutex);
 
     /* Call callback. */
-    if (h->cb.on_connect_complete && !IS_CLOSING(h))
-	(*h->cb.on_connect_complete)(h, -1);
+    if (h->cb.on_connect_complete && !IS_CLOSING(h)) {
+	pj_status_t status = -1;
+#if (defined(PJ_HAS_SO_ERROR) && PJ_HAS_SO_ERROR!=0)
+	int value;
+	socklen_t vallen = sizeof(value);
+	int gs_rc = pj_sock_getsockopt(h->fd, SOL_SOCKET, SO_ERROR, 
+				       &value, &vallen);
+	if (gs_rc == 0) {
+	    status = PJ_RETURN_OS_ERROR(value);
+	}
+#endif
+
+	(*h->cb.on_connect_complete)(h, status);
+    }
 }
 
 /*

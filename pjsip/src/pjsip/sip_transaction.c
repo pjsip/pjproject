@@ -648,6 +648,15 @@ static pj_status_t mod_tsx_layer_stop(void)
  */
 static pj_status_t mod_tsx_layer_unload(void)
 {
+    /* Only self destroy when there's no transaction in the table.
+     * Transaction may refuse to destroy when it has pending
+     * transmission. If we destroy the module now, application will
+     * crash when the pending transaction finally got error response
+     * from transport and when it tries to unregister itself.
+     */
+    if (pj_hash_count(mod_tsx_layer.htable) != 0)
+	return PJ_EBUSY;
+
     /* Destroy mutex. */
     pj_mutex_destroy(mod_tsx_layer.mutex);
 
@@ -927,6 +936,7 @@ static void tsx_destroy( pjsip_transaction *tsx )
     /* Refuse to destroy transaction if it has pending resolving. */
     if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 	tsx->transport_flag |= TSX_HAS_PENDING_DESTROY;
+	tsx->tsx_user = NULL;
 	PJ_LOG(4,(tsx->obj_name, "Will destroy later because transport is "
 				 "in progress"));
 	return;

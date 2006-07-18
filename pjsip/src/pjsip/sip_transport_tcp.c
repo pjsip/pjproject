@@ -1240,15 +1240,6 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
 
     tcp = pj_ioqueue_get_user_data(key);
 
-    PJ_LOG(4,(tcp->base.obj_name, 
-	      "TCP transport %.*s:%d is connected to %.*s:%d",
-	      (int)tcp->base.local_name.host.slen,
-	      tcp->base.local_name.host.ptr,
-	      tcp->base.local_name.port,
-	      (int)tcp->base.remote_name.host.slen,
-	      tcp->base.remote_name.host.ptr,
-	      tcp->base.remote_name.port));
-
     /* Mark that pending connect() operation has completed. */
     tcp->has_pending_connect = PJ_FALSE;
 
@@ -1256,6 +1247,19 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     if (status != PJ_SUCCESS) {
 
 	tcp_perror(tcp->base.obj_name, "TCP connect() error", status);
+
+	/* Cancel all delayed transmits */
+	while (!pj_list_empty(&tcp->delayed_list)) {
+	    struct delayed_tdata *pending_tx;
+	    pj_ioqueue_op_key_t *op_key;
+
+	    pending_tx = tcp->delayed_list.next;
+	    pj_list_erase(pending_tx);
+
+	    op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	    on_write_complete(tcp->key, op_key, -status);
+	}
 
 	/* We can not destroy the transport since high level objects may
 	 * still keep reference to this transport. So we can only 
@@ -1266,6 +1270,16 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
 	pjsip_transport_shutdown(&tcp->base);
 	return;
     }
+
+    PJ_LOG(4,(tcp->base.obj_name, 
+	      "TCP transport %.*s:%d is connected to %.*s:%d",
+	      (int)tcp->base.local_name.host.slen,
+	      tcp->base.local_name.host.ptr,
+	      tcp->base.local_name.port,
+	      (int)tcp->base.remote_name.host.slen,
+	      tcp->base.remote_name.host.ptr,
+	      tcp->base.remote_name.port));
+
 
     /* Update (again) local address, just in case local address currently
      * set is different now that the socket is connected (could happen

@@ -73,7 +73,7 @@
 /* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
  * the status of non-blocking connect() operation.
  */
-#define PJ_HAS_SO_ERROR             0
+#define PJ_HAS_SO_ERROR             1
 
 /* This value specifies the value set in errno by the OS when a non-blocking
  * socket recv() or send() can not return immediately.
