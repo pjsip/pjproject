@@ -223,7 +223,7 @@
 /* Transaction related constants. */
 #define PJSIP_POOL_TSX_LAYER_LEN	4000
 #define PJSIP_POOL_TSX_LAYER_INC	4000
-#define PJSIP_POOL_TSX_LEN		1536 //768
+#define PJSIP_POOL_TSX_LEN		1536 /* 768 */
 #define PJSIP_POOL_TSX_INC		256
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
@@ -250,9 +250,6 @@
 /*****************************************************************************
  *  Default timeout settings, in miliseconds. 
  */
-
-//#define PJSIP_T1_TIMEOUT	15000
-//#define PJSIP_T2_TIMEOUT	60000
 
 /** Transaction T1 timeout value. */
 #if !defined(PJSIP_T1_TIMEOUT)
