@@ -624,8 +624,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_MAX_CALLS:
 	    cfg->cfg.max_calls = my_atoi(pj_optarg);
-	    if (cfg->cfg.max_calls < 1 || cfg->cfg.max_calls > 255) {
-		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-255)"));
+	    if (cfg->cfg.max_calls < 1 || cfg->cfg.max_calls > PJSUA_MAX_CALLS) {
+		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-%d)",
+			  PJSUA_MAX_CALLS));
 		return -1;
 	    }
 	    break;
@@ -1315,6 +1316,9 @@ static void keystroke_help(void)
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
+
+    i = pjsua_call_get_count();
+    printf("You have %d active call%s\n", i, (i>1?"s":""));
 }
 
 
