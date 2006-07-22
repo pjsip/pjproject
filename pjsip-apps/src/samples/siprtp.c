@@ -717,9 +717,11 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 	    call->d_timer.id = 0;
 	}
 
-	PJ_LOG(3,(THIS_FILE, "Call #%d disconnected. Reason=%s",
+	PJ_LOG(3,(THIS_FILE, "Call #%d disconnected. Reason=%d (%.*s)",
 		  call->index,
-		  pjsip_get_status_text(inv->cause)->ptr));
+		  inv->cause,
+		  (int)inv->cause_text.slen,
+		  inv->cause_text.ptr));
 	PJ_LOG(3,(THIS_FILE, "Call #%d statistics:", call->index));
 	print_call(call->index);
 
@@ -1144,7 +1146,7 @@ static int media_thread(void *arg)
     boost_priority();
 
     /* Let things settle */
-    pj_thread_sleep(1000);
+    pj_thread_sleep(100);
 
     msec_interval = strm->samples_per_frame * 1000 / strm->clock_rate;
     pj_get_timestamp_freq(&freq);
@@ -1388,6 +1390,308 @@ static void destroy_call_media(unsigned call_index)
 /*****************************************************************************
  * USER INTERFACE STUFFS
  */
+
+static void call_get_duration(int call_index, pj_time_val *dur)
+{
+    struct call *call = &app.call[call_index];
+    pjsip_inv_session *inv;
+
+    dur->sec = dur->msec = 0;
+
+    if (!call)
+	return;
+
+    inv = call->inv;
+    if (!inv)
+	return;
+
+    if (inv->state >= PJSIP_INV_STATE_CONFIRMED && call->connect_time.sec) {
+
+	pj_gettimeofday(dur);
+	PJ_TIME_VAL_SUB((*dur), call->connect_time);
+    }
+}
+
+
+static const char *good_number(char *buf, pj_int32_t val)
+{
+    if (val < 1000) {
+	pj_ansi_sprintf(buf, "%d", val);
+    } else if (val < 1000000) {
+	pj_ansi_sprintf(buf, "%d.%02dK", 
+			val / 1000,
+			(val % 1000) / 100);
+    } else {
+	pj_ansi_sprintf(buf, "%d.%02dM", 
+			val / 1000000,
+			(val % 1000000) / 10000);
+    }
+
+    return buf;
+}
+
+
+
+static void print_avg_stat(void)
+{
+#define MIN_(var,val)	   if ((int)val < (int)var) var = val
+#define MAX_(var,val)	   if ((int)val > (int)var) var = val
+#define AVG_(var,val)	   var = ( ((var * count) + val) / (count+1) )
+#define BIGVAL		    0x7FFFFFFFL
+    struct stat_entry
+    {
+	int min, avg, max;
+    };
+
+    struct stat_entry call_dur, call_pdd;
+    pjmedia_rtcp_stat min_stat, avg_stat, max_stat;
+
+    char srx_min[16], srx_avg[16], srx_max[16];
+    char brx_min[16], brx_avg[16], brx_max[16];
+    char stx_min[16], stx_avg[16], stx_max[16];
+    char btx_min[16], btx_avg[16], btx_max[16];
+
+
+    unsigned i, count;
+
+    pj_bzero(&call_dur, sizeof(call_dur)); 
+    call_dur.min = BIGVAL;
+
+    pj_bzero(&call_pdd, sizeof(call_pdd)); 
+    call_pdd.min = BIGVAL;
+
+    pj_bzero(&min_stat, sizeof(min_stat));
+    min_stat.rx.pkt = min_stat.tx.pkt = BIGVAL;
+    min_stat.rx.bytes = min_stat.tx.bytes = BIGVAL;
+    min_stat.rx.loss = min_stat.tx.loss = BIGVAL;
+    min_stat.rx.dup = min_stat.tx.dup = BIGVAL;
+    min_stat.rx.reorder = min_stat.tx.reorder = BIGVAL;
+    min_stat.rx.jitter.min = min_stat.tx.jitter.min = BIGVAL;
+    min_stat.rtt.min = BIGVAL;
+
+    pj_bzero(&avg_stat, sizeof(avg_stat));
+    pj_bzero(&max_stat, sizeof(max_stat));
+
+
+    for (i=0, count=0; i<app.max_calls; ++i) {
+
+	struct call *call = &app.call[i];
+	struct media_stream *audio = &call->media[0];
+	pj_time_val dur;
+	unsigned msec_dur;
+
+	if (call->inv == NULL || 
+	    call->inv->state < PJSIP_INV_STATE_CONFIRMED ||
+	    call->connect_time.sec == 0) 
+	{
+	    continue;
+	}
+
+	/* Duration */
+	call_get_duration(i, &dur);
+	msec_dur = PJ_TIME_VAL_MSEC(dur);
+
+	MIN_(call_dur.min, msec_dur);
+	MAX_(call_dur.max, msec_dur);
+	AVG_(call_dur.avg, msec_dur);
+
+	/* Connect delay */
+	if (call->connect_time.sec) {
+	    pj_time_val t = call->connect_time;
+	    PJ_TIME_VAL_SUB(t, call->start_time);
+	    msec_dur = PJ_TIME_VAL_MSEC(t);
+	} else {
+	    msec_dur = 10;
+	}
+
+	MIN_(call_pdd.min, msec_dur);
+	MAX_(call_pdd.max, msec_dur);
+	AVG_(call_pdd.avg, msec_dur);
+
+	/* RX Statistisc: */
+
+	/* Packets */
+	MIN_(min_stat.rx.pkt, audio->rtcp.stat.rx.pkt);
+	MAX_(max_stat.rx.pkt, audio->rtcp.stat.rx.pkt);
+	AVG_(avg_stat.rx.pkt, audio->rtcp.stat.rx.pkt);
+
+	/* Bytes */
+	MIN_(min_stat.rx.bytes, audio->rtcp.stat.rx.bytes);
+	MAX_(max_stat.rx.bytes, audio->rtcp.stat.rx.bytes);
+	AVG_(avg_stat.rx.bytes, audio->rtcp.stat.rx.bytes);
+
+
+	/* Packet loss */
+	MIN_(min_stat.rx.loss, audio->rtcp.stat.rx.loss);
+	MAX_(max_stat.rx.loss, audio->rtcp.stat.rx.loss);
+	AVG_(avg_stat.rx.loss, audio->rtcp.stat.rx.loss);
+
+	/* Packet dup */
+	MIN_(min_stat.rx.dup, audio->rtcp.stat.rx.dup);
+	MAX_(max_stat.rx.dup, audio->rtcp.stat.rx.dup);
+	AVG_(avg_stat.rx.dup, audio->rtcp.stat.rx.dup);
+
+	/* Packet reorder */
+	MIN_(min_stat.rx.reorder, audio->rtcp.stat.rx.reorder);
+	MAX_(max_stat.rx.reorder, audio->rtcp.stat.rx.reorder);
+	AVG_(avg_stat.rx.reorder, audio->rtcp.stat.rx.reorder);
+
+	/* Jitter  */
+	MIN_(min_stat.rx.jitter.min, audio->rtcp.stat.rx.jitter.min);
+	MAX_(max_stat.rx.jitter.max, audio->rtcp.stat.rx.jitter.max);
+	AVG_(avg_stat.rx.jitter.avg, audio->rtcp.stat.rx.jitter.avg);
+
+
+	/* TX Statistisc: */
+
+	/* Packets */
+	MIN_(min_stat.tx.pkt, audio->rtcp.stat.tx.pkt);
+	MAX_(max_stat.tx.pkt, audio->rtcp.stat.tx.pkt);
+	AVG_(avg_stat.tx.pkt, audio->rtcp.stat.tx.pkt);
+
+	/* Bytes */
+	MIN_(min_stat.tx.bytes, audio->rtcp.stat.tx.bytes);
+	MAX_(max_stat.tx.bytes, audio->rtcp.stat.tx.bytes);
+	AVG_(avg_stat.tx.bytes, audio->rtcp.stat.tx.bytes);
+
+	/* Packet loss */
+	MIN_(min_stat.tx.loss, audio->rtcp.stat.tx.loss);
+	MAX_(max_stat.tx.loss, audio->rtcp.stat.tx.loss);
+	AVG_(avg_stat.tx.loss, audio->rtcp.stat.tx.loss);
+
+	/* Packet dup */
+	MIN_(min_stat.tx.dup, audio->rtcp.stat.tx.dup);
+	MAX_(max_stat.tx.dup, audio->rtcp.stat.tx.dup);
+	AVG_(avg_stat.tx.dup, audio->rtcp.stat.tx.dup);
+
+	/* Packet reorder */
+	MIN_(min_stat.tx.reorder, audio->rtcp.stat.tx.reorder);
+	MAX_(max_stat.tx.reorder, audio->rtcp.stat.tx.reorder);
+	AVG_(avg_stat.tx.reorder, audio->rtcp.stat.tx.reorder);
+
+	/* Jitter  */
+	MIN_(min_stat.tx.jitter.min, audio->rtcp.stat.tx.jitter.min);
+	MAX_(max_stat.tx.jitter.max, audio->rtcp.stat.tx.jitter.max);
+	AVG_(avg_stat.tx.jitter.avg, audio->rtcp.stat.tx.jitter.avg);
+
+
+	/* RTT */
+	MIN_(min_stat.rtt.min, audio->rtcp.stat.rtt.min);
+	MAX_(max_stat.rtt.max, audio->rtcp.stat.rtt.max);
+	AVG_(avg_stat.rtt.avg, audio->rtcp.stat.rtt.avg);
+
+	++count;
+    }
+
+    if (count == 0) {
+	puts("No active calls");
+	return;
+    }
+
+    printf("Total %d call(s) active.\n"
+	   "                    Average Statistics\n"
+	   "                    min     avg     max \n"
+	   "                -----------------------\n"
+	   " call duration: %7d %7d %7d %s\n"
+	   " connect delay: %7d %7d %7d %s\n"
+	   " RX stat:\n"
+	   "       packets: %7s %7s %7s %s\n"
+	   "       payload: %7s %7s %7s %s\n"
+	   "          loss: %7d %7d %7d %s\n"
+	   "  percent loss: %7.3f %7.3f %7.3f %s\n"
+	   "           dup: %7d %7d %7d %s\n"
+	   "       reorder: %7d %7d %7d %s\n"
+	   "        jitter: %7.3f %7.3f %7.3f %s\n"
+	   " TX stat:\n"
+	   "       packets: %7s %7s %7s %s\n"
+	   "       payload: %7s %7s %7s %s\n"
+	   "          loss: %7d %7d %7d %s\n"
+	   "  percent loss: %7.3f %7.3f %7.3f %s\n"
+	   "           dup: %7d %7d %7d %s\n"
+	   "       reorder: %7d %7d %7d %s\n"
+	   "        jitter: %7.3f %7.3f %7.3f %s\n"
+	   " RTT          : %7.3f %7.3f %7.3f %s\n"
+	   ,
+	   count,
+	   call_dur.min/1000, call_dur.avg/1000, call_dur.max/1000, 
+	   "seconds",
+
+	   call_pdd.min, call_pdd.avg, call_pdd.max, 
+	   "ms",
+
+	   /* rx */
+
+	   good_number(srx_min, min_stat.rx.pkt),
+	   good_number(srx_avg, avg_stat.rx.pkt),
+	   good_number(srx_max, max_stat.rx.pkt),
+	   "packets",
+
+	   good_number(brx_min, min_stat.rx.bytes),
+	   good_number(brx_avg, avg_stat.rx.bytes),
+	   good_number(brx_max, max_stat.rx.bytes),
+	   "bytes",
+
+	   min_stat.rx.loss, avg_stat.rx.loss, max_stat.rx.loss,
+	   "packets",
+	   
+	   min_stat.rx.loss*100.0/(min_stat.rx.pkt+min_stat.rx.loss),
+	   avg_stat.rx.loss*100.0/(avg_stat.rx.pkt+avg_stat.rx.loss),
+	   max_stat.rx.loss*100.0/(max_stat.rx.pkt+max_stat.rx.loss),
+	   "%",
+
+
+	   min_stat.rx.dup, avg_stat.rx.dup, max_stat.rx.dup,
+	   "packets",
+
+	   min_stat.rx.reorder, avg_stat.rx.reorder, max_stat.rx.reorder,
+	   "packets",
+
+	   min_stat.rx.jitter.min/1000.0, 
+	   avg_stat.rx.jitter.avg/1000.0, 
+	   max_stat.rx.jitter.max/1000.0,
+	   "ms",
+	
+	   /* tx */
+
+	   good_number(stx_min, min_stat.tx.pkt),
+	   good_number(stx_avg, avg_stat.tx.pkt),
+	   good_number(stx_max, max_stat.tx.pkt),
+	   "packets",
+
+	   good_number(btx_min, min_stat.tx.bytes),
+	   good_number(btx_avg, avg_stat.tx.bytes),
+	   good_number(btx_max, max_stat.tx.bytes),
+	   "bytes",
+
+	   min_stat.tx.loss, avg_stat.tx.loss, max_stat.tx.loss,
+	   "packets",
+	   
+	   min_stat.rx.loss*100.0/(min_stat.rx.pkt+min_stat.rx.loss),
+	   avg_stat.rx.loss*100.0/(avg_stat.rx.pkt+avg_stat.rx.loss),
+	   max_stat.rx.loss*100.0/(max_stat.rx.pkt+max_stat.rx.loss),
+	   "%",
+
+	   min_stat.tx.dup, avg_stat.tx.dup, max_stat.tx.dup,
+	   "packets",
+
+	   min_stat.tx.reorder, avg_stat.tx.reorder, max_stat.tx.reorder,
+	   "packets",
+
+	   min_stat.tx.jitter.min/1000.0, 
+	   avg_stat.tx.jitter.avg/1000.0, 
+	   max_stat.tx.jitter.max/1000.0,
+	   "ms",
+
+	   /* rtt */
+	   min_stat.rtt.min/1000.0, 
+	   avg_stat.rtt.avg/1000.0, 
+	   max_stat.rtt.max/1000.0,
+	   "ms"
+	   );
+
+}
+
+
 #include "siprtp_report.c"
 
 
@@ -1454,6 +1758,7 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
 static const char *MENU =
 "\n"
 "Enter menu character:\n"
+"  s    Summary\n"
 "  l    List all calls\n"
 "  h    Hangup a call\n"
 "  H    Hangup all calls\n"
@@ -1474,6 +1779,11 @@ static void console_main()
 	fgets(input1, sizeof(input1), stdin);
 
 	switch (input1[0]) {
+
+	case 's':
+	    print_avg_stat();
+	    break;
+
 	case 'l':
 	    list_calls();
 	    break;

@@ -26,23 +26,6 @@
  * functionality (such as writing to XML file).
  */
 
-static const char *good_number(char *buf, pj_int32_t val)
-{
-    if (val < 1000) {
-	pj_ansi_sprintf(buf, "%d", val);
-    } else if (val < 1000000) {
-	pj_ansi_sprintf(buf, "%d.%dK", 
-			val / 1000,
-			(val % 1000) / 100);
-    } else {
-	pj_ansi_sprintf(buf, "%d.%02dM", 
-			val / 1000000,
-			(val % 1000000) / 10000);
-    }
-
-    return buf;
-}
-
 
 static void print_call(int call_index)
 {
@@ -54,7 +37,12 @@ static void print_call(int call_index)
     char userinfo[128];
     char duration[80], last_update[80];
     char bps[16], ipbps[16], packets[16], bytes[16], ipbytes[16];
+    unsigned decor;
     pj_time_val now;
+
+
+    decor = pj_log_get_decor();
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
 
     pj_gettimeofday(&now);
 
@@ -79,8 +67,10 @@ static void print_call(int call_index)
 
 
     /* Call number and state */
-    printf("Call #%d: %s%s\n", call_index, pjsip_inv_state_name(inv->state), 
-			       duration);
+    PJ_LOG(3, (THIS_FILE,
+	      "Call #%d: %s%s", 
+	      call_index, pjsip_inv_state_name(inv->state), 
+	      duration));
 
 
 
@@ -91,12 +81,13 @@ static void print_call(int call_index)
     else
 	userinfo[len] = '\0';
 
-    printf("   %s\n", userinfo);
+    PJ_LOG(3, (THIS_FILE, "   %s", userinfo));
 
 
     if (call->inv == NULL || call->inv->state < PJSIP_INV_STATE_CONFIRMED ||
 	call->connect_time.sec == 0) 
     {
+	pj_log_set_decor(decor);
 	return;
     }
 
@@ -123,17 +114,19 @@ static void print_call(int call_index)
 	    connectdelay[0] = '\0';
 	}
 
-	printf("   Signaling quality: %s%s\n", pdd, connectdelay);
+	PJ_LOG(3, (THIS_FILE, 
+		   "   Signaling quality: %s%s", pdd, connectdelay));
     }
 
 
-    printf("   Stream #0: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
+    PJ_LOG(3, (THIS_FILE,
+	       "   Stream #0: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)",
    	(int)audio->si.fmt.encoding_name.slen,
 	audio->si.fmt.encoding_name.ptr,
 	audio->clock_rate,
 	audio->samples_per_frame * 1000 / audio->clock_rate,
 	good_number(bps, audio->bytes_per_frame * audio->clock_rate / audio->samples_per_frame),
-	good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame));
+	good_number(ipbps, (audio->bytes_per_frame+32) * audio->clock_rate / audio->samples_per_frame)));
 
     if (audio->rtcp.stat.rx.update_cnt == 0)
 	strcpy(last_update, "never");
@@ -147,12 +140,13 @@ static void print_call(int call_index)
 		now.msec);
     }
 
-    printf("              RX stat last update: %s\n"
+    PJ_LOG(3, (THIS_FILE, 
+	   "              RX stat last update: %s\n"
 	   "                 total %s packets %sB received (%sB +IP hdr)%s\n"
 	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	   "                       (msec)    min     avg     max     last\n"
 	   "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
+	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
 	   last_update,
 	   good_number(packets, audio->rtcp.stat.rx.pkt),
 	   good_number(bytes, audio->rtcp.stat.rx.bytes),
@@ -175,7 +169,7 @@ static void print_call(int call_index)
 	   audio->rtcp.stat.rx.jitter.max / 1000.0,
 	   audio->rtcp.stat.rx.jitter.last / 1000.0,
 	   ""
-	   );
+	   ));
 
 
     if (audio->rtcp.stat.tx.update_cnt == 0)
@@ -190,12 +184,13 @@ static void print_call(int call_index)
 		now.msec);
     }
 
-    printf("              TX stat last update: %s\n"
+    PJ_LOG(3, (THIS_FILE,
+	   "              TX stat last update: %s\n"
 	   "                 total %s packets %sB sent (%sB +IP hdr)%s\n"
 	   "                 pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
 	   "                       (msec)    min     avg     max     last\n"
 	   "                 loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
+	   "                 jitter     : %7.3f %7.3f %7.3f %7.3f%s",
 	   last_update,
 	   good_number(packets, audio->rtcp.stat.tx.pkt),
 	   good_number(bytes, audio->rtcp.stat.tx.bytes),
@@ -218,16 +213,18 @@ static void print_call(int call_index)
 	   audio->rtcp.stat.tx.jitter.max / 1000.0,
 	   audio->rtcp.stat.tx.jitter.last / 1000.0,
 	   ""
-	   );
+	   ));
 
 
-    printf("             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n", 
+    PJ_LOG(3, (THIS_FILE,
+	   "             RTT delay      : %7.3f %7.3f %7.3f %7.3f%s\n", 
 	   audio->rtcp.stat.rtt.min / 1000.0,
 	   audio->rtcp.stat.rtt.avg / 1000.0,
 	   audio->rtcp.stat.rtt.max / 1000.0,
 	   audio->rtcp.stat.rtt.last / 1000.0,
 	   ""
-	   );
+	   ));
 
+    pj_log_set_decor(decor);
 }
 
