@@ -274,7 +274,9 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	/* Ignore the first N packets as they normally have bad jitter
 	 * due to other threads working to establish the call
 	 */
-	if (sess->transit == 0 || sess->received < 25 ) {
+	if (sess->transit == 0 || 
+	    sess->received < PJMEDIA_RTCP_IGNORE_FIRST_PACKETS) 
+	{
 	    sess->transit = transit;
 	    sess->stat.rx.jitter.min = 2000;
 	} else {

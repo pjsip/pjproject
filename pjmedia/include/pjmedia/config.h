@@ -146,6 +146,20 @@
 
 
 /**
+ * Tell RTCP to ignore the first N packets when calculating the
+ * jitter statistics. From experimentation, the first few packets
+ * (25 or so) have relatively big jitter, possibly because during
+ * this time, the program is also busy setting up the signaling,
+ * so they make the average jitter big.
+ *
+ * Default: 25.
+ */
+#ifndef PJMEDIA_RTCP_IGNORE_FIRST_PACKETS
+#   define  PJMEDIA_RTCP_IGNORE_FIRST_PACKETS	25
+#endif
+
+
+/**
  * G.711 Appendix I Packet Lost Concealment (PLC).
  * Enabled only when floating point is enabled.
  */
