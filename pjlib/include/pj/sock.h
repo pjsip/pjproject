@@ -109,7 +109,7 @@ typedef enum pj_sock_msg_flag
 {
     PJ_MSG_OOB		= 0x01,	    /**< Out-of-band messages.		 */
     PJ_MSG_PEEK		= 0x02,	    /**< Peek, don't remove from buffer. */
-    PJ_MSG_DONTROUTE	= 0x04,	    /**< Don't route.			 */
+    PJ_MSG_DONTROUTE	= 0x04	    /**< Don't route.			 */
 } pj_sock_msg_flag;
 
 
@@ -123,7 +123,7 @@ typedef enum pj_socket_sd_type
     PJ_SD_SEND	    = 1,    /**< No more sending.	    */
     PJ_SHUT_WR	    = 1,    /**< Alias for SD_SEND.	    */
     PJ_SD_BOTH	    = 2,    /**< No more send and receive.  */
-    PJ_SHUT_RDWR    = 2,    /**< Alias for SD_BOTH.	    */
+    PJ_SHUT_RDWR    = 2     /**< Alias for SD_BOTH.	    */
 } pj_socket_sd_type;
 
 
@@ -379,7 +379,7 @@ PJ_INLINE(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr)
     pj_in_addr in_addr;
     in_addr.s_addr = pj_ntohl(addr->sin_addr.s_addr);
     return in_addr;
-};
+}
 
 /**
  * Set the IP address of an Internet socket address.

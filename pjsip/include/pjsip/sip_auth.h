@@ -50,7 +50,7 @@ PJ_BEGIN_DECL
 typedef enum pjsip_cred_data_type
 {
     PJSIP_CRED_DATA_PLAIN_PASSWD,   /**< Plain text password.	*/
-    PJSIP_CRED_DATA_DIGEST,	    /**< Hashed digest.		*/
+    PJSIP_CRED_DATA_DIGEST	    /**< Hashed digest.		*/
 } pjsip_cred_data_type;
 
 /** Authentication's quality of protection (qop) type. */
@@ -59,7 +59,7 @@ typedef enum pjsip_auth_qop_type
     PJSIP_AUTH_QOP_NONE,	    /**< No quality of protection. */
     PJSIP_AUTH_QOP_AUTH,	    /**< Authentication. */
     PJSIP_AUTH_QOP_AUTH_INT,	    /**< Authentication with integrity protection. */
-    PJSIP_AUTH_QOP_UNKNOWN,	    /**< Unknown protection. */
+    PJSIP_AUTH_QOP_UNKNOWN	    /**< Unknown protection. */
 } pjsip_auth_qop_type;
 
 

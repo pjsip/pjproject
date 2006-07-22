@@ -144,7 +144,7 @@ typedef enum pjsip_uri_context_e
     PJSIP_URI_IN_FROMTO_HDR,	/**< The URI is in From/To header. */
     PJSIP_URI_IN_CONTACT_HDR,	/**< The URI is in Contact header. */
     PJSIP_URI_IN_ROUTING_HDR,	/**< The URI is in Route/Record-Route header. */
-    PJSIP_URI_IN_OTHER,		/**< Other context (web page, business card, etc.) */
+    PJSIP_URI_IN_OTHER		/**< Other context (web page, business card, etc.) */
 } pjsip_uri_context_e;
 
 /**

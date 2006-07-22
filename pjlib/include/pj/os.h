@@ -33,7 +33,7 @@ PJ_BEGIN_DECL
  */
 
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_THREAD Threads
  * @ingroup PJ_OS
@@ -226,7 +226,7 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_TLS Thread Local Storage.
  * @ingroup PJ_OS
@@ -271,7 +271,7 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  */
 
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_ATOMIC Atomic Variables
  * @ingroup PJ_OS
@@ -382,7 +382,7 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_MUTEX Mutexes.
  * @ingroup PJ_OS
@@ -403,7 +403,7 @@ typedef enum pj_mutex_type_e
 {
     PJ_MUTEX_DEFAULT,
     PJ_MUTEX_SIMPLE,
-    PJ_MUTEX_RECURSE,
+    PJ_MUTEX_RECURSE
 } pj_mutex_type_e;
 
 
@@ -500,7 +500,7 @@ PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_RW_MUTEX Reader/Writer Mutex
  * @ingroup PJ_OS
@@ -576,7 +576,7 @@ PJ_DECL(pj_status_t) pj_rwmutex_destroy(pj_rwmutex_t *mutex);
  */
 
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_CRIT_SEC Critical sections.
  * @ingroup PJ_OS
@@ -610,7 +610,7 @@ PJ_DECL(void) pj_leave_critical_section(void);
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 #if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
 /**
  * @defgroup PJ_SEM Semaphores.
@@ -679,7 +679,7 @@ PJ_DECL(pj_status_t) pj_sem_destroy(pj_sem_t *sem);
 #endif	/* PJ_HAS_SEMAPHORE */
 
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 #if defined(PJ_HAS_EVENT_OBJ) && PJ_HAS_EVENT_OBJ != 0
 /**
  * @defgroup PJ_EVENT Event Object.
@@ -771,7 +771,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  */
 #endif	/* PJ_HAS_EVENT_OBJ */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @addtogroup PJ_TIME Time Data Type and Manipulation.
  * @ingroup PJ_OS
@@ -836,7 +836,7 @@ PJ_DECL(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv);
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0
 
 /**
@@ -867,7 +867,7 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
 
 #endif	/* PJ_TERM_HAS_COLOR */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_TIMESTAMP High Resolution Timestamp
  * @ingroup PJ_OS
@@ -1046,7 +1046,7 @@ PJ_DECL(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
 /** @} */
 
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * Internal PJLIB function to initialize the threading subsystem.
  * @return          PJ_SUCCESS or the appropriate error code.

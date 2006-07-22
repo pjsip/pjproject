@@ -255,7 +255,7 @@ enum pjmedia_port_op
     /**
      * Enable TX and RX to/from this port.
      */
-    PJMEDIA_PORT_ENABLE,
+    PJMEDIA_PORT_ENABLE
 };
 
 
@@ -292,7 +292,7 @@ typedef enum pjmedia_frame_type
 {
     PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
     PJMEDIA_FRAME_TYPE_CNG,	    /**< Silence audio frame.	*/
-    PJMEDIA_FRAME_TYPE_AUDIO,	    /**< Normal audio frame.	*/
+    PJMEDIA_FRAME_TYPE_AUDIO	    /**< Normal audio frame.	*/
 
 } pjmedia_frame_type;
 

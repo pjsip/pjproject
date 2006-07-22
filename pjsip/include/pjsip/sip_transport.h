@@ -62,7 +62,7 @@ enum pjsip_transport_flags_e
 {
     PJSIP_TRANSPORT_RELIABLE	    = 1,    /**< Transport is reliable.	    */
     PJSIP_TRANSPORT_SECURE	    = 2,    /**< Transport is secure.	    */
-    PJSIP_TRANSPORT_DATAGRAM	    = 4,    /**< Datagram based transport.  
+    PJSIP_TRANSPORT_DATAGRAM	    = 4     /**< Datagram based transport.  
 					         (it's also assumed to be 
 						 connectionless)	    */
 };

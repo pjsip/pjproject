@@ -312,7 +312,7 @@ PJ_IDECL(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count,
  * @}	// PJ_POOL
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /**
  * @defgroup PJ_POOL_FACTORY Pool Factory and Policy.
  * @ingroup PJ_POOL_GROUP
@@ -526,7 +526,7 @@ PJ_INLINE(void) pj_pool_factory_dump( pj_pool_factory *pf,
  *  @}	// PJ_POOL_FACTORY
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 
 /**
  * @defgroup PJ_CACHING_POOL Caching Pool Factory.

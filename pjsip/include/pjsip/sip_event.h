@@ -59,7 +59,7 @@ typedef enum pjsip_event_id_e
     PJSIP_EVENT_TSX_STATE,
 
     /** Indicates that the event was triggered by user action. */
-    PJSIP_EVENT_USER,
+    PJSIP_EVENT_USER
 
 } pjsip_event_id_e;
 

@@ -68,7 +68,7 @@ typedef enum pjsip_tsx_state_e
     PJSIP_TSX_STATE_CONFIRMED,	/**< For UAS, after ACK is received.	    */
     PJSIP_TSX_STATE_TERMINATED,	/**< For UAS/UAC, before it's destroyed.    */
     PJSIP_TSX_STATE_DESTROYED,	/**< For UAS/UAC, will be destroyed now.    */
-    PJSIP_TSX_STATE_MAX,	/**< Number of states.			    */
+    PJSIP_TSX_STATE_MAX		/**< Number of states.			    */
 } pjsip_tsx_state_e;
 
 

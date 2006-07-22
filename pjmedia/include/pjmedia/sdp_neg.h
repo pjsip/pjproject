@@ -272,7 +272,7 @@ enum pjmedia_sdp_neg_state
      * This state occurs when SDP negotiation has completed, either 
      * successfully or not.
      */
-    PJMEDIA_SDP_NEG_STATE_DONE,
+    PJMEDIA_SDP_NEG_STATE_DONE
 };
 
 

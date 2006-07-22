@@ -34,15 +34,23 @@
 #define PJ_CC_VER_3		__GNUC_PATCHLEVEL__
 
 
-#define PJ_INLINE_SPECIFIER	static inline
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		
-#define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
 
 #define PJ_HAS_INT64		1
 
-typedef long long pj_int64_t;
-typedef unsigned long long pj_uint64_t;
+#ifdef __STRICT_ANSI__
+  #include <inttypes.h> 
+  typedef int64_t		pj_int64_t;
+  typedef uint64_t		pj_uint64_t;
+  #define PJ_INLINE_SPECIFIER	static __inline
+  #define PJ_ATTR_NORETURN	
+#else
+  typedef long long		pj_int64_t;
+  typedef unsigned long long	pj_uint64_t;
+  #define PJ_INLINE_SPECIFIER	static inline
+  #define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
+#endif
 
 #define PJ_INT64(val)		val##LL
 #define PJ_UINT64(val)		val##LLU

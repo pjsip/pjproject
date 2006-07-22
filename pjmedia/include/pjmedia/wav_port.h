@@ -46,7 +46,7 @@ enum pjmedia_file_player_option
      * Tell the file player to return NULL frame when the whole
      * file has been played.
      */
-    PJMEDIA_FILE_NO_LOOP = 1,
+    PJMEDIA_FILE_NO_LOOP = 1
 };
 
 

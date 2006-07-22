@@ -179,7 +179,7 @@ enum
 
     /** Auto-skip new lines.
      */
-    PJ_SCAN_AUTOSKIP_NEWLINE = 4,
+    PJ_SCAN_AUTOSKIP_NEWLINE = 4
 };
 
 

@@ -219,7 +219,7 @@ typedef enum pj_ioqueue_operation_e
     PJ_IOQUEUE_OP_SEND_TO	= 32,	/**< sendto() operation.    */
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
     PJ_IOQUEUE_OP_ACCEPT	= 64,	/**< accept() operation.    */
-    PJ_IOQUEUE_OP_CONNECT	= 128,	/**< connect() operation.   */
+    PJ_IOQUEUE_OP_CONNECT	= 128	/**< connect() operation.   */
 #endif	/* PJ_HAS_TCP */
 } pj_ioqueue_operation_e;
 

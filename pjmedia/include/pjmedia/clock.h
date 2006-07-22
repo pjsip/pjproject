@@ -62,7 +62,7 @@ enum pjmedia_clock_options
      * application must poll the clock continuously by calling
      * #pjmedia_clock_wait() in order to synchronize timing.
      */
-    PJMEDIA_CLOCK_NO_ASYNC  = 1,
+    PJMEDIA_CLOCK_NO_ASYNC  = 1
 };
 
 

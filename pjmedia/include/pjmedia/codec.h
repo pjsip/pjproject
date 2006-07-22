@@ -220,7 +220,7 @@ enum pjmedia_rtp_pt
     PJMEDIA_RTP_PT_MP2T = 33,	    /**< video MPEG2 transport		    */
     PJMEDIA_RTP_PT_H263 = 34,	    /**< video H263			    */
 
-    PJMEDIA_RTP_PT_DYNAMIC = 96,    /**< start of dynamic RTP payload	    */
+    PJMEDIA_RTP_PT_DYNAMIC = 96     /**< start of dynamic RTP payload	    */
 
 };
 
@@ -575,7 +575,7 @@ typedef enum pjmedia_codec_priority
      * be listed by #pjmedia_codec_mgr_enum_codecs() and other codec
      * query functions.
      */
-    PJMEDIA_CODEC_PRIO_DISABLED = 0,
+    PJMEDIA_CODEC_PRIO_DISABLED = 0
 
 } pjmedia_codec_priority;
 

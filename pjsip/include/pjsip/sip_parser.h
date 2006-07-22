@@ -54,7 +54,7 @@ enum
      *  the URI is not enclosed in brackets ("<" and ">"), all parameters 
      *  are treated as header parameters (not URI parameters).
      */
-    PJSIP_PARSE_URI_IN_FROM_TO_HDR = 2,
+    PJSIP_PARSE_URI_IN_FROM_TO_HDR = 2
 };
 
 /**
@@ -354,7 +354,7 @@ extern const pj_str_t pjsip_USER_STR,	    /**< "user" string constant.    */
  */
 enum
 {
-    PJSIP_PARSE_REMOVE_QUOTE = 1,
+    PJSIP_PARSE_REMOVE_QUOTE = 1
 };
 
 /* Parse parameter in header (matching the character as token) */

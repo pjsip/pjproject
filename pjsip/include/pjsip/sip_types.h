@@ -79,7 +79,7 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_LOOP,
 
     /** Loopback (datagram, unreliable) */
-    PJSIP_TRANSPORT_LOOP_DGRAM,
+    PJSIP_TRANSPORT_LOOP_DGRAM
 
 } pjsip_transport_type_e;
 
@@ -162,11 +162,6 @@ typedef pjsip_module pjsip_user_agent;
 typedef struct pjsip_dialog pjsip_dialog;
 
 /**
- * Dialog state (sip_dialog.h).
- */
-typedef enum pjsip_dialog_state pjsip_dialog_state;
-
-/**
  * Transaction role.
  */
 typedef enum pjsip_role_e
@@ -177,7 +172,7 @@ typedef enum pjsip_role_e
     /* Alias: */
 
     PJSIP_UAC_ROLE = PJSIP_ROLE_UAC,	/**< Role is UAC. */
-    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS,	/**< Role is UAS. */
+    PJSIP_UAS_ROLE = PJSIP_ROLE_UAS	/**< Role is UAS. */
 
 } pjsip_role_e;
 

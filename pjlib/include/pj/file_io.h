@@ -61,7 +61,7 @@ enum pj_file_access
     PJ_O_WRONLY     = 0x1102,   /**< Open file for writing.             */
     PJ_O_RDWR       = 0x1103,   /**< Open file for reading and writing. 
                                      File will be truncated.            */
-    PJ_O_APPEND     = 0x1108,   /**< Append to existing file.           */
+    PJ_O_APPEND     = 0x1108    /**< Append to existing file.           */
 };
 
 /**
@@ -71,7 +71,7 @@ enum pj_file_seek_type
 {
     PJ_SEEK_SET     = 0x1201,   /**< Offset from beginning of the file. */
     PJ_SEEK_CUR     = 0x1202,   /**< Offset from current position.      */
-    PJ_SEEK_END     = 0x1203,   /**< Size of the file plus offset.      */
+    PJ_SEEK_END     = 0x1203    /**< Size of the file plus offset.      */
 };
 
 /**

@@ -63,7 +63,7 @@ typedef enum pjmedia_type
     /** Unknown media type, in this case the name will be specified in 
      *  encoding_name.
      */
-    PJMEDIA_TYPE_UNKNOWN = 3,
+    PJMEDIA_TYPE_UNKNOWN = 3
 
 } pjmedia_type;
 
@@ -84,7 +84,7 @@ typedef enum pjmedia_dir
     PJMEDIA_DIR_DECODING = 2,
 
     /** Incoming and outgoing stream. */
-    PJMEDIA_DIR_ENCODING_DECODING = 3,
+    PJMEDIA_DIR_ENCODING_DECODING = 3
 
 } pjmedia_dir;
 

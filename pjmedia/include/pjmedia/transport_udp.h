@@ -51,7 +51,7 @@ enum pjmedia_transport_udp_options
      * received.
      * Specifying this option will disable this feature.
      */
-    PJMEDIA_UDP_NO_SRC_ADDR_CHECKING = 1,
+    PJMEDIA_UDP_NO_SRC_ADDR_CHECKING = 1
 };
 
 

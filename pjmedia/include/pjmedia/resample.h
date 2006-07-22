@@ -139,7 +139,7 @@ enum pjmedia_resample_port_options
     /**
      * Do not destroy downstream port when resample port is destroyed.
      */
-    PJMEDIA_RESAMPLE_DONT_DESTROY_DN = 4,
+    PJMEDIA_RESAMPLE_DONT_DESTROY_DN = 4
 };
 
 

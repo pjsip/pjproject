@@ -76,14 +76,14 @@ typedef struct pjsip_dlg_party
 /**
  * Dialog state.
  */
-enum pjsip_dialog_state
+typedef enum pjsip_dialog_state
 {
     /** Dialog is not established. */
     PJSIP_DIALOG_STATE_NULL,
 
     /** Dialog has been established (probably early) */
-    PJSIP_DIALOG_STATE_ESTABLISHED,
-};
+    PJSIP_DIALOG_STATE_ESTABLISHED
+} pjsip_dialog_state;
 
 /**
  * This structure describes the dialog structure. Application MUST NOT

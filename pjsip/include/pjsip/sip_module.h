@@ -207,7 +207,7 @@ enum pjsip_module_priority
     /**
      * This is the recommended priority to be used by applications.
      */
-    PJSIP_MOD_PRIORITY_APPLICATION	= 64,
+    PJSIP_MOD_PRIORITY_APPLICATION	= 64
 };
 
 

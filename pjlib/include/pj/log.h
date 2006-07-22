@@ -77,7 +77,7 @@ enum pj_log_decoration
     PJ_LOG_HAS_MICRO_SEC  =  32, /**< Include microseconds [yes]             */
     PJ_LOG_HAS_SENDER	  =  64, /**< Include sender in the log [yes].	     */
     PJ_LOG_HAS_NEWLINE	  = 128, /**< Terminate each call with newline [yes].*/
-    PJ_LOG_HAS_CR	  = 256, /**< Include carriage return [no].	     */
+    PJ_LOG_HAS_CR	  = 256  /**< Include carriage return [no].	     */
 };
 
 /**
@@ -249,7 +249,7 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
  * @}
  */
 
-///////////////////////////////////////////////////////////////////////////////
+/* **************************************************************************/
 /*
  * Log functions implementation prototypes.
  * These functions are called by PJ_LOG macros according to verbosity
