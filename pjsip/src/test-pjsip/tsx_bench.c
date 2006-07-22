@@ -31,6 +31,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pjsip_tx_data *request;
     pjsip_transaction **tsx;
     pj_timestamp t1, t2, elapsed;
+    pjsip_via_hdr *via;
     pj_status_t status;
 
     /* Create the request first. */
@@ -48,6 +49,9 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 	return status;
     }
 
+    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_VIA,
+					      NULL);
+
     /* Create transaction array */
     tsx = pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
 
@@ -61,6 +65,8 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 	status = pjsip_tsx_create_uac(&mod_tsx_user, request, &tsx[i]);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+	/* Reset branch param */
+	via->branch_param.slen = 0;
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
@@ -183,7 +189,7 @@ on_error:
 
 int tsx_bench(void)
 {
-    enum { WORKING_SET=PJSIP_MAX_TSX_COUNT, REPEAT = 4 };
+    enum { WORKING_SET=10000, REPEAT = 4 };
     unsigned i, speed;
     pj_timestamp usec[REPEAT], min, freq;
     char desc[250];

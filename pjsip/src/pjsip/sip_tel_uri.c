@@ -164,7 +164,7 @@ pj_status_t pjsip_tel_uri_subsys_init(void)
 
     status = pj_cis_dup(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC, 
 			&pjsip_TEL_PARSING_PVALUE_SPEC);
-    pj_cis_del_str(&pjsip_TEL_PVALUE_SPEC_ESC, "%");
+    pj_cis_del_str(&pjsip_TEL_PARSING_PVALUE_SPEC_ESC, "%");
 
     status = pjsip_register_uri_parser("tel", &tel_uri_parse);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
