@@ -204,8 +204,6 @@ PJ_DEF(void *) pj_hash_get( pj_hash_table_t *ht,
 			    pj_uint32_t *hval)
 {
     pj_hash_entry *entry;
-
-    if (hval) *hval = 0;
     entry = *find_entry( NULL, ht, key, keylen, NULL, hval, NULL);
     return entry ? entry->value : NULL;
 }

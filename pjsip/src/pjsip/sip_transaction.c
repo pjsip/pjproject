@@ -38,6 +38,13 @@
 #define TSX_TRACE_(expr)
 #endif
 
+/* When this macro is set, transaction will keep the hashed value
+ * so that future lookup (to unregister transaction) does not need
+ * to recalculate the hash again. It should gains a little bit of
+ * performance, so generally we'd want this.
+ */
+#define PRECALC_HASH
+
 
 /* Defined in sip_util_statefull.c */
 extern pjsip_module mod_stateful_util;
@@ -529,11 +536,13 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 		tsx->transaction_key.ptr));
 
     /* Register the transaction to the hash table. */
-    //pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    //		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
-    PJ_TODO(USE_PRECALCULATED_HASHED_VALUE);
+#ifdef PRECALC_HASH
+    pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
+#else
     pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
     		 tsx->transaction_key.slen, 0, tsx);
+#endif
 
     /* Unlock mutex. */
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -554,11 +563,13 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
     pj_mutex_lock(mod_tsx_layer.mutex);
 
     /* Register the transaction to the hash table. */
-    //pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    //		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
-    PJ_TODO(USE_PRECALCULATED_HASHED_VALUE);
+#ifdef PRECALC_HASH
     pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-		 tsx->transaction_key.slen, 0, NULL);
+    		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
+#else
+    pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    		 tsx->transaction_key.slen, 0, NULL);
+#endif
 
     TSX_TRACE_((THIS_FILE, 
 		"Transaction %p unregistered, hkey=0x%p and key=%.*s",
@@ -1153,13 +1164,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 			 &via->branch_param);
 
     /* Calculate hashed key value. */
-    PJ_TODO(OPTIMIZE_TSX_BY_PRECALCULATING_HASHED_KEY_VALUE);
-    /*
-     blp: somehow this yields different hashed value!!
-
+#ifdef PRECALC_HASH
     tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
 				   tsx->transaction_key.slen);
-     */
+#endif
 
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
 	       tsx->transaction_key.ptr));
@@ -1282,13 +1290,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     }
 
     /* Calculate hashed key value. */
-    PJ_TODO(OPTIMIZE_TSX_BY_PRECALCULATING_HASHED_KEY_VALUE);
-    /*
-     blp: somehow this yields different hashed value!!
-
+#ifdef PRECALC_HASH
     tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
 				   tsx->transaction_key.slen);
-     */
+#endif
 
     /* Duplicate branch parameter for transaction. */
     branch = &rdata->msg_info.via->branch_param;
