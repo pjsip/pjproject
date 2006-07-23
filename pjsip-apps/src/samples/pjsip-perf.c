@@ -504,10 +504,13 @@ static pj_bool_t mod_responder_on_rx_request(pjsip_rx_data *rdata)
     const pj_str_t reason = pj_str("Not expecting request at this URI");
 
     /*
-     * Respond any requests with 500.
+     * Respond any requests (except ACK!) with 500.
      */
-    pjsip_endpt_respond_stateless(app.sip_endpt, rdata, 500, &reason,
-				  NULL, NULL);
+    if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	pjsip_endpt_respond_stateless(app.sip_endpt, rdata, 500, &reason,
+				      NULL, NULL);
+    }
+
     return PJ_TRUE;
 }
 
@@ -1313,7 +1316,7 @@ static pj_status_t submit_job(void)
 static int client_thread(void *arg)
 {
     pj_time_val end_time, last_report, now;
-    unsigned thread_index = (unsigned)arg;
+    unsigned thread_index = (unsigned)(long)arg;
     unsigned cycle = 0, last_cycle = 0;
 
     pj_thread_sleep(100);
@@ -1470,7 +1473,7 @@ static const char *good_number(char *buf, pj_int32_t val)
 static int server_thread(void *arg)
 {
     pj_time_val timeout = { 0, 1 };
-    unsigned thread_index = (unsigned)arg;
+    unsigned thread_index = (unsigned)(long)arg;
     pj_time_val last_report, next_report;
 
     pj_gettimeofday(&last_report);
@@ -1606,8 +1609,8 @@ int main(int argc, char *argv[])
 		  app.client.job_window);
 
 	for (i=0; i<app.thread_count; ++i) {
-	    status = pj_thread_create(app.pool, NULL, &client_thread, (void*)i,
-				      0, 0, &app.thread[i]);
+	    status = pj_thread_create(app.pool, NULL, &client_thread, 
+				      (void*)(long)i, 0, 0, &app.thread[i]);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Unable to create thread", status);
 		return 1;
@@ -1715,8 +1718,8 @@ int main(int argc, char *argv[])
 	printf("INVITE with non-matching user part will be handled call-statefully\n");
 
 	for (i=0; i<app.thread_count; ++i) {
-	    status = pj_thread_create(app.pool, NULL, &server_thread, (void*)i,
-				      0, 0, &app.thread[i]);
+	    status = pj_thread_create(app.pool, NULL, &server_thread, 
+				      (void*)(long)i, 0, 0, &app.thread[i]);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Unable to create thread", status);
 		return 1;

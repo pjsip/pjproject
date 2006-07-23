@@ -11,6 +11,8 @@ if echo $MACHINE | grep sun4u > /dev/null; then
     MACHINE_NAME=sparc
 elif echo $MACHINE | grep i.86 > /dev/null; then
     MACHINE_NAME=i386
+elif echo $MACHINE | grep x86_64 > /dev/null; then
+    MACHINE_NAME=x86_64
 elif echo $MACHINE | grep alpha > /dev/null; then
     MACHINE_NAME=alpha
 elif echo $MACHINE | grep Mac > /dev/null; then

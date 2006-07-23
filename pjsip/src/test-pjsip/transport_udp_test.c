@@ -34,7 +34,7 @@ int transport_udp_test(void)
     pj_sockaddr_in addr, rem_addr;
     pj_str_t s;
     pj_status_t status;
-    unsigned rtt[SEND_RECV_LOOP], min_rtt;
+    int rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
 
     pj_sockaddr_in_init(&addr, NULL, TEST_UDP_PORT);

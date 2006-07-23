@@ -539,13 +539,19 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
 	    /* Not found. Mulfunction UAC? */
 	    pj_mutex_unlock(mod_ua.mutex);
 
-	    PJ_LOG(5,(THIS_FILE, 
-		      "Unable to find dialog for %s, answering with 481",
-		      pjsip_rx_data_get_info(rdata)));
+	    if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+		PJ_LOG(5,(THIS_FILE, 
+		          "Unable to find dialog for %s, answering with 481",
+		          pjsip_rx_data_get_info(rdata)));
 
-	    pjsip_endpt_respond_stateless(mod_ua.endpt, rdata,
-					  PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, 
-					  NULL, NULL, NULL);
+		pjsip_endpt_respond_stateless(mod_ua.endpt, rdata,
+					      PJSIP_SC_CALL_TSX_DOES_NOT_EXIST, 
+					      NULL, NULL, NULL);
+	    } else {
+		PJ_LOG(5,(THIS_FILE, 
+		          "Unable to find dialog for %s",
+		          pjsip_rx_data_get_info(rdata)));
+	    }
 	    return PJ_TRUE;
 	}
 

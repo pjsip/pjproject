@@ -65,6 +65,8 @@
  */
 #if defined (PJ_M_I386) && PJ_M_I386 != 0
 #   include <pj/compat/m_i386.h>
+#elif defined (PJ_M_X86_64) && PJ_M_X86_64 != 0
+#   include <pj/compat/m_x86_64.h>
 #elif defined (PJ_M_M68K) && PJ_M_M68K != 0
 #   include <pj/compat/m_m68k.h>
 #elif defined (PJ_M_ALPHA) && PJ_M_ALPHA != 0

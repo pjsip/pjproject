@@ -35,7 +35,7 @@ int transport_tcp_test(void)
     pj_sockaddr_in rem_addr;
     pj_status_t status;
     char url[64];
-    unsigned rtt[SEND_RECV_LOOP], min_rtt;
+    int rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
 
     /* Start TCP listener on arbitrary port. */

@@ -489,7 +489,7 @@ static void rt_tx_timer( pj_timer_heap_t *timer_heap,
 
 static int rt_worker_thread(void *arg)
 {
-    int i, thread_id = (int)arg;
+    int i, thread_id = (int)(long)arg;
     pj_time_val poll_delay = { 0, 10 };
 
     /* Sleep to allow main threads to run. */
@@ -576,7 +576,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	}
 
 	/* Create thread, suspended. */
-	status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, (void*)i, 0,
+	status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, (void*)(long)i, 0,
 				  PJ_THREAD_SUSPENDED, &rt_test_data[i].thread);
 	if (status != PJ_SUCCESS) {
 	    app_perror("   error: unable to create thread", status);

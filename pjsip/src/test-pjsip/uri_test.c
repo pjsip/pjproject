@@ -955,7 +955,7 @@ int uri_test(void)
 			  "<tt>pjsip_parse_uri()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
 
     report_ival("uri-parse-per-sec", max, "URI/sec", desc);
 
@@ -975,7 +975,7 @@ int uri_test(void)
 			  "<tt>pjsip_uri_print()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
 
     report_ival("uri-print-per-sec", max, "URI/sec", desc);
 
@@ -989,7 +989,7 @@ int uri_test(void)
 			  "<tt>pjsip_uri_cmp()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
 
     report_ival("uri-cmp-per-sec", max, "URI/sec", desc);
 

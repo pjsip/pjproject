@@ -86,7 +86,7 @@ static void init_rdata(struct udp_transport *tp, unsigned rdata_index,
     /* Init tp_info part. */
     rdata->tp_info.pool = pool;
     rdata->tp_info.transport = &tp->base;
-    rdata->tp_info.tp_data = (void*) rdata_index;
+    rdata->tp_info.tp_data = (void*)(long)rdata_index;
     rdata->tp_info.op_key.rdata = rdata;
     pj_ioqueue_op_key_init(&rdata->tp_info.op_key.op_key, 
 			   sizeof(pj_ioqueue_op_key_t));
@@ -190,7 +190,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    unsigned rdata_index;
 
 	    rdata_tp = (struct udp_transport*)rdata->tp_info.transport;
-	    rdata_index = (unsigned)rdata->tp_info.tp_data;
+	    rdata_index = (unsigned)(unsigned long)rdata->tp_info.tp_data;
 
 	    pj_pool_reset(rdata_pool);
 	    init_rdata(rdata_tp, rdata_index, rdata_pool, &rdata);

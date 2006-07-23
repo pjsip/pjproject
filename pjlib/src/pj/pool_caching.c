@@ -175,7 +175,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
     pj_list_insert_before( &cp->used_list, pool );
 
     /* Mark factory data */
-    pool->factory_data = (void*) idx;
+    pool->factory_data = (void*) (long) idx;
 
     /* Increment used count. */
     ++cp->used_count;
@@ -225,7 +225,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     /*
      * Otherwise put the pool in our recycle list.
      */
-    i = (unsigned)pool->factory_data;
+    i = (unsigned) (unsigned long) pool->factory_data;
 
     pj_assert(i<PJ_CACHING_POOL_ARRAY_SIZE);
     if (i >= PJ_CACHING_POOL_ARRAY_SIZE ) {

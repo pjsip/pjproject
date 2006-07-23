@@ -818,7 +818,7 @@ int msg_test(void)
 			  "can be pre-parse by <tt>pjsip_find_msg()</tt> "
 			  "per second (tested with %d message sets with "
 			  "average message length of "
-			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+			  "%d bytes)", (int)PJ_ARRAY_SIZE(test_array), avg_len);
     report_ival("msg-detect-per-sec", max, "msg/sec", desc);
 
     /* Print maximum parse/sec */
@@ -831,7 +831,7 @@ int msg_test(void)
 			  "can be <b>parsed</b> by <tt>pjsip_parse_msg()</tt> "
 			  "per second (tested with %d message sets with "
 			  "average message length of "
-			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+			  "%d bytes)", (int)PJ_ARRAY_SIZE(test_array), avg_len);
     report_ival("msg-parse-per-sec", max, "msg/sec", desc);
 
     /* Msg parsing bandwidth */
@@ -851,7 +851,7 @@ int msg_test(void)
 			  "can be <b>printed</b> by <tt>pjsip_msg_print()</tt>"
 			  " per second (tested with %d message sets with "
 			  "average message length of "
-			  "%d bytes)", PJ_ARRAY_SIZE(test_array), avg_len);
+			  "%d bytes)", (int)PJ_ARRAY_SIZE(test_array), avg_len);
 
     report_ival("msg-print-per-sec", max, "msg/sec", desc);
 

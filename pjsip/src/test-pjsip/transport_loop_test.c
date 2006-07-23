@@ -31,7 +31,7 @@ static int datagram_loop_test()
     pj_sockaddr_in addr;
     pj_status_t status;
     long ref_cnt;
-    unsigned rtt[LOOP], min_rtt;
+    int rtt[LOOP], min_rtt;
 
     PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
 
