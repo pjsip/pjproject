@@ -1,0 +1,126 @@
+/* $Id$ */
+/* 
+ * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
+#ifndef __PJ_COMPAT_OS_AUTO_H__
+#define __PJ_COMPAT_OS_AUTO_H__
+
+/**
+ * @file os_auto.h
+ * @brief Describes operating system specifics (automatically detected by
+ *        autoconf)
+ */
+
+/* Canonical OS name */
+#undef PJ_OS_NAME
+
+/* Headers availability */
+#undef PJ_HAS_ARPA_INET_H
+#undef PJ_HAS_ASSERT_H
+#undef PJ_HAS_CTYPE_H
+#undef PJ_HAS_ERRNO_H
+#undef PJ_HAS_LINUX_SOCKET_H
+#undef PJ_HAS_MALLOC_H
+#undef PJ_HAS_NETDB_H
+#undef PJ_HAS_NETINET_IN_H
+#undef PJ_HAS_SETJMP_H
+#undef PJ_HAS_STDARG_H
+#undef PJ_HAS_STDDEF_H
+#undef PJ_HAS_STDIO_H
+#undef PJ_HAS_STDLIB_H
+#undef PJ_HAS_STRING_H
+#undef PJ_HAS_SYS_IOCTL_H
+#undef PJ_HAS_SYS_SELECT_H
+#undef PJ_HAS_SYS_SOCKET_H
+#undef PJ_HAS_SYS_TIME_H
+#undef PJ_HAS_SYS_TIMEB_H
+#undef PJ_HAS_SYS_TYPES_H
+#undef PJ_HAS_TIME_H
+#undef PJ_HAS_UNISTD_H
+
+#undef PJ_HAS_MSWSOCK_H
+#undef PJ_HAS_WINSOCK_H
+#undef PJ_HAS_WINSOCK2_H
+
+#undef PJ_SOCK_HAS_INET_ATON
+
+/* Set 1 if native sockaddr_in has sin_len member. 
+ * Default: 0
+ */
+#undef PJ_SOCKADDR_HAS_LEN
+
+/**
+ * If this macro is set, it tells select I/O Queue that select() needs to
+ * be given correct value of nfds (i.e. largest fd + 1). This requires
+ * select ioqueue to re-scan the descriptors on each registration and
+ * unregistration.
+ * If this macro is not set, then ioqueue will always give FD_SETSIZE for
+ * nfds argument when calling select().
+ *
+ * Default: 0
+ */
+#undef PJ_SELECT_NEEDS_NFDS
+
+/* Is errno a good way to retrieve OS errors?
+ */
+#undef PJ_HAS_ERRNO_VAR
+
+/* When this macro is set, getsockopt(SOL_SOCKET, SO_ERROR) will return
+ * the status of non-blocking connect() operation.
+ */
+#undef PJ_HAS_SO_ERROR
+
+/* This value specifies the value set in errno by the OS when a non-blocking
+ * socket recv() can not return immediate daata.
+ */
+#undef PJ_BLOCKING_ERROR_VAL
+
+/* This value specifies the value set in errno by the OS when a non-blocking
+ * socket connect() can not get connected immediately.
+ */
+#undef PJ_BLOCKING_CONNECT_ERROR_VAL
+
+/* Default threading is enabled, unless it's overridden. */
+#ifndef PJ_HAS_THREADS
+#  define PJ_HAS_THREADS	    (1)
+#endif
+
+#undef PJ_HAS_HIGH_RES_TIMER
+#undef PJ_HAS_MALLOC
+#ifndef PJ_OS_HAS_CHECK_STACK
+#   define PJ_OS_HAS_CHECK_STACK    0
+#endif
+#undef PJ_NATIVE_STRING_IS_UNICODE
+
+#undef PJ_ATOMIC_VALUE_TYPE
+
+/* If 1, use Read/Write mutex emulation for platforms that don't support it */
+#undef PJ_EMULATE_RWMUTEX
+
+/* If 1, pj_thread_create() should enforce the stack size when creating 
+ * threads.
+ * Default: 0 (let OS decide the thread's stack size).
+ */
+#undef PJ_THREAD_SET_STACK_SIZE
+
+/* If 1, pj_thread_create() should allocate stack from the pool supplied.
+ * Default: 0 (let OS allocate memory for thread's stack).
+ */
+#undef PJ_THREAD_ALLOCATE_STACK
+
+#endif	/* __PJ_COMPAT_OS_AUTO_H__ */
+

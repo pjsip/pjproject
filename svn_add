@@ -1,5 +1,5 @@
 #!/bin/sh
 
-svn add $1
+svn add $*
 
-./svn_pset $1
+./svn_pset $*

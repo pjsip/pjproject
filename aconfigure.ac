@@ -1,0 +1,148 @@
+AC_INIT(pjproject,0.5.7)
+AC_CANONICAL_TARGET
+AC_CONFIG_HEADER(pjlib/include/pj/compat/os_auto.h)
+AC_PROG_CC
+AC_LANG_C
+
+AC_CHECK_HEADER(arpa/inet.h,[AC_DEFINE(PJ_HAS_ARPA_INET_H,1)])
+AC_CHECK_HEADER(assert.h,[AC_DEFINE(PJ_HAS_ASSERT_H,1)])
+AC_CHECK_HEADER(ctype.h,[AC_DEFINE(PJ_HAS_CTYPE_H,1)])
+AC_CHECK_HEADER(errno.h,[AC_DEFINE(PJ_HAS_ERRNO_H,1)])
+AC_CHECK_HEADER(linux/socket.h,[AC_DEFINE(PJ_HAS_LINUX_SOCKET_H,1)])
+AC_CHECK_HEADER(malloc.h,[AC_DEFINE(PJ_HAS_MALLOC_H,1)])
+AC_CHECK_HEADER(netdb.h,[AC_DEFINE(PJ_HAS_NETDB_H,1)])
+AC_CHECK_HEADER(netinet/in.h,[AC_DEFINE(PJ_HAS_NETINET_IN_H,1)])
+AC_CHECK_HEADER(setjmp.h,[AC_DEFINE(PJ_HAS_SETJMP_H,1)])
+AC_CHECK_HEADER(stdarg.h,[AC_DEFINE(PJ_HAS_STDARG_H,1)])
+AC_CHECK_HEADER(stddef.h,[AC_DEFINE(PJ_HAS_STDDEF_H,1)])
+AC_CHECK_HEADER(stdio.h,[AC_DEFINE(PJ_HAS_STDIO_H,1)])
+AC_CHECK_HEADER(stdlib.h,[AC_DEFINE(PJ_HAS_STDLIB_H,1)])
+AC_CHECK_HEADER(string.h,[AC_DEFINE(PJ_HAS_STRING_H,1)])
+AC_CHECK_HEADER(sys/ioctl.h,[AC_DEFINE(PJ_HAS_SYS_IOCTL_H,1)])
+AC_CHECK_HEADER(sys/select.h,[AC_DEFINE(PJ_HAS_SYS_SELECT_H,1)])
+AC_CHECK_HEADER(sys/socket.h,[AC_DEFINE(PJ_HAS_SYS_SOCKET_H,1)])
+AC_CHECK_HEADER(sys/time.h,[AC_DEFINE(PJ_HAS_SYS_TIME_H,1)])
+AC_CHECK_HEADER(sys/timeb.h,[AC_DEFINE(PJ_HAS_SYS_TIMEB_H,1)])
+AC_CHECK_HEADER(sys/types.h,[AC_DEFINE(PJ_HAS_SYS_TYPES_H,1)])
+AC_CHECK_HEADER(time.h,[AC_DEFINE(PJ_HAS_TIME_H,1)])
+AC_CHECK_HEADER(unistd.h,[AC_DEFINE(PJ_HAS_UNISTD_H,1)])
+AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)])
+AC_CHECK_HEADER(winsock.h,[AC_DEFINE(PJ_HAS_WINSOCK_H,1)])
+AC_CHECK_HEADER(winsock2.h,[AC_DEFINE(PJ_HAS_WINSOCK2_H,1)])
+
+AC_CHECK_HEADER(alsa/version.h)
+
+# Determine if inet_aton() is available
+AC_MSG_CHECKING([if inet_aton is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
+		    		    #include <netinet/in.h>
+		    		    #include <arpa/inet.h>]],
+		    		  [inet_aton(0, 0);])],
+		  [AC_DEFINE(PJ_SOCK_HAS_INET_ATON,1)
+		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
+# Determine if sockaddr_in has sin_len member
+AC_MSG_CHECKING([if sockaddr_in has sin_len member])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
+		    		    #include <netinet/in.h>
+		    		    #include <arpa/inet.h>]],
+		    		  [struct sockaddr_in a; a.sin_len=0;])],
+		  [AC_DEFINE(PJ_SOCKADDR_HAS_LEN,1)
+		   AC_MSG_RESULT(yes)],
+		  AC_MSG_RESULT(no))
+
+# Determine if SO_ERROR is available
+AC_MSG_CHECKING([if SO_ERROR is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
+		    		    #include <netinet/in.h>
+		    		    #include <arpa/inet.h>]],
+		    		  [int i=SO_ERROR;])],
+		  [AC_DEFINE(PJ_HAS_SO_ERROR,1)
+		   AC_MSG_RESULT(yes)],
+		  AC_MSG_RESULT(no))
+
+# Determine if RW-mutex is available
+AC_MSG_CHECKING([if pthread_rwlock_t is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
+		    		   [pthread_rwlock_t *x;])],
+		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
+  		   AC_MSG_RESULT(yes)],
+		  AC_MSG_RESULT(no))
+
+# Determine if select() requires nfds to be filled up with
+# correct value (max_fd+1). If zero, nfds will be filled up with
+# PJ_FD_SETSIZE
+case $target in
+  *rtems*) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,1)
+	   AC_MSG_CHECKING([if select() needs correct nfds])
+	   AC_MSG_RESULT(yes)
+	;;
+  *) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,0)
+     AC_MSG_RESULT([no (default)])
+     AC_MSG_RESULT([** Decided that select() doesn't need correct nfds (please check)])
+	;;
+esac
+
+# Determine if pj_thread_create() should enforce thread stack size when
+# creating thread. Default is zero, to allow OS to allocate appropriate
+# thread's stack size.
+AC_MSG_CHECKING([if pj_thread_create() should enforce stack size])
+case $target in
+  *rtems*) AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,1)
+	   AC_MSG_RESULT(yes)
+	;;
+  *) AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,0)
+     AC_MSG_RESULT([no (default)])
+	;;
+esac
+
+# Determine if pj_thread_create() should allocate thread's stack from
+# the pool. Default is zero, to let OS allocate thread's stack.
+AC_MSG_CHECKING([if pj_thread_create() should allocate stack])
+case $target in
+  *rtems*) AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,1)
+	   AC_MSG_RESULT(yes)
+	;;
+  *) AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,0)
+     AC_MSG_RESULT([no (default)])
+	;;
+esac
+
+# This value specifies the value set in errno by the OS when a non-blocking
+# socket recv() can not return immediate data.
+case $target in
+  *) AC_DEFINE(PJ_BLOCKING_ERROR_VAL,EAGAIN)
+     AC_MSG_RESULT([** Setting non-blocking recv() retval to EAGAIN (please check)])
+	;;
+esac
+
+# This value specifies the value set in errno by the OS when a non-blocking
+# socket connect() can not get connected immediately.
+case $target in
+  *) AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,EINPROGRESS)
+     AC_MSG_RESULT([** Setting non-blocking connect() retval to EINPROGRESS (please check)])
+	;;
+esac
+
+AC_MSG_RESULT([Setting PJ_OS_NAME to $target])
+AC_DEFINE_UNQUOTED(PJ_OS_NAME,["$target"])
+
+AC_MSG_RESULT([Setting PJ_HAS_ERRNO_VAR to 1])
+AC_DEFINE(PJ_HAS_ERRNO_VAR,1)
+
+AC_MSG_RESULT([Setting PJ_HAS_HIGH_RES_TIMER to 1])
+AC_DEFINE(PJ_HAS_HIGH_RES_TIMER,1)
+
+AC_MSG_RESULT([Setting PJ_HAS_MALLOC to 1])
+AC_DEFINE(PJ_HAS_MALLOC,1)
+
+AC_MSG_RESULT([Setting PJ_NATIVE_STRING_IS_UNICODE to 0])
+AC_DEFINE(PJ_NATIVE_STRING_IS_UNICODE,0)
+
+AC_MSG_RESULT([Setting PJ_ATOMIC_VALUE_TYPE to long])
+AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
+
+
+AC_OUTPUT()
+
