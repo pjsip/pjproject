@@ -1666,9 +1666,9 @@ static void print_avg_stat(void)
 	   min_stat.tx.loss, avg_stat.tx.loss, max_stat.tx.loss,
 	   "packets",
 	   
-	   min_stat.rx.loss*100.0/(min_stat.rx.pkt+min_stat.rx.loss),
-	   avg_stat.rx.loss*100.0/(avg_stat.rx.pkt+avg_stat.rx.loss),
-	   max_stat.rx.loss*100.0/(max_stat.rx.pkt+max_stat.rx.loss),
+	   min_stat.tx.loss*100.0/(min_stat.tx.pkt+min_stat.tx.loss),
+	   avg_stat.tx.loss*100.0/(avg_stat.tx.pkt+avg_stat.tx.loss),
+	   max_stat.tx.loss*100.0/(max_stat.tx.pkt+max_stat.tx.loss),
 	   "%",
 
 	   min_stat.tx.dup, avg_stat.tx.dup, max_stat.tx.dup,
