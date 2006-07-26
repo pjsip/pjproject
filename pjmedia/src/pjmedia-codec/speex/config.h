@@ -1,14 +1,14 @@
 
-#include <pj/config.h>
+/* Check if we need to use the fixed point version */
+#if !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
+#   define FIXED_POINT
+#endif
+
 
 #define inline __inline
 #define restrict
 
 #include "misc.h"
-
-#if !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
-#   define FIXED_POINT
-#endif
 
 #ifdef _MSC_VER
 #   pragma warning(disable: 4100)   // unreferenced formal parameter

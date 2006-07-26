@@ -103,8 +103,8 @@ SPEEX_OBJS :=	speex_codec.o \
 		speex/nb_celp.o speex/preprocess_spx.o \
 		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o \
 		speex/speex.o speex/speex_callbacks.o speex/speex_header.o \
-		speex/stereo.o speex/vbr.o speex/vq.o
-SPEEX_CFLAGS := -DHAVE_CONFIG=1 -I../src/pjmedia-codec
+		speex/stereo.o speex/vbr.o speex/vq.o speex/window.o
+SPEEX_CFLAGS := -DHAVE_CONFIG_H=1 -I../src/pjmedia-codec
 
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += l16.o \

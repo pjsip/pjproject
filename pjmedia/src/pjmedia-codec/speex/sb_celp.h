@@ -42,60 +42,63 @@
 
 /**Structure representing the full state of the sub-band encoder*/
 typedef struct SBEncState {
-   const SpeexMode *mode;            /**< Pointer to the mode (containing for vtable info) */
-   void *st_low;               /**< State of the low-band (narrowband) encoder */
-   int    full_frame_size;     /**< Length of full-band frames*/
-   int    frame_size;          /**< Length of high-band frames*/
-   int    subframeSize;        /**< Length of high-band sub-frames*/
-   int    nbSubframes;         /**< Number of high-band sub-frames*/
-   int    windowSize;          /**< Length of high-band LPC window*/
-   int    lpcSize;             /**< Order of high-band LPC analysis */
-   int    bufSize;             /**< Buffer size */
-   int    first;               /**< First frame? */
-   float  lag_factor;          /**< Lag-windowing control parameter */
-   spx_word16_t  lpc_floor;           /**< Controls LPC analysis noise floor */
-   spx_word16_t  gamma1;              /**< Perceptual weighting coef 1 */
-   spx_word16_t  gamma2;              /**< Perceptual weighting coef 2 */
+   const SpeexMode *mode;         /**< Pointer to the mode (containing for vtable info) */
+   void *st_low;                  /**< State of the low-band (narrowband) encoder */
+   int    full_frame_size;        /**< Length of full-band frames*/
+   int    frame_size;             /**< Length of high-band frames*/
+   int    subframeSize;           /**< Length of high-band sub-frames*/
+   int    nbSubframes;            /**< Number of high-band sub-frames*/
+   int    windowSize;             /**< Length of high-band LPC window*/
+   int    lpcSize;                /**< Order of high-band LPC analysis */
+   int    bufSize;                /**< Buffer size */
+   int    first;                  /**< First frame? */
+   float  lag_factor;             /**< Lag-windowing control parameter */
+   spx_word16_t  lpc_floor;       /**< Controls LPC analysis noise floor */
+   spx_word16_t  gamma1;          /**< Perceptual weighting coef 1 */
+   spx_word16_t  gamma2;          /**< Perceptual weighting coef 2 */
 
-   char  *stack;               /**< Temporary allocation stack */
-   spx_sig_t *x0d, *x1d; /**< QMF filter signals*/
-   spx_sig_t *high;                /**< High-band signal (buffer) */
-   spx_sig_t *y0, *y1;             /**< QMF synthesis signals */
+   char  *stack;                  /**< Temporary allocation stack */
+   spx_sig_t *x0d, *x1d;          /**< QMF filter signals*/
+   spx_sig_t *high;               /**< High-band signal (buffer) */
+   spx_sig_t *y0, *y1;            /**< QMF synthesis signals */
    spx_word16_t *h0_mem, *h1_mem;
    spx_word32_t *g0_mem, *g1_mem; /**< QMF memories */
 
-   spx_sig_t *excBuf;              /**< High-band excitation */
-   spx_sig_t *exc;                 /**< High-band excitation (for QMF only)*/
-   spx_sig_t *res;                 /**< Zero-input response (ringing) */
-   spx_sig_t *sw;                  /**< Perceptually weighted signal */
-   spx_sig_t *target;              /**< Weighted target signal (analysis by synthesis) */
-   spx_word16_t *window;              /**< LPC analysis window */
-   spx_word16_t *lagWindow;           /**< Auto-correlation window */
-   spx_word16_t *autocorr;            /**< Auto-correlation (for LPC analysis) */
-   spx_coef_t *lpc;                 /**< LPC coefficients */
-   spx_lsp_t *lsp;                 /**< LSP coefficients */
-   spx_lsp_t *qlsp;                /**< Quantized LSPs */
-   spx_lsp_t *old_lsp;             /**< LSPs of previous frame */
-   spx_lsp_t *old_qlsp;            /**< Quantized LSPs of previous frame */
-   spx_lsp_t *interp_lsp;          /**< Interpolated LSPs for current sub-frame */
-   spx_lsp_t *interp_qlsp;         /**< Interpolated quantized LSPs for current sub-frame */
-   spx_coef_t *interp_lpc;          /**< Interpolated LPCs for current sub-frame */
-   spx_coef_t *interp_qlpc;         /**< Interpolated quantized LPCs for current sub-frame */
-   spx_coef_t *bw_lpc1;             /**< Bandwidth-expanded version of LPCs (#1) */
-   spx_coef_t *bw_lpc2;             /**< Bandwidth-expanded version of LPCs (#2) */
+   spx_sig_t *excBuf;             /**< High-band excitation */
+   spx_sig_t *exc;                /**< High-band excitation (for QMF only)*/
+   spx_sig_t *res;                /**< Zero-input response (ringing) */
+   spx_sig_t *sw;                 /**< Perceptually weighted signal */
+   const spx_word16_t *window;    /**< LPC analysis window */
+   spx_word16_t *lagWindow;       /**< Auto-correlation window */
+   spx_word16_t *autocorr;        /**< Auto-correlation (for LPC analysis) */
+   spx_coef_t *lpc;               /**< LPC coefficients */
+   spx_lsp_t *lsp;                /**< LSP coefficients */
+   spx_lsp_t *qlsp;               /**< Quantized LSPs */
+   spx_lsp_t *old_lsp;            /**< LSPs of previous frame */
+   spx_lsp_t *old_qlsp;           /**< Quantized LSPs of previous frame */
+   spx_lsp_t *interp_lsp;         /**< Interpolated LSPs for current sub-frame */
+   spx_lsp_t *interp_qlsp;        /**< Interpolated quantized LSPs for current sub-frame */
+   spx_coef_t *interp_lpc;        /**< Interpolated LPCs for current sub-frame */
+   spx_coef_t *interp_qlpc;       /**< Interpolated quantized LPCs for current sub-frame */
+   spx_coef_t *bw_lpc1;           /**< Bandwidth-expanded version of LPCs (#1) */
+   spx_coef_t *bw_lpc2;           /**< Bandwidth-expanded version of LPCs (#2) */
 
-   spx_mem_t *mem_sp;              /**< Synthesis signal memory */
+   spx_mem_t *mem_sp;             /**< Synthesis signal memory */
    spx_mem_t *mem_sp2;
-   spx_mem_t *mem_sw;              /**< Perceptual signal memory */
+   spx_mem_t *mem_sw;             /**< Perceptual signal memory */
    spx_word32_t *pi_gain;
+   spx_sig_t *innov_save;         /**< If non-NULL, innovation is copied here */
+   spx_sig_t *low_innov;          /**< Lower-band innovation is copied here magically */
 
-   float  vbr_quality;         /**< Quality setting for VBR encoding */
-   int    vbr_enabled;         /**< 1 for enabling VBR, 0 otherwise */
-   int    abr_enabled;         /**< ABR setting (in bps), 0 if off */
+   float  vbr_quality;            /**< Quality setting for VBR encoding */
+   int    vbr_enabled;            /**< 1 for enabling VBR, 0 otherwise */
+   spx_int32_t vbr_max;           /**< Max bit-rate allowed in VBR mode (total) */
+   spx_int32_t vbr_max_high;      /**< Max bit-rate allowed in VBR mode for the high-band */
+   spx_int32_t abr_enabled;       /**< ABR setting (in bps), 0 if off */
    float  abr_drift;
    float  abr_drift2;
    float  abr_count;
-   int    vad_enabled;         /**< 1 for enabling VAD, 0 otherwise */
+   int    vad_enabled;            /**< 1 for enabling VAD, 0 otherwise */
    float  relative_quality;
 
    int    encode_submode;
@@ -103,7 +106,7 @@ typedef struct SBEncState {
    int    submodeID;
    int    submodeSelect;
    int    complexity;
-   int    sampling_rate;
+   spx_int32_t sampling_rate;
 
 } SBEncState;
 
@@ -118,7 +121,7 @@ typedef struct SBDecState {
    int    nbSubframes;
    int    lpcSize;
    int    first;
-   int    sampling_rate;
+   spx_int32_t sampling_rate;
    int    lpc_enh_enabled;
 
    char  *stack;
@@ -128,6 +131,7 @@ typedef struct SBDecState {
    spx_word32_t *g0_mem, *g1_mem;
 
    spx_sig_t *exc;
+   spx_sig_t *excBuf;
    spx_lsp_t *qlsp;
    spx_lsp_t *old_qlsp;
    spx_lsp_t *interp_qlsp;
@@ -135,6 +139,9 @@ typedef struct SBDecState {
 
    spx_mem_t *mem_sp;
    spx_word32_t *pi_gain;
+   spx_sig_t *innov_save;      /** If non-NULL, innovation is copied here */
+   spx_sig_t *low_innov;       /** Lower-band innovation is copied here magically */
+   
    spx_int32_t seed;
 
    int    encode_submode;

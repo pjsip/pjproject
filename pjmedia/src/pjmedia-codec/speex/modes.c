@@ -190,11 +190,7 @@ static const SpeexSubmode nb_submode1 = {
    noise_codebook_quant,
    noise_codebook_unquant,
    NULL,
-#ifdef FIXED_POINT
-   22938, 22938, 0, -1,
-#else
-   .7, .7, 0, -1,
-#endif
+   -1,
    43
 };
 
@@ -215,11 +211,7 @@ static const SpeexSubmode nb_submode8 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_ulbr,
-#ifdef FIXED_POINT
-   22938, 16384, 11796, 21299,
-#else
-   0.7, 0.5, .36, .65,
-#endif
+   QCONST16(.65,15),
    79
 };
 
@@ -240,11 +232,7 @@ static const SpeexSubmode nb_submode2 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_vlbr,
-#ifdef FIXED_POINT
-   22938, 16384, 11796, 18022,
-#else
-   0.7, 0.5, .36, .55,
-#endif
+   QCONST16(.55,15),
    119
 };
 
@@ -265,11 +253,7 @@ static const SpeexSubmode nb_submode3 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_lbr,
-#ifdef FIXED_POINT
-   22938, 18022, 9830, 14746,
-#else
-   0.7, 0.55, .30, .45,
-#endif
+   QCONST16(.45,15),
    160
 };
 
@@ -290,11 +274,7 @@ static const SpeexSubmode nb_submode4 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_med,
-#ifdef FIXED_POINT
-   22938, 20644, 5243, 11469,
-#else
-   0.7, 0.63, .16, .35,
-#endif
+   QCONST16(.35,15),
    220
 };
 
@@ -315,11 +295,7 @@ static const SpeexSubmode nb_submode5 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb,
-#ifdef FIXED_POINT
-   22938, 21299, 3932, 8192,
-#else
-   0.7, 0.65, .12, .25,
-#endif
+   QCONST16(.2,15),
    300
 };
 
@@ -340,11 +316,7 @@ static const SpeexSubmode nb_submode6 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_sb,
-#ifdef FIXED_POINT
-   22282, 21299, 2294, 3277,
-#else
-   0.68, 0.65, .07, .1,
-#endif
+   QCONST16(.1,15),
    364
 };
 
@@ -365,11 +337,7 @@ static const SpeexSubmode nb_submode7 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb,
-#ifdef FIXED_POINT
-   21299, 21299, 0, -1,
-#else
-   0.65, 0.65, .0, -1,
-#endif
+   -1,
    492
 };
 
@@ -434,11 +402,7 @@ static const SpeexSubmode wb_submode1 = {
    NULL,
    NULL,
    NULL,
-#ifdef FIXED_POINT
-   24576, 24576, 0, -1,
-#else
-   .75, .75, .0, -1,
-#endif
+   -1,
    36
 };
 
@@ -463,11 +427,7 @@ static const SpeexSubmode wb_submode2 = {
 #else
    &split_cb_high_lbr,
 #endif
-#ifdef FIXED_POINT
-   27853, 19661, 8192, -1,
-#else
-   .85, .6, .25, -1,
-#endif
+   -1,
    112
 };
 
@@ -492,12 +452,7 @@ static const SpeexSubmode wb_submode3 = {
 #else
    &split_cb_high,
 #endif
-
-#ifdef FIXED_POINT
-   24576, 22938, 1638, -1,
-#else
-   .75, .7, .05, -1,
-#endif
+   -1,
    192
 };
 
@@ -521,11 +476,7 @@ static const SpeexSubmode wb_submode4 = {
 #else
    &split_cb_high,
 #endif
-#ifdef FIXED_POINT
-   24576, 24576, 0, -1,
-#else
-   .75, .75, .0, -1,
-#endif
+   -1,
    352
 };
 
@@ -542,8 +493,8 @@ static const SpeexSBMode sb_wb_mode = {
 #else
    0.9, 0.6, /* gamma1, gamma2 */
 #endif
-   .001,   /*lag_factor*/
-   QCONST16(.0001,15), /*lpc_floor*/
+   .012,   /*lag_factor*/
+   QCONST16(.0002,15), /*lpc_floor*/
    0.9,
    {NULL, &wb_submode1, &wb_submode2, &wb_submode3, &wb_submode4, NULL, NULL, NULL},
    3,
@@ -588,8 +539,8 @@ static const SpeexSBMode sb_uwb_mode = {
 #else
    0.9, 0.6, /* gamma1, gamma2 */
 #endif
-   .002,   /*lag_factor*/
-   QCONST16(.0001,15), /*lpc_floor*/
+   .012,   /*lag_factor*/
+   QCONST16(.0002,15), /*lpc_floor*/
    0.7,
    {NULL, &wb_submode1, NULL, NULL, NULL, NULL, NULL, NULL},
    1,

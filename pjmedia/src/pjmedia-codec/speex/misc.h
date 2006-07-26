@@ -38,9 +38,34 @@
 #ifndef SPEEX_VERSION
 #define SPEEX_MAJOR_VERSION 1         /**< Major Speex version. */
 #define SPEEX_MINOR_VERSION 1         /**< Minor Speex version. */
-#define SPEEX_MICRO_VERSION 12        /**< Micro Speex version. */
+#define SPEEX_MICRO_VERSION 13        /**< Micro Speex version. */
 #define SPEEX_EXTRA_VERSION ""        /**< Extra Speex version. */
-#define SPEEX_VERSION "speex-1.1.12"  /**< Speex version string. */
+#define SPEEX_VERSION "speex-1.1.13"  /**< Speex version string. */
+#endif
+
+/* A couple test to catch stupid option combinations */
+#ifdef FIXED_POINT
+
+#ifdef _USE_SSE
+#error SSE is only for floating-point
+#endif
+#if ((defined (ARM4_ASM)||defined (ARM4_ASM)) && defined(BFIN_ASM)) || (defined (ARM4_ASM)&&defined(ARM5E_ASM))
+#error Make up your mind. What CPU do you have?
+#endif
+#ifdef VORBIS_PSYCHO
+#error Vorbis-psy model currently not implemented in fixed-point
+#endif
+
+#else
+
+#if defined (ARM4_ASM) || defined(ARM5E_ASM) || defined(BFIN_ASM)
+#error I suppose you can have a [ARM4/ARM5E/Blackfin] that has float instructions?
+#endif
+#ifdef FIXED_POINT_DEBUG
+#error Don't you think enabling fixed-point is a good thing to do if you want to debug that?
+#endif
+
+
 #endif
 
 #include "arch.h"
@@ -88,11 +113,8 @@ void speex_warning(const char *str);
 /** Print warning message with integer argument to stderr */
 void speex_warning_int(const char *str, int val);
 
-/** Generate a vector of random numbers */
-void speex_rand_vec(float std, spx_sig_t *data, int len);
-
 /** Generate a random number */
-spx_word32_t speex_rand(spx_word16_t std, spx_int32_t *seed);
+spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed);
 
 /** Speex wrapper for putc */
 void _speex_putc(int ch, void *file);

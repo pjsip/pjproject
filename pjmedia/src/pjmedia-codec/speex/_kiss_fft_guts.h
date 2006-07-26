@@ -20,7 +20,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
    and defines
    typedef struct { kiss_fft_scalar r; kiss_fft_scalar i; }kiss_fft_cpx; */
 #include "kiss_fft.h"
-#include <limits.h>
 
 #define MAXFACTORS 32
 /* e.g. an fft of length 128 has 4 factors 
@@ -45,8 +44,9 @@ struct kiss_fft_state{
    C_ADDTO( res , a)    : res += a
  * */
 #ifdef FIXED_POINT
+#include "misc.h"
 # define FRACBITS 15
-# define SAMPPROD int32_t 
+# define SAMPPROD spx_int32_t 
 #define SAMP_MAX 32767
 
 #define SAMP_MIN -SAMP_MAX

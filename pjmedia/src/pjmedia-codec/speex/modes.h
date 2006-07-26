@@ -55,17 +55,17 @@ typedef void (*lsp_unquant_func)(spx_lsp_t *, int, SpeexBits *);
 
 
 /** Long-term predictor quantization */
-typedef int (*ltp_quant_func)(spx_sig_t *, spx_sig_t *, spx_coef_t *, spx_coef_t *, 
+typedef int (*ltp_quant_func)(spx_word16_t *, spx_word16_t *, spx_coef_t *, spx_coef_t *, 
                               spx_coef_t *, spx_sig_t *, const void *, int, int, spx_word16_t, 
-                              int, int, SpeexBits*, char *, spx_sig_t *, spx_word16_t *, int, int, int);
+                              int, int, SpeexBits*, char *, spx_word16_t *, spx_word16_t *, int, int, int, spx_word32_t *);
 
 /** Long-term un-quantize */
-typedef void (*ltp_unquant_func)(spx_sig_t *, int, int, spx_word16_t, const void *, int, int *,
+typedef void (*ltp_unquant_func)(spx_word16_t *, spx_word32_t *, int, int, spx_word16_t, const void *, int, int *,
                                  spx_word16_t *, SpeexBits*, char*, int, int, spx_word16_t, int);
 
 
 /** Innovation quantization function */
-typedef void (*innovation_quant_func)(spx_sig_t *, spx_coef_t *, spx_coef_t *, spx_coef_t *, const void *, int, int, 
+typedef void (*innovation_quant_func)(spx_word16_t *, spx_coef_t *, spx_coef_t *, spx_coef_t *, const void *, int, int, 
                                       spx_sig_t *, spx_word16_t *, SpeexBits *, char *, int, int);
 
 /** Innovation unquantization function */
@@ -84,17 +84,13 @@ typedef struct SpeexSubmode {
    /*Lont-term predictor functions*/
    ltp_quant_func    ltp_quant; /**< Long-term predictor (pitch) quantizer */
    ltp_unquant_func  ltp_unquant; /**< Long-term predictor (pitch) un-quantizer */
-   const void             *ltp_params; /**< Pitch parameters (options) */
+   const void       *ltp_params; /**< Pitch parameters (options) */
 
    /*Quantization of innovation*/
    innovation_quant_func innovation_quant; /**< Innovation quantization */
    innovation_unquant_func innovation_unquant; /**< Innovation un-quantization */
    const void             *innovation_params; /**< Innovation quantization parameters*/
 
-   /*Synthesis filter enhancement*/
-   spx_word16_t      lpc_enh_k1; /**< Enhancer constant */
-   spx_word16_t      lpc_enh_k2; /**< Enhancer constant */
-   spx_word16_t      lpc_enh_k3; /**< Enhancer constant */
    spx_word16_t      comb_gain;  /**< Gain of enhancer comb filter */
 
    int               bits_per_frame; /**< Number of bits per frame after encoding*/

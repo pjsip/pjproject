@@ -35,13 +35,13 @@
 #ifndef FIXED_GENERIC_H
 #define FIXED_GENERIC_H
 
-#define QCONST16(x,bits) ((spx_word16_t)(.5+(x)*(1<<(bits))))
-#define QCONST32(x,bits) ((spx_word32_t)(.5+(x)*(1<<(bits))))
+#define QCONST16(x,bits) ((spx_word16_t)(.5+(x)*(((spx_word32_t)1)<<(bits))))
+#define QCONST32(x,bits) ((spx_word32_t)(.5+(x)*(((spx_word32_t)1)<<(bits))))
 
 #define NEG16(x) (-(x))
 #define NEG32(x) (-(x))
-#define EXTRACT16(x) ((spx_word16_t)x)
-#define EXTEND32(x) ((spx_word32_t)x)
+#define EXTRACT16(x) ((spx_word16_t)(x))
+#define EXTEND32(x) ((spx_word32_t)(x))
 #define SHR16(a,shift) ((a) >> (shift))
 #define SHL16(a,shift) ((a) << (shift))
 #define SHR32(a,shift) ((a) >> (shift))
@@ -61,7 +61,6 @@
 #define SUB16(a,b) ((spx_word16_t)(a)-(spx_word16_t)(b))
 #define ADD32(a,b) ((spx_word32_t)(a)+(spx_word32_t)(b))
 #define SUB32(a,b) ((spx_word32_t)(a)-(spx_word32_t)(b))
-#define ADD64(a,b) ((spx_word64_t)(a)+(spx_word64_t)(b))
 
 
 /* result fits in 16 bits */
@@ -84,6 +83,7 @@
 
 #define MAC16_16_Q11(c,a,b)     (ADD32((c),SHR(MULT16_16((a),(b)),11)))
 #define MAC16_16_Q13(c,a,b)     (ADD32((c),SHR(MULT16_16((a),(b)),13)))
+#define MAC16_16_P13(c,a,b)     (ADD32((c),SHR(ADD32(4096,MULT16_16((a),(b))),13)))
 
 #define MULT16_16_Q11_32(a,b) (SHR(MULT16_16((a),(b)),11))
 #define MULT16_16_Q13(a,b) (SHR(MULT16_16((a),(b)),13))
@@ -97,6 +97,8 @@
 #define MUL_16_32_R15(a,bh,bl) ADD32(MULT16_16((a),(bh)), SHR(MULT16_16((a),(bl)),15))
 
 #define DIV32_16(a,b) ((spx_word16_t)(((spx_word32_t)(a))/((spx_word16_t)(b))))
+#define PDIV32_16(a,b) ((spx_word16_t)(((spx_word32_t)(a)+((spx_word16_t)(b)>>1))/((spx_word16_t)(b))))
 #define DIV32(a,b) (((spx_word32_t)(a))/((spx_word32_t)(b)))
+#define PDIV32(a,b) (((spx_word32_t)(a)+((spx_word16_t)(b)>>1))/((spx_word32_t)(b)))
 
 #endif

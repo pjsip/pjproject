@@ -33,7 +33,7 @@
 */
 
 #define OVERRIDE_INNER_PROD
-static spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
+spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
 {
    spx_word32_t sum1=0,sum2=0;
    spx_word16_t *deadx, *deady;
@@ -84,7 +84,7 @@ static spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t *y, int
 }
 
 #define OVERRIDE_PITCH_XCORR
-static void pitch_xcorr(const spx_word16_t *_x, const spx_word16_t *_y, spx_word32_t *corr, int len, int nb_pitch, char *stack)
+void pitch_xcorr(const spx_word16_t *_x, const spx_word16_t *_y, spx_word32_t *corr, int len, int nb_pitch, char *stack)
 {
    int i,j;
    for (i=0;i<nb_pitch;i+=4)

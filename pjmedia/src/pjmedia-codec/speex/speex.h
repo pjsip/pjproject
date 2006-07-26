@@ -141,6 +141,11 @@ extern "C" {
 /** Gets tuning for PLC */
 #define SPEEX_GET_PLC_TUNING 41
 
+/** Sets the max bit-rate allowed in VBR mode */
+#define SPEEX_SET_VBR_MAX_BITRATE 42
+/** Gets the max bit-rate allowed in VBR mode */
+#define SPEEX_GET_VBR_MAX_BITRATE 43
+
 /* Used internally, not to be used in applications */
 /** Used internally*/
 #define SPEEX_GET_PI_GAIN 100
@@ -150,6 +155,8 @@ extern "C" {
 #define SPEEX_GET_INNOV   102
 /** Used internally*/
 #define SPEEX_GET_DTX_STATUS   103
+/** Used internally*/
+#define SPEEX_SET_INNOVATION_SAVE   104
 
 
 /* Preserving compatibility:*/

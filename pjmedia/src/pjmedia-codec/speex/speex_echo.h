@@ -61,7 +61,13 @@ SpeexEchoState *speex_echo_state_init(int frame_size, int filter_length);
 void speex_echo_state_destroy(SpeexEchoState *st);
 
 /** Performs echo cancellation a frame */
-void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, spx_int32_t *Y);
+void speex_echo_cancel(SpeexEchoState *st, const spx_int16_t *rec, const spx_int16_t *play, spx_int16_t *out, spx_int32_t *Yout);
+
+/** Perform echo cancellation using internal playback buffer */
+void speex_echo_capture(SpeexEchoState *st, const spx_int16_t *rec, spx_int16_t *out, spx_int32_t *Yout);
+
+/** Let the echo canceller know that a frame was just played */
+void speex_echo_playback(SpeexEchoState *st, const spx_int16_t *play);
 
 /** Reset the echo canceller state */
 void speex_echo_state_reset(SpeexEchoState *st);

@@ -70,7 +70,7 @@ static void compute_weighted_codebook(const signed char *shape_cb, const spx_wor
          for (k=0;k<=j;k++)
             resj = MAC16_16(resj,shape[k],r[j-k]);
 #ifdef FIXED_POINT
-         res16 = EXTRACT16(SHR32(resj, 11));
+         res16 = EXTRACT16(SHR32(resj, 13));
 #else
          res16 = 0.03125f*resj;
 #endif
@@ -88,16 +88,15 @@ static void compute_weighted_codebook(const signed char *shape_cb, const spx_wor
 static inline void target_update(spx_word16_t *t, spx_word16_t g, spx_word16_t *r, int len)
 {
    int n;
-   int q=0;
-   for (n=0;n<len;n++,q++)
-      t[n] = SUB32(t[n],MULT16_16_Q11_32(g,r[q]));
+   for (n=0;n<len;n++)
+      t[n] = SUB16(t[n],PSHR32(MULT16_16(g,r[n]),13));
 }
 #endif
 
 
 
 static void split_cb_search_shape_sign_N1(
-spx_sig_t target[],			/* target vector */
+spx_word16_t target[],			/* target vector */
 spx_coef_t ak[],			/* LPCs for this subframe */
 spx_coef_t awk1[],			/* Weighted LPCs for this subframe */
 spx_coef_t awk2[],			/* Weighted LPCs for this subframe */
@@ -113,9 +112,6 @@ int   update_target
 )
 {
    int i,j,m,q;
-#ifndef FIXED_POINT
-   int n;
-#endif
    VARDECL(spx_word16_t *resp);
 #ifdef _USE_SSE
    VARDECL(__m128 *resp2);
@@ -158,7 +154,7 @@ int   update_target
    
    /* FIXME: make that adaptive? */
    for (i=0;i<nsf;i++)
-      t[i]=EXTRACT16(PSHR32(target[i],6));
+      t[i]=target[i];
 
    compute_weighted_codebook(shape_cb, r, resp, resp2, E, shape_cb_size, subvect_size, stack);
 
@@ -222,13 +218,10 @@ int   update_target
          q=subvect_size-m;
 #ifdef FIXED_POINT
          g=sign*shape_cb[rind*subvect_size+m];
-         target_update(t+subvect_size*(i+1), g, r+q, nsf-subvect_size*(i+1));
 #else
          g=sign*0.03125*shape_cb[rind*subvect_size+m];
-         /*FIXME: I think that one too can be replaced by target_update */
-         for (n=subvect_size*(i+1);n<nsf;n++,q++)
-            t[n] = SUB32(t[n],g*r[q]);
 #endif
+         target_update(t+subvect_size*(i+1), g, r+q, nsf-subvect_size*(i+1));
       }
    }
 
@@ -244,14 +237,14 @@ int   update_target
       ALLOC(r2, nsf, spx_sig_t);
       syn_percep_zero(e, ak, awk1, awk2, r2, nsf,p, stack);
       for (j=0;j<nsf;j++)
-         target[j]=SUB32(target[j],r2[j]);
+         target[j]=SUB16(target[j],EXTRACT16(PSHR32(r2[j],8)));
    }
 }
 
 
 
 void split_cb_search_shape_sign(
-spx_sig_t target[],			/* target vector */
+spx_word16_t target[],			/* target vector */
 spx_coef_t ak[],			/* LPCs for this subframe */
 spx_coef_t awk1[],			/* Weighted LPCs for this subframe */
 spx_coef_t awk2[],			/* Weighted LPCs for this subframe */
@@ -356,7 +349,7 @@ int   update_target
    
    /* FIXME: make that adaptive? */
    for (i=0;i<nsf;i++)
-      t[i]=EXTRACT16(PSHR32(target[i],6));
+      t[i]=target[i];
 
    for (j=0;j<N;j++)
       speex_move(&ot[j][0], t, nsf*sizeof(spx_word16_t));
@@ -444,13 +437,10 @@ int   update_target
             q=subvect_size-m;
 #ifdef FIXED_POINT
             g=sign*shape_cb[rind*subvect_size+m];
-            target_update(nt[j]+subvect_size*(i+1), g, r+q, nsf-subvect_size*(i+1));
 #else
             g=sign*0.03125*shape_cb[rind*subvect_size+m];
-            /*FIXME: I think that one too can be replaced by target_update */
-            for (n=subvect_size*(i+1);n<nsf;n++,q++)
-               nt[j][n] = SUB32(nt[j][n],g*r[q]);
 #endif
+            target_update(nt[j]+subvect_size*(i+1), g, r+q, nsf-subvect_size*(i+1));
          }
 
          for (q=0;q<nb_subvect;q++)
@@ -514,7 +504,7 @@ int   update_target
    {
       syn_percep_zero(e, ak, awk1, awk2, r2, nsf,p, stack);
       for (j=0;j<nsf;j++)
-         target[j]=SUB32(target[j],r2[j]);
+         target[j]=SUB16(target[j],EXTRACT16(PSHR32(r2[j],8)));
    }
 }
 
@@ -577,7 +567,7 @@ char *stack
 }
 
 void noise_codebook_quant(
-spx_sig_t target[],			/* target vector */
+spx_word16_t target[],			/* target vector */
 spx_coef_t ak[],			/* LPCs for this subframe */
 spx_coef_t awk1[],			/* Weighted LPCs for this subframe */
 spx_coef_t awk2[],			/* Weighted LPCs for this subframe */
@@ -595,13 +585,14 @@ int   update_target
    int i;
    VARDECL(spx_sig_t *tmp);
    ALLOC(tmp, nsf, spx_sig_t);
-   residue_percep_zero(target, ak, awk1, awk2, tmp, nsf, p, stack);
+   for (i=0;i<nsf;i++)
+      tmp[i]=PSHR32(EXTEND32(target[i]),SIG_SHIFT);
+   residue_percep_zero(tmp, ak, awk1, awk2, tmp, nsf, p, stack);
 
    for (i=0;i<nsf;i++)
       exc[i]+=tmp[i];
    for (i=0;i<nsf;i++)
       target[i]=0;
-
 }
 
 
@@ -613,5 +604,9 @@ SpeexBits *bits,
 char *stack
 )
 {
-   speex_rand_vec(1, exc, nsf);
+   int i;
+   /* FIXME: This is bad, but I don't think the function ever gets called anyway */
+   spx_int32_t seed = 0;
+   for (i=0;i<nsf;i++)
+      exc[i]=SHL32(EXTEND32(speex_rand(1, &seed)),SIG_SHIFT);
 }

@@ -196,12 +196,12 @@ void speex_warning_int(const char *str, int val)
 #endif
 
 #ifdef FIXED_POINT
-spx_word32_t speex_rand(spx_word16_t std, spx_int32_t *seed)
+spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed)
 {
    spx_word32_t res;
    *seed = 1664525 * *seed + 1013904223;
    res = MULT16_16(EXTRACT16(SHR32(*seed,16)),std);
-   return SUB32(res, SHR(res, 3));
+   return PSHR32(SUB32(res, SHR(res, 3)),14);
 }
 #else
 spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed)
@@ -215,19 +215,6 @@ spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed)
    return 3.4642*std*ran.f;
 }
 #endif
-
-void speex_rand_vec(float std, spx_sig_t *data, int len)
-{
-   int i;
-   for (i=0;i<len;i++)
-      data[i]+=SIG_SCALING*3*std*((((float)rand())/RAND_MAX)-.5);
-}
-
-
-/*float speex_rand(float std)
-{
-   return 3*std*((((float)rand())/RAND_MAX)-.5);
-}*/
 
 #ifndef OVERRIDE_SPEEX_PUTC
 void _speex_putc(int ch, void *file)

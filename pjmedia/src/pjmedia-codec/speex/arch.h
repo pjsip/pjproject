@@ -41,18 +41,12 @@
 #define ABS16(x) ((x) < 0 ? (-(x)) : (x))    /**< Absolute 16-bit value.  */
 #define MAX16(a,b) ((a) > (b) ? (a) : (b))   /**< Maximum 16-bit value.   */
 #define ABS32(x) ((x) < 0 ? (-(x)) : (x))    /**< Absolute 32-bit value.  */
+#define MAX32(a,b) ((a) > (b) ? (a) : (b))   /**< Maximum 32-bit value.   */
 
 #ifdef FIXED_POINT
 
 typedef spx_int16_t spx_word16_t;
 typedef spx_int32_t   spx_word32_t;
-#ifdef _MSC_VER
-typedef __int64      spx_word64_t;
-#elif defined NO_LONGLONG
-typedef double    spx_word64_t;
-#else
-typedef long long    spx_word64_t;
-#endif
 typedef spx_word32_t spx_mem_t;
 typedef spx_word16_t spx_coef_t;
 typedef spx_word16_t spx_lsp_t;
@@ -103,7 +97,6 @@ typedef float spx_lsp_t;
 typedef float spx_sig_t;
 typedef float spx_word16_t;
 typedef float spx_word32_t;
-typedef float spx_word64_t;
 
 #define Q15ONE 1.0f
 #define LPC_SCALING  1.f
@@ -146,7 +139,6 @@ typedef float spx_word64_t;
 #define SUB16(a,b) ((a)-(b))
 #define ADD32(a,b) ((a)+(b))
 #define SUB32(a,b) ((a)-(b))
-#define ADD64(a,b) ((a)+(b))
 #define MULT16_16_16(a,b)     ((a)*(b))
 #define MULT16_16(a,b)     ((spx_word32_t)(a)*(spx_word32_t)(b))
 #define MAC16_16(c,a,b)     ((c)+(spx_word32_t)(a)*(spx_word32_t)(b))
@@ -161,20 +153,25 @@ typedef float spx_word64_t;
 
 #define MAC16_16_Q11(c,a,b)     ((c)+(a)*(b))
 #define MAC16_16_Q13(c,a,b)     ((c)+(a)*(b))
+#define MAC16_16_P13(c,a,b)     ((c)+(a)*(b))
 #define MULT16_16_Q11_32(a,b)     ((a)*(b))
 #define MULT16_16_Q13(a,b)     ((a)*(b))
 #define MULT16_16_Q14(a,b)     ((a)*(b))
 #define MULT16_16_Q15(a,b)     ((a)*(b))
 #define MULT16_16_P15(a,b)     ((a)*(b))
+#define MULT16_16_P13(a,b)     ((a)*(b))
+#define MULT16_16_P14(a,b)     ((a)*(b))
 
-#define DIV32_16(a,b)     ((a)/(b))
-#define DIV32(a,b)     ((a)/(b))
+#define DIV32_16(a,b)     (((spx_word32_t)(a))/(spx_word16_t)(b))
+#define PDIV32_16(a,b)     (((spx_word32_t)(a))/(spx_word16_t)(b))
+#define DIV32(a,b)     (((spx_word32_t)(a))/(spx_word32_t)(b))
+#define PDIV32(a,b)     (((spx_word32_t)(a))/(spx_word32_t)(b))
 
 
 #endif
 
 
-#ifdef CONFIG_TI_C55X
+#if defined (CONFIG_TI_C54X) || defined (CONFIG_TI_C55X)
 
 /* 2 on TI C5x DSP */
 #define BYTES_PER_CHAR 2 

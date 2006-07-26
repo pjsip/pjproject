@@ -255,6 +255,12 @@ ulaw2linear(
 {
 	int		t;
 
+	/* Shortcut: when input is zero, output is zero 
+	 * This will also make the VAD works harder.
+	 *  -bennylp
+	 */
+	if (u_val == 0) return 0;
+
 	/* Complement to obtain normal u-law value. */
 	u_val = ~u_val;
 

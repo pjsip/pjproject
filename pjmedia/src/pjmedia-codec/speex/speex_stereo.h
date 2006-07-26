@@ -53,7 +53,7 @@ typedef struct SpeexStereoState {
 } SpeexStereoState;
 
 /** Initialization value for a stereo state */
-#define SPEEX_STEREO_STATE_INIT {1,.5,1,1}
+#define SPEEX_STEREO_STATE_INIT {1,.5,1,1,0,0}
 
 /** Transforms a stereo frame into a mono frame and stores intensity stereo info in 'bits' */
 void speex_encode_stereo(float *data, int frame_size, SpeexBits *bits);

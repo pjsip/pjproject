@@ -101,6 +101,8 @@ void filter_mem2(const spx_sig_t *x, const spx_coef_t *num, const spx_coef_t *de
    int i,j;
    spx_sig_t xi,yi,nyi;
 
+   for (i=0;i<ord;i++)
+      mem[i] = SHR32(mem[i],1);   
    for (i=0;i<N;i++)
    {
       int deadm, deadn, deadd, deadidx, x1, y1, dead1, dead2, dead3, dead4, dead5, dead6;
@@ -252,6 +254,8 @@ void filter_mem2(const spx_sig_t *x, const spx_coef_t *num, const spx_coef_t *de
          : "cc", "memory");
    
    }
+   for (i=0;i<ord;i++)
+      mem[i] = SHL32(mem[i],1);   
 }
 
 #define OVERRIDE_IIR_MEM2
@@ -259,6 +263,9 @@ void iir_mem2(const spx_sig_t *x, const spx_coef_t *den, spx_sig_t *y, int N, in
 {
    int i,j;
    spx_sig_t xi,yi,nyi;
+
+   for (i=0;i<ord;i++)
+      mem[i] = SHR32(mem[i],1);   
 
    for (i=0;i<N;i++)
    {
@@ -376,4 +383,7 @@ void iir_mem2(const spx_sig_t *x, const spx_coef_t *den, spx_sig_t *y, int N, in
          : "cc", "memory");
    
    }
+   for (i=0;i<ord;i++)
+      mem[i] = SHL32(mem[i],1);   
+
 }

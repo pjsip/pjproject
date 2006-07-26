@@ -93,28 +93,36 @@ void speex_bits_rewind(SpeexBits *bits)
 void speex_bits_read_from(SpeexBits *bits, char *chars, int len)
 {
    int i;
-   if (len > bits->buf_size)
+   int nchars = len / BYTES_PER_CHAR;
+   if (nchars > bits->buf_size)
    {
       speex_warning_int("Packet is larger than allocated buffer: ", len);
       if (bits->owner)
       {
-         char *tmp = (char*)speex_realloc(bits->chars, len);
+         char *tmp = (char*)speex_realloc(bits->chars, nchars);
          if (tmp)
          {
-            bits->buf_size=len;
+            bits->buf_size=nchars;
             bits->chars=tmp;
          } else {
-            len=bits->buf_size;
+            nchars=bits->buf_size;
             speex_warning("Could not resize input buffer: truncating input");
          }
       } else {
          speex_warning("Do not own input buffer: truncating input");
-         len=bits->buf_size;
+         nchars=bits->buf_size;
       }
    }
-   for (i=0;i<len;i++)
-      bits->chars[i]=chars[i];
-   bits->nbBits=len<<3;
+#if (BYTES_PER_CHAR==2)
+/* Swap bytes to proper endian order (could be done externally) */
+#define HTOLS(A) ((((A) >> 8)&0xff)|(((A) & 0xff)<<8))
+#else
+#define HTOLS(A) (A)
+#endif
+   for (i=0;i<nchars;i++)
+      bits->chars[i]=HTOLS(chars[i]);
+
+   bits->nbBits=nchars<<LOG2_BITS_PER_CHAR;
    bits->charPtr=0;
    bits->bitPtr=0;
    bits->overflow=0;
@@ -161,7 +169,7 @@ void speex_bits_read_whole_bytes(SpeexBits *bits, char *chars, int nbytes)
    speex_bits_flush(bits);
    pos=bits->nbBits>>LOG2_BITS_PER_CHAR;
    for (i=0;i<nchars;i++)
-      bits->chars[pos+i]=chars[i];
+      bits->chars[pos+i]=HTOLS(chars[i]);
    bits->nbBits+=nchars<<LOG2_BITS_PER_CHAR;
 }
 
@@ -182,11 +190,7 @@ int speex_bits_write(SpeexBits *bits, char *chars, int max_nbytes)
 
    if (max_nchars > ((bits->nbBits+BITS_PER_CHAR-1)>>LOG2_BITS_PER_CHAR))
       max_nchars = ((bits->nbBits+BITS_PER_CHAR-1)>>LOG2_BITS_PER_CHAR);
-#if BYTES_PER_CHAR==1
-#define HTOLS(A) (A)
-#else
-#define HTOLS(A) ((((A) >> 8)&0xff)|(((A) & 0xff)<<8))
-#endif
+
    for (i=0;i<max_nchars;i++)
       chars[i]=HTOLS(bits->chars[i]);
    return max_nchars*BYTES_PER_CHAR;
@@ -199,8 +203,8 @@ int speex_bits_write_whole_bytes(SpeexBits *bits, char *chars, int max_nbytes)
    if (max_nchars > ((bits->nbBits)>>LOG2_BITS_PER_CHAR))
       max_nchars = ((bits->nbBits)>>LOG2_BITS_PER_CHAR);
    for (i=0;i<max_nchars;i++)
-      chars[i]=bits->chars[i];
-   
+      chars[i]=HTOLS(bits->chars[i]);
+
    if (bits->bitPtr>0)
       bits->chars[0]=bits->chars[max_nchars];
    else

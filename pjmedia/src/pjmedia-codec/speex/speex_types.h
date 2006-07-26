@@ -26,7 +26,6 @@
 
 #  if defined(__CYGWIN__)
 #    include <_G_config.h>
-     typedef _G_int64_t spx_int64_t;
      typedef _G_int32_t spx_int32_t;
      typedef _G_uint32_t spx_uint32_t;
      typedef _G_int16_t spx_int16_t;
@@ -36,17 +35,13 @@
      typedef unsigned short spx_uint16_t;                                                                   
      typedef int spx_int32_t;                                                                               
      typedef unsigned int spx_uint32_t;                                                                     
-     typedef long long spx_int64_t;                                                                         
-     typedef unsigned long long spx_uint64_t;  
 #  elif defined(__MWERKS__)
-     typedef long long spx_int64_t;
      typedef int spx_int32_t;
      typedef unsigned int spx_uint32_t;
      typedef short spx_int16_t;
      typedef unsigned short spx_uint16_t;
 #  else
      /* MSVC/Borland */
-     typedef __int64 spx_int64_t;
      typedef __int32 spx_int32_t;
      typedef unsigned __int32 spx_uint32_t;
      typedef __int16 spx_int16_t;
@@ -60,7 +55,6 @@
    typedef UInt16 spx_uint16_t;
    typedef SInt32 spx_int32_t;
    typedef UInt32 spx_uint32_t;
-   typedef SInt64 spx_int64_t;
 
 #elif defined(__MACOSX__) /* MacOS X Framework build */
 
@@ -69,7 +63,6 @@
    typedef u_int16_t spx_uint16_t;
    typedef int32_t spx_int32_t;
    typedef u_int32_t spx_uint32_t;
-   typedef int64_t spx_int64_t;
 
 #elif defined(__BEOS__)
 
@@ -79,7 +72,6 @@
    typedef u_int16_t spx_uint16_t;
    typedef int32_t spx_int32_t;
    typedef u_int32_t spx_uint32_t;
-   typedef int64_t spx_int64_t;
 
 #elif defined (__EMX__)
 
@@ -88,7 +80,6 @@
    typedef unsigned short spx_uint16_t;
    typedef int spx_int32_t;
    typedef unsigned int spx_uint32_t;
-   typedef long long spx_int64_t;
 
 #elif defined (DJGPP)
 
@@ -96,12 +87,10 @@
    typedef short spx_int16_t;
    typedef int spx_int32_t;
    typedef unsigned int spx_uint32_t;
-   typedef long long spx_int64_t;
 
 #elif defined(R5900)
 
    /* PS2 EE */
-   typedef long spx_int64_t;
    typedef int spx_int32_t;
    typedef unsigned spx_uint32_t;
    typedef short spx_int16_t;
@@ -113,7 +102,6 @@
    typedef unsigned short spx_uint16_t;
    typedef signed int spx_int32_t;
    typedef unsigned int spx_uint32_t;
-   typedef long long int spx_int64_t;
 
 #elif defined(CONFIG_TI_C54X) || defined (CONFIG_TI_C55X)
 
@@ -122,7 +110,7 @@
    typedef long spx_int32_t;
    typedef unsigned long spx_uint32_t;
 
-#elif defined(CONFIG_TI_C5X)
+#elif defined(CONFIG_TI_C6X)
 
    typedef short spx_int16_t;
    typedef unsigned short spx_uint16_t;

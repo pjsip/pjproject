@@ -43,32 +43,55 @@
 extern "C" {
 #endif
 
-#define SPEEX_JITTER_MAX_PACKET_SIZE 1500 /**< Maximum number of bytes per packet         */
-#define SPEEX_JITTER_MAX_BUFFER_SIZE 20   /**< Maximum number of packets in jitter buffer */
+struct JitterBuffer_;
 
-#define MAX_MARGIN 12  /**< Number of bins in margin histogram */
+typedef struct JitterBuffer_ JitterBuffer;
+
+typedef struct _JitterBufferPacket JitterBufferPacket;
+
+struct _JitterBufferPacket {
+   char        *data;
+   spx_uint32_t len;
+   spx_uint32_t timestamp;
+   spx_uint32_t span;
+};
+
+
+#define JITTER_BUFFER_OK 0
+#define JITTER_BUFFER_MISSING 1
+#define JITTER_BUFFER_INCOMPLETE 2
+#define JITTER_BUFFER_INTERNAL_ERROR -1
+#define JITTER_BUFFER_BAD_ARGUMENT -2
+
+/** Initialise jitter buffer */
+JitterBuffer *jitter_buffer_init(int tick);
+
+/** Reset jitter buffer */
+void jitter_buffer_reset(JitterBuffer *jitter);
+
+/** Destroy jitter buffer */
+void jitter_buffer_destroy(JitterBuffer *jitter);
+
+/** Put one packet into the jitter buffer */
+void jitter_buffer_put(JitterBuffer *jitter, const JitterBufferPacket *packet);
+
+/** Get one packet from the jitter buffer */
+int jitter_buffer_get(JitterBuffer *jitter, JitterBufferPacket *packet, spx_uint32_t *current_timestamp);
+
+/** Get pointer timestamp of jitter buffer */
+int jitter_buffer_get_pointer_timestamp(JitterBuffer *jitter);
+
+/** Advance by one tick */
+void jitter_buffer_tick(JitterBuffer *jitter);
+
 
 /** Speex jitter-buffer state. */
 typedef struct SpeexJitter {
-   int buffer_size;                                                       /**< Buffer size                         */
-   int pointer_timestamp;                                                 /**< Pointer timestamp                   */
-
    SpeexBits current_packet;                                              /**< Current Speex packet                */
    int valid_bits;                                                        /**< True if Speex bits are valid        */
-
-   char buf[SPEEX_JITTER_MAX_BUFFER_SIZE][SPEEX_JITTER_MAX_PACKET_SIZE];  /**< Buffer of packets                   */
-   int timestamp[SPEEX_JITTER_MAX_BUFFER_SIZE];                           /**< Timestamp of packet                 */
-   int len[SPEEX_JITTER_MAX_BUFFER_SIZE];                                 /**< Number of bytes in packet           */
-
+   JitterBuffer *packets;
    void *dec;                                                             /**< Pointer to Speex decoder            */
    int frame_size;                                                        /**< Frame size of Speex decoder         */
-   int frame_time;                                                        /**< Frame time in [ms] of Speex decoder */
-   int reset_state;                                                       /**< True if Speex state was reset       */
-   
-   int lost_count;                                                        /**< Number of lost packets              */
-   float shortterm_margin[MAX_MARGIN];                                    /**< Short term margins                  */
-   float longterm_margin[MAX_MARGIN];                                     /**< Long term margins                   */
-   float loss_rate;                                                       /**< Loss rate                           */
 } SpeexJitter;
 
 /** Initialise jitter buffer */
@@ -81,7 +104,7 @@ void speex_jitter_destroy(SpeexJitter *jitter);
 void speex_jitter_put(SpeexJitter *jitter, char *packet, int len, int timestamp);
 
 /** Get one packet from the jitter buffer */
-void speex_jitter_get(SpeexJitter *jitter, short *out, int *current_timestamp);
+void speex_jitter_get(SpeexJitter *jitter, spx_int16_t *out, int *start_offset);
 
 /** Get pointer timestamp of jitter buffer */
 int speex_jitter_get_pointer_timestamp(SpeexJitter *jitter);

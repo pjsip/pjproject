@@ -683,9 +683,7 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
-    float tmp[642]; /* 20ms at 32KHz + 2 */
-    pj_int16_t *samp_in;
-    unsigned i, samp_count, sz;
+    unsigned sz;
     int tx;
 
     spx = (struct spx_private*) codec->codec_data;
@@ -698,19 +696,11 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 	return PJ_SUCCESS;
     }
 
-    /* Copy frame to float buffer. */
-    samp_count = input->size / 2;
-    pj_assert(samp_count <= PJ_ARRAY_SIZE(tmp));
-    samp_in = input->buf;
-    for (i=0; i<samp_count; ++i) {
-	tmp[i] = samp_in[i];
-    }
-
     /* Flush all the bits in the struct so we can encode a new frame */
     speex_bits_reset(&spx->enc_bits);
 
     /* Encode the frame */
-    tx = speex_encode(spx->enc, tmp, &spx->enc_bits);
+    tx = speex_encode_int(spx->enc, input->buf, &spx->enc_bits);
 
     /* Check if we need not to transmit the frame (DTX) */
     if (tx == 0) {
@@ -743,9 +733,6 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
-    float tmp[642]; /* 20ms at 32KHz + 2 */
-    pj_int16_t *dst_buf;
-    unsigned i, count, sz;
 
     spx = (struct spx_private*) codec->codec_data;
 
@@ -764,21 +751,11 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     speex_bits_read_from(&spx->dec_bits, input->buf, input->size);
 
     /* Decode the data */
-    speex_decode(spx->dec, &spx->dec_bits, tmp);
+    speex_decode_int(spx->dec, &spx->dec_bits, output->buf);
 
-    /* Check size. */
-    sz = speex_bits_nbytes(&spx->enc_bits);
-    pj_assert(sz <= output_buf_len);
-
-    /* Copy from float to short samples. */
-    count = spx_factory.speex_param[spx->param_id].clock_rate * 20 / 1000;
-    pj_assert((count <= output_buf_len/2) && count <= PJ_ARRAY_SIZE(tmp));
-    dst_buf = output->buf;
-    for (i=0; i<count; ++i) {
-	dst_buf[i] = (pj_int16_t)tmp[i];
-    }
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = count * 2;
+    output->size = speex_bits_nbytes(&spx->dec_bits);
+    pj_assert(output->size <= (int)output_buf_len);
     output->timestamp.u64 = input->timestamp.u64;
 
 
@@ -793,9 +770,7 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
 				      struct pjmedia_frame *output)
 {
     struct spx_private *spx;
-    float tmp[642]; /* 20ms at 32KHz + 2 */
-    pj_int16_t *dst_buf;
-    unsigned i, count;
+    unsigned count;
 
     /* output_buf_len is unreferenced when building in Release mode */
     PJ_UNUSED_ARG(output_buf_len);
@@ -803,16 +778,11 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
     spx = (struct spx_private*) codec->codec_data;
 
     count = spx_factory.speex_param[spx->param_id].clock_rate * 20 / 1000;
-    pj_assert((count <= output_buf_len/2) && count <= PJ_ARRAY_SIZE(tmp));
+    pj_assert(count <= output_buf_len/2);
 
     /* Recover packet loss */
-    speex_decode(spx->dec, NULL, tmp);
+    speex_decode_int(spx->dec, NULL, output->buf);
 
-    /* Copy from float to short samples. */
-    dst_buf = output->buf;
-    for (i=0; i<count; ++i) {
-	dst_buf[i] = (pj_int16_t)tmp[i];
-    }
     output->size = count * 2;
 
     return PJ_SUCCESS;

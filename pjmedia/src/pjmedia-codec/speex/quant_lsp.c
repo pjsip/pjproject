@@ -40,8 +40,11 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-
 #include "misc.h"
+
+#ifdef BFIN_ASM
+#include "quant_lsp_bfin.h"
+#endif
 
 #ifdef FIXED_POINT
 
@@ -90,12 +93,13 @@ static void compute_quant_weights(spx_lsp_t *qlsp, spx_word16_t *quant_weight, i
 }
 
 /* Note: x is modified*/
+#ifndef OVERRIDE_LSP_QUANT
 static int lsp_quant(spx_word16_t *x, const signed char *cdbk, int nbVec, int nbDim)
 {
    int i,j;
    spx_word32_t dist;
    spx_word16_t tmp;
-   spx_word32_t best_dist=0;
+   spx_word32_t best_dist=VERY_LARGE32;
    int best_id=0;
    const signed char *ptr=cdbk;
    for (i=0;i<nbVec;i++)
@@ -105,8 +109,8 @@ static int lsp_quant(spx_word16_t *x, const signed char *cdbk, int nbVec, int nb
       {
          tmp=SUB16(x[j],SHL16((spx_word16_t)*ptr++,5));
          dist=MAC16_16(dist,tmp,tmp);
-      }
-      if (dist<best_dist || i==0)
+      } 
+      if (dist<best_dist)
       {
          best_dist=dist;
          best_id=i;
@@ -118,14 +122,16 @@ static int lsp_quant(spx_word16_t *x, const signed char *cdbk, int nbVec, int nb
     
    return best_id;
 }
+#endif
 
 /* Note: x is modified*/
+#ifndef OVERRIDE_LSP_WEIGHT_QUANT
 static int lsp_weight_quant(spx_word16_t *x, spx_word16_t *weight, const signed char *cdbk, int nbVec, int nbDim)
 {
    int i,j;
    spx_word32_t dist;
    spx_word16_t tmp;
-   spx_word32_t best_dist=0;
+   spx_word32_t best_dist=VERY_LARGE32;
    int best_id=0;
    const signed char *ptr=cdbk;
    for (i=0;i<nbVec;i++)
@@ -136,7 +142,7 @@ static int lsp_weight_quant(spx_word16_t *x, spx_word16_t *weight, const signed 
          tmp=SUB16(x[j],SHL16((spx_word16_t)*ptr++,5));
          dist=MAC16_32_Q15(dist,weight[j],MULT16_16(tmp,tmp));
       }
-      if (dist<best_dist || i==0)
+      if (dist<best_dist)
       {
          best_dist=dist;
          best_id=i;
@@ -147,7 +153,7 @@ static int lsp_weight_quant(spx_word16_t *x, spx_word16_t *weight, const signed 
       x[j] = SUB16(x[j],SHL16((spx_word16_t)cdbk[best_id*nbDim+j],5));
    return best_id;
 }
-
+#endif
 
 void lsp_quant_nb(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
 {

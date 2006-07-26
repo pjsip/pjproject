@@ -90,7 +90,7 @@
 #endif
 
 #ifdef FIXED_POINT
-static const spx_float_t MIN_LEAK = ((spx_float_t){16777, -24});
+static const spx_float_t MIN_LEAK = {16777, -24};
 #define TOP16(x) ((x)>>16)
 #else
 static const spx_float_t MIN_LEAK = .001f;
@@ -140,9 +140,13 @@ struct SpeexEchoState_ {
    spx_word16_t preemph;
    spx_word16_t notch_radius;
    spx_mem_t notch_mem[2];
+
+   /* NOTE: If you only use speex_echo_cancel() and want to save some memory, remove this */
+   spx_int16_t *play_buf;
+   int play_buf_pos;
 };
 
-static inline void filter_dc_notch16(spx_int16_t *in, spx_word16_t radius, spx_word16_t *out, int len, spx_mem_t *mem)
+static inline void filter_dc_notch16(const spx_int16_t *in, spx_word16_t radius, spx_word16_t *out, int len, spx_mem_t *mem)
 {
    int i;
    spx_word16_t den2;
@@ -166,15 +170,13 @@ static inline void filter_dc_notch16(spx_int16_t *in, spx_word16_t radius, spx_w
    }
 }
 
-static inline spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
+static inline spx_word32_t mdf_inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
 {
    spx_word32_t sum=0;
-   len >>= 2;
+   len >>= 1;
    while(len--)
    {
       spx_word32_t part=0;
-      part = MAC16_16(part,*x++,*y++);
-      part = MAC16_16(part,*x++,*y++);
       part = MAC16_16(part,*x++,*y++);
       part = MAC16_16(part,*x++,*y++);
       /* HINT: If you had a 40-bit accumulator, you could shift only at the end */
@@ -184,7 +186,7 @@ static inline spx_word32_t inner_prod(const spx_word16_t *x, const spx_word16_t 
 }
 
 /** Compute power spectrum of a half-complex (packed) vector */
-static inline void power_spectrum(spx_word16_t *X, spx_word32_t *ps, int N)
+static inline void power_spectrum(const spx_word16_t *X, spx_word32_t *ps, int N)
 {
    int i, j;
    ps[0]=MULT16_16(X[0],X[0]);
@@ -197,7 +199,7 @@ static inline void power_spectrum(spx_word16_t *X, spx_word32_t *ps, int N)
 
 /** Compute cross-power spectrum of a half-complex (packed) vectors and add to acc */
 #ifdef FIXED_POINT
-static inline void spectral_mul_accum(spx_word16_t *X, spx_word32_t *Y, spx_word16_t *acc, int N, int M)
+static inline void spectral_mul_accum(const spx_word16_t *X, const spx_word32_t *Y, spx_word16_t *acc, int N, int M)
 {
    int i,j;
    spx_word32_t tmp1=0,tmp2=0;
@@ -225,7 +227,7 @@ static inline void spectral_mul_accum(spx_word16_t *X, spx_word32_t *Y, spx_word
    acc[N-1] = PSHR32(tmp1,WEIGHT_SHIFT);
 }
 #else
-static inline void spectral_mul_accum(spx_word16_t *X, spx_word32_t *Y, spx_word16_t *acc, int N, int M)
+static inline void spectral_mul_accum(const spx_word16_t *X, const spx_word32_t *Y, spx_word16_t *acc, int N, int M)
 {
    int i,j;
    for (i=0;i<N;i++)
@@ -246,7 +248,7 @@ static inline void spectral_mul_accum(spx_word16_t *X, spx_word32_t *Y, spx_word
 #endif
 
 /** Compute weighted cross-power spectrum of a half-complex (packed) vector with conjugate */
-static inline void weighted_spectral_mul_conj(spx_float_t *w, spx_word16_t *X, spx_word16_t *Y, spx_word32_t *prod, int N)
+static inline void weighted_spectral_mul_conj(const spx_float_t *w, const spx_word16_t *X, const spx_word16_t *Y, spx_word32_t *prod, int N)
 {
    int i, j;
    prod[0] = FLOAT_MUL32(w[0],MULT16_16(X[0],Y[0]));
@@ -273,10 +275,10 @@ SpeexEchoState *speex_echo_state_init(int frame_size, int filter_length)
    st->sum_adapt = 0;
    /* FIXME: Make that an init option (new API call?) */
    st->sampling_rate = 8000;
-   st->spec_average = DIV32_16(SHL32(st->frame_size, 15), st->sampling_rate);
+   st->spec_average = DIV32_16(SHL32(EXTEND32(st->frame_size), 15), st->sampling_rate);
 #ifdef FIXED_POINT
-   st->beta0 = DIV32_16(SHL32(st->frame_size, 16), st->sampling_rate);
-   st->beta_max = DIV32_16(SHL32(st->frame_size, 14), st->sampling_rate);
+   st->beta0 = DIV32_16(SHL32(EXTEND32(st->frame_size), 16), st->sampling_rate);
+   st->beta_max = DIV32_16(SHL32(EXTEND32(st->frame_size), 14), st->sampling_rate);
 #else
    st->beta0 = (2.0f*st->frame_size)/st->sampling_rate;
    st->beta_max = (.5f*st->frame_size)/st->sampling_rate;
@@ -332,6 +334,10 @@ SpeexEchoState *speex_echo_state_init(int frame_size, int filter_length)
    st->notch_mem[0] = st->notch_mem[1] = 0;
    st->adapted = 0;
    st->Pey = st->Pyy = FLOAT_ONE;
+   
+   st->play_buf = (spx_int16_t*)speex_alloc(2*st->frame_size*sizeof(spx_int16_t));
+   st->play_buf_pos = 0;
+
    return st;
 }
 
@@ -385,12 +391,46 @@ void speex_echo_state_destroy(SpeexEchoState *st)
 #ifdef FIXED_POINT
    speex_free(st->wtmp2);
 #endif
+   speex_free(st->play_buf);
    speex_free(st);
 }
 
-extern int fixed_point;
+void speex_echo_capture(SpeexEchoState *st, const spx_int16_t *rec, spx_int16_t *out, spx_int32_t *Yout)
+{
+   int i;
+   if (st->play_buf_pos>=st->frame_size)
+   {
+      speex_echo_cancel(st, rec, st->play_buf, out, Yout);
+      st->play_buf_pos -= st->frame_size;
+      for (i=0;i<st->frame_size;i++)
+         st->play_buf[i] = st->play_buf[i+st->frame_size];
+   } else {
+      speex_warning("no playback frame available");
+      if (st->play_buf_pos!=0)
+      {
+         speex_warning("internal playback buffer corruption?");
+         st->play_buf_pos = 0;
+      }
+      for (i=0;i<st->frame_size;i++)
+         out[i] = rec[i];
+   }
+}
+
+void speex_echo_playback(SpeexEchoState *st, const spx_int16_t *play)
+{
+   if (st->play_buf_pos<=st->frame_size)
+   {
+      int i;
+      for (i=0;i<st->frame_size;i++)
+         st->play_buf[st->play_buf_pos+i] = play[i];
+      st->play_buf_pos += st->frame_size;
+   } else {
+      speex_warning("had to discard a playback frame");
+   }
+}
+
 /** Performs echo cancellation on a frame */
-void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, spx_int32_t *Yout)
+void speex_echo_cancel(SpeexEchoState *st, const spx_int16_t *ref, const spx_int16_t *echo, spx_int16_t *out, spx_int32_t *Yout)
 {
    int i,j;
    int N,M;
@@ -402,6 +442,7 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
    spx_word16_t RER;
    spx_word32_t tmp32;
    spx_word16_t M_1;
+   int saturated=0;
    
    N = st->window_size;
    M = st->M;
@@ -416,18 +457,46 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
    M_1 = 1.f/M;
 #endif
 
-   filter_dc_notch16((spx_int16_t*)ref, st->notch_radius, st->d, st->frame_size, st->notch_mem);
+   filter_dc_notch16(ref, st->notch_radius, st->d, st->frame_size, st->notch_mem);
    /* Copy input data to buffer */
    for (i=0;i<st->frame_size;i++)
    {
       spx_word16_t tmp;
+      spx_word32_t tmp32;
       st->x[i] = st->x[i+st->frame_size];
-      st->x[i+st->frame_size] = SUB16(echo[i], MULT16_16_P15(st->preemph, st->memX));
+      tmp32 = SUB32(EXTEND32(echo[i]), EXTEND32(MULT16_16_P15(st->preemph, st->memX)));
+#ifdef FIXED_POINT
+      /*FIXME: If saturation occurs here, we need to freeze adaptation for M frames (not just one) */
+      if (tmp32 > 32767)
+      {
+         tmp32 = 32767;
+         saturated = 1;
+      }      
+      if (tmp32 < -32767)
+      {
+         tmp32 = -32767;
+         saturated = 1;
+      }      
+#endif
+      st->x[i+st->frame_size] = EXTRACT16(tmp32);
       st->memX = echo[i];
       
       tmp = st->d[i];
       st->d[i] = st->d[i+st->frame_size];
-      st->d[i+st->frame_size] = SUB16(tmp, MULT16_16_P15(st->preemph, st->memD));
+      tmp32 = SUB32(EXTEND32(tmp), EXTEND32(MULT16_16_P15(st->preemph, st->memD)));
+#ifdef FIXED_POINT
+      if (tmp32 > 32767)
+      {
+         tmp32 = 32767;
+         saturated = 1;
+      }      
+      if (tmp32 < -32767)
+      {
+         tmp32 = -32767;
+         saturated = 1;
+      }
+#endif
+      st->d[i+st->frame_size] = tmp32;
       st->memD = tmp;
    }
 
@@ -465,6 +534,12 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
       else if (tmp_out<-32768)
          tmp_out = -32768;
       tmp_out = ADD32(tmp_out, EXTEND32(MULT16_16_P15(st->preemph, st->memE)));
+      /* This is an arbitrary test for saturation */
+      if (ref[i] <= -32000 || ref[i] >= 32000)
+      {
+         tmp_out = 0;
+         saturated = 1;
+      }
       out[i] = tmp_out;
       st->memE = tmp_out;
    }
@@ -477,9 +552,9 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
    }
 
    /* Compute a bunch of correlations */
-   See = inner_prod(st->e+st->frame_size, st->e+st->frame_size, st->frame_size);
-   See = ADD32(See, SHR32(10000,6));
-   Syy = inner_prod(st->y+st->frame_size, st->y+st->frame_size, st->frame_size);
+   See = mdf_inner_prod(st->e+st->frame_size, st->e+st->frame_size, st->frame_size);
+   See = ADD32(See, SHR32(EXTEND32(10000),6));
+   Syy = mdf_inner_prod(st->y+st->frame_size, st->y+st->frame_size, st->frame_size);
    
    /* Convert error to frequency domain */
    spx_fft(st->fft_table, st->e, st->E);
@@ -544,8 +619,9 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
       st->Pey = FLOAT_MULT(MIN_LEAK,st->Pyy);
    if (FLOAT_GT(st->Pey, st->Pyy))
       st->Pey = st->Pyy;
-   /* leak_estimate is the limear regression result */
+   /* leak_estimate is the linear regression result */
    leak_estimate = FLOAT_EXTRACT16(FLOAT_SHL(FLOAT_DIVU(st->Pey, st->Pyy),14));
+   /* This looks like a stupid bug, but it's right (because we convert from Q14 to Q15) */
    if (leak_estimate > 16383)
       leak_estimate = 32767;
    else
@@ -594,7 +670,7 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
       spx_word32_t Sxx;
       spx_word16_t adapt_rate=0;
 
-      Sxx = inner_prod(st->x+st->frame_size, st->x+st->frame_size, st->frame_size);
+      Sxx = mdf_inner_prod(st->x+st->frame_size, st->x+st->frame_size, st->frame_size);
       /* Temporary adaption rate if filter is not adapted correctly */
 
       tmp32 = MULT16_32_Q15(QCONST16(.15f, 15), Sxx);
@@ -620,12 +696,15 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
       weighted_spectral_mul_conj(st->power_1, &st->X[j*N], st->E, st->PHI+N*j, N);
    }
 
-   /* Gradient descent */
-   for (i=0;i<M*N;i++)
+   if (!saturated)
    {
-      st->W[i] += st->PHI[i];
-      /* Old value of W in PHI */
-      st->PHI[i] = st->W[i] - st->PHI[i];
+      /* Gradient descent */
+      for (i=0;i<M*N;i++)
+      {
+         st->W[i] += st->PHI[i];
+         /* Old value of W in PHI */
+         st->PHI[i] = st->W[i] - st->PHI[i];
+      }
    }
    
    /* Update weight to prevent circular convolution (MDF / AUMDF) */
@@ -637,7 +716,7 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
       {
 #ifdef FIXED_POINT
          for (i=0;i<N;i++)
-            st->wtmp2[i] = PSHR32(st->W[j*N+i],NORMALIZE_SCALEDOWN+16);
+            st->wtmp2[i] = EXTRACT16(PSHR32(st->W[j*N+i],NORMALIZE_SCALEDOWN+16));
          spx_ifft(st->fft_table, st->wtmp2, st->wtmp);
          for (i=0;i<st->frame_size;i++)
          {
@@ -645,12 +724,12 @@ void speex_echo_cancel(SpeexEchoState *st, short *ref, short *echo, short *out, 
          }
          for (i=st->frame_size;i<N;i++)
          {
-            st->wtmp[i]=SHL(st->wtmp[i],NORMALIZE_SCALEUP);
+            st->wtmp[i]=SHL16(st->wtmp[i],NORMALIZE_SCALEUP);
          }
          spx_fft(st->fft_table, st->wtmp, st->wtmp2);
          /* The "-1" in the shift is a sort of kludge that trades less efficient update speed for decrease noise */
          for (i=0;i<N;i++)
-            st->W[j*N+i] -= SHL32(st->wtmp2[i],16+NORMALIZE_SCALEDOWN-NORMALIZE_SCALEUP-1);
+            st->W[j*N+i] -= SHL32(EXTEND32(st->wtmp2[i]),16+NORMALIZE_SCALEDOWN-NORMALIZE_SCALEUP-1);
 #else
          spx_ifft(st->fft_table, &st->W[j*N], st->wtmp);
          for (i=st->frame_size;i<N;i++)
@@ -715,10 +794,10 @@ int speex_echo_ctl(SpeexEchoState *st, int request, void *ptr)
          break;
       case SPEEX_ECHO_SET_SAMPLING_RATE:
          st->sampling_rate = (*(int*)ptr);
-         st->spec_average = DIV32_16(SHL32(st->frame_size, 15), st->sampling_rate);
+         st->spec_average = DIV32_16(SHL32(EXTEND32(st->frame_size), 15), st->sampling_rate);
 #ifdef FIXED_POINT
-         st->beta0 = DIV32_16(SHL32(st->frame_size, 16), st->sampling_rate);
-         st->beta_max = DIV32_16(SHL32(st->frame_size, 14), st->sampling_rate);
+         st->beta0 = DIV32_16(SHL32(EXTEND32(st->frame_size), 16), st->sampling_rate);
+         st->beta_max = DIV32_16(SHL32(EXTEND32(st->frame_size), 14), st->sampling_rate);
 #else
          st->beta0 = (2.0f*st->frame_size)/st->sampling_rate;
          st->beta_max = (.5f*st->frame_size)/st->sampling_rate;

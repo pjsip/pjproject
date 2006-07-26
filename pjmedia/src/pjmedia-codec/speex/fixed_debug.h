@@ -40,8 +40,9 @@
 extern long long spx_mips;
 #define MIPS_INC spx_mips++,
 
-#define QCONST16(x,bits) ((spx_word16_t)((x)*(1<<(bits))+(1<<((bits)-1))))
-#define QCONST32(x,bits) ((spx_word32_t)((x)*(1<<(bits))+(1<<((bits)-1))))
+#define QCONST16(x,bits) ((spx_word16_t)(.5+(x)*(((spx_word32_t)1)<<(bits))))
+#define QCONST32(x,bits) ((spx_word32_t)(.5+(x)*(((spx_word32_t)1)<<(bits))))
+
 
 #define VERIFY_SHORT(x) ((x)<=32767&&(x)>=-32768)
 #define VERIFY_INT(x) ((x)<=2147483647LL&&(x)>=-2147483648LL)
@@ -169,7 +170,7 @@ static inline short ADD16(int a, int b)
    }
    res = a+b;
    if (!VERIFY_SHORT(res))
-      fprintf (stderr, "ADD16: output is not short: %d\n", res);
+      fprintf (stderr, "ADD16: output is not short: %d+%d=%d\n", a,b,res);
    spx_mips++;
    return res;
 }
@@ -196,7 +197,9 @@ static inline int ADD32(long long a, long long b)
    }
    res = a+b;
    if (!VERIFY_INT(res))
+   {
       fprintf (stderr, "ADD32: output is not int: %d\n", (int)res);
+   }
    spx_mips++;
    return res;
 }
@@ -251,6 +254,8 @@ static inline int MULT16_16(int a, int b)
 #define MAC16_16(c,a,b)     (spx_mips--,ADD32((c),MULT16_16((a),(b))))
 #define MAC16_16_Q11(c,a,b)     (ADD16((c),EXTRACT16(SHR32(MULT16_16((a),(b)),11))))
 #define MAC16_16_Q13(c,a,b)     (ADD16((c),EXTRACT16(SHR32(MULT16_16((a),(b)),13))))
+#define MAC16_16_P13(c,a,b)     (ADD32((c),SHR(ADD32(4096,MULT16_16((a),(b))),13)))
+
 
 static inline int MULT16_32_QX(int a, long long b, int Q)
 {
@@ -437,7 +442,7 @@ static inline int DIV32(long long a, long long b)
    spx_mips+=36;
    return res;
 }
-
-
+#define PDIV32(a,b) DIV32(ADD32((a),(b)>>1),b)
+#define PDIV32_16(a,b) DIV32_16(ADD32((a),(b)>>1),b)
 
 #endif

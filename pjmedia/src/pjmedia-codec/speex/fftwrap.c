@@ -42,6 +42,7 @@
 
 #include "misc.h"
 
+#define MAX_FFT_SIZE 2048
 
 #ifdef FIXED_POINT
 static int maximize_range(spx_word16_t *in, spx_word16_t *out, spx_word16_t bound, int len)
@@ -225,9 +226,8 @@ void spx_ifft(void *table, spx_word16_t *in, spx_word16_t *out)
 #endif
 
 
-int fixed_point = 1;
 #ifdef FIXED_POINT
-#include "smallft.h"
+/*#include "smallft.h"*/
 
 
 void spx_fft_float(void *table, float *in, float *out)
@@ -239,13 +239,19 @@ void spx_fft_float(void *table, float *in, float *out)
    int N = ((struct kiss_config *)table)->N;
 #else
 #endif
+#ifdef VAR_ARRAYS
    spx_word16_t _in[N];
    spx_word16_t _out[N];
+#else
+   spx_word16_t _in[MAX_FFT_SIZE];
+   spx_word16_t _out[MAX_FFT_SIZE];
+#endif
    for (i=0;i<N;i++)
       _in[i] = (int)floor(.5+in[i]);
    spx_fft(table, _in, _out);
    for (i=0;i<N;i++)
       out[i] = _out[i];
+#if 0
    if (!fixed_point)
    {
       float scale;
@@ -257,6 +263,7 @@ void spx_fft_float(void *table, float *in, float *out)
       spx_drft_forward(&t, out);
       spx_drft_clear(&t);
    }
+#endif
 }
 
 void spx_ifft_float(void *table, float *in, float *out)
@@ -268,13 +275,19 @@ void spx_ifft_float(void *table, float *in, float *out)
    int N = ((struct kiss_config *)table)->N;
 #else
 #endif
+#ifdef VAR_ARRAYS
    spx_word16_t _in[N];
    spx_word16_t _out[N];
+#else
+   spx_word16_t _in[MAX_FFT_SIZE];
+   spx_word16_t _out[MAX_FFT_SIZE];
+#endif
    for (i=0;i<N;i++)
       _in[i] = (int)floor(.5+in[i]);
    spx_ifft(table, _in, _out);
    for (i=0;i<N;i++)
       out[i] = _out[i];
+#if 0
    if (!fixed_point)
    {
       int i;
@@ -285,6 +298,7 @@ void spx_ifft_float(void *table, float *in, float *out)
       spx_drft_backward(&t, out);
       spx_drft_clear(&t);
    }
+#endif
 }
 
 #else

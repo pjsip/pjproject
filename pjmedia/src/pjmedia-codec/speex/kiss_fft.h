@@ -2,11 +2,8 @@
 #define KISS_FFT_H
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
-#include <memory.h>
-//Not available in gcc MacOS X (bennylp)
-//#include <malloc.h>
+#include "misc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,13 +27,13 @@ extern "C" {
 # define kiss_fft_scalar __m128
 #define KISS_FFT_MALLOC(nbytes) memalign(16,nbytes)
 #else	
-#define KISS_FFT_MALLOC malloc
+#define KISS_FFT_MALLOC speex_alloc
 #endif	
 
 
 #ifdef FIXED_POINT
-#include <sys/types.h>	
-#  define kiss_fft_scalar int16_t
+#include "misc.h"	
+#  define kiss_fft_scalar spx_int16_t
 #else
 # ifndef kiss_fft_scalar
 /*  default is float */
@@ -95,7 +92,7 @@ void kiss_fft_stride(kiss_fft_cfg cfg,const kiss_fft_cpx *fin,kiss_fft_cpx *fout
 
 /* If kiss_fft_alloc allocated a buffer, it is one contiguous 
    buffer and can be simply free()d when no longer needed*/
-#define kiss_fft_free free
+#define kiss_fft_free speex_free
 
 /*
  Cleans up some memory that gets managed internally. Not necessary to call, but it might clean up 
