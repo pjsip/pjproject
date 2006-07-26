@@ -116,9 +116,9 @@ static void usage(void)
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --quality=N	  Specify media quality (0-10, default=10)");
-    /*
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
-    */
+    puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
+
     puts  ("");
     puts  ("Buddy List (can be more than one):");
     puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -248,7 +248,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
-	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME,
+	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP,
     };
@@ -289,6 +289,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "complexity",	1, 0, OPT_COMPLEXITY},
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
+	{ "no-vad",     0, 0, OPT_NO_VAD},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -591,17 +592,20 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_DURATION:
 	    cfg->duration = my_atoi(pj_optarg);
 	    break;
+	*/
 
 	case OPT_PTIME:
-	    cfg->ptime = my_atoi(pj_optarg);
-	    if (cfg->ptime < 10 || cfg->ptime > 1000) {
+	    cfg->media_cfg.ptime = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.ptime < 10 || cfg->media_cfg.ptime > 1000) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --ptime option"));
 		return -1;
 	    }
 	    break;
 
-	*/
+	case OPT_NO_VAD:
+	    cfg->media_cfg.no_vad = PJ_TRUE;
+	    break;
 
 	case OPT_QUALITY:
 	    cfg->media_cfg.quality = my_atoi(pj_optarg);

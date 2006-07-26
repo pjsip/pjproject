@@ -2090,6 +2090,20 @@ struct pjsua_media_config
      * Default: 5.
      */
     unsigned		quality;
+
+    /**
+     * Specify default ptime.
+     *
+     * Default: 0 (codec specific)
+     */
+    unsigned		ptime;
+
+    /**
+     * Disable VAD?
+     *
+     * Default: 0 (no (meaning VAD is enabled))
+     */
+    pj_bool_t		no_vad;
 };
 
 

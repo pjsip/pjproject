@@ -1852,7 +1852,17 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     } else {
 
 	/* Override ptime, if this option is specified. */
-	PJ_TODO(set_codec_ptime_in_call);
+	if (pjsua_var.media_cfg.ptime != 0) {
+	    sess_info.stream_info[0].param->setting.frm_per_pkt = 
+		pjsua_var.media_cfg.ptime / sess_info.stream_info[0].param->info.frm_ptime;
+	    if (sess_info.stream_info[0].param->setting.frm_per_pkt == 0)
+		sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
+	}
+
+	/* Disable VAD, if this option is specified. */
+	if (pjsua_var.media_cfg.no_vad) {
+	    sess_info.stream_info[0].param->setting.vad = 0;
+	}
 
 
 	/* Optionally, application may modify other stream settings here
