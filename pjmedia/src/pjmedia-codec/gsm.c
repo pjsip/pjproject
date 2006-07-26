@@ -343,6 +343,8 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 				      pjmedia_codec *codec )
 {
     struct gsm_data *gsm_data;
+    pj_int16_t frame[160];
+    int i;
 
     PJ_ASSERT_RETURN(factory && codec, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &gsm_codec_factory.base, PJ_EINVAL);
@@ -351,6 +353,14 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 
     /* Close codec, if it's not closed. */
     gsm_codec_close(codec);
+
+    /* Clear left samples in the PLC, since codec+plc will be reused
+     * next time.
+     */
+    for (i=0; i<2; ++i) {
+	pjmedia_zero_samples(frame, PJ_ARRAY_SIZE(frame));
+	pjmedia_plc_save(gsm_data->plc, frame);
+    }
 
     /* Put in the free list. */
     pj_mutex_lock(gsm_codec_factory.mutex);

@@ -357,13 +357,24 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory, 
 				      pjmedia_codec *codec )
 {
-    
+    struct g711_private *priv = codec->codec_data;
+    pj_int16_t frame[SAMPLES_PER_FRAME];
+    int i;
+
     PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
 
     /* Check that this node has not been deallocated before */
     pj_assert (codec->next==NULL && codec->prev==NULL);
     if (codec->next!=NULL || codec->prev!=NULL) {
 	return PJ_EINVALIDOP;
+    }
+
+    /* Clear left samples in the PLC, since codec+plc will be reused
+     * next time.
+     */
+    for (i=0; i<2; ++i) {
+	pjmedia_zero_samples(frame, PJ_ARRAY_SIZE(frame));
+	pjmedia_plc_save(priv->plc, frame);
     }
 
     /* Lock mutex. */
