@@ -21,6 +21,7 @@
 
 #define THIS_FILE	"pjsua.c"
 
+//#define STEREO_DEMO
 
 
 /* Pjsua application data */
@@ -54,12 +55,19 @@ static struct app_config
     unsigned		    ptime;
     unsigned		    auto_answer;
     unsigned		    duration;
+
+#ifdef STEREO_DEMO
+    pjmedia_snd_port	   *snd;
+#endif
+
 } app_config;
 
 
 static pjsua_acc_id	current_acc;
 static pjsua_call_id	current_call;
 static pj_str_t		uri_arg;
+
+static void stereo_demo();
 
 /*****************************************************************************
  * Configuration manipulation
@@ -2199,6 +2207,10 @@ pj_status_t app_init(int argc, char *argv[])
     if (status != PJ_SUCCESS)
 	return status;
 
+#ifdef STEREO_DEMO
+    stereo_demo();
+#endif
+
     /* Optionally registers WAV file */
     if (app_config.wav_file.slen) {
 	status = pjsua_player_create(&app_config.wav_file, 0, 
@@ -2272,11 +2284,13 @@ pj_status_t app_init(int argc, char *argv[])
 	goto on_error;
 
     /* Use null sound device? */
+#ifndef STEREO_DEMO
     if (app_config.null_audio) {
 	status = pjsua_set_null_snd_dev();
 	if (status != PJ_SUCCESS)
 	    return status;
     }
+#endif
 
     return PJ_SUCCESS;
 
@@ -2304,6 +2318,13 @@ pj_status_t app_main(void)
 
 pj_status_t app_destroy(void)
 {
+#ifdef STEREO_DEMO
+    if (app_config.snd) {
+	pjmedia_snd_port_destroy(app_config.snd);
+	app_config.snd = NULL;
+    }
+#endif
+
     if (app_config.pool) {
 	pj_pool_release(app_config.pool);
 	app_config.pool = NULL;
@@ -2311,3 +2332,64 @@ pj_status_t app_destroy(void)
 
     return pjsua_destroy();
 }
+
+
+#ifdef STEREO_DEMO
+static void stereo_demo()
+{
+    pjmedia_port *conf, *splitter, *ch1;
+    unsigned clock;
+    pj_status_t status;
+
+    /* Disable existing sound device */
+    conf = pjsua_set_no_snd_dev();
+
+    clock = app_config.media_cfg.clock_rate;
+
+    /* Create stereo-mono splitter/combiner */
+    status = pjmedia_splitcomb_create(app_config.pool, 
+				      clock /* clock rate */,
+				      2	    /* stereo */,
+				      clock*2*10/1000/* 10ms samples * 2ch */,
+				      16    /* bits */,
+				      0	    /* options */,
+				      &splitter);
+    pj_assert(status == PJ_SUCCESS);
+
+    /* Connect channel0 (left channel?) to conference port slot0 */
+    status = pjmedia_splitcomb_set_channel(splitter, 0 /* ch0 */, 
+					   0 /*options*/,
+					   conf);
+    pj_assert(status == PJ_SUCCESS);
+
+    /* Create reverse channel for channel1 (right channel?)... */
+    status = pjmedia_splitcomb_create_rev_channel(app_config.pool,
+						  splitter,
+						  1  /* ch1 */,
+						  0  /* options */,
+						  &ch1);
+    pj_assert(status == PJ_SUCCESS);
+
+    /* .. and register it to conference bridge (it would be slot1
+     * if there's no other devices connected to the bridge)
+     */
+    status = pjsua_conf_add_port(app_config.pool, ch1, NULL);
+    pj_assert(status == PJ_SUCCESS);
+    
+    /* Create sound device */
+    status = pjmedia_snd_port_create(app_config.pool, -1, -1, 
+				     clock  /* clock rate */,
+				     2	    /* stereo */,
+				     clock*2*10/1000 /* 10 ms samples * 2ch */,
+				     16	    /* bits */,
+				     0, &app_config.snd);
+    pj_assert(status == PJ_SUCCESS);
+
+
+    /* Connect the splitter to the sound device */
+    status = pjmedia_snd_port_connect(app_config.snd, splitter);
+    pj_assert(status == PJ_SUCCESS);
+
+}
+#endif
+

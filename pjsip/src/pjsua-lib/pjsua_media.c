@@ -339,7 +339,9 @@ pj_status_t pjsua_media_subsys_start(void)
     }
 
     /* Create sound port if none is created yet */
-    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL) {
+    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
+	!pjsua_var.no_snd) 
+    {
 	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
 	if (status != PJ_SUCCESS) {
 	    /* Error opening sound device, use null device */
@@ -567,6 +569,35 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
     }
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Add arbitrary media port to PJSUA's conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_add_port( pj_pool_t *pool,
+					 pjmedia_port *port,
+					 pjsua_conf_port_id *p_id)
+{
+    pj_status_t status;
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool,
+				   port, NULL, (unsigned*)p_id);
+    if (status != PJ_SUCCESS) {
+	if (p_id)
+	    *p_id = PJSUA_INVALID_ID;
+    }
+
+    return status;
+}
+
+
+/*
+ * Remove arbitrary slot from the conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
+{
+    return pjmedia_conf_remove_port(pjsua_var.mconf, (unsigned)id);
 }
 
 
@@ -960,6 +991,21 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 
     return PJ_SUCCESS;
 }
+
+
+
+/*
+ * Use no device!
+ */
+PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
+{
+    /* Close existing sound device */
+    close_snd_dev();
+
+    pjsua_var.no_snd = PJ_TRUE;
+    return pjmedia_conf_get_master_port(pjsua_var.mconf);
+}
+
 
 
 /*****************************************************************************

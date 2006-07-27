@@ -2247,6 +2247,36 @@ PJ_DECL(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
 
 
 /**
+ * Add arbitrary media port to PJSUA's conference bridge. Application
+ * can use this function to add the media port that it creates. For
+ * media ports that are created by PJSUA-LIB (such as calls, file player,
+ * or file recorder), PJSUA-LIB will automatically add the port to
+ * the bridge.
+ *
+ * @param pool		Pool to use.
+ * @param port		Media port to be added to the bridge.
+ * @param p_id		Optional pointer to receive the conference 
+ *			slot id.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_add_port(pj_pool_t *pool,
+					 pjmedia_port *port,
+					 pjsua_conf_port_id *p_id);
+
+
+/**
+ * Remove arbitrary slot from the conference bridge. Application should only
+ * call this function if it registered the port manually.
+ *
+ * @param id		The slot id of the port to be removed.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id);
+
+
+/**
  * Establish unidirectional media flow from souce to sink. One source
  * may transmit to multiple destinations/sink. And if multiple
  * sources are transmitting to the same sink, the media will be mixed
@@ -2422,6 +2452,17 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev(int capture_dev,
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_set_null_snd_dev(void);
+
+
+/**
+ * Disconnect the main conference bridge from any sound devices, and let
+ * application connect the bridge to it's own sound device/master port.
+ *
+ * @return		The port interface of the conference bridge, 
+ *			so that application can connect this to it's own
+ *			sound device or master port.
+ */
+PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
 
 
 /*****************************************************************************
