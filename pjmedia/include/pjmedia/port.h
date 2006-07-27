@@ -356,13 +356,45 @@ struct pjmedia_port
 
 
 /**
+ * This is an auxiliary function to initialize port info for
+ * ports which deal with PCM audio.
+ *
+ * @param info		    The port info to be initialized.
+ * @param name		    Port name.
+ * @param signature	    Port signature.
+ * @param channel_count	    Number of channels.
+ * @param bits_per_sample   Bits per sample.
+ * @param samples_per_frame Number of samples per frame.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_info_init( pjmedia_port_info *info,
+					     const pj_str_t *name,
+					     unsigned signature,
+					     unsigned clock_rate,
+					     unsigned channel_count,
+					     unsigned bits_per_sample,
+					     unsigned samples_per_frame);
+
+
+/**
  * Get a frame from the port (and subsequent downstream ports).
+ *
+ * @param port	    The media port.
+ * @param frame	    Frame to store samples.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
 					     pjmedia_frame *frame );
 
 /**
  * Put a frame to the port (and subsequent downstream ports).
+ *
+ * @param port	    The media port.
+ * @param frame	    Frame to the put to the port.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 					     const pjmedia_frame *frame );
@@ -370,6 +402,10 @@ PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 
 /**
  * Destroy port (and subsequent downstream ports)
+ *
+ * @param port	    The media port.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 

@@ -25,6 +25,37 @@
 
 
 /**
+ * This is an auxiliary function to initialize port info for
+ * ports which deal with PCM audio.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_info_init( pjmedia_port_info *info,
+					    const pj_str_t *name,
+					    unsigned signature,
+					    unsigned clock_rate,
+					    unsigned channel_count,
+					    unsigned bits_per_sample,
+					    unsigned samples_per_frame)
+{
+    pj_bzero(info, sizeof(*info));
+
+    info->name = *name;
+    info->signature = signature;
+    info->type = PJMEDIA_TYPE_AUDIO;
+    info->has_info = PJ_TRUE;
+    info->need_info = PJ_FALSE;
+    info->pt = 0xFF;
+    info->encoding_name = pj_str("pcm");
+    info->clock_rate = clock_rate;
+    info->channel_count = channel_count;
+    info->bits_per_sample = bits_per_sample;
+    info->samples_per_frame = samples_per_frame;
+    info->bytes_per_frame = samples_per_frame * bits_per_sample / 8;
+
+    return PJ_SUCCESS;
+}
+
+
+/**
  * Get a frame from the port (and subsequent downstream ports).
  */
 PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,

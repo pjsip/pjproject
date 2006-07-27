@@ -24,7 +24,7 @@
  * @file splitcomb.h
  * @brief Media channel splitter/combiner port.
  */
-#include <pjmedia/types.h>
+#include <pjmedia/port.h>
 
 
 /**
@@ -34,6 +34,12 @@
  * @{
  * This section describes media port to split and combine media
  * channels in the stream.
+ *
+ * A splitter/combiner splits a single stereo/multichannels audio frame into
+ * multiple audio frames to each channel when put_frame() is called, 
+ * and combines mono frames from each channel into a stereo/multichannel 
+ * frame when get_frame() is called. A common application for the splitter/
+ * combiner is to split frames from stereo to mono and vise versa.
  */
 
 PJ_BEGIN_DECL
@@ -41,11 +47,6 @@ PJ_BEGIN_DECL
 
 /**
  * Create a media splitter/combiner with the specified parameters.
- * A splitter/combiner splits a single stereo/multichannel audio frame into
- * multiple mono audio frames to each channel when put_frame() is called, 
- * and combines mono frames from each channel into a stereo/multichannel 
- * frame when get_frame() is called.
- *
  * When the splitter/combiner is created, it creates an instance of
  * pjmedia_port. This media port represents the stereo/multichannel side
  * of the splitter/combiner. Application needs to supply the splitter/
@@ -79,10 +80,8 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_create(pj_pool_t *pool,
  * for all ports that have the same phase. And similarly for put_frame().
  *
  * @param splitcomb	    The splitter/combiner.
- * @param ch_num	    Audio channel number.
- * @param options	    Valid options are:
- *			    - PJMEDIA_SPLITCOMB_AUTO_DESTROY to destroy the
- *			      media port when the splitter is destroyed.
+ * @param ch_num	    Audio channel starting number (zero based).
+ * @param options	    Must be zero at the moment.
  * @param port		    The media port.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
@@ -107,10 +106,11 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_set_channel(pjmedia_port *splitcomb,
  * @param pool		    The pool to allocate memory for the port and
  *			    buffers.
  * @param splitcomb	    The splitter/combiner.
- * @param ch_num	    Audio channel number.
- * @param options	    Valid options are:
- *			    - PJMEDIA_SPLITCOMB_AUTO_DESTROY to destroy the
- *			      media port when the splitter is destroyed.
+ * @param ch_num	    Audio channel starting number (zero based).
+ * @param options	    Normally is zero, but the lower 8-bit of the 
+ *			    options can be used to specify the number of 
+ *			    buffers in the circular buffer. If zero, then
+ *			    default number will be used (default: 8).
  * @param p_chport	    The media port created with reverse phase for
  *			    the specified audio channel.
  *

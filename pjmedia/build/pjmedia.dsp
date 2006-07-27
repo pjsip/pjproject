@@ -199,6 +199,10 @@ SOURCE=..\src\pjmedia\sound_port.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\splitcomb.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
