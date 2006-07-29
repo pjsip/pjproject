@@ -34,9 +34,7 @@ size:
 	@echo
 	@for lib in $(LIBS); do \
 		echo "$$lib:"; \
-		ar tv $$lib | awk '{print $$3 "\t" $$8}' | sort -n; \
-		echo -n 'Total: '; \
-		ar tv $$lib | awk '{print " + " $$3}' | xargs expr 0; \
+		size -t $$lib | awk '{print $$1 "\t" $$2 "\t" $$3 "\t" $$6}'; \
 		echo; \
 	done
 	@echo

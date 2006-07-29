@@ -425,10 +425,6 @@ SOURCE=..\include\pj\compat\socket.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pj\compat\sprintf.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pj\compat\stdarg.h
 # End Source File
 # Begin Source File
