@@ -24,6 +24,8 @@
 
 
 #define BYTES_PER_SAMPLE	2
+#define SIGNATURE		PJMEDIA_PORT_SIGNATURE('R','S','M','P')
+
 
 struct resample_port
 {
@@ -52,6 +54,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
 						  unsigned opt,
 						  pjmedia_port **p_port  )
 {
+    const pj_str_t name = pj_str("resample");
     struct resample_port *rport;
     unsigned ptime;
     pj_status_t status;
@@ -69,19 +72,9 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     rport = pj_pool_zalloc(pool, sizeof(struct resample_port));
     PJ_ASSERT_RETURN(rport != NULL, PJ_ENOMEM);
 
-    rport->base.info.clock_rate = clock_rate;
-    rport->base.info.samples_per_frame = clock_rate * ptime / 1000;
-    rport->base.info.bytes_per_frame = rport->base.info.samples_per_frame *
-				       BYTES_PER_SAMPLE;
-    rport->base.info.bits_per_sample = BYTES_PER_SAMPLE * 8;
-    rport->base.info.channel_count = dn_port->info.channel_count;
-    rport->base.info.encoding_name = pj_str("pcm");
-    rport->base.info.has_info = 1;
-    rport->base.info.name = pj_str("resample");
-    rport->base.info.need_info = 0;
-    rport->base.info.pt = 0xFF;
-    rport->base.info.signature = PJMEDIA_PORT_SIGNATURE('R','S','M','P');
-    rport->base.info.type = PJMEDIA_TYPE_AUDIO;
+    pjmedia_port_info_init(&rport->base.info, &name, SIGNATURE, clock_rate,
+			   dn_port->info.channel_count, BYTES_PER_SAMPLE * 8, 
+			   clock_rate * ptime / 1000);
 
     rport->dn_port = dn_port;
     rport->options = opt;

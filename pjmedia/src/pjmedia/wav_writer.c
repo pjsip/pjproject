@@ -69,6 +69,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     struct file_port *fport;
     pjmedia_wave_hdr wave_hdr;
     pj_ssize_t size;
+    pj_str_t name;
     pj_status_t status;
 
     PJ_UNUSED_ARG(flags);
@@ -86,20 +87,11 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(fport != NULL, PJ_ENOMEM);
 
     /* Initialize port info. */
-    fport->base.info.bits_per_sample = bits_per_sample;
-    fport->base.info.bytes_per_frame = samples_per_frame * bits_per_sample *
-				       channel_count / 8;
-    fport->base.info.channel_count = channel_count;
-    fport->base.info.encoding_name = pj_str("pom");
-    fport->base.info.has_info = 1;
-    pj_strdup2(pool, &fport->base.info.name, filename);
-    fport->base.info.need_info = 0;
-    fport->base.info.pt = 0xFF;
-    fport->base.info.clock_rate = sampling_rate;
-    fport->base.info.samples_per_frame = samples_per_frame;
-    fport->base.info.signature = SIGNATURE;
-    fport->base.info.type = PJMEDIA_TYPE_AUDIO;
-    
+    pj_strdup2(pool, &name, filename);
+    pjmedia_port_info_init(&fport->base.info, &name, SIGNATURE,
+			   sampling_rate, channel_count, bits_per_sample,
+			   samples_per_frame);
+
     fport->base.get_frame = &file_get_frame;
     fport->base.put_frame = &file_put_frame;
     fport->base.on_destroy = &file_on_destroy;
@@ -220,7 +212,7 @@ pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
     fport = (struct file_port*) port;
 
     fport->cb_size = pos;
-    fport->base.user_data = user_data;
+    fport->base.port_data.pdata = user_data;
     fport->cb = cb;
 
     return PJ_SUCCESS;
@@ -293,7 +285,7 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 	cb = fport->cb;
 	fport->cb = NULL;
 
-	status = (*cb)(this_port, this_port->user_data);
+	status = (*cb)(this_port, this_port->port_data.pdata);
 	return status;
     }
 

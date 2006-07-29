@@ -172,12 +172,16 @@ PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
 
 
 /**
- * Add stream port to the conference bridge. By default, the new conference
- * port will have both TX and RX enabled, but it is not connected to any
- * other ports.
+ * Add media port to the conference bridge.
  *
- * Application SHOULD call #pjmedia_conf_connect_port() to enable audio
- * transmission and receipt to/from this port.
+ * By default, the new conference port will have both TX and RX enabled, 
+ * but it is not connected to any other ports. Application SHOULD call 
+ * #pjmedia_conf_connect_port() to  enable audio transmission and receipt 
+ * to/from this port.
+ *
+ * Once the media port is connected to other port(s) in the bridge,
+ * the bridge will continuosly call get_frame() and put_frame() to the
+ * port, allowing media to flow to/from the port.
  *
  * @param conf		The conference bridge.
  * @param pool		Pool to allocate buffers for this port.
@@ -196,6 +200,45 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 					    const pj_str_t *name,
 					    unsigned *p_slot );
 
+
+/**
+ * Create and add a passive media port to the conference bridge. Unlike
+ * "normal" media port that is added with #pjmedia_conf_add_port(), media
+ * port created with this function will not have its get_frame() and
+ * put_frame() called by the bridge; instead, application MUST continuosly
+ * call these functions to the port, to allow media to flow from/to the
+ * port.
+ *
+ * Upon return of this function, application will be given two objects:
+ * the slot number of the port in the bridge, and pointer to the media
+ * port where application MUST start calling get_frame() and put_frame()
+ * to the port.
+ *
+ * @param conf		    The conference bridge.
+ * @param pool		    Pool to allocate buffers etc for this port.
+ * @param name		    Name to be assigned to the port.
+ * @param clock_rate	    Clock rate/sampling rate.
+ * @param channel_count	    Number of channels.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Number of bits per sample.
+ * @param options	    Options (should be zero at the moment).
+ * @param p_slot	    Pointer to receive the slot index of the port in
+ *			    the conference bridge.
+ * @param p_port	    Pointer to receive the port instance.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error 
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
+						    pj_pool_t *pool,
+						    const pj_str_t *name,
+						    unsigned clock_rate,
+						    unsigned channel_count,
+						    unsigned samples_per_frame,
+						    unsigned bits_per_sample,
+						    unsigned options,
+						    unsigned *p_slot,
+						    pjmedia_port **p_port );
 
 
 /**

@@ -57,6 +57,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
 						pjmedia_port **p_port)
 {
     struct mem_rec *rec;
+    const pj_str_t name = { "memrec", 6 };
 
     /* Sanity check */
     PJ_ASSERT_RETURN(pool && buffer && size && clock_rate && channel_count &&
@@ -71,23 +72,15 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(rec != NULL, PJ_ENOMEM);
 
     /* Create the rec */
-    rec->base.info.name = pj_str("memrec");
-    rec->base.info.signature = SIGNATURE;
-    rec->base.info.type = PJMEDIA_TYPE_AUDIO;
-    rec->base.info.has_info = PJ_TRUE;
-    rec->base.info.need_info = PJ_FALSE;
-    rec->base.info.pt = 0xFF;
-    rec->base.info.encoding_name = pj_str("pcm");
+    pjmedia_port_info_init(&rec->base.info, &name, SIGNATURE,
+			   clock_rate, channel_count, bits_per_sample, 
+			   samples_per_frame);
+
 
     rec->base.put_frame = &rec_put_frame;
     rec->base.get_frame = &rec_get_frame;
     rec->base.on_destroy = &rec_on_destroy;
 
-    rec->base.info.clock_rate = clock_rate;
-    rec->base.info.channel_count = channel_count;
-    rec->base.info.bits_per_sample = bits_per_sample;
-    rec->base.info.samples_per_frame = samples_per_frame;
-    rec->base.info.bytes_per_frame = samples_per_frame * bits_per_sample / 2;
 
     /* Save the buffer */
     rec->buffer = rec->write_pos = (char*)buffer;

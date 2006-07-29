@@ -29,6 +29,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
  */
@@ -57,6 +58,8 @@ static FILE *fhnd_rec;
 
 #define BYTES_PER_SAMPLE    2
 
+#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
+#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'P')
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned
 #define INVALID_SLOT	    ((SLOT_TYPE)-1)
@@ -196,6 +199,8 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 			     const pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
+static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
+				  pjmedia_frame *frame);
 static pj_status_t destroy_port(pjmedia_port *this_port);
 
 
@@ -328,6 +333,42 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Add passive port.
+ */
+static pj_status_t create_pasv_port( pjmedia_conf *conf,
+				     pj_pool_t *pool,
+				     const pj_str_t *name,
+				     pjmedia_port *port,
+				     struct conf_port **p_conf_port)
+{
+    struct conf_port *conf_port;
+    unsigned i;
+    pj_status_t status;
+
+    /* Create port */
+    status = create_conf_port(pool, conf, port, name, &conf_port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Passive port has rx buffers. */
+    for (i=0; i<RX_BUF_COUNT; ++i) {
+	conf_port->snd_buf[i] = pj_pool_zalloc(pool, conf->samples_per_frame *
+					      sizeof(conf_port->snd_buf[0][0]));
+	if (conf_port->snd_buf[i] == NULL) {
+	    return PJ_ENOMEM;
+	}
+    }
+    conf_port->snd_write_pos = 0;
+    conf_port->snd_read_pos = 0;
+
+    *p_conf_port = conf_port;
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Create port zero for the sound device.
  */
@@ -336,32 +377,12 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 {
     struct conf_port *conf_port;
     pj_str_t name = { "Master/sound", 12 };
-    unsigned i;
     pj_status_t status;
 
 
-
-    /* Create port */
-    status = create_conf_port(pool, conf, NULL, &name, &conf_port);
+    status = create_pasv_port(conf, pool, &name, NULL, &conf_port);
     if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Sound device has rx buffers. */
-    for (i=0; i<RX_BUF_COUNT; ++i) {
-	conf_port->snd_buf[i] = pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->snd_buf[0][0]));
-	if (conf_port->snd_buf[i] == NULL) {
-	    status = PJ_ENOMEM;
-	    goto on_error;
-	}
-    }
-    conf_port->snd_write_pos = 0;
-    conf_port->snd_read_pos = 0;
-
-
-     /* Set to port zero */
-    conf->ports[0] = conf_port;
-    conf->port_cnt++;
+	return status;
 
 
     /* Create sound device port: */
@@ -394,12 +415,13 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     }
 
 
+     /* Add the port to the bridge */
+    conf->ports[0] = conf_port;
+    conf->port_cnt++;
+
+
     PJ_LOG(5,(THIS_FILE, "Sound device successfully created for port 0"));
     return PJ_SUCCESS;
-
-on_error:
-    return status;
-
 }
 
 /*
@@ -415,6 +437,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 					 pjmedia_conf **p_conf )
 {
     pjmedia_conf *conf;
+    const pj_str_t name = { "Conf", 4 };
     pj_status_t status;
 
     /* Can only accept 16bits per sample, for now.. */
@@ -442,25 +465,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     conf->master_port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
     PJ_ASSERT_RETURN(conf->master_port, PJ_ENOMEM);
     
-    conf->master_port->info.bits_per_sample = bits_per_sample;
-    conf->master_port->info.bytes_per_frame = samples_per_frame *
-					      bits_per_sample / 8;
-    conf->master_port->info.channel_count = channel_count;
-    conf->master_port->info.encoding_name = pj_str("pcm");
-    conf->master_port->info.has_info = 1;
-    conf->master_port->info.name = pj_str("sound-dev");
-    conf->master_port->info.need_info = 0;
-    conf->master_port->info.pt = 0xFF;
-    conf->master_port->info.clock_rate = clock_rate;
-    conf->master_port->info.samples_per_frame = samples_per_frame;
-    conf->master_port->info.signature = 0;
-    conf->master_port->info.type = PJMEDIA_TYPE_AUDIO;
+    pjmedia_port_info_init(&conf->master_port->info, &name, SIGNATURE,
+			   clock_rate, channel_count, bits_per_sample,
+			   samples_per_frame);
+
+    conf->master_port->port_data.pdata = conf;
+    conf->master_port->port_data.ldata = 0;
 
     conf->master_port->get_frame = &get_frame;
     conf->master_port->put_frame = &put_frame;
     conf->master_port->on_destroy = &destroy_port;
-
-    conf->master_port->user_data = conf;
 
 
     /* Create port zero for sound device. */
@@ -544,7 +558,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
  */
 static pj_status_t destroy_port(pjmedia_port *this_port)
 {
-    pjmedia_conf *conf = this_port->user_data;
+    pjmedia_conf *conf = this_port->port_data.pdata;
     return pjmedia_conf_destroy(conf);
 }
 
@@ -629,6 +643,104 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Add passive port.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
+						   pj_pool_t *pool,
+						   const pj_str_t *name,
+						   unsigned clock_rate,
+						   unsigned channel_count,
+						   unsigned samples_per_frame,
+						   unsigned bits_per_sample,
+						   unsigned options,
+						   unsigned *p_slot,
+						   pjmedia_port **p_port )
+{
+    struct conf_port *conf_port;
+    pjmedia_port *port;
+    unsigned index;
+    pj_str_t tmp;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(conf && pool, PJ_EINVAL);
+
+    /* For this version of PJMEDIA, port MUST have the same number of
+     * PCM channels.
+     */
+    if (channel_count != conf->channel_count) {
+	pj_assert(!"Number of channels mismatch");
+	return PJMEDIA_ENCCHANNEL;
+    }
+
+    /* For this version, options must be zero */
+    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
+    PJ_UNUSED_ARG(options);
+
+    pj_mutex_lock(conf->mutex);
+
+    if (conf->port_cnt >= conf->max_ports) {
+	pj_assert(!"Too many ports");
+	pj_mutex_unlock(conf->mutex);
+	return PJ_ETOOMANY;
+    }
+
+    /* Find empty port in the conference bridge. */
+    for (index=0; index < conf->max_ports; ++index) {
+	if (conf->ports[index] == NULL)
+	    break;
+    }
+
+    pj_assert(index != conf->max_ports);
+
+    if (name == NULL) {
+	name = &tmp;
+
+	tmp.ptr = pj_pool_alloc(pool, 20);
+	tmp.slen = pj_ansi_sprintf(tmp.ptr, "ConfPort#%d", index);
+    }
+
+    /* Create and initialize the media port structure. */
+    port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
+    PJ_ASSERT_RETURN(port, PJ_ENOMEM);
+    
+    pjmedia_port_info_init(&port->info, name, SIGNATURE_PORT,
+			   clock_rate, channel_count, bits_per_sample,
+			   samples_per_frame);
+
+    port->port_data.pdata = conf;
+    port->port_data.ldata = index;
+
+    port->get_frame = &get_frame_pasv;
+    port->put_frame = &put_frame;
+    port->on_destroy = NULL;
+
+    
+    /* Create conf port structure. */
+    status = create_pasv_port(conf, pool, name, port, &conf_port);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(conf->mutex);
+	return status;
+    }
+
+
+    /* Put the port. */
+    conf->ports[index] = conf_port;
+    conf->port_cnt++;
+
+    /* Done. */
+    if (p_slot)
+	*p_slot = index;
+    if (p_port)
+	*p_port = port;
+
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
+
 
 
 /*
@@ -1362,7 +1474,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame)
 {
-    pjmedia_conf *conf = this_port->user_data;
+    pjmedia_conf *conf = this_port->port_data.pdata;
     unsigned ci, cj, i, j;
     
     TRACE_((THIS_FILE, "- clock -"));
@@ -1418,10 +1530,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	}
 
 	/* Get frame from this port. 
-	 * For port zero (sound port), get the frame  from the rx_buffer
-	 * instead.
+	 * For port zero (sound port) and passive ports, get the frame  from 
+	 * the rx_buffer instead.
 	 */
-	if (i==0) {
+	if (conf_port->port == NULL) {
 	    pj_int16_t *snd_buf;
 
 	    if (conf_port->snd_read_pos == conf_port->snd_write_pos) {
@@ -1615,13 +1727,24 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 
 /*
+ * get_frame() for passive port
+ */
+static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
+				  pjmedia_frame *frame)
+{
+    pj_assert(0);
+    return -1;
+}
+
+
+/*
  * Recorder callback.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
 			     const pjmedia_frame *frame)
 {
-    pjmedia_conf *conf = this_port->user_data;
-    struct conf_port *snd_port = conf->ports[0];
+    pjmedia_conf *conf = this_port->port_data.pdata;
+    struct conf_port *port = conf->ports[this_port->port_data.ldata];
     const pj_int16_t *input = frame->buf;
     pj_int16_t *target_snd_buf;
 
@@ -1631,24 +1754,24 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 		      PJMEDIA_ENCSAMPLESPFRAME);
 
     /* Skip if this port is muted/disabled. */
-    if (snd_port->rx_setting != PJMEDIA_PORT_ENABLE) {
+    if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
 	return PJ_SUCCESS;
     }
 
     /* Skip if no port is listening to the microphone */
-    if (snd_port->listener_cnt == 0) {
+    if (port->listener_cnt == 0) {
 	return PJ_SUCCESS;
     }
 
 
     /* Determine which rx_buffer to fill in */
-    target_snd_buf = snd_port->snd_buf[snd_port->snd_write_pos];
+    target_snd_buf = port->snd_buf[port->snd_write_pos];
     
     /* Copy samples from audio device to target rx_buffer */
     pjmedia_copy_samples(target_snd_buf, input, conf->samples_per_frame);
 
     /* Switch buffer */
-    snd_port->snd_write_pos = (snd_port->snd_write_pos+1)%RX_BUF_COUNT;
+    port->snd_write_pos = (port->snd_write_pos+1)%RX_BUF_COUNT;
 
 
     return PJ_SUCCESS;

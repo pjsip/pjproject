@@ -58,6 +58,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
 					       pjmedia_port **p_port )
 {
     struct mem_player *port;
+    pj_str_t name = pj_str("memplayer");
 
     /* Sanity check */
     PJ_ASSERT_RETURN(pool && buffer && size && clock_rate && channel_count &&
@@ -72,23 +73,13 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
 
     /* Create the port */
-    port->base.info.name = pj_str("memplayer");
-    port->base.info.signature = SIGNATURE;
-    port->base.info.type = PJMEDIA_TYPE_AUDIO;
-    port->base.info.has_info = PJ_TRUE;
-    port->base.info.need_info = PJ_FALSE;
-    port->base.info.pt = 0xFF;
-    port->base.info.encoding_name = pj_str("pcm");
+    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, clock_rate,
+			   channel_count, bits_per_sample, samples_per_frame);
 
     port->base.put_frame = &mem_put_frame;
     port->base.get_frame = &mem_get_frame;
     port->base.on_destroy = &mem_on_destroy;
 
-    port->base.info.clock_rate = clock_rate;
-    port->base.info.channel_count = channel_count;
-    port->base.info.bits_per_sample = bits_per_sample;
-    port->base.info.samples_per_frame = samples_per_frame;
-    port->base.info.bytes_per_frame = samples_per_frame * bits_per_sample / 2;
 
     /* Save the buffer */
     port->buffer = port->read_pos = (char*)buffer;

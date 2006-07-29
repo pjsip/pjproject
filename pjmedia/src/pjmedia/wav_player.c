@@ -77,32 +77,23 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port);
 
 static struct file_port *create_file_port(pj_pool_t *pool)
 {
+    const pj_str_t name = pj_str("file");
     struct file_port *port;
 
     port = pj_pool_zalloc(pool, sizeof(struct file_port));
     if (!port)
 	return NULL;
 
-    port->base.info.name = pj_str("file");
-    port->base.info.signature = SIGNATURE;
-    port->base.info.type = PJMEDIA_TYPE_AUDIO;
-    port->base.info.has_info = PJ_TRUE;
-    port->base.info.need_info = PJ_FALSE;
-    port->base.info.pt = 0xFF;
-    port->base.info.encoding_name = pj_str("pcm");
+    /* Put in default values.
+     * These will be overriden once the file is read.
+     */
+    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, 
+			   8000, 1, 16, 80);
 
     port->base.put_frame = &file_put_frame;
     port->base.get_frame = &file_get_frame;
     port->base.on_destroy = &file_on_destroy;
 
-
-    /* Put in default values.
-     * These will be overriden once the file is read.
-     */
-    port->base.info.clock_rate = 8000;
-    port->base.info.bits_per_sample = 16;
-    port->base.info.samples_per_frame = 160;
-    port->base.info.bytes_per_frame = 320;
 
     return port;
 }
@@ -150,7 +141,7 @@ static pj_status_t fill_buffer(struct file_port *fport)
 			  fport->base.info.name.ptr));
 
 		fport->eof = PJ_TRUE;
-		status = (*fport->cb)(&fport->base, fport->base.user_data);
+		status=(*fport->cb)(&fport->base,fport->base.port_data.pdata);
 		if (status != PJ_SUCCESS) {
 		    /* This will crash if file port is destroyed in the 
 		     * callback, that's why we set the eof flag before
@@ -424,7 +415,7 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 
     fport = (struct file_port*) port;
 
-    fport->base.user_data = user_data;
+    fport->base.port_data.pdata = user_data;
     fport->cb = cb;
 
     return PJ_SUCCESS;

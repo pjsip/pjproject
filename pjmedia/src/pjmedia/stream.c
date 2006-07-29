@@ -143,7 +143,7 @@ static void stream_perror(const char *sender, const char *title,
  */
 static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 {
-    pjmedia_stream *stream = port->user_data;
+    pjmedia_stream *stream = port->port_data.pdata;
     pjmedia_channel *channel = stream->dec;
     unsigned samples_count, samples_per_frame, samples_required;
     pj_int16_t *p_out_samp;
@@ -438,7 +438,7 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 static pj_status_t put_frame( pjmedia_port *port, 
 			      const pjmedia_frame *frame )
 {
-    pjmedia_stream *stream = port->user_data;
+    pjmedia_stream *stream = port->port_data.pdata;
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     struct pjmedia_frame frame_out;
@@ -913,6 +913,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 {
     pjmedia_stream *stream;
+    pj_str_t name;
     unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
     pj_status_t status;
 
@@ -925,21 +926,24 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
 
     /* Init stream/port name */
-    stream->port.info.name.ptr = pj_pool_alloc(pool, 24);
-    pj_ansi_sprintf(stream->port.info.name.ptr,
-		    "strm%p", stream);
-    stream->port.info.name.slen = pj_ansi_strlen(stream->port.info.name.ptr);
+    name.ptr = pj_pool_alloc(pool, 24);
+    name.slen = pj_ansi_snprintf(name.ptr, 24, "strm%p", stream);
+
+
+    /* Init some port-info. Some parts of the info will be set later
+     * once we have more info about the codec.
+     */
+    pjmedia_port_info_init(&stream->port.info, &name,
+			   PJMEDIA_PORT_SIGNATURE('S', 'T', 'R', 'M'),
+			   info->fmt.clock_rate, info->fmt.channel_cnt,
+			   16, 80);
 
     /* Init port. */
-    stream->port.info.signature = ('S'<<3 | 'T'<<2 | 'R'<<1 | 'M');
-    stream->port.info.type = PJMEDIA_TYPE_AUDIO;
-    stream->port.info.has_info = 1;
-    stream->port.info.need_info = 0;
-    stream->port.info.pt = info->fmt.pt;
+
     pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
     stream->port.info.clock_rate = info->fmt.clock_rate;
     stream->port.info.channel_count = info->fmt.channel_cnt;
-    stream->port.user_data = stream;
+    stream->port.port_data.pdata = stream;
     stream->port.put_frame = &put_frame;
     stream->port.get_frame = &get_frame;
 

@@ -24,6 +24,7 @@
 
 
 #define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'b')
+#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'P')
 #define THIS_FILE	    "splitcomb.c"
 #define TMP_SAMP_TYPE	    pj_int16_t
 #define MAX_BUF_CNT	    8
@@ -128,6 +129,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
 					      unsigned options,
 					      pjmedia_port **p_splitcomb)
 {
+    const pj_str_t name = pj_str("splitcomb");
     struct splitcomb *sc;
 
     /* Sanity check */
@@ -160,18 +162,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
     sc->options = options;
 
     /* Initialize port */
-    sc->base.info.name = pj_str("splitcomb");
-    sc->base.info.signature = SIGNATURE;
-    sc->base.info.type = PJMEDIA_TYPE_AUDIO;
-    sc->base.info.has_info = PJ_TRUE;
-    sc->base.info.need_info = PJ_FALSE;
-    sc->base.info.pt = 0xFF;
-    sc->base.info.encoding_name = pj_str("pcm");
-    sc->base.info.clock_rate = clock_rate;
-    sc->base.info.channel_count = channel_count;
-    sc->base.info.bits_per_sample = bits_per_sample;
-    sc->base.info.samples_per_frame = samples_per_frame;
-    sc->base.info.bytes_per_frame = samples_per_frame * bits_per_sample / 8;
+    pjmedia_port_info_init(&sc->base.info, &name, SIGNATURE, clock_rate,
+			   channel_count, bits_per_sample, samples_per_frame);
 
     sc->base.put_frame = &put_frame;
     sc->base.get_frame = &get_frame;
@@ -226,6 +218,7 @@ pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 				      unsigned options,
 				      pjmedia_port **p_chport)
 {
+    const pj_str_t name = pj_str("splitcomb-ch");
     struct splitcomb *sc = (struct splitcomb*) splitcomb;
     struct reverse_port *rport;
     unsigned i;
@@ -250,20 +243,11 @@ pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 
     /* Initialize port info... */
     port = &rport->base;
-    port->info.name = pj_str("splitcomb-ch");
-    port->info.signature = 0;
-    port->info.type = PJMEDIA_TYPE_AUDIO;
-    port->info.has_info = PJ_TRUE;
-    port->info.need_info = PJ_FALSE;
-    port->info.pt = 0xFF;
-    port->info.encoding_name = pj_str("pcm");
-    port->info.clock_rate = splitcomb->info.clock_rate;
-    port->info.channel_count = 1;
-    port->info.bits_per_sample = splitcomb->info.bits_per_sample;
-    port->info.samples_per_frame = splitcomb->info.samples_per_frame /
-				   splitcomb->info.channel_count;
-    port->info.bytes_per_frame = port->info.samples_per_frame * 
-				 port->info.bits_per_sample / 8;
+    pjmedia_port_info_init(&port->info, &name, SIGNATURE_PORT, 
+			   splitcomb->info.clock_rate, 1, 
+			   splitcomb->info.bits_per_sample, 
+			   splitcomb->info.samples_per_frame / 
+				   splitcomb->info.channel_count);
 
     /* ... and the callbacks */
     port->put_frame = &rport_put_frame;

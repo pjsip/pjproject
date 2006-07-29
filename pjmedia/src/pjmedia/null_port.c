@@ -23,6 +23,8 @@
 #include <pj/string.h>
 
 
+#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('N', 'U', 'L', 'L')
+
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
@@ -38,24 +40,15 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 					      pjmedia_port **p_port )
 {
     pjmedia_port *port;
+    const pj_str_t name = pj_str("null-port");
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
     port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    port->info.bits_per_sample = bits_per_sample;
-    port->info.bytes_per_frame = samples_per_frame * bits_per_sample / 8;
-    port->info.encoding_name = pj_str("pcm");
-    port->info.has_info = 1;
-    port->info.name = pj_str("null-port");
-    port->info.need_info = 0;
-    port->info.pt = 0xFF;
-    port->info.clock_rate = sampling_rate;
-    port->info.samples_per_frame = samples_per_frame;
-    port->info.channel_count = channel_count;
-    port->info.signature = 0x2411;
-    port->info.type = PJMEDIA_TYPE_AUDIO;
+    pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
+			   channel_count, bits_per_sample, samples_per_frame);
 
     port->get_frame = &null_get_frame;
     port->put_frame = &null_put_frame;

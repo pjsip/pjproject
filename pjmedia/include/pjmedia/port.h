@@ -291,7 +291,6 @@ typedef struct pjmedia_port_info
 typedef enum pjmedia_frame_type
 {
     PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
-    PJMEDIA_FRAME_TYPE_CNG,	    /**< Silence audio frame.	*/
     PJMEDIA_FRAME_TYPE_AUDIO	    /**< Normal audio frame.	*/
 
 } pjmedia_frame_type;
@@ -332,7 +331,14 @@ typedef struct pjmedia_port pjmedia_port;
 struct pjmedia_port
 {
     pjmedia_port_info	 info;		    /**< Port information.  */
-    void		*user_data;	    /**< User data.	    */
+
+    /** Port data can be used by the port creator to attach arbitrary
+     *  value to be associated with the port.
+     */
+    struct port_data {
+	void		*pdata;		    /**< Pointer data.	    */
+	long		 ldata;		    /**< Long data.	    */
+    } port_data;
 
     /**
      * Sink interface. 
