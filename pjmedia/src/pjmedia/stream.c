@@ -912,6 +912,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 					   pjmedia_stream **p_stream)
 
 {
+    enum { M = 32 };
     pjmedia_stream *stream;
     pj_str_t name;
     unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
@@ -926,8 +927,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
 
     /* Init stream/port name */
-    name.ptr = pj_pool_alloc(pool, 24);
-    name.slen = pj_ansi_snprintf(name.ptr, 24, "strm%p", stream);
+    name.ptr = pj_pool_alloc(pool, M);
+    name.slen = pj_ansi_snprintf(name.ptr, M, "strm%p", stream);
 
 
     /* Init some port-info. Some parts of the info will be set later

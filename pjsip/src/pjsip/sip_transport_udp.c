@@ -403,6 +403,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
 						unsigned async_cnt,
 						pjsip_transport **p_transport)
 {
+    enum { M = 80 };
     pj_pool_t *pool;
     struct udp_transport *tp;
     pj_ioqueue_t *ioqueue;
@@ -450,7 +451,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->base.pool = pool;
 
     /* Object name. */
-    pj_ansi_sprintf(tp->base.obj_name, "udp%p", tp);
+    pj_ansi_snprintf(tp->base.obj_name, sizeof(tp->base.obj_name), 
+		     "udp%p", tp);
 
     /* Init reference counter. */
     status = pj_atomic_create(pool, 0, &tp->base.ref_cnt);
@@ -493,9 +495,9 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->base.remote_name.port = 0;
 
     /* Transport info. */
-    tp->base.info = pj_pool_alloc(pool, 80);
-    pj_ansi_sprintf( 
-	tp->base.info, "udp %s:%d [published as %s:%d]",
+    tp->base.info = pj_pool_alloc(pool, M);
+    pj_ansi_snprintf( 
+	tp->base.info, M, "udp %s:%d [published as %s:%d]",
 	pj_inet_ntoa(((pj_sockaddr_in*)&tp->base.local_addr)->sin_addr),
 	pj_ntohs(((pj_sockaddr_in*)&tp->base.local_addr)->sin_port),
 	tp->base.local_name.host.ptr,

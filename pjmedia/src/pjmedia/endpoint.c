@@ -470,7 +470,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
     for (i=0; i<count; ++i) {
 	const char *type;
 	pjmedia_codec_param param;
-	char bps[16];
+	char bps[32];
 
 	switch (codec_info[i].type) {
 	case PJMEDIA_TYPE_AUDIO:

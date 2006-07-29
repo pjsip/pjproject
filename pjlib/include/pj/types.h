@@ -279,7 +279,7 @@ typedef int pj_exception_id_t;
 /**
  * Length of object names.
  */
-#define PJ_MAX_OBJ_NAME	16
+#define PJ_MAX_OBJ_NAME	32
 
 /* ************************************************************************* */
 /*

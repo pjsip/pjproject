@@ -359,7 +359,8 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     loop = pj_pool_zalloc(pool, sizeof(struct loop_transport));
     
     /* Initialize transport properties. */
-    pj_ansi_sprintf(loop->base.obj_name, "loop%p", loop);
+    pj_ansi_snprintf(loop->base.obj_name, sizeof(loop->base.obj_name), 
+		     "loop%p", loop);
     loop->base.pool = pool;
     status = pj_atomic_create(pool, 0, &loop->base.ref_cnt);
     if (status != PJ_SUCCESS)

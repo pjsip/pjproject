@@ -126,7 +126,8 @@ PJ_DEF(const char*) pj_exception_id_name(pj_exception_id_t id)
     PJ_ASSERT_RETURN(id>0 && id<PJ_MAX_EXCEPTION_ID, "<Invalid ID>");
 
     if (exception_id_names[id] == NULL) {
-        pj_ansi_sprintf(unknown_name, "exception %d", id);
+        pj_ansi_snprintf(unknown_name, sizeof(unknown_name), 
+			 "exception %d", id);
 	return unknown_name;
     }
 

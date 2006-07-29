@@ -1275,8 +1275,8 @@ static void dump_media_session(const char *indent,
 	const char *rem_addr;
 	int rem_port;
 	const char *dir;
-	char last_update[40];
-	char packets[16], bytes[16], ipbytes[16];
+	char last_update[64];
+	char packets[32], bytes[32], ipbytes[32];
 	pj_time_val now;
 
 	pjmedia_session_get_stream_stat(session, i, &stat);

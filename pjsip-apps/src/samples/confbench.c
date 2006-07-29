@@ -141,7 +141,7 @@ typedef struct
 static pj_status_t sine_get_frame( pjmedia_port *port, 
 				   pjmedia_frame *frame)
 {
-    port_data *sine = port->user_data;
+    port_data *sine = port->port_data.pdata;
     pj_int16_t *samples = frame->buf;
     unsigned i, count, left, right;
 
@@ -211,7 +211,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     port->get_frame = &sine_get_frame;
 
     /* Create sine port data */
-    port->user_data = sine = pj_pool_zalloc(pool, sizeof(port_data));
+    port->port_data.pdata = sine = pj_pool_zalloc(pool, sizeof(port_data));
 
     /* Create samples */
     count = port->info.samples_per_frame / channel_count;

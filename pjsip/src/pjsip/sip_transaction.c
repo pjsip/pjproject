@@ -892,7 +892,8 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     tsx->tsx_user = tsx_user;
     tsx->endpt = mod_tsx_layer.endpt;
 
-    pj_ansi_sprintf(tsx->obj_name, "tsx%p", tsx);
+    pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), 
+		     "tsx%p", tsx);
 
     tsx->handle_200resp = 1;
     tsx->retransmit_timer.id = TSX_TIMER_RETRANSMISSION;

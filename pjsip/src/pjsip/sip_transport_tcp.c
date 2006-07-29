@@ -167,8 +167,9 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 				   pjsip_host_port *host_port,
 				   const pj_sockaddr_in *addr )
 {
-    host_port->host.ptr = pj_pool_alloc(pool, 48);
-    host_port->host.slen = pj_ansi_sprintf( host_port->host.ptr, "%s", 
+    enum { M = 48 };
+    host_port->host.ptr = pj_pool_alloc(pool, M);
+    host_port->host.slen = pj_ansi_snprintf( host_port->host.ptr, M, "%s", 
 					    pj_inet_ntoa(addr->sin_addr));
     host_port->port = pj_ntohs(addr->sin_port);
 }
@@ -259,8 +260,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 	listener_addr->sin_addr = *(pj_in_addr*)he.h_addr;
     }
 
-    pj_ansi_sprintf(listener->obj_name, "tcp:%d", 
-		     (int)pj_ntohs(listener_addr->sin_port));
+    pj_ansi_snprintf(listener->obj_name, sizeof(listener->obj_name), 
+		     "tcp:%d",  (int)pj_ntohs(listener_addr->sin_port));
 
     /* Save the address name */
     sockaddr_to_host_port(listener->factory.pool, 

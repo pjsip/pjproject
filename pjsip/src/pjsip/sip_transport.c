@@ -373,7 +373,7 @@ PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 
 PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
 {
-    char obj_name[16];
+    char obj_name[PJ_MAX_OBJ_NAME];
 
     PJ_ASSERT_RETURN(rdata->msg_info.msg, "INVALID MSG");
 
@@ -381,7 +381,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
 	return rdata->msg_info.info;
 
     pj_ansi_strcpy(obj_name, "rdata");
-    pj_ansi_sprintf(obj_name+5, "%p", rdata);
+    pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
 					rdata->msg_info.msg);

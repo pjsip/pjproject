@@ -23,8 +23,8 @@
 
 #define THIS_FILE   "tsx_basic_test.c"
 
-static char TARGET_URI[128];
-static char FROM_URI[128];
+static char TARGET_URI[PJSIP_MAX_URL_SIZE];
+static char FROM_URI[PJSIP_MAX_URL_SIZE];
 
 
 /* Test transaction layer. */

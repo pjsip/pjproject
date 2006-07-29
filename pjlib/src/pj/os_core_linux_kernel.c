@@ -138,8 +138,10 @@ static void thread_initialize( pj_thread_t *thread )
     /* initialise termination flag */
     thread->terminate = 0;
 
-    /* set name of this process (max 15 chars + 0 !) */
-    thread->obj_name[15] = '\0';
+    /* set name of this process (making sure obj_name is null 
+     * terminated first) 
+     */
+    thread->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     sprintf(current->comm, thread->obj_name);
         
     /* tell the creator that we are ready and let him continue */
@@ -266,7 +268,8 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
 	pj_sprintf(thread->obj_name, cstr_thread_name, thread->thread);
     else
-	pj_sprintf(thread->obj_name, "thr%p", (void*)thread->thread);
+	pj_snprintf(thread->obj_name, sizeof(thread->obj_name), 
+		    "thr%p", (void*)thread->thread);
     
     /* Initialize. */
     thread_initialize(thread);

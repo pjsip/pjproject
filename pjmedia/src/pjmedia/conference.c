@@ -698,8 +698,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     if (name == NULL) {
 	name = &tmp;
 
-	tmp.ptr = pj_pool_alloc(pool, 20);
-	tmp.slen = pj_ansi_sprintf(tmp.ptr, "ConfPort#%d", index);
+	tmp.ptr = pj_pool_alloc(pool, 32);
+	tmp.slen = pj_ansi_snprintf(tmp.ptr, 32, "ConfPort#%d", index);
     }
 
     /* Create and initialize the media port structure. */

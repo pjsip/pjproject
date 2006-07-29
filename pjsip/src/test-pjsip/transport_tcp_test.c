@@ -34,7 +34,7 @@ int transport_tcp_test(void)
     pjsip_transport *tcp;
     pj_sockaddr_in rem_addr;
     pj_status_t status;
-    char url[64];
+    char url[PJSIP_MAX_URL_SIZE];
     int rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
 

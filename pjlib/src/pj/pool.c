@@ -150,7 +150,8 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
 
     if (name) {
 	if (strchr(name, '%') != NULL) {
-	    pj_ansi_sprintf(pool->obj_name, name, pool);
+	    pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
+			     name, pool);
 	} else {
 	    pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
 	}

@@ -36,9 +36,9 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
 {
     static int guid_initialized;
     static unsigned pid;
-    static char str_pid[5];
-    static unsigned char mac_addr[6];
-    static char str_mac_addr[16];
+    static char str_pid[32];
+    static unsigned char mac_addr[32];
+    static char str_mac_addr[32];
     static unsigned clock_seq;
 
     PJ_CHECK_STACK();

@@ -57,14 +57,14 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
 int platform_strerror( pj_os_err_type os_errcode, 
                        char *buf, pj_size_t bufsize)
 {
-    char errmsg[32];
+    char errmsg[PJ_ERR_MSG_SIZE];
     int len;
     
     /* Handle EINVAL as special case so that it'll pass errno test. */
     if (os_errcode==EINVAL)
 	strcpy(errmsg, "Invalid value");
     else
-	sprintf(errmsg, "errno=%d", os_errcode);
+	snprintf(errmsg, sizeof(errmsg), "errno=%d", os_errcode);
     
     len = strlen(errmsg);
 

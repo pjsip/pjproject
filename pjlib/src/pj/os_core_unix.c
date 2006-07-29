@@ -210,9 +210,11 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->thread = pthread_self();
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
-	pj_ansi_sprintf(thread->obj_name, cstr_thread_name, thread->thread);
+	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
+			 cstr_thread_name, thread->thread);
     else
-	pj_ansi_sprintf(thread->obj_name, "thr%p", (void*)thread->thread);
+	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
+			 "thr%p", (void*)thread->thread);
     
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)

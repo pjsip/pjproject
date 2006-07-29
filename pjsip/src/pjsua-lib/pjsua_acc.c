@@ -289,7 +289,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 {
     pjsua_acc_config cfg;
     struct transport_data *t = &pjsua_var.tpdata[tid];
-    char uri[62];
+    char uri[PJSIP_MAX_URL_SIZE];
 
     /* ID must be valid */
     PJ_ASSERT_RETURN(tid>=0 && tid<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
@@ -300,11 +300,12 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     pjsua_acc_config_default(&cfg);
 
     /* Build URI for the account */
-    pj_ansi_sprintf(uri, "<sip:%.*s:%d;transport=%s>", 
-			 (int)t->local_name.host.slen,
-			 t->local_name.host.ptr,
-			 t->local_name.port,
-			 pjsip_transport_get_type_name(t->type));
+    pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,
+		     "<sip:%.*s:%d;transport=%s>", 
+		     (int)t->local_name.host.slen,
+		     t->local_name.host.ptr,
+		     t->local_name.port,
+		     pjsip_transport_get_type_name(t->type));
 
     cfg.id = pj_str(uri);
     
