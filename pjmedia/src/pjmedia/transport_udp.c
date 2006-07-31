@@ -21,6 +21,7 @@
 #include <pj/errno.h>
 #include <pj/ioqueue.h>
 #include <pj/log.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 
@@ -57,6 +58,9 @@ struct transport_udp
     void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
 			const void*,
 			pj_ssize_t);
+
+    unsigned		tx_drop_pct;	/**< Percent of tx pkts to drop.    */
+    unsigned		rx_drop_pct;	/**< Percent of rx pkts to drop.    */
 
     pj_sock_t	        rtp_sock;	/**< RTP socket			    */
     pj_sockaddr_in	rtp_addr_name;	/**< Published RTP address.	    */
@@ -371,6 +375,17 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	cb = udp->rtp_cb;
 	user_data = udp->user_data;
 
+	/* Simulate packet lost on RX direction */
+	if (udp->rx_drop_pct) {
+	    if ((pj_rand() % 100) <= (int)udp->rx_drop_pct) {
+		PJ_LOG(5,(udp->base.name, 
+			  "RX RTP packet dropped because of pkt lost "
+			  "simulation"));
+		goto read_next_packet;
+	    }
+	}
+
+
 	if (udp->attached && cb)
 	    (*cb)(user_data, udp->rtp_pkt, bytes_read);
 
@@ -425,6 +440,7 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    }
 	}
 
+read_next_packet:
 	bytes_read = sizeof(udp->rtp_pkt);
 	udp->rtp_addrlen = sizeof(pj_sockaddr_in);
 	status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
@@ -581,6 +597,17 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Check that the size is supported */
     PJ_ASSERT_RETURN(size <= RTP_LEN, PJ_ETOOBIG);
 
+    /* Simulate packet lost on TX direction */
+    if (udp->tx_drop_pct) {
+	if ((pj_rand() % 100) <= (int)udp->tx_drop_pct) {
+	    PJ_LOG(5,(udp->base.name, 
+		      "TX RTP packet dropped because of pkt lost "
+		      "simulation"));
+	    return PJ_SUCCESS;
+	}
+    }
+
+
     id = udp->rtp_write_op_id;
     pw = &udp->rtp_pending_write[id];
 
@@ -626,5 +653,26 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 	return PJ_SUCCESS;
 
     return status;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_transport_udp_simulate_lost(pjmedia_transport *tp,
+							pjmedia_dir dir,
+							unsigned pct_lost)
+{
+    struct transport_udp *udp = (struct transport_udp*)tp;
+
+    PJ_ASSERT_RETURN(tp && 
+		     (dir==PJMEDIA_DIR_ENCODING||dir==PJMEDIA_DIR_DECODING) &&
+		     pct_lost <= 100, PJ_EINVAL);
+
+    if (dir == PJMEDIA_DIR_ENCODING)
+	udp->tx_drop_pct = pct_lost;
+    else if (dir == PJMEDIA_DIR_DECODING)
+	udp->rx_drop_pct = pct_lost;
+    else
+	return PJ_EINVAL;
+
+    return PJ_SUCCESS;
 }
 

@@ -2087,7 +2087,7 @@ struct pjsua_media_config
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 5.
+     * Default: 6.
      */
     unsigned		quality;
 
@@ -2104,6 +2104,30 @@ struct pjsua_media_config
      * Default: 0 (no (meaning VAD is enabled))
      */
     pj_bool_t		no_vad;
+
+    /**
+     * iLBC mode (20 or 30).
+     *
+     * Default: 20
+     */
+    unsigned		ilbc_mode;
+
+    /**
+     * Percentage of RTP packet to drop in TX direction
+     * (to simulate packet lost).
+     *
+     * Default: 0
+     */
+    unsigned		tx_drop_pct;
+
+    /**
+     * Percentage of RTP packet to drop in RX direction
+     * (to simulate packet lost).
+     *
+     * Default: 0
+     */
+    unsigned		rx_drop_pct;
+
 };
 
 
@@ -2120,7 +2144,8 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
-    cfg->quality = 5;
+    cfg->quality = 6;
+    cfg->ilbc_mode = 20;
 }
 
 

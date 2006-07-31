@@ -123,9 +123,13 @@ static void usage(void)
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
-    puts  ("  --quality=N	  Specify media quality (0-10, default=10)");
+    puts  ("  --quality=N         Specify media quality (0-10, default=6)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
+    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
+    puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
+    puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
+
 
     puts  ("");
     puts  ("Buddy List (can be more than one):");
@@ -255,8 +259,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
-	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC,
+	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC, OPT_ILBC_MODE,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
+	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP,
     };
@@ -298,6 +303,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
 	{ "no-vad",     0, 0, OPT_NO_VAD},
+	{ "ilbc-mode",	1, 0, OPT_ILBC_MODE},
+	{ "rx-drop-pct",1, 0, OPT_RX_DROP_PCT},
+	{ "tx-drop-pct",1, 0, OPT_TX_DROP_PCT},
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
@@ -620,6 +628,33 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    if (cfg->media_cfg.quality < 0 || cfg->media_cfg.quality > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --quality (expecting 0-10"));
+		return -1;
+	    }
+	    break;
+
+	case OPT_ILBC_MODE:
+	    cfg->media_cfg.ilbc_mode = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.ilbc_mode!=20 && cfg->media_cfg.ilbc_mode!=30) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --ilbc-mode (expecting 20 or 30"));
+		return -1;
+	    }
+	    break;
+
+	case OPT_RX_DROP_PCT:
+	    cfg->media_cfg.rx_drop_pct = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.rx_drop_pct > 100) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --rx-drop-pct (expecting <= 100"));
+		return -1;
+	    }
+	    break;
+	    
+	case OPT_TX_DROP_PCT:
+	    cfg->media_cfg.tx_drop_pct = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.tx_drop_pct > 100) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --tx-drop-pct (expecting <= 100"));
 		return -1;
 	    }
 	    break;

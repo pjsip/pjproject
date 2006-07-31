@@ -271,11 +271,11 @@ typedef struct pjmedia_codec_param
 	pj_uint8_t  frm_per_pkt;    /**< Number of frames per packet.	*/
 	unsigned    vad:1;	    /**< Voice Activity Detector.	*/
 	unsigned    cng:1;	    /**< Comfort Noise Generator.	*/
-	unsigned    lpf:1;	    /**< Low pass filter		*/
-	unsigned    hpf:1;	    /**< High pass filter		*/
 	unsigned    penh:1;	    /**< Perceptual Enhancement		*/
 	unsigned    plc:1;	    /**< Packet loss concealment	*/
 	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
+	pj_uint8_t  enc_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
+	pj_uint8_t  dec_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
     } setting;
 } pjmedia_codec_param;
 

@@ -408,8 +408,6 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     /* Default flags. */
     attr->setting.cng = 1;
     attr->setting.plc = 1;
-    attr->setting.hpf = 1;
-    attr->setting.lpf =1 ;
     attr->setting.penh =1 ;
     attr->setting.vad = 1;
 

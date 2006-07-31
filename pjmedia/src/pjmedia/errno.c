@@ -89,6 +89,8 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_CODEC_EFRMTOOSHORT,   "Codec frame is too short" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EPCMTOOSHORT,   "PCM frame is too short" ),
     PJ_BUILD_ERR( PJMEDIA_CODEC_EFRMINLEN,      "Invalid codec frame length" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EPCMFRMINLEN,   "Invalid PCM frame length" ),
+    PJ_BUILD_ERR( PJMEDIA_CODEC_EINMODE,	"Invalid codec mode (no fmtp?)" ),
 
     /* Media errors. */
     PJ_BUILD_ERR( PJMEDIA_EINVALIDIP,	    "Invalid remote media (IP) address" ),

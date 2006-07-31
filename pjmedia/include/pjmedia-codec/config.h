@@ -46,5 +46,13 @@
 #endif
 
 
+/**
+ * Unless specified otherwise, iLBC codec is included by default.
+ */
+#ifndef PJMEDIA_HAS_ILBC_CODEC
+#   define PJMEDIA_HAS_ILBC_CODEC    1
+#endif
+
+
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */

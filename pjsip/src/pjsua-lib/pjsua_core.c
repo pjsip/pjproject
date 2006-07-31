@@ -1114,7 +1114,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
     /* To be done!! */
-
+    PJ_UNUSED_ARG(force);
 
     PJ_TODO(pjsua_transport_close);
 

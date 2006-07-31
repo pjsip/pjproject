@@ -58,6 +58,55 @@ static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 
 
 /*
+ * Get fmtp mode parameter associated with the codec.
+ */
+static pj_status_t get_fmtp_mode(const pjmedia_sdp_media *m,
+				 const pj_str_t *fmt,
+				 int *p_mode)
+{
+    const pjmedia_sdp_attr *attr;
+    pjmedia_sdp_fmtp fmtp;
+    const pj_str_t str_mode = { "mode=", 5 };
+    char *pos;
+
+    /* Get "fmtp" attribute for the format */
+    attr = pjmedia_sdp_media_find_attr2(m, "fmtp", fmt);
+    if (attr == NULL)
+	return -1;
+
+    /* Parse "fmtp" attribute */
+    if (pjmedia_sdp_attr_get_fmtp(attr, &fmtp) != PJ_SUCCESS)
+	return -1;
+
+    /* Look for "mode=" string in the fmtp */
+    while (fmtp.fmt_param.slen >= str_mode.slen + 1) {
+	if (pj_strnicmp(&fmtp.fmt_param, &str_mode, str_mode.slen)==0) {
+	    /* Found "mode=" string */
+	    break;
+	}
+
+	fmtp.fmt_param.ptr++;
+	fmtp.fmt_param.slen--;
+    }
+
+    if (fmtp.fmt_param.slen < str_mode.slen + 1) {
+	/* "mode=" param not found */
+	return -1;
+    }
+
+    /* Get the mode */
+    pos = fmtp.fmt_param.ptr + str_mode.slen;
+    *p_mode = 0;
+    while (pj_isdigit(*pos)) {
+	*p_mode = *p_mode * 10 + (*pos - '0');
+	++pos;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create stream info from SDP media line.
  */
 PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
@@ -75,6 +124,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     const pjmedia_sdp_conn *local_conn;
     const pjmedia_sdp_conn *rem_conn;
     pjmedia_sdp_rtpmap *rtpmap;
+    int local_fmtp_mode = 0, rem_fmtp_mode = 0;
     unsigned i, pt;
     pj_status_t status;
 
@@ -270,6 +320,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	si->tx_pt = pt;
 
     } else {
+
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
 					   &local_m->desc.fmt[0]);
 	if (attr == NULL)
@@ -304,6 +355,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    si->fmt.channel_cnt = 1;
 	}
 
+	/* Get fmtp mode= param in local SDP, if any */
+	get_fmtp_mode(local_m, &local_m->desc.fmt[0], &local_fmtp_mode);
+
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.
 	 */
@@ -330,6 +384,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    {
 		/* Found matched codec. */
 		si->tx_pt = rpt;
+
+		/* Get fmtp mode param in remote SDP, if any */
+		get_fmtp_mode(rem_m, &rtpmap->pt, &rem_fmtp_mode);
+
 		break;
 	    }
 	}
@@ -344,6 +402,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt, si->param);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Set fmtp mode for both local and remote */
+    if (local_fmtp_mode != 0)
+	si->param->setting.dec_fmtp_mode = (pj_int8_t)local_fmtp_mode;
+    if (rem_fmtp_mode != 0)
+	si->param->setting.enc_fmtp_mode = (pj_int8_t)rem_fmtp_mode;
+
 
     /* Get incomming payload type for telephone-events */
     si->rx_event_pt = -1;

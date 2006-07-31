@@ -100,6 +100,10 @@ SOURCE="..\src\pjmedia-codec\gsm.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\ilbc.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\l16.c"
 
 !IF  "$(CFG)" == "pjmedia_codec - Win32 Release"
@@ -135,6 +139,10 @@ SOURCE="..\include\pjmedia-codec\config.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\gsm.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\ilbc.h"
 # End Source File
 # Begin Source File
 
@@ -662,6 +670,203 @@ SOURCE="..\src\pjmedia-codec\speex\window.c"
 # ADD CPP /W3
 # End Source File
 # End Group
+# End Group
+# Begin Group "iLBC Codec"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\anaFilter.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\anaFilter.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\constants.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\constants.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\createCB.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\createCB.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\doCPLC.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\doCPLC.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\enhancer.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\enhancer.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\filter.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\filter.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\FrameClassify.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\FrameClassify.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\gainquant.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\gainquant.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\getCBvec.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\getCBvec.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\helpfun.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\helpfun.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\hpInput.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\hpInput.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\hpOutput.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\hpOutput.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iCBConstruct.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iCBConstruct.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iCBSearch.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iCBSearch.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_decode.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_decode.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_define.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_encode.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_encode.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\iLBC_test.c"
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\LPCdecode.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\LPCdecode.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\LPCencode.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\LPCencode.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\lsf.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\lsf.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\packing.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\packing.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\StateConstructW.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\StateConstructW.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\StateSearchW.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\StateSearchW.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\syntFilter.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\ilbc\syntFilter.h"
+# End Source File
 # End Group
 # End Target
 # End Project

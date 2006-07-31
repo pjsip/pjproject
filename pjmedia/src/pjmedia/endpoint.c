@@ -346,19 +346,22 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     }
 #endif
 
-    /* Add format and rtpmap for each codec */
+    /* Add format, rtpmap, and fmtp (when applicable) for each codec */
     for (i=0; i<endpt->codec_mgr.codec_cnt; ++i) {
 
 	pjmedia_codec_info *codec_info;
 	pjmedia_sdp_rtpmap rtpmap;
 	char tmp_param[3];
 	pjmedia_sdp_attr *attr;
+	pjmedia_codec_param codec_param;
 	pj_str_t *fmt;
 
 	if (endpt->codec_mgr.codec_desc[i].prio == PJMEDIA_CODEC_PRIO_DISABLED)
 	    break;
 
 	codec_info = &endpt->codec_mgr.codec_desc[i].info;
+	pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr, codec_info,
+					    &codec_param);
 	fmt = &m->desc.fmt[m->desc.fmt_count++];
 
 	fmt->ptr = pj_pool_alloc(pool, 8);
@@ -390,6 +393,20 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
 	m->attr[m->attr_count++] = attr;
 
+	/* Add fmtp mode where applicable */
+	if (codec_param.setting.dec_fmtp_mode != 0) {
+	    const pj_str_t fmtp = { "fmtp", 4 };
+	    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+
+	    attr->name = fmtp;
+	    attr->value.ptr = pj_pool_alloc(pool, 32);
+	    attr->value.slen = 
+		pj_ansi_snprintf( attr->value.ptr, 32,
+				  ":%d mode=%d",
+				  codec_info->pt,
+				  codec_param.setting.dec_fmtp_mode);
+	    m->attr[m->attr_count++] = attr;
+	}
     }
 
     /* Add sendrecv attribute. */

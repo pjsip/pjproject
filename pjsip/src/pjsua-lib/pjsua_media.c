@@ -85,6 +85,17 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     }
 #endif /* PJMEDIA_HAS_SPEEX_CODEC */
 
+#if PJMEDIA_HAS_ILBC_CODEC
+    /* Register iLBC. */
+    status = pjmedia_codec_ilbc_init( pjsua_var.med_endpt, 
+				      pjsua_var.media_cfg.ilbc_mode);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing iLBC codec",
+		     status);
+	return status;
+    }
+#endif /* PJMEDIA_HAS_ILBC_CODEC */
+
 #if PJMEDIA_HAS_GSM_CODEC
     /* Register GSM */
     status = pjmedia_codec_gsm_init(pjsua_var.med_endpt);
@@ -484,6 +495,15 @@ pjsua_media_transports_create(const pjsua_transport_config *app_cfg)
 		         status);
 	    goto on_error;
 	}
+
+	pjmedia_transport_udp_simulate_lost(pjsua_var.calls[i].med_tp,
+					    PJMEDIA_DIR_ENCODING,
+					    pjsua_var.media_cfg.tx_drop_pct);
+
+	pjmedia_transport_udp_simulate_lost(pjsua_var.calls[i].med_tp,
+					    PJMEDIA_DIR_DECODING,
+					    pjsua_var.media_cfg.rx_drop_pct);
+
     }
 
     PJSUA_UNLOCK();
@@ -660,7 +680,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     status = pjmedia_wav_player_port_create(pjsua_var.pool, path,
 					    pjsua_var.mconf_cfg.samples_per_frame *
 					      1000 / pjsua_var.media_cfg.clock_rate, 
-					    0, 0, &port);
+					    options, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for playback", status);
@@ -758,6 +778,15 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pjmedia_port *port;
     pj_status_t status;
 
+    /* Don't support max_size at present */
+    PJ_ASSERT_RETURN(max_size == 0, PJ_EINVAL);
+
+    /* Don't support file format at present */
+    PJ_ASSERT_RETURN(file_format == 0, PJ_EINVAL);
+
+    /* Don't support encoding at present */
+    PJ_ASSERT_RETURN(encoding == NULL, PJ_EINVAL);
+
     if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder))
 	return PJ_ETOOMANY;
 
@@ -782,7 +811,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 					    pjsua_var.mconf_cfg.channel_count,
 					    pjsua_var.mconf_cfg.samples_per_frame,
 					    pjsua_var.mconf_cfg.bits_per_sample, 
-					    0, 0, &port);
+					    options, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for recording", status);
@@ -1092,8 +1121,8 @@ PJ_DEF(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *id,
 					   const pjmedia_codec_param *param)
 {
+    PJ_UNUSED_ARG(id);
+    PJ_UNUSED_ARG(param);
     PJ_TODO(set_codec_param);
     return PJ_SUCCESS;
 }
-
-

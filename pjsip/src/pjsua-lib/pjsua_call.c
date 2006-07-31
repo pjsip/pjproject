@@ -941,6 +941,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     }
 
     /* Create SDP */
+    PJ_UNUSED_ARG(unhold);
     PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
     status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, call->inv->pool, 
 				       1, &call->skinfo, &sdp);
@@ -1853,8 +1854,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	/* Override ptime, if this option is specified. */
 	if (pjsua_var.media_cfg.ptime != 0) {
-	    sess_info.stream_info[0].param->setting.frm_per_pkt = 
-		pjsua_var.media_cfg.ptime / sess_info.stream_info[0].param->info.frm_ptime;
+	    sess_info.stream_info[0].param->setting.frm_per_pkt = (pj_uint8_t)
+		(pjsua_var.media_cfg.ptime / sess_info.stream_info[0].param->info.frm_ptime);
 	    if (sess_info.stream_info[0].param->setting.frm_per_pkt == 0)
 		sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
 	}

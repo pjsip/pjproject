@@ -298,6 +298,16 @@ PJ_BEGIN_DECL
  * Invalid codec frame length.
  */
 #define PJMEDIA_CODEC_EFRMINLEN	    (PJMEDIA_ERRNO_START+84)    /* 220084 */
+/**
+ * @hideinitializer
+ * Invalid PCM frame length.
+ */
+#define PJMEDIA_CODEC_EPCMFRMINLEN  (PJMEDIA_ERRNO_START+85)    /* 220085 */
+/**
+ * @hideinitializer
+ * Invalid mode.
+ */
+#define PJMEDIA_CODEC_EINMODE	    (PJMEDIA_ERRNO_START+86)    /* 220086 */
 
 
 /************************************************************

@@ -48,7 +48,8 @@ enum
     PJMEDIA_RTP_PT_L16_32KHZ_MONO,		/**< L16 @ 32KHz, mono	    */
     PJMEDIA_RTP_PT_L16_32KHZ_STEREO,		/**< L16 @ 32KHz, stereo    */
     PJMEDIA_RTP_PT_L16_48KHZ_MONO,		/**< L16 @ 48KHz, mono	    */
-    PJMEDIA_RTP_PT_L16_48KHZ_STEREO		/**< L16 @ 48KHz, stereo    */
+    PJMEDIA_RTP_PT_L16_48KHZ_STEREO,		/**< L16 @ 48KHz, stereo    */
+    PJMEDIA_RTP_PT_ILBC				/**< iLBC (13.3/15.2Kbps)   */
 };
 
 
