@@ -1056,6 +1056,69 @@ static void boost_priority(void)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 }
 
+#elif defined(PJ_LINUX) && PJ_LINUX != 0
+#include <pthread.h>
+static void boost_priority(void)
+{
+#define POLICY	SCHED_FIFO
+    pthread_t thread;
+    struct sched_param tp;
+    int max_prio;
+    int policy;
+    int rc;
+
+    if (sched_get_priority_min(POLICY) < sched_get_priority_max(POLICY))
+	max_prio = sched_get_priority_max(POLICY)-1;
+    else
+	max_prio = sched_get_priority_max(POLICY)+1;
+
+    /*
+     * Adjust process scheduling algorithm and priority
+     */
+    rc = sched_getparam(0, &tp);
+    if (rc != 0) {
+	app_perror( THIS_FILE, "sched_getparam error",
+		    PJ_RETURN_OS_ERROR(rc));
+	return;
+    }
+    tp.__sched_priority = max_prio;
+
+    rc = sched_setscheduler(0, POLICY, &tp);
+    if (rc != 0) {
+	app_perror( THIS_FILE, "sched_setscheduler error",
+		    PJ_RETURN_OS_ERROR(rc));
+    }
+
+    PJ_LOG(4, (THIS_FILE, "New process policy=%d, priority=%d",
+	      policy, tp.__sched_priority));
+
+    /*
+     * Adjust thread scheduling algorithm and priority
+     */
+    rc = pthread_getschedparam(pthread_self(), &policy, &tp);
+    if (rc != 0) {
+	app_perror( THIS_FILE, "pthread_getschedparam error",
+		    PJ_RETURN_OS_ERROR(rc));
+	return;
+    }
+
+    PJ_LOG(4, (THIS_FILE, "Old thread policy=%d, priority=%d",
+	      policy, tp.__sched_priority));
+
+    policy = POLICY;
+    tp.__sched_priority = max_prio;
+
+    rc = pthread_setschedparam(pthread_self(), policy, &tp);
+    if (rc != 0) {
+	app_perror( THIS_FILE, "pthread_setschedparam error",
+		    PJ_RETURN_OS_ERROR(rc));
+	return;
+    }
+
+    PJ_LOG(4, (THIS_FILE, "New thread policy=%d, priority=%d",
+	      policy, tp.__sched_priority));
+}
+
 #else
 #  define boost_priority()
 #endif
