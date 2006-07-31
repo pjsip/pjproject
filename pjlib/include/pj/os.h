@@ -67,7 +67,7 @@ typedef int (PJ_THREAD_FUNC pj_thread_proc)(void*);
  * Size of thread struct.
  */
 #if !defined(PJ_THREAD_DESC_SIZE)
-#   define PJ_THREAD_DESC_SIZE	    (16)
+#   define PJ_THREAD_DESC_SIZE	    (64)
 #endif
 
 /**
