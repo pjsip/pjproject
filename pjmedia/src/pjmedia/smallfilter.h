@@ -1,8 +1,8 @@
 /* Included by resamplesubs.c */
-#define SMALL_FILTER_NMULT ((HWORD)13)
+#define SMALL_FILTER_NMULT ((RES_HWORD)13)
 #define SMALL_FILTER_SCALE 13128 /* Unity-gain scale factor */
 #define SMALL_FILTER_NWING 1536 /* Filter table length */
-static const HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
+static const RES_HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
 32767,
 32766,
 32764,
@@ -1541,7 +1541,7 @@ static const HWORD SMALL_FILTER_IMP[] /* Impulse response */ = {
 -1
 };
 
-static const HWORD SMALL_FILTER_IMPD[] = {
+static const RES_HWORD SMALL_FILTER_IMPD[] = {
 -1,
 -2,
 -4,

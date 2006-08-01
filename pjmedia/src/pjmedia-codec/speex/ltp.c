@@ -152,7 +152,7 @@ void pitch_xcorr(const spx_word16_t *_x, const spx_word16_t *_y, spx_word32_t *c
 #endif
 
 #ifndef OVERRIDE_COMPUTE_PITCH_ERROR
-static inline spx_word32_t compute_pitch_error(spx_word16_t *C, spx_word16_t *g, spx_word16_t pitch_control)
+PJ_INLINE(spx_word32_t) compute_pitch_error(spx_word16_t *C, spx_word16_t *g, spx_word16_t pitch_control)
 {
    spx_word32_t sum = 0;
    sum = ADD32(sum,MULT16_16(MULT16_16_16(g[0],pitch_control),C[0]));

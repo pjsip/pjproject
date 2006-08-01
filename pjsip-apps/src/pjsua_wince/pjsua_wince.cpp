@@ -1,0 +1,564 @@
+// pjsua_wince.cpp : Defines the entry point for the application.
+//
+
+#include "stdafx.h"
+#include "pjsua_wince.h"
+#include <commctrl.h>
+#include <pjsua-lib/pjsua.h>
+
+#define MAX_LOADSTRING 100
+
+// Global Variables:
+static HINSTANCE    hInst;
+static HWND	    hMainWnd;
+static HWND	    hwndCB;
+static HWND	    hwndGlobalStatus;
+static HWND	    hwndURI;
+static HWND	    hwndCallStatus;
+
+static pj_pool_t   *g_pool;
+static pj_str_t	    g_local_uri;
+static int	    g_current_acc;
+static int	    g_current_call = PJSUA_INVALID_ID;
+
+enum
+{
+    ID_GLOBAL_STATUS	= 21,
+    ID_URI,
+    ID_CALL_STATUS,
+    ID_POLL_TIMER,
+};
+
+enum
+{
+    ID_MENU_NONE	= 64,
+    ID_MENU_CALL,
+    ID_MENU_ANSWER,
+    ID_MENU_DISCONNECT,
+};
+
+
+// Forward declarations of functions included in this code module:
+static ATOM		MyRegisterClass	(HINSTANCE, LPTSTR);
+BOOL			InitInstance	(HINSTANCE, int);
+static void		OnCreate	(HWND hWnd);
+static LRESULT CALLBACK	WndProc		(HWND, UINT, WPARAM, LPARAM);
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+
+static void OnError(const wchar_t *title, pj_status_t status)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+    PJ_DECL_UNICODE_TEMP_BUF(werrmsg, PJ_ERR_MSG_SIZE);
+
+    pj_strerror(status, errmsg, sizeof(errmsg));
+    
+    MessageBox(NULL, PJ_STRING_TO_NATIVE(errmsg, werrmsg, PJ_ERR_MSG_SIZE),
+	       title, MB_OK);
+}
+
+
+static void SetLocalURI(const char *uri, int len, bool enabled=true)
+{
+    wchar_t tmp[128];
+    pj_ansi_to_unicode(uri, len, tmp, PJ_ARRAY_SIZE(tmp));
+    SetDlgItemText(hMainWnd, ID_GLOBAL_STATUS, tmp);
+    EnableWindow(hwndGlobalStatus, enabled?TRUE:FALSE);
+}
+
+
+
+static void SetURI(const char *uri, int len, bool enabled=true)
+{
+    wchar_t tmp[128];
+    pj_ansi_to_unicode(uri, len, tmp, PJ_ARRAY_SIZE(tmp));
+    SetDlgItemText(hMainWnd, ID_URI, tmp);
+    EnableWindow(hwndURI, enabled?TRUE:FALSE);
+}
+
+
+static void SetCallStatus(const char *state, int len)
+{
+    wchar_t tmp[128];
+    pj_ansi_to_unicode(state, len, tmp, PJ_ARRAY_SIZE(tmp));
+    SetDlgItemText(hMainWnd, ID_CALL_STATUS, tmp);
+}
+
+static void SetAction(int action, bool enable=true)
+{
+    HMENU hMenu;
+
+    hMenu = CommandBar_GetMenu(hwndCB, 0);
+
+    RemoveMenu(hMenu, ID_MENU_NONE, MF_BYCOMMAND);
+    RemoveMenu(hMenu, ID_MENU_CALL, MF_BYCOMMAND);
+    RemoveMenu(hMenu, ID_MENU_ANSWER, MF_BYCOMMAND);
+    RemoveMenu(hMenu, ID_MENU_DISCONNECT, MF_BYCOMMAND);
+
+    switch (action) {
+    case ID_MENU_NONE:
+	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("None"));
+	break;
+    case ID_MENU_CALL:
+	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Call"));
+	break;
+    case ID_MENU_ANSWER:
+	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Answer"));
+	break;
+    case ID_MENU_DISCONNECT:
+	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Hangup"));
+	break;
+    }
+
+    EnableMenuItem(hMenu, action, MF_BYCOMMAND | (enable?MF_ENABLED:MF_GRAYED));
+}
+
+
+/*
+ * Handler when invite state has changed.
+ */
+static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    pjsua_call_info call_info;
+
+    PJ_UNUSED_ARG(e);
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
+
+	g_current_call = PJSUA_INVALID_ID;
+	SetURI("sip:", 4);
+	SetAction(ID_MENU_CALL);
+	SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
+
+    } else {
+	if (g_current_call == PJSUA_INVALID_ID)
+	    g_current_call = call_id;
+
+	if (call_info.remote_contact.slen)
+	    SetURI(call_info.remote_contact.ptr, call_info.remote_contact.slen, false);
+	else
+	    SetURI(call_info.remote_info.ptr, call_info.remote_info.slen, false);
+	SetAction(ID_MENU_DISCONNECT);
+	SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
+    }
+}
+
+
+/*
+ * Callback on media state changed event.
+ * The action may connect the call to sound device, to file, or
+ * to loop the call.
+ */
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pjsua_call_info call_info;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    if (call_info.media_status == PJSUA_CALL_MEDIA_ACTIVE) {
+	pjsua_conf_connect(call_info.conf_slot, 0);
+	pjsua_conf_connect(0, call_info.conf_slot);
+    }
+}
+
+
+/**
+ * Handler when there is incoming call.
+ */
+static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+			     pjsip_rx_data *rdata)
+{
+    pjsua_call_info call_info;
+
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(rdata);
+
+    if (g_current_call != PJSUA_INVALID_ID) {
+	pjsua_call_answer(call_id, PJSIP_SC_BUSY_HERE, NULL, NULL);
+	return;
+    }
+
+    g_current_call = call_id;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    SetAction(ID_MENU_ANSWER);
+    SetURI(call_info.remote_info.ptr, call_info.remote_info.slen, false);
+    pjsua_call_answer(call_id, 180, NULL, NULL);
+}
+
+
+/*
+ * Handler registration status has changed.
+ */
+static void on_reg_state(pjsua_acc_id acc_id)
+{
+    PJ_UNUSED_ARG(acc_id);
+
+    // Log already written.
+}
+
+
+/*
+ * Handler on buddy state changed.
+ */
+static void on_buddy_state(pjsua_buddy_id buddy_id)
+{
+}
+
+
+/**
+ * Incoming IM message (i.e. MESSAGE request)!
+ */
+static void on_pager(pjsua_call_id call_id, const pj_str_t *from, 
+		     const pj_str_t *to, const pj_str_t *contact,
+		     const pj_str_t *mime_type, const pj_str_t *text)
+{
+}
+
+
+/**
+ * Received typing indication
+ */
+static void on_typing(pjsua_call_id call_id, const pj_str_t *from,
+		      const pj_str_t *to, const pj_str_t *contact,
+		      pj_bool_t is_typing)
+{
+}
+
+
+
+static BOOL OnInitStack(void)
+{
+    pjsua_config	    cfg;
+    pjsua_logging_config    log_cfg;
+    pjsua_media_config	    media_cfg;
+    pjsua_transport_config  udp_cfg;
+    pjsua_transport_config  rtp_cfg;
+    pjsua_transport_id	    transport_id;
+    pjsua_transport_info    transport_info;
+    pj_status_t status;
+
+    /* Create pjsua */
+    status = pjsua_create();
+    if (status != PJ_SUCCESS) {
+	OnError(TEXT("Error creating pjsua"), status);
+	return FALSE;
+    }
+
+    /* Create global pool for application */
+    g_pool = pjsua_pool_create("pjsua", 4000, 4000);
+
+    /* Init configs */
+    pjsua_config_default(&cfg);
+    pjsua_logging_config_default(&log_cfg);
+    pjsua_media_config_default(&media_cfg);
+    pjsua_transport_config_default(&udp_cfg);
+    pjsua_transport_config_default(&rtp_cfg);
+
+    /* Setup media */
+    media_cfg.clock_rate = 8000;
+
+    /* Initialize application callbacks */
+    cfg.cb.on_call_state = &on_call_state;
+    cfg.cb.on_call_media_state = &on_call_media_state;
+    cfg.cb.on_incoming_call = &on_incoming_call;
+    cfg.cb.on_reg_state = &on_reg_state;
+    cfg.cb.on_buddy_state = &on_buddy_state;
+    cfg.cb.on_pager = &on_pager;
+    cfg.cb.on_typing = &on_typing;
+
+    /* Initialize pjsua */
+    status = pjsua_init(&cfg, &log_cfg, &media_cfg);
+    if (status != PJ_SUCCESS) {
+	OnError(TEXT("Initialization error"), status);
+	return FALSE;
+    }
+
+    /* Set codec priority */
+    pj_str_t codec = pj_str("pcmu");
+    pjsua_codec_set_priority(&codec, 254);
+
+    /* Add UDP transport and the corresponding PJSUA account */
+    status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
+				    &udp_cfg, &transport_id);
+    if (status != PJ_SUCCESS) {
+	OnError(TEXT("Error starting SIP transport"), status);
+	return FALSE;
+    }
+
+    pjsua_transport_get_info(transport_id, &transport_info);
+
+    g_local_uri.ptr = (char*)pj_pool_alloc(g_pool, 128);
+    g_local_uri.slen = pj_ansi_sprintf(g_local_uri.ptr,
+				       "<sip:%.*s:%d>",
+				       (int)transport_info.local_name.host.slen,
+				       transport_info.local_name.host.ptr,
+				       transport_info.local_name.port);
+
+
+    /* Add local account */
+    pjsua_acc_add_local(transport_id, PJ_TRUE, &g_current_acc);
+    pjsua_acc_set_online_status(g_current_acc, PJ_TRUE);
+
+    /* Start pjsua */
+    status = pjsua_start();
+    if (status != PJ_SUCCESS) {
+	OnError(TEXT("Error starting pjsua"), status);
+	return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+int WINAPI WinMain(HINSTANCE hInstance,
+		   HINSTANCE hPrevInstance,
+		   LPTSTR    lpCmdLine,
+		   int       nCmdShow)
+{
+    MSG msg;
+    HACCEL hAccelTable;
+    
+
+
+    // Perform application initialization:
+    if (!InitInstance (hInstance, nCmdShow)) 
+    {
+	return FALSE;
+    }
+    
+    hAccelTable = LoadAccelerators(hInstance, (LPCTSTR)IDC_PJSUA_WINCE);
+    
+    
+    // Main message loop:
+    while (GetMessage(&msg, NULL, 0, 0)) 
+    {
+	if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) 
+	{
+	    TranslateMessage(&msg);
+	    DispatchMessage(&msg);
+	}
+    }
+    
+    return msg.wParam;
+}
+
+static ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
+{
+    WNDCLASS wc;
+
+    wc.style		= CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc	= (WNDPROC) WndProc;
+    wc.cbClsExtra	= 0;
+    wc.cbWndExtra	= 0;
+    wc.hInstance	= hInstance;
+    wc.hIcon		= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_PJSUA_WINCE));
+    wc.hCursor		= 0;
+    wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
+    wc.lpszMenuName	= 0;
+    wc.lpszClassName	= szWindowClass;
+
+    return RegisterClass(&wc);
+}
+
+
+
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+    HWND	hWnd;
+    TCHAR	szTitle[MAX_LOADSTRING];
+    TCHAR	szWindowClass[MAX_LOADSTRING];
+
+    hInst = hInstance;
+
+    /* Init stack */
+    if (OnInitStack() == FALSE)
+	return FALSE;
+
+    LoadString(hInstance, IDC_PJSUA_WINCE, szWindowClass, MAX_LOADSTRING);
+    MyRegisterClass(hInstance, szWindowClass);
+
+    LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    hWnd = CreateWindow(szWindowClass, szTitle, WS_VISIBLE,
+	    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+	    NULL, NULL, hInstance, NULL);
+
+    if (!hWnd)
+    {	
+	    return FALSE;
+    }
+
+    hMainWnd = hWnd;
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
+    if (hwndCB)
+	CommandBar_Show(hwndCB, TRUE);
+
+    SetTimer(hMainWnd, ID_POLL_TIMER, 50, NULL);
+    return TRUE;
+}
+
+
+static void OnCreate(HWND hWnd)
+{
+    enum 
+    {
+	X = 10,
+	W = 220,
+	H = 30,
+    };
+
+    DWORD dwStyle;
+
+    hMainWnd = hWnd;
+
+    hwndCB = CommandBar_Create(hInst, hWnd, 1);			
+    CommandBar_InsertMenubar(hwndCB, hInst, IDM_MENU, 0);   
+    CommandBar_AddAdornments(hwndCB, 0, 0);
+
+    // Create global status text
+    dwStyle = WS_CHILD | WS_VISIBLE | WS_DISABLED | ES_LEFT;  
+    hwndGlobalStatus = CreateWindow(
+                TEXT("EDIT"),   // Class name
+                NULL,           // Window text
+                dwStyle,        // Window style
+                X,		// x-coordinate of the upper-left corner
+                60,            // y-coordinate of the upper-left corner
+                W,		// Width of the window for the edit
+                                // control
+                H,		// Height of the window for the edit
+                                // control
+                hWnd,           // Window handle to the parent window
+                (HMENU) ID_GLOBAL_STATUS, // Control identifier
+                hInst,           // Instance handle
+                NULL);          // Specify NULL for this parameter when 
+                                // you create a control
+    SetLocalURI(g_local_uri.ptr, g_local_uri.slen, false);
+
+
+    // Create URI edit
+    dwStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER;  
+    hwndURI = CreateWindow (
+                TEXT("EDIT"),   // Class name
+                NULL,		// Window text
+                dwStyle,        // Window style
+                X,  // x-coordinate of the upper-left corner
+                100,  // y-coordinate of the upper-left corner
+                W,  // Width of the window for the edit
+                                // control
+                H,  // Height of the window for the edit
+                                // control
+                hWnd,           // Window handle to the parent window
+                (HMENU) ID_URI, // Control identifier
+                hInst,           // Instance handle
+                NULL);          // Specify NULL for this parameter when 
+                                // you create a control
+    SetURI("sip:", 4, true);
+    SetFocus(hwndURI);
+
+    // Create call status edit
+    dwStyle = WS_CHILD | WS_VISIBLE | WS_DISABLED;  
+    hwndCallStatus = CreateWindow (
+                TEXT("EDIT"),   // Class name
+                NULL,		// Window text
+                dwStyle,        // Window style
+                X,  // x-coordinate of the upper-left corner
+                140,  // y-coordinate of the upper-left corner
+                W,  // Width of the window for the edit
+                                // control
+                H,  // Height of the window for the edit
+                                // control
+                hWnd,           // Window handle to the parent window
+                (HMENU) ID_CALL_STATUS, // Control identifier
+                hInst,           // Instance handle
+                NULL);          // Specify NULL for this parameter when 
+                                // you create a control
+    SetCallStatus("Ready", 5);
+
+    SetAction(ID_MENU_CALL);
+}
+
+
+static void OnDestroy(void)
+{
+    pjsua_destroy();
+}
+
+static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    int wmId, wmEvent;
+    
+    switch (message) {
+    case WM_COMMAND:
+	wmId    = LOWORD(wParam); 
+	wmEvent = HIWORD(wParam); 
+	switch (wmId)
+	{
+	case ID_MENU_CALL:
+	    if (g_current_call != PJSUA_INVALID_ID) {
+		MessageBox(NULL, TEXT("Can not make call"), 
+			   TEXT("You already have one call active"), MB_OK);
+	    }
+	    pj_str_t dst_uri;
+	    wchar_t text[256];
+	    char tmp[256];
+	    pj_status_t status;
+
+	    GetWindowText(hwndURI, text, PJ_ARRAY_SIZE(text));
+	    pj_unicode_to_ansi(text, pj_unicode_strlen(text),
+			       tmp, sizeof(tmp));
+	    dst_uri.ptr = tmp;
+	    dst_uri.slen = pj_ansi_strlen(tmp);
+	    status = pjsua_call_make_call(g_current_acc,
+						      &dst_uri, 0, NULL,
+						      NULL, &g_current_call);
+	    if (status != PJ_SUCCESS)
+		OnError(TEXT("Unable to make call"), status);
+	    break;
+	case ID_MENU_ANSWER:
+	    if (g_current_call == PJSUA_INVALID_ID)
+		MessageBox(NULL, TEXT("Can not answer"), 
+			   TEXT("There is no call!"), MB_OK);
+	    break;
+	case ID_MENU_DISCONNECT:
+	    if (g_current_call == PJSUA_INVALID_ID)
+		MessageBox(NULL, TEXT("Can not disconnect"), 
+			   TEXT("There is no call!"), MB_OK);
+	    else
+		pjsua_call_hangup(g_current_call, PJSIP_SC_DECLINE, NULL, NULL);
+	    break;
+	case ID_EXIT:
+	    DestroyWindow(hWnd);
+	    break;
+	default:
+	    return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	break;
+
+    case WM_CREATE:
+	OnCreate(hWnd);
+	break;
+
+    case WM_DESTROY:
+	OnDestroy();
+	CommandBar_Destroy(hwndCB);
+	PostQuitMessage(0);
+	break;
+
+    case WM_TIMER:
+	pjsua_handle_events(1);
+	break;
+
+    default:
+	return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+   return 0;
+}
+

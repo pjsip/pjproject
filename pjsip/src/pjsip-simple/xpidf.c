@@ -22,18 +22,18 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-static pj_str_t PRESENCE = { "presence", 8 };
-static pj_str_t STATUS = { "status", 6 };
-static pj_str_t OPEN = { "open", 4 };
-static pj_str_t CLOSED = { "closed", 6 };
-static pj_str_t URI = { "uri", 3 };
-static pj_str_t ATOM = { "atom", 4 };
-static pj_str_t ATOMID = { "atomid", 6 };
-static pj_str_t ID = { "id", 2 };
-static pj_str_t ADDRESS = { "address", 7 };
-static pj_str_t SUBSCRIBE_PARAM = { ";method=SUBSCRIBE", 17 };
-static pj_str_t PRESENTITY = { "presentity", 10 };
-static pj_str_t EMPTY_STRING = { NULL, 0 };
+static pj_str_t STR_PRESENCE = { "presence", 8 };
+static pj_str_t STR_STATUS = { "status", 6 };
+static pj_str_t STR_OPEN = { "open", 4 };
+static pj_str_t STR_CLOSED = { "closed", 6 };
+static pj_str_t STR_URI = { "uri", 3 };
+static pj_str_t STR_ATOM = { "atom", 4 };
+static pj_str_t STR_ATOMID = { "atomid", 6 };
+static pj_str_t STR_ID = { "id", 2 };
+static pj_str_t STR_ADDRESS = { "address", 7 };
+static pj_str_t STR_SUBSCRIBE_PARAM = { ";method=SUBSCRIBE", 17 };
+static pj_str_t STR_PRESENTITY = { "presentity", 10 };
+static pj_str_t STR_EMPTY_STRING = { NULL, 0 };
 
 static pj_xml_node* xml_create_node(pj_pool_t *pool, 
 				    pj_str_t *name, const pj_str_t *value)
@@ -72,42 +72,42 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri_cstr)
     pj_str_t tmp;
 
     /* <presence> */
-    pres = xml_create_node(pool, &PRESENCE, NULL);
+    pres = xml_create_node(pool, &STR_PRESENCE, NULL);
 
     /* <presentity> */
-    presentity = xml_create_node(pool, &PRESENTITY, NULL);
+    presentity = xml_create_node(pool, &STR_PRESENTITY, NULL);
     pj_xml_add_node(pres, presentity);
 
     /* uri attribute */
-    uri.ptr = pj_pool_alloc(pool, uri_cstr->slen + SUBSCRIBE_PARAM.slen);
+    uri.ptr = pj_pool_alloc(pool, uri_cstr->slen + STR_SUBSCRIBE_PARAM.slen);
     pj_strcpy( &uri, uri_cstr);
-    pj_strcat( &uri, &SUBSCRIBE_PARAM);
-    attr = xml_create_attr(pool, &URI, &uri);
+    pj_strcat( &uri, &STR_SUBSCRIBE_PARAM);
+    attr = xml_create_attr(pool, &STR_URI, &uri);
     pj_xml_add_attr(presentity, attr);
 
     /* <atom> */
-    atom = xml_create_node(pool, &ATOM, NULL);
+    atom = xml_create_node(pool, &STR_ATOM, NULL);
     pj_xml_add_node(pres, atom);
 
     /* atom id */
     pj_create_unique_string(pool, &tmp);
-    attr = xml_create_attr(pool, &ATOMID, &tmp);
+    attr = xml_create_attr(pool, &STR_ATOMID, &tmp);
     pj_xml_add_attr(atom, attr);
 
     /* address */
-    addr = xml_create_node(pool, &ADDRESS, NULL);
+    addr = xml_create_node(pool, &STR_ADDRESS, NULL);
     pj_xml_add_node(atom, addr);
 
     /* address'es uri */
-    attr = xml_create_attr(pool, &URI, uri_cstr);
+    attr = xml_create_attr(pool, &STR_URI, uri_cstr);
     pj_xml_add_attr(addr, attr);
 
     /* status */
-    status = xml_create_node(pool, &STATUS, NULL);
+    status = xml_create_node(pool, &STR_STATUS, NULL);
     pj_xml_add_node(addr, status);
 
     /* status attr */
-    attr = xml_create_attr(pool, &STATUS, &OPEN);
+    attr = xml_create_attr(pool, &STR_STATUS, &STR_OPEN);
     pj_xml_add_attr(status, attr);
 
     return pres;
@@ -125,39 +125,39 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_parse(pj_pool_t *pool, char *text, pj_size_t len)
 	return NULL;
 
     /* Validate <presence> */
-    if (pj_stricmp(&pres->name, &PRESENCE) != 0)
+    if (pj_stricmp(&pres->name, &STR_PRESENCE) != 0)
 	return NULL;
 
     /* Validate <presentity> */
-    node = pj_xml_find_node(pres, &PRESENTITY);
+    node = pj_xml_find_node(pres, &STR_PRESENTITY);
     if (node == NULL)
 	return NULL;
-    if (pj_xml_find_attr(node, &URI, NULL) == NULL)
+    if (pj_xml_find_attr(node, &STR_URI, NULL) == NULL)
 	return NULL;
 
     /* Validate <atom> */
-    node = pj_xml_find_node(pres, &ATOM);
+    node = pj_xml_find_node(pres, &STR_ATOM);
     if (node == NULL)
 	return NULL;
-    if (pj_xml_find_attr(node, &ATOMID, NULL) == NULL && 
-	pj_xml_find_attr(node, &ID, NULL) == NULL)
+    if (pj_xml_find_attr(node, &STR_ATOMID, NULL) == NULL && 
+	pj_xml_find_attr(node, &STR_ID, NULL) == NULL)
     {
 	return NULL;
     }
 
     /* Address */
-    node = pj_xml_find_node(node, &ADDRESS);
+    node = pj_xml_find_node(node, &STR_ADDRESS);
     if (node == NULL)
 	return NULL;
-    if (pj_xml_find_attr(node, &URI, NULL) == NULL)
+    if (pj_xml_find_attr(node, &STR_URI, NULL) == NULL)
 	return NULL;
 
 
     /* Status */
-    node = pj_xml_find_node(node, &STATUS);
+    node = pj_xml_find_node(node, &STR_STATUS);
     if (node == NULL)
 	return NULL;
-    if (pj_xml_find_attr(node, &STATUS, NULL) == NULL)
+    if (pj_xml_find_attr(node, &STR_STATUS, NULL) == NULL)
 	return NULL;
 
     return pres;
@@ -175,13 +175,13 @@ PJ_DEF(pj_str_t*) pjxpidf_get_uri(pjxpidf_pres *pres)
     pj_xml_node *presentity;
     pj_xml_attr *attr;
 
-    presentity = pj_xml_find_node(pres, &PRESENTITY);
+    presentity = pj_xml_find_node(pres, &STR_PRESENTITY);
     if (!presentity)
-	return &EMPTY_STRING;
+	return &STR_EMPTY_STRING;
 
-    attr = pj_xml_find_attr(presentity, &URI, NULL);
+    attr = pj_xml_find_attr(presentity, &STR_URI, NULL);
     if (!attr)
-	return &EMPTY_STRING;
+	return &STR_EMPTY_STRING;
 
     return &attr->value;
 }
@@ -196,24 +196,24 @@ PJ_DEF(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres,
     pj_xml_attr *attr;
     pj_str_t dup_uri;
 
-    presentity = pj_xml_find_node(pres, &PRESENTITY);
+    presentity = pj_xml_find_node(pres, &STR_PRESENTITY);
     if (!presentity) {
 	pj_assert(0);
 	return -1;
     }
-    atom = pj_xml_find_node(pres, &ATOM);
+    atom = pj_xml_find_node(pres, &STR_ATOM);
     if (!atom) {
 	pj_assert(0);
 	return -1;
     }
-    addr = pj_xml_find_node(atom, &ADDRESS);
+    addr = pj_xml_find_node(atom, &STR_ADDRESS);
     if (!addr) {
 	pj_assert(0);
 	return -1;
     }
 
     /* Set uri in presentity */
-    attr = pj_xml_find_attr(presentity, &URI, NULL);
+    attr = pj_xml_find_attr(presentity, &STR_URI, NULL);
     if (!attr) {
 	pj_assert(0);
 	return -1;
@@ -222,7 +222,7 @@ PJ_DEF(pj_status_t) pjxpidf_set_uri(pj_pool_t *pool, pjxpidf_pres *pres,
     attr->value = dup_uri;
 
     /* Set uri in address. */
-    attr = pj_xml_find_attr(addr, &URI, NULL);
+    attr = pj_xml_find_attr(addr, &STR_URI, NULL);
     if (!attr) {
 	pj_assert(0);
 	return -1;
@@ -240,28 +240,28 @@ PJ_DEF(pj_bool_t) pjxpidf_get_status(pjxpidf_pres *pres)
     pj_xml_node *status;
     pj_xml_attr *attr;
 
-    atom = pj_xml_find_node(pres, &ATOM);
+    atom = pj_xml_find_node(pres, &STR_ATOM);
     if (!atom) {
 	pj_assert(0);
 	return PJ_FALSE;
     }
-    addr = pj_xml_find_node(atom, &ADDRESS);
+    addr = pj_xml_find_node(atom, &STR_ADDRESS);
     if (!addr) {
 	pj_assert(0);
 	return PJ_FALSE;
     }
-    status = pj_xml_find_node(addr, &STATUS);
+    status = pj_xml_find_node(addr, &STR_STATUS);
     if (!status) {
 	pj_assert(0);
 	return PJ_FALSE;
     }
-    attr = pj_xml_find_attr(status, &STATUS, NULL);
+    attr = pj_xml_find_attr(status, &STR_STATUS, NULL);
     if (!attr) {
 	pj_assert(0);
 	return PJ_FALSE;
     }
 
-    return pj_stricmp(&attr->value, &OPEN)==0 ? PJ_TRUE : PJ_FALSE;
+    return pj_stricmp(&attr->value, &STR_OPEN)==0 ? PJ_TRUE : PJ_FALSE;
 }
 
 
@@ -272,28 +272,28 @@ PJ_DEF(pj_status_t) pjxpidf_set_status(pjxpidf_pres *pres, pj_bool_t online_stat
     pj_xml_node *status;
     pj_xml_attr *attr;
 
-    atom = pj_xml_find_node(pres, &ATOM);
+    atom = pj_xml_find_node(pres, &STR_ATOM);
     if (!atom) {
 	pj_assert(0);
 	return -1;
     }
-    addr = pj_xml_find_node(atom, &ADDRESS);
+    addr = pj_xml_find_node(atom, &STR_ADDRESS);
     if (!addr) {
 	pj_assert(0);
 	return -1;
     }
-    status = pj_xml_find_node(addr, &STATUS);
+    status = pj_xml_find_node(addr, &STR_STATUS);
     if (!status) {
 	pj_assert(0);
 	return -1;
     }
-    attr = pj_xml_find_attr(status, &STATUS, NULL);
+    attr = pj_xml_find_attr(status, &STR_STATUS, NULL);
     if (!attr) {
 	pj_assert(0);
 	return -1;
     }
 
-    attr->value = ( online_status ? OPEN : CLOSED );
+    attr->value = ( online_status ? STR_OPEN : STR_CLOSED );
     return 0;
 }
 

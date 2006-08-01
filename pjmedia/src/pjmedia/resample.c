@@ -98,11 +98,11 @@
 #define SGN(x)   ((x)<0   ?(-1):((x)==0?(0):(1)))
 #endif
 
-typedef char           BOOL;
-typedef short          HWORD;
-typedef unsigned short UHWORD;
-typedef int            WORD;
-typedef unsigned int   UWORD;
+typedef char           RES_BOOL;
+typedef short          RES_HWORD;
+typedef int            RES_WORD;
+typedef unsigned short RES_UHWORD;
+typedef unsigned int   RES_UWORD;
 
 #define MAX_HWORD (32767)
 #define MIN_HWORD (-32768)
@@ -221,10 +221,10 @@ typedef unsigned int   UWORD;
 #endif
 
 
-static INLINE HWORD WordToHword(WORD v, int scl)
+static INLINE RES_HWORD WordToHword(RES_WORD v, int scl)
 {
-    HWORD out;
-    WORD llsb = (1<<(scl-1));
+    RES_HWORD out;
+    RES_WORD llsb = (1<<(scl-1));
     v += llsb;		/* round */
     v >>= scl;
     if (v>MAX_HWORD) {
@@ -232,31 +232,31 @@ static INLINE HWORD WordToHword(WORD v, int scl)
     } else if (v < MIN_HWORD) {
 	v = MIN_HWORD;
     }	
-    out = (HWORD) v;
+    out = (RES_HWORD) v;
     return out;
 }
 
 /* Sampling rate conversion using linear interpolation for maximum speed.
  */
 static int 
-  SrcLinear(const HWORD X[], HWORD Y[], double pFactor, UHWORD nx)
+  SrcLinear(const RES_HWORD X[], RES_HWORD Y[], double pFactor, RES_UHWORD nx)
 {
-    HWORD iconst;
-    UWORD time = 0;
-    const HWORD *xp;
-    HWORD *Ystart, *Yend;
-    WORD v,x1,x2;
+    RES_HWORD iconst;
+    RES_UWORD time = 0;
+    const RES_HWORD *xp;
+    RES_HWORD *Ystart, *Yend;
+    RES_WORD v,x1,x2;
     
     double dt;                  /* Step through input signal */ 
-    UWORD dtb;                  /* Fixed-point version of Dt */
-    UWORD endTime;              /* When time reaches EndTime, return to user */
+    RES_UWORD dtb;                  /* Fixed-point version of Dt */
+    RES_UWORD endTime;              /* When time reaches EndTime, return to user */
     
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
-    endTime = time + (1<<Np)*(WORD)nx;
+    endTime = time + (1<<Np)*(RES_WORD)nx;
     while (time < endTime)
     {
 	iconst = (time) & Pmask;
@@ -272,15 +272,15 @@ static int
     return (Y - Ystart);            /* Return number of output samples */
 }
 
-static WORD FilterUp(const HWORD Imp[], const HWORD ImpD[], 
-		     UHWORD Nwing, BOOL Interp,
-		     const HWORD *Xp, HWORD Ph, HWORD Inc)
+static RES_WORD FilterUp(const RES_HWORD Imp[], const RES_HWORD ImpD[], 
+		     RES_UHWORD Nwing, RES_BOOL Interp,
+		     const RES_HWORD *Xp, RES_HWORD Ph, RES_HWORD Inc)
 {
-    const HWORD *Hp;
-    const HWORD *Hdp = NULL;
-    const HWORD *End;
-    HWORD a = 0;
-    WORD v, t;
+    const RES_HWORD *Hp;
+    const RES_HWORD *Hdp = NULL;
+    const RES_HWORD *End;
+    RES_HWORD a = 0;
+    RES_WORD v, t;
     
     v=0;
     Hp = &Imp[Ph>>Na];
@@ -301,7 +301,7 @@ static WORD FilterUp(const HWORD Imp[], const HWORD ImpD[],
     if (Interp)
       while (Hp < End) {
 	  t = *Hp;		/* Get filter coeff */
-	  t += (((WORD)*Hdp)*a)>>Na; /* t is now interp'd filter coeff */
+	  t += (((RES_WORD)*Hdp)*a)>>Na; /* t is now interp'd filter coeff */
 	  Hdp += Npc;		/* Filter coeff differences step */
 	  t *= *Xp;		/* Mult coeff by input sample */
 	  if (t & (1<<(Nhxn-1)))  /* Round, if needed */
@@ -327,17 +327,17 @@ static WORD FilterUp(const HWORD Imp[], const HWORD ImpD[],
 }
 
 
-static WORD FilterUD(const HWORD Imp[], const HWORD ImpD[],
-		     UHWORD Nwing, BOOL Interp,
-		     const HWORD *Xp, HWORD Ph, HWORD Inc, UHWORD dhb)
+static RES_WORD FilterUD(const RES_HWORD Imp[], const RES_HWORD ImpD[],
+		     RES_UHWORD Nwing, RES_BOOL Interp,
+		     const RES_HWORD *Xp, RES_HWORD Ph, RES_HWORD Inc, RES_UHWORD dhb)
 {
-    HWORD a;
-    const HWORD *Hp, *Hdp, *End;
-    WORD v, t;
-    UWORD Ho;
+    RES_HWORD a;
+    const RES_HWORD *Hp, *Hdp, *End;
+    RES_WORD v, t;
+    RES_UWORD Ho;
     
     v=0;
-    Ho = (Ph*(UWORD)dhb)>>Np;
+    Ho = (Ph*(RES_UWORD)dhb)>>Np;
     End = &Imp[Nwing];
     if (Inc == 1)		/* If doing right wing...              */
     {				/* ...drop extra coeff, so when Ph is  */
@@ -351,7 +351,7 @@ static WORD FilterUD(const HWORD Imp[], const HWORD ImpD[],
 	  t = *Hp;		/* Get IR sample */
 	  Hdp = &ImpD[Ho>>Na];  /* get interp (lower Na) bits from diff table*/
 	  a = Ho & Amask;	/* a is logically between 0 and 1 */
-	  t += (((WORD)*Hdp)*a)>>Na; /* t is now interp'd filter coeff */
+	  t += (((RES_WORD)*Hdp)*a)>>Na; /* t is now interp'd filter coeff */
 	  t *= *Xp;		/* Mult coeff by input sample */
 	  if (t & 1<<(Nhxn-1))	/* Round, if needed */
 	    t += 1<<(Nhxn-1);
@@ -377,34 +377,34 @@ static WORD FilterUD(const HWORD Imp[], const HWORD ImpD[],
 /* Sampling rate up-conversion only subroutine;
  * Slightly faster than down-conversion;
  */
-static int SrcUp(const HWORD X[], HWORD Y[], double pFactor, 
-		 UHWORD nx, UHWORD pNwing, UHWORD pLpScl,
-		 const HWORD pImp[], const HWORD pImpD[], BOOL Interp)
+static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+		 RES_UHWORD nx, RES_UHWORD pNwing, RES_UHWORD pLpScl,
+		 const RES_HWORD pImp[], const RES_HWORD pImpD[], RES_BOOL Interp)
 {
-    const HWORD *xp;
-    HWORD *Ystart, *Yend;
-    WORD v;
+    const RES_HWORD *xp;
+    RES_HWORD *Ystart, *Yend;
+    RES_WORD v;
     
     double dt;                  /* Step through input signal */ 
-    UWORD dtb;                  /* Fixed-point version of Dt */
-    UWORD time = 0;
-    UWORD endTime;              /* When time reaches EndTime, return to user */
+    RES_UWORD dtb;                  /* Fixed-point version of Dt */
+    RES_UWORD time = 0;
+    RES_UWORD endTime;              /* When time reaches EndTime, return to user */
     
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
-    endTime = time + (1<<Np)*(WORD)nx;
+    endTime = time + (1<<Np)*(RES_WORD)nx;
     while (time < endTime)
     {
 	xp = &X[time>>Np];      /* Ptr to current input sample */
 	/* Perform left-wing inner product */
 	v = 0;
-	v = FilterUp(pImp, pImpD, pNwing, Interp, xp, (HWORD)(time&Pmask),-1);
+	v = FilterUp(pImp, pImpD, pNwing, Interp, xp, (RES_HWORD)(time&Pmask),-1);
 
 	/* Perform right-wing inner product */
-	v += FilterUp(pImp, pImpD, pNwing, Interp, xp+1,  (HWORD)((-time)&Pmask),1);
+	v += FilterUp(pImp, pImpD, pNwing, Interp, xp+1,  (RES_HWORD)((-time)&Pmask),1);
 
 	v >>= Nhg;		/* Make guard bits */
 	v *= pLpScl;		/* Normalize for unity filter gain */
@@ -417,19 +417,19 @@ static int SrcUp(const HWORD X[], HWORD Y[], double pFactor,
 
 /* Sampling rate conversion subroutine */
 
-static int SrcUD(const HWORD X[], HWORD Y[], double pFactor, 
-		 UHWORD nx, UHWORD pNwing, UHWORD pLpScl,
-		 const HWORD pImp[], const HWORD pImpD[], BOOL Interp)
+static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+		 RES_UHWORD nx, RES_UHWORD pNwing, RES_UHWORD pLpScl,
+		 const RES_HWORD pImp[], const RES_HWORD pImpD[], RES_BOOL Interp)
 {
-    const HWORD *xp;
-    HWORD *Ystart, *Yend;
-    WORD v;
+    const RES_HWORD *xp;
+    RES_HWORD *Ystart, *Yend;
+    RES_WORD v;
     
     double dh;                  /* Step through filter impulse response */
     double dt;                  /* Step through input signal */
-    UWORD time = 0;
-    UWORD endTime;              /* When time reaches EndTime, return to user */
-    UWORD dhb, dtb;             /* Fixed-point versions of Dh,Dt */
+    RES_UWORD time = 0;
+    RES_UWORD endTime;          /* When time reaches EndTime, return to user */
+    RES_UWORD dhb, dtb;         /* Fixed-point versions of Dh,Dt */
     
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
@@ -439,13 +439,13 @@ static int SrcUD(const HWORD X[], HWORD Y[], double pFactor,
     
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor);
-    endTime = time + (1<<Np)*(WORD)nx;
+    endTime = time + (1<<Np)*(RES_WORD)nx;
     while (time < endTime)
     {
 	xp = &X[time>>Np];	/* Ptr to current input sample */
-	v = FilterUD(pImp, pImpD, pNwing, Interp, xp, (HWORD)(time&Pmask),
+	v = FilterUD(pImp, pImpD, pNwing, Interp, xp, (RES_HWORD)(time&Pmask),
 		     -1, dhb);	/* Perform left-wing inner product */
-	v += FilterUD(pImp, pImpD, pNwing, Interp, xp+1, (HWORD)((-time)&Pmask),
+	v += FilterUD(pImp, pImpD, pNwing, Interp, xp+1, (RES_HWORD)((-time)&Pmask),
 		      1, dhb);	/* Perform right-wing inner product */
 	v >>= Nhg;		/* Make guard bits */
 	v *= pLpScl;		/* Normalize for unity filter gain */

@@ -146,7 +146,7 @@ struct SpeexEchoState_ {
    int play_buf_pos;
 };
 
-static inline void filter_dc_notch16(const spx_int16_t *in, spx_word16_t radius, spx_word16_t *out, int len, spx_mem_t *mem)
+PJ_INLINE(void) filter_dc_notch16(const spx_int16_t *in, spx_word16_t radius, spx_word16_t *out, int len, spx_mem_t *mem)
 {
    int i;
    spx_word16_t den2;
@@ -170,7 +170,7 @@ static inline void filter_dc_notch16(const spx_int16_t *in, spx_word16_t radius,
    }
 }
 
-static inline spx_word32_t mdf_inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
+PJ_INLINE(spx_word32_t ) mdf_inner_prod(const spx_word16_t *x, const spx_word16_t *y, int len)
 {
    spx_word32_t sum=0;
    len >>= 1;
@@ -186,7 +186,7 @@ static inline spx_word32_t mdf_inner_prod(const spx_word16_t *x, const spx_word1
 }
 
 /** Compute power spectrum of a half-complex (packed) vector */
-static inline void power_spectrum(const spx_word16_t *X, spx_word32_t *ps, int N)
+PJ_INLINE(void) power_spectrum(const spx_word16_t *X, spx_word32_t *ps, int N)
 {
    int i, j;
    ps[0]=MULT16_16(X[0],X[0]);
@@ -227,7 +227,7 @@ static inline void spectral_mul_accum(const spx_word16_t *X, const spx_word32_t 
    acc[N-1] = PSHR32(tmp1,WEIGHT_SHIFT);
 }
 #else
-static inline void spectral_mul_accum(const spx_word16_t *X, const spx_word32_t *Y, spx_word16_t *acc, int N, int M)
+PJ_INLINE(void) spectral_mul_accum(const spx_word16_t *X, const spx_word32_t *Y, spx_word16_t *acc, int N, int M)
 {
    int i,j;
    for (i=0;i<N;i++)
@@ -248,7 +248,7 @@ static inline void spectral_mul_accum(const spx_word16_t *X, const spx_word32_t 
 #endif
 
 /** Compute weighted cross-power spectrum of a half-complex (packed) vector with conjugate */
-static inline void weighted_spectral_mul_conj(const spx_float_t *w, const spx_word16_t *X, const spx_word16_t *Y, spx_word32_t *prod, int N)
+PJ_INLINE(void) weighted_spectral_mul_conj(const spx_float_t *w, const spx_word16_t *X, const spx_word16_t *Y, spx_word32_t *prod, int N)
 {
    int i, j;
    prod[0] = FLOAT_MUL32(w[0],MULT16_16(X[0],Y[0]));

@@ -63,7 +63,31 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjsip_simple_wince"=".\pjsip_simple_wince.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjsip_ua_wince"=".\pjsip_ua_wince.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsua_lib_wince"=".\pjsua_lib_wince.vcp" - Package Owner=<4>
 
 Package=<5>
 {{{

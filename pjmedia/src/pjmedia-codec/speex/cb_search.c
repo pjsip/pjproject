@@ -85,7 +85,7 @@ static void compute_weighted_codebook(const signed char *shape_cb, const spx_wor
 #endif
 
 #ifndef OVERRIDE_TARGET_UPDATE
-static inline void target_update(spx_word16_t *t, spx_word16_t g, spx_word16_t *r, int len)
+PJ_INLINE(void) target_update(spx_word16_t *t, spx_word16_t g, spx_word16_t *r, int len)
 {
    int n;
    for (n=0;n<len;n++)
