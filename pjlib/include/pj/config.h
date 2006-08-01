@@ -39,46 +39,192 @@
 /********************************************************************
  * Include target OS specific configuration.
  */
-#if defined(PJ_WIN32) && PJ_WIN32!=0
-#  include <pj/compat/os_win32.h>
-#elif defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
-#  include <pj/compat/os_win32_wince.h>
-#elif defined(PJ_LINUX) && PJ_LINUX!=0
-#  include <pj/compat/os_linux.h>
+#if defined(PJ_WIN32_WINCE) || defined(_WIN32_WCE) || defined(UNDER_CE)
+    /*
+     * Windows CE
+     */
+#   undef PJ_WIN32_WINCE
+#   define PJ_WIN32_WINCE   1
+#   include <pj/compat/os_win32_wince.h>
+
+    /* Also define Win32 */
+#   define PJ_WIN32 1
+
+#elif defined(PJ_WIN32) || defined(_WIN32) || defined(__WIN32__) || \
+	defined(_WIN64) || defined(WIN32) || defined(__TOS_WIN__)
+    /*
+     * Win32
+     */
+#   undef PJ_WIN32
+#   define PJ_WIN32 1
+#   include <pj/compat/os_win32.h>
+
 #elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
+    /*
+     * Linux kernel
+     */
 #  include <pj/compat/os_linux_kernel.h>
+
+#elif defined(PJ_LINUX) || defined(linux) || defined(__linux)
+    /*
+     * Linux
+     */
+#   undef PJ_LINUX
+#   define PJ_LINUX	    1
+#   include <pj/compat/os_linux.h>
+
 #elif defined(PJ_PALMOS) && PJ_PALMOS!=0
+    /*
+     * Palm
+     */
 #  include <pj/compat/os_palmos.h>
-#elif defined(PJ_SUNOS) && PJ_SUNOS!=0
-#  include <pj/compat/os_sunos.h>
-#elif defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-#  include <pj/compat/os_darwinos.h>
+
+#elif defined(PJ_SUNOS) || defined(sun) || defined(__sun)
+    /*
+     * SunOS
+     */
+#   undef PJ_SUNOS
+#   define PJ_SUNOS	    1
+#   include <pj/compat/os_sunos.h>
+
+#elif defined(PJ_DARWINOS) || defined(__MACOSX__)
+    /*
+     * MacOS X
+     */
+#   undef PJ_DARWINOS
+#   define PJ_DARWINOS	    1
+#   include <pj/compat/os_darwinos.h>
+
 #elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+    /*
+     * RTEMS
+     */
 #  include <pj/compat/os_rtems.h>
 #else
-#  error "Please specify target os."
+#   error "Please specify target os."
 #endif
 
 
 /********************************************************************
  * Target machine specific configuration.
  */
-#if defined (PJ_M_I386) && PJ_M_I386 != 0
-#   include <pj/compat/m_i386.h>
-#elif defined (PJ_M_X86_64) && PJ_M_X86_64 != 0
-#   include <pj/compat/m_x86_64.h>
+#if defined (PJ_M_I386) || defined(_i386_) || defined(i_386_) || \
+	defined(_X86_) || defined(x86) || defined(__i386__) || \
+	defined(__i386) || defined(_M_IX86) || defined(__I86__)
+    /*
+     * Generic i386 processor family, little-endian
+     */
+#   undef PJ_M_I386
+#   define PJ_M_I386		1
+#   define PJ_M_NAME		"i386"
+#   define PJ_HAS_PENTIUM	1
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
+
+#elif defined (PJ_M_X86_64) || defined(__amd64__) || defined(__amd64) || \
+	defined(__x86_64__) || defined(__x86_64)
+    /*
+     * AMD 64bit processor, little endian
+     */
+#   undef PJ_M_X86_64
+#   define PJ_M_X86_64		1
+#   define PJ_M_NAME		"x86_64"
+#   define PJ_HAS_PENTIUM	1
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
+#elif defined(PJ_M_IA64) || defined(__ia64__) || defined(_IA64) || \
+	defined(__IA64__) || defined( 	_M_IA64)
+    /*
+     * Intel IA64 processor, little endian
+     */
+#   undef PJ_M_IA64
+#   define PJ_M_IA64		1
+#   define PJ_M_NAME		"ia64"
+#   define PJ_HAS_PENTIUM	1
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
 #elif defined (PJ_M_M68K) && PJ_M_M68K != 0
-#   include <pj/compat/m_m68k.h>
-#elif defined (PJ_M_ALPHA) && PJ_M_ALPHA != 0
-#   include <pj/compat/m_alpha.h>
-#elif defined (PJ_M_SPARC) && PJ_M_SPARC != 0
-#   include <pj/compat/m_sparc.h>
-#elif defined (PJ_M_ARMV4) && PJ_M_ARMV4 != 0
-#   include <pj/compat/m_armv4.h>
-#elif defined (PJ_M_POWERPC) && PJ_M_POWERPC != 0
-#   include <pj/compat/m_powerpc.h>
+
+    /*
+     * Motorola m64k processor, little endian
+     */
+#   undef PJ_M_M68K
+#   define PJ_M_M68K		1
+#   define PJ_M_NAME		"m68k"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
+
+#elif defined (PJ_M_ALPHA) || defined (__alpha__) || defined (__alpha) || \
+	defined (_M_ALPHA)
+    /*
+     * DEC Alpha processor, little endian
+     */
+#   undef PJ_M_ALPHA
+#   define PJ_M_ALPHA		1
+#   define PJ_M_NAME		"alpha"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
+
+#elif defined(PJ_M_MIPS) || defined(__mips__) || defined(__mips) || \\
+	defined(__MIPS__) || defined(MIPS) || defined(_MIPS_)
+    /*
+     * MIPS, little endian
+     */
+#   undef PJ_M_MIPS
+#   define PJ_M_MIPS		1
+#   define PJ_M_NAME		"mips"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
+
+#elif defined (PJ_M_SPARC) || defined( 	__sparc__) || defined(__sparc)
+    /*
+     * Sun Sparc, big endian
+     */
+#   undef PJ_M_SPARC
+#   define PJ_M_SPARC		1
+#   define PJ_M_NAME		"sparc"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	0
+#   define PJ_IS_BIG_ENDIAN	1
+
+#elif defined (PJ_M_ARMV4) || defined(ARM) || defined(_ARM_) ||  \
+	defined(ARMV4) || defined(__arm__)
+    /*
+     * ARM, default to little endian */
+     */
+#   undef PJ_M_ARMV4
+#   define PJ_M_ARMV4		1
+#   define PJ_M_NAME		"armv4"
+#   define PJ_HAS_PENTIUM	0
+#   if !defined(PJ_IS_LITTLE_ENDIAN) && !defined(PJ_IS_BIG_ENDIAN)
+#	define PJ_IS_LITTLE_ENDIAN	1
+#	define PJ_IS_BIG_ENDIAN		0
+#   endif
+
+#elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
+	defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || \
+	defined(_ARCH_PPC)
+    /*
+     * PowerPC, big endian
+     */
+#   undef PJ_M_POWERPC
+#   define PJ_M_POWERPC		1
+#   define PJ_M_NAME		"powerpc"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+
 #else
-#  error "Please specify target machine."
+#   error "Please specify target machine."
 #endif
 
 /* Include size_t definition. */

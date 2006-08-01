@@ -373,7 +373,7 @@ PJ_IDECL(int) pj_stricmp(const pj_str_t *str1, const pj_str_t *str2);
 PJ_IDECL(int) strnicmp_alnum(const char *str1, const char *str2,
 			     int len);
 #else
-#define strnicmp_alnum	strnicmp
+#define strnicmp_alnum	pj_ansi_strnicmp
 #endif
 
 /**

@@ -37,6 +37,11 @@
 /* For sprintf family */
 #include <stdio.h>
 
+/* On WinCE, string stuffs are declared in stdlib.h */
+#if defined(PJ_HAS_STDLIB_H) && PJ_HAS_STDLIB_H!=0
+#   include <stdlib.h>
+#endif
+
 #if defined(_MSC_VER)
 #   define strcasecmp	_stricmp
 #   define strncasecmp	_strnicmp

@@ -89,7 +89,9 @@ int errno_test(void)
     if (my_stristr(errbuf, "invalid") == NULL) {
         PJ_LOG(3, (THIS_FILE, 
                    "...error: expecting \"invalid\" string in the msg"));
+#ifndef PJ_WIN32_WINCE
         return -20;
+#endif
     }
 
     /* Cut version. */
