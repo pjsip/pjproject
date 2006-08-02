@@ -25,6 +25,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/aec_port.h>
 #include <pjmedia/clock.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/conference.h>

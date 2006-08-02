@@ -2128,6 +2128,12 @@ struct pjsua_media_config
      */
     unsigned		rx_drop_pct;
 
+    /**
+     * Echo canceller tail length, in miliseconds.
+     *
+     * Default: 256
+     */
+    unsigned		ec_tail_len;
 };
 
 
@@ -2146,6 +2152,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->thread_cnt = 1;
     cfg->quality = 6;
     cfg->ilbc_mode = 20;
+    cfg->ec_tail_len = 256;
 }
 
 

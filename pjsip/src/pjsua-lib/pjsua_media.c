@@ -968,8 +968,23 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     conf_port = pjmedia_conf_get_master_port(pjsua_var.mconf);
     pj_assert(conf_port != NULL);
 
-    /* Connect to the conference port */
-    status = pjmedia_snd_port_connect(pjsua_var.snd_port, conf_port);
+    /* Create AEC if it's not created */
+    if (pjsua_var.aec_port == NULL) {
+	status = pjmedia_aec_port_create(pjsua_var.pool, conf_port,
+					 conf_port->info.clock_rate * 
+					    pjsua_var.media_cfg.ec_tail_len /
+					    1000,
+					 &pjsua_var.aec_port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create AEC port", status);
+	    pjmedia_snd_port_destroy(pjsua_var.snd_port);
+	    pjsua_var.snd_port = NULL;
+	    return status;
+	}
+    }
+
+    /* Connect to the AEC port */
+    status = pjmedia_snd_port_connect(pjsua_var.snd_port, pjsua_var.aec_port);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to connect conference port to "
 				"sound device", status);
