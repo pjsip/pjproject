@@ -50,7 +50,8 @@ NULLSOUND_OBJS := nullsound.o
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include \
-		   $(CC_INC)../src/pjmedia/portaudio
+		   $(CC_INC)../src/pjmedia/portaudio \
+		   $(CC_INC)../src/pjmedia-codec
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
@@ -64,7 +65,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			alaw_ulaw.o \
+			aec_port.o alaw_ulaw.o \
 			clock_thread.o codec.o conference.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o plc_g711.o \

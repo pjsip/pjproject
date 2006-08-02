@@ -93,9 +93,13 @@ PJ_DEF(pj_status_t) pjmedia_aec_port_create( pj_pool_t *pool,
     /* Done */
     *p_port = &aec_port->base;
 
-    PJ_LOG(4,(THIS_FILE, "AEC created for port %.*s", 
+    PJ_LOG(4,(THIS_FILE, "AEC created for port %.*s, clock_rate=%d, "
+			 "samples per frame=%d, tail length=%d ms", 
 			 (int)dn_port->info.name.slen,
-			 dn_port->info.name.ptr));
+			 dn_port->info.name.ptr,
+			 dn_port->info.clock_rate,
+			 dn_port->info.samples_per_frame,
+			 tail_length * 1000 / dn_port->info.clock_rate));
     return PJ_SUCCESS;
 }
 

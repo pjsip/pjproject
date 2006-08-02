@@ -126,6 +126,7 @@ static void usage(void)
     puts  ("  --quality=N         Specify media quality (0-10, default=6)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
+    puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
     puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
     puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
@@ -261,7 +262,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC, OPT_ILBC_MODE,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
-	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT,
+	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP,
     };
@@ -303,6 +304,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
 	{ "no-vad",     0, 0, OPT_NO_VAD},
+	{ "ec-tail",    1, 0, OPT_EC_TAIL},
 	{ "ilbc-mode",	1, 0, OPT_ILBC_MODE},
 	{ "rx-drop-pct",1, 0, OPT_RX_DROP_PCT},
 	{ "tx-drop-pct",1, 0, OPT_TX_DROP_PCT},
@@ -621,6 +623,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NO_VAD:
 	    cfg->media_cfg.no_vad = PJ_TRUE;
+	    break;
+
+	case OPT_EC_TAIL:
+	    cfg->media_cfg.ec_tail_len = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.ec_tail_len > 1000) {
+		PJ_LOG(1,(THIS_FILE, "I think the ec-tail length setting "
+			  "is too big"));
+		return -1;
+	    }
 	    break;
 
 	case OPT_QUALITY:

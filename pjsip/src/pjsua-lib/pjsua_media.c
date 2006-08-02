@@ -969,7 +969,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pj_assert(conf_port != NULL);
 
     /* Create AEC if it's not created */
-    if (pjsua_var.aec_port == NULL) {
+    if (pjsua_var.aec_port == NULL && pjsua_var.media_cfg.ec_tail_len) {
 	status = pjmedia_aec_port_create(pjsua_var.pool, conf_port,
 					 conf_port->info.clock_rate * 
 					    pjsua_var.media_cfg.ec_tail_len /
@@ -984,7 +984,9 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     }
 
     /* Connect to the AEC port */
-    status = pjmedia_snd_port_connect(pjsua_var.snd_port, pjsua_var.aec_port);
+    status = pjmedia_snd_port_connect(pjsua_var.snd_port, 
+				      pjsua_var.media_cfg.ec_tail_len ? 
+					pjsua_var.aec_port : conf_port );
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to connect conference port to "
 				"sound device", status);

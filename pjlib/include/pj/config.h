@@ -172,17 +172,19 @@
 #   define PJ_IS_BIG_ENDIAN	0
 
 
-#elif defined(PJ_M_MIPS) || defined(__mips__) || defined(__mips) || \\
+#elif defined(PJ_M_MIPS) || defined(__mips__) || defined(__mips) || \
 	defined(__MIPS__) || defined(MIPS) || defined(_MIPS_)
     /*
-     * MIPS, little endian
+     * MIPS, default to little endian
      */
 #   undef PJ_M_MIPS
 #   define PJ_M_MIPS		1
 #   define PJ_M_NAME		"mips"
 #   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   if !defined(PJ_IS_LITTLE_ENDIAN) && !defined(PJ_IS_BIG_ENDIAN)
+#   	define PJ_IS_LITTLE_ENDIAN	1
+#   	define PJ_IS_BIG_ENDIAN		0
+#   endif
 
 
 #elif defined (PJ_M_SPARC) || defined( 	__sparc__) || defined(__sparc)
@@ -220,8 +222,8 @@
 #   define PJ_M_POWERPC		1
 #   define PJ_M_NAME		"powerpc"
 #   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_IS_LITTLE_ENDIAN	0
+#   define PJ_IS_BIG_ENDIAN	1
 
 #else
 #   error "Please specify target machine."

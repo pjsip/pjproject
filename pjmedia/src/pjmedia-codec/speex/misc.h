@@ -62,7 +62,7 @@
 #error I suppose you can have a [ARM4/ARM5E/Blackfin] that has float instructions?
 #endif
 #ifdef FIXED_POINT_DEBUG
-#error Don't you think enabling fixed-point is a good thing to do if you want to debug that?
+#error Dont you think enabling fixed-point is a good thing to do if you want to debug that?
 #endif
 
 
