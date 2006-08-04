@@ -34,7 +34,7 @@
 #endif
 
 //#define SIMULATE_LOST_PCT   20
-#define AEC_TAIL    500	    /* in ms */
+#define AEC_TAIL    128	    /* default AEC length in ms */
 
 #define THIS_FILE	    "sound_port.c"
 
@@ -57,6 +57,7 @@ struct pjmedia_snd_port
     unsigned		 options;
 
     pjmedia_aec		*aec;
+    unsigned		 aec_tail_len;
     pjmedia_plc		*plc;
 
     unsigned		 clock_rate;
@@ -135,10 +136,6 @@ no_frame:
     }
 
 
-    if (snd_port->aec) {
-	pjmedia_aec_playback(snd_port->aec, output);
-    }
-
     return PJ_SUCCESS;
 }
 
@@ -156,11 +153,6 @@ static pj_status_t rec_cb(/* in */   void *user_data,
     pjmedia_port *port;
     pjmedia_frame frame;
 
-    /* Cancel echo */
-    if (snd_port->aec) {
-	pjmedia_aec_capture(snd_port->aec, input, 0);
-    }
-
     /* We're risking accessing the port without holding any mutex.
      * It's possible that port is disconnected then destroyed while
      * we're trying to access it.
@@ -170,6 +162,11 @@ static pj_status_t rec_cb(/* in */   void *user_data,
     port = snd_port->port;
     if (port == NULL)
 	return PJ_SUCCESS;
+
+    /* Cancel echo */
+    if (snd_port->aec) {
+	pjmedia_aec_capture(snd_port->aec, input, 0);
+    }
 
     frame.buf = (void*)input;
     frame.size = size;
@@ -246,18 +243,19 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 				    snd_port->samples_per_frame * 
 					snd_port->channel_count,
 				    0, &snd_port->plc);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(4,(THIS_FILE, "Unable to create PLC"));
 	    snd_port->plc = NULL;
+	}
     }
 
     /* Create AEC only when direction is full duplex */
     if (snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	status = pjmedia_aec_create(pool, snd_port->clock_rate, 
-				    snd_port->samples_per_frame, 
-				    snd_port->clock_rate * AEC_TAIL / 1000,
-				    0, &snd_port->aec);
-	if (status != PJ_SUCCESS)
+	status = pjmedia_snd_port_set_aec(snd_port, pool, AEC_TAIL);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(4,(THIS_FILE, "Unable to create AEC"));
 	    snd_port->aec = NULL;
+	}
     }
 
     /* Start sound stream. */
@@ -429,6 +427,54 @@ PJ_DEF(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
     PJ_ASSERT_RETURN(snd_port, NULL);
     return snd_port->snd_stream;
 }
+
+
+/*
+ * Enable AEC
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_port_set_aec( pjmedia_snd_port *snd_port,
+					      pj_pool_t *pool,
+					      unsigned tail_ms)
+{
+    pj_status_t status;
+
+    /* Sound must be opened in full-duplex mode */
+    PJ_ASSERT_RETURN(snd_port && 
+		     snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK,
+		     PJ_EINVALIDOP);
+
+    /* Destroy AEC */
+    if (snd_port->aec) {
+	pjmedia_aec_destroy(snd_port->aec);
+	snd_port->aec = NULL;
+    }
+
+    snd_port->aec_tail_len = tail_ms;
+
+    if (tail_ms != 0) {
+	status = pjmedia_aec_create(pool, snd_port->clock_rate, 
+				    snd_port->samples_per_frame, 
+				    snd_port->clock_rate * tail_ms / 1000,
+				    0, &snd_port->aec);
+	if (status != PJ_SUCCESS)
+	    snd_port->aec = NULL;
+    } else {
+	status = PJ_SUCCESS;
+    }
+
+    return status;
+}
+
+
+/* Get AEC tail length */
+PJ_DEF(pj_status_t) pjmedia_snd_port_get_aec_tail( pjmedia_snd_port *snd_port,
+						   unsigned *p_length)
+{
+    PJ_ASSERT_RETURN(snd_port && p_length, PJ_EINVAL);
+    *p_length =  snd_port->aec ? snd_port->aec_tail_len : 0;
+    return PJ_SUCCESS;
+}
+
 
 
 /*

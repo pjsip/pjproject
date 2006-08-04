@@ -204,7 +204,6 @@ struct pjsua_data
     pjmedia_conf	*mconf;	    /**< Conference bridge.		*/
     int			 cap_dev;   /**< Capture device ID.		*/
     int			 play_dev;  /**< Playback device ID.		*/
-    pjmedia_port	*aec_port;  /**< AEC port to conf bridge.	*/
     pj_bool_t		 no_snd;    /**< No sound (app will manage it)	*/
     pjmedia_snd_port	*snd_port;  /**< Sound port.			*/
     pjmedia_master_port	*null_snd;  /**< Master port for null sound.	*/

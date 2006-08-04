@@ -160,13 +160,6 @@ int main(int argc, char *argv[])
     /* Create bidirectional port from the WAV ports */
     pjmedia_bidirectional_port_create(pool, play_port, rec_port, &bidir_port);
 
-    /* Create AEC port */
-    if (0) {
-	pjmedia_aec_port_create(pool, bidir_port, 
-				bidir_port->info.clock_rate * 200 / 1000,
-				&bidir_port);
-    }
-
     /* Create sound device. */
     status = pjmedia_snd_port_create(pool, -1, -1, 
 				     play_port->info.clock_rate,
@@ -179,6 +172,9 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+
+    /* Customize AEC */
+    pjmedia_snd_port_set_aec(snd, pool, 800);
 
     /* Connect sound to the port */
     pjmedia_snd_port_connect(snd, bidir_port);

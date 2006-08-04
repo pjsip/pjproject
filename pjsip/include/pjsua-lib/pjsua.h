@@ -2152,7 +2152,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->thread_cnt = 1;
     cfg->quality = 6;
     cfg->ilbc_mode = 20;
-    cfg->ec_tail_len = 0;
+    cfg->ec_tail_len = 500;
 }
 
 
@@ -2495,6 +2495,29 @@ PJ_DECL(pj_status_t) pjsua_set_null_snd_dev(void);
  *			sound device or master port.
  */
 PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
+
+
+/**
+ * Configure the AEC settings of the sound port.
+ *
+ * @param tail_ms	The tail length, in miliseconds. Set to zero to
+ *			disable AEC.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_set_aec(unsigned tail_ms);
+
+
+/**
+ * Get current AEC tail length.
+ *
+ * @param p_tail_ms	Pointer to receive the tail length, in miliseconds. 
+ *			If AEC is disabled, the value will be zero.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_get_aec(unsigned *p_tail_ms);
+
 
 
 /*****************************************************************************

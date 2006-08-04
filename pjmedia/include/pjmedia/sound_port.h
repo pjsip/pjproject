@@ -183,6 +183,40 @@ PJ_DECL(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
 
 
 /**
+ * Enable accoustic echo cancellation (AEC) to the specified sound. 
+ * The AEC can only be enabled for sound streams with full-duplex direction.
+ *
+ * And note, you should only change the AEC settings when the sound port
+ * is not connected to any downstream ports.
+ *
+ * @param snd_port	    The sound device port.
+ * @param pool		    Pool to re-create the AEC if necessary.
+ * @param tail_ms	    Maximum echo tail length to be supported, in
+ *			    miliseconds. If zero is specified, the AEC would
+ *			    be disabled.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_port_set_aec(pjmedia_snd_port *snd_port,
+					      pj_pool_t *pool,
+					      unsigned tail_ms);
+
+
+/**
+ * Get current AEC tail length, in miliseconds. The tail length will be zero
+ * if AEC is not enabled.
+ *
+ * @param snd_port	    The sound device port.
+ * @param p_length	    Pointer to receive the tail length.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_port_get_aec_tail(pjmedia_snd_port *snd_port,
+						   unsigned *p_length);
+
+
+
+/**
  * Connect a port to the sound device port. If the sound device port has a
  * sound recorder device, then this will start periodic function call to
  * the port's put_frame() function. If the sound device has a sound player

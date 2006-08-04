@@ -51,14 +51,14 @@ typedef struct pjmedia_aec pjmedia_aec;
  * @param pool		    Pool to allocate memory.
  * @param clock_rate	    Media clock rate/sampling rate.
  * @param samples_per_frame Number of samples per frame.
- * @param tail_size	    Tail length, in number of samples.
+ * @param tail_ms	    Tail length, miliseconds.
  *
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
 					 unsigned clock_rate,
 					 unsigned samples_per_frame,
-					 unsigned tail_size,
+					 unsigned tail_ms,
 					 unsigned options,
 					 pjmedia_aec **p_aec );
 

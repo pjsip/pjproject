@@ -75,6 +75,7 @@ CFG=pjsua_wince - Win32 (WCE MIPSII_FP) Debug
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSII_FPRel"
 # PROP CPU_ID "{D8AC856C-B213-4895-9E83-9EC51A55201E}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /d "MIPSII_FP" /r
@@ -90,7 +91,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSII_FP) Debug"
 
@@ -107,6 +108,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSII_FPDbg"
 # PROP CPU_ID "{D8AC856C-B213-4895-9E83-9EC51A55201E}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /d "MIPSII_FP" /r
@@ -122,7 +124,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSII) Release"
 
@@ -139,6 +141,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIIRel"
 # PROP CPU_ID "{689DDC64-9D9D-11D5-96F8-00207802C01C}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /r
@@ -154,7 +157,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSII) Debug"
 
@@ -171,6 +174,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIIDbg"
 # PROP CPU_ID "{689DDC64-9D9D-11D5-96F8-00207802C01C}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /r
@@ -186,7 +190,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE SH4) Release"
 
@@ -203,6 +207,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-SH4Rel"
 # PROP CPU_ID "{D6519021-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "NDEBUG" /d "UNICODE" /d "_UNICODE" /d "$(CePlatform)" /d "SHx" /d "SH4" /d "_SH4_" /r
@@ -218,7 +223,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE SH4) Debug"
 
@@ -235,6 +240,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-SH4Dbg"
 # PROP CPU_ID "{D6519021-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "DEBUG" /d "UNICODE" /d "_UNICODE" /d "$(CePlatform)" /d "SHx" /d "SH4" /d "_SH4_" /r
@@ -250,7 +256,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH4
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE SH3) Release"
 
@@ -267,6 +273,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-SH3Rel"
 # PROP CPU_ID "{D6519020-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "SHx" /d "SH3" /d "_SH3_" /r
@@ -282,7 +289,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE SH3) Debug"
 
@@ -299,6 +306,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-SH3Dbg"
 # PROP CPU_ID "{D6519020-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "SHx" /d "SH3" /d "_SH3_" /r
@@ -314,7 +322,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:SH3 /align:4096
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSIV) Release"
 
@@ -331,6 +339,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIVRel"
 # PROP CPU_ID "{0B2FE524-26C5-4194-8CEF-B1582DEB5A98}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /r
@@ -346,7 +355,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSIV) Debug"
 
@@ -363,6 +372,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIVDbg"
 # PROP CPU_ID "{0B2FE524-26C5-4194-8CEF-B1582DEB5A98}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /r
@@ -378,7 +388,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE emulator) Release"
 
@@ -395,6 +405,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-emulatorRel"
 # PROP CPU_ID "{32E52003-403E-442D-BE48-DE10F8C6131D}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "_X86_" /d "x86" /d "_i386_" /r
@@ -410,7 +421,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
-# ADD LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
+# ADD LINK32 $(CEx86Corelibc) commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE emulator) Debug"
 
@@ -434,7 +445,7 @@ RSC=rc.exe
 # ADD RSC /l 0x409 /d "$(CePlatform)" /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "_X86_" /d "x86" /d "_i386_" /r
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D "_i386_" /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "i_386_" /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /Yu"stdafx.h" /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../../pjsip/include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "i_386_" /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /Yu"stdafx.h" /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../../pjsip/include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D UNDER_CE=$(CEVersion) /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "i_386_" /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /FR /Yu"stdafx.h" /Gs8192 /GF /c
 MTL=midl.exe
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
@@ -443,7 +454,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
-# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
+# ADD LINK32 $(CEx86Corelibc) commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4I) Release"
 
@@ -460,6 +471,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4IRel"
 # PROP CPU_ID "{DC70F430-E78B-494F-A9D5-62ADC56443B8}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "THUMB" /d "_THUMB_" /d "ARM" /d "_ARM_" /d "ARMV4I" /r
@@ -475,7 +487,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4I) Debug"
 
@@ -492,6 +504,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4IDbg"
 # PROP CPU_ID "{DC70F430-E78B-494F-A9D5-62ADC56443B8}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "THUMB" /d "_THUMB_" /d "ARM" /d "_ARM_" /d "ARMV4I" /r
@@ -507,7 +520,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSIV_FP) Release"
 
@@ -524,6 +537,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIV_FPRel"
 # PROP CPU_ID "{046A430D-7770-48AB-89B5-24C2D300B03F}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /r
@@ -539,7 +553,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPSIV_FP) Debug"
 
@@ -556,6 +570,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPSIV_FPDbg"
 # PROP CPU_ID "{046A430D-7770-48AB-89B5-24C2D300B03F}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /r
@@ -571,7 +586,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPSFPU
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4) Release"
 
@@ -588,6 +603,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4Rel"
 # PROP CPU_ID "{ECBEA43D-CD7B-4852-AD55-D4227B5D624B}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "NDEBUG" /d "UNICODE" /d "_UNICODE" /d "$(CePlatform)" /d "ARM" /d "_ARM_" /d "ARMV4" /r
@@ -603,7 +619,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4) Debug"
 
@@ -620,6 +636,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4Dbg"
 # PROP CPU_ID "{ECBEA43D-CD7B-4852-AD55-D4227B5D624B}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "DEBUG" /d "UNICODE" /d "_UNICODE" /d "$(CePlatform)" /d "ARM" /d "_ARM_" /d "ARMV4" /r
@@ -635,7 +652,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /align:"4096" /MACHINE:ARM
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPS16) Release"
 
@@ -652,6 +669,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPS16Rel"
 # PROP CPU_ID "{D6519013-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "MIPS16SUPPORT" /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /d "MIPS16" /r
@@ -667,7 +685,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE MIPS16) Debug"
 
@@ -684,6 +702,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-MIPS16Dbg"
 # PROP CPU_ID "{D6519013-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "MIPS16SUPPORT" /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "MIPS" /d "_MIPS_" /d "R4000" /d "MIPSII" /d "MIPS16" /r
@@ -699,7 +718,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:MIPS16 /ALIGN:4096
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4T) Release"
 
@@ -716,6 +735,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4TRel"
 # PROP CPU_ID "{F52316A9-3B7C-4FE7-A67F-68350B41240D}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "THUMB" /d "_THUMB_" /d "ARM" /d "_ARM_" /d "ARMV4T" /r
@@ -731,7 +751,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4T) Debug"
 
@@ -748,6 +768,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-ARMV4TDbg"
 # PROP CPU_ID "{F52316A9-3B7C-4FE7-A67F-68350B41240D}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "$(CePlatform)" /d "THUMB" /d "_THUMB_" /d "ARM" /d "_ARM_" /d "ARMV4T" /r
@@ -763,7 +784,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
-# ADD LINK32 commctrl.lib coredll.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
+# ADD LINK32 commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"$(CENoDefaultLib)" /subsystem:$(CESubsystem) /MACHINE:THUMB
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE x86) Release"
 
@@ -780,6 +801,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-X86Rel"
 # PROP CPU_ID "{D6518FF3-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "NDEBUG" /d "$(CePlatform)" /d "_X86_" /d "x86" /d "_i386_" /r
@@ -795,7 +817,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
-# ADD LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
+# ADD LINK32 $(CEx86Corelibc) commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
 
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE x86) Debug"
 
@@ -812,6 +834,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../../build/wince-evc4/output/pjsua-wince-X86Dbg"
 # PROP CPU_ID "{D6518FF3-710F-11D3-99F2-00105A0DF099}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 RSC=rc.exe
 # ADD BASE RSC /l 0x409 /d "$(CePlatform)" /d UNDER_CE=$(CEVersion) /d _WIN32_WCE=$(CEVersion) /d "UNICODE" /d "_UNICODE" /d "DEBUG" /d "_X86_" /d "x86" /d "_i386_" /r
@@ -827,7 +850,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
-# ADD LINK32 commctrl.lib coredll.lib $(CEx86Corelibc) /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
+# ADD LINK32 $(CEx86Corelibc) commctrl.lib coredll.lib winsock.lib ws2.lib /nologo /base:"0x00010000" /stack:0x10000,0x1000 /entry:"WinMainCRTStartup" /debug /nodefaultlib:"OLDNAMES.lib" /nodefaultlib:$(CENoDefaultLib) /subsystem:$(CESubsystem) /MACHINE:IX86
 
 !ENDIF 
 
@@ -1108,6 +1131,135 @@ DEP_CPP_PJSUA=\
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PJSUA=\
+	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
+	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\clock.h"\
+	"..\..\..\pjmedia\include\pjmedia\codec.h"\
+	"..\..\..\pjmedia\include\pjmedia\conference.h"\
+	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
+	"..\..\..\pjmedia\include\pjmedia\errno.h"\
+	"..\..\..\pjmedia\include\pjmedia\g711.h"\
+	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
+	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\plc.h"\
+	"..\..\..\pjmedia\include\pjmedia\port.h"\
+	"..\..\..\pjmedia\include\pjmedia\resample.h"\
+	"..\..\..\pjmedia\include\pjmedia\rtcp.h"\
+	"..\..\..\pjmedia\include\pjmedia\rtp.h"\
+	"..\..\..\pjmedia\include\pjmedia\sdp.h"\
+	"..\..\..\pjmedia\include\pjmedia\sdp_neg.h"\
+	"..\..\..\pjmedia\include\pjmedia\session.h"\
+	"..\..\..\pjmedia\include\pjmedia\silencedet.h"\
+	"..\..\..\pjmedia\include\pjmedia\sound.h"\
+	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
+	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
+	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjsip\include\pjsip-simple\evsub.h"\
+	"..\..\..\pjsip\include\pjsip-simple\iscomposing.h"\
+	"..\..\..\pjsip\include\pjsip-simple\pidf.h"\
+	"..\..\..\pjsip\include\pjsip-simple\presence.h"\
+	"..\..\..\pjsip\include\pjsip-simple\types.h"\
+	"..\..\..\pjsip\include\pjsip-simple\xpidf.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_inv.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_regc.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_xfer.h"\
+	"..\..\..\pjsip\include\pjsip.h"\
+	"..\..\..\pjsip\include\pjsip\sip_auth.h"\
+	"..\..\..\pjsip\include\pjsip\sip_auth_msg.h"\
+	"..\..\..\pjsip\include\pjsip\sip_config.h"\
+	"..\..\..\pjsip\include\pjsip\sip_dialog.h"\
+	"..\..\..\pjsip\include\pjsip\sip_endpoint.h"\
+	"..\..\..\pjsip\include\pjsip\sip_errno.h"\
+	"..\..\..\pjsip\include\pjsip\sip_event.h"\
+	"..\..\..\pjsip\include\pjsip\sip_module.h"\
+	"..\..\..\pjsip\include\pjsip\sip_msg.h"\
+	"..\..\..\pjsip\include\pjsip\sip_parser.h"\
+	"..\..\..\pjsip\include\pjsip\sip_resolve.h"\
+	"..\..\..\pjsip\include\pjsip\sip_tel_uri.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transaction.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_loop.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_tcp.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_udp.h"\
+	"..\..\..\pjsip\include\pjsip\sip_types.h"\
+	"..\..\..\pjsip\include\pjsip\sip_ua_layer.h"\
+	"..\..\..\pjsip\include\pjsip\sip_uri.h"\
+	"..\..\..\pjsip\include\pjsip\sip_util.h"\
+	"..\..\..\pjsip\include\pjsip_simple.h"\
+	"..\..\..\pjsip\include\pjsip_ua.h"\
+	"..\..\..\pjsip\include\pjsua-lib\pjsua.h"\
 	".\pjsua_wince.h"\
 	".\StdAfx.h"\
 	
@@ -1115,6 +1267,135 @@ DEP_CPP_PJSUA=\
 !ELSEIF  "$(CFG)" == "pjsua_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_PJSUA=\
+	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
+	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\clock.h"\
+	"..\..\..\pjmedia\include\pjmedia\codec.h"\
+	"..\..\..\pjmedia\include\pjmedia\conference.h"\
+	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
+	"..\..\..\pjmedia\include\pjmedia\errno.h"\
+	"..\..\..\pjmedia\include\pjmedia\g711.h"\
+	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
+	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\plc.h"\
+	"..\..\..\pjmedia\include\pjmedia\port.h"\
+	"..\..\..\pjmedia\include\pjmedia\resample.h"\
+	"..\..\..\pjmedia\include\pjmedia\rtcp.h"\
+	"..\..\..\pjmedia\include\pjmedia\rtp.h"\
+	"..\..\..\pjmedia\include\pjmedia\sdp.h"\
+	"..\..\..\pjmedia\include\pjmedia\sdp_neg.h"\
+	"..\..\..\pjmedia\include\pjmedia\session.h"\
+	"..\..\..\pjmedia\include\pjmedia\silencedet.h"\
+	"..\..\..\pjmedia\include\pjmedia\sound.h"\
+	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
+	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
+	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjsip\include\pjsip-simple\evsub.h"\
+	"..\..\..\pjsip\include\pjsip-simple\iscomposing.h"\
+	"..\..\..\pjsip\include\pjsip-simple\pidf.h"\
+	"..\..\..\pjsip\include\pjsip-simple\presence.h"\
+	"..\..\..\pjsip\include\pjsip-simple\types.h"\
+	"..\..\..\pjsip\include\pjsip-simple\xpidf.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_inv.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_regc.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_xfer.h"\
+	"..\..\..\pjsip\include\pjsip.h"\
+	"..\..\..\pjsip\include\pjsip\sip_auth.h"\
+	"..\..\..\pjsip\include\pjsip\sip_auth_msg.h"\
+	"..\..\..\pjsip\include\pjsip\sip_config.h"\
+	"..\..\..\pjsip\include\pjsip\sip_dialog.h"\
+	"..\..\..\pjsip\include\pjsip\sip_endpoint.h"\
+	"..\..\..\pjsip\include\pjsip\sip_errno.h"\
+	"..\..\..\pjsip\include\pjsip\sip_event.h"\
+	"..\..\..\pjsip\include\pjsip\sip_module.h"\
+	"..\..\..\pjsip\include\pjsip\sip_msg.h"\
+	"..\..\..\pjsip\include\pjsip\sip_parser.h"\
+	"..\..\..\pjsip\include\pjsip\sip_resolve.h"\
+	"..\..\..\pjsip\include\pjsip\sip_tel_uri.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transaction.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_loop.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_tcp.h"\
+	"..\..\..\pjsip\include\pjsip\sip_transport_udp.h"\
+	"..\..\..\pjsip\include\pjsip\sip_types.h"\
+	"..\..\..\pjsip\include\pjsip\sip_ua_layer.h"\
+	"..\..\..\pjsip\include\pjsip\sip_uri.h"\
+	"..\..\..\pjsip\include\pjsip\sip_util.h"\
+	"..\..\..\pjsip\include\pjsip_simple.h"\
+	"..\..\..\pjsip\include\pjsip_ua.h"\
+	"..\..\..\pjsip\include\pjsua-lib\pjsua.h"\
 	".\pjsua_wince.h"\
 	".\StdAfx.h"\
 	

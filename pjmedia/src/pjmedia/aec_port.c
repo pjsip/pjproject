@@ -45,7 +45,7 @@ static pj_status_t aec_on_destroy(pjmedia_port *this_port);
 
 PJ_DEF(pj_status_t) pjmedia_aec_port_create( pj_pool_t *pool,
 					     pjmedia_port *dn_port,
-					     unsigned tail_length,
+					     unsigned tail_ms,
 					     pjmedia_port **p_port )
 {
     const pj_str_t AEC = { "AEC", 3 };
@@ -53,7 +53,7 @@ PJ_DEF(pj_status_t) pjmedia_aec_port_create( pj_pool_t *pool,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && dn_port && p_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(dn_port->info.bits_per_sample==16 && tail_length, 
+    PJ_ASSERT_RETURN(dn_port->info.bits_per_sample==16 && tail_ms, 
 		     PJ_EINVAL);
 
     /* Create the port and the AEC itself */
@@ -67,7 +67,7 @@ PJ_DEF(pj_status_t) pjmedia_aec_port_create( pj_pool_t *pool,
 
     status = pjmedia_aec_create(pool, dn_port->info.clock_rate, 
 				dn_port->info.samples_per_frame,
-				tail_length, 0, &aec->aec);
+				tail_ms, 0, &aec->aec);
     if (status != PJ_SUCCESS)
 	return status;
 

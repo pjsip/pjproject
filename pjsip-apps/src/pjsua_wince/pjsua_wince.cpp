@@ -12,14 +12,14 @@
 static HINSTANCE    hInst;
 static HWND	    hMainWnd;
 static HWND	    hwndCB;
-static HWND	    hwndGlobalStatus;
-static HWND	    hwndURI;
-static HWND	    hwndCallStatus;
+static HWND	    hwndGlobalStatus, hwndURI, hwndCallStatus;
+static HWND	    hwndActionButton, hwndExitButton;
 
 static pj_pool_t   *g_pool;
 static pj_str_t	    g_local_uri;
 static int	    g_current_acc;
 static int	    g_current_call = PJSUA_INVALID_ID;
+static int	    g_current_action;
 
 enum
 {
@@ -35,7 +35,10 @@ enum
     ID_MENU_CALL,
     ID_MENU_ANSWER,
     ID_MENU_DISCONNECT,
+    ID_BTN_ACTION,
 };
+
+#define DEFAULT_URI	"sip:192.168.0.7"
 
 
 // Forward declarations of functions included in this code module:
@@ -63,6 +66,7 @@ static void OnError(const wchar_t *title, pj_status_t status)
 static void SetLocalURI(const char *uri, int len, bool enabled=true)
 {
     wchar_t tmp[128];
+    if (len==-1) len=pj_ansi_strlen(uri);
     pj_ansi_to_unicode(uri, len, tmp, PJ_ARRAY_SIZE(tmp));
     SetDlgItemText(hMainWnd, ID_GLOBAL_STATUS, tmp);
     EnableWindow(hwndGlobalStatus, enabled?TRUE:FALSE);
@@ -73,6 +77,7 @@ static void SetLocalURI(const char *uri, int len, bool enabled=true)
 static void SetURI(const char *uri, int len, bool enabled=true)
 {
     wchar_t tmp[128];
+    if (len==-1) len=pj_ansi_strlen(uri);
     pj_ansi_to_unicode(uri, len, tmp, PJ_ARRAY_SIZE(tmp));
     SetDlgItemText(hMainWnd, ID_URI, tmp);
     EnableWindow(hwndURI, enabled?TRUE:FALSE);
@@ -82,6 +87,7 @@ static void SetURI(const char *uri, int len, bool enabled=true)
 static void SetCallStatus(const char *state, int len)
 {
     wchar_t tmp[128];
+    if (len==-1) len=pj_ansi_strlen(state);
     pj_ansi_to_unicode(state, len, tmp, PJ_ARRAY_SIZE(tmp));
     SetDlgItemText(hMainWnd, ID_CALL_STATUS, tmp);
 }
@@ -100,19 +106,26 @@ static void SetAction(int action, bool enable=true)
     switch (action) {
     case ID_MENU_NONE:
 	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("None"));
+	SetWindowText(hwndActionButton, TEXT("-"));
 	break;
     case ID_MENU_CALL:
 	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Call"));
+	SetWindowText(hwndActionButton, TEXT("&Call"));
 	break;
     case ID_MENU_ANSWER:
 	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Answer"));
+	SetWindowText(hwndActionButton, TEXT("&Answer"));
 	break;
     case ID_MENU_DISCONNECT:
 	InsertMenu(hMenu, ID_EXIT, MF_BYCOMMAND, action, TEXT("Hangup"));
+	SetWindowText(hwndActionButton, TEXT("&Hangup"));
 	break;
     }
 
     EnableMenuItem(hMenu, action, MF_BYCOMMAND | (enable?MF_ENABLED:MF_GRAYED));
+    DrawMenuBar(hMainWnd);
+
+    g_current_action = action;
 }
 
 
@@ -130,9 +143,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	g_current_call = PJSUA_INVALID_ID;
-	SetURI("sip:", 4);
+	SetURI(DEFAULT_URI, -1);
 	SetAction(ID_MENU_CALL);
-	SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
+	//SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
+	SetCallStatus(call_info.last_status_text.ptr, call_info.last_status_text.slen);
 
     } else {
 	if (g_current_call == PJSUA_INVALID_ID)
@@ -258,7 +272,9 @@ static BOOL OnInitStack(void)
     pjsua_logging_config_default(&log_cfg);
     pjsua_media_config_default(&media_cfg);
     pjsua_transport_config_default(&udp_cfg);
+    udp_cfg.port = 50060;
     pjsua_transport_config_default(&rtp_cfg);
+    rtp_cfg.port = 40000;
 
     /* Setup media */
     media_cfg.clock_rate = 8000;
@@ -387,7 +403,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     hWnd = CreateWindow(szWindowClass, szTitle, WS_VISIBLE,
-	    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+	    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 200, 
 	    NULL, NULL, hInstance, NULL);
 
     if (!hWnd)
@@ -411,6 +427,7 @@ static void OnCreate(HWND hWnd)
     enum 
     {
 	X = 10,
+	Y = 40,
 	W = 220,
 	H = 30,
     };
@@ -430,10 +447,10 @@ static void OnCreate(HWND hWnd)
                 NULL,           // Window text
                 dwStyle,        // Window style
                 X,		// x-coordinate of the upper-left corner
-                60,            // y-coordinate of the upper-left corner
+                Y+0,            // y-coordinate of the upper-left corner
                 W,		// Width of the window for the edit
                                 // control
-                H,		// Height of the window for the edit
+                H-5,		// Height of the window for the edit
                                 // control
                 hWnd,           // Window handle to the parent window
                 (HMENU) ID_GLOBAL_STATUS, // Control identifier
@@ -450,18 +467,33 @@ static void OnCreate(HWND hWnd)
                 NULL,		// Window text
                 dwStyle,        // Window style
                 X,  // x-coordinate of the upper-left corner
-                100,  // y-coordinate of the upper-left corner
+                Y+H,  // y-coordinate of the upper-left corner
                 W,  // Width of the window for the edit
                                 // control
-                H,  // Height of the window for the edit
+                H-5,  // Height of the window for the edit
                                 // control
                 hWnd,           // Window handle to the parent window
                 (HMENU) ID_URI, // Control identifier
                 hInst,           // Instance handle
                 NULL);          // Specify NULL for this parameter when 
                                 // you create a control
-    SetURI("sip:", 4, true);
-    SetFocus(hwndURI);
+
+    // Create action Button
+    hwndActionButton = CreateWindow( L"button", L"Action", 
+                         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 
+                         X, Y+2*H, 
+			 60, H-5, hWnd, 
+                         (HMENU) ID_BTN_ACTION,
+                         hInst, NULL );
+
+    // Create exit button
+    hwndExitButton = CreateWindow( L"button", L"E&xit", 
+                         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 
+                         X+70, Y+2*H, 
+			 60, H-5, hWnd, 
+                         (HMENU) ID_EXIT,
+                         hInst, NULL );
+
 
     // Create call status edit
     dwStyle = WS_CHILD | WS_VISIBLE | WS_DISABLED;  
@@ -470,10 +502,10 @@ static void OnCreate(HWND hWnd)
                 NULL,		// Window text
                 dwStyle,        // Window style
                 X,  // x-coordinate of the upper-left corner
-                140,  // y-coordinate of the upper-left corner
+                Y+3*H,  // y-coordinate of the upper-left corner
                 W,  // Width of the window for the edit
                                 // control
-                H,  // Height of the window for the edit
+                H-5,  // Height of the window for the edit
                                 // control
                 hWnd,           // Window handle to the parent window
                 (HMENU) ID_CALL_STATUS, // Control identifier
@@ -481,8 +513,10 @@ static void OnCreate(HWND hWnd)
                 NULL);          // Specify NULL for this parameter when 
                                 // you create a control
     SetCallStatus("Ready", 5);
-
     SetAction(ID_MENU_CALL);
+    SetURI(DEFAULT_URI, -1);
+    SetFocus(hwndURI);
+
 }
 
 
@@ -499,6 +533,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
     case WM_COMMAND:
 	wmId    = LOWORD(wParam); 
 	wmEvent = HIWORD(wParam); 
+	if (wmId == ID_BTN_ACTION)
+	    wmId = g_current_action;
 	switch (wmId)
 	{
 	case ID_MENU_CALL:

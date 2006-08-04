@@ -26,10 +26,11 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <speex/speex_echo.h>
+#include <speex/speex_preprocess.h>
 
 
 #define THIS_FILE   "aec_speex.c"
-#define BUF_COUNT   16
+#define BUF_COUNT   8
 
 
 struct frame
@@ -39,10 +40,13 @@ struct frame
 
 struct pjmedia_aec
 {
-    SpeexEchoState  *state;
+    SpeexEchoState	 *state;
+    SpeexPreprocessState *preprocess;
+
     unsigned	     samples_per_frame;
     unsigned	     options;
     pj_int16_t	    *tmp_frame;
+    spx_int32_t	    *residue;
 
     pj_lock_t	    *lock;		/* To protect buffers, if required  */
 
@@ -59,7 +63,7 @@ struct pjmedia_aec
 PJ_DEF(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
 					unsigned clock_rate,
 					unsigned samples_per_frame,
-					unsigned tail_size,
+					unsigned tail_ms,
 					unsigned options,
 					pjmedia_aec **p_aec )
 {
@@ -67,6 +71,8 @@ PJ_DEF(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
     int sampling_rate;
     unsigned i;
     pj_status_t status;
+
+    *p_aec = NULL;
 
     aec = pj_pool_zalloc(pool, sizeof(pjmedia_aec));
     PJ_ASSERT_RETURN(aec != NULL, PJ_ENOMEM);
@@ -78,8 +84,17 @@ PJ_DEF(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
     aec->samples_per_frame = samples_per_frame;
     aec->options = options;
 
-    aec->state = speex_echo_state_init(samples_per_frame,tail_size);
+    aec->state = speex_echo_state_init(samples_per_frame,
+					clock_rate * tail_ms / 1000);
     if (aec->state == NULL) {
+	pj_lock_destroy(aec->lock);
+	return PJ_ENOMEM;
+    }
+
+    aec->preprocess = speex_preprocess_state_init(samples_per_frame, 
+						  clock_rate);
+    if (aec->preprocess == NULL) {
+	speex_echo_state_destroy(aec->state);
 	pj_lock_destroy(aec->lock);
 	return PJ_ENOMEM;
     }
@@ -90,9 +105,13 @@ PJ_DEF(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
 		   &sampling_rate);
 
     /* Create temporary frame for echo cancellation */
-    aec->tmp_frame = pj_pool_zalloc(pool, sizeof(pj_int16_t) *
-					    samples_per_frame);
+    aec->tmp_frame = pj_pool_zalloc(pool, 2 * samples_per_frame);
     PJ_ASSERT_RETURN(aec->tmp_frame != NULL, PJ_ENOMEM);
+
+    /* Create temporary frame to receive residue */
+    aec->residue = pj_pool_zalloc(pool, sizeof(spx_int32_t) * 
+					    samples_per_frame);
+    PJ_ASSERT_RETURN(aec->residue != NULL, PJ_ENOMEM);
 
     /* Create internal playback buffers */
     for (i=0; i<BUF_COUNT; ++i) {
@@ -108,7 +127,7 @@ PJ_DEF(pj_status_t) pjmedia_aec_create( pj_pool_t *pool,
 			 "samples per frame=%d, tail length=%d ms", 
 			 clock_rate,
 			 samples_per_frame,
-			 tail_size * 1000 / clock_rate));
+			 tail_ms));
     return PJ_SUCCESS;
 
 }
@@ -121,9 +140,17 @@ PJ_DEF(pj_status_t) pjmedia_aec_destroy(pjmedia_aec *aec )
 {
     PJ_ASSERT_RETURN(aec && aec->state, PJ_EINVAL);
 
+    if (aec->lock)
+	pj_lock_acquire(aec->lock);
+
     if (aec->state) {
 	speex_echo_state_destroy(aec->state);
 	aec->state = NULL;
+    }
+
+    if (aec->preprocess) {
+	speex_preprocess_state_destroy(aec->preprocess);
+	aec->preprocess = NULL;
     }
 
     if (aec->lock) {
@@ -224,8 +251,6 @@ PJ_DEF(pj_status_t) pjmedia_aec_cancel_echo( pjmedia_aec *aec,
 					     unsigned options,
 					     void *reserved )
 {
-    unsigned level0, level1;
-
     /* Sanity checks */
     PJ_ASSERT_RETURN(aec && rec_frm && play_frm && options==0 &&
 		     reserved==NULL, PJ_EINVAL);
@@ -233,20 +258,13 @@ PJ_DEF(pj_status_t) pjmedia_aec_cancel_echo( pjmedia_aec *aec,
     /* Cancel echo, put output in temporary buffer */
     speex_echo_cancel(aec->state, (const spx_int16_t*)rec_frm, 
 		      (const spx_int16_t*)play_frm, 
-		      (spx_int16_t*)aec->tmp_frame, NULL);
+		      (spx_int16_t*)aec->tmp_frame, 
+		      aec->residue);
 
-#if 0
-    level0 = pjmedia_calc_avg_signal(rec_frm, aec->samples_per_frame);
-    level1 = pjmedia_calc_avg_signal(aec->tmp_frame, aec->samples_per_frame);
 
-    if (level1 < level0) {
-	PJ_LOG(5,(THIS_FILE, "Input signal reduced from %d to %d",
-		  level0, level1));
-    }
-#else
-    PJ_UNUSED_ARG(level0);
-    PJ_UNUSED_ARG(level1);
-#endif
+    /* Preprocess output */
+    speex_preprocess(aec->preprocess, (spx_int16_t*)aec->tmp_frame, 
+		     aec->residue);
 
     /* Copy temporary buffer back to original rec_frm */
     pjmedia_copy_samples(rec_frm, aec->tmp_frame, aec->samples_per_frame);
