@@ -105,7 +105,7 @@ typedef pj_status_t (*pjmedia_snd_play_cb)(/* in */   void *user_data,
  */
 typedef pj_status_t (*pjmedia_snd_rec_cb)(/* in */   void *user_data,
 				     /* in */   pj_uint32_t timestamp,
-				     /* in */   const void *input,
+				     /* in */   void *input,
 				     /* in*/    unsigned size);
 
 /**

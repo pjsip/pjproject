@@ -95,8 +95,9 @@ static int PaRecorderCallback(const void *input,
     stream->timestamp += frameCount;
 
     status = (*stream->rec_cb)(stream->user_data, stream->timestamp, 
-			       input, frameCount * stream->bytes_per_sample *
-			       stream->channel_count);
+			       (void*)input, 
+			       frameCount * stream->bytes_per_sample *
+				 stream->channel_count);
     
     if (status==0) 
 	return paContinue;
