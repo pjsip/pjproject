@@ -44,7 +44,7 @@
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
 
 #define MAX_PACKET_BUFFER_COUNT	    32
-#define DEFAULT_BUFFER_COUNT	    32
+#define DEFAULT_BUFFER_COUNT	    16
 
 #define MAX_HARDWARE		    16
 
@@ -452,6 +452,7 @@ static int dsound_dev_thread(void *arg)
     HANDLE events[2];
     unsigned eventCount;
     unsigned bytes_per_frame;
+    int excess_rec = 0;
     pj_status_t status;
 
 
@@ -465,7 +466,7 @@ static int dsound_dev_thread(void *arg)
     /* Raise self priority. We don't want the audio to be distorted by
      * system activity.
      */
-    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    //SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     /* Calculate bytes per frame */
     bytes_per_frame = strm->samples_per_frame * BYTES_PER_SAMPLE;
@@ -501,6 +502,7 @@ static int dsound_dev_thread(void *arg)
 	if (signalled_dir == PJMEDIA_DIR_PLAYBACK) {
 	    
 	    struct dsound_stream *dsound_strm;
+	    int i;
 
 	    /*
 	     * DirectSound has requested us to feed some frames to
@@ -508,26 +510,32 @@ static int dsound_dev_thread(void *arg)
 	     */
 
 	    dsound_strm = &strm->play_strm;
+	    status = PJ_SUCCESS;
 
-	    /* Get frame from application. */
-	    status = (*strm->play_cb)(strm->user_data, 
-				      dsound_strm->timestamp.u32.lo,
-				      strm->buffer,
+	    for (i=0; i <= excess_rec; ++i) {
+		/* Get frame from application. */
+		status = (*strm->play_cb)(strm->user_data, 
+					  dsound_strm->timestamp.u32.lo,
+					  strm->buffer,
+					  bytes_per_frame);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		/* Write to DirectSound buffer. */
+		AppWriteDataToBuffer( dsound_strm->ds.play.lpDsBuffer, 
+				      dsound_strm->dwBytePos,
+				      (LPBYTE)strm->buffer, 
 				      bytes_per_frame);
+
+		/* Increment position. */
+		dsound_strm->dwBytePos += bytes_per_frame;
+		if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
+		    dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
+		dsound_strm->timestamp.u64 += strm->samples_per_frame;
+	    }
+
 	    if (status != PJ_SUCCESS)
 		break;
-
-	    /* Write to DirectSound buffer. */
-	    AppWriteDataToBuffer( dsound_strm->ds.play.lpDsBuffer, 
-				  dsound_strm->dwBytePos,
-				  (LPBYTE)strm->buffer, 
-				  bytes_per_frame);
-
-	    /* Increment position. */
-	    dsound_strm->dwBytePos += bytes_per_frame;
-	    if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
-		dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
-	    dsound_strm->timestamp.u64 += strm->samples_per_frame;
 
 	} else {
 	    /*
@@ -536,6 +544,7 @@ static int dsound_dev_thread(void *arg)
 	     * prevent overflows.
 	     */
 	    struct dsound_stream *dsound_strm;
+	    int captured = 0;
 	    BOOL rc;
 
 	    dsound_strm = &strm->rec_strm;
@@ -549,6 +558,8 @@ static int dsound_dev_thread(void *arg)
 		
 		if (!rc) {
 		    pj_bzero(strm->buffer, bytes_per_frame);
+		} else {
+		    captured++;
 		}
 
 		/* Call callback */
@@ -570,6 +581,9 @@ static int dsound_dev_thread(void *arg)
 
 		/* Fetch while we have more than 1 frame */
 	    } while (dsound_captured_size(dsound_strm) > bytes_per_frame);
+
+	    excess_rec = captured-1;
+	    if (excess_rec < 0) excess_rec = 0;
 	}
     }
 
