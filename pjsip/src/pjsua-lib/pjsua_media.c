@@ -972,6 +972,17 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pjmedia_snd_port_set_aec(pjsua_var.snd_port, pjsua_var.pool, 
 			     pjsua_var.media_cfg.ec_tail_len);
 
+    /* Connect sound port to the bridge */ 	 
+    status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
+				      conf_port ); 	 
+    if (status != PJ_SUCCESS) { 	 
+	pjsua_perror(THIS_FILE, "Unable to connect conference port to "
+			        "sound device", status); 	 
+	pjmedia_snd_port_destroy(pjsua_var.snd_port); 	 
+	pjsua_var.snd_port = NULL; 	 
+	return status; 	 
+    }
+
     /* Save the device IDs */
     pjsua_var.cap_dev = capture_dev;
     pjsua_var.play_dev = playback_dev;
