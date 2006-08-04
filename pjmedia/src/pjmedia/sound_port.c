@@ -454,11 +454,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_aec( pjmedia_snd_port *snd_port,
     if (tail_ms != 0) {
 	status = pjmedia_aec_create(pool, snd_port->clock_rate, 
 				    snd_port->samples_per_frame, 
-				    snd_port->clock_rate * tail_ms / 1000,
-				    0, &snd_port->aec);
+				    tail_ms, 0, &snd_port->aec);
 	if (status != PJ_SUCCESS)
 	    snd_port->aec = NULL;
     } else {
+	PJ_LOG(4,(THIS_FILE, "AEC disabled in the sound port"));
 	status = PJ_SUCCESS;
     }
 
