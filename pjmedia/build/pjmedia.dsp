@@ -91,7 +91,15 @@ SOURCE=..\src\pjmedia\aec_port.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\aec_speex.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\alaw_ulaw.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\bidirectional.c
 # End Source File
 # Begin Source File
 
@@ -231,7 +239,15 @@ SOURCE=..\src\pjmedia\wave.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=..\include\pjmedia\aec.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\aec_port.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\bidirectional.h
 # End Source File
 # Begin Source File
 

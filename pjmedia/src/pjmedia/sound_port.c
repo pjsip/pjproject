@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound_port.h>
+#include <pjmedia/aec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/plc.h>
 #include <pj/assert.h>
@@ -24,9 +25,16 @@
 #include <pj/rand.h>
 #include <pj/string.h>	    /* pj_memset() */
 
+#ifndef PJMEDIA_SOUND_HAS_AEC
+#   define PJMEDIA_SOUND_HAS_AEC	1
+#endif
+
+#if defined(PJMEDIA_SOUND_HAS_AEC) && PJMEDIA_SOUND_HAS_AEC!=0
+#   include <speex/speex_echo.h>
+#endif
 
 //#define SIMULATE_LOST_PCT   20
-
+#define AEC_TAIL    500	    /* in ms */
 
 #define THIS_FILE	    "sound_port.c"
 
@@ -48,6 +56,7 @@ struct pjmedia_snd_port
     pjmedia_port	*port;
     unsigned		 options;
 
+    pjmedia_aec		*aec;
     pjmedia_plc		*plc;
 
     unsigned		 clock_rate;
@@ -105,6 +114,11 @@ static pj_status_t play_cb(/* in */   void *user_data,
     if (snd_port->plc)
 	pjmedia_plc_save(snd_port->plc, output);
 
+    if (snd_port->aec) {
+	pjmedia_aec_playback(snd_port->aec, output);
+    }
+
+
     return PJ_SUCCESS;
 
 no_frame:
@@ -121,6 +135,10 @@ no_frame:
     }
 
 
+    if (snd_port->aec) {
+	pjmedia_aec_playback(snd_port->aec, output);
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -131,12 +149,17 @@ no_frame:
  */
 static pj_status_t rec_cb(/* in */   void *user_data,
 			  /* in */   pj_uint32_t timestamp,
-			  /* in */   const void *input,
+			  /* in */   void *input,
 			  /* in*/    unsigned size)
 {
     pjmedia_snd_port *snd_port = user_data;
     pjmedia_port *port;
     pjmedia_frame frame;
+
+    /* Cancel echo */
+    if (snd_port->aec) {
+	pjmedia_aec_capture(snd_port->aec, input, 0);
+    }
 
     /* We're risking accessing the port without holding any mutex.
      * It's possible that port is disconnected then destroyed while
@@ -227,6 +250,16 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	    snd_port->plc = NULL;
     }
 
+    /* Create AEC only when direction is full duplex */
+    if (snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
+	status = pjmedia_aec_create(pool, snd_port->clock_rate, 
+				    snd_port->samples_per_frame, 
+				    snd_port->clock_rate * AEC_TAIL / 1000,
+				    0, &snd_port->aec);
+	if (status != PJ_SUCCESS)
+	    snd_port->aec = NULL;
+    }
+
     /* Start sound stream. */
     status = pjmedia_snd_stream_start(snd_port->snd_stream);
     if (status != PJ_SUCCESS) {
@@ -250,6 +283,12 @@ static pj_status_t stop_sound_device( pjmedia_snd_port *snd_port )
 	pjmedia_snd_stream_stop(snd_port->snd_stream);
 	pjmedia_snd_stream_close(snd_port->snd_stream);
 	snd_port->snd_stream = NULL;
+    }
+
+    /* Destroy AEC */
+    if (snd_port->aec) {
+	pjmedia_aec_destroy(snd_port->aec);
+	snd_port->aec = NULL;
     }
 
     return PJ_SUCCESS;
