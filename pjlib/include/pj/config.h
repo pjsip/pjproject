@@ -201,7 +201,7 @@
 #elif defined (PJ_M_ARMV4) || defined(ARM) || defined(_ARM_) ||  \
 	defined(ARMV4) || defined(__arm__)
     /*
-     * ARM, default to little endian */
+     * ARM, default to little endian
      */
 #   undef PJ_M_ARMV4
 #   define PJ_M_ARMV4		1
