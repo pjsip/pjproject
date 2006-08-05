@@ -38,7 +38,7 @@ enum
     ID_BTN_ACTION,
 };
 
-#define DEFAULT_URI	"sip:192.168.0.7"
+#define DEFAULT_URI	"sip:192.168.0.66"
 
 
 // Forward declarations of functions included in this code module:
@@ -255,6 +255,7 @@ static BOOL OnInitStack(void)
     pjsua_transport_config  rtp_cfg;
     pjsua_transport_id	    transport_id;
     pjsua_transport_info    transport_info;
+    pj_str_t		    tmp;
     pj_status_t status;
 
     /* Create pjsua */
@@ -278,6 +279,9 @@ static BOOL OnInitStack(void)
 
     /* Setup media */
     media_cfg.clock_rate = 8000;
+    media_cfg.ec_tail_len = 0;
+    media_cfg.quality = 3;
+    media_cfg.ptime = 0;
 
     /* Initialize application callbacks */
     cfg.cb.on_call_state = &on_call_state;
@@ -296,8 +300,12 @@ static BOOL OnInitStack(void)
     }
 
     /* Set codec priority */
-    pj_str_t codec = pj_str("pcmu");
-    pjsua_codec_set_priority(&codec, 254);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "gsm"), 254);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "pcmu"), 253);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "pcma"), 252);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/16000"), 0);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/32000"), 0);
+
 
     /* Add UDP transport and the corresponding PJSUA account */
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
