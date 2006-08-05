@@ -795,7 +795,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     call = &pjsua_var.calls[call_id];
 
     if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
+	PJ_LOG(3,(THIS_FILE,"Invalid call or call has been disconnected"));
 	PJSUA_UNLOCK();
 	return PJ_EINVAL;
     }

@@ -2039,6 +2039,10 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #   define PJSUA_MAX_CONF_PORTS	    254
 #endif
 
+#define PJSUA_DEFAULT_CLOCK_RATE    16000
+#define PJSUA_DEFAULT_CODEC_QUALITY 5
+#define PJSUA_DEFAULT_ILBC_MODE	    20
+#define PJSUA_DEFAULT_EC_TAIL_LEN   256
 
 
 /**
@@ -2087,7 +2091,7 @@ struct pjsua_media_config
      * The media quality also sets speex codec quality/complexity to the
      * number.
      *
-     * Default: 6.
+     * Default: 5 (PJSUA_DEFAULT_CODEC_QUALITY).
      */
     unsigned		quality;
 
@@ -2108,7 +2112,7 @@ struct pjsua_media_config
     /**
      * iLBC mode (20 or 30).
      *
-     * Default: 20
+     * Default: 20 (PJSUA_DEFAULT_ILBC_MODE)
      */
     unsigned		ilbc_mode;
 
@@ -2131,7 +2135,7 @@ struct pjsua_media_config
     /**
      * Echo canceller tail length, in miliseconds.
      *
-     * Default: 0 (disabled, for now)
+     * Default: 128 (PJSUA_DEFAULT_EC_TAIL_LEN)
      */
     unsigned		ec_tail_len;
 };
@@ -2146,13 +2150,13 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
 
-    cfg->clock_rate = 16000;
+    cfg->clock_rate = PJSUA_DEFAULT_CLOCK_RATE;
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
-    cfg->quality = 6;
-    cfg->ilbc_mode = 20;
-    cfg->ec_tail_len = 500;
+    cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
+    cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
+    cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
 }
 
 

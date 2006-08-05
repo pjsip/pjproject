@@ -917,13 +917,23 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
     /* Media clock rate. */
-    if (config->media_cfg.clock_rate) {
+    if (config->media_cfg.clock_rate != PJSUA_DEFAULT_CLOCK_RATE) {
 	pj_ansi_sprintf(line, "--clock-rate %d\n",
 			config->media_cfg.clock_rate);
 	pj_strcat2(&cfg, line);
+    } else {
+	pj_ansi_sprintf(line, "#using default --clock-rate %d\n",
+			config->media_cfg.clock_rate);
+	pj_strcat2(&cfg, line);
     }
-    if (config->media_cfg.quality != 10) {
+
+    /* quality */
+    if (config->media_cfg.quality != PJSUA_DEFAULT_CODEC_QUALITY) {
 	pj_ansi_sprintf(line, "--quality %d\n",
+			config->media_cfg.quality);
+	pj_strcat2(&cfg, line);
+    } else {
+	pj_ansi_sprintf(line, "#using default --quality %d\n",
 			config->media_cfg.quality);
 	pj_strcat2(&cfg, line);
     }
@@ -935,6 +945,49 @@ static int write_settings(const struct app_config *config,
 			config->ptime);
 	pj_strcat2(&cfg, line);
     }
+
+    /* no-vad */
+    if (config->media_cfg.no_vad) {
+	pj_strcat2(&cfg, "--no-vad\n");
+    }
+
+    /* ec-tail */
+    if (config->media_cfg.ec_tail_len != PJSUA_DEFAULT_EC_TAIL_LEN) {
+	pj_ansi_sprintf(line, "--ec-tail %d\n",
+			config->media_cfg.ec_tail_len);
+	pj_strcat2(&cfg, line);
+    } else {
+	pj_ansi_sprintf(line, "#using default --ec-tail %d\n",
+			config->media_cfg.ec_tail_len);
+	pj_strcat2(&cfg, line);
+    }
+
+
+    /* ilbc-mode */
+    if (config->media_cfg.ilbc_mode != PJSUA_DEFAULT_ILBC_MODE) {
+	pj_ansi_sprintf(line, "--ilbc-mode %d\n",
+			config->media_cfg.ilbc_mode);
+	pj_strcat2(&cfg, line);
+    } else {
+	pj_ansi_sprintf(line, "#using default --ilbc-mode %d\n",
+			config->media_cfg.ilbc_mode);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* RTP drop */
+    if (config->media_cfg.tx_drop_pct) {
+	pj_ansi_sprintf(line, "--tx-drop-pct %d\n",
+			config->media_cfg.tx_drop_pct);
+	pj_strcat2(&cfg, line);
+
+    }
+    if (config->media_cfg.rx_drop_pct) {
+	pj_ansi_sprintf(line, "--rx-drop-pct %d\n",
+			config->media_cfg.rx_drop_pct);
+	pj_strcat2(&cfg, line);
+
+    }
+
 
     /* Start RTP port. */
     pj_ansi_sprintf(line, "--rtp-port %d\n",
