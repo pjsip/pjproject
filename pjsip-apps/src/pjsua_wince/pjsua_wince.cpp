@@ -149,14 +149,17 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	SetCallStatus(call_info.last_status_text.ptr, call_info.last_status_text.slen);
 
     } else {
-	if (g_current_call == PJSUA_INVALID_ID)
-	    g_current_call = call_id;
+	//if (g_current_call == PJSUA_INVALID_ID)
+	//    g_current_call = call_id;
 
 	if (call_info.remote_contact.slen)
 	    SetURI(call_info.remote_contact.ptr, call_info.remote_contact.slen, false);
 	else
 	    SetURI(call_info.remote_info.ptr, call_info.remote_info.slen, false);
-	SetAction(ID_MENU_DISCONNECT);
+
+	if (call_info.state == PJSIP_INV_STATE_CONFIRMED)
+	    SetAction(ID_MENU_DISCONNECT);
+
 	SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
     }
 }
@@ -192,7 +195,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(rdata);
 
     if (g_current_call != PJSUA_INVALID_ID) {
-	pjsua_call_answer(call_id, PJSIP_SC_BUSY_HERE, NULL, NULL);
+	pj_str_t reason;
+	reason = pj_str("Another call is in progress");
+	pjsua_call_answer(call_id, PJSIP_SC_BUSY_HERE, &reason, NULL);
 	return;
     }
 
@@ -279,9 +284,9 @@ static BOOL OnInitStack(void)
 
     /* Setup media */
     media_cfg.clock_rate = 8000;
-    media_cfg.ec_tail_len = 0;
-    media_cfg.quality = 3;
-    media_cfg.ptime = 0;
+    //media_cfg.ec_tail_len = ;
+    media_cfg.quality = 1;
+    media_cfg.ptime = 20;
 
     /* Initialize application callbacks */
     cfg.cb.on_call_state = &on_call_state;
@@ -300,10 +305,11 @@ static BOOL OnInitStack(void)
     }
 
     /* Set codec priority */
-    pjsua_codec_set_priority(pj_cstr(&tmp, "gsm"), 254);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "pcmu"), 253);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "pcma"), 252);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/16000"), 0);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "gsm"), 10);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "pcmu"), 240);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "pcma"), 230);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/8000"), 190);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/16000"), 180);
     pjsua_codec_set_priority(pj_cstr(&tmp, "speex/32000"), 0);
 
 
@@ -570,6 +576,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 	    if (g_current_call == PJSUA_INVALID_ID)
 		MessageBox(NULL, TEXT("Can not answer"), 
 			   TEXT("There is no call!"), MB_OK);
+	    else
+		pjsua_call_answer(g_current_call, 200, NULL, NULL);
 	    break;
 	case ID_MENU_DISCONNECT:
 	    if (g_current_call == PJSUA_INVALID_ID)

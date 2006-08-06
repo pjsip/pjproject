@@ -94,7 +94,7 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 
     pjmedia_silence_det_set_name(ec->sd, "ecsu%p");
     pjmedia_silence_det_set_adaptive(ec->sd, PJMEDIA_ECHO_SUPPRESS_THRESHOLD);
-    pjmedia_silence_det_set_params(ec->sd, 0, 500, 3000);
+    pjmedia_silence_det_set_params(ec->sd, 100, 500, 3000);
 
     *p_state = ec;
     return PJ_SUCCESS;

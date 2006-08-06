@@ -466,6 +466,10 @@ SOURCE=..\include\pj\config_site.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pj\config_site_sample.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pj\ctype.h
 # End Source File
 # Begin Source File
