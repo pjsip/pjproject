@@ -221,7 +221,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     PJ_ASSERT_RETURN(conf_port, PJ_ENOMEM);
 
     /* Set name */
-    pj_strdup(pool, &conf_port->name, name);
+    pj_strdup_with_null(pool, &conf_port->name, name);
 
     /* Default has tx and rx enabled. */
     conf_port->rx_setting = PJMEDIA_PORT_ENABLE;
@@ -258,6 +258,8 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     /* Set fixed */
     pjmedia_silence_det_set_fixed(conf_port->vad, 2);
 
+    /* Set VAD name */
+    pjmedia_silence_det_set_name(conf_port->vad, conf_port->name.ptr);
 
     /* If port's clock rate is different than conference's clock rate,
      * create a resample sessions.
@@ -894,6 +896,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     }
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Get total number of ports connections currently set up in the bridge.
+ */
+PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf)
+{
+    return conf->connect_cnt;
 }
 
 

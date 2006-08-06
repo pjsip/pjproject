@@ -27,7 +27,7 @@
 
 
 #define THIS_FILE			    "echo_suppress.c"
-#define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	    20
+#define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	    PJMEDIA_SILENCE_DET_THRESHOLD
 
 
 /*
@@ -35,11 +35,11 @@
  */
 typedef struct echo_supp
 {
-    unsigned	threshold;
-    pj_bool_t	suppressing;
-    pj_time_val	last_signal;
-    unsigned	samples_per_frame;
-    unsigned	tail_ms;
+    pj_bool_t		 suppressing;
+    pjmedia_silence_det	*sd;
+    pj_time_val		 last_signal;
+    unsigned		 samples_per_frame;
+    unsigned		 tail_ms;
 } echo_supp;
 
 
@@ -78,14 +78,23 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 				      void **p_state )
 {
     echo_supp *ec;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(clock_rate);
     PJ_UNUSED_ARG(options);
 
     ec = pj_pool_zalloc(pool, sizeof(struct echo_supp));
-    ec->threshold = PJMEDIA_ECHO_SUPPRESS_THRESHOLD;
     ec->samples_per_frame = samples_per_frame;
     ec->tail_ms = tail_ms;
+
+    status = pjmedia_silence_det_create(pool, clock_rate, samples_per_frame,
+					&ec->sd);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pjmedia_silence_det_set_name(ec->sd, "ecsu%p");
+    pjmedia_silence_det_set_adaptive(ec->sd, PJMEDIA_ECHO_SUPPRESS_THRESHOLD);
+    pjmedia_silence_det_set_params(ec->sd, 0, 500, 3000);
 
     *p_state = ec;
     return PJ_SUCCESS;
@@ -109,17 +118,16 @@ PJ_DEF(pj_status_t) echo_supp_playback( void *state,
 					pj_int16_t *play_frm )
 {
     echo_supp *ec = state;
+    pj_bool_t silence;
     pj_bool_t last_suppressing = ec->suppressing;
-    unsigned level;
 
-    level = pjmedia_calc_avg_signal(play_frm, ec->samples_per_frame);
-    level = linear2ulaw(level) ^ 0xff;
+    silence = pjmedia_silence_det_detect(ec->sd, play_frm,
+					 ec->samples_per_frame, NULL);
 
-    if (level >= ec->threshold) {
+    ec->suppressing = !silence;
+
+    if (ec->suppressing) {
 	pj_gettimeofday(&ec->last_signal);
-	ec->suppressing = 1;
-    } else {
-	ec->suppressing = 0;
     }
 
     if (ec->suppressing!=0 && last_suppressing==0) {
@@ -168,15 +176,15 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 					   void *reserved )
 {
     echo_supp *ec = state;
-    unsigned level;
+    pj_bool_t silence;
 
     PJ_UNUSED_ARG(options);
     PJ_UNUSED_ARG(reserved);
 
-    level = pjmedia_calc_avg_signal(play_frm, ec->samples_per_frame);
-    level = linear2ulaw(level) ^ 0xff;
+    silence = pjmedia_silence_det_detect(ec->sd, play_frm, 
+					 ec->samples_per_frame, NULL);
 
-    if (level >= ec->threshold) {
+    if (!silence) {
 	pjmedia_zero_samples(rec_frm, ec->samples_per_frame);
     }
 

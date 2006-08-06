@@ -73,6 +73,19 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
 
 
 /**
+ * Set silence detector name to identify the particular silence detector
+ * instance in the log.
+ *
+ * @param sd		    The silence detector.
+ * @param name		    Name.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_name(pjmedia_silence_det *sd,
+						  const char *name);
+
+
+/**
  * Set the sd to operate in fixed threshold mode. With fixed threshold mode,
  * the threshold will not be changed adaptively.
  *
@@ -109,7 +122,7 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
  * @param min_signal	    Minimum duration of signal (in msec) before
  *			    signal is reported. If -1 is specified, then
  *			    the default value will be used. The default is
- *			    one frame.
+ *			    equal to one frame.
  * @param recalc_time	    The interval to recalculate signal and silence
  *			    proportion and to readjust the silence threshold
  *			    when adaptive silence detection is set. If -1
@@ -144,7 +157,7 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_disable( pjmedia_silence_det *sd );
  * @param p_level	Optional pointer to receive average signal level
  *			of the input samples.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		Non zero if signal is silence.
  */
 PJ_DECL(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
 					       const pj_int16_t samples[],
@@ -173,7 +186,7 @@ PJ_DECL(pj_int32_t) pjmedia_calc_avg_signal( const pj_int16_t samples[],
  * @param sd		The silence detector instance.
  * @param level		Signal level.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		Non zero if signal is silence.
  */
 PJ_DECL(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 					      pj_uint32_t level);

@@ -118,7 +118,7 @@ static struct ec_operations aec_op =
 };
 
 #else
-static struct ec_operations aec_op = echo_supp_op;
+#define aec_op echo_supp_op
 #endif
 
 

@@ -38,6 +38,8 @@ typedef enum pjmedia_silence_det_mode {
  */
 struct pjmedia_silence_det
 {
+    char      objname[PJ_MAX_OBJ_NAME]; /**< VAD name.			    */
+
     int	      mode;		/**< VAD mode.				    */
     unsigned  ptime;		/**< Frame time, in msec.		    */
 
@@ -70,6 +72,9 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
 
     sd = pj_pool_zalloc(pool, sizeof(struct pjmedia_silence_det));
 
+    pj_ansi_strncpy(sd->objname, THIS_FILE, PJ_MAX_OBJ_NAME);
+    sd->objname[PJ_MAX_OBJ_NAME-1] = '\0';
+
     sd->ptime = samples_per_frame * 1000 / clock_rate;
     sd->signal_cnt = 0;
     sd->silence_cnt = 0;
@@ -86,6 +91,18 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
     *p_sd = sd;
     return PJ_SUCCESS;
 }
+
+
+PJ_DEF(pj_status_t) pjmedia_silence_det_set_name( pjmedia_silence_det *sd,
+						  const char *name)
+{
+    PJ_ASSERT_RETURN(sd && name, PJ_EINVAL);
+
+    pj_ansi_snprintf(sd->objname, PJ_MAX_OBJ_NAME, name, sd);
+    sd->objname[PJ_MAX_OBJ_NAME-1] = '\0';
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
 						     int threshold)
@@ -233,7 +250,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 	
 	if (sd->mode == VAD_MODE_ADAPTIVE) {
 	    pj_bool_t updated = PJ_TRUE;
-	    unsigned pct_signal;
+	    unsigned pct_signal, new_threshold = sd->cur_threshold;
 
 	    /* Get percentage of signal */
 	    pct_signal = sd->signal_cnt * 100 / 
@@ -241,19 +258,20 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 
 	    /* Adjust according to signal/silence proportions. */
 	    if (pct_signal > 95) {
-		sd->cur_threshold += (sd->weakest_signal - sd->cur_threshold)/4;
+		new_threshold += (sd->weakest_signal - sd->cur_threshold)/4;
 	    } else if (pct_signal < 5) {
-		sd->cur_threshold = (sd->cur_threshold+sd->loudest_silence)/2+1;
+		new_threshold = (sd->cur_threshold+sd->loudest_silence)/2+1;
 	    } else if (pct_signal > 90) {
-		sd->cur_threshold++;
+		new_threshold++;
 	    } else if (pct_signal < 10) {
-		sd->cur_threshold--;
+		new_threshold--;
 	    } else {
 		updated = PJ_FALSE;
 	    }
 
-	    if (updated) {
-		PJ_LOG(5,(THIS_FILE, "Vad cur_threshold updated to %d",
+	    if (updated && sd->cur_threshold != new_threshold) {
+		sd->cur_threshold = new_threshold;
+		PJ_LOG(5,(sd->objname, "Vad cur_threshold updated to %d",
 			  sd->cur_threshold));
 	    }
 	}

@@ -293,6 +293,16 @@ PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 
 
 /**
+ * Get total number of ports connections currently set up in the bridge.
+ * 
+ * @param conf		The conference bridge.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf);
+
+
+/**
  * Remove the specified port from the conference bridge.
  *
  * @param conf		The conference bridge.
