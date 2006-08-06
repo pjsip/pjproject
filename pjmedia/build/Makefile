@@ -65,8 +65,9 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			aec_port.o alaw_ulaw.o \
-			clock_thread.o codec.o conference.o endpoint.o errno.o \
+			alaw_ulaw.o clock_thread.o codec.o conference.o \
+			echo_common.o echo_port.o echo_speex.o \
+			echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o plc_g711.o \
 			port.o splitcomb.o resample.o \

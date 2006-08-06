@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound_port.h>
-#include <pjmedia/aec.h>
+#include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/plc.h>
 #include <pj/assert.h>
@@ -56,7 +56,7 @@ struct pjmedia_snd_port
     pjmedia_port	*port;
     unsigned		 options;
 
-    pjmedia_aec		*aec;
+    pjmedia_echo_state	*ec_state;
     unsigned		 aec_tail_len;
     pjmedia_plc		*plc;
 
@@ -115,8 +115,8 @@ static pj_status_t play_cb(/* in */   void *user_data,
     if (snd_port->plc)
 	pjmedia_plc_save(snd_port->plc, output);
 
-    if (snd_port->aec) {
-	pjmedia_aec_playback(snd_port->aec, output);
+    if (snd_port->ec_state) {
+	pjmedia_echo_playback(snd_port->ec_state, output);
     }
 
 
@@ -164,8 +164,8 @@ static pj_status_t rec_cb(/* in */   void *user_data,
 	return PJ_SUCCESS;
 
     /* Cancel echo */
-    if (snd_port->aec) {
-	pjmedia_aec_capture(snd_port->aec, input, 0);
+    if (snd_port->ec_state) {
+	pjmedia_echo_capture(snd_port->ec_state, input, 0);
     }
 
     frame.buf = (void*)input;
@@ -251,10 +251,10 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 
     /* Create AEC only when direction is full duplex */
     if (snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	status = pjmedia_snd_port_set_aec(snd_port, pool, AEC_TAIL);
+	status = pjmedia_snd_port_set_ec_tail(snd_port, pool, AEC_TAIL);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(4,(THIS_FILE, "Unable to create AEC"));
-	    snd_port->aec = NULL;
+	    snd_port->ec_state = NULL;
 	}
     }
 
@@ -284,9 +284,9 @@ static pj_status_t stop_sound_device( pjmedia_snd_port *snd_port )
     }
 
     /* Destroy AEC */
-    if (snd_port->aec) {
-	pjmedia_aec_destroy(snd_port->aec);
-	snd_port->aec = NULL;
+    if (snd_port->ec_state) {
+	pjmedia_echo_destroy(snd_port->ec_state);
+	snd_port->ec_state = NULL;
     }
 
     return PJ_SUCCESS;
@@ -432,9 +432,9 @@ PJ_DEF(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
 /*
  * Enable AEC
  */
-PJ_DEF(pj_status_t) pjmedia_snd_port_set_aec( pjmedia_snd_port *snd_port,
-					      pj_pool_t *pool,
-					      unsigned tail_ms)
+PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec_tail(pjmedia_snd_port *snd_port,
+					         pj_pool_t *pool,
+					         unsigned tail_ms)
 {
     pj_status_t status;
 
@@ -444,21 +444,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_aec( pjmedia_snd_port *snd_port,
 		     PJ_EINVALIDOP);
 
     /* Destroy AEC */
-    if (snd_port->aec) {
-	pjmedia_aec_destroy(snd_port->aec);
-	snd_port->aec = NULL;
+    if (snd_port->ec_state) {
+	pjmedia_echo_destroy(snd_port->ec_state);
+	snd_port->ec_state = NULL;
     }
 
     snd_port->aec_tail_len = tail_ms;
 
     if (tail_ms != 0) {
-	status = pjmedia_aec_create(pool, snd_port->clock_rate, 
+	status = pjmedia_echo_create(pool, snd_port->clock_rate, 
 				    snd_port->samples_per_frame, 
-				    tail_ms, 0, &snd_port->aec);
+				    tail_ms, 0, &snd_port->ec_state);
 	if (status != PJ_SUCCESS)
-	    snd_port->aec = NULL;
+	    snd_port->ec_state = NULL;
     } else {
-	PJ_LOG(4,(THIS_FILE, "AEC disabled in the sound port"));
+	PJ_LOG(4,(THIS_FILE, "Echo canceller is now disabled in the "
+			     "sound port"));
 	status = PJ_SUCCESS;
     }
 
@@ -467,11 +468,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_aec( pjmedia_snd_port *snd_port,
 
 
 /* Get AEC tail length */
-PJ_DEF(pj_status_t) pjmedia_snd_port_get_aec_tail( pjmedia_snd_port *snd_port,
-						   unsigned *p_length)
+PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_tail( pjmedia_snd_port *snd_port,
+						  unsigned *p_length)
 {
     PJ_ASSERT_RETURN(snd_port && p_length, PJ_EINVAL);
-    *p_length =  snd_port->aec ? snd_port->aec_tail_len : 0;
+    *p_length =  snd_port->ec_state ? snd_port->aec_tail_len : 0;
     return PJ_SUCCESS;
 }
 

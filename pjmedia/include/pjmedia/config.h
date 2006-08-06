@@ -170,6 +170,15 @@
 
 
 /**
+ * Speex Accoustic Echo Cancellation (AEC).
+ * By default is enabled.
+ */
+#ifndef PJMEDIA_HAS_SPEEX_AEC
+#   define PJMEDIA_HAS_SPEEX_AEC		1
+#endif
+
+
+/**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
  * Default is yes.
  */

@@ -2502,25 +2502,25 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
 
 
 /**
- * Configure the AEC settings of the sound port.
+ * Configure the echo canceller tail length of the sound port.
  *
  * @param tail_ms	The tail length, in miliseconds. Set to zero to
  *			disable AEC.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsua_set_aec(unsigned tail_ms);
+PJ_DECL(pj_status_t) pjsua_set_ec_tail(unsigned tail_ms);
 
 
 /**
- * Get current AEC tail length.
+ * Get current echo canceller tail length.
  *
  * @param p_tail_ms	Pointer to receive the tail length, in miliseconds. 
  *			If AEC is disabled, the value will be zero.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsua_get_aec(unsigned *p_tail_ms);
+PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
 
 
 

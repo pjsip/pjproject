@@ -29,6 +29,7 @@ COMPATIBILITY WITH FWD
 
 MULTIPLE ACCOUNTS (combo.cfg)
 
+DIGEST with qop=auth (sipcenter?)
 
 AUDIO QUALITY
 - call to another pjsua that loops incoming call

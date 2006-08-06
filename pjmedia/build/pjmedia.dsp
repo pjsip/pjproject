@@ -87,14 +87,6 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\pjmedia\aec_port.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\aec_speex.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\alaw_ulaw.c
 # End Source File
 # Begin Source File
@@ -116,6 +108,22 @@ SOURCE=..\src\pjmedia\conference.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\dsound.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\echo_common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\echo_port.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\echo_speex.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\echo_suppress.c
 # End Source File
 # Begin Source File
 
@@ -239,14 +247,6 @@ SOURCE=..\src\pjmedia\wave.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\include\pjmedia\aec.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\aec_port.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjmedia\bidirectional.h
 # End Source File
 # Begin Source File
@@ -268,6 +268,14 @@ SOURCE=..\include\pjmedia\config.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\doxygen.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\echo.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\echo_port.h
 # End Source File
 # Begin Source File
 

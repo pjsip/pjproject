@@ -969,8 +969,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pj_assert(conf_port != NULL);
 
     /* Set AEC */
-    pjmedia_snd_port_set_aec(pjsua_var.snd_port, pjsua_var.pool, 
-			     pjsua_var.media_cfg.ec_tail_len);
+    pjmedia_snd_port_set_ec_tail(pjsua_var.snd_port, pjsua_var.pool, 
+			         pjsua_var.media_cfg.ec_tail_len);
 
     /* Connect sound port to the bridge */ 	 
     status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
@@ -1044,13 +1044,13 @@ PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
 /*
  * Configure the AEC settings of the sound port.
  */
-PJ_DEF(pj_status_t) pjsua_set_aec(unsigned tail_ms)
+PJ_DEF(pj_status_t) pjsua_set_ec_tail(unsigned tail_ms)
 {
     pjsua_var.media_cfg.ec_tail_len = tail_ms;
 
     if (pjsua_var.snd_port)
-	return pjmedia_snd_port_set_aec(pjsua_var.snd_port, pjsua_var.pool,
-					tail_ms);
+	return pjmedia_snd_port_set_ec_tail(pjsua_var.snd_port, pjsua_var.pool,
+					    tail_ms);
     
     return PJ_SUCCESS;
 }
@@ -1059,7 +1059,7 @@ PJ_DEF(pj_status_t) pjsua_set_aec(unsigned tail_ms)
 /*
  * Get current AEC tail length.
  */
-PJ_DEF(pj_status_t) pjsua_get_aec(unsigned *p_tail_ms)
+PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
 {
     *p_tail_ms = pjsua_var.media_cfg.ec_tail_len;
     return PJ_SUCCESS;

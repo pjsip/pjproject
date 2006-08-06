@@ -25,14 +25,14 @@
  */
 
 #include <pjmedia/types.h>
-#include <pjmedia/aec.h>
-#include <pjmedia/aec_port.h>
 #include <pjmedia/bidirectional.h>
 #include <pjmedia/clock.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/conference.h>
-#include <pjmedia/endpoint.h>
+#include <pjmedia/echo.h>
+#include <pjmedia/echo_port.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/endpoint.h>
 #include <pjmedia/g711.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/master_port.h>

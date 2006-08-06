@@ -28,9 +28,11 @@
 
 
 /**
- * @defgroup PJMEDIA_AEC_PORT AEC Port
+ * @defgroup PJMEDIA_ECHO_PORT Echo Cancellation Port
  * @ingroup PJMEDIA_PORT
- * @brief AEC (Accoustic Echo Cancellation) media port.
+ * @brief Echo Cancellation Port
+ *
+ * Echo canceller media port, using @ref PJMEDIA_Echo_Cancel backend.
  * @{
  */
 
@@ -39,18 +41,20 @@ PJ_BEGIN_DECL
 
 
 /**
- * Create AEC port. 
+ * Create echo canceller port. 
  *
  * @param pool		Pool to allocate memory.
  * @param dn_port	Downstream port.
  * @param tail_ms	Tail length in miliseconds.
+ * @param options	Options, as in #pjmedia_echo_create().
  * @param p_port	Pointer to receive the port instance.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_aec_port_create( pj_pool_t *pool,
+PJ_DECL(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 					      pjmedia_port *dn_port,
 					      unsigned tail_ms,
+					      unsigned options,
 					      pjmedia_port **p_port );
 
 
