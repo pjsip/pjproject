@@ -303,12 +303,9 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
     out->ptr = s;
     do {
 	if (*s == '%') {
-	    if (s+3 <= scanner->end) {
-		/* This doesn't check if the hex digits are valid.
-		 * If they dont' it will produce garbage characters, but
-		 * no harm is done to the application (e.g. no illegal
-		 * memory access.
-		 */
+	    if (s+3 <= scanner->end && pj_isxdigit(*(s+1)) && 
+		pj_isxdigit(*(s+2))) 
+	    {
 		*dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(s+1)) << 4) +
 				      pj_hex_digit_to_val(*(s+2)));
 		++dst;

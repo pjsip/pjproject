@@ -34,7 +34,9 @@ PJ_DEF(pj_str_t) pj_str_unescape( pj_pool_t *pool, const pj_str_t *src_str)
     dst = dst_str.ptr = pj_pool_alloc(pool, src_str->slen);
 
     while (src != end) {
-	if (*src == '%' && src < end-2) {
+	if (*src == '%' && src < end-2 && pj_isxdigit(*(src+1)) && 
+	    pj_isxdigit(*(src+2))) 
+	{
 	    *dst = (pj_uint8_t) ((pj_hex_digit_to_val(*(src+1)) << 4) + 
 				 pj_hex_digit_to_val(*(src+2)));
 	    ++dst;
