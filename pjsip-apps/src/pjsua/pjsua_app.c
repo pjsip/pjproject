@@ -139,6 +139,7 @@ static void usage(void)
     puts  ("User Agent options:");
     puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
+    puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     /*
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
     */
@@ -264,7 +265,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
-	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP,
+	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -311,7 +312,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "next-account",0,0, OPT_NEXT_ACCOUNT},
 	{ "next-cred",	0, 0, OPT_NEXT_CRED},
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
-	{ "duration",1,0, OPT_DURATION},
+	{ "duration",	1, 0, OPT_DURATION},
+	{ "thread-cnt",	1, 0, OPT_THREAD_CNT},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -611,6 +613,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->duration = my_atoi(pj_optarg);
 	    break;
 	*/
+
+	case OPT_THREAD_CNT:
+	    cfg->cfg.thread_cnt = my_atoi(pj_optarg);
+	    if (cfg->cfg.thread_cnt > 128) {
+		PJ_LOG(1,(THIS_FILE,
+			  "Error: invalid --thread-cnt option"));
+		return -1;
+	    }
+	    break;
 
 	case OPT_PTIME:
 	    cfg->media_cfg.ptime = my_atoi(pj_optarg);

@@ -256,10 +256,18 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
      */
     if (method->id == PJSIP_ACK_METHOD && inv) {
 
+	/* Ignore ACK if pending INVITE transaction has not finished. */
+	if (inv->invite_tsx && 
+	    inv->invite_tsx->state < PJSIP_TSX_STATE_COMPLETED)
+	{
+	    return PJ_TRUE;
+	}
+
 	/* Terminate INVITE transaction, if it's still present. */
 	if (inv->invite_tsx && 
 	    inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
 	{
+	    pj_assert(inv->invite_tsx->status_code >= 200);
 	    pjsip_tsx_terminate(inv->invite_tsx, 
 				inv->invite_tsx->status_code);
 	    inv->invite_tsx = NULL;

@@ -552,6 +552,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}
+	PJ_LOG(4,(THIS_FILE, "%d SIP worker threads created", 
+		  pjsua_var.ua_cfg.thread_cnt));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "No SIP worker threads created"));
     }
 
     /* Done! */

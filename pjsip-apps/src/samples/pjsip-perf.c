@@ -158,6 +158,9 @@ struct app
     } client;
 
     struct {
+	pj_bool_t send_trying;
+	pj_bool_t send_ringing;
+	unsigned delay;
 	struct srv_state prev_state;
 	struct srv_state cur_state;
     } server;
@@ -168,7 +171,7 @@ struct app
 struct call
 {
     pjsip_inv_session	*inv;
-    pj_timer_entry	 timer;
+    pj_timer_entry	 ans_timer;
 };
 
 
@@ -343,6 +346,60 @@ static pjsip_module mod_call_server =
 };
 
 
+static pj_status_t send_response(pjsip_inv_session *inv, 
+				 pjsip_rx_data *rdata,
+				 int code,
+				 pj_bool_t *has_initial)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    if (*has_initial) {
+	status = pjsip_inv_answer(inv, code, NULL, NULL, &tdata);
+    } else {
+	status = pjsip_inv_initial_answer(inv, rdata, code, 
+					  NULL, NULL, &tdata);
+    }
+
+    if (status != PJ_SUCCESS) {
+	if (*has_initial) {
+	    status = pjsip_inv_answer(inv, PJSIP_SC_NOT_ACCEPTABLE, 
+				      NULL, NULL, &tdata);
+	} else {
+	    status = pjsip_inv_initial_answer(inv, rdata, 
+					      PJSIP_SC_NOT_ACCEPTABLE,
+					      NULL, NULL, &tdata);
+	}
+
+	if (status == PJ_SUCCESS) {
+	    *has_initial = PJ_TRUE;
+	    pjsip_inv_send_msg(inv, tdata); 
+	} else {
+	    pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	    return -1;
+	}
+    } else {
+	*has_initial = PJ_TRUE;
+
+	status = pjsip_inv_send_msg(inv, tdata); 
+	if (status != PJ_SUCCESS) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
+    }
+
+    return status;
+}
+
+static void answer_timer_cb(pj_timer_heap_t *h, pj_timer_entry *entry)
+{
+    struct call *call = entry->user_data;
+    pj_bool_t has_initial = PJ_TRUE;
+
+    entry->id = 0;
+    send_response(call->inv, NULL, 200, &has_initial);
+}
+
 static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 {
     const pj_str_t call_user = { "2", 1 };
@@ -352,6 +409,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
     pjsip_dialog *dlg;
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
+    pj_bool_t has_initial = PJ_FALSE;
     pj_status_t status;
 
     uri = pjsip_uri_get_uri(rdata->msg_info.msg->line.req.uri);
@@ -444,26 +502,39 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
     
-
-    /* Create 200 response .*/
-    status = pjsip_inv_initial_answer(call->inv, rdata, 200, 
-				      NULL, NULL, &tdata);
-    if (status != PJ_SUCCESS) {
-	status = pjsip_inv_initial_answer(call->inv, rdata, 
-					  PJSIP_SC_NOT_ACCEPTABLE,
-					  NULL, NULL, &tdata);
-	if (status == PJ_SUCCESS)
-	    pjsip_inv_send_msg(call->inv, tdata); 
-	else
-	    pjsip_inv_terminate(call->inv, 500, PJ_FALSE);
-	return PJ_TRUE;
+    /* Send 100/Trying if needed */
+    if (app.server.send_trying) {
+	status = send_response(call->inv, rdata, 100, &has_initial);
+	if (status != PJ_SUCCESS)
+	    return PJ_TRUE;
     }
 
+    /* Send 180/Ringing if needed */
+    if (app.server.send_ringing) {
+	status = send_response(call->inv, rdata, 180, &has_initial);
+	if (status != PJ_SUCCESS)
+	    return PJ_TRUE;
+    }
 
-    /* Send the 200 response. */  
-    status = pjsip_inv_send_msg(call->inv, tdata); 
-    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return PJ_TRUE);
+    /* Simulate call processing delay */
+    if (app.server.delay) {
+	pj_time_val delay;
 
+	call->ans_timer.id = 1;
+	call->ans_timer.user_data = call;
+	call->ans_timer.cb = &answer_timer_cb;
+	
+	delay.sec = 0;
+	delay.msec = app.server.delay;
+	pj_time_val_normalize(&delay);
+
+	pjsip_endpt_schedule_timer(app.sip_endpt, &call->ans_timer, &delay);
+
+    } else {
+	/* Send the 200 response immediately . */  
+	status = pjsip_inv_send_msg(call->inv, tdata); 
+	PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return PJ_TRUE);
+    }
 
     /* Done */
     app.server.cur_state.call_cnt++;
@@ -1062,6 +1133,9 @@ static void usage(void)
 	"                           client, you must add ;transport=tcp parameter to URL\n"
 	"                           [default: no]\n"
 	"   --thread-count=N        Set number of worker threads [default=1]\n"
+	"   --trying                Send 100/Trying response (server, default no)\n"
+	"   --ringing               Send 180/Ringing response (server, default no)\n"
+	"   --delay=MS, -d          Delay answering call by MS (server, default no)\n"
 	"\n"
 	"Misc options:\n"
 	"   --help, -h              Display this screen\n"
@@ -1084,7 +1158,7 @@ static int my_atoi(const char *s)
 
 static pj_status_t init_options(int argc, char *argv[])
 {
-    enum { OPT_THREAD_COUNT = 1, OPT_REAL_SDP };
+    enum { OPT_THREAD_COUNT = 1, OPT_REAL_SDP, OPT_TRYING, OPT_RINGING };
     struct pj_getopt_option long_options[] = {
 	{ "local-port",	    1, 0, 'p' },
 	{ "count",	    1, 0, 'c' },
@@ -1097,6 +1171,9 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "verbose",        0, 0, 'v' },
 	{ "use-tcp",	    0, 0, 'T' },
 	{ "window",	    1, 0, 'w' },
+	{ "delay",	    1, 0, 'd' },
+	{ "trying",	    0, 0, OPT_TRYING},
+	{ "ringing",	    0, 0, OPT_RINGING},
 	{ NULL, 0, 0, 0 },
     };
     int c;
@@ -1114,7 +1191,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
     /* Parse options */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "p:c:m:t:w:hsv", 
+    while((c=pj_getopt_long(argc,argv, "p:c:m:t:w:d:hsv", 
 			    long_options, &option_index))!=-1) 
     {
 	switch (c) {
@@ -1188,6 +1265,23 @@ static pj_status_t init_options(int argc, char *argv[])
 
 	case 'T':
 	    app.use_tcp = PJ_TRUE;
+	    break;
+
+	case 'd':
+	    app.server.delay = my_atoi(pj_optarg);
+	    if (app.server.delay > 3600) {
+		PJ_LOG(3,(THIS_FILE, "I think --delay %s is too long", 
+			  pj_optarg));
+		return -1;
+	    }
+	    break;
+
+	case OPT_TRYING:
+	    app.server.send_trying = 1;
+	    break;
+
+	case OPT_RINGING:
+	    app.server.send_ringing = 1;
 	    break;
 
 	default:

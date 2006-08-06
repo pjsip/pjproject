@@ -1061,7 +1061,6 @@ static void boost_priority(void)
 static void boost_priority(void)
 {
 #define POLICY	SCHED_FIFO
-    pthread_t thread;
     struct sched_param tp;
     int max_prio;
     int policy;

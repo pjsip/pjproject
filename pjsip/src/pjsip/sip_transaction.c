@@ -1009,6 +1009,9 @@ static void tsx_set_state( pjsip_transaction *tsx,
 {
     pjsip_tsx_state_e prev_state = tsx->state;
 
+    /* New state must be greater than previous state */
+    pj_assert(state >= tsx->state);
+
     PJ_LOG(5, (tsx->obj_name, "State changed from %s to %s, event=%s",
 	       state_str[tsx->state], state_str[state], 
                pjsip_event_str(event_src_type)));

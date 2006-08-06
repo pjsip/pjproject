@@ -117,7 +117,7 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 }
 
 static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
-			  const void *input, unsigned size)
+			  void *input, unsigned size)
 {
 
     PJ_UNUSED_ARG(size);
