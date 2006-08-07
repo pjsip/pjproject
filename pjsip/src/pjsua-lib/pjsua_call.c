@@ -1277,8 +1277,8 @@ static void dump_media_session(const char *indent,
 	int rem_port;
 	const char *dir;
 	char last_update[64];
-	char packets[32], bytes[32], ipbytes[32];
-	pj_time_val now;
+	char packets[32], bytes[32], ipbytes[32], avg_bps[32];
+	pj_time_val media_duration, now;
 
 	pjmedia_session_get_stream_stat(session, i, &stat);
 	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
@@ -1323,9 +1323,14 @@ static void dump_media_session(const char *indent,
 		    now.msec);
 	}
 
+	pj_gettimeofday(&media_duration);
+	PJ_TIME_VAL_SUB(media_duration, stat.start);
+	if (PJ_TIME_VAL_MSEC(media_duration) == 0)
+	    media_duration.msec = 1;
+
 	len = pj_ansi_snprintf(p, end-p,
 	       "%s     RX pt=%d, stat last update: %s\n"
-	       "%s        total %spkt %sB (%sB +IP hdr)\n"
+	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps\n"
 	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
 	       "%s              (msec)    min     avg     max     last\n"
 	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
@@ -1336,6 +1341,7 @@ static void dump_media_session(const char *indent,
 	       good_number(packets, stat.rx.pkt),
 	       good_number(bytes, stat.rx.bytes),
 	       good_number(ipbytes, stat.rx.bytes + stat.rx.pkt * 32),
+	       good_number(avg_bps, stat.rx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
 	       indent,
 	       stat.rx.loss,
 	       stat.rx.loss * 100.0 / (stat.rx.pkt + stat.rx.loss),
@@ -1379,7 +1385,7 @@ static void dump_media_session(const char *indent,
 
 	len = pj_ansi_snprintf(p, end-p,
 	       "%s     TX pt=%d, ptime=%dms, stat last update: %s\n"
-	       "%s        total %spkt %sB (%sB +IP hdr)\n"
+	       "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps\n"
 	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
 	       "%s              (msec)    min     avg     max     last\n"
 	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
@@ -1394,6 +1400,7 @@ static void dump_media_session(const char *indent,
 	       good_number(packets, stat.tx.pkt),
 	       good_number(bytes, stat.tx.bytes),
 	       good_number(ipbytes, stat.tx.bytes + stat.tx.pkt * 32),
+	       good_number(avg_bps, stat.tx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration)),
 
 	       indent,
 	       stat.tx.loss,

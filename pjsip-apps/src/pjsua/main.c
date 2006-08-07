@@ -28,10 +28,56 @@ pj_status_t app_init(int argc, char *argv[]);
 pj_status_t app_main(void);
 pj_status_t app_destroy(void);
 
+
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+#include <windows.h>
+
+static pj_thread_desc handler_desc;
+
+static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
+{
+    pj_thread_t *thread;
+
+    switch (fdwCtrlType) 
+    { 
+        // Handle the CTRL+C signal. 
+ 
+        case CTRL_C_EVENT: 
+        case CTRL_CLOSE_EVENT: 
+        case CTRL_BREAK_EVENT: 
+        case CTRL_LOGOFF_EVENT: 
+        case CTRL_SHUTDOWN_EVENT: 
+	    pj_thread_register("ctrlhandler", handler_desc, &thread);
+	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
+            app_destroy();
+	    ExitProcess(1);
+            return TRUE; 
+ 
+        default: 
+ 
+            return FALSE; 
+    } 
+}
+
+static void setup_signal_handler(void)
+{
+    SetConsoleCtrlHandler(&CtrlHandler, TRUE);
+}
+
+#else
+
+static void setup_signal_handler(void)
+{
+}
+
+#endif
+
 int main(int argc, char *argv[])
 {
     if (app_init(argc, argv) != PJ_SUCCESS)
 	return 1;
+
+    setup_signal_handler();
 
     app_main();
     app_destroy();
