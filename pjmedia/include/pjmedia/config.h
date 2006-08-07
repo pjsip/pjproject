@@ -161,6 +161,16 @@
 
 
 /**
+ * Suggested or default threshold to be set for fixed silence detection
+ * or as starting threshold for adaptive silence detection. The threshold
+ * has the range from zero to 255.
+ */
+#ifndef PJMEDIA_SILENCE_DET_THRESHOLD
+#   define PJMEDIA_SILENCE_DET_THRESHOLD	4
+#endif
+
+
+/**
  * G.711 Appendix I Packet Lost Concealment (PLC).
  * Enabled only when floating point is enabled.
  */
@@ -175,6 +185,27 @@
  */
 #ifndef PJMEDIA_HAS_SPEEX_AEC
 #   define PJMEDIA_HAS_SPEEX_AEC		1
+#endif
+
+
+/**
+ * Initial signal threshold to be applied to echo suppressor. When
+ * playback signal level is greater than this threshold, the microphone
+ * signal will be reduced or cut.
+ */
+#ifndef PJMEDIA_ECHO_SUPPRESS_THRESHOLD
+#   define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	PJMEDIA_SILENCE_DET_THRESHOLD
+#endif
+
+
+/**
+ * The signal reduction factor to be applied into the microphone signal
+ * when the mic signal needs to be reduced. Valid values are [1-16], where
+ * 1 will leave signal as it is (thus probably transmitting the echo) and
+ * 16 will effectively zero the signal.
+ */
+#ifndef PJMEDIA_ECHO_SUPPRESS_FACTOR
+#   define PJMEDIA_ECHO_SUPPRESS_FACTOR		4
 #endif
 
 

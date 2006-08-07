@@ -38,7 +38,7 @@ enum
     ID_BTN_ACTION,
 };
 
-#define DEFAULT_URI	"sip:192.168.0.66"
+#define DEFAULT_URI	"sip:192.168.0.7"
 
 
 // Forward declarations of functions included in this code module:
@@ -284,7 +284,7 @@ static BOOL OnInitStack(void)
 
     /* Setup media */
     media_cfg.clock_rate = 8000;
-    //media_cfg.ec_tail_len = ;
+    media_cfg.ec_options = PJMEDIA_ECHO_SIMPLE;
     media_cfg.quality = 1;
     media_cfg.ptime = 20;
 

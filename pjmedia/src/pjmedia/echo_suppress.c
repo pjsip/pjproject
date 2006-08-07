@@ -27,7 +27,6 @@
 
 
 #define THIS_FILE			    "echo_suppress.c"
-#define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	    PJMEDIA_SILENCE_DET_THRESHOLD
 
 
 /*
@@ -159,7 +158,15 @@ PJ_DEF(pj_status_t) echo_supp_capture( void *state,
     delay_ms = PJ_TIME_VAL_MSEC(now);
 
     if (delay_ms < ec->tail_ms) {
+#if defined(PJMEDIA_ECHO_SUPPRESS_FACTOR) && PJMEDIA_ECHO_SUPPRESS_FACTOR!=0
+	unsigned i;
+	for (i=0; i<ec->samples_per_frame; ++i) {
+	    rec_frm[i] = (pj_int16_t)(rec_frm[i] >> 
+				      PJMEDIA_ECHO_SUPPRESS_FACTOR);
+	}
+#else
 	pjmedia_zero_samples(rec_frm, ec->samples_per_frame);
+#endif
     }
 
     return PJ_SUCCESS;
@@ -185,10 +192,17 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 					 ec->samples_per_frame, NULL);
 
     if (!silence) {
+#if defined(PJMEDIA_ECHO_SUPPRESS_FACTOR) && PJMEDIA_ECHO_SUPPRESS_FACTOR!=0
+	unsigned i;
+	for (i=0; i<ec->samples_per_frame; ++i) {
+	    rec_frm[i] = (pj_int16_t)(rec_frm[i] >> 
+				      PJMEDIA_ECHO_SUPPRESS_FACTOR);
+	}
+#else
 	pjmedia_zero_samples(rec_frm, ec->samples_per_frame);
+#endif
     }
 
     return PJ_SUCCESS;
 }
-
 

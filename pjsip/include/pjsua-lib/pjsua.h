@@ -2133,6 +2133,13 @@ struct pjsua_media_config
     unsigned		rx_drop_pct;
 
     /**
+     * Echo canceller options (see #pjmedia_echo_create())
+     *
+     * Default: 0.
+     */
+    unsigned		ec_options;
+
+    /**
      * Echo canceller tail length, in miliseconds.
      *
      * Default: 128 (PJSUA_DEFAULT_EC_TAIL_LEN)
@@ -2506,10 +2513,12 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
  *
  * @param tail_ms	The tail length, in miliseconds. Set to zero to
  *			disable AEC.
+ * @param options	Options to be passed to #pjmedia_echo_create().
+ *			Normally the value should be zero.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsua_set_ec_tail(unsigned tail_ms);
+PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
 
 
 /**

@@ -249,14 +249,6 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	}
     }
 
-    /* Create AEC only when direction is full duplex */
-    if (snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	status = pjmedia_snd_port_set_ec_tail(snd_port, pool, AEC_TAIL);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(4,(THIS_FILE, "Unable to create AEC"));
-	    snd_port->ec_state = NULL;
-	}
-    }
 
     /* Start sound stream. */
     status = pjmedia_snd_stream_start(snd_port->snd_stream);
@@ -432,9 +424,10 @@ PJ_DEF(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
 /*
  * Enable AEC
  */
-PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec_tail(pjmedia_snd_port *snd_port,
-					         pj_pool_t *pool,
-					         unsigned tail_ms)
+PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
+					     pj_pool_t *pool,
+					     unsigned tail_ms,
+					     unsigned options)
 {
     pj_status_t status;
 
@@ -454,7 +447,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec_tail(pjmedia_snd_port *snd_port,
     if (tail_ms != 0) {
 	status = pjmedia_echo_create(pool, snd_port->clock_rate, 
 				    snd_port->samples_per_frame, 
-				    tail_ms, 0, &snd_port->ec_state);
+				    tail_ms, options, &snd_port->ec_state);
 	if (status != PJ_SUCCESS)
 	    snd_port->ec_state = NULL;
     } else {

@@ -197,12 +197,14 @@ PJ_DECL(pjmedia_snd_stream*) pjmedia_snd_port_get_snd_stream(
  * @param tail_ms	    Maximum echo tail length to be supported, in
  *			    miliseconds. If zero is specified, the EC would
  *			    be disabled.
+ * @param options	    The options to be passed to #pjmedia_echo_create().
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_port_set_ec_tail(pjmedia_snd_port *snd_port,
-						  pj_pool_t *pool,
-						  unsigned tail_ms);
+PJ_DECL(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
+					      pj_pool_t *pool,
+					      unsigned tail_ms,
+					      unsigned options);
 
 
 /**

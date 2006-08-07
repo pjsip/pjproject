@@ -44,13 +44,6 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_silence_det pjmedia_silence_det;
 
 
-/**
- * Suggested or default threshold to be set for fixed silence detection
- * or as starting threshold for adaptive silence detection. The threshold
- * has the range from zero to 255.
- */
-#define PJMEDIA_SILENCE_DET_THRESHOLD	4
-
 
 /**
  * Create voice activity detector with default settings. The default settings
