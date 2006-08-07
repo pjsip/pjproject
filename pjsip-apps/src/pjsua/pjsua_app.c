@@ -1259,13 +1259,14 @@ static void on_call_media_state(pjsua_call_id call_id)
 	/* Put call in conference with other calls, if desired */
 	if (app_config.auto_conf) {
 	    pjsua_call_id call_ids[PJSUA_MAX_CALLS];
-	    unsigned call_cnt=0;
+	    unsigned call_cnt=PJ_ARRAY_SIZE(call_ids);
 	    unsigned i;
 
 	    /* Get all calls, and establish media connection between
 	     * this call and other calls.
 	     */
 	    pjsua_enum_calls(call_ids, &call_cnt);
+
 	    for (i=0; i<call_cnt; ++i) {
 		if (call_ids[i] == call_id)
 		    continue;
