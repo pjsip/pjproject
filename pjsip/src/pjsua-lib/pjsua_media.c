@@ -75,7 +75,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 #if PJMEDIA_HAS_SPEEX_CODEC
     /* Register speex. */
     status = pjmedia_codec_speex_init(pjsua_var.med_endpt, 
-				      PJMEDIA_SPEEX_NO_UWB,
+				      0,
 				      pjsua_var.media_cfg.quality, 
 				      pjsua_var.media_cfg.quality);
     if (status != PJ_SUCCESS) {
@@ -83,6 +83,21 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 		     status);
 	return status;
     }
+
+    /* Set speex/16000 to higher priority*/
+    codec_id = pj_str("speex/16000");
+    pjmedia_codec_mgr_set_codec_priority( 
+	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+2);
+
+    /* Set speex/8000 to next higher priority*/
+    codec_id = pj_str("speex/8000");
+    pjmedia_codec_mgr_set_codec_priority( 
+	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+1);
+
+
+
 #endif /* PJMEDIA_HAS_SPEEX_CODEC */
 
 #if PJMEDIA_HAS_ILBC_CODEC
@@ -145,7 +160,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     /* Init options for conference bridge. */
     opt = PJMEDIA_CONF_NO_DEVICE;
     if (pjsua_var.media_cfg.quality >= 3 &&
-	pjsua_var.media_cfg.quality <= 7)
+	pjsua_var.media_cfg.quality <= 4)
     {
 	opt |= PJMEDIA_CONF_SMALL_FILTER;
     }

@@ -52,6 +52,7 @@ static struct app_config
     pjsua_conf_port_id	    wav_port;
     pj_bool_t		    auto_play;
     pj_bool_t		    auto_loop;
+    pj_bool_t		    auto_conf;
     unsigned		    ptime;
     unsigned		    auto_answer;
     unsigned		    duration;
@@ -122,6 +123,7 @@ static void usage(void)
     puts  ("  --play-file=file    Play WAV file in conference bridge");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
+    puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --quality=N         Specify media quality (0-10, default=6)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
@@ -580,6 +582,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->auto_loop = 1;
 	    break;
 
+	case OPT_AUTO_CONF:
+	    cfg->auto_conf = 1;
+	    break;
+
 	case OPT_PLAY_FILE:
 	    cfg->wav_file = pj_str(pj_optarg);
 	    break;
@@ -922,6 +928,8 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--auto-play\n");
     if (config->auto_loop)
 	pj_strcat2(&cfg, "--auto-loop\n");
+    if (config->auto_conf)
+	pj_strcat2(&cfg, "--auto-conf\n");
     if (config->wav_file.slen) {
 	pj_ansi_sprintf(line, "--play-file %s\n",
 			config->wav_file.ptr);
@@ -1246,6 +1254,33 @@ static void on_call_media_state(pjsua_call_id call_id)
 	if (app_config.auto_play && app_config.wav_port != PJSUA_INVALID_ID) {
 	    pjsua_conf_connect(app_config.wav_port, call_info.conf_slot);
 	    connect_sound = PJ_FALSE;
+	}
+
+	/* Put call in conference with other calls, if desired */
+	if (app_config.auto_conf) {
+	    pjsua_call_id call_ids[PJSUA_MAX_CALLS];
+	    unsigned call_cnt=0;
+	    unsigned i;
+
+	    /* Get all calls, and establish media connection between
+	     * this call and other calls.
+	     */
+	    pjsua_enum_calls(call_ids, &call_cnt);
+	    for (i=0; i<call_cnt; ++i) {
+		if (call_ids[i] == call_id)
+		    continue;
+		
+		if (!pjsua_call_has_media(call_ids[i]))
+		    continue;
+
+		pjsua_conf_connect(call_info.conf_slot,
+				   pjsua_call_get_conf_port(call_ids[i]));
+		pjsua_conf_connect(pjsua_call_get_conf_port(call_ids[i]),
+				   call_info.conf_slot);
+	    }
+
+	    /* Also connect call to local sound device */
+	    connect_sound = PJ_TRUE;
 	}
 
 	/* Otherwise connect to sound device */

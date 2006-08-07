@@ -2085,8 +2085,8 @@ struct pjsua_media_config
 
     /**
      * Media quality, 0-10, according to this table:
-     *   8-10: resampling use large filter,
-     *   3-7:  resampling use small filter,
+     *   5-10: resampling use large filter,
+     *   3-4:  resampling use small filter,
      *   1-2:  resampling use linear.
      * The media quality also sets speex codec quality/complexity to the
      * number.
