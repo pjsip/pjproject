@@ -598,6 +598,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 
     /* Make sure we don't have pending transaction. */
     if (regc->pending_tsx) {
+	PJ_LOG(4,(THIS_FILE, "Unable to send request, regc has another "
+			     "transaction pending"));
 	pjsip_tx_data_dec_ref( tdata );
 	return PJSIP_EBUSY;
     }
@@ -615,8 +617,10 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
      */
     ++regc->pending_tsx;
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
-    if (status!=PJ_SUCCESS)
+    if (status!=PJ_SUCCESS) {
 	--regc->pending_tsx;
+	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
+    }
 
     return status;
 }
