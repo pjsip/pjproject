@@ -469,8 +469,10 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     entry->id = 0;
     status = pjsip_regc_register(regc, 1, &tdata);
     if (status == PJ_SUCCESS) {
-	pjsip_regc_send(regc, tdata);
-    } else {
+	status = pjsip_regc_send(regc, tdata);
+    } 
+    
+    if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
 	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
@@ -507,13 +509,17 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
-	    pjsip_regc_send(regc, tdata);
-	    return;
-	} else {
+	    status = pjsip_regc_send(regc, tdata);
+	} 
+	
+	if (status != PJ_SUCCESS) {
 	    call_callback(regc, status, tsx->status_code, 
 			  &rdata->msg_info.msg->line.status.reason,
 			  rdata, -1, 0, NULL);
 	}
+
+	return;
+
     } else {
 	int contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
