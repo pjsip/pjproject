@@ -207,7 +207,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
     SetAction(ID_MENU_ANSWER);
     SetURI(call_info.remote_info.ptr, call_info.remote_info.slen, false);
-    pjsua_call_answer(call_id, 180, NULL, NULL);
+    pjsua_call_answer(call_id, 200, NULL, NULL);
 }
 
 
@@ -285,6 +285,7 @@ static BOOL OnInitStack(void)
     /* Setup media */
     media_cfg.clock_rate = 8000;
     media_cfg.ec_options = PJMEDIA_ECHO_SIMPLE;
+    media_cfg.ec_tail_len = 256;
     media_cfg.quality = 1;
     media_cfg.ptime = 20;
 
@@ -305,12 +306,13 @@ static BOOL OnInitStack(void)
     }
 
     /* Set codec priority */
-    pjsua_codec_set_priority(pj_cstr(&tmp, "gsm"), 10);
     pjsua_codec_set_priority(pj_cstr(&tmp, "pcmu"), 240);
     pjsua_codec_set_priority(pj_cstr(&tmp, "pcma"), 230);
     pjsua_codec_set_priority(pj_cstr(&tmp, "speex/8000"), 190);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "ilbc"), 189);
     pjsua_codec_set_priority(pj_cstr(&tmp, "speex/16000"), 180);
     pjsua_codec_set_priority(pj_cstr(&tmp, "speex/32000"), 0);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "gsm"), 100);
 
 
     /* Add UDP transport and the corresponding PJSUA account */
