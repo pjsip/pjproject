@@ -396,6 +396,8 @@ static void answer_timer_cb(pj_timer_heap_t *h, pj_timer_entry *entry)
     struct call *call = entry->user_data;
     pj_bool_t has_initial = PJ_TRUE;
 
+    PJ_UNUSED_ARG(h);
+
     entry->id = 0;
     send_response(call->inv, NULL, 200, &has_initial);
 }
@@ -532,7 +534,7 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 
     } else {
 	/* Send the 200 response immediately . */  
-	status = pjsip_inv_send_msg(call->inv, tdata); 
+	status = send_response(call->inv, rdata, 200, &has_initial);
 	PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return PJ_TRUE);
     }
 

@@ -256,38 +256,32 @@ int main(int argc, char *argv[])
     status = pjmedia_codec_g711_init(g_med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+    
     /* 
-     * Initialize RTP socket info for the media.
-     * The RTP socket is hard-codec to port 4000.
+     * Create media transport used to send/receive RTP/RTCP socket.
+     * One media transport is needed for each call. Application may
+     * opt to re-use the same media transport for subsequent calls.
      */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g_med_skinfo.rtp_sock);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-    
-    pj_sockaddr_in_init( &g_med_skinfo.rtp_addr_name, 
-			 pjsip_endpt_name(g_endpt), 4000);
-
-    status = pj_sock_bind(g_med_skinfo.rtp_sock, &g_med_skinfo.rtp_addr_name,
-			  sizeof(pj_sockaddr_in));
-    if (status != PJ_SUCCESS) {
-	app_perror( THIS_FILE, 
-		    "Unable to bind RTP socket", 
-		    status);
-	return 1;
-    }
-
-
-    /* For simplicity, ignore RTCP socket. */
-    g_med_skinfo.rtcp_sock = PJ_INVALID_SOCKET;
-    g_med_skinfo.rtcp_addr_name = g_med_skinfo.rtp_addr_name;
-
-    
-    /* Create media transport */
-    status = pjmedia_transport_udp_attach(g_med_endpt, NULL, &g_med_skinfo,
-					  0, &g_med_transport);
+    status = pjmedia_transport_udp_create(g_med_endpt, NULL, 4000, 0, 
+					  &g_med_transport);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create media transport", status);
 	return 1;
     }
+
+    /* 
+     * Get socket info (address, port) of the media transport. We will
+     * need this info to create SDP (i.e. the address and port info in
+     * the SDP).
+     */
+    {
+	pjmedia_transport_udp_info udp_info;
+
+	pjmedia_transport_udp_get_info(g_med_transport, &udp_info);
+	pj_memcpy(&g_med_skinfo, &udp_info.skinfo, 
+		  sizeof(pjmedia_sock_info));
+    }
+
 
     /*
      * If URL is specified, then make call immediately.
