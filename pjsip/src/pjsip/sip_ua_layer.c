@@ -209,6 +209,30 @@ PJ_DEF(pjsip_user_agent*) pjsip_ua_instance(void)
 }
 
 
+/**
+ * Lock the dialog's hash table. This function is normally called by
+ * dialog code only.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DEF(pj_status_t) pjsip_ua_lock_dlg_table(void)
+{
+    return pj_mutex_lock(mod_ua.mutex);
+}
+
+
+/**
+ * Unlock the dialog's hash table. This function is normally called by
+ * dialog code only.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DEF(pj_status_t) pjsip_ua_unlock_dlg_table(void)
+{
+    return pj_mutex_unlock(mod_ua.mutex);
+}
+
+
 /*
  * Get the endpoint where this UA is currently registered.
  */
@@ -561,11 +585,17 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     /* Mark the dialog id of the request. */
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
+    /* Lock the dialog */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Done processing in the UA */
     pj_mutex_unlock(mod_ua.mutex);
 
     /* Pass to dialog. */
     pjsip_dlg_on_rx_request(dlg, rdata);
+
+    /* Unlock the dialog. This may destroy the dialog */
+    pjsip_dlg_dec_lock(dlg);
 
     /* Report as handled. */
     return PJ_TRUE;
@@ -590,13 +620,19 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
      * the response is a forked response.
      */
 
+    /* Lock user agent dlg table before we're doing anything. */
+    pj_mutex_lock(mod_ua.mutex);
+
     /* Check if transaction is present. */
     tsx = pjsip_rdata_get_tsx(rdata);
     if (tsx) {
 	/* Check if dialog is present in the transaction. */
 	dlg = pjsip_tsx_get_dlg(tsx);
-	if (!dlg)
+	if (!dlg) {
+	    /* Unlock dialog hash table. */
+	    pj_mutex_unlock(mod_ua.mutex);
 	    return PJ_FALSE;
+	}
 
 	/* Get the dialog set. */
 	dlg_set = dlg->dlg_set;
@@ -620,11 +656,11 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 	     * This must be some stateless response sent by other modules,
 	     * or a very late response.
 	     */
+	    /* Unlock dialog hash table. */
+	    pj_mutex_unlock(mod_ua.mutex);
 	    return PJ_FALSE;
 	}
 
-	/* Lock user agent before accessing the hash table. */
-	pj_mutex_lock(mod_ua.mutex);
 
 	/* Get the dialog set. */
 	dlg_set = pj_hash_get(mod_ua.dlg_table, 
@@ -632,10 +668,10 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 			      rdata->msg_info.from->tag.slen,
 			      NULL);
 
-	/* Done with accessing the hash table. */
-	pj_mutex_unlock(mod_ua.mutex);
-
 	if (!dlg_set) {
+	    /* Unlock dialog hash table. */
+	    pj_mutex_unlock(mod_ua.mutex);
+
 	    /* Strayed 2xx response!! */
 	    PJ_LOG(4,(THIS_FILE, 
 		      "Received strayed 2xx response (no dialog is found)"
@@ -665,9 +701,6 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 	
 	int st_code = rdata->msg_info.msg->line.status.code;
 	pj_str_t *to_tag = &rdata->msg_info.to->tag;
-
-	/* Must hold UA mutex before accessing dialog set. */
-	pj_mutex_lock(mod_ua.mutex);
 
 	dlg = dlg_set->dlg_list.next;
 
@@ -733,9 +766,6 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 
 	}
 
-	/* Done with the dialog set. */
-	pj_mutex_unlock(mod_ua.mutex);
-
     } else {
 	/* Either this is a non-INVITE response, or subsequent INVITE
 	 * within dialog. The dialog should have been identified when
@@ -751,8 +781,17 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     /* Put the dialog instance in the rdata. */
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
+    /* Acquire lock to the dialog. */
+    pjsip_dlg_inc_lock(dlg);
+
+    /* Unlock dialog hash table. */
+    pj_mutex_unlock(mod_ua.mutex);
+
     /* Pass the response to the dialog. */
     pjsip_dlg_on_rx_response(dlg, rdata);
+
+    /* Unlock the dialog. This may destroy the dialog. */
+    pjsip_dlg_dec_lock(dlg);
 
     /* Done. */
     return PJ_TRUE;

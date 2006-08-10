@@ -108,7 +108,7 @@ struct pjsip_dialog
     /* Dialog's system properties. */
     char		obj_name[PJ_MAX_OBJ_NAME];  /**< Standard id.	    */
     pj_pool_t	       *pool;	    /**< Dialog's pool.			    */
-    pj_mutex_t	       *mutex;	    /**< Dialog's mutex. Do not call!!
+    pj_mutex_t	       *mutex_;	    /**< Dialog's mutex. Do not call!!
 					 Use pjsip_dlg_inc_lock() instead!  */
     pjsip_user_agent   *ua;	    /**< User agent instance.		    */
     pjsip_endpoint     *endpt;	    /**< Endpoint instance.		    */

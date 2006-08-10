@@ -668,6 +668,9 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 	return PJSIP_SIMPLE_ENOPKG;
 
 
+    /* Must lock dialog before using pool etc. */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Init attributes: */
 
     sub = pj_pool_zalloc(dlg->pool, sizeof(struct pjsip_evsub));
@@ -714,8 +717,10 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     /* Register as dialog usage: */
 
     status = pjsip_dlg_add_usage(dlg, &mod_evsub.mod, dlgsub_head);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
 	return status;
+    }
 
 
     PJ_LOG(5,(sub->obj_name, "%s subscription created, using dialog %s",
@@ -723,6 +728,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 	      dlg->obj_name));
 
     *p_evsub = sub;
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }

@@ -80,7 +80,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
 
     pj_list_init(&dlg->inv_hdr);
 
-    status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex);
+    status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex_);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -89,16 +89,18 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     return PJ_SUCCESS;
 
 on_error:
-    if (dlg->mutex)
-	pj_mutex_destroy(dlg->mutex);
+    if (dlg->mutex_)
+	pj_mutex_destroy(dlg->mutex_);
     pjsip_endpt_release_pool(endpt, pool);
     return status;
 }
 
 static void destroy_dialog( pjsip_dialog *dlg )
 {
-    if (dlg->mutex)
-	pj_mutex_destroy(dlg->mutex);
+    if (dlg->mutex_) {
+	pj_mutex_destroy(dlg->mutex_);
+	dlg->mutex_ = NULL;
+    }
     pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 
@@ -606,8 +608,7 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg )
     PJ_LOG(5,(dlg->obj_name, "Dialog destroyed"));
 
     /* Destroy this dialog. */
-    pj_mutex_destroy(dlg->mutex);
-    pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
+    destroy_dialog(dlg);
 
     return PJ_SUCCESS;
 }
@@ -638,13 +639,13 @@ PJ_DEF(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
 
     PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
 
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
 
     /* Clear route set. */
     pj_list_init(&dlg->route_set);
 
     if (!route_set) {
-	pj_mutex_unlock(dlg->mutex);
+	pjsip_dlg_dec_lock(dlg);
 	return PJ_SUCCESS;
     }
 
@@ -658,8 +659,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_set_route_set( pjsip_dialog *dlg,
 	r = r->next;
     }
 
-    pj_mutex_unlock(dlg->mutex);
-
+    pjsip_dlg_dec_lock(dlg);
     return PJ_SUCCESS;
 }
 
@@ -672,9 +672,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
 {
     PJ_ASSERT_RETURN(dlg && mod, PJ_EINVAL);
 
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
     ++dlg->sess_count;
-    pj_mutex_unlock(dlg->mutex);
+    pjsip_dlg_dec_lock(dlg);
 
     PJ_LOG(5,(dlg->obj_name, "Session count inc to %d by %.*s",
 	      dlg->sess_count, (int)mod->name.slen, mod->name.ptr));
@@ -684,12 +684,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
 
 /*
  * Lock dialog and increment session counter temporarily
- * to prevent it from being deleted.
+ * to prevent it from being deleted. In addition, it must lock
+ * the user agent's dialog table first, to prevent deadlock.
  */
 PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 {
-    pj_mutex_lock(dlg->mutex);
+    pjsip_ua_lock_dlg_table();
+
+    pj_mutex_lock(dlg->mutex_);
     dlg->sess_count++;
+
+    pjsip_ua_unlock_dlg_table();
 }
 
 
@@ -699,16 +704,20 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
  */
 PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
 {
+    pjsip_ua_lock_dlg_table();
+
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
     if (dlg->sess_count==0 && dlg->tsx_count==0) {
-	pj_mutex_unlock(dlg->mutex);
-	pj_mutex_lock(dlg->mutex);
+	pj_mutex_unlock(dlg->mutex_);
+	pj_mutex_lock(dlg->mutex_);
 	unregister_and_destroy_dialog(dlg);
     } else {
-	pj_mutex_unlock(dlg->mutex);
+	pj_mutex_unlock(dlg->mutex_);
     }
+
+    pjsip_ua_unlock_dlg_table();
 }
 
 
@@ -724,7 +733,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
     PJ_LOG(5,(dlg->obj_name, "Session count dec to %d by %.*s",
 	      dlg->sess_count-1, (int)mod->name.slen, mod->name.ptr));
 
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
+    --dlg->sess_count;
     pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
@@ -748,7 +758,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
 	      "Module %.*s added as dialog usage, data=%p",
 	      (int)mod->name.slen, mod->name.ptr, mod_data));
 
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
 
     /* Usages are sorted on priority, lowest number first.
      * Find position to put the new module, also makes sure that
@@ -757,7 +767,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
     for (index=0; index<dlg->usage_cnt; ++index) {
 	if (dlg->usage[index] == mod) {
 	    pj_assert(!"This module is already registered");
-	    pj_mutex_unlock(dlg->mutex);
+	    pjsip_dlg_dec_lock(dlg);
 	    return PJSIP_ETYPEEXISTS;
 	}
 
@@ -777,7 +787,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
     /* Increment count. */
     ++dlg->usage_cnt;
 
-    pj_mutex_unlock(dlg->mutex);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -896,7 +906,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
     PJ_ASSERT_RETURN(dlg && method && p_tdata, PJ_EINVAL);
 
     /* Lock dialog. */
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
 
     /* Use outgoing CSeq and increment it by one. */
     if (cseq <= 0)
@@ -921,7 +931,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
     }
 
     /* Unlock dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    pjsip_dlg_dec_lock(dlg);
 
     *p_tdata = tdata;
 
@@ -1113,12 +1123,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 	return status;
 
     /* Lock the dialog. */
-    pj_mutex_lock(dlg->mutex);
+    pjsip_dlg_inc_lock(dlg);
 
     dlg_beautify_response(dlg, st_code, tdata);
 
     /* Unlock the dialog. */
-    pj_mutex_unlock(dlg->mutex);
+    pjsip_dlg_dec_lock(dlg);
 
     /* Done. */
     *p_tdata = tdata;

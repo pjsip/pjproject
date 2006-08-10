@@ -435,6 +435,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     /* Verify arguments. */
     PJ_ASSERT_RETURN(dlg && p_inv, PJ_EINVAL);
 
+    /* Must lock dialog first */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Normalize options */
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
@@ -444,7 +447,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 
     /* Create the session */
     inv = pj_pool_zalloc(dlg->pool, sizeof(pjsip_inv_session));
-    PJ_ASSERT_RETURN(inv != NULL, PJ_ENOMEM);
+    pj_assert(inv != NULL);
 
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAC;
@@ -461,20 +464,26 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     if (local_sdp) {
 	status = pjmedia_sdp_neg_create_w_local_offer(dlg->pool, local_sdp,
 						      &inv->neg);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    pjsip_dlg_dec_lock(dlg);
 	    return status;
+	}
     }
 
     /* Register invite as dialog usage. */
     status = pjsip_dlg_add_usage(dlg, &mod_inv.mod, inv);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
 	return status;
+    }
 
     /* Increment dialog session */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
 
     /* Done */
     *p_inv = inv;
+
+    pjsip_dlg_dec_lock(dlg);
 
     PJ_LOG(5,(inv->obj_name, "UAC invite session created for dialog %s",
 	      dlg->obj_name));
@@ -840,6 +849,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 		     msg->line.req.method.id == PJSIP_INVITE_METHOD,
 		     PJ_EINVALIDOP);
 
+    /* Lock dialog */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Normalize options */
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
@@ -849,7 +861,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Create the session */
     inv = pj_pool_zalloc(dlg->pool, sizeof(pjsip_inv_session));
-    PJ_ASSERT_RETURN(inv != NULL, PJ_ENOMEM);
+    pj_assert(inv != NULL);
 
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAS;
@@ -872,8 +884,10 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 	if (status == PJ_SUCCESS)
 	    status = pjmedia_sdp_validate(rem_sdp);
 
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    pjsip_dlg_dec_lock(dlg);
 	    return status;
+	}
     }
 
     /* Create negotiator. */
@@ -888,13 +902,17 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 	status = PJ_SUCCESS;
     }
 
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
 	return status;
+    }
 
     /* Register invite as dialog usage. */
     status = pjsip_dlg_add_usage(dlg, &mod_inv.mod, inv);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
 	return status;
+    }
 
     /* Increment session in the dialog. */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
@@ -909,6 +927,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
 
     /* Done */
+    pjsip_dlg_dec_lock(dlg);
     *p_inv = inv;
 
     PJ_LOG(5,(inv->obj_name, "UAS invite session created for dialog %s",
