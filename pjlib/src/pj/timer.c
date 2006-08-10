@@ -1,7 +1,18 @@
 /* $Id$ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * The PJLIB's timer heap is based (or more correctly, copied and modied)
+ * from ACE library by Douglas C. Schmidt. ACE is an excellent OO framework
+ * that implements many core patterns for concurrent communication software.
+ * If you're looking for C++ alternative of PJLIB, then ACE is your best
+ * solution.
  *
+ * You may use this file according to ACE open source terms or PJLIB open
+ * source terms. You can find the fine ACE library at:
+ *  http://www.cs.wustl.edu/~schmidt/ACE.html
+ *
+ * ACE is Copyright (C)1993-2006 Douglas C. Schmidt <d.schmidt@vanderbilt.edu>
+ *
+ * GNU Public License:
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or

@@ -1,7 +1,5 @@
 /* $Id$ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -47,6 +45,12 @@ PJ_BEGIN_DECL
  *      the heap.  This allows us to completely remove the need for
  *      dynamic memory allocation, which is important for real-time
  *      systems.
+ *
+ * You can find the fine ACE library at:
+ *  http://www.cs.wustl.edu/~schmidt/ACE.html
+ *
+ * ACE is Copyright (C)1993-2006 Douglas C. Schmidt <d.schmidt@vanderbilt.edu>
+ *
  * @{
  *
  * \section pj_timer_examples_sec Examples
