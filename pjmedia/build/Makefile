@@ -23,6 +23,7 @@ PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 
 export PJMEDIA_LIB:=../lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
 export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
+export PJSDP_LIB:=../lib/libpjsdp-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Sound frameworks
@@ -77,6 +78,18 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
+
+
+###############################################################################
+# Defines for building PJSDP library
+# Note that SDP functionality is already INCLUDED in PJMEDIA.
+# The PJSDP library should only be used for applications that want SDP
+# but don't want to use the rest of the media framework.
+#
+export PJSDP_SRCDIR = ../src/pjmedia
+export PJSDP_OBJS += 	$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			errno.o sdp.o sdp_cmp.o sdp_neg.o
+export PJSDP_CFLAGS += $(_CFLAGS)
 
 
 ###############################################################################
@@ -143,7 +156,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia pjmedia-codec
+TARGETS := pjmedia pjmedia-codec pjsdp
 #pjmedia-test
 
 all: $(TARGETS)
@@ -161,6 +174,9 @@ pjmedia:
 
 pjmedia-codec:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $(PJMEDIA_CODEC_LIB)
+
+pjsdp:
+	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $(PJSDP_LIB)
 
 pjmedia-test: $(PJMEDIA_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $(PJMEDIA_TEST_EXE)
@@ -182,21 +198,25 @@ pjmedia-test: $(PJMEDIA_LIB)
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-codec-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-test-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsdp-$(TARGET_NAME).depend),$(HOST_RMR))
 	
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 	echo '$(PJMEDIA_LIB): .pjmedia-$(TARGET_NAME).depend' >> .pjmedia-$(TARGET_NAME).depend; \
 	echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(TARGET_NAME).depend' >> .pjmedia-codec-$(TARGET_NAME).depend; \
 	echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend; \
