@@ -179,6 +179,15 @@ PJ_DEF(pj_uint32_t) pj_getpid(void)
 }
 
 /*
+ * Check if this thread has been registered to PJLIB.
+ */
+PJ_DEF(pj_status_t) pj_thread_is_registered(void)
+{
+    return pj_thread_local_get(thread_tls_id) != 0;
+}
+
+
+/*
  * pj_thread_register(..)
  */
 PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,

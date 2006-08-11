@@ -130,6 +130,14 @@ PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
 					  pj_thread_t **thread);
 
 /**
+ * Check if this thread has been registered to PJLIB.
+ *
+ * @return		Non-zero if it is registered.
+ */
+PJ_DECL(pj_status_t) pj_thread_is_registered(void);
+
+
+/**
  * Get thread name.
  *
  * @param thread    The thread handle.
