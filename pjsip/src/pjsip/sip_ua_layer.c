@@ -586,16 +586,17 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
     /* Lock the dialog */
+    PJ_LOG(6,(dlg->obj_name, "UA layer acquiring dialog lock for request"));
     pjsip_dlg_inc_lock(dlg);
-
-    /* Done processing in the UA */
-    pj_mutex_unlock(mod_ua.mutex);
 
     /* Pass to dialog. */
     pjsip_dlg_on_rx_request(dlg, rdata);
 
     /* Unlock the dialog. This may destroy the dialog */
     pjsip_dlg_dec_lock(dlg);
+
+    /* Done processing in the UA */
+    pj_mutex_unlock(mod_ua.mutex);
 
     /* Report as handled. */
     return PJ_TRUE;
@@ -782,16 +783,17 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
     /* Acquire lock to the dialog. */
+    PJ_LOG(6,(dlg->obj_name, "UA layer acquiring dialog lock for response"));
     pjsip_dlg_inc_lock(dlg);
-
-    /* Unlock dialog hash table. */
-    pj_mutex_unlock(mod_ua.mutex);
 
     /* Pass the response to the dialog. */
     pjsip_dlg_on_rx_response(dlg, rdata);
 
     /* Unlock the dialog. This may destroy the dialog. */
     pjsip_dlg_dec_lock(dlg);
+
+    /* Unlock dialog hash table. */
+    pj_mutex_unlock(mod_ua.mutex);
 
     /* Done. */
     return PJ_TRUE;

@@ -689,12 +689,18 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
  */
 PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 {
+    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_inc_lock(), sess_count=%d", 
+	      dlg->sess_count));
+
     pjsip_ua_lock_dlg_table();
 
     pj_mutex_lock(dlg->mutex_);
     dlg->sess_count++;
 
-    pjsip_ua_unlock_dlg_table();
+    //pjsip_ua_unlock_dlg_table();
+
+    PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_inc_lock(), sess_count=%d", 
+	      dlg->sess_count));
 }
 
 
@@ -704,7 +710,10 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
  */
 PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
 {
-    pjsip_ua_lock_dlg_table();
+    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d", 
+	      dlg->sess_count));
+
+    //pjsip_ua_lock_dlg_table();
 
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
@@ -718,6 +727,8 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     }
 
     pjsip_ua_unlock_dlg_table();
+
+    PJ_LOG(6,(THIS_FILE, "Leaving pjsip_dlg_dec_lock() (dlg=%p)", dlg));
 }
 
 
