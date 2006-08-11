@@ -43,12 +43,17 @@
 
 #define THIS_FILE   "os_core_unix.c"
 
+#define SIGNATURE1  0xDEAFBEEF
+#define SIGNATURE2  0xDEADC0DE
+
 struct pj_thread_t
 {
     char	    obj_name[PJ_MAX_OBJ_NAME];
     pthread_t	    thread;
     pj_thread_proc *proc;
     void	   *arg;
+    pj_uint32_t	    signature1;
+    pj_uint32_t	    signature2;
 
     pj_mutex_t	   *suspended_mutex;
 
@@ -192,7 +197,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 	return PJ_EBUG;
     }
 
-    /* If a thread descriptor has been registered before, just return it. */
+    /* Warn if this thread has been registered before */
     if (pj_thread_local_get (thread_tls_id) != 0) {
 	// 2006-02-26 bennylp:
 	//  This wouldn't work in all cases!.
@@ -205,9 +210,18 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 			     "thread"));
     }
 
+    /* On the other hand, also warn if the thread descriptor buffer seem to
+     * have been used to register other threads.
+     */
+    pj_assert(thread->signature1 != SIGNATURE1 ||
+	      thread->signature2 != SIGNATURE2 ||
+	      (thread->thread == pthread_self()));
+
     /* Initialize and set the thread entry. */
     pj_bzero(desc, sizeof(struct pj_thread_t));
     thread->thread = pthread_self();
+    thread->signature1 = SIGNATURE1;
+    thread->signature2 = SIGNATURE2;
 
     if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
 	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
@@ -217,8 +231,10 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 			 "thr%p", (void*)thread->thread);
     
     rc = pj_thread_local_set(thread_tls_id, thread);
-    if (rc != PJ_SUCCESS)
+    if (rc != PJ_SUCCESS) {
+	pj_bzero(desc, sizeof(struct pj_thread_t));
 	return rc;
+    }
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     thread->stk_start = &stack_ptr;

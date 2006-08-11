@@ -115,7 +115,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	pre += pj_utoa_pad(ptime.msec, pre, 3, '0');
     }
     if (log_decor & PJ_LOG_HAS_SENDER) {
-	enum { SENDER_WIDTH = 12 };
+	enum { SENDER_WIDTH = 14 };
 	int sender_len = strlen(sender);
 	*pre++ = ' ';
 	if (sender_len <= SENDER_WIDTH) {
