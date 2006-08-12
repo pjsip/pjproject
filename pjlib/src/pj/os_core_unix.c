@@ -79,6 +79,7 @@ struct pj_mutex_t
 #if PJ_DEBUG
     int		        nesting_level;
     pj_thread_t	       *owner;
+    char		owner_name[PJ_MAX_OBJ_NAME];
 #endif
 };
 
@@ -978,20 +979,35 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
+#if PJ_DEBUG
+    PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s is waiting (mutex owner=%s)", 
+				pj_thread_this()->obj_name,
+				mutex->owner_name));
+#else
     PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s is waiting", 
 				pj_thread_this()->obj_name));
+#endif
 
     status = pthread_mutex_lock( &mutex->mutex );
 
-    PJ_LOG(6,(mutex->obj_name, 
-	      (status==0 ? "Mutex acquired by thread %s" : "FAILED by %s"),
-	      pj_thread_this()->obj_name));
 
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
 	mutex->owner = pj_thread_this();
+	pj_ansi_strcpy(mutex->owner_name, mutex->owner->obj_name);
 	++mutex->nesting_level;
     }
+
+    PJ_LOG(6,(mutex->obj_name, 
+	      (status==0 ? 
+		"Mutex acquired by thread %s (level=%d)" : 
+		"Mutex acquisition FAILED by %s (level=%d)"),
+	      pj_thread_this()->obj_name,
+	      mutex->nesting_level));
+#else
+    PJ_LOG(6,(mutex->obj_name, 
+	      (status==0 ? "Mutex acquired by thread %s" : "FAILED by %s"),
+	      pj_thread_this()->obj_name));
 #endif
 
     if (status == 0)
@@ -1019,11 +1035,16 @@ PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex)
     pj_assert(mutex->owner == pj_thread_this());
     if (--mutex->nesting_level == 0) {
 	mutex->owner = NULL;
+	mutex->owner_name[0] = '\0';
     }
-#endif
 
+    PJ_LOG(6,(mutex->obj_name, "Mutex released by thread %s (level=%d)", 
+				pj_thread_this()->obj_name, 
+				mutex->nesting_level));
+#else
     PJ_LOG(6,(mutex->obj_name, "Mutex released by thread %s", 
 				pj_thread_this()->obj_name));
+#endif
 
     status = pthread_mutex_unlock( &mutex->mutex );
     if (status == 0)
@@ -1051,12 +1072,17 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
     status = pthread_mutex_trylock( &mutex->mutex );
 
     if (status==0) {
-	PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s", 
-				  pj_thread_this()->obj_name));
-
 #if PJ_DEBUG
 	mutex->owner = pj_thread_this();
+	pj_ansi_strcpy(mutex->owner_name, mutex->owner->obj_name);
 	++mutex->nesting_level;
+
+	PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s (level=%d)", 
+				   pj_thread_this()->obj_name,
+				   mutex->nesting_level));
+#else
+	PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s", 
+				  pj_thread_this()->obj_name));
 #endif
     }
     
@@ -1081,7 +1107,8 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
 #if PJ_HAS_THREADS
-    PJ_LOG(6,(mutex->obj_name, "Mutex destroyed"));
+    PJ_LOG(6,(mutex->obj_name, "Mutex destroyed by thread %s",
+			       pj_thread_this()->obj_name));
     status = pthread_mutex_destroy( &mutex->mutex );
     if (status == 0)
 	return PJ_SUCCESS;

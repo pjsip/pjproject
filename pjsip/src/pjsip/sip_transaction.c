@@ -905,7 +905,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     tsx->timeout_timer.user_data = tsx;
     tsx->timeout_timer.cb = &tsx_timer_callback;
     
-    status = pj_mutex_create_recursive(pool, "tsx%p", &tsx->mutex);
+    status = pj_mutex_create_recursive(pool, tsx->obj_name, &tsx->mutex);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_release_pool(mod_tsx_layer.endpt, pool);
 	return status;

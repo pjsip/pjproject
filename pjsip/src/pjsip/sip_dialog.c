@@ -80,7 +80,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
 
     pj_list_init(&dlg->inv_hdr);
 
-    status = pj_mutex_create_recursive(pool, "dlg%p", &dlg->mutex_);
+    status = pj_mutex_create_recursive(pool, dlg->obj_name, &dlg->mutex_);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
