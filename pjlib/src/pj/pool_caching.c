@@ -69,7 +69,7 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.on_block_alloc = &cpool_on_block_alloc;
     cp->factory.on_block_free = &cpool_on_block_free;
 
-    cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 256, 
+    cp->pool = pj_pool_create_int(&cp->factory, "cachingpool", 512, 
 				  0, NULL);
     i = pj_mutex_create_simple(cp->pool, "cachingpool", &cp->mutex);
 }
