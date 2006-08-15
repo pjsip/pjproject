@@ -66,7 +66,8 @@ export PJSIP_UA_CFLAGS += $(_CFLAGS)
 #
 export PJSIP_SIMPLE_SRCDIR = ../src/pjsip-simple
 export PJSIP_SIMPLE_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			errno.o evsub.o evsub_msg.o iscomposing.o pidf.o presence.o \
+			errno.o evsub.o evsub_msg.o iscomposing.o \
+			pidf.o presence.o presence_body.o publishc.o \
 			xpidf.o
 export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 

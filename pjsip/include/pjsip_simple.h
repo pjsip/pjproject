@@ -38,6 +38,7 @@
 #include <pjsip-simple/iscomposing.h>
 #include <pjsip-simple/presence.h>
 #include <pjsip-simple/pidf.h>
+#include <pjsip-simple/publish.h>
 #include <pjsip-simple/xpidf.h>
 
 #endif	/* __PJSIP_SIMPLE_H__ */

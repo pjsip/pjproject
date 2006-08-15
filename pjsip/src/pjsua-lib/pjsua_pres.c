@@ -566,14 +566,163 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 }
 
 
+/*
+ * Client presence publication callback.
+ */
+static void publish_cb(struct pjsip_publishc_cbparam *param)
+{
+    pjsua_acc *acc = param->token;
+
+    if (param->code/100 != 2 || param->status != PJ_SUCCESS) {
+	if (param->status != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+
+	    pj_strerror(param->status, errmsg, sizeof(errmsg));
+	    PJ_LOG(1,(THIS_FILE, 
+		      "Client publication (PUBLISH) failed, status=%d, msg=%s",
+		       param->status, errmsg));
+	} else {
+	    PJ_LOG(1,(THIS_FILE, 
+		      "Client publication (PUBLISH) failed (%d/%.*s)",
+		       param->code, (int)param->reason.slen,
+		       param->reason.ptr));
+	}
+
+	pjsip_publishc_destroy(param->pubc);
+	acc->publish_sess = NULL;
+    }
+}
+
+
+/*
+ * Send PUBLISH request.
+ */
+static pj_status_t send_publish(int acc_id, pj_bool_t active)
+{
+    pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pjsip_pres_status pres_status;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+
+    /* Create PUBLISH request */
+    if (active) {
+	status = pjsip_publishc_publish(acc->publish_sess, PJ_TRUE, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating PUBLISH request", status);
+	    goto on_error;
+	}
+
+	/* Set our online status: */
+	pj_bzero(&pres_status, sizeof(pres_status));
+	pres_status.info_cnt = 1;
+	pres_status.info[0].basic_open = acc->online_status;
+
+	/* Create and add PIDF message body */
+	status = pjsip_pres_create_pidf(tdata->pool, &pres_status,
+					&acc_cfg->id, &tdata->msg->body);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating PIDF for PUBLISH request",
+			 status);
+	    pjsip_tx_data_dec_ref(tdata);
+	    goto on_error;
+	}
+    } else {
+	status = pjsip_publishc_unpublish(acc->publish_sess, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating PUBLISH request", status);
+	    goto on_error;
+	}
+    }
+
+    /* Add headers etc */
+    pjsua_process_msg_data(tdata, NULL);
+
+    /* Send the PUBLISH request */
+    status = pjsip_publishc_send(acc->publish_sess, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error sending PUBLISH request", status);
+	goto on_error;
+    }
+
+    acc->publish_state = acc->online_status;
+    return PJ_SUCCESS;
+
+on_error:
+    pjsip_publishc_destroy(acc->publish_sess);
+    acc->publish_sess = NULL;
+    return status;
+}
+
+
+/* Create client publish session */
+static pj_status_t create_publish(int acc_id)
+{
+    const pj_str_t STR_PRESENCE = { "presence", 8 };
+    pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pj_status_t status;
+
+    /* Create and init client publication session */
+    if (acc_cfg->publish_enabled) {
+
+	/* Create client publication */
+	status = pjsip_publishc_create(pjsua_var.endpt, 0, acc, &publish_cb,
+				       &acc->publish_sess);
+	if (status != PJ_SUCCESS) {
+	    acc->publish_sess = NULL;
+	    return status;
+	}
+
+	/* Initialize client publication */
+	status = pjsip_publishc_init(acc->publish_sess, &STR_PRESENCE,
+				     &acc_cfg->id, &acc_cfg->id,
+				     &acc_cfg->id, 
+				     PJSUA_PUBLISH_EXPIRATION);
+	if (status != PJ_SUCCESS) {
+	    acc->publish_sess = NULL;
+	    return status;
+	}
+
+	/* Send initial PUBLISH request */
+	if (acc->online_status != 0) {
+	    status = send_publish(acc_id, PJ_TRUE);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+
+    } else {
+	acc->publish_sess = NULL;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Init presence for account */
+pj_status_t pjsua_pres_init_acc(int acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    /* Init presence subscription */
+    pj_list_init(&acc->pres_srv_list);
+
+
+    return create_publish(acc_id);
+}
+
+
 /* Terminate server subscription for the account */
 void pjsua_pres_delete_acc(int acc_id)
 {
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_srv_pres *uapres;
 
     uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
 
-    while (uapres != &pjsua_var.acc[acc_id].pres_srv_list) {
+    while (uapres != &acc->pres_srv_list) {
 	
 	pjsip_pres_status pres_status;
 	pj_str_t reason = { "noresource", 10 };
@@ -593,24 +742,36 @@ void pjsua_pres_delete_acc(int acc_id)
 
 	uapres = uapres->next;
     }
+
+    if (acc->publish_sess) {
+	acc->online_status = PJ_FALSE;
+	send_publish(acc_id, PJ_FALSE);
+	if (acc->publish_sess) {
+	    pjsip_publishc_destroy(acc->publish_sess);
+	    acc->publish_sess = NULL;
+	}
+	acc_cfg->publish_enabled = PJ_FALSE;
+    }
 }
 
 
 /* Refresh subscription (e.g. when our online status has changed) */
 static void refresh_server_subscription(int acc_id)
 {
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_srv_pres *uapres;
 
     uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
 
-    while (uapres != &pjsua_var.acc[acc_id].pres_srv_list) {
+    while (uapres != &acc->pres_srv_list) {
 	
 	pjsip_pres_status pres_status;
 	pjsip_tx_data *tdata;
 
 	pjsip_pres_get_status(uapres->sub, &pres_status);
-	if (pres_status.info[0].basic_open != pjsua_var.acc[acc_id].online_status) {
-	    pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
+	if (pres_status.info[0].basic_open != acc->online_status) {
+	    pres_status.info[0].basic_open = acc->online_status;
 	    pjsip_pres_set_status(uapres->sub, &pres_status);
 
 	    if (pjsip_pres_current_notify(uapres->sub, &tdata)==PJ_SUCCESS) {
@@ -620,6 +781,16 @@ static void refresh_server_subscription(int acc_id)
 	}
 
 	uapres = uapres->next;
+    }
+
+    /* Send PUBLISH if required */
+    if (acc_cfg->publish_enabled) {
+	if (acc->publish_sess == NULL)
+	    create_publish(acc_id);
+
+	if (acc->publish_sess && acc->publish_state != acc->online_status) {
+	    send_publish(acc_id, PJ_TRUE);
+	}
     }
 }
 
@@ -819,7 +990,7 @@ static void subscribe_buddy_presence(unsigned index)
     }
 
     status = pjsip_pres_create_uac( dlg, &pres_callback, 
-				    &buddy->sub);
+				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
 	pjsua_var.buddy[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create presence client", 

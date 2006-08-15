@@ -103,6 +103,8 @@ typedef struct pjsip_pres_status pjsip_pres_status;
  * @param dlg		The underlying dialog to use.
  * @param user_cb	Pointer to callbacks to receive presence subscription
  *			events.
+ * @param options	Option flags. Currently only PJSIP_EVSUB_NO_EVENT_ID
+ *			is recognized.
  * @param p_evsub	Pointer to receive the presence subscription
  *			session.
  *
@@ -110,6 +112,7 @@ typedef struct pjsip_pres_status pjsip_pres_status;
  */
 PJ_DECL(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
 					    const pjsip_evsub_user *user_cb,
+					    unsigned options,
 					    pjsip_evsub **p_evsub );
 
 
@@ -262,6 +265,77 @@ PJ_DECL(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
  */
 PJ_DECL(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
 					    const pjsip_pres_status *status );
+
+
+/**
+ * This is a utility function to create PIDF message body from PJSIP
+ * presence status (pjsip_pres_status).
+ *
+ * @param pool		The pool to allocate memory for the message body.
+ * @param status	Presence status to be converted into PIDF message
+ *			body.
+ * @param entity	The entity ID, which normally is equal to the 
+ *			presentity ID publishing this presence info.
+ * @param p_body	Pointer to receive the SIP message body.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
+					     const pjsip_pres_status *status,
+					     const pj_str_t *entity,
+					     pjsip_msg_body **p_body );
+
+
+/**
+ * This is a utility function to create X-PIDF message body from PJSIP
+ * presence status (pjsip_pres_status).
+ *
+ * @param pool		The pool to allocate memory for the message body.
+ * @param status	Presence status to be converted into X-PIDF message
+ *			body.
+ * @param entity	The entity ID, which normally is equal to the 
+ *			presentity ID publishing this presence info.
+ * @param p_body	Pointer to receive the SIP message body.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_create_xpidf(pj_pool_t *pool,
+					     const pjsip_pres_status *status,
+					     const pj_str_t *entity,
+					     pjsip_msg_body **p_body );
+
+
+
+/**
+ * This is a utility function to parse PIDF body into PJSIP presence status.
+ *
+ * @param rdata		The incoming SIP message containing the PIDF body.
+ * @param pool		Pool to allocate memory to copy the strings into
+ *			the presence status structure.
+ * @param status	The presence status to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_parse_pidf(pjsip_rx_data *rdata,
+					   pj_pool_t *pool,
+					   pjsip_pres_status *status);
+
+
+
+/**
+ * This is a utility function to parse X-PIDF body into PJSIP presence status.
+ *
+ * @param rdata		The incoming SIP message containing the X-PIDF body.
+ * @param pool		Pool to allocate memory to copy the strings into
+ *			the presence status structure.
+ * @param status	The presence status to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
+					   pj_pool_t *pool,
+					   pjsip_pres_status *status);
+
 
 
 /**

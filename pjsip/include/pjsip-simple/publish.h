@@ -16,13 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJSIP_SIMPLE_PRESENCE_H__
-#define __PJSIP_SIMPLE_PRESENCE_H__
+#ifndef __PJSIP_SIMPLE_PUBLISH_H__
+#define __PJSIP_SIMPLE_PUBLISH_H__
 
 /**
  * @file publish.h
  * @brief SIP Extension for Event State Publication (PUBLISH, RFC 3903)
  */
+
+#include <pjsip/sip_util.h>
 
 
 PJ_BEGIN_DECL
@@ -37,6 +39,11 @@ PJ_BEGIN_DECL
  This module contains the implementation of Session Initiation Protocol (SIP)
  Extension for Event State Publication (PUBLISH) as defined by RFC 3856.
  */
+
+/**
+ * The SIP PUBLISH method constant.
+ */
+extern const pjsip_method pjsip_publish_method;
 
 
 /*****************************************************************************
@@ -77,11 +84,22 @@ struct pjsip_publishc_cbparam
 typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam *param);
 
 
+/**
+ * Initialize client publication module.
+ *
+ * @param endpt	    SIP endpoint.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt);
+
+
 
 /**
  * Create client publication structure.
  *
  * @param endpt	    Endpoint, used to allocate pool from.
+ * @param options   Option flags.
  * @param token	    Opaque data to be associated with the client publication.
  * @param cb	    Pointer to callback function to receive publication status.
  * @param p_pubc    Pointer to receive client publication structure.
@@ -89,6 +107,7 @@ typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam *param);
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt, 
+					    unsigned options,
 					    void *token,
 				            pjsip_publishc_cb *cb, 
 					    pjsip_publishc **p_pubc);
@@ -248,5 +267,5 @@ PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 PJ_END_DECL
 
 
-#endif	/* __PJSIP_SIMPLE_PRESENCE_H__ */
+#endif	/* __PJSIP_SIMPLE_PUBLISH_H__ */
 

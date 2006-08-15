@@ -101,6 +101,7 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+    puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --next-cred	  Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
@@ -258,7 +259,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     enum { OPT_CONFIG_FILE, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
 	   OPT_LOCAL_PORT, OPT_PROXY, OPT_OUTBOUND_PROXY, OPT_REGISTRAR,
-	   OPT_REG_TIMEOUT, OPT_ID, OPT_CONTACT, 
+	   OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT, 
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -286,6 +287,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "outbound",	1, 0, OPT_OUTBOUND_PROXY},
 	{ "registrar",	1, 0, OPT_REGISTRAR},
 	{ "reg-timeout",1, 0, OPT_REG_TIMEOUT},
+	{ "publish",    0, 0, OPT_PUBLISH},
 	{ "id",		1, 0, OPT_ID},
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "realm",	1, 0, OPT_REALM},
@@ -477,6 +479,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 			  "(expecting 1-3600)"));
 		return PJ_EINVAL;
 	    }
+	    break;
+
+	case OPT_PUBLISH:   /* publish */
+	    cur_acc->publish_enabled = PJ_TRUE;
 	    break;
 
 	case OPT_ID:   /* id */

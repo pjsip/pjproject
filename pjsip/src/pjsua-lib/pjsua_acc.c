@@ -98,6 +98,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
     pjsip_name_addr *name_addr;
     pjsip_sip_uri *sip_uri, *sip_reg_uri;
+    pj_status_t status;
     unsigned i;
 
     /* Need to parse local_uri to get the elements: */
@@ -220,8 +221,10 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
     }
 
-    /* Init presence subscription */
-    pj_list_init(&acc->pres_srv_list);
+    status = pjsua_pres_init_acc(acc_id);
+    if (status != PJ_SUCCESS)
+	return status;
+
 
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;

@@ -1003,6 +1003,14 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Default PUBLISH expiration
+ */
+#ifndef PJSUA_PUBLISH_EXPIRATION
+#   define PJSUA_PUBLISH_EXPIRATION 600
+#endif
+
+
+/**
  * Account configuration.
  */
 typedef struct pjsua_acc_config
@@ -1023,6 +1031,11 @@ typedef struct pjsua_acc_config
      * value is empty, no account registration will be performed.
      */
     pj_str_t	    reg_uri;
+
+    /**
+     * Publish presence?
+     */
+    pj_bool_t	    publish_enabled;
 
     /** 
      * Optional URI to be put as Contact for this account. It is recommended

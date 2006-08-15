@@ -97,6 +97,8 @@ typedef struct pjsua_acc
 
     pj_bool_t	     online_status; /**< Our online status.		*/
     pjsua_srv_pres   pres_srv_list; /**< Server subscription list.	*/
+    pjsip_publishc  *publish_sess;  /**< Client publication session.	*/
+    pj_bool_t	     publish_state; /**< Last published online status	*/
 
 } pjsua_acc;
 
@@ -255,8 +257,13 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 }
 
 
+#if 0
 #define PJSUA_LOCK()	    pj_mutex_lock(pjsua_var.mutex);
 #define PJSUA_UNLOCK()	    pj_mutex_unlock(pjsua_var.mutex);
+#else
+#define PJSUA_LOCK()
+#define PJSUA_UNLOCK()
+#endif
 
 
 
@@ -284,6 +291,11 @@ void pjsua_pres_refresh(void);
  * Shutdown presence.
  */
 void pjsua_pres_shutdown(void);
+
+/**
+ * Init presence for aoocunt.
+ */
+pj_status_t pjsua_pres_init_acc(int acc_id);
 
 /**
  * Terminate server subscription for the account 

@@ -179,6 +179,7 @@ PJ_DEF(pjsip_module*) pjsip_pres_instance(void)
  */
 PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
 					   const pjsip_evsub_user *user_cb,
+					   unsigned options,
 					   pjsip_evsub **p_evsub )
 {
     pj_status_t status;
@@ -190,7 +191,8 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Create event subscription */
-    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE, 0, &sub);
+    status = pjsip_evsub_create_uac( dlg,  &pres_user, &STR_PRESENCE, 
+				     options, &sub);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -412,140 +414,34 @@ PJ_DEF(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
 
 
 /*
- * Create PIDF document based on the presence info.
- */
-static pjpidf_pres* pres_create_pidf( pj_pool_t *pool,
-				      pjsip_pres *pres )
-{
-    pjpidf_pres *pidf;
-    unsigned i;
-    pj_str_t entity;
-
-    /* Get publisher URI */
-    entity.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
-    entity.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-				  pres->dlg->local.info->uri,
-				  entity.ptr, PJSIP_MAX_URL_SIZE);
-    if (entity.slen < 1)
-	return NULL;
-
-    /* Create <presence>. */
-    pidf = pjpidf_create(pool, &entity);
-
-    /* Create <tuple> */
-    for (i=0; i<pres->status.info_cnt; ++i) {
-
-	pjpidf_tuple *pidf_tuple;
-	pjpidf_status *pidf_status;
-
-	/* Add tuple id. */
-	pidf_tuple = pjpidf_pres_add_tuple(pool, pidf, 
-					   &pres->status.info[i].id);
-
-	/* Set <contact> */
-	if (pres->status.info[i].contact.slen)
-	    pjpidf_tuple_set_contact(pool, pidf_tuple, 
-				     &pres->status.info[i].contact);
-
-
-	/* Set basic status */
-	pidf_status = pjpidf_tuple_get_status(pidf_tuple);
-	pjpidf_status_set_basic_open(pidf_status, 
-				     pres->status.info[i].basic_open);
-    }
-
-    return pidf;
-}
-
-
-/*
- * Create XPIDF document based on the presence info.
- */
-static pjxpidf_pres* pres_create_xpidf( pj_pool_t *pool,
-				        pjsip_pres *pres )
-{
-    /* Note: PJSIP implementation of XPIDF is not complete!
-     */
-    pjxpidf_pres *xpidf;
-    pj_str_t publisher_uri;
-
-    PJ_LOG(4,(THIS_FILE, "Warning: XPIDF format is not fully supported "
-			 "by PJSIP"));
-
-    publisher_uri.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
-    publisher_uri.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-					 pres->dlg->local.info->uri,
-					 publisher_uri.ptr,
-					 PJSIP_MAX_URL_SIZE);
-    if (publisher_uri.slen < 1)
-	return NULL;
-
-    /* Create XPIDF document. */
-    xpidf = pjxpidf_create(pool, &publisher_uri);
-
-    /* Set basic status. */
-    if (pres->status.info_cnt > 0)
-	pjxpidf_set_status( xpidf, pres->status.info[0].basic_open);
-    else
-	pjxpidf_set_status( xpidf, PJ_FALSE);
-
-    return xpidf;
-}
-
-
-/*
- * Function to print XML message body.
- */
-static int pres_print_body(struct pjsip_msg_body *msg_body, 
-			   char *buf, pj_size_t size)
-{
-    return pj_xml_print(msg_body->data, buf, size, PJ_TRUE);
-}
-
-
-/*
- * Function to clone XML document.
- */
-static void* xml_clone_data(pj_pool_t *pool, const void *data, unsigned len)
-{
-    PJ_UNUSED_ARG(len);
-    return pj_xml_clone( pool, data);
-}
-
-
-/*
  * Create message body.
  */
 static pj_status_t pres_create_msg_body( pjsip_pres *pres, 
 					 pjsip_tx_data *tdata)
 {
-    pjsip_msg_body *body;
+    pj_str_t entity;
 
-    body = pj_pool_zalloc(tdata->pool, sizeof(pjsip_msg_body));
-    
+    /* Get publisher URI */
+    entity.ptr = pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE);
+    entity.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+				  pres->dlg->local.info->uri,
+				  entity.ptr, PJSIP_MAX_URL_SIZE);
+    if (entity.slen < 1)
+	return PJ_ENOMEM;
+
     if (pres->content_type == CONTENT_TYPE_PIDF) {
 
-	body->data = pres_create_pidf(tdata->pool, pres);
-	body->content_type.type = pj_str("application");
-	body->content_type.subtype = pj_str("pidf+xml");
+	return pjsip_pres_create_pidf(tdata->pool, &pres->status,
+				      &entity, &tdata->msg->body);
 
     } else if (pres->content_type == CONTENT_TYPE_XPIDF) {
 
-	body->data = pres_create_xpidf(tdata->pool, pres);
-	body->content_type.type = pj_str("application");
-	body->content_type.subtype = pj_str("xpidf+xml");
+	return pjsip_pres_create_xpidf(tdata->pool, &pres->status,
+				       &entity, &tdata->msg->body);
 
     } else {
 	return PJSIP_SIMPLE_EBADCONTENT;
     }
-
-
-    body->print_body = &pres_print_body;
-    body->clone_data = &xml_clone_data;
-
-    tdata->msg->body = body;
-
-    return PJ_SUCCESS;
 }
 
 
@@ -722,77 +618,6 @@ static void pres_on_evsub_rx_refresh( pjsip_evsub *sub,
     }
 }
 
-/*
- * Parse PIDF to info.
- */
-static pj_status_t pres_parse_pidf( pjsip_pres *pres,
-				    pjsip_rx_data *rdata,
-				    pjsip_pres_status *pres_status)
-{
-    pjpidf_pres *pidf;
-    pjpidf_tuple *pidf_tuple;
-
-    pidf = pjpidf_parse(rdata->tp_info.pool, 
-			rdata->msg_info.msg->body->data,
-			rdata->msg_info.msg->body->len);
-    if (pidf == NULL)
-	return PJSIP_SIMPLE_EBADPIDF;
-
-    pres_status->info_cnt = 0;
-
-    pidf_tuple = pjpidf_pres_get_first_tuple(pidf);
-    while (pidf_tuple) {
-	pjpidf_status *pidf_status;
-
-	pj_strdup(pres->dlg->pool, 
-		  &pres_status->info[pres_status->info_cnt].id,
-		  pjpidf_tuple_get_id(pidf_tuple));
-
-	pj_strdup(pres->dlg->pool, 
-		  &pres_status->info[pres_status->info_cnt].contact,
-		  pjpidf_tuple_get_contact(pidf_tuple));
-
-	pidf_status = pjpidf_tuple_get_status(pidf_tuple);
-	if (pidf_status) {
-	    pres_status->info[pres_status->info_cnt].basic_open = 
-		pjpidf_status_is_basic_open(pidf_status);
-	} else {
-	    pres_status->info[pres_status->info_cnt].basic_open = PJ_FALSE;
-	}
-
-	pidf_tuple = pjpidf_pres_get_next_tuple( pidf, pidf_tuple );
-	pres_status->info_cnt++;
-    }
-
-    return PJ_SUCCESS;
-}
-
-/*
- * Parse XPIDF info.
- */
-static pj_status_t pres_parse_xpidf( pjsip_pres *pres,
-				     pjsip_rx_data *rdata,
-				     pjsip_pres_status *pres_status)
-{
-    pjxpidf_pres *xpidf;
-
-    xpidf = pjxpidf_parse(rdata->tp_info.pool, 
-			  rdata->msg_info.msg->body->data,
-			  rdata->msg_info.msg->body->len);
-    if (xpidf == NULL)
-	return PJSIP_SIMPLE_EBADXPIDF;
-
-    pres_status->info_cnt = 1;
-    
-    pj_strdup(pres->dlg->pool,
-	      &pres_status->info[0].contact,
-	      pjxpidf_get_uri(xpidf));
-    pres_status->info[0].basic_open = pjxpidf_get_status(xpidf);
-    pres_status->info[0].id.slen = 0;
-
-    return PJ_SUCCESS;
-}
-
 
 /*
  * Process the content of incoming NOTIFY request and update temporary
@@ -836,13 +661,15 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
     if (pj_stricmp(&ctype_hdr->media.type, &STR_APPLICATION)==0 &&
 	pj_stricmp(&ctype_hdr->media.subtype, &STR_PIDF_XML)==0)
     {
-	status = pres_parse_pidf( pres, rdata, &pres->tmp_status);
+	status = pjsip_pres_parse_pidf( rdata, pres->dlg->pool,
+					&pres->tmp_status);
     }
     else 
     if (pj_stricmp(&ctype_hdr->media.type, &STR_APPLICATION)==0 &&
 	pj_stricmp(&ctype_hdr->media.subtype, &STR_XPIDF_XML)==0)
     {
-	status = pres_parse_xpidf( pres, rdata, &pres->tmp_status);
+	status = pjsip_pres_parse_xpidf( rdata, pres->dlg->pool,
+					 &pres->tmp_status);
     }
     else
     {

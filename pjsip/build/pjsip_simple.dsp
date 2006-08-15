@@ -109,13 +109,15 @@ SOURCE="..\src\pjsip-simple\presence.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsip-simple\presence_body.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsip-simple\publishc.c"
 
 !IF  "$(CFG)" == "pjsip_simple - Win32 Release"
 
 !ELSEIF  "$(CFG)" == "pjsip_simple - Win32 Debug"
-
-# PROP Exclude_From_Build 1
 
 !ENDIF 
 

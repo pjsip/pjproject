@@ -333,14 +333,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
     pjsip_generic_array_hdr *hdr;
     unsigned i;
 
+    PJ_UNUSED_ARG(mod);
+
     /* Check arguments. */
-    PJ_ASSERT_RETURN(endpt!=NULL && mod!=NULL && count>0 && tags, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt!=NULL && count>0 && tags, PJ_EINVAL);
     PJ_ASSERT_RETURN(htype==PJSIP_H_ACCEPT || 
 		     htype==PJSIP_H_ALLOW ||
 		     htype==PJSIP_H_SUPPORTED,
 		     PJ_EINVAL);
-
-    PJ_UNUSED_ARG(mod);
 
     /* Find the header. */
     hdr = (pjsip_generic_array_hdr*) pjsip_endpt_get_capability(endpt, 
