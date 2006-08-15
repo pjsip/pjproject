@@ -1163,6 +1163,26 @@ PJ_DECL(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id);
 
 
 /**
+ * Set default account to be used when incoming and outgoing
+ * requests doesn't match any accounts.
+ *
+ * @param acc_id	The account ID to be used as default.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id);
+
+
+/**
+ * Get default account.
+ *
+ * @return		The default account ID, or PJSUA_INVALID_ID if no
+ *			default account is configured.
+ */
+PJ_DECL(pjsua_acc_id) pjsua_acc_get_default(void);
+
+
+/**
  * Add a new account to pjsua. PJSUA must have been initialized (with
  * #pjsua_init()) before calling this function.
  *

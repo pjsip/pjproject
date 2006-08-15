@@ -109,6 +109,19 @@ SOURCE="..\src\pjsip-simple\presence.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsip-simple\publishc.c"
+
+!IF  "$(CFG)" == "pjsip_simple - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjsip_simple - Win32 Debug"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsip-simple\xpidf.c"
 # End Source File
 # End Group
@@ -142,6 +155,10 @@ SOURCE=..\include\pjsip_simple.h
 # Begin Source File
 
 SOURCE="..\include\pjsip-simple\presence.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-simple\publish.h"
 # End Source File
 # Begin Source File
 

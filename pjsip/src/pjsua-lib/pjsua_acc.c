@@ -43,6 +43,25 @@ PJ_DEF(pj_bool_t) pjsua_acc_is_valid(pjsua_acc_id acc_id)
 
 
 /*
+ * Set default account
+ */
+PJ_DEF(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id)
+{
+    pjsua_var.default_acc = acc_id;
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get default account.
+ */
+PJ_DEF(pjsua_acc_id) pjsua_acc_get_default(void)
+{
+    return pjsua_var.default_acc;
+}
+
+
+/*
  * Copy account configuration.
  */
 static void copy_acc_config(pj_pool_t *pool,
@@ -724,13 +743,25 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 
     sip_uri = pjsip_uri_get_uri(uri);
 
+    /* See if default acc match */
+    if (pjsua_var.default_acc != PJSUA_INVALID_ID &&
+	pj_stricmp(&pjsua_var.acc[pjsua_var.default_acc].srv_domain, &sip_uri->host)==0 &&
+	pjsua_var.acc[pjsua_var.default_acc].srv_port == sip_uri->port) 
+    {
+	acc_id = pjsua_var.default_acc;
+    } else {
+	acc_id = PJ_ARRAY_SIZE(pjsua_var.acc);
+    }
+
     /* Find matching domain AND port */
-    for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
-	if (!pjsua_var.acc[acc_id].valid)
-	    continue;
-	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
-	    pjsua_var.acc[acc_id].srv_port == sip_uri->port)
-	    break;
+    if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
+	for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
+	    if (!pjsua_var.acc[acc_id].valid)
+		continue;
+	    if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
+		pjsua_var.acc[acc_id].srv_port == sip_uri->port)
+		break;
+	}
     }
 
     /* If no match, try to match the domain part only */

@@ -543,8 +543,10 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Create and send the first NOTIFY to active subscription: */
     status = pjsip_pres_notify( sub, PJSIP_EVSUB_STATE_ACTIVE, NULL,
 			        NULL, &tdata);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
+	pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_pres_send_request( sub, tdata);
+    }
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY", 
@@ -611,8 +613,10 @@ static void refresh_server_subscription(int acc_id)
 	    pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
 	    pjsip_pres_set_status(uapres->sub, &pres_status);
 
-	    if (pjsip_pres_current_notify(uapres->sub, &tdata)==PJ_SUCCESS)
+	    if (pjsip_pres_current_notify(uapres->sub, &tdata)==PJ_SUCCESS) {
+		pjsua_process_msg_data(tdata, NULL);
 		pjsip_pres_send_request(uapres->sub, tdata);
+	    }
 	}
 
 	uapres = uapres->next;
@@ -835,6 +839,8 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
+    pjsua_process_msg_data(tdata, NULL);
+
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
 	pjsip_pres_terminate(buddy->sub, PJ_FALSE);
@@ -864,8 +870,10 @@ static void unsubscribe_buddy_presence(unsigned index)
     }
 
     status = pjsip_pres_initiate( buddy->sub, 0, &tdata);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
+	pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_pres_send_request( buddy->sub, tdata );
+    }
 
     if (status != PJ_SUCCESS) {
 	pjsip_pres_terminate(buddy->sub, PJ_FALSE);

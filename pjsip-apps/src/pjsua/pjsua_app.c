@@ -64,7 +64,8 @@ static struct app_config
 } app_config;
 
 
-static pjsua_acc_id	current_acc;
+//static pjsua_acc_id	current_acc;
+#define current_acc	pjsua_acc_get_default()
 static pjsua_call_id	current_call;
 static pj_str_t		uri_arg;
 
@@ -1919,7 +1920,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    i = my_atoi(buf);
 	    if (pjsua_acc_is_valid(i)) {
-		current_acc = i;
+		pjsua_acc_set_default(i);
 		PJ_LOG(3,(THIS_FILE, "Current account changed to %d", i));
 	    } else {
 		PJ_LOG(3,(THIS_FILE, "Invalid account id %d", i));
@@ -2377,7 +2378,7 @@ pj_status_t app_init(int argc, char *argv[])
 	    goto on_error;
 
 	/* Add local account */
-	pjsua_acc_add_local(transport_id, PJ_TRUE, &current_acc);
+	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
     }
@@ -2392,7 +2393,7 @@ pj_status_t app_init(int argc, char *argv[])
 	    goto on_error;
 
 	/* Add local account */
-	pjsua_acc_add_local(transport_id, PJ_TRUE, &current_acc);
+	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
     }
 
@@ -2405,7 +2406,7 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Add accounts */
     for (i=0; i<app_config.acc_cnt; ++i) {
-	status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, &current_acc);
+	status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
