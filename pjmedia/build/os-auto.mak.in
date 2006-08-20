@@ -1,0 +1,123 @@
+# @configure_input@
+
+# PJMEDIA features exclusion
+export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_g711_plc@ @ac_no_speex_aec@
+
+# Define the desired sound device backend
+# Valid values are:
+#   - pa_unix:	    PortAudio on Unix (OSS or ALSA)
+#   - pa_darwinos:  PortAudio on MacOSX (CoreAudio)
+#   - pa_win32:	    PortAudio on Win32 (WMME)
+#   - ds:	    Win32 DirectSound (dsound.c)
+#   - null:	    Null sound device (nullsound.c)
+AC_PJMEDIA_SND=@ac_pjmedia_snd@
+
+# For Unix, specify if ALSA should be supported
+AC_PA_USE_ALSA=@ac_pa_use_alsa@
+
+# PortAudio endianness
+AC_PA_BIGENDIAN=@ac_bigendian@
+ifeq ($(AC_PA_BIGENDIAN),1)
+export CFLAGS += -DPA_BIG_ENDIAN=1
+else
+export CFLAGS += -DPA_LITTLE_ENDIAN=1
+endif
+
+#
+# Codecs
+#
+AC_NO_G711_CODEC=@ac_no_g711_codec@
+AC_NO_L16_CODEC=@ac_no_l16_codec@
+AC_NO_GSM_CODEC=@ac_no_gsm_codec@
+AC_NO_SPEEX_CODEC=@ac_no_speex_codec@
+AC_NO_ILBC_CODEC=@ac_no_ilbc_codec@
+
+export CODEC_OBJS=
+
+ifeq ($(AC_NO_G711_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_G711_CODEC=0
+else
+export CODEC_OBJS +=
+endif
+
+ifeq ($(AC_NO_L16_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_L16_CODEC=0
+else
+export CODEC_OBJS += l16.o
+endif
+
+ifeq ($(AC_NO_GSM_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_GSM_CODEC=0
+else
+export CODEC_OBJS += $(GSM_OBJS)
+endif
+
+ifeq ($(AC_NO_SPEEX_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_SPEEX_CODEC=0
+else
+export CODEC_OBJS += $(SPEEX_OBJS)
+endif
+
+ifeq ($(AC_NO_ILBC_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_ILBC_CODEC=0
+else
+export CODEC_OBJS += $(ILBC_OBJS)
+endif
+
+
+#
+# PortAudio on Unix
+#
+ifeq ($(AC_PJMEDIA_SND),pa_unix)
+# Host APIs and utils
+export PJMEDIA_OBJS += $(PA_DIR)/pa_unix_hostapis.o $(PA_DIR)/pa_unix_util.o
+
+# Include ALSA?
+ifeq ($(AC_PA_USE_ALSA),1)
+export CFLAGS += -DPA_USE_ALSA=1
+export PJMEDIA_OBJS += $(PA_DIR)/pa_linux_alsa.o
+endif
+
+export CFLAGS += -DPA_USE_OSS=1 \
+	         -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_PORTAUDIO_SOUND
+export PJMEDIA_OBJS += $(PA_DIR)/pa_unix_oss.o
+endif
+
+
+#
+# PortAudio on MacOS X
+#
+ifeq ($(AC_PJMEDIA_SND),pa_darwinos)
+export PJMEDIA_OBJS += $(PA_DIR)/pa_mac_hostapis.o $(PA_DIR)/pa_unix_util.o \
+		       $(PA_DIR)/pa_mac_core.o
+export CFLAGS += -DPA_USE_COREAUDIO=1  \
+	         -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_PORTAUDIO_SOUND
+endif
+
+#
+# PortAudio on Win32 (WMME)
+#
+ifeq ($(AC_PJMEDIA_SND),pa_win32)
+export PJMEDIA_OBJS += $(PA_DIR)/pa_win_hostapis.o $(PA_DIR)/pa_win_util.o \
+		       $(PA_DIR)/pa_win_wmme.o
+export CFLAGS += -DDPA_NO_ASIO -DPA_NO_DS \
+	         -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_PORTAUDIO_SOUND
+endif
+
+#
+# Win32 DirectSound
+#
+ifeq ($(AC_PJMEDIA_SND),ds)
+export SOUND_OBJS = dsound.o
+export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_WIN32_DIRECT_SOUND
+endif
+
+#
+# Last resort, null sound device
+#
+ifeq ($(AC_PJMEDIA_SND),null)
+export SOUND_OBJS = nullsound.o
+export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_NULL_SOUND
+endif
+
+

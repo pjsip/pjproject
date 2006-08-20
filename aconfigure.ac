@@ -1,8 +1,50 @@
-AC_INIT(pjproject,0.5.7)
+AC_INIT(pjproject,0.5.8)
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AC_CONFIG_HEADER(pjlib/include/pj/compat/os_auto.h)
+AC_CONFIG_HEADER([pjlib/include/pj/compat/os_auto.h
+		  pjlib/include/pj/compat/m_auto.h
+		 ])
+AC_CONFIG_FILES([build.mak 
+		 build/os-auto.mak 
+	         pjlib/build/os-auto.mak 
+	         pjlib-util/build/os-auto.mak 
+		 pjmedia/build/os-auto.mak
+		 pjsip/build/os-auto.mak
+	        ])
 AC_PROG_CC
+AC_PROG_CXX
 AC_LANG_C
+
+AC_CHECK_LIB(pthread,pthread_create)
+
+AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
+AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
+
+# Endianness detection
+AC_C_BIGENDIAN([AC_SUBST(ac_bigendian,1)
+	        AC_DEFINE(PJ_IS_LITTLE_ENDIAN,0)
+	        AC_DEFINE(PJ_IS_BIG_ENDIAN,1)
+	       ],
+	       [AC_SUBST(ac_bigendian,0)
+	        AC_DEFINE(PJ_IS_LITTLE_ENDIAN,1)
+	        AC_DEFINE(PJ_IS_BIG_ENDIAN,0)
+	       ])
+
+# --disable-floating-point option
+AC_ARG_ENABLE(floating-point,
+	      AC_HELP_STRING([--disable-floating-point],
+			     [Disable floating point where possible]),
+	      [if test "$enable_floating_point" = "no"; then
+		AC_DEFINE(PJ_HAS_FLOATING_POINT,0)
+		AC_MSG_RESULT([Checking if floating point is disabled... yes])
+	       fi],
+	      [
+		AC_DEFINE(PJ_HAS_FLOATING_POINT,1)
+	        AC_MSG_RESULT([Checking if floating point is disabled... no]) 
+		AC_CHECK_LIB(m,fmod)
+	      ])
+
 
 AC_CHECK_HEADER(arpa/inet.h,[AC_DEFINE(PJ_HAS_ARPA_INET_H,1)])
 AC_CHECK_HEADER(assert.h,[AC_DEFINE(PJ_HAS_ASSERT_H,1)])
@@ -30,7 +72,23 @@ AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)])
 AC_CHECK_HEADER(winsock.h,[AC_DEFINE(PJ_HAS_WINSOCK_H,1)])
 AC_CHECK_HEADER(winsock2.h,[AC_DEFINE(PJ_HAS_WINSOCK2_H,1)])
 
-AC_CHECK_HEADER(alsa/version.h)
+AC_MSG_RESULT([Setting PJ_OS_NAME to $target])
+AC_DEFINE_UNQUOTED(PJ_OS_NAME,["$target"])
+
+AC_MSG_RESULT([Setting PJ_HAS_ERRNO_VAR to 1])
+AC_DEFINE(PJ_HAS_ERRNO_VAR,1)
+
+AC_MSG_RESULT([Setting PJ_HAS_HIGH_RES_TIMER to 1])
+AC_DEFINE(PJ_HAS_HIGH_RES_TIMER,1)
+
+AC_MSG_RESULT([Setting PJ_HAS_MALLOC to 1])
+AC_DEFINE(PJ_HAS_MALLOC,1)
+
+AC_MSG_RESULT([Setting PJ_NATIVE_STRING_IS_UNICODE to 0])
+AC_DEFINE(PJ_NATIVE_STRING_IS_UNICODE,0)
+
+AC_MSG_RESULT([Setting PJ_ATOMIC_VALUE_TYPE to long])
+AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
 
 # Determine if inet_aton() is available
 AC_MSG_CHECKING([if inet_aton is available])
@@ -68,14 +126,156 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
 		    		   [pthread_rwlock_t *x;])],
 		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
   		   AC_MSG_RESULT(yes)],
-		  AC_MSG_RESULT(no))
+		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
+		   AC_MSG_RESULT(no)])
+
+
+##########################################
+#
+# PJMEDIA
+#
+
+# Sound device backend selection
+AC_SUBST(ac_pjmedia_snd)
+case $target in
+  *cygwin* | *win* | *mingw*)
+	ac_pjmedia_snd=pa_win32
+	AC_MSG_RESULT([Checking sound device backend... win32 sound])
+	;;
+  *rtems*)
+	ac_pjmedia_snd=null
+	AC_MSG_RESULT([Checking sound device backend... null sound])
+	;;
+  *darwin*)
+	ac_pjmedia_snd=pa_darwin_os
+	AC_MSG_RESULT([Checking sound device backend... coreaudio])
+	;;
+  *)
+	ac_pjmedia_snd=pa_unix
+	AC_CHECK_HEADER(alsa/version.h,
+			[AC_SUBST(ac_pa_use_alsa,1)
+			 LIBS="$LIBS -lasound"
+			],
+		        [AC_SUBST(ac_pa_use_alsa,0)])
+	AC_MSG_RESULT([Checking sound device backend... unix])
+	;;
+esac
+
+# Include resampling small filter
+AC_SUBST(ac_no_small_filter)
+AC_ARG_ENABLE(small-filter,
+	      AC_HELP_STRING([--disable-small-filter],
+			     [Exclude small filter in resampling]),
+	      [if test "$enable_small_filter" = "no"; then
+		[ac_no_small_filter='-DPJMEDIA_HAS_SMALL_FILTER=0']
+		AC_MSG_RESULT([Checking if small filter is disabled... yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if small filter is disabled... no]))
+
+# Include resampling large filter
+AC_SUBST(ac_no_large_filter)
+AC_ARG_ENABLE(large-filter,
+	      AC_HELP_STRING([--disable-large-filter],
+			     [Exclude large filter in resampling]),
+	      [if test "$enable_large_filter" = "no"; then
+		[ac_no_large_filter='-DPJMEDIA_HAS_LARGE_FILTER=0']
+		AC_MSG_RESULT([Checking if large filter is disabled... yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if large filter is disabled... no]))
+
+# Include G.711 Annex A PLC
+AC_SUBST(ac_no_g711_plc)
+AC_ARG_ENABLE(g711-plc,
+	      AC_HELP_STRING([--disable-g711-plc],
+			     [Exclude G.711 Annex A PLC]),
+	      [if test "$enable_g711_plc" = "no"; then
+		[ac_no_g711_plc='-DPJMEDIA_HAS_G711_PLC=0']
+		AC_MSG_RESULT([Checking if G.711 Annex A PLC is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if G.711 Annex A PLC is disabled...no]))
+
+# Include Speex AEC
+AC_SUBST(ac_no_speex_aec)
+AC_ARG_ENABLE(speex-aec,
+	      AC_HELP_STRING([--disable-speex-aec],
+			     [Exclude Speex Acoustic Echo Canceller/AEC]),
+	      [if test "$enable_speex_aec" = "no"; then
+		[ac_no_speex_aec='-DPJMEDIA_HAS_SPEEX_AEC=0']
+		AC_MSG_RESULT([Checking if Speex AEC is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if Speex AEC is disabled...no]))
+
+# Include G711 codec
+AC_SUBST(ac_no_g711_codec)
+AC_ARG_ENABLE(g711-codec,
+	      AC_HELP_STRING([--disable-g711-codec],
+			     [Exclude G.711 codecs from the build]),
+	      [if test "$enable_g711_codec" = "no"; then
+		[ac_no_g711_codec=1]
+		AC_MSG_RESULT([Checking if G.711 codec is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
+
+
+# Include L16 codec
+AC_SUBST(ac_no_l16_codec)
+AC_ARG_ENABLE(l16-codec,
+	      AC_HELP_STRING([--disable-l16-codec],
+			     [Exclude Linear/L16 codec family from the build]),
+	      [if test "$enable_l16_codec" = "no"; then
+		[ac_no_l16_codec=1]
+		AC_MSG_RESULT([Checking if L16 codecs are disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
+
+
+# Include GSM codec
+AC_SUBST(ac_no_gsm_codec)
+AC_ARG_ENABLE(gsm-codec,
+	      AC_HELP_STRING([--disable-gsm-codec],
+			     [Exclude GSM codec in the build]),
+	      [if test "$enable_gsm_codec" = "no"; then
+		[ac_no_gsm_codec=1]
+		AC_MSG_RESULT([Checking if GSM codec is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if GSM codec is disabled...no]))
+
+# Include Speex codec
+AC_SUBST(ac_no_speex_codec)
+AC_ARG_ENABLE(speex-codec,
+	      AC_HELP_STRING([--disable-speex-codec],
+			     [Exclude Speex codecs in the build]),
+	      [if test "$enable_speex_codec" = "no"; then
+		[ac_no_speex_codec=1]
+		AC_MSG_RESULT([Checking if Speex codec is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if Speex codec is disabled...no]))
+
+# Include iLBC codec
+AC_SUBST(ac_no_ilbc_codec)
+AC_ARG_ENABLE(ilbc-codec,
+	      AC_HELP_STRING([--disable-ilbc-codec],
+			     [Exclude iLBC codec in the build]),
+	      [if test "$enable_ilbc_codec" = "no"; then
+		[ac_no_ilbc_codec=1]
+		AC_MSG_RESULT([Checking if iLBC codec is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if iLBC codec is disabled...no]))
+
+
+
+##########################################
+#
+# MANUAL CONFIG
+#
+
 
 # Determine if select() requires nfds to be filled up with
 # correct value (max_fd+1). If zero, nfds will be filled up with
 # PJ_FD_SETSIZE
+AC_MSG_CHECKING([if select() needs correct nfds])
 case $target in
   *rtems*) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,1)
-	   AC_MSG_CHECKING([if select() needs correct nfds])
 	   AC_MSG_RESULT(yes)
 	;;
   *) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,0)
@@ -125,24 +325,25 @@ case $target in
 	;;
 esac
 
-AC_MSG_RESULT([Setting PJ_OS_NAME to $target])
-AC_DEFINE_UNQUOTED(PJ_OS_NAME,["$target"])
 
-AC_MSG_RESULT([Setting PJ_HAS_ERRNO_VAR to 1])
-AC_DEFINE(PJ_HAS_ERRNO_VAR,1)
-
-AC_MSG_RESULT([Setting PJ_HAS_HIGH_RES_TIMER to 1])
-AC_DEFINE(PJ_HAS_HIGH_RES_TIMER,1)
-
-AC_MSG_RESULT([Setting PJ_HAS_MALLOC to 1])
-AC_DEFINE(PJ_HAS_MALLOC,1)
-
-AC_MSG_RESULT([Setting PJ_NATIVE_STRING_IS_UNICODE to 0])
-AC_DEFINE(PJ_NATIVE_STRING_IS_UNICODE,0)
-
-AC_MSG_RESULT([Setting PJ_ATOMIC_VALUE_TYPE to long])
-AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
-
-
+AC_SUBST(target)
+AC_SUBST(ac_cross_compile)
+if test "$build" = "$host"; then
+    ac_cross_compile=
+else
+    ac_cross_compile=${host}-
+fi
+AC_SUBST(ac_linux_poll,select)
+AC_SUBST(ac_host,unix)
+AC_SUBST(ac_main_obj)
+case $target in
+  *rtems*)
+	ac_main_obj=main_rtems.o
+	;;
+  *)
+	ac_main_obj=main.o
+	;;
+esac
+AC_SUBST(CC)
 AC_OUTPUT()
 

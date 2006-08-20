@@ -41,12 +41,12 @@ PaError PaSGI_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex 
 
 PaUtilHostApiInitializer *paHostApiInitializers[] =
     {
-#ifdef PA_USE_OSS
-        PaOSS_Initialize,
-#endif
-
 #ifdef PA_USE_ALSA
         PaAlsa_Initialize,
+#endif
+
+#ifdef PA_USE_OSS
+        PaOSS_Initialize,
 #endif
 
 #ifdef PA_USE_JACK

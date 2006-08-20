@@ -1,0 +1,8 @@
+# @configure_input@
+export MACHINE_NAME := auto
+export OS_NAME := auto
+export HOST_NAME := unix
+export CC_NAME := @CC@
+export TARGET_NAME := @target@
+export CROSS_COMPILE := @ac_cross_compile@
+export LINUX_POLL := @ac_linux_poll@ 

@@ -11,7 +11,7 @@ export OS_CFLAGS   := $(CC_DEF)PJ_RTEMS=1 \
 
 export OS_CXXFLAGS := 
 
-export OS_LDFLAGS  := -B$(RTEMS_LIBRARY_PATH)/lib/ -specs bsp_specs -qrtems 
+export OS_LDFLAGS  := -B$(RTEMS_LIBRARY_PATH)/lib/ -specs bsp_specs -qrtems  -lm
 
 export OS_SOURCES  := 
 

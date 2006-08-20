@@ -11,7 +11,7 @@ export SOUND_OBJS = $(PORTAUDIO_OBJS)
 # E.g., to exclude Speex, we need to exclude SPEEX_OBJS from CODEC_OBJS, AND specify
 #       "#define PJMEDIA_HAS_SPEEX_CODEC 0" in pj/config_site.h.
 #
-export CODEC_OBJS = $(GSM_OBJS) $(SPEEX_OBJS) $(ILBC_OBJS)
+export CODEC_OBJS = l16.o $(GSM_OBJS) $(SPEEX_OBJS) $(ILBC_OBJS)
 
 
 include ../../build/common.mak
@@ -133,7 +133,7 @@ ILBC_OBJS := 	ilbc.o \
 ILBC_CFLAGS :=
 
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
-export PJMEDIA_CODEC_OBJS += l16.o \
+export PJMEDIA_CODEC_OBJS += \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			$(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \

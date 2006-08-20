@@ -39,7 +39,13 @@
 /********************************************************************
  * Include target OS specific configuration.
  */
-#if defined(PJ_WIN32_WINCE) || defined(_WIN32_WCE) || defined(UNDER_CE)
+#if defined(PJ_AUTOCONF)
+    /*
+     * Autoconf
+     */
+#   include <pj/compat/os_auto.h>
+
+#elif defined(PJ_WIN32_WINCE) || defined(_WIN32_WCE) || defined(UNDER_CE)
     /*
      * Windows CE
      */
@@ -108,7 +114,13 @@
 /********************************************************************
  * Target machine specific configuration.
  */
-#if defined (PJ_M_I386) || defined(_i386_) || defined(i_386_) || \
+#if defined(PJ_AUTOCONF)
+    /*
+     * Autoconf configured
+     */
+#include <pj/compat/m_auto.h>
+
+#elif defined (PJ_M_I386) || defined(_i386_) || defined(i_386_) || \
 	defined(_X86_) || defined(x86) || defined(__i386__) || \
 	defined(__i386) || defined(_M_IX86) || defined(__I86__)
     /*

@@ -25,6 +25,7 @@
  */
 
 #include <pjsip/sip_util.h>
+#include <pjsip/sip_auth.h>
 
 
 PJ_BEGIN_DECL
