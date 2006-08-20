@@ -567,6 +567,9 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
 pj_status_t pjsua_im_init(void)
 {
     const pj_str_t msg_tag = { "MESSAGE", 7 };
+    const pj_str_t STR_MIME_TEXT_PLAIN = { "text/plain", 10 };
+    const pj_str_t STR_MIME_APP_ISCOMPOSING = 
+		    { "application/im-iscomposing+xml", 30 };
     pj_status_t status;
 
     /* Register module */
@@ -577,6 +580,14 @@ pj_status_t pjsua_im_init(void)
     /* Register support for MESSAGE method. */
     pjsip_endpt_add_capability( pjsua_var.endpt, &mod_pjsua_im, PJSIP_H_ALLOW,
 				NULL, 1, &msg_tag);
+
+    /* Register support for "application/im-iscomposing+xml" content */
+    pjsip_endpt_add_capability( pjsua_var.endpt, &mod_pjsua_im, PJSIP_H_ACCEPT,
+				NULL, 1, &STR_MIME_APP_ISCOMPOSING);
+
+    /* Register support for "text/plain" content */
+    pjsip_endpt_add_capability( pjsua_var.endpt, &mod_pjsua_im, PJSIP_H_ACCEPT,
+				NULL, 1, &STR_MIME_TEXT_PLAIN);
 
     return PJ_SUCCESS;
 }

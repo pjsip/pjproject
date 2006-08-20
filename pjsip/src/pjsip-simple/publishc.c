@@ -40,9 +40,17 @@
 #define THIS_FILE		"publishc.c"
 
 
+/* Let's define this enum, so that it'll trigger compilation error
+ * when somebody define the same enum in sip_msg.h
+ */
+enum
+{
+    PJSIP_PUBLISH_METHOD = PJSIP_OTHER_METHOD,
+};
+
 const pjsip_method pjsip_publish_method = 
 {
-    PJSIP_OTHER_METHOD,
+    PJSIP_PUBLISH_METHOD,
     { "PUBLISH", 7 }
 };
 

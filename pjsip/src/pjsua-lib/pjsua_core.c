@@ -334,12 +334,6 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 	}
     }
 
-    /* Unregister OPTIONS handler if it's previously registered */
-    if (pjsua_options_handler.id >= 0) {
-	pjsip_endpt_unregister_module(pjsua_var.endpt, &pjsua_options_handler);
-	pjsua_options_handler.id = -1;
-    }
-
     /* Unregister msg logging if it's previously registered */
     if (pjsua_msg_logger.id >= 0) {
 	pjsip_endpt_unregister_module(pjsua_var.endpt, &pjsua_msg_logger);
@@ -349,9 +343,6 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     /* Enable SIP message logging */
     if (pjsua_var.log_cfg.msg_logging)
 	pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_msg_logger);
-
-    /* Register OPTIONS handler */
-    pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_options_handler);
 
     return PJ_SUCCESS;
 }
@@ -443,6 +434,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 {
     pjsua_config	 default_cfg;
     pjsua_media_config	 default_media_cfg;
+    const pj_str_t	 STR_OPTIONS = { "OPTIONS", 7 };
     pj_status_t status;
 
 
@@ -540,6 +532,13 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsua_im_init();
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Register OPTIONS handler */
+    pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_options_handler);
+
+    /* Add OPTIONS in Allow header */
+    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
+			       NULL, 1, &STR_OPTIONS);
 
     /* Start worker thread if needed. */
     if (pjsua_var.ua_cfg.thread_cnt) {

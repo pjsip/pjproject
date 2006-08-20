@@ -94,6 +94,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
 {
     pjsip_inv_callback inv_cb;
     unsigned i;
+    const pj_str_t str_norefersub = { "norefersub", 10 };
     pj_status_t status;
 
     /* Init calls array. */
@@ -115,6 +116,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /* Add "norefersub" in Supported header */
+    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
+			       NULL, 1, &str_norefersub);
 
     return status;
 }
@@ -2124,10 +2129,12 @@ static void on_call_transfered( pjsip_inv_session *inv,
     pjsua_call *existing_call;
     int new_call;
     const pj_str_t str_refer_to = { "Refer-To", 8};
+    const pj_str_t str_refer_sub = { "Refer-Sub", 9 };
     pjsip_generic_string_hdr *refer_to;
+    pjsip_generic_string_hdr *refer_sub;
+    pj_bool_t no_refer_sub = PJ_FALSE;
     char *uri;
     pj_str_t tmp;
-    struct pjsip_evsub_user xfer_cb;
     pjsip_status_code code;
     pjsip_evsub *sub;
 
@@ -2145,6 +2152,16 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	pjsip_dlg_respond( inv->dlg, rdata, 400, NULL, NULL, NULL);
 	return;
     }
+
+    /* Find optional Refer-Sub header */
+    refer_sub = (pjsip_generic_string_hdr*)
+	pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_refer_sub, NULL);
+
+    if (refer_sub) {
+	if (!pj_strnicmp2(&refer_sub->hvalue, "true", 4)==0)
+	    no_refer_sub = PJ_TRUE;
+    }
+
 
     /* Notify callback */
     code = PJSIP_SC_OK;
@@ -2166,34 +2183,92 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	      (int)refer_to->hvalue.slen, 
 	      refer_to->hvalue.ptr));
 
-    /* Init callback */
-    pj_bzero(&xfer_cb, sizeof(xfer_cb));
-    xfer_cb.on_evsub_state = &xfer_on_evsub_state;
+    if (no_refer_sub) {
+	/*
+	 * Always answer with 200.
+	 */
+	pjsip_tx_data *tdata;
+	const pj_str_t str_false = { "false", 5};
+	pjsip_hdr *hdr;
 
-    /* Create transferee event subscription */
-    status = pjsip_xfer_create_uas( inv->dlg, &xfer_cb, rdata, &sub);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create xfer uas", status);
-	pjsip_dlg_respond( inv->dlg, rdata, 500, NULL, NULL, NULL);
-	return;
-    }
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+			 status);
+	    return;
+	}
 
-    /* Accept the REFER request, send 200 (OK). */
-    pjsip_xfer_accept(sub, rdata, code, NULL);
+	/* Add Refer-Sub header */
+	hdr = (pjsip_hdr*) 
+	       pjsip_generic_string_hdr_create(tdata->pool, &str_refer_sub,
+					      &str_false);
+	pjsip_msg_add_hdr(tdata->msg, hdr);
 
-    /* Create initial NOTIFY request */
-    status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_ACTIVE,
-				100, NULL, &tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create NOTIFY to REFER", status);
-	return;
-    }
 
-    /* Send initial NOTIFY request */
-    status = pjsip_xfer_send_request( sub, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send NOTIFY to REFER", status);
-	return;
+	/* Send answer */
+	status = pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata),
+					 tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+			 status);
+	    return;
+	}
+
+	/* Don't have subscription */
+	sub = NULL;
+
+    } else {
+	struct pjsip_evsub_user xfer_cb;
+	pjsip_hdr hdr_list;
+
+	/* Init callback */
+	pj_bzero(&xfer_cb, sizeof(xfer_cb));
+	xfer_cb.on_evsub_state = &xfer_on_evsub_state;
+
+	/* Init additional header list to be sent with REFER response */
+	pj_list_init(&hdr_list);
+
+	/* Create transferee event subscription */
+	status = pjsip_xfer_create_uas( inv->dlg, &xfer_cb, rdata, &sub);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create xfer uas", status);
+	    pjsip_dlg_respond( inv->dlg, rdata, 500, NULL, NULL, NULL);
+	    return;
+	}
+
+	/* If there's Refer-Sub header and the value is "true", send back
+	 * Refer-Sub in the response with value "true" too.
+	 */
+	if (refer_sub) {
+	    const pj_str_t str_true = { "true", 4 };
+	    pjsip_hdr *hdr;
+
+	    hdr = (pjsip_hdr*) 
+		   pjsip_generic_string_hdr_create(inv->dlg->pool, 
+						   &str_refer_sub,
+						   &str_true);
+	    pj_list_push_back(&hdr_list, hdr);
+
+	}
+
+	/* Accept the REFER request, send 200 (OK). */
+	pjsip_xfer_accept(sub, rdata, code, &hdr_list);
+
+	/* Create initial NOTIFY request */
+	status = pjsip_xfer_notify( sub, PJSIP_EVSUB_STATE_ACTIVE,
+				    100, NULL, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create NOTIFY to REFER", 
+			 status);
+	    return;
+	}
+
+	/* Send initial NOTIFY request */
+	status = pjsip_xfer_send_request( sub, tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to send NOTIFY to REFER", status);
+	    return;
+	}
     }
 
     /* We're cheating here.
@@ -2211,32 +2286,36 @@ static void on_call_transfered( pjsip_inv_session *inv,
 				  &new_call);
     if (status != PJ_SUCCESS) {
 
-	/* Notify xferer about the error */
-	status = pjsip_xfer_notify(sub, PJSIP_EVSUB_STATE_TERMINATED,
-				   500, NULL, &tdata);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create NOTIFY to REFER", 
-			  status);
-	    return;
-	}
-	status = pjsip_xfer_send_request(sub, tdata);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to send NOTIFY to REFER", 
-			  status);
-	    return;
+	/* Notify xferer about the error (if we have subscription) */
+	if (sub) {
+	    status = pjsip_xfer_notify(sub, PJSIP_EVSUB_STATE_TERMINATED,
+				       500, NULL, &tdata);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Unable to create NOTIFY to REFER", 
+			      status);
+		return;
+	    }
+	    status = pjsip_xfer_send_request(sub, tdata);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Unable to send NOTIFY to REFER", 
+			      status);
+		return;
+	    }
 	}
 	return;
     }
 
-    /* Put the server subscription in inv_data.
-     * Subsequent state changed in pjsua_inv_on_state_changed() will be
-     * reported back to the server subscription.
-     */
-    pjsua_var.calls[new_call].xfer_sub = sub;
+    if (sub) {
+	/* Put the server subscription in inv_data.
+	 * Subsequent state changed in pjsua_inv_on_state_changed() will be
+	 * reported back to the server subscription.
+	 */
+	pjsua_var.calls[new_call].xfer_sub = sub;
 
-    /* Put the invite_data in the subscription. */
-    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, 
-			     &pjsua_var.calls[new_call]);
+	/* Put the invite_data in the subscription. */
+	pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, 
+				 &pjsua_var.calls[new_call]);
+    }
 }
 
 
