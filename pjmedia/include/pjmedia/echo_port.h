@@ -20,7 +20,7 @@
 #define __PJMEDIA_AEC_PORT_H__
 
 /**
- * @file aec_port.h
+ * @file echo_port.h
  * @brief AEC (Accoustic Echo Cancellation) media port.
  */
 #include <pjmedia/port.h>

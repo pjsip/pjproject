@@ -29,7 +29,7 @@
 
 
 /**
- * @defgroup PJMEDIA_Echo_Cancel Canceller Echo Cancellation
+ * @defgroup PJMEDIA_Echo_Cancel Accoustic Echo Cancellation API
  * @ingroup PJMEDIA_PORT
  * @brief Echo Cancellation API.
  * @{

@@ -70,7 +70,7 @@ typedef struct pjmedia_master_port pjmedia_master_port;
  * @param pool		Pool to allocate master port from.
  * @param u_port	Upstream port.
  * @param d_port	Downstream port.
- * @param options	Options flags, bitmask from #pjmedia_master_port_flag.
+ * @param options	Options flags, must be zero for now.
  * @param p_m		Pointer to receive the master port instance.
  *
  * @return		PJ_SUCCESS on success.

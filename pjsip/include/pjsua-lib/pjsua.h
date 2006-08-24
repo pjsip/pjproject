@@ -617,6 +617,15 @@ PJ_DECL(pjsip_endpoint*) pjsua_get_pjsip_endpt(void);
  */
 PJ_DECL(pjmedia_endpt*) pjsua_get_pjmedia_endpt(void);
 
+/**
+ * Internal function to get PJSUA pool factory.
+ * Only valid after #pjsua_init() is called.
+ *
+ * @return		Pool factory currently used by PJSUA.
+ */
+PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
+
+
 
 /*****************************************************************************
  * Utilities.

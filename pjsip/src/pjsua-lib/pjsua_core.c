@@ -746,6 +746,13 @@ PJ_DEF(pjmedia_endpt*) pjsua_get_pjmedia_endpt(void)
     return pjsua_var.med_endpt;
 }
 
+/*
+ * Internal function to get PJSUA pool factory.
+ */
+PJ_DEF(pj_pool_factory*) pjsua_get_pool_factory(void)
+{
+    return &pjsua_var.cp.factory;
+}
 
 /*****************************************************************************
  * PJSUA SIP Transport API.

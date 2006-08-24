@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_RTP RTP Session
+ * @defgroup PJMED_RTP RTP Session and Encapsulation (RFC 3550)
  * @ingroup PJMEDIA_TRANSPORT
  * @{
  *

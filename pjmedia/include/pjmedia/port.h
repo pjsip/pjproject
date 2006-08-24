@@ -28,11 +28,11 @@
 
 
 /**
-  @defgroup PJMEDIA_PORT_CONCEPT Media Ports
+  @defgroup PJMEDIA_PORT_CONCEPT Media Ports Framework
   @ingroup PJMEDIA
   @brief Extensible framework for media terminations
   
-  @section media_port_intro Concepts
+  @section media_port_intro Media Port Concepts
   
   @subsection The Media Port
   A media port (represented with pjmedia_port "class") provides a generic
@@ -55,9 +55,6 @@
   Some media ports (such as @ref PJMEDIA_CONF and @ref PJMEDIA_RESAMPLE_PORT)
   may be interconnected with each other, while some
   others represent the ultimate source/sink termination for the media. 
-  The  #pjmedia_port_connect() and #pjmedia_port_disconnect() are used to
-  connect and disconnect media ports respectively. But even when ports
-  are connected with each other ports, they still remain passive.
 
 
   @subsection port_clock_ex1 Example: Manual Resampling
@@ -368,6 +365,7 @@ struct pjmedia_port
  * @param info		    The port info to be initialized.
  * @param name		    Port name.
  * @param signature	    Port signature.
+ * @param clock_rate	    Port's clock rate.
  * @param channel_count	    Number of channels.
  * @param bits_per_sample   Bits per sample.
  * @param samples_per_frame Number of samples per frame.

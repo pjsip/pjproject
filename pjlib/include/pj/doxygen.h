@@ -44,7 +44,7 @@
  * @section download_sec Download
  *
  * PJLIB and all documentation can be downloaded from 
- * http://www.pjproject.net.
+ * http://www.pjsip.org.
  *
  *
  * @section how_to_use_sec About This Documentation
@@ -55,7 +55,7 @@
  *
  * @subsection doc_ver_subsec Version
  *
- * This document corresponds to PJLIB version 0.5.6.
+ * This document corresponds to PJLIB version 0.5.7.6.
  *
  *
  * @subsection find_samples_subsec How to Read This Document

@@ -32,9 +32,23 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMED_RTCP RTCP Session
+ * @defgroup PJMED_RTCP RTCP Session and Encapsulation (RFC 3550)
  * @ingroup PJMEDIA_TRANSPORT
  * @{
+ * PJMEDIA implements subsets of RTCP specification (RFC 3550) to monitor
+ * the quality of the real-time media (audio/video) transmission. In
+ * addition to the standard quality monitoring and reporting with RTCP
+ * SR and RR types, PJMEDIA's RTCP implementation is able to report
+ * extended statistics for incoming streams, such as packet duplications,
+ * reorder, discarded, and loss period (to distinguish between random
+ * and burst loss).
+ *
+ * The bidirectional media quality statistic is represented with
+ * #pjmedia_rtcp_stat structure.
+ *
+ * When application uses the stream interface (see @ref PJMED_STRM),
+ * application may retrieve the RTCP statistic by calling 
+ * #pjmedia_stream_get_stat() function.
  */
 
 #pragma pack(1)
