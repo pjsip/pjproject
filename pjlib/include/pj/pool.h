@@ -38,60 +38,235 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJ_POOL_GROUP Memory Pool Management
+ * @defgroup PJ_POOL_GROUP Fast Memory Pool
  * @ingroup PJ
  * @brief
- * Memory pool management provides API to allocate and deallocate memory from
- * memory pool and to manage and establish policy for pool creation and
- * destruction in pool factory.
+ * Memory pools allow dynamic memory allocation comparable to malloc or the 
+ * new in operator C++. Those implementations are not desirable for very
+ * high performance applications or real-time systems, because of the 
+ * performance bottlenecks and it suffers from fragmentation issue.
  *
- * \section PJ_POOL_FACTORY_SEC Pool Factory
- * See: \ref PJ_POOL_FACTORY "Pool Factory"
- *
- * A memory pool must be created through a factory. A factory not only provides
- * generic interface functions to create and release pool, but also provides 
- * strategy to manage the life time of pools. One sample implementation, 
- * \a pj_caching_pool, can be set to keep the pools released by application for
- * future use as long as the total memory is below the limit.
+ * \section PJ_POOL_INTRO_SEC PJLIB's Memory Pool
+ * \subsection PJ_POOL_ADVANTAGE_SUBSEC Advantages
  * 
- * The pool factory interface declared in PJLIB is designed to be extensible.
- * Application can define its own strategy by creating it's own pool factory
- * implementation, and this strategy can be used even by existing library
- * without recompilation.
+ * PJLIB's pool has many advantages over traditional malloc/new operator and
+ * over other memory pool implementations, because:
+ *  - unlike other memory pool implementation, it allows allocation of
+ *    memory chunks of different sizes,
+ *  - it's very very fast. 
+ *    \n
+ *    Memory chunk allocation is not only an O(1) 
+ *    operation, but it's also very simple (just 
+ *    few pointer arithmetic operations) and it doesn't require locking 
+ *    any mutex,
+ *  - it's memory efficient.
+ *    \n
+ *    Pool doesn't keep track individual memory chunks allocated by
+ *    applications, so there is no additional overhead needed for each
+ *    memory allocation (other than possible additional of few bytes, up to
+ *    PJ_POOL_ALIGNMENT-1, for aligning the memory). 
+ *    But see the @ref PJ_POOL_CAVEATS_SUBSEC below.
+ *  - it prevents memory leaks. 
+ *    \n
+ *    Memory pool inherently has garbage collection functionality. In fact, 
+ *    there is no need to free the chunks allocated from the memory pool.
+ *    All chunks previously allocated from the pool will be freed once the
+ *    pool itself is destroyed. This would prevent memory leaks that haunt
+ *    programmers for decades, and it provides additional performance 
+ *    advantage over traditional malloc/new operator.
+ *
+ * Even more, PJLIB's memory pool provides some additional usability and
+ * flexibility for applications:
+ *  - memory leaks are easily traceable, since memory pool is assigned name,
+ *    and application can inspect what pools currently active in the system.
+ *  - by design, memory allocation from a pool is not thread safe. We assumed
+ *    that a pool will be owned by a higher level object, and thread safety 
+ *    should be handled by that object. This enables very fast pool operations
+ *    and prevents unnecessary locking operations,
+ *  - by default, the memory pool API behaves more like C++ new operator, 
+ *    in that it will throw PJ_NO_MEMORY_EXCEPTION exception (see 
+ *    @ref PJ_EXCEPT) when memory chunk allocation fails. This enables failure
+ *    handling to be done on more high level function (instead of checking
+ *    the result of pj_pool_alloc() everytime). If application doesn't like
+ *    this, the default behavior can be changed on global basis by supplying 
+ *    different policy to the pool factory.
+ *  - any memory allocation backend allocator/deallocator may be used. By
+ *    default, the policy uses malloc() and free() to manage the pool's block,
+ *    but application may use different strategy, for example to allocate
+ *    memory blocks from a globally static memory location.
  *
  *
- * \section PJ_POOL_POLICY_SEC Pool Factory Policy
- * See: \ref PJ_POOL_FACTORY "Pool Factory Policy"
- *
- * A pool factory only defines functions to create and release pool and how
- * to manage pools, but the rest of the functionalities are controlled by
- * policy. A pool policy defines:
- *  - how memory block is allocated and deallocated (the default implementation
- *    allocates and deallocate memory by calling malloc() and free()).
- *  - callback to be called when memory allocation inside a pool fails (the
- *    default implementation will throw PJ_NO_MEMORY_EXCEPTION exception).
- *  - concurrency when creating and releasing pool from/to the factory.
- *
- * A pool factory can be given different policy during creation to make
- * it behave differently. For example, caching pool factory can be configured
- * to allocate and deallocate from a static/contiguous/preallocated memory 
- * instead of using malloc()/free().
+ * \subsection PJ_POOL_PERFORMANCE_SUBSEC Performance
  * 
- * What strategy/factory and what policy to use is not defined by PJLIB, but
- * instead is left to application to make use whichever is most efficient for
- * itself.
+ * The result of PJLIB's memory design and careful implementation is a
+ * memory allocation strategy that can speed-up the memory allocations
+ * and deallocations by up to <b>30 times</b> compared to standard
+ * malloc()/free()!
+ *
+ * (Note: your mileage may vary, of course. You can see how much PJLIB's
+ *  pool improves the performance over malloc()/free() in your target
+ *  system by running pjlib-test application).
  *
  *
- * \section PJ_POOL_POOL_SEC The Pool
- * See: \ref PJ_POOL "Pool"
+ * \subsection PJ_POOL_CAVEATS_SUBSEC Caveats
  *
+ * There are some caveats though!
+ *
+ * When creating pool, PJLIB requires applications to specify the initial
+ * pool size, and as soon as the pool is created, PJLIB allocates memory
+ * from the system by that size. Application designers MUST choose the 
+ * initial pool size carefully, since choosing too big value will result in
+ * wasting system's memory.
+ *
+ * But the pool can grow. Application designer can specify how the
+ * pool will grow in size, by specifying the size increment when creating
+ * the pool.
+ *
+ * The pool, however, <b>cannot</b> shrink! Since there is <b>no</b> 
+ * function to deallocate memory chunks, there is no way for the pool to 
+ * release back unused memory to the system. 
+ * Application designers must be aware that constant memory allocations 
+ * from pool that has infinite life-time may cause the memory usage of 
+ * the application to grow over time.
+ *
+ *
+ * \section PJ_POOL_USING_SEC Using Memory Pool
+ *
+ * This section describes how to use PJLIB's memory pool framework.
+ * As we hope the readers will witness, PJLIB's memory pool API is quite
+ * straightforward. 
+ *
+ * \subsection PJ_POOL_USING_F Create Pool Factory
+ * First, application needs to initialize a pool factory (this normally
+ * only needs to be done once in one application). PJLIB provides
+ * a pool factory implementation called caching pool (see @ref 
+ * PJ_CACHING_POOL), and it is initialized by calling #pj_caching_pool_init().
+ *
+ * \subsection PJ_POOL_USING_P Create The Pool
+ * Then application creates the pool object itself with #pj_pool_create(),
+ * specifying among other thing the pool factory where the pool should
+ * be created from, the pool name, initial size, and increment/expansion
+ * size.
+ *
+ * \subsection PJ_POOL_USING_M Allocate Memory as Required
+ * Then whenever application needs to allocate dynamic memory, it would
+ * call #pj_pool_alloc(), #pj_pool_calloc(), or #pj_pool_zalloc() to
+ * allocate memory chunks from the pool.
+ *
+ * \subsection PJ_POOL_USING_DP Destroy the Pool
+ * When application has finished with the pool, it should call 
+ * #pj_pool_release() to release the pool object back to the factory. 
+ * Depending on the types of the factory, this may release the memory back 
+ * to the operating system.
+ *
+ * \subsection PJ_POOL_USING_Dc Destroy the Pool Factory
+ * And finally, before application quites, it should deinitialize the
+ * pool factory, to make sure that all memory blocks allocated by the
+ * factory are released back to the operating system. After this, of 
+ * course no more memory pool allocation can be requested.
+ *
+ * \subsection PJ_POOL_USING_EX Example
+ * Below is a sample complete program that utilizes PJLIB's memory pool.
+ *
+ * \code
+
+   #include <pjlib.h>
+
+   #define THIS_FILE    "pool_sample.c"
+
+   static void my_perror(const char *title, pj_status_t status)
+   {
+        char errmsg[PJ_ERR_MSG_SIZE];
+
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(1,(THIS_FILE, "%s: %s [status=%d]", title, errmsg, status));
+   }
+
+   static void pool_demo_1(pj_pool_factory *pfactory)
+   {
+	unsigned i;
+	pj_pool_t *pool;
+
+	// Must create pool before we can allocate anything
+	pool = pj_pool_create(pfactory,	 // the factory
+			      "pool1",	 // pool's name
+			      4000,	 // initial size
+			      4000,	 // increment size
+			      NULL);	 // use default callback.
+	if (pool == NULL) {
+	    my_perror("Error creating pool", PJ_ENOMEM);
+	    return;
+	}
+
+	// Demo: allocate some memory chunks
+	for (i=0; i<1000; ++i) {
+	    void *p;
+
+	    p = pj_pool_alloc(pool, (pj_rand()+1) % 512);
+
+	    // Do something with p
+	    ...
+
+	    // Look! No need to free p!!
+	}
+
+	// Done with silly demo, must free pool to release all memory.
+	pj_pool_release(pool);
+   }
+
+   int main()
+   {
+	pj_caching_pool cp;
+	pj_status_t status;
+
+        // Must init PJLIB before anything else
+	status = pj_init();
+	if (status != PJ_SUCCESS) {
+	    my_perror("Error initializing PJLIB", status);
+	    return 1;
+	}
+
+	// Create the pool factory, in this case, a caching pool.
+	pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 
+			     1024*1024 );
+
+	// Do a demo
+	pool_demo_1(&cp.factory);
+
+	// Done with demos, destroy caching pool before exiting app.
+	pj_caching_pool_destroy(&cp);
+
+	return 0;
+   }
+
+   \endcode
+ *
+ * More information about pool factory, the pool object, and caching pool
+ * can be found on the Module Links below.
+ */
+
+
+/**
+ * @defgroup PJ_POOL Memory Pool Object
+ * @ingroup PJ_POOL_GROUP
+ * @brief
  * The memory pool is an opaque object created by pool factory.
  * Application uses this object to request a memory chunk, by calling
- * #pj_pool_alloc or #pj_pool_calloc. When the application has finished using
- * the pool, it must call #pj_pool_release to free all the chunks previously
+ * #pj_pool_alloc(), #pj_pool_calloc(), or #pj_pool_zalloc(). 
+ * When the application has finished using
+ * the pool, it must call #pj_pool_release() to free all the chunks previously
  * allocated and release the pool back to the factory.
  *
- * \section PJ_POOL_THREADING_SEC More on Threading Policies:
+ * A memory pool is initialized with an initial amount of memory, which is
+ * called a block. Pool can be configured to dynamically allocate more memory 
+ * blocks when it runs out of memory. 
+ *
+ * The pool doesn't keep track of individual memory allocations
+ * by user, and the user doesn't have to free these indidual allocations. This
+ * makes memory allocation simple and very fast. All the memory allocated from
+ * the pool will be destroyed when the pool itself is destroyed.
+ *
+ * \section PJ_POOL_THREADING_SEC More on Threading Policies
  * - By design, memory allocation from a pool is not thread safe. We assumed 
  *   that a pool will be owned by an object, and thread safety should be 
  *   handled by that object. Thus these functions are not thread safe: 
@@ -105,20 +280,7 @@ PJ_BEGIN_DECL
  *
  * For some sample codes on how to use the pool, please see:
  *  - @ref page_pjlib_pool_test
- */
-
-/**
- * @defgroup PJ_POOL Memory Pool.
- * @ingroup PJ_POOL_GROUP
- * @brief
- * A memory pool is initialized with an initial amount of memory, which is
- * called a block. Pool can be configured to dynamically allocate more memory 
- * blocks when it runs out of memory. Subsequent memory allocations by user 
- * will use up portions of these block. 
- * The pool doesn't keep track of individual memory allocations
- * by user, and the user doesn't have to free these indidual allocations. This
- * makes memory allocation simple and very fast. All the memory allocated from
- * the pool will be destroyed when the pool itself is destroyed.
+ *
  * @{
  */
 
@@ -314,12 +476,19 @@ PJ_IDECL(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count,
 
 /* **************************************************************************/
 /**
- * @defgroup PJ_POOL_FACTORY Pool Factory and Policy.
+ * @defgroup PJ_POOL_FACTORY Pool Factory and Policy
  * @ingroup PJ_POOL_GROUP
  * @brief
- * Pool factory declares an interface to create and destroy pool. There may
- * be several strategies for pool creation, and these strategies should 
- * implement the interface defined by pool factory.
+ * A pool object must be created through a factory. A factory not only provides
+ * generic interface functions to create and release pool, but also provides 
+ * strategy to manage the life time of pools. One sample implementation, 
+ * \a pj_caching_pool, can be set to keep the pools released by application for
+ * future use as long as the total memory is below the limit.
+ * 
+ * The pool factory interface declared in PJLIB is designed to be extensible.
+ * Application can define its own strategy by creating it's own pool factory
+ * implementation, and this strategy can be used even by existing library
+ * without recompilation.
  *
  * \section PJ_POOL_FACTORY_ITF Pool Factory Interface
  * The pool factory defines the following interface:
@@ -328,6 +497,25 @@ PJ_IDECL(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count,
  *  - \a release_pool(): release memory pool back to factory.
  *
  * \section PJ_POOL_FACTORY_POL Pool Factory Policy.
+ *
+ * A pool factory only defines functions to create and release pool and how
+ * to manage pools, but the rest of the functionalities are controlled by
+ * policy. A pool policy defines:
+ *  - how memory block is allocated and deallocated (the default implementation
+ *    allocates and deallocate memory by calling malloc() and free()).
+ *  - callback to be called when memory allocation inside a pool fails (the
+ *    default implementation will throw PJ_NO_MEMORY_EXCEPTION exception).
+ *  - concurrency when creating and releasing pool from/to the factory.
+ *
+ * A pool factory can be given different policy during creation to make
+ * it behave differently. For example, caching pool factory can be configured
+ * to allocate and deallocate from a static/contiguous/preallocated memory 
+ * instead of using malloc()/free().
+ * 
+ * What strategy/factory and what policy to use is not defined by PJLIB, but
+ * instead is left to application to make use whichever is most efficient for
+ * itself.
+ *
  * The pool factory policy controls the behaviour of memory factories, and
  * defines the following interface:
  *  - \a block_alloc(): allocate memory block from backend memory mgmt/system.
@@ -529,7 +717,7 @@ PJ_INLINE(void) pj_pool_factory_dump( pj_pool_factory *pf,
 /* **************************************************************************/
 
 /**
- * @defgroup PJ_CACHING_POOL Caching Pool Factory.
+ * @defgroup PJ_CACHING_POOL Caching Pool Factory
  * @ingroup PJ_POOL_GROUP
  * @brief
  * Caching pool is one sample implementation of pool factory where the

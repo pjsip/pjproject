@@ -2516,6 +2516,23 @@ PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_snd_dev_info info[],
 					 unsigned *count);
 
 
+
+/**
+ * Get currently active sound devices. If sound devices has not been created
+ * (for example when pjsua_start() is not called), it is possible that
+ * the function returns PJ_SUCCESS with -1 as device IDs.
+ *
+ * @param capture_dev   On return it will be filled with device ID of the 
+ *			capture device.
+ * @param playback_dev	On return it will be filled with device ID of the 
+ *			device ID of the playback device.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
+				       int *playback_dev);
+
+
 /**
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.

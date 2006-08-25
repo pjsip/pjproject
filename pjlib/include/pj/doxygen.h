@@ -393,7 +393,7 @@
  *
  * Enjoy using PJLIB!
  *
- * Benny Prijono < bennylp at pjproject dot net >
+ * Benny Prijono < bennylp at pjsip dot org >
  */
 
 

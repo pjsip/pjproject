@@ -59,7 +59,7 @@ PJ_BEGIN_DECL
  */
 
 /**
- * @defgroup PJ_IOQUEUE I/O Event Dispatching Queue
+ * @defgroup PJ_IOQUEUE IOQueue: I/O Event Dispatching with Proactor Pattern
  * @ingroup PJ_IO
  * @{
  *
