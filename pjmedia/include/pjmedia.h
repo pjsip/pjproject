@@ -50,6 +50,7 @@
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/splitcomb.h>
+#include <pjmedia/tonegen.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/transport_udp.h>
 #include <pjmedia/wav_port.h>

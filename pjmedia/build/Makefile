@@ -74,7 +74,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			port.o splitcomb.o resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o \
-			transport_udp.o wav_player.o wav_writer.o wave.o \
+			tonegen.o transport_udp.o \
+			wav_player.o wav_writer.o wave.o \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)

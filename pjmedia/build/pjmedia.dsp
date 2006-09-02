@@ -227,6 +227,10 @@ SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\tonegen.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\transport_udp.c
 # End Source File
 # Begin Source File
@@ -360,6 +364,10 @@ SOURCE=..\include\pjmedia\splitcomb.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\stream.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\tonegen.h
 # End Source File
 # Begin Source File
 

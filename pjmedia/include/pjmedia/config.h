@@ -241,6 +241,14 @@
 #endif
 
 
+/**
+ * Maximum tones/digits that can be enqueued in the tone generator.
+ */
+#ifndef PJMEDIA_TONEGEN_MAX_DIGITS
+#   define PJMEDIA_TONEGEN_MAX_DIGITS		    32
+#endif
+
+
 
 /**
  * @}

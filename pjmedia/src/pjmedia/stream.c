@@ -1273,22 +1273,21 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	 */
 	for (i=0; i<digit_char->slen; ++i) {
 	    unsigned pt;
+	    int dig = pj_tolower(digit_char->ptr[i]);
 
-	    if (digit_char->ptr[i] >= '0' &&
-		digit_char->ptr[i] <= '9')
+	    if (dig >= '0' && dig <= '9')
 	    {
-		pt = digit_char->ptr[i] - '0';
+		pt = dig - '0';
 	    } 
-	    else if (pj_tolower(digit_char->ptr[i]) >= 'a' &&
-		     pj_tolower(digit_char->ptr[i]) <= 'd')
+	    else if (dig >= 'a' && dig <= 'd')
 	    {
-		pt = pj_tolower(digit_char->ptr[i]) - 'a' + 12;
+		pt = dig - 'a' + 12;
 	    }
-	    else if (digit_char->ptr[i] == '*')
+	    else if (dig == '*')
 	    {
 		pt = 10;
 	    }
-	    else if (digit_char->ptr[i] == '#')
+	    else if (dig == '#')
 	    {
 		pt = 11;
 	    }

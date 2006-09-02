@@ -51,7 +51,8 @@ SAMPLES := confsample \
 	   sipstateless \
 	   sndinfo \
 	   sndtest \
-	   streamutil
+	   streamutil \
+	   tonegen
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))
 
