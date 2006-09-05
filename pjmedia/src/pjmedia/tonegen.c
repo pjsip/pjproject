@@ -42,7 +42,7 @@
      *   http://www.musicdsp.org/showone.php?id=10.
      * This produces good quality tone in relatively faster time than
      * the normal sin() generator.
-     * Speed = 32,500 cycles (to generate 100 msec single-tone).
+     * Speed = 40.6 cycles per sample.
      */
 #   include <math.h>
     struct gen
@@ -53,19 +53,21 @@
 #   define GEN_INIT(var,R,F,A)	 var.a = (DATA) (2.0 * sin(M_PI * F / R)); \
 				 var.s0 = A; \
 				 var.s1 = 0
-#   define GEN_SAMP(val,var,A)	 var.s0 = var.s0 - var.a * var.s1; \
+#   define GEN_SAMP(val,var)	 var.s0 = var.s0 - var.a * var.s1; \
 				 var.s1 = var.s1 + var.a * var.s0; \
 				 val = (short) var.s0
 
 
-#elif defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+#elif !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
     /* 
      * Fallback algorithm when floating point is disabled.
      * This is a very fast fixed point tone generation using sine wave
      * approximation from
      *    http://www.audiomulch.com/~rossb/code/sinusoids/ 
      * Quality wise not so good, but it's blazing fast!
-     * Speed = 9,776 cycles (to generate 100 msec single-tone).
+     * Speed: 
+     *	- with volume adjustment: 14 cycles per sample 
+     *  - without volume adjustment: 12.22 cycles per sample
      */
     PJ_INLINE(int) approximate_sin3(unsigned x)
     {	
@@ -80,12 +82,18 @@
     {
 	unsigned add;
 	unsigned c;
+	unsigned vol;
     };
 
 #   define MAXI			((unsigned)0xFFFFFFFF)
 #   define SIN			approximate_sin3
-#   define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0
-#   define GEN_SAMP(val,var,A)	val = (short) (SIN(var.c) >> 16); \
+#   if 1    /* set this to 0 to disable volume adjustment */
+#	define VOL(var,v)	(((v) * var.vol) >> 16)
+#   else
+#	define VOL(var,v)	(v)
+#   endif
+#   define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0, var.vol=A
+#   define GEN_SAMP(val,var)	val = (short) VOL(SIN(var.c)>>16));\
 				var.c += var.add
 
 
@@ -95,16 +103,17 @@
     /*
      * Should never really reach here, but anyway it's provided for reference.
      * This is the good old tone generator using sin().
-     * Speed = 178,000 cycles (to generate 100 msec single-tone).
+     * Speed = 222.5 cycles per sample.
      */
     struct gen
     {
 	DATA add;
 	DATA c;
+	DATA vol;
     };
 
-#   define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0
-#   define GEN_SAMP(val,var,A) val = (short) (sin(var.c * 2 * M_PI) * A); \
+#   define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0, var.vol=A
+#   define GEN_SAMP(val,var)   val = (short)(sin(var.c * 2 * M_PI) * var.vol);\
 			       var.c += var.add
 
 #endif
@@ -119,9 +128,10 @@ struct gen_state
 
 static void init_generate_single_tone(struct gen_state *state,
 				      unsigned clock_rate, 
-				      unsigned freq)
+				      unsigned freq,
+				      unsigned vol)
 {
-    GEN_INIT(state->tone1,clock_rate,freq,AMP);
+    GEN_INIT(state->tone1,clock_rate,freq,vol);
     state->has_tone2 = PJ_FALSE;
 }
 
@@ -135,13 +145,13 @@ static void generate_single_tone(struct gen_state *state,
     if (channel_count==1) {
 
 	while (buf < end) {
-	    GEN_SAMP(*buf++, state->tone1, AMP);
+	    GEN_SAMP(*buf++, state->tone1);
 	}
 
     } else if (channel_count == 2) {
 
 	while (buf < end) {
-	    GEN_SAMP(*buf, state->tone1, AMP);
+	    GEN_SAMP(*buf, state->tone1);
 	    *(buf+1) = *buf;
 	    buf += 2;
 	}
@@ -152,10 +162,11 @@ static void generate_single_tone(struct gen_state *state,
 static void init_generate_dual_tone(struct gen_state *state,
 				    unsigned clock_rate, 
 				    unsigned freq1,
-				    unsigned freq2)
+				    unsigned freq2,
+				    unsigned vol)
 {
-    GEN_INIT(state->tone1,clock_rate,freq1,AMP);
-    GEN_INIT(state->tone2,clock_rate,freq2,AMP);
+    GEN_INIT(state->tone1,clock_rate,freq1,vol);
+    GEN_INIT(state->tone2,clock_rate,freq2,vol);
     state->has_tone2 = PJ_TRUE;
 }
 
@@ -170,16 +181,16 @@ static void generate_dual_tone(struct gen_state *state,
     if (channel_count==1) {
 	int val, val2;
 	while (buf < end) {
-	    GEN_SAMP(val, state->tone1, AMP);
-	    GEN_SAMP(val2, state->tone2, AMP);
+	    GEN_SAMP(val, state->tone1);
+	    GEN_SAMP(val2, state->tone2);
 	    *buf++ = (short)((val+val2) >> 1);
 	}
     } else if (channel_count == 2) {
 	int val, val2;
 	while (buf < end) {
 
-	    GEN_SAMP(val, state->tone1, AMP);
-	    GEN_SAMP(val2, state->tone2, AMP);
+	    GEN_SAMP(val, state->tone1);
+	    GEN_SAMP(val2, state->tone2);
 	    val = (val + val2) >> 1;
 
 	    *buf++ = (short)val;
@@ -192,12 +203,13 @@ static void generate_dual_tone(struct gen_state *state,
 static void init_generate_tone(struct gen_state *state,
 			       unsigned clock_rate, 
 			       unsigned freq1,
-			       unsigned freq2)
+			       unsigned freq2,
+			       unsigned vol)
 {
     if (freq2)
-	init_generate_dual_tone(state, clock_rate, freq1, freq2);
+	init_generate_dual_tone(state, clock_rate, freq1, freq2 ,vol);
     else
-	init_generate_single_tone(state, clock_rate, freq1);
+	init_generate_single_tone(state, clock_rate, freq1,vol);
 }
 
 
@@ -383,7 +395,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	/* Init tonegen */
 	if (tonegen->dig_samples == 0) {
 	    init_generate_tone(&tonegen->state, port->info.clock_rate,
-			       dig->freq1, dig->freq2);
+			       dig->freq1, dig->freq2, dig->volume);
 	}
 
 	/* Add tone signal */
@@ -438,6 +450,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
 					  unsigned options)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
+    unsigned i;
 
     PJ_ASSERT_RETURN(port && port->info.signature == SIGNATURE &&
 		     count && tones && options==0, PJ_EINVAL);
@@ -446,8 +459,19 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
     PJ_ASSERT_RETURN(count+tonegen->count <= PJMEDIA_TONEGEN_MAX_DIGITS,
 		     PJ_ETOOMANY);
 
+    /* Copy digits */
     pj_memcpy(tonegen->digits + tonegen->count,
 	      tones, count * sizeof(pjmedia_tone_desc));
+    
+    /* Normalize volume */
+    for (i=0; i<count; ++i) {
+	pjmedia_tone_desc *t = &tonegen->digits[i+tonegen->count];
+	if (t->volume == 0)
+	    t->volume = AMP;
+	else if (t->volume < 0)
+	    t->volume = (short) -t->volume;
+    }
+
     tonegen->count += count;
 
     return PJ_SUCCESS;
@@ -487,6 +511,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play_digits( pjmedia_port *port,
 	tones[i].freq2 = map->digits[j].freq2;
 	tones[i].on_msec = digits[i].on_msec;
 	tones[i].off_msec = digits[i].off_msec;
+	tones[i].volume = digits[i].volume;
     }
 
     return pjmedia_tonegen_play(port, count, tones, options);
