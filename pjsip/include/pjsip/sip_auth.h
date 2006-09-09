@@ -117,9 +117,7 @@ typedef struct pjsip_cached_auth
     pj_uint32_t			 nc;	    /**< Nonce count.		    */
     pj_str_t			 cnonce;    /**< Cnonce value.		    */
 #endif
-#if PJSIP_AUTH_AUTO_SEND_NEXT
     pjsip_www_authenticate_hdr	*last_chal; /**< Last challenge seen.	    */
-#endif
 #if PJSIP_AUTH_HEADER_CACHING
     pjsip_cached_auth_hdr	 cached_hdr;/**< List of cached header for
 						 each method.		    */

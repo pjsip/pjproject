@@ -78,5 +78,8 @@
 #   endif
 
 #   define PJSUA_MAX_CALLS		512
+#   define PJSIP_AUTH_HEADER_CACHING	1
+#   define PJSIP_AUTH_AUTO_SEND_NEXT	1
+
 #endif
 

@@ -289,7 +289,7 @@
  * Default: 1
  */
 #if !defined(PJSIP_AUTH_HEADER_CACHING)
-#   define PJSIP_AUTH_HEADER_CACHING	    1
+#   define PJSIP_AUTH_HEADER_CACHING	    0
 #endif
 
 /**
@@ -310,7 +310,7 @@
  * Default: 1
  */
 #if !defined(PJSIP_AUTH_AUTO_SEND_NEXT)
-#   define PJSIP_AUTH_AUTO_SEND_NEXT	    1
+#   define PJSIP_AUTH_AUTO_SEND_NEXT	    0
 #endif
 
 /**
