@@ -63,6 +63,13 @@
  */
 #undef PJ_SOCKADDR_HAS_LEN
 
+/* Does the OS have socklen_t? */
+#undef PJ_HAS_SOCKLEN_T
+
+#if !defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0
+  typedef int socklen_t;
+#endif
+
 /**
  * If this macro is set, it tells select I/O Queue that select() needs to
  * be given correct value of nfds (i.e. largest fd + 1). This requires
@@ -99,13 +106,20 @@
 #  define PJ_HAS_THREADS	    (1)
 #endif
 
+/* Do we need high resolution timer? */
 #undef PJ_HAS_HIGH_RES_TIMER
+
+/* Is malloc() available? */
 #undef PJ_HAS_MALLOC
+
 #ifndef PJ_OS_HAS_CHECK_STACK
 #   define PJ_OS_HAS_CHECK_STACK    0
 #endif
+
+/* Unicode? */
 #undef PJ_NATIVE_STRING_IS_UNICODE
 
+/* The type of atomic variable value: */
 #undef PJ_ATOMIC_VALUE_TYPE
 
 /* If 1, use Read/Write mutex emulation for platforms that don't support it */

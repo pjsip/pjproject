@@ -110,6 +110,14 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
 		   AC_MSG_RESULT(yes)],
 		  AC_MSG_RESULT(no))
 
+# Determine if socklen_t is available
+AC_MSG_CHECKING([if socklen_t is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <unistd.h>]],
+		    		   [socklen_t xxx = 0;])],
+		  [AC_DEFINE(PJ_HAS_SOCKLEN_T,1)
+		   AC_MSG_RESULT(yes)],
+		  AC_MSG_RESULT(no))
+
 # Determine if SO_ERROR is available
 AC_MSG_CHECKING([if SO_ERROR is available])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
