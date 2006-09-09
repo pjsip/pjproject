@@ -228,7 +228,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	 */
 	cred->qop = pjsip_AUTH_STR;
 	cred->nc.ptr = pj_pool_alloc(pool, 16);
-	pj_ansi_snprintf(cred->nc.ptr, 16, "%06u", nc);
+	cred->nc.slen = pj_ansi_snprintf(cred->nc.ptr, 16, "%08u", nc);
 
 	if (cnonce && cnonce->slen) {
 	    pj_strdup(pool, &cred->cnonce, cnonce);
@@ -588,7 +588,6 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 {
     const pjsip_method *method;
     pjsip_cached_auth *auth;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
@@ -640,6 +639,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 	     */
 	    const pjsip_cred_info *cred;
 	    pjsip_authorization_hdr *hauth;
+	    pj_status_t status;
 
 	    cred = auth_find_cred(sess, &auth->realm, 
 				  &auth->last_chal->scheme);
