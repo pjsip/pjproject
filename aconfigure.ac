@@ -21,17 +21,10 @@ AC_CHECK_LIB(pthread,pthread_create)
 AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
 AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
 
-# Endianness detection
-AC_C_BIGENDIAN([AC_SUBST(ac_bigendian,1)
-	        AC_DEFINE(PJ_IS_LITTLE_ENDIAN,0)
-	        AC_DEFINE(PJ_IS_BIG_ENDIAN,1)
-	       ],
-	       [AC_SUBST(ac_bigendian,0)
-	        AC_DEFINE(PJ_IS_LITTLE_ENDIAN,1)
-	        AC_DEFINE(PJ_IS_BIG_ENDIAN,0)
-	       ])
+dnl # Endianness detection
+AC_C_BIGENDIAN
 
-# --disable-floating-point option
+dnl # --disable-floating-point option
 AC_ARG_ENABLE(floating-point,
 	      AC_HELP_STRING([--disable-floating-point],
 			     [Disable floating point where possible]),
@@ -90,27 +83,26 @@ AC_DEFINE(PJ_NATIVE_STRING_IS_UNICODE,0)
 AC_MSG_RESULT([Setting PJ_ATOMIC_VALUE_TYPE to long])
 AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
 
-# Determine if inet_aton() is available
+dnl # Determine if inet_aton() is available
 AC_MSG_CHECKING([if inet_aton is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
-		    		    #include <netinet/in.h>
-		    		    #include <arpa/inet.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <arpa/inet.h>]],
 		    		  [inet_aton(0, 0);])],
 		  [AC_DEFINE(PJ_SOCK_HAS_INET_ATON,1)
 		   AC_MSG_RESULT(yes)],
 		  [AC_MSG_RESULT(no)])
 
-# Determine if sockaddr_in has sin_len member
+dnl # Determine if sockaddr_in has sin_len member
 AC_MSG_CHECKING([if sockaddr_in has sin_len member])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
-		    		    #include <netinet/in.h>
-		    		    #include <arpa/inet.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+		    		     #include <netinet/in.h>
+		    		     #include <arpa/inet.h>]],
 		    		  [struct sockaddr_in a; a.sin_len=0;])],
 		  [AC_DEFINE(PJ_SOCKADDR_HAS_LEN,1)
 		   AC_MSG_RESULT(yes)],
 		  AC_MSG_RESULT(no))
 
-# Determine if socklen_t is available
+dnl # Determine if socklen_t is available
 AC_MSG_CHECKING([if socklen_t is available])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <unistd.h>]],
 		    		   [socklen_t xxx = 0;])],
@@ -118,17 +110,18 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <unistd.h>]],
 		   AC_MSG_RESULT(yes)],
 		  AC_MSG_RESULT(no))
 
-# Determine if SO_ERROR is available
+dnl # Determine if SO_ERROR is available
 AC_MSG_CHECKING([if SO_ERROR is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
-		    		    #include <netinet/in.h>
-		    		    #include <arpa/inet.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+		    		     #include <netinet/in.h>
+		    		     #include <arpa/inet.h>]],
 		    		  [int i=SO_ERROR;])],
 		  [AC_DEFINE(PJ_HAS_SO_ERROR,1)
 		   AC_MSG_RESULT(yes)],
 		  AC_MSG_RESULT(no))
 
-# Determine if RW-mutex is available
+dnl # Determine if RW-mutex is available
 AC_MSG_CHECKING([if pthread_rwlock_t is available])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
 		    		   [pthread_rwlock_t *x;])],
@@ -138,25 +131,26 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
 		   AC_MSG_RESULT(no)])
 
 
-##########################################
-#
-# PJMEDIA
-#
+dnl ##########################################
+dnl #
+dnl # PJMEDIA
+dnl #
 
-# Sound device backend selection
+dnl # Sound device backend selection
 AC_SUBST(ac_pjmedia_snd)
 case $target in
-  *cygwin* | *win* | *mingw*)
+  *darwin*)
+	ac_pjmedia_snd=pa_darwinos
+	AC_MSG_RESULT([Checking sound device backend... coreaudio])
+	LIBS="$LIBS -framework CoreAudio"
+	;;
+  *cygwin* | *mingw*)
 	ac_pjmedia_snd=pa_win32
 	AC_MSG_RESULT([Checking sound device backend... win32 sound])
 	;;
   *rtems*)
 	ac_pjmedia_snd=null
 	AC_MSG_RESULT([Checking sound device backend... null sound])
-	;;
-  *darwin*)
-	ac_pjmedia_snd=pa_darwin_os
-	AC_MSG_RESULT([Checking sound device backend... coreaudio])
 	;;
   *)
 	ac_pjmedia_snd=pa_unix
@@ -169,7 +163,7 @@ case $target in
 	;;
 esac
 
-# Include resampling small filter
+dnl # Include resampling small filter
 AC_SUBST(ac_no_small_filter)
 AC_ARG_ENABLE(small-filter,
 	      AC_HELP_STRING([--disable-small-filter],
@@ -180,7 +174,7 @@ AC_ARG_ENABLE(small-filter,
 	       fi],
 	      AC_MSG_RESULT([Checking if small filter is disabled... no]))
 
-# Include resampling large filter
+dnl # Include resampling large filter
 AC_SUBST(ac_no_large_filter)
 AC_ARG_ENABLE(large-filter,
 	      AC_HELP_STRING([--disable-large-filter],
@@ -191,7 +185,7 @@ AC_ARG_ENABLE(large-filter,
 	       fi],
 	      AC_MSG_RESULT([Checking if large filter is disabled... no]))
 
-# Include G.711 Annex A PLC
+dnl # Include G.711 Annex A PLC
 AC_SUBST(ac_no_g711_plc)
 AC_ARG_ENABLE(g711-plc,
 	      AC_HELP_STRING([--disable-g711-plc],
@@ -202,7 +196,7 @@ AC_ARG_ENABLE(g711-plc,
 	       fi],
 	      AC_MSG_RESULT([Checking if G.711 Annex A PLC is disabled...no]))
 
-# Include Speex AEC
+dnl # Include Speex AEC
 AC_SUBST(ac_no_speex_aec)
 AC_ARG_ENABLE(speex-aec,
 	      AC_HELP_STRING([--disable-speex-aec],
@@ -213,7 +207,7 @@ AC_ARG_ENABLE(speex-aec,
 	       fi],
 	      AC_MSG_RESULT([Checking if Speex AEC is disabled...no]))
 
-# Include G711 codec
+dnl # Include G711 codec
 AC_SUBST(ac_no_g711_codec)
 AC_ARG_ENABLE(g711-codec,
 	      AC_HELP_STRING([--disable-g711-codec],
@@ -225,7 +219,7 @@ AC_ARG_ENABLE(g711-codec,
 	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
 
 
-# Include L16 codec
+dnl # Include L16 codec
 AC_SUBST(ac_no_l16_codec)
 AC_ARG_ENABLE(l16-codec,
 	      AC_HELP_STRING([--disable-l16-codec],
@@ -237,7 +231,7 @@ AC_ARG_ENABLE(l16-codec,
 	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
 
 
-# Include GSM codec
+dnl # Include GSM codec
 AC_SUBST(ac_no_gsm_codec)
 AC_ARG_ENABLE(gsm-codec,
 	      AC_HELP_STRING([--disable-gsm-codec],
@@ -248,7 +242,7 @@ AC_ARG_ENABLE(gsm-codec,
 	       fi],
 	      AC_MSG_RESULT([Checking if GSM codec is disabled...no]))
 
-# Include Speex codec
+dnl # Include Speex codec
 AC_SUBST(ac_no_speex_codec)
 AC_ARG_ENABLE(speex-codec,
 	      AC_HELP_STRING([--disable-speex-codec],
@@ -259,7 +253,7 @@ AC_ARG_ENABLE(speex-codec,
 	       fi],
 	      AC_MSG_RESULT([Checking if Speex codec is disabled...no]))
 
-# Include iLBC codec
+dnl # Include iLBC codec
 AC_SUBST(ac_no_ilbc_codec)
 AC_ARG_ENABLE(ilbc-codec,
 	      AC_HELP_STRING([--disable-ilbc-codec],
@@ -272,15 +266,15 @@ AC_ARG_ENABLE(ilbc-codec,
 
 
 
-##########################################
-#
-# MANUAL CONFIG
-#
+dnl ##########################################
+dnl #
+dnl # MANUAL CONFIG
+dnl #
 
 
-# Determine if select() requires nfds to be filled up with
-# correct value (max_fd+1). If zero, nfds will be filled up with
-# PJ_FD_SETSIZE
+dnl # Determine if select() requires nfds to be filled up with
+dnl # correct value (max_fd+1). If zero, nfds will be filled up with
+dnl # PJ_FD_SETSIZE
 AC_MSG_CHECKING([if select() needs correct nfds])
 case $target in
   *rtems*) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,1)
@@ -292,9 +286,9 @@ case $target in
 	;;
 esac
 
-# Determine if pj_thread_create() should enforce thread stack size when
-# creating thread. Default is zero, to allow OS to allocate appropriate
-# thread's stack size.
+dnl # Determine if pj_thread_create() should enforce thread stack size when
+dnl # creating thread. Default is zero, to allow OS to allocate appropriate
+dnl # thread's stack size.
 AC_MSG_CHECKING([if pj_thread_create() should enforce stack size])
 case $target in
   *rtems*) AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,1)
@@ -305,8 +299,8 @@ case $target in
 	;;
 esac
 
-# Determine if pj_thread_create() should allocate thread's stack from
-# the pool. Default is zero, to let OS allocate thread's stack.
+dnl # Determine if pj_thread_create() should allocate thread's stack from
+dnl # the pool. Default is zero, to let OS allocate thread's stack.
 AC_MSG_CHECKING([if pj_thread_create() should allocate stack])
 case $target in
   *rtems*) AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,1)
@@ -317,16 +311,16 @@ case $target in
 	;;
 esac
 
-# This value specifies the value set in errno by the OS when a non-blocking
-# socket recv() can not return immediate data.
+dnl # This value specifies the value set in errno by the OS when a non-blocking
+dnl # socket recv() can not return immediate data.
 case $target in
   *) AC_DEFINE(PJ_BLOCKING_ERROR_VAL,EAGAIN)
      AC_MSG_RESULT([** Setting non-blocking recv() retval to EAGAIN (please check)])
 	;;
 esac
 
-# This value specifies the value set in errno by the OS when a non-blocking
-# socket connect() can not get connected immediately.
+dnl # This value specifies the value set in errno by the OS when a non-blocking
+dnl # socket connect() can not get connected immediately.
 case $target in
   *) AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,EINPROGRESS)
      AC_MSG_RESULT([** Setting non-blocking connect() retval to EINPROGRESS (please check)])

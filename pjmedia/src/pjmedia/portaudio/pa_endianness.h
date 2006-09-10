@@ -54,6 +54,17 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#include <pj/config.h>
+
+#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
+#  define PA_BIG_ENDIAN     1
+#elif defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+#  define PA_LITTLE_ENDIAN  1
+#else
+#  error "Unable to detect PJLIB's endianness"
+#endif
+
+
 
 #if defined(PA_LITTLE_ENDIAN) || defined(PA_BIG_ENDIAN)
     /* endianness define has been set externally, such as by autoconf */

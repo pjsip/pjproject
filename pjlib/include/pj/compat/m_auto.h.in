@@ -24,10 +24,20 @@
  * @brief Automatically generated process definition file.
  */
 
+/* Machine name, filled in by autoconf script */
 #undef PJ_M_NAME
 
-#undef PJ_IS_LITTLE_ENDIAN
-#undef PJ_IS_BIG_ENDIAN
+/* Endianness, as detected by autoconf */
+#undef WORDS_BIGENDIAN
+
+#ifdef WORDS_BIGENDIAN
+#  define PJ_IS_LITTLE_ENDIAN	0
+#  define PJ_IS_BIG_ENDIAN	1
+#else
+#  define PJ_IS_LITTLE_ENDIAN	1
+#  define PJ_IS_BIG_ENDIAN	0
+#endif
+
 
 /* Specify if floating point is present/desired */
 #undef PJ_HAS_FLOATING_POINT

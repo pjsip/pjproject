@@ -15,14 +15,6 @@ AC_PJMEDIA_SND=@ac_pjmedia_snd@
 # For Unix, specify if ALSA should be supported
 AC_PA_USE_ALSA=@ac_pa_use_alsa@
 
-# PortAudio endianness
-AC_PA_BIGENDIAN=@ac_bigendian@
-ifeq ($(AC_PA_BIGENDIAN),1)
-export CFLAGS += -DPA_BIG_ENDIAN=1
-else
-export CFLAGS += -DPA_LITTLE_ENDIAN=1
-endif
-
 #
 # Codecs
 #
