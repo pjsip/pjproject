@@ -29,6 +29,22 @@ AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
 AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
 
 dnl
+dnl Memory alignment detection
+dnl
+AC_MSG_CHECKING([memory alignment])
+case $target in
+    ia64-* | x86_64-* )
+	AC_DEFINE(PJ_POOL_ALIGNMENT, 8)
+	AC_MSG_RESULT([8 bytes])
+	;;
+    * )
+	AC_DEFINE(PJ_POOL_ALIGNMENT, 4)
+	AC_MSG_RESULT([4 bytes (default)])
+	;;
+esac
+
+
+dnl
 dnl Endianness detection
 dnl
 AC_C_BIGENDIAN
@@ -150,7 +166,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 
 dnl # Determine if socklen_t is available
 AC_MSG_CHECKING([if socklen_t is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <unistd.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>]],
 		    		   [socklen_t xxx = 0;])],
 		  [AC_DEFINE(PJ_HAS_SOCKLEN_T,1)
 		   AC_MSG_RESULT(yes)],
@@ -203,7 +219,19 @@ dnl #
 
 dnl # Sound device backend selection
 AC_SUBST(ac_pjmedia_snd)
-case $target in
+AC_ARG_ENABLE(sound,
+	      AC_HELP_STRING([--disable-sound],
+			     [Exclude sound (i.e. use null sound)]),
+	      [if test "$enable_sound" = "no"; then
+		[ac_pjmedia_snd=null]
+		AC_MSG_RESULT([Checking if sound is disabled... yes])
+	       fi]
+	      )
+
+if test "$enable_sound" = "no"; then
+  true;
+else
+ case $target in
   *darwin*)
 	ac_pjmedia_snd=pa_darwinos
 	AC_MSG_RESULT([Checking sound device backend... coreaudio])
@@ -226,7 +254,8 @@ case $target in
 		        [AC_SUBST(ac_pa_use_alsa,0)])
 	AC_MSG_RESULT([Checking sound device backend... unix])
 	;;
-esac
+ esac
+fi
 
 dnl # Include resampling small filter
 AC_SUBST(ac_no_small_filter)

@@ -10,7 +10,7 @@ endif
 all clean dep depend distclean doc print realclean:
 	for dir in $(DIRS); do \
 	   if [ -d $$dir ]; then \
-		if make $(MAKE_FLAGS) -C $$dir/build $@; then \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
 		    true; \
 		else \
 		    exit 1; \

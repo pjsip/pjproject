@@ -133,6 +133,9 @@
 /* Unicode? */
 #undef PJ_NATIVE_STRING_IS_UNICODE
 
+/* Pool alignment in bytes */
+#undef PJ_POOL_ALIGNMENT
+
 /* The type of atomic variable value: */
 #undef PJ_ATOMIC_VALUE_TYPE
 
