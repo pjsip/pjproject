@@ -92,7 +92,7 @@ endif
 ifeq ($(AC_PJMEDIA_SND),pa_win32)
 export PJMEDIA_OBJS += $(PA_DIR)/pa_win_hostapis.o $(PA_DIR)/pa_win_util.o \
 		       $(PA_DIR)/pa_win_wmme.o
-export CFLAGS += -DDPA_NO_ASIO -DPA_NO_DS \
+export CFLAGS += -DPA_NO_ASIO -DPA_NO_DS \
 	         -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_PORTAUDIO_SOUND
 endif
 

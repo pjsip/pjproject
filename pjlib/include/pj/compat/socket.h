@@ -24,12 +24,12 @@
  * @brief Provides all socket related functions,data types, error codes, etc.
  */
 
-#if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
-#  include <winsock.h>
-#endif
-
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
 #  include <winsock2.h>
+#endif
+
+#if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
+#  include <winsock.h>
 #endif
 
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
@@ -124,9 +124,10 @@
 
 
 /*
- * Windows specific
+ * This will finally be obsoleted, since it should be declared in
+ * os_auto.h
  */
-#if defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+#if !defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0
     typedef int socklen_t;
 #endif
 

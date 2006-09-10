@@ -17,12 +17,49 @@ AC_PROG_CXX
 AC_LANG_C
 
 AC_CHECK_LIB(pthread,pthread_create)
+AC_CHECK_LIB(wsock32,puts)
+AC_CHECK_LIB(ws2_32,puts)
+AC_CHECK_LIB(ole32,puts)
+AC_CHECK_LIB(winmm,puts)
+AC_CHECK_LIB(socket,puts)
+AC_CHECK_LIB(rt,puts)
+AC_CHECK_LIB(nsl,puts)
 
 AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
 AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
 
-dnl # Endianness detection
+dnl
+dnl Endianness detection
+dnl
 AC_C_BIGENDIAN
+
+dnl
+dnl Legacy macros
+dnl
+case $target in
+    *mingw* | *cygw* | *win32* | *w32* )
+	AC_DEFINE(PJ_WIN32,1)
+	AC_DEFINE(PJ_WIN32_WINNT,0x0400)
+	AC_DEFINE(WIN32_LEAN_AND_MEAN)
+	;;
+    *darwin*)
+	AC_DEFINE(PJ_DARWINOS,1)
+	;;
+    *linux*)
+	AC_DEFINE(PJ_LINUX,1)
+	;;
+    *rtems*)
+	AC_DEFINE(PJ_RTEMS,1)
+	;;
+    *sunos* | *solaris* )
+	AC_DEFINE(PJ_SUNOS,1)
+	;;
+    *)
+	;;
+esac
+
+
+
 
 dnl # --disable-floating-point option
 AC_ARG_ENABLE(floating-point,
@@ -42,7 +79,16 @@ AC_ARG_ENABLE(floating-point,
 AC_CHECK_HEADER(arpa/inet.h,[AC_DEFINE(PJ_HAS_ARPA_INET_H,1)])
 AC_CHECK_HEADER(assert.h,[AC_DEFINE(PJ_HAS_ASSERT_H,1)])
 AC_CHECK_HEADER(ctype.h,[AC_DEFINE(PJ_HAS_CTYPE_H,1)])
-AC_CHECK_HEADER(errno.h,[AC_DEFINE(PJ_HAS_ERRNO_H,1)])
+
+case $target in
+    *mingw* | *cygw* | *win32* | *w32* )
+	AC_DEFINE(PJ_HAS_ERRNO_H,0)
+	;;
+    *)
+	AC_CHECK_HEADER(errno.h,[AC_DEFINE(PJ_HAS_ERRNO_H,1)])
+	;;
+esac
+
 AC_CHECK_HEADER(linux/socket.h,[AC_DEFINE(PJ_HAS_LINUX_SOCKET_H,1)])
 AC_CHECK_HEADER(malloc.h,[AC_DEFINE(PJ_HAS_MALLOC_H,1)])
 AC_CHECK_HEADER(netdb.h,[AC_DEFINE(PJ_HAS_NETDB_H,1)])
@@ -112,14 +158,23 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <unistd.h>]],
 
 dnl # Determine if SO_ERROR is available
 AC_MSG_CHECKING([if SO_ERROR is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-		    		     #include <netinet/in.h>
-		    		     #include <arpa/inet.h>]],
-		    		  [int i=SO_ERROR;])],
-		  [AC_DEFINE(PJ_HAS_SO_ERROR,1)
-		   AC_MSG_RESULT(yes)],
-		  AC_MSG_RESULT(no))
+case $target in
+    *mingw* | *cygw* | *win32* | *w32* )
+	AC_DEFINE(PJ_HAS_SO_ERROR,1)
+	AC_MSG_RESULT(yes)
+	;;
+    *)
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+					     #include <sys/socket.h>
+					     #include <netinet/in.h>
+					     #include <arpa/inet.h>]],
+					  [int i=SO_ERROR;])],
+			  [AC_DEFINE(PJ_HAS_SO_ERROR,1)
+			   AC_MSG_RESULT(yes)],
+			  AC_MSG_RESULT(no))
+	;;
+esac
+
 
 dnl # Determine if RW-mutex is available
 AC_MSG_CHECKING([if pthread_rwlock_t is available])
@@ -129,6 +184,16 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
   		   AC_MSG_RESULT(yes)],
 		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
 		   AC_MSG_RESULT(no)])
+
+AC_SUBST(ac_os_objs)
+case $target in
+  *mingw* | *cygw* | *win32* | *w32* )
+	ac_os_objs="os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o ioqueue_select.o"
+	;;
+  *)
+	ac_os_objs="os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o guid_simple.o ioqueue_select.o"
+	;;
+esac
 
 
 dnl ##########################################
@@ -314,6 +379,9 @@ esac
 dnl # This value specifies the value set in errno by the OS when a non-blocking
 dnl # socket recv() can not return immediate data.
 case $target in
+  *mingw* | *cygw* | *win32* | *w32* )
+	AC_DEFINE(PJ_BLOCKING_ERROR_VAL,WSAEWOULDBLOCK)
+	;;
   *) AC_DEFINE(PJ_BLOCKING_ERROR_VAL,EAGAIN)
      AC_MSG_RESULT([** Setting non-blocking recv() retval to EAGAIN (please check)])
 	;;
@@ -322,6 +390,9 @@ esac
 dnl # This value specifies the value set in errno by the OS when a non-blocking
 dnl # socket connect() can not get connected immediately.
 case $target in
+  *mingw* | *cygw* | *win32* | *w32* )
+	AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,WSAEWOULDBLOCK)
+	;;
   *) AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,EINPROGRESS)
      AC_MSG_RESULT([** Setting non-blocking connect() retval to EINPROGRESS (please check)])
 	;;

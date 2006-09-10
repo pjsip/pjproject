@@ -28,6 +28,19 @@
 /* Canonical OS name */
 #undef PJ_OS_NAME
 
+/* Legacy macros */
+#undef PJ_WIN32
+#undef PJ_WIN32_WINNT
+#undef WIN32_LEAN_AND_MEAN
+#undef PJ_DARWINOS
+#undef PJ_LINUX
+#undef PJ_RTEMS
+#undef PJ_SUNOS
+
+#if defined(PJ_WIN32_WINNT) && !defined(_WIN32_WINNT)
+#  define _WIN32_WINNT	PJ_WIN32_WINNT
+#endif
+
 /* Headers availability */
 #undef PJ_HAS_ARPA_INET_H
 #undef PJ_HAS_ASSERT_H
@@ -67,6 +80,7 @@
 #undef PJ_HAS_SOCKLEN_T
 
 #if !defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0
+# define PJ_HAS_SOCKLEN_T  1
   typedef int socklen_t;
 #endif
 

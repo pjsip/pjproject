@@ -79,7 +79,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
 
     if (bytes_read < 0) {
-	if (-bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK))
+	if (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
 	    app_perror("ioqueue reported recv error", -bytes_read);
     } else {
 	sock_data.received += bytes_read;
