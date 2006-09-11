@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/transport_udp.h>
+#include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/ioqueue.h>
@@ -242,6 +243,21 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     tp->rtcp_sock = si->rtcp_sock;
     tp->rtcp_addr_name = si->rtcp_addr_name;
 
+    /* If address is 0.0.0.0, use host's IP address */
+    if (tp->rtp_addr_name.sin_addr.s_addr == 0) {
+	pj_hostent he;
+	const pj_str_t *hostname = pj_gethostname();
+	status = pj_gethostbyname(hostname, &he);
+	if (status != PJ_SUCCESS) {
+	    goto on_error;
+	}
+	tp->rtp_addr_name.sin_addr = *(pj_in_addr*)he.h_addr;
+    }
+
+    /* Same with RTCP */
+    if (tp->rtcp_addr_name.sin_addr.s_addr == 0) {
+	tp->rtcp_addr_name.sin_addr.s_addr = tp->rtp_addr_name.sin_addr.s_addr;
+    }
 
     /* Setup RTP socket with the ioqueue */
     pj_bzero(&rtp_cb, sizeof(rtp_cb));
