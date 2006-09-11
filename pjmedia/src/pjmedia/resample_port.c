@@ -84,10 +84,10 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
      * We need separate buffer for get_frame() and put_frame() since
      * both functions may run simultaneously.
      */
-    rport->get_buf = pj_pool_alloc(pool, rport->base.info.bytes_per_frame);
+    rport->get_buf = pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
     PJ_ASSERT_RETURN(rport->get_buf != NULL, PJ_ENOMEM);
 
-    rport->put_buf = pj_pool_alloc(pool, rport->base.info.bytes_per_frame);
+    rport->put_buf = pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
     PJ_ASSERT_RETURN(rport->put_buf != NULL, PJ_ENOMEM);
 
 
