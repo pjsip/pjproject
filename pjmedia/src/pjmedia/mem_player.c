@@ -37,6 +37,12 @@ struct mem_player
     char	    *buffer;
     pj_size_t	     buf_size;
     char	    *read_pos;
+
+    pj_bool_t	     eof;
+    void	    *user_data;
+    pj_status_t    (*cb)(pjmedia_port *port,
+			 void *user_data);
+
 };
 
 
@@ -94,6 +100,30 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
 }
 
 
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of buffer.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
+			       void *user_data,
+			       pj_status_t (*cb)(pjmedia_port *port,
+						 void *usr_data))
+{
+    struct mem_player *player;
+
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
+		     PJ_EINVALIDOP);
+
+    player = (struct mem_player*) port;
+    player->user_data = user_data;
+    player->cb = cb;
+
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t mem_put_frame( pjmedia_port *this_port, 
 				  const pjmedia_frame *frame)
 {
@@ -116,6 +146,11 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
     player = (struct mem_player*) this_port;
 
+    if (player->eof) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_EEOF;
+    }
+
     size_needed = this_port->info.bytes_per_frame;
     size_written = 0;
     endpos = player->buffer + player->buf_size;
@@ -134,15 +169,34 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
 	pj_assert(player->read_pos <= endpos);
 
-	if (player->read_pos == endpos)
+	if (player->read_pos == endpos) {
 	    player->read_pos = player->buffer;
-    }
 
-    player->timestamp.u64 += this_port->info.samples_per_frame;
+	    /* Call callback, if any */
+	    if (player->cb) {
+		pj_status_t status;
+
+		player->eof = PJ_TRUE;
+		status = (*player->cb)(this_port, player->user_data);
+		if (status != PJ_SUCCESS) {
+		    /* Must not access player from here on. It may be
+		     * destroyed by application.
+		     */
+		    frame->size = size_written;
+		    frame->timestamp.u64 = player->timestamp.u64;
+		    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+		    return status;
+		}
+		player->eof = PJ_FALSE;
+	    }
+	}
+    }
 
     frame->size = this_port->info.bytes_per_frame;
     frame->timestamp.u64 = player->timestamp.u64;
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+    player->timestamp.u64 += this_port->info.samples_per_frame;
 
     return PJ_SUCCESS;
 }

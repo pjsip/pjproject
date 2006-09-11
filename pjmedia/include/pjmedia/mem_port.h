@@ -70,6 +70,28 @@ PJ_DECL(pj_status_t) pjmedia_mem_player_create(pj_pool_t *pool,
 
 
 /**
+ * Register a callback to be called when the buffer reading has reached the
+ * end of buffer. If the player is set to play repeatedly, then the callback
+ * will be called multiple times. Note that only one callback can be 
+ * registered for each player port.
+ *
+ * @param port		The memory player port.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. If the callback returns non-
+ *			PJ_SUCCESS, the playback will stop. Note that if
+ *			application destroys the player port in the callback,
+ *			it must return non-PJ_SUCCESS here.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
+			       void *user_data,
+			       pj_status_t (*cb)(pjmedia_port *port,
+						 void *usr_data));
+
+
+/**
  * @}
  */
 
