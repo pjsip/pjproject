@@ -134,6 +134,40 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
 
 
 /**
+ * Register a callback to be called when no space left in the buffer.
+ * Note that when a callback is registered, this callback will also be
+ * called when application destroys the port and the callback has not 
+ * been called before.
+ *
+ * @param port		The memory recorder port.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. If the callback returns non-
+ *			PJ_SUCCESS, the recording will stop. In other cases
+ *                      recording will be restarted and the rest of the frame
+ *                      will be stored starting from the beginning of the 
+ *			buffer. Note that if application destroys the capture
+ *			port in the callback, it must return non-PJ_SUCCESS 
+ *			here.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_mem_capture_set_eof_cb(pjmedia_port *port,
+                               void *user_data,
+                               pj_status_t (*cb)(pjmedia_port *port,
+						 void *usr_data));
+
+/**
+ * Return the current size of the recorded data in the buffer.
+ *
+ * @param port		The memory recorder port.
+ * @return		The size of buffer data..
+ */
+PJ_DECL(pj_size_t)
+pjmedia_mem_capture_get_size(pjmedia_port *port);
+
+
+/**
  * @}
  */
 
