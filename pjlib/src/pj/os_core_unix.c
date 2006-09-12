@@ -1101,7 +1101,9 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
  */
 PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
 {
+    enum { RETRY = 4 };
     int status;
+    unsigned retry;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
@@ -1109,11 +1111,21 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
 #if PJ_HAS_THREADS
     PJ_LOG(6,(mutex->obj_name, "Mutex destroyed by thread %s",
 			       pj_thread_this()->obj_name));
-    status = pthread_mutex_destroy( &mutex->mutex );
+
+    for (retry=0; retry<RETRY; ++retry) {
+	status = pthread_mutex_destroy( &mutex->mutex );
+	if (status == PJ_SUCCESS)
+	    break;
+	else if (retry<RETRY-1 && status == EBUSY)
+	    pthread_mutex_unlock(&mutex->mutex);
+    }
+
     if (status == 0)
 	return PJ_SUCCESS;
-    else
+    else {
+	pj_assert(!"Error destroying pthread_mutex");
 	return PJ_RETURN_OS_ERROR(status);
+    }
 #else
     pj_assert( mutex == (pj_mutex_t*)1 );
     status = PJ_SUCCESS;
