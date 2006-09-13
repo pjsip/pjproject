@@ -96,9 +96,9 @@ PJ_DEF(pj_status_t) pj_stun_parse_msg( void *buf, pj_size_t len,
 	}
 
 	if (pj_ntohs((*attr)->type) > PJ_STUN_ATTR_REFLECTED_FORM) {
-	    PJ_LOG(4,(THIS_FILE, "Error: invalid attr type %d in attr %d",
+	    PJ_LOG(5,(THIS_FILE, "Warning: unknown attr type %x in attr %d. "
+				 "Attribute was ignored.",
 				 pj_ntohs((*attr)->type), msg->attr_count));
-	    return PJLIB_UTIL_ESTUNINATTRTYPE;
 	}
 
 	msg_len = (pj_uint16_t)(msg_len - len);
