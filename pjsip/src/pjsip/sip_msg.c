@@ -226,7 +226,8 @@ PJ_DEF(int) pjsip_method_cmp( const pjsip_method *m1, const pjsip_method *m2)
     if (m1->id == m2->id) {
 	if (m1->id != PJSIP_OTHER_METHOD)
 	    return 0;
-	return pj_stricmp(&m1->name, &m2->name);
+	/* Method comparison is case sensitive! */
+	return pj_strcmp(&m1->name, &m2->name);
     }
     
     return ( m1->id < m2->id ) ? -1 : 1;

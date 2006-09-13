@@ -141,7 +141,7 @@ PJ_IDEF(int) pj_strcmp( const pj_str_t *str1, const pj_str_t *str2)
     if (diff) {
 	return diff > 0 ? 1 : -1;
     } else if (str1->ptr && str1->slen) {
-	return pj_ansi_strncmp(str1->ptr, str2->ptr, str1->slen);
+	return memcmp(str1->ptr, str2->ptr, str1->slen);
     } else {
 	return 0;
     }
@@ -151,7 +151,7 @@ PJ_IDEF(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2,
 			 pj_size_t len)
 {
     if (str1->ptr && str2->ptr)
-	return pj_ansi_strncmp(str1->ptr, str2->ptr, len);
+	return memcmp(str1->ptr, str2->ptr, len);
     else if (str2->ptr)
 	return str2->slen==0 ? 0 : -1;
     else if (str1->ptr)
@@ -166,7 +166,7 @@ PJ_IDEF(int) pj_strncmp2( const pj_str_t *str1, const char *str2,
     if (len == 0) 
 	return 0;
     else if (str1->ptr && str2)
-	return pj_ansi_strncmp(str1->ptr, str2, len);
+	return memcmp(str1->ptr, str2, len);
     else if (str1->ptr)
 	return str1->slen==0 ? 0 : 1;
     else if (str2)
