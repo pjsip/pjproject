@@ -590,7 +590,7 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 	    pj_status_t status;
 
 	    PJ_LOG(5,(sub->obj_name, "Refreshing subscription."));
-	    status = pjsip_evsub_initiate(sub, &sub->method, 
+	    status = pjsip_evsub_initiate(sub, NULL, 
 					  sub->expires->ivalue,
 					  &tdata);
 	    if (status == PJ_SUCCESS)
@@ -632,7 +632,7 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 		     "Timeout waiting for subsequent NOTIFY (we did "
 		     "send non-2xx response for previous NOTIFY). "
 		     "Unsubscribing.."));
-	    status = pjsip_evsub_initiate( sub, &sub->method, 0, &tdata);
+	    status = pjsip_evsub_initiate( sub, NULL, 0, &tdata);
 	    if (status == PJ_SUCCESS)
 		pjsip_evsub_send_request(sub, tdata);
 	}
@@ -1363,15 +1363,15 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
      */
     if (tsx->role == PJSIP_ROLE_UAC &&
 	tsx->state == PJSIP_TSX_STATE_CALLING &&
-	pjsip_method_cmp(&tsx->method, &sub->method) == 0) 
+	(pjsip_method_cmp(&tsx->method, &sub->method) == 0  ||
+	 pjsip_method_cmp(&tsx->method, &pjsip_subscribe_method) == 0))
     {
 
 	if (sub->pending_sub && 
 	    sub->pending_sub->state < PJSIP_TSX_STATE_COMPLETED) 
 	{
 	    PJ_LOG(4,(sub->obj_name, 
-		      "Cancelling pending %.*s request",
-		      (int)sub->method.name.slen, sub->method.name.ptr));
+		      "Cancelling pending subscription request"));
 
 	    /* By convention, we use 490 (Request Updated) status code.
 	     * When transaction handler (below) see this status code, it
@@ -1470,7 +1470,9 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 			      pjsip_event *event )
 {
 
-    if (pjsip_method_cmp(&tsx->method, &sub->method)==0) {
+    if (pjsip_method_cmp(&tsx->method, &sub->method)==0 || 
+	pjsip_method_cmp(&tsx->method, &pjsip_subscribe_method)==0) 
+    {
 
 	/* Received response to outgoing request that establishes/refresh
 	 * subscription. 
@@ -1764,7 +1766,9 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 			      pjsip_event *event)
 {
 
-    if (pjsip_method_cmp(&tsx->method, &sub->method) == 0) {
+    if (pjsip_method_cmp(&tsx->method, &sub->method) == 0 ||
+	pjsip_method_cmp(&tsx->method, &pjsip_subscribe_method) == 0) 
+    {
 	
 	/*
 	 * Incoming request (e.g. SUBSCRIBE or REFER) to refresh subsciption.
