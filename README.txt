@@ -1,41 +1,41 @@
 
 
 Getting Started: Building and Using PJSIP and PJMEDIA
-[Last Update: 12/Sept/2006]
 
-   This article describes how to get, build, and use the open source PJSIP and
-   PJMEDIA SIP and media stack. You can get the online (and HTML) version of
-   this file in http://www.pjsip.org/using.htm
+   [Last Update: Sept 13, 2006]
+     _________________________________________________________________
+
+   This article describes how to download, customize, build, and use the open
+   source PJSIP and PJMEDIA SIP and media stack. The online (and HTML) version
+   of this file can be downloaded from http://www.pjsip.org/using.htm
 
 
-If you're so impatient..
-
-   If you just want to get going quickly (and maybe read this document later),
-   this is what you can do to build the libraries:
+Quick Info
 
    Building with GNU tools
-          Just do:
+          Generally these should be all that are needed to build the libraries,
+          applications, and samples:
 
    $ ./configure
    $ make dep && make clean && make
 
-   Building with Microsoft Visual Studio
-          Just follow the following steps:
+   Building Win32 Target with Microsoft Visual Studio
+          Generally we can just do these steps:
 
          1. Open pjsip-apps/build/pjsip_apps.dsw workspace,
          2. Create an empty pjlib/include/pj/config_site.h, and
          3. build the pjsua application.
 
    Building for Windows Mobile
-          Just follow the following steps:
+          Generally these are all that are needed:
 
          1. Open pjsip-apps/build/wince-evc4/wince_demos.vcw EVC4 workspace,
          2. Create an empty pjlib/include/pj/config_site.h, and
          3. build the pjsua_wince application.
 
-   With  all  the  build systems, the output libraries will be put in lib
-   directory under each projects, and the output binaries will be put in bin
-   directory under each projects.
+   With Visual Studio for Win32 target and the GNU build systems, the output
+   libraries will be put in lib directory under each projects, and the output
+   binaries will be put in bin directory under each projects.
 
 
 Table of Contents:
@@ -81,7 +81,7 @@ Table of Contents:
 
      5.2 Building the Projects
 
-   6. Using PJPROJECT with Your Applications
+   6. Using PJPROJECT with Applications
 
 
    Appendix I: Common Problems/Frequently Asked Question (FAQ)
@@ -92,9 +92,6 @@ Table of Contents:
 
 1. Getting the Source Code Distribution
      _________________________________________________________________
-
-   Since all libraries are released under Open Source license, all source code
-   are available for your scrutinizing pleasure.
 
    All libraries (PJLIB, PJLIB-UTIL, PJSIP, PJMEDIA, and PJMEDIA-CODEC) are
    currently distributed under a single source tree, collectively named as
@@ -107,60 +104,64 @@ Table of Contents:
 
    Getting the released tarball is a convenient way to obtain stable version of
    PJPROJECT. The tarball may not contain the latest features or bug-fixes, but
-   normally it is considered more stable as it will be tested more rigorously
-   before it is released.
+   normally it is considered more stable as each will be tested more rigorously
+   before released.
 
-   You    can    get    the    latest    released    tarball   from   the
+   The   latest   released   tarball   can   be   downloaded   from   the
    http://www.pjsip.org/download.htm.
 
 
 1.2 Getting from Subversion trunk
      _________________________________________________________________
 
-   You can always get the most up-to-date version of the sources from the
-   Subversion trunk. However, please bear in mind that the sources in the
-   Subversion trunk may not be the most stable one. In fact, it may not even
-   compile for some particular targets, because of the time lag in the updating
-   process for all targets. Please consult the mailing list if you encounter
-   such problems.
+   PJPROJECT  Subversion  repository  will always contain the latest/most
+   up-to-date version of the sources. Normally the Subversion repository is
+   always kept in a "good" state. However, there's always a chance that things
+   break  and  the  tree  doesn't  build  correctly (particularly for the
+   "not-so-popular" targets), so please consult the mailing list should there
+   be any problems.
 
-   Using Subversion also has benefits of keeping your source up to date with
-   the main PJ source tree and to track your changes made to your local copy,
-   if any.
+   Using Subversion also has benefits of keeping the local copy of the source
+   up to date with the main PJ source tree and to easily track the changes made
+   to the local copy, if any.
 
 
 What is Subversion
 
-   Subversion is Open Source version control system similar to CVS. Subversion
-   homepage is in http://subversion.tigris.org/
+   Subversion (SVN) is Open Source version control system similar to CVS.
+   Subversion homepage is in http://subversion.tigris.org/
 
 
 Getting Subversion Client
 
-   Before you can download the PJ source files from pjsip.org SVN tree, you
-   need  to  install  a Subversion client. You can download binaries from
-   http://subversion.tigris.org/  and  follow the instructions there.
-   Subversion clients are available for Windows, Linux, MacOS X, and many more
-   platforms.
+   A Subversion (SVN) client is needed to download the PJ source files from
+   pjsip.org  SVN  tree.  SVN  client  binaries  can  be  downloaded from
+   http://subversion.tigris.org/, and the program should be available for
+   Windows, Linux, MacOS X, and many more platforms.
 
 
 Getting the Source for The First Time
 
-   Once Subversion client is installed, you can use these commands to initially
+   Once Subversion client is installed, we can use these commands to initially
    retrieve the latest sources from the Subversion trunk:
+
+
 
    $ svn co http://svn.pjproject.net/repos/pjproject/trunk pjproject
    $ cd pjproject
 
 
-Keeping Your Local Copy Up-to-Date
+Keeping The Local Copy Up-to-Date
 
-   Once you have your local copy of the sources, you will want to keep your
-   local copy up to date by periodically synchronizing your source with the
-   latest revision from the Subversion trunk. The mailing list provides best
-   source of information about the availability of new updates in the trunk.
+   Once sources have been downloaded, we can keep the local copy up to date by
+   periodically synchronizing the local source with the latest revision from
+   the  PJ's  Subversion  trunk. The mailing list provides best source of
+   information about the availability of new updates in the trunk.
 
-   You can use these commands to synchronize your copy with the main trunk:
+   To  update  the  local  copy  with the latest changes in the main PJ's
+   repository:
+
+
 
    $ cd pjproject
    $ svn update
@@ -168,29 +169,26 @@ Keeping Your Local Copy Up-to-Date
 
 Tracking Local and Remote Changes
 
-   In general, it is not recommended to keep your local changes (to the library
-   source codes) for a long time, because the longer you keep your changes, the
-   more chances that your source will be out-of-sync with the main PJ source
-   tree (the trunk), because the trunk may be updated to support new features
-   or to fix some bugs.
-
-   The  best way to resolve this is to send your modification back to the
-   author, so that he can change the copy in the SVN trunk.
-
    To see what files have been changed locally:
+
+
 
    $ cd pjproject
    $ svn status
 
    The above command only compares local file against the original local copy,
-   so it doesn't require Internet connection to perform the check.
+   so it doesn't require Internet connection while performing the check.
 
-   To see what files have been changed both locally and remotely:
+   To see both what files have been changed locally and what files have been
+   updated in the PJ's Subversion repository:
+
+
 
    $ cd pjproject
    $ svn status -u
 
-   Note that svn status -u requires Internet connection to the SVN tree.
+   Note that this command requires active Internet connection to query the
+   status of PJPROJECT's source repository.
 
 
 1.3 Source Directories Layout
@@ -198,36 +196,40 @@ Tracking Local and Remote Changes
 
 Top-Level Directory Layout
 
-   The top-level directories (denoted as $PJ here) in the source distribution
-   contains the sources of individual libraries:
+   The top-level directories (denoted as $TOP here) in the source distribution
+   contains the following sub-directories:
 
-   $PJ/build
+   $TOP/build
           Contains makefiles that are common for all projects.
 
-   $PJ/pjlib
-          Contains PJLIB header and source files.
+   $TOP/pjlib
+          Contains  header  and  source files of PJLIB. PJLIB is the base
+          portability  and  framework  library which is used by all other
+          libraries
 
-   $PJ/pjlib-util
-          Contains PJLIB-UTIL header and source files.
+   $TOP/pjlib-util
+          Contains  PJLIB-UTIL  header and source files. PJLIB-UTIL is an
+          auxiliary library that contains utility functions such as scanner,
+          XML, STUN, MD5 algorithm, getopt() implementation, etc.
 
-   $PJ/pjmedia
-          Contains PJMEDIA and PJMEDIA-CODEC header and source files.
+   $TOP/pjmedia
+          Contains PJMEDIA and PJMEDIA-CODEC header and source files. The
+          sources of various codecs (such as GSM, Speex, and iLBC) can be found
+          under this directory.
 
-   $PJ/pjsip
+   $TOP/pjsip
           Contains PJSIP header and source files.
 
-   $PJ/pjsip-apps
-          Contains source code for PJSUA and samples applications.
+   $TOP/pjsip-apps
+          Contains source code for PJSUA and various sample applications.
 
 
 Individual Directory Inside Each Project
 
-   The directories inside each project (for example, inside pjlib, pjmedia, or
-   pjsip) further contains some sub-directories below:
+   Each library directory further contains these sub-directories:
 
    bin
-          Contains binaries produced by the build process. The contents of this
-          directory will not get synchronized with the SVN trunk.
+          Contains binaries produced by the build process.
 
    build
           Contains build scripts/makefiles, project files, project workspace,
@@ -238,18 +240,28 @@ Individual Directory Inside Each Project
 
    build/output
           The build/output directory contains the object files and other files
-          generated by the build process.
+          generated by the build process. To support building multiple targets
+          with a single source tree, each build target will occupy a different
+          subdirectory under this directory.
 
    build/wince-evc4
           This directory contains the project/workspace files to build Windows
           CE/WinCE version of the project using Microsoft Embedded Visual C++
           4.
 
+   build/wince-evc4/output
+          This directory contains the library, executable, and object files
+          generated by Windows Mobile build process.
+
    docs
           Contains Doxygen configuration file (doxygen.cfg) to generate online
           documentation from the source files. The output documentation will be
           put in this directory as well (for example, docs/html directory for
           the HTML files).
+
+          (to generate Doxygen documentation from the source tree, just run
+          "doxygen docs/doxygen.cfg" in the individual project directory. The
+          generated files will reside in docs directory).
 
    include
           Contains the header files for the project.
@@ -267,44 +279,36 @@ Individual Directory Inside Each Project
 2.1 config_site.h file
      _________________________________________________________________
 
-   Before you can compile and use the libraries, you need to create your
-   config_site.h MANUALLY.
-
-   (Sorry to write in red background, but this question comes out quite often
-   so I thought it's worth to put some punctuation)
-
-Q: What is config_site.h File
-
-   The pjlib/include/pj/config_site.h contains your local customizations to the
+   The pjlib/include/pj/config_site.h contains local customizations to the
    libraries.
 
-Q: Why do we need config_site.h file
+   All customizations should be put in this file instead of modifying PJ's
+   files, because if PJ's files get modified, then those modified files will
+   not be updated the next time the source is synchronized. Or in other case,
+   the local modification may be overwritten with the fresh copy from the SVN.
 
-   You should put your customization in this file instead of modifying PJ's
-   files,  because  if you modify PJ's files, then you will prevent those
-   modified files from being updated next time you synchronize your local copy
-   to the SVN trunk. Or even worse, you may accidently overwrite your local
-   modification with the fresh copy from the SVN.
+   Putting the local customization to the config_site.h solves this problem,
+   because this file is not included in the version control, so it will never
+   be overwritten by "svn update" command.
 
-   Putting your local customization to the config_site.h solves this problem,
-   because this file is not included in the version control.
-
-Q: What customizations can be put in config_site.h file
-
-   You  can  put  your  #define macros in this file. You can find list of
-   configuration macros that you can override by scanning:
+   Please find list of configuration macros that can be overriden from these
+   files:
      * pjlib/config.h file
      * pjmedia/config.h file
      * pjsip/sip_config.h file
 
-   You    can    also    see    a    sample    config_site.h    file   in
+   A     sample    config_site.h    file    is    also    available    in
    pjlib/include/config_site_sample.h.
 
-Q: How to create config_site.h file
 
-   The simplest way is just to create an empty file.
+Creating config_site.h file
 
-   Another way to create your config_site.h is to write something like this:
+   The simplest way is just to create an empty file, to use whetever default
+   values set by the libraries.
+
+   Another way to create the config_site.h file is to write something like the
+   following:
+
 
    // Uncomment to get minimum footprint (suitable for 1-2 concurrent calls
    only)
@@ -317,12 +321,11 @@ Q: How to create config_site.h file
 2.2 Disk Space Requirements
      _________________________________________________________________
 
-   PJ will need
-   currently about 50-60 MB of disk space to store the source files, and
-     * approximately 30-50 MB of additional space for building each target
+   The building process needs:
+     * about 50-60 MB of disk space to store the uncompressed source files, and
+     * about 30-50 MB of additional space for building each target
 
-   (For example, Visual Studio Debug and Release are considered to be separate
-   targets, so you'll need twice the capacity to build both of them)
+   (Visual Studio Debug and Release are considered as separate targets)
 
 
 3. Building Linux, *nix, *BSD, and MacOS X Targets with GNU Build Systems
@@ -336,22 +339,31 @@ Q: How to create config_site.h file
      * Linux/uC-Linux (i386, Opteron, Itanium, MIPS, PowerPC, etc.),
      * MacOS X (PowerPC),
      * mingw (i386),
-     * *BSD (i386, Opteron, etc.),
-     * RTEMS (ARM, powerpc),
+     * FreeBSD and maybe other BSD's (i386, Opteron, etc.),
+     * RTEMS with cross compilation (ARM, powerpc),
      * etc.
 
 
 3.2 Requirements
      _________________________________________________________________
 
-   To use PJ's GNU build system, you would need the typical GNU tools such as:
-     * GNU Make (other make will not work),
-     * binutils,
-     * gcc, and
-     * sh compatible shell (for autoconf to work)
+   In order to use PJ's GNU build system, these typical GNU tools are needed:
+     * GNU make (other make will not work),
+     * GNU binutils for the target, and
+     * GNU gcc for the target.
 
-   On Windows, mingw will work, but cygwin currently doesn't. As usual, your
-   mileage may vary.
+   In addition, the appropriate "SDK" must be installed for the particular
+   target (this could just be a libc and the appropriate system abstraction
+   library such as Posix).
+
+   The build system is known to work on the following hosts:
+     * Linux, many types of distributions.
+     * MacOS X 10.2
+     * mingw (Win2K, XP)
+     * FreeBSD (must use gmake instead of make)
+
+   Building Win32 applications with cygwin is currently not supported (there is
+   some Windows header conflicts), but cross-compilations might just work.
 
 
 3.3 Running configure
@@ -359,22 +371,27 @@ Q: How to create config_site.h file
 
 Using Default Settings
 
-   Just  run  configure  without any options to let the script detect the
+   Run  "./configure"  without  any  options to let the script detect the
    appropriate settings for the host:
+
+
 
    $ cd pjproject
    $ ./configure
    ...
 
    Notes:
-          The  default settings build the library in "release" mode, with
-          default CFLAGS set to "-O2 -DNDEBUG".
+          The default settings build the libraries in "release" mode, with
+          default CFLAGS set to "-O2 -DNDEBUG". To change the default CFLAGS,
+          we can use the usual "./configure CFLAGS='-g'" construct.
 
     Features Customization
 
    With the new autoconf based build system, most configuration/customization
-   can  be  specified  as  configure  arguments.  You can get the list of
-   customizable features by running ./configure --help:
+   can be specified as configure arguments. The list of customizable features
+   can be viewed by running "./configure --help" command:
+
+
 
    $ cd pjproject
    $ ./configure --help
@@ -393,12 +410,14 @@ Using Default Settings
    --disable-ilbc-codec       Exclude iLBC codec in the build
    ...                       
 
-    Debug Version and Other Customizations
+    Configuring Debug Version and Other Customizations
 
-   The configure script accepts standard customization such as the CFLAGS,
-   LDFLAGS, etc.
+   The configure script accepts standard customization, which details can be
+   obtained by executing ./configure --help.
 
    For example, to build the libraries/application in debug mode:
+
+
 
    $ ./configure CFLAGS="-g"
    ...
@@ -408,6 +427,8 @@ Using Default Settings
      _________________________________________________________________
 
    (.. to be completed)
+
+
 
    $ ./configure --target=powerpc-linux-unknown
    ...
@@ -419,34 +440,37 @@ Using Default Settings
    Once the configure script completes successfully, start the build process by
    invoking these commands:
 
+
+
    $ cd pjproject
    $ make dep
    $ make
 
    Note:
-          You may need to call gmake instead of make for your host to invoke
-          GNU make instead of the native make.
+          gmake may need to be specified instead of make for some hosts, to
+          invoke GNU make instead of the native make.
+
 
    Description of all make targets supported by the Makefile's:
 
    all
-          The default (or first) make target to build the libraries/binaries.
+          The default (or first) target to build the libraries/binaries.
 
    dep, depend
           Build dependencies rule from the source files.
 
    clean
-          Clean the object files, but keep the output library/binary files
-          intact.
+          Clean  the object files for current target, but keep the output
+          library/binary files intact.
 
    distclean, realclean
-          Clean  all  generated  files  (object, libraries, binaries, and
-          dependency files).
+          Remove  all  generated  files (object, libraries, binaries, and
+          dependency files) for current target.
 
 
    Note:
-          You can run make in the top-level PJ directory or in build directory
-          under each project to build only the particular project.
+          make can be invoked either in the top-level PJ directory or in build
+          directory under each project to build only the particular project.
 
 
 4. Building for Windows Targets with Microsoft Visual Studio
@@ -455,18 +479,18 @@ Using Default Settings
   4.1 Requirements
      _________________________________________________________________
 
-   In order to build the projects using Microsoft Visual Studio, you need to
-   have one of the following:
+   The Microsoft Visual Studio based project files can be used with one of the
+   following:
 
      * Microsoft Visual Studio 6,
      * Microsoft Visual Studio .NET 2002,
      * Microsoft Visual Studio .NET 2003,
-     * Microsoft Visual Studio Express 2005 with Platform SDK and DirectX SDK,
+     * Microsoft Visual C++ Express 2005 with Platform SDK and DirectX SDK,
 
-   For the host, you need:
-     * Windows NT, 2000, XP, 2003, or later (it may work on Windows 95 or 98,
-       but this has not been tested),
-     * Sufficient amount of RAM for the build process,
+   For the host, the following are required:
+     * Windows NT, 2000, XP, 2003, or later ,
+     * Windows 95/98 should work too, but this has not been tested,
+     * Sufficient amount of RAM for the build process.
 
 
   4.2 Building the Projects
@@ -475,7 +499,7 @@ Using Default Settings
    Follow the steps below to build the libraries/application using Visual
    Studio:
     1. Open Visual Studio 6 workspace file pjsip-apps/build/pjsip_apps.dsw. If
-       you're using later version of Visual Studio, it should convert the
+       later version of Visual Studio is being used, it should convert the
        workspace file and project files into the new formats.
     2. Set pjsua as Active Project.
     3. Select Debug or Release build as appropriate.
@@ -508,8 +532,8 @@ Using Default Settings
     1. (Still using pjsip_apps workspace)
     2. Set sample_debug project as Active Project
     3. Edit debug.c file inside this project.
-    4. Modify the #include line to include the particular sample application
-       you want to debug
+    4. Modify the #include line to include the particular sample application to
+       debug
     5. Select Debug build.
     6. Build and debug the project.
 
@@ -524,14 +548,14 @@ Using Default Settings
   5.1 Requirements
      _________________________________________________________________
 
-   You will need the following to build SIP and media components for Windows
-   Mobile:
+   One of the following development tools is needed to build SIP and media
+   components for Windows Mobile:
      * Microsoft Embedded Visual C++ 4 with appropriate SDKs, or
      * Microsoft Visual Studio 2005 for Windows Mobile with appropriate SDKs.
 
    Note that VS2005 is not directly supported (as I don't have the tools), but
-   it is reported to work (and I assumed that VS2005 for Windows Mobile can
-   import EVC4 workspace file).
+   it is reported to work (I assumed that VS2005 for Windows Mobile can import
+   EVC4 workspace file).
 
   5.2 Building the Projects
      _________________________________________________________________
@@ -540,41 +564,46 @@ Using Default Settings
    follow  the  following  steps  to build the WinCE libraries and sample
    application:
     1. Open pjsip-apps/build/wince-evc4/wince_demos.vcw workspace file. If
-       you're using later version of EVC4 this may cause the workspace file to
-       be converted to the current version of your Visual Studio.
+       later version of EVC4 is being used, this may cause the workspace file
+       to be converted to the appropriate format.
     2. Select pjsua_wince project as the Active Project.
     3. Select the appropriate SDK (for example Pocket PC 2003 SDK or SmartPhone
        2003 SDK)
     4. Select the appropriate configuration (for example, Win32 (WCE Emulator
-       Debug) if you plan to debug the program in emulator)
+       Debug) to debug the program in emulator, or other configurations such as
+       ARMV4, MIPS, SH3, SH4, or whatever suitable for the device)
     5. Select the appropriate device (Emulator or the actual Device).
     6. Build the project. This will build the sample WinCE application and all
        libraries (SIP, Media, etc.) needed by this application.
 
    Notes
-          If your config_site.h includes config_site_sample.h file, then
-          there are certain configuration in config_site_sample.h that get
-          activated for Windows CE targets.
+
+          + If the config_site.h includes config_site_sample.h file, then
+            there are certain configuration in config_site_sample.h that get
+            activated for Windows CE targets. Please make sure that these
+            configurations are suitable for the application.
+          + The libraries, binaries and object files produced by the build
+            process are located under build/wince-evc4/output directory of each
+            projects.
 
 
-6. Using PJPROJECT with Your Applications
+6. Using PJPROJECT with Applications
      _________________________________________________________________
 
-   Regardless if you use Visual Studio or GNU build systems or other tools, in
-   order to build your application to use PJSIP and PJMEDIA SIP and media
-   stack, you need to configure your build tools as follows:
-    1. Put these include directories in your include search path:
+   Regardless of the build system being used, the following tasks are normally
+   needed to be done in order to build application to use PJSIP and PJMEDIA:
+    1. Put these include directories in the include search path:
           + pjlib/include
           + pjlib-util/include
           + pjmedia/include
           + pjsip/include
-    2. Put these library directories in your library search path:
+    2. Put these library directories in the library search path:
           + pjlib/lib
           + pjlib-util/lib
           + pjmedia/lib
           + pjsip/lib
-    3. Include the relevant PJ header files in your application source file.
-       For example, using these would include ALL APIs exported by PJ:
+    3. Include the relevant PJ header files in the application source file. For
+       example, using these would include ALL APIs exported by PJ:
 
       #include <pjlib.h>
       #include <pjlib-util.h>
@@ -587,19 +616,19 @@ Using Default Settings
        (Note: the documentation of the relevant libraries should say which
        header files should be included to get the declaration of the APIs).
     4. Declare the OS macros.
-          + For Windows applications built with Visual Studio, you need to
-            declare PJ_WIN32=1 macro in your project settings (declaring the
-            macro in your source file may not be sufficient).
-          + For Windows Mobile applications build with Visual C++, you need to
-            declare PJ_WIN32_WINCE=1 macro in your project settings.
-          + For GNU build system/autoconf based build system, you need to
-            declare PJ_AUTOCONF=1 macro when compiling your applications.
+          + For Windows applications built with Visual Studio, we need to
+            declare PJ_WIN32=1 macro in the project settings (declaring the
+            macro in the source file may not be sufficient).
+          + For Windows Mobile applications build with Visual C++, we need to
+            declare PJ_WIN32_WINCE=1 macro in the project settings.
+          + For  GNU build system/autoconf based build system, we need to
+            declare PJ_AUTOCONF=1 macro when compiling the applications.
        (Note: the old PJ build system requires declaring the target processor
        with PJ_M_XXX=1 macro, but this has been made obsolete. The target
        processor  will  be  detected  from compiler's predefined macro by
        pjlib/config.h file).
     5. Link with the appropriate PJ libraries. The following libraries will
-       need to be included in your library link specifications:
+       need to be included in the library link specifications:
 
         pjlib
                 Base library used by all libraries.
@@ -637,18 +666,36 @@ Using Default Settings
         For Visual Studio builds
                 The actual library names will look like
                 pjlib-i386-win32-vc6-debug.lib,
-                pjlib-i386-win32-vc6-release.lib, etc., depending on whether
-                you build the Debug or Release version of the library.
+                pjlib-i386-win32-vc6-release.lib, etc., depending on whether we
+                are building the Debug or Release version of the library.
+
+                An easier way to link with the libraries is to include PJ
+                project files in the workspace, and to configure project
+                dependencies so that the application depends on the PJ
+                libraries. This way, we don't need to manually add each PJ
+                libraries to the input library file specification, since VS
+                will automatically link the dependency libraries with the
+                application.
+
+        For Windows Mobile builds
+                Unfortunately the PJ libraries built for Windows Mobile will
+                not be placed in the usual lib directory, but rather under the
+                output directory under build/wince-evc4 project directory.
+
+                An easier way to link with the libraries is to include PJ
+                project files in the workspace, and to configure project
+                dependencies so that the application depends on the PJ
+                libraries. This way, we don't need to manually add each PJ
+                libraries to the input library file specification, since VS
+                will automatically link the dependency libraries with the
+                application.
 
         For GNU builds
-                You can get the library suffix by including PJ's build.mak file
-                from the root PJ directory (the suffix is contained in
-                TARGET_NAME variable). For example, to link with PJLIB and
-                PJMEDIA, you can use this in syntax your LDFLAGS:
-                "-lpj-$(TARGET_NAME) -lpjmedia-$(TARGET_NAME)"
-
-   Should you encounter any difficulties with using PJ libraries, you can
-   consult the mailing list for some help.
+                Application's Makefile can get the PJ library suffix by
+                including PJ's build.mak file from the root PJ directory (the
+                suffix is contained in TARGET_NAME variable). For example, to
+                link with PJLIB and PJMEDIA, we can use this syntax in the
+                LDFLAGS: "-lpj-$(TARGET_NAME) -lpjmedia-$(TARGET_NAME)"
 
 
 Appendix I: Common Problems/Frequently Asked Question (FAQ)
@@ -657,21 +704,16 @@ Appendix I: Common Problems/Frequently Asked Question (FAQ)
   I.1 fatal error C1083: Cannot open include file: 'pj/config_site.h': No such
   file or directory
 
-   If  you  encounter  this  error, then probably you haven't created the
-   config_site.h file. Please follow the Build Preparation instructions
-   above to create this file.
+   This error normally occurs when the config_site.h file has not been created.
+   This file needs to be created manually (an empty file is sufficient). Please
+   follow the Build Preparation instructions above to create this file.
 
 
 
 
 
+  Thanks for using PJ libraries and for reading this document. Please
+  send feedbacks or general comments to <bennylp at pjsip dot org>.
 
-
-
-     _________________________________________________________________
-
-   Feedback:
-          Thanks for downloading PJ libraries and for reading this document. If
-          you'd like to comment on anything, send your email to me and I would
-          be delighted to hear them. -benny <bennylp at pjsip dot org>
+  Benny Prijono
 
