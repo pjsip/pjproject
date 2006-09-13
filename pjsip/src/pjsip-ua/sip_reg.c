@@ -371,9 +371,11 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     /* Add Contact header. */
     msg = tdata->msg;
-    pjsip_msg_add_hdr(msg, (pjsip_hdr*) regc->contact_hdr);
+    pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool, 
+						   regc->contact_hdr));
     if (regc->expires_hdr)
-	pjsip_msg_add_hdr(msg, (pjsip_hdr*) regc->expires_hdr);
+	pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool,
+						       regc->expires_hdr));
 
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
