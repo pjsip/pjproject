@@ -97,13 +97,14 @@ struct transport_key
 /*
  * Transport names.
  */
-const struct
+struct
 {
     pjsip_transport_type_e type;
     pj_uint16_t		   port;
     pj_str_t		   name;
     unsigned		   flag;
-} transport_names[] = 
+    char		   name_buf[16];
+} transport_names[16] = 
 {
     { PJSIP_TRANSPORT_UNSPECIFIED, 0, {"Unspecified", 11}, 0},
     { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}, PJSIP_TRANSPORT_DATAGRAM},
@@ -113,6 +114,42 @@ const struct
     { PJSIP_TRANSPORT_LOOP, 15060, {"LOOP", 4}, PJSIP_TRANSPORT_RELIABLE}, 
     { PJSIP_TRANSPORT_LOOP_DGRAM, 15060, {"LOOP-DGRAM", 10}, PJSIP_TRANSPORT_DATAGRAM},
 };
+
+
+/*
+ * Register new transport type to PJSIP.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_register_type(unsigned tp_flag,
+						   const char *tp_name,
+						   int def_port,
+						   int *p_tp_type)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(tp_flag && tp_name && def_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pj_ansi_strlen(tp_name) < 
+			PJ_ARRAY_SIZE(transport_names[0].name_buf), 
+		     PJ_ENAMETOOLONG);
+
+    for (i=1; i<PJ_ARRAY_SIZE(transport_names); ++i) {
+	if (transport_names[i].type == 0)
+	    break;
+    }
+
+    if (i == PJ_ARRAY_SIZE(transport_names))
+	return PJ_ETOOMANY;
+
+    transport_names[i].type = (pjsip_transport_type_e)i;
+    transport_names[i].port = (pj_uint16_t)def_port;
+    pj_ansi_strcpy(transport_names[i].name_buf, tp_name);
+    transport_names[i].name = pj_str(transport_names[i].name_buf);
+    transport_names[i].flag = tp_flag;
+
+    if (p_tp_type)
+	*p_tp_type = i;
+
+    return PJ_SUCCESS;
+}
 
 
 /*

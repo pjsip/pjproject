@@ -80,6 +80,30 @@ enum pjsip_transport_flags_e
 	    ((tp)->flag & PJSIP_TRANSPORT_SECURE)
 
 /**
+ * Register new transport type to PJSIP. The PJSIP transport framework
+ * contains the info for some standard transports, as declared by
+ * #pjsip_transport_type_e. Application may use non-standard transport
+ * with PJSIP, but before it does so, it must register the information
+ * about the new transport type to PJSIP by calling this function.
+ *
+ * @param tp_flag   The flags describing characteristics of this
+ *		    transport type.
+ * @param tp_name   Transport type name.
+ * @param def_port  Default port to be used for the transport.
+ * @param p_tp_type On successful registration, it will be filled with
+ *		    the registered type. This argument is optional.
+ *
+ * @return	    PJ_SUCCESS if registration is successful, or
+ *		    PJSIP_ETYPEEXISTS if the same transport type has
+ *		    already been registered.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_register_type(unsigned tp_flag,
+						   const char *tp_name,
+						   int def_port,
+						   int *p_tp_type);
+
+
+/**
  * Get the transport type from the transport name.
  *
  * @param name	    Transport name, such as "TCP", or "UDP".

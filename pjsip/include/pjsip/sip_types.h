@@ -79,7 +79,10 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_LOOP,
 
     /** Loopback (datagram, unreliable) */
-    PJSIP_TRANSPORT_LOOP_DGRAM
+    PJSIP_TRANSPORT_LOOP_DGRAM,
+
+    /** Start of user defined transport */
+    PJSIP_TRANSPORT_START_OTHER
 
 } pjsip_transport_type_e;
 
