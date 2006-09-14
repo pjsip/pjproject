@@ -604,6 +604,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     /* id and role */
     info->id = call_id;
     info->role = call->inv->role;
+    info->acc_id = call->acc_id;
 
     /* local info */
     info->local_info.ptr = info->buf_.local_info;

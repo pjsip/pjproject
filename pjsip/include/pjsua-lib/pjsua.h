@@ -1437,6 +1437,9 @@ typedef struct pjsua_call_info
     /** Initial call role (UAC == caller) */
     pjsip_role_e	role;
 
+    /** The account ID where this call belongs. */
+    pjsua_acc_id	acc_id;
+
     /** Local URI */
     pj_str_t		local_info;
 
