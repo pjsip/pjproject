@@ -20,8 +20,15 @@
 
 
 #define THIS_FILE	"pjsua.c"
+#define NO_LIMIT	(int)0x7FFFFFFF
 
 //#define STEREO_DEMO
+
+/* Call specific data */
+struct call_data
+{
+    pj_timer_entry	    timer;
+};
 
 
 /* Pjsua application data */
@@ -40,6 +47,8 @@ static struct app_config
 
     unsigned		    buddy_cnt;
     pjsua_buddy_config	    buddy_cfg[PJSUA_MAX_BUDDIES];
+
+    struct call_data	    call_data[PJSUA_MAX_CALLS];
 
     pj_pool_t		   *pool;
     /* Compatibility with older pjsua */
@@ -82,11 +91,11 @@ static void usage(void)
     puts  ("  pjsua [options]");
     puts  ("");
     puts  ("General options:");
+    puts  ("  --config-file=file  Read the config/arguments from file.");
     puts  ("  --help              Display this help screen");
     puts  ("  --version           Display version info");
     puts  ("");
     puts  ("Logging options:");
-    puts  ("  --config-file=file  Read the config/arguments from file.");
     puts  ("  --log-file=fname    Log to filename (default stderr)");
     puts  ("  --log-level=N       Set log max level to N (0(none) to 6(trace)) (default=5)");
     puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
@@ -144,9 +153,8 @@ static void usage(void)
     puts  ("  --auto-answer=code  Automatically answer incoming calls with code (e.g. 200)");
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
-    /*
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
-    */
+
     puts  ("");
     fflush(stdout);
 }
@@ -167,7 +175,7 @@ static void default_config(struct app_config *cfg)
     cfg->udp_cfg.port = 5060;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
-    cfg->duration = (unsigned)-1;
+    cfg->duration = NO_LIMIT;
     cfg->wav_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
 }
@@ -621,11 +629,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return -1;
 	    }
 	    break;
+	*/
 
 	case OPT_DURATION:
 	    cfg->duration = my_atoi(pj_optarg);
 	    break;
-	*/
 
 	case OPT_THREAD_CNT:
 	    cfg->cfg.thread_cnt = my_atoi(pj_optarg);
@@ -707,7 +715,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_MAX_CALLS:
 	    cfg->cfg.max_calls = my_atoi(pj_optarg);
 	    if (cfg->cfg.max_calls < 1 || cfg->cfg.max_calls > PJSUA_MAX_CALLS) {
-		PJ_LOG(1,(THIS_FILE,"Too many calls for max-calls (1-%d)",
+		PJ_LOG(1,(THIS_FILE,"Error: maximum call setting exceeds "
+				    "compile time limit (PJSUA_MAX_CALLS=%d)",
 			  PJSUA_MAX_CALLS));
 		return -1;
 	    }
@@ -1042,7 +1051,7 @@ static int write_settings(const struct app_config *config,
     pj_strcat2(&cfg, line);
 
     /* Uas-duration. */
-    if (config->duration != (unsigned)-1) {
+    if (config->duration != NO_LIMIT) {
 	pj_ansi_sprintf(line, "--duration %d\n",
 			config->duration);
 	pj_strcat2(&cfg, line);
@@ -1171,6 +1180,33 @@ static pj_bool_t find_prev_call(void)
 }
 
 
+/* Callback from timer when the maximum call duration has been
+ * exceeded.
+ */
+static void call_timeout_callback(pj_timer_heap_t *timer_heap,
+				  struct pj_timer_entry *entry)
+{
+    pjsua_call_id call_id = entry->id;
+    pjsua_msg_data msg_data;
+    pjsip_generic_string_hdr warn;
+    pj_str_t hname = pj_str("Warning");
+    pj_str_t hvalue = pj_str("399 pjsua \"Call duration exceeded\"");
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    /* Add warning header */
+    pjsua_msg_data_init(&msg_data);
+    pjsip_generic_string_hdr_init2(&warn, &hname, &hvalue);
+    pj_list_push_back(&msg_data.hdr_list, &warn);
+
+    /* Call duration has been exceeded; disconnect the call */
+    PJ_LOG(3,(THIS_FILE, "Duration (%d seconds) has been exceeded "
+			 "for call %d, disconnecting the call",
+			 app_config.duration, call_id));
+    entry->id = PJSUA_INVALID_ID;
+    pjsua_call_hangup(call_id, 200, NULL, &msg_data);
+}
+
 
 /*
  * Handler when invite state has changed.
@@ -1185,6 +1221,15 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
+	/* Cancel duration timer, if any */
+	if (app_config.call_data[call_id].timer.id != PJSUA_INVALID_ID) {
+	    struct call_data *cd = &app_config.call_data[call_id];
+	    pjsip_endpoint *endpt = pjsua_get_pjsip_endpt();
+
+	    cd->timer.id = PJSUA_INVALID_ID;
+	    pjsip_endpt_cancel_timer(endpt, &cd->timer);
+	}
+
 	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
 		  call_id,
 		  call_info.last_status,
@@ -1195,6 +1240,20 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	}
 
     } else {
+
+	if (app_config.duration!=NO_LIMIT && 
+	    call_info.state == PJSIP_INV_STATE_CONFIRMED) 
+	{
+	    /* Schedule timer to hangup call after the specified duration */
+	    struct call_data *cd = &app_config.call_data[call_id];
+	    pjsip_endpoint *endpt = pjsua_get_pjsip_endpt();
+	    pj_time_val delay;
+
+	    cd->timer.id = call_id;
+	    delay.sec = app_config.duration;
+	    delay.msec = 0;
+	    pjsip_endpt_schedule_timer(endpt, &cd->timer, &delay);
+	}
 
 	PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
 		  call_id,
@@ -2363,6 +2422,12 @@ pj_status_t app_init(int argc, char *argv[])
 #ifdef STEREO_DEMO
     stereo_demo();
 #endif
+
+    /* Initialize calls data */
+    for (i=0; i<PJ_ARRAY_SIZE(app_config.call_data); ++i) {
+	app_config.call_data[i].timer.id = PJSUA_INVALID_ID;
+	app_config.call_data[i].timer.cb = &call_timeout_callback;
+    }
 
     /* Optionally registers WAV file */
     if (app_config.wav_file.slen) {

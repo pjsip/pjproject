@@ -505,6 +505,25 @@ static pjsip_hdr_vptr generic_hdr_vptr =
     (pjsip_hdr_print_fptr) &pjsip_generic_string_hdr_print,
 };
 
+
+PJ_DEF(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *hdr,
+					    pj_str_t *hname,
+					    pj_str_t *hvalue)
+{
+    init_hdr(hdr, PJSIP_H_OTHER, &generic_hdr_vptr);
+    if (hname) {
+	hdr->name = *hname;
+	hdr->sname = *hname;
+    }
+    if (hvalue) {
+	hdr->hvalue = *hvalue;
+    } else {
+	hdr->hvalue.ptr = NULL;
+	hdr->hvalue.slen = 0;
+    }
+}
+
+
 PJ_DEF(pjsip_generic_string_hdr*) 
 pjsip_generic_string_hdr_init( pj_pool_t *pool,
 			       void *mem,
@@ -512,19 +531,21 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
 			       const pj_str_t *hvalue)
 {
     pjsip_generic_string_hdr *hdr = mem;
+    pj_str_t dup_hname, dup_hval;
 
-    init_hdr(hdr, PJSIP_H_OTHER, &generic_hdr_vptr);
     if (hnames) {
-	pj_strdup(pool, &hdr->name, hnames);
-	hdr->sname = hdr->name;
-    }
-    if (hvalue) {
-	pj_strdup(pool, &hdr->hvalue, hvalue);
+	pj_strdup(pool, &dup_hname, hnames);
     } else {
-	hdr->hvalue.ptr = NULL;
-	hdr->hvalue.slen = 0;
+	dup_hname.slen = 0;
     }
 
+    if (hvalue) {
+	pj_strdup(pool, &dup_hval, hvalue);
+    } else {
+	dup_hval.slen = 0;
+    }
+
+    pjsip_generic_string_hdr_init2(hdr, &dup_hname, &dup_hval);
     return hdr;
 }
 

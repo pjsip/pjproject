@@ -879,6 +879,7 @@ pjsip_generic_string_hdr_create( pj_pool_t *pool,
 				 const pj_str_t *hname,
 				 const pj_str_t *hvalue);
 
+
 /**
  * Initialize a preallocated memory with the header structure. This function
  * should only be called when application uses its own memory allocation to
@@ -902,6 +903,23 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
 			       const pj_str_t *hname,
 			       const pj_str_t *hvalue);
 
+
+/**
+ * Construct a generic string header without allocating memory from the pool.
+ * This function is useful to create a temporary header which life-time is
+ * very short (for example, creating the header in the stack to be passed
+ * as argument to a function which will copy the header).
+ *
+ * @param pool	    The pool.
+ * @param hname	    The header name to be assigned to the header, or NULL to
+ *		    assign the header name with some string.
+ * @param hvalue    Optional string to be assigned as the value.
+ *
+ * @return	    The header, or THROW exception.
+ */
+PJ_DECL(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *h,
+					     pj_str_t *hname,
+					     pj_str_t *hvalue);
 
 
 /* **************************************************************************/
