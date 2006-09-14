@@ -531,7 +531,7 @@ static void OnCreate(HWND hWnd)
     SetCallStatus("Ready", 5);
     SetAction(ID_MENU_CALL);
     SetURI(DEFAULT_URI, -1);
-    SetFocus(hwndURI);
+    SetFocus(hWnd);
 
 }
 
@@ -546,6 +546,17 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
     int wmId, wmEvent;
     
     switch (message) {
+    case WM_KEYUP:
+	if (wParam==114) {
+	    wParam = ID_MENU_CALL;
+	} else if (wParam==115) {
+	    if (g_current_call == PJSUA_INVALID_ID)
+		wParam = ID_EXIT;
+	    else
+		wParam = ID_MENU_DISCONNECT;
+	} else
+	    break;
+
     case WM_COMMAND:
 	wmId    = LOWORD(wParam); 
 	wmEvent = HIWORD(wParam); 
