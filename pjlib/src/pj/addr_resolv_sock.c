@@ -38,7 +38,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 
     he = gethostbyname(copy);
     if (!he)
-	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+	return PJ_ERESOLVE;
 
     phe->h_name = he->h_name;
     phe->h_aliases = he->h_aliases;

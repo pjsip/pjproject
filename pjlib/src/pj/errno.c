@@ -64,6 +64,7 @@ static const struct
     PJ_BUILD_ERR(PJ_EEXISTS,       "Object already exists" ),
     PJ_BUILD_ERR(PJ_EEOF,	   "End of file" ),
     PJ_BUILD_ERR(PJ_ETOOBIG,	   "Size is too big"),
+    PJ_BUILD_ERR(PJ_ERESOLVE,	   "gethostbyname() has returned error"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

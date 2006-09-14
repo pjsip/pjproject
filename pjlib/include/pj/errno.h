@@ -285,6 +285,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Size is too big.
  */
 #define PJ_ETOOBIG	    (PJ_ERRNO_START_STATUS + 17)/* 70017 */
+/**
+ * @hideinitializer
+ * Error in gethostbyname()
+ */
+#define PJ_ERESOLVE	    (PJ_ERRNO_START_STATUS + 18)/* 70018 */
 
 
 /** @} */   /* pj_errnum */
