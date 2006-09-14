@@ -301,12 +301,19 @@ PJ_BEGIN_DECL
  ***********************************************************/
 /**
  * @hideinitializer
- * Credential failed to authenticate.
+ * Credential failed to authenticate. For this failure, right credential
+ * for the realm has been found and used to authenticate against the challenge,
+ * but the server has rejected the authorization request with 401/407 response
+ * (either with no stale parameter or with "stale=false" parameter). In most
+ * cases, this indicates that the username/password combination is incorrect.
  */
 #define PJSIP_EFAILEDCREDENTIAL	(PJSIP_ERRNO_START_PJSIP + 100)	/* 171100 */
 /**
  * @hideinitializer
- * No suitable credential.
+ * No suitable credential is found to authenticate the request against 
+ * the received authentication challenge in 401/407 response. This often
+ * is caused by different realm supplied in the credential than the realm
+ * found in the challenge.
  */
 #define PJSIP_ENOCREDENTIAL	(PJSIP_ERRNO_START_PJSIP + 101)	/* 171101 */
 /**
