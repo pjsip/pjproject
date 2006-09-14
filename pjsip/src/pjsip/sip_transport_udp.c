@@ -652,15 +652,13 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 	 * of local hostname.
 	 */
 	if (tmp_addr.sin_addr.s_addr == PJ_INADDR_ANY) {
-	    pj_hostent he;
-	    const pj_str_t *hostname = pj_gethostname();
-	    status = pj_gethostbyname(hostname, &he);
-	    if (status != PJ_SUCCESS) {
-		pj_sock_close(sock);
+	    pj_in_addr hostip;
+
+	    status = pj_gethostip(&hostip);
+	    if (status != PJ_SUCCESS)
 		return status;
-	    }
-	    pj_strcpy2(&bound_name.host, 
-		       pj_inet_ntoa(*(pj_in_addr*)he.h_addr));
+
+	    pj_strcpy2(&bound_name.host, pj_inet_ntoa(hostip));
 	} else {
 	    /* Otherwise use bound address. */
 	    pj_strcpy2(&bound_name.host, pj_inet_ntoa(tmp_addr.sin_addr));

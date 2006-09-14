@@ -245,13 +245,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
     /* If address is 0.0.0.0, use host's IP address */
     if (tp->rtp_addr_name.sin_addr.s_addr == 0) {
-	pj_hostent he;
-	const pj_str_t *hostname = pj_gethostname();
-	status = pj_gethostbyname(hostname, &he);
-	if (status != PJ_SUCCESS) {
+	pj_in_addr hostip;
+
+	status = pj_gethostip(&hostip);
+	if (status != PJ_SUCCESS)
 	    goto on_error;
-	}
-	tp->rtp_addr_name.sin_addr = *(pj_in_addr*)he.h_addr;
+
+	tp->rtp_addr_name.sin_addr = hostip;
     }
 
     /* Same with RTCP */

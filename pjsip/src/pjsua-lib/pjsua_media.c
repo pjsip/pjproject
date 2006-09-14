@@ -286,23 +286,15 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    sock[1] = PJ_INVALID_SOCKET;
 
 	} else {
-	    const pj_str_t *hostname;
-	    pj_sockaddr_in addr;
+	    pj_in_addr addr;
 
 	    /* Get local IP address. */
-	    hostname = pj_gethostname();
-
-	    pj_bzero( &addr, sizeof(addr));
-	    addr.sin_family = PJ_AF_INET;
-	    status = pj_sockaddr_in_set_str_addr( &addr, hostname);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Unresolvable local hostname", 
-			     status);
+	    status = pj_gethostip(&addr);
+	    if (status != PJ_SUCCESS)
 		goto on_error;
-	    }
 
 	    for (i=0; i<2; ++i)
-		pj_memcpy(&mapped_addr[i], &addr, sizeof(addr));
+		mapped_addr[i].sin_addr = addr;
 
 	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)rtp_port);
 	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(rtp_port+1));

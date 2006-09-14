@@ -812,20 +812,16 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 
     } else {
 
-	const pj_str_t *hostname = pj_gethostname();
-	struct pj_hostent he;
+	pj_bzero(p_pub_addr, sizeof(pj_sockaddr_in));
 
-	status = pj_gethostbyname(hostname, &he);
+	status = pj_gethostip(&p_pub_addr->sin_addr);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to resolve local host", status);
 	    pj_sock_close(sock);
 	    return status;
 	}
 
-	pj_bzero(p_pub_addr, sizeof(pj_sockaddr_in));
 	p_pub_addr->sin_family = PJ_AF_INET;
 	p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
-	p_pub_addr->sin_addr = *(pj_in_addr*)he.h_addr;
     }
 
     *p_sock = sock;

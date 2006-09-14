@@ -21,10 +21,10 @@
 
 /**
  * @file addr_resolv.h
- * @brief Address resolve (pj_gethostbyname()).
+ * @brief IP address resolution.
  */
 
-#include <pj/types.h>
+#include <pj/sock.h>
 
 PJ_BEGIN_DECL
 
@@ -82,6 +82,17 @@ typedef struct pj_hostent
  * @return	    PJ_SUCCESS, or the appropriate error codes.
  */ 
 PJ_DECL(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he);
+
+
+/**
+ * Resolve the primary IP address of local host. 
+ *
+ * @param ip_addr   On successful resolution, this will be filled up with
+ *		    the host IP address, in network byte order.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_gethostip(pj_in_addr *ip_addr);
 
 
 /** @} */

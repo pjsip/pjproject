@@ -78,7 +78,9 @@ static struct app_config
 static pjsua_call_id	current_call;
 static pj_str_t		uri_arg;
 
+#ifdef STEREO_DEMO
 static void stereo_demo();
+#endif
 
 /*****************************************************************************
  * Configuration manipulation

@@ -249,15 +249,13 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
      * as the transport's address.
      */
     if (listener_addr->sin_addr.s_addr == 0) {
-	const pj_str_t *hostname;
-	struct pj_hostent he;
+	pj_in_addr hostip;
 
-	hostname = pj_gethostname();
-	status = pj_gethostbyname(hostname, &he);
+	status = pj_gethostip(&hostip);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	listener_addr->sin_addr = *(pj_in_addr*)he.h_addr;
+	listener_addr->sin_addr = hostip;
     }
 
     pj_ansi_snprintf(listener->obj_name, sizeof(listener->obj_name), 

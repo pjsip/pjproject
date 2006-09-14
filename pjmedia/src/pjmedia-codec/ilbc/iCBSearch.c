@@ -127,7 +127,8 @@
                *ppe=0.0;
                pp=buf+LPC_FILTERORDER+lMem-lTarget;
                for (j=0; j<lTarget; j++) {
-                   *ppe+=(*pp)*(*pp++);
+                   *ppe+=(*pp)*(*pp);
+		   ++pp;
                }
 
                if (*ppe>0.0) {
@@ -322,7 +323,8 @@
 
                pp=cbvectors+lMem-lTarget;
                for (j=0; j<lTarget; j++) {
-                   *ppe+=(*pp)*(*pp++);
+                   *ppe+=(*pp)*(*pp);
+		   ++pp;
                }
 
                ppi = cbvectors + lMem - 1 - lTarget;
