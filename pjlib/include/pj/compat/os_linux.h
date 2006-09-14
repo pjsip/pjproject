@@ -119,6 +119,8 @@
  */
 #define PJ_THREAD_ALLOCATE_STACK    	0
 
+/* Linux has socklen_t */
+#define PJ_HAS_SOCKLEN_T		1
 
 
 #endif	/* __PJ_COMPAT_OS_LINUX_H__ */

@@ -135,6 +135,9 @@ typedef int socklen_t;
  */
 #define PJ_THREAD_ALLOCATE_STACK    	0
 
+/* Oh well.. MacOS 10.2 doesn't have socklen_t, but 10.4 has! */
+#define PJ_HAS_SOCKLEN_T		0
+
 
 #endif	/* __PJ_COMPAT_OS_DARWINOS_H__ */
 

@@ -128,6 +128,9 @@ typedef int socklen_t;
  */
 #define PJ_THREAD_ALLOCATE_STACK    1
 
+/* RTEMS has socklen_t (does it? )*/
+#define PJ_HAS_SOCKLEN_T	    1
+
 
 
 

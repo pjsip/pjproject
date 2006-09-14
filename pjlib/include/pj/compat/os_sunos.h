@@ -122,6 +122,9 @@
  */
 #define PJ_THREAD_ALLOCATE_STACK    	0
 
+/* SunOS has socklen_t (does it? )*/
+#define PJ_HAS_SOCKLEN_T	    1
+
 
 
 #endif	/* __PJ_COMPAT_OS_SUNOS_H__ */
