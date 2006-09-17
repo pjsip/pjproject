@@ -70,7 +70,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			echo_common.o echo_port.o echo_speex.o \
 			echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
-			null_port.o plc_common.o plc_g711.o \
+			null_port.o plc_common.o plc_steveu.o \
 			port.o splitcomb.o resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o \

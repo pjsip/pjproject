@@ -232,6 +232,10 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	return status;
 
 
+#ifdef SIMULATE_LOST_PCT
+    snd_port->options |= PJMEDIA_PLC_ENABLED;
+#endif
+
     /* If we have player components, allocate buffer to save the last
      * frame played to the speaker. The last frame is used for packet
      * lost concealment (PLC) algorithm.

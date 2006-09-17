@@ -171,11 +171,10 @@
 
 
 /**
- * G.711 Appendix I Packet Lost Concealment (PLC).
- * Enabled only when floating point is enabled.
+ * Enable Steve Underwood's PLC.
  */
-#ifndef PJMEDIA_HAS_G711_PLC
-#   define PJMEDIA_HAS_G711_PLC			PJ_HAS_FLOATING_POINT
+#ifndef PJMEDIA_HAS_STEVEU_PLC
+#   define PJMEDIA_HAS_STEVEU_PLC		PJ_HAS_FLOATING_POINT
 #endif
 
 

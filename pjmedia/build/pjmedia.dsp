@@ -171,7 +171,12 @@ SOURCE=..\src\pjmedia\plc_common.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\plc_g711.c
+SOURCE=..\src\pjmedia\plc_steveu.c
+# ADD CPP /W2
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\plc_steveu.h
 # End Source File
 # Begin Source File
 

@@ -27,9 +27,9 @@ static void* plc_replay_create(pj_pool_t*, unsigned c, unsigned f);
 static void  plc_replay_save(void*, pj_int16_t*);
 static void  plc_replay_generate(void*, pj_int16_t*);
 
-extern void* pjmedia_plc_g711_create(pj_pool_t*, unsigned c, unsigned f);
-extern void  pjmedia_plc_g711_save(void*, pj_int16_t*);
-extern void  pjmedia_plc_g711_generate(void*, pj_int16_t*);
+extern void* pjmedia_plc_steveu_create(pj_pool_t*, unsigned c, unsigned f);
+extern void  pjmedia_plc_steveu_save(void*, pj_int16_t*);
+extern void  pjmedia_plc_steveu_generate(void*, pj_int16_t*);
 
 
 /**
@@ -43,12 +43,12 @@ struct plc_alg
 };
 
 
-#if defined(PJMEDIA_HAS_G711_PLC) && PJMEDIA_HAS_G711_PLC!=0
-static struct plc_alg plc_g711 =
+#if defined(PJMEDIA_HAS_STEVEU_PLC) && PJMEDIA_HAS_STEVEU_PLC!=0
+static struct plc_alg plc_steveu =
 {
-    &pjmedia_plc_g711_create,
-    &pjmedia_plc_g711_save,
-    &pjmedia_plc_g711_generate
+    &pjmedia_plc_steveu_create,
+    &pjmedia_plc_steveu_save,
+    &pjmedia_plc_steveu_generate
 };
 #endif
 
@@ -90,9 +90,9 @@ PJ_DEF(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
 
     if (0)
 	;
-#if defined(PJMEDIA_HAS_G711_PLC) && PJMEDIA_HAS_G711_PLC!=0
+#if defined(PJMEDIA_HAS_STEVEU_PLC) && PJMEDIA_HAS_STEVEU_PLC!=0
     else if (clock_rate == 8000)
-	plc->op = &plc_g711;
+	plc->op = &plc_steveu;
 #endif
     else
 	plc->op = &plc_replay;
