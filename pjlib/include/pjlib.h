@@ -42,6 +42,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/pool_buf.h>
 #include <pj/rand.h>
 #include <pj/rbtree.h>
 #include <pj/sock.h>

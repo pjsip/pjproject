@@ -88,6 +88,7 @@ PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f,
 
 PJ_IDEF(void) pj_pool_release( pj_pool_t *pool )
 {
-    (*pool->factory->release_pool)(pool->factory, pool);
+    if (pool->factory->release_pool)
+	(*pool->factory->release_pool)(pool->factory, pool);
 }
 

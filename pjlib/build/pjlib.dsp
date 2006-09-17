@@ -294,6 +294,10 @@ SOURCE=..\src\pj\pool.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\pool_buf.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\pool_caching.c
 # End Source File
 # Begin Source File
@@ -539,6 +543,10 @@ SOURCE=..\include\pj\pool.h
 # Begin Source File
 
 SOURCE=..\include\pj\pool_alt.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\pool_buf.h
 # End Source File
 # Begin Source File
 

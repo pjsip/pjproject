@@ -266,7 +266,8 @@ PJ_DEF(void) pj_pool_destroy_int(pj_pool_t *pool)
     reset_pool(pool);
     initial_size = ((pj_pool_block*)pool->block_list.next)->end - 
 		   (unsigned char*)pool;
-    (*pool->factory->policy.block_free)(pool->factory, pool, initial_size);
+    if (pool->factory->policy.block_free)
+	(*pool->factory->policy.block_free)(pool->factory, pool, initial_size);
 }
 
 
