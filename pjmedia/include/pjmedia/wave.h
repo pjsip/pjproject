@@ -96,6 +96,30 @@ struct pjmedia_wave_hdr
  */
 typedef struct pjmedia_wave_hdr pjmedia_wave_hdr;
 
+/**
+ * This structure describes generic RIFF subchunk header.
+ */
+typedef struct pjmedia_wave_subchunk
+{
+    pj_uint32_t	    id;			/**< Subchunk ASCII tag.	    */
+    pj_uint32_t	    len;		/**< Length following this field    */
+} pjmedia_wave_subchunk;
+
+
+/**
+ * Normalize subchunk header from little endian (the representation of
+ * RIFF file) into host's endian.
+ */
+#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
+#   define PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(ch)  \
+	    do { \
+		(ch)->id = pj_swap32((ch)->id); \
+		(ch)->len = pj_swap32((ch)->len); \
+	    } while (0)
+#else
+#   define PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(ch)
+#endif
+
 
 /**
  * On big-endian hosts, this function swaps the byte order of the values
