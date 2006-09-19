@@ -257,11 +257,13 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 }
 
 
-#if 0
-#define PJSUA_LOCK()	    pj_mutex_lock(pjsua_var.mutex);
-#define PJSUA_UNLOCK()	    pj_mutex_unlock(pjsua_var.mutex);
+#if 1
+#define PJSUA_LOCK()	    pj_mutex_lock(pjsua_var.mutex)
+#define PJSUA_TRY_LOCK()    pj_mutex_trylock(pjsua_var.mutex)
+#define PJSUA_UNLOCK()	    pj_mutex_unlock(pjsua_var.mutex)
 #else
 #define PJSUA_LOCK()
+#define PJSUA_TRY_LOCK()    PJ_SUCCESS
 #define PJSUA_UNLOCK()
 #endif
 

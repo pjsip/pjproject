@@ -209,30 +209,6 @@ PJ_DEF(pjsip_user_agent*) pjsip_ua_instance(void)
 }
 
 
-/**
- * Lock the dialog's hash table. This function is normally called by
- * dialog code only.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DEF(pj_status_t) pjsip_ua_lock_dlg_table(void)
-{
-    return pj_mutex_lock(mod_ua.mutex);
-}
-
-
-/**
- * Unlock the dialog's hash table. This function is normally called by
- * dialog code only.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DEF(pj_status_t) pjsip_ua_unlock_dlg_table(void)
-{
-    return pj_mutex_unlock(mod_ua.mutex);
-}
-
-
 /*
  * Get the endpoint where this UA is currently registered.
  */
@@ -499,6 +475,7 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     struct dlg_set *dlg_set;
     pj_str_t *from_tag;
     pjsip_dialog *dlg;
+    pj_status_t status;
 
     /* Optimized path: bail out early if request is not CANCEL and it doesn't
      * have To tag 
@@ -508,6 +485,8 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     {
 	return PJ_FALSE;
     }
+
+retry_on_deadlock:
 
     /* Lock user agent before looking up the dialog hash table. */
     pj_mutex_lock(mod_ua.mutex);
@@ -585,18 +564,27 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     /* Mark the dialog id of the request. */
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
-    /* Lock the dialog */
+    /* Try to lock the dialog */
     PJ_LOG(6,(dlg->obj_name, "UA layer acquiring dialog lock for request"));
-    pjsip_dlg_inc_lock(dlg);
+    status = pjsip_dlg_try_inc_lock(dlg);
+    if (status != PJ_SUCCESS) {
+	/* Failed to acquire dialog mutex immediately, this could be 
+	 * because of deadlock. Release UA mutex, yield, and retry 
+	 * the whole thing once again.
+	 */
+	pj_mutex_unlock(mod_ua.mutex);
+	pj_thread_sleep(0);
+	goto retry_on_deadlock;
+    }
+
+    /* Done with processing in UA layer, release lock */
+    pj_mutex_unlock(mod_ua.mutex);
 
     /* Pass to dialog. */
     pjsip_dlg_on_rx_request(dlg, rdata);
 
     /* Unlock the dialog. This may destroy the dialog */
     pjsip_dlg_dec_lock(dlg);
-
-    /* Done processing in the UA */
-    pj_mutex_unlock(mod_ua.mutex);
 
     /* Report as handled. */
     return PJ_TRUE;
@@ -609,7 +597,8 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
 {
     pjsip_transaction *tsx;
     struct dlg_set *dlg_set;
-    pjsip_dialog *dlg = NULL;
+    pjsip_dialog *dlg;
+    pj_status_t status;
 
     /*
      * Find the dialog instance for the response.
@@ -620,6 +609,10 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
      * But even when transaction is found, there is possibility that
      * the response is a forked response.
      */
+
+retry_on_deadlock:
+
+    dlg = NULL;
 
     /* Lock user agent dlg table before we're doing anything. */
     pj_mutex_lock(mod_ua.mutex);
@@ -782,18 +775,27 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     /* Put the dialog instance in the rdata. */
     rdata->endpt_info.mod_data[mod_ua.mod.id] = dlg;
 
-    /* Acquire lock to the dialog. */
+    /* Attempt to acquire lock to the dialog. */
     PJ_LOG(6,(dlg->obj_name, "UA layer acquiring dialog lock for response"));
-    pjsip_dlg_inc_lock(dlg);
+    status = pjsip_dlg_try_inc_lock(dlg);
+    if (status != PJ_SUCCESS) {
+	/* Failed to acquire dialog mutex. This could indicate a deadlock
+	 * situation, and for safety, try to avoid deadlock by releasing
+	 * UA mutex, yield, and retry the whole processing once again.
+	 */
+	pj_mutex_unlock(mod_ua.mutex);
+	pj_thread_sleep(0);
+	goto retry_on_deadlock;
+    }
+
+    /* We're done with processing in the UA layer, we can release the mutex */
+    pj_mutex_unlock(mod_ua.mutex);
 
     /* Pass the response to the dialog. */
     pjsip_dlg_on_rx_response(dlg, rdata);
 
     /* Unlock the dialog. This may destroy the dialog. */
     pjsip_dlg_dec_lock(dlg);
-
-    /* Unlock dialog hash table. */
-    pj_mutex_unlock(mod_ua.mutex);
 
     /* Done. */
     return PJ_TRUE;

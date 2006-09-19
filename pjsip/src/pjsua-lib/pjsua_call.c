@@ -383,6 +383,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (dlg || tsx)
 	return PJ_FALSE;
 
+    PJSUA_LOCK();
 
     /* Verify that we can handle the request. */
     status = pjsip_inv_verify_request(rdata, &options, NULL, NULL,
@@ -407,6 +408,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 					  NULL, NULL);
 	}
 
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     } 
 
@@ -427,6 +429,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				      NULL, NULL);
 	PJ_LOG(2,(THIS_FILE, 
 		  "Unable to accept incoming call (too many calls)"));
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
 
@@ -445,6 +448,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
 
@@ -462,6 +466,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
 
@@ -471,7 +476,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
-
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
 
@@ -499,6 +504,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/* Can't terminate dialog because transaction is in progress.
 	pjsip_dlg_terminate(dlg);
 	 */
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
 
@@ -520,6 +526,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 	pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	PJSUA_UNLOCK();
 	return PJ_TRUE;
 
     } else {
@@ -536,6 +543,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
 
     /* This INVITE request has been handled. */
+    PJSUA_UNLOCK();
     return PJ_TRUE;
 }
 
@@ -565,15 +573,89 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id)
 }
 
 
+/* Acquire lock to the specified call_id */
+static pj_status_t acquire_call(const char *title,
+				pjsua_call_id call_id,
+				pjsua_call **p_call)
+{
+    enum { MAX_RETRY=50 };
+    unsigned retry;
+    pjsua_call *call;
+    pj_bool_t has_pjsua_lock;
+    pj_status_t status;
+
+    for (retry=0; retry<MAX_RETRY; ++retry) {
+	
+	has_pjsua_lock = PJ_FALSE;
+
+	status = PJSUA_TRY_LOCK();
+	if (status != PJ_SUCCESS) {
+	    pj_thread_sleep(retry/10);
+	    continue;
+	}
+
+	has_pjsua_lock = PJ_TRUE;
+	call = &pjsua_var.calls[call_id];
+
+	if (call->inv == NULL) {
+	    PJSUA_UNLOCK();
+	    PJ_LOG(3,(THIS_FILE, "Invalid call_id %d in %s", call_id, title));
+	    return PJSIP_ESESSIONTERMINATED;
+	}
+
+	status = pjsip_dlg_try_inc_lock(call->inv->dlg);
+	if (status != PJ_SUCCESS) {
+	    PJSUA_UNLOCK();
+	    pj_thread_sleep(retry/10);
+	    continue;
+	}
+
+	PJSUA_UNLOCK();
+
+	break;
+    }
+
+    if (status != PJ_SUCCESS) {
+	if (has_pjsua_lock == PJ_FALSE)
+	    PJ_LOG(1,(THIS_FILE, "Timed-out trying to acquire PJSUA mutex "
+				 "(possibly system has deadlocked) in %s",
+				 title));
+	else
+	    PJ_LOG(1,(THIS_FILE, "Timed-out trying to acquire dialog mutex "
+				 "(possibly system has deadlocked) in %s",
+				 title));
+	return PJ_ETIMEDOUT;
+    }
+    
+    *p_call = call;
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Get the conference port identification associated with the call.
  */
 PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 {
+    pjsua_call *call;
+    pjsua_conf_port_id port_id;
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
 		     PJ_EINVAL);
-    return pjsua_var.calls[call_id].conf_slot;
+
+    status = acquire_call("pjsua_call_get_conf_port()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return -1;
+
+    port_id = call->conf_slot;
+
+    pjsip_dlg_dec_lock(call->inv->dlg);
+
+    return port_id;
 }
+
 
 
 /*
@@ -583,23 +665,17 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 					 pjsua_call_info *info)
 {
     pjsua_call *call;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
     pj_bzero(info, sizeof(*info));
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (call->inv == NULL) {
-	PJSUA_UNLOCK();
-	return PJ_SUCCESS;
+    status = acquire_call("pjsua_call_get_info()", call_id, &call);
+    if (status != PJ_SUCCESS) {
+	return status;
     }
-
-    pjsip_dlg_inc_lock(call->inv->dlg);
-
 
     /* id and role */
     info->id = call_id;
@@ -696,7 +772,6 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     }
 
     pjsip_dlg_dec_lock(call->inv->dlg);
-    PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
 }
@@ -742,15 +817,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (call->inv == NULL) {
-	PJ_LOG(3,(THIS_FILE, "Call %d already disconnected", call_id));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
+    status = acquire_call("pjsua_call_answer()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
     if (call->res_time.sec == 0)
 	pj_gettimeofday(&call->res_time);
@@ -760,7 +829,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating response", 
 		     status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -773,7 +842,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, "Error sending response", 
 		     status);
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return status;
 }
@@ -793,18 +862,17 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     pjsip_tx_data *tdata;
 
 
+    if (call_id<0 || call_id>=(int)pjsua_var.ua_cfg.max_calls) {
+	PJ_LOG(1,(THIS_FILE, "pjsua_call_hangup(): invalid call id %d",
+			     call_id));
+    }
+    
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Invalid call or call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJ_EINVAL;
-    }
+    status = acquire_call("pjsua_call_hangup()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
     if (code==0) {
 	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
@@ -820,7 +888,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, 
 		     "Failed to create end session message", 
 		     status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -829,7 +897,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
      * with any provisional responses.
      */
     if (tdata == NULL) {
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return PJ_SUCCESS;
     }
 
@@ -842,11 +910,11 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, 
 		     "Failed to send end session message", 
 		     status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return PJ_SUCCESS;
 }
@@ -866,25 +934,20 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
+    status = acquire_call("pjsua_call_set_hold()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    call = &pjsua_var.calls[call_id];
-    
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not hold call that is not confirmed"));
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return PJSIP_ESESSIONSTATE;
     }
 
     status = create_inactive_sdp(call, &sdp);
     if (status != PJ_SUCCESS) {
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -892,7 +955,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -903,11 +966,11 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return PJ_SUCCESS;
 }
@@ -929,20 +992,13 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
-
+    status = acquire_call("pjsua_call_reinvite()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not re-INVITE call that is not confirmed"));
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return PJSIP_ESESSIONSTATE;
     }
 
@@ -954,7 +1010,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -962,7 +1018,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -973,11 +1029,11 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return PJ_SUCCESS;
 }
@@ -999,15 +1055,11 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    PJSUA_LOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
+    status = acquire_call("pjsua_call_xfer()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
    
     /* Create xfer client subscription.
      * We're not interested in knowing the transfer result, so we
@@ -1016,7 +1068,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_create_uac(call->inv->dlg, NULL, &sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create xfer", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -1026,7 +1078,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_initiate(sub, dest, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create REFER request", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -1037,7 +1089,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_send_request(sub, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send REFER request", status);
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return status;
     }
 
@@ -1046,7 +1098,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
      * may want to hold the INVITE, or terminate the invite, or whatever.
      */
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return PJ_SUCCESS;
 
@@ -1065,19 +1117,21 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    PJSUA_LOCK();
+    status = acquire_call("pjsua_call_dial_dtmf()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
     call = &pjsua_var.calls[call_id];
 
     if (!call->session) {
 	PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
-	PJSUA_UNLOCK();
+	pjsip_dlg_dec_lock(call->inv->dlg);
 	return PJ_EINVALIDOP;
     }
 
     status = pjmedia_session_dial_dtmf( call->session, 0, digits);
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return status;
 }
@@ -1103,19 +1157,10 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
-
-    /* Lock dialog. */
-    pjsip_dlg_inc_lock(call->inv->dlg);
-
+    status = acquire_call("pjsua_call_send_im", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
+    
     /* Set default media type if none is specified */
     if (mime_type == NULL) {
 	mime_type = &mime_text_plain;
@@ -1167,7 +1212,6 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
 
 on_return:
     pjsip_dlg_dec_lock(call->inv->dlg);
-    PJSUA_UNLOCK();
     return status;
 }
 
@@ -1183,23 +1227,13 @@ PJ_DEF(pj_status_t) pjsua_call_send_typing_ind( pjsua_call_id call_id,
     pjsip_tx_data *tdata;
     pj_status_t status;
 
-
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
+    status = acquire_call("pjsua_call_send_typing_ind", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
-	PJ_LOG(3,(THIS_FILE,"Call has been disconnected"));
-	PJSUA_UNLOCK();
-	return PJSIP_ESESSIONTERMINATED;
-    }
-
-    /* Lock dialog. */
-    pjsip_dlg_inc_lock(call->inv->dlg);
-    
     /* Create request message. */
     status = pjsip_dlg_create_request( call->inv->dlg, &pjsip_message_method,
 				       -1, &tdata);
@@ -1224,7 +1258,6 @@ PJ_DEF(pj_status_t) pjsua_call_send_typing_ind( pjsua_call_id call_id,
 
 on_return:
     pjsip_dlg_dec_lock(call->inv->dlg);
-    PJSUA_UNLOCK();
     return status;
 }
 
@@ -1501,24 +1534,20 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     pj_time_val duration, res_delay, con_delay;
     char tmp[128];
     char *p, *end;
+    pj_status_t status;
     int len;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
+    status = acquire_call("pjsua_call_dump()", call_id, &call);
+    if (status != PJ_SUCCESS)
+	return status;
 
     *buffer = '\0';
     p = buffer;
     end = buffer + maxlen;
     len = 0;
-
-    if (call->inv == NULL) {
-	PJSUA_UNLOCK();
-	return PJ_EINVALIDOP;
-    }
 
     print_call(indent, call_id, tmp, sizeof(tmp));
     
@@ -1569,7 +1598,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     if (with_media && call->session)
 	dump_media_session(indent, p, end-p, call->session);
 
-    PJSUA_UNLOCK();
+    pjsip_dlg_dec_lock(call->inv->dlg);
 
     return PJ_SUCCESS;
 }

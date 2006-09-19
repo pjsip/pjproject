@@ -1196,6 +1196,11 @@ static void call_timeout_callback(pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
+    if (call_id == PJSUA_INVALID_ID) {
+	PJ_LOG(1,(THIS_FILE, "Invalid call ID in timer callback"));
+	return;
+    }
+    
     /* Add warning header */
     pjsua_msg_data_init(&msg_data);
     pjsip_generic_string_hdr_init2(&warn, &hname, &hvalue);

@@ -81,24 +81,6 @@ PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
 
 
 /**
- * Lock the dialog's hash table. This function is normally called by
- * dialog code only.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsip_ua_lock_dlg_table(void);
-
-
-/**
- * Unlock the dialog's hash table. This function is normally called by
- * dialog code only.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsip_ua_unlock_dlg_table(void);
-
-
-/**
  * Destroy the user agent layer.
  *
  * @return		PJ_SUCCESS on success.

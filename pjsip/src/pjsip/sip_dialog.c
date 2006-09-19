@@ -692,15 +692,35 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_inc_lock(), sess_count=%d", 
 	      dlg->sess_count));
 
-    pjsip_ua_lock_dlg_table();
-
     pj_mutex_lock(dlg->mutex_);
     dlg->sess_count++;
 
-    //pjsip_ua_unlock_dlg_table();
-
     PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_inc_lock(), sess_count=%d", 
 	      dlg->sess_count));
+}
+
+/* Try to acquire dialog's mutex, but bail out if mutex can not be
+ * acquired immediately.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_try_inc_lock(pjsip_dialog *dlg)
+{
+    pj_status_t status;
+
+    PJ_LOG(6,(dlg->obj_name,"Entering pjsip_dlg_try_inc_lock(), sess_count=%d", 
+	      dlg->sess_count));
+
+    status = pj_mutex_trylock(dlg->mutex_);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(6,(dlg->obj_name, "pjsip_dlg_try_inc_lock() failed"));
+	return status;
+    }
+
+    dlg->sess_count++;
+
+    PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_try_inc_lock(), sess_count=%d", 
+	      dlg->sess_count));
+
+    return PJ_SUCCESS;
 }
 
 
@@ -713,8 +733,6 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d", 
 	      dlg->sess_count));
 
-    //pjsip_ua_lock_dlg_table();
-
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
@@ -725,8 +743,6 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     } else {
 	pj_mutex_unlock(dlg->mutex_);
     }
-
-    pjsip_ua_unlock_dlg_table();
 
     PJ_LOG(6,(THIS_FILE, "Leaving pjsip_dlg_dec_lock() (dlg=%p)", dlg));
 }

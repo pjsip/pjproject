@@ -356,6 +356,16 @@ PJ_DECL(void*) pjsip_dlg_get_mod_data( pjsip_dialog *dlg,
 PJ_DECL(void) pjsip_dlg_inc_lock( pjsip_dialog *dlg );
 
 /**
+ * Try to acquire dialog's lock, but return immediately if lock can not
+ * be acquired.
+ *
+ * @param dlg		    The dialog.
+ *
+ * @return		    PJ_SUCCESS if lock has been acquired.
+ */
+PJ_DECL(pj_status_t) pjsip_dlg_try_inc_lock( pjsip_dialog *dlg );
+
+/**
  * Unlock dialog and decrement temporary session counter. After this function
  * is called, dialog may be destroyed.
  *
