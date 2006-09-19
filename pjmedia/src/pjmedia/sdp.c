@@ -71,13 +71,16 @@ static pj_cis_t cs_digit, cs_token;
 
 static void init_sdp_parser(void)
 {
-    if (is_initialized == 0) {
-	is_initialized = 1;
-	if (is_initialized != 1) {
-	    return;
-	}
-    }
+    if (is_initialized != 0)
+	return;
 
+    pj_enter_critical_section();
+
+    if (is_initialized != 0) {
+	pj_leave_critical_section();
+	return;
+    }
+    
     pj_cis_buf_init(&cis_buf);
 
     pj_cis_init(&cis_buf, &cs_token);
@@ -87,6 +90,9 @@ static void init_sdp_parser(void)
 
     pj_cis_init(&cis_buf, &cs_digit);
     pj_cis_add_num(&cs_digit);
+
+    is_initialized = 1;
+    pj_leave_critical_section();
 }
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create( pj_pool_t *pool,
@@ -1114,6 +1120,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 
 	session = NULL;
 
+	pj_assert(ctx.last_error == PJ_SUCCESS);
     }
     PJ_END;
 
