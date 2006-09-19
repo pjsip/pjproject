@@ -337,6 +337,7 @@ static int core_txdata_test(void)
  * This test demonstrate the bug as reported in:
  *  http://bugzilla.pjproject.net/show_bug.cgi?id=49
  */
+#if INCLUDE_GCC_TEST
 static int gcc_test()
 {
     char msgbuf[512];
@@ -400,6 +401,7 @@ static int gcc_test()
     pjsip_tx_data_dec_ref(tdata);
     return 0;
 }
+#endif
 
 
 /* This tests the request creating functions against the following

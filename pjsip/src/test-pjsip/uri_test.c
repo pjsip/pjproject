@@ -76,7 +76,7 @@ static pjsip_uri *create_uri31( pj_pool_t *pool );
 static pjsip_uri *create_uri32( pj_pool_t *pool );
 static pjsip_uri *create_uri33( pj_pool_t *pool );
 static pjsip_uri *create_uri34( pj_pool_t *pool );
-static pjsip_uri *create_uri35( pj_pool_t *pool );
+//static pjsip_uri *create_uri35( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
 
 #define ERR_NOT_EQUAL	-1001

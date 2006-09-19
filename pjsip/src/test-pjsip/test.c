@@ -219,11 +219,14 @@ int test_main(void)
     pj_status_t rc;
     pj_caching_pool caching_pool;
     const char *filename;
-    unsigned i, tsx_test_cnt=0;
+    unsigned tsx_test_cnt=0;
     struct tsx_test_param tsx_test[10];
     pj_status_t status;
+#if INCLUDE_TSX_TEST
+    unsigned i;
     pjsip_transport *tp;
     pjsip_tpfactory *tpfactory;
+#endif
     int line;
 
     pj_log_set_level(log_level);

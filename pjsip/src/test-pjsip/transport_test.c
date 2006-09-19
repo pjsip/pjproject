@@ -335,9 +335,6 @@ static pj_str_t  rt_call_id;
 static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
 {
     if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
-	char *pos = pj_strchr(&rdata->msg_info.cid->id, '/');
-	int thread_id = (*pos - '0');
-
 	pjsip_tx_data *tdata;
 	pjsip_response_addr res_addr;
 	pj_status_t status;
@@ -489,7 +486,7 @@ static void rt_tx_timer( pj_timer_heap_t *timer_heap,
 
 static int rt_worker_thread(void *arg)
 {
-    int i, thread_id = (int)(long)arg;
+    int i;
     pj_time_val poll_delay = { 0, 10 };
 
     /* Sleep to allow main threads to run. */

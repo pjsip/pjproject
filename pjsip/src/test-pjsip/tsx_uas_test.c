@@ -106,7 +106,7 @@ static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test9";
 static char *TEST10_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test10";
 static char *TEST11_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test11";
 static char *TEST12_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test12";
-static char *TEST13_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test13";
+//static char *TEST13_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test13";
 
 #define TEST1_STATUS_CODE	200
 #define TEST2_STATUS_CODE	301
@@ -194,7 +194,7 @@ static pj_str_t tsx_key = { key_buf, 0 };
 
 
 /* General timer entry to be used by tests. */
-static pj_timer_entry timer;
+//static pj_timer_entry timer;
 
 /* Timer to send response via transaction. */
 struct response
@@ -313,6 +313,7 @@ static void terminate_our_tsx(int status_code)
     pj_mutex_unlock(tsx->mutex);
 }
 
+#if 0	/* Unused for now */
 /* Timer callback to terminate transaction. */
 static void terminate_tsx_timer( pj_timer_heap_t *timer_heap,
 				 struct pj_timer_entry *entry)
@@ -338,6 +339,7 @@ static void schedule_terminate_tsx( pjsip_transaction *tsx,
     timer.cb = &terminate_tsx_timer;
     pjsip_endpt_schedule_timer(endpt, &timer, &delay);
 }
+#endif
 
 
 /*
