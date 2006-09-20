@@ -2187,7 +2187,7 @@ struct pjsua_media_config
     /**
      * Echo canceller tail length, in miliseconds.
      *
-     * Default: 128 (PJSUA_DEFAULT_EC_TAIL_LEN)
+     * Default: PJSUA_DEFAULT_EC_TAIL_LEN
      */
     unsigned		ec_tail_len;
 };

@@ -1266,11 +1266,14 @@ static pj_status_t read_port( pjmedia_conf *conf,
  * Write the mixed signal to the port.
  */
 static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
-			      pj_uint32_t timestamp)
+			      pj_uint32_t timestamp, 
+			      pjmedia_frame_type *frm_type)
 {
     pj_int16_t *buf;
     unsigned j;
     pj_status_t status;
+
+    *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
@@ -1292,10 +1295,12 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	}
 
 	cport->tx_level = 0;
+	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
 
     } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
 	cport->tx_level = 0;
+	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
 
@@ -1486,6 +1491,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 			     pjmedia_frame *frame)
 {
     pjmedia_conf *conf = this_port->port_data.pdata;
+    pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
     unsigned ci, cj, i, j;
     
     TRACE_((THIS_FILE, "- clock -"));
@@ -1683,6 +1689,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
      */
     for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
+	pjmedia_frame_type frm_type;
 	pj_status_t status;
 
 	if (!conf_port)
@@ -1691,7 +1698,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Var "ci" is to count how many ports have been visited. */
 	++ci;
 
-	status = write_port( conf, conf_port, frame->timestamp.u32.lo);
+	status = write_port( conf, conf_port, frame->timestamp.u32.lo,
+			     &frm_type);
 	if (status != PJ_SUCCESS) {
 	    /* bennylp: why do we need this????
 	       One thing for sure, put_frame()/write_port() may return
@@ -1708,6 +1716,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    */
 	    continue;
 	}
+
+	/* Set the type of frame to be returned to sound playback
+	 * device.
+	 */
+	if (i == 0)
+	    speaker_frame_type = frm_type;
     }
 
     /* Return sound playback frame. */
@@ -1722,7 +1736,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     }
 
     /* MUST set frame type */
-    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame->type = speaker_frame_type;
 
     pj_mutex_unlock(conf->mutex);
 
@@ -1744,6 +1758,8 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
 				  pjmedia_frame *frame)
 {
     pj_assert(0);
+    PJ_UNUSED_ARG(this_port);
+    PJ_UNUSED_ARG(frame);
     return -1;
 }
 

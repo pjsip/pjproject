@@ -34,7 +34,8 @@
 #endif
 
 //#define SIMULATE_LOST_PCT   20
-#define AEC_TAIL    128	    /* default AEC length in ms */
+#define AEC_TAIL	    128	    /* default AEC length in ms */
+#define AEC_SUSPEND_LIMIT   5	    /* seconds of no activity	*/
 
 #define THIS_FILE	    "sound_port.c"
 
@@ -58,6 +59,11 @@ struct pjmedia_snd_port
 
     pjmedia_echo_state	*ec_state;
     unsigned		 aec_tail_len;
+
+    pj_bool_t		 ec_suspended;
+    unsigned		 ec_suspend_count;
+    unsigned		 ec_suspend_limit;
+
     pjmedia_plc		*plc;
 
     unsigned		 clock_rate;
@@ -116,6 +122,11 @@ static pj_status_t play_cb(/* in */   void *user_data,
 	pjmedia_plc_save(snd_port->plc, output);
 
     if (snd_port->ec_state) {
+	if (snd_port->ec_suspended) {
+	    snd_port->ec_suspended = PJ_FALSE;
+	    PJ_LOG(4,(THIS_FILE, "EC activated"));
+	}
+	snd_port->ec_suspend_count = 0;
 	pjmedia_echo_playback(snd_port->ec_state, output);
     }
 
@@ -123,6 +134,14 @@ static pj_status_t play_cb(/* in */   void *user_data,
     return PJ_SUCCESS;
 
 no_frame:
+
+    if (!snd_port->ec_suspended) {
+	++snd_port->ec_suspend_count;
+	if (snd_port->ec_suspend_count > snd_port->ec_suspend_limit) {
+	    snd_port->ec_suspended = PJ_TRUE;
+	    PJ_LOG(4,(THIS_FILE, "EC suspended because of inactivity"));
+	}
+    }
 
     /* Apply PLC */
     if (snd_port->plc) {
@@ -164,7 +183,7 @@ static pj_status_t rec_cb(/* in */   void *user_data,
 	return PJ_SUCCESS;
 
     /* Cancel echo */
-    if (snd_port->ec_state) {
+    if (snd_port->ec_state && !snd_port->ec_suspended) {
 	pjmedia_echo_capture(snd_port->ec_state, input, 0);
     }
 
@@ -253,6 +272,10 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	}
     }
 
+    /* Inactivity limit before EC is suspended. */
+    snd_port->ec_suspend_limit = AEC_SUSPEND_LIMIT *
+				 (snd_port->clock_rate / 
+				  snd_port->samples_per_frame);
 
     /* Start sound stream. */
     status = pjmedia_snd_stream_start(snd_port->snd_stream);
@@ -454,6 +477,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 				    tail_ms, options, &snd_port->ec_state);
 	if (status != PJ_SUCCESS)
 	    snd_port->ec_state = NULL;
+	else
+	    snd_port->ec_suspended = PJ_FALSE;
     } else {
 	PJ_LOG(4,(THIS_FILE, "Echo canceller is now disabled in the "
 			     "sound port"));

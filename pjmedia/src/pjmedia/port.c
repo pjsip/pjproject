@@ -62,9 +62,13 @@ PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
 					    pjmedia_frame *frame )
 {
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
-    PJ_ASSERT_RETURN(port->get_frame, PJ_EINVALIDOP);
 
-    return port->get_frame(port, frame);
+    if (port->get_frame)
+	return port->get_frame(port, frame);
+    else {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_EINVALIDOP;
+    }
 }
 
 
@@ -75,10 +79,11 @@ PJ_DEF(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 					    const pjmedia_frame *frame )
 {
     PJ_ASSERT_RETURN(port && frame, PJ_EINVAL);
-    PJ_ASSERT_RETURN(port->put_frame, PJ_EINVALIDOP);
 
-    return port->put_frame(port, frame);
-
+    if (port->put_frame)
+	return port->put_frame(port, frame);
+    else
+	return PJ_EINVALIDOP;
 }
 
 

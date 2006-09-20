@@ -70,8 +70,6 @@ struct file_port
 };
 
 
-static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame);
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
@@ -91,7 +89,6 @@ static struct file_port *create_file_port(pj_pool_t *pool)
     pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, 
 			   8000, 1, 16, 80);
 
-    port->base.put_frame = &file_put_frame;
     port->base.get_frame = &file_get_frame;
     port->base.on_destroy = &file_on_destroy;
 
@@ -467,17 +464,6 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
     return PJ_SUCCESS;
 }
 
-
-/*
- * Put frame to file.
- */
-static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame)
-{
-    PJ_UNUSED_ARG(this_port);
-    PJ_UNUSED_ARG(frame);
-    return PJ_EINVALIDOP;
-}
 
 /*
  * Get frame from file.
