@@ -298,7 +298,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     sdp->origin.version = sdp->origin.id = tv.sec + 2208988800UL;
     sdp->origin.net_type = STR_IN;
     sdp->origin.addr_type = STR_IP4;
-    sdp->origin.addr = *pj_gethostname();
+    pj_strdup2(pool, &sdp->origin.addr, 
+	       pj_inet_ntoa(sock_info[0].rtp_addr_name.sin_addr));
     sdp->name = STR_SDP_NAME;
 
     /* Since we only support one media stream at present, put the

@@ -641,7 +641,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 	return PJ_RETURN_OS_ERROR(hr);
 
     /* Enumerate sound capture devices */
-    hr = DirectSoundEnumerate(&DSEnumCallback, (void*)1);
+    hr = DirectSoundCaptureEnumerate(&DSEnumCallback, (void*)1);
     if (FAILED(hr))
 	return PJ_RETURN_OS_ERROR(hr);
 
