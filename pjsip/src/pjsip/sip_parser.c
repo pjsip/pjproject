@@ -908,6 +908,13 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 	    pj_scan_get_newline(scanner);
 	}
 
+	/* Check if we still have valid packet.
+	 * Sometimes endpoints just send blank (CRLF) packets just to keep
+	 * NAT bindings open.
+	 */
+	if (pj_scan_is_eof(scanner))
+	    return NULL;
+
 	/* Parse request or status line */
 	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
 	    msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);

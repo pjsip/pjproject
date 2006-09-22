@@ -1083,7 +1083,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    while (err != &rdata->msg_info.parse_err) {
 		int len;
 		len = pj_ansi_snprintf(tmp.ptr+tmp.slen, sizeof(buf)-tmp.slen,
-				       ": %s exception when parsing %.*s "
+				       ": %s exception when parsing '%.*s' "
 				       "header on line %d col %d",
 				       pj_exception_id_name(err->except_code),
 				       (int)err->hname.slen, err->hname.ptr,
@@ -1094,16 +1094,23 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 		err = err->next;
 	    }
 
-	    PJ_LOG(1, (THIS_FILE, 
-		      "Error processing %d bytes packet from %s:%d %.*s:\n"
+	    /* Only print error message if there's error.
+	     * Sometimes we receive blank packets (packets with only CRLF)
+	     * which were sent to keep NAT bindings.
+	     */
+	    if (tmp.slen) {
+		PJ_LOG(1, (THIS_FILE, 
+		      "Error processing %d bytes packet from %s %s:%d %.*s:\n"
 		      "%.*s\n"
 		      "-- end of packet.",
 		      msg_fragment_size,
+		      rdata->tp_info.transport->type_name,
 		      rdata->pkt_info.src_name, 
 		      rdata->pkt_info.src_port,
 		      (int)tmp.slen, tmp.ptr,
 		      (int)msg_fragment_size,
 		      rdata->msg_info.msg_buf));
+	    }
 
 	    goto finish_process_fragment;
 	}
