@@ -55,7 +55,7 @@
  *
  * @subsection doc_ver_subsec Version
  *
- * This document corresponds to PJLIB version 0.5.7.6.
+ * This document corresponds to PJLIB version 0.5.8.
  *
  *
  * @subsection find_samples_subsec How to Read This Document
@@ -457,6 +457,14 @@
  *
  * @section build_sys_install_sec Build and Installation
  *
+ * \note
+ * <b>The most up-to-date information on building and installing PJLIB
+ *  should be found in the website, under "Getting Started" document.
+ *  More over, the new PJLIB build system is now based on autoconf,
+ *  so some of the information here might not be relevant anymore 
+ *  (although most still are, since the autoconf script still use
+ *  the old Makefile system as the backend).</b>
+ *
  * @subsection build_sys_install_win32_sec Visual Studio
  *
  * The PJLIB Visual Studio workspace supports the building of PJLIB
@@ -793,6 +801,13 @@ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
 /**
  * @page porting_pjlib_pg Porting PJLIB
  *
+ * \note
+ * <b>Since version 0.5.8, PJLIB build system is now based on autoconf, so
+ * most of the time we shouldn't need to apply the tweakings below to get
+ * PJLIB working on a new platform. However, since the autoconf build system
+ * still uses the old Makefile build system, the information below may still
+ * be useful for reference.
+ * </b>
  *
  * @section new_arch_sec Porting to New CPU Architecture
  *

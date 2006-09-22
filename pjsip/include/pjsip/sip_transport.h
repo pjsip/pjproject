@@ -360,7 +360,7 @@ typedef struct pjsip_tx_data_op_key
  * this buffer will be destroyed.
  *
  * A transaction object normally will add reference counter to this buffer
- * when application calls #pjsip_tsx_on_tx_msg, because it needs to keep the
+ * when application calls #pjsip_tsx_send_msg, because it needs to keep the
  * message for retransmission. The transaction will release the reference
  * counter once its state has reached final state.
  */

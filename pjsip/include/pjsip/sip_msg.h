@@ -910,7 +910,7 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
  * very short (for example, creating the header in the stack to be passed
  * as argument to a function which will copy the header).
  *
- * @param pool	    The pool.
+ * @param h	    The header to be initialized.
  * @param hname	    The header name to be assigned to the header, or NULL to
  *		    assign the header name with some string.
  * @param hvalue    Optional string to be assigned as the value.

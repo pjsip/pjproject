@@ -28,8 +28,9 @@
  */
 
 /**
+  \n
 
-  @mainpage PJSIP
+  @mainpage PJSIP - Open Source SIP Stack
 
   \n
   \n
@@ -118,7 +119,7 @@
   \n
   @subsection doc_ver Version
 
-  This document corresponds to PJSIP version 0.5.6.
+  This document corresponds to PJSIP version 0.5.8.
 
   \n
   @subsection doc_how_to_read How to Read This Document
@@ -216,6 +217,12 @@
     is recommended.\n
     Screenshots on WinXP: \image html siprtp.jpg "siprtp screenshot on WinXP"
 
+  - @ref page_pjsip_perf_c\n
+    This sample contains a complete implementation of a SIP performance
+    measurement tool. Unlike other tool such SIPp, pjsip-perf is geared
+    more towards finding the performance of an endpoint by flooding the
+    endpoint with some requests and time the completion of the requests.\n
+    Screenshots on Linux console: \image html pjsip-perf.jpg "pjsip-perf screenshot on Linux"
  */
 
 /**
@@ -254,7 +261,7 @@
  */
 
 /**
- * \page page_pjmedia_samples_siprtp_c Samples: Using SIP and Custom RTP/RTCP to Monitor Quality
+ * \page page_pjmedia_samples_siprtp_c Samples: siprtp - SIP with RTCP Quality Monitoring
  *
  * This source is an example to demonstrate using SIP and RTP/RTCP framework
  * to measure the network quality/impairment from the SIP call. This
@@ -272,5 +279,20 @@
  * Screenshots on WinXP: \image html siprtp.jpg
  *
  * \includelineno siprtp.c
+ */
+
+/**
+ * \page page_pjsip_perf_c Samples: pjsip-perf - SIP Performance Benchmarking Tool
+ *
+ * This sample contains a complete implementation of a SIP performance
+ * measurement tool. Unlike other tool such SIPp, pjsip-perf is geared
+ * more towards finding the performance of an endpoint by flooding the
+ * endpoint with some requests and time the completion of the requests.
+ *
+ * The source code of the file is pjsip-apps/src/samples/pjsip-perf.c
+ *
+ * Screenshots on Linux console: \image html pjsip-perf.jpg
+ *
+ * \includelineno pjsip-perf.c
  */
 

@@ -101,7 +101,8 @@ PJ_BEGIN_DECL
  * The result of PJLIB's memory design and careful implementation is a
  * memory allocation strategy that can speed-up the memory allocations
  * and deallocations by up to <b>30 times</b> compared to standard
- * malloc()/free()!
+ * malloc()/free() (more than 150 million allocations per second on a
+ * P4/3.0GHz Linux machine).
  *
  * (Note: your mileage may vary, of course. You can see how much PJLIB's
  *  pool improves the performance over malloc()/free() in your target

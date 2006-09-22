@@ -395,7 +395,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
  * Send outgoing request and initiate UAC transaction for the request.
  * This is an auxiliary function to be used by application to send arbitrary
  * requests outside a dialog. To send a request within a dialog, application
- * should use #pjsip_dlg_send_msg instead.
+ * should use #pjsip_dlg_send_request instead.
  *
  * @param endpt	    The endpoint instance.
  * @param tdata	    The transmit data to be sent.

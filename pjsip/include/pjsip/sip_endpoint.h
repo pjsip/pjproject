@@ -244,9 +244,7 @@ PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
 
 /**
  * Register the transaction to the endpoint's transaction table.
- * Before the transaction is registered, it must have been initialized as
- * either UAS or UAC by calling #pjsip_tsx_init_uac or #pjsip_tsx_init_uas.
- * This function, like all other endpoint functions, is thread safe.
+ * This function should only be used internally by the stack.
  *
  * @param endpt	    The SIP endpoint.
  * @param tsx	    The transaction.
@@ -255,11 +253,8 @@ PJ_DECL(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
 					pjsip_transaction *tsx);
 
 /**
- * Forcefull destroy the transaction.
- * The only time where application needs to call this function is when the
- * transaction fails to initialize in #pjsip_tsx_init_uac or
- * #pjsip_tsx_init_uas. For other cases. the transaction will be destroyed
- * automaticly by endpoint.
+ * Forcefull destroy the transaction. This function should only be used
+ * internally by the stack.
  *
  * @param endpt	    The endpoint.
  * @param tsx	    The transaction to destroy.
