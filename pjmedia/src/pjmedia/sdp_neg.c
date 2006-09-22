@@ -894,6 +894,8 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	    /* No matching media.
 	     * Reject the offer by setting the port to zero in the answer.
 	     */
+	    pjmedia_sdp_attr *a;
+
 	    /* For simplicity in the construction of the answer, we'll
 	     * just clone the media from the offer. Anyway receiver will
 	     * ignore anything in the media once it sees that the port
@@ -902,8 +904,11 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	    am = pjmedia_sdp_media_clone(pool, om);
 	    am->desc.port = 0;
 
-	    /* Match direction */
-	    update_media_direction(pool, om, am);
+	    /* Remove direction attribute, and replace with inactive */
+	    remove_all_media_directions(am);
+
+	    a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+	    pjmedia_sdp_media_add_attr(am, a);
 
 	} else {
 	    /* The answer is in am */

@@ -978,6 +978,16 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
+    status = pjsip_pres_create_uac( dlg, &pres_callback, 
+				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
+    if (status != PJ_SUCCESS) {
+	pjsua_var.buddy[index].sub = NULL;
+	pjsua_perror(THIS_FILE, "Unable to create presence client", 
+		     status);
+	pjsip_dlg_terminate(dlg);
+	return;
+    }
+
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
 	pjsip_dlg_set_route_set(dlg, &acc->route_set);
@@ -987,16 +997,6 @@ static void subscribe_buddy_presence(unsigned index)
     if (acc->cred_cnt) {
 	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
 					acc->cred_cnt, acc->cred);
-    }
-
-    status = pjsip_pres_create_uac( dlg, &pres_callback, 
-				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
-    if (status != PJ_SUCCESS) {
-	pjsua_var.buddy[index].sub = NULL;
-	pjsua_perror(THIS_FILE, "Unable to create presence client", 
-		     status);
-	pjsip_dlg_terminate(dlg);
-	return;
     }
 
     pjsip_evsub_set_mod_data(buddy->sub, pjsua_var.mod.id, buddy);

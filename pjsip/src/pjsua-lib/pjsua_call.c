@@ -581,7 +581,8 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id)
 /* Acquire lock to the specified call_id */
 static pj_status_t acquire_call(const char *title,
 				pjsua_call_id call_id,
-				pjsua_call **p_call)
+				pjsua_call **p_call,
+				pjsip_dialog **p_dlg)
 {
     enum { MAX_RETRY=50 };
     unsigned retry;
@@ -633,6 +634,7 @@ static pj_status_t acquire_call(const char *title,
     }
     
     *p_call = call;
+    *p_dlg = call->inv->dlg;
 
     return PJ_SUCCESS;
 }
@@ -645,18 +647,19 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 {
     pjsua_call *call;
     pjsua_conf_port_id port_id;
+    pjsip_dialog *dlg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_get_conf_port()", call_id, &call);
+    status = acquire_call("pjsua_call_get_conf_port()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return PJSUA_INVALID_ID;
 
     port_id = call->conf_slot;
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return port_id;
 }
@@ -670,6 +673,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 					 pjsua_call_info *info)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -677,7 +681,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 
     pj_bzero(info, sizeof(*info));
 
-    status = acquire_call("pjsua_call_get_info()", call_id, &call);
+    status = acquire_call("pjsua_call_get_info()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS) {
 	return status;
     }
@@ -776,7 +780,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
     }
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -816,13 +820,14 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 				       const pjsua_msg_data *msg_data)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_answer()", call_id, &call);
+    status = acquire_call("pjsua_call_answer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -834,7 +839,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating response", 
 		     status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -847,7 +852,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, "Error sending response", 
 		     status);
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return status;
 }
@@ -863,6 +868,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 				      const pjsua_msg_data *msg_data)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pj_status_t status;
     pjsip_tx_data *tdata;
 
@@ -875,7 +881,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_hangup()", call_id, &call);
+    status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -893,7 +899,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, 
 		     "Failed to create end session message", 
 		     status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -902,7 +908,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
      * with any provisional responses.
      */
     if (tdata == NULL) {
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return PJ_SUCCESS;
     }
 
@@ -915,11 +921,11 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, 
 		     "Failed to send end session message", 
 		     status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -933,26 +939,27 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 {
     pjmedia_sdp_session *sdp;
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_set_hold()", call_id, &call);
+    status = acquire_call("pjsua_call_set_hold()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not hold call that is not confirmed"));
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return PJSIP_ESESSIONSTATE;
     }
 
     status = create_inactive_sdp(call, &sdp);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -960,7 +967,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -971,11 +978,11 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -991,19 +998,20 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     pjmedia_sdp_session *sdp;
     pjsip_tx_data *tdata;
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pj_status_t status;
 
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_reinvite()", call_id, &call);
+    status = acquire_call("pjsua_call_reinvite()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not re-INVITE call that is not confirmed"));
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return PJSIP_ESESSIONSTATE;
     }
 
@@ -1015,7 +1023,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -1023,7 +1031,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -1034,11 +1042,11 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
@@ -1054,6 +1062,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     pjsip_evsub *sub;
     pjsip_tx_data *tdata;
     pjsua_call *call;
+    pjsip_dialog *dlg;
     struct pjsip_evsub_user xfer_cb;
     pj_status_t status;
 
@@ -1061,7 +1070,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    status = acquire_call("pjsua_call_xfer()", call_id, &call);
+    status = acquire_call("pjsua_call_xfer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1073,7 +1082,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_create_uac(call->inv->dlg, &xfer_cb, &sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create xfer", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -1083,7 +1092,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_initiate(sub, dest, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create REFER request", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -1094,7 +1103,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     status = pjsip_xfer_send_request(sub, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send REFER request", status);
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
 
@@ -1103,7 +1112,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
      * may want to hold the INVITE, or terminate the invite, or whatever.
      */
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 
@@ -1117,24 +1126,25 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
 					  const pj_str_t *digits)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    status = acquire_call("pjsua_call_dial_dtmf()", call_id, &call);
+    status = acquire_call("pjsua_call_dial_dtmf()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
     if (!call->session) {
 	PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
-	pjsip_dlg_dec_lock(call->inv->dlg);
+	pjsip_dlg_dec_lock(dlg);
 	return PJ_EINVALIDOP;
     }
 
     status = pjmedia_session_dial_dtmf( call->session, 0, digits);
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return status;
 }
@@ -1150,6 +1160,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
 					void *user_data)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     const pj_str_t mime_text_plain = pj_str("text/plain");
     pjsip_media_type ctype;
     pjsua_im_data *im_data;
@@ -1160,7 +1171,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_send_im", call_id, &call);
+    status = acquire_call("pjsua_call_send_im()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
     
@@ -1214,7 +1225,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     }
 
 on_return:
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
     return status;
 }
 
@@ -1227,13 +1238,14 @@ PJ_DEF(pj_status_t) pjsua_call_send_typing_ind( pjsua_call_id call_id,
 						const pjsua_msg_data*msg_data)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_send_typing_ind", call_id, &call);
+    status = acquire_call("pjsua_call_send_typing_ind", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1260,7 +1272,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_typing_ind( pjsua_call_id call_id,
     }
 
 on_return:
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
     return status;
 }
 
@@ -1534,6 +1546,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 				     const char *indent)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pj_time_val duration, res_delay, con_delay;
     char tmp[128];
     char *p, *end;
@@ -1543,7 +1556,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_dump()", call_id, &call);
+    status = acquire_call("pjsua_call_dump()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1601,7 +1614,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     if (with_media && call->session)
 	dump_media_session(indent, p, end-p, call->session);
 
-    pjsip_dlg_dec_lock(call->inv->dlg);
+    pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
 }
