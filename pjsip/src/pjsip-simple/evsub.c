@@ -879,11 +879,14 @@ PJ_DEF(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
 
     pjsip_dlg_inc_lock(sub->dlg);
 
+    /* I think it's pretty safe to disable this check.
+     
     if (sub->pending_tsx) {
 	pj_assert(!"Unable to terminate when there's pending tsx");
 	pjsip_dlg_dec_lock(sub->dlg);
 	return PJ_EINVALIDOP;
     }
+    */
 
     sub->call_cb = notify;
     set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);

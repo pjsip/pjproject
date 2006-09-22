@@ -16,6 +16,11 @@ BASIC FLOW TEST (compaq1.cfg, compaq2.cfg);
 	- hold and being held
 	- DTMF send/receive
 - IM and typing
+- Call transfer (with and without norefersub)
+- Call Hold
+- Re-Invite
+- DTMF
+- RTCP
 - TCP (if there's UDP route, then Contact will be UDP)
 
 - Repeat basic flow test without Route set (to wheter TCP is correctly specified in the contact etc)

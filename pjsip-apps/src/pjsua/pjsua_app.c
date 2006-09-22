@@ -2104,6 +2104,10 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    } else {
 		int call = current_call;
+		pjsua_msg_data msg_data;
+		pjsip_generic_string_hdr refer_sub;
+		pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
+		pj_str_t STR_FALSE = { "false", 5 };
 
 		ui_input_url("Transfer to URL", buf, sizeof(buf), &result);
 
@@ -2114,19 +2118,25 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    continue;
 		}
 
+		/* Add Refer-Sub: false in outgoing REFER request */
+		pjsua_msg_data_init(&msg_data);
+		pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
+					       &STR_FALSE);
+		pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+
 		if (result.nb_result != NO_NB) {
 		    if (result.nb_result == -1 || result.nb_result == 0)
 			puts("You can't do that with transfer call!");
 		    else {
 			pjsua_buddy_info binfo;
 			pjsua_buddy_get_info(result.nb_result-1, &binfo);
-			pjsua_call_xfer( current_call, &binfo.uri, NULL);
+			pjsua_call_xfer( current_call, &binfo.uri, &msg_data);
 		    }
 
 		} else if (result.uri_result) {
 		    pj_str_t tmp;
 		    tmp = pj_str(result.uri_result);
-		    pjsua_call_xfer( current_call, &tmp, NULL);
+		    pjsua_call_xfer( current_call, &tmp, &msg_data);
 		}
 	    }
 	    break;

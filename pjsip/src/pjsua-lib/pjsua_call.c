@@ -67,6 +67,11 @@ static pj_status_t call_destroy_media(int call_id);
 static pj_status_t create_inactive_sdp(pjsua_call *call,
 				       pjmedia_sdp_session **p_answer);
 
+/*
+ * Callback called by event framework when the xfer subscription state
+ * has changed.
+ */
+static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 
 /*
  * Reset call descriptor.
@@ -580,9 +585,9 @@ static pj_status_t acquire_call(const char *title,
 {
     enum { MAX_RETRY=50 };
     unsigned retry;
-    pjsua_call *call;
-    pj_bool_t has_pjsua_lock;
-    pj_status_t status;
+    pjsua_call *call = NULL;
+    pj_bool_t has_pjsua_lock = PJ_FALSE;
+    pj_status_t status = PJ_SUCCESS;
 
     for (retry=0; retry<MAX_RETRY; ++retry) {
 	
@@ -647,7 +652,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 
     status = acquire_call("pjsua_call_get_conf_port()", call_id, &call);
     if (status != PJ_SUCCESS)
-	return -1;
+	return PJSUA_INVALID_ID;
 
     port_id = call->conf_slot;
 
@@ -1049,23 +1054,23 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     pjsip_evsub *sub;
     pjsip_tx_data *tdata;
     pjsua_call *call;
+    struct pjsip_evsub_user xfer_cb;
     pj_status_t status;
 
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    pjsip_dlg_dec_lock(call->inv->dlg);
     status = acquire_call("pjsua_call_xfer()", call_id, &call);
     if (status != PJ_SUCCESS)
 	return status;
 
    
-    /* Create xfer client subscription.
-     * We're not interested in knowing the transfer result, so we
-     * put NULL as the callback.
-     */
-    status = pjsip_xfer_create_uac(call->inv->dlg, NULL, &sub);
+    /* Create xfer client subscription. */
+    pj_bzero(&xfer_cb, sizeof(xfer_cb));
+    xfer_cb.on_evsub_state = &xfer_on_evsub_state;
+
+    status = pjsip_xfer_create_uac(call->inv->dlg, &xfer_cb, &sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create xfer", status);
 	pjsip_dlg_dec_lock(call->inv->dlg);
@@ -1120,8 +1125,6 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
     status = acquire_call("pjsua_call_dial_dtmf()", call_id, &call);
     if (status != PJ_SUCCESS)
 	return status;
-
-    call = &pjsua_var.calls[call_id];
 
     if (!call->session) {
 	PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
@@ -2130,8 +2133,8 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
     PJ_UNUSED_ARG(event);
 
     /*
-     * We're only interested when subscription is terminated, to 
-     * clear the xfer_sub member of the inv_data.
+     * When subscription is terminated, clear the xfer_sub member of 
+     * the inv_data.
      */
     if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
 	pjsua_call *call;
@@ -2143,7 +2146,38 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
 	call->xfer_sub = NULL;
 
-	PJ_LOG(3,(THIS_FILE, "Xfer subscription terminated"));
+	PJ_LOG(4,(THIS_FILE, "Xfer subscription terminated"));
+
+    }
+    /*
+     * When subscription is accepted (got 200/OK to REFER), check if 
+     * subscription suppressed.
+     */
+    else if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_ACCEPTED) {
+
+	pjsip_rx_data *rdata;
+	pjsip_generic_string_hdr *refer_sub;
+	const pj_str_t REFER_SUB = { "Refer-Sub", 9 };
+
+	/* Must be receipt of response message */
+	pj_assert(event->type == PJSIP_EVENT_TSX_STATE && 
+		  event->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
+	rdata = event->body.tsx_state.src.rdata;
+
+	/* Find Refer-Sub header */
+	refer_sub = (pjsip_generic_string_hdr*)
+		    pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, 
+					       &REFER_SUB, NULL);
+
+	/* Check if subscription is suppressed */
+	if (refer_sub && pj_stricmp2(&refer_sub->hvalue, "false")==0) {
+	    /* Yes, subscription is suppressed.
+	     * Terminate our subscription now.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "Xfer subscription suppressed, terminating "
+				 "event subcription..."));
+	    pjsip_evsub_terminate(sub, PJ_TRUE);
+	}
     }
 }
 
