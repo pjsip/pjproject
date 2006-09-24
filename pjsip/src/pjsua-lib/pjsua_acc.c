@@ -229,6 +229,16 @@ static pj_status_t initialize_acc(unsigned acc_id)
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;
 
+    /* Insert account ID into account ID array, sorted by priority */
+    for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	if ( pjsua_var.acc[pjsua_var.acc_ids[i]].cfg.priority <
+	     pjsua_var.acc[acc_id].cfg.priority)
+	{
+	    break;
+	}
+    }
+    pj_array_insert(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
+		    pjsua_var.acc_cnt, i, &acc_id);
 
     return PJ_SUCCESS;
 }
@@ -321,6 +331,9 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     
     pjsua_acc_config_default(&cfg);
 
+    /* Lower the priority of local account */
+    --cfg.priority;
+
     /* Build URI for the account */
     pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,
 		     "<sip:%.*s:%d;transport=%s>", 
@@ -340,6 +353,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
  */
 PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 {
+    unsigned i;
+
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
@@ -355,6 +370,17 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     /* Invalidate */
     pjsua_var.acc[acc_id].valid = PJ_FALSE;
+
+    /* Remove from array */
+    for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	if (pjsua_var.acc_ids[i] == acc_id)
+	    break;
+    }
+    if (i != pjsua_var.acc_cnt) {
+	pj_array_erase(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
+		       pjsua_var.acc_cnt, i);
+	--pjsua_var.acc_cnt;
+    }
 
     PJ_TODO(may_need_to_scan_calls);
 
@@ -709,7 +735,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
     pj_str_t tmp;
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
-    unsigned acc_id;
+    unsigned i;
 
     PJSUA_LOCK();
 
@@ -719,74 +745,59 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_outgoing(const pj_str_t *url)
 
     uri = pjsip_parse_uri(pjsua_var.pool, tmp.ptr, tmp.slen, 0);
     if (!uri) {
-	acc_id = pjsua_var.default_acc;
-	goto on_return;
+	PJSUA_UNLOCK();
+	return pjsua_var.default_acc;
     }
 
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
 	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
     {
 	/* Return the first account with proxy */
-	for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
-	    if (!pjsua_var.acc[acc_id].valid)
+	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	    if (!pjsua_var.acc[i].valid)
 		continue;
-	    if (!pj_list_empty(&pjsua_var.acc[acc_id].route_set))
+	    if (!pj_list_empty(&pjsua_var.acc[i].route_set))
 		break;
 	}
 
-	if (acc_id != PJ_ARRAY_SIZE(pjsua_var.acc)) {
+	if (i != PJ_ARRAY_SIZE(pjsua_var.acc)) {
 	    /* Found rather matching account */
-	    goto on_return;
+	    PJSUA_UNLOCK();
+	    return 0;
 	}
 
 	/* Not found, use default account */
-	acc_id = pjsua_var.default_acc;
-	goto on_return;
+	PJSUA_UNLOCK();
+	return pjsua_var.default_acc;
     }
 
     sip_uri = pjsip_uri_get_uri(uri);
 
-    /* See if default acc match */
-    if (pjsua_var.default_acc != PJSUA_INVALID_ID &&
-	pj_stricmp(&pjsua_var.acc[pjsua_var.default_acc].srv_domain, &sip_uri->host)==0 &&
-	pjsua_var.acc[pjsua_var.default_acc].srv_port == sip_uri->port) 
-    {
-	acc_id = pjsua_var.default_acc;
-    } else {
-	acc_id = PJ_ARRAY_SIZE(pjsua_var.acc);
-    }
-
     /* Find matching domain AND port */
-    if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
-	for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
-	    if (!pjsua_var.acc[acc_id].valid)
-		continue;
-	    if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
-		pjsua_var.acc[acc_id].srv_port == sip_uri->port)
-		break;
+    for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	unsigned acc_id = pjsua_var.acc_ids[i];
+	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0 &&
+	    pjsua_var.acc[acc_id].srv_port == sip_uri->port)
+	{
+	    PJSUA_UNLOCK();
+	    return acc_id;
 	}
     }
 
     /* If no match, try to match the domain part only */
-    if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
-	/* Just use default account */
-	for (acc_id=0; acc_id<PJ_ARRAY_SIZE(pjsua_var.acc); ++acc_id) {
-	    if (!pjsua_var.acc[acc_id].valid)
-		continue;
-	    if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0)
-		break;
+    for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	unsigned acc_id = pjsua_var.acc_ids[i];
+	if (pj_stricmp(&pjsua_var.acc[acc_id].srv_domain, &sip_uri->host)==0)
+	{
+	    PJSUA_UNLOCK();
+	    return acc_id;
 	}
     }
 
-    if (acc_id == PJ_ARRAY_SIZE(pjsua_var.acc)) {
-	/* Just use default account */
-	acc_id = pjsua_var.default_acc;
-    }
 
-on_return:
+    /* Still no match, just use default account */
     PJSUA_UNLOCK();
-
-    return acc_id;
+    return pjsua_var.default_acc;
 }
 
 
@@ -798,7 +809,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 {
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
-    unsigned acc_id;
+    unsigned i;
 
     uri = rdata->msg_info.to->uri;
 
@@ -815,8 +826,8 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 
     /* Find account which has matching username and domain. */
-    for (acc_id=0; acc_id < pjsua_var.acc_cnt; ++acc_id) {
-
+    for (i=0; i < pjsua_var.acc_cnt; ++i) {
+	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
 	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
@@ -828,12 +839,24 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	}
     }
 
-    /* No matching, try match domain part only. */
-    for (acc_id=0; acc_id < pjsua_var.acc_cnt; ++acc_id) {
-
+    /* No matching account, try match domain part only. */
+    for (i=0; i < pjsua_var.acc_cnt; ++i) {
+	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
 	if (pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
+	    /* Match ! */
+	    PJSUA_UNLOCK();
+	    return acc_id;
+	}
+    }
+
+    /* No matching account, try match user part only. */
+    for (i=0; i < pjsua_var.acc_cnt; ++i) {
+	unsigned acc_id = pjsua_var.acc_ids[i];
+	pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
 	    /* Match ! */
 	    PJSUA_UNLOCK();
 	    return acc_id;

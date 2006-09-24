@@ -2138,6 +2138,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    tmp = pj_str(result.uri_result);
 		    pjsua_call_xfer( current_call, &tmp, &msg_data);
 		}
+
+		/* Hangup call regardless of xfer status */
+		pjsua_call_hangup(current_call, PJSIP_SC_GONE, NULL, NULL);
 	    }
 	    break;
 

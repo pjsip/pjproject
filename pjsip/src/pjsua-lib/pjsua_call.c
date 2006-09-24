@@ -237,6 +237,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     call = &pjsua_var.calls[call_id];
 
+    PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
+	      (int)dest_uri->slen, dest_uri->ptr));
+
     /* Mark call start time. */
     pj_gettimeofday(&call->start_time);
 
@@ -316,6 +319,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     pjsua_process_msg_data( tdata, msg_data);
 
+    /* Must increment call counter now */
+    ++pjsua_var.call_cnt;
+
     /* Send initial INVITE: */
 
     status = pjsip_inv_send_msg(inv, tdata);
@@ -332,8 +338,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Done. */
-
-    ++pjsua_var.call_cnt;
 
     if (p_call_id)
 	*p_call_id = call_id;
@@ -462,7 +466,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * call. We need the account to find which contact URI to put for
      * the call.
      */
-    acc_id = pjsua_acc_find_for_incoming(rdata);
+    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
     /* Get suitable Contact header */
     status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,

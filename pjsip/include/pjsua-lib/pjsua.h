@@ -1020,10 +1020,25 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Default account priority.
+ */
+#ifndef PJSUA_DEFAULT_ACC_PRIORITY
+#   define PJSUA_DEFAULT_ACC_PRIORITY	0
+#endif
+
+
+/**
  * Account configuration.
  */
 typedef struct pjsua_acc_config
 {
+    /**
+     * Account priority, which is used to control the order of matching
+     * incoming/outgoing requests. The higher the number means the higher
+     * the priority is, and the account will be matched first.
+     */
+    int		    priority;
+
     /** 
      * The full SIP URL for the account. The value can take name address or 
      * URL format, and will look something like "sip:account@serviceprovider".
