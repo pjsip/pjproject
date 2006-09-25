@@ -2102,7 +2102,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #define PJSUA_DEFAULT_CLOCK_RATE    16000
 #define PJSUA_DEFAULT_CODEC_QUALITY 5
 #define PJSUA_DEFAULT_ILBC_MODE	    20
-#define PJSUA_DEFAULT_EC_TAIL_LEN   256
+#define PJSUA_DEFAULT_EC_TAIL_LEN   0
 
 
 /**

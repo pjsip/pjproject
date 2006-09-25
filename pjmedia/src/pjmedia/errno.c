@@ -67,6 +67,9 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINVANSTP,	"SDP media transport type mismatch in offer/answer" ),
     PJ_BUILD_ERR( PJMEDIA_SDPNEG_EANSNOMEDIA,	"No common SDP media payload in answer" ),
     PJ_BUILD_ERR( PJMEDIA_SDPNEG_ENOMEDIA,	"No active media stream after negotiation" ),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSCODEC,	"No suitable codec for remote offer"),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSTELEVENT,	"No suitable telephone-event for remote offer"),
+    PJ_BUILD_ERR( PJMEDIA_SDPNEG_NOANSUNKNOWN,	"No suitable answer for unknown remote offer"),
 
     /* SDP comparison results */
     PJ_BUILD_ERR( PJMEDIA_SDP_EMEDIANOTEQUAL,   "SDP media descriptor not equal" ),

@@ -394,38 +394,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     PJSUA_LOCK();
 
-    /* Verify that we can handle the request. */
-    status = pjsip_inv_verify_request(rdata, &options, NULL, NULL,
-				      pjsua_var.endpt, &response);
-    if (status != PJ_SUCCESS) {
-
-	/*
-	 * No we can't handle the incoming INVITE request.
-	 */
-
-	if (response) {
-	    pjsip_response_addr res_addr;
-
-	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
-	    pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response, 
-				      NULL, NULL);
-
-	} else {
-
-	    /* Respond with 500 (Internal Server Error) */
-	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-					  NULL, NULL);
-	}
-
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
-    } 
-
-
-    /*
-     * Yes we can handle the incoming INVITE request.
-     */
-
     /* Find free call slot. */
     for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
 	if (pjsua_var.calls[call_id].inv == NULL)
@@ -460,6 +428,35 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
+
+
+    /* Verify that we can handle the request. */
+    status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
+				      pjsua_var.endpt, &response);
+    if (status != PJ_SUCCESS) {
+
+	/*
+	 * No we can't handle the incoming INVITE request.
+	 */
+
+	if (response) {
+	    pjsip_response_addr res_addr;
+
+	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
+	    pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response, 
+				      NULL, NULL);
+
+	} else {
+
+	    /* Respond with 500 (Internal Server Error) */
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+					  NULL, NULL);
+	}
+
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    } 
+
 
     /* 
      * Get which account is most likely to be associated with this incoming
@@ -1836,6 +1833,9 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
+
+	/* Stop/destroy media, if any */
+	call_destroy_media(call->index);
 
 	/* Disconnect call if we're not in the middle of initializing an
 	 * UAS dialog and if this is not a re-INVITE 

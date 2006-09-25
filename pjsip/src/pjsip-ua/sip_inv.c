@@ -614,7 +614,6 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
 
 		/* Incompatible media */
 		code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-		status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
 
 		if (p_tdata) {
 		    pjsip_accept_hdr *acc;
@@ -2414,9 +2413,38 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	    /* Process SDP in the answer */
 	    status = process_answer(inv, 200, tdata, NULL);
-	    if (status != PJ_SUCCESS)
-		return;
 
+	    if (status != PJ_SUCCESS) {
+		/*
+		 * SDP negotiation has failed.
+		 */
+		pj_status_t rc;
+		pj_str_t reason;
+
+		/* Delete the 2xx answer */
+		pjsip_tx_data_dec_ref(tdata);
+		
+		/* Create 500 response */
+		reason = pj_str("SDP negotiation failed");
+		rc = pjsip_dlg_create_response(dlg, rdata, 500, &reason, 
+					       &tdata);
+		if (rc == PJ_SUCCESS) {
+		    pjsip_warning_hdr *w;
+		    const pj_str_t *endpt_name;
+
+		    endpt_name = pjsip_endpt_name(dlg->endpt);
+		    w = pjsip_warning_hdr_create_from_status(tdata->pool, 
+							     endpt_name,
+							     status);
+		    if (w)
+			pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)w);
+
+		    pjsip_inv_send_msg(inv, tdata);
+		}
+		return;
+	    }
+
+	    /* Send 2xx regardless of the status of negotiation */
 	    status = pjsip_inv_send_msg(inv, tdata);
 
 	}

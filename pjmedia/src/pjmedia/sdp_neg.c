@@ -533,9 +533,10 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			/* See if encoding name, clock rate, and channel
 			 * count match 
 			 */
-			if (!pj_strcmp(&or.enc_name, &ar.enc_name) &&
+			if (!pj_stricmp(&or.enc_name, &ar.enc_name) &&
 			    or.clock_rate == ar.clock_rate &&
-			    pj_strcmp(&or.param, &ar.param)==0)
+			    (pj_stricmp(&or.param, &ar.param)==0 ||
+			     ar.param.slen==1 && *ar.param.ptr=='1'))
 			{
 			    /* Match! */
 			    break;
@@ -628,10 +629,10 @@ static pj_status_t process_answer(pj_pool_t *pool,
 }
 
 /* Try to match offer with answer. */
-static pj_bool_t match_offer(pj_pool_t *pool,
-			     const pjmedia_sdp_media *offer,
-			     const pjmedia_sdp_media *local,
-			     pjmedia_sdp_media **p_answer)
+static pj_status_t match_offer(pj_pool_t *pool,
+			       const pjmedia_sdp_media *offer,
+			       const pjmedia_sdp_media *local,
+			       pjmedia_sdp_media **p_answer)
 {
     unsigned i;
     pj_bool_t offer_has_codec = 0,
@@ -697,7 +698,7 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 						 &offer->desc.fmt[i]);
 		if (!a) {
 		    pj_assert(!"Bug! Offer should have been validated");
-		    return PJ_FALSE;
+		    return PJMEDIA_SDP_EMISSINGRTPMAP;
 		}
 		pjmedia_sdp_attr_get_rtpmap(a, &or);
 
@@ -726,9 +727,10 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 			/* See if encoding name, clock rate, and
 			 * channel count  match 
 			 */
-			if (!pj_strcmp(&or.enc_name, &lr.enc_name) &&
+			if (!pj_stricmp(&or.enc_name, &lr.enc_name) &&
 			    or.clock_rate == lr.clock_rate &&
-			    pj_strcmp(&or.param, &lr.param)==0) 
+			    (pj_strcmp(&or.param, &lr.param)==0 ||
+			     or.param.slen==1 && *or.param.ptr=='1')) 
 			{
 			    /* Match! */
 			    if (is_codec)
@@ -766,12 +768,16 @@ static pj_bool_t match_offer(pj_pool_t *pool,
 
     /* See if all types of offer can be matched. */
 #if 1
-    if ((offer_has_codec && !found_matching_codec) ||
-	(offer_has_telephone_event && !found_matching_telephone_event) ||
-	(offer_has_other && !found_matching_other))
-    {
-	/* Some of the payload in the offer has no matching local sdp */
-	return PJ_FALSE;
+    if (offer_has_codec && !found_matching_codec) {
+	return PJMEDIA_SDPNEG_NOANSCODEC;
+    }
+
+    if (offer_has_telephone_event && !found_matching_telephone_event) {
+	return PJMEDIA_SDPNEG_NOANSTELEVENT;
+    }
+
+    if (offer_has_other && !found_matching_other) {
+	return PJMEDIA_SDPNEG_NOANSUNKNOWN;
     }
 #else
     PJ_TODO(FULL_MATCHING_WITH_TELEPHONE_EVENTS);
@@ -827,7 +833,7 @@ static pj_bool_t match_offer(pj_pool_t *pool,
     update_media_direction(pool, offer, answer);
 
     *p_answer = answer;
-    return PJ_TRUE;
+    return PJ_SUCCESS;
 }
 
 /* Create complete answer for remote's offer. */
@@ -836,7 +842,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 				  const pjmedia_sdp_session *offer,
 				  pjmedia_sdp_session **p_answer)
 {
-    pj_status_t status;
+    pj_status_t status = PJMEDIA_SDPNEG_ENOMEDIA;
     pj_bool_t has_active = PJ_FALSE;
     pjmedia_sdp_session *answer;
     char media_used[PJMEDIA_MAX_SDP_MEDIA];
@@ -879,10 +885,8 @@ static pj_status_t create_answer( pj_pool_t *pool,
 		media_used[j] == 0)
 	    {
 		/* See if it has matching codec. */
-		pj_bool_t match;
-
-		match = match_offer(pool, om, im, &am);
-		if (match) {
+		status = match_offer(pool, om, im, &am);
+		if (status == PJ_SUCCESS) {
 		    /* Mark media as used. */
 		    media_used[j] = 1;
 		    break;
@@ -925,8 +929,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 
     *p_answer = answer;
 
-    return has_active ? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA;
-    //return PJ_SUCCESS;
+    return has_active ? PJ_SUCCESS : status;
 }
 
 /* The best bit: SDP negotiation function! */

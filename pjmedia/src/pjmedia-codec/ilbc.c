@@ -395,7 +395,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 						   attr->setting.penh);
     if (attr->setting.dec_fmtp_mode == 20)
 	ilbc_codec->dec_frame_size = 38;
-    else if (attr->setting.dec_fmtp_mode == 20)
+    else if (attr->setting.dec_fmtp_mode == 30)
 	ilbc_codec->dec_frame_size = 50;
     else {
 	pj_assert(!"Invalid iLBC mode");

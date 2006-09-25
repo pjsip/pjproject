@@ -198,6 +198,21 @@ PJ_BEGIN_DECL
  * No media is active after negotiation.
  */
 #define PJMEDIA_SDPNEG_ENOMEDIA	    (PJMEDIA_ERRNO_START+48)    /* 220048 */
+/**
+ * @hideinitializer
+ * No suitable codec for remote offer.
+ */
+#define PJMEDIA_SDPNEG_NOANSCODEC   (PJMEDIA_ERRNO_START+49)    /* 220049 */
+/**
+ * @hideinitializer
+ * No suitable telephone-event for remote offer.
+ */
+#define PJMEDIA_SDPNEG_NOANSTELEVENT (PJMEDIA_ERRNO_START+50)   /* 220050 */
+/**
+ * @hideinitializer
+ * No suitable answer for unknown remote offer.
+ */
+#define PJMEDIA_SDPNEG_NOANSUNKNOWN (PJMEDIA_ERRNO_START+51)    /* 220051 */
 
 
 /************************************************************
