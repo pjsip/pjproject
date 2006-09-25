@@ -135,7 +135,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
 
 no_frame:
 
-    if (!snd_port->ec_suspended) {
+    if (snd_port->ec_state && !snd_port->ec_suspended) {
 	++snd_port->ec_suspend_count;
 	if (snd_port->ec_suspend_count > snd_port->ec_suspend_limit) {
 	    snd_port->ec_suspended = PJ_TRUE;
