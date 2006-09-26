@@ -69,7 +69,6 @@ struct pending_accept
 struct tcp_listener
 {
     pjsip_tpfactory	     factory;
-    char		     obj_name[PJ_MAX_OBJ_NAME];
     pj_bool_t		     is_registered;
     pjsip_endpoint	    *endpt;
     pjsip_tpmgr		    *tpmgr;
@@ -184,8 +183,9 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
  * This is the public API to create, initialize, register, and start the
  * TCP listener.
  */
-PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
+PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 					       const pj_sockaddr_in *local,
+					       const pjsip_host_port *a_name,
 					       unsigned async_cnt,
 					       pjsip_tpfactory **p_factory)
 {
@@ -200,6 +200,19 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
+    /* Verify that address given in a_name (if any) is valid */
+    if (a_name && a_name->host.slen) {
+	pj_sockaddr_in tmp;
+
+	status = pj_sockaddr_in_init(&tmp, &a_name->host, 
+				     (pj_uint16_t)a_name->port);
+	if (status != PJ_SUCCESS || tmp.sin_addr.s_addr == PJ_INADDR_ANY ||
+	    tmp.sin_addr.s_addr == PJ_INADDR_NONE)
+	{
+	    /* Invalid address */
+	    return PJ_EINVAL;
+	}
+    }
 
     pool = pjsip_endpt_create_pool(endpt, "tcplis", POOL_LIS_INIT, 
 				   POOL_LIS_INC);
@@ -214,7 +227,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 	pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TCP);
     listener->sock = PJ_INVALID_SOCKET;
 
-    pj_ansi_strcpy(listener->obj_name, "tcp");
+    pj_ansi_strcpy(listener->factory.obj_name, "tcplis");
 
     status = pj_lock_create_recursive_mutex(pool, "tcplis", 
 					    &listener->factory.lock);
@@ -245,25 +258,46 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    /* If the address returns 0.0.0.0, use the first interface address
-     * as the transport's address.
+    /* If published host/IP is specified, then use that address as the
+     * listener advertised address.
      */
-    if (listener_addr->sin_addr.s_addr == 0) {
-	pj_in_addr hostip;
+    if (a_name && a_name->host.slen) {
+	/* Copy the address */
+	listener->factory.addr_name = *a_name;
+	pj_strdup(listener->factory.pool, &listener->factory.addr_name.host, 
+		  &a_name->host);
+	listener->factory.addr_name.port = a_name->port;
 
-	status = pj_gethostip(&hostip);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+    } else {
+	/* No published address is given, use the bound address */
 
-	listener_addr->sin_addr = hostip;
+	/* If the address returns 0.0.0.0, use the default
+	 * interface address as the transport's address.
+	 */
+	if (listener_addr->sin_addr.s_addr == 0) {
+	    pj_in_addr hostip;
+
+	    status = pj_gethostip(&hostip);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    listener_addr->sin_addr = hostip;
+	}
+
+	/* Save the address name */
+	sockaddr_to_host_port(listener->factory.pool, 
+			      &listener->factory.addr_name, listener_addr);
     }
 
-    pj_ansi_snprintf(listener->obj_name, sizeof(listener->obj_name), 
-		     "tcp:%d",  (int)pj_ntohs(listener_addr->sin_port));
+    /* If port is zero, get the bound port */
+    if (listener->factory.addr_name.port == 0) {
+	listener->factory.addr_name.port = pj_ntohs(listener_addr->sin_port);
+    }
 
-    /* Save the address name */
-    sockaddr_to_host_port(listener->factory.pool, 
-			  &listener->factory.addr_name, listener_addr);
+    pj_ansi_snprintf(listener->factory.obj_name, 
+		     sizeof(listener->factory.obj_name),
+		     "tcplis:%d",  listener->factory.addr_name.port);
+
 
     /* Start listening to the address */
     status = pj_sock_listen(listener->sock, PJSIP_TCP_TRANSPORT_BACKLOG);
@@ -319,10 +353,11 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 			   listener->sock, PJ_EPENDING);
     }
 
-    PJ_LOG(4,(listener->obj_name, 
-	     "SIP TCP listener ready for incoming connections at %s:%d",
-	     pj_inet_ntoa(listener_addr->sin_addr), 
-	     (int)pj_ntohs(listener_addr->sin_port)));
+    PJ_LOG(4,(listener->factory.obj_name, 
+	     "SIP TCP listener ready for incoming connections at %.*s:%d",
+	     (int)listener->factory.addr_name.host.slen,
+	     listener->factory.addr_name.host.ptr,
+	     listener->factory.addr_name.port));
 
     /* Return the pointer to user */
     if (p_factory) *p_factory = &listener->factory;
@@ -332,6 +367,19 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 on_error:
     lis_destroy(&listener->factory);
     return status;
+}
+
+
+/*
+ * This is the public API to create, initialize, register, and start the
+ * TCP listener.
+ */
+PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
+					       const pj_sockaddr_in *local,
+					       unsigned async_cnt,
+					       pjsip_tpfactory **p_factory)
+{
+    return pjsip_tcp_transport_start2(endpt, local, NULL, async_cnt, p_factory);
 }
 
 
@@ -373,7 +421,7 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
     if (listener->factory.pool) {
 	pj_pool_t *pool = listener->factory.pool;
 
-	PJ_LOG(4,(listener->obj_name,  "SIP TCP listener destroyed"));
+	PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP listener destroyed"));
 
 	listener->factory.pool = NULL;
 	pj_pool_release(pool);
@@ -855,7 +903,8 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	    /*
 	     * Error in accept().
 	     */
-	    tcp_perror(listener->obj_name, "Error in accept()", status);
+	    tcp_perror(listener->factory.obj_name, "Error in accept()", 
+		       status);
 
 	    /*
 	     * Prevent endless accept() error loop by limiting the
@@ -865,7 +914,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	     */
 	    ++err_cnt;
 	    if (err_cnt >= 10) {
-		PJ_LOG(1, (listener->obj_name, 
+		PJ_LOG(1, (listener->factory.obj_name, 
 			   "Too many errors, listener stopping"));
 	    }
 
@@ -882,7 +931,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 		goto next_accept;
 	    }
 
-	    PJ_LOG(4,(listener->obj_name, 
+	    PJ_LOG(4,(listener->factory.obj_name, 
 		      "TCP listener %.*s:%d: got incoming TCP connection "
 		      "from %s:%d, sock=%d",
 		      (int)listener->factory.addr_name.host.slen,

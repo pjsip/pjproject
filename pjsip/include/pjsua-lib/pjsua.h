@@ -724,7 +724,7 @@ PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
 
 
 /**
- * Transport configuration for creating UDP transports for both SIP
+ * Transport configuration for creating transports for both SIP
  * and media.
  */
 typedef struct pjsua_transport_config
@@ -738,9 +738,28 @@ typedef struct pjsua_transport_config
     unsigned		port;
 
     /**
-     * Optional address where the socket should be bound.
+     * Optional address to advertise as the address of this transport.
+     * Application can specify any address or hostname for this field,
+     * for example it can point to one of the interface address in the
+     * system, or it can point to the public address of a NAT router
+     * where port mappings have been configured for the application.
+     *
+     * Note: this option can be used for both UDP and TCP as well!
      */
-    pj_in_addr		ip_addr;
+    pj_str_t		public_addr;
+
+    /**
+     * Optional address where the socket should be bound to. This option
+     * SHOULD only be used to selectively bind the socket to particular
+     * interface (instead of 0.0.0.0), and SHOULD NOT be used to set the
+     * published address of a transport (the public_addr field should be
+     * used for that purpose).
+     *
+     * Note that unlike public_addr field, the address (or hostname) here 
+     * MUST correspond to the actual interface address in the host, since
+     * this address will be specified as bind() argument.
+     */
+    pj_str_t		bound_addr;
 
     /**
      * Flag to indicate whether STUN should be used.

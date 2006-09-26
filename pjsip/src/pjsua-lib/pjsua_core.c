@@ -798,6 +798,9 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
      * the name of local host.
      */
     if (stun.stun_srv1.slen) {
+	/*
+	 * STUN is specified, resolve the address with STUN.
+	 */
 	status = pj_stun_get_mapped_addr(&pjsua_var.cp.factory, 1, &sock,
 				         &stun.stun_srv1, 
 					  stun.stun_port1,
@@ -809,6 +812,13 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	    pj_sock_close(sock);
 	    return status;
 	}
+
+    } else if (p_pub_addr->sin_addr.s_addr != 0) {
+	/*
+	 * Public address is already specified, no need to resolve the 
+	 * address, only set the port.
+	 */
+	/* Do nothing */
 
     } else {
 
@@ -866,6 +876,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	 */
 	pjsua_transport_config config;
 	pj_sock_t sock = PJ_INVALID_SOCKET;
+	pj_sockaddr_in bound_addr;
 	pj_sockaddr_in pub_addr;
 	pjsip_host_port addr_name;
 
@@ -875,9 +886,36 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	    cfg = &config;
 	}
 
-	/* Create the socket and possibly resolve the address with STUN */
-	status = create_sip_udp_sock(cfg->ip_addr, cfg->port, cfg->use_stun,
-				     &cfg->stun_config, &sock, &pub_addr);
+	/* Initialize bound address, if any */
+	bound_addr.sin_addr.s_addr = PJ_INADDR_ANY;
+	if (cfg->bound_addr.slen) {
+	    status = pj_sockaddr_in_set_str_addr(&bound_addr,&cfg->bound_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, 
+			     "Unable to resolve transport bound address", 
+			     status);
+		goto on_return;
+	    }
+	}
+
+	/* Initialize the public address from the config, if any */
+	pj_sockaddr_in_init(&pub_addr, NULL, (pj_uint16_t)cfg->port);
+	if (cfg->public_addr.slen) {
+	    status = pj_sockaddr_in_set_str_addr(&pub_addr, &cfg->public_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, 
+			     "Unable to resolve transport public address", 
+			     status);
+		goto on_return;
+	    }
+	}
+
+	/* Create the socket and possibly resolve the address with STUN 
+	 * (only when public address is not specified).
+	 */
+	status = create_sip_udp_sock(bound_addr.sin_addr, cfg->port, 
+				     cfg->use_stun, &cfg->stun_config, 
+				     &sock, &pub_addr);
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
@@ -906,6 +944,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	 * Create TCP transport.
 	 */
 	pjsua_transport_config config;
+	pjsip_host_port a_name;
 	pjsip_tpfactory *tcp;
 	pj_sockaddr_in local_addr;
 
@@ -921,12 +960,24 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	if (cfg->port)
 	    local_addr.sin_port = pj_htons((pj_uint16_t)cfg->port);
 
-	if (cfg->ip_addr.s_addr)
-	    local_addr.sin_addr.s_addr = cfg->ip_addr.s_addr;
+	if (cfg->bound_addr.slen) {
+	    status = pj_sockaddr_in_set_str_addr(&local_addr,&cfg->bound_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, 
+			     "Unable to resolve transport bound address", 
+			     status);
+		goto on_return;
+	    }
+	}
+
+	/* Init published name */
+	pj_bzero(&a_name, sizeof(pjsip_host_port));
+	if (cfg->public_addr.slen)
+	    a_name.host = cfg->public_addr;
 
 	/* Create the TCP transport */
-	status = pjsip_tcp_transport_start(pjsua_var.endpt, &local_addr, 1,
-					   &tcp);
+	status = pjsip_tcp_transport_start2(pjsua_var.endpt, &local_addr, 
+					    &a_name, 1, &tcp);
 
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating SIP TCP listener", 
@@ -1029,6 +1080,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 					      pjsua_transport_info *info)
 {
     struct transport_data *t = &pjsua_var.tpdata[id];
+    pj_status_t status;
 
     pj_bzero(info, sizeof(*info));
 
@@ -1059,6 +1111,8 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 	info->local_name = tp->local_name;
 	info->usage_count = pj_atomic_get(tp->ref_cnt);
 
+	status = PJ_SUCCESS;
+
     } else if (pjsua_var.tpdata[id].type == PJSIP_TRANSPORT_TCP) {
 
 	pjsip_tpfactory *factory = t->data.factory;
@@ -1078,12 +1132,17 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 	info->local_name = factory->addr_name;
 	info->usage_count = 0;
 
+	status = PJ_SUCCESS;
+
+    } else {
+	pj_assert(!"Unsupported transport");
+	status = PJ_EINVALIDOP;
     }
 
 
     PJSUA_UNLOCK();
 
-    return PJ_EINVALIDOP;
+    return status;
 }
 
 
@@ -1120,12 +1179,29 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     /* Make sure that transport exists */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
 
+    /* Note: destroy() may not work if there are objects still referencing
+     *	     the transport.
+     */
+    if (force) {
+	switch (pjsua_var.tpdata[id].type) {
+	case PJSIP_TRANSPORT_UDP:
+	    return pjsip_transport_destroy(pjsua_var.tpdata[id].data.tp);
+	case PJSIP_TRANSPORT_TCP:
+	    break;
+	}
+	
+    } else {
+	switch (pjsua_var.tpdata[id].type) {
+	case PJSIP_TRANSPORT_UDP:
+	    return pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
+	case PJSIP_TRANSPORT_TCP:
+	    return (*pjsua_var.tpdata[id].data.factory->destroy)
+			(pjsua_var.tpdata[id].data.factory);
+	}
+    }
 
-    /* To be done!! */
-    PJ_UNUSED_ARG(force);
-
-    PJ_TODO(pjsua_transport_close);
-
+    /* Unreachable */
+    pj_assert(!"Unknown transport");
     return PJ_EINVALIDOP;
 }
 

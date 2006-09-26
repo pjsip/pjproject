@@ -209,6 +209,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     };
     int i;
     static pj_uint16_t rtp_port;
+    pj_sockaddr_in bound_addr;
     pj_sockaddr_in mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
     pj_sock_t sock[2];
@@ -219,6 +220,15 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
 
+    bound_addr.sin_addr.s_addr = PJ_INADDR_ANY;
+    if (cfg->bound_addr.slen) {
+	status = pj_sockaddr_in_set_str_addr(&bound_addr, &cfg->bound_addr);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to resolve transport bind address",
+			 status);
+	    return status;
+	}
+    }
 
     /* Loop retry to bind RTP and RTCP sockets. */
     for (i=0; i<RTP_RETRY; ++i, rtp_port += 2) {
@@ -230,7 +240,8 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    return status;
 	}
 
-	status = pj_sock_bind_in(sock[0], cfg->ip_addr.s_addr, rtp_port);
+	status = pj_sock_bind_in(sock[0], bound_addr.sin_addr.s_addr, 
+				 rtp_port);
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -245,7 +256,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    return status;
 	}
 
-	status = pj_sock_bind_in(sock[1], cfg->ip_addr.s_addr, 
+	status = pj_sock_bind_in(sock[1], bound_addr.sin_addr.s_addr, 
 				 (pj_uint16_t)(rtp_port+1));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
@@ -284,6 +295,20 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 
 	    pj_sock_close(sock[1]); 
 	    sock[1] = PJ_INVALID_SOCKET;
+
+	} else if (cfg->public_addr.slen) {
+
+	    status = pj_sockaddr_in_init(&mapped_addr[0], &cfg->public_addr,
+					 (pj_uint16_t)rtp_port);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    status = pj_sockaddr_in_init(&mapped_addr[1], &cfg->public_addr,
+					 (pj_uint16_t)(rtp_port+1));
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    break;
 
 	} else {
 	    pj_in_addr addr;

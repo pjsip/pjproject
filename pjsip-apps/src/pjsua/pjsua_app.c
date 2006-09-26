@@ -90,7 +90,7 @@ static void stereo_demo();
 static void usage(void)
 {
     puts  ("Usage:");
-    puts  ("  pjsua [options]");
+    puts  ("  pjsua [options] [SIP URL to call]");
     puts  ("");
     puts  ("General options:");
     puts  ("  --config-file=file  Read the config/arguments from file.");
@@ -122,6 +122,8 @@ static void usage(void)
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
+    puts  ("  --ip-addr=IP        Use the specifed address as SIP and RTP addresses.");
+    puts  ("                      (Hint: the IP may be the public IP of the NAT/router)");
     puts  ("  --no-tcp            Disable TCP transport.");
     puts  ("  --no-udp            Disable UDP transport.");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
@@ -158,6 +160,9 @@ static void usage(void)
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
 
     puts  ("");
+    puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
+    puts  ("");
+
     fflush(stdout);
 }
 
@@ -268,8 +273,8 @@ static pj_status_t parse_args(int argc, char *argv[],
     int option_index;
     enum { OPT_CONFIG_FILE, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
-	   OPT_LOCAL_PORT, OPT_PROXY, OPT_OUTBOUND_PROXY, OPT_REGISTRAR,
-	   OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT, 
+	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
+	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -291,6 +296,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
+	{ "ip-addr",	1, 0, OPT_IP_ADDR},
 	{ "no-tcp",     0, 0, OPT_NO_TCP},
 	{ "no-udp",     0, 0, OPT_NO_UDP},
 	{ "proxy",	1, 0, OPT_PROXY},
@@ -431,6 +437,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return PJ_EINVAL;
 	    }
 	    cfg->udp_cfg.port = (pj_uint16_t)lval;
+	    break;
+
+	case OPT_IP_ADDR: /* ip-addr */
+	    cfg->udp_cfg.public_addr = pj_str(pj_optarg);
+	    cfg->rtp_cfg.public_addr = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NO_UDP: /* no-udp */
@@ -916,6 +927,14 @@ static int write_settings(const struct app_config *config,
     /* UDP Transport. */
     pj_ansi_sprintf(line, "--local-port %d\n", config->udp_cfg.port);
     pj_strcat2(&cfg, line);
+
+    /* IP address, if any. */
+    if (config->udp_cfg.public_addr.slen) {
+	pj_ansi_sprintf(line, "--ip-addr %.*s\n", 
+			(int)config->udp_cfg.public_addr.slen,
+			config->udp_cfg.public_addr.ptr);
+	pj_strcat2(&cfg, line);
+    }
 
 
     /* STUN */

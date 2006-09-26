@@ -726,6 +726,8 @@ struct pjsip_tpfactory
     /** This list is managed by transport manager. */
     PJ_DECL_LIST_MEMBER(struct pjsip_tpfactory);
 
+    char		    obj_name[PJ_MAX_OBJ_NAME];	/**< Name.	*/
+
     pj_pool_t		   *pool;	    /**< Owned memory pool.	*/
     pj_lock_t		   *lock;	    /**< Lock object.		*/
 
