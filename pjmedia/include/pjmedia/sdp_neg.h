@@ -25,9 +25,9 @@
  * @brief SDP negotiator header file.
  */
 /**
- * @defgroup PJMEDIA_SDP_NEG SDP Negotiation
+ * @defgroup PJMEDIA_SDP_NEG SDP Negotiation State Machine (Offer/Answer Model, RFC 3264)
  * @ingroup PJMEDIA_SESSION
- * @brief Abstraction to perform SDP negotiation
+ * @brief SDP Negotiation State Machine (Offer/Answer Model, RFC 3264)
  * @{
  *
  * The header file <b><pjmedia/sdp_neg.h></b> contains the declaration
