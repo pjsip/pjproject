@@ -89,6 +89,8 @@ struct dsound_stream
 struct pjmedia_snd_stream
 {
     pjmedia_dir		    dir;		/**< Sound direction.	    */
+    int			    play_id;		/**< Playback dev id.	    */
+    int			    rec_id;		/**< Recording dev id.	    */
     pj_pool_t		   *pool;		/**< Memory pool.	    */
   
     pjmedia_snd_rec_cb	    rec_cb;		/**< Capture callback.	    */
@@ -101,6 +103,8 @@ struct pjmedia_snd_stream
     void		   *buffer;		/**< Temp. frame buffer.    */
     unsigned		    clock_rate;		/**< Clock rate.	    */
     unsigned		    samples_per_frame;	/**< Samples per frame.	    */
+    unsigned		    bits_per_sample;	/**< Bits per sample.	    */
+    unsigned		    channel_count;	/**< Channel count.	    */
 
     pj_thread_t		   *thread;		/**< Thread handle.	    */
     pj_bool_t		    thread_quit_flag;	/**< Quit signal to thread  */
@@ -719,12 +723,16 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     strm = pj_pool_zalloc(pool, sizeof(pjmedia_snd_stream));
     strm->dir = dir;
+    strm->play_id = play_id;
+    strm->rec_id = rec_id;
     strm->pool = pool;
     strm->rec_cb = rec_cb;
     strm->play_cb = play_cb;
     strm->user_data = user_data;
     strm->clock_rate = clock_rate;
     strm->samples_per_frame = samples_per_frame;
+    strm->bits_per_sample = bits_per_sample;
+    strm->channel_count = channel_count;
     strm->buffer = pj_pool_alloc(pool, samples_per_frame * BYTES_PER_SAMPLE);
     if (!strm->buffer) {
 	pj_pool_release(pool);
@@ -825,6 +833,30 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 			bits_per_sample, rec_cb, play_cb, user_data,
 			p_snd_strm );
 }
+
+/*
+ * Get stream info.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
+						pjmedia_snd_stream_info *pi)
+{
+
+    PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
+
+    pj_bzero(pi, sizeof(*pi));
+    pi->dir = strm->dir;
+    pi->play_id = strm->play_id;
+    pi->rec_id = strm->rec_id;
+    pi->clock_rate = strm->clock_rate;
+    pi->channel_count = strm->channel_count;
+    pi->samples_per_frame = strm->samples_per_frame;
+    pi->bits_per_sample = strm->bits_per_sample;
+    pi->rec_latency = 0;
+    pi->play_latency = 0;
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Start stream.

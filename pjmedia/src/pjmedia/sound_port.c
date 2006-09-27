@@ -124,6 +124,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
     if (snd_port->ec_state) {
 	if (snd_port->ec_suspended) {
 	    snd_port->ec_suspended = PJ_FALSE;
+	    //pjmedia_echo_state_reset(snd_port->ec_state);
 	    PJ_LOG(4,(THIS_FILE, "EC activated"));
 	}
 	snd_port->ec_suspend_count = 0;
@@ -140,6 +141,10 @@ no_frame:
 	if (snd_port->ec_suspend_count > snd_port->ec_suspend_limit) {
 	    snd_port->ec_suspended = PJ_TRUE;
 	    PJ_LOG(4,(THIS_FILE, "EC suspended because of inactivity"));
+	}
+	if (snd_port->ec_state) {
+	    /* To maintain correct delay in EC */
+	    pjmedia_echo_playback(snd_port->ec_state, output);
 	}
     }
 
@@ -353,7 +358,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 }
 
 /*
- * Create sound recorder port.
+ * Create sound recorder AEC.
  */
 PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
 						 int dev_id,
@@ -456,11 +461,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 					     unsigned tail_ms,
 					     unsigned options)
 {
+    pjmedia_snd_stream_info si;
     pj_status_t status;
 
     /* Sound must be opened in full-duplex mode */
     PJ_ASSERT_RETURN(snd_port && 
 		     snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK,
+		     PJ_EINVALIDOP);
+
+    /* Sound port must have 16bits per sample */
+    PJ_ASSERT_RETURN(snd_port->bits_per_sample == 16,
 		     PJ_EINVALIDOP);
 
     /* Destroy AEC */
@@ -472,6 +482,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
     snd_port->aec_tail_len = tail_ms;
 
     if (tail_ms != 0) {
+	unsigned delay_ms;
+
+	status = pjmedia_snd_stream_get_info(snd_port->snd_stream, &si);
+	if (status != PJ_SUCCESS)
+	    si.rec_latency = si.play_latency = 0;
+
+	delay_ms = (si.rec_latency + si.play_latency) * 1000 /
+		   snd_port->clock_rate;
 	status = pjmedia_echo_create(pool, snd_port->clock_rate, 
 				    snd_port->samples_per_frame, 
 				    tail_ms, options, &snd_port->ec_state);

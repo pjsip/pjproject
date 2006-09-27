@@ -75,6 +75,24 @@ typedef struct pjmedia_snd_dev_info
 } pjmedia_snd_dev_info;
 
 /** 
+ * Stream information, can be retrieved from a live stream by calling
+ * #pjmedia_snd_stream_get_info().
+ */
+typedef struct pjmedia_snd_stream_info
+{
+    pjmedia_dir	dir;		    /**< Stream direction.		    */
+    int		play_id;	    /**< Playback dev id, or -1 for rec only*/
+    int		rec_id;		    /**< Capture dev id, or -1 for play only*/
+    unsigned	clock_rate;	    /**< Actual clock rate.		    */
+    unsigned	channel_count;	    /**< Number of channels.		    */
+    unsigned	samples_per_frame;  /**< Samples per frame.		    */
+    unsigned	bits_per_sample;    /**< Bits per sample.		    */
+    unsigned	rec_latency;	    /**< Record latency, in samples.	    */
+    unsigned	play_latency;	    /**< Playback latency, in samples.	    */
+} pjmedia_snd_stream_info;
+
+
+/** 
  * This callback is called by player stream when it needs additional data
  * to be played by the device. Application must fill in the whole of output 
  * buffer with sound samples.
@@ -229,6 +247,19 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
 					 pjmedia_snd_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_snd_stream **p_snd_strm );
+
+
+/**
+ * Get information about live stream.
+ *
+ * @param strm		The stream to be queried.
+ * @param i		Pointer to stream information to be filled up with
+ *			information about the stream.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
+						 pjmedia_snd_stream_info *pi);
 
 
 /**
