@@ -19,6 +19,7 @@
 #ifndef __PJLIB_UTIL_H__
 #define __PJLIB_UTIL_H__
 
+#include <pjlib-util/dns.h>
 #include <pjlib-util/errno.h>
 #include <pjlib-util/getopt.h>
 #include <pjlib-util/md5.h>

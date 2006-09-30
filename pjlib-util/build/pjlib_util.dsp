@@ -85,6 +85,14 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\dns.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\dns_dump.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\errno.c"
 # End Source File
 # Begin Source File
@@ -133,6 +141,10 @@ SOURCE="..\src\pjlib-util\xml.c"
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\dns.h"
+# End Source File
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\errno.h"

@@ -47,6 +47,12 @@ static const struct
 
     /* XML errors */
     PJ_BUILD_ERR( PJLIB_UTIL_EINXML,		"Invalid XML message" ),
+
+    /* DNS errors */
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSQRYTOOSMALL,	"Outgoing DNS query packet buffer is too small"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINSIZE,	"Invalid packet length in DNS response"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINCLASS,	"Invalid class in DNS response"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINNAMEPTR,	"Invalid name pointer in DNS response"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

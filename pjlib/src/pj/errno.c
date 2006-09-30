@@ -65,6 +65,7 @@ static const struct
     PJ_BUILD_ERR(PJ_EEOF,	   "End of file" ),
     PJ_BUILD_ERR(PJ_ETOOBIG,	   "Size is too big"),
     PJ_BUILD_ERR(PJ_ERESOLVE,	   "gethostbyname() has returned error"),
+    PJ_BUILD_ERR(PJ_ETOOSMALL,	   "Size is too short"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 
@@ -161,6 +162,9 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 		return (*err_msg_hnd[i].strerror)(statcode, buf, bufsize);
 	    }
 	}
+
+	/* Handler not found! */
+	len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
     }
 
     if (len < 1) {

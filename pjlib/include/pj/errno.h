@@ -287,9 +287,15 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 #define PJ_ETOOBIG	    (PJ_ERRNO_START_STATUS + 17)/* 70017 */
 /**
  * @hideinitializer
- * Error in gethostbyname()
+ * Error in gethostbyname(). This is a generic error returned when
+ * gethostbyname() has returned an error.
  */
 #define PJ_ERESOLVE	    (PJ_ERRNO_START_STATUS + 18)/* 70018 */
+/**
+ * @hideinitializer
+ * Size is too small.
+ */
+#define PJ_ETOOSMALL	    (PJ_ERRNO_START_STATUS + 19)/* 70019 */
 
 
 /** @} */   /* pj_errnum */
