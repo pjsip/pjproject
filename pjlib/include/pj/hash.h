@@ -83,7 +83,7 @@ PJ_DECL(pj_uint32_t) pj_hash_calc_tolower(pj_uint32_t hval,
  * Create a hash table with the specified 'bucket' size.
  *
  * @param pool	the pool from which the hash table will be allocated from.
- * @param size	the bucket size, which will be round-up to the nearest 2^n+1
+ * @param size	the bucket size, which will be round-up to the nearest 2^n-1
  *
  * @return the hash table.
  */
