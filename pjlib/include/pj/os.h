@@ -134,7 +134,7 @@ PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
  *
  * @return		Non-zero if it is registered.
  */
-PJ_DECL(pj_status_t) pj_thread_is_registered(void);
+PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
 
 
 /**
