@@ -93,7 +93,7 @@
 #	define VOL(var,v)	(v)
 #   endif
 #   define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0, var.vol=A
-#   define GEN_SAMP(val,var)	val = (short) VOL(SIN(var.c)>>16));\
+#   define GEN_SAMP(val,var)	val = (short) VOL(var,SIN(var.c)>>16);\
 				var.c += var.add
 
 
