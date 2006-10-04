@@ -62,9 +62,7 @@ PJ_DEF(void) pj_log_write(int level, const char *buffer, int len)
 
     /* Copy to terminal/file. */
     term_set_color(level);
-    fputs(buffer, stdout);
+    puts(buffer);
     term_restore_color();
-
-    fflush(stdout);
 }
 
