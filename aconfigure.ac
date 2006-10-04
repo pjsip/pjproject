@@ -20,7 +20,7 @@ dnl
 dnl Setup default CFLAGS
 dnl
 if test "$CFLAGS" = ""; then
-  CFLAGS="-O2 -DNDEBUG"
+  CFLAGS="-O2"
 else
   CFLAGS="$CFLAGS"
 fi
