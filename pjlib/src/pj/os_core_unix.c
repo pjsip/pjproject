@@ -184,7 +184,12 @@ PJ_DEF(pj_uint32_t) pj_getpid(void)
  */
 PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 {
+#if PJ_HAS_THREADS
     return pj_thread_local_get(thread_tls_id) != 0;
+#else
+    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    return PJ_TRUE;
+#endif
 }
 
 
@@ -944,7 +949,8 @@ PJ_DEF(pj_status_t) pj_mutex_create(pj_pool_t *pool,
     *ptr_mutex = mutex;
     return PJ_SUCCESS;
 #else /* PJ_HAS_THREADS */
-    return (pj_mutex_t*)1;
+    *ptr_mutex = (pj_mutex_t*)1;
+    return PJ_SUCCESS;
 #endif
 }
 

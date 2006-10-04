@@ -183,7 +183,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
     /* Lock the key. */
     pj_mutex_lock(h->mutex);
 
-    if (h->closing) {
+    if (IS_CLOSING(h)) {
 	pj_mutex_unlock(h->mutex);
 	return;
     }
@@ -361,7 +361,7 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
     /* Lock the key. */
     pj_mutex_lock(h->mutex);
 
-    if (h->closing) {
+    if (IS_CLOSING(h)) {
 	pj_mutex_unlock(h->mutex);
 	return;
     }
@@ -510,7 +510,7 @@ void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
         return;
     }
 
-    if (h->closing) {
+    if (IS_CLOSING(h)) {
 	pj_mutex_unlock(h->mutex);
 	return;
     }
@@ -560,7 +560,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     read_op->op = 0;
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     /* Try to see if there's data immediately available. 
@@ -622,7 +622,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
@@ -691,7 +691,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write. */
@@ -800,7 +800,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     /* We can not use PJ_IOQUEUE_ALWAYS_ASYNC for socket write */
@@ -913,7 +913,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     PJ_ASSERT_RETURN(key && op_key && new_sock, PJ_EINVAL);
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     accept_op = (struct accept_operation*)op_key;
@@ -978,7 +978,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     PJ_ASSERT_RETURN(key && addr && addrlen, PJ_EINVAL);
 
     /* Check if key is closing. */
-    if (key->closing)
+    if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
 
     /* Check if socket has not been marked for connecting */
