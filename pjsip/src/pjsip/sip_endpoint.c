@@ -484,8 +484,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     }
 
     /* Create asynchronous DNS resolver. */
-    endpt->resolver = pjsip_resolver_create(endpt->pool);
-    if (!endpt->resolver) {
+    status = pjsip_resolver_create(endpt->pool, &endpt->resolver);
+    if (status != PJ_SUCCESS) {
 	PJ_LOG(4, (THIS_FILE, "Error creating resolver instance"));
 	goto on_error;
     }
@@ -926,6 +926,42 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_tdata(  pjsip_endpoint *endpt,
 }
 
 /*
+ * Create the DNS resolver instance. 
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_create_resolver(pjsip_endpoint *endpt,
+						pj_dns_resolver **p_resv)
+{
+#if PJSIP_HAS_RESOLVER
+    PJ_ASSERT_RETURN(endpt && p_resv, PJ_EINVAL);
+    return pj_dns_resolver_create( endpt->pf, NULL, 0, endpt->timer_heap,
+				   endpt->ioqueue, p_resv);
+#else
+    PJ_UNUSED_ARG(endpt);
+    PJ_UNUSED_ARG(p_resv);
+    pj_assert(!"Resolver is disabled (PJSIP_HAS_RESOLVER==0)");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+/*
+ * Set DNS resolver to be used by the SIP resolver.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_set_resolver( pjsip_endpoint *endpt,
+					      pj_dns_resolver *resv)
+{
+    return pjsip_resolver_set_resolver(endpt->resolver, resv);
+}
+
+/*
+ * Get the DNS resolver being used by the SIP resolver.
+ */
+PJ_DEF(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt)
+{
+    PJ_ASSERT_RETURN(endpt, NULL);
+    return pjsip_resolver_get_resolver(endpt->resolver);
+}
+
+/*
  * Resolve
  */
 PJ_DEF(void) pjsip_endpt_resolve( pjsip_endpoint *endpt,
@@ -1035,6 +1071,13 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%u, used_size=%u",
 	       pj_pool_get_capacity(endpt->pool),
 	       pj_pool_get_used_size(endpt->pool)));
+
+    /* Resolver */
+#if PJSIP_HAS_RESOLVER
+    if (pjsip_endpt_get_resolver(endpt)) {
+	pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), detail);
+    }
+#endif
 
     /* Transports. 
      */

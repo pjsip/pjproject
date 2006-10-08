@@ -22,7 +22,7 @@
 
 /**
  * @file dns.h
- * @brief Asynchronous DNS Name Resolution/resolver
+ * @brief Low level DNS message parsing and packetization.
  */
 #include <pj/types.h>
 
@@ -31,16 +31,35 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJ_DNS_RESOLVER Asynchronous DNS Name Resolution/resolver
+ * @defgroup PJ_DNS Low-level DNS message parsing and packetization
  * @ingroup PJ
  * @{
  *
- * This module provides services to performing asynchronous DNS resolution.
+ * This module provides low-level services to parse and packetize DNS queries
+ * and responses. The functions support building a DNS query packet and parse
+ * the data in the DNS response.
+ *
+ * To create a DNS query packet, application should call #pj_dns_make_query()
+ * function, specifying the desired DNS query type, the name to be resolved,
+ * and the buffer where the DNS packet will be built into. 
+ *
+ * When incoming DNS query or response packet arrives, application can use
+ * #pj_dns_parse_packet() to parse the TCP/UDP payload into parsed DNS packet
+ * structure.
+ *
+ * This module does not provide any networking functionalities to send or
+ * receive DNS packets. This functionality should be provided by higher layer
+ * modules such as @ref PJ_DNS_RESOLVER.
  */
+
+enum
+{
+    PJ_DNS_CLASS_IN	= 1	/**< DNS class IN.			    */
+};
 
 /**
  * This enumeration describes standard DNS record types as described by
- * RFC 1035.
+ * RFC 1035, RFC 2782, and others.
  */
 typedef enum pj_dns_type
 {
@@ -158,31 +177,69 @@ typedef struct pj_dns_hdr
 #define PJ_DNS_GET_QR(val)	(((val) & PJ_DNS_SET_QR(1)) >> 15)
 
 
-
-/**
- * This constants describes record types in the DNS packet.
+/** 
+ * These constants describe DNS RCODEs. Application can fold these constants
+ * into PJLIB pj_status_t namespace by calling #PJ_STATUS_FROM_DNS_RCODE()
+ * macro.
  */
-typedef enum pj_dns_rec_type
+typedef enum pj_dns_rcode
 {
-    DNS_QUERY_REC,  /**< The record is a query record	    */
-    DNS_RR_REC,	    /**< The record is resource record	    */
-    DNS_NS_REC,	    /**< The record is name server record   */
-    DNS_REC_AR,	    /**< The record is additional RR.	    */
-} pj_dns_rec_type;
+    PJ_DNS_RCODE_FORMERR    = 1,    /**< Format error.			    */
+    PJ_DNS_RCODE_SERVFAIL   = 2,    /**< Server failure.		    */
+    PJ_DNS_RCODE_NXDOMAIN   = 3,    /**< Name Error.			    */
+    PJ_DNS_RCODE_NOTIMPL    = 4,    /**< Not Implemented.		    */
+    PJ_DNS_RCODE_REFUSED    = 5,    /**< Refused.			    */
+    PJ_DNS_RCODE_YXDOMAIN   = 6,    /**< The name exists.		    */
+    PJ_DNS_RCODE_YXRRSET    = 7,    /**< The RRset (name, type) exists.	    */
+    PJ_DNS_RCODE_NXRRSET    = 8,    /**< The RRset (name, type) doesn't exist*/
+    PJ_DNS_RCODE_NOTAUTH    = 9,    /**< Not authorized.		    */
+    PJ_DNS_RCODE_NOTZONE    = 10    /**< The zone specified is not a zone.  */
+
+} pj_dns_rcode;
 
 
 /**
- * This structure describes a Resource Record parsed from the DNS response.
+ * This constant specifies the maximum names to keep in the temporary name
+ * table when performing name compression scheme when duplicating DNS packet
+ * (the #pj_dns_packet_dup() function).
+ *
+ * Generally name compression is desired, since it saves some memory (see
+ * PJ_DNS_RESOLVER_RES_BUF_SIZE setting). However it comes at the expense of 
+ * a little processing overhead to perform name scanning and also a little
+ * bit more stack usage (8 bytes per entry on 32bit platform).
+ *
+ * Default: 16
+ */
+#ifndef PJ_DNS_MAX_NAMES_IN_NAMETABLE
+#   define PJ_DNS_MAX_NAMES_IN_NAMETABLE	16
+#endif
+
+
+/**
+ * This structure describes a DNS query record.
+ */
+typedef struct pj_dns_parsed_query
+{
+    pj_str_t	name;	    /**< The domain in the query.		    */
+    pj_uint16_t	type;	    /**< Type of the query (pj_dns_type)	    */
+    pj_uint16_t	dnsclass;   /**< Network class (PJ_DNS_CLASS_IN=1)	    */
+} pj_dns_parsed_query;
+
+
+/**
+ * This structure describes a Resource Record parsed from the DNS packet.
  * All integral values are in host byte order.
  */
 typedef struct pj_dns_parsed_rr
 {
     pj_str_t	 name;	    /**< The domain name which this rec pertains.   */
     pj_uint16_t	 type;	    /**< RR type code.				    */
-    pj_uint16_t	 class_;    /**< Class of data (normally 1, for IN).	    */
+    pj_uint16_t	 dnsclass;  /**< Class of data (PJ_DNS_CLASS_IN=1).	    */
     pj_uint32_t	 ttl;	    /**< Time to live.				    */
     pj_uint16_t	 rdlength;  /**< Resource data length.			    */
-    void	*data;	    /**< Pointer to the raw resource data.	    */
+    void	*data;	    /**< Pointer to the raw resource data, only
+				 when the type is not known. If it is known,
+				 the data will be put in rdata below.	    */
     
     /** For resource types that are recognized/supported by this library,
      *  the parsed resource data will be placed in this rdata union.
@@ -223,21 +280,29 @@ typedef struct pj_dns_parsed_rr
 
 
 /**
- * This structure describes the response parsed from the raw DNS response.
- * Note that all integral values in the parsed response are represented in
+ * This structure describes the parsed repersentation of the raw DNS packet.
+ * Note that all integral values in the parsed packet are represented in
  * host byte order.
  */
-typedef struct pj_dns_parsed_response
+typedef struct pj_dns_parsed_packet
 {
-    pj_dns_hdr	      hdr;  /**< Pointer to DNS hdr, in host byte order */
-    pj_dns_parsed_rr *ans;  /**< Array of DNS RR answer.		*/
-    pj_dns_parsed_rr *ns;   /**< Array of NS record in the answer.	*/
-    pj_dns_parsed_rr *arr;  /**< Array of additional RR answer.		*/
-} pj_dns_parsed_response;
+    pj_dns_hdr		 hdr;	/**< Pointer to DNS hdr, in host byte order */
+    pj_dns_parsed_query	*q;	/**< Array of DNS queries.		    */
+    pj_dns_parsed_rr	*ans;	/**< Array of DNS RR answer.		    */
+    pj_dns_parsed_rr	*ns;	/**< Array of NS record in the answer.	    */
+    pj_dns_parsed_rr	*arr;	/**< Array of additional RR answer.	    */
+} pj_dns_parsed_packet;
 
 
 /**
- * Create DNS query packet to resolve the specified names.
+ * Create DNS query packet to resolve the specified names. This function
+ * can be used to build any types of DNS query, such as A record or DNS SRV
+ * record.
+ *
+ * Application specifies the type of record and the name to be queried,
+ * and the function will build the DNS query packet into the buffer
+ * specified. Once the packet is successfully built, application can send
+ * the packet via TCP or UDP connection.
  *
  * @param packet	The buffer to put the DNS query packet.
  * @param size		On input, it specifies the size of the buffer.
@@ -245,7 +310,7 @@ typedef struct pj_dns_parsed_response
  *			the DNS query packet.
  * @param id		DNS query ID to associate DNS response with the
  *			query.
- * @param qtype		DNS type of record to be queried.
+ * @param qtype		DNS type of record to be queried (see #pj_dns_type).
  * @param name		Name to be queried from the DNS server.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -253,30 +318,55 @@ typedef struct pj_dns_parsed_response
 PJ_DECL(pj_status_t) pj_dns_make_query(void *packet,
 				       unsigned *size,
 				       pj_uint16_t id,
-				       pj_dns_type qtype,
+				       int qtype,
 				       const pj_str_t *name);
 
 /**
- * Parse raw DNS response packet into DNS response structure.
+ * Parse raw DNS packet into parsed DNS packet structure. This function is
+ * able to parse few DNS resource records such as A record, PTR record,
+ * CNAME record, NS record, and SRV record.
  *
- * @param pool		Pool to allocate memory for the parsed response.
- * @param packet
- * @param size
- * @param p_res
+ * @param pool		Pool to allocate memory for the parsed packet.
+ * @param packet	Pointer to the DNS packet (the TCP/UDP payload of 
+ *			the raw packet).
+ * @param size		The size of the DNS packet.
+ * @param p_res		Pointer to store the resulting parsed packet.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_dns_parse_response(pj_pool_t *pool,
-					   const void *packet,
-					   unsigned size,
-					   pj_dns_parsed_response **p_res);
+PJ_DECL(pj_status_t) pj_dns_parse_packet(pj_pool_t *pool,
+					 const void *packet,
+					 unsigned size,
+					 pj_dns_parsed_packet **p_res);
 
 /**
- * Dump DNS response to standard log.
+ * Duplicate DNS packet.
  *
- * @param res		The DNS response.
+ * @param pool		The pool to allocate memory for the duplicated packet.
+ * @param p		The DNS packet to be cloned.
+ * @p_dst		Pointer to store the cloned DNS packet.
  */
-PJ_DECL(void) pj_dns_dump_response(const pj_dns_parsed_response *res);
+PJ_DECL(void) pj_dns_packet_dup(pj_pool_t *pool,
+				const pj_dns_parsed_packet*p,
+				pj_dns_parsed_packet **p_dst);
+
+
+/**
+ * Utility function to get the type name string of the specified DNS type.
+ *
+ * @param type		DNS type (see #pj_dns_type).
+ *
+ * @return		String name of the type (e.g. "A", "SRV", etc.).
+ */
+PJ_DECL(const char *) pj_dns_get_type_name(int type);
+
+
+/**
+ * Dump DNS packet to standard log.
+ *
+ * @param res		The DNS packet.
+ */
+PJ_DECL(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res);
 
 
 /**

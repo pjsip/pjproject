@@ -41,7 +41,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "./output/pjlib-util-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /Ob2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /Ob2 /I "../include" /I "../../pjlib/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -64,7 +65,8 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "./output/pjlib-util-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -86,10 +88,24 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\dns.c"
+
+!IF  "$(CFG)" == "pjlib_util - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\dns_dump.c"
+
+!IF  "$(CFG)" == "pjlib_util - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -102,6 +118,17 @@ SOURCE="..\src\pjlib-util\getopt.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\md5.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\resolver.c"
+
+!IF  "$(CFG)" == "pjlib_util - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -160,6 +187,10 @@ SOURCE="..\include\pjlib-util\md5.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\resolver.h"
 # End Source File
 # Begin Source File
 

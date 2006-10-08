@@ -49,10 +49,25 @@ static const struct
     PJ_BUILD_ERR( PJLIB_UTIL_EINXML,		"Invalid XML message" ),
 
     /* DNS errors */
-    PJ_BUILD_ERR( PJLIB_UTIL_EDNSQRYTOOSMALL,	"Outgoing DNS query packet buffer is too small"),
-    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINSIZE,	"Invalid packet length in DNS response"),
-    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINCLASS,	"Invalid class in DNS response"),
-    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINNAMEPTR,	"Invalid name pointer in DNS response"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSQRYTOOSMALL,	"DNS query packet buffer is too small"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINSIZE,	"Invalid DNS packet length"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINCLASS,	"Invalid DNS class"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINNAMEPTR,	"Invalid DNS name pointer"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINNSADDR,	"Invalid DNS nameserver address"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSNONS,		"No nameserver is in DNS resolver"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSNOWORKINGNS,	"No working DNS nameserver"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSNOANSWERREC,	"No answer record in the DNS response"),
+
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_FORMERR,	"DNS \"Format error\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_SERVFAIL,	"DNS \"Server failure\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NXDOMAIN,	"DNS \"Name Error\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NOTIMPL,	"DNS \"Not Implemented\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_REFUSED,	"DNS \"Refused\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_YXDOMAIN,	"DNS \"The name exists\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_YXRRSET,	"DNS \"The RRset (name, type) exists\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NXRRSET,	"DNS \"The RRset (name, type) does not exist\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NOTAUTH,	"DNS \"Not authorized\""),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NOTZONE,	"DNS \"The zone specified is not a zone\""),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

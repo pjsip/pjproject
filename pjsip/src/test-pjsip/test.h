@@ -38,7 +38,7 @@ extern pjsip_endpoint *endpt;
 
 #define INCLUDE_MESSAGING_GROUP	    0
 #define INCLUDE_TRANSPORT_GROUP	    0
-#define INCLUDE_TSX_GROUP	    1
+#define INCLUDE_TSX_GROUP	    0
 
 /*
  * Include tests that normally would fail under certain gcc
@@ -56,6 +56,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_UDP_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_LOOP_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TCP_TEST	INCLUDE_TRANSPORT_GROUP
+#define INCLUDE_RESOLVE_TEST	1
 #define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
 
 
@@ -69,6 +70,7 @@ int tsx_bench(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
 int transport_tcp_test(void);
+int resolve_test(void);
 
 struct tsx_test_param
 {

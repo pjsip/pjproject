@@ -275,11 +275,50 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_tdata( pjsip_endpoint *endpt,
 					       pjsip_tx_data **p_tdata);
 
 /**
+ * Create the DNS resolver instance. Application creates the DNS
+ * resolver instance, set the nameserver to be used by the DNS
+ * resolver, then set the DNS resolver to be used by the endpoint
+ * by calling #pjsip_endpt_set_resolver().
+ *
+ * @param endpt		The SIP endpoint instance.
+ * @param p_resv	Pointer to receive the DNS resolver instance.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error
+ *			code.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_create_resolver(pjsip_endpoint *endpt,
+						 pj_dns_resolver **p_resv);
+
+/**
+ * Set DNS resolver to be used by the SIP resolver. Application can set
+ * the resolver instance to NULL to disable DNS resolution (perhaps
+ * temporarily). When DNS resolver is disabled, the endpoint will resolve
+ * hostnames with the normal pj_gethostbyname() function.
+ *
+ * @param endpt		The SIP endpoint instance.
+ * @param resv		The resolver instance to be used by the SIP
+ *			endpoint.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error
+ *			code.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_set_resolver(pjsip_endpoint *endpt,
+					      pj_dns_resolver *resv);
+
+/**
+ * Get the DNS resolver being used by the SIP resolver.
+ *
+ * @param endpt		The SIP endpoint instance.
+ *
+ * @return		The DNS resolver instance currently being used
+ *			by the SIP endpoint.
+ */
+PJ_DECL(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt);
+
+/**
  * Asynchronously resolve a SIP target host or domain according to rule 
  * specified in RFC 3263 (Locating SIP Servers). When the resolving operation
  * has completed, the callback will be called.
- *
- * Note: at the moment we don't have implementation of RFC 3263 yet!
  *
  * @param endpt	    The endpoint instance.
  * @param pool	    The pool to allocate resolver job.

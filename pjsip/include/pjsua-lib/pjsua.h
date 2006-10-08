@@ -388,6 +388,20 @@ typedef struct pjsua_config
     unsigned	    thread_cnt;
 
     /**
+     * Number of nameservers. If no name server is configured, the SIP SRV
+     * resolution would be disabled, and domain will be resolved with
+     * standard pj_gethostbyname() function.
+     */
+    unsigned	    nameserver_count;
+
+    /**
+     * Array of nameservers to be used by the SIP resolver subsystem.
+     * The order of the name server specifies the priority (first name
+     * server will be used first, unless it is not reachable).
+     */
+    pj_str_t	    nameserver[4];
+
+    /**
      * Number of outbound proxies in the array.
      */
     unsigned	    outbound_proxy_cnt;

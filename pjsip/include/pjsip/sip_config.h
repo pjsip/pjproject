@@ -199,6 +199,42 @@
 #endif
 
 
+/**
+ * This macro specifies whether full DNS resolution should be used.
+ * When enabled, #pjsip_resolve() will perform asynchronous DNS SRV and
+ * A (or AAAA, when IPv6 is supported) resolution to resolve the SIP
+ * domain.
+ *
+ * Note that even when this setting is enabled, asynchronous DNS resolution
+ * will only be done when application calls #pjsip_endpt_create_resolver(),
+ * configure the nameservers with #pj_dns_resolver_set_ns(), and configure
+ * the SIP endpoint's DNS resolver with #pjsip_endpt_set_resolver(). If
+ * these steps are not followed, the domain will be resolved with normal
+ * pj_gethostbyname() function.
+ *
+ * Turning off this setting will save the footprint by about 16KB, since
+ * it should also exclude dns.o and resolve.o from PJLIB-UTIL.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSIP_HAS_RESOLVER
+#   define PJSIP_HAS_RESOLVER		1
+#endif
+
+
+/** 
+ * Maximum number of addresses returned by the resolver. The number here 
+ * will slightly affect stack usage, since each entry will occupy about
+ * 32 bytes of stack memory.
+ *
+ * Default: 8
+ */
+#ifndef PJSIP_MAX_RESOLVED_ADDRESSES
+#   define PJSIP_MAX_RESOLVED_ADDRESSES	    8
+#endif
+
+
+
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
 #define PJSIP_POOL_LEN_ENDPT		(4000)

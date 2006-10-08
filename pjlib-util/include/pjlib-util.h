@@ -23,6 +23,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/getopt.h>
 #include <pjlib-util/md5.h>
+#include <pjlib-util/resolver.h>
 #include <pjlib-util/scanner.h>
 #include <pjlib-util/stun.h>
 #include <pjlib-util/xml.h>

@@ -126,6 +126,8 @@ static void usage(void)
     puts  ("                      (Hint: the IP may be the public IP of the NAT/router)");
     puts  ("  --no-tcp            Disable TCP transport.");
     puts  ("  --no-udp            Disable UDP transport.");
+    puts  ("  --nameserver=NS     Add the specified nameserver to enable SRV resolution");
+    puts  ("                      This option can be specified multiple times.");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
     puts  ("                      May be specified multiple times");
     puts  ("  --use-stun1=host[:port]");
@@ -276,7 +278,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
-	   OPT_USE_STUN1, OPT_USE_STUN2, 
+	   OPT_NAMESERVER, OPT_USE_STUN1, OPT_USE_STUN2, 
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
@@ -309,6 +311,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "realm",	1, 0, OPT_REALM},
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
+	{ "nameserver", 1, 0, OPT_NAMESERVER},
 	{ "use-stun1",  1, 0, OPT_USE_STUN1},
 	{ "use-stun2",  1, 0, OPT_USE_STUN2},
 	{ "add-buddy",  1, 0, OPT_ADD_BUDDY},
@@ -547,6 +550,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NEXT_CRED: /* next credential */
 	    cur_acc->cred_count++;
+	    break;
+
+	case OPT_NAMESERVER: /* nameserver */
+	    cfg->cfg.nameserver[cfg->cfg.nameserver_count++] = pj_str(pj_optarg);
+	    if (cfg->cfg.nameserver_count > PJ_ARRAY_SIZE(cfg->cfg.nameserver)) {
+		PJ_LOG(1,(THIS_FILE, "Error: too many nameservers"));
+		return PJ_ETOOMANY;
+	    }
 	    break;
 
 	case OPT_USE_STUN1:   /* STUN server 1 */

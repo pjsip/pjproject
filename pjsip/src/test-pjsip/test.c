@@ -20,6 +20,7 @@
 
 #include "test.h"
 #include <pjlib.h>
+#include <pjlib-util.h>
 #include <pjsip.h>
 
 #define THIS_FILE   "test.c"
@@ -240,6 +241,11 @@ int test_main(void)
 	return rc;
     }
 
+    if ((rc=pjlib_util_init()) != PJ_SUCCESS) {
+	app_perror("pj_init", rc);
+	return rc;
+    }
+
     status = init_report();
     if (status != PJ_SUCCESS)
 	return status;
@@ -309,6 +315,10 @@ int test_main(void)
 
 #if INCLUDE_TCP_TEST
     DO_TEST(transport_tcp_test());
+#endif
+
+#if INCLUDE_RESOLVE_TEST
+    DO_TEST(resolve_test());
 #endif
 
 

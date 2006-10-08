@@ -19,43 +19,93 @@
 #include <pjlib-util/dns.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/string.h>
 
 #define THIS_FILE   "dns_dump.c"
 #define LEVEL	    3
 
-static const char *get_rr_name(int type)
+static const char *spell_ttl(char *buf, int size, unsigned ttl)
 {
-    switch (type) {
-    case PJ_DNS_TYPE_A:	    return "A";
-    case PJ_DNS_TYPE_NS:    return "NS";
-    case PJ_DNS_TYPE_CNAME: return "CNAME";
-    case PJ_DNS_TYPE_PTR:   return "PTR";
-    case PJ_DNS_TYPE_MX:    return "MX";
-    case PJ_DNS_TYPE_TXT:   return "TXT";
-    case PJ_DNS_TYPE_SRV:   return "SRV";
-    case PJ_DNS_TYPE_NAPTR: return "NAPTR";
+#define DAY	(3600*24)
+#define HOUR	(3600)
+#define MINUTE	(60)
+
+    char *p = buf;
+    int len;
+
+    if (ttl > DAY) {
+	len = pj_ansi_snprintf(p, size, "%dd ", ttl/DAY);
+	if (len < 1)
+	    return "-err-";
+	size -= len;
+	p += len;
+	ttl %= DAY;
     }
-    return "(Unknown)";
+
+    if (ttl > HOUR) {
+	len = pj_ansi_snprintf(p, size, "%dh ", ttl/HOUR);
+	if (len < 1)
+	    return "-err-";
+	size -= len;
+	p += len;
+	ttl %= HOUR;
+    }
+
+    if (ttl > MINUTE) {
+	len = pj_ansi_snprintf(p, size, "%dm ", ttl/MINUTE);
+	if (len < 1)
+	    return "-err-";
+	size -= len;
+	p += len;
+	ttl %= MINUTE;
+    }
+
+    if (ttl > 0) {
+	len = pj_ansi_snprintf(p, size, "%ds ", ttl);
+	if (len < 1)
+	    return "-err-";
+	size -= len;
+	p += len;
+	ttl = 0;
+    }
+
+    *p = '\0';
+    return buf;
+}
+
+
+static void dump_query(unsigned index, const pj_dns_parsed_query *q)
+{
+    PJ_LOG(3,(THIS_FILE, " %d. Name: %.*s", 
+			 index, (int)q->name.slen, q->name.ptr));
+    PJ_LOG(3,(THIS_FILE, "    Type: %s (%d)", 
+			 pj_dns_get_type_name(q->type), q->type));
+    PJ_LOG(3,(THIS_FILE, "    Class: %s (%d)", 
+		         (q->dnsclass==1 ? "IN" : "<Unknown>"), q->dnsclass));
 }
 
 static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
 {
     const pj_str_t root_name = { "<Root>", 6 };
     const pj_str_t *name = &rr->name;
+    char ttl_words[32];
 
     if (name->slen == 0)
 	name = &root_name;
 
-    PJ_LOG(3,(THIS_FILE, " %d. %s record (type=%d)", index, get_rr_name(rr->type),
+    PJ_LOG(3,(THIS_FILE, " %d. %s record (type=%d)", 
+			 index, pj_dns_get_type_name(rr->type),
 			rr->type));
     PJ_LOG(3,(THIS_FILE, "    Name: %.*s", (int)name->slen, name->ptr));
-    PJ_LOG(3,(THIS_FILE, "    TTL: %u", rr->ttl));
+    PJ_LOG(3,(THIS_FILE, "    TTL: %u (%s)", rr->ttl, 
+			  spell_ttl(ttl_words, sizeof(ttl_words), rr->ttl)));
     PJ_LOG(3,(THIS_FILE, "    Data length: %u", rr->rdlength));
 
     if (rr->type == PJ_DNS_TYPE_SRV) {
 	PJ_LOG(3,(THIS_FILE, "    SRV: prio=%d, weight=%d %.*s:%d", 
 			     rr->rdata.srv.prio, rr->rdata.srv.weight,
-			     (int)rr->rdata.srv.target.slen, rr->rdata.srv.target.ptr,
+			     (int)rr->rdata.srv.target.slen, 
+			     rr->rdata.srv.target.ptr,
 			     rr->rdata.srv.port));
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
 	       rr->type == PJ_DNS_TYPE_NS ||
@@ -72,7 +122,7 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
 }
 
 
-PJ_DEF(void) pj_dns_dump_response(const pj_dns_parsed_response *res)
+PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
 {
     unsigned i;
 
@@ -82,17 +132,27 @@ PJ_DEF(void) pj_dns_dump_response(const pj_dns_parsed_response *res)
     PJ_LOG(3,(THIS_FILE, "Domain Name System packet (%s):",
 		(PJ_DNS_GET_QR(res->hdr.flags) ? "response" : "query")));
     PJ_LOG(3,(THIS_FILE, " Transaction ID: %d", res->hdr.id));
-    PJ_LOG(3,(THIS_FILE, " Flags: type=%s, opcode=%d, authoritative=%d, truncated=%d, rcode=%d", 
-		(PJ_DNS_GET_QR(res->hdr.flags) ? "response" : "query"),
+    PJ_LOG(3,(THIS_FILE, 
+	      " Flags: opcode=%d, authoritative=%d, truncated=%d, rcode=%d",
 		 PJ_DNS_GET_OPCODE(res->hdr.flags),
 		 PJ_DNS_GET_AA(res->hdr.flags),
 		 PJ_DNS_GET_TC(res->hdr.flags),
 		 PJ_DNS_GET_RCODE(res->hdr.flags)));
-    PJ_LOG(3,(THIS_FILE, " Nb of question RR: %d", res->hdr.qdcount));
+    PJ_LOG(3,(THIS_FILE, " Nb of queries: %d", res->hdr.qdcount));
     PJ_LOG(3,(THIS_FILE, " Nb of answer RR: %d", res->hdr.anscount));
     PJ_LOG(3,(THIS_FILE, " Nb of authority RR: %d", res->hdr.nscount));
     PJ_LOG(3,(THIS_FILE, " Nb of additional RR: %d", res->hdr.arcount));
     PJ_LOG(3,(THIS_FILE, ""));
+
+    /* Dump queries */
+    if (res->hdr.qdcount) {
+	PJ_LOG(3,(THIS_FILE, " Queries:"));
+
+	for (i=0; i<res->hdr.qdcount; ++i) {
+	    dump_query(i, &res->q[i]);
+	}
+	PJ_LOG(3,(THIS_FILE, ""));
+    }
 
     /* Dump answers */
     if (res->hdr.anscount) {

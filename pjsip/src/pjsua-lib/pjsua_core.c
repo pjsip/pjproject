@@ -456,6 +456,45 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     }
 
+    /* If nameserver is configured, create DNS resolver instance and
+     * set it to be used by SIP resolver.
+     */
+    if (ua_cfg->nameserver_count) {
+#if PJSIP_HAS_RESOLVER
+	pj_dns_resolver *resv;
+	unsigned i;
+
+	/* Create DNS resolver */
+	status = pjsip_endpt_create_resolver(pjsua_var.endpt, &resv);
+	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+	/* Configure nameserver for the DNS resolver */
+	status = pj_dns_resolver_set_ns(resv, ua_cfg->nameserver_count,
+					ua_cfg->nameserver, NULL);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error setting nameserver", status);
+	    return status;
+	}
+
+	/* Set this DNS resolver to be used by the SIP resolver */
+	status = pjsip_endpt_set_resolver(pjsua_var.endpt, resv);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error setting DNS resolver", status);
+	    return status;
+	}
+
+	/* Print nameservers */
+	for (i=0; i<ua_cfg->nameserver_count; ++i) {
+	    PJ_LOG(4,(THIS_FILE, "Nameserver %.*s added",
+		      (int)ua_cfg->nameserver[i].slen,
+		      ua_cfg->nameserver[i].ptr));
+	}
+#else
+	PJ_LOG(2,(THIS_FILE, 
+		  "DNS resolver is disabled (PJSIP_HAS_RESOLVER==0)"));
+#endif
+    }
+
     /* Init SIP UA: */
 
     /* Initialize transaction layer: */
