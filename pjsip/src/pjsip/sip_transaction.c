@@ -2392,15 +2392,17 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	/* Stop timer B. */
 	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 
-	/* Generate ACK now (for INVITE) but send it later because
-	 * dialog need to use last_tx.
-	 */
+	/* Generate and send ACK (for INVITE) */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
 	    pj_status_t status;
 
 	    status = pjsip_endpt_create_ack( tsx->endpt, tsx->last_tx, 
 					     event->body.rx_msg.rdata,
 					     &ack_tdata);
+	    if (status != PJ_SUCCESS)
+		return status;
+
+	    status = tsx_send_msg( tsx, ack_tdata);
 	    if (status != PJ_SUCCESS)
 		return status;
 	}
@@ -2411,10 +2413,6 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Generate and send ACK for INVITE. */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
-	    pj_status_t status;
-
-	    status = tsx_send_msg( tsx, ack_tdata);
-
 	    if (ack_tdata != tsx->last_tx) {
 		pjsip_tx_data_dec_ref(tsx->last_tx);
 		tsx->last_tx = ack_tdata;
@@ -2425,10 +2423,6 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 		   reference counter 2, causing it to leak.
 		pjsip_tx_data_add_ref(ack_tdata);
 		*/
-	    }
-
-	    if (status != PJ_SUCCESS) {
-		return status;
 	    }
 	}
 
