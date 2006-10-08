@@ -30,8 +30,8 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJ_XML XML Parser/Helper.
- * @ingroup PJ
+ * @defgroup PJ_TINY_XML Mini/Tiny XML Parser/Helper
+ * @ingroup PJLIB_UTIL
  * @{
  */
 

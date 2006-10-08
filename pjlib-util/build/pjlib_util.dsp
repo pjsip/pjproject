@@ -88,24 +88,10 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\dns.c"
-
-!IF  "$(CFG)" == "pjlib_util - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\dns_dump.c"
-
-!IF  "$(CFG)" == "pjlib_util - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -122,13 +108,6 @@ SOURCE="..\src\pjlib-util\md5.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\resolver.c"
-
-!IF  "$(CFG)" == "pjlib_util - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib_util - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -168,6 +147,10 @@ SOURCE="..\src\pjlib-util\xml.c"
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\config.h"
+# End Source File
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\dns.h"
@@ -211,6 +194,10 @@ SOURCE="..\include\pjlib-util\string.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\stun.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\types.h"
 # End Source File
 # Begin Source File
 

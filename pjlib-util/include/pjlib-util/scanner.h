@@ -24,25 +24,16 @@
  * @brief Text Scanning.
  */
 
-#include <pj/types.h>
-
-/**
- * Macro PJ_SCANNER_USE_BITWISE is defined and non-zero (by default yes)
- * will enable the use of bitwise for character input specification (cis).
- * This would save several kilobytes of .bss memory in the SIP parser.
- */
-#ifndef PJ_SCANNER_USE_BITWISE
-#  define PJ_SCANNER_USE_BITWISE   1
-#endif
-
+#include <pjlib-util/types.h>
 
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJ_SCAN Text Scanning
- * @ingroup PJ_MISC
- * @brief
- * Text scanning utility.
+ * @defgroup PJ_SCAN Fast Text Scanning
+ * @ingroup PJLIB_UTIL
+ * @brief Text scanning utility.
+ *
+ * This module describes a fast text scanning functions.
  *
  * @{
  */

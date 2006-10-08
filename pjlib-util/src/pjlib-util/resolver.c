@@ -948,7 +948,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
 
     /* Calculate expiration time. */
     if (set_expiry) {
-	if (pkt->hdr.anscount == 0) {
+	if (pkt->hdr.anscount == 0 || status != PJ_SUCCESS) {
 	    /* If we don't have answers for the name, then give a different
 	     * ttl value (note: PJ_DNS_RESOLVER_INVALID_TTL may be zero, 
 	     * which means that invalid names won't be kept in the cache)

@@ -22,6 +22,17 @@
 #ifndef __PJ_GETOPT_H__
 #define __PJ_GETOPT_H__ 1
 
+/**
+ * @file getopt.h
+ * @brief Compile time settings
+ */
+
+/**
+ * @defgroup PJLIB_UTIL_GETOPT Getopt
+ * @ingroup PJLIB_UTIL
+ * @{
+ */
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -126,6 +137,10 @@ int pj_getopt_long_only (int argc, char *const *argv,
 #ifdef	__cplusplus
 }
 #endif
+
+/**
+ * @}
+ */
 
 #endif /* pj_getopt.h */
 

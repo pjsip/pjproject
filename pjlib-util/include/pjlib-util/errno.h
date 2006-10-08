@@ -22,6 +22,11 @@
 
 #include <pj/errno.h>
 
+/**
+ * @defgroup PJLIB_UTIL_ERROR PJLIB-UTIL Error Codes
+ * @ingroup PJLIB_UTIL
+ * @{
+ */
 
 /**
  * Start of error code relative to PJ_ERRNO_START_USER.
@@ -239,5 +244,9 @@
  */
 #define PJLIB_UTIL_EDNS_NOTZONE	    PJ_STATUS_FROM_DNS_RCODE(10)/* 320060 */
 
+
+/**
+ * @}
+ */
 
 #endif	/* __PJLIB_UTIL_ERRNO_H__ */

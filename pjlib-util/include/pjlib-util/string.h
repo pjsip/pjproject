@@ -27,6 +27,12 @@
 #include <pj/types.h>
 #include <pjlib-util/scanner.h>
 
+/**
+ * @defgroup PJLIB_UTIL_STRING String Escaping Utilities
+ * @ingroup PJLIB_UTIL
+ * @{
+ */
+
 PJ_BEGIN_DECL
 
 /**
@@ -86,5 +92,10 @@ PJ_DECL(pj_ssize_t) pj_strncpy2_escape(char *dst, const pj_str_t *src,
 				       pj_ssize_t max, const pj_cis_t *unres);
 
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 #endif	/* __PJLIB_UTIL_STRING_H__ */

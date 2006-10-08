@@ -30,8 +30,8 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJ_DNS_RESOLVER Asynchronous DNS Server Resolution
- * @ingroup PJLIB_UTIL
+ * @defgroup PJ_DNS_RESOLVER DNS Asynchronous/Caching Resolution Engine
+ * @ingroup PJ_DNS
  * @{
  *
  * This module manages the host/server resolution by performing asynchronous
@@ -132,7 +132,8 @@ PJ_BEGIN_DECL
  * enties will be created in the response cache.
  *
  * Note that a single response entry will occupy about 600-700 bytes of 
- * pool memory. 
+ * pool memory (the PJ_DNS_RESOLVER_RES_BUF_SIZE value plus internal
+ * structure). 
  *
  * Application can work around this problem by doing one of these:
  *  - disable caching by setting PJ_DNS_RESOLVER_MAX_TTL and 
@@ -148,123 +149,12 @@ PJ_BEGIN_DECL
  *
  * The PJLIB-UTIL resolver was built from the information in the following
  * standards:
- *  - RFC 1035: "Domain names - implementation and specification"
- *  - RFC 2782: "A DNS RR for specifying the location of services (DNS SRV)"
+ *  - <A HREF="http://www.faqs.org/rfcs/rfc1035.html">
+ *    RFC 1035: "Domain names - implementation and specification"</A>
+ *  - <A HREF="http://www.faqs.org/rfcs/rfc2782.html">
+ *    RFC 2782: "A DNS RR for specifying the location of services (DNS SRV)"
+ *    </A>
  */
-
-
-/*
- * CONFIGURATIONS
- */
-
-/**
- * Maximum numbers of DNS nameservers that can be configured in resolver.
- */
-#ifndef PJ_DNS_RESOLVER_MAX_NS
-#   define PJ_DNS_RESOLVER_MAX_NS		    16
-#endif
-
-
-/**
- * Default retransmission delay, in miliseconds. The combination of 
- * retransmission delay and count determines the query timeout.
- *
- * Default: 2000 (2 seconds, according to RFC 1035)
- */
-#ifndef PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY
-#   define PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY   2000
-#endif
-
-
-/**
- * Maximum number of transmissions before timeout is declared for
- * the query.
- *
- * Default: 2
- */
-#ifndef PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT
-#   define PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT   5
-#endif
-
-
-/**
- * Maximum life-time of DNS response in the resolver response cache, 
- * in seconds. If the value is zero, then DNS response caching will be 
- * disabled.
- *
- * Default is 300 seconds (5 minutes).
- *
- * @see PJ_DNS_RESOLVER_INVALID_TTL
- */
-#ifndef PJ_DNS_RESOLVER_MAX_TTL
-#   define PJ_DNS_RESOLVER_MAX_TTL		    (5*60)
-#endif
-
-/**
- * The life-time of invalid DNS response in the resolver response cache.
- * An invalid DNS response is a response without an answer. These 
- * responses can be put in the cache too to minimize message round-trip.
- *
- * Default: 0 (which means, invalid DNS response will not be cached).
- *
- * @see PJ_DNS_RESOLVER_MAX_TTL
- */
-#ifndef PJ_DNS_RESOLVER_INVALID_TTL
-#   define PJ_DNS_RESOLVER_INVALID_TTL		    60
-#endif
-
-/**
- * The interval on which nameservers which are known to be good to be 
- * probed again to determine whether they are still good. Note that
- * this applies to both active nameserver (the one currently being used)
- * and idle nameservers (good nameservers that are not currently selected).
- * The probing to query the "goodness" of nameservers involves sending
- * the same query to multiple servers, so it's probably not a good idea
- * to send this probing too often.
- *
- * Default: 600 (ten minutes)
- *
- * @see PJ_DNS_RESOLVER_BAD_NS_TTL
- */
-#ifndef PJ_DNS_RESOLVER_GOOD_NS_TTL
-#   define PJ_DNS_RESOLVER_GOOD_NS_TTL		    (10*60)
-#endif
-
-/**
- * The interval on which nameservers which known to be bad to be probed
- * again to determine whether it is still bad.
- *
- * Default: 600 (ten minutes)
- *
- * @see PJ_DNS_RESOLVER_GOOD_NS_TTL
- */
-#ifndef PJ_DNS_RESOLVER_BAD_NS_TTL
-#   define PJ_DNS_RESOLVER_BAD_NS_TTL		    (1*60)
-#endif
-
-
-/**
- * Maximum size of UDP packet. RFC 1035 states that maximum size of
- * DNS packet carried over UDP is 512 bytes.
- *
- * Default: 512 byes
- */
-#ifndef PJ_DNS_RESOLVER_MAX_UDP_SIZE
-#   define PJ_DNS_RESOLVER_MAX_UDP_SIZE		    512
-#endif
-
-
-/**
- * Size of memory pool allocated for each individual DNS response cache.
- * This value here should be more or less the same as maximum UDP packet
- * size (PJ_DNS_RESOLVER_MAX_UDP_SIZE), since the DNS replicator function
- * (#pj_dns_packet_dup()) is also capable of performing name compressions.
- *
- * Default: 512 (as a broad guidance, 400 is good for 4 SRV entries).
- */
-#ifndef PJ_DNS_RESOLVER_RES_BUF_SIZE
-#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    512
-#endif
 
 
 

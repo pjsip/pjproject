@@ -455,7 +455,7 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
 	res->q = pj_pool_zalloc(pool, res->hdr.qdcount *
 				      sizeof(pj_dns_parsed_query));
 	for (i=0; i<res->hdr.qdcount; ++i) {
-	    int parsed_len;
+	    int parsed_len = 0;
 	    
 	    status = parse_query(&res->q[i], pool, packet, start, end,
 				 &parsed_len);

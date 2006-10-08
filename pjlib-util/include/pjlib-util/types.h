@@ -1,6 +1,6 @@
-/* $Id */
+/* $Id$ */
 /* 
- * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,44 +16,48 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_H__
-#define __PJLIB_UTIL_H__
+#ifndef __PJLIB_UTIL_TYPES_H__
+#define __PJLIB_UTIL_TYPES_H__
 
 /**
- * @file pjlib-util.h
- * @brief pjlib-util.h
+ * @file types.h
+ * @brief PJLIB-UTIL types.
  */
 
-#include <pjlib-util/dns.h>
-#include <pjlib-util/errno.h>
-#include <pjlib-util/getopt.h>
-#include <pjlib-util/md5.h>
-#include <pjlib-util/resolver.h>
-#include <pjlib-util/scanner.h>
-#include <pjlib-util/stun.h>
-#include <pjlib-util/xml.h>
-
+#include <pj/types.h>
+#include <pjlib-util/config.h>
 
 /**
- * @addtogroup PJLIB_UTIL
- * @{
+ * @defgroup PJLIB_UTIL PJLIB-UTIL Library
  */
 
-PJ_BEGIN_DECL
-
 /**
- * Initialize PJLIB UTIL (defined in errno.c)
+ * @mainpage PJLIB-UTIL
  *
- * @return PJ_SUCCESS on success.
+ * \n
+ * \n
+ * \n
+ * This is the documentation of PJLIB-UTIL, an auxiliary library providing
+ * adjunct functions to PJLIB.
+ * 
+ * Please go to the <A HREF="modules.htm"><B>Modules</B></A> page for list
+ * of modules.
+ *
+ *
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
+ * \n
  */
-PJ_DECL(pj_status_t) pjlib_util_init(void);
 
+#endif	/* __PJLIB_UTIL_TYPES_H__ */
 
-/**
- * @}
- */
-
-PJ_END_DECL
-
-
-#endif	/* __PJLIB_UTIL_H__ */

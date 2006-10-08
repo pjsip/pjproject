@@ -19,9 +19,21 @@
 #ifndef __PJLIB_UTIL_MD5_H__
 #define __PJLIB_UTIL_MD5_H__
 
+/**
+ * @file md5.h
+ * @brief MD5 Functions
+ */
+
 #include <pj/types.h>
 
 PJ_BEGIN_DECL
+
+/**
+ * @defgroup PJLIB_UTIL_MD5 MD5 Functions
+ * @ingroup PJLIB_UTIL
+ * @{
+ */
+
 
 /** MD5 context. */
 typedef struct pj_md5_context
@@ -50,6 +62,12 @@ PJ_DECL(void) pj_md5_update( pj_md5_context *pms,
  */
 PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
 
+
+/**
+ * @}
+ */
+
 PJ_END_DECL
+
 
 #endif	/* __PJLIB_UTIL_MD5_H__ */

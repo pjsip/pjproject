@@ -24,15 +24,19 @@
  * @file dns.h
  * @brief Low level DNS message parsing and packetization.
  */
-#include <pj/types.h>
+#include <pjlib-util/types.h>
 
 
 PJ_BEGIN_DECL
 
+/**
+ * @defgroup PJ_DNS DNS and Asynchronous DNS Resolver
+ * @ingroup PJLIB_UTIL
+ */
 
 /**
- * @defgroup PJ_DNS Low-level DNS message parsing and packetization
- * @ingroup PJ
+ * @defgroup PJ_DNS_PARSING Low-level DNS Message Parsing and Packetization
+ * @ingroup PJ_DNS
  * @{
  *
  * This module provides low-level services to parse and packetize DNS queries
@@ -199,23 +203,6 @@ typedef enum pj_dns_rcode
 
 
 /**
- * This constant specifies the maximum names to keep in the temporary name
- * table when performing name compression scheme when duplicating DNS packet
- * (the #pj_dns_packet_dup() function).
- *
- * Generally name compression is desired, since it saves some memory (see
- * PJ_DNS_RESOLVER_RES_BUF_SIZE setting). However it comes at the expense of 
- * a little processing overhead to perform name scanning and also a little
- * bit more stack usage (8 bytes per entry on 32bit platform).
- *
- * Default: 16
- */
-#ifndef PJ_DNS_MAX_NAMES_IN_NAMETABLE
-#   define PJ_DNS_MAX_NAMES_IN_NAMETABLE	16
-#endif
-
-
-/**
  * This structure describes a DNS query record.
  */
 typedef struct pj_dns_parsed_query
@@ -344,7 +331,7 @@ PJ_DECL(pj_status_t) pj_dns_parse_packet(pj_pool_t *pool,
  *
  * @param pool		The pool to allocate memory for the duplicated packet.
  * @param p		The DNS packet to be cloned.
- * @p_dst		Pointer to store the cloned DNS packet.
+ * @param p_dst		Pointer to store the cloned DNS packet.
  */
 PJ_DECL(void) pj_dns_packet_dup(pj_pool_t *pool,
 				const pj_dns_parsed_packet*p,
