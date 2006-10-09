@@ -227,6 +227,85 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 }
 
 
+/* Get PortAudio default input device ID */
+static int pa_get_default_input_dev(int channel_count)
+{
+    int i, count;
+
+    /* Enumerate the host api's for the default devices, and return
+     * the device with suitable channels.
+     */
+    count = Pa_GetHostApiCount();
+    for (i=0; i < count; ++i) {
+	const PaHostApiInfo *pHAInfo;
+
+	pHAInfo = Pa_GetHostApiInfo(i);
+	if (!pHAInfo)
+	    continue;
+
+	if (pHAInfo->defaultInputDevice >= 0) {
+	    const PaDeviceInfo *paDevInfo;
+
+	    paDevInfo = Pa_GetDeviceInfo(pHAInfo->defaultInputDevice);
+
+	    if (paDevInfo->maxInputChannels >= channel_count)
+		return pHAInfo->defaultInputDevice;
+	}
+    }
+
+    /* If still no device is found, enumerate all devices */
+    count = Pa_GetDeviceCount();
+    for (i=0; i<count; ++i) {
+	const PaDeviceInfo *paDevInfo;
+
+	paDevInfo = Pa_GetDeviceInfo(i);
+	if (paDevInfo->maxInputChannels >= channel_count)
+	    return i;
+    }
+    
+    return -1;
+}
+
+/* Get PortAudio default output device ID */
+static int pa_get_default_output_dev(int channel_count)
+{
+    int i, count;
+
+    /* Enumerate the host api's for the default devices, and return
+     * the device with suitable channels.
+     */
+    count = Pa_GetHostApiCount();
+    for (i=0; i < count; ++i) {
+	const PaHostApiInfo *pHAInfo;
+
+	pHAInfo = Pa_GetHostApiInfo(i);
+	if (!pHAInfo)
+	    continue;
+
+	if (pHAInfo->defaultOutputDevice >= 0) {
+	    const PaDeviceInfo *paDevInfo;
+
+	    paDevInfo = Pa_GetDeviceInfo(pHAInfo->defaultOutputDevice);
+
+	    if (paDevInfo->maxOutputChannels >= channel_count)
+		return pHAInfo->defaultOutputDevice;
+	}
+    }
+
+    /* If still no device is found, enumerate all devices */
+    count = Pa_GetDeviceCount();
+    for (i=0; i<count; ++i) {
+	const PaDeviceInfo *paDevInfo;
+
+	paDevInfo = Pa_GetDeviceInfo(i);
+	if (paDevInfo->maxOutputChannels >= channel_count)
+	    return i;
+    }
+    
+    return -1;
+}
+
+
 /*
  * Open stream.
  */
@@ -250,22 +329,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     PaError err;
 
     if (index <= 0) {
-	int count = Pa_GetDeviceCount();
-	for (index=0; index<count; ++index) {
-	    paDevInfo = Pa_GetDeviceInfo(index);
-	    if (paDevInfo->maxInputChannels >= (int)channel_count)
-		break;
-	}
-	if (index == count) {
+	index = pa_get_default_input_dev(channel_count);
+	if (index < 0) {
 	    /* No such device. */
 	    return PJMEDIA_ENOSNDREC;
 	}
-    } else {
-	paDevInfo = Pa_GetDeviceInfo(index);
-	if (!paDevInfo) {
-	    /* Assumed it is "No such device" error. */
-	    return PJMEDIA_ESNDINDEVID;
-	}
+    }
+
+    paDevInfo = Pa_GetDeviceInfo(index);
+    if (!paDevInfo) {
+	/* Assumed it is "No such device" error. */
+	return PJMEDIA_ESNDINDEVID;
     }
 
     if (bits_per_sample == 8)
@@ -351,22 +425,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     PaError err;
 
     if (index <= 0) {
-	int count = Pa_GetDeviceCount();
-	for (index=0; index<count; ++index) {
-	    paDevInfo = Pa_GetDeviceInfo(index);
-	    if (paDevInfo->maxOutputChannels >= (int)channel_count)
-		break;
-	}
-	if (index == count) {
+	index = pa_get_default_output_dev(channel_count);
+	if (index < 0) {
 	    /* No such device. */
 	    return PJMEDIA_ENOSNDPLAY;
 	}
-    } else {
-	paDevInfo = Pa_GetDeviceInfo(index);
-	if (!paDevInfo) {
-	    /* Assumed it is "No such device" error. */
-	    return PJMEDIA_ESNDINDEVID;
-	}
+    } 
+
+    paDevInfo = Pa_GetDeviceInfo(index);
+    if (!paDevInfo) {
+	/* Assumed it is "No such device" error. */
+	return PJMEDIA_ESNDINDEVID;
     }
 
     if (bits_per_sample == 8)
@@ -460,42 +529,33 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     PaError err;
 
     if (rec_id <= 0) {
-	int count = Pa_GetDeviceCount();
-	for (rec_id=0; rec_id<count; ++rec_id) {
-	    paRecDevInfo = Pa_GetDeviceInfo(rec_id);
-	    if (paRecDevInfo->maxInputChannels >= (int)channel_count)
-		break;
-	}
-	if (rec_id == count) {
+	rec_id = pa_get_default_input_dev(channel_count);
+	if (rec_id < 0) {
 	    /* No such device. */
 	    return PJMEDIA_ENOSNDREC;
 	}
-    } else {
-	paRecDevInfo = Pa_GetDeviceInfo(rec_id);
-	if (!paRecDevInfo) {
-	    /* Assumed it is "No such device" error. */
-	    return PJMEDIA_ESNDINDEVID;
-	}
+    }
+
+    paRecDevInfo = Pa_GetDeviceInfo(rec_id);
+    if (!paRecDevInfo) {
+	/* Assumed it is "No such device" error. */
+	return PJMEDIA_ESNDINDEVID;
     }
 
     if (play_id <= 0) {
-	int count = Pa_GetDeviceCount();
-	for (play_id=0; play_id<count; ++play_id) {
-	    paPlayDevInfo = Pa_GetDeviceInfo(play_id);
-	    if (paPlayDevInfo->maxOutputChannels >= (int)channel_count)
-		break;
-	}
-	if (play_id == count) {
+	play_id = pa_get_default_output_dev(channel_count);
+	if (play_id < 0) {
 	    /* No such device. */
 	    return PJMEDIA_ENOSNDPLAY;
 	}
-    } else {
-	paPlayDevInfo = Pa_GetDeviceInfo(play_id);
-	if (!paPlayDevInfo) {
-	    /* Assumed it is "No such device" error. */
-	    return PJMEDIA_ESNDINDEVID;
-	}
+    } 
+
+    paPlayDevInfo = Pa_GetDeviceInfo(play_id);
+    if (!paPlayDevInfo) {
+	/* Assumed it is "No such device" error. */
+	return PJMEDIA_ESNDINDEVID;
     }
+
 
     if (bits_per_sample == 8)
 	sampleFormat = paUInt8;
