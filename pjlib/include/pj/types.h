@@ -38,22 +38,22 @@ PJ_BEGIN_DECL
 
 /* ************************************************************************* */
 
-/** Unsigned 32bit integer. */
+/** Signed 32bit integer. */
 typedef int		pj_int32_t;
 
-/** Signed 32bit integer. */
+/** Unsigned 32bit integer. */
 typedef unsigned int	pj_uint32_t;
 
-/** Unsigned 16bit integer. */
+/** Signed 16bit integer. */
 typedef short		pj_int16_t;
 
-/** Signed 16bit integer. */
+/** Unsigned 16bit integer. */
 typedef unsigned short	pj_uint16_t;
 
-/** Unsigned 8bit integer. */
+/** Signed 8bit integer. */
 typedef signed char	pj_int8_t;
 
-/** Signed 16bit integer. */
+/** Unsigned 16bit integer. */
 typedef unsigned char	pj_uint8_t;
 
 /** Large unsigned integer. */
