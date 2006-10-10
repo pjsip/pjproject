@@ -84,6 +84,9 @@ static int PaRecorderCallback(const void *input,
     if (stream->quit_flag)
 	goto on_break;
 
+    if (input == NULL)
+	return paContinue;
+
     if (stream->thread_initialized == 0) {
 	status = pj_thread_register("pa_rec", stream->thread_desc, 
 				    &stream->thread);
@@ -128,6 +131,9 @@ static int PaPlayerCallback( const void *input,
 
     if (stream->quit_flag)
 	goto on_break;
+
+    if (output == NULL)
+	return paContinue;
 
     if (stream->thread_initialized == 0) {
 	status = pj_thread_register("portaudio", stream->thread_desc,
