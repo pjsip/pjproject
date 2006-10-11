@@ -44,9 +44,6 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     pj_memcpy(&pjsua_var.media_cfg, cfg, sizeof(*cfg));
 
     /* Normalize configuration */
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    pjsua_var.media_cfg.clock_rate = 44100;
-#endif
 
     if (pjsua_var.media_cfg.has_ioqueue &&
 	pjsua_var.media_cfg.thread_cnt == 0)
@@ -972,7 +969,9 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 {
     pjmedia_port *conf_port;
     const pjmedia_snd_dev_info *cap_info, *play_info;
-    pj_status_t status;
+    unsigned clock_rates[] = { 0, 22050, 44100, 48000, 11025, 32000, 8000};
+    unsigned i;
+    pj_status_t status = -1;
 
     /* Close existing sound port */
     close_snd_dev();
@@ -981,16 +980,31 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     cap_info = pjmedia_snd_get_dev_info(capture_dev);
     play_info = pjmedia_snd_get_dev_info(playback_dev);
 
-    PJ_LOG(4,(THIS_FILE, "Opening %s sound playback device and "
-			 "%s sound capture device..",
-			 play_info->name, cap_info->name));
+    /* Set default clock rate */
+    clock_rates[0] = pjsua_var.media_cfg.clock_rate;
 
-    /* Create the sound device. Sound port will start immediately. */
-    status = pjmedia_snd_port_create(pjsua_var.pool, capture_dev,
-				     playback_dev, 
-				     pjsua_var.media_cfg.clock_rate, 1,
-				     pjsua_var.media_cfg.clock_rate/FPS,
-				     16, 0, &pjsua_var.snd_port);
+    /* Attempts to open the sound device with different clock rates */
+    for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+
+	PJ_LOG(4,(THIS_FILE, 
+		  "pjsua_set_snd_dev(): attempting to open devices "
+		  "@%d Hz", clock_rates[i]));
+
+	/* Create the sound device. Sound port will start immediately. */
+	status = pjmedia_snd_port_create(pjsua_var.pool, capture_dev,
+					 playback_dev, 
+					 clock_rates[i], 1,
+					 clock_rates[i]/FPS,
+					 16, 0, &pjsua_var.snd_port);
+
+	if (status == PJ_SUCCESS)
+	    break;
+
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(4, ("..failed: %s", errmsg));
+    }
+
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to open sound device", status);
 	return status;
