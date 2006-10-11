@@ -970,6 +970,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pjmedia_port *conf_port;
     const pjmedia_snd_dev_info *cap_info, *play_info;
     unsigned clock_rates[] = { 0, 22050, 44100, 48000, 11025, 32000, 8000};
+    unsigned selected_clock_rate = 0;
     unsigned i;
     pj_status_t status = -1;
 
@@ -998,11 +999,13 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 					 clock_rates[i]/FPS,
 					 16, 0, &pjsua_var.snd_port);
 
-	if (status == PJ_SUCCESS)
+	if (status == PJ_SUCCESS) {
+	    selected_clock_rate = clock_rates[i];
 	    break;
+	}
 
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4, ("..failed: %s", errmsg));
+	PJ_LOG(4, (THIS_FILE, "..failed: %s", errmsg));
     }
 
     if (status != PJ_SUCCESS) {
@@ -1018,6 +1021,23 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.pool, 
 			     pjsua_var.media_cfg.ec_tail_len, 
 			     pjsua_var.media_cfg.ec_options);
+
+    /* If there's mismatch between sound port and conference's port,
+     * create a resample port to bridge them.
+     */
+    if (selected_clock_rate != pjsua_var.media_cfg.clock_rate) {
+	pjmedia_port *resample_port;
+
+	status = pjmedia_resample_port_create(pjsua_var.pool, conf_port, 
+					      selected_clock_rate, 0, 
+					      &resample_port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror("Error creating resample port", THIS_FILE, status);
+	    return status;
+	}
+
+	conf_port = resample_port;
+    }
 
     /* Connect sound port to the bridge */ 	 
     status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
