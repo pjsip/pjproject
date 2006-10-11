@@ -130,6 +130,15 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
+						pjmedia_snd_stream_info *pi)
+{
+
+    PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
+    return PJ_EINVALIDOP;
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 {
     PJ_UNUSED_ARG(stream);
