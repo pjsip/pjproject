@@ -53,7 +53,7 @@ typedef unsigned short	pj_uint16_t;
 /** Signed 8bit integer. */
 typedef signed char	pj_int8_t;
 
-/** Unsigned 16bit integer. */
+/** Unsigned 8bit integer. */
 typedef unsigned char	pj_uint8_t;
 
 /** Large unsigned integer. */
