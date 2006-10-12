@@ -63,10 +63,15 @@ struct pjmedia_snd_stream
 
     pj_bool_t		 quit_flag;
 
-    pj_bool_t		 thread_exited;
-    pj_bool_t		 thread_initialized;
-    pj_thread_desc	 thread_desc;
-    pj_thread_t		*thread;
+    pj_bool_t		 rec_thread_exited;
+    pj_bool_t		 rec_thread_initialized;
+    pj_thread_desc	 rec_thread_desc;
+    pj_thread_t		*rec_thread;
+
+    pj_bool_t		 play_thread_exited;
+    pj_bool_t		 play_thread_initialized;
+    pj_thread_desc	 play_thread_desc;
+    pj_thread_t		*play_thread;
 };
 
 
@@ -89,10 +94,10 @@ static int PaRecorderCallback(const void *input,
     if (input == NULL)
 	return paContinue;
 
-    if (stream->thread_initialized == 0) {
-	status = pj_thread_register("pa_rec", stream->thread_desc, 
-				    &stream->thread);
-	stream->thread_initialized = 1;
+    if (stream->rec_thread_initialized == 0) {
+	status = pj_thread_register("pa_rec", stream->rec_thread_desc, 
+				    &stream->rec_thread);
+	stream->rec_thread_initialized = 1;
 	PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
 
@@ -112,7 +117,7 @@ static int PaRecorderCallback(const void *input,
 	return paContinue;
 
 on_break:
-    stream->thread_exited = 1;
+    stream->rec_thread_exited = 1;
     return paAbort;
 }
 
@@ -137,10 +142,10 @@ static int PaPlayerCallback( const void *input,
     if (output == NULL)
 	return paContinue;
 
-    if (stream->thread_initialized == 0) {
-	status = pj_thread_register("portaudio", stream->thread_desc,
-				    &stream->thread);
-	stream->thread_initialized = 1;
+    if (stream->play_thread_initialized == 0) {
+	status = pj_thread_register("portaudio", stream->play_thread_desc,
+				    &stream->play_thread);
+	stream->play_thread_initialized = 1;
 	PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
@@ -158,7 +163,7 @@ static int PaPlayerCallback( const void *input,
 	return paContinue;
 
 on_break:
-    stream->thread_exited = 1;
+    stream->play_thread_exited = 1;
     return paAbort;
 }
 
@@ -743,7 +748,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
     int i, err = 0;
 
     stream->quit_flag = 1;
-    for (i=0; !stream->thread_exited && i<100; ++i)
+    for (i=0; !stream->rec_thread_exited && i<100; ++i)
+	pj_thread_sleep(10);
+    for (i=0; !stream->play_thread_exited && i<100; ++i)
 	pj_thread_sleep(10);
 
     pj_thread_sleep(1);
@@ -769,7 +776,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     int i, err = 0;
 
     stream->quit_flag = 1;
-    for (i=0; !stream->thread_exited && i<100; ++i) {
+    for (i=0; !stream->rec_thread_exited && i<100; ++i) {
+	pj_thread_sleep(1);
+    }
+    for (i=0; !stream->play_thread_exited && i<100; ++i) {
 	pj_thread_sleep(1);
     }
 
