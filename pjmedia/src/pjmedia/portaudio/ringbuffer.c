@@ -4,9 +4,13 @@
  * Ring Buffer utility..
  *
  * Author: Phil Burk, http://www.softsynth.com
+ * modified for SMP safety on Mac OS X by Bjorn Roche
+ * also, alowed for const where possible
+ * Note that this is safe only for a single-thread reader and a
+ * single-thread writer.
  *
  * This program uses the PortAudio Portable Audio Library.
- * For more information see: http://www.audiomulch.com/portaudio/
+ * For more information see: http://www.portaudio.com
  * Copyright (c) 1999-2000 Ross Bencina and Phil Burk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -20,10 +24,6 @@
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * Any person wishing to distribute modifications to the Software is
- * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -31,13 +31,68 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
  */
+
+/*
+ * The text above constitutes the entire PortAudio license; however, 
+ * the PortAudio community also makes the following non-binding requests:
+ *
+ * Any person wishing to distribute modifications to the Software is
+ * requested to send the modifications to the original developer so that
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
+ * license above.
+ */
+
+/**
+ @file
+ @ingroup hostapi_src
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "ringbuffer.h"
 #include <string.h>
+
+/*
+ * We can undefine this, to turn off memory barriers, but that
+ * is only useful if we know we don't need to be MP safe or
+ * we are interested in doing some kind of tests.
+ */
+#define MPSAFE
+
+/****************
+ * First, we'll define some memory barrier primitives based on the system.
+ * right now only OS X and FreeBSD are supported. In addition to providing
+ * memory barriers, these functions should ensure that data cached in registers
+ * is written out to cache where it can be snooped by other CPUs. (ie, the volatile
+ * keyword should not be required)
+ *
+ * the primitives that must be defined are:
+ *
+ * FullMemoryBarrier()
+ * ReadMemoryBarrier()
+ * WriteMemoryBarrier()
+ *
+ ****************/
+
+#if 1
+#   define FullMemoryBarrier()
+#   define ReadMemoryBarrier()
+#   define WriteMemoryBarrier()
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+#   include <libkern/OSAtomic.h>
+    /* Here are the memory barrier functions. Mac OS X and FreeBSD only provide
+       full memory barriers, so the three types of barriers are the same.
+       The asm volatile may be redundant with the memory barrier, but
+       until I have proof of that, I'm leaving it. */
+#   define FullMemoryBarrier()  do{ asm volatile("":::"memory"); OSMemoryBarrier(); }while(false)
+#   define ReadMemoryBarrier()  do{ asm volatile("":::"memory"); OSMemoryBarrier(); }while(false)
+#   define WriteMemoryBarrier() do{ asm volatile("":::"memory"); OSMemoryBarrier(); }while(false)
+#else
+#   error Memory Barriers not defined on this system or system unknown
+#endif
 
 /***************************************************************************
  * Initialize FIFO.
@@ -57,12 +112,16 @@ long RingBuffer_Init( RingBuffer *rbuf, long numBytes, void *dataPtr )
 ** Return number of bytes available for reading. */
 long RingBuffer_GetReadAvailable( RingBuffer *rbuf )
 {
+#ifdef MPSAFE
+    ReadMemoryBarrier();
+#endif
     return ( (rbuf->writeIndex - rbuf->readIndex) & rbuf->bigMask );
 }
 /***************************************************************************
 ** Return number of bytes available for writing. */
 long RingBuffer_GetWriteAvailable( RingBuffer *rbuf )
 {
+    /* Since we are calling RingBuffer_GetReadAvailable, we don't need an aditional MB */
     return ( rbuf->bufferSize - RingBuffer_GetReadAvailable(rbuf));
 }
 
@@ -112,7 +171,13 @@ long RingBuffer_GetWriteRegions( RingBuffer *rbuf, long numBytes,
 */
 long RingBuffer_AdvanceWriteIndex( RingBuffer *rbuf, long numBytes )
 {
+#ifdef MPSAFE
+    /* we need to ensure that previous writes are seen before we update the write index */
+    WriteMemoryBarrier();
     return rbuf->writeIndex = (rbuf->writeIndex + numBytes) & rbuf->bigMask;
+#else
+    return rbuf->writeIndex = (rbuf->writeIndex + numBytes) & rbuf->bigMask;
+#endif
 }
 
 /***************************************************************************
@@ -152,12 +217,18 @@ long RingBuffer_GetReadRegions( RingBuffer *rbuf, long numBytes,
 */
 long RingBuffer_AdvanceReadIndex( RingBuffer *rbuf, long numBytes )
 {
+#ifdef MPSAFE
+    /* we need to ensure that previous writes are always seen before updating the index. */
+    WriteMemoryBarrier();
     return rbuf->readIndex = (rbuf->readIndex + numBytes) & rbuf->bigMask;
+#else
+    return rbuf->readIndex = (rbuf->readIndex + numBytes) & rbuf->bigMask;
+#endif
 }
 
 /***************************************************************************
 ** Return bytes written. */
-long RingBuffer_Write( RingBuffer *rbuf, void *data, long numBytes )
+long RingBuffer_Write( RingBuffer *rbuf, const void *data, long numBytes )
 {
     long size1, size2, numWritten;
     void *data1, *data2;

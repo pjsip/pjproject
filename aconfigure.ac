@@ -243,14 +243,22 @@ AC_ARG_ENABLE(sound,
 	       fi]
 	      )
 
+AC_SUBST(ac_pa_cflags)
 if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
   *darwin*)
-	ac_pjmedia_snd=pa_darwinos
-	AC_MSG_RESULT([Checking sound device backend... coreaudio])
-	LIBS="$LIBS -framework CoreAudio"
+	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
+	if test "`uname -r`" = "6.8"; then
+		#ac_pa_cflags="-DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS"
+		#AC_MSG_RESULT([Setting additional PortAudio CFLAGS.. -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS])
+		ac_pjmedia_snd=pa_old_darwinos
+		AC_MSG_RESULT([Checking sound device backend... old coreaudio])
+	else
+		ac_pjmedia_snd=pa_darwinos
+		AC_MSG_RESULT([Checking sound device backend... coreaudio])
+	fi
 	;;
   *cygwin* | *mingw*)
 	ac_pjmedia_snd=pa_win32

@@ -11,9 +11,13 @@ extern "C"
  * Ring Buffer utility..
  *
  * Author: Phil Burk, http://www.softsynth.com
+ * modified for SMP safety on OS X by Bjorn Roche.
+ * also allowed for const where possible.
+ * Note that this is safe only for a single-thread reader
+ * and a single-thread writer.
  *
  * This program is distributed with the PortAudio Portable Audio Library.
- * For more information see: http://www.audiomulch.com/portaudio/
+ * For more information see: http://www.portaudio.com
  * Copyright (c) 1999-2000 Ross Bencina and Phil Burk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,10 +31,6 @@ extern "C"
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * Any person wishing to distribute modifications to the Software is
- * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -38,8 +38,24 @@ extern "C"
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
  */
+
+/*
+ * The text above constitutes the entire PortAudio license; however, 
+ * the PortAudio community also makes the following non-binding requests:
+ *
+ * Any person wishing to distribute modifications to the Software is
+ * requested to send the modifications to the original developer so that
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
+ * license above.
+ */
+
+/**
+ @file
+ @ingroup hostapi_src
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -53,7 +69,7 @@ typedef struct
     long   readIndex;  /* Index of next readable byte. Set by RingBuffer_AdvanceReadIndex. */
     long   bigMask;    /* Used for wrapping indices with extra bit to distinguish full/empty. */
     long   smallMask;  /* Used for fitting indices to buffer. */
-    char *buffer;
+    char * buffer;
 }
 RingBuffer;
 /*
@@ -70,7 +86,7 @@ long RingBuffer_GetWriteAvailable( RingBuffer *rbuf );
 /* Return number of bytes available for read. */
 long RingBuffer_GetReadAvailable( RingBuffer *rbuf );
 /* Return bytes written. */
-long RingBuffer_Write( RingBuffer *rbuf, void *data, long numBytes );
+long RingBuffer_Write( RingBuffer *rbuf, const void *data, long numBytes );
 /* Return bytes read. */
 long RingBuffer_Read( RingBuffer *rbuf, void *data, long numBytes );
 
