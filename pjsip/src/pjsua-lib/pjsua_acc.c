@@ -487,6 +487,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
     pj_str_t contact;
+    char contact_buf[512];
+    pj_pool_t *pool;
     pj_status_t status;
 
     acc = &pjsua_var.acc[acc_id];
@@ -494,6 +496,12 @@ static pj_status_t pjsua_regc_init(int acc_id)
     if (acc->cfg.reg_uri.slen == 0) {
 	PJ_LOG(3,(THIS_FILE, "Registrar URI is not specified"));
 	return PJ_SUCCESS;
+    }
+
+    /* Destroy existing session, if any */
+    if (acc->regc) {
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
     }
 
     /* initialize SIP registration if registrar is configured */
@@ -507,7 +515,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	return status;
     }
 
-    status = pjsua_acc_create_uac_contact( pjsua_var.pool, &contact,
+    pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
+    status = pjsua_acc_create_uac_contact( pool, &contact,
 					   acc_id, &acc->cfg.reg_uri);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
@@ -562,7 +571,6 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 
     if (renew) {
 	if (pjsua_var.acc[acc_id].regc == NULL) {
-	    // Need route set.
 	    status = pjsua_regc_init(acc_id);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Unable to create registration", 
