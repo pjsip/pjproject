@@ -151,7 +151,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	if (log_decor & PJ_LOG_HAS_NEWLINE) {
 	    log_buffer[len++] = '\n';
 	}
-	log_buffer[len++] = '\0';
+	log_buffer[len] = '\0';
     } else {
 	len = sizeof(log_buffer)-1;
 	if (log_decor & PJ_LOG_HAS_CR) {
