@@ -66,6 +66,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     if (!is_initialized) {
 	if (initialize() != PJ_SUCCESS)
 	    return NULL;
+	is_initialized = 1;
     }
 
     param.stack_buf = buf;
