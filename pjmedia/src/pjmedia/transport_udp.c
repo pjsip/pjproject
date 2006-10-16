@@ -410,7 +410,9 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	 * source packet address after several consecutive packets
 	 * have been received.
 	 */
-	if ((udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0) {
+	if (bytes_read>0 && 
+	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0) 
+	{
 	    if ((udp->rem_rtp_addr.sin_addr.s_addr != 
 		 udp->rtp_src_addr.sin_addr.s_addr) ||
 		(udp->rem_rtp_addr.sin_port != 
@@ -464,7 +466,7 @@ read_next_packet:
 				     &udp->rtp_src_addr, 
 				     &udp->rtp_addrlen);
 
-    } while (status == PJ_SUCCESS);
+    } while (status != PJ_EPENDING);
 }
 
 
@@ -494,7 +496,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	 * remote address, and switch the address when they are
 	 * different.
 	 */
-	if ((udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
+	if (bytes_read>0 &&
+	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
 	    ((udp->rem_rtcp_addr.sin_addr.s_addr != 
 	       udp->rtcp_src_addr.sin_addr.s_addr) ||
 	     (udp->rem_rtcp_addr.sin_port != 
@@ -515,7 +518,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 				     &udp->rtcp_src_addr, 
 				     &udp->rtcp_addr_len);
 
-    } while (status == PJ_SUCCESS);
+    } while (status != PJ_EPENDING);
 }
 
 
