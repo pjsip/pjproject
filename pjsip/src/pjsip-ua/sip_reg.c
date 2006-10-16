@@ -581,6 +581,10 @@ static void tsx_callback(void *token, pjsip_event *event)
 			event->body.tsx_state.src.rdata : NULL;
 	}
 
+	/* Increment pending_tsx temporarily to prevent regc from
+	 * being destroyed.
+	 */
+	++regc->pending_tsx;
 
 	/* Call callback. */
 	if (expiration == 0xFFFF) expiration = -1;
@@ -590,6 +594,8 @@ static void tsx_callback(void *token, pjsip_event *event)
 		      rdata, expiration, 
 		      contact_cnt, contact);
 
+	/* Decrement pending_tsx */
+	--regc->pending_tsx;
     }
 
     /* Delete the record if user destroy regc during the callback. */
@@ -623,11 +629,16 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     /* Increment pending transaction first, since transaction callback
      * may be called even before send_request() returns!
      */
-    ++regc->pending_tsx;
+    regc->pending_tsx += 2;
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
     if (status!=PJ_SUCCESS) {
-	--regc->pending_tsx;
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
+    }
+    --regc->pending_tsx;
+
+    /* Delete the record if user destroy regc during the callback. */
+    if (regc->_delete_flag && regc->pending_tsx==0) {
+	pjsip_regc_destroy(regc);
     }
 
     return status;
