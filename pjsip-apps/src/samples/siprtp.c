@@ -299,8 +299,16 @@ static pj_status_t init_sip()
 	addr.sin_port = pj_htons((pj_uint16_t)app.sip_port);
 
 	if (app.local_addr.slen) {
+
 	    addrname.host = app.local_addr;
 	    addrname.port = app.sip_port;
+
+	    status = pj_sockaddr_in_init(&addr, &app.local_addr, 
+					 (pj_uint16_t)app.sip_port);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to resolve IP interface", status);
+		return status;
+	    }
 	}
 
 	status = pjsip_udp_transport_start( app.sip_endpt, &addr, 
