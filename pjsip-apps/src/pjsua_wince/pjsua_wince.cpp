@@ -250,7 +250,6 @@ static void on_typing(pjsua_call_id call_id, const pj_str_t *from,
 }
 
 
-
 static BOOL OnInitStack(void)
 {
     pjsua_config	    cfg;
@@ -275,12 +274,17 @@ static BOOL OnInitStack(void)
 
     /* Init configs */
     pjsua_config_default(&cfg);
-    pjsua_logging_config_default(&log_cfg);
     pjsua_media_config_default(&media_cfg);
     pjsua_transport_config_default(&udp_cfg);
     udp_cfg.port = 50060;
     pjsua_transport_config_default(&rtp_cfg);
     rtp_cfg.port = 40000;
+
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.level = 5;
+    log_cfg.log_filename = pj_str("\\pjsua.txt");
+    log_cfg.msg_logging = 1;
+    log_cfg.decor = pj_log_get_decor() | PJ_LOG_HAS_CR;
 
     /* Setup media */
     media_cfg.clock_rate = 8000;

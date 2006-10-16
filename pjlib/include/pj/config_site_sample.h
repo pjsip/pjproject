@@ -14,11 +14,6 @@
  * Typical configuration for WinCE target.
  */
 #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
-#   if !defined(PJ_DEBUG) || PJ_DEBUG==0
-#	define PJ_LOG_MAX_LEVEL		0
-#	define PJ_ENABLE_EXTRA_CHECK	0
-#   endif
-
 #   define PJ_HAS_FLOATING_POINT	0
 
 #   define PJMEDIA_HAS_G711_PLC		0
