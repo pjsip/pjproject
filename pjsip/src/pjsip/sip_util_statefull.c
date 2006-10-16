@@ -106,7 +106,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     PJ_TODO(IMPLEMENT_TIMEOUT_FOR_SEND_REQUEST);
 
-    return pjsip_tsx_send_msg(tsx, NULL);
+    status = pjsip_tsx_send_msg(tsx, NULL);
+    if (status != PJ_SUCCESS)
+	pjsip_tx_data_dec_ref(tdata);
+
+    return status;
 }
 
 

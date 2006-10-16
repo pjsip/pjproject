@@ -1762,7 +1762,6 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
     status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send request", status);
-	pjsip_tx_data_dec_ref(tdata);
 	return;
     }
 }

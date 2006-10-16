@@ -1402,7 +1402,8 @@ static pj_status_t submit_job(void)
 	app_perror(THIS_FILE, "Error sending stateful request", status);
 	//should have been reported by tsx_completion_cb().
 	//report_completion(701);
-	pjsip_tx_data_dec_ref(tdata);
+	//No longer necessary (r777)
+	//pjsip_tx_data_dec_ref(tdata);
     }
     return status;
 }
