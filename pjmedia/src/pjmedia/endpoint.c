@@ -340,7 +340,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	attr->value.ptr = pj_pool_alloc(pool, 80);
 	attr->value.slen = 
 	    pj_ansi_snprintf(attr->value.ptr, 80,
-			    ":%u IN IP4 %s",
+			    "%u IN IP4 %s",
 			    pj_ntohs(sock_info[0].rtcp_addr_name.sin_port),
 			    pj_inet_ntoa(sock_info[0].rtcp_addr_name.sin_addr));
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
@@ -403,7 +403,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	    attr->value.ptr = pj_pool_alloc(pool, 32);
 	    attr->value.slen = 
 		pj_ansi_snprintf( attr->value.ptr, 32,
-				  ":%d mode=%d",
+				  "%d mode=%d",
 				  codec_info->pt,
 				  codec_param.setting.dec_fmtp_mode);
 	    m->attr[m->attr_count++] = attr;
@@ -427,14 +427,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Add rtpmap. */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("rtpmap");
-    attr->value = pj_str(":" PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR 
+    attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR 
 			 " telephone-event/8000");
     m->attr[m->attr_count++] = attr;
 
     /* Add fmtp */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("fmtp");
-    attr->value = pj_str(":" PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
+    attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
     m->attr[m->attr_count++] = attr;
 #endif
 
