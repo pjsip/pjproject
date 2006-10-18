@@ -57,44 +57,81 @@
  *
  * \section PJMEDIA_TRANSPORT_H_USING Using the Media Transport
  *
- * The media transport's life-cycle normally follows the following stages:
- *  - application creates the media transport when it needs to establish
+ * The media transport's life-cycle normally follows the following stages.
+ *
+ * \subsection PJMEDIA_TRANSPORT_H_CREATE Creating the Media Transport
+ *
+ *  Application creates the media transport when it needs to establish
  *    media session to remote peer. The media transport is created using
  *    specific function to create that particular transport; for example,
  *    for UDP media transport, it is created with #pjmedia_transport_udp_create()
  *    or #pjmedia_transport_udp_create2() functions. Different media
  *    transports will provide different API to create those transports.
- *  - application specifies this media transport instance when creating
+ *
+ *  Alternatively, application may create pool of media transports when
+ *    it is first started up. Using this approach probably is better, since
+ *    application has to specify the RTP port when sending the initial
+ *    session establishment request (e.g. SIP INVITE request), thus if
+ *    application only creates the media transport later when media is to be
+ *    established (normally when 200/OK is received, or when 18x is received
+ *    for early media), there is a possibility that the particular RTP
+ *    port might have been occupied by other programs. Also it is more
+ *    efficient since sockets don't need to be closed and re-opened between
+ *    calls.
+ *
+ *
+ * \subsection PJMEDIA_TRANSPORT_H_ATTACH Attaching and Using the Media Transport.
+ *
+ *  Application specifies the media transport instance when creating
  *    the media session (#pjmedia_session_create()). Alternatively, it
  *    may create the media stream directly with #pjmedia_stream_create()
- *    and specify this transport instance in the argument. (Note: media
+ *    and specify the transport instance in the argument. (Note: media
  *    session is a high-level abstraction for media communications between
- *    two endpoints, and it may contain more than one media stream, for
+ *    two endpoints, and it may contain more than one media streams, for
  *    example, an audio stream and a video stream).
- *  - when stream is created, it will "attach" itself to the media 
+ *
+ *  When stream is created, it will "attach" itself to the media 
  *    transport by calling #pjmedia_transport_attach(), which is a thin
  *    wrapper which calls "attach()" method of the media transport's 
  *    "virtual function pointer" (#pjmedia_transport_op). Among other things,
- *    the stream specifies two callback functions to be called: one
+ *    the stream specifies two callback functions to the transport: one
  *    callback function will be called by transport when it receives RTP
- *    packet, and another callback for incoming RTCP packet.
- *  - when the stream needs to send outgoing RTP/RTCP packets, it will
- *    call #pjmedia_transport_send_rtp() and #pjmedia_transport_send_rtcp(),
- *    which is a thin wrapper to call send_rtp() and send_rtcp() methods
- *    in the media transport's "virtual function pointer" 
- *    (#pjmedia_transport_op).
- *  - when the stream is destroyed, it will "detach" itself from
+ *    packet, and another callback for incoming RTCP packet. The 
+ *    #pjmedia_transport_attach() function also establish the destination
+ *    of the outgoing RTP and RTCP packets.
+ *
+ *  When the stream needs to send outgoing RTP/RTCP packets, it will
+ *    call #pjmedia_transport_send_rtp() and #pjmedia_transport_send_rtcp()
+ *    of the media transport API, which is a thin wrapper to call send_rtp() 
+ *    and send_rtcp() methods in the media transport's "virtual function 
+ *    pointer"  (#pjmedia_transport_op).
+ *
+ *  When the stream is destroyed, it will "detach" itself from
  *    the media transport by calling #pjmedia_transport_detach(), which is
  *    a thin wrapper which calls "detach()" method of the media transport's 
  *    "virtual function pointer" (#pjmedia_transport_op). After the transport
  *    is detached from its user (the stream), it will no longer report 
- *    incoming RTP/RTCP packets, since there is no "user" of the transport.
- *  - after transport has been detached, application may re-attach the
- *    transport to another stream if it wants to.
- *  - finally if application no longer needs the media transport, it will
+ *    incoming RTP/RTCP packets to the stream, and it will refuse to send
+ *    outgoing packets since the destination has been cleared.
+ *
+ *
+ * \subsection PJMEDIA_TRANSPORT_H_REUSE Reusing the Media Transport.
+ *
+ *  After transport has been detached, application may re-attach the
+ *    transport to another stream if it wants to. Detaching and re-attaching
+ *    media transport may be preferable than closing and re-opening the
+ *    transport, since it is more efficient (sockets don't need to be
+ *    closed and re-opened). However it is up to the application to choose
+ *    which method is most suitable for its uses.
+ *
+ * 
+ * \subsection PJMEDIA_TRANSPORT_H_DESTROY Destroying the Media Transport.
+ *
+ *  Finally if application no longer needs the media transport, it will
  *    call #pjmedia_transport_close() function, which is thin wrapper which 
  *    calls "destroy()" method of the media transport's  "virtual function 
- *    pointer" (#pjmedia_transport_op). 
+ *    pointer" (#pjmedia_transport_op). This function releases
+ *    all resources used by the transport, such as sockets and memory.
  *
  *
  * \section PJMEDIA_TRANSPORT_H_IMPL Implementing Media Transport
