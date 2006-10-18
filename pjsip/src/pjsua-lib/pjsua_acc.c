@@ -487,7 +487,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
     pj_str_t contact;
-    char contact_buf[512];
+    char contact_buf[1024];
     pj_pool_t *pool;
     pj_status_t status;
 
