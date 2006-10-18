@@ -28,23 +28,102 @@
 #include <pjmedia/types.h>
 
 /**
- * @defgroup PJMEDIA_TRANSPORT Transports
+ * @defgroup PJMEDIA_TRANSPORT Media Transports
  * @ingroup PJMEDIA
  * @brief Transports.
  * Transport related components.
  */
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_H Network Transport Interface
+ * @defgroup PJMEDIA_TRANSPORT_H Media Network Transport Interface
  * @ingroup PJMEDIA_TRANSPORT
  * @brief PJMEDIA object for sending/receiving media packets over the network
  * @{
  * The media transport (#pjmedia_transport) is the object to send and
- * receive media packets over the network. Currently only media @ref PJMED_STRM
- * are using the transport.
+ * receive media packets over the network. The media transport interface
+ * allows the library to be extended to support different types of 
+ * transports to send and receive packets. Currently only the standard
+ * UDP transport implementation is provided (see \ref PJMEDIA_TRANSPORT_UDP),
+ * but application designer may extend the library to support other types
+ * of custom transports such as RTP/RTCP over TCP, RTP/RTCP over HTTP, etc.
  *
- * Although currently only @ref PJMEDIA_TRANSPORT_UDP is implemented,
- * media transport interface is intended to support any custom transports.
+ * The media transport is declared as #pjmedia_transport "class", which
+ * declares "interfaces" to use the class in #pjmedia_transport_op
+ * structure. For the user of the media transport (normally the user of
+ * media transport is media stream, see \ref PJMED_STRM), these transport
+ * "methods" are wrapped with API such as #pjmedia_transport_attach(),
+ * so it should not need to call the function pointer inside 
+ * #pjmedia_transport_op directly.
+ *
+ * \section PJMEDIA_TRANSPORT_H_USING Using the Media Transport
+ *
+ * The media transport's life-cycle normally follows the following stages:
+ *  - application creates the media transport when it needs to establish
+ *    media session to remote peer. The media transport is created using
+ *    specific function to create that particular transport; for example,
+ *    for UDP media transport, it is created with #pjmedia_transport_udp_create()
+ *    or #pjmedia_transport_udp_create2() functions. Different media
+ *    transports will provide different API to create those transports.
+ *  - application specifies this media transport instance when creating
+ *    the media session (#pjmedia_session_create()). Alternatively, it
+ *    may create the media stream directly with #pjmedia_stream_create()
+ *    and specify this transport instance in the argument. (Note: media
+ *    session is a high-level abstraction for media communications between
+ *    two endpoints, and it may contain more than one media stream, for
+ *    example, an audio stream and a video stream).
+ *  - when stream is created, it will "attach" itself to the media 
+ *    transport by calling #pjmedia_transport_attach(), which is a thin
+ *    wrapper which calls "attach()" method of the media transport's 
+ *    "virtual function pointer" (#pjmedia_transport_op). Among other things,
+ *    the stream specifies two callback functions to be called: one
+ *    callback function will be called by transport when it receives RTP
+ *    packet, and another callback for incoming RTCP packet.
+ *  - when the stream needs to send outgoing RTP/RTCP packets, it will
+ *    call #pjmedia_transport_send_rtp() and #pjmedia_transport_send_rtcp(),
+ *    which is a thin wrapper to call send_rtp() and send_rtcp() methods
+ *    in the media transport's "virtual function pointer" 
+ *    (#pjmedia_transport_op).
+ *  - when the stream is destroyed, it will "detach" itself from
+ *    the media transport by calling #pjmedia_transport_detach(), which is
+ *    a thin wrapper which calls "detach()" method of the media transport's 
+ *    "virtual function pointer" (#pjmedia_transport_op). After the transport
+ *    is detached from its user (the stream), it will no longer report 
+ *    incoming RTP/RTCP packets, since there is no "user" of the transport.
+ *  - after transport has been detached, application may re-attach the
+ *    transport to another stream if it wants to.
+ *  - finally if application no longer needs the media transport, it will
+ *    call #pjmedia_transport_close() function, which is thin wrapper which 
+ *    calls "destroy()" method of the media transport's  "virtual function 
+ *    pointer" (#pjmedia_transport_op). 
+ *
+ *
+ * \section PJMEDIA_TRANSPORT_H_IMPL Implementing Media Transport
+ *
+ * To implement a new type of media transport, one needs to "subclass" the
+ * media transport "class" (#pjmedia_transport) by providing the "methods"
+ * in the media transport "interface" (#pjmedia_transport_op), and provides
+ * a function to create this new type of transport (similar to 
+ * #pjmedia_transport_udp_create() function).
+ *
+ * The media transport is expected to run indepently, that is there should
+ * be no polling like function to poll the transport for incoming RTP/RTCP
+ * packets. This normally can be done by registering the media sockets to
+ * the media endpoint's IOQueue, which allows the transport to be notified
+ * when incoming packet has arrived.
+ *
+ * Alternatively, media transport may utilize thread(s) internally to wait
+ * for incoming packets. The thread then will call the appropriate RTP or
+ * RTCP callback provided by its user (stream) whenever packet is received.
+ * If the transport's user is a stream, then the callbacks provided by the
+ * stream will be thread-safe, so the transport may call these callbacks
+ * without having to serialize the access with some mutex protection. But
+ * the media transport may still have to protect its internal data with
+ * mutex protection, since it may be called by application's thread (for
+ * example, to send RTP/RTCP packets).
+ *
+ * For an example of media transport implementation, please refer to 
+ * <tt>transport_udp.h</tt> and <tt>transport_udp.c</tt> in PJMEDIA source
+ * distribution.
  */
 
 PJ_BEGIN_DECL
@@ -83,8 +162,12 @@ struct pjmedia_transport_op
 					  pj_ssize_t size));
 
     /**
-     * This function is called by the stream when the stream is no longer
-     * need the transport (normally when the stream is about to be closed).
+     * This function is called by the stream when the stream no longer
+     * needs the transport (normally when the stream is about to be closed).
+     * After the transport is detached, it will ignore incoming
+     * RTP/RTCP packets, and will refuse to send outgoing RTP/RTCP packets.
+     * Application may re-attach the media transport to another transport 
+     * user (e.g. stream) after the transport has been detached.
      *
      * Application should call #pjmedia_transport_detach() instead of 
      * calling this function directly.
@@ -186,8 +269,11 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 
 /**
  * Detach callbacks from the transport.
- * This is just a simple wrapper which calls <tt>attach()</tt> member of 
- * the transport.
+ * This is just a simple wrapper which calls <tt>detach()</tt> member of 
+ * the transport. After the transport is detached, it will ignore incoming
+ * RTP/RTCP packets, and will refuse to send outgoing RTP/RTCP packets.
+ * Application may re-attach the media transport to another transport user
+ * (e.g. stream) after the transport has been detached.
  *
  * @param tp	    The media transport.
  * @param user_data User data which must match the previously set value
@@ -202,7 +288,9 @@ PJ_INLINE(void) pjmedia_transport_detach(pjmedia_transport *tp,
 
 /**
  * Send RTP packet with the specified media transport. This is just a simple
- * wrapper which calls <tt>send_rtp()</tt> member of the transport.
+ * wrapper which calls <tt>send_rtp()</tt> member of the transport. The 
+ * RTP packet will be delivered to the destination address specified in
+ * #pjmedia_transport_attach() function.
  *
  * @param tp	    The media transport.
  * @param pkt	    The packet to send.
@@ -220,7 +308,9 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtp(pjmedia_transport *tp,
 
 /**
  * Send RTCP packet with the specified media transport. This is just a simple
- * wrapper which calls <tt>send_rtcp()</tt> member of the transport.
+ * wrapper which calls <tt>send_rtcp()</tt> member of the transport. The 
+ * RTCP packet will be delivered to the destination address specified in
+ * #pjmedia_transport_attach() function.
  *
  * @param tp	    The media transport.
  * @param pkt	    The packet to send.
@@ -238,7 +328,8 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
 
 /**
  * Close media transport. This is just a simple wrapper which calls 
- * <tt>destroy()</tt> member of the transport.
+ * <tt>destroy()</tt> member of the transport. This function will free
+ * all resources created by this transport (such as sockets, memory, etc.).
  *
  * @param tp	    The media transport.
  *
