@@ -24,7 +24,7 @@
  * @brief SIP Message Parser
  */
 
-#include <pjsip/sip_types.h>
+#include <pjsip/sip_msg.h>
 #include <pjlib-util/scanner.h>
 #include <pj/list.h>
 
@@ -189,6 +189,19 @@ PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
 PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool, 
 				     char *buf, pj_size_t size,
 				     unsigned options);
+
+/**
+ * Parse SIP status line.
+ *
+ * @param buf		Text buffer to parse.
+ * @param size		The size of the buffer.
+ * @param status_line	Structure to receive the parsed elements.
+ *
+ * @return		PJ_SUCCESS if a status line is parsed successfully.
+ */
+PJ_DECL(pj_status_t) pjsip_parse_status_line(char *buf, pj_size_t size,
+					     pjsip_status_line *status_line);
+
 
 /**
  * Parse a packet buffer and build a full SIP message from the packet. This

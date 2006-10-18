@@ -37,6 +37,7 @@ static struct app_config
     pjsua_config	    cfg;
     pjsua_logging_config    log_cfg;
     pjsua_media_config	    media_cfg;
+    pj_bool_t		    no_refersub;
     pj_bool_t		    no_tcp;
     pj_bool_t		    no_udp;
     pjsua_transport_config  udp_cfg;
@@ -160,6 +161,7 @@ static void usage(void)
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
+    puts  ("  --norefersub        Suppress event subscription when transfering calls");
 
     puts  ("");
     puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
@@ -287,6 +289,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
+	   OPT_NOREFERSUB,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -301,6 +304,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "ip-addr",	1, 0, OPT_IP_ADDR},
 	{ "no-tcp",     0, 0, OPT_NO_TCP},
 	{ "no-udp",     0, 0, OPT_NO_UDP},
+	{ "norefersub", 0, 0, OPT_NOREFERSUB},
 	{ "proxy",	1, 0, OPT_PROXY},
 	{ "outbound",	1, 0, OPT_OUTBOUND_PROXY},
 	{ "registrar",	1, 0, OPT_REGISTRAR},
@@ -454,6 +458,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 
 	    cfg->no_udp = PJ_TRUE;
+	    break;
+
+	case OPT_NOREFERSUB: /* norefersub */
+	    cfg->no_refersub = PJ_TRUE;
 	    break;
 
 	case OPT_NO_TCP: /* no-tcp */
@@ -947,6 +955,15 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* No TCP ? */
+    if (config->no_tcp) {
+	pj_strcat2(&cfg, "--no-tcp\n");
+    }
+
+    /* No UDP ? */
+    if (config->no_udp) {
+	pj_strcat2(&cfg, "--no-udp\n");
+    }
 
     /* STUN */
     if (config->udp_cfg.stun_config.stun_port1) {
@@ -1088,6 +1105,12 @@ static int write_settings(const struct app_config *config,
 			config->duration);
 	pj_strcat2(&cfg, line);
     }
+
+    /* norefersub ? */
+    if (config->no_refersub) {
+	pj_strcat2(&cfg, "--norefersub\n");
+    }
+
 
     pj_strcat2(&cfg, "\n#\n# Buddies:\n#\n");
 
@@ -1470,6 +1493,30 @@ static void on_typing(pjsua_call_id call_id, const pj_str_t *from,
     PJ_LOG(3,(THIS_FILE, "IM indication: %.*s %s",
 	      (int)from->slen, from->ptr,
 	      (is_typing?"is typing..":"has stopped typing")));
+}
+
+
+/**
+ * Call transfer request status.
+ */
+static void on_call_transfer_status(pjsua_call_id call_id,
+				    int status_code,
+				    const pj_str_t *status_text,
+				    pj_bool_t final,
+				    pj_bool_t *p_cont)
+{
+    PJ_LOG(3,(THIS_FILE, "Call %d: transfer status=%d (%.*s) %s",
+	      call_id, status_code,
+	      (int)status_text->slen, status_text->ptr,
+	      (final ? "[final]" : "")));
+
+    if (status_code/100 == 2) {
+	PJ_LOG(3,(THIS_FILE, 
+	          "Call %d: call transfered successfully, disconnecting call",
+		  call_id));
+	pjsua_call_hangup(call_id, PJSIP_SC_GONE, NULL, NULL);
+	*p_cont = PJ_FALSE;
+    }
 }
 
 
@@ -2147,12 +2194,13 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    continue;
 		}
 
-		/* Add Refer-Sub: false in outgoing REFER request */
 		pjsua_msg_data_init(&msg_data);
-		pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
-					       &STR_FALSE);
-		pj_list_push_back(&msg_data.hdr_list, &refer_sub);
-
+		if (app_config.no_refersub) {
+		    /* Add Refer-Sub: false in outgoing REFER request */
+		    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
+						   &STR_FALSE);
+		    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+		}
 		if (result.nb_result != NO_NB) {
 		    if (result.nb_result == -1 || result.nb_result == 0)
 			puts("You can't do that with transfer call!");
@@ -2167,9 +2215,6 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    tmp = pj_str(result.uri_result);
 		    pjsua_call_xfer( current_call, &tmp, &msg_data);
 		}
-
-		/* Hangup call regardless of xfer status */
-		pjsua_call_hangup(current_call, PJSIP_SC_GONE, NULL, NULL);
 	    }
 	    break;
 
@@ -2461,6 +2506,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
+    app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,

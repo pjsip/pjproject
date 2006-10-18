@@ -71,7 +71,19 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
  * Callback called by event framework when the xfer subscription state
  * has changed.
  */
-static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
+static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
+static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
+
+/*
+ * Callback called by event framework when NOTIFY is received for outgoing
+ * REFER subscription.
+ */
+static void xfer_on_rx_notify(pjsip_evsub *sub, 
+			      pjsip_rx_data *rdata,
+			      int *p_st_code,
+			      pj_str_t **p_st_text,
+			      pjsip_hdr *res_hdr,
+			      pjsip_msg_body **p_body);
 
 /*
  * Reset call descriptor.
@@ -1078,7 +1090,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
    
     /* Create xfer client subscription. */
     pj_bzero(&xfer_cb, sizeof(xfer_cb));
-    xfer_cb.on_evsub_state = &xfer_on_evsub_state;
+    xfer_cb.on_evsub_state = &xfer_client_on_evsub_state;
 
     status = pjsip_xfer_create_uac(call->inv->dlg, &xfer_cb, &sub);
     if (status != PJ_SUCCESS) {
@@ -1086,6 +1098,9 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
+
+    /* Associate this call with the client subscription */
+    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, call);
 
     /*
      * Create REFER request.
@@ -2144,7 +2159,163 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
  * Callback called by event framework when the xfer subscription state
  * has changed.
  */
-static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
+static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
+{
+    
+    PJ_UNUSED_ARG(event);
+
+    /*
+     * When subscription is accepted (got 200/OK to REFER), check if 
+     * subscription suppressed.
+     */
+    if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_ACCEPTED) {
+
+	pjsip_rx_data *rdata;
+	pjsip_generic_string_hdr *refer_sub;
+	const pj_str_t REFER_SUB = { "Refer-Sub", 9 };
+	pjsua_call *call;
+
+	call = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+
+	/* Must be receipt of response message */
+	pj_assert(event->type == PJSIP_EVENT_TSX_STATE && 
+		  event->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
+	rdata = event->body.tsx_state.src.rdata;
+
+	/* Find Refer-Sub header */
+	refer_sub = (pjsip_generic_string_hdr*)
+		    pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, 
+					       &REFER_SUB, NULL);
+
+	/* Check if subscription is suppressed */
+	if (refer_sub && pj_stricmp2(&refer_sub->hvalue, "false")==0) {
+	    /* Since no subscription is desired, assume that call has been
+	     * transfered successfully.
+	     */
+	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+		const pj_str_t ACCEPTED = { "Accepted", 8 };
+		pj_bool_t cont = PJ_FALSE;
+		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index, 
+							       200,
+							       &ACCEPTED,
+							       PJ_TRUE,
+							       &cont);
+	    }
+
+	    /* Yes, subscription is suppressed.
+	     * Terminate our subscription now.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "Xfer subscription suppressed, terminating "
+				 "event subcription..."));
+	    pjsip_evsub_terminate(sub, PJ_TRUE);
+
+	} else {
+	    /* Notify application about call transfer progress. 
+	     * Initially notify with 100/Accepted status.
+	     */
+	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+		const pj_str_t ACCEPTED = { "Accepted", 8 };
+		pj_bool_t cont = PJ_FALSE;
+		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index, 
+							       100,
+							       &ACCEPTED,
+							       PJ_FALSE,
+							       &cont);
+	    }
+	}
+    }
+    /*
+     * On incoming NOTIFY, notify application about call transfer progress.
+     */
+    else if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_ACTIVE ||
+	     pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) 
+    {
+	pjsua_call *call;
+	pjsip_msg *msg;
+	pjsip_msg_body *body;
+	pjsip_status_line status_line;
+	pj_bool_t is_last;
+	pj_bool_t cont;
+	pj_status_t status;
+
+	call = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+
+	/* When subscription is terminated, clear the xfer_sub member of 
+	 * the inv_data.
+	 */
+	if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
+	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+	    PJ_LOG(4,(THIS_FILE, "Xfer client subscription terminated"));
+
+	}
+
+	if (!call || !event || !pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	    /* Application is not interested with call progress status */
+	    return;
+	}
+
+	/* This better be a NOTIFY request */
+	if (event->type == PJSIP_EVENT_TSX_STATE &&
+	    event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+	{
+	    pjsip_rx_data *rdata;
+
+	    rdata = event->body.tsx_state.src.rdata;
+
+	    /* Check if there's body */
+	    msg = rdata->msg_info.msg;
+	    body = msg->body;
+	    if (!body) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Warning: received NOTIFY without message body"));
+		return;
+	    }
+
+	    /* Check for appropriate content */
+	    if (pj_stricmp2(&body->content_type.type, "message") != 0 ||
+		pj_stricmp2(&body->content_type.subtype, "sipfrag") != 0)
+	    {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Warning: received NOTIFY with non message/sipfrag "
+			  "content"));
+		return;
+	    }
+
+	    /* Try to parse the content */
+	    status = pjsip_parse_status_line(body->data, body->len, 
+					     &status_line);
+	    if (status != PJ_SUCCESS) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Warning: received NOTIFY with invalid "
+			  "message/sipfrag content"));
+		return;
+	    }
+
+	} else {
+	    status_line.code = 500;
+	    status_line.reason = *pjsip_get_status_text(500);
+	}
+
+	/* Notify application */
+	is_last = (pjsip_evsub_get_state(sub)==PJSIP_EVSUB_STATE_TERMINATED);
+	cont = !is_last;
+	(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index, 
+						       status_line.code,
+						       &status_line.reason,
+						       is_last, &cont);
+
+	if (!cont) {
+	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+	}
+    }
+}
+
+
+/*
+ * Callback called by event framework when the xfer subscription state
+ * has changed.
+ */
+static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 {
     
     PJ_UNUSED_ARG(event);
@@ -2163,38 +2334,7 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
 	call->xfer_sub = NULL;
 
-	PJ_LOG(4,(THIS_FILE, "Xfer subscription terminated"));
-
-    }
-    /*
-     * When subscription is accepted (got 200/OK to REFER), check if 
-     * subscription suppressed.
-     */
-    else if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_ACCEPTED) {
-
-	pjsip_rx_data *rdata;
-	pjsip_generic_string_hdr *refer_sub;
-	const pj_str_t REFER_SUB = { "Refer-Sub", 9 };
-
-	/* Must be receipt of response message */
-	pj_assert(event->type == PJSIP_EVENT_TSX_STATE && 
-		  event->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
-	rdata = event->body.tsx_state.src.rdata;
-
-	/* Find Refer-Sub header */
-	refer_sub = (pjsip_generic_string_hdr*)
-		    pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, 
-					       &REFER_SUB, NULL);
-
-	/* Check if subscription is suppressed */
-	if (refer_sub && pj_stricmp2(&refer_sub->hvalue, "false")==0) {
-	    /* Yes, subscription is suppressed.
-	     * Terminate our subscription now.
-	     */
-	    PJ_LOG(4,(THIS_FILE, "Xfer subscription suppressed, terminating "
-				 "event subcription..."));
-	    pjsip_evsub_terminate(sub, PJ_TRUE);
-	}
+	PJ_LOG(4,(THIS_FILE, "Xfer server subscription terminated"));
     }
 }
 
@@ -2246,9 +2386,10 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     /* Notify callback */
     code = PJSIP_SC_OK;
-    if (pjsua_var.ua_cfg.cb.on_call_transfered)
-	(*pjsua_var.ua_cfg.cb.on_call_transfered)(existing_call->index,
-						  &refer_to->hvalue, &code);
+    if (pjsua_var.ua_cfg.cb.on_call_transfer_request)
+	(*pjsua_var.ua_cfg.cb.on_call_transfer_request)(existing_call->index,
+							&refer_to->hvalue, 
+							&code);
 
     if (code < 200)
 	code = 200;
@@ -2304,7 +2445,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
 	/* Init callback */
 	pj_bzero(&xfer_cb, sizeof(xfer_cb));
-	xfer_cb.on_evsub_state = &xfer_on_evsub_state;
+	xfer_cb.on_evsub_state = &xfer_server_on_evsub_state;
 
 	/* Init additional header list to be sent with REFER response */
 	pj_list_init(&hdr_list);

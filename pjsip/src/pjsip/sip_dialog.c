@@ -793,9 +793,23 @@ PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
      */
     for (index=0; index<dlg->usage_cnt; ++index) {
 	if (dlg->usage[index] == mod) {
-	    pj_assert(!"This module is already registered");
+	    /* Module may be registered more than once in the same dialog.
+	     * For example, when call transfer fails, application may retry
+	     * call transfer on the same dialog.
+	     * So return PJ_SUCCESS here.
+	     */
+	    PJ_LOG(4,(dlg->obj_name, 
+		      "Module %.*s already registered as dialog usage, "
+		      "updating the data %p",
+		      (int)mod->name.slen, mod->name.ptr, mod_data));
+	    dlg->mod_data[mod->id] = mod_data;
+
 	    pjsip_dlg_dec_lock(dlg);
-	    return PJSIP_ETYPEEXISTS;
+	    return PJ_SUCCESS;
+
+	    //pj_assert(!"This module is already registered");
+	    //pjsip_dlg_dec_lock(dlg);
+	    //return PJSIP_ETYPEEXISTS;
 	}
 
 	if (dlg->usage[index]->priority > mod->priority)

@@ -309,9 +309,32 @@ typedef struct pjsua_callback
      * is not defined, the default behavior is to accept the
      * transfer.
      */
-    void (*on_call_transfered)(pjsua_call_id call_id,
-			       const pj_str_t *dst,
-			       pjsip_status_code *code);
+    void (*on_call_transfer_request)(pjsua_call_id call_id,
+				     const pj_str_t *dst,
+				     pjsip_status_code *code);
+
+    /**
+     * Notify application of the status of previously sent call
+     * transfer request. Application can monitor the status of the
+     * call transfer request, for example to decide whether to 
+     * terminate existing call.
+     *
+     * @param call_id	    Call ID.
+     * @param status_code   Status progress of the transfer request.
+     * @param status_text   Status progress text.
+     * @param final	    If non-zero, no further notification will
+     *			    be reported. The status_code specified in
+     *			    this callback is the final status.
+     * @param p_cont	    Initially will be set to non-zero, application
+     *			    can set this to FALSE if it no longer wants
+     *			    to receie further notification (for example,
+     *			    after it hangs up the call).
+     */
+    void (*on_call_transfer_status)(pjsua_call_id call_id,
+				    int status_code,
+				    const pj_str_t *status_text,
+				    pj_bool_t final,
+				    pj_bool_t *p_cont);
 
     /**
      * Notify application when registration status has changed.

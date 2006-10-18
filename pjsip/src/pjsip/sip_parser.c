@@ -1471,6 +1471,36 @@ static void int_parse_status_line( pj_scanner *scanner,
     pj_scan_get_newline( scanner );
 }
 
+
+/*
+ * Public API to parse SIP status line.
+ */
+PJ_DEF(pj_status_t) pjsip_parse_status_line( char *buf, pj_size_t size,
+					     pjsip_status_line *status_line)
+{
+    pj_scanner scanner;
+    PJ_USE_EXCEPTION;
+
+    pj_bzero(status_line, sizeof(*status_line));
+    pj_scan_init(&scanner, buf, size, 0, &on_syntax_error);
+
+    PJ_TRY {
+	int_parse_status_line(&scanner, status_line);
+    } 
+    PJ_CATCH_ANY {
+	/* Tolerate the error if it is caused only by missing newline */
+	if (status_line->code == 0 && status_line->reason.slen == 0) {
+	    pj_scan_fini(&scanner);
+	    return PJSIP_EINVALIDMSG;
+	}
+    }
+    PJ_END;
+
+    pj_scan_fini(&scanner);
+    return PJ_SUCCESS;
+}
+
+
 /* Parse ending of header. */
 static void parse_hdr_end( pj_scanner *scanner )
 {
