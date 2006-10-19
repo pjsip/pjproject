@@ -1149,6 +1149,8 @@ DEP_CPP_BIDIR=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -1179,6 +1181,7 @@ DEP_CPP_BIDIR=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -2108,6 +2111,8 @@ DEP_CPP_CLOCK=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -2138,6 +2143,7 @@ DEP_CPP_CLOCK=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -3164,6 +3170,8 @@ DEP_CPP_CODEC=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -3194,6 +3202,7 @@ DEP_CPP_CODEC=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -4371,6 +4380,8 @@ DEP_CPP_CONFE=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -4401,6 +4412,7 @@ DEP_CPP_CONFE=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -5507,6 +5519,8 @@ DEP_CPP_ECHO_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -5537,6 +5551,7 @@ DEP_CPP_ECHO_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -6431,6 +6446,8 @@ DEP_CPP_ECHO_P=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -6461,6 +6478,7 @@ DEP_CPP_ECHO_P=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -7486,6 +7504,8 @@ DEP_CPP_ECHO_S=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -7516,6 +7536,7 @@ DEP_CPP_ECHO_S=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -8537,6 +8558,8 @@ DEP_CPP_ECHO_SU=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -8567,6 +8590,7 @@ DEP_CPP_ECHO_SU=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -9589,6 +9613,8 @@ DEP_CPP_ENDPO=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -9619,6 +9645,7 @@ DEP_CPP_ENDPO=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -10603,6 +10630,8 @@ DEP_CPP_ERRNO=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -10633,6 +10662,7 @@ DEP_CPP_ERRNO=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -11550,6 +11580,8 @@ DEP_CPP_G711_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -11580,6 +11612,7 @@ DEP_CPP_G711_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -12571,6 +12604,8 @@ DEP_CPP_JBUF_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -12601,6 +12636,7 @@ DEP_CPP_JBUF_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -13644,6 +13680,8 @@ DEP_CPP_MASTE=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -13674,6 +13712,7 @@ DEP_CPP_MASTE=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -14748,6 +14787,8 @@ DEP_CPP_MEM_C=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -14778,6 +14819,7 @@ DEP_CPP_MEM_C=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -15814,6 +15856,8 @@ DEP_CPP_MEM_P=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -15844,6 +15888,7 @@ DEP_CPP_MEM_P=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -16891,6 +16936,8 @@ DEP_CPP_NULL_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -16921,6 +16968,7 @@ DEP_CPP_NULL_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -17893,6 +17941,8 @@ DEP_CPP_PASOU=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -17923,6 +17973,7 @@ DEP_CPP_PASOU=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -18879,6 +18930,8 @@ DEP_CPP_PLC_C=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -18909,6 +18962,7 @@ DEP_CPP_PLC_C=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -20087,6 +20141,8 @@ DEP_CPP_PLC_S=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -20117,6 +20173,7 @@ DEP_CPP_PLC_S=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -21343,6 +21400,8 @@ DEP_CPP_PORT_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -21373,6 +21432,7 @@ DEP_CPP_PORT_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -22465,6 +22525,8 @@ DEP_CPP_RESAM=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -22495,6 +22557,7 @@ DEP_CPP_RESAM=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -23593,6 +23656,8 @@ DEP_CPP_RESAMP=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -23623,6 +23688,7 @@ DEP_CPP_RESAMP=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -24595,6 +24661,8 @@ DEP_CPP_RTCP_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -24625,6 +24693,7 @@ DEP_CPP_RTCP_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -25541,6 +25610,8 @@ DEP_CPP_RTP_C=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -25571,6 +25642,7 @@ DEP_CPP_RTP_C=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -26627,9 +26699,11 @@ NODEP_CPP_SDP_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SDP_C=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -26639,6 +26713,8 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -26669,6 +26745,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -27760,6 +27837,8 @@ DEP_CPP_SDP_CM=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -27790,6 +27869,7 @@ DEP_CPP_SDP_CM=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -28805,6 +28885,8 @@ DEP_CPP_SDP_N=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -28835,6 +28917,7 @@ DEP_CPP_SDP_N=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -29954,6 +30037,8 @@ DEP_CPP_SESSI=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -29984,6 +30069,7 @@ DEP_CPP_SESSI=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -31115,6 +31201,8 @@ DEP_CPP_SILEN=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -31145,6 +31233,7 @@ DEP_CPP_SILEN=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -32240,6 +32329,8 @@ DEP_CPP_SOUND=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -32270,6 +32361,7 @@ DEP_CPP_SOUND=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -33403,6 +33495,8 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -33433,6 +33527,7 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -34560,6 +34655,8 @@ DEP_CPP_STREA=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -34591,6 +34688,7 @@ DEP_CPP_STREA=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -35851,6 +35949,8 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -35881,6 +35981,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -37112,6 +37213,8 @@ DEP_CPP_WAV_P=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -37142,6 +37245,7 @@ DEP_CPP_WAV_P=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -38295,6 +38399,8 @@ DEP_CPP_WAV_W=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -38325,6 +38431,7 @@ DEP_CPP_WAV_W=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -39357,6 +39464,8 @@ DEP_CPP_WAVE_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -39387,6 +39496,7 @@ DEP_CPP_WAVE_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -39912,6 +40022,10 @@ SOURCE=..\..\include\pjmedia\mem_port.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\include\pjmedia\mp3_port.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\include\pjmedia\null_port.h
 # End Source File
 # Begin Source File
@@ -40320,6 +40434,8 @@ DEP_CPP_PA_CO=\
 DEP_CPP_PA_CO=\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -40993,6 +41109,8 @@ DEP_CPP_PA_FR=\
 DEP_CPP_PA_FR=\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -42962,6 +43080,8 @@ DEP_CPP_PA_WIN_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -42992,6 +43112,7 @@ DEP_CPP_PA_WIN_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\

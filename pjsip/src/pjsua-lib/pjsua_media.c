@@ -802,13 +802,23 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 					   unsigned options,
 					   pjsua_recorder_id *p_id)
 {
+    enum Format
+    {
+	FMT_UNKNOWN,
+	FMT_WAV,
+	FMT_MP3,
+    };
     unsigned slot, file_id;
     char path[128];
+    pj_str_t ext;
     pjmedia_port *port;
     pj_status_t status;
 
+    /* Filename must present */
+    PJ_ASSERT_RETURN(filename != NULL, PJ_EINVAL);
+
     /* Don't support max_size at present */
-    PJ_ASSERT_RETURN(max_size == 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(max_size == 0 || max_size == -1, PJ_EINVAL);
 
     /* Don't support file format at present */
     PJ_ASSERT_RETURN(file_format == 0, PJ_EINVAL);
@@ -818,6 +828,21 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 
     if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder))
 	return PJ_ETOOMANY;
+
+    /* Determine the file format */
+    ext.ptr = filename->ptr + filename->slen - 4;
+    ext.slen = 4;
+
+    if (pj_stricmp2(&ext, ".wav") == 0)
+	file_format = FMT_WAV;
+    else if (pj_stricmp2(&ext, ".mp3") == 0)
+	file_format = FMT_MP3;
+    else {
+	PJ_LOG(1,(THIS_FILE, "pjsua_recorder_create() error: unable to "
+			     "determine file format for %.*s",
+			     (int)filename->slen, filename->ptr));
+	return PJ_ENOTSUP;
+    }
 
     PJSUA_LOCK();
 
@@ -835,12 +860,26 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
-    status = pjmedia_wav_writer_port_create(pjsua_var.pool, path, 
-					    pjsua_var.media_cfg.clock_rate, 
-					    pjsua_var.mconf_cfg.channel_count,
-					    pjsua_var.mconf_cfg.samples_per_frame,
-					    pjsua_var.mconf_cfg.bits_per_sample, 
-					    options, 0, &port);
+
+    if (file_format == FMT_WAV) {
+	status = pjmedia_wav_writer_port_create(pjsua_var.pool, path, 
+						pjsua_var.media_cfg.clock_rate, 
+						pjsua_var.mconf_cfg.channel_count,
+						pjsua_var.mconf_cfg.samples_per_frame,
+						pjsua_var.mconf_cfg.bits_per_sample, 
+						options, 0, &port);
+    } else if (file_format == FMT_MP3) {
+	status = pjmedia_mp3_writer_port_create(pjsua_var.pool, path,
+						pjsua_var.media_cfg.clock_rate,
+						pjsua_var.mconf_cfg.channel_count,
+						pjsua_var.mconf_cfg.samples_per_frame,
+						pjsua_var.mconf_cfg.bits_per_sample,
+						NULL, &port);
+    } else {
+	port = NULL;
+	status = PJ_ENOTSUP;
+    }
+
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for recording", status);

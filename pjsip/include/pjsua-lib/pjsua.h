@@ -2531,12 +2531,15 @@ PJ_DECL(pj_status_t) pjsua_player_destroy(pjsua_player_id id);
  * Create a file recorder, and automatically connect this recorder to
  * the conference bridge.
  *
- * @param filename	Output file name.
- * @param file_format	Specify the file format (currently only WAV is
- *			supported, so the value MUST be zero).
- * @param encoding	Specify the encoding to be applied to the file.
- *			Currently only 16bit raw PCM is supported, so
- *			the value must be NULL.
+ * @param filename	Output file name. The function will determine the
+ *			default format to be used based on the file extension.
+ *			Currently ".wav" is supported on all platforms, and
+ *			also ".mp3" is support on Windows.
+ * @param file_format	This option is obsolete.
+ * @param encoding	Optionally specify the encoding to be applied to the
+ *			file. By default (if NULL is specified), the encoding
+ *			is determined from the file extension (i.e. 16bit PCM
+ *			is used for the WAV files).
  * @param max_size	Maximum file size. Specify -1 to remove size
  *			limitation.
  * @param options	Optional options.

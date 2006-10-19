@@ -1283,8 +1283,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
     PJ_ASSERT_RETURN(PJ_DNS_GET_QR(pkt->hdr.flags) & 1, PJ_EINVAL);
 
     /* Make sure there are answers in the packet */
-    PJ_ASSERT_RETURN(pkt->hdr.anscount && pkt->ans ||
-		     pkt->hdr.qdcount && pkt->q,
+    PJ_ASSERT_RETURN((pkt->hdr.anscount && pkt->ans) ||
+		      (pkt->hdr.qdcount && pkt->q),
 		     PJLIB_UTIL_EDNSNOANSWERREC);
 
     pj_mutex_lock(resolver->mutex);

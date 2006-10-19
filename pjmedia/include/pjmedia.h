@@ -37,6 +37,7 @@
 #include <pjmedia/jbuf.h>
 #include <pjmedia/master_port.h>
 #include <pjmedia/mem_port.h>
+#include <pjmedia/mp3_port.h>
 #include <pjmedia/null_port.h>
 #include <pjmedia/plc.h>
 #include <pjmedia/port.h>

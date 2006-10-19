@@ -155,6 +155,10 @@ SOURCE=..\src\pjmedia\mem_player.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\mp3_writer.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
@@ -309,6 +313,10 @@ SOURCE=..\include\pjmedia\master_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\mem_port.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\mp3_port.h
 # End Source File
 # Begin Source File
 
