@@ -536,7 +536,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			if (!pj_stricmp(&or.enc_name, &ar.enc_name) &&
 			    or.clock_rate == ar.clock_rate &&
 			    (pj_stricmp(&or.param, &ar.param)==0 ||
-			     ar.param.slen==1 && *ar.param.ptr=='1'))
+			     (ar.param.slen==1 && *ar.param.ptr=='1')))
 			{
 			    /* Match! */
 			    break;
@@ -730,7 +730,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			if (!pj_stricmp(&or.enc_name, &lr.enc_name) &&
 			    or.clock_rate == lr.clock_rate &&
 			    (pj_strcmp(&or.param, &lr.param)==0 ||
-			     or.param.slen==1 && *or.param.ptr=='1')) 
+			     (or.param.slen==1 && *or.param.ptr=='1'))) 
 			{
 			    /* Match! */
 			    if (is_codec)

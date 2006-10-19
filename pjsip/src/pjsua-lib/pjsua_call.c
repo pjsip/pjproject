@@ -75,17 +75,6 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 
 /*
- * Callback called by event framework when NOTIFY is received for outgoing
- * REFER subscription.
- */
-static void xfer_on_rx_notify(pjsip_evsub *sub, 
-			      pjsip_rx_data *rdata,
-			      int *p_st_code,
-			      pj_str_t **p_st_text,
-			      pjsip_hdr *res_hdr,
-			      pjsip_msg_body **p_body);
-
-/*
  * Reset call descriptor.
  */
 static void reset_call(pjsua_call_id id)

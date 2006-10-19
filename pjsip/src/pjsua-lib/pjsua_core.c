@@ -1227,6 +1227,8 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 	    return pjsip_transport_destroy(pjsua_var.tpdata[id].data.tp);
 	case PJSIP_TRANSPORT_TCP:
 	    break;
+	default:
+	    break;
 	}
 	
     } else {
@@ -1236,6 +1238,8 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 	case PJSIP_TRANSPORT_TCP:
 	    return (*pjsua_var.tpdata[id].data.factory->destroy)
 			(pjsua_var.tpdata[id].data.factory);
+	default:
+	    break;
 	}
     }
 

@@ -63,6 +63,10 @@ static struct app_config
     pj_bool_t		    auto_play;
     pj_bool_t		    auto_loop;
     pj_bool_t		    auto_conf;
+    pj_str_t		    rec_file;
+    pj_bool_t		    auto_rec;
+    pjsua_recorder_id	    rec_id;
+    pjsua_conf_port_id	    rec_port;
     unsigned		    ptime;
     unsigned		    auto_answer;
     unsigned		    duration;
@@ -138,10 +142,12 @@ static void usage(void)
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
-    puts  ("  --play-file=file    Play WAV file in conference bridge");
+    puts  ("  --play-file=file    Register WAV file in conference bridge");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
+    puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3");
+    puts  ("  --auto-rec          Automatically record conversation");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --quality=N         Specify media quality (0-10, default=6)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
@@ -188,7 +194,9 @@ static void default_config(struct app_config *cfg)
     cfg->rtp_cfg.port = 4000;
     cfg->duration = NO_LIMIT;
     cfg->wav_id = PJSUA_INVALID_ID;
+    cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
+    cfg->rec_port = PJSUA_INVALID_ID;
 }
 
 
@@ -285,6 +293,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
 	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC, OPT_ILBC_MODE,
+	   OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
@@ -324,9 +333,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "auto-answer",1, 0, OPT_AUTO_ANSWER},
 	{ "auto-hangup",1, 0, OPT_AUTO_HANGUP},
 	{ "auto-play",  0, 0, OPT_AUTO_PLAY},
+	{ "auto-rec",   0, 0, OPT_AUTO_REC},
 	{ "auto-loop",  0, 0, OPT_AUTO_LOOP},
 	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
 	{ "play-file",  1, 0, OPT_PLAY_FILE},
+	{ "rec-file",   1, 0, OPT_REC_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
 	{ "complexity",	1, 0, OPT_COMPLEXITY},
@@ -625,6 +636,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->auto_play = 1;
 	    break;
 
+	case OPT_AUTO_REC:
+	    cfg->auto_rec = 1;
+	    break;
+
 	case OPT_AUTO_LOOP:
 	    cfg->auto_loop = 1;
 	    break;
@@ -635,6 +650,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_PLAY_FILE:
 	    cfg->wav_file = pj_str(pj_optarg);
+	    break;
+
+	case OPT_REC_FILE:
+	    cfg->rec_file = pj_str(pj_optarg);
 	    break;
 
 	case OPT_RTP_PORT:
@@ -1000,6 +1019,15 @@ static int write_settings(const struct app_config *config,
 			config->wav_file.ptr);
 	pj_strcat2(&cfg, line);
     }
+    if (config->rec_file.slen) {
+	pj_ansi_sprintf(line, "--rec-file %s\n",
+			config->rec_file.ptr);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->auto_rec)
+	pj_strcat2(&cfg, "--auto-rec\n");
+
+
     /* Media clock rate. */
     if (config->media_cfg.clock_rate != PJSUA_DEFAULT_CLOCK_RATE) {
 	pj_ansi_sprintf(line, "--clock-rate %d\n",
@@ -1374,6 +1402,11 @@ static void on_call_media_state(pjsua_call_id call_id)
 	if (app_config.auto_loop) {
 	    pjsua_conf_connect(call_info.conf_slot, call_info.conf_slot);
 	    connect_sound = PJ_FALSE;
+
+	    /* Automatically record conversation, if desired */
+	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+		pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
+	    }
 	}
 
 	/* Stream a file, if desired */
@@ -1404,6 +1437,13 @@ static void on_call_media_state(pjsua_call_id call_id)
 				   pjsua_call_get_conf_port(call_ids[i]));
 		pjsua_conf_connect(pjsua_call_get_conf_port(call_ids[i]),
 				   call_info.conf_slot);
+
+		/* Automatically record conversation, if desired */
+		if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+		    pjsua_conf_connect(pjsua_call_get_conf_port(call_ids[i]), 
+				       app_config.rec_port);
+		}
+
 	    }
 
 	    /* Also connect call to local sound device */
@@ -1414,6 +1454,12 @@ static void on_call_media_state(pjsua_call_id call_id)
 	if (connect_sound) {
 	    pjsua_conf_connect(call_info.conf_slot, 0);
 	    pjsua_conf_connect(0, call_info.conf_slot);
+
+	    /* Automatically record conversation, if desired */
+	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+		pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
+		pjsua_conf_connect(0, app_config.rec_port);
+	    }
 	}
 
 	PJ_LOG(3,(THIS_FILE, "Media for call %d is active", call_id));
@@ -2534,6 +2580,15 @@ pj_status_t app_init(int argc, char *argv[])
 	app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
     }
 
+    /* Optionally create recorder file, if any. */
+    if (app_config.rec_file.slen) {
+	status = pjsua_recorder_create(&app_config.rec_file, 0, NULL, 0, 0,
+				       &app_config.rec_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	app_config.rec_port = pjsua_recorder_get_conf_port(app_config.rec_id);
+    }
 
     /* Add TCP transport unless it's disabled */
     if (!app_config.no_tcp) {

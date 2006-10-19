@@ -124,7 +124,7 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
     PJ_UNUSED_ARG(dns_res);
     pj_assert(!"Resolver is disabled (PJSIP_HAS_RESOLVER==0)");
     return PJ_EINVALIDOP;
-#endif;
+#endif
 }
 
 
