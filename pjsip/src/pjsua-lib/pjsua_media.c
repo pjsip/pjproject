@@ -796,8 +796,8 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
  * the conference bridge.
  */
 PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
-					   unsigned file_format,
-					   const pj_str_t *encoding,
+					   unsigned enc_type,
+					   void *enc_param,
 					   pj_ssize_t max_size,
 					   unsigned options,
 					   pjsua_recorder_id *p_id)
@@ -811,6 +811,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     unsigned slot, file_id;
     char path[128];
     pj_str_t ext;
+    int file_format;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -820,11 +821,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     /* Don't support max_size at present */
     PJ_ASSERT_RETURN(max_size == 0 || max_size == -1, PJ_EINVAL);
 
-    /* Don't support file format at present */
-    PJ_ASSERT_RETURN(file_format == 0, PJ_EINVAL);
-
-    /* Don't support encoding at present */
-    PJ_ASSERT_RETURN(encoding == NULL, PJ_EINVAL);
+    /* Don't support encoding type at present */
+    PJ_ASSERT_RETURN(enc_type == 0, PJ_EINVAL);
 
     if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder))
 	return PJ_ETOOMANY;
@@ -874,7 +872,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 						pjsua_var.mconf_cfg.channel_count,
 						pjsua_var.mconf_cfg.samples_per_frame,
 						pjsua_var.mconf_cfg.bits_per_sample,
-						NULL, &port);
+						enc_param, &port);
     } else {
 	port = NULL;
 	status = PJ_ENOTSUP;

@@ -199,7 +199,7 @@ static pj_status_t init_mp3_encoder(struct mp3_file_port *fport,
     } else {
 	LConfig.format.LHV1.nVbrMethod = VBR_METHOD_DEFAULT;
 	LConfig.format.LHV1.bWriteVBRHeader = 1;
-	//LConfig.format.LHV1.dwVbrAbr_bps = fport->mp3_option.bit_rate;
+	LConfig.format.LHV1.dwVbrAbr_bps = fport->mp3_option.bit_rate;
 	LConfig.format.LHV1.bEnableVBR = 1;
     }
 
@@ -294,8 +294,8 @@ pjmedia_mp3_writer_port_create( pj_pool_t *pool,
 	fport->mp3_option.vbr = PJ_TRUE;
     }
 
-    /* Calculate bitrate if it's not specified */
-    if (fport->mp3_option.bit_rate == 0) 
+    /* Calculate bitrate if it's not specified, only if it's not VBR. */
+    if (fport->mp3_option.bit_rate == 0 && !fport->mp3_option.vbr) 
 	fport->mp3_option.bit_rate = sampling_rate * channel_count;
 
     /* Set default quality if it's not specified */

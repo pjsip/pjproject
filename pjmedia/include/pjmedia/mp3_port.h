@@ -59,13 +59,21 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_mp3_encoder_option
 {
-    /** Specify whether variable bit rate should be used (say Yes!).	    */
+    /** Specify whether variable bit rate should be used. Variable bitrate
+     *  would normally produce better quality at the expense of probably
+     *  larger file.
+     */
     pj_bool_t	vbr;
 
-    /** Target bitrate, in bps. If zero, bitrate will be  calculated.	    */
+    /** Target bitrate, in bps. For VBR, if the bitrate is specified, then 
+     *  the encoder will ignore the quality settings and instead will try to 
+     *  limit the bitrate to the desired value in this setting.
+     */
     unsigned	bit_rate;
 
-    /** Encoding quality, 0-9, with 0 is the highest. 			    */
+    /** Encoding quality, 0-9, with 0 is the highest quality. For VBR, the 
+     *  quality setting will only take effect when bit_rate setting is zero.
+     */
     unsigned	quality;
 
 } pjmedia_mp3_encoder_option;
