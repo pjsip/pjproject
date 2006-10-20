@@ -1040,12 +1040,12 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     /* Add rtpmap. */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("rtpmap");
-    attr->value = pj_str(":121 telephone-event/8000");
+    attr->value = pj_str("121 telephone-event/8000");
     m->attr[m->attr_count++] = attr;
     /* Add fmtp */
     attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
     attr->name = pj_str("fmtp");
-    attr->value = pj_str(":121 0-15");
+    attr->value = pj_str("121 0-15");
     m->attr[m->attr_count++] = attr;
 #endif
 
