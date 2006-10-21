@@ -200,10 +200,14 @@ static pj_status_t init_mp3_encoder(struct mp3_file_port *fport,
 	LConfig.format.LHV1.nVbrMethod = VBR_METHOD_DEFAULT;
 	LConfig.format.LHV1.bWriteVBRHeader = 1;
 	LConfig.format.LHV1.dwVbrAbr_bps = fport->mp3_option.bit_rate;
+	LConfig.format.LHV1.nVBRQuality =  (pj_uint16_t)
+					   fport->mp3_option.quality;
 	LConfig.format.LHV1.bEnableVBR = 1;
     }
 
-    LConfig.format.LHV1.nQuality =  (pj_uint16_t)fport->mp3_option.quality;
+    LConfig.format.LHV1.nQuality = (pj_uint16_t) 
+				   (((0-fport->mp3_option.quality-1)<<8) | 
+				    fport->mp3_option.quality);
 
     /*
      * Init MP3 stream.

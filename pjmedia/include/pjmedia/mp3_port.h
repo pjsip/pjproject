@@ -65,9 +65,11 @@ typedef struct pjmedia_mp3_encoder_option
      */
     pj_bool_t	vbr;
 
-    /** Target bitrate, in bps. For VBR, if the bitrate is specified, then 
-     *  the encoder will ignore the quality settings and instead will try to 
-     *  limit the bitrate to the desired value in this setting.
+    /** Target bitrate, in bps. If VBR is enabled, this settings specifies 
+     *  the  average bit-rate requested, and will make the encoder ignore 
+     *  the quality setting. For CBR, this specifies the actual bitrate,
+     *  and if this option is zero, it will be set to the sampling rate
+     *  multiplied by number of channels.
      */
     unsigned	bit_rate;
 
