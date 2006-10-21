@@ -1,8 +1,8 @@
 
-
 Getting Started: Building and Using PJSIP and PJMEDIA
 
-   [Last Update: Sept 13, 2006]
+   [Last Update: $Date: 2006-10-21 19:14:22 +0100 (Sat, 21 Oct 2006) $]
+
      _________________________________________________________________
 
    This article describes how to download, customize, build, and use the open
@@ -11,13 +11,14 @@ Getting Started: Building and Using PJSIP and PJMEDIA
 
 
 Quick Info
+     _________________________________________________________________
 
-   Building with GNU tools
+   Building with GNU tools (Linux, *BSD, MacOS X, mingw, etc.)
           Generally these should be all that are needed to build the libraries,
           applications, and samples:
 
-   $ ./configure
-   $ make dep && make clean && make
+	   $ ./configure
+	   $ make dep && make clean && make
 
    Building Win32 Target with Microsoft Visual Studio
           Generally we can just do these steps:
@@ -33,9 +34,14 @@ Quick Info
          2. Create an empty pjlib/include/pj/config_site.h, and
          3. build the pjsua_wince application.
 
-   With Visual Studio for Win32 target and the GNU build systems, the output
-   libraries will be put in lib directory under each projects, and the output
-   binaries will be put in bin directory under each projects.
+   Locating Output Binaries/Libraries
+          Libraries will be put in lib directory, and binaries will be put in
+          bin directory, under each projects.
+
+   Running the Applications
+          After successful build, you can try running pjsua application on
+          pjsip-apps/bin     directory.     PJSUA     manual     is    in
+          http://www.pjsip.org/pjsua.htm.
 
 
 Table of Contents:
@@ -55,7 +61,8 @@ Table of Contents:
 
      2.2 Disk Space Requirements
 
-   3. Building Linux, *nix, *BSD, and MacOS X Targets with GNU Build Systems
+   3.  Building Linux, *nix, *BSD, and MacOS X Targets with GNU Build
+   Systems
 
      3.1 Supported Targets
 
@@ -66,6 +73,8 @@ Table of Contents:
      3.4 Running make
 
      3.5 Cross Compilation
+
+     3.6 Build Customizations
 
    4. Building for Windows Targets with Microsoft Visual Studio
 
@@ -276,8 +285,20 @@ Individual Directory Inside Each Project
 2. Build Preparation
      _________________________________________________________________
 
-2.1 config_site.h file
+2.1 Create config_site.h file
      _________________________________________________________________
+
+   Before source files can be built, the pjlib/include/pj/config_site.h file
+   must be created (it can just be an empty file).
+
+   Note:
+          When the Makefile based build system is used, this process is taken
+          care by the Makefiles. But when non-Makefile based build system (such
+          as Visual Studio) is used, the config_site.h file must be created
+          manually.
+
+
+What is config_site.h File
 
    The pjlib/include/pj/config_site.h contains local customizations to the
    libraries.
@@ -293,9 +314,10 @@ Individual Directory Inside Each Project
 
    Please find list of configuration macros that can be overriden from these
    files:
-     * pjlib/config.h file
-     * pjmedia/config.h file
-     * pjsip/sip_config.h file
+     * PJLIB Configuration (the pjlib/config.h file)
+     * PJLIB-UTIL Configuration (the pjlib-util/config.h file)
+     * PJMEDIA Configuration (the pjmedia/config.h file)
+     * PJSIP Configuration (the pjsip/sip_config.h file)
 
    A     sample    config_site.h    file    is    also    available    in
    pjlib/include/config_site_sample.h.
@@ -322,7 +344,7 @@ Creating config_site.h file
      _________________________________________________________________
 
    The building process needs:
-     * about 50-60 MB of disk space to store the uncompressed source files, and
+   about 50-60 MB of disk space to store the uncompressed source files, and
      * about 30-50 MB of additional space for building each target
 
    (Visual Studio Debug and Release are considered as separate targets)
@@ -415,23 +437,30 @@ Using Default Settings
    The configure script accepts standard customization, which details can be
    obtained by executing ./configure --help.
 
-   For example, to build the libraries/application in debug mode:
+   Below is an example of specifying CFLAGS in configure:
 
 
 
-   $ ./configure CFLAGS="-g"
+   $ ./configure CFLAGS="-O3 -DNDEBUG -msoft-float -fno-builtin"
    ...
 
 
   3.4 Cross Compilation
      _________________________________________________________________
 
-   (.. to be completed)
+   Cross compilation should be supported, using the usual autoconf syntax:
 
 
 
-   $ ./configure --target=powerpc-linux-unknown
+   $ ./configure --host=arm-elf-linux
    ...
+
+   Since cross-compilation is not tested as often as the "normal" build, please
+   watch for the ./configure output for incorrect settings (well ideally this
+   should be done for normal build too).
+
+   Please refer to Porting Guide for further information about porting PJ
+   software.
 
 
   3.5 Running make
@@ -473,6 +502,22 @@ Using Default Settings
           directory under each project to build only the particular project.
 
 
+  3.6 Build Customizations
+     _________________________________________________________________
+
+   Build features can be customized by specifying the options when running
+   ./configure as described in Running Configure above.
+
+   In addition, additional CFLAGS and LDFLAGS options can be put in user.mak
+   file in PJ root directory (this file may need to be created if it doesn't
+   exist). Below is a sample of user.mak file contents:
+
+
+
+   export CFLAGS += -msoft-float -fno-builtin
+   export LDFLAGS +=
+
+
 4. Building for Windows Targets with Microsoft Visual Studio
      _________________________________________________________________
 
@@ -485,7 +530,10 @@ Using Default Settings
      * Microsoft Visual Studio 6,
      * Microsoft Visual Studio .NET 2002,
      * Microsoft Visual Studio .NET 2003,
-     * Microsoft Visual C++ Express 2005 with Platform SDK and DirectX SDK,
+     * Microsoft Visual C++ Express 2005 with Platform SDK,
+     * DirectX SDK is needed if PJMEDIA DirectSound sound backend is explicitly
+       choosen (default is using PortAudio, which uses DirectSound via run-time
+       bindings, so DirectX SDK is not needed)
 
    For the host, the following are required:
      * Windows NT, 2000, XP, 2003, or later ,
@@ -698,6 +746,19 @@ Using Default Settings
                 LDFLAGS: "-lpj-$(TARGET_NAME) -lpjmedia-$(TARGET_NAME)"
 
 
+    6. Link with system spesific libraries:
+
+        Windows
+                Add (among other things): wsock32.lib, ws2_32.lib, ole32.lib,
+                dsound.lib
+
+        Linux, *nix, *BSD
+                Add (among other things): '-lpthread -lm' (at least).
+
+        MacOS X
+                Add (among other things): '-framework CoreAudio -lpthread -lm'.
+
+
 Appendix I: Common Problems/Frequently Asked Question (FAQ)
      _________________________________________________________________
 
@@ -712,8 +773,12 @@ Appendix I: Common Problems/Frequently Asked Question (FAQ)
 
 
 
-  Thanks for using PJ libraries and for reading this document. Please
-  send feedbacks or general comments to <bennylp at pjsip dot org>.
 
-  Benny Prijono
+
+
+     _________________________________________________________________
+
+   Feedback:
+          Thanks for using PJ libraries and for reading this document. Please
+          send feedbacks or general comments to <bennylp at pjsip dot org>.
 
