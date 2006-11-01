@@ -468,7 +468,7 @@ PJ_IDECL(void) pj_strcat2(pj_str_t *dst, const char *src);
  */
 PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 {
-    return (char*) memchr(str->ptr, chr, str->slen);
+    return (char*) memchr((char*)str->ptr, chr, str->slen);
 }
 
 /**
@@ -628,7 +628,7 @@ PJ_INLINE(int) pj_memcmp(const void *buf1, const void *buf2, pj_size_t size)
  */
 PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 {
-    return memchr(buf, c, size);
+    return (void*)memchr((void*)buf, c, size);
 }
 
 
