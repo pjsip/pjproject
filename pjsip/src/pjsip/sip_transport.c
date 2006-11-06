@@ -1141,6 +1141,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
 	/* Drop response message if it has more than one Via.
 	*/
+	/* This is wrong. Proxy DOES receive responses with multiple
+	 * Via headers! Thanks Aldo <acampi at deis.unibo.it> for pointing
+	 * this out.
+
 	if (msg->type == PJSIP_RESPONSE_MSG) {
 	    pjsip_hdr *hdr;
 	    hdr = (pjsip_hdr*)rdata->msg_info.via->next;
@@ -1152,6 +1156,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 		}
 	    }
 	}
+	*/
 
 	/* Call the transport manager's upstream message callback.
 	 */
