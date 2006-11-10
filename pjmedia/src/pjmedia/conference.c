@@ -1140,13 +1140,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
 /* Convert signed 16bit pcm sample to unsigned 16bit sample */
 static pj_uint16_t pcm2unsigned(pj_int32_t pcm)
 {
-    return (pj_uint16_t)(pcm + 32767);
+    return (pj_uint16_t)(pcm + 32768);
 }
 
 /* Convert unsigned 16bit sample to signed 16bit pcm sample */
 static pj_int16_t unsigned2pcm(pj_uint32_t uns)
 {
-    return (pj_int16_t)(uns - 32767);
+    return (pj_int16_t)(uns - 32768);
 }
 
 
