@@ -80,7 +80,7 @@ static struct app_config
 
 //static pjsua_acc_id	current_acc;
 #define current_acc	pjsua_acc_get_default()
-static pjsua_call_id	current_call;
+static pjsua_call_id	current_call = PJSUA_INVALID_ID;
 static pj_str_t		uri_arg;
 
 #ifdef STEREO_DEMO
@@ -1567,6 +1567,26 @@ static void on_call_transfer_status(pjsua_call_id call_id,
 
 
 /*
+ * Notification that call is being replaced.
+ */
+static void on_call_replaced(pjsua_call_id old_call_id,
+			     pjsua_call_id new_call_id)
+{
+    pjsua_call_info old_ci, new_ci;
+
+    pjsua_call_get_info(old_call_id, &old_ci);
+    pjsua_call_get_info(new_call_id, &new_ci);
+
+    PJ_LOG(3,(THIS_FILE, "Call %d with %.*s is being replaced by "
+			 "call %d with %.*s",
+			 old_call_id, 
+			 (int)old_ci.remote_info.slen, old_ci.remote_info.ptr,
+			 new_call_id,
+			 (int)new_ci.remote_info.slen, new_ci.remote_info.ptr));
+}
+
+
+/*
  * Print buddy list.
  */
 static void print_buddy_list(void)
@@ -1662,9 +1682,9 @@ static void keystroke_help(void)
     puts("|  ]  Select next dialog       |  t  ToGgle Online status |  <  Cycle prev ac.|");
     puts("|  [  Select previous dialog   +--------------------------+-------------------+");
     puts("|  x  Xfer call                |      Media Commands:     |  Status & Config: |");
-    puts("|  #  Send DTMF string         |                          |                   |");
-    puts("| dq  Dump curr. call quality  | cl  List ports           |  d  Dump status   |");
-    puts("|                              | cc  Connect port         | dd  Dump detailed |");
+    puts("|  X  Xfer with Replaces       |                          |                   |");
+    puts("|  #  Send DTMF string         | cl  List ports           |  d  Dump status   |");
+    puts("| dq  Dump curr. call quality  | cc  Connect port         | dd  Dump detailed |");
     puts("|                              | cd  Disconnect port      | dc  Dump config   |");
     puts("|  S  Send arbitrary REQUEST   |                          |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
@@ -1673,6 +1693,14 @@ static void keystroke_help(void)
 
     i = pjsua_call_get_count();
     printf("You have %d active call%s\n", i, (i>1?"s":""));
+
+    if (current_call != PJSUA_INVALID_ID) {
+	pjsua_call_info ci;
+	if (pjsua_call_get_info(current_call, &ci)==PJ_SUCCESS)
+	    printf("Current call id=%d to %.*s [%.*s]\n", current_call,
+		   (int)ci.remote_info.slen, ci.remote_info.ptr,
+		   (int)ci.state_text.slen, ci.state_text.ptr);
+    }
 }
 
 
@@ -2230,6 +2258,12 @@ void console_app_main(const pj_str_t *uri_to_call)
 		pjsip_generic_string_hdr refer_sub;
 		pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 		pj_str_t STR_FALSE = { "false", 5 };
+		pjsua_call_info ci;
+
+		pjsua_call_get_info(current_call, &ci);
+		printf("Transfering current call [%d] %.*s\n",
+		       current_call,
+		       (int)ci.remote_info.slen, ci.remote_info.ptr);
 
 		ui_input_url("Transfer to URL", buf, sizeof(buf), &result);
 
@@ -2261,6 +2295,93 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    tmp = pj_str(result.uri_result);
 		    pjsua_call_xfer( current_call, &tmp, &msg_data);
 		}
+	    }
+	    break;
+
+	case 'X':
+	    /*
+	     * Transfer call with replaces.
+	     */
+	    if (current_call == -1) {
+		
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+
+	    } else {
+		int call = current_call;
+		int dst_call;
+		pjsua_msg_data msg_data;
+		pjsip_generic_string_hdr refer_sub;
+		pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
+		pj_str_t STR_FALSE = { "false", 5 };
+		pjsua_call_id ids[PJSUA_MAX_CALLS];
+		pjsua_call_info ci;
+		unsigned i, count;
+
+		count = PJ_ARRAY_SIZE(ids);
+		pjsua_enum_calls(ids, &count);
+
+		if (count <= 1) {
+		    puts("There are no other calls");
+		    continue;
+		}
+
+		pjsua_call_get_info(current_call, &ci);
+		printf("Transfer call [%d] %.*s to one of the following:\n",
+		       current_call,
+		       (int)ci.remote_info.slen, ci.remote_info.ptr);
+
+		for (i=0; i<count; ++i) {
+		    pjsua_call_info call_info;
+
+		    if (ids[i] == call)
+			continue;
+
+		    pjsua_call_get_info(ids[i], &call_info);
+		    printf("%d  %.*s [%.*s]\n",
+			   ids[i],
+			   (int)call_info.remote_info.slen,
+			   call_info.remote_info.ptr,
+			   (int)call_info.state_text.slen,
+			   call_info.state_text.ptr);
+		}
+
+		if (!simple_input("Enter call number to be replaced", 
+			          buf, sizeof(buf)))
+		    continue;
+
+		dst_call = my_atoi(buf);
+
+		/* Check if call is still there. */
+
+		if (call != current_call) {
+		    puts("Call has been disconnected");
+		    continue;
+		}
+
+		/* Check that destination call is valid. */
+		if (dst_call == call) {
+		    puts("Destination call number must not be the same "
+			 "as the call being transfered");
+		    continue;
+		}
+		if (dst_call >= PJSUA_MAX_CALLS) {
+		    puts("Invalid destination call number");
+		    continue;
+		}
+		if (!pjsua_call_is_active(dst_call)) {
+		    puts("Invalid destination call number");
+		    continue;
+		}
+
+		pjsua_msg_data_init(&msg_data);
+		if (app_config.no_refersub) {
+		    /* Add Refer-Sub: false in outgoing REFER request */
+		    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
+						   &STR_FALSE);
+		    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+		}
+
+		pjsua_call_xfer_replaces(call, dst_call, 0, &msg_data);
 	    }
 	    break;
 
@@ -2553,6 +2674,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
+    app_config.cfg.cb.on_call_replaced = &on_call_replaced;
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
