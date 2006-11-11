@@ -386,8 +386,10 @@ PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
 
     /* Register the module. */
     status = pjsip_endpt_register_module(endpt, &mod_inv.mod);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 /*
@@ -680,8 +682,9 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
     req_hdr = pjsip_msg_find_hdr(msg, PJSIP_H_REQUIRE, NULL);
     if (req_hdr) {
 	unsigned i;
-	pj_str_t STR_100REL = { "100rel", 6};
-	pj_str_t STR_TIMER = { "timer", 5 };
+	const pj_str_t STR_100REL = { "100rel", 6};
+	const pj_str_t STR_TIMER = { "timer", 5 };
+	const pj_str_t STR_REPLACES = { "replaces", 8 };
 	unsigned unsupp_cnt = 0;
 	pj_str_t unsupp_tags[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 	
@@ -695,6 +698,14 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
 		       pj_stricmp(&req_hdr->values[i], &STR_TIMER)==0)
 	    {
 		rem_option |= PJSIP_INV_REQUIRE_TIMER;
+
+	    } else if (pj_stricmp(&req_hdr->values[i], &STR_REPLACES)==0) {
+		pj_bool_t supp;
+		
+		supp = pjsip_endpt_has_capability(endpt, PJSIP_H_SUPPORTED, 
+						  NULL, &STR_REPLACES);
+		if (!supp)
+		    unsupp_tags[unsupp_cnt++] = req_hdr->values[i];
 
 	    } else {
 		/* Unknown/unsupported extension tag!  */

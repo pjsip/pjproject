@@ -372,6 +372,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 {
     pj_str_t contact;
     pjsip_dialog *dlg = pjsip_rdata_get_dlg(rdata);
+    pjsip_dialog *replaced_dlg = NULL;
     pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_tx_data *response = NULL;
@@ -418,6 +419,66 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Mark call start time. */
     pj_gettimeofday(&call->start_time);
+
+    /* Check INVITE request for Replaces header. If Replaces header is
+     * present, the function will make sure that we can handle the request.
+     */
+    status = pjsip_replaces_verify_request(rdata, &replaced_dlg, PJ_FALSE,
+					   &response);
+    if (status != PJ_SUCCESS) {
+	/*
+	 * Something wrong with the Replaces header.
+	 */
+	if (response) {
+	    pjsip_response_addr res_addr;
+
+	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
+	    pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response, 
+				      NULL, NULL);
+
+	} else {
+
+	    /* Respond with 500 (Internal Server Error) */
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+					  NULL, NULL);
+	}
+
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
+    /* If this INVITE request contains Replaces header, notify application
+     * about the request so that application can do subsequent checking
+     * if it wants to.
+     */
+    if (replaced_dlg != NULL && pjsua_var.ua_cfg.cb.on_call_replace_request) {
+	pjsua_call *replaced_call;
+	int st_code = 200;
+	pj_str_t st_text = { "OK", 2 };
+
+	/* Get the replaced call instance */
+	replaced_call = replaced_dlg->mod_data[pjsua_var.mod.id];
+
+	/* Notify application */
+	pjsua_var.ua_cfg.cb.on_call_replace_request(replaced_call->index,
+						    rdata, &st_code, &st_text);
+
+	/* Must specify final response */
+	PJ_ASSERT_ON_FAIL(st_code >= 200, st_code = 200);
+
+	/* Check if application rejects this request. */
+	if (st_code >= 300) {
+
+	    if (st_text.slen == 2)
+		st_text = *pjsip_get_status_text(st_code);
+
+	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 
+				st_code, &st_text, NULL, NULL, NULL);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+    }
+
 
     /* Get media capability from media endpoint: */
     status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, 
@@ -545,9 +606,56 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     ++pjsua_var.call_cnt;
 
 
-    /* Notify application */
-    if (pjsua_var.ua_cfg.cb.on_incoming_call)
-	pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
+    /* Check if this request should replace existing call */
+    if (replaced_dlg) {
+	pjsip_inv_session *replaced_inv;
+	struct pjsua_call *replaced_call;
+	pjsip_tx_data *tdata;
+
+	/* Get the invite session in the dialog */
+	replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
+
+	/* Get the replaced call instance */
+	replaced_call = replaced_dlg->mod_data[pjsua_var.mod.id];
+
+	/* Notify application */
+	if (pjsua_var.ua_cfg.cb.on_call_replaced)
+	    pjsua_var.ua_cfg.cb.on_call_replaced(replaced_call->index,
+					         call_id);
+
+	PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
+			     call_id));
+
+	/* Answer the new call with 200 response */
+	status = pjsip_inv_answer(inv, 200, NULL, NULL, &tdata);
+	if (status == PJ_SUCCESS)
+	    status = pjsip_inv_send_msg(inv, tdata);
+
+	if (status != PJ_SUCCESS)
+	    pjsua_perror(THIS_FILE, "Error answering session", status);
+
+
+	PJ_LOG(4,(THIS_FILE, "Disconnecting replaced call %d",
+			     replaced_call->index));
+
+	/* Disconnect replaced invite session */
+	status = pjsip_inv_end_session(replaced_inv, PJSIP_SC_GONE, NULL,
+				       &tdata);
+	if (status == PJ_SUCCESS && tdata)
+	    status = pjsip_inv_send_msg(replaced_inv, tdata);
+
+	if (status != PJ_SUCCESS)
+	    pjsua_perror(THIS_FILE, "Error terminating session", status);
+
+
+    } else {
+
+	/* Notify application */
+	if (pjsua_var.ua_cfg.cb.on_incoming_call)
+	    pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
+
+    }
+
 
     /* This INVITE request has been handled. */
     PJSUA_UNLOCK();
@@ -1065,6 +1173,8 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     pjsip_tx_data *tdata;
     pjsua_call *call;
     pjsip_dialog *dlg;
+    pjsip_generic_string_hdr *gs_hdr;
+    const pj_str_t str_ref_by = { "Referred-By", 11 };
     struct pjsip_evsub_user xfer_cb;
     pj_status_t status;
 
@@ -1101,6 +1211,12 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
 	return status;
     }
 
+    /* Add Referred-By header */
+    gs_hdr = pjsip_generic_string_hdr_create(tdata->pool, &str_ref_by,
+					     &dlg->local.info_str);
+    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)gs_hdr);
+
+
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
@@ -1121,6 +1237,86 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
 
     return PJ_SUCCESS;
 
+}
+
+
+/*
+ * Initiate attended call transfer to the specified address.
+ */
+PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id, 
+					      pjsua_call_id dest_call_id,
+					      unsigned options,
+					      const pjsua_msg_data *msg_data)
+{
+    pjsua_call *dest_call;
+    pjsip_dialog *dest_dlg;
+    char str_dest_buf[512];
+    pj_str_t str_dest;
+    int len;
+    pjsip_uri *uri;
+    pj_status_t status;
+    
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(dest_call_id>=0 && 
+		      dest_call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+    
+    status = acquire_call("pjsua_call_xfer_replaces()", dest_call_id, 
+			  &dest_call, &dest_dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+        
+    /* 
+     * Create REFER destination URI with Replaces field.
+     */
+
+    /* Make sure we have sufficient buffer's length */
+    PJ_ASSERT_RETURN( dest_dlg->remote.info_str.slen +
+		      dest_dlg->call_id->id.slen +
+		      dest_dlg->remote.info->tag.slen +
+		      dest_dlg->local.info->tag.slen + 32 
+		      < sizeof(str_dest_buf), PJSIP_EURITOOLONG);
+
+    /* Print URI */
+    str_dest_buf[0] = '<';
+    str_dest.slen = 1;
+
+    uri = pjsip_uri_get_uri(dest_dlg->remote.info->uri);
+    len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, uri, 
+		          str_dest_buf+1, sizeof(str_dest_buf)-1);
+    if (len < 0)
+	return PJSIP_EURITOOLONG;
+
+    str_dest.slen += len;
+
+
+    /* Build the URI */
+    len = pj_ansi_snprintf(str_dest_buf + str_dest.slen, 
+			   sizeof(str_dest_buf) - str_dest.slen,
+			   "?%s"
+			   "Replaces=%.*s"
+			   "%%3Bto-tag%%3D%.*s"
+			   "%%3Bfrom-tag%%3D%.*s>",
+			   ((options&PJSUA_XFER_NO_REQUIRE_REPLACES) ?
+			    "" : "Require=replaces&"),
+			   (int)dest_dlg->call_id->id.slen,
+			   dest_dlg->call_id->id.ptr,
+			   (int)dest_dlg->remote.info->tag.slen,
+			   dest_dlg->remote.info->tag.ptr,
+			   (int)dest_dlg->local.info->tag.slen,
+			   dest_dlg->local.info->tag.ptr);
+
+    PJ_ASSERT_RETURN(len > 0 && len <= (int)sizeof(str_dest_buf)-str_dest.slen,
+		     PJSIP_EURITOOLONG);
+    
+    str_dest.ptr = str_dest_buf;
+    str_dest.slen += len;
+
+    pjsip_dlg_dec_lock(dest_dlg);
+    
+    return pjsua_call_xfer(call_id, &str_dest, msg_data);
 }
 
 
@@ -2340,10 +2536,13 @@ static void on_call_transfered( pjsip_inv_session *inv,
     int new_call;
     const pj_str_t str_refer_to = { "Refer-To", 8};
     const pj_str_t str_refer_sub = { "Refer-Sub", 9 };
+    const pj_str_t str_ref_by = { "Referred-By", 11 };
     pjsip_generic_string_hdr *refer_to;
     pjsip_generic_string_hdr *refer_sub;
+    pjsip_hdr *ref_by_hdr;
     pj_bool_t no_refer_sub = PJ_FALSE;
     char *uri;
+    pjsua_msg_data msg_data;
     pj_str_t tmp;
     pjsip_status_code code;
     pjsip_evsub *sub;
@@ -2372,6 +2571,11 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	    no_refer_sub = PJ_TRUE;
     }
 
+    /* Find optional Referred-By header (to be copied onto outgoing INVITE
+     * request.
+     */
+    ref_by_hdr = pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_ref_by, 
+					    NULL);
 
     /* Notify callback */
     code = PJSIP_SC_OK;
@@ -2490,10 +2694,21 @@ static void on_call_transfered( pjsip_inv_session *inv,
     uri = refer_to->hvalue.ptr;
     uri[refer_to->hvalue.slen] = '\0';
 
+    /* Init msg_data */
+    pjsua_msg_data_init(&msg_data);
+
+    /* If Referred-By header is present in the REFER request, copy this
+     * to the outgoing INVITE request.
+     */
+    if (ref_by_hdr != NULL) {
+	pjsip_hdr *dup = pjsip_hdr_clone(rdata->tp_info.pool, ref_by_hdr);
+	pj_list_push_back(&msg_data.hdr_list, dup);
+    }
+
     /* Now make the outgoing call. */
     tmp = pj_str(uri);
     status = pjsua_call_make_call(existing_call->acc_id, &tmp, 0,
-				  existing_call->user_data, NULL, 
+				  existing_call->user_data, &msg_data, 
 				  &new_call);
     if (status != PJ_SUCCESS) {
 

@@ -320,6 +320,32 @@ PJ_DEF(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
 
 
 /*
+ * Check if the specified capability is supported.
+ */
+PJ_DEF(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
+					      int htype,
+					      const pj_str_t *hname,
+					      const pj_str_t *token)
+{
+    const pjsip_generic_array_hdr *hdr;
+    unsigned i;
+
+    hdr = (const pjsip_generic_array_hdr*) 
+	   pjsip_endpt_get_capability(endpt, htype, hname);
+    if (!hdr)
+	return PJ_FALSE;
+
+    PJ_ASSERT_RETURN(token != NULL, PJ_FALSE);
+
+    for (i=0; i<hdr->count; ++i) {
+	if (!pj_stricmp(&hdr->values[i], token))
+	    return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
+/*
  * Add or register new capabilities as indicated by the tags to the
  * appropriate header fields in the endpoint.
  */

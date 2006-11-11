@@ -333,6 +333,31 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 							   pj_bool_t *cont));
 
 /**
+ * This is a convenient function which wraps #pjsip_get_response_addr() and
+ * #pjsip_endpt_send_response() in a single function.
+ *
+ * @param endpt	    The endpoint instance.
+ * @param rdata	    The original request to be responded.
+ * @param tdata	    The response message to be sent.
+ * @param token	    Token to be passed back when the callback is called.
+ * @param cb	    Optional callback to notify the transmission status
+ *		    to application, and to inform whether next address or
+ *		    transport will be tried.
+ * 
+ * @return	    PJ_SUCCESS if response has been successfully created and
+ *		    sent to transport layer, or a non-zero error code. 
+ *		    However, even when it returns PJ_SUCCESS, there is no 
+ *		    guarantee that the response has been successfully sent.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_send_response2(pjsip_endpoint *endpt,
+					        pjsip_rx_data *rdata,
+					        pjsip_tx_data *tdata,
+						void *token,
+						void (*cb)(pjsip_send_state*,
+							   pj_ssize_t sent,
+							   pj_bool_t *cont));
+
+/**
  * This composite function sends response message statelessly to an incoming
  * request message. Internally it calls #pjsip_endpt_create_response() and
  * #pjsip_endpt_send_response().

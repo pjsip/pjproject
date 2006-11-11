@@ -403,6 +403,31 @@ PJ_DECL(const pjsip_hdr*) pjsip_endpt_get_capability( pjsip_endpoint *endpt,
 
 
 /**
+ * Check if we have the specified capability.
+ *
+ * @param endpt	    The endpoint.
+ * @param htype	    The header type to be retrieved, which value may be:
+ *		    - PJSIP_H_ACCEPT
+ *		    - PJSIP_H_ALLOW
+ *		    - PJSIP_H_SUPPORTED
+ * @param hname	    If htype specifies PJSIP_H_OTHER, then the header name
+ *		    must be supplied in this argument. Otherwise the value
+ *		    must be set to NULL.
+ * @param token	    The capability token to check. For example, if \a htype
+ *		    is PJSIP_H_ALLOW, then \a token specifies the method
+ *		    names; if \a htype is PJSIP_H_SUPPORTED, then \a token
+ *		    specifies the extension names such as "100rel".
+ *
+ * @return	    PJ_TRUE if the specified capability is supported,
+ *		    otherwise PJ_FALSE..
+ */
+PJ_DECL(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
+					       int htype,
+					       const pj_str_t *hname,
+					       const pj_str_t *token);
+
+
+/**
  * Add or register new capabilities as indicated by the tags to the
  * appropriate header fields in the endpoint.
  *

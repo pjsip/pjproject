@@ -337,6 +337,38 @@ typedef struct pjsua_callback
 				    pj_bool_t *p_cont);
 
     /**
+     * Notify application about incoming INVITE with Replaces header.
+     * Application may reject the request by setting non-2xx code.
+     *
+     * @param call_id	    The call ID to be replaced.
+     * @param rdata	    The incoming INVITE request to replace the call.
+     * @param st_code	    Status code to be set by application. Application
+     *			    should only return a final status (200-699).
+     * @param st_text	    Optional status text to be set by application.
+     */
+    void (*on_call_replace_request)(pjsua_call_id call_id,
+				    pjsip_rx_data *rdata,
+				    int *st_code,
+				    pj_str_t *st_text);
+
+    /**
+     * Notify application that an existing call has been replaced with
+     * a new call. This happens when PJSUA-API receives incoming INVITE
+     * request with Replaces header.
+     *
+     * After this callback is called, normally PJSUA-API will disconnect
+     * \a old_call_id and establish \a new_call_id.
+     *
+     * @param old_call_id   Existing call which to be replaced with the
+     *			    new call.
+     * @param new_call_id   The new call.
+     * @param rdata	    The incoming INVITE with Replaces request.
+     */
+    void (*on_call_replaced)(pjsua_call_id old_call_id,
+			     pjsua_call_id new_call_id);
+
+
+    /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
      * registration details.
@@ -1752,9 +1784,11 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 
 
 /**
- * Initiate call transfer to the specified address.
+ * Initiate call transfer to the specified address. This function will send
+ * REFER request to instruct remote call party to initiate a new INVITE
+ * session to the specified destination/target.
  *
- * @param call_id	Call identification.
+ * @param call_id	The call id to be transfered.
  * @param dest		Address of new target to be contacted.
  * @param msg_data	Optional message components to be sent with
  *			the request.
@@ -1764,6 +1798,35 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_xfer(pjsua_call_id call_id, 
 				     const pj_str_t *dest,
 				     const pjsua_msg_data *msg_data);
+
+/**
+ * Flag to indicate that "Require: replaces" should not be put in the
+ * outgoing INVITE request caused by REFER request created by 
+ * #pjsua_call_xfer_replaces().
+ */
+#define PJSUA_XFER_NO_REQUIRE_REPLACES	1
+
+/**
+ * Initiate attended call transfer. This function will send REFER request
+ * to instruct remote call party to initiate new INVITE session to the URL
+ * of \a dest_call_id. The party at \a dest_call_id then should "replace"
+ * the call with us with the new call from the REFER recipient.
+ *
+ * @param call_id	The call id to be transfered.
+ * @param dest_call_id	The call id to be replaced.
+ * @param options	Application may specify PJSUA_XFER_NO_REQUIRE_REPLACES
+ *			to suppress the inclusion of "Require: replaces" in
+ *			the outgoing INVITE request created by the REFER
+ *			request.
+ * @param msg_data	Optional message components to be sent with
+ *			the request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id, 
+					      pjsua_call_id dest_call_id,
+					      unsigned options,
+					      const pjsua_msg_data *msg_data);
 
 /**
  * Send DTMF digits to remote using RFC 2833 payload formats.

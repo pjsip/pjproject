@@ -145,9 +145,16 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 	param = uri->header_param.next;
 	while (param != &uri->header_param) {
 	    pjsip_hdr *hdr;
+	    int c;
+
+	    c = param->value.ptr[param->value.slen];
+	    param->value.ptr[param->value.slen] = '\0';
 
 	    hdr = pjsip_parse_hdr(dlg->pool, &param->name, param->value.ptr,
 				  param->value.slen, NULL);
+
+	    param->value.ptr[param->value.slen] = (char)c;
+
 	    if (hdr == NULL) {
 		status = PJSIP_EINVALIDURI;
 		goto on_error;
@@ -206,6 +213,34 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 	status = PJSIP_EINVALIDURI;
 	goto on_error;
     }
+
+    /* Remove header param from remote.info_str, if any */
+    if (PJSIP_URI_SCHEME_IS_SIP(dlg->remote.info->uri) ||
+	PJSIP_URI_SCHEME_IS_SIPS(dlg->remote.info->uri))
+    {
+	pjsip_sip_uri *sip_uri = pjsip_uri_get_uri(dlg->remote.info->uri);
+	if (!pj_list_empty(&sip_uri->header_param)) {
+	    pj_str_t tmp;
+
+	    /* Remove all header param */
+	    pj_list_init(&sip_uri->header_param);
+
+	    /* Print URI */
+	    tmp.ptr = pj_pool_alloc(dlg->pool, dlg->remote.info_str.slen);
+	    tmp.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+				       sip_uri, tmp.ptr, 
+				       dlg->remote.info_str.slen);
+
+	    if (tmp.slen < 1) {
+		status = PJSIP_EURITOOLONG;
+		goto on_error;
+	    }
+
+	    /* Assign remote.info_str */
+	    dlg->remote.info_str = tmp;
+	}
+    }
+
 
     /* Initialize remote's CSeq to -1. */
     dlg->remote.cseq = dlg->remote.first_cseq = -1;
@@ -361,7 +396,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     } else
 	tmp.slen = len;
 
-    /* Save the local info. */
+    /* Save the remote info. */
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
 
 

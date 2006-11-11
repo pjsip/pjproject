@@ -1195,6 +1195,31 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 }
 
 /*
+ * Send response combo
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_send_response2( pjsip_endpoint *endpt,
+					        pjsip_rx_data *rdata,
+					        pjsip_tx_data *tdata,
+						void *token,
+						void (*cb)(pjsip_send_state*,
+							   pj_ssize_t sent,
+							   pj_bool_t *cont))
+{
+    pjsip_response_addr res_addr;
+    pj_status_t status;
+
+    status = pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return PJ_SUCCESS;
+    }
+
+    status = pjsip_endpt_send_response(endpt, &res_addr, tdata, token, cb);
+    return status;
+}
+
+
+/*
  * Send response
  */
 PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,

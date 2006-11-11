@@ -409,6 +409,81 @@ PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 }
 
 
+/* 
+ * Find a dialog.
+ */
+PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
+					   const pj_str_t *local_tag,
+					   const pj_str_t *remote_tag,
+					   pj_bool_t lock_dialog)
+{
+    struct dlg_set *dlg_set;
+    pjsip_dialog *dlg;
+
+    PJ_ASSERT_RETURN(call_id && local_tag && remote_tag, NULL);
+
+    /* Lock user agent. */
+    pj_mutex_lock(mod_ua.mutex);
+
+    /* Lookup the dialog set. */
+    dlg_set = pj_hash_get(mod_ua.dlg_table, local_tag->ptr, local_tag->slen,
+			  NULL);
+    if (dlg_set == NULL) {
+	/* Not found */
+	pj_mutex_unlock(mod_ua.mutex);
+	return NULL;
+    }
+
+    /* Dialog set is found, now find the matching dialog based on the
+     * remote tag.
+     */
+    dlg = dlg_set->dlg_list.next;
+    while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {	
+	if (pj_strcmp(&dlg->remote.info->tag, remote_tag) == 0)
+	    break;
+	dlg = dlg->next;
+    }
+
+    if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
+	/* Not found */
+	pj_mutex_unlock(mod_ua.mutex);
+	return NULL;
+    }
+
+    /* Dialog has been found. It SHOULD have the right Call-ID!! */
+    PJ_ASSERT_ON_FAIL(pj_strcmp(&dlg->call_id->id, call_id)==0, 
+			{pj_mutex_unlock(mod_ua.mutex); return NULL;});
+
+    if (lock_dialog) {
+	if (pjsip_dlg_try_inc_lock(dlg) != PJ_SUCCESS) {
+
+	    /*
+	     * Unable to acquire dialog's lock while holding the user
+	     * agent's mutex. Release the UA mutex before retrying once
+	     * more.
+	     *
+	     * THIS MAY CAUSE RACE CONDITION!
+	     */
+
+	    /* Unlock user agent. */
+	    pj_mutex_unlock(mod_ua.mutex);
+	    /* Lock dialog */
+	    pjsip_dlg_inc_lock(dlg);
+
+	} else {
+	    /* Unlock user agent. */
+	    pj_mutex_unlock(mod_ua.mutex);
+	}
+
+    } else {
+	/* Unlock user agent. */
+	pj_mutex_unlock(mod_ua.mutex);
+    }
+
+    return dlg;
+}
+
+
 /*
  * Find the first dialog in dialog set in hash table for an incoming message.
  */

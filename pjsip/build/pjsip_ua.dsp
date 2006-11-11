@@ -95,6 +95,10 @@ SOURCE="..\src\pjsip-ua\sip_reg.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsip-ua\sip_replaces.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsip-ua\sip_xfer.c"
 # End Source File
 # End Group
@@ -112,6 +116,10 @@ SOURCE="..\include\pjsip-ua\sip_inv.h"
 # Begin Source File
 
 SOURCE="..\include\pjsip-ua\sip_regc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-ua\sip_replaces.h"
 # End Source File
 # Begin Source File
 

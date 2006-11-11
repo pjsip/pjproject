@@ -29,17 +29,32 @@
 #include <pjsip/sip_msg.h>
 
 /**
- * @defgroup PJSUA_XFER Call Transfer
+ * @defgroup PJSUA_XFER SIP REFER (RFC 3515) for Call Transfer etc.
  * @ingroup PJSIP_HIGH_UA
- * @brief Provides call transfer functionality.
+ * @brief SIP REFER dialog usage (call transfer, etc.)
  * @{
  *
- * This implements call transfer functionality to INVITE sessions. The call
- * transfer functionality uses SIP Event Subscription framework for
- * managing call transfer status.
+ * This describes a generic handling of SIP REFER request. The SIP REFER
+ * request is described in RFC 3515, and commonly used to perform call
+ * transfer functionality. Other types of SIP REFER usages are described
+ * in draft-worley-sip-many-refers-00 draft, for example:
+ *  - Remote Dial: where UAC sends REFER to instruct REFER recipient to
+ *    initiate an INVITE session to some target.
+ * 
+ * A REFER request can be sent inside or outside existing dialog context,
+ * although for call transfer case, it is more common to send REFER inside
+ * existing INVITE session context. PJSIP supports both sending REFER request
+ * inside or outside dialog context.
  *
- * Application must link with <b>pjsip-ua</b> AND <b>pjsip-simple</b> static
- * libraries to use call transfer functionality.
+ * The REFER framework uses @ref PJSIP_EVENT_NOT to manage the event
+ * subscription created by the REFER request. Because of this, application 
+ * must link with <b>pjsip-ua</b> AND <b>pjsip-simple</b> static libraries 
+ * to use REFER functionality.
+ *
+ * Reference:
+ *  - <A HREF="http://www.ietf.org/rfc/rfc3515.txt">RFC 3515: The Session 
+ *    Initiation Protocol (SIP) Refer Method</A>
+ *  - @ref PJSIP_EVENT_NOT
  */
 
 

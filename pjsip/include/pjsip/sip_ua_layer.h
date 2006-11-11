@@ -81,6 +81,28 @@ PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
 
 
 /**
+ * Find a dialog with the specified Call-ID and tags properties. This
+ * function may optionally lock the matching dialog instance before
+ * returning it back to the caller.
+ *
+ * @param call_id	The call ID to be matched.
+ * @param local_tag	The local tag to be matched.
+ * @param remote_tag	The remote tag to be matched.
+ * @param lock_dialog	If non-zero, instruct the function to lock the 
+ *			matching dialog with #pjsip_dlg_inc_lock(). 
+ *			Application is responsible to release the dialog's
+ *			lock after it has finished manipulating the dialog,
+ *			by calling #pjsip_dlg_dec_lock().
+ *
+ * @return		The matching dialog instance, or NULL if no matching
+ *			dialog is found.
+ */
+PJ_DECL(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
+					    const pj_str_t *local_tag,
+					    const pj_str_t *remote_tag,
+					    pj_bool_t lock_dialog);
+
+/**
  * Destroy the user agent layer.
  *
  * @return		PJ_SUCCESS on success.
