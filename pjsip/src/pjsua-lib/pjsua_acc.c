@@ -550,6 +550,22 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsip_regc_set_route_set( acc->regc, &acc->route_set );
     }
 
+    /* Add other request headers. */
+    if (pjsua_var.ua_cfg.user_agent.slen) {
+	pjsip_hdr hdr_list;
+	const pj_str_t STR_USER_AGENT = { "User-Agent", 10 };
+	pjsip_generic_string_hdr *h;
+
+	pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
+	pj_list_init(&hdr_list);
+
+	h = pjsip_generic_string_hdr_create(pool, &STR_USER_AGENT, 
+					    &pjsua_var.ua_cfg.user_agent);
+	pj_list_push_back(&hdr_list, (pjsip_hdr*)h);
+
+	pjsip_regc_add_headers(acc->regc, &hdr_list);
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -596,7 +612,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS) {
-	pjsua_process_msg_data(tdata, NULL);
+	//pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
     }
 

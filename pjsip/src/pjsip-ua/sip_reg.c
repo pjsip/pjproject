@@ -65,6 +65,7 @@ struct pjsip_regc
     pjsip_expires_hdr		*unreg_expires_hdr;
     pj_uint32_t			 expires;
     pjsip_route_hdr		 route_set;
+    pjsip_hdr			 hdr_list;
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess		 auth_sess;
@@ -106,6 +107,7 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
 	return status;
 
     pj_list_init(&regc->route_set);
+    pj_list_init(&regc->hdr_list);
 
     /* Done */
     *p_regc = regc;
@@ -307,6 +309,25 @@ PJ_DEF(pj_status_t) pjsip_regc_set_route_set( pjsip_regc *regc,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjsip_regc_add_headers( pjsip_regc *regc,
+					    const pjsip_hdr *hdr_list)
+{
+    const pjsip_hdr *hdr;
+
+    PJ_ASSERT_RETURN(regc && hdr_list, PJ_EINVAL);
+
+    //This is "add" operation, so don't remove headers.
+    //pj_list_init(&regc->hdr_list);
+
+    hdr = hdr_list->next;
+    while (hdr != hdr_list) {
+	pj_list_push_back(&regc->hdr_list, pjsip_hdr_clone(regc->pool, hdr));
+	hdr = hdr->next;
+    }
+
+    return PJ_SUCCESS;
+}
+
 static pj_status_t create_request(pjsip_regc *regc, 
 				  pjsip_tx_data **p_tdata)
 {
@@ -347,6 +368,18 @@ static pj_status_t create_request(pjsip_regc *regc,
 	    pj_list_insert_after(route_pos, new_hdr);
 	    route_pos = new_hdr;
 	    route = route->next;
+	}
+    }
+
+    /* Add additional request headers */
+    if (!pj_list_empty(&regc->hdr_list)) {
+	const pjsip_hdr *hdr;
+
+	hdr = regc->hdr_list.next;
+	while (hdr != &regc->hdr_list) {
+	    pjsip_hdr *new_hdr = pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	    pjsip_msg_add_hdr(tdata->msg, new_hdr);
+	    hdr = hdr->next;
 	}
     }
 

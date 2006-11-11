@@ -199,6 +199,19 @@ PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
 					      const pjsip_route_hdr*route_set);
 
 /**
+ * Add headers to be added to outgoing REGISTER requests.
+ *
+ * @param regc	    The client registration structure.
+ * @param hdr_list  List containing SIP headers to be added for all outgoing
+ *		    REGISTER requests.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_add_headers(pjsip_regc *regc,
+					    const pjsip_hdr *hdr_list);
+
+
+/**
  * Create REGISTER request for the specified client registration structure.
  *
  * After successfull registration, application can inspect the contacts in
