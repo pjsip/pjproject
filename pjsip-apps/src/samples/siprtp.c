@@ -1442,17 +1442,21 @@ static void destroy_call_media(unsigned call_index)
 {
     struct media_stream *audio = &app.call[call_index].media[0];
 
-    if (audio->thread) {
-
+    if (audio) {
 	audio->active = PJ_FALSE;
 
-	audio->thread_quit_flag = 1;
-	pj_thread_join(audio->thread);
-	pj_thread_destroy(audio->thread);
-	audio->thread = NULL;
-	audio->thread_quit_flag = 0;
+	if (audio->thread) {
+	    audio->thread_quit_flag = 1;
+	    pj_thread_join(audio->thread);
+	    pj_thread_destroy(audio->thread);
+	    audio->thread = NULL;
+	    audio->thread_quit_flag = 0;
+	}
 
-	pjmedia_transport_detach(audio->transport, audio);
+	if (audio->transport) {
+	    pjmedia_transport_detach(audio->transport, audio);
+	    audio->transport = NULL;
+	}
     }
 }
 
