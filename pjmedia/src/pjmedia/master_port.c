@@ -60,7 +60,11 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && u_port && d_port && p_m, PJ_EINVAL);
 
 
-    /* Both ports MUST have the equal ptime */
+    /* Both ports MUST have equal clock rate */
+    PJ_ASSERT_RETURN(u_port->info.clock_rate == d_port->info.clock_rate,
+		     PJMEDIA_ENCCLOCKRATE);
+
+    /* Both ports MUST have equal ptime */
     PJ_ASSERT_RETURN(u_port->info.clock_rate/u_port->info.samples_per_frame==
 		     d_port->info.clock_rate/d_port->info.samples_per_frame,
 		     PJMEDIA_ENCSAMPLESPFRAME);
