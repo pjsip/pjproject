@@ -999,6 +999,7 @@ parse_headers:
 	    body->data = scanner->curptr;
 	    body->len = scanner->end - scanner->curptr;
 	    body->print_body = &generic_print_body;
+	    body->clone_data = &pjsip_clone_text_data;
 
 	    msg->body = body;
 	}
