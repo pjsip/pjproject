@@ -310,12 +310,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
 	return PJ_SUCCESS;
     }
 
-    /* We don't want to deinit if there's outstanding codec. */
     pj_mutex_lock(spx_factory.mutex);
+
+    /* We don't want to deinit if there's outstanding codec. */
+    /* This is silly, as we'll always have codec in the list if
+       we ever allocate a codec! A better behavior maybe is to 
+       deallocate all codecs in the list.
     if (!pj_list_empty(&spx_factory.codec_list)) {
 	pj_mutex_unlock(spx_factory.mutex);
 	return PJ_EBUSY;
     }
+    */
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(spx_factory.endpt);
@@ -741,9 +746,6 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 	return PJ_SUCCESS;
     }
-
-    /* Initialization of the structure that holds the bits */
-    speex_bits_init(&spx->dec_bits);
 
     /* Copy the data into the bit-stream struct */
     speex_bits_read_from(&spx->dec_bits, input->buf, input->size);

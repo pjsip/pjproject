@@ -361,6 +361,7 @@ void sb_encoder_destroy(void *state)
    speex_free(st->interp_lpc);
    speex_free(st->interp_qlpc);
    speex_free(st->pi_gain);
+   speex_free(st->low_innov);
 
    speex_free(st->mem_sp);
    speex_free(st->mem_sp2);
@@ -924,6 +925,7 @@ void sb_decoder_destroy(void *state)
    speex_free(st->interp_qlpc);
    speex_free(st->pi_gain);
    speex_free(st->mem_sp);
+   speex_free(st->low_innov);
 
    speex_free(state);
 }
