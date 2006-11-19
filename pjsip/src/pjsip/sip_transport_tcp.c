@@ -346,6 +346,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 						sizeof(struct pending_accept));
 	pj_ioqueue_op_key_init(&listener->accept_op[i]->op_key, 
 				sizeof(listener->accept_op[i]->op_key));
+	listener->accept_op[i]->pool = pool;
 	listener->accept_op[i]->listener = listener;
 	listener->accept_op[i]->index = i;
 
