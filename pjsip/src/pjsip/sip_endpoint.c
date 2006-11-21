@@ -537,6 +537,10 @@ on_error:
 	pjsip_tpmgr_destroy(endpt->transport_mgr);
 	endpt->transport_mgr = NULL;
     }
+    if (endpt->ioqueue) {
+	pj_ioqueue_destroy(endpt->ioqueue);
+	endpt->ioqueue = NULL;
+    }
     if (endpt->mutex) {
 	pj_mutex_destroy(endpt->mutex);
 	endpt->mutex = NULL;
@@ -570,6 +574,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Shutdown and destroy all transports. */
     pjsip_tpmgr_destroy(endpt->transport_mgr);
+
+    /* Destroy ioqueue */
+    pj_ioqueue_destroy(endpt->ioqueue);
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
