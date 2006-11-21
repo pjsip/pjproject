@@ -795,12 +795,12 @@ struct pj_caching_pool
     /**
      * Internal pool.
      */
-    pj_pool_t	   *pool;
+    char	    pool_buf[256];
 
     /**
      * Mutex.
      */
-    pj_mutex_t	   *mutex;
+    pj_lock_t	   *lock;
 };
 
 
