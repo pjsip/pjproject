@@ -27,7 +27,7 @@
 #define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'P')
 #define THIS_FILE	    "splitcomb.c"
 #define TMP_SAMP_TYPE	    pj_int16_t
-#define MAX_BUF_CNT	    8
+#define MAX_BUF_CNT	    32
 
 #if 0
 #   define TRACE_UP_(x)	PJ_LOG(5,x)
