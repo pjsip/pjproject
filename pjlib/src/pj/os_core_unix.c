@@ -109,6 +109,9 @@ struct pj_event_t
     static void *tls[MAX_THREADS];
 #endif
 
+static unsigned atexit_count;
+static void (*atexit_func[32])(void);
+
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
 
 /*
