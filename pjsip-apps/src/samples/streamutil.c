@@ -517,6 +517,9 @@ on_exit:
     /* Destroy pool factory */
     pj_caching_pool_destroy( &cp );
 
+    /* Shutdown PJLIB */
+    pj_shutdown();
+
 
     return (status == PJ_SUCCESS) ? 0 : 1;
 }

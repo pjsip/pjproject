@@ -285,6 +285,9 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+    /* Shutdown PJLIB */
+    pj_shutdown();
+
     return 0;
 }
 

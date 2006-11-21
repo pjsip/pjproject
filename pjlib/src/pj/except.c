@@ -51,6 +51,14 @@ PJ_DEF(void) pj_throw_exception_(int exception_id)
     pj_longjmp(handler->state, exception_id);
 }
 
+static void exception_cleanup(void)
+{
+    if (thread_local_id != -1) {
+	pj_thread_local_free(thread_local_id);
+	thread_local_id = -1;
+    }
+}
+
 PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
 {
     struct pj_exception_state_t *parent_handler = NULL;
@@ -58,6 +66,7 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
     if (thread_local_id == -1) {
 	pj_thread_local_alloc(&thread_local_id);
 	pj_assert(thread_local_id != -1);
+	pj_atexit(&exception_cleanup);
     }
     parent_handler = pj_thread_local_get(thread_local_id);
     rec->prev = parent_handler;

@@ -674,6 +674,9 @@ static pj_status_t mod_tsx_layer_unload(void)
     /* Release pool. */
     pjsip_endpt_release_pool(mod_tsx_layer.endpt, mod_tsx_layer.pool);
 
+    /* Free TLS */
+    pj_thread_local_free(pjsip_tsx_lock_tls_id);
+
     /* Mark as unregistered. */
     mod_tsx_layer.endpt = NULL;
 

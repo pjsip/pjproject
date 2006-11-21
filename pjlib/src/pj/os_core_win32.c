@@ -108,9 +108,10 @@ struct pj_atomic_t
  * Static global variables.
  */
 static pj_thread_desc main_thread;
-static long thread_tls_id;
+static long thread_tls_id = -1;
 static pj_mutex_t critical_section_mutex;
-
+static unsigned atexit_count;
+static void (*atexit_func[32])(void);
 
 /*
  * Some static prototypes.
@@ -175,6 +176,52 @@ PJ_DEF(pj_status_t) pj_init(void)
 
     return PJ_SUCCESS;
 }
+
+/*
+ * pj_atexit()
+ */
+PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
+{
+    if (atexit_count >= PJ_ARRAY_SIZE(atexit_func))
+	return PJ_ETOOMANY;
+
+    atexit_func[atexit_count++] = func;
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * pj_shutdown(void)
+ */
+PJ_DEF(void) pj_shutdown()
+{
+    int i;
+
+    /* Call atexit() functions */
+    for (i=atexit_count-1; i>=0; --i) {
+	(*atexit_func[i])();
+    }
+    atexit_count = 0;
+
+    /* Free exception ID */
+    if (PJ_NO_MEMORY_EXCEPTION != -1) {
+	pj_exception_id_free(PJ_NO_MEMORY_EXCEPTION);
+	PJ_NO_MEMORY_EXCEPTION = -1;
+    }
+
+    /* Destroy PJLIB critical section */
+    pj_mutex_destroy(&critical_section_mutex);
+
+    /* Free PJLIB TLS */
+    if (thread_tls_id != -1) {
+	pj_thread_local_free(thread_tls_id);
+	thread_tls_id = -1;
+    }
+
+    /* Shutdown Winsock */
+    WSACleanup();
+}
+
 
 /*
  * pj_getpid(void)

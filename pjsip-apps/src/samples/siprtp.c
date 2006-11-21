@@ -379,6 +379,10 @@ static void destroy_sip()
 	pjsip_endpt_destroy(app.sip_endpt);
 	app.sip_endpt = NULL;
     }
+
+    /* Shutdown PJLIB */
+    pj_shutdown();
+
 }
 
 

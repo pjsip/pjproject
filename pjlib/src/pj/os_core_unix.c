@@ -147,13 +147,6 @@ PJ_DEF(pj_status_t) pj_init(void)
     guid.ptr = dummy_guid;
     pj_generate_unique_string( &guid );
 
-    /* Initialize exception ID for the pool. 
-     * Must do so after critical section is configured.
-     */
-    rc = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
-    if (rc != PJ_SUCCESS)
-        return rc;
-
     /* Startup timestamp */
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
     {
@@ -169,6 +162,50 @@ PJ_DEF(pj_status_t) pj_init(void)
 
     return PJ_SUCCESS;
 }
+
+/*
+ * pj_atexit()
+ */
+PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
+{
+    if (atexit_count >= PJ_ARRAY_SIZE(atexit_func))
+	return PJ_ETOOMANY;
+
+    atexit_func[atexit_count++] = func;
+    return PJ_SUCCESS;
+}
+
+/*
+ * pj_shutdown(void)
+ */
+PJ_DEF(void) pj_shutdown()
+{
+    int i;
+
+    /* Call atexit() functions */
+    for (i=atexit_count-1; i>=0; --i) {
+	(*atexit_func[i])();
+    }
+    atexit_count = 0;
+
+    /* Free exception ID */
+    if (PJ_NO_MEMORY_EXCEPTION != -1) {
+	pj_exception_id_free(PJ_NO_MEMORY_EXCEPTION);
+	PJ_NO_MEMORY_EXCEPTION = -1;
+    }
+
+#if PJ_HAS_THREADS
+    /* Destroy PJLIB critical section */
+    pj_mutex_destroy(&critical_section);
+
+    /* Free PJLIB TLS */
+    if (thread_tls_id != -1) {
+	pj_thread_local_free(thread_tls_id);
+	thread_tls_id = -1;
+    }
+#endif
+}
+
 
 /*
  * pj_getpid(void)

@@ -29,11 +29,21 @@ struct creation_param
 };
 
 static int is_initialized;
-static long tls;
+static long tls = -1;
 static void* stack_alloc(pj_pool_factory *factory, pj_size_t size);
 
-static pj_status_t initialize()
+static void pool_buf_cleanup(void)
 {
+    if (tls != -1) {
+	pj_thread_local_free(tls);
+	tls = -1;
+    }
+}
+
+static pj_status_t pool_buf_initialize()
+{
+    pj_atexit(&pool_buf_cleanup);
+
     stack_based_factory.policy.block_alloc = &stack_alloc;
     return pj_thread_local_alloc(&tls);
 }
@@ -64,7 +74,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     PJ_ASSERT_RETURN(buf && size, NULL);
 
     if (!is_initialized) {
-	if (initialize() != PJ_SUCCESS)
+	if (pool_buf_initialize() != PJ_SUCCESS)
 	    return NULL;
 	is_initialized = 1;
     }

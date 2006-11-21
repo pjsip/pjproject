@@ -581,6 +581,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
 
+    /* Delete module's mutex */
+    pj_rwmutex_destroy(endpt->mod_mutex);
+
     /* Finally destroy pool. */
     pj_pool_release(endpt->pool);
 

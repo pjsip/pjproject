@@ -894,6 +894,9 @@ static void destroy_app()
 			     app.cp.peak_used_size / 1000000));
 	pj_caching_pool_destroy(&app.cp);
     }
+
+    /* Shutdown PJLIB */
+    pj_shutdown();
 }
 
 

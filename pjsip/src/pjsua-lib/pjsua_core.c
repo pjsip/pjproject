@@ -707,6 +707,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	pjsua_var.log_file = NULL;
     }
 
+    /* Shutdown PJLIB */
+    pj_shutdown();
+
     /* Done. */
     return PJ_SUCCESS;
 }

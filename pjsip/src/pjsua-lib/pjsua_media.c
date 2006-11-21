@@ -474,6 +474,9 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	pjsua_var.med_endpt = NULL;
     }
 
+    /* Deinitialize sound subsystem */
+    pjmedia_snd_deinit();
+
     return PJ_SUCCESS;
 }
 

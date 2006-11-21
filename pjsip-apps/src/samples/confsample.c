@@ -460,6 +460,8 @@ on_quit:
     /* Destroy pool factory */
     pj_caching_pool_destroy( &cp );
 
+    /* Shutdown PJLIB */
+    pj_shutdown();
 
     /* Done. */
     return 0;

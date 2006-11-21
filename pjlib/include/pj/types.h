@@ -291,8 +291,28 @@ typedef int pj_exception_id_t;
  * function is to initialize static library data, such as character table used
  * in random string generation, and to initialize operating system dependent
  * functionality (such as WSAStartup() in Windows).
+ *
+ * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_init(void);
+
+
+/**
+ * Shutdown PJLIB.
+ */
+PJ_DECL(void) pj_shutdown(void);
+
+/**
+ * Register cleanup function to be called by PJLIB when pj_shutdown() is 
+ * called.
+ *
+ * @param func	    The function to be registered.
+ *
+ * @return PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_atexit(void (*func)(void));
+
+
 
 /**
  * Swap the byte order of an 16bit data.
