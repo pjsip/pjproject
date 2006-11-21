@@ -247,7 +247,7 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 {
     pjsua_im_data *dst;
 
-    dst = pj_pool_alloc(pool, sizeof(*dst));
+    dst = (pjsua_im_data*) pj_pool_alloc(pool, sizeof(*dst));
     dst->acc_id = src->acc_id;
     dst->call_id = src->call_id;
     pj_strdup_with_null(pool, &dst->to, &src->to);
