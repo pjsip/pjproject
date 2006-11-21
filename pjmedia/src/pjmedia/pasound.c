@@ -341,7 +341,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     const PaStreamInfo *paSI;
     PaError err;
 
-    if (index <= 0) {
+    if (index < 0) {
 	index = pa_get_default_input_dev(channel_count);
 	if (index < 0) {
 	    /* No such device. */
@@ -437,7 +437,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     unsigned paFrames, paRate, paLatency;
     PaError err;
 
-    if (index <= 0) {
+    if (index < 0) {
 	index = pa_get_default_output_dev(channel_count);
 	if (index < 0) {
 	    /* No such device. */
@@ -542,7 +542,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     unsigned paFrames, paRate, paInputLatency, paOutputLatency;
     PaError err;
 
-    if (rec_id <= 0) {
+    if (rec_id < 0) {
 	rec_id = pa_get_default_input_dev(channel_count);
 	if (rec_id < 0) {
 	    /* No such device. */
@@ -556,7 +556,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 	return PJMEDIA_ESNDINDEVID;
     }
 
-    if (play_id <= 0) {
+    if (play_id < 0) {
 	play_id = pa_get_default_output_dev(channel_count);
 	if (play_id < 0) {
 	    /* No such device. */
