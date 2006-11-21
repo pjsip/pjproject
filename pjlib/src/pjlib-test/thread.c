@@ -78,6 +78,8 @@ static void* thread_proc(pj_uint32_t *pcounter)
     id = *pcounter;
     TRACE__((THIS_FILE, "     thread %d running..", id));
 
+    pj_bzero(desc, sizeof(desc));
+
     rc = pj_thread_register("thread", desc, &this_thread);
     if (rc != PJ_SUCCESS) {
         app_perror("...error in pj_thread_register", rc);
