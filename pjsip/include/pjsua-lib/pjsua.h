@@ -2324,6 +2324,36 @@ struct pjsua_media_config
      * Default: PJSUA_DEFAULT_EC_TAIL_LEN
      */
     unsigned		ec_tail_len;
+
+    /** 
+     * Jitter buffer initial prefetch delay in msec. The value must be
+     * between jb_min_pre and jb_max_pre below.
+     *
+     * Default: -1 (to use default stream settings, currently 150 msec)
+     */
+    int			jb_init;
+
+    /**
+     * Jitter buffer minimum prefetch delay in msec.
+     *
+     * Default: -1 (to use default stream settings, currently 60 msec)
+     */
+    int			jb_min_pre;
+    
+    /**
+     * Jitter buffer maximum prefetch delay in msec.
+     *
+     * Default: -1 (to use default stream settings, currently 240 msec)
+     */
+    int			jb_max_pre;
+
+    /**
+     * Set maximum delay that can be accomodated by the jitter buffer msec.
+     *
+     * Default: -1 (to use default stream settings, currently 360 msec)
+     */
+    int			jb_max;
+
 };
 
 
@@ -2343,6 +2373,7 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
     cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
     cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
+    cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
 }
 
 

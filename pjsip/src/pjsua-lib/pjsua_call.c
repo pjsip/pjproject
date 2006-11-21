@@ -2131,6 +2131,10 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
+	sess_info.stream_info[0].jb_init = pjsua_var.media_cfg.jb_init;
+	sess_info.stream_info[0].jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
+	sess_info.stream_info[0].jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
+	sess_info.stream_info[0].jb_max = pjsua_var.media_cfg.jb_max;
 
 	/* Create session based on session info. */
 	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,
