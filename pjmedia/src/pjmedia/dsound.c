@@ -682,6 +682,9 @@ PJ_DEF(int) pjmedia_snd_get_dev_count(void)
  */
 PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
+    if (index == (unsigned)-1) 
+	index = 0;
+
     PJ_ASSERT_RETURN(index < dev_count, NULL);
 
     return &dev_info[index].info;
