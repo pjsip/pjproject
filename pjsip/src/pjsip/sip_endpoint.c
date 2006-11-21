@@ -541,6 +541,10 @@ on_error:
 	pj_ioqueue_destroy(endpt->ioqueue);
 	endpt->ioqueue = NULL;
     }
+    if (endpt->timer_heap) {
+	pj_timer_heap_destroy(endpt->timer_heap);
+	endpt->timer_heap = NULL;
+    }
     if (endpt->mutex) {
 	pj_mutex_destroy(endpt->mutex);
 	endpt->mutex = NULL;
@@ -577,6 +581,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Destroy ioqueue */
     pj_ioqueue_destroy(endpt->ioqueue);
+
+    /* Destroy timer heap */
+    pj_timer_heap_destroy(endpt->timer_heap);
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
