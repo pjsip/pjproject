@@ -74,17 +74,21 @@ pj_list_insert_nodes_before(pj_list_type *pos, pj_list_type *lst)
 PJ_IDEF(void)
 pj_list_merge_last(pj_list_type *lst1, pj_list_type *lst2)
 {
-    pj_link_node(((pj_list*)lst1)->prev, ((pj_list*)lst2)->next);
-    pj_link_node(((pj_list*)lst2)->prev, lst1);
-    pj_list_init(lst2);
+    if (!pj_list_empty(lst2)) {
+	pj_link_node(((pj_list*)lst1)->prev, ((pj_list*)lst2)->next);
+	pj_link_node(((pj_list*)lst2)->prev, lst1);
+	pj_list_init(lst2);
+    }
 }
 
 PJ_IDEF(void)
 pj_list_merge_first(pj_list_type *lst1, pj_list_type *lst2)
 {
-    pj_link_node(((pj_list*)lst2)->prev, ((pj_list*)lst1)->next);
-    pj_link_node(((pj_list*)lst1), ((pj_list*)lst2)->next);
-    pj_list_init(lst2);
+    if (!pj_list_empty(lst2)) {
+	pj_link_node(((pj_list*)lst2)->prev, ((pj_list*)lst1)->next);
+	pj_link_node(((pj_list*)lst1), ((pj_list*)lst2)->next);
+	pj_list_init(lst2);
+    }
 }
 
 PJ_IDEF(void) 
