@@ -285,18 +285,19 @@ static pj_bool_t mod_pjsua_on_rx_response(pjsip_rx_data *rdata)
 /* Log callback */
 static void log_writer(int level, const char *buffer, int len)
 {
-    /* Write to stdout, file, and application callback. */
-
-    if (level <= (int)pjsua_var.log_cfg.console_level)
-	pj_log_write(level, buffer, len);
+    /* Write to file, stdout or application callback. */
 
     if (pjsua_var.log_file) {
 	pj_ssize_t size = len;
 	pj_file_write(pjsua_var.log_file, buffer, &size);
     }
 
-    if (pjsua_var.log_cfg.cb)
-	(*pjsua_var.log_cfg.cb)(level, buffer, len);
+    if (level <= (int)pjsua_var.log_cfg.console_level) {
+	if (pjsua_var.log_cfg.cb)
+	    (*pjsua_var.log_cfg.cb)(level, buffer, len);
+	else
+	    pj_log_write(level, buffer, len);
+    }
 }
 
 

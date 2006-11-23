@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 python24.lib pjlib-i386-win32-vc6-release.lib pjlib-util-i386-win32-vc6-release.lib pjmedia-codec-i386-win32-vc6-release.lib pjmedia-i386-win32-vc6-release.lib pjsip-core-i386-win32-vc6-release.lib pjsip-simple-i386-win32-vc6-release.lib pjsip-ua-i386-win32-vc6-release.lib pjsua-lib-i386-win32-vc6-release.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /map /machine:I386 /nodefaultlib:"libcmt.lib" /out:"..\lib\py_pjsua.pyd" /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib"
+# ADD LINK32 python24.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /map /machine:I386 /nodefaultlib:"libcmt.lib" /out:"..\lib\py_pjsua.pyd" /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib"
 # SUBTRACT LINK32 /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "py_pjsua - Win32 Debug"
@@ -80,7 +80,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 python24_d.lib pjlib-i386-win32-vc6-debug.lib pjlib-util-i386-win32-vc6-debug.lib pjmedia-codec-i386-win32-vc6-debug.lib pjmedia-i386-win32-vc6-debug.lib pjsip-core-i386-win32-vc6-debug.lib pjsip-simple-i386-win32-vc6-debug.lib pjsip-ua-i386-win32-vc6-debug.lib pjsua-lib-i386-win32-vc6-debug.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /debug /machine:I386 /out:"..\lib\py_pjsua_d.pyd" /pdbtype:sept /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PCbuild" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PC\VC6"
+# ADD LINK32 python24.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /debug /machine:I386 /out:"..\lib\py_pjsua_d.pyd" /pdbtype:sept /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PCbuild" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PC\VC6"
 
 !ENDIF 
 
@@ -91,6 +91,11 @@ LINK32=link.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=..\src\py_pjsua\pjsua.py
+# PROP Exclude_From_Build 1
+# End Source File
 # Begin Source File
 
 SOURCE=..\src\py_pjsua\py_pjsua.c
