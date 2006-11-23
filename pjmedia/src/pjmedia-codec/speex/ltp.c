@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002-2006 Jean-Marc Valin 
    File: ltp.c
    Long-Term Prediction functions
 
@@ -152,7 +152,7 @@ void pitch_xcorr(const spx_word16_t *_x, const spx_word16_t *_y, spx_word32_t *c
 #endif
 
 #ifndef OVERRIDE_COMPUTE_PITCH_ERROR
-PJ_INLINE(spx_word32_t) compute_pitch_error(spx_word16_t *C, spx_word16_t *g, spx_word16_t pitch_control)
+static inline spx_word32_t compute_pitch_error(spx_word16_t *C, spx_word16_t *g, spx_word16_t pitch_control)
 {
    spx_word32_t sum = 0;
    sum = ADD32(sum,MULT16_16(MULT16_16_16(g[0],pitch_control),C[0]));
@@ -177,7 +177,10 @@ void open_loop_nbest_pitch(spx_word16_t *sw, int start, int end, int len, int *p
    spx_word32_t e0;
    VARDECL(spx_word32_t *corr);
    VARDECL(spx_word32_t *energy);
-
+#ifdef FIXED_POINT
+   int scaledown = 0;
+#endif
+   
    ALLOC(best_score, N, spx_word32_t);
    ALLOC(best_ener, N, spx_word32_t);
    ALLOC(corr, end-start+1, spx_word32_t);
@@ -189,7 +192,24 @@ void open_loop_nbest_pitch(spx_word16_t *sw, int start, int end, int len, int *p
         best_ener[i]=0;
         pitch[i]=start;
    }
-
+#ifdef FIXED_POINT
+   for (i=-end;i<len;i++)
+   {
+      if (ABS16(sw[i])>16383)
+      {
+         scaledown=1;
+         break;
+      }
+   }
+   /* If the weighted input is close to saturation, then we scale it down */
+   if (scaledown)
+   {
+      for (i=-end;i<len;i++)
+      {
+         sw[i]=SHR16(sw[i],1);
+      }
+   }      
+#endif
    energy[0]=inner_prod(sw-start, sw-start, len);
    e0=inner_prod(sw, sw, len);
    for (i=start;i<end;i++)
@@ -201,6 +221,16 @@ void open_loop_nbest_pitch(spx_word16_t *sw, int start, int end, int len, int *p
    }
 
    pitch_xcorr(sw, sw-end, corr, len, end-start+1, stack);
+#ifdef FIXED_POINT
+   /* If we scaled weighted input down, we need to scale it up again (OK, so we've just lost the LSB, who cares?) */
+   if (scaledown)
+   {
+      for (i=-end;i<len;i++)
+      {
+         sw[i]=SHL16(sw[i],1);
+      }
+   }      
+#endif
 
    /* FIXME: Fixed-point and floating-point code should be merged */
 #ifdef FIXED_POINT
@@ -342,7 +372,8 @@ const spx_word16_t *r,
 spx_word16_t *new_target,
 int  *cdbk_index,
 int plc_tuning,
-spx_word32_t cumul_gain
+spx_word32_t cumul_gain,
+int scaledown
 )
 {
    int i,j;
@@ -366,6 +397,9 @@ spx_word32_t cumul_gain
    x[1]=tmp1+nsf;
    x[2]=tmp1+2*nsf;
    
+   for (j=0;j<nsf;j++)
+      new_target[j] = target[j];
+
    {
       VARDECL(spx_mem_t *mm);
       int pp=pitch-1;
@@ -379,6 +413,16 @@ spx_word32_t cumul_gain
          else
             e[j]=0;
       }
+#ifdef FIXED_POINT
+      /* Scale target and excitation down if needed (avoiding overflow) */
+      if (scaledown)
+      {
+         for (j=0;j<nsf;j++)
+            e[j] = SHR16(e[j],1);
+         for (j=0;j<nsf;j++)
+            new_target[j] = SHR16(new_target[j],1);
+      }
+#endif
       for (j=0;j<p;j++)
          mm[j] = 0;
       iir_mem16(e, ak, e, nsf, p, mm, stack);
@@ -391,13 +435,18 @@ spx_word32_t cumul_gain
    for (i=1;i>=0;i--)
    {
       spx_word16_t e0=exc2[-pitch-1+i];
+#ifdef FIXED_POINT
+      /* Scale excitation down if needed (avoiding overflow) */
+      if (scaledown)
+         e0 = SHR16(e0,1);
+#endif
       x[i][0]=MULT16_16_Q14(r[0], e0);
       for (j=0;j<nsf-1;j++)
          x[i][j+1]=ADD32(x[i+1][j],MULT16_16_P14(r[j+1], e0));
    }
 
    for (i=0;i<3;i++)
-      corr[i]=inner_prod(x[i],target,nsf);
+      corr[i]=inner_prod(x[i],new_target,nsf);
    for (i=0;i<3;i++)
       for (j=0;j<=i;j++)
          A[i][j]=A[j][i]=inner_prod(x[i],x[j],nsf);
@@ -478,7 +527,7 @@ spx_word32_t cumul_gain
    {
       spx_word32_t tmp = ADD32(ADD32(MULT16_16(gain[0],x[2][i]),MULT16_16(gain[1],x[1][i])),
                             MULT16_16(gain[2],x[0][i]));
-      new_target[i] = SUB16(target[i], EXTRACT16(PSHR32(tmp,6)));
+      new_target[i] = SUB16(new_target[i], EXTRACT16(PSHR32(tmp,6)));
    }
    err = inner_prod(new_target, new_target, nsf);
 
@@ -520,7 +569,8 @@ spx_word32_t *cumul_gain
    const ltp_params *params;
    const signed char *gain_cdbk;
    int   gain_cdbk_size;
-   
+   int scaledown=0;
+         
    VARDECL(int *nbest);
    
    params = (const ltp_params*) par;
@@ -545,6 +595,25 @@ spx_word32_t *cumul_gain
       return start;
    }
    
+#ifdef FIXED_POINT
+   /* Check if we need to scale everything down in the pitch search to avoid overflows */
+   for (i=0;i<nsf;i++)
+   {
+      if (ABS16(target[i])>16383)
+      {
+         scaledown=1;
+         break;
+      }
+   }
+   for (i=-end;i<nsf;i++)
+   {
+      if (ABS16(exc2[i])>16383)
+      {
+         scaledown=1;
+         break;
+      }
+   }
+#endif
    if (N>end-start+1)
       N=end-start+1;
    if (end != start)
@@ -562,7 +631,7 @@ spx_word32_t *cumul_gain
       for (j=0;j<nsf;j++)
          exc[j]=0;
       err=pitch_gain_search_3tap(target, ak, awk1, awk2, exc, gain_cdbk, gain_cdbk_size, pitch, p, nsf,
-                                 bits, stack, exc2, r, new_target, &cdbk_index, plc_tuning, *cumul_gain);
+                                 bits, stack, exc2, r, new_target, &cdbk_index, plc_tuning, *cumul_gain, scaledown);
       if (err<best_err || best_err<0)
       {
          for (j=0;j<nsf;j++)
@@ -588,7 +657,14 @@ spx_word32_t *cumul_gain
       exc[i]=best_exc[i];
    for (i=0;i<nsf;i++)
       target[i]=best_target[i];
-
+#ifdef FIXED_POINT
+   /* Scale target back up if needed */
+   if (scaledown)
+   {
+      for (i=0;i<nsf;i++)
+         target[i]=SHL16(target[i],1);
+   }
+#endif
    return pitch;
 }
 

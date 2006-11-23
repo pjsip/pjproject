@@ -1,9 +1,8 @@
-/* Copyright (C) 2002 Jean-Marc Valin */
-/**
-   @file math_approx.h
-   @brief Various math approximation functions for Speex
-*/
-/*
+/* Copyright (C) 2004 Jean-Marc Valin
+   File medfilter.c
+   Median filter
+
+
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -30,33 +29,69 @@
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 */
 
-#ifndef MATH_APPROX_H
-#define MATH_APPROX_H
-
+#include "medfilter.h"
 #include "misc.h"
 
-spx_word16_t spx_cos(spx_word16_t x);
-spx_int16_t spx_ilog2(spx_uint32_t x);
-spx_int16_t spx_ilog4(spx_uint32_t x);
-#ifdef FIXED_POINT
-spx_word16_t spx_sqrt(spx_word32_t x);
-spx_word16_t spx_acos(spx_word16_t x);
-spx_word32_t spx_exp(spx_word16_t x);
-spx_word16_t spx_cos_norm(spx_word32_t x);
+MedianFilter *median_filter_new(int N)
+{
+   MedianFilter *f = (MedianFilter*)speex_alloc(sizeof(MedianFilter));
+   f->N = N;
+   f->ids = (int*)speex_alloc(sizeof(int)*N);
+   f->val = (float*)speex_alloc(sizeof(float)*N);
+   f->filled = 0;
+   return f;
+}
 
-/* Input in Q15, output in Q14 */
-spx_word16_t spx_atan(spx_word32_t x);
+void median_filter_update(MedianFilter *f, float val)
+{
+   int i=0;
+   int insert = 0;
+   while (insert<f->filled && f->val[insert] < val)
+   {
+      insert++;
+   }
+   if (f->filled == f->N)
+   {
+      int remove;
+      for (remove=0;remove<f->N;remove++)
+         if (f->ids[remove] == 0)
+            break;
+      if (insert>remove)
+         insert--;
+      if (insert > remove)
+      {
+         for (i=remove;i<insert;i++)
+         {
+            f->val[i] = f->val[i+1];
+            f->ids[i] = f->ids[i+1];
+         }
+      } else if (insert < remove)
+      {
+         for (i=remove;i>insert;i--)
+         {
+            f->val[i] = f->val[i-1];
+            f->ids[i] = f->ids[i-1];
+         }
+      }
+      for (i=0;i<f->filled;i++)
+         f->ids[i]--;
+   } else {
+      for (i=f->filled;i>insert;i--)
+      {
+         f->val[i] = f->val[i-1];
+         f->ids[i] = f->ids[i-1];
+      }
+      f->filled++;
+   }
+   f->val[insert]=val;
+   f->ids[insert]=f->filled-1;
+}
 
-#else
+float median_filter_get(MedianFilter *f)
+{
+   return f->val[f->filled>>1];
+}
 
-#define spx_sqrt sqrt
-#define spx_acos acos
-#define spx_exp exp
-#define spx_cos_norm(x) (cos((.5f*M_PI)*(x)))
-#define spx_atan atan
-
-#endif
-
-#endif

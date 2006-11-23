@@ -34,6 +34,10 @@
 
 #ifndef STEREO_H
 #define STEREO_H
+/** @defgroup SpeexStereoState SpeexStereoState: Handling Speex stereo files
+ *  This describes the Speex intensity stereo encoding/decoding
+ *  @{
+ */
 
 #include "speex/speex_types.h"
 #include "speex/speex_bits.h"
@@ -74,5 +78,5 @@ int speex_std_stereo_request_handler(SpeexBits *bits, void *state, void *data);
 }
 #endif
 
-
+/** @} */
 #endif

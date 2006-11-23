@@ -1,0 +1,9 @@
+This Speex taken from SVN 
+   url="http://svn.xiph.org/trunk/speex",
+   committed-rev="12136"
+   name=""
+   committed-date="2006-11-22T02:21:19.831305Z"
+   last-author="jm"
+   kind="dir"
+   uuid="0101bb08-14d6-0310-b084-bc0e0c8e3800"
+   revision="12140"

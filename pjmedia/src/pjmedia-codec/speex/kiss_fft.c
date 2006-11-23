@@ -338,8 +338,6 @@ static
 void kf_factor(int n,int * facbuf)
 {
     int p=4;
-    double floor_sqrt;
-    floor_sqrt = floor( sqrt((double)n) );
 
     /*factor out powers of 4, powers of 2, then any remaining primes */
     do {
@@ -349,7 +347,7 @@ void kf_factor(int n,int * facbuf)
                 case 2: p = 3; break;
                 default: p += 2; break;
             }
-            if (p > floor_sqrt)
+            if (p>32000 || (spx_int32_t)p*(spx_int32_t)p > n)
                 p = n;          /* no more factors, skip to end */
         }
         n /= p;
@@ -357,7 +355,6 @@ void kf_factor(int n,int * facbuf)
         *facbuf++ = n;
     } while (n > 1);
 }
-
 /*
  *
  * User-callable function to allocate all necessary storage space for the fft.
@@ -382,15 +379,22 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
         int i;
         st->nfft=nfft;
         st->inverse = inverse_fft;
-
+#ifdef FIXED_POINT
         for (i=0;i<nfft;++i) {
-            const double pi=3.14159265358979323846264338327;
-            double phase = ( -2*pi /nfft ) * i;
-            if (st->inverse)
-                phase *= -1;
-            kf_cexp(st->twiddles+i, phase );
+            spx_word32_t phase = i;
+            if (!st->inverse)
+                phase = -phase;
+            kf_cexp2(st->twiddles+i, DIV32(SHL32(phase,17),nfft));
         }
-
+#else
+        for (i=0;i<nfft;++i) {
+           const double pi=3.14159265358979323846264338327;
+           double phase = ( -2*pi /nfft ) * i;
+           if (st->inverse)
+              phase *= -1;
+           kf_cexp(st->twiddles+i, phase );
+        }
+#endif
         kf_factor(nfft,st->factors);
     }
     return st;

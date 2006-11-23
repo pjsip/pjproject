@@ -109,8 +109,8 @@ SPEEX_OBJS :=	speex_codec.o \
 		speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
 		speex/exc_10_32_table.o speex/exc_20_32_table.o \
 		speex/exc_5_256_table.o speex/exc_5_64_table.o \
-		speex/exc_8_128_table.o speex/fftwrap.o speex/filters.o \
-		speex/gain_table.o speex/gain_table_lbr.o \
+		speex/exc_8_128_table.o speex/fftwrap.o speex/filterbank.o \
+		speex/filters.o speex/gain_table.o speex/gain_table_lbr.o \
 		speex/hexc_10_32_table.o speex/hexc_table.o \
 		speex/high_lsp_tables.o speex/jitter.o \
 		speex/kiss_fft.o speex/kiss_fftr.o speex/lpc_spx.o \

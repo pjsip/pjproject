@@ -35,6 +35,11 @@
 
 #ifndef BITS_H
 #define BITS_H
+/** @defgroup SpeexBits SpeexBits: Bit-stream manipulations
+ *  This is the structure that holds the bit-stream when encoding or decoding
+ * with Speex. It allows some manipulations as well.
+ *  @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,13 +77,20 @@ void speex_bits_rewind(SpeexBits *bits);
 void speex_bits_read_from(SpeexBits *bits, char *bytes, int len);
 
 /** Append bytes to the bit-stream
+ * 
  * @param bits Bit-stream to operate on
  * @param bytes pointer to the bytes what will be appended
  * @param len Number of bytes of append
  */
 void speex_bits_read_whole_bytes(SpeexBits *bits, char *bytes, int len);
 
-/** Write the content of a bit-stream to an area of memory */
+/** Write the content of a bit-stream to an area of memory
+ * 
+ * @param bits Bit-stream to operate on
+ * @param bytes Memory location where to write the bits
+ * @param max_len Maximum number of bytes to write (i.e. size of the "bytes" buffer)
+ * @return Number of bytes written to the "bytes" buffer
+*/
 int speex_bits_write(SpeexBits *bits, char *bytes, int max_len);
 
 /** Like speex_bits_write, but writes only the complete bytes in the stream. Also removes the written bytes from the stream */
@@ -114,13 +126,19 @@ unsigned int speex_bits_unpack_unsigned(SpeexBits *bits, int nbBits);
  */
 int speex_bits_nbytes(SpeexBits *bits);
 
-/** Same as speex_bits_unpack_unsigned, but without modifying the cursor position */
+/** Same as speex_bits_unpack_unsigned, but without modifying the cursor position 
+ * 
+ * @param bits Bit-stream to operate on
+ * @param nbBits Number of bits to look for
+ * @return Value of the bits peeked, interpreted as unsigned
+ */
 unsigned int speex_bits_peek_unsigned(SpeexBits *bits, int nbBits);
 
 /** Get the value of the next bit in the stream, without modifying the
  * "cursor" position 
  * 
  * @param bits Bit-stream to operate on
+ * @return Value of the bit peeked (one bit only)
  */
 int speex_bits_peek(SpeexBits *bits);
 
@@ -134,6 +152,7 @@ void speex_bits_advance(SpeexBits *bits, int n);
 /** Returns the number of bits remaining to be read in a stream
  *
  * @param bits Bit-stream to operate on
+ * @return Number of bits that can still be read from the stream
  */
 int speex_bits_remaining(SpeexBits *bits);
 
@@ -148,4 +167,5 @@ void speex_bits_insert_terminator(SpeexBits *bits);
 }
 #endif
 
+/* @} */
 #endif

@@ -37,65 +37,83 @@
 #include "math_approx.h"
 #include "misc.h"
 
+spx_int16_t spx_ilog2(spx_uint32_t x)
+{
+   int r=0;
+   if (x>=(spx_int32_t)65536)
+   {
+      x >>= 16;
+      r += 16;
+   }
+   if (x>=256)
+   {
+      x >>= 8;
+      r += 8;
+   }
+   if (x>=16)
+   {
+      x >>= 4;
+      r += 4;
+   }
+   if (x>=4)
+   {
+      x >>= 2;
+      r += 2;
+   }
+   if (x>=2)
+   {
+      r += 1;
+   }
+   return r;
+}
+
+spx_int16_t spx_ilog4(spx_uint32_t x)
+{
+   int r=0;
+   if (x>=(spx_int32_t)65536)
+   {
+      x >>= 16;
+      r += 8;
+   }
+   if (x>=256)
+   {
+      x >>= 8;
+      r += 4;
+   }
+   if (x>=16)
+   {
+      x >>= 4;
+      r += 2;
+   }
+   if (x>=4)
+   {
+      r += 1;
+   }
+   return r;
+}
+
 #ifdef FIXED_POINT
 
 /* sqrt(x) ~= 0.22178 + 1.29227*x - 0.77070*x^2 + 0.25723*x^3 (for .25 < x < 1) */
+/*#define C0 3634
+#define C1 21173
+#define C2 -12627
+#define C3 4215*/
+
+/* sqrt(x) ~= 0.22178 + 1.29227*x - 0.77070*x^2 + 0.25659*x^3 (for .25 < x < 1) */
 #define C0 3634
 #define C1 21173
 #define C2 -12627
-#define C3 4215
+#define C3 4204
 
 spx_word16_t spx_sqrt(spx_word32_t x)
 {
-   int k=0;
+   int k;
    spx_word32_t rt;
-
-   if (x==0)
-      return 0;
-#if 1
-   if (x>16777216)
-   {
-      x>>=10;
-      k+=5;
-   }
-   if (x>1048576)
-   {
-      x>>=6;
-      k+=3;
-   }
-   if (x>262144)
-   {
-      x>>=4;
-      k+=2;
-   }
-   if (x>32768)
-   {
-      x>>=2;
-      k+=1;
-   }
-   if (x>16384)
-   {
-      x>>=2;
-      k+=1;
-   }
-#else
-   while (x>16384)
-   {
-      x>>=2;
-      k++;
-      }
-#endif
-   while (x<4096)
-   {
-      x<<=2;
-      k--;
-   }
+   k = spx_ilog4(x)-6;
+   x = VSHR32(x, (k<<1));
    rt = ADD16(C0, MULT16_16_Q14(x, ADD16(C1, MULT16_16_Q14(x, ADD16(C2, MULT16_16_Q14(x, (C3)))))));
-   if (k>0)
-      rt <<= k;
-   else
-      rt >>= -k;
-   rt >>=7;
+   rt = VSHR32(rt,7-k);
    return rt;
 }
 
@@ -149,6 +167,101 @@ spx_word16_t spx_cos(spx_word16_t x)
    }
 }
 
+#define L1 32767
+#define L2 -7651
+#define L3 8277
+#define L4 -626
+
+static inline spx_word16_t _spx_cos_pi_2(spx_word16_t x)
+{
+   spx_word16_t x2;
+   
+   x2 = MULT16_16_P15(x,x);
+   return ADD16(1,MIN16(32766,ADD32(SUB16(L1,x2), MULT16_16_P15(x2, ADD32(L2, MULT16_16_P15(x2, ADD32(L3, MULT16_16_P15(L4, x2))))))));
+}
+
+spx_word16_t spx_cos_norm(spx_word32_t x)
+{
+   x = x&0x0001ffff;
+   if (x>SHL32(EXTEND32(1), 16))
+      x = SUB32(SHL32(EXTEND32(1), 17),x);
+   if (x&0x00007fff)
+   {
+      if (x<SHL32(EXTEND32(1), 15))
+      {
+         return _spx_cos_pi_2(EXTRACT16(x));
+      } else {
+         return NEG32(_spx_cos_pi_2(EXTRACT16(65536-x)));
+      }
+   } else {
+      if (x&0x0000ffff)
+         return 0;
+      else if (x&0x0001ffff)
+         return -32767;
+      else
+         return 32767;
+   }
+}
+
+/*
+ K0 = 1
+ K1 = log(2)
+ K2 = 3-4*log(2)
+ K3 = 3*log(2) - 2
+*/
+#define D0 16384
+#define D1 11356
+#define D2 3726
+#define D3 1301
+/* Input in Q11 format, output in Q16 */
+static spx_word32_t spx_exp2(spx_word16_t x)
+{
+   int integer;
+   spx_word16_t frac;
+   integer = SHR16(x,11);
+   if (integer>14)
+      return 0x7fffffff;
+   else if (integer < -15)
+      return 0;
+   frac = SHL16(x-SHL16(integer,11),3);
+   frac = ADD16(D0, MULT16_16_Q14(frac, ADD16(D1, MULT16_16_Q14(frac, ADD16(D2 , MULT16_16_Q14(D3,frac))))));
+   return VSHR32(EXTEND32(frac), -integer-2);
+}
+
+/* Input in Q11 format, output in Q16 */
+spx_word32_t spx_exp(spx_word16_t x)
+{
+   if (x>21290)
+      return 0x7fffffff;
+   else if (x<-21290)
+      return 0;
+   else
+      return spx_exp2(MULT16_16_P14(23637,x));
+}
+#define M1 32767
+#define M2 -21
+#define M3 -11943
+#define M4 4936
+
+static inline spx_word16_t spx_atan01(spx_word16_t x)
+{
+   return MULT16_16_P15(x, ADD32(M1, MULT16_16_P15(x, ADD32(M2, MULT16_16_P15(x, ADD32(M3, MULT16_16_P15(M4, x)))))));
+}
+
+/* Input in Q15, output in Q14 */
+spx_word16_t spx_atan(spx_word32_t x)
+{
+   if (x <= 32767)
+   {
+      return SHR16(spx_atan01(x),1);
+   } else {
+      int e = spx_ilog2(x);
+      if (e>=29)
+         return 25736;
+      x = DIV32_16(SHL32(EXTEND32(32767),29-e), EXTRACT16(SHR32(x, e-14)));
+      return SUB16(25736, SHR16(spx_atan01(x),1));
+   }
+}
 #else
 
 #ifndef M_PI
@@ -174,6 +287,5 @@ spx_word16_t spx_cos(spx_word16_t x)
       return NEG16(C1 + x*(C2+x*(C3+C4*x)));
    }
 }
-
 
 #endif

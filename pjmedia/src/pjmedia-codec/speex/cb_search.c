@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002-2006 Jean-Marc Valin 
    File: cb_search.c
 
    Redistribution and use in source and binary forms, with or without
@@ -85,7 +85,7 @@ static void compute_weighted_codebook(const signed char *shape_cb, const spx_wor
 #endif
 
 #ifndef OVERRIDE_TARGET_UPDATE
-PJ_INLINE(void) target_update(spx_word16_t *t, spx_word16_t g, spx_word16_t *r, int len)
+static inline void target_update(spx_word16_t *t, spx_word16_t g, spx_word16_t *r, int len)
 {
    int n;
    for (n=0;n<len;n++)
@@ -107,7 +107,6 @@ spx_sig_t *exc,
 spx_word16_t *r,
 SpeexBits *bits,
 char *stack,
-int   complexity,
 int   update_target
 )
 {
@@ -125,15 +124,9 @@ int   update_target
    const signed char *shape_cb;
    int shape_cb_size, subvect_size, nb_subvect;
    const split_cb_params *params;
-   int N=2;
    int best_index;
    spx_word32_t best_dist;
    int have_sign;
-   N=complexity;
-   if (N>10)
-      N=10;
-   if (N<1)
-      N=1;
    
    params = (const split_cb_params *) par;
    subvect_size = params->subvect_size;
@@ -152,7 +145,7 @@ int   update_target
    ALLOC(t, nsf, spx_word16_t);
    ALLOC(e, nsf, spx_sig_t);
    
-   /* FIXME: make that adaptive? */
+   /* FIXME: Do we still need to copy the target? */
    for (i=0;i<nsf;i++)
       t[i]=target[i];
 
@@ -293,12 +286,13 @@ int   update_target
    N=complexity;
    if (N>10)
       N=10;
+   /* Complexity isn't as important for the codebooks as it is for the pitch */
+   N=(2*N)/3;
    if (N<1)
       N=1;
-   
    if (N==1)
    {
-      split_cb_search_shape_sign_N1(target,ak,awk1,awk2,par,p,nsf,exc,r,bits,stack,complexity,update_target);
+      split_cb_search_shape_sign_N1(target,ak,awk1,awk2,par,p,nsf,exc,r,bits,stack,update_target);
       return;
    }
    ALLOC(ot2, N, spx_word16_t*);
@@ -347,7 +341,6 @@ int   update_target
       oind[i]=itmp+(2*i+1)*nb_subvect;
    }
    
-   /* FIXME: make that adaptive? */
    for (i=0;i<nsf;i++)
       t[i]=target[i];
 
@@ -514,7 +507,8 @@ spx_sig_t *exc,
 const void *par,                      /* non-overlapping codebook */
 int   nsf,                      /* number of samples in subframe */
 SpeexBits *bits,
-char *stack
+char *stack,
+spx_int32_t *seed
 )
 {
    int i,j;
@@ -601,12 +595,12 @@ spx_sig_t *exc,
 const void *par,                      /* non-overlapping codebook */
 int   nsf,                      /* number of samples in subframe */
 SpeexBits *bits,
-char *stack
+char *stack,
+spx_int32_t *seed
 )
 {
    int i;
    /* FIXME: This is bad, but I don't think the function ever gets called anyway */
-   spx_int32_t seed = 0;
    for (i=0;i<nsf;i++)
-      exc[i]=SHL32(EXTEND32(speex_rand(1, &seed)),SIG_SHIFT);
+      exc[i]=SHL32(EXTEND32(speex_rand(1, seed)),SIG_SHIFT);
 }

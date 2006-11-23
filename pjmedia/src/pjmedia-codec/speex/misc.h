@@ -40,7 +40,7 @@
 #define SPEEX_MINOR_VERSION 1         /**< Minor Speex version. */
 #define SPEEX_MICRO_VERSION 13        /**< Micro Speex version. */
 #define SPEEX_EXTRA_VERSION ""        /**< Extra Speex version. */
-#define SPEEX_VERSION "speex-1.1.13"  /**< Speex version string. */
+#define SPEEX_VERSION "speex-1.2beta1"  /**< Speex version string. */
 #endif
 
 /* A couple test to catch stupid option combinations */
@@ -62,7 +62,7 @@
 #error I suppose you can have a [ARM4/ARM5E/Blackfin] that has float instructions?
 #endif
 #ifdef FIXED_POINT_DEBUG
-#error Dont you think enabling fixed-point is a good thing to do if you want to debug that?
+#error "Don't you think enabling fixed-point is a good thing to do if you want to debug that?"
 #endif
 
 

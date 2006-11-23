@@ -58,13 +58,22 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft,int inverse_fft,void * mem,size_t * lenme
     st->super_twiddles = st->tmpbuf + nfft;
     kiss_fft_alloc(nfft, inverse_fft, st->substate, &subsize);
 
-    for (i = 0; i < nfft; ++i) {
-        double phase =
-            -3.14159265358979323846264338327 * ((double) i / nfft + .5);
-        if (inverse_fft)
-            phase *= -1;
-        kf_cexp (st->super_twiddles+i,phase);
+#ifdef FIXED_POINT
+    for (i=0;i<nfft;++i) {
+       spx_word32_t phase = i+(nfft>>1);
+       if (!inverse_fft)
+          phase = -phase;
+       kf_cexp2(st->super_twiddles+i, DIV32(SHL32(phase,16),nfft));
     }
+#else
+    for (i=0;i<nfft;++i) {
+       const double pi=3.14159265358979323846264338327;
+       double phase = pi*(((double)i) /nfft + .5);
+       if (!inverse_fft)
+          phase = -phase;
+       kf_cexp(st->super_twiddles+i, phase );
+    }
+#endif
     return st;
 }
 
@@ -75,8 +84,7 @@ void kiss_fftr(kiss_fftr_cfg st,const kiss_fft_scalar *timedata,kiss_fft_cpx *fr
     kiss_fft_cpx fpnk,fpk,f1k,f2k,tw,tdc;
 
     if ( st->substate->inverse) {
-        speex_warning("kiss fft usage error: improper alloc\n");
-        exit(1);
+        speex_error("kiss fft usage error: improper alloc\n");
     }
 
     ncfft = st->substate->nfft;
@@ -130,8 +138,7 @@ void kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,kiss_fft_scalar *t
     int k, ncfft;
 
     if (st->substate->inverse == 0) {
-        speex_warning ("kiss fft usage error: improper alloc\n");
-        exit (1);
+        speex_error ("kiss fft usage error: improper alloc\n");
     }
 
     ncfft = st->substate->nfft;

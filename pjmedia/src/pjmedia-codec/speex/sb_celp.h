@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin */
+/* Copyright (C) 2002-2006 Jean-Marc Valin */
 /**
    @file sb_celp.h
    @brief Sub-band CELP mode used for wideband encoding

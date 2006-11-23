@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin */
+/* Copyright (C) 2002-2006 Jean-Marc Valin */
 /**
     @file nb_celp.h
     @brief Narrowband CELP encoder/decoder
@@ -94,13 +94,14 @@ typedef struct EncState {
    spx_mem_t *mem_sw_whole;      /**< Filter memory for perceptually-weighted signal (whole frame)*/
    spx_mem_t *mem_exc;           /**< Filter memory for excitation (whole frame) */
    spx_mem_t *mem_exc2;          /**< Filter memory for excitation (whole frame) */
+   spx_mem_t mem_hp[2];          /**< High-pass filter memory */
    spx_word32_t *pi_gain;        /**< Gain of LPC filter at theta=pi (fe/2) */
    spx_sig_t *innov_save;        /**< If non-NULL, innovation is copied here */
          
    VBRState *vbr;                /**< State of the VBR data */
    float  vbr_quality;           /**< Quality setting for VBR encoding */
    float  relative_quality;      /**< Relative quality that will be needed by VBR */
-   int    vbr_enabled;           /**< 1 for enabling VBR, 0 otherwise */
+   spx_int32_t vbr_enabled;      /**< 1 for enabling VBR, 0 otherwise */
    spx_int32_t vbr_max;          /**< Max bit-rate allowed in VBR mode */
    int    vad_enabled;           /**< 1 for enabling VAD, 0 otherwise */
    int    dtx_enabled;           /**< 1 for enabling DTX, 0 otherwise */
@@ -116,6 +117,8 @@ typedef struct EncState {
    const SpeexSubmode * const *submodes; /**< Sub-mode data */
    int    submodeID;             /**< Activated sub-mode */
    int    submodeSelect;         /**< Mode chosen by the user (may differ from submodeID if VAD is on) */
+   int    isWideband;            /**< Is this used as part of the embedded wideband codec */
+   int    highpass_enabled;        /**< Is the input filter enabled */
 } EncState;
 
 /**Structure representing the full state of the narrowband decoder*/
@@ -143,6 +146,7 @@ typedef struct DecState {
    spx_lsp_t *old_qlsp;         /**< Quantized LSPs for previous frame */
    spx_coef_t *interp_qlpc;     /**< Interpolated quantized LPCs */
    spx_mem_t *mem_sp;           /**< Filter memory for synthesis signal */
+   spx_mem_t mem_hp[2];         /**< High-pass filter memory */
    spx_word32_t *pi_gain;       /**< Gain of LPC filter at theta=pi (fe/2) */
    spx_sig_t *innov_save;       /** If non-NULL, innovation is copied here */
    
@@ -168,6 +172,8 @@ typedef struct DecState {
    int    voc_offset;
 
    int    dtx_enabled;
+   int    isWideband;            /**< Is this used as part of the embedded wideband codec */
+   int    highpass_enabled;        /**< Is the input filter enabled */
 } DecState;
 
 /** Initializes encoder state*/

@@ -73,7 +73,7 @@ int speex_inband_handler(SpeexBits *bits, SpeexCallback *callback_list, void *st
 
 int speex_std_mode_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int m;
+   spx_int32_t m;
    m = speex_bits_unpack_unsigned(bits, 4);
    speex_encoder_ctl(data, SPEEX_SET_MODE, &m);
    return 0;
@@ -81,7 +81,7 @@ int speex_std_mode_request_handler(SpeexBits *bits, void *state, void *data)
 
 int speex_std_low_mode_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int m;
+   spx_int32_t m;
    m = speex_bits_unpack_unsigned(bits, 4);
    speex_encoder_ctl(data, SPEEX_SET_LOW_MODE, &m);
    return 0;
@@ -89,7 +89,7 @@ int speex_std_low_mode_request_handler(SpeexBits *bits, void *state, void *data)
 
 int speex_std_high_mode_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int m;
+   spx_int32_t m;
    m = speex_bits_unpack_unsigned(bits, 4);
    speex_encoder_ctl(data, SPEEX_SET_HIGH_MODE, &m);
    return 0;
@@ -97,7 +97,7 @@ int speex_std_high_mode_request_handler(SpeexBits *bits, void *state, void *data
 
 int speex_std_vbr_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int vbr;
+   spx_int32_t vbr;
    vbr = speex_bits_unpack_unsigned(bits, 1);
    speex_encoder_ctl(data, SPEEX_SET_VBR, &vbr);
    return 0;
@@ -105,7 +105,7 @@ int speex_std_vbr_request_handler(SpeexBits *bits, void *state, void *data)
 
 int speex_std_enh_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int enh;
+   spx_int32_t enh;
    enh = speex_bits_unpack_unsigned(bits, 1);
    speex_decoder_ctl(data, SPEEX_SET_ENH, &enh);
    return 0;
@@ -113,7 +113,7 @@ int speex_std_enh_request_handler(SpeexBits *bits, void *state, void *data)
 
 int speex_std_vbr_quality_request_handler(SpeexBits *bits, void *state, void *data)
 {
-   int qual;
+   float qual;
    qual = speex_bits_unpack_unsigned(bits, 4);
    speex_encoder_ctl(data, SPEEX_SET_VBR_QUALITY, &qual);
    return 0;

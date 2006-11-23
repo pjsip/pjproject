@@ -20,6 +20,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
    and defines
    typedef struct { kiss_fft_scalar r; kiss_fft_scalar i; }kiss_fft_cpx; */
 #include "kiss_fft.h"
+#include "math_approx.h"
 
 #define MAXFACTORS 32
 /* e.g. an fft of length 128 has 4 factors 
@@ -140,6 +141,11 @@ struct kiss_fft_state{
 		(x)->r = KISS_FFT_COS(phase);\
 		(x)->i = KISS_FFT_SIN(phase);\
 	}while(0)
+#define  kf_cexp2(x,phase) \
+               do{ \
+               (x)->r = spx_cos_norm((phase));\
+               (x)->i = spx_cos_norm((phase)-32768);\
+}while(0)
 
 
 /* a debugging function */

@@ -69,7 +69,8 @@ spx_sig_t *exc,
 const void *par,                /* non-overlapping codebook */
 int   nsf,                      /* number of samples in subframe */
 SpeexBits *bits,
-char *stack
+char *stack,
+spx_int32_t *seed
 );
 
 
@@ -95,7 +96,8 @@ spx_sig_t *exc,
 const void *par,                /* non-overlapping codebook */
 int   nsf,                      /* number of samples in subframe */
 SpeexBits *bits,
-char *stack
+char *stack,
+spx_int32_t *seed
 );
 
 #endif

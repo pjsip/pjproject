@@ -2232,7 +2232,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
-#   define PJSUA_DEFAULT_EC_TAIL_LEN	600
+#   define PJSUA_DEFAULT_EC_TAIL_LEN	800
 #endif
 
 

@@ -309,6 +309,10 @@ SOURCE="..\src\pjmedia-codec\speex\fftwrap.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\speex\filterbank.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\speex\filters.h"
 # End Source File
 # Begin Source File
@@ -523,6 +527,10 @@ SOURCE="..\src\pjmedia-codec\speex\exc_8_128_table.c"
 
 SOURCE="..\src\pjmedia-codec\speex\fftwrap.c"
 # ADD CPP /W3
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\speex\filterbank.c"
 # End Source File
 # Begin Source File
 

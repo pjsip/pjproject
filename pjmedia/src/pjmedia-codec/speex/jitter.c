@@ -78,7 +78,7 @@ struct JitterBuffer_ {
 /** Initialise jitter buffer */
 JitterBuffer *jitter_buffer_init(int tick)
 {
-   JitterBuffer *jitter = speex_alloc(sizeof(JitterBuffer));
+   JitterBuffer *jitter = (JitterBuffer*)speex_alloc(sizeof(JitterBuffer));
    if (jitter)
    {
       int i;
@@ -180,7 +180,7 @@ void jitter_buffer_put(JitterBuffer *jitter, const JitterBufferPacket *packet)
    }
    
    /* Copy packet in buffer */
-   jitter->buf[i]=speex_alloc(packet->len);
+   jitter->buf[i]=(char*)speex_alloc(packet->len);
    for (j=0;j<packet->len;j++)
       jitter->buf[i][j]=packet->data[j];
    jitter->timestamp[i]=packet->timestamp;

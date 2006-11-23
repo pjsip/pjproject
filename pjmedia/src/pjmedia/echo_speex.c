@@ -30,9 +30,9 @@
 
 
 #define THIS_FILE	"echo_speex.c"
-#define BUF_COUNT	20
-#define MIN_PREFETCH	4
-#define MAX_PREFETCH	12
+#define BUF_COUNT	16
+#define MIN_PREFETCH	2
+#define MAX_PREFETCH	(BUF_COUNT*2/3)
 
 
 
@@ -147,6 +147,7 @@ PJ_DEF(pj_status_t) pjmedia_frame_queue_put( pjmedia_frame_queue *fq,
 		  " AEC info: queue is full, frame discarded "
 		  "[count=%d, seq=%d]",
 		  fq->max_count, timestamp / fq->samples_per_frame));
+	//pjmedia_frame_queue_init(fq, fq->seq_delay, fq->prefetch_count);
 	return PJ_ETOOMANY;
     }
 
@@ -289,7 +290,6 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 {
     speex_ec *echo;
     int sampling_rate;
-    int disabled, enabled;
     pj_status_t status;
 
     *p_echo = NULL;
@@ -322,6 +322,11 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 	return PJ_ENOMEM;
     }
 
+    /* Set sampling rate */
+    sampling_rate = clock_rate;
+    speex_echo_ctl(echo->state, SPEEX_ECHO_SET_SAMPLING_RATE, 
+		   &sampling_rate);
+
     echo->preprocess = speex_preprocess_state_init(samples_per_frame, 
 						   clock_rate);
     if (echo->preprocess == NULL) {
@@ -331,6 +336,7 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
     }
 
     /* Disable all preprocessing, we only want echo cancellation */
+#if 0
     disabled = 0;
     enabled = 1;
     speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, 
@@ -341,11 +347,12 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 			 &disabled);
     speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DEREVERB, 
 			 &disabled);
+#endif
 
-    /* Set sampling rate */
-    sampling_rate = clock_rate;
-    speex_echo_ctl(echo->state, SPEEX_ECHO_SET_SAMPLING_RATE, 
-		   &sampling_rate);
+    /* Control echo cancellation in the preprocessor */
+   speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_ECHO_STATE, 
+			echo->state);
+
 
     /* Create temporary frame for echo cancellation */
     echo->tmp_frame = pj_pool_zalloc(pool, 2 * samples_per_frame);
@@ -443,8 +450,23 @@ PJ_DEF(pj_status_t) speex_aec_playback(void *state,
 	}
     }
 
-    pjmedia_frame_queue_put(echo->frame_queue, play_frm, 
-			    echo->samples_per_frame*2, echo->play_ts);
+    if (pjmedia_frame_queue_put(echo->frame_queue, play_frm, 
+				echo->samples_per_frame*2, 
+				echo->play_ts) != PJ_SUCCESS)
+    {
+	int seq_delay;
+
+	/* On full reset frame queue */
+	seq_delay = ((int)echo->play_ts - (int)echo->rec_ts) / 
+			(int)echo->samples_per_frame;
+	pjmedia_frame_queue_init(echo->frame_queue, seq_delay,
+				 echo->prefetch);
+
+	/* And re-put */
+	pjmedia_frame_queue_put(echo->frame_queue, play_frm, 
+				echo->samples_per_frame*2, 
+				echo->play_ts);
+    }
 
     pj_lock_release(echo->lock);
 
@@ -494,13 +516,12 @@ PJ_DEF(pj_status_t) speex_aec_capture( void *state,
 	unsigned size = 0;
 	
 	if (pjmedia_frame_queue_empty(echo->frame_queue)) {
-	    int seq_delay, prefetch;
+	    int seq_delay;
 
 	    seq_delay = ((int)echo->play_ts - (int)echo->rec_ts) / 
 			    (int)echo->samples_per_frame;
-	    prefetch = pjmedia_frame_queue_get_prefetch(echo->frame_queue);
-	    //++prefetch;
-	    pjmedia_frame_queue_init(echo->frame_queue, seq_delay, prefetch);
+	    pjmedia_frame_queue_init(echo->frame_queue, seq_delay, 
+				     echo->prefetch);
 	    status = -1;
 
 	} else {
@@ -537,15 +558,13 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
 		     reserved==NULL, PJ_EINVAL);
 
     /* Cancel echo, put output in temporary buffer */
-    speex_echo_cancel(echo->state, (const spx_int16_t*)rec_frm, 
-		      (const spx_int16_t*)play_frm, 
-		      (spx_int16_t*)echo->tmp_frame, 
-		      echo->residue);
+    speex_echo_cancellation(echo->state, (const spx_int16_t*)rec_frm,
+			    (const spx_int16_t*)play_frm,
+			    (spx_int16_t*)echo->tmp_frame);
 
 
     /* Preprocess output */
-    speex_preprocess(echo->preprocess, (spx_int16_t*)echo->tmp_frame, 
-		     echo->residue);
+    speex_preprocess_run(echo->preprocess, (spx_int16_t*)echo->tmp_frame);
 
     /* Copy temporary buffer back to original rec_frm */
     pjmedia_copy_samples(rec_frm, echo->tmp_frame, echo->samples_per_frame);

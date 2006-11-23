@@ -49,6 +49,15 @@ int normalize16(const spx_sig_t *x, spx_word16_t *y, spx_sig_t max_scale, int le
 #endif
 
 
+#define HIGHPASS_NARROWBAND 0
+#define HIGHPASS_WIDEBAND 2
+#define HIGHPASS_INPUT 0
+#define HIGHPASS_OUTPUT 1
+#define HIGHPASS_IRS 4
+
+void highpass(const spx_word16_t *x, spx_word16_t *y, int len, int filtID, spx_mem_t *mem);
+
+
 void qmf_decomp(const spx_word16_t *xx, const spx_word16_t *aa, spx_sig_t *, spx_sig_t *y2, int N, int M, spx_word16_t *mem, char *stack);
 void fir_mem_up(const spx_sig_t *x, const spx_word16_t *a, spx_sig_t *y, int N, int M, spx_word32_t *mem, char *stack);
 

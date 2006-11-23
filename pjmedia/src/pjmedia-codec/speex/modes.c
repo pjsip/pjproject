@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002-2006 Jean-Marc Valin 
    File: modes.c
 
    Describes the different modes of the codec
@@ -211,7 +211,7 @@ static const SpeexSubmode nb_submode8 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_ulbr,
-   QCONST16(.65,15),
+   QCONST16(.5,15),
    79
 };
 
@@ -232,7 +232,7 @@ static const SpeexSubmode nb_submode2 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_vlbr,
-   QCONST16(.55,15),
+   QCONST16(.6,15),
    119
 };
 
@@ -253,7 +253,7 @@ static const SpeexSubmode nb_submode3 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_lbr,
-   QCONST16(.45,15),
+   QCONST16(.55,15),
    160
 };
 
@@ -274,7 +274,7 @@ static const SpeexSubmode nb_submode4 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb_med,
-   QCONST16(.35,15),
+   QCONST16(.45,15),
    220
 };
 
@@ -295,7 +295,7 @@ static const SpeexSubmode nb_submode5 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb,
-   QCONST16(.2,15),
+   QCONST16(.3,15),
    300
 };
 
@@ -316,7 +316,7 @@ static const SpeexSubmode nb_submode6 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_sb,
-   QCONST16(.1,15),
+   QCONST16(.2,15),
    364
 };
 
@@ -337,7 +337,7 @@ static const SpeexSubmode nb_submode7 = {
    split_cb_search_shape_sign,
    split_cb_shape_sign_unquant,
    &split_cb_nb,
-   -1,
+   QCONST16(.1,15),
    492
 };
 

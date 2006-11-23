@@ -1,7 +1,7 @@
-/* Copyright (C) 2002 Jean-Marc Valin */
+/* Copyright (C) 2004 Jean-Marc Valin */
 /**
-   @file math_approx.h
-   @brief Various math approximation functions for Speex
+   @file medfilter.h
+   @brief Median filter
 */
 /*
    Redistribution and use in source and binary forms, with or without
@@ -30,33 +30,22 @@
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 */
 
-#ifndef MATH_APPROX_H
-#define MATH_APPROX_H
+#ifndef MEDFILTER_H
+#define MEDFILTER_H
 
-#include "misc.h"
+/** Median filter. */
+typedef struct {
+   int N;
+   int filled;
+   int *ids;
+   float *val;
+} MedianFilter;
 
-spx_word16_t spx_cos(spx_word16_t x);
-spx_int16_t spx_ilog2(spx_uint32_t x);
-spx_int16_t spx_ilog4(spx_uint32_t x);
-#ifdef FIXED_POINT
-spx_word16_t spx_sqrt(spx_word32_t x);
-spx_word16_t spx_acos(spx_word16_t x);
-spx_word32_t spx_exp(spx_word16_t x);
-spx_word16_t spx_cos_norm(spx_word32_t x);
-
-/* Input in Q15, output in Q14 */
-spx_word16_t spx_atan(spx_word32_t x);
-
-#else
-
-#define spx_sqrt sqrt
-#define spx_acos acos
-#define spx_exp exp
-#define spx_cos_norm(x) (cos((.5f*M_PI)*(x)))
-#define spx_atan atan
-
-#endif
+MedianFilter *median_filter_new(int N);
+void median_filter_update(MedianFilter *f, float val);
+float median_filter_get(MedianFilter *f);
 
 #endif

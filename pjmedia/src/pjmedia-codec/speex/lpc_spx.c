@@ -94,7 +94,7 @@ int          p
       for (j = 0; j < i; j++) 
          rr = SUB32(rr,MULT16_16(lpc[j],ac[i - j]));
 #ifdef FIXED_POINT
-      r = DIV32_16(rr,ADD16(error,16));
+      r = DIV32_16(rr+PSHR32(error,1),ADD16(error,8));
 #else
       r = rr/(error+.003*ac[0]);
 #endif
@@ -103,11 +103,11 @@ int          p
       for (j = 0; j < i>>1; j++) 
       {
          spx_word16_t tmp  = lpc[j];
-         lpc[j]     = MAC16_16_Q13(lpc[j],r,lpc[i-1-j]);
-         lpc[i-1-j] = MAC16_16_Q13(lpc[i-1-j],r,tmp);
+         lpc[j]     = MAC16_16_P13(lpc[j],r,lpc[i-1-j]);
+         lpc[i-1-j] = MAC16_16_P13(lpc[i-1-j],r,tmp);
       }
       if (i & 1) 
-         lpc[j] = MAC16_16_Q13(lpc[j],lpc[j],r);
+         lpc[j] = MAC16_16_P13(lpc[j],lpc[j],r);
 
       error = SUB16(error,MULT16_16_Q13(r,MULT16_16_Q13(error,r)));
    }
