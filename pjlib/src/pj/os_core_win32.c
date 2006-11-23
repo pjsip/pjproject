@@ -219,7 +219,7 @@ PJ_DEF(void) pj_shutdown()
     }
 
     /* Shutdown Winsock */
-    WSACleanup();
+    //WSACleanup();
 }
 
 

@@ -687,6 +687,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 	pj_lock_release(ioqueue->lock);
     }
 #endif
+
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+    /* Mark key as closing before closing handle. */
+    key->closing = 1;
+#endif
     
     /* Close handle (the only way to disassociate handle from IOCP). 
      * We also need to close handle to make sure that no further events
@@ -701,12 +706,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     key->cb.on_write_complete = NULL;
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-    /* Mark key as closing. */
-    key->closing = 1;
-
-    /* Decrement reference counter. */
-    decrement_counter(key);
-
     /* Even after handle is closed, I suspect that IOCP may still try to
      * do something with the handle, causing memory corruption when pool
      * debugging is enabled.
@@ -714,7 +713,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      * Forcing context switch seems to have fixed that, but this is quite
      * an ugly solution..
      */
-    pj_thread_sleep(0);
+    while (pj_atomic_get(key->ref_count) != 1)
+	pj_thread_sleep(0);
+
+    /* Decrement reference counter to destroy the key. */
+    decrement_counter(key);
 #endif
 
     return PJ_SUCCESS;
