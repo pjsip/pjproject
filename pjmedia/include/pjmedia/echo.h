@@ -82,6 +82,9 @@ typedef enum pjmedia_echo_flag
  * @param clock_rate	    Media clock rate/sampling rate.
  * @param samples_per_frame Number of samples per frame.
  * @param tail_ms	    Tail length, miliseconds.
+ * @param latency_ms	    Total lacency introduced by playback and 
+ *			    recording device. Set to zero if the latency
+ *			    is not known.
  * @param options	    Options. If PJMEDIA_ECHO_SIMPLE is specified,
  *			    then a simple echo suppressor implementation 
  *			    will be used instead of an accoustic echo 
@@ -95,6 +98,7 @@ PJ_DECL(pj_status_t) pjmedia_echo_create(pj_pool_t *pool,
 					 unsigned clock_rate,
 					 unsigned samples_per_frame,
 					 unsigned tail_ms,
+					 unsigned latency_ms,
 					 unsigned options,
 					 pjmedia_echo_state **p_echo );
 

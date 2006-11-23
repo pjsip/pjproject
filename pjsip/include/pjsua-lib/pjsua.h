@@ -2215,13 +2215,25 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * Max ports in the conference bridge.
  */
 #ifndef PJSUA_MAX_CONF_PORTS
-#   define PJSUA_MAX_CONF_PORTS	    254
+#   define PJSUA_MAX_CONF_PORTS		254
 #endif
 
-#define PJSUA_DEFAULT_CLOCK_RATE    16000
-#define PJSUA_DEFAULT_CODEC_QUALITY 5
-#define PJSUA_DEFAULT_ILBC_MODE	    20
-#define PJSUA_DEFAULT_EC_TAIL_LEN   0
+#ifndef PJSUA_DEFAULT_CLOCK_RATE
+#   define PJSUA_DEFAULT_CLOCK_RATE	16000
+#endif
+
+#ifndef PJSUA_DEFAULT_CODEC_QUALITY
+#   define PJSUA_DEFAULT_CODEC_QUALITY	5
+#endif
+
+#ifndef PJSUA_DEFAULT_ILBC_MODE
+#   define PJSUA_DEFAULT_ILBC_MODE	20
+#endif
+
+
+#ifndef PJSUA_DEFAULT_EC_TAIL_LEN
+#   define PJSUA_DEFAULT_EC_TAIL_LEN	600
+#endif
 
 
 /**

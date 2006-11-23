@@ -37,6 +37,7 @@ struct ec_operations
 			    unsigned clock_rate,
 			    unsigned samples_per_frame,
 			    unsigned tail_ms,
+			    unsigned latency_ms,
 			    unsigned options,
 			    void **p_state );
     pj_status_t (*ec_destroy)(void *state );
@@ -61,6 +62,7 @@ PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
 				      unsigned clock_rate,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
+				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
@@ -94,6 +96,7 @@ PJ_DECL(pj_status_t) speex_aec_create(pj_pool_t *pool,
 				      unsigned clock_rate,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
+				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) speex_aec_destroy(void *state );
@@ -130,6 +133,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
 					 unsigned clock_rate,
 					 unsigned samples_per_frame,
 					 unsigned tail_ms,
+					 unsigned latency_ms,
 					 unsigned options,
 					 pjmedia_echo_state **p_echo )
 {
@@ -145,15 +149,14 @@ PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
 
     if (options & PJMEDIA_ECHO_SIMPLE) {
 	ec->op = &echo_supp_op;
-	status = (*echo_supp_op.ec_create)(pool, clock_rate, 
-					   samples_per_frame,
-					   tail_ms, options,
+	status = (*echo_supp_op.ec_create)(pool, clock_rate, samples_per_frame,
+					   tail_ms, latency_ms, options,
 					   &ec->state);
     } else {
 	ec->op = &aec_op;
 	status = (*aec_op.ec_create)(pool, clock_rate, 
 				     samples_per_frame,
-				     tail_ms, options,
+				     tail_ms, latency_ms, options,
 				     &ec->state);
     }
 

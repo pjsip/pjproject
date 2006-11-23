@@ -492,7 +492,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 		   snd_port->clock_rate;
 	status = pjmedia_echo_create(pool, snd_port->clock_rate, 
 				    snd_port->samples_per_frame, 
-				    tail_ms, options, &snd_port->ec_state);
+				    tail_ms, delay_ms,
+				    options, &snd_port->ec_state);
 	if (status != PJ_SUCCESS)
 	    snd_port->ec_state = NULL;
 	else

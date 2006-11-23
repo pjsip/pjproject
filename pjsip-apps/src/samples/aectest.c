@@ -35,6 +35,7 @@
 /* For logging purpose. */
 #define THIS_FILE   "playfile.c"
 #define PTIME	    20
+#define TAIL_LENGTH 800
 
 static const char *desc = 
 " FILE		    						    \n"
@@ -174,7 +175,7 @@ int main(int argc, char *argv[])
 
 
     /* Customize AEC */
-    pjmedia_snd_port_set_aec(snd, pool, 800);
+    pjmedia_snd_port_set_ec(snd, pool, TAIL_LENGTH, 0);
 
     /* Connect sound to the port */
     pjmedia_snd_port_connect(snd, bidir_port);
