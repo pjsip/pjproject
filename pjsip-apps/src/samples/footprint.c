@@ -65,6 +65,7 @@
 
 #define HAS_PJMEDIA
 #define HAS_PJMEDIA_SND_DEV
+#define HAS_PJMEDIA_EC
 #define HAS_PJMEDIA_SND_PORT
 #define HAS_PJMEDIA_RESAMPLE
 #define HAS_PJMEDIA_SILENCE_DET
@@ -75,6 +76,7 @@
 #define HAS_PJMEDIA_RTCP
 #define HAS_PJMEDIA_JBUF
 #define HAS_PJMEDIA_STREAM
+#define HAS_PJMEDIA_TONEGEN
 #define HAS_PJMEDIA_UDP_TRANSPORT
 #define HAS_PJMEDIA_FILE_PLAYER
 #define HAS_PJMEDIA_FILE_CAPTURE
@@ -394,6 +396,14 @@ int dummy_function()
     pjmedia_endpt_create_sdp(NULL, NULL, 1, NULL, NULL);
 #endif
 
+#ifdef HAS_PJMEDIA_EC
+    pjmedia_echo_create(NULL, 0, 0, 0, 0, 0, NULL);
+    pjmedia_echo_destroy(NULL);
+    pjmedia_echo_playback(NULL, NULL);
+    pjmedia_echo_capture(NULL, NULL, 0);
+    pjmedia_echo_cancel(NULL, NULL, NULL, 0, NULL);
+#endif
+
 #ifdef HAS_PJMEDIA_SND_DEV
     pjmedia_snd_init(NULL);
     pjmedia_snd_get_dev_count();
@@ -501,6 +511,16 @@ int dummy_function()
     pjmedia_stream_dial_dtmf(NULL, NULL);
     pjmedia_stream_check_dtmf(NULL);
     pjmedia_stream_get_dtmf(NULL, NULL, NULL);
+#endif
+
+#ifdef HAS_PJMEDIA_TONEGEN
+    pjmedia_tonegen_create(NULL, 0, 0, 0, 0, 0, NULL);
+    pjmedia_tonegen_is_busy(NULL);
+    pjmedia_tonegen_stop(NULL);
+    pjmedia_tonegen_play(NULL, 0, NULL, 0);
+    pjmedia_tonegen_play_digits(NULL, 0, NULL, 0);
+    pjmedia_tonegen_get_digit_map(NULL, NULL);
+    pjmedia_tonegen_set_digit_map(NULL, NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_UDP_TRANSPORT

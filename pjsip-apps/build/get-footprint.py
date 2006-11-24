@@ -76,6 +76,7 @@ compile_flags = [
     ['',			'Subtotal: Complete PJSIP package (call, registration, presence, IM) +STUN +GETOPT (+PJLIB), no media'],
     
     # PJMEDIA
+    ['HAS_PJMEDIA_EC',		'PJMEDIA accoustic echo cancellation'],
     ['HAS_PJMEDIA_SND_DEV',	'PJMEDIA sound device backend (platform specific)'],
     ['HAS_PJMEDIA_SILENCE_DET',	'PJMEDIA Adaptive silence detector'],
     ['HAS_PJMEDIA',		'PJMEDIA endpoint'],
@@ -89,6 +90,7 @@ compile_flags = [
     ['HAS_PJMEDIA_RTCP',	'PJMEDIA stand-alone RTCP and media quality calculation'],
     ['HAS_PJMEDIA_JBUF',	'PJMEDIA stand-alone adaptive jitter buffer'],
     ['HAS_PJMEDIA_STREAM',	'PJMEDIA stream for remote media communication (needs RTP, RTCP, and jitter buffer)'],
+    ['HAS_PJMEDIA_TONEGEN',	'PJMEDIA tone generator'],
     ['HAS_PJMEDIA_UDP_TRANSPORT','PJMEDIA UDP media transport'],
     ['HAS_PJMEDIA_FILE_PLAYER',	'PJMEDIA WAV file player'],
     ['HAS_PJMEDIA_FILE_CAPTURE',	'PJMEDIA WAV file writer'],
