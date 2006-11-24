@@ -42,6 +42,8 @@
 #define HAS_PJLIB_GETOPT
 #define HAS_PJLIB_XML
 #define HAS_PJLIB_SCANNER
+#define HAS_PJLIB_DNS
+#define HAS_PJLIB_RESOLVER
 
 #define HAS_PJSIP_CORE_MSG_ELEM
 #define HAS_PJSIP_CORE
@@ -82,6 +84,7 @@
 #define HAS_PJMEDIA_G711_CODEC
 #define HAS_PJMEDIA_GSM_CODEC
 #define HAS_PJMEDIA_SPEEX_CODEC
+#define HAS_PJMEDIA_ILBC_CODEC
 #endif
 
 
@@ -151,6 +154,22 @@ int dummy_function()
     pj_scan_stricmp_alnum(NULL, NULL, 0);
     pj_scan_get_newline(NULL);
     pj_scan_restore_state(NULL, NULL);
+#endif
+
+#ifdef HAS_PJLIB_DNS
+    pj_dns_make_query(NULL, NULL, 0, 0, NULL);
+    pj_dns_parse_packet(NULL, NULL, 0, NULL);
+    pj_dns_packet_dup(NULL, NULL, NULL);
+#endif
+
+#ifdef HAS_PJLIB_RESOLVER
+    pj_dns_resolver_create(NULL, NULL, 0, NULL, NULL, NULL);
+    pj_dns_resolver_set_ns(NULL, 0, NULL, NULL);
+    pj_dns_resolver_handle_events(NULL, NULL);
+    pj_dns_resolver_destroy(NULL, 0);
+    pj_dns_resolver_start_query(NULL, NULL, 0, 0, NULL, NULL, NULL);
+    pj_dns_resolver_cancel_query(NULL, 0);
+    pj_dns_resolver_add_entry(NULL, NULL, 0);
 #endif
 
 #ifdef HAS_PJSIP_CORE_MSG_ELEM
@@ -351,7 +370,7 @@ int dummy_function()
 #ifdef HAS_PJSIP_PRESENCE
     pjsip_pres_init_module(NULL, NULL);
     pjsip_pres_instance();
-    pjsip_pres_create_uac(NULL, NULL, NULL);
+    pjsip_pres_create_uac(NULL, NULL, 0, NULL);
     pjsip_pres_create_uas(NULL, NULL, NULL, NULL);
     pjsip_pres_terminate(NULL, PJ_FALSE);
     pjsip_pres_initiate(NULL, 100, NULL);
@@ -523,6 +542,11 @@ int dummy_function()
 #ifdef HAS_PJMEDIA_SPEEX_CODEC
     pjmedia_codec_speex_init(NULL, 0, 0, 0);
     pjmedia_codec_speex_deinit();
+#endif
+
+#ifdef HAS_PJMEDIA_ILBC_CODEC
+    pjmedia_codec_ilbc_init(NULL, 0);
+    pjmedia_codec_ilbc_deinit();
 #endif
 
     return 0;

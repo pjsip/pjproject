@@ -42,11 +42,13 @@ compile_flags = [
     ['HAS_PJLIB_GETOPT',	'PJLIB-UTIL getopt() functionality'],
     ['HAS_PJLIB_SCANNER',	'PJLIB-UTIL text scanner (needed by SIP parser)'],
     ['HAS_PJLIB_XML',		'PJLIB-UTIL tiny XML (parsing and API) (needs text scanner)'],
+    ['HAS_PJLIB_DNS',		'PJLIB-UTIL DNS packet and parsing'],
+    ['HAS_PJLIB_RESOLVER',	'PJLIB-UTIL Asynchronous DNS resolver/caching engine'],
 
     # PJSIP
     ['HAS_PJSIP_CORE_MSG_ELEM',	'PJSIP Core - Messaging Elements and Parsing (message, headers, SIP URI, TEL URI/RFC 3966, etc.)'],
     ['HAS_PJSIP_CORE',		'PJSIP Core - Endpoint (transport management, module management, event distribution, etc.)'],
-    ['HAS_PJSIP_CORE_MSG_UTIL',	'PJSIP Core - Stateless operations, server resolution and fail-over'],
+    ['HAS_PJSIP_CORE_MSG_UTIL',	'PJSIP Core - Stateless operations, SIP SRV, server resolution and fail-over'],
     ['HAS_PJSIP_UDP_TRANSPORT',	'PJSIP UDP transport'],
     ['',			'Subtotal: A minimalistic SIP application (parsing, UDP transport+STUN, no transaction)'],
    
@@ -99,6 +101,7 @@ compile_flags = [
     # Codecs
     ['HAS_PJMEDIA_GSM_CODEC',	'PJMEDIA GSM codec (including PLC)'],
     ['HAS_PJMEDIA_SPEEX_CODEC',	'PJMEDIA Speex codec (narrowband, wideband, ultra-wideband)'],
+    ['HAS_PJMEDIA_ILBC_CODEC',	'PJMEDIA iLBC codec'],
 
     # Total
     ['',			'TOTAL: complete libraries (+all codecs)'],
@@ -217,7 +220,7 @@ def print_html_report():
     # config_site.h
     output.write('\n<H3>&lt;pj/config.site.h&gt;</H3>\n')
     output.write('<tt>\n')
-    f = os.popen('cpp -dM ../../pjlib/include/pj/config_site.h | grep PJ')
+    f = os.popen('cpp -dM -I../../pjlib/include ../../pjlib/include/pj/config_site.h | grep PJ')
     s = f.readlines()
     for l in s:
 	output.write(l + '<BR>\n')
