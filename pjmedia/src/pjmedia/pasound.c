@@ -409,7 +409,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 			 "rate=%d, ch=%d, "
 			 "bits=%d, %d samples per frame, latency=%d ms",
 			 paDevInfo->name, paHostApiInfo->name,
-			 paSI->sampleRate, channel_count,
+			 paRate, channel_count,
 			 bits_per_sample, samples_per_frame,
 			 paLatency));
 
