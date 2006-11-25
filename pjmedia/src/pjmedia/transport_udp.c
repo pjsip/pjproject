@@ -583,19 +583,21 @@ static void transport_detach( pjmedia_transport *tp,
 
     pj_assert(tp);
 
-    /* User data is unreferenced on Release build */
-    PJ_UNUSED_ARG(user_data);
+    if (udp->attached) {
+	/* User data is unreferenced on Release build */
+	PJ_UNUSED_ARG(user_data);
 
-    /* As additional checking, check if the same user data is specified */
-    pj_assert(user_data == udp->user_data);
+	/* As additional checking, check if the same user data is specified */
+	pj_assert(user_data == udp->user_data);
 
-    /* First, mark transport as unattached */
-    udp->attached = PJ_FALSE;
+	/* First, mark transport as unattached */
+	udp->attached = PJ_FALSE;
 
-    /* Clear up application infos from transport */
-    udp->rtp_cb = NULL;
-    udp->rtcp_cb = NULL;
-    udp->user_data = NULL;
+	/* Clear up application infos from transport */
+	udp->rtp_cb = NULL;
+	udp->rtcp_cb = NULL;
+	udp->user_data = NULL;
+    }
 }
 
 
