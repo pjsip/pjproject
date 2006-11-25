@@ -35,10 +35,10 @@
 
 static const char *inv_state_names[] =
 {
-    "NULL      ",
-    "CALLING   ",
-    "INCOMING  ",
-    "EARLY     ",
+    "NULL",
+    "CALLING",
+    "INCOMING",
+    "EARLY",
     "CONNECTING",
     "CONFIRMED ",
     "DISCONNCTD",

@@ -90,6 +90,10 @@ static void reset_call(pjsua_call_id id)
     call->conf_slot = PJSUA_INVALID_ID;
     call->last_text.ptr = call->last_text_buf_;
     call->last_text.slen = 0;
+    call->conn_time.sec = 0;
+    call->conn_time.msec = 0;
+    call->res_time.sec = 0;
+    call->res_time.msec = 0;
 }
 
 
@@ -1776,7 +1780,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     *p++ = '\n';
 
     /* Calculate call duration */
-    if (call->inv->state >= PJSIP_INV_STATE_CONFIRMED) {
+    if (call->conn_time.sec != 0) {
 	pj_gettimeofday(&duration);
 	PJ_TIME_VAL_SUB(duration, call->conn_time);
 	con_delay = call->conn_time;
@@ -1787,7 +1791,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     }
 
     /* Calculate first response delay */
-    if (call->inv->state >= PJSIP_INV_STATE_EARLY) {
+    if (call->res_time.sec != 0) {
 	res_delay = call->res_time;
 	PJ_TIME_VAL_SUB(res_delay, call->start_time);
     } else {
@@ -1976,6 +1980,10 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	/* Free call */
 	call->inv = NULL;
 	--pjsua_var.call_cnt;
+
+	/* Reset call */
+	reset_call(call->index);
+
     }
 
     PJSUA_UNLOCK();

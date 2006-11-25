@@ -1327,6 +1327,16 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    find_next_call();
 	}
 
+	/* Dump media state upon disconnected */
+	if (1) {
+	    char buf[1024];
+	    pjsua_call_dump(call_id, PJ_TRUE, buf, 
+			    sizeof(buf), "  ");
+	    PJ_LOG(5,(THIS_FILE, 
+		      "Call %d disconnected, dumping media stats\n%s", 
+		      call_id, buf));
+	}
+
     } else {
 
 	if (app_config.duration!=NO_LIMIT && 
@@ -1343,9 +1353,31 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    pjsip_endpt_schedule_timer(endpt, &cd->timer, &delay);
 	}
 
-	PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
-		  call_id,
-		  call_info.state_text.ptr));
+	if (call_info.state == PJSIP_INV_STATE_EARLY) {
+	    int code;
+	    pj_str_t reason;
+	    pjsip_msg *msg;
+
+	    /* This can only occur because of TX or RX message */
+	    pj_assert(e->type == PJSIP_EVENT_TSX_STATE);
+
+	    if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+		msg = e->body.tsx_state.src.rdata->msg_info.msg;
+	    } else {
+		msg = e->body.tsx_state.src.tdata->msg;
+	    }
+
+	    code = msg->line.status.code;
+	    reason = msg->line.status.reason;
+
+	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s (%d %.*s)", 
+		      call_id, call_info.state_text.ptr,
+		      code, (int)reason.slen, reason.ptr));
+	} else {
+	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
+		      call_id,
+		      call_info.state_text.ptr));
+	}
 
 	if (current_call==PJSUA_INVALID_ID)
 	    current_call = call_id;
