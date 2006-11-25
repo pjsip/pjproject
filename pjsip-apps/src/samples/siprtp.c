@@ -292,6 +292,7 @@ static pj_status_t init_sip()
     {
 	pj_sockaddr_in addr;
 	pjsip_host_port addrname;
+	pjsip_transport *tp;
 
 	pj_bzero(&addr, sizeof(addr));
 	addr.sin_family = PJ_AF_INET;
@@ -313,11 +314,15 @@ static pj_status_t init_sip()
 
 	status = pjsip_udp_transport_start( app.sip_endpt, &addr, 
 					    (app.local_addr.slen ? &addrname:NULL),
-					    1, NULL);
+					    1, &tp);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to start UDP transport", status);
 	    return status;
 	}
+
+	PJ_LOG(3,(THIS_FILE, "SIP UDP listening on %.*s:%d",
+		  (int)tp->local_name.host.slen, tp->local_name.host.ptr,
+		  tp->local_name.port));
     }
 
     /* 
@@ -379,9 +384,6 @@ static void destroy_sip()
 	pjsip_endpt_destroy(app.sip_endpt);
 	app.sip_endpt = NULL;
     }
-
-    /* Shutdown PJLIB */
-    pj_shutdown();
 
 }
 
@@ -1457,10 +1459,7 @@ static void destroy_call_media(unsigned call_index)
 	    audio->thread_quit_flag = 0;
 	}
 
-	if (audio->transport) {
-	    pjmedia_transport_detach(audio->transport, audio);
-	    audio->transport = NULL;
-	}
+	pjmedia_transport_detach(audio->transport, audio);
     }
 }
 
@@ -2119,6 +2118,8 @@ int main(int argc, char *argv[])
 
     app_logging_shutdown();
 
+    /* Shutdown PJLIB */
+    pj_shutdown();
 
     return 0;
 }
