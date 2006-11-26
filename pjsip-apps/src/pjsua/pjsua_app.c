@@ -1925,7 +1925,7 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
  */
 void console_app_main(const pj_str_t *uri_to_call)
 {
-    char menuin[10];
+    char menuin[32];
     char buf[128];
     char text[128];
     int i, count;
@@ -2553,24 +2553,29 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    case 'c':
 	    case 'd':
 		{
-		    char src_port[10], dst_port[10];
+		    char tmp[10], src_port[10], dst_port[10];
 		    pj_status_t status;
+		    int cnt;
 		    const char *src_title, *dst_title;
 
-		    conf_list();
+		    cnt = sscanf(menuin, "%s %s %s", tmp, src_port, dst_port);
 
-		    src_title = (menuin[1]=='c'?
-				 "Connect src port #":
-				 "Disconnect src port #");
-		    dst_title = (menuin[1]=='c'?
-				 "To dst port #":
-				 "From dst port #");
+		    if (cnt != 3) {
+			conf_list();
 
-		    if (!simple_input(src_title, src_port, sizeof(src_port)))
-			break;
+			src_title = (menuin[1]=='c'?
+				     "Connect src port #":
+				     "Disconnect src port #");
+			dst_title = (menuin[1]=='c'?
+				     "To dst port #":
+				     "From dst port #");
 
-		    if (!simple_input(dst_title, dst_port, sizeof(dst_port)))
-			break;
+			if (!simple_input(src_title, src_port, sizeof(src_port)))
+			    break;
+
+			if (!simple_input(dst_title, dst_port, sizeof(dst_port)))
+			    break;
+		    }
 
 		    if (menuin[1]=='c') {
 			status = pjsua_conf_connect(my_atoi(src_port), 
