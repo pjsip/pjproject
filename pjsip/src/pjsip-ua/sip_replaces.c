@@ -125,7 +125,11 @@ static pjsip_hdr *parse_hdr_replaces(pjsip_parse_ctx *ctx)
     const pj_str_t from_tag = { "from-tag", 8 };
     const pj_str_t early_only_tag = { "early-only", 10 };
 
-    pj_scan_get(ctx->scanner, &pjsip_TOKEN_SPEC, &hdr->call_id);
+    /*pj_scan_get(ctx->scanner, &pjsip_TOKEN_SPEC, &hdr->call_id);*/
+    /* Get Call-ID (until ';' is found). using pjsip_TOKEN_SPEC doesn't work
+     * because it stops parsing when '@' character is found.
+     */
+    pj_scan_get_until_ch(ctx->scanner, ';', &hdr->call_id);
 
     while (*ctx->scanner->curptr == ';') {
 	pj_str_t pname, pvalue;
