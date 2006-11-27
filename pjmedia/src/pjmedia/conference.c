@@ -181,6 +181,7 @@ struct pjmedia_conf
     unsigned		  connect_cnt;	/**< Total number of connections    */
     pjmedia_snd_port	 *snd_dev_port;	/**< Sound device port.		    */
     pjmedia_port	 *master_port;	/**< Port zero's port.		    */
+    char		  master_name_buf[80]; /**< Port0 name buffer.	    */
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
     pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
@@ -390,6 +391,8 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     /* Create sound device port: */
 
     if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0) {
+	pjmedia_snd_stream *strm;
+	pjmedia_snd_stream_info si;
 
 	/*
 	 * If capture is disabled then create player only port.
@@ -414,6 +417,17 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	strm = pjmedia_snd_port_get_snd_stream(conf->snd_dev_port);
+	status = pjmedia_snd_stream_get_info(strm, &si);
+	if (status == PJ_SUCCESS) {
+	    const pjmedia_snd_dev_info *snd_dev_info;
+	    if (conf->options & PJMEDIA_CONF_NO_MIC)
+		snd_dev_info = pjmedia_snd_get_dev_info(si.play_id);
+	    else
+		snd_dev_info = pjmedia_snd_get_dev_info(si.rec_id);
+	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info->name);
+	}
     }
 
 
@@ -581,6 +595,32 @@ PJ_DEF(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf)
     return conf->master_port;
 }
 
+
+/*
+ * Set master port name.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
+						const pj_str_t *name)
+{
+    int len;
+
+    /* Sanity check. */
+    PJ_ASSERT_RETURN(conf != NULL && name != NULL, PJ_EINVAL);
+
+    len = name->slen;
+    if (len > sizeof(conf->master_name_buf))
+	len = sizeof(conf->master_name_buf);
+    
+    if (len > 0) pj_memcpy(conf->master_name_buf, name->ptr, len);
+
+    conf->ports[0]->name.ptr = conf->master_name_buf;
+    conf->ports[0]->name.slen = len;
+
+    if (conf->master_port)
+	conf->master_port->info.name = conf->ports[0]->name;
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Add stream port to the conference bridge.

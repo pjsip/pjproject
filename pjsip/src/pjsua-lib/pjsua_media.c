@@ -1012,14 +1012,14 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     unsigned clock_rates[] = { 0, 22050, 44100, 48000, 11025, 32000, 8000};
     unsigned selected_clock_rate = 0;
     unsigned i;
+    pjmedia_snd_stream *strm;
+    pjmedia_snd_stream_info si;
+    pj_str_t tmp;
     pj_status_t status = -1;
 
     /* Close existing sound port */
     close_snd_dev();
 
-
-    cap_info = pjmedia_snd_get_dev_info(capture_dev);
-    play_info = pjmedia_snd_get_dev_info(playback_dev);
 
     /* Set default clock rate */
     clock_rates[0] = pjsua_var.media_cfg.clock_rate;
@@ -1093,6 +1093,14 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     /* Save the device IDs */
     pjsua_var.cap_dev = capture_dev;
     pjsua_var.play_dev = playback_dev;
+
+    /* Update sound device name. */
+    strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
+    pjmedia_snd_stream_get_info(strm, &si);
+    play_info = pjmedia_snd_get_dev_info(si.rec_id);
+
+    pjmedia_conf_set_port0_name(pjsua_var.mconf, 
+				pj_cstr(&tmp, play_info->name));
 
     return PJ_SUCCESS;
 }

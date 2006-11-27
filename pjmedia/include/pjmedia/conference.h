@@ -172,6 +172,18 @@ PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
 
 
 /**
+ * Set master port name.
+ *
+ * @param conf		    The conference bridge.
+ * @param name		    Name to be assigned.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
+						 const pj_str_t *name);
+
+
+/**
  * Add media port to the conference bridge.
  *
  * By default, the new conference port will have both TX and RX enabled, 
