@@ -130,21 +130,6 @@ static void enum_devices(void)
 }
 
 
-static const char *get_dev_name(int dev_id)
-{
-    const pjmedia_snd_dev_info *info;
-
-    if (dev_id == -1)
-	dev_id = 0;
-
-    info = pjmedia_snd_get_dev_info(dev_id);
-    if (info == NULL)
-	return "????";
-
-    return info->name;
-}
-
-
 static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
 			   void *output, unsigned size)
 {
@@ -368,13 +353,14 @@ static void print_stream_data(const char *title,
 }
 
 
-static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
+static int perform_test(int dev_id, pjmedia_dir dir,
 		        unsigned clock_rate, unsigned samples_per_frame, 
 			unsigned nchannel, int verbose)
 {
     pj_status_t status = PJ_SUCCESS;
     pjmedia_snd_stream *strm;
     struct test_data test_data;
+    pjmedia_snd_stream_info si;
 
 
     /*
@@ -389,8 +375,6 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
     /*
      * Open device.
      */
-    PJ_LOG(3,(THIS_FILE, "Testing %s", title));
-
     if (dir == PJMEDIA_DIR_CAPTURE) {
 	status = pjmedia_snd_open_rec( dev_id, clock_rate, nchannel,
 				       samples_per_frame, 16, &rec_cb, 
@@ -408,6 +392,16 @@ static int perform_test(const char *title, int dev_id, pjmedia_dir dir,
     if (status != PJ_SUCCESS) {
         app_perror("Unable to open device for capture", status);
         return status;
+    }
+
+    pjmedia_snd_stream_get_info(strm, &si);
+    if (si.play_id >= 0) {
+	PJ_LOG(3,(THIS_FILE, "Testing playback device %s", 
+		  pjmedia_snd_get_dev_info(si.play_id)->name));
+    }
+    if (si.rec_id >= 0) {
+	PJ_LOG(3,(THIS_FILE, "Testing capture device %s", 
+		  pjmedia_snd_get_dev_info(si.rec_id)->name));
     }
 
     /* Sleep for a while to let sound device "settles" */
@@ -594,7 +588,7 @@ int main(int argc, char *argv[])
 	frame = 10 * clock_rate / 1000;
 
 
-    status = perform_test(get_dev_name(id), id, PJMEDIA_DIR_CAPTURE_PLAYBACK, 
+    status = perform_test(id, PJMEDIA_DIR_CAPTURE_PLAYBACK, 
 			  clock_rate, frame, channel, verbose);
     if (status != 0)
 	return 1;
