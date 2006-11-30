@@ -66,6 +66,17 @@
 
 
 /**
+ * Specify which A-law/U-law conversion algorithm to use.
+ * By default the conversion algorithm uses A-law/U-law table which gives
+ * the best performance, at the expense of 33 KBytes of static data.
+ * If this option is disabled, a smaller but slower algorithm will be used.
+ */
+#ifndef PJMEDIA_HAS_ALAW_ULAW_TABLE
+#   define PJMEDIA_HAS_ALAW_ULAW_TABLE	    1
+#endif
+
+
+/**
  * Unless specified otherwise, G711 codec is included by default.
  * Note that there are parts of G711 codec (such as linear2ulaw) that are 
  * needed by other PJMEDIA components (e.g. silence detector, conference).

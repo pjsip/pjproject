@@ -91,6 +91,10 @@ SOURCE=..\src\pjmedia\alaw_ulaw.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\alaw_ulaw_table.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\bidirectional.c
 # End Source File
 # Begin Source File
@@ -258,6 +262,10 @@ SOURCE=..\src\pjmedia\wave.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=..\include\pjmedia\alaw_ulaw.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\include\pjmedia\bidirectional.h

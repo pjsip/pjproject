@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/silencedet.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
@@ -56,9 +57,6 @@ struct pjmedia_silence_det
     unsigned  loudest_silence;	/**< Loudest silence detected.		    */
 };
 
-
-
-unsigned char linear2ulaw(int pcm_val);
 
 
 PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
@@ -195,7 +193,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 	return PJ_FALSE;
 
     /* Convert PCM level to ulaw */
-    level = linear2ulaw(level) ^ 0xff;
+    level = pjmedia_linear2ulaw(level) ^ 0xff;
     
     /* Do we have signal? */
     have_signal = level > sd->cur_threshold;

@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 	pjmedia_port_get_frame(file_port, &frm);
 
 	level32 = pjmedia_calc_avg_signal( framebuf, NSAMPLES );
-	level = linear2ulaw(level32) ^ 0xFF;
+	level = pjmedia_linear2ulaw(level32) ^ 0xFF;
 
 	printf("%d ", level);
     }

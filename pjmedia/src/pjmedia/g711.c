@@ -20,6 +20,7 @@
  * notice in the second half of this file.
  */
 #include <pjmedia/codec.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
@@ -41,12 +42,6 @@
 /* These are the only public functions exported to applications */
 PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, 
 					pj_pool_t *pool);
-
-/* Algorithm prototypes. */
-unsigned char linear2alaw(int		pcm_val);
-int	      alaw2linear(unsigned char	a_val);
-unsigned char linear2ulaw(int		pcm_val);
-int	      ulaw2linear(unsigned char	u_val);
 
 /* Prototypes for G711 factory */
 static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, 
@@ -477,14 +472,14 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 	pj_uint8_t *dst = output->buf;
 
 	for (i=0; i!=input->size/2; ++i, ++dst) {
-	    *dst = linear2alaw(samples[i]);
+	    *dst = pjmedia_linear2alaw(samples[i]);
 	}
     } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i;
 	pj_uint8_t *dst = output->buf;
 
 	for (i=0; i!=input->size/2; ++i, ++dst) {
-	    *dst = linear2ulaw(samples[i]);
+	    *dst = pjmedia_linear2ulaw(samples[i]);
 	}
 
     } else {
@@ -519,7 +514,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 	pj_uint16_t *dst = output->buf;
 
 	for (i=0; i!=input->size; ++i) {
-	    *dst++ = (pj_uint16_t) alaw2linear(*src++);
+	    *dst++ = (pj_uint16_t) pjmedia_alaw2linear(*src++);
 	}
     } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i;
@@ -527,7 +522,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 	pj_uint16_t *dst = output->buf;
 
 	for (i=0; i!=input->size; ++i) {
-	    *dst++ = (pj_uint16_t) ulaw2linear(*src++);
+	    *dst++ = (pj_uint16_t) pjmedia_ulaw2linear(*src++);
 	}
 
     } else {

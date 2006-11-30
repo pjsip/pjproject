@@ -25,6 +25,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/bidirectional.h>
 #include <pjmedia/clock.h>
 #include <pjmedia/codec.h>

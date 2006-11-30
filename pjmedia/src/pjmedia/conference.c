@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/conference.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
 #include <pjmedia/resample.h>
@@ -191,9 +192,6 @@ struct pjmedia_conf
     unsigned		  bits_per_sample;	/**< Bits per sample.	    */
 };
 
-
-/* Extern */
-unsigned char linear2ulaw(int pcm_val);
 
 /* Prototypes */
 static pj_status_t put_frame(pjmedia_port *this_port, 
@@ -1670,7 +1668,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	}
 
 	/* Convert level to 8bit complement ulaw */
-	level = linear2ulaw(level) ^ 0xff;
+	level = pjmedia_linear2ulaw(level) ^ 0xff;
 
 	/* Put this level to port's last RX level. */
 	conf_port->rx_level = level;
