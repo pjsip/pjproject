@@ -131,7 +131,7 @@ PJ_DEF(pj_status_t) pj_init(void)
     }
 
     /* Critical section. */
-    if ((rc=init_mutex(&critical_section, "critsec", PJ_MUTEX_SIMPLE)) != 0)
+    if ((rc=init_mutex(&critical_section, "critsec", PJ_MUTEX_RECURSE)) != 0)
 	return rc;
 
 #endif
