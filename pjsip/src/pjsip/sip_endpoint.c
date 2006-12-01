@@ -108,6 +108,7 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
 
 /* Defined in sip_parser.c */
 void init_sip_parser(void);
+void deinit_sip_parser(void);
 
 /* Defined in sip_tel_uri.c */
 pj_status_t pjsip_tel_uri_subsys_init(void);
@@ -587,6 +588,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
+
+    /* Deinit parser */
+    deinit_sip_parser();
 
     /* Delete module's mutex */
     pj_rwmutex_destroy(endpt->mod_mutex);

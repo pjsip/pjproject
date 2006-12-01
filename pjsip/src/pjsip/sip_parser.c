@@ -281,13 +281,7 @@ static void concat_param( pj_str_t *param, pj_pool_t *pool,
 /* Initialize static properties of the parser. */
 static pj_status_t init_parser()
 {
-    static int initialized;
     pj_status_t status;
-
-    if (initialized)
-	return PJ_SUCCESS;
-
-    initialized = 1;
 
     /*
      * Syntax error exception number.
@@ -472,12 +466,26 @@ static pj_status_t init_parser()
 
 void init_sip_parser(void)
 {
-    if (!parser_is_initialized) {
-	if (!parser_is_initialized) {
-	    init_parser();
-	    parser_is_initialized = 1;
-	}
+    pj_enter_critical_section();
+    if (++parser_is_initialized == 1) {
+	init_parser();
     }
+    pj_leave_critical_section();
+}
+
+void deinit_sip_parser(void)
+{
+    pj_enter_critical_section();
+    if (--parser_is_initialized == 0) {
+	/* Clear header handlers */
+	pj_bzero(handler, sizeof(handler));
+	handler_count = 0;
+
+	/* Clear URI handlers */
+	pj_bzero(uri_handler, sizeof(uri_handler));
+	uri_handler_count = 0;
+    }
+    pj_leave_critical_section();
 }
 
 /* Compare the handler record with header name, and return:

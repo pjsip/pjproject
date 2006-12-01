@@ -207,6 +207,9 @@ PJ_DEF(void) pj_shutdown()
 	thread_tls_id = -1;
     }
 #endif
+
+    /* Clear static variables */
+    pj_errno_clear_handlers();
 }
 
 

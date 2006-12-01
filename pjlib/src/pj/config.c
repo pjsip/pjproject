@@ -21,7 +21,7 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-const char *PJ_VERSION = "0.5.9";
+const char *PJ_VERSION = "0.5.9.1";
 
 PJ_DEF(void) pj_dump_config(void)
 {

@@ -361,6 +361,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     unsigned i;
 
     /* Run pj_getopt once to see if user specifies config file to read. */ 
+    pj_optind = 0;
     while ((c=pj_getopt_long(argc, argv, "", long_options, 
 			     &option_index)) != -1) 
     {
@@ -2845,6 +2846,8 @@ pj_status_t app_main(void)
 
 pj_status_t app_destroy(void)
 {
+    pj_status_t status;
+
 #ifdef STEREO_DEMO
     if (app_config.snd) {
 	pjmedia_snd_port_destroy(app_config.snd);
@@ -2857,7 +2860,11 @@ pj_status_t app_destroy(void)
 	app_config.pool = NULL;
     }
 
-    return pjsua_destroy();
+    status = pjsua_destroy();
+
+    pj_bzero(&app_config, sizeof(app_config));
+
+    return status;
 }
 
 

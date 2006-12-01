@@ -346,5 +346,8 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 
 PJ_END_DECL
 
+/* Internal */
+void pj_errno_clear_handlers(void);
+
 #endif	/* __PJ_ERRNO_H__ */
 

@@ -711,6 +711,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     /* Shutdown PJLIB */
     pj_shutdown();
 
+    /* Clear pjsua_var */
+    pj_bzero(&pjsua_var, sizeof(pjsua_var));
+
     /* Done. */
     return PJ_SUCCESS;
 }

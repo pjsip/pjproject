@@ -133,6 +133,14 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start,
     return PJ_SUCCESS;
 }
 
+/* Internal PJLIB function called by pj_shutdown() to clear error handlers */
+void pj_errno_clear_handlers(void)
+{
+    err_msg_hnd_cnt = 0;
+    pj_bzero(err_msg_hnd, sizeof(err_msg_hnd));
+}
+
+
 /*
  * pj_strerror()
  */

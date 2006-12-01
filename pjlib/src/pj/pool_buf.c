@@ -38,6 +38,8 @@ static void pool_buf_cleanup(void)
 	pj_thread_local_free(tls);
 	tls = -1;
     }
+    if (is_initialized)
+	is_initialized = 0;
 }
 
 static pj_status_t pool_buf_initialize()

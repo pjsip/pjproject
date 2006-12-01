@@ -57,6 +57,16 @@ static void exception_cleanup(void)
 	pj_thread_local_free(thread_local_id);
 	thread_local_id = -1;
     }
+
+#if defined(PJ_HAS_EXCEPTION_NAMES) && PJ_HAS_EXCEPTION_NAMES != 0
+    {
+	unsigned i;
+	for (i=0; i<PJ_MAX_EXCEPTION_ID; ++i)
+	    exception_id_names[i] = NULL;
+    }
+#else
+    last_exception_id = 1;
+#endif
 }
 
 PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)

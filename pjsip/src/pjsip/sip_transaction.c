@@ -175,7 +175,7 @@ static void        tsx_timer_callback( pj_timer_heap_t *theap,
 			               pj_timer_entry *entry);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
 			       pjsip_transaction **p_tsx);
-static void	   tsx_destroy( pjsip_transaction *tsx );
+static pj_status_t tsx_destroy( pjsip_transaction *tsx );
 static void	   tsx_resched_retransmission( pjsip_transaction *tsx );
 static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched);
 static int         tsx_send_msg( pjsip_transaction *tsx, 
@@ -644,8 +644,10 @@ static pj_status_t mod_tsx_layer_stop(void)
     while (it) {
 	pjsip_transaction *tsx = pj_hash_this(mod_tsx_layer.htable, it);
 	pj_hash_iterator_t *next = pj_hash_next(mod_tsx_layer.htable, it);
-	if (tsx)
+	if (tsx) {
+	    mod_tsx_layer_unregister_tsx(tsx);
 	    tsx_destroy(tsx);
+	}
 	it = next;
     }
 
@@ -920,7 +922,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
 
 
 /* Destroy transaction. */
-static void tsx_destroy( pjsip_transaction *tsx )
+static pj_status_t tsx_destroy( pjsip_transaction *tsx )
 {
     struct tsx_lock_data *lck;
 
@@ -954,7 +956,7 @@ static void tsx_destroy( pjsip_transaction *tsx )
 	tsx->tsx_user = NULL;
 	PJ_LOG(4,(tsx->obj_name, "Will destroy later because transport is "
 				 "in progress"));
-	return;
+	return PJ_EBUSY;
     }
 
     /* Clear TLS, so that mutex will not be unlocked */
@@ -971,6 +973,8 @@ static void tsx_destroy( pjsip_transaction *tsx )
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
 
     pjsip_endpt_release_pool(tsx->endpt, tsx->pool);
+
+    return PJ_SUCCESS;
 }
 
 
