@@ -46,7 +46,8 @@ struct pjsip_regc
     pj_pool_t			*pool;
     pjsip_endpoint		*endpt;
     pj_bool_t			 _delete_flag;
-    int				 pending_tsx;
+    pj_bool_t			 has_tsx;
+    pj_int32_t			 busy;
 
     void			*token;
     pjsip_regc_cb		*cb;
@@ -119,7 +120,7 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
-    if (regc->pending_tsx) {
+    if (regc->has_tsx || regc->busy) {
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
     } else {
@@ -137,11 +138,11 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 
     info->server_uri = regc->str_srv_url;
     info->client_uri = regc->from_uri;
-    info->is_busy = (regc->pending_tsx != 0);
+    info->is_busy = (regc->busy || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
     
-    if (regc->pending_tsx)
+    if (regc->has_tsx)
 	info->next_reg = 0;
     else if (regc->auto_reg == 0)
 	info->next_reg = 0;
@@ -521,8 +522,8 @@ static void tsx_callback(void *token, pjsip_event *event)
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     
     /* Decrement pending transaction counter. */
-    pj_assert(regc->pending_tsx > 0);
-    --regc->pending_tsx;
+    pj_assert(regc->has_tsx);
+    regc->has_tsx = PJ_FALSE;
 
     /* If registration data has been deleted by user then remove registration 
      * data from transaction's callback, and don't call callback.
@@ -614,10 +615,10 @@ static void tsx_callback(void *token, pjsip_event *event)
 			event->body.tsx_state.src.rdata : NULL;
 	}
 
-	/* Increment pending_tsx temporarily to prevent regc from
+	/* Increment busy flag temporarily to prevent regc from
 	 * being destroyed.
 	 */
-	++regc->pending_tsx;
+	++regc->busy;
 
 	/* Call callback. */
 	if (expiration == 0xFFFF) expiration = -1;
@@ -627,12 +628,12 @@ static void tsx_callback(void *token, pjsip_event *event)
 		      rdata, expiration, 
 		      contact_cnt, contact);
 
-	/* Decrement pending_tsx */
-	--regc->pending_tsx;
+	/* Decrement busy flag */
+	--regc->busy;
     }
 
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->pending_tsx==0) {
+    if (regc->_delete_flag && regc->busy==0) {
 	pjsip_regc_destroy(regc);
     }
 }
@@ -644,7 +645,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pj_uint32_t cseq;
 
     /* Make sure we don't have pending transaction. */
-    if (regc->pending_tsx) {
+    if (regc->has_tsx) {
 	PJ_LOG(4,(THIS_FILE, "Unable to send request, regc has another "
 			     "transaction pending"));
 	pjsip_tx_data_dec_ref( tdata );
@@ -662,15 +663,16 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     /* Increment pending transaction first, since transaction callback
      * may be called even before send_request() returns!
      */
-    regc->pending_tsx += 2;
+    regc->has_tsx = PJ_TRUE;
+    ++regc->busy;
     status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
-    --regc->pending_tsx;
+    --regc->busy;
 
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->pending_tsx==0) {
+    if (regc->_delete_flag && regc->busy==0) {
 	pjsip_regc_destroy(regc);
     }
 
