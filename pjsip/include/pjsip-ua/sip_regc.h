@@ -230,7 +230,8 @@ PJ_DECL(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
 
 /**
- * Create REGISTER request to unregister all contacts from server records.
+ * Create REGISTER request to unregister the contacts that were previously
+ * registered by this client registration.
  *
  * @param regc	    The client registration structure.
  * @param p_tdata   Pointer to receive the REGISTER request.
@@ -239,6 +240,21 @@ PJ_DECL(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
  */
 PJ_DECL(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 					   pjsip_tx_data **p_tdata);
+
+/**
+ * Create REGISTER request to unregister all contacts from server records.
+ * Note that this will unregister all registered contact for the AOR
+ * including contacts registered by other user agents. To only unregister
+ * contact registered by this client registration instance, use
+ * #pjsip_regc_unregister() instead.
+ *
+ * @param regc	    The client registration structure.
+ * @param p_tdata   Pointer to receive the REGISTER request.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
+					       pjsip_tx_data **p_tdata);
 
 /**
  * Update Contact details in the client registration structure.

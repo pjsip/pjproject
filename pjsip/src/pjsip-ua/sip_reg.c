@@ -443,6 +443,33 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 	return status;
 
     msg = tdata->msg;
+    pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool, 
+						   regc->contact_hdr));
+    pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
+
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
+					      pjsip_tx_data **p_tdata)
+{
+    pjsip_tx_data *tdata;
+    pjsip_msg *msg;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
+
+    if (regc->timer.id != 0) {
+	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
+	regc->timer.id = 0;
+    }
+
+    status = create_request(regc, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    msg = tdata->msg;
     pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_contact_hdr);
     pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
 
