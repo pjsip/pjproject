@@ -80,7 +80,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 python24.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /debug /machine:I386 /out:"..\lib\py_pjsua_d.pyd" /pdbtype:sept /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PCbuild" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PC\VC6"
+# ADD LINK32 python24_d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib /nologo /dll /debug /machine:I386 /out:"..\lib\py_pjsua_d.pyd" /pdbtype:sept /libpath:"../../pjlib/lib" /libpath:"../../pjlib-util/lib" /libpath:"../../pjmedia/lib" /libpath:"../../pjsip/lib" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PCbuild" /libpath:"F:\incoming\projects\divusi\Python-2.4\Python-2.4\PC\VC6"
 
 !ENDIF 
 

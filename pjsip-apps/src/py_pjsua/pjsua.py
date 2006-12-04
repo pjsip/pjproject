@@ -74,6 +74,55 @@ print "py status after 3 second of blocking wait :" + `status`
 
 #
 
+# lib transport
+stunc = py_pjsua.STUN_Config();
+py_pjsua.stun_config_default(stunc);
+
+tc = py_pjsua.Transport_Config();
+py_pjsua.transport_config_default(tc);
+
+py_pjsua.normalize_stun_config(stunc);
+
+id = py_pjsua.Transport_ID();
+status = py_pjsua.transport_create(1, tc, id);
+print "py transport create status " + `status`
+
+t_id = id.transport_id;
+ti = py_pjsua.Transport_Info();
+status = py_pjsua.transport_get_info(t_id,ti)
+print "py transport get info status " + `status`
+
+status = py_pjsua.transport_set_enable(t_id,1)
+print "py transport set enable status " + `status`
+if status != 0 :
+	py_pjsua.perror("py_pjsua","set enable",status)
+
+
+status = py_pjsua.transport_close(t_id,1)
+print "py transport close status " + `status`
+if status != 0 :
+	py_pjsua.perror("py_pjsua","close",status)
+
+# end of lib transport
+
+# lib account 
+
+accfg = py_pjsua.Acc_Config()
+py_pjsua.acc_config_default(accfg)
+accid = py_pjsua.Acc_ID()
+status = py_pjsua.acc_add(accfg, 1, accid)
+print "py acc add status " + `status`
+if status != 0 :
+	py_pjsua.perror("py_pjsua","add acc",status)
+count = py_pjsua.acc_get_count()
+print "acc count " + `count`
+
+accid.acc_id = py_pjsua.acc_get_default()
+
+print "acc id default " + `accid.acc_id`
+
+# end of lib account
+
 py_pjsua.perror("saya","hallo",70006)
 
 status = py_pjsua.destroy()
