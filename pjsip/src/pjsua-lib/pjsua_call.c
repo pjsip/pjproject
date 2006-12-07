@@ -218,6 +218,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Options must be zero for now */
     PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
+    /* Check arguments */
+    PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
+
     PJSUA_LOCK();
 
     acc = &pjsua_var.acc[acc_id];
@@ -241,6 +244,35 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     call = &pjsua_var.calls[call_id];
+
+    /* Verify that destination URI is valid before calling 
+     * pjsua_acc_create_uac_contact, or otherwise there  
+     * a misleading "Invalid Contact URI" error will be printed
+     * when pjsua_acc_create_uac_contact() fails.
+     */
+    if (1) {
+	pj_pool_t *pool;
+	pjsip_uri *uri;
+	pj_str_t dup;
+
+	pool = pjsua_pool_create("tmp-uri", 4000, 4000);
+	if (!pool) {
+	    pjsua_perror(THIS_FILE, "Unable to create pool", PJ_ENOMEM);
+	    PJSUA_UNLOCK();
+	    return PJ_ENOMEM;
+	}
+	
+	pj_strdup_with_null(pool, &dup, dest_uri);
+	uri = pjsip_parse_uri(pool, dup.ptr, dup.slen, 0);
+	pj_pool_release(pool);
+
+	if (uri == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to make call", 
+			 PJSIP_EINVALIDREQURI);
+	    PJSUA_UNLOCK();
+	    return PJSIP_EINVALIDREQURI;
+	}
+    }
 
     PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
 	      (int)dest_uri->slen, dest_uri->ptr));
