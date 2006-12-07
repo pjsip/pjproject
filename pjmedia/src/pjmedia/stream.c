@@ -707,6 +707,7 @@ static void on_rx_rtp( void *data,
 				    &hdr, &payload, &payloadlen);
     if (status != PJ_SUCCESS) {
 	LOGERR_((stream->port.info.name.ptr, "RTP decode error", status));
+	stream->rtcp.stat.rx.discard++;
 	return;
     }
 
