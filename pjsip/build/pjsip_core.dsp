@@ -150,6 +150,10 @@ SOURCE=..\src\pjsip\sip_transport_tcp.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_transport_tls_ossl.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_transport_udp.c
 # End Source File
 # End Group
@@ -283,6 +287,10 @@ SOURCE=..\include\pjsip\sip_transport_loop.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_transport_tcp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_transport_tls.h
 # End Source File
 # Begin Source File
 

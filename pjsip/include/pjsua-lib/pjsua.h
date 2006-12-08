@@ -840,6 +840,21 @@ typedef struct pjsua_transport_config
      */
     pjsua_stun_config	stun_config;
 
+    /**
+     * TLS root CA file path (only used for TLS transport).
+     */
+    pj_str_t		tls_ca_file;
+
+    /**
+     * TLS client key path (only used for TLS transport).
+     */
+    pj_str_t		tls_key_file;
+
+    /**
+     * TLS password (only used for TLS transport).
+     */
+    pj_str_t		tls_password;
+
 } pjsua_transport_config;
 
 

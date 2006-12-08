@@ -1044,6 +1044,30 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].local_name = tcp->addr_name;
 	pjsua_var.tpdata[id].data.factory = tcp;
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    } else if (type == PJSIP_TRANSPORT_TLS) {
+	/*
+	 * Create TLS transport.
+	 */
+	pjsip_tpfactory *tls;
+
+	status = pjsip_tls_transport_start(pjsua_var.endpt, 
+					   &cfg->tls_key_file,
+					   &cfg->tls_password, 
+					   &cfg->tls_ca_file,
+					   NULL, NULL, 1, &tls);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating SIP TLS listener", 
+			 status);
+	    goto on_return;
+	}
+
+	/* Save the transport */
+	pjsua_var.tpdata[id].type = type;
+	pjsua_var.tpdata[id].local_name = tls->addr_name;
+	pjsua_var.tpdata[id].data.factory = tls;
+#endif
+
     } else {
 	status = PJSIP_EUNSUPTRANSPORT;
 	pjsua_perror(THIS_FILE, "Error creating transport", status);

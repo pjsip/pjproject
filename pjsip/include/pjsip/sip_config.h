@@ -234,6 +234,17 @@
 #endif
 
 
+/**
+ * Enable TLS SIP transport support. For most systems this means that
+ * OpenSSL must be installed.
+ *
+ * Default: 0 (for now)
+ */
+#ifndef PJSIP_HAS_TLS_TRANSPORT
+#   define PJSIP_HAS_TLS_TRANSPORT	    0
+#endif
+
+
 
 /* Endpoint. */
 #define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)

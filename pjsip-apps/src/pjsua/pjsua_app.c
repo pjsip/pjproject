@@ -40,6 +40,7 @@ static struct app_config
     pj_bool_t		    no_refersub;
     pj_bool_t		    no_tcp;
     pj_bool_t		    no_udp;
+    pj_bool_t		    use_tls;
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
 
@@ -137,6 +138,12 @@ static void usage(void)
     puts  ("                      May be specified multiple times");
     puts  ("  --use-stun1=host[:port]");
     puts  ("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    puts  ("  --use-tls           Enable TLS transport");
+    puts  ("  --tls-ca-file       Specify TLS CA file");
+    puts  ("  --tls-key-file      Specify TLS client key file");
+    puts  ("  --tls-password      Specify TLS password");
+#endif
     puts  ("");
     puts  ("Media Options:");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
@@ -299,6 +306,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
 	   OPT_NOREFERSUB,
+	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_KEY_FILE, OPT_TLS_PASSWORD,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -353,6 +361,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
 	{ "duration",	1, 0, OPT_DURATION},
 	{ "thread-cnt",	1, 0, OPT_THREAD_CNT},
+	{ "use-tls",	0, 0, OPT_USE_TLS}, 
+	{ "tls-ca-file",1, 0, OPT_TLS_CA_FILE},
+	{ "tls-key-file",1,0, OPT_TLS_KEY_FILE}, 
+	{ "tls-password",1,0, OPT_TLS_PASSWORD},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -774,6 +786,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
+	case OPT_USE_TLS:
+	    cfg->use_tls = PJ_TRUE;
+	    break;
+	    
+	case OPT_TLS_CA_FILE:
+	    cfg->udp_cfg.tls_ca_file = pj_str(pj_optarg);
+	    break;
+	    
+	case OPT_TLS_KEY_FILE:
+	    cfg->udp_cfg.tls_key_file = pj_str(pj_optarg);
+	    break;
+	    
+	case OPT_TLS_PASSWORD:
+	    cfg->udp_cfg.tls_password = pj_str(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1002,6 +1030,27 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* TLS */
+    if (config->use_tls)
+	pj_strcat2(&cfg, "--use-tls\n");
+    if (config->udp_cfg.tls_ca_file.slen) {
+	pj_ansi_sprintf(line, "--tls-ca-file %.*s\n",
+			(int)config->udp_cfg.tls_ca_file.slen, 
+			config->udp_cfg.tls_ca_file.ptr);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->udp_cfg.tls_key_file.slen) {
+	pj_ansi_sprintf(line, "--tls-key-file %.*s\n",
+			(int)config->udp_cfg.tls_key_file.slen, 
+			config->udp_cfg.tls_key_file.ptr);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->udp_cfg.tls_password.slen) {
+	pj_ansi_sprintf(line, "--tls-password %.*s\n",
+			(int)config->udp_cfg.tls_password.slen, 
+			config->udp_cfg.tls_password.ptr);
+	pj_strcat2(&cfg, line);
+    }
 
     pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
 
@@ -2764,7 +2813,6 @@ pj_status_t app_init(int argc, char *argv[])
 
     }
 
-
     /* Add UDP transport unless it's disabled. */
     if (!app_config.no_udp) {
 	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
@@ -2777,6 +2825,17 @@ pj_status_t app_init(int argc, char *argv[])
 	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
     }
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    /* Add TLS transport when application wants one */
+    if (app_config.use_tls) {
+	status = pjsua_transport_create(PJSIP_TRANSPORT_TLS,
+					&app_config.udp_cfg, 
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+#endif
 
     if (transport_id == -1) {
 	PJ_LOG(3,(THIS_FILE, "Error: no transport is configured"));
