@@ -98,6 +98,11 @@ SOURCE=..\src\py_pjsua\pjsua.py
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\py_pjsua\pjsua_app.py
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\py_pjsua\py_pjsua.c
 # End Source File
 # Begin Source File

@@ -236,20 +236,30 @@ static void cb_on_call_media_state(pjsua_call_id call_id)
 
 /*
  * Notify application on call being transfered.
+ * !modified @061206
  */
 static void cb_on_call_transfer_request(pjsua_call_id call_id,
 				        const pj_str_t *dst,
 				        pjsip_status_code *code)
 {
+    PyObject * ret;
+    int cd;
     if (PyCallable_Check(obj_callback->on_call_transfer_request))
     {
-        PyObject_CallFunctionObjArgs(
+        ret = PyObject_CallFunctionObjArgs(
             obj_callback->on_call_transfer_request,
 	    Py_BuildValue("i",call_id),
             PyString_FromStringAndSize(dst->ptr, dst->slen),
             Py_BuildValue("i",*code),
 	    NULL
         );
+	if (ret != NULL) {
+	    if (ret != Py_None) {
+		if (PyArg_Parse(ret,"i",&cd)) {
+		    *code = cd;
+		}
+	    }
+	}
     }
 }
 
@@ -259,6 +269,7 @@ static void cb_on_call_transfer_request(pjsua_call_id call_id,
  * transfer request. Application can monitor the status of the
  * call transfer request, for example to decide whether to 
  * terminate existing call.
+ * !modified @061206
  */
 static void cb_on_call_transfer_status( pjsua_call_id call_id,
 					int status_code,
@@ -266,9 +277,11 @@ static void cb_on_call_transfer_status( pjsua_call_id call_id,
 					pj_bool_t final,
 					pj_bool_t *p_cont)
 {
+    PyObject * ret;
+    int cnt;
     if (PyCallable_Check(obj_callback->on_call_transfer_status))
     {
-        PyObject_CallFunctionObjArgs(
+        ret = PyObject_CallFunctionObjArgs(
             obj_callback->on_call_transfer_status,
 	    Py_BuildValue("i",call_id),
 	    Py_BuildValue("i",status_code),
@@ -277,6 +290,13 @@ static void cb_on_call_transfer_status( pjsua_call_id call_id,
             Py_BuildValue("i",*p_cont),
 	    NULL
         );
+	if (ret != NULL) {
+	    if (ret != Py_None) {
+		if (PyArg_Parse(ret,"i",&cnt)) {
+		    *p_cont = cnt;
+		}
+	    }
+	}
     }
 }
 
@@ -284,20 +304,24 @@ static void cb_on_call_transfer_status( pjsua_call_id call_id,
 /*
  * Notify application about incoming INVITE with Replaces header.
  * Application may reject the request by setting non-2xx code.
+ * !modified @061206
  */
 static void cb_on_call_replace_request( pjsua_call_id call_id,
 					pjsip_rx_data *rdata,
 					int *st_code,
 					pj_str_t *st_text)
 {
+    PyObject * ret;
+    PyObject * txt;
+    int cd;
     if (PyCallable_Check(obj_callback->on_call_replace_request))
     {
-	pjsip_rx_data_Object * obj = (pjsip_rx_data_Object *)
+        pjsip_rx_data_Object * obj = (pjsip_rx_data_Object *)
 				      PyType_GenericNew(&pjsip_rx_data_Type,
 							NULL, NULL);
-	obj->rdata = rdata;
+        obj->rdata = rdata;
 
-        PyObject_CallFunctionObjArgs(
+        ret = PyObject_CallFunctionObjArgs(
             obj_callback->on_call_replace_request,
 	    Py_BuildValue("i",call_id),
 	    obj,
@@ -305,6 +329,15 @@ static void cb_on_call_replace_request( pjsua_call_id call_id,
             PyString_FromStringAndSize(st_text->ptr, st_text->slen),
 	    NULL
         );
+	if (ret != NULL) {
+	    if (ret != Py_None) {
+		if (PyArg_ParseTuple(ret,"iO",&cd, &txt)) {
+		    *st_code = cd;
+		    st_text->ptr = PyString_AsString(txt);
+		    st_text->slen = strlen(PyString_AsString(txt));
+		}
+	    }
+	}
     }
 }
 
@@ -1110,12 +1143,14 @@ static PyTypeObject logging_config_Type =
 /*
  * msg_data_Object
  * typewrapper for MessageData class
+ * !modified @ 061206
  */
 typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-    pjsip_hdr hdr_list;
+    /*pjsip_hdr hdr_list;*/
+    PyObject * hdr_list;
     PyObject * content_type;
     PyObject * msg_body;
 } msg_data_Object;
@@ -1124,9 +1159,11 @@ typedef struct
 /*
  * msg_data_dealloc
  * deletes a msg_data
+ * !modified @ 061206
  */
 static void msg_data_dealloc(msg_data_Object* self)
 {
+    Py_XDECREF(self->hdr_list);
     Py_XDECREF(self->content_type);
     Py_XDECREF(self->msg_body);
     self->ob_type->tp_free((PyObject*)self);
@@ -1136,6 +1173,7 @@ static void msg_data_dealloc(msg_data_Object* self)
 /*
  * msg_data_new
  * constructor for msg_data object
+ * !modified @ 061206
  */
 static PyObject * msg_data_new(PyTypeObject *type, PyObject *args,
                                 PyObject *kwds)
@@ -1145,6 +1183,13 @@ static PyObject * msg_data_new(PyTypeObject *type, PyObject *args,
     self = (msg_data_Object *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
+        Py_INCREF(Py_None);
+        self->hdr_list = Py_None;
+        if (self->hdr_list == NULL)
+    	{
+            Py_DECREF(self);
+            return NULL;
+        }
         self->content_type = PyString_FromString("");
         if (self->content_type == NULL)
     	{
@@ -1165,11 +1210,16 @@ static PyObject * msg_data_new(PyTypeObject *type, PyObject *args,
 
 /*
  * msg_data_members
+ * !modified @ 061206
  */
 static PyMemberDef msg_data_members[] =
 {
     {
-    	"content_type", T_OBJECT_EX, offsetof(msg_data_Object, content_type),
+        "hdr_list", T_OBJECT_EX, offsetof(msg_data_Object, hdr_list),
+	0, "Additional message headers as linked list."
+    }, 
+    {
+	"content_type", T_OBJECT_EX, offsetof(msg_data_Object, content_type),
     	0, "MIME type of optional message body."
     },
     {
@@ -1227,6 +1277,76 @@ static PyTypeObject msg_data_Type =
 
 };
 
+/* 
+ * translate_hdr
+ * internal function 
+ * translate from hdr_list to pjsip_generic_string_hdr
+ */
+void translate_hdr(pj_pool_t *pool, pjsip_hdr *hdr, PyObject *py_hdr_list)
+{
+    int i;
+
+    if (PyList_Check(py_hdr_list)) {
+        pj_list_init(hdr);
+
+        for (i = 0; i < PyList_Size(py_hdr_list); i++) { 
+            pj_str_t hname, hvalue;
+	    pjsip_generic_string_hdr * new_hdr;
+            PyObject * tuple = PyList_GetItem(py_hdr_list, i);
+
+            if (PyTuple_Check(tuple)) {
+                hname.ptr = PyString_AsString(PyTuple_GetItem(tuple,0));
+                hname.slen = strlen(PyString_AsString(PyTuple_GetItem(tuple,0)));
+                hvalue.ptr = PyString_AsString(PyTuple_GetItem(tuple,1));
+                hvalue.slen = strlen(PyString_AsString(PyTuple_GetItem(tuple,1)));
+            } else {
+		hname.ptr = "";
+		hname.slen = 0;
+		hvalue.ptr = "";
+		hvalue.slen = 0;
+            }  
+            new_hdr = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
+            pj_list_push_back((pj_list_type *)hdr, (pj_list_type *)new_hdr);
+	}     
+    }
+}
+
+/* 
+ * translate_hdr_rev
+ * internal function
+ * translate from pjsip_generic_string_hdr to hdr_list
+ */
+
+void translate_hdr_rev(pjsip_generic_string_hdr *hdr, PyObject *py_hdr_list)
+{
+    int i;
+    int len;
+    pjsip_generic_string_hdr * p_hdr;
+
+    len = pj_list_size(hdr);
+    
+    if (len > 0) {
+	p_hdr = hdr;
+        Py_XDECREF(py_hdr_list);
+        py_hdr_list = PyList_New(len);
+
+	for (i = 0; i < len && p_hdr != NULL; i++) {
+	    PyObject * tuple;
+	    PyObject * str;
+
+	    tuple = PyTuple_New(2);
+	    
+	    str = PyString_FromStringAndSize(p_hdr->name.ptr, p_hdr->name.slen);
+	    PyTuple_SetItem(tuple, 0, str);
+	    str = PyString_FromStringAndSize(hdr->hvalue.ptr, p_hdr->hvalue.slen);
+	    PyTuple_SetItem(tuple, 1, str);
+	    PyList_SetItem(py_hdr_list, i, tuple);
+	    p_hdr = p_hdr->next;
+	}
+    }
+    
+    
+}
 
 /*
  * pj_pool_Object
@@ -1443,19 +1563,19 @@ static PyObject * pjsip_cred_info_new(PyTypeObject *type, PyObject *args,
             Py_DECREF(self);
             return NULL;
         }
-         self->scheme = PyString_FromString("");
+        self->scheme = PyString_FromString("");
         if (self->scheme == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
-		 self->username = PyString_FromString("");
+        self->username = PyString_FromString("");
         if (self->username == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
-		 self->data = PyString_FromString("");
+        self->data = PyString_FromString("");
         if (self->data == NULL)
     	{
             Py_DECREF(self);
@@ -1472,29 +1592,29 @@ static PyObject * pjsip_cred_info_new(PyTypeObject *type, PyObject *args,
  */
 static PyMemberDef pjsip_cred_info_members[] =
 {
-	{
-    	"realm", T_OBJECT_EX,
-    	offsetof(pjsip_cred_info_Object, realm), 0,
-    	"Realm"
-    },
-	{
-    	"scheme", T_OBJECT_EX,
-    	offsetof(pjsip_cred_info_Object, scheme), 0,
-    	"Scheme"
-    },
-	{
-    	"username", T_OBJECT_EX,
-    	offsetof(pjsip_cred_info_Object, username), 0,
-    	"User name"
-    },
-	{
-    	"data", T_OBJECT_EX,
-    	offsetof(pjsip_cred_info_Object, data), 0,
-    	"The data, which can be a plaintext password or a hashed digest. "
+    {
+        "realm", T_OBJECT_EX,
+        offsetof(pjsip_cred_info_Object, realm), 0,
+        "Realm"
     },
     {
-    	"data_type", T_INT, offsetof(pjsip_cred_info_Object, data_type), 0,
-    	"Type of data"
+        "scheme", T_OBJECT_EX,
+        offsetof(pjsip_cred_info_Object, scheme), 0,
+        "Scheme"
+    },
+    {
+        "username", T_OBJECT_EX,
+        offsetof(pjsip_cred_info_Object, username), 0,
+        "User name"
+    },
+    {
+        "data", T_OBJECT_EX,
+        offsetof(pjsip_cred_info_Object, data), 0,
+        "The data, which can be a plaintext password or a hashed digest. "
+    },
+    {
+        "data_type", T_INT, offsetof(pjsip_cred_info_Object, data_type), 0,
+        "Type of data"
     },
     
     {NULL}  /* Sentinel */
@@ -1547,80 +1667,106 @@ static PyTypeObject pjsip_cred_info_Type =
 
 };
 
+/*
+ * py_pjsua_thread_register
+ * !added @ 061206
+ */
+static PyObject *py_pjsua_thread_register(PyObject *pSelf, PyObject 
+*pArgs)
+{
+	
+    pj_status_t status;	
+    const char *name;
+    PyObject *py_desc;
+    pj_thread_t *thread;
+    void *thread_desc;
+    int size;
+    int i;
+    int *td;
+
+    if (!PyArg_ParseTuple(pArgs, "sO", &name, &py_desc))
+    {
+         return NULL;
+    }
+#if 0
+    size = PyList_Size(py_desc);
+    td = (int *)malloc(size * sizeof(int));
+    for (i = 0; i < size; i++) {
+	if (!PyArg_Parse(PyList_GetItem(py_desc,i),"i", td[i])) {
+	    return NULL;
+	}
+    }
+    thread_desc = td;
+#else
+    thread_desc = malloc(sizeof(pj_thread_desc));
+#endif
+    status = pj_thread_register(name, thread_desc, &thread);
+    return Py_BuildValue("i",status);
+}
 
 /*
  * py_pjsua_logging_config_default
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_logging_config_default(PyObject *pSelf,
                                                     PyObject *pArgs)
 {
-    logging_config_Object *obj;
+    logging_config_Object *obj;	
     pjsua_logging_config cfg;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
-    /*pj_bzero(cfg, sizeof(*cfg));
-
-    cfg->msg_logging = obj->msg_logging;
-    cfg->level = obj->level;
-    cfg->console_level = obj->console_level;
-    cfg->decor = obj->decor;*/
+    
     pjsua_logging_config_default(&cfg);
+	obj = (logging_config_Object *) logging_config_new
+		(&logging_config_Type,NULL,NULL);
     obj->msg_logging = cfg.msg_logging;
     obj->level = cfg.level;
     obj->console_level = cfg.console_level;
     obj->decor = cfg.decor;
-    /*printf("msg logging : %d\n",obj->msg_logging);
-    printf("level : %d\n",obj->level);
-    printf("console level : %d\n",obj->console_level);
-    printf("decor : %d\n",obj->decor);
-    printf("str sebelum ");
-    printf(PyString_AsString(obj->log_filename));
-
-    Py_XDECREF(obj->log_filename);
-    obj->log_filename = PyString_FromString("oke");
-    printf("\nstr sesudah ");
-    printf(PyString_AsString(obj->log_filename));*/
-    Py_INCREF(Py_None);
-    return Py_None;
+    
+    return (PyObject *)obj;
 }
 
 
 /*
  * py_pjsua_config_default
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_config_default(PyObject *pSelf, PyObject *pArgs)
 {
     config_Object *obj;
     pjsua_config cfg;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
     pjsua_config_default(&cfg);
+	obj = (config_Object *) config_new(&config_Type, NULL, NULL);
     obj->max_calls = cfg.max_calls;
     obj->thread_cnt = cfg.thread_cnt;
-    Py_INCREF(Py_None);
-    return Py_None;
+    return (PyObject *)obj;
 }
 
 
 /*
  * py_pjsua_media_config_default
+ * !modified @ 051206
  */
 static PyObject * py_pjsua_media_config_default(PyObject *pSelf,
                                                 PyObject *pArgs)
 {
     media_config_Object *obj;
     pjsua_media_config cfg;
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
     pjsua_media_config_default(&cfg);
+    obj = (media_config_Object *)PyType_GenericNew(&media_config_Type, NULL, NULL);
     obj->clock_rate = cfg.clock_rate;
     obj->ec_options = cfg.ec_options;
     obj->ec_tail_len = cfg.ec_tail_len;
@@ -1633,23 +1779,25 @@ static PyObject * py_pjsua_media_config_default(PyObject *pSelf,
     obj->rx_drop_pct = cfg.rx_drop_pct;
     obj->thread_cnt = cfg.thread_cnt;
     obj->tx_drop_pct = cfg.tx_drop_pct;
-    Py_INCREF(Py_None);
-    return Py_None;
+    return (PyObject *)obj;
 }
 
 
 /*
  * py_pjsua_msg_data_init
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_msg_data_init(PyObject *pSelf, PyObject *pArgs)
 {
     msg_data_Object *obj;
     pjsua_msg_data msg;
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
     pjsua_msg_data_init(&msg);
+    obj = (msg_data_Object *)msg_data_new(&msg_data_Type, NULL, NULL);
     Py_XDECREF(obj->content_type);
     obj->content_type = PyString_FromStringAndSize(
         msg.content_type.ptr, msg.content_type.slen
@@ -1658,137 +1806,10 @@ static PyObject *py_pjsua_msg_data_init(PyObject *pSelf, PyObject *pArgs)
     obj->msg_body = PyString_FromStringAndSize(
         msg.msg_body.ptr, msg.msg_body.slen
     );
-    obj->hdr_list = msg.hdr_list;
-    Py_INCREF(Py_None);
-    return Py_None;
-}
 
-
-/*
- * py_pjsua_logging_config_dup
- */
-static PyObject *py_pjsua_logging_config_dup(PyObject *pSelf, PyObject *pArgs)
-{
-    pj_pool_Object *pool;
-    logging_config_Object *src;
-    logging_config_Object *dest;
-    pj_str_t strdest;
-    pj_str_t strsrc;
-    int len;
-
-    if (!PyArg_ParseTuple(pArgs, "OOO", &pool, &dest, &src))
-    {
-        return NULL;
-    }
-    pj_memcpy(dest, src, sizeof(*src));
-    len = strlen(PyString_AsString(src->log_filename));
-    strsrc.ptr = PyString_AsString(src->log_filename);
-    strsrc.slen = len;
-    pj_strdup_with_null(pool->pool, &strdest, &strsrc);
-    Py_XDECREF(dest->log_filename);
-    dest->log_filename = PyString_FromStringAndSize(strdest.ptr, strdest.slen);
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-
-/*
- * py_pjsua_config_dup
- */
-static PyObject *py_pjsua_config_dup(PyObject *pSelf, PyObject *pArgs)
-{
-    pj_pool_Object *pool;
-    config_Object *src;
-    config_Object *dest;
-    pj_str_t strdest;
-    pj_str_t strsrc;
-    int len;
-    unsigned i;
-
-    if (!PyArg_ParseTuple(pArgs, "OOO", &pool, &dest, &src))
-    {
-        return NULL;
-    }
-    pj_memcpy(dest, src, sizeof(*src));
-
-    for (i=0; i<src->outbound_proxy_cnt; ++i)
-    {
-        pj_strdup_with_null(
-            pool->pool, &dest->outbound_proxy[i], &src->outbound_proxy[i]
-        );
-    }
-
-    for (i=0; i<src->cred_count; ++i)
-    {
-        pjsip_cred_dup(pool->pool, &dest->cred_info[i], &src->cred_info[i]);
-    }
-    len = strlen(PyString_AsString(src->user_agent));
-    strsrc.ptr = PyString_AsString(src->user_agent);
-    strsrc.slen = len;
-    pj_strdup_with_null(pool->pool, &strdest, &strsrc);
-    Py_XDECREF(dest->user_agent);
-    dest->user_agent = PyString_FromStringAndSize(strdest.ptr, strdest.slen);
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-
-/*
- * py_pjsip_cred_dup
- */
-static PyObject *py_pjsip_cred_dup(PyObject *pSelf, PyObject *pArgs)
-{
-    pj_pool_Object *pool;
-    pjsip_cred_info_Object *src;
-    pjsip_cred_info_Object *dest;
-	pjsip_cred_info s;
-	pjsip_cred_info d;
-    if (!PyArg_ParseTuple(pArgs, "OOO", &pool, &dest, &src))
-    {
-        return NULL;
-    }
-	s.data.ptr = PyString_AsString(src->data);
-	s.data.slen = strlen(PyString_AsString(src->data));
-	s.realm.ptr = PyString_AsString(src->realm);
-	s.realm.slen = strlen(PyString_AsString(src->realm));
-	s.scheme.ptr = PyString_AsString(src->scheme);
-	s.scheme.slen = strlen(PyString_AsString(src->scheme));
-	s.username.ptr = PyString_AsString(src->username);
-	s.username.slen = strlen(PyString_AsString(src->username));
-	s.data_type = src->data_type;
-	d.data.ptr = PyString_AsString(dest->data);
-	d.data.slen = strlen(PyString_AsString(dest->data));
-	d.realm.ptr = PyString_AsString(dest->realm);
-	d.realm.slen = strlen(PyString_AsString(dest->realm));
-	d.scheme.ptr = PyString_AsString(dest->scheme);
-	d.scheme.slen = strlen(PyString_AsString(dest->scheme));
-	d.username.ptr = PyString_AsString(dest->username);
-	d.username.slen = strlen(PyString_AsString(dest->username));
-	d.data_type = dest->data_type;
-    pjsip_cred_dup(pool->pool, &d, &s);
-	Py_XDECREF(src->data);
-	src->data = PyString_FromStringAndSize(s.data.ptr, s.data.slen);
-	Py_XDECREF(src->realm);
-	src->realm = PyString_FromStringAndSize(s.realm.ptr, s.realm.slen);
-	Py_XDECREF(src->scheme);
-	src->scheme = PyString_FromStringAndSize(s.scheme.ptr, s.scheme.slen);
-	Py_XDECREF(src->username);
-	src->username = 
-		PyString_FromStringAndSize(s.username.ptr, s.username.slen);
-    Py_INCREF(Py_None);
-	src->data_type = s.data_type;
-	Py_XDECREF(dest->data);
-	dest->data = PyString_FromStringAndSize(d.data.ptr, d.data.slen);
-	Py_XDECREF(dest->realm);
-	dest->realm = PyString_FromStringAndSize(d.realm.ptr, d.realm.slen);
-	Py_XDECREF(dest->scheme);
-	dest->scheme = PyString_FromStringAndSize(d.scheme.ptr, d.scheme.slen);
-	Py_XDECREF(dest->username);
-	dest->username = 
-		PyString_FromStringAndSize(d.username.ptr, d.username.slen);
-    Py_INCREF(Py_None);
-	src->data_type = s.data_type;
-    return Py_None;
+    translate_hdr_rev((pjsip_generic_string_hdr *)&msg.hdr_list, obj->hdr_list);
+    
+    return (PyObject *)obj;
 }
 
 
@@ -1921,6 +1942,7 @@ static PyObject *py_pjsua_perror(PyObject *pSelf, PyObject *pArgs)
     {
         return NULL;
     }
+	
     pjsua_perror(sender, title, status);
     Py_INCREF(Py_None);
     return Py_None;
@@ -1938,7 +1960,7 @@ static PyObject *py_pjsua_create(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_create();
-    printf("status %d\n",status);
+    //printf("status %d\n",status);
     return Py_BuildValue("i",status);
 }
 
@@ -2036,7 +2058,7 @@ static PyObject *py_pjsua_start(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_start();
-    printf("status %d\n",status);
+    //printf("status %d\n",status);
     return Py_BuildValue("i",status);
 }
 
@@ -2052,7 +2074,7 @@ static PyObject *py_pjsua_destroy(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_destroy();
-    printf("status %d\n",status);
+    //printf("status %d\n",status);
     return Py_BuildValue("i",status);
 }
 
@@ -2069,7 +2091,7 @@ static PyObject *py_pjsua_handle_events(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     ret = pjsua_handle_events(msec);
-    printf("return %d\n",ret);
+    //printf("return %d\n",ret);
     return Py_BuildValue("i",ret);
 }
 
@@ -2086,19 +2108,17 @@ static PyObject *py_pjsua_verify_sip_url(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_verify_sip_url(url);
-    printf("status %d\n",status);
+    //printf("status %d\n",status);
     return Py_BuildValue("i",status);
 }
 
 
-
-
-
-
 /*
- * error messages
+ * function doc
  */
 
+static char pjsua_thread_register_doc[] =
+    "int py_pjsua.thread_register(string name, int[] desc)";
 static char pjsua_perror_doc[] =
     "void py_pjsua.perror (string sender, string title, int status) "
     "Display error message for the specified error code. Parameters: "
@@ -2181,40 +2201,21 @@ static char pjsua_reconfigure_logging_doc[] =
         "c: Logging configuration.";
 
 static char pjsua_logging_config_default_doc[] =
-    "void py_pjsua.logging_config_default  (py_pjsua.Logging_Config cfg)  "
+    "py_pjsua.Logging_Config py_pjsua.logging_config_default  ()  "
     "Use this function to initialize logging config.";
 
 static char pjsua_config_default_doc[] =
-    "void py_pjsua.config_default (py_pjsua.Config cfg). Use this function to "
-    "initialize pjsua config. Parameters: "
-        "cfg: pjsua config to be initialized.";
+    "py_pjsua.Config py_pjsua.config_default (). Use this function to "
+    "initialize pjsua config. ";
 
 static char pjsua_media_config_default_doc[] =
+    "py_pjsua.Media_Config py_pjsua.media_config_default (). "
     "Use this function to initialize media config.";
 
-static char pjsua_logging_config_dup_doc[] =
-    "void py_pjsua.logging_config_dup  (py_pjsua.PJ_Pool pool, "
-        "py_pjsua.Logging_Config dst, py_pjsua.Logging_Config src) "
-    "Use this function to duplicate logging config. Parameters: "
-        "pool: Pool to use;  "
-        "dst: Destination config;  "
-        "src: Source config.";
-
-static char pjsua_config_dup_doc[] =
-    "void py_pjsua.config_dup (py_pjsua.PJ_Pool pool, py_pjsua.Config dst, "
-                                "py_pjsua.Config src) "
-    "Duplicate pjsua_config. ";
-
-static char pjsip_cred_dup_doc[] =
-    "void py_pjsua.pjsip_cred_dup (py_pjsua.PJ_Pool pool, "
-                                "py_pjsua.PJSIP_Cred_Info dst, "
-                                "py_pjsua.PJSIP_Cred_Info src) "
-    "Duplicate credential.";
-
 static char pjsua_msg_data_init_doc[] =
-    "void py_pjsua.msg_data_init (py_pjsua.Msg_Data msg_data) "
-    "Initialize message data Parameters: "
-        "msg_data: Message data to be initialized.";
+    "py_pjsua.Msg_Data void py_pjsua.msg_data_init () "
+    "Initialize message data ";
+        
 
 /* END OF LIB BASE */
 
@@ -2228,7 +2229,7 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-	PyObject * stun_srv1;    
+    PyObject * stun_srv1;    
     unsigned stun_port1;
     PyObject * stun_srv2;
     unsigned stun_port2;    
@@ -2282,25 +2283,25 @@ static PyObject * stun_config_new(PyTypeObject *type, PyObject *args,
 static PyMemberDef stun_config_members[] =
 {
     {
-    	"stun_port1", T_INT, offsetof(stun_config_Object, stun_port1), 0,
-    	"The first STUN server IP address or hostname."
+        "stun_port1", T_INT, offsetof(stun_config_Object, stun_port1), 0,
+        "The first STUN server IP address or hostname."
     },
     {
-    	"stun_port2", T_INT, offsetof(stun_config_Object, stun_port2), 0,
-    	"Port number of the second STUN server. "
-		"If zero, default STUN port will be used."
+        "stun_port2", T_INT, offsetof(stun_config_Object, stun_port2), 0,
+        "Port number of the second STUN server. "
+        "If zero, default STUN port will be used."
     },    
     {
-    	"stun_srv1", T_OBJECT_EX,
-    	offsetof(stun_config_Object, stun_srv1), 0,
-    	"The first STUN server IP address or hostname"
+        "stun_srv1", T_OBJECT_EX,
+        offsetof(stun_config_Object, stun_srv1), 0,
+        "The first STUN server IP address or hostname"
     },
     {
-    	"stun_srv2", T_OBJECT_EX,
-    	offsetof(stun_config_Object, stun_srv2), 0,
-    	"Optional second STUN server IP address or hostname, for which the "
-		"result of the mapping request will be compared to. If the value "
-		"is empty, only one STUN server will be used"
+        "stun_srv2", T_OBJECT_EX,
+        offsetof(stun_config_Object, stun_srv2), 0,
+        "Optional second STUN server IP address or hostname, for which the "
+        "result of the mapping request will be compared to. If the value "
+        "is empty, only one STUN server will be used"
     },
     {NULL}  /* Sentinel */
 };
@@ -2364,11 +2365,11 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-	unsigned port;
-	PyObject * public_addr;
-	PyObject * bound_addr;
-	int use_stun;
-	stun_config_Object * stun_config;
+    unsigned port;
+    PyObject * public_addr;
+    PyObject * bound_addr;
+    int use_stun;
+    stun_config_Object * stun_config;
 } transport_config_Object;
 
 
@@ -2378,8 +2379,8 @@ typedef struct
  */
 static void transport_config_dealloc(transport_config_Object* self)
 {
-	Py_XDECREF(self->public_addr);    
-	Py_XDECREF(self->bound_addr);    
+    Py_XDECREF(self->public_addr);    
+    Py_XDECREF(self->bound_addr);    
     Py_XDECREF(self->stun_config);    
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -2410,7 +2411,7 @@ static PyObject * transport_config_new(PyTypeObject *type, PyObject *args,
             return NULL;
         }
         self->stun_config = 
-			(stun_config_Object *)stun_config_new(&stun_config_Type,NULL,NULL);
+            (stun_config_Object *)stun_config_new(&stun_config_Type,NULL,NULL);
         if (self->stun_config == NULL)
     	{
             Py_DECREF(self);
@@ -2429,39 +2430,39 @@ static PyObject * transport_config_new(PyTypeObject *type, PyObject *args,
 static PyMemberDef transport_config_members[] =
 {
     {
-    	"port", T_INT, offsetof(transport_config_Object, port), 0,
-    	"UDP port number to bind locally. This setting MUST be specified "
-		"even when default port is desired. If the value is zero, the "
-		"transport will be bound to any available port, and application "
-		"can query the port by querying the transport info."
+        "port", T_INT, offsetof(transport_config_Object, port), 0,
+        "UDP port number to bind locally. This setting MUST be specified "
+        "even when default port is desired. If the value is zero, the "
+        "transport will be bound to any available port, and application "
+        "can query the port by querying the transport info."
     },
     {
-    	"public_addr", T_OBJECT_EX, 
-		offsetof(transport_config_Object, public_addr), 0,
-    	"Optional address to advertise as the address of this transport. "
-		"Application can specify any address or hostname for this field, "
-		"for example it can point to one of the interface address in the "
-		"system, or it can point to the public address of a NAT router "
-		"where port mappings have been configured for the application."		
-    },    
-	{
-    	"bound_addr", T_OBJECT_EX, 
-		offsetof(transport_config_Object, bound_addr), 0,
-    	"Optional address where the socket should be bound to. This option "
-		"SHOULD only be used to selectively bind the socket to particular "
-		"interface (instead of 0.0.0.0), and SHOULD NOT be used to set the "
-		"published address of a transport (the public_addr field should be "
-		"used for that purpose)."		
+        "public_addr", T_OBJECT_EX, 
+	offsetof(transport_config_Object, public_addr), 0,
+        "Optional address to advertise as the address of this transport. "
+        "Application can specify any address or hostname for this field, "
+        "for example it can point to one of the interface address in the "
+        "system, or it can point to the public address of a NAT router "
+        "where port mappings have been configured for the application."		
     },    
     {
-    	"use_stun", T_INT,
-    	offsetof(transport_config_Object, use_stun), 0,
-    	"Flag to indicate whether STUN should be used."
+        "bound_addr", T_OBJECT_EX, 
+        offsetof(transport_config_Object, bound_addr), 0,
+        "Optional address where the socket should be bound to. This option "
+        "SHOULD only be used to selectively bind the socket to particular "
+        "interface (instead of 0.0.0.0), and SHOULD NOT be used to set the "
+        "published address of a transport (the public_addr field should be "
+        "used for that purpose)."		
+    },    
+    {
+        "use_stun", T_INT,
+        offsetof(transport_config_Object, use_stun), 0,
+        "Flag to indicate whether STUN should be used."
     },
     {
-    	"stun_config", T_OBJECT_EX,
-    	offsetof(transport_config_Object, stun_config), 0,
-    	"STUN configuration, must be specified when STUN is used."
+        "stun_config", T_OBJECT_EX,
+        offsetof(transport_config_Object, stun_config), 0,
+        "STUN configuration, must be specified when STUN is used."
     },
     {NULL}  /* Sentinel */
 };
@@ -2593,9 +2594,9 @@ static PyMemberDef sockaddr_members[] =
     },
 #endif
     {
-    	"sa_data", T_OBJECT_EX,
-    	offsetof(sockaddr_Object, sa_data), 0,
-    	"Address data"
+        "sa_data", T_OBJECT_EX,
+        offsetof(sockaddr_Object, sa_data), 0,
+        "Address data"
     },
     {NULL}  /* Sentinel */
 };
@@ -2707,9 +2708,9 @@ static PyMemberDef host_port_members[] =
         "Port number."
     },
     {
-    	"host", T_OBJECT_EX,
-    	offsetof(host_port_Object, host), 0,
-    	"Host part or IP address."
+        "host", T_OBJECT_EX,
+        offsetof(host_port_Object, host), 0,
+        "Host part or IP address."
     },
     {NULL}  /* Sentinel */
 };
@@ -2761,134 +2762,7 @@ static PyTypeObject host_port_Type =
     host_port_new,             /* tp_new */
 };
 
-/*
- * transport_id_Object
- * C/Python wrapper for transport_id object
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    int transport_id;
-} transport_id_Object;
 
-
-/*
- * transport_id_members
- * declares attributes accessible from 
- * both C and Python for transport_id object
- */
-static PyMemberDef transport_id_members[] =
-{
-    {
-        "transport_id", T_INT, offsetof(transport_id_Object, transport_id), 0,
-        "SIP transport identification"
-    },
-    {NULL}  /* Sentinel */
-};
-
-
-/*
- * transport_id_Type
- */
-static PyTypeObject transport_id_Type =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "py_pjsua.Transport_ID",        /*tp_name*/
-    sizeof(transport_id_Object),    /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    0,                              /*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Transport ID objects",         /*tp_doc*/
-    0,                              /*tp_traverse*/
-    0,                              /*tp_clear*/
-    0,                              /*tp_richcompare*/
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    0,                              /* tp_methods */
-    transport_id_members,           /* tp_members */
-
-};
-
-/*
- * integer_Object
- * C/Python wrapper for integer object
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    int integer;
-} integer_Object;
-
-
-/*
- * integer_members
- * declares attributes accessible from both C and Python for integer object
- */
-static PyMemberDef integer_members[] =
-{
-    {
-        "integer", T_INT, offsetof(integer_Object, integer), 0,
-        "integer value"
-    },
-    {NULL}  /* Sentinel */
-};
-
-
-/*
- * integer_Type
- */
-static PyTypeObject integer_Type =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "py_pjsua.Integer",        /*tp_name*/
-    sizeof(integer_Object),    /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    0,                              /*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Integer objects",         /*tp_doc*/
-    0,                              /*tp_traverse*/
-    0,                              /*tp_clear*/
-    0,                              /*tp_richcompare*/
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    0,                              /* tp_methods */
-    integer_members,           /* tp_members */
-
-};
 
 
 /*
@@ -2899,15 +2773,15 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-	int id;
-	int type;
-	PyObject * type_name;
-	PyObject * info;
-	unsigned flag;
-	unsigned addr_len;
-	sockaddr_Object * local_addr;
-	host_port_Object * local_name;
-	unsigned usage_count;
+    int id;
+    int type;
+    PyObject * type_name;
+    PyObject * info;
+    unsigned flag;
+    unsigned addr_len;
+    sockaddr_Object * local_addr;
+    host_port_Object * local_name;
+    unsigned usage_count;
 } transport_info_Object;
 
 
@@ -2918,9 +2792,9 @@ typedef struct
 static void transport_info_dealloc(transport_info_Object* self)
 {
     Py_XDECREF(self->type_name); 
-	Py_XDECREF(self->info);
-	Py_XDECREF(self->local_addr);
-	Py_XDECREF(self->local_name);
+    Py_XDECREF(self->info);
+    Py_XDECREF(self->local_addr);
+    Py_XDECREF(self->local_name);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -2937,27 +2811,27 @@ static PyObject * transport_info_new(PyTypeObject *type, PyObject *args,
     self = (transport_info_Object *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
-		self->type_name = PyString_FromString("");
+        self->type_name = PyString_FromString("");
         if (self->type_name == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
-		self->info = PyString_FromString("");
+        self->info = PyString_FromString("");
         if (self->info == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
         self->local_addr = 
-			(sockaddr_Object *)sockaddr_new(&sockaddr_Type,NULL,NULL);
+            (sockaddr_Object *)sockaddr_new(&sockaddr_Type,NULL,NULL);
         if (self->local_addr == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
         self->local_name = 
-			(host_port_Object *)host_port_new(&host_port_Type,NULL,NULL);
+            (host_port_Object *)host_port_new(&host_port_Type,NULL,NULL);
         if (self->local_name == NULL)
     	{
             Py_DECREF(self);
@@ -2974,45 +2848,45 @@ static PyObject * transport_info_new(PyTypeObject *type, PyObject *args,
  */
 static PyMemberDef transport_info_members[] =
 {
-	{
-    	"id", T_INT, offsetof(transport_info_Object, id), 0,
-    	"PJSUA transport identification."
+    {
+        "id", T_INT, offsetof(transport_info_Object, id), 0,
+        "PJSUA transport identification."
     },
-	{
-    	"type", T_INT, offsetof(transport_info_Object, id), 0,
-    	"Transport type."
+    {
+        "type", T_INT, offsetof(transport_info_Object, id), 0,
+        "Transport type."
     },
-	{
-    	"type_name", T_OBJECT_EX,
-    	offsetof(transport_info_Object, type_name), 0,
-    	"Transport type name."
+    {
+        "type_name", T_OBJECT_EX,
+        offsetof(transport_info_Object, type_name), 0,
+        "Transport type name."
     },
-	{
-    	"info", T_OBJECT_EX,
-    	offsetof(transport_info_Object, info), 0,
-    	"Transport string info/description."
+    {
+        "info", T_OBJECT_EX,
+        offsetof(transport_info_Object, info), 0,
+        "Transport string info/description."
     },
-	{
-    	"flag", T_INT, offsetof(transport_info_Object, flag), 0,
-    	"Transport flag (see ##pjsip_transport_flags_e)."
+    {
+        "flag", T_INT, offsetof(transport_info_Object, flag), 0,
+        "Transport flag (see ##pjsip_transport_flags_e)."
     },
-	{
-    	"addr_len", T_INT, offsetof(transport_info_Object, addr_len), 0,
-    	"Local address length."
+    {
+        "addr_len", T_INT, offsetof(transport_info_Object, addr_len), 0,
+        "Local address length."
     },
-	{
-    	"local_addr", T_OBJECT_EX,
-    	offsetof(transport_info_Object, local_addr), 0,
-    	"Local/bound address."
+    {
+        "local_addr", T_OBJECT_EX,
+        offsetof(transport_info_Object, local_addr), 0,
+        "Local/bound address."
     },
-	{
-    	"local_name", T_OBJECT_EX,
-    	offsetof(transport_info_Object, local_name), 0,
-    	"Published address (or transport address name)."
+    {
+        "local_name", T_OBJECT_EX,
+        offsetof(transport_info_Object, local_name), 0,
+        "Published address (or transport address name)."
     },
-	{
-    	"usage_count", T_INT, offsetof(transport_info_Object, usage_count), 0,
-    	"Current number of objects currently referencing this transport."
+    {
+        "usage_count", T_INT, offsetof(transport_info_Object, usage_count), 0,
+        "Current number of objects currently referencing this transport."
     },    
     {NULL}  /* Sentinel */
 };
@@ -3111,31 +2985,34 @@ static PyTypeObject pjsip_transport_Type =
 
 /*
  * py_pjsua_stun_config_default
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_stun_config_default(PyObject *pSelf, PyObject *pArgs)
 {
     stun_config_Object *obj;
     pjsua_stun_config cfg;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
+	
     pjsua_stun_config_default(&cfg);
+	obj = (stun_config_Object *)stun_config_new(&stun_config_Type, NULL, NULL);
     obj->stun_port1 = cfg.stun_port1;
-	obj->stun_port2 = cfg.stun_port2;
-	Py_XDECREF(obj->stun_srv1);
+    obj->stun_port2 = cfg.stun_port2;
+    Py_XDECREF(obj->stun_srv1);
     obj->stun_srv1 = 
-		PyString_FromStringAndSize(cfg.stun_srv1.ptr, cfg.stun_srv1.slen);
-	Py_XDECREF(obj->stun_srv2);
-	obj->stun_srv2 = 
-		PyString_FromStringAndSize(cfg.stun_srv2.ptr, cfg.stun_srv2.slen);
-    Py_INCREF(Py_None);
-    return Py_None;
+        PyString_FromStringAndSize(cfg.stun_srv1.ptr, cfg.stun_srv1.slen);
+    Py_XDECREF(obj->stun_srv2);
+    obj->stun_srv2 = 
+        PyString_FromStringAndSize(cfg.stun_srv2.ptr, cfg.stun_srv2.slen);
+    return (PyObject *)obj;
 }
 
 /*
  * py_pjsua_transport_config_default
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_transport_config_default
 (PyObject *pSelf, PyObject *pArgs)
@@ -3143,32 +3020,33 @@ static PyObject *py_pjsua_transport_config_default
     transport_config_Object *obj;
     pjsua_transport_config cfg;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
     pjsua_transport_config_default(&cfg);
+	obj = (transport_config_Object *)transport_config_new
+		(&transport_config_Type,NULL,NULL);
     obj->public_addr = 
-		PyString_FromStringAndSize(cfg.public_addr.ptr, cfg.public_addr.slen);
-	obj->bound_addr = 
-		PyString_FromStringAndSize(cfg.bound_addr.ptr, cfg.bound_addr.slen);
-	obj->port = cfg.port;
-	obj->use_stun = cfg.use_stun;
-	Py_XDECREF(obj->stun_config);
-	obj->stun_config = 
-		(stun_config_Object *)stun_config_new(&stun_config_Type, NULL, NULL);
+        PyString_FromStringAndSize(cfg.public_addr.ptr, cfg.public_addr.slen);
+    obj->bound_addr = 
+        PyString_FromStringAndSize(cfg.bound_addr.ptr, cfg.bound_addr.slen);
+    obj->port = cfg.port;
+    obj->use_stun = cfg.use_stun;
+    Py_XDECREF(obj->stun_config);
+    obj->stun_config = 
+        (stun_config_Object *)stun_config_new(&stun_config_Type, NULL, NULL);
     obj->stun_config->stun_port1 = cfg.stun_config.stun_port1;
-	obj->stun_config->stun_port2 = cfg.stun_config.stun_port2;
-	Py_XDECREF(obj->stun_config->stun_srv1);
+    obj->stun_config->stun_port2 = cfg.stun_config.stun_port2;
+    Py_XDECREF(obj->stun_config->stun_srv1);
     obj->stun_config->stun_srv1 = 
-		PyString_FromStringAndSize(cfg.stun_config.stun_srv1.ptr, 
-		cfg.stun_config.stun_srv1.slen);
-	Py_XDECREF(obj->stun_config->stun_srv2);
-	obj->stun_config->stun_srv2 = 
-		PyString_FromStringAndSize(cfg.stun_config.stun_srv2.ptr, 
-		cfg.stun_config.stun_srv2.slen);
-    Py_INCREF(Py_None);
-    return Py_None;
+        PyString_FromStringAndSize(cfg.stun_config.stun_srv1.ptr, 
+    cfg.stun_config.stun_srv1.slen);
+    Py_XDECREF(obj->stun_config->stun_srv2);
+    obj->stun_config->stun_srv2 = 
+        PyString_FromStringAndSize(cfg.stun_config.stun_srv2.ptr, 
+    cfg.stun_config.stun_srv2.slen);
+    return (PyObject *)obj;
 }
 
 /*
@@ -3184,169 +3062,83 @@ static PyObject *py_pjsua_normalize_stun_config
     {
         return NULL;
     }
-	cfg = (pjsua_stun_config *)malloc(sizeof(pjsua_stun_config));
-	cfg->stun_port1 = obj->stun_port1;
-	cfg->stun_port2 = obj->stun_port2;
-	cfg->stun_srv1.ptr = PyString_AsString(obj->stun_srv1);
-	cfg->stun_srv1.slen = strlen(PyString_AsString(obj->stun_srv1));
-	cfg->stun_srv2.ptr = PyString_AsString(obj->stun_srv2);
-	cfg->stun_srv2.slen = strlen(PyString_AsString(obj->stun_srv2));
+    cfg = (pjsua_stun_config *)malloc(sizeof(pjsua_stun_config));
+    cfg->stun_port1 = obj->stun_port1;
+    cfg->stun_port2 = obj->stun_port2;
+    cfg->stun_srv1.ptr = PyString_AsString(obj->stun_srv1);
+    cfg->stun_srv1.slen = strlen(PyString_AsString(obj->stun_srv1));
+    cfg->stun_srv2.ptr = PyString_AsString(obj->stun_srv2);
+    cfg->stun_srv2.slen = strlen(PyString_AsString(obj->stun_srv2));
     pjsua_normalize_stun_config(cfg);
     obj->stun_port1 = cfg->stun_port1;
-	obj->stun_port2 = cfg->stun_port2;
-	Py_XDECREF(obj->stun_srv1);
+    obj->stun_port2 = cfg->stun_port2;
+    Py_XDECREF(obj->stun_srv1);
     obj->stun_srv1 = 
-		PyString_FromStringAndSize(cfg->stun_srv1.ptr, cfg->stun_srv1.slen);
-	Py_XDECREF(obj->stun_srv2);
-	obj->stun_srv2 = 
-		PyString_FromStringAndSize(cfg->stun_srv2.ptr, cfg->stun_srv2.slen);
-	free(cfg);
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-/*
- * py_pjsua_transport_config_dup
- */
-static PyObject *py_pjsua_transport_config_dup
-(PyObject *pSelf, PyObject *pArgs)
-{
-    pj_pool_Object *pool;
-    transport_config_Object *src;
-    transport_config_Object *dest;
-	pj_pool_t *p;
-	pjsua_transport_config s;
-	pjsua_transport_config d;	
-
-    if (!PyArg_ParseTuple(pArgs, "OOO", &pool, &dest, &src))
-    {
-        return NULL;
-    }
-    p = pool->pool;
-	s.public_addr.ptr = PyString_AsString(src->public_addr);
-	s.public_addr.slen = strlen(PyString_AsString(src->public_addr));
-	s.bound_addr.ptr = PyString_AsString(src->bound_addr);
-	s.bound_addr.slen = strlen(PyString_AsString(src->bound_addr));
-	s.port = src->port;
-	s.use_stun = src->use_stun;
-	s.stun_config.stun_port1 = src->stun_config->stun_port1;
-	s.stun_config.stun_port2 = src->stun_config->stun_port2;
-	s.stun_config.stun_srv1.ptr = 
-		PyString_AsString(src->stun_config->stun_srv1);
-	s.stun_config.stun_srv1.slen = 
-		strlen(PyString_AsString(src->stun_config->stun_srv1));
-	s.stun_config.stun_srv2.ptr = 
-		PyString_AsString(src->stun_config->stun_srv2);
-	s.stun_config.stun_srv2.slen = 
-		strlen(PyString_AsString(src->stun_config->stun_srv2));
-	d.public_addr.ptr = PyString_AsString(dest->public_addr);
-	d.public_addr.slen = strlen(PyString_AsString(dest->public_addr));
-	d.bound_addr.ptr = PyString_AsString(dest->bound_addr);
-	d.bound_addr.slen = strlen(PyString_AsString(dest->bound_addr));
-	d.port = dest->port;
-	d.use_stun = dest->use_stun;
-	d.stun_config.stun_port1 = dest->stun_config->stun_port1;
-	d.stun_config.stun_port2 = dest->stun_config->stun_port2;
-	d.stun_config.stun_srv1.ptr = 
-		PyString_AsString(dest->stun_config->stun_srv1);
-	d.stun_config.stun_srv1.slen = 
-		strlen(PyString_AsString(dest->stun_config->stun_srv1));
-	d.stun_config.stun_srv2.ptr = 
-		PyString_AsString(dest->stun_config->stun_srv2);
-	d.stun_config.stun_srv2.slen = 
-		strlen(PyString_AsString(dest->stun_config->stun_srv2));
-	pjsua_transport_config_dup(p, &d, &s);
-	src->public_addr = 
-		PyString_FromStringAndSize(s.public_addr.ptr, s.public_addr.slen);
-	src->bound_addr = 
-		PyString_FromStringAndSize(s.bound_addr.ptr, s.bound_addr.slen);
-	src->port = s.port;
-	src->use_stun = s.use_stun;
-	src->stun_config->stun_port1 = s.stun_config.stun_port1;
-	src->stun_config->stun_port2 = s.stun_config.stun_port2;
-	Py_XDECREF(src->stun_config->stun_srv1);
-	src->stun_config->stun_srv1 = 
-		PyString_FromStringAndSize(s.stun_config.stun_srv1.ptr, 
-		s.stun_config.stun_srv1.slen);
-	Py_XDECREF(src->stun_config->stun_srv2);
-	src->stun_config->stun_srv2 = 
-		PyString_FromStringAndSize(s.stun_config.stun_srv2.ptr, 
-		s.stun_config.stun_srv2.slen);	
-	dest->public_addr = 
-		PyString_FromStringAndSize(d.public_addr.ptr, d.public_addr.slen);
-	dest->bound_addr = 
-		PyString_FromStringAndSize(d.bound_addr.ptr, d.bound_addr.slen);
-	dest->port = d.port;
-	dest->use_stun = d.use_stun;
-	dest->stun_config->stun_port1 = d.stun_config.stun_port1;
-	dest->stun_config->stun_port2 = d.stun_config.stun_port2;
-	Py_XDECREF(dest->stun_config->stun_srv1);
-	dest->stun_config->stun_srv1 = 
-		PyString_FromStringAndSize(d.stun_config.stun_srv1.ptr, 
-		d.stun_config.stun_srv1.slen);
-	Py_XDECREF(dest->stun_config->stun_srv2);
-	dest->stun_config->stun_srv2 = 
-		PyString_FromStringAndSize(d.stun_config.stun_srv2.ptr, 
-		d.stun_config.stun_srv2.slen);
+        PyString_FromStringAndSize(cfg->stun_srv1.ptr, cfg->stun_srv1.slen);
+    Py_XDECREF(obj->stun_srv2);
+    obj->stun_srv2 = 
+        PyString_FromStringAndSize(cfg->stun_srv2.ptr, cfg->stun_srv2.slen);
+    free(cfg);
     Py_INCREF(Py_None);
     return Py_None;
 }
 
 /*
  * py_pjsua_transport_create
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_transport_create(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	int type;
-	transport_id_Object *p_id;
-	transport_config_Object *obj;
-	pjsua_transport_config cfg;
-	pjsua_transport_id id;
-    if (!PyArg_ParseTuple(pArgs, "iOO", &type, &obj, &p_id))
+    int type;
+    
+    transport_config_Object *obj;
+    pjsua_transport_config cfg;
+    pjsua_transport_id id;
+    if (!PyArg_ParseTuple(pArgs, "iO", &type, &obj))
     {
         return NULL;
     }
-	cfg.public_addr.ptr = PyString_AsString(obj->public_addr);
-	cfg.public_addr.slen = strlen(PyString_AsString(obj->public_addr));
-	cfg.bound_addr.ptr = PyString_AsString(obj->bound_addr);
-	cfg.bound_addr.slen = strlen(PyString_AsString(obj->bound_addr));
-	cfg.port = obj->port;
-	cfg.use_stun = obj->use_stun;
-	cfg.stun_config.stun_port1 = obj->stun_config->stun_port1;
-	cfg.stun_config.stun_port2 = obj->stun_config->stun_port2;
-	cfg.stun_config.stun_srv1.ptr = 
-		PyString_AsString(obj->stun_config->stun_srv1);
-	cfg.stun_config.stun_srv1.slen = 
-		strlen(PyString_AsString(obj->stun_config->stun_srv1));
-	cfg.stun_config.stun_srv2.ptr = 
-		PyString_AsString(obj->stun_config->stun_srv2);
-	cfg.stun_config.stun_srv2.slen = 
-		strlen(PyString_AsString(obj->stun_config->stun_srv2));
+    cfg.public_addr.ptr = PyString_AsString(obj->public_addr);
+    cfg.public_addr.slen = strlen(PyString_AsString(obj->public_addr));
+    cfg.bound_addr.ptr = PyString_AsString(obj->bound_addr);
+    cfg.bound_addr.slen = strlen(PyString_AsString(obj->bound_addr));
+    cfg.port = obj->port;
+    cfg.use_stun = obj->use_stun;
+    cfg.stun_config.stun_port1 = obj->stun_config->stun_port1;
+    cfg.stun_config.stun_port2 = obj->stun_config->stun_port2;
+    cfg.stun_config.stun_srv1.ptr = 
+        PyString_AsString(obj->stun_config->stun_srv1);
+    cfg.stun_config.stun_srv1.slen = 
+        strlen(PyString_AsString(obj->stun_config->stun_srv1));
+    cfg.stun_config.stun_srv2.ptr = 
+        PyString_AsString(obj->stun_config->stun_srv2);
+    cfg.stun_config.stun_srv2.slen = 
+        strlen(PyString_AsString(obj->stun_config->stun_srv2));
     status = pjsua_transport_create(type, &cfg, &id);
-	p_id->transport_id = id;
-    printf("status %d\n",status);
-    return Py_BuildValue("i",status);
+    
+    
+    return Py_BuildValue("ii",status,id);
 }
 
 /*
  * py_pjsua_transport_register
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_transport_register(PyObject *pSelf, PyObject *pArgs)
 {
-    pj_status_t status;	
-	transport_id_Object *p_id;
-	pjsip_transport_Object *obj;	
-	pjsua_transport_id id;
-    if (!PyArg_ParseTuple(pArgs, "OO", &obj, &p_id))
+    pj_status_t status;	    
+    pjsip_transport_Object *obj;	
+    pjsua_transport_id id;
+    if (!PyArg_ParseTuple(pArgs, "O", &obj))
     {
         return NULL;
     }
 	
-	id = p_id->transport_id;
+    
     status = pjsua_transport_register(obj->tp, &id);
-	p_id->transport_id = id;    
-    return Py_BuildValue("i",status);
+    
+    return Py_BuildValue("ii",status, id);
 }
 
 /*
@@ -3355,80 +3147,70 @@ static PyObject *py_pjsua_transport_register(PyObject *pSelf, PyObject *pArgs)
 static PyObject *py_pjsua_enum_transports(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	PyObject *list;
-	integer_Object *count;
-	pjsua_transport_id *id;
-	int c, i;
-    if (!PyArg_ParseTuple(pArgs, "OO", &list, &count))
+    PyObject *list;
+    
+    pjsua_transport_id *id;
+    int c, i;
+    if (!PyArg_ParseTuple(pArgs, "i", &c))
     {
         return NULL;
     }	
-	c = count->integer;
-	id = (pjsua_transport_id *)malloc(c * sizeof(pjsua_transport_id));
+    
+    id = (pjsua_transport_id *)malloc(c * sizeof(pjsua_transport_id));
     status = pjsua_enum_transports(id, &c);
-	Py_XDECREF(list);
-	list = PyList_New(c);
-	for (i = 0; i < c; i++) {
-		int ret = PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
-		if (ret == -1) {
-			return NULL;
-		}
-	}
-	count->integer = c;
-	free(id);
-    return Py_BuildValue("i",status);
+    
+    list = PyList_New(c);
+    for (i = 0; i < c; i++) 
+    {     
+        int ret = PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
+        if (ret == -1) 
+        {
+            return NULL;
+        }
+    }
+    
+    free(id);
+    return Py_BuildValue("O",list);
 }
 
 /*
  * py_pjsua_transport_get_info
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	int id;
-	transport_info_Object *obj;
-	pjsua_transport_info info;
-	char * str;
-	int len;
-	int i;
+    int id;
+    transport_info_Object *obj;
+    pjsua_transport_info info;
+    
 
-    if (!PyArg_ParseTuple(pArgs, "iO", &id, &obj))
+    if (!PyArg_ParseTuple(pArgs, "i", &id))
     {
         return NULL;
     }	
-	info.addr_len = obj->addr_len;
-	info.flag = obj->flag;
-	info.id = obj->id;
-	info.info.ptr = PyString_AsString(obj->info);
-	info.info.slen = strlen(PyString_AsString(obj->info));
-	str = PyString_AsString(obj->local_addr->sa_data);
-	len = strlen(str);
-	if (len > 14) {
-		len = 14;
-	}
-	for (i = 0; i < len; i++) {
-		info.local_addr.sa_data[i] = str[i];
-	}
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-	info.local_addr.sa_zero_len = obj->local_addr->sa_zero_len;
-	info.local_addr.sa_family = obj->local_addr->sa_family;
-#else
-	info.local_addr.sa_family = obj->local_addr->sa_family;
-#endif
+    
     status = pjsua_transport_get_info(id, &info);	
-    obj->addr_len = info.addr_len;
-	obj->flag = info.flag;
-	obj->id = info.id;
-	obj->info = PyString_FromStringAndSize(info.info.ptr, info.info.slen);
-	obj->local_addr->sa_data = 
-		PyString_FromStringAndSize(info.local_addr.sa_data, 14);
+    if (status == PJ_SUCCESS) {
+        obj = (transport_info_Object *) transport_info_new
+			(&transport_info_Type,NULL,NULL);
+        obj->addr_len = info.addr_len;
+        obj->flag = info.flag;
+        obj->id = info.id;
+        obj->info = PyString_FromStringAndSize(info.info.ptr, info.info.slen);
+        obj->local_addr->sa_data = 
+			PyString_FromStringAndSize(info.local_addr.sa_data, 14);
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-	obj->local_addr->sa_zero_len = info.local_addr.sa_zero_len;
-	obj->local_addr->sa_family = info.local_addr.sa_family;
+        obj->local_addr->sa_zero_len = info.local_addr.sa_zero_len;
+        obj->local_addr->sa_family = info.local_addr.sa_family;
 #else
-	obj->local_addr->sa_family = info.local_addr.sa_family;
+        obj->local_addr->sa_family = info.local_addr.sa_family;
 #endif
-    return Py_BuildValue("i",status);
+        return Py_BuildValue("O", obj);
+    } else {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
 }
 
 /*
@@ -3438,8 +3220,8 @@ static PyObject *py_pjsua_transport_set_enable
 (PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	int id;
-	int enabled;
+    int id;
+    int enabled;
     if (!PyArg_ParseTuple(pArgs, "ii", &id, &enabled))
     {
         return NULL;
@@ -3455,8 +3237,8 @@ static PyObject *py_pjsua_transport_set_enable
 static PyObject *py_pjsua_transport_close(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	int id;
-	int force;
+    int id;
+    int force;
     if (!PyArg_ParseTuple(pArgs, "ii", &id, &force))
     {
         return NULL;
@@ -3467,50 +3249,45 @@ static PyObject *py_pjsua_transport_close(PyObject *pSelf, PyObject *pArgs)
 }
 
 static char pjsua_stun_config_default_doc[] =
-    "void py_pjsua.stun_config_default (py_pjsua.STUN_Config cfg) "
+    "py_pjsua.STUN_Config py_pjsua.stun_config_default () "
     "Call this function to initialize STUN config with default values.";
 static char pjsua_transport_config_default_doc[] =
-	"void py_pjsua.transport_config_default (py_pjsua.Transport_Config cfg) "
-	"Call this function to initialize UDP config with default values.";
+    "py_pjsua.Transport_Config py_pjsua.transport_config_default () "
+    "Call this function to initialize UDP config with default values.";
 static char pjsua_normalize_stun_config_doc[] =
-	"void py_pjsua.normalize_stun_config (py_pjsua.STUN_Config cfg) "
-	"Normalize STUN config. ";
-static char pjsua_transport_config_dup_doc[] =
-	"void py_pjsua.transport_config_dup (py_pjsua.Pool pool, "
-	"py_pjsua.Transport_Config dest, py_pjsua.Transport_Config dest) "
-	"Duplicate transport config. ";
+    "void py_pjsua.normalize_stun_config (py_pjsua.STUN_Config cfg) "
+    "Normalize STUN config. ";
 static char pjsua_transport_create_doc[] =
-	"void py_pjsua.transport_create (int type, "
-	"py_pjsua.Transport_Config cfg, py_pjsua.Transport_ID p_id) "
-	"Create SIP transport.";
+    "int, int py_pjsua.transport_create (int type, "
+    "py_pjsua.Transport_Config cfg) "
+    "Create SIP transport.";
 static char pjsua_transport_register_doc[] =
-	"void py_pjsua.transport_register "
-	"(py_pjsua.PJSIP_Transport tp, py_pjsua.Transport_ID p_id) "
-	"Register transport that has been created by application.";
+    "int, int py_pjsua.transport_register "
+    "(py_pjsua.PJSIP_Transport tp) "
+    "Register transport that has been created by application.";
 static char pjsua_enum_transports_doc[] =
-	"void py_pjsua.enum_transports "
-	"(py_pjsua.Transport_ID id[], py_pjsua.Integer count) "
-	"Enumerate all transports currently created in the system.";
+    "int[] py_pjsua.enum_transports (int count) "
+    "Enumerate all transports currently created in the system.";
 static char pjsua_transport_get_info_doc[] =
-	"void py_pjsua.transport_get_info "
-	"(py_pjsua.Transport_ID id, py_pjsua.Transport_Info info) "
-	"Get information about transports.";
+    "void py_pjsua.transport_get_info "
+    "(py_pjsua.Transport_ID id, py_pjsua.Transport_Info info) "
+    "Get information about transports.";
 static char pjsua_transport_set_enable_doc[] =
-	"void py_pjsua.transport_set_enable "
-	"(py_pjsua.Transport_ID id, int enabled) "
-	"Disable a transport or re-enable it. "
-	"By default transport is always enabled after it is created. "
-	"Disabling a transport does not necessarily close the socket, "
-	"it will only discard incoming messages and prevent the transport "
-	"from being used to send outgoing messages.";
+    "void py_pjsua.transport_set_enable "
+    "(py_pjsua.Transport_ID id, int enabled) "
+    "Disable a transport or re-enable it. "
+    "By default transport is always enabled after it is created. "
+    "Disabling a transport does not necessarily close the socket, "
+    "it will only discard incoming messages and prevent the transport "
+    "from being used to send outgoing messages.";
 static char pjsua_transport_close_doc[] =
-	"void py_pjsua.transport_close (py_pjsua.Transport_ID id, int force) "
-	"Close the transport. If transport is forcefully closed, "
-	"it will be immediately closed, and any pending transactions "
-	"that are using the transport may not terminate properly. "
-	"Otherwise, the system will wait until all transactions are closed "
-	"while preventing new users from using the transport, and will close "
-	"the transport when it is safe to do so.";
+    "void py_pjsua.transport_close (py_pjsua.Transport_ID id, int force) "
+    "Close the transport. If transport is forcefully closed, "
+    "it will be immediately closed, and any pending transactions "
+    "that are using the transport may not terminate properly. "
+    "Otherwise, the system will wait until all transactions are closed "
+    "while preventing new users from using the transport, and will close "
+    "the transport when it is safe to do so.";
 
 /* END OF LIB TRANSPORT */
 
@@ -3524,16 +3301,18 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-	int priority;	
-	PyObject * id;
-	PyObject * reg_uri;
-	int publish_enabled;
-	PyObject * force_contact;
-	unsigned proxy_cnt;
-	pj_str_t proxy[8];
-	unsigned reg_timeout;
-	unsigned cred_count;
-	pjsip_cred_info cred_info[8];
+    int priority;	
+    PyObject * id;
+    PyObject * reg_uri;
+    int publish_enabled;
+    PyObject * force_contact;
+    unsigned proxy_cnt;
+    /*pj_str_t proxy[8];*/
+    PyListObject * proxy;
+    unsigned reg_timeout;
+    unsigned cred_count;
+    /*pjsip_cred_info cred_info[8];*/
+    PyListObject * cred_info;
 } acc_config_Object;
 
 
@@ -3544,8 +3323,10 @@ typedef struct
 static void acc_config_dealloc(acc_config_Object* self)
 {
     Py_XDECREF(self->id); 
-	Py_XDECREF(self->reg_uri);
-	Py_XDECREF(self->force_contact);	
+    Py_XDECREF(self->reg_uri);
+    Py_XDECREF(self->force_contact);	
+    Py_XDECREF(self->proxy);
+    Py_XDECREF(self->cred_info);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -3562,13 +3343,13 @@ static PyObject * acc_config_new(PyTypeObject *type, PyObject *args,
     self = (acc_config_Object *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
-		self->id = PyString_FromString("");
+        self->id = PyString_FromString("");
         if (self->id == NULL)
     	{
             Py_DECREF(self);
             return NULL;
         }
-		self->reg_uri = PyString_FromString("");
+        self->reg_uri = PyString_FromString("");
         if (self->reg_uri == NULL)
     	{
             Py_DECREF(self);
@@ -3580,132 +3361,22 @@ static PyObject * acc_config_new(PyTypeObject *type, PyObject *args,
             Py_DECREF(self);
             return NULL;
         }
+	self->proxy = (PyListObject *)PyList_New(8);
+	if (self->proxy == NULL)
+	{
+	    Py_DECREF(self);
+	    return NULL;
+	}
+	self->cred_info = (PyListObject *)PyList_New(8);
+	if (self->cred_info == NULL)
+	{
+	    Py_DECREF(self);
+	    return NULL;
+	}
     }
 
     return (PyObject *)self;
 }
-
-static PyObject * acc_config_get_proxy
-(acc_config_Object *self, PyObject * args)
-{
-	int idx;
-	pj_str_t elmt;
-	if (!PyArg_ParseTuple(args,"i",&idx)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < 8)) 
-	{
-		elmt = self->proxy[idx];
-	} 
-	else
-	{
-		return NULL;
-	}
-	return PyString_FromStringAndSize(elmt.ptr, elmt.slen);
-}
-
-static PyObject * acc_config_set_proxy
-(acc_config_Object *self, PyObject * args)
-{
-	int idx;
-	PyObject * str;	
-	if (!PyArg_ParseTuple(args,"iO",&idx, &str)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < 8)) 
-	{
-		self->proxy[idx].ptr = PyString_AsString(str);
-		self->proxy[idx].slen = strlen(PyString_AsString(str));
-	} 
-	else
-	{
-		return NULL;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-static PyObject * acc_config_get_cred_info
-(acc_config_Object *self, PyObject * args)
-{
-	int idx;
-	pjsip_cred_info elmt;
-	pjsip_cred_info_Object *obj;
-	if (!PyArg_ParseTuple(args,"i",&idx)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < 8)) 
-	{
-		elmt = self->cred_info[idx];
-	} 
-	else
-	{
-		return NULL;
-	}
-	obj = (pjsip_cred_info_Object *)
-		PyType_GenericNew(&pjsip_cred_info_Type, NULL, NULL);
-	obj->data = PyString_FromStringAndSize(elmt.data.ptr, elmt.data.slen);
-	obj->realm = PyString_FromStringAndSize(elmt.realm.ptr, elmt.realm.slen);
-	obj->scheme = 
-		PyString_FromStringAndSize(elmt.scheme.ptr, elmt.scheme.slen);
-	obj->username = 
-		PyString_FromStringAndSize(elmt.username.ptr, elmt.username.slen);
-	obj->data_type = elmt.data_type;
-	return (PyObject *)obj;
-}
-
-static PyObject * acc_config_set_cred_info
-(acc_config_Object *self, PyObject * args)
-{
-	int idx;
-	pjsip_cred_info_Object * obj;	
-	if (!PyArg_ParseTuple(args,"iO",&idx, &obj)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < 8)) 
-	{
-		self->cred_info[idx].data.ptr = PyString_AsString(obj->data);
-		self->cred_info[idx].data.slen = strlen(PyString_AsString(obj->data));
-		self->cred_info[idx].realm.ptr = PyString_AsString(obj->realm);
-		self->cred_info[idx].realm.slen = strlen(PyString_AsString(obj->realm));
-		self->cred_info[idx].scheme.ptr = PyString_AsString(obj->scheme);
-		self->cred_info[idx].scheme.slen = 
-			strlen(PyString_AsString(obj->scheme));
-		self->cred_info[idx].username.ptr = PyString_AsString(obj->username);
-		self->cred_info[idx].username.slen = 
-			strlen(PyString_AsString(obj->username));
-		self->cred_info[idx].data_type = obj->data_type;
-	} 
-	else
-	{
-		return NULL;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static PyMethodDef acc_config_methods[] = {
-    {
-		"get_proxy", (PyCFunction)acc_config_get_proxy, METH_VARARGS,
-		"Return proxy at specified index"
-    },
-	{
-		"set_proxy", (PyCFunction)acc_config_set_proxy, METH_VARARGS,
-		"Set proxy at specified index"
-    },
-	{
-		"get_cred_info", (PyCFunction)acc_config_get_cred_info, METH_VARARGS,
-		"Return cred_info at specified index"
-    },
-	{
-		"set_cred_info", (PyCFunction)acc_config_set_cred_info, METH_VARARGS,
-		"Set cred_info at specified index"
-    },
-    {NULL}  /* Sentinel */
-};
 
 
 
@@ -3714,54 +3385,72 @@ static PyMethodDef acc_config_methods[] = {
  */
 static PyMemberDef acc_config_members[] =
 {
-	{
-    	"priority", T_INT, offsetof(acc_config_Object, priority), 0,
-    	"Account priority, which is used to control the order of matching "
-		"incoming/outgoing requests. The higher the number means the higher "
-		"the priority is, and the account will be matched first. "
+    {
+        "priority", T_INT, offsetof(acc_config_Object, priority), 0,
+        "Account priority, which is used to control the order of matching "
+        "incoming/outgoing requests. The higher the number means the higher "
+        "the priority is, and the account will be matched first. "
     },
-	{
-    	"id", T_OBJECT_EX,
-    	offsetof(acc_config_Object, id), 0,
-    	"The full SIP URL for the account. "
-		"The value can take name address or URL format, "
-		"and will look something like 'sip:account@serviceprovider'. "
-		"This field is mandatory."
+    {
+        "id", T_OBJECT_EX,
+        offsetof(acc_config_Object, id), 0,
+        "The full SIP URL for the account. "
+        "The value can take name address or URL format, "
+        "and will look something like 'sip:account@serviceprovider'. "
+        "This field is mandatory."
     },
-	{
-    	"reg_uri", T_OBJECT_EX,
-    	offsetof(acc_config_Object, reg_uri), 0,
-    	"This is the URL to be put in the request URI for the registration, "
-		"and will look something like 'sip:serviceprovider'. "
-		"This field should be specified if registration is desired. "
-		"If the value is empty, no account registration will be performed. "
+    {
+        "reg_uri", T_OBJECT_EX,
+        offsetof(acc_config_Object, reg_uri), 0,
+        "This is the URL to be put in the request URI for the registration, "
+        "and will look something like 'sip:serviceprovider'. "
+        "This field should be specified if registration is desired. "
+        "If the value is empty, no account registration will be performed. "
     },
-	{
-    	"publish_enabled", T_INT, 
-			offsetof(acc_config_Object, publish_enabled), 0,
-    	"Publish presence? "
+    {
+        "publish_enabled", T_INT, 
+        offsetof(acc_config_Object, publish_enabled), 0,
+        "Publish presence? "
     },
-	{
-    	"force_contact", T_OBJECT_EX,
-    	offsetof(acc_config_Object, force_contact), 0,
-    	"Optional URI to be put as Contact for this account. "
-		"It is recommended that this field is left empty, "
-		"so that the value will be calculated automatically "
-		"based on the transport address. "
+    {
+        "force_contact", T_OBJECT_EX,
+        offsetof(acc_config_Object, force_contact), 0,
+        "Optional URI to be put as Contact for this account. "
+        "It is recommended that this field is left empty, "
+        "so that the value will be calculated automatically "
+        "based on the transport address. "
     },
-	{
-    	"proxy_cnt", T_INT, offsetof(acc_config_Object, proxy_cnt), 0,
-    	"Number of proxies in the proxy array below. "
+    {
+        "proxy_cnt", T_INT, offsetof(acc_config_Object, proxy_cnt), 0,
+        "Number of proxies in the proxy array below. "
     },
-	{
-    	"reg_timeout", T_INT, offsetof(acc_config_Object, reg_timeout), 0,
-    	"Optional interval for registration, in seconds. "
-		"If the value is zero, default interval will be used "
-		"(PJSUA_REG_INTERVAL, 55 seconds). "
+    {
+        "proxy", T_OBJECT_EX,
+        offsetof(acc_config_Object, proxy), 0,
+        "Optional URI of the proxies to be visited for all outgoing requests "
+	"that are using this account (REGISTER, INVITE, etc). Application need "
+	"to specify these proxies if the service provider requires "
+	"that requests destined towards its network should go through certain "
+	"proxies first (for example, border controllers)."
     },
-	{
-    	"cred_count", T_INT, offsetof(acc_config_Object, cred_count), 0,
-    	"Number of credentials in the credential array. "
+    {
+        "reg_timeout", T_INT, offsetof(acc_config_Object, reg_timeout), 0,
+        "Optional interval for registration, in seconds. "
+        "If the value is zero, default interval will be used "
+        "(PJSUA_REG_INTERVAL, 55 seconds). "
+    },
+    {
+        "cred_count", T_INT, offsetof(acc_config_Object, cred_count), 0,
+        "Number of credentials in the credential array. "
+    },
+    {
+        "cred_info", T_OBJECT_EX,
+        offsetof(acc_config_Object, cred_info), 0,
+        "Array of credentials. If registration is desired, normally there "
+	"should be at least one credential specified, to successfully "
+	"authenticate against the service provider. More credentials can "
+	"be specified, for example when the requests are expected to be "
+	"challenged by the proxies in the route set."
     },
     {NULL}  /* Sentinel */
 };
@@ -3802,7 +3491,7 @@ static PyTypeObject acc_config_Type =
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
-    acc_config_methods,                              /* tp_methods */
+    0/*acc_config_methods*/,                              /* tp_methods */
     acc_config_members,         /* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
@@ -3824,15 +3513,15 @@ typedef struct
 {
     PyObject_HEAD
     /* Type-specific fields go here. */
-	int id;	
-	int is_default;
-	PyObject * acc_uri;
-	int has_registration;
-	int expires;
-	int status;
-	PyObject * status_text;
-	int online_status;	
-	char buf_[PJ_ERR_MSG_SIZE];
+    int id;	
+    int is_default;
+    PyObject * acc_uri;
+    int has_registration;
+    int expires;
+    int status;
+    PyObject * status_text;
+    int online_status;	
+    char buf_[PJ_ERR_MSG_SIZE];
 } acc_info_Object;
 
 
@@ -3843,7 +3532,7 @@ typedef struct
 static void acc_info_dealloc(acc_info_Object* self)
 {
     Py_XDECREF(self->acc_uri); 
-	Py_XDECREF(self->status_text);	
+    Py_XDECREF(self->status_text);	
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -3860,7 +3549,7 @@ static PyObject * acc_info_new(PyTypeObject *type, PyObject *args,
     self = (acc_info_Object *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
-		self->acc_uri = PyString_FromString("");
+        self->acc_uri = PyString_FromString("");
         if (self->acc_uri == NULL)
     	{
             Py_DECREF(self);
@@ -3881,61 +3570,61 @@ static PyObject * acc_info_new(PyTypeObject *type, PyObject *args,
 static PyObject * acc_info_get_buf
 (acc_info_Object *self, PyObject * args)
 {
-	int idx;
-	char elmt;
-	if (!PyArg_ParseTuple(args,"i",&idx)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < PJ_ERR_MSG_SIZE)) 
-	{
-		elmt = self->buf_[idx];
-	} 
-	else
-	{
-		return NULL;
-	}
-	return PyString_FromStringAndSize(&elmt, 1);
+    int idx;
+    char elmt;
+    if (!PyArg_ParseTuple(args,"i",&idx)) 
+    {
+        return NULL;
+    }
+    if ((idx >= 0) && (idx < PJ_ERR_MSG_SIZE)) 
+    {
+        elmt = self->buf_[idx];
+    } 
+    else
+    {
+        return NULL;
+    }
+    return PyString_FromStringAndSize(&elmt, 1);
 }
 
 static PyObject * acc_info_set_buf
 (acc_info_Object *self, PyObject * args)
 {
-	int idx;
-	PyObject * str;	
-	char * s;
-	if (!PyArg_ParseTuple(args,"iO",&idx, &str)) 
-	{
-		return NULL;
-	}
-	if ((idx >= 0) && (idx < PJ_ERR_MSG_SIZE)) 
-	{
-		s = PyString_AsString(str);
-		if (s[0]) 
-		{
-			self->buf_[idx] = s[0];
-		} 
-		else 
-		{
-			return NULL;
-		}
-	} 
-	else
-	{
-		return NULL;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
+    int idx;
+    PyObject * str;	
+    char * s;
+    if (!PyArg_ParseTuple(args,"iO",&idx, &str)) 
+    {
+        return NULL;
+    }
+    if ((idx >= 0) && (idx < PJ_ERR_MSG_SIZE)) 
+    {
+        s = PyString_AsString(str);
+        if (s[0]) 
+        {
+        self->buf_[idx] = s[0];
+        }	 
+	else 
+        {
+            return NULL;
+        }
+    } 
+    else
+    {
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef acc_info_methods[] = {
     {
-		"get_buf", (PyCFunction)acc_info_get_buf, METH_VARARGS,
-		"Return buf char at specified index"
+        "get_buf", (PyCFunction)acc_info_get_buf, METH_VARARGS,
+        "Return buf char at specified index"
     },
-	{
-		"set_buf", (PyCFunction)acc_info_set_buf, METH_VARARGS,
-		"Set buf at specified index"
+    {
+        "set_buf", (PyCFunction)acc_info_set_buf, METH_VARARGS,
+        "Set buf at specified index"
     },
 	
     {NULL}  /* Sentinel */
@@ -3948,43 +3637,43 @@ static PyMethodDef acc_info_methods[] = {
  */
 static PyMemberDef acc_info_members[] =
 {
-	{
-    	"id", T_INT, offsetof(acc_info_Object, id), 0,
-    	"The account ID."
+    {
+        "id", T_INT, offsetof(acc_info_Object, id), 0,
+        "The account ID."
     },
-	{
-    	"is_default", T_INT, offsetof(acc_info_Object, is_default), 0,
-    	"Flag to indicate whether this is the default account. "
+    {
+        "is_default", T_INT, offsetof(acc_info_Object, is_default), 0,
+        "Flag to indicate whether this is the default account. "
     },
-	{
-    	"acc_uri", T_OBJECT_EX,
-    	offsetof(acc_info_Object, acc_uri), 0,
-    	"Account URI"
+    {
+        "acc_uri", T_OBJECT_EX,
+        offsetof(acc_info_Object, acc_uri), 0,
+        "Account URI"
     },
-	{
-    	"has_registration", T_INT, offsetof(acc_info_Object, has_registration),
-		0,
-    	"Flag to tell whether this account has registration setting "
-		"(reg_uri is not empty)."
+    {
+        "has_registration", T_INT, offsetof(acc_info_Object, has_registration),
+        0,
+        "Flag to tell whether this account has registration setting "
+        "(reg_uri is not empty)."
     },
-	{
-    	"expires", T_INT, offsetof(acc_info_Object, expires), 0,
-    	"An up to date expiration interval for account registration session."
+    {
+        "expires", T_INT, offsetof(acc_info_Object, expires), 0,
+        "An up to date expiration interval for account registration session."
     },
-	{
-    	"status", T_INT, offsetof(acc_info_Object, status), 0,
-    	"Last registration status code. If status code is zero, "
-		"the account is currently not registered. Any other value indicates "
-		"the SIP status code of the registration. "
+    {
+        "status", T_INT, offsetof(acc_info_Object, status), 0,
+        "Last registration status code. If status code is zero, "
+        "the account is currently not registered. Any other value indicates "
+        "the SIP status code of the registration. "
     },
-	{
-    	"status_text", T_OBJECT_EX,
-    	offsetof(acc_info_Object, status_text), 0,
-    	"String describing the registration status."
+    {
+        "status_text", T_OBJECT_EX,
+        offsetof(acc_info_Object, status_text), 0,
+        "String describing the registration status."
     },
-	{
-    	"online_status", T_INT, offsetof(acc_info_Object, online_status), 0,
-    	"Presence online status for this account. "
+    {
+        "online_status", T_INT, offsetof(acc_info_Object, online_status), 0,
+        "Presence online status for this account. "
     },
     {NULL}  /* Sentinel */
 };
@@ -4039,112 +3728,75 @@ static PyTypeObject acc_info_Type =
 
 };
 
-/*
- * acc_id_Object
- * C/Python wrapper for acc_id object
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    int acc_id;
-} acc_id_Object;
 
-
-/*
- * acc_id_members
- * declares attributes accessible from 
- * both C and Python for acc_id object
- */
-static PyMemberDef acc_id_members[] =
-{
-    {
-        "acc_id", T_INT, offsetof(acc_id_Object, acc_id), 0,
-        "Account identification"
-    },
-    {NULL}  /* Sentinel */
-};
-
-
-/*
- * acc_id_Type
- */
-static PyTypeObject acc_id_Type =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "py_pjsua.Acc_ID",        /*tp_name*/
-    sizeof(acc_id_Object),    /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    0,                              /*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Acc ID objects",         /*tp_doc*/
-    0,                              /*tp_traverse*/
-    0,                              /*tp_clear*/
-    0,                              /*tp_richcompare*/
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    0,                              /* tp_methods */
-    acc_id_members,           /* tp_members */
-
-};
 
 /*
  * py_pjsua_acc_config_default
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_acc_config_default
 (PyObject *pSelf, PyObject *pArgs)
 {
     acc_config_Object *obj;
     pjsua_acc_config cfg;
-	int i;
+    int i;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
     pjsua_acc_config_default(&cfg);
-	obj->cred_count = cfg.cred_count;
-	for (i = 0; i < 8; i++) 
-	{
-		obj->cred_info[i] = cfg.cred_info[i];
+    obj = (acc_config_Object *)acc_config_new(&acc_config_Type, NULL, NULL);
+    obj->cred_count = cfg.cred_count;
+    for (i = 0; i < 8; i++) 
+    {
+        /*obj->cred_info[i] = cfg.cred_info[i];*/
+	int ret;
+	pjsip_cred_info_Object * ci = 
+	    (pjsip_cred_info_Object *)pjsip_cred_info_new
+	    (&pjsip_cred_info_Type,NULL,NULL);
+	ci->data = PyString_FromStringAndSize(cfg.cred_info[i].data.ptr, 
+	    cfg.cred_info[i].data.slen);
+	ci->realm = PyString_FromStringAndSize(cfg.cred_info[i].realm.ptr, 
+	    cfg.cred_info[i].realm.slen);
+	ci->scheme = PyString_FromStringAndSize(cfg.cred_info[i].scheme.ptr, 
+	    cfg.cred_info[i].scheme.slen);
+	ci->username = PyString_FromStringAndSize(cfg.cred_info[i].username.ptr, 
+	    cfg.cred_info[i].username.slen);
+	ci->data_type = cfg.cred_info[i].data_type;
+	ret = PyList_SetItem((PyObject *)obj->cred_info,i,(PyObject *)ci);
+	if (ret == -1) {
+	    return NULL;
 	}
-	Py_XDECREF(obj->force_contact);
-	obj->force_contact = 
-		PyString_FromStringAndSize(cfg.force_contact.ptr, 
-		cfg.force_contact.slen);
-	obj->priority = cfg.priority;
-	Py_XDECREF(obj->id);
-	obj->id = 
-		PyString_FromStringAndSize(cfg.id.ptr, cfg.id.slen);
-	Py_XDECREF(obj->reg_uri);
-	obj->reg_uri = 
-		PyString_FromStringAndSize(cfg.reg_uri.ptr, cfg.reg_uri.slen);
-	obj->proxy_cnt = cfg.proxy_cnt;
-	for (i = 0; i < 8; i++) 
-	{
-		obj->proxy[i] = cfg.proxy[i];
+    }
+    
+    Py_XDECREF(obj->force_contact);
+    obj->force_contact = 
+        PyString_FromStringAndSize(cfg.force_contact.ptr, 
+        cfg.force_contact.slen);
+    obj->priority = cfg.priority;
+    Py_XDECREF(obj->id);
+    obj->id = 
+        PyString_FromStringAndSize(cfg.id.ptr, cfg.id.slen);
+    Py_XDECREF(obj->reg_uri);
+    obj->reg_uri = 
+        PyString_FromStringAndSize(cfg.reg_uri.ptr, cfg.reg_uri.slen);
+    obj->proxy_cnt = cfg.proxy_cnt;
+    for (i = 0; i < 8; i++) 
+    {
+	PyObject * str;
+	int ret;
+        /*obj->proxy[i] = cfg.proxy[i];*/
+	str = PyString_FromStringAndSize(cfg.proxy[i].ptr, cfg.proxy[i].slen);
+	ret = PyList_SetItem((PyObject *)obj->proxy,i,str);
+	if (ret == -1) {
+	    return NULL;
 	}
-	obj->publish_enabled = cfg.publish_enabled;
-	obj->reg_timeout = cfg.reg_timeout;
+    }
+    obj->publish_enabled = cfg.publish_enabled;
+    obj->reg_timeout = cfg.reg_timeout;
 	
-    Py_INCREF(Py_None);
-    return Py_None;
+    return (PyObject *)obj;
 }
 
 /*
@@ -4153,7 +3805,7 @@ static PyObject *py_pjsua_acc_config_default
 static PyObject *py_pjsua_acc_get_count
 (PyObject *pSelf, PyObject *pArgs)
 {
-	int count;
+    int count;
     if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
@@ -4168,8 +3820,8 @@ static PyObject *py_pjsua_acc_get_count
 static PyObject *py_pjsua_acc_is_valid
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int id;
-	int is_valid;
+    int id;
+    int is_valid;
 
     if (!PyArg_ParseTuple(pArgs, "i", &id))
     {
@@ -4186,8 +3838,8 @@ static PyObject *py_pjsua_acc_is_valid
 static PyObject *py_pjsua_acc_set_default
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int id;
-	int status;
+    int id;
+    int status;
 
     if (!PyArg_ParseTuple(pArgs, "i", &id))
     {
@@ -4204,7 +3856,7 @@ static PyObject *py_pjsua_acc_set_default
 static PyObject *py_pjsua_acc_get_default
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int id;
+    int id;
 	
     if (!PyArg_ParseTuple(pArgs, ""))
     {
@@ -4217,68 +3869,81 @@ static PyObject *py_pjsua_acc_get_default
 
 /*
  * py_pjsua_acc_add
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_acc_add
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int is_default;
-	acc_config_Object * ac;
-	pjsua_acc_config cfg;
-	acc_id_Object * id;
-	int p_acc_id;
-	int status;
-	int i;
+    int is_default;
+    acc_config_Object * ac;
+    pjsua_acc_config cfg;
+    
+    int p_acc_id;
+    int status;
+    int i;
 
-    if (!PyArg_ParseTuple(pArgs, "OiO", &ac, &is_default, &id))
+    if (!PyArg_ParseTuple(pArgs, "Oi", &ac, &is_default))
     {
         return NULL;
     }
-	cfg.cred_count = ac->cred_count;
-	for (i = 0; i < 8; i++) 
-	{
-		cfg.cred_info[i] = ac->cred_info[i];
-	}
-	cfg.force_contact.ptr = PyString_AsString(ac->force_contact);
-	cfg.force_contact.slen = strlen(PyString_AsString(ac->force_contact));
-	cfg.id.ptr = PyString_AsString(ac->id);
-	cfg.id.slen = strlen(PyString_AsString(ac->id));
-	cfg.priority = ac->priority;
-	for (i = 0; i < 8; i++) {
-		cfg.proxy[i] = ac->proxy[i];
-	}
-	cfg.proxy_cnt = ac->proxy_cnt;
-	cfg.publish_enabled = ac->publish_enabled;
-	cfg.reg_timeout = ac->reg_timeout;
-	cfg.reg_uri.ptr = PyString_AsString(ac->reg_uri);
-	cfg.reg_uri.slen = strlen(PyString_AsString(ac->reg_uri));
-	p_acc_id = id->acc_id;
+    cfg.cred_count = ac->cred_count;
+    for (i = 0; i < 8; i++) 
+    {
+        /*cfg.cred_info[i] = ac->cred_info[i];*/
+	pjsip_cred_info_Object * ci = (pjsip_cred_info_Object *)PyList_GetItem((PyObject *)ac->cred_info,i);
+	cfg.cred_info[i].data.ptr = PyString_AsString(ci->data);
+	cfg.cred_info[i].data.slen = strlen(PyString_AsString(ci->data));
+	cfg.cred_info[i].realm.ptr = PyString_AsString(ci->realm);
+	cfg.cred_info[i].realm.slen = strlen(PyString_AsString(ci->realm));
+	cfg.cred_info[i].scheme.ptr = PyString_AsString(ci->scheme);
+	cfg.cred_info[i].scheme.slen = strlen(PyString_AsString(ci->scheme));
+	cfg.cred_info[i].username.ptr = PyString_AsString(ci->username);
+	cfg.cred_info[i].username.slen = strlen(PyString_AsString(ci->username));
+	cfg.cred_info[i].data_type = ci->data_type;
+    }
+    cfg.force_contact.ptr = PyString_AsString(ac->force_contact);
+    cfg.force_contact.slen = strlen(PyString_AsString(ac->force_contact));
+    cfg.id.ptr = PyString_AsString(ac->id);
+    cfg.id.slen = strlen(PyString_AsString(ac->id));
+    cfg.priority = ac->priority;
+    for (i = 0; i < 8; i++) {
+        /*cfg.proxy[i] = ac->proxy[i];*/
+	cfg.proxy[i].ptr = PyString_AsString(PyList_GetItem((PyObject *)ac->proxy,i));
+    }
+    cfg.proxy_cnt = ac->proxy_cnt;
+    cfg.publish_enabled = ac->publish_enabled;
+    cfg.reg_timeout = ac->reg_timeout;
+    cfg.reg_uri.ptr = PyString_AsString(ac->reg_uri);
+    cfg.reg_uri.slen = strlen(PyString_AsString(ac->reg_uri));
+    
     status = pjsua_acc_add(&cfg, is_default, &p_acc_id);
-	id->acc_id = p_acc_id;
-    return Py_BuildValue("i", status);
+    
+    return Py_BuildValue("ii", status, p_acc_id);
 }
 
 /*
  * py_pjsua_acc_add_local
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_acc_add_local
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int is_default;
-	int tid;
-	acc_id_Object * id;
-	int p_acc_id;
-	int status;
+    int is_default;
+    int tid;
+    
+    int p_acc_id;
+    int status;
 	
 
-    if (!PyArg_ParseTuple(pArgs, "iiO", &tid, &is_default, &id))
+    if (!PyArg_ParseTuple(pArgs, "iiO", &tid, &is_default))
     {
         return NULL;
     }
 	
-	p_acc_id = id->acc_id;
+    
     status = pjsua_acc_add_local(tid, is_default, &p_acc_id);
-	id->acc_id = p_acc_id;
-    return Py_BuildValue("i", status);
+    
+    return Py_BuildValue("ii", status, p_acc_id);
 }
 
 /*
@@ -4287,9 +3952,9 @@ static PyObject *py_pjsua_acc_add_local
 static PyObject *py_pjsua_acc_del
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int acc_id;
-	int status;
-	
+    int acc_id;
+    int status;
+
     if (!PyArg_ParseTuple(pArgs, "i", &acc_id))
     {
         return NULL;
@@ -4306,34 +3971,44 @@ static PyObject *py_pjsua_acc_del
 static PyObject *py_pjsua_acc_modify
 (PyObject *pSelf, PyObject *pArgs)
 {    	
-	acc_config_Object * ac;
-	pjsua_acc_config cfg;	
-	int acc_id;
-	int status;
-	int i;
+    acc_config_Object * ac;
+    pjsua_acc_config cfg;	
+    int acc_id;
+    int status;
+    int i;
 
     if (!PyArg_ParseTuple(pArgs, "iO", &acc_id, &ac))
     {
         return NULL;
     }
-	cfg.cred_count = ac->cred_count;
-	for (i = 0; i < 8; i++) 
-	{
-		cfg.cred_info[i] = ac->cred_info[i];
-	}
-	cfg.force_contact.ptr = PyString_AsString(ac->force_contact);
-	cfg.force_contact.slen = strlen(PyString_AsString(ac->force_contact));
-	cfg.id.ptr = PyString_AsString(ac->id);
-	cfg.id.slen = strlen(PyString_AsString(ac->id));
-	cfg.priority = ac->priority;
-	for (i = 0; i < 8; i++) {
-		cfg.proxy[i] = ac->proxy[i];
-	}
-	cfg.proxy_cnt = ac->proxy_cnt;
-	cfg.publish_enabled = ac->publish_enabled;
-	cfg.reg_timeout = ac->reg_timeout;
-	cfg.reg_uri.ptr = PyString_AsString(ac->reg_uri);
-	cfg.reg_uri.slen = strlen(PyString_AsString(ac->reg_uri));	
+    cfg.cred_count = ac->cred_count;
+    for (i = 0; i < 8; i++) 
+    {
+        /*cfg.cred_info[i] = ac->cred_info[i];*/
+	pjsip_cred_info_Object * ci = (pjsip_cred_info_Object *)PyList_GetItem((PyObject *)ac->cred_info,i);
+	cfg.cred_info[i].data.ptr = PyString_AsString(ci->data);
+	cfg.cred_info[i].data.slen = strlen(PyString_AsString(ci->data));
+	cfg.cred_info[i].realm.ptr = PyString_AsString(ci->realm);
+	cfg.cred_info[i].realm.slen = strlen(PyString_AsString(ci->realm));
+	cfg.cred_info[i].scheme.ptr = PyString_AsString(ci->scheme);
+	cfg.cred_info[i].scheme.slen = strlen(PyString_AsString(ci->scheme));
+	cfg.cred_info[i].username.ptr = PyString_AsString(ci->username);
+	cfg.cred_info[i].username.slen = strlen(PyString_AsString(ci->username));
+    }
+    cfg.force_contact.ptr = PyString_AsString(ac->force_contact);
+    cfg.force_contact.slen = strlen(PyString_AsString(ac->force_contact));
+    cfg.id.ptr = PyString_AsString(ac->id);
+    cfg.id.slen = strlen(PyString_AsString(ac->id));
+    cfg.priority = ac->priority;
+    for (i = 0; i < 8; i++) {
+        /*cfg.proxy[i] = ac->proxy[i];*/
+	cfg.proxy[i].ptr = PyString_AsString(PyList_GetItem((PyObject *)ac->proxy,i));
+    }
+    cfg.proxy_cnt = ac->proxy_cnt;
+    cfg.publish_enabled = ac->publish_enabled;
+    cfg.reg_timeout = ac->reg_timeout;
+    cfg.reg_uri.ptr = PyString_AsString(ac->reg_uri);
+    cfg.reg_uri.slen = strlen(PyString_AsString(ac->reg_uri));	
     status = pjsua_acc_modify(acc_id, &cfg);	
     return Py_BuildValue("i", status);
 }
@@ -4344,9 +4019,9 @@ static PyObject *py_pjsua_acc_modify
 static PyObject *py_pjsua_acc_set_online_status
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int is_online;	
-	int acc_id;
-	int status;	
+    int is_online;	
+    int acc_id;
+    int status;	
 
     if (!PyArg_ParseTuple(pArgs, "ii", &acc_id, &is_online))
     {
@@ -4364,9 +4039,9 @@ static PyObject *py_pjsua_acc_set_online_status
 static PyObject *py_pjsua_acc_set_registration
 (PyObject *pSelf, PyObject *pArgs)
 {    
-	int renew;	
-	int acc_id;
-	int status;	
+    int renew;	
+    int acc_id;
+    int status;	
 
     if (!PyArg_ParseTuple(pArgs, "ii", &acc_id, &renew))
     {
@@ -4379,112 +4054,126 @@ static PyObject *py_pjsua_acc_set_registration
 }
 
 /*
- * py_pjsua_acc_set_get_info
+ * py_pjsua_acc_get_info
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_acc_get_info
 (PyObject *pSelf, PyObject *pArgs)
 {    	
-	int acc_id;
-	acc_info_Object * obj;
-	pjsua_acc_info info;
-	int status;	
-	int i;
+    int acc_id;
+    acc_info_Object * obj;
+    pjsua_acc_info info;
+    int status;	
+    int i;
 
-    if (!PyArg_ParseTuple(pArgs, "iO", &acc_id, &obj))
+    if (!PyArg_ParseTuple(pArgs, "i", &acc_id))
     {
         return NULL;
     }
 	
-	info.acc_uri.ptr = PyString_AsString(obj->acc_uri);
-	info.acc_uri.slen = strlen(PyString_AsString(obj->acc_uri));
-	for (i = 0; i < PJ_ERR_MSG_SIZE; i++) {
-		info.buf_[i] = obj->buf_[i];
-	}
-	info.expires = obj->expires;
-	info.has_registration = obj->has_registration;
-	info.id = obj->id;
-	info.is_default = obj->is_default;
-	info.online_status = obj->online_status;
-	info.status = obj->status;
-	info.status_text.ptr = PyString_AsString(obj->status_text);
-	info.status_text.slen = strlen(PyString_AsString(obj->status_text));
+    
     status = pjsua_acc_get_info(acc_id, &info);
-	obj->acc_uri =
-		PyString_FromStringAndSize(info.acc_uri.ptr, 
-		info.acc_uri.slen);
-	for (i = 0; i < PJ_ERR_MSG_SIZE; i++) {
-		obj->buf_[i] = info.buf_[i];
+    if (status == PJ_SUCCESS) {
+	obj = (acc_info_Object *)acc_info_new(&acc_info_Type,NULL, NULL);
+        obj->acc_uri =
+            PyString_FromStringAndSize(info.acc_uri.ptr, 
+            info.acc_uri.slen);
+        for (i = 0; i < PJ_ERR_MSG_SIZE; i++) {
+            obj->buf_[i] = info.buf_[i];
 	}
-	obj->expires = info.expires;
-	obj->has_registration = info.has_registration;
-	obj->id = info.id;
-	obj->is_default = info.is_default;
-	obj->online_status = info.online_status;
-	obj->status = info.status;
-	obj->status_text =
-		PyString_FromStringAndSize(info.status_text.ptr, 
-		info.status_text.slen);
-    return Py_BuildValue("i", status);
+        obj->expires = info.expires;
+        obj->has_registration = info.has_registration;
+        obj->id = info.id;
+        obj->is_default = info.is_default;
+        obj->online_status = info.online_status;
+        obj->status = info.status;
+        obj->status_text =
+	    PyString_FromStringAndSize(info.status_text.ptr, 
+	    info.status_text.slen);
+        return Py_BuildValue("O", obj);
+    } else {
+	Py_INCREF(Py_None);
+	return Py_None;
+    }
 }
 
 /*
  * py_pjsua_enum_accs
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_enum_accs(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	PyObject *list;
-	integer_Object *count;
-	pjsua_acc_id *id;
-	int c, i;
-    if (!PyArg_ParseTuple(pArgs, "OO", &list, &count))
+    PyObject *list;
+    
+    pjsua_acc_id *id;
+    int c, i;
+    if (!PyArg_ParseTuple(pArgs, "i", &c))
     {
         return NULL;
     }	
-	c = count->integer;
-	id = (pjsua_acc_id *)malloc(c * sizeof(pjsua_acc_id));
+    
+    id = (pjsua_acc_id *)malloc(c * sizeof(pjsua_acc_id));
     status = pjsua_enum_accs(id, &c);
-	Py_XDECREF(list);
-	list = PyList_New(c);
-	for (i = 0; i < c; i++) {
-		int ret = PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
-		if (ret == -1) {
-			return NULL;
-		}
+    
+    list = PyList_New(c);
+    for (i = 0; i < c; i++) {
+        int ret = PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
+        if (ret == -1) {
+            return NULL;
 	}
-	count->integer = c;
-	free(id);
-    return Py_BuildValue("i",status);
+    }
+    
+    free(id);
+    return Py_BuildValue("O",list);
 }
 
 /*
  * py_pjsua_acc_enum_info
+ * !modified @ 051206
  */
 static PyObject *py_pjsua_acc_enum_info(PyObject *pSelf, PyObject *pArgs)
 {
     pj_status_t status;
-	PyObject *list;
-	integer_Object *count;
-	pjsua_acc_info *info;
-	int c, i;
-    if (!PyArg_ParseTuple(pArgs, "OO", &list, &count))
+    PyObject *list;
+    
+    pjsua_acc_info *info;
+    int c, i;
+    if (!PyArg_ParseTuple(pArgs, "i", &c))
     {
         return NULL;
     }	
-	c = count->integer;
-	info = (pjsua_acc_info *)malloc(c * sizeof(pjsua_acc_info));
+    
+    info = (pjsua_acc_info *)malloc(c * sizeof(pjsua_acc_info));
     status = pjsua_acc_enum_info(info, &c);
-	Py_XDECREF(list);
-	list = PyList_New(c);
-	for (i = 0; i < c; i++) {
-		int ret = PyList_SetItem(list, i, Py_BuildValue("i", info[i]));
-		if (ret == -1) {
-			return NULL;
-		}
+    
+    list = PyList_New(c);
+    for (i = 0; i < c; i++) {
+        int ret;
+	int j;
+	acc_info_Object *obj;
+	obj = (acc_info_Object *)acc_info_new(&acc_info_Type,NULL,NULL);
+	obj->acc_uri = PyString_FromStringAndSize
+	    (info[i].acc_uri.ptr, info[i].acc_uri.slen);
+	for(j = 0; j < PJ_ERR_MSG_SIZE; j++) {
+	    obj->buf_[j] = info[i].buf_[j];
 	}
-	count->integer = c;
-	free(info);
-    return Py_BuildValue("i",status);
+	obj->expires = info[i].expires;
+	obj->has_registration = info[i].has_registration;
+	obj->id = info[i].id;
+	obj->is_default = info[i].is_default;
+	obj->online_status = info[i].online_status;
+	obj->status = info[i].status;
+	obj->status_text = PyString_FromStringAndSize(info[i].status_text.ptr,
+	    info[i].status_text.slen);
+	ret = PyList_SetItem(list, i, (PyObject *)obj);
+        if (ret == -1) {
+	    return NULL;
+        }
+    }
+    
+    free(info);
+    return Py_BuildValue("O",list);
 }
 
 /*
@@ -4494,16 +4183,16 @@ static PyObject *py_pjsua_acc_find_for_outgoing
 (PyObject *pSelf, PyObject *pArgs)
 {    
 	
-	int acc_id;	
-	PyObject * url;
-	pj_str_t str;
+    int acc_id;	
+    PyObject * url;
+    pj_str_t str;
 
     if (!PyArg_ParseTuple(pArgs, "O", &url))
     {
         return NULL;
     }
-	str.ptr = PyString_AsString(url);
-	str.slen = strlen(PyString_AsString(url));
+    str.ptr = PyString_AsString(url);
+    str.slen = strlen(PyString_AsString(url));
 	
     acc_id = pjsua_acc_find_for_outgoing(&str);
 	
@@ -4516,16 +4205,16 @@ static PyObject *py_pjsua_acc_find_for_outgoing
 static PyObject *py_pjsua_acc_find_for_incoming
 (PyObject *pSelf, PyObject *pArgs)
 {    	
-	int acc_id;	
-	pjsip_rx_data_Object * obj;
-	pjsip_rx_data * rdata;
+    int acc_id;	
+    pjsip_rx_data_Object * obj;
+    pjsip_rx_data * rdata;
 
     if (!PyArg_ParseTuple(pArgs, "O", &obj))
     {
         return NULL;
     }
 	
-	rdata = obj->rdata;
+    rdata = obj->rdata;
     acc_id = pjsua_acc_find_for_incoming(rdata);
 	
     return Py_BuildValue("i", acc_id);
@@ -4533,67 +4222,66 @@ static PyObject *py_pjsua_acc_find_for_incoming
 
 /*
  * py_pjsua_acc_create_uac_contact
+ * !modified @ 061206
  */
 static PyObject *py_pjsua_acc_create_uac_contact
 (PyObject *pSelf, PyObject *pArgs)
 {    	
-	int status;
-	int acc_id;	
-	pj_pool_Object * p;
-	pj_pool_t * pool;
-	PyObject * strc;
-	pj_str_t contact;
-	PyObject * stru;
-	pj_str_t uri;
+    int status;
+    int acc_id;	
+    pj_pool_Object * p;
+    pj_pool_t * pool;
+    PyObject * strc;
+    pj_str_t contact;
+    PyObject * stru;
+    pj_str_t uri;
 
-    if (!PyArg_ParseTuple(pArgs, "OOiO", &p, &strc, &acc_id, &stru))
+    if (!PyArg_ParseTuple(pArgs, "OiO", &p, &acc_id, &stru))
     {
         return NULL;
     }
 	
-	pool = p->pool;
-	contact.ptr = PyString_AsString(strc);
-	contact.slen = strlen(PyString_AsString(strc));
-	uri.ptr = PyString_AsString(stru);
-	uri.slen = strlen(PyString_AsString(stru));
+    pool = p->pool;    
+    uri.ptr = PyString_AsString(stru);
+    uri.slen = strlen(PyString_AsString(stru));
     status = pjsua_acc_create_uac_contact(pool, &contact, acc_id, &uri);
-	strc = PyString_FromStringAndSize(contact.ptr, contact.slen);
+    strc = PyString_FromStringAndSize(contact.ptr, contact.slen);
 	
-    return Py_BuildValue("i", status);
+    return Py_BuildValue("O", strc);
 }
 
 /*
  * py_pjsua_acc_create_uas_contact
+ * !modified @ 061206
  */
 static PyObject *py_pjsua_acc_create_uas_contact
 (PyObject *pSelf, PyObject *pArgs)
 {    	
-	int status;
-	int acc_id;	
-	pj_pool_Object * p;
-	pj_pool_t * pool;
-	PyObject * strc;
-	pj_str_t contact;
-	pjsip_rx_data_Object * objr;
-	pjsip_rx_data * rdata;
+    int status;
+    int acc_id;	
+    pj_pool_Object * p;
+    pj_pool_t * pool;
+    PyObject * strc;
+    pj_str_t contact;
+    pjsip_rx_data_Object * objr;
+    pjsip_rx_data * rdata;
 
-    if (!PyArg_ParseTuple(pArgs, "OOiO", &p, &strc, &acc_id, &objr))
+    if (!PyArg_ParseTuple(pArgs, "OiO", &p, &acc_id, &objr))
     {
         return NULL;
     }
 	
-	pool = p->pool;
-	contact.ptr = PyString_AsString(strc);
-	contact.slen = strlen(PyString_AsString(strc));
-	rdata = objr->rdata;
+    pool = p->pool;
+    
+    rdata = objr->rdata;
     status = pjsua_acc_create_uas_contact(pool, &contact, acc_id, rdata);
-	strc = PyString_FromStringAndSize(contact.ptr, contact.slen);
+    strc = PyString_FromStringAndSize(contact.ptr, contact.slen);
 	
-    return Py_BuildValue("i", status);
+    return Py_BuildValue("O", strc);
 }
 
 static char pjsua_acc_config_default_doc[] =
-    "void py_pjsua.acc_config_default (py_pjsua.Acc_Config cfg) "
+    "py_pjsua.Acc_Config py_pjsua.acc_config_default () "
     "Call this function to initialize account config with default values.";
 static char pjsua_acc_get_count_doc[] =
     "int py_pjsua.acc_get_count () "
@@ -4604,21 +4292,21 @@ static char pjsua_acc_is_valid_doc[] =
 static char pjsua_acc_set_default_doc[] =
     "int py_pjsua.acc_set_default (int acc_id) "
     "Set default account to be used when incoming "
-	"and outgoing requests doesn't match any accounts.";
+    "and outgoing requests doesn't match any accounts.";
 static char pjsua_acc_get_default_doc[] =
     "int py_pjsua.acc_get_default () "
     "Get default account.";
 static char pjsua_acc_add_doc[] =
-    "int py_pjsua.acc_add (py_pjsua.Acc_Config cfg, "
-	"int is_default, py_pjsua.Acc_ID p_acc_id) "
+    "int, int py_pjsua.acc_add (py_pjsua.Acc_Config cfg, "
+    "int is_default) "
     "Add a new account to pjsua. PJSUA must have been initialized "
-	"(with pjsua_init()) before calling this function.";
+    "(with pjsua_init()) before calling this function.";
 static char pjsua_acc_add_local_doc[] =
-    "int py_pjsua.acc_add_local (int tid, "
-	"int is_default, py_pjsua.Acc_ID p_acc_id) "
+    "int,int py_pjsua.acc_add_local (int tid, "
+    "int is_default) "
     "Add a local account. A local account is used to identify "
-	"local endpoint instead of a specific user, and for this reason, "
-	"a transport ID is needed to obtain the local address information.";
+    "local endpoint instead of a specific user, and for this reason, "
+    "a transport ID is needed to obtain the local address information.";
 static char pjsua_acc_del_doc[] =
     "int py_pjsua.acc_del (int acc_id) "
     "Delete account.";
@@ -4628,58 +4316,635 @@ static char pjsua_acc_modify_doc[] =
 static char pjsua_acc_set_online_status_doc[] =
     "int py_pjsua.acc_set_online_status (int acc_id, int is_online) "
     "Modify account's presence status to be advertised "
-	"to remote/presence subscribers.";
+    "to remote/presence subscribers.";
 static char pjsua_acc_set_registration_doc[] =
     "int py_pjsua.acc_set_registration (int acc_id, int renew) "
     "Update registration or perform unregistration.";
 static char pjsua_acc_get_info_doc[] =
-    "int py_pjsua.acc_get_info (int acc_id, py_pjsua.Acc_Info info) "
+    "py_pjsua.Acc_Info py_pjsua.acc_get_info (int acc_id) "
     "Get account information.";
 static char pjsua_enum_accs_doc[] =
-    "int py_pjsua.enum_accs (py_pjsua.Acc_ID ids[], py_pjsua.Integer count) "
+    "int[] py_pjsua.enum_accs (int count) "
     "Enum accounts all account ids.";
 static char pjsua_acc_enum_info_doc[] =
-    "int py_pjsua.acc_enum_info (py_pjsua.Acc_Info info[], "
-	"py_pjsua.Integer count) "
+    "py_pjsua.Acc_Info[] py_pjsua.acc_enum_info (int count) "
     "Enum accounts info.";
 static char pjsua_acc_find_for_outgoing_doc[] =
     "int py_pjsua.acc_find_for_outgoing (string url) "
     "This is an internal function to find the most appropriate account "
-	"to used to reach to the specified URL.";
+    "to used to reach to the specified URL.";
 static char pjsua_acc_find_for_incoming_doc[] =
     "int py_pjsua.acc_find_for_incoming (pjsip_rx_data_Object rdata) "
     "This is an internal function to find the most appropriate account "
-	"to be used to handle incoming calls.";
+    "to be used to handle incoming calls.";
 static char pjsua_acc_create_uac_contact_doc[] =
-    "int py_pjsua.acc_create_uac_contact (pj_pool_Object pool, "
-	"string contact, int acc_id, string uri) "
+    "string py_pjsua.acc_create_uac_contact (pj_pool_Object pool, "
+    "int acc_id, string uri) "
     "Create a suitable URI to be put as Contact based on the specified "
-	"target URI for the specified account.";
+    "target URI for the specified account.";
 static char pjsua_acc_create_uas_contact_doc[] =
-    "int py_pjsua.acc_create_uas_contact (pj_pool_Object pool, "
-	"string contact, int acc_id, pjsip_rx_data_Object rdata) "
+    "string py_pjsua.acc_create_uas_contact (pj_pool_Object pool, "
+    "int acc_id, pjsip_rx_data_Object rdata) "
     "Create a suitable URI to be put as Contact based on the information "
-	"in the incoming request.";
+    "in the incoming request.";
 
 /* END OF LIB ACCOUNT */
 
-/* XXX test */
-static PyObject *py_my_parse_by_reference
+/* LIB BUDDY */
+
+
+
+/*
+ * buddy_config_Object
+ * Buddy Config
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */
+    
+    PyObject * uri;
+    int subscribe;
+} buddy_config_Object;
+
+
+/*
+ * buddy_config_dealloc
+ * deletes a buddy_config from memory
+ */
+static void buddy_config_dealloc(buddy_config_Object* self)
+{
+    Py_XDECREF(self->uri);     
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+/*
+ * buddy_config_new
+ * constructor for buddy_config object
+ */
+static PyObject * buddy_config_new(PyTypeObject *type, PyObject *args,
+                                    PyObject *kwds)
+{
+    buddy_config_Object *self;
+
+    self = (buddy_config_Object *)type->tp_alloc(type, 0);
+    if (self != NULL)
+    {
+        self->uri = PyString_FromString("");
+        if (self->uri == NULL)
+    	{
+            Py_DECREF(self);
+            return NULL;
+        }        
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * buddy_config_members
+ */
+static PyMemberDef buddy_config_members[] =
+{
+    
+    {
+        "uri", T_OBJECT_EX,
+        offsetof(buddy_config_Object, uri), 0,
+        "TBuddy URL or name address."        
+    },
+    
+    {
+        "subscribe", T_INT, 
+        offsetof(buddy_config_Object, subscribe), 0,
+        "Specify whether presence subscription should start immediately. "
+    },
+    
+    {NULL}  /* Sentinel */
+};
+
+
+
+
+/*
+ * buddy_config_Type
+ */
+static PyTypeObject buddy_config_Type =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "py_pjsua.Buddy_Config",      /*tp_name*/
+    sizeof(buddy_config_Object),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)buddy_config_dealloc,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "Buddy Config objects",       /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    buddy_config_members,         /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    buddy_config_new,             /* tp_new */
+
+};
+
+/*
+ * buddy_info_Object
+ * Buddy Info
+ * !modified @ 071206
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    int id;
+    PyObject * uri;
+    PyObject * contact;
+    int status;
+    PyObject * status_text;
+    int monitor_pres;
+    char buf_[256];
+} buddy_info_Object;
+
+
+/*
+ * buddy_info_dealloc
+ * deletes a buddy_info from memory
+ * !modified @ 071206
+ */
+static void buddy_info_dealloc(buddy_info_Object* self)
+{
+    Py_XDECREF(self->uri);
+    Py_XDECREF(self->contact);
+    Py_XDECREF(self->status_text);
+    
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+/*
+ * buddy_info_new
+ * constructor for buddy_info object
+ * !modified @ 071206
+ */
+static PyObject * buddy_info_new(PyTypeObject *type, PyObject *args,
+                                    PyObject *kwds)
+{
+    buddy_info_Object *self;
+
+    self = (buddy_info_Object *)type->tp_alloc(type, 0);
+    if (self != NULL)
+    {
+        self->uri = PyString_FromString("");
+        if (self->uri == NULL)
+    	{
+            Py_DECREF(self);
+            return NULL;
+        }        
+	self->contact = PyString_FromString("");
+        if (self->contact == NULL)
+    	{
+            Py_DECREF(self);
+            return NULL;
+        }
+	self->status_text = PyString_FromString("");
+        if (self->status_text == NULL)
+    	{
+            Py_DECREF(self);
+            return NULL;
+        }
+	
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * buddy_info_members
+ * !modified @ 071206
+ */
+static PyMemberDef buddy_info_members[] =
+{
+    {
+        "id", T_INT, 
+        offsetof(buddy_info_Object, id), 0,
+        "The buddy ID."
+    },
+    {
+        "uri", T_OBJECT_EX,
+        offsetof(buddy_info_Object, uri), 0,
+        "The full URI of the buddy, as specified in the configuration. "        
+    },
+    {
+        "contact", T_OBJECT_EX,
+        offsetof(buddy_info_Object, contact), 0,
+        "Buddy's Contact, only available when presence subscription "
+        "has been established to the buddy."        
+    },
+    {
+        "status", T_INT, 
+        offsetof(buddy_info_Object, status), 0,
+        "Buddy's online status. "
+    },
+    {
+        "status_text", T_OBJECT_EX,
+        offsetof(buddy_info_Object, status_text), 0,
+        "Text to describe buddy's online status."        
+    },
+    {
+        "monitor_pres", T_INT, 
+        offsetof(buddy_info_Object, monitor_pres), 0,
+        "Flag to indicate that we should monitor the presence information "
+        "for this buddy (normally yes, unless explicitly disabled). "
+    },
+    
+    
+    {NULL}  /* Sentinel */
+};
+
+
+
+
+/*
+ * buddy_info_Type
+ */
+static PyTypeObject buddy_info_Type =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "py_pjsua.Buddy_Info",      /*tp_name*/
+    sizeof(buddy_info_Object),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)buddy_info_dealloc,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "Buddy Info objects",       /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    buddy_info_members,         /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    buddy_info_new,             /* tp_new */
+
+};
+
+/*
+ * py_pjsua_get_buddy_count
+ */
+static PyObject *py_pjsua_get_buddy_count
 (PyObject *pSelf, PyObject *pArgs)
 {    
-    PyObject *obj;
+    int ret;
 
-    if (!PyArg_ParseTuple(pArgs, "O", &obj))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }
+    ret = pjsua_get_buddy_count();
+	
+    return Py_BuildValue("i", ret);
+}
 
+/*
+ * py_pjsua_buddy_is_valid
+ */
+static PyObject *py_pjsua_buddy_is_valid
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int id;
+    int is_valid;
 
+    if (!PyArg_ParseTuple(pArgs, "i", &id))
+    {
+        return NULL;
+    }
+    is_valid = pjsua_buddy_is_valid(id);
+	
+    return Py_BuildValue("i", is_valid);
+}
+
+/*
+ * py_pjsua_enum_buddies
+ * !modified @ 061206
+ */
+static PyObject *py_pjsua_enum_buddies(PyObject *pSelf, PyObject *pArgs)
+{
+    pj_status_t status;
+    PyObject *list;
+    
+    pjsua_buddy_id *id;
+    int c, i;
+    if (!PyArg_ParseTuple(pArgs, "i", &c))
+    {
+        return NULL;
+    }	
+    
+    id = (pjsua_buddy_id *)malloc(c * sizeof(pjsua_buddy_id));
+    status = pjsua_enum_buddies(id, &c);
+    
+    list = PyList_New(c);
+    for (i = 0; i < c; i++) {
+        int ret = PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
+        if (ret == -1) {
+            return NULL;
+	}
+    }
+    
+    free(id);
+    return Py_BuildValue("O",list);
+}
+
+/*
+ * py_pjsua_buddy_get_info
+ * !modified @ 071206
+ */
+static PyObject *py_pjsua_buddy_get_info
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+    int buddy_id;
+    buddy_info_Object * obj;
+    pjsua_buddy_info info;
+    int status;	
+    int i;
+
+    if (!PyArg_ParseTuple(pArgs, "i", &buddy_id))
+    {
+        return NULL;
+    }
+	
+    
+    status = pjsua_buddy_get_info(buddy_id, &info);
+    if (status == PJ_SUCCESS) {
+	obj = (buddy_info_Object *)buddy_info_new(&buddy_info_Type,NULL,NULL);
+        obj->id = info.id;
+        Py_XDECREF(obj->uri);
+        obj->uri =
+            PyString_FromStringAndSize(info.uri.ptr, 
+            info.uri.slen);
+        Py_XDECREF(obj->contact);
+        obj->contact =
+            PyString_FromStringAndSize(info.contact.ptr, 
+            info.contact.slen);
+        obj->status = info.status;
+        Py_XDECREF(obj->status_text);
+        obj->status_text =
+            PyString_FromStringAndSize(info.status_text.ptr, 
+            info.status_text.slen);
+        obj->monitor_pres = info.monitor_pres;
+        for (i = 0; i < 256; i++) {
+	    
+            obj->buf_[i] = info.buf_[i];
+	}
+	
+        return Py_BuildValue("O", obj);
+    } else {
+	Py_INCREF(Py_None);
+	return Py_None;
+    }
+}
+
+/*
+ * py_pjsua_buddy_add
+ * !modified @ 061206
+ */
+static PyObject *py_pjsua_buddy_add
+(PyObject *pSelf, PyObject *pArgs)
+{        
+    buddy_config_Object * bc;
+    pjsua_buddy_config cfg;
+    
+    int p_buddy_id;
+    int status;
+
+    if (!PyArg_ParseTuple(pArgs, "O", &bc))
+    {
+        return NULL;
+    }
+    cfg.subscribe = bc->subscribe;
+    cfg.uri.ptr = PyString_AsString(bc->uri);
+    cfg.uri.slen = strlen(PyString_AsString(bc->uri));    
+    
+    status = pjsua_buddy_add(&cfg, &p_buddy_id);
+    
+    return Py_BuildValue("ii", status, p_buddy_id);
+}
+
+/*
+ * py_pjsua_buddy_del
+ */
+static PyObject *py_pjsua_buddy_del
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int buddy_id;
+    int status;
+
+    if (!PyArg_ParseTuple(pArgs, "i", &buddy_id))
+    {
+        return NULL;
+    }
+	
+	
+    status = pjsua_buddy_del(buddy_id);	
+    return Py_BuildValue("i", status);
+}
+
+/*
+ * py_pjsua_buddy_subscribe_pres
+ */
+static PyObject *py_pjsua_buddy_subscribe_pres
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int buddy_id;
+    int status;
+    int subscribe;
+
+    if (!PyArg_ParseTuple(pArgs, "ii", &buddy_id, &subscribe))
+    {
+        return NULL;
+    }
+	
+	
+    status = pjsua_buddy_subscribe_pres(buddy_id, subscribe);	
+    return Py_BuildValue("i", status);
+}
+
+/*
+ * py_pjsua_pres_dump
+ */
+static PyObject *py_pjsua_pres_dump
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int verbose;
+
+    if (!PyArg_ParseTuple(pArgs, "i", &verbose))
+    {
+        return NULL;
+    }
+	
+	
+    pjsua_pres_dump(verbose);	
     Py_INCREF(Py_None);
     return Py_None;
 }
 
-/* XXX end-test */
+/*
+ * py_pjsua_im_send
+ * !modified @ 071206
+ */
+static PyObject *py_pjsua_im_send
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int status;
+    int acc_id;
+    pj_str_t to, mime_type, content;
+    PyObject * st;
+    PyObject * smt;
+    PyObject * sc;
+    pjsua_msg_data msg_data;
+    msg_data_Object * omd;
+    int user_data;
+    pj_pool_t *pool;
+
+    if (!PyArg_ParseTuple(pArgs, "iOOOOi", &acc_id, &st, &smt, &sc, &omd, &user_data))
+    {
+        return NULL;
+    }
+	
+    to.ptr = PyString_AsString(st);
+    to.slen = strlen(PyString_AsString(st));
+    mime_type.ptr = PyString_AsString(smt);
+    mime_type.slen = strlen(PyString_AsString(smt));
+    content.ptr = PyString_AsString(sc);
+    content.slen = strlen(PyString_AsString(sc));
+    msg_data.content_type.ptr = PyString_AsString(omd->content_type);
+    msg_data.content_type.slen = strlen(PyString_AsString(omd->content_type));
+    msg_data.msg_body.ptr = PyString_AsString(omd->msg_body);
+    msg_data.msg_body.slen = strlen(PyString_AsString(omd->msg_body));
+    pool = pjsua_pool_create("pjsua", 4000, 4000);
+
+    translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
+    status = pjsua_im_send(acc_id, &to, &mime_type, &content, &msg_data, &user_data);	
+    pj_pool_release(pool);
+    return Py_BuildValue("i",status);
+}
+
+/*
+ * py_pjsua_im_typing
+ */
+static PyObject *py_pjsua_im_typing
+(PyObject *pSelf, PyObject *pArgs)
+{    
+    int status;
+    int acc_id;
+    pj_str_t to;
+    PyObject * st;
+    int is_typing;
+    pjsua_msg_data msg_data;
+    msg_data_Object * omd;
+    pj_pool_t * pool;
+
+    if (!PyArg_ParseTuple(pArgs, "iOiO", &acc_id, &st, &is_typing, &omd))
+    {
+        return NULL;
+    }
+	
+    to.ptr = PyString_AsString(st);
+    to.slen = strlen(PyString_AsString(st));    
+    msg_data.content_type.ptr = PyString_AsString(omd->content_type);
+    msg_data.content_type.slen = strlen(PyString_AsString(omd->content_type));
+    msg_data.msg_body.ptr = PyString_AsString(omd->msg_body);
+    msg_data.msg_body.slen = strlen(PyString_AsString(omd->msg_body));
+    pool = pjsua_pool_create("pjsua", 4000, 4000);
+
+    translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
+    status = pjsua_im_typing(acc_id, &to, is_typing, &msg_data);	
+    pj_pool_release(pool);
+    return Py_BuildValue("i",status);
+}
+
+static char pjsua_get_buddy_count_doc[] =
+    "int py_pjsua.get_buddy_count () "
+    "Get total number of buddies.";
+static char pjsua_buddy_is_valid_doc[] =
+    "int py_pjsua.buddy_is_valid (int buddy_id) "
+    "Check if buddy ID is valid.";
+static char pjsua_enum_buddies_doc[] =
+    "int[] py_pjsua.enum_buddies (int count) "
+    "Enum buddy IDs.";
+static char pjsua_buddy_get_info_doc[] =
+    "py_pjsua.Buddy_Info py_pjsua.buddy_get_info (int buddy_id) "
+    "Get detailed buddy info.";
+static char pjsua_buddy_add_doc[] =
+    "int,int py_pjsua.buddy_add (py_pjsua.Buddy_Config cfg) "
+    "Add new buddy.";
+static char pjsua_buddy_del_doc[] =
+    "int py_pjsua.buddy_del (int buddy_id) "
+    "Delete buddy.";
+static char pjsua_buddy_subscribe_pres_doc[] =
+    "int py_pjsua.buddy_subscribe_pres (int buddy_id, int subscribe) "
+    "Enable/disable buddy's presence monitoring.";
+static char pjsua_pres_dump_doc[] =
+    "void py_pjsua.pres_dump (int verbose) "
+    "Dump presence subscriptions to log file.";
+static char pjsua_im_send_doc[] =
+    "int py_pjsua.im_send (int acc_id, string to, string mime_type, "
+    "string content, py_pjsua.Msg_Data msg_data, int user_data) "
+    "Send instant messaging outside dialog, using the specified account "
+    "for route set and authentication.";
+static char pjsua_im_typing_doc[] =
+    "int py_pjsua.im_typing (int acc_id, string to, int is_typing, "
+    "py_pjsua.Msg_Data msg_data) "
+    "Send typing indication outside dialog.";
+
+/* END OF LIB BUDDY */
+
 
 
 /*
@@ -4688,7 +4953,8 @@ static PyObject *py_my_parse_by_reference
 static PyMethodDef py_pjsua_methods[] =
 {
     {
-	"my_parse_by_reference", py_my_parse_by_reference, METH_VARARGS, ""
+        "thread_register", py_pjsua_thread_register, METH_VARARGS, 
+         pjsua_thread_register_doc
     },
     {
     	"perror", py_pjsua_perror, METH_VARARGS, pjsua_perror_doc
@@ -4745,132 +5011,163 @@ static PyMethodDef py_pjsua_methods[] =
     	"media_config_default", py_pjsua_media_config_default, METH_VARARGS,
     	pjsua_media_config_default_doc
     },
-    {
-    	"logging_config_dup", py_pjsua_logging_config_dup, METH_VARARGS,
-    	pjsua_logging_config_dup_doc
-    },
-    {
-    	"config_dup", py_pjsua_config_dup, METH_VARARGS, pjsua_config_dup_doc
-    },
-    {
-    	"pjsip_cred_dup", py_pjsip_cred_dup, METH_VARARGS, pjsip_cred_dup_doc
-    },
+    
+    
     {
     	"msg_data_init", py_pjsua_msg_data_init, METH_VARARGS,
     	pjsua_msg_data_init_doc
     },
-	{
-    	"stun_config_default", py_pjsua_stun_config_default, METH_VARARGS,
-    	pjsua_stun_config_default_doc
+    {
+        "stun_config_default", py_pjsua_stun_config_default, METH_VARARGS,
+        pjsua_stun_config_default_doc
     },
-	{
-    	"transport_config_default", py_pjsua_transport_config_default, 
-			METH_VARARGS,pjsua_transport_config_default_doc
+    {
+        "transport_config_default", py_pjsua_transport_config_default, 
+        METH_VARARGS,pjsua_transport_config_default_doc
     },
-	{
-    	"normalize_stun_config", py_pjsua_normalize_stun_config, METH_VARARGS,
-    	pjsua_normalize_stun_config_doc
+    {
+        "normalize_stun_config", py_pjsua_normalize_stun_config, METH_VARARGS,
+        pjsua_normalize_stun_config_doc
     },
-	{
-    	"transport_config_dup", py_pjsua_transport_config_dup, METH_VARARGS,
-    	pjsua_transport_config_dup_doc
+    
+    {
+        "transport_create", py_pjsua_transport_create, METH_VARARGS,
+        pjsua_transport_create_doc
     },
-	{
-    	"transport_create", py_pjsua_transport_create, METH_VARARGS,
-    	pjsua_transport_create_doc
+    {
+        "transport_register", py_pjsua_transport_register, METH_VARARGS,
+        pjsua_transport_register_doc
     },
-	{
-    	"transport_register", py_pjsua_transport_register, METH_VARARGS,
-    	pjsua_transport_register_doc
+    {
+        "transport_enum_transports", py_pjsua_enum_transports, METH_VARARGS,
+        pjsua_enum_transports_doc
     },
-	{
-    	"transport_enum_transports", py_pjsua_enum_transports, METH_VARARGS,
-    	pjsua_enum_transports_doc
+    {
+        "transport_get_info", py_pjsua_transport_get_info, METH_VARARGS,
+        pjsua_transport_get_info_doc
     },
-	{
-    	"transport_get_info", py_pjsua_transport_get_info, METH_VARARGS,
-    	pjsua_transport_get_info_doc
+    {
+        "transport_set_enable", py_pjsua_transport_set_enable, METH_VARARGS,
+        pjsua_transport_set_enable_doc
     },
-	{
-    	"transport_set_enable", py_pjsua_transport_set_enable, METH_VARARGS,
-    	pjsua_transport_set_enable_doc
+    {
+       "transport_close", py_pjsua_transport_close, METH_VARARGS,
+        pjsua_transport_close_doc
     },
-	{
-    	"transport_close", py_pjsua_transport_close, METH_VARARGS,
-    	pjsua_transport_close_doc
+    {
+        "acc_config_default", py_pjsua_acc_config_default, METH_VARARGS,
+        pjsua_acc_config_default_doc
     },
-	{
-    	"acc_config_default", py_pjsua_acc_config_default, METH_VARARGS,
-    	pjsua_acc_config_default_doc
+    {
+        "acc_get_count", py_pjsua_acc_get_count, METH_VARARGS,
+        pjsua_acc_get_count_doc
     },
-	{
-    	"acc_get_count", py_pjsua_acc_get_count, METH_VARARGS,
-    	pjsua_acc_get_count_doc
+    {
+        "acc_is_valid", py_pjsua_acc_is_valid, METH_VARARGS,
+        pjsua_acc_is_valid_doc
     },
-	{
-    	"acc_is_valid", py_pjsua_acc_is_valid, METH_VARARGS,
-    	pjsua_acc_is_valid_doc
+    {
+        "acc_set_default", py_pjsua_acc_set_default, METH_VARARGS,
+        pjsua_acc_set_default_doc
     },
-	{
-    	"acc_set_default", py_pjsua_acc_set_default, METH_VARARGS,
-    	pjsua_acc_set_default_doc
+    {
+        "acc_get_default", py_pjsua_acc_get_default, METH_VARARGS,
+        pjsua_acc_get_default_doc
     },
-	{
-    	"acc_get_default", py_pjsua_acc_get_default, METH_VARARGS,
-    	pjsua_acc_get_default_doc
+    {
+        "acc_add", py_pjsua_acc_add, METH_VARARGS,
+        pjsua_acc_add_doc
     },
-	{
-    	"acc_add", py_pjsua_acc_add, METH_VARARGS,
-    	pjsua_acc_add_doc
+    {
+        "acc_add_local", py_pjsua_acc_add_local, METH_VARARGS,
+        pjsua_acc_add_local_doc
     },
-	{
-    	"acc_add_local", py_pjsua_acc_add_local, METH_VARARGS,
-    	pjsua_acc_add_local_doc
+    {
+        "acc_del", py_pjsua_acc_del, METH_VARARGS,
+        pjsua_acc_del_doc
     },
-	{
-    	"acc_del", py_pjsua_acc_del, METH_VARARGS,
-    	pjsua_acc_del_doc
+    {
+        "acc_modify", py_pjsua_acc_modify, METH_VARARGS,
+        pjsua_acc_modify_doc
     },
-	{
-    	"acc_modify", py_pjsua_acc_modify, METH_VARARGS,
-    	pjsua_acc_modify_doc
+    {
+        "acc_set_online_status", py_pjsua_acc_set_online_status, METH_VARARGS,
+        pjsua_acc_set_online_status_doc
     },
-	{
-    	"acc_set_online_status", py_pjsua_acc_set_online_status, METH_VARARGS,
-    	pjsua_acc_set_online_status_doc
+    {
+        "acc_set_registration", py_pjsua_acc_set_registration, METH_VARARGS,
+        pjsua_acc_set_registration_doc
     },
-	{
-    	"acc_set_registration", py_pjsua_acc_set_registration, METH_VARARGS,
-    	pjsua_acc_set_registration_doc
+    {
+        "acc_get_info", py_pjsua_acc_get_info, METH_VARARGS,
+        pjsua_acc_get_info_doc
     },
-	{
-    	"acc_get_info", py_pjsua_acc_get_info, METH_VARARGS,
-    	pjsua_acc_get_info_doc
+    {
+        "enum_accs", py_pjsua_enum_accs, METH_VARARGS,
+        pjsua_enum_accs_doc
     },
-	{
-    	"enum_accs", py_pjsua_enum_accs, METH_VARARGS,
-    	pjsua_enum_accs_doc
+    {
+        "acc_enum_info", py_pjsua_acc_enum_info, METH_VARARGS,
+        pjsua_acc_enum_info_doc
     },
-	{
-    	"acc_enum_info", py_pjsua_acc_enum_info, METH_VARARGS,
-    	pjsua_acc_enum_info_doc
+    {
+        "acc_find_for_outgoing", py_pjsua_acc_find_for_outgoing, METH_VARARGS,
+        pjsua_acc_find_for_outgoing_doc
     },
-	{
-    	"acc_find_for_outgoing", py_pjsua_acc_find_for_outgoing, METH_VARARGS,
-    	pjsua_acc_find_for_outgoing_doc
+    {
+        "acc_find_for_incoming", py_pjsua_acc_find_for_incoming, METH_VARARGS,
+        pjsua_acc_find_for_incoming_doc
     },
-	{
-    	"acc_find_for_incoming", py_pjsua_acc_find_for_incoming, METH_VARARGS,
-    	pjsua_acc_find_for_incoming_doc
+    {
+        "acc_create_uac_contact", py_pjsua_acc_create_uac_contact, METH_VARARGS,
+        pjsua_acc_create_uac_contact_doc
     },
-	{
-    	"acc_create_uac_contact", py_pjsua_acc_create_uac_contact, METH_VARARGS,
-    	pjsua_acc_create_uac_contact_doc
+    {
+        "acc_create_uas_contact", py_pjsua_acc_create_uas_contact, METH_VARARGS,
+        pjsua_acc_create_uas_contact_doc
     },
-	{
-    	"acc_create_uas_contact", py_pjsua_acc_create_uas_contact, METH_VARARGS,
-    	pjsua_acc_create_uas_contact_doc
+    {
+        "get_buddy_count", py_pjsua_get_buddy_count, METH_VARARGS,
+        pjsua_get_buddy_count_doc
     },
+    {
+        "buddy_is_valid", py_pjsua_buddy_is_valid, METH_VARARGS,
+        pjsua_buddy_is_valid_doc
+    },
+    {
+        "enum_buddies", py_pjsua_enum_buddies, METH_VARARGS,
+        pjsua_enum_buddies_doc
+    },
+    {
+        "buddy_get_info", py_pjsua_buddy_get_info, METH_VARARGS,
+        pjsua_buddy_get_info_doc
+    },
+    {
+        "buddy_add", py_pjsua_buddy_add, METH_VARARGS,
+        pjsua_buddy_add_doc
+    },
+    {
+        "buddy_del", py_pjsua_buddy_del, METH_VARARGS,
+        pjsua_buddy_del_doc
+    },
+    {
+        "buddy_subscribe_pres", py_pjsua_buddy_subscribe_pres, METH_VARARGS,
+        pjsua_buddy_subscribe_pres_doc
+    },
+    {
+        "pres_dump", py_pjsua_pres_dump, METH_VARARGS,
+        pjsua_pres_dump_doc
+    },
+    {
+        "im_send", py_pjsua_im_send, METH_VARARGS,
+        pjsua_im_send_doc
+    },
+    {
+        "im_typing", py_pjsua_im_typing, METH_VARARGS,
+        pjsua_im_typing_doc
+    },
+    
+    
     {NULL, NULL} /* end of function list */
 };
 
@@ -4884,6 +5181,7 @@ initpy_pjsua(void)
 {
     PyObject* m = NULL;
 
+    
     if (PyType_Ready(&callback_Type) < 0)
         return;
     if (PyType_Ready(&config_Type) < 0)
@@ -4917,41 +5215,46 @@ initpy_pjsua(void)
     if (PyType_Ready(&pjsip_cred_info_Type) < 0)
         return;
 
-	/* LIB TRANSPORT */
+    /* LIB TRANSPORT */
 
-	if (PyType_Ready(&stun_config_Type) < 0)
+    if (PyType_Ready(&stun_config_Type) < 0)
         return;
-	if (PyType_Ready(&transport_config_Type) < 0)
+    if (PyType_Ready(&transport_config_Type) < 0)
         return;
-	if (PyType_Ready(&sockaddr_Type) < 0)
+    if (PyType_Ready(&sockaddr_Type) < 0)
         return;
-	if (PyType_Ready(&host_port_Type) < 0)
+    if (PyType_Ready(&host_port_Type) < 0)
         return;
-	transport_id_Type.tp_new = PyType_GenericNew;
-	if (PyType_Ready(&transport_id_Type) < 0)
+    
+    if (PyType_Ready(&transport_info_Type) < 0)
         return;
-	if (PyType_Ready(&transport_info_Type) < 0)
-        return;
-	integer_Type.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&integer_Type) < 0)
-        return;
-	pjsip_transport_Type.tp_new = PyType_GenericNew;
+    
+    pjsip_transport_Type.tp_new = PyType_GenericNew;
     if (PyType_Ready(&pjsip_transport_Type) < 0)
         return;
 
-	/* END OF LIB TRANSPORT */
+    /* END OF LIB TRANSPORT */
 
-	/* LIB ACCOUNT */
+    /* LIB ACCOUNT */
 
-	acc_id_Type.tp_new = PyType_GenericNew;
-	if (PyType_Ready(&acc_id_Type) < 0)
+    
+    if (PyType_Ready(&acc_config_Type) < 0)
         return;
-	if (PyType_Ready(&acc_config_Type) < 0)
-        return;
-	if (PyType_Ready(&acc_info_Type) < 0)
+    if (PyType_Ready(&acc_info_Type) < 0)
         return;
 
-	/* END OF LIB ACCOUNT */
+    /* END OF LIB ACCOUNT */
+
+    /* LIB BUDDY */
+
+    if (PyType_Ready(&buddy_config_Type) < 0)
+        return;
+    if (PyType_Ready(&buddy_info_Type) < 0)
+        return;
+
+    /* END OF LIB BUDDY */
+
+    
 
     m = Py_InitModule3(
         "py_pjsua", py_pjsua_methods,"PJSUA-lib module for python"
@@ -4997,38 +5300,46 @@ initpy_pjsua(void)
         (PyObject *)&pjsip_cred_info_Type
     );
 
-	/* LIB TRANSPORT */
+    /* LIB TRANSPORT */
 
-	Py_INCREF(&stun_config_Type);
+    Py_INCREF(&stun_config_Type);
     PyModule_AddObject(m, "STUN_Config", (PyObject *)&stun_config_Type);
-	Py_INCREF(&transport_config_Type);
+    Py_INCREF(&transport_config_Type);
     PyModule_AddObject
-		(m, "Transport_Config", (PyObject *)&transport_config_Type);
-	Py_INCREF(&sockaddr_Type);
+        (m, "Transport_Config", (PyObject *)&transport_config_Type);
+    Py_INCREF(&sockaddr_Type);
     PyModule_AddObject(m, "Sockaddr", (PyObject *)&sockaddr_Type);
-	Py_INCREF(&host_port_Type);
+    Py_INCREF(&host_port_Type);
     PyModule_AddObject(m, "Host_Port", (PyObject *)&host_port_Type);
-	Py_INCREF(&transport_id_Type);
-    PyModule_AddObject(m, "Transport_ID", (PyObject *)&transport_id_Type);
-	Py_INCREF(&transport_info_Type);
+    
+    Py_INCREF(&transport_info_Type);
     PyModule_AddObject(m, "Transport_Info", (PyObject *)&transport_info_Type);
-	Py_INCREF(&integer_Type);
-    PyModule_AddObject(m, "Integer", (PyObject *)&integer_Type);
-	Py_INCREF(&pjsip_transport_Type);
+    
+    Py_INCREF(&pjsip_transport_Type);
     PyModule_AddObject(m, "PJSIP_Transport", (PyObject *)&pjsip_transport_Type);
 
-	/* END OF LIB TRANSPORT */
+    /* END OF LIB TRANSPORT */
 
-	/* LIB ACCOUNT */
+    /* LIB ACCOUNT */
 
-	Py_INCREF(&acc_id_Type);
-    PyModule_AddObject(m, "Acc_ID", (PyObject *)&acc_id_Type);
-	Py_INCREF(&acc_config_Type);
+    
+    Py_INCREF(&acc_config_Type);
     PyModule_AddObject(m, "Acc_Config", (PyObject *)&acc_config_Type);
-	Py_INCREF(&acc_info_Type);
+    Py_INCREF(&acc_info_Type);
     PyModule_AddObject(m, "Acc_Info", (PyObject *)&acc_info_Type);
 
-	/* END OF LIB ACCOUNT */
+    /* END OF LIB ACCOUNT */
+
+    /* LIB BUDDY */
+    
+    Py_INCREF(&buddy_config_Type);
+    PyModule_AddObject(m, "Buddy_Config", (PyObject *)&buddy_config_Type);
+    Py_INCREF(&buddy_info_Type);
+    PyModule_AddObject(m, "Buddy_Info", (PyObject *)&buddy_info_Type);
+
+    /* END OF LIB BUDDY */
+
+    
 
 #ifdef PJSUA_INVALID_ID
     /*
@@ -5081,5 +5392,17 @@ initpy_pjsua(void)
         m, "PJSUA_DEFAULT_ACC_PRIORITY", PJSUA_DEFAULT_ACC_PRIORITY
     );
 #endif
+
+#ifdef PJSUA_MAX_BUDDIES
+    /*
+     * Default account priority.
+     */
+    PyModule_AddIntConstant(
+        m, "PJSUA_MAX_BUDDIES", PJSUA_MAX_BUDDIES
+    );
+#endif
+
+
+
 
 }
