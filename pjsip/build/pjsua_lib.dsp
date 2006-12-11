@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\output\pjsua-lib-i386-win32-vc6-release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /O2 /I "../include" /I "../../pjmedia/include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "NDEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjmedia/include" /I "../../pjlib-util/include" /I "../../pjlib/include" /D "NDEBUG" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "WIN32" /D "_MBCS" /D "_LIB" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
