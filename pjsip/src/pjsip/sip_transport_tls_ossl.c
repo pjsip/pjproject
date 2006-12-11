@@ -162,6 +162,7 @@ struct err_data
     const char *ttl;
 };
 
+static int ssl_print_err_count;
 static int ssl_print_err_cb(const char *str, size_t len, void *u)
 {
     struct err_data *e = (struct err_data *)u;
@@ -179,15 +180,19 @@ static int ssl_print_err_cb(const char *str, size_t len, void *u)
 	PJ_LOG(4,(e->snd, "%s: %.*s", e->ttl, len-1, str));
 	break;
     }
+    ++ssl_print_err_count;
     return len;
 }
 
 static void ssl_perror(int level, const char *sender, const char *title)
 {
     struct err_data e;
+    int count = ssl_print_err_count;
     e.lvl = level; e.snd = sender; e.ttl = title;
     ERR_print_errors_cb(&ssl_print_err_cb, &e);
-    ERR_print_errors_fp(stderr);
+
+    if (count==ssl_print_err_count)
+	ssl_print_err_cb(" ", 1, &e);
 }
 #else
 static void ssl_perror(int level, const char *sender, const char *title)
@@ -528,6 +533,7 @@ static int PJ_THREAD_FUNC tls_worker_thread(void *arg)
 	    break;
 
         case SSL_ERROR_ZERO_RETURN:
+	    PJ_LOG(4,(tls_tp->base.obj_name, "SSL transport shutdodwn by remote"));
 	    pjsip_transport_shutdown(&tls_tp->base);
 	    goto done;
 
@@ -677,6 +683,7 @@ static pj_status_t tls_create_transport(struct tls_listener *lis,
     }
 
     /* Initialize local address */
+    tls_tp->base.addr_len = sizeof(tls_tp->base.local_addr);
     status = pj_sock_getsockname(tls_tp->sock, &tls_tp->base.local_addr,
 				 &tls_tp->base.addr_len);
     if (status != PJ_SUCCESS)
@@ -712,12 +719,20 @@ static pj_status_t tls_create_transport(struct tls_listener *lis,
 		   pj_inet_ntoa(rem_addr->sin_addr));
     tls_tp->rdata.pkt_info.src_port = pj_ntohs(rem_addr->sin_port);
 
+    /* Register transport to transport manager */
+    status = pjsip_transport_register(lis->tpmgr, &tls_tp->base);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
     /* Create worker thread to receive packets */
     status = pj_thread_create(pool, "tlsthread", &tls_worker_thread,
 			      tls_tp, PJ_THREAD_DEFAULT_STACK_SIZE, 0, 
 			      &tls_tp->thread);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    if (status != PJ_SUCCESS) {
+	pjsip_transport_destroy(&tls_tp->base);
+	return status;
+    }
 
     /* Done */
     *p_tp = tls_tp;
@@ -854,8 +869,11 @@ static pj_status_t tls_tp_send_msg(pjsip_transport *transport,
  */
 static pj_status_t tls_tp_do_shutdown(pjsip_transport *transport)
 {
+    PJ_LOG(4,(transport->obj_name, "TLS transport marked for shutdown.."));
+
     /* Nothing to do for TLS */
     PJ_UNUSED_ARG(transport);
+
     return PJ_SUCCESS;
 }
 
@@ -865,6 +883,8 @@ static pj_status_t tls_tp_do_shutdown(pjsip_transport *transport)
 static pj_status_t tls_tp_destroy(pjsip_transport *transport)
 {
     struct tls_transport *tls_tp = (struct tls_transport*) transport;
+
+    PJ_LOG(4,(transport->obj_name, "Destroying TLS transport.."));
 
     if (tls_tp->thread) {
 	tls_tp->quitting = PJ_TRUE;
@@ -909,6 +929,7 @@ static pj_status_t tls_tp_destroy(pjsip_transport *transport)
 	pj_pool_release(pool);
     }
 
+    PJ_LOG(4,(THIS_FILE, "TLS transport destroyed"));
     return PJ_SUCCESS;
 }
 
