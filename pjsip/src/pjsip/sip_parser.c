@@ -1532,6 +1532,13 @@ void pjsip_parse_end_hdr_imp( pj_scanner *scanner )
 static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 				     pj_scanner *scanner)
 {
+    /* Some header fields allow empty elements in the value:
+     *   Accept, Allow, Supported
+     */
+    if (*scanner->curptr == '\r' || *scanner->curptr == '\n') {
+	goto end;
+    }
+
     pj_scan_get( scanner, &pjsip_NOT_COMMA_OR_NEWLINE, &hdr->values[0]);
     hdr->count++;
 
@@ -1541,6 +1548,8 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 		     &hdr->values[hdr->count]);
 	hdr->count++;
     }
+
+end:
     parse_hdr_end(scanner);
 }
 
