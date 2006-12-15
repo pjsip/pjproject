@@ -50,6 +50,7 @@ PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
 				      unsigned clock_rate,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
+				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
@@ -73,6 +74,7 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 				      unsigned clock_rate,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
+				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state )
 {
