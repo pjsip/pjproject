@@ -466,6 +466,9 @@ read_next_packet:
 				     &udp->rtp_src_addr, 
 				     &udp->rtp_addrlen);
 
+	if (status != PJ_EPENDING && status != PJ_SUCCESS)
+	    bytes_read = -status;
+
     } while (status != PJ_EPENDING);
 }
 
@@ -517,6 +520,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 				     udp->rtcp_pkt, &bytes_read, 0,
 				     &udp->rtcp_src_addr, 
 				     &udp->rtcp_addr_len);
+	if (status != PJ_EPENDING && status != PJ_SUCCESS)
+	    bytes_read = -status;
 
     } while (status != PJ_EPENDING);
 }
