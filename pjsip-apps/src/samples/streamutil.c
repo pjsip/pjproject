@@ -50,8 +50,8 @@ static const char *desc =
  "                        specified address. (default: recv only)	\n"
  "  --play-file=WAV       Send audio from the WAV file instead of from	\n"
  "                        the sound device.				\n"
-// "  --record-file=WAV     Record incoming audio to WAV file instead of	\n"
-// "                        playing it to sound device.			\n"
+ "  --record-file=WAV     Record incoming audio to WAV file instead of	\n"
+ "                        playing it to sound device.			\n"
  "  --send-recv           Set stream direction to bidirectional.        \n"
  "  --send-only           Set stream direction to send only		\n"
  "  --recv-only           Set stream direction to recv only (default)   \n"
@@ -393,7 +393,36 @@ int main(int argc, char *argv[])
 	    goto on_exit;
 	}
 
+	printf("Playing from WAV file %s..\n", play_file);
 
+    } else if (rec_file) {
+
+	status = pjmedia_wav_writer_port_create(pool, rec_file,
+					        stream_port->info.clock_rate,
+						stream_port->info.channel_count,
+						stream_port->info.samples_per_frame,
+						stream_port->info.bits_per_sample,
+						0, 0, &rec_file_port);
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to use file", status);
+	    goto on_exit;
+	}
+
+	status = pjmedia_master_port_create(pool, stream_port, rec_file_port, 
+					    0, &master_port);
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to create master port", status);
+	    goto on_exit;
+	}
+
+	status = pjmedia_master_port_start(master_port);
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Error starting master port", status);
+	    goto on_exit;
+	}
+
+	printf("Recording to WAV file %s..\n", rec_file);
+	
     } else {
 
 	/* Create sound device port. */
