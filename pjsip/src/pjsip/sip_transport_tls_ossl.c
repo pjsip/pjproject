@@ -25,7 +25,9 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/sock_select.h>
 #include <pj/string.h>
+#include <pj/compat/socket.h>
 
 
 /* Only build when PJSIP_HAS_TLS_TRANSPORT is enabled */
@@ -58,6 +60,11 @@
  * Unable to read SSL private key file.
  */
 #define PJSIP_TLS_EKEYFILE	PJ_EUNKNOWN
+/**
+ * @hideinitializer
+ * Error creating SSL context.
+ */
+#define PJSIP_TLS_ECTX		PJ_EUNKNOWN
 /**
  * @hideinitializer
  * Unable to list SSL CA list.
@@ -103,7 +110,6 @@ struct tls_transport
 
     pj_sock_t	     sock;
     SSL		    *ssl;
-    BIO		    *bio;
 
     pjsip_rx_data    rdata;
     pj_bool_t	     quitting;
@@ -145,67 +151,31 @@ static pj_status_t tls_tp_destroy(pjsip_transport *transport);
  */
 static int tls_init_count;
 
-/* ssl_perror() */
-#if 0
-#define ssl_perror(level,obj,title)	\
-{ \
-    unsigned long ssl_err = ERR_get_error(); \
-    char errmsg[200]; \
-    ERR_error_string_n(ssl_err, errmsg, sizeof(errmsg)); \
-    PJ_LOG(level,(obj, "%s: %s", title, errmsg)); \
-}
-#elif 1
-struct err_data
+/* ssl_report_error() */
+static void ssl_report_error(int level, const char *sender, 
+			     const char *format, ...)
 {
-    int lvl;
-    const char *snd;
-    const char *ttl;
-};
+    va_list arg;
+    unsigned long ssl_err;
 
-static int ssl_print_err_count;
-static int ssl_print_err_cb(const char *str, size_t len, void *u)
-{
-    struct err_data *e = (struct err_data *)u;
-    switch (e->lvl) {
-    case 1:
-	PJ_LOG(1,(e->snd, "%s: %.*s", e->ttl, len-1, str));
-	break;
-    case 2:
-	PJ_LOG(2,(e->snd, "%s: %.*s", e->ttl, len-1, str));
-	break;
-    case 3:
-	PJ_LOG(3,(e->snd, "%s: %.*s", e->ttl, len-1, str));
-	break;
-    default:
-	PJ_LOG(4,(e->snd, "%s: %.*s", e->ttl, len-1, str));
-	break;
+    va_start(arg, format);
+    ssl_err = ERR_get_error();
+
+    if (ssl_err == 0) {
+	pj_log(sender, level, format, arg);
+    } else {
+	char err_format[512];
+	int len;
+
+	len = pj_ansi_snprintf(err_format, sizeof(err_format),
+			       "%s: ", format);
+	ERR_error_string(ssl_err, err_format+len);
+	
+	pj_log(sender, level, err_format, arg);
     }
-    ++ssl_print_err_count;
-    return len;
+
+    va_end(arg);
 }
-
-static void ssl_perror(int level, const char *sender, const char *title)
-{
-    struct err_data e;
-    int count = ssl_print_err_count;
-    e.lvl = level; e.snd = sender; e.ttl = title;
-    ERR_print_errors_cb(&ssl_print_err_cb, &e);
-
-    if (count==ssl_print_err_count)
-	ssl_print_err_cb(" ", 1, &e);
-}
-#else
-static void ssl_perror(int level, const char *sender, const char *title)
-{
-    static BIO *bio_err;
-
-    if (!bio_err) {
-	bio_err = BIO_new_fp(stderr,BIO_NOCLOSE);
-    }
-    ERR_print_errors(bio_err);
-}
-
-#endif
 
 
 /* Initialize OpenSSL */
@@ -254,34 +224,47 @@ static pj_status_t initialize_ctx(struct tls_listener *lis,
     SSL_METHOD *meth;
     SSL_CTX *ctx;
         
+    *p_ctx = NULL;
+
     /* Create SSL context*/
     meth = SSLv23_method();
     ctx = SSL_CTX_new(meth);
+    if (ctx == NULL)
+	return PJSIP_TLS_ECTX;
+
+    /* Load the CAs we trust*/
+    if (ca_list_file && *ca_list_file) {
+	if(!(SSL_CTX_load_verify_locations(ctx, ca_list_file, 0))) {
+	    ssl_report_error(2, lis->base.obj_name, 
+			     "Error loading/verifying CA list file '%s'",
+			     ca_list_file);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_ECALIST;
+	}
+    }
+
     
     /* Load our keys and certificates */
-    if(!(SSL_CTX_use_certificate_chain_file(ctx, keyfile))) {
-	ssl_perror(2, lis->base.obj_name, 
-		   "Error loading keys and certificate file");
-	SSL_CTX_free(ctx);
-	return PJSIP_TLS_EKEYFILE;
-    }
+    if (keyfile && *keyfile) {
+	if(!(SSL_CTX_use_certificate_chain_file(ctx, keyfile))) {
+	    ssl_report_error(2, lis->base.obj_name, 
+			     "Error loading keys and certificate file '%s'",
+			     keyfile);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_EKEYFILE;
+	}
 
-    /* Set password callback */
-    SSL_CTX_set_default_passwd_cb(ctx, password_cb);
-    SSL_CTX_set_default_passwd_cb_userdata(ctx, lis);
+	/* Set password callback */
+	SSL_CTX_set_default_passwd_cb(ctx, password_cb);
+	SSL_CTX_set_default_passwd_cb_userdata(ctx, lis);
 
-    if(!(SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM))) {
-	ssl_perror(2, lis->base.obj_name, "Error loading private key file");
-	SSL_CTX_free(ctx);
-	return PJSIP_TLS_EKEYFILE;
-    }
-    
-    /* Load the CAs we trust*/
-    if(!(SSL_CTX_load_verify_locations(ctx, ca_list_file, 0))) {
-	ssl_perror(2, lis->base.obj_name, 
-		   "Error loading/verifying CA list file");
-	SSL_CTX_free(ctx);
-	return PJSIP_TLS_ECALIST;
+	if(!(SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM))) {
+	    ssl_report_error(2, lis->base.obj_name, 
+			     "Error loading private key file '%s'",
+			     keyfile);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_EKEYFILE;
+	}
     }
 
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
@@ -497,8 +480,20 @@ static int PJ_THREAD_FUNC tls_worker_thread(void *arg)
     pjsip_rx_data *rdata = &tls_tp->rdata;
 
     while (!tls_tp->quitting) {
+	pj_fd_set_t rd_set;
+	pj_time_val timeout;
 	int len;
 	pj_size_t size_eaten;
+
+	PJ_FD_ZERO(&rd_set);
+	PJ_FD_SET(tls_tp->sock, &rd_set);
+
+	timeout.sec = 1;
+	timeout.msec = 0;
+
+	len = pj_sock_select(tls_tp->sock, &rd_set, NULL, NULL, &timeout);
+	if (len < 1)
+	    continue;
 
 	/* Start blocking read to SSL socket */
 	len = SSL_read(tls_tp->ssl, 
@@ -534,24 +529,143 @@ static int PJ_THREAD_FUNC tls_worker_thread(void *arg)
 
         case SSL_ERROR_ZERO_RETURN:
 	    PJ_LOG(4,(tls_tp->base.obj_name, "SSL transport shutdodwn by remote"));
-	    pjsip_transport_shutdown(&tls_tp->base);
+	    if (!tls_tp->quitting)
+		pjsip_transport_shutdown(&tls_tp->base);
 	    goto done;
 
         case SSL_ERROR_SYSCALL:
 	    PJ_LOG(2,(tls_tp->base.obj_name, "SSL Error: Premature close"));
-	    pjsip_transport_shutdown(&tls_tp->base);
+	    if (!tls_tp->quitting)
+		pjsip_transport_shutdown(&tls_tp->base);
 	    goto done;
 
         default:
 	    PJ_LOG(2,(tls_tp->base.obj_name, "SSL read problem"));
-	    pjsip_transport_shutdown(&tls_tp->base);
+	    if (!tls_tp->quitting)
+		pjsip_transport_shutdown(&tls_tp->base);
 	    goto done;
 	}
-
     }
 
 done:
     return 0;
+}
+
+
+PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
+
+/*
+ * Perform SSL_connect upon completion of socket connect()
+ */
+static pj_status_t perform_ssl_connect(SSL *ssl, pj_sock_t sock)
+{
+    int status;
+
+    if (SSL_is_init_finished (ssl))
+	return PJ_SUCCESS;
+
+    SSL_set_fd(ssl, (int)sock);
+
+    if (!SSL_in_connect_init (ssl))
+	SSL_set_connect_state (ssl);
+
+    do {
+	/* These handle sets are used to set up for whatever SSL_connect
+	 * says it wants next. They're reset on each pass around the loop.
+	 */
+	pj_fd_set_t rd_set;
+	pj_fd_set_t wr_set;
+	
+	PJ_FD_ZERO(&rd_set);
+	PJ_FD_ZERO(&wr_set);
+
+	status = SSL_connect (ssl);
+	switch (SSL_get_error (ssl, status)) {
+        case SSL_ERROR_NONE:
+	    /* Success */
+	    status = 0;
+	    break;
+
+        case SSL_ERROR_WANT_WRITE:
+	    /* Wait for more activity */
+	    PJ_FD_SET(sock, &wr_set);
+	    status = 1;
+	    break;
+	    
+        case SSL_ERROR_WANT_READ:
+	    /* Wait for more activity */
+	    PJ_FD_SET(sock, &rd_set);
+	    status = 1;
+	    break;
+	    
+        case SSL_ERROR_ZERO_RETURN:
+	    /* The peer has notified us that it is shutting down via
+	     * the SSL "close_notify" message so we need to
+	     * shutdown, too.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "SSL connect() failed, remote has"
+				 "shutdown connection."));
+	    status = -1;
+	    break;
+	    
+        case SSL_ERROR_SYSCALL:
+	    /* On some platforms (e.g. MS Windows) OpenSSL does not
+	     * store the last error in errno so explicitly do so.
+	     *
+	     * Explicitly check for EWOULDBLOCK since it doesn't get
+	     * converted to an SSL_ERROR_WANT_{READ,WRITE} on some
+	     * platforms. If SSL_connect failed outright, though, don't
+	     * bother checking more. This can happen if the socket gets
+	     * closed during the handshake.
+	     */
+	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
+		status == -1)
+            {
+		/* Although the SSL_ERROR_WANT_READ/WRITE isn't getting
+		 * set correctly, the read/write state should be valid.
+		 * Use that to decide what to do.
+		 */
+		status = 1;               /* Wait for more activity */
+		if (SSL_want_write (ssl))
+		    PJ_FD_SET(sock, &wr_set);
+		else if (SSL_want_read (ssl))
+		    PJ_FD_SET(sock, &rd_set);
+		else
+		    status = -1;	/* Doesn't want anything - bail out */
+            }
+	    else {
+		status = -1;
+	    }
+	    break;
+	    
+        default:
+	    ssl_report_error(4, THIS_FILE, "SSL_connect() error");
+	    status = -1;
+	    break;
+        }
+	
+	if (status == 1) {
+	    /* Must have at least one handle to wait for at this point. */
+	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || 
+		      PJ_FD_COUNT(&wr_set) == 1);
+	    
+	    /* Block indefinitely if timeout pointer is zero. */
+	    status = pj_sock_select(FD_SETSIZE, &rd_set, &wr_set,
+				    NULL, NULL);
+	    	    
+	    /* 0 is timeout, so we're done.
+	     * -1 is error, so we're done.
+	     * Could be both handles set (same handle in both masks) so set to 1.
+	     */
+	    if (status >= 1)
+		status = 1;
+	    else                 /* Timeout or socket failure */
+		status = -1;
+        }
+	
+    } while (status == 1 && !SSL_is_init_finished (ssl));
+        
+    return (status == -1 ? PJSIP_TLS_ECONNECT : PJ_SUCCESS);
 }
 
 
@@ -657,15 +771,12 @@ static pj_status_t tls_create_transport(struct tls_listener *lis,
 
 	/* Create SSL object and BIO */
 	tls_tp->ssl = SSL_new(lis->ctx);
-	tls_tp->bio = BIO_new_socket(sock, BIO_NOCLOSE);
-	SSL_set_bio(tls_tp->ssl, tls_tp->bio, tls_tp->bio);
+	SSL_set_verify (tls_tp->ssl, 0, 0);
 
 	/* Connect SSL */
-	if (SSL_connect(tls_tp->ssl) <= 0) {
-	    ssl_perror(4, tls_tp->base.obj_name, "SSL_connect() error");
-	    status = PJSIP_TLS_ECONNECT;
+	status = perform_ssl_connect(tls_tp->ssl, sock);
+	if (status != PJ_SUCCESS)
 	    goto on_error;
-	}
 
 	/* TODO: check server cert. */
 	PJ_TODO(TLS_CHECK_SERVER_CERT);
@@ -839,28 +950,56 @@ static pj_status_t tls_tp_send_msg(pjsip_transport *transport,
 						    pj_ssize_t sent_bytes))
 {
     struct tls_transport *tls_tp = (struct tls_transport*) transport;
+    int bytes_sent;
 
     /* This is a connection oriented protocol, so rem_addr is not used */
     PJ_UNUSED_ARG(rem_addr);
     PJ_UNUSED_ARG(addr_len);
 
-    /* Write to TLS */
-    if (BIO_write(tls_tp->bio, tdata->buf.start	, 
-		  tdata->buf.cur - tdata->buf.start) <= 0)
-    {
-	if(! BIO_should_retry(tls_tp->bio)) {
-	    ssl_perror(4, transport->obj_name, "SSL send error");
-	    return PJSIP_TLS_ESEND;
-	}
-
-	/* Do something to handle the retry */
-    }
-
     /* Data written immediately, no need to call callback */
     PJ_UNUSED_ARG(callback);
     PJ_UNUSED_ARG(token);
 
-    return PJ_SUCCESS;
+    /* Write to TLS */
+    bytes_sent = SSL_write (tls_tp->ssl, tdata->buf.start,
+			    tdata->buf.cur - tdata->buf.start);
+    
+    switch (SSL_get_error (tls_tp->ssl, bytes_sent)) {
+    case SSL_ERROR_NONE:
+	pj_assert(bytes_sent == tdata->buf.cur - tdata->buf.start);
+	return PJ_SUCCESS;
+	
+    case SSL_ERROR_WANT_READ:
+    case SSL_ERROR_WANT_WRITE:
+	return PJ_RETURN_OS_ERROR(OSERR_EWOULDBLOCK);
+	
+    case SSL_ERROR_ZERO_RETURN:
+	/* The peer has notified us that it is shutting down via the SSL
+	 * "close_notify" message so we need to shutdown, too.
+	 */
+	pj_assert(bytes_sent == tdata->buf.cur - tdata->buf.start);
+	SSL_shutdown (tls_tp->ssl);
+	pjsip_transport_shutdown(transport);
+	return PJ_SUCCESS;
+	
+    case SSL_ERROR_SYSCALL:
+	if (bytes_sent == 0) {
+	    /* An EOF occured but the SSL "close_notify" message was not
+	     * sent.  This is a protocol error, but we ignore it.
+	     */
+	    pjsip_transport_shutdown(transport);
+	    return 0;
+	}
+	return pj_get_netos_error();
+	
+    default:
+	/* Reset errno to prevent previous values (e.g. EWOULDBLOCK)
+	 * from being associated with fatal SSL errors.
+	 */
+	pj_set_netos_error(0);
+	ssl_report_error(4, transport->obj_name, "SSL_write error");
+	return PJSIP_TLS_ESEND;
+    }
 }
 
 
@@ -905,7 +1044,6 @@ static pj_status_t tls_tp_destroy(pjsip_transport *transport)
 
 	SSL_free(tls_tp->ssl);
 	tls_tp->ssl = NULL;
-	tls_tp->bio = NULL;
 	tls_tp->sock = PJ_INVALID_SOCKET;
 
     } else if (tls_tp->sock != PJ_INVALID_SOCKET) {
