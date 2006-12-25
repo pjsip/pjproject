@@ -417,12 +417,14 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
 
 	if ((read_op->op == PJ_IOQUEUE_OP_RECV_FROM)) {
 	    read_op->op = 0;
-	    rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 0,
+	    rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 
+				  read_op->flags,
 				  read_op->rmt_addr, 
                                   read_op->rmt_addrlen);
 	} else if ((read_op->op == PJ_IOQUEUE_OP_RECV)) {
 	    read_op->op = 0;
-	    rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 0);
+	    rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
+			      read_op->flags);
         } else {
             pj_assert(read_op->op == PJ_IOQUEUE_OP_READ);
 	    read_op->op = 0;
@@ -440,7 +442,8 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
              */
 #	    if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
 	       defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
-                rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 0);
+                rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
+				  read_op->flags);
                 //rc = ReadFile((HANDLE)h->fd, read_op->buf, read_op->size,
                 //              &bytes_read, NULL);
 #           elif (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
