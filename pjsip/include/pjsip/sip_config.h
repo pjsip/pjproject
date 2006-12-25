@@ -56,6 +56,14 @@
  * @{
  */
 
+/*
+ * Include sip_autoconf.h if autoconf is used (PJ_AUTOCONF is set)
+ */
+#if defined(PJ_AUTOCONF)
+#   include <pjsip/sip_autoconf.h>
+#endif
+
+
 /**
  * Specify maximum transaction count in transaction hash table.
  * Default value is 16*1024
