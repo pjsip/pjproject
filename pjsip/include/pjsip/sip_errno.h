@@ -397,6 +397,76 @@ PJ_BEGIN_DECL
 #define PJSIP_ESESSIONSTATE	 (PJSIP_ERRNO_START_PJSIP+141)	/* 171141 */
 
 
+/************************************************************
+ * TLS TRANSPORT ERRORS
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Unknown TLS error
+ */
+#define PJSIP_TLS_EUNKNOWN	(PJSIP_ERRNO_START_PJSIP+160)	/* 171160 */
+/**
+ * @hideinitializer
+ * Invalid SSL protocol method.
+ */
+#define PJSIP_TLS_EINVMETHOD	(PJSIP_ERRNO_START_PJSIP+161)	/* 171161 */
+/**
+ * @hideinitializer
+ * Error loading/verifying SSL CA list file.
+ */
+#define PJSIP_TLS_ECACERT	(PJSIP_ERRNO_START_PJSIP+162)	/* 171162 */
+/**
+ * @hideinitializer
+ * Error loading SSL certificate chain file.
+ */
+#define PJSIP_TLS_ECERTFILE	(PJSIP_ERRNO_START_PJSIP+163)	/* 171163 */
+/**
+ * @hideinitializer
+ * Error adding private key from SSL certificate file.
+ */
+#define PJSIP_TLS_EKEYFILE	(PJSIP_ERRNO_START_PJSIP+164)	/* 171164 */
+/**
+ * @hideinitializer
+ * Error setting SSL cipher list.
+ */
+#define PJSIP_TLS_ECIPHER	(PJSIP_ERRNO_START_PJSIP+165)	/* 171165 */
+/**
+ * @hideinitializer
+ * Error creating SSL context.
+ */
+#define PJSIP_TLS_ECTX		(PJSIP_ERRNO_START_PJSIP+166)	/* 171166 */
+/**
+ * @hideinitializer
+ * Error creating SSL connection object.
+ */
+#define PJSIP_TLS_ESSLCONN	(PJSIP_ERRNO_START_PJSIP+167)	/* 171167 */
+/**
+ * @hideinitializer
+ * Unknown error when performing SSL connect().
+ */
+#define PJSIP_TLS_ECONNECT	(PJSIP_ERRNO_START_PJSIP+168)	/* 171168 */
+/**
+ * @hideinitializer
+ * Unknown error when performing SSL accept().
+ */
+#define PJSIP_TLS_EACCEPT	(PJSIP_ERRNO_START_PJSIP+169)	/* 171169 */
+/**
+ * @hideinitializer
+ * Unknown error when sending SSL data
+ */
+#define PJSIP_TLS_ESEND		(PJSIP_ERRNO_START_PJSIP+170)	/* 171170 */
+/**
+ * @hideinitializer
+ * Unknown error when reading SSL data
+ */
+#define PJSIP_TLS_EREAD		(PJSIP_ERRNO_START_PJSIP+171)	/* 171171 */
+/**
+ * @hideinitializer
+ * SSL negotiation has exceeded the maximum configured timeout.
+ */
+#define PJSIP_TLS_ETIMEDOUT	(PJSIP_ERRNO_START_PJSIP+172)	/* 171172 */
+
+
 
 
 PJ_END_DECL

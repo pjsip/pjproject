@@ -108,6 +108,21 @@ static const struct
     /* Invite session. */
     PJ_BUILD_ERR( PJSIP_ESESSIONTERMINATED, "INVITE session already terminated" ),
     PJ_BUILD_ERR( PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" ),
+
+    /* SSL errors */
+    PJ_BUILD_ERR( PJSIP_TLS_EUNKNOWN,	"Unknown TLS error" ),
+    PJ_BUILD_ERR( PJSIP_TLS_EINVMETHOD,	"Invalid SSL protocol method" ),
+    PJ_BUILD_ERR( PJSIP_TLS_ECACERT,	"Error loading/verifying SSL CA list file"),
+    PJ_BUILD_ERR( PJSIP_TLS_ECERTFILE,	"Error loading SSL certificate chain file"),
+    PJ_BUILD_ERR( PJSIP_TLS_EKEYFILE,	"Error adding private key from SSL certificate file"),
+    PJ_BUILD_ERR( PJSIP_TLS_ECIPHER,	"Error setting SSL cipher list"),
+    PJ_BUILD_ERR( PJSIP_TLS_ECTX,	"Error creating SSL context"),
+    PJ_BUILD_ERR( PJSIP_TLS_ESSLCONN,	"Error creating SSL connection object"),
+    PJ_BUILD_ERR( PJSIP_TLS_ECONNECT,	"Unknown error when performing SSL connect()"),
+    PJ_BUILD_ERR( PJSIP_TLS_EACCEPT,	"Unknown error when performing SSL accept()"),
+    PJ_BUILD_ERR( PJSIP_TLS_ESEND,	"Unknown error when sending SSL data"),
+    PJ_BUILD_ERR( PJSIP_TLS_EREAD,	"Unknown error when reading SSL data"),
+    PJ_BUILD_ERR( PJSIP_TLS_ETIMEDOUT,	"SSL negotiation has timed out"),
 };
 
 

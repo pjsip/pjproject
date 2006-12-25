@@ -1049,13 +1049,45 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	/*
 	 * Create TLS transport.
 	 */
+	/*
+	 * Create TCP transport.
+	 */
+	pjsua_transport_config config;
+	pjsip_host_port a_name;
 	pjsip_tpfactory *tls;
+	pj_sockaddr_in local_addr;
+
+	/* Supply default config if it's not specified */
+	if (cfg == NULL) {
+	    pjsua_transport_config_default(&config);
+	    config.port = 5061;
+	    cfg = &config;
+	}
+
+	/* Init local address */
+	pj_sockaddr_in_init(&local_addr, 0, 0);
+
+	if (cfg->port)
+	    local_addr.sin_port = pj_htons((pj_uint16_t)cfg->port);
+
+	if (cfg->bound_addr.slen) {
+	    status = pj_sockaddr_in_set_str_addr(&local_addr,&cfg->bound_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, 
+			     "Unable to resolve transport bound address", 
+			     status);
+		goto on_return;
+	    }
+	}
+
+	/* Init published name */
+	pj_bzero(&a_name, sizeof(pjsip_host_port));
+	if (cfg->public_addr.slen)
+	    a_name.host = cfg->public_addr;
 
 	status = pjsip_tls_transport_start(pjsua_var.endpt, 
-					   &cfg->tls_key_file,
-					   &cfg->tls_password, 
-					   &cfg->tls_ca_file,
-					   NULL, NULL, 1, &tls);
+					   &cfg->tls_setting, 
+					   &local_addr, &a_name, 1, &tls);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating SIP TLS listener", 
 			 status);

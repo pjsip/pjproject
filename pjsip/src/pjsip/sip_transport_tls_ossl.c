@@ -16,30 +16,42 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsip/sip_transport.h>
+#include <pjsip/sip_transport_tls.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
+#include <pj/compat/socket.h>
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
+#include <pj/ioqueue.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/compat/socket.h>
 #include <pj/sock_select.h>
 #include <pj/string.h>
-#include <pj/compat/socket.h>
 
 
 /* Only build when PJSIP_HAS_TLS_TRANSPORT is enabled */
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
 
 
-/* OpenSSL headers */
 
+/* 
+ * Include OpenSSL headers 
+ */
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+/*
+ * With VisualC++, it's not possible to dynamically link against some
+ * libraries when some macros are defined (unlike "make" based build
+ * system where this can be easily manipulated).
+ *
+ * So for VisualC++ IDE, include OpenSSL libraries in the linking by
+ * using the #pragma lib construct below.
+ */
 #ifdef _MSC_VER
 # ifdef _DEBUG
 #  pragma comment( lib, "libeay32MTd")
@@ -50,155 +62,209 @@
 # endif
 #endif
 
-/**
- * @hideinitializer
- * Unable to read SSL certificate file.
- */
-#define PJSIP_TLS_ECERTFILE	PJ_EUNKNOWN
-/**
- * @hideinitializer
- * Unable to read SSL private key file.
- */
-#define PJSIP_TLS_EKEYFILE	PJ_EUNKNOWN
-/**
- * @hideinitializer
- * Error creating SSL context.
- */
-#define PJSIP_TLS_ECTX		PJ_EUNKNOWN
-/**
- * @hideinitializer
- * Unable to list SSL CA list.
- */
-#define PJSIP_TLS_ECALIST	PJ_EUNKNOWN
-/**
- * @hideinitializer
- * SSL connect() error
- */
-#define PJSIP_TLS_ECONNECT	PJ_EUNKNOWN
-/**
- * @hideinitializer
- * Error sending SSL data
- */
-#define PJSIP_TLS_ESEND		PJ_EUNKNOWN
+
+#define THIS_FILE	"transport_tls_ossl.c"
+
+#define MAX_ASYNC_CNT	16
+#define POOL_LIS_INIT	4000
+#define POOL_LIS_INC	4001
+#define POOL_TP_INIT	4000
+#define POOL_TP_INC	4002
 
 
-#define THIS_FILE	"tls_ssl"
+
+/**
+ * Get the number of descriptors in the set. This is defined in sock_select.c
+ * This function will only return the number of sockets set from PJ_FD_SET
+ * operation. When the set is modified by other means (such as by select()),
+ * the count will not be reflected here.
+ *
+ * That's why don't export this function in the header file, to avoid
+ * misunderstanding.
+ *
+ * @param fdsetp    The descriptor set.
+ *
+ * @return          Number of descriptors in the set.
+ */
+PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
+
+
+
+struct tls_listener;
+struct tls_transport;
 
 
 /*
- * TLS transport factory/listener.
+ * This structure is "descendant" of pj_ioqueue_op_key_t, and it is used to
+ * track pending/asynchronous accept() operation. TLS transport may have
+ * more than one pending accept() operations, depending on the value of
+ * async_cnt.
+ */
+struct pending_accept
+{
+    pj_ioqueue_op_key_t	     op_key;
+    struct tls_listener	    *listener;
+    unsigned		     index;
+    pj_pool_t		    *pool;
+    pj_sock_t		     new_sock;
+    int			     addr_len;
+    pj_sockaddr_in	     local_addr;
+    pj_sockaddr_in	     remote_addr;
+};
+
+
+/*
+ * This is the TLS listener, which is a "descendant" of pjsip_tpfactory (the
+ * SIP transport factory).
  */
 struct tls_listener
 {
-    pjsip_tpfactory  base;
-    pjsip_endpoint  *endpt;
-    pjsip_tpmgr	    *tpmgr;
+    pjsip_tpfactory	     factory;
+    pj_bool_t		     is_registered;
+    pjsip_tls_setting	     setting;
+    pjsip_endpoint	    *endpt;
+    pjsip_tpmgr		    *tpmgr;
+    pj_sock_t		     sock;
+    pj_ioqueue_key_t	    *key;
+    unsigned		     async_cnt;
+    struct pending_accept   *accept_op[MAX_ASYNC_CNT];
 
-    pj_bool_t	     is_registered;
-
-    SSL_CTX	    *ctx;
-    pj_str_t	     password;
+    SSL_CTX		    *ctx;
 };
 
 
 /*
- * TLS transport.
+ * This structure is used to keep delayed transmit operation in a list.
+ * A delayed transmission occurs when application sends tx_data when
+ * the TLS connect/establishment is still in progress. These delayed
+ * transmission will be "flushed" once the socket is connected (either
+ * successfully or with errors).
+ */
+struct delayed_tdata
+{
+    PJ_DECL_LIST_MEMBER(struct delayed_tdata);
+    pjsip_tx_data_op_key    *tdata_op_key;
+};
+
+
+/*
+ * This structure describes the TLS transport, and it's descendant of
+ * pjsip_transport.
  */
 struct tls_transport
 {
-    pjsip_transport  base;
+    pjsip_transport	     base;
+    pj_bool_t		     is_server;
+    struct tls_listener	    *listener;
+    pj_bool_t		     is_registered;
+    pj_bool_t		     is_closing;
+    pj_status_t		     close_reason;
+    pj_sock_t		     sock;
+    pj_ioqueue_key_t	    *key;
+    pj_bool_t		     has_pending_connect;
 
-    pj_sock_t	     sock;
-    SSL		    *ssl;
+    /* SSL connection */
+    SSL			    *ssl;
+    pj_bool_t		     ssl_shutdown_called;
 
-    pjsip_rx_data    rdata;
-    pj_bool_t	     quitting;
-    pj_thread_t	    *thread;
+    /* TLS transport can only have  one rdata!
+     * Otherwise chunks of incoming PDU may be received on different
+     * buffer.
+     */
+    pjsip_rx_data	     rdata;
+
+    /* Pending transmission list. */
+    struct delayed_tdata     delayed_list;
 };
 
 
-/*
- * TLS factory callbacks.
+/****************************************************************************
+ * PROTOTYPES
  */
+
+/* This callback is called when pending accept() operation completes. */
+static void on_accept_complete(	pj_ioqueue_key_t *key, 
+				pj_ioqueue_op_key_t *op_key, 
+				pj_sock_t sock, 
+				pj_status_t status);
+
+/* This callback is called by transport manager to destroy listener */
+static pj_status_t lis_destroy(pjsip_tpfactory *factory);
+
+/* This callback is called by transport manager to create transport */
 static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 					pjsip_tpmgr *mgr,
 					pjsip_endpoint *endpt,
 					const pj_sockaddr *rem_addr,
 					int addr_len,
 					pjsip_transport **transport);
-static pj_status_t lis_destroy(pjsip_tpfactory *factory);
+
+/* Common function to create and initialize transport */
+static pj_status_t tls_create(struct tls_listener *listener,
+			      pj_pool_t *pool,
+			      pj_sock_t sock, pj_bool_t is_server,
+			      const pj_sockaddr_in *local,
+			      const pj_sockaddr_in *remote,
+			      struct tls_transport **p_tls);
 
 
-/*
- * TLS transport callback.
+/****************************************************************************
+ * SSL FUNCTIONS
  */
-static pj_status_t tls_tp_send_msg(pjsip_transport *transport, 
-				   pjsip_tx_data *tdata,
-				   const pj_sockaddr_t *rem_addr,
-				   int addr_len,
-				   void *token,
-				   void (*callback)(pjsip_transport *transport,
-						    void *token, 
-						    pj_ssize_t sent_bytes));
-static pj_status_t tls_tp_do_shutdown(pjsip_transport *transport);
-static pj_status_t tls_tp_destroy(pjsip_transport *transport);
-
-
-
-
-/*
- * Static vars.
- */
-static int tls_init_count;
 
 /* ssl_report_error() */
-static void ssl_report_error(int level, const char *sender, 
+static void ssl_report_error(const char *sender, int level, 
+			     pj_status_t status,
 			     const char *format, ...)
 {
-    va_list arg;
-    unsigned long ssl_err;
+    va_list marker;
 
-    va_start(arg, format);
-    ssl_err = ERR_get_error();
+    va_start(marker, format);
 
-    if (ssl_err == 0) {
-	pj_log(sender, level, format, arg);
-    } else {
-	char err_format[512];
+    if (status != PJ_SUCCESS) {
+	char err_format[PJ_ERR_MSG_SIZE + 512];
 	int len;
 
 	len = pj_ansi_snprintf(err_format, sizeof(err_format),
 			       "%s: ", format);
-	ERR_error_string(ssl_err, err_format+len);
+	pj_strerror(status, err_format+len, sizeof(err_format)-len);
 	
-	pj_log(sender, level, err_format, arg);
+	pj_log(sender, level, err_format, marker);
+
+    } else {
+	unsigned long ssl_err;
+
+	ssl_err = ERR_get_error();
+
+	if (ssl_err == 0) {
+	    pj_log(sender, level, format, marker);
+	} else {
+	    char err_format[512];
+	    int len;
+
+	    len = pj_ansi_snprintf(err_format, sizeof(err_format),
+				   "%s: ", format);
+	    ERR_error_string(ssl_err, err_format+len);
+	    
+	    pj_log(sender, level, err_format, marker);
+	}
     }
 
-    va_end(arg);
+    va_end(marker);
 }
 
 
-/* Initialize OpenSSL */
-static pj_status_t init_openssl(void)
+static void sockaddr_to_host_port( pj_pool_t *pool,
+				   pjsip_host_port *host_port,
+				   const pj_sockaddr_in *addr )
 {
-    if (++tls_init_count != 1)
-	return PJ_SUCCESS;
-
-    SSL_library_init();
-    SSL_load_error_strings();
-
-    ERR_load_BIO_strings();
-    OpenSSL_add_all_algorithms();
-
-    return PJ_SUCCESS;
+    enum { M = 48 };
+    host_port->host.ptr = pj_pool_alloc(pool, M);
+    host_port->host.slen = pj_ansi_snprintf( host_port->host.ptr, M, "%s", 
+					    pj_inet_ntoa(addr->sin_addr));
+    host_port->port = pj_ntohs(addr->sin_port);
 }
 
-/* Shutdown OpenSSL */
-static void shutdown_openssl(void)
-{
-    if (--tls_init_count != 0)
-	return;
-}
 
 /* SSL password callback. */
 static int password_cb(char *buf, int num, int rwflag, void *user_data)
@@ -207,70 +273,193 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 
     PJ_UNUSED_ARG(rwflag);
 
-    if(num < lis->password.slen+1)
+    if(num < lis->setting.password.slen+1)
 	return 0;
     
-    pj_memcpy(buf, lis->password.ptr, lis->password.slen);
-    return lis->password.slen;
+    pj_memcpy(buf, lis->setting.password.ptr, lis->setting.password.slen);
+    return lis->setting.password.slen;
+}
+
+
+/* OpenSSL library initialization counter */
+static int openssl_init_count;
+
+/* Initialize OpenSSL */
+static pj_status_t init_openssl(void)
+{
+    if (++openssl_init_count != 1)
+	return PJ_SUCCESS;
+
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
+
+    return PJ_SUCCESS;
+}
+
+/* Shutdown OpenSSL */
+static void shutdown_openssl(void)
+{
+    if (--openssl_init_count != 0)
+	return;
 }
 
 
 /* Create and initialize new SSL context */
-static pj_status_t initialize_ctx(struct tls_listener *lis,
-				  const char *keyfile, 
-				  const char *ca_list_file,
-				  SSL_CTX **p_ctx)
+static pj_status_t create_ctx( struct tls_listener *lis, SSL_CTX **p_ctx)
 {
-    SSL_METHOD *meth;
+    struct pjsip_tls_setting *opt = &lis->setting;
+    char *lis_name = lis->factory.obj_name;
+    SSL_METHOD *ssl_method;
     SSL_CTX *ctx;
+    int mode, rc;
         
     *p_ctx = NULL;
 
-    /* Create SSL context*/
-    meth = SSLv23_method();
-    ctx = SSL_CTX_new(meth);
-    if (ctx == NULL)
+    /* Make sure OpenSSL library has been initialized */
+    init_openssl();
+
+    /* Determine SSL method to use */
+    switch (opt->method) {
+    case PJSIP_SSL_DEFAULT_METHOD:
+    case PJSIP_SSLV23_METHOD:
+	ssl_method = SSLv23_method();
+	break;
+    case PJSIP_TLSV1_METHOD:
+	ssl_method = TLSv1_method();
+	break;
+    case PJSIP_SSLV2_METHOD:
+	ssl_method = SSLv2_method();
+	break;
+    case PJSIP_SSLV3_METHOD:
+	ssl_method = SSLv3_method();
+	break;
+    default:
+	ssl_report_error(lis_name, 4, PJSIP_TLS_EINVMETHOD,
+			 "Error creating SSL context");
+	return PJSIP_TLS_EINVMETHOD;
+    }
+
+    /* Create SSL context for the listener */
+    ctx = SSL_CTX_new(ssl_method);
+    if (ctx == NULL) {
+	ssl_report_error(lis_name, 4, PJ_SUCCESS,
+			 "Error creating SSL context");
 	return PJSIP_TLS_ECTX;
-
-    /* Load the CAs we trust*/
-    if (ca_list_file && *ca_list_file) {
-	if(!(SSL_CTX_load_verify_locations(ctx, ca_list_file, 0))) {
-	    ssl_report_error(2, lis->base.obj_name, 
-			     "Error loading/verifying CA list file '%s'",
-			     ca_list_file);
-	    SSL_CTX_free(ctx);
-	    return PJSIP_TLS_ECALIST;
-	}
     }
 
+
+    /* Load CA list if one is specified. */
+    if (opt->ca_list_file.slen) {
+
+	/* Can only take a NULL terminated filename in the setting */
+	pj_assert(opt->ca_list_file.ptr[opt->ca_list_file.slen] == '\0');
+
+	rc = SSL_CTX_load_verify_locations(ctx, opt->ca_list_file.ptr, NULL);
+
+	if (rc != 1) {
+	    ssl_report_error(lis_name, 4, PJ_SUCCESS,
+			     "Error loading/verifying CA list file '%.*s'",
+			     (int)opt->ca_list_file.slen,
+			     opt->ca_list_file.ptr);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_ECACERT;
+	}
+
+	PJ_LOG(5,(lis_name, "TLS CA file successfully loaded from '%.*s'",
+		  (int)opt->ca_list_file.slen,
+		  opt->ca_list_file.ptr));
+    }
     
-    /* Load our keys and certificates */
-    if (keyfile && *keyfile) {
-	if(!(SSL_CTX_use_certificate_chain_file(ctx, keyfile))) {
-	    ssl_report_error(2, lis->base.obj_name, 
-			     "Error loading keys and certificate file '%s'",
-			     keyfile);
+    /* Set password callback */
+    SSL_CTX_set_default_passwd_cb(ctx, password_cb);
+    SSL_CTX_set_default_passwd_cb_userdata(ctx, lis);
+
+
+    /* Load certificate if one is specified */
+    if (opt->cert_file.slen) {
+
+	/* Can only take a NULL terminated filename in the setting */
+	pj_assert(opt->cert_file.ptr[opt->cert_file.slen] == '\0');
+
+	/* Load certificate chain from file into ctx */
+	rc = SSL_CTX_use_certificate_chain_file(ctx, opt->cert_file.ptr);
+
+	if(rc != 1) {
+	    ssl_report_error(lis_name, 4, PJ_SUCCESS,
+			     "Error loading certificate chain file '%.*s'",
+			     (int)opt->cert_file.slen,
+			     opt->cert_file.ptr);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_ECERTFILE;
+	}
+
+	PJ_LOG(5,(lis_name, "TLS certificate successfully loaded from '%.*s'",
+		  (int)opt->cert_file.slen,
+		  opt->cert_file.ptr));
+    }
+
+
+    /* Load private key if one is specified */
+    if (opt->privkey_file.slen) {
+
+	/* Can only take a NULL terminated filename in the setting */
+	pj_assert(opt->privkey_file.ptr[opt->privkey_file.slen] == '\0');
+
+	/* Adds the first private key found in file to ctx */
+	rc = SSL_CTX_use_PrivateKey_file(ctx, opt->privkey_file.ptr, 
+					 SSL_FILETYPE_PEM);
+
+	if(rc != 1) {
+	    ssl_report_error(lis_name, 4, PJ_SUCCESS,
+			     "Error adding private key from '%.*s'",
+			     (int)opt->privkey_file.slen,
+			     opt->privkey_file.ptr);
 	    SSL_CTX_free(ctx);
 	    return PJSIP_TLS_EKEYFILE;
 	}
 
-	/* Set password callback */
-	SSL_CTX_set_default_passwd_cb(ctx, password_cb);
-	SSL_CTX_set_default_passwd_cb_userdata(ctx, lis);
-
-	if(!(SSL_CTX_use_PrivateKey_file(ctx, keyfile, SSL_FILETYPE_PEM))) {
-	    ssl_report_error(2, lis->base.obj_name, 
-			     "Error loading private key file '%s'",
-			     keyfile);
-	    SSL_CTX_free(ctx);
-	    return PJSIP_TLS_EKEYFILE;
-	}
+	PJ_LOG(5,(lis_name, "TLS private key successfully loaded from '%.*s'",
+		  (int)opt->privkey_file.slen,
+		  opt->privkey_file.ptr));
     }
 
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(ctx,1);
-#endif
-    
+
+    /* SSL verification options */
+    if (lis->setting.verify_client || lis->setting.verify_server) {
+	mode = SSL_VERIFY_PEER;
+	if (lis->setting.require_client_cert)
+	    mode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+    } else {
+	mode = SSL_VERIFY_NONE;
+    }
+
+    SSL_CTX_set_verify(ctx, mode, NULL);
+
+    PJ_LOG(5,(lis_name, "TLS verification mode set to %d", mode));
+
+    /* Optionally set cipher list if one is specified */
+    if (opt->ciphers.slen) {
+	/* Can only take a NULL terminated cipher list in the setting */
+	pj_assert(opt->cert_file.ptr[opt->cert_file.slen] == '\0');
+
+	rc = SSL_CTX_set_cipher_list(ctx, opt->ciphers.ptr);
+	if (rc != 1) {
+	    ssl_report_error(lis_name, 4, PJ_SUCCESS,
+			     "Error setting cipher list '%.*s'",
+			     (int)opt->ciphers.slen,
+			     opt->ciphers.ptr);
+	    SSL_CTX_free(ctx);
+	    return PJSIP_TLS_ECIPHER;
+	}
+
+	PJ_LOG(5,(lis_name, "TLS ciphers set to '%.*s'",
+		  (int)opt->ciphers.slen,
+		  opt->ciphers.ptr));
+    }
+
+    /* Done! */
+
     *p_ctx = ctx;
     return PJ_SUCCESS;
 }
@@ -279,77 +468,422 @@ static pj_status_t initialize_ctx(struct tls_listener *lis,
 static void destroy_ctx(SSL_CTX *ctx)
 {
     SSL_CTX_free(ctx);
-}
 
-
-/* Check that the common name matches the host name*/
-#if 0
-static void check_cert(SSL *ssl, char *host)
-{
-    X509 *peer;
-    char peer_CN[256];
-    
-    if(SSL_get_verify_result(ssl)!=X509_V_OK)
-	berr_exit("Certificate doesn't verify");
-    
-    /* Check the cert chain. The chain length is automatically checked 
-     * by OpenSSL when we set the verify depth in the ctx 
+    /* Potentially shutdown OpenSSL library if this is the last
+     * context exists.
      */
-    
-    /* Check the common name */
-    peer = SSL_get_peer_certificate(ssl);
-    X509_NAME_get_text_by_NID( X509_get_subject_name(peer),
-			       NID_commonName, peer_CN, 256);
-
-    if(strcasecmp(peer_CN,host)) {
-	err_exit("Common name doesn't match host name");
-    }
+    shutdown_openssl();
 }
-#endif
 
+/*
+ * Perform SSL_connect upon completion of socket connect()
+ */
+static pj_status_t ssl_connect(struct tls_transport *tls)
+{
+    SSL *ssl = tls->ssl;
+    int status;
+
+    if (SSL_is_init_finished (ssl))
+	return PJ_SUCCESS;
+
+    if (SSL_get_fd(ssl) < 0)
+	SSL_set_fd(ssl, (int)tls->sock);
+
+    if (!SSL_in_connect_init(ssl))
+	SSL_set_connect_state(ssl);
+
+    PJ_LOG(5,(tls->base.obj_name, "Starting SSL_connect() negotiation"));
+
+    do {
+	/* These handle sets are used to set up for whatever SSL_connect
+	 * says it wants next. They're reset on each pass around the loop.
+	 */
+	pj_fd_set_t rd_set;
+	pj_fd_set_t wr_set;
+	
+	PJ_FD_ZERO(&rd_set);
+	PJ_FD_ZERO(&wr_set);
+
+	status = SSL_connect (ssl);
+	switch (SSL_get_error (ssl, status)) {
+        case SSL_ERROR_NONE:
+	    /* Success */
+	    status = 0;
+	    PJ_LOG(5,(tls->base.obj_name, 
+		      "SSL_connect() negotiation completes successfully"));
+	    break;
+
+        case SSL_ERROR_WANT_WRITE:
+	    /* Wait for more activity */
+	    PJ_FD_SET(tls->sock, &wr_set);
+	    status = 1;
+	    break;
+	    
+        case SSL_ERROR_WANT_READ:
+	    /* Wait for more activity */
+	    PJ_FD_SET(tls->sock, &rd_set);
+	    status = 1;
+	    break;
+	    
+        case SSL_ERROR_ZERO_RETURN:
+	    /* The peer has notified us that it is shutting down via
+	     * the SSL "close_notify" message so we need to
+	     * shutdown, too.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "SSL connect() failed, remote has"
+				 "shutdown connection."));
+	    return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+	    
+        case SSL_ERROR_SYSCALL:
+	    /* On some platforms (e.g. MS Windows) OpenSSL does not
+	     * store the last error in errno so explicitly do so.
+	     *
+	     * Explicitly check for EWOULDBLOCK since it doesn't get
+	     * converted to an SSL_ERROR_WANT_{READ,WRITE} on some
+	     * platforms. If SSL_connect failed outright, though, don't
+	     * bother checking more. This can happen if the socket gets
+	     * closed during the handshake.
+	     */
+	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
+		status == -1)
+            {
+		/* Although the SSL_ERROR_WANT_READ/WRITE isn't getting
+		 * set correctly, the read/write state should be valid.
+		 * Use that to decide what to do.
+		 */
+		status = 1;               /* Wait for more activity */
+		if (SSL_want_write (ssl))
+		    PJ_FD_SET(tls->sock, &wr_set);
+		else if (SSL_want_read (ssl))
+		    PJ_FD_SET(tls->sock, &rd_set);
+		else
+		    status = -1;	/* Doesn't want anything - bail out */
+            }
+	    else {
+		status = -1;
+	    }
+	    break;
+
+        default:
+	    ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			     "SSL_connect() error");
+	    status = -1;
+	    break;
+        }
+	
+	if (status == 1) {
+	    pj_time_val timeout, *p_timeout;
+
+	    /* Must have at least one handle to wait for at this point. */
+	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || PJ_FD_COUNT(&wr_set) == 1);
+	    
+	    /* This will block the whole stack!!! */
+	    PJ_TODO(SUPPORT_SSL_ASYNCHRONOUS_CONNECT);
+
+	    if (tls->listener->setting.timeout.sec == 0 &&
+		tls->listener->setting.timeout.msec == 0)
+	    {
+		p_timeout = NULL;
+	    } else {
+		timeout = tls->listener->setting.timeout;
+		p_timeout = &timeout;
+	    }
+
+	    /* Block indefinitely if timeout pointer is zero. */
+	    status = pj_sock_select(tls->sock+1, &rd_set, &wr_set,
+				    NULL, p_timeout);
+	    	    
+	    /* 0 is timeout, so we're done.
+	     * -1 is error, so we're done.
+	     * Could be both handles set (same handle in both masks) so set to 1.
+	     */
+	    if (status >= 1)
+		status = 1;
+	    else if (status == 0)
+		return PJSIP_TLS_ETIMEDOUT;
+	    else
+		status = -1;
+        }
+	
+    } while (status == 1 && !SSL_is_init_finished (ssl));
+        
+    return (status == -1 ? PJSIP_TLS_ECONNECT : PJ_SUCCESS);
+}
 
 
 /*
- * Public function to create TLS listener.
+ * Perform SSL_accept() on the newly established incoming TLS connection.
  */
-PJ_DEF(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
-					      const pj_str_t *prm_keyfile,
-					      const pj_str_t *prm_password,
-					      const pj_str_t *prm_ca_list_file,
-					      const pj_sockaddr_in *local,
-					      const pjsip_host_port *a_name,
-					      unsigned async_cnt,
-					      pjsip_tpfactory **p_factory)
+static pj_status_t ssl_accept(struct tls_transport *tls)
 {
-    struct tls_listener *lis = NULL;
-    pj_pool_t *pool = NULL;
-    char str_keyfile[256], *keyfile;
-    char str_ca_list_file[256], *ca_list_file;
-    char str_password[128], *password;
-    pj_status_t status;
+    SSL *ssl = tls->ssl;
+    int rc;
+    
+    if (SSL_is_init_finished (ssl))
+	return PJ_SUCCESS;
+    
+    if (!SSL_in_accept_init(ssl))
+	SSL_set_accept_state(ssl);
 
-    PJ_LOG(5,(THIS_FILE, "Creating TLS listener"));
+    PJ_LOG(5,(tls->base.obj_name, "Starting SSL_accept() negotiation"));
 
-    /* Sanity check */
-    PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
+    /* Repeat retrying SSL_accept() procedure until it completes either
+     * successfully or with failure.
+     */
+    do {
 
-    /* Unused arguments */
-    PJ_UNUSED_ARG(async_cnt);
+	/* These handle sets are used to set up for whatever SSL_accept says
+	 * it wants next. They're reset on each pass around the loop.
+	 */
+	pj_fd_set_t rd_set;
+	pj_fd_set_t wr_set;
+	
+	PJ_FD_ZERO(&rd_set);
+	PJ_FD_ZERO(&wr_set);
 
-#define COPY_STRING(dstbuf, dst, src)	\
-    if (src) {	\
-	PJ_ASSERT_RETURN(src->slen < sizeof(dstbuf), PJ_ENAMETOOLONG); \
-	pj_memcpy(dstbuf, src->ptr, src->slen); \
-	dstbuf[src->slen] = '\0'; \
-	dst = dstbuf; \
-    } else { \
-	dst = NULL; \
+	rc = SSL_accept (ssl);
+
+	switch (SSL_get_error (ssl, rc)) {
+        case SSL_ERROR_NONE:
+	    /* Success! */
+	    rc = 0;
+	    PJ_LOG(5,(tls->base.obj_name, 
+		      "SSL_accept() negotiation completes successfully"));
+	    break;
+	    
+        case SSL_ERROR_WANT_WRITE:
+	    PJ_FD_SET(tls->sock, &wr_set);
+	    rc = 1;               /* Wait for more activity */
+	    break;
+	    
+        case SSL_ERROR_WANT_READ:
+	    PJ_FD_SET(tls->sock, &rd_set);
+	    rc = 1;               /* Need to read more data */
+	    break;
+
+        case SSL_ERROR_ZERO_RETURN:
+	    /* The peer has notified us that it is shutting down via the SSL 
+	     * "close_notify" message so we need to shutdown, too.
+	     */
+	    PJ_LOG(4,(tls->base.obj_name,  
+		      "Incoming SSL connection closed prematurely by client"));
+	    return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+
+        case SSL_ERROR_SYSCALL:
+	    /* Explicitly check for EWOULDBLOCK since it doesn't get converted
+	     * to an SSL_ERROR_WANT_{READ,WRITE} on some platforms. 
+	     * If SSL_accept failed outright, though, don't bother checking 
+	     * more. This can happen if the socket gets closed during the 
+	     * handshake.
+	     */
+	    if (pj_get_netos_error()==PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) 
+		&& rc==-1)
+            {
+		/* Although the SSL_ERROR_WANT_READ/WRITE isn't getting set 
+		 * correctly, the read/write state should be valid. Use that 
+		 * to decide what to do.
+		 */
+		rc = 1;               /* Wait for more activity */
+		if (SSL_want_write(ssl))
+		    PJ_FD_SET(tls->sock, &wr_set);
+		else if (SSL_want_read(ssl))
+		    PJ_FD_SET(tls->sock, &rd_set);
+		else {
+		    /* Doesn't want anything - bail out */
+		    return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+		}
+            }
+	    else {
+		return PJSIP_TLS_EUNKNOWN;
+	    }
+	    break;
+	    
+        default:
+	    ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			     "Error calling SSL_accept()");
+	    return pj_get_netos_error() ? pj_get_netos_error() : 
+		    PJSIP_TLS_EUNKNOWN;
+        }
+	
+	if (rc == 1) {
+
+	    pj_time_val timeout, *p_timeout;
+
+	    /* Must have at least one handle to wait for at this point. */
+	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || PJ_FD_COUNT(&wr_set) == 1);
+
+	    if (tls->listener->setting.timeout.sec == 0 &&
+		tls->listener->setting.timeout.msec == 0)
+	    {
+		p_timeout = NULL;
+	    } else {
+		timeout = tls->listener->setting.timeout;
+		p_timeout = &timeout;
+	    }
+
+	    rc = pj_sock_select(tls->sock+1, &rd_set, &wr_set, NULL, 
+			        p_timeout);
+	    
+	    if (rc >= 1)
+		rc = 1;
+	    else if (rc == 0)
+		return PJSIP_TLS_ETIMEDOUT;
+	    else
+		return pj_get_netos_error();
+        }
+	
+    } while (rc == 1 && !SSL_is_init_finished(ssl));
+    
+    return (rc == -1 ? PJSIP_TLS_EUNKNOWN : PJ_SUCCESS);
+}
+
+
+/* Send outgoing data with SSL connection */
+static pj_status_t ssl_write(struct tls_transport *tls,
+			     pjsip_tx_data *tdata)
+{
+    int size = tdata->buf.cur - tdata->buf.start;
+    int sent = 0;
+
+    do {
+	const int fragment_sent = SSL_write(tls->ssl,
+					    tdata->buf.start + sent, 
+					    size - sent);
+    
+	switch( SSL_get_error(tls->ssl, fragment_sent)) {
+	case SSL_ERROR_NONE:
+	    sent += fragment_sent;
+	    break;
+	    
+	case SSL_ERROR_WANT_READ:
+	case SSL_ERROR_WANT_WRITE:
+	    /* For now, we can't handle situation where WANT_READ/WANT_WRITE
+	     * is raised after some data has been sent, since we don't have
+	     * mechanism to keep track of how many bytes have been sent
+	     * inside the individual tdata.
+	     */
+	    pj_assert(sent == 0);
+	    PJ_TODO(PARTIAL_SSL_SENT);
+	    return PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK);
+	    
+	case SSL_ERROR_ZERO_RETURN:
+	    /* The peer has notified us that it is shutting down via the SSL
+	     * "close_notify" message. Tell the transport manager that it
+	     * shouldn't use this transport any more and return ENOTCONN
+	     * to caller.
+	     */
+	    
+	    /* It is safe to call this multiple times. */
+	    pjsip_transport_shutdown(&tls->base);
+
+	    return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+	    
+	case SSL_ERROR_SYSCALL:
+	    if (fragment_sent == 0) {
+		/* An EOF occured but the SSL "close_notify" message was not
+		 * sent. Shutdown the transport and return ENOTCONN.
+		 */
+
+		/* It is safe to call this multiple times. */
+		pjsip_transport_shutdown(&tls->base);
+
+		return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+	    }
+	    
+	    /* Other error */
+	    return pj_get_netos_error();
+
+	default:
+	    ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			     "Error sending %s with SSL_write()",
+			     pjsip_tx_data_get_info(tdata));
+	    return pj_get_netos_error() ? pj_get_netos_error() 
+		    : PJSIP_TLS_ESEND;
+	}
+    
+    } while (sent < size);
+
+    return PJ_SUCCESS;
+}
+
+
+/* Read data from SSL connection */
+static pj_status_t ssl_read(struct tls_transport *tls)
+{
+    pjsip_rx_data *rdata = &tls->rdata;
+
+    int bytes_read, max_size;
+
+    max_size = sizeof(rdata->pkt_info.packet) - rdata->pkt_info.len;
+    bytes_read = SSL_read(tls->ssl, 
+			  rdata->pkt_info.packet+rdata->pkt_info.len,
+                          max_size);
+
+    switch (SSL_get_error(tls->ssl, bytes_read)) {
+    case SSL_ERROR_NONE:
+	/* Data successfully read */
+	rdata->pkt_info.len += bytes_read;
+	return PJ_SUCCESS;
+	
+    case SSL_ERROR_WANT_READ:
+    case SSL_ERROR_WANT_WRITE:
+	return PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK);
+	
+    case SSL_ERROR_ZERO_RETURN:
+	/* The peer has notified us that it is shutting down via the SSL
+	 * "close_notify" message.
+	 */
+	pjsip_transport_shutdown(&tls->base);
+	return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+	
+    case SSL_ERROR_SYSCALL:
+	if (bytes_read == 0) {
+	    /* An EOF occured but the SSL "close_notify" message was not
+	     * sent.
+	     */
+	    pjsip_transport_shutdown(&tls->base);
+	    return PJ_STATUS_FROM_OS(OSERR_ENOTCONN);
+	}
+	
+	/* Other error */
+	return pj_get_netos_error();
+	
+    default:
+	ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			 "Error reading data with SSL_read()");
+	return pj_get_netos_error() ? pj_get_netos_error() 
+		: PJSIP_TLS_EREAD;
     }
 
-    /* Copy strings */
-    COPY_STRING(str_keyfile, keyfile, prm_keyfile);
-    COPY_STRING(str_ca_list_file, ca_list_file, prm_ca_list_file);
-    COPY_STRING(str_password, password, prm_password);
+    /* Should not reach here */
+}
+
+
+/****************************************************************************
+ * The TLS listener/transport factory.
+ */
+
+/*
+ * This is the public API to create, initialize, register, and start the
+ * TLS listener.
+ */
+PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
+					       const pjsip_tls_setting *opt,
+					       const pj_sockaddr_in *local,
+					       const pjsip_host_port *a_name,
+					       unsigned async_cnt,
+					       pjsip_tpfactory **p_factory)
+{
+    pj_pool_t *pool;
+    struct tls_listener *listener;
+    pj_ioqueue_callback listener_cb;
+    pj_sockaddr_in *listener_addr;
+    int addr_len;
+    unsigned i;
+    pj_status_t status;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
     /* Verify that address given in a_name (if any) is valid */
     if (a_name && a_name->host.slen) {
@@ -365,145 +899,1076 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
 	}
     }
 
-    /* Initialize OpenSSL */
-    status = init_openssl();
+    pool = pjsip_endpt_create_pool(endpt, "tlslis", POOL_LIS_INIT, 
+				   POOL_LIS_INC);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
+
+    listener = pj_pool_zalloc(pool, sizeof(struct tls_listener));
+    listener->factory.pool = pool;
+    listener->factory.type = PJSIP_TRANSPORT_TLS;
+    listener->factory.type_name = "tls";
+    listener->factory.flag = 
+	pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
+    listener->sock = PJ_INVALID_SOCKET;
+    
+    /* Create object name */
+    pj_ansi_snprintf(listener->factory.obj_name, 
+		     sizeof(listener->factory.obj_name),
+		     "tls%p",  listener);
+    
+    /* Create duplicate of TLS settings */
+    if (opt)
+	pjsip_tls_setting_copy(pool, &listener->setting, opt);
+    else
+	pjsip_tls_setting_default(&listener->setting);
+
+    /* Initialize SSL context to be used by this listener */
+    status = create_ctx(listener, &listener->ctx);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_lock_create_recursive_mutex(pool, "tlslis", 
+					    &listener->factory.lock);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+
+    /* Create and bind socket */
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &listener->sock);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    listener_addr = (pj_sockaddr_in*)&listener->factory.local_addr;
+    if (local) {
+	pj_memcpy(listener_addr, local, sizeof(pj_sockaddr_in));
+    } else {
+	pj_sockaddr_in_init(listener_addr, NULL, 0);
+    }
+
+    status = pj_sock_bind(listener->sock, listener_addr, 
+			  sizeof(pj_sockaddr_in));
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Retrieve the bound address */
+    addr_len = sizeof(pj_sockaddr_in);
+    status = pj_sock_getsockname(listener->sock, listener_addr, &addr_len);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* If published host/IP is specified, then use that address as the
+     * listener advertised address.
+     */
+    if (a_name && a_name->host.slen) {
+	/* Copy the address */
+	listener->factory.addr_name = *a_name;
+	pj_strdup(listener->factory.pool, &listener->factory.addr_name.host, 
+		  &a_name->host);
+	listener->factory.addr_name.port = a_name->port;
+
+    } else {
+	/* No published address is given, use the bound address */
+
+	/* If the address returns 0.0.0.0, use the default
+	 * interface address as the transport's address.
+	 */
+	if (listener_addr->sin_addr.s_addr == 0) {
+	    pj_in_addr hostip;
+
+	    status = pj_gethostip(&hostip);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    listener_addr->sin_addr = hostip;
+	}
+
+	/* Save the address name */
+	sockaddr_to_host_port(listener->factory.pool, 
+			      &listener->factory.addr_name, listener_addr);
+    }
+
+    /* If port is zero, get the bound port */
+    if (listener->factory.addr_name.port == 0) {
+	listener->factory.addr_name.port = pj_ntohs(listener_addr->sin_port);
+    }
+
+    /* Start listening to the address */
+    status = pj_sock_listen(listener->sock, PJSIP_TLS_TRANSPORT_BACKLOG);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+
+    /* Register socket to ioqeuue */
+    pj_bzero(&listener_cb, sizeof(listener_cb));
+    listener_cb.on_accept_complete = &on_accept_complete;
+    status = pj_ioqueue_register_sock(pool, pjsip_endpt_get_ioqueue(endpt),
+				      listener->sock, listener,
+				      &listener_cb, &listener->key);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Register to transport manager */
+    listener->endpt = endpt;
+    listener->tpmgr = pjsip_endpt_get_tpmgr(endpt);
+    listener->factory.create_transport = lis_create_transport;
+    listener->factory.destroy = lis_destroy;
+    listener->is_registered = PJ_TRUE;
+    status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
+					    &listener->factory);
+    if (status != PJ_SUCCESS) {
+	listener->is_registered = PJ_FALSE;
+	goto on_error;
+    }
+
+
+    /* Start pending accept() operations */
+    if (async_cnt > MAX_ASYNC_CNT) async_cnt = MAX_ASYNC_CNT;
+    listener->async_cnt = async_cnt;
+
+    for (i=0; i<async_cnt; ++i) {
+	pj_pool_t *pool;
+
+	pool = pjsip_endpt_create_pool(endpt, "tlss%p", POOL_TP_INIT, 
+				       POOL_TP_INIT);
+	if (!pool) {
+	    status = PJ_ENOMEM;
+	    goto on_error;
+	}
+
+	listener->accept_op[i] = pj_pool_zalloc(pool, 
+						sizeof(struct pending_accept));
+	pj_ioqueue_op_key_init(&listener->accept_op[i]->op_key, 
+				sizeof(listener->accept_op[i]->op_key));
+	listener->accept_op[i]->pool = pool;
+	listener->accept_op[i]->listener = listener;
+	listener->accept_op[i]->index = i;
+
+	on_accept_complete(listener->key, &listener->accept_op[i]->op_key,
+			   listener->sock, PJ_EPENDING);
+    }
+
+    PJ_LOG(4,(listener->factory.obj_name, 
+	     "SIP TLS listener ready for incoming connections at %.*s:%d",
+	     (int)listener->factory.addr_name.host.slen,
+	     listener->factory.addr_name.host.ptr,
+	     listener->factory.addr_name.port));
+
+    /* Return the pointer to user */
+    if (p_factory) *p_factory = &listener->factory;
+
+    return PJ_SUCCESS;
+
+on_error:
+    lis_destroy(&listener->factory);
+    return status;
+}
+
+
+/* This callback is called by transport manager to destroy listener */
+static pj_status_t lis_destroy(pjsip_tpfactory *factory)
+{
+    struct tls_listener *listener = (struct tls_listener *)factory;
+    unsigned i;
+
+    if (listener->is_registered) {
+	pjsip_tpmgr_unregister_tpfactory(listener->tpmgr, &listener->factory);
+	listener->is_registered = PJ_FALSE;
+    }
+
+    if (listener->key) {
+	pj_ioqueue_unregister(listener->key);
+	listener->key = NULL;
+	listener->sock = PJ_INVALID_SOCKET;
+    }
+
+    if (listener->sock != PJ_INVALID_SOCKET) {
+	pj_sock_close(listener->sock);
+	listener->sock = PJ_INVALID_SOCKET;
+    }
+
+    if (listener->factory.lock) {
+	pj_lock_destroy(listener->factory.lock);
+	listener->factory.lock = NULL;
+    }
+
+    for (i=0; i<PJ_ARRAY_SIZE(listener->accept_op); ++i) {
+	if (listener->accept_op[i] && listener->accept_op[i]->pool) {
+	    pj_pool_t *pool = listener->accept_op[i]->pool;
+	    listener->accept_op[i]->pool = NULL;
+	    pj_pool_release(pool);
+	}
+    }
+
+    if (listener->ctx) {
+	destroy_ctx(listener->ctx);
+	listener->ctx = NULL;
+    }
+
+    if (listener->factory.pool) {
+	pj_pool_t *pool = listener->factory.pool;
+
+	PJ_LOG(4,(listener->factory.obj_name,  "SIP TLS listener destroyed"));
+
+	listener->factory.pool = NULL;
+	pj_pool_release(pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/***************************************************************************/
+/*
+ * TLS Transport
+ */
+
+/*
+ * Prototypes.
+ */
+/* Called by transport manager to send message */
+static pj_status_t tls_send_msg(pjsip_transport *transport, 
+				pjsip_tx_data *tdata,
+				const pj_sockaddr_t *rem_addr,
+				int addr_len,
+				void *token,
+				void (*callback)(pjsip_transport *transport,
+						 void *token, 
+						 pj_ssize_t sent_bytes));
+
+/* Called by transport manager to shutdown */
+static pj_status_t tls_shutdown(pjsip_transport *transport);
+
+/* Called by transport manager to destroy transport */
+static pj_status_t tls_destroy_transport(pjsip_transport *transport);
+
+/* Utility to destroy transport */
+static pj_status_t tls_destroy(pjsip_transport *transport,
+			       pj_status_t reason);
+
+/* Callback from ioqueue on incoming packet */
+static void on_read_complete(pj_ioqueue_key_t *key, 
+                             pj_ioqueue_op_key_t *op_key, 
+                             pj_ssize_t bytes_read);
+
+/* Callback from ioqueue when packet is sent */
+static void on_write_complete(pj_ioqueue_key_t *key, 
+                              pj_ioqueue_op_key_t *op_key, 
+                              pj_ssize_t bytes_sent);
+
+/* Callback from ioqueue when connect completes */
+static void on_connect_complete(pj_ioqueue_key_t *key, 
+                                pj_status_t status);
+
+
+/*
+ * Common function to create TLS transport, called when pending accept() and
+ * pending connect() complete.
+ */
+static pj_status_t tls_create( struct tls_listener *listener,
+			       pj_pool_t *pool,
+			       pj_sock_t sock, pj_bool_t is_server,
+			       const pj_sockaddr_in *local,
+			       const pj_sockaddr_in *remote,
+			       struct tls_transport **p_tls)
+{
+    struct tls_transport *tls;
+    pj_ioqueue_t *ioqueue;
+    pj_ioqueue_callback tls_callback;
+    int rc;
+    pj_status_t status;
+    
+
+    PJ_ASSERT_RETURN(sock != PJ_INVALID_SOCKET, PJ_EINVAL);
+
+
+    if (pool == NULL) {
+	pool = pjsip_endpt_create_pool(listener->endpt, "tls",
+				       POOL_TP_INIT, POOL_TP_INC);
+	PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
+    }    
+
+    /*
+     * Create and initialize basic transport structure.
+     */
+    tls = pj_pool_zalloc(pool, sizeof(*tls));
+    tls->sock = sock;
+    tls->is_server = is_server;
+    tls->listener = listener;
+    pj_list_init(&tls->delayed_list);
+    tls->base.pool = pool;
+
+    pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME, 
+		     (is_server ? "tlss%p" :"tlsc%p"), tls);
+
+    /* Initialize transport reference counter to 1 */
+    status = pj_atomic_create(pool, 1, &tls->base.ref_cnt);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
+    status = pj_lock_create_recursive_mutex(pool, "tls", &tls->base.lock);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
+    tls->base.key.type = PJSIP_TRANSPORT_TLS;
+    pj_memcpy(&tls->base.key.rem_addr, remote, sizeof(pj_sockaddr_in));
+    tls->base.type_name = "tls";
+    tls->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
+
+    tls->base.info = pj_pool_alloc(pool, 64);
+    pj_ansi_snprintf(tls->base.info, 64, "TLS to %s:%d",
+		     pj_inet_ntoa(remote->sin_addr), 
+		     (int)pj_ntohs(remote->sin_port));
+
+    tls->base.addr_len = sizeof(pj_sockaddr_in);
+    pj_memcpy(&tls->base.local_addr, local, sizeof(pj_sockaddr_in));
+    sockaddr_to_host_port(pool, &tls->base.local_name, local);
+    sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
+
+    tls->base.endpt = listener->endpt;
+    tls->base.tpmgr = listener->tpmgr;
+    tls->base.send_msg = &tls_send_msg;
+    tls->base.do_shutdown = &tls_shutdown;
+    tls->base.destroy = &tls_destroy_transport;
+
+    /* Create SSL connection object */
+    tls->ssl = SSL_new(listener->ctx);
+    if (tls->ssl == NULL) {
+	ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			 "Error creating SSL connection object");
+	status = PJSIP_TLS_ESSLCONN;
+	goto on_error;
+    }
+
+    /* Associate network socket with SSL connection object */
+    rc = SSL_set_fd(tls->ssl, (int)sock);
+    if (rc != 1) {
+	ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
+			 "Error calling SSL_set_fd");
+	status = PJSIP_TLS_ESSLCONN;
+	goto on_error;
+    }
+
+    /* Register socket to ioqueue */
+    pj_bzero(&tls_callback, sizeof(pj_ioqueue_callback));
+    tls_callback.on_read_complete = &on_read_complete;
+    tls_callback.on_write_complete = &on_write_complete;
+    tls_callback.on_connect_complete = &on_connect_complete;
+
+    ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
+    status = pj_ioqueue_register_sock(pool, ioqueue, sock, 
+				      tls, &tls_callback, &tls->key);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
+    /* Register transport to transport manager */
+    status = pjsip_transport_register(listener->tpmgr, &tls->base);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
+    tls->is_registered = PJ_TRUE;
+
+    /* Done setting up basic transport. */
+    *p_tls = tls;
+
+    PJ_LOG(4,(tls->base.obj_name, "TLS %s transport created",
+	      (tls->is_server ? "server" : "client")));
+
+    return PJ_SUCCESS;
+
+on_error:
+    tls_destroy(&tls->base, status);
+    return status;
+}
+
+
+/* Flush all delayed transmision once the socket is connected. 
+ * Return non-zero if pending transmission list is empty after
+ * the function returns.
+ */
+static pj_bool_t tls_flush_pending_tx(struct tls_transport *tls)
+{
+    pj_bool_t empty;
+
+    pj_lock_acquire(tls->base.lock);
+    while (!pj_list_empty(&tls->delayed_list)) {
+	struct delayed_tdata *pending_tx;
+	pjsip_tx_data *tdata;
+	pj_ioqueue_op_key_t *op_key;
+	pj_ssize_t size;
+	pj_status_t status;
+
+	pending_tx = tls->delayed_list.next;
+
+	tdata = pending_tx->tdata_op_key->tdata;
+	op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	/* send the txdata */
+	status = ssl_write(tls, tdata);
+
+	/* On EWOULDBLOCK, suspend further transmissions */
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    break;
+	}
+
+	/* tdata has been transmitted (successfully or with failure).
+	 * In any case, remove it from pending transmission list.
+	 */
+	pj_list_erase(pending_tx);
+
+	/* Notify callback */
+	if (status == PJ_SUCCESS)
+	    size = tdata->buf.cur - tdata->buf.start;
+	else
+	    size = -status;
+
+	on_write_complete(tls->key, op_key, size);
+
+    }
+
+    empty = pj_list_empty(&tls->delayed_list);
+
+    pj_lock_release(tls->base.lock);
+
+    return empty;
+}
+
+
+/* Called by transport manager to destroy transport */
+static pj_status_t tls_destroy_transport(pjsip_transport *transport)
+{
+    struct tls_transport *tls = (struct tls_transport*)transport;
+
+    /* Transport would have been unregistered by now since this callback
+     * is called by transport manager.
+     */
+    tls->is_registered = PJ_FALSE;
+
+    return tls_destroy(transport, tls->close_reason);
+}
+
+
+/* Destroy TLS transport */
+static pj_status_t tls_destroy(pjsip_transport *transport, 
+			       pj_status_t reason)
+{
+    struct tls_transport *tls = (struct tls_transport*)transport;
+
+    if (tls->close_reason == 0)
+	tls->close_reason = reason;
+
+    if (tls->is_registered) {
+	tls->is_registered = PJ_FALSE;
+	pjsip_transport_destroy(transport);
+
+	/* pjsip_transport_destroy will recursively call this function
+	 * again.
+	 */
+	return PJ_SUCCESS;
+    }
+
+    /* Mark transport as closing */
+    ++tls->is_closing;
+
+    /* Cancel all delayed transmits */
+    while (!pj_list_empty(&tls->delayed_list)) {
+	struct delayed_tdata *pending_tx;
+	pj_ioqueue_op_key_t *op_key;
+
+	pending_tx = tls->delayed_list.next;
+	pj_list_erase(pending_tx);
+
+	op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	on_write_complete(tls->key, op_key, -reason);
+    }
+
+    if (tls->rdata.tp_info.pool) {
+	pj_pool_release(tls->rdata.tp_info.pool);
+	tls->rdata.tp_info.pool = NULL;
+    }
+
+    if (tls->key) {
+	pj_ioqueue_unregister(tls->key);
+	tls->key = NULL;
+	tls->sock = PJ_INVALID_SOCKET;
+    }
+
+    if (tls->sock != PJ_INVALID_SOCKET) {
+	pj_sock_close(tls->sock);
+	tls->sock = PJ_INVALID_SOCKET;
+    }
+
+    if (tls->base.lock) {
+	pj_lock_destroy(tls->base.lock);
+	tls->base.lock = NULL;
+    }
+
+    if (tls->base.ref_cnt) {
+	pj_atomic_destroy(tls->base.ref_cnt);
+	tls->base.ref_cnt = NULL;
+    }
+
+    if (tls->ssl) {
+	SSL_free(tls->ssl);
+	tls->ssl = NULL;
+    }
+
+    if (tls->base.pool) {
+	pj_pool_t *pool;
+
+	if (reason != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+
+	    pj_strerror(reason, errmsg, sizeof(errmsg));
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "TLS transport destroyed with reason %d: %s", 
+		      reason, errmsg));
+
+	} else {
+
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "TLS transport destroyed normally"));
+
+	}
+
+	pool = tls->base.pool;
+	tls->base.pool = NULL;
+	pj_pool_release(pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * This utility function creates receive data buffers and start
+ * asynchronous recv() operations from the socket. It is called after
+ * accept() or connect() operation complete.
+ */
+static pj_status_t tls_start_read(struct tls_transport *tls)
+{
+    pj_pool_t *pool;
+    pj_ssize_t size;
+    pj_sockaddr_in *rem_addr;
+    pj_status_t status;
+
+    /* Init rdata */
+    pool = pjsip_endpt_create_pool(tls->listener->endpt,
+				   "rtd%p",
+				   PJSIP_POOL_RDATA_LEN,
+				   PJSIP_POOL_RDATA_INC);
+    if (!pool) {
+	ssl_report_error(tls->base.obj_name, 4, PJ_ENOMEM, 
+			 "Unable to create pool for listener rxdata");
+	return PJ_ENOMEM;
+    }
+
+    tls->rdata.tp_info.pool = pool;
+
+    tls->rdata.tp_info.transport = &tls->base;
+    tls->rdata.tp_info.tp_data = tls;
+    tls->rdata.tp_info.op_key.rdata = &tls->rdata;
+    pj_ioqueue_op_key_init(&tls->rdata.tp_info.op_key.op_key, 
+			   sizeof(pj_ioqueue_op_key_t));
+
+    tls->rdata.pkt_info.src_addr = tls->base.key.rem_addr;
+    tls->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
+    rem_addr = (pj_sockaddr_in*) &tls->base.key.rem_addr;
+    pj_ansi_strcpy(tls->rdata.pkt_info.src_name,
+		   pj_inet_ntoa(rem_addr->sin_addr));
+    tls->rdata.pkt_info.src_port = pj_ntohs(rem_addr->sin_port);
+
+    /* Here's the real trick with OpenSSL.
+     * Since asynchronous socket operation with OpenSSL uses select() like
+     * mechanism, it's not really compatible with PJLIB's ioqueue. So to
+     * make them "talk" together, we simulate select() by using MSG_PEEK
+     * when we call pj_ioqueue_recv().
+     */
+    size = 1;
+    status = pj_ioqueue_recv(tls->key, &tls->rdata.tp_info.op_key.op_key,
+			     tls->rdata.pkt_info.packet, &size,
+			     PJ_IOQUEUE_ALWAYS_ASYNC | PJ_MSG_PEEK);
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	ssl_report_error(tls->base.obj_name, 4, status,
+			 "ioqueue_recv() error");
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+
+/* This callback is called by transport manager for the TLS factory
+ * to create outgoing transport to the specified destination.
+ */
+static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
+					pjsip_tpmgr *mgr,
+					pjsip_endpoint *endpt,
+					const pj_sockaddr *rem_addr,
+					int addr_len,
+					pjsip_transport **p_transport)
+{
+    struct tls_listener *listener;
+    struct tls_transport *tls;
+    pj_sock_t sock;
+    pj_sockaddr_in local_addr;
+    pj_status_t status;
+
+    /* Sanity checks */
+    PJ_ASSERT_RETURN(factory && mgr && endpt && rem_addr &&
+		     addr_len && p_transport, PJ_EINVAL);
+
+    /* Check that address is a sockaddr_in */
+    PJ_ASSERT_RETURN(rem_addr->sa_family == PJ_AF_INET &&
+		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
+
+
+    listener = (struct tls_listener*)factory;
+
+    
+    /* Create socket */
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &sock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Bind to any port */
+    status = pj_sock_bind_in(sock, 0, 0);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(sock);
+	return status;
+    }
+
+    /* Get the local port */
+    addr_len = sizeof(pj_sockaddr_in);
+    status = pj_sock_getsockname(sock, &local_addr, &addr_len);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(sock);
+	return status;
+    }
+
+    /* Initially set the address from the listener's address */
+    local_addr.sin_addr.s_addr = 
+	((pj_sockaddr_in*)&listener->factory.local_addr)->sin_addr.s_addr;
+
+    /* Create the transport descriptor */
+    status = tls_create(listener, NULL, sock, PJ_FALSE, &local_addr, 
+			(pj_sockaddr_in*)rem_addr, &tls);
     if (status != PJ_SUCCESS)
 	return status;
 
 
-    /* Create the listener struct. */
-    pool = pjsip_endpt_create_pool(endpt, "tlslis", 4000, 4000);
-    lis = pj_pool_zalloc(pool, sizeof(*lis));
-    lis->base.pool = pool;
+    /* Start asynchronous connect() operation */
+    tls->has_pending_connect = PJ_TRUE;
+    status = pj_ioqueue_connect(tls->key, rem_addr, sizeof(pj_sockaddr_in));
+    if (status == PJ_SUCCESS) {
 
-    /* Save password */
-    pj_strdup2_with_null(pool, &lis->password, password);
+	/* Immediate socket connect() ! */
+	tls->has_pending_connect = PJ_FALSE;
 
+	/* Perform SSL_connect() */
+	status = ssl_connect(tls);
+	if (status != PJ_SUCCESS) {
+	    tls_destroy(&tls->base, status);
+	    return status;
+	}
 
-    /* Create OpenSSL context */
-    status = initialize_ctx(lis, keyfile, ca_list_file, &lis->ctx);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    } else if (status != PJ_EPENDING) {
+	tls_destroy(&tls->base, status);
+	return status;
+    }
 
-    /* Initialize listener. */
-    pj_ansi_snprintf(lis->base.obj_name, sizeof(lis->base.obj_name), 
-		     "%s", "tlslis");
-    pj_lock_create_recursive_mutex(pool, "tlslis", &lis->base.lock);
-    lis->base.type = PJSIP_TRANSPORT_TLS;
-    lis->base.type_name = "tls";
-    lis->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
-    lis->base.create_transport = &lis_create_transport;
-    lis->base.destroy = &lis_destroy;
+    /* Update (again) local address, just in case local address currently
+     * set is different now that asynchronous connect() is started.
+     */
+    addr_len = sizeof(pj_sockaddr_in);
+    if (pj_sock_getsockname(tls->sock, &local_addr, &addr_len)==PJ_SUCCESS) {
+	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
 
-    /* Keep endpoint and transport manager instance */
-    lis->endpt = endpt;
-    lis->tpmgr = pjsip_endpt_get_tpmgr(endpt);
-
-    /* Determine the exported name */
-    if (a_name) {
-	pj_strdup(pool, &lis->base.addr_name.host, &a_name->host);
-	lis->base.addr_name.port = a_name->port;
-    } else {
-	pj_in_addr ip_addr;
-	const char *str_ip_addr;
-
-	/* Get default IP interface for the host */
-	status = pj_gethostip(&ip_addr);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* Set publicized host */
-	str_ip_addr = pj_inet_ntoa(ip_addr);
-	pj_strdup2(pool, &lis->base.addr_name.host, str_ip_addr);
-
-	/* Set publicized port */
-	if (local) {
-	    lis->base.addr_name.port = pj_ntohs(local->sin_port);
-	} else {
-	    lis->base.addr_name.port = 
-		pjsip_transport_get_default_port_for_type(PJSIP_TRANSPORT_TLS);
+	/* Some systems (like old Win32 perhaps) may not set local address
+	 * properly before socket is fully connected.
+	 */
+	if (tp_addr->sin_addr.s_addr != local_addr.sin_addr.s_addr &&
+	    local_addr.sin_addr.s_addr != 0) 
+	{
+	    tp_addr->sin_addr.s_addr = local_addr.sin_addr.s_addr;
+	    tp_addr->sin_port = local_addr.sin_port;
+	    sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+				  &local_addr);
 	}
     }
 
-#if 0
-    if (local) {
-	pj_memcpy(&lis->base.local_addr, local, sizeof(pj_sockaddr_in));
-	pj_strdup2(pool, &lis->base.addr_name.host, 
-		   pj_inet_ntoa(((pj_sockaddr_in*)local)->sin_addr));
-	lis->base.addr_name.port = pj_ntohs(((pj_sockaddr_in*)local)->sin_port);
-    } else {
-	int port;
-	port = pjsip_transport_get_default_port_for_type(PJSIP_TRANSPORT_TLS);
-	pj_sockaddr_in_init(&lis->base.local_addr, NULL, port);
-	pj_strdup(pool, &lis->base.addr_name.host, pj_gethostname());
-	lis->base.addr_name.port = port;
+    if (tls->has_pending_connect) {
+	PJ_LOG(4,(tls->base.obj_name, 
+		  "TLS transport %.*s:%d is connecting to %.*s:%d...",
+		  (int)tls->base.local_name.host.slen,
+		  tls->base.local_name.host.ptr,
+		  tls->base.local_name.port,
+		  (int)tls->base.remote_name.host.slen,
+		  tls->base.remote_name.host.ptr,
+		  tls->base.remote_name.port));
     }
-#endif
-
-
-    /* Register listener to transport manager. */
-    status = pjsip_tpmgr_register_tpfactory(lis->tpmgr, &lis->base);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    lis->is_registered = PJ_TRUE;
-
 
     /* Done */
-    if (p_factory)
-	*p_factory = &lis->base;
+    *p_transport = &tls->base;
 
-    PJ_LOG(4,(lis->base.obj_name, "TLS listener started at %.*s;%d",
-	      (int)lis->base.addr_name.host.slen,
-	      lis->base.addr_name.host.ptr,
-	      lis->base.addr_name.port));
     return PJ_SUCCESS;
+}
 
-on_error:
-    if (lis) {
-	lis_destroy(&lis->base);
-    } else if (pool) {
-	pj_pool_release(pool);
-	shutdown_openssl();
-    } else {
-	shutdown_openssl();
+
+/*
+ * This callback is called by ioqueue when pending accept() operation has
+ * completed.
+ */
+static void on_accept_complete(	pj_ioqueue_key_t *key, 
+				pj_ioqueue_op_key_t *op_key, 
+				pj_sock_t sock, 
+				pj_status_t status)
+{
+    struct tls_listener *listener;
+    struct tls_transport *tls;
+    struct pending_accept *accept_op;
+    int err_cnt = 0;
+
+    listener = pj_ioqueue_get_user_data(key);
+    accept_op = (struct pending_accept*) op_key;
+
+    /*
+     * Loop while there is immediate connection or when there is error.
+     */
+    do {
+	if (status == PJ_EPENDING) {
+	    /*
+	     * This can only happen when this function is called during
+	     * initialization to kick off asynchronous accept().
+	     */
+
+	} else if (status != PJ_SUCCESS) {
+
+	    /*
+	     * Error in accept().
+	     */
+	    ssl_report_error(listener->factory.obj_name, 4, status,
+			     "Error in asynchronous accept() completion");
+
+	    /*
+	     * Prevent endless accept() error loop by limiting the
+	     * number of consecutive errors. Once the number of errors
+	     * is equal to maximum, we treat this as permanent error, and
+	     * we stop the accept() operation.
+	     */
+	    ++err_cnt;
+	    if (err_cnt >= 10) {
+		PJ_LOG(1, (listener->factory.obj_name, 
+			   "Too many errors, listener stopping"));
+	    }
+
+	} else {
+	    pj_pool_t *pool;
+	    struct pending_accept *new_op;
+
+	    if (sock == PJ_INVALID_SOCKET) {
+		sock = accept_op->new_sock;
+	    }
+
+	    if (sock == PJ_INVALID_SOCKET) {
+		pj_assert(!"Should not happen. status should be error");
+		goto next_accept;
+	    }
+
+	    PJ_LOG(4,(listener->factory.obj_name, 
+		      "TLS listener %.*s:%d: got incoming TCP connection "
+		      "from %s:%d, sock=%d",
+		      (int)listener->factory.addr_name.host.slen,
+		      listener->factory.addr_name.host.ptr,
+		      listener->factory.addr_name.port,
+		      pj_inet_ntoa(accept_op->remote_addr.sin_addr),
+		      pj_ntohs(accept_op->remote_addr.sin_port),
+		      sock));
+
+	    /* Create new accept_opt */
+	    pool = pjsip_endpt_create_pool(listener->endpt, "tlss%p", 
+					   POOL_TP_INIT, POOL_TP_INC);
+	    new_op = pj_pool_zalloc(pool, sizeof(struct pending_accept));
+	    new_op->pool = pool;
+	    new_op->listener = listener;
+	    new_op->index = accept_op->index;
+	    pj_ioqueue_op_key_init(&new_op->op_key, sizeof(new_op->op_key));
+	    listener->accept_op[accept_op->index] = new_op;
+
+	    /* 
+	     * Incoming connections!
+	     * Create TLS transport for the new socket.
+	     */
+	    status = tls_create( listener, accept_op->pool, sock, PJ_TRUE,
+				 &accept_op->local_addr, 
+				 &accept_op->remote_addr, &tls);
+	    if (status == PJ_SUCCESS) {
+		/* Complete SSL_accept() */
+		status = ssl_accept(tls);
+	    }
+
+	    if (status == PJ_SUCCESS) {
+		/* Start asynchronous read from the socket */
+		status = tls_start_read(tls);
+	    }
+
+	    if (status != PJ_SUCCESS) {
+		ssl_report_error(tls->base.obj_name, 4, status,
+				 "Error creating incoming TLS transport");
+		pjsip_transport_shutdown(&tls->base);
+	    }
+
+	    accept_op = new_op;
+	}
+
+next_accept:
+	/*
+	 * Start the next asynchronous accept() operation.
+	 */
+	accept_op->addr_len = sizeof(pj_sockaddr_in);
+	accept_op->new_sock = PJ_INVALID_SOCKET;
+
+	status = pj_ioqueue_accept(listener->key, 
+				   &accept_op->op_key,
+				   &accept_op->new_sock,
+				   &accept_op->local_addr,
+				   &accept_op->remote_addr,
+				   &accept_op->addr_len);
+
+	/*
+	 * Loop while we have immediate connection or when there is error.
+	 */
+
+    } while (status != PJ_EPENDING);
+}
+
+
+/* 
+ * Callback from ioqueue when packet is sent.
+ */
+static void on_write_complete(pj_ioqueue_key_t *key, 
+                              pj_ioqueue_op_key_t *op_key, 
+                              pj_ssize_t bytes_sent)
+{
+    struct tls_transport *tls = pj_ioqueue_get_user_data(key);
+    pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
+
+    tdata_op_key->tdata = NULL;
+
+    /* Check for error/closure */
+    if (bytes_sent <= 0) {
+	pj_status_t status;
+
+	ssl_report_error(tls->base.obj_name, 4, -bytes_sent, 
+		         "TLS send() error");
+
+	status = (bytes_sent == 0) ? PJ_STATUS_FROM_OS(OSERR_ENOTCONN) :
+				     -bytes_sent;
+	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+	pjsip_transport_shutdown(&tls->base);
+    }
+
+    if (tdata_op_key->callback) {
+	/*
+	 * Notify sip_transport.c that packet has been sent.
+	 */
+	tdata_op_key->callback(&tls->base, tdata_op_key->token, bytes_sent);
+    }
+}
+
+
+/* Add tdata to pending list */
+static void add_pending_tx(struct tls_transport *tls,
+			   pjsip_tx_data *tdata)
+{
+    struct delayed_tdata *delayed_tdata;
+
+    delayed_tdata = pj_pool_alloc(tdata->pool, 
+				  sizeof(*delayed_tdata));
+    delayed_tdata->tdata_op_key = &tdata->op_key;
+    pj_list_push_back(&tls->delayed_list, delayed_tdata);
+}
+
+
+/* 
+ * This callback is called by transport manager to send SIP message 
+ */
+static pj_status_t tls_send_msg(pjsip_transport *transport, 
+				pjsip_tx_data *tdata,
+				const pj_sockaddr_t *rem_addr,
+				int addr_len,
+				void *token,
+				void (*callback)(pjsip_transport *transport,
+						 void *token, 
+						 pj_ssize_t sent_bytes))
+{
+    struct tls_transport *tls = (struct tls_transport*)transport;
+    pj_ssize_t size;
+    pj_bool_t delayed = PJ_FALSE;
+    pj_status_t status = PJ_SUCCESS;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(transport && tdata, PJ_EINVAL);
+
+    /* Check that there's no pending operation associated with the tdata */
+    PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
+    
+    /* Check the address is supported */
+    PJ_ASSERT_RETURN(rem_addr && addr_len==sizeof(pj_sockaddr_in), PJ_EINVAL);
+
+
+
+    /* Init op key. */
+    tdata->op_key.tdata = tdata;
+    tdata->op_key.token = token;
+    tdata->op_key.callback = callback;
+
+    /* If asynchronous connect() has not completed yet, just put the
+     * transmit data in the pending transmission list since we can not
+     * use the socket yet.
+     */
+    if (tls->has_pending_connect) {
+
+	/*
+	 * Looks like connect() is still in progress. Check again (this time
+	 * with holding the lock) to be sure.
+	 */
+	pj_lock_acquire(tls->base.lock);
+
+	if (tls->has_pending_connect) {
+	    /*
+	     * connect() is still in progress. Put the transmit data to
+	     * the delayed list.
+	     */
+	    add_pending_tx(tls, tdata);
+	    status = PJ_EPENDING;
+
+	    /* Prevent ssl_write() to be called below */
+	    delayed = PJ_TRUE;
+	}
+
+	pj_lock_release(tls->base.lock);
+    } 
+    
+    if (!delayed) {
+
+	pj_bool_t no_pending_tx;
+
+	/* Make sure that we've flushed pending tx first so that
+	 * stream is in order.
+	 */
+	no_pending_tx = tls_flush_pending_tx(tls);
+
+	/* Send data immediately with SSL_write() if we don't have
+	 * pending data in our list.
+	 */
+	if (no_pending_tx) {
+
+	    status = ssl_write(tls, tdata);
+
+	    /* On EWOULDBLOCK, put this tdata in the list */
+	    if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+		add_pending_tx(tls, tdata);
+		status = PJ_EPENDING;
+	    }
+
+	    if (status != PJ_EPENDING) {
+		/* Not pending (could be immediate success or error) */
+		tdata->op_key.tdata = NULL;
+
+		/* Shutdown transport on closure/errors */
+		if (status != PJ_SUCCESS) {
+		    size = -status;
+
+		    ssl_report_error(tls->base.obj_name, 4, status,
+				     "TLS send() error");
+
+		    if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+		    pjsip_transport_shutdown(&tls->base);
+		}
+	    }
+
+	} else {
+	    /* We have pending data in our list, so queue the txdata
+	     * in the pending tx list.
+	     */
+	    add_pending_tx(tls, tdata);
+	    status = PJ_EPENDING;
+	}
     }
 
     return status;
 }
 
 
-/* Transport worker thread */
-static int PJ_THREAD_FUNC tls_worker_thread(void *arg)
+/* 
+ * This callback is called by transport manager to shutdown transport.
+ * This normally is only used by UDP transport.
+ */
+static pj_status_t tls_shutdown(pjsip_transport *transport)
 {
-    struct tls_transport *tls_tp = (struct tls_transport *)arg;
-    pjsip_rx_data *rdata = &tls_tp->rdata;
+    struct tls_transport *tls = (struct tls_transport*)transport;
 
-    while (!tls_tp->quitting) {
-	pj_fd_set_t rd_set;
-	pj_time_val timeout;
-	int len;
-	pj_size_t size_eaten;
+    /* Shutdown SSL */
+    if (!tls->ssl_shutdown_called) {
+	/* Release our reference counter and shutdown SSL */
+	pjsip_transport_dec_ref(transport);
+	SSL_shutdown(tls->ssl);
+	tls->ssl_shutdown_called = PJ_TRUE;
 
-	PJ_FD_ZERO(&rd_set);
-	PJ_FD_SET(tls_tp->sock, &rd_set);
+	PJ_LOG(4,(transport->obj_name, "TLS transport shutdown"));
+    }
 
-	timeout.sec = 1;
-	timeout.msec = 0;
-
-	len = pj_sock_select(tls_tp->sock, &rd_set, NULL, NULL, &timeout);
-	if (len < 1)
-	    continue;
-
-	/* Start blocking read to SSL socket */
-	len = SSL_read(tls_tp->ssl, 
-		       rdata->pkt_info.packet + rdata->pkt_info.len,
-		       sizeof(rdata->pkt_info.packet) - rdata->pkt_info.len);
+    return PJ_SUCCESS;
+}
 
 
-	switch (SSL_get_error(tls_tp->ssl, len)) {
-        case SSL_ERROR_NONE:
-	    rdata->pkt_info.len += len;
+/* 
+ * Callback from ioqueue that an incoming data is received from the socket.
+ */
+static void on_read_complete(pj_ioqueue_key_t *key, 
+                             pj_ioqueue_op_key_t *op_key, 
+                             pj_ssize_t bytes_read_unused)
+{
+    enum { MAX_IMMEDIATE_PACKET = 10 };
+    pjsip_rx_data_op_key *rdata_op_key = (pjsip_rx_data_op_key*) op_key;
+    pjsip_rx_data *rdata = rdata_op_key->rdata;
+    struct tls_transport *tls = 
+	(struct tls_transport*)rdata->tp_info.transport;
+    int i;
+    pj_status_t status;
+
+    /* Don't do anything if transport is closing. */
+    if (tls->is_closing) {
+	tls->is_closing++;
+	return;
+    }
+
+
+    /* Recall that we use MSG_PEEK when calling ioqueue_recv(), so
+     * when this callback is called, data has not actually been read
+     * from socket buffer.
+     */
+
+    for (i=0;; ++i) {
+	pj_uint32_t flags;
+
+	/* Read data from SSL connection */
+	status = ssl_read(tls);
+
+	if (status == PJ_SUCCESS) {
+	    /*
+	     * We have packet!
+	     */
+	    pj_size_t size_eaten;
+
+	    /* Init pkt_info part. */
 	    rdata->pkt_info.zero = 0;
 	    pj_gettimeofday(&rdata->pkt_info.timestamp);
 
@@ -525,552 +1990,224 @@ static int PJ_THREAD_FUNC tls_worker_thread(void *arg)
 	    }
 	    
 	    rdata->pkt_info.len -= size_eaten;
-	    break;
 
-        case SSL_ERROR_ZERO_RETURN:
-	    PJ_LOG(4,(tls_tp->base.obj_name, "SSL transport shutdodwn by remote"));
-	    if (!tls_tp->quitting)
-		pjsip_transport_shutdown(&tls_tp->base);
-	    goto done;
+	} else if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
 
-        case SSL_ERROR_SYSCALL:
-	    PJ_LOG(2,(tls_tp->base.obj_name, "SSL Error: Premature close"));
-	    if (!tls_tp->quitting)
-		pjsip_transport_shutdown(&tls_tp->base);
-	    goto done;
+	    /* Ignore EWOULDBLOCK error (?) */
 
-        default:
-	    PJ_LOG(2,(tls_tp->base.obj_name, "SSL read problem"));
-	    if (!tls_tp->quitting)
-		pjsip_transport_shutdown(&tls_tp->base);
-	    goto done;
+	} else {
+
+	    /* For other errors, treat as transport being closed */
+	    ssl_report_error(tls->base.obj_name, 4, status,
+			     "Error reading SSL stream");
+	    
+	    /* We can not destroy the transport since high level objects may
+	     * still keep reference to this transport. So we can only 
+	     * instruct transport manager to gracefully start the shutdown
+	     * procedure for this transport.
+	     */
+	    if (tls->close_reason==PJ_SUCCESS) 
+		tls->close_reason = status;
+	    pjsip_transport_shutdown(&tls->base);
+
+	    return;
 	}
-    }
 
-done:
-    return 0;
-}
+	/* Reset pool. */
+	pj_pool_reset(rdata->tp_info.pool);
 
+	/* If we have pending data in SSL buffer, read it. */
+	if (SSL_pending(tls->ssl)) {
 
-PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
-
-/*
- * Perform SSL_connect upon completion of socket connect()
- */
-static pj_status_t perform_ssl_connect(SSL *ssl, pj_sock_t sock)
-{
-    int status;
-
-    if (SSL_is_init_finished (ssl))
-	return PJ_SUCCESS;
-
-    SSL_set_fd(ssl, (int)sock);
-
-    if (!SSL_in_connect_init (ssl))
-	SSL_set_connect_state (ssl);
-
-    do {
-	/* These handle sets are used to set up for whatever SSL_connect
-	 * says it wants next. They're reset on each pass around the loop.
-	 */
-	pj_fd_set_t rd_set;
-	pj_fd_set_t wr_set;
-	
-	PJ_FD_ZERO(&rd_set);
-	PJ_FD_ZERO(&wr_set);
-
-	status = SSL_connect (ssl);
-	switch (SSL_get_error (ssl, status)) {
-        case SSL_ERROR_NONE:
-	    /* Success */
-	    status = 0;
-	    break;
-
-        case SSL_ERROR_WANT_WRITE:
-	    /* Wait for more activity */
-	    PJ_FD_SET(sock, &wr_set);
-	    status = 1;
-	    break;
-	    
-        case SSL_ERROR_WANT_READ:
-	    /* Wait for more activity */
-	    PJ_FD_SET(sock, &rd_set);
-	    status = 1;
-	    break;
-	    
-        case SSL_ERROR_ZERO_RETURN:
-	    /* The peer has notified us that it is shutting down via
-	     * the SSL "close_notify" message so we need to
-	     * shutdown, too.
-	     */
-	    PJ_LOG(4,(THIS_FILE, "SSL connect() failed, remote has"
-				 "shutdown connection."));
-	    status = -1;
-	    break;
-	    
-        case SSL_ERROR_SYSCALL:
-	    /* On some platforms (e.g. MS Windows) OpenSSL does not
-	     * store the last error in errno so explicitly do so.
-	     *
-	     * Explicitly check for EWOULDBLOCK since it doesn't get
-	     * converted to an SSL_ERROR_WANT_{READ,WRITE} on some
-	     * platforms. If SSL_connect failed outright, though, don't
-	     * bother checking more. This can happen if the socket gets
-	     * closed during the handshake.
-	     */
-	    if (pj_get_netos_error() == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
-		status == -1)
-            {
-		/* Although the SSL_ERROR_WANT_READ/WRITE isn't getting
-		 * set correctly, the read/write state should be valid.
-		 * Use that to decide what to do.
-		 */
-		status = 1;               /* Wait for more activity */
-		if (SSL_want_write (ssl))
-		    PJ_FD_SET(sock, &wr_set);
-		else if (SSL_want_read (ssl))
-		    PJ_FD_SET(sock, &rd_set);
-		else
-		    status = -1;	/* Doesn't want anything - bail out */
-            }
-	    else {
-		status = -1;
+	    /* Check that we have enough space in buffer */
+	    if (rdata->pkt_info.len >= PJSIP_MAX_PKT_LEN-1) {
+		PJ_LOG(4,(tls->base.obj_name, 
+			  "Incoming packet dropped from tls:%.*s:%d "
+			  "because it's too big (%d bytes)",
+			  (int)tls->base.remote_name.host.slen,
+			  tls->base.remote_name.host.ptr,
+			  tls->base.remote_name.port,
+			  rdata->pkt_info.len));
+		rdata->pkt_info.len = 0;
 	    }
-	    break;
-	    
-        default:
-	    ssl_report_error(4, THIS_FILE, "SSL_connect() error");
-	    status = -1;
-	    break;
-        }
-	
-	if (status == 1) {
-	    /* Must have at least one handle to wait for at this point. */
-	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || 
-		      PJ_FD_COUNT(&wr_set) == 1);
-	    
-	    /* Block indefinitely if timeout pointer is zero. */
-	    status = pj_sock_select(FD_SETSIZE, &rd_set, &wr_set,
-				    NULL, NULL);
-	    	    
-	    /* 0 is timeout, so we're done.
-	     * -1 is error, so we're done.
-	     * Could be both handles set (same handle in both masks) so set to 1.
-	     */
-	    if (status >= 1)
-		status = 1;
-	    else                 /* Timeout or socket failure */
-		status = -1;
-        }
-	
-    } while (status == 1 && !SSL_is_init_finished (ssl));
-        
-    return (status == -1 ? PJSIP_TLS_ECONNECT : PJ_SUCCESS);
-}
 
-
-/*
- * Create a new TLS transport. The TLS role can be a server or a client,
- * depending on whether socket is valid.
- */
-static pj_status_t tls_create_transport(struct tls_listener *lis,
-				        pj_sock_t sock,
-				        const pj_sockaddr_in *rem_addr,
-				        struct tls_transport **p_tp)
-{
-    struct tls_transport *tls_tp = NULL;
-    pj_pool_t *pool = NULL;
-    char dst_str[80];
-    int len;
-    pj_status_t status;
-
-    /* Build remote address */
-    PJ_ASSERT_RETURN(rem_addr->sin_family==PJ_AF_INET, PJ_EINVAL);
-
-    /* sock must not be zero (should be either a valid socket or
-     * PJ_INVALID_SOCKET.
-     */
-    PJ_ASSERT_RETURN(sock==PJ_INVALID_SOCKET || sock > 0, PJ_EINVAL);
-
-    /* 
-     * Create the transport 
-     */
-    pool = pjsip_endpt_create_pool(lis->endpt, "tls", 4000, 4000);
-    tls_tp = pj_pool_zalloc(pool, sizeof(*tls_tp));
-    tls_tp->sock = sock;
-    tls_tp->base.pool = pool;
-
-    len = pj_ansi_snprintf(tls_tp->base.obj_name, 
-			   sizeof(tls_tp->base.obj_name),
-			   "tls%p", tls_tp);
-    if (len < 1 || len >= sizeof(tls_tp->base.obj_name)) {
-	status = PJ_ENAMETOOLONG;
-	goto on_error;
-    }
-
-    /* Print destination address. */
-    len = pj_ansi_snprintf(dst_str, sizeof(dst_str), "%s:%d",
-			   pj_inet_ntoa(rem_addr->sin_addr), 
-			   pj_ntohs(rem_addr->sin_port));
-
-    PJ_LOG(5,(lis->base.obj_name, "Creating TLS transport to %s", dst_str));
-
-
-    /* Transport info */
-    tls_tp->base.endpt = lis->endpt;
-    tls_tp->base.tpmgr = lis->tpmgr;
-    tls_tp->base.type_name = (char*)pjsip_transport_get_type_name(PJSIP_TRANSPORT_TLS);
-    tls_tp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
-    tls_tp->base.info = pj_pool_alloc(pool, len + 5);
-    pj_ansi_snprintf(tls_tp->base.info, len + 5, "TLS:%s", dst_str);
-
-    /* Reference counter */
-    status = pj_atomic_create(pool, 0, &tls_tp->base.ref_cnt);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-    
-    /* Lock */
-    status = pj_lock_create_recursive_mutex(pool, "tls", &tls_tp->base.lock);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Transport key */
-    tls_tp->base.key.type = PJSIP_TRANSPORT_TLS;
-    pj_memcpy(&tls_tp->base.key.rem_addr, rem_addr, sizeof(*rem_addr));
-
-    pj_strdup(pool, &tls_tp->base.local_name.host, &lis->base.addr_name.host);
-    tls_tp->base.local_name.port = lis->base.addr_name.port;
-
-    pj_strdup2(pool, &tls_tp->base.remote_name.host, dst_str);
-    tls_tp->base.remote_name.port = pj_ntohs(rem_addr->sin_port);
-
-    /* Initialize transport callback */
-    tls_tp->base.send_msg = &tls_tp_send_msg;
-    tls_tp->base.do_shutdown = &tls_tp_do_shutdown;
-    tls_tp->base.destroy = &tls_tp_destroy;
-
-
-    /* Connect SSL */
-    if (sock == PJ_INVALID_SOCKET) {
-
-	/* Create socket */
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &sock);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* Save the socket */
-	tls_tp->sock = sock;
-
-	/* TODO: asynchronous connect() */
-	PJ_TODO(TLS_ASYNC_CONNECT);
-
-	/* Connect socket */
-	status = pj_sock_connect(sock, rem_addr, sizeof(*rem_addr));
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* Create SSL object and BIO */
-	tls_tp->ssl = SSL_new(lis->ctx);
-	SSL_set_verify (tls_tp->ssl, 0, 0);
-
-	/* Connect SSL */
-	status = perform_ssl_connect(tls_tp->ssl, sock);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* TODO: check server cert. */
-	PJ_TODO(TLS_CHECK_SERVER_CERT);
-#if 0
-	check_cert(ssl,host);
-#endif
-
-    } else {
-	/*
-	 * This is a server side TLS socket.
-	 */
-	PJ_TODO(TLS_IMPLEMENT_SERVER);
-	status = PJ_ENOTSUP;
-	goto on_error;
-    }
-
-    /* Initialize local address */
-    tls_tp->base.addr_len = sizeof(tls_tp->base.local_addr);
-    status = pj_sock_getsockname(tls_tp->sock, &tls_tp->base.local_addr,
-				 &tls_tp->base.addr_len);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-
-    /* 
-     * Create rdata 
-     */
-    pool = pjsip_endpt_create_pool(lis->endpt,
-				   "rtd%p",
-				   PJSIP_POOL_RDATA_LEN,
-				   PJSIP_POOL_RDATA_INC);
-    if (!pool) {
-	status = PJ_ENOMEM;
-	goto on_error;
-    }
-    tls_tp->rdata.tp_info.pool = pool;
-
-    /*
-     * Initialize rdata
-     */
-    tls_tp->rdata.tp_info.transport = &tls_tp->base;
-    tls_tp->rdata.tp_info.tp_data = tls_tp;
-    tls_tp->rdata.tp_info.op_key.rdata = &tls_tp->rdata;
-    pj_ioqueue_op_key_init(&tls_tp->rdata.tp_info.op_key.op_key, 
-			   sizeof(pj_ioqueue_op_key_t));
-
-    tls_tp->rdata.pkt_info.src_addr = tls_tp->base.key.rem_addr;
-    tls_tp->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
-    rem_addr = (pj_sockaddr_in*) &tls_tp->base.key.rem_addr;
-    pj_ansi_strcpy(tls_tp->rdata.pkt_info.src_name,
-		   pj_inet_ntoa(rem_addr->sin_addr));
-    tls_tp->rdata.pkt_info.src_port = pj_ntohs(rem_addr->sin_port);
-
-    /* Register transport to transport manager */
-    status = pjsip_transport_register(lis->tpmgr, &tls_tp->base);
-    if (status != PJ_SUCCESS) {
-	goto on_error;
-    }
-
-    /* Create worker thread to receive packets */
-    status = pj_thread_create(pool, "tlsthread", &tls_worker_thread,
-			      tls_tp, PJ_THREAD_DEFAULT_STACK_SIZE, 0, 
-			      &tls_tp->thread);
-    if (status != PJ_SUCCESS) {
-	pjsip_transport_destroy(&tls_tp->base);
-	return status;
-    }
-
-    /* Done */
-    *p_tp = tls_tp;
-
-    PJ_LOG(4,(tls_tp->base.obj_name, "TLS transport created, remote=%s", 
-	      dst_str));
-
-    return PJ_SUCCESS;
-
-on_error:
-    if (tls_tp)
-	tls_tp_destroy(&tls_tp->base);
-    else if (pool) {
-	pj_pool_release(pool);
-	if (sock != PJ_INVALID_SOCKET) pj_sock_close(sock);
-    }
-    return status;
-}
-
-
-/*
- * Callback from transport manager to create a new (outbound) TLS transport.
- */
-static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
-					pjsip_tpmgr *mgr,
-					pjsip_endpoint *endpt,
-					const pj_sockaddr *rem_addr,
-					int addr_len,
-					pjsip_transport **transport)
-{
-    pj_status_t status;
-    struct tls_transport *tls_tp;
-
-    /* Check address */
-    PJ_ASSERT_RETURN(rem_addr->sa_family == PJ_AF_INET &&
-		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
-
-
-    PJ_UNUSED_ARG(mgr);
-    PJ_UNUSED_ARG(endpt);
-    /* addr_len is not used on Release build */
-    PJ_UNUSED_ARG(addr_len);
-
-    /* Create TLS transport */
-    status = tls_create_transport((struct tls_listener*)factory, 
-				  PJ_INVALID_SOCKET,
-				  (const pj_sockaddr_in*)rem_addr,
-				  &tls_tp);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Done */
-    *transport = &tls_tp->base;
-    return PJ_SUCCESS;
-}
-
-/*
- * Callback from transport manager to destroy TLS listener.
- */
-static pj_status_t lis_destroy(pjsip_tpfactory *factory)
-{
-    struct tls_listener *lis = (struct tls_listener *) factory;
-
-    PJ_LOG(4,(factory->obj_name, "TLS listener shutting down.."));
-
-    if (lis->is_registered) {
-	pjsip_tpmgr_unregister_tpfactory(lis->tpmgr, &lis->base);
-	lis->is_registered = PJ_FALSE;
-    }
-
-    if (lis->base.lock) {
-	pj_lock_destroy(lis->base.lock);
-	lis->base.lock = NULL;
-    }
-
-    if (lis->ctx) {
-	destroy_ctx(lis->ctx);
-	lis->ctx = NULL;
-    }
-
-    if (lis->base.pool) {
-	pj_pool_t *pool = lis->base.pool;
-	lis->base.pool = NULL;
-	pj_pool_release(pool);
-    }
-
-    /* Shutdown OpenSSL */
-    shutdown_openssl();
-
-    return PJ_SUCCESS;
-}
-
-
-/*
- * Function to be called by transport manager to send SIP message.
- */
-static pj_status_t tls_tp_send_msg(pjsip_transport *transport, 
-				   pjsip_tx_data *tdata,
-				   const pj_sockaddr_t *rem_addr,
-				   int addr_len,
-				   void *token,
-				   void (*callback)(pjsip_transport *transport,
-						    void *token, 
-						    pj_ssize_t sent_bytes))
-{
-    struct tls_transport *tls_tp = (struct tls_transport*) transport;
-    int bytes_sent;
-
-    /* This is a connection oriented protocol, so rem_addr is not used */
-    PJ_UNUSED_ARG(rem_addr);
-    PJ_UNUSED_ARG(addr_len);
-
-    /* Data written immediately, no need to call callback */
-    PJ_UNUSED_ARG(callback);
-    PJ_UNUSED_ARG(token);
-
-    /* Write to TLS */
-    bytes_sent = SSL_write (tls_tp->ssl, tdata->buf.start,
-			    tdata->buf.cur - tdata->buf.start);
-    
-    switch (SSL_get_error (tls_tp->ssl, bytes_sent)) {
-    case SSL_ERROR_NONE:
-	pj_assert(bytes_sent == tdata->buf.cur - tdata->buf.start);
-	return PJ_SUCCESS;
-	
-    case SSL_ERROR_WANT_READ:
-    case SSL_ERROR_WANT_WRITE:
-	return PJ_RETURN_OS_ERROR(OSERR_EWOULDBLOCK);
-	
-    case SSL_ERROR_ZERO_RETURN:
-	/* The peer has notified us that it is shutting down via the SSL
-	 * "close_notify" message so we need to shutdown, too.
-	 */
-	pj_assert(bytes_sent == tdata->buf.cur - tdata->buf.start);
-	SSL_shutdown (tls_tp->ssl);
-	pjsip_transport_shutdown(transport);
-	return PJ_SUCCESS;
-	
-    case SSL_ERROR_SYSCALL:
-	if (bytes_sent == 0) {
-	    /* An EOF occured but the SSL "close_notify" message was not
-	     * sent.  This is a protocol error, but we ignore it.
-	     */
-	    pjsip_transport_shutdown(transport);
-	    return 0;
-	}
-	return pj_get_netos_error();
-	
-    default:
-	/* Reset errno to prevent previous values (e.g. EWOULDBLOCK)
-	 * from being associated with fatal SSL errors.
-	 */
-	pj_set_netos_error(0);
-	ssl_report_error(4, transport->obj_name, "SSL_write error");
-	return PJSIP_TLS_ESEND;
-    }
-}
-
-
-/*
- * Instruct the transport to initiate graceful shutdown procedure.
- */
-static pj_status_t tls_tp_do_shutdown(pjsip_transport *transport)
-{
-    PJ_LOG(4,(transport->obj_name, "TLS transport marked for shutdown.."));
-
-    /* Nothing to do for TLS */
-    PJ_UNUSED_ARG(transport);
-
-    return PJ_SUCCESS;
-}
-
-/*
- * Forcefully destroy this transport.
- */
-static pj_status_t tls_tp_destroy(pjsip_transport *transport)
-{
-    struct tls_transport *tls_tp = (struct tls_transport*) transport;
-
-    PJ_LOG(4,(transport->obj_name, "Destroying TLS transport.."));
-
-    if (tls_tp->thread) {
-	tls_tp->quitting = PJ_TRUE;
-	SSL_shutdown(tls_tp->ssl);
-
-	pj_thread_join(tls_tp->thread);
-	pj_thread_destroy(tls_tp->thread);
-	tls_tp->thread = NULL;
-    }
-
-    if (tls_tp->ssl) {
-	int rc;
-	rc = SSL_shutdown(tls_tp->ssl);
-	if (rc == 0) {
-	    pj_sock_shutdown(tls_tp->sock, PJ_SD_BOTH);
-	    SSL_shutdown(tls_tp->ssl);
+	    continue;
 	}
 
-	SSL_free(tls_tp->ssl);
-	tls_tp->ssl = NULL;
-	tls_tp->sock = PJ_INVALID_SOCKET;
+	/* If we've reached maximum number of packets received on a single
+	 * poll, force the next reading to be asynchronous.
+	 */
+	if (i >= MAX_IMMEDIATE_PACKET) {
+	    /* Receive quota reached. Force ioqueue_recv() to 
+	     * return PJ_EPENDING 
+	     */
+	    flags = PJ_IOQUEUE_ALWAYS_ASYNC;
+	} else {
+	    flags = 0;
+	}
 
-    } else if (tls_tp->sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(tls_tp->sock);
-	tls_tp->sock = PJ_INVALID_SOCKET;
+	/* Read next packet from the network. Remember, we need to use
+	 * MSG_PEEK or otherwise the packet will be eaten by us!
+	 */
+	bytes_read_unused = 1;
+	status = pj_ioqueue_recv(key, op_key, 
+				 rdata->pkt_info.packet+rdata->pkt_info.len,
+				 &bytes_read_unused, flags | PJ_MSG_PEEK);
+
+	if (status == PJ_SUCCESS) {
+
+	    /* Continue loop. */
+	    pj_assert(i < MAX_IMMEDIATE_PACKET);
+
+	} else if (status == PJ_EPENDING) {
+	    break;
+
+	} else {
+	    /* Socket error */
+
+	    /* We can not destroy the transport since high level objects may
+	     * still keep reference to this transport. So we can only 
+	     * instruct transport manager to gracefully start the shutdown
+	     * procedure for this transport.
+	     */
+	    if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+	    pjsip_transport_shutdown(&tls->base);
+
+	    return;
+	}
     }
-
-    if (tls_tp->base.lock) {
-	pj_lock_destroy(tls_tp->base.lock);
-	tls_tp->base.lock = NULL;
-    }
-
-    if (tls_tp->base.ref_cnt) {
-	pj_atomic_destroy(tls_tp->base.ref_cnt);
-	tls_tp->base.ref_cnt = NULL;
-    }
-
-    if (tls_tp->base.pool) {
-	pj_pool_t *pool = tls_tp->base.pool;
-	tls_tp->base.pool = NULL;
-	pj_pool_release(pool);
-    }
-
-    PJ_LOG(4,(THIS_FILE, "TLS transport destroyed"));
-    return PJ_SUCCESS;
 }
 
+
+/* 
+ * Callback from ioqueue when asynchronous connect() operation completes.
+ */
+static void on_connect_complete(pj_ioqueue_key_t *key, 
+                                pj_status_t status)
+{
+    struct tls_transport *tls;
+    pj_sockaddr_in addr;
+    int addrlen;
+
+    tls = pj_ioqueue_get_user_data(key);
+
+    /* Check connect() status */
+    if (status != PJ_SUCCESS) {
+
+	/* Mark that pending connect() operation has completed. */
+	tls->has_pending_connect = PJ_FALSE;
+
+	ssl_report_error(tls->base.obj_name, 4, status,
+			 "Error connecting to %.*s:%d",
+			 (int)tls->base.remote_name.host.slen,
+			 tls->base.remote_name.host.ptr,
+			 tls->base.remote_name.port);
+
+	/* Cancel all delayed transmits */
+	while (!pj_list_empty(&tls->delayed_list)) {
+	    struct delayed_tdata *pending_tx;
+	    pj_ioqueue_op_key_t *op_key;
+
+	    pending_tx = tls->delayed_list.next;
+	    pj_list_erase(pending_tx);
+
+	    op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	    on_write_complete(tls->key, op_key, -status);
+	}
+
+	/* We can not destroy the transport since high level objects may
+	 * still keep reference to this transport. So we can only 
+	 * instruct transport manager to gracefully start the shutdown
+	 * procedure for this transport.
+	 */
+	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+	pjsip_transport_shutdown(&tls->base);
+	return;
+    }
+
+    PJ_LOG(4,(tls->base.obj_name, 
+	      "TCP transport %.*s:%d is connected to %.*s:%d",
+	      (int)tls->base.local_name.host.slen,
+	      tls->base.local_name.host.ptr,
+	      tls->base.local_name.port,
+	      (int)tls->base.remote_name.host.slen,
+	      tls->base.remote_name.host.ptr,
+	      tls->base.remote_name.port));
+
+
+    /* Update (again) local address, just in case local address currently
+     * set is different now that the socket is connected (could happen
+     * on some systems, like old Win32 probably?).
+     */
+    addrlen = sizeof(pj_sockaddr_in);
+    if (pj_sock_getsockname(tls->sock, &addr, &addrlen)==PJ_SUCCESS) {
+	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
+
+	if (tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) {
+	    tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
+	    tp_addr->sin_port = addr.sin_port;
+	    sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+				  tp_addr);
+	}
+    }
+
+    /* Perform SSL_connect() */
+    status = ssl_connect(tls);
+    if (status != PJ_SUCCESS) {
+
+	/* Cancel all delayed transmits */
+	while (!pj_list_empty(&tls->delayed_list)) {
+	    struct delayed_tdata *pending_tx;
+	    pj_ioqueue_op_key_t *op_key;
+
+	    pending_tx = tls->delayed_list.next;
+	    pj_list_erase(pending_tx);
+
+	    op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	    on_write_complete(tls->key, op_key, -status);
+	}
+
+	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+	pjsip_transport_shutdown(&tls->base);
+	return;
+    }
+
+    /* Mark that pending connect() operation has completed. */
+    tls->has_pending_connect = PJ_FALSE;
+
+    /* Start pending read */
+    status = tls_start_read(tls);
+    if (status != PJ_SUCCESS) {
+
+	/* Cancel all delayed transmits */
+	while (!pj_list_empty(&tls->delayed_list)) {
+	    struct delayed_tdata *pending_tx;
+	    pj_ioqueue_op_key_t *op_key;
+
+	    pending_tx = tls->delayed_list.next;
+	    pj_list_erase(pending_tx);
+
+	    op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	    on_write_complete(tls->key, op_key, -status);
+	}
+
+
+	/* We can not destroy the transport since high level objects may
+	 * still keep reference to this transport. So we can only 
+	 * instruct transport manager to gracefully start the shutdown
+	 * procedure for this transport.
+	 */
+	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
+	pjsip_transport_shutdown(&tls->base);
+	return;
+    }
+
+    /* Flush all pending send operations */
+    tls_flush_pending_tx(tls);
+}
 
 #endif	/* PJSIP_HAS_TLS_TRANSPORT */
 

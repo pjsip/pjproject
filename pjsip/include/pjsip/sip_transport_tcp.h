@@ -38,15 +38,6 @@ PJ_BEGIN_DECL
  */
 
 /**
- * The TCP incoming connection backlog number.
- * Default: 5
- */
-#ifndef PJSIP_TCP_TRANSPORT_BACKLOG
-#   define PJSIP_TCP_TRANSPORT_BACKLOG	5
-#endif
-
-
-/**
  * Register support for SIP TCP transport by creating TCP listener on
  * the specified address and port. This function will create an
  * instance of SIP TCP transport factory and register it to the

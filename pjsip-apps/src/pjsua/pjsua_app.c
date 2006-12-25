@@ -138,12 +138,17 @@ static void usage(void)
     puts  ("                      May be specified multiple times");
     puts  ("  --use-stun1=host[:port]");
     puts  ("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
-#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    puts  ("");
+    puts  ("TLS Options:");
     puts  ("  --use-tls           Enable TLS transport");
-    puts  ("  --tls-ca-file       Specify TLS CA file");
-    puts  ("  --tls-key-file      Specify TLS client key file");
-    puts  ("  --tls-password      Specify TLS password");
-#endif
+    puts  ("  --tls-ca-file       Specify TLS CA file (default=none)");
+    puts  ("  --tls-cert-file     Specify TLS certificate file (default=none)");
+    puts  ("  --tls-privkey-file  Specify TLS private key file (default=none)");
+    puts  ("  --tls-password      Specify TLS password to private key file (default=none)");
+    puts  ("  --tls-verify-server Verify server's certificate (default=no)");
+    puts  ("  --tls-verify-client Verify client's certificate (default=no)");
+    puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
+
     puts  ("");
     puts  ("Media Options:");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
@@ -306,7 +311,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
 	   OPT_NOREFERSUB,
-	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_KEY_FILE, OPT_TLS_PASSWORD,
+	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
+	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
+	   OPT_TLS_NEG_TIMEOUT,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -363,8 +370,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "thread-cnt",	1, 0, OPT_THREAD_CNT},
 	{ "use-tls",	0, 0, OPT_USE_TLS}, 
 	{ "tls-ca-file",1, 0, OPT_TLS_CA_FILE},
-	{ "tls-key-file",1,0, OPT_TLS_KEY_FILE}, 
+	{ "tls-cert-file",1,0, OPT_TLS_CERT_FILE}, 
+	{ "tls-privkey-file",1,0, OPT_TLS_PRIV_FILE},
 	{ "tls-password",1,0, OPT_TLS_PASSWORD},
+	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
+	{ "tls-verify-client", 0, 0, OPT_TLS_VERIFY_CLIENT},
+	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -788,18 +799,50 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_USE_TLS:
 	    cfg->use_tls = PJ_TRUE;
+#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
+	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
+	    return -1;
+#endif
 	    break;
 	    
 	case OPT_TLS_CA_FILE:
-	    cfg->udp_cfg.tls_ca_file = pj_str(pj_optarg);
+	    cfg->udp_cfg.tls_setting.ca_list_file = pj_str(pj_optarg);
+#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
+	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
+	    return -1;
+#endif
 	    break;
 	    
-	case OPT_TLS_KEY_FILE:
-	    cfg->udp_cfg.tls_key_file = pj_str(pj_optarg);
+	case OPT_TLS_CERT_FILE:
+	    cfg->udp_cfg.tls_setting.cert_file = pj_str(pj_optarg);
+#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
+	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
+	    return -1;
+#endif
 	    break;
 	    
+	case OPT_TLS_PRIV_FILE:
+	    cfg->udp_cfg.tls_setting.privkey_file = pj_str(pj_optarg);
+	    break;
+
 	case OPT_TLS_PASSWORD:
-	    cfg->udp_cfg.tls_password = pj_str(pj_optarg);
+	    cfg->udp_cfg.tls_setting.password = pj_str(pj_optarg);
+#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
+	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
+	    return -1;
+#endif
+	    break;
+
+	case OPT_TLS_VERIFY_SERVER:
+	    cfg->udp_cfg.tls_setting.verify_server = PJ_TRUE;
+	    break;
+
+	case OPT_TLS_VERIFY_CLIENT:
+	    cfg->udp_cfg.tls_setting.verify_client = PJ_TRUE;
+	    break;
+
+	case OPT_TLS_NEG_TIMEOUT:
+	    cfg->udp_cfg.tls_setting.timeout.sec = atoi(pj_optarg);
 	    break;
 
 	default:
@@ -1033,22 +1076,41 @@ static int write_settings(const struct app_config *config,
     /* TLS */
     if (config->use_tls)
 	pj_strcat2(&cfg, "--use-tls\n");
-    if (config->udp_cfg.tls_ca_file.slen) {
+    if (config->udp_cfg.tls_setting.ca_list_file.slen) {
 	pj_ansi_sprintf(line, "--tls-ca-file %.*s\n",
-			(int)config->udp_cfg.tls_ca_file.slen, 
-			config->udp_cfg.tls_ca_file.ptr);
+			(int)config->udp_cfg.tls_setting.ca_list_file.slen, 
+			config->udp_cfg.tls_setting.ca_list_file.ptr);
 	pj_strcat2(&cfg, line);
     }
-    if (config->udp_cfg.tls_key_file.slen) {
-	pj_ansi_sprintf(line, "--tls-key-file %.*s\n",
-			(int)config->udp_cfg.tls_key_file.slen, 
-			config->udp_cfg.tls_key_file.ptr);
+    if (config->udp_cfg.tls_setting.cert_file.slen) {
+	pj_ansi_sprintf(line, "--tls-cert-file %.*s\n",
+			(int)config->udp_cfg.tls_setting.cert_file.slen, 
+			config->udp_cfg.tls_setting.cert_file.ptr);
 	pj_strcat2(&cfg, line);
     }
-    if (config->udp_cfg.tls_password.slen) {
+    if (config->udp_cfg.tls_setting.privkey_file.slen) {
+	pj_ansi_sprintf(line, "--tls-privkey-file %.*s\n",
+			(int)config->udp_cfg.tls_setting.privkey_file.slen, 
+			config->udp_cfg.tls_setting.privkey_file.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->udp_cfg.tls_setting.password.slen) {
 	pj_ansi_sprintf(line, "--tls-password %.*s\n",
-			(int)config->udp_cfg.tls_password.slen, 
-			config->udp_cfg.tls_password.ptr);
+			(int)config->udp_cfg.tls_setting.password.slen, 
+			config->udp_cfg.tls_setting.password.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->udp_cfg.tls_setting.verify_server)
+	pj_strcat2(&cfg, "--tls-verify-server\n");
+
+    if (config->udp_cfg.tls_setting.verify_client)
+	pj_strcat2(&cfg, "--tls-verify-client\n");
+
+    if (config->udp_cfg.tls_setting.timeout.sec) {
+	pj_ansi_sprintf(line, "--tls-neg-timeout %d\n",
+			config->udp_cfg.tls_setting.timeout.sec);
 	pj_strcat2(&cfg, line);
     }
 
@@ -2829,11 +2891,21 @@ pj_status_t app_init(int argc, char *argv[])
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Add TLS transport when application wants one */
     if (app_config.use_tls) {
+
+	pjsua_acc_id acc_id;
+
+	/* Set TLS port as TCP port+1 */
+	app_config.udp_cfg.port++;
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TLS,
 					&app_config.udp_cfg, 
 					&transport_id);
+	app_config.udp_cfg.port--;
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+	
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
+	pjsua_acc_set_online_status(acc_id, PJ_TRUE);
     }
 #endif
 

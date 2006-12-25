@@ -200,6 +200,18 @@
 
 
 /**
+ * The TCP incoming connection backlog number to be set in accept().
+ *
+ * Default: 5
+ *
+ * @see PJSIP_TLS_TRANSPORT_BACKLOG
+ */
+#ifndef PJSIP_TCP_TRANSPORT_BACKLOG
+#   define PJSIP_TCP_TRANSPORT_BACKLOG	5
+#endif
+
+
+/**
  * This macro specifies whether full DNS resolution should be used.
  * When enabled, #pjsip_resolve() will perform asynchronous DNS SRV and
  * A (or AAAA, when IPv6 is supported) resolution to resolve the SIP
@@ -216,6 +228,8 @@
  * it should also exclude dns.o and resolve.o from PJLIB-UTIL.
  *
  * Default: 1 (enabled)
+ *
+ * @see PJSIP_MAX_RESOLVED_ADDRESSES
  */
 #ifndef PJSIP_HAS_RESOLVER
 #   define PJSIP_HAS_RESOLVER		1
@@ -228,6 +242,8 @@
  * 32 bytes of stack memory.
  *
  * Default: 8
+ *
+ * @see PJSIP_HAS_RESOLVER
  */
 #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
 #   define PJSIP_MAX_RESOLVED_ADDRESSES	    8
@@ -242,6 +258,18 @@
  */
 #ifndef PJSIP_HAS_TLS_TRANSPORT
 #   define PJSIP_HAS_TLS_TRANSPORT	    0
+#endif
+
+
+/**
+ * The TLS pending incoming connection backlog number to be set in accept().
+ *
+ * Default: 5
+ *
+ * @see PJSIP_TCP_TRANSPORT_BACKLOG
+ */
+#ifndef PJSIP_TLS_TRANSPORT_BACKLOG
+#   define PJSIP_TLS_TRANSPORT_BACKLOG	    5
 #endif
 
 

@@ -1289,6 +1289,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 #if PJ_LOG_MAX_LEVEL >= 3
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
+    pjsip_tpfactory *factory;
 
     pj_lock_acquire(mgr->lock);
 
@@ -1297,6 +1298,18 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 	      pj_atomic_get(mgr->tdata_counter)));
 #endif
 
+    PJ_LOG(3, (THIS_FILE, " Dumping listeners:"));
+    factory = mgr->factory_list.next;
+    while (factory != &mgr->factory_list) {
+	PJ_LOG(3, (THIS_FILE, "  %s %s:%.*s:%d", 
+		   factory->obj_name,
+		   factory->type_name,
+		   (int)factory->addr_name.host.slen,
+		   factory->addr_name.host.ptr,
+		   (int)factory->addr_name.port));
+	factory = factory->next;
+    }
+
     itr = pj_hash_first(mgr->table, &itr_val);
     if (itr) {
 	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));
@@ -1304,10 +1317,11 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 	do {
 	    pjsip_transport *t = pj_hash_this(mgr->table, itr);
 
-	    PJ_LOG(3, (THIS_FILE, "  %s %s (refcnt=%d)", 
+	    PJ_LOG(3, (THIS_FILE, "  %s %s (refcnt=%d%s)", 
 		       t->obj_name,
 		       t->info,
-		       pj_atomic_get(t->ref_cnt)));
+		       pj_atomic_get(t->ref_cnt),
+		       (t->idle_timer.id ? " [idle]" : "")));
 
 	    itr = pj_hash_next(mgr->table, itr);
 	} while (itr);

@@ -841,19 +841,9 @@ typedef struct pjsua_transport_config
     pjsua_stun_config	stun_config;
 
     /**
-     * TLS root CA file path (only used for TLS transport).
+     * TLS settings.
      */
-    pj_str_t		tls_ca_file;
-
-    /**
-     * TLS client key path (only used for TLS transport).
-     */
-    pj_str_t		tls_key_file;
-
-    /**
-     * TLS password (only used for TLS transport).
-     */
-    pj_str_t		tls_password;
+    pjsip_tls_setting	tls_setting;
 
 } pjsua_transport_config;
 
@@ -866,6 +856,7 @@ typedef struct pjsua_transport_config
 PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    pjsip_tls_setting_default(&cfg->tls_setting);
 }
 
 
