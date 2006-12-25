@@ -102,15 +102,12 @@ extern const pj_uint16_t PJ_SO_RCVBUF;  /**< Buffer size for receive.   */
 extern const pj_uint16_t PJ_SO_SNDBUF;  /**< Buffer size for send.      */
 
 
-/**
+/*
  * Flags to be specified in #pj_sock_recv, #pj_sock_send, etc.
  */
-typedef enum pj_sock_msg_flag
-{
-    PJ_MSG_OOB		= 0x01,	    /**< Out-of-band messages.		 */
-    PJ_MSG_PEEK		= 0x02,	    /**< Peek, don't remove from buffer. */
-    PJ_MSG_DONTROUTE	= 0x04	    /**< Don't route.			 */
-} pj_sock_msg_flag;
+extern const int PJ_MSG_OOB;	    /**< Out-of-band messages.		 */
+extern const int PJ_MSG_PEEK;	    /**< Peek, don't remove from buffer. */
+extern const int PJ_MSG_DONTROUTE;  /**< Don't route.			 */
 
 
 /**

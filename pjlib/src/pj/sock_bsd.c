@@ -82,6 +82,12 @@ const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
 
 
+/* recv() and send() flags */
+const int PJ_MSG_OOB		= MSG_OOB;
+const int PJ_MSG_PEEK		= MSG_PEEK;
+const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
+
+
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
 #   define SET_LEN(addr,len) (((pj_sockaddr*)(addr))->sa_zero_len=(len))
 #   define RESET_LEN(addr)   (((pj_sockaddr*)(addr))->sa_zero_len=0)
