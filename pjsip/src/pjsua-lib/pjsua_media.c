@@ -442,7 +442,7 @@ pj_status_t pjsua_media_subsys_destroy(void)
     }
 
     /* Close media transports */
-    for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
+    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	if (pjsua_var.calls[i].med_tp) {
 	    (*pjsua_var.calls[i].med_tp->op->destroy)(pjsua_var.calls[i].med_tp);
 	    pjsua_var.calls[i].med_tp = NULL;

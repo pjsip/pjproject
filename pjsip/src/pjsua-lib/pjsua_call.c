@@ -2050,6 +2050,22 @@ static void call_disconnect( pjsip_inv_session *inv,
 }
 
 /*
+ * DTMF callback from the stream.
+ */
+static void dtmf_callback(pjmedia_stream *strm, void *user_data,
+			  int digit)
+{
+    PJ_UNUSED_ARG(strm);
+
+    if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
+	pjsua_call_id call_id;
+
+	call_id = (pjsua_call_id)user_data;
+	pjsua_var.ua_cfg.cb.on_dtmf_digit(call_id, digit);
+    }
+}
+
+/*
  * Callback to be called when SDP offer/answer negotiation has just completed
  * in the session. This function will start/update media if negotiation
  * has succeeded.
@@ -2188,6 +2204,14 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	    return;
 	}
 
+	/* If DTMF callback is installed by application, install our
+	 * callback to the session.
+	 */
+	if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
+	    pjmedia_session_set_dtmf_callback(call->session, 0, 
+					      &dtmf_callback, 
+					      (void*)(call->index));
+	}
 
 	/* Get the port interface of the first stream in the session.
 	 * We need the port interface to add to the conference bridge.

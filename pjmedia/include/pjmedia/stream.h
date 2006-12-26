@@ -277,6 +277,27 @@ PJ_DECL(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
 
 
 /**
+ * Set callback to be called upon receiving DTMF digits. If callback is
+ * registered, the stream will not buffer incoming DTMF but rather call
+ * the callback as soon as DTMF digit is received completely.
+ *
+ * @param stream	The media stream.
+ * @param cb		Callback to be called upon receiving DTMF digits.
+ *			The DTMF digits will be given to the callback as
+ *			ASCII digits.
+ * @param user_data	User data to be returned back when the callback
+ *			is called.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
+				 void (*cb)(pjmedia_stream*, 
+					    void *user_data, 
+					    int digit), 
+				 void *user_data);
+
+/**
  * @}
  */
 

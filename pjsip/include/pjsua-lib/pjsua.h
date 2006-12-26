@@ -286,11 +286,19 @@ typedef struct pjsua_callback
      * Notify application when invite state has changed.
      * Application may then query the call info to get the
      * detail call states.
+     *
+     * @param call_id	The call index.
+     * @param e		Event which causes the call state to change.
      */
     void (*on_call_state)(pjsua_call_id call_id, pjsip_event *e);
 
     /**
      * Notify application on incoming call.
+     *
+     * @param acc_id	The account which match the incoming call.
+     * @param call_id	The call id that has just been created for
+     *			the call.
+     * @param rdata	The incoming INVITE request.
      */
     void (*on_incoming_call)(pjsua_acc_id acc_id, pjsua_call_id call_id,
 			     pjsip_rx_data *rdata);
@@ -299,8 +307,18 @@ typedef struct pjsua_callback
      * Notify application when media state in the call has changed.
      * Normal application would need to implement this callback, e.g.
      * to connect the call's media to sound device.
+     *
+     * @param call_id	The call index.
      */
     void (*on_call_media_state)(pjsua_call_id call_id);
+
+    /**
+     * Notify application upon incoming DTMF digits.
+     *
+     * @param call_id	The call index.
+     * @param digit	DTMF ASCII digit.
+     */
+    void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
 
     /**
      * Notify application on call being transfered.
@@ -308,6 +326,12 @@ typedef struct pjsua_callback
      * by setting the code (default is 200). When this callback
      * is not defined, the default behavior is to accept the
      * transfer.
+     *
+     * @param call_id	The call index.
+     * @param dst	The destination where the call will be 
+     *			transfered to.
+     * @param code	Status code to be returned for the call transfer
+     *			request. On input, it contains status code 200.
      */
     void (*on_call_transfer_request)(pjsua_call_id call_id,
 				     const pj_str_t *dst,
@@ -372,12 +396,16 @@ typedef struct pjsua_callback
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
      * registration details.
+     *
+     * @param acc_id	    Account ID.
      */
     void (*on_reg_state)(pjsua_acc_id acc_id);
 
     /**
      * Notify application when the buddy state has changed.
      * Application may then query the buddy into to get the details.
+     *
+     * @param buddy_id	    The buddy id.
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
@@ -385,6 +413,15 @@ typedef struct pjsua_callback
      * Notify application on incoming pager (i.e. MESSAGE request).
      * Argument call_id will be -1 if MESSAGE request is not related to an
      * existing call.
+     *
+     * @param call_id	    Containts the ID of the call where the IM was
+     *			    sent, or PJSUA_INVALID_ID if the IM was sent
+     *			    outside call context.
+     * @param from	    URI of the sender.
+     * @param to	    URI of the destination message.
+     * @param contact	    The Contact URI of the sender, if present.
+     * @param mime_type	    MIME type of the message.
+     * @param body	    The message content.
      */
     void (*on_pager)(pjsua_call_id call_id, const pj_str_t *from,
 		     const pj_str_t *to, const pj_str_t *contact,
@@ -413,6 +450,15 @@ typedef struct pjsua_callback
 
     /**
      * Notify application about typing indication.
+     *
+     * @param call_id	    Containts the ID of the call where the IM was
+     *			    sent, or PJSUA_INVALID_ID if the IM was sent
+     *			    outside call context.
+     * @param from	    URI of the sender.
+     * @param to	    URI of the destination message.
+     * @param contact	    The Contact URI of the sender, if present.
+     * @param is_typing	    Non-zero if peer is typing, or zero if peer
+     *			    has stopped typing a message.
      */
     void (*on_typing)(pjsua_call_id call_id, const pj_str_t *from,
 		      const pj_str_t *to, const pj_str_t *contact,

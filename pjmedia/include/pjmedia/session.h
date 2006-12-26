@@ -321,6 +321,29 @@ PJ_DECL(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
 					       unsigned *size );
 
 /**
+ * Set callback to be called upon receiving DTMF digits. If callback is
+ * registered, the stream will not buffer incoming DTMF but rather call
+ * the callback as soon as DTMF digit is received completely.
+ *
+ * @param session	The media session.
+ * @param index		The stream index.
+ * @param cb		Callback to be called upon receiving DTMF digits.
+ *			The DTMF digits will be given to the callback as
+ *			ASCII digits.
+ * @param user_data	User data to be returned back when the callback
+ *			is called.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_session_set_dtmf_callback(pjmedia_session *session,
+				  unsigned index,
+				  void (*cb)(pjmedia_stream*, 
+				 	     void *user_data, 
+					     int digit), 
+				  void *user_data);
+
+/**
  * Destroy media session.
  *
  * @param session	The media session.

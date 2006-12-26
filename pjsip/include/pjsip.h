@@ -40,9 +40,7 @@
 #include <pjsip/sip_transport_udp.h>
 #include <pjsip/sip_transport_loop.h>
 #include <pjsip/sip_transport_tcp.h>
-#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
-#   include <pjsip/sip_transport_tls.h>
-#endif
+#include <pjsip/sip_transport_tls.h>
 #include <pjsip/sip_resolve.h>
 
 /* Authentication. */

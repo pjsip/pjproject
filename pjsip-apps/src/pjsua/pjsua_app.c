@@ -1622,6 +1622,13 @@ static void on_call_media_state(pjsua_call_id call_id)
     }
 }
 
+/*
+ * DTMF callback.
+ */
+static void call_on_dtmf_callback(pjsua_call_id call_id, int dtmf)
+{
+    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c", call_id, dtmf));
+}
 
 /*
  * Handler registration status has changed.
@@ -2818,6 +2825,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_state = &on_call_state;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
+    app_config.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
     app_config.cfg.cb.on_pager = &on_pager;

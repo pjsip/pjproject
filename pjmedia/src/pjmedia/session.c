@@ -733,3 +733,20 @@ PJ_DEF(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
     return pjmedia_stream_get_dtmf(session->stream[index], ascii_digits,
 				   size);
 }
+
+/*
+ * Install DTMF callback.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_session_set_dtmf_callback(pjmedia_session *session,
+				  unsigned index,
+				  void (*cb)(pjmedia_stream*, 
+				 	     void *user_data, 
+					     int digit), 
+				  void *user_data)
+{
+    PJ_ASSERT_RETURN(session && index < session->stream_cnt, PJ_EINVAL);
+    return pjmedia_stream_set_dtmf_callback(session->stream[index], cb,
+					    user_data);
+}
+

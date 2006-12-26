@@ -113,6 +113,10 @@ struct pjmedia_stream
     pj_uint32_t		     last_dtmf_dur; /**< Start ts for cur digit.    */
     unsigned		     rx_dtmf_count; /**< # of digits in dtmf rx buf.*/
     char		     rx_dtmf_buf[32];/**< Incoming DTMF buffer.	    */
+
+    /* DTMF callback */
+    void		    (*dtmf_cb)(pjmedia_stream*, void*, int);
+    void		     *dtmf_cb_user_data;
 };
 
 
@@ -379,10 +383,11 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 	stream->tx_dtmf_buf[0].start_ts = cur_ts;
 	pj_mutex_unlock(stream->jb_mutex);
 
-	if (stream->tx_dtmf_count)
+	if (stream->tx_dtmf_count) {
 	    PJ_LOG(5,(stream->port.info.name.ptr,
 		      "Sending DTMF digit id %c", 
 		      digitmap[stream->tx_dtmf_buf[0].event]));
+	}
 
     } else if (duration == 0) {
 	PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c", 
@@ -663,18 +668,29 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     stream->last_dtmf = event->event;
     stream->last_dtmf_dur = pj_ntohs(event->duration);
 
-    /* By convention, we use jitter buffer's mutex to access shared
-     * DTMF variables.
+    /* If DTMF callback is installed, call the callback, otherwise keep
+     * the DTMF digits in the buffer.
      */
-    pj_mutex_lock(stream->jb_mutex);
-    if (stream->rx_dtmf_count >= PJ_ARRAY_SIZE(stream->rx_dtmf_buf)) {
-	/* DTMF digits overflow.  Discard the oldest digit. */
-	pj_array_erase(stream->rx_dtmf_buf, sizeof(stream->rx_dtmf_buf[0]),
-		       stream->rx_dtmf_count, 0);
-	--stream->rx_dtmf_count;
+    if (stream->dtmf_cb) {
+
+	stream->dtmf_cb(stream, stream->dtmf_cb_user_data, 
+			digitmap[event->event]);
+
+    } else {
+	/* By convention, we use jitter buffer's mutex to access shared
+	 * DTMF variables.
+	 */
+	pj_mutex_lock(stream->jb_mutex);
+	if (stream->rx_dtmf_count >= PJ_ARRAY_SIZE(stream->rx_dtmf_buf)) {
+	    /* DTMF digits overflow.  Discard the oldest digit. */
+	    pj_array_erase(stream->rx_dtmf_buf, 
+			   sizeof(stream->rx_dtmf_buf[0]),
+			   stream->rx_dtmf_count, 0);
+	    --stream->rx_dtmf_count;
+	}
+	stream->rx_dtmf_buf[stream->rx_dtmf_count++] = digitmap[event->event];
+	pj_mutex_unlock(stream->jb_mutex);
     }
-    stream->rx_dtmf_buf[stream->rx_dtmf_count++] = digitmap[event->event];
-    pj_mutex_unlock(stream->jb_mutex);
 }
 
 
@@ -1368,3 +1384,30 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Set callback to be called upon receiving DTMF digits.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
+				 void (*cb)(pjmedia_stream*, 
+					    void *user_data, 
+					    int digit), 
+				 void *user_data)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    /* By convention, we use jitter buffer's mutex to access DTMF
+     * digits resources.
+     */
+    pj_mutex_lock(stream->jb_mutex);
+
+    stream->dtmf_cb = cb;
+    stream->dtmf_cb_user_data = user_data;
+
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return PJ_SUCCESS;
+}
+
