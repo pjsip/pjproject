@@ -638,6 +638,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 					      pjsip_transport *tp )
 {
     int key_len;
+    pj_uint32_t hval;
+    void *entry;
 
     /* Init. */
     tp->tpmgr = mgr;
@@ -646,11 +648,20 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     tp->idle_timer.cb = &transport_idle_callback;
 
     /* 
-     * Register to hash table.
+     * Register to hash table (see Trac ticket #42).
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
-    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, tp);
+
+    /* If entry already occupied, unregister previous entry */
+    hval = 0;
+    entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
+    if (entry != NULL)
+	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
+
+    /* Register new entry */
+    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, hval, tp);
+
     pj_lock_release(mgr->lock);
 
     TRACE_((THIS_FILE,"Transport %s registered: type=%s, remote=%s:%d",
@@ -667,6 +678,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 				      pjsip_transport *tp )
 {
     int key_len;
+    pj_uint32_t hval;
+    void *entry;
 
     TRACE_((THIS_FILE, "Transport %s is being destroyed", tp->obj_name));
 
@@ -683,11 +696,13 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     }
 
     /*
-     * Unregister from hash table.
+     * Unregister from hash table (see Trac ticket #42).
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
-    pj_assert(pj_hash_get(mgr->table, &tp->key, key_len, NULL) != NULL);
-    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, 0, NULL);
+    hval = 0;
+    entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
+    if (entry == (void*)tp)
+	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
 
     pj_lock_release(mgr->lock);
 

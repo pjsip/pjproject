@@ -1221,6 +1221,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	{
 
 	    /* Socket error. */
+	    PJ_LOG(4,(tcp->base.obj_name, "TCP connection reset"));
 
 	    /* We can not destroy the transport since high level objects may
 	     * still keep reference to this transport. So we can only 
@@ -1262,6 +1263,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 	} else {
 	    /* Socket error */
+	    PJ_LOG(4,(tcp->base.obj_name, "TCP connection reset"));
 
 	    /* We can not destroy the transport since high level objects may
 	     * still keep reference to this transport. So we can only 
