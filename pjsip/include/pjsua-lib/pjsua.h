@@ -2709,6 +2709,17 @@ PJ_DECL(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id);
 
 
 /**
+ * Get the media port for the player.
+ *
+ * @param id		The player ID.
+ * @param p_port	The media port associated with the player.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_recorder_id id,
+					   pjmedia_port **p_port);
+
+/**
  * Set playback position.
  *
  * @param id		The file player ID.
@@ -2777,6 +2788,18 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
  * @return		Conference port ID associated with this recorder.
  */
 PJ_DECL(pjsua_conf_port_id) pjsua_recorder_get_conf_port(pjsua_recorder_id id);
+
+
+/**
+ * Get the media port for the recorder.
+ *
+ * @param id		The recorder ID.
+ * @param p_port	The media port associated with the recorder.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_recorder_get_port(pjsua_recorder_id id,
+					     pjmedia_port **p_port);
 
 
 /**
