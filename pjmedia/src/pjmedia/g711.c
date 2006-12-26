@@ -62,8 +62,10 @@ static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  g711_init( pjmedia_codec *codec, 
 			       pj_pool_t *pool );
 static pj_status_t  g711_open( pjmedia_codec *codec, 
-			       pjmedia_codec_param *attr );
+			       const pjmedia_codec_param *attr );
 static pj_status_t  g711_close( pjmedia_codec *codec );
+static pj_status_t  g711_modify(pjmedia_codec *codec, 
+			        const pjmedia_codec_param *attr );
 static pj_status_t  g711_parse(pjmedia_codec *codec,
 			       void *pkt,
 			       pj_size_t pkt_size,
@@ -88,6 +90,7 @@ static pjmedia_codec_op g711_op =
     &g711_init,
     &g711_open,
     &g711_close,
+    &g711_modify,
     &g711_parse,
     &g711_encode,
     &g711_decode,
@@ -394,7 +397,7 @@ static pj_status_t g711_init( pjmedia_codec *codec, pj_pool_t *pool )
 }
 
 static pj_status_t g711_open(pjmedia_codec *codec, 
-			     pjmedia_codec_param *attr )
+			     const pjmedia_codec_param *attr )
 {
     struct g711_private *priv = codec->codec_data;
     priv->pt = attr->info.pt;
@@ -407,6 +410,20 @@ static pj_status_t g711_close( pjmedia_codec *codec )
 {
     PJ_UNUSED_ARG(codec);
     /* Nothing to do */
+    return PJ_SUCCESS;
+}
+
+static pj_status_t  g711_modify(pjmedia_codec *codec, 
+			        const pjmedia_codec_param *attr )
+{
+    struct g711_private *priv = codec->codec_data;
+
+    if (attr->info.pt != priv->pt)
+	return PJMEDIA_EINVALIDPT;
+
+    priv->plc_enabled = (attr->setting.plc != 0);
+    priv->vad_enabled = (attr->setting.vad != 0);
+
     return PJ_SUCCESS;
 }
 

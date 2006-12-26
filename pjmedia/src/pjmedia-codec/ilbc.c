@@ -63,8 +63,10 @@ static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory,
 static pj_status_t  ilbc_codec_init(pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  ilbc_codec_open(pjmedia_codec *codec, 
-				    pjmedia_codec_param *attr );
+				    const pjmedia_codec_param *attr );
 static pj_status_t  ilbc_codec_close(pjmedia_codec *codec );
+static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec, 
+				      const pjmedia_codec_param *attr );
 static pj_status_t  ilbc_codec_parse(pjmedia_codec *codec,
 				     void *pkt,
 				     pj_size_t pkt_size,
@@ -89,6 +91,7 @@ static pjmedia_codec_op ilbc_op =
     &ilbc_codec_init,
     &ilbc_codec_open,
     &ilbc_codec_close,
+    &ilbc_codec_modify,
     &ilbc_codec_parse,
     &ilbc_codec_encode,
     &ilbc_codec_decode,
@@ -123,6 +126,7 @@ struct ilbc_codec
     pj_pool_t		*pool;
     char		 obj_name[PJ_MAX_OBJ_NAME];
     pjmedia_silence_det	*vad;
+    pj_bool_t		 vad_enabled;
     pj_bool_t		 plc_enabled;
 
     pj_bool_t		 enc_ready;
@@ -360,13 +364,19 @@ static pj_status_t ilbc_codec_init(pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t ilbc_codec_open(pjmedia_codec *codec, 
-				   pjmedia_codec_param *attr )
+				   const pjmedia_codec_param *param_attr )
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
+    pjmedia_codec_param attr_copy, *attr;
+    pj_status_t status;
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
 	      ilbc_codec->dec_ready == PJ_FALSE);
+
+    /* Copy param to temporary location since we need to modify fmtp_mode */
+    pj_memcpy(&attr_copy, param_attr, sizeof(*param_attr));
+    attr = &attr_copy;
 
     /* Decoder mode must be set */
     PJ_ASSERT_RETURN(attr->setting.dec_fmtp_mode==20 ||
@@ -404,17 +414,15 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     ilbc_codec->dec_ready = PJ_TRUE;
 
     /* Save plc flags */
-    ilbc_codec->plc_enabled = attr->setting.plc != 0;
+    ilbc_codec->plc_enabled = (attr->setting.plc != 0);
 
-    /* Create silence detector, if wanted. */
-    if (attr->setting.vad != 0) {
-	pj_status_t status;
-	status = pjmedia_silence_det_create(ilbc_codec->pool, CLOCK_RATE,
-					    ilbc_codec->enc_samples_per_frame,
-					    &ilbc_codec->vad);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
+    /* Create silence detector. */
+    ilbc_codec->vad_enabled = (attr->setting.vad != 0);
+    status = pjmedia_silence_det_create(ilbc_codec->pool, CLOCK_RATE,
+					ilbc_codec->enc_samples_per_frame,
+					&ilbc_codec->vad);
+    if (status != PJ_SUCCESS)
+	return status;
 
     PJ_LOG(5,(ilbc_codec->obj_name, 
 	      "iLBC codec opened, encoder mode=%d, decoder mode=%d",
@@ -438,6 +446,19 @@ static pj_status_t ilbc_codec_close( pjmedia_codec *codec )
     return PJ_SUCCESS;
 }
 
+/*
+ * Modify codec settings.
+ */
+static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec, 
+				      const pjmedia_codec_param *attr )
+{
+    struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
+
+    ilbc_codec->plc_enabled = (attr->setting.plc != 0);
+    ilbc_codec->vad_enabled = (attr->setting.vad != 0);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Get frames in the packet.
@@ -493,7 +514,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EPCMFRMINLEN;
 
     /* Detect silence */
-    if (ilbc_codec->vad) {
+    if (ilbc_codec->vad_enabled) {
 	pj_bool_t is_silence;
 
 	is_silence = pjmedia_silence_det_detect(ilbc_codec->vad, 

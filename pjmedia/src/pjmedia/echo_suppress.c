@@ -83,6 +83,7 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(clock_rate);
     PJ_UNUSED_ARG(options);
+    PJ_UNUSED_ARG(latency_ms);
 
     ec = pj_pool_zalloc(pool, sizeof(struct echo_supp));
     ec->samples_per_frame = samples_per_frame;

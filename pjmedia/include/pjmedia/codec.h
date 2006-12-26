@@ -314,7 +314,7 @@ typedef struct pjmedia_codec_op
      * @return		PJ_SUCCESS on success.
      */
     pj_status_t	(*open)(pjmedia_codec *codec, 
-			pjmedia_codec_param *param );
+			const pjmedia_codec_param *param );
 
     /** 
      * Close and shutdown codec, releasing all resources allocated by
@@ -326,6 +326,22 @@ typedef struct pjmedia_codec_op
      */
     pj_status_t (*close)(pjmedia_codec *codec);
 
+    /** 
+     * Modify the codec parameter after the codec is open. 
+     * Note that not all codec parameters can be modified during run-time. 
+     * When the parameter cannot be changed, this function will return 
+     * non-PJ_SUCCESS, and the original parameters will not be changed.
+     *
+     * Application can expect changing trivial codec settings such as
+     * changing VAD setting to succeed.
+     *
+     * @param codec	The codec instance.
+     * @param param	The new codec parameter.
+     *
+     * @return		PJ_SUCCESS on success.
+     */
+    pj_status_t	(*modify)(pjmedia_codec *codec, 
+			  const pjmedia_codec_param *param );
 
     /**
      * Instruct the codec to inspect the specified payload/packet and

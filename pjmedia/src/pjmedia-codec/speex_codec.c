@@ -59,8 +59,10 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  spx_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  spx_codec_open( pjmedia_codec *codec, 
-				    pjmedia_codec_param *attr );
+				    const pjmedia_codec_param *attr );
 static pj_status_t  spx_codec_close( pjmedia_codec *codec );
+static pj_status_t  spx_codec_modify(pjmedia_codec *codec, 
+				     const pjmedia_codec_param *attr );
 static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
 				     void *pkt,
 				     pj_size_t pkt_size,
@@ -85,6 +87,7 @@ static pjmedia_codec_op spx_op =
     &spx_codec_init,
     &spx_codec_open,
     &spx_codec_close,
+    &spx_codec_modify,
     &spx_codec_parse,
     &spx_codec_encode,
     &spx_codec_decode,
@@ -544,13 +547,16 @@ static pj_status_t spx_codec_init( pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t spx_codec_open( pjmedia_codec *codec, 
-				   pjmedia_codec_param *attr )
+				   const pjmedia_codec_param *attr )
 {
     struct spx_private *spx;
     int id, tmp;
 
     spx = (struct spx_private*) codec->codec_data;
     id = spx->param_id;
+
+    /* Only supports one frame per packet */
+    PJ_ASSERT_RETURN(attr->setting.frm_per_pkt==1, PJ_EINVAL);
 
     /* 
      * Create and initialize encoder. 
@@ -625,6 +631,33 @@ static pj_status_t spx_codec_close( pjmedia_codec *codec )
 	spx->dec = NULL;
 	speex_bits_destroy( &spx->dec_bits );
     }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Modify codec settings.
+ */
+static pj_status_t  spx_codec_modify(pjmedia_codec *codec, 
+				     const pjmedia_codec_param *attr )
+{
+    struct spx_private *spx;
+    int tmp;
+
+    spx = (struct spx_private*) codec->codec_data;
+
+    /* Only supports one frame per packet */
+    PJ_ASSERT_RETURN(attr->setting.frm_per_pkt==1, PJ_EINVAL);
+
+    /* VAD */
+    tmp = (attr->setting.vad != 0);
+    speex_encoder_ctl(spx->enc, SPEEX_SET_VAD, &tmp);
+    speex_encoder_ctl(spx->enc, SPEEX_SET_DTX, &tmp);
+
+    /* PENH */
+    tmp = attr->setting.penh;
+    speex_decoder_ctl(spx->dec, SPEEX_SET_ENH, &tmp);
 
     return PJ_SUCCESS;
 }

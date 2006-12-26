@@ -54,8 +54,10 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  gsm_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  gsm_codec_open( pjmedia_codec *codec, 
-				    pjmedia_codec_param *attr );
+				    const pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_close( pjmedia_codec *codec );
+static pj_status_t  gsm_codec_modify(pjmedia_codec *codec, 
+				     const pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_parse( pjmedia_codec *codec,
 				     void *pkt,
 				     pj_size_t pkt_size,
@@ -80,6 +82,7 @@ static pjmedia_codec_op gsm_op =
     &gsm_codec_init,
     &gsm_codec_open,
     &gsm_codec_close,
+    &gsm_codec_modify,
     &gsm_codec_parse,
     &gsm_codec_encode,
     &gsm_codec_decode,
@@ -385,14 +388,12 @@ static pj_status_t gsm_codec_init( pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t gsm_codec_open( pjmedia_codec *codec, 
-				   pjmedia_codec_param *attr )
+				   const pjmedia_codec_param *attr )
 {
     struct gsm_data *gsm_data = codec->codec_data;
 
     pj_assert(gsm_data != NULL);
     pj_assert(gsm_data->encoder == NULL && gsm_data->decoder == NULL);
-
-    PJ_UNUSED_ARG(attr);
 
     gsm_data->encoder = gsm_create();
     if (!gsm_data->encoder)
@@ -425,6 +426,24 @@ static pj_status_t gsm_codec_close( pjmedia_codec *codec )
 	gsm_destroy(gsm_data->decoder);
 	gsm_data->decoder = NULL;
     }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Modify codec settings.
+ */
+static pj_status_t  gsm_codec_modify(pjmedia_codec *codec, 
+				     const pjmedia_codec_param *attr )
+{
+    struct gsm_data *gsm_data = codec->codec_data;
+
+    pj_assert(gsm_data != NULL);
+    pj_assert(gsm_data->encoder == NULL && gsm_data->decoder == NULL);
+
+    gsm_data->vad_enabled = (attr->setting.vad != 0);
+    gsm_data->plc_enabled = (attr->setting.plc != 0);
 
     return PJ_SUCCESS;
 }
