@@ -172,6 +172,20 @@
 
 
 /**
+ * Specify how long (in miliseconds) the stream should suspend the
+ * silence detector/voice activity detector (VAD) during the initial
+ * period of the session.
+ *
+ * Specify zero to disable this feature.
+ *
+ * Default: 600 msec
+ */
+#ifndef PJMEDIA_STREAM_VAD_SUSPEND_MSEC
+#   define PJMEDIA_STREAM_VAD_SUSPEND_MSEC	600
+#endif
+
+
+/**
  * Suggested or default threshold to be set for fixed silence detection
  * or as starting threshold for adaptive silence detection. The threshold
  * has the range from zero to 255.

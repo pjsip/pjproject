@@ -88,10 +88,13 @@ struct pjmedia_stream
 
     pjmedia_codec	    *codec;	    /**< Codec instance being used. */
     pjmedia_codec_param	     codec_param;   /**< Codec param.		    */
+    unsigned		     vad_enabled;   /**< VAD enabled in param.	    */
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     pj_bool_t		     is_streaming;  /**< Currently streaming?. This
 						 is used to put RTP marker
 						 bit.			    */
+    pj_uint32_t		     ts_vad_disabled;/**< TS when VAD was disabled. */
+    pj_uint32_t		     tx_duration;   /**< TX duration in timestamp.  */
 
     pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
@@ -125,6 +128,11 @@ static const char digitmap[16] = { '0', '1', '2', '3',
 				   '4', '5', '6', '7', 
 				   '8', '9', '*', '#',
 				   'A', 'B', 'C', 'D'};
+
+/* Zero PCM frame */
+#define ZERO_PCM_MAX_SIZE   1920    /* 40ms worth of PCM @ 48KHz */
+static pj_int16_t zero_frame[ZERO_PCM_MAX_SIZE];
+
 
 /*
  * Print error.
@@ -447,7 +455,8 @@ static pj_status_t put_frame( pjmedia_port *port,
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     struct pjmedia_frame frame_out;
-    unsigned ts_len;
+    unsigned ts_len, samples_per_frame;
+    pjmedia_frame tmp_in_frame;
     void *rtphdr;
     int rtphdrlen;
 
@@ -461,9 +470,34 @@ static pj_status_t put_frame( pjmedia_port *port,
     //ts_len = frame->size / 2;
     ts_len = port->info.samples_per_frame;
 
+    /* Increment transmit duration */
+    stream->tx_duration += ts_len;
+
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
+
+    /* Calculate number of samples per frame */
+    samples_per_frame = stream->codec_param.info.frm_ptime *
+			stream->codec_param.info.clock_rate *
+			stream->codec_param.info.channel_cnt /
+			1000;
+
+    /* If VAD is temporarily disabled during creation, feed zero PCM frame
+     * to the codec.
+     */
+    if (stream->vad_enabled != stream->codec_param.setting.vad &&
+	stream->vad_enabled != 0 &&
+	frame->type == PJMEDIA_FRAME_TYPE_NONE &&
+	samples_per_frame <= ZERO_PCM_MAX_SIZE)
+    {
+	pj_memcpy(&tmp_in_frame, frame, sizeof(pjmedia_frame));
+	frame = &tmp_in_frame;
+
+	tmp_in_frame.buf = zero_frame;
+	tmp_in_frame.size = samples_per_frame * 2;
+	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    }
 
 
     /* If we have DTMF digits in the queue, transmit the digits. 
@@ -481,15 +515,11 @@ static pj_status_t put_frame( pjmedia_port *port,
 					 &rtphdrlen);
 
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
-	unsigned ts, samples_per_frame;
+	unsigned ts;
 
 	/* Repeatedly call encode if there are multiple frames to be
 	 * sent.
 	 */
-	samples_per_frame = stream->codec_param.info.frm_ptime *
-			    stream->codec_param.info.clock_rate *
-			    stream->codec_param.info.channel_cnt /
-			    1000;
 
 	for (ts=0; ts<ts_len; ts += samples_per_frame) {
 	    pjmedia_frame tmp_out_frame, tmp_in_frame;
@@ -569,6 +599,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	    PJ_LOG(5,(stream->port.info.name.ptr,"Starting silence"));
 	    stream->is_streaming = PJ_FALSE;
 	}
+
 	return PJ_SUCCESS;
     }
 
@@ -596,6 +627,19 @@ static pj_status_t put_frame( pjmedia_port *port,
 
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
+
+    /* If VAD is temporarily disabled during creation, enable it
+     * after transmitting for VAD_SUSPEND_SEC seconds.
+     */
+    if (stream->vad_enabled != stream->codec_param.setting.vad &&
+	(stream->tx_duration - stream->ts_vad_disabled) > 
+	stream->port.info.clock_rate * PJMEDIA_STREAM_VAD_SUSPEND_MSEC / 1000)
+    {
+	stream->codec_param.setting.vad = stream->vad_enabled;
+	stream->codec->op->modify(stream->codec, &stream->codec_param);
+	PJ_LOG(4,(stream->port.info.name.ptr,"VAD re-enabled"));
+    }
+
 
     return PJ_SUCCESS;
 }
@@ -1027,6 +1071,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+
+    /* Initially disable the VAD in the stream, to help traverse NAT better */
+    stream->vad_enabled = stream->codec_param.setting.vad;
+    if (stream->vad_enabled) {
+	stream->codec_param.setting.vad = 0;
+	stream->ts_vad_disabled = 0;
+	stream->codec->op->modify(stream->codec, &stream->codec_param);
+	PJ_LOG(4,(stream->port.info.name.ptr,"VAD temporarily disabled"));
+    }
 
     /* Get the frame size: */
 
