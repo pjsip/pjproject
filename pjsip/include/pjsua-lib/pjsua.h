@@ -2625,6 +2625,57 @@ PJ_DECL(pj_status_t) pjsua_conf_disconnect(pjsua_conf_port_id source,
 					   pjsua_conf_port_id sink);
 
 
+/**
+ * Adjust the signal level to be transmitted from the bridge to the 
+ * specified port by making it louder or quieter.
+ *
+ * @param slot		The conference bridge slot number.
+ * @param level		Signal level adjustment. Value 1.0 means no level
+ *			adjustment, while value 0 means to mute the port.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_adjust_tx_level(pjsua_conf_port_id slot,
+						float level);
+
+/**
+ * Adjust the signal level to be received from the specified port (to
+ * the bridge) by making it louder or quieter.
+ *
+ * @param slot		The conference bridge slot number.
+ * @param level		Signal level adjustment. Value 1.0 means no level
+ *			adjustment, while value 0 means to mute the port.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_adjust_rx_level(pjsua_conf_port_id slot,
+						float level);
+
+/**
+ * Get last signal level transmitted to or received from the specified port.
+ * The signal level is an integer value in zero to 255, with zero indicates
+ * no signal, and 255 indicates the loudest signal level.
+ *
+ * @param slot		The conference bridge slot number.
+ * @param tx_level	Optional argument to receive the level of signal
+ *			transmitted to the specified port (i.e. the direction
+ *			is from the bridge to the port).
+ * @param rx_level	Optional argument to receive the level of signal
+ *			received from the port (i.e. the direction is from the
+ *			port to the bridge).
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
+						 unsigned *tx_level,
+						 unsigned *rx_level);
+
+/**
+ * 
+ */
+
+
+
 /*****************************************************************************
  * File player.
  */

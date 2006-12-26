@@ -673,6 +673,40 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
 }
 
 
+/*
+ * Adjust the signal level to be transmitted from the bridge to the 
+ * specified port by making it louder or quieter.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_adjust_tx_level(pjsua_conf_port_id slot,
+					       float level)
+{
+    return pjmedia_conf_adjust_tx_level(pjsua_var.mconf, slot,
+					(int)((level-1) * 128));
+}
+
+/*
+ * Adjust the signal level to be received from the specified port (to
+ * the bridge) by making it louder or quieter.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_adjust_rx_level(pjsua_conf_port_id slot,
+					       float level)
+{
+    return pjmedia_conf_adjust_rx_level(pjsua_var.mconf, slot,
+					(int)((level-1) * 128));
+}
+
+
+/*
+ * Get last signal level transmitted to or received from the specified port.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
+						unsigned *tx_level,
+						unsigned *rx_level)
+{
+    return pjmedia_conf_get_signal_level(pjsua_var.mconf, slot, 
+					 tx_level, rx_level);
+}
+
 /*****************************************************************************
  * File player.
  */
@@ -1008,7 +1042,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 				       int playback_dev)
 {
     pjmedia_port *conf_port;
-    const pjmedia_snd_dev_info *cap_info, *play_info;
+    const pjmedia_snd_dev_info *play_info;
     unsigned clock_rates[] = { 0, 22050, 44100, 48000, 11025, 32000, 8000};
     unsigned selected_clock_rate = 0;
     unsigned i;

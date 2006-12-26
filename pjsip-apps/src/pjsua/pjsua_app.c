@@ -76,6 +76,9 @@ static struct app_config
     pjmedia_snd_port	   *snd;
 #endif
 
+    float		    mic_level,
+			    speaker_level;
+
 } app_config;
 
 
@@ -209,6 +212,7 @@ static void default_config(struct app_config *cfg)
     cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
     cfg->rec_port = PJSUA_INVALID_ID;
+    cfg->mic_level = cfg->speaker_level = 1.0;
 }
 
 
@@ -848,7 +852,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
-		      argv[pj_optind-1]));
+		      argv[pj_optind]));
 	    return -1;
 	}
     }
@@ -1837,7 +1841,7 @@ static void keystroke_help(void)
     puts("|  #  Send DTMF string         | cl  List ports           |  d  Dump status   |");
     puts("| dq  Dump curr. call quality  | cc  Connect port         | dd  Dump detailed |");
     puts("|                              | cd  Disconnect port      | dc  Dump config   |");
-    puts("|  S  Send arbitrary REQUEST   |                          |  f  Save config   |");
+    puts("|  S  Send arbitrary REQUEST   |  V  Adjust audio Volume  |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                                                                    |");
     puts("+=============================================================================+");
@@ -2711,6 +2715,24 @@ void console_app_main(const pj_str_t *uri_to_call)
 		}
 		break;
 	    }
+	    break;
+
+	case 'V':
+	    /* Adjust audio volume */
+	    sprintf(buf, "Adjust mic level: [%4.1fx] ", app_config.mic_level);
+	    if (simple_input(buf,text,sizeof(text))) {
+		char *err;
+		app_config.mic_level = (float)strtod(text, &err);
+		pjsua_conf_adjust_rx_level(0, app_config.mic_level);
+	    }
+	    sprintf(buf, "Adjust speaker level: [%4.1fx] ", 
+		    app_config.speaker_level);
+	    if (simple_input(buf,text,sizeof(text))) {
+		char *err;
+		app_config.speaker_level = (float)strtod(text, &err);
+		pjsua_conf_adjust_tx_level(0, app_config.speaker_level);
+	    }
+
 	    break;
 
 	case 'd':

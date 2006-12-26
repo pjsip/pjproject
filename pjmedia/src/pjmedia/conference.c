@@ -61,6 +61,7 @@ static FILE *fhnd_rec;
 
 #define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
 #define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'P')
+/* Normal level is hardcodec to 128 in all over places */
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned
 #define INVALID_SLOT	    ((SLOT_TYPE)-1)
@@ -1137,7 +1138,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
 
     /* Value must be from -128 to +127 */
-    PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
+    /* Disabled, you can put more than +127, at your own risk: 
+     PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
+     */
+    PJ_ASSERT_RETURN(adj_level >= -128, PJ_EINVAL);
 
     conf_port = conf->ports[slot];
 
@@ -1164,7 +1168,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
 
     /* Value must be from -128 to +127 */
-    PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
+    /* Disabled, you can put more than +127,, at your own risk:
+     PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
+     */
+    PJ_ASSERT_RETURN(adj_level >= -128, PJ_EINVAL);
 
     conf_port = conf->ports[slot];
 
@@ -1364,7 +1371,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 		 * 16bit sample storage.
 		 */
 		itemp = input[j];
-		itemp = itemp * adj / NORMAL_LEVEL;
+		/*itemp = itemp * adj / NORMAL_LEVEL; */
+		itemp = (itemp * adj) >> 7;
 
 		/* Clip the signal if it's too loud */
 		if (itemp > 32767) itemp = 32767;
@@ -1396,7 +1404,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    itemp = unsigned2pcm(cport->mix_buf[j] / cport->src_level);
 
 	    /* Adjust the level */
-	    itemp = itemp * adj_level / NORMAL_LEVEL;
+	    /*itemp = itemp * adj_level / NORMAL_LEVEL;*/
+	    itemp = (itemp * adj_level) >> 7;
 
 	    /* Clip the signal if it's too loud */
 	    if (itemp > 32767) itemp = 32767;
@@ -1650,7 +1659,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		 * 16bit sample storage.
 		 */
 		itemp = input[j];
-		itemp = itemp * adj / NORMAL_LEVEL;
+		/*itemp = itemp * adj / NORMAL_LEVEL;*/
+		itemp = (itemp * adj) >> 7;
 
 		/* Clip the signal if it's too loud */
 		if (itemp > 32767) itemp = 32767;
