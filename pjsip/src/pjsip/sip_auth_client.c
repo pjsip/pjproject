@@ -43,6 +43,7 @@
 #  define AUTH_TRACE_(expr)
 #endif
 
+
 /* Transform digest to string.
  * output must be at least PJSIP_MD5STRLEN+1 bytes.
  *
@@ -599,6 +600,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 
     auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
+	/* Reset stale counter */
+	auth->stale_cnt = 0;
+
 	if (auth->qop_value == PJSIP_AUTH_QOP_NONE) {
 #	    if defined(PJSIP_AUTH_HEADER_CACHING) && \
 	       PJSIP_AUTH_HEADER_CACHING!=0
@@ -707,12 +711,27 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 	    /* Our credential is rejected. No point in trying to re-supply
 	     * the same credential.
 	     */
-	    PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s",
+	    PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
+		       "server rejected with stale=false",
 		       sent_auth->credential.digest.username.slen,
 		       sent_auth->credential.digest.username.ptr,
 		       sent_auth->credential.digest.realm.slen,
 		       sent_auth->credential.digest.realm.ptr));
 	    return PJSIP_EFAILEDCREDENTIAL;
+	}
+
+	cached_auth->stale_cnt++;
+	if (cached_auth->stale_cnt >= PJSIP_MAX_STALE_COUNT) {
+	    /* Our credential is rejected. No point in trying to re-supply
+	     * the same credential.
+	     */
+	    PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
+		       "maximum number of stale retries exceeded",
+		       sent_auth->credential.digest.username.slen,
+		       sent_auth->credential.digest.username.ptr,
+		       sent_auth->credential.digest.realm.slen,
+		       sent_auth->credential.digest.realm.ptr));
+	    return PJSIP_EAUTHSTALECOUNT;
 	}
 
 	/* Otherwise remove old, stale authorization header from the mesasge.

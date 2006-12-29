@@ -99,6 +99,7 @@ static const struct
     PJ_BUILD_ERR( PJSIP_EAUTHACCDISABLED,  "Account or credential is disabled" ),
     PJ_BUILD_ERR( PJSIP_EAUTHINVALIDREALM, "Invalid authorization realm"),
     PJ_BUILD_ERR( PJSIP_EAUTHINVALIDDIGEST,"Invalid authorization digest" ),
+    PJ_BUILD_ERR( PJSIP_EAUTHSTALECOUNT,   "Maximum number of stale retries exceeded"),
 
     /* UA/dialog layer. */
     PJ_BUILD_ERR( PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" ),

@@ -113,6 +113,7 @@ typedef struct pjsip_cached_auth
     pj_str_t			 realm;	    /**< Realm.			    */
     pj_bool_t			 is_proxy;  /**< Server type (401/407)	    */
     pjsip_auth_qop_type		 qop_value; /**< qop required by server.    */
+    unsigned			 stale_cnt; /**< Number of stale retry.	    */
 #if PJSIP_AUTH_QOP_SUPPORT
     pj_uint32_t			 nc;	    /**< Nonce count.		    */
     pj_str_t			 cnonce;    /**< Cnonce value.		    */

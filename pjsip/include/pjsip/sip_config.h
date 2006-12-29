@@ -409,6 +409,15 @@
 
 
 /**
+ * Maximum number of stale retries when server keeps rejecting our request
+ * with stale=true.
+ */
+#ifndef PJSIP_MAX_STALE_COUNT
+#   define PJSIP_MAX_STALE_COUNT	    3
+#endif
+
+
+/**
  * @}
  */
 

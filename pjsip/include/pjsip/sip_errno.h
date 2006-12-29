@@ -361,6 +361,12 @@ PJ_BEGIN_DECL
  * Invalid digest.
  */
 #define PJSIP_EAUTHINVALIDDIGEST (PJSIP_ERRNO_START_PJSIP+110)	/* 171110 */
+/**
+ * @hideinitializer
+ * Maximum number of stale retries exceeded. This happens when server 
+ * keeps rejecting our authorization request with stale=true.
+ */
+#define PJSIP_EAUTHSTALECOUNT	(PJSIP_ERRNO_START_PJSIP + 111)	/* 171111 */
 
 
 /************************************************************
