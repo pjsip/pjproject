@@ -133,7 +133,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt->thread_cnt = worker_cnt;
 
     /* Sound */
-    pjmedia_snd_init(pf);
+    status = pjmedia_snd_init(pf);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     /* Init codec manager. */
     status = pjmedia_codec_mgr_init(&endpt->codec_mgr);

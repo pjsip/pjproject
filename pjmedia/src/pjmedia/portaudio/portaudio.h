@@ -64,7 +64,7 @@ typedef enum PaErrorCode
 {
     paNoError = 0,
 
-    paNotInitialized = 1,   /* blp: changed from -10000 */
+    paNotInitialized = -1000,   /* blp: changed from -10000 */
     paUnanticipatedHostError,
     paInvalidChannelCount,
     paInvalidSampleRate,
