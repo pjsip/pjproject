@@ -2043,7 +2043,15 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	     */
 	    flags = PJ_IOQUEUE_ALWAYS_ASYNC;
 	} else {
-	    flags = 0;
+	    /* This doesn't work too well when IOCP is used, as it seems that
+	     * IOCP refuses to do MSG_PEEK when WSARecv() is called without
+	     * OVERLAP structure. With OpenSSL it gives this error:
+	     * error:1408F10B:SSL routines:SSL3_GET_RECORD:wrong version 
+	     * number
+	     *
+	     * flags = 0 
+	     */
+	    flags = PJ_IOQUEUE_ALWAYS_ASYNC;
 	}
 
 	/* Read next packet from the network. Remember, we need to use
