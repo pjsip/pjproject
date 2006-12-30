@@ -54,7 +54,7 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  gsm_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  gsm_codec_open( pjmedia_codec *codec, 
-				    const pjmedia_codec_param *attr );
+				    pjmedia_codec_param *attr );
 static pj_status_t  gsm_codec_close( pjmedia_codec *codec );
 static pj_status_t  gsm_codec_modify(pjmedia_codec *codec, 
 				     const pjmedia_codec_param *attr );
@@ -388,7 +388,7 @@ static pj_status_t gsm_codec_init( pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t gsm_codec_open( pjmedia_codec *codec, 
-				   const pjmedia_codec_param *attr )
+				   pjmedia_codec_param *attr )
 {
     struct gsm_data *gsm_data = codec->codec_data;
 
@@ -440,7 +440,7 @@ static pj_status_t  gsm_codec_modify(pjmedia_codec *codec,
     struct gsm_data *gsm_data = codec->codec_data;
 
     pj_assert(gsm_data != NULL);
-    pj_assert(gsm_data->encoder == NULL && gsm_data->decoder == NULL);
+    pj_assert(gsm_data->encoder != NULL && gsm_data->decoder != NULL);
 
     gsm_data->vad_enabled = (attr->setting.vad != 0);
     gsm_data->plc_enabled = (attr->setting.plc != 0);

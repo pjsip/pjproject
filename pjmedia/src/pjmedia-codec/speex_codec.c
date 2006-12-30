@@ -59,7 +59,7 @@ static pj_status_t spx_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  spx_codec_init( pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  spx_codec_open( pjmedia_codec *codec, 
-				    const pjmedia_codec_param *attr );
+				    pjmedia_codec_param *attr );
 static pj_status_t  spx_codec_close( pjmedia_codec *codec );
 static pj_status_t  spx_codec_modify(pjmedia_codec *codec, 
 				     const pjmedia_codec_param *attr );
@@ -547,7 +547,7 @@ static pj_status_t spx_codec_init( pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t spx_codec_open( pjmedia_codec *codec, 
-				   const pjmedia_codec_param *attr )
+				   pjmedia_codec_param *attr )
 {
     struct spx_private *spx;
     int id, tmp;

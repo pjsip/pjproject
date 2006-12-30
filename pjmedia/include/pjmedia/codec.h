@@ -253,7 +253,9 @@ typedef struct pjmedia_codec_param
        unsigned	   clock_rate;		/**< Sampling rate in Hz	    */
        unsigned	   channel_cnt;		/**< Channel count.		    */
        pj_uint32_t avg_bps;		/**< Average bandwidth in bits/sec  */
-       pj_uint16_t frm_ptime;		/**< Base frame ptime in msec.	    */
+       pj_uint16_t frm_ptime;		/**< Decoder frame ptime in msec.   */
+       pj_uint16_t enc_ptime;		/**< Encoder ptime, or zero if it's
+					     equal to decoder ptime.	    */
        pj_uint8_t  pcm_bits_per_sample;	/**< Bits/sample in the PCM side    */
        pj_uint8_t  pt;			/**< Payload type.		    */
     } info;
@@ -306,7 +308,10 @@ typedef struct pjmedia_codec_op
 			pj_pool_t *pool );
 
     /** 
-     * Open the codec and initialize with the specified parameter..
+     * Open the codec and initialize with the specified parameter.
+     * Upon successful initialization, the codec may modify the parameter
+     * and fills in the unspecified values (such as enc_ptime, when
+     * encoder ptime is different than decoder ptime).
      *
      * @param codec	The codec instance.
      * @param param	Codec initialization parameter.
@@ -314,7 +319,7 @@ typedef struct pjmedia_codec_op
      * @return		PJ_SUCCESS on success.
      */
     pj_status_t	(*open)(pjmedia_codec *codec, 
-			const pjmedia_codec_param *param );
+			pjmedia_codec_param *param );
 
     /** 
      * Close and shutdown codec, releasing all resources allocated by

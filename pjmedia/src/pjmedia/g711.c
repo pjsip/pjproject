@@ -62,7 +62,7 @@ static pj_status_t g711_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  g711_init( pjmedia_codec *codec, 
 			       pj_pool_t *pool );
 static pj_status_t  g711_open( pjmedia_codec *codec, 
-			       const pjmedia_codec_param *attr );
+			       pjmedia_codec_param *attr );
 static pj_status_t  g711_close( pjmedia_codec *codec );
 static pj_status_t  g711_modify(pjmedia_codec *codec, 
 			        const pjmedia_codec_param *attr );
@@ -397,7 +397,7 @@ static pj_status_t g711_init( pjmedia_codec *codec, pj_pool_t *pool )
 }
 
 static pj_status_t g711_open(pjmedia_codec *codec, 
-			     const pjmedia_codec_param *attr )
+			     pjmedia_codec_param *attr )
 {
     struct g711_private *priv = codec->codec_data;
     priv->pt = attr->info.pt;

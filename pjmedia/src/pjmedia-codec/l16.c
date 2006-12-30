@@ -59,7 +59,7 @@ static pj_status_t l16_dealloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t  l16_init( pjmedia_codec *codec, 
 			       pj_pool_t *pool );
 static pj_status_t  l16_open( pjmedia_codec *codec, 
-			       const pjmedia_codec_param *attr );
+			      pjmedia_codec_param *attr );
 static pj_status_t  l16_close( pjmedia_codec *codec );
 static pj_status_t  l16_modify(pjmedia_codec *codec, 
 			       const pjmedia_codec_param *attr );
@@ -489,7 +489,7 @@ static pj_status_t l16_init( pjmedia_codec *codec, pj_pool_t *pool )
 }
 
 static pj_status_t l16_open(pjmedia_codec *codec, 
-			    const pjmedia_codec_param *attr )
+			    pjmedia_codec_param *attr )
 {
     /* Nothing to do.. */
     PJ_UNUSED_ARG(codec);

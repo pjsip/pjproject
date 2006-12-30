@@ -63,7 +63,7 @@ static pj_status_t ilbc_dealloc_codec(pjmedia_codec_factory *factory,
 static pj_status_t  ilbc_codec_init(pjmedia_codec *codec, 
 				    pj_pool_t *pool );
 static pj_status_t  ilbc_codec_open(pjmedia_codec *codec, 
-				    const pjmedia_codec_param *attr );
+				    pjmedia_codec_param *attr );
 static pj_status_t  ilbc_codec_close(pjmedia_codec *codec );
 static pj_status_t  ilbc_codec_modify(pjmedia_codec *codec, 
 				      const pjmedia_codec_param *attr );
@@ -364,19 +364,14 @@ static pj_status_t ilbc_codec_init(pjmedia_codec *codec,
  * Open codec.
  */
 static pj_status_t ilbc_codec_open(pjmedia_codec *codec, 
-				   const pjmedia_codec_param *param_attr )
+				   pjmedia_codec_param *attr )
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
-    pjmedia_codec_param attr_copy, *attr;
     pj_status_t status;
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
 	      ilbc_codec->dec_ready == PJ_FALSE);
-
-    /* Copy param to temporary location since we need to modify fmtp_mode */
-    pj_memcpy(&attr_copy, param_attr, sizeof(*param_attr));
-    attr = &attr_copy;
 
     /* Decoder mode must be set */
     PJ_ASSERT_RETURN(attr->setting.dec_fmtp_mode==20 ||
@@ -391,6 +386,13 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 
     PJ_ASSERT_RETURN(attr->setting.enc_fmtp_mode==20 ||
 		     attr->setting.enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
+
+    /* Update enc_ptime in the param */
+    if (attr->setting.enc_fmtp_mode != attr->setting.dec_fmtp_mode) {
+	attr->info.enc_ptime = attr->setting.enc_fmtp_mode;
+    } else {
+	attr->info.enc_ptime = 0;
+    }
 
     /* Create enc */
     ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, 

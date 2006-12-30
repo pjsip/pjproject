@@ -88,6 +88,17 @@ struct pjmedia_stream
 
     pjmedia_codec	    *codec;	    /**< Codec instance being used. */
     pjmedia_codec_param	     codec_param;   /**< Codec param.		    */
+    pj_int16_t		    *enc_buf;	    /**< Encoding buffer, when enc's
+						 ptime is different than dec.
+						 Otherwise it's NULL.	    */
+
+    unsigned		     enc_samples_per_frame;
+    unsigned		     enc_buf_size;  /**< Encoding buffer size, in
+						 samples.		    */
+    unsigned		     enc_buf_pos;   /**< First position in buf.	    */
+    unsigned		     enc_buf_count; /**< Number of samples in the
+						 encoding buffer.	    */
+
     unsigned		     vad_enabled;   /**< VAD enabled in param.	    */
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     pj_bool_t		     is_streaming;  /**< Currently streaming?. This
@@ -442,33 +453,87 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
 
 /**
- * put_frame()
- *
- * This callback is called by upstream component when it has PCM frame
- * to transmit. This function encodes the PCM frame, pack it into
- * RTP packet, and transmit to peer.
+ * Rebuffer the frame when encoder and decoder has different ptime
+ * (such as when different iLBC modes are used by local and remote)
  */
-static pj_status_t put_frame( pjmedia_port *port, 
-			      const pjmedia_frame *frame )
+static void rebuffer(pjmedia_stream *stream,
+		     pjmedia_frame *frame)
+{
+    /* How many samples are needed */
+    unsigned count;
+
+    /* Normalize frame */
+    if (frame->type != PJMEDIA_FRAME_TYPE_AUDIO)
+	frame->size = 0;
+
+    /* Remove used frame from the buffer. */
+    if (stream->enc_buf_pos) {
+	if (stream->enc_buf_count) {
+	    pj_memmove(stream->enc_buf,
+		       stream->enc_buf + stream->enc_buf_pos,
+		       (stream->enc_buf_count << 1));
+	}
+	stream->enc_buf_pos = 0;
+    }
+
+    /* Make sure we have space to store the new frame */
+    pj_assert(stream->enc_buf_count + (frame->size >> 1) <
+		stream->enc_buf_size);
+
+    /* Append new frame to the buffer */
+    if (frame->size) {
+	pj_memcpy(stream->enc_buf + stream->enc_buf_count,
+		  frame->buf, frame->size);
+	stream->enc_buf_count += (frame->size >> 1);
+    }
+
+    /* How many samples are needed */
+    count = stream->codec_param.info.enc_ptime * 
+		stream->port.info.clock_rate / 1000;
+
+    /* See if we have enough samples */
+    if (stream->enc_buf_count >= count) {
+
+	frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame->buf = stream->enc_buf;
+	frame->size = (count << 1);
+
+	stream->enc_buf_pos = count;
+	stream->enc_buf_count -= count;
+
+    } else {
+	/* We don't have enough samples */
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+    }
+}
+
+
+/**
+ * put_frame_imp()
+ */
+static pj_status_t put_frame_imp( pjmedia_port *port, 
+				  const pjmedia_frame *frame )
 {
     pjmedia_stream *stream = port->port_data.pdata;
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
-    struct pjmedia_frame frame_out;
+    pjmedia_frame frame_out;
     unsigned ts_len, samples_per_frame;
-    pjmedia_frame tmp_in_frame;
     void *rtphdr;
     int rtphdrlen;
 
 
     /* Don't do anything if stream is paused */
-    if (channel->paused)
+    if (channel->paused) {
+	stream->enc_buf_pos = stream->enc_buf_count = 0;
 	return PJ_SUCCESS;
-
+    }
 
     /* Number of samples in the frame */
-    //ts_len = frame->size / 2;
-    ts_len = port->info.samples_per_frame;
+    if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
+	ts_len = (frame->size >> 1);
+    else
+	ts_len = 0;
 
     /* Increment transmit duration */
     stream->tx_duration += ts_len;
@@ -478,26 +543,7 @@ static pj_status_t put_frame( pjmedia_port *port,
     frame_out.size = 0;
 
     /* Calculate number of samples per frame */
-    samples_per_frame = stream->codec_param.info.frm_ptime *
-			stream->codec_param.info.clock_rate *
-			stream->codec_param.info.channel_cnt /
-			1000;
-
-    /* If VAD is temporarily disabled during creation, feed zero PCM frame
-     * to the codec.
-     */
-    if (stream->vad_enabled != stream->codec_param.setting.vad &&
-	stream->vad_enabled != 0 &&
-	frame->type == PJMEDIA_FRAME_TYPE_NONE &&
-	samples_per_frame <= ZERO_PCM_MAX_SIZE)
-    {
-	pj_memcpy(&tmp_in_frame, frame, sizeof(pjmedia_frame));
-	frame = &tmp_in_frame;
-
-	tmp_in_frame.buf = zero_frame;
-	tmp_in_frame.size = samples_per_frame * 2;
-	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-    }
+    samples_per_frame = stream->enc_samples_per_frame;
 
 
     /* If we have DTMF digits in the queue, transmit the digits. 
@@ -628,6 +674,42 @@ static pj_status_t put_frame( pjmedia_port *port,
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
 
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * put_frame()
+ *
+ * This callback is called by upstream component when it has PCM frame
+ * to transmit. This function encodes the PCM frame, pack it into
+ * RTP packet, and transmit to peer.
+ */
+static pj_status_t put_frame( pjmedia_port *port, 
+			      const pjmedia_frame *frame )
+{
+    pjmedia_stream *stream = port->port_data.pdata;
+    pjmedia_frame tmp_in_frame;
+    unsigned samples_per_frame;
+
+    samples_per_frame = stream->enc_samples_per_frame;
+
+    /* If VAD is temporarily disabled during creation, feed zero PCM frame
+     * to the codec.
+     */
+    if (stream->vad_enabled != stream->codec_param.setting.vad &&
+	stream->vad_enabled != 0 &&
+	frame->type == PJMEDIA_FRAME_TYPE_NONE &&
+	samples_per_frame <= ZERO_PCM_MAX_SIZE)
+    {
+	pj_memcpy(&tmp_in_frame, frame, sizeof(pjmedia_frame));
+	frame = &tmp_in_frame;
+
+	tmp_in_frame.buf = zero_frame;
+	tmp_in_frame.size = samples_per_frame * 2;
+	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    }
+
     /* If VAD is temporarily disabled during creation, enable it
      * after transmitting for VAD_SUSPEND_SEC seconds.
      */
@@ -641,8 +723,51 @@ static pj_status_t put_frame( pjmedia_port *port,
     }
 
 
-    return PJ_SUCCESS;
+    /* If encoder has different ptime than decoder, then the frame must
+     * be passed through the encoding buffer via rebuffer() function.
+     */
+    if (stream->enc_buf != NULL) {
+	pjmedia_frame tmp_rebuffer_frame;
+	pj_status_t status = PJ_SUCCESS;
+
+	/* Copy original frame to temporary frame since we need 
+	 * to modify it.
+	 */
+	pj_memcpy(&tmp_rebuffer_frame, frame, sizeof(pjmedia_frame));
+
+	/* Loop while we have full frame in enc_buffer */
+	for (;;) {
+	    pj_status_t st;
+
+	    /* Run rebuffer() */
+	    rebuffer(stream, &tmp_rebuffer_frame);
+
+	    /* Process this frame */
+	    st = put_frame_imp(port, &tmp_rebuffer_frame);
+	    if (st != PJ_SUCCESS)
+		status = st;
+
+	    /* If we still have full frame in the buffer, re-run
+	     * rebuffer() with NULL frame.
+	     */
+	    if (stream->enc_buf_count >= stream->enc_samples_per_frame) {
+
+		tmp_rebuffer_frame.type = PJMEDIA_FRAME_TYPE_NONE;
+
+	    } else {
+
+		/* Otherwise break */
+		break;
+	    }
+	}
+
+	return status;
+
+    } else {
+	return put_frame_imp(port, frame);
+    }
 }
+
 
 #if 0
 static void dump_bin(const char *buf, unsigned len)
@@ -1071,6 +1196,40 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+    /* If encoder and decoder's ptime are asymmetric, then we need to
+     * create buffer on the encoder side. This could happen for example
+     * with iLBC 
+     */
+    if (stream->codec_param.info.enc_ptime!=0 &&
+	stream->codec_param.info.enc_ptime!=stream->codec_param.info.frm_ptime)
+    {
+	unsigned ptime;
+
+	stream->enc_samples_per_frame = stream->codec_param.info.enc_ptime *
+					stream->port.info.clock_rate / 1000;
+
+	/* Set buffer size as twice the largest ptime value between
+	 * stream's ptime, encoder ptime, or decoder ptime.
+	 */
+
+	ptime = stream->port.info.samples_per_frame * 1000 /
+		stream->port.info.clock_rate;
+
+	if (stream->codec_param.info.enc_ptime > ptime)
+	    ptime = stream->codec_param.info.enc_ptime;
+
+	if (stream->codec_param.info.frm_ptime > ptime)
+	    ptime = stream->codec_param.info.frm_ptime;
+
+	ptime <<= 1;
+
+	/* Allocate buffer */
+	stream->enc_buf_size = stream->port.info.clock_rate * ptime / 1000;
+	stream->enc_buf = pj_pool_alloc(pool, stream->enc_buf_size * 2);
+
+    } else {
+	stream->enc_samples_per_frame = stream->port.info.samples_per_frame;
+    }
 
     /* Initially disable the VAD in the stream, to help traverse NAT better */
     stream->vad_enabled = stream->codec_param.setting.vad;
@@ -1083,8 +1242,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Get the frame size: */
 
-    stream->frame_size = (stream->codec_param.info.avg_bps / 8) * 
+    stream->frame_size = ((stream->codec_param.info.avg_bps + 7) / 8) * 
 			  stream->codec_param.info.frm_ptime / 1000;
+
 
     /* Init RTCP session: */
 
