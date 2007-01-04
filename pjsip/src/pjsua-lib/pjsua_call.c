@@ -686,10 +686,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     } else {
 
-	/* Notify application */
-	if (pjsua_var.ua_cfg.cb.on_incoming_call)
+	/* Notify application if on_incoming_call() is overriden, 
+	 * otherwise hangup the call with 480
+	 */
+	if (pjsua_var.ua_cfg.cb.on_incoming_call) {
 	    pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
-
+	} else {
+	    pjsua_call_hangup(call_id, PJSIP_SC_TEMPORARILY_UNAVAILABLE, 
+			      NULL, NULL);
+	}
     }
 
 

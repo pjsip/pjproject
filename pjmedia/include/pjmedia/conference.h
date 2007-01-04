@@ -31,6 +31,13 @@
  * @ingroup PJMEDIA_PORT
  * @brief The implementation of conference bridge
  * @{
+ *
+ * This describes the conference bridge implementation in PJMEDIA. The
+ * conference bridge provides powerful and very efficient mechanism to
+ * route the audio flow and mix the audio signal when required.
+ *
+ * Some more information about the media flow when conference bridge is
+ * used is described in http://www.pjsip.org/trac/wiki/media-flow .
  */
 
 PJ_BEGIN_DECL
@@ -97,11 +104,13 @@ enum pjmedia_conf_option
  * be created in the conference bridge. Application MUST acquire the port
  * interface of the bridge by calling #pjmedia_conf_get_master_port(), and
  * connect this port interface to a sound device port by calling
- * #pjmedia_snd_port_connect().
+ * #pjmedia_snd_port_connect(), or to a master port (pjmedia_master_port)
+ * if application doesn't want to instantiate any sound devices.
  *
- * The sound device is crucial for the bridge's operation, because it provides
- * the bridge with necessary clock to process the audio frames periodically.
- * Internally, the bridge runs when get_frame() to port zero is called.
+ * The sound device or master port are crucial for the bridge's operation, 
+ * because it provides the bridge with necessary clock to process the audio
+ * frames periodically. Internally, the bridge runs when get_frame() to 
+ * port zero is called.
  *
  * @param pool		    Pool to use to allocate the bridge and 
  *			    additional buffers for the sound device.

@@ -280,7 +280,7 @@ PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
  *
  * @param session	The media session.
  * @param index		The stream index.
- * @param ascii_digits	String of ASCII digits (i.e. 0-9*#A-B).
+ * @param ascii_digits	String of ASCII digits (i.e. 0-9*##A-B).
  *
  * @return		PJ_SUCCESS on success.
  */

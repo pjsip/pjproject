@@ -253,7 +253,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
  * Get information about live stream.
  *
  * @param strm		The stream to be queried.
- * @param i		Pointer to stream information to be filled up with
+ * @param pi		Pointer to stream information to be filled up with
  *			information about the stream.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.

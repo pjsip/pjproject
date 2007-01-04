@@ -115,9 +115,23 @@ typedef struct pjsua_media_config pjsua_media_config;
  * Sample code to initialize PJSUA:
  \code
 
+ #include <pjsua-lib/pjsua.h>
+
+ #define THIS_FILE  __FILE__
+
+ static pj_status_t app_init(void)
+ {
     pjsua_config	 ua_cfg;
     pjsua_logging_config log_cfg;
     pjsua_media_config   media_cfg;
+    pj_status_t status;
+
+    // Must create pjsua before anything else!
+    status = pjsua_create();
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing pjsua", status);
+	return status;
+    }
 
     // Initialize configs with default settings.
     pjsua_config_default(&ua_cfg);
@@ -140,8 +154,9 @@ typedef struct pjsua_media_config pjsua_media_config;
           pjsua_perror(THIS_FILE, "Error initializing pjsua", status);
 	  return status;
     }
-    ..
-
+    .
+    ...
+ }
  \endcode
  *
  * @subsection other_init_pjsua_lib Other Initialization
@@ -169,6 +184,31 @@ typedef struct pjsua_media_config pjsua_media_config;
  * Most settings can be changed during run-time. For example, application
  * may add, modify, or delete accounts, buddies, or change media settings
  * during run-time.
+ *
+ * Sample code:
+ \code
+ static pj_status_t app_run(void)
+ {
+    pj_status_t status;
+
+    // Start pjsua
+    status = pjsua_start();
+    if (status != PJ_SUCCESS) {
+	pjsua_destroy();
+	pjsua_perror(THIS_FILE, "Error starting pjsua", status);
+	return status;
+    }
+
+    // Run application loop
+    while (1) {
+	char choice[10];
+	
+	printf("Select menu: ");
+	fgets(choice, sizeof(choice), stdin);
+	...
+    }
+ }
+ \endcode
  */
 
 /** Constant to identify invalid ID for all sorts of IDs. */
@@ -204,7 +244,9 @@ typedef int pjsua_conf_port_id;
 
 
 /**
- * Logging configuration.
+ * Logging configuration, which can be (optionally) specified when calling
+ * #pjsua_init(). Application must call #pjsua_logging_config_default() to
+ * initialize this structure with the default values.
  */
 typedef struct pjsua_logging_config
 {
@@ -278,7 +320,10 @@ PJ_INLINE(void) pjsua_logging_config_dup(pj_pool_t *pool,
 
 
 /**
- * Application callbacks.
+ * This structure describes application callback to receive various event
+ * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
+ * although definitely application would want to implement some of
+ * the important callbacks (such as \a on_incoming_call).
  */
 typedef struct pjsua_callback
 {
@@ -321,7 +366,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
 
     /**
-     * Notify application on call being transfered.
+     * Notify application on call being transfered (i.e. REFER is received).
      * Application can decide to accept/reject transfer request
      * by setting the code (default is 200). When this callback
      * is not defined, the default behavior is to accept the
@@ -470,13 +515,20 @@ typedef struct pjsua_callback
 
 
 /**
- * PJSUA settings.
+ * This structure describes the settings to control the API and
+ * user agent behavior, and can be specified when calling #pjsua_init().
+ * Before setting the values, application must call #pjsua_config_default()
+ * to initialize this structure with the default values.
  */
 typedef struct pjsua_config
 {
 
     /** 
-     * Maximum calls to support (default: 4) 
+     * Maximum calls to support (default: 4). The value specified here
+     * must be smaller than the compile time maximum settings 
+     * PJSUA_MAX_CALLS, which by default is 32. To increase this 
+     * limit, the library must be recompiled with new PJSUA_MAX_CALLS
+     * value.
      */
     unsigned	    max_calls;
 
@@ -503,7 +555,7 @@ typedef struct pjsua_config
     pj_str_t	    nameserver[4];
 
     /**
-     * Number of outbound proxies in the array.
+     * Number of outbound proxies in the \a outbound_proxy array.
      */
     unsigned	    outbound_proxy_cnt;
 
@@ -523,17 +575,22 @@ typedef struct pjsua_config
 
     /** 
      * Array of credentials. These credentials will be used by all accounts,
-     * and can be used to authenticate against outbound proxies.
+     * and can be used to authenticate against outbound proxies. If the
+     * credential is specific to the account, then application should set
+     * the credential in the pjsua_acc_config rather than the credential
+     * here.
      */
     pjsip_cred_info cred_info[PJSUA_ACC_MAX_PROXIES];
 
     /**
-     * Application callback.
+     * Application callback to receive various event notifications from
+     * the library.
      */
     pjsua_callback  cb;
 
     /**
-     * User agent string (default empty)
+     * Optional user agent string (default empty). If it's empty, no
+     * User-Agent header will be sent with outgoing requests.
      */
     pj_str_t	    user_agent;
 
@@ -596,7 +653,12 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
 
 /**
  * This structure describes additional information to be sent with
- * outgoing SIP message.
+ * outgoing SIP message. It can (optionally) be specified for example
+ * with #pjsua_call_make_call(), #pjsua_call_answer(), #pjsua_call_hangup(),
+ * #pjsua_call_set_hold(), #pjsua_call_send_im(), and many more.
+ *
+ * Application MUST call #pjsua_msg_data_init() to initialize this
+ * structure before setting its values.
  */
 typedef struct pjsua_msg_data
 {
@@ -647,6 +709,8 @@ PJ_DECL(pj_status_t) pjsua_create(void);
  * optional, and the default values will be used when the config is not
  * specified.
  *
+ * Note that #pjsua_create() MUST be called before calling this function.
+ *
  * @param ua_cfg	User agent configuration.
  * @param log_cfg	Optional logging configuration.
  * @param media_cfg	Optional media configuration.
@@ -663,15 +727,23 @@ PJ_DECL(pj_status_t) pjsua_init(const pjsua_config *ua_cfg,
  * is done, so that the library can do additional checking set up
  * additional 
  *
+ * Application may call this function anytime after #pjsua_init().
+ *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_start(void);
 
 
 /**
- * Destroy pjsua. This function must be called once PJSUA is created. To
- * make it easier for application, application may call this function
- * several times with no danger.
+ * Destroy pjsua. Application is recommended to perform graceful shutdown
+ * before calling this function (such as unregister the account from the SIP 
+ * server, terminate presense subscription, and hangup active calls), however,
+ * this function will do all of these if it finds there are active sessions
+ * that need to be terminated. This function will approximately block for
+ * one second to wait for replies from remote.
+ *
+ * Application.may safely call this function more than once if it doesn't
+ * keep track of it's state.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -681,6 +753,10 @@ PJ_DECL(pj_status_t) pjsua_destroy(void);
 /**
  * Poll pjsua for events, and if necessary block the caller thread for
  * the specified maximum interval (in miliseconds).
+ *
+ * Application doesn't normally need to call this function if it has
+ * configured worker thread (\a thread_cnt field) in pjsua_config structure,
+ * because polling then will be done by these worker threads instead.
  *
  * @param msec_timeout	Maximum time to wait, in miliseconds.
  *
@@ -692,7 +768,8 @@ PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout);
 
 
 /**
- * Create memory pool.
+ * Create memory pool to be used by the application. Once application
+ * finished using the pool, it must be released with pj_pool_release().
  *
  * @param name		Optional pool name.
  * @param init_size	Initial size of the pool.
@@ -718,7 +795,7 @@ PJ_DECL(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *c);
 /**
  * Internal function to get SIP endpoint instance of pjsua, which is
  * needed for example to register module, create transports, etc.
- * Probably is only valid after #pjsua_init() is called.
+ * Only valid after #pjsua_init() is called.
  * 
  * @return		SIP endpoint instance.
  */
@@ -734,7 +811,7 @@ PJ_DECL(pjmedia_endpt*) pjsua_get_pjmedia_endpt(void);
 
 /**
  * Internal function to get PJSUA pool factory.
- * Only valid after #pjsua_init() is called.
+ * Only valid after #pjsua_create() is called.
  *
  * @return		Pool factory currently used by PJSUA.
  */
@@ -748,7 +825,8 @@ PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
  */
 
 /**
- * Verify that valid SIP url is given.
+ * This is a utility function to verify that valid SIP url is given. If the
+ * URL is valid, PJ_SUCCESS will be returned.
  *
  * @param c_url		The URL, as NULL terminated string.
  *
@@ -758,7 +836,8 @@ PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *c_url);
 
 
 /**
- * Display error message for the specified error code.
+ * This is a utility function to display error message for the specified 
+ * error code. The error message will be sent to the log.
  *
  * @param sender	The log sender field.
  * @param title		Message title for the error.
@@ -795,7 +874,8 @@ typedef int pjsua_transport_id;
 
 
 /**
- * STUN configuration.
+ * This structure describes STUN configuration for SIP and media transport,
+ * and is embedded inside pjsua_transport_config structure.
  */
 typedef struct pjsua_stun_config
 {
@@ -840,7 +920,9 @@ PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
 
 /**
  * Transport configuration for creating transports for both SIP
- * and media.
+ * and media. Before setting some values to this structure, application
+ * MUST call #pjsua_transport_config_default() to initialize its
+ * values with default settings.
  */
 typedef struct pjsua_transport_config
 {
@@ -887,7 +969,9 @@ typedef struct pjsua_transport_config
     pjsua_stun_config	stun_config;
 
     /**
-     * TLS settings.
+     * This specifies TLS settings for TLS transport. It is only be used
+     * when this transport config is being used to create a SIP TLS
+     * transport.
      */
     pjsip_tls_setting	tls_setting;
 
@@ -902,12 +986,16 @@ typedef struct pjsua_transport_config
 PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    pjsua_stun_config_default(&cfg->stun_config);
     pjsip_tls_setting_default(&cfg->tls_setting);
 }
 
 
 /**
- * Normalize STUN config.
+ * This is a utility function to normalize STUN config. It's only
+ * used internally by the library.
+ *
+ * @param cfg	    The STUN config to be initialized.
  */
 PJ_INLINE(void) pjsua_normalize_stun_config( pjsua_stun_config *cfg )
 {
@@ -957,7 +1045,8 @@ PJ_INLINE(void) pjsua_transport_config_dup(pj_pool_t *pool,
 
 
 /**
- * Transport info.
+ * This structure describes transport information returned by
+ * #pjsua_transport_get_info() function.
  */
 typedef struct pjsua_transport_info
 {
@@ -1011,7 +1100,8 @@ typedef struct pjsua_transport_info
 
 
 /**
- * Create SIP transport.
+ * Create and start a new SIP transport according to the specified
+ * settings.
  *
  * @param type		Transport type.
  * @param cfg		Transport configuration.
@@ -1078,10 +1168,10 @@ PJ_DECL(pj_status_t) pjsua_transport_set_enable(pjsua_transport_id id,
 /**
  * Close the transport. If transport is forcefully closed, it will be
  * immediately closed, and any pending transactions that are using the
- * transport may not terminate properly. Otherwise, the system will wait
- * until all transactions are closed while preventing new users from
- * using the transport, and will close the transport when it is safe to
- * do so.
+ * transport may not terminate properly (it may even crash). Otherwise, 
+ * the system will wait until all transactions are closed while preventing 
+ * new users from using the transport, and will close the transport when 
+ * it is safe to do so.
  *
  * @param id		Transport ID.
  * @param force		Non-zero to immediately close the transport. This
@@ -1168,7 +1258,9 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
- * Account configuration.
+ * This structure describes account configuration to be specified when
+ * adding a new account with #pjsua_acc_add(). Application MUST initialize
+ * this structure first by calling #pjsua_acc_config_default().
  */
 typedef struct pjsua_acc_config
 {
@@ -1197,7 +1289,8 @@ typedef struct pjsua_acc_config
     pj_str_t	    reg_uri;
 
     /**
-     * Publish presence?
+     * If this flag is set, the presence information of this account will
+     * be PUBLISH-ed to the server where the account belongs.
      */
     pj_bool_t	    publish_enabled;
 
@@ -1222,7 +1315,9 @@ typedef struct pjsua_acc_config
      *
      * These proxies will be put in the route set for this account, with 
      * maintaining the orders (the first proxy in the array will be visited
-     * first).
+     * first). If global outbound proxies are configured in pjsua_config,
+     * then these account proxies will be placed after the global outbound
+     * proxies in the routeset.
      */
     pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
 
@@ -1351,7 +1446,9 @@ PJ_DECL(pj_status_t) pjsua_acc_set_default(pjsua_acc_id acc_id);
 
 
 /**
- * Get default account.
+ * Get default account to be used when receiving incoming requests (calls),
+ * when the destination of the incoming call doesn't match any other
+ * accounts.
  *
  * @return		The default account ID, or PJSUA_INVALID_ID if no
  *			default account is configured.
@@ -1361,7 +1458,12 @@ PJ_DECL(pjsua_acc_id) pjsua_acc_get_default(void);
 
 /**
  * Add a new account to pjsua. PJSUA must have been initialized (with
- * #pjsua_init()) before calling this function.
+ * #pjsua_init()) before calling this function. If registration is configured
+ * for this account, this function would also start the SIP registration
+ * session with the SIP registrar server. This SIP registration session
+ * will be maintained internally by the library, and application doesn't
+ * need to do anything to maintain the registration session.
+ *
  *
  * @param cfg		Account configuration.
  * @param is_default	If non-zero, this account will be set as the default
@@ -1400,7 +1502,9 @@ PJ_DECL(pj_status_t) pjsua_acc_add_local(pjsua_transport_id tid,
 					 pjsua_acc_id *p_acc_id);
 
 /**
- * Delete account.
+ * Delete an account. This will unregister the account from the SIP server,
+ * if necessary, and terminate server side presence subscriptions associated
+ * with this account.
  *
  * @param acc_id	Id of the account to be deleted.
  *
@@ -1423,7 +1527,8 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
 
 /**
  * Modify account's presence status to be advertised to remote/presence
- * subscribers.
+ * subscribers. This would trigger the sending of outgoing NOTIFY request
+ * if there are server side presence subscription for this account.
  *
  * @param acc_id	The account ID.
  * @param is_online	True of false.
@@ -1435,7 +1540,11 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status(pjsua_acc_id acc_id,
 
 
 /**
- * Update registration or perform unregistration. 
+ * Update registration or perform unregistration. If registration is
+ * configured for this account, then initial SIP REGISTER will be sent
+ * when the account is added with #pjsua_acc_add(). Application normally
+ * only need to call this function if it wants to manually update the
+ * registration or to unregister from the server.
  *
  * @param acc_id	The account ID.
  * @param renew		If renew argument is zero, this will start 
@@ -1448,7 +1557,7 @@ PJ_DECL(pj_status_t) pjsua_acc_set_registration(pjsua_acc_id acc_id,
 
 
 /**
- * Get account information.
+ * Get information about the specified account.
  *
  * @param acc_id	Account identification.
  * @param info		Pointer to receive account information.
@@ -1460,7 +1569,11 @@ PJ_DECL(pj_status_t) pjsua_acc_get_info(pjsua_acc_id acc_id,
 
 
 /**
- * Enum accounts all account ids.
+ * Enumerate all account currently active in the library. This will fill
+ * the array with the account Ids, and application can then query the
+ * account information for each id with #pjsua_acc_get_info().
+ *
+ * @see pjsua_acc_enum_info().
  *
  * @param ids		Array of account IDs to be initialized.
  * @param count		In input, specifies the maximum number of elements.
@@ -1473,7 +1586,7 @@ PJ_DECL(pj_status_t) pjsua_enum_accs(pjsua_acc_id ids[],
 
 
 /**
- * Enum accounts info.
+ * Enumerate account informations.
  *
  * @param info		Array of account infos to be initialized.
  * @param count		In input, specifies the maximum number of elements.
@@ -1561,7 +1674,7 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
  */
 
 /**
- * Max simultaneous calls.
+ * Maximum simultaneous calls.
  */
 #ifndef PJSUA_MAX_CALLS
 #   define PJSUA_MAX_CALLS	    32
@@ -1570,19 +1683,28 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
 
 /**
- * Call media status.
+ * This enumeration specifies the media status of a call, and it's part
+ * of pjsua_call_info structure.
  */
 typedef enum pjsua_call_media_status
 {
+    /** Call currently has no media */
     PJSUA_CALL_MEDIA_NONE,
+
+    /** The media is active */
     PJSUA_CALL_MEDIA_ACTIVE,
+
+    /** The media is currently put on hold by local endpoint */
     PJSUA_CALL_MEDIA_LOCAL_HOLD,
+
+    /** The media is currently put on hold by remote endpoint */
     PJSUA_CALL_MEDIA_REMOTE_HOLD,
+
 } pjsua_call_media_status;
 
 
 /**
- * Call info.
+ * This structure describes the information and current status of a call.
  */
 typedef struct pjsua_call_info
 {
@@ -1668,7 +1790,8 @@ PJ_DECL(unsigned) pjsua_call_get_max_count(void);
 PJ_DECL(unsigned) pjsua_call_get_count(void);
 
 /**
- * Enumerate all active calls.
+ * Enumerate all active calls. Application may then query the information and
+ * state of each call by calling #pjsua_call_get_info().
  *
  * @param ids		Array of account IDs to be initialized.
  * @param count		In input, specifies the maximum number of elements.
@@ -1747,7 +1870,8 @@ PJ_DECL(pj_status_t) pjsua_call_get_info(pjsua_call_id call_id,
 
 
 /**
- * Attach application specific data to the call.
+ * Attach application specific data to the call. Application can then
+ * inspect this data by calling #pjsua_call_get_user_data().
  *
  * @param call_id	Call identification.
  * @param user_data	Arbitrary data to be attached to the call.
@@ -1759,7 +1883,8 @@ PJ_DECL(pj_status_t) pjsua_call_set_user_data(pjsua_call_id call_id,
 
 
 /**
- * Get user data attached to the call.
+ * Get user data attached to the call, which has been previously set with
+ * #pjsua_call_set_user_data().
  *
  * @param call_id	Call identification.
  *
@@ -1769,7 +1894,9 @@ PJ_DECL(void*) pjsua_call_get_user_data(pjsua_call_id call_id);
 
 
 /**
- * Send response to incoming INVITE request.
+ * Send response to incoming INVITE request. Depending on the status
+ * code specified as parameter, this function may send provisional
+ * response, establish the call, or terminate the call.
  *
  * @param call_id	Incoming call identification.
  * @param code		Status code, (100-699).
@@ -1787,7 +1914,11 @@ PJ_DECL(pj_status_t) pjsua_call_answer(pjsua_call_id call_id,
 
 /**
  * Hangup call by using method that is appropriate according to the
- * call state.
+ * call state. This function is different than answering the call with
+ * 3xx-6xx response (with #pjsua_call_answer()), in that this function
+ * will hangup the call regardless of the state and role of the call,
+ * while #pjsua_call_answer() only works with incoming calls on EARLY
+ * state.
  *
  * @param call_id	Call identification.
  * @param code		Optional status code to be sent when we're rejecting
@@ -1807,7 +1938,11 @@ PJ_DECL(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 
 
 /**
- * Put the specified call on hold.
+ * Put the specified call on hold. This will send re-INVITE with the
+ * appropriate SDP to inform remote that the call is being put on hold.
+ * The final status of the request itself will be reported on the
+ * \a on_call_media_state() callback, which inform the application that
+ * the media state of the call has changed.
  *
  * @param call_id	Call identification.
  * @param msg_data	Optional message components to be sent with
@@ -1820,7 +1955,10 @@ PJ_DECL(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 
 
 /**
- * Send re-INVITE (to release hold).
+ * Send re-INVITE to release hold.
+ * The final status of the request itself will be reported on the
+ * \a on_call_media_state() callback, which inform the application that
+ * the media state of the call has changed.
  *
  * @param call_id	Call identification.
  * @param unhold	If this argument is non-zero and the call is locally
@@ -1839,6 +1977,11 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
  * Initiate call transfer to the specified address. This function will send
  * REFER request to instruct remote call party to initiate a new INVITE
  * session to the specified destination/target.
+ *
+ * If application is interested to monitor the successfulness and 
+ * the progress of the transfer request, it can implement 
+ * \a on_call_transfer_status() callback which will report the progress
+ * of the call transfer request.
  *
  * @param call_id	The call id to be transfered.
  * @param dest		Address of new target to be contacted.
@@ -1929,7 +2072,8 @@ PJ_DECL(pj_status_t) pjsua_call_send_typing_ind(pjsua_call_id call_id,
 						const pjsua_msg_data*msg_data);
 
 /**
- * Terminate all calls.
+ * Terminate all calls. This will initiate #pjsua_call_hangup() for all
+ * currently active calls. 
  */
 PJ_DECL(void) pjsua_call_hangup_all(void);
 
@@ -1977,7 +2121,10 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 
 
 /**
- * Buddy configuration.
+ * This structure describes buddy configuration when adding a buddy to
+ * the buddy list with #pjsua_buddy_add(). Application MUST initialize
+ * the structure with #pjsua_buddy_config_default() to initialize this
+ * structure with default configuration.
  */
 typedef struct pjsua_buddy_config
 {
@@ -1995,7 +2142,7 @@ typedef struct pjsua_buddy_config
 
 
 /**
- * Buddy's online status.
+ * This enumeration describes basic buddy's online status.
  */
 typedef enum pjsua_buddy_status
 {
@@ -2020,7 +2167,8 @@ typedef enum pjsua_buddy_status
 
 
 /**
- * Buddy info.
+ * This structure describes buddy info, which can be retrieved by calling
+ * #pjsua_buddy_get_info().
  */
 typedef struct pjsua_buddy_info
 {
@@ -2065,6 +2213,15 @@ typedef struct pjsua_buddy_info
 
 
 /**
+ * Set default values to the buddy config.
+ */
+PJ_INLINE(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+}
+
+
+/**
  * Get total number of buddies.
  *
  * @return		Number of buddies.
@@ -2083,7 +2240,9 @@ PJ_DECL(pj_bool_t) pjsua_buddy_is_valid(pjsua_buddy_id buddy_id);
 
 
 /**
- * Enum buddy IDs.
+ * Enumerate all buddy IDs in the buddy list. Application then can use
+ * #pjsua_buddy_get_info() to get the detail information for each buddy
+ * id.
  *
  * @param ids		Array of ids to be initialized.
  * @param count		On input, specifies max elements in the array.
@@ -2107,7 +2266,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
 					  pjsua_buddy_info *info);
 
 /**
- * Add new buddy.
+ * Add new buddy to the buddy list. If presence subscription is enabled
+ * for this buddy, this function will also start the presence subscription
+ * session immediately.
  *
  * @param cfg		Buddy configuration.
  * @param p_buddy_id	Pointer to receive buddy ID.
@@ -2119,7 +2280,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_add(const pjsua_buddy_config *cfg,
 
 
 /**
- * Delete buddy.
+ * Delete the specified buddy from the buddy list. Any presence subscription
+ * to this buddy will be terminated.
  *
  * @param buddy_id	Buddy identification.
  *
@@ -2129,7 +2291,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
 
 
 /**
- * Enable/disable buddy's presence monitoring.
+ * Enable/disable buddy's presence monitoring. Once buddy's presence is
+ * subscribed, application will be informed about buddy's presence status
+ * changed via \a on_buddy_state() callback.
  *
  * @param buddy_id	Buddy identification.
  * @param subscribe	Specify non-zero to activate presence subscription to
@@ -2142,7 +2306,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
 
 
 /**
- * Dump presence subscriptions to log file.
+ * Dump presence subscriptions to log.
  *
  * @param verbose	Yes or no.
  */
@@ -2270,32 +2434,46 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #   define PJSUA_MAX_CONF_PORTS		254
 #endif
 
+/**
+ * The default clock rate to be used by the conference bridge.
+ */
 #ifndef PJSUA_DEFAULT_CLOCK_RATE
 #   define PJSUA_DEFAULT_CLOCK_RATE	16000
 #endif
 
+/**
+ * Default codec quality settings.
+ */
 #ifndef PJSUA_DEFAULT_CODEC_QUALITY
 #   define PJSUA_DEFAULT_CODEC_QUALITY	5
 #endif
 
+/**
+ * Default iLBC mode.
+ */
 #ifndef PJSUA_DEFAULT_ILBC_MODE
 #   define PJSUA_DEFAULT_ILBC_MODE	20
 #endif
 
-
+/**
+ * The default echo canceller tail length.
+ */
 #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
 #   define PJSUA_DEFAULT_EC_TAIL_LEN	800
 #endif
 
 
 /**
- * Media configuration.
+ * This structure describes media configuration, which will be specified
+ * when calling #pjsua_init(). Application MUST initialize this structure
+ * by calling #pjsua_media_config_default().
  */
 struct pjsua_media_config
 {
     /**
      * Clock rate to be applied to the conference bridge.
-     * If value is zero, default clock rate will be used (16KHz).
+     * If value is zero, default clock rate will be used 
+     * (PJSUA_DEFAULT_CLOCK_RATE, which by default is 16KHz).
      */
     unsigned		clock_rate;
 
@@ -2443,7 +2621,8 @@ PJ_INLINE(void) pjsua_media_config_default(pjsua_media_config *cfg)
 
 
 /**
- * Codec config.
+ * This structure describes codec information, which can be retrieved by
+ * calling #pjsua_enum_codecs().
  */
 typedef struct pjsua_codec_info
 {
@@ -2466,7 +2645,9 @@ typedef struct pjsua_codec_info
 
 
 /**
- * Conference port info.
+ * This structure descibes information about a particular media port that
+ * has been registered into the conference bridge. Application can query
+ * this info by calling #pjsua_conf_get_port_info().
  */
 typedef struct pjsua_conf_port_info
 {
@@ -2584,7 +2765,8 @@ PJ_DECL(pj_status_t) pjsua_conf_add_port(pj_pool_t *pool,
 
 /**
  * Remove arbitrary slot from the conference bridge. Application should only
- * call this function if it registered the port manually.
+ * call this function if it registered the port manually with previous call
+ * to #pjsua_conf_add_port().
  *
  * @param id		The slot id of the port to be removed.
  *
@@ -2817,7 +2999,7 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
  */
 
 /**
- * Enum sound devices.
+ * Enum all sound devices installed in the system.
  *
  * @param info		Array of info to be initialized.
  * @param count		On input, specifies max elements in the array.

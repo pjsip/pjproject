@@ -84,7 +84,7 @@ typedef struct pjmedia_tone_digit
  * This structure describes the digit map which is used by the tone generator
  * to produce tones from an ASCII digits.
  * Digit map used by a particular tone generator can be retrieved/set with
- * #pjmedia_tonegen_get_digit_map() and #pjmedia_tonegen_load_digit_map().
+ * #pjmedia_tonegen_get_digit_map() and #pjmedia_tonegen_set_digit_map().
  */
 typedef struct pjmedia_tone_digit_map
 {
@@ -94,7 +94,7 @@ typedef struct pjmedia_tone_digit_map
 	char    digit;	    /**< The ASCI identification for the digit.	*/
 	short   freq1;	    /**< First frequency.			*/
 	short   freq2;	    /**< Optional second frequency.		*/
-    } digits[16];
+    } digits[16];	    /**< Array of digits in the digit map.	*/
 } pjmedia_tone_digit_map;
 
 

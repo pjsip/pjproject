@@ -119,7 +119,7 @@
   \n
   @subsection doc_ver Version
 
-  This document corresponds to PJSIP version 0.5.8.
+  This document corresponds to PJSIP version 0.5.9.5.
 
   \n
   @subsection doc_how_to_read How to Read This Document

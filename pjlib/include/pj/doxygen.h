@@ -55,7 +55,7 @@
  *
  * @subsection doc_ver_subsec Version
  *
- * This document corresponds to PJLIB version 0.5.8.
+ * This document corresponds to PJLIB version 0.5.9.5.
  *
  *
  * @subsection find_samples_subsec How to Read This Document
