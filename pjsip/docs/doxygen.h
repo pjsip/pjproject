@@ -198,6 +198,10 @@
     (without PJSIP-UA). It's able to make and receive call, and play
     media to the sound device.
     
+  - @ref page_pjsip_sample_simple_pjsuaua_c\n
+    Very simple SIP User Agent with registration, call, and media, using
+    PJSUA-API, all in under 200 lines of code.
+
   - @ref page_pjsip_samples_pjsua\n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
@@ -248,6 +252,15 @@
  * media to the sound device.
  *
  * \includelineno simpleua.c
+ */
+
+/**
+ * \page page_pjsip_sample_simple_pjsuaua_c Samples: Simple PJSUA
+ *
+ * Very simple SIP User Agent with registration, call, and media, all
+ * in under 200 lines of code.
+ *
+ * \includelineno simple_pjsua.c
  */
 
 /**

@@ -47,6 +47,7 @@ SAMPLES := confsample \
 	   recfile \
 	   resampleplay \
 	   simpleua \
+	   simple_pjsua \
 	   siprtp \
 	   sipstateless \
 	   sndinfo \

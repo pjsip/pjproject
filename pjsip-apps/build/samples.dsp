@@ -126,6 +126,10 @@ SOURCE=..\src\samples\resampleplay.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\simple_pjsua.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\simpleua.c
 # End Source File
 # Begin Source File

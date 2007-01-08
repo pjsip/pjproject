@@ -44,6 +44,7 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\recfile.exe  \
 	  $(BINDIR)\resampleplay.exe \
 	  $(BINDIR)\simpleua.exe \
+	  $(BINDIR)\simple_pjsua.exe \
 	  $(BINDIR)\siprtp.exe \
 	  $(BINDIR)\sipstateless.exe \
 	  $(BINDIR)\sndinfo.exe \
