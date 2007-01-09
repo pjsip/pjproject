@@ -795,7 +795,7 @@ struct pj_caching_pool
     /**
      * Internal pool.
      */
-    char	    pool_buf[256];
+    char	    pool_buf[256 * (sizeof(long) / 4)];
 
     /**
      * Mutex.
