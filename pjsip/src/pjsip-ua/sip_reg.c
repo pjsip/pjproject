@@ -76,6 +76,9 @@ struct pjsip_regc
     pj_time_val			 last_reg;
     pj_time_val			 next_reg;
     pj_timer_entry		 timer;
+
+    /* Transport selector */
+    pjsip_tpselector		 tp_sel;
 };
 
 
@@ -124,6 +127,7 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
     } else {
+	pjsip_tpselector_dec_ref(&regc->tp_sel);
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 
@@ -309,6 +313,23 @@ PJ_DEF(pj_status_t) pjsip_regc_set_route_set( pjsip_regc *regc,
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Bind client registration to a specific transport/listener. 
+ */
+PJ_DEF(pj_status_t) pjsip_regc_set_transport( pjsip_regc *regc,
+					      const pjsip_tpselector *sel)
+{
+    PJ_ASSERT_RETURN(regc && sel, PJ_EINVAL);
+
+    pjsip_tpselector_dec_ref(&regc->tp_sel);
+    pj_memcpy(&regc->tp_sel, sel, sizeof(*sel));
+    pjsip_tpselector_add_ref(&regc->tp_sel);
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjsip_regc_add_headers( pjsip_regc *regc,
 					    const pjsip_hdr *hdr_list)

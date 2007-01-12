@@ -837,6 +837,7 @@ static void stateless_send_transport_cb( void *token,
 						cur_addr_type,
 						cur_addr,
 						cur_addr_len,
+						&tdata->tp_sel,
 						&stateless_data->cur_transport);
 	if (status != PJ_SUCCESS) {
 	    sent = -status;
@@ -1111,6 +1112,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
 					    addr->entry[0].type,
 					    &addr->entry[0].addr,
 					    addr->entry[0].addr_len,
+					    &send_state->tdata->tp_sel,
 					    &send_state->cur_transport);
     if (status != PJ_SUCCESS) {
 	if (send_state->app_cb) {

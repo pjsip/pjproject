@@ -55,6 +55,13 @@ PJ_BEGIN_DECL
  *
  *****************************************************************************/
 
+/*
+ * Forward declaration for transport factory (since it is referenced by
+ * the transport factory itself).
+ */
+typedef struct pjsip_tpfactory pjsip_tpfactory;
+
+
 /**
  * Flags for SIP transports.
  */
@@ -154,6 +161,76 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
  * @return	    Transport name.
  */
 PJ_DECL(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e t);
+
+
+
+/*****************************************************************************
+ *
+ * TRANSPORT SELECTOR.
+ *
+ *****************************************************************************/
+
+/**
+ * This structure describes the type of data in pjsip_tpselector.
+ */
+typedef enum pjsip_tpselector_type
+{
+    /** Transport is not specified. */
+    PJSIP_TPSELECTOR_NONE,
+
+    /** Use the specific transport to send request. */
+    PJSIP_TPSELECTOR_TRANSPORT,
+
+    /** Use the specific listener to send request. */
+    PJSIP_TPSELECTOR_LISTENER,
+
+} pjsip_tpselector_type;
+
+
+/**
+ * This structure describes the transport/listener preference to be used
+ * when sending outgoing requests.
+ *
+ * Normally transport will be selected automatically according to rules about
+ * sending requests. But some applications (such as proxies or B2BUAs) may 
+ * want to explicitly use specific transport to send requests, for example
+ * when they want to make sure that outgoing request should go from a specific
+ * network interface.
+ *
+ * The pjsip_tpselector structure is used for that purpose, i.e. to allow
+ * application specificly request that a particular transport/listener
+ * should be used to send request. This structure is used when calling
+ * pjsip_tsx_set_transport() and pjsip_dlg_set_transport().
+ */
+typedef struct pjsip_tpselector
+{
+    /** The type of data in the union */
+    pjsip_tpselector_type   type;
+
+    /** Union representing the transport/listener criteria to be used. */
+    union {
+	pjsip_transport	*transport;
+	pjsip_tpfactory	*listener;
+    } u;
+
+} pjsip_tpselector;
+
+
+/**
+ * Add transport/listener reference in the selector to prevent the specified
+ * transport/listener from being destroyed while application still has
+ * reference to it.
+ *
+ * @param sel	The transport selector.
+ */
+PJ_DECL(void) pjsip_tpselector_add_ref(pjsip_tpselector *sel);
+
+
+/**
+ * Decrement transport/listener reference in the selector.
+ * @param sel	The transport selector
+ */
+PJ_DECL(void) pjsip_tpselector_dec_ref(pjsip_tpselector *sel);
 
 
 /*****************************************************************************
@@ -431,6 +508,14 @@ struct pjsip_tx_data
 	char		     dst_name[16];  /**< Destination address.	*/
 	int		     dst_port;	    /**< Destination port.	*/
     } tp_info;
+
+    /** 
+     * Transport selector, to specify which transport to be used. 
+     * The value here must be set with pjsip_tx_data_set_transport(),
+     * to allow reference counter to be set properly.
+     */
+    pjsip_tpselector	    tp_sel;
+
 };
 
 
@@ -498,6 +583,20 @@ PJ_DECL(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata );
  * @return	    Null terminated info string.
  */
 PJ_DECL(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata );
+
+/**
+ * Set the explicit transport to be used when sending this transmit data.
+ * Application should not need to call this function, but rather use
+ * pjsip_tsx_set_transport() and pjsip_dlg_set_transport() instead (which
+ * will call this function).
+ *
+ * @param tdata	    The transmit buffer.
+ * @param sel	    Transport selector.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
+						 const pjsip_tpselector *sel);
 
 
 /*****************************************************************************
@@ -706,12 +805,6 @@ PJ_DECL(pj_ssize_t) pjsip_tpmgr_receive_packet(pjsip_tpmgr *mgr,
  *
  *****************************************************************************/
 
-/*
- * Forward declaration for transport factory (since it is referenced by
- * the transport factory itself).
- */
-typedef struct pjsip_tpfactory pjsip_tpfactory;
-
 
 /**
  * A transport factory is normally used for connection oriented transports
@@ -859,11 +952,26 @@ PJ_DECL(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr);
 /**
  * Find transport to be used to send message to remote destination. If no
  * suitable transport is found, a new one will be created.
+ *
+ * This is an internal function since normally application doesn't have access
+ * to transport manager. Application should use pjsip_endpt_acquire_transport()
+ * instead.
+ *
+ * @param mgr	    The transport manager instance.
+ * @param type	    The type of transport to be acquired.
+ * @param remote    The remote address to send message to.
+ * @param addr_len  Length of the remote address.
+ * @param sel	    Optional pointer to transport selector instance which is
+ *		    used to find explicit transport, if required.
+ * @param tp	    Pointer to receive the transport instance, if one is found.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						   pjsip_transport_type_e type,
 						   const pj_sockaddr_t *remote,
 						   int addr_len,
+						   const pjsip_tpselector *sel,
 						   pjsip_transport **tp);
 
 

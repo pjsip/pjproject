@@ -931,6 +931,9 @@ static pj_status_t tsx_destroy( pjsip_transaction *tsx )
 	pjsip_transport_dec_ref( tsx->transport );
 	tsx->transport = NULL;
     }
+    /* Decrement reference counter in transport selector */
+    pjsip_tpselector_dec_ref(&tsx->tp_sel);
+
     /* Free last transmitted message. */
     if (tsx->last_tx) {
 	pjsip_tx_data_dec_ref( tsx->last_tx );
@@ -1363,6 +1366,36 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
 
 /*
+ * Bind transaction to a specific transport/listener. 
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_set_transport(pjsip_transaction *tsx,
+					    const pjsip_tpselector *sel)
+{
+    struct tsx_lock_data lck;
+
+    /* Must be UAC transaction */
+    PJ_ASSERT_RETURN(tsx && sel && tsx->role == PJSIP_ROLE_UAC, PJ_EINVAL);
+
+    /* Start locking the transaction. */
+    lock_tsx(tsx, &lck);
+
+    /* Decrement reference counter of previous transport selector */
+    pjsip_tpselector_dec_ref(&tsx->tp_sel);
+
+    /* Copy transport selector structure .*/
+    pj_memcpy(&tsx->tp_sel, sel, sizeof(*sel));
+
+    /* Increment reference counter */
+    pjsip_tpselector_add_ref(&tsx->tp_sel);
+
+    /* Unlock transaction. */
+    unlock_tsx(tsx, &lck);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Set transaction status code and reason.
  */
 static void tsx_set_status_code(pjsip_transaction *tsx,
@@ -1423,11 +1456,17 @@ PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
 
     /* Dispatch to transaction. */
     lock_tsx(tsx, &lck);
+
+    /* Set transport selector to tdata */
+    pjsip_tx_data_set_transport(tdata, &tsx->tp_sel);
+
+    /* Dispatch to state handler */
     status = (*tsx->state_handler)(tsx, &event);
+
     unlock_tsx(tsx, &lck);
 
-    /* Will always decrement tdata reference counter
-     * (consistent with other send functions.
+    /* Only decrement reference counter when it returns success.
+     * (This is the specification from the .PDF design document).
      */
     if (status == PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);

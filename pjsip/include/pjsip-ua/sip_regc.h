@@ -26,6 +26,7 @@
 
 #include <pjsip/sip_types.h>
 #include <pjsip/sip_auth.h>
+#include <pjsip/sip_transport.h>
 
 
 /**
@@ -197,6 +198,32 @@ PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_route_set(pjsip_regc *regc,
 					      const pjsip_route_hdr*route_set);
+
+
+/**
+ * Lock/bind client registration to a specific transport/listener. 
+ * This is optional, as normally transport will be selected automatically
+ * based on the destination of requests upon resolver completion. 
+ * When the client registration is explicitly bound to the specific 
+ * transport/listener, all UAC transactions originated by the client
+ * registration will use the specified transport/listener when sending 
+ * outgoing requests.
+ *
+ * Note that this doesn't affect the Contact header set for this client
+ * registration. Application must manually update the Contact header if
+ * necessary, to adjust the address according to the transport being
+ * selected.
+ *
+ * @param regc	    The client registration instance.
+ * @param sel	    Transport selector containing the specification of
+ *		    transport or listener to be used by this session
+ *		    to send requests.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_transport(pjsip_regc *regc,
+					      const pjsip_tpselector *sel);
+
 
 /**
  * Add headers to be added to outgoing REGISTER requests.

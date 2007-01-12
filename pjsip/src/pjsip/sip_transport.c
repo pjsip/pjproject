@@ -259,6 +259,37 @@ PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
     return transport_names[type].name.ptr;
 }
 
+
+/*****************************************************************************
+ *
+ * TRANSPORT SELECTOR
+ *
+ *****************************************************************************/
+
+/*
+ * Add transport/listener reference in the selector.
+ */
+PJ_DEF(void) pjsip_tpselector_add_ref(pjsip_tpselector *sel)
+{
+    if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
+	pjsip_transport_add_ref(sel->u.transport);
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+	; /* Hmm.. looks like we don't have reference counter for listener */
+}
+
+
+/*
+ * Decrement transport/listener reference in the selector.
+ */
+PJ_DEF(void) pjsip_tpselector_dec_ref(pjsip_tpselector *sel)
+{
+    if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
+	pjsip_transport_dec_ref(sel->u.transport);
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+	; /* Hmm.. looks like we don't have reference counter for listener */
+}
+
+
 /*****************************************************************************
  *
  * TRANSMIT DATA BUFFER MANIPULATION.
@@ -330,6 +361,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
     if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
 	PJ_LOG(5,(tdata->obj_name, "Destroying txdata %s",
 		  pjsip_tx_data_get_info(tdata)));
+	pjsip_tpselector_dec_ref(&tdata->tp_sel);
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
 	pj_atomic_dec( tdata->mgr->tdata_counter );
 #endif
@@ -407,6 +439,24 @@ PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 
     return tdata->info;
 }
+
+PJ_DEF(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
+						const pjsip_tpselector *sel)
+{
+    PJ_ASSERT_RETURN(tdata && sel, PJ_EINVAL);
+
+    pj_lock_acquire(tdata->lock);
+
+    pjsip_tpselector_dec_ref(&tdata->tp_sel);
+
+    pj_memcpy(&tdata->tp_sel, sel, sizeof(*sel));
+    pjsip_tpselector_add_ref(&tdata->tp_sel);
+
+    pj_lock_release(tdata->lock);
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
 {
@@ -911,7 +961,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 
 	pj_sockaddr_in_init(&remote, NULL, 0);
 	status = pjsip_tpmgr_acquire_transport(tpmgr, type, &remote,
-					       sizeof(remote), &tp);
+					       sizeof(remote), NULL, &tp);
 
 	if (status == PJ_SUCCESS) {
 	    pj_strdup(pool, ip_addr, &tp->local_name.host);
@@ -1200,11 +1250,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						  pjsip_transport_type_e type,
 						  const pj_sockaddr_t *remote,
 						  int addr_len,
+						  const pjsip_tpselector *sel,
 						  pjsip_transport **tp)
 {
-    struct transport_key key;
-    int key_len;
-    pjsip_transport *transport;
     pjsip_tpfactory *factory;
     pj_status_t status;
 
@@ -1215,74 +1263,135 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 
     pj_lock_acquire(mgr->lock);
 
-    key_len = sizeof(key.type) + addr_len;
-
-    /* First try to get exact destination. */
-    key.type = type;
-    pj_memcpy(&key.addr, remote, addr_len);
-
-    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
-    if (transport == NULL) {
-	unsigned flag = pjsip_transport_get_flag_from_type(type);
-	const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
-
-	/* Ignore address for loop transports. */
-	if (type == PJSIP_TRANSPORT_LOOP ||
-	         type == PJSIP_TRANSPORT_LOOP_DGRAM)
-	{
-	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
-
-	    pj_bzero(addr, sizeof(pj_sockaddr_in));
-	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
-	    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
-	}
-	/* For datagram INET transports, try lookup with zero address.
-	 */
-	else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
-	         (remote_addr->sa_family == PJ_AF_INET)) 
-	{
-	    pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
-
-	    pj_bzero(addr, sizeof(pj_sockaddr_in));
-	    addr->sin_family = PJ_AF_INET;
-
-	    key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
-	    transport = pj_hash_get(mgr->table, &key, key_len, NULL);
-	}
-    }
-    
-    if (transport!=NULL && !transport->is_shutdown) {
-	/*
-	 * Transport found!
-	 */
-	pjsip_transport_add_ref(transport);
-	pj_lock_release(mgr->lock);
-	*tp = transport;
-
-	TRACE_((THIS_FILE, "Transport %s acquired", transport->obj_name));
-	return PJ_SUCCESS;
-    }
-
-    /*
-     * Transport not found!
-     * Find factory that can create such transport.
+    /* If transport is specified, then just use it if it is suitable
+     * for the destination.
      */
-    factory = mgr->factory_list.next;
-    while (factory != &mgr->factory_list) {
-	if (factory->type == type)
-	    break;
-	factory = factory->next;
-    }
+    if (sel && sel->type == PJSIP_TPSELECTOR_TRANSPORT &&
+	sel->u.transport) 
+    {
+	pjsip_transport *seltp = sel->u.transport;
 
-    if (factory == &mgr->factory_list) {
-	/* No factory can create the transport! */
+	/* See if the transport is (not) suitable */
+	if (seltp->key.type != type) {
+	    pj_lock_release(mgr->lock);
+	    return PJSIP_ETPNOTSUITABLE;
+	}
+
+	/* We could also verify that the destination address is reachable
+	 * from this transport (i.e. both are equal), but if application
+	 * has requested a specific transport to be used, assume that
+	 * it knows what to do.
+	 *
+	 * In other words, I don't think destination verification is a good
+	 * idea for now.
+	 */
+
+	/* Transport looks to be suitable to use, so just use it. */
+	pjsip_transport_add_ref(seltp);
 	pj_lock_release(mgr->lock);
-	TRACE_((THIS_FILE, "No suitable factory was found either"));
-	return PJSIP_EUNSUPTRANSPORT;
+	*tp = seltp;
+
+	TRACE_((THIS_FILE, "Transport %s acquired", seltp->obj_name));
+	return PJ_SUCCESS;
+
+
+    } else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
+	       sel->u.listener)
+    {
+	/* Application has requested that a specific listener is to
+	 * be used. In this case, skip transport hash table lookup.
+	 */
+
+	/* Verify that the listener type matches the destination type */
+	if (sel->u.listener->type != type) {
+	    pj_lock_release(mgr->lock);
+	    return PJSIP_ETPNOTSUITABLE;
+	}
+
+	/* We'll use this listener to create transport */
+	factory = sel->u.listener;
+
+    } else {
+
+	/*
+	 * This is the "normal" flow, where application doesn't specify
+	 * specific transport/listener to be used to send message to.
+	 * In this case, lookup the transport from the hash table.
+	 */
+	struct transport_key key;
+	int key_len;
+	pjsip_transport *transport;
+
+	key_len = sizeof(key.type) + addr_len;
+
+	/* First try to get exact destination. */
+	key.type = type;
+	pj_memcpy(&key.addr, remote, addr_len);
+
+	transport = pj_hash_get(mgr->table, &key, key_len, NULL);
+	if (transport == NULL) {
+	    unsigned flag = pjsip_transport_get_flag_from_type(type);
+	    const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
+
+	    /* Ignore address for loop transports. */
+	    if (type == PJSIP_TRANSPORT_LOOP ||
+		     type == PJSIP_TRANSPORT_LOOP_DGRAM)
+	    {
+		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+
+		pj_bzero(addr, sizeof(pj_sockaddr_in));
+		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+		transport = pj_hash_get(mgr->table, &key, key_len, NULL);
+	    }
+	    /* For datagram INET transports, try lookup with zero address.
+	     */
+	    else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
+		     (remote_addr->sa_family == PJ_AF_INET)) 
+	    {
+		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+
+		pj_bzero(addr, sizeof(pj_sockaddr_in));
+		addr->sin_family = PJ_AF_INET;
+
+		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+		transport = pj_hash_get(mgr->table, &key, key_len, NULL);
+	    }
+	}
+
+	if (transport!=NULL && !transport->is_shutdown) {
+	    /*
+	     * Transport found!
+	     */
+	    pjsip_transport_add_ref(transport);
+	    pj_lock_release(mgr->lock);
+	    *tp = transport;
+
+	    TRACE_((THIS_FILE, "Transport %s acquired", transport->obj_name));
+	    return PJ_SUCCESS;
+	}
+
+	/*
+	 * Transport not found!
+	 * Find factory that can create such transport.
+	 */
+	factory = mgr->factory_list.next;
+	while (factory != &mgr->factory_list) {
+	    if (factory->type == type)
+		break;
+	    factory = factory->next;
+	}
+
+	if (factory == &mgr->factory_list) {
+	    /* No factory can create the transport! */
+	    pj_lock_release(mgr->lock);
+	    TRACE_((THIS_FILE, "No suitable factory was found either"));
+	    return PJSIP_EUNSUPTRANSPORT;
+	}
+
     }
 
-    TRACE_((THIS_FILE, "%s, creating new one from factory",
-	   (transport?"Transport is shutdown":"No transport found")));
+    
+    TRACE_((THIS_FILE, "Creating new transport from factory"));
 
     /* Request factory to create transport. */
     status = factory->create_transport(factory, mgr, mgr->endpt,

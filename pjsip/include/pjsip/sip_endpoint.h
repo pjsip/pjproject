@@ -352,18 +352,29 @@ PJ_DECL(pj_ioqueue_t*) pjsip_endpt_get_ioqueue(pjsip_endpoint *endpt);
 
 /**
  * Find a SIP transport suitable for sending SIP message to the specified
- * address. This function will complete asynchronously when the transport is
- * ready (for example, when TCP socket is connected), and when it completes,
- * the callback will be called with the status of the operation.
+ * address. If transport selector ("sel") is set, then the function will
+ * check if the transport selected is suitable to send requests to the
+ * specified address.
  *
- * @see pjsip_transport_get
+ * @see pjsip_tpmgr_acquire_transport
+ *
+ * @param endpt	    The SIP endpoint instance.
+ * @param type	    The type of transport to be acquired.
+ * @param remote    The remote address to send message to.
+ * @param addr_len  Length of the remote address.
+ * @param sel	    Optional pointer to transport selector instance which is
+ *		    used to find explicit transport, if required.
+ * @param p_tp	    Pointer to receive the transport instance, if one is found.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) 
 pjsip_endpt_acquire_transport( pjsip_endpoint *endpt,
 			       pjsip_transport_type_e type,
 			       const pj_sockaddr_t *remote,
 			       int addr_len,
-			       pjsip_transport **p_transport);
+			       const pjsip_tpselector *sel,
+			       pjsip_transport **p_tp);
 
 
 /*****************************************************************************

@@ -1043,10 +1043,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport(pjsip_endpoint *endpt,
 						  pjsip_transport_type_e type,
 						  const pj_sockaddr_t *remote,
 						  int addr_len,
+						  const pjsip_tpselector *sel,
 						  pjsip_transport **transport)
 {
     return pjsip_tpmgr_acquire_transport(endpt->transport_mgr, type, 
-					 remote, addr_len, transport);
+					 remote, addr_len, sel, transport);
 }
 
 

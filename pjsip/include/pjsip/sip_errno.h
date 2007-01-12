@@ -214,6 +214,14 @@ PJ_BEGIN_DECL
  * transmit data has been deleted on return of pjsip_tx_data_dec_ref().
  */
 #define PJSIP_EBUFDESTROYED     (PJSIP_ERRNO_START_PJSIP + 63)	/* 171063 */
+/**
+ * @hideinitializer
+ * Unsuitable transport selected. This error occurs when application
+ * has explicitly requested to use a particular transport/listener,
+ * but the selected transport is not suitable to send request to
+ * the specified destination.
+ */
+#define PJSIP_ETPNOTSUITABLE	(PJSIP_ERRNO_START_PJSIP + 64)	/* 171064 */
 
 
 /************************************************************

@@ -26,6 +26,7 @@
 
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_util.h>
+#include <pjsip/sip_transport.h>
 #include <pj/timer.h>
 
 PJ_BEGIN_DECL
@@ -96,6 +97,7 @@ struct pjsip_transaction
     pj_str_t			transaction_key;/**< Hash table key.        */
     pj_uint32_t			hashed_key;	/**< Key's hashed value.    */
     pj_str_t			branch;         /**< The branch Id.         */
+    pjsip_tpselector		tp_sel;		/**< Transport selector.    */
 
     /*
      * State and status.
@@ -211,6 +213,26 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 					   pjsip_rx_data *rdata,
 					   pjsip_transaction **p_tsx );
+
+
+/**
+ * Lock/bind transaction to a specific transport/listener. This is optional,
+ * as normally transport will be selected automatically based on the 
+ * destination of the request upon resolver completion. Also it's only valid
+ * for UAC transaction (to send outgoing request), since for UAS the
+ * transport will be selected according to rules about handling incoming
+ * request (most likely it will use the transport where the request is
+ * coming from if ";rport" parameter is present in Via header).
+ *
+ * @param tsx	    The UAC transaction.
+ * @param sel	    Transport selector containing the specification of
+ *		    transport or listener to be used by this transaction
+ *		    to send requests.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_set_transport(pjsip_transaction *tsx,
+					     const pjsip_tpselector *sel);
 
 
 /**

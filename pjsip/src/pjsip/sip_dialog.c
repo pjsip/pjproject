@@ -506,6 +506,34 @@ on_error:
 
 
 /*
+ * Bind dialog to a specific transport/listener.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_set_transport( pjsip_dialog *dlg,
+					     const pjsip_tpselector *sel)
+{
+    /* Validate */
+    PJ_ASSERT_RETURN(dlg && sel, PJ_EINVAL);
+
+    /* Start locking the dialog. */
+    pjsip_dlg_inc_lock(dlg);
+
+    /* Decrement reference counter of previous transport selector */
+    pjsip_tpselector_dec_ref(&dlg->tp_sel);
+
+    /* Copy transport selector structure .*/
+    pj_memcpy(&dlg->tp_sel, sel, sizeof(*sel));
+
+    /* Increment reference counter */
+    pjsip_tpselector_add_ref(&dlg->tp_sel);
+
+    /* Unlock dialog. */
+    pjsip_dlg_dec_lock(dlg);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create forked dialog from a response.
  */
 PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
@@ -1065,6 +1093,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
+	/* Set transport selector */
+	status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
+	pj_assert(status == PJ_SUCCESS);
+
 	/* Attach this dialog to the transaction, so that user agent
 	 * will dispatch events to this dialog.
 	 */
@@ -1086,6 +1118,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 	}
 
     } else {
+	/* Set transport selector */
+	pjsip_tx_data_set_transport(tdata, &dlg->tp_sel);
+
+	/* Send request */
 	status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata, 
 						    NULL, NULL);
 	if (status != PJ_SUCCESS)
