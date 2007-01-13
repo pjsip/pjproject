@@ -940,6 +940,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 						 pj_pool_t *pool,
 						 pjsip_transport_type_e type,
+						 const pjsip_tpselector *sel,
 						 pj_str_t *ip_addr,
 						 int *port)
 {
@@ -954,7 +955,21 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 
     flag = pjsip_transport_get_flag_from_type(type);
 
-    if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
+    if (sel && sel->type == PJSIP_TPSELECTOR_TRANSPORT &&
+	sel->u.transport)
+    {
+	pj_strdup(pool, ip_addr, &sel->u.transport->local_name.host);
+	*port = sel->u.transport->local_name.port;
+	status = PJ_SUCCESS;
+
+    } else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
+	       sel->u.listener)
+    {
+	pj_strdup(pool, ip_addr, &sel->u.listener->addr_name.host);
+	*port = sel->u.listener->addr_name.port;
+	status = PJ_SUCCESS;
+
+    } else if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
 	
 	pj_sockaddr_in remote;
 	pjsip_transport *tp;

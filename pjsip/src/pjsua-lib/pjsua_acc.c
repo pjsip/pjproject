@@ -225,7 +225,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
     if (status != PJ_SUCCESS)
 	return status;
 
-
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;
 
@@ -258,7 +257,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 		     PJ_ETOOMANY);
 
     /* Must have a transport */
-    PJ_TODO(associate_acc_with_transport);
     PJ_ASSERT_RETURN(pjsua_var.tpdata[0].data.ptr != NULL, PJ_EINVALIDOP);
 
     PJSUA_LOCK();
@@ -320,7 +318,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 					 pjsua_acc_id *p_acc_id)
 {
     pjsua_acc_config cfg;
-    struct transport_data *t = &pjsua_var.tpdata[tid];
+    pjsua_transport_data *t = &pjsua_var.tpdata[tid];
     char uri[PJSIP_MAX_URL_SIZE];
 
     /* ID must be valid */
@@ -382,7 +380,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 	--pjsua_var.acc_cnt;
     }
 
-    PJ_TODO(may_need_to_scan_calls);
+    /* Leave the calls intact, as I don't think calls need to
+     * access account once it's created
+     */
+
 
     PJSUA_UNLOCK();
 
@@ -491,6 +492,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     pj_pool_t *pool;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
     if (acc->cfg.reg_uri.slen == 0) {
@@ -537,6 +539,17 @@ static pj_status_t pjsua_regc_init(int acc_id)
 		     status);
 	return status;
     }
+
+    /* If account is locked to specific transport, then set transport to
+     * the client registration.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsip_regc_set_transport(acc->regc, &tp_sel);
+    }
+
 
     /* Set credentials
      */
@@ -640,6 +653,7 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
 
     PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     
     pj_bzero(info, sizeof(pjsua_acc_info));
 
@@ -854,7 +868,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
+	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
 	    pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) 
 	{
 	    /* Match ! */
@@ -868,19 +882,30 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-	if (pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
+	if (acc->valid && pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
 	    /* Match ! */
 	    PJSUA_UNLOCK();
 	    return acc_id;
 	}
     }
 
-    /* No matching account, try match user part only. */
+    /* No matching account, try match user part (and transport type) only. */
     for (i=0; i < pjsua_var.acc_cnt; ++i) {
 	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
+	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
+
+	    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+		pjsip_transport_type_e type;
+		type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
+		if (type == PJSIP_TRANSPORT_UNSPECIFIED)
+		    type = PJSIP_TRANSPORT_UDP;
+
+		if (pjsua_var.tpdata[acc->cfg.transport_id].type != type)
+		    continue;
+	    }
+
 	    /* Match ! */
 	    PJSUA_UNLOCK();
 	    return acc_id;
@@ -903,10 +928,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
     pj_str_t local_addr;
+    pjsip_tpselector tp_sel;
     unsigned flag;
     int secure;
     int local_port;
     
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
     /* If route-set is configured for the account, then URI is the 
@@ -945,9 +972,13 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
+    /* Init transport selector. */
+    pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+
     /* Get local address suitable to send request from */
     status = pjsip_tpmgr_find_local_addr(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-					 pool, tp_type, &local_addr, &local_port);
+					 pool, tp_type, &tp_sel, 
+					 &local_addr, &local_port);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -990,10 +1021,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
     pj_str_t local_addr;
+    pjsip_tpselector tp_sel;
     unsigned flag;
     int secure;
     int local_port;
     
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
     /* If Record-Route is present, then URI is the top Record-Route. */
@@ -1038,9 +1071,13 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
+    /* Init transport selector. */
+    pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+
     /* Get local address suitable to send request from */
     status = pjsip_tpmgr_find_local_addr(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-					 pool, tp_type, &local_addr, &local_port);
+					 pool, tp_type, &tp_sel,
+					 &local_addr, &local_port);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1064,4 +1101,19 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 }
 
 
+PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
+					     pjsua_transport_id tp_id)
+{
+    pjsua_acc *acc;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
+    acc = &pjsua_var.acc[acc_id];
+
+    PJ_ASSERT_RETURN(tp_id >= 0 && tp_id < PJ_ARRAY_SIZE(pjsua_var.tpdata),
+		     PJ_EINVAL);
+    
+    acc->cfg.transport_id = tp_id;
+
+    return PJ_SUCCESS;
+}
 

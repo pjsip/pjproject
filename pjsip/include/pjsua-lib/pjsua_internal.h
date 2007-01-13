@@ -106,7 +106,7 @@ typedef struct pjsua_acc
 /**
  *Transport.
  */
-typedef struct transport_data
+typedef struct pjsua_transport_data
 {
     int			     index;
     pjsip_transport_type_e   type;
@@ -118,7 +118,7 @@ typedef struct transport_data
 	void		    *ptr;
     } data;
 
-} transport_data;
+} pjsua_transport_data;
 
 
 /**
@@ -179,7 +179,7 @@ struct pjsua_data
     /* SIP: */
     pjsip_endpoint	*endpt;	    /**< Global endpoint.		*/
     pjsip_module	 mod;	    /**< pjsua's PJSIP module.		*/
-    transport_data	 tpdata[8]; /**< Array of transports.		*/
+    pjsua_transport_data tpdata[8]; /**< Array of transports.		*/
 
     /* Threading: */
     pj_bool_t		 thread_quit_flag;  /**< Thread quit flag.	*/
@@ -377,6 +377,14 @@ void pjsua_set_msg_route_set( pjsip_tx_data *tdata,
 void pjsua_parse_media_type( pj_pool_t *pool,
 			     const pj_str_t *mime,
 			     pjsip_media_type *media_type);
+
+
+/*
+ * Internal function to init transport selector from transport id.
+ */
+void pjsua_init_tpselector(pjsua_transport_id tp_id,
+			   pjsip_tpselector *sel);
+
 
 
 PJ_END_DECL

@@ -101,6 +101,10 @@ static void destroy_dialog( pjsip_dialog *dlg )
 	pj_mutex_destroy(dlg->mutex_);
 	dlg->mutex_ = NULL;
     }
+    if (dlg->tp_sel.type != PJSIP_TPSELECTOR_NONE) {
+	pjsip_tpselector_dec_ref(&dlg->tp_sel);
+	pj_bzero(&dlg->tp_sel, sizeof(pjsip_tpselector));
+    }
     pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 

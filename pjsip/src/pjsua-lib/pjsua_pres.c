@@ -501,6 +501,16 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
+    }
+
     /* Attach our data to the subscription: */
     uapres = pj_pool_alloc(dlg->pool, sizeof(pjsua_srv_pres));
     uapres->sub = sub;
@@ -986,6 +996,16 @@ static void subscribe_buddy_presence(unsigned index)
 		     status);
 	pjsip_dlg_terminate(dlg);
 	return;
+    }
+
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
     }
 
     /* Set route-set */

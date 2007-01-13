@@ -1341,6 +1341,19 @@ typedef struct pjsua_acc_config
      */
     pjsip_cred_info cred_info[PJSUA_ACC_MAX_PROXIES];
 
+    /**
+     * Optionally bind this account to specific transport. This normally is
+     * not a good idea, as account should be able to send requests using
+     * any available transports according to the destination. But some
+     * application may want to have explicit control over the transport to
+     * use, so in that case it can set this field.
+     *
+     * Default: -1 (PJSUA_INVALID_ID)
+     *
+     * @see pjsua_acc_set_transport()
+     */
+    pjsua_transport_id  transport_id;
+
 } pjsua_acc_config;
 
 
@@ -1354,6 +1367,7 @@ PJ_INLINE(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
+    cfg->transport_id = PJSUA_INVALID_ID;
 }
 
 
@@ -1654,6 +1668,26 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 						   pjsua_acc_id acc_id,
 						   pjsip_rx_data *rdata );
 							   
+
+/**
+ * Lock/bind this account to a specific transport/listener. Normally
+ * application shouldn't need to do this, as transports will be selected
+ * automatically by the stack according to the destination.
+ *
+ * When account is locked/bound to a specific transport, all outgoing
+ * requests from this account will use the specified transport (this
+ * includes SIP registration, dialog (call and event subscription), and
+ * out-of-dialog requests such as MESSAGE).
+ *
+ * Note that transport_id may be specified in pjsua_acc_config too.
+ *
+ * @param acc_id	The account ID.
+ * @param tp_id		The transport ID.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
+					     pjsua_transport_id tp_id);
 
 
 /**

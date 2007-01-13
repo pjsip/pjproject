@@ -1189,7 +1189,7 @@ PJ_DEF(pj_status_t) pjsua_enum_transports( pjsua_transport_id id[],
 PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 					      pjsua_transport_info *info)
 {
-    struct transport_data *t = &pjsua_var.tpdata[id];
+    pjsua_transport_data *t = &pjsua_var.tpdata[id];
     pj_status_t status;
 
     pj_bzero(info, sizeof(*info));
@@ -1411,6 +1411,34 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 	media_type->subtype.slen = tmp.ptr+tmp.slen-pos-1;
     } else {
 	media_type->type = tmp;
+    }
+}
+
+
+/*
+ * Internal function to init transport selector from transport id.
+ */
+void pjsua_init_tpselector(pjsua_transport_id tp_id,
+			   pjsip_tpselector *sel)
+{
+    pjsua_transport_data *tpdata;
+    unsigned flag;
+
+    pj_bzero(sel, sizeof(*sel));
+    if (tp_id == PJSUA_INVALID_ID)
+	return;
+
+    pj_assert(tp_id >= 0 && tp_id < PJ_ARRAY_SIZE(pjsua_var.tpdata));
+    tpdata = &pjsua_var.tpdata[tp_id];
+
+    flag = pjsip_transport_get_flag_from_type(tpdata->type);
+
+    if (flag & PJSIP_TRANSPORT_DATAGRAM) {
+	sel->type = PJSIP_TPSELECTOR_TRANSPORT;
+	sel->u.transport = tpdata->data.tp;
+    } else {
+	sel->type = PJSIP_TPSELECTOR_LISTENER;
+	sel->u.listener = tpdata->data.factory;
     }
 }
 

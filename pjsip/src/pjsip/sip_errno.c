@@ -67,6 +67,7 @@ static const struct
     PJ_BUILD_ERR( PJSIP_EPENDINGTX,	"Transmit buffer already pending"),
     PJ_BUILD_ERR( PJSIP_ERXOVERFLOW,	"Rx buffer overflow"),
     PJ_BUILD_ERR( PJSIP_EBUFDESTROYED,	"Buffer destroyed"),
+    PJ_BUILD_ERR( PJSIP_ETPNOTSUITABLE,	"Unsuitable transport selected"),
 
     /* Transaction errors */
     PJ_BUILD_ERR( PJSIP_ETSXDESTROYED,	"Transaction has been destroyed"),

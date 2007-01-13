@@ -433,6 +433,16 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
 	return status;
     }
 
+    /* If account is locked to specific transport, then set transport to
+     * the request.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
+
     /* Add accept header. */
     pjsip_msg_add_hdr( tdata->msg, 
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
@@ -519,6 +529,16 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
 	return status;
     }
 
+
+    /* If account is locked to specific transport, then set transport to
+     * the request.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
 
     /* Add accept header. */
     pjsip_msg_add_hdr( tdata->msg, 

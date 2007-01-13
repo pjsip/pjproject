@@ -330,6 +330,16 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Attach user data */
     call->user_data = user_data;
 
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
+    }
+
     /* Set dialog Route-Set: */
     if (!pj_list_empty(&acc->route_set))
 	pjsip_dlg_set_route_set(dlg, &acc->route_set);
@@ -619,6 +629,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     dlg->mod_data[pjsua_var.mod.id] = call;
     inv->mod_data[pjsua_var.mod.id] = call;
 
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
+    }
 
     /* Must answer with some response to initial INVITE.
      */

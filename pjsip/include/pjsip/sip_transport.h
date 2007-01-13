@@ -917,7 +917,8 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
  *
  * @param tpmgr	    The transport manager.
  * @param pool	    Pool to allocate memory for the IP address.
- * @param h	    Destination address to contact.
+ * @param type	    Destination address to contact.
+ * @param sel	    Optional pointer to prefered transport, if any.
  * @param ip_addr   Pointer to receive the IP address.
  * @param port	    Pointer to receive the port number.
  *
@@ -926,6 +927,7 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 PJ_DECL(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 						  pj_pool_t *pool,
 						  pjsip_transport_type_e type,
+						  const pjsip_tpselector *sel,
 						  pj_str_t *ip_addr,
 						  int *port);
 
