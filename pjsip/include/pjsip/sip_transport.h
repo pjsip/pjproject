@@ -211,6 +211,7 @@ typedef struct pjsip_tpselector
     union {
 	pjsip_transport	*transport;
 	pjsip_tpfactory	*listener;
+	void		*ptr;
     } u;
 
 } pjsip_tpselector;

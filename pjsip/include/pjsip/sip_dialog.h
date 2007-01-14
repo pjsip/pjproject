@@ -230,8 +230,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uas(  pjsip_user_agent *ua,
 /**
  * Lock/bind dialog to a specific transport/listener. This is optional,
  * as normally transport will be selected automatically based on the 
- * destination of requests upon resolver completion. When the dialog is 
- * explicitly bound to the specific transport/listener, all UAC transactions
+ * destination of messages upon resolver completion. When the dialog is 
+ * explicitly bound to the specific transport/listener, all transactions
  * originated by this dialog will use the specified transport/listener
  * when sending outgoing requests.
  *

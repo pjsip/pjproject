@@ -1325,6 +1325,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
     /* Must acquire dialog first, to prevent deadlock */
     pjsip_dlg_inc_lock(dlg);
 
+    /* If the dialog is locked to transport, make sure that transaction
+     * is locked to the same transport too.
+     */
+    if (dlg->tp_sel.type != tsx->tp_sel.type ||
+	dlg->tp_sel.u.ptr != tsx->tp_sel.u.ptr)
+    {
+	status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
+	pj_assert(status == PJ_SUCCESS);
+    }
+
+    /* Ask transaction to send the response */
     status = pjsip_tsx_send_msg(tsx, tdata);
 
     pjsip_dlg_dec_lock(dlg);

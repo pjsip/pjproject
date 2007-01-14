@@ -2891,6 +2891,22 @@ pj_status_t app_init(int argc, char *argv[])
 	app_config.rec_port = pjsua_recorder_get_conf_port(app_config.rec_id);
     }
 
+    /* Add UDP transport unless it's disabled. */
+    if (!app_config.no_udp) {
+	pjsua_acc_id aid;
+
+	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
+					&app_config.udp_cfg, 
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	//pjsua_acc_set_transport(aid, transport_id);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+    }
+
     /* Add TCP transport unless it's disabled */
     if (!app_config.no_tcp) {
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
@@ -2905,18 +2921,6 @@ pj_status_t app_init(int argc, char *argv[])
 
     }
 
-    /* Add UDP transport unless it's disabled. */
-    if (!app_config.no_udp) {
-	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
-					&app_config.udp_cfg, 
-					&transport_id);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* Add local account */
-	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
-	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
-    }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Add TLS transport when application wants one */

@@ -1374,7 +1374,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_transport(pjsip_transaction *tsx,
     struct tsx_lock_data lck;
 
     /* Must be UAC transaction */
-    PJ_ASSERT_RETURN(tsx && sel && tsx->role == PJSIP_ROLE_UAC, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tsx && sel, PJ_EINVAL);
 
     /* Start locking the transaction. */
     lock_tsx(tsx, &lck);

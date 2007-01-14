@@ -218,13 +218,9 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 /**
  * Lock/bind transaction to a specific transport/listener. This is optional,
  * as normally transport will be selected automatically based on the 
- * destination of the request upon resolver completion. Also it's only valid
- * for UAC transaction (to send outgoing request), since for UAS the
- * transport will be selected according to rules about handling incoming
- * request (most likely it will use the transport where the request is
- * coming from if ";rport" parameter is present in Via header).
+ * destination of the message upon resolver completion.
  *
- * @param tsx	    The UAC transaction.
+ * @param tsx	    The transaction.
  * @param sel	    Transport selector containing the specification of
  *		    transport or listener to be used by this transaction
  *		    to send requests.
