@@ -34,7 +34,7 @@
 #define PJ_CC_VER_3	    0
 
 /* Disable CRT deprecation warnings. */
-#if PJ_CC_VER_1 >= 8
+#if PJ_CC_VER_1 >= 8 && !defined(_CRT_SECURE_NO_DEPRECATE)
 #   define _CRT_SECURE_NO_DEPRECATE
 #endif
 
