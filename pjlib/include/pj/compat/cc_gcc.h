@@ -31,7 +31,14 @@
 #define PJ_CC_NAME		"gcc"
 #define PJ_CC_VER_1		__GNUC__
 #define PJ_CC_VER_2		__GNUC_MINOR__
-#define PJ_CC_VER_3		__GNUC_PATCHLEVEL__
+
+/* __GNUC_PATCHLEVEL__ doesn't exist in gcc-2.9x.x */
+#ifdef __GNUC_PATCHLEVEL__
+#   define PJ_CC_VER_3		__GNUC_PATCHLEVEL__
+#else
+#   define PJ_CC_VER_3		0
+#endif
+
 
 
 #define PJ_THREAD_FUNC	
