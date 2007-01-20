@@ -62,7 +62,7 @@ int transport_tcp_test(void)
     /* Acquire one TCP transport. */
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_TCP, 
 					   &rem_addr, sizeof(rem_addr),
-					   &tcp);
+					   NULL, &tcp);
     if (status != PJ_SUCCESS || tcp == NULL) {
 	app_perror("   Error: unable to acquire TCP transport", status);
 	return -17;

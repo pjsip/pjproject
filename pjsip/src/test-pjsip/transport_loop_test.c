@@ -37,7 +37,7 @@ static int datagram_loop_test()
 
     /* Test acquire transport. */
     status = pjsip_endpt_acquire_transport( endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-					    &addr, sizeof(addr), &loop);
+					    &addr, sizeof(addr), NULL, &loop);
     if (status != PJ_SUCCESS) {
 	app_perror("   error: loop transport is not configured", status);
 	return -20;

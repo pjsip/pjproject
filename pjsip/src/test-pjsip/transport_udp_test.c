@@ -61,7 +61,7 @@ int transport_udp_test(void)
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP, 
 					   &rem_addr, sizeof(rem_addr),
-					   &tp);
+					   NULL, &tp);
     if (status != PJ_SUCCESS)
 	return -50;
     if (tp != udp_tp)

@@ -139,7 +139,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pj_sockaddr_in_init(&remote, 0, 0);
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
 					   &remote, sizeof(pj_sockaddr_in),
-					   &rdata.tp_info.transport);
+					   NULL, &rdata.tp_info.transport);
     if (status != PJ_SUCCESS) {
 	app_perror("    error: unable to get loop transport", status);
 	return status;

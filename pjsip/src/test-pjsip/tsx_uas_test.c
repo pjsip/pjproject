@@ -1541,7 +1541,7 @@ int tsx_uas_test(struct tsx_test_param *param)
 
     /* Check if loop transport is configured. */
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-				      &addr, sizeof(addr), &loop);
+				      &addr, sizeof(addr), NULL, &loop);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(3,(THIS_FILE, "  Error: loop transport is not configured!"));
 	return -10;
