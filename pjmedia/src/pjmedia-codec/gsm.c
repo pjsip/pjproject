@@ -119,6 +119,7 @@ struct gsm_data
     pjmedia_plc		*plc;
     pj_bool_t		 vad_enabled;
     pjmedia_silence_det	*vad;
+    pj_timestamp	 last_tx;
 };
 
 
@@ -365,6 +366,9 @@ static pj_status_t gsm_dealloc_codec( pjmedia_codec_factory *factory,
 	pjmedia_plc_save(gsm_data->plc, frame);
     }
 
+    /* Re-init silence_period */
+    pj_set_timestamp32(&gsm_data->last_tx, 0, 0);
+
     /* Put in the free list. */
     pj_mutex_lock(gsm_codec_factory.mutex);
     pj_list_push_front(&gsm_codec_factory.codec_list, codec);
@@ -497,23 +501,31 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     if (output_buf_len < 33)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
-    if (input->size < 320)
-	return PJMEDIA_CODEC_EPCMTOOSHORT;
+    PJ_ASSERT_RETURN(input->size==320, PJMEDIA_CODEC_EPCMFRMINLEN);
 
     /* Detect silence */
     if (gsm_data->vad_enabled) {
 	pj_bool_t is_silence;
+	pj_int32_t silence_duration;
+
+	silence_duration = pj_timestamp_diff32(&gsm_data->last_tx, 
+					       &input->timestamp);
 
 	is_silence = pjmedia_silence_det_detect(gsm_data->vad, 
 					        input->buf,
-						input->size / 2,
+						(input->size >> 1),
 						NULL);
-	if (is_silence) {
+	if (is_silence &&
+	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
+	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
 	    output->size = 0;
-	    output->timestamp.u64 = input->timestamp.u64;
+	    output->timestamp = input->timestamp;
 	    return PJ_SUCCESS;
+	} else {
+	    gsm_data->last_tx = input->timestamp;
 	}
     }
 

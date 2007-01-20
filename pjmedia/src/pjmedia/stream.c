@@ -561,13 +561,21 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 					 &rtphdrlen);
 
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
-	unsigned ts;
+	unsigned ts, codec_samples_per_frame;
 
 	/* Repeatedly call encode if there are multiple frames to be
 	 * sent.
 	 */
+	codec_samples_per_frame = stream->codec_param.info.enc_ptime *
+				  stream->codec_param.info.clock_rate /
+				  1000;
+	if (codec_samples_per_frame == 0) {
+	    codec_samples_per_frame = stream->codec_param.info.frm_ptime *
+				      stream->codec_param.info.clock_rate /
+				      1000;
+	}
 
-	for (ts=0; ts<ts_len; ts += samples_per_frame) {
+	for (ts=0; ts<ts_len; ts += codec_samples_per_frame) {
 	    pjmedia_frame tmp_out_frame, tmp_in_frame;
 	    unsigned bytes_per_sample, max_size;
 
@@ -575,8 +583,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	    bytes_per_sample = stream->codec_param.info.pcm_bits_per_sample/8;
 
 	    /* Split original PCM input frame into base frame size */
+	    tmp_in_frame.timestamp.u64 = frame->timestamp.u64 + ts;
 	    tmp_in_frame.buf = ((char*)frame->buf) + ts * bytes_per_sample;
-	    tmp_in_frame.size = samples_per_frame * bytes_per_sample;
+	    tmp_in_frame.size = codec_samples_per_frame * bytes_per_sample;
 	    tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 
 	    /* Set output frame position */
@@ -689,10 +698,30 @@ static pj_status_t put_frame( pjmedia_port *port,
 			      const pjmedia_frame *frame )
 {
     pjmedia_stream *stream = port->port_data.pdata;
-    pjmedia_frame tmp_in_frame;
+    pjmedia_frame tmp_zero_frame;
     unsigned samples_per_frame;
 
     samples_per_frame = stream->enc_samples_per_frame;
+
+    /* http://www.pjsip.org/trac/ticket/56:
+     *  when input is PJMEDIA_FRAME_TYPE_NONE, feed zero PCM frame
+     *  instead so that encoder can decide whether or not to transmit
+     *  silence frame.
+     */
+    if (frame->type == PJMEDIA_FRAME_TYPE_NONE &&
+	samples_per_frame <= ZERO_PCM_MAX_SIZE) 
+    {
+	pj_memcpy(&tmp_zero_frame, frame, sizeof(pjmedia_frame));
+	frame = &tmp_zero_frame;
+
+	tmp_zero_frame.buf = zero_frame;
+	tmp_zero_frame.size = samples_per_frame * 2;
+	tmp_zero_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    }
+
+#if 0
+    // This is no longer needed because each TYPE_NONE frame will
+    // be converted into zero frame above
 
     /* If VAD is temporarily disabled during creation, feed zero PCM frame
      * to the codec.
@@ -709,6 +738,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	tmp_in_frame.size = samples_per_frame * 2;
 	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     }
+#endif
 
     /* If VAD is temporarily disabled during creation, enable it
      * after transmitting for VAD_SUSPEND_SEC seconds.

@@ -174,14 +174,39 @@
 /**
  * Specify how long (in miliseconds) the stream should suspend the
  * silence detector/voice activity detector (VAD) during the initial
- * period of the session.
+ * period of the session. This feature is useful to open bindings in
+ * all NAT routers between local and remote endpoint since most NATs
+ * do not allow incoming packet to get in before local endpoint sends
+ * outgoing packets.
  *
  * Specify zero to disable this feature.
  *
- * Default: 600 msec
+ * Default: 600 msec (which gives good probability that some RTP 
+ *                    packets will reach the destination, but without
+ *                    filling up the jitter buffer on the remote end).
  */
 #ifndef PJMEDIA_STREAM_VAD_SUSPEND_MSEC
 #   define PJMEDIA_STREAM_VAD_SUSPEND_MSEC	600
+#endif
+
+
+/**
+ * Specify the maximum duration of silence period in the codec. 
+ * This is useful for example to keep NAT binding open in the firewall
+ * and to prevent server from disconnecting the call because no 
+ * RTP packet is received.
+ *
+ * This only applies to codecs that use PJMEDIA's VAD (pretty much
+ * everything including iLBC, except Speex, which has its own DTX 
+ * mechanism).
+ *
+ * Use (-1) to disable this feature.
+ *
+ * Default: 8000 (one second on 8KHz).
+ *
+ */
+#ifndef PJMEDIA_CODEC_MAX_SILENCE_PERIOD
+#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	8000
 #endif
 
 

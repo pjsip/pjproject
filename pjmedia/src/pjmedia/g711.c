@@ -125,6 +125,7 @@ struct g711_private
     pjmedia_plc		*plc;
     pj_bool_t		 vad_enabled;
     pjmedia_silence_det *vad;
+    pj_timestamp	 last_tx;
 };
 
 
@@ -465,37 +466,48 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
     struct g711_private *priv = codec->codec_data;
 
     /* Check output buffer length */
-    if (output_buf_len < input->size / 2)
+    if (output_buf_len < (input->size >> 1))
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
     /* Detect silence if VAD is enabled */
     if (priv->vad_enabled) {
 	pj_bool_t is_silence;
+	pj_int32_t silence_period;
+
+	silence_period = pj_timestamp_diff32(&priv->last_tx,
+					     &input->timestamp);
 
 	is_silence = pjmedia_silence_det_detect(priv->vad, input->buf, 
-						input->size / 2, NULL);
-	if (is_silence) {
+						(input->size >> 1), NULL);
+	if (is_silence && 
+	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
+	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
 	    output->size = 0;
-	    output->timestamp.u64 = input->timestamp.u64;
+	    output->timestamp = input->timestamp;
 	    return PJ_SUCCESS;
+	} else {
+	    priv->last_tx = input->timestamp;
 	}
     }
 
     /* Encode */
     if (priv->pt == PJMEDIA_RTP_PT_PCMA) {
-	unsigned i;
+	unsigned i, n;
 	pj_uint8_t *dst = output->buf;
 
-	for (i=0; i!=input->size/2; ++i, ++dst) {
+	n = (input->size >> 1);
+	for (i=0; i!=n; ++i, ++dst) {
 	    *dst = pjmedia_linear2alaw(samples[i]);
 	}
     } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
-	unsigned i;
+	unsigned i, n;
 	pj_uint8_t *dst = output->buf;
 
-	for (i=0; i!=input->size/2; ++i, ++dst) {
+	n = (input->size >> 1);
+	for (i=0; i!=n; ++i, ++dst) {
 	    *dst = pjmedia_linear2ulaw(samples[i]);
 	}
 
@@ -504,7 +516,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
     }
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = input->size / 2;
+    output->size = (input->size >> 1);
 
     return PJ_SUCCESS;
 }
@@ -517,7 +529,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
     struct g711_private *priv = codec->codec_data;
 
     /* Check output buffer length */
-    PJ_ASSERT_RETURN(output_buf_len >= input->size * 2,
+    PJ_ASSERT_RETURN(output_buf_len >= (input->size << 1),
 		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     /* Input buffer MUST have exactly 80 bytes long */
@@ -547,7 +559,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
     }
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = input->size * 2;
+    output->size = (input->size << 1);
 
     if (priv->plc_enabled)
 	pjmedia_plc_save( priv->plc, output->buf);

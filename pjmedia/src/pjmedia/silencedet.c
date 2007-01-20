@@ -142,7 +142,7 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
     if (min_signal < 0)
 	min_signal = sd->ptime;
     if (recalc_time < 0)
-	recalc_time = 5000;
+	recalc_time = 2000;
 
     sd->min_signal_cnt = min_signal / sd->ptime;
     sd->min_silence_cnt = min_silence / sd->ptime;
@@ -256,10 +256,10 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 
 	    /* Adjust according to signal/silence proportions. */
 	    if (pct_signal > 95) {
-		new_threshold += (sd->weakest_signal - sd->cur_threshold)/4;
+		new_threshold += (sd->weakest_signal+1 - sd->cur_threshold)/2;
 	    } else if (pct_signal < 5) {
 		new_threshold = (sd->cur_threshold+sd->loudest_silence)/2+1;
-	    } else if (pct_signal > 90) {
+	    } else if (pct_signal > 80) {
 		new_threshold++;
 	    } else if (pct_signal < 10) {
 		new_threshold--;
@@ -268,9 +268,12 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 	    }
 
 	    if (updated && sd->cur_threshold != new_threshold) {
+		PJ_LOG(5,(sd->objname, 
+			  "Vad cur_threshold updated %d-->%d. "
+			  "Signal lo=%d",
+			  sd->cur_threshold, new_threshold,
+			  sd->weakest_signal));
 		sd->cur_threshold = new_threshold;
-		PJ_LOG(5,(sd->objname, "Vad cur_threshold updated to %d",
-			  sd->cur_threshold));
 	    }
 	}
 

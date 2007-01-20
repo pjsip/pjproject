@@ -128,6 +128,7 @@ struct ilbc_codec
     pjmedia_silence_det	*vad;
     pj_bool_t		 vad_enabled;
     pj_bool_t		 plc_enabled;
+    pj_timestamp	 last_tx;
 
     pj_bool_t		 enc_ready;
     iLBC_Enc_Inst_t	 enc;
@@ -426,6 +427,11 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Init last_tx (not necessary because of zalloc, but better
+     * be safe in case someone remove zalloc later.
+     */
+    pj_set_timestamp32(&ilbc_codec->last_tx, 0, 0);
+
     PJ_LOG(5,(ilbc_codec->obj_name, 
 	      "iLBC codec opened, encoder mode=%d, decoder mode=%d",
 	      attr->setting.enc_fmtp_mode, attr->setting.dec_fmtp_mode));
@@ -512,23 +518,32 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
     if (output_buf_len < ilbc_codec->enc_frame_size)
 	return PJMEDIA_CODEC_EFRMTOOSHORT;
 
-    if (input->size != ilbc_codec->enc_samples_per_frame * 2)
+    if (input->size != (ilbc_codec->enc_samples_per_frame << 1))
 	return PJMEDIA_CODEC_EPCMFRMINLEN;
 
     /* Detect silence */
     if (ilbc_codec->vad_enabled) {
 	pj_bool_t is_silence;
+	pj_int32_t silence_period;
+
+	silence_period = pj_timestamp_diff32(&ilbc_codec->last_tx,
+					      &input->timestamp);
 
 	is_silence = pjmedia_silence_det_detect(ilbc_codec->vad, 
 					        input->buf,
-						input->size / 2,
+						(input->size >> 1),
 						NULL);
-	if (is_silence) {
+	if (is_silence &&
+	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
+	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD)
+	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
 	    output->size = 0;
-	    output->timestamp.u64 = input->timestamp.u64;
+	    output->timestamp = input->timestamp;
 	    return PJ_SUCCESS;
+	} else {
+	    ilbc_codec->last_tx = input->timestamp;
 	}
     }
 
@@ -544,7 +559,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = ilbc_codec->enc.no_of_bytes;
-    output->timestamp.u64 = input->timestamp.u64;
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -563,7 +578,7 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
     pj_assert(ilbc_codec != NULL);
     PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
 
-    if (output_buf_len < ilbc_codec->dec_samples_per_frame*2)
+    if (output_buf_len < (ilbc_codec->dec_samples_per_frame << 1))
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     if (input->size != ilbc_codec->dec_frame_size)
@@ -577,9 +592,9 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
     for (i=0; i<ilbc_codec->dec_samples_per_frame; ++i) {
 	((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
     }
-    output->size = ilbc_codec->dec_samples_per_frame * 2;
+    output->size = (ilbc_codec->dec_samples_per_frame << 1);
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->timestamp.u64 = input->timestamp.u64;
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -598,7 +613,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
     pj_assert(ilbc_codec != NULL);
     PJ_ASSERT_RETURN(output, PJ_EINVAL);
 
-    if (output_buf_len < ilbc_codec->dec_samples_per_frame*2)
+    if (output_buf_len < (ilbc_codec->dec_samples_per_frame << 1))
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     /* Decode to temporary buffer */
@@ -608,7 +623,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
     for (i=0; i<ilbc_codec->dec_samples_per_frame; ++i) {
 	((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
     }
-    output->size = ilbc_codec->dec_samples_per_frame * 2;
+    output->size = (ilbc_codec->dec_samples_per_frame << 1);
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     return PJ_SUCCESS;
