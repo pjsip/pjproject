@@ -880,6 +880,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 
 	status = pj_gethostip(&p_pub_addr->sin_addr);
 	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
 	    pj_sock_close(sock);
 	    return status;
 	}

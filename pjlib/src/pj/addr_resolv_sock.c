@@ -87,14 +87,16 @@ pj_status_t pj_gethostip(pj_in_addr *addr)
 	status = pj_sock_connect(fd, &a, sizeof(a));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(fd);
-	    return status;
+	    /* Return 127.0.0.1 as the address */
+	    return PJ_SUCCESS;
 	}
 
 	len = sizeof(a);
 	status = pj_sock_getsockname(fd, &a, &len);
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(fd);
-	    return status;
+	    /* Return 127.0.0.1 as the address */
+	    return PJ_SUCCESS;
 	}
 
 	pj_sock_close(fd);
