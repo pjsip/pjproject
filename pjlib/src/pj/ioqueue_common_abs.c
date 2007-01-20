@@ -842,7 +842,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
             }
 	    status = status;
         }
-	PJ_LOG(3,(THIS_FILE, "pending write operation!!"));
     }
 
     /*
