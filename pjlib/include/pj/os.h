@@ -921,6 +921,19 @@ PJ_DECL(pj_status_t) pj_get_timestamp(pj_timestamp *ts);
 PJ_DECL(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq);
 
 /**
+ * Set timestamp from 32bit values.
+ * @param t	    The timestamp to be set.
+ * @param hi	    The high 32bit part.
+ * @param lo	    The low 32bit part.
+ */
+PJ_INLINE(void) pj_set_timestamp32(pj_timestamp *t, pj_uint32_t hi,
+				   pj_uint32_t lo)
+{
+    t->u32.hi = hi;
+    t->u32.lo = lo;
+}
+
+/**
  * Add timestamp t2 to t1.
  * @param t1	    t1.
  * @param t2	    t2.
@@ -933,6 +946,23 @@ PJ_INLINE(void) pj_add_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
     pj_uint32_t old = t1->u32.lo;
     t1->u32.hi += t2->u32.hi;
     t1->u32.lo += t2->u32.lo;
+    if (t1->u32.lo < old)
+	++t1->u32.hi;
+#endif
+}
+
+/**
+ * Add timestamp t2 to t1.
+ * @param t1	    t1.
+ * @param t2	    t2.
+ */
+PJ_INLINE(void) pj_add_timestamp32(pj_timestamp *t1, pj_uint32_t t2)
+{
+#if PJ_HAS_INT64
+    t1->u64 += t2;
+#else
+    pj_uint32_t old = t1->u32.lo;
+    t1->u32.lo += t2;
     if (t1->u32.lo < old)
 	++t1->u32.hi;
 #endif
@@ -957,6 +987,43 @@ PJ_INLINE(void) pj_sub_timestamp(pj_timestamp *t1, const pj_timestamp *t2)
     }
 #endif
 }
+
+/**
+ * Substract timestamp t2 from t1.
+ * @param t1	    t1.
+ * @param t2	    t2.
+ */
+PJ_INLINE(void) pj_sub_timestamp32(pj_timestamp *t1, pj_uint32_t t2)
+{
+#if PJ_HAS_INT64
+    t1->u64 -= t2;
+#else
+    if (t1->u32.lo >= t2)
+	t1->u32.lo -= t2;
+    else {
+	t1->u32.lo -= t2;
+	--t1->u32.hi;
+    }
+#endif
+}
+
+/**
+ * Get the timestamp difference between t2 and t1 (that is t2 minus t1),
+ * and return a 32bit signed integer difference.
+ */
+PJ_INLINE(pj_int32_t) pj_timestamp_diff32(const pj_timestamp *t1,
+					  const pj_timestamp *t2)
+{
+    /* Be careful with the signess (I think!) */
+#if PJ_HAS_INT64
+    pj_int64_t diff = t2->u64 - t1->u64;
+    return (pj_int32_t) diff;
+#else
+    pj_int32 diff = t2->u32.lo - t1->u32.lo;
+    return diff;
+#endif
+}
+
 
 /**
  * Calculate the elapsed time, and store it in pj_time_val.

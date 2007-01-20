@@ -1311,11 +1311,11 @@ static pj_status_t read_port( pjmedia_conf *conf,
  * Write the mixed signal to the port.
  */
 static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
-			      pj_uint32_t timestamp, 
+			      const pj_timestamp *timestamp, 
 			      pjmedia_frame_type *frm_type)
 {
     pj_int16_t *buf;
-    unsigned j;
+    unsigned j, ts;
     pj_status_t status;
 
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -1331,6 +1331,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
 	pjmedia_frame frame;
 
+	/* Adjust the timestamp */
+	frame.timestamp.u64 = timestamp->u64 * cport->clock_rate /
+				conf->clock_rate;
 	frame.type = PJMEDIA_FRAME_TYPE_NONE;
 	frame.buf = NULL;
 	frame.size = 0;
@@ -1457,7 +1460,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	    frame.buf = (pj_int16_t*)cport->mix_buf;
 	    frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
-	    frame.timestamp.u64 = timestamp;
+	    /* No need to adjust timestamp, port has the same
+	     * clock rate as conference bridge 
+	     */
+	    frame.timestamp = *timestamp;
 
 	    TRACE_((THIS_FILE, "put_frame %.*s, count=%d", 
 			       (int)cport->name.slen, cport->name.ptr,
@@ -1491,6 +1497,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
     /* Transmit while we have enough frame in the tx_buf. */
     status = PJ_SUCCESS;
+    ts = 0;
     while (cport->tx_buf_count >= cport->samples_per_frame &&
 	   status == PJ_SUCCESS) 
     {
@@ -1505,7 +1512,15 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	    frame.buf = cport->tx_buf;
 	    frame.size = cport->samples_per_frame * BYTES_PER_SAMPLE;
-	    frame.timestamp.u64 = timestamp;
+	    /* Adjust timestamp as port may have different clock rate
+	     * than the bridge.
+	     */
+	    frame.timestamp.u64 = timestamp->u64 * cport->clock_rate /
+				  conf->clock_rate;
+
+	    /* Add timestamp for individual frame */
+	    frame.timestamp.u64 += ts;
+	    ts += cport->samples_per_frame;
 
 	    TRACE_((THIS_FILE, "put_frame %.*s, count=%d", 
 			       (int)cport->name.slen, cport->name.ptr,
@@ -1746,7 +1761,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Var "ci" is to count how many ports have been visited. */
 	++ci;
 
-	status = write_port( conf, conf_port, frame->timestamp.u32.lo,
+	status = write_port( conf, conf_port, &frame->timestamp,
 			     &frm_type);
 	if (status != PJ_SUCCESS) {
 	    /* bennylp: why do we need this????
