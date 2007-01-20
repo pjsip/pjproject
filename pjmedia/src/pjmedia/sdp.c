@@ -770,8 +770,8 @@ static void parse_version(pj_scanner *scanner, parse_context *ctx)
 	return;
     }
 
-    pj_scan_advance_n(scanner, 3, SKIP_WS);
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
 }
 
 static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
@@ -813,10 +813,11 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* address */
-    pj_scan_get_until_ch(scanner, '\r', &ses->origin.addr);
+    pj_scan_get_until_chr(scanner, " \t\r", &ses->origin.addr);
 
-    /* newline */
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
+
 }
 
 static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
@@ -842,11 +843,11 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* stop time */
-    pj_scan_get_until_ch(scanner, '\r', &str);
+    pj_scan_get_until_chr(scanner, " \t\r", &str);
     ses->time.stop = pj_strtoul(&str);
 
-    /* newline */
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
 }
 
 static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
@@ -863,7 +864,7 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
     /* x= */
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
-    /* get anything until newline. */
+    /* get anything until newline (including whitespaces). */
     pj_scan_get_until_ch(scanner, '\r', str);
 
     /* newline. */
@@ -887,10 +888,10 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     pj_scan_get_char(scanner);
 
     /* address. */
-    pj_scan_get_until_ch(scanner, '\r', &conn->addr);
+    pj_scan_get_until_chr(scanner, " \t\r", &conn->addr);
 
-    /* newline */
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
 }
 
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
@@ -940,8 +941,8 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
 	pj_scan_get(scanner, &cs_token, &med->desc.fmt[med->desc.fmt_count++]);
     }
 
-    /* newline */
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
 }
 
 static void on_scanner_error(pj_scanner *scanner)
@@ -990,8 +991,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
 	attr->value.slen = 0;
     }
 
-    /* newline */
-    pj_scan_get_newline(scanner);
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
 
     return attr;
 }
@@ -1096,7 +1097,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 
 	session = NULL;
 
-	pj_assert(ctx.last_error == PJ_SUCCESS);
+	pj_assert(ctx.last_error != PJ_SUCCESS);
     }
     PJ_END;
 
