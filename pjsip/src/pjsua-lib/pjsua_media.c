@@ -720,7 +720,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 					 pjsua_player_id *p_id)
 {
     unsigned slot, file_id;
-    char path[128];
+    char path[PJ_MAXPATH];
     pjmedia_port *port;
     pj_status_t status;
 
@@ -761,6 +761,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 	return status;
     }
 
+    pjsua_var.player[file_id].type = 0;
     pjsua_var.player[file_id].port = port;
     pjsua_var.player[file_id].slot = slot;
 
@@ -770,6 +771,73 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Create a file playlist media port, and automatically add the port
+ * to the conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
+					   unsigned file_count,
+					   const pj_str_t *label,
+					   unsigned options,
+					   pjsua_player_id *p_id)
+{
+    unsigned slot, file_id, ptime;
+    pjmedia_port *port;
+    pj_status_t status;
+
+    if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
+	return PJ_ETOOMANY;
+
+    PJSUA_LOCK();
+
+    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.player); ++file_id) {
+	if (pjsua_var.player[file_id].port == NULL)
+	    break;
+    }
+
+    if (file_id == PJ_ARRAY_SIZE(pjsua_var.player)) {
+	/* This is unexpected */
+	PJSUA_UNLOCK();
+	pj_assert(0);
+	return PJ_EBUG;
+    }
+
+
+    ptime = pjsua_var.mconf_cfg.samples_per_frame * 1000 / 
+	    pjsua_var.media_cfg.clock_rate;
+
+    status = pjmedia_wav_playlist_create(pjsua_var.pool, label, 
+					 file_names, file_count,
+					 ptime, options, 0, &port);
+    if (status != PJ_SUCCESS) {
+	PJSUA_UNLOCK();
+	pjsua_perror(THIS_FILE, "Unable to create playlist", status);
+	return status;
+    }
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pjsua_var.pool, 
+				   port, &port->info.name, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	PJSUA_UNLOCK();
+	pjsua_perror(THIS_FILE, "Unable to add port", status);
+	return status;
+    }
+
+    pjsua_var.player[file_id].type = 1;
+    pjsua_var.player[file_id].port = port;
+    pjsua_var.player[file_id].slot = slot;
+
+    if (p_id) *p_id = file_id;
+
+    ++pjsua_var.player_cnt;
+
+    PJSUA_UNLOCK();
+    return PJ_SUCCESS;
+
 }
 
 
@@ -807,6 +875,7 @@ PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
 {
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.player[id].type == 0, PJ_EINVAL);
 
     return pjmedia_wav_player_port_set_pos(pjsua_var.player[id].port, samples);
 }
@@ -860,7 +929,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 	FMT_MP3,
     };
     unsigned slot, file_id;
-    char path[128];
+    char path[PJ_MAXPATH];
     pj_str_t ext;
     int file_format;
     pjmedia_port *port;

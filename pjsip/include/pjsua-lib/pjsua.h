@@ -2893,11 +2893,11 @@ PJ_DECL(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
 
 
 /*****************************************************************************
- * File player.
+ * File player and playlist.
  */
 
 /**
- * Create a file player, and automatically connect this player to
+ * Create a file player, and automatically add this player to
  * the conference bridge.
  *
  * @param filename	The filename to be played. Currently only
@@ -2915,7 +2915,28 @@ PJ_DECL(pj_status_t) pjsua_player_create(const pj_str_t *filename,
 
 
 /**
- * Get conference port ID associated with player.
+ * Create a file playlist media port, and automatically add the port
+ * to the conference bridge.
+ *
+ * @param file_names	Array of file names to be added to the play list.
+ *			Note that the files must have the same clock rate,
+ *			number of channels, and number of bits per sample.
+ * @param file_count	Number of files in the array.
+ * @param label		Optional label to be set for the media port.
+ * @param options	Optional option flag. Application may specify
+ *			PJMEDIA_FILE_NO_LOOP to prevent looping.
+ * @param p_id		Optional pointer to receive player ID.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_playlist_create(const pj_str_t file_names[],
+					   unsigned file_count,
+					   const pj_str_t *label,
+					   unsigned options,
+					   pjsua_player_id *p_id);
+
+/**
+ * Get conference port ID associated with player or playlist.
  *
  * @param id		The file player ID.
  *
@@ -2925,7 +2946,7 @@ PJ_DECL(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id);
 
 
 /**
- * Get the media port for the player.
+ * Get the media port for the player or playlist.
  *
  * @param id		The player ID.
  * @param p_port	The media port associated with the player.
@@ -2936,7 +2957,7 @@ PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_recorder_id id,
 					   pjmedia_port **p_port);
 
 /**
- * Set playback position.
+ * Set playback position. This operation is not valid for playlist.
  *
  * @param id		The file player ID.
  * @param samples	The playback position, in samples. Application can
@@ -2949,8 +2970,8 @@ PJ_DECL(pj_status_t) pjsua_player_set_pos(pjsua_player_id id,
 
 
 /**
- * Close the file, remove the player from the bridge, and free
- * resources associated with the file player.
+ * Close the file of playlist, remove the player from the bridge, and free
+ * resources associated with the file player or playlist.
  *
  * @param id		The file player ID.
  *

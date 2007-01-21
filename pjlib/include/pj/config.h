@@ -519,6 +519,14 @@
 
 
 /**
+ * Maximum file name length.
+ */
+#ifndef PJ_MAXPATH
+#   define PJ_MAXPATH		    260
+#endif
+
+
+/**
  * Enable library's extra check.
  * If this macro is enabled, #PJ_ASSERT_RETURN macro will expand to
  * run-time checking. If this macro is disabled, #PJ_ASSERT_RETURN

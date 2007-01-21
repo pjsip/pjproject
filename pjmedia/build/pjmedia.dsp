@@ -252,6 +252,10 @@ SOURCE=..\src\pjmedia\wav_player.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\wav_playlist.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\wav_writer.c
 # End Source File
 # Begin Source File
@@ -401,6 +405,10 @@ SOURCE=..\include\pjmedia\transport_udp.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\wav_playlist.h
 # End Source File
 # Begin Source File
 
