@@ -1843,7 +1843,7 @@ static void keystroke_help(void)
     puts("|                              | cd  Disconnect port      | dc  Dump config   |");
     puts("|  S  Send arbitrary REQUEST   |  V  Adjust audio Volume  |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
-    puts("|  q  QUIT                                                                    |");
+    puts("|  q  QUIT                  sleep N: console sleep for N ms                   |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -2071,7 +2071,26 @@ void console_app_main(const pj_str_t *uri_to_call)
 	printf(">>> ");
 	fflush(stdout);
 
-	fgets(menuin, sizeof(menuin), stdin);
+	if (fgets(menuin, sizeof(menuin), stdin) == NULL) {
+	    /* 
+	     * Be friendly to users who redirect commands into
+	     * program, when file ends, resume with kbd.
+	     * If exit is desired end script with q for quit
+	     */
+ 	    /* Reopen stdin/stdout/stderr to /dev/console */
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+	    if (freopen ("CONIN$", "r", stdin) == NULL) {
+#else
+	    if (1) {
+#endif
+		puts("Cannot switch back to console from file redirection");
+		menuin[0] = 'q';
+		menuin[1] = '\0';
+	    } else {
+		puts("Switched back to console from file redirection");
+		continue;
+	    }
+	}
 
 	switch (menuin[0]) {
 
@@ -2617,6 +2636,25 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    break;
 
 	case 's':
+	    if (pj_ansi_strnicmp(menuin, "sleep", 5)==0) {
+		pj_str_t tmp;
+		int delay;
+
+		tmp.ptr = menuin+6;
+		tmp.slen = pj_ansi_strlen(menuin)-7;
+
+		if (tmp.slen < 1) {
+		    puts("Usage: sleep MSEC");
+		    break;
+		}
+
+		delay = pj_strtoul(&tmp);
+		if (delay < 0) delay = 0;
+		pj_thread_sleep(delay);
+		break;
+	    }
+	    /* Continue below */
+
 	case 'u':
 	    /*
 	     * Subscribe/unsubscribe presence.
