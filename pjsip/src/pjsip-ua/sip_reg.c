@@ -573,16 +573,9 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_assert(regc->has_tsx);
     regc->has_tsx = PJ_FALSE;
 
-    /* If registration data has been deleted by user then remove registration 
-     * data from transaction's callback, and don't call callback.
-     */
-    if (regc->_delete_flag) {
-
-	/* Nothing to do */
-	;
-
-    } else if (tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED ||
-	       tsx->status_code == PJSIP_SC_UNAUTHORIZED)
+    /* Handle 401/407 challenge (even when _delete_flag is set) */
+    if (tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED ||
+	tsx->status_code == PJSIP_SC_UNAUTHORIZED)
     {
 	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 	pjsip_tx_data *tdata;
@@ -597,12 +590,33 @@ static void tsx_callback(void *token, pjsip_event *event)
 	} 
 	
 	if (status != PJ_SUCCESS) {
-	    call_callback(regc, status, tsx->status_code, 
-			  &rdata->msg_info.msg->line.status.reason,
-			  rdata, -1, 0, NULL);
+
+	    /* Only call callback if application is still interested
+	     * in it.
+	     */
+	    if (regc->_delete_flag == 0) {
+		/* Increment busy flag temporarily to prevent regc from
+		 * being destroyed.
+		 */
+		++regc->busy;
+
+		call_callback(regc, status, tsx->status_code, 
+			      &rdata->msg_info.msg->line.status.reason,
+			      rdata, -1, 0, NULL);
+
+		/* Decrement busy flag */
+		--regc->busy;
+	    }
 	}
 
-	return;
+    } else if (regc->_delete_flag) {
+
+	/* User has called pjsip_regc_destroy(), so don't call callback. 
+	 * This regc will be destroyed later in this function.
+	 */
+
+	/* Nothing to do */
+	;
 
     } else {
 	int contact_cnt = 0;
