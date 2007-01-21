@@ -454,7 +454,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 
 	/* Find next Record-Route header. */
 	rr = rr->next;
-	if (rr == (pjsip_rr_hdr*)&rdata->msg_info.msg->hdr)
+	if (rr == (void*)&rdata->msg_info.msg->hdr)
 	    break;
 	rr = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_RECORD_ROUTE, rr);
     }

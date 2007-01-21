@@ -59,6 +59,7 @@ static pj_status_t create_mutex_lock( pj_pool_t *pool,
 				      pj_lock_t **lock )
 {
     pj_lock_t *p_lock;
+    pj_mutex_t *mutex;
     pj_status_t rc;
 
     PJ_ASSERT_RETURN(pool && lock, PJ_EINVAL);
@@ -68,10 +69,11 @@ static pj_status_t create_mutex_lock( pj_pool_t *pool,
 	return PJ_ENOMEM;
 
     pj_memcpy(p_lock, &mutex_lock_template, sizeof(pj_lock_t));
-    rc = pj_mutex_create(pool, name, type, (pj_mutex_t**)&p_lock->lock_object);
+    rc = pj_mutex_create(pool, name, type, &mutex);
     if (rc != PJ_SUCCESS)
 	return rc;
 
+    p_lock->lock_object = mutex;
     *lock = p_lock;
     return PJ_SUCCESS;
 }
@@ -145,6 +147,7 @@ PJ_DEF(pj_status_t) pj_lock_create_semaphore(  pj_pool_t *pool,
 					       pj_lock_t **lock )
 {
     pj_lock_t *p_lock;
+    pj_sem_t *sem;
     pj_status_t rc;
 
     PJ_ASSERT_RETURN(pool && lock, PJ_EINVAL);
@@ -154,11 +157,11 @@ PJ_DEF(pj_status_t) pj_lock_create_semaphore(  pj_pool_t *pool,
 	return PJ_ENOMEM;
 
     pj_memcpy(p_lock, &sem_lock_template, sizeof(pj_lock_t));
-    rc = pj_sem_create( pool, name, initial, max, 
-		        (pj_sem_t**)&p_lock->lock_object);
+    rc = pj_sem_create( pool, name, initial, max, &sem);
     if (rc != PJ_SUCCESS)
         return rc;
 
+    p_lock->lock_object = sem;
     *lock = p_lock;
 
     return PJ_SUCCESS;

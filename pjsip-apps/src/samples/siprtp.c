@@ -1278,6 +1278,7 @@ static int media_thread(void *arg)
 	     * Time to send RTP packet.
 	     */
 	    pj_status_t status;
+	    const void *p_hdr;
 	    const pjmedia_rtp_hdr *hdr;
 	    pj_ssize_t size;
 	    int hdrlen;
@@ -1287,10 +1288,12 @@ static int media_thread(void *arg)
 					     0, /* marker bit */
 					     strm->bytes_per_frame, 
 					     strm->samples_per_frame,
-					     (const void**)&hdr, &hdrlen);
+					     &p_hdr, &hdrlen);
 	    if (status == PJ_SUCCESS) {
 
 		//PJ_LOG(4,(THIS_FILE, "\t\tTx seq=%d", pj_ntohs(hdr->seq)));
+		
+		hdr = (const pjmedia_rtp_hdr*) p_hdr;
 
 		/* Copy RTP header to packet */
 		pj_memcpy(packet, hdr, hdrlen);

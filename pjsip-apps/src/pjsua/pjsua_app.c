@@ -1114,7 +1114,7 @@ static int write_settings(const struct app_config *config,
 
     if (config->udp_cfg.tls_setting.timeout.sec) {
 	pj_ansi_sprintf(line, "--tls-neg-timeout %d\n",
-			config->udp_cfg.tls_setting.timeout.sec);
+			(int)config->udp_cfg.tls_setting.timeout.sec);
 	pj_strcat2(&cfg, line);
     }
 

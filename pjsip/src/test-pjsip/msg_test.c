@@ -112,7 +112,7 @@ static struct
 
 static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
 {
-    pjsip_msg *parsed_msg, *ref_msg;
+    pjsip_msg *parsed_msg, *ref_msg = NULL;
     static pjsip_msg *print_msg;
     pj_status_t status = PJ_SUCCESS;
     int len;

@@ -26,7 +26,8 @@
 #define ___BLADEDLL_H_INCLUDED___
 
 #ifdef __GNUC__
-#define ATTRIBUTE_PACKED	__attribute__((packed))
+//#define ATTRIBUTE_PACKED	__attribute__((packed))
+#define ATTRIBUTE_PACKED
 #else
 #define ATTRIBUTE_PACKED
 #pragma pack(push)
@@ -241,7 +242,7 @@ typedef unsigned long	(*BEENCODECHUNKFLOATS16NI)	(HBE_STREAM, unsigned long, flo
 typedef unsigned long	(*BEDEINITSTREAM)			(HBE_STREAM, unsigned char *, unsigned long *);
 typedef unsigned long	(*BECLOSESTREAM)			(HBE_STREAM);
 typedef void	(*BEVERSION)				(PBE_VERSION);
-typedef unsigned long	(*BEWRITEVBRHEADER)			(LPCSTR);
+typedef unsigned long	(*BEWRITEVBRHEADER)			(const char*);
 typedef unsigned long	(*BEWRITEINFOTAG)			(HBE_STREAM, const char * );
 
 #define	TEXT_BEINITSTREAM				"beInitStream"
