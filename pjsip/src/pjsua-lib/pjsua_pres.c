@@ -732,6 +732,7 @@ void pjsua_pres_delete_acc(int acc_id)
 
     uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
 
+    /* Notify all subscribers that we're no longer available */
     while (uapres != &acc->pres_srv_list) {
 	
 	pjsip_pres_status pres_status;
@@ -753,6 +754,11 @@ void pjsua_pres_delete_acc(int acc_id)
 	uapres = uapres->next;
     }
 
+    /* Clear server presence subscription list because account might be reused
+     * later. */
+    pj_list_init(&acc->pres_srv_list);
+
+    /* Terminate presence publication, if any */
     if (acc->publish_sess) {
 	acc->online_status = PJ_FALSE;
 	send_publish(acc_id, PJ_FALSE);

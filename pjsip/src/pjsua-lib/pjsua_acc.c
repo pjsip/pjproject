@@ -360,8 +360,11 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     PJSUA_LOCK();
 
     /* Delete registration */
-    if (pjsua_var.acc[acc_id].regc != NULL) 
+    if (pjsua_var.acc[acc_id].regc != NULL) {
 	pjsua_acc_set_registration(acc_id, PJ_FALSE);
+	pjsip_regc_destroy(pjsua_var.acc[acc_id].regc);
+	pjsua_var.acc[acc_id].regc = NULL;
+    }
 
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id);
