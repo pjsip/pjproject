@@ -429,7 +429,12 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
 PJ_DEF(pj_thread_t*) pj_thread_this(void)
 {
     pj_thread_t *rec = pj_thread_local_get(thread_tls_id);
-    pj_assert(rec != NULL);
+
+    if (rec == NULL) {
+	pj_assert(!"Calling pjlib from unknown/external thread. You must "
+		   "register external threads with pj_thread_register() "
+		   "before calling any pjlib functions.");
+    }
 
     /*
      * MUST NOT check stack because this function is called
