@@ -938,6 +938,11 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     med->desc.fmt_count = 0;
     while (*scanner->curptr == ' ') {
 	pj_scan_get_char(scanner);
+
+	/* Check again for the end of the line */
+	if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
+		break;
+
 	pj_scan_get(scanner, &cs_token, &med->desc.fmt[med->desc.fmt_count++]);
     }
 
