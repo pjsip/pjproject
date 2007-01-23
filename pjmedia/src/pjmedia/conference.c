@@ -55,7 +55,7 @@ static FILE *fhnd_rec;
 
 
 #define THIS_FILE	"conference.c"
-#define RX_BUF_COUNT	8
+#define RX_BUF_COUNT	PJMEDIA_SOUND_BUFFER_COUNT
 
 #define BYTES_PER_SAMPLE    2
 

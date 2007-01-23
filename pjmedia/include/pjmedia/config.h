@@ -66,6 +66,19 @@
 
 
 /**
+ * Specify number of sound buffers. Larger number is better for sound
+ * stability and to accomodate sound devices that are unable to send frames
+ * in timely manner, however it would take more memory. One individual
+ * buffer is about 10 or 20 ms long.
+ *
+ * Default: 32
+ */
+#ifndef PJMEDIA_SOUND_BUFFER_COUNT
+#   define PJMEDIA_SOUND_BUFFER_COUNT	    32
+#endif
+
+
+/**
  * Specify which A-law/U-law conversion algorithm to use.
  * By default the conversion algorithm uses A-law/U-law table which gives
  * the best performance, at the expense of 33 KBytes of static data.
