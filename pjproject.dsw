@@ -1,0 +1,266 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "pjlib"=.\pjlib\build\pjlib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjlib_test"=.\pjlib\build\pjlib_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjlib_util"=".\pjlib-util\build\pjlib_util.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjlib_util_test"=".\pjlib-util\build\pjlib_util_test.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjmedia"=.\pjmedia\build\pjmedia.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjmedia_codec"=.\pjmedia\build\pjmedia_codec.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsip_core"=.\pjsip\build\pjsip_core.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsip_simple"=.\pjsip\build\pjsip_simple.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsip_ua"=.\pjsip\build\pjsip_ua.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjsua"=".\pjsip-apps\build\pjsua.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_codec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_ua
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsua_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjsua_lib"=.\pjsip\build\pjsua_lib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "sample_debug"=".\pjsip-apps\build\sample_debug.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_codec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_ua
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsua_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "samples"=".\pjsip-apps\build\samples.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "test_pjsip"=.\pjsip\build\test_pjsip.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_codec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_ua
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsua_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+
