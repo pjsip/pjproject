@@ -1226,7 +1226,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 	/* Validate the m= line. */
 	CHECK( m->desc.media.slen != 0, PJMEDIA_SDP_EINMEDIA);
 	CHECK( m->desc.transport.slen != 0, PJMEDIA_SDP_EINMEDIA);
-	CHECK( m->desc.fmt_count != 0, PJMEDIA_SDP_ENOFMT);
+	CHECK( m->desc.fmt_count != 0 || m->desc.port==0, PJMEDIA_SDP_ENOFMT);
 
 	/* If media level connection info is present, validate it. */
 	if (m->conn) {
