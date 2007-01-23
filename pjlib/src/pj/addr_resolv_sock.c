@@ -61,6 +61,11 @@ pj_status_t pj_gethostip(pj_in_addr *addr)
     cp = pj_str("127.0.0.1");
     loopip = pj_inet_addr(&cp);
 
+#ifdef _MSC_VER
+    /* Get rid of "uninitialized he variable" with MS compilers */
+    pj_bzero(&he, sizeof(he));
+#endif
+
     /* Try with resolving local hostname first */
     status = pj_gethostbyname(hostname, &he);
     if (status == PJ_SUCCESS) {

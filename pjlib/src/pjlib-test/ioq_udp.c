@@ -842,7 +842,7 @@ int udp_ioqueue_test()
     PJ_LOG(4, (THIS_FILE, "... note: buf=bytes sent, fds=# of fds, "
 			  "elapsed=in timer ticks"));
 
-pass1:
+//pass1:
     PJ_LOG(3, (THIS_FILE, "...Benchmarking poll times for %s:", pj_ioqueue_name()));
     PJ_LOG(3, (THIS_FILE, "...====================================="));
     PJ_LOG(3, (THIS_FILE, "...Buf.size   #inactive-socks  Time/poll"));
@@ -855,7 +855,7 @@ pass1:
 	if ((status=bench_test(bufsize, SOCK_INACTIVE_MIN)) != 0)
 	    return status;
     }
-pass2:
+//pass2:
     bufsize = 512;
     for (sock_count=SOCK_INACTIVE_MIN+2; 
 	 sock_count<=SOCK_INACTIVE_MAX+2; 

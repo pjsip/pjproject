@@ -187,7 +187,7 @@ static int timeslice_test(void)
     pj_pool_t *pool;
     pj_uint32_t counter[NUM_THREADS], lowest, highest, diff;
     pj_thread_t *thread[NUM_THREADS];
-    int i;
+    unsigned i;
     pj_status_t rc;
 
     quit_flag = 0;
