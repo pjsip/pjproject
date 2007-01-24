@@ -758,6 +758,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     if (status != PJ_SUCCESS) {
 	pjmedia_port_destroy(port);
 	PJSUA_UNLOCK();
+	pjsua_perror(THIS_FILE, "Unable to add file to conference bridge", 
+		     status);
 	return status;
     }
 

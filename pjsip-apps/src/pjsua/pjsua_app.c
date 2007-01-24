@@ -58,7 +58,8 @@ static struct app_config
     unsigned		    codec_cnt;
     pj_str_t		    codec_arg[32];
     pj_bool_t		    null_audio;
-    pj_str_t		    wav_file;
+    unsigned		    wav_count;
+    pj_str_t		    wav_files[32];
     pjsua_player_id	    wav_id;
     pjsua_conf_port_id	    wav_port;
     pj_bool_t		    auto_play;
@@ -677,7 +678,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_PLAY_FILE:
-	    cfg->wav_file = pj_str(pj_optarg);
+	    cfg->wav_files[cfg->wav_count++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_REC_FILE:
@@ -1130,9 +1131,9 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--auto-loop\n");
     if (config->auto_conf)
 	pj_strcat2(&cfg, "--auto-conf\n");
-    if (config->wav_file.slen) {
+    for (i=0; i<config->wav_count; ++i) {
 	pj_ansi_sprintf(line, "--play-file %s\n",
-			config->wav_file.ptr);
+			config->wav_files[i].ptr);
 	pj_strcat2(&cfg, line);
     }
     if (config->rec_file.slen) {
@@ -2910,13 +2911,18 @@ pj_status_t app_init(int argc, char *argv[])
     }
 
     /* Optionally registers WAV file */
-    if (app_config.wav_file.slen) {
-	status = pjsua_player_create(&app_config.wav_file, 0, 
-				     &app_config.wav_id);
+    for (i=0; i<app_config.wav_count; ++i) {
+	pjsua_player_id wav_id;
+
+	status = pjsua_player_create(&app_config.wav_files[i], 0, 
+				     &wav_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
+	if (app_config.wav_id == 0) {
+	    app_config.wav_id = wav_id;
+	    app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
+	}
     }
 
     /* Optionally create recorder file, if any. */
