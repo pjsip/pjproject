@@ -60,6 +60,9 @@ static struct app_config
     pj_bool_t		    null_audio;
     unsigned		    wav_count;
     pj_str_t		    wav_files[32];
+    unsigned		    tone_count;
+    pjmedia_tone_desc	    tones[32];
+    pjsua_conf_port_id	    tone_slots[32];
     pjsua_player_id	    wav_id;
     pjsua_conf_port_id	    wav_port;
     pj_bool_t		    auto_play;
@@ -158,7 +161,11 @@ static void usage(void)
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
-    puts  ("  --play-file=file    Register WAV file in conference bridge");
+    puts  ("  --play-file=file    Register WAV file in conference bridge.");
+    puts  ("                      This can be specified multiple times.");
+    puts  ("  --play-tone=F1,F2,ON,OFF    Register tone to the conference bridge.");
+    puts  ("                      f1,f2=frequency, on,off=on/off duration in msec.");
+    puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
@@ -309,8 +316,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE,
-	   OPT_PLAY_FILE, OPT_RTP_PORT, OPT_ADD_CODEC, OPT_ILBC_MODE,
-	   OPT_REC_FILE, OPT_AUTO_REC,
+	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
+	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
@@ -357,6 +364,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "auto-loop",  0, 0, OPT_AUTO_LOOP},
 	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
 	{ "play-file",  1, 0, OPT_PLAY_FILE},
+	{ "play-tone",  1, 0, OPT_PLAY_TONE},
 	{ "rec-file",   1, 0, OPT_REC_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
@@ -679,6 +687,25 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_PLAY_FILE:
 	    cfg->wav_files[cfg->wav_count++] = pj_str(pj_optarg);
+	    break;
+
+	case OPT_PLAY_TONE:
+	    {
+		int f1, f2, on, off;
+		int n;
+
+		n = sscanf(pj_optarg, "%d,%d,%d,%d", &f1, &f2, &on, &off);
+		if (n != 4) {
+		    puts("Expecting f1,f2,on,off in --play-tone");
+		    return -1;
+		}
+
+		cfg->tones[cfg->tone_count].freq1 = (short)f1;
+		cfg->tones[cfg->tone_count].freq2 = (short)f2;
+		cfg->tones[cfg->tone_count].on_msec = (short)on;
+		cfg->tones[cfg->tone_count].off_msec = (short)off;
+		++cfg->tone_count;
+	    }
 	    break;
 
 	case OPT_REC_FILE:
@@ -1134,6 +1161,12 @@ static int write_settings(const struct app_config *config,
     for (i=0; i<config->wav_count; ++i) {
 	pj_ansi_sprintf(line, "--play-file %s\n",
 			config->wav_files[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
+    for (i=0; i<config->tone_count; ++i) {
+	pj_ansi_sprintf(line, "--play-tone %d,%d,%d,%d\n",
+			config->tones[i].freq1, config->tones[i].freq2, 
+			config->tones[i].on_msec, config->tones[i].off_msec);
 	pj_strcat2(&cfg, line);
     }
     if (config->rec_file.slen) {
@@ -2925,6 +2958,33 @@ pj_status_t app_init(int argc, char *argv[])
 	}
     }
 
+    /* Optionally registers tone players */
+    for (i=0; i<app_config.tone_count; ++i) {
+	pjmedia_port *tport;
+	char name[80];
+	pj_str_t label;
+	pj_status_t status;
+
+	pj_ansi_snprintf(name, sizeof(name), "tone-%d,%d",
+			 app_config.tones[i].freq1, 
+			 app_config.tones[i].freq2);
+	label = pj_str(name);
+	status = pjmedia_tonegen_create2(app_config.pool, &label,
+					 8000, 1, 160, 16, 
+					 PJMEDIA_TONEGEN_LOOP,  &tport);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to create tone generator", status);
+	    goto on_error;
+	}
+
+	status = pjsua_conf_add_port(app_config.pool, tport, 
+				     &app_config.tone_slots[i]);
+	pj_assert(status == PJ_SUCCESS);
+
+	status = pjmedia_tonegen_play(tport, 1, &app_config.tones[i], 0);
+	pj_assert(status == PJ_SUCCESS);
+    }
+
     /* Optionally create recorder file, if any. */
     if (app_config.rec_file.slen) {
 	status = pjsua_recorder_create(&app_config.rec_file, 0, NULL, 0, 0,
@@ -3056,6 +3116,7 @@ pj_status_t app_main(void)
 pj_status_t app_destroy(void)
 {
     pj_status_t status;
+    unsigned i;
 
 #ifdef STEREO_DEMO
     if (app_config.snd) {
@@ -3063,6 +3124,11 @@ pj_status_t app_destroy(void)
 	app_config.snd = NULL;
     }
 #endif
+
+    /* Close tone generators */
+    for (i=0; i<app_config.tone_count; ++i) {
+	pjsua_conf_remove_port(app_config.tone_slots[i]);
+    }
 
     if (app_config.pool) {
 	pj_pool_release(app_config.pool);

@@ -98,6 +98,18 @@ typedef struct pjmedia_tone_digit_map
 } pjmedia_tone_digit_map;
 
 
+/**
+ * Tone generator options.
+ */
+enum
+{
+    /**
+     * Play the tones in loop, restarting playing the first tone after
+     * the last tone has been played.
+     */
+    PJMEDIA_TONEGEN_LOOP    = 1
+};
+
 
 /**
  * Create an instance of tone generator with the specified parameters.
@@ -111,7 +123,8 @@ typedef struct pjmedia_tone_digit_map
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample. This version of PJMEDIA
  *			    only supports 16bit per sample.
- * @param options	    Option flags, must be zero for now.
+ * @param options	    Option flags. Application may specify 
+ *			    PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  * @param p_port	    Pointer to receive the port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate
@@ -124,6 +137,36 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_create(pj_pool_t *pool,
 					    unsigned bits_per_sample,
 					    unsigned options,
 					    pjmedia_port **p_port);
+
+
+/**
+ * Create an instance of tone generator with the specified parameters.
+ * When the tone generator is first created, it will be loaded with the
+ * default digit map.
+ *
+ * @param pool		    Pool to allocate memory for the port structure.
+ * @param name		    Optional name for the tone generator.
+ * @param clock_rate	    Sampling rate.
+ * @param channel_count	    Number of channels. Currently only mono and stereo
+ *			    are supported.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Number of bits per sample. This version of PJMEDIA
+ *			    only supports 16bit per sample.
+ * @param options	    Option flags. Application may specify 
+ *			    PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
+ * @param p_port	    Pointer to receive the port instance.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate
+ *			    error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
+					     const pj_str_t *name,
+					     unsigned clock_rate,
+					     unsigned channel_count,
+					     unsigned samples_per_frame,
+					     unsigned bits_per_sample,
+					     unsigned options,
+					     pjmedia_port **p_port);
 
 
 /**
@@ -156,7 +199,8 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *tonegen);
  * @param tonegen	    The tone generator instance.
  * @param count		    The number of tones in the array.
  * @param tones		    Array of tones to be played.
- * @param options	    Playback options, must be zero for now.
+ * @param options	    Option flags. Application may specify 
+ *			    PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  *
  * @return		    PJ_SUCCESS on success, or PJ_ETOOMANY if
  *			    there are too many digits in the queue.
@@ -178,7 +222,8 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_play(pjmedia_port *tonegen,
  * @param tonegen	    The tone generator instance.
  * @param count		    Number of digits in the array.
  * @param digits	    Array of MF digits.
- * @param options	    Playback options, must be zero for now.
+ * @param options	    Option flags. Application may specify 
+ *			    PJMEDIA_TONEGEN_LOOP to play the tone in a loop.
  *
  * @return		    PJ_SUCCESS on success, or PJ_ETOOMANY if
  *			    there are too many digits in the queue, or
