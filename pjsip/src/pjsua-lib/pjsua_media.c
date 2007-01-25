@@ -22,7 +22,7 @@
 
 #define THIS_FILE		"pjsua_media.c"
 
-#define PTIME		    10
+#define PTIME		    20
 #define FPS		    (1000/PTIME)
 #define DEFAULT_RTP_PORT    4000
 
