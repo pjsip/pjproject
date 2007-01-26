@@ -141,7 +141,7 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
 int platform_strerror( pj_os_err_type os_errcode, 
                        char *buf, pj_size_t bufsize)
 {
-    int len;
+    int len = 0;
     PJ_DECL_UNICODE_TEMP_BUF(wbuf,128);
 
     pj_assert(buf != NULL);
@@ -153,31 +153,7 @@ int platform_strerror( pj_os_err_type os_errcode,
        //PJ_CHECK_STACK();
      */
 
-#if PJ_NATIVE_STRING_IS_UNICODE
-    len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
-			 | FORMAT_MESSAGE_IGNORE_INSERTS,
-			 NULL,
-			 os_errcode,
-			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-			 wbuf,
-			 sizeof(wbuf),
-			 NULL);
-    if (len) {
-	pj_unicode_to_ansi(wbuf, len, buf, bufsize);
-    }
-#else
-    len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
-			 | FORMAT_MESSAGE_IGNORE_INSERTS,
-			 NULL,
-			 os_errcode,
-			 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-			 buf,
-			 bufsize,
-			 NULL);
-#endif
-
     if (!len) {
-
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING!=0)
 	int i;
         for (i = 0; gaErrorList[i].msg; ++i) {
@@ -193,11 +169,39 @@ int platform_strerror( pj_os_err_type os_errcode,
         }
 #endif	/* PJ_HAS_ERROR_STRING */
 
-    } else {
-	/* Remove trailing newlines. */
-	while (len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
-	    buf[len-1] = '\0';
-	    --len;
+    }
+
+
+    if (!len) {
+#if PJ_NATIVE_STRING_IS_UNICODE
+	len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+			     | FORMAT_MESSAGE_IGNORE_INSERTS,
+			     NULL,
+			     os_errcode,
+			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+			     wbuf,
+			     sizeof(wbuf),
+			     NULL);
+	if (len) {
+	    pj_unicode_to_ansi(wbuf, len, buf, bufsize);
+	}
+#else
+	len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
+			     | FORMAT_MESSAGE_IGNORE_INSERTS,
+			     NULL,
+			     os_errcode,
+			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+			     buf,
+			     bufsize,
+			     NULL);
+#endif
+
+	if (len) {
+	    /* Remove trailing newlines. */
+	    while (len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
+		buf[len-1] = '\0';
+		--len;
+	    }
 	}
     }
 
