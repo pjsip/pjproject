@@ -525,6 +525,9 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
     struct pjsip_regc_cbparam cbparam;
 
 
+    if (!regc->cb)
+	return;
+
     cbparam.regc = regc;
     cbparam.token = regc->token;
     cbparam.status = status;
@@ -550,16 +553,28 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     
     PJ_UNUSED_ARG(timer_heap);
 
+    /* Temporarily increase busy flag to prevent regc from being deleted
+     * in pjsip_regc_send()
+     */
+    regc->busy++;
+
     entry->id = 0;
     status = pjsip_regc_register(regc, 1, &tdata);
     if (status == PJ_SUCCESS) {
 	status = pjsip_regc_send(regc, tdata);
     } 
     
-    if (status != PJ_SUCCESS) {
+    if (status != PJ_SUCCESS && regc->cb) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
 	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
+    }
+
+    regc->busy--;
+
+    /* Delete the record if user destroy regc during the callback. */
+    if (regc->_delete_flag && regc->busy==0) {
+	pjsip_regc_destroy(regc);
     }
 }
 
