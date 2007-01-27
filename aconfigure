@@ -1439,7 +1439,7 @@ test -n "$target_alias" &&
   test "$program_prefix$program_suffix$program_transform_name" = \
     NONENONEs,x,x, &&
   program_prefix=${target_alias}-
-                              ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjsip/include/pjsip/sip_autoconf.h"
+                                                  ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
                                                             ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak"
 
@@ -8473,6 +8473,10 @@ if test "${enable_g711_codec+set}" = set; then
   enableval="$enable_g711_codec"
   if test "$enable_g711_codec" = "no"; then
 		ac_no_g711_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_G711_CODEC 0
+_ACEOF
+
 		echo "$as_me:$LINENO: result: Checking if G.711 codec is disabled...yes" >&5
 echo "${ECHO_T}Checking if G.711 codec is disabled...yes" >&6
 	       fi
@@ -8488,6 +8492,10 @@ if test "${enable_l16_codec+set}" = set; then
   enableval="$enable_l16_codec"
   if test "$enable_l16_codec" = "no"; then
 		ac_no_l16_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_L16_CODEC 0
+_ACEOF
+
 		echo "$as_me:$LINENO: result: Checking if L16 codecs are disabled...yes" >&5
 echo "${ECHO_T}Checking if L16 codecs are disabled...yes" >&6
 	       fi
@@ -8503,6 +8511,10 @@ if test "${enable_gsm_codec+set}" = set; then
   enableval="$enable_gsm_codec"
   if test "$enable_gsm_codec" = "no"; then
 		ac_no_gsm_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_GSM_CODEC 0
+_ACEOF
+
 		echo "$as_me:$LINENO: result: Checking if GSM codec is disabled...yes" >&5
 echo "${ECHO_T}Checking if GSM codec is disabled...yes" >&6
 	       fi
@@ -8517,6 +8529,10 @@ if test "${enable_speex_codec+set}" = set; then
   enableval="$enable_speex_codec"
   if test "$enable_speex_codec" = "no"; then
 		ac_no_speex_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_SPEEX_CODEC 0
+_ACEOF
+
 		echo "$as_me:$LINENO: result: Checking if Speex codec is disabled...yes" >&5
 echo "${ECHO_T}Checking if Speex codec is disabled...yes" >&6
 	       fi
@@ -8531,6 +8547,10 @@ if test "${enable_ilbc_codec+set}" = set; then
   enableval="$enable_ilbc_codec"
   if test "$enable_ilbc_codec" = "no"; then
 		ac_no_ilbc_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_ILBC_CODEC 0
+_ACEOF
+
 		echo "$as_me:$LINENO: result: Checking if iLBC codec is disabled...yes" >&5
 echo "${ECHO_T}Checking if iLBC codec is disabled...yes" >&6
 	       fi
@@ -9500,6 +9520,8 @@ do
   "pjsip/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjsip/build/os-auto.mak" ;;
   "pjlib/include/pj/compat/os_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/os_auto.h" ;;
   "pjlib/include/pj/compat/m_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/m_auto.h" ;;
+  "pjmedia/include/pjmedia/config_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjmedia/include/pjmedia/config_auto.h" ;;
+  "pjmedia/include/pjmedia-codec/config_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjmedia/include/pjmedia-codec/config_auto.h" ;;
   "pjsip/include/pjsip/sip_autoconf.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjsip/include/pjsip/sip_autoconf.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
