@@ -21,6 +21,12 @@
 
 #include <pjmedia/types.h>
 
+/*
+ * Include config_auto.h if autoconf is used (PJ_AUTOCONF is set)
+ */
+#if defined(PJ_AUTOCONF)
+#   include <pjmedia-codec/config_auto.h>
+#endif
 
 /**
  * Unless specified otherwise, L16 codec is included by default.
@@ -56,3 +62,4 @@
 
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
+

@@ -7,6 +7,8 @@ AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AC_CONFIG_HEADER([pjlib/include/pj/compat/os_auto.h
 		  pjlib/include/pj/compat/m_auto.h
+		  pjmedia/include/pjmedia/config_auto.h
+		  pjmedia/include/pjmedia-codec/config_auto.h
 		  pjsip/include/pjsip/sip_autoconf.h
 		 ])
 AC_CONFIG_FILES([build.mak 
@@ -332,6 +334,7 @@ AC_ARG_ENABLE(g711-codec,
 			     [Exclude G.711 codecs from the build]),
 	      [if test "$enable_g711_codec" = "no"; then
 		[ac_no_g711_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_G711_CODEC,0)
 		AC_MSG_RESULT([Checking if G.711 codec is disabled...yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
@@ -344,6 +347,7 @@ AC_ARG_ENABLE(l16-codec,
 			     [Exclude Linear/L16 codec family from the build]),
 	      [if test "$enable_l16_codec" = "no"; then
 		[ac_no_l16_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_L16_CODEC,0)
 		AC_MSG_RESULT([Checking if L16 codecs are disabled...yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if L16 codec is disabled...no]))
@@ -356,6 +360,7 @@ AC_ARG_ENABLE(gsm-codec,
 			     [Exclude GSM codec in the build]),
 	      [if test "$enable_gsm_codec" = "no"; then
 		[ac_no_gsm_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_GSM_CODEC,0)
 		AC_MSG_RESULT([Checking if GSM codec is disabled...yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if GSM codec is disabled...no]))
@@ -367,6 +372,7 @@ AC_ARG_ENABLE(speex-codec,
 			     [Exclude Speex codecs in the build]),
 	      [if test "$enable_speex_codec" = "no"; then
 		[ac_no_speex_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_SPEEX_CODEC,0)
 		AC_MSG_RESULT([Checking if Speex codec is disabled...yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if Speex codec is disabled...no]))
@@ -378,6 +384,7 @@ AC_ARG_ENABLE(ilbc-codec,
 			     [Exclude iLBC codec in the build]),
 	      [if test "$enable_ilbc_codec" = "no"; then
 		[ac_no_ilbc_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_ILBC_CODEC,0)
 		AC_MSG_RESULT([Checking if iLBC codec is disabled...yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if iLBC codec is disabled...no]))

@@ -38,6 +38,13 @@
  */
 
 /*
+ * Include config_auto.h if autoconf is used (PJ_AUTOCONF is set)
+ */
+#if defined(PJ_AUTOCONF)
+#   include <pjmedia/config_auto.h>
+#endif
+
+/*
  * Types of sound stream backends.
  */
 
@@ -91,9 +98,6 @@
 
 /**
  * Unless specified otherwise, G711 codec is included by default.
- * Note that there are parts of G711 codec (such as linear2ulaw) that are 
- * needed by other PJMEDIA components (e.g. silence detector, conference).
- * Thus disabling G711 is generally not a good idea.
  */
 #ifndef PJMEDIA_HAS_G711_CODEC
 #   define PJMEDIA_HAS_G711_CODEC	    1
