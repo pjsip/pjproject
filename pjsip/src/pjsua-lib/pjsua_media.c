@@ -40,6 +40,9 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     unsigned opt;
     pj_status_t status;
 
+    /* To suppress warning about unused var when all codecs are disabled */
+    PJ_UNUSED_ARG(codec_id);
+
     /* Copy configuration */
     pj_memcpy(&pjsua_var.media_cfg, cfg, sizeof(*cfg));
 

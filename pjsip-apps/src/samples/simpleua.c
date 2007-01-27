@@ -253,8 +253,10 @@ int main(int argc, char *argv[])
     /* 
      * Add PCMA/PCMU codec to the media endpoint. 
      */
+#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
     status = pjmedia_codec_g711_init(g_med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+#endif
 
     
     /* 

@@ -2187,7 +2187,7 @@ typedef enum pjsua_buddy_status
     PJSUA_BUDDY_STATUS_UNKNOWN,
 
     /**
-     * Buddy is known to be offline.
+     * Buddy is known to be online.
      */
     PJSUA_BUDDY_STATUS_ONLINE,
 

@@ -406,7 +406,9 @@ static pj_status_t init_media()
 
 
     /* Must register codecs to be supported */
+#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
     pjmedia_codec_g711_init(app.med_endpt);
+#endif
 
     /* RTP port counter */
     rtp_port = (pj_uint16_t)(app.rtp_start_port & 0xFFFE);

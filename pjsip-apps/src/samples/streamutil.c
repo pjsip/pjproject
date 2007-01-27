@@ -86,6 +86,9 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
 {
     pj_status_t status;
 
+    /* To suppress warning about unused var when all codecs are disabled */
+    PJ_UNUSED_ARG(status);
+
 #if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
     status = pjmedia_codec_g711_init(med_endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);

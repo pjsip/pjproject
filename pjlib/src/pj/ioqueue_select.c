@@ -315,7 +315,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
                                               pj_ioqueue_key_t **p_key)
 {
     pj_ioqueue_key_t *key = NULL;
+#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    u_long value;
+#else
     pj_uint32_t value;
+#endif
     pj_status_t rc = PJ_SUCCESS;
     
     PJ_ASSERT_RETURN(pool && ioqueue && sock != PJ_INVALID_SOCKET &&
@@ -354,7 +359,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     value = 1;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
-    if (ioctlsocket(sock, FIONBIO, (u_long*)&value)) {
+    if (ioctlsocket(sock, FIONBIO, &value)) {
 #else
     if (ioctl(sock, FIONBIO, &value)) {
 #endif
