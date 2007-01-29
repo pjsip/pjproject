@@ -3172,7 +3172,7 @@ static PyObject *py_pjsua_enum_transports(PyObject *pSelf, PyObject *pArgs)
         }
     }
     
-    free(id);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -4127,7 +4127,7 @@ static PyObject *py_pjsua_enum_accs(PyObject *pSelf, PyObject *pArgs)
         }
     }
     
-    free(id);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -4175,7 +4175,7 @@ static PyObject *py_pjsua_acc_enum_info(PyObject *pSelf, PyObject *pArgs)
         }
     }
     
-    free(info);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -4700,7 +4700,7 @@ static PyObject *py_pjsua_enum_buddies(PyObject *pSelf, PyObject *pArgs)
 	}
     }
     
-    free(id);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -5825,7 +5825,7 @@ static PyObject *py_pjsua_enum_conf_ports(PyObject *pSelf, PyObject *pArgs)
 	}
     }
     
-    free(id);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -6124,14 +6124,14 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
     pj_status_t status;
     PyObject *list;
     
-    pjmedia_snd_dev_info *info;
+    pjmedia_snd_dev_info info[64];
     int c, i;
-    if (!PyArg_ParseTuple(pArgs, "i", &c))
+    if (!PyArg_ParseTuple(pArgs, ""))
     {
         return NULL;
     }	
     
-    info = (pjmedia_snd_dev_info *)malloc(c * sizeof(pjmedia_snd_dev_info));
+    c = PJ_ARRAY_SIZE(info);
     status = pjsua_enum_snd_devs(info, &c);
     
     list = PyList_New(c);
@@ -6160,7 +6160,7 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
 	}
     }
     
-    free(info);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -6329,7 +6329,7 @@ static PyObject *py_pjsua_enum_codecs(PyObject *pSelf, PyObject *pArgs)
         }	
     }
     
-    free(info);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -6968,7 +6968,7 @@ static PyObject *py_pjsua_enum_calls(PyObject *pSelf, PyObject *pArgs)
         }
     }
     
-    free(id);
+    
     return Py_BuildValue("O",list);
 }
 
@@ -7583,6 +7583,114 @@ static char pjsua_call_dump_doc[] =
     "Dump call and media statistics to string.";
 
 /* END OF LIB CALL */
+
+/* For testing purpose only */
+
+struct call_data
+{
+    pj_timer_entry	    timer;
+};
+
+/*
+ * call_data_Object
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */
+    struct call_data * data;
+} call_data_Object;
+
+
+/*
+ * call_data_Type
+ */
+static PyTypeObject call_data_Type =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "py_pjsua.Call_Data",       /*tp_name*/
+    sizeof(call_data_Object),   /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    0,                              /*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "call_data objects",        /*tp_doc*/
+};
+
+static void call_timeout_callback(pj_timer_heap_t *timer_heap,
+				  struct pj_timer_entry *entry, unsigned duration)
+{
+    pjsua_call_id call_id = entry->id;
+    pjsua_msg_data msg_data;
+    pjsip_generic_string_hdr warn;
+    pj_str_t hname = pj_str("Warning");
+    pj_str_t hvalue = pj_str("399 pjsua \"Call duration exceeded\"");
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    if (call_id == PJSUA_INVALID_ID) {
+	PJ_LOG(1,(THIS_FILE, "Invalid call ID in timer callback"));
+	return;
+    }
+    
+    /* Add warning header */
+    pjsua_msg_data_init(&msg_data);
+    pjsip_generic_string_hdr_init2(&warn, &hname, &hvalue);
+    pj_list_push_back(&msg_data.hdr_list, &warn);
+
+    /* Call duration has been exceeded; disconnect the call */
+    PJ_LOG(3,(THIS_FILE, "Duration (%d seconds) has been exceeded "
+			 "for call %d, disconnecting the call",
+			 duration, call_id));
+    entry->id = PJSUA_INVALID_ID;
+    pjsua_call_hangup(call_id, 200, NULL, &msg_data);
+}
+
+/*static PyObject *py_pjsua_call_timeout_callback
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+
+    if (!PyArg_ParseTuple(pArgs, ""))
+    {
+        return NULL;
+    }	
+    
+    call_timeout_callback();
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}*/
+
+static void on_call_state_1() {
+/*	if app_config.call_data[call_id].timer.id != PJSUA_INVALID_ID) {
+	    struct call_data *cd = &app_config.call_data[call_id];
+	    pjsip_endpoint *endpt = pjsua_get_pjsip_endpt();
+
+	    cd->timer.id = PJSUA_INVALID_ID;
+	    pjsip_endpt_cancel_timer(endpt, &cd->timer);
+	}
+
+	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
+		  call_id,
+		  call_info.last_status,
+		  call_info.last_status_text.ptr));*/
+}
+
+/* END OF Testing section */
 
 /*
  * Map of function names to functions
