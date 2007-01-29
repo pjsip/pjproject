@@ -26,6 +26,7 @@
 
 static PyObject* obj_reconfigure_logging;
 static PyObject* obj_logging_init;
+static long thread_id;
 
 /*
  * cb_reconfigure_logging
@@ -50,7 +51,12 @@ static void cb_reconfigure_logging(int level, const char *data, pj_size_t len)
  */
 static void cb_logging_init(int level, const char *data, pj_size_t len)
 {
-	
+    /* Ignore if this callback is called from alien thread context,
+     * or otherwise it will crash Python.
+     */
+    if (pj_thread_local_get(thread_id) == 0)
+	return;
+
     if (PyCallable_Check(obj_logging_init))
     {
         //PyObject_CallFunction(obj_logging_init,"iSi",level,data,len);
@@ -175,7 +181,7 @@ typedef struct
 /*
  * The global callback object.
  */
-static callback_Object * obj_callback;
+static callback_Object * g_obj_callback;
 
 
 /*
@@ -184,9 +190,7 @@ static callback_Object * obj_callback;
  */
 static void cb_on_call_state(pjsua_call_id call_id, pjsip_event *e)
 {
-
-	printf("on_call_state called\n");
-    if (PyCallable_Check(obj_callback->on_call_state))
+    if (PyCallable_Check(g_obj_callback->on_call_state))
     {	
         pjsip_event_Object * obj;
 		
@@ -197,7 +201,7 @@ static void cb_on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    obj->event = e;
 		
         PyObject_CallFunctionObjArgs(
-            obj_callback->on_call_state,Py_BuildValue("i",call_id),obj,NULL
+            g_obj_callback->on_call_state,Py_BuildValue("i",call_id),obj,NULL
         );
 		
     }
@@ -211,8 +215,7 @@ static void cb_on_call_state(pjsua_call_id call_id, pjsip_event *e)
 static void cb_on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                                 pjsip_rx_data *rdata)
 {
-	printf("on_incoming_call called\n");
-    if (PyCallable_Check(obj_callback->on_incoming_call))
+    if (PyCallable_Check(g_obj_callback->on_incoming_call))
     {
 	pjsip_rx_data_Object * obj = (pjsip_rx_data_Object *)
 				      PyType_GenericNew(&pjsip_rx_data_Type, 
@@ -220,7 +223,7 @@ static void cb_on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	obj->rdata = rdata;
 
         PyObject_CallFunctionObjArgs(
-                obj_callback->on_incoming_call,
+                g_obj_callback->on_incoming_call,
 		Py_BuildValue("i",acc_id),
                 Py_BuildValue("i",call_id),
 		obj,
@@ -236,10 +239,9 @@ static void cb_on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
  */
 static void cb_on_call_media_state(pjsua_call_id call_id)
 {
-	printf("on_call_media_state called\n");
-    if (PyCallable_Check(obj_callback->on_call_media_state))
+    if (PyCallable_Check(g_obj_callback->on_call_media_state))
     {
-        PyObject_CallFunction(obj_callback->on_call_media_state,"i",call_id);
+        PyObject_CallFunction(g_obj_callback->on_call_media_state,"i",call_id);
     }
 }
 
@@ -254,11 +256,10 @@ static void cb_on_call_transfer_request(pjsua_call_id call_id,
 {
     PyObject * ret;
     int cd;
-	printf("on_call_transfer_request called\n");
-    if (PyCallable_Check(obj_callback->on_call_transfer_request))
+    if (PyCallable_Check(g_obj_callback->on_call_transfer_request))
     {
         ret = PyObject_CallFunctionObjArgs(
-            obj_callback->on_call_transfer_request,
+            g_obj_callback->on_call_transfer_request,
 	    Py_BuildValue("i",call_id),
             PyString_FromStringAndSize(dst->ptr, dst->slen),
             Py_BuildValue("i",*code),
@@ -290,11 +291,10 @@ static void cb_on_call_transfer_status( pjsua_call_id call_id,
 {
     PyObject * ret;
     int cnt;
-	printf("on_call_transfer_status called\n");
-    if (PyCallable_Check(obj_callback->on_call_transfer_status))
+    if (PyCallable_Check(g_obj_callback->on_call_transfer_status))
     {
         ret = PyObject_CallFunctionObjArgs(
-            obj_callback->on_call_transfer_status,
+            g_obj_callback->on_call_transfer_status,
 	    Py_BuildValue("i",call_id),
 	    Py_BuildValue("i",status_code),
             PyString_FromStringAndSize(status_text->ptr, status_text->slen),
@@ -326,8 +326,7 @@ static void cb_on_call_replace_request( pjsua_call_id call_id,
     PyObject * ret;
     PyObject * txt;
     int cd;
-	printf("on_call_replace_request called\n");
-    if (PyCallable_Check(obj_callback->on_call_replace_request))
+    if (PyCallable_Check(g_obj_callback->on_call_replace_request))
     {
         pjsip_rx_data_Object * obj = (pjsip_rx_data_Object *)
 				      PyType_GenericNew(&pjsip_rx_data_Type,
@@ -335,7 +334,7 @@ static void cb_on_call_replace_request( pjsua_call_id call_id,
         obj->rdata = rdata;
 
         ret = PyObject_CallFunctionObjArgs(
-            obj_callback->on_call_replace_request,
+            g_obj_callback->on_call_replace_request,
 	    Py_BuildValue("i",call_id),
 	    obj,
 	    Py_BuildValue("i",*st_code),
@@ -363,11 +362,10 @@ static void cb_on_call_replace_request( pjsua_call_id call_id,
 static void cb_on_call_replaced(pjsua_call_id old_call_id,
 				pjsua_call_id new_call_id)
 {
-	printf("on_call_replaced\n");
-    if (PyCallable_Check(obj_callback->on_call_replaced))
+    if (PyCallable_Check(g_obj_callback->on_call_replaced))
     {
         PyObject_CallFunctionObjArgs(
-            obj_callback->on_call_replaced,
+            g_obj_callback->on_call_replaced,
 	    Py_BuildValue("i",old_call_id),
 	    Py_BuildValue("i",old_call_id),
 	    NULL
@@ -382,10 +380,9 @@ static void cb_on_call_replaced(pjsua_call_id old_call_id,
  */
 static void cb_on_reg_state(pjsua_acc_id acc_id)
 {
-	printf("on_reg_state\n");
-    if (PyCallable_Check(obj_callback->on_reg_state))
+    if (PyCallable_Check(g_obj_callback->on_reg_state))
     {
-        PyObject_CallFunction(obj_callback->on_reg_state,"i",acc_id);
+        PyObject_CallFunction(g_obj_callback->on_reg_state,"i",acc_id);
     }
 }
 
@@ -396,10 +393,9 @@ static void cb_on_reg_state(pjsua_acc_id acc_id)
  */
 static void cb_on_buddy_state(pjsua_buddy_id buddy_id)
 {
-	printf("on_buddy_state called\n");
-    if (PyCallable_Check(obj_callback->on_buddy_state))
+    if (PyCallable_Check(g_obj_callback->on_buddy_state))
     {
-        PyObject_CallFunction(obj_callback->on_buddy_state,"i",buddy_id);
+        PyObject_CallFunction(g_obj_callback->on_buddy_state,"i",buddy_id);
     }
 }
 
@@ -411,11 +407,10 @@ static void cb_on_pager(pjsua_call_id call_id, const pj_str_t *from,
                         const pj_str_t *to, const pj_str_t *contact,
                         const pj_str_t *mime_type, const pj_str_t *body)
 {
-	printf("on_pager called\n");
-    if (PyCallable_Check(obj_callback->on_pager))
+    if (PyCallable_Check(g_obj_callback->on_pager))
     {
         PyObject_CallFunctionObjArgs(
-            obj_callback->on_pager,Py_BuildValue("i",call_id),
+            g_obj_callback->on_pager,Py_BuildValue("i",call_id),
             PyString_FromStringAndSize(from->ptr, from->slen),
             PyString_FromStringAndSize(to->ptr, to->slen),
             PyString_FromStringAndSize(contact->ptr, contact->slen),
@@ -437,11 +432,10 @@ static void cb_on_pager_status(pjsua_call_id call_id, const pj_str_t *to,
 {
 	
     PyObject * obj = PyType_GenericNew(user_data, NULL, NULL);
-	printf("on_pager_status called\n");
-    if (PyCallable_Check(obj_callback->on_pager))
+    if (PyCallable_Check(g_obj_callback->on_pager))
     {
         PyObject_CallFunctionObjArgs(
-            obj_callback->on_pager,Py_BuildValue("i",call_id),
+            g_obj_callback->on_pager,Py_BuildValue("i",call_id),
             PyString_FromStringAndSize(to->ptr, to->slen),
             PyString_FromStringAndSize(body->ptr, body->slen),obj,
             Py_BuildValue("i",status),PyString_FromStringAndSize(reason->ptr,
@@ -459,11 +453,10 @@ static void cb_on_typing(pjsua_call_id call_id, const pj_str_t *from,
                             const pj_str_t *to, const pj_str_t *contact,
                             pj_bool_t is_typing)
 {
-	printf("on_typing called\n");
-    if (PyCallable_Check(obj_callback->on_typing))
+    if (PyCallable_Check(g_obj_callback->on_typing))
     {
         PyObject_CallFunctionObjArgs(
-            obj_callback->on_typing,Py_BuildValue("i",call_id),
+            g_obj_callback->on_typing,Py_BuildValue("i",call_id),
             PyString_FromStringAndSize(from->ptr, from->slen),
             PyString_FromStringAndSize(to->ptr, to->slen),
             PyString_FromStringAndSize(contact->ptr, contact->slen),
@@ -1725,6 +1718,9 @@ static PyObject *py_pjsua_thread_register(PyObject *pSelf, PyObject
     thread_desc = malloc(sizeof(pj_thread_desc));
 #endif
     status = pj_thread_register(name, thread_desc, &thread);
+
+    if (status == PJ_SUCCESS)
+	status = pj_thread_local_set(thread_id, (void*)1);
     return Py_BuildValue("i",status);
 }
 
@@ -1991,7 +1987,13 @@ static PyObject *py_pjsua_create(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_create();
-    //printf("status %d\n",status);
+    
+    if (status == PJ_SUCCESS) {
+	status = pj_thread_local_alloc(&thread_id);
+	if (status == PJ_SUCCESS)
+	    status = pj_thread_local_set(thread_id, (void*)1);
+    }
+
     return Py_BuildValue("i",status);
 }
 
@@ -2027,40 +2029,44 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
     pjsua_media_config_default(&cfg_media);
 
     if (ua_cfgObj != Py_None) {
-		ua_cfg = (config_Object *)ua_cfgObj;
+	ua_cfg = (config_Object *)ua_cfgObj;
         cfg_ua.cred_count = ua_cfg->cred_count;
         for (i = 0; i < 4; i++)
-		{
+	{
             cfg_ua.cred_info[i] = ua_cfg->cred_info[i];
-		}
+	}
         cfg_ua.max_calls = ua_cfg->max_calls;
         for (i = 0; i < PJSUA_ACC_MAX_PROXIES; i++)
-		{
+	{
             cfg_ua.outbound_proxy[i] = ua_cfg->outbound_proxy[i];
-		}
+	}
+
+    	g_obj_callback = ua_cfg->cb;
+    	Py_INCREF(g_obj_callback);
+
+    	cfg_ua.cb.on_call_state = &cb_on_call_state;
+    	cfg_ua.cb.on_incoming_call = &cb_on_incoming_call;
+    	cfg_ua.cb.on_call_media_state = &cb_on_call_media_state;
+    	cfg_ua.cb.on_call_transfer_request = &cb_on_call_transfer_request;
+    	cfg_ua.cb.on_call_transfer_status = &cb_on_call_transfer_status;
+    	cfg_ua.cb.on_call_replace_request = &cb_on_call_replace_request;
+    	cfg_ua.cb.on_call_replaced = &cb_on_call_replaced;
+    	cfg_ua.cb.on_reg_state = &cb_on_reg_state;
+    	cfg_ua.cb.on_buddy_state = &cb_on_buddy_state;
+    	cfg_ua.cb.on_pager = &cb_on_pager;
+    	cfg_ua.cb.on_pager_status = &cb_on_pager_status;
+    	cfg_ua.cb.on_typing = &cb_on_typing;
 
         cfg_ua.outbound_proxy_cnt = ua_cfg->outbound_proxy_cnt;
         cfg_ua.thread_cnt = ua_cfg->thread_cnt;
         cfg_ua.user_agent.ptr = PyString_AsString(ua_cfg->user_agent);
         cfg_ua.user_agent.slen = strlen(cfg_ua.user_agent.ptr);
 
-        obj_callback = ua_cfg->cb;
-        cfg_ua.cb.on_call_state = &cb_on_call_state;
-        cfg_ua.cb.on_incoming_call = &cb_on_incoming_call;
-        cfg_ua.cb.on_call_media_state = &cb_on_call_media_state;
-        cfg_ua.cb.on_call_transfer_request = &cb_on_call_transfer_request;
-        cfg_ua.cb.on_call_transfer_status = &cb_on_call_transfer_status;
-        cfg_ua.cb.on_call_replace_request = &cb_on_call_replace_request;
-        cfg_ua.cb.on_call_replaced = &cb_on_call_replaced;
-        cfg_ua.cb.on_reg_state = &cb_on_reg_state;
-        cfg_ua.cb.on_buddy_state = &cb_on_buddy_state;
-        cfg_ua.cb.on_pager = &cb_on_pager;
-        cfg_ua.cb.on_pager_status = &cb_on_pager_status;
-        cfg_ua.cb.on_typing = &cb_on_typing;
         p_cfg_ua = &cfg_ua;
     } else {
         p_cfg_ua = NULL;
-	}
+    }
+
     if (log_cfgObj != Py_None) {
         log_cfg = (logging_config_Object *)log_cfgObj;
         cfg_log.msg_logging = log_cfg->msg_logging;
@@ -2076,7 +2082,8 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
         p_cfg_log = &cfg_log;
     } else {
         p_cfg_log = NULL;
-	}
+    }
+
     if (media_cfgObj != Py_None) {
         media_cfg = (media_config_Object *)media_cfgObj;
         cfg_media.clock_rate = media_cfg->clock_rate;
@@ -2092,9 +2099,10 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
         cfg_media.thread_cnt = media_cfg->thread_cnt;
         cfg_media.tx_drop_pct = media_cfg->tx_drop_pct;
 	    p_cfg_media = &cfg_media;
-	} else {
+    } else {
         p_cfg_media = NULL;
-	}
+    }
+
     status = pjsua_init(p_cfg_ua, p_cfg_log, p_cfg_media);
     return Py_BuildValue("i",status);
 }
@@ -3959,12 +3967,14 @@ static PyObject *py_pjsua_acc_add
     {
         return NULL;
     }
+
+    pjsua_acc_config_default(&cfg);
     if (acObj != Py_None)
 	{
         ac = (acc_config_Object *)acObj;
         cfg.cred_count = ac->cred_count;
         for (i = 0; i < 8; i++) 
-		{
+	{
             /*cfg.cred_info[i] = ac->cred_info[i];*/
 	        pjsip_cred_info_Object * ci = (pjsip_cred_info_Object *)
 				PyList_GetItem((PyObject *)ac->cred_info,i);
@@ -3979,7 +3989,7 @@ static PyObject *py_pjsua_acc_add
 	        cfg.cred_info[i].username.slen = strlen
 				(PyString_AsString(ci->username));
 	        cfg.cred_info[i].data_type = ci->data_type;
-		}
+	}
         cfg.force_contact.ptr = PyString_AsString(ac->force_contact);
         cfg.force_contact.slen = strlen(PyString_AsString(ac->force_contact));
         cfg.id.ptr = PyString_AsString(ac->id);
@@ -3989,7 +3999,7 @@ static PyObject *py_pjsua_acc_add
             /*cfg.proxy[i] = ac->proxy[i];*/
 	        cfg.proxy[i].ptr = PyString_AsString
 				(PyList_GetItem((PyObject *)ac->proxy,i));
-		}
+	}
         cfg.proxy_cnt = ac->proxy_cnt;
         cfg.publish_enabled = ac->publish_enabled;
         cfg.reg_timeout = ac->reg_timeout;
@@ -7162,7 +7172,7 @@ static PyObject *py_pjsua_call_make_call
     dst_uri.ptr = PyString_AsString(sd);
     dst_uri.slen = strlen(PyString_AsString(sd));
     if (omdObj != Py_None) {
-		omd = (msg_data_Object *)omdObj;
+	omd = (msg_data_Object *)omdObj;
         msg_data.content_type.ptr = PyString_AsString(omd->content_type);
         msg_data.content_type.slen = strlen
 			(PyString_AsString(omd->content_type));
@@ -7173,10 +7183,11 @@ static PyObject *py_pjsua_call_make_call
         status = pjsua_call_make_call(acc_id, &dst_uri, 
 			options, &user_data, &msg_data, &call_id);	
         pj_pool_release(pool);
-	} else {
+    } else {
         status = pjsua_call_make_call(acc_id, &dst_uri, 
 			options, &user_data, NULL, &call_id);	
-	}
+    }
+
     return Py_BuildValue("ii",status, call_id);
 }
 
@@ -7253,7 +7264,6 @@ static PyObject *py_pjsua_call_get_info
     int status;
     call_info_Object * oi;
     pjsua_call_info info;
-    int i;
     
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id))
@@ -7267,15 +7277,19 @@ static PyObject *py_pjsua_call_get_info
     {
         oi = (call_info_Object *)call_info_new(&call_info_Type, NULL, NULL);
         oi->acc_id = info.acc_id;
-        for (i = 0; i < 128; i++)
-	{
-	    oi->buf_.call_id[i] = info.buf_.call_id[i];
-	    oi->buf_.last_status_text[i] = info.buf_.last_status_text[i];
-	    oi->buf_.local_contact[i] = info.buf_.local_contact[i];
-	    oi->buf_.local_info[i] = info.buf_.local_info[i];
-	    oi->buf_.remote_contact[i] = info.buf_.remote_contact[i];
-	    oi->buf_.remote_info[i] = info.buf_.remote_info[i];
-	}
+	pj_ansi_snprintf(oi->buf_.call_id, sizeof(oi->buf_.call_id),
+			 "%.*s", (int)info.call_id.slen, info.call_id.ptr);
+	pj_ansi_snprintf(oi->buf_.last_status_text, sizeof(oi->buf_.last_status_text),
+			 "%.*s", (int)info.last_status_text.slen, info.last_status_text.ptr);
+	pj_ansi_snprintf(oi->buf_.local_contact, sizeof(oi->buf_.local_contact),
+			 "%.*s", (int)info.local_contact.slen, info.local_contact.ptr);
+	pj_ansi_snprintf(oi->buf_.local_info, sizeof(oi->buf_.local_info),
+			 "%.*s", (int)info.local_info.slen, info.local_info.ptr);
+	pj_ansi_snprintf(oi->buf_.remote_contact, sizeof(oi->buf_.remote_contact),
+			 "%.*s", (int)info.remote_contact.slen, info.remote_contact.ptr);
+	pj_ansi_snprintf(oi->buf_.remote_info, sizeof(oi->buf_.remote_info),
+			 "%.*s", (int)info.remote_info.slen, info.remote_info.ptr);
+
         oi->call_id = PyString_FromStringAndSize(info.call_id.ptr, 
 	    info.call_id.slen);
         oi->conf_slot = info.conf_slot;
@@ -7371,7 +7385,7 @@ static PyObject *py_pjsua_call_answer
     {
         return NULL;
     }
-	
+
     reason.ptr = PyString_AsString(sr);
     reason.slen = strlen(PyString_AsString(sr));
     if (omdObj != Py_None) {
@@ -7408,7 +7422,7 @@ static PyObject *py_pjsua_call_hangup
     pjsua_msg_data msg_data;
 	PyObject * omdObj;
     msg_data_Object * omd;    
-    pj_pool_t * pool;
+    pj_pool_t * pool = NULL;
 
     if (!PyArg_ParseTuple(pArgs, "iIOO", &call_id, &code, &sr, &omdObj))
     {
@@ -7428,9 +7442,9 @@ static PyObject *py_pjsua_call_hangup
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
         status = pjsua_call_hangup(call_id, code, &reason, &msg_data);	
         pj_pool_release(pool);
-	} else {
+    } else {
         status = pjsua_call_hangup(call_id, code, &reason, NULL);	
-	}
+    }
     return Py_BuildValue("i",status);
 }
 

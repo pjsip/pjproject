@@ -1004,6 +1004,9 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     if (call->res_time.sec == 0)
 	pj_gettimeofday(&call->res_time);
 
+    if (reason && reason->slen == 0)
+	reason = NULL;
+
     /* Create response message */
     status = pjsip_inv_answer(call->inv, code, reason, NULL, &tdata);
     if (status != PJ_SUCCESS) {
