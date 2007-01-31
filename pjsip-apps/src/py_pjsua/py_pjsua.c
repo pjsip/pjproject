@@ -7181,11 +7181,11 @@ static PyObject *py_pjsua_call_make_call
         pool = pjsua_pool_create("pjsua", 4000, 4000);
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
         status = pjsua_call_make_call(acc_id, &dst_uri, 
-			options, &user_data, &msg_data, &call_id);	
+			options, (void*)user_data, &msg_data, &call_id);	
         pj_pool_release(pool);
     } else {
         status = pjsua_call_make_call(acc_id, &dst_uri, 
-			options, &user_data, NULL, &call_id);	
+			options, (void*)user_data, NULL, &call_id);	
     }
 
     return Py_BuildValue("ii",status, call_id);
@@ -7338,7 +7338,7 @@ static PyObject *py_pjsua_call_set_user_data
         return NULL;
     }	
     
-    status = pjsua_call_set_user_data(call_id, &user_data);
+    status = pjsua_call_set_user_data(call_id, (void*)user_data);
     
     
     return Py_BuildValue("i", status);
@@ -7351,7 +7351,7 @@ static PyObject *py_pjsua_call_get_user_data
 (PyObject *pSelf, PyObject *pArgs)
 {    	
     int call_id;
-    int * user_data;	
+    void * user_data;	
     
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id))
@@ -7362,7 +7362,7 @@ static PyObject *py_pjsua_call_get_user_data
     user_data = pjsua_call_get_user_data(call_id);
     
     
-    return Py_BuildValue("i", *user_data);
+    return Py_BuildValue("i", (int)user_data);
 }
 
 /*

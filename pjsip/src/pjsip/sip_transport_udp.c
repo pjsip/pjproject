@@ -79,7 +79,8 @@ static void init_rdata(struct udp_transport *tp, unsigned rdata_index,
     pjsip_rx_data *rdata;
 
     /* Reset pool. */
-    pj_pool_reset(pool);
+    //note: already done by caller
+    //pj_pool_reset(pool);
 
     rdata = pj_pool_zalloc(pool, sizeof(pjsip_rx_data));
 
