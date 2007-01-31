@@ -140,6 +140,13 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 	 */
 	if (size < (pj_ssize_t)size_to_read)
 	{
+	    /* Rewind the file for the next iteration */
+	    fport->fpos_list[current_file] = 
+		fport->start_data_list[current_file];
+	    pj_file_setpos(fport->fd_list[current_file], 
+			   fport->fpos_list[current_file], PJ_SEEK_SET);
+
+	    /* Move to next file */
 	    current_file++;
 	    fport->current_file = current_file;
 
