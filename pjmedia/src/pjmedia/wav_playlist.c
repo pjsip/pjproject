@@ -187,7 +187,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 			      fport->base.info.name.ptr));
 		    
 		    /* start with first file again. */
-		    fport->current_file = 0;
+		    fport->current_file = current_file = 0;
 		    fport->fpos_list[0] = fport->start_data_list[0];
 		    pj_file_setpos(fport->fd_list[0], fport->fpos_list[0],
 				   PJ_SEEK_SET);
