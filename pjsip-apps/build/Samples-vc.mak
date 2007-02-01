@@ -1,5 +1,5 @@
 
-TARGET = i386-win32-vc6-$(BUILD_MODE)
+TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
 LIBEXT = .lib
 
 !if "$(BUILD_MODE)" == "debug"
@@ -60,6 +60,10 @@ $(SAMPLES): $(SRCDIR)\$(@B).c $(LIBS) $(SRCDIR)\util.h Samples-vc.mak
 	cl /nologo $(OBJDIR)\$(@B).obj /Fe$@ /Fm$(OBJDIR)\$(@B).map $(LDFLAGS)
 
 $(OBJDIR):
-	mkdir $(OBJDIR)
+	if not exist $(OBJDIR) mkdir $(OBJDIR)
 
+clean:
+	echo Cleaning up samples...
+	if exist $(BINDIR) del /Q $(BINDIR)\*.*
+	if exist $(OBJDIR) del /Q $(OBJDIR)\*.*
 

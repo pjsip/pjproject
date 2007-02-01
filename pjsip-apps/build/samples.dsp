@@ -41,7 +41,7 @@ CFG=samples - Win32 Debug
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "./output/samples-i386-win32-vc6-release"
 # PROP Intermediate_Dir "./output/samples-i386-win32-vc6-release"
-# PROP Cmd_Line "nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release"
+# PROP Cmd_Line "nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=6"
 # PROP Rebuild_Opt "/a"
 # PROP Target_File "All samples"
 # PROP Bsc_Name ""
@@ -62,7 +62,7 @@ CFG=samples - Win32 Debug
 # PROP Use_Debug_Libraries 1
 # PROP Output_Dir "./output/samples-i386-win32-vc6-debug"
 # PROP Intermediate_Dir "./output/samples-i386-win32-vc6-debug"
-# PROP Cmd_Line "nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug"
+# PROP Cmd_Line "nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=6"
 # PROP Rebuild_Opt "/a"
 # PROP Target_File "All samples"
 # PROP Bsc_Name ""

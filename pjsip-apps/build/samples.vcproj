@@ -25,9 +25,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release"
-				ReBuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release /a"
-				CleanCommandLine=""
+				BuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=8"
+				ReBuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=8 /a"
+				CleanCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=8 clean"
 				Output="All samples"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -48,9 +48,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug"
-				ReBuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug /a"
-				CleanCommandLine=""
+				BuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=8"
+				ReBuildCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=8 /a"
+				CleanCommandLine="nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=8 clean"
 				Output="All samples"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
