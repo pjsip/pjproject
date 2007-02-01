@@ -1242,6 +1242,25 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
 
 /*
+ * Get currently active sound devices. If sound devices has not been created
+ * (for example when pjsua_start() is not called), it is possible that
+ * the function returns PJ_SUCCESS with -1 as device IDs.
+ */
+PJ_DEF(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
+				      int *playback_dev)
+{
+    if (capture_dev) {
+	*capture_dev = pjsua_var.cap_dev;
+    }
+    if (playback_dev) {
+	*playback_dev = pjsua_var.play_dev;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Use null sound device.
  */
 PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)

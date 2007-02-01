@@ -8228,10 +8228,10 @@ static PyMethodDef py_pjsua_methods[] =
         "enum_snd_devs", py_pjsua_enum_snd_devs, METH_VARARGS,
         pjsua_enum_snd_devs_doc
     },
-    /*{
+    {
         "get_snd_dev", py_pjsua_get_snd_dev, METH_VARARGS,
         pjsua_get_snd_dev_doc
-    },*/
+    },
     {
         "set_snd_dev", py_pjsua_set_snd_dev, METH_VARARGS,
         pjsua_set_snd_dev_doc

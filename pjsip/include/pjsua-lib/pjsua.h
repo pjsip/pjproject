@@ -4074,7 +4074,7 @@ PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_snd_dev_info info[],
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  *
  * \par Python:
- * The function takes no argument and return a tuple:
+ * The function takes no argument and return an (integer,integer) tuple:
  * \code
     capture_dev, playback_dev = py_pjsua.get_snd_dev()
  * \endcode
