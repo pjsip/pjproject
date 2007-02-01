@@ -52,6 +52,11 @@
 #  include <netinet/in.h>
 #endif
 
+#if defined(PJ_HAS_NETINET_IP_H) && PJ_HAS_NETINET_IP_H != 0
+/* To pull in IPTOS_* constants */
+#  include <netinet/ip.h>
+#endif
+
 #if defined(PJ_HAS_ARPA_INET_H) && PJ_HAS_ARPA_INET_H != 0
 #  include <arpa/inet.h>
 #endif

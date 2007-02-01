@@ -93,6 +93,30 @@ extern const pj_uint16_t PJ_SOL_TCP;	/**< TCP level.	    */
 extern const pj_uint16_t PJ_SOL_UDP;	/**< UDP level.	    */
 extern const pj_uint16_t PJ_SOL_IPV6;	/**< IP version 6   */
 
+
+/* IP_TOS 
+ *
+ * Note:
+ *  TOS CURRENTLY DOES NOT WORK IN Windows 2000 and above!
+ *  See http://support.microsoft.com/kb/248611
+ */
+extern const pj_uint16_t PJ_IP_TOS;	/**< IP_TOS optname in setsockopt() */
+
+
+/*
+ * IP TOS related constats.
+ *
+ * Note:
+ *  TOS CURRENTLY DOES NOT WORK IN Windows 2000 and above!
+ *  See http://support.microsoft.com/kb/248611
+ */
+extern const pj_uint16_t PJ_IPTOS_LOWDELAY;	/**< Minimize  delays	    */
+extern const pj_uint16_t PJ_IPTOS_THROUGHPUT;	/**< Optimize throughput    */
+extern const pj_uint16_t PJ_IPTOS_RELIABILITY;	/**< Optimize for reliability*/
+extern const pj_uint16_t PJ_IPTOS_MINCOST;	/**< "filler data" where slow 
+						 transmission does't matter */
+
+
 /**
  * Values to be specified as \c optname when calling #pj_sock_setsockopt() 
  * or #pj_sock_getsockopt().

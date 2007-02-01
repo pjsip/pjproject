@@ -46,7 +46,7 @@ const pj_uint16_t PJ_AF_IRDA	= 0xFFFF;
  * Socket types conversion.
  * The values here are indexed based on pj_sock_type
  */
-const pj_uint16_t PJ_SOCK_STREAM	= SOCK_STREAM;
+const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
 const pj_uint16_t PJ_SOCK_DGRAM	= SOCK_DGRAM;
 const pj_uint16_t PJ_SOCK_RAW	= SOCK_RAW;
 const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
@@ -75,6 +75,37 @@ const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
 #else
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
 #endif
+
+/* IP_TOS */
+#ifdef IP_TOS
+const pj_uint16_t PJ_IP_TOS	= IP_TOS;
+#else
+const pj_uint16_t PJ_IP_TOS	= 1;
+#endif
+
+
+/* TOS settings (declared in netinet/ip.h) */
+#ifdef IPTOS_LOWDELAY
+const pj_uint16_t PJ_IPTOS_LOWDELAY	= IPTOS_LOWDELAY;
+#else
+const pj_uint16_t PJ_IPTOS_LOWDELAY	= 0x10;
+#endif
+#ifdef IPTOS_THROUGHPUT
+const pj_uint16_t PJ_IPTOS_THROUGHPUT	= IPTOS_THROUGHPUT;
+#else
+const pj_uint16_t PJ_IPTOS_THROUGHPUT	= 0x08;
+#endif
+#ifdef IPTOS_RELIABILITY
+const pj_uint16_t PJ_IPTOS_RELIABILITY	= IPTOS_RELIABILITY;
+#else
+const pj_uint16_t PJ_IPTOS_RELIABILITY	= 0x04;
+#endif
+#ifdef IPTOS_MINCOST
+const pj_uint16_t PJ_IPTOS_MINCOST	= IPTOS_MINCOST;
+#else
+const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
+#endif
+
 
 /* optname values. */
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
