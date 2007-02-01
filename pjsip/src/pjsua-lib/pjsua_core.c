@@ -1284,6 +1284,8 @@ PJ_DEF(pj_status_t) pjsua_transport_set_enable( pjsua_transport_id id,
 PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 					   pj_bool_t force )
 {
+    pj_status_t status;
+
     /* Make sure id is in range. */
     PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
 
@@ -1296,28 +1298,56 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     if (force) {
 	switch (pjsua_var.tpdata[id].type) {
 	case PJSIP_TRANSPORT_UDP:
-	    return pjsip_transport_destroy(pjsua_var.tpdata[id].data.tp);
+	    status = pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
+	    if (status  != PJ_SUCCESS)
+		return status;
+	    status = pjsip_transport_destroy(pjsua_var.tpdata[id].data.tp);
+	    if (status != PJ_SUCCESS)
+		return status;
+	    break;
+
+	case PJSIP_TRANSPORT_TLS:
 	case PJSIP_TRANSPORT_TCP:
+	    /* This will close the TCP listener, but existing TCP/TLS
+	     * connections (if any) will still linger 
+	     */
+	    status = (*pjsua_var.tpdata[id].data.factory->destroy)
+			(pjsua_var.tpdata[id].data.factory);
+	    if (status != PJ_SUCCESS)
+		return status;
+
 	    break;
+
 	default:
-	    break;
+	    return PJ_EINVAL;
 	}
 	
     } else {
+	/* If force is not specified, transports will be closed at their
+	 * convenient time. However this will leak PJSUA-API transport
+	 * descriptors as PJSUA-API wouldn't know when exactly the
+	 * transport is closed thus it can't cleanup PJSUA transport
+	 * descriptor.
+	 */
 	switch (pjsua_var.tpdata[id].type) {
 	case PJSIP_TRANSPORT_UDP:
 	    return pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
+	case PJSIP_TRANSPORT_TLS:
 	case PJSIP_TRANSPORT_TCP:
 	    return (*pjsua_var.tpdata[id].data.factory->destroy)
 			(pjsua_var.tpdata[id].data.factory);
 	default:
-	    break;
+	    return PJ_EINVAL;
 	}
     }
 
-    /* Unreachable */
-    pj_assert(!"Unknown transport");
-    return PJ_EINVALIDOP;
+    /* Cleanup pjsua data when force is applied */
+    if (force) {
+	pjsua_var.tpdata[id].type = PJSIP_TRANSPORT_UNSPECIFIED;
+	pjsua_var.tpdata[id].data.ptr = NULL;
+    }
+
+    return PJ_SUCCESS;
 }
 
 
