@@ -73,6 +73,20 @@ def on_reg_state(acc_id):
 		write_log(3, "Account successfully (un)registered")
 
 
+def on_buddy_state(buddy_id):
+	write_log(3, "On Buddy state called")
+	buddy_info = py_pjsua.buddy_get_info(buddy_id)
+	if buddy_info.status != 0 and buddy_info.status != 200:
+		write_log(3, "Status of " + `buddy_info.uri` + " is " + `buddy_info.status_text`)
+	else:
+		write_log(3, "Status : " + `buddy_info.status`)
+		
+def on_pager(call_id, strfrom, strto, contact, mime_type, text):
+	write_log(3, "MESSAGE from " + `strfrom` + " : " + `text`)
+	
+def on_pager_status(call_id, strto, body, user_data, status, reason):
+	write_log(3, "MESSAGE to " + `strto` + " status " + `status` + " reason " + `reason`)
+
 # Utility: display PJ error and exit
 #
 def err_exit(title, rc):
@@ -117,6 +131,10 @@ def app_init():
 	ua_cfg.cb.on_call_media_state = on_call_media_state
 	ua_cfg.cb.on_reg_state = on_reg_state
 	ua_cfg.cb.on_call_state = on_call_state
+	ua_cfg.cb.on_buddy_state = on_buddy_state
+	ua_cfg.cb.on_pager = on_pager
+	ua_cfg.cb.on_pager_status = on_pager_status
+	
 
 	# Create and initialize media config
 	med_cfg = py_pjsua.media_config_default()

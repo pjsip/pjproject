@@ -23,6 +23,7 @@
 #define THIS_FILE    "main.c"
 #define POOL_SIZE    4000
 #define SND_DEV_NUM  64
+#define SND_NAME_LEN  64
 
 /* LIB BASE */
 
@@ -403,7 +404,7 @@ static void cb_on_buddy_state(pjsua_buddy_id buddy_id)
 
 /*
  * cb_on_pager
- * * declares method on_pager for callback struct
+ * declares method on_pager for callback struct
  */
 static void cb_on_pager(pjsua_call_id call_id, const pj_str_t *from,
                         const pj_str_t *to, const pj_str_t *contact,
@@ -3160,7 +3161,10 @@ static PyObject *py_pjsua_normalize_stun_config
     Py_XDECREF(obj->stun_srv2);
     obj->stun_srv2 = 
         PyString_FromStringAndSize(cfg->stun_srv2.ptr, cfg->stun_srv2.slen);
-    free(cfg);
+    if (cfg != NULL)
+    {
+        free(cfg);
+    }
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -5024,7 +5028,7 @@ static PyObject *py_pjsua_im_send
 {    
     int status;
     int acc_id;
-    pj_str_t * mime_type;
+    pj_str_t * mime_type, tmp_mime_type;
     pj_str_t to, content;
     PyObject * st;
     PyObject * smt;
@@ -5042,11 +5046,11 @@ static PyObject *py_pjsua_im_send
     {
         return NULL;
     }
-    if (smt != NULL)
+    if (smt != Py_None)
     {
-        mime_type = (pj_str_t *)malloc(sizeof(pj_str_t));
-        mime_type->ptr = PyString_AsString(smt);
-        mime_type->slen = strlen(PyString_AsString(smt));
+        mime_type = &tmp_mime_type;
+        tmp_mime_type.ptr = PyString_AsString(smt);
+        tmp_mime_type.slen = strlen(PyString_AsString(smt));
     } else {
         mime_type = NULL;
     }
@@ -5075,10 +5079,7 @@ static PyObject *py_pjsua_im_send
         status = pjsua_im_send(acc_id, &to, mime_type, 
 			&content, NULL, NULL);	
     }
-    if (mime_type != NULL)
-    {
-        free(mime_type);
-    }
+    
     return Py_BuildValue("i",status);
 }
 
@@ -5510,7 +5511,7 @@ typedef struct
     unsigned  input_count;
     unsigned  output_count;
     unsigned  default_samples_per_sec;    
-    PyListObject * name;
+    PyObject * name;
 
 } pjmedia_snd_dev_info_Object;
 
@@ -5538,7 +5539,7 @@ static PyObject * pjmedia_snd_dev_info_new(PyTypeObject *type, PyObject *args,
     self = (pjmedia_snd_dev_info_Object *)type->tp_alloc(type, 0);
     if (self != NULL)
     {
-        self->name = (PyListObject *)PyList_New(SND_DEV_NUM);
+        self->name = PyString_FromString("");
         if (self->name == NULL)
     	{
             Py_DECREF(self);
@@ -6375,22 +6376,22 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
     {
         int ret;
         int j;
+        char * str;
+	
         pjmedia_snd_dev_info_Object * obj;
         obj = (pjmedia_snd_dev_info_Object *)pjmedia_snd_dev_info_new
 	    (&pjmedia_snd_dev_info_Type, NULL, NULL);
         obj->default_samples_per_sec = info[i].default_samples_per_sec;
         obj->input_count = info[i].input_count;
         obj->output_count = info[i].output_count;
-        for (j = 0; j < SND_DEV_NUM; j++)
+        str = (char *)malloc(SND_NAME_LEN * sizeof(char));
+        memset(str, 0, SND_NAME_LEN);
+        for (j = 0; j < SND_NAME_LEN; j++)
 	{
-            PyObject * ostr;
-            char * str;
-            str = (char *)malloc(sizeof(char));
-            str[0] = info[i].name[j];
-            ostr = PyString_FromStringAndSize(str,1);
-            PyList_SetItem((PyObject *)obj->name, j, ostr);
-            free(str);
+            str[j] = info[i].name[j];
 	}
+        obj->name = PyString_FromStringAndSize(str, SND_NAME_LEN);
+        free(str);
         ret = PyList_SetItem(list, i, (PyObject *)obj);
         if (ret == -1) 
 	{
@@ -7447,7 +7448,7 @@ static PyObject *py_pjsua_call_answer
 {    
     int status;
     int call_id;
-    pj_str_t * reason;
+    pj_str_t * reason, tmp_reason;
     PyObject * sr;
     unsigned code;
     pjsua_msg_data msg_data;
@@ -7463,9 +7464,9 @@ static PyObject *py_pjsua_call_answer
     {
         reason = NULL;
     } else {
-	reason = (pj_str_t *)malloc(sizeof(pj_str_t));
-        reason->ptr = PyString_AsString(sr);
-        reason->slen = strlen(PyString_AsString(sr));
+	reason = &tmp_reason;
+        tmp_reason.ptr = PyString_AsString(sr);
+        tmp_reason.slen = strlen(PyString_AsString(sr));
     }
     if (omdObj != Py_None) 
     {
@@ -7485,10 +7486,7 @@ static PyObject *py_pjsua_call_answer
 	
         status = pjsua_call_answer(call_id, code, reason, NULL);	
     }
-    if (reason != NULL)
-    {
-        free(reason);
-    }
+    
     return Py_BuildValue("i",status);
 }
 
@@ -7500,7 +7498,7 @@ static PyObject *py_pjsua_call_hangup
 {    
     int status;
     int call_id;
-    pj_str_t * reason;
+    pj_str_t * reason, tmp_reason;
     PyObject * sr;
     unsigned code;
     pjsua_msg_data msg_data;
@@ -7516,9 +7514,9 @@ static PyObject *py_pjsua_call_hangup
     {
         reason = NULL;
     } else {
-        reason = (pj_str_t *)malloc(sizeof(pj_str_t));
-        reason->ptr = PyString_AsString(sr);
-        reason->slen = strlen(PyString_AsString(sr));
+        reason = &tmp_reason;
+        tmp_reason.ptr = PyString_AsString(sr);
+        tmp_reason.slen = strlen(PyString_AsString(sr));
     }
     if (omdObj != Py_None) 
     {
@@ -7535,10 +7533,7 @@ static PyObject *py_pjsua_call_hangup
     } else {
         status = pjsua_call_hangup(call_id, code, reason, NULL);	
     }
-    if (reason != NULL)
-    {
-        free(reason);
-    }
+    
     return Py_BuildValue("i",status);
 }
 
@@ -7727,7 +7722,7 @@ static PyObject *py_pjsua_call_send_im
     int status;
     int call_id;
     pj_str_t content;
-    pj_str_t * mime_type;
+    pj_str_t * mime_type, tmp_mime_type;
     PyObject * sm;
     PyObject * sc;
     pjsua_msg_data msg_data;
@@ -7745,9 +7740,9 @@ static PyObject *py_pjsua_call_send_im
     {
         mime_type = NULL;
     } else {
-        mime_type = (pj_str_t *)malloc(sizeof(pj_str_t));
-        mime_type->ptr = PyString_AsString(sm);
-        mime_type->slen = strlen(PyString_AsString(sm));
+        mime_type = &tmp_mime_type;
+        tmp_mime_type.ptr = PyString_AsString(sm);
+        tmp_mime_type.slen = strlen(PyString_AsString(sm));
     }
     content.ptr = PyString_AsString(sc);
     content.slen = strlen(PyString_AsString(sc));
@@ -7769,10 +7764,7 @@ static PyObject *py_pjsua_call_send_im
         status = pjsua_call_send_im
 			(call_id, mime_type, &content, NULL, (void *)user_data);	
     }
-    if (mime_type != NULL)
-    {
-        free(mime_type);
-    }
+    
     return Py_BuildValue("i",status);
 }
 
