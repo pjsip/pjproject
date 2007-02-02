@@ -1,8 +1,10 @@
 
+
 Getting Started: Building and Using PJSIP and PJMEDIA
 
-   [Last Update: $Date: 2006-10-21 19:14:22 +0100 (Sat, 21 Oct 2006) $]
+   [Last Update: $Date: 2007-02-02 20:42:44 +0000 (Fri, 02 Feb 2007) $]
 
+                                                   Print Friendly Page
      _________________________________________________________________
 
    This article describes how to download, customize, build, and use the open
@@ -17,15 +19,16 @@ Quick Info
           Generally these should be all that are needed to build the libraries,
           applications, and samples:
 
-	   $ ./configure
-	   $ make dep && make clean && make
+   $ ./configure
+   $ make dep && make clean && make
 
    Building Win32 Target with Microsoft Visual Studio
           Generally we can just do these steps:
 
-         1. Open pjsip-apps/build/pjsip_apps.dsw workspace,
-         2. Create an empty pjlib/include/pj/config_site.h, and
-         3. build the pjsua application.
+         1. Visual Studio 6: open pjproject.dsw workspace,
+         2. Visual Studio 2005: open pjproject-vs8.sln solution,
+         3. Create an empty pjlib/include/pj/config_site.h, and
+         4. build the pjsua application.
 
    Building for Windows Mobile
           Generally these are all that are needed:
@@ -34,14 +37,21 @@ Quick Info
          2. Create an empty pjlib/include/pj/config_site.h, and
          3. build the pjsua_wince application.
 
+   Invoking Older Build System (e.g. for RTEMS)
+          Generally these should be all that are needed to build the libraries,
+          applications, and samples:
+
+   $ ./configure-legacy
+   $ make dep && make clean && make
+
    Locating Output Binaries/Libraries
           Libraries will be put in lib directory, and binaries will be put in
           bin directory, under each projects.
 
    Running the Applications
           After successful build, you can try running pjsua application on
-          pjsip-apps/bin     directory.     PJSUA     manual     is    in
-          http://www.pjsip.org/pjsua.htm.
+          pjsip-apps/bin   directory.   PJSUA  manual  can  be  found  in
+          http://www.pjsip.org/pjsua.htm page.
 
 
 Table of Contents:
@@ -90,7 +100,23 @@ Table of Contents:
 
      5.2 Building the Projects
 
-   6. Using PJPROJECT with Applications
+   6. Older PJLIB Build System for Non-Autoconf Targets (e.g. RTEMS)
+
+     6.1 Supported Targets
+
+     6.2 Invoking the Build System
+
+   7. Running the Applications
+
+     7.1 pjsua
+
+     7.2 Sample Applications
+
+     7.3 pjlib-test
+
+     7.4 pjsip-test
+
+   8. Using PJPROJECT with Applications
 
 
    Appendix I: Common Problems/Frequently Asked Question (FAQ)
@@ -373,6 +399,7 @@ Creating config_site.h file
      * GNU make (other make will not work),
      * GNU binutils for the target, and
      * GNU gcc for the target.
+     * OpenSSL header files/libraries (optional) if TLS support is wanted.
 
    In addition, the appropriate "SDK" must be installed for the particular
    target (this could just be a libc and the appropriate system abstraction
@@ -384,8 +411,10 @@ Creating config_site.h file
      * mingw (Win2K, XP)
      * FreeBSD (must use gmake instead of make)
 
-   Building Win32 applications with cygwin is currently not supported (there is
-   some Windows header conflicts), but cross-compilations might just work.
+   Building Win32 applications with Cygwin is currently not supported by the
+   autoconf script (there is some Windows header conflicts), but one can still
+   use the old configure script by calling ./configure-legacy. More over,
+   cross-compilations might also work with Cygwin.
 
 
 3.3 Running configure
@@ -419,18 +448,20 @@ Using Default Settings
    $ ./configure --help
    ...
    Optional Features:
-   --disable-floating-point   Disable floating point where possible
-   --disable-sound            Exclude sound (i.e. use null sound)
-   --disable-small-filter     Exclude small filter in resampling
-   --disable-large-filter     Exclude large filter in resampling
-   --disable-g711-plc         Exclude G.711 Annex A PLC
-   --disable-speex-aec        Exclude Speex Acoustic Echo Canceller/AEC
-   --disable-g711-codec       Exclude G.711 codecs from the build
-   --disable-l16-codec        Exclude Linear/L16 codec family from the build
-   --disable-gsm-codec        Exclude GSM codec in the build
-   --disable-speex-codec      Exclude Speex codecs in the build
-   --disable-ilbc-codec       Exclude iLBC codec in the build
-   ...                       
+   --disable-floating-point	Disable floating point where possible
+   --disable-sound 		Exclude sound (i.e. use null sound)
+   --disable-small-filter 	Exclude small filter in resampling
+   --disable-large-filter 	Exclude large filter in resampling
+   --disable-g711-plc 		Exclude G.711 Annex A PLC
+   --disable-speex-aec 		Exclude Speex Acoustic Echo Canceller/AEC
+   --disable-g711-codec 	Exclude G.711 codecs from the build
+   --disable-l16-codec 		Exclude Linear/L16 codec family from the build
+   --disable-gsm-codec 		Exclude GSM codec in the build
+   --disable-speex-codec 	Exclude Speex codecs in the build
+   --disable-ilbc-codec 	Exclude iLBC codec in the build
+   --disable-tls Force excluding TLS support (default is autodetected based on
+   OpenSSL availability)
+   ...
 
     Configuring Debug Version and Other Customizations
 
@@ -443,6 +474,15 @@ Using Default Settings
 
    $ ./configure CFLAGS="-O3 -DNDEBUG -msoft-float -fno-builtin"
    ...
+
+    Configuring TLS Support
+
+   By default, TLS support is configured based on the availability of OpenSSL
+   header files and libraries. If OpenSSL is available at the default include
+   and library path locations, TLS will be enabled by the configure script.
+
+   You  can explicitly disable TLS support by giving the configure script
+   --disable-tls option.
 
 
   3.4 Cross Compilation
@@ -530,15 +570,44 @@ Using Default Settings
      * Microsoft Visual Studio 6,
      * Microsoft Visual Studio .NET 2002,
      * Microsoft Visual Studio .NET 2003,
-     * Microsoft Visual C++ Express 2005 with Platform SDK,
-     * DirectX SDK is needed if PJMEDIA DirectSound sound backend is explicitly
-       choosen (default is using PortAudio, which uses DirectSound via run-time
-       bindings, so DirectX SDK is not needed)
+     * Microsoft Visual C++ 2005 (including Express edition),
+
+   In addition, the following SDK's are needed:
+     * Platform SDK, if you're using Visual Studio 2005 Express (tested with
+       Platform SDK for Windows Server 2003 SP1),
+     * DirectX SDK (tested with DirectX version 8 and 9),
+     * OpenSSL development kit would be needed if TLS support is wanted, or
+       otherwise this is optional.
 
    For the host, the following are required:
      * Windows NT, 2000, XP, 2003, or later ,
      * Windows 95/98 should work too, but this has not been tested,
-     * Sufficient amount of RAM for the build process.
+     * Sufficient amount of RAM for the build process (at least 256MB).
+
+
+    Enabling TLS Support with OpenSSL
+
+   If  TLS  support  is wanted, then OpenSSL SDK must be installed in the
+   development host.
+
+   To install OpenSSL SDK from the Win32 binary distribution:
+    1. Install OpenSSL SDK to any folder (e.g. C:\OpenSSL)
+    2. Add OpenSSL DLL location to the system PATH.
+    3. Add OpenSSL include path to Visual Studio includes search directory.
+       Make sure that OpenSSL header files can be accessed from the program
+       with #include <openssl/ssl.h> construct.
+    4. Add OpenSSL library path to Visual Studio library search directory. Make
+       sure the following libraries are accessible:
+          + For Debug build: libeay32MTd and ssleay32MTd.
+          + For Release build: libeay32MT and ssleay32MT.
+
+   Then to enable TLS transport support in PJSIP, just add
+
+     #define PJSIP_HAS_TLS_TRANSPORT 1
+
+   in your pj/config_site.h. When this macro is defined, OpenSSL libraries will
+   be automatically linked to the application via the #pragma construct in
+   sip_transport_tls_ossl.c file.
 
 
   4.2 Building the Projects
@@ -546,14 +615,13 @@ Using Default Settings
 
    Follow the steps below to build the libraries/application using Visual
    Studio:
-    1. Open Visual Studio 6 workspace file pjsip-apps/build/pjsip_apps.dsw. If
-       later version of Visual Studio is being used, it should convert the
-       workspace file and project files into the new formats.
-    2. Set pjsua as Active Project.
-    3. Select Debug or Release build as appropriate.
-    4. Build the project. This will build pjsua application and all libraries
+    1. For Visual Studio 6: open pjproject.dsw workspace file.
+    2. For Visual Studio 8 (VS 2005): open pjproject-vs8.sln solution file.
+    3. Set pjsua as Active Project.
+    4. Select Debug or Release build as appropriate.
+    5. Build the project. This will build pjsua application and all libraries
        needed by pjsua.
-    5. After  successful  build,  the pjsua application will be placed in
+    6. After  successful  build,  the pjsua application will be placed in
        pjsip-apps/bin directory, and the libraries in lib directory under each
        projects.
 
@@ -635,7 +703,104 @@ Using Default Settings
             projects.
 
 
-6. Using PJPROJECT with Applications
+6. Older PJLIB Build System for Non-Autoconf Targets (e.g. RTEMS)
+     _________________________________________________________________
+
+   The old PJLIB build system can still be used for building PJ libraries, for
+   example for RTEMS target. Please see the Porting PJLIB page in PJLIB
+   Reference documentation for information on how to support new target using
+   this build system.
+
+  6.1 Supported Targets
+     _________________________________________________________________
+
+   The older build system supports building PJ libraries for the following
+   operating systems:
+     * RTEMS
+     * Linux
+     * MacOS X
+     * Cygwin and Mingw
+
+   And it supports the following target architectures:
+     * i386, x86_64, itanium
+     * ARM
+     * mips
+     * powerpc
+     * mpc860
+     * etc.
+
+   For other targets, specific files need to be added to the build system,
+   please see the Porting PJLIB page in PJLIB Reference documentation for
+   details.
+
+  6.2 Invoking the Build System
+     _________________________________________________________________
+
+   To invoke the older build system, run the following:
+
+
+
+   $ cd pjproject
+   $ ./configure-legacy
+   $ make dep && make clean && make
+
+
+
+7. Running the Applications
+     _________________________________________________________________
+
+   Upon successful build, the output libraries (PJLIB, PJLIB-UTIL, PJMEDIA,
+   PJSIP, etc.) are put under ./lib sub-directory under each project directory.
+   In addition, some applications may also be built, and such applications will
+   be put in ./bin sub-directory under each project directory.
+
+
+  7.1 pjsua
+     _________________________________________________________________
+
+   pjsua is the reference implementation for both PJSIP and PJMEDIA stack, and
+   is  the  main target of the build system. Upon successful build, pjsua
+   application will be put in pjsip-apps/bin directory.
+
+   pjsua manual can be found in pjsua Manual Page.
+
+
+  7.2 Sample Applications
+     _________________________________________________________________
+
+   Sample applications will be built with the Makefile build system. For Visual
+   Studio, you have to build the samples manually by selecting and building the
+   Samples project inside pjsip-apps/build/pjsip_apps.dsw project workspace.
+
+   Upon   successful   build,   the   sample   applications  are  put  in
+   pjsip-apps/bin/samples directory.
+
+   The  sample applications are described in PJMEDIA Samples Page and
+   PJSIP Samples Page in the website.
+
+
+  7.3 pjlib-test
+     _________________________________________________________________
+
+   pjlib-test contains comprehensive tests for testing PJLIB functionality.
+   This application will only be built when the Makefile build system is used;
+   with  Visual  Studio, one has to open pjlib.dsw project in pjlib/build
+   directory to build this application.
+
+   If  you're  porting PJLIB to new target, it is recommended to run this
+   application to make sure that all functionalities works as expected.
+
+
+  7.4 pjsip-test
+     _________________________________________________________________
+
+   pjsip-test contains codes for testing various SIP functionalities in PJSIP
+   and also to benchmark static performance metrics such as message parsing per
+   second.
+
+
+
+8. Using PJPROJECT with Applications
      _________________________________________________________________
 
    Regardless of the build system being used, the following tasks are normally
