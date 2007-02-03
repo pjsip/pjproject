@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -7510,7 +7510,7 @@ static PyObject *py_pjsua_call_hangup
     {
         return NULL;
     }
-    if (sr != Py_None)
+    if (sr == Py_None)
     {
         reason = NULL;
     } else {
@@ -8359,6 +8359,7 @@ DL_EXPORT(void)
 initpy_pjsua(void)
 {
     PyObject* m = NULL;
+#define ADD_CONSTANT(mod,name)	PyModule_AddIntConstant(mod,#name,name)
 
     
     if (PyType_Ready(&callback_Type) < 0)
@@ -8587,123 +8588,60 @@ initpy_pjsua(void)
 
     /* END OF LIB CALL */
 
-#ifdef PJSUA_INVALID_ID
-    /*
-     * Constant to identify invalid ID for all sorts of IDs.
-     */
-    PyModule_AddIntConstant(m, "PJSUA_INVALID_ID", PJSUA_INVALID_ID);
-#endif
-
-#ifdef PJSUA_ACC_MAX_PROXIES
-    /*
-     * Maximum proxies in account.
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_ACC_MAX_PROXIES ", PJSUA_ACC_MAX_PROXIES
-    );
-#endif
-
-#ifdef PJSUA_MAX_ACC
-    /*
-     * Maximum account.
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_MAX_ACC", PJSUA_MAX_ACC
-    );
-#endif
-
-#ifdef PJSUA_REG_INTERVAL
-    /*
-     * Default registration interval..
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_REG_INTERVAL", PJSUA_REG_INTERVAL
-    );
-#endif
-
-#ifdef PJSUA_PUBLISH_EXPIRATION
-    /*
-     * Default PUBLISH expiration
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_PUBLISH_EXPIRATION", PJSUA_PUBLISH_EXPIRATION
-    );
-#endif
-	
-#ifdef PJSUA_DEFAULT_ACC_PRIORITY
-    /*
-     * Default account priority.
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_DEFAULT_ACC_PRIORITY", PJSUA_DEFAULT_ACC_PRIORITY
-    );
-#endif
-
-#ifdef PJSUA_MAX_BUDDIES
-    /*
-     * Default account priority.
-     */
-    PyModule_AddIntConstant(
-        m, "PJSUA_MAX_BUDDIES", PJSUA_MAX_BUDDIES
-    );
-#endif
-
-#ifdef  PJSUA_MAX_CONF_PORTS
 
     /*
-     * Max ports in the conference bridge.
+     * Add various constants.
      */
-    PyModule_AddIntConstant(
-        m, "PJSUA_MAX_CONF_PORTS", PJSUA_MAX_CONF_PORTS
-    );
 
-#endif
+    /* Call states */
+    ADD_CONSTANT(m, PJSIP_INV_STATE_NULL);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_CALLING);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_INCOMING);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_EARLY);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_CONNECTING);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_CONFIRMED);
+    ADD_CONSTANT(m, PJSIP_INV_STATE_DISCONNECTED);
 
-#ifdef  PJSUA_DEFAULT_CLOCK_RATE  
+    /* Call media status (enum pjsua_call_media_status) */
+    ADD_CONSTANT(m, PJSUA_CALL_MEDIA_NONE);
+    ADD_CONSTANT(m, PJSUA_CALL_MEDIA_ACTIVE);
+    ADD_CONSTANT(m, PJSUA_CALL_MEDIA_LOCAL_HOLD);
+    ADD_CONSTANT(m, PJSUA_CALL_MEDIA_REMOTE_HOLD);
 
-    PyModule_AddIntConstant(
-        m, "PJSUA_DEFAULT_CLOCK_RATE", PJSUA_DEFAULT_CLOCK_RATE
-    );
+    /* Buddy status */
+    ADD_CONSTANT(m, PJSUA_BUDDY_STATUS_UNKNOWN);
+    ADD_CONSTANT(m, PJSUA_BUDDY_STATUS_ONLINE);
+    ADD_CONSTANT(m, PJSUA_BUDDY_STATUS_OFFLINE);
 
-#endif
+    /* PJSIP transport types (enum pjsip_transport_type_e) */
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_UNSPECIFIED);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_UDP);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_TCP);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_TLS);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_SCTP);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_LOOP);
+    ADD_CONSTANT(m, PJSIP_TRANSPORT_LOOP_DGRAM);
 
-#ifdef  PJSUA_DEFAULT_CODEC_QUALITY  
 
-    PyModule_AddIntConstant(
-        m, "PJSUA_DEFAULT_CODEC_QUALITY", PJSUA_DEFAULT_CODEC_QUALITY
-    );
+    /* Invalid IDs */
+    ADD_CONSTANT(m, PJSUA_INVALID_ID);
 
-#endif
 
-#ifdef  PJSUA_DEFAULT_ILBC_MODE   
+    /* Various compile time constants */
+    ADD_CONSTANT(m, PJSUA_ACC_MAX_PROXIES);
+    ADD_CONSTANT(m, PJSUA_MAX_ACC);
+    ADD_CONSTANT(m, PJSUA_REG_INTERVAL);
+    ADD_CONSTANT(m, PJSUA_PUBLISH_EXPIRATION);
+    ADD_CONSTANT(m, PJSUA_DEFAULT_ACC_PRIORITY);
+    ADD_CONSTANT(m, PJSUA_MAX_BUDDIES);
+    ADD_CONSTANT(m, PJSUA_MAX_CONF_PORTS);
+    ADD_CONSTANT(m, PJSUA_DEFAULT_CLOCK_RATE);
+    ADD_CONSTANT(m, PJSUA_DEFAULT_CODEC_QUALITY);
+    ADD_CONSTANT(m, PJSUA_DEFAULT_ILBC_MODE);
+    ADD_CONSTANT(m, PJSUA_DEFAULT_EC_TAIL_LEN);
+    ADD_CONSTANT(m, PJSUA_MAX_CALLS);
+    ADD_CONSTANT(m, PJSUA_XFER_NO_REQUIRE_REPLACES);
 
-    PyModule_AddIntConstant(
-        m, "PJSUA_DEFAULT_ILBC_MODE", PJSUA_DEFAULT_ILBC_MODE
-    );
 
-#endif
-
-#ifdef  PJSUA_DEFAULT_EC_TAIL_LEN  
-
-    PyModule_AddIntConstant(
-        m, "PJSUA_DEFAULT_EC_TAIL_LEN", PJSUA_DEFAULT_EC_TAIL_LEN
-    );
-
-#endif
-
-#ifdef  PJSUA_MAX_CALLS  
-
-    PyModule_AddIntConstant(
-        m, "PJSUA_MAX_CALLS", PJSUA_MAX_CALLS
-    );
-
-#endif
-
-#ifdef  PJSUA_XFER_NO_REQUIRE_REPLACES
-
-    PyModule_AddIntConstant(
-	m, "PJSUA_XFER_NO_REQUIRE_REPLACES", PJSUA_XFER_NO_REQUIRE_REPLACES
-    );
-#endif
-
+#undef ADD_CONSTANT
 }

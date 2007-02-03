@@ -1,3 +1,10 @@
+# $Id$
+#
+# Sample and simple Python script to make and receive calls, and do
+# presence and instant messaging/IM using PJSUA-API binding for Python.
+#
+# Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+#
 import py_pjsua
 import sys
 import thread
@@ -29,33 +36,35 @@ def call_name(call_id):
 	ci = py_pjsua.call_get_info(call_id)
 	return "[Call " + `call_id` + " " + ci.remote_info + "]"
 
-# Handler when invite state has changed.
+# Callback when call state has changed.
 #
 def on_call_state(call_id, e):	
 	global g_current_call
 	ci = py_pjsua.call_get_info(call_id)
 	write_log(3, call_name(call_id) + " state = " + `ci.state_text`)
-	if ci.state == 6:
+	if ci.state == py_pjsua.PJSIP_INV_STATE_DISCONNECTED:
 		g_current_call = py_pjsua.PJSUA_INVALID_ID
 
-# Handler for incoming call
+# Callback for incoming call
 #
 def on_incoming_call(acc_id, call_id, rdata):
 	global g_current_call
 	if g_current_call != py_pjsua.PJSUA_INVALID_ID:
-		py_pjsua.call_answer(call_id, 486, "", None)
+		# There's call in progress - answer Busy
+		py_pjsua.call_answer(call_id, 486, None, None)
 		return
+
 	g_current_call = call_id
 	ci = py_pjsua.call_get_info(call_id)
-	write_log(3, "Incoming call: " + call_name(call_id))
-	py_pjsua.call_answer(call_id, 200, "", None)
+	write_log(3, "*** Incoming call: " + call_name(call_id) + "***")
+	write_log(3, "*** Press a to answer or h to hangup  ***");
 
 	
-# Handler when media state has changed (e.g. established or terminated)
+# Callback when media state has changed (e.g. established or terminated)
 #
 def on_call_media_state(call_id):
 	ci = py_pjsua.call_get_info(call_id)
-	if ci.media_status == 1:
+	if ci.media_status == py_pjsua.PJSUA_CALL_MEDIA_ACTIVE:
 		py_pjsua.conf_connect(ci.conf_slot, 0)
 		py_pjsua.conf_connect(0, ci.conf_slot)
 		write_log(3, call_name(call_id) + ": media is active")
@@ -63,7 +72,7 @@ def on_call_media_state(call_id):
 		write_log(3, call_name(call_id) + ": media is inactive")
 
 
-# Handler when account registration state has changed
+# Callback when account registration state has changed
 #
 def on_reg_state(acc_id):
 	acc_info = py_pjsua.acc_get_info(acc_id)
@@ -73,6 +82,8 @@ def on_reg_state(acc_id):
 		write_log(3, "Account successfully (un)registered")
 
 
+# Callback when buddy's presence state has changed
+#
 def on_buddy_state(buddy_id):
 	write_log(3, "On Buddy state called")
 	buddy_info = py_pjsua.buddy_get_info(buddy_id)
@@ -80,12 +91,18 @@ def on_buddy_state(buddy_id):
 		write_log(3, "Status of " + `buddy_info.uri` + " is " + `buddy_info.status_text`)
 	else:
 		write_log(3, "Status : " + `buddy_info.status`)
-		
+
+# Callback on incoming pager (MESSAGE)
+#		
 def on_pager(call_id, strfrom, strto, contact, mime_type, text):
 	write_log(3, "MESSAGE from " + `strfrom` + " : " + `text`)
-	
+
+
+# Callback on the delivery status of outgoing pager (MESSAGE)
+#	
 def on_pager_status(call_id, strto, body, user_data, status, reason):
 	write_log(3, "MESSAGE to " + `strto` + " status " + `status` + " reason " + `reason`)
+
 
 # Utility: display PJ error and exit
 #
@@ -162,7 +179,8 @@ def app_init():
 		transport_cfg.use_stun = 1
 
 	# Create UDP transport
-	status, transport_id = py_pjsua.transport_create(1, transport_cfg)
+	status, transport_id = \
+	    py_pjsua.transport_create(py_pjsua.PJSIP_TRANSPORT_UDP, transport_cfg)
 	if status != 0:
 		py_pjsua.destroy()
 		err_exit("Error creating UDP transport", status)
@@ -268,6 +286,7 @@ Menu:
  +a   Add account
  +b   Add buddy
   m   Make call
+  a   Answer current call (if any)
   h   Hangup current call (if any)
   i   Send instant message
 	"""
@@ -304,7 +323,7 @@ def app_menu():
 				continue
 
 			# Send the IM!
-			py_pjsua.im_send(g_acc_id, url, "", message, None, 0)
+			py_pjsua.im_send(g_acc_id, url, None, message, None, 0)
 
 		elif choice[0] == "m":
 			# Make call 
@@ -342,7 +361,13 @@ def app_menu():
 
 		elif choice[0] == "h":
 			if g_current_call != py_pjsua.PJSUA_INVALID_ID:
-				py_pjsua.call_hangup(g_current_call, 603, "", None)
+				py_pjsua.call_hangup(g_current_call, 603, None, None)
+			else:
+				print "No current call"
+
+		elif choice[0] == "a":
+			if g_current_call != py_pjsua.PJSUA_INVALID_ID:
+				py_pjsua.call_answer(g_current_call, 200, None, None)
 			else:
 				print "No current call"
 
