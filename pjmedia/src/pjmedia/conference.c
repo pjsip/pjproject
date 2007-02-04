@@ -67,6 +67,25 @@ static FILE *fhnd_rec;
 #define INVALID_SLOT	    ((SLOT_TYPE)-1)
 
 
+/* These are settings to control the adaptivity of changes in the
+ * signal level of the ports, so that sudden change in signal level
+ * in the port does not cause misaligned signal (which causes noise).
+ */
+#if 1
+#   define ATTACK_A	    3
+#   define ATTACK_B	    2
+#   define DECAY_A	    3
+#   define DECAY_B	    2
+#else
+    /* To simulate old behavior */
+#   define ATTACK_A	    0
+#   define ATTACK_B	    1
+#   define DECAY_A	    0
+#   define DECAY_B	    1
+#endif
+
+
+
 /*
  * DON'T GET CONFUSED WITH TX/RX!!
  *
@@ -94,6 +113,9 @@ struct conf_port
     /* Shortcut for port info. */
     unsigned		 clock_rate;	/**< Port's clock rate.		    */
     unsigned		 samples_per_frame; /**< Port's samples per frame.  */
+
+    /* Last level calculated from this port */
+    pj_int32_t		 last_level;
 
     /* Calculated signal levels: */
     unsigned		 tx_level;	/**< Last tx level to this port.    */
@@ -1715,6 +1737,20 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    level = pjmedia_calc_avg_signal(frame->buf, 
 					    conf->samples_per_frame);
 	}
+
+	/* Apply simple AGC to the level, to avoid dramatic change in the
+	 * level thus causing noise because the signal now is not aligned
+	 * with the signal from the previous frame.
+	 */
+	if (level >= conf_port->last_level) {
+	    level = (conf_port->last_level * ATTACK_A + level * ATTACK_B) / 
+		    (ATTACK_A + ATTACK_B);
+	} else {
+	    level = (conf_port->last_level * DECAY_A + level * DECAY_B) / 
+		    (DECAY_A + DECAY_B);
+	}
+	conf_port->last_level = level;
+
 
 	/* Convert level to 8bit complement ulaw */
 	level = pjmedia_linear2ulaw(level) ^ 0xff;
