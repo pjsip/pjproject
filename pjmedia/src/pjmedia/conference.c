@@ -1323,11 +1323,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
      */
-    /* note:
-     *  the "cport->src_level==0" checking will cause discontinuous
-     *  transmission for RTP stream.
-     */
-    if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->src_level==0) {
+    if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->transmitter_cnt==0) {
 
 	pjmedia_frame frame;
 
@@ -1345,6 +1341,34 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	cport->tx_level = 0;
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
+
+    } else if (cport->src_level==0) {
+
+	pjmedia_frame frame;
+
+	/* If silence is transmitted to this port, transmit silence
+	 * PCM frame (otherwise if we transmit NULL frame, nothing will
+	 * be written to WAV port). This would work with stream too
+	 * since stream has it's own silence detector.
+	 */
+	pjmedia_zero_samples((pj_int16_t*)cport->mix_buf, 
+			     cport->samples_per_frame);
+
+	/* Adjust the timestamp */
+	frame.timestamp.u64 = timestamp->u64 * cport->clock_rate /
+				conf->clock_rate;
+	frame.type = PJMEDIA_FRAME_TYPE_NONE;
+	frame.buf = (void*)cport->mix_buf;
+	frame.size = (cport->samples_per_frame << 1);
+
+	if (cport->port && cport->port->put_frame) {
+	    pjmedia_port_put_frame(cport->port, &frame);
+	}
+
+	cport->tx_level = 0;
+	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+
 
     } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
 	cport->tx_level = 0;
