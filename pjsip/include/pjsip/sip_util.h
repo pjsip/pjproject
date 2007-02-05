@@ -426,6 +426,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
  * @param tdata	    The transmit data to be sent.
  * @param timeout   Optional timeout for final response to be received, or -1 
  *		    if the transaction should not have a timeout restriction.
+ *		    The value is in miliseconds.
  * @param token	    Optional token to be associated with the transaction, and 
  *		    to be passed to the callback.
  * @param cb	    Optional callback to be called when the transaction has
@@ -437,7 +438,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
  */
 PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
 					       pjsip_tx_data *tdata,
-					       int timeout,
+					       pj_int32_t timeout,
 					       void *token,
 					       void (*cb)(void*,pjsip_event*));
 

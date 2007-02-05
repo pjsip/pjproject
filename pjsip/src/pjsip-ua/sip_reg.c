@@ -38,6 +38,12 @@
 #define DELAY_BEFORE_REFRESH	5
 #define THIS_FILE		"sip_regc.c"
 
+/* Outgoing transaction timeout when server sends 100 but never replies
+ * with final response. Value is in MILISECONDS!
+ */
+#define REGC_TSX_TIMEOUT	33000
+
+
 /**
  * SIP client registration structure.
  */
@@ -742,7 +748,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
      */
     regc->has_tsx = PJ_TRUE;
     ++regc->busy;
-    status = pjsip_endpt_send_request(regc->endpt, tdata, -1, regc, &tsx_callback);
+    status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
+				      regc, &tsx_callback);
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
