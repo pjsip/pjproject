@@ -21,11 +21,11 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-const char *PJ_VERSION = "0.5.9.9";
+const char *PJ_VERSION = "0.5.10-rc1";
 
 PJ_DEF(void) pj_dump_config(void)
 {
-    PJ_LOG(3, (id, "PJLIB (c)2005 Benny Prijono"));
+    PJ_LOG(3, (id, "PJLIB (c)2001-2007 Benny Prijono"));
     PJ_LOG(3, (id, "Dumping configurations:"));
     PJ_LOG(3, (id, " PJ_VERSION                : %s", PJ_VERSION));
     PJ_LOG(3, (id, " PJ_M_NAME                 : %s", PJ_M_NAME));
