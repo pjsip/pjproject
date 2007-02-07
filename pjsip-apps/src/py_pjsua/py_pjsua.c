@@ -62,8 +62,7 @@ static void cb_logging_init(int level, const char *data, pj_size_t len)
 
     if (PyCallable_Check(obj_logging_init))
     {
-        //PyObject_CallFunction(obj_logging_init,"iSi",level,data,len);
-        //printf("level : %d data : %s len : %d\n",level, data, len);
+        
         PyObject_CallFunctionObjArgs(
             obj_logging_init, Py_BuildValue("i",level),
             PyString_FromString(data), Py_BuildValue("i",len), NULL
@@ -1894,9 +1893,7 @@ static PyObject *py_pjsua_pool_create(PyObject *pSelf, PyObject *pArgs)
     {
         return NULL;
     }
-    /*printf("name : %s\n",name);
-    printf("init : %d\n", init_size);
-    printf("increment : %d\n", increment);*/
+    
     p = pjsua_pool_create(name, init_size, increment);
     pool = (pj_pool_Object *)PyType_GenericNew(&pj_pool_Type, NULL, NULL);
     pool->pool = p;
@@ -2134,7 +2131,7 @@ static PyObject *py_pjsua_start(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_start();
-    //printf("status %d\n",status);
+    
     return Py_BuildValue("i",status);
 }
 
@@ -2150,7 +2147,7 @@ static PyObject *py_pjsua_destroy(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_destroy();
-    //printf("status %d\n",status);
+    
     return Py_BuildValue("i",status);
 }
 
@@ -2167,7 +2164,7 @@ static PyObject *py_pjsua_handle_events(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     ret = pjsua_handle_events(msec);
-    //printf("return %d\n",ret);
+    
     return Py_BuildValue("i",ret);
 }
 
@@ -2184,7 +2181,7 @@ static PyObject *py_pjsua_verify_sip_url(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_verify_sip_url(url);
-    //printf("status %d\n",status);
+    
     return Py_BuildValue("i",status);
 }
 
@@ -3325,7 +3322,7 @@ static PyObject *py_pjsua_transport_set_enable
         return NULL;
     }	
     status = pjsua_transport_set_enable(id, enabled);	
-    //printf("status %d\n",status);
+    
     return Py_BuildValue("i",status);
 }
 
@@ -3342,7 +3339,7 @@ static PyObject *py_pjsua_transport_close(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }	
     status = pjsua_transport_close(id, force);	
-    //printf("status %d\n",status);
+    
     return Py_BuildValue("i",status);
 }
 
@@ -5392,11 +5389,11 @@ static PyMemberDef conf_port_info_members[] =
         offsetof(conf_port_info_Object, bits_per_sample), 0,
         "Bits per sample"
     },
-    /*{
+    {
         "listener_cnt", T_INT, 
         offsetof(conf_port_info_Object, listener_cnt), 0,
         "Number of listeners in the array."
-    },*/
+    },
     {
         "listeners", T_OBJECT_EX,
         offsetof(conf_port_info_Object, listeners), 0,
@@ -6303,11 +6300,16 @@ static PyObject *py_pjsua_recorder_create
     }	
     str.ptr = PyString_AsString(filename);
     str.slen = strlen(PyString_AsString(filename));
-    strparam.ptr = PyString_AsString(enc_param);
-    strparam.slen = strlen(PyString_AsString(enc_param));
-    status = pjsua_recorder_create
+    if (enc_param != Py_None)
+    {
+        strparam.ptr = PyString_AsString(enc_param);
+        strparam.slen = strlen(PyString_AsString(enc_param));
+        status = pjsua_recorder_create
 		(&str, enc_type, NULL, max_size, options, &p_id);
-    
+    } else {
+        status = pjsua_recorder_create
+		(&str, enc_type, NULL, max_size, options, &p_id);
+    }
     return Py_BuildValue("ii", status, p_id);
 }
 
@@ -7257,11 +7259,13 @@ static PyObject *py_pjsua_call_make_call
 			options, (void*)user_data, &msg_data, &call_id);	
         pj_pool_release(pool);
     } else {
+		
         status = pjsua_call_make_call(acc_id, &dst_uri, 
 			options, (void*)user_data, NULL, &call_id);	
     }
-
+	
     return Py_BuildValue("ii",status, call_id);
+	
 }
 
 /*
@@ -7484,7 +7488,8 @@ static PyObject *py_pjsua_call_answer
         pj_pool_release(pool);
     } else {
 	
-        status = pjsua_call_answer(call_id, code, reason, NULL);	
+        status = pjsua_call_answer(call_id, code, reason, NULL);
+	
     }
     
     return Py_BuildValue("i",status);

@@ -26,9 +26,15 @@ C_STUN_PORT = 3478
 
 # Globals
 #
+g_ua_cfg = None
 g_acc_id = py_pjsua.PJSUA_INVALID_ID
 g_current_call = py_pjsua.PJSUA_INVALID_ID
-
+g_wav_files = []
+g_wav_id = 0
+g_wav_port = 0
+g_rec_file = ""
+g_rec_id = 0
+g_rec_port = 0
 
 # Utility to get call info
 #
@@ -49,16 +55,18 @@ def on_call_state(call_id, e):
 #
 def on_incoming_call(acc_id, call_id, rdata):
 	global g_current_call
+	
 	if g_current_call != py_pjsua.PJSUA_INVALID_ID:
 		# There's call in progress - answer Busy
 		py_pjsua.call_answer(call_id, 486, None, None)
 		return
-
+	
 	g_current_call = call_id
 	ci = py_pjsua.call_get_info(call_id)
 	write_log(3, "*** Incoming call: " + call_name(call_id) + "***")
-	write_log(3, "*** Press a to answer or h to hangup  ***");
-
+	write_log(3, "*** Press a to answer or h to hangup  ***")
+	
+	
 	
 # Callback when media state has changed (e.g. established or terminated)
 #
@@ -104,6 +112,35 @@ def on_pager_status(call_id, strto, body, user_data, status, reason):
 	write_log(3, "MESSAGE to " + `strto` + " status " + `status` + " reason " + `reason`)
 
 
+# Received typing indication
+#
+def on_typing(call_id, strfrom, to, contact, is_typing):
+	str_t = ""
+	if is_typing:
+		str_t = "is typing.."
+	else:
+		str_t = "has stopped typing"
+	write_log(3, "IM indication: " + strfrom + " " + str_t)
+
+# on call transfer status
+#
+def on_call_transfer_status(call_id,status_code,status_text,final,p_cont):
+	strfinal = ""
+	if final == 1:
+		strfinal = "[final]"
+	
+	write_log(3, "Call " + `call_id` + ": transfer status= " + `status_code` + " " + status_text+ " " + strfinal)
+	      
+	if status_code/100 == 2:
+		write_log(3, "Call " + `call_id` + " : call transfered successfully, disconnecting call")
+		status = py_pjsua.call_hangup(call_id, 410, None, None)
+		p_cont = 0
+
+# on call transfer request
+#		
+def on_call_transfer_request(call_id, dst, code):
+	write_log(3, "Call transfer request from " + `call_id` + " to " + dst + " with code " + `code`)
+
 # Utility: display PJ error and exit
 #
 def err_exit(title, rc):
@@ -125,7 +162,7 @@ def write_log(level, str):
 # Initialize pjsua.
 #
 def app_init():
-	global g_acc_id
+	global g_acc_id, g_ua_cfg
 
 	# Create pjsua before anything else
 	status = py_pjsua.create()
@@ -151,7 +188,9 @@ def app_init():
 	ua_cfg.cb.on_buddy_state = on_buddy_state
 	ua_cfg.cb.on_pager = on_pager
 	ua_cfg.cb.on_pager_status = on_pager_status
-	
+	ua_cfg.cb.on_typing = on_typing
+	ua_cfg.cb.on_call_transfer_status = on_call_transfer_status
+	ua_cfg.cb.on_call_transfer_request = on_call_transfer_request
 
 	# Create and initialize media config
 	med_cfg = py_pjsua.media_config_default()
@@ -192,6 +231,7 @@ def app_init():
 		err_exit("Error creating account", status)
 
 	g_acc_id = acc_id
+	g_ua_cfg = ua_cfg
 
 # Add SIP account interractively
 #
@@ -241,7 +281,196 @@ def add_account():
 		g_acc_id = acc_id
 		write_log(3, "Account " + acc_cfg.id + " added")
 
+def add_player():
+	global g_wav_files
+	global g_wav_id
+	global g_wav_port
+	
+	file_name = ""
+	status = -1
+	wav_id = 0
+	
+	print "Enter the path of the file player(e.g. /tmp/audio.wav): ",
+	file_name = sys.stdin.readline()
+	if file_name == "\n": 
+		return
+	file_name = file_name.replace("\n", "")
+	status, wav_id = py_pjsua.player_create(file_name, 0)
+	if status != 0:
+		py_pjsua.perror(THIS_FILE, "Error adding file player ", status)
+	else:
+		g_wav_files.append(file_name)
+		if g_wav_id == 0:
+			g_wav_id = wav_id
+			g_wav_port = py_pjsua.player_get_conf_port(wav_id)
+		write_log(3, "File player " + file_name + " added")
+		
+def add_recorder():
+	global g_rec_file
+	global g_rec_id
+	global g_rec_port
+	
+	file_name = ""
+	status = -1
+	rec_id = 0
+	
+	print "Enter the path of the file recorder(e.g. /tmp/audio.wav): ",
+	file_name = sys.stdin.readline()
+	if file_name == "\n": 
+		return
+	file_name = file_name.replace("\n", "")
+	status, rec_id = py_pjsua.recorder_create(file_name, 0, None, 0, 0)
+	if status != 0:
+		py_pjsua.perror(THIS_FILE, "Error adding file recorder ", status)
+	else:
+		g_rec_file = file_name
+		g_rec_id = rec_id
+		g_rec_port = py_pjsua.recorder_get_conf_port(rec_id)
+		write_log(3, "File recorder " + file_name + " added")
 
+def conf_list():
+	
+	
+	ports = None
+
+	print "Conference ports : "
+
+	
+	ports = py_pjsua.enum_conf_ports()
+
+	for port in ports:
+		info = None
+		info = py_pjsua.conf_get_port_info(port)
+		txlist = ""
+		for i in range(info.listener_cnt):
+			txlist = txlist + "#" + `info.listeners[i]` + " "
+		
+		print "Port #" + `info.slot_id` + "[" + `(info.clock_rate/1000)` + "KHz/" + `(info.samples_per_frame * 1000 / info.clock_rate)` + "ms] " + info.name + " transmitting to: " + txlist
+		
+def connect_port():
+	src_port = 0
+	dst_port = 0
+	
+	print "Connect src port # (empty to cancel): "
+	src_port = sys.stdin.readline()
+	if src_port == "\n": 
+		return
+	src_port = src_port.replace("\n", "")
+	src_port = int(src_port)
+	print "To dst port # (empty to cancel): "
+	dst_port = sys.stdin.readline()
+	if dst_port == "\n": 
+		return
+	dst_port = dst_port.replace("\n", "")
+	dst_port = int(dst_port)
+	status = py_pjsua.conf_connect(src_port, dst_port)
+	if status != 0:
+		py_pjsua.perror(THIS_FILE, "Error connecting port ", status)
+	else:		
+		write_log(3, "Port connected from " + `src_port` + " to " + `dst_port`)
+		
+def disconnect_port():
+	src_port = 0
+	dst_port = 0
+	
+	print "Disconnect src port # (empty to cancel): "
+	src_port = sys.stdin.readline()
+	if src_port == "\n": 
+		return
+	src_port = src_port.replace("\n", "")
+	src_port = int(src_port)
+	print "From dst port # (empty to cancel): "
+	dst_port = sys.stdin.readline()
+	if dst_port == "\n": 
+		return
+	dst_port = dst_port.replace("\n", "")
+	dst_port = int(dst_port)
+	status = py_pjsua.conf_disconnect(src_port, dst_port)
+	if status != 0:
+		py_pjsua.perror(THIS_FILE, "Error disconnecting port ", status)
+	else:		
+		write_log(3, "Port disconnected " + `src_port` + " from " + `dst_port`)
+
+def dump_call_quality():
+	global g_current_call
+	
+	buf = ""
+	if g_current_call != -1:
+		buf = py_pjsua.call_dump(g_current_call, 1, 1024, "  ")
+		write_log(3, "\n" + buf)
+	else:
+		write_log(3, "No current call")
+		
+def xfer_call():
+	global g_current_call
+	
+	if g_current_call == -1:
+		
+		write_log(3, "No current call")
+
+	else:
+		call = g_current_call		
+		ci = py_pjsua.call_get_info(g_current_call)
+		print "Transfering current call ["+ `g_current_call` + "] " + ci.remote_info
+		print "Enter sip url : "
+		url = sys.stdin.readline()
+		if url == "\n": 
+			return
+		url = url.replace("\n", "")
+		if call != g_current_call:
+			print "Call has been disconnected"
+			return
+		msg_data = py_pjsua.msg_data_init()
+		status = py_pjsua.call_xfer(g_current_call, url, msg_data);
+		if status != 0:
+			py_pjsua.perror(THIS_FILE, "Error transfering call ", status)
+		else:		
+			write_log(3, "Call transfered to " + url)
+		
+def xfer_call_replaces():
+	if g_current_call == -1:
+		write_log(3, "No current call")
+	else:
+		call = g_current_call
+		
+		ids = py_pjsua.enum_calls()
+		if len(ids) <= 1:
+			print "There are no other calls"
+			return		
+
+		ci = py_pjsua.call_get_info(g_current_call)
+		print "Transfer call [" + `g_current_call` + "] " + ci.remote_info + " to one of the following:"
+		for i in range(0, len(ids)):		    
+			if ids[i] == call:
+				continue
+			call_info = py_pjsua.call_get_info(ids[i])
+			print `ids[i]` + "  " +  call_info.remote_info + "  [" + call_info.state_text + "]"		
+
+		print "Enter call number to be replaced : "
+		buf = sys.stdin.readline()
+		buf = buf.replace("\n","")
+		if buf == "":
+			return
+		dst_call = int(buf)
+		
+		if call != g_current_call:
+			print "Call has been disconnected"
+			return		
+		
+		if dst_call == call:
+			print "Destination call number must not be the same as the call being transfered"
+			return
+		
+		if dst_call >= py_pjsua.PJSUA_MAX_CALLS:
+			print "Invalid destination call number"
+			return
+	
+		if py_pjsua.call_is_active(dst_call) == 0:
+			print "Invalid destination call number"
+			return		
+
+		py_pjsua.call_xfer_replaces(call, dst_call, 0, None)
+		
 #
 # Worker thread function.
 # Python doesn't like it when it's called from an alien thread
@@ -281,14 +510,26 @@ def app_start():
 #
 def print_menu():
 	print """
-Menu:
-  q   Quit application
- +a   Add account
- +b   Add buddy
-  m   Make call
-  a   Answer current call (if any)
-  h   Hangup current call (if any)
-  i   Send instant message
++============================================================================+
+|         Call Commands :      |  Buddy, IM & Presence:   |    Account:      |
+|                              |                          |                  |
+|  m  Make call                | +b  Add buddy            | +a  Add account  |
+|  a  Answer current call      | -b  Delete buddy         | -a  Delete accnt |
+|  h  Hangup current call      |                          |                  |
+|  H  Hold call                |  i  Send instant message | rr  register     |
+|  v  re-inVite (release Hold) |  s  Subscribe presence   | ru  Unregister   |
+|  #  Send DTMF string         |  u  Unsubscribe presence |                  |
+| dq  Dump curr. call quality  |  t  ToGgle Online status |                  |
+|                              +--------------------------+------------------+
+|  x  Xfer call                |     Media Commands:      |    Status:       |
+|  X  Xfer with Replaces       |                          |                  |
+|                              | cl  List ports           |  d  Dump status  |
+|                              | cc  Connect port         |                  |
+|                              | cd  Disconnect port      |                  |
+|                              | +p  Add file player      |                  |
+|------------------------------+ +r  Add file recorder    |                  |
+|  q  Quit application         |                          |                  |
++============================================================================+
 	"""
 	print "Choice: ", 
 
@@ -354,19 +595,140 @@ def app_menu():
 			status, buddy_id = py_pjsua.buddy_add(bc)
 			if status != 0:
 				py_pjsua.perror(THIS_FILE, "Error adding buddy", status)
-
+		elif choice[0] == "-" and choice[1] == "b":
+			print "Enter buddy ID to delete : "
+			buf = sys.stdin.readline()
+			buf = buf.replace("\n","")
+			if buf == "":
+				continue
+			i = int(buf)
+			if py_pjsua.buddy_is_valid(i) == 0:
+				print "Invalid buddy id " + `i`
+			else:
+				py_pjsua.buddy_del(i)
+				print "Buddy " + `i` + " deleted"		
 		elif choice[0] == "+" and choice[1] == "a":
 			# Add account
 			add_account()
+		elif choice[0] == "-" and choice[1] == "a":
+			print "Enter account ID to delete : "
+			buf = sys.stdin.readline()
+			buf = buf.replace("\n","")
+			if buf == "":
+				continue
+			i = int(buf)
 
+			if py_pjsua.acc_is_valid(i) == 0:
+				print "Invalid account id " + `i`
+			else:
+				py_pjsua.acc_del(i)
+				print "Account " + `i` + " deleted"
+	    
+		elif choice[0] == "+" and choice[1] == "p":
+			add_player()
+		elif choice[0] == "+" and choice[1] == "r":
+			add_recorder()
+		elif choice[0] == "c" and choice[1] == "l":
+			conf_list()
+		elif choice[0] == "c" and choice[1] == "c":
+			connect_port()
+		elif choice[0] == "c" and choice[1] == "d":
+			disconnect_port()
+		elif choice[0] == "d" and choice[1] == "q":
+			dump_call_quality()
+		elif choice[0] == "x":
+			xfer_call()
+		elif choice[0] == "X":
+			xfer_call_replaces()
 		elif choice[0] == "h":
 			if g_current_call != py_pjsua.PJSUA_INVALID_ID:
 				py_pjsua.call_hangup(g_current_call, 603, None, None)
 			else:
 				print "No current call"
-
-		elif choice[0] == "a":
+		elif choice[0] == "H":
 			if g_current_call != py_pjsua.PJSUA_INVALID_ID:
+				py_pjsua.call_set_hold(g_current_call, None)
+		
+			else:
+				print "No current call"
+		elif choice[0] == "v":
+			if g_current_call != py_pjsua.PJSUA_INVALID_ID:
+		
+				py_pjsua.call_reinvite(g_current_call, 1, None);
+
+			else:
+				print "No current call"
+		elif choice[0] == "#":
+			if g_current_call == py_pjsua.PJSUA_INVALID_ID:		
+				print "No current call"
+			elif py_pjsua.call_has_media(g_current_call) == 0:
+				print "Media is not established yet!"
+			else:
+				call = g_current_call
+				print "DTMF strings to send (0-9*#A-B)"
+				buf = sys.stdin.readline()
+				buf = buf.replace("\n", "")
+				if buf == "":
+					continue
+				if call != g_current_call:
+					print "Call has been disconnected"
+					continue
+				status = py_pjsua.call_dial_dtmf(g_current_call, buf)
+				if status != 0:
+					py_pjsua.perror(THIS_FILE, "Unable to send DTMF", status);
+				else:
+					print "DTMF digits enqueued for transmission"
+		elif choice[0] == "s":
+			print "Subscribe presence of (buddy id) : "
+			buf = sys.stdin.readline()
+			buf = buf.replace("\n","")
+			if buf == "":
+				continue
+			i = int(buf)
+			py_pjsua.buddy_subscribe_pres(i, 1)
+		elif choice[0] == "u":
+			print "Unsubscribe presence of (buddy id) : "
+			buf = sys.stdin.readline()
+			buf = buf.replace("\n","")
+			if buf == "":
+				continue
+			i = int(buf)
+			py_pjsua.buddy_subscribe_pres(i, 0)
+		elif choice[0] == "t":
+			acc_info = py_pjsua.acc_get_info(g_acc_id)
+			if acc_info.online_status == 0:
+				acc_info.online_status = 1
+			else:
+				acc_info.online_status = 0
+			py_pjsua.acc_set_online_status(g_acc_id, acc_info.online_status)
+			st = ""
+			if acc_info.online_status == 0:
+				st = "offline"
+			else:
+				st = "online"
+			print "Setting " + acc_info.acc_uri + " online status to " + st
+		elif choice[0] == "r":
+			if choice[1] == "r":	    
+				py_pjsua.acc_set_registration(g_acc_id, 1)
+			elif choice[1] == "u":
+				py_pjsua.acc_set_registration(g_acc_id, 0)
+		elif choice[0] == "d":
+			
+			write_log(3, "Start dumping application states : ")
+			write_log(3, "Dumping invite sessions : ")
+
+			if py_pjsua.call_get_count() == 0:
+				write_log(3, "  - no sessions -")
+			else:
+				for i in range(0, g_ua_cfg.max_calls):
+					if py_pjsua.call_is_active(i):
+						buf = py_pjsua.call_dump(i, 1, 1024, "  ")
+						write_log(3, buf)	
+			py_pjsua.pres_dump(1)
+			write_log(3, "Dump complete")
+		elif choice[0] == "a":
+			if g_current_call != py_pjsua.PJSUA_INVALID_ID:				
+				
 				py_pjsua.call_answer(g_current_call, 200, None, None)
 			else:
 				print "No current call"
