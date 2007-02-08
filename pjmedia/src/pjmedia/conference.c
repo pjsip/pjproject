@@ -1728,7 +1728,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		else if (itemp < -32768) itemp = -32768;
 
 		input[j] = (pj_int16_t) itemp;
-		level += itemp;
+
+		if (itemp >=0 ) level += itemp;
+		else level -= itemp;
 	    }
 
 	    level /= conf->samples_per_frame;
