@@ -736,7 +736,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
      */
     if (new_request_uri && new_request_uri!=tdata->msg->line.req.uri) {
 	pjsip_route_hdr *route = pjsip_route_hdr_create(tdata->pool);
-	route->name_addr.uri = tdata->msg->line.req.uri;
+	route->name_addr.uri = pjsip_uri_get_uri(tdata->msg->line.req.uri);
 	if (last_route_hdr)
 	    pj_list_insert_after(last_route_hdr, route);
 	else
