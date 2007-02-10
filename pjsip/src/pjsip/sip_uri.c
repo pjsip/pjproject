@@ -203,7 +203,7 @@ static void *pjsip_get_uri( pjsip_uri *uri )
 
 static void *pjsip_name_addr_get_uri( pjsip_name_addr *name )
 {
-    return name->uri;
+    return pjsip_uri_get_uri(name->uri);
 }
 
 PJ_DEF(void) pjsip_sip_uri_set_secure( pjsip_sip_uri *url, 
@@ -529,8 +529,10 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    pjsip_uri *uri;
 
-    pj_assert(name->uri != NULL);
+    uri = pjsip_uri_get_uri(name->uri);
+    pj_assert(uri != NULL);
 
     if (context != PJSIP_URI_IN_REQ_URI) {
 	if (name->display.slen) {
@@ -543,7 +545,7 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
 	*buf++ = '<';
     }
 
-    printed = pjsip_uri_print(context,name->uri, buf, size-(buf-startbuf));
+    printed = pjsip_uri_print(context,uri, buf, size-(buf-startbuf));
     if (printed < 1)
 	return -1;
     buf += printed;

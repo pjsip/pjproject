@@ -185,7 +185,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     /* Save URI */
     pjsua_var.buddy[index].uri = tmp;
 
-    sip_uri = (pjsip_sip_uri*) url->uri;
+    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(url->uri);
     pjsua_var.buddy[index].name = sip_uri->user;
     pjsua_var.buddy[index].display = url->display;
     pjsua_var.buddy[index].host = sip_uri->host;

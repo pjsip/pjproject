@@ -943,7 +943,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
      * first entry of the route-set.
      */
     if (!pj_list_empty(&acc->route_set)) {
-	sip_uri = (pjsip_sip_uri*) acc->route_set.next->name_addr.uri;
+	sip_uri = (pjsip_sip_uri*) 
+		  pjsip_uri_get_uri(acc->route_set.next->name_addr.uri);
     } else {
 	pj_str_t tmp;
 	pjsip_uri *uri;
@@ -1034,7 +1035,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
     /* If Record-Route is present, then URI is the top Record-Route. */
     if (rdata->msg_info.record_route) {
-	sip_uri = (pjsip_sip_uri*) rdata->msg_info.record_route->name_addr.uri;
+	sip_uri = (pjsip_sip_uri*) 
+		pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
     } else {
 	pjsip_contact_hdr *h_contact;
 	pjsip_uri *uri = NULL;
