@@ -833,7 +833,8 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	return status;
     }
 
-    status = pj_sock_bind_in(sock, bound_addr.s_addr, (pj_uint16_t)port);
+    status = pj_sock_bind_in(sock, pj_ntohl(bound_addr.s_addr), 
+			     (pj_uint16_t)port);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "bind() error", status);
 	pj_sock_close(sock);
