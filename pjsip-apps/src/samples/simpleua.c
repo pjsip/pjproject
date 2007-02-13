@@ -472,11 +472,14 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      */
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_INVITE_METHOD) {
 
-	pj_str_t reason = pj_str("Simple UA unable to handle this request");
+	if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	    pj_str_t reason = pj_str("Simple UA unable to handle "
+				     "this request");
 
-	pjsip_endpt_respond_stateless( g_endpt, rdata, 
-				       500, &reason,
-				       NULL, NULL);
+	    pjsip_endpt_respond_stateless( g_endpt, rdata, 
+					   500, &reason,
+					   NULL, NULL);
+	}
 	return PJ_TRUE;
     }
 
