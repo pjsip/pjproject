@@ -1396,6 +1396,23 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_transport(pjsip_transaction *tsx,
 
 
 /*
+ * Set the UAC absolute transaction timeout.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_set_uac_timeout(pjsip_transaction *tsx,
+					      unsigned msec_time,
+					      pjsip_tsx_timeout_policy policy)
+{
+    PJ_ASSERT_RETURN(tsx && tsx->role==PJSIP_ROLE_UAC &&
+		     tsx->state==PJSIP_TSX_STATE_NULL, PJ_EINVALIDOP);
+
+    tsx->msec_timeout = msec_time;
+    tsx->timeout_policy = policy;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Set transaction status code and reason.
  */
 static void tsx_set_status_code(pjsip_transaction *tsx,
@@ -1896,10 +1913,22 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	}
 
 	/* Start Timer B (or called timer F for non-INVITE) for transaction 
-	 * timeout.
+	 * timeout. If user has configured the timeout value with 
+	 * pjsip_tsx_set_uac_timeout(), use the timeout value there.
 	 */
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-                                    &timeout_timer_val);
+	if (tsx->msec_timeout > 0) {
+	    pj_time_val timeout;
+
+	    timeout.sec = tsx->msec_timeout / 1000;
+	    timeout.msec = tsx->msec_timeout % 1000;
+
+	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+					&timeout);
+
+	} else {
+	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+					&timeout_timer_val);
+	}
 
 	/* Start Timer A (or timer E) for retransmission only if unreliable 
 	 * transport is being used.
@@ -1967,7 +1996,7 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 
     } else if (event->type == PJSIP_EVENT_RX_MSG) {
 	pjsip_msg *msg;
-	//int code;
+	int code;
 
 	/* Get message instance */
 	msg = event->body.rx_msg.rdata->msg_info.msg;
@@ -1984,8 +2013,18 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 
-	/* Cancel timer B (transaction timeout) */
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+	/* Cancel timer B (transaction timeout) but look at the timeout policy
+	 * as set by pjsip_tsx_set_uac_timeout().
+	 */
+	code = msg->line.status.code;
+	if ((code==100 && tsx->timeout_policy==PJSIP_TSX_IGNORE_100) ||
+	    (code<200 && tsx->timeout_policy==PJSIP_TSX_IGNORE_1xx))
+	{
+	    /* Don't cancel the timeout timer */
+	}
+	else {
+	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+	}
 
 	/* Discard retransmission message if it is not INVITE.
 	 * The INVITE tdata is needed in case we have to generate ACK for
@@ -2371,6 +2410,14 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
                            PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
 	}
+
+    } else if (event->type == PJSIP_EVENT_TIMER &&
+	       event->body.timer.entry == &tsx->timeout_timer) {
+
+	/* Inform TU. */
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+		       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
+
 
     } else if (tsx->status_code >= 300 && tsx->status_code <= 699) {
 

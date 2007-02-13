@@ -29,9 +29,6 @@
 
 struct tsx_data
 {
-    pj_time_val	    delay;
-    pj_timer_entry  timeout_timer;
-
     void *token;
     void (*cb)(void*, pjsip_event*);
 };
@@ -71,12 +68,6 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
     if (tsx->status_code < 200)
 	return;
 
-    /* Cancel timer if any */
-    if (tsx_data->timeout_timer.id != 0) {
-	tsx_data->timeout_timer.id = 0;
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx_data->timeout_timer);
-    }
-
     /* Call the callback, if any, and prevent the callback to be called again
      * by clearing the transaction's module_data.
      */
@@ -85,29 +76,6 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
     if (tsx_data->cb) {
 	(*tsx_data->cb)(tsx_data->token, event);
     }
-}
-
-
-static void mod_util_on_timeout(pj_timer_heap_t *th, pj_timer_entry *te)
-{
-    pjsip_transaction *tsx = (pjsip_transaction*) te->user_data;
-    struct tsx_data *tsx_data;
-
-    PJ_UNUSED_ARG(th);
-
-    tsx_data = tsx->mod_data[mod_stateful_util.id];
-    if (tsx_data == NULL) {
-	pj_assert(!"Shouldn't happen");
-	return;
-    }
-
-    tsx_data->timeout_timer.id = 0;
-
-    PJ_LOG(4,(tsx->obj_name, "Transaction timed out by user timer (%d.%d sec)",
-	      (int)tsx_data->delay.sec, (int)tsx_data->delay.msec));
-
-    /* Terminate the transaction. This will call mod_util_on_tsx_state() */
-    pjsip_tsx_terminate(tsx, PJSIP_SC_TSX_TIMEOUT);
 }
 
 
@@ -133,38 +101,20 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 	return status;
     }
 
-    tsx_data = pj_pool_zalloc(tsx->pool, sizeof(struct tsx_data));
+    tsx_data = pj_pool_alloc(tsx->pool, sizeof(struct tsx_data));
     tsx_data->token = token;
     tsx_data->cb = cb;
 
     if (timeout >= 0) {
-	tsx_data->delay.sec = 0;
-	tsx_data->delay.msec = timeout;
-	pj_time_val_normalize(&tsx_data->delay);
-
-	tsx_data->timeout_timer.id = PJ_TRUE;
-	tsx_data->timeout_timer.user_data = tsx;
-	tsx_data->timeout_timer.cb = &mod_util_on_timeout;
-	
-	status = pjsip_endpt_schedule_timer(endpt, &tsx_data->timeout_timer, 
-					    &tsx_data->delay);
-	if (status != PJ_SUCCESS) {
-	    pjsip_tsx_terminate(tsx, PJSIP_SC_INTERNAL_SERVER_ERROR);
-	    pjsip_tx_data_dec_ref(tdata);
-	    return status;
-	}
+	status = pjsip_tsx_set_uac_timeout(tsx, timeout, PJSIP_TSX_IGNORE_1xx);
+	pj_assert(status == PJ_SUCCESS);
     }
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
     status = pjsip_tsx_send_msg(tsx, NULL);
-    if (status != PJ_SUCCESS) {
-	if (tsx_data->timeout_timer.id != 0) {
-	    pjsip_endpt_cancel_timer(endpt, &tsx_data->timeout_timer);
-	    tsx_data->timeout_timer.id = PJ_FALSE;
-	}
+    if (status != PJ_SUCCESS)
 	pjsip_tx_data_dec_ref(tdata);
-    }
 
     return status;
 }
