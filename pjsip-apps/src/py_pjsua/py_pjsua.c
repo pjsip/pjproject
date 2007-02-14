@@ -3130,38 +3130,36 @@ static PyObject *py_pjsua_normalize_stun_config
 {
     PyObject * tmpObj;
     stun_config_Object *obj;
-    pjsua_stun_config *cfg;
+    pjsua_stun_config cfg;
 
     if (!PyArg_ParseTuple(pArgs, "O", &tmpObj))
     {
         return NULL;
     }
-    if (tmpObj != Py_None)
-    {
-        obj = (stun_config_Object *) tmpObj;
-        cfg = (pjsua_stun_config *)malloc(sizeof(pjsua_stun_config));
-        cfg->stun_port1 = obj->stun_port1;
-        cfg->stun_port2 = obj->stun_port2;
-        cfg->stun_srv1.ptr = PyString_AsString(obj->stun_srv1);
-        cfg->stun_srv1.slen = strlen(PyString_AsString(obj->stun_srv1));
-        cfg->stun_srv2.ptr = PyString_AsString(obj->stun_srv2);
-        cfg->stun_srv2.slen = strlen(PyString_AsString(obj->stun_srv2));
-    } else {
-        cfg = NULL;
+
+    if (tmpObj == Py_None) {
+	Py_INCREF(Py_None);
+	return Py_None;
     }
-    pjsua_normalize_stun_config(cfg);
-    obj->stun_port1 = cfg->stun_port1;
-    obj->stun_port2 = cfg->stun_port2;
+
+    obj = (stun_config_Object *) tmpObj;
+    cfg.stun_port1 = obj->stun_port1;
+    cfg.stun_port2 = obj->stun_port2;
+    cfg.stun_srv1.ptr = PyString_AsString(obj->stun_srv1);
+    cfg.stun_srv1.slen = strlen(PyString_AsString(obj->stun_srv1));
+    cfg.stun_srv2.ptr = PyString_AsString(obj->stun_srv2);
+    cfg.stun_srv2.slen = strlen(PyString_AsString(obj->stun_srv2));
+
+    pjsua_normalize_stun_config(&cfg);
+    obj->stun_port1 = cfg.stun_port1;
+    obj->stun_port2 = cfg.stun_port2;
     Py_XDECREF(obj->stun_srv1);
     obj->stun_srv1 = 
-        PyString_FromStringAndSize(cfg->stun_srv1.ptr, cfg->stun_srv1.slen);
+        PyString_FromStringAndSize(cfg.stun_srv1.ptr, cfg.stun_srv1.slen);
     Py_XDECREF(obj->stun_srv2);
     obj->stun_srv2 = 
-        PyString_FromStringAndSize(cfg->stun_srv2.ptr, cfg->stun_srv2.slen);
-    if (cfg != NULL)
-    {
-        free(cfg);
-    }
+        PyString_FromStringAndSize(cfg.stun_srv2.ptr, cfg.stun_srv2.slen);
+
     Py_INCREF(Py_None);
     return Py_None;
 }
