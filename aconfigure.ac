@@ -1,4 +1,4 @@
-AC_INIT(pjproject,0.5.8)
+AC_INIT(pjproject,0.5.10)
 
 host_orig="$host"
 
@@ -400,10 +400,9 @@ dnl #
 dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_ARG_ENABLE(ssl,
-	      [
-	      	AC_HELP_STRING([--disable-ssl],
-			       [Exclude SSL support the build (default: autodetect)])
-	      ],
+	      AC_HELP_STRING([--disable-ssl],
+			     [Exclude SSL support the build (default: autodetect)])
+	      ,
 	      [
 		if test "$enable_ssl" = "no"; then
 		 [ac_no_ssl=1]

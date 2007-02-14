@@ -1756,7 +1756,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     PaTime inputLatency, outputLatency;
     unsigned long framesPerHostBuffer;
     PaUtilHostBufferSizeMode hostBufferSizeMode = paUtilBoundedHostBufferSize;
-    unsigned long maxHostBufferSize;    /* Upper bound of host buffer size */
+    unsigned long maxHostBufferSize=0;    /* Upper bound of host buffer size */
 
     if( (streamFlags & paPlatformSpecificFlags) != 0 )
         return paInvalidFlag;
