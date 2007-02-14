@@ -3046,11 +3046,11 @@ pj_status_t app_init(int argc, char *argv[])
 	pjsua_acc_id acc_id;
 
 	/* Set TLS port as TCP port+1 */
-	app_config.udp_cfg.port++;
+	tcp_cfg.port++;
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TLS,
-					&app_config.udp_cfg, 
+					&tcp_cfg, 
 					&transport_id);
-	app_config.udp_cfg.port--;
+	tcp_cfg.port--;
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 	
