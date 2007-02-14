@@ -2163,7 +2163,15 @@ static PyObject *py_pjsua_handle_events(PyObject *pSelf, PyObject *pArgs)
     {
         return NULL;
     }
+
+    /* Since handle_events() will block, we must wrap it with ALLOW_THREADS
+     * construct, or otherwise many Python blocking functions (such as
+     * time.sleep(), readline(), etc.) may hang/block indefinitely.
+     * See http://www.python.org/doc/current/api/threads.html for more info.
+     */
+    Py_BEGIN_ALLOW_THREADS
     ret = pjsua_handle_events(msec);
+    Py_END_ALLOW_THREADS
     
     return Py_BuildValue("i",ret);
 }
