@@ -485,7 +485,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_LOCAL_PORT:   /* local-port */
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (lval < 1 || lval > 65535) {
+	    if (lval < 0 || lval > 65535) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: expecting integer value for "
 			  "--local-port"));
@@ -2891,6 +2891,7 @@ on_exit:
 pj_status_t app_init(int argc, char *argv[])
 {
     pjsua_transport_id transport_id = -1;
+    pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_status_t status;
 
@@ -2995,6 +2996,8 @@ pj_status_t app_init(int argc, char *argv[])
 	app_config.rec_port = pjsua_recorder_get_conf_port(app_config.rec_id);
     }
 
+    pj_memcpy(&tcp_cfg, &app_config.udp_cfg, sizeof(tcp_cfg));
+
     /* Add UDP transport unless it's disabled. */
     if (!app_config.no_udp) {
 	pjsua_acc_id aid;
@@ -3009,12 +3012,22 @@ pj_status_t app_init(int argc, char *argv[])
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+
+	if (app_config.udp_cfg.port == 0) {
+	    pjsua_transport_info ti;
+	    pj_sockaddr_in *a;
+
+	    pjsua_transport_get_info(transport_id, &ti);
+	    a = (pj_sockaddr_in*)&ti.local_addr;
+
+	    tcp_cfg.port = pj_ntohs(a->sin_port);
+	}
     }
 
     /* Add TCP transport unless it's disabled */
     if (!app_config.no_tcp) {
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
-					&app_config.udp_cfg, 
+					&tcp_cfg, 
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;

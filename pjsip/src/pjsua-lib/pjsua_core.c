@@ -841,6 +841,20 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	return status;
     }
 
+    /* If port is zero, get the bound port */
+    if (port == 0) {
+	pj_sockaddr_in bound_addr;
+	int namelen = sizeof(bound_addr);
+	status = pj_sock_getsockname(sock, &bound_addr, &namelen);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "getsockname() error", status);
+	    pj_sock_close(sock);
+	    return status;
+	}
+
+	port = pj_ntohs(bound_addr.sin_port);
+    }
+
     /* Copy and normalize STUN param */
     if (use_stun) {
 	pj_memcpy(&stun, stun_param, sizeof(*stun_param));
@@ -873,7 +887,8 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	 * Public address is already specified, no need to resolve the 
 	 * address, only set the port.
 	 */
-	/* Do nothing */
+	if (p_pub_addr->sin_port == 0)
+	    p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
 
     } else {
 
