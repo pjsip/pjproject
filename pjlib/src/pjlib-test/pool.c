@@ -17,8 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/pool.h>
+#include <pj/pool_buf.h>
 #include <pj/rand.h>
 #include <pj/log.h>
+#include <pj/except.h>
 #include "test.h"
 
 /**
@@ -139,6 +141,54 @@ on_error:
     return status;
 }
 
+/* Test the buffer based pool */
+static int pool_buf_test(void)
+{
+    enum { STATIC_BUF_SIZE = 40 };
+    /* 16 is the internal struct in pool_buf */
+    static char buf[ STATIC_BUF_SIZE + sizeof(pj_pool_t) + 
+		     sizeof(pj_pool_block) + 16];
+    pj_pool_t *pool;
+    void *p;
+    PJ_USE_EXCEPTION;
+
+    PJ_LOG(3,("test", "...pool_buf test"));
+
+    pool = pj_pool_create_on_buf("no name", buf, sizeof(buf));
+    if (!pool)
+	return -70;
+
+    /* Drain the pool */
+    PJ_TRY {
+	if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
+	    return -75;
+
+	if ((p=pj_pool_alloc(pool, STATIC_BUF_SIZE/2)) == NULL)
+	    return -76;
+    }
+    PJ_CATCH_ANY {
+	return -77;
+    }
+    PJ_END;
+
+    /* On the next alloc, exception should be thrown */
+    PJ_TRY {
+	p = pj_pool_alloc(pool, STATIC_BUF_SIZE);
+	if (p != NULL) {
+	    /* This is unexpected, the alloc should fail */
+	    return -78;
+	}
+    }
+    PJ_CATCH_ANY {
+	/* This is the expected result */
+    }
+    PJ_END;
+
+    /* Done */
+    return 0;
+}
+
+
 int pool_test(void)
 {
     enum { LOOP = 2 };
@@ -159,6 +209,11 @@ int pool_test(void)
 	rc = drain_test(SIZE, 0);
 	if (rc != -40) return rc;
     }
+
+    rc = pool_buf_test();
+    if (rc != 0)
+	return rc;
+
 
     return 0;
 }

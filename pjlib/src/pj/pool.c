@@ -174,6 +174,10 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 
     PJ_CHECK_STACK();
 
+    /* Size must be at least sizeof(pj_pool)+sizeof(pj_pool_block) */
+    PJ_ASSERT_RETURN(initial_size >= sizeof(pj_pool_t)+sizeof(pj_pool_block),
+		     NULL);
+
     /* If callback is NULL, set calback from the policy */
     if (callback == NULL)
 	callback = f->policy.callback;

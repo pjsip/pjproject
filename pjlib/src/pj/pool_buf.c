@@ -53,17 +53,26 @@ static pj_status_t pool_buf_initialize()
 static void* stack_alloc(pj_pool_factory *factory, pj_size_t size)
 {
     struct creation_param *param;
+    void *buf;
 
     PJ_UNUSED_ARG(factory);
 
     param = pj_thread_local_get(tls);
-    PJ_ASSERT_RETURN(param != NULL, NULL);
+    if (param == NULL) {
+	/* Don't assert(), this is normal no-memory situation */
+	return NULL;
+    }
 
     pj_thread_local_set(tls, NULL);
 
     PJ_ASSERT_RETURN(size <= param->size, NULL);
 
-    return param->stack_buf;
+    buf = param->stack_buf;
+
+    /* Prevent the buffer from being reused */
+    param->stack_buf = NULL;
+
+    return buf;
 }
 
 
