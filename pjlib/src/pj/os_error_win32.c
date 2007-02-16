@@ -194,6 +194,7 @@ int platform_strerror( pj_os_err_type os_errcode,
 			     buf,
 			     bufsize,
 			     NULL);
+	buf[bufsize-1] = '\0';
 #endif
 
 	if (len) {
@@ -208,6 +209,8 @@ int platform_strerror( pj_os_err_type os_errcode,
     if (!len) {
 	len = pj_ansi_snprintf( buf, bufsize, "Win32 error code %u", 
 				(unsigned)os_errcode);
+	if (len < 0 || len >= (int)bufsize)
+	    len = bufsize-1;
 	buf[len] = '\0';
     }
 
