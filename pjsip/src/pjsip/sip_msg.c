@@ -1181,6 +1181,7 @@ static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool,
 {
     pjsip_ctype_hdr *hdr = pjsip_ctype_hdr_create(pool);
     pj_strdup(pool, &hdr->media.type, &rhs->media.type);
+    pj_strdup(pool, &hdr->media.subtype, &rhs->media.subtype);
     pj_strdup(pool, &hdr->media.param, &rhs->media.param);
     return hdr;
 }
