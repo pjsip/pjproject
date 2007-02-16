@@ -14,8 +14,6 @@ export PJLIB_OBJS +=	$(AC_OS_OBJS) \
 			os_timestamp_common.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
-export PJLIB_OBJS += file_access_unistd.o file_io_ansi.o
-
 #
 # TEST_OBJS are operating system specific object files to be included in
 # the test application.
