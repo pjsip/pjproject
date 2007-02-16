@@ -216,11 +216,11 @@ struct pjsua_data
 
     /* File players: */
     unsigned		 player_cnt;/**< Number of file players.	*/
-    pjsua_file_data	 player[32];/**< Array of players.		*/
+    pjsua_file_data	 player[PJSUA_MAX_PLAYERS];/**< Array of players.*/
 
     /* File recorders: */
     unsigned		 rec_cnt;   /**< Number of file recorders.	*/
-    pjsua_file_data	 recorder[32];/**< Array of file recorders.	*/
+    pjsua_file_data	 recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
 };
 
 

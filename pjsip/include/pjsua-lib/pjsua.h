@@ -3374,6 +3374,22 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
+ * The maximum file player.
+ */
+#ifndef PJSUA_MAX_PLAYERS
+#   define PJSUA_MAX_PLAYERS		32
+#endif
+
+
+/**
+ * The maximum file player.
+ */
+#ifndef PJSUA_MAX_RECORDERS
+#   define PJSUA_MAX_RECORDERS		32
+#endif
+
+
+/**
  * This structure describes media configuration, which will be specified
  * when calling #pjsua_init(). Application MUST initialize this structure
  * by calling #pjsua_media_config_default().
