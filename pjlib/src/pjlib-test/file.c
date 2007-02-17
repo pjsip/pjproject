@@ -28,7 +28,7 @@
 static char buffer[11] = {'H', 'e', 'l', 'l', 'o', ' ',
 		          'W', 'o', 'r', 'l', 'd' };
 
-int file_test(void)
+static int file_test_internal(void)
 {
     enum { FILE_MAX_AGE = 1000 };
     pj_oshandle_t fd = 0;
@@ -89,9 +89,9 @@ int file_test(void)
     if (stat.size != sizeof(buffer))
         return -70;
 
+#if INCLUDE_FILE_TIME_TEST
     /* Check file creation time >= start_time. */
     if (!PJ_TIME_VAL_GTE(stat.ctime, start_time))
-#if INCLUDE_FILE_TIME_TEST
         return -80;
     /* Check file creation time is not much later. */
     PJ_TIME_VAL_SUB(stat.ctime, start_time);
@@ -204,6 +204,18 @@ int file_test(void)
 
     PJ_LOG(3,("", "...success"));
     return PJ_SUCCESS;
+}
+
+
+int file_test(void)
+{
+    int rc = file_test_internal();
+
+    /* Delete test file if exists. */
+    if (pj_file_exists(FILENAME))
+        pj_file_delete(FILENAME);
+
+    return rc;
 }
 
 #else
