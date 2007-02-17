@@ -666,6 +666,9 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 {
+    unsigned i;
+    enum { RETRY = 10 };
+
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
 #if PJ_HAS_TCP
@@ -713,7 +716,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      * Forcing context switch seems to have fixed that, but this is quite
      * an ugly solution..
      */
-    while (pj_atomic_get(key->ref_count) != 1)
+    //This will loop forever if unregistration is done on the callback.
+    //Doing this with RETRY I think should solve the IOCP setting the 
+    //socket signalled, without causing the deadlock.
+    //while (pj_atomic_get(key->ref_count) != 1)
+    //	pj_thread_sleep(0);
+    for (i=0; pj_atomic_get(key->ref_count) != 1 && i<RETRY; ++i)
 	pj_thread_sleep(0);
 
     /* Decrement reference counter to destroy the key. */
@@ -754,8 +762,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check the closing keys only when there's no activity and when there are
      * pending closing keys.
+     * blp:
+     *	no, always check the list. Otherwise on busy activity, this will cause
+     *  ioqueue to reject new registration.
      */
-    if (event_count == 0 && !pj_list_empty(&ioqueue->closing_list)) {
+    if (/*event_count == 0 &&*/ !pj_list_empty(&ioqueue->closing_list)) {
 	pj_time_val now;
 	pj_ioqueue_key_t *key;
 
