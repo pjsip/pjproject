@@ -281,6 +281,15 @@ int main(int argc, char *argv[])
     
     /* Start deinitialization: */
 
+    /* Disconnect sound port from file port */
+    status = pjmedia_snd_port_disconnect(snd_port);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
+    /* Without this sleep, Windows/DirectSound will repeteadly
+     * play the last frame during destroy.
+     */
+    pj_thread_sleep(100);
+
     /* Destroy sound device */
     status = pjmedia_snd_port_destroy( snd_port );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
