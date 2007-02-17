@@ -2953,7 +2953,7 @@ pj_status_t app_init(int argc, char *argv[])
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	if (app_config.wav_id == 0) {
+	if (app_config.wav_id == PJSUA_INVALID_ID) {
 	    app_config.wav_id = wav_id;
 	    app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
 	}
