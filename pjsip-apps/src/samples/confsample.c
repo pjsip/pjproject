@@ -354,11 +354,11 @@ int main(int argc, char *argv[])
 		continue;
 	    }
 
-	    if (!input("Enter level (-128 to +127, 0 for normal)", 
+	    if (!input("Enter level (-128 to >127, 0 for normal)", 
 			      tmp2, sizeof(tmp2)) )
 		continue;
 	    level = strtol(tmp2, &err, 10);
-	    if (*err || level < -128 || level > 127) {
+	    if (*err || level < -128) {
 		puts("Invalid level");
 		continue;
 	    }
@@ -380,11 +380,11 @@ int main(int argc, char *argv[])
 		continue;
 	    }
 
-	    if (!input("Enter level (-128 to +127, 0 for normal)", 
+	    if (!input("Enter level (-128 to >127, 0 for normal)", 
 			      tmp2, sizeof(tmp2)) )
 		continue;
 	    level = strtol(tmp2, &err, 10);
-	    if (*err || level < -128 || level > 127) {
+	    if (*err || level < -128) {
 		puts("Invalid level");
 		continue;
 	    }

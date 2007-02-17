@@ -385,6 +385,10 @@ PJ_DECL(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
 
 /**
  * Get last signal level transmitted to or received from the specified port.
+ * This will retrieve the "real-time" signal level of the audio as they are
+ * transmitted or received by the specified port. Application may call this
+ * function periodically to display the signal level to a VU meter.
+ *
  * The signal level is an integer value in zero to 255, with zero indicates
  * no signal, and 255 indicates the loudest signal level.
  *
@@ -407,18 +411,26 @@ PJ_DECL(pj_status_t) pjmedia_conf_get_signal_level(pjmedia_conf *conf,
 
 /**
  * Adjust the level of signal received from the specified port.
- * Application may adjust the level to make the signal received from the port
- * either louder or more quiet, by giving the value from +127 to -128. The
- * value zero indicates no adjustment, the value -128 will mute the signal, 
- * and the value of +127 will make the signal twice as loud.
+ * Application may adjust the level to make signal received from the port
+ * either louder or more quiet. The level adjustment is calculated with this
+ * formula: <b><tt>output = input * (adj_level+128) / 128</tt></b>. Using 
+ * this, zero indicates no adjustment, the value -128 will mute the signal, 
+ * and the value of +128 will make the signal 100% louder, +256 will make it
+ * 200% louder, etc.
+ *
+ * The level adjustment value will stay with the port until the port is
+ * removed from the bridge or new adjustment value is set. The current
+ * level adjustment value is reported in the media port info when
+ * the #pjmedia_conf_get_port_info() function is called.
  *
  * @param conf		The conference bridge.
- * @param slot		Slot number.
- * @param adj_level	Adjustment level, with valid values are from -128
- *			to +127. A value of zero means there is no level
+ * @param slot		Slot number of the port.
+ * @param adj_level	Adjustment level, which must be greater than or equal
+ *			to -128. A value of zero means there is no level
  *			adjustment to be made, the value -128 will mute the 
- *			signal, and the value of +127 will make the signal 
- *			twice as loud.
+ *			signal, and the value of +128 will make the signal 
+ *			100% louder, +256 will make it 200% louder, etc. 
+ *			See the function description for the formula.
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -429,18 +441,26 @@ PJ_DECL(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
 
 /**
  * Adjust the level of signal to be transmitted to the specified port.
- * Application may adjust the level to make the signal transmitted to the port
- * either louder or more quiet, by giving the value from +127 to -128. The
- * value zero indicates no adjustment, the value -128 will mute the signal, 
- * and the value of +127 will make the signal twice as loud.
+ * Application may adjust the level to make signal transmitted to the port
+ * either louder or more quiet. The level adjustment is calculated with this
+ * formula: <b><tt>output = input * (adj_level+128) / 128</tt></b>. Using 
+ * this, zero indicates no adjustment, the value -128 will mute the signal, 
+ * and the value of +128 will make the signal 100% louder, +256 will make it
+ * 200% louder, etc.
+ *
+ * The level adjustment value will stay with the port until the port is
+ * removed from the bridge or new adjustment value is set. The current
+ * level adjustment value is reported in the media port info when
+ * the #pjmedia_conf_get_port_info() function is called.
  *
  * @param conf		The conference bridge.
- * @param slot		Slot number.
- * @param adj_level	Adjustment level, with valid values are from -128
- *			to +127. A value of zero means there is no level
+ * @param slot		Slot number of the port.
+ * @param adj_level	Adjustment level, which must be greater than or equal
+ *			to -128. A value of zero means there is no level
  *			adjustment to be made, the value -128 will mute the 
- *			signal, and the value of +127 will make the signal 
- *			twice as loud.
+ *			signal, and the value of +128 will make the signal 
+ *			100% louder, +256 will make it 200% louder, etc. 
+ *			See the function description for the formula.
  *
  * @return		PJ_SUCCESS on success.
  */
