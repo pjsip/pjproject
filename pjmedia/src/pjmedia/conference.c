@@ -72,9 +72,9 @@ static FILE *fhnd_rec;
  * in the port does not cause misaligned signal (which causes noise).
  */
 #if 1
-#   define ATTACK_A	    3
+#   define ATTACK_A	    10
 #   define ATTACK_B	    2
-#   define DECAY_A	    3
+#   define DECAY_A	    10
 #   define DECAY_B	    2
 #else
     /* To simulate old behavior */
@@ -1441,7 +1441,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      */
     else if (cport->tx_adj_level != NORMAL_LEVEL && cport->src_level) {
 
-	unsigned adj_level = cport->tx_adj_level;
+	pj_int32_t adj_level = cport->tx_adj_level;
 
 	/* We need to adjust signal level. */
 	for (j=0; j<conf->samples_per_frame; ++j) {
