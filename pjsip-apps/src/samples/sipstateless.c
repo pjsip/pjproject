@@ -44,6 +44,9 @@
 /* Global SIP endpoint */
 static pjsip_endpoint *sip_endpt;
 
+/* What response code to be sent (default is 501/Not Implemented) */
+static int code = PJSIP_SC_NOT_IMPLEMENTED;
+
 
 /* Callback to handle incoming requests. */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
@@ -53,7 +56,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      */
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
 	pjsip_endpt_respond_stateless( sip_endpt, rdata, 
-				       PJSIP_SC_NOT_IMPLEMENTED, NULL,
+				       code, NULL,
 				       NULL, NULL);
     }
     return PJ_TRUE;
@@ -65,7 +68,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
  * main()
  *
  */
-int main()
+int main(int argc, char *argv[])
 {
     pj_caching_pool cp;
     pjsip_module mod_app =
@@ -88,6 +91,9 @@ int main()
 
     pj_status_t status;
     
+    if (argc == 2)
+	code = atoi(argv[1]);
+
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
