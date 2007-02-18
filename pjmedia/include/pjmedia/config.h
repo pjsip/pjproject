@@ -81,7 +81,7 @@
  * Default: 32
  */
 #ifndef PJMEDIA_SOUND_BUFFER_COUNT
-#   define PJMEDIA_SOUND_BUFFER_COUNT	    32
+#   define PJMEDIA_SOUND_BUFFER_COUNT	    16
 #endif
 
 
