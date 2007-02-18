@@ -20,10 +20,9 @@
 /**
  * sipcore.c
  *
- * This program is only used to measure the footprint of the SIP core.
- * When UDP transport is included (with HAS_UDP_TRANSPORT macro), the
- * executable will respond any incoming requests with 501 (Not Implemented)
- * response statelessly.
+ * A simple program to respond any incoming requests (except ACK, of course!)
+ * with any status code (taken from command line argument, with the default
+ * is 501/Not Implemented).
  */
 
 
@@ -36,6 +35,8 @@
 /* If this macro is set, UDP transport will be initialized at port 5060 */
 #define HAS_UDP_TRANSPORT
 
+/* If this macro is set, TCP transport will be initialized at port 5060 */
+#define HAS_TCP_TRANSPORT
 
 /* Log identification */
 #define THIS_FILE	"sipstateless.c"
@@ -135,6 +136,26 @@ int main(int argc, char *argv[])
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(3,(THIS_FILE, 
 		      "Error starting UDP transport (port in use?)"));
+	    return 1;
+	}
+    }
+#endif
+
+#ifdef HAS_TCP_TRANSPORT
+    /* 
+     * Add UDP transport, with hard-coded port 
+     */
+    {
+	pj_sockaddr_in addr;
+
+	addr.sin_family = PJ_AF_INET;
+	addr.sin_addr.s_addr = 0;
+	addr.sin_port = pj_htons(5060);
+
+	status = pjsip_tcp_transport_start(sip_endpt, &addr, 1, NULL);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(3,(THIS_FILE, 
+		      "Error starting TCP transport (port in use?)"));
 	    return 1;
 	}
     }
