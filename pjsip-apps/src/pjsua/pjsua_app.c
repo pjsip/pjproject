@@ -126,7 +126,7 @@ static void usage(void)
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
-    puts  ("  --next-cred	  Add another credentials");
+    puts  ("  --next-cred         Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
     puts  ("  --next-account      Add more account");
@@ -143,11 +143,11 @@ static void usage(void)
     puts  ("                      This option can be specified multiple times.");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
     puts  ("                      May be specified multiple times");
-    puts  ("  --use-stun1=host[:port]");
-    puts  ("  --use-stun2=host[:port]  Resolve local IP with the specified STUN servers");
+    puts  ("  --use-stun1=FORMAT  where FORMAT=host[:port]");
+    puts  ("  --use-stun2=FORMAT  Resolve local IP with the specified STUN servers");
     puts  ("");
     puts  ("TLS Options:");
-    puts  ("  --use-tls           Enable TLS transport");
+    puts  ("  --use-tls           Enable TLS transport (default=no)");
     puts  ("  --tls-ca-file       Specify TLS CA file (default=none)");
     puts  ("  --tls-cert-file     Specify TLS certificate file (default=none)");
     puts  ("  --tls-privkey-file  Specify TLS private key file (default=none)");
@@ -163,8 +163,9 @@ static void usage(void)
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --play-file=file    Register WAV file in conference bridge.");
     puts  ("                      This can be specified multiple times.");
-    puts  ("  --play-tone=F1,F2,ON,OFF    Register tone to the conference bridge.");
-    puts  ("                      f1,f2=frequency, on,off=on/off duration in msec.");
+    puts  ("  --play-tone=FORMAT  Register tone to the conference bridge.");
+    puts  ("                      FORMAT is 'F1,F2,ON,OFF', where F1,F2 are");
+    puts  ("                      frequencies, and ON,OFF=on/off duration in msec.");
     puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
