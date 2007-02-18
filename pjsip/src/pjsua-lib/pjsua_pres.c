@@ -177,6 +177,10 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 	return PJSIP_EINVALIDURI;
     }
 
+    /* Only support SIP schemes */
+    if (!PJSIP_URI_SCHEME_IS_SIP(url) && !PJSIP_URI_SCHEME_IS_SIPS(url))
+	return PJSIP_EINVALIDSCHEME;
+
     /* Reset buddy, to make sure everything is cleared with default
      * values
      */
