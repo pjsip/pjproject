@@ -204,6 +204,7 @@ static void usage(void)
 static void default_config(struct app_config *cfg)
 {
     char tmp[80];
+    unsigned i;
 
     pjsua_config_default(&cfg->cfg);
     pj_ansi_sprintf(tmp, "PJSUA v%s/%s", PJ_VERSION, PJ_OS_NAME);
@@ -221,6 +222,12 @@ static void default_config(struct app_config *cfg)
     cfg->wav_port = PJSUA_INVALID_ID;
     cfg->rec_port = PJSUA_INVALID_ID;
     cfg->mic_level = cfg->speaker_level = 1.0;
+
+    for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
+	pjsua_acc_config_default(&cfg->acc_cfg[i]);
+
+    for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
+	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
 }
 
 
