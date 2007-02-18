@@ -665,9 +665,10 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 
 	    /* Log */
 	    PJ_LOG(5,(resolver->name.ptr, 
-		      "Picked up DNS %s record for %.*s in cache",
+		      "Picked up DNS %s record for %.*s from cache, ttl=%d",
 		      pj_dns_get_type_name(type),
-		      (int)name->slen, name->ptr));
+		      (int)name->slen, name->ptr,
+		      (int)(cache->expiry_time.sec - now.sec)));
 
 	    /* Map DNS Rcode in the response into PJLIB status name space */
 	    status = PJ_DNS_GET_RCODE(cache->pkt->hdr.flags);
