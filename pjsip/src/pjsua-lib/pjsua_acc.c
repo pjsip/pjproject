@@ -959,7 +959,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	    return PJSIP_EINVALIDREQURI;
 
-	sip_uri = (pjsip_sip_uri*)uri;
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
     }
 
     /* Get transport type of the URI */
@@ -1059,7 +1059,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	    return PJSIP_EINVALIDREQURI;
 
-	sip_uri = (pjsip_sip_uri*)uri;
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
     }
 
     /* Get transport type of the URI */
