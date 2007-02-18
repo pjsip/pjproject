@@ -36,6 +36,23 @@ g_rec_file = ""
 g_rec_id = 0
 g_rec_port = 0
 
+# Utility: display PJ error and exit
+#
+def err_exit(title, rc):
+    py_pjsua.perror(THIS_FILE, title, rc)
+    exit(1)
+
+
+# Logging function (also callback, called by pjsua-lib)
+#
+def log_cb(level, str, len):
+    if level <= C_LOG_LEVEL:
+        print str,
+
+def write_log(level, str):
+    log_cb(level, str + "\n", 0)
+
+
 # Utility to get call info
 #
 def call_name(call_id):
@@ -84,10 +101,14 @@ def on_call_media_state(call_id):
 #
 def on_reg_state(acc_id):
 	acc_info = py_pjsua.acc_get_info(acc_id)
-	if acc_info.status != 0 and acc_info.status != 200:
-		write_log(3, "Account (un)registration failed: rc=" + `acc_info.status` + " " + acc_info.status_text)
+	if acc_info.has_registration != 0:
+		cmd = "registration"
 	else:
-		write_log(3, "Account successfully (un)registered")
+		cmd = "unregistration"
+	if acc_info.status != 0 and acc_info.status != 200:
+		write_log(3, "Account " + cmd + " failed: rc=" + `acc_info.status` + " " + acc_info.status_text)
+	else:
+		write_log(3, "Account " + cmd + " success")
 
 
 # Callback when buddy's presence state has changed
@@ -122,7 +143,7 @@ def on_typing(call_id, strfrom, to, contact, is_typing):
 		str_t = "has stopped typing"
 	write_log(3, "IM indication: " + strfrom + " " + str_t)
 
-# on call transfer status
+# Received the status of previous call transfer request
 #
 def on_call_transfer_status(call_id,status_code,status_text,final,p_cont):
 	strfinal = ""
@@ -136,27 +157,10 @@ def on_call_transfer_status(call_id,status_code,status_text,final,p_cont):
 		status = py_pjsua.call_hangup(call_id, 410, None, None)
 		p_cont = 0
 
-# on call transfer request
+# Callback on incoming call transfer request
 #		
 def on_call_transfer_request(call_id, dst, code):
 	write_log(3, "Call transfer request from " + `call_id` + " to " + dst + " with code " + `code`)
-
-# Utility: display PJ error and exit
-#
-def err_exit(title, rc):
-    py_pjsua.perror(THIS_FILE, title, rc)
-    exit(1)
-
-
-# Logging function (also callback, called by pjsua-lib)
-#
-def log_cb(level, str, len):
-    if level <= C_LOG_LEVEL:
-        print str,
-
-def write_log(level, str):
-    log_cb(level, str + "\n", 0)
-
 
 #
 # Initialize pjsua.
@@ -329,13 +333,8 @@ def add_recorder():
 		write_log(3, "File recorder " + file_name + " added")
 
 def conf_list():
-	
-	
 	ports = None
-
 	print "Conference ports : "
-
-	
 	ports = py_pjsua.enum_conf_ports()
 
 	for port in ports:
@@ -400,7 +399,7 @@ def dump_call_quality():
 		write_log(3, "\n" + buf)
 	else:
 		write_log(3, "No current call")
-		
+
 def xfer_call():
 	global g_current_call
 	
@@ -506,9 +505,46 @@ def app_start():
 	print "PJSUA Started!!"
 
 
+# Print account and buddy list
+def print_acc_buddy_list():
+	global g_acc_id
+	
+	acc_ids = py_pjsua.enum_accs()
+	print "Account list:"
+	for acc_id in acc_ids:
+		acc_info = py_pjsua.acc_get_info(acc_id)
+		if acc_info.has_registration == 0:
+			acc_status = acc_info.status_text
+		else:
+			acc_status = `acc_info.status` + "/" + acc_info.status_text + " (expires=" + `acc_info.expires` + ")"
+
+		if acc_id == g_acc_id:
+			print " *",
+		else:
+			print "  ",
+
+		print "[" + `acc_id` + "] " + acc_info.acc_uri + ": " + acc_status
+		print "       Presence status: ",
+		if acc_info.online_status != 0:
+			print "Online"
+		else:
+			print "Invisible"
+
+	if py_pjsua.get_buddy_count() > 0:
+		print ""
+		print "Buddy list:"
+		buddy_ids = py_pjsua.enum_buddies()
+		for buddy_id in buddy_ids:
+			bi = py_pjsua.buddy_get_info(buddy_id)
+			print "   [" + `buddy_id` + "] " + bi.status_text + " " + bi.uri
+	
+		
 # Print application menu
 #
 def print_menu():
+	print ""
+	print ">>>"
+	print_acc_buddy_list()
 	print """
 +============================================================================+
 |         Call Commands :      |  Buddy, IM & Presence:   |    Account:      |
@@ -524,14 +560,14 @@ def print_menu():
 |  x  Xfer call                |     Media Commands:      |    Status:       |
 |  X  Xfer with Replaces       |                          |                  |
 |                              | cl  List ports           |  d  Dump status  |
-|                              | cc  Connect port         |                  |
+|                              | cc  Connect port         | dd  Dump detail  |
 |                              | cd  Disconnect port      |                  |
 |                              | +p  Add file player      |                  |
 |------------------------------+ +r  Add file recorder    |                  |
 |  q  Quit application         |                          |                  |
-+============================================================================+
-	"""
-	print "Choice: ", 
++============================================================================+"""
+	print "You have " + `py_pjsua.call_get_count()` + " active call(s)"
+	print ">>>", 
 
 # Menu
 #
@@ -591,6 +627,7 @@ def app_menu():
 			if bc.uri == "\n":
 				continue
             
+			bc.uri = bc.uri.replace("\n", "")
 			bc.subscribe = 1
 			status, buddy_id = py_pjsua.buddy_add(bc)
 			if status != 0:
@@ -713,19 +750,7 @@ def app_menu():
 			elif choice[1] == "u":
 				py_pjsua.acc_set_registration(g_acc_id, 0)
 		elif choice[0] == "d":
-			
-			write_log(3, "Start dumping application states : ")
-			write_log(3, "Dumping invite sessions : ")
-
-			if py_pjsua.call_get_count() == 0:
-				write_log(3, "  - no sessions -")
-			else:
-				for i in range(0, g_ua_cfg.max_calls):
-					if py_pjsua.call_is_active(i):
-						buf = py_pjsua.call_dump(i, 1, 1024, "  ")
-						write_log(3, buf)	
-			py_pjsua.pres_dump(1)
-			write_log(3, "Dump complete")
+			py_pjsua.dump(choice[1] == "d")
 		elif choice[0] == "a":
 			if g_current_call != py_pjsua.PJSUA_INVALID_ID:				
 				
