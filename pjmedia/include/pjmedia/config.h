@@ -75,10 +75,14 @@
 /**
  * Specify number of sound buffers. Larger number is better for sound
  * stability and to accomodate sound devices that are unable to send frames
- * in timely manner, however it would take more memory. One individual
- * buffer is about 10 or 20 ms long.
+ * in timely manner, however it would probably cause more audio delay (and 
+ * definitely will take more memory). One individual buffer is normally 10ms
+ * or 20 ms long, depending on ptime settings (samples_per_frame value).
  *
- * Default: 32
+ * The setting here currently is used by the conference bridge, the splitter
+ * combiner port, and dsound.c.
+ *
+ * Default: 16
  */
 #ifndef PJMEDIA_SOUND_BUFFER_COUNT
 #   define PJMEDIA_SOUND_BUFFER_COUNT	    16
