@@ -356,9 +356,13 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     if (mod_inv.cb.on_tsx_state_changed && inv->notify)
 	(*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
 
-    /* Clear invite transaction when tsx is terminated. */
-    if (tsx->state==PJSIP_TSX_STATE_TERMINATED && tsx == inv->invite_tsx)
-	inv->invite_tsx = NULL;
+    /* Clear invite transaction when tsx is confirmed.
+     * Previously we set invite_tsx to NULL only when transaction has
+     * terminated, but this didn't work when ACK has the same Via branch
+     * value as the INVITE (see http://www.pjsip.org/trac/ticket/113)
+     */
+    if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx)
+        inv->invite_tsx = NULL;
 }
 
 
@@ -2375,10 +2379,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	    /* Check if we have INVITE pending. */
 	    if (inv->invite_tsx && inv->invite_tsx!=tsx) {
+		pj_str_t reason;
+
+		reason = pj_str("Another INVITE transaction in progress");
 
 		/* Can not receive re-INVITE while another one is pending. */
-		status = pjsip_dlg_create_response( inv->dlg, rdata, 500, NULL,
-						    &tdata);
+		status = pjsip_dlg_create_response( inv->dlg, rdata, 500, 
+						    &reason, &tdata);
 		if (status != PJ_SUCCESS)
 		    return;
 
