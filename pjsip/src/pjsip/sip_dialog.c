@@ -1518,11 +1518,26 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
     /* When we receive response that establishes dialog, update To tag, 
      * route set and dialog target.
-     */
-    if (dlg->state == PJSIP_DIALOG_STATE_NULL && 
-	pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
-	(res_code > 100 && res_code < 300) &&
-	rdata->msg_info.to->tag.slen)
+     * 
+     * The second condition of the "if" is a workaround for forking. 
+     * Originally, the dialog takes the first To tag seen and set it as 
+     * the remote tag. If the tag in 2xx response is different than this 
+     * tag, ACK will be sent with wrong To tag and incoming request with 
+     * this tag will be rejected with 481. 
+     * 
+     * The workaround for this is to take the To tag received in the 
+     * 2xx response and set it as remote tag. 
+     */ 
+    if ((dlg->state == PJSIP_DIALOG_STATE_NULL &&  
+         pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) && 
+ 	 (res_code > 100 && res_code < 300) && 
+ 	 rdata->msg_info.to->tag.slen)  
+ 	|| 
+ 	(dlg->role==PJSIP_ROLE_UAC && 
+ 	 !dlg->uac_has_2xx && 
+ 	 res_code/100 == 2 && 
+ 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) && 
+ 	 pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
     {
 	pjsip_hdr *hdr, *end_hdr;
 	pjsip_contact_hdr *contact;
@@ -1563,6 +1578,16 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	}
 
 	dlg->state = PJSIP_DIALOG_STATE_ESTABLISHED;
+
+ 
+ 	/* Prevent dialog from being updated just in case more 2xx 
+ 	 * gets through this dialog (it shouldn't happen). 
+ 	 */ 
+ 	if (dlg->role==PJSIP_ROLE_UAC && !dlg->uac_has_2xx &&  
+ 	    res_code/100==2)  
+ 	{ 
+ 	    dlg->uac_has_2xx = PJ_TRUE; 
+ 	} 
     }
 
     /* Update remote target (again) when receiving 2xx response messages
