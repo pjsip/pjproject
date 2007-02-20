@@ -27,7 +27,7 @@ PJ_DEF(void) pj_array_insert( void *array,
 			      unsigned pos,
 			      const void *value)
 {
-    if (count && pos < count-1) {
+    if (count && pos < count) {
 	pj_memmove( (char*)array + (pos+1)*elem_size,
 		    (char*)array + pos*elem_size,
 		    (count-pos)*elem_size);

@@ -42,7 +42,7 @@ PJ_BEGIN_DECL
  *
  * @param array	    the array.
  * @param elem_size the size of the individual element.
- * @param count	    the current number of elements in the array.
+ * @param count	    the CURRENT number of elements in the array.
  * @param pos	    the position where the new element is put.
  * @param value	    the value to copy to the new element.
  */
