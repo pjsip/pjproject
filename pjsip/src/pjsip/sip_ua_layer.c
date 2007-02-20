@@ -805,24 +805,17 @@ retry_on_deadlock:
 	    /* Report to application about forked condition.
 	     * Application can either create a dialog or ignore the response.
 	     */
-	    if (mod_ua.param.on_dlg_forked)
+	    if (mod_ua.param.on_dlg_forked) {
 		dlg = (*mod_ua.param.on_dlg_forked)(dlg_set->dlg_list.next, 
 						    rdata);
-	    else
-		dlg = NULL;
-
-	    /* Ignore this response if application doesn't want to
-	     * create a dialog.
-	     */
-	    if (dlg == NULL) {
-		pj_mutex_unlock(mod_ua.mutex);
+	    } else {
+		dlg = dlg_set->dlg_list.next;
 
 		PJ_LOG(4,(THIS_FILE, 
-			  "Unhandled forked %s from %s:%d",
+			  "Unhandled forked %s from %s:%d, response will be "
+			  "handed over to the first dialog",
 			  pjsip_rx_data_get_info(rdata),
 			  rdata->pkt_info.src_name, rdata->pkt_info.src_port));
-
-		return PJ_TRUE;
 	    }
 
 	} else if (dlg == (pjsip_dialog*)&dlg_set->dlg_list) {
