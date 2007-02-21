@@ -191,14 +191,25 @@
  */
 
 /**
- * Maximum number of attributes in the STUN packet.
+ * Maximum number of attributes in the STUN packet (for the old STUN
+ * library).
+ *
+ * Default: 16
+ */
+#ifndef PJSTUN_MAX_ATTR
+#   define PJSTUN_MAX_ATTR			    16
+#endif
+
+
+/**
+ * Maximum number of attributes in the STUN packet (for the new STUN
+ * library).
  *
  * Default: 16
  */
 #ifndef PJ_STUN_MAX_ATTR
 #   define PJ_STUN_MAX_ATTR			    16
 #endif
-
 
 /**
  * @}

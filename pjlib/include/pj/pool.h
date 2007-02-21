@@ -441,6 +441,8 @@ PJ_IDECL(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool );
  * @param size	    the requested size.
  *
  * @return pointer to the allocated memory.
+ *
+ * @see PJ_POOL_ALLOC_TYPE
  */
 PJ_IDECL(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size);
 
@@ -460,15 +462,49 @@ PJ_IDECL(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count,
 
 
 /**
- * @def pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  * Allocate storage from the pool and initialize it to zero.
  *
  * @param pool	    The pool.
  * @param size	    The size to be allocated.
  *
  * @return	    Pointer to the allocated memory.
+ *
+ * @see PJ_POOL_ZALLOC_TYPE
  */
-#define pj_pool_zalloc(pool, size)  pj_pool_calloc(pool, 1, size)
+PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
+{
+    return pj_pool_calloc(pool, 1, size);
+}
+
+
+/**
+ * This macro allocates memory from the pool and returns the instance of
+ * the specified type. It provides a stricker type safety than pj_pool_alloc()
+ * since the return value of this macro will be type-casted to the specified
+ * type.
+ *
+ * @param pool	    The pool
+ * @param type	    The type of object to be allocated
+ *
+ * @return	    Memory buffer of the specified type.
+ */
+#define PJ_POOL_ALLOC_TYPE(pool,type) \
+	    ((type*)pj_pool_alloc(pool, sizeof(type)))
+
+/**
+ * This macro allocates memory from the pool, zeroes the buffer, and 
+ * returns the instance of the specified type. It provides a stricker type 
+ * safety than pj_pool_zalloc() since the return value of this macro will be 
+ * type-casted to the specified type.
+ *
+ * @param pool	    The pool
+ * @param type	    The type of object to be allocated
+ *
+ * @return	    Memory buffer of the specified type.
+ */
+#define PJ_POOL_ZALLOC_TYPE(pool,type) \
+	    ((type*)pj_pool_zalloc(pool, sizeof(type)))
+
 
 
 /**

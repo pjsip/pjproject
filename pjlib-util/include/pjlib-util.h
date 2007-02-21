@@ -30,9 +30,16 @@
 #include <pjlib-util/md5.h>
 #include <pjlib-util/resolver.h>
 #include <pjlib-util/scanner.h>
-#include <pjlib-util/stun.h>
 #include <pjlib-util/xml.h>
 
+/* New STUN */
+#include <pjlib-util/stun_endpoint.h>
+#include <pjlib-util/stun_msg.h>
+#include <pjlib-util/stun_server.h>
+#include <pjlib-util/stun_transaction.h>
+
+/* Old STUN */
+#include <pjlib-util/stun_simple.h>
 
 /**
  * @addtogroup PJLIB_UTIL

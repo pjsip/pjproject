@@ -399,48 +399,12 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjlib-util\stun.c"
+				RelativePath="..\src\pjlib-util\stun_simple.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjlib-util\stun_client.c"
+				RelativePath="..\src\pjlib-util\stun_simple_client.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\symbols.c"
@@ -536,7 +500,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjlib-util\stun.h"
+				RelativePath="..\include\pjlib-util\stun_simple.h"
 				>
 			</File>
 			<File

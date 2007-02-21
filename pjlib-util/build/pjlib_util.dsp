@@ -129,11 +129,27 @@ SOURCE="..\src\pjlib-util\string.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjlib-util\stun.c"
+SOURCE="..\src\pjlib-util\stun_endpoint.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\pjlib-util\stun_client.c"
+SOURCE="..\src\pjlib-util\stun_msg.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\stun_server.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\stun_simple.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\stun_simple_client.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\stun_transaction.c"
 # End Source File
 # Begin Source File
 
@@ -193,7 +209,27 @@ SOURCE="..\include\pjlib-util\string.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\include\pjlib-util\stun.h"
+SOURCE="..\include\pjlib-util\stun_doc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_endpoint.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_msg.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_server.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_simple.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_transaction.h"
 # End Source File
 # Begin Source File
 

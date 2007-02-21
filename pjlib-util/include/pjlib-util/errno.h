@@ -50,12 +50,12 @@
 #define PJLIB_UTIL_ESTUNINMSGTYPE   (PJLIB_UTIL_ERRNO_START+2)	/* 320002 */
 /**
  * @hideinitializer
- * Invalid STUN message length.
+ * Invalid STUN message length
  */
 #define PJLIB_UTIL_ESTUNINMSGLEN    (PJLIB_UTIL_ERRNO_START+3)	/* 320003 */
 /**
  * @hideinitializer
- * STUN attribute length error.
+ * Invalid STUN attribute length
  */
 #define PJLIB_UTIL_ESTUNINATTRLEN   (PJLIB_UTIL_ERRNO_START+4)	/* 320004 */
 /**
@@ -243,6 +243,57 @@
  * This corresponds to DNS RCODE 10.
  */
 #define PJLIB_UTIL_EDNS_NOTZONE	    PJ_STATUS_FROM_DNS_RCODE(10)/* 320060 */
+
+
+/************************************************************
+ * NEW STUN ERROR
+ ***********************************************************/
+/* Messaging errors */
+/**
+ * @hideinitializer
+ * Invalid STUN attribute
+ */
+#define PJLIB_UTIL_ESTUNINATTR	    (PJLIB_UTIL_ERRNO_START+110)/* 320110 */
+/**
+ * @hideinitializer
+ * Too many STUN attributes.
+ */
+#define PJLIB_UTIL_ESTUNTOOMANYATTR (PJLIB_UTIL_ERRNO_START+111)/* 320111 */
+/**
+ * @hideinitializer
+ * Unknown STUN attribute.
+ */
+#define PJLIB_UTIL_ESTUNUNKNOWNATTR (PJLIB_UTIL_ERRNO_START+112)/* 320112 */
+/**
+ * @hideinitializer
+ * Invalid socket address length.
+ */
+#define PJLIB_UTIL_ESTUNINADDRLEN   (PJLIB_UTIL_ERRNO_START+113)/* 320113 */
+/**
+ * @hideinitializer
+ * IPv6 attribute not supported
+ */
+#define PJLIB_UTIL_ESTUNIPV6NOTSUPP (PJLIB_UTIL_ERRNO_START+113)/* 320113 */
+/**
+ * @hideinitializer
+ * Expecting STUN response message.
+ */
+#define PJLIB_UTIL_ESTUNNOTRESPONSE (PJLIB_UTIL_ERRNO_START+114)/* 320114 */
+/**
+ * @hideinitializer
+ * Transaction ID mismatch.
+ */
+#define PJLIB_UTIL_ESTUNINVALIDID   (PJLIB_UTIL_ERRNO_START+115)/* 320115 */
+/**
+ * @hideinitializer
+ * Unable to find handler for the request.
+ */
+#define PJLIB_UTIL_ESTUNNOHANDLER   (PJLIB_UTIL_ERRNO_START+116)/* 320116 */
+
+
+#define PJ_STATUS_FROM_STUN_CODE(code)	-1
+
+
 
 
 /**

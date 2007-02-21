@@ -870,7 +870,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	/*
 	 * STUN is specified, resolve the address with STUN.
 	 */
-	status = pj_stun_get_mapped_addr(&pjsua_var.cp.factory, 1, &sock,
+	status = pjstun_get_mapped_addr(&pjsua_var.cp.factory, 1, &sock,
 				         &stun.stun_srv1, 
 					  stun.stun_port1,
 					 &stun.stun_srv2, 

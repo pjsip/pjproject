@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2006 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun.h>
+#include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -32,7 +32,7 @@ static int stun_timer[] = {1600, 1600, 1600 };
 #define LOG_ADDR(addr)	pj_inet_ntoa(addr.sin_addr), pj_ntohs(addr.sin_port)
 
 
-PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
+PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 					      int sock_cnt, pj_sock_t sock[],
 					      const pj_str_t *srv1, int port1,
 					      const pj_str_t *srv2, int port2,
@@ -69,7 +69,7 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 
 
     /* Create the outgoing BIND REQUEST message template */
-    status = pj_stun_create_bind_req( pool, &out_msg, &out_msg_len, 
+    status = pjstun_create_bind_req( pool, &out_msg, &out_msg_len, 
 				      pj_rand(), pj_rand());
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -97,7 +97,7 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 	/* Send messages to servers that has not given us response. */
 	for (i=0; i<sock_cnt && status==PJ_SUCCESS; ++i) {
 	    for (j=0; j<2 && status==PJ_SUCCESS; ++j) {
-		pj_stun_msg_hdr *msg_hdr = out_msg;
+		pjstun_msg_hdr *msg_hdr = out_msg;
                 pj_ssize_t sent_len;
 
 		if (rec[i].srv[j].mapped_port != 0)
@@ -150,10 +150,10 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 	    for (i=0; i<sock_cnt; ++i) {
 		int sock_idx, srv_idx;
                 pj_ssize_t len;
-		pj_stun_msg msg;
+		pjstun_msg msg;
 		pj_sockaddr_in addr;
 		int addrlen = sizeof(addr);
-		pj_stun_mapped_addr_attr *attr;
+		pjstun_mapped_addr_attr *attr;
 		char recv_buf[128];
 
 		if (!PJ_FD_ISSET(sock[i], &r))
@@ -170,7 +170,7 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 		if (status != PJ_SUCCESS)
 		    continue;
 
-		status = pj_stun_parse_msg(recv_buf, len, &msg);
+		status = pjstun_parse_msg(recv_buf, len, &msg);
 		if (status != PJ_SUCCESS) {
 		    continue;
 		}
@@ -184,17 +184,17 @@ PJ_DECL(pj_status_t) pj_stun_get_mapped_addr( pj_pool_factory *pf,
 		    continue;
 		}
 
-		if (pj_ntohs(msg.hdr->type) != PJ_STUN_BINDING_RESPONSE) {
+		if (pj_ntohs(msg.hdr->type) != PJSTUN_BINDING_RESPONSE) {
 		    status = PJLIB_UTIL_ESTUNNOBINDRES;
 		    continue;
 		}
 
-		if (pj_stun_msg_find_attr(&msg, PJ_STUN_ATTR_ERROR_CODE) != NULL) {
+		if (pjstun_msg_find_attr(&msg, PJSTUN_ATTR_ERROR_CODE) != NULL) {
 		    status = PJLIB_UTIL_ESTUNRECVERRATTR;
 		    continue;
 		}
 
-		attr = (void*)pj_stun_msg_find_attr(&msg, PJ_STUN_ATTR_MAPPED_ADDR);
+		attr = (void*)pjstun_msg_find_attr(&msg, PJSTUN_ATTR_MAPPED_ADDR);
 		if (!attr) {
 		    status = PJLIB_UTIL_ESTUNNOMAP;
 		    continue;

@@ -272,7 +272,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	 * and make sure that the mapped RTCP port is adjacent with the RTP.
 	 */
 	if (cfg->stun_config.stun_srv1.slen) {
-	    status=pj_stun_get_mapped_addr(&pjsua_var.cp.factory, 2, sock,
+	    status=pjstun_get_mapped_addr(&pjsua_var.cp.factory, 2, sock,
 					   &cfg->stun_config.stun_srv1, 
 					   cfg->stun_config.stun_port1,
 					   &cfg->stun_config.stun_srv2, 
