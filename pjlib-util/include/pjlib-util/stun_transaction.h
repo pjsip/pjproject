@@ -73,7 +73,7 @@ typedef struct pj_stun_tsx_cb
      */
     void	(*on_complete)(pj_stun_client_tsx *tsx,
 			       pj_status_t status, 
-			       pj_stun_msg *response);
+			       const pj_stun_msg *response);
 
     /**
      * This callback is called by the STUN transaction when it wants to send
@@ -121,6 +121,16 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_endpoint *endpt,
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
+
+
+/**
+ * Check if transaction has completed.
+ *
+ * @param tsx		The STUN transaction.
+ *
+ * @return		Non-zero if transaction has completed.
+ */
+PJ_DECL(pj_bool_t) pj_stun_client_tsx_is_complete(pj_stun_client_tsx *tsx);
 
 
 /**
@@ -186,11 +196,33 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
+PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_pkt(pj_stun_client_tsx *tsx,
 						  const void *packet,
 						  pj_size_t pkt_size,
 						  unsigned *parsed_len);
 
+
+/**
+ * Notify the STUN transaction about the arrival of STUN response.
+ * If the STUN response contains a final error (300 and greater), the
+ * transaction will be terminated and callback will be called. If the
+ * STUN response contains response code 100-299, retransmission
+ * will  cease, but application must still call this function again
+ * with a final response later to allow the transaction to complete.
+ *
+ * @param tsx		The STUN client transaction instance.
+ * @param packet	The incoming packet.
+ * @param pkt_size	Size of the incoming packet.
+ * @param parsed_len	Optional pointer to receive the number of bytes
+ *			that have been parsed from the incoming packet
+ *			for the STUN message. This is useful if the
+ *			STUN transaction is running over stream oriented
+ *			socket such as TCP or TLS.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
+						  const pj_stun_msg *msg);
 
 
 /**

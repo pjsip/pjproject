@@ -137,6 +137,10 @@ SOURCE="..\src\pjlib-util\stun_msg.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\stun_msg_dump.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\stun_server.c"
 # End Source File
 # Begin Source File

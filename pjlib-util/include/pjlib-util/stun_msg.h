@@ -1190,11 +1190,28 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 
 
 /**
+ * Dump STUN message to a printable string output.
+ *
+ * @param msg		The STUN message
+ * @param buffer	Buffer where the printable string output will
+ *			be printed on.
+ * @param length	On input, specify the maximum length of the buffer.
+ *			On output, it will be filled up with the actual
+ *			length of the output string.
+ *
+ * @return		The message string output.
+ */
+PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
+			        char *buffer,
+			        unsigned *length);
+
+
+/**
  * Find STUN attribute in the STUN message, starting from the specified
  * index.
  *
  * @param msg		The STUN message.
- * @param attr_type	The attribute type to be found.
+ * @param attr_type	The attribute type to be found, from pj_stun_attr_type.
  * @param start_index	The start index of the attribute in the message.
  *			Specify zero to start searching from the first
  *			attribute.
@@ -1212,7 +1229,7 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
  * the port and ip_addr parameters are in host byte order.
  *
  * @param pool		The pool to allocate memory from.
- * @param attr_type	Attribute type.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
  * @param xor_ed	If non-zero, the port and address will be XOR-ed
  *			with magic, to make the XOR-MAPPED-ADDRESS attribute.
  * @param addr_len	Length of \a addr parameter.
@@ -1234,6 +1251,7 @@ pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
  * Create a STUN generic string attribute.
  *
  * @param pool		The pool to allocate memory from.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
  * @param value		The string value to be assigned to the attribute.
  * @param p_attr	Pointer to receive the attribute.
  *
@@ -1315,7 +1333,7 @@ pj_stun_unknown_attr_create(pj_pool_t *pool,
  * Create a blank binary attribute.
  *
  * @param pool		The pool to allocate memory from.
- * @param attr_type	The attribute type.
+ * @param attr_type	The attribute type, from #pj_stun_attr_type.
  * @param p_attr	Pointer to receive the attribute.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.

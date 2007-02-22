@@ -252,28 +252,15 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 }
 
 
+
 /*
  * Notify the STUN transaction about the arrival of STUN response.
  */
 PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
-						 const void *packet,
-						 pj_size_t pkt_size,
-						 unsigned *parsed_len)
+						 const pj_stun_msg *msg)
 {
-    pj_stun_msg *msg;
     pj_stun_error_code_attr *err_attr;
     pj_status_t status;
-
-    PJ_ASSERT_RETURN(tsx && packet && pkt_size, PJ_EINVAL);
-
-    /* Try to parse the message */
-    status = pj_stun_msg_decode(tsx->pool, (const pj_uint8_t*)packet,
-			        pkt_size, 0, &msg, parsed_len,
-				NULL, NULL, NULL);
-    if (status != PJ_SUCCESS) {
-	stun_perror(tsx, "STUN msg_decode() error", status);
-	return status;
-    }
 
     /* Must be STUN response message */
     if (!PJ_STUN_IS_RESPONSE(msg->hdr.type) && 
@@ -329,5 +316,32 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     }
 
     return PJ_SUCCESS;
+
+}
+
+
+/*
+ * Notify the STUN transaction about the arrival of STUN response.
+ */
+PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_pkt(pj_stun_client_tsx *tsx,
+						 const void *packet,
+						 pj_size_t pkt_size,
+						 unsigned *parsed_len)
+{
+    pj_stun_msg *msg;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(tsx && packet && pkt_size, PJ_EINVAL);
+
+    /* Try to parse the message */
+    status = pj_stun_msg_decode(tsx->pool, (const pj_uint8_t*)packet,
+			        pkt_size, 0, &msg, parsed_len,
+				NULL, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+	stun_perror(tsx, "STUN msg_decode() error", status);
+	return status;
+    }
+
+    return pj_stun_client_tsx_on_rx_msg(tsx, msg);
 }
 

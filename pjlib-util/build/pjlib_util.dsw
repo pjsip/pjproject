@@ -57,6 +57,24 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjstun_client"=".\pjstun_client.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "pjstun_srv"=".\pjstun_srv.dsp" - Package Owner=<4>
 
 Package=<5>
