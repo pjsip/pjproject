@@ -2284,11 +2284,31 @@ void console_app_main(const pj_str_t *uri_to_call)
 		continue;
 
 	    } else {
+		int st_code;
+		char contact[120];
+		pj_str_t hname = { "Contact", 7 };
+		pj_str_t hvalue;
+		pjsip_generic_string_hdr hcontact;
+		pjsua_msg_data msg_data;
+
 		if (!simple_input("Answer with code (100-699)", buf, sizeof(buf)))
 		    continue;
 		
-		if (my_atoi(buf) < 100)
+		st_code = my_atoi(buf);
+		if (st_code < 100)
 		    continue;
+
+		pjsua_msg_data_init(&msg_data);
+
+		if (st_code/100 == 3) {
+		    if (!simple_input("Enter URL to be put in Contact", 
+				      contact, sizeof(contact)))
+			continue;
+		    hvalue = pj_str(contact);
+		    pjsip_generic_string_hdr_init2(&hcontact, &hname, &hvalue);
+
+		    pj_list_push_back(&msg_data.hdr_list, &hcontact);
+		}
 
 		/*
 		 * Must check again!
@@ -2301,7 +2321,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    continue;
 		}
 
-		pjsua_call_answer(current_call, my_atoi(buf), NULL, NULL);
+		pjsua_call_answer(current_call, st_code, NULL, &msg_data);
 	    }
 
 	    break;

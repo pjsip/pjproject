@@ -1150,6 +1150,7 @@ on_error:
 
 /* Add standard headers for certain types of response */
 static void dlg_beautify_response(pjsip_dialog *dlg,
+				  pj_bool_t add_headers,
 				  int st_code,
 				  pjsip_tx_data *tdata)
 {
@@ -1164,13 +1165,17 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
     st_class = st_code / 100;
 
     /* Contact, Allow, Supported header. */
-    if (pjsip_method_creates_dialog(&cseq->method)) {
+    if (add_headers && pjsip_method_creates_dialog(&cseq->method)) {
 	/* Add Contact header for 1xx, 2xx, 3xx and 485 response. */
 	if (st_class==2 || st_class==3 || (st_class==1 && st_code != 100) ||
 	    st_code==485) 
 	{
+	    pj_str_t hcontact = { "Contact", 7 };
+
 	    /* Add contact header only if one is not present. */
-	    if (pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL) == 0) {
+	    if (pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL) == 0 &&
+		pjsip_msg_find_hdr_by_name(tdata->msg, &hcontact, NULL) == 0) 
+	    {
 		hdr = pjsip_hdr_clone(tdata->pool, dlg->local.contact);
 		pjsip_msg_add_hdr(tdata->msg, hdr);
 	    }
@@ -1241,7 +1246,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
     /* Lock the dialog. */
     pjsip_dlg_inc_lock(dlg);
 
-    dlg_beautify_response(dlg, st_code, tdata);
+    dlg_beautify_response(dlg, PJ_FALSE, st_code, tdata);
 
     /* Unlock the dialog. */
     pjsip_dlg_dec_lock(dlg);
@@ -1259,7 +1264,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 						int st_code,
 						const pj_str_t *st_text)
 {
-    
+    pjsip_hdr *hdr;
+
     PJ_ASSERT_RETURN(dlg && tdata && tdata->msg, PJ_EINVAL);
     PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_RESPONSE_MSG,
 		     PJSIP_ENOTRESPONSEMSG);
@@ -1276,7 +1282,15 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 	tdata->msg->line.status.reason = *pjsip_get_status_text(st_code);
     }
 
-    dlg_beautify_response(dlg, st_code, tdata);
+    /* Remove existing Contact header (without this, when dialog sent 
+     * 180 and then 302, the Contact in 302 will not get updated).
+     */
+    hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL);
+    if (hdr)
+	pj_list_erase(hdr);
+
+    /* Add tag etc. if necessary */
+    dlg_beautify_response(dlg, PJ_FALSE, st_code, tdata);
 
 
     /* Must add reference counter, since tsx_send_msg() will decrement it */
@@ -1324,6 +1338,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
 
     /* Must acquire dialog first, to prevent deadlock */
     pjsip_dlg_inc_lock(dlg);
+
+    /* Last chance to add mandatory headers before the response is
+     * sent.
+     */
+    dlg_beautify_response(dlg, PJ_TRUE, tdata->msg->line.status.code, tdata);
 
     /* If the dialog is locked to transport, make sure that transaction
      * is locked to the same transport too.
