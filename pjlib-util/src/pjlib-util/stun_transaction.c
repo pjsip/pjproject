@@ -31,19 +31,18 @@
 struct pj_stun_client_tsx
 {
     char		 obj_name[PJ_MAX_OBJ_NAME];
-    pj_pool_t		*pool;
     pj_stun_endpoint	*endpt;
     pj_stun_tsx_cb	 cb;
     void		*user_data;
 
-    pj_uint32_t		 tsx_id[4];
-
+    pj_bool_t		 complete;
+    \
     pj_bool_t		 require_retransmit;
     pj_timer_entry	 timer;
     unsigned		 transmit_count;
     pj_time_val		 retransmit_time;
 
-    pj_uint8_t		 last_pkt[PJ_STUN_MAX_PKT_LEN];
+    void		*last_pkt;
     unsigned		 last_pkt_size;
 };
 
@@ -65,25 +64,23 @@ static void stun_perror(pj_stun_client_tsx *tsx, const char *title,
  * Create a STUN client transaction.
  */
 PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_endpoint *endpt,
+					      pj_pool_t *pool,
 					      const pj_stun_tsx_cb *cb,
 					      pj_stun_client_tsx **p_tsx)
 {
-    pj_pool_t *pool;
     pj_stun_client_tsx *tsx;
 
     PJ_ASSERT_RETURN(endpt && cb && p_tsx, PJ_EINVAL);
     PJ_ASSERT_RETURN(cb->on_send_msg, PJ_EINVAL);
 
-    pool = pj_pool_create(endpt->pf, "tsx", 1000, 1000, NULL);
     tsx = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_client_tsx);
-    tsx->pool = pool;
     tsx->endpt = endpt;
     pj_memcpy(&tsx->cb, cb, sizeof(*cb));
 
     tsx->timer.cb = &retransmit_timer_callback;
     tsx->timer.user_data = tsx;
 
-    pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), "stuntsx%p", pool);
+    pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), "stuntsx%p", tsx);
 
     *p_tsx = tsx;
 
@@ -103,8 +100,17 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx)
 	pj_timer_heap_cancel(tsx->endpt->timer_heap, &tsx->timer);
 	tsx->timer.id = 0;
     }
-    pj_pool_release(tsx->pool);
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Check if transaction has completed.
+ */
+PJ_DEF(pj_bool_t) pj_stun_client_tsx_is_complete(pj_stun_client_tsx *tsx)
+{
+    PJ_ASSERT_RETURN(tsx, PJ_FALSE);
+    return tsx->complete;
 }
 
 
@@ -145,13 +151,13 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	    tsx->retransmit_time.sec = 0;
 	    tsx->retransmit_time.msec = tsx->endpt->rto_msec;
 
-	} else if (tsx->transmit_count < PJ_STUN_MAX_RETRANSMIT_COUNT) {
+	} else if (tsx->transmit_count < PJ_STUN_MAX_RETRANSMIT_COUNT-1) {
 	    unsigned msec;
 
 	    msec = PJ_TIME_VAL_MSEC(tsx->retransmit_time);
-	    msec = (msec >> 1) + 100;
+	    msec = (msec << 1) + 100;
 	    tsx->retransmit_time.sec = msec / 1000;
-	    tsx->retransmit_time.msec = msec % 100;
+	    tsx->retransmit_time.msec = msec % 1000;
 
 	} else {
 	    tsx->retransmit_time.sec = PJ_STUN_TIMEOUT_VALUE / 1000;
@@ -161,13 +167,14 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	/* Schedule timer first because when send_msg() failed we can
 	 * cancel it (as opposed to when schedule_timer() failed we cannot
 	 * cancel transmission).
-	 */
+	 */;
 	status = pj_timer_heap_schedule(tsx->endpt->timer_heap, &tsx->timer,
 					&tsx->retransmit_time);
 	if (status != PJ_SUCCESS) {
 	    tsx->timer.id = 0;
 	    return status;
 	}
+	tsx->timer.id = TIMER_ACTIVE;
     }
 
 
@@ -195,24 +202,15 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
  */
 PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						pj_bool_t retransmit,
-						const pj_stun_msg *msg)
+						void *pkt,
+						unsigned pkt_len)
 {
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(tsx && msg, PJ_EINVAL);
-    PJ_ASSERT_RETURN(tsx->timer.id != 0, PJ_EBUSY);
+    PJ_ASSERT_RETURN(tsx && pkt && pkt_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tsx->timer.id == 0, PJ_EBUSY);
 
     /* Encode message */
-    status = pj_stun_msg_encode(msg, tsx->last_pkt, sizeof(tsx->last_pkt), 
-				0, &tsx->last_pkt_size);
-    if (status != PJ_SUCCESS) {
-	stun_perror(tsx, "STUN msg_encode() failed", status);
-	return status;
-    }
-
-    /* Update STUN transaction ID */
-    tsx->tsx_id[0] = msg->hdr.magic;
-    pj_memcpy(&tsx->tsx_id[1], msg->hdr.tsx_id, 12);
+    tsx->last_pkt = pkt;
+    tsx->last_pkt_size = pkt_len;
 
     /* Update STUN retransmit flag */
     tsx->require_retransmit = retransmit;
@@ -235,6 +233,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	/* Retransmission count exceeded. Transaction has failed */
 	tsx->timer.id = 0;
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
+	tsx->complete = PJ_TRUE;
 	if (tsx->cb.on_complete) {
 	    tsx->cb.on_complete(tsx, PJLIB_UTIL_ESTUNNOTRESPOND, NULL);
 	}
@@ -245,6 +244,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
     status = tsx_transmit_msg(tsx);
     if (status != PJ_SUCCESS) {
 	tsx->timer.id = 0;
+	tsx->complete = PJ_TRUE;
 	if (tsx->cb.on_complete) {
 	    tsx->cb.on_complete(tsx, status, NULL);
 	}
@@ -271,12 +271,6 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
 	return PJLIB_UTIL_ESTUNNOTRESPONSE;
     }
 
-    /* Compare response's transaction ID */
-    if (msg->hdr.magic != tsx->tsx_id[0] ||
-	pj_memcmp(msg->hdr.tsx_id, &tsx->tsx_id[1], 12) != 0)
-    {
-	return PJLIB_UTIL_ESTUNINVALIDID;
-    }
 
     /* We have a response with matching transaction ID. 
      * We can cancel retransmit timer now.
@@ -311,37 +305,12 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     }
 
     /* Call callback */
+    tsx->complete = PJ_TRUE;
     if (tsx->cb.on_complete) {
 	tsx->cb.on_complete(tsx, status, msg);
     }
 
     return PJ_SUCCESS;
 
-}
-
-
-/*
- * Notify the STUN transaction about the arrival of STUN response.
- */
-PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_pkt(pj_stun_client_tsx *tsx,
-						 const void *packet,
-						 pj_size_t pkt_size,
-						 unsigned *parsed_len)
-{
-    pj_stun_msg *msg;
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(tsx && packet && pkt_size, PJ_EINVAL);
-
-    /* Try to parse the message */
-    status = pj_stun_msg_decode(tsx->pool, (const pj_uint8_t*)packet,
-			        pkt_size, 0, &msg, parsed_len,
-				NULL, NULL, NULL);
-    if (status != PJ_SUCCESS) {
-	stun_perror(tsx, "STUN msg_decode() error", status);
-	return status;
-    }
-
-    return pj_stun_client_tsx_on_rx_msg(tsx, msg);
 }
 

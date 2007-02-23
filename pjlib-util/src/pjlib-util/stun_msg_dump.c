@@ -32,7 +32,7 @@ static int print_attr(char *buffer, unsigned length,
     char *p = buffer, *end = buffer + length;
     int len;
 
-    len = pj_ansi_snprintf(buffer, end-p,
+    len = pj_ansi_snprintf(p, end-p,
 			   "  %s: length=%d",
 			   pj_stun_get_attr_name(ahdr->type),
 			   (int)ahdr->length);
@@ -58,16 +58,16 @@ static int print_attr(char *buffer, unsigned length,
 	    attr = (const pj_stun_generic_ip_addr_attr*)ahdr;
 
 	    if (attr->addr.addr.sa_family == PJ_AF_INET) {
-		len = pj_ansi_snprintf(buffer, end-p,
+		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv4 addr=%s:%d\n",
 				       pj_inet_ntoa(attr->addr.ipv4.sin_addr),
 				       pj_ntohs(attr->addr.ipv4.sin_port));
 
 	    } else if (attr->addr.addr.sa_family == PJ_AF_INET6) {
-		len = pj_ansi_snprintf(buffer, end-p,
+		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv6 addr present\n");
 	    } else {
-		len = pj_ansi_snprintf(buffer, end-p,
+		len = pj_ansi_snprintf(p, end-p,
 				       ", INVALID ADDRESS FAMILY!\n");
 	    }
 	}
@@ -87,8 +87,8 @@ static int print_attr(char *buffer, unsigned length,
 	    const pj_stun_generic_uint_attr *attr;
 
 	    attr = (const pj_stun_generic_uint_attr*)ahdr;
-	    len = pj_ansi_snprintf(buffer, end-p,
-				   ", value=%d (%x)\n",
+	    len = pj_ansi_snprintf(p, end-p,
+				   ", value=%d (0x%x)\n",
 				   (pj_uint32_t)attr->value,
 				   (pj_uint32_t)attr->value);
 	}
@@ -103,7 +103,7 @@ static int print_attr(char *buffer, unsigned length,
 	    const pj_stun_generic_string_attr *attr;
 
 	    attr = (pj_stun_generic_string_attr*)ahdr;
-	    len = pj_ansi_snprintf(buffer, end-p,
+	    len = pj_ansi_snprintf(p, end-p,
 				   ", value=\"%.*s\"\n",
 				   (int)attr->value.slen,
 				   attr->value.ptr);
@@ -115,7 +115,7 @@ static int print_attr(char *buffer, unsigned length,
 	    const pj_stun_error_code_attr *attr;
 
 	    attr = (const pj_stun_error_code_attr*) ahdr;
-	    len = pj_ansi_snprintf(buffer, end-p,
+	    len = pj_ansi_snprintf(p, end-p,
 				   ", err_code=%d, reason=\"%.*s\"\n",
 				   attr->err_class*100 + attr->number,
 				   (int)attr->reason.slen,
@@ -130,12 +130,12 @@ static int print_attr(char *buffer, unsigned length,
 
 	    attr = (const pj_stun_unknown_attr*) ahdr;
 
-	    len = pj_ansi_snprintf(buffer, end-p,
+	    len = pj_ansi_snprintf(p, end-p,
 				   ", unknown list:");
 	    APPLY();
 
 	    for (j=0; j<attr->attr_count; ++j) {
-		len = pj_ansi_snprintf(buffer, end-p,
+		len = pj_ansi_snprintf(p, end-p,
 				       " %d",
 				       (int)attr->attrs[j]);
 		APPLY();
@@ -147,7 +147,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_DATA:
     case PJ_STUN_ATTR_USE_CANDIDATE:
     default:
-	len = pj_ansi_snprintf(buffer, end-p, "\n");
+	len = pj_ansi_snprintf(p, end-p, "\n");
 
 	break;
     }
@@ -166,7 +166,8 @@ on_return:
  */
 PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 			       char *buffer,
-			       unsigned *length)
+			       unsigned length,
+			       unsigned *printed_len)
 {
     char *p, *end;
     int len;
@@ -175,7 +176,7 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     PJ_ASSERT_RETURN(msg && buffer && length, NULL);
 
     p = buffer;
-    end = buffer + (*length);
+    end = buffer + length;
 
     len = pj_ansi_snprintf(p, end-p, "STUN %s %s\n",
 			   pj_stun_get_method_name(msg->hdr.type),
@@ -183,8 +184,8 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     APPLY();
 
     len = pj_ansi_snprintf(p, end-p, 
-			    " Hdr: length=%d, magic=%x, tsx_id=%x %x %x\n"
-			    " Attributes:\n",
+			   " Hdr: length=%d, magic=%08x, tsx_id=%08x %08x %08x\n"
+			   " Attributes:\n",
 			   msg->hdr.length,
 			   msg->hdr.magic,
 			   *(pj_uint32_t*)&msg->hdr.tsx_id[0],
@@ -199,7 +200,8 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 
 on_return:
     *p = '\0';
-    *length = (p-buffer);
+    if (printed_len)
+	*printed_len = (p-buffer);
     return buffer;
 
 }

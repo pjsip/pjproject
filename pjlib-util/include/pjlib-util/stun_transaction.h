@@ -102,6 +102,7 @@ typedef struct pj_stun_tsx_cb
  *
  * @param endpt		The STUN endpoint, which will be used to retrieve
  *			various settings for the transaction.
+ * @param pool		Pool to be used to allocate memory from.
  * @param cb		Callback structure, to be used by the transaction
  *			to send message and to notify the application about
  *			the completion of the transaction.
@@ -110,6 +111,7 @@ typedef struct pj_stun_tsx_cb
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_endpoint *endpt,
+					        pj_pool_t *pool,
 						const pj_stun_tsx_cb *cb,
 						pj_stun_client_tsx **p_tsx);
 
@@ -168,38 +170,16 @@ PJ_DECL(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx *tsx);
  * @param tsx		The STUN client transaction.
  * @param retransmit	Should this message be retransmitted by the
  *			STUN transaction.
- * @param msg		The STUN message.
+ * @param pkt		The STUN packet to send.
+ * @param pkt_len	Length of STUN packet.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						 pj_bool_t retransmit,
-						 const pj_stun_msg *msg);
+						 void *pkt,
+						 unsigned pkt_len);
 
-
-/**
- * Notify the STUN transaction about the arrival of STUN response.
- * If the STUN response contains a final error (300 and greater), the
- * transaction will be terminated and callback will be called. If the
- * STUN response contains response code 100-299, retransmission
- * will  cease, but application must still call this function again
- * with a final response later to allow the transaction to complete.
- *
- * @param tsx		The STUN client transaction instance.
- * @param packet	The incoming packet.
- * @param pkt_size	Size of the incoming packet.
- * @param parsed_len	Optional pointer to receive the number of bytes
- *			that have been parsed from the incoming packet
- *			for the STUN message. This is useful if the
- *			STUN transaction is running over stream oriented
- *			socket such as TCP or TLS.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_pkt(pj_stun_client_tsx *tsx,
-						  const void *packet,
-						  pj_size_t pkt_size,
-						  unsigned *parsed_len);
 
 
 /**

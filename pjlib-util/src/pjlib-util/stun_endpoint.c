@@ -25,11 +25,11 @@
 /*
  * Create a STUN endpoint instance.
  */
-PJ_DEF(pj_status_t) pj_stun_endpt_create( pj_pool_factory *factory,
-					  unsigned options,
-					  pj_ioqueue_t *ioqueue,
-					  pj_timer_heap_t *timer_heap,
-					  pj_stun_endpoint **p_endpt)
+PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
+					     unsigned options,
+					     pj_ioqueue_t *ioqueue,
+					     pj_timer_heap_t *timer_heap,
+					     pj_stun_endpoint **p_endpt)
 {
     pj_pool_t *pool;
     pj_stun_endpoint *endpt;
@@ -57,7 +57,7 @@ PJ_DEF(pj_status_t) pj_stun_endpt_create( pj_pool_factory *factory,
 /*
  * Destroy STUN endpoint instance.
  */
-PJ_DEF(pj_status_t) pj_stun_endpt_destroy(pj_stun_endpoint *endpt)
+PJ_DEF(pj_status_t) pj_stun_endpoint_destroy(pj_stun_endpoint *endpt)
 {
     PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
 

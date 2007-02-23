@@ -152,7 +152,10 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 
     pj_assert(buf && bufsize);
 
-    if (statcode < PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE) {
+    if (statcode == PJ_SUCCESS) {
+	len = pj_ansi_snprintf( buf, bufsize, "Success");
+
+    } else if (statcode < PJ_ERRNO_START + PJ_ERRNO_SPACE_SIZE) {
         len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
 
     } else if (statcode < PJ_ERRNO_START_STATUS + PJ_ERRNO_SPACE_SIZE) {

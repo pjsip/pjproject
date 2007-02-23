@@ -1332,8 +1332,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const void *pdu, unsigned pdu_len,
 {
     pj_stun_msg_hdr *hdr;
 
-    PJ_ASSERT_RETURN(pdu && pdu_len > sizeof(pj_stun_msg_hdr), 
-		     PJLIB_UTIL_ESTUNINMSGLEN);
+    PJ_ASSERT_RETURN(pdu, PJ_EINVAL);
+
+    if (pdu_len < sizeof(pj_stun_msg_hdr))
+	return PJLIB_UTIL_ESTUNINMSGLEN;
 
     PJ_UNUSED_ARG(options);
 

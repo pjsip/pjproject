@@ -1195,15 +1195,16 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
  * @param msg		The STUN message
  * @param buffer	Buffer where the printable string output will
  *			be printed on.
- * @param length	On input, specify the maximum length of the buffer.
- *			On output, it will be filled up with the actual
- *			length of the output string.
+ * @param length	Specify the maximum length of the buffer.
+ * @param printed_len	Optional pointer, which on output will be filled
+ *			up with the actual length of the output string.
  *
  * @return		The message string output.
  */
 PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 			        char *buffer,
-			        unsigned *length);
+			        unsigned length,
+				unsigned *printed_len);
 
 
 /**

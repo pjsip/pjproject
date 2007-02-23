@@ -100,6 +100,13 @@ static pj_status_t send_msg(struct service *svc, const pj_stun_msg *msg)
     pj_ssize_t length;
     pj_status_t status;
 
+    /* Print to log */
+    PJ_LOG(4,(THIS_FILE, "TX STUN message: \n"
+			 "--- begin STUN message ---\n"
+			 "%s"
+			 "--- end of STUN message ---\n", 
+	      pj_stun_msg_dump(msg, svc->tx_pkt, sizeof(svc->tx_pkt), NULL)));
+
     /* Encode packet */
     tx_pkt_len = sizeof(svc->tx_pkt);
     status = pj_stun_msg_encode(msg, svc->tx_pkt, tx_pkt_len, 0,
@@ -220,6 +227,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     unsigned err_code;
     unsigned uattr_cnt;
     pj_uint16_t uattr_types[16];
+    char dump[512];
     pj_status_t status;
 
     if (bytes_read <= 0)
@@ -241,9 +249,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	goto next_read;
     }
 
-    PJ_LOG(4,(THIS_FILE, "RX STUN %s %s message", 
-	      pj_stun_get_method_name(rx_msg->hdr.type),
-	      pj_stun_get_class_name(rx_msg->hdr.type)));
+    PJ_LOG(4,(THIS_FILE, "RX STUN message: \n"
+			 "--- begin STUN message ---\n"
+			 "%s"
+			 "--- end of STUN message ---\n", 
+	      pj_stun_msg_dump(rx_msg, dump, sizeof(dump), NULL)));
 
     if (PJ_STUN_IS_REQUEST(rx_msg->hdr.type)) {
 	switch (rx_msg->hdr.type) {

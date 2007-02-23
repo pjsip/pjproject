@@ -61,16 +61,16 @@ typedef struct pj_stun_endpoint
 /**
  * Create a STUN endpoint instance.
  */
-PJ_DECL(pj_status_t) pj_stun_endpt_create(pj_pool_factory *factory,
-					  unsigned options,
-					  pj_ioqueue_t *ioqueue,
-					  pj_timer_heap_t *timer_heap,
-					  pj_stun_endpoint **p_endpt);
+PJ_DECL(pj_status_t) pj_stun_endpoint_create(pj_pool_factory *factory,
+					     unsigned options,
+					     pj_ioqueue_t *ioqueue,
+					     pj_timer_heap_t *timer_heap,
+					     pj_stun_endpoint **p_endpt);
 
 /**
  * Destroy STUN endpoint instance.
  */
-PJ_DECL(pj_status_t) pj_stun_endpt_destroy(pj_stun_endpoint *endpt);
+PJ_DECL(pj_status_t) pj_stun_endpoint_destroy(pj_stun_endpoint *endpt);
 
 
 /**
