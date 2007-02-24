@@ -622,6 +622,9 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 
     /* Create PUBLISH request */
     if (active) {
+	char *bpos;
+	pj_str_t entity;
+
 	status = pjsip_publishc_publish(acc->publish_sess, PJ_TRUE, &tdata);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating PUBLISH request", status);
@@ -633,9 +636,25 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 	pres_status.info_cnt = 1;
 	pres_status.info[0].basic_open = acc->online_status;
 
+	/* Be careful not to send PIDF with presence entity ID containing
+	 * "<" character.
+	 */
+	if ((bpos=pj_strchr(&acc_cfg->id, '<')) != NULL) {
+	    char *epos = pj_strchr(&acc_cfg->id, '>');
+	    if (epos - bpos < 2) {
+		pj_assert(!"Unexpected invalid URI");
+		status = PJSIP_EINVALIDURI;
+		goto on_error;
+	    }
+	    entity.ptr = bpos+1;
+	    entity.slen = epos - bpos - 1;
+	} else {
+	    entity = acc_cfg->id;
+	}
+
 	/* Create and add PIDF message body */
 	status = pjsip_pres_create_pidf(tdata->pool, &pres_status,
-					&acc_cfg->id, &tdata->msg->body);
+					&entity, &tdata->msg->body);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating PIDF for PUBLISH request",
 			 status);
