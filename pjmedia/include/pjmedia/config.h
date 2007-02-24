@@ -78,7 +78,7 @@
  * in timely manner, however it would take more memory. One individual
  * buffer is about 10 or 20 ms long.
  *
- * Default: 32
+ * Default: 16
  */
 #ifndef PJMEDIA_SOUND_BUFFER_COUNT
 #   define PJMEDIA_SOUND_BUFFER_COUNT	    16

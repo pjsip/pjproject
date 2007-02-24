@@ -468,6 +468,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		       param->code,
 		       (int)param->reason.slen, param->reason.ptr,
 		       param->expiration));
+
+	    /* Send initial PUBLISH if it is enabled */
+	    if (acc->cfg.publish_enabled && acc->publish_sess==NULL)
+		pjsua_pres_init_publish_acc(acc->index);
 	}
 
     } else {
