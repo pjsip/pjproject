@@ -302,6 +302,11 @@ void pjsua_pres_shutdown(void);
 pj_status_t pjsua_pres_init_acc(int acc_id);
 
 /**
+ * Send PUBLISH
+ */
+pj_status_t pjsua_pres_init_publish_acc(int acc_id);
+
+/**
  * Terminate server subscription for the account 
  */
 void pjsua_pres_delete_acc(int acc_id);

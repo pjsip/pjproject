@@ -671,7 +671,7 @@ on_error:
 
 
 /* Create client publish session */
-static pj_status_t create_publish(int acc_id)
+pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 {
     const pj_str_t STR_PRESENCE = { "presence", 8 };
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
@@ -722,8 +722,7 @@ pj_status_t pjsua_pres_init_acc(int acc_id)
     /* Init presence subscription */
     pj_list_init(&acc->pres_srv_list);
 
-
-    return create_publish(acc_id);
+    return PJ_SUCCESS;
 }
 
 
@@ -803,12 +802,13 @@ static void refresh_server_subscription(int acc_id)
 	uapres = uapres->next;
     }
 
-    /* Send PUBLISH if required */
-    if (acc_cfg->publish_enabled) {
-	if (acc->publish_sess == NULL)
-	    create_publish(acc_id);
-
-	if (acc->publish_sess && acc->publish_state != acc->online_status) {
+    /* Send PUBLISH if required. We only do this when we have a PUBLISH
+     * session. If we don't have a PUBLISH session, then it could be
+     * that we're waiting until registration has completed before we
+     * send the first PUBLISH. 
+     */
+    if (acc_cfg->publish_enabled && acc->publish_sess) {
+	if (acc->publish_state != acc->online_status) {
 	    send_publish(acc_id, PJ_TRUE);
 	}
     }
