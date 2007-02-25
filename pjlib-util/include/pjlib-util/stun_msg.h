@@ -1171,21 +1171,38 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 				        pj_uint16_t uattr[]);
 
 /**
- * Print the message structure to a buffer.
+ * Print the STUN message structure to a packet buffer, ready to be 
+ * sent to remote destination. This function will take care about 
+ * calculating the MESSAGE-INTEGRITY digest as well as FINGERPRINT
+ * value.
  *
- * @param msg		The message to be printed to a contiguous buffer.
- * @param pkt_buf	The buffer.
+ * If MESSAGE-INTEGRITY attribute is present, the function assumes
+ * that application wants to include credential (short or long term)
+ * in the message, and this function will calculate the HMAC digest
+ * from the message using the supplied password in the parameter. 
+ * If REALM attribute is present, the HMAC digest is calculated as
+ * long term credential, otherwise as short term credential.
+ *
+ * If FINGERPRINT attribute is present, this function will calculate
+ * the FINGERPRINT CRC attribute for the message.
+ *
+ * @param msg		The STUN message to be printed.
+ * @param pkt_buf	The buffer to be filled with the packet.
  * @param buf_size	Size of the buffer.
- * @param options	Options.
+ * @param options	Options, which currently must be zero.
+ * @param password	Password to be used when credential is to be
+ *			included. This parameter MUST be specified when
+ *			the message contains MESSAGE-INTEGRITY attribute.
  * @param p_msg_len	Upon return, it will be filed with the size of 
  *			the packet in bytes, or negative value on error.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 				        pj_uint8_t *pkt_buf,
 				        unsigned buf_size,
 				        unsigned options,
+					const pj_str_t *password,
 				        unsigned *p_msg_len);
 
 

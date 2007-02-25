@@ -26,15 +26,17 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 #
 export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-		errno.o dns.o dns_dump.o getopt.o md5.o resolver.o \
-		scanner.o string.o stun_simple.o stun_simple_client.o xml.o
+		errno.o dns.o dns_dump.o getopt.o \
+		hmac_md5.o hmac_sha1.o md5.o resolver.o \
+		scanner.o sha1.o string.o stun_simple.o \
+		stun_simple_client.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 
 ###############################################################################
 # Defines for building test application
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
-export UTIL_TEST_OBJS += xml.o test.o 
+export UTIL_TEST_OBJS += xml.o encryption.o test.o 
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_LDFLAGS += $(_LDFLAGS)
 export UTIL_TEST_EXE:=../bin/pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)

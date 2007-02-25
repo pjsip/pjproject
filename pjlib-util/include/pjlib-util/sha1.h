@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_MD5_H__
-#define __PJLIB_UTIL_MD5_H__
+#ifndef __PJLIB_UTIL_SHA1_H__
+#define __PJLIB_UTIL_SHA1_H__
 
 /**
- * @file md5.h
- * @brief MD5 Functions
+ * @file sha1.h
+ * @brief SHA1 encryption implementation
  */
 
 #include <pj/types.h>
@@ -29,38 +29,43 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJLIB_UTIL_MD5 MD5
+ * @defgroup PJLIB_UTIL_SHA1 SHA1
  * @ingroup PJLIB_UTIL_ENCRYPTION
  * @{
  */
 
-
-/** MD5 context. */
-typedef struct pj_md5_context
+/** SHA1 context */
+typedef struct pj_sha1_context
 {
-	pj_uint32_t buf[4];
-	pj_uint32_t bits[2];
-	pj_uint8_t  in[64];
-} pj_md5_context;
+    pj_uint32_t state[5];
+    pj_uint32_t count[2];
+    pj_uint8_t	buffer[64];
+} pj_sha1_context;
+
+/** SHA1 digest size is 20 bytes */
+#define PJ_SHA1_DIGEST_SIZE	20
+
 
 /** Initialize the algorithm. 
- *  @param pms		MD5 context.
+ *  @param ctx		SHA1 context.
  */
-PJ_DECL(void) pj_md5_init(pj_md5_context *pms);
+PJ_DECL(void) pj_sha1_init(pj_sha1_context *ctx);
 
-/** Append a string to the message. 
- *  @param pms		MD5 context.
+/** Append a stream to the message. 
+ *  @param ctx		SHA1 context.
  *  @param data		Data.
  *  @param nbytes	Length of data.
  */
-PJ_DECL(void) pj_md5_update( pj_md5_context *pms, 
-			     const pj_uint8_t *data, unsigned nbytes);
+PJ_DECL(void) pj_sha1_update(pj_sha1_context *ctx, 
+			     const pj_uint8_t *data, 
+			     const pj_size_t nbytes);
 
 /** Finish the message and return the digest. 
- *  @param pms		MD5 context.
+ *  @param ctx		SHA1 context.
  *  @param digest	16 byte digest.
  */
-PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
+PJ_DECL(void) pj_sha1_final(pj_sha1_context *ctx, 
+			    pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE]);
 
 
 /**
@@ -70,4 +75,5 @@ PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_MD5_H__ */
+#endif	/* __PJLIB_UTIL_SHA1_H__ */
+

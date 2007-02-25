@@ -1486,15 +1486,20 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 				       pj_uint8_t *buf, unsigned buf_size,
 				       unsigned options,
+				       const pj_str_t *password,
 				       unsigned *p_msg_len)
 {
     pj_stun_msg_hdr *hdr;
     pj_uint8_t *start = buf;
+    pj_stun_realm_attr *arealm = NULL;
+    pj_stun_username_attr *auname = NULL;
+    pj_stun_msg_integrity_attr *amsg_integrity = NULL;
     unsigned i;
 
     PJ_ASSERT_RETURN(msg && buf && buf_size, PJ_EINVAL);
 
     PJ_UNUSED_ARG(options);
+    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     /* Copy the message header part and convert the header fields to
      * network byte order
@@ -1519,6 +1524,21 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 
 	attr_hdr = msg->attr[i];
 
+	if (attr_hdr->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+	    pj_assert(amsg_integrity == NULL);
+	    amsg_integrity = (pj_stun_msg_integrity_attr*) attr_hdr;
+
+	    /* Stop when encountering MESSAGE-INTEGRITY */
+	    break;
+
+	} else if (attr_hdr->type == PJ_STUN_ATTR_USERNAME) {
+	    pj_assert(auname == NULL);
+	    auname = (pj_stun_username_attr*) attr_hdr;
+	} else if (attr_hdr->type == PJ_STUN_ATTR_REALM) {
+	    pj_assert(arealm == NULL);
+	    arealm = (pj_stun_realm_attr*) attr_hdr;
+	}
+
 	adesc = find_attr_desc(attr_hdr->type);
 	PJ_ASSERT_RETURN(adesc != NULL, PJ_EBUG);
 
@@ -1529,6 +1549,11 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	buf += printed;
 	buf_size -= printed;
     }
+
+    if (amsg_integrity != NULL) {
+	PJ_TODO(IMPLEMENT_MSG_INTEGRITY);
+    }
+
 
     /* Update the message length in the header. 
      * Note that length is not including the 20 bytes header.

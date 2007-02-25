@@ -263,6 +263,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\hmac_md5.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\hmac_sha1.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\md5.c"
 				>
 				<FileConfiguration
@@ -377,6 +385,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\sha1.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\string.c"
 				>
 				<FileConfiguration
@@ -399,11 +411,31 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\stun_endpoint.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\stun_msg.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\stun_msg_dump.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\stun_server.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\stun_simple.c"
 				>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\stun_simple_client.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\stun_transaction.c"
 				>
 			</File>
 			<File
@@ -472,6 +504,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjlib-util\hmac_md5.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\hmac_sha1.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjlib-util\md5.h"
 				>
 			</File>
@@ -496,11 +536,35 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjlib-util\sha1.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjlib-util\string.h"
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjlib-util\stun_doc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\stun_endpoint.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\stun_msg.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\stun_server.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjlib-util\stun_simple.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\stun_transaction.h"
 				>
 			</File>
 			<File

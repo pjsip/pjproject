@@ -1,4 +1,4 @@
-/* $Id */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
  *
@@ -61,7 +61,15 @@ static int test_inner(void)
     
     pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+
+#if INCLUDE_XML_TEST
     DO_TEST(xml_test());
+#endif
+
+#if INCLUDE_ENCRYPTION_TEST
+    DO_TEST(encryption_test());
+#endif
+
 
 on_return:
     return rc;

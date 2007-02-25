@@ -16,12 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_MD5_H__
-#define __PJLIB_UTIL_MD5_H__
+#ifndef __PJLIB_UTIL_HMAC_MD5_H__
+#define __PJLIB_UTIL_HMAC_MD5_H__
 
 /**
- * @file md5.h
- * @brief MD5 Functions
+ * @file hmac_md5.h
+ * @brief HMAC MD5 Message Authentication
+ */
+
+/**
+ * @defgroup PJLIB_UTIL_ENCRYPTION Encryption Algorithms
  */
 
 #include <pj/types.h>
@@ -29,38 +33,27 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJLIB_UTIL_MD5 MD5
+ * @defgroup PJLIB_UTIL_HMAC_MD5 HMAC MD5 Message Authentication
  * @ingroup PJLIB_UTIL_ENCRYPTION
  * @{
+ *
+ * This module contains the implementation of HMAC: Keyed-Hashing 
+ * for Message Authentication, as described in RFC 2104
  */
 
 
-/** MD5 context. */
-typedef struct pj_md5_context
-{
-	pj_uint32_t buf[4];
-	pj_uint32_t bits[2];
-	pj_uint8_t  in[64];
-} pj_md5_context;
-
-/** Initialize the algorithm. 
- *  @param pms		MD5 context.
+/**
+ * Calculate HMAC MD5 digest for the specified input and key.
+ *
+ * @param input		Pointer to the input stream.
+ * @param input_len	Length of input stream in bytes.
+ * @param key		Pointer to the authentication key.
+ * @param key_len	Length of the authentication key.
+ * @param digest	Buffer to be filled with HMAC MD5 digest.
  */
-PJ_DECL(void) pj_md5_init(pj_md5_context *pms);
-
-/** Append a string to the message. 
- *  @param pms		MD5 context.
- *  @param data		Data.
- *  @param nbytes	Length of data.
- */
-PJ_DECL(void) pj_md5_update( pj_md5_context *pms, 
-			     const pj_uint8_t *data, unsigned nbytes);
-
-/** Finish the message and return the digest. 
- *  @param pms		MD5 context.
- *  @param digest	16 byte digest.
- */
-PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
+PJ_DECL(void) pj_hmac_md5(const pj_uint8_t *input, unsigned input_len, 
+			  const pj_uint8_t *key, unsigned key_len, 
+			  pj_uint8_t digest[16]);
 
 
 /**
@@ -70,4 +63,6 @@ PJ_DECL(void) pj_md5_final(pj_md5_context *pms, pj_uint8_t digest[16]);
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_MD5_H__ */
+#endif	/* __PJLIB_UTIL_HMAC_MD5_H__ */
+
+

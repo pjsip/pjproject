@@ -95,11 +95,23 @@ SOURCE="..\src\pjlib-util\dns_dump.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util-test\encryption.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\errno.c"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\getopt.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\hmac_md5.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\hmac_sha1.c"
 # End Source File
 # Begin Source File
 
@@ -122,6 +134,10 @@ SOURCE="..\src\pjlib-util\scanner_cis_bitwise.c"
 
 SOURCE="..\src\pjlib-util\scanner_cis_uint.c"
 # PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjlib-util\sha1.c"
 # End Source File
 # Begin Source File
 
@@ -185,6 +201,14 @@ SOURCE="..\include\pjlib-util\getopt.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjlib-util\hmac_md5.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\hmac_sha1.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjlib-util\md5.h"
 # End Source File
 # Begin Source File
@@ -206,6 +230,10 @@ SOURCE="..\include\pjlib-util\scanner_cis_bitwise.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\scanner_cis_uint.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\sha1.h"
 # End Source File
 # Begin Source File
 

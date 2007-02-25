@@ -24,12 +24,27 @@
  * @brief pjlib-util.h
  */
 
-#include <pjlib-util/dns.h>
+/* Base */
 #include <pjlib-util/errno.h>
+#include <pjlib-util/types.h>
+
+/* Getopt */
 #include <pjlib-util/getopt.h>
+
+/* Crypto */
+#include <pjlib-util/hmac_md5.h>
+#include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/md5.h>
+#include <pjlib-util/sha1.h>
+
+/* DNS and resolver */
+#include <pjlib-util/dns.h>
 #include <pjlib-util/resolver.h>
+
+/* Text scanner */
 #include <pjlib-util/scanner.h>
+
+/* XML */
 #include <pjlib-util/xml.h>
 
 /* New STUN */
