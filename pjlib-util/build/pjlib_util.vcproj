@@ -175,6 +175,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjlib-util\crc32.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\dns.c"
 				>
 				<FileConfiguration
@@ -489,6 +493,10 @@
 			>
 			<File
 				RelativePath="..\include\pjlib-util\config.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\crc32.h"
 				>
 			</File>
 			<File

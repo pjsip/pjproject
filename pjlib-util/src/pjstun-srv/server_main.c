@@ -51,31 +51,12 @@ static pj_status_t create_response(pj_pool_t *pool,
 {
     pj_uint32_t msg_type = req_msg->hdr.type;
     pj_stun_msg *response;
-    pj_stun_error_code_attr *err_attr;
     pj_status_t status;
 
-    /* Create response or error response */
-    if (err_code)
-	msg_type |= PJ_STUN_ERROR_RESPONSE_BIT;
-    else
-	msg_type |= PJ_STUN_RESPONSE_BIT;
-
-    status = pj_stun_msg_create(pool, msg_type, req_msg->hdr.magic, 
-				req_msg->hdr.tsx_id, &response);
-    if (status != PJ_SUCCESS) {
+    status = pj_stun_msg_create_response(pool, req_msg, err_code, NULL,
+					 &response);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
-
-    /* Add error code attribute */
-    if (err_code) {
-	status = pj_stun_error_code_attr_create(pool, err_code, NULL,
-						&err_attr);
-	if (status != PJ_SUCCESS) {
-	    return status;
-	}
-
-	pj_stun_msg_add_attr(response, &err_attr->hdr);
-    }
 
     /* Add unknown_attribute attributes if err_code is 420 */
     if (err_code == PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE) {
@@ -110,7 +91,7 @@ static pj_status_t send_msg(struct service *svc, const pj_stun_msg *msg)
     /* Encode packet */
     tx_pkt_len = sizeof(svc->tx_pkt);
     status = pj_stun_msg_encode(msg, svc->tx_pkt, tx_pkt_len, 0,
-				&tx_pkt_len);
+				NULL, &tx_pkt_len);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -223,10 +204,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 {
     struct service *svc = (struct service *) pj_ioqueue_get_user_data(key);
     pj_pool_t *pool = NULL;
-    pj_stun_msg *rx_msg;
-    unsigned err_code;
-    unsigned uattr_cnt;
-    pj_uint16_t uattr_types[16];
+    pj_stun_msg *rx_msg, *response;
     char dump[512];
     pj_status_t status;
 
@@ -235,16 +213,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     pool = pj_pool_create(&server.cp.factory, "service", 4000, 4000, NULL);
 
-    err_code = 0;
-    uattr_cnt = PJ_ARRAY_SIZE(uattr_types);
     rx_msg = NULL;
     status = pj_stun_msg_decode(pool, svc->rx_pkt, bytes_read, 0, &rx_msg,
-				NULL, &err_code, &uattr_cnt, uattr_types);
+				NULL, &response);
     if (status != PJ_SUCCESS) {
 	server_perror(THIS_FILE, "STUN msg_decode() error", status);
-	if (err_code != 0 && rx_msg && PJ_STUN_IS_REQUEST(rx_msg->hdr.type)) {
-	    err_respond(svc, pool, rx_msg, err_code, 
-			uattr_cnt, uattr_types);
+	if (response) {
+	    send_msg(svc, response);
 	}
 	goto next_read;
     }

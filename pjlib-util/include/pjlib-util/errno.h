@@ -93,6 +93,16 @@
  * Symetric NAT detected by STUN
  */
 #define PJLIB_UTIL_ESTUNSYMMETRIC   (PJLIB_UTIL_ERRNO_START+11)	/* 320011 */
+/**
+ * @hideinitializer
+ * Invalid STUN magic value
+ */
+#define PJLIB_UTIL_ESTUNNOTMAGIC    (PJLIB_UTIL_ERRNO_START+12)	/* 320012 */
+/**
+ * @hideinitializer
+ * Invalid STUN fingerprint value
+ */
+#define PJLIB_UTIL_ESTUNFINGERPRINT (PJLIB_UTIL_ERRNO_START+13)	/* 320013 */
 
 
 
@@ -266,12 +276,12 @@
 #define PJLIB_UTIL_ESTUNUNKNOWNATTR (PJLIB_UTIL_ERRNO_START+112)/* 320112 */
 /**
  * @hideinitializer
- * Invalid socket address length.
+ * Invalid STUN socket address length.
  */
 #define PJLIB_UTIL_ESTUNINADDRLEN   (PJLIB_UTIL_ERRNO_START+113)/* 320113 */
 /**
  * @hideinitializer
- * IPv6 attribute not supported
+ * STUN IPv6 attribute not supported
  */
 #define PJLIB_UTIL_ESTUNIPV6NOTSUPP (PJLIB_UTIL_ERRNO_START+113)/* 320113 */
 /**
@@ -281,7 +291,7 @@
 #define PJLIB_UTIL_ESTUNNOTRESPONSE (PJLIB_UTIL_ERRNO_START+114)/* 320114 */
 /**
  * @hideinitializer
- * Transaction ID mismatch.
+ * STUN transaction ID mismatch.
  */
 #define PJLIB_UTIL_ESTUNINVALIDID   (PJLIB_UTIL_ERRNO_START+115)/* 320115 */
 /**
@@ -289,9 +299,23 @@
  * Unable to find handler for the request.
  */
 #define PJLIB_UTIL_ESTUNNOHANDLER   (PJLIB_UTIL_ERRNO_START+116)/* 320116 */
+/**
+ * @hideinitializer
+ * Invalid STUN MESSAGE-INTEGRITY attribute position in message.
+ * STUN MESSAGE-INTEGRITY must be put last in the message, or before
+ * FINGERPRINT attribute.
+ */
+#define PJLIB_UTIL_ESTUNMSGINT	    (PJLIB_UTIL_ERRNO_START+117)/* 320117 */
+/**
+ * @hideinitializer
+ * Missing STUN USERNAME attribute.
+ * When credential is included in the STUN message (MESSAGE-INTEGRITY is
+ * present), the USERNAME attribute must be present in the message.
+ */
+#define PJLIB_UTIL_ESTUNNOUSERNAME  (PJLIB_UTIL_ERRNO_START+118)/* 320118 */
 
 
-#define PJ_STATUS_FROM_STUN_CODE(code)	-1
+#define PJ_STATUS_FROM_STUN_CODE(code)	(PJLIB_UTIL_ERRNO_START+code)
 
 
 

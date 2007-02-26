@@ -17,7 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/stun_msg.h>
+#include <pjlib-util/crc32.h>
 #include <pjlib-util/errno.h>
+#include <pjlib-util/hmac_sha1.h>
+#include <pjlib-util/md5.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -25,8 +28,8 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 
-#define THIS_FILE   "stun_msg.c"
-
+#define THIS_FILE		"stun_msg.c"
+#define STUN_XOR_FINGERPRINT	0x5354554eL
 
 static const char *stun_method_names[] = 
 {
@@ -547,6 +550,28 @@ pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
 }
 
 
+/*
+ * Create and add generic STUN IP address attribute to a STUN message.
+ */
+PJ_DEF(pj_status_t) 
+pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
+				     pj_stun_msg *msg,
+				     int attr_type, 
+				     pj_bool_t xor_ed,
+				     unsigned addr_len,
+				     const pj_sockaddr_t *addr)
+{
+    pj_stun_generic_ip_addr_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_generic_ip_addr_attr_create(pool, attr_type, xor_ed,
+					         addr_len, addr, &attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
+}
+
 static pj_status_t decode_generic_ip_addr_attr(pj_pool_t *pool, 
 					       const pj_uint8_t *buf, 
 					       void **p_attr)
@@ -655,6 +680,27 @@ pj_stun_generic_string_attr_create(pj_pool_t *pool,
     *p_attr = attr;
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Create and add STUN generic string attribute to the message.
+ */
+PJ_DEF(pj_status_t) 
+pj_stun_msg_add_generic_string_attr(pj_pool_t *pool,
+				    pj_stun_msg *msg,
+				    int attr_type,
+				    const pj_str_t *value)
+{
+    pj_stun_generic_string_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_generic_string_attr_create(pool, attr_type, value, 
+						&attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
 
@@ -827,6 +873,22 @@ pj_stun_generic_uint_attr_create(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+/* Create and add STUN generic 32bit value attribute to the message. */
+PJ_DEF(pj_status_t) 
+pj_stun_msg_add_generic_uint_attr(pj_pool_t *pool,
+				  pj_stun_msg *msg,
+				  int attr_type,
+				  pj_uint32_t value)
+{
+    pj_stun_generic_uint_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_generic_uint_attr_create(pool, attr_type, value, &attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
+}
 
 static pj_status_t decode_generic_uint_attr(pj_pool_t *pool, 
 					    const pj_uint8_t *buf, 
@@ -1087,7 +1149,7 @@ static pj_status_t encode_error_code_attr(const void *a, pj_uint8_t *buf,
 PJ_DEF(pj_status_t) 
 pj_stun_unknown_attr_create(pj_pool_t *pool,
 			    unsigned attr_cnt,
-			    pj_uint16_t attr_array[],
+			    const pj_uint16_t attr_array[],
 			    pj_stun_unknown_attr **p_attr)
 {
     pj_stun_unknown_attr *attr;
@@ -1115,6 +1177,23 @@ pj_stun_unknown_attr_create(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+
+/* Create and add STUN UNKNOWN-ATTRIBUTES attribute to the message. */
+PJ_DEF(pj_status_t) 
+pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
+			     pj_stun_msg *msg,
+			     unsigned attr_cnt,
+			     const pj_uint16_t attr_types[])
+{
+    pj_stun_unknown_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_unknown_attr_create(pool, attr_cnt, attr_types, &attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
+}
 
 static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
@@ -1193,6 +1272,8 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
 PJ_DEF(pj_status_t)
 pj_stun_binary_attr_create(pj_pool_t *pool,
 			   int attr_type,
+			   const pj_uint8_t *data,
+			   unsigned length,
 			   pj_stun_binary_attr **p_attr)
 {
     pj_stun_binary_attr *attr;
@@ -1202,9 +1283,35 @@ pj_stun_binary_attr_create(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_binary_attr);
     INIT_ATTR(attr, attr_type, sizeof(pj_stun_binary_attr));
 
+    if (data && length) {
+	attr->length = length;
+	attr->data = pj_pool_alloc(pool, length);
+	pj_memcpy(attr->data, data, length);
+    }
+
     *p_attr = attr;
 
     return PJ_SUCCESS;
+}
+
+
+/* Create and add binary attr. */
+PJ_DEF(pj_status_t)
+pj_stun_msg_add_binary_attr(pj_pool_t *pool,
+			    pj_stun_msg *msg,
+			    int attr_type,
+			    const pj_uint8_t *data,
+			    unsigned length)
+{
+    pj_stun_binary_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_binary_attr_create(pool, attr_type,
+					data, length, &attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
 
@@ -1324,38 +1431,115 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
 }
 
 
+PJ_INLINE(pj_uint16_t) GET_VAL16(const pj_uint8_t *pdu, unsigned pos)
+{
+    pj_uint16_t val = (pj_uint16_t) ((pdu[pos] << 8) + pdu[pos+1]);
+    return pj_ntohs(val);
+}
+
+PJ_INLINE(pj_uint32_t) GET_VAL32(const pj_uint8_t *pdu, unsigned pos)
+{
+    pj_uint32_t val = (pdu[pos+0] << 24) +
+		      (pdu[pos+1] << 16) +
+		      (pdu[pos+2] <<  8) +
+		      (pdu[pos+3]);
+    return pj_ntohl(val);
+}
+
+
 /*
  * Check that the PDU is potentially a valid STUN message.
  */
-PJ_DEF(pj_status_t) pj_stun_msg_check(const void *pdu, unsigned pdu_len,
+PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
 				      unsigned options)
 {
-    pj_stun_msg_hdr *hdr;
+    unsigned msg_len;
 
     PJ_ASSERT_RETURN(pdu, PJ_EINVAL);
 
     if (pdu_len < sizeof(pj_stun_msg_hdr))
 	return PJLIB_UTIL_ESTUNINMSGLEN;
 
-    PJ_UNUSED_ARG(options);
-
-    hdr = (pj_stun_msg_hdr*) pdu;
-
     /* First byte of STUN message is always 0x00 or 0x01. */
-    if ((*(const char*)pdu) != 0x00 && (*(const char*)pdu) != 0x01)
+    if (*pdu != 0x00 && *pdu != 0x01)
 	return PJLIB_UTIL_ESTUNINMSGTYPE;
 
     /* If magic is set, then there is great possibility that this is
      * a STUN message.
      */
-    if (pj_ntohl(hdr->magic) == PJ_STUN_MAGIC)
-	return PJ_SUCCESS;
+    if (GET_VAL32(pdu, 4) != PJ_STUN_MAGIC)
+	return PJLIB_UTIL_ESTUNNOTMAGIC;
 
     /* Check the PDU length */
-    if (pj_ntohs(hdr->length) > pdu_len)
+    msg_len = GET_VAL16(pdu, 2);
+    if ((msg_len > pdu_len) || 
+	((options & PJ_STUN_IS_DATAGRAM) && msg_len != pdu_len))
+    {
 	return PJLIB_UTIL_ESTUNINMSGLEN;
+    }
+
+    /* Check if FINGERPRINT attribute is present */
+    if (GET_VAL16(pdu, msg_len + 20) == PJ_STUN_ATTR_FINGERPRINT) {
+	pj_uint16_t attr_len = GET_VAL16(pdu, msg_len + 22);
+	pj_uint32_t fingerprint = GET_VAL32(pdu, msg_len + 24);
+	pj_uint32_t crc;
+
+	if (attr_len != 4)
+	    return PJLIB_UTIL_ESTUNINATTRLEN;
+
+	crc = pj_crc32_calc(pdu, msg_len + 20);
+	crc ^= STUN_XOR_FINGERPRINT;
+
+	if (crc != fingerprint)
+	    return PJLIB_UTIL_ESTUNFINGERPRINT;
+    }
 
     /* Could be a STUN message */
+    return PJ_SUCCESS;
+}
+
+
+/* Create error response */
+PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
+						const pj_stun_msg *req_msg,
+						unsigned err_code,
+						const pj_str_t *err_msg,
+						pj_stun_msg **p_response)
+{
+    unsigned msg_type = req_msg->hdr.type;
+    pj_stun_msg *response;
+    pj_stun_error_code_attr *err_attr;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(pool && p_response, PJ_EINVAL);
+
+    PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(msg_type), 
+		     PJLIB_UTIL_ESTUNINMSGTYPE);
+
+    /* Create response or error response */
+    if (err_code)
+	msg_type |= PJ_STUN_ERROR_RESPONSE_BIT;
+    else
+	msg_type |= PJ_STUN_RESPONSE_BIT;
+
+    status = pj_stun_msg_create(pool, msg_type, req_msg->hdr.magic, 
+				req_msg->hdr.tsx_id, &response);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    /* Add error code attribute */
+    if (err_code) {
+	status = pj_stun_error_code_attr_create(pool, err_code, err_msg,
+						&err_attr);
+	if (status != PJ_SUCCESS) {
+	    return status;
+	}
+
+	pj_stun_msg_add_attr(response, &err_attr->hdr);
+    }
+
+    *p_response = response;
     return PJ_SUCCESS;
 }
 
@@ -1369,9 +1553,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 				       unsigned options,
 				       pj_stun_msg **p_msg,
 				       unsigned *p_parsed_len,
-				       unsigned *p_err_code,
-				       unsigned *p_uattr_cnt,
-				       pj_uint16_t uattr[])
+				       pj_stun_msg **p_response)
 {
     
     pj_stun_msg *msg;
@@ -1384,9 +1566,17 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && pdu && pdu_len && p_msg, PJ_EINVAL);
     PJ_ASSERT_RETURN(sizeof(pj_stun_msg_hdr) == 20, PJ_EBUG);
 
-    /* Application should have checked that this is a valid STUN msg */
-    PJ_ASSERT_RETURN((status=pj_stun_msg_check(pdu, pdu_len, options))
-			== PJ_SUCCESS, status);
+    if (p_parsed_len)
+	*p_parsed_len = 0;
+    if (p_response)
+	*p_response = NULL;
+
+    /* Check if this is a STUN message, if necessary */
+    if (options & PJ_STUN_CHECK_PACKET) {
+	status = pj_stun_msg_check(pdu, pdu_len, options);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Create the message, copy the header, and convert to host byte order */
     msg = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msg);
@@ -1398,8 +1588,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     pdu += sizeof(pj_stun_msg_hdr);
     pdu_len -= sizeof(pj_stun_msg_hdr);
 
-    if (p_err_code)
-	*p_err_code = 0;
+    /* No need to create response if this is not a request */
+    if (!PJ_STUN_IS_REQUEST(msg->hdr.type))
+	p_response = NULL;
 
     /* Parse attributes */
     uattr_cnt = 0;
@@ -1415,8 +1606,25 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	attr_val_len = (attr_val_len + 3) & (~3);
 
 	/* Check length */
-	if (pdu_len < attr_val_len)
+	if (pdu_len < attr_val_len) {
+	    pj_str_t err_msg;
+	    char err_msg_buf[80];
+
+	    err_msg.ptr = err_msg_buf;
+	    err_msg.slen = pj_ansi_snprintf(err_msg_buf, sizeof(err_msg_buf),
+					    "Attribute %s has invalid length",
+					    pj_stun_get_attr_name(attr_type));
+
+	    PJ_LOG(4,(THIS_FILE, "Error decoding message: %.*s",
+		      (int)err_msg.slen, err_msg.ptr));
+
+	    if (p_response) {
+		pj_stun_msg_create_response(pool, msg, 
+					    PJ_STUN_STATUS_BAD_REQUEST, 
+					    &err_msg, p_response);
+	    }
 	    return PJLIB_UTIL_ESTUNINATTRLEN;
+	}
 
 	/* Get the attribute descriptor */
 	adesc = find_attr_desc(attr_type);
@@ -1427,38 +1635,71 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	    PJ_LOG(4,(THIS_FILE, "Unrecognized attribute type %d", 
 		      attr_type));
 
-	    /* Put to unrecognized attribute array */
-	    if (p_uattr_cnt && uattr && uattr_cnt < *p_uattr_cnt) {
-		uattr[uattr_cnt++] = (pj_uint16_t)attr_type;
-	    }
-
 	    /* Is this a fatal condition? */
 	    if (attr_type <= 0x7FFF) {
 		/* This is a mandatory attribute, we must return error
 		 * if we don't understand the attribute.
 		 */
-		if (p_err_code && *p_err_code == 0)
-		    *p_err_code = PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE;
+		if (p_response) {
+		    unsigned err_code = PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE;
+
+		    status = pj_stun_msg_create_response(pool, msg,
+							 err_code, NULL, 
+							 p_response);
+		    if (status==PJ_SUCCESS) {
+			pj_uint16_t d = (pj_uint16_t)attr_type;
+			pj_stun_msg_add_unknown_attr(pool, *p_response, 1, &d);
+		    }
+		}
 
 		return PJLIB_UTIL_ESTUNUNKNOWNATTR;
 	    }
 
 	} else {
 	    void *attr;
+	    char err_msg1[PJ_ERR_MSG_SIZE],
+		 err_msg2[PJ_ERR_MSG_SIZE];
 
 	    /* Parse the attribute */
 	    status = (adesc->decode_attr)(pool, pdu, &attr);
 
 	    if (status != PJ_SUCCESS) {
+		pj_strerror(status, err_msg1, sizeof(err_msg1));
+
+		if (p_response) {
+		    pj_str_t e;
+
+		    e.ptr = err_msg2;
+		    e.slen= pj_ansi_snprintf(err_msg2, sizeof(err_msg2),
+					     "%s in %s",
+					     err_msg1,
+					     pj_stun_get_attr_name(attr_type));
+
+		    pj_stun_msg_create_response(pool, msg,
+						PJ_STUN_STATUS_BAD_REQUEST,
+						&e, p_response);
+		}
+
 		PJ_LOG(4,(THIS_FILE, 
-			  "Error parsing STUN attribute type %d: status=%d",
-			  attr_type, status));
+			  "Error parsing STUN attribute %s: %s",
+			  pj_stun_get_attr_name(attr_type), 
+			  err_msg1));
+
 		return status;
 	    }
 	    
 	    /* Make sure we have rooms for the new attribute */
-	    if (msg->attr_count >= PJ_STUN_MAX_ATTR)
+	    if (msg->attr_count >= PJ_STUN_MAX_ATTR) {
+		if (p_response) {
+		    pj_str_t e;
+
+		    e = pj_str("Too many attributes");
+		    pj_stun_msg_create_response(pool, msg,
+						PJ_STUN_STATUS_BAD_REQUEST,
+						&e, p_response);
+		}
 		return PJLIB_UTIL_ESTUNTOOMANYATTR;
+	    }
 
 	    /* Add the attribute */
 	    msg->attr[msg->attr_count++] = (pj_stun_attr_hdr*)attr;
@@ -1469,9 +1710,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     }
 
     *p_msg = msg;
-
-    if (p_uattr_cnt)
-	*p_uattr_cnt = uattr_cnt;
 
     if (p_parsed_len)
 	*p_parsed_len = (pdu - start_pdu);
@@ -1494,7 +1732,11 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
     pj_stun_realm_attr *arealm = NULL;
     pj_stun_username_attr *auname = NULL;
     pj_stun_msg_integrity_attr *amsg_integrity = NULL;
-    unsigned i;
+    pj_stun_fingerprint_attr *afingerprint = NULL;
+    unsigned printed;
+    pj_status_t status;
+    unsigned i, length;
+
 
     PJ_ASSERT_RETURN(msg && buf && buf_size, PJ_EINVAL);
 
@@ -1519,8 +1761,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
     for (i=0; i<msg->attr_count; ++i) {
 	const struct attr_desc *adesc;
 	const pj_stun_attr_hdr *attr_hdr;
-	unsigned printed;
-	pj_status_t status;
 
 	attr_hdr = msg->attr[i];
 
@@ -1534,9 +1774,14 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	} else if (attr_hdr->type == PJ_STUN_ATTR_USERNAME) {
 	    pj_assert(auname == NULL);
 	    auname = (pj_stun_username_attr*) attr_hdr;
+
 	} else if (attr_hdr->type == PJ_STUN_ATTR_REALM) {
 	    pj_assert(arealm == NULL);
 	    arealm = (pj_stun_realm_attr*) attr_hdr;
+
+	} else if (attr_hdr->type == PJ_STUN_ATTR_FINGERPRINT) {
+	    afingerprint = (pj_stun_fingerprint_attr*) attr_hdr;
+	    break;
 	}
 
 	adesc = find_attr_desc(attr_hdr->type);
@@ -1550,16 +1795,128 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	buf_size -= printed;
     }
 
+    /* Calculate message integrity, if present */
     if (amsg_integrity != NULL) {
-	PJ_TODO(IMPLEMENT_MSG_INTEGRITY);
+
+	pj_uint8_t md5_key_buf[16];
+	pj_str_t key;
+
+	/* MESSAGE-INTEGRITY must be the last attribute in the message, or
+	 * the last attribute before FINGERPRINT.
+	 */
+	if (i < msg->attr_count-2) {
+	    /* Should not happen for message generated by us */
+	    pj_assert(PJ_FALSE);
+	    return PJLIB_UTIL_ESTUNMSGINT;
+
+	} else if (i == msg->attr_count-2)  {
+	    if (msg->attr[i+1]->type != PJ_STUN_ATTR_FINGERPRINT) {
+		/* Should not happen for message generated by us */
+		pj_assert(PJ_FALSE);
+		return PJLIB_UTIL_ESTUNMSGINT;
+	    } else {
+		afingerprint = (pj_stun_fingerprint_attr*) msg->attr[i+1];
+	    }
+	}
+
+	/* Must have USERNAME attribute */
+	if (auname == NULL) {
+	    /* Should not happen for message generated by us */
+	    pj_assert(PJ_FALSE);
+	    return PJLIB_UTIL_ESTUNNOUSERNAME;
+	}
+
+	/* Password must be specified */
+	PJ_ASSERT_RETURN(password, PJ_EINVAL);
+
+	/* Get the key to sign the message */
+	if (arealm == NULL ) {
+	    /* For short term credential, the key is the password */
+	    key = *password;
+
+	} else {
+	    /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
+	     * the MD5 hash of the result of concatenating the following five
+	     * fields: (1) The username, with any quotes and trailing nulls
+	     * removed, (2) A single colon, (3) The realm, with any quotes and
+	     * trailing nulls removed, (4) A single colon, and (5) The 
+	     * password, with any trailing nulls removed.
+	     */
+	    pj_md5_context ctx;
+	    pj_str_t s;
+
+	    pj_md5_init(&ctx);
+
+#define REMOVE_QUOTE(s)	if (s.slen && *s.ptr=='"') \
+			    s.ptr++, s.slen--; \
+			if (s.slen && s.ptr[s.slen-1]=='"') \
+			    s.slen--;
+
+	    /* Add username */
+	    s = auname->value;
+	    REMOVE_QUOTE(s);
+	    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
+
+	    /* Add single colon */
+	    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
+
+	    /* Add realm */
+	    s = arealm->value;
+	    REMOVE_QUOTE(s);
+	    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
+
+#undef REMOVE_QUOTE
+
+	    /* Another colon */
+	    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
+
+	    /* Add password */
+	    pj_md5_update(&ctx, (pj_uint8_t*)password->ptr, password->slen);
+
+	    /* Done */
+	    pj_md5_final(&ctx, md5_key_buf);
+	    key.ptr = (char*) md5_key_buf;
+	    key.slen = 16;
+	}
+
+	/* Calculate HMAC-SHA1 digest */
+	pj_hmac_sha1((pj_uint8_t*)buf, buf-start, 
+		     (pj_uint8_t*)key.ptr, key.slen,
+		     amsg_integrity->hmac);
+
+	/* Put this attribute in the message */
+	status = encode_msg_integrity_attr(amsg_integrity, buf, buf_size, 
+				           &printed);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	buf += printed;
+	buf_size -= printed;
     }
 
+    /* Calculate FINGERPRINT if present */
+    if (afingerprint != NULL) {
+	afingerprint->value = pj_crc32_calc(start, buf-start);
+	afingerprint->value ^= STUN_XOR_FINGERPRINT;
+
+	/* Put this attribute in the message */
+	status = encode_generic_uint_attr(afingerprint, buf, buf_size, 
+				          &printed);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	buf += printed;
+	buf_size -= printed;
+    }
 
     /* Update the message length in the header. 
      * Note that length is not including the 20 bytes header.
      */
-    hdr->length = (pj_uint16_t)((buf - start) - 20);
-    hdr->length = pj_htons(hdr->length);
+    length = (pj_uint16_t)((buf - start) - 20);
+    /* hdr->length = pj_htons(length); */
+    *(buf+2) = (pj_uint8_t)((length >> 8) & 0x00FF);
+    *(buf+3) = (pj_uint8_t)(length & 0x00FF);
+
 
     /* Done */
     if (p_msg_len)
@@ -1586,4 +1943,117 @@ PJ_DEF(pj_stun_attr_hdr*) pj_stun_msg_find_attr( const pj_stun_msg *msg,
 
     return NULL;
 }
+
+
+/* Verify credential */
+PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_stun_msg *msg,
+					       const pj_str_t *realm,
+					       const pj_str_t *username,
+					       const pj_str_t *password,
+					       unsigned options,
+					       pj_pool_t *pool,
+					       pj_stun_msg **p_response)
+{
+    const pj_stun_msg_integrity_attr *amsgi;
+    const pj_stun_username_attr *auser;
+    const pj_stun_realm_attr *arealm;
+
+    PJ_ASSERT_RETURN(msg && password, PJ_EINVAL);
+    PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
+    PJ_UNUSED_ARG(options);
+
+    if (p_response)
+	*p_response = NULL;
+
+    /* First check that MESSAGE-INTEGRITY is present */
+    amsgi = (const pj_stun_msg_integrity_attr*)
+	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
+    if (amsgi == NULL) {
+	if (pool && p_response) {
+	    pj_status_t rc;
+
+	    rc = pj_stun_msg_create_response(pool, msg, 
+					     PJ_STUN_STATUS_UNAUTHORIZED, 
+					     NULL, p_response);
+	    if (rc==PJ_SUCCESS && realm) {
+		pj_stun_msg_add_generic_string_attr(pool, *p_response,
+						    PJ_STUN_ATTR_REALM, 
+						    realm);
+	    }
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_UNAUTHORIZED);
+    }
+
+    /* Next check that USERNAME is present */
+    auser = (const pj_stun_username_attr*)
+	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
+    if (auser == NULL) {
+	if (pool && p_response) {
+	    pj_status_t rc;
+
+	    rc = pj_stun_msg_create_response(pool, msg, 
+					     PJ_STUN_STATUS_MISSING_USERNAME, 
+					     NULL, p_response);
+	    if (rc==PJ_SUCCESS && realm) {
+		pj_stun_msg_add_generic_string_attr(pool, *p_response,
+						    PJ_STUN_ATTR_REALM, 
+						    realm);
+	    }
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_USERNAME);
+    }
+
+    /* Check if username match */
+    if (username && pj_stricmp(&auser->value, username) != 0) {
+	/* Username mismatch */
+	if (pool && p_response) {
+	    pj_status_t rc;
+
+	    rc = pj_stun_msg_create_response(pool, msg, 
+					     PJ_STUN_STATUS_WRONG_USERNAME, 
+					     NULL, p_response);
+	    if (rc==PJ_SUCCESS && realm) {
+		pj_stun_msg_add_generic_string_attr(pool, *p_response,
+						    PJ_STUN_ATTR_REALM, 
+						    realm);
+	    }
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_WRONG_USERNAME);
+    }
+
+    /* Next check that REALM is present */
+    arealm = (const pj_stun_realm_attr*)
+	     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_REALM, 0);
+    if (realm != NULL && arealm == NULL) {
+	/* Long term credential is required */
+	if (pool && p_response) {
+	    pj_status_t rc;
+
+	    rc = pj_stun_msg_create_response(pool, msg, 
+					     PJ_STUN_STATUS_MISSING_REALM, 
+					     NULL, p_response);
+	    if (rc==PJ_SUCCESS) {
+		pj_stun_msg_add_generic_string_attr(pool, *p_response,
+						    PJ_STUN_ATTR_REALM, 
+						    realm);
+	    }
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_REALM);
+
+    } else if (realm != NULL && arealm != NULL) {
+
+
+    } else if (realm == NULL && arealm != NULL) {
+	/* We want to use short term credential, but client uses long
+	 * term credential. The draft doesn't mention anything about
+	 * switching between long term and short term.
+	 */
+	PJ_TODO(SWITCHING_BETWEEN_SHORT_TERM_AND_LONG_TERM);
+    }
+
+    PJ_TODO(CONTINUE_IMPLEMENTATION);
+
+    return PJ_SUCCESS;
+}
+
 

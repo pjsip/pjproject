@@ -601,7 +601,7 @@ typedef struct pj_stun_binary_attr
     /**
      * The raw data.
      */
-    char	       *data;
+    pj_uint8_t	       *data;
 
 } pj_stun_binary_attr;
 
@@ -1046,6 +1046,23 @@ typedef struct pj_stun_msg
 } pj_stun_msg;
 
 
+/** STUN decoding options */
+enum pj_stun_options
+{
+    /** 
+     * Tell the decoder that the message was received from datagram
+     * oriented transport (such as UDP).
+     */
+    PJ_STUN_IS_DATAGRAM	    = 1,
+
+    /**
+     * Tell pj_stun_msg_decode() to check the validity of the STUN
+     * message by calling pj_stun_msg_check() before starting to
+     * decode the packet.
+     */
+    PJ_STUN_CHECK_PACKET    = 2
+};
+
 /**
  * Get STUN message method name.
  *
@@ -1087,7 +1104,7 @@ PJ_DECL(pj_str_t) pj_stun_get_err_reason(int err_code);
 
 
 /**
- * Create a blank STUN message.
+ * Create a generic STUN message.
  *
  * @param pool		Pool to create the STUN message.
  * @param msg_type	The 14bit message type.
@@ -1105,6 +1122,28 @@ PJ_DECL(pj_status_t) pj_stun_msg_create(pj_pool_t *pool,
 					const pj_uint8_t tsx_id[12],
 					pj_stun_msg **p_msg);
 
+/**
+ * Create STUN response message. 
+ *
+ * @param pool		Pool to create the mesage.
+ * @param req_msg	The request message.
+ * @param err_code	STUN error code. If this value is not zero,
+ *			then error response will be created, otherwise
+ *			successful response will be created.
+ * @param err_msg	Optional error message to explain err_code.
+ *			If this value is NULL and err_code is not zero,
+ *			the error string will be taken from the default
+ *			STUN error message.
+ * @param p_response	Pointer to receive the response.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
+						 const pj_stun_msg *req_msg,
+						 unsigned err_code,
+						 const pj_str_t *err_msg,
+						 pj_stun_msg **p_response);
+
 
 /**
  * Add STUN attribute to STUN message.
@@ -1118,57 +1157,6 @@ PJ_DECL(pj_status_t) pj_stun_msg_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
 					  pj_stun_attr_hdr *attr);
 
-
-/**
- * Check that the PDU is potentially a valid STUN message. This function
- * is useful when application needs to multiplex STUN packets with other
- * application traffic. When this function returns PJ_SUCCESS, there is a
- * big chance that the packet is a STUN packet.
- *
- * Note that we cannot be sure that the PDU is a really valid STUN message 
- * until we actually parse the PDU.
- *
- * @param pdu		The packet buffer.
- * @param pdu_len	The length of the packet buffer.
- * @param options	Options.
- *
- * @return		PJ_SUCCESS if the PDU is a potentially valid STUN
- *			message.
- */
-PJ_DECL(pj_status_t) pj_stun_msg_check(const void *pdu, unsigned pdu_len,
-				       unsigned options);
-
-
-/**
- * Parse incoming packet into STUN message.
- *
- * @param pool		Pool to allocate the message.
- * @param pdu		The incoming packet to be parsed.
- * @param pdu_len	The length of the incoming packet.
- * @param options	Parsing flags.
- * @param p_msg		Pointer to receive the parsed message.
- * @param p_parsed_len	Optional pointer to receive how many bytes have
- *			been parsed for the STUN message. This is useful
- *			when the packet is received over stream oriented
- *			transport.
- * @param p_err_code	Optional pointer to receive STUN error code when
- *			parsing failed.
- * @param uattr_cnt	Optional pointer to specify the number of elements
- *			in uattr array. On return, this will be filled with
- *			the actual number of attributes set in the uattr.
- * @param uattr		Optional array to receive unknown attribute types.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
-				        const pj_uint8_t *pdu,
-				        unsigned pdu_len,
-				        unsigned options,
-				        pj_stun_msg **p_msg,
-					unsigned *p_parsed_len,
-				        unsigned *p_err_code,
-				        unsigned *uattr_cnt,
-				        pj_uint16_t uattr[]);
 
 /**
  * Print the STUN message structure to a packet buffer, ready to be 
@@ -1204,6 +1192,94 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 				        unsigned options,
 					const pj_str_t *password,
 				        unsigned *p_msg_len);
+
+/**
+ * Check that the PDU is potentially a valid STUN message. This function
+ * is useful when application needs to multiplex STUN packets with other
+ * application traffic. When this function returns PJ_SUCCESS, there is a
+ * big chance that the packet is a STUN packet.
+ *
+ * Note that we cannot be sure that the PDU is a really valid STUN message 
+ * until we actually parse the PDU.
+ *
+ * @param pdu		The packet buffer.
+ * @param pdu_len	The length of the packet buffer.
+ * @param options	Additional options to be applied in the checking,
+ *			which can be taken from pj_stun_options. One of the
+ *			useful option is PJ_STUN_IS_DATAGRAM which means that
+ *			the pdu represents a whole STUN packet.
+ *
+ * @return		PJ_SUCCESS if the PDU is a potentially valid STUN
+ *			message.
+ */
+PJ_DECL(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
+				       unsigned options);
+
+
+/**
+ * Decode incoming packet into STUN message.
+ *
+ * @param pool		Pool to allocate the message.
+ * @param pdu		The incoming packet to be parsed.
+ * @param pdu_len	The length of the incoming packet.
+ * @param options	Parsing flags, according to pj_stun_options.
+ * @param p_msg		Pointer to receive the parsed message.
+ * @param p_parsed_len	Optional pointer to receive how many bytes have
+ *			been parsed for the STUN message. This is useful
+ *			when the packet is received over stream oriented
+ *			transport.
+ * @param p_response	Optional pointer to receive an instance of response
+ *			message, if one can be created. If the packet being
+ *			decoded is a request message, and it contains error,
+ *			and a response can be created, then the STUN 
+ *			response message will be returned on this argument.
+ *
+ * @return		PJ_SUCCESS if a STUN message has been successfully
+ *			decoded.
+ */
+PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
+				        const pj_uint8_t *pdu,
+				        unsigned pdu_len,
+				        unsigned options,
+				        pj_stun_msg **p_msg,
+					unsigned *p_parsed_len,
+				        pj_stun_msg **p_response);
+
+/**
+ * Verify credential in the STUN message. Note that before calling this
+ * function, application must have checked that the message contains
+ * PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute by calling pj_stun_msg_find_attr()
+ * function, because this function will reject the message with 401 error
+ * if it doesn't contain PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute.
+ *
+ * @param msg		The message to be verified.
+ * @param realm		Realm, if long term credential is required. If
+ *			short term credential is required, this argument
+ *			must be set to NULL.
+ * @param username	If this attribute is specified, then the USERNAME
+ *			attribute in the message will be compared against
+ *			this value. If NULL is specified, then this function
+ *			will accept any usernames.
+ * @param password	The password.
+ * @param options	Options, must be zero for now.
+ * @param pool		If response is to be created, then memory will
+ *			be allocated from this pool.
+ * @param p_response	Optional pointer to receive the response message
+ *			then the credential in the request fails to
+ *			authenticate.
+ *
+ * @return		PJ_SUCCESS if credential is verified successfully.
+ *			If the verification fails and \a p_response is not
+ *			NULL, an appropriate response will be returned in
+ *			\a p_response.
+ */
+PJ_DECL(pj_status_t) pj_stun_verify_credential(const pj_stun_msg *msg,
+					       const pj_str_t *realm,
+					       const pj_str_t *username,
+					       const pj_str_t *password,
+					       unsigned options,
+					       pj_pool_t *pool,
+					       pj_stun_msg **p_response);
 
 
 /**
@@ -1243,8 +1319,9 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
 
 
 /**
- * Create a generic STUN IP address attribute for IPv4 address. Note that
- * the port and ip_addr parameters are in host byte order.
+ * Create a generic STUN IP address attribute. The \a addr_len and
+ * \a addr parameters specify whether the address is IPv4 or IPv4
+ * address.
  *
  * @param pool		The pool to allocate memory from.
  * @param attr_type	Attribute type, from #pj_stun_attr_type.
@@ -1266,6 +1343,29 @@ pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
 
 
 /**
+ * Create and add generic STUN IP address attribute to a STUN message.
+ * The \a addr_len and \a addr parameters specify whether the address is 
+ * IPv4 or IPv4 address.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param xor_ed	If non-zero, the port and address will be XOR-ed
+ *			with magic, to make the XOR-MAPPED-ADDRESS attribute.
+ * @param addr_len	Length of \a addr parameter.
+ * @param addr		A pj_sockaddr_in or pj_sockaddr_in6 structure.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
+				     pj_stun_msg *msg,
+				     int attr_type, 
+				     pj_bool_t xor_ed,
+				     unsigned addr_len,
+				     const pj_sockaddr_t *addr);
+
+/**
  * Create a STUN generic string attribute.
  *
  * @param pool		The pool to allocate memory from.
@@ -1281,6 +1381,21 @@ pj_stun_generic_string_attr_create(pj_pool_t *pool,
 				   const pj_str_t *value,
 				   pj_stun_generic_string_attr **p_attr);
 
+/**
+ * Create and add STUN generic string attribute to the message.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param value		The string value to be assigned to the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_stun_msg_add_generic_string_attr(pj_pool_t *pool,
+				    pj_stun_msg *msg,
+				    int attr_type,
+				    const pj_str_t *value);
 
 /**
  * Create a STUN generic 32bit value attribute.
@@ -1298,6 +1413,22 @@ pj_stun_generic_uint_attr_create(pj_pool_t *pool,
 				 pj_uint32_t value,
 				 pj_stun_generic_uint_attr **p_attr);
 
+/**
+ * Create and add STUN generic 32bit value attribute to the message.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param value		The 32bit value to be assigned to the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_stun_msg_add_generic_uint_attr(pj_pool_t *pool,
+				  pj_stun_msg *msg,
+				  int attr_type,
+				  pj_uint32_t value);
+
 
 /**
  * Create a STUN MESSAGE-INTEGRITY attribute.
@@ -1310,7 +1441,6 @@ pj_stun_generic_uint_attr_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) 
 pj_stun_msg_integrity_attr_create(pj_pool_t *pool,
 				  pj_stun_msg_integrity_attr **p_attr);
-
 
 /**
  * Create a STUN ERROR-CODE attribute.
@@ -1331,7 +1461,8 @@ pj_stun_error_code_attr_create(pj_pool_t *pool,
 
 
 /**
- * Create an empty instance of STUN UNKNOWN-ATTRIBUTES attribute.
+ * Create instance of STUN UNKNOWN-ATTRIBUTES attribute and copy the
+ * unknown attribute array to the attribute.
  *
  * @param pool		The pool to allocate memory from.
  * @param attr_cnt	Number of attributes in the array (can be zero).
@@ -1343,15 +1474,34 @@ pj_stun_error_code_attr_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) 
 pj_stun_unknown_attr_create(pj_pool_t *pool,
 			    unsigned attr_cnt,
-			    pj_uint16_t attr[],
+			    const pj_uint16_t attr[],
 			    pj_stun_unknown_attr **p_attr);
 
+/**
+ * Create and add STUN UNKNOWN-ATTRIBUTES attribute to the message.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message.
+ * @param attr_cnt	Number of attributes in the array (can be zero).
+ * @param attr		Optional array of attributes.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
+			     pj_stun_msg *msg,
+			     unsigned attr_cnt,
+			     const pj_uint16_t attr[]);
 
 /**
- * Create a blank binary attribute.
+ * Create STUN binary attribute.
  *
  * @param pool		The pool to allocate memory from.
  * @param attr_type	The attribute type, from #pj_stun_attr_type.
+ * @param data		Data to be coped to the attribute, or NULL
+ *			if no data to be copied now.
+ * @param length	Length of data, or zero if no data is to be
+ *			copied now.
  * @param p_attr	Pointer to receive the attribute.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
@@ -1359,7 +1509,30 @@ pj_stun_unknown_attr_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t)
 pj_stun_binary_attr_create(pj_pool_t *pool,
 			   int attr_type,
+			   const pj_uint8_t *data,
+			   unsigned length,
 			   pj_stun_binary_attr **p_attr);
+
+/**
+ * Create STUN binary attribute and add the attribute to the message.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message.
+ * @param attr_type	The attribute type, from #pj_stun_attr_type.
+ * @param data		Data to be coped to the attribute, or NULL
+ *			if no data to be copied now.
+ * @param length	Length of data, or zero if no data is to be
+ *			copied now.
+ * @param p_attr	Pointer to receive the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pj_stun_msg_add_binary_attr(pj_pool_t *pool,
+			    pj_stun_msg *msg,
+			    int attr_type,
+			    const pj_uint8_t *data,
+			    unsigned length);
 
 
 /**

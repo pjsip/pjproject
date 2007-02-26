@@ -32,6 +32,7 @@
 #include <pjlib-util/getopt.h>
 
 /* Crypto */
+#include <pjlib-util/crc32.h>
 #include <pjlib-util/hmac_md5.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/md5.h>

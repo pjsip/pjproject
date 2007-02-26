@@ -383,6 +383,58 @@ static int rfc2202_test(void)
     return 0;
 }
 
+/* CRC32 test data, generated from crc32 test on a Linux box */
+struct
+{
+    char	    *input;
+    pj_uint32_t	     crc;
+} crc32_test_data[] = 
+{
+    {
+	"",
+	0x0
+    },
+    {
+	"Hello World",
+	0x4a17b156
+    },
+    {
+	/* Something read from /dev/random */
+	"\x21\x21\x98\x10\x62\x59\xbc\x58\x42\x24\xe5\xf3\x92\x0a\x68\x3c\xa7\x67\x73\xc3",
+	0x506693be
+    },
+    {
+	"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	0xcab11777
+    },
+    {
+	"123456789",
+	0xCBF43926
+    }
+};
+
+/*
+ * CRC32 test
+ */
+static int crc32_test(void)
+{
+    unsigned i;
+
+    PJ_LOG(3, (THIS_FILE, "  crc32 test.."));
+
+    for (i=0; i<PJ_ARRAY_SIZE(crc32_test_data); ++i) {
+	pj_uint32_t crc;
+
+	crc = pj_crc32_calc((pj_uint8_t*)crc32_test_data[i].input,
+			    pj_ansi_strlen(crc32_test_data[i].input));
+	if (crc != crc32_test_data[i].crc) {
+	    PJ_LOG(3,(THIS_FILE, "    error: crc mismatch on test %d", i));
+	    return -80;
+	}
+    }
+    return 0;
+}
+
 
 int encryption_test()
 {
@@ -397,6 +449,10 @@ int encryption_test()
 	return rc;
 
     rc = rfc2202_test();
+    if (rc != 0)
+	return rc;
+
+    rc = crc32_test();
     if (rc != 0)
 	return rc;
 

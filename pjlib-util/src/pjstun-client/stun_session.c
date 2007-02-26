@@ -484,7 +484,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
     /* Encode message */
     status = pj_stun_msg_encode(tdata->msg, tdata->pkt, tdata->max_len,
-			        0, &tdata->pkt_size);
+			        0, NULL, &tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "STUN encode() error", status);
 	destroy_tdata(tdata);
@@ -540,7 +540,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					      pj_size_t pkt_size,
 					      unsigned *parsed_len)
 {
-    pj_stun_msg *msg;
+    pj_stun_msg *msg, *response;
     pj_pool_t *tmp_pool;
     char *dump;
     pj_status_t status;
@@ -554,9 +554,12 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     /* Try to parse the message */
     status = pj_stun_msg_decode(tmp_pool, (const pj_uint8_t*)packet,
 			        pkt_size, 0, &msg, parsed_len,
-				NULL, NULL, NULL);
+				&response);
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "STUN msg_decode() error", status);
+	if (response) {
+	    PJ_TODO(SEND_RESPONSE);
+	}
 	pj_pool_release(tmp_pool);
 	return status;
     }
