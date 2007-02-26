@@ -75,7 +75,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjstun_srv"=".\pjstun_srv.dsp" - Package Owner=<4>
+Project: "pjstun_srv_test"=".\pjstun_srv_test.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
