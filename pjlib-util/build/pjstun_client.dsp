@@ -89,18 +89,10 @@ LINK32=link.exe
 
 SOURCE="..\src\pjstun-client\client_main.c"
 # End Source File
-# Begin Source File
-
-SOURCE="..\src\pjstun-client\stun_session.c"
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE="..\src\pjstun-client\stun_session.h"
-# End Source File
 # End Group
 # Begin Group "Resource Files"
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "stun_session.h"
+#include <pjlib-util/stun_session.h>
 #include <pjlib.h>
 
 struct pj_stun_session
@@ -90,6 +90,7 @@ static pj_status_t tsx_add(pj_stun_session *sess,
 static pj_status_t tsx_erase(pj_stun_session *sess,
 			     pj_stun_tx_data *tdata)
 {
+    PJ_UNUSED_ARG(sess);
     pj_list_erase(tdata);
     return PJ_SUCCESS;
 }
@@ -130,7 +131,7 @@ static pj_status_t create_tdata(pj_stun_session *sess,
     tdata = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_tx_data);
     tdata->pool = pool;
     tdata->sess = sess;
-    tdata->user_data = tdata;
+    tdata->user_data = user_data;
 
     /* Create STUN message */
     status = pj_stun_msg_create(pool, msg_type,  PJ_STUN_MAGIC, 

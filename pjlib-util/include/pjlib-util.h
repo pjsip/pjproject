@@ -52,6 +52,7 @@
 #include <pjlib-util/stun_endpoint.h>
 #include <pjlib-util/stun_msg.h>
 #include <pjlib-util/stun_server.h>
+#include <pjlib-util/stun_session.h>
 #include <pjlib-util/stun_transaction.h>
 
 /* Old STUN */

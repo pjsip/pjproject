@@ -18,7 +18,6 @@
  */
 #include <pjlib-util.h>
 #include <pjlib.h>
-#include "stun_session.h"
 
 #include <conio.h>
 

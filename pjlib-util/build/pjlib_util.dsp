@@ -161,6 +161,10 @@ SOURCE="..\src\pjlib-util\stun_server.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\stun_session.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\stun_simple.c"
 # End Source File
 # Begin Source File
@@ -258,6 +262,10 @@ SOURCE="..\include\pjlib-util\stun_msg.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\stun_server.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\stun_session.h"
 # End Source File
 # Begin Source File
 
