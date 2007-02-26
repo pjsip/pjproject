@@ -517,7 +517,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 
     /* Copy stream info (this simple memcpy may break sometime) */
     pj_memcpy(session->stream_info, si->stream_info,
-	      si->stream_cnt * sizeof(pjmedia_session_info));
+	      si->stream_cnt * sizeof(pjmedia_stream_info));
 
     /*
      * Now create and start the stream!
