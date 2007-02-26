@@ -211,6 +211,24 @@
 #   define PJ_STUN_MAX_ATTR			    16
 #endif
 
+
+/* **************************************************************************
+ * ENCRYPTION
+ */
+
+/**
+ * Specifies whether CRC32 algorithm should use the table based lookup table
+ * for faster calculation, at the expense of about 1KB table size on the
+ * executable. If zero, the CRC32 will use non-table based which is more than
+ * an order of magnitude slower.
+ *
+ * Default: 1
+ */
+#ifndef PJ_CRC32_HAS_TABLES
+#   define PJ_CRC32_HAS_TABLES			    1
+#endif
+
+
 /**
  * @}
  */

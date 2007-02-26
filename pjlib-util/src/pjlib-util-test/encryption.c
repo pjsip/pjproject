@@ -422,6 +422,7 @@ static int crc32_test(void)
 
     PJ_LOG(3, (THIS_FILE, "  crc32 test.."));
 
+    /* testing pj_crc32_calc */
     for (i=0; i<PJ_ARRAY_SIZE(crc32_test_data); ++i) {
 	pj_uint32_t crc;
 
@@ -431,6 +432,34 @@ static int crc32_test(void)
 	    PJ_LOG(3,(THIS_FILE, "    error: crc mismatch on test %d", i));
 	    return -80;
 	}
+    }
+
+    /* testing incremental CRC32 calculation */
+    for (i=0; i<PJ_ARRAY_SIZE(crc32_test_data); ++i) {
+	pj_crc32_context ctx;
+	pj_uint32_t crc0, crc1;
+	unsigned len;
+
+	len = pj_ansi_strlen(crc32_test_data[i].input);
+	crc0 = pj_crc32_calc((pj_uint8_t*)crc32_test_data[i].input, len);
+
+	pj_crc32_init(&ctx);
+	pj_crc32_update(&ctx, (pj_uint8_t*)crc32_test_data[i].input,
+			len / 2);
+
+	if (len/2 > 0) {
+	    pj_crc32_update(&ctx, (pj_uint8_t*)crc32_test_data[i].input + len/2,
+			    len - len/2);
+	}
+
+	crc1 = pj_crc32_final(&ctx);
+
+	if (crc0 != crc1) {
+	    PJ_LOG(3,(THIS_FILE, 
+		      "    error: crc algorithm error on test %d", i));
+	    return -85;
+	}
+
     }
     return 0;
 }
@@ -455,6 +484,112 @@ int encryption_test()
     rc = crc32_test();
     if (rc != 0)
 	return rc;
+
+    return 0;
+}
+
+static void crc32_update(pj_crc32_context *c, const pj_uint8_t *data,
+			 pj_size_t nbytes)
+{
+    pj_crc32_update(c, data, nbytes);
+}
+
+static void crc32_final(pj_crc32_context *ctx, pj_uint32_t *digest)
+{
+    *digest = pj_crc32_final(ctx);
+}
+
+int encryption_benchmark()
+{
+    pj_pool_t *pool;
+    pj_uint8_t *input;
+    union {
+	pj_md5_context md5_context;
+	pj_sha1_context sha1_context;
+    } context;
+    pj_uint8_t digest[32];
+    pj_size_t input_len;
+    struct algorithm
+    {
+	const char *name;
+	void (*init_context)(void*);
+	void (*update)(void*, const pj_uint8_t*, unsigned);
+	void (*final)(void*, void*);
+	pj_uint32_t t;
+    } algorithms[] = 
+    {
+	{
+	    "MD5  ",
+	    &pj_md5_init,
+	    &pj_md5_update,
+	    &pj_md5_final
+	},
+	{
+	    "SHA1 ",
+	    &pj_sha1_init,
+	    &pj_sha1_update,
+	    &pj_sha1_final
+	},
+	{
+	    "CRC32",
+	    &pj_crc32_init,
+	    &crc32_update,
+	    &crc32_final
+	}
+    };
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    enum { LOOP = 1000 };
+#else
+    enum { LOOP = 10000 };
+#endif
+    unsigned i;
+    double total_len;
+
+    input_len = 2048;
+    total_len = input_len * LOOP;
+    pool = pj_pool_create(mem, "enc", input_len+256, 0, NULL);
+    if (!pool)
+	return PJ_ENOMEM;
+
+    input = pj_pool_alloc(pool, input_len);
+    pj_memset(input, '\xaa', input_len);
+    
+    PJ_LOG(3, (THIS_FILE, "  feeding %d Mbytes of data",
+	       (unsigned)(total_len/1024/1024)));
+
+    /* Dry run */
+    for (i=0; i<PJ_ARRAY_SIZE(algorithms); ++i) {
+	algorithms[i].init_context(&context);
+	algorithms[i].update(&context, input, input_len);
+	algorithms[i].final(&context, digest);
+    }
+
+    /* Run */
+    for (i=0; i<PJ_ARRAY_SIZE(algorithms); ++i) {
+	int j;
+	pj_timestamp t1, t2;
+
+	pj_get_timestamp(&t1);
+	algorithms[i].init_context(&context);
+	for (j=0; j<LOOP; ++j) {
+	    algorithms[i].update(&context, input, input_len);
+	}
+	algorithms[i].final(&context, digest);
+	pj_get_timestamp(&t2);
+
+	algorithms[i].t = pj_elapsed_usec(&t1, &t2);
+    }
+
+    /* Results */
+    for (i=0; i<PJ_ARRAY_SIZE(algorithms); ++i) {
+	double bytes;
+
+	bytes = (total_len * 1000000 / algorithms[i].t);
+	PJ_LOG(3, (THIS_FILE, "    %s:%8d usec (%3d.%03d Mbytes/sec)",
+		   algorithms[i].name, algorithms[i].t,
+		   (unsigned)(bytes / 1024 / 1024),
+		   ((unsigned)(bytes) % (1024 * 1024)) / 1024));
+    }
 
     return 0;
 }

@@ -21,6 +21,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/md5.h>
+#include <pjlib-util/sha1.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -1559,6 +1560,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     pj_stun_msg *msg;
     unsigned uattr_cnt;
     const pj_uint8_t *start_pdu = pdu;
+    pj_bool_t has_msg_int = PJ_FALSE;
+    pj_bool_t has_fingerprint = PJ_FALSE;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
@@ -1586,7 +1589,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     msg->hdr.magic = pj_ntohl(msg->hdr.magic);
 
     pdu += sizeof(pj_stun_msg_hdr);
-    pdu_len -= sizeof(pj_stun_msg_hdr);
+    /* pdu_len -= sizeof(pj_stun_msg_hdr); */
+    pdu_len = msg->hdr.length;
 
     /* No need to create response if this is not a request */
     if (!PJ_STUN_IS_REQUEST(msg->hdr.type))
@@ -1687,7 +1691,51 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 		return status;
 	    }
-	    
+
+	    if (attr_type == PJ_STUN_ATTR_MESSAGE_INTEGRITY && 
+		!has_fingerprint) 
+	    {
+		if (has_msg_int) {
+		    /* Already has MESSAGE-INTEGRITY */
+		    if (p_response) {
+			pj_str_t e;
+			e = pj_str("MESSAGE-INTEGRITY already present");
+			pj_stun_msg_create_response(pool, msg,
+						    PJ_STUN_STATUS_BAD_REQUEST,
+						    NULL, p_response);
+		    }
+		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		}
+		has_msg_int = PJ_TRUE;
+
+	    } else if (attr_type == PJ_STUN_ATTR_FINGERPRINT) {
+		if (has_fingerprint) {
+		    /* Already has FINGERPRINT */
+		    if (p_response) {
+			pj_str_t e;
+			e = pj_str("FINGERPRINT already present");
+			pj_stun_msg_create_response(pool, msg,
+						    PJ_STUN_STATUS_BAD_REQUEST,
+						    NULL, p_response);
+		    }
+		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		}
+		has_fingerprint = PJ_TRUE;
+	    } else {
+		if (has_msg_int || has_fingerprint) {
+		    /* Another attribute is found which is not FINGERPRINT
+		     * after FINGERPRINT or MESSAGE-INTEGRITY */
+		    if (p_response) {
+			pj_str_t e;
+			e = pj_str("Invalid attribute order");
+			pj_stun_msg_create_response(pool, msg,
+						    PJ_STUN_STATUS_BAD_REQUEST,
+						    NULL, p_response);
+		    }
+		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		}
+	    }
+
 	    /* Make sure we have rooms for the new attribute */
 	    if (msg->attr_count >= PJ_STUN_MAX_ATTR) {
 		if (p_response) {
@@ -1715,6 +1763,56 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	*p_parsed_len = (pdu - start_pdu);
 
     return PJ_SUCCESS;
+}
+
+/* Calculate HMAC-SHA1 key for long term credential, by getting
+ * MD5 digest of username, realm, and password. 
+ */
+static void calc_md5_key(pj_uint8_t digest[16],
+			 const pj_str_t *realm,
+			 const pj_str_t *username,
+			 const pj_str_t *passwd)
+{
+    /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
+     * the MD5 hash of the result of concatenating the following five
+     * fields: (1) The username, with any quotes and trailing nulls
+     * removed, (2) A single colon, (3) The realm, with any quotes and
+     * trailing nulls removed, (4) A single colon, and (5) The 
+     * password, with any trailing nulls removed.
+     */
+    pj_md5_context ctx;
+    pj_str_t s;
+
+    pj_md5_init(&ctx);
+
+#define REMOVE_QUOTE(s)	if (s.slen && *s.ptr=='"') \
+		    s.ptr++, s.slen--; \
+		if (s.slen && s.ptr[s.slen-1]=='"') \
+		    s.slen--;
+
+    /* Add username */
+    s = *username;
+    REMOVE_QUOTE(s);
+    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
+
+    /* Add single colon */
+    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
+
+    /* Add realm */
+    s = *realm;
+    REMOVE_QUOTE(s);
+    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
+
+#undef REMOVE_QUOTE
+
+    /* Another colon */
+    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
+
+    /* Add password */
+    pj_md5_update(&ctx, (pj_uint8_t*)passwd->ptr, passwd->slen);
+
+    /* Done */
+    pj_md5_final(&ctx, digest);
 }
 
 
@@ -1795,6 +1893,24 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	buf_size -= printed;
     }
 
+    /* We MUST update the message length in the header NOW before
+     * calculating MESSAGE-INTEGRITY and FINGERPRINT. 
+     * Note that length is not including the 20 bytes header.
+     */
+    if (amsg_integrity && afingerprint) {
+	length = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
+    } else if (amsg_integrity) {
+	length = (pj_uint16_t)((buf - start) - 20 + 24);
+    } else if (afingerprint) {
+	length = (pj_uint16_t)((buf - start) - 20 + 8);
+    } else {
+	length = (pj_uint16_t)((buf - start) - 20);
+    }
+
+    /* hdr->length = pj_htons(length); */
+    *(buf+2) = (pj_uint8_t)((length >> 8) & 0x00FF);
+    *(buf+3) = (pj_uint8_t)(length & 0x00FF);
+
     /* Calculate message integrity, if present */
     if (amsg_integrity != NULL) {
 
@@ -1835,46 +1951,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	    key = *password;
 
 	} else {
-	    /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
-	     * the MD5 hash of the result of concatenating the following five
-	     * fields: (1) The username, with any quotes and trailing nulls
-	     * removed, (2) A single colon, (3) The realm, with any quotes and
-	     * trailing nulls removed, (4) A single colon, and (5) The 
-	     * password, with any trailing nulls removed.
-	     */
-	    pj_md5_context ctx;
-	    pj_str_t s;
-
-	    pj_md5_init(&ctx);
-
-#define REMOVE_QUOTE(s)	if (s.slen && *s.ptr=='"') \
-			    s.ptr++, s.slen--; \
-			if (s.slen && s.ptr[s.slen-1]=='"') \
-			    s.slen--;
-
-	    /* Add username */
-	    s = auname->value;
-	    REMOVE_QUOTE(s);
-	    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
-
-	    /* Add single colon */
-	    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
-
-	    /* Add realm */
-	    s = arealm->value;
-	    REMOVE_QUOTE(s);
-	    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
-
-#undef REMOVE_QUOTE
-
-	    /* Another colon */
-	    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
-
-	    /* Add password */
-	    pj_md5_update(&ctx, (pj_uint8_t*)password->ptr, password->slen);
-
-	    /* Done */
-	    pj_md5_final(&ctx, md5_key_buf);
+	    calc_md5_key(md5_key_buf, &arealm->value, &auname->value, 
+			 password);
 	    key.ptr = (char*) md5_key_buf;
 	    key.slen = 16;
 	}
@@ -1909,15 +1987,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
 	buf_size -= printed;
     }
 
-    /* Update the message length in the header. 
-     * Note that length is not including the 20 bytes header.
-     */
-    length = (pj_uint16_t)((buf - start) - 20);
-    /* hdr->length = pj_htons(length); */
-    *(buf+2) = (pj_uint8_t)((length >> 8) & 0x00FF);
-    *(buf+3) = (pj_uint8_t)(length & 0x00FF);
-
-
     /* Done */
     if (p_msg_len)
 	*p_msg_len = (buf - start);
@@ -1945,41 +2014,108 @@ PJ_DEF(pj_stun_attr_hdr*) pj_stun_msg_find_attr( const pj_stun_msg *msg,
 }
 
 
+/**************************************************************************/
+/*
+ * Authentication
+ */
+
+
+/* Send 401 response */
+static pj_status_t create_challenge(pj_pool_t *pool,
+				    const pj_stun_msg *msg,
+				    int err_code,
+				    const pj_str_t *err_msg,
+				    const pj_str_t *realm,
+				    const pj_str_t *nonce,
+				    pj_stun_msg **p_response)
+{
+    pj_stun_msg *response;
+    pj_status_t rc;
+
+    rc = pj_stun_msg_create_response(pool, msg, 
+				     err_code,  err_msg, &response);
+    if (rc != PJ_SUCCESS)
+	return rc;
+
+
+    if (realm && realm->slen) {
+	rc = pj_stun_msg_add_generic_string_attr(pool, response,
+						 PJ_STUN_ATTR_REALM, 
+						 realm);
+	if (rc != PJ_SUCCESS)
+	    return rc;
+    }
+
+    if (nonce && nonce->slen) {
+	rc = pj_stun_msg_add_generic_string_attr(pool, response,
+						 PJ_STUN_ATTR_NONCE, 
+						 nonce);
+	if (rc != PJ_SUCCESS)
+	    return rc;
+    }
+
+    *p_response = response;
+
+    return PJ_SUCCESS;
+}
+
 /* Verify credential */
-PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_stun_msg *msg,
-					       const pj_str_t *realm,
-					       const pj_str_t *username,
-					       const pj_str_t *password,
-					       unsigned options,
+PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
+					       unsigned pkt_len,
+					       const pj_stun_msg *msg,
+					       pj_stun_auth_policy *pol,
 					       pj_pool_t *pool,
 					       pj_stun_msg **p_response)
 {
+    pj_str_t realm, nonce, password;
     const pj_stun_msg_integrity_attr *amsgi;
+    unsigned amsgi_pos;
     const pj_stun_username_attr *auser;
+    pj_bool_t username_ok;
     const pj_stun_realm_attr *arealm;
+    const pj_stun_realm_attr *anonce;
+    pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE];
+    pj_uint8_t md5_digest[16];
+    pj_str_t key;
+    pj_status_t status;
 
-    PJ_ASSERT_RETURN(msg && password, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
-    PJ_UNUSED_ARG(options);
+    /* msg and policy MUST be specified */
+    PJ_ASSERT_RETURN(pkt && pkt_len && msg && pol, PJ_EINVAL);
+
+    /* If p_response is specified, pool MUST be specified. */
+    PJ_ASSERT_RETURN(!p_response || pool, PJ_EINVAL);
 
     if (p_response)
 	*p_response = NULL;
+
+    if (PJ_STUN_IS_REQUEST(msg->hdr.type))
+	p_response = NULL;
+
+    /* Get realm and nonce */
+    realm.slen = nonce.slen = 0;
+    if (pol->type == PJ_STUN_POLICY_STATIC_SHORT_TERM) {
+	realm.slen = 0;
+	nonce = pol->data.static_short_term.nonce;
+    } else if (pol->type == PJ_STUN_POLICY_STATIC_LONG_TERM) {
+	realm = pol->data.static_long_term.realm;
+	nonce = pol->data.static_long_term.nonce;
+    } else if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
+	status = pol->data.dynamic.get_auth(pol->user_data, pool, 
+					    &realm, &nonce);
+	if (status != PJ_SUCCESS)
+	    return status;
+    } else {
+	pj_assert(!"Unexpected");
+	return PJ_EBUG;
+    }
 
     /* First check that MESSAGE-INTEGRITY is present */
     amsgi = (const pj_stun_msg_integrity_attr*)
 	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
     if (amsgi == NULL) {
-	if (pool && p_response) {
-	    pj_status_t rc;
-
-	    rc = pj_stun_msg_create_response(pool, msg, 
-					     PJ_STUN_STATUS_UNAUTHORIZED, 
-					     NULL, p_response);
-	    if (rc==PJ_SUCCESS && realm) {
-		pj_stun_msg_add_generic_string_attr(pool, *p_response,
-						    PJ_STUN_ATTR_REALM, 
-						    realm);
-	    }
+	if (p_response) {
+	    create_challenge(pool, msg, PJ_STUN_STATUS_UNAUTHORIZED, NULL,
+			     &realm, &nonce, p_response);
 	}
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_UNAUTHORIZED);
     }
@@ -1988,71 +2124,178 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_stun_msg *msg,
     auser = (const pj_stun_username_attr*)
 	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
     if (auser == NULL) {
-	if (pool && p_response) {
-	    pj_status_t rc;
-
-	    rc = pj_stun_msg_create_response(pool, msg, 
-					     PJ_STUN_STATUS_MISSING_USERNAME, 
-					     NULL, p_response);
-	    if (rc==PJ_SUCCESS && realm) {
-		pj_stun_msg_add_generic_string_attr(pool, *p_response,
-						    PJ_STUN_ATTR_REALM, 
-						    realm);
-	    }
+	if (p_response) {
+	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_USERNAME, NULL,
+			     &realm, &nonce, p_response);
 	}
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_USERNAME);
     }
 
-    /* Check if username match */
-    if (username && pj_stricmp(&auser->value, username) != 0) {
-	/* Username mismatch */
-	if (pool && p_response) {
-	    pj_status_t rc;
-
-	    rc = pj_stun_msg_create_response(pool, msg, 
-					     PJ_STUN_STATUS_WRONG_USERNAME, 
-					     NULL, p_response);
-	    if (rc==PJ_SUCCESS && realm) {
-		pj_stun_msg_add_generic_string_attr(pool, *p_response,
-						    PJ_STUN_ATTR_REALM, 
-						    realm);
-	    }
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_WRONG_USERNAME);
-    }
-
-    /* Next check that REALM is present */
+    /* Get REALM, if any */
     arealm = (const pj_stun_realm_attr*)
 	     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_REALM, 0);
-    if (realm != NULL && arealm == NULL) {
-	/* Long term credential is required */
-	if (pool && p_response) {
-	    pj_status_t rc;
 
-	    rc = pj_stun_msg_create_response(pool, msg, 
-					     PJ_STUN_STATUS_MISSING_REALM, 
-					     NULL, p_response);
-	    if (rc==PJ_SUCCESS) {
-		pj_stun_msg_add_generic_string_attr(pool, *p_response,
-						    PJ_STUN_ATTR_REALM, 
-						    realm);
-	    }
+    /* Check if username match */
+    if (pol->type == PJ_STUN_POLICY_STATIC_SHORT_TERM) {
+	username_ok = !pj_strcmp(&auser->value, 
+				 &pol->data.static_short_term.username);
+	password = pol->data.static_short_term.password;
+    } else if (pol->type == PJ_STUN_POLICY_STATIC_LONG_TERM) {
+	username_ok = !pj_strcmp(&auser->value, 
+				 &pol->data.static_long_term.username);
+	password = pol->data.static_long_term.password;
+    } else if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
+	pj_status_t rc;
+	rc = pol->data.dynamic.get_password(pol->user_data, 
+					    (arealm?&arealm->value:NULL),
+					    &auser->value, pool,
+					    &password);
+	username_ok = (rc == PJ_SUCCESS);
+    } else {
+	username_ok = PJ_TRUE;
+	password.slen = 0;
+    }
+
+    if (!username_ok) {
+	/* Username mismatch */
+	if (p_response) {
+	    create_challenge(pool, msg, PJ_STUN_STATUS_UNKNOWN_USERNAME, NULL,
+			     &realm, &nonce, p_response);
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_UNKNOWN_USERNAME);
+    }
+
+
+    /* Get NONCE attribute */
+    anonce = (pj_stun_nonce_attr*)
+	     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_NONCE, 0);
+
+    /* Check for long term/short term requirements. */
+    if (realm.slen != 0 && arealm == NULL) {
+	/* Long term credential is required and REALM is not present */
+	if (p_response) {
+	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, NULL,
+			     &realm, &nonce, p_response);
 	}
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_REALM);
 
-    } else if (realm != NULL && arealm != NULL) {
+    } else if (realm.slen != 0 && arealm != NULL) {
+	/* We want long term, and REALM is present */
 
+	/* NONCE must be present. */
+	if (anonce == NULL) {
+	    if (p_response) {
+		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
+				 NULL, &realm, &nonce, p_response);
+	    }
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_NONCE);
+	}
 
-    } else if (realm == NULL && arealm != NULL) {
+	/* Verify REALM matches */
+	if (pj_stricmp(&arealm->value, &realm)) {
+	    /* REALM doesn't match */
+	    if (p_response) {
+		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, 
+				 NULL, &realm, &nonce, p_response);
+	    }
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_REALM);
+	}
+
+	/* Valid case, will validate the message integrity later */
+
+    } else if (realm.slen == 0 && arealm != NULL) {
 	/* We want to use short term credential, but client uses long
 	 * term credential. The draft doesn't mention anything about
 	 * switching between long term and short term.
 	 */
-	PJ_TODO(SWITCHING_BETWEEN_SHORT_TERM_AND_LONG_TERM);
+	
+	/* For now just accept the credential, anyway it will probably
+	 * cause wrong message integrity value later.
+	 */
+    } else if (realm.slen==0 && arealm == NULL) {
+	/* Short term authentication is wanted, and one is supplied */
+
+	/* Application MAY request NONCE to be supplied */
+	if (nonce.slen != 0) {
+	    if (p_response) {
+		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
+				 NULL, &realm, &nonce, p_response);
+	    }
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_NONCE);
+	}
     }
 
-    PJ_TODO(CONTINUE_IMPLEMENTATION);
+    /* If NONCE is present, validate it */
+    if (anonce) {
+	pj_bool_t ok;
 
+	if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
+	    ok = pol->data.dynamic.verify_nonce(pol->user_data,
+						(arealm?&arealm->value:NULL),
+						&auser->value,
+						&anonce->value);
+	} else {
+	    if (nonce.slen) {
+		ok = !pj_strcmp(&anonce->value, &nonce);
+	    } else {
+		ok = PJ_TRUE;
+	    }
+	}
+
+	if (!ok) {
+	    if (p_response) {
+		create_challenge(pool, msg, PJ_STUN_STATUS_STALE_NONCE, 
+				 NULL, &realm, &nonce, p_response);
+	    }
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_STALE_NONCE);
+	}
+    }
+
+    /* Get the position of MESSAGE-INTEGRITY in the packet */
+    amsgi_pos = 20+msg->hdr.length-22;
+    if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+	/* Found MESSAGE-INTEGRITY as the last attribute */
+    } else {
+	amsgi_pos = 0;
+    }
+    
+    if (amsgi_pos==0) {
+	amsgi_pos = 20+msg->hdr.length-8-22;
+	if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+	    /* Found MESSAGE-INTEGRITY before FINGERPRINT */
+	} else {
+	    amsgi_pos = 0;
+	}
+    }
+
+    if (amsgi_pos==0) {
+	pj_assert(!"Unable to find MESSAGE-INTEGRITY in the message!");
+	return PJ_EBUG;
+    }
+
+    /* Determine which key to use */
+    if (realm.slen) {
+	calc_md5_key(md5_digest, &realm, &auser->value, &password);
+	key.ptr = (char*)md5_digest;
+	key.slen = 16;
+    } else {
+	key = password;
+    }
+
+    /* Now calculate HMAC of the message */
+    pj_hmac_sha1(pkt, amsgi_pos, (pj_uint8_t*)key.ptr, key.slen, digest);
+
+    /* Compare HMACs */
+    if (pj_memcmp(amsgi->hmac, digest, 20)) {
+	/* HMAC value mismatch */
+	if (p_response) {
+	    create_challenge(pool, msg, PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE,
+			     NULL, &realm, &nonce, p_response);
+	}
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE);
+    }
+
+    /* Everything looks okay! */
     return PJ_SUCCESS;
 }
 

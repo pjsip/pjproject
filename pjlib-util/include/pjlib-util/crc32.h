@@ -24,7 +24,7 @@
  * @brief CRC32 implementation
  */
 
-#include <pj/types.h>
+#include <pjlib-util/types.h>
 
 PJ_BEGIN_DECL
 

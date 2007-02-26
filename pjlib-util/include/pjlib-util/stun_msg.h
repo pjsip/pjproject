@@ -1245,6 +1245,106 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 					unsigned *p_parsed_len,
 				        pj_stun_msg **p_response);
 
+typedef enum pj_stun_auth_policy_type
+{
+    PJ_STUN_POLICY_NONE,
+    PJ_STUN_POLICY_STATIC_SHORT_TERM,
+    PJ_STUN_POLICY_STATIC_LONG_TERM,
+    PJ_STUN_POLICY_DYNAMIC
+} pj_stun_auth_policy_type;
+
+typedef struct pj_stun_auth_policy
+{
+    pj_stun_auth_policy_type	type;
+    void		       *user_data;
+
+    union 
+    {
+	struct
+	{
+	    pj_str_t	  username;
+	    pj_str_t	  password;
+	    pj_str_t	  nonce;
+	} static_short_term;
+
+	struct
+	{
+	    pj_str_t	  realm;
+	    pj_str_t	  username;
+	    pj_str_t	  password;
+	    pj_str_t	  nonce;
+	} static_long_term;
+
+	struct
+	{
+	    /**
+	     * This callback is called by pj_stun_verify_credential() when
+	     * server needs to challenge the request with 401 response.
+	     *
+	     * @param user_data	The user data as specified in the policy.
+	     * @param pool	Pool to allocate memory.
+	     * @param realm	On return, the function should fill in with
+	     *			realm if application wants to use long term
+	     *			credential. Otherwise application should set
+	     *			empty string for the realm.
+	     * @param nonce	On return, if application wants to use long
+	     *			term credential, it MUST fill in the nonce
+	     *			with some value. Otherwise  if short term 
+	     *			credential is wanted, it MAY set this value.
+	     *			If short term credential is wanted and the
+	     *			application doesn't want to include NONCE,
+	     *			then it must set this to empty string.
+	     *
+	     * @return		The callback should return PJ_SUCCESS, or
+	     *			otherwise response message will not be 
+	     *			created.
+	     */
+	    pj_status_t (*get_auth)(void *user_data,
+				    pj_pool_t *pool,
+				    pj_str_t *realm,
+				    pj_str_t *nonce);
+
+	    /**
+	     * Get the password for the specified username. This function 
+	     * is also used to check whether the username is valid.
+	     *
+	     * @param user_data	The user data as specified in the policy.
+	     * @param realm	The realm as specified in the message.
+	     * @param username	The username as specified in the message.
+	     * @param pool	Pool to allocate memory when necessary.
+	     * @param password	On return, application should fill up this
+	     *			argument with the password.
+	     *
+	     * @return		The callback should return PJ_SUCCESS if
+	     *			username has been successfully verified
+	     *			and password was obtained. If non-PJ_SUCCESS
+	     *			is returned, it is assumed that the
+	     *			username is not valid.
+	     */
+	    pj_status_t	(*get_password)(void *user_data, 
+				        const pj_str_t *realm,
+				        const pj_str_t *username,
+					pj_pool_t *pool,
+					pj_str_t *password);
+	    pj_bool_t	(*require_nonce)(void *user_data,
+					 const pj_str_t *realm,
+					 const pj_str_t *username);
+	    pj_bool_t	(*verify_nonce)(void *data,
+					const pj_str_t *realm,
+					const pj_str_t *username,
+					const pj_str_t *nonce);
+	    pj_status_t	(*make_nonce)(void *user_data,
+				      const pj_str_t *realm,
+				      const pj_str_t *username,
+				      pj_pool_t *pool,
+				      pj_str_t *nonce);
+	} dynamic;
+
+    } data;
+
+} pj_stun_auth_policy;
+
+
 /**
  * Verify credential in the STUN message. Note that before calling this
  * function, application must have checked that the message contains
@@ -1252,16 +1352,12 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
  * function, because this function will reject the message with 401 error
  * if it doesn't contain PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute.
  *
- * @param msg		The message to be verified.
- * @param realm		Realm, if long term credential is required. If
- *			short term credential is required, this argument
- *			must be set to NULL.
- * @param username	If this attribute is specified, then the USERNAME
- *			attribute in the message will be compared against
- *			this value. If NULL is specified, then this function
- *			will accept any usernames.
- * @param password	The password.
- * @param options	Options, must be zero for now.
+ * @param pkt		The original packet which has been parsed into
+ *			the message. This packet MUST NOT have been modified
+ *			after the parsing.
+ * @param pkt_len	The length of the packet.
+ * @param msg		The parsed message to be verified.
+ * @param policy	Pointer to authentication policy.
  * @param pool		If response is to be created, then memory will
  *			be allocated from this pool.
  * @param p_response	Optional pointer to receive the response message
@@ -1273,11 +1369,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
  *			NULL, an appropriate response will be returned in
  *			\a p_response.
  */
-PJ_DECL(pj_status_t) pj_stun_verify_credential(const pj_stun_msg *msg,
-					       const pj_str_t *realm,
-					       const pj_str_t *username,
-					       const pj_str_t *password,
-					       unsigned options,
+PJ_DECL(pj_status_t) pj_stun_verify_credential(const pj_uint8_t *pkt,
+					       unsigned pkt_len,
+					       const pj_stun_msg *msg,
+					       pj_stun_auth_policy *policy,
 					       pj_pool_t *pool,
 					       pj_stun_msg **p_response);
 

@@ -68,8 +68,12 @@ static int test_inner(void)
 
 #if INCLUDE_ENCRYPTION_TEST
     DO_TEST(encryption_test());
+    DO_TEST(encryption_benchmark());
 #endif
 
+#if INCLUDE_STUN_TEST
+    DO_TEST(stun_test());
+#endif
 
 on_return:
     return rc;
