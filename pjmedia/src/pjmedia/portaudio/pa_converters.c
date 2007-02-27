@@ -1662,7 +1662,9 @@ static void Copy_16_To_16(
 {
     PaUint16 *src = (PaUint16 *)sourceBuffer;
     PaUint16 *dest = (PaUint16 *)destinationBuffer;
-                                                        
+                                                  
+    if (dest==NULL) return;
+
     (void) ditherGenerator; /* unused parameter */
     
     while( count-- )
