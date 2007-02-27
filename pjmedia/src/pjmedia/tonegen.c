@@ -355,7 +355,10 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *port)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
-    return tonegen->count = 0;
+    tonegen->count = 0;
+    tonegen->cur_digit = 0;
+    tonegen->dig_samples = 0;
+    return PJ_SUCCESS;
 }
 
 
