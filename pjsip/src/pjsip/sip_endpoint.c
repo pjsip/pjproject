@@ -684,6 +684,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
      * ioqueue_poll() will block forever!
      */
     pj_assert(timeout.sec >= 0 && timeout.msec >= 0);
+    if (timeout.msec >= 1000) timeout.msec = 999;
 
     /* If caller specifies maximum time to wait, then compare the value with
      * the timeout to wait from timer, and use the minimum value.
