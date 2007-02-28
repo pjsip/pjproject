@@ -36,7 +36,7 @@ export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 # Defines for building test application
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
-export UTIL_TEST_OBJS += xml.o encryption.o test.o 
+export UTIL_TEST_OBJS += xml.o encryption.o stun.o test.o 
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_LDFLAGS += $(_LDFLAGS)
 export UTIL_TEST_EXE:=../bin/pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)

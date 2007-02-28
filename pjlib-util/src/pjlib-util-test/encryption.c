@@ -520,21 +520,21 @@ int encryption_benchmark()
     {
 	{
 	    "MD5  ",
-	    &pj_md5_init,
-	    &pj_md5_update,
-	    &pj_md5_final
+	    (void (*)(void*))&pj_md5_init,
+	    (void (*)(void*, const pj_uint8_t*, unsigned))&pj_md5_update,
+	    (void (*)(void*, void*))&pj_md5_final
 	},
 	{
 	    "SHA1 ",
-	    &pj_sha1_init,
-	    &pj_sha1_update,
-	    &pj_sha1_final
+	    (void (*)(void*))&pj_sha1_init,
+	    (void (*)(void*, const pj_uint8_t*, unsigned))&pj_sha1_update,
+	    (void (*)(void*, void*))&pj_sha1_final
 	},
 	{
 	    "CRC32",
-	    &pj_crc32_init,
-	    &crc32_update,
-	    &crc32_final
+	    (void (*)(void*))&pj_crc32_init,
+	    (void (*)(void*, const pj_uint8_t*, unsigned))&crc32_update,
+	    (void (*)(void*, void*))&crc32_final
 	}
     };
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
