@@ -1515,12 +1515,31 @@ on_return:
     pjsip_dlg_dec_lock(dlg);
 }
 
+/* Update route-set from incoming message */
+static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_msg *msg)
+{
+    const pjsip_hdr *hdr, *end_hdr;
+
+    pj_list_init(&dlg->route_set);
+
+    end_hdr = &msg->hdr;
+    for (hdr=msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
+	if (hdr->type == PJSIP_H_RECORD_ROUTE) {
+	    pjsip_route_hdr *r;
+	    r = pjsip_hdr_clone(dlg->pool, hdr);
+	    pjsip_routing_hdr_set_route(r);
+	    pj_list_push_back(&dlg->route_set, r);
+	}
+    }
+}
+
 /* This function is called by user agent upon receiving incoming response
  * message.
  */
 void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     unsigned i;
+    pj_bool_t routeset_updated = PJ_FALSE;
     int res_code;
 
     PJ_LOG(5,(dlg->obj_name, "Received %s",
@@ -1558,7 +1577,6 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
 	 pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
     {
-	pjsip_hdr *hdr, *end_hdr;
 	pjsip_contact_hdr *contact;
 
 	/* Update To tag. */
@@ -1574,17 +1592,8 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 * empty set. This route set, even if empty, overrides any pre-existing
 	 * route set for future requests in this dialog.
 	 */
-	pj_list_init(&dlg->route_set);
-
-	end_hdr = &rdata->msg_info.msg->hdr;
-	for (hdr=rdata->msg_info.msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
-	    if (hdr->type == PJSIP_H_RECORD_ROUTE) {
-		pjsip_route_hdr *r;
-		r = pjsip_hdr_clone(dlg->pool, hdr);
-		pjsip_routing_hdr_set_route(r);
-		pj_list_push_back(&dlg->route_set, r);
-	    }
-	}
+	dlg_update_routeset(dlg, rdata->msg_info.msg);
+	routeset_updated = PJ_TRUE;
 
 	/* The remote target MUST be set to the URI from the Contact header 
 	 * field of the response.
@@ -1610,6 +1619,23 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
     /* Update remote target (again) when receiving 2xx response messages
      * that's defined as target refresh. 
+     *
+     * Also upon receiving 2xx response, recheck again the route set.
+     * This is for compatibility with RFC 2543, as described in Section
+     * 13.2.2.4 of RFC 3261:
+
+	If the dialog identifier in the 2xx response matches the dialog
+	identifier of an existing dialog, the dialog MUST be transitioned to
+	the "confirmed" state, and the route set for the dialog MUST be
+	recomputed based on the 2xx response using the procedures of Section
+	12.2.1.2. 
+
+	Note that the only piece of state that is recomputed is the route
+	set.  Other pieces of state such as the highest sequence numbers
+	(remote and local) sent within the dialog are not recomputed.  The
+	route set only is recomputed for backwards compatibility.  RFC
+	2543 did not mandate mirroring of the Record-Route header field in
+	a 1xx, only 2xx.
      */
     if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
 	res_code/100 == 2)
@@ -1621,6 +1647,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	if (contact) {
 	    dlg->remote.contact = pjsip_hdr_clone(dlg->pool, contact);
 	    dlg->target = dlg->remote.contact->uri;
+	}
+
+	if (!routeset_updated) {
+	    dlg_update_routeset(dlg, rdata->msg_info.msg);
+	    routeset_updated = PJ_TRUE;
 	}
     }
 
