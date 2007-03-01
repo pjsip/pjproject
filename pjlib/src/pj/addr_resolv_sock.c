@@ -59,12 +59,8 @@ pj_status_t pj_gethostip(pj_in_addr *addr)
 {
     const pj_str_t *hostname = pj_gethostname();
     struct pj_hostent he;
-    pj_str_t cp;
-    pj_in_addr loopip;
     pj_status_t status;
 
-    cp = pj_str("127.0.0.1");
-    loopip = pj_inet_addr(&cp);
 
 #ifdef _MSC_VER
     /* Get rid of "uninitialized he variable" with MS compilers */
@@ -78,11 +74,12 @@ pj_status_t pj_gethostip(pj_in_addr *addr)
     }
 
 
-    /* If we end up with 127.0.0.1, resolve the IP by getting the default
+    /* If we end up with 127.x.x.x, resolve the IP by getting the default
      * interface to connect to some public host.
      */
-    if (status != PJ_SUCCESS || addr->s_addr == loopip.s_addr) {
+    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127) {
 	pj_sock_t fd;
+	pj_str_t cp;
 	pj_sockaddr_in a;
 	int len;
 
