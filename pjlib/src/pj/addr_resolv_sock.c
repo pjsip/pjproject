@@ -38,7 +38,11 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 
     he = gethostbyname(copy);
     if (!he) {
+	return PJ_ERESOLVE;
+	/* DO NOT use pj_get_netos_error() since host resolution error
+	 * is reported in h_errno instead of errno!
 	return pj_get_netos_error();
+	 */
     }
 
     phe->h_name = he->h_name;
