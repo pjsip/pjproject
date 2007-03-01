@@ -271,9 +271,11 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 	    total_capacity += pool_capacity;
 	    pool = pool->next;
 	}
-	PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
-			      total_used, total_capacity,
-			      total_used * 100 / total_capacity));
+	if (total_capacity) {
+	    PJ_LOG(3,("cachpool", "  Total %9d of %9d (%d %%) used!",
+				  total_used, total_capacity,
+				  total_used * 100 / total_capacity));
+	}
     }
 
     pj_lock_release(cp->lock);
