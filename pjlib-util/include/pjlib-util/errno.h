@@ -301,18 +301,24 @@
 #define PJLIB_UTIL_ESTUNNOHANDLER   (PJLIB_UTIL_ERRNO_START+116)/* 320116 */
 /**
  * @hideinitializer
- * Invalid STUN MESSAGE-INTEGRITY attribute position in message.
- * STUN MESSAGE-INTEGRITY must be put last in the message, or before
- * FINGERPRINT attribute.
+ * Found non-FINGERPRINT attribute after MESSAGE-INTEGRITY. This is not
+ * valid since MESSAGE-INTEGRITY MUST be the last attribute or the
+ * attribute right before FINGERPRINT before the message.
  */
-#define PJLIB_UTIL_ESTUNMSGINT	    (PJLIB_UTIL_ERRNO_START+117)/* 320117 */
+#define PJLIB_UTIL_ESTUNMSGINTPOS    (PJLIB_UTIL_ERRNO_START+118)/* 320118 */
+/**
+ * @hideinitializer
+ * Found attribute after FINGERPRINT. This is not valid since FINGERPRINT
+ * MUST be the last attribute in the message.
+ */
+#define PJLIB_UTIL_ESTUNFINGERPOS   (PJLIB_UTIL_ERRNO_START+119)/* 320119 */
 /**
  * @hideinitializer
  * Missing STUN USERNAME attribute.
  * When credential is included in the STUN message (MESSAGE-INTEGRITY is
  * present), the USERNAME attribute must be present in the message.
  */
-#define PJLIB_UTIL_ESTUNNOUSERNAME  (PJLIB_UTIL_ERRNO_START+118)/* 320118 */
+#define PJLIB_UTIL_ESTUNNOUSERNAME  (PJLIB_UTIL_ERRNO_START+120)/* 320120 */
 
 
 #define PJ_STATUS_FROM_STUN_CODE(code)	(PJLIB_UTIL_ERRNO_START+code)

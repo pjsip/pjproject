@@ -571,7 +571,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
     /* Encode message */
     status = pj_stun_msg_encode(tdata->msg, tdata->pkt, tdata->max_len,
-			        0, NULL, &tdata->pkt_size);
+			        0, password, &tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
 	pj_mutex_unlock(sess->mutex);

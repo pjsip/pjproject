@@ -123,27 +123,12 @@ static pj_status_t on_rx_binding_request(pj_stun_session *sess,
 {
     struct service *svc = (struct service *) pj_stun_session_get_user_data(sess);
     pj_stun_tx_data *tdata;
-    pj_stun_auth_policy pol;
     pj_status_t status;
 
     /* Create response */
     status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
-
-#if 1
-    pj_memset(&pol, 0, sizeof(pol));
-    pol.type = PJ_STUN_POLICY_STATIC_LONG_TERM;
-    pol.user_data = NULL;
-    pol.data.static_long_term.realm = pj_str("realm");
-    pol.data.static_long_term.username = pj_str("user");
-    pol.data.static_long_term.password = pj_str("password");
-    pol.data.static_long_term.nonce = pj_str("nonce");
-    status = pj_stun_verify_credential(pkt, pkt_len, msg, &pol, tdata->pool, 
-				       &tdata->msg);
-    if (!tdata->msg)
-	return status;
-#endif
 
     /* Create MAPPED-ADDRESS attribute */
     status = pj_stun_msg_add_generic_ip_addr_attr(tdata->pool, tdata->msg,
@@ -387,15 +372,23 @@ pj_status_t server_main(void)
     }
 #else
     pj_status_t status;
-    char line[10];
 
     status = pj_thread_create(server.pool, "stun_server", &worker_thread, NULL,
 			      0, 0, &server.threads[0]);
     if (status != PJ_SUCCESS)
 	return server_perror(THIS_FILE, "create_thread() error", status);
 
-    puts("Press ENTER to quit");
-    fgets(line, sizeof(line), stdin);
+    while (!server.thread_quit_flag) {
+	char line[10];
+
+	printf("Menu:\n"
+	       "  q     Quit\n"
+	       "Choice:");
+
+	fgets(line, sizeof(line), stdin);
+	if (line[0] == 'q')
+	    server.thread_quit_flag = 1;
+    }
 
 #endif
 
