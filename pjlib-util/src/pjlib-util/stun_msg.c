@@ -517,8 +517,8 @@ PJ_DEF(pj_status_t)
 pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
 				    int attr_type,
 				    pj_bool_t xor_ed,
-				    unsigned addr_len,
 				    const pj_sockaddr_t *addr,
+				    unsigned addr_len,
 				    pj_stun_generic_ip_addr_attr **p_attr)
 {
     pj_stun_generic_ip_addr_attr *attr;
@@ -559,14 +559,14 @@ pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
 				     pj_stun_msg *msg,
 				     int attr_type, 
 				     pj_bool_t xor_ed,
-				     unsigned addr_len,
-				     const pj_sockaddr_t *addr)
+				     const pj_sockaddr_t *addr,
+				     unsigned addr_len)
 {
     pj_stun_generic_ip_addr_attr *attr;
     pj_status_t status;
 
     status = pj_stun_generic_ip_addr_attr_create(pool, attr_type, xor_ed,
-					         addr_len, addr, &attr);
+					         addr, addr_len, &attr);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1434,17 +1434,15 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
 
 PJ_INLINE(pj_uint16_t) GET_VAL16(const pj_uint8_t *pdu, unsigned pos)
 {
-    pj_uint16_t val = (pj_uint16_t) ((pdu[pos] << 8) + pdu[pos+1]);
-    return pj_ntohs(val);
+    return (pj_uint16_t) ((pdu[pos] << 8) + pdu[pos+1]);
 }
 
 PJ_INLINE(pj_uint32_t) GET_VAL32(const pj_uint8_t *pdu, unsigned pos)
 {
-    pj_uint32_t val = (pdu[pos+0] << 24) +
-		      (pdu[pos+1] << 16) +
-		      (pdu[pos+2] <<  8) +
-		      (pdu[pos+3]);
-    return pj_ntohl(val);
+    return (pdu[pos+0] << 24) +
+	   (pdu[pos+1] << 16) +
+	   (pdu[pos+2] <<  8) +
+	   (pdu[pos+3]);
 }
 
 
@@ -1465,34 +1463,34 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
     if (*pdu != 0x00 && *pdu != 0x01)
 	return PJLIB_UTIL_ESTUNINMSGTYPE;
 
-    /* If magic is set, then there is great possibility that this is
-     * a STUN message.
-     */
-    if (GET_VAL32(pdu, 4) != PJ_STUN_MAGIC)
-	return PJLIB_UTIL_ESTUNNOTMAGIC;
-
     /* Check the PDU length */
     msg_len = GET_VAL16(pdu, 2);
-    if ((msg_len > pdu_len) || 
-	((options & PJ_STUN_IS_DATAGRAM) && msg_len != pdu_len))
+    if ((msg_len + 20 > pdu_len) || 
+	((options & PJ_STUN_IS_DATAGRAM) && msg_len + 20 != pdu_len))
     {
 	return PJLIB_UTIL_ESTUNINMSGLEN;
     }
 
-    /* Check if FINGERPRINT attribute is present */
-    if (GET_VAL16(pdu, msg_len + 20) == PJ_STUN_ATTR_FINGERPRINT) {
-	pj_uint16_t attr_len = GET_VAL16(pdu, msg_len + 22);
-	pj_uint32_t fingerprint = GET_VAL32(pdu, msg_len + 24);
-	pj_uint32_t crc;
+    /* If magic is set, then there is great possibility that this is
+     * a STUN message.
+     */
+    if (GET_VAL32(pdu, 4) == PJ_STUN_MAGIC) {
 
-	if (attr_len != 4)
-	    return PJLIB_UTIL_ESTUNINATTRLEN;
+	/* Check if FINGERPRINT attribute is present */
+	if (GET_VAL16(pdu, msg_len + 20) == PJ_STUN_ATTR_FINGERPRINT) {
+	    pj_uint16_t attr_len = GET_VAL16(pdu, msg_len + 22);
+	    pj_uint32_t fingerprint = GET_VAL32(pdu, msg_len + 24);
+	    pj_uint32_t crc;
 
-	crc = pj_crc32_calc(pdu, msg_len + 20);
-	crc ^= STUN_XOR_FINGERPRINT;
+	    if (attr_len != 4)
+		return PJLIB_UTIL_ESTUNINATTRLEN;
 
-	if (crc != fingerprint)
-	    return PJLIB_UTIL_ESTUNFINGERPRINT;
+	    crc = pj_crc32_calc(pdu, msg_len + 20);
+	    crc ^= STUN_XOR_FINGERPRINT;
+
+	    if (crc != fingerprint)
+		return PJLIB_UTIL_ESTUNFINGERPRINT;
+	}
     }
 
     /* Could be a STUN message */
@@ -1819,7 +1817,7 @@ static void calc_md5_key(pj_uint8_t digest[16],
 /*
  * Print the message structure to a buffer.
  */
-PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
+PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				       pj_uint8_t *buf, unsigned buf_size,
 				       unsigned options,
 				       const pj_str_t *password,
@@ -1833,7 +1831,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
     pj_stun_fingerprint_attr *afingerprint = NULL;
     unsigned printed;
     pj_status_t status;
-    unsigned i, length;
+    unsigned i;
 
 
     PJ_ASSERT_RETURN(msg && buf && buf_size, PJ_EINVAL);
@@ -1898,18 +1896,18 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
      * Note that length is not including the 20 bytes header.
      */
     if (amsg_integrity && afingerprint) {
-	length = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
+	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
     } else if (amsg_integrity) {
-	length = (pj_uint16_t)((buf - start) - 20 + 24);
+	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24);
     } else if (afingerprint) {
-	length = (pj_uint16_t)((buf - start) - 20 + 8);
+	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 8);
     } else {
-	length = (pj_uint16_t)((buf - start) - 20);
+	msg->hdr.length = (pj_uint16_t)((buf - start) - 20);
     }
 
     /* hdr->length = pj_htons(length); */
-    *(buf+2) = (pj_uint8_t)((length >> 8) & 0x00FF);
-    *(buf+3) = (pj_uint8_t)(length & 0x00FF);
+    start[2] = (pj_uint8_t)((msg->hdr.length >> 8) & 0x00FF);
+    start[3] = (pj_uint8_t)(msg->hdr.length & 0x00FF);
 
     /* Calculate message integrity, if present */
     if (amsg_integrity != NULL) {
@@ -2088,7 +2086,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     if (p_response)
 	*p_response = NULL;
 
-    if (PJ_STUN_IS_REQUEST(msg->hdr.type))
+    if (!PJ_STUN_IS_REQUEST(msg->hdr.type))
 	p_response = NULL;
 
     /* Get realm and nonce */

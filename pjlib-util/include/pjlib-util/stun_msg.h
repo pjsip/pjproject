@@ -1174,7 +1174,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * If FINGERPRINT attribute is present, this function will calculate
  * the FINGERPRINT CRC attribute for the message.
  *
- * @param msg		The STUN message to be printed.
+ * @param msg		The STUN message to be printed. Upon return,
+ *			some fields in the header (such as message
+ *			length) will be updated.
  * @param pkt_buf	The buffer to be filled with the packet.
  * @param buf_size	Size of the buffer.
  * @param options	Options, which currently must be zero.
@@ -1186,7 +1188,7 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_encode(const pj_stun_msg *msg,
+PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				        pj_uint8_t *pkt_buf,
 				        unsigned buf_size,
 				        unsigned options,
@@ -1422,8 +1424,8 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
  * @param attr_type	Attribute type, from #pj_stun_attr_type.
  * @param xor_ed	If non-zero, the port and address will be XOR-ed
  *			with magic, to make the XOR-MAPPED-ADDRESS attribute.
- * @param addr_len	Length of \a addr parameter.
  * @param addr		A pj_sockaddr_in or pj_sockaddr_in6 structure.
+ * @param addr_len	Length of \a addr parameter.
  * @param p_attr	Pointer to receive the attribute.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
@@ -1432,8 +1434,8 @@ PJ_DECL(pj_status_t)
 pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
 				    int attr_type, 
 				    pj_bool_t xor_ed,
-				    unsigned addr_len,
 				    const pj_sockaddr_t *addr,
+				    unsigned addr_len,
 				    pj_stun_generic_ip_addr_attr **p_attr);
 
 
@@ -1447,8 +1449,8 @@ pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
  * @param attr_type	Attribute type, from #pj_stun_attr_type.
  * @param xor_ed	If non-zero, the port and address will be XOR-ed
  *			with magic, to make the XOR-MAPPED-ADDRESS attribute.
- * @param addr_len	Length of \a addr parameter.
  * @param addr		A pj_sockaddr_in or pj_sockaddr_in6 structure.
+ * @param addr_len	Length of \a addr parameter.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
@@ -1457,8 +1459,8 @@ pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
 				     pj_stun_msg *msg,
 				     int attr_type, 
 				     pj_bool_t xor_ed,
-				     unsigned addr_len,
-				     const pj_sockaddr_t *addr);
+				     const pj_sockaddr_t *addr,
+				     unsigned addr_len);
 
 /**
  * Create a STUN generic string attribute.

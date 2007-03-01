@@ -18,7 +18,6 @@
  */
 #include <pjlib-util.h>
 #include <pjlib.h>
-#include "server.h"
 
 #include <stdio.h>
 #include <conio.h>
@@ -26,12 +25,47 @@
 
 #define THIS_FILE	"server_main.c"
 #define MAX_THREADS	8
+#define MAX_SERVICE	16
+#define MAX_PKT_LEN	512
 
-struct stun_server_tag server;
+struct service
+{
+    unsigned		 index;
+    pj_uint16_t		 port;
+    pj_bool_t		 is_stream;
+    pj_sock_t		 sock;
+    pj_ioqueue_key_t	*key;
+    pj_ioqueue_op_key_t  recv_opkey,
+			 send_opkey;
+
+    pj_stun_session	*sess;
+
+    int		         src_addr_len;
+    pj_sockaddr_in	 src_addr;
+    pj_ssize_t		 rx_pkt_len;
+    pj_uint8_t		 rx_pkt[MAX_PKT_LEN];
+    pj_uint8_t		 tx_pkt[MAX_PKT_LEN];
+};
+
+static struct stun_server
+{
+    pj_caching_pool	 cp;
+    pj_pool_t		*pool;
+    pj_stun_endpoint	*endpt;
+    pj_ioqueue_t	*ioqueue;
+    pj_timer_heap_t	*timer_heap;
+    unsigned		 service_cnt;
+    struct service	 services[MAX_SERVICE];
+
+    pj_bool_t		 thread_quit_flag;
+    unsigned		 thread_cnt;
+    pj_thread_t		*threads[16];
+
+} server;
 
 
-pj_status_t server_perror(const char *sender, const char *title, 
-			  pj_status_t status)
+static pj_status_t server_perror(const char *sender, const char *title, 
+				 pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_strerror(status, errmsg, sizeof(errmsg));
@@ -42,209 +76,168 @@ pj_status_t server_perror(const char *sender, const char *title,
 }
 
 
-static pj_status_t create_response(pj_pool_t *pool,
-				   const pj_stun_msg *req_msg,
-				   unsigned err_code,
-				   unsigned uattr_cnt,
-				   pj_uint16_t uattr_types[],
-				   pj_stun_msg **p_response)
+/* Callback to be called to send outgoing message */
+static pj_status_t on_send_msg(pj_stun_session *sess,
+			       const void *pkt,
+			       pj_size_t pkt_size,
+			       const pj_sockaddr_t *dst_addr,
+			       unsigned addr_len)
 {
-    pj_uint32_t msg_type = req_msg->hdr.type;
-    pj_stun_msg *response;
-    pj_status_t status;
-
-    status = pj_stun_msg_create_response(pool, req_msg, err_code, NULL,
-					 &response);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Add unknown_attribute attributes if err_code is 420 */
-    if (err_code == PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE) {
-	pj_stun_unknown_attr *uattr;
-
-	status = pj_stun_unknown_attr_create(pool, uattr_cnt, uattr_types,
-					     &uattr);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	pj_stun_msg_add_attr(response, &uattr->hdr);
-    }
-
-    *p_response = response;
-    return PJ_SUCCESS;
-}
-
-
-static pj_status_t send_msg(struct service *svc, const pj_stun_msg *msg)
-{
-    unsigned tx_pkt_len;
+    struct service *svc;
     pj_ssize_t length;
     pj_status_t status;
 
-    /* Print to log */
-    PJ_LOG(4,(THIS_FILE, "TX STUN message: \n"
-			 "--- begin STUN message ---\n"
-			 "%s"
-			 "--- end of STUN message ---\n", 
-	      pj_stun_msg_dump(msg, svc->tx_pkt, sizeof(svc->tx_pkt), NULL)));
-
-    /* Encode packet */
-    tx_pkt_len = sizeof(svc->tx_pkt);
-    status = pj_stun_msg_encode(msg, svc->tx_pkt, tx_pkt_len, 0,
-				NULL, &tx_pkt_len);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    length = tx_pkt_len;
+    svc = (struct service*) pj_stun_session_get_user_data(sess);
 
     /* Send packet */
+    length = pkt_size;
     if (svc->is_stream) {
-	status = pj_ioqueue_send(svc->key, &svc->send_opkey, svc->tx_pkt,
-				 &length, 0);
+	status = pj_ioqueue_send(svc->key, &svc->send_opkey, pkt, &length, 0);
     } else {
-	status = pj_ioqueue_sendto(svc->key, &svc->send_opkey, svc->tx_pkt,
-				   &length, 0, &svc->src_addr, 
-				   svc->src_addr_len);
-    }
+#if 0
+	pj_pool_t *pool;
+	char *buf;
+	pj_stun_msg *msg;
 
-    PJ_LOG(4,(THIS_FILE, "Sending STUN %s %s",
-	      pj_stun_get_method_name(msg->hdr.type),
-	      pj_stun_get_class_name(msg->hdr.type)));
+	pool = pj_pool_create(&server.cp.factory, "", 4000, 4000, NULL);
+	status = pj_stun_msg_decode(pool, pkt, pkt_size, PJ_STUN_CHECK_PACKET, &msg, NULL, NULL);
+	buf = pj_pool_alloc(pool, 512);
+	PJ_LOG(3,("", "%s", pj_stun_msg_dump(msg, buf, 512, NULL)));
+#endif
+	status = pj_ioqueue_sendto(svc->key, &svc->send_opkey, pkt, &length, 
+				   0, dst_addr, addr_len);
+    }
 
     return (status == PJ_SUCCESS || status == PJ_EPENDING) ? 
 	    PJ_SUCCESS : status;
 }
 
 
-static pj_status_t err_respond(struct service *svc,
-			       pj_pool_t *pool,
-			       const pj_stun_msg *req_msg,
-			       unsigned err_code,
-			       unsigned uattr_cnt,
-			       pj_uint16_t uattr_types[])
+/* Handle STUN binding request */
+static pj_status_t on_rx_binding_request(pj_stun_session *sess,
+					 const pj_uint8_t *pkt,
+					 unsigned pkt_len,
+					 const pj_stun_msg *msg,
+					 const pj_sockaddr_t *src_addr,
+					 unsigned src_addr_len)
 {
-    pj_stun_msg *response;
+    struct service *svc = (struct service *) pj_stun_session_get_user_data(sess);
+    pj_stun_tx_data *tdata;
+    pj_stun_auth_policy pol;
     pj_status_t status;
 
-    /* Create the error response */
-    status = create_response(pool, req_msg, err_code,
-			     uattr_cnt, uattr_types, &response);
-    if (status != PJ_SUCCESS) {
-	server_perror(THIS_FILE, "Error creating response", status);
+    /* Create response */
+    status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
 
-    /* Send response */
-    status = send_msg(svc, response);
-    if (status != PJ_SUCCESS) {
-	server_perror(THIS_FILE, "Error sending response", status);
+#if 1
+    pj_memset(&pol, 0, sizeof(pol));
+    pol.type = PJ_STUN_POLICY_STATIC_LONG_TERM;
+    pol.user_data = NULL;
+    pol.data.static_long_term.realm = pj_str("realm");
+    pol.data.static_long_term.username = pj_str("user");
+    pol.data.static_long_term.password = pj_str("password");
+    pol.data.static_long_term.nonce = pj_str("nonce");
+    status = pj_stun_verify_credential(pkt, pkt_len, msg, &pol, tdata->pool, 
+				       &tdata->msg);
+    if (!tdata->msg)
 	return status;
-    }
-
-    return PJ_SUCCESS;
-}
-
-
-static void handle_binding_request(struct service *svc, pj_pool_t *pool, 
-				   const pj_stun_msg *rx_msg)
-{
-    pj_stun_msg *response;
-    pj_stun_generic_ip_addr_attr *m_attr;
-    pj_status_t status;
-
-    status = create_response(pool, rx_msg, 0, 0, NULL, &response);
-    if (status != PJ_SUCCESS) {
-	server_perror(THIS_FILE, "Error creating response", status);
-	return;
-    }
+#endif
 
     /* Create MAPPED-ADDRESS attribute */
-    status = pj_stun_generic_ip_addr_attr_create(pool,
-						 PJ_STUN_ATTR_MAPPED_ADDR,
-					         PJ_FALSE,
-					         svc->src_addr_len,
-					         &svc->src_addr, &m_attr);
+    status = pj_stun_msg_add_generic_ip_addr_attr(tdata->pool, tdata->msg,
+						  PJ_STUN_ATTR_MAPPED_ADDR,
+						  PJ_FALSE,
+					          src_addr, src_addr_len);
     if (status != PJ_SUCCESS) {
 	server_perror(THIS_FILE, "Error creating response", status);
-	return;
+	pj_stun_msg_destroy_tdata(sess, tdata);
+	return status;
     }
-    pj_stun_msg_add_attr(response, &m_attr->hdr);
 
     /* On the presence of magic, create XOR-MAPPED-ADDRESS attribute */
-    if (rx_msg->hdr.magic == PJ_STUN_MAGIC) {
+    if (msg->hdr.magic == PJ_STUN_MAGIC) {
 	status = 
-	    pj_stun_generic_ip_addr_attr_create(pool, 
-						PJ_STUN_ATTR_XOR_MAPPED_ADDRESS,
-						PJ_TRUE,
-						svc->src_addr_len,
-						&svc->src_addr, &m_attr);
+	    pj_stun_msg_add_generic_ip_addr_attr(tdata->pool, tdata->msg,
+						 PJ_STUN_ATTR_XOR_MAPPED_ADDRESS,
+						 PJ_TRUE,
+						 src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    server_perror(THIS_FILE, "Error creating response", status);
-	    return;
+	    pj_stun_msg_destroy_tdata(sess, tdata);
+	    return status;
 	}
     }
 
     /* Send */
-    status = send_msg(svc, response);
-    if (status != PJ_SUCCESS)
-	server_perror(THIS_FILE, "Error sending response", status);
+    status = pj_stun_session_send_msg(sess, 0, src_addr, src_addr_len, tdata);
+    return status;
 }
 
 
-static void handle_unknown_request(struct service *svc, pj_pool_t *pool, 
-				   pj_stun_msg *rx_msg)
+/* Handle unknown request */
+static pj_status_t on_rx_unknown_request(pj_stun_session *sess,
+					 const pj_uint8_t *pkt,
+					 unsigned pkt_len,
+					 const pj_stun_msg *msg,
+					 const pj_sockaddr_t *src_addr,
+					 unsigned src_addr_len)
 {
-    err_respond(svc, pool, rx_msg, PJ_STUN_STATUS_BAD_REQUEST, 0, NULL);
+    pj_stun_tx_data *tdata;
+    pj_status_t status;
+
+    /* Create response */
+    status = pj_stun_session_create_response(sess, msg, 
+					     PJ_STUN_STATUS_BAD_REQUEST,
+					     NULL, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Send */
+    status = pj_stun_session_send_msg(sess, 0, src_addr, src_addr_len, tdata);
+    return status;
+}
+
+/* Callback to be called by STUN session on incoming STUN requests */
+static pj_status_t on_rx_request(pj_stun_session *sess,
+				 const pj_uint8_t *pkt,
+				 unsigned pkt_len,
+				 const pj_stun_msg *msg,
+				 const pj_sockaddr_t *src_addr,
+				 unsigned src_addr_len)
+{
+    switch (PJ_STUN_GET_METHOD(msg->hdr.type)) {
+    case PJ_STUN_BINDING_METHOD:
+	return on_rx_binding_request(sess, pkt, pkt_len, msg, 
+				     src_addr, src_addr_len);
+    default:
+	return on_rx_unknown_request(sess, pkt, pkt_len, msg,
+				     src_addr, src_addr_len);
+    }
 }
 
 
+/* Callback on ioqueue read completion */
 static void on_read_complete(pj_ioqueue_key_t *key, 
 			     pj_ioqueue_op_key_t *op_key, 
 			     pj_ssize_t bytes_read)
 {
     struct service *svc = (struct service *) pj_ioqueue_get_user_data(key);
-    pj_pool_t *pool = NULL;
-    pj_stun_msg *rx_msg, *response;
-    char dump[512];
     pj_status_t status;
 
     if (bytes_read <= 0)
 	goto next_read;
 
-    pool = pj_pool_create(&server.cp.factory, "service", 4000, 4000, NULL);
-
-    rx_msg = NULL;
-    status = pj_stun_msg_decode(pool, svc->rx_pkt, bytes_read, 0, &rx_msg,
-				NULL, &response);
+    /* Handle packet to session */
+    status = pj_stun_session_on_rx_pkt(svc->sess, svc->rx_pkt, bytes_read,
+				       PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
+				       NULL, &svc->src_addr, svc->src_addr_len);
     if (status != PJ_SUCCESS) {
-	server_perror(THIS_FILE, "STUN msg_decode() error", status);
-	if (response) {
-	    send_msg(svc, response);
-	}
-	goto next_read;
-    }
-
-    PJ_LOG(4,(THIS_FILE, "RX STUN message: \n"
-			 "--- begin STUN message ---\n"
-			 "%s"
-			 "--- end of STUN message ---\n", 
-	      pj_stun_msg_dump(rx_msg, dump, sizeof(dump), NULL)));
-
-    if (PJ_STUN_IS_REQUEST(rx_msg->hdr.type)) {
-	switch (rx_msg->hdr.type) {
-	case PJ_STUN_BINDING_REQUEST:
-	    handle_binding_request(svc, pool, rx_msg);
-	    break;
-	default:
-	    handle_unknown_request(svc, pool, rx_msg);
-	}
-	
+	server_perror(THIS_FILE, "Error processing incoming packet", status);
     }
 
 next_read:
-    if (pool != NULL)
-	pj_pool_release(pool);
-
     if (bytes_read < 0) {
 	server_perror(THIS_FILE, "on_read_complete()", -bytes_read);
     }
@@ -265,6 +258,7 @@ static pj_status_t init_service(struct service *svc)
 {
     pj_status_t status;
     pj_ioqueue_callback service_callback;
+    pj_stun_session_cb sess_cb;
     pj_sockaddr_in addr;
 
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &svc->sock);
@@ -278,6 +272,16 @@ static pj_status_t init_service(struct service *svc)
     status = pj_sock_bind(svc->sock, &addr, sizeof(addr));
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_send_msg = &on_send_msg;
+    sess_cb.on_rx_request = &on_rx_request;
+    status = pj_stun_session_create(server.endpt, "session", 
+				    &sess_cb, &svc->sess);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    pj_stun_session_set_user_data(svc->sess, (void*)svc);
 
     pj_bzero(&service_callback, sizeof(service_callback));
     service_callback.on_read_complete = &on_read_complete;
@@ -316,6 +320,7 @@ static int worker_thread(void *p)
 
     while (!server.thread_quit_flag) {
 	pj_time_val timeout = { 0, 50 };
+	pj_timer_heap_poll(server.timer_heap, NULL);
 	pj_ioqueue_poll(server.ioqueue, &timeout);
     }
 
@@ -347,6 +352,16 @@ pj_status_t server_init(void)
     if (status != PJ_SUCCESS)
 	return server_perror(THIS_FILE, "pj_ioqueue_create()", status);
 
+    status = pj_timer_heap_create(server.pool, 1024, &server.timer_heap);
+    if (status != PJ_SUCCESS)
+	return server_perror(THIS_FILE, "Error creating timer heap", status);
+
+    status = pj_stun_endpoint_create(&server.cp.factory, 0, 
+				     server.ioqueue, server.timer_heap, 
+				     &server.endpt);
+    if (status != PJ_SUCCESS)
+	return server_perror(THIS_FILE, "Error creating endpoint", status);
+
     server.service_cnt = 1;
     server.services[0].index = 0;
     server.services[0].port = PJ_STUN_PORT;
@@ -361,9 +376,10 @@ pj_status_t server_init(void)
 
 pj_status_t server_main(void)
 {
-#if 1
+#if 0
     for (;;) {
 	pj_time_val timeout = { 0, 50 };
+	pj_timer_heap_poll(server.timer_heap, NULL);
 	pj_ioqueue_poll(server.ioqueue, &timeout);
 
 	if (kbhit() && _getch()==27)
@@ -413,8 +429,12 @@ pj_status_t server_destroy(void)
 	}
     }
 
+    pj_stun_session_destroy(server.services[0].sess);
+    pj_stun_endpoint_destroy(server.endpt);
     pj_ioqueue_destroy(server.ioqueue);
     pj_pool_release(server.pool);
+
+    pj_pool_factory_dump(&server.cp.factory, PJ_TRUE);
     pj_caching_pool_destroy(&server.cp);
 
     pj_shutdown();

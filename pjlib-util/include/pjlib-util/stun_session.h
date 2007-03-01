@@ -24,12 +24,24 @@
 #include <pjlib-util/stun_transaction.h>
 #include <pj/list.h>
 
+PJ_BEGIN_DECL
+
+
+/* **************************************************************************/
+/**
+ * @defgroup PJLIB_UTIL_STUN_SESSION STUN Client/Server Session
+ * @brief STUN client and server session
+ * @ingroup PJLIB_UTIL_STUN
+ * @{
+ */
+
 
 /** Forward declaration for pj_stun_tx_data */
 typedef struct pj_stun_tx_data pj_stun_tx_data;
 
 /** Forward declaration for pj_stun_session */
 typedef struct pj_stun_session pj_stun_session;
+
 
 /**
  * This is the callback to be registered to pj_stun_session, to send
@@ -51,15 +63,40 @@ typedef struct pj_stun_session_cb
      * @return		    The callback should return the status of the
      *			    packet sending.
      */
-    pj_status_t (*on_send_msg)(pj_stun_tx_data *tdata,
+    pj_status_t (*on_send_msg)(pj_stun_session *sess,
 			       const void *pkt,
 			       pj_size_t pkt_size,
-			       unsigned addr_len, 
-			       const pj_sockaddr_t *dst_addr);
+			       const pj_sockaddr_t *dst_addr,
+			       unsigned addr_len);
+
+    /** 
+     * Callback to be called on incoming STUN request message. In the 
+     * callback processing, application MUST create a response by calling
+     * pj_stun_session_create_response() function and send the response
+     * with pj_stun_session_send_msg() function, before returning from
+     * the callback.
+     *
+     * @param sess	    The STUN session.
+     * @param pkt	    Pointer to the original STUN packet.
+     * @param pkt_len	    Length of the STUN packet.
+     * @param msg	    The parsed STUN request.
+     * @param src_addr	    Source address of the packet.
+     * @param src_addr_len  Length of the source address.
+     *
+     * @return		    The return value of this callback will be
+     *			    returned back to pj_stun_session_on_rx_pkt()
+     *			    function.
+     */
+    pj_status_t (*on_rx_request)(pj_stun_session *sess,
+				 const pj_uint8_t *pkt,
+				 unsigned pkt_len,
+				 const pj_stun_msg *msg,
+				 const pj_sockaddr_t *src_addr,
+				 unsigned src_addr_len);
 
     /**
-     * Callback to be called when Binding response is received or the 
-     * transaction has timed out.
+     * Callback to be called when response is received or the transaction 
+     * has timed out.
      *
      * @param sess	    The STUN session.
      * @param status	    Status of the request. If the value if not
@@ -69,61 +106,22 @@ typedef struct pj_stun_session_cb
      * @param request	    The original STUN request.
      * @param response	    The response message, on successful transaction.
      */
-    void (*on_bind_response)(pj_stun_session *sess, 
-			     pj_status_t status, 
-			     pj_stun_tx_data *request,
-			     const pj_stun_msg *response);
+    void (*on_request_complete)(pj_stun_session *sess,
+			        pj_status_t status,
+			        pj_stun_tx_data *tdata,
+			        const pj_stun_msg *response);
+
 
     /**
-     * Callback to be called when Allocate response is received or the 
-     * transaction has timed out.
-     *
-     * @param sess	    The STUN session.
-     * @param status	    Status of the request. If the value if not
-     *			    PJ_SUCCESS, the transaction has timed-out
-     *			    or other error has occurred, and the response
-     *			    argument may be NULL.
-     * @param request	    The original STUN request.
-     * @param response	    The response message, on successful transaction.
+     * Type of callback to be called on incoming STUN indication.
      */
-    void (*on_allocate_response)(pj_stun_session *sess, 
-				 pj_status_t status, 
-				 pj_stun_tx_data *request,
-				 const pj_stun_msg *response);
+    pj_status_t (*on_rx_indication)(pj_stun_session *sess,
+				    const pj_uint8_t *pkt,
+				    unsigned pkt_len,
+				    const pj_stun_msg *msg,
+				    const pj_sockaddr_t *src_addr,
+				    unsigned src_addr_len);
 
-    /**
-     * Callback to be called when Set Active Destination response is received
-     * or the transaction has timed out.
-     *
-     * @param sess	    The STUN session.
-     * @param status	    Status of the request. If the value if not
-     *			    PJ_SUCCESS, the transaction has timed-out
-     *			    or other error has occurred, and the response
-     *			    argument may be NULL.
-     * @param request	    The original STUN request.
-     * @param response	    The response message, on successful transaction.
-     */
-    void (*on_set_active_destination_response)(pj_stun_session *sess, 
-					       pj_status_t status, 
-					       pj_stun_tx_data *request,
-					       const pj_stun_msg *response);
-
-    /**
-     * Callback to be called when Connect response is received or the 
-     * transaction has timed out.
-     *
-     * @param sess	    The STUN session.
-     * @param status	    Status of the request. If the value if not
-     *			    PJ_SUCCESS, the transaction has timed-out
-     *			    or other error has occurred, and the response
-     *			    argument may be NULL.
-     * @param request	    The original STUN request.
-     * @param response	    The response message, on successful transaction.
-     */
-    void (*on_connect_response)( pj_stun_session *sess, 
-				 pj_status_t status, 
-				 pj_stun_tx_data *request,
-				 const pj_stun_msg *response);
 } pj_stun_session_cb;
 
 
@@ -361,6 +359,32 @@ PJ_DECL(pj_status_t) pj_stun_session_create_data_ind(pj_stun_session *sess,
 						     pj_stun_tx_data **p_tdata);
 
 /**
+ * Create a STUN response message. After the message has been 
+ * successfully created, application can send the message by calling 
+ * pj_stun_session_send_msg().
+ *
+ * @param sess	    The STUN session instance.
+ * @param req	    The STUN request where the response is to be created.
+ * @param err_code  Error code to be set in the response, if error response
+ *		    is to be created, according to pj_stun_status enumeration.
+ *		    This argument MUST be zero if successful response is
+ *		    to be created.
+ * @param err_msg   Optional pointer for the error message string, when
+ *		    creating error response. If the value is NULL and the
+ *		    \a err_code is non-zero, then default error message will
+ *		    be used.
+ * @param p_tdata   Pointer to receive the response message created.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_session_create_response(pj_stun_session *sess,
+						     const pj_stun_msg *req,
+						     unsigned err_code,
+						     const pj_str_t *err_msg,
+						     pj_stun_tx_data **p_tdata);
+
+
+/**
  * Send STUN message to the specified destination. This function will encode
  * the pj_stun_msg instance to a packet buffer, and add credential or
  * fingerprint if necessary. If the message is a request, the session will
@@ -372,8 +396,8 @@ PJ_DECL(pj_status_t) pj_stun_session_create_data_ind(pj_stun_session *sess,
  *
  * @param sess	    The STUN session instance.
  * @param options   Optional flags, from pj_stun_session_option.
- * @param addr_len  Length of destination address.
  * @param dst_addr  The destination socket address.
+ * @param addr_len  Length of destination address.
  * @param tdata	    The STUN transmit data containing the STUN message to
  *		    be sent.
  *
@@ -381,8 +405,8 @@ PJ_DECL(pj_status_t) pj_stun_session_create_data_ind(pj_stun_session *sess,
  */
 PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
 					      unsigned options,
-					      unsigned addr_len,
 					      const pj_sockaddr_t *dst_addr,
+					      unsigned addr_len,
 					      pj_stun_tx_data *tdata);
 
 /**
@@ -402,6 +426,7 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  * @param sess	     The STUN session instance.
  * @param packet     The packet containing STUN message.
  * @param pkt_size   Size of the packet.
+ * @param options    Options, from pj_stun_options.
  * @param parsed_len Optional pointer to receive the size of the parsed
  *		     STUN message (useful if packet is received via a
  *		     stream oriented protocol).
@@ -411,9 +436,31 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
 PJ_DECL(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					       const void *packet,
 					       pj_size_t pkt_size,
-					       unsigned *parsed_len);
+					       unsigned options,
+					       unsigned *parsed_len,
+					       const pj_sockaddr_t *src_addr,
+					       unsigned src_addr_len);
+
+/**
+ * Destroy the transmit data. Call this function only when tdata has been
+ * created but application doesn't want to send the message (perhaps
+ * because of other error).
+ *
+ * @param sess	    The STUN session.
+ * @param tdata	    The transmit data.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(void) pj_stun_msg_destroy_tdata(pj_stun_session *sess,
+					pj_stun_tx_data *tdata);
 
 
+/**
+ * @}
+ */
+
+
+PJ_END_DECL
 
 #endif	/* __PJLIB_UTIL_STUN_SESSION_H__ */
 
