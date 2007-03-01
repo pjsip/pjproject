@@ -51,6 +51,7 @@
  *  - pj_sock_connect()
  *  - pj_sock_listen()
  *  - pj_sock_accept()
+ *  - pj_gethostbyname()
  *
  *
  * This file is <b>pjlib-test/sock.c</b>
@@ -441,6 +442,23 @@ static int ioctl_test(void)
     return 0;
 }
 
+static int gethostbyname_test(void)
+{
+    pj_str_t host;
+    pj_hostent he;
+    pj_status_t status;
+
+    /* Testing pj_gethostbyname() with invalid host */
+    host = pj_str("an-invalid-host-name");
+    status = pj_gethostbyname(&host, &he);
+
+    /* Must return failure! */
+    if (status == PJ_SUCCESS)
+	return -20100;
+    else
+	return 0;
+}
+
 int sock_test()
 {
     int rc;
@@ -448,6 +466,10 @@ int sock_test()
     pj_create_random_string(bigdata, BIG_DATA_LEN);
 
     rc = format_test();
+    if (rc != 0)
+	return rc;
+
+    rc = gethostbyname_test();
     if (rc != 0)
 	return rc;
 
