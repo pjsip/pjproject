@@ -51,6 +51,7 @@
 
 #define RES_BUF_SZ	    PJ_DNS_RESOLVER_RES_BUF_SIZE
 #define UDPSZ		    PJ_DNS_RESOLVER_MAX_UDP_SIZE
+#define TMP_SZ		    PJ_DNS_RESOLVER_TMP_BUF_SIZE
 
 
 /* Nameserver state */
@@ -161,7 +162,7 @@ struct pj_dns_resolver
     pj_timer_heap_t	*timer;		/**< Timer instance.		    */
     pj_bool_t		 own_ioqueue;	/**< Do we own ioqueue?		    */
     pj_ioqueue_t	*ioqueue;	/**< Ioqueue instance.		    */
-    char		 tmp_pool[1500];/**< Temporary pool buffer.	    */
+    char		 tmp_pool[TMP_SZ];/**< Temporary pool buffer.	    */
 
     /* Socket */
     pj_sock_t		 udp_sock;	/**< UDP socket.		    */
@@ -993,11 +994,16 @@ static void update_res_cache(pj_dns_resolver *resolver,
 	}
     }
 
-    /* Duplicate the packet */
+    /* Duplicate the packet.
+     * We don't need to keep the query, NS, and AR sections from the packet,
+     * so exclude from duplication.
+     */
     res_pool = pj_pool_create_on_buf("respool", cache->buf, sizeof(cache->buf));
     PJ_TRY {
 	cache->pkt = NULL;
-	pj_dns_packet_dup(res_pool, pkt, &cache->pkt);
+	pj_dns_packet_dup(res_pool, pkt, 
+			  PJ_DNS_NO_QD | PJ_DNS_NO_NS | PJ_DNS_NO_AR,
+			  &cache->pkt);
     }
     PJ_CATCH_ANY {
 	PJ_LOG(1,(THIS_FILE, 
@@ -1222,10 +1228,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    child_q = child_q->next;
 	}
     }
-
-    /* We don't need NS and query section in the packet, so trim them. */
-    dns_pkt->hdr.qdcount = 0;
-    dns_pkt->hdr.nscount = 0;
 
     /* Save/update response cache. */
     update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);

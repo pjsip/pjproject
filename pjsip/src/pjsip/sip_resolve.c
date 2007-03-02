@@ -535,7 +535,7 @@ static void build_server_entries(struct query *query,
 	for (j=0; j<query->srv_cnt; ++j) {
 	    if (pj_stricmp(&rr->name, &query->srv[j].target_name)==0) {
 		unsigned cnt = query->srv[j].addr_cnt;
-		query->srv[j].addr[cnt] = pj_inet_addr(&rr->rdata.a.ip_addr);
+		query->srv[j].addr[cnt].s_addr = rr->rdata.a.ip_addr.s_addr;
 		++query->srv[j].addr_cnt;
 		++query->host_resolved;
 		break;
@@ -777,29 +777,27 @@ static void dns_callback(void *user_data,
 	    } else {
 		unsigned j;
 
-		query->srv[i].addr[query->srv[i].addr_cnt++] =
-		    pj_inet_addr(&pkt->ans[0].rdata.a.ip_addr);
+		query->srv[i].addr[query->srv[i].addr_cnt++].s_addr =
+		    pkt->ans[0].rdata.a.ip_addr.s_addr;
 
 		PJ_LOG(5,(query->objname, 
-			  "DNS A for %.*s: %.*s",
+			  "DNS A for %.*s: %s",
 			  (int)query->srv[i].target_name.slen, 
 			  query->srv[i].target_name.ptr,
-			  (int)pkt->ans[0].rdata.a.ip_addr.slen,
-			  pkt->ans[0].rdata.a.ip_addr.ptr));
+			  pj_inet_ntoa(pkt->ans[0].rdata.a.ip_addr)));
 
 		/* Check for multiple IP addresses */
 		for (j=1; j<pkt->hdr.anscount && 
 			    query->srv[i].addr_cnt < ADDR_MAX_COUNT; ++j)
 		{
-		    query->srv[i].addr[query->srv[i].addr_cnt++] = 
-			pj_inet_addr(&pkt->ans[j].rdata.a.ip_addr);
+		    query->srv[i].addr[query->srv[i].addr_cnt++].s_addr = 
+			pkt->ans[j].rdata.a.ip_addr.s_addr;
 
 		    PJ_LOG(5,(query->objname, 
-			      "Additional DNS A for %.*s: %.*s",
+			      "Additional DNS A for %.*s: %s",
 			      (int)query->srv[i].target_name.slen, 
 			      query->srv[i].target_name.ptr,
-			      (int)pkt->ans[j].rdata.a.ip_addr.slen,
-			      pkt->ans[j].rdata.a.ip_addr.ptr));
+			      pj_inet_ntoa(pkt->ans[j].rdata.a.ip_addr)));
 		}
 	    }
 

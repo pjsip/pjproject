@@ -169,6 +169,15 @@
 #endif
 
 
+/**
+ * Size of temporary pool buffer for parsing DNS packets in resolver.
+ *
+ * default: 4000
+ */
+#ifndef PJ_DNS_RESOLVER_TMP_BUF_SIZE
+#   define PJ_DNS_RESOLVER_TMP_BUF_SIZE		    4000
+#endif
+
 
 /* **************************************************************************
  * SCANNER CONFIGURATION
