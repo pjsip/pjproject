@@ -258,8 +258,7 @@ typedef struct pj_dns_parsed_rr
 
 	/** A Resource Data (PJ_DNS_TYPE_A, 1) */
 	struct a {
-	    //pj_str_t	ip_addr;/**< IP host address string.		    */
-	    pj_in_addr	ip_addr;
+	    pj_in_addr	ip_addr;/**< IP host address string.		    */
 	} a;
 
     } rdata;
