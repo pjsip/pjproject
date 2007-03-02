@@ -47,6 +47,7 @@ PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
     endpt->ioqueue = ioqueue;
     endpt->timer_heap = timer_heap;
     endpt->rto_msec = PJ_STUN_RTO_VALUE;
+    endpt->res_cache_msec = 10000;
 
     *p_endpt = endpt;
 

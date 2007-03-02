@@ -37,6 +37,7 @@ struct pj_stun_session
     pj_str_t		 s_password;
 
     pj_stun_tx_data	 pending_request_list;
+    pj_stun_tx_data	 cached_response_list;
 };
 
 #define SNAME(s_)		    ((s_)->pool->obj_name)
@@ -103,8 +104,9 @@ static pj_stun_tx_data* tsx_lookup(pj_stun_session *sess,
 
     tdata = sess->pending_request_list.next;
     while (tdata != &sess->pending_request_list) {
-	pj_assert(sizeof(tdata->client_key)==sizeof(msg->hdr.tsx_id));
-	if (pj_memcmp(tdata->client_key, msg->hdr.tsx_id, 
+	pj_assert(sizeof(tdata->msg_key)==sizeof(msg->hdr.tsx_id));
+	if (tdata->msg_magic == msg->hdr.magic &&
+	    pj_memcmp(tdata->msg_key, msg->hdr.tsx_id, 
 		      sizeof(msg->hdr.tsx_id))==0)
 	{
 	    return tdata;
@@ -158,8 +160,9 @@ static pj_status_t create_request_tdata(pj_stun_session *sess,
     }
 
     /* copy the request's transaction ID as the transaction key. */
-    pj_assert(sizeof(tdata->client_key)==sizeof(tdata->msg->hdr.tsx_id));
-    pj_memcpy(tdata->client_key, tdata->msg->hdr.tsx_id,
+    pj_assert(sizeof(tdata->msg_key)==sizeof(tdata->msg->hdr.tsx_id));
+    tdata->msg_magic = tdata->msg->hdr.magic;
+    pj_memcpy(tdata->msg_key, tdata->msg->hdr.tsx_id,
 	      sizeof(tdata->msg->hdr.tsx_id));
 
     *p_tdata = tdata;
@@ -174,7 +177,11 @@ static void destroy_tdata(pj_stun_tx_data *tdata)
 	pj_stun_client_tsx_destroy(tdata->client_tsx);
 	tdata->client_tsx = NULL;
     }
-
+    if (tdata->res_timer.id != PJ_FALSE) {
+	pj_timer_heap_cancel(tdata->sess->endpt->timer_heap, 
+			     &tdata->res_timer);
+	tdata->res_timer.id = PJ_FALSE;
+    }
     pj_pool_release(tdata->pool);
 }
 
@@ -186,6 +193,24 @@ PJ_DEF(void) pj_stun_msg_destroy_tdata( pj_stun_session *sess,
 {
     PJ_UNUSED_ARG(sess);
     destroy_tdata(tdata);
+}
+
+
+/* Timer callback to be called when it's time to destroy response cache */
+static void on_cache_timeout(pj_timer_heap_t *timer_heap,
+			     struct pj_timer_entry *entry)
+{
+    pj_stun_tx_data *tdata;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    entry->id = PJ_FALSE;
+    tdata = (pj_stun_tx_data*) entry->user_data;
+
+    PJ_LOG(5,(SNAME(tdata->sess), "Response cache deleted"));
+
+    pj_list_erase(tdata);
+    pj_stun_msg_destroy_tdata(tdata->sess, tdata);
 }
 
 static pj_status_t apply_msg_options(pj_stun_session *sess,
@@ -328,6 +353,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_endpoint *endpt,
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
 
     pj_list_init(&sess->pending_request_list);
+    pj_list_init(&sess->cached_response_list);
 
     status = pj_mutex_create_recursive(pool, name, &sess->mutex);
     if (status != PJ_SUCCESS) {
@@ -499,8 +525,9 @@ PJ_DEF(pj_status_t) pj_stun_session_create_response( pj_stun_session *sess,
     }
 
     /* copy the request's transaction ID as the transaction key. */
-    pj_assert(sizeof(tdata->client_key)==sizeof(req->hdr.tsx_id));
-    pj_memcpy(tdata->client_key, req->hdr.tsx_id, sizeof(req->hdr.tsx_id));
+    pj_assert(sizeof(tdata->msg_key)==sizeof(req->hdr.tsx_id));
+    tdata->msg_magic = req->hdr.magic;
+    pj_memcpy(tdata->msg_key, req->hdr.tsx_id, sizeof(req->hdr.tsx_id));
 
     *p_tdata = tdata;
 
@@ -551,6 +578,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && addr_len && server && tdata, PJ_EINVAL);
+
+    tdata->options = options;
 
     /* Allocate packet */
     tdata->max_len = PJ_STUN_MAX_PKT_LEN;
@@ -611,6 +640,33 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	tsx_add(sess, tdata);
 
     } else {
+	if ((options & PJ_STUN_CACHE_RESPONSE) && 
+	    (PJ_STUN_IS_RESPONSE(tdata->msg->hdr.type) ||
+	     PJ_STUN_IS_ERROR_RESPONSE(tdata->msg->hdr.type))) 
+	{
+	    /* Requested to keep the response in the cache */
+	    pj_time_val timeout;
+	    
+	    pj_memset(&tdata->res_timer, 0, sizeof(tdata->res_timer));
+	    pj_timer_entry_init(&tdata->res_timer, PJ_TRUE, tdata, 
+				&on_cache_timeout);
+
+	    timeout.sec = sess->endpt->res_cache_msec / 1000;
+	    timeout.msec = sess->endpt->res_cache_msec % 1000;
+
+	    status = pj_timer_heap_schedule(sess->endpt->timer_heap, 
+					    &tdata->res_timer,
+					    &timeout);
+	    if (status != PJ_SUCCESS) {
+		pj_stun_msg_destroy_tdata(sess, tdata);
+		pj_mutex_unlock(sess->mutex);
+		LOG_ERR_(sess, "Error scheduling response timer", status);
+		return status;
+	    }
+
+	    pj_list_push_back(&sess->cached_response_list, tdata);
+	}
+    
 	/* Otherwise for non-request message, send directly to transport. */
 	status = sess->cb.on_send_msg(sess, tdata->pkt, tdata->pkt_size,
 				      server, addr_len);
@@ -619,8 +675,10 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	    LOG_ERR_(sess, "Error sending STUN request", status);
 	}
 
-	/* Destroy */
-	pj_stun_msg_destroy_tdata(sess, tdata);
+	/* Destroy only when response is not cached*/
+	if (tdata->res_timer.id == 0) {
+	    pj_stun_msg_destroy_tdata(sess, tdata);
+	}
     }
 
 
@@ -639,8 +697,9 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Lookup pending client transaction */
     tdata = tsx_lookup(sess, msg);
     if (tdata == NULL) {
-	LOG_ERR_(sess, "STUN error finding transaction", PJ_ENOTFOUND);
-	return PJ_ENOTFOUND;
+	PJ_LOG(4,(SNAME(sess), 
+		  "Transaction not found, response silently discarded"));
+	return PJ_SUCCESS;
     }
 
     /* Pass the response to the transaction. 
@@ -707,7 +766,33 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 				       const pj_sockaddr_t *src_addr,
 				       unsigned src_addr_len)
 {
+    pj_stun_tx_data *t;
     pj_status_t status;
+
+    /* First lookup response in response cache */
+    t = sess->cached_response_list.next;
+    while (t != &sess->cached_response_list) {
+	if (t->msg_magic == msg->hdr.magic &&
+	    pj_memcmp(t->msg_key, msg->hdr.tsx_id, 
+		      sizeof(msg->hdr.tsx_id))==0)
+	{
+	    break;
+	}
+	t = t->next;
+    }
+
+    if (t != &sess->cached_response_list) {
+	/* Found response in the cache */
+	unsigned options;
+
+	PJ_LOG(5,(SNAME(sess), 
+		 "Request retransmission, sending cached response"));
+
+	options = t->options;
+	options &= ~PJ_STUN_CACHE_RESPONSE;
+	pj_stun_session_send_msg(sess, options, src_addr, src_addr_len, t);
+	return PJ_SUCCESS;
+    }
 
     /* Distribute to handler, or respond with Bad Request */
     if (sess->cb.on_rx_request) {
@@ -725,7 +810,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 	}
     }
 
-    return status;    
+    return status;
 }
 
 

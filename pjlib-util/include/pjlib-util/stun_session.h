@@ -23,6 +23,7 @@
 #include <pjlib-util/stun_endpoint.h>
 #include <pjlib-util/stun_transaction.h>
 #include <pj/list.h>
+#include <pj/timer.h>
 
 PJ_BEGIN_DECL
 
@@ -139,14 +140,18 @@ struct pj_stun_tx_data
     void		*user_data;	/**< Arbitrary user data.	    */
 
     pj_stun_client_tsx	*client_tsx;	/**< Client STUN transaction.	    */
-    pj_uint8_t		 client_key[12];/**< Client transaction key.	    */
+    pj_uint32_t		 msg_magic;	/**< Message magic.		    */
+    pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */
 
     void		*pkt;		/**< The STUN packet.		    */
     unsigned		 max_len;	/**< Length of packet buffer.	    */
     unsigned		 pkt_size;	/**< The actual length of STUN pkt. */
 
+    unsigned		 options;	/**< Options specified when sending */
     unsigned		 addr_len;	/**< Length of destination address. */
     const pj_sockaddr_t	*dst_addr;	/**< Destination address.	    */
+
+    pj_timer_entry	 res_timer;	/**< Response cache timer.	    */
 };
 
 
@@ -154,7 +159,7 @@ struct pj_stun_tx_data
  * Options that can be specified when creating or sending outgoing STUN
  * messages. These options may be specified as bitmask.
  */
-enum pj_stun_session_option
+enum pj_stun_session_send_option
 {
     /**
      * Add short term credential to the message. This option may not be used
@@ -171,7 +176,15 @@ enum pj_stun_session_option
     /**
      * Add STUN fingerprint to the message.
      */
-    PJ_STUN_USE_FINGERPRINT	= 4
+    PJ_STUN_USE_FINGERPRINT	= 4,
+
+    /**
+     * Instruct the session to cache outgoing response. This can only be 
+     * used when sending outgoing response message, and when it's specified,
+     * the session will use \a res_cache_msec settings in pj_stun_endpoint
+     * as the duration of the cache.
+     */
+    PJ_STUN_CACHE_RESPONSE	= 8
 };
 
 
@@ -257,6 +270,7 @@ PJ_DECL(pj_status_t)
 pj_stun_session_set_short_term_credential(pj_stun_session *sess,
 					  const pj_str_t *user,
 					  const pj_str_t *passwd);
+
 
 /**
  * Create a STUN Bind request message. After the message has been 
@@ -395,7 +409,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create_response(pj_stun_session *sess,
  * to actually send the message to the wire.
  *
  * @param sess	    The STUN session instance.
- * @param options   Optional flags, from pj_stun_session_option.
+ * @param options   Optional flags, from pj_stun_session_send_option.
  * @param dst_addr  The destination socket address.
  * @param addr_len  Length of destination address.
  * @param tdata	    The STUN transmit data containing the STUN message to

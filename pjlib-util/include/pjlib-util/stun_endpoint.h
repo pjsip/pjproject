@@ -45,14 +45,46 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_stun_endpoint
 {
+    /**
+     * Pool factory to be used by the STUN endpoint and all objects created
+     * that use this STUN endpoint.
+     */
     pj_pool_factory	*pf;
+
+    /**
+     * Ioqueue used by this endpoint.
+     */
     pj_ioqueue_t	*ioqueue;
+
+    /**
+     * Timer heap instance used by this endpoint.
+     */
     pj_timer_heap_t	*timer_heap;
+
+    /**
+     * Internal pool used by this endpoint. This shouldn't be used by
+     * application.
+     */
+    pj_pool_t		*pool;
+
+    /**
+     * Options.
+     */
     unsigned		 options;
 
+    /**
+     * The default initial STUN round-trip time estimation in msecs.
+     * The value normally is PJ_STUN_RTO_VALUE.
+     */
     unsigned		 rto_msec;
 
-    pj_pool_t		*pool;
+    /**
+     * The interval to cache outgoing  STUN response in the STUN session,
+     * in miliseconds. 
+     *
+     * Default 10000 (10 seconds).
+     */
+    unsigned		 res_cache_msec;
 
 } pj_stun_endpoint;
 

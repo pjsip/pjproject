@@ -156,7 +156,8 @@ static pj_status_t on_rx_binding_request(pj_stun_session *sess,
     }
 
     /* Send */
-    status = pj_stun_session_send_msg(sess, 0, src_addr, src_addr_len, tdata);
+    status = pj_stun_session_send_msg(sess, PJ_STUN_CACHE_RESPONSE, 
+				      src_addr, src_addr_len, tdata);
     return status;
 }
 
