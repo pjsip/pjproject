@@ -115,9 +115,8 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
 		  (int)rr->rdata.cname.name.slen,
 		  rr->rdata.cname.name.ptr));
     } else if (rr->type == PJ_DNS_TYPE_A) {
-	PJ_LOG(3,(THIS_FILE, "    IP address: %.*s",
-		  (int)rr->rdata.a.ip_addr.slen,
-		  rr->rdata.a.ip_addr.ptr));
+	PJ_LOG(3,(THIS_FILE, "    IP address: %s",
+		  pj_inet_ntoa(rr->rdata.a.ip_addr)));
     }
 }
 

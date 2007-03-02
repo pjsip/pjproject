@@ -340,11 +340,7 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 
     /* Parse some well known records */
     if (rr->type == PJ_DNS_TYPE_A) {
-	pj_in_addr ip_addr;
-
-	pj_memcpy(&ip_addr, p, 4);
-	pj_strdup2(pool, &rr->rdata.a.ip_addr, pj_inet_ntoa(ip_addr));
-
+	pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
 	p += 4;
 
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
@@ -587,7 +583,7 @@ static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
 	apply_name_table(nametable_count, nametable, &src->rdata.srv.target, 
 			 pool, &dst->rdata.srv.target);
     } else if (src->type == PJ_DNS_TYPE_A) {
-	pj_strdup(pool, &dst->rdata.a.ip_addr, &src->rdata.a.ip_addr);
+	dst->rdata.a.ip_addr.s_addr =  src->rdata.a.ip_addr.s_addr;
     } else if (src->type == PJ_DNS_TYPE_CNAME) {
 	pj_strdup(pool, &dst->rdata.cname.name, &src->rdata.cname.name);
     } else if (src->type == PJ_DNS_TYPE_NS) {
@@ -602,6 +598,7 @@ static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
  */
 PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
 			       const pj_dns_parsed_packet*p,
+			       unsigned options,
 			       pj_dns_parsed_packet **p_dst)
 {
     pj_dns_parsed_packet *dst;
@@ -630,7 +627,7 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
 	
 
     /* Copy query section */
-    if (p->hdr.qdcount) {
+    if (p->hdr.qdcount && (options & PJ_DNS_NO_QD)==0) {
 	dst->q = pj_pool_alloc(pool, p->hdr.qdcount * 
 				     sizeof(pj_dns_parsed_query));
 	for (i=0; i<p->hdr.qdcount; ++i) {
@@ -641,7 +638,7 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
     }
 
     /* Copy answer section */
-    if (p->hdr.anscount) {
+    if (p->hdr.anscount && (options & PJ_DNS_NO_ANS)==0) {
 	dst->ans = pj_pool_alloc(pool, p->hdr.anscount * 
 				       sizeof(pj_dns_parsed_rr));
 	for (i=0; i<p->hdr.anscount; ++i) {
@@ -652,7 +649,7 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
     }
 
     /* Copy NS section */
-    if (p->hdr.nscount) {
+    if (p->hdr.nscount && (options & PJ_DNS_NO_NS)==0) {
 	dst->ns = pj_pool_alloc(pool, p->hdr.nscount * 
 				      sizeof(pj_dns_parsed_rr));
 	for (i=0; i<p->hdr.nscount; ++i) {
@@ -663,7 +660,7 @@ PJ_DEF(void) pj_dns_packet_dup(pj_pool_t *pool,
     }
 
     /* Copy additional info section */
-    if (p->hdr.arcount) {
+    if (p->hdr.arcount && (options & PJ_DNS_NO_AR)==0) {
 	dst->arr = pj_pool_alloc(pool, p->hdr.arcount * 
 				       sizeof(pj_dns_parsed_rr));
 	for (i=0; i<p->hdr.arcount; ++i) {

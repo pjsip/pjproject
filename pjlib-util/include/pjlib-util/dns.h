@@ -25,7 +25,7 @@
  * @brief Low level DNS message parsing and packetization.
  */
 #include <pjlib-util/types.h>
-
+#include <pj/sock.h>
 
 PJ_BEGIN_DECL
 
@@ -258,7 +258,7 @@ typedef struct pj_dns_parsed_rr
 
 	/** A Resource Data (PJ_DNS_TYPE_A, 1) */
 	struct a {
-	    pj_str_t	ip_addr;/**< IP host address string.		    */
+	    pj_in_addr	ip_addr;/**< IP host address string.		    */
 	} a;
 
     } rdata;
@@ -279,6 +279,19 @@ typedef struct pj_dns_parsed_packet
     pj_dns_parsed_rr	*ns;	/**< Array of NS record in the answer.	    */
     pj_dns_parsed_rr	*arr;	/**< Array of additional RR answer.	    */
 } pj_dns_parsed_packet;
+
+
+/**
+ * Option flags to be specified when calling #pj_dns_packet_dup() function.
+ * These flags can be combined with bitwise OR operation.
+ */
+enum pj_dns_dup_options
+{
+    PJ_DNS_NO_QD    = 1, /**< Do not duplicate the query section.	    */
+    PJ_DNS_NO_ANS   = 2, /**< Do not duplicate the answer section.	    */
+    PJ_DNS_NO_NS    = 4, /**< Do not duplicate the NS section.		    */
+    PJ_DNS_NO_AR    = 8  /**< Do not duplicate the additional rec section   */
+};
 
 
 /**
@@ -331,10 +344,12 @@ PJ_DECL(pj_status_t) pj_dns_parse_packet(pj_pool_t *pool,
  *
  * @param pool		The pool to allocate memory for the duplicated packet.
  * @param p		The DNS packet to be cloned.
+ * @param options	Option flags, from pj_dns_dup_options.
  * @param p_dst		Pointer to store the cloned DNS packet.
  */
 PJ_DECL(void) pj_dns_packet_dup(pj_pool_t *pool,
 				const pj_dns_parsed_packet*p,
+				unsigned options,
 				pj_dns_parsed_packet **p_dst);
 
 
