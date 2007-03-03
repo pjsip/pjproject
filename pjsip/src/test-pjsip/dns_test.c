@@ -49,6 +49,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     pj_dns_parsed_packet pkt;
     pj_dns_parsed_rr ans[4];
     pj_dns_parsed_rr ar[5];
+    pj_str_t tmp;
     unsigned i;
 
     /*
@@ -122,31 +123,31 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ar[0].type = PJ_DNS_TYPE_A;
     ar[0].dnsclass = PJ_DNS_CLASS_IN;
     ar[0].ttl = 3600;
-    ar[0].rdata.a.ip_addr = pj_str("1.1.1.1");
+    ar[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "1.1.1.1"));
 
     ar[1].name = pj_str("sip02.example.com");
     ar[1].type = PJ_DNS_TYPE_A;
     ar[1].dnsclass = PJ_DNS_CLASS_IN;
     ar[1].ttl = 3600;
-    ar[1].rdata.a.ip_addr = pj_str("2.2.2.2");
+    ar[1].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "2.2.2.2"));
 
     ar[2].name = pj_str("sip03.example.com");
     ar[2].type = PJ_DNS_TYPE_A;
     ar[2].dnsclass = PJ_DNS_CLASS_IN;
     ar[2].ttl = 3600;
-    ar[2].rdata.a.ip_addr = pj_str("3.3.3.3");
+    ar[2].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "3.3.3.3"));
 
     ar[3].name = pj_str("sip04.example.com");
     ar[3].type = PJ_DNS_TYPE_A;
     ar[3].dnsclass = PJ_DNS_CLASS_IN;
     ar[3].ttl = 3600;
-    ar[3].rdata.a.ip_addr = pj_str("4.4.4.4");
+    ar[3].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "4.4.4.4"));
 
     ar[4].name = pj_str("example.com");
     ar[4].type = PJ_DNS_TYPE_A;
     ar[4].dnsclass = PJ_DNS_CLASS_IN;
     ar[4].ttl = 3600;
-    ar[4].rdata.a.ip_addr = pj_str("5.5.5.5");
+    ar[4].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "5.5.5.5"));
 
     /* 
      * Create individual A records for all hosts in "example.com" domain.
@@ -256,7 +257,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].type = PJ_DNS_TYPE_A;
     ans[0].dnsclass = PJ_DNS_CLASS_IN;
     ans[0].ttl = 3600;
-    ans[0].rdata.a.ip_addr = pj_str("6.6.6.6");
+    ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "6.6.6.6"));
 
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
 
@@ -265,7 +266,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].type = PJ_DNS_TYPE_A;
     ans[0].dnsclass = PJ_DNS_CLASS_IN;
     ans[0].ttl = 3600;
-    ans[0].rdata.a.ip_addr = pj_str("7.7.7.7");
+    ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "7.7.7.7"));
 
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
 }
