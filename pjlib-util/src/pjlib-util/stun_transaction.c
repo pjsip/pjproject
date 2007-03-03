@@ -259,7 +259,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
 						 const pj_stun_msg *msg)
 {
-    pj_stun_error_code_attr *err_attr;
+    pj_stun_errcode_attr *err_attr;
     pj_status_t status;
 
     /* Must be STUN response message */
@@ -281,7 +281,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     }
 
     /* Find STUN error code attribute */
-    err_attr = (pj_stun_error_code_attr*) 
+    err_attr = (pj_stun_errcode_attr*) 
 		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ERROR_CODE, 0);
 
     if (err_attr && err_attr->err_class <= 2) {
@@ -300,8 +300,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     if (err_attr == NULL) {
 	status = PJ_SUCCESS;
     } else {
-	status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_class * 100 +
-					  err_attr->number);
+	status = PJLIB_UTIL_ESTUNTSXFAILED;
     }
 
     /* Call callback */

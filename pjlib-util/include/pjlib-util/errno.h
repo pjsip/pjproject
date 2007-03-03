@@ -261,24 +261,20 @@
 /* Messaging errors */
 /**
  * @hideinitializer
- * Invalid STUN attribute
- */
-#define PJLIB_UTIL_ESTUNINATTR	    (PJLIB_UTIL_ERRNO_START+110)/* 320110 */
-/**
- * @hideinitializer
  * Too many STUN attributes.
  */
-#define PJLIB_UTIL_ESTUNTOOMANYATTR (PJLIB_UTIL_ERRNO_START+111)/* 320111 */
+#define PJLIB_UTIL_ESTUNTOOMANYATTR (PJLIB_UTIL_ERRNO_START+110)/* 320110 */
 /**
  * @hideinitializer
- * Unknown STUN attribute.
+ * Unknown STUN attribute. This error happens when the decoder encounters
+ * mandatory attribute type which it doesn't understand.
  */
-#define PJLIB_UTIL_ESTUNUNKNOWNATTR (PJLIB_UTIL_ERRNO_START+112)/* 320112 */
+#define PJLIB_UTIL_ESTUNUNKNOWNATTR (PJLIB_UTIL_ERRNO_START+111)/* 320111 */
 /**
  * @hideinitializer
  * Invalid STUN socket address length.
  */
-#define PJLIB_UTIL_ESTUNINADDRLEN   (PJLIB_UTIL_ERRNO_START+113)/* 320113 */
+#define PJLIB_UTIL_ESTUNINADDRLEN   (PJLIB_UTIL_ERRNO_START+112)/* 320112 */
 /**
  * @hideinitializer
  * STUN IPv6 attribute not supported
@@ -319,9 +315,39 @@
  * present), the USERNAME attribute must be present in the message.
  */
 #define PJLIB_UTIL_ESTUNNOUSERNAME  (PJLIB_UTIL_ERRNO_START+120)/* 320120 */
+/**
+ * @hideinitializer
+ * Unknown STUN username/credential.
+ */
+#define PJLIB_UTIL_ESTUNUSERNAME    (PJLIB_UTIL_ERRNO_START+121)/* 320121 */
+/**
+ * @hideinitializer
+ * Missing/invalidSTUN MESSAGE-INTEGRITY attribute.
+ */
+#define PJLIB_UTIL_ESTUNMSGINT	    (PJLIB_UTIL_ERRNO_START+122)/* 320122 */
+/**
+ * @hideinitializer
+ * Found duplicate STUN attribute.
+ */
+#define PJLIB_UTIL_ESTUNDUPATTR	    (PJLIB_UTIL_ERRNO_START+123)/* 320123 */
+/**
+ * @hideinitializer
+ * Missing STUN REALM attribute.
+ */
+#define PJLIB_UTIL_ESTUNNOREALM	    (PJLIB_UTIL_ERRNO_START+124)/* 320124 */
+/**
+ * @hideinitializer
+ * Missing/stale STUN NONCE attribute value.
+ */
+#define PJLIB_UTIL_ESTUNNONCE	    (PJLIB_UTIL_ERRNO_START+125)/* 320125 */
+/**
+ * @hideinitializer
+ * STUN transaction terminates with failure.
+ */
+#define PJLIB_UTIL_ESTUNTSXFAILED    (PJLIB_UTIL_ERRNO_START+126)/* 320126 */
 
 
-#define PJ_STATUS_FROM_STUN_CODE(code)	(PJLIB_UTIL_ERRNO_START+code)
+//#define PJ_STATUS_FROM_STUN_CODE(code)	(PJLIB_UTIL_ERRNO_START+code)
 
 
 

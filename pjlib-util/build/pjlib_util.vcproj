@@ -415,6 +415,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\stun_auth.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\stun_endpoint.c"
 				>
 			</File>
@@ -427,7 +431,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjlib-util\stun_server.c"
+				RelativePath="..\src\pjlib-util\stun_session.c"
 				>
 			</File>
 			<File
@@ -552,6 +556,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjlib-util\stun_auth.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjlib-util\stun_doc.h"
 				>
 			</File>
@@ -564,7 +572,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjlib-util\stun_server.h"
+				RelativePath="..\include\pjlib-util\stun_session.h"
 				>
 			</File>
 			<File

@@ -29,7 +29,6 @@ static struct global
     pj_caching_pool	 cp;
     pj_timer_heap_t	*th;
     pj_stun_session	*sess;
-    unsigned		 sess_options;
     pj_sock_t		 sock;
     pj_thread_t		*thread;
     pj_bool_t		 quit;
@@ -45,6 +44,7 @@ static struct options
     char    *realm;
     char    *user_name;
     char    *password;
+    char    *nonce;
     pj_bool_t use_fingerprint;
 } o;
 
@@ -180,39 +180,27 @@ static int init()
     stun_cb.on_send_msg = &on_send_msg;
     stun_cb.on_request_complete = &on_request_complete;
 
-    status = pj_stun_session_create(g.endpt, NULL, &stun_cb, &g.sess);
+    status = pj_stun_session_create(g.endpt, NULL, &stun_cb, 
+				    o.use_fingerprint!=0, &g.sess);
     pj_assert(status == PJ_SUCCESS);
 
-    if (o.realm) {
-	pj_str_t r, u, p;
+    if (o.user_name) {
+	pj_stun_auth_cred cred;
 
-	if (o.user_name == NULL) {
-	    printf("error: username must be specified\n");
-	    return PJ_EINVAL;
-	}
-	if (o.password == NULL)
-	    o.password = "";
-	g.sess_options = PJ_STUN_USE_LONG_TERM_CRED;
-	pj_stun_session_set_long_term_credential(g.sess, pj_cstr(&r, o.realm),
-						 pj_cstr(&u, o.user_name),
-						 pj_cstr(&p, o.password));
-	puts("Using long term credential");
-    } else if (o.user_name) {
-	pj_str_t u, p;
+	pj_bzero(&cred, sizeof(cred));
 
-	if (o.password == NULL)
-	    o.password = "";
-	g.sess_options = PJ_STUN_USE_SHORT_TERM_CRED;
-	pj_stun_session_set_short_term_credential(g.sess, 
-						  pj_cstr(&u, o.user_name),
-						  pj_cstr(&p, o.password));
-	puts("Using short term credential");
+	cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	cred.data.static_cred.realm = pj_str(o.realm);
+	cred.data.static_cred.username = pj_str(o.user_name);
+	cred.data.static_cred.data_type = 0;
+	cred.data.static_cred.data = pj_str(o.password);
+	cred.data.static_cred.nonce = pj_str(o.nonce);
+
+	pj_stun_session_set_credential(g.sess, &cred);
+	puts("Session credential set");
     } else {
 	puts("Credential not set");
     }
-
-    if (o.use_fingerprint)
-	g.sess_options |= PJ_STUN_USE_FINGERPRINT;
 
     status = pj_thread_create(g.pool, "stun", &worker_thread, NULL, 
 			      0, 0, &g.thread);
@@ -275,7 +263,7 @@ static void console_main(void)
 		rc = pj_stun_session_create_bind_req(g.sess, &tdata);
 		pj_assert(rc == PJ_SUCCESS);
 
-		rc = pj_stun_session_send_msg(g.sess, g.sess_options, 
+		rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
 					      &g.dst_addr, sizeof(g.dst_addr),
 					      tdata);
 		if (rc != PJ_SUCCESS)
@@ -302,6 +290,7 @@ static void usage(void)
     puts(" --realm, -r       Set realm of the credential");
     puts(" --username, -u    Set username of the credential");
     puts(" --password, -p    Set password of the credential");
+    puts(" --nonce, -N       Set NONCE");   
     puts(" --fingerprint, -F Use fingerprint for outgoing requests");
     puts(" --help, -h");
 }
@@ -312,6 +301,7 @@ int main(int argc, char *argv[])
 	{ "realm",	1, 0, 'r'},
 	{ "username",	1, 0, 'u'},
 	{ "password",	1, 0, 'p'},
+	{ "nonce",	1, 0, 'N'},
 	{ "fingerprint",0, 0, 'F'},
 	{ "help",	0, 0, 'h'}
     };
@@ -329,6 +319,9 @@ int main(int argc, char *argv[])
 	    break;
 	case 'p':
 	    o.password = pj_optarg;
+	    break;
+	case 'N':
+	    o.nonce = pj_optarg;
 	    break;
 	case 'h':
 	    usage();

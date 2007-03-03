@@ -145,6 +145,10 @@ SOURCE="..\src\pjlib-util\string.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\stun_auth.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\stun_endpoint.c"
 # End Source File
 # Begin Source File
@@ -154,10 +158,6 @@ SOURCE="..\src\pjlib-util\stun_msg.c"
 # Begin Source File
 
 SOURCE="..\src\pjlib-util\stun_msg_dump.c"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjlib-util\stun_server.c"
 # End Source File
 # Begin Source File
 
@@ -249,6 +249,10 @@ SOURCE="..\include\pjlib-util\string.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjlib-util\stun_auth.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjlib-util\stun_doc.h"
 # End Source File
 # Begin Source File
@@ -258,10 +262,6 @@ SOURCE="..\include\pjlib-util\stun_endpoint.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\stun_msg.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\include\pjlib-util\stun_server.h"
 # End Source File
 # Begin Source File
 

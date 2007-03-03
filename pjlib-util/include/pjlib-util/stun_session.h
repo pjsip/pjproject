@@ -20,6 +20,7 @@
 #define __PJLIB_UTIL_STUN_SESSION_H__
 
 #include <pjlib-util/stun_msg.h>
+#include <pjlib-util/stun_auth.h>
 #include <pjlib-util/stun_endpoint.h>
 #include <pjlib-util/stun_transaction.h>
 #include <pj/list.h>
@@ -147,7 +148,6 @@ struct pj_stun_tx_data
     unsigned		 max_len;	/**< Length of packet buffer.	    */
     unsigned		 pkt_size;	/**< The actual length of STUN pkt. */
 
-    unsigned		 options;	/**< Options specified when sending */
     unsigned		 addr_len;	/**< Length of destination address. */
     const pj_sockaddr_t	*dst_addr;	/**< Destination address.	    */
 
@@ -156,52 +156,21 @@ struct pj_stun_tx_data
 
 
 /**
- * Options that can be specified when creating or sending outgoing STUN
- * messages. These options may be specified as bitmask.
- */
-enum pj_stun_session_send_option
-{
-    /**
-     * Add short term credential to the message. This option may not be used
-     * together with PJ_STUN_USE_LONG_TERM_CRED option.
-     */
-    PJ_STUN_USE_SHORT_TERM_CRED	= 1,
-
-    /**
-     * Add long term credential to the message. This option may not be used
-     * together with PJ_STUN_USE_SHORT_TERM_CRED option.
-     */
-    PJ_STUN_USE_LONG_TERM_CRED	= 2,
-
-    /**
-     * Add STUN fingerprint to the message.
-     */
-    PJ_STUN_USE_FINGERPRINT	= 4,
-
-    /**
-     * Instruct the session to cache outgoing response. This can only be 
-     * used when sending outgoing response message, and when it's specified,
-     * the session will use \a res_cache_msec settings in pj_stun_endpoint
-     * as the duration of the cache.
-     */
-    PJ_STUN_CACHE_RESPONSE	= 8
-};
-
-
-/**
  * Create a STUN session.
  *
- * @param endpt	    The STUN endpoint, to be used to register timers etc.
- * @param name	    Optional name to be associated with this instance. The
- *		    name will be used for example for logging purpose.
- * @param cb	    Session callback.
- * @param p_sess    Pointer to receive STUN session instance.
+ * @param endpt		The STUN endpoint, to be used to register timers etc.
+ * @param name		Optional name to be associated with this instance. The
+ *			name will be used for example for logging purpose.
+ * @param cb		Session callback.
+ * @param fingerprint	Enable message fingerprint for outgoing messages.
+ * @param p_sess	Pointer to receive STUN session instance.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_session_create(pj_stun_endpoint *endpt,
 					    const char *name,
 					    const pj_stun_session_cb *cb,
+					    pj_bool_t fingerprint,
 					    pj_stun_session **p_sess);
 
 /**
@@ -235,42 +204,32 @@ PJ_DECL(pj_status_t) pj_stun_session_set_user_data(pj_stun_session *sess,
 PJ_DECL(void*) pj_stun_session_get_user_data(pj_stun_session *sess);
 
 /**
- * Save a long term credential to be used by this STUN session when sending
- * outgoing messages. After long term credential is configured, application
- * may specify PJ_STUN_USE_LONG_TERM_CRED option when sending outgoing STUN
- * message to send the long term credential in the message.
+ * Set server name to be included in all response.
  *
  * @param sess	    The STUN session instance.
- * @param realm	    Realm of the long term credential.
- * @param user	    The user name.
- * @param passwd    The pain-text password.
+ * @param srv_name  Server name string.
  *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ * @return	    The user data associated with this STUN session.
  */
-PJ_DECL(pj_status_t) 
-pj_stun_session_set_long_term_credential(pj_stun_session *sess,
-					 const pj_str_t *realm,
-					 const pj_str_t *user,
-					 const pj_str_t *passwd);
-
+PJ_DECL(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
+						     const pj_str_t *srv_name);
 
 /**
- * Save a short term credential to be used by this STUN session when sending
- * outgoing messages. After short term credential is configured, application
- * may specify PJ_STUN_USE_SHORT_TERM_CRED option when sending outgoing STUN
- * message to send the short term credential in the message.
+ * Set credential to be used by this session. Once credential is set, all
+ * outgoing messages will include MESSAGE-INTEGRITY, and all incoming
+ * message will be authenticated against this credential.
+ *
+ * To disable authentication after it has been set, call this function
+ * again with NULL as the argument.
  *
  * @param sess	    The STUN session instance.
- * @param user	    The user name.
- * @param passwd    The pain-text password.
+ * @param cred	    The credential to be used by this session. If NULL
+ *		    is specified, authentication will be disabled.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) 
-pj_stun_session_set_short_term_credential(pj_stun_session *sess,
-					  const pj_str_t *user,
-					  const pj_str_t *passwd);
-
+PJ_DECL(void) pj_stun_session_set_credential(pj_stun_session *sess,
+					     const pj_stun_auth_cred *cred);
 
 /**
  * Create a STUN Bind request message. After the message has been 
@@ -409,7 +368,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create_response(pj_stun_session *sess,
  * to actually send the message to the wire.
  *
  * @param sess	    The STUN session instance.
- * @param options   Optional flags, from pj_stun_session_send_option.
+ * @param cache_res If PJ_TRUE then response will be cached.
  * @param dst_addr  The destination socket address.
  * @param addr_len  Length of destination address.
  * @param tdata	    The STUN transmit data containing the STUN message to
@@ -418,7 +377,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create_response(pj_stun_session *sess,
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
-					      unsigned options,
+					      pj_bool_t cache_res,
 					      const pj_sockaddr_t *dst_addr,
 					      unsigned addr_len,
 					      pj_stun_tx_data *tdata);

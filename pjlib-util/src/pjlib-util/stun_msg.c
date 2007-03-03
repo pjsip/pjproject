@@ -21,7 +21,6 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/md5.h>
-#include <pjlib-util/sha1.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -88,37 +87,37 @@ struct attr_desc
 
 };
 
-static pj_status_t decode_generic_ip_addr_attr(pj_pool_t *pool, 
-					       const pj_uint8_t *buf, 
-					       void **p_attr);
-static pj_status_t encode_generic_ip_addr_attr(const void *a, pj_uint8_t *buf, 
-					       unsigned len, 
-					       unsigned *printed);
-static pj_status_t decode_generic_string_attr(pj_pool_t *pool, 
-					      const pj_uint8_t *buf, 
-					      void **p_attr);
-static pj_status_t encode_generic_string_attr(const void *a, pj_uint8_t *buf, 
-					      unsigned len, unsigned *printed);
-static pj_status_t decode_msg_integrity_attr(pj_pool_t *pool, 
-					     const pj_uint8_t *buf,
-					     void **p_attr);
-static pj_status_t encode_msg_integrity_attr(const void *a, pj_uint8_t *buf, 
-					     unsigned len, unsigned *printed);
-static pj_status_t decode_error_code_attr(pj_pool_t *pool, 
-					  const pj_uint8_t *buf,
-					  void **p_attr);
-static pj_status_t encode_error_code_attr(const void *a, pj_uint8_t *buf, 
-					  unsigned len, unsigned *printed);
+static pj_status_t decode_ip_addr_attr(pj_pool_t *pool, 
+				       const pj_uint8_t *buf, 
+				       void **p_attr);
+static pj_status_t encode_ip_addr_attr(const void *a, pj_uint8_t *buf, 
+				       unsigned len, 
+				       unsigned *printed);
+static pj_status_t decode_string_attr(pj_pool_t *pool, 
+				      const pj_uint8_t *buf, 
+				      void **p_attr);
+static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
+				      unsigned len, unsigned *printed);
+static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
+				      const pj_uint8_t *buf,
+				      void **p_attr);
+static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
+				      unsigned len, unsigned *printed);
+static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
+				       const pj_uint8_t *buf,
+				       void **p_attr);
+static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
+				       unsigned len, unsigned *printed);
 static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
 				       void **p_attr);
 static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
 				       unsigned len, unsigned *printed);
-static pj_status_t decode_generic_uint_attr(pj_pool_t *pool, 
-					    const pj_uint8_t *buf, 
-					    void **p_attr);
-static pj_status_t encode_generic_uint_attr(const void *a, pj_uint8_t *buf, 
-					    unsigned len, unsigned *printed);
+static pj_status_t decode_uint_attr(pj_pool_t *pool, 
+				    const pj_uint8_t *buf, 
+				    void **p_attr);
+static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
+				    unsigned len, unsigned *printed);
 static pj_status_t decode_binary_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
 				      void **p_attr);
@@ -142,56 +141,56 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_MAPPED_ADDR, */
 	"MAPPED-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_RESPONSE_ADDR, */
 	"RESPONSE-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGE_REQUEST, */
 	"CHANGE-REQUEST",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_SOURCE_ADDR, */
 	"SOURCE-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGED_ADDR, */
 	"CHANGED-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_USERNAME, */
 	"USERNAME",
-	&decode_generic_string_attr,
-	&encode_generic_string_attr
+	&decode_string_attr,
+	&encode_string_attr
     },
     {
 	/* PJ_STUN_ATTR_PASSWORD, */
 	"PASSWORD",
-	&decode_generic_string_attr,
-	&encode_generic_string_attr
+	&decode_string_attr,
+	&encode_string_attr
     },
     {
 	/* PJ_STUN_ATTR_MESSAGE_INTEGRITY, */
 	"MESSAGE-INTEGRITY",
-	&decode_msg_integrity_attr,
-	&encode_msg_integrity_attr
+	&decode_msgint_attr,
+	&encode_msgint_attr
     },
     {
 	/* PJ_STUN_ATTR_ERROR_CODE, */
 	"ERROR-CODE",
-	&decode_error_code_attr,
-	&encode_error_code_attr
+	&decode_errcode_attr,
+	&encode_errcode_attr
     },
     {
 	/* PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES, */
@@ -202,8 +201,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REFLECTED_FROM, */
 	"REFLECTED-FROM",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* ID 0x000C is not assigned */
@@ -214,8 +213,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_LIFETIME, */
 	"LIFETIME",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* ID 0x000E is not assigned */
@@ -232,8 +231,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_BANDWIDTH, */
 	"BANDWIDTH",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* ID 0x0011 is not assigned */
@@ -244,8 +243,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REMOTE_ADDRESS, */
 	"REMOTE-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_DATA, */
@@ -256,38 +255,38 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REALM, */
 	"REALM",
-	&decode_generic_string_attr,
-	&encode_generic_string_attr
+	&decode_string_attr,
+	&encode_string_attr
     },
     {
 	/* PJ_STUN_ATTR_NONCE, */
 	"NONCE",
-	&decode_generic_string_attr,
-	&encode_generic_string_attr
+	&decode_string_attr,
+	&encode_string_attr
     },
     {
 	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
 	"RELAY-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_ADDR_TYPE, */
 	"REQUESTED-ADDRESS-TYPE",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_PORT_PROPS, */
 	"REQUESTED-PORT-PROPS",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_TRANSPORT, */
 	"REQUESTED-TRANSPORT",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* ID 0x001A is not assigned */
@@ -328,32 +327,32 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_XOR_MAPPED_ADDRESS, */
 	"XOR-MAPPED-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_TIMER_VAL, */
 	"TIMER-VAL",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_IP, */
 	"REQUESTED-IP",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_XOR_REFLECTED_FROM, */
 	"XOR-REFLECTED-FROM",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_PRIORITY, */
 	"PRIORITY",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_USE_CANDIDATE, */
@@ -364,8 +363,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_XOR_INTERNAL_ADDR, */
 	"XOR-INTERNAL-ADDRESS",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
 
     /* Sentinel */
@@ -382,26 +381,26 @@ static struct attr_desc extended_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_FINGERPRINT, */
 	"FINGERPRINT",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_SERVER, */
 	"SERVER",
-	&decode_generic_string_attr,
-	&encode_generic_string_attr
+	&decode_string_attr,
+	&encode_string_attr
     },
     {
 	/* PJ_STUN_ATTR_ALTERNATE_SERVER, */
 	"ALTERNATE-SERVER",
-	&decode_generic_ip_addr_attr,
-	&encode_generic_ip_addr_attr
+	&decode_ip_addr_attr,
+	&encode_ip_addr_attr
     },
     {
 	/* PJ_STUN_ATTR_REFRESH_INTERVAL, */
 	"REFRESH-INTERVAL",
-	&decode_generic_uint_attr,
-	&encode_generic_uint_attr
+	&decode_uint_attr,
+	&encode_uint_attr
     },
 };
 
@@ -514,20 +513,20 @@ PJ_DEF(pj_str_t) pj_stun_get_err_reason(int err_code)
  * Create a generic STUN IP address attribute for IPv4 address.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
-				    int attr_type,
-				    pj_bool_t xor_ed,
-				    const pj_sockaddr_t *addr,
-				    unsigned addr_len,
-				    pj_stun_generic_ip_addr_attr **p_attr)
+pj_stun_ip_addr_attr_create(pj_pool_t *pool,
+			    int attr_type,
+			    pj_bool_t xor_ed,
+			    const pj_sockaddr_t *addr,
+			    unsigned addr_len,
+			    pj_stun_ip_addr_attr **p_attr)
 {
-    pj_stun_generic_ip_addr_attr *attr;
+    pj_stun_ip_addr_attr *attr;
 
     PJ_ASSERT_RETURN(pool && addr_len && addr && p_attr, PJ_EINVAL);
     PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
 		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_ip_addr_attr);
     INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
 
     if (!xor_ed) {
@@ -555,17 +554,17 @@ pj_stun_generic_ip_addr_attr_create(pj_pool_t *pool,
  * Create and add generic STUN IP address attribute to a STUN message.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
-				     pj_stun_msg *msg,
-				     int attr_type, 
-				     pj_bool_t xor_ed,
-				     const pj_sockaddr_t *addr,
-				     unsigned addr_len)
+pj_stun_msg_add_ip_addr_attr(pj_pool_t *pool,
+			     pj_stun_msg *msg,
+			     int attr_type, 
+			     pj_bool_t xor_ed,
+			     const pj_sockaddr_t *addr,
+			     unsigned addr_len)
 {
-    pj_stun_generic_ip_addr_attr *attr;
+    pj_stun_ip_addr_attr *attr;
     pj_status_t status;
 
-    status = pj_stun_generic_ip_addr_attr_create(pool, attr_type, xor_ed,
+    status = pj_stun_ip_addr_attr_create(pool, attr_type, xor_ed,
 					         addr, addr_len, &attr);
     if (status != PJ_SUCCESS)
 	return status;
@@ -573,15 +572,15 @@ pj_stun_msg_add_generic_ip_addr_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_generic_ip_addr_attr(pj_pool_t *pool, 
-					       const pj_uint8_t *buf, 
-					       void **p_attr)
+static pj_status_t decode_ip_addr_attr(pj_pool_t *pool, 
+				       const pj_uint8_t *buf, 
+				       void **p_attr)
 {
-    pj_stun_generic_ip_addr_attr *attr;
+    pj_stun_ip_addr_attr *attr;
     pj_uint32_t val;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_ip_addr_attr);
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
 
     /* Convert to host byte order */
@@ -611,23 +610,23 @@ static pj_status_t decode_generic_ip_addr_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_generic_ip_addr_attr(const void *a, pj_uint8_t *buf, 
-					       unsigned len, unsigned *printed)
+static pj_status_t encode_ip_addr_attr(const void *a, pj_uint8_t *buf, 
+				       unsigned len, unsigned *printed)
 {
     enum {
 	ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IP_ADDR_LEN
     };
     pj_uint8_t *start_buf = buf;
-    const pj_stun_generic_ip_addr_attr *ca = 
-	(const pj_stun_generic_ip_addr_attr *)a;
-    pj_stun_generic_ip_addr_attr *attr;
+    const pj_stun_ip_addr_attr *ca = 
+	(const pj_stun_ip_addr_attr *)a;
+    pj_stun_ip_addr_attr *attr;
 
     if (len < ATTR_LEN) 
 	return PJ_ETOOSMALL;
 
     /* Copy and convert headers to network byte order */
     pj_memcpy(buf, a, ATTR_HDR_LEN);
-    attr = (pj_stun_generic_ip_addr_attr*) buf;
+    attr = (pj_stun_ip_addr_attr*) buf;
     attr->hdr.type = pj_htons(attr->hdr.type);
     attr->hdr.length = pj_htons((pj_uint16_t)STUN_GENERIC_IP_ADDR_LEN);
     buf += ATTR_HDR_LEN;
@@ -665,16 +664,16 @@ static pj_status_t encode_generic_ip_addr_attr(const void *a, pj_uint8_t *buf,
  * Create a STUN generic string attribute.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_generic_string_attr_create(pj_pool_t *pool,
-				   int attr_type,
-				   const pj_str_t *value,
-				   pj_stun_generic_string_attr **p_attr)
+pj_stun_string_attr_create(pj_pool_t *pool,
+			   int attr_type,
+			   const pj_str_t *value,
+			   pj_stun_string_attr **p_attr)
 {
-    pj_stun_generic_string_attr *attr;
+    pj_stun_string_attr *attr;
 
     PJ_ASSERT_RETURN(pool && value && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_string_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_string_attr);
     INIT_ATTR(attr, attr_type, value->slen);
     pj_strdup(pool, &attr->value, value);
 
@@ -688,15 +687,15 @@ pj_stun_generic_string_attr_create(pj_pool_t *pool,
  * Create and add STUN generic string attribute to the message.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_msg_add_generic_string_attr(pj_pool_t *pool,
-				    pj_stun_msg *msg,
-				    int attr_type,
-				    const pj_str_t *value)
+pj_stun_msg_add_string_attr(pj_pool_t *pool,
+			    pj_stun_msg *msg,
+			    int attr_type,
+			    const pj_str_t *value)
 {
-    pj_stun_generic_string_attr *attr;
+    pj_stun_string_attr *attr;
     pj_status_t status;
 
-    status = pj_stun_generic_string_attr_create(pool, attr_type, value, 
+    status = pj_stun_string_attr_create(pool, attr_type, value, 
 						&attr);
     if (status != PJ_SUCCESS)
 	return status;
@@ -705,15 +704,15 @@ pj_stun_msg_add_generic_string_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_generic_string_attr(pj_pool_t *pool, 
-					      const pj_uint8_t *buf, 
-					      void **p_attr)
+static pj_status_t decode_string_attr(pj_pool_t *pool, 
+				      const pj_uint8_t *buf, 
+				      void **p_attr)
 {
-    pj_stun_generic_string_attr *attr;
+    pj_stun_string_attr *attr;
     pj_str_t value;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_string_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_string_attr);
 
     /* Copy the header */
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
@@ -737,11 +736,11 @@ static pj_status_t decode_generic_string_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_generic_string_attr(const void *a, pj_uint8_t *buf, 
-					      unsigned len, unsigned *printed)
+static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
+				      unsigned len, unsigned *printed)
 {
-    const pj_stun_generic_string_attr *ca = 
-	(const pj_stun_generic_string_attr*)a;
+    const pj_stun_string_attr *ca = 
+	(const pj_stun_string_attr*)a;
     pj_stun_attr_hdr *attr;
 
     /* Calculated total attr_len (add padding if necessary) */
@@ -856,16 +855,16 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
  * Create a STUN generic 32bit value attribute.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_generic_uint_attr_create(pj_pool_t *pool,
-				 int attr_type,
-				 pj_uint32_t value,
-				 pj_stun_generic_uint_attr **p_attr)
+pj_stun_uint_attr_create(pj_pool_t *pool,
+			 int attr_type,
+			 pj_uint32_t value,
+			 pj_stun_uint_attr **p_attr)
 {
-    pj_stun_generic_uint_attr *attr;
+    pj_stun_uint_attr *attr;
 
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_uint_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_uint_attr);
     INIT_ATTR(attr, attr_type, STUN_UINT_LEN);
     attr->value = value;
 
@@ -876,36 +875,36 @@ pj_stun_generic_uint_attr_create(pj_pool_t *pool,
 
 /* Create and add STUN generic 32bit value attribute to the message. */
 PJ_DEF(pj_status_t) 
-pj_stun_msg_add_generic_uint_attr(pj_pool_t *pool,
-				  pj_stun_msg *msg,
-				  int attr_type,
-				  pj_uint32_t value)
+pj_stun_msg_add_uint_attr(pj_pool_t *pool,
+			  pj_stun_msg *msg,
+			  int attr_type,
+			  pj_uint32_t value)
 {
-    pj_stun_generic_uint_attr *attr;
+    pj_stun_uint_attr *attr;
     pj_status_t status;
 
-    status = pj_stun_generic_uint_attr_create(pool, attr_type, value, &attr);
+    status = pj_stun_uint_attr_create(pool, attr_type, value, &attr);
     if (status != PJ_SUCCESS)
 	return status;
 
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_generic_uint_attr(pj_pool_t *pool, 
-					    const pj_uint8_t *buf, 
-					    void **p_attr)
+static pj_status_t decode_uint_attr(pj_pool_t *pool, 
+				    const pj_uint8_t *buf, 
+				    void **p_attr)
 {
     enum
     {
 	ATTR_LEN = STUN_UINT_LEN + ATTR_HDR_LEN
     };
-    pj_stun_generic_uint_attr *attr;
+    pj_stun_uint_attr *attr;
 
     /* Check that the struct address is valid */
-    pj_assert(sizeof(pj_stun_generic_uint_attr) == ATTR_LEN);
+    pj_assert(sizeof(pj_stun_uint_attr) == ATTR_LEN);
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_generic_uint_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_uint_attr);
     pj_memcpy(attr, buf, ATTR_LEN);
 
     /* Convert to host byte order */
@@ -924,21 +923,21 @@ static pj_status_t decode_generic_uint_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_generic_uint_attr(const void *a, pj_uint8_t *buf, 
-					    unsigned len, unsigned *printed)
+static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
+				    unsigned len, unsigned *printed)
 {
     enum
     {
 	ATTR_LEN = STUN_UINT_LEN + ATTR_HDR_LEN
     };
-    pj_stun_generic_uint_attr *attr;
+    pj_stun_uint_attr *attr;
 
     if (len < ATTR_LEN) 
 	return PJ_ETOOSMALL;
 
     /* Copy and convert attribute to network byte order */
     pj_memcpy(buf, a, ATTR_LEN);
-    attr = (pj_stun_generic_uint_attr*) buf;
+    attr = (pj_stun_uint_attr*) buf;
     attr->hdr.type = pj_htons(attr->hdr.type);
     pj_assert(attr->hdr.length == STUN_UINT_LEN);
     attr->hdr.length = pj_htons(STUN_UINT_LEN);
@@ -961,14 +960,14 @@ static pj_status_t encode_generic_uint_attr(const void *a, pj_uint8_t *buf,
  * Create a STUN MESSAGE-INTEGRITY attribute.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_msg_integrity_attr_create(pj_pool_t *pool,
-				  pj_stun_msg_integrity_attr **p_attr)
+pj_stun_msgint_attr_create(pj_pool_t *pool,
+			   pj_stun_msgint_attr **p_attr)
 {
-    pj_stun_msg_integrity_attr *attr;
+    pj_stun_msgint_attr *attr;
 
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msg_integrity_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msgint_attr);
     INIT_ATTR(attr, PJ_STUN_ATTR_MESSAGE_INTEGRITY, STUN_MSG_INTEGRITY_LEN);
 
     *p_attr = attr;
@@ -977,22 +976,35 @@ pj_stun_msg_integrity_attr_create(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_msg_integrity_attr(pj_pool_t *pool, 
-					     const pj_uint8_t *buf,
-					     void **p_attr)
+PJ_DEF(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
+						pj_stun_msg *msg)
+{
+    pj_stun_msgint_attr *attr;
+    pj_status_t status;
+
+    status = pj_stun_msgint_attr_create(pool, &attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &attr->hdr);
+}
+
+static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
+				      const pj_uint8_t *buf,
+				      void **p_attr)
 {
     enum
     {
 	ATTR_LEN = STUN_MSG_INTEGRITY_LEN + ATTR_HDR_LEN
     };
-    pj_stun_msg_integrity_attr *attr;
+    pj_stun_msgint_attr *attr;
 
     /* Check that struct size is valid */
-    pj_assert(sizeof(pj_stun_msg_integrity_attr)==ATTR_LEN);
+    pj_assert(sizeof(pj_stun_msgint_attr)==ATTR_LEN);
 
     /* Create attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msg_integrity_attr);
-    pj_memcpy(attr, buf, sizeof(pj_stun_msg_integrity_attr));
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msgint_attr);
+    pj_memcpy(attr, buf, sizeof(pj_stun_msgint_attr));
     attr->hdr.type = pj_ntohs(attr->hdr.type);
     attr->hdr.length = pj_ntohs(attr->hdr.length);
 
@@ -1006,21 +1018,21 @@ static pj_status_t decode_msg_integrity_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_msg_integrity_attr(const void *a, pj_uint8_t *buf, 
-					     unsigned len, unsigned *printed)
+static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
+				      unsigned len, unsigned *printed)
 {
     enum
     {
 	ATTR_LEN = STUN_MSG_INTEGRITY_LEN + ATTR_HDR_LEN
     };
-    pj_stun_msg_integrity_attr *attr;
+    pj_stun_msgint_attr *attr;
 
     if (len < ATTR_LEN) 
 	return PJ_ETOOSMALL;
 
     /* Copy and convert attribute to network byte order */
     pj_memcpy(buf, a, ATTR_LEN);
-    attr = (pj_stun_msg_integrity_attr*) buf;
+    attr = (pj_stun_msgint_attr*) buf;
     attr->hdr.type = pj_htons(attr->hdr.type);
     pj_assert(attr->hdr.length == STUN_MSG_INTEGRITY_LEN);
     attr->hdr.length = pj_htons(STUN_MSG_INTEGRITY_LEN);
@@ -1040,12 +1052,12 @@ static pj_status_t encode_msg_integrity_attr(const void *a, pj_uint8_t *buf,
  * Create a STUN ERROR-CODE attribute.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_error_code_attr_create(pj_pool_t *pool,
-			       int err_code,
-			       const pj_str_t *err_reason,
-			       pj_stun_error_code_attr **p_attr)
+pj_stun_errcode_attr_create(pj_pool_t *pool,
+			    int err_code,
+			    const pj_str_t *err_reason,
+			    pj_stun_errcode_attr **p_attr)
 {
-    pj_stun_error_code_attr *attr;
+    pj_stun_errcode_attr *attr;
     char err_buf[80];
     pj_str_t str;
 
@@ -1061,7 +1073,7 @@ pj_stun_error_code_attr_create(pj_pool_t *pool,
 	err_reason = &str;
     }
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_error_code_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_errcode_attr);
     INIT_ATTR(attr, PJ_STUN_ATTR_ERROR_CODE, 4+err_reason->slen);
     attr->err_class = (pj_uint8_t)(err_code / 100);
     attr->number = (pj_uint8_t) (err_code % 100);
@@ -1073,15 +1085,31 @@ pj_stun_error_code_attr_create(pj_pool_t *pool,
 }
 
 
-static pj_status_t decode_error_code_attr(pj_pool_t *pool, 
-					  const pj_uint8_t *buf,
-					  void **p_attr)
+PJ_DEF(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
+						 pj_stun_msg *msg,
+						 int err_code,
+						 const pj_str_t *err_reason)
 {
-    pj_stun_error_code_attr *attr;
+    pj_stun_errcode_attr *err_attr;
+    pj_status_t status;
+
+    status = pj_stun_errcode_attr_create(pool, err_code, err_reason,
+					 &err_attr);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_msg_add_attr(msg, &err_attr->hdr);
+}
+
+static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
+				       const pj_uint8_t *buf,
+				       void **p_attr)
+{
+    pj_stun_errcode_attr *attr;
     pj_str_t value;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_error_code_attr);
+    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_errcode_attr);
 
     /* Copy the header */
     pj_memcpy(attr, buf, ATTR_HDR_LEN + 4);
@@ -1104,12 +1132,12 @@ static pj_status_t decode_error_code_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_error_code_attr(const void *a, pj_uint8_t *buf, 
-					  unsigned len, unsigned *printed)
+static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
+				       unsigned len, unsigned *printed)
 {
-    const pj_stun_error_code_attr *ca = 
-	(const pj_stun_error_code_attr*)a;
-    pj_stun_error_code_attr *attr;
+    const pj_stun_errcode_attr *ca = 
+	(const pj_stun_errcode_attr*)a;
+    pj_stun_errcode_attr *attr;
 
     if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen) 
 	return PJ_ETOOSMALL;
@@ -1118,7 +1146,7 @@ static pj_status_t encode_error_code_attr(const void *a, pj_uint8_t *buf,
     pj_memcpy(buf, ca, ATTR_HDR_LEN + 4);
 
     /* Update length */
-    attr = (pj_stun_error_code_attr*) buf;
+    attr = (pj_stun_errcode_attr*) buf;
     attr->hdr.length = (pj_uint16_t)(4 + ca->reason.slen);
 
     /* Convert fiends to network byte order */
@@ -1507,7 +1535,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
 {
     unsigned msg_type = req_msg->hdr.type;
     pj_stun_msg *response;
-    pj_stun_error_code_attr *err_attr;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_response, PJ_EINVAL);
@@ -1529,13 +1556,11 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
 
     /* Add error code attribute */
     if (err_code) {
-	status = pj_stun_error_code_attr_create(pool, err_code, err_msg,
-						&err_attr);
+	status = pj_stun_msg_add_errcode_attr(pool, response, 
+					      err_code, err_msg);
 	if (status != PJ_SUCCESS) {
 	    return status;
 	}
-
-	pj_stun_msg_add_attr(response, &err_attr->hdr);
     }
 
     *p_response = response;
@@ -1702,7 +1727,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_STATUS_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		    return PJLIB_UTIL_ESTUNDUPATTR;
 		}
 		has_msg_int = PJ_TRUE;
 
@@ -1716,7 +1741,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_STATUS_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		    return PJLIB_UTIL_ESTUNDUPATTR;
 		}
 		has_fingerprint = PJ_TRUE;
 	    } else {
@@ -1730,7 +1755,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_STATUS_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_BAD_REQUEST);
+		    return has_fingerprint ? PJLIB_UTIL_ESTUNFINGERPOS :
+					     PJLIB_UTIL_ESTUNMSGINTPOS;
 		}
 	    }
 
@@ -1766,10 +1792,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 /* Calculate HMAC-SHA1 key for long term credential, by getting
  * MD5 digest of username, realm, and password. 
  */
-static void calc_md5_key(pj_uint8_t digest[16],
-			 const pj_str_t *realm,
-			 const pj_str_t *username,
-			 const pj_str_t *passwd)
+void pj_stun_calc_md5_key(pj_uint8_t digest[16],
+			  const pj_str_t *realm,
+			  const pj_str_t *username,
+			  const pj_str_t *passwd)
 {
     /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
      * the MD5 hash of the result of concatenating the following five
@@ -1827,7 +1853,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
     pj_uint8_t *start = buf;
     pj_stun_realm_attr *arealm = NULL;
     pj_stun_username_attr *auname = NULL;
-    pj_stun_msg_integrity_attr *amsg_integrity = NULL;
+    pj_stun_msgint_attr *amsgint = NULL;
     pj_stun_fingerprint_attr *afingerprint = NULL;
     unsigned printed;
     pj_status_t status;
@@ -1859,8 +1885,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	const pj_stun_attr_hdr *attr_hdr = msg->attr[i];
 
 	if (attr_hdr->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
-	    pj_assert(amsg_integrity == NULL);
-	    amsg_integrity = (pj_stun_msg_integrity_attr*) attr_hdr;
+	    pj_assert(amsgint == NULL);
+	    amsgint = (pj_stun_msgint_attr*) attr_hdr;
 
 	    /* Stop when encountering MESSAGE-INTEGRITY */
 	    break;
@@ -1901,9 +1927,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 	if (attr_hdr->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
 	    /* There mustn't be MESSAGE-INTEGRITY before */
-	    PJ_ASSERT_RETURN(amsg_integrity == NULL, 
+	    PJ_ASSERT_RETURN(amsgint == NULL, 
 			     PJLIB_UTIL_ESTUNMSGINTPOS);
-	    amsg_integrity = (pj_stun_msg_integrity_attr*) attr_hdr;
+	    amsgint = (pj_stun_msgint_attr*) attr_hdr;
 
 	} else if (attr_hdr->type == PJ_STUN_ATTR_FINGERPRINT) {
 	    afingerprint = (pj_stun_fingerprint_attr*) attr_hdr;
@@ -1914,9 +1940,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
      * calculating MESSAGE-INTEGRITY and FINGERPRINT. 
      * Note that length is not including the 20 bytes header.
      */
-    if (amsg_integrity && afingerprint) {
+    if (amsgint && afingerprint) {
 	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
-    } else if (amsg_integrity) {
+    } else if (amsgint) {
 	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24);
     } else if (afingerprint) {
 	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 8);
@@ -1929,7 +1955,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
     start[3] = (pj_uint8_t)(msg->hdr.length & 0x00FF);
 
     /* Calculate message integrity, if present */
-    if (amsg_integrity != NULL) {
+    if (amsgint != NULL) {
 
 	pj_uint8_t md5_key_buf[16];
 	pj_str_t key;
@@ -1968,8 +1994,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	    key = *password;
 
 	} else {
-	    calc_md5_key(md5_key_buf, &arealm->value, &auname->value, 
-			 password);
+	    pj_stun_calc_md5_key(md5_key_buf, &arealm->value, 
+				 &auname->value, password);
 	    key.ptr = (char*) md5_key_buf;
 	    key.slen = 16;
 	}
@@ -1977,11 +2003,11 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	/* Calculate HMAC-SHA1 digest */
 	pj_hmac_sha1((pj_uint8_t*)buf, buf-start, 
 		     (pj_uint8_t*)key.ptr, key.slen,
-		     amsg_integrity->hmac);
+		     amsgint->hmac);
 
 	/* Put this attribute in the message */
-	status = encode_msg_integrity_attr(amsg_integrity, buf, buf_size, 
-				           &printed);
+	status = encode_msgint_attr(amsgint, buf, buf_size, 
+			            &printed);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -1995,7 +2021,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	afingerprint->value ^= STUN_XOR_FINGERPRINT;
 
 	/* Put this attribute in the message */
-	status = encode_generic_uint_attr(afingerprint, buf, buf_size, 
+	status = encode_uint_attr(afingerprint, buf, buf_size, 
 				          &printed);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -2024,296 +2050,9 @@ PJ_DEF(pj_stun_attr_hdr*) pj_stun_msg_find_attr( const pj_stun_msg *msg,
 
     for (; index < msg->attr_count; ++index) {
 	if (msg->attr[index]->type == attr_type)
-	    return (pj_stun_attr_hdr*) &msg->attr[index];
+	    return (pj_stun_attr_hdr*) msg->attr[index];
     }
 
     return NULL;
 }
-
-
-/**************************************************************************/
-/*
- * Authentication
- */
-
-
-/* Send 401 response */
-static pj_status_t create_challenge(pj_pool_t *pool,
-				    const pj_stun_msg *msg,
-				    int err_code,
-				    const pj_str_t *err_msg,
-				    const pj_str_t *realm,
-				    const pj_str_t *nonce,
-				    pj_stun_msg **p_response)
-{
-    pj_stun_msg *response;
-    pj_status_t rc;
-
-    rc = pj_stun_msg_create_response(pool, msg, 
-				     err_code,  err_msg, &response);
-    if (rc != PJ_SUCCESS)
-	return rc;
-
-
-    if (realm && realm->slen) {
-	rc = pj_stun_msg_add_generic_string_attr(pool, response,
-						 PJ_STUN_ATTR_REALM, 
-						 realm);
-	if (rc != PJ_SUCCESS)
-	    return rc;
-    }
-
-    if (nonce && nonce->slen) {
-	rc = pj_stun_msg_add_generic_string_attr(pool, response,
-						 PJ_STUN_ATTR_NONCE, 
-						 nonce);
-	if (rc != PJ_SUCCESS)
-	    return rc;
-    }
-
-    *p_response = response;
-
-    return PJ_SUCCESS;
-}
-
-/* Verify credential */
-PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
-					       unsigned pkt_len,
-					       const pj_stun_msg *msg,
-					       pj_stun_auth_policy *pol,
-					       pj_pool_t *pool,
-					       pj_stun_msg **p_response)
-{
-    pj_str_t realm, nonce, password;
-    const pj_stun_msg_integrity_attr *amsgi;
-    unsigned amsgi_pos;
-    const pj_stun_username_attr *auser;
-    pj_bool_t username_ok;
-    const pj_stun_realm_attr *arealm;
-    const pj_stun_realm_attr *anonce;
-    pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE];
-    pj_uint8_t md5_digest[16];
-    pj_str_t key;
-    pj_status_t status;
-
-    /* msg and policy MUST be specified */
-    PJ_ASSERT_RETURN(pkt && pkt_len && msg && pol, PJ_EINVAL);
-
-    /* If p_response is specified, pool MUST be specified. */
-    PJ_ASSERT_RETURN(!p_response || pool, PJ_EINVAL);
-
-    if (p_response)
-	*p_response = NULL;
-
-    if (!PJ_STUN_IS_REQUEST(msg->hdr.type))
-	p_response = NULL;
-
-    /* Get realm and nonce */
-    realm.slen = nonce.slen = 0;
-    if (pol->type == PJ_STUN_POLICY_STATIC_SHORT_TERM) {
-	realm.slen = 0;
-	nonce = pol->data.static_short_term.nonce;
-    } else if (pol->type == PJ_STUN_POLICY_STATIC_LONG_TERM) {
-	realm = pol->data.static_long_term.realm;
-	nonce = pol->data.static_long_term.nonce;
-    } else if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
-	status = pol->data.dynamic.get_auth(pol->user_data, pool, 
-					    &realm, &nonce);
-	if (status != PJ_SUCCESS)
-	    return status;
-    } else {
-	pj_assert(!"Unexpected");
-	return PJ_EBUG;
-    }
-
-    /* First check that MESSAGE-INTEGRITY is present */
-    amsgi = (const pj_stun_msg_integrity_attr*)
-	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
-    if (amsgi == NULL) {
-	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_UNAUTHORIZED, NULL,
-			     &realm, &nonce, p_response);
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_UNAUTHORIZED);
-    }
-
-    /* Next check that USERNAME is present */
-    auser = (const pj_stun_username_attr*)
-	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
-    if (auser == NULL) {
-	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_USERNAME, NULL,
-			     &realm, &nonce, p_response);
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_USERNAME);
-    }
-
-    /* Get REALM, if any */
-    arealm = (const pj_stun_realm_attr*)
-	     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_REALM, 0);
-
-    /* Check if username match */
-    if (pol->type == PJ_STUN_POLICY_STATIC_SHORT_TERM) {
-	username_ok = !pj_strcmp(&auser->value, 
-				 &pol->data.static_short_term.username);
-	password = pol->data.static_short_term.password;
-    } else if (pol->type == PJ_STUN_POLICY_STATIC_LONG_TERM) {
-	username_ok = !pj_strcmp(&auser->value, 
-				 &pol->data.static_long_term.username);
-	password = pol->data.static_long_term.password;
-    } else if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
-	pj_status_t rc;
-	rc = pol->data.dynamic.get_password(pol->user_data, 
-					    (arealm?&arealm->value:NULL),
-					    &auser->value, pool,
-					    &password);
-	username_ok = (rc == PJ_SUCCESS);
-    } else {
-	username_ok = PJ_TRUE;
-	password.slen = 0;
-    }
-
-    if (!username_ok) {
-	/* Username mismatch */
-	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_UNKNOWN_USERNAME, NULL,
-			     &realm, &nonce, p_response);
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_UNKNOWN_USERNAME);
-    }
-
-
-    /* Get NONCE attribute */
-    anonce = (pj_stun_nonce_attr*)
-	     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_NONCE, 0);
-
-    /* Check for long term/short term requirements. */
-    if (realm.slen != 0 && arealm == NULL) {
-	/* Long term credential is required and REALM is not present */
-	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, NULL,
-			     &realm, &nonce, p_response);
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_REALM);
-
-    } else if (realm.slen != 0 && arealm != NULL) {
-	/* We want long term, and REALM is present */
-
-	/* NONCE must be present. */
-	if (anonce == NULL) {
-	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
-				 NULL, &realm, &nonce, p_response);
-	    }
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_NONCE);
-	}
-
-	/* Verify REALM matches */
-	if (pj_stricmp(&arealm->value, &realm)) {
-	    /* REALM doesn't match */
-	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, 
-				 NULL, &realm, &nonce, p_response);
-	    }
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_REALM);
-	}
-
-	/* Valid case, will validate the message integrity later */
-
-    } else if (realm.slen == 0 && arealm != NULL) {
-	/* We want to use short term credential, but client uses long
-	 * term credential. The draft doesn't mention anything about
-	 * switching between long term and short term.
-	 */
-	
-	/* For now just accept the credential, anyway it will probably
-	 * cause wrong message integrity value later.
-	 */
-    } else if (realm.slen==0 && arealm == NULL) {
-	/* Short term authentication is wanted, and one is supplied */
-
-	/* Application MAY request NONCE to be supplied */
-	if (nonce.slen != 0) {
-	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
-				 NULL, &realm, &nonce, p_response);
-	    }
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_MISSING_NONCE);
-	}
-    }
-
-    /* If NONCE is present, validate it */
-    if (anonce) {
-	pj_bool_t ok;
-
-	if (pol->type == PJ_STUN_POLICY_DYNAMIC) {
-	    ok = pol->data.dynamic.verify_nonce(pol->user_data,
-						(arealm?&arealm->value:NULL),
-						&auser->value,
-						&anonce->value);
-	} else {
-	    if (nonce.slen) {
-		ok = !pj_strcmp(&anonce->value, &nonce);
-	    } else {
-		ok = PJ_TRUE;
-	    }
-	}
-
-	if (!ok) {
-	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_STALE_NONCE, 
-				 NULL, &realm, &nonce, p_response);
-	    }
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_STALE_NONCE);
-	}
-    }
-
-    /* Get the position of MESSAGE-INTEGRITY in the packet */
-    amsgi_pos = 20+msg->hdr.length-22;
-    if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
-	/* Found MESSAGE-INTEGRITY as the last attribute */
-    } else {
-	amsgi_pos = 0;
-    }
-    
-    if (amsgi_pos==0) {
-	amsgi_pos = 20+msg->hdr.length-8-22;
-	if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
-	    /* Found MESSAGE-INTEGRITY before FINGERPRINT */
-	} else {
-	    amsgi_pos = 0;
-	}
-    }
-
-    if (amsgi_pos==0) {
-	pj_assert(!"Unable to find MESSAGE-INTEGRITY in the message!");
-	return PJ_EBUG;
-    }
-
-    /* Determine which key to use */
-    if (realm.slen) {
-	calc_md5_key(md5_digest, &realm, &auser->value, &password);
-	key.ptr = (char*)md5_digest;
-	key.slen = 16;
-    } else {
-	key = password;
-    }
-
-    /* Now calculate HMAC of the message */
-    pj_hmac_sha1(pkt, amsgi_pos, (pj_uint8_t*)key.ptr, key.slen, digest);
-
-    /* Compare HMACs */
-    if (pj_memcmp(amsgi->hmac, digest, 20)) {
-	/* HMAC value mismatch */
-	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE,
-			     NULL, &realm, &nonce, p_response);
-	}
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE);
-    }
-
-    /* Everything looks okay! */
-    return PJ_SUCCESS;
-}
-
 

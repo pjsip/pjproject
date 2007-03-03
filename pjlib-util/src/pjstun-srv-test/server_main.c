@@ -61,8 +61,17 @@ static struct stun_server
     unsigned		 thread_cnt;
     pj_thread_t		*threads[16];
 
+
 } server;
 
+static struct options
+{
+    char	*realm;
+    char	*user_name;
+    char	*password;
+    char	*nonce;
+    pj_bool_t	 use_fingerprint;
+} o;
 
 static pj_status_t server_perror(const char *sender, const char *title, 
 				 pj_status_t status)
@@ -131,10 +140,10 @@ static pj_status_t on_rx_binding_request(pj_stun_session *sess,
 	return status;
 
     /* Create MAPPED-ADDRESS attribute */
-    status = pj_stun_msg_add_generic_ip_addr_attr(tdata->pool, tdata->msg,
-						  PJ_STUN_ATTR_MAPPED_ADDR,
-						  PJ_FALSE,
-					          src_addr, src_addr_len);
+    status = pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
+				   	  PJ_STUN_ATTR_MAPPED_ADDR,
+					  PJ_FALSE,
+				          src_addr, src_addr_len);
     if (status != PJ_SUCCESS) {
 	server_perror(THIS_FILE, "Error creating response", status);
 	pj_stun_msg_destroy_tdata(sess, tdata);
@@ -144,10 +153,10 @@ static pj_status_t on_rx_binding_request(pj_stun_session *sess,
     /* On the presence of magic, create XOR-MAPPED-ADDRESS attribute */
     if (msg->hdr.magic == PJ_STUN_MAGIC) {
 	status = 
-	    pj_stun_msg_add_generic_ip_addr_attr(tdata->pool, tdata->msg,
-						 PJ_STUN_ATTR_XOR_MAPPED_ADDRESS,
-						 PJ_TRUE,
-						 src_addr, src_addr_len);
+	    pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
+					 PJ_STUN_ATTR_XOR_MAPPED_ADDRESS,
+					 PJ_TRUE,
+					 src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    server_perror(THIS_FILE, "Error creating response", status);
 	    pj_stun_msg_destroy_tdata(sess, tdata);
@@ -156,7 +165,7 @@ static pj_status_t on_rx_binding_request(pj_stun_session *sess,
     }
 
     /* Send */
-    status = pj_stun_session_send_msg(sess, PJ_STUN_CACHE_RESPONSE, 
+    status = pj_stun_session_send_msg(sess, PJ_TRUE, 
 				      src_addr, src_addr_len, tdata);
     return status;
 }
@@ -263,11 +272,31 @@ static pj_status_t init_service(struct service *svc)
     sess_cb.on_send_msg = &on_send_msg;
     sess_cb.on_rx_request = &on_rx_request;
     status = pj_stun_session_create(server.endpt, "session", 
-				    &sess_cb, &svc->sess);
+				    &sess_cb, 
+				    o.use_fingerprint!=0, 
+				    &svc->sess);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     pj_stun_session_set_user_data(svc->sess, (void*)svc);
+
+    if (o.user_name) {
+	pj_stun_auth_cred cred;
+
+	pj_bzero(&cred, sizeof(cred));
+
+	cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	cred.data.static_cred.realm = pj_str(o.realm);
+	cred.data.static_cred.username = pj_str(o.user_name);
+	cred.data.static_cred.data_type = 0;
+	cred.data.static_cred.data = pj_str(o.password);
+	cred.data.static_cred.nonce = pj_str(o.nonce);
+
+	pj_stun_session_set_credential(svc->sess, &cred);
+	puts("Session credential set");
+    } else {
+	puts("Credential not set");
+    }
 
     pj_bzero(&service_callback, sizeof(service_callback));
     service_callback.on_read_complete = &on_read_complete;
@@ -437,8 +466,65 @@ pj_status_t server_destroy(void)
 }
 
 
-int main()
+static void usage(void)
 {
+    puts("Usage: pjstun_srv_test [OPTIONS]");
+    puts("");
+    puts("where OPTIONS:");
+    puts(" --realm, -r       Set realm of the credential");
+    puts(" --username, -u    Set username of the credential");
+    puts(" --password, -p    Set password of the credential");
+    puts(" --nonce, -N       Set NONCE");      
+    puts(" --fingerprint, -F Use fingerprint for outgoing requests");
+    puts(" --help, -h");
+}
+
+
+int main(int argc, char *argv[])
+{
+    struct pj_getopt_option long_options[] = {
+	{ "realm",	1, 0, 'r'},
+	{ "username",	1, 0, 'u'},
+	{ "password",	1, 0, 'p'},
+	{ "nonce",	1, 0, 'N'},
+	{ "fingerprint",0, 0, 'F'},
+	{ "help",	0, 0, 'h'}
+    };
+    int c, opt_id;
+
+    while((c=pj_getopt_long(argc,argv, "r:u:p:hF", long_options, &opt_id))!=-1) {
+	switch (c) {
+	case 'r':
+	    o.realm = pj_optarg;
+	    break;
+	case 'u':
+	    o.user_name = pj_optarg;
+	    break;
+	case 'p':
+	    o.password = pj_optarg;
+	    break;
+	case 'N':
+	    o.nonce = pj_optarg;
+	    break;
+	case 'h':
+	    usage();
+	    return 0;
+	case 'F':
+	    o.use_fingerprint = PJ_TRUE;
+	    break;
+	default:
+	    printf("Argument \"%s\" is not valid. Use -h to see help",
+		   argv[pj_optind]);
+	    return 1;
+	}
+    }
+
+    if (pj_optind != argc) {
+	puts("Error: invalid arguments");
+	return 1;
+    }
+
+
     if (server_init()) {
 	server_destroy();
 	return 1;

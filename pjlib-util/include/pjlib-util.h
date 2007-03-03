@@ -49,9 +49,9 @@
 #include <pjlib-util/xml.h>
 
 /* New STUN */
+#include <pjlib-util/stun_auth.h>
 #include <pjlib-util/stun_endpoint.h>
 #include <pjlib-util/stun_msg.h>
-#include <pjlib-util/stun_server.h>
 #include <pjlib-util/stun_session.h>
 #include <pjlib-util/stun_transaction.h>
 

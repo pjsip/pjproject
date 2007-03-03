@@ -68,6 +68,23 @@ static const struct
     PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NXRRSET,	"DNS \"The RRset (name, type) does not exist\""),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NOTAUTH,	"DNS \"Not authorized\""),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNS_NOTZONE,	"DNS \"The zone specified is not a zone\""),
+
+    /* STUN */
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNTOOMANYATTR,	"Too many STUN attributes"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNUNKNOWNATTR,	"Unknown STUN attribute"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINADDRLEN,	"Invalid STUN socket address length"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNIPV6NOTSUPP,	"STUN IPv6 attribute not supported"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOTRESPONSE,	"Expecting STUN response message"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNINVALIDID,	"STUN transaction ID mismatch"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOHANDLER,	"Unable to find STUN handler for the request"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNMSGINTPOS,	"Found non-FINGERPRINT attr. after MESSAGE-INTEGRITY"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNFINGERPOS,	"Found STUN attribute after FINGERPRINT"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOUSERNAME,	"Missing STUN USERNAME attribute"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNMSGINT,	"Missing/invalid STUN MESSAGE-INTEGRITY attribute"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNDUPATTR,	"Found duplicate STUN attribute"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOREALM,	"Missing STUN REALM attribute"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNONCE,	"Missing/stale STUN NONCE attribute value"),
+    PJ_BUILD_ERR( PJLIB_UTIL_ESTUNTSXFAILED,	"STUN transaction terminates with failure"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

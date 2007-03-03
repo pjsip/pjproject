@@ -53,9 +53,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_XOR_INTERNAL_ADDR:
     case PJ_STUN_ATTR_ALTERNATE_SERVER:
 	{
-	    const pj_stun_generic_ip_addr_attr *attr;
+	    const pj_stun_ip_addr_attr *attr;
 
-	    attr = (const pj_stun_generic_ip_addr_attr*)ahdr;
+	    attr = (const pj_stun_ip_addr_attr*)ahdr;
 
 	    if (attr->addr.addr.sa_family == PJ_AF_INET) {
 		len = pj_ansi_snprintf(p, end-p,
@@ -84,9 +84,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_FINGERPRINT:
     case PJ_STUN_ATTR_REFRESH_INTERVAL:
 	{
-	    const pj_stun_generic_uint_attr *attr;
+	    const pj_stun_uint_attr *attr;
 
-	    attr = (const pj_stun_generic_uint_attr*)ahdr;
+	    attr = (const pj_stun_uint_attr*)ahdr;
 	    len = pj_ansi_snprintf(p, end-p,
 				   ", value=%d (0x%x)\n",
 				   (pj_uint32_t)attr->value,
@@ -100,9 +100,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_NONCE:
     case PJ_STUN_ATTR_SERVER:
 	{
-	    const pj_stun_generic_string_attr *attr;
+	    const pj_stun_string_attr *attr;
 
-	    attr = (pj_stun_generic_string_attr*)ahdr;
+	    attr = (pj_stun_string_attr*)ahdr;
 	    len = pj_ansi_snprintf(p, end-p,
 				   ", value=\"%.*s\"\n",
 				   (int)attr->value.slen,
@@ -112,9 +112,9 @@ static int print_attr(char *buffer, unsigned length,
 
     case PJ_STUN_ATTR_ERROR_CODE:
 	{
-	    const pj_stun_error_code_attr *attr;
+	    const pj_stun_errcode_attr *attr;
 
-	    attr = (const pj_stun_error_code_attr*) ahdr;
+	    attr = (const pj_stun_errcode_attr*) ahdr;
 	    len = pj_ansi_snprintf(p, end-p,
 				   ", err_code=%d, reason=\"%.*s\"\n",
 				   attr->err_class*100 + attr->number,
