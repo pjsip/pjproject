@@ -1841,6 +1841,32 @@ void pj_stun_calc_md5_key(pj_uint8_t digest[16],
 
 
 /*
+static char *print_binary(const pj_uint8_t *data, unsigned data_len)
+{
+    static char static_buffer[1024];
+    char *buffer = static_buffer;
+    unsigned length=sizeof(static_buffer), i;
+
+    if (length < data_len * 2 + 8)
+	return "";
+
+    pj_ansi_sprintf(buffer, ", data=");
+    buffer += 7;
+
+    for (i=0; i<data_len; ++i) {
+	pj_ansi_sprintf(buffer, "%02x", (*data) & 0xFF);
+	buffer += 2;
+	data++;
+    }
+
+    pj_ansi_sprintf(buffer, "\n");
+    buffer++;
+
+    return static_buffer;
+}
+*/
+
+/*
  * Print the message structure to a buffer.
  */
 PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
@@ -2001,7 +2027,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	}
 
 	/* Calculate HMAC-SHA1 digest */
-	pj_hmac_sha1((pj_uint8_t*)buf, buf-start, 
+	pj_hmac_sha1((pj_uint8_t*)start, buf-start, 
 		     (pj_uint8_t*)key.ptr, key.slen,
 		     amsgint->hmac);
 

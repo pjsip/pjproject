@@ -699,6 +699,7 @@ static pj_status_t authenticate_msg(pj_stun_session *sess,
     status = pj_stun_verify_credential(pkt, pkt_len, msg, sess->cred,
 				       tmp_pool, &response);
     if (status != PJ_SUCCESS && response != NULL) {
+	PJ_LOG(5,(SNAME(sess), "Message authentication failed"));
 	send_response(sess, tmp_pool, response, PJ_FALSE, 
 		      src_addr, src_addr_len);
     }
@@ -865,7 +866,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     dump = pj_pool_alloc(tmp_pool, PJ_STUN_MAX_PKT_LEN);
 
-    PJ_LOG(4,(SNAME(sess),
+    PJ_LOG(5,(SNAME(sess),
 	      "RX STUN message:\n"
 	      "--- begin STUN message ---\n"
 	      "%s"
@@ -884,8 +885,9 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     /* Authenticate the message */
     status = authenticate_msg(sess, packet, pkt_size, msg, tmp_pool, 
 			      src_addr, src_addr_len);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
 	goto on_return;
+    }
 
     /* Handle message */
     if (PJ_STUN_IS_RESPONSE(msg->hdr.type) ||

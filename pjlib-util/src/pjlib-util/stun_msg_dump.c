@@ -26,6 +26,29 @@
 			    goto on_return; \
 			p += len
 
+static int print_binary(char *buffer, unsigned length,
+			const pj_uint8_t *data, unsigned data_len)
+{
+    unsigned i;
+
+    if (length < data_len * 2 + 8)
+	return -1;
+
+    pj_ansi_sprintf(buffer, ", data=");
+    buffer += 7;
+
+    for (i=0; i<data_len; ++i) {
+	pj_ansi_sprintf(buffer, "%02x", (*data) & 0xFF);
+	buffer += 2;
+	data++;
+    }
+
+    pj_ansi_sprintf(buffer, "\n");
+    buffer++;
+
+    return data_len * 2 + 8;
+}
+
 static int print_attr(char *buffer, unsigned length,
 		      const pj_stun_attr_hdr *ahdr)
 {
@@ -144,7 +167,24 @@ static int print_attr(char *buffer, unsigned length,
 	break;
 
     case PJ_STUN_ATTR_MESSAGE_INTEGRITY:
+	{
+	    const pj_stun_msgint_attr *attr;
+
+	    attr = (const pj_stun_msgint_attr*) ahdr;
+	    len = print_binary(p, end-p, attr->hmac, 20);
+	    APPLY();
+	}
+	break;
+
     case PJ_STUN_ATTR_DATA:
+	{
+	    const pj_stun_binary_attr *attr;
+
+	    attr = (const pj_stun_binary_attr*) ahdr;
+	    len = print_binary(p, end-p, attr->data, attr->length);
+	    APPLY();
+	}
+	break;
     case PJ_STUN_ATTR_USE_CANDIDATE:
     default:
 	len = pj_ansi_snprintf(p, end-p, "\n");
