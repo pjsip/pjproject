@@ -396,7 +396,7 @@ PJ_DEF(void) pj_stun_session_set_credential(pj_stun_session *sess,
 PJ_DEF(pj_status_t) pj_stun_session_create_bind_req(pj_stun_session *sess,
 						    pj_stun_tx_data **p_tdata)
 {
-    pj_stun_tx_data *tdata;
+    pj_stun_tx_data *tdata = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
@@ -472,7 +472,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_response( pj_stun_session *sess,
 						     pj_stun_tx_data **p_tdata)
 {
     pj_status_t status;
-    pj_stun_tx_data *tdata;
+    pj_stun_tx_data *tdata = NULL;
 
     status = create_tdata(sess, NULL, &tdata);
     if (status != PJ_SUCCESS)

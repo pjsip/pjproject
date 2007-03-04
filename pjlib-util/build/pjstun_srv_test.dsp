@@ -87,7 +87,7 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\src\pjstun-srv-test\server_main.c"
+SOURCE="..\src\pjstun-srv-test\server.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"

@@ -692,7 +692,7 @@ pj_stun_msg_add_string_attr(pj_pool_t *pool,
 			    int attr_type,
 			    const pj_str_t *value)
 {
-    pj_stun_string_attr *attr;
+    pj_stun_string_attr *attr = NULL;
     pj_status_t status;
 
     status = pj_stun_string_attr_create(pool, attr_type, value, 
@@ -880,7 +880,7 @@ pj_stun_msg_add_uint_attr(pj_pool_t *pool,
 			  int attr_type,
 			  pj_uint32_t value)
 {
-    pj_stun_uint_attr *attr;
+    pj_stun_uint_attr *attr = NULL;
     pj_status_t status;
 
     status = pj_stun_uint_attr_create(pool, attr_type, value, &attr);
@@ -979,7 +979,7 @@ pj_stun_msgint_attr_create(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
 						pj_stun_msg *msg)
 {
-    pj_stun_msgint_attr *attr;
+    pj_stun_msgint_attr *attr = NULL;
     pj_status_t status;
 
     status = pj_stun_msgint_attr_create(pool, &attr);
@@ -1090,7 +1090,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
 						 int err_code,
 						 const pj_str_t *err_reason)
 {
-    pj_stun_errcode_attr *err_attr;
+    pj_stun_errcode_attr *err_attr = NULL;
     pj_status_t status;
 
     status = pj_stun_errcode_attr_create(pool, err_code, err_reason,
@@ -1214,7 +1214,7 @@ pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
 			     unsigned attr_cnt,
 			     const pj_uint16_t attr_types[])
 {
-    pj_stun_unknown_attr *attr;
+    pj_stun_unknown_attr *attr = NULL;
     pj_status_t status;
 
     status = pj_stun_unknown_attr_create(pool, attr_cnt, attr_types, &attr);
@@ -1332,7 +1332,7 @@ pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 			    const pj_uint8_t *data,
 			    unsigned length)
 {
-    pj_stun_binary_attr *attr;
+    pj_stun_binary_attr *attr = NULL;
     pj_status_t status;
 
     status = pj_stun_binary_attr_create(pool, attr_type,
@@ -1534,7 +1534,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
 						pj_stun_msg **p_response)
 {
     unsigned msg_type = req_msg->hdr.type;
-    pj_stun_msg *response;
+    pj_stun_msg *response = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_response, PJ_EINVAL);
@@ -1881,7 +1881,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
     pj_stun_username_attr *auname = NULL;
     pj_stun_msgint_attr *amsgint = NULL;
     pj_stun_fingerprint_attr *afingerprint = NULL;
-    unsigned printed;
+    unsigned printed = 0;
     pj_status_t status;
     unsigned i;
 
