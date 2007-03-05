@@ -28,6 +28,8 @@
 
 #define THIS_FILE	"pasound.c"
 
+static int snd_init_count;
+
 static struct snd_mgr
 {
     pj_pool_factory *factory;
@@ -193,18 +195,23 @@ static int PaRecorderPlayerCallback( const void *input,
  */
 PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
-    int err;
+    if (++snd_init_count == 1) {
+	int err;
 
-    snd_mgr.factory = factory;
-    err = Pa_Initialize();
+	snd_mgr.factory = factory;
+	err = Pa_Initialize();
 
-    PJ_LOG(4,(THIS_FILE, "PortAudio sound library initialized, status=%d", err));
-    PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
-			 Pa_GetHostApiCount()));
-    PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
-			 pjmedia_snd_get_dev_count()));
+	PJ_LOG(4,(THIS_FILE, 
+		  "PortAudio sound library initialized, status=%d", err));
+	PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
+			     Pa_GetHostApiCount()));
+	PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
+			     pjmedia_snd_get_dev_count()));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+	return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    } else {
+	return PJ_SUCCESS;
+    }
 }
 
 
@@ -804,13 +811,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
  */
 PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 {
-    int err;
+    if (--snd_init_count == 0) {
+	int err;
 
-    PJ_LOG(4,(THIS_FILE, "PortAudio sound library shutting down.."));
+	PJ_LOG(4,(THIS_FILE, "PortAudio sound library shutting down.."));
 
-    err = Pa_Terminate();
+	err = Pa_Terminate();
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+	return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    } else {
+	return PJ_SUCCESS;
+    }
 }
 
 

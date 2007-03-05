@@ -56,7 +56,7 @@ struct dsound_dev_info
 
 static unsigned dev_count;
 static struct dsound_dev_info dev_info[MAX_HARDWARE];
-
+static int snd_init_count;
 
 
 /* Individual DirectSound capture/playback stream descriptor */
@@ -637,6 +637,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
     HRESULT hr;
     unsigned i;
 
+    if (++snd_init_count != 1)
+	return PJ_SUCCESS;
+
     pool_factory = factory;
 
     /* Enumerate sound playback devices */
@@ -666,6 +669,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
  */
 PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 {
+    --snd_init_count;
     return PJ_SUCCESS;
 }
 
