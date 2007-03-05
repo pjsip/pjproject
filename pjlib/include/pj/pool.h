@@ -442,7 +442,7 @@ PJ_IDECL(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool );
  *
  * @return pointer to the allocated memory.
  *
- * @see PJ_POOL_ALLOC_TYPE
+ * @see PJ_POOL_ALLOC_T
  */
 PJ_IDECL(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size);
 
@@ -469,7 +469,7 @@ PJ_IDECL(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count,
  *
  * @return	    Pointer to the allocated memory.
  *
- * @see PJ_POOL_ZALLOC_TYPE
+ * @see PJ_POOL_ZALLOC_T
  */
 PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
 {
@@ -488,7 +488,7 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  *
  * @return	    Memory buffer of the specified type.
  */
-#define PJ_POOL_ALLOC_TYPE(pool,type) \
+#define PJ_POOL_ALLOC_T(pool,type) \
 	    ((type*)pj_pool_alloc(pool, sizeof(type)))
 
 /**
@@ -502,7 +502,7 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  *
  * @return	    Memory buffer of the specified type.
  */
-#define PJ_POOL_ZALLOC_TYPE(pool,type) \
+#define PJ_POOL_ZALLOC_T(pool,type) \
 	    ((type*)pj_pool_zalloc(pool, sizeof(type)))
 
 

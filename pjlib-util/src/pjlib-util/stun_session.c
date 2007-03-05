@@ -124,7 +124,7 @@ static pj_status_t create_tdata(pj_stun_session *sess,
 			  TDATA_POOL_SIZE, TDATA_POOL_INC, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
-    tdata = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_tx_data);
+    tdata = PJ_POOL_ZALLOC_T(pool, pj_stun_tx_data);
     tdata->pool = pool;
     tdata->sess = sess;
     tdata->user_data = user_data;
@@ -320,7 +320,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_endpoint *endpt,
     pool = pj_pool_create(endpt->pf, name, 4000, 4000, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
-    sess = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_session);
+    sess = PJ_POOL_ZALLOC_T(pool, pj_stun_session);
     sess->endpt = endpt;
     sess->pool = pool;
     pj_memcpy(&sess->cb, cb, sizeof(*cb));

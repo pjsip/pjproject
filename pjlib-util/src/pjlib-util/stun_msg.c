@@ -526,7 +526,7 @@ pj_stun_ip_addr_attr_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
 		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_ip_addr_attr);
     INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
 
     if (!xor_ed) {
@@ -580,7 +580,7 @@ static pj_status_t decode_ip_addr_attr(pj_pool_t *pool,
     pj_uint32_t val;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_ip_addr_attr);
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
 
     /* Convert to host byte order */
@@ -673,7 +673,7 @@ pj_stun_string_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && value && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_string_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_string_attr);
     INIT_ATTR(attr, attr_type, value->slen);
     pj_strdup(pool, &attr->value, value);
 
@@ -712,7 +712,7 @@ static pj_status_t decode_string_attr(pj_pool_t *pool,
     pj_str_t value;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_string_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_string_attr);
 
     /* Copy the header */
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
@@ -786,7 +786,7 @@ pj_stun_empty_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_empty_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_empty_attr);
     INIT_ATTR(attr, attr_type, sizeof(pj_stun_empty_attr));
 
     *p_attr = attr;
@@ -805,7 +805,7 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
     pj_assert(sizeof(pj_stun_empty_attr) == ATTR_HDR_LEN);
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_empty_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_empty_attr);
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
 
     /* Convert to host byte order */
@@ -864,7 +864,7 @@ pj_stun_uint_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_uint_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
     INIT_ATTR(attr, attr_type, STUN_UINT_LEN);
     attr->value = value;
 
@@ -904,7 +904,7 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
     pj_assert(sizeof(pj_stun_uint_attr) == ATTR_LEN);
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_uint_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
     pj_memcpy(attr, buf, ATTR_LEN);
 
     /* Convert to host byte order */
@@ -967,7 +967,7 @@ pj_stun_msgint_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msgint_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_msgint_attr);
     INIT_ATTR(attr, PJ_STUN_ATTR_MESSAGE_INTEGRITY, STUN_MSG_INTEGRITY_LEN);
 
     *p_attr = attr;
@@ -1003,7 +1003,7 @@ static pj_status_t decode_msgint_attr(pj_pool_t *pool,
     pj_assert(sizeof(pj_stun_msgint_attr)==ATTR_LEN);
 
     /* Create attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msgint_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_msgint_attr);
     pj_memcpy(attr, buf, sizeof(pj_stun_msgint_attr));
     attr->hdr.type = pj_ntohs(attr->hdr.type);
     attr->hdr.length = pj_ntohs(attr->hdr.length);
@@ -1073,7 +1073,7 @@ pj_stun_errcode_attr_create(pj_pool_t *pool,
 	err_reason = &str;
     }
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_errcode_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
     INIT_ATTR(attr, PJ_STUN_ATTR_ERROR_CODE, 4+err_reason->slen);
     attr->err_class = (pj_uint8_t)(err_code / 100);
     attr->number = (pj_uint8_t) (err_code % 100);
@@ -1109,7 +1109,7 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
     pj_str_t value;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_errcode_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
 
     /* Copy the header */
     pj_memcpy(attr, buf, ATTR_HDR_LEN + 4);
@@ -1186,7 +1186,7 @@ pj_stun_unknown_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && attr_cnt < PJ_STUN_MAX_ATTR && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_unknown_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_unknown_attr);
     INIT_ATTR(attr, PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES, attr_cnt * 2);
 
     attr->attr_count = attr_cnt;
@@ -1232,7 +1232,7 @@ static pj_status_t decode_unknown_attr(pj_pool_t *pool,
     const pj_uint16_t *punk_attr;
     unsigned i;
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_unknown_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_unknown_attr);
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
 
     attr->hdr.type = pj_ntohs(attr->hdr.type);
@@ -1309,7 +1309,7 @@ pj_stun_binary_attr_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && attr_type && p_attr, PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_binary_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_binary_attr);
     INIT_ATTR(attr, attr_type, sizeof(pj_stun_binary_attr));
 
     if (data && length) {
@@ -1351,7 +1351,7 @@ static pj_status_t decode_binary_attr(pj_pool_t *pool,
     pj_stun_binary_attr *attr;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_binary_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_binary_attr);
 
     /* Copy the header */
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
@@ -1418,7 +1418,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && msg_type && p_msg, PJ_EINVAL);
 
-    msg = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msg);
+    msg = PJ_POOL_ZALLOC_T(pool, pj_stun_msg);
     msg->hdr.type = (pj_uint16_t) msg_type;
     msg->hdr.magic = magic;
 
@@ -1605,7 +1605,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     }
 
     /* Create the message, copy the header, and convert to host byte order */
-    msg = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_msg);
+    msg = PJ_POOL_ZALLOC_T(pool, pj_stun_msg);
     pj_memcpy(&msg->hdr, pdu, sizeof(pj_stun_msg_hdr));
     msg->hdr.type = pj_ntohs(msg->hdr.type);
     msg->hdr.length = pj_ntohs(msg->hdr.length);

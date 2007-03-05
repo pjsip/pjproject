@@ -40,7 +40,7 @@ PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
     if (!pool)
 	return PJ_ENOMEM;
     
-    endpt = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_endpoint);
+    endpt = PJ_POOL_ZALLOC_T(pool, pj_stun_endpoint);
     endpt->pool = pool;
     endpt->pf = factory;
     endpt->options = options;

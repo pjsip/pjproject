@@ -73,7 +73,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_endpoint *endpt,
     PJ_ASSERT_RETURN(endpt && cb && p_tsx, PJ_EINVAL);
     PJ_ASSERT_RETURN(cb->on_send_msg, PJ_EINVAL);
 
-    tsx = PJ_POOL_ZALLOC_TYPE(pool, pj_stun_client_tsx);
+    tsx = PJ_POOL_ZALLOC_T(pool, pj_stun_client_tsx);
     tsx->endpt = endpt;
     pj_memcpy(&tsx->cb, cb, sizeof(*cb));
 
