@@ -24,7 +24,7 @@
 
 #if PJ_LOG_MAX_LEVEL >= 1
 
-static int log_max_level = PJ_LOG_MAX_LEVEL;
+PJ_DEF(int) pj_log_max_level = PJ_LOG_MAX_LEVEL;
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE;
@@ -45,13 +45,15 @@ PJ_DEF(unsigned) pj_log_get_decor(void)
 
 PJ_DEF(void) pj_log_set_level(int level)
 {
-    log_max_level = level;
+    pj_log_max_level = level;
 }
 
+#if 0
 PJ_DEF(int) pj_log_get_level(void)
 {
-    return log_max_level;
+    return pj_log_max_level;
 }
+#endif
 
 PJ_DEF(void) pj_log_set_log_func( pj_log_func *func )
 {
@@ -76,7 +78,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 
     PJ_CHECK_STACK();
 
-    if (level > log_max_level)
+    if (level > pj_log_max_level)
 	return;
 
     /* Get current date/time. */

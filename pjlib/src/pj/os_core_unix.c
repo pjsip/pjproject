@@ -1123,6 +1123,9 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
+    PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s is trying", 
+				pj_thread_this()->obj_name));
+
     status = pthread_mutex_trylock( &mutex->mutex );
 
     if (status==0) {
@@ -1138,6 +1141,9 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
 	PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s", 
 				  pj_thread_this()->obj_name));
 #endif
+    } else {
+	PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s's trylock() failed", 
+				    pj_thread_this()->obj_name));
     }
     
     if (status==0)

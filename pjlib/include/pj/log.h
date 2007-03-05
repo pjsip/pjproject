@@ -98,7 +98,10 @@ enum pj_log_decoration
    \endverbatim
  * @hideinitializer
  */
-#define PJ_LOG(level,arg)	pj_log_wrapper_##level(arg)
+#define PJ_LOG(level,arg)	do { \
+				    if (level <= pj_log_get_level()) \
+					pj_log_wrapper_##level(arg); \
+				} while (0)
 
 /**
  * Signature for function to be registered to the logging subsystem to
@@ -171,7 +174,12 @@ PJ_DECL(void) pj_log_set_level(int level);
  *
  * @return	    Current log maximum level.
  */
+#if 0
 PJ_DECL(int) pj_log_get_level(void);
+#else
+PJ_DECL(int) pj_log_max_level;
+#define pj_log_get_level()  pj_log_max_level
+#endif
 
 /**
  * Set log decoration. The log decoration flag controls what are printed
