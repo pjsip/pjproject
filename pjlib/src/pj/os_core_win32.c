@@ -324,11 +324,11 @@ static DWORD WINAPI thread_main(void *param)
     rec->stk_start = (char*)&rec;
 #endif
 
-    PJ_LOG(6,(rec->obj_name, "Thread started"));
-
     if (pj_thread_local_set(thread_tls_id, rec) != PJ_SUCCESS) {
 	pj_assert(!"TLS is not set (pj_init() error?)");
     }
+
+    PJ_LOG(6,(rec->obj_name, "Thread started"));
 
     result = (*rec->proc)(rec->arg);
 
