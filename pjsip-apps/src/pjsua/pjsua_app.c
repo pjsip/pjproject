@@ -83,6 +83,7 @@ static struct app_config
     float		    mic_level,
 			    speaker_level;
 
+    int			    capture_dev, playback_dev;
 } app_config;
 
 
@@ -180,6 +181,8 @@ static void usage(void)
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
     puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
     puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
+    puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
+    puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
 
 
     puts  ("");
@@ -223,6 +226,8 @@ static void default_config(struct app_config *cfg)
     cfg->wav_port = PJSUA_INVALID_ID;
     cfg->rec_port = PJSUA_INVALID_ID;
     cfg->mic_level = cfg->speaker_level = 1.0;
+    cfg->capture_dev = PJSUA_INVALID_ID;
+    cfg->playback_dev = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
 	pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -334,6 +339,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT,
+	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -397,6 +403,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
 	{ "tls-verify-client", 0, 0, OPT_TLS_VERIFY_CLIENT},
 	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
+	{ "capture-dev",    1, 0, OPT_CAPTURE_DEV},
+	{ "playback-dev",   1, 0, OPT_PLAYBACK_DEV},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -885,6 +893,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.tls_setting.timeout.sec = atoi(pj_optarg);
 	    break;
 
+	case OPT_CAPTURE_DEV:
+	    cfg->capture_dev = atoi(pj_optarg);
+	    break;
+
+	case OPT_PLAYBACK_DEV:
+	    cfg->playback_dev = atoi(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1184,7 +1200,14 @@ static int write_settings(const struct app_config *config,
     }
     if (config->auto_rec)
 	pj_strcat2(&cfg, "--auto-rec\n");
-
+    if (config->capture_dev != PJSUA_INVALID_ID) {
+	pj_ansi_sprintf(line, "--capture-dev %d\n", config->capture_dev);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->playback_dev != PJSUA_INVALID_ID) {
+	pj_ansi_sprintf(line, "--playback-dev %d\n", config->playback_dev);
+	pj_strcat2(&cfg, line);
+    }
 
     /* Media clock rate. */
     if (config->media_cfg.clock_rate != PJSUA_DEFAULT_CLOCK_RATE) {
@@ -3129,6 +3152,14 @@ pj_status_t app_init(int argc, char *argv[])
 	    return status;
     }
 #endif
+
+    if (app_config.capture_dev != PJSUA_INVALID_ID
+        || app_config.playback_dev != PJSUA_INVALID_ID) {
+	status
+	  = pjsua_set_snd_dev(app_config.capture_dev, app_config.playback_dev);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
 
     return PJ_SUCCESS;
 
