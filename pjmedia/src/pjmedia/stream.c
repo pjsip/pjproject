@@ -917,6 +917,10 @@ static void on_rx_rtp( void *data,
 	return;
     }
 
+    /* Ignore keep-alive packets */
+    if (bytes_read < sizeof(pjmedia_rtp_hdr))
+	return;
+
     /* Update RTP and RTCP session. */
     status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, bytes_read,
 				    &hdr, &payload, &payloadlen);
@@ -931,12 +935,15 @@ static void on_rx_rtp( void *data,
     pjmedia_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq),
 			pj_ntohl(hdr->ts), payloadlen);
 
+    /* Ignore the packet if decoder is paused */
+    if (channel->paused)
+	return;
+
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
 	handle_incoming_dtmf(stream, payload, payloadlen);
 	return;
     }
-
 
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
@@ -1473,6 +1480,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
 
     if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 1;
+
+	/* Also reset jitter buffer */
+	pj_mutex_lock( stream->jb_mutex );
+	pjmedia_jbuf_reset(stream->jb);
+	pj_mutex_unlock( stream->jb_mutex );
+
 	PJ_LOG(4,(stream->port.info.name.ptr, "Decoder stream paused"));
     }
 
@@ -1489,12 +1502,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc) {
-	stream->enc->paused = 1;
+	stream->enc->paused = 0;
 	PJ_LOG(4,(stream->port.info.name.ptr, "Encoder stream resumed"));
     }
 
     if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
-	stream->dec->paused = 1;
+	stream->dec->paused = 0;
 	PJ_LOG(4,(stream->port.info.name.ptr, "Decoder stream resumed"));
     }
 
