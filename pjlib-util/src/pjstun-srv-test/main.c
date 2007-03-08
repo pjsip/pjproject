@@ -18,6 +18,8 @@
  */
 #include "server.h"
 
+#define THIS_FILE	"main.c"
+
 struct options
 {
     char	*realm;
@@ -41,7 +43,7 @@ static void usage(void)
 }
 
 
-static void server_main(void)
+static void server_main(pj_stun_server *srv)
 {
     int quit = 0;
 
@@ -49,12 +51,17 @@ static void server_main(void)
 	char line[10];
 
 	printf("Menu:\n"
+	       "  d     Dump status\n"
 	       "  q     Quit\n"
 	       "Choice:");
 
 	fgets(line, sizeof(line), stdin);
-	if (line[0] == 'q')
+	if (line[0] == 'q') {
 	    quit = 1;
+	} else if (line[0] == 'd') {
+	    pj_stun_server_info *si = pj_stun_server_get_info(srv);
+	    pj_pool_factory_dump(si->pf, PJ_TRUE);
+	}
     }
 }
 
@@ -71,7 +78,6 @@ int main(int argc, char *argv[])
     int c, opt_id;
     pj_caching_pool cp;
     pj_stun_server *srv;
-    pj_stun_usage *bu;
     pj_status_t status;
 
     while((c=pj_getopt_long(argc,argv, "r:u:p:hF", long_options, &opt_id))!=-1) {
@@ -116,15 +122,14 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    status = pj_stun_bind_usage_create(srv, NULL, 3478, &bu);
+    status = pj_stun_bind_usage_create(srv, NULL, 3478, NULL);
     if (status != PJ_SUCCESS) {
 	pj_stun_perror(THIS_FILE, "Unable to create bind usage", status);
 	return 1;
     }
 
-    server_main();
+    server_main(srv);
 
-    pj_stun_usage_destroy(bu);
     pj_stun_server_destroy(srv);
     pj_pool_factory_dump(&cp.factory, PJ_TRUE);
     pj_shutdown();

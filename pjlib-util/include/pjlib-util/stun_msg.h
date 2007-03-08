@@ -338,13 +338,13 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
     PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
-    PJ_STUN_ATTR_RELAY_ADDRESS	    = 0x0016,/**< RELAY-ADDRESS attribute.  */
-    PJ_STUN_ATTR_REQUESTED_ADDR_TYPE= 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
-    PJ_STUN_ATTR_REQUESTED_PORT_PROPS=0x0018,/**< REQUESTED-PORT-PROPS	    */
-    PJ_STUN_ATTR_REQUESTED_TRANSPORT= 0x0019,/**< REQUESTED-TRANSPORT	    */
-    PJ_STUN_ATTR_XOR_MAPPED_ADDRESS = 0x0020,/**< XOR-MAPPED-ADDRESS	    */
+    PJ_STUN_ATTR_RELAY_ADDR	    = 0x0016,/**< RELAY-ADDRESS attribute.  */
+    PJ_STUN_ATTR_REQ_ADDR_TYPE	    = 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
+    PJ_STUN_ATTR_REQ_PORT_PROPS	    = 0x0018,/**< REQUESTED-PORT-PROPS	    */
+    PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< REQUESTED-TRANSPORT	    */
+    PJ_STUN_ATTR_XOR_MAPPED_ADDR    = 0x0020,/**< XOR-MAPPED-ADDRESS	    */
     PJ_STUN_ATTR_TIMER_VAL	    = 0x0021,/**< TIMER-VAL attribute.	    */
-    PJ_STUN_ATTR_REQUESTED_IP	    = 0x0022,/**< REQUESTED-IP attribute    */
+    PJ_STUN_ATTR_REQ_IP		    = 0x0022,/**< REQUESTED-IP attribute    */
     PJ_STUN_ATTR_XOR_REFLECTED_FROM = 0x0023,/**< XOR-REFLECTED-FROM	    */
     PJ_STUN_ATTR_PRIORITY	    = 0x0024,/**< PRIORITY		    */
     PJ_STUN_ATTR_USE_CANDIDATE	    = 0x0025,/**< USE-CANDIDATE		    */
@@ -390,7 +390,9 @@ typedef enum pj_stun_status
     PJ_STUN_STATUS_OPER_TCP_ONLY	    = 445,  /**< Operation for TCP Only */
     PJ_STUN_STATUS_CONNECTION_FAILURE	    = 446,  /**< Connection Failure */
     PJ_STUN_STATUS_CONNECTION_TIMEOUT	    = 447,  /**< Connection Timeout */
+    PJ_STUN_STATUS_ALLOCATION_QUOTA_REACHED = 486,  /**< Allocation Quota Reached (TURN) */
     PJ_STUN_STATUS_SERVER_ERROR		    = 500,  /**< Server Error	    */
+    PJ_STUN_STATUS_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity (TURN) */
     PJ_STUN_STATUS_GLOBAL_FAILURE	    = 600   /**< Global Failure	    */
 } pj_stun_status;
 
@@ -933,7 +935,7 @@ typedef struct pj_stun_ip_addr_attr pj_stun_relay_addr_attr;
 
  \endverbatim
  */
-typedef struct pj_stun_uint_attr pj_stun_requested_addr_type;
+typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
 
 /**
  * This describes the STUN REQUESTED-PORT-PROPS attribute.
@@ -953,7 +955,7 @@ typedef struct pj_stun_uint_attr pj_stun_requested_addr_type;
 
  \endverbatim  
  */
-typedef struct pj_stun_uint_attr pj_stun_requested_port_props_attr;
+typedef struct pj_stun_uint_attr pj_stun_req_port_props_attr;
 
 
 /**
@@ -962,7 +964,7 @@ typedef struct pj_stun_uint_attr pj_stun_requested_port_props_attr;
  * protocol for the allocated transport address.  It is a 32 bit
  * unsigned integer.  Its values are: 0x0000 for UDP and 0x0000 for TCP.
  */
-typedef struct pj_stun_uint_attr pj_stun_requested_transport_attr;
+typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
 
 
 /**
@@ -970,7 +972,7 @@ typedef struct pj_stun_uint_attr pj_stun_requested_transport_attr;
  * The REQUESTED-IP attribute is used by the client to request that a
  * specific IP address be allocated to it.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_requested_ip_attr;
+typedef struct pj_stun_ip_addr_attr pj_stun_req_ip_attr;
 
 /**
  * This describes the XOR-REFLECTED-FROM attribute, as described by

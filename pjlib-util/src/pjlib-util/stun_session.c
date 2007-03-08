@@ -176,6 +176,7 @@ static void destroy_tdata(pj_stun_tx_data *tdata)
 	pj_timer_heap_cancel(tdata->sess->endpt->timer_heap, 
 			     &tdata->res_timer);
 	tdata->res_timer.id = PJ_FALSE;
+	pj_list_erase(tdata);
     }
     pj_pool_release(tdata->pool);
 }
@@ -347,6 +348,17 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_endpoint *endpt,
 PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+
+    pj_mutex_lock(sess->mutex);
+    while (!pj_list_empty(&sess->pending_request_list)) {
+	pj_stun_tx_data *tdata = sess->pending_request_list.next;
+	destroy_tdata(tdata);
+    }
+    while (!pj_list_empty(&sess->cached_response_list)) {
+	pj_stun_tx_data *tdata = sess->cached_response_list.next;
+	destroy_tdata(tdata);
+    }
+    pj_mutex_unlock(sess->mutex);
 
     pj_mutex_destroy(sess->mutex);
     pj_pool_release(sess->pool);

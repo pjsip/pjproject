@@ -30,6 +30,7 @@ struct worker
 struct pj_stun_usage
 {
     pj_pool_t		*pool;
+    pj_stun_server	*srv;
     pj_mutex_t		*mutex;
     pj_stun_usage_cb	 cb;
     int			 type;
@@ -75,6 +76,7 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
     pool = pj_pool_create(si->pf, name, 4000, 4000, NULL);
     usage = PJ_POOL_ZALLOC_T(pool, pj_stun_usage);
     usage->pool = pool;
+    usage->srv = srv;
 
     status = pj_mutex_create_simple(pool, name, &usage->mutex);
     if (status != PJ_SUCCESS)
@@ -129,6 +131,8 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
 	    goto on_error;
     }
 
+    pj_stun_server_register_usage(srv, usage);
+
     *p_usage = usage;
     return PJ_SUCCESS;
 
@@ -143,6 +147,10 @@ on_error:
  */
 PJ_DEF(pj_status_t) pj_stun_usage_destroy(pj_stun_usage *usage)
 {
+    pj_stun_server_unregister_usage(usage->srv, usage);
+    if (usage->cb.on_destroy)
+	(*usage->cb.on_destroy)(usage);
+
     if (usage->key) {
 	pj_ioqueue_unregister(usage->key);
 	usage->key = NULL;

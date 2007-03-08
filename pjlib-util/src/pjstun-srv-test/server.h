@@ -47,6 +47,7 @@ typedef struct pj_stun_usage_cb
 		       pj_size_t pkt_size,
 		       const pj_sockaddr_t *src_addr,
 		       unsigned src_addr_len);
+    void (*on_destroy)(pj_stun_usage *usage);
 } pj_stun_usage_cb;
 
 
@@ -115,6 +116,13 @@ PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
 					      const pj_str_t *ip_addr,
 					      unsigned port,
 					      pj_stun_usage **p_bu);
+
+
+
+pj_status_t pj_stun_server_register_usage(pj_stun_server *srv,
+					  pj_stun_usage *usage);
+pj_status_t pj_stun_server_unregister_usage(pj_stun_server *srv,
+					    pj_stun_usage *usage);
 
 
 #endif	/* __STUN_SERVER_H__ */

@@ -71,7 +71,9 @@ static struct
     { PJ_STUN_STATUS_OPER_TCP_ONLY,	    "Operation for TCP Only"},
     { PJ_STUN_STATUS_CONNECTION_FAILURE,    "Connection Failure"},
     { PJ_STUN_STATUS_CONNECTION_TIMEOUT,    "Connection Timeout"},
+    { PJ_STUN_STATUS_ALLOCATION_QUOTA_REACHED, "Allocation Quota Reached"},
     { PJ_STUN_STATUS_SERVER_ERROR,	    "Server Error"},
+    { PJ_STUN_STATUS_INSUFFICIENT_CAPACITY, "Insufficient Capacity"},
     { PJ_STUN_STATUS_GLOBAL_FAILURE,	    "Global Failure"}
 };
 

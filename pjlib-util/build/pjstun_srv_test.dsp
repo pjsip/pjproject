@@ -99,6 +99,10 @@ SOURCE="..\src\pjstun-srv-test\server.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjstun-srv-test\turn_usage.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjstun-srv-test\usage.c"
 # End Source File
 # End Group

@@ -29,6 +29,9 @@ struct pj_stun_server
 
     pj_bool_t		 thread_quit_flag;
     pj_thread_t	       **threads;
+
+    unsigned		 usage_cnt;
+    pj_stun_usage	*usage[32];
 };
 
 PJ_DEF(pj_status_t) pj_stun_perror( const char *sender, 
@@ -109,9 +112,61 @@ PJ_DEF(pj_stun_server_info*) pj_stun_server_get_info(pj_stun_server *srv)
 }
 
 
+pj_status_t pj_stun_server_register_usage(pj_stun_server *srv,
+					  pj_stun_usage *usage)
+{
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(srv->usage); ++i) {
+	if (srv->usage[i] == usage)
+	    return PJ_SUCCESS;
+    }
+
+    for (i=0; i<PJ_ARRAY_SIZE(srv->usage); ++i) {
+	if (srv->usage[i] == NULL)
+	    break;
+    }
+
+    if (i == PJ_ARRAY_SIZE(srv->usage))
+	return PJ_ETOOMANY;
+
+    srv->usage[i] = usage;
+    ++srv->usage_cnt;
+
+    return PJ_SUCCESS;
+}
+
+pj_status_t pj_stun_server_unregister_usage(pj_stun_server *srv,
+					    pj_stun_usage *usage)
+{
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(srv->usage); ++i) {
+	if (srv->usage[i] == usage)
+	    break;
+    }
+
+    if (i != PJ_ARRAY_SIZE(srv->usage)) {
+	srv->usage[i] = NULL;
+	--srv->usage_cnt;
+	return PJ_SUCCESS;
+    }
+
+    return PJ_ENOTFOUND;
+}
+
+
 PJ_DEF(pj_status_t) pj_stun_server_destroy(pj_stun_server *srv)
 {
     unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(srv->usage); ++i) {
+	if (!srv->usage[i])
+	    continue;
+
+	pj_stun_usage_destroy(srv->usage[i]);
+	pj_stun_server_unregister_usage(srv, srv->usage[i]);
+    }
 
     srv->thread_quit_flag = PJ_TRUE;
     for (i=0; i<srv->si.thread_cnt; ++i) {

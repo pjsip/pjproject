@@ -25,6 +25,7 @@ static void usage_on_rx_data(pj_stun_usage *usage,
 			     pj_size_t pkt_size,
 			     const pj_sockaddr_t *src_addr,
 			     unsigned src_addr_len);
+static void usage_on_destroy(pj_stun_usage *usage);
 static pj_status_t sess_on_send_msg(pj_stun_session *sess,
 				    const void *pkt,
 				    pj_size_t pkt_size,
@@ -37,14 +38,22 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 
+struct bind_usage
+{
+    pj_pool_t	    *pool;
+    pj_stun_usage   *usage;
+    pj_stun_session *session;
+};
+
+
 PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
 					      const pj_str_t *ip_addr,
 					      unsigned port,
 					      pj_stun_usage **p_bu)
 {
+    pj_pool_t *pool;
+    struct bind_usage *bu;
     pj_stun_server_info *si;
-    pj_stun_session *session;
-    pj_stun_usage *usage;
     pj_stun_usage_cb usage_cb;
     pj_stun_session_cb sess_cb;
     pj_sockaddr_in local_addr;
@@ -52,34 +61,42 @@ PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
 
     si = pj_stun_server_get_info(srv);
 
+    pool = pj_pool_create(si->pf, "bind%p", 128, 128, NULL);
+    bu = PJ_POOL_ZALLOC_T(pool, struct bind_usage);
+    bu->pool = pool;
+
     status = pj_sockaddr_in_init(&local_addr, ip_addr, (pj_uint16_t)port);
     if (status != PJ_SUCCESS)
 	return status;
 
     pj_bzero(&usage_cb, sizeof(usage_cb));
     usage_cb.on_rx_data = &usage_on_rx_data;
+    usage_cb.on_destroy = &usage_on_destroy;
 
     status = pj_stun_usage_create(srv, "bind%p", &usage_cb,
 				  PJ_AF_INET, PJ_SOCK_DGRAM, 0,
 				  &local_addr, sizeof(local_addr),
-				  &usage);
-    if (status != PJ_SUCCESS)
+				  &bu->usage);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
 	return status;
+    }
 
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &sess_on_send_msg;
     sess_cb.on_rx_request = &sess_on_rx_request;
     status = pj_stun_session_create(si->endpt, "bind%p", &sess_cb, PJ_FALSE,
-				    &session);
+				    &bu->session);
     if (status != PJ_SUCCESS) {
-	pj_stun_usage_destroy(usage);
+	pj_stun_usage_destroy(bu->usage);
 	return status;
     }
 
-    pj_stun_usage_set_user_data(usage, session);
-    pj_stun_session_set_user_data(session, usage);
+    pj_stun_usage_set_user_data(bu->usage, bu);
+    pj_stun_session_set_user_data(bu->session, bu);
 
-    *p_bu = usage;
+    if (p_bu)
+	*p_bu = bu->usage;
 
     return PJ_SUCCESS;
 }
@@ -91,10 +108,12 @@ static void usage_on_rx_data(pj_stun_usage *usage,
 			     const pj_sockaddr_t *src_addr,
 			     unsigned src_addr_len)
 {
+    struct bind_usage *bu;
     pj_stun_session *session;
     pj_status_t status;
 
-    session = (pj_stun_session*) pj_stun_usage_get_user_data(usage);
+    bu = (struct bind_usage*) pj_stun_usage_get_user_data(usage);
+    session = bu->session;
 
     /* Handle packet to session */
     status = pj_stun_session_on_rx_pkt(session, (pj_uint8_t*)pkt, pkt_size,
@@ -113,9 +132,11 @@ static pj_status_t sess_on_send_msg(pj_stun_session *sess,
 				    const pj_sockaddr_t *dst_addr,
 				    unsigned addr_len)
 {
+    struct bind_usage *bu;
     pj_stun_usage *usage;
 
-    usage = pj_stun_session_get_user_data(sess);
+    bu = (struct bind_usage*) pj_stun_session_get_user_data(sess);
+    usage = bu->usage;
 
     return pj_stun_usage_sendto(usage, pkt, pkt_size, 0,
 				dst_addr, addr_len);
@@ -155,7 +176,7 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
     if (msg->hdr.magic == PJ_STUN_MAGIC) {
 	status = 
 	    pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
-					 PJ_STUN_ATTR_XOR_MAPPED_ADDRESS,
+					 PJ_STUN_ATTR_XOR_MAPPED_ADDR,
 					 PJ_TRUE,
 					 src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
@@ -172,3 +193,14 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
 
 }
 
+static void usage_on_destroy(pj_stun_usage *usage)
+{
+    struct bind_usage *bu;
+
+    bu = (struct bind_usage*) pj_stun_usage_get_user_data(usage);
+    if (bu==NULL)
+	return;
+
+    pj_stun_session_destroy(bu->session);
+    pj_pool_release(bu->pool);
+}
