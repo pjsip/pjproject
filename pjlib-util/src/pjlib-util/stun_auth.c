@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
     if (amsgi == NULL) {
 	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_UNAUTHORIZED, NULL,
+	    create_challenge(pool, msg, PJ_STUN_SC_UNAUTHORIZED, NULL,
 			     &realm, &nonce, p_response);
 	}
 	return PJLIB_UTIL_ESTUNMSGINT;
@@ -167,7 +167,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
     if (auser == NULL) {
 	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_USERNAME, NULL,
+	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
 	return PJLIB_UTIL_ESTUNNOUSERNAME;
@@ -198,7 +198,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     if (!username_ok) {
 	/* Username mismatch */
 	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_UNKNOWN_USERNAME, NULL,
+	    create_challenge(pool, msg, PJ_STUN_SC_UNKNOWN_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
 	return PJLIB_UTIL_ESTUNUSERNAME;
@@ -213,7 +213,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     if (realm.slen != 0 && arealm == NULL) {
 	/* Long term credential is required and REALM is not present */
 	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, NULL,
+	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, NULL,
 			     &realm, &nonce, p_response);
 	}
 	return PJLIB_UTIL_ESTUNNOREALM;
@@ -224,7 +224,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	/* NONCE must be present. */
 	if (anonce == NULL) {
 	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
+		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
 	    return PJLIB_UTIL_ESTUNNONCE;
@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	if (pj_stricmp(&arealm->value, &realm)) {
 	    /* REALM doesn't match */
 	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_REALM, 
+		create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, 
 				 NULL, &realm, &nonce, p_response);
 	    }
 	    return PJLIB_UTIL_ESTUNNOREALM;
@@ -257,7 +257,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	/* Application MAY request NONCE to be supplied */
 	if (nonce.slen != 0) {
 	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_MISSING_NONCE, 
+		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
 	    return PJLIB_UTIL_ESTUNNONCE;
@@ -283,7 +283,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 
 	if (!ok) {
 	    if (p_response) {
-		create_challenge(pool, msg, PJ_STUN_STATUS_STALE_NONCE, 
+		create_challenge(pool, msg, PJ_STUN_SC_STALE_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
 	    return PJLIB_UTIL_ESTUNNONCE;
@@ -328,7 +328,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     if (pj_memcmp(amsgi->hmac, digest, 20)) {
 	/* HMAC value mismatch */
 	if (p_response) {
-	    create_challenge(pool, msg, PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE,
+	    create_challenge(pool, msg, PJ_STUN_SC_INTEGRITY_CHECK_FAILURE,
 			     NULL, &realm, &nonce, p_response);
 	}
 	return PJLIB_UTIL_ESTUNMSGINT;

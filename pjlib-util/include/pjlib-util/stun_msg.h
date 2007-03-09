@@ -334,7 +334,7 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_REFLECTED_FROM	    = 0x000B,/**< REFLECTED-FROM (deprecatd)*/
     PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< LIFETIME attribute.	    */
     PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< BANDWIDTH attribute	    */
-    PJ_STUN_ATTR_REMOTE_ADDRESS	    = 0x0012,/**< REMOTE-ADDRESS attribute  */
+    PJ_STUN_ATTR_REMOTE_ADDR	    = 0x0012,/**< REMOTE-ADDRESS attribute  */
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
     PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
@@ -354,10 +354,10 @@ typedef enum pj_stun_attr_type
 
     PJ_STUN_ATTR_START_EXTENDED_ATTR= 0x8021,
 
-    PJ_STUN_ATTR_FINGERPRINT	    = 0x8021,/**< FINGERPRINT attribute.    */
     PJ_STUN_ATTR_SERVER		    = 0x8022,/**< SERVER attribute.	    */
     PJ_STUN_ATTR_ALTERNATE_SERVER   = 0x8023,/**< ALTERNATE-SERVER.	    */
     PJ_STUN_ATTR_REFRESH_INTERVAL   = 0x8024,/**< REFRESH-INTERVAL.	    */
+    PJ_STUN_ATTR_FINGERPRINT	    = 0x8028,/**< FINGERPRINT attribute.    */
 
     PJ_STUN_ATTR_END_EXTENDED_ATTR
 
@@ -369,31 +369,34 @@ typedef enum pj_stun_attr_type
  */
 typedef enum pj_stun_status
 {
-    PJ_STUN_STATUS_TRY_ALTERNATE	    = 300,  /**< Try Alternate	    */
-    PJ_STUN_STATUS_BAD_REQUEST		    = 400,  /**< Bad Request	    */
-    PJ_STUN_STATUS_UNAUTHORIZED		    = 401,  /**< Unauthorized	    */
-    PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE	    = 420,  /**< Unknown Attribute  */
-    PJ_STUN_STATUS_STALE_CREDENTIALS	    = 430,  /**< Stale Credentials  */
-    PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE  = 431,  /**< Integrity Chk Fail */
-    PJ_STUN_STATUS_MISSING_USERNAME	    = 432,  /**< Missing Username   */
-    PJ_STUN_STATUS_USE_TLS		    = 433,  /**< Use TLS	    */
-    PJ_STUN_STATUS_MISSING_REALM	    = 434,  /**< Missing Realm	    */
-    PJ_STUN_STATUS_MISSING_NONCE	    = 435,  /**< Missing Nonce	    */
-    PJ_STUN_STATUS_UNKNOWN_USERNAME	    = 436,  /**< Unknown Username   */
-    PJ_STUN_STATUS_NO_BINDING		    = 437,  /**< No Binding.	    */
-    PJ_STUN_STATUS_STALE_NONCE		    = 438,  /**< Stale Nonce	    */
-    PJ_STUN_STATUS_TRANSITIONING	    = 439,  /**< Transitioning.	    */
-    PJ_STUN_STATUS_WRONG_USERNAME	    = 441,  /**< Wrong Username.    */
-    PJ_STUN_STATUS_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport Protocol */
-    PJ_STUN_STATUS_INVALID_IP_ADDR	    = 443,  /**< Invalid IP Address */
-    PJ_STUN_STATUS_INVALID_PORT		    = 444,  /**< Invalid Port	    */
-    PJ_STUN_STATUS_OPER_TCP_ONLY	    = 445,  /**< Operation for TCP Only */
-    PJ_STUN_STATUS_CONNECTION_FAILURE	    = 446,  /**< Connection Failure */
-    PJ_STUN_STATUS_CONNECTION_TIMEOUT	    = 447,  /**< Connection Timeout */
-    PJ_STUN_STATUS_ALLOCATION_QUOTA_REACHED = 486,  /**< Allocation Quota Reached (TURN) */
-    PJ_STUN_STATUS_SERVER_ERROR		    = 500,  /**< Server Error	    */
-    PJ_STUN_STATUS_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity (TURN) */
-    PJ_STUN_STATUS_GLOBAL_FAILURE	    = 600   /**< Global Failure	    */
+    PJ_STUN_SC_TRY_ALTERNATE		= 300,  /**< Try Alternate	    */
+    PJ_STUN_SC_BAD_REQUEST		= 400,  /**< Bad Request	    */
+    PJ_STUN_SC_UNAUTHORIZED	        = 401,  /**< Unauthorized	    */
+    PJ_STUN_SC_UNKNOWN_ATTRIBUTE        = 420,  /**< Unknown Attribute	    */
+    PJ_STUN_SC_STALE_CREDENTIALS        = 430,  /**< Stale Credentials	    */
+    PJ_STUN_SC_INTEGRITY_CHECK_FAILURE  = 431,  /**< Integrity Chk Fail	    */
+    PJ_STUN_SC_MISSING_USERNAME		= 432,  /**< Missing Username	    */
+    PJ_STUN_SC_USE_TLS			= 433,  /**< Use TLS		    */
+    PJ_STUN_SC_MISSING_REALM		= 434,  /**< Missing Realm	    */
+    PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
+    PJ_STUN_SC_UNKNOWN_USERNAME		= 436,  /**< Unknown Username	    */
+    PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
+    PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
+    PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
+    PJ_STUN_SC_WRONG_USERNAME	        = 441,  /**< Wrong Username.	    */
+    PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
+						     Protocol */
+    PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address	    */
+    PJ_STUN_SC_INVALID_PORT	        = 444,  /**< Invalid Port	    */
+    PJ_STUN_SC_OPER_TCP_ONLY		= 445,  /**< Operation for TCP Only */
+    PJ_STUN_SC_CONNECTION_FAILURE       = 446,  /**< Connection Failure	    */
+    PJ_STUN_SC_CONNECTION_TIMEOUT       = 447,  /**< Connection Timeout	    */
+    PJ_STUN_SC_ALLOCATION_QUOTA_REACHED = 486,  /**< Allocation Quota Reached
+						     (TURN) */
+    PJ_STUN_SC_SERVER_ERROR	        = 500,  /**< Server Error	    */
+    PJ_STUN_SC_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity 
+						     (TURN) */
+    PJ_STUN_SC_GLOBAL_FAILURE	        = 600   /**< Global Failure	    */
 } pj_stun_status;
 
 

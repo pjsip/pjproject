@@ -50,31 +50,31 @@ static struct
     const char *err_msg;
 } stun_err_msg_map[] = 
 {
-    { PJ_STUN_STATUS_TRY_ALTERNATE,	    "Try Alternate"}, 
-    { PJ_STUN_STATUS_BAD_REQUEST,	    "Bad Request"},
-    { PJ_STUN_STATUS_UNAUTHORIZED,	    "Unauthorized"},
-    { PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE,	    "Unknown Attribute"},
-    { PJ_STUN_STATUS_STALE_CREDENTIALS,	    "Stale Credentials"},
-    { PJ_STUN_STATUS_INTEGRITY_CHECK_FAILURE,"Integrity Check Failure"},
-    { PJ_STUN_STATUS_MISSING_USERNAME,	    "Missing Username"},
-    { PJ_STUN_STATUS_USE_TLS,		    "Use TLS"},
-    { PJ_STUN_STATUS_MISSING_REALM,	    "Missing Realm"},
-    { PJ_STUN_STATUS_MISSING_NONCE,	    "Missing Nonce"},
-    { PJ_STUN_STATUS_UNKNOWN_USERNAME,	    "Unknown Username"},
-    { PJ_STUN_STATUS_NO_BINDING,	    "No Binding"},
-    { PJ_STUN_STATUS_STALE_NONCE,	    "Stale Nonce"},
-    { PJ_STUN_STATUS_TRANSITIONING,	    "Transitioning"},
-    { PJ_STUN_STATUS_WRONG_USERNAME,	    "Wrong Username"},
-    { PJ_STUN_STATUS_UNSUPP_TRANSPORT_PROTO,"Unsupported Transport Protocol"},
-    { PJ_STUN_STATUS_INVALID_IP_ADDR,	    "Invalid IP Address"},
-    { PJ_STUN_STATUS_INVALID_PORT,	    "Invalid Port"},
-    { PJ_STUN_STATUS_OPER_TCP_ONLY,	    "Operation for TCP Only"},
-    { PJ_STUN_STATUS_CONNECTION_FAILURE,    "Connection Failure"},
-    { PJ_STUN_STATUS_CONNECTION_TIMEOUT,    "Connection Timeout"},
-    { PJ_STUN_STATUS_ALLOCATION_QUOTA_REACHED, "Allocation Quota Reached"},
-    { PJ_STUN_STATUS_SERVER_ERROR,	    "Server Error"},
-    { PJ_STUN_STATUS_INSUFFICIENT_CAPACITY, "Insufficient Capacity"},
-    { PJ_STUN_STATUS_GLOBAL_FAILURE,	    "Global Failure"}
+    { PJ_STUN_SC_TRY_ALTERNATE,		    "Try Alternate"}, 
+    { PJ_STUN_SC_BAD_REQUEST,		    "Bad Request"},
+    { PJ_STUN_SC_UNAUTHORIZED,		    "Unauthorized"},
+    { PJ_STUN_SC_UNKNOWN_ATTRIBUTE,	    "Unknown Attribute"},
+    { PJ_STUN_SC_STALE_CREDENTIALS,	    "Stale Credentials"},
+    { PJ_STUN_SC_INTEGRITY_CHECK_FAILURE,   "Integrity Check Failure"},
+    { PJ_STUN_SC_MISSING_USERNAME,	    "Missing Username"},
+    { PJ_STUN_SC_USE_TLS,		    "Use TLS"},
+    { PJ_STUN_SC_MISSING_REALM,		    "Missing Realm"},
+    { PJ_STUN_SC_MISSING_NONCE,		    "Missing Nonce"},
+    { PJ_STUN_SC_UNKNOWN_USERNAME,	    "Unknown Username"},
+    { PJ_STUN_SC_NO_BINDING,		    "No Binding"},
+    { PJ_STUN_SC_STALE_NONCE,		    "Stale Nonce"},
+    { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
+    { PJ_STUN_SC_WRONG_USERNAME,	    "Wrong Username"},
+    { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},
+    { PJ_STUN_SC_INVALID_IP_ADDR,	    "Invalid IP Address"},
+    { PJ_STUN_SC_INVALID_PORT,		    "Invalid Port"},
+    { PJ_STUN_SC_OPER_TCP_ONLY,		    "Operation for TCP Only"},
+    { PJ_STUN_SC_CONNECTION_FAILURE,	    "Connection Failure"},
+    { PJ_STUN_SC_CONNECTION_TIMEOUT,	    "Connection Timeout"},
+    { PJ_STUN_SC_ALLOCATION_QUOTA_REACHED,  "Allocation Quota Reached"},
+    { PJ_STUN_SC_SERVER_ERROR,		    "Server Error"},
+    { PJ_STUN_SC_INSUFFICIENT_CAPACITY,	    "Insufficient Capacity"},
+    { PJ_STUN_SC_GLOBAL_FAILURE,	    "Global Failure"}
 };
 
 
@@ -381,10 +381,10 @@ struct attr_desc mandatory_attr_desc[] =
 static struct attr_desc extended_attr_desc[] =
 {
     {
-	/* PJ_STUN_ATTR_FINGERPRINT, */
-	"FINGERPRINT",
-	&decode_uint_attr,
-	&encode_uint_attr
+	/* ID 0x8021 is not assigned */
+	NULL,
+	NULL,
+	NULL
     },
     {
 	/* PJ_STUN_ATTR_SERVER, */
@@ -404,6 +404,30 @@ static struct attr_desc extended_attr_desc[] =
 	&decode_uint_attr,
 	&encode_uint_attr
     },
+    {
+	/* Unassigned, 0x8025 */
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* Padding, 0x8026 */
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* Padding, 0x8027 */
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* PJ_STUN_ATTR_FINGERPRINT, */
+	"FINGERPRINT",
+	&decode_uint_attr,
+	&encode_uint_attr
+    }
 };
 
 
@@ -1649,7 +1673,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 	    if (p_response) {
 		pj_stun_msg_create_response(pool, msg, 
-					    PJ_STUN_STATUS_BAD_REQUEST, 
+					    PJ_STUN_SC_BAD_REQUEST, 
 					    &err_msg, p_response);
 	    }
 	    return PJLIB_UTIL_ESTUNINATTRLEN;
@@ -1670,7 +1694,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		 * if we don't understand the attribute.
 		 */
 		if (p_response) {
-		    unsigned err_code = PJ_STUN_STATUS_UNKNOWN_ATTRIBUTE;
+		    unsigned err_code = PJ_STUN_SC_UNKNOWN_ATTRIBUTE;
 
 		    status = pj_stun_msg_create_response(pool, msg,
 							 err_code, NULL, 
@@ -1705,7 +1729,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 					     pj_stun_get_attr_name(attr_type));
 
 		    pj_stun_msg_create_response(pool, msg,
-						PJ_STUN_STATUS_BAD_REQUEST,
+						PJ_STUN_SC_BAD_REQUEST,
 						&e, p_response);
 		}
 
@@ -1726,7 +1750,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 			pj_str_t e;
 			e = pj_str("MESSAGE-INTEGRITY already present");
 			pj_stun_msg_create_response(pool, msg,
-						    PJ_STUN_STATUS_BAD_REQUEST,
+						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
 		    return PJLIB_UTIL_ESTUNDUPATTR;
@@ -1740,7 +1764,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 			pj_str_t e;
 			e = pj_str("FINGERPRINT already present");
 			pj_stun_msg_create_response(pool, msg,
-						    PJ_STUN_STATUS_BAD_REQUEST,
+						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
 		    return PJLIB_UTIL_ESTUNDUPATTR;
@@ -1754,7 +1778,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 			pj_str_t e;
 			e = pj_str("Invalid attribute order");
 			pj_stun_msg_create_response(pool, msg,
-						    PJ_STUN_STATUS_BAD_REQUEST,
+						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
 		    return has_fingerprint ? PJLIB_UTIL_ESTUNFINGERPOS :
@@ -1769,7 +1793,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 		    e = pj_str("Too many attributes");
 		    pj_stun_msg_create_response(pool, msg,
-						PJ_STUN_STATUS_BAD_REQUEST,
+						PJ_STUN_SC_BAD_REQUEST,
 						&e, p_response);
 		}
 		return PJLIB_UTIL_ESTUNTOOMANYATTR;

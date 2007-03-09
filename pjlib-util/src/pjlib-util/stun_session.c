@@ -113,7 +113,6 @@ static pj_stun_tx_data* tsx_lookup(pj_stun_session *sess,
 }
 
 static pj_status_t create_tdata(pj_stun_session *sess,
-				void *user_data,
 			        pj_stun_tx_data **p_tdata)
 {
     pj_pool_t *pool;
@@ -127,7 +126,6 @@ static pj_status_t create_tdata(pj_stun_session *sess,
     tdata = PJ_POOL_ZALLOC_T(pool, pj_stun_tx_data);
     tdata->pool = pool;
     tdata->sess = sess;
-    tdata->user_data = user_data;
 
     *p_tdata = tdata;
 
@@ -136,13 +134,12 @@ static pj_status_t create_tdata(pj_stun_session *sess,
 
 static pj_status_t create_request_tdata(pj_stun_session *sess,
 					unsigned msg_type,
-					void *user_data,
 					pj_stun_tx_data **p_tdata)
 {
     pj_status_t status;
     pj_stun_tx_data *tdata;
 
-    status = create_tdata(sess, user_data, &tdata);
+    status = create_tdata(sess, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -405,16 +402,16 @@ PJ_DEF(void) pj_stun_session_set_credential(pj_stun_session *sess,
 }
 
 
-PJ_DEF(pj_status_t) pj_stun_session_create_bind_req(pj_stun_session *sess,
-						    pj_stun_tx_data **p_tdata)
+PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
+					       int method,
+					       pj_stun_tx_data **p_tdata)
 {
     pj_stun_tx_data *tdata = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
 
-    status = create_request_tdata(sess, PJ_STUN_BINDING_REQUEST, NULL, 
-				  &tdata);
+    status = create_request_tdata(sess, method, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -422,57 +419,31 @@ PJ_DEF(pj_status_t) pj_stun_session_create_bind_req(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_stun_session_create_allocate_req(pj_stun_session *sess,
-							pj_stun_tx_data **p_tdata)
+PJ_DEF(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
+					       int msg_type,
+					       pj_stun_tx_data **p_tdata)
 {
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
+    pj_stun_tx_data *tdata = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
+
+    status = create_tdata(sess, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create STUN message */
+    msg_type |= PJ_STUN_INDICATION_BIT;
+    status = pj_stun_msg_create(tdata->pool, msg_type,  PJ_STUN_MAGIC, 
+				NULL, &tdata->msg);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(tdata->pool);
+	return status;
+    }
+
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
 }
-
-
-PJ_DEF(pj_status_t) 
-pj_stun_session_create_set_active_destination_req(pj_stun_session *sess,
-						  pj_stun_tx_data **p_tdata)
-{
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
-}
-
-PJ_DEF(pj_status_t) pj_stun_session_create_connect_req(	pj_stun_session *sess,
-						        pj_stun_tx_data **p_tdata)
-{
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
-}
-
-PJ_DEF(pj_status_t) 
-pj_stun_session_create_connection_status_ind(pj_stun_session *sess,
-					     pj_stun_tx_data **p_tdata)
-{
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
-}
-
-PJ_DEF(pj_status_t) pj_stun_session_create_send_ind( pj_stun_session *sess,
-						     pj_stun_tx_data **p_tdata)
-{
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
-}
-
-PJ_DEF(pj_status_t) pj_stun_session_create_data_ind( pj_stun_session *sess,
-						     pj_stun_tx_data **p_tdata)
-{
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(p_tdata);
-    PJ_ASSERT_RETURN(PJ_FALSE, PJ_ENOTSUP);
-}
-
 
 /*
  * Create a STUN response message.
@@ -486,7 +457,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_response( pj_stun_session *sess,
     pj_status_t status;
     pj_stun_tx_data *tdata = NULL;
 
-    status = create_tdata(sess, NULL, &tdata);
+    status = create_tdata(sess, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -810,7 +781,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 	pj_stun_msg *response;
 
 	status = pj_stun_msg_create_response(tmp_pool, msg, 
-					     PJ_STUN_STATUS_BAD_REQUEST, NULL,
+					     PJ_STUN_SC_BAD_REQUEST, NULL,
 					     &response);
 	if (status == PJ_SUCCESS && response) {
 	    status = send_response(sess, tmp_pool, response, 

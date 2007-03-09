@@ -236,11 +236,46 @@ static int shutdown()
     return PJ_SUCCESS;
 }
 
+static void send_bind_request(void)
+{
+    pj_stun_tx_data *tdata;
+    pj_status_t rc;
+
+    rc = pj_stun_session_create_req(g.sess, PJ_STUN_BINDING_REQUEST, &tdata);
+    pj_assert(rc == PJ_SUCCESS);
+
+    rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
+				  &g.dst_addr, sizeof(g.dst_addr),
+				  tdata);
+    if (rc != PJ_SUCCESS)
+	my_perror("Error sending STUN request", rc);
+}
+
+static void send_allocate_request(void)
+{
+}
+
+static void send_sad_request(void)
+{
+}
+
+static void send_send_ind(void)
+{
+}
+
+static void send_raw_data(void)
+{
+}
+
 static void menu(void)
 {
     puts("Menu:");
-    puts("  b      Send Bind request");
-    puts("  q      Quit");
+    puts("  br      Send Bind request");
+    puts("  ar      Send Allocate request");
+    puts("  sr      Send Set Active Indication request");
+    puts("  si      Send Send Indication");
+    puts("  rw      Send raw data");
+    puts("  q       Quit");
     puts("");
     printf("Choice: ");
 }
@@ -254,27 +289,23 @@ static void console_main(void)
 
 	fgets(input, sizeof(input), stdin);
 	
-	switch (input[0]) {
-	case 'b':
-	    {
-		pj_stun_tx_data *tdata;
-		pj_status_t rc;
-
-		rc = pj_stun_session_create_bind_req(g.sess, &tdata);
-		pj_assert(rc == PJ_SUCCESS);
-
-		rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
-					      &g.dst_addr, sizeof(g.dst_addr),
-					      tdata);
-		if (rc != PJ_SUCCESS)
-		    my_perror("Error sending STUN request", rc);
-	    }
-	    break;
-	case 'q':
+	if (input[0]=='b' && input[1]=='r') {
+	    send_bind_request();
+	    
+	} else if (input[0]=='a' && input[1]=='r') {
+	    send_allocate_request();
+	    
+	} else if (input[0]=='s' && input[1]=='r') {
+	    send_sad_request();
+	    
+	} else if (input[0]=='s' && input[1]=='i') {
+	    send_send_ind();
+	    
+	} else if (input[0]=='r' && input[1]=='w') {
+	    send_raw_data();
+	    
+	} else if (input[0]=='q') {
 	    g.quit = 1;
-	    break;
-	default:
-	    break;
 	}
     }
 }

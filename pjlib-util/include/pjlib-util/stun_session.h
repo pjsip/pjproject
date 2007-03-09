@@ -138,7 +138,6 @@ struct pj_stun_tx_data
     pj_pool_t		*pool;		/**< Pool.			    */
     pj_stun_session	*sess;		/**< The STUN session.		    */
     pj_stun_msg		*msg;		/**< The STUN message.		    */
-    void		*user_data;	/**< Arbitrary user data.	    */
 
     pj_stun_client_tsx	*client_tsx;	/**< Client STUN transaction.	    */
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
@@ -232,104 +231,39 @@ PJ_DECL(void) pj_stun_session_set_credential(pj_stun_session *sess,
 					     const pj_stun_auth_cred *cred);
 
 /**
- * Create a STUN Bind request message. After the message has been 
- * successfully created, application can send the message by calling 
+ * Create a STUN request message. After the message has been successfully
+ * created, application can send the message by calling 
  * pj_stun_session_send_msg().
  *
  * @param sess	    The STUN session instance.
+ * @param msg_type  The STUN request message type, from pj_stun_method_e or
+ *		    from pj_stun_msg_type.
  * @param p_tdata   Pointer to receive STUN transmit data instance containing
  *		    the request.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_session_create_bind_req(pj_stun_session *sess,
-						     pj_stun_tx_data **p_tdata);
+PJ_DECL(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
+						int msg_type,
+						pj_stun_tx_data **p_tdata);
 
 /**
- * Create a STUN Allocate request message. After the message has been
- * successfully created, application can send the message by calling  
+ * Create a STUN Indication message. After the message  has been successfully
+ * created, application can send the message by calling 
  * pj_stun_session_send_msg().
  *
  * @param sess	    The STUN session instance.
- * @param p_tdata   Pointer to receive STUN transmit data instance containing
- *		    the request.
- *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_session_create_allocate_req(pj_stun_session *sess,
-							 pj_stun_tx_data **p_tdata);
-
-/**
- * Create a STUN Set Active Destination request message. After the message 
- * has been successfully created, application can send the message by calling
- * pj_stun_session_send_msg().
- *
- * @param sess	    The STUN session instance.
- * @param p_tdata   Pointer to receive STUN transmit data instance containing
- *		    the request.
- *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) 
-pj_stun_session_create_set_active_destination_req(pj_stun_session *sess,
-						  pj_stun_tx_data **p_tdata);
-
-/**
- * Create a STUN Connect request message. After the message has been 
- * successfully created, application can send the message by calling 
- * pj_stun_session_send_msg().
- *
- * @param sess	    The STUN session instance.
- * @param p_tdata   Pointer to receive STUN transmit data instance containing
- *		    the request.
- *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_session_create_connect_req(pj_stun_session *sess,
-							pj_stun_tx_data **p_tdata);
-
-/**
- * Create a STUN Connection Status Indication message. After the message 
- * has been successfully created, application can send the message by calling
- * pj_stun_session_send_msg().
- *
- * @param sess	    The STUN session instance.
+ * @param msg_type  The STUN request message type, from pj_stun_method_e or
+ *		    from pj_stun_msg_type. This function will add the
+ *		    indication bit as necessary.
  * @param p_tdata   Pointer to receive STUN transmit data instance containing
  *		    the message.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t)
-pj_stun_session_create_connection_status_ind(pj_stun_session *sess,
-					     pj_stun_tx_data **p_tdata);
-
-/**
- * Create a STUN Send Indication message. After the message has been 
- * successfully created, application can send the message by calling 
- * pj_stun_session_send_msg().
- *
- * @param sess	    The STUN session instance.
- * @param p_tdata   Pointer to receive STUN transmit data instance containing
- *		    the message.
- *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_session_create_send_ind(pj_stun_session *sess,
-						     pj_stun_tx_data **p_tdata);
-
-/**
- * Create a STUN Data Indication message. After the message has been 
- * successfully created, application can send the message by calling 
- * pj_stun_session_send_msg().
- *
- * @param sess	    The STUN session instance.
- * @param p_tdata   Pointer to receive STUN transmit data instance containing
- *		    the message.
- *
- * @return	    PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_stun_session_create_data_ind(pj_stun_session *sess,
-						     pj_stun_tx_data **p_tdata);
+PJ_DECL(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
+						int msg_type,
+					        pj_stun_tx_data **p_tdata);
 
 /**
  * Create a STUN response message. After the message has been 
@@ -399,7 +333,7 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  * @param sess	     The STUN session instance.
  * @param packet     The packet containing STUN message.
  * @param pkt_size   Size of the packet.
- * @param options    Options, from pj_stun_options.
+ * @param options    Options, from #pj_stun_decode_options.
  * @param parsed_len Optional pointer to receive the size of the parsed
  *		     STUN message (useful if packet is received via a
  *		     stream oriented protocol).

@@ -68,7 +68,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_SOURCE_ADDR:
     case PJ_STUN_ATTR_CHANGED_ADDR:
     case PJ_STUN_ATTR_REFLECTED_FROM:
-    case PJ_STUN_ATTR_REMOTE_ADDRESS:
+    case PJ_STUN_ATTR_REMOTE_ADDR:
     case PJ_STUN_ATTR_RELAY_ADDR:
     case PJ_STUN_ATTR_XOR_MAPPED_ADDR:
     case PJ_STUN_ATTR_REQ_IP:
