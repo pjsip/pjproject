@@ -269,12 +269,12 @@ typedef enum pj_stun_msg_type
     /**
      * STUN/TURN Send Indication
      */
-    PJ_STUN_SEND_INDICATION		    = 0x0004,
+    PJ_STUN_SEND_INDICATION		    = 0x0014,
 
     /**
      * STUN/TURN Data Indication
      */
-    PJ_STUN_DATA_INDICATION		    = 0x0115,
+    PJ_STUN_DATA_INDICATION		    = 0x0015,
 
     /**
      * STUN/TURN Set Active Destination Request
@@ -309,7 +309,7 @@ typedef enum pj_stun_msg_type
     /**
      * STUN/TURN Connect Status Indication
      */
-    PJ_STUN_CONNECT_STATUS_INDICATION	    = 0x0118
+    PJ_STUN_CONNECT_STATUS_INDICATION	    = 0x0018
 
 
 } pj_stun_msg_type;
@@ -515,12 +515,18 @@ typedef struct pj_stun_attr_hdr
 
    \endverbatim
  */
-typedef struct pj_stun_ip_addr_attr
+typedef struct pj_stun_sockaddr_attr
 {
     /**
      * Standard STUN attribute header.
      */
     pj_stun_attr_hdr	hdr;
+
+    /**
+     * Flag to indicate whether this attribute should be sent in XOR-ed
+     * format, or has been received in XOR-ed format.
+     */
+    pj_bool_t		xor_ed;
 
     /**
      * The socket address (as a union)
@@ -531,7 +537,7 @@ typedef struct pj_stun_ip_addr_attr
 	pj_sockaddr_in6	    ipv6;   /**< IPv6 socket address.	    */
     } addr;
 
-} pj_stun_ip_addr_attr;
+} pj_stun_sockaddr_attr;
 
 
 /**
@@ -744,7 +750,7 @@ typedef struct pj_stun_unknown_attr
  * This structure describes STUN MAPPED-ADDRESS attribute.
  * The MAPPED-ADDRESS attribute indicates the mapped transport address.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_mapped_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_mapped_addr_attr;
 
 
 /**
@@ -756,7 +762,7 @@ typedef struct pj_stun_ip_addr_attr pj_stun_mapped_addr_attr;
  * obfuscated through the XOR function, STUN messages are able to pass
  * through NATs which would otherwise interfere with STUN.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_xor_mapped_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_xor_mapped_addr_attr;
 
 
 /**
@@ -776,7 +782,7 @@ typedef struct pj_stun_string_attr pj_stun_server_attr;
  * different STUN server to try.  It is encoded in the same way as
  * MAPPED-ADDRESS.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_alt_server_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_alt_server_attr;
 
 
 /**
@@ -797,7 +803,7 @@ typedef struct pj_stun_uint_attr pj_stun_refresh_interval_attr;
  * Note that the usage of this attribute has been deprecated by the 
  * RFC 3489-bis standard.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_response_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_response_addr_attr;
 
 
 /**
@@ -812,7 +818,7 @@ typedef struct pj_stun_ip_addr_attr pj_stun_response_addr_attr;
  * Note that the usage of this attribute has been deprecated by the 
  * RFC 3489-bis standard.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_changed_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_changed_addr_attr;
 
 
 /**
@@ -844,7 +850,7 @@ typedef struct pj_stun_uint_attr pj_stun_change_request_attr;
  * Note that the usage of this attribute has been deprecated by the 
  * RFC 3489-bis standard.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_src_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_src_addr_attr;
 
 
 /**
@@ -856,7 +862,7 @@ typedef struct pj_stun_ip_addr_attr pj_stun_src_addr_attr;
  * traceability, so that a STUN server cannot be used as a reflector for
  * denial-of-service attacks.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_reflected_from_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_reflected_from_attr;
 
 
 /**
@@ -901,7 +907,7 @@ typedef struct pj_stun_uint_attr pj_stun_bandwidth_attr;
  * The REMOTE-ADDRESS specifies the address and port of the peer as seen
  * from the STUN relay server.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_remote_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_remote_addr_attr;
 
 
 /**
@@ -919,7 +925,7 @@ typedef struct pj_stun_binary_attr pj_stun_data_attr;
  * The RELAY-ADDRESS is present in Allocate responses.  It specifies the
  * address and port that the server allocated to the client.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_relay_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_relay_addr_attr;
 
 
 /**
@@ -975,7 +981,7 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
  * The REQUESTED-IP attribute is used by the client to request that a
  * specific IP address be allocated to it.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_req_ip_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_req_ip_attr;
 
 /**
  * This describes the XOR-REFLECTED-FROM attribute, as described by
@@ -987,7 +993,7 @@ typedef struct pj_stun_ip_addr_attr pj_stun_req_ip_attr;
  * the private network address.  XOR-REFLECTED-FROM has identical syntax
  * to XOR-MAPPED-ADDRESS.
  */
-typedef struct pj_stun_ip_addr_attr pj_stun_xor_reflected_from_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_xor_reflected_from_attr;
 
 /**
  * This describes the PRIORITY attribute from draft-ietf-mmusic-ice-13.
@@ -1015,7 +1021,7 @@ typedef struct pj_stun_empty_attr pj_stun_use_candidate_attr;
  * STUN client to 'walk backwards' and communicate directly with all of
  * the STUN-aware NATs along the path.
  */
-typedef pj_stun_ip_addr_attr pj_stun_xor_internal_addr_attr;
+typedef pj_stun_sockaddr_attr pj_stun_xor_internal_addr_attr;
 
 /**
  * This describes the STUN TIMER-VAL attribute.
@@ -1304,12 +1310,12 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_ip_addr_attr_create(pj_pool_t *pool,
+PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
 						int attr_type, 
 						pj_bool_t xor_ed,
 						const pj_sockaddr_t *addr,
 						unsigned addr_len,
-						pj_stun_ip_addr_attr **p_attr);
+						pj_stun_sockaddr_attr **p_attr);
 
 
 /**
@@ -1327,7 +1333,7 @@ PJ_DECL(pj_status_t) pj_stun_ip_addr_attr_create(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_msg_add_ip_addr_attr(pj_pool_t *pool,
+PJ_DECL(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
 						  pj_stun_msg *msg,
 						  int attr_type, 
 						  pj_bool_t xor_ed,

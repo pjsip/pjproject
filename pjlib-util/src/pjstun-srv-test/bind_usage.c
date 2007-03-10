@@ -162,10 +162,10 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
 	return status;
 
     /* Create MAPPED-ADDRESS attribute */
-    status = pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
-				   	  PJ_STUN_ATTR_MAPPED_ADDR,
-					  PJ_FALSE,
-				          src_addr, src_addr_len);
+    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+				   	   PJ_STUN_ATTR_MAPPED_ADDR,
+					   PJ_FALSE,
+				           src_addr, src_addr_len);
     if (status != PJ_SUCCESS) {
 	pj_stun_perror(THIS_FILE, "Error creating response", status);
 	pj_stun_msg_destroy_tdata(sess, tdata);
@@ -175,10 +175,10 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
     /* On the presence of magic, create XOR-MAPPED-ADDRESS attribute */
     if (msg->hdr.magic == PJ_STUN_MAGIC) {
 	status = 
-	    pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
-					 PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-					 PJ_TRUE,
-					 src_addr, src_addr_len);
+	    pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+					  PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+					  PJ_TRUE,
+					  src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    pj_stun_perror(THIS_FILE, "Error creating response", status);
 	    pj_stun_msg_destroy_tdata(sess, tdata);

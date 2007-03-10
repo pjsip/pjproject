@@ -119,7 +119,8 @@ PJ_DECL(void *) pj_hash_get( pj_hash_table_t *ht,
  * @param pool	    the pool to allocate the new entry if a new entry has to be
  *		    created.
  * @param ht	    the hash table.
- * @param key	    the key.
+ * @param key	    the key, which MUST point to buffer that remains valid
+ *		    for the duration of the entry.
  * @param keylen    the length of the key, or PJ_HASH_KEY_STRING to use the 
  *		    string length of the key.
  * @param hval	    if the value is not zero, then the hash table will use

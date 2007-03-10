@@ -55,7 +55,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 }
 
 /* Resolve the IP address of local machine */
-pj_status_t pj_gethostip(pj_in_addr *addr)
+PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 {
     const pj_str_t *hostname = pj_gethostname();
     struct pj_hostent he;

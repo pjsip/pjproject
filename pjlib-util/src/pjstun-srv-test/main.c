@@ -122,7 +122,16 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
+    /*
     status = pj_stun_bind_usage_create(srv, NULL, 3478, NULL);
+    if (status != PJ_SUCCESS) {
+	pj_stun_perror(THIS_FILE, "Unable to create bind usage", status);
+	return 1;
+    }
+    */
+
+    status = pj_stun_turn_usage_create(srv, PJ_SOCK_DGRAM, NULL,
+				       3478, NULL);
     if (status != PJ_SUCCESS) {
 	pj_stun_perror(THIS_FILE, "Unable to create bind usage", status);
 	return 1;

@@ -89,10 +89,13 @@ struct attr_desc
 
 };
 
-static pj_status_t decode_ip_addr_attr(pj_pool_t *pool, 
+static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
 				       void **p_attr);
-static pj_status_t encode_ip_addr_attr(const void *a, pj_uint8_t *buf, 
+static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
+					      const pj_uint8_t *buf, 
+					      void **p_attr);
+static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
 				       unsigned len, 
 				       unsigned *printed);
 static pj_status_t decode_string_attr(pj_pool_t *pool, 
@@ -143,14 +146,14 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_MAPPED_ADDR, */
 	"MAPPED-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_RESPONSE_ADDR, */
 	"RESPONSE-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGE_REQUEST, */
@@ -161,14 +164,14 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_SOURCE_ADDR, */
 	"SOURCE-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGED_ADDR, */
 	"CHANGED-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_USERNAME, */
@@ -203,8 +206,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REFLECTED_FROM, */
 	"REFLECTED-FROM",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* ID 0x000C is not assigned */
@@ -245,8 +248,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REMOTE_ADDRESS, */
 	"REMOTE-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_DATA, */
@@ -269,8 +272,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
 	"RELAY-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_ADDR_TYPE, */
@@ -329,8 +332,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_XOR_MAPPED_ADDRESS, */
 	"XOR-MAPPED-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_xored_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_TIMER_VAL, */
@@ -341,14 +344,14 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REQUESTED_IP, */
 	"REQUESTED-IP",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_XOR_REFLECTED_FROM, */
 	"XOR-REFLECTED-FROM",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_xored_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_PRIORITY, */
@@ -365,8 +368,8 @@ struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_XOR_INTERNAL_ADDR, */
 	"XOR-INTERNAL-ADDRESS",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_xored_sockaddr_attr,
+	&encode_sockaddr_attr
     },
 
     /* Sentinel */
@@ -395,8 +398,8 @@ static struct attr_desc extended_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_ALTERNATE_SERVER, */
 	"ALTERNATE-SERVER",
-	&decode_ip_addr_attr,
-	&encode_ip_addr_attr
+	&decode_sockaddr_attr,
+	&encode_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_REFRESH_INTERVAL, */
@@ -539,36 +542,24 @@ PJ_DEF(pj_str_t) pj_stun_get_err_reason(int err_code)
  * Create a generic STUN IP address attribute for IPv4 address.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_ip_addr_attr_create(pj_pool_t *pool,
-			    int attr_type,
-			    pj_bool_t xor_ed,
-			    const pj_sockaddr_t *addr,
-			    unsigned addr_len,
-			    pj_stun_ip_addr_attr **p_attr)
+pj_stun_sockaddr_attr_create(pj_pool_t *pool,
+			     int attr_type,
+			     pj_bool_t xor_ed,
+			     const pj_sockaddr_t *addr,
+			     unsigned addr_len,
+			     pj_stun_sockaddr_attr **p_attr)
 {
-    pj_stun_ip_addr_attr *attr;
+    pj_stun_sockaddr_attr *attr;
 
     PJ_ASSERT_RETURN(pool && addr_len && addr && p_attr, PJ_EINVAL);
     PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
 		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
 
-    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
 
-    if (!xor_ed) {
-	pj_memcpy(&attr->addr, addr, addr_len);
-    } else if (addr_len == sizeof(pj_sockaddr_in)) {
-	const pj_sockaddr_in *addr4 = (const pj_sockaddr_in*) addr;
-
-	pj_sockaddr_in_init(&attr->addr.ipv4, NULL, 0);
-	attr->addr.ipv4.sin_port = (pj_uint16_t)(addr4->sin_port ^ 0x2112);
-	attr->addr.ipv4.sin_addr.s_addr = (addr4->sin_addr.s_addr ^ 
-					   pj_htonl(0x2112A442));
-    } else if (addr_len == sizeof(pj_sockaddr_in6)) {
-	return PJLIB_UTIL_ESTUNIPV6NOTSUPP;
-    } else {
-	return PJLIB_UTIL_ESTUNINADDRLEN;
-    }
+    pj_memcpy(&attr->addr, addr, addr_len);
+    attr->xor_ed = xor_ed;
 
     *p_attr = attr;
 
@@ -580,17 +571,17 @@ pj_stun_ip_addr_attr_create(pj_pool_t *pool,
  * Create and add generic STUN IP address attribute to a STUN message.
  */
 PJ_DEF(pj_status_t) 
-pj_stun_msg_add_ip_addr_attr(pj_pool_t *pool,
-			     pj_stun_msg *msg,
-			     int attr_type, 
-			     pj_bool_t xor_ed,
-			     const pj_sockaddr_t *addr,
-			     unsigned addr_len)
+pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
+			      pj_stun_msg *msg,
+			      int attr_type, 
+			      pj_bool_t xor_ed,
+			      const pj_sockaddr_t *addr,
+			      unsigned addr_len)
 {
-    pj_stun_ip_addr_attr *attr;
+    pj_stun_sockaddr_attr *attr;
     pj_status_t status;
 
-    status = pj_stun_ip_addr_attr_create(pool, attr_type, xor_ed,
+    status = pj_stun_sockaddr_attr_create(pool, attr_type, xor_ed,
 					         addr, addr_len, &attr);
     if (status != PJ_SUCCESS)
 	return status;
@@ -598,15 +589,15 @@ pj_stun_msg_add_ip_addr_attr(pj_pool_t *pool,
     return pj_stun_msg_add_attr(msg, &attr->hdr);
 }
 
-static pj_status_t decode_ip_addr_attr(pj_pool_t *pool, 
-				       const pj_uint8_t *buf, 
-				       void **p_attr)
+static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
+				        const pj_uint8_t *buf, 
+				        void **p_attr)
 {
-    pj_stun_ip_addr_attr *attr;
+    pj_stun_sockaddr_attr *attr;
     pj_uint32_t val;
 
     /* Create the attribute */
-    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_ip_addr_attr);
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     pj_memcpy(attr, buf, ATTR_HDR_LEN);
 
     /* Convert to host byte order */
@@ -626,7 +617,7 @@ static pj_status_t decode_ip_addr_attr(pj_pool_t *pool,
 
     /* Get port and address */
     pj_sockaddr_in_init(&attr->addr.ipv4, NULL, 0);
-    attr->addr.ipv4.sin_port = getval16(buf, ATTR_HDR_LEN + 2);
+    pj_memcpy(&attr->addr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
     pj_memcpy(&attr->addr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
 
     /* Done */
@@ -636,23 +627,64 @@ static pj_status_t decode_ip_addr_attr(pj_pool_t *pool,
 }
 
 
-static pj_status_t encode_ip_addr_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, unsigned *printed)
+static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
+					      const pj_uint8_t *buf, 
+					      void **p_attr)
+{
+    pj_stun_sockaddr_attr *attr;
+    pj_uint32_t val;
+
+    /* Create the attribute */
+    attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
+    pj_memcpy(attr, buf, ATTR_HDR_LEN);
+
+    /* Convert to host byte order */
+    attr->hdr.type = pj_ntohs(attr->hdr.type);
+    attr->hdr.length = pj_ntohs(attr->hdr.length);
+
+    /* Check that the attribute length is valid */
+    if (attr->hdr.length != STUN_GENERIC_IP_ADDR_LEN)
+	return PJLIB_UTIL_ESTUNINATTRLEN;
+
+    /* Check address family */
+    val = *(pj_uint8_t*)(buf + ATTR_HDR_LEN + 1);
+
+    /* Check address family is valid (only supports ipv4 for now) */
+    if (val != 1)
+	return PJLIB_UTIL_ESTUNIPV6NOTSUPP;
+
+    /* Get port and address */
+    pj_sockaddr_in_init(&attr->addr.ipv4, NULL, 0);
+    pj_memcpy(&attr->addr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
+    pj_memcpy(&attr->addr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
+
+    attr->addr.ipv4.sin_port ^= 0x2112;
+    attr->addr.ipv4.sin_addr.s_addr ^= pj_htonl(0x2112A442);
+
+    /* Done */
+    *p_attr = attr;
+
+    return PJ_SUCCESS;
+}
+
+
+static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
+				        unsigned len, unsigned *printed)
 {
     enum {
 	ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IP_ADDR_LEN
     };
     pj_uint8_t *start_buf = buf;
-    const pj_stun_ip_addr_attr *ca = 
-	(const pj_stun_ip_addr_attr *)a;
-    pj_stun_ip_addr_attr *attr;
+    const pj_stun_sockaddr_attr *ca = 
+	(const pj_stun_sockaddr_attr *)a;
+    pj_stun_sockaddr_attr *attr;
 
     if (len < ATTR_LEN) 
 	return PJ_ETOOSMALL;
 
     /* Copy and convert headers to network byte order */
     pj_memcpy(buf, a, ATTR_HDR_LEN);
-    attr = (pj_stun_ip_addr_attr*) buf;
+    attr = (pj_stun_sockaddr_attr*) buf;
     attr->hdr.type = pj_htons(attr->hdr.type);
     attr->hdr.length = pj_htons((pj_uint16_t)STUN_GENERIC_IP_ADDR_LEN);
     buf += ATTR_HDR_LEN;
@@ -664,13 +696,33 @@ static pj_status_t encode_ip_addr_attr(const void *a, pj_uint8_t *buf,
     PJ_ASSERT_RETURN(ca->addr.addr.sa_family == PJ_AF_INET, PJ_EINVAL);
     *buf++ = 1;
 
-    /* Port */
-    pj_memcpy(buf, &ca->addr.ipv4.sin_port, 2);
-    buf += 2;
+    if (ca->xor_ed) {
+	pj_uint32_t addr;
+	pj_uint16_t port;
 
-    /* Address */
-    pj_memcpy(buf, &ca->addr.ipv4.sin_addr, 4);
-    buf += 4;
+	addr = ca->addr.ipv4.sin_addr.s_addr;
+	port = ca->addr.ipv4.sin_port;
+
+	port ^= 0x2112;
+	addr ^= pj_htonl(0x2112A442);
+
+	/* Port */
+	pj_memcpy(buf, &port, 2);
+	buf += 2;
+
+	/* Address */
+	pj_memcpy(buf, &addr, 4);
+	buf += 4;
+
+    } else {
+	/* Port */
+	pj_memcpy(buf, &ca->addr.ipv4.sin_port, 2);
+	buf += 2;
+
+	/* Address */
+	pj_memcpy(buf, &ca->addr.ipv4.sin_addr, 4);
+	buf += 4;
+    }
 
     pj_assert(buf - start_buf == ATTR_LEN);
 

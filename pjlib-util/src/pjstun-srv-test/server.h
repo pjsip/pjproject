@@ -112,11 +112,16 @@ PJ_DECL(pj_status_t) pj_stun_usage_sendto(pj_stun_usage *usage,
 					  const pj_sockaddr_t *dst_addr,
 					  unsigned addr_len);
 
-PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
-					      const pj_str_t *ip_addr,
-					      unsigned port,
-					      pj_stun_usage **p_bu);
+PJ_DECL(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
+					       const pj_str_t *ip_addr,
+					       unsigned port,
+					       pj_stun_usage **p_bu);
 
+PJ_DECL(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
+					       int type,
+					       const pj_str_t *ip_addr,
+					       unsigned port,
+					       pj_stun_usage **p_bu);
 
 
 pj_status_t pj_stun_server_register_usage(pj_stun_server *srv,

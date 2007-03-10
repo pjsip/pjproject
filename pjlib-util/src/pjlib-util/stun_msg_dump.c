@@ -76,9 +76,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_XOR_INTERNAL_ADDR:
     case PJ_STUN_ATTR_ALTERNATE_SERVER:
 	{
-	    const pj_stun_ip_addr_attr *attr;
+	    const pj_stun_sockaddr_attr *attr;
 
-	    attr = (const pj_stun_ip_addr_attr*)ahdr;
+	    attr = (const pj_stun_sockaddr_attr*)ahdr;
 
 	    if (attr->addr.addr.sa_family == PJ_AF_INET) {
 		len = pj_ansi_snprintf(p, end-p,

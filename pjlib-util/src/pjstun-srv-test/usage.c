@@ -82,8 +82,6 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    pj_memcpy(&usage->cb, cb, sizeof(*cb));
-
     usage->type = type;
     status = pj_sock_socket(family, type, protocol, &usage->sock);
     if (status != PJ_SUCCESS)
@@ -132,6 +130,12 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
     }
 
     pj_stun_server_register_usage(srv, usage);
+
+    /* Only after everything has been initialized we copy the callback,
+     * to prevent callback from being called when we encounter error
+     * during initialiation (decendant would not expect this).
+     */
+    pj_memcpy(&usage->cb, cb, sizeof(*cb));
 
     *p_usage = usage;
     return PJ_SUCCESS;

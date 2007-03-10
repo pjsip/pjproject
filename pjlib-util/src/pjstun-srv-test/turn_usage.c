@@ -49,6 +49,11 @@ static pj_status_t tu_sess_on_rx_request(pj_stun_session *sess,
 					 const pj_sockaddr_t *src_addr,
 					 unsigned src_addr_len);
 
+static pj_status_t handle_binding_req(pj_stun_session *session,
+				      const pj_stun_msg *msg,
+				      const pj_sockaddr_t *src_addr,
+				      unsigned src_addr_len);
+
 static pj_status_t client_create(struct turn_usage *tu,
 				 const pj_sockaddr_t *src_addr,
 				 unsigned src_addr_len,
@@ -90,11 +95,13 @@ struct turn_client
     pj_stun_session	*session;
     pj_mutex_t		*mutex;
 
+    pj_sockaddr_in	 client_src_addr;
+
     /* Socket and socket address of the allocated port */
     int			 sock_type;
     pj_sock_t		 sock;
     pj_ioqueue_key_t	*key;
-    pj_sockaddr_in	 client_addr;
+    pj_sockaddr_in	 alloc_addr;
 
     /* Allocation properties */
     unsigned		 bw_kbps;
@@ -149,8 +156,8 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     pj_sockaddr_in local_addr;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(srv && (type==PJ_SOCK_DGRAM||type==PJ_SOCK_STREAM) &&
-		     p_bu, PJ_EINVAL);
+    PJ_ASSERT_RETURN(srv && (type==PJ_SOCK_DGRAM||type==PJ_SOCK_STREAM),
+		     PJ_EINVAL);
     si = pj_stun_server_get_info(srv);
 
     pool = pj_pool_create(si->pf, "turn%p", 4000, 4000, NULL);
@@ -159,8 +166,11 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     tu->type = type;
     tu->pf = si->pf;
     tu->endpt = si->endpt;
+    tu->ioqueue = si->ioqueue;
     tu->timer_heap = si->timer_heap;
     tu->next_port = START_PORT;
+    tu->max_bw_kbps = 64;
+    tu->max_lifetime = 10 * 60;
 
     status = pj_sockaddr_in_init(&local_addr, ip_addr, (pj_uint16_t)port);
     if (status != PJ_SUCCESS)
@@ -205,7 +215,9 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
 	return status;
     }
 
-    *p_bu = tu->usage;
+    if (p_bu) {
+	*p_bu = tu->usage;
+    }
 
     return PJ_SUCCESS;
 }
@@ -223,14 +235,16 @@ static void tu_on_destroy(pj_stun_usage *usage)
     tu = (struct turn_usage*) pj_stun_usage_get_user_data(usage);
 
     /* Destroy all clients */
-    it = pj_hash_first(tu->client_htable, &hit);
-    while (it) {
-	struct turn_client *client;
+    if (tu->client_htable) {
+	it = pj_hash_first(tu->client_htable, &hit);
+	while (it) {
+	    struct turn_client *client;
 
-	client = (struct turn_client *)pj_hash_this(tu->client_htable, it);
-	client_destroy(client, PJ_SUCCESS);
+	    client = (struct turn_client *)pj_hash_this(tu->client_htable, it);
+	    client_destroy(client, PJ_SUCCESS);
 
-	it = pj_hash_next(tu->client_htable, it);
+	    it = pj_hash_first(tu->client_htable, &hit);
+	}
     }
 
     pj_stun_session_destroy(tu->default_session);
@@ -391,6 +405,7 @@ static pj_status_t tu_alloc_port(struct turn_usage *tu,
 	    return status;
 	}
 
+	*p_sock = sock;
 	return PJ_SUCCESS;
     }
 }
@@ -419,7 +434,10 @@ static pj_status_t tu_sess_on_rx_request(pj_stun_session *sess,
 
     pj_assert(sd->client == NULL);
 
-    if (msg->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {
+    if (msg->hdr.type == PJ_STUN_BINDING_REQUEST) {
+	return handle_binding_req(sess, msg, src_addr, src_addr_len);
+
+    } else if (msg->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {
 	if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 	    status = pj_stun_session_create_response(sess, msg, 
 						     PJ_STUN_SC_NO_BINDING,
@@ -505,9 +523,9 @@ static struct peer* client_add_peer(struct turn_client *client,
 
 static const char *get_tp_type(int type)
 {
-    if (type==0)
+    if (type==PJ_SOCK_DGRAM)
 	return "udp";
-    else if (type==1)
+    else if (type==PJ_SOCK_STREAM)
 	return "tcp";
     else
 	return "???";
@@ -519,12 +537,12 @@ static const char *get_tp_type(int type)
  * in the TURN usage. This is called from by tu_on_rx_data() when
  * the packet is handed over to the client.
  */
-static pj_status_t client_sess_on_rx_request(pj_stun_session *sess,
-					     const pj_uint8_t *pkt,
-					     unsigned pkt_len,
-					     const pj_stun_msg *msg,
-					     const pj_sockaddr_t *src_addr,
-					     unsigned src_addr_len)
+static pj_status_t client_sess_on_rx_msg(pj_stun_session *sess,
+					 const pj_uint8_t *pkt,
+					 unsigned pkt_len,
+					 const pj_stun_msg *msg,
+					 const pj_sockaddr_t *src_addr,
+					 unsigned src_addr_len)
 {
     struct session_data *sd;
 
@@ -576,11 +594,16 @@ static pj_status_t client_create(struct turn_usage *tu,
     struct session_data *sd;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(src_addr_len==sizeof(pj_sockaddr_in), PJ_EINVAL);
+
     pool = pj_pool_create(tu->pf, "turnc%p", 4000, 4000, NULL);
     client = PJ_POOL_ZALLOC_T(pool, struct turn_client);
     client->pool = pool;
     client->tu = tu;
     client->sock = PJ_INVALID_SOCKET;
+
+    pj_memcpy(&client->client_src_addr, src_addr,
+	      sizeof(client->client_src_addr));
 
     if (src_addr) {
 	const pj_sockaddr_in *a4 = (const pj_sockaddr_in *)src_addr;
@@ -595,7 +618,8 @@ static pj_status_t client_create(struct turn_usage *tu,
     /* Create session */
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &client_sess_on_send_msg;
-    sess_cb.on_rx_request = &client_sess_on_rx_request;
+    sess_cb.on_rx_request = &client_sess_on_rx_msg;
+    sess_cb.on_rx_indication = &client_sess_on_rx_msg;
     status = pj_stun_session_create(tu->endpt, client->obj_name, 
 				    &sess_cb, PJ_FALSE,
 				    &client->session);
@@ -667,7 +691,8 @@ static pj_status_t client_destroy(struct turn_client *client,
     /* Unregister client from hash table */
     pj_mutex_lock(tu->mutex);
     pj_hash_set(NULL, tu->client_htable, 
-		&client->client_addr, sizeof(client->client_addr), 0, NULL);
+		&client->client_src_addr, sizeof(client->client_src_addr), 
+		0, NULL);
     pj_mutex_unlock(tu->mutex);
 
     /* Destroy STUN session */
@@ -709,12 +734,21 @@ static pj_status_t client_create_relay(struct turn_client *client)
 
     /* Update address */
     addrlen = sizeof(pj_sockaddr_in);
-    status = pj_sock_getsockname(client->sock, &client->client_addr, 
+    status = pj_sock_getsockname(client->sock, &client->alloc_addr, 
 			         &addrlen);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(client->sock);
 	client->sock = PJ_INVALID_SOCKET;
 	return status;
+    }
+
+    if (client->alloc_addr.sin_addr.s_addr == 0) {
+	status = pj_gethostip(&client->alloc_addr.sin_addr);
+	if (status != PJ_SUCCESS) {
+	    pj_sock_close(client->sock);
+	    client->sock = PJ_INVALID_SOCKET;
+	    return status;
+	}
     }
 
     /* Register to ioqueue */
@@ -740,8 +774,8 @@ static pj_status_t client_create_relay(struct turn_client *client)
     PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocated on %s:%s:%d",
 	      client->obj_name,
 	      get_tp_type(client->sock_type),
-	      pj_inet_ntoa(client->client_addr.sin_addr),
-	      (int)pj_ntohs(client->client_addr.sin_port)));
+	      pj_inet_ntoa(client->alloc_addr.sin_addr),
+	      (int)pj_ntohs(client->alloc_addr.sin_port)));
 
     return PJ_SUCCESS;
 }
@@ -766,8 +800,8 @@ static pj_status_t client_destroy_relay(struct turn_client *client)
     PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocation %s:%s:%d destroyed",
 	      client->obj_name,
 	      get_tp_type(client->sock_type),
-	      pj_inet_ntoa(client->client_addr.sin_addr),
-	      (int)pj_ntohs(client->client_addr.sin_port)));
+	      pj_inet_ntoa(client->alloc_addr.sin_addr),
+	      (int)pj_ntohs(client->alloc_addr.sin_port)));
     return PJ_SUCCESS;
 }
 
@@ -795,15 +829,15 @@ static struct peer* client_add_peer(struct turn_client *client,
 
     peer = PJ_POOL_ZALLOC_T(client->pool, struct peer);
     peer->client = client;
-    pj_memcpy(&peer->addr, peer_addr, sizeof(*peer_addr));
+    pj_memcpy(&peer->addr, peer_addr, sizeof(peer->addr));
 
     pj_hash_set(client->pool, client->peer_htable,
-		peer_addr, sizeof(*peer_addr), hval, peer);
+		&peer->addr, sizeof(peer->addr), hval, peer);
 
     PJ_LOG(4,(THIS_FILE, "TURN client %s: peer %s:%s:%d added",
 	      client->obj_name, get_tp_type(client->sock_type), 
-	      pj_inet_ntoa(peer_addr->sin_addr),
-	      (int)pj_ntohs(peer_addr->sin_port)));
+	      pj_inet_ntoa(peer->addr.sin_addr),
+	      (int)pj_ntohs(peer->addr.sin_port)));
 
     return peer;
 }
@@ -975,7 +1009,7 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
     timeout.sec = client->lifetime;
     timeout.msec = 0;
     pj_timer_heap_schedule(client->tu->timer_heap, &client->expiry_timer, &timeout);
-
+    client->expiry_timer.id = PJ_TRUE;
 
     /* Done successfully, create and send success response */
     status = pj_stun_session_create_response(client->session, msg, 
@@ -988,18 +1022,18 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 			      PJ_STUN_ATTR_BANDWIDTH, client->bw_kbps);
     pj_stun_msg_add_uint_attr(response->pool, response->msg,
 			      PJ_STUN_ATTR_LIFETIME, client->lifetime);
-    pj_stun_msg_add_ip_addr_attr(response->pool, response->msg,
+    pj_stun_msg_add_sockaddr_attr(response->pool, response->msg,
 				 PJ_STUN_ATTR_MAPPED_ADDR, PJ_FALSE,
 				 src_addr, src_addr_len);
-    pj_stun_msg_add_ip_addr_attr(response->pool, response->msg,
+    pj_stun_msg_add_sockaddr_attr(response->pool, response->msg,
 				 PJ_STUN_ATTR_XOR_MAPPED_ADDR, PJ_TRUE,
 				 src_addr, src_addr_len);
 
     addr_len = sizeof(req_addr);
     pj_sock_getsockname(client->sock, &req_addr, &addr_len);
-    pj_stun_msg_add_ip_addr_attr(response->pool, response->msg,
+    pj_stun_msg_add_sockaddr_attr(response->pool, response->msg,
 				 PJ_STUN_ATTR_RELAY_ADDR, PJ_FALSE,
-				 &req_addr, addr_len);
+				 &client->alloc_addr, addr_len);
 
     PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocated or refreshed, "
 			 "internal address is %s:%s:%d",
@@ -1010,6 +1044,46 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 
     return pj_stun_session_send_msg(client->session, PJ_TRUE, 
 				    src_addr, src_addr_len, response);
+}
+
+
+/*
+ * Handle incoming Binding request.
+ * This function is called by client_handle_stun_msg() below.
+ */
+static pj_status_t handle_binding_req(pj_stun_session *session,
+				      const pj_stun_msg *msg,
+				      const pj_sockaddr_t *src_addr,
+				      unsigned src_addr_len)
+{
+    pj_stun_tx_data *tdata;
+    pj_status_t status;
+
+    /* Create response */
+    status = pj_stun_session_create_response(session, msg, 0, NULL, 
+					     &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create MAPPED-ADDRESS attribute */
+    pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+				 PJ_STUN_ATTR_MAPPED_ADDR,
+				PJ_FALSE,
+				src_addr, src_addr_len);
+
+    /* On the presence of magic, create XOR-MAPPED-ADDRESS attribute */
+    if (msg->hdr.magic == PJ_STUN_MAGIC) {
+	status = 
+	    pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+					 PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+					 PJ_TRUE,
+					 src_addr, src_addr_len);
+    }
+
+    /* Send */
+    status = pj_stun_session_send_msg(session, PJ_TRUE, 
+				      src_addr, src_addr_len, tdata);
+    return status;
 }
 
 
@@ -1058,10 +1132,16 @@ static pj_status_t client_handle_sad(struct turn_client *client,
 	client->active_peer = peer;
     }
 
-    PJ_LOG(4,(THIS_FILE, "TURN client %s: active destination set to %s:%d",
-			 client->obj_name,
-		         pj_inet_ntoa(client->active_peer->addr.sin_addr),
-			 (int)pj_ntohs(client->active_peer->addr.sin_port)));
+    if (client->active_peer) {
+	PJ_LOG(4,(THIS_FILE, 
+		  "TURN client %s: active destination set to %s:%d",
+		  client->obj_name,
+		  pj_inet_ntoa(client->active_peer->addr.sin_addr),
+		  (int)pj_ntohs(client->active_peer->addr.sin_port)));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "TURN client %s: active destination cleared",
+		  client->obj_name));
+    }
 
     /* Respond with successful response */
     client_respond(client, msg, 0, NULL, src_addr, src_addr_len);
@@ -1162,17 +1242,27 @@ static pj_status_t client_handle_stun_msg(struct turn_client *client,
     switch (msg->hdr.type) {
     case PJ_STUN_SEND_INDICATION:
 	status = client_handle_send_ind(client, msg);
+	break;
 
     case PJ_STUN_SET_ACTIVE_DESTINATION_REQUEST:
 	status = client_handle_sad(client, msg,
 				   src_addr, src_addr_len);
+	break;
+
     case PJ_STUN_ALLOCATE_REQUEST:
 	status = client_handle_allocate_req(client, msg,
 					    src_addr, src_addr_len);
+	break;
+
+    case PJ_STUN_BINDING_REQUEST:
+	status = handle_binding_req(client->session, msg,
+				    src_addr, src_addr_len);
+	break;
 
     default:
 	status = client_handle_unknown_msg(client, msg,
 					   src_addr, src_addr_len);
+	break;
     }
 
     return status;
@@ -1203,6 +1293,11 @@ static void client_handle_peer_data(struct turn_client *client,
     peer = client_get_peer(client, &client->pkt_src_addr, NULL);
     if (peer == NULL) {
 	/* Nope. Discard packet */
+	PJ_LOG(5,(THIS_FILE, 
+		 "TURN client %s: discarded data from %s:%d",
+		 client->obj_name,
+		 pj_inet_ntoa(client->pkt_src_addr.sin_addr),
+		 (int)pj_ntohs(client->pkt_src_addr.sin_port)));
 	return;
     }
 
@@ -1225,10 +1320,10 @@ static void client_handle_peer_data(struct turn_client *client,
 	if (status != PJ_SUCCESS)
 	    return;
 
-	pj_stun_msg_add_ip_addr_attr(data_ind->pool, data_ind->msg, 
-				     PJ_STUN_ATTR_REMOTE_ADDR, PJ_FALSE,
-				     &client->pkt_src_addr,
-				     client->pkt_src_addr_len);
+	pj_stun_msg_add_sockaddr_attr(data_ind->pool, data_ind->msg, 
+				      PJ_STUN_ATTR_REMOTE_ADDR, PJ_FALSE,
+				      &client->pkt_src_addr,
+				      client->pkt_src_addr_len);
 	pj_stun_msg_add_binary_attr(data_ind->pool, data_ind->msg,
 				    PJ_STUN_ATTR_DATA, 
 				    client->pkt, bytes_read);
