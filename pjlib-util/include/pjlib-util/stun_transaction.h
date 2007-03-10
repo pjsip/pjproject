@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_STUN_TRANSACTION_H__
-#define __PJ_STUN_TRANSACTION_H__
+#ifndef __PJLIB_UTIL_STUN_TRANSACTION_H__
+#define __PJLIB_UTIL_STUN_TRANSACTION_H__
 
 /**
  * @file stun_transaction.h
@@ -213,5 +213,5 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
 PJ_END_DECL
 
 
-#endif	/* __PJ_STUN_TRANSACTION_H__ */
+#endif	/* __PJLIB_UTIL_STUN_TRANSACTION_H__ */
 

@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_STUN_MSG_H__
-#define __PJ_STUN_MSG_H__
+#ifndef __PJLIB_UTIL_STUN_MSG_H__
+#define __PJLIB_UTIL_STUN_MSG_H__
 
 /**
  * @file stun_msg.h
@@ -1529,5 +1529,5 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 PJ_END_DECL
 
 
-#endif	/* __PJ_STUN_MSG_H__ */
+#endif	/* __PJLIB_UTIL_STUN_MSG_H__ */
 

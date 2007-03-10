@@ -1,4 +1,4 @@
-/* $Id */
+/* $Id$ */
 /* 
  * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
  *
@@ -54,6 +54,7 @@
 #include <pjlib-util/stun_msg.h>
 #include <pjlib-util/stun_session.h>
 #include <pjlib-util/stun_transaction.h>
+/*#include <pjlib-util/turn_client.h>*/
 
 /* Old STUN */
 #include <pjlib-util/stun_simple.h>

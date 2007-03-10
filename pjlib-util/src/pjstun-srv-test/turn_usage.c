@@ -89,9 +89,9 @@ struct turn_client
     pj_pool_t		*pool;
     pj_stun_session	*session;
     pj_mutex_t		*mutex;
-    int			 sock_type;
 
     /* Socket and socket address of the allocated port */
+    int			 sock_type;
     pj_sock_t		 sock;
     pj_ioqueue_key_t	*key;
     pj_sockaddr_in	 client_addr;
@@ -503,6 +503,16 @@ static struct peer* client_add_peer(struct turn_client *client,
 				    const pj_sockaddr_in *peer_addr,
 				    pj_uint32_t hval);
 
+static const char *get_tp_type(int type)
+{
+    if (type==0)
+	return "udp";
+    else if (type==1)
+	return "tcp";
+    else
+	return "???";
+}
+
 
 /*
  * This callback is called when incoming STUN message is received
@@ -575,7 +585,8 @@ static pj_status_t client_create(struct turn_usage *tu,
     if (src_addr) {
 	const pj_sockaddr_in *a4 = (const pj_sockaddr_in *)src_addr;
 	pj_ansi_snprintf(client->obj_name, sizeof(client->obj_name),
-			 "%s:%d",
+			 "%s:%s:%d",
+			 get_tp_type(tu->type),
 			 pj_inet_ntoa(a4->sin_addr),
 			 (int)pj_ntohs(a4->sin_port));
 	client->obj_name[sizeof(client->obj_name)-1] = '\0';
@@ -585,7 +596,8 @@ static pj_status_t client_create(struct turn_usage *tu,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &client_sess_on_send_msg;
     sess_cb.on_rx_request = &client_sess_on_rx_request;
-    status = pj_stun_session_create(tu->endpt, "turnc%p", &sess_cb, PJ_FALSE,
+    status = pj_stun_session_create(tu->endpt, client->obj_name, 
+				    &sess_cb, PJ_FALSE,
 				    &client->session);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);
@@ -598,7 +610,7 @@ static pj_status_t client_create(struct turn_usage *tu,
     pj_stun_session_set_user_data(client->session, sd);
 
     /* Mutex */
-    status = pj_mutex_create_recursive(client->pool, pool->obj_name, 
+    status = pj_mutex_create_recursive(client->pool, pool->obj_name,
 				       &client->mutex);
     if (status != PJ_SUCCESS) {
 	client_destroy(client, status);
@@ -692,7 +704,18 @@ static pj_status_t client_destroy(struct turn_client *client,
 static pj_status_t client_create_relay(struct turn_client *client)
 {
     pj_ioqueue_callback client_ioq_cb;
+    int addrlen;
     pj_status_t status;
+
+    /* Update address */
+    addrlen = sizeof(pj_sockaddr_in);
+    status = pj_sock_getsockname(client->sock, &client->client_addr, 
+			         &addrlen);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(client->sock);
+	client->sock = PJ_INVALID_SOCKET;
+	return status;
+    }
 
     /* Register to ioqueue */
     pj_bzero(&client_ioq_cb, sizeof(client_ioq_cb));
@@ -714,6 +737,12 @@ static pj_status_t client_create_relay(struct turn_client *client)
     /* Trigger the first read */
     client_on_read_complete(client->key, &client->pkt_read_key, 0);
 
+    PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocated on %s:%s:%d",
+	      client->obj_name,
+	      get_tp_type(client->sock_type),
+	      pj_inet_ntoa(client->client_addr.sin_addr),
+	      (int)pj_ntohs(client->client_addr.sin_port)));
+
     return PJ_SUCCESS;
 }
 
@@ -734,8 +763,9 @@ static pj_status_t client_destroy_relay(struct turn_client *client)
 	client->sock = PJ_INVALID_SOCKET;
     }
 
-    PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocation %s:%d destroyed",
+    PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocation %s:%s:%d destroyed",
 	      client->obj_name,
+	      get_tp_type(client->sock_type),
 	      pj_inet_ntoa(client->client_addr.sin_addr),
 	      (int)pj_ntohs(client->client_addr.sin_port)));
     return PJ_SUCCESS;
@@ -771,7 +801,8 @@ static struct peer* client_add_peer(struct turn_client *client,
 		peer_addr, sizeof(*peer_addr), hval, peer);
 
     PJ_LOG(4,(THIS_FILE, "TURN client %s: peer %s:%s:%d added",
-	      client->obj_name, "udp", pj_inet_ntoa(peer_addr->sin_addr),
+	      client->obj_name, get_tp_type(client->sock_type), 
+	      pj_inet_ntoa(peer_addr->sin_addr),
 	      (int)pj_ntohs(peer_addr->sin_port)));
 
     return peer;
@@ -824,7 +855,7 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
     pj_stun_tx_data *response;
     pj_sockaddr_in req_addr;
     int addr_len;
-    unsigned rpp_bits;
+    unsigned req_bw, rpp_bits;
     pj_time_val timeout;
     pj_status_t status;
 
@@ -848,8 +879,9 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 		       src_addr, src_addr_len);
 	return PJ_SUCCESS;
     } else if (a_bw) {
-	client->bw_kbps = a_bw->value;
+	client->bw_kbps = req_bw = a_bw->value;
     } else {
+	req_bw = 0;
 	client->bw_kbps = client->tu->max_bw_kbps;
     }
 
@@ -899,11 +931,11 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 	int err_code;
 
 	PJ_LOG(4,(THIS_FILE, "TURN client %s: received initial Allocate "
-			     "request, requested type:addr:port=%d:%s:%d, rpp "
-			     "bits=%d",
-		  client->obj_name, client->sock_type,
+			     "request, requested type:addr:port=%s:%s:%d, rpp "
+			     "bits=%d, bw=%dkbps, lifetime=%d",
+		  client->obj_name, get_tp_type(client->sock_type),
 		  pj_inet_ntoa(req_addr.sin_addr), pj_ntohs(req_addr.sin_port),
-		  rpp_bits));
+		  rpp_bits, client->bw_kbps, client->lifetime));
 
 	status = tu_alloc_port(client->tu, client->sock_type, rpp_bits, 
 			       &req_addr, &client->sock, &err_code);
@@ -930,8 +962,9 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
     } else {
 	/* Otherwise check if the port parameter stays the same */
 	/* TODO */
-	PJ_LOG(4,(THIS_FILE, "TURN client %s: received Allocate refresh",
-		  client->obj_name));
+	PJ_LOG(4,(THIS_FILE, "TURN client %s: received Allocate refresh, "
+			     "lifetime=%d",
+		  client->obj_name, client->lifetime));
     }
 
     /* Refresh timer */
@@ -969,8 +1002,9 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 				 &req_addr, addr_len);
 
     PJ_LOG(4,(THIS_FILE, "TURN client %s: relay allocated or refreshed, "
-			 "internal address is %s:%d",
+			 "internal address is %s:%s:%d",
 			 client->obj_name,
+			 get_tp_type(client->sock_type),
 			 pj_inet_ntoa(req_addr.sin_addr),
 			 (int)pj_ntohs(req_addr.sin_port)));
 

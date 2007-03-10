@@ -405,19 +405,19 @@ static struct attr_desc extended_attr_desc[] =
 	&encode_uint_attr
     },
     {
-	/* Unassigned, 0x8025 */
+	/* ID 0x8025 is not assigned*/
 	NULL,
 	NULL,
 	NULL
     },
     {
-	/* Padding, 0x8026 */
+	/* PADDING, 0x8026 */
 	NULL,
 	NULL,
 	NULL
     },
     {
-	/* Padding, 0x8027 */
+	/* CACHE-TIMEOUT, 0x8027 */
 	NULL,
 	NULL,
 	NULL

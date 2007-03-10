@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_STUN_AUTH_H__
-#define __PJ_STUN_AUTH_H__
+#ifndef __PJLIB_UTIL_STUN_AUTH_H__
+#define __PJLIB_UTIL_STUN_AUTH_H__
 
 /**
  * @file stun_auth.h
@@ -271,5 +271,5 @@ void pj_stun_calc_md5_key(pj_uint8_t digest[16],
 PJ_END_DECL
 
 
-#endif	/* __PJ_STUN_AUTH_H__ */
+#endif	/* __PJLIB_UTIL_STUN_AUTH_H__ */
 

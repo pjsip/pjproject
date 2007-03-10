@@ -55,12 +55,11 @@ typedef struct pj_stun_session_cb
     /**
      * Callback to be called by the STUN session to send outgoing message.
      *
-     * @param tdata	    The STUN transmit data containing the original
-     *			    STUN message
+     * @param sess	    The STUN session.
      * @param pkt	    Packet to be sent.
      * @param pkt_size	    Size of the packet to be sent.
-     * @param addr_len	    Length of destination address.
      * @param dst_addr	    The destination address.
+     * @param addr_len	    Length of destination address.
      *
      * @return		    The callback should return the status of the
      *			    packet sending.

@@ -277,6 +277,10 @@ SOURCE="..\include\pjlib-util\stun_transaction.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\include\pjlib-util\turn_client.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjlib-util\types.h"
 # End Source File
 # Begin Source File

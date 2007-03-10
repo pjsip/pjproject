@@ -21,6 +21,12 @@
 
 
 #define THIS_FILE	"client_main.c"
+#define BANDWIDTH	64		    /* -1 to disable */
+#define LIFETIME	30		    /* -1 to disable */
+#define REQ_TRANSPORT	-1		    /* 0: udp, 1: tcp, -1: disable */
+#define REQ_PORT_PROPS	-1		    /* -1 to disable */
+#define REQ_IP		NULL		    /* IP address string */
+
 
 static struct global
 {
@@ -32,15 +38,15 @@ static struct global
     pj_sock_t		 sock;
     pj_thread_t		*thread;
     pj_bool_t		 quit;
-
-    pj_sockaddr_in	 dst_addr;  /**< destination addr */
+    pj_sockaddr_in	 peer_addr;
+    pj_sockaddr_in	 srv_addr;  /**< server addr */
 
 } g;
 
 static struct options
 {
-    char    *dst_addr;
-    char    *dst_port;
+    char    *srv_addr;
+    char    *srv_port;
     char    *realm;
     char    *user_name;
     char    *password;
@@ -60,14 +66,14 @@ static my_perror(const char *title, pj_status_t status)
 static pj_status_t on_send_msg(pj_stun_session *sess,
 			       const void *pkt,
 			       pj_size_t pkt_size,
-			       const pj_sockaddr_t *dst_addr,
+			       const pj_sockaddr_t *srv_addr,
 			       unsigned addr_len)
 {
     pj_ssize_t len;
     pj_status_t status;
 
     len = pkt_size;
-    status = pj_sock_sendto(g.sock, pkt, &len, 0, dst_addr, addr_len);
+    status = pj_sock_sendto(g.sock, pkt, &len, 0, srv_addr, addr_len);
 
     if (status != PJ_SUCCESS)
 	my_perror("Error sending packet", status);
@@ -141,22 +147,22 @@ static int init()
 
     pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
 
-    if (o.dst_addr) {
+    if (o.srv_addr) {
 	pj_str_t s;
 	pj_uint16_t port;
 
-	if (o.dst_port)
-	    port = (pj_uint16_t) atoi(o.dst_port);
+	if (o.srv_port)
+	    port = (pj_uint16_t) atoi(o.srv_port);
 	else
 	    port = PJ_STUN_PORT;
 
-	status = pj_sockaddr_in_init(&g.dst_addr, pj_cstr(&s, o.dst_addr), port);
+	status = pj_sockaddr_in_init(&g.srv_addr, pj_cstr(&s, o.srv_addr), port);
 	if (status != PJ_SUCCESS) {
 	    my_perror("Invalid address", status);
 	    return status;
 	}
 
-	printf("Destination address set to %s:%d\n", o.dst_addr, (int)port);
+	printf("Destination address set to %s:%d\n", o.srv_addr, (int)port);
     } else {
 	printf("Error: address must be specified\n");
 	return PJ_EINVAL;
@@ -245,18 +251,88 @@ static void send_bind_request(void)
     pj_assert(rc == PJ_SUCCESS);
 
     rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
-				  &g.dst_addr, sizeof(g.dst_addr),
+				  &g.srv_addr, sizeof(g.srv_addr),
 				  tdata);
     if (rc != PJ_SUCCESS)
 	my_perror("Error sending STUN request", rc);
 }
 
-static void send_allocate_request(void)
+static void send_allocate_request(pj_bool_t allocate)
 {
+    pj_stun_tx_data *tdata;
+    pj_status_t rc;
+
+    rc = pj_stun_session_create_req(g.sess, PJ_STUN_ALLOCATE_REQUEST, &tdata);
+    pj_assert(rc == PJ_SUCCESS);
+
+
+    if (BANDWIDTH != -1) {
+	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, 
+				  PJ_STUN_ATTR_BANDWIDTH, BANDWIDTH);
+    }
+
+    if (!allocate) {
+	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, 
+				  PJ_STUN_ATTR_LIFETIME, 0);
+
+    } else {
+	if (LIFETIME != -1) {
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, 
+				      PJ_STUN_ATTR_LIFETIME, LIFETIME);
+	}
+
+	if (REQ_TRANSPORT != -1) {
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, 
+				      PJ_STUN_ATTR_REQ_TRANSPORT, REQ_TRANSPORT);
+	}
+
+	if (REQ_PORT_PROPS != -1) {
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, 
+				      PJ_STUN_ATTR_REQ_PORT_PROPS, REQ_PORT_PROPS);
+	}
+
+	if (REQ_IP != NULL) {
+	    pj_sockaddr_in addr;
+	    pj_str_t tmp;
+
+	    pj_sockaddr_in_init(&addr, pj_cstr(&tmp, REQ_IP), 0);
+	    pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
+					 PJ_STUN_ATTR_REQ_IP, PJ_FALSE,
+					 &addr, sizeof(addr));
+	}
+    }
+
+    rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
+				  &g.srv_addr, sizeof(g.srv_addr),
+				  tdata);
+    pj_assert(rc == PJ_SUCCESS);
 }
 
-static void send_sad_request(void)
+static void send_sad_request(pj_bool_t set)
 {
+    pj_stun_tx_data *tdata;
+    pj_status_t rc;
+
+    if (g.peer_addr.sin_addr.s_addr == 0 ||
+	g.peer_addr.sin_port == 0)
+    {
+	puts("Error: peer address is not set");
+	return;
+    }
+
+    rc = pj_stun_session_create_req(g.sess, PJ_STUN_ALLOCATE_REQUEST, &tdata);
+    pj_assert(rc == PJ_SUCCESS);
+
+    if (set) {
+	pj_stun_msg_add_ip_addr_attr(tdata->pool, tdata->msg,
+				     PJ_STUN_ATTR_REMOTE_ADDR, PJ_FALSE,
+				     &g.peer_addr, sizeof(g.peer_addr));
+    }
+
+    rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
+				  &g.srv_addr, sizeof(g.srv_addr),
+				  tdata);
+    pj_assert(rc == PJ_SUCCESS);
 }
 
 static void send_send_ind(void)
@@ -267,18 +343,51 @@ static void send_raw_data(void)
 {
 }
 
+static void set_peer_addr(void)
+{
+    char ip_addr[64];
+    pj_str_t tmp;
+    pj_sockaddr_in addr;
+    int port;
+
+    printf("Current peer address: %s:%d\n", 
+	   pj_inet_ntoa(g.peer_addr.sin_addr), 
+	   pj_ntohs(g.peer_addr.sin_port));
+
+    printf("Input peer address in IP:PORT format: ");
+    fflush(stdout);
+
+    if (scanf("%s:%d", ip_addr, &port) != 2) {
+	puts("Error.");
+	return;
+    }
+
+    if (pj_sockaddr_in_init(&addr, pj_cstr(&tmp,ip_addr), (pj_uint16_t)port) != PJ_SUCCESS) {
+	puts("Error: invalid address");
+	return;
+    }
+
+    g.peer_addr = addr;
+}
+
 static void menu(void)
 {
     puts("Menu:");
+    printf("  pr      Set peer address (currently %s:%d)\n",
+	   pj_inet_ntoa(g.peer_addr.sin_addr), pj_ntohs(g.peer_addr.sin_port));
+    puts("");
     puts("  br      Send Bind request");
     puts("  ar      Send Allocate request");
+    puts("  dr      Send de-Allocate request");
     puts("  sr      Send Set Active Indication request");
-    puts("  si      Send Send Indication");
+    puts("  cr      Send clear Active Indication request");
+    puts("  si      Send data with Send Indication");
     puts("  rw      Send raw data");
     puts("  q       Quit");
     puts("");
     printf("Choice: ");
 }
+
 
 static void console_main(void)
 {
@@ -293,16 +402,25 @@ static void console_main(void)
 	    send_bind_request();
 	    
 	} else if (input[0]=='a' && input[1]=='r') {
-	    send_allocate_request();
+	    send_allocate_request(PJ_TRUE);
+	    
+	} else if (input[0]=='d' && input[1]=='r') {
+	    send_allocate_request(PJ_FALSE);
 	    
 	} else if (input[0]=='s' && input[1]=='r') {
-	    send_sad_request();
+	    send_sad_request(PJ_TRUE);
+	    
+	} else if (input[0]=='c' && input[1]=='r') {
+	    send_sad_request(PJ_FALSE);
 	    
 	} else if (input[0]=='s' && input[1]=='i') {
 	    send_send_ind();
 	    
 	} else if (input[0]=='r' && input[1]=='w') {
 	    send_raw_data();
+	    
+	} else if (input[0]=='p' && input[1]=='r') {
+	    set_peer_addr();
 	    
 	} else if (input[0]=='q') {
 	    g.quit = 1;
@@ -373,11 +491,11 @@ int main(int argc, char *argv[])
     }
 
     if ((pos=pj_ansi_strchr(argv[pj_optind], ':')) != NULL) {
-	o.dst_addr = argv[pj_optind];
+	o.srv_addr = argv[pj_optind];
 	*pos = '\0';
-	o.dst_port = pos+1;
+	o.srv_port = pos+1;
     } else {
-	o.dst_addr = argv[pj_optind];
+	o.srv_addr = argv[pj_optind];
     }
 
     status = init();
