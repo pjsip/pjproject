@@ -6,3 +6,30 @@ export CC_NAME := gcc
 export TARGET_NAME := @target@
 export CROSS_COMPILE := @ac_cross_compile@
 export LINUX_POLL := @ac_linux_poll@ 
+
+# Application can use this
+export PJDIR := @ac_pjdir@
+export APP_CC := $(CROSS_COMPILE)$(CC_NAME)
+export APP_CFLAGS := -DPJ_AUTOCONF=1\
+	@CFLAGS@\
+	-I$(PJDIR)/pjlib/include\
+	-I$(PJDIR)/pjlib-util/include\
+	-I$(PJDIR)/pjmedia/include\
+	-I$(PJDIR)/pjsip/include
+export APP_CXXFLAGS := $(APP_CFLAGS)
+export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
+	-L$(PJDIR)/pjlib-util/lib\
+	-L$(PJDIR)/pjmedia/lib\
+	-L$(PJDIR)/pjsip/lib\
+	@LDFLAGS@
+export APP_LDLIBS := -lpjsua-$(TARGET_NAME)\
+	-lpjsip-ua-$(TARGET_NAME)\
+	-lpjsip-simple-$(TARGET_NAME)\
+	-lpjsip-$(TARGET_NAME)\
+	-lpjmedia-codec-$(TARGET_NAME)\
+	-lpjmedia-$(TARGET_NAME)\
+	-lpjmedia-codec-$(TARGET_NAME)\
+	-lpjlib-util-$(TARGET_NAME)\
+	-lpj-$(TARGET_NAME)\
+	@LIBS@
+

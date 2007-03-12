@@ -19,6 +19,7 @@ AC_CONFIG_FILES([build.mak
 		 pjsip/build/os-auto.mak
 	        ])
 
+
 dnl
 dnl Setup default CFLAGS
 dnl
@@ -33,6 +34,9 @@ CXXFLAGS="$CFLAGS $CXXFLAGS"
 AC_PROG_CC
 AC_PROG_CXX
 AC_LANG_C
+
+AC_SUBST(ac_pjdir)
+ac_pjdir=`pwd`
 
 AC_CHECK_LIB(pthread,pthread_create)
 AC_CHECK_LIB(wsock32,puts)
