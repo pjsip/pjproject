@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjlib_util"
 	ProjectGUID="{FE07F272-AE7F-4549-9E9F-EF9B80CB1693}"
+	RootNamespace="pjlib_util"
 	>
 	<Platforms>
 		<Platform
@@ -415,35 +416,11 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjlib-util\stun_auth.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjlib-util\stun_endpoint.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjlib-util\stun_msg.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjlib-util\stun_msg_dump.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjlib-util\stun_session.c"
-				>
-			</File>
-			<File
 				RelativePath="..\src\pjlib-util\stun_simple.c"
 				>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\stun_simple_client.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjlib-util\stun_transaction.c"
 				>
 			</File>
 			<File
@@ -556,31 +533,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjlib-util\stun_auth.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\pjlib-util\stun_doc.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\pjlib-util\stun_endpoint.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\pjlib-util\stun_msg.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\pjlib-util\stun_session.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\pjlib-util\stun_simple.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\pjlib-util\stun_transaction.h"
 				>
 			</File>
 			<File

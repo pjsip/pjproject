@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "pjlib"="..\..\pjlib\build\pjlib.dsp" - Package Owner=<4>
+Project: "pjlib"=..\..\pjlib\build\pjlib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjlib_test"="..\..\pjlib\build\pjlib_test.dsp" - Package Owner=<4>
+Project: "pjlib_test"=..\..\pjlib\build\pjlib_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjlib_util"=".\pjlib_util.dsp" - Package Owner=<4>
+Project: "pjlib_util"="..\..\pjlib-util\build\pjlib_util.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -39,7 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjlib_util_test"=".\pjlib_util_test.dsp" - Package Owner=<4>
+Project: "pjstun_client"=.\pjstun_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -47,11 +47,29 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib
+    End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjlib_util
     End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "pjstun_srv_test"=.\pjstun_srv_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
     Begin Project Dependency
     Project_Dep_Name pjlib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util
     End Project Dependency
 }}}
 

@@ -370,6 +370,8 @@ DEP_CPP_ADDR_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -779,6 +781,8 @@ DEP_CPP_ARRAY=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -1158,6 +1162,8 @@ DEP_CPP_CONFI=\
 DEP_CPP_CONFI=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -1404,6 +1410,8 @@ DEP_CPP_CTYPE=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -1666,6 +1674,8 @@ DEP_CPP_ERRNO=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -2038,6 +2048,8 @@ DEP_CPP_EXCEP=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -2371,6 +2383,8 @@ DEP_CPP_FIFOB=\
 	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -2651,6 +2665,8 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -2987,6 +3003,8 @@ DEP_CPP_FILE_I=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -3277,6 +3295,8 @@ DEP_CPP_GUID_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -3643,6 +3663,8 @@ DEP_CPP_GUID_S=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -4027,6 +4049,8 @@ DEP_CPP_HASH_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -4448,6 +4472,8 @@ DEP_CPP_IOQUE=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -4894,6 +4920,8 @@ DEP_CPP_LIST_=\
 DEP_CPP_LIST_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -5161,6 +5189,8 @@ DEP_CPP_LOCK_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -5567,6 +5597,8 @@ DEP_CPP_LOG_C=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -5932,6 +5964,8 @@ DEP_CPP_LOG_W=\
 DEP_CPP_LOG_W=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -6212,6 +6246,8 @@ DEP_CPP_OS_CO=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -6654,6 +6690,8 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -7042,6 +7080,8 @@ DEP_CPP_OS_TI=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -7335,6 +7375,8 @@ DEP_CPP_OS_TIM=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -7583,6 +7625,8 @@ DEP_CPP_OS_TIME=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -7862,6 +7906,8 @@ DEP_CPP_POOL_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -8289,6 +8335,8 @@ DEP_CPP_POOL_B=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -8836,6 +8884,8 @@ DEP_CPP_POOL_C=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -9227,7 +9277,9 @@ DEP_CPP_POOL_P=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
 	"..\..\include\pj\compat\malloc.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -9600,6 +9652,8 @@ DEP_CPP_RAND_=\
 DEP_CPP_RAND_=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -9854,6 +9908,8 @@ DEP_CPP_RBTRE=\
 DEP_CPP_RBTRE=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -10123,6 +10179,8 @@ DEP_CPP_SOCK_=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -10535,6 +10593,8 @@ DEP_CPP_SOCK_S=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -10842,6 +10902,8 @@ DEP_CPP_STRIN=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -11236,6 +11298,8 @@ DEP_CPP_TIMER=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -11630,6 +11694,8 @@ DEP_CPP_TYPES=\
 DEP_CPP_TYPES=\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -11885,6 +11951,8 @@ DEP_CPP_UNICO=\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
@@ -12322,6 +12390,10 @@ SOURCE=..\..\include\pj\config.h
 # Begin Source File
 
 SOURCE=..\..\include\pj\config_site.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pj\config_site_sample.h
 # End Source File
 # Begin Source File
 

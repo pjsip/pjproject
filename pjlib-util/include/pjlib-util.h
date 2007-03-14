@@ -48,14 +48,6 @@
 /* XML */
 #include <pjlib-util/xml.h>
 
-/* New STUN */
-#include <pjlib-util/stun_auth.h>
-#include <pjlib-util/stun_endpoint.h>
-#include <pjlib-util/stun_msg.h>
-#include <pjlib-util/stun_session.h>
-#include <pjlib-util/stun_transaction.h>
-/*#include <pjlib-util/turn_client.h>*/
-
 /* Old STUN */
 #include <pjlib-util/stun_simple.h>
 
