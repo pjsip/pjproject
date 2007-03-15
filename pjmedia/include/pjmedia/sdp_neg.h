@@ -354,6 +354,30 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
 				      pjmedia_sdp_neg **p_neg);
 
 /**
+ * This specifies the behavior of the SDP negotiator when responding to an
+ * offer, whether it should rather use the codec preference as set by
+ * remote, or should it rather use the codec preference as specified by
+ * local endpoint.
+ *
+ * For example, suppose incoming call has codec order "8 0 3", while 
+ * local codec order is "3 0 8". If remote codec order is preferable,
+ * the selected codec will be 8, while if local codec order is preferable,
+ * the selected codec will be 3.
+ *
+ * By default, the value in PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER will
+ * be used.
+ *
+ * @param neg		The SDP negotiator instance.
+ * @param prefer_remote	If non-zero, the negotiator will use the codec
+ *			order as specified in remote offer. If zero, it
+ *			will prefer to use the local codec order.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
+					      pj_bool_t prefer_remote);
+
+
+/**
  * Get SDP negotiator state.
  *
  * @param neg		The SDP negotiator instance.
