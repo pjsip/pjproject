@@ -26,6 +26,8 @@
 #define FPS		    (1000/PTIME)
 #define DEFAULT_RTP_PORT    4000
 
+/* Next RTP port to be used */
+static pj_uint16_t next_rtp_port;
 
 /* Close existing sound device */
 static void close_snd_dev(void);
@@ -208,14 +210,13 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	RTP_RETRY = 100
     };
     int i;
-    static pj_uint16_t rtp_port;
     pj_sockaddr_in bound_addr;
     pj_sockaddr_in mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
     pj_sock_t sock[2];
 
-    if (rtp_port == 0)
-	rtp_port = (pj_uint16_t)cfg->port;
+    if (next_rtp_port == 0)
+	next_rtp_port = (pj_uint16_t)cfg->port;
 
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
@@ -231,7 +232,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     }
 
     /* Loop retry to bind RTP and RTCP sockets. */
-    for (i=0; i<RTP_RETRY; ++i, rtp_port += 2) {
+    for (i=0; i<RTP_RETRY; ++i, next_rtp_port += 2) {
 
 	/* Create and bind RTP socket. */
 	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[0]);
@@ -241,7 +242,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	}
 
 	status = pj_sock_bind_in(sock[0], bound_addr.sin_addr.s_addr, 
-				 rtp_port);
+				 next_rtp_port);
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -257,7 +258,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	}
 
 	status = pj_sock_bind_in(sock[1], bound_addr.sin_addr.s_addr, 
-				 (pj_uint16_t)(rtp_port+1));
+				 (pj_uint16_t)(next_rtp_port+1));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -299,12 +300,12 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	} else if (cfg->public_addr.slen) {
 
 	    status = pj_sockaddr_in_init(&mapped_addr[0], &cfg->public_addr,
-					 (pj_uint16_t)rtp_port);
+					 (pj_uint16_t)next_rtp_port);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
 	    status = pj_sockaddr_in_init(&mapped_addr[1], &cfg->public_addr,
-					 (pj_uint16_t)(rtp_port+1));
+					 (pj_uint16_t)(next_rtp_port+1));
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
@@ -321,8 +322,8 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    for (i=0; i<2; ++i)
 		mapped_addr[i].sin_addr = addr;
 
-	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)rtp_port);
-	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(rtp_port+1));
+	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)next_rtp_port);
+	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(next_rtp_port+1));
 	    break;
 	}
     }
@@ -349,7 +350,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	      pj_inet_ntoa(skinfo->rtcp_addr_name.sin_addr), 
 	      pj_ntohs(skinfo->rtcp_addr_name.sin_port)));
 
-    rtp_port += 2;
+    next_rtp_port += 2;
     return PJ_SUCCESS;
 
 on_error:
@@ -479,6 +480,9 @@ pj_status_t pjsua_media_subsys_destroy(void)
 
     /* Deinitialize sound subsystem */
     pjmedia_snd_deinit();
+
+    /* Reset RTP port */
+    next_rtp_port = 0;
 
     return PJ_SUCCESS;
 }
