@@ -32,7 +32,11 @@ enum
     /* PJMEDIA_RTP_PT_TELEPHONE_EVENTS is declared in
      * <pjmedia/config.h>
      */
+#if PJMEDIA_RTP_PT_TELEPHONE_EVENTS
     PJMEDIA_RTP_PT_START = PJMEDIA_RTP_PT_TELEPHONE_EVENTS,
+#else
+    PJMEDIA_RTP_PT_START = 102,
+#endif
 
     PJMEDIA_RTP_PT_SPEEX_NB,			/**< Speex narrowband/8KHz  */
     PJMEDIA_RTP_PT_SPEEX_WB,			/**< Speex wideband/16KHz   */
