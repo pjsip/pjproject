@@ -803,28 +803,21 @@ static pj_status_t match_offer(pj_pool_t *pool,
     }
 
     /* See if all types of offer can be matched. */
-#if 1
     if (offer_has_codec && !found_matching_codec) {
 	return PJMEDIA_SDPNEG_NOANSCODEC;
     }
 
+    /* If this comment is removed, negotiation will fail if remote has offered
+       telephone-event and local is not configured with telephone-event
+
     if (offer_has_telephone_event && !found_matching_telephone_event) {
 	return PJMEDIA_SDPNEG_NOANSTELEVENT;
     }
+    */
 
     if (offer_has_other && !found_matching_other) {
 	return PJMEDIA_SDPNEG_NOANSUNKNOWN;
     }
-#else
-    PJ_TODO(FULL_MATCHING_WITH_TELEPHONE_EVENTS);
-    if (!found_matching_codec &&
-	!found_matching_telephone_event &&
-	!found_matching_other)
-    {
-	/* Some of the payload in the offer has no matching local sdp */
-	return PJ_FALSE;
-    }
-#endif
 
     /* Seems like everything is in order.
      * Build the answer by cloning from local media, but rearrange the payload
