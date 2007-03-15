@@ -190,11 +190,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_gsm_deinit(void)
 	return PJ_SUCCESS;
 
     /* We don't want to deinit if there's outstanding codec. */
+    /* This is silly, as we'll always have codec in the list if
+       we ever allocate a codec! A better behavior maybe is to 
+       deallocate all codecs in the list.
     pj_mutex_lock(gsm_codec_factory.mutex);
     if (!pj_list_empty(&gsm_codec_factory.codec_list)) {
 	pj_mutex_unlock(gsm_codec_factory.mutex);
 	return PJ_EBUSY;
     }
+    */
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(gsm_codec_factory.endpt);
