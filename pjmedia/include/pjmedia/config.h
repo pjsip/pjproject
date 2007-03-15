@@ -280,6 +280,30 @@
 
 
 /**
+ * This specifies the behavior of the SDP negotiator when responding to an
+ * offer, whether it should rather use the codec preference as set by
+ * remote, or should it rather use the codec preference as specified by
+ * local endpoint.
+ *
+ * For example, suppose incoming call has codec order "8 0 3", while 
+ * local codec order is "3 0 8". If remote codec order is preferable,
+ * the selected codec will be 8, while if local codec order is preferable,
+ * the selected codec will be 3.
+ *
+ * If set to non-zero, the negotiator will use the codec order as specified
+ * by remote in the offer.
+ *
+ * Note that this behavior can be changed during run-time by calling
+ * pjmedia_sdp_neg_set_prefer_remote_codec_order().
+ *
+ * Default is 1 (to maintain backward compatibility)
+ */
+#ifndef PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER
+#   define PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER	1
+#endif
+
+
+/**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
  * Default is yes.
  */

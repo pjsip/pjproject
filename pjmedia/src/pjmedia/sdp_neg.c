@@ -31,6 +31,7 @@
 struct pjmedia_sdp_neg
 {
     pjmedia_sdp_neg_state state;	    /**< Negotiator state.	     */
+    pj_bool_t		  prefer_remote_codec_order;
     pj_bool_t		  has_remote_answer;
     pj_bool_t		  answer_was_remote;
 
@@ -86,6 +87,7 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     PJ_ASSERT_RETURN(neg != NULL, PJ_ENOMEM);
 
     neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
+    neg->prefer_remote_codec_order = PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER;
     neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
 
@@ -119,6 +121,7 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     neg = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_neg));
     PJ_ASSERT_RETURN(neg != NULL, PJ_ENOMEM);
 
+    neg->prefer_remote_codec_order = PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER;
     neg->neg_remote_sdp = pjmedia_sdp_session_clone(pool, remote);
 
     if (initial) {
@@ -139,6 +142,20 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     *p_neg = neg;
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Set codec order preference.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
+					      pj_bool_t prefer_remote)
+{
+    PJ_ASSERT_RETURN(neg, PJ_EINVAL);
+    neg->prefer_remote_codec_order = prefer_remote;
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Get SDP negotiator state.
@@ -667,7 +684,8 @@ static pj_status_t process_answer(pj_pool_t *pool,
 /* Try to match offer with answer. */
 static pj_status_t match_offer(pj_pool_t *pool,
 			       const pjmedia_sdp_media *offer,
-			       const pjmedia_sdp_media *local,
+			       const pjmedia_sdp_media *preanswer,
+			       const pjmedia_sdp_media *orig_local,
 			       pjmedia_sdp_media **p_answer)
 {
     unsigned i;
@@ -710,12 +728,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		    continue;
 
 		/* Find matching codec in local descriptor. */
-		for (j=0; j<local->desc.fmt_count; ++j) {
+		for (j=0; j<preanswer->desc.fmt_count; ++j) {
 		    unsigned p;
-		    p = pj_strtoul(&local->desc.fmt[j]);
-		    if (p == pt && pj_isdigit(*local->desc.fmt[j].ptr)) {
+		    p = pj_strtoul(&preanswer->desc.fmt[j]);
+		    if (p == pt && pj_isdigit(*preanswer->desc.fmt[j].ptr)) {
 			found_matching_codec = 1;
-			pt_answer[pt_answer_count++] = local->desc.fmt[j];
+			pt_answer[pt_answer_count++] = preanswer->desc.fmt[j];
 			break;
 		    }
 		}
@@ -753,9 +771,9 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		/* Find paylaod in our initial SDP with matching 
 		 * encoding name and clock rate.
 		 */
-		for (j=0; j<local->desc.fmt_count; ++j) {
-		    a = pjmedia_sdp_media_find_attr2(local, "rtpmap", 
-						     &local->desc.fmt[j]);
+		for (j=0; j<preanswer->desc.fmt_count; ++j) {
+		    a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap", 
+						     &preanswer->desc.fmt[j]);
 		    if (a) {
 			pjmedia_sdp_rtpmap lr;
 			pjmedia_sdp_attr_get_rtpmap(a, &lr);
@@ -773,7 +791,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 				found_matching_codec = 1;
 			    else
 				found_matching_telephone_event = 1;
-			    pt_answer[pt_answer_count++] = local->desc.fmt[j];
+			    pt_answer[pt_answer_count++] = preanswer->desc.fmt[j];
 			    break;
 			}
 		    }
@@ -791,11 +809,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
 	    if (found_matching_other)
 		continue;
 
-	    for (j=0; j<local->desc.fmt_count; ++j) {
-		if (!pj_strcmp(&offer->desc.fmt[i], &local->desc.fmt[j])) {
+	    for (j=0; j<preanswer->desc.fmt_count; ++j) {
+		if (!pj_strcmp(&offer->desc.fmt[i], &preanswer->desc.fmt[j])) {
 		    /* Match */
 		    found_matching_other = 1;
-		    pt_answer[pt_answer_count++] = local->desc.fmt[j];
+		    pt_answer[pt_answer_count++] = preanswer->desc.fmt[j];
 		    break;
 		}
 	    }
@@ -823,7 +841,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
      * Build the answer by cloning from local media, but rearrange the payload
      * to suit the offer.
      */
-    answer = pjmedia_sdp_media_clone(pool, local);
+    answer = pjmedia_sdp_media_clone(pool, orig_local);
     for (i=0; i<pt_answer_count; ++i) {
 	unsigned j;
 	for (j=i; j<answer->desc.fmt_count; ++j) {
@@ -867,6 +885,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 
 /* Create complete answer for remote's offer. */
 static pj_status_t create_answer( pj_pool_t *pool,
+				  pj_bool_t prefer_remote_codec_order,
 				  const pjmedia_sdp_session *initial,
 				  const pjmedia_sdp_session *offer,
 				  pjmedia_sdp_session **p_answer)
@@ -914,7 +933,12 @@ static pj_status_t create_answer( pj_pool_t *pool,
 		media_used[j] == 0)
 	    {
 		/* See if it has matching codec. */
-		status = match_offer(pool, om, im, &am);
+		if (prefer_remote_codec_order) {
+		    status = match_offer(pool, om, im, im, &am);
+		} else {
+		    status = match_offer(pool, im, om, im, &am);
+		}
+
 		if (status == PJ_SUCCESS) {
 		    /* Mark media as used. */
 		    media_used[j] = 1;
@@ -991,7 +1015,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     } else {
 	pjmedia_sdp_session *answer = NULL;
 
-	status = create_answer(pool, neg->neg_local_sdp, neg->neg_remote_sdp,
+	status = create_answer(pool, neg->prefer_remote_codec_order, 
+			       neg->neg_local_sdp, neg->neg_remote_sdp,
 			       &answer);
 	if (status == PJ_SUCCESS) {
 	    pj_uint32_t active_ver;
