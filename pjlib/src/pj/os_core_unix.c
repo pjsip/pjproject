@@ -594,10 +594,13 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
     return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
 #else
     PJ_CHECK_STACK();
-    if (usleep(msec * 1000) == 0)
-	return PJ_SUCCESS;
 
-    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    pj_set_os_error(0);
+
+    usleep(msec * 1000);
+
+    return pj_get_os_error();
+;
 #endif	/* PJ_RTEMS */
 }
 
