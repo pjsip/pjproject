@@ -163,6 +163,16 @@ PJ_DECL(pj_status_t) pj_file_setpos(pj_oshandle_t fd,
 PJ_DECL(pj_status_t) pj_file_getpos(pj_oshandle_t fd,
                                     pj_off_t *pos);
 
+/**
+ * Flush file buffers.
+ *
+ * @param fd		The file descriptor.
+ *
+ * @return		PJ_SUCCESS or the appropriate error code on error.
+ */
+PJ_DECL(pj_status_t) pj_file_flush(pj_oshandle_t fd);
+
+
 /** @} */
 
 
