@@ -204,3 +204,17 @@ PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
+{
+    BOOL rc;
+
+    rc = FlushFileBuffers(fd);
+
+    if (!rc) {
+	DWORD dwStatus = GetLastError();
+        if (dwStatus != 0)
+            return PJ_RETURN_OS_ERROR(dwStatus);
+    }
+
+    return PJ_SUCCESS;
+}

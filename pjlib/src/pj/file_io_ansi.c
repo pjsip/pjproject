@@ -154,4 +154,14 @@ PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
+{
+    int rc;
 
+    rc = fflush((FILE*)fd);
+    if (rc == EOF) {
+	return PJ_RETURN_OS_ERROR(errno);
+    }
+
+    return PJ_SUCCESS;
+}
