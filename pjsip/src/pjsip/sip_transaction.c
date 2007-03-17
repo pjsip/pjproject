@@ -1199,7 +1199,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     /* Determine whether reliable transport should be used initially.
      * This will be updated whenever transport has changed.
      */
-    status = pjsip_get_request_addr(tdata, &dst_info);
+    status = pjsip_get_request_dest(tdata, &dst_info);
     if (status != PJ_SUCCESS) {
 	tsx_destroy(tsx);
 	return status;
