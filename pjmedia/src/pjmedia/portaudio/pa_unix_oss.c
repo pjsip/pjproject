@@ -39,6 +39,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <alloca.h>

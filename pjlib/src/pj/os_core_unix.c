@@ -1165,7 +1165,7 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
 PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
 {
     enum { RETRY = 4 };
-    int status;
+    int status = 0;
     unsigned retry;
 
     PJ_CHECK_STACK();
