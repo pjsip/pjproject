@@ -639,7 +639,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
      */
     first_route_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
-	target_uri = (const pjsip_uri*)&first_route_hdr->name_addr;
+	target_uri = first_route_hdr->name_addr.uri;
     } else {
 	target_uri = tdata->msg->line.req.uri;
     }
