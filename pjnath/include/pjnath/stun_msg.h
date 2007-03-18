@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_STUN_MSG_H__
-#define __PJLIB_UTIL_STUN_MSG_H__
+#ifndef __PJNATH_STUN_MSG_H__
+#define __PJNATH_STUN_MSG_H__
 
 /**
  * @file stun_msg.h
  * @brief STUN message components.
  */
 
-#include <pjlib-util/types.h>
+#include <pjnath/types.h>
 #include <pj/sock.h>
 
 
@@ -33,9 +33,9 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJLIB_UTIL_STUN_MSG STUN Message Representation and Parsing
+ * @defgroup PJNATH_STUN_MSG STUN Message Representation and Parsing
  * @brief Low-level representation and parsing of STUN messages.
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJNATH_STUN
  * @{
  */
 
@@ -529,13 +529,9 @@ typedef struct pj_stun_sockaddr_attr
     pj_bool_t		xor_ed;
 
     /**
-     * The socket address (as a union)
+     * The socket address
      */
-    union {
-	pj_sockaddr	    addr;   /**< Generic socket address.    */
-	pj_sockaddr_in	    ipv4;   /**< IPv4 socket address.	    */
-	pj_sockaddr_in6	    ipv6;   /**< IPv6 socket address.	    */
-    } addr;
+    pj_sockaddr		sockaddr;
 
 } pj_stun_sockaddr_attr;
 
@@ -1535,5 +1531,5 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_STUN_MSG_H__ */
+#endif	/* __PJNATH_STUN_MSG_H__ */
 

@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &sess_on_send_msg;
     sess_cb.on_rx_request = &sess_on_rx_request;
-    status = pj_stun_session_create(si->endpt, "bind%p", &sess_cb, PJ_FALSE,
+    status = pj_stun_session_create(si->cfg, "bind%p", &sess_cb, PJ_FALSE,
 				    &bu->session);
     if (status != PJ_SUCCESS) {
 	pj_stun_usage_destroy(bu->usage);

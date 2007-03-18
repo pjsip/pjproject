@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_transaction.h>
-#include <pjlib-util/errno.h>
+#include <pjnath/stun_transaction.h>
+#include <pjnath/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
@@ -31,7 +31,7 @@
 struct pj_stun_client_tsx
 {
     char		 obj_name[PJ_MAX_OBJ_NAME];
-    pj_stun_endpoint	*endpt;
+    pj_stun_config	*cfg;
     pj_stun_tsx_cb	 cb;
     void		*user_data;
 
@@ -63,18 +63,18 @@ static void stun_perror(pj_stun_client_tsx *tsx, const char *title,
 /*
  * Create a STUN client transaction.
  */
-PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_endpoint *endpt,
+PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
 					      pj_pool_t *pool,
 					      const pj_stun_tsx_cb *cb,
 					      pj_stun_client_tsx **p_tsx)
 {
     pj_stun_client_tsx *tsx;
 
-    PJ_ASSERT_RETURN(endpt && cb && p_tsx, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg && cb && p_tsx, PJ_EINVAL);
     PJ_ASSERT_RETURN(cb->on_send_msg, PJ_EINVAL);
 
     tsx = PJ_POOL_ZALLOC_T(pool, pj_stun_client_tsx);
-    tsx->endpt = endpt;
+    tsx->cfg = cfg;
     pj_memcpy(&tsx->cb, cb, sizeof(*cb));
 
     tsx->timer.cb = &retransmit_timer_callback;
@@ -97,7 +97,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx)
     PJ_ASSERT_RETURN(tsx, PJ_EINVAL);
 
     if (tsx->timer.id != 0) {
-	pj_timer_heap_cancel(tsx->endpt->timer_heap, &tsx->timer);
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
 	tsx->timer.id = 0;
     }
     return PJ_SUCCESS;
@@ -149,7 +149,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	/* Calculate retransmit/timeout delay */
 	if (tsx->transmit_count == 0) {
 	    tsx->retransmit_time.sec = 0;
-	    tsx->retransmit_time.msec = tsx->endpt->rto_msec;
+	    tsx->retransmit_time.msec = tsx->cfg->rto_msec;
 
 	} else if (tsx->transmit_count < PJ_STUN_MAX_RETRANSMIT_COUNT-1) {
 	    unsigned msec;
@@ -168,7 +168,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	 * cancel it (as opposed to when schedule_timer() failed we cannot
 	 * cancel transmission).
 	 */;
-	status = pj_timer_heap_schedule(tsx->endpt->timer_heap, &tsx->timer,
+	status = pj_timer_heap_schedule(tsx->cfg->timer_heap, &tsx->timer,
 					&tsx->retransmit_time);
 	if (status != PJ_SUCCESS) {
 	    tsx->timer.id = 0;
@@ -182,7 +182,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
     status = tsx->cb.on_send_msg(tsx, tsx->last_pkt, tsx->last_pkt_size);
     if (status != PJ_SUCCESS) {
 	if (tsx->timer.id != 0) {
-	    pj_timer_heap_cancel(tsx->endpt->timer_heap, &tsx->timer);
+	    pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
 	    tsx->timer.id = 0;
 	}
 	stun_perror(tsx, "STUN error sending message", status);
@@ -235,7 +235,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
 	tsx->complete = PJ_TRUE;
 	if (tsx->cb.on_complete) {
-	    tsx->cb.on_complete(tsx, PJLIB_UTIL_ESTUNNOTRESPOND, NULL);
+	    tsx->cb.on_complete(tsx, PJNATH_ESTUNNOTRESPOND, NULL);
 	}
 	return;
     }
@@ -268,7 +268,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     {
 	PJ_LOG(4,(tsx->obj_name, 
 		  "STUN rx_msg() error: not response message"));
-	return PJLIB_UTIL_ESTUNNOTRESPONSE;
+	return PJNATH_ESTUNNOTRESPONSE;
     }
 
 
@@ -276,7 +276,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
      * We can cancel retransmit timer now.
      */
     if (tsx->timer.id) {
-	pj_timer_heap_cancel(tsx->endpt->timer_heap, &tsx->timer);
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
 	tsx->timer.id = 0;
     }
 
@@ -300,7 +300,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     if (err_attr == NULL) {
 	status = PJ_SUCCESS;
     } else {
-	status = PJLIB_UTIL_ESTUNTSXFAILED;
+	status = PJNATH_ESTUNTSXFAILED;
     }
 
     /* Call callback */

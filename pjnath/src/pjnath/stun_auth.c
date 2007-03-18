@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_auth.h>
-#include <pjlib-util/errno.h>
+#include <pjnath/stun_auth.h>
+#include <pjnath/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/sha1.h>
 #include <pj/assert.h>
@@ -159,7 +159,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_UNAUTHORIZED, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJLIB_UTIL_ESTUNMSGINT;
+	return PJNATH_ESTUNMSGINT;
     }
 
     /* Next check that USERNAME is present */
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJLIB_UTIL_ESTUNNOUSERNAME;
+	return PJNATH_ESTUNNOUSERNAME;
     }
 
     /* Get REALM, if any */
@@ -201,7 +201,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_UNKNOWN_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJLIB_UTIL_ESTUNUSERNAME;
+	return PJNATH_ESTUNUSERNAME;
     }
 
 
@@ -216,7 +216,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJLIB_UTIL_ESTUNNOREALM;
+	return PJNATH_ESTUNNOREALM;
 
     } else if (realm.slen != 0 && arealm != NULL) {
 	/* We want long term, and REALM is present */
@@ -227,7 +227,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJLIB_UTIL_ESTUNNONCE;
+	    return PJNATH_ESTUNNONCE;
 	}
 
 	/* Verify REALM matches */
@@ -237,7 +237,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJLIB_UTIL_ESTUNNOREALM;
+	    return PJNATH_ESTUNNOREALM;
 	}
 
 	/* Valid case, will validate the message integrity later */
@@ -260,7 +260,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJLIB_UTIL_ESTUNNONCE;
+	    return PJNATH_ESTUNNONCE;
 	}
     }
 
@@ -286,7 +286,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_STALE_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJLIB_UTIL_ESTUNNONCE;
+	    return PJNATH_ESTUNNONCE;
 	}
     }
 
@@ -331,7 +331,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_INTEGRITY_CHECK_FAILURE,
 			     NULL, &realm, &nonce, p_response);
 	}
-	return PJLIB_UTIL_ESTUNMSGINT;
+	return PJNATH_ESTUNMSGINT;
     }
 
     /* Everything looks okay! */

@@ -786,7 +786,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 		     addr_len && p_transport, PJ_EINVAL);
 
     /* Check that address is a sockaddr_in */
-    PJ_ASSERT_RETURN(rem_addr->sa_family == PJ_AF_INET &&
+    PJ_ASSERT_RETURN(rem_addr->addr.sa_family == PJ_AF_INET &&
 		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
 
 

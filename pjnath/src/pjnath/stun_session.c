@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_session.h>
+#include <pjnath/stun_session.h>
 #include <pjlib.h>
 
 struct pj_stun_session
 {
-    pj_stun_endpoint	*endpt;
+    pj_stun_config	*cfg;
     pj_pool_t		*pool;
     pj_mutex_t		*mutex;
     pj_stun_session_cb	 cb;
@@ -119,7 +119,7 @@ static pj_status_t create_tdata(pj_stun_session *sess,
     pj_stun_tx_data *tdata;
 
     /* Create pool and initialize basic tdata attributes */
-    pool = pj_pool_create(sess->endpt->pf, "tdata%p", 
+    pool = pj_pool_create(sess->cfg->pf, "tdata%p", 
 			  TDATA_POOL_SIZE, TDATA_POOL_INC, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
@@ -170,7 +170,7 @@ static void destroy_tdata(pj_stun_tx_data *tdata)
 	tdata->client_tsx = NULL;
     }
     if (tdata->res_timer.id != PJ_FALSE) {
-	pj_timer_heap_cancel(tdata->sess->endpt->timer_heap, 
+	pj_timer_heap_cancel(tdata->sess->cfg->timer_heap, 
 			     &tdata->res_timer);
 	tdata->res_timer.id = PJ_FALSE;
 	pj_list_erase(tdata);
@@ -223,8 +223,8 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     pj_status_t status = 0;
 
     /* The server SHOULD include a SERVER attribute in all responses */
-    if (PJ_STUN_IS_RESPONSE(msg->hdr.type) ||
-	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type)) 
+    if (sess->srv_name.slen && (PJ_STUN_IS_RESPONSE(msg->hdr.type) ||
+			        PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))) 
     {
 	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER,
 				    &sess->srv_name);
@@ -300,7 +300,7 @@ static pj_status_t tsx_on_send_msg(pj_stun_client_tsx *tsx,
 
 /* **************************************************************************/
 
-PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_endpoint *endpt,
+PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
 					    const char *name,
 					    const pj_stun_session_cb *cb,
 					    pj_bool_t fingerprint,
@@ -310,16 +310,16 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_endpoint *endpt,
     pj_stun_session *sess;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(endpt && cb && p_sess, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg && cb && p_sess, PJ_EINVAL);
 
     if (name==NULL)
 	name = "sess%p";
 
-    pool = pj_pool_create(endpt->pf, name, 4000, 4000, NULL);
+    pool = pj_pool_create(cfg->pf, name, 4000, 4000, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
     sess = PJ_POOL_ZALLOC_T(pool, pj_stun_session);
-    sess->endpt = endpt;
+    sess->cfg = cfg;
     sess->pool = pool;
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
     sess->use_fingerprint = fingerprint;
@@ -383,8 +383,11 @@ PJ_DEF(void*) pj_stun_session_get_user_data(pj_stun_session *sess)
 PJ_DEF(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
 						    const pj_str_t *srv_name)
 {
-    PJ_ASSERT_RETURN(sess && srv_name, PJ_EINVAL);
-    pj_strdup(sess->pool, &sess->srv_name, srv_name);
+    PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+    if (srv_name)
+	pj_strdup(sess->pool, &sess->srv_name, srv_name);
+    else
+	sess->srv_name.slen = 0;
     return PJ_SUCCESS;
 }
 
@@ -489,14 +492,12 @@ static void dump_tx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
     const pj_sockaddr *dst = (const pj_sockaddr*)addr;
     char buf[512];
     
-    if (dst->sa_family == PJ_AF_INET) {
-	const pj_sockaddr_in *dst4 = (const pj_sockaddr_in*)dst;
-	dst_name = pj_inet_ntoa(dst4->sin_addr);
-	dst_port = pj_ntohs(dst4->sin_port);
-    } else if (dst->sa_family == PJ_AF_INET6) {
-	const pj_sockaddr_in6 *dst6 = (const pj_sockaddr_in6*)dst;
+    if (dst->addr.sa_family == PJ_AF_INET) {
+	dst_name = pj_inet_ntoa(dst->ipv4.sin_addr);
+	dst_port = pj_ntohs(dst->ipv4.sin_port);
+    } else if (dst->addr.sa_family == PJ_AF_INET6) {
 	dst_name = "IPv6";
-	dst_port = pj_ntohs(dst6->sin6_port);
+	dst_port = pj_ntohs(dst->ipv6.sin6_port);
     } else {
 	LOG_ERR_(sess, "Invalid address family", PJ_EINVAL);
 	return;
@@ -558,7 +559,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     if (PJ_STUN_IS_REQUEST(tdata->msg->hdr.type)) {
 
 	/* Create STUN client transaction */
-	status = pj_stun_client_tsx_create(sess->endpt, tdata->pool, 
+	status = pj_stun_client_tsx_create(sess->cfg, tdata->pool, 
 					   &tsx_cb, &tdata->client_tsx);
 	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 	pj_stun_client_tsx_set_data(tdata->client_tsx, (void*)tdata);
@@ -592,10 +593,10 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	    pj_timer_entry_init(&tdata->res_timer, PJ_TRUE, tdata, 
 				&on_cache_timeout);
 
-	    timeout.sec = sess->endpt->res_cache_msec / 1000;
-	    timeout.msec = sess->endpt->res_cache_msec % 1000;
+	    timeout.sec = sess->cfg->res_cache_msec / 1000;
+	    timeout.msec = sess->cfg->res_cache_msec % 1000;
 
-	    status = pj_timer_heap_schedule(sess->endpt->timer_heap, 
+	    status = pj_timer_heap_schedule(sess->cfg->timer_heap, 
 					    &tdata->res_timer,
 					    &timeout);
 	    if (status != PJ_SUCCESS) {
@@ -829,7 +830,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && packet && pkt_size, PJ_EINVAL);
 
-    tmp_pool = pj_pool_create(sess->endpt->pf, "tmpstun", 1024, 1024, NULL);
+    tmp_pool = pj_pool_create(sess->cfg->pf, "tmpstun", 1024, 1024, NULL);
     if (!tmp_pool)
 	return PJ_ENOMEM;
 

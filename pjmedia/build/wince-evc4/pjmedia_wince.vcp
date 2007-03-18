@@ -76,8 +76,8 @@ BSC32=bscmake.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "output/pjmedia_emulatorDbg"
-# PROP Intermediate_Dir "output/pjmedia_emulatorDbg"
+# PROP Output_Dir "./output/pjmedia_emulatorDbg"
+# PROP Intermediate_Dir "./output/pjmedia_emulatorDbg"
 # PROP CPU_ID "{32E52003-403E-442D-BE48-DE10F8C6131D}"
 # PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
 # PROP Target_Dir ""

@@ -19,6 +19,7 @@
 #ifndef __STUN_SERVER_H__
 #define __STUN_SERVER_H__
 
+#include <pjnath.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
 
@@ -30,7 +31,7 @@ typedef struct pj_stun_server pj_stun_server;
 typedef struct pj_stun_server_info
 {
     pj_pool_factory	*pf;
-    pj_stun_endpoint	*endpt;
+    pj_stun_config	*cfg;
     pj_ioqueue_t	*ioqueue;
     pj_timer_heap_t	*timer_heap;
     unsigned		 thread_cnt;

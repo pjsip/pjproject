@@ -16,9 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_msg.h>
+#include <pjnath/stun_msg.h>
+#include <pjnath/errno.h>
 #include <pjlib-util/crc32.h>
-#include <pjlib-util/errno.h>
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/md5.h>
 #include <pj/assert.h>
@@ -558,7 +558,7 @@ pj_stun_sockaddr_attr_create(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
 
-    pj_memcpy(&attr->addr, addr, addr_len);
+    pj_memcpy(&attr->sockaddr, addr, addr_len);
     attr->xor_ed = xor_ed;
 
     *p_attr = attr;
@@ -606,19 +606,19 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
 
     /* Check that the attribute length is valid */
     if (attr->hdr.length != STUN_GENERIC_IP_ADDR_LEN)
-	return PJLIB_UTIL_ESTUNINATTRLEN;
+	return PJNATH_ESTUNINATTRLEN;
 
     /* Check address family */
     val = *(pj_uint8_t*)(buf + ATTR_HDR_LEN + 1);
 
     /* Check address family is valid (only supports ipv4 for now) */
     if (val != 1)
-	return PJLIB_UTIL_ESTUNIPV6NOTSUPP;
+	return PJNATH_ESTUNIPV6NOTSUPP;
 
     /* Get port and address */
-    pj_sockaddr_in_init(&attr->addr.ipv4, NULL, 0);
-    pj_memcpy(&attr->addr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
-    pj_memcpy(&attr->addr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
+    pj_sockaddr_in_init(&attr->sockaddr.ipv4, NULL, 0);
+    pj_memcpy(&attr->sockaddr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
+    pj_memcpy(&attr->sockaddr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
 
     /* Done */
     *p_attr = attr;
@@ -644,22 +644,22 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 
     /* Check that the attribute length is valid */
     if (attr->hdr.length != STUN_GENERIC_IP_ADDR_LEN)
-	return PJLIB_UTIL_ESTUNINATTRLEN;
+	return PJNATH_ESTUNINATTRLEN;
 
     /* Check address family */
     val = *(pj_uint8_t*)(buf + ATTR_HDR_LEN + 1);
 
     /* Check address family is valid (only supports ipv4 for now) */
     if (val != 1)
-	return PJLIB_UTIL_ESTUNIPV6NOTSUPP;
+	return PJNATH_ESTUNIPV6NOTSUPP;
 
     /* Get port and address */
-    pj_sockaddr_in_init(&attr->addr.ipv4, NULL, 0);
-    pj_memcpy(&attr->addr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
-    pj_memcpy(&attr->addr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
+    pj_sockaddr_in_init(&attr->sockaddr.ipv4, NULL, 0);
+    pj_memcpy(&attr->sockaddr.ipv4.sin_port, buf+ATTR_HDR_LEN+2, 2);
+    pj_memcpy(&attr->sockaddr.ipv4.sin_addr, buf+ATTR_HDR_LEN+4, 4);
 
-    attr->addr.ipv4.sin_port ^= 0x2112;
-    attr->addr.ipv4.sin_addr.s_addr ^= pj_htonl(0x2112A442);
+    attr->sockaddr.ipv4.sin_port ^= pj_htons(0x2112);
+    attr->sockaddr.ipv4.sin_addr.s_addr ^= pj_htonl(0x2112A442);
 
     /* Done */
     *p_attr = attr;
@@ -693,17 +693,17 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
     *buf++ = '\0';
 
     /* Family (IPv4 only for now) */
-    PJ_ASSERT_RETURN(ca->addr.addr.sa_family == PJ_AF_INET, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ca->sockaddr.addr.sa_family == PJ_AF_INET, PJ_EINVAL);
     *buf++ = 1;
 
     if (ca->xor_ed) {
 	pj_uint32_t addr;
 	pj_uint16_t port;
 
-	addr = ca->addr.ipv4.sin_addr.s_addr;
-	port = ca->addr.ipv4.sin_port;
+	addr = ca->sockaddr.ipv4.sin_addr.s_addr;
+	port = ca->sockaddr.ipv4.sin_port;
 
-	port ^= 0x2112;
+	port ^= pj_htons(0x2112);
 	addr ^= pj_htonl(0x2112A442);
 
 	/* Port */
@@ -716,11 +716,11 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
 
     } else {
 	/* Port */
-	pj_memcpy(buf, &ca->addr.ipv4.sin_port, 2);
+	pj_memcpy(buf, &ca->sockaddr.ipv4.sin_port, 2);
 	buf += 2;
 
 	/* Address */
-	pj_memcpy(buf, &ca->addr.ipv4.sin_addr, 4);
+	pj_memcpy(buf, &ca->sockaddr.ipv4.sin_addr, 4);
 	buf += 4;
     }
 
@@ -892,7 +892,7 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
 
     /* Check that the attribute length is valid */
     if (attr->hdr.length != ATTR_HDR_LEN)
-	return PJLIB_UTIL_ESTUNINATTRLEN;
+	return PJNATH_ESTUNINATTRLEN;
 
     /* Done */
     *p_attr = attr;
@@ -992,7 +992,7 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
 
     /* Check that the attribute length is valid */
     if (attr->hdr.length != STUN_UINT_LEN)
-	return PJLIB_UTIL_ESTUNINATTRLEN;
+	return PJNATH_ESTUNINATTRLEN;
 
     /* Done */
     *p_attr = attr;
@@ -1088,7 +1088,7 @@ static pj_status_t decode_msgint_attr(pj_pool_t *pool,
 
     /* Check that the attribute length is valid */
     if (attr->hdr.length != STUN_MSG_INTEGRITY_LEN)
-	return PJLIB_UTIL_ESTUNINATTRLEN;
+	return PJNATH_ESTUNINATTRLEN;
 
     /* Done */
     *p_attr = attr;
@@ -1563,18 +1563,18 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
     PJ_ASSERT_RETURN(pdu, PJ_EINVAL);
 
     if (pdu_len < sizeof(pj_stun_msg_hdr))
-	return PJLIB_UTIL_ESTUNINMSGLEN;
+	return PJNATH_ESTUNINMSGLEN;
 
     /* First byte of STUN message is always 0x00 or 0x01. */
     if (*pdu != 0x00 && *pdu != 0x01)
-	return PJLIB_UTIL_ESTUNINMSGTYPE;
+	return PJNATH_ESTUNINMSGTYPE;
 
     /* Check the PDU length */
     msg_len = GET_VAL16(pdu, 2);
     if ((msg_len + 20 > pdu_len) || 
 	((options & PJ_STUN_IS_DATAGRAM) && msg_len + 20 != pdu_len))
     {
-	return PJLIB_UTIL_ESTUNINMSGLEN;
+	return PJNATH_ESTUNINMSGLEN;
     }
 
     /* If magic is set, then there is great possibility that this is
@@ -1589,13 +1589,13 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
 	    pj_uint32_t crc;
 
 	    if (attr_len != 4)
-		return PJLIB_UTIL_ESTUNINATTRLEN;
+		return PJNATH_ESTUNINATTRLEN;
 
 	    crc = pj_crc32_calc(pdu, msg_len + 20);
 	    crc ^= STUN_XOR_FINGERPRINT;
 
 	    if (crc != fingerprint)
-		return PJLIB_UTIL_ESTUNFINGERPRINT;
+		return PJNATH_ESTUNFINGERPRINT;
 	}
     }
 
@@ -1618,7 +1618,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_response, PJ_EINVAL);
 
     PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(msg_type), 
-		     PJLIB_UTIL_ESTUNINMSGTYPE);
+		     PJNATH_ESTUNINMSGTYPE);
 
     /* Create response or error response */
     if (err_code)
@@ -1728,7 +1728,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 					    PJ_STUN_SC_BAD_REQUEST, 
 					    &err_msg, p_response);
 	    }
-	    return PJLIB_UTIL_ESTUNINATTRLEN;
+	    return PJNATH_ESTUNINATTRLEN;
 	}
 
 	/* Get the attribute descriptor */
@@ -1757,7 +1757,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		    }
 		}
 
-		return PJLIB_UTIL_ESTUNUNKNOWNATTR;
+		return PJNATH_ESTUNUNKNOWNATTR;
 	    }
 
 	} else {
@@ -1805,7 +1805,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return PJLIB_UTIL_ESTUNDUPATTR;
+		    return PJNATH_ESTUNDUPATTR;
 		}
 		has_msg_int = PJ_TRUE;
 
@@ -1819,7 +1819,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return PJLIB_UTIL_ESTUNDUPATTR;
+		    return PJNATH_ESTUNDUPATTR;
 		}
 		has_fingerprint = PJ_TRUE;
 	    } else {
@@ -1833,8 +1833,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return has_fingerprint ? PJLIB_UTIL_ESTUNFINGERPOS :
-					     PJLIB_UTIL_ESTUNMSGINTPOS;
+		    return has_fingerprint ? PJNATH_ESTUNFINGERPOS :
+					     PJNATH_ESTUNMSGINTPOS;
 		}
 	    }
 
@@ -1848,7 +1848,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 						PJ_STUN_SC_BAD_REQUEST,
 						&e, p_response);
 		}
-		return PJLIB_UTIL_ESTUNTOOMANYATTR;
+		return PJNATH_ESTUNTOOMANYATTR;
 	    }
 
 	    /* Add the attribute */
@@ -2027,12 +2027,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	const pj_stun_attr_hdr *attr_hdr = msg->attr[i];
 
 	/* There mustn't any attribute after FINGERPRINT */
-	PJ_ASSERT_RETURN(afingerprint == NULL, PJLIB_UTIL_ESTUNFINGERPOS);
+	PJ_ASSERT_RETURN(afingerprint == NULL, PJNATH_ESTUNFINGERPOS);
 
 	if (attr_hdr->type == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
 	    /* There mustn't be MESSAGE-INTEGRITY before */
 	    PJ_ASSERT_RETURN(amsgint == NULL, 
-			     PJLIB_UTIL_ESTUNMSGINTPOS);
+			     PJNATH_ESTUNMSGINTPOS);
 	    amsgint = (pj_stun_msgint_attr*) attr_hdr;
 
 	} else if (attr_hdr->type == PJ_STUN_ATTR_FINGERPRINT) {
@@ -2070,13 +2070,13 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	if (i < msg->attr_count-2) {
 	    /* Should not happen for message generated by us */
 	    pj_assert(PJ_FALSE);
-	    return PJLIB_UTIL_ESTUNMSGINTPOS;
+	    return PJNATH_ESTUNMSGINTPOS;
 
 	} else if (i == msg->attr_count-2)  {
 	    if (msg->attr[i+1]->type != PJ_STUN_ATTR_FINGERPRINT) {
 		/* Should not happen for message generated by us */
 		pj_assert(PJ_FALSE);
-		return PJLIB_UTIL_ESTUNMSGINTPOS;
+		return PJNATH_ESTUNMSGINTPOS;
 	    } else {
 		afingerprint = (pj_stun_fingerprint_attr*) msg->attr[i+1];
 	    }
@@ -2086,7 +2086,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	if (auname == NULL) {
 	    /* Should not happen for message generated by us */
 	    pj_assert(PJ_FALSE);
-	    return PJLIB_UTIL_ESTUNNOUSERNAME;
+	    return PJNATH_ESTUNNOUSERNAME;
 	}
 
 	/* Password must be specified */

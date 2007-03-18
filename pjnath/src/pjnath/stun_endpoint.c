@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_endpoint.h>
-#include <pjlib-util/errno.h>
+#include <pjnath/stun_endpoint.h>
+#include <pjnath/errno.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 
@@ -25,14 +25,14 @@
 /*
  * Create a STUN endpoint instance.
  */
-PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
-					     unsigned options,
-					     pj_ioqueue_t *ioqueue,
-					     pj_timer_heap_t *timer_heap,
-					     pj_stun_endpoint **p_endpt)
+PJ_DEF(pj_status_t) pj_stun_config_create( pj_pool_factory *factory,
+					   unsigned options,
+					   pj_ioqueue_t *ioqueue,
+					   pj_timer_heap_t *timer_heap,
+					   pj_stun_config **p_endpt)
 {
     pj_pool_t *pool;
-    pj_stun_endpoint *endpt;
+    pj_stun_config *endpt;
 
     PJ_ASSERT_RETURN(factory && p_endpt, PJ_EINVAL);
 
@@ -40,7 +40,7 @@ PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
     if (!pool)
 	return PJ_ENOMEM;
     
-    endpt = PJ_POOL_ZALLOC_T(pool, pj_stun_endpoint);
+    endpt = PJ_POOL_ZALLOC_T(pool, pj_stun_config);
     endpt->pool = pool;
     endpt->pf = factory;
     endpt->options = options;
@@ -58,7 +58,7 @@ PJ_DEF(pj_status_t) pj_stun_endpoint_create( pj_pool_factory *factory,
 /*
  * Destroy STUN endpoint instance.
  */
-PJ_DEF(pj_status_t) pj_stun_endpoint_destroy(pj_stun_endpoint *endpt)
+PJ_DEF(pj_status_t) pj_stun_config_destroy(pj_stun_config *endpt)
 {
     PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
 

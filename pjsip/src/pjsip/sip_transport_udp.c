@@ -469,7 +469,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->base.key.type = PJSIP_TRANSPORT_UDP;
 
     /* Remote address is left zero (except the family) */
-    tp->base.key.rem_addr.sa_family = PJ_AF_INET;
+    tp->base.key.rem_addr.addr.sa_family = PJ_AF_INET;
 
     /* Type name. */
     tp->base.type_name = "UDP";

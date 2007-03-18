@@ -69,7 +69,7 @@ static pj_status_t client_handle_stun_msg(struct turn_client *client,
 struct turn_usage
 {
     pj_pool_factory	*pf;
-    pj_stun_endpoint	*endpt;
+    pj_stun_config	*cfg;
     pj_ioqueue_t	*ioqueue;
     pj_timer_heap_t	*timer_heap;
     pj_pool_t		*pool;
@@ -165,7 +165,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     tu->pool = pool;
     tu->type = type;
     tu->pf = si->pf;
-    tu->endpt = si->endpt;
+    tu->cfg = si->cfg;
     tu->ioqueue = si->ioqueue;
     tu->timer_heap = si->timer_heap;
     tu->next_port = START_PORT;
@@ -197,7 +197,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &tu_sess_on_send_msg;
     sess_cb.on_rx_request = &tu_sess_on_rx_request;
-    status = pj_stun_session_create(si->endpt, "turns%p", &sess_cb, PJ_FALSE,
+    status = pj_stun_session_create(si->cfg, "turns%p", &sess_cb, PJ_FALSE,
 				    &tu->default_session);
     if (status != PJ_SUCCESS) {
 	pj_stun_usage_destroy(tu->usage);
@@ -207,6 +207,8 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     sd = PJ_POOL_ZALLOC_T(pool, struct session_data);
     sd->tu = tu;
     pj_stun_session_set_user_data(tu->default_session, sd);
+
+    pj_stun_session_set_server_name(tu->default_session, NULL);
 
     /* Create mutex */
     status = pj_mutex_create_recursive(pool, "turn%p", &tu->mutex);
@@ -620,7 +622,7 @@ static pj_status_t client_create(struct turn_usage *tu,
     sess_cb.on_send_msg = &client_sess_on_send_msg;
     sess_cb.on_rx_request = &client_sess_on_rx_msg;
     sess_cb.on_rx_indication = &client_sess_on_rx_msg;
-    status = pj_stun_session_create(tu->endpt, client->obj_name, 
+    status = pj_stun_session_create(tu->cfg, client->obj_name, 
 				    &sess_cb, PJ_FALSE,
 				    &client->session);
     if (status != PJ_SUCCESS) {

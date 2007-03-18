@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_STUN_AUTH_H__
-#define __PJLIB_UTIL_STUN_AUTH_H__
+#ifndef __PJNATH_STUN_AUTH_H__
+#define __PJNATH_STUN_AUTH_H__
 
 /**
  * @file stun_auth.h
  * @brief STUN authentication.
  */
 
-#include <pjlib-util/stun_msg.h>
+#include <pjnath/stun_msg.h>
 
 
 PJ_BEGIN_DECL
@@ -32,8 +32,8 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJLIB_UTIL_STUN_AUTH STUN Authentication
- * @ingroup PJLIB_UTIL_STUN
+ * @defgroup PJNATH_STUN_AUTH STUN Authentication
+ * @ingroup PJNATH_STUN
  * @{
  */
 
@@ -271,5 +271,5 @@ void pj_stun_calc_md5_key(pj_uint8_t digest[16],
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_STUN_AUTH_H__ */
+#endif	/* __PJNATH_STUN_AUTH_H__ */
 

@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_STUN_ENDPOINT_H__
-#define __PJLIB_UTIL_STUN_ENDPOINT_H__
+#ifndef __PJNATH_STUN_CONFIG_H__
+#define __PJNATH_STUN_CONFIG_H__
 
 /**
- * @file stun_endpoint.h
+ * @file stun_config.h
  * @brief STUN endpoint.
  */
 
-#include <pjlib-util/stun_msg.h>
+#include <pjnath/stun_msg.h>
 
 
 PJ_BEGIN_DECL
@@ -32,9 +32,9 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJLIB_UTIL_STUN_ENDPOINT STUN Endpoint
+ * @defgroup PJNATH_STUN_ENDPOINT STUN Endpoint
  * @brief Management of incoming and outgoing STUN transactions.
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJNATH_STUN
  * @{
  */
 
@@ -43,7 +43,7 @@ PJ_BEGIN_DECL
  * server STUN transactions, and it needs to be initialized before application
  * can send or receive STUN messages.
  */
-typedef struct pj_stun_endpoint
+typedef struct pj_stun_config
 {
     /**
      * Pool factory to be used by the STUN endpoint and all objects created
@@ -86,23 +86,23 @@ typedef struct pj_stun_endpoint
      */
     unsigned		 res_cache_msec;
 
-} pj_stun_endpoint;
+} pj_stun_config;
 
 
 
 /**
  * Create a STUN endpoint instance.
  */
-PJ_DECL(pj_status_t) pj_stun_endpoint_create(pj_pool_factory *factory,
-					     unsigned options,
-					     pj_ioqueue_t *ioqueue,
-					     pj_timer_heap_t *timer_heap,
-					     pj_stun_endpoint **p_endpt);
+PJ_DECL(pj_status_t) pj_stun_config_create(pj_pool_factory *factory,
+					   unsigned options,
+					   pj_ioqueue_t *ioqueue,
+					   pj_timer_heap_t *timer_heap,
+					   pj_stun_config **p_endpt);
 
 /**
  * Destroy STUN endpoint instance.
  */
-PJ_DECL(pj_status_t) pj_stun_endpoint_destroy(pj_stun_endpoint *endpt);
+PJ_DECL(pj_status_t) pj_stun_config_destroy(pj_stun_config *endpt);
 
 
 /**
@@ -113,5 +113,5 @@ PJ_DECL(pj_status_t) pj_stun_endpoint_destroy(pj_stun_endpoint *endpt);
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_STUN_ENDPOINT_H__ */
+#endif	/* __PJNATH_STUN_CONFIG_H__ */
 

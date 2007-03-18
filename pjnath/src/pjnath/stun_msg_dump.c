@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/stun_msg.h>
-#include <pjlib-util/errno.h>
+#include <pjnath/stun_msg.h>
+#include <pjnath/errno.h>
 #include <pj/assert.h>
 #include <pj/string.h>
 
@@ -80,13 +80,13 @@ static int print_attr(char *buffer, unsigned length,
 
 	    attr = (const pj_stun_sockaddr_attr*)ahdr;
 
-	    if (attr->addr.addr.sa_family == PJ_AF_INET) {
+	    if (attr->sockaddr.addr.sa_family == PJ_AF_INET) {
 		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv4 addr=%s:%d\n",
-				       pj_inet_ntoa(attr->addr.ipv4.sin_addr),
-				       pj_ntohs(attr->addr.ipv4.sin_port));
+				       pj_inet_ntoa(attr->sockaddr.ipv4.sin_addr),
+				       pj_ntohs(attr->sockaddr.ipv4.sin_port));
 
-	    } else if (attr->addr.addr.sa_family == PJ_AF_INET6) {
+	    } else if (attr->sockaddr.addr.sa_family == PJ_AF_INET6) {
 		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv6 addr present\n");
 	    } else {

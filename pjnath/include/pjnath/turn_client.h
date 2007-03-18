@@ -16,24 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_TURN_CLIENT_H__
-#define __PJLIB_UTIL_TURN_CLIENT_H__
+#ifndef __PJNATH_TURN_CLIENT_H__
+#define __PJNATH_TURN_CLIENT_H__
 
 /**
  * @file turn_client.h
  * @brief TURN client session.
  */
 
-#include <pjlib-util/stun_msg.h>
+#include <pjnath/stun_msg.h>
 
 
 PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJLIB_UTIL_TURN_CLIENT TURN Client Session
+ * @defgroup PJNATH_TURN_CLIENT TURN Client Session
  * @brief Management of STUN/TURN client session
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJNATH_STUN
  * @{
  */
 
@@ -128,5 +128,5 @@ PJ_DECL(pj_status_t) pj_turn_client_create(pj_stun_endpoint *endpt,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_TURN_CLIENT_H__ */
+#endif	/* __PJNATH_TURN_CLIENT_H__ */
 

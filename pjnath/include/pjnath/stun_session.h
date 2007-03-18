@@ -16,13 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_STUN_SESSION_H__
-#define __PJLIB_UTIL_STUN_SESSION_H__
+#ifndef __PJNATH_STUN_SESSION_H__
+#define __PJNATH_STUN_SESSION_H__
 
-#include <pjlib-util/stun_msg.h>
-#include <pjlib-util/stun_auth.h>
-#include <pjlib-util/stun_endpoint.h>
-#include <pjlib-util/stun_transaction.h>
+#include <pjnath/stun_msg.h>
+#include <pjnath/stun_auth.h>
+#include <pjnath/stun_endpoint.h>
+#include <pjnath/stun_transaction.h>
 #include <pj/list.h>
 #include <pj/timer.h>
 
@@ -31,9 +31,9 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJLIB_UTIL_STUN_SESSION STUN Client/Server Session
+ * @defgroup PJNATH_STUN_SESSION STUN Client/Server Session
  * @brief STUN client and server session
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJNATH_STUN
  * @{
  */
 
@@ -156,7 +156,7 @@ struct pj_stun_tx_data
 /**
  * Create a STUN session.
  *
- * @param endpt		The STUN endpoint, to be used to register timers etc.
+ * @param cfg		The STUN endpoint, to be used to register timers etc.
  * @param name		Optional name to be associated with this instance. The
  *			name will be used for example for logging purpose.
  * @param cb		Session callback.
@@ -165,7 +165,7 @@ struct pj_stun_tx_data
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_session_create(pj_stun_endpoint *endpt,
+PJ_DECL(pj_status_t) pj_stun_session_create(pj_stun_config *cfg,
 					    const char *name,
 					    const pj_stun_session_cb *cb,
 					    pj_bool_t fingerprint,
@@ -368,5 +368,5 @@ PJ_DECL(void) pj_stun_msg_destroy_tdata(pj_stun_session *sess,
 
 PJ_END_DECL
 
-#endif	/* __PJLIB_UTIL_STUN_SESSION_H__ */
+#endif	/* __PJNATH_STUN_SESSION_H__ */
 

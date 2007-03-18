@@ -175,26 +175,6 @@ typedef enum pj_socket_sd_type
  */
 #define PJ_INVALID_SOCKET   (-1)
 
-/**
- * Structure describing a generic socket address.
- * If PJ_SOCKADDR_HAS_LEN is not zero, then sa_zero_len member is added
- * to this struct. As far the application is concerned, the value of
- * this member will always be zero. Internally, PJLIB may modify the value
- * before calling OS socket API, and reset the value back to zero before
- * returning the struct to application.
- */
-typedef struct pj_sockaddr
-{
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    pj_uint8_t  sa_zero_len;
-    pj_uint8_t  sa_family;
-#else
-    pj_uint16_t	sa_family;	/**< Common data: address family.   */
-#endif
-    char	sa_data[14];	/**< Address data.		    */
-} pj_sockaddr;
-
-
 #undef s_addr
 
 /**
@@ -274,6 +254,36 @@ typedef struct pj_sockaddr_in6
     pj_in6_addr sin6_addr;	    /**< IPv6 address.		    */
     pj_uint32_t sin6_scope_id;	    /**< IPv6 scope-id		    */
 } pj_sockaddr_in6;
+
+
+/**
+ * This structure describes common attributes found in transport addresses.
+ * If PJ_SOCKADDR_HAS_LEN is not zero, then sa_zero_len member is added
+ * to this struct. As far the application is concerned, the value of
+ * this member will always be zero. Internally, PJLIB may modify the value
+ * before calling OS socket API, and reset the value back to zero before
+ * returning the struct to application.
+ */
+typedef struct pj_addr_hdr
+{
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+    pj_uint8_t  sa_zero_len;
+    pj_uint8_t  sa_family;
+#else
+    pj_uint16_t	sa_family;	/**< Common data: address family.   */
+#endif
+} pj_addr_hdr;
+
+
+/**
+ * This union describes a generic socket address.
+ */
+typedef union pj_sockaddr
+{
+    pj_addr_hdr	    addr;	/**< Generic transport address.	    */
+    pj_sockaddr_in  ipv4;	/**< IPv4 transport address.	    */
+    pj_sockaddr_in6 ipv6;	/**< IPv6 transport address.	    */
+} pj_sockaddr;
 
 
 /*****************************************************************************

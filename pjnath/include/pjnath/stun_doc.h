@@ -24,8 +24,8 @@
  */
 
 /**
- * @defgroup PJLIB_UTIL_STUN STUN and TURN
- * @ingroup PJLIB_UTIL
+ * @defgroup PJNATH_STUN STUN and TURN
+ * @ingroup PJNATH
 
  This is the implementation of STUN/TURN in PJLIB-UTIL library.
 
@@ -54,7 +54,7 @@
 
  @subsection stun_msg_sec Messaging and Parsing
 
- The lowest layer of the STUN implementation is the @ref PJLIB_UTIL_STUN_MSG
+ The lowest layer of the STUN implementation is the @ref PJNATH_STUN_MSG
  component. This part is responsible for encoding and decoding STUN messages.
 
  This layer only implements message representation and parsing. In particular,
@@ -65,7 +65,7 @@
 
  @subsection stun_endpt_sec Endpoint
 
- The @ref PJLIB_UTIL_STUN_ENDPOINT is used by the library to put together
+ The @ref PJNATH_STUN_ENDPOINT is used by the library to put together
  common settings for all STUN objects. For example, the STUN endpoint has a
  reference of timer heap to poll all STUN timers, reference to ioqueue to
  poll network events for STUN servers, and some common settings used by
@@ -74,11 +74,11 @@
 
  @subsection stun_clt_tsx_sec Client Transaction
 
- The @ref PJLIB_UTIL_STUN_TRANSACTION is used to manage outgoing STUN request,
+ The @ref PJNATH_STUN_TRANSACTION is used to manage outgoing STUN request,
  for example to retransmit the request and to notify application about the
  completion of the request.
 
- The @ref PJLIB_UTIL_STUN_TRANSACTION does not use any networking operations,
+ The @ref PJNATH_STUN_TRANSACTION does not use any networking operations,
  but instead application must supply the transaction with a callback to
  be used by the transaction to send outgoing requests. This way the STUN
  transaction is made more generic and can work with different types of
@@ -88,7 +88,7 @@
 
  @subsection stun_srv_sec Server Components
 
- The @ref PJLIB_UTIL_STUN_SERVER is used for:
+ The @ref PJNATH_STUN_SERVER is used for:
  - implementing STUN servers, and/or
  - implementing server side STUN handling (for example for ICE).
 

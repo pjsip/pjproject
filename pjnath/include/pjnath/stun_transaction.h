@@ -16,16 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJLIB_UTIL_STUN_TRANSACTION_H__
-#define __PJLIB_UTIL_STUN_TRANSACTION_H__
+#ifndef __PJNATH_STUN_TRANSACTION_H__
+#define __PJNATH_STUN_TRANSACTION_H__
 
 /**
  * @file stun_transaction.h
  * @brief STUN transaction
  */
 
-#include <pjlib-util/stun_msg.h>
-#include <pjlib-util/stun_endpoint.h>
+#include <pjnath/stun_msg.h>
+#include <pjnath/stun_endpoint.h>
 
 
 PJ_BEGIN_DECL
@@ -33,16 +33,16 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJLIB_UTIL_STUN_TRANSACTION STUN Client Transaction
+ * @defgroup PJNATH_STUN_TRANSACTION STUN Client Transaction
  * @brief STUN client transaction
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJNATH_STUN
  * @{
  *
- The @ref PJLIB_UTIL_STUN_TRANSACTION is used to manage outgoing STUN request,
+ The @ref PJNATH_STUN_TRANSACTION is used to manage outgoing STUN request,
  for example to retransmit the request and to notify application about the
  completion of the request.
 
- The @ref PJLIB_UTIL_STUN_TRANSACTION does not use any networking operations,
+ The @ref PJNATH_STUN_TRANSACTION does not use any networking operations,
  but instead application must supply the transaction with a callback to
  be used by the transaction to send outgoing requests. This way the STUN
  transaction is made more generic and can work with different types of
@@ -100,7 +100,7 @@ typedef struct pj_stun_tsx_cb
  * ensure the reliability of the request by periodically retransmitting
  * the request, if necessary.
  *
- * @param endpt		The STUN endpoint, which will be used to retrieve
+ * @param cfg		The STUN endpoint, which will be used to retrieve
  *			various settings for the transaction.
  * @param pool		Pool to be used to allocate memory from.
  * @param cb		Callback structure, to be used by the transaction
@@ -110,7 +110,7 @@ typedef struct pj_stun_tsx_cb
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_endpoint *endpt,
+PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_config *cfg,
 					        pj_pool_t *pool,
 						const pj_stun_tsx_cb *cb,
 						pj_stun_client_tsx **p_tsx);
@@ -213,5 +213,5 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
 PJ_END_DECL
 
 
-#endif	/* __PJLIB_UTIL_STUN_TRANSACTION_H__ */
+#endif	/* __PJNATH_STUN_TRANSACTION_H__ */
 
