@@ -625,7 +625,67 @@ on_missing_hdr:
  * used here follows the guidelines on sending the request in RFC 3261
  * chapter 8.1.2.
  */
-PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
+PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
+					   pjsip_host_info *dest_info )
+{
+    const pjsip_uri *target_uri;
+    const pjsip_route_hdr *first_route_hdr;
+    
+    PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG, 
+		     PJSIP_ENOTREQUESTMSG);
+    PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
+
+    /* Get the first "Route" header from the message.
+     */
+    first_route_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+    if (first_route_hdr) {
+	target_uri = first_route_hdr->name_addr.uri;
+    } else {
+	target_uri = tdata->msg->line.req.uri;
+    }
+
+
+    /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
+     * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
+     */
+    pj_bzero(dest_info, sizeof(*dest_info));
+
+    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
+	pjsip_uri *uri = (pjsip_uri*) target_uri;
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
+        dest_info->addr.port = url->port;
+	dest_info->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
+
+    } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
+	pjsip_uri *uri = (pjsip_uri*) target_uri;
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
+	dest_info->addr.port = url->port;
+	dest_info->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
+	dest_info->flag = 
+	    pjsip_transport_get_flag_from_type(dest_info->type);
+    } else {
+        pj_assert(!"Unsupported URI scheme!");
+	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);
+	return PJSIP_EINVALIDSCHEME;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Process route-set found in the request and calculate
+ * the destination to be used to send the request message, based
+ * on the request URI and Route headers in the message. The procedure
+ * used here follows the guidelines on sending the request in RFC 3261
+ * chapter 8.1.2.
+ */
+PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 					    pjsip_host_info *dest_info )
 {
     const pjsip_uri *new_request_uri, *target_uri;
@@ -636,10 +696,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
 		     PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
-    /* Get the first "Route" header from the message. If the message doesn't
-     * have any "Route" headers but the endpoint has, then copy the "Route"
-     * headers from the endpoint first.
-     */
+    /* Find the first and last "Route" headers from the message. */
     last_route_hdr = first_route_hdr = 
 	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
@@ -946,7 +1003,7 @@ pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(endpt && tdata, PJ_EINVAL);
 
     /* Get destination name to contact. */
-    status = pjsip_get_request_addr(tdata, &dest_info);
+    status = pjsip_process_route_set(tdata, &dest_info);
     if (status != PJ_SUCCESS)
 	return status;
 

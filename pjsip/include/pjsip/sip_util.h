@@ -172,6 +172,33 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
  * used here follows the guidelines on sending the request in RFC 3261
  * chapter 8.1.2.
  *
+ * Note there was a change in the behavior of this function since version
+ * 0.5.10.2. Previously this function may modify the request when strict
+ * route is present (to update request URI and route-set). This is no
+ * longer the case now, and this process is done in separate function
+ * (see #pjsip_process_route_set()).
+ *
+ * @param tdata	    The transmit data containing the request message.
+ * @param dest_info On return, it contains information about destination
+ *		    host to contact, along with the preferable transport
+ *		    type, if any. Caller will then normally proceed with
+ *		    resolving this host with server resolution procedure
+ *		    described in RFC 3263.
+ *
+ * @return	    PJ_SUCCESS, or the appropriate error code.
+ *
+ * @see pjsip_process_route_set
+ */
+PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
+					    pjsip_host_info *dest_info );
+
+
+/**
+ * Process route-set found in the request and calculate destination to be
+ * used to send the request message, based on the request URI and Route 
+ * headers in the message. The procedure used here follows the guidelines
+ * on sending the request in RFC 3261 chapter 8.1.2.
+ *
  * This function may modify the message (request line and Route headers),
  * if the Route information specifies strict routing and the request
  * URI in the message is different than the calculated target URI. In that
@@ -186,8 +213,10 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
  *		    described in RFC 3263.
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
+ *
+ * @see pjsip_get_request_addr
  */
-PJ_DECL(pj_status_t) pjsip_get_request_addr( pjsip_tx_data *tdata,
+PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 					     pjsip_host_info *dest_info );
 
 
