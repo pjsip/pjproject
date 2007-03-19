@@ -452,7 +452,7 @@ static pj_status_t init_parser()
                                         &parse_hdr_unsupported);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    status = pjsip_register_hdr_parser( "Via", NULL, &parse_hdr_via);
+    status = pjsip_register_hdr_parser( "Via", "v", &parse_hdr_via);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* 
