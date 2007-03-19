@@ -397,17 +397,17 @@ static pj_status_t init_parser()
     status = pjsip_register_hdr_parser( "Allow", NULL, &parse_hdr_allow);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    status = pjsip_register_hdr_parser( "Call-ID", NULL, &parse_hdr_call_id);
+    status = pjsip_register_hdr_parser( "Call-ID", "i", &parse_hdr_call_id);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     status = pjsip_register_hdr_parser( "Contact", "m", &parse_hdr_contact);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    status = pjsip_register_hdr_parser( "Content-Length", NULL, 
+    status = pjsip_register_hdr_parser( "Content-Length", "l", 
                                         &parse_hdr_content_len);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    status = pjsip_register_hdr_parser( "Content-Type", NULL, 
+    status = pjsip_register_hdr_parser( "Content-Type", "c", 
                                         &parse_hdr_content_type);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
