@@ -62,7 +62,7 @@ struct test_msg
     "  <sip:server10.biloxi.com;lr>\r"
     "Record-Route: <sip:server10.biloxi.com>,\r\n" /* multiple routes+folding*/
     "  <sip:bigbox3.site3.atlanta.com;lr>\n"
-    "Via: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c230\n"
+    "v: SIP/2.0/SCTP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c230\n"
     "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\n" /* folding. */
     " ;received=192.0.2.1\r\n"
     "Via: SIP/2.0/UDP 10.2.1.1, SIP/2.0/TCP 192.168.1.1\n"
