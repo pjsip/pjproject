@@ -185,7 +185,8 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     } else if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
 	int data_type = 0;
 	pj_status_t rc;
-	rc = cred->data.dyn_cred.get_password(cred->data.dyn_cred.user_data,
+	rc = cred->data.dyn_cred.get_password(msg, 
+					      cred->data.dyn_cred.user_data,
 					      (arealm?&arealm->value:NULL),
 					      &auser->value, pool,
 					      &data_type, &password);
@@ -269,7 +270,8 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	pj_bool_t ok;
 
 	if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
-	    ok=cred->data.dyn_cred.verify_nonce(cred->data.dyn_cred.user_data,
+	    ok=cred->data.dyn_cred.verify_nonce(msg, 
+						cred->data.dyn_cred.user_data,
 						(arealm?&arealm->value:NULL),
 						&auser->value,
 						&anonce->value);

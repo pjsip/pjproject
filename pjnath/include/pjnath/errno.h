@@ -45,6 +45,7 @@
 #define	PJNATH_ESTUNINMSGTYPE	    -1
 #define PJNATH_ESTUNFINGERPRINT	    -1
 #define PJNATH_ESTUNNOTRESPOND	    -1
+#define PJNATH_ESTUNNOXORMAP	    -1
 
 /**
  * @hideinitializer

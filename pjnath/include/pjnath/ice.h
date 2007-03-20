@@ -27,6 +27,8 @@
 #include <pjnath/stun_session.h>
 #include <pjlib-util/resolver.h>
 #include <pj/sock.h>
+#include <pj/timer.h>
+
 
 PJ_BEGIN_DECL
 
@@ -67,14 +69,17 @@ typedef struct pj_ice pj_ice;
 #define PJ_ICE_MAX_CAND	    16
 #define PJ_ICE_MAX_COMP	    8
 #define PJ_ICE_MAX_CHECKS   32
+#define PJ_ICE_TA_VAL	    20
 
 /**
  * ICE component
  */
 typedef struct pj_ice_comp
 {
-    unsigned	    comp_id;
-    pj_sock_t	    sock;
+    unsigned	     comp_id;
+    pj_sock_t	     sock;
+    pj_stun_session *stun_sess;
+    pj_sockaddr	     local_addr;
 } pj_ice_comp;
 
 
@@ -104,18 +109,13 @@ typedef enum pj_ice_check_state
 
 typedef struct pj_ice_check
 {
-    unsigned		cand_id;
-    pj_uint32_t		comp_id;
-    pj_str_t		foundation;
+    pj_ice_cand		*lcand;
+    pj_ice_cand		*rcand;
 
-    pj_uint64_t		check_prio;
-    pj_ice_check_state	check_state;
-
-    pj_ice_cand_type	rem_type;
-    pj_str_t		rem_foundation;
-    pj_uint32_t		rem_prio;
-    pj_sockaddr		rem_addr;
-    pj_sockaddr		rem_base_addr;
+    pj_uint64_t		 prio;
+    pj_ice_check_state	 state;
+    pj_bool_t		 nominated;
+    pj_status_t		 err_code;
 } pj_ice_check;
 
 
@@ -131,6 +131,7 @@ typedef struct pj_ice_checklist
     pj_ice_checklist_state   state;
     unsigned		     count;
     pj_ice_check	     checks[PJ_ICE_MAX_CHECKS];
+    pj_timer_entry	     timer;
 } pj_ice_checklist;
 
 
@@ -175,8 +176,9 @@ struct pj_ice
     int			 sock_type;
     pj_ice_role		 role;
     pj_ice_state	 state;
-
     pj_ice_cb		 cb;
+
+    pj_stun_config	 stun_cfg;
 
     /* STUN credentials */
     pj_str_t		 tx_uname;
@@ -205,14 +207,10 @@ struct pj_ice
     pj_dns_async_query	*resv_q;
     pj_bool_t		 relay_enabled;
     pj_sockaddr		 stun_srv;
-
-    /* STUN sessions */
-    pj_stun_session	*tx_sess;
-    pj_stun_session	*rx_sess;
 };
 
 
-PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *cfg,
+PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				   const char *name,
 				   pj_ice_role role,
 				   const pj_ice_cb *cb,
@@ -256,17 +254,16 @@ PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 
 PJ_DECL(unsigned) pj_ice_get_cand_cnt(pj_ice *ice);
 PJ_DECL(pj_status_t) pj_ice_enum_cands(pj_ice *ice,
-				       unsigned sort_by,
 				       unsigned *p_count,
 				       unsigned cand_ids[]);
-PJ_DECL(unsigned) pj_ice_get_default_cand(pj_ice *ice,
-					  int *cand_id);
+PJ_DECL(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
+					     unsigned comp_id,
+					     int *cand_id);
 PJ_DECL(pj_status_t) pj_ice_get_cand(pj_ice *ice,
 				     unsigned cand_id,
 				     pj_ice_cand **p_cand);
 
 PJ_DECL(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
-					      pj_bool_t is_remote_offer,
 					      unsigned rem_cand_cnt,
 					      const pj_ice_cand rem_cand[]);
 

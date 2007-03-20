@@ -155,9 +155,45 @@ typedef struct pj_stun_auth_cred
 				    pj_str_t *nonce);
 
 	    /**
+	     * Get the credential to be put in outgoing message.
+	     *
+	     * @param msg	The outgoing message where the credential is
+	     *			to be applied.
+	     * @param user_data	The user data as specified in the credential.
+	     * @param pool	Pool where the callback can allocate memory
+	     *			to fill in the credential.
+	     * @param realm	On return, the callback may specify the realm
+	     *			if long term credential is desired, otherwise
+	     *			this string must be set to empty.
+	     * @param username	On return, the callback must fill in with the
+	     *			username.
+	     * @param nonce	On return, the callback may optionally fill in
+	     *			this argument with NONCE value if desired,
+	     *			otherwise this argument must be set to empty.
+	     * @param data_type	On return, the callback must set this argument
+	     *			with the type of password in the data argument.
+	     * @param data	On return, the callback must set this with
+	     *			the password, encoded according to data_type
+	     *			argument.
+	     *
+	     * @return		The callback must return PJ_SUCCESS, otherwise
+	     *			the message transmission will be cancelled.
+	     */
+	    pj_status_t (*get_cred)(const pj_stun_msg *msg,
+				    void *user_data,
+				    pj_pool_t *pool,
+				    pj_str_t *realm,
+				    pj_str_t *username,
+				    pj_str_t *nonce,
+				    int *data_type,
+				    pj_str_t *data);
+
+	    /**
 	     * Get the password for the specified username. This function 
 	     * is also used to check whether the username is valid.
 	     *
+	     * @param msg	The STUN message where the password will be
+	     *			applied to.
 	     * @param user_data	The user data as specified in the credential.
 	     * @param realm	The realm as specified in the message.
 	     * @param username	The username as specified in the message.
@@ -175,7 +211,8 @@ typedef struct pj_stun_auth_cred
 	     *			is returned, it is assumed that the
 	     *			username is not valid.
 	     */
-	    pj_status_t	(*get_password)(void *user_data, 
+	    pj_status_t	(*get_password)(const pj_stun_msg *msg,
+					void *user_data, 
 				        const pj_str_t *realm,
 				        const pj_str_t *username,
 					pj_pool_t *pool,
@@ -187,6 +224,7 @@ typedef struct pj_stun_auth_cred
 	     * in the message can be accepted. If this callback returns
 	     * PJ_FALSE, 438 (Stale Nonce) response will be created.
 	     *
+	     * @param msg	The STUN message where the nonce was received.
 	     * @param user_data	The user data as specified in the credential.
 	     * @param realm	The realm as specified in the message.
 	     * @param username	The username as specified in the message.
@@ -195,7 +233,8 @@ typedef struct pj_stun_auth_cred
 	     * @return		The callback MUST return non-zero if the 
 	     *			NONCE can be accepted.
 	     */
-	    pj_bool_t	(*verify_nonce)(void *user_data,
+	    pj_bool_t	(*verify_nonce)(const pj_stun_msg *msg,
+					void *user_data,
 					const pj_str_t *realm,
 					const pj_str_t *username,
 					const pj_str_t *nonce);
