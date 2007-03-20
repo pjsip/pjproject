@@ -138,6 +138,8 @@ struct pj_stun_tx_data
     pj_stun_session	*sess;		/**< The STUN session.		    */
     pj_stun_msg		*msg;		/**< The STUN message.		    */
 
+    void		*user_data;	/**< Arbitrary application data.    */
+
     pj_stun_client_tsx	*client_tsx;	/**< Client STUN transaction.	    */
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
     pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */

@@ -1512,7 +1512,6 @@ PJ_DECL(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
  *			if no data to be copied now.
  * @param length	Length of data, or zero if no data is to be
  *			copied now.
- * @param p_attr	Pointer to receive the attribute.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
@@ -1522,6 +1521,31 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 						 const pj_uint8_t *data,
 						 unsigned length);
 
+/**
+ * Create STUN empty attribute.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param attr_type	The attribute type, from #pj_stun_attr_type.
+ * @param p_attr	Pointer to receive the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_empty_attr_create(pj_pool_t *pool,
+					       int attr_type,
+					       pj_stun_empty_attr **p_attr);
+
+/**
+ * Create STUN empty attribute and add the attribute to the message.
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message.
+ * @param attr_type	The attribute type, from #pj_stun_attr_type.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_msg_add_empty_attr(pj_pool_t *pool,
+						pj_stun_msg *msg,
+						int attr_type);
 
 /**
  * @}

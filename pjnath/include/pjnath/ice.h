@@ -24,7 +24,7 @@
  * @brief ICE socket.
  */
 #include <pjnath/types.h>
-#include <pjnath/stun_endpoint.h>
+#include <pjnath/stun_session.h>
 #include <pjlib-util/resolver.h>
 #include <pj/sock.h>
 
@@ -64,9 +64,9 @@ enum pj_ice_type_pref
 typedef struct pj_ice pj_ice;
 
 
-#define PJ_ICE_MAX_CAND	    32
+#define PJ_ICE_MAX_CAND	    16
 #define PJ_ICE_MAX_COMP	    8
-
+#define PJ_ICE_MAX_CHECKS   32
 
 /**
  * ICE component
@@ -104,7 +104,10 @@ typedef enum pj_ice_check_state
 
 typedef struct pj_ice_check
 {
-    unsigned		local_cand_id;
+    unsigned		cand_id;
+    pj_uint32_t		comp_id;
+    pj_str_t		foundation;
+
     pj_uint64_t		check_prio;
     pj_ice_check_state	check_state;
 
@@ -127,7 +130,7 @@ typedef struct pj_ice_checklist
 {
     pj_ice_checklist_state   state;
     unsigned		     count;
-    pj_ice_check	    *checks;
+    pj_ice_check	     checks[PJ_ICE_MAX_CHECKS];
 } pj_ice_checklist;
 
 
@@ -136,10 +139,10 @@ typedef struct pj_ice_checklist
  */
 typedef struct pj_ice_cb
 {
-    pj_bool_t (*on_found_cand)(pj_ice *sock,
-			       pj_ice_cand_type type,
-			       const pj_sockaddr_t *addr,
-			       int addr_len);
+    pj_status_t (*on_send_pkt)(pj_ice *ice, 
+			       const void *pkt, pj_size_t size,
+			       const pj_sockaddr_t *dst_addr,
+			       unsigned addr_len);
 } pj_ice_cb;
 
 
@@ -153,6 +156,12 @@ typedef enum pj_ice_state
     PJ_ICE_STATE_RESV_ERROR
 } pj_ice_state;
 
+typedef enum pj_ice_role
+{
+    PJ_ICE_ROLE_CONTROLLED,
+    PJ_ICE_ROLE_CONTROLLING
+} pj_ice_role;
+
 /**
  * ICE structure.
  */
@@ -164,30 +173,49 @@ struct pj_ice
     pj_mutex_t		*mutex;
     int			 af;
     int			 sock_type;
-
+    pj_ice_role		 role;
     pj_ice_state	 state;
+
+    pj_ice_cb		 cb;
+
+    /* STUN credentials */
+    pj_str_t		 tx_uname;
+    pj_str_t		 tx_pass;
+    pj_str_t		 rx_uname;
+    pj_str_t		 rx_pass;
 
     /* Components */
     unsigned		 comp_cnt;
     pj_ice_comp		 comp[PJ_ICE_MAX_COMP];
 
     /* Local candidates */
-    unsigned		 cand_cnt;
-    pj_ice_cand		 cand[PJ_ICE_MAX_CAND];
+    unsigned		 lcand_cnt;
+    pj_ice_cand		 lcand[PJ_ICE_MAX_CAND];
 
-    /* Checklist */
+    /* Remote candidates */
+    unsigned		 rcand_cnt;
+    pj_ice_cand		 rcand[PJ_ICE_MAX_CAND];
+
+    /* Checklists */
     pj_ice_checklist	 cklist;
+    pj_ice_checklist	 valid_list;
 
     /* STUN servers */
     pj_dns_resolver	*resv;
     pj_dns_async_query	*resv_q;
     pj_bool_t		 relay_enabled;
     pj_sockaddr		 stun_srv;
+
+    /* STUN sessions */
+    pj_stun_session	*tx_sess;
+    pj_stun_session	*rx_sess;
 };
 
 
 PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *cfg,
 				   const char *name,
+				   pj_ice_role role,
+				   const pj_ice_cb *cb,
 				   int af,
 				   int sock_type,
 				   pj_ice **p_ice);
@@ -207,7 +235,11 @@ PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice,
 PJ_DECL(pj_status_t) pj_ice_add_sock_comp(pj_ice *ice,
 					  unsigned comp_id,
 					  pj_sock_t sock);
-
+PJ_DECL(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
+					    const pj_str_t *local_ufrag,
+					    const pj_str_t *local_pass,
+					    const pj_str_t *remote_ufrag,
+					    const pj_str_t *remote_pass);
 PJ_DECL(pj_status_t) pj_ice_start_gather(pj_ice *ice,
 					 unsigned flags);
 
