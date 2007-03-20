@@ -712,11 +712,18 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 	status = pjsip_publishc_init(acc->publish_sess, &STR_PRESENCE,
 				     &acc_cfg->id, &acc_cfg->id,
 				     &acc_cfg->id, 
-				     PJSUA_PUBLISH_EXPIRATION);
+				     60);
 	if (status != PJ_SUCCESS) {
 	    acc->publish_sess = NULL;
 	    return status;
 	}
+
+	/* Add credential for authentication */
+	pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt, 
+				       acc->cred);
+
+	/* Set route-set */
+	pjsip_publishc_set_route_set(acc->publish_sess, &acc->route_set);
 
 	/* Send initial PUBLISH request */
 	if (acc->online_status != 0) {
