@@ -64,8 +64,6 @@ const pj_str_t peer_mapped_foundation = {"peer", 4};
 
 static void destroy_ice(pj_ice *ice,
 			pj_status_t reason);
-static void ice_set_state(pj_ice *ice,
-			  pj_ice_state new_state);
 static pj_status_t start_periodic_check(pj_timer_heap_t *th, 
 					pj_timer_entry *te);
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
@@ -168,8 +166,24 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 static void destroy_ice(pj_ice *ice,
 			pj_status_t reason)
 {
+    unsigned i;
+
     if (reason == PJ_SUCCESS) {
 	LOG((ice->obj_name, "Destroying ICE session"));
+    }
+
+    for (i=0; i<ice->comp_cnt; ++i) {
+	pj_ice_comp *comp = &ice->comp[i];
+
+	if (comp->stun_sess) {
+	    pj_stun_session_destroy(comp->stun_sess);
+	    comp->stun_sess = NULL;
+	}
+    }
+
+    if (ice->clist.timer.id) {
+	pj_timer_heap_cancel(ice->stun_cfg.timer_heap, &ice->clist.timer);
+	ice->clist.timer.id = PJ_FALSE;
     }
 
     if (ice->resv_q) {
@@ -197,11 +211,107 @@ PJ_DEF(pj_status_t) pj_ice_destroy(pj_ice *ice)
 }
 
 
-static void ice_set_state(pj_ice *ice,
-			  pj_ice_state new_state)
+/* This function is called when ICE processing completes */
+static void on_ice_complete(pj_ice *ice, pj_status_t status)
 {
-    ice->state = new_state;
 }
+
+
+/* This function is called when one check completes */
+static pj_bool_t on_check_complete(pj_ice *ice,
+				   pj_ice_check *check)
+{
+    unsigned i;
+
+    /* If there is at least one nominated pair in the valid list:
+     * - The agent MUST remove all Waiting and Frozen pairs in the check
+     *   list for the same component as the nominated pairs for that
+     *   media stream
+     * - If an In-Progress pair in the check list is for the same
+     *   component as a nominated pair, the agent SHOULD cease
+     *   retransmissions for its check if its pair priority is lower
+     *   than the lowest priority nominated pair for that component
+     */
+    if (check->nominated) {
+	for (i=0; i<ice->clist.count; ++i) {
+	    pj_ice_check *c;
+	    if (c->lcand->comp_id == check->lcand->comp_id &&
+		(c->state==PJ_ICE_CHECK_STATE_FROZEN ||
+		 c->state==PJ_ICE_CHECK_STATE_WAITING)
+	    {
+		check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED,
+				PJ_ECANCELLED);
+	    }
+	}
+    }
+
+    /* Once there is at least one nominated pair in the valid list for
+     * every component of at least one media stream:
+     * - The agent MUST change the state of processing for its check
+     *   list for that media stream to Completed.
+     * - The agent MUST continue to respond to any checks it may still
+     *   receive for that media stream, and MUST perform triggered
+     *   checks if required by the processing of Section 7.2.
+     * - The agent MAY begin transmitting media for this media stream as
+     *   described in Section 11.1
+     */
+    /* TODO */
+
+    /* Once there is at least one nominated pair in the valid list for
+     * each component of each media stream:
+     * - The agent sets the state of ICE processing overall to
+     *   Completed.
+     * - If an agent is controlling, it examines the highest priority
+     *   nominated candidate pair for each component of each media
+     *   stream.  If any of those candidate pairs differ from the
+     *   default candidate pairs in the most recent offer/answer
+     *   exchange, the controlling agent MUST generate an updated offer
+     *   as described in Section 9.  If the controlling agent is using
+     *   an aggressive nomination algorithm, this may result in several
+     *   updated offers as the pairs selected for media change.  An
+     *   agent MAY delay sending the offer for a brief interval (one
+     *   second is RECOMMENDED) in order to allow the selected pairs to
+     *   stabilize.
+     */
+    /* TODO */
+
+
+    /* For now, just see if we have a valid pair in component 1 and
+     * just terminate ICE.
+     */
+    for (i=0; i<ice->valid_cnt; ++i) {
+	pj_ice_check *c = ice->clist.checks[ice->valid_list[i]];
+	if (c->lcand->comp_id == 1)
+	    break;
+    }
+
+    if (i != ice->valid_cnt) {
+	/* ICE succeeded */
+	on_ice_complete(ice, PJ_SUCCESS);
+	return PJ_TRUE;
+    }
+
+    /* We don't have valid pair for component 1.
+     * See if we have performed all checks in the checklist. If we do,
+     * then mark ICE processing as failed.
+     */
+    for (i=0; i<ice->clist.count; ++i) {
+	pj_ice_check *c = &ice->clist.checks[i];
+	if (c->state < PJ_ICE_CHECK_STATE_SUCCEEDED) {
+	    break;
+	}
+    }
+
+    if (i == ice->clist.count) {
+	/* All checks have completed */
+	on_ice_complete(ice, -1);
+	return PJ_TRUE;
+    }
+
+    /* We still have checks to perform */
+    return PJ_FALSE;
+}
+
 
 static void resolver_cb(void *user_data,
 			pj_status_t status,
@@ -632,8 +742,6 @@ PJ_DEF(pj_status_t) pj_ice_start_gather(pj_ice *ice,
 
     PJ_TODO(GATHER_MAPPED_AND_RELAYED_CANDIDATES);
 
-    ice_set_state(ice, PJ_ICE_STATE_CAND_COMPLETE);
-
     return PJ_SUCCESS;
 }
 
@@ -882,6 +990,7 @@ static void clist_set_state(pj_ice *ice, pj_ice_checklist *clist,
     clist->state = st;
 }
 
+/* Sort checklist based on priority */
 static void sort_checklist(pj_ice_checklist *clist)
 {
     unsigned i;
@@ -901,6 +1010,31 @@ static void sort_checklist(pj_ice_checklist *clist)
 	    pj_memcpy(&clist->checks[i], &clist->checks[highest], 
 		      sizeof(pj_ice_check));
 	    pj_memcpy(&clist->checks[highest], &tmp, sizeof(pj_ice_check));
+	}
+    }
+}
+
+/* Sort valid list based on priority */
+static void sort_valid_list(pj_ice *ice)
+{
+    unsigned i;
+
+    for (i=0; i<ice->valid_cnt-1; ++i) {
+	unsigned j, highest = i;
+	pj_ice_check *ci = ice->clist.checks[ice->valid_list[i]];
+
+	for (j=i+1; j<ice->valid_cnt; ++j) {
+	    pj_ice_check *cj = ice->clist.checks[ice->valid_list[j]];
+
+	    if (cj->prio > ci->prio) {
+		highest = j;
+	    }
+	}
+
+	if (highest != i) {
+	    unsigned tmp = ice->valid_list[i];
+	    ice->valid_list[i] = ice->valid_list[j];
+	    ice->valid_list[j] = tmp;
 	}
     }
 }
@@ -1019,7 +1153,7 @@ PJ_DEF(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
     }
 
     /* Generate checklist */
-    clist = &ice->cklist;
+    clist = &ice->clist;
     for (i=0; i<ice->lcand_cnt; ++i) {
 	for (j=0; j<ice->rcand_cnt; ++j) {
 
@@ -1130,10 +1264,11 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, PJ_STUN_ATTR_PRIORITY,
 			      prio);
 
-    /* Add USE-CANDIDATE */
+    /* Add USE-CANDIDATE and set this check to nominated */
     if (ice->role == PJ_ICE_ROLE_CONTROLLING) {
 	pj_stun_msg_add_empty_attr(tdata->pool, tdata->msg, 
 				   PJ_STUN_ATTR_USE_CANDIDATE);
+	check->nominated = PJ_TRUE;
     }
 
     /* Note that USERNAME and MESSAGE-INTEGRITY will be added by the 
@@ -1247,7 +1382,7 @@ PJ_DEF(pj_status_t) pj_ice_start_check(pj_ice *ice)
 
     LOG((ice->obj_name, "Starting ICE check.."));
 
-    clist = &ice->cklist;
+    clist = &ice->clist;
 
     if (clist->count == 0)
 	return PJ_EICENOCHECKLIST;
@@ -1379,20 +1514,20 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     /* Sets the state of the pair that generated the check to succeeded. */
     check_set_state(ice, check, PJ_ICE_CHECK_STATE_SUCCEEDED, PJ_SUCCESS);
 
-
     /* This is a valid pair, so add this to the valid list */
-    valid_check = &ice->valid_list.checks[ice->valid_list.count++];
-    valid_check->lcand = lcand;
-    valid_check->rcand = rcand;
-    valid_check->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
-    valid_check->state = PJ_ICE_CHECK_STATE_SUCCEEDED;
-    valid_check->nominated = (pj_stun_msg_find_attr(tdata->msg, 
-						    PJ_STUN_ATTR_USE_CANDIDATE,
-						    0) != NULL);
-    valid_check->err_code = PJ_SUCCESS;
+    ice->valid_list[ice->valid_cnt++] = rd->ckid;
 
     /* Sort valid_list */
-    sort_checklist(&ice->valid_list);
+    sort_valid_list(ice);
+
+    /* Inform about check completion.
+     * This may terminate ICE processing.
+     */
+    if (on_check_complete(ice, check)) {
+	/* ICE complete! */
+	pj_mutex_unlock(ice->mutex);
+	return;
+    }
 
     /* If the pair had a component ID of 1, the agent MUST change the
      * states for all other Frozen pairs for the same media stream and
@@ -1452,6 +1587,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     stun_data *sd;
     pj_ice *ice;
     pj_stun_priority_attr *ap;
+    pj_stun_use_candidate_attr *uc;
     pj_ice_comp *comp;
     pj_ice_cand *lcand;
     pj_ice_cand *rcand;
@@ -1463,11 +1599,22 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
 
-    /* Only accepts Binding request */
+    /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	LOG((ice->obj_name, "Received non-Binding request, ignored"));
-	return PJ_SUCCESS;
+	pj_str_t err_msg = pj_str("Expecting Binding Request only");
+	status = pj_stun_session_create_response(sess, msg, 
+						 PJ_STUN_SC_BAD_REQUEST,
+						 &err_msg, &tdata);
+	if (status != PJ_SUCCESS) {
+	    return status;
+	}
+
+	status = pj_stun_session_send_msg(sess, PJ_TRUE, 
+					  src_addr, src_addr_len, tdata);
+
+	return status;
     }
+
 
     sd = (stun_data*) pj_stun_session_get_user_data(sess);
     ice = sd->ice;
@@ -1484,6 +1631,10 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	return PJ_SUCCESS;
     }
 
+    /* Get USE-CANDIDATE attribute */
+    uc = (pj_stun_use_candidate_attr*)
+	 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
+
     /* For simplicity, ignore incoming requests when we don't have remote
      * candidates yet. The peer agent should retransmit the STUN request
      * and we'll receive it again later.
@@ -1492,6 +1643,22 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	pj_mutex_unlock(ice->mutex);
 	return PJ_SUCCESS;
     }
+
+    /* 
+     * First send response to this request 
+     */
+    status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(ice->mutex);
+	return status;
+    }
+
+    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
+					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+					   PJ_TRUE, src_addr, src_addr_len);
+
+    status = pj_stun_session_send_msg(sess, PJ_TRUE, 
+				      src_addr, src_addr_len, tdata);
 
 
     /* Find remote candidate based on the source transport address of 
@@ -1532,52 +1699,104 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     PJ_TODO(DETERMINE_IF_REQUEST_COMES_FROM_RELAYED_CANDIDATE);
     is_relayed = PJ_FALSE;
 
-    /* Next find local candidate */
-    /* Just pick up 
+    /* Next find local candidate, by first finding a check in the checklist
+     * which base address is equal to the local address.
+     */
+    for (i=0; i<ice->clist.count; ++i) {
+	pj_ice_check *c = &ice->clist.checks[i];
+	if (sockaddr_cmp(&c->lcand->base_addr, &comp->local_addr)==0)
+	    break;
+    }
 
+    /* MUST find a local candidate! */
+    pj_assert(i != ice->clist.count);
+    if (i == ice->clist.count) {
+	pj_mutex_unlock(ice->mutex);
+	LOG((ice->obj_name, "Error: unable to find local candidate for "
+	     "incoming request"));
+	return PJ_SUCCESS;
+    }
 
+    lcand = ice->clist.checks[i].lcand;
 
-    /* 7.2.1.2.  Learning Peer Reflexive Candidates */
-    PJ_TODO(LEARN_PEER_REFLEXIVE_CANDIDATES);
+    /* Now that we have local and remote candidate, check if we already
+     * have this pair in our checklist.
+     */
+    for (i=0; i<ice->clist.count; ++i) {
+	pj_ice_check *c = &ice->clist.checks[i];
+	if (c->lcand == lcand && c->rcand == rcand)
+	    break;
+    }
 
-    /* Reject any requests except Binding request */
-    if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	status = pj_stun_session_create_response(sess, msg, 
-						 PJ_STUN_SC_BAD_REQUEST,
-						 NULL, &tdata);
-	if (status != PJ_SUCCESS) {
-	    pj_mutex_unlock(ice->mutex);
-	    return status;
+    /* If the pair is already on the check list:
+     * - If the state of that pair is Waiting or Frozen, its state is
+     *   changed to In-Progress and a check for that pair is performed
+     *   immediately.  This is called a triggered check.
+     *
+     * - If the state of that pair is In-Progress, the agent SHOULD
+     *   generate an immediate retransmit of the Binding Request for the
+     *   check in progress.  This is to facilitate rapid completion of
+     *   ICE when both agents are behind NAT.
+     * 
+     * - If the state of that pair is Failed or Succeeded, no triggered
+     *   check is sent.
+     */
+    if (i != ice->clist.count) {
+	pj_ice_check *c = &ice->clist.checks[i];
+
+	/* If USE-CANDIDATE is present, set nominated flag */
+	c->nominated = (uc != NULL);
+
+	if (c->state == PJ_ICE_CHECK_STATE_FROZEN ||
+	    c->state == PJ_ICE_CHECK_STATE_WAITING)
+	{
+	    LOG((ice->obj_name, "Performing triggered check for check %d",i));
+	    perform_check(ice, &ice->clist, i);
+
+	} else if (c->state == PJ_ICE_CHECK_STATE_IN_PROGRESS) {
+	    /* Should retransmit here, but how??
+	     * TODO
+	     */
+	} else if (c->state == PJ_ICE_CHECK_STATE_SUCCEEDED) {
+	    /* Check complete for this component.
+	     * Note this may end ICE process.
+	     */
+	    pj_bool_t complete;
+
+	    complete = on_check_complete(ice, c);
+	    if (complete) {
+		pj_mutex_unlock(ice->mutex);
+		return PJ_SUCCESS;
+	    }
 	}
 
-	status = pj_stun_session_send_msg(sess, PJ_TRUE, 
-					  src_addr, src_addr_len, tdata);
-
-	pj_mutex_unlock(ice->mutex);
-	return status;
     }
-
-    status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(ice->mutex);
-	return status;
-    }
-
-    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
-					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-					   PJ_TRUE, src_addr, src_addr_len);
-
-    status = pj_stun_session_send_msg(sess, PJ_TRUE, 
-				      src_addr, src_addr_len, tdata);
-
-    /* 7.2.1.3.  Triggered Checks:
-     * Next, the agent constructs a pair whose local candidate is equal to
-     * the transport address on which the STUN request was received, and a
-     * remote candidate equal to the source transport address where the
-     * request came from (which may be peer-reflexive remote candidate that
-     * was just learned). 
+    /* If the pair is not already on the check list:
+     * - The pair is inserted into the check list based on its priority.
+     * - Its state is set to In-Progress
+     * - A triggered check for that pair is performed immediately.
      */
-    
+    /* Note: only do this if we don't have too many checks in checklist */
+    else if (ice->clist.count < PJ_ICE_MAX_CHECKS) {
+
+	pj_ice_check *c = &ice->clist.checks[ice->clist.count];
+
+	c->lcand = lcand;
+	c->rcand = rcand;
+	c->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+	c->state = PJ_ICE_CHECK_STATE_WAITING;
+	c->nominated = (uc != NULL);
+	c->err_code = PJ_SUCCESS;
+
+	LOG((ice->obj_name, "New triggered check added: %d", 
+	     ice->clist.count));
+	perform_check(ice, &ice->clist, ice->clist.count++);
+
+    } else {
+	LOG((ice->obj_name, "Error: unable to perform triggered check: "
+	     "TOO MANY CHECKS IN CHECKLIST!"));
+    }
+
     pj_mutex_unlock(ice->mutex);
     return status;
 }

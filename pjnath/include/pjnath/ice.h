@@ -147,16 +147,6 @@ typedef struct pj_ice_cb
 } pj_ice_cb;
 
 
-typedef enum pj_ice_state
-{
-    PJ_ICE_STATE_INIT,
-    PJ_ICE_STATE_GATHERING,
-    PJ_ICE_STATE_CAND_COMPLETE,
-    PJ_ICE_STATE_CHECKING,
-    PJ_ICE_STATE_COMPLETE,
-    PJ_ICE_STATE_RESV_ERROR
-} pj_ice_state;
-
 typedef enum pj_ice_role
 {
     PJ_ICE_ROLE_CONTROLLED,
@@ -175,7 +165,6 @@ struct pj_ice
     int			 af;
     int			 sock_type;
     pj_ice_role		 role;
-    pj_ice_state	 state;
     pj_ice_cb		 cb;
 
     pj_stun_config	 stun_cfg;
@@ -198,9 +187,12 @@ struct pj_ice
     unsigned		 rcand_cnt;
     pj_ice_cand		 rcand[PJ_ICE_MAX_CAND];
 
-    /* Checklists */
-    pj_ice_checklist	 cklist;
-    pj_ice_checklist	 valid_list;
+    /* Checklist */
+    pj_ice_checklist	 clist;
+    
+    /* Valid list */
+    unsigned		 valid_cnt;
+    unsigned		 valid_list[PJ_ICE_MAX_CHECKS];
 
     /* STUN servers */
     pj_dns_resolver	*resv;

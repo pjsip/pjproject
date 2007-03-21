@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2005 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-
-#include <pjnath/config.h>
+#include <pjnath/stun_endpoint.h>
 #include <pjnath/errno.h>
-#include <pjnath/stun_auth.h>
-#include <pjnath/stun_setting.h>
-#include <pjnath/stun_msg.h>
-#include <pjnath/stun_session.h>
-#include <pjnath/stun_transaction.h>
-#include <pjnath/types.h>
+#include <pj/assert.h>
+#include <pj/pool.h>
+

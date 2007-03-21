@@ -99,10 +99,6 @@ SOURCE=..\src\pjnath\stun_auth.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjnath\stun_endpoint.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjnath\stun_msg.c
 # End Source File
 # Begin Source File
@@ -112,6 +108,10 @@ SOURCE=..\src\pjnath\stun_msg_dump.c
 # Begin Source File
 
 SOURCE=..\src\pjnath\stun_session.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjnath\stun_setting.c
 # End Source File
 # Begin Source File
 
@@ -147,15 +147,15 @@ SOURCE=..\include\pjnath\stun_doc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\stun_endpoint.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjnath\stun_msg.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\include\pjnath\stun_session.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjnath\stun_setting.h
 # End Source File
 # Begin Source File
 
