@@ -25,7 +25,7 @@
  */
 
 #include <pjnath/stun_msg.h>
-#include <pjnath/stun_endpoint.h>
+#include <pjnath/stun_config.h>
 
 
 PJ_BEGIN_DECL

@@ -32,7 +32,7 @@
 
 static struct global
 {
-    pj_stun_endpoint	*endpt;
+    pj_stun_config	 stun_config;
     pj_pool_t		*pool;
     pj_caching_pool	 cp;
     pj_timer_heap_t	*th;
@@ -104,7 +104,7 @@ static void on_request_complete(pj_stun_session *sess,
 		     pj_stun_msg_find_attr(response, 
 					   PJ_STUN_ATTR_RELAY_ADDR, 0);
 		if (ar) {
-		    pj_memcpy(&g.relay_addr, &ar->addr.ipv4,
+		    pj_memcpy(&g.relay_addr, &ar->sockaddr.ipv4,
 			      sizeof(pj_sockaddr_in));
 		    PJ_LOG(3,(THIS_FILE, "Relay address is %s:%d",
 			      pj_inet_ntoa(g.relay_addr.sin_addr),
@@ -208,7 +208,7 @@ static int init()
     status = pj_timer_heap_create(g.pool, 1000, &g.th);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_stun_endpoint_create(&g.cp.factory, 0, NULL, g.th, &g.endpt);
+    pj_stun_config_init(&g.stun_config, &g.cp.factory, 0, NULL, g.th);
     pj_assert(status == PJ_SUCCESS);
 
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g.sock);
@@ -235,7 +235,7 @@ static int init()
     stun_cb.on_send_msg = &on_send_msg;
     stun_cb.on_request_complete = &on_request_complete;
 
-    status = pj_stun_session_create(g.endpt, NULL, &stun_cb, 
+    status = pj_stun_session_create(&g.stun_config, NULL, &stun_cb, 
 				    o.use_fingerprint!=0, &g.sess);
     pj_assert(status == PJ_SUCCESS);
 
@@ -281,8 +281,6 @@ static int shutdown()
     }
     if (g.sess)
 	pj_stun_session_destroy(g.sess);
-    if (g.endpt)
-	pj_stun_endpoint_destroy(g.endpt);
     if (g.sock != PJ_INVALID_SOCKET)
 	pj_sock_close(g.sock);
     if (g.th)

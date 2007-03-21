@@ -211,108 +211,6 @@ PJ_DEF(pj_status_t) pj_ice_destroy(pj_ice *ice)
 }
 
 
-/* This function is called when ICE processing completes */
-static void on_ice_complete(pj_ice *ice, pj_status_t status)
-{
-}
-
-
-/* This function is called when one check completes */
-static pj_bool_t on_check_complete(pj_ice *ice,
-				   pj_ice_check *check)
-{
-    unsigned i;
-
-    /* If there is at least one nominated pair in the valid list:
-     * - The agent MUST remove all Waiting and Frozen pairs in the check
-     *   list for the same component as the nominated pairs for that
-     *   media stream
-     * - If an In-Progress pair in the check list is for the same
-     *   component as a nominated pair, the agent SHOULD cease
-     *   retransmissions for its check if its pair priority is lower
-     *   than the lowest priority nominated pair for that component
-     */
-    if (check->nominated) {
-	for (i=0; i<ice->clist.count; ++i) {
-	    pj_ice_check *c;
-	    if (c->lcand->comp_id == check->lcand->comp_id &&
-		(c->state==PJ_ICE_CHECK_STATE_FROZEN ||
-		 c->state==PJ_ICE_CHECK_STATE_WAITING)
-	    {
-		check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED,
-				PJ_ECANCELLED);
-	    }
-	}
-    }
-
-    /* Once there is at least one nominated pair in the valid list for
-     * every component of at least one media stream:
-     * - The agent MUST change the state of processing for its check
-     *   list for that media stream to Completed.
-     * - The agent MUST continue to respond to any checks it may still
-     *   receive for that media stream, and MUST perform triggered
-     *   checks if required by the processing of Section 7.2.
-     * - The agent MAY begin transmitting media for this media stream as
-     *   described in Section 11.1
-     */
-    /* TODO */
-
-    /* Once there is at least one nominated pair in the valid list for
-     * each component of each media stream:
-     * - The agent sets the state of ICE processing overall to
-     *   Completed.
-     * - If an agent is controlling, it examines the highest priority
-     *   nominated candidate pair for each component of each media
-     *   stream.  If any of those candidate pairs differ from the
-     *   default candidate pairs in the most recent offer/answer
-     *   exchange, the controlling agent MUST generate an updated offer
-     *   as described in Section 9.  If the controlling agent is using
-     *   an aggressive nomination algorithm, this may result in several
-     *   updated offers as the pairs selected for media change.  An
-     *   agent MAY delay sending the offer for a brief interval (one
-     *   second is RECOMMENDED) in order to allow the selected pairs to
-     *   stabilize.
-     */
-    /* TODO */
-
-
-    /* For now, just see if we have a valid pair in component 1 and
-     * just terminate ICE.
-     */
-    for (i=0; i<ice->valid_cnt; ++i) {
-	pj_ice_check *c = ice->clist.checks[ice->valid_list[i]];
-	if (c->lcand->comp_id == 1)
-	    break;
-    }
-
-    if (i != ice->valid_cnt) {
-	/* ICE succeeded */
-	on_ice_complete(ice, PJ_SUCCESS);
-	return PJ_TRUE;
-    }
-
-    /* We don't have valid pair for component 1.
-     * See if we have performed all checks in the checklist. If we do,
-     * then mark ICE processing as failed.
-     */
-    for (i=0; i<ice->clist.count; ++i) {
-	pj_ice_check *c = &ice->clist.checks[i];
-	if (c->state < PJ_ICE_CHECK_STATE_SUCCEEDED) {
-	    break;
-	}
-    }
-
-    if (i == ice->clist.count) {
-	/* All checks have completed */
-	on_ice_complete(ice, -1);
-	return PJ_TRUE;
-    }
-
-    /* We still have checks to perform */
-    return PJ_FALSE;
-}
-
-
 static void resolver_cb(void *user_data,
 			pj_status_t status,
 			pj_dns_parsed_packet *response)
@@ -919,7 +817,6 @@ static pj_uint64_t CALC_CHECK_PRIO(const pj_ice *ice,
 }
 
 static const char *dump_check(char *buffer, unsigned bufsize,
-			      const pj_ice *ice,
 			      const pj_ice_check *check)
 {
     const pj_ice_cand *lcand = check->lcand;
@@ -960,7 +857,7 @@ static void dump_checklist(const char *title, const pj_ice *ice,
     for (i=0; i<clist->count; ++i) {
 	const pj_ice_check *c = &clist->checks[i];
 	LOG((ice->obj_name, " %d: %s (prio=%u, state=%s)",
-	     i, dump_check(buffer, sizeof(buffer), ice, c),
+	     i, dump_check(buffer, sizeof(buffer), c),
 	     c->prio, check_state_name[c->state]));
     }
 }
@@ -974,7 +871,7 @@ static void check_set_state(pj_ice *ice, pj_ice_check *check,
 {
     char buf[CHECK_NAME_LEN];
     LOG((ice->obj_name, "Check %s: state changed from %s to %s",
-	 dump_check(buf, sizeof(buf), ice, check),
+	 dump_check(buf, sizeof(buf), check),
 	 check_state_name[check->state],
 	 check_state_name[st]));
     check->state = st;
@@ -1021,10 +918,10 @@ static void sort_valid_list(pj_ice *ice)
 
     for (i=0; i<ice->valid_cnt-1; ++i) {
 	unsigned j, highest = i;
-	pj_ice_check *ci = ice->clist.checks[ice->valid_list[i]];
+	pj_ice_check *ci = &ice->clist.checks[ice->valid_list[i]];
 
 	for (j=i+1; j<ice->valid_cnt; ++j) {
-	    pj_ice_check *cj = ice->clist.checks[ice->valid_list[j]];
+	    pj_ice_check *cj = &ice->clist.checks[ice->valid_list[j]];
 
 	    if (cj->prio > ci->prio) {
 		highest = j;
@@ -1111,7 +1008,7 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 		char buf[CHECK_NAME_LEN];
 
 		LOG((ice->obj_name, "Check %s pruned",
-		    dump_check(buf, sizeof(buf), ice, &clist->checks[j])));
+		    dump_check(buf, sizeof(buf), &clist->checks[j])));
 
 		pj_array_erase(clist->checks, sizeof(clist->checks[0]),
 			       clist->count, j);
@@ -1123,6 +1020,111 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 	}
     }
 }
+
+/* This function is called when ICE processing completes */
+static void on_ice_complete(pj_ice *ice, pj_status_t status)
+{
+}
+
+
+/* This function is called when one check completes */
+static pj_bool_t on_check_complete(pj_ice *ice,
+				   pj_ice_check *check)
+{
+    unsigned i;
+
+    /* If there is at least one nominated pair in the valid list:
+     * - The agent MUST remove all Waiting and Frozen pairs in the check
+     *   list for the same component as the nominated pairs for that
+     *   media stream
+     * - If an In-Progress pair in the check list is for the same
+     *   component as a nominated pair, the agent SHOULD cease
+     *   retransmissions for its check if its pair priority is lower
+     *   than the lowest priority nominated pair for that component
+     */
+    if (check->nominated) {
+	for (i=0; i<ice->clist.count; ++i) {
+	    pj_ice_check *c = &ice->clist.checks[i];
+	    if (c->lcand->comp_id == check->lcand->comp_id &&
+		(c->state==PJ_ICE_CHECK_STATE_FROZEN ||
+		 c->state==PJ_ICE_CHECK_STATE_WAITING))
+	    {
+		check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED,
+				PJ_ECANCELLED);
+	    }
+	}
+    }
+
+    /* Once there is at least one nominated pair in the valid list for
+     * every component of at least one media stream:
+     * - The agent MUST change the state of processing for its check
+     *   list for that media stream to Completed.
+     * - The agent MUST continue to respond to any checks it may still
+     *   receive for that media stream, and MUST perform triggered
+     *   checks if required by the processing of Section 7.2.
+     * - The agent MAY begin transmitting media for this media stream as
+     *   described in Section 11.1
+     */
+    /* TODO */
+
+    /* Once there is at least one nominated pair in the valid list for
+     * each component of each media stream:
+     * - The agent sets the state of ICE processing overall to
+     *   Completed.
+     * - If an agent is controlling, it examines the highest priority
+     *   nominated candidate pair for each component of each media
+     *   stream.  If any of those candidate pairs differ from the
+     *   default candidate pairs in the most recent offer/answer
+     *   exchange, the controlling agent MUST generate an updated offer
+     *   as described in Section 9.  If the controlling agent is using
+     *   an aggressive nomination algorithm, this may result in several
+     *   updated offers as the pairs selected for media change.  An
+     *   agent MAY delay sending the offer for a brief interval (one
+     *   second is RECOMMENDED) in order to allow the selected pairs to
+     *   stabilize.
+     */
+    /* TODO */
+
+
+    /* For now, just see if we have a valid pair in component 1 and
+     * just terminate ICE.
+     */
+    for (i=0; i<ice->valid_cnt; ++i) {
+	pj_ice_check *c = &ice->clist.checks[ice->valid_list[i]];
+	if (c->lcand->comp_id == 1)
+	    break;
+    }
+
+    if (i != ice->valid_cnt) {
+	/* ICE succeeded */
+	on_ice_complete(ice, PJ_SUCCESS);
+	return PJ_TRUE;
+    }
+
+    /* We don't have valid pair for component 1.
+     * See if we have performed all checks in the checklist. If we do,
+     * then mark ICE processing as failed.
+     */
+    for (i=0; i<ice->clist.count; ++i) {
+	pj_ice_check *c = &ice->clist.checks[i];
+	if (c->state < PJ_ICE_CHECK_STATE_SUCCEEDED) {
+	    break;
+	}
+    }
+
+    if (i == ice->clist.count) {
+	/* All checks have completed */
+	on_ice_complete(ice, -1);
+	return PJ_TRUE;
+    }
+
+    /* We still have checks to perform */
+    return PJ_FALSE;
+}
+
+
+
+
 
 typedef struct timer_data
 {
@@ -1241,7 +1243,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
 
     LOG((ice->obj_name, 
 	 "Sending connectivity check for check %d: %s", 
-	 check_id, dump_check(buffer, sizeof(buffer), ice, check)));
+	 check_id, dump_check(buffer, sizeof(buffer), check)));
 
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
@@ -1433,7 +1435,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 {
     struct req_data *rd = (struct req_data*) tdata->user_data;
     pj_ice *ice;
-    pj_ice_check *check, *valid_check;
+    pj_ice_check *check;
     const pj_ice_cand *lcand;
     const pj_ice_cand *rcand;
     pj_ice_checklist *clist;
@@ -1455,7 +1457,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     LOG((ice->obj_name, 
 	 "Connectivity check %s for check %s",
 	 (status==PJ_SUCCESS ? "SUCCESS" : "FAILED"), 
-	 dump_check(buffer, sizeof(buffer), ice, check)));
+	 dump_check(buffer, sizeof(buffer), check)));
 
     if (status != PJ_SUCCESS) {
 	check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED, status);

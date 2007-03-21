@@ -21,7 +21,7 @@
 
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_auth.h>
-#include <pjnath/stun_endpoint.h>
+#include <pjnath/stun_config.h>
 #include <pjnath/stun_transaction.h>
 #include <pj/list.h>
 #include <pj/timer.h>

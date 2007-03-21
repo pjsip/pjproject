@@ -165,7 +165,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     tu->pool = pool;
     tu->type = type;
     tu->pf = si->pf;
-    tu->cfg = si->cfg;
+    tu->cfg = &si->stun_cfg;
     tu->ioqueue = si->ioqueue;
     tu->timer_heap = si->timer_heap;
     tu->next_port = START_PORT;
@@ -197,8 +197,8 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_msg = &tu_sess_on_send_msg;
     sess_cb.on_rx_request = &tu_sess_on_rx_request;
-    status = pj_stun_session_create(si->cfg, "turns%p", &sess_cb, PJ_FALSE,
-				    &tu->default_session);
+    status = pj_stun_session_create(&si->stun_cfg, "turns%p", &sess_cb, 
+				    PJ_FALSE, &tu->default_session);
     if (status != PJ_SUCCESS) {
 	pj_stun_usage_destroy(tu->usage);
 	return status;
@@ -933,13 +933,13 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
     }
 
     /* Process REQUESTED-IP attribute */
-    if (a_rip && a_rip->addr.addr.sa_family != PJ_AF_INET) {
+    if (a_rip && a_rip->sockaddr.addr.sa_family != PJ_AF_INET) {
 	client_respond(client, msg, PJ_STUN_SC_INVALID_IP_ADDR, NULL,
 		       src_addr, src_addr_len);
 	return PJ_SUCCESS;
 	
     } else if (a_rip) {
-	req_addr.sin_addr.s_addr = a_rip->addr.ipv4.sin_addr.s_addr;
+	req_addr.sin_addr.s_addr = a_rip->sockaddr.ipv4.sin_addr.s_addr;
     }
 
     /* Process REQUESTED-PORT-PROPS attribute */
@@ -1106,7 +1106,7 @@ static pj_status_t client_handle_sad(struct turn_client *client,
 	/* Remote active destination needs to be cleared */
 	client->active_peer = NULL;
 
-    } else if (a_raddr->addr.addr.sa_family != PJ_AF_INET) {
+    } else if (a_raddr->sockaddr.addr.sa_family != PJ_AF_INET) {
 	/* Bad request (not IPv4) */
 	client_respond(client, msg, PJ_STUN_SC_BAD_REQUEST, NULL,
 		       src_addr, src_addr_len);
@@ -1125,9 +1125,9 @@ static pj_status_t client_handle_sad(struct turn_client *client,
 	pj_uint32_t hval = 0;
 
 	/* Add a new peer/permission if we don't have one for this address */
-	peer = client_get_peer(client, &a_raddr->addr.ipv4, &hval);
+	peer = client_get_peer(client, &a_raddr->sockaddr.ipv4, &hval);
 	if (peer==NULL) {
-	    peer = client_add_peer(client, &a_raddr->addr.ipv4, hval);
+	    peer = client_add_peer(client, &a_raddr->sockaddr.ipv4, hval);
 	}
 
 	/* Set active destination */
@@ -1172,7 +1172,7 @@ static pj_status_t client_handle_send_ind(struct turn_client *client,
 	/* REMOTE-ADDRESS not present, discard packet */
 	return PJ_SUCCESS;
 
-    } else if (a_raddr->addr.addr.sa_family != PJ_AF_INET) {
+    } else if (a_raddr->sockaddr.addr.sa_family != PJ_AF_INET) {
 	/* REMOTE-ADDRESS present but not IPv4, discard packet */
 	return PJ_SUCCESS;
 
@@ -1195,13 +1195,13 @@ static pj_status_t client_handle_send_ind(struct turn_client *client,
     }
 
     /* Add to peer table if necessary */
-    if (client_get_peer(client, &a_raddr->addr.ipv4, &hval)==NULL)
-	client_add_peer(client, &a_raddr->addr.ipv4, hval);
+    if (client_get_peer(client, &a_raddr->sockaddr.ipv4, &hval)==NULL)
+	client_add_peer(client, &a_raddr->sockaddr.ipv4, hval);
 
     /* Send the packet */
     pj_ioqueue_sendto(client->key, &client->pkt_write_key, 
 		      data, &datalen, 0,
-		      &a_raddr->addr.ipv4, sizeof(a_raddr->addr.ipv4));
+		      &a_raddr->sockaddr.ipv4, sizeof(pj_sockaddr_in));
 
     return PJ_SUCCESS;
 }

@@ -83,10 +83,8 @@ PJ_DEF(pj_status_t) pj_stun_server_create(pj_pool_factory *pf,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    status = pj_stun_config_create(srv->si.pf, 0, srv->si.ioqueue, 
-				     srv->si.timer_heap, &srv->si.cfg);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    pj_stun_config_init(&srv->si.stun_cfg, srv->si.pf, 0, srv->si.ioqueue,
+			srv->si.timer_heap);
 
     srv->si.thread_cnt = thread_cnt;
     srv->threads = pj_pool_calloc(pool, thread_cnt, sizeof(pj_thread_t*));
@@ -174,7 +172,6 @@ PJ_DEF(pj_status_t) pj_stun_server_destroy(pj_stun_server *srv)
 	srv->threads[i] = NULL;
     }
 
-    pj_stun_config_destroy(srv->si.cfg);
     pj_timer_heap_destroy(srv->si.timer_heap);
     pj_ioqueue_destroy(srv->si.ioqueue);
     pj_pool_release(srv->pool);

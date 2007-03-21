@@ -20,7 +20,7 @@
 #include <pjnath/config.h>
 #include <pjnath/errno.h>
 #include <pjnath/stun_auth.h>
-#include <pjnath/stun_setting.h>
+#include <pjnath/stun_config.h>
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_session.h>
 #include <pjnath/stun_transaction.h>

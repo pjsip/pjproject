@@ -25,6 +25,7 @@
  */
 
 #include <pjnath/stun_msg.h>
+#include <pj/string.h>
 
 
 PJ_BEGIN_DECL
@@ -32,38 +33,31 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJNATH_STUN_SETTING STUN Settings
- * @brief STUN settings.
+ * @defgroup PJNATH_STUN_CONFIG STUN Config
+ * @brief STUN config
  * @ingroup PJNATH_STUN
  * @{
  */
 
 /**
- * Opaque declaration for STUN setting.
+ * STUN configuration.
  */
 typedef struct pj_stun_config
 {
     /**
-     * Pool factory to be used by the STUN endpoint and all objects created
-     * that use this STUN endpoint.
+     * Pool factory to be used.
      */
     pj_pool_factory	*pf;
 
     /**
-     * Ioqueue used by this endpoint.
+     * Ioqueue.
      */
     pj_ioqueue_t	*ioqueue;
 
     /**
-     * Timer heap instance used by this endpoint.
+     * Timer heap instance.
      */
     pj_timer_heap_t	*timer_heap;
-
-    /**
-     * Internal pool used by this endpoint. This shouldn't be used by
-     * application.
-     */
-    pj_pool_t		*pool;
 
     /**
      * Options.
