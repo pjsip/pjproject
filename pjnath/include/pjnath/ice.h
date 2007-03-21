@@ -20,23 +20,28 @@
 #define __PJNATH_ICE_SOCK_H__
 
 /**
- * @file ice_sock.h
- * @brief ICE socket.
+ * @file ice.h
+ * @brief ICE.
  */
 #include <pjnath/types.h>
 #include <pjnath/stun_session.h>
 #include <pj/sock.h>
 #include <pj/timer.h>
 
+/**
+ * @defgroup PJNATH_ICE Interactive Connectivity Establishment (ICE)
+ * @brief Interactive Connectivity Establishment (ICE)
+ * @ingroup PJNATH
+ */
+
 
 PJ_BEGIN_DECL
 
 
-/* **************************************************************************/
 /**
- * @defgroup PJNATH_ICE_SOCK ICE Socket
- * @brief High level ICE socket abstraction.
- * @ingroup PJNATH
+ * @defgroup PJNATH_ICE_STREAM Transport Independent ICE Media Stream
+ * @brief Transport Independent ICE Media Stream
+ * @ingroup PJNATH_ICE
  * @{
  */
 
@@ -165,9 +170,8 @@ struct pj_ice
     char		obj_name[PJ_MAX_OBJ_NAME];
 
     pj_pool_t		*pool;
+    void		*user_data;
     pj_mutex_t		*mutex;
-    int			 af;
-    int			 sock_type;
     pj_ice_role		 role;
     pj_bool_t		 is_complete;
     pj_status_t		 ice_status;
@@ -176,8 +180,10 @@ struct pj_ice
     pj_stun_config	 stun_cfg;
 
     /* STUN credentials */
+    pj_str_t		 tx_ufrag;
     pj_str_t		 tx_uname;
     pj_str_t		 tx_pass;
+    pj_str_t		 rx_ufrag;
     pj_str_t		 rx_uname;
     pj_str_t		 rx_pass;
 
@@ -206,17 +212,12 @@ PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				   const char *name,
 				   pj_ice_role role,
 				   const pj_ice_cb *cb,
-				   int af,
-				   int sock_type,
 				   pj_ice **p_ice);
 PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
 PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice,
 				     unsigned comp_id,
 				     const pj_sockaddr_t *local_addr,
 				     unsigned addr_len);
-PJ_DECL(pj_status_t) pj_ice_add_sock_comp(pj_ice *ice,
-					  unsigned comp_id,
-					  pj_sock_t sock);
 PJ_DECL(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
 					    const pj_str_t *local_ufrag,
 					    const pj_str_t *local_pass,

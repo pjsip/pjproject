@@ -95,6 +95,10 @@ SOURCE=..\src\pjnath\ice.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjnath\ice_mt.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjnath\stun_auth.c
 # End Source File
 # Begin Source File
@@ -128,6 +132,10 @@ SOURCE=..\include\pjnath\errno.h
 # Begin Source File
 
 SOURCE=..\include\pjnath\ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjnath\ice_mt.h
 # End Source File
 # Begin Source File
 

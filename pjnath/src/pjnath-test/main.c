@@ -16,14 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include "test.h"
 
-#include <pjnath/config.h>
-#include <pjnath/errno.h>
-#include <pjnath/ice.h>
-#include <pjnath/ice_mt.h>
-#include <pjnath/stun_auth.h>
-#include <pjnath/stun_config.h>
-#include <pjnath/stun_msg.h>
-#include <pjnath/stun_session.h>
-#include <pjnath/stun_transaction.h>
-#include <pjnath/types.h>
+#if defined(PJ_SUNOS) && PJ_SUNOS!=0
+#include <signal.h>
+static void init_signals()
+{
+    struct sigaction act;
+
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = SIG_IGN;
+
+    sigaction(SIGALRM, &act, NULL);
+}
+
+#else
+#define init_signals()
+#endif
+
+#define boost()
+
+int main(int argc, char *argv[])
+{
+    int rc;
+
+    PJ_UNUSED_ARG(argc);
+    PJ_UNUSED_ARG(argv);
+
+    boost();
+    init_signals();
+
+    rc = test_main();
+
+    return rc;
+}
+

@@ -136,8 +136,6 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				  const char *name,
 				  pj_ice_role role,
 				  const pj_ice_cb *cb,
-				  int af,
-				  int sock_type,
 				  pj_ice **p_ice)
 {
     pj_pool_t *pool;
@@ -146,8 +144,6 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stun_cfg && cb && p_ice, PJ_EINVAL);
-    PJ_ASSERT_RETURN(sock_type==PJ_SOCK_DGRAM || sock_type==PJ_SOCK_STREAM,
-		     PJ_EINVAL);
 
     if (!name)
 	name = "ice%p";
@@ -155,8 +151,6 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
     pool = pj_pool_create(stun_cfg->pf, name, 4000, 4000, NULL);
     ice = PJ_POOL_ZALLOC_T(pool, pj_ice);
     ice->pool = pool;
-    ice->af = af;
-    ice->sock_type = sock_type;
     ice->role = role;
 
     pj_ansi_snprintf(ice->obj_name, sizeof(ice->obj_name),
@@ -435,6 +429,7 @@ PJ_DEF(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
     pj_strcat(&username, local_ufrag);
 
     pj_strdup(ice->pool, &ice->tx_uname, &username);
+    pj_strdup(ice->pool, &ice->tx_ufrag, remote_ufrag);
     pj_strdup(ice->pool, &ice->tx_pass, remote_pass);
 
     pj_strcpy(&username, local_ufrag);
@@ -442,6 +437,7 @@ PJ_DEF(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
     pj_strcat(&username, remote_ufrag);
 
     pj_strdup(ice->pool, &ice->rx_uname, &username);
+    pj_strdup(ice->pool, &ice->rx_ufrag, local_ufrag);
     pj_strdup(ice->pool, &ice->rx_pass, local_pass);
 
     return PJ_SUCCESS;
@@ -481,7 +477,7 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
     pj_status_t status = PJ_SUCCESS;
     char tmp[128];
 
-    PJ_ASSERT_RETURN(ice && comp_id && type && local_pref &&
+    PJ_ASSERT_RETURN(ice && comp_id && local_pref &&
 		     foundation && addr && base_addr && addr_len,
 		     PJ_EINVAL);
 
@@ -703,7 +699,7 @@ static void dump_checklist(const char *title, const pj_ice *ice,
     LOG((ice->obj_name, "%s", title));
     for (i=0; i<clist->count; ++i) {
 	const pj_ice_check *c = &clist->checks[i];
-	LOG((ice->obj_name, " %d: %s (prio=%u, state=%s)",
+	LOG((ice->obj_name, " %d: %s (prio=0x%"PJ_INT64_FMT"x, state=%s)",
 	     i, dump_check(buffer, sizeof(buffer), c),
 	     c->prio, check_state_name[c->state]));
     }
@@ -1101,7 +1097,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
     check = &clist->checks[check_id];
     lcand = check->lcand;
     rcand = check->rcand;
-    comp = &ice->comp[lcand->comp_id];
+    comp = find_comp(ice, lcand->comp_id);
 
     LOG((ice->obj_name, 
 	 "Sending connectivity check for check %d: %s", 
@@ -1733,7 +1729,7 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_ice_comp *comp;
-    pj_bool_t is_stun;
+    pj_status_t stun_status;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
@@ -1745,8 +1741,8 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 	goto on_return;
     }
 
-    is_stun = pj_stun_msg_check(pkt, pkt_size, PJ_STUN_IS_DATAGRAM);
-    if (is_stun) {
+    stun_status = pj_stun_msg_check(pkt, pkt_size, PJ_STUN_IS_DATAGRAM);
+    if (stun_status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);

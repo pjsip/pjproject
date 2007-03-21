@@ -16,14 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pjlib.h>
+#include <pjlib-util.h>
+#include <pjnath.h>
 
-#include <pjnath/config.h>
-#include <pjnath/errno.h>
-#include <pjnath/ice.h>
-#include <pjnath/ice_mt.h>
-#include <pjnath/stun_auth.h>
-#include <pjnath/stun_config.h>
-#include <pjnath/stun_msg.h>
-#include <pjnath/stun_session.h>
-#include <pjnath/stun_transaction.h>
-#include <pjnath/types.h>
+#define INCLUDE_ICE_TEST	    1
+
+extern int ice_test(void);
+extern int test_main(void);
+
+extern void app_perror(const char *title, pj_status_t rc);
+extern pj_pool_factory *mem;
+
