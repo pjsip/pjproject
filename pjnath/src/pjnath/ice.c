@@ -59,8 +59,26 @@ const pj_str_t mapped_foundation = {"srfx", 4};
 const pj_str_t relayed_foundation = {"rlyd", 4};
 const pj_str_t peer_mapped_foundation = {"peer", 4};
 
-#define CHECK_NAME_LEN	128
-#define LOG(expr)	PJ_LOG(4,expr)
+#define CHECK_NAME_LEN	    128
+#define LOG(expr)	    PJ_LOG(4,expr)
+#define GET_LCAND_ID(cand)  (cand - ice->lcand)
+#define GET_CHECK_ID(chk)   (chk - ice->clist.checks)
+
+
+typedef struct stun_data
+{
+    pj_ice	*ice;
+    unsigned	 comp_id;
+    pj_ice_comp	*comp;
+} stun_data;
+
+typedef struct timer_data
+{
+    pj_ice		*ice;
+    pj_ice_checklist	*clist;
+} timer_data;
+
+
 
 static void destroy_ice(pj_ice *ice,
 			pj_status_t reason);
@@ -124,6 +142,7 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 {
     pj_pool_t *pool;
     pj_ice *ice;
+    unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stun_cfg && cb && p_ice, PJ_EINVAL);
@@ -153,11 +172,14 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
     pj_memcpy(&ice->cb, cb, sizeof(*cb));
     pj_memcpy(&ice->stun_cfg, stun_cfg, sizeof(*stun_cfg));
 
+    for (i=0; i<PJ_ICE_MAX_COMP; ++i) {
+	ice->comp[i].nominated_check_id = -1;
+    }
 
     /* Done */
     *p_ice = ice;
 
-    LOG((ice->obj_name, "ICE session created"));
+    LOG((ice->obj_name, "ICE media stream created"));
 
     return PJ_SUCCESS;
 }
@@ -186,11 +208,6 @@ static void destroy_ice(pj_ice *ice,
 	ice->clist.timer.id = PJ_FALSE;
     }
 
-    if (ice->resv_q) {
-	pj_dns_resolver_cancel_query(ice->resv_q, PJ_FALSE);
-	ice->resv_q = NULL;
-    }
-
     if (ice->mutex) {
 	pj_mutex_destroy(ice->mutex);
 	ice->mutex = NULL;
@@ -211,119 +228,16 @@ PJ_DEF(pj_status_t) pj_ice_destroy(pj_ice *ice)
 }
 
 
-static void resolver_cb(void *user_data,
-			pj_status_t status,
-			pj_dns_parsed_packet *response)
+static pj_ice_comp *find_comp(const pj_ice *ice, unsigned comp_id)
 {
-    pj_assert(!"Not implemented yet!");
-    PJ_UNUSED_ARG(user_data);
-    PJ_UNUSED_ARG(status);
-    PJ_UNUSED_ARG(response);
+    unsigned i;
+    for (i=0; i<ice->comp_cnt; ++i) {
+	if (ice->comp[i].comp_id == comp_id)
+	    return (pj_ice_comp*) &ice->comp[i];
+    }
+
+    return NULL;
 }
-
-PJ_DEF(pj_status_t) pj_ice_set_srv(pj_ice *ice,
-				   pj_bool_t enable_relay,
-				   pj_dns_resolver *resolver,
-				   const pj_str_t *domain)
-{
-    char namebuf[128];
-    char *tp_name;
-    pj_str_t name;
-    pj_status_t status;
-
-
-    /* Not implemented yet! */
-    return PJ_ENOTSUP;
-
-
-    PJ_ASSERT_RETURN(ice && resolver && domain, PJ_EINVAL);
-
-    /* Must not have a running resolver. This is because we couldn't
-     * safely cancel the query (there is a race condition situation
-     * between the callback acquiring the mutex and this function
-     * acquiring the mutex)
-     */
-    PJ_ASSERT_RETURN(ice->resv_q==NULL, PJ_EBUSY);
-
-    pj_mutex_lock(ice->mutex);
-
-    /* Reset resolver and server addresses */
-    ice->relay_enabled = enable_relay;
-    ice->resv = resolver;
-    pj_bzero(&ice->stun_srv, sizeof(ice->stun_srv));
-
-    /* Build SRV record name */
-    if (ice->sock_type == PJ_SOCK_DGRAM) {
-	tp_name = "_udp";
-    } else if (ice->sock_type == PJ_SOCK_STREAM) {
-	tp_name = "_tcp";
-    } else {
-	pj_assert(!"Invalid sock_type");
-	pj_mutex_unlock(ice->mutex);
-	return PJ_EBUG;
-    }
-
-    if (enable_relay) {
-	name.ptr = namebuf;
-	name.slen = pj_ansi_snprintf(namebuf, sizeof(namebuf),
-				     "_stun-relay.%s.%.*s",
-				     tp_name,
-				     (int)domain->slen,
-				     domain->ptr);
-    } else {
-	name.ptr = namebuf;
-	name.slen = pj_ansi_snprintf(namebuf, sizeof(namebuf),
-				     "_stun.%s.%.*s",
-				     tp_name,
-				     (int)domain->slen,
-				     domain->ptr);
-    }
-
-    if (name.slen < 1 || name.slen >= sizeof(namebuf)) {
-	pj_mutex_unlock(ice->mutex);
-	return PJ_ENAMETOOLONG;
-    }
-
-    /* Start DNS query */
-    status = pj_dns_resolver_start_query(ice->resv, &name, 
-					 PJ_DNS_TYPE_SRV, 0, 
-					 &resolver_cb, 
-					 ice, &ice->resv_q);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(ice->mutex);
-	return status;
-    }
-
-    pj_mutex_unlock(ice->mutex);
-
-    return PJ_SUCCESS;
-}
-
-
-PJ_DEF(pj_status_t) pj_ice_set_srv_addr(pj_ice *ice,
-					pj_bool_t enable_relay,
-					const pj_sockaddr_t *srv_addr,
-					unsigned addr_len)
-{
-    PJ_ASSERT_RETURN(ice && srv_addr, PJ_EINVAL);
-    /* Must not have a running resolver. This is because we couldn't
-     * safely cancel the query (there is a race condition situation
-     * between the callback acquiring the mutex and this function
-     * acquiring the mutex)
-     */
-    PJ_ASSERT_RETURN(ice->resv_q==NULL, PJ_EBUSY);
-
-    pj_mutex_lock(ice->mutex);
-
-    ice->relay_enabled = enable_relay;
-    pj_memcpy(&ice->stun_srv, srv_addr, addr_len);
-
-    pj_mutex_unlock(ice->mutex);
-
-    return PJ_SUCCESS;
-
-}
-
 
 
 PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice,
@@ -331,63 +245,22 @@ PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice,
 				    const pj_sockaddr_t *local_addr,
 				    unsigned addr_len)
 {
-    pj_status_t status;
-    pj_sock_t sock;
-
-    PJ_ASSERT_RETURN(ice && local_addr && addr_len, PJ_EINVAL);
-
-    status = pj_sock_socket(ice->af, ice->sock_type, 0, &sock);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    status = pj_sock_bind(sock, local_addr, addr_len);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    status = pj_ice_add_sock_comp(ice, comp_id, sock);
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(sock);
-	return status;
-    }
-
-    return PJ_SUCCESS;
-}
-
-typedef struct stun_data
-{
-    pj_ice	*ice;
-    unsigned	 comp_id;
-    pj_ice_comp	*comp;
-} stun_data;
-
-
-PJ_DEF(pj_status_t) pj_ice_add_sock_comp( pj_ice *ice,
-					  unsigned comp_id,
-					  pj_sock_t sock)
-{
     pj_stun_session_cb sess_cb;
     pj_ice_comp *comp;
     pj_stun_auth_cred auth_cred;
     stun_data *sd;
-    int addr_len;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && sock != PJ_INVALID_SOCKET, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && local_addr && addr_len, PJ_EINVAL);
     PJ_ASSERT_RETURN(ice->comp_cnt < PJ_ARRAY_SIZE(ice->comp), PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(find_comp(ice, comp_id) == NULL, PJ_EEXISTS);
 
     pj_mutex_lock(ice->mutex);
 
     comp = &ice->comp[ice->comp_cnt];
     comp->comp_id = comp_id;
-    comp->sock = sock;
-
-    addr_len = sizeof(comp->local_addr);
-    status = pj_sock_getsockname(sock, &comp->local_addr, &addr_len);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(ice->mutex);
-	return status;
-    }
-
+    comp->nominated_check_id = -1;
+    pj_memcpy(&comp->local_addr, local_addr, addr_len);
 
     /* Init STUN callbacks */
     pj_bzero(&sess_cb, sizeof(sess_cb));
@@ -428,7 +301,6 @@ PJ_DEF(pj_status_t) pj_ice_add_sock_comp( pj_ice *ice,
 
     return PJ_SUCCESS;
 }
-
 
 static pj_status_t stun_auth_get_auth(void *user_data,
 				      pj_pool_t *pool,
@@ -576,74 +448,6 @@ PJ_DEF(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
 }
 
 
-static pj_status_t gather_host_cands(pj_ice *ice)
-{
-    unsigned i;
-    pj_status_t status;
-
-    for (i=0; i<ice->comp_cnt; ++i) {
-	pj_ice_comp *comp = &ice->comp[i];
-	pj_sockaddr addr;
-	int addr_len;
-
-	addr_len = sizeof(addr);
-	status = pj_sock_getsockname(comp->sock, &addr, &addr_len);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	if (addr.ipv4.sin_addr.s_addr == 0) {
-	    status = pj_gethostip(&addr.ipv4.sin_addr);
-	    if (status != PJ_SUCCESS)
-		return status;
-	}
-
-	status = pj_ice_add_cand(ice, i, PJ_ICE_CAND_TYPE_HOST, 65535,
-				 &host_foundation, &addr, &addr, NULL,
-    				 sizeof(pj_sockaddr_in), NULL);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
-
-    return PJ_SUCCESS;
-}
-
-/* Eliminate redundant candidates. */
-static void eliminate_redundant_cand(unsigned *cnt,
-				     pj_ice_cand cand[])
-{
-
-    /* A candidate is redundant if its transport address equals another 
-     * candidate, and its base equals the base of that other candidate.
-     * Note that two candidates can have the same transport address yet
-     * have different bases, and these would not be considered redundant.
-     */
-    PJ_TODO(ELIMINATE_REDUNDANT_CANDIDATES);
-    PJ_UNUSED_ARG(cnt);
-    PJ_UNUSED_ARG(cand);
-}
-
-
-PJ_DEF(pj_status_t) pj_ice_start_gather(pj_ice *ice,
-					unsigned flags)
-{
-    pj_status_t status;
-
-    PJ_UNUSED_ARG(flags);
-
-    /* Gather host candidate */
-    status = gather_host_cands(ice);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Eliminate redundant host candidates. */
-    eliminate_redundant_cand(&ice->lcand_cnt, ice->lcand);
-
-    PJ_TODO(GATHER_MAPPED_AND_RELAYED_CANDIDATES);
-
-    return PJ_SUCCESS;
-}
-
-
 static pj_uint32_t CALC_CAND_PRIO(pj_ice_cand_type type,
 				  pj_uint32_t local_pref,
 				  pj_uint32_t comp_id)
@@ -651,8 +455,8 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_cand_type type,
     static pj_uint32_t type_pref[] =
     {
 	PJ_ICE_HOST_PREF,
-	PJ_ICE_MAPPED_PREF,
-	PJ_ICE_PEER_MAPPED_PREF,
+	PJ_ICE_SRFLX_PREF,
+	PJ_ICE_PRFLX_PREF,
 	PJ_ICE_RELAYED_PREF
     };
 
@@ -757,24 +561,67 @@ PJ_DEF(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
 					    unsigned comp_id,
 					    int *cand_id)
 {
+    unsigned i;
+
     PJ_ASSERT_RETURN(ice && comp_id && cand_id, PJ_EINVAL);
+
+    *cand_id = -1;
 
     pj_mutex_lock(ice->mutex);
 
     /* First find in valid list if we have nominated pair */
+    for (i=0; i<ice->valid_cnt; ++i) {
+	pj_ice_cand *lcand;
+	
+	lcand = ice->clist.checks[ice->valid_list[i]].lcand;
+	if (lcand->comp_id==comp_id) {
+	    *cand_id = GET_LCAND_ID(lcand);
+	    pj_mutex_unlock(ice->mutex);
+	    return PJ_SUCCESS;
+	}
+    }
 
     /* If there's no nominated pair, find relayed candidate */
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	pj_ice_cand *lcand = &ice->lcand[i];
+	if (lcand->comp_id==comp_id &&
+	    lcand->type == PJ_ICE_CAND_TYPE_RELAYED) 
+	{
+	    *cand_id = GET_LCAND_ID(lcand);
+	    pj_mutex_unlock(ice->mutex);
+	    return PJ_SUCCESS;
+	}
+    }
 
     /* If there's no relayed candidate, find server reflexive candidate */
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	pj_ice_cand *lcand = &ice->lcand[i];
+	if (lcand->comp_id==comp_id &&
+	    lcand->type == PJ_ICE_CAND_TYPE_SRFLX) 
+	{
+	    *cand_id = GET_LCAND_ID(lcand);
+	    pj_mutex_unlock(ice->mutex);
+	    return PJ_SUCCESS;
+	}
+    }
 
     /* Otherwise return host candidate */
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	pj_ice_cand *lcand = &ice->lcand[i];
+	if (lcand->comp_id==comp_id &&
+	    lcand->type == PJ_ICE_CAND_TYPE_HOST) 
+	{
+	    *cand_id = GET_LCAND_ID(lcand);
+	    pj_mutex_unlock(ice->mutex);
+	    return PJ_SUCCESS;
+	}
+    }
 
-    pj_assert(!"Not implemented yet");
-    PJ_TODO(IMPLEMENT_GET_DEFAULT_CAND);
-
+    /* Still no candidate is found! :( */
     pj_mutex_unlock(ice->mutex);
 
-    return PJ_SUCCESS;
+    pj_assert(!"Should have a candidate by now");
+    return PJ_EICENOCAND;
 }
 
 
@@ -986,7 +833,7 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 	const pj_sockaddr *liaddr;
 	unsigned j;
 
-	if (licand->type == PJ_ICE_CAND_TYPE_MAPPED)
+	if (licand->type == PJ_ICE_CAND_TYPE_SRFLX)
 	    liaddr = &licand->base_addr;
 	else
 	    liaddr = &licand->addr;
@@ -996,7 +843,7 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 	    pj_ice_cand *rjcand = clist->checks[j].rcand;
 	    const pj_sockaddr *ljaddr;
 
-	    if (ljcand->type == PJ_ICE_CAND_TYPE_MAPPED)
+	    if (ljcand->type == PJ_ICE_CAND_TYPE_SRFLX)
 		ljaddr = &licand->base_addr;
 	    else
 		ljaddr = &licand->addr;
@@ -1024,6 +871,14 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 /* This function is called when ICE processing completes */
 static void on_ice_complete(pj_ice *ice, pj_status_t status)
 {
+    if (!ice->is_complete) {
+
+	ice->is_complete = PJ_TRUE;
+	ice->ice_status = status;
+
+	/* Call callback */
+	(*ice->cb.on_ice_complete)(ice, status);
+    }
 }
 
 
@@ -1032,6 +887,8 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 				   pj_ice_check *check)
 {
     unsigned i;
+
+    pj_assert(check->state >= PJ_ICE_CHECK_STATE_SUCCEEDED);
 
     /* If there is at least one nominated pair in the valid list:
      * - The agent MUST remove all Waiting and Frozen pairs in the check
@@ -1042,7 +899,9 @@ static pj_bool_t on_check_complete(pj_ice *ice,
      *   retransmissions for its check if its pair priority is lower
      *   than the lowest priority nominated pair for that component
      */
-    if (check->nominated) {
+    if (check->err_code==PJ_SUCCESS && check->nominated) {
+	pj_ice_comp *comp;
+
 	for (i=0; i<ice->clist.count; ++i) {
 	    pj_ice_check *c = &ice->clist.checks[i];
 	    if (c->lcand->comp_id == check->lcand->comp_id &&
@@ -1052,6 +911,17 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 		check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED,
 				PJ_ECANCELLED);
 	    }
+	}
+
+	/* Update the nominated check for the component */
+	comp = find_comp(ice, check->lcand->comp_id);
+	if (comp->nominated_check_id < 0) {
+	    comp->nominated_check_id = GET_CHECK_ID(check);
+	} else {
+	    pj_ice_check *nom_check;
+	    nom_check = &ice->clist.checks[comp->nominated_check_id];
+	    if (nom_check->prio < check->prio)
+		comp->nominated_check_id = GET_CHECK_ID(check);
 	}
     }
 
@@ -1123,14 +993,6 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 }
 
 
-
-
-
-typedef struct timer_data
-{
-    pj_ice		*ice;
-    pj_ice_checklist	*clist;
-} timer_data;
 
 PJ_DEF(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
 					     unsigned rcand_cnt,
@@ -1261,7 +1123,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
     tdata->user_data = (void*) rd;
 
     /* Add PRIORITY */
-    prio = CALC_CAND_PRIO(PJ_ICE_CAND_TYPE_PEER_MAPPED, 65535, 
+    prio = CALC_CAND_PRIO(PJ_ICE_CAND_TYPE_PRFLX, 65535, 
 			  lcand->comp_id);
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg, PJ_STUN_ATTR_PRIORITY,
 			      prio);
@@ -1422,8 +1284,10 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 				    const pj_sockaddr_t *dst_addr,
 				    unsigned addr_len)
 {
-    pj_ice *ice = (pj_ice*) pj_stun_session_get_user_data(sess);
-    return (*ice->cb.on_send_pkt)(ice, pkt, pkt_size, dst_addr, addr_len);
+    stun_data *sd = (stun_data*) pj_stun_session_get_user_data(sess);
+    return (*sd->ice->cb.on_tx_pkt)(sd->ice, sd->comp_id, 
+				    pkt, pkt_size, 
+				    dst_addr, addr_len);
 }
 
 
@@ -1499,7 +1363,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
 	/* Add new peer reflexive candidate */
 	status = pj_ice_add_cand(ice, lcand->comp_id, 
-				 PJ_ICE_CAND_TYPE_PEER_MAPPED,
+				 PJ_ICE_CAND_TYPE_PRFLX,
 				 65535, &peer_mapped_foundation,
 				 &xaddr->sockaddr, &lcand->base_addr, NULL,
 				 sizeof(pj_sockaddr_in), &cand_id);
@@ -1678,7 +1542,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     if (i == ice->rcand_cnt) {
 	rcand = &ice->rcand[ice->rcand_cnt++];
 	rcand->comp_id = comp->comp_id;
-	rcand->type = PJ_ICE_CAND_TYPE_PEER_MAPPED;
+	rcand->type = PJ_ICE_CAND_TYPE_PRFLX;
 	rcand->prio = ap->value;
 	pj_memcpy(&rcand->addr, src_addr, src_addr_len);
 
@@ -1822,4 +1686,79 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 
     return PJ_ENOTSUP;
 }
+
+
+PJ_DEF(pj_status_t) pj_ice_send_data( pj_ice *ice,
+				      unsigned comp_id,
+				      const void *data,
+				      pj_size_t data_len)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_ice_comp *comp;
+    pj_ice_check *check;
+
+    PJ_ASSERT_RETURN(ice, PJ_EINVAL);
+    
+    pj_mutex_lock(ice->mutex);
+
+    comp = find_comp(ice, comp_id);
+    if (comp == NULL) {
+	status = PJ_EICEINCOMPID;
+	goto on_return;
+    }
+
+    if (comp->nominated_check_id == -1) {
+	status = PJ_EICEINPROGRESS;
+	goto on_return;
+    }
+
+    check = &ice->clist.checks[comp->nominated_check_id];
+
+    status = (*ice->cb.on_tx_pkt)(ice, comp_id, data, data_len, 
+				  &check->rcand->addr, 
+				  sizeof(pj_sockaddr_in));
+
+on_return:
+    pj_mutex_unlock(ice->mutex);
+    return status;
+}
+
+
+PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
+				      unsigned comp_id,
+				      void *pkt,
+				      pj_size_t pkt_size,
+				      const pj_sockaddr_t *src_addr,
+				      int src_addr_len)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_ice_comp *comp;
+    pj_bool_t is_stun;
+
+    PJ_ASSERT_RETURN(ice, PJ_EINVAL);
+
+    pj_mutex_lock(ice->mutex);
+
+    comp = find_comp(ice, comp_id);
+    if (comp == NULL) {
+	status = PJ_EICEINCOMPID;
+	goto on_return;
+    }
+
+    is_stun = pj_stun_msg_check(pkt, pkt_size, PJ_STUN_IS_DATAGRAM);
+    if (is_stun) {
+	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
+					   PJ_STUN_IS_DATAGRAM,
+					   NULL, src_addr, src_addr_len);
+    } else {
+	status = (*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 
+				       src_addr, src_addr_len);
+    }
+    
+
+on_return:
+    pj_mutex_unlock(ice->mutex);
+    return status;
+}
+
 

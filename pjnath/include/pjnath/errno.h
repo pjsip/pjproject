@@ -143,6 +143,21 @@
  * No ICE checklist is formed.
  */
 #define PJ_EICENOCHECKLIST	    -1
+/**
+ * @hideinitializer
+ * No suitable default ICE candidate for the component.
+ */
+#define PJ_EICENOCAND		    -1
+/**
+ * @hideinitializer
+ * Invalid ICE component ID
+ */
+#define PJ_EICEINCOMPID		    -1
+/**
+ * @hideinitializer
+ * ICE check is in progress
+ */
+#define PJ_EICEINPROGRESS	    -1
 
 
 

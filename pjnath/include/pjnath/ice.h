@@ -25,7 +25,6 @@
  */
 #include <pjnath/types.h>
 #include <pjnath/stun_session.h>
-#include <pjlib-util/resolver.h>
 #include <pj/sock.h>
 #include <pj/timer.h>
 
@@ -47,8 +46,8 @@ PJ_BEGIN_DECL
 typedef enum pj_ice_cand_type
 {
     PJ_ICE_CAND_TYPE_HOST,
-    PJ_ICE_CAND_TYPE_MAPPED,
-    PJ_ICE_CAND_TYPE_PEER_MAPPED,
+    PJ_ICE_CAND_TYPE_SRFLX,
+    PJ_ICE_CAND_TYPE_PRFLX,
     PJ_ICE_CAND_TYPE_RELAYED
 } pj_ice_cand_type;
 
@@ -58,8 +57,8 @@ typedef enum pj_ice_cand_type
 enum pj_ice_type_pref
 {
     PJ_ICE_HOST_PREF	    = 126,
-    PJ_ICE_MAPPED_PREF	    = 100,
-    PJ_ICE_PEER_MAPPED_PREF = 110,
+    PJ_ICE_SRFLX_PREF	    = 100,
+    PJ_ICE_PRFLX_PREF	    = 110,
     PJ_ICE_RELAYED_PREF	    = 0
 };
 
@@ -77,9 +76,9 @@ typedef struct pj_ice pj_ice;
 typedef struct pj_ice_comp
 {
     unsigned	     comp_id;
-    pj_sock_t	     sock;
     pj_stun_session *stun_sess;
     pj_sockaddr	     local_addr;
+    int		     nominated_check_id;
 } pj_ice_comp;
 
 
@@ -140,10 +139,15 @@ typedef struct pj_ice_checklist
  */
 typedef struct pj_ice_cb
 {
-    pj_status_t (*on_send_pkt)(pj_ice *ice, 
-			       const void *pkt, pj_size_t size,
-			       const pj_sockaddr_t *dst_addr,
-			       unsigned addr_len);
+    void	(*on_ice_complete)(pj_ice *ice, pj_status_t status);
+    pj_status_t (*on_tx_pkt)(pj_ice *ice, unsigned comp_id,
+			     const void *pkt, pj_size_t size,
+			     const pj_sockaddr_t *dst_addr,
+			     unsigned dst_addr_len);
+    pj_status_t	(*on_rx_data)(pj_ice *ice, unsigned comp_id,
+			      void *pkt, pj_size_t size,
+			      const pj_sockaddr_t *src_addr,
+			      unsigned src_addr_len);
 } pj_ice_cb;
 
 
@@ -165,6 +169,8 @@ struct pj_ice
     int			 af;
     int			 sock_type;
     pj_ice_role		 role;
+    pj_bool_t		 is_complete;
+    pj_status_t		 ice_status;
     pj_ice_cb		 cb;
 
     pj_stun_config	 stun_cfg;
@@ -193,12 +199,6 @@ struct pj_ice
     /* Valid list */
     unsigned		 valid_cnt;
     unsigned		 valid_list[PJ_ICE_MAX_CHECKS];
-
-    /* STUN servers */
-    pj_dns_resolver	*resv;
-    pj_dns_async_query	*resv_q;
-    pj_bool_t		 relay_enabled;
-    pj_sockaddr		 stun_srv;
 };
 
 
@@ -210,14 +210,6 @@ PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				   int sock_type,
 				   pj_ice **p_ice);
 PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
-PJ_DECL(pj_status_t) pj_ice_set_srv(pj_ice *ice,
-				    pj_bool_t enable_relay,
-				    pj_dns_resolver *resolver,
-				    const pj_str_t *domain);
-PJ_DECL(pj_status_t) pj_ice_set_srv_addr(pj_ice *ice,
-					 pj_bool_t enable_relay,
-					 const pj_sockaddr_t *srv_addr,
-					 unsigned addr_len);
 PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice,
 				     unsigned comp_id,
 				     const pj_sockaddr_t *local_addr,
@@ -230,9 +222,6 @@ PJ_DECL(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
 					    const pj_str_t *local_pass,
 					    const pj_str_t *remote_ufrag,
 					    const pj_str_t *remote_pass);
-PJ_DECL(pj_status_t) pj_ice_start_gather(pj_ice *ice,
-					 unsigned flags);
-
 PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				     unsigned comp_id,
 				     pj_ice_cand_type type,
@@ -258,8 +247,19 @@ PJ_DECL(pj_status_t) pj_ice_get_cand(pj_ice *ice,
 PJ_DECL(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
 					      unsigned rem_cand_cnt,
 					      const pj_ice_cand rem_cand[]);
-
 PJ_DECL(pj_status_t) pj_ice_start_check(pj_ice *ice);
+
+PJ_DECL(pj_status_t) pj_ice_send_data(pj_ice *ice,
+				      unsigned comp_id,
+				      const void *data,
+				      pj_size_t data_len);
+PJ_DECL(pj_status_t) pj_ice_on_rx_pkt(pj_ice *ice,
+				      unsigned comp_id,
+				      void *pkt,
+				      pj_size_t pkt_size,
+				      const pj_sockaddr_t *src_addr,
+				      int src_addr_len);
+
 
 
 /**
