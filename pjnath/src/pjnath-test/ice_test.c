@@ -29,8 +29,10 @@ struct ice_data
     unsigned	    rx_rtp_cnt;
     unsigned	    rx_rtcp_cnt;
 
-    char	    rx_rtp_data[32];
-    char	    rx_rtcp_data[32];
+    unsigned	    rx_rtp_count;
+    char	    last_rx_rtp_data[32];
+    unsigned	    rx_rtcp_count;
+    char	    last_rx_rtcp_data[32];
 };
 
 static pj_stun_config stun_cfg;
@@ -54,7 +56,8 @@ static void on_rx_rtp(pj_icemt *icemt,
     struct ice_data *id = (struct ice_data*) icemt->user_data;
 
     id->rx_rtp_cnt++;
-    pj_memcpy(id->rx_rtp_data, pkt, size);
+    pj_memcpy(id->last_rx_rtp_data, pkt, size);
+    id->last_rx_rtp_data[size] = '\0';
 
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -69,7 +72,8 @@ static void on_rx_rtcp(pj_icemt *icemt,
     struct ice_data *id = (struct ice_data*) icemt->user_data;
 
     id->rx_rtcp_cnt++;
-    pj_memcpy(id->rx_rtcp_data, pkt, size);
+    pj_memcpy(id->last_rx_rtcp_data, pkt, size);
+    id->last_rx_rtcp_data[size] = '\0';
 
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -102,7 +106,7 @@ static int ice_basic_create_destroy_test()
 
     pj_bzero(&icemt_cb, sizeof(icemt_cb));
     icemt_cb.on_ice_complete = &on_ice_complete;
-    icemt_cb.on_rx_rtcp = &on_rx_rtp;
+    icemt_cb.on_rx_rtp = &on_rx_rtp;
     icemt_cb.on_rx_rtcp = &on_rx_rtcp;
 
     status = pj_icemt_create(&stun_cfg, NULL, PJ_ICE_ROLE_CONTROLLING,
@@ -152,11 +156,13 @@ static pj_status_t set_remote_list(pj_icemt *src, pj_icemt *dst)
  * - acand_cnt,
  *   acand	Additional candidates to be added to answerer
  *
- * The additional candidates are invalid candidates, meaning they
- * won't be reachable by the agents. They are used to "confuse"
+ * The additional candidates are normally invalid candidates, meaning 
+ * they won't be reachable by the agents. They are used to "confuse"
  * ICE processing.
  */
 static int perform_ice_test(const char *title,
+			    unsigned wait_before_send,
+			    unsigned max_total_time,
 			    unsigned ocand_cnt,
 			    const pj_ice_cand ocand[],
 			    unsigned acand_cnt,
@@ -167,6 +173,7 @@ static int perform_ice_test(const char *title,
     struct ice_data *id1, *id2;
     pj_timestamp t_start, t_end;
     pj_ice_cand *rcand;
+    pj_str_t data_from_offerer, data_from_answerer;
     unsigned i;
     pj_status_t status;
 
@@ -174,7 +181,7 @@ static int perform_ice_test(const char *title,
 
     pj_bzero(&icemt_cb, sizeof(icemt_cb));
     icemt_cb.on_ice_complete = &on_ice_complete;
-    icemt_cb.on_rx_rtcp = &on_rx_rtp;
+    icemt_cb.on_rx_rtp = &on_rx_rtp;
     icemt_cb.on_rx_rtcp = &on_rx_rtcp;
 
     /* Create first ICE */
@@ -252,6 +259,38 @@ static int perform_ice_test(const char *title,
 	return -45;
 #endif
 
+    /* Poll for wait_before_send msecs before we send the first data */
+    for (;;) {
+	pj_timestamp t_now;
+
+	handle_events(1);
+
+	pj_get_timestamp(&t_now);
+	if (pj_elapsed_msec(&t_start, &t_now) >= wait_before_send)
+	    break;
+    }
+
+    /* Send data. It must be successful! */
+    data_from_offerer = pj_str("from offerer");
+    status = pj_ice_send_data(im1->ice, 1, data_from_offerer.ptr, data_from_offerer.slen);
+    if (status != PJ_SUCCESS)
+	return -47;
+
+    data_from_answerer = pj_str("from answerer");
+    status = pj_ice_send_data(im2->ice, 1, data_from_answerer.ptr, data_from_answerer.slen);
+    if (status != PJ_SUCCESS)
+	return -48;
+
+    /* Poll to allow data to be received */
+    for (;;) {
+	pj_timestamp t_now;
+	handle_events(1);
+	pj_get_timestamp(&t_now);
+	if (pj_elapsed_msec(&t_start, &t_now) >= (wait_before_send + 200))
+	    break;
+    }
+
+
     /* Just wait until both completes, or timed out */
     while (!id1->complete || !id2->complete) {
 	pj_timestamp t_now;
@@ -259,7 +298,7 @@ static int perform_ice_test(const char *title,
 	handle_events(1);
 
 	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_start, &t_now) >= 10000) {
+	if (pj_elapsed_msec(&t_start, &t_now) >= max_total_time) {
 	    PJ_LOG(3,(THIS_FILE, "....error: timed-out"));
 	    return -50;
 	}
@@ -288,6 +327,27 @@ static int perform_ice_test(const char *title,
 	return -70;
     }
 
+    /* Check that data is received in offerer */
+    if (id1->rx_rtp_cnt != 1) {
+	PJ_LOG(3,(THIS_FILE, "....error: data not received in offerer"));
+	return -80;
+    }
+    if (pj_strcmp2(&data_from_answerer, id1->last_rx_rtp_data) != 0) {
+	PJ_LOG(3,(THIS_FILE, "....error: data mismatch in offerer"));
+	return -82;
+    }
+
+    /* And the same in answerer */
+    if (id2->rx_rtp_cnt != 1) {
+	PJ_LOG(3,(THIS_FILE, "....error: data not received in answerer"));
+	return -84;
+    }
+    if (pj_strcmp2(&data_from_offerer, id2->last_rx_rtp_data) != 0) {
+	PJ_LOG(3,(THIS_FILE, "....error: data mismatch in answerer"));
+	return -82;
+    }
+
+
     /* Done */
     PJ_LOG(3,(THIS_FILE, "....success: ICE completed in %d msec", 
 	      pj_elapsed_msec(&t_start, &t_end)));
@@ -298,7 +358,7 @@ static int perform_ice_test(const char *title,
 	pj_timestamp t_now;
 
 	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_end, &t_now) > 10000)
+	if (pj_elapsed_msec(&t_start, &t_now) > max_total_time)
 	    break;
 
 	handle_events(1);
@@ -335,7 +395,7 @@ int ice_test(void)
 	goto on_return;
 
     /* Direct communication */
-    rc = perform_ice_test("Direct connection", 0, NULL, 0, NULL);
+    rc = perform_ice_test("Direct connection", 500, 1000, 0, NULL, 0, NULL);
     if (rc != 0)
 	goto on_return;
 
@@ -347,9 +407,15 @@ int ice_test(void)
     ocand[0].foundation = pj_str("H2");
     ocand[0].type = PJ_ICE_CAND_TYPE_HOST;
 
-    rc = perform_ice_test("Direct connection with 1 invalid address", 1, ocand, 0, NULL);
+    rc = perform_ice_test("Direct connection with 1 invalid address", 500, 1000, 1, ocand, 0, NULL);
     if (rc != 0)
 	goto on_return;
+
+    /* Direct communication with two components */
+    rc = perform_ice_test("Direct connection with two components", 500, 1000, 0, NULL, 0, NULL);
+    if (rc != 0)
+	goto on_return;
+
 
 
 on_return:

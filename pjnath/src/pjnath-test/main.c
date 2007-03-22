@@ -50,6 +50,8 @@ int main(int argc, char *argv[])
 
     if (argc == 2 && pj_ansi_strcmp(argv[1], "-i")==0) {
 	char buf[10];
+
+	puts("Press <ENTER> to exit");
 	fgets(buf, sizeof(buf), stdin);
     }
 

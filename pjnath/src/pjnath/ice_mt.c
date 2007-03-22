@@ -270,15 +270,11 @@ static pj_status_t on_rx_data(pj_ice *ice, unsigned comp_id,
 {
     pj_icemt *icemt = (pj_icemt*)ice->user_data;
 
-    if (comp_id == RTP_COMP_ID) {
+    if (comp_id == RTP_COMP_ID && icemt->cb.on_rx_rtp) {
 	(*icemt->cb.on_rx_rtp)(icemt, pkt, size, src_addr, src_addr_len);
-    } else if (comp_id == RTCP_COMP_ID) {
+    } else if (comp_id == RTCP_COMP_ID && icemt->cb.on_rx_rtcp) {
 	(*icemt->cb.on_rx_rtcp)(icemt, pkt, size, src_addr, src_addr_len);
-    } else {
-	pj_assert(!"Invalid comp_id");
-	return -1;
     }
-
     return PJ_SUCCESS;
 }
 
