@@ -865,7 +865,7 @@ pj_stun_empty_attr_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_empty_attr);
-    INIT_ATTR(attr, attr_type, sizeof(pj_stun_empty_attr));
+    INIT_ATTR(attr, attr_type, 0);
 
     *p_attr = attr;
 
@@ -908,7 +908,7 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
     attr->hdr.length = pj_ntohs(attr->hdr.length);
 
     /* Check that the attribute length is valid */
-    if (attr->hdr.length != ATTR_HDR_LEN)
+    if (attr->hdr.length != 0)
 	return PJNATH_ESTUNINATTRLEN;
 
     /* Done */
@@ -930,8 +930,7 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
     pj_memcpy(buf, a, ATTR_HDR_LEN);
     attr = (pj_stun_empty_attr*) buf;
     attr->hdr.type = pj_htons(attr->hdr.type);
-    pj_assert(attr->hdr.length == ATTR_HDR_LEN);
-    attr->hdr.length = pj_htons(ATTR_HDR_LEN);
+    attr->hdr.length = 0;
 
     /* Done */
     *printed = ATTR_HDR_LEN;

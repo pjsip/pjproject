@@ -48,6 +48,11 @@ int main(int argc, char *argv[])
 
     rc = test_main();
 
+    if (argc == 2 && pj_ansi_strcmp(argv[1], "-i")==0) {
+	char buf[10];
+	fgets(buf, sizeof(buf), stdin);
+    }
+
     return rc;
 }
 
