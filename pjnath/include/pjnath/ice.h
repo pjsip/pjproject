@@ -81,8 +81,6 @@ typedef struct pj_ice pj_ice;
 typedef struct pj_ice_comp
 {
     unsigned	     comp_id;
-    pj_stun_session *stun_sess;
-    pj_sockaddr	     local_addr;
     int		     nominated_check_id;
 } pj_ice_comp;
 
@@ -99,6 +97,7 @@ typedef struct pj_ice_cand
     pj_sockaddr		 addr;
     pj_sockaddr		 base_addr;
     pj_sockaddr		 srv_addr;
+    pj_stun_session	*stun_sess;
 } pj_ice_cand;
 
 typedef enum pj_ice_check_state
@@ -145,11 +144,13 @@ typedef struct pj_ice_checklist
 typedef struct pj_ice_cb
 {
     void	(*on_ice_complete)(pj_ice *ice, pj_status_t status);
-    pj_status_t (*on_tx_pkt)(pj_ice *ice, unsigned comp_id,
+    pj_status_t (*on_tx_pkt)(pj_ice *ice, unsigned comp_id, 
+			     unsigned cand_id,
 			     const void *pkt, pj_size_t size,
 			     const pj_sockaddr_t *dst_addr,
 			     unsigned dst_addr_len);
-    pj_status_t	(*on_rx_data)(pj_ice *ice, unsigned comp_id,
+    void	(*on_rx_data)(pj_ice *ice, unsigned comp_id,
+			      unsigned cand_id,
 			      void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *src_addr,
 			      unsigned src_addr_len);
@@ -212,17 +213,11 @@ PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				   const char *name,
 				   pj_ice_role role,
 				   const pj_ice_cb *cb,
+				   const pj_str_t *local_ufrag,
+				   const pj_str_t *local_passwd,
 				   pj_ice **p_ice);
 PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
-PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice,
-				     unsigned comp_id,
-				     const pj_sockaddr_t *local_addr,
-				     unsigned addr_len);
-PJ_DECL(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
-					    const pj_str_t *local_ufrag,
-					    const pj_str_t *local_pass,
-					    const pj_str_t *remote_ufrag,
-					    const pj_str_t *remote_pass);
+PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice, unsigned comp_id);
 PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				     unsigned comp_id,
 				     pj_ice_cand_type type,
@@ -246,6 +241,8 @@ PJ_DECL(pj_status_t) pj_ice_get_cand(pj_ice *ice,
 				     pj_ice_cand **p_cand);
 
 PJ_DECL(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
+					      const pj_str_t *rem_ufrag,
+					      const pj_str_t *rem_passwd,
 					      unsigned rem_cand_cnt,
 					      const pj_ice_cand rem_cand[]);
 PJ_DECL(pj_status_t) pj_ice_start_check(pj_ice *ice);
@@ -256,6 +253,7 @@ PJ_DECL(pj_status_t) pj_ice_send_data(pj_ice *ice,
 				      pj_size_t data_len);
 PJ_DECL(pj_status_t) pj_ice_on_rx_pkt(pj_ice *ice,
 				      unsigned comp_id,
+				      unsigned cand_id,
 				      void *pkt,
 				      pj_size_t pkt_size,
 				      const pj_sockaddr_t *src_addr,

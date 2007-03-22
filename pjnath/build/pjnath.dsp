@@ -95,7 +95,7 @@ SOURCE=..\src\pjnath\ice.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjnath\ice_mt.c
+SOURCE=..\src\pjnath\ice_stream_transport.c
 # End Source File
 # Begin Source File
 
@@ -135,7 +135,7 @@ SOURCE=..\include\pjnath\ice.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\ice_mt.h
+SOURCE=..\include\pjnath\ice_stream_transport.h
 # End Source File
 # Begin Source File
 

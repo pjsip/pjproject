@@ -21,6 +21,7 @@
 #include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>
+#include <pj/guid.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -68,8 +69,8 @@ const pj_str_t peer_mapped_foundation = {"peer", 4};
 typedef struct stun_data
 {
     pj_ice	*ice;
-    unsigned	 comp_id;
-    pj_ice_comp	*comp;
+    unsigned	 lcand_id;
+    pj_ice_cand	*lcand;
 } stun_data;
 
 typedef struct timer_data
@@ -132,20 +133,27 @@ static pj_bool_t stun_auth_verify_nonce(const pj_stun_msg *msg,
 					const pj_str_t *nonce);
 
 
+/*
+ * Create ICE stream session.
+ */
 PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				  const char *name,
 				  pj_ice_role role,
 				  const pj_ice_cb *cb,
+				  const pj_str_t *local_ufrag,
+				  const pj_str_t *local_passwd,
 				  pj_ice **p_ice)
 {
     pj_pool_t *pool;
     pj_ice *ice;
+    char tmp[32];
+    pj_str_t s;
     unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stun_cfg && cb && p_ice, PJ_EINVAL);
 
-    if (!name)
+    if (name == NULL)
 	name = "ice%p";
 
     pool = pj_pool_create(stun_cfg->pf, name, 4000, 4000, NULL);
@@ -170,15 +178,34 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 	ice->comp[i].nominated_check_id = -1;
     }
 
+    if (local_ufrag == NULL) {
+	pj_ansi_snprintf(tmp, sizeof(tmp), "%x", pj_rand());
+	s = pj_str(tmp);
+	local_ufrag = &s;
+    }
+    pj_strdup(ice->pool, &ice->rx_ufrag, local_ufrag);
+
+    if (local_passwd == NULL) {
+	pj_ansi_snprintf(tmp, sizeof(tmp), "%x", pj_rand());
+	s = pj_str(tmp);
+	local_passwd = &s;
+    }
+    pj_strdup(ice->pool, &ice->rx_pass, local_passwd);
+
+
     /* Done */
     *p_ice = ice;
 
-    LOG((ice->obj_name, "ICE media stream created"));
+    LOG((ice->obj_name, "ICE stream session created, role is %s agent",
+	(ice->role==PJ_ICE_ROLE_CONTROLLING ? "controlling" : "controlled")));
 
     return PJ_SUCCESS;
 }
 
 
+/*
+ * Destroy
+ */
 static void destroy_ice(pj_ice *ice,
 			pj_status_t reason)
 {
@@ -189,11 +216,13 @@ static void destroy_ice(pj_ice *ice,
     }
 
     for (i=0; i<ice->comp_cnt; ++i) {
-	pj_ice_comp *comp = &ice->comp[i];
+	/* Nothing to do */
+    }
 
-	if (comp->stun_sess) {
-	    pj_stun_session_destroy(comp->stun_sess);
-	    comp->stun_sess = NULL;
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	if (ice->lcand[i].stun_sess) {
+	    pj_stun_session_destroy(ice->lcand[i].stun_sess);
+	    ice->lcand[i].stun_sess = NULL;
 	}
     }
 
@@ -222,31 +251,27 @@ PJ_DEF(pj_status_t) pj_ice_destroy(pj_ice *ice)
 }
 
 
+/* Find component by ID */
 static pj_ice_comp *find_comp(const pj_ice *ice, unsigned comp_id)
 {
     unsigned i;
     for (i=0; i<ice->comp_cnt; ++i) {
 	if (ice->comp[i].comp_id == comp_id)
-	    return (pj_ice_comp*) &ice->comp[i];
+	    return (pj_ice_comp *) &ice->comp[i];
     }
 
     return NULL;
 }
 
 
-PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice,
-				    unsigned comp_id,
-				    const pj_sockaddr_t *local_addr,
-				    unsigned addr_len)
+/* Add a new component */
+PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice, unsigned comp_id)
 {
-    pj_stun_session_cb sess_cb;
     pj_ice_comp *comp;
-    pj_stun_auth_cred auth_cred;
-    stun_data *sd;
-    pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && local_addr && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
     PJ_ASSERT_RETURN(ice->comp_cnt < PJ_ARRAY_SIZE(ice->comp), PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(comp_id==ice->comp_cnt+1, PJ_EICEINCOMPID);
     PJ_ASSERT_RETURN(find_comp(ice, comp_id) == NULL, PJ_EEXISTS);
 
     pj_mutex_lock(ice->mutex);
@@ -254,40 +279,6 @@ PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice,
     comp = &ice->comp[ice->comp_cnt];
     comp->comp_id = comp_id;
     comp->nominated_check_id = -1;
-    pj_memcpy(&comp->local_addr, local_addr, addr_len);
-
-    /* Init STUN callbacks */
-    pj_bzero(&sess_cb, sizeof(sess_cb));
-    sess_cb.on_request_complete = &on_stun_request_complete;
-    sess_cb.on_rx_indication = &on_stun_rx_indication;
-    sess_cb.on_rx_request = &on_stun_rx_request;
-    sess_cb.on_send_msg = &on_stun_send_msg;
-
-    /* Create STUN session for this component */
-    status = pj_stun_session_create(&ice->stun_cfg, ice->obj_name, 
-			            &sess_cb, PJ_FALSE,
-				    &comp->stun_sess);
-    if (status != PJ_SUCCESS) {
-	pj_mutex_unlock(ice->mutex);
-	return status;
-    }
-
-    /* Associate data with this STUN session */
-    sd = PJ_POOL_ZALLOC_T(ice->pool, struct stun_data);
-    sd->ice = ice;
-    sd->comp_id = comp_id;
-    sd->comp = comp;
-    pj_stun_session_set_user_data(comp->stun_sess, sd);
-
-    /* Init STUN authentication credential */
-    pj_bzero(&auth_cred, sizeof(auth_cred));
-    auth_cred.type = PJ_STUN_AUTH_CRED_DYNAMIC;
-    auth_cred.data.dyn_cred.get_auth = &stun_auth_get_auth;
-    auth_cred.data.dyn_cred.get_cred = &stun_auth_get_cred;
-    auth_cred.data.dyn_cred.get_password = &stun_auth_get_password;
-    auth_cred.data.dyn_cred.verify_nonce = &stun_auth_verify_nonce;
-    auth_cred.data.dyn_cred.user_data = comp->stun_sess;
-    pj_stun_session_set_credential(comp->stun_sess, &auth_cred);
 
     /* Done */
     ice->comp_cnt++;
@@ -408,42 +399,6 @@ static pj_bool_t stun_auth_verify_nonce(const pj_stun_msg *msg,
 }
 
 
-PJ_DEF(pj_status_t) pj_ice_set_credentials(pj_ice *ice,
-					   const pj_str_t *local_ufrag,
-					   const pj_str_t *local_pass,
-					   const pj_str_t *remote_ufrag,
-					   const pj_str_t *remote_pass)
-{
-    char buf[128];
-    pj_str_t username;
-
-    username.ptr = buf;
-
-    PJ_ASSERT_RETURN(ice && local_ufrag && local_pass &&
-		     remote_ufrag && remote_pass, PJ_EINVAL);
-    PJ_ASSERT_RETURN(local_ufrag->slen + remote_ufrag->slen <
-		     sizeof(buf), PJ_ENAMETOOLONG);
-
-    pj_strcpy(&username, remote_ufrag);
-    pj_strcat2(&username, ":");
-    pj_strcat(&username, local_ufrag);
-
-    pj_strdup(ice->pool, &ice->tx_uname, &username);
-    pj_strdup(ice->pool, &ice->tx_ufrag, remote_ufrag);
-    pj_strdup(ice->pool, &ice->tx_pass, remote_pass);
-
-    pj_strcpy(&username, local_ufrag);
-    pj_strcat2(&username, ":");
-    pj_strcat(&username, remote_ufrag);
-
-    pj_strdup(ice->pool, &ice->rx_uname, &username);
-    pj_strdup(ice->pool, &ice->rx_ufrag, local_ufrag);
-    pj_strdup(ice->pool, &ice->rx_pass, local_pass);
-
-    return PJ_SUCCESS;
-}
-
-
 static pj_uint32_t CALC_CAND_PRIO(pj_ice_cand_type type,
 				  pj_uint32_t local_pref,
 				  pj_uint32_t comp_id)
@@ -462,6 +417,9 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_cand_type type,
 }
 
 
+/*
+ * Add ICE candidate
+ */
 PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				    unsigned comp_id,
 				    pj_ice_cand_type type,
@@ -474,6 +432,9 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				    unsigned *p_cand_id)
 {
     pj_ice_cand *lcand;
+    pj_stun_session_cb sess_cb;
+    pj_stun_auth_cred auth_cred;
+    stun_data *sd;
     pj_status_t status = PJ_SUCCESS;
     char tmp[128];
 
@@ -500,8 +461,39 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
     else
 	pj_bzero(&lcand->srv_addr, sizeof(lcand->srv_addr));
 
-    if (p_cand_id)
-	*p_cand_id = ice->lcand_cnt;
+    /* Init STUN callbacks */
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_request_complete = &on_stun_request_complete;
+    sess_cb.on_rx_indication = &on_stun_rx_indication;
+    sess_cb.on_rx_request = &on_stun_rx_request;
+    sess_cb.on_send_msg = &on_stun_send_msg;
+
+    /* Create STUN session for this candidate */
+    status = pj_stun_session_create(&ice->stun_cfg, ice->obj_name, 
+			            &sess_cb, PJ_FALSE,
+				    &lcand->stun_sess);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(ice->mutex);
+	return status;
+    }
+
+    /* Associate data with this STUN session */
+    sd = PJ_POOL_ZALLOC_T(ice->pool, struct stun_data);
+    sd->ice = ice;
+    sd->lcand_id = GET_LCAND_ID(lcand);
+    sd->lcand = lcand;
+    pj_stun_session_set_user_data(lcand->stun_sess, sd);
+
+    /* Init STUN authentication credential */
+    pj_bzero(&auth_cred, sizeof(auth_cred));
+    auth_cred.type = PJ_STUN_AUTH_CRED_DYNAMIC;
+    auth_cred.data.dyn_cred.get_auth = &stun_auth_get_auth;
+    auth_cred.data.dyn_cred.get_cred = &stun_auth_get_cred;
+    auth_cred.data.dyn_cred.get_password = &stun_auth_get_password;
+    auth_cred.data.dyn_cred.verify_nonce = &stun_auth_verify_nonce;
+    auth_cred.data.dyn_cred.user_data = lcand->stun_sess;
+    pj_stun_session_set_credential(lcand->stun_sess, &auth_cred);
+
 
     pj_ansi_strcpy(tmp, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
     LOG((ice->obj_name, 
@@ -517,6 +509,9 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 	 pj_inet_ntoa(lcand->base_addr.ipv4.sin_addr),
 	 (int)pj_htons(lcand->base_addr.ipv4.sin_port),
 	 lcand->prio, lcand->prio));
+
+    if (p_cand_id)
+	*p_cand_id = ice->lcand_cnt;
 
     ++ice->lcand_cnt;
 
@@ -1041,18 +1036,41 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 
 
 PJ_DEF(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
 					     unsigned rcand_cnt,
 					     const pj_ice_cand rcand[])
 {
     pj_ice_checklist *clist;
+    char buf[128];
+    pj_str_t username;
     timer_data *td;
     unsigned i, j;
 
-    PJ_ASSERT_RETURN(ice && rcand_cnt && rcand, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rcand_cnt && rcand,
+		     PJ_EINVAL);
     PJ_ASSERT_RETURN(rcand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND, 
 		     PJ_ETOOMANY);
 
     pj_mutex_lock(ice->mutex);
+
+    /* Save credentials */
+    username.ptr = buf;
+
+    pj_strcpy(&username, rem_ufrag);
+    pj_strcat2(&username, ":");
+    pj_strcat(&username, &ice->rx_ufrag);
+
+    pj_strdup(ice->pool, &ice->tx_uname, &username);
+    pj_strdup(ice->pool, &ice->tx_ufrag, rem_ufrag);
+    pj_strdup(ice->pool, &ice->tx_pass, rem_passwd);
+
+    pj_strcpy(&username, &ice->rx_ufrag);
+    pj_strcat2(&username, ":");
+    pj_strcat(&username, rem_ufrag);
+
+    pj_strdup(ice->pool, &ice->rx_uname, &username);
+
 
     /* Save remote candidates */
     ice->rcand_cnt = 0;
@@ -1154,7 +1172,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
 	 dump_check(buffer, sizeof(buffer), ice, check)));
 
     /* Create request */
-    status = pj_stun_session_create_req(comp->stun_sess, 
+    status = pj_stun_session_create_req(lcand->stun_sess, 
 					PJ_STUN_BINDING_REQUEST, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
@@ -1186,7 +1204,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
      */
 
     /* Initiate STUN transaction to send the request */
-    status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
+    status = pj_stun_session_send_msg(lcand->stun_sess, PJ_FALSE, 
 				      &rcand->addr, 
 				      sizeof(pj_sockaddr_in), tdata);
     if (status != PJ_SUCCESS)
@@ -1331,7 +1349,7 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 				    unsigned addr_len)
 {
     stun_data *sd = (stun_data*) pj_stun_session_get_user_data(sess);
-    return (*sd->ice->cb.on_tx_pkt)(sd->ice, sd->comp_id, 
+    return (*sd->ice->cb.on_tx_pkt)(sd->ice, sd->lcand->comp_id, sd->lcand_id,
 				    pkt, pkt_size, 
 				    dst_addr, addr_len);
 }
@@ -1534,7 +1552,8 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     sd = (stun_data*) pj_stun_session_get_user_data(sess);
     ice = sd->ice;
-    comp = sd->comp;
+    lcand = sd->lcand;
+    comp = find_comp(ice, lcand->comp_id);
 
     pj_mutex_lock(ice->mutex);
 
@@ -1620,26 +1639,6 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
      */
     PJ_TODO(DETERMINE_IF_REQUEST_COMES_FROM_RELAYED_CANDIDATE);
     is_relayed = PJ_FALSE;
-
-    /* Next find local candidate, by first finding a check in the checklist
-     * which base address is equal to the local address.
-     */
-    for (i=0; i<ice->clist.count; ++i) {
-	pj_ice_check *c = &ice->clist.checks[i];
-	if (sockaddr_cmp(&c->lcand->base_addr, &comp->local_addr)==0)
-	    break;
-    }
-
-    /* MUST find a local candidate! */
-    pj_assert(i != ice->clist.count);
-    if (i == ice->clist.count) {
-	pj_mutex_unlock(ice->mutex);
-	LOG((ice->obj_name, "Error: unable to find local candidate for "
-	     "incoming request"));
-	return PJ_SUCCESS;
-    }
-
-    lcand = ice->clist.checks[i].lcand;
 
     /* Now that we have local and remote candidate, check if we already
      * have this pair in our checklist.
@@ -1758,6 +1757,7 @@ PJ_DEF(pj_status_t) pj_ice_send_data( pj_ice *ice,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_ice_comp *comp;
+    unsigned cand_id;
     pj_ice_check *check;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
@@ -1776,8 +1776,9 @@ PJ_DEF(pj_status_t) pj_ice_send_data( pj_ice *ice,
     }
 
     check = &ice->clist.checks[comp->nominated_check_id];
+    cand_id = GET_LCAND_ID(check->lcand);
 
-    status = (*ice->cb.on_tx_pkt)(ice, comp_id, data, data_len, 
+    status = (*ice->cb.on_tx_pkt)(ice, comp_id, cand_id, data, data_len, 
 				  &check->rcand->addr, 
 				  sizeof(pj_sockaddr_in));
 
@@ -1789,6 +1790,7 @@ on_return:
 
 PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 				      unsigned comp_id,
+				      unsigned cand_id,
 				      void *pkt,
 				      pj_size_t pkt_size,
 				      const pj_sockaddr_t *src_addr,
@@ -1796,6 +1798,7 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_ice_comp *comp;
+    pj_ice_cand *lcand;
     pj_status_t stun_status;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
@@ -1808,14 +1811,16 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 	goto on_return;
     }
 
+    lcand = &ice->lcand[cand_id];
+
     stun_status = pj_stun_msg_check(pkt, pkt_size, PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
-	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
+	status = pj_stun_session_on_rx_pkt(lcand->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);
     } else {
-	status = (*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 
-				       src_addr, src_addr_len);
+	(*ice->cb.on_rx_data)(ice, comp_id, cand_id, pkt, pkt_size, 
+			      src_addr, src_addr_len);
     }
     
 

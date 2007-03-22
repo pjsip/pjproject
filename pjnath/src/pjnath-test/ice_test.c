@@ -37,10 +37,10 @@ struct ice_data
 
 static pj_stun_config stun_cfg;
 
-static void on_ice_complete(pj_icemt *icemt, 
+static void on_ice_complete(pj_ice_st *icest, 
 			    pj_status_t status)
 {
-    struct ice_data *id = (struct ice_data*) icemt->user_data;
+    struct ice_data *id = (struct ice_data*) icest->user_data;
     id->complete = PJ_TRUE;
     id->err_code = status;
     PJ_LOG(3,(THIS_FILE, "    ICE %s complete %s", id->obj_name,
@@ -48,33 +48,27 @@ static void on_ice_complete(pj_icemt *icemt,
 }
 
 
-static void on_rx_rtp(pj_icemt *icemt,
-		      void *pkt, pj_size_t size,
-		      const pj_sockaddr_t *src_addr,
-		      unsigned src_addr_len)
-{
-    struct ice_data *id = (struct ice_data*) icemt->user_data;
-
-    id->rx_rtp_cnt++;
-    pj_memcpy(id->last_rx_rtp_data, pkt, size);
-    id->last_rx_rtp_data[size] = '\0';
-
-    PJ_UNUSED_ARG(src_addr);
-    PJ_UNUSED_ARG(src_addr_len);
-}
-
-
-static void on_rx_rtcp(pj_icemt *icemt,
+static void on_rx_data(pj_ice_st *icest,
+		       unsigned comp_id, unsigned cand_id,
 		       void *pkt, pj_size_t size,
 		       const pj_sockaddr_t *src_addr,
 		       unsigned src_addr_len)
 {
-    struct ice_data *id = (struct ice_data*) icemt->user_data;
+    struct ice_data *id = (struct ice_data*) icest->user_data;
 
-    id->rx_rtcp_cnt++;
-    pj_memcpy(id->last_rx_rtcp_data, pkt, size);
-    id->last_rx_rtcp_data[size] = '\0';
+    if (comp_id == 1) {
+	id->rx_rtp_cnt++;
+	pj_memcpy(id->last_rx_rtp_data, pkt, size);
+	id->last_rx_rtp_data[size] = '\0';
+    } else if (comp_id == 2) {
+	id->rx_rtcp_cnt++;
+	pj_memcpy(id->last_rx_rtcp_data, pkt, size);
+	id->last_rx_rtcp_data[size] = '\0';
+    } else {
+	pj_assert(!"Invalid component ID");
+    }
 
+    PJ_UNUSED_ARG(cand_id);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 }
@@ -97,55 +91,41 @@ static void handle_events(unsigned msec_timeout)
 /* Basic create and destroy test */
 static int ice_basic_create_destroy_test()
 {
-    pj_icemt *im;
-    pj_ice *ice;
-    pj_icemt_cb icemt_cb;
+    pj_ice_st *im;
+    pj_ice_st_cb icest_cb;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "...basic create/destroy"));
 
-    pj_bzero(&icemt_cb, sizeof(icemt_cb));
-    icemt_cb.on_ice_complete = &on_ice_complete;
-    icemt_cb.on_rx_rtp = &on_rx_rtp;
-    icemt_cb.on_rx_rtcp = &on_rx_rtcp;
+    pj_bzero(&icest_cb, sizeof(icest_cb));
+    icest_cb.on_ice_complete = &on_ice_complete;
+    icest_cb.on_rx_data = &on_rx_data;
 
-    status = pj_icemt_create(&stun_cfg, NULL, PJ_ICE_ROLE_CONTROLLING,
-			     &icemt_cb, 0, PJ_FALSE, PJ_FALSE, NULL, &im);
+    status = pj_ice_st_create(&stun_cfg, NULL, NULL, &icest_cb, &im);
     if (status != PJ_SUCCESS)
 	return -10;
 
-    ice = im->ice;
-
-    pj_icemt_destroy(im);
+    pj_ice_st_destroy(im);
 
     return 0;
 }
 
 
-static pj_status_t set_remote_list(pj_icemt *src, pj_icemt *dst)
+static pj_status_t start_ice(pj_ice_st *ist, pj_ice_st *remote)
 {
-    unsigned i, count;
-    unsigned cand_id[PJ_ICE_MAX_CAND];
+    unsigned count;
     pj_ice_cand cand[PJ_ICE_MAX_CAND];
     pj_status_t status;
 
-    count = PJ_ARRAY_SIZE(cand_id);
-    status = pj_ice_enum_cands(src->ice, &count, cand_id);
+    count = PJ_ARRAY_SIZE(cand);
+    status = pj_ice_st_enum_cands(remote, &count, cand);
     if (status != PJ_SUCCESS)
 	return status;
 
-    for (i=0; i<count; ++i) {
-	pj_ice_cand *p_cand;
-	status = pj_ice_get_cand(src->ice, cand_id[i], &p_cand);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	pj_memcpy(&cand[i], p_cand, sizeof(pj_ice_cand));
-    }
-
-    status = pj_ice_create_check_list(dst->ice, count, cand);
-    return status;
+    return pj_ice_st_start_ice(ist, &remote->ice->rx_ufrag, &remote->ice->rx_pass,
+			       count, cand);
 }
+
 
 
 /* Perform ICE test with the following parameters:
@@ -162,31 +142,24 @@ static pj_status_t set_remote_list(pj_icemt *src, pj_icemt *dst)
  */
 static int perform_ice_test(const char *title,
 			    unsigned wait_before_send,
-			    unsigned max_total_time,
-			    unsigned ocand_cnt,
-			    const pj_ice_cand ocand[],
-			    unsigned acand_cnt,
-			    const pj_ice_cand acand[])
+			    unsigned max_total_time)
 {
-    pj_icemt *im1, *im2;
-    pj_icemt_cb icemt_cb;
+    pj_ice_st *im1, *im2;
+    pj_ice_st_cb icest_cb;
     struct ice_data *id1, *id2;
     pj_timestamp t_start, t_end;
     pj_ice_cand *rcand;
     pj_str_t data_from_offerer, data_from_answerer;
-    unsigned i;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "...%s", title));
 
-    pj_bzero(&icemt_cb, sizeof(icemt_cb));
-    icemt_cb.on_ice_complete = &on_ice_complete;
-    icemt_cb.on_rx_rtp = &on_rx_rtp;
-    icemt_cb.on_rx_rtcp = &on_rx_rtcp;
+    pj_bzero(&icest_cb, sizeof(icest_cb));
+    icest_cb.on_ice_complete = &on_ice_complete;
+    icest_cb.on_rx_data = &on_rx_data;
 
     /* Create first ICE */
-    status = pj_icemt_create(&stun_cfg, "offerer", PJ_ICE_ROLE_CONTROLLING,
-			     &icemt_cb, 0, PJ_FALSE, PJ_FALSE, NULL, &im1);
+    status = pj_ice_st_create(&stun_cfg, "offerer", NULL, &icest_cb, &im1);
     if (status != PJ_SUCCESS)
 	return -20;
 
@@ -194,19 +167,18 @@ static int perform_ice_test(const char *title,
     id1->obj_name = "offerer";
     im1->user_data = id1;
 
-    /* Add additional candidates */
-    for (i=0; i<ocand_cnt; ++i) {
-	status = pj_ice_add_cand(im1->ice, 1, ocand[i].type, 65535,
-				 &ocand[i].foundation, &ocand[i].addr,
-				 &ocand[i].base_addr, &ocand[i].srv_addr,
-				 sizeof(pj_sockaddr_in), NULL);
-	if (status != PJ_SUCCESS)
-	    return -22;
-    }
+    /* Add first component */
+    status = pj_ice_st_add_comp(im1, 1);
+    if (status != PJ_SUCCESS)
+	return -21;
+
+    /* Add host candidate */
+    status = pj_ice_st_add_host_interface(im1, 1, 65535, NULL, NULL, PJ_FALSE, NULL);
+    if (status != PJ_SUCCESS)
+	return -21;
 
     /* Create second ICE */
-    status = pj_icemt_create(&stun_cfg, "answerer", PJ_ICE_ROLE_CONTROLLED,
-			     &icemt_cb, 0, PJ_FALSE, PJ_FALSE, NULL, &im2);
+    status = pj_ice_st_create(&stun_cfg, "answerer", NULL, &icest_cb, &im2);
     if (status != PJ_SUCCESS)
 	return -25;
 
@@ -214,50 +186,38 @@ static int perform_ice_test(const char *title,
     id2->obj_name = "answerer";
     im2->user_data = id2;
 
-    /* Add additional candidates */
-    for (i=0; i<acand_cnt; ++i) {
-	status = pj_ice_add_cand(im1->ice, 1, acand[i].type, 65535,
-				 &acand[i].foundation, &acand[i].addr,
-				 &acand[i].base_addr, &acand[i].srv_addr,
-				 sizeof(pj_sockaddr_in), NULL);
-	if (status != PJ_SUCCESS)
-	    return -22;
-    }
+    /* Add first component */
+    status = pj_ice_st_add_comp(im2, 1);
+    if (status != PJ_SUCCESS)
+	return -26;
 
-    /* Set credentials */
-    {
-	pj_str_t u1 = pj_str("offerer");
-	pj_str_t p1 = pj_str("pass1");
-	pj_str_t u2 = pj_str("answerer");
-	pj_str_t p2 = pj_str("pass2");
+    /* Add host candidate */
+    status = pj_ice_st_add_host_interface(im2, 1, 65535, NULL, NULL, PJ_FALSE, NULL);
+    if (status != PJ_SUCCESS)
+	return -27;
 
-	pj_ice_set_credentials(im1->ice, &u1, &p1, &u2, &p2);
-	pj_ice_set_credentials(im2->ice, &u2, &p2, &u1, &p1);
-    }
+    /* Init ICE on im1 */
+    status = pj_ice_st_init_ice(im1, PJ_ICE_ROLE_CONTROLLING, NULL, NULL);
+    if (status != PJ_SUCCESS)
+	return -29;
 
-    /* Send offer to im2 */
-    status = set_remote_list(im1, im2);
+    /* Init ICE on im2 */
+    status = pj_ice_st_init_ice(im2, PJ_ICE_ROLE_CONTROLLED, NULL, NULL);
+    if (status != PJ_SUCCESS)
+	return -29;
+
+    /* Start ICE on im2 */
+    status = start_ice(im2, im1);
     if (status != PJ_SUCCESS)
 	return -30;
 
-    /* Send answer to im1 */
-    status = set_remote_list(im2, im1);
+    /* Start ICE on im1 */
+    status = start_ice(im1, im2);
     if (status != PJ_SUCCESS)
 	return -35;
 
     /* Mark start time */
     pj_get_timestamp(&t_start);
-
-    /* Both can start now */
-    status = pj_ice_start_check(im1->ice);
-    if (status != PJ_SUCCESS)
-	return -40;
-
-#if 1
-    status = pj_ice_start_check(im2->ice);
-    if (status != PJ_SUCCESS)
-	return -45;
-#endif
 
     /* Poll for wait_before_send msecs before we send the first data */
     for (;;) {
@@ -365,8 +325,8 @@ static int perform_ice_test(const char *title,
     }
 
 
-    pj_icemt_destroy(im1);
-    pj_icemt_destroy(im2);
+    pj_ice_st_destroy(im1);
+    pj_ice_st_destroy(im2);
     return 0;
 }
 
@@ -377,9 +337,6 @@ int ice_test(void)
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_timer_heap_t *timer_heap;
-    pj_ice_cand ocand[PJ_ICE_MAX_CAND];
-    pj_ice_cand acand[PJ_ICE_MAX_CAND];
-    pj_str_t s;
 
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     pj_ioqueue_create(pool, 12, &ioqueue);
@@ -395,24 +352,17 @@ int ice_test(void)
 	goto on_return;
 
     /* Direct communication */
-    rc = perform_ice_test("Direct connection", 500, 1000, 0, NULL, 0, NULL);
+    rc = perform_ice_test("Direct connection", 500, 1000);
     if (rc != 0)
 	goto on_return;
 
     /* Direct communication with invalid address */
-    pj_bzero(ocand, sizeof(ocand));
-    pj_sockaddr_in_init(&ocand[0].addr.ipv4, pj_cstr(&s, "127.0.0.127"), 1234);
-    pj_sockaddr_in_init(&ocand[0].base_addr.ipv4, pj_cstr(&s, "127.0.0.128"), 1234);
-    ocand[0].comp_id = 1;
-    ocand[0].foundation = pj_str("H2");
-    ocand[0].type = PJ_ICE_CAND_TYPE_HOST;
-
-    rc = perform_ice_test("Direct connection with 1 invalid address", 500, 1000, 1, ocand, 0, NULL);
+    rc = perform_ice_test("Direct connection with 1 invalid address", 500, 1000);
     if (rc != 0)
 	goto on_return;
 
     /* Direct communication with two components */
-    rc = perform_ice_test("Direct connection with two components", 500, 1000, 0, NULL, 0, NULL);
+    rc = perform_ice_test("Direct connection with two components", 500, 1000);
     if (rc != 0)
 	goto on_return;
 

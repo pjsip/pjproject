@@ -155,6 +155,17 @@
 #define PJ_EICEINCOMPID		    -1
 /**
  * @hideinitializer
+ * Invalid ICE candidate ID
+ */
+#define PJ_EICEINCANDID		    -1
+/**
+ * @hideinitializer
+ * ICE session not available
+ */
+#define PJ_ENOICE		    -1
+
+ /**
+ * @hideinitializer
  * ICE check is in progress
  */
 #define PJ_EICEINPROGRESS	    -1
