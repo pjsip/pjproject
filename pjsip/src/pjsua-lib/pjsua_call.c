@@ -60,8 +60,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_event *e);
 
 
-/* Destroy the call's media */
-static pj_status_t call_destroy_media(int call_id);
 
 /* Create inactive SDP for call hold. */
 static pj_status_t create_inactive_sdp(pjsua_call *call,
@@ -302,10 +300,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 	return status;
     }
 
-    /* Get media capability from media endpoint: */
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	goto on_error;
+    }
 
-    status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, dlg->pool, 1, 
-				       &call->skinfo, &offer);
+    /* Create SDP offer */
+    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, &offer);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
@@ -403,6 +406,7 @@ on_error:
 
     if (call_id != -1) {
 	reset_call(call_id);
+	pjsua_media_channel_deinit(call_id);
     }
 
     PJSUA_UNLOCK();
@@ -526,13 +530,22 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
 
-    /* Get media capability from media endpoint: */
-    status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, 
-				       rdata->tp_info.pool, 1,
-				       &call->skinfo, &answer );
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
+
+    /* Get media capability from media endpoint: */
+    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, &answer);
+    if (status != PJ_SUCCESS) {
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+				      NULL, NULL);
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
@@ -561,6 +574,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 					  NULL, NULL);
 	}
 
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     } 
@@ -580,6 +594,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
@@ -590,6 +605,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
@@ -618,6 +634,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/* Can't terminate dialog because transaction is in progress.
 	pjsip_dlg_terminate(dlg);
 	 */
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
@@ -649,13 +666,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
 	pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
 
     } else {
 	status = pjsip_inv_send_msg(inv, response);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
+	}
     }
 
     ++pjsua_var.call_cnt;
@@ -1191,8 +1210,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     /* Create SDP */
     PJ_UNUSED_ARG(unhold);
     PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
-    status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, call->inv->pool, 
-				       1, &call->skinfo, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1885,34 +1903,6 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 
 
 /*
- * Destroy the call's media
- */
-static pj_status_t call_destroy_media(int call_id)
-{
-    pjsua_call *call = &pjsua_var.calls[call_id];
-
-    if (call->conf_slot != PJSUA_INVALID_ID) {
-	pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
-	call->conf_slot = PJSUA_INVALID_ID;
-    }
-
-    if (call->session) {
-	/* Destroy session (this will also close RTP/RTCP sockets). */
-	pjmedia_session_destroy(call->session);
-	call->session = NULL;
-
-	PJ_LOG(4,(THIS_FILE, "Media session for call %d is destroyed", 
-			     call_id));
-
-    }
-
-    call->media_st = PJSUA_CALL_MEDIA_NONE;
-
-    return PJ_SUCCESS;
-}
-
-
-/*
  * This callback receives notification from invite session when the
  * session state has changed.
  */
@@ -2034,7 +2024,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	pj_assert(call != NULL);
 
 	if (call)
-	    call_destroy_media(call->index);
+	    pjsua_media_channel_deinit(call->index);
 
 	/* Free call */
 	call->inv = NULL;
@@ -2077,22 +2067,6 @@ static void call_disconnect( pjsip_inv_session *inv,
 }
 
 /*
- * DTMF callback from the stream.
- */
-static void dtmf_callback(pjmedia_stream *strm, void *user_data,
-			  int digit)
-{
-    PJ_UNUSED_ARG(strm);
-
-    if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
-	pjsua_call_id call_id;
-
-	call_id = (pjsua_call_id)user_data;
-	pjsua_var.ua_cfg.cb.on_dtmf_digit(call_id, digit);
-    }
-}
-
-/*
  * Callback to be called when SDP offer/answer negotiation has just completed
  * in the session. This function will start/update media if negotiation
  * has succeeded.
@@ -2100,14 +2074,9 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				       pj_status_t status)
 {
-    int prev_media_st = 0;
     pjsua_call *call;
-    pjmedia_session_info sess_info;
-    const pjmedia_sdp_session *local_sdp;
-    const pjmedia_sdp_session *remote_sdp;
-    pjmedia_port *media_port;
-    pj_str_t port_name;
-    char tmp[PJSIP_MAX_URL_SIZE];
+    pjmedia_sdp_session *local_sdp;
+    pjmedia_sdp_session *remote_sdp;
 
     PJSUA_LOCK();
 
@@ -2118,7 +2087,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
 	/* Stop/destroy media, if any */
-	call_destroy_media(call->index);
+	pjsua_media_channel_deinit(call->index);
 
 	/* Disconnect call if we're not in the middle of initializing an
 	 * UAS dialog and if this is not a re-INVITE 
@@ -2133,15 +2102,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-    /* Destroy existing media session, if any. */
-
-    if (call) {
-	prev_media_st = call->media_st;
-	call_destroy_media(call->index);
-    }
 
     /* Get local and remote SDP */
-
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -2163,155 +2125,16 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-    /* Create media session info based on SDP parameters. 
-     * We only support one stream per session at the moment
-     */    
-    status = pjmedia_session_info_from_sdp( call->inv->dlg->pool, 
-					    pjsua_var.med_endpt, 
-					    1,&sess_info, 
-					    local_sdp, remote_sdp);
+    status = pjsua_media_channel_update(call->index, local_sdp, remote_sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
 	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return;
     }
 
-    /* Check if media is put on-hold */
-    if (sess_info.stream_cnt == 0 || 
-	sess_info.stream_info[0].dir == PJMEDIA_DIR_NONE)
-    {
-
-	/* Determine who puts the call on-hold */
-	if (prev_media_st == PJSUA_CALL_MEDIA_ACTIVE) {
-	    if (pjmedia_sdp_neg_was_answer_remote(call->inv->neg)) {
-		/* It was local who offer hold */
-		call->media_st = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-	    } else {
-		call->media_st = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-	    }
-	}
-
-	call->media_dir = PJMEDIA_DIR_NONE;
-
-    } else {
-
-	/* Override ptime, if this option is specified. */
-	if (pjsua_var.media_cfg.ptime != 0) {
-	    sess_info.stream_info[0].param->setting.frm_per_pkt = (pj_uint8_t)
-		(pjsua_var.media_cfg.ptime / sess_info.stream_info[0].param->info.frm_ptime);
-	    if (sess_info.stream_info[0].param->setting.frm_per_pkt == 0)
-		sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
-	}
-
-	/* Disable VAD, if this option is specified. */
-	if (pjsua_var.media_cfg.no_vad) {
-	    sess_info.stream_info[0].param->setting.vad = 0;
-	}
-
-
-	/* Optionally, application may modify other stream settings here
-	 * (such as jitter buffer parameters, codec ptime, etc.)
-	 */
-	sess_info.stream_info[0].jb_init = pjsua_var.media_cfg.jb_init;
-	sess_info.stream_info[0].jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
-	sess_info.stream_info[0].jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
-	sess_info.stream_info[0].jb_max = pjsua_var.media_cfg.jb_max;
-
-	/* Create session based on session info. */
-	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,
-					 &call->med_tp,
-					 call, &call->session );
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create media session", 
-			 status);
-	    //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
-	    PJSUA_UNLOCK();
-	    return;
-	}
-
-	/* If DTMF callback is installed by application, install our
-	 * callback to the session.
-	 */
-	if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
-	    pjmedia_session_set_dtmf_callback(call->session, 0, 
-					      &dtmf_callback, 
-					      (void*)(call->index));
-	}
-
-	/* Get the port interface of the first stream in the session.
-	 * We need the port interface to add to the conference bridge.
-	 */
-	pjmedia_session_get_port(call->session, 0, &media_port);
-
-
-	/*
-	 * Add the call to conference bridge.
-	 */
-	port_name.ptr = tmp;
-	port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-					 call->inv->dlg->remote.info->uri,
-					 tmp, sizeof(tmp));
-	if (port_name.slen < 1) {
-	    port_name = pj_str("call");
-	}
-	status = pjmedia_conf_add_port( pjsua_var.mconf, call->inv->pool,
-					media_port, 
-					&port_name,
-					(unsigned*)&call->conf_slot);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create conference slot", 
-			 status);
-	    call_destroy_media(call->index);
-	    //call_disconnect(inv, PJSIP_SC_INTERNAL_SERVER_ERROR);
-	    PJSUA_UNLOCK();
-	    return;
-	}
-
-	/* Call's media state is active */
-	call->media_st = PJSUA_CALL_MEDIA_ACTIVE;
-	call->media_dir = sess_info.stream_info[0].dir;
-    }
-
-    /* Print info. */
-    {
-	char info[80];
-	int info_len = 0;
-	unsigned i;
-
-	for (i=0; i<sess_info.stream_cnt; ++i) {
-	    int len;
-	    const char *dir;
-	    pjmedia_stream_info *strm_info = &sess_info.stream_info[i];
-
-	    switch (strm_info->dir) {
-	    case PJMEDIA_DIR_NONE:
-		dir = "inactive";
-		break;
-	    case PJMEDIA_DIR_ENCODING:
-		dir = "sendonly";
-		break;
-	    case PJMEDIA_DIR_DECODING:
-		dir = "recvonly";
-		break;
-	    case PJMEDIA_DIR_ENCODING_DECODING:
-		dir = "sendrecv";
-		break;
-	    default:
-		dir = "unknown";
-		break;
-	    }
-	    len = pj_ansi_sprintf( info+info_len,
-				   ", stream #%d: %.*s (%s)", i,
-				   (int)strm_info->fmt.encoding_name.slen,
-				   strm_info->fmt.encoding_name.ptr,
-				   dir);
-	    if (len > 0)
-		info_len += len;
-	}
-	PJ_LOG(4,(THIS_FILE,"Media updates%s", info));
-    }
 
     /* Call application callback, if any */
     if (pjsua_var.ua_cfg.cb.on_call_media_state)
@@ -2413,9 +2236,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     } else {
 	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 		  call->index));
-	status = pjmedia_endpt_create_sdp( pjsua_var.med_endpt, 
-					   call->inv->pool, 1,
-					   &call->skinfo, &answer);	
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &answer);
     }
 
     if (status != PJ_SUCCESS) {

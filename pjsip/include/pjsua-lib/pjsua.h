@@ -902,6 +902,14 @@ typedef struct pjsua_config
      */
     pj_str_t	    outbound_proxy[4];
 
+    /**
+     * Specify STUN server. This server will be first resolved with DNS SRV
+     * to get the actual server address. If DNS SRV resolution failed, or
+     * when nameserver is not configured, the server will be resolved using
+     * DNS A resolution (i.e. gethostbyname()).
+     */
+    pj_str_t	    stun_srv;
+
     /** 
      * Number of credentials in the credential array.
      */
@@ -1001,6 +1009,7 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
     }
 
     pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
+    pj_strdup_with_null(pool, &dst->stun_srv, &src->stun_srv);
 }
 
 
@@ -1334,60 +1343,6 @@ typedef int pjsua_transport_id;
 
 
 /**
- * This structure describes STUN configuration for SIP and media transport,
- * and is embedded inside pjsua_transport_config structure.
- */
-typedef struct pjsua_stun_config
-{
-    /**
-     * The first STUN server IP address or hostname.
-     */
-    pj_str_t	stun_srv1;
-
-    /**
-     * Port number of the first STUN server.
-     * If zero, default STUN port will be used.
-     */
-    unsigned	stun_port1;
-    
-    /**
-     * Optional second STUN server IP address or hostname, for which the
-     * result of the mapping request will be compared to. If the value
-     * is empty, only one STUN server will be used.
-     */
-    pj_str_t	stun_srv2;
-
-    /**
-     * Port number of the second STUN server.
-     * If zero, default STUN port will be used.
-     */
-    unsigned	stun_port2;
-
-} pjsua_stun_config;
-
-
-
-/**
- * Call this function to initialize STUN config with default values.
- * STUN config is normally embedded inside pjsua_transport_config, so
- * normally there is no need to call this function and rather just
- * call pjsua_transport_config_default() instead.
- *
- * @param cfg	    The STUN config to be initialized.
- *
- * \par Python:
- * The corresponding Python function creates and initialize the config:
- * \code
-    stun_cfg = py_pjsua.stun_config_default()
- * \endcode
- */
-PJ_INLINE(void) pjsua_stun_config_default(pjsua_stun_config *cfg)
-{
-    pj_bzero(cfg, sizeof(*cfg));
-}
-
-
-/**
  * Transport configuration for creating transports for both SIP
  * and media. Before setting some values to this structure, application
  * MUST call #pjsua_transport_config_default() to initialize its
@@ -1435,16 +1390,6 @@ typedef struct pjsua_transport_config
     pj_str_t		bound_addr;
 
     /**
-     * Flag to indicate whether STUN should be used.
-     */
-    pj_bool_t		use_stun;
-
-    /**
-     * STUN configuration, must be specified when STUN is used.
-     */
-    pjsua_stun_config	stun_config;
-
-    /**
      * This specifies TLS settings for TLS transport. It is only be used
      * when this transport config is being used to create a SIP TLS
      * transport.
@@ -1468,42 +1413,7 @@ typedef struct pjsua_transport_config
 PJ_INLINE(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
-    pjsua_stun_config_default(&cfg->stun_config);
     pjsip_tls_setting_default(&cfg->tls_setting);
-}
-
-
-/**
- * This is a utility function to normalize STUN config. It's only
- * used internally by the library.
- *
- * @param cfg	    The STUN config to be initialized.
- *
- * \par Python:
- * \code
-    py_pjsua.normalize_stun_config(cfg)
- * \code
- */
-PJ_INLINE(void) pjsua_normalize_stun_config( pjsua_stun_config *cfg )
-{
-    if (cfg->stun_srv1.slen) {
-
-	if (cfg->stun_port1 == 0)
-	    cfg->stun_port1 = 3478;
-
-	if (cfg->stun_srv2.slen == 0) {
-	    cfg->stun_srv2 = cfg->stun_srv1;
-	    cfg->stun_port2 = cfg->stun_port1;
-	} else {
-	    if (cfg->stun_port2 == 0)
-		cfg->stun_port2 = 3478;
-	}
-
-    } else {
-	cfg->stun_port1 = 0;
-	cfg->stun_srv2.slen = 0;
-	cfg->stun_port2 = 0;
-    }
 }
 
 
@@ -1522,19 +1432,8 @@ PJ_INLINE(void) pjsua_transport_config_dup(pj_pool_t *pool,
 					   pjsua_transport_config *dst,
 					   const pjsua_transport_config *src)
 {
+    PJ_UNUSED_ARG(pool);
     pj_memcpy(dst, src, sizeof(*src));
-
-    if (src->stun_config.stun_srv1.slen) {
-	pj_strdup_with_null(pool, &dst->stun_config.stun_srv1,
-			    &src->stun_config.stun_srv1);
-    }
-
-    if (src->stun_config.stun_srv2.slen) {
-	pj_strdup_with_null(pool, &dst->stun_config.stun_srv2,
-			    &src->stun_config.stun_srv2);
-    }
-
-    pjsua_normalize_stun_config(&dst->stun_config);
 }
 
 
@@ -3530,6 +3429,15 @@ struct pjsua_media_config
      */
     int			jb_max;
 
+    /**
+     * Enable ICE
+     */
+    pj_bool_t		enable_ice;
+
+    /**
+     * Enable ICE media relay.
+     */
+    pj_bool_t		enable_relay;
 };
 
 

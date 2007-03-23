@@ -25,7 +25,7 @@ struct transport_ice
     pjmedia_transport	 base;
     pj_ice_st		*ice_st;
 
-    void  *user_data;
+    void  *stream;
     void (*rtp_cb)(void*,
 		   const void*,
 		   pj_ssize_t);
@@ -41,7 +41,7 @@ struct transport_ice
 static pj_status_t tp_get_info(pjmedia_transport *tp,
 			       pjmedia_sock_info *info);
 static pj_status_t tp_attach( pjmedia_transport *tp,
-			      void *user_data,
+			      void *stream,
 			      const pj_sockaddr_t *rem_addr,
 			      const pj_sockaddr_t *rem_rtcp,
 			      unsigned addr_len,
@@ -92,15 +92,14 @@ static pjmedia_transport_op tp_ice_op =
 
 PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 				       const char *name,
+				       unsigned comp_cnt,
 				       pj_stun_config *stun_cfg,
-				       pj_dns_resolver *resolver,
-				       pj_bool_t enable_relay,
-				       const pj_str_t *stun_name,
-				       pjmedia_transport **p_tp)
+	    			       pjmedia_transport **p_tp)
 {
     pj_ice_st *ice_st;
     pj_ice_st_cb ice_st_cb;
     struct transport_ice *tp_ice;
+    unsigned i;
     pj_status_t status;
 
     PJ_UNUSED_ARG(endpt);
@@ -117,24 +116,11 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add component 1 (RTP) */
-    status = pj_ice_st_add_comp(ice_st, 1);
-    if (status != PJ_SUCCESS) 
-	goto on_error;
-
-    /* Add host candidates. */
-    status = pj_ice_st_add_all_host_interfaces(ice_st, 1, 0, PJ_FALSE, NULL);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Configure STUN server for ICE */
-    if (stun_name) {
-	status = pj_ice_st_set_stun(ice_st, resolver, enable_relay, stun_name);
+    /* Add components */
+    for (i=0; i<comp_cnt; ++i) {
+	status = pj_ice_st_add_comp(ice_st, i+1);
 	if (status != PJ_SUCCESS) 
 	    goto on_error;
-
-	/* Add STUN candidates */
-	status = pj_ice_st_add_stun_interface(ice_st, 1, 0, PJ_FALSE, NULL);
     }
 
     /* Create transport instance and attach to ICE */
@@ -142,6 +128,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     tp_ice->ice_st = ice_st;
     pj_ansi_strcpy(tp_ice->base.name, ice_st->obj_name);
     tp_ice->base.op = &tp_ice_op;
+    tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
 
     ice_st->user_data = (void*)tp_ice;
 
@@ -157,16 +144,25 @@ on_error:
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_ice_close(pjmedia_transport *tp)
+PJ_DEF(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
     if (tp_ice->ice_st) {
 	pj_ice_st_destroy(tp_ice->ice_st);
-	tp_ice->ice_st = NULL;
+	//Must not touch tp_ice after ice_st is destroyed!
+	//(it has the pool)
+	//tp_ice->ice_st = NULL;
     }
 
     return PJ_SUCCESS;
+}
+
+
+PJ_DECL(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    return tp_ice->ice_st;
 }
 
 
@@ -180,9 +176,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_ice_build_sdp(pjmedia_transport *tp,
-					  pj_pool_t *pool,
-					  pjmedia_sdp_session *sdp)
+PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
+					   pj_pool_t *pool,
+					   pjmedia_sdp_session *sdp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     enum { MAXLEN = 256 };
@@ -202,7 +198,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_build_sdp(pjmedia_transport *tp,
 				   &tp_ice->ice_st->ice->rx_pass);
     sdp->attr[sdp->attr_count++] = attr;
 
-    /* Add all candidates */
+    /* Add all candidates (to media level) */
     cand_cnt = pj_ice_get_cand_cnt(tp_ice->ice_st->ice);
     for (i=0; i<cand_cnt; ++i) {
 	pj_ice_cand *cand;
@@ -255,7 +251,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_build_sdp(pjmedia_transport *tp,
 
 	value = pj_str(buffer);
 	attr = pjmedia_sdp_attr_create(pool, "candidate", &value);
-	sdp->attr[sdp->attr_count++] = attr;
+	sdp->media[0]->attr[sdp->media[0]->attr_count++] = attr;
     }
 
     /* Done */
@@ -377,10 +373,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 
     /* Get all candidates */
     cand_cnt = 0;
-    for (i=0; i<rem_sdp->attr_count; ++i) {
+    for (i=0; i<rem_sdp->media[0]->attr_count; ++i) {
 	pjmedia_sdp_attr *attr;
 
-	attr = rem_sdp->attr[i];
+	attr = rem_sdp->media[0]->attr[i];
 	if (pj_strcmp2(&attr->name, "candidate")!=0)
 	    continue;
 
@@ -441,7 +437,7 @@ static pj_status_t tp_get_info(pjmedia_transport *tp,
 
 
 static pj_status_t tp_attach( pjmedia_transport *tp,
-			      void *user_data,
+			      void *stream,
 			      const pj_sockaddr_t *rem_addr,
 			      const pj_sockaddr_t *rem_rtcp,
 			      unsigned addr_len,
@@ -454,7 +450,7 @@ static pj_status_t tp_attach( pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
-    tp_ice->user_data = user_data;
+    tp_ice->stream = stream;
     tp_ice->rtp_cb = rtp_cb;
     tp_ice->rtcp_cb = rtcp_cb;
 
@@ -473,7 +469,7 @@ static void tp_detach(pjmedia_transport *tp,
 
     tp_ice->rtp_cb = NULL;
     tp_ice->rtcp_cb = NULL;
-    tp_ice->user_data = NULL;
+    tp_ice->stream = NULL;
 
     PJ_UNUSED_ARG(strm);
 }
@@ -514,9 +510,9 @@ static void ice_on_rx_data(pj_ice_st *ice_st,
     struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
 
     if (comp_id==1 && tp_ice->rtp_cb)
-	(*tp_ice->rtp_cb)(tp_ice->user_data, pkt, size);
+	(*tp_ice->rtp_cb)(tp_ice->stream, pkt, size);
     else if (comp_id==2 && tp_ice->rtcp_cb)
-	(*tp_ice->rtcp_cb)(tp_ice->user_data, pkt, size);
+	(*tp_ice->rtcp_cb)(tp_ice->stream, pkt, size);
 
     PJ_UNUSED_ARG(cand_id);
     PJ_UNUSED_ARG(src_addr);

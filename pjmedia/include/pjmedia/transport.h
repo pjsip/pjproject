@@ -178,6 +178,11 @@ typedef struct pjmedia_transport pjmedia_transport;
  */
 struct pjmedia_transport_op
 {
+    /**
+     * Get media socket info from the specified transport.
+     *
+     * Application should call #pjmedia_transport_get_info() instead
+     */
     pj_status_t (*get_info)(pjmedia_transport *tp,
 			    pjmedia_sock_info *info);
 
@@ -254,6 +259,20 @@ struct pjmedia_transport_op
 typedef struct pjmedia_transport_op pjmedia_transport_op;
 
 
+/** 
+ * Media transport type.
+ */
+typedef enum pjmedia_transport_type
+{
+    /** Media transport using standard UDP */
+    PJMEDIA_TRANSPORT_TYPE_UDP,
+
+    /** Media transport using ICE */
+    PJMEDIA_TRANSPORT_TYPE_ICE
+
+} pjmedia_transport_type;
+
+
 /**
  * This structure declares stream transport. A stream transport is called
  * by the stream to transmit a packet, and will notify stream when
@@ -262,13 +281,27 @@ typedef struct pjmedia_transport_op pjmedia_transport_op;
 struct pjmedia_transport
 {
     /** Transport name (for logging purpose). */
-    char		  name[PJ_MAX_OBJ_NAME];
+    char		     name[PJ_MAX_OBJ_NAME];
+
+    /** Transport type. */
+    pjmedia_transport_type   type;
 
     /** Transport's "virtual" function table. */
-    pjmedia_transport_op *op;
+    pjmedia_transport_op    *op;
 };
 
 
+/**
+ * Get media socket info from the specified transport. The socket info
+ * contains information about the local address of this transport, and
+ * would be needed for example to fill in the "c=" and "m=" line of local 
+ * SDP.
+ *
+ * @param tp	    The transport.
+ * @param info	    Media socket info to be initialized.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
 PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
 						  pjmedia_sock_info *info)
 {

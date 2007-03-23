@@ -41,21 +41,21 @@ PJ_BEGIN_DECL
 
 PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					const char *name,
+					unsigned comp_cnt,
 					pj_stun_config *stun_cfg,
-					pj_dns_resolver *resolver,
-					pj_bool_t enable_relay,
-					const pj_str_t *stun_name,
 					pjmedia_transport **p_tp);
 PJ_DECL(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp);
+
+PJ_DECL(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp);
 
 
 PJ_DECL(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 					  pj_ice_role role,
 					  const pj_str_t *local_ufrag,
 					  const pj_str_t *local_passwd);
-PJ_DECL(pj_status_t) pjmedia_ice_build_sdp(pjmedia_transport *tp,
-					   pj_pool_t *pool,
-					   pjmedia_sdp_session *sdp);
+PJ_DECL(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
+					    pj_pool_t *pool,
+					    pjmedia_sdp_session *sdp);
 PJ_DECL(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					   pj_pool_t *pool,
 					   pjmedia_sdp_session *rem_sdp);

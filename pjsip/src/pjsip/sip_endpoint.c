@@ -758,6 +758,14 @@ PJ_DEF(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt,
 }
 
 /*
+ * Get the timer heap instance of the SIP endpoint.
+ */
+PJ_DEF(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt)
+{
+    return endpt->timer_heap;
+}
+
+/*
  * This is the callback that is called by the transport manager when it 
  * receives a message from the network.
  */

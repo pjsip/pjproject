@@ -888,12 +888,15 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 static void on_ice_complete(pj_ice *ice, pj_status_t status)
 {
     if (!ice->is_complete) {
+	char errmsg[PJ_ERR_MSG_SIZE];
 
 	ice->is_complete = PJ_TRUE;
 	ice->ice_status = status;
     
 	/* Log message */
-	LOG((ice->obj_name, "ICE process complete"));
+	LOG((ice->obj_name, "ICE process complete, status=%s", 
+	     pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
+
 	dump_checklist("Dumping checklist", ice, &ice->clist);
 	dump_valid_list("Dumping valid list", ice);
 
@@ -1136,7 +1139,7 @@ PJ_DEF(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
     /* Log checklist */
     dump_checklist("Checklist created:", ice, clist);
 
-    pj_mutex_lock(ice->mutex);
+    pj_mutex_unlock(ice->mutex);
 
     return PJ_SUCCESS;
 }

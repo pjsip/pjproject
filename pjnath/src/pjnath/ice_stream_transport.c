@@ -151,7 +151,6 @@ on_error:
     return status;
 }
 
-
 /* 
  * This is callback called by ioqueue on incoming packet 
  */
@@ -191,7 +190,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
 }
 
-
 /* 
  * Destroy an interface 
  */
@@ -206,7 +204,6 @@ static void destroy_ice_interface(pj_ice_st_interface *is)
 	is->sock = PJ_INVALID_SOCKET;
     }
 }
-
 
 /* 
  * Create ICE stream transport 
@@ -241,7 +238,6 @@ PJ_DECL(pj_status_t) pj_ice_st_create(pj_stun_config *stun_cfg,
     return PJ_SUCCESS;
 }
 
-
 static void destroy_ice_st(pj_ice_st *ice_st, pj_status_t reason)
 {
     unsigned i;
@@ -273,7 +269,6 @@ static void destroy_ice_st(pj_ice_st *ice_st, pj_status_t reason)
     }
 }
 
-
 /*
  * Destroy ICE stream transport.
  */
@@ -282,7 +277,6 @@ PJ_DEF(pj_status_t) pj_ice_st_destroy(pj_ice_st *ice_st)
     destroy_ice_st(ice_st, PJ_SUCCESS);
     return PJ_SUCCESS;
 }
-
 
 /*
  * Resolve STUN server
@@ -299,7 +293,6 @@ PJ_DEF(pj_status_t) pj_ice_st_set_stun( pj_ice_st *ice_st,
     PJ_UNUSED_ARG(domain);
     return -1;
 }
-
 
 /*
  * Set STUN server address.
@@ -318,7 +311,6 @@ PJ_DEF(pj_status_t) pj_ice_st_set_stun_addr( pj_ice_st *ice_st,
 
     return PJ_SUCCESS;
 }
-
 
 /*
  * Add new component.
@@ -349,7 +341,6 @@ PJ_DEF(pj_status_t) pj_ice_st_add_comp(pj_ice_st *ice_st,
 
     return PJ_SUCCESS;
 }
-
 
 /* Add interface */
 static void add_interface(pj_ice_st *ice_st, pj_ice_st_interface *is,
@@ -405,9 +396,11 @@ PJ_DEF(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
     /* Store this interface */
     add_interface(ice_st, is, p_itf_id, notify, notify_data);
 
+    /* Set interface status to SUCCESS */
+    is->status = PJ_SUCCESS;
+
     return PJ_SUCCESS;
 }
-
 
 /*
  * Enumerate and add all host interfaces.
@@ -434,7 +427,6 @@ PJ_DEF(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
 					NULL, notify, notify_data);
 }
 
-
 /*
  * Add STUN mapping interface.
  */
@@ -452,7 +444,6 @@ PJ_DEF(pj_status_t) pj_ice_st_add_stun_interface(pj_ice_st *ice_st,
     PJ_UNUSED_ARG(notify_data);
     return -1;
 }
-
 
 /*
  * Add TURN mapping interface.
@@ -472,6 +463,25 @@ PJ_DEF(pj_status_t) pj_ice_st_add_relay_interface(pj_ice_st *ice_st,
     return -1;
 }
 
+PJ_DEF(pj_status_t) pj_ice_st_get_interfaces_status(pj_ice_st *ice_st)
+{
+    unsigned i;
+    pj_status_t worst = PJ_SUCCESS;
+
+    for (i=0; i<ice_st->itf_cnt; ++i) {
+	pj_ice_st_interface *itf = ice_st->itfs[i];
+
+	if (itf->status == PJ_SUCCESS) {
+	    /* okay */
+	} else if (itf->status == PJ_EPENDING && worst==PJ_SUCCESS) {
+	    worst = itf->status;
+	} else {
+	    worst = itf->status;
+	}
+    }
+
+    return worst;
+}
 
 /*
  * Create ICE!
@@ -537,7 +547,6 @@ on_error:
     return status;
 }
 
-
 /*
  * Enum candidates
  */
@@ -568,7 +577,6 @@ PJ_DEF(pj_status_t) pj_ice_st_enum_cands(pj_ice_st *ice_st,
     return PJ_SUCCESS;
 }
 
-
 /*
  * Start ICE processing !
  */
@@ -588,7 +596,6 @@ PJ_DEF(pj_status_t) pj_ice_st_start_ice( pj_ice_st *ice_st,
     return pj_ice_start_check(ice_st->ice);
 }
 
-
 /*
  * Stop ICE!
  */
@@ -601,7 +608,6 @@ PJ_DECL(pj_status_t) pj_ice_st_stop_ice(pj_ice_st *ice_st)
 
     return PJ_SUCCESS;
 }
-
 
 /*
  * Send data to peer agent.
@@ -617,8 +623,6 @@ PJ_DEF(pj_status_t) pj_ice_st_send_data( pj_ice_st *ice_st,
     return pj_ice_send_data(ice_st->ice, comp_id, data, data_len);
 }
 
-
-
 /*
  * Callback called by ICE session when ICE processing is complete, either
  * successfully or with failure.
@@ -630,7 +634,6 @@ static void on_ice_complete(pj_ice *ice, pj_status_t status)
 	(*ice_st->cb.on_ice_complete)(ice_st, status);
     }
 }
-
 
 /*
  * Callback called by ICE session when it wants to send outgoing packet.
@@ -666,7 +669,6 @@ static pj_status_t on_tx_pkt(pj_ice *ice,
     
     return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
 }
-
 
 /*
  * Callback called by ICE session when it receives application data.

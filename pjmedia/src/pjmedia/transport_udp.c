@@ -239,6 +239,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     tp->options = options;
     pj_ansi_strcpy(tp->base.name, name);
     tp->base.op = &transport_udp_op;
+    tp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
 
     /* Copy socket infos */
     tp->rtp_sock = si->rtp_sock;

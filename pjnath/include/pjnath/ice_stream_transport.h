@@ -71,6 +71,7 @@ typedef struct pj_ice_st_interface
 {
     pj_ice_st		*ice_st;
     pj_ice_cand_type	 type;
+    pj_status_t		 status;
     unsigned		 comp_id;
     int			 cand_id;
     pj_str_t		 foundation;
@@ -150,7 +151,7 @@ PJ_DECL(pj_status_t) pj_ice_st_add_relay_interface(pj_ice_st *ice_st,
 						   unsigned local_port,
 						   pj_bool_t notify,
 						   void *notify_data);
-
+PJ_DECL(pj_status_t) pj_ice_st_get_interfaces_status(pj_ice_st *ice_st);
 
 PJ_DECL(pj_status_t) pj_ice_st_init_ice(pj_ice_st *ice_st,
 					pj_ice_role role,

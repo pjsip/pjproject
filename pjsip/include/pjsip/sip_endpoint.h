@@ -156,6 +156,15 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 PJ_DECL(void) pjsip_endpt_cancel_timer( pjsip_endpoint *endpt, 
 					pj_timer_entry *entry );
 
+/**
+ * Get the timer heap instance of the SIP endpoint.
+ *
+ * @param endpt	    The endpoint.
+ *
+ * @return	    The timer heap instance.
+ */
+PJ_DECL(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt);
+
 
 /**
  * Register new module to the endpoint.
