@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="sample_debug"
-	ProjectGUID="{A0F1AA62-0F6F-420D-B09A-AC04B6862821}"
-	RootNamespace="sample_debug"
+	Name="pjnath_test"
+	ProjectGUID="{553C094C-F581-4A80-9540-D5D7B398A2C6}"
+	RootNamespace="pjnath_test"
 	>
 	<Platforms>
 		<Platform
@@ -16,8 +16,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="./output/samples-i386-win32-vc8-debug"
-			IntermediateDirectory="./output/samples-i386-win32-vc8-debug"
+			OutputDirectory="./output/pjnath-test-i386-win32-vc8-debug"
+			IntermediateDirectory="./output/pjnath-test-i386-win32-vc8-debug"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -38,21 +38,21 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/samples-i386-win32-vc8-debug/sample_debug.tlb"
+				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PreprocessorDefinitions="PJ_WIN32=1;PJ_M_I386=1;WIN32;_DEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/samples-i386-win32-vc8-debug/sample_debug.pch"
-				AssemblerListingLocation="./output/samples-i386-win32-vc8-debug/"
-				ObjectFile="./output/samples-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/samples-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.pch"
+				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-debug/"
+				ObjectFile="./output/pjnath-test-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -71,14 +71,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="../bin/samples/sampledebug_vc8d.exe"
+				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
+				OutputFile="../bin/pjnath-test-i386-win32-vc8-debug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/samples-i386-win32-vc8-debug/sampledebug_vc8d.pdb"
-				GenerateMapFile="true"
-				MapFileName="./output/samples-i386-win32-vc8-debug/sampledebug_vc8d.map"
+				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath-test-i386-win32-vc8-debug.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -94,7 +92,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/samples-i386-win32-vc8-debug/sample_debug.bsc"
+				OutputFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -111,8 +109,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="./output/samples-i386-win32-vc8-release"
-			IntermediateDirectory="./output/samples-i386-win32-vc8-release"
+			OutputDirectory="./output/pjnath-test-i386-win32-vc8-release"
+			IntermediateDirectory="./output/pjnath-test-i386-win32-vc8-release"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -133,26 +131,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/samples-i386-win32-vc8-release/sample_debug.tlb"
+				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PreprocessorDefinitions="PJ_WIN32=1;PJ_M_I386=1;WIN32;NDEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/samples-i386-win32-vc8-release/sample_debug.pch"
-				AssemblerListingLocation="./output/samples-i386-win32-vc8-release/"
-				ObjectFile="./output/samples-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/samples-i386-win32-vc8-release/"
+				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.pch"
+				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-release/"
+				ObjectFile="./output/pjnath-test-i386-win32-vc8-release/"
+				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-release/"
 				BrowseInformation="1"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -167,15 +164,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/FIXED:NO"
-				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="../bin/samples/sampledebug_vc8.exe"
+				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
+				OutputFile="../bin/pjnath-test-i386-win32-vc8-release.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/samples-i386-win32-vc8-release/sampledebug_vc8.pdb"
-				GenerateMapFile="true"
-				MapFileName="./output/samples-i386-win32-vc8-release/sampledebug_vc8.map"
+				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-release/pjnath-test-i386-win32-vc8-release.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -191,7 +184,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/samples-i386-win32-vc8-release/sample_debug.bsc"
+				OutputFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -215,7 +208,73 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\samples\debug.c"
+				RelativePath="..\src\pjnath-test\ice_test.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath-test\main.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath-test\stun.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath-test\test.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -241,6 +300,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\src\pjnath-test\test.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

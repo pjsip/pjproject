@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjlib"
 	ProjectGUID="{DA0E03ED-53A7-4050-8A85-90541C5509F8}"
+	RootNamespace="pjlib"
 	>
 	<Platforms>
 		<Platform
@@ -15,8 +16,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\pjlib-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\pjlib-i386-win32-vc8-debug"
+			OutputDirectory=".\output\pjlib-i386-win32-vc6-debug"
+			IntermediateDirectory=".\output\pjlib-i386-win32-vc6-debug"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -46,10 +47,10 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc6-debug/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc6-debug/"
+				ObjectFile=".\output\pjlib-i386-win32-vc6-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc6-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -68,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-debug.lib"
+				OutputFile="../lib/pjlib-i386-win32-vc6-debug.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -80,7 +81,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
+				OutputFile=".\output\pjlib-i386-win32-vc6-debug/pjlib.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -91,8 +92,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\pjlib-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\pjlib-i386-win32-vc8-release"
+			OutputDirectory=".\output\pjlib-i386-win32-vc6-release"
+			IntermediateDirectory=".\output\pjlib-i386-win32-vc6-release"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -123,10 +124,10 @@
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc6-release/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc6-release/"
+				ObjectFile=".\output\pjlib-i386-win32-vc6-release/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc6-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -145,7 +146,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
+				OutputFile="../lib/pjlib-i386-win32-vc6-release.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -157,7 +158,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
+				OutputFile=".\output\pjlib-i386-win32-vc6-release/pjlib.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

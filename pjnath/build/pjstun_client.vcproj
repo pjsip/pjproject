@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="sample_debug"
-	ProjectGUID="{A0F1AA62-0F6F-420D-B09A-AC04B6862821}"
-	RootNamespace="sample_debug"
+	Name="pjstun_client"
+	ProjectGUID="{D13A6424-23A4-4990-998D-F80C63704580}"
+	RootNamespace="pjstun_client"
 	>
 	<Platforms>
 		<Platform
@@ -15,9 +15,9 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory="./output/samples-i386-win32-vc8-debug"
-			IntermediateDirectory="./output/samples-i386-win32-vc8-debug"
+			Name="Release|Win32"
+			OutputDirectory="./output/pjstun-client-i386-win32-vc8-release"
+			IntermediateDirectory="./output/pjstun-client-i386-win32-vc8-release"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -38,23 +38,115 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/samples-i386-win32-vc8-debug/sample_debug.tlb"
+				TypeLibraryName="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.pch"
+				AssemblerListingLocation="./output/pjstun-client-i386-win32-vc8-release/"
+				ObjectFile="./output/pjstun-client-i386-win32-vc8-release/"
+				ProgramDataBaseFileName="./output/pjstun-client-i386-win32-vc8-release/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
+				OutputFile="../bin/pjstun-client-i386-win32-vc8-release.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				ProgramDatabaseFile="./output/pjstun-client-i386-win32-vc8-release/pjstun-client-i386-win32-vc8-release.pdb"
+				SubSystem="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="./output/pjstun-client-i386-win32-vc8-debug"
+			IntermediateDirectory="./output/pjstun-client-i386-win32-vc8-debug"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PreprocessorDefinitions="PJ_WIN32=1;PJ_M_I386=1;WIN32;_DEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/samples-i386-win32-vc8-debug/sample_debug.pch"
-				AssemblerListingLocation="./output/samples-i386-win32-vc8-debug/"
-				ObjectFile="./output/samples-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/samples-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.pch"
+				AssemblerListingLocation="./output/pjstun-client-i386-win32-vc8-debug/"
+				ObjectFile="./output/pjstun-client-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName="./output/pjstun-client-i386-win32-vc8-debug/"
 				BrowseInformation="1"
-				WarningLevel="4"
+				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -71,14 +163,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="../bin/samples/sampledebug_vc8d.exe"
+				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
+				OutputFile="../bin/pjstun-client-i386-win32-vc8-debug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/samples-i386-win32-vc8-debug/sampledebug_vc8d.pdb"
-				GenerateMapFile="true"
-				MapFileName="./output/samples-i386-win32-vc8-debug/sampledebug_vc8d.map"
+				ProgramDatabaseFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun-client-i386-win32-vc8-debug.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -94,104 +184,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/samples-i386-win32-vc8-debug/sample_debug.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Win32"
-			OutputDirectory="./output/samples-i386-win32-vc8-release"
-			IntermediateDirectory="./output/samples-i386-win32-vc8-release"
-			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName="./output/samples-i386-win32-vc8-release/sample_debug.tlb"
-				HeaderFileName=""
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PreprocessorDefinitions="PJ_WIN32=1;PJ_M_I386=1;WIN32;NDEBUG;_CONSOLE"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/samples-i386-win32-vc8-release/sample_debug.pch"
-				AssemblerListingLocation="./output/samples-i386-win32-vc8-release/"
-				ObjectFile="./output/samples-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/samples-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalOptions="/FIXED:NO"
-				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="../bin/samples/sampledebug_vc8.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/samples-i386-win32-vc8-release/sampledebug_vc8.pdb"
-				GenerateMapFile="true"
-				MapFileName="./output/samples-i386-win32-vc8-release/sampledebug_vc8.map"
-				SubSystem="1"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/samples-i386-win32-vc8-release/sample_debug.bsc"
+				OutputFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -215,10 +208,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\samples\debug.c"
+				RelativePath="..\src\pjstun-client\client_main.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -227,7 +220,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

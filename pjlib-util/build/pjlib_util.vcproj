@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="pjlib_util"
 	ProjectGUID="{FE07F272-AE7F-4549-9E9F-EF9B80CB1693}"
-	RootNamespace="pjlib_util"
 	>
 	<Platforms>
 		<Platform
@@ -16,8 +15,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="./output/pjlib-util-i386-win32-vc8-release"
-			IntermediateDirectory="./output/pjlib-util-i386-win32-vc8-release"
+			OutputDirectory=".\./output/pjlib-util-i386-win32-vc6-release"
+			IntermediateDirectory=".\./output/pjlib-util-i386-win32-vc6-release"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -48,10 +47,10 @@
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjlib-util-i386-win32-vc8-release/pjlib_util.pch"
-				AssemblerListingLocation="./output/pjlib-util-i386-win32-vc8-release/"
-				ObjectFile="./output/pjlib-util-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjlib-util-i386-win32-vc8-release/"
+				PrecompiledHeaderFile=".\./output/pjlib-util-i386-win32-vc6-release/pjlib_util.pch"
+				AssemblerListingLocation=".\./output/pjlib-util-i386-win32-vc6-release/"
+				ObjectFile=".\./output/pjlib-util-i386-win32-vc6-release/"
+				ProgramDataBaseFileName=".\./output/pjlib-util-i386-win32-vc6-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -70,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-util-i386-win32-vc8-release.lib"
+				OutputFile="../lib/pjlib-util-i386-win32-vc6-release.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -82,7 +81,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/pjlib-util-i386-win32-vc8-release/pjlib_util.bsc"
+				OutputFile=".\./output/pjlib-util-i386-win32-vc6-release/pjlib_util.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -93,8 +92,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="./output/pjlib-util-i386-win32-vc8-debug"
-			IntermediateDirectory="./output/pjlib-util-i386-win32-vc8-debug"
+			OutputDirectory=".\./output/pjlib-util-i386-win32-vc6-debug"
+			IntermediateDirectory=".\./output/pjlib-util-i386-win32-vc6-debug"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -124,10 +123,10 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/pjlib-util-i386-win32-vc8-debug/pjlib_util.pch"
-				AssemblerListingLocation="./output/pjlib-util-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjlib-util-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjlib-util-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile=".\./output/pjlib-util-i386-win32-vc6-debug/pjlib_util.pch"
+				AssemblerListingLocation=".\./output/pjlib-util-i386-win32-vc6-debug/"
+				ObjectFile=".\./output/pjlib-util-i386-win32-vc6-debug/"
+				ProgramDataBaseFileName=".\./output/pjlib-util-i386-win32-vc6-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -146,7 +145,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-util-i386-win32-vc8-debug.lib"
+				OutputFile="../lib/pjlib-util-i386-win32-vc6-debug.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -158,7 +157,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/pjlib-util-i386-win32-vc8-debug/pjlib_util.bsc"
+				OutputFile=".\./output/pjlib-util-i386-win32-vc6-debug/pjlib_util.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -178,6 +177,24 @@
 			<File
 				RelativePath="..\src\pjlib-util\crc32.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\dns.c"
@@ -270,10 +287,46 @@
 			<File
 				RelativePath="..\src\pjlib-util\hmac_md5.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\hmac_sha1.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\md5.c"
@@ -392,6 +445,24 @@
 			<File
 				RelativePath="..\src\pjlib-util\sha1.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\string.c"
@@ -418,10 +489,46 @@
 			<File
 				RelativePath="..\src\pjlib-util\stun_simple.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\stun_simple_client.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjlib-util\symbols.c"

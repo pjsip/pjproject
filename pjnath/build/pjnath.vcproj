@@ -2,9 +2,8 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="pjsua_lib"
-	ProjectGUID="{9CA0FDFB-2172-41FC-B7F1-5CE915EDCB37}"
-	RootNamespace="pjsua_lib"
+	Name="pjnath"
+	ProjectGUID="{A5D9AA24-08ED-48B9-BD65-F0A25E96BFC4}"
 	>
 	<Platforms>
 		<Platform
@@ -15,85 +14,9 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory=".\output\pjsua-lib-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\pjsua-lib-i386-win32-vc8-debug"
-			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				AdditionalIncludeDirectories="../include,../../pjmedia/include,../../pjlib-util/include,../../pjlib/include,../../pjnath/include"
-				PreprocessorDefinitions="_DEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjsua-lib-i386-win32-vc8-debug/pjsua_lib.pch"
-				AssemblerListingLocation=".\output\pjsua-lib-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjsua-lib-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjsua-lib-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjsua-lib-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjsua-lib-i386-win32-vc8-debug/pjsua_lib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\pjsua-lib-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\pjsua-lib-i386-win32-vc8-release"
+			OutputDirectory="./output/pjnath-i386-win32-vc8-release"
+			IntermediateDirectory="./output/pjnath-i386-win32-vc8-release"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -118,16 +41,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../include,../../pjmedia/include,../../pjlib-util/include,../../pjlib/include,../../pjnath/include"
-				PreprocessorDefinitions="NDEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_LIB"
+				InlineFunctionExpansion="2"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjsua-lib-i386-win32-vc8-release/pjsua_lib.pch"
-				AssemblerListingLocation=".\output\pjsua-lib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjsua-lib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjsua-lib-i386-win32-vc8-release/"
+				PrecompiledHeaderFile="./output/pjnath-i386-win32-vc8-release/pjnath.pch"
+				AssemblerListingLocation="./output/pjnath-i386-win32-vc8-release/"
+				ObjectFile="./output/pjnath-i386-win32-vc8-release/"
+				ProgramDataBaseFileName="./output/pjnath-i386-win32-vc8-release/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -146,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjsua-lib-i386-win32-vc8-release.lib"
+				OutputFile="../lib/pjnath-i386-win32-vc8-release.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -158,7 +81,83 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\pjsua-lib-i386-win32-vc8-release/pjsua_lib.bsc"
+				OutputFile="./output/pjnath-i386-win32-vc8-release/pjnath.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="./output/pjnath-i386-win32-vc8-debug"
+			IntermediateDirectory="./output/pjnath-i386-win32-vc8-debug"
+			ConfigurationType="4"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
+				PrecompiledHeaderFile="./output/pjnath-i386-win32-vc8-debug/pjnath.pch"
+				AssemblerListingLocation="./output/pjnath-i386-win32-vc8-debug/"
+				ObjectFile="./output/pjnath-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName="./output/pjnath-i386-win32-vc8-debug/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="4"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjnath-i386-win32-vc8-debug.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile="./output/pjnath-i386-win32-vc8-debug/pjnath.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -176,10 +175,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_acc.c"
+				RelativePath="..\src\pjnath\errno.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -188,7 +187,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -198,10 +197,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_call.c"
+				RelativePath="..\src\pjnath\ice.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -210,7 +209,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -220,10 +219,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_core.c"
+				RelativePath="..\src\pjnath\ice_stream_transport.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -232,7 +231,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -242,10 +241,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_im.c"
+				RelativePath="..\src\pjnath\stun_auth.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -254,7 +253,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -264,10 +263,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_media.c"
+				RelativePath="..\src\pjnath\stun_msg.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -276,7 +275,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -286,8 +285,17 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_pres.c"
+				RelativePath="..\src\pjnath\stun_msg_dump.c"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
 					>
@@ -297,8 +305,43 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath\stun_session.c"
+				>
 				<FileConfiguration
 					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath\stun_transaction.c"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -313,11 +356,55 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\include\pjsua-lib\pjsua.h"
+				RelativePath="..\include\pjnath\config.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjsua-lib\pjsua_internal.h"
+				RelativePath="..\include\pjnath\errno.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\ice.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\ice_stream_transport.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_auth.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_config.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_doc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_msg.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_session.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\stun_transaction.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\turn_client.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\types.h"
 				>
 			</File>
 		</Filter>

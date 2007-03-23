@@ -10,6 +10,7 @@ BUILD_FLAGS = /Ox /MD /DNDEBUG /W4
 
 PJLIB_LIB = ..\..\pjlib\lib\pjlib-$(TARGET)$(LIBEXT)
 PJLIB_UTIL_LIB = ..\..\pjlib-util\lib\pjlib-util-$(TARGET)$(LIBEXT)
+PJNATH_LIB = ..\..\pjnath\lib\pjnath-$(TARGET)$(LIBEXT)
 PJMEDIA_LIB = ..\..\pjmedia\lib\pjmedia-$(TARGET)$(LIBEXT)
 PJMEDIA_CODEC_LIB = ..\..\pjmedia\lib\pjmedia-codec-$(TARGET)$(LIBEXT)
 PJSIP_LIB = ..\..\pjsip\lib\pjsip-core-$(TARGET)$(LIBEXT)
@@ -18,14 +19,15 @@ PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
 PJSUA_LIB_LIB = ..\..\pjsip\lib\pjsua-lib-$(TARGET)$(LIBEXT)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
-	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) \
+	  $(PJSIP_LIB) $(PJNATH_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) \
 	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
 
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  $(BUILD_FLAGS) \
 	  -I..\..\pjsip\include \
 	  -I..\..\pjlib\include -I..\..\pjlib-util\include \
-	  -I..\..\pjmedia\include
+	  -I..\..\pjmedia\include \
+	  -I..\..\pjnath/include
 LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
 	  ole32.lib user32.lib dsound.lib dxguid.lib netapi32.lib \
 	  mswsock.lib ws2_32.lib 

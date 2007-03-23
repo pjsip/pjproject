@@ -173,7 +173,7 @@ static int perform_ice_test(const char *title,
 	return -21;
 
     /* Add host candidate */
-    status = pj_ice_st_add_host_interface(im1, 1, 65535, NULL, NULL, PJ_FALSE, NULL);
+    status = pj_ice_st_add_host_interface(im1, 1, 65535, NULL, NULL);
     if (status != PJ_SUCCESS)
 	return -21;
 
@@ -192,7 +192,7 @@ static int perform_ice_test(const char *title,
 	return -26;
 
     /* Add host candidate */
-    status = pj_ice_st_add_host_interface(im2, 1, 65535, NULL, NULL, PJ_FALSE, NULL);
+    status = pj_ice_st_add_host_interface(im2, 1, 65535, NULL, NULL);
     if (status != PJ_SUCCESS)
 	return -27;
 

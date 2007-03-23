@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="pjsua_lib"
-	ProjectGUID="{9CA0FDFB-2172-41FC-B7F1-5CE915EDCB37}"
-	RootNamespace="pjsua_lib"
+	Name="pjstun_srv_test"
+	ProjectGUID="{CD3783DF-22FA-4BAC-A8A6-62DA0D2CC045}"
+	RootNamespace="pjstun_srv_test"
 	>
 	<Platforms>
 		<Platform
@@ -15,10 +15,10 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory=".\output\pjsua-lib-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\pjsua-lib-i386-win32-vc8-debug"
-			ConfigurationType="4"
+			Name="Release|Win32"
+			OutputDirectory="./output/pjstun-srv-test-i386-win32-vc8-release"
+			IntermediateDirectory="./output/pjstun-srv-test-i386-win32-vc8-release"
+			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -38,19 +38,113 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TypeLibraryName="./output/pjstun-srv-test-i386-win32-vc8-release/pjstun_srv_test.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile="./output/pjstun-srv-test-i386-win32-vc8-release/pjstun_srv_test.pch"
+				AssemblerListingLocation="./output/pjstun-srv-test-i386-win32-vc8-release/"
+				ObjectFile="./output/pjstun-srv-test-i386-win32-vc8-release/"
+				ProgramDataBaseFileName="./output/pjstun-srv-test-i386-win32-vc8-release/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
+				OutputFile="../bin/pjstun-srv-test-i386-win32-vc8-release.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				ProgramDatabaseFile="./output/pjstun-srv-test-i386-win32-vc8-release/pjstun-srv-test-i386-win32-vc8-release.pdb"
+				SubSystem="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile="./output/pjstun-srv-test-i386-win32-vc8-release/pjstun_srv_test.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="./output/pjstun-srv-test-i386-win32-vc8-debug"
+			IntermediateDirectory="./output/pjstun-srv-test-i386-win32-vc8-debug"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./output/pjstun-srv-test-i386-win32-vc8-debug/pjstun_srv_test.tlb"
+				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include,../../pjmedia/include,../../pjlib-util/include,../../pjlib/include,../../pjnath/include"
-				PreprocessorDefinitions="_DEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_LIB"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjsua-lib-i386-win32-vc8-debug/pjsua_lib.pch"
-				AssemblerListingLocation=".\output\pjsua-lib-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjsua-lib-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjsua-lib-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile="./output/pjstun-srv-test-i386-win32-vc8-debug/pjstun_srv_test.pch"
+				AssemblerListingLocation="./output/pjstun-srv-test-i386-win32-vc8-debug/"
+				ObjectFile="./output/pjstun-srv-test-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName="./output/pjstun-srv-test-i386-win32-vc8-debug/"
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
@@ -68,12 +162,21 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjsua-lib-i386-win32-vc8-debug.lib"
+				Name="VCLinkerTool"
+				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
+				OutputFile="../bin/pjstun-srv-test-i386-win32-vc8-debug.exe"
+				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				GenerateDebugInformation="true"
+				ProgramDatabaseFile="./output/pjstun-srv-test-i386-win32-vc8-debug/pjstun-srv-test-i386-win32-vc8-debug.pdb"
+				SubSystem="1"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -81,87 +184,16 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\pjsua-lib-i386-win32-vc8-debug/pjsua_lib.bsc"
+				OutputFile="./output/pjstun-srv-test-i386-win32-vc8-debug/pjstun_srv_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
 			/>
 			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Win32"
-			OutputDirectory=".\output\pjsua-lib-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\pjsua-lib-i386-win32-vc8-release"
-			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
+				Name="VCAppVerifierTool"
 			/>
 			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../include,../../pjmedia/include,../../pjlib-util/include,../../pjlib/include,../../pjnath/include"
-				PreprocessorDefinitions="NDEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjsua-lib-i386-win32-vc8-release/pjsua_lib.pch"
-				AssemblerListingLocation=".\output\pjsua-lib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjsua-lib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjsua-lib-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjsua-lib-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjsua-lib-i386-win32-vc8-release/pjsua_lib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -176,10 +208,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_acc.c"
+				RelativePath="..\src\pjstun-srv-test\bind_usage.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -188,7 +220,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -198,10 +230,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_call.c"
+				RelativePath="..\src\pjstun-srv-test\main.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -210,7 +242,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -220,10 +252,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_core.c"
+				RelativePath="..\src\pjstun-srv-test\server.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -232,7 +264,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -242,10 +274,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_im.c"
+				RelativePath="..\src\pjstun-srv-test\turn_usage.c"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -254,7 +286,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -264,17 +296,8 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua-lib\pjsua_media.c"
+				RelativePath="..\src\pjstun-srv-test\usage.c"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
 					>
@@ -284,21 +307,8 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjsua-lib\pjsua_pres.c"
-				>
 				<FileConfiguration
 					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -313,13 +323,14 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\include\pjsua-lib\pjsua.h"
+				RelativePath="..\src\pjstun-srv-test\server.h"
 				>
 			</File>
-			<File
-				RelativePath="..\include\pjsua-lib\pjsua_internal.h"
-				>
-			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+			>
 		</Filter>
 	</Files>
 	<Globals>

@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjsua"
 	ProjectGUID="{8310649E-A25E-4AF0-91E8-9E3CC659BB89}"
+	RootNamespace="pjsua"
 	>
 	<Platforms>
 		<Platform
@@ -44,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
 				PreprocessorDefinitions="NDEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -140,7 +141,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
 				PreprocessorDefinitions="_DEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
