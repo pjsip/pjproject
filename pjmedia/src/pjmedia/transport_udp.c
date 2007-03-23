@@ -93,6 +93,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
 
+static pj_status_t transport_get_info(pjmedia_transport *tp,
+				      pjmedia_sock_info *info);
 static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
@@ -116,6 +118,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 
 static pjmedia_transport_op transport_udp_op = 
 {
+    &transport_get_info,
     &transport_attach,
     &transport_detach,
     &transport_send_rtp,
@@ -324,15 +327,7 @@ PJ_DEF(pj_status_t)
 pjmedia_transport_udp_get_info( pjmedia_transport *tp,
 				pjmedia_transport_udp_info *inf)
 {
-    struct transport_udp *udp = (struct transport_udp*)tp;
-    PJ_ASSERT_RETURN(tp && inf, PJ_EINVAL);
-
-    inf->skinfo.rtp_sock = udp->rtp_sock;
-    inf->skinfo.rtp_addr_name = udp->rtp_addr_name;
-    inf->skinfo.rtcp_sock = udp->rtcp_sock;
-    inf->skinfo.rtcp_addr_name = udp->rtcp_addr_name;
-
-    return PJ_SUCCESS;
+    return transport_get_info(tp, &inf->skinfo);
 }
 
 
@@ -524,6 +519,22 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	    bytes_read = -status;
 
     } while (status != PJ_EPENDING);
+}
+
+
+/* Called to get the transport info */
+static pj_status_t transport_get_info(pjmedia_transport *tp,
+				      pjmedia_sock_info *info)
+{
+    struct transport_udp *udp = (struct transport_udp*)tp;
+    PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
+
+    info->rtp_sock = udp->rtp_sock;
+    info->rtp_addr_name = udp->rtp_addr_name;
+    info->rtcp_sock = udp->rtcp_sock;
+    info->rtcp_addr_name = udp->rtcp_addr_name;
+
+    return PJ_SUCCESS;
 }
 
 

@@ -163,12 +163,21 @@
  * ICE session not available
  */
 #define PJ_ENOICE		    -1
-
- /**
+/**
  * @hideinitializer
  * ICE check is in progress
  */
 #define PJ_EICEINPROGRESS	    -1
+/**
+ * @hideinitializer
+ * Missing ICE SDP attribute
+ */
+#define PJ_EICEMISSINGSDP	    -1
+/**
+ * @hideinitializer
+ * Invalid SDP "candidate" attribute
+ */
+#define PJ_EICEINCANDSDP	    -1
 
 
 

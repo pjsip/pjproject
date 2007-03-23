@@ -26,6 +26,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/errno.h>
 
 /**
  * @defgroup PJMEDIA_TRANSPORT Media Transports
@@ -177,6 +178,9 @@ typedef struct pjmedia_transport pjmedia_transport;
  */
 struct pjmedia_transport_op
 {
+    pj_status_t (*get_info)(pjmedia_transport *tp,
+			    pjmedia_sock_info *info);
+
     /**
      * This function is called by the stream when the transport is about
      * to be used by the stream for the first time, and it tells the transport
@@ -264,6 +268,15 @@ struct pjmedia_transport
     pjmedia_transport_op *op;
 };
 
+
+PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
+						  pjmedia_sock_info *info)
+{
+    if (tp->op->get_info)
+	return (*tp->op->get_info)(tp, info);
+    else
+	return PJ_ENOTSUP;
+}
 
 
 /**

@@ -25,6 +25,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 
