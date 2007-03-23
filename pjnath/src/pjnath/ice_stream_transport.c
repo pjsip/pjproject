@@ -47,6 +47,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 static void destroy_ice_interface(pj_ice_st_interface *is);
 static void destroy_ice_st(pj_ice_st *ice_st, pj_status_t reason);
 
+/* STUN session callback */
+static pj_status_t stun_on_send_msg(pj_stun_session *sess,
+				    const void *pkt,
+				    pj_size_t pkt_size,
+				    const pj_sockaddr_t *dst_addr,
+				    unsigned addr_len);
+static void stun_on_request_complete(pj_stun_session *sess,
+				     pj_status_t status,
+				     pj_stun_tx_data *tdata,
+				     const pj_stun_msg *response);
+
+/* Utility: print error */
 static void ice_st_perror(pj_ice_st *ice_st, const char *title, 
 			  pj_status_t status)
 {
@@ -160,6 +172,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 {
     pj_ice_st_interface *is = (pj_ice_st_interface*) 
 			      pj_ioqueue_get_user_data(key);
+    pj_ice_st *ice_st = is->ice_st;
     pj_ssize_t pkt_size;
     pj_status_t status;
 
@@ -168,11 +181,29 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	/* If we have an active ICE session, hand over all incoming
 	 * packets to the ICE session. Otherwise just drop the packet.
 	 */
-	if (is->ice_st->ice) {
-	    status = pj_ice_on_rx_pkt(is->ice_st->ice, 
+	if (ice_st->ice) {
+	    status = pj_ice_on_rx_pkt(ice_st->ice, 
 				      is->comp_id, is->cand_id,
 				      is->pkt, bytes_read,
 				      &is->src_addr, is->src_addr_len);
+	} else if (is->stun_sess) {
+	    status = pj_stun_msg_check(is->pkt, bytes_read, PJ_STUN_IS_DATAGRAM);
+	    if (status == PJ_SUCCESS) {
+		status = pj_stun_session_on_rx_pkt(is->stun_sess, is->pkt, 
+						   bytes_read, 
+						   PJ_STUN_IS_DATAGRAM, NULL,
+						   &is->src_addr, 
+						   is->src_addr_len);
+	    } else {
+		(*ice_st->cb.on_rx_data)(ice_st, is->comp_id, is->cand_id, 
+					 is->pkt, bytes_read, 
+					 &is->src_addr, is->src_addr_len);
+
+	    }
+	} else {
+	    (*ice_st->cb.on_rx_data)(ice_st, is->comp_id, is->cand_id, 
+				     is->pkt, bytes_read, 
+				     &is->src_addr, is->src_addr_len);
 	}
 
     } else if (bytes_read < 0) {
@@ -195,6 +226,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
  */
 static void destroy_ice_interface(pj_ice_st_interface *is)
 {
+    if (is->stun_sess) {
+	pj_stun_session_destroy(is->stun_sess);
+	is->stun_sess = NULL;
+    }
+
     if (is->key) {
 	pj_ioqueue_unregister(is->key);
 	is->key = NULL;
@@ -344,8 +380,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_comp(pj_ice_st *ice_st,
 
 /* Add interface */
 static void add_interface(pj_ice_st *ice_st, pj_ice_st_interface *is,
-			  unsigned *p_itf_id, pj_bool_t notify,
-			  void *notify_data)
+			  unsigned *p_itf_id)
 {
     unsigned itf_id;
 
@@ -354,11 +389,6 @@ static void add_interface(pj_ice_st *ice_st, pj_ice_st_interface *is,
 
     if (p_itf_id)
 	*p_itf_id = itf_id;
-
-    if (notify && ice_st->cb.on_interface_status) {
-	(*ice_st->cb.on_interface_status)(ice_st, notify_data, 
-					  PJ_SUCCESS, itf_id);
-    }
 }
 
 /*
@@ -368,9 +398,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
 						 unsigned comp_id,
 						 pj_uint16_t local_pref,
 					         const pj_sockaddr_in *addr,
-				    		 unsigned *p_itf_id,
-						 pj_bool_t notify,
-						 void *notify_data)
+				    		 unsigned *p_itf_id)
 {
     pj_ice_st_interface *is;
     pj_status_t status;
@@ -394,7 +422,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
     pj_memcpy(&is->addr, &is->base_addr, sizeof(is->addr));
 
     /* Store this interface */
-    add_interface(ice_st, is, p_itf_id, notify, notify_data);
+    add_interface(ice_st, is, p_itf_id);
 
     /* Set interface status to SUCCESS */
     is->status = PJ_SUCCESS;
@@ -407,9 +435,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
  */
 PJ_DEF(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
 						      unsigned comp_id,
-						      unsigned port,
-						      pj_bool_t notify,
-						      void *notify_data)
+						      unsigned port)
 {
     pj_sockaddr_in addr;
     pj_status_t status;
@@ -423,8 +449,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
     if (status != PJ_SUCCESS)
 	return status;
 
-    return pj_ice_st_add_host_interface(ice_st, comp_id, 65535, &addr, 
-					NULL, notify, notify_data);
+    return pj_ice_st_add_host_interface(ice_st, comp_id, 65535, &addr, NULL);
 }
 
 /*
@@ -433,16 +458,61 @@ PJ_DEF(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
 PJ_DEF(pj_status_t) pj_ice_st_add_stun_interface(pj_ice_st *ice_st,
 						 unsigned comp_id,
 						 unsigned local_port,
-						 pj_bool_t notify,
-						 void *notify_data)
+						 unsigned *p_itf_id)
 {
-    /* Yeah, TODO */
-    PJ_UNUSED_ARG(ice_st);
-    PJ_UNUSED_ARG(comp_id);
-    PJ_UNUSED_ARG(local_port);
-    PJ_UNUSED_ARG(notify);
-    PJ_UNUSED_ARG(notify_data);
-    return -1;
+    pj_ice_st_interface *is;
+    pj_sockaddr_in local_addr;
+    pj_stun_session_cb sess_cb;
+    pj_stun_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice_st && comp_id, PJ_EINVAL);
+    
+    /* STUN server must have been configured */
+    PJ_ASSERT_RETURN(ice_st->stun_srv.sin_family != 0, PJ_EINVALIDOP);
+
+
+    /* Create interface */
+    pj_sockaddr_in_init(&local_addr, NULL, (pj_uint16_t)local_port);
+    status = create_ice_interface(ice_st, PJ_ICE_CAND_TYPE_SRFLX, comp_id,
+				  65535, &local_addr, &is);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create STUN session */
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_request_complete = &stun_on_request_complete;
+    sess_cb.on_send_msg = &stun_on_send_msg;
+    status = pj_stun_session_create(&ice_st->stun_cfg, ice_st->obj_name,
+				    &sess_cb, PJ_FALSE, &is->stun_sess);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Associate interface with STUN session */
+    pj_stun_session_set_user_data(is->stun_sess, (void*)is);
+
+    /* Create and send STUN binding request */
+    status = pj_stun_session_create_req(is->stun_sess, 
+					PJ_STUN_BINDING_REQUEST, &tdata);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_stun_session_send_msg(is->stun_sess, PJ_FALSE, 
+				      &ice_st->stun_srv, 
+				      sizeof(pj_sockaddr_in), tdata);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Mark interface as pending */
+    is->status = PJ_EPENDING;
+
+    add_interface(ice_st, is, p_itf_id);
+
+    return PJ_SUCCESS;
+
+on_error:
+    destroy_ice_interface(is);
+    return status;
 }
 
 /*
@@ -624,6 +694,29 @@ PJ_DEF(pj_status_t) pj_ice_st_send_data( pj_ice_st *ice_st,
 }
 
 /*
+ * Send packet using non-ICE means (e.g. when ICE was not negotiated).
+ */
+PJ_DEF(pj_status_t) pj_ice_st_sendto( pj_ice_st *ice_st,
+				      unsigned comp_id,
+				      unsigned itf_id,
+				      const void *data,
+				      pj_size_t data_len,
+				      const pj_sockaddr_t *dst_addr,
+				      int dst_addr_len)
+{
+    pj_ssize_t pkt_size;
+    pj_ice_st_interface *is = ice_st->itfs[itf_id];
+    pj_status_t status;
+
+    pkt_size = data_len;
+    status = pj_ioqueue_sendto(is->key, &is->write_op, 
+			       data, &pkt_size, 0,
+			       dst_addr, dst_addr_len);
+    
+    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
+}
+
+/*
  * Callback called by ICE session when ICE processing is complete, either
  * successfully or with failure.
  */
@@ -687,4 +780,72 @@ static void on_rx_data(pj_ice *ice,
     }
 }
 
+/*
+ * Callback called by STUN session to send outgoing packet.
+ */
+static pj_status_t stun_on_send_msg(pj_stun_session *sess,
+				    const void *pkt,
+				    pj_size_t size,
+				    const pj_sockaddr_t *dst_addr,
+				    unsigned dst_addr_len)
+{
+    pj_ice_st_interface *is;
+    pj_ssize_t pkt_size;
+    pj_status_t status;
+
+    is = (pj_ice_st_interface*) pj_stun_session_get_user_data(sess);
+    pkt_size = size;
+    status = pj_ioqueue_sendto(is->key, &is->write_op, 
+			       pkt, &pkt_size, 0,
+			       dst_addr, dst_addr_len);
+    
+    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
+}
+
+/*
+ * Callback sent by STUN session when outgoing STUN request has
+ * completed.
+ */
+static void stun_on_request_complete(pj_stun_session *sess,
+				     pj_status_t status,
+				     pj_stun_tx_data *tdata,
+				     const pj_stun_msg *response)
+{
+    pj_ice_st_interface *is;
+    pj_stun_xor_mapped_addr_attr *xa;
+    pj_stun_mapped_addr_attr *ma;
+    pj_sockaddr *mapped_addr;
+
+    PJ_UNUSED_ARG(tdata);
+
+    is = (pj_ice_st_interface*) pj_stun_session_get_user_data(sess);
+    if (status != PJ_SUCCESS) {
+	is->status = status;
+	ice_st_perror(is->ice_st, "STUN Binding request failed", is->status);
+	return;
+    }
+
+    xa = (pj_stun_xor_mapped_addr_attr*)
+	 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_XOR_MAPPED_ADDR, 0);
+    ma = (pj_stun_mapped_addr_attr*)
+	 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_MAPPED_ADDR, 0);
+
+    if (xa)
+	mapped_addr = &xa->sockaddr;
+    else if (ma)
+	mapped_addr = &ma->sockaddr;
+    else {
+	is->status = PJNATH_ESTUNNOMAPPEDADDR;
+	ice_st_perror(is->ice_st, "STUN Binding request failed", is->status);
+	return;
+    }
+
+    PJ_LOG(4,(is->ice_st->obj_name, 
+	      "STUN mapped address: %s:%d",
+	      pj_inet_ntoa(mapped_addr->ipv4.sin_addr),
+	      (int)pj_ntohs(mapped_addr->ipv4.sin_port)));
+    pj_memcpy(&is->addr, mapped_addr, sizeof(pj_sockaddr_in));
+    is->status = PJ_SUCCESS;
+
+}
 

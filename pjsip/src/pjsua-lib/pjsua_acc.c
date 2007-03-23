@@ -943,6 +943,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
 
+    /* If force_contact is configured, then use use it */
+    if (acc->cfg.force_contact.slen) {
+	*contact = acc->cfg.force_contact;
+	return PJ_SUCCESS;
+    }
+
     /* If route-set is configured for the account, then URI is the 
      * first entry of the route-set.
      */
@@ -1036,6 +1042,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
+
+    /* If force_contact is configured, then use use it */
+    if (acc->cfg.force_contact.slen) {
+	*contact = acc->cfg.force_contact;
+	return PJ_SUCCESS;
+    }
 
     /* If Record-Route is present, then URI is the top Record-Route. */
     if (rdata->msg_info.record_route) {

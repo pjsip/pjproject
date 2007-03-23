@@ -19,19 +19,25 @@
 #include <pjmedia/transport_ice.h>
 #include <pjnath/errno.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 
 struct transport_ice
 {
     pjmedia_transport	 base;
     pj_ice_st		*ice_st;
 
-    void  *stream;
-    void (*rtp_cb)(void*,
-		   const void*,
-		   pj_ssize_t);
-    void (*rtcp_cb)(void*,
-		    const void*,
-		    pj_ssize_t);
+    pj_time_val		 start_ice;
+    
+    void		*stream;
+    pj_sockaddr_in	 remote_rtp;
+    pj_sockaddr_in	 remote_rtcp;
+
+    void	       (*rtp_cb)(void*,
+			         const void*,
+				 pj_ssize_t);
+    void	       (*rtcp_cb)(void*,
+				  const void*,
+				  pj_ssize_t);
 };
 
 
@@ -68,12 +74,6 @@ static void ice_on_rx_data(pj_ice_st *ice_st,
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len);
-static void ice_on_stun_srv_resolved(pj_ice_st *ice_st,
-				     pj_status_t status);
-static void ice_on_interface_status(pj_ice_st *ice_st,
-				    void *notify_data,
-				    pj_status_t status,
-				    int itf_id);
 static void ice_on_ice_complete(pj_ice_st *ice_st, 
 			        pj_status_t status);
 
@@ -107,9 +107,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     /* Configure ICE callbacks */
     pj_bzero(&ice_st_cb, sizeof(ice_st_cb));
     ice_st_cb.on_ice_complete = &ice_on_ice_complete;
-    ice_st_cb.on_interface_status = &ice_on_interface_status;
     ice_st_cb.on_rx_data = &ice_on_rx_data;
-    ice_st_cb.on_stun_srv_resolved = &ice_on_stun_srv_resolved;
 
     /* Create ICE */
     status = pj_ice_st_create(stun_cfg, name, NULL, &ice_st_cb, &ice_st);
@@ -387,6 +385,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	cand_cnt++;
     }
 
+    /* Mark start time */
+    pj_gettimeofday(&tp_ice->start_ice);
+
     /* Start ICE */
     return pj_ice_st_start_ice(tp_ice->ice_st, &uname, &pass, cand_cnt, cand);
 }
@@ -454,9 +455,8 @@ static pj_status_t tp_attach( pjmedia_transport *tp,
     tp_ice->rtp_cb = rtp_cb;
     tp_ice->rtcp_cb = rtcp_cb;
 
-    PJ_UNUSED_ARG(rem_addr);
-    PJ_UNUSED_ARG(rem_rtcp);
-    PJ_UNUSED_ARG(addr_len);
+    pj_memcpy(&tp_ice->remote_rtp, rem_addr, addr_len);
+    pj_memcpy(&tp_ice->remote_rtcp, rem_rtcp, addr_len);
 
     return PJ_SUCCESS;
 }
@@ -480,7 +480,13 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 			       pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_send_data(tp_ice->ice_st, 1, pkt, size);
+    if (tp_ice->ice_st->ice) {
+	return pj_ice_st_send_data(tp_ice->ice_st, 1, pkt, size);
+    } else {
+	return pj_ice_st_sendto(tp_ice->ice_st, 1, 0,
+				pkt, size, &tp_ice->remote_rtp,
+				sizeof(pj_sockaddr_in));
+    }
 }
 
 
@@ -520,26 +526,40 @@ static void ice_on_rx_data(pj_ice_st *ice_st,
 }
 
 
-static void ice_on_stun_srv_resolved(pj_ice_st *ice_st,
-				     pj_status_t status)
-{
-    struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
-}
-
-
-static void ice_on_interface_status(pj_ice_st *ice_st,
-				    void *notify_data,
-				    pj_status_t status,
-				    int itf_id)
-{
-    struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
-}
-
-
 static void ice_on_ice_complete(pj_ice_st *ice_st, 
 			        pj_status_t status)
 {
     struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
+    pj_time_val end_ice;
+    pj_ice_cand *lcand, *rcand;
+    pj_ice_check *check;
+    char src_addr[32];
+    char dst_addr[32];
+
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(1,(ice_st->obj_name, "ICE negotiation failed: %s", errmsg));
+	return;
+    }
+
+    pj_gettimeofday(&end_ice);
+    PJ_TIME_VAL_SUB(end_ice, tp_ice->start_ice);
+
+    check = &ice_st->ice->clist.checks[ice_st->ice->valid_list[0]];
+    
+    lcand = check->lcand;
+    rcand = check->rcand;
+
+    pj_ansi_strcpy(src_addr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
+    pj_ansi_strcpy(dst_addr, pj_inet_ntoa(rcand->addr.ipv4.sin_addr));
+
+    PJ_LOG(3,(ice_st->obj_name, 
+	      "ICE negotiation completed in %d.%03ds. Sending from "
+	      "%s:%d to %s:%d",
+	      (int)end_ice.sec, (int)end_ice.msec,
+	      src_addr, pj_ntohs(lcand->addr.ipv4.sin_port),
+	      dst_addr, pj_ntohs(rcand->addr.ipv4.sin_port)));
 }
 
 

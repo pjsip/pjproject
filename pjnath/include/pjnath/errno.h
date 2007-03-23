@@ -133,6 +133,11 @@
  * STUN transaction terminates with failure.
  */
 #define PJNATH_ESTUNTSXFAILED	    (PJNATH_ERRNO_START+126)/* 370126 */
+/**
+ * @hideinitializer
+ * STUN mapped address attribute not found
+ */
+#define PJNATH_ESTUNNOMAPPEDADDR    (PJNATH_ERRNO_START+127)/* 370127 */
 
 
 //#define PJ_STATUS_FROM_STUN_CODE(code)	(PJNATH_ERRNO_START+code)

@@ -56,11 +56,6 @@ static const char *clist_state_name[] =
     "Completed"
 };
 
-const pj_str_t host_foundation = {"host", 4};
-const pj_str_t mapped_foundation = {"srfx", 4};
-const pj_str_t relayed_foundation = {"rlyd", 4};
-const pj_str_t peer_mapped_foundation = {"peer", 4};
-
 #define CHECK_NAME_LEN	    128
 #define LOG(expr)	    PJ_LOG(4,expr)
 #define GET_LCAND_ID(cand)  (cand - ice->lcand)
@@ -1431,11 +1426,17 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
     if (i == ice->lcand_cnt) {
 	unsigned cand_id;
+	char buf[32];
+	pj_str_t foundation;
+
+	pj_ansi_snprintf(buf, sizeof(buf), "P%x", 
+			 lcand->base_addr.ipv4.sin_addr.s_addr);
+	foundation = pj_str(buf);
 
 	/* Add new peer reflexive candidate */
 	status = pj_ice_add_cand(ice, lcand->comp_id, 
 				 PJ_ICE_CAND_TYPE_PRFLX,
-				 65535, &peer_mapped_foundation,
+				 65535, &foundation,
 				 &xaddr->sockaddr, &lcand->base_addr, NULL,
 				 sizeof(pj_sockaddr_in), &cand_id);
 	if (status != PJ_SUCCESS) {

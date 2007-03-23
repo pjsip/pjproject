@@ -675,6 +675,13 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
 		pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
 		pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)3478);
+
+		PJ_LOG(4,(THIS_FILE, 
+			  "STUN server %.*s resolved, address is %s:%d",
+			  (int)pjsua_var.ua_cfg.stun_srv.slen,
+			  pjsua_var.ua_cfg.stun_srv.ptr,
+			  pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr),
+			  (int)pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port)));
 	    }
 	}
 	return pjsua_var.stun_status;

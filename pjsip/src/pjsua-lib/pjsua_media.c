@@ -571,8 +571,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	ice_st = pjmedia_ice_get_ice_st(pjsua_var.calls[i].med_tp);
 
 	/* Add host candidates for RTP */
-	status = pj_ice_st_add_all_host_interfaces(ice_st, 1, 0, 
-						   PJ_FALSE, NULL);
+	status = pj_ice_st_add_all_host_interfaces(ice_st, 1, 0);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error adding ICE host candidates",
 		         status);
@@ -592,8 +591,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	    }
 
 	    /* Add STUN server reflexive candidate for RTP */
-	    status = pj_ice_st_add_stun_interface(ice_st, 1, 0, 
-						  PJ_FALSE, NULL);
+	    status = pj_ice_st_add_stun_interface(ice_st, 1, 0, NULL);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error adding ICE address",
 			     status);

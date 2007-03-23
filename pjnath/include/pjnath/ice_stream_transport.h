@@ -48,13 +48,6 @@ typedef struct pj_ice_st_cb
 			  void *pkt, pj_size_t size,
 			  const pj_sockaddr_t *src_addr,
 			  unsigned src_addr_len);
-
-    void    (*on_stun_srv_resolved)(pj_ice_st *ice_st,
-				    pj_status_t status);
-    void    (*on_interface_status)(pj_ice_st *ice_st,
-				   void *notify_data,
-				   pj_status_t status,
-				   int itf_id);
     void    (*on_ice_complete)(pj_ice_st *ice_st, 
 			       pj_status_t status);
 
@@ -85,6 +78,7 @@ typedef struct pj_ice_st_interface
     pj_ioqueue_op_key_t	 write_op;
     pj_sockaddr		 src_addr;
     int			 src_addr_len;
+    pj_stun_session	*stun_sess;
 } pj_ice_st_interface;
 
 
@@ -133,19 +127,14 @@ PJ_DECL(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
 						  unsigned comp_id,
 						  pj_uint16_t local_pref,
 					          const pj_sockaddr_in *addr,
-				    		  unsigned *p_itf_id,
-						  pj_bool_t notify,
-						  void *notify_data);
+				    		  unsigned *p_itf_id);
 PJ_DECL(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
 						       unsigned comp_id,
-						       unsigned port,
-						       pj_bool_t notify,
-						       void *notify_data);
+						       unsigned port);
 PJ_DECL(pj_status_t) pj_ice_st_add_stun_interface(pj_ice_st *ice_st,
 						  unsigned comp_id,
 						  unsigned local_port,
-						  pj_bool_t notify,
-						  void *notify_data);
+						  unsigned *p_itf_id);
 PJ_DECL(pj_status_t) pj_ice_st_add_relay_interface(pj_ice_st *ice_st,
 						   unsigned comp_id,
 						   unsigned local_port,
@@ -171,6 +160,13 @@ PJ_DECL(pj_status_t) pj_ice_st_send_data(pj_ice_st *ice_st,
 					 unsigned comp_id,
 					 const void *data,
 					 pj_size_t data_len);
+PJ_DECL(pj_status_t) pj_ice_st_sendto(pj_ice_st *ice_st,
+				      unsigned comp_id,
+				      unsigned itf_id,
+				      const void *data,
+				      pj_size_t data_len,
+				      const pj_sockaddr_t *dst_addr,
+				      int dst_addr_len);
 
 
 /**

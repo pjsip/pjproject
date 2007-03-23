@@ -280,10 +280,12 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 
 
     /* Create and add USERNAME attribute */
-    status = pj_stun_msg_add_string_attr(pool, msg,
-					 PJ_STUN_ATTR_USERNAME,
-					 &username);
-    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    if (username.slen) {
+	status = pj_stun_msg_add_string_attr(pool, msg,
+					     PJ_STUN_ATTR_USERNAME,
+					     &username);
+	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    }
 
     /* Add REALM only when long term credential is used */
     if (realm.slen) {
@@ -301,8 +303,10 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     }
 
     /* Add MESSAGE-INTEGRITY attribute */
-    status = pj_stun_msg_add_msgint_attr(pool, msg);
-    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    if (username.slen) {
+	status = pj_stun_msg_add_msgint_attr(pool, msg);
+	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    }
 
 
     /* Add FINGERPRINT attribute if necessary */
