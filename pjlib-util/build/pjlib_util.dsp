@@ -141,6 +141,10 @@ SOURCE="..\src\pjlib-util\sha1.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\srv_resolver.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\string.c"
 # End Source File
 # Begin Source File
@@ -218,6 +222,10 @@ SOURCE="..\include\pjlib-util\scanner_cis_uint.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\sha1.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\srv_resolver.h"
 # End Source File
 # Begin Source File
 

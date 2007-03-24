@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjlib_util"
 	ProjectGUID="{FE07F272-AE7F-4549-9E9F-EF9B80CB1693}"
+	RootNamespace="pjlib_util"
 	>
 	<Platforms>
 		<Platform
@@ -465,6 +466,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\srv_resolver.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\string.c"
 				>
 				<FileConfiguration
@@ -633,6 +638,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjlib-util\sha1.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\srv_resolver.h"
 				>
 			</File>
 			<File

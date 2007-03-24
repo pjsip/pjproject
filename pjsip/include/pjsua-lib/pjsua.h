@@ -903,12 +903,24 @@ typedef struct pjsua_config
     pj_str_t	    outbound_proxy[4];
 
     /**
-     * Specify STUN server. This server will be first resolved with DNS SRV
-     * to get the actual server address. If DNS SRV resolution failed, or
-     * when nameserver is not configured, the server will be resolved using
-     * DNS A resolution (i.e. gethostbyname()).
+     * Specify domain name to be resolved with DNS SRV resolution to get the
+     * address of the STUN servers. Alternatively application may specify
+     * \a stun_host and \a stun_relay_host instead.
+     *
+     * If DNS SRV resolution failed for this domain, then DNS A resolution
+     * will be performed only if \a stun_host is specified.
      */
-    pj_str_t	    stun_srv;
+    pj_str_t	    stun_domain;
+
+    /**
+     * Specify STUN server to be used.
+     */
+    pj_str_t	    stun_host;
+
+    /**
+     * Specify STUN relay server to be used.
+     */
+    pj_str_t	    stun_relay_host;
 
     /** 
      * Number of credentials in the credential array.
@@ -1009,7 +1021,9 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
     }
 
     pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
-    pj_strdup_with_null(pool, &dst->stun_srv, &src->stun_srv);
+    pj_strdup_with_null(pool, &dst->stun_domain, &src->stun_domain);
+    pj_strdup_with_null(pool, &dst->stun_host, &src->stun_host);
+    pj_strdup_with_null(pool, &dst->stun_relay_host, &src->stun_relay_host);
 }
 
 

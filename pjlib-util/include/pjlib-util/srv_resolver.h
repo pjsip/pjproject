@@ -1,0 +1,162 @@
+/* $Id$ */
+/* 
+ * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
+#ifndef __PJLIB_UTIL_SRV_RESOLVER_H__
+#define __PJLIB_UTIL_SRV_RESOLVER_H__
+
+/**
+ * @file srv_resolver.h
+ * @brief DNS SRV resolver
+ */
+#include <pjlib-util/resolver.h>
+
+PJ_BEGIN_DECL
+
+/**
+ * @defgroup PJ_DNS_SRV_RESOLVER DNS SRV Resolution Helper
+ * @ingroup PJ_DNS
+ * @{
+ *
+ * \subsection PJ_DNS_SRV_RESOLVER_INTRO DNS SRV Resolution Helper
+ *
+ * This module provides an even higher layer of abstraction for the DNS
+ * resolution framework, to resolve DNS SRV names.
+ *
+ * The #pj_dns_srv_resolve() function will asynchronously resolve the server
+ * name into IP address(es) with a single function call. If the SRV name
+ * contains multiple names, then each will be resolved with individual
+ * DNS A resolution to get the IP addresses. Upon successful completion, 
+ * application callback will be called with each IP address of the
+ * target selected based on the load-balancing and fail-over criteria
+ * below.
+ *
+ * When the resolver fails to resolve the name using DNS SRV resolution
+ * (for example when the DNS SRV record is not present in the DNS server),
+ * the resolver will fallback to using DNS A record resolution to resolve
+ * the name.
+ *
+ * \subsection PJ_DNS_SRV_RESOLVER_FAILOVER_LOADBALANCE Load-Balancing and Fail-Over
+ *
+ * When multiple targets are returned in the DNS SRV response, server entries
+ * are selected based on the following rule (which is described in RFC 2782):
+ *  - targets will be sorted based on the priority first.
+ *  - for targets with the same priority, #pj_dns_srv_resolve() will select
+ *    only one target according to its weight. To select this one target,
+ *    the function associates running-sum for all targets, and generates 
+ *    a random number between zero and the total running-sum (inclusive).
+ *    The target selected is the first target with running-sum greater than
+ *    or equal to this random number.
+ *
+ * The above procedure will select one target for each priority, allowing
+ * application to fail-over to the next target when the previous target fails.
+ * These targets are returned in the #pj_dns_srv_record structure 
+ * argument of the callback. 
+ *
+ * \section PJ_DNS_SRV_RESOLVER_REFERENCE Reference
+ *
+ * Reference:
+ *  - <A HREF="http://www.ietf.org/rfc/rfc2782.txt">RFC 2782</A>: 
+ *	A DNS RR for specifying the location of services (DNS SRV)
+ */
+
+/**
+ * Maximum server address entries per one SRV record
+ */
+#ifndef PJ_DNS_SRV_MAX_ADDR
+#   define PJ_DNS_SRV_MAX_ADDR	    8
+#endif
+
+
+/**
+ * The server addresses returned by the resolver.
+ */
+typedef struct pj_dns_srv_record
+{
+    /** Number of address records. */
+    unsigned	count;
+
+    /** Address records. */
+    struct
+    {
+	/** Server priority (the lower the higher the priority). */
+	unsigned		priority;
+
+	/** Server weight (the higher the more load it can handle). */
+	unsigned		weight;
+
+	/** The server's address. */
+	pj_sockaddr		addr;
+
+	/** Address length. */
+	int			addr_len;
+
+    } entry[PJ_DNS_SRV_MAX_ADDR];
+
+} pj_dns_srv_record;
+
+
+/**
+ * Type of callback function to receive notification from the resolver
+ * when the resolution process completes.
+ */
+typedef void pj_dns_srv_resolver_cb(void *user_data,
+				    pj_status_t status,
+				    const pj_dns_srv_record *rec);
+
+
+/**
+ * Start DNS SRV resolution for the specified name. The full name of the
+ * entry will be concatenated from \a res_name and \a domain_name fragments.
+ *
+ * @param domain_name	The domain name part of the name.
+ * @param res_name	The full service name, including the transport name
+ *			and with all the leading underscore characters and
+ *			ending dot (e.g. "_sip._udp.", "_stun._udp.").
+ * @param def_port	The port number to be assigned to the resolved address
+ *			when the DNS SRV resolution fails and the name is 
+ *			resolved with DNS A resolution.
+ * @param pool		Memory pool used to allocate memory for the query.
+ * @param resolver	The resolver instance.
+ * @param fallback_a	Specify if the resolver should fallback with DNS A
+ *			resolution when the SRV resolution fails.
+ * @param token		Arbitrary data to be associated with this query when
+ *			the calback is called.
+ * @param cb		Pointer to callback function to receive the
+ *			notification when the resolution process completes.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
+					const pj_str_t *res_name,
+					unsigned def_port,
+					pj_pool_t *pool,
+					pj_dns_resolver *resolver,
+					pj_bool_t fallback_a,
+					void *token,
+					pj_dns_srv_resolver_cb *cb);
+
+
+/**
+ * @}
+ */
+
+PJ_END_DECL
+
+
+#endif	/* __PJLIB_UTIL_SRV_RESOLVER_H__ */
+

@@ -325,7 +325,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
-	   OPT_NAMESERVER, OPT_STUN_SRV,
+	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE,
@@ -366,6 +366,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
 	{ "nameserver", 1, 0, OPT_NAMESERVER},
+	{ "stun-domain",1, 0, OPT_STUN_DOMAIN},
 	{ "stun-srv",   1, 0, OPT_STUN_SRV},
 	{ "add-buddy",  1, 0, OPT_ADD_BUDDY},
 	{ "offer-x-ms-msg",0,0,OPT_OFFER_X_MS_MSG},
@@ -631,8 +632,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
+	case OPT_STUN_DOMAIN:   /* STUN domain */
+	    cfg->cfg.stun_domain = pj_str(pj_optarg);
+	    break;
+
 	case OPT_STUN_SRV:   /* STUN server */
-	    cfg->cfg.stun_srv = pj_str(pj_optarg);
+	    cfg->cfg.stun_host = pj_str(pj_optarg);
 	    break;
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
@@ -1083,10 +1088,16 @@ static int write_settings(const struct app_config *config,
     }
 
     /* STUN */
-    if (config->cfg.stun_srv.slen) {
+    if (config->cfg.stun_domain.slen) {
+	pj_ansi_sprintf(line, "--stun-domain %.*s\n",
+			(int)config->cfg.stun_domain.slen, 
+			config->cfg.stun_domain.ptr);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->cfg.stun_host.slen) {
 	pj_ansi_sprintf(line, "--stun-srv %.*s\n",
-			(int)config->cfg.stun_srv.slen, 
-			config->cfg.stun_srv.ptr);
+			(int)config->cfg.stun_host.slen, 
+			config->cfg.stun_host.ptr);
 	pj_strcat2(&cfg, line);
     }
 

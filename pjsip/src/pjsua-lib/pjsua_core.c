@@ -652,6 +652,75 @@ static void busy_sleep(unsigned msec)
     } while (PJ_TIME_VAL_LT(now, timeout));
 }
 
+
+static pj_status_t resolve_stun_server(pj_bool_t use_dns_srv);
+
+/*
+ * Callback function to receive notification from the resolver
+ * when the resolution process completes.
+ */
+static void stun_dns_srv_resolver_cb(void *user_data,
+				     pj_status_t status,
+				     const pj_dns_srv_record *rec)
+{
+    unsigned i;
+
+    PJ_UNUSED_ARG(user_data);
+
+    pjsua_var.stun_status = status;
+    
+    if (status != PJ_SUCCESS) {
+	/* DNS SRV resolution failed. If stun_host is specified, resolve
+	 * it with gethostbyname()
+	 */
+	if (pjsua_var.ua_cfg.stun_host.slen) {
+	    pj_hostent he;
+
+	    pjsua_var.stun_status = pj_gethostbyname(&pjsua_var.ua_cfg.stun_host, &he);
+
+	    if (pjsua_var.stun_status == PJ_SUCCESS) {
+		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
+		pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
+		pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)3478);
+
+		PJ_LOG(3,(THIS_FILE, 
+			  "STUN server %.*s resolved, address is %s:%d",
+			  (int)pjsua_var.ua_cfg.stun_host.slen,
+			  pjsua_var.ua_cfg.stun_host.ptr,
+			  pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr),
+			  (int)pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port)));
+	    }
+	} else {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    PJ_LOG(1,(THIS_FILE, 
+		     "DNS SRV resolution failed for STUN server %.*s: %s",
+		     (int)pjsua_var.ua_cfg.stun_domain.slen,
+		     pjsua_var.ua_cfg.stun_domain.ptr,
+		     errmsg));
+	}
+	return;
+    }
+
+    pj_memcpy(&pjsua_var.stun_srv, &rec->entry[0].addr, 
+	      rec->entry[0].addr_len);
+
+    PJ_LOG(3,(THIS_FILE, "_stun._udp.%.*s resolved, found %d entry(s):",
+	      (int)pjsua_var.ua_cfg.stun_domain.slen,
+	      pjsua_var.ua_cfg.stun_domain.ptr,
+	      rec->count));
+
+    for (i=0; i<rec->count; ++i) {
+	PJ_LOG(3,(THIS_FILE, 
+		  " %d: prio=%d, weight=%d  %s:%d", 
+		  i, rec->entry[i].priority, rec->entry[i].weight,
+		  pj_inet_ntoa(rec->entry[i].addr.ipv4.sin_addr),
+		  (int)pj_ntohs(rec->entry[i].addr.ipv4.sin_port)));
+    }
+
+}
+
 /*
  * Resolve STUN server.
  */
@@ -664,37 +733,73 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 			    pjsip_endpt_get_timer_heap(pjsua_var.endpt));
 
 	/* Start STUN server resolution */
-	/* For now just do DNS A resolution */
+	
+	pjsua_var.stun_status = PJ_EPENDING;
 
-	if (pjsua_var.ua_cfg.stun_srv.slen == 0) {
-	    pjsua_var.stun_status = PJ_SUCCESS;
-	} else {
+	/* If stun_domain is specified, resolve STUN servers with DNS
+	 * SRV resolution.
+	 */
+	if (pjsua_var.ua_cfg.stun_domain.slen) {
+	    pj_str_t res_type;
+
+	    /* Fail if resolver is not configured */
+	    if (pjsua_var.resolver == NULL) {
+		PJ_LOG(1,(THIS_FILE, "Nameserver must be configured when "
+				     "stun_domain is specified"));
+		pjsua_var.stun_status = PJLIB_UTIL_EDNSNONS;
+		return PJLIB_UTIL_EDNSNONS;
+	    }
+	    res_type = pj_str("_stun._udp");
+	    pjsua_var.stun_status = 
+		pj_dns_srv_resolve(&pjsua_var.ua_cfg.stun_domain, &res_type,
+				   3478, pjsua_var.pool, pjsua_var.resolver,
+				   0, NULL, stun_dns_srv_resolver_cb);
+	    if (pjsua_var.stun_status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error starting DNS SRV resolution", 
+			     pjsua_var.stun_status);
+		return pjsua_var.stun_status;
+	    }
+	}
+	/* Otherwise if stun_host is specified, resolve STUN server with
+	 * gethostbyname().
+	 */
+	else if (pjsua_var.ua_cfg.stun_host.slen) {
 	    pj_hostent he;
 
-	    pjsua_var.stun_status = 
-		pj_gethostbyname(&pjsua_var.ua_cfg.stun_srv, &he);
+	    pjsua_var.stun_status = pj_gethostbyname(&pjsua_var.ua_cfg.stun_host, &he);
 
 	    if (pjsua_var.stun_status == PJ_SUCCESS) {
 		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
 		pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
 		pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)3478);
 
-		PJ_LOG(4,(THIS_FILE, 
+		PJ_LOG(3,(THIS_FILE, 
 			  "STUN server %.*s resolved, address is %s:%d",
-			  (int)pjsua_var.ua_cfg.stun_srv.slen,
-			  pjsua_var.ua_cfg.stun_srv.ptr,
+			  (int)pjsua_var.ua_cfg.stun_host.slen,
+			  pjsua_var.ua_cfg.stun_host.ptr,
 			  pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr),
 			  (int)pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port)));
 	    }
+
 	}
+	/* Otherwise disable STUN. */
+	else {
+	    pjsua_var.stun_status = PJ_SUCCESS;
+	}
+
+
 	return pjsua_var.stun_status;
 
     } else if (pjsua_var.stun_status == PJ_EPENDING) {
 	/* STUN server resolution has been started, wait for the
 	 * result.
 	 */
-	pj_assert(!"Should not happen");
-	return PJ_EBUG;
+	if (wait) {
+	    while (pjsua_var.stun_status == PJ_EPENDING)
+		pjsua_handle_events(10);
+	}
+
+	return pjsua_var.stun_status;
 
     } else {
 	/* STUN server has been resolved, return the status */
@@ -946,7 +1051,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 					 &stun_srv, 3478,
 				         p_pub_addr);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error resolving with STUN", status);
+	    pjsua_perror(THIS_FILE, "Error contacting STUN server", status);
 	    pj_sock_close(sock);
 	    return status;
 	}
