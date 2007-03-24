@@ -336,7 +336,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
     /* Add "rtcp" attribute */
 #if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
-    {
+    if (sock_info->rtcp_addr_name.sin_family != 0) {
 	attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
 	attr->name = pj_str("rtcp");
 	attr->value.ptr = pj_pool_alloc(pool, 80);
