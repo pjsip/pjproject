@@ -399,6 +399,9 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     status = pjlib_util_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Init PJNATH */
+    status = pjnath_init();
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Set default sound device ID */
     pjsua_var.cap_dev = pjsua_var.play_dev = -1;

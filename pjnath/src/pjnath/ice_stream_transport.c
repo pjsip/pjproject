@@ -364,13 +364,13 @@ PJ_DEF(pj_status_t) pj_ice_st_add_comp(pj_ice_st *ice_st,
     PJ_ASSERT_RETURN(ice_st->comp_cnt < PJ_ICE_MAX_COMP, PJ_ETOOMANY);
 
     /* Component ID must be valid */
-    PJ_ASSERT_RETURN(comp_id <= PJ_ICE_MAX_COMP, PJ_EICEINCOMPID);
+    PJ_ASSERT_RETURN(comp_id <= PJ_ICE_MAX_COMP, PJNATH_EICEINCOMPID);
 
     /* First component ID must be 1, second must be 2, etc., and 
      * they must be registered in order.
      */
     PJ_ASSERT_RETURN(ice_st->comps[comp_id-1] == ice_st->comp_cnt, 
-		     PJ_EICEINCOMPID);
+		     PJNATH_EICEINCOMPID);
 
     /* All in order, add the component. */
     ice_st->comps[ice_st->comp_cnt++] = comp_id;
@@ -407,7 +407,7 @@ PJ_DEF(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
     PJ_ASSERT_RETURN(ice_st && comp_id, PJ_EINVAL);
 
     /* Check that component ID present */
-    PJ_ASSERT_RETURN(comp_id <= ice_st->comp_cnt, PJ_EICEINCOMPID);
+    PJ_ASSERT_RETURN(comp_id <= ice_st->comp_cnt, PJNATH_EICEINCOMPID);
 
     /* Can't add new interface while ICE is running */
     PJ_ASSERT_RETURN(ice_st->ice == NULL, PJ_EBUSY);
@@ -578,19 +578,13 @@ PJ_DEF(pj_status_t) pj_ice_st_init_ice(pj_ice_st *ice_st,
 
     /* Create! */
     status = pj_ice_create(&ice_st->stun_cfg, ice_st->obj_name, role, 
-			   &ice_cb, local_ufrag, local_passwd, &ice_st->ice);
+			   ice_st->comp_cnt, &ice_cb, 
+			   local_ufrag, local_passwd, &ice_st->ice);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Associate user data */
     ice_st->ice->user_data = (void*)ice_st;
-
-    /* Add components */
-    for (i=0; i<ice_st->comp_cnt; ++i) {
-	status = pj_ice_add_comp(ice_st->ice, ice_st->comps[i]);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
 
     /* Add candidates */
     for (i=0; i<ice_st->itf_cnt; ++i) {
@@ -626,20 +620,16 @@ PJ_DEF(pj_status_t) pj_ice_st_enum_cands(pj_ice_st *ice_st,
 {
     unsigned i, cnt;
     pj_ice_cand *pcand;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(ice_st && count && cand, PJ_EINVAL);
     PJ_ASSERT_RETURN(ice_st->ice, PJ_EINVALIDOP);
 
-    cnt = pj_ice_get_cand_cnt(ice_st->ice);
+    cnt = ice_st->ice->lcand_cnt;
     cnt = (cnt > *count) ? *count : cnt;
     *count = 0;
 
     for (i=0; i<cnt; ++i) {
-	status = pj_ice_get_cand(ice_st->ice, i, &pcand);
-	if (status != PJ_SUCCESS)
-	    return status;
-
+	pcand = &ice_st->ice->lcand[i];
 	pj_memcpy(&cand[i], pcand, sizeof(pj_ice_cand));
     }
 
@@ -688,7 +678,7 @@ PJ_DEF(pj_status_t) pj_ice_st_send_data( pj_ice_st *ice_st,
 					 pj_size_t data_len)
 {
     if (!ice_st->ice)
-	return PJ_ENOICE;
+	return PJNATH_ENOICE;
 
     return pj_ice_send_data(ice_st->ice, comp_id, data, data_len);
 }
@@ -752,7 +742,7 @@ static pj_status_t on_tx_pkt(pj_ice *ice,
 	}
     }
     if (is == NULL) {
-	return PJ_EICEINCANDID;
+	return PJNATH_EICEINCANDID;
     }
 
     pkt_size = size;

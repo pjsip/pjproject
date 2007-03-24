@@ -57,7 +57,8 @@ static const char *clist_state_name[] =
 };
 
 #define CHECK_NAME_LEN	    128
-#define LOG(expr)	    PJ_LOG(4,expr)
+#define LOG4(expr)	    PJ_LOG(4,expr)
+#define LOG5(expr)	    PJ_LOG(4,expr)
 #define GET_LCAND_ID(cand)  (cand - ice->lcand)
 #define GET_CHECK_ID(chk)   (chk - ice->clist.checks)
 
@@ -135,6 +136,7 @@ static pj_bool_t stun_auth_verify_nonce(const pj_stun_msg *msg,
 PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				  const char *name,
 				  pj_ice_role role,
+				  unsigned comp_cnt,
 				  const pj_ice_cb *cb,
 				  const pj_str_t *local_ufrag,
 				  const pj_str_t *local_passwd,
@@ -170,8 +172,12 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
     pj_memcpy(&ice->cb, cb, sizeof(*cb));
     pj_memcpy(&ice->stun_cfg, stun_cfg, sizeof(*stun_cfg));
 
-    for (i=0; i<PJ_ICE_MAX_COMP; ++i) {
-	ice->comp[i].nominated_check_id = -1;
+    ice->comp_cnt = comp_cnt;
+    for (i=0; i<comp_cnt; ++i) {
+	pj_ice_comp *comp;
+	comp = &ice->comp[i];
+	comp->comp_id = i+1;
+	comp->nominated_check_id = -1;
     }
 
     if (local_ufrag == NULL) {
@@ -192,8 +198,8 @@ PJ_DEF(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
     /* Done */
     *p_ice = ice;
 
-    LOG((ice->obj_name, "ICE stream session created, role is %s agent",
-	(ice->role==PJ_ICE_ROLE_CONTROLLING ? "controlling" : "controlled")));
+    LOG4((ice->obj_name, "ICE stream session created, role is %s agent",
+	 (ice->role==PJ_ICE_ROLE_CONTROLLING ? "controlling" : "controlled")));
 
     return PJ_SUCCESS;
 }
@@ -208,11 +214,7 @@ static void destroy_ice(pj_ice *ice,
     unsigned i;
 
     if (reason == PJ_SUCCESS) {
-	LOG((ice->obj_name, "Destroying ICE session"));
-    }
-
-    for (i=0; i<ice->comp_cnt; ++i) {
-	/* Nothing to do */
+	LOG4((ice->obj_name, "Destroying ICE session"));
     }
 
     for (i=0; i<ice->lcand_cnt; ++i) {
@@ -250,38 +252,10 @@ PJ_DEF(pj_status_t) pj_ice_destroy(pj_ice *ice)
 /* Find component by ID */
 static pj_ice_comp *find_comp(const pj_ice *ice, unsigned comp_id)
 {
-    unsigned i;
-    for (i=0; i<ice->comp_cnt; ++i) {
-	if (ice->comp[i].comp_id == comp_id)
-	    return (pj_ice_comp *) &ice->comp[i];
-    }
-
-    return NULL;
+    pj_assert(comp_id > 0 && comp_id <= ice->comp_cnt);
+    return (pj_ice_comp*) &ice->comp[comp_id-1];
 }
 
-
-/* Add a new component */
-PJ_DEF(pj_status_t) pj_ice_add_comp(pj_ice *ice, unsigned comp_id)
-{
-    pj_ice_comp *comp;
-
-    PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
-    PJ_ASSERT_RETURN(ice->comp_cnt < PJ_ARRAY_SIZE(ice->comp), PJ_ETOOMANY);
-    PJ_ASSERT_RETURN(comp_id==ice->comp_cnt+1, PJ_EICEINCOMPID);
-    PJ_ASSERT_RETURN(find_comp(ice, comp_id) == NULL, PJ_EEXISTS);
-
-    pj_mutex_lock(ice->mutex);
-
-    comp = &ice->comp[ice->comp_cnt];
-    comp->comp_id = comp_id;
-    comp->nominated_check_id = -1;
-
-    /* Done */
-    ice->comp_cnt++;
-    pj_mutex_unlock(ice->mutex);
-
-    return PJ_SUCCESS;
-}
 
 static pj_status_t stun_auth_get_auth(void *user_data,
 				      pj_pool_t *pool,
@@ -356,7 +330,7 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 	/* Incoming response is authenticated with TX credential */
 	/* Verify username */
 	if (pj_strcmp(username, &ice->tx_uname) != 0)
-	    return -1;
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_USERNAME);
 	*data_type = 0;
 	*data = ice->tx_pass;
 
@@ -407,9 +381,9 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_cand_type type,
 	PJ_ICE_RELAYED_PREF
     };
 
-    return ((1 << 24) * type_pref[type]) + 
-	   ((1 << 8) * local_pref) +
-	   (256 - comp_id);
+    return ((type_pref[type] & 0xFF) << 24) + 
+	   ((local_pref & 0xFFFF)    << 8) +
+	   (((256 - comp_id) & 0xFF) << 0);
 }
 
 
@@ -423,7 +397,7 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				    const pj_str_t *foundation,
 				    const pj_sockaddr_t *addr,
 				    const pj_sockaddr_t *base_addr,
-				    const pj_sockaddr_t *srv_addr,
+				    const pj_sockaddr_t *rel_addr,
 				    int addr_len,
 				    unsigned *p_cand_id)
 {
@@ -452,10 +426,10 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
     lcand->prio = CALC_CAND_PRIO(type, local_pref, lcand->comp_id);
     pj_memcpy(&lcand->addr, addr, addr_len);
     pj_memcpy(&lcand->base_addr, base_addr, addr_len);
-    if (srv_addr)
-	pj_memcpy(&lcand->srv_addr, srv_addr, addr_len);
+    if (rel_addr)
+	pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
     else
-	pj_bzero(&lcand->srv_addr, sizeof(lcand->srv_addr));
+	pj_bzero(&lcand->rel_addr, sizeof(lcand->rel_addr));
 
     /* Init STUN callbacks */
     pj_bzero(&sess_cb, sizeof(sess_cb));
@@ -492,7 +466,7 @@ PJ_DEF(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 
 
     pj_ansi_strcpy(tmp, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
-    LOG((ice->obj_name, 
+    LOG4((ice->obj_name, 
 	 "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
 	 "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
 	 ice->lcand_cnt, 
@@ -517,36 +491,9 @@ on_error:
 }
 
 
-PJ_DEF(unsigned) pj_ice_get_cand_cnt(pj_ice *ice)
-{
-    return ice->lcand_cnt;
-}
-
-
-PJ_DEF(pj_status_t) pj_ice_enum_cands(pj_ice *ice,
-				      unsigned *p_count,
-				      unsigned cand_ids[])
-{
-    unsigned i, count;
-
-    PJ_ASSERT_RETURN(ice && p_count && *p_count && cand_ids, PJ_EINVAL);
-
-    pj_mutex_lock(ice->mutex);
-
-    count = (*p_count < ice->lcand_cnt) ? *p_count : ice->lcand_cnt;
-    for (i=0; i<count; ++i)
-	cand_ids[i] = i;
-
-    *p_count = count;
-    pj_mutex_unlock(ice->mutex);
-
-    return PJ_SUCCESS;
-}
-
-
-PJ_DEF(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
-					    unsigned comp_id,
-					    int *cand_id)
+PJ_DEF(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
+					     unsigned comp_id,
+					     int *cand_id)
 {
     unsigned i;
 
@@ -557,12 +504,11 @@ PJ_DEF(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
     pj_mutex_lock(ice->mutex);
 
     /* First find in valid list if we have nominated pair */
-    for (i=0; i<ice->valid_cnt; ++i) {
-	pj_ice_cand *lcand;
+    for (i=0; i<ice->valid_list.count; ++i) {
+	pj_ice_check *check = &ice->valid_list.checks[i];
 	
-	lcand = ice->clist.checks[ice->valid_list[i]].lcand;
-	if (lcand->comp_id==comp_id) {
-	    *cand_id = GET_LCAND_ID(lcand);
+	if (check->lcand->comp_id == comp_id) {
+	    *cand_id = GET_LCAND_ID(check->lcand);
 	    pj_mutex_unlock(ice->mutex);
 	    return PJ_SUCCESS;
 	}
@@ -608,21 +554,9 @@ PJ_DEF(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
     pj_mutex_unlock(ice->mutex);
 
     pj_assert(!"Should have a candidate by now");
-    return PJ_EICENOCAND;
+    return PJ_EBUG;
 }
 
-
-PJ_DEF(pj_status_t) pj_ice_get_cand(pj_ice *ice,
-				    unsigned cand_id,
-				    pj_ice_cand **p_cand)
-{
-    PJ_ASSERT_RETURN(ice && p_cand, PJ_EINVAL);
-    PJ_ASSERT_RETURN(cand_id <= ice->lcand_cnt, PJ_EINVAL);
-
-    *p_cand = &ice->lcand[cand_id];
-
-    return PJ_SUCCESS;
-}
 
 #ifndef MIN
 #   define MIN(a,b) (a < b ? a : b)
@@ -689,25 +623,10 @@ static void dump_checklist(const char *title, const pj_ice *ice,
     unsigned i;
     char buffer[CHECK_NAME_LEN];
 
-    LOG((ice->obj_name, "%s", title));
+    LOG4((ice->obj_name, "%s", title));
     for (i=0; i<clist->count; ++i) {
 	const pj_ice_check *c = &clist->checks[i];
-	LOG((ice->obj_name, " %s (%s, state=%s)",
-	     dump_check(buffer, sizeof(buffer), ice, c),
-	     (c->nominated ? "nominated" : "not nominated"), 
-	     check_state_name[c->state]));
-    }
-}
-
-static void dump_valid_list(const char *title, const pj_ice *ice)
-{
-    unsigned i;
-    char buffer[CHECK_NAME_LEN];
-
-    LOG((ice->obj_name, "%s", title));
-    for (i=0; i<ice->valid_cnt; ++i) {
-	const pj_ice_check *c = &ice->clist.checks[ice->valid_list[i]];
-	LOG((ice->obj_name, " %s (%s, state=%s)",
+	LOG4((ice->obj_name, " %s (%s, state=%s)",
 	     dump_check(buffer, sizeof(buffer), ice, c),
 	     (c->nominated ? "nominated" : "not nominated"), 
 	     check_state_name[c->state]));
@@ -726,7 +645,7 @@ static void check_set_state(pj_ice *ice, pj_ice_check *check,
 
     pj_assert(check->state < PJ_ICE_CHECK_STATE_SUCCEEDED);
 
-    LOG((ice->obj_name, "Check %s: state changed from %s to %s",
+    LOG5((ice->obj_name, "Check %s: state changed from %s to %s",
 	 dump_check(buf, sizeof(buf), ice, check),
 	 check_state_name[check->state],
 	 check_state_name[st]));
@@ -738,7 +657,7 @@ static void clist_set_state(pj_ice *ice, pj_ice_checklist *clist,
 			    pj_ice_checklist_state st)
 {
     if (clist->state != st) {
-	LOG((ice->obj_name, "Checklist: state changed from %s to %s",
+	LOG5((ice->obj_name, "Checklist: state changed from %s to %s",
 	     clist_state_name[clist->state],
 	     clist_state_name[st]));
 	clist->state = st;
@@ -768,32 +687,6 @@ static void sort_checklist(pj_ice_checklist *clist)
 	}
     }
 }
-
-/* Sort valid list based on priority */
-static void sort_valid_list(pj_ice *ice)
-{
-    unsigned i;
-
-    for (i=0; i<ice->valid_cnt-1; ++i) {
-	unsigned j, highest = i;
-	pj_ice_check *ci = &ice->clist.checks[ice->valid_list[i]];
-
-	for (j=i+1; j<ice->valid_cnt; ++j) {
-	    pj_ice_check *cj = &ice->clist.checks[ice->valid_list[j]];
-
-	    if (cj->prio > ci->prio) {
-		highest = j;
-	    }
-	}
-
-	if (highest != i) {
-	    unsigned tmp = ice->valid_list[i];
-	    ice->valid_list[i] = ice->valid_list[j];
-	    ice->valid_list[j] = tmp;
-	}
-    }
-}
-
 
 enum 
 { 
@@ -865,7 +758,7 @@ static void prune_checklist(pj_ice *ice, pj_ice_checklist *clist)
 		/* Found duplicate, remove it */
 		char buf[CHECK_NAME_LEN];
 
-		LOG((ice->obj_name, "Check %s pruned",
+		LOG5((ice->obj_name, "Check %s pruned",
 		    dump_check(buf, sizeof(buf), ice, &clist->checks[j])));
 
 		pj_array_erase(clist->checks, sizeof(clist->checks[0]),
@@ -889,11 +782,10 @@ static void on_ice_complete(pj_ice *ice, pj_status_t status)
 	ice->ice_status = status;
     
 	/* Log message */
-	LOG((ice->obj_name, "ICE process complete, status=%s", 
+	LOG4((ice->obj_name, "ICE process complete, status=%s", 
 	     pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
 
-	dump_checklist("Dumping checklist", ice, &ice->clist);
-	dump_valid_list("Dumping valid list", ice);
+	dump_checklist("Valid list", ice, &ice->valid_list);
 
 	/* Call callback */
 	(*ice->cb.on_ice_complete)(ice, status);
@@ -921,7 +813,7 @@ static pj_bool_t on_check_complete(pj_ice *ice,
     if (check->err_code==PJ_SUCCESS && check->nominated) {
 	pj_ice_comp *comp;
 
-	LOG((ice->obj_name, "Check %d is successful and nominated",
+	LOG5((ice->obj_name, "Check %d is successful and nominated",
 	     GET_CHECK_ID(check)));
 
 	for (i=0; i<ice->clist.count; ++i) {
@@ -930,7 +822,7 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 		(c->state==PJ_ICE_CHECK_STATE_FROZEN ||
 		 c->state==PJ_ICE_CHECK_STATE_WAITING))
 	    {
-		LOG((ice->obj_name, 
+		LOG5((ice->obj_name, 
 		     "Check %d to be failed because state is %s",
 		     i, check_state_name[c->state]));
 		check_set_state(ice, c, PJ_ICE_CHECK_STATE_FAILED,
@@ -981,22 +873,6 @@ static pj_bool_t on_check_complete(pj_ice *ice,
     /* TODO */
 
 
-#if 0
-    /* For now, just see if we have a valid pair in component 1 and
-     * just terminate ICE.
-     */
-    for (i=0; i<ice->valid_cnt; ++i) {
-	pj_ice_check *c = &ice->clist.checks[ice->valid_list[i]];
-	if (c->lcand->comp_id == 1)
-	    break;
-    }
-
-    if (i != ice->valid_cnt) {
-	/* ICE succeeded */
-	on_ice_complete(ice, PJ_SUCCESS);
-	return PJ_TRUE;
-    }
-#else
     /* See if all components have nominated pair. If they do, then mark
      * ICE processing as success, otherwise wait.
      */
@@ -1009,7 +885,6 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 	on_ice_complete(ice, PJ_SUCCESS);
 	return PJ_TRUE;
     }
-#endif
 
     /* 
      * See if all checks in the checklist have completed. If we do,
@@ -1024,7 +899,7 @@ static pj_bool_t on_check_complete(pj_ice *ice,
 
     if (i == ice->clist.count) {
 	/* All checks have completed */
-	on_ice_complete(ice, -1);
+	on_ice_complete(ice, PJNATH_EICEFAILED);
 	return PJ_TRUE;
     }
 
@@ -1166,7 +1041,7 @@ static pj_status_t perform_check(pj_ice *ice, pj_ice_checklist *clist,
     rcand = check->rcand;
     comp = find_comp(ice, lcand->comp_id);
 
-    LOG((ice->obj_name, 
+    LOG5((ice->obj_name, 
 	 "Sending connectivity check for check %s", 
 	 dump_check(buffer, sizeof(buffer), ice, check)));
 
@@ -1238,7 +1113,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     /* Set checklist state to Running */
     clist_set_state(ice, clist, PJ_ICE_CHECKLIST_ST_RUNNING);
 
-    LOG((ice->obj_name, "Starting checklist periodic check"));
+    LOG5((ice->obj_name, "Starting checklist periodic check"));
 
     /* Send STUN Binding request for check with highest priority on
      * Waiting state.
@@ -1306,13 +1181,12 @@ PJ_DEF(pj_status_t) pj_ice_start_check(pj_ice *ice)
     unsigned i;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
+    /* Checklist must be created */
+    PJ_ASSERT_RETURN(ice->clist.count > 0, PJ_EINVALIDOP);
 
-    LOG((ice->obj_name, "Starting ICE check.."));
+    LOG4((ice->obj_name, "Starting ICE check.."));
 
     clist = &ice->clist;
-
-    if (clist->count == 0)
-	return PJ_EICENOCHECKLIST;
 
     /* Pickup the first pair and set the state to Waiting */
     clist->checks[0].state = PJ_ICE_CHECK_STATE_WAITING;
@@ -1362,9 +1236,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 {
     struct req_data *rd = (struct req_data*) tdata->user_data;
     pj_ice *ice;
-    pj_ice_check *check;
-    const pj_ice_cand *lcand;
-    const pj_ice_cand *rcand;
+    pj_ice_check *check, *new_check;
+    pj_ice_cand *lcand;
     pj_ice_checklist *clist;
     pj_stun_xor_mapped_addr_attr *xaddr;
     char buffer[CHECK_NAME_LEN];
@@ -1378,10 +1251,12 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
     pj_mutex_lock(ice->mutex);
 
-    lcand = check->lcand;
-    rcand = check->rcand;
+    /* Init lcand to NULL. lcand will be found from the mapped address
+     * found in the response.
+     */
+    lcand = NULL;
 
-    LOG((ice->obj_name, 
+    LOG4((ice->obj_name, 
 	 "Check %s%s: connectivity check %s",
 	 dump_check(buffer, sizeof(buffer), ice, check),
 	 (check->nominated ? " (nominated)" : " (not nominated)"),
@@ -1402,29 +1277,32 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      */
     PJ_TODO(ICE_CHECK_RESPONSE_SOURCE_ADDRESS);
 
-    /* Get the STUN MAPPED-ADDRESS attribute. */
+    /* Get the STUN XOR-MAPPED-ADDRESS attribute. */
     xaddr = (pj_stun_xor_mapped_addr_attr*)
 	    pj_stun_msg_find_attr(response, PJ_STUN_ATTR_XOR_MAPPED_ADDR,0);
     if (!xaddr) {
 	check_set_state(ice, check, PJ_ICE_CHECK_STATE_FAILED, 
-			PJNATH_ESTUNNOXORMAP);
+			PJNATH_ESTUNNOMAPPEDADDR);
 	on_check_complete(ice, check);
 	pj_mutex_unlock(ice->mutex);
 	return;
+    }
+
+    /* Find local candidate that matches the XOR-MAPPED-ADDRESS */
+    pj_assert(lcand == NULL);
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	if (sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0) {
+	    /* Match */
+	    lcand = &ice->lcand[i];
+	    break;
+	}
     }
 
     /* If the transport address returned in XOR-MAPPED-ADDRESS does not match
      * any of the local candidates that the agent knows about, the mapped 
      * address represents a new candidate - a peer reflexive candidate.
      */
-    for (i=0; i<ice->lcand_cnt; ++i) {
-	if (sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0) {
-	    /* Match */
-	    break;
-	}
-    }
-
-    if (i == ice->lcand_cnt) {
+    if (lcand == NULL) {
 	unsigned cand_id;
 	char buf[32];
 	pj_str_t foundation;
@@ -1450,14 +1328,23 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	lcand = &ice->lcand[cand_id];
     }
 
-    /* Sets the state of the pair that generated the check to succeeded. */
-    check_set_state(ice, check, PJ_ICE_CHECK_STATE_SUCCEEDED, PJ_SUCCESS);
-
-    /* This is a valid pair, so add this to the valid list */
-    ice->valid_list[ice->valid_cnt++] = rd->ckid;
+    /* Add pair to valid list */
+    new_check = &ice->valid_list.checks[ice->valid_list.count++];
+    new_check->lcand = lcand;
+    new_check->rcand = check->rcand;
+    new_check->prio = CALC_CHECK_PRIO(ice, lcand, check->rcand);
+    new_check->state = PJ_ICE_CHECK_STATE_SUCCEEDED;
+    new_check->nominated = check->nominated;
+    new_check->err_code = PJ_SUCCESS;
 
     /* Sort valid_list */
-    sort_valid_list(ice);
+    sort_checklist(&ice->valid_list);
+
+
+    /* Sets the state of the original pair that generated the check to 
+     * succeeded. 
+     */
+    check_set_state(ice, check, PJ_ICE_CHECK_STATE_SUCCEEDED, PJ_SUCCESS);
 
     /* Inform about check completion.
      * This may terminate ICE processing.
@@ -1515,7 +1402,9 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     pj_mutex_unlock(ice->mutex);
 }
 
-
+/* This callback is called by the STUN session associated with a candidate
+ * when it receives incoming request.
+ */
 static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
@@ -1540,18 +1429,14 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	pj_str_t err_msg = pj_str("Expecting Binding Request only");
 	status = pj_stun_session_create_response(sess, msg, 
 						 PJ_STUN_SC_BAD_REQUEST,
-						 &err_msg, &tdata);
-	if (status != PJ_SUCCESS) {
+						 NULL, &tdata);
+	if (status != PJ_SUCCESS)
 	    return status;
-	}
 
-	status = pj_stun_session_send_msg(sess, PJ_TRUE, 
-					  src_addr, src_addr_len, tdata);
-
-	return status;
+	return pj_stun_session_send_msg(sess, PJ_TRUE, 
+					src_addr, src_addr_len, tdata);
     }
 
 
@@ -1566,7 +1451,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     ap = (pj_stun_priority_attr*)
 	 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PRIORITY, 0);
     if (ap == 0) {
-	LOG((ice->obj_name, "Received Binding request with no PRIORITY"));
+	LOG5((ice->obj_name, "Received Binding request with no PRIORITY"));
 	pj_mutex_unlock(ice->mutex);
 	return PJ_SUCCESS;
     }
@@ -1626,7 +1511,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 						  "f%p", 
 						  rcand->foundation.ptr);
 
-	LOG((ice->obj_name, 
+	LOG4((ice->obj_name, 
 	     "Added new remote candidate from the request: %s:%d",
 	     pj_inet_ntoa(rcand->addr.ipv4.sin_addr),
 	     (int)pj_ntohs(rcand->addr.ipv4.sin_port)));
@@ -1678,14 +1563,14 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	if (c->state == PJ_ICE_CHECK_STATE_FROZEN ||
 	    c->state == PJ_ICE_CHECK_STATE_WAITING)
 	{
-	    LOG((ice->obj_name, "Performing triggered check for check %d",i));
+	    LOG5((ice->obj_name, "Performing triggered check for check %d",i));
 	    perform_check(ice, &ice->clist, i);
 
 	} else if (c->state == PJ_ICE_CHECK_STATE_IN_PROGRESS) {
 	    /* Should retransmit here, but how??
 	     * TODO
 	     */
-	    LOG((ice->obj_name, "Triggered check for check %d not performed "
+	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 				"because it's in progress", i));
 	} else if (c->state == PJ_ICE_CHECK_STATE_SUCCEEDED) {
 	    /* Check complete for this component.
@@ -1693,7 +1578,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	     */
 	    pj_bool_t complete;
 
-	    LOG((ice->obj_name, "Triggered check for check %d not performed "
+	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 				"because it's completed", i));
 
 	    complete = on_check_complete(ice, c);
@@ -1721,12 +1606,12 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	c->nominated = (uc != NULL);
 	c->err_code = PJ_SUCCESS;
 
-	LOG((ice->obj_name, "New triggered check added: %d", 
+	LOG4((ice->obj_name, "New triggered check added: %d", 
 	     ice->clist.count));
 	perform_check(ice, &ice->clist, ice->clist.count++);
 
     } else {
-	LOG((ice->obj_name, "Error: unable to perform triggered check: "
+	LOG4((ice->obj_name, "Error: unable to perform triggered check: "
 	     "TOO MANY CHECKS IN CHECKLIST!"));
     }
 
@@ -1771,12 +1656,12 @@ PJ_DEF(pj_status_t) pj_ice_send_data( pj_ice *ice,
 
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {
-	status = PJ_EICEINCOMPID;
+	status = PJNATH_EICEINCOMPID;
 	goto on_return;
     }
 
     if (comp->nominated_check_id == -1) {
-	status = PJ_EICEINPROGRESS;
+	status = PJNATH_EICEINPROGRESS;
 	goto on_return;
     }
 
@@ -1812,7 +1697,7 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {
-	status = PJ_EICEINCOMPID;
+	status = PJNATH_EICEINCOMPID;
 	goto on_return;
     }
 

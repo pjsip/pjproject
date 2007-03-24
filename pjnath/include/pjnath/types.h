@@ -29,7 +29,26 @@
 
 /**
  * @defgroup PJNATH NAT Helper Library
+ * @{
  */
+
+PJ_BEGIN_DECL
+
+/**
+ * Initialize pjnath library.
+ *
+ * @return  Initialization status.
+ */
+PJ_DECL(pj_status_t) pjnath_init(void);
+
+
+PJ_END_DECL
+
+/**
+ * @}
+ */
+
+/* Doxygen documentation below: */
 
 /**
  * @mainpage NAT Helper Library
@@ -43,20 +62,6 @@
  * Please go to the <A HREF="modules.htm"><B>Modules</B></A> page for list
  * of modules.
  *
- *
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
- * \n
  */
 
 #endif	/* __PJNATH_TYPES_H__ */

@@ -23,7 +23,7 @@
 #include <pj/errno.h>
 
 /**
- * @defgroup PJNATH_ERROR NAT Helper Error Codes
+ * @defgroup PJNATH_ERROR NAT Helper Library Error Codes
  * @ingroup PJNATH
  * @{
  */
@@ -35,154 +35,119 @@
 #define PJNATH_ERRNO_START    (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*4)
 
 
-
 /************************************************************
- * NEW STUN ERROR
+ * STUN MESSAGING ERRORS
  ***********************************************************/
-/* Messaging errors */
-#define PJNATH_ESTUNINATTRLEN	    -1
-#define PJNATH_ESTUNINMSGLEN	    -1
-#define	PJNATH_ESTUNINMSGTYPE	    -1
-#define PJNATH_ESTUNFINGERPRINT	    -1
-#define PJNATH_ESTUNNOTRESPOND	    -1
-#define PJNATH_ESTUNNOXORMAP	    -1
+
+/**
+ * Map STUN error code (300-699) into pj_status_t error space.
+ */
+#define PJ_STATUS_FROM_STUN_CODE(code)	(PJNATH_ERRNO_START+code)
+
+/**
+ * @hideinitializer
+ * Invalid STUN message length.
+ */
+#define PJNATH_EINSTUNMSGLEN	    (PJNATH_ERRNO_START+1)  /* 370001 */
+/**
+ * @hideinitializer
+ * Invalid or unexpected STUN message type
+ */
+#define	PJNATH_EINSTUNMSGTYPE	    (PJNATH_ERRNO_START+2)  /* 370002 */
+/**
+ * @hideinitializer
+ * STUN transaction has timed out
+ */
+#define PJNATH_ESTUNTIMEDOUT	    (PJNATH_ERRNO_START+3)  /* 370003 */
+
+
 
 /**
  * @hideinitializer
  * Too many STUN attributes.
  */
-#define PJNATH_ESTUNTOOMANYATTR	    (PJNATH_ERRNO_START+110)/* 370110 */
+#define PJNATH_ESTUNTOOMANYATTR	    (PJNATH_ERRNO_START+21) /* 370021 */
 /**
  * @hideinitializer
- * Unknown STUN attribute. This error happens when the decoder encounters
- * mandatory attribute type which it doesn't understand.
+ * Invalid STUN attribute length.
  */
-#define PJNATH_ESTUNUNKNOWNATTR	    (PJNATH_ERRNO_START+111)/* 370111 */
-/**
- * @hideinitializer
- * Invalid STUN socket address length.
- */
-#define PJNATH_ESTUNINADDRLEN	    (PJNATH_ERRNO_START+112)/* 370112 */
-/**
- * @hideinitializer
- * STUN IPv6 attribute not supported
- */
-#define PJNATH_ESTUNIPV6NOTSUPP	    (PJNATH_ERRNO_START+113)/* 370113 */
-/**
- * @hideinitializer
- * Expecting STUN response message.
- */
-#define PJNATH_ESTUNNOTRESPONSE	    (PJNATH_ERRNO_START+114)/* 370114 */
-/**
- * @hideinitializer
- * STUN transaction ID mismatch.
- */
-#define PJNATH_ESTUNINVALIDID	    (PJNATH_ERRNO_START+115)/* 370115 */
-/**
- * @hideinitializer
- * Unable to find handler for the request.
- */
-#define PJNATH_ESTUNNOHANDLER	    (PJNATH_ERRNO_START+116)/* 370116 */
-/**
- * @hideinitializer
- * Found non-FINGERPRINT attribute after MESSAGE-INTEGRITY. This is not
- * valid since MESSAGE-INTEGRITY MUST be the last attribute or the
- * attribute right before FINGERPRINT before the message.
- */
-#define PJNATH_ESTUNMSGINTPOS	    (PJNATH_ERRNO_START+118)/* 370118 */
-/**
- * @hideinitializer
- * Found attribute after FINGERPRINT. This is not valid since FINGERPRINT
- * MUST be the last attribute in the message.
- */
-#define PJNATH_ESTUNFINGERPOS	    (PJNATH_ERRNO_START+119)/* 370119 */
-/**
- * @hideinitializer
- * Missing STUN USERNAME attribute.
- * When credential is included in the STUN message (MESSAGE-INTEGRITY is
- * present), the USERNAME attribute must be present in the message.
- */
-#define PJNATH_ESTUNNOUSERNAME	    (PJNATH_ERRNO_START+120)/* 370120 */
-/**
- * @hideinitializer
- * Unknown STUN username/credential.
- */
-#define PJNATH_ESTUNUSERNAME	    (PJNATH_ERRNO_START+121)/* 370121 */
-/**
- * @hideinitializer
- * Missing/invalidSTUN MESSAGE-INTEGRITY attribute.
- */
-#define PJNATH_ESTUNMSGINT	    (PJNATH_ERRNO_START+122)/* 370122 */
+#define PJNATH_ESTUNINATTRLEN	    (PJNATH_ERRNO_START+22) /* 370022 */
 /**
  * @hideinitializer
  * Found duplicate STUN attribute.
  */
-#define PJNATH_ESTUNDUPATTR	    (PJNATH_ERRNO_START+123)/* 370123 */
-/**
- * @hideinitializer
- * Missing STUN REALM attribute.
- */
-#define PJNATH_ESTUNNOREALM	    (PJNATH_ERRNO_START+124)/* 370124 */
-/**
- * @hideinitializer
- * Missing/stale STUN NONCE attribute value.
- */
-#define PJNATH_ESTUNNONCE	    (PJNATH_ERRNO_START+125)/* 370125 */
-/**
- * @hideinitializer
- * STUN transaction terminates with failure.
- */
-#define PJNATH_ESTUNTSXFAILED	    (PJNATH_ERRNO_START+126)/* 370126 */
-/**
- * @hideinitializer
- * STUN mapped address attribute not found
- */
-#define PJNATH_ESTUNNOMAPPEDADDR    (PJNATH_ERRNO_START+127)/* 370127 */
+#define PJNATH_ESTUNDUPATTR	    (PJNATH_ERRNO_START+23) /* 370023 */
 
-
-//#define PJ_STATUS_FROM_STUN_CODE(code)	(PJNATH_ERRNO_START+code)
+/**
+ * @hideinitializer
+ * STUN FINGERPRINT verification failed
+ */
+#define PJNATH_ESTUNFINGERPRINT	    (PJNATH_ERRNO_START+30) /* 370030 */
+/**
+ * @hideinitializer
+ * Invalid STUN attribute after MESSAGE-INTEGRITY.
+ */
+#define PJNATH_ESTUNMSGINTPOS	    (PJNATH_ERRNO_START+31) /* 370031 */
+/**
+ * @hideinitializer
+ * Invalid STUN attribute after FINGERPRINT.
+ */
+#define PJNATH_ESTUNFINGERPOS	    (PJNATH_ERRNO_START+33) /* 370033 */
 
 
 /**
  * @hideinitializer
- * No ICE checklist is formed.
+ * STUN (XOR-)MAPPED-ADDRESS attribute not found
  */
-#define PJ_EICENOCHECKLIST	    -1
+#define PJNATH_ESTUNNOMAPPEDADDR    (PJNATH_ERRNO_START+40) /* 370040 */
 /**
  * @hideinitializer
- * No suitable default ICE candidate for the component.
+ * STUN IPv6 attribute not supported
  */
-#define PJ_EICENOCAND		    -1
-/**
- * @hideinitializer
- * Invalid ICE component ID
- */
-#define PJ_EICEINCOMPID		    -1
-/**
- * @hideinitializer
- * Invalid ICE candidate ID
- */
-#define PJ_EICEINCANDID		    -1
+#define PJNATH_ESTUNIPV6NOTSUPP	    (PJNATH_ERRNO_START+41) /* 370041 */
+
+
+
+
+/************************************************************
+ * ICE ERROR CODES
+ ***********************************************************/
+
 /**
  * @hideinitializer
  * ICE session not available
  */
-#define PJ_ENOICE		    -1
+#define PJNATH_ENOICE		    (PJNATH_ERRNO_START+80) /* 370080 */
 /**
  * @hideinitializer
  * ICE check is in progress
  */
-#define PJ_EICEINPROGRESS	    -1
+#define PJNATH_EICEINPROGRESS	    (PJNATH_ERRNO_START+81) /* 370081 */
+/**
+ * @hideinitializer
+ * All ICE checklists failed
+ */
+#define PJNATH_EICEFAILED	    (PJNATH_ERRNO_START+82) /* 370082 */
+/**
+ * @hideinitializer
+ * Invalid ICE component ID
+ */
+#define PJNATH_EICEINCOMPID	    (PJNATH_ERRNO_START+86) /* 370086 */
+/**
+ * @hideinitializer
+ * Invalid ICE candidate ID
+ */
+#define PJNATH_EICEINCANDID	    (PJNATH_ERRNO_START+87) /* 370087 */
 /**
  * @hideinitializer
  * Missing ICE SDP attribute
  */
-#define PJ_EICEMISSINGSDP	    -1
+#define PJNATH_EICEMISSINGSDP	    (PJNATH_ERRNO_START+90) /* 370090 */
 /**
  * @hideinitializer
  * Invalid SDP "candidate" attribute
  */
-#define PJ_EICEINCANDSDP	    -1
+#define PJNATH_EICEINCANDSDP	    (PJNATH_ERRNO_START+91) /* 370091 */
 
 
 

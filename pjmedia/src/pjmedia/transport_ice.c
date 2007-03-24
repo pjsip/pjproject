@@ -197,13 +197,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
     sdp->attr[sdp->attr_count++] = attr;
 
     /* Add all candidates (to media level) */
-    cand_cnt = pj_ice_get_cand_cnt(tp_ice->ice_st->ice);
+    cand_cnt = tp_ice->ice_st->ice->lcand_cnt;
     for (i=0; i<cand_cnt; ++i) {
 	pj_ice_cand *cand;
 	pj_str_t value;
 	int len;
 
-	pj_ice_get_cand(tp_ice->ice_st->ice, i, &cand);
+	cand = &tp_ice->ice_st->ice->lcand[i];
 
 	len = pj_ansi_snprintf( buffer, MAXLEN,
 				"%.*s %d UDP %u %s %d typ ",
@@ -265,7 +265,7 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     pj_str_t input;
     char *token, *host;
     pj_str_t s;
-    pj_status_t status = PJ_EICEINCANDSDP;
+    pj_status_t status = PJNATH_EICEINCANDSDP;
 
     pj_bzero(cand, sizeof(*cand));
     pj_strdup_with_null(pool, &input, orig_input);
@@ -343,6 +343,13 @@ on_return:
     return status;
 }
 
+static void set_no_ice(struct transport_ice *tp_ice)
+{
+    PJ_LOG(4,(tp_ice->ice_st->obj_name, 
+	      "Remote does not support ICE, disabling local ICE"));
+    pjmedia_ice_stop_ice(&tp_ice->base);
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					  pj_pool_t *pool,
@@ -358,15 +365,19 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     /* Find ice-ufrag attribute */
     attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				  "ice-ufrag", NULL);
-    if (attr == NULL)
-	return PJ_EICEMISSINGSDP;
+    if (attr == NULL) {
+	set_no_ice(tp_ice);
+	return PJ_SUCCESS;
+    }
     uname = attr->value;
 
     /* Find ice-pwd attribute */
     attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				  "ice-pwd", NULL);
-    if (attr == NULL)
-	return PJ_EICEMISSINGSDP;
+    if (attr == NULL) {
+	set_no_ice(tp_ice);
+	return PJ_SUCCESS;
+    }
     pass = attr->value;
 
     /* Get all candidates */
@@ -546,7 +557,7 @@ static void ice_on_ice_complete(pj_ice_st *ice_st,
     pj_gettimeofday(&end_ice);
     PJ_TIME_VAL_SUB(end_ice, tp_ice->start_ice);
 
-    check = &ice_st->ice->clist.checks[ice_st->ice->valid_list[0]];
+    check = &ice_st->ice->valid_list.checks[0];
     
     lcand = check->lcand;
     rcand = check->rcand;

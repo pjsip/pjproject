@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/errno.h>
+#include <pjnath/stun_msg.h>
 #include <pj/string.h>
 
 
@@ -32,22 +33,31 @@ static const struct
     const char *msg;
 } err_str[] = 
 {
-    /* STUN */
+    /* STUN related error codes */
+    PJ_BUILD_ERR( PJNATH_EINSTUNMSGLEN,	    "Invalid STUN message length"),
+    PJ_BUILD_ERR( PJNATH_EINSTUNMSGTYPE,    "Invalid or unexpected STUN message type"),
+    PJ_BUILD_ERR( PJNATH_ESTUNTIMEDOUT,	    "STUN transaction has timed out"),
+
     PJ_BUILD_ERR( PJNATH_ESTUNTOOMANYATTR,  "Too many STUN attributes"),
-    PJ_BUILD_ERR( PJNATH_ESTUNUNKNOWNATTR,  "Unknown STUN attribute"),
-    PJ_BUILD_ERR( PJNATH_ESTUNINADDRLEN,    "Invalid STUN socket address length"),
-    PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
-    PJ_BUILD_ERR( PJNATH_ESTUNNOTRESPONSE,  "Expecting STUN response message"),
-    PJ_BUILD_ERR( PJNATH_ESTUNINVALIDID,    "STUN transaction ID mismatch"),
-    PJ_BUILD_ERR( PJNATH_ESTUNNOHANDLER,    "Unable to find STUN handler for the request"),
-    PJ_BUILD_ERR( PJNATH_ESTUNMSGINTPOS,    "Found non-FINGERPRINT attr. after MESSAGE-INTEGRITY"),
-    PJ_BUILD_ERR( PJNATH_ESTUNFINGERPOS,    "Found STUN attribute after FINGERPRINT"),
-    PJ_BUILD_ERR( PJNATH_ESTUNNOUSERNAME,   "Missing STUN USERNAME attribute"),
-    PJ_BUILD_ERR( PJNATH_ESTUNMSGINT,	    "Missing/invalid STUN MESSAGE-INTEGRITY attribute"),
+    PJ_BUILD_ERR( PJNATH_ESTUNINATTRLEN,    "Invalid STUN attribute length"),
     PJ_BUILD_ERR( PJNATH_ESTUNDUPATTR,	    "Found duplicate STUN attribute"),
-    PJ_BUILD_ERR( PJNATH_ESTUNNOREALM,	    "Missing STUN REALM attribute"),
-    PJ_BUILD_ERR( PJNATH_ESTUNNONCE,	    "Missing/stale STUN NONCE attribute value"),
-    PJ_BUILD_ERR( PJNATH_ESTUNTSXFAILED,    "STUN transaction terminates with failure"),
+
+    PJ_BUILD_ERR( PJNATH_ESTUNFINGERPRINT,  "STUN FINGERPRINT verification failed"),
+    PJ_BUILD_ERR( PJNATH_ESTUNMSGINTPOS,    "Invalid STUN attribute after MESSAGE-INTEGRITY"),
+    PJ_BUILD_ERR( PJNATH_ESTUNFINGERPOS,    "Invalid STUN attribute after FINGERPRINT"),
+
+    PJ_BUILD_ERR( PJNATH_ESTUNNOMAPPEDADDR, "STUN (XOR-)MAPPED-ADDRESS attribute not found"),
+    PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
+
+    /* ICE related errors */
+    PJ_BUILD_ERR( PJNATH_ENOICE,	    "ICE session not available"),
+    PJ_BUILD_ERR( PJNATH_EICEINPROGRESS,    "ICE check is in progress"),
+    PJ_BUILD_ERR( PJNATH_EICEFAILED,	    "All ICE checklists failed"),
+    PJ_BUILD_ERR( PJNATH_EICEINCOMPID,	    "Invalid ICE component ID"),
+    PJ_BUILD_ERR( PJNATH_EICEINCANDID,	    "Invalid ICE candidate ID"),
+    PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
+    PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
+
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 
@@ -55,8 +65,8 @@ static const struct
 /*
  * pjnath_strerror()
  */
-PJ_DEF(pj_str_t) pjnath_strerror( pj_status_t statcode, 
-				  char *buf, pj_size_t bufsize )
+static pj_str_t pjnath_strerror(pj_status_t statcode, 
+				char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
 
@@ -106,8 +116,35 @@ PJ_DEF(pj_str_t) pjnath_strerror( pj_status_t statcode,
     /* Error not found. */
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown pjlib-util error %d",
+				   "Unknown pjnath error %d",
 				   statcode);
+    if (errstr.slen < 0) errstr.slen = 0;
+    else if (errstr.slen > (int)bufsize) errstr.slen = bufsize;
+
+    return errstr;
+}
+
+
+static pj_str_t pjnath_strerror2(pj_status_t statcode, 
+				 char *buf, pj_size_t bufsize )
+{
+    int stun_code = statcode - PJ_STATUS_FROM_STUN_CODE(0);
+    const pj_str_t cmsg = pj_stun_get_err_reason(stun_code);
+    pj_str_t errstr;
+
+    if (cmsg.slen == 0) {
+	/* Not found */
+	errstr.ptr = buf;
+	errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+				       "Unknown STUN err-code %d",
+				       stun_code);
+    } else {
+	errstr.ptr = buf;
+	pj_strncpy(&errstr, &cmsg, bufsize);
+    }
+
+    if (errstr.slen < 0) errstr.slen = 0;
+    else if (errstr.slen > (int)bufsize) errstr.slen = bufsize;
 
     return errstr;
 }
@@ -115,7 +152,16 @@ PJ_DEF(pj_str_t) pjnath_strerror( pj_status_t statcode,
 
 PJ_DEF(pj_status_t) pjnath_init(void)
 {
-    return pj_register_strerror(PJNATH_ERRNO_START, 
-				PJ_ERRNO_SPACE_SIZE, 
-				&pjnath_strerror);
+    pj_status_t status;
+
+    status = pj_register_strerror(PJNATH_ERRNO_START, 299, 
+				  &pjnath_strerror);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_register_strerror(PJ_STATUS_FROM_STUN_CODE(300), 
+				  699 - 300, 
+				  &pjnath_strerror2);
+    return status;
 }
+

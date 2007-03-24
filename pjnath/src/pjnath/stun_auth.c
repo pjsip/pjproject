@@ -159,7 +159,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_UNAUTHORIZED, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJNATH_ESTUNMSGINT;
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
     }
 
     /* Next check that USERNAME is present */
@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJNATH_ESTUNNOUSERNAME;
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_USERNAME);
     }
 
     /* Get REALM, if any */
@@ -202,7 +202,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_UNKNOWN_USERNAME, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJNATH_ESTUNUSERNAME;
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_USERNAME);
     }
 
 
@@ -217,7 +217,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, NULL,
 			     &realm, &nonce, p_response);
 	}
-	return PJNATH_ESTUNNOREALM;
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_REALM);
 
     } else if (realm.slen != 0 && arealm != NULL) {
 	/* We want long term, and REALM is present */
@@ -228,7 +228,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJNATH_ESTUNNONCE;
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_NONCE);
 	}
 
 	/* Verify REALM matches */
@@ -238,7 +238,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_REALM, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJNATH_ESTUNNOREALM;
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_REALM);
 	}
 
 	/* Valid case, will validate the message integrity later */
@@ -261,7 +261,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJNATH_ESTUNNONCE;
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_NONCE);
 	}
     }
 
@@ -288,7 +288,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 		create_challenge(pool, msg, PJ_STUN_SC_STALE_NONCE, 
 				 NULL, &realm, &nonce, p_response);
 	    }
-	    return PJNATH_ESTUNNONCE;
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_NONCE);
 	}
     }
 
@@ -333,7 +333,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	    create_challenge(pool, msg, PJ_STUN_SC_INTEGRITY_CHECK_FAILURE,
 			     NULL, &realm, &nonce, p_response);
 	}
-	return PJNATH_ESTUNMSGINT;
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
     }
 
     /* Everything looks okay! */

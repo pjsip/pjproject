@@ -383,7 +383,6 @@ typedef enum pj_stun_status
     PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
     PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
     PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
-    PJ_STUN_SC_WRONG_USERNAME	        = 441,  /**< Wrong Username.	    */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
 						     Protocol */
     PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address	    */

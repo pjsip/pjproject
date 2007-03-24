@@ -235,7 +235,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
 	tsx->complete = PJ_TRUE;
 	if (tsx->cb.on_complete) {
-	    tsx->cb.on_complete(tsx, PJNATH_ESTUNNOTRESPOND, NULL);
+	    tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL);
 	}
 	return;
     }
@@ -268,7 +268,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     {
 	PJ_LOG(4,(tsx->obj_name, 
 		  "STUN rx_msg() error: not response message"));
-	return PJNATH_ESTUNNOTRESPONSE;
+	return PJNATH_EINSTUNMSGTYPE;
     }
 
 
@@ -300,7 +300,8 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     if (err_attr == NULL) {
 	status = PJ_SUCCESS;
     } else {
-	status = PJNATH_ESTUNTSXFAILED;
+	status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_class * 100 + 
+					  err_attr->number);
     }
 
     /* Call callback */

@@ -96,7 +96,7 @@ typedef struct pj_ice_cand
     pj_uint32_t		 prio;
     pj_sockaddr		 addr;
     pj_sockaddr		 base_addr;
-    pj_sockaddr		 srv_addr;
+    pj_sockaddr		 rel_addr;
     pj_stun_session	*stun_sess;
 } pj_ice_cand;
 
@@ -204,20 +204,19 @@ struct pj_ice
     pj_ice_checklist	 clist;
     
     /* Valid list */
-    unsigned		 valid_cnt;
-    unsigned		 valid_list[PJ_ICE_MAX_CHECKS];
+    pj_ice_checklist	 valid_list;
 };
 
 
 PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
 				   const char *name,
 				   pj_ice_role role,
+				   unsigned comp_cnt,
 				   const pj_ice_cb *cb,
 				   const pj_str_t *local_ufrag,
 				   const pj_str_t *local_passwd,
 				   pj_ice **p_ice);
 PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
-PJ_DECL(pj_status_t) pj_ice_add_comp(pj_ice *ice, unsigned comp_id);
 PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				     unsigned comp_id,
 				     pj_ice_cand_type type,
@@ -225,20 +224,13 @@ PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
 				     const pj_str_t *foundation,
 				     const pj_sockaddr_t *addr,
 				     const pj_sockaddr_t *base_addr,
-				     const pj_sockaddr_t *srv_addr,
+				     const pj_sockaddr_t *rel_addr,
 				     int addr_len,
 				     unsigned *cand_id);
 
-PJ_DECL(unsigned) pj_ice_get_cand_cnt(pj_ice *ice);
-PJ_DECL(pj_status_t) pj_ice_enum_cands(pj_ice *ice,
-				       unsigned *p_count,
-				       unsigned cand_ids[]);
-PJ_DECL(pj_status_t) pj_ice_get_default_cand(pj_ice *ice,
-					     unsigned comp_id,
-					     int *cand_id);
-PJ_DECL(pj_status_t) pj_ice_get_cand(pj_ice *ice,
-				     unsigned cand_id,
-				     pj_ice_cand **p_cand);
+PJ_DECL(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
+					      unsigned comp_id,
+					      int *cand_id);
 
 PJ_DECL(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
 					      const pj_str_t *rem_ufrag,
