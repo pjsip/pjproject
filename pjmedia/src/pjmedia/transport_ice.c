@@ -69,8 +69,7 @@ static pj_status_t tp_send_rtcp( pjmedia_transport *tp,
 /*
  * And these are ICE callbacks.
  */
-static void ice_on_rx_data(pj_ice_st *ice_st,
-			   unsigned comp_id, unsigned cand_id,
+static void ice_on_rx_data(pj_ice_st *ice_st, unsigned comp_id, 
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len);
@@ -99,7 +98,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     pj_ice_st *ice_st;
     pj_ice_st_cb ice_st_cb;
     struct transport_ice *tp_ice;
-    unsigned i;
     pj_status_t status;
 
     PJ_UNUSED_ARG(endpt);
@@ -110,16 +108,11 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     ice_st_cb.on_rx_data = &ice_on_rx_data;
 
     /* Create ICE */
-    status = pj_ice_st_create(stun_cfg, name, NULL, &ice_st_cb, &ice_st);
+    status = pj_ice_st_create(stun_cfg, name, comp_cnt, NULL, 
+			      &ice_st_cb, &ice_st);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add components */
-    for (i=0; i<comp_cnt; ++i) {
-	status = pj_ice_st_add_comp(ice_st, i+1);
-	if (status != PJ_SUCCESS) 
-	    goto on_error;
-    }
 
     /* Create transport instance and attach to ICE */
     tp_ice = PJ_POOL_ZALLOC_T(ice_st->pool, struct transport_ice);
@@ -135,10 +128,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 	*p_tp = &tp_ice->base;
 
     return PJ_SUCCESS;
-
-on_error:
-    pj_ice_st_destroy(ice_st);
-    return status;
 }
 
 
@@ -157,7 +146,65 @@ PJ_DEF(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp)
 }
 
 
-PJ_DECL(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
+PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
+					    unsigned options,
+					    const pj_sockaddr_in *start_addr,
+					    const pj_sockaddr_in *stun_srv,
+					    const pj_sockaddr_in *turn_srv)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    unsigned comp_id;
+    pj_status_t status;
+
+    status = pj_ice_st_set_stun_srv(tp_ice->ice_st, stun_srv, turn_srv);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_ice_st_create_comp(tp_ice->ice_st, 1, options, start_addr, 
+				   &comp_id);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (tp_ice->ice_st->comp_cnt > 1) {
+	pj_sockaddr_in addr;
+
+	pj_memcpy(&addr, &tp_ice->ice_st->comp[0]->local_addr.ipv4,
+		  sizeof(pj_sockaddr_in));
+	if (start_addr)
+	    addr.sin_addr.s_addr = start_addr->sin_addr.s_addr;
+	else
+	    addr.sin_addr.s_addr = 0;
+
+	addr.sin_port = (pj_uint16_t)(pj_ntohs(addr.sin_port)+1);
+	status = pj_ice_st_create_comp(tp_ice->ice_st, 2, options, 
+				       &addr, &comp_id);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+    return status;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    return pj_ice_st_get_comps_status(tp_ice->ice_st);
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_ice_get_comp( pjmedia_transport *tp,
+					  unsigned comp_id,
+					  pj_ice_st_comp *comp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    PJ_ASSERT_RETURN(tp && comp_id && comp_id <= tp_ice->ice_st->comp_cnt &&
+		     comp, PJ_EINVAL);
+
+    pj_memcpy(comp, tp_ice->ice_st->comp[comp_id-1], sizeof(pj_ice_st_comp));
+    return PJ_SUCCESS;		    
+}
+
+PJ_DEF(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     return tp_ice->ice_st;
@@ -415,34 +462,30 @@ static pj_status_t tp_get_info(pjmedia_transport *tp,
 			       pjmedia_sock_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    int rel_idx = -1, srflx_idx = -1, host_idx = -1, idx = -1;
-    unsigned i;
+    pj_ice_st *ice_st = tp_ice->ice_st;
+    pj_ice_st_comp *comp;
 
     pj_bzero(info, sizeof(*info));
     info->rtp_sock = info->rtcp_sock = PJ_INVALID_SOCKET;
 
-    for (i=0; i<tp_ice->ice_st->itf_cnt; ++i) {
-	pj_ice_st_interface *itf = tp_ice->ice_st->itfs[i];
+    /* Retrieve address of default candidate for component 1 (RTP) */
+    comp = ice_st->comp[0];
+    pj_assert(comp->default_cand >= 0);
+    info->rtp_sock = comp->sock;
+    pj_memcpy(&info->rtp_addr_name, 
+	      &comp->cand_list[comp->default_cand].addr,
+	      sizeof(pj_sockaddr_in));
 
-	if (itf->type == PJ_ICE_CAND_TYPE_HOST && host_idx == -1)
-	    host_idx = i;
-	else if (itf->type == PJ_ICE_CAND_TYPE_RELAYED && rel_idx == -1)
-	    rel_idx = i;
-	else if (itf->type == PJ_ICE_CAND_TYPE_SRFLX && srflx_idx == -1)
-	    srflx_idx = i;
+    /* Retrieve address of default candidate for component 12(RTCP) */
+    if (ice_st->comp_cnt > 1) {
+	comp = ice_st->comp[1];
+	pj_assert(comp->default_cand >= 0);
+	info->rtp_sock = comp->sock;
+	pj_memcpy(&info->rtp_addr_name, 
+		  &comp->cand_list[comp->default_cand].addr,
+		  sizeof(pj_sockaddr_in));
     }
 
-    if (idx == -1 && srflx_idx != -1)
-	idx = srflx_idx;
-    else if (idx == -1 && rel_idx != -1)
-	idx = rel_idx;
-    else if (idx == -1 && host_idx != -1)
-	idx = host_idx;
-
-    PJ_ASSERT_RETURN(idx != -1, PJ_EBUG);
-
-    pj_memcpy(&info->rtp_addr_name, &tp_ice->ice_st->itfs[idx]->addr,
-	      sizeof(pj_sockaddr_in));
 
     return PJ_SUCCESS;
 }
@@ -491,13 +534,9 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 			       pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    if (tp_ice->ice_st->ice) {
-	return pj_ice_st_send_data(tp_ice->ice_st, 1, pkt, size);
-    } else {
-	return pj_ice_st_sendto(tp_ice->ice_st, 1, 0,
-				pkt, size, &tp_ice->remote_rtp,
-				sizeof(pj_sockaddr_in));
-    }
+    return pj_ice_st_sendto(tp_ice->ice_st, 1, 
+			    pkt, size, &tp_ice->remote_rtp,
+			    sizeof(pj_sockaddr_in));
 }
 
 
@@ -505,21 +544,18 @@ static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
 			        const void *pkt,
 			        pj_size_t size)
 {
-#if 0
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_send_data(tp_ice->ice_st, 1, pkt, size);
-#else
-    PJ_TODO(SUPPORT_RTCP);
-    PJ_UNUSED_ARG(tp);
-    PJ_UNUSED_ARG(pkt);
-    PJ_UNUSED_ARG(size);
-    return PJ_SUCCESS;
-#endif
+    if (tp_ice->ice_st->comp_cnt > 1) {
+	return pj_ice_st_sendto(tp_ice->ice_st, 2, 
+				pkt, size, &tp_ice->remote_rtp,
+				sizeof(pj_sockaddr_in));
+    } else {
+	return PJ_SUCCESS;
+    }
 }
 
 
-static void ice_on_rx_data(pj_ice_st *ice_st,
-			   unsigned comp_id, unsigned cand_id,
+static void ice_on_rx_data(pj_ice_st *ice_st, unsigned comp_id, 
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len)
@@ -531,9 +567,10 @@ static void ice_on_rx_data(pj_ice_st *ice_st,
     else if (comp_id==2 && tp_ice->rtcp_cb)
 	(*tp_ice->rtcp_cb)(tp_ice->stream, pkt, size);
 
-    PJ_UNUSED_ARG(cand_id);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
+
+    PJ_TODO(SWITCH_SOURCE_ADDRESS);
 }
 
 

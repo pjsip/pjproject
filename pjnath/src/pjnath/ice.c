@@ -1709,7 +1709,7 @@ PJ_DEF(pj_status_t) pj_ice_on_rx_pkt( pj_ice *ice,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);
     } else {
-	(*ice->cb.on_rx_data)(ice, comp_id, cand_id, pkt, pkt_size, 
+	(*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 
 			      src_addr, src_addr_len);
     }
     

@@ -37,6 +37,7 @@
 #include <pj/guid.h>
 #include <pj/hash.h>
 #include <pj/ioqueue.h>
+#include <pj/ip_helper.h>
 #include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>

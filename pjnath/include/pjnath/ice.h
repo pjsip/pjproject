@@ -150,7 +150,6 @@ typedef struct pj_ice_cb
 			     const pj_sockaddr_t *dst_addr,
 			     unsigned dst_addr_len);
     void	(*on_rx_data)(pj_ice *ice, unsigned comp_id,
-			      unsigned cand_id,
 			      void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *src_addr,
 			      unsigned src_addr_len);

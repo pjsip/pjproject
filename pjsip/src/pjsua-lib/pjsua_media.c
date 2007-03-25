@@ -553,11 +553,15 @@ on_error:
 static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 {
     unsigned i;
+    pj_sockaddr_in addr;
     pj_status_t status;
+
+    pj_sockaddr_in_init(&addr, 0, (pj_uint16_t)cfg->port);
 
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	pj_ice_st *ice_st;
+	pj_ice_st_comp comp;
+	int next_port;
 
 	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, 1,
 				    &pjsua_var.stun_cfg, 
@@ -568,47 +572,26 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	    goto on_error;
 	}
 
-	ice_st = pjmedia_ice_get_ice_st(pjsua_var.calls[i].med_tp);
-
-	/* Add host candidates for RTP */
-	status = pj_ice_st_add_all_host_interfaces(ice_st, 1, 0);
+	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, 0, &addr,
+				        &pjsua_var.stun_srv.ipv4, NULL);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error adding ICE host candidates",
+	    pjsua_perror(THIS_FILE, "Error starting ICE transport",
 		         status);
 	    goto on_error;
 	}
 
-	/* Configure STUN server */
-	if (pjsua_var.stun_srv.addr.sa_family != 0) {
-	
-	    status = pj_ice_st_set_stun_addr(ice_st, 
-					     pjsua_var.media_cfg.enable_relay,
-					     &pjsua_var.stun_srv.ipv4);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error setting ICE's STUN server",
-			     status);
-		goto on_error;
-	    }
-
-	    /* Add STUN server reflexive candidate for RTP */
-	    status = pj_ice_st_add_stun_interface(ice_st, 1, 0, NULL);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error adding ICE address",
-			     status);
-		goto on_error;
-	    }
-	}
+	pjmedia_ice_get_comp(pjsua_var.calls[i].med_tp, 1, &comp);
+	next_port = pj_ntohs(comp.local_addr.ipv4.sin_port);
+	next_port += 2;
+	addr.sin_port = pj_htons((pj_uint16_t)next_port);
     }
 
     /* Wait until all ICE transports are ready */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	pj_ice_st *ice_st;
-
-	ice_st = pjmedia_ice_get_ice_st(pjsua_var.calls[i].med_tp);
 
 	/* Wait until interface status is PJ_SUCCESS */
 	for (;;) {
-	    status = pj_ice_st_get_interfaces_status(ice_st);
+	    status = pjmedia_ice_get_init_status(pjsua_var.calls[i].med_tp);
 	    if (status == PJ_EPENDING)
 		pjsua_handle_events(100);
 	    else

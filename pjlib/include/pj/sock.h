@@ -207,6 +207,7 @@ struct pj_sockaddr_in
     char	sin_zero[8];	/**< Padding.			    */
 };
 
+#undef s6_addr
 
 /**
  * This structure describes IPv6 address.

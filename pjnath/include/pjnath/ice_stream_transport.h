@@ -44,7 +44,7 @@ typedef struct pj_ice_st pj_ice_st;
 typedef struct pj_ice_st_cb
 {
     void    (*on_rx_data)(pj_ice_st *ice_st,
-			  unsigned comp_id, unsigned cand_id,
+			  unsigned comp_id, 
 			  void *pkt, pj_size_t size,
 			  const pj_sockaddr_t *src_addr,
 			  unsigned src_addr_len);
@@ -54,32 +54,55 @@ typedef struct pj_ice_st_cb
 } pj_ice_st_cb;
 
 
+#ifndef PJ_ICE_ST_MAX_ALIASES
+#   define PJ_ICE_ST_MAX_ALIASES	8
+#endif
+
+enum pj_ice_st_option
+{
+    PJ_ICE_ST_OPT_DISABLE_STUN	= 1,
+    PJ_ICE_ST_OPT_DISABLE_RELAY	= 2,
+    PJ_ICE_ST_OPT_NO_PORT_RETRY	= 4,
+};
+
+
+typedef struct pj_ice_st_cand
+{
+    pj_ice_cand_type	type;
+    pj_status_t		status;
+    pj_sockaddr		addr;
+    int			cand_id;
+    pj_uint16_t		local_pref;
+    pj_str_t		foundation;
+} pj_ice_st_cand;
+
+
 typedef struct pj_ice_st_comp
 {
-    unsigned		 comp_id;
-} pj_ice_st_comp;
-
-
-typedef struct pj_ice_st_interface
-{
     pj_ice_st		*ice_st;
-    pj_ice_cand_type	 type;
-    pj_status_t		 status;
     unsigned		 comp_id;
-    int			 cand_id;
-    pj_str_t		 foundation;
-    pj_uint16_t		 local_pref;
+    pj_uint32_t		 options;
     pj_sock_t		 sock;
-    pj_sockaddr		 addr;
-    pj_sockaddr		 base_addr;
+
+    pj_stun_session	*stun_sess;
+
+    pj_sockaddr		 local_addr;
+
+    unsigned		 pending_cnt;
+    pj_status_t		 last_status;
+
+    unsigned		 cand_cnt;
+    pj_ice_st_cand	 cand_list[PJ_ICE_ST_MAX_ALIASES];
+    int			 default_cand;
+
     pj_ioqueue_key_t	*key;
     pj_uint8_t		 pkt[1500];
     pj_ioqueue_op_key_t	 read_op;
     pj_ioqueue_op_key_t	 write_op;
     pj_sockaddr		 src_addr;
     int			 src_addr_len;
-    pj_stun_session	*stun_sess;
-} pj_ice_st_interface;
+
+} pj_ice_st_comp;
 
 
 struct pj_ice_st
@@ -93,54 +116,37 @@ struct pj_ice_st
     pj_ice		    *ice;
 
     unsigned		     comp_cnt;
-    unsigned		     comps[PJ_ICE_MAX_COMP];
-
-    unsigned		     itf_cnt;
-    pj_ice_st_interface	    *itfs[PJ_ICE_MAX_CAND];
+    pj_ice_st_comp	   **comp;
 
     pj_dns_resolver	    *resolver;
-    pj_bool_t		     relay_enabled;
-    pj_str_t		     stun_domain;
+    pj_bool_t		     has_resolver_job;
     pj_sockaddr_in	     stun_srv;
+    pj_sockaddr_in	     turn_srv;
 };
 
 
 PJ_DECL(pj_status_t) pj_ice_st_create(pj_stun_config *stun_cfg,
 				      const char *name,
+				      unsigned comp_cnt,
 				      void *user_data,
 				      const pj_ice_st_cb *cb,
 				      pj_ice_st **p_ice_st);
 PJ_DECL(pj_status_t) pj_ice_st_destroy(pj_ice_st *ice_st);
 
-PJ_DECL(pj_status_t) pj_ice_st_set_stun(pj_ice_st *ice_st,
-					pj_dns_resolver *resolver,
-					pj_bool_t enable_relay,
-					const pj_str_t *domain);
-PJ_DECL(pj_status_t) pj_ice_st_set_stun_addr(pj_ice_st *ice_st,
-					     pj_bool_t enable_relay,
-					     const pj_sockaddr_in *srv_addr);
+PJ_DECL(pj_status_t) pj_ice_st_set_stun_domain(pj_ice_st *ice_st,
+					       pj_dns_resolver *resolver,
+					       const pj_str_t *domain);
+PJ_DECL(pj_status_t) pj_ice_st_set_stun_srv(pj_ice_st *ice_st,
+					    const pj_sockaddr_in *stun_srv,
+					    const pj_sockaddr_in *turn_srv);
 
-PJ_DECL(pj_status_t) pj_ice_st_add_comp(pj_ice_st *ice_st,
-					unsigned comp_id);
+PJ_DECL(pj_status_t) pj_ice_st_create_comp(pj_ice_st *ice_st,
+					   unsigned comp_id,
+					   pj_uint32_t options,
+					   const pj_sockaddr_in *addr,
+				    	   unsigned *p_itf_id);
 
-PJ_DECL(pj_status_t) pj_ice_st_add_host_interface(pj_ice_st *ice_st,
-						  unsigned comp_id,
-						  pj_uint16_t local_pref,
-					          const pj_sockaddr_in *addr,
-				    		  unsigned *p_itf_id);
-PJ_DECL(pj_status_t) pj_ice_st_add_all_host_interfaces(pj_ice_st *ice_st,
-						       unsigned comp_id,
-						       unsigned port);
-PJ_DECL(pj_status_t) pj_ice_st_add_stun_interface(pj_ice_st *ice_st,
-						  unsigned comp_id,
-						  unsigned local_port,
-						  unsigned *p_itf_id);
-PJ_DECL(pj_status_t) pj_ice_st_add_relay_interface(pj_ice_st *ice_st,
-						   unsigned comp_id,
-						   unsigned local_port,
-						   pj_bool_t notify,
-						   void *notify_data);
-PJ_DECL(pj_status_t) pj_ice_st_get_interfaces_status(pj_ice_st *ice_st);
+PJ_DECL(pj_status_t) pj_ice_st_get_comps_status(pj_ice_st *ice_st);
 
 PJ_DECL(pj_status_t) pj_ice_st_init_ice(pj_ice_st *ice_st,
 					pj_ice_role role,
@@ -156,13 +162,8 @@ PJ_DECL(pj_status_t) pj_ice_st_start_ice(pj_ice_st *ice_st,
 					 const pj_ice_cand rem_cand[]);
 PJ_DECL(pj_status_t) pj_ice_st_stop_ice(pj_ice_st *ice_st);
 
-PJ_DECL(pj_status_t) pj_ice_st_send_data(pj_ice_st *ice_st,
-					 unsigned comp_id,
-					 const void *data,
-					 pj_size_t data_len);
 PJ_DECL(pj_status_t) pj_ice_st_sendto(pj_ice_st *ice_st,
 				      unsigned comp_id,
-				      unsigned itf_id,
 				      const void *data,
 				      pj_size_t data_len,
 				      const pj_sockaddr_t *dst_addr,

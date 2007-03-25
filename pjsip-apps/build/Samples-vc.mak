@@ -19,7 +19,7 @@ PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
 PJSUA_LIB_LIB = ..\..\pjsip\lib\pjsua-lib-$(TARGET)$(LIBEXT)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
-	  $(PJSIP_LIB) $(PJNATH_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) \
+	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) $(PJNATH_LIB) \
 	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
 
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
@@ -29,7 +29,7 @@ CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  -I..\..\pjmedia\include \
 	  -I..\..\pjnath/include
 LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
-	  ole32.lib user32.lib dsound.lib dxguid.lib netapi32.lib \
+	  Iphlpapi.lib ole32.lib user32.lib dsound.lib dxguid.lib netapi32.lib \
 	  mswsock.lib ws2_32.lib 
 
 SRCDIR = ..\src\samples

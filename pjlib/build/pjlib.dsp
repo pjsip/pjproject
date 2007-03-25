@@ -110,6 +110,11 @@ SOURCE=..\src\pj\ioqueue_epoll.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\ip_helper_generic.c
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\log_writer_printk.c
 # PROP Exclude_From_Build 1
 # End Source File
@@ -251,6 +256,10 @@ SOURCE=..\src\pj\ioqueue_winnt.c
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\ip_helper_win32.c
 # End Source File
 # Begin Source File
 
@@ -515,6 +524,10 @@ SOURCE=..\include\pj\hash.h
 # Begin Source File
 
 SOURCE=..\include\pj\ioqueue.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\ip_helper.h
 # End Source File
 # Begin Source File
 

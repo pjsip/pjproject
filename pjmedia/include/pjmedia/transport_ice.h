@@ -46,8 +46,16 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					pjmedia_transport **p_tp);
 PJ_DECL(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp);
 
-PJ_DECL(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp);
+PJ_DECL(pj_status_t) pjmedia_ice_start_init(pjmedia_transport *tp,
+					    unsigned options,
+					    const pj_sockaddr_in *start_addr,
+					    const pj_sockaddr_in *stun_srv,
+					    const pj_sockaddr_in *turn_srv);
+PJ_DECL(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp);
 
+PJ_DECL(pj_status_t) pjmedia_ice_get_comp(pjmedia_transport *tp,
+					  unsigned comp_id,
+					  pj_ice_st_comp *comp);
 
 PJ_DECL(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 					  pj_ice_role role,
