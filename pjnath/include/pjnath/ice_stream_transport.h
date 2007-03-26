@@ -60,9 +60,10 @@ typedef struct pj_ice_st_cb
 
 enum pj_ice_st_option
 {
-    PJ_ICE_ST_OPT_DISABLE_STUN	= 1,
-    PJ_ICE_ST_OPT_DISABLE_RELAY	= 2,
-    PJ_ICE_ST_OPT_NO_PORT_RETRY	= 4,
+    PJ_ICE_ST_OPT_DONT_ADD_CAND = 1,
+    PJ_ICE_ST_OPT_DISABLE_STUN	= 2,
+    PJ_ICE_ST_OPT_DISABLE_RELAY	= 4,
+    PJ_ICE_ST_OPT_NO_PORT_RETRY	= 8,
 };
 
 
@@ -143,8 +144,13 @@ PJ_DECL(pj_status_t) pj_ice_st_set_stun_srv(pj_ice_st *ice_st,
 PJ_DECL(pj_status_t) pj_ice_st_create_comp(pj_ice_st *ice_st,
 					   unsigned comp_id,
 					   pj_uint32_t options,
-					   const pj_sockaddr_in *addr,
-				    	   unsigned *p_itf_id);
+					   const pj_sockaddr_in *addr);
+PJ_DECL(pj_status_t) pj_ice_st_add_cand(pj_ice_st *ice_st,
+					unsigned comp_id,
+					pj_ice_cand_type type,
+					pj_uint16_t local_pref,
+					const pj_sockaddr_in *addr,
+					pj_bool_t set_default);
 
 PJ_DECL(pj_status_t) pj_ice_st_get_comps_status(pj_ice_st *ice_st);
 

@@ -18,7 +18,7 @@
  */
 #include "test.h"
 
-#define THIS_FILE   "ice.c"
+#define THIS_FILE   "ice_test.c"
 
 
 struct ice_data
@@ -43,13 +43,12 @@ static void on_ice_complete(pj_ice_st *icest,
     struct ice_data *id = (struct ice_data*) icest->user_data;
     id->complete = PJ_TRUE;
     id->err_code = status;
-    PJ_LOG(3,(THIS_FILE, "    ICE %s complete %s", id->obj_name,
+    PJ_LOG(3,(THIS_FILE, "     ICE %s complete %s", id->obj_name,
 	      (status==PJ_SUCCESS ? "successfully" : "with failure")));
 }
 
 
-static void on_rx_data(pj_ice_st *icest,
-		       unsigned comp_id, unsigned cand_id,
+static void on_rx_data(pj_ice_st *icest, unsigned comp_id, 
 		       void *pkt, pj_size_t size,
 		       const pj_sockaddr_t *src_addr,
 		       unsigned src_addr_len)
@@ -68,7 +67,6 @@ static void on_rx_data(pj_ice_st *icest,
 	pj_assert(!"Invalid component ID");
     }
 
-    PJ_UNUSED_ARG(cand_id);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 }
@@ -101,7 +99,7 @@ static int ice_basic_create_destroy_test()
     icest_cb.on_ice_complete = &on_ice_complete;
     icest_cb.on_rx_data = &on_rx_data;
 
-    status = pj_ice_st_create(&stun_cfg, NULL, NULL, &icest_cb, &im);
+    status = pj_ice_st_create(&stun_cfg, "icetest", 2, NULL, &icest_cb, &im);
     if (status != PJ_SUCCESS)
 	return -10;
 
@@ -127,6 +125,88 @@ static pj_status_t start_ice(pj_ice_st *ist, pj_ice_st *remote)
 }
 
 
+struct dummy_cand
+{
+    unsigned		 comp_id;
+    pj_ice_cand_type	 type;
+    const char		*addr;
+    unsigned		 port;
+};
+
+static int init_ice_st(pj_ice_st *ice_st,
+		       pj_bool_t add_valid_comp,
+		       unsigned dummy_cnt,
+		       struct dummy_cand cand[])
+{
+    pj_str_t a;
+    pj_status_t status;
+    unsigned i;
+
+    /* Create components */
+    for (i=0; i<ice_st->comp_cnt; ++i) {
+	status = pj_ice_st_create_comp(ice_st, i+1, PJ_ICE_ST_OPT_DONT_ADD_CAND, NULL);
+	if (status != PJ_SUCCESS)
+	    return -21;
+    }
+
+    /* Add dummy candidates */
+    for (i=0; i<dummy_cnt; ++i) {
+	pj_sockaddr_in addr;
+
+	pj_sockaddr_in_init(&addr, pj_cstr(&a, cand[i].addr), (pj_uint16_t)cand[i].port);
+	status = pj_ice_st_add_cand(ice_st, cand[i].comp_id, cand[i].type,
+				    65535, &addr, PJ_FALSE);
+	if (status != PJ_SUCCESS)
+	    return -22;
+    }
+
+    /* Add the real candidate */
+    if (add_valid_comp) {
+	for (i=0; i<ice_st->comp_cnt; ++i) {
+	    status = pj_ice_st_add_cand(ice_st, i+1, PJ_ICE_CAND_TYPE_HOST, 65535,
+					&ice_st->comp[i]->local_addr.ipv4, PJ_TRUE);
+	    if (status != PJ_SUCCESS)
+		return -23;
+	}
+    }
+
+    return 0;
+}
+
+
+/* When ICE completes, both agents should agree on the same candidate pair.
+ * Check that the remote address selected by agent1 is equal to the
+ * local address of selected by agent 2.
+ */
+static int verify_address(pj_ice_st *agent1, pj_ice_st *agent2,
+			  unsigned comp_id)
+{
+    pj_ice_cand *rcand, *lcand;
+    int lcand_id;
+
+    if (agent1->ice->comp[comp_id-1].valid_check == NULL) {
+	PJ_LOG(3,(THIS_FILE, "....error: valid_check not set for comp_id %d", comp_id));
+	return -60;
+    }
+
+    /* Get default remote candidate of agent 1 */
+    rcand = agent1->ice->comp[comp_id-1].valid_check->rcand;
+
+    /* Get default local candidate of agent 2 */
+    pj_ice_find_default_cand(agent2->ice, comp_id, &lcand_id);
+    if (lcand_id < 0)
+	return -62;
+
+    lcand = &agent2->ice->lcand[lcand_id];
+
+    if (pj_memcmp(&rcand->addr, &lcand->addr, sizeof(pj_sockaddr_in))!=0) {
+	PJ_LOG(3,(THIS_FILE, "....error: the selected addresses are incorrect for comp_id %d", comp_id));
+	return -64;
+    }
+
+    return 0;
+}
+
 
 /* Perform ICE test with the following parameters:
  *
@@ -141,25 +221,38 @@ static pj_status_t start_ice(pj_ice_st *ist, pj_ice_st *remote)
  * ICE processing.
  */
 static int perform_ice_test(const char *title,
+			    pj_bool_t expected_success,
+			    unsigned comp_cnt,
+			    pj_bool_t add_valid_comp,
 			    unsigned wait_before_send,
-			    unsigned max_total_time)
+			    unsigned max_total_time,
+			    unsigned ocand_cnt,
+			    struct dummy_cand ocand[],
+			    unsigned acand_cnt,
+			    struct dummy_cand acand[])
 {
     pj_ice_st *im1, *im2;
     pj_ice_st_cb icest_cb;
     struct ice_data *id1, *id2;
     pj_timestamp t_start, t_end;
-    pj_ice_cand *rcand;
+    unsigned i;
     pj_str_t data_from_offerer, data_from_answerer;
     pj_status_t status;
 
+#define CHECK_COMPLETE()    if (id1->complete && id2->complete) { \
+				if (t_end.u32.lo==0) pj_get_timestamp(&t_end); \
+			    } else {}
+
     PJ_LOG(3,(THIS_FILE, "...%s", title));
+
+    pj_bzero(&t_end, sizeof(t_end));
 
     pj_bzero(&icest_cb, sizeof(icest_cb));
     icest_cb.on_ice_complete = &on_ice_complete;
     icest_cb.on_rx_data = &on_rx_data;
 
     /* Create first ICE */
-    status = pj_ice_st_create(&stun_cfg, "offerer", NULL, &icest_cb, &im1);
+    status = pj_ice_st_create(&stun_cfg, "offerer", comp_cnt, NULL, &icest_cb, &im1);
     if (status != PJ_SUCCESS)
 	return -20;
 
@@ -167,18 +260,13 @@ static int perform_ice_test(const char *title,
     id1->obj_name = "offerer";
     im1->user_data = id1;
 
-    /* Add first component */
-    status = pj_ice_st_add_comp(im1, 1);
-    if (status != PJ_SUCCESS)
-	return -21;
-
-    /* Add host candidate */
-    status = pj_ice_st_add_host_interface(im1, 1, 65535, NULL, NULL);
-    if (status != PJ_SUCCESS)
-	return -21;
+    /* Init components */
+    status = init_ice_st(im1, add_valid_comp, ocand_cnt, ocand);
+    if (status != 0)
+	return status;
 
     /* Create second ICE */
-    status = pj_ice_st_create(&stun_cfg, "answerer", NULL, &icest_cb, &im2);
+    status = pj_ice_st_create(&stun_cfg, "answerer", comp_cnt, NULL, &icest_cb, &im2);
     if (status != PJ_SUCCESS)
 	return -25;
 
@@ -186,15 +274,11 @@ static int perform_ice_test(const char *title,
     id2->obj_name = "answerer";
     im2->user_data = id2;
 
-    /* Add first component */
-    status = pj_ice_st_add_comp(im2, 1);
-    if (status != PJ_SUCCESS)
-	return -26;
+    /* Init components */
+    status = init_ice_st(im2, add_valid_comp, acand_cnt, acand);
+    if (status != 0)
+	return status;
 
-    /* Add host candidate */
-    status = pj_ice_st_add_host_interface(im2, 1, 65535, NULL, NULL);
-    if (status != PJ_SUCCESS)
-	return -27;
 
     /* Init ICE on im1 */
     status = pj_ice_st_init_ice(im1, PJ_ICE_ROLE_CONTROLLING, NULL, NULL);
@@ -216,40 +300,47 @@ static int perform_ice_test(const char *title,
     if (status != PJ_SUCCESS)
 	return -35;
 
+    /* Apply delay to let other checks commence */
+    pj_thread_sleep(40);
+
     /* Mark start time */
     pj_get_timestamp(&t_start);
 
     /* Poll for wait_before_send msecs before we send the first data */
-    for (;;) {
-	pj_timestamp t_now;
+    if (expected_success) {
+	for (;;) {
+	    pj_timestamp t_now;
 
-	handle_events(1);
+	    handle_events(1);
 
-	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_start, &t_now) >= wait_before_send)
-	    break;
+	    CHECK_COMPLETE();
+
+	    pj_get_timestamp(&t_now);
+	    if (pj_elapsed_msec(&t_start, &t_now) >= wait_before_send)
+		break;
+	}
+
+	/* Send data. It must be successful! */
+	data_from_offerer = pj_str("from offerer");
+	status = pj_ice_send_data(im1->ice, 1, data_from_offerer.ptr, data_from_offerer.slen);
+	if (status != PJ_SUCCESS)
+	    return -47;
+
+	data_from_answerer = pj_str("from answerer");
+	status = pj_ice_send_data(im2->ice, 1, data_from_answerer.ptr, data_from_answerer.slen);
+	if (status != PJ_SUCCESS)
+	    return -48;
+
+	/* Poll to allow data to be received */
+	for (;;) {
+	    pj_timestamp t_now;
+	    handle_events(1);
+	    CHECK_COMPLETE();
+	    pj_get_timestamp(&t_now);
+	    if (pj_elapsed_msec(&t_start, &t_now) >= (wait_before_send + 200))
+		break;
+	}
     }
-
-    /* Send data. It must be successful! */
-    data_from_offerer = pj_str("from offerer");
-    status = pj_ice_send_data(im1->ice, 1, data_from_offerer.ptr, data_from_offerer.slen);
-    if (status != PJ_SUCCESS)
-	return -47;
-
-    data_from_answerer = pj_str("from answerer");
-    status = pj_ice_send_data(im2->ice, 1, data_from_answerer.ptr, data_from_answerer.slen);
-    if (status != PJ_SUCCESS)
-	return -48;
-
-    /* Poll to allow data to be received */
-    for (;;) {
-	pj_timestamp t_now;
-	handle_events(1);
-	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_start, &t_now) >= (wait_before_send + 200))
-	    break;
-    }
-
 
     /* Just wait until both completes, or timed out */
     while (!id1->complete || !id2->complete) {
@@ -257,6 +348,7 @@ static int perform_ice_test(const char *title,
 
 	handle_events(1);
 
+	CHECK_COMPLETE();
 	pj_get_timestamp(&t_now);
 	if (pj_elapsed_msec(&t_start, &t_now) >= max_total_time) {
 	    PJ_LOG(3,(THIS_FILE, "....error: timed-out"));
@@ -265,7 +357,17 @@ static int perform_ice_test(const char *title,
     }
 
     /* Mark end-time */
-    pj_get_timestamp(&t_end);
+    CHECK_COMPLETE();
+
+    /* If expected to fail, then just check that both fail */
+    if (!expected_success) {
+	/* Check status */
+	if (id1->err_code == PJ_SUCCESS)
+	    return -51;
+	if (id2->err_code == PJ_SUCCESS)
+	    return -52;
+	goto on_return;
+    }
 
     /* Check status */
     if (id1->err_code != PJ_SUCCESS)
@@ -274,17 +376,17 @@ static int perform_ice_test(const char *title,
 	return -56;
 
     /* Verify that offerer gets answerer's transport address */
-    rcand = im1->ice->clist.checks[im1->ice->comp[0].nominated_check_id].rcand;
-    if (pj_memcmp(&rcand->addr, &im2->ice->lcand[0].addr, sizeof(pj_sockaddr_in))!=0) {
-	PJ_LOG(3,(THIS_FILE, "....error: address mismatch"));
-	return -60;
+    for (i=0; i<comp_cnt; ++i) {
+	status = verify_address(im1, im2, i+1);
+	if (status != 0)
+	    return status;
     }
 
     /* And the other way around */
-    rcand = im2->ice->clist.checks[im2->ice->comp[0].nominated_check_id].rcand;
-    if (pj_memcmp(&rcand->addr, &im1->ice->lcand[0].addr, sizeof(pj_sockaddr_in))!=0) {
-	PJ_LOG(3,(THIS_FILE, "....error: address mismatch"));
-	return -70;
+    for (i=0; i<comp_cnt; ++i) {
+	status = verify_address(im2, im1, i+1);
+	if (status != 0)
+	    return status;
     }
 
     /* Check that data is received in offerer */
@@ -308,12 +410,13 @@ static int perform_ice_test(const char *title,
     }
 
 
+on_return:
+
     /* Done */
-    PJ_LOG(3,(THIS_FILE, "....success: ICE completed in %d msec", 
+    PJ_LOG(3,(THIS_FILE, "....success: ICE completed in %d msec, waiting..", 
 	      pj_elapsed_msec(&t_start, &t_end)));
 
     /* Wait for some more time */
-    PJ_LOG(3,(THIS_FILE, ".....waiting.."));
     for (;;) {
 	pj_timestamp t_now;
 
@@ -327,6 +430,7 @@ static int perform_ice_test(const char *title,
 
     pj_ice_st_destroy(im1);
     pj_ice_st_destroy(im2);
+    handle_events(100);
     return 0;
 }
 
@@ -337,6 +441,17 @@ int ice_test(void)
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_timer_heap_t *timer_heap;
+    enum { D1=500, D2=5000, D3=15000 };
+    struct dummy_cand ocand[] = 
+    {
+	{1, PJ_ICE_CAND_TYPE_SRFLX, "127.1.1.1", 65534 },
+	{2, PJ_ICE_CAND_TYPE_SRFLX, "127.1.1.1", 65535 },
+    };
+    struct dummy_cand acand[] =
+    {
+	{1, PJ_ICE_CAND_TYPE_SRFLX, "127.2.2.2", 65534 },
+	{2, PJ_ICE_CAND_TYPE_SRFLX, "127.2.2.2", 65535 },
+    };
 
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     pj_ioqueue_create(pool, 12, &ioqueue);
@@ -344,7 +459,7 @@ int ice_test(void)
     
     pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
 
-    pj_log_set_level(5);
+    //pj_log_set_level(4);
 
     /* Basic create/destroy */
     rc = ice_basic_create_destroy_test();
@@ -352,24 +467,41 @@ int ice_test(void)
 	goto on_return;
 
     /* Direct communication */
-    rc = perform_ice_test("Direct connection", 500, 1000);
+    rc = perform_ice_test("Simple test (1 component)", PJ_TRUE, 1, PJ_TRUE, D1, D2, 0, NULL, 0, NULL);
+    if (rc != 0)
+	goto on_return;
+
+    /* Failure case (all checks fail) */
+    rc = perform_ice_test("Failure case (all checks fail)", PJ_FALSE, 1, PJ_FALSE, D3, D3, 1, ocand, 1, acand);
     if (rc != 0)
 	goto on_return;
 
     /* Direct communication with invalid address */
-    rc = perform_ice_test("Direct connection with 1 invalid address", 500, 1000);
+    rc = perform_ice_test("With 1 unreachable address", PJ_TRUE, 1, PJ_TRUE, D1, D2, 1, ocand, 0, NULL);
+    if (rc != 0)
+	goto on_return;
+
+    /* Direct communication with invalid address */
+    rc = perform_ice_test("With 2 unreachable addresses (one each)", PJ_TRUE, 1, PJ_TRUE, D1, D2, 1, ocand, 1, acand);
     if (rc != 0)
 	goto on_return;
 
     /* Direct communication with two components */
-    rc = perform_ice_test("Direct connection with two components", 500, 1000);
+    rc = perform_ice_test("With two components (RTP and RTCP)", PJ_TRUE, 2, PJ_TRUE, D1, D2, 0, NULL, 0, NULL);
+    if (rc != 0)
+	goto on_return;
+
+    /* Direct communication with mismatch number of components */
+
+    /* Direct communication with 2 components and 2 invalid address */
+    rc = perform_ice_test("With 2 two components and 2 unreachable address", PJ_TRUE, 2, PJ_TRUE, D1, D2, 1, ocand, 1, acand);
     if (rc != 0)
 	goto on_return;
 
 
 
 on_return:
-    pj_log_set_level(3);
+    //pj_log_set_level(3);
     pj_ioqueue_destroy(stun_cfg.ioqueue);
     pj_pool_release(pool);
     return rc;

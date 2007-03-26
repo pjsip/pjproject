@@ -563,7 +563,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	pj_ice_st_comp comp;
 	int next_port;
 
-	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, 1,
+	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, 2,
 				    &pjsua_var.stun_cfg, 
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {

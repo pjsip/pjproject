@@ -153,20 +153,19 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 					    const pj_sockaddr_in *turn_srv)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    unsigned comp_id;
     pj_status_t status;
 
     status = pj_ice_st_set_stun_srv(tp_ice->ice_st, stun_srv, turn_srv);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_ice_st_create_comp(tp_ice->ice_st, 1, options, start_addr, 
-				   &comp_id);
+    status = pj_ice_st_create_comp(tp_ice->ice_st, 1, options, start_addr);
     if (status != PJ_SUCCESS)
 	return status;
 
     if (tp_ice->ice_st->comp_cnt > 1) {
 	pj_sockaddr_in addr;
+	pj_uint16_t port;
 
 	pj_memcpy(&addr, &tp_ice->ice_st->comp[0]->local_addr.ipv4,
 		  sizeof(pj_sockaddr_in));
@@ -175,9 +174,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 	else
 	    addr.sin_addr.s_addr = 0;
 
-	addr.sin_port = (pj_uint16_t)(pj_ntohs(addr.sin_port)+1);
-	status = pj_ice_st_create_comp(tp_ice->ice_st, 2, options, 
-				       &addr, &comp_id);
+	port = pj_ntohs(addr.sin_port);
+	++port;
+	addr.sin_port = pj_htons(port);
+	status = pj_ice_st_create_comp(tp_ice->ice_st, 2, options, &addr);
 	if (status != PJ_SUCCESS)
 	    return status;
     }
@@ -481,7 +481,7 @@ static pj_status_t tp_get_info(pjmedia_transport *tp,
 	comp = ice_st->comp[1];
 	pj_assert(comp->default_cand >= 0);
 	info->rtp_sock = comp->sock;
-	pj_memcpy(&info->rtp_addr_name, 
+	pj_memcpy(&info->rtcp_addr_name, 
 		  &comp->cand_list[comp->default_cand].addr,
 		  sizeof(pj_sockaddr_in));
     }

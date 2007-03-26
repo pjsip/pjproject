@@ -677,6 +677,31 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     return status;
 }
 
+/*
+ * Cancel outgoing STUN transaction. 
+ */
+PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
+						pj_stun_tx_data *tdata,
+						pj_bool_t notify,
+						pj_status_t notify_status)
+{
+    PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(!notify || notify_status!=PJ_SUCCESS, PJ_EINVAL);
+    PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
+
+    pj_mutex_lock(sess->mutex);
+
+    if (notify) {
+	(sess->cb.on_request_complete)(sess, notify_status, tdata, NULL);
+    }
+
+    /* Just destroy tdata. This will destroy the transaction as well */
+    pj_stun_msg_destroy_tdata(sess, tdata);
+
+    pj_mutex_unlock(sess->mutex);
+    return PJ_SUCCESS;
+
+}
 
 /* Send response */
 static pj_status_t send_response(pj_stun_session *sess, 

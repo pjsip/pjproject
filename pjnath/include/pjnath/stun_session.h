@@ -318,6 +318,26 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
 					      pj_stun_tx_data *tdata);
 
 /**
+ * Cancel outgoing STUN transaction. This operation is only valid for outgoing
+ * STUN request, to cease retransmission of the request and destroy the
+ * STUN client transaction that is used to send the request.
+ *
+ * @param sess	    The STUN session instance.
+ * @param tdata	    The request message previously sent.
+ * @param notify    Specify whether \a on_request_complete() callback should
+ *		    be called.
+ * @param status    If \a on_request_complete() callback is to be called,
+ *		    specify the error status to be given when calling the
+ *		    callback. This error status MUST NOT be PJ_SUCCESS.
+ *
+ * @return	    PJ_SUCCESS if transaction is successfully cancelled.
+ */
+PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
+						pj_stun_tx_data *tdata,
+						pj_bool_t notify,
+						pj_status_t status);
+
+/**
  * Application must call this function to notify the STUN session about
  * the arrival of STUN packet. The STUN packet MUST have been checked
  * first with #pj_stun_msg_check() to verify that this is indeed a valid

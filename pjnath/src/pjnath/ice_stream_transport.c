@@ -60,14 +60,18 @@ static void stun_on_request_complete(pj_stun_session *sess,
 				     const pj_stun_msg *response);
 
 /* Utility: print error */
+#if PJ_LOG_MAX_LEVEL >= 3
 static void ice_st_perror(pj_ice_st *ice_st, const char *title, 
 			  pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
 
     pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(1,(ice_st->obj_name, "%s: %s", title, errmsg));
+    PJ_LOG(3,(ice_st->obj_name, "%s: %s", title, errmsg));
 }
+#else
+#   define ice_st_perror(ice_st, title, status)
+#endif
 
 
 /* Get the prefix for the foundation */
@@ -224,6 +228,44 @@ static pj_str_t calc_foundation(pj_pool_t *pool,
     return result;
 }
 
+/* Add new candidate */
+static pj_status_t add_cand( pj_ice_st *ice_st,
+			     pj_ice_st_comp *comp,
+			     unsigned comp_id,
+			     pj_ice_cand_type type,
+			     pj_uint16_t local_pref,
+			     const pj_sockaddr_in *addr,
+			     pj_bool_t set_default)
+{
+    pj_ice_st_cand *cand;
+
+    PJ_ASSERT_RETURN(ice_st && comp && addr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(comp->cand_cnt < PJ_ICE_ST_MAX_ALIASES, PJ_ETOOMANY);
+
+    cand = &comp->cand_list[comp->cand_cnt];
+
+    pj_bzero(cand, sizeof(*cand));
+    cand->type = type;
+    cand->status = PJ_SUCCESS;
+    pj_memcpy(&cand->addr, addr, sizeof(pj_sockaddr_in));
+    cand->cand_id = -1;
+    cand->local_pref = local_pref;
+    cand->foundation = calc_foundation(ice_st->pool, type, &addr->sin_addr);
+
+    if (set_default) 
+	comp->default_cand = comp->cand_cnt;
+
+    PJ_LOG(5,(ice_st->obj_name, 
+	      "Candidate %s:%d (type=%s) added to component %d",
+	      pj_inet_ntoa(addr->sin_addr),
+	      (int)pj_ntohs(addr->sin_port), 
+	      pj_ice_get_cand_type_name(type),
+	      comp_id));
+    
+    comp->cand_cnt++;
+    return PJ_SUCCESS;
+}
+
 /*  Create new component (i.e. socket)  */
 static pj_status_t create_component(pj_ice_st *ice_st,
 				    unsigned comp_id,
@@ -300,7 +342,9 @@ static pj_status_t create_component(pj_ice_st *ice_st,
      * to a specific interface, then only add that specific interface to
      * cand_list.
      */
-    if (comp->local_addr.ipv4.sin_addr.s_addr == 0) {
+    if (((options & PJ_ICE_ST_OPT_DONT_ADD_CAND)==0) &&
+	comp->local_addr.ipv4.sin_addr.s_addr == 0) 
+    {
 	/* Socket is bound to INADDR_ANY */
 	unsigned i, ifs_cnt;
 	pj_in_addr ifs[PJ_ICE_ST_MAX_ALIASES-2];
@@ -317,64 +361,62 @@ static pj_status_t create_component(pj_ice_st *ice_st,
 	/* Set default IP interface as the base address */
 	status = pj_gethostip(&comp->local_addr.ipv4.sin_addr);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
 
 	/* Add candidate entry for each interface */
 	for (i=0; i<ifs_cnt; ++i) {
-	    pj_ice_st_cand *cand = &comp->cand_list[i];
+	    pj_sockaddr_in cand_addr;
+	    pj_bool_t set_default;
 
-	    cand->type = PJ_ICE_CAND_TYPE_HOST;
-	    cand->status = PJ_SUCCESS;
-	    pj_memcpy(&cand->addr, &comp->local_addr, sizeof(pj_sockaddr_in));
-	    cand->addr.ipv4.sin_addr.s_addr = ifs[i].s_addr;
-	    cand->cand_id = -1;
-	    cand->local_pref = 65535;
-	    cand->foundation = calc_foundation(ice_st->pool, 
-					     PJ_ICE_CAND_TYPE_HOST,
-					     &cand->addr.ipv4.sin_addr);
+	    /* Ignore 127.0.0.0/24 address */
+	    if ((pj_ntohl(ifs[i].s_addr) >> 24)==127)
+		continue;
+
+	    pj_memcpy(&cand_addr, &comp->local_addr, sizeof(pj_sockaddr_in));
+	    cand_addr.sin_addr.s_addr = ifs[i].s_addr;
+
 
 	    /* If the IP address is equal to local address, assign it
 	     * as default candidate.
 	     */
-	    if (cand->addr.ipv4.sin_addr.s_addr ==
-		comp->local_addr.ipv4.sin_addr.s_addr)
-	    {
-		comp->default_cand = i;
+	    if (ifs[i].s_addr == comp->local_addr.ipv4.sin_addr.s_addr) {
+		set_default = PJ_TRUE;
+	    } else {
+		set_default = PJ_FALSE;
 	    }
 
-	    PJ_LOG(5,(ice_st->obj_name, 
-		      "Interface %s:%d added to component %d",
-		      pj_inet_ntoa(cand->addr.ipv4.sin_addr),
-		      (int)pj_ntohs(cand->addr.ipv4.sin_port), comp_id));
+	    status = add_cand(ice_st, comp, comp_id, 
+			      PJ_ICE_CAND_TYPE_HOST, 
+			      (pj_uint16_t)(65535-i), &cand_addr,
+			      set_default);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
 	}
-	comp->cand_cnt = ifs_cnt;
 
 
-    } else {
+    } else if ((options & PJ_ICE_ST_OPT_DONT_ADD_CAND)==0) {
 	/* Socket is bound to specific address. 
 	 * In this case only add that address as a single entry in the
 	 * cand_list table.
 	 */
-	pj_ice_st_cand *cand = &comp->cand_list[0];
+	status = add_cand(ice_st, comp, comp_id, 
+			  PJ_ICE_CAND_TYPE_HOST, 
+			  65535, &comp->local_addr.ipv4,
+			  PJ_TRUE);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
 
-	cand->type = PJ_ICE_CAND_TYPE_HOST;
-	cand->status = PJ_SUCCESS;
-	pj_memcpy(&cand->addr, &comp->local_addr, sizeof(pj_sockaddr_in));
-	cand->cand_id = -1;
-	cand->local_pref = 65535;
-	cand->foundation = calc_foundation(ice_st->pool, 
-					 PJ_ICE_CAND_TYPE_HOST,
-					 &cand->addr.ipv4.sin_addr);
-
-	comp->cand_cnt = 1;
-	comp->default_cand = 0;
-
-	PJ_LOG(5,(ice_st->obj_name, 
-		  "Interface %s:%d added to component %d",
-		  pj_inet_ntoa(cand->addr.ipv4.sin_addr),
-		  (int)pj_ntohs(cand->addr.ipv4.sin_port), comp_id));
-
+    } else if (options & PJ_ICE_ST_OPT_DONT_ADD_CAND) {
+	/* If application doesn't want to add candidate, just fix local_addr
+	 * in case its value is zero.
+	 */
+	if (comp->local_addr.ipv4.sin_addr.s_addr == 0) {
+	    status = pj_gethostip(&comp->local_addr.ipv4.sin_addr);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
     }
+
 
     /* Done */
     if (p_comp)
@@ -568,8 +610,7 @@ static pj_status_t get_stun_mapped_addr(pj_ice_st *ice_st,
 PJ_DEF(pj_status_t) pj_ice_st_create_comp(pj_ice_st *ice_st,
 					  unsigned comp_id,
 					  pj_uint32_t options,
-					  const pj_sockaddr_in *addr,
-				    	  unsigned *p_itf_id)
+					  const pj_sockaddr_in *addr)
 {
     pj_ice_st_comp *comp;
     pj_status_t status;
@@ -601,12 +642,29 @@ PJ_DEF(pj_status_t) pj_ice_st_create_comp(pj_ice_st *ice_st,
     }
 
     /* Store this component */
-    if (p_itf_id)
-	*p_itf_id = ice_st->comp_cnt;
-
     ice_st->comp[comp_id-1] = comp;
 
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pj_ice_st_add_cand( pj_ice_st *ice_st,
+					unsigned comp_id,
+					pj_ice_cand_type type,
+					pj_uint16_t local_pref,
+					const pj_sockaddr_in *addr,
+					pj_bool_t set_default)
+{
+    pj_ice_st_comp *comp;
+
+
+    PJ_ASSERT_RETURN(ice_st && comp_id && addr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(comp_id <= ice_st->comp_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->comp[comp_id-1] != NULL, PJ_EINVALIDOP);
+
+    comp = ice_st->comp[comp_id-1];
+    return add_cand(ice_st, comp, comp_id, type, local_pref, addr, 
+		    set_default);
 }
 
 
@@ -651,6 +709,8 @@ PJ_DEF(pj_status_t) pj_ice_st_init_ice(pj_ice_st *ice_st,
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
     /* Must not have ICE */
     PJ_ASSERT_RETURN(ice_st->ice == NULL, PJ_EINVALIDOP);
+    /* Components must have been created */
+    PJ_ASSERT_RETURN(ice_st->comp[0] != NULL, PJ_EINVALIDOP);
 
     /* Init callback */
     pj_bzero(&ice_cb, sizeof(ice_cb));

@@ -68,7 +68,7 @@ enum pj_ice_type_pref
 };
 
 typedef struct pj_ice pj_ice;
-
+typedef struct pj_ice_check pj_ice_check;
 
 #define PJ_ICE_MAX_CAND	    16
 #define PJ_ICE_MAX_COMP	    8
@@ -80,8 +80,7 @@ typedef struct pj_ice pj_ice;
  */
 typedef struct pj_ice_comp
 {
-    unsigned	     comp_id;
-    int		     nominated_check_id;
+    pj_ice_check	*valid_check;
 } pj_ice_comp;
 
 
@@ -110,16 +109,17 @@ typedef enum pj_ice_check_state
 } pj_ice_check_state;
 
 
-typedef struct pj_ice_check
+struct pj_ice_check
 {
     pj_ice_cand		*lcand;
     pj_ice_cand		*rcand;
 
     pj_uint64_t		 prio;
     pj_ice_check_state	 state;
+    pj_stun_tx_data	*tdata;
     pj_bool_t		 nominated;
     pj_status_t		 err_code;
-} pj_ice_check;
+};
 
 
 typedef enum pj_ice_checklist_state
@@ -205,6 +205,8 @@ struct pj_ice
     /* Valid list */
     pj_ice_checklist	 valid_list;
 };
+
+PJ_DECL(const char*) pj_ice_get_cand_type_name(pj_ice_cand_type type);
 
 
 PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
