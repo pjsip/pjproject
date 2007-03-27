@@ -533,11 +533,12 @@ PJ_DEF(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
 	}
     }
 
-    /* If there's no relayed candidate, find server reflexive candidate */
+    /* If there's no relayed candidate, find reflexive candidate */
     for (i=0; i<ice->lcand_cnt; ++i) {
 	pj_ice_cand *lcand = &ice->lcand[i];
 	if (lcand->comp_id==comp_id &&
-	    lcand->type == PJ_ICE_CAND_TYPE_SRFLX) 
+	    (lcand->type == PJ_ICE_CAND_TYPE_SRFLX ||
+	     lcand->type == PJ_ICE_CAND_TYPE_PRFLX)) 
 	{
 	    *cand_id = GET_LCAND_ID(lcand);
 	    pj_mutex_unlock(ice->mutex);
@@ -797,7 +798,9 @@ static void on_ice_complete(pj_ice *ice, pj_status_t status)
 	dump_checklist("Valid list", ice, &ice->valid_list);
 
 	/* Call callback */
-	(*ice->cb.on_ice_complete)(ice, status);
+	if (ice->cb.on_ice_complete) {
+	    (*ice->cb.on_ice_complete)(ice, status);
+	}
     }
 }
 

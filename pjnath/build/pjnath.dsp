@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD CPP /nologo /MD /W4 /GX /O1 /Ob2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
-# SUBTRACT CPP /Z<none> /YX
+# SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -151,10 +151,6 @@ SOURCE=..\include\pjnath\stun_config.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\stun_doc.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjnath\stun_msg.h
 # End Source File
 # Begin Source File
@@ -164,10 +160,6 @@ SOURCE=..\include\pjnath\stun_session.h
 # Begin Source File
 
 SOURCE=..\include\pjnath\stun_transaction.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjnath\turn_client.h
 # End Source File
 # Begin Source File
 

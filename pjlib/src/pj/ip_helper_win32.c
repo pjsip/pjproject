@@ -62,11 +62,14 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 
     /* Now fill out the entries */
     count = (pTab->dwNumEntries < *p_cnt) ? pTab->dwNumEntries : *p_cnt;
+    *p_cnt = 0;
     for (i=0; i<count; ++i) {
-	ifs[i].s_addr = pTab->table[i].dwAddr;
+	/* Some Windows returns 0.0.0.0! */
+	if (pTab->table[i].dwAddr == 0)
+	    continue;
+	ifs[*p_cnt].s_addr = pTab->table[i].dwAddr;
+	(*p_cnt)++;
     }
-
-    *p_cnt = count;
 
     return PJ_SUCCESS;
 

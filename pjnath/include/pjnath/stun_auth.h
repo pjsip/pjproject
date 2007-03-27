@@ -33,6 +33,7 @@ PJ_BEGIN_DECL
 /* **************************************************************************/
 /**
  * @defgroup PJNATH_STUN_AUTH STUN Authentication
+ * @brief STUN authentication helper
  * @ingroup PJNATH_STUN
  * @{
  */
@@ -298,8 +299,15 @@ PJ_DECL(pj_status_t) pj_stun_verify_credential(const pj_uint8_t *pkt,
  */
 
 
-/* Calculate HMAC-SHA1 key for long term credential, by getting
+/**
+ * Calculate HMAC-SHA1 key for long term credential, by getting
  * MD5 digest of username, realm, and password. 
+ *
+ * @param digest    The buffer for the digest.
+ * @param realm	    The realm of the credential, if long term credential
+ *		    is to be used.
+ * @param username  The username.
+ * @param passwd    The clear text password.
  */
 void pj_stun_calc_md5_key(pj_uint8_t digest[16],
 			  const pj_str_t *realm,

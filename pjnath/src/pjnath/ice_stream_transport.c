@@ -194,7 +194,7 @@ PJ_DEF(pj_status_t) pj_ice_st_set_stun_srv( pj_ice_st *ice_st,
 {
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
     /* Must not have pending resolver job */
-    PJ_ASSERT_RETURN(ice_st->has_resolver_job==PJ_FALSE, PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(ice_st->has_rjob==PJ_FALSE, PJ_EINVALIDOP);
 
     if (stun_srv) {
 	pj_memcpy(&ice_st->stun_srv, stun_srv, sizeof(pj_sockaddr_in));
@@ -240,7 +240,7 @@ static pj_status_t add_cand( pj_ice_st *ice_st,
     pj_ice_st_cand *cand;
 
     PJ_ASSERT_RETURN(ice_st && comp && addr, PJ_EINVAL);
-    PJ_ASSERT_RETURN(comp->cand_cnt < PJ_ICE_ST_MAX_ALIASES, PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(comp->cand_cnt < PJ_ICE_ST_MAX_CAND, PJ_ETOOMANY);
 
     cand = &comp->cand_list[comp->cand_cnt];
 
@@ -248,7 +248,7 @@ static pj_status_t add_cand( pj_ice_st *ice_st,
     cand->type = type;
     cand->status = PJ_SUCCESS;
     pj_memcpy(&cand->addr, addr, sizeof(pj_sockaddr_in));
-    cand->cand_id = -1;
+    cand->ice_cand_id = -1;
     cand->local_pref = local_pref;
     cand->foundation = calc_foundation(ice_st->pool, type, &addr->sin_addr);
 
@@ -347,7 +347,7 @@ static pj_status_t create_component(pj_ice_st *ice_st,
     {
 	/* Socket is bound to INADDR_ANY */
 	unsigned i, ifs_cnt;
-	pj_in_addr ifs[PJ_ICE_ST_MAX_ALIASES-2];
+	pj_in_addr ifs[PJ_ICE_ST_MAX_CAND-2];
 
 	/* Reset default candidate */
 	comp->default_cand = -1;
@@ -473,7 +473,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	if (ice_st->ice) {
 	    PJ_TODO(DISTINGUISH_BETWEEN_LOCAL_AND_RELAY);
 	    status = pj_ice_on_rx_pkt(ice_st->ice, comp->comp_id, 
-				      comp->cand_list[0].cand_id,
+				      comp->cand_list[0].ice_cand_id,
 				      comp->pkt, bytes_read,
 				      &comp->src_addr, comp->src_addr_len);
 	} else if (comp->stun_sess) {
@@ -549,7 +549,7 @@ static pj_status_t get_stun_mapped_addr(pj_ice_st *ice_st,
     PJ_ASSERT_RETURN(ice_st && comp, PJ_EINVAL);
     
     /* Bail out if STUN server is still being resolved */
-    if (ice_st->has_resolver_job)
+    if (ice_st->has_rjob)
 	return PJ_EBUSY;
 
     /* Just return (successfully) if STUN server is not configured */
@@ -590,7 +590,7 @@ static pj_status_t get_stun_mapped_addr(pj_ice_st *ice_st,
     /* Add new alias to this component */
     cand->type = PJ_ICE_CAND_TYPE_SRFLX;
     cand->status = PJ_EPENDING;
-    cand->cand_id = -1;
+    cand->ice_cand_id = -1;
     cand->local_pref = 65535;
     cand->foundation = calc_foundation(ice_st->pool, PJ_ICE_CAND_TYPE_SRFLX,
 				       &comp->local_addr.ipv4.sin_addr);
@@ -625,7 +625,7 @@ PJ_DEF(pj_status_t) pj_ice_st_create_comp(pj_ice_st *ice_st,
     PJ_ASSERT_RETURN(ice_st->ice == NULL, PJ_EBUSY);
     
     /* Can't add new component while resolver is running */
-    PJ_ASSERT_RETURN(ice_st->has_resolver_job == PJ_FALSE, PJ_EBUSY);
+    PJ_ASSERT_RETURN(ice_st->has_rjob == PJ_FALSE, PJ_EBUSY);
 
 
     /* Create component */
@@ -748,7 +748,7 @@ PJ_DEF(pj_status_t) pj_ice_st_init_ice(pj_ice_st *ice_st,
 				     cand->local_pref, &cand->foundation,
 				     &cand->addr, &comp->local_addr, NULL, 
 				     sizeof(pj_sockaddr_in), 
-				     (unsigned*)&cand->cand_id);
+				     (unsigned*)&cand->ice_cand_id);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}
@@ -827,7 +827,7 @@ PJ_DECL(pj_status_t) pj_ice_st_stop_ice(pj_ice_st *ice_st)
     for (i=0; i<ice_st->comp_cnt; ++i) {
 	unsigned j;
 	for (j=0; j<ice_st->comp[i]->cand_cnt; ++j) {
-	    ice_st->comp[i]->cand_list[j].cand_id = -1;
+	    ice_st->comp[i]->cand_list[j].ice_cand_id = -1;
 	}
     }
 
@@ -858,6 +858,13 @@ PJ_DEF(pj_status_t) pj_ice_st_sendto( pj_ice_st *ice_st,
 	return pj_ice_send_data(ice_st->ice, comp_id, data, data_len);
     }
 
+#if 1
+    PJ_UNUSED_ARG(pkt_size);
+    PJ_UNUSED_ARG(status);
+
+    /* Otherwise return error */
+    return PJNATH_EICEINPROGRESS;
+#else
     /* Otherwise send direcly with the socket */
     pkt_size = data_len;
     status = pj_ioqueue_sendto(comp->key, &comp->write_op, 
@@ -865,6 +872,7 @@ PJ_DEF(pj_status_t) pj_ice_st_sendto( pj_ice_st *ice_st,
 			       dst_addr, dst_addr_len);
     
     return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
+#endif
 }
 
 /*

@@ -41,54 +41,6 @@ PJ_BEGIN_DECL
 
 
 /**
- * The default initial STUN round-trip time estimation (the RTO value
- * in RFC 3489-bis), in miliseconds. 
- * This value is used to control the STUN request 
- * retransmit time. The initial value of retransmission interval 
- * would be set to this value, and will be doubled after each
- * retransmission.
- */
-#ifndef PJ_STUN_RTO_VALUE
-#   define PJ_STUN_RTO_VALUE		    100
-#endif
-
-
-/**
- * The STUN transaction timeout value, in miliseconds.
- * After the last retransmission is sent and if no response is received 
- * after this time, the STUN transaction will be considered to have failed.
- *
- * The default value is 1600 miliseconds (as per RFC 3489-bis).
- */
-#ifndef PJ_STUN_TIMEOUT_VALUE
-#   define PJ_STUN_TIMEOUT_VALUE	    1600
-#endif
-
-
-/**
- * Maximum number of STUN retransmission count.
- *
- * Default: 7 (as per RFC 3489-bis)
- */
-#ifndef PJ_STUN_MAX_RETRANSMIT_COUNT
-#   define PJ_STUN_MAX_RETRANSMIT_COUNT	    7
-#endif
-
-
-/**
- * Maximum size of STUN message.
- */
-#ifndef PJ_STUN_MAX_PKT_LEN
-#   define PJ_STUN_MAX_PKT_LEN		    512
-#endif
-
-
-/**
- * Default STUN port as defined by RFC 3489.
- */
-#define PJ_STUN_PORT			    3478
-
-/**
  * STUN magic cookie.
  */
 #define PJ_STUN_MAGIC			    0x2112A442

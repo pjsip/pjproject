@@ -19,6 +19,11 @@
 #ifndef __PJNATH_STUN_SESSION_H__
 #define __PJNATH_STUN_SESSION_H__
 
+/**
+ * @file stun_session.h
+ * @brief STUN session management for client/server.
+ */
+
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_auth.h>
 #include <pjnath/stun_config.h>
@@ -187,6 +192,7 @@ PJ_DECL(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess);
  * be retrieved later with pj_stun_session_get_user_data() function.
  *
  * @param sess	    The STUN session instance.
+ * @param user_data The user data.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -351,15 +357,17 @@ PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
  * On successful message processing, application will be notified about
  * the message via one of the pj_stun_session_cb callback.
  *
- * @param sess	     The STUN session instance.
- * @param packet     The packet containing STUN message.
- * @param pkt_size   Size of the packet.
- * @param options    Options, from #pj_stun_decode_options.
- * @param parsed_len Optional pointer to receive the size of the parsed
- *		     STUN message (useful if packet is received via a
- *		     stream oriented protocol).
+ * @param sess		The STUN session instance.
+ * @param packet	The packet containing STUN message.
+ * @param pkt_size	Size of the packet.
+ * @param options	Options, from #pj_stun_decode_options.
+ * @param parsed_len	Optional pointer to receive the size of the parsed
+ *			STUN message (useful if packet is received via a
+ *			stream oriented protocol).
+ * @param src_addr	The source address of the packet.
+ * @param src_addr_len	Length of the source address.
  *
- * @return	     PJ_SUCCESS on success, or the appropriate error code.
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					       const void *packet,

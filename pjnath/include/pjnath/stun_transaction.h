@@ -191,13 +191,7 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  * with a final response later to allow the transaction to complete.
  *
  * @param tsx		The STUN client transaction instance.
- * @param packet	The incoming packet.
- * @param pkt_size	Size of the incoming packet.
- * @param parsed_len	Optional pointer to receive the number of bytes
- *			that have been parsed from the incoming packet
- *			for the STUN message. This is useful if the
- *			STUN transaction is running over stream oriented
- *			socket such as TCP or TLS.
+ * @param msg		The incoming STUN message.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */

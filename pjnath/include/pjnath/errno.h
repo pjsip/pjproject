@@ -19,12 +19,16 @@
 #ifndef __PJNATH_ERRNO_H__
 #define __PJNATH_ERRNO_H__
 
+/**
+ * @file errno.h
+ * @brief PJNATH specific error codes
+ */
 
 #include <pj/errno.h>
 
 /**
  * @defgroup PJNATH_ERROR NAT Helper Library Error Codes
- * @ingroup PJNATH
+ * @brief PJNATH specific error code constants
  * @{
  */
 
