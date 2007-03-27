@@ -708,6 +708,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	if (status != PJ_SUCCESS)
 	    pjsua_perror(THIS_FILE, "Error answering session", status);
 
+	/* Note that inv may be invalid if 200/OK has caused error in
+	 * starting the media.
+	 */
 
 	PJ_LOG(4,(THIS_FILE, "Disconnecting replaced call %d",
 			     replaced_call->index));
@@ -1033,6 +1036,14 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 		     status);
 	pjsip_dlg_dec_lock(dlg);
 	return status;
+    }
+
+    /* Call might have been disconnected if application is answering with
+     * 200/OK and the media failed to start.
+     */
+    if (call->inv == NULL) {
+	pjsip_dlg_dec_lock(dlg);
+	return PJSIP_ESESSIONTERMINATED;
     }
 
     /* Add additional headers etc */
