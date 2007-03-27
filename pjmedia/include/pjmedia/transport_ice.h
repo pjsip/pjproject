@@ -66,7 +66,8 @@ PJ_DECL(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
 					    pjmedia_sdp_session *sdp);
 PJ_DECL(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					   pj_pool_t *pool,
-					   pjmedia_sdp_session *rem_sdp);
+					   pjmedia_sdp_session *rem_sdp,
+					   unsigned media_index);
 PJ_DECL(pj_status_t) pjmedia_ice_stop_ice(pjmedia_transport *tp);
 
 

@@ -400,39 +400,56 @@ static void set_no_ice(struct transport_ice *tp_ice)
 
 PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					  pj_pool_t *pool,
-					  pjmedia_sdp_session *rem_sdp)
+					  pjmedia_sdp_session *rem_sdp,
+					  unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
     pj_ice_cand cand[PJ_ICE_MAX_CAND];
+    pjmedia_sdp_media *sdp_med;
     pj_str_t uname, pass;
     pj_status_t status;
 
-    /* Find ice-ufrag attribute */
+    PJ_ASSERT_RETURN(tp && pool && rem_sdp, PJ_EINVAL);
+    PJ_ASSERT_RETURN(media_index < rem_sdp->media_count, PJ_EINVAL);
+
+    sdp_med = rem_sdp->media[media_index];
+
+    /* Find ice-ufrag attribute in session descriptor */
     attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				  "ice-ufrag", NULL);
     if (attr == NULL) {
-	set_no_ice(tp_ice);
-	return PJ_SUCCESS;
+	/* Find in media descriptor */
+	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
+				      "ice-ufrag", NULL);
+	if (attr == NULL) {
+	    set_no_ice(tp_ice);
+	    return PJ_SUCCESS;
+	}
     }
     uname = attr->value;
 
-    /* Find ice-pwd attribute */
+    /* Find ice-pwd attribute in session descriptor */
     attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				  "ice-pwd", NULL);
     if (attr == NULL) {
-	set_no_ice(tp_ice);
-	return PJ_SUCCESS;
+	/* Not found, find in media descriptor */
+	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
+				      "ice-pwd", NULL);
+	if (attr == NULL) {
+	    set_no_ice(tp_ice);
+	    return PJ_SUCCESS;
+	}
     }
     pass = attr->value;
 
     /* Get all candidates */
     cand_cnt = 0;
-    for (i=0; i<rem_sdp->media[0]->attr_count; ++i) {
+    for (i=0; i<sdp_med->attr_count; ++i) {
 	pjmedia_sdp_attr *attr;
 
-	attr = rem_sdp->media[0]->attr[i];
+	attr = sdp_med->attr[i];
 	if (pj_strcmp2(&attr->name, "candidate")!=0)
 	    continue;
 

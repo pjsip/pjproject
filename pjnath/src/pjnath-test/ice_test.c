@@ -459,7 +459,11 @@ int ice_test(void)
     
     pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
 
-    //pj_log_set_level(4);
+#if 1
+    pj_log_set_level(5);
+#endif
+
+    goto test;
 
     /* Basic create/destroy */
     rc = ice_basic_create_destroy_test();
@@ -487,9 +491,12 @@ int ice_test(void)
 	goto on_return;
 
     /* Direct communication with two components */
+test:
     rc = perform_ice_test("With two components (RTP and RTCP)", PJ_TRUE, 2, PJ_TRUE, D1, D2, 0, NULL, 0, NULL);
     if (rc != 0)
 	goto on_return;
+
+    goto on_return;
 
     /* Direct communication with mismatch number of components */
 
@@ -501,7 +508,7 @@ int ice_test(void)
 
 
 on_return:
-    //pj_log_set_level(3);
+    pj_log_set_level(3);
     pj_ioqueue_destroy(stun_cfg.ioqueue);
     pj_pool_release(pool);
     return rc;

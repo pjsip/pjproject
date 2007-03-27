@@ -822,7 +822,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/* Start ICE */
 	if (pjsua_var.media_cfg.enable_ice) {
 	    status = pjmedia_ice_start_ice(call->med_tp, call->inv->pool, 
-					   remote_sdp);
+					   remote_sdp, 0);
 	    if (status != PJ_SUCCESS)
 		return status;
 	}
