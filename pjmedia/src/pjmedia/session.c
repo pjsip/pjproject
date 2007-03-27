@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     const pjmedia_sdp_conn *rem_conn;
     pjmedia_sdp_rtpmap *rtpmap;
     int local_fmtp_mode = 0, rem_fmtp_mode = 0;
-    unsigned i, pt;
+    unsigned i, pt, fmti;
     pj_status_t status;
 
     
@@ -248,17 +248,40 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     }
 
 
-    /* And codec must be numeric! */
+    /* Get the payload number for receive channel. */
+    /*
+       Previously we used to rely on fmt[0] being the selected codec,
+       but some UA sends telephone-event as fmt[0] and this would
+       cause assert failure below.
+
+       Thanks Chris Hamilton <chamilton .at. cs.dal.ca> for this patch.
+
+    // And codec must be numeric!
     if (!pj_isdigit(*local_m->desc.fmt[0].ptr) || 
 	!pj_isdigit(*rem_m->desc.fmt[0].ptr))
     {
 	return PJMEDIA_EINVALIDPT;
     }
 
-    /* Get the payload number for receive channel. */
     pt = pj_strtoul(&local_m->desc.fmt[0]);
     pj_assert(PJMEDIA_RTP_PT_TELEPHONE_EVENTS==0 ||
 	      pt != PJMEDIA_RTP_PT_TELEPHONE_EVENTS);
+    */
+
+    /* This is to suppress MSVC warning about uninitialized var */
+    pt = 0;
+
+    /* Find the first codec which is not telephone-event */
+    for ( fmti = 0; fmti < local_m->desc.fmt_count; ++fmti ) {
+	if ( !pj_isdigit(*local_m->desc.fmt[fmti].ptr) )
+	    return PJMEDIA_EINVALIDPT;
+	pt = pj_strtoul(&local_m->desc.fmt[fmti]);
+	if ( PJMEDIA_RTP_PT_TELEPHONE_EVENTS == 0 ||
+		pt != PJMEDIA_RTP_PT_TELEPHONE_EVENTS )
+		break;
+    }
+    if ( fmti >= local_m->desc.fmt_count )
+	return PJMEDIA_EINVALIDPT;
 
     /* Get codec info.
      * For static payload types, get the info from codec manager.
@@ -271,7 +294,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	has_rtpmap = PJ_TRUE;
 
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
-					   &local_m->desc.fmt[0]);
+					   &local_m->desc.fmt[fmti]);
 	if (attr == NULL) {
 	    has_rtpmap = PJ_FALSE;
 	}
@@ -284,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	/* Build codec format info: */
 	if (has_rtpmap) {
 	    si->fmt.type = si->type;
-	    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
+	    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
 	    pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
 	    si->fmt.clock_rate = rtpmap->clock_rate;
 	    
@@ -322,7 +345,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     } else {
 
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
-					   &local_m->desc.fmt[0]);
+					   &local_m->desc.fmt[fmti]);
 	if (attr == NULL)
 	    return PJMEDIA_EMISSINGRTPMAP;
 
@@ -333,7 +356,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	/* Build codec format info: */
 
 	si->fmt.type = si->type;
-	si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
+	si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
 	pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
 	si->fmt.clock_rate = rtpmap->clock_rate;
 
@@ -356,7 +379,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	}
 
 	/* Get fmtp mode= param in local SDP, if any */
-	get_fmtp_mode(local_m, &local_m->desc.fmt[0], &local_fmtp_mode);
+	get_fmtp_mode(local_m, &local_m->desc.fmt[fmti], &local_fmtp_mode);
 
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.
