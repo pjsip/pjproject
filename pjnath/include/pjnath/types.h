@@ -109,33 +109,8 @@ PJ_END_DECL
  *
  * \subsection PJNATH_STUN_ARCH STUN Library Organization
  *
-
- \verbatim
-
-    +-----------------------------------------------------------------+
-    |                                                                 |
-    |                   A P P L I C A T I O N                         |
-    |                                                                 |
-    +-----------------------------------------------------------------+
-         ^                          ^
-         |                          |
-         v                          v
-    +--------+    +-----------------------------------+    +----------+
-    |        |    |                                   |    |          |
-    |  Appl- |<-->|      S T U N   S E S S I O N      |<-->| S T U N  |
-    | ication|    |                                   |    |  Authen- |
-    | Trans- |    +-----------------------------------+    | tication |
-    |  port  |    |                                   |    |          |
-    |        |<-->|  S T U N   T R A N S A C T I O N  |    +----------+
-    |        |    |                                   |
-    |        |    +-----------------------------------+
-    |        |    |                                   |
-    |        |    |    STUN MESSAGE REPRESENTATION    |
-    +--------+    |            AND PARSING            |
-                  +-----------------------------------+
-
- \endverbatim
-
+ * \image html stun-arch.jpg "STUN Library Architecture"
+ *
  * The STUN library is organized as follows:
  *
  *  - the lowest layer of the library is \ref PJNATH_STUN_MSG. This layer
@@ -173,6 +148,8 @@ PJ_END_DECL
  * 
  * \subsection PJNATH_ICE_ARCH ICE Library Organization
  * 
+ * \image html ice-arch.jpg "ICE Architecture"
+ *
  * The ICE library is organized as follows:
  *
  *  - the lowest layer is \ref PJNATH_ICE_SESSION, which provides 

@@ -19,8 +19,8 @@
 
 #include <pjnath/config.h>
 #include <pjnath/errno.h>
-#include <pjnath/ice.h>
-#include <pjnath/ice_stream_transport.h>
+#include <pjnath/ice_session.h>
+#include <pjnath/ice_strans.h>
 #include <pjnath/stun_auth.h>
 #include <pjnath/stun_config.h>
 #include <pjnath/stun_msg.h>

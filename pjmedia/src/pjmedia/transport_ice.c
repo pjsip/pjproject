@@ -24,7 +24,7 @@
 struct transport_ice
 {
     pjmedia_transport	 base;
-    pj_ice_st		*ice_st;
+    pj_ice_strans		*ice_st;
 
     pj_time_val		 start_ice;
     
@@ -69,11 +69,11 @@ static pj_status_t tp_send_rtcp( pjmedia_transport *tp,
 /*
  * And these are ICE callbacks.
  */
-static void ice_on_rx_data(pj_ice_st *ice_st, unsigned comp_id, 
+static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id, 
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len);
-static void ice_on_ice_complete(pj_ice_st *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st, 
 			        pj_status_t status);
 
 
@@ -95,8 +95,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 				       pj_stun_config *stun_cfg,
 	    			       pjmedia_transport **p_tp)
 {
-    pj_ice_st *ice_st;
-    pj_ice_st_cb ice_st_cb;
+    pj_ice_strans *ice_st;
+    pj_ice_strans_cb ice_st_cb;
     struct transport_ice *tp_ice;
     pj_status_t status;
 
@@ -108,7 +108,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     ice_st_cb.on_rx_data = &ice_on_rx_data;
 
     /* Create ICE */
-    status = pj_ice_st_create(stun_cfg, name, comp_cnt, NULL, 
+    status = pj_ice_strans_create(stun_cfg, name, comp_cnt, NULL, 
 			      &ice_st_cb, &ice_st);
     if (status != PJ_SUCCESS)
 	return status;
@@ -136,7 +136,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp)
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
     if (tp_ice->ice_st) {
-	pj_ice_st_destroy(tp_ice->ice_st);
+	pj_ice_strans_destroy(tp_ice->ice_st);
 	//Must not touch tp_ice after ice_st is destroyed!
 	//(it has the pool)
 	//tp_ice->ice_st = NULL;
@@ -155,11 +155,11 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_status_t status;
 
-    status = pj_ice_st_set_stun_srv(tp_ice->ice_st, stun_srv, turn_srv);
+    status = pj_ice_strans_set_stun_srv(tp_ice->ice_st, stun_srv, turn_srv);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_ice_st_create_comp(tp_ice->ice_st, 1, options, start_addr);
+    status = pj_ice_strans_create_comp(tp_ice->ice_st, 1, options, start_addr);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -177,7 +177,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 	port = pj_ntohs(addr.sin_port);
 	++port;
 	addr.sin_port = pj_htons(port);
-	status = pj_ice_st_create_comp(tp_ice->ice_st, 2, options, &addr);
+	status = pj_ice_strans_create_comp(tp_ice->ice_st, 2, options, &addr);
 	if (status != PJ_SUCCESS)
 	    return status;
     }
@@ -188,23 +188,23 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 PJ_DEF(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_get_comps_status(tp_ice->ice_st);
+    return pj_ice_strans_get_comps_status(tp_ice->ice_st);
 }
 
 
 PJ_DEF(pj_status_t) pjmedia_ice_get_comp( pjmedia_transport *tp,
 					  unsigned comp_id,
-					  pj_ice_st_comp *comp)
+					  pj_ice_strans_comp *comp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     PJ_ASSERT_RETURN(tp && comp_id && comp_id <= tp_ice->ice_st->comp_cnt &&
 		     comp, PJ_EINVAL);
 
-    pj_memcpy(comp, tp_ice->ice_st->comp[comp_id-1], sizeof(pj_ice_st_comp));
+    pj_memcpy(comp, tp_ice->ice_st->comp[comp_id-1], sizeof(pj_ice_strans_comp));
     return PJ_SUCCESS;		    
 }
 
-PJ_DEF(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
+PJ_DEF(pj_ice_strans*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     return tp_ice->ice_st;
@@ -212,12 +212,12 @@ PJ_DEF(pj_ice_st*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
 
 
 PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
-					 pj_ice_role role,
+					 pj_ice_sess_role role,
 					 const pj_str_t *local_ufrag,
 					 const pj_str_t *local_passwd)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_init_ice(tp_ice->ice_st, role, local_ufrag, local_passwd);
+    return pj_ice_strans_init_ice(tp_ice->ice_st, role, local_ufrag, local_passwd);
 }
 
 
@@ -246,7 +246,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
     /* Add all candidates (to media level) */
     cand_cnt = tp_ice->ice_st->ice->lcand_cnt;
     for (i=0; i<cand_cnt; ++i) {
-	pj_ice_cand *cand;
+	pj_ice_sess_cand *cand;
 	pj_str_t value;
 	int len;
 
@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
 
 static pj_status_t parse_cand(pj_pool_t *pool,
 			      const pj_str_t *orig_input,
-			      pj_ice_cand *cand)
+			      pj_ice_sess_cand *cand)
 {
     pj_str_t input;
     char *token, *host;
@@ -406,7 +406,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
-    pj_ice_cand cand[PJ_ICE_MAX_CAND];
+    pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
     pjmedia_sdp_media *sdp_med;
     pj_str_t uname, pass;
     pj_status_t status;
@@ -464,14 +464,14 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     pj_gettimeofday(&tp_ice->start_ice);
 
     /* Start ICE */
-    return pj_ice_st_start_ice(tp_ice->ice_st, &uname, &pass, cand_cnt, cand);
+    return pj_ice_strans_start_ice(tp_ice->ice_st, &uname, &pass, cand_cnt, cand);
 }
 
 
 PJ_DEF(pj_status_t) pjmedia_ice_stop_ice(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_stop_ice(tp_ice->ice_st);
+    return pj_ice_strans_stop_ice(tp_ice->ice_st);
 }
 
 
@@ -479,8 +479,8 @@ static pj_status_t tp_get_info(pjmedia_transport *tp,
 			       pjmedia_sock_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    pj_ice_st *ice_st = tp_ice->ice_st;
-    pj_ice_st_comp *comp;
+    pj_ice_strans *ice_st = tp_ice->ice_st;
+    pj_ice_strans_comp *comp;
 
     pj_bzero(info, sizeof(*info));
     info->rtp_sock = info->rtcp_sock = PJ_INVALID_SOCKET;
@@ -551,7 +551,7 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 			       pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_st_sendto(tp_ice->ice_st, 1, 
+    return pj_ice_strans_sendto(tp_ice->ice_st, 1, 
 			    pkt, size, &tp_ice->remote_rtp,
 			    sizeof(pj_sockaddr_in));
 }
@@ -563,7 +563,7 @@ static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     if (tp_ice->ice_st->comp_cnt > 1) {
-	return pj_ice_st_sendto(tp_ice->ice_st, 2, 
+	return pj_ice_strans_sendto(tp_ice->ice_st, 2, 
 				pkt, size, &tp_ice->remote_rtp,
 				sizeof(pj_sockaddr_in));
     } else {
@@ -572,7 +572,7 @@ static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
 }
 
 
-static void ice_on_rx_data(pj_ice_st *ice_st, unsigned comp_id, 
+static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id, 
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len)
@@ -591,13 +591,13 @@ static void ice_on_rx_data(pj_ice_st *ice_st, unsigned comp_id,
 }
 
 
-static void ice_on_ice_complete(pj_ice_st *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st, 
 			        pj_status_t status)
 {
     struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
     pj_time_val end_ice;
-    pj_ice_cand *lcand, *rcand;
-    pj_ice_check *check;
+    pj_ice_sess_cand *lcand, *rcand;
+    pj_ice_sess_check *check;
     char src_addr[32];
     char dst_addr[32];
 

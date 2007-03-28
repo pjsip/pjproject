@@ -136,7 +136,7 @@ enum pj_stun_msg_class_e
 /**
  * Determine if the message type is a response.
  */
-#define PJ_STUN_IS_RESPONSE(msg_type)	(((msg_type) & 0x0110) == 0x0100)
+#define PJ_STUN_IS_SUCCESS_RESPONSE(msg_type) (((msg_type) & 0x0110) == 0x0100)
 
 
 /**

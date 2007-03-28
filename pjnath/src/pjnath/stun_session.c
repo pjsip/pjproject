@@ -244,7 +244,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     realm.slen = username.slen = nonce.slen = password.slen = 0;
 
     /* The server SHOULD include a SERVER attribute in all responses */
-    if (sess->srv_name.slen && (PJ_STUN_IS_RESPONSE(msg->hdr.type) ||
+    if (sess->srv_name.slen && (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
 			        PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))) 
     {
 	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER,
@@ -632,7 +632,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
     } else {
 	if (cache_res && 
-	    (PJ_STUN_IS_RESPONSE(tdata->msg->hdr.type) ||
+	    (PJ_STUN_IS_SUCCESS_RESPONSE(tdata->msg->hdr.type) ||
 	     PJ_STUN_IS_ERROR_RESPONSE(tdata->msg->hdr.type))) 
 	{
 	    /* Requested to keep the response in the cache */
@@ -951,7 +951,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     }
 
     /* Handle message */
-    if (PJ_STUN_IS_RESPONSE(msg->hdr.type) ||
+    if (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
 	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
 	status = on_incoming_response(sess, msg);

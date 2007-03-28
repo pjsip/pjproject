@@ -16,12 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pj/config.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-/* PMIB_ICMP_EX is not declared in VC6, causing error */
-#if defined(_MSC_VER) && _MSC_VER < 1400
+/* PMIB_ICMP_EX is not declared in VC6, causing error.
+ * But EVC4, which also claims to be VC6, does have it! 
+ */
+#if defined(_MSC_VER) && _MSC_VER==1200 && !defined(PJ_WIN32_WINCE)
 #   define PMIB_ICMP_EX void*
 #endif
 #include <Iphlpapi.h>

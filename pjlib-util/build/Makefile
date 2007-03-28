@@ -28,7 +28,7 @@ export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		crc32.o errno.o dns.o dns_dump.o getopt.o \
 		hmac_md5.o hmac_sha1.o md5.o resolver.o \
-		scanner.o sha1.o string.o stun_simple.o \
+		scanner.o sha1.o srv_resolver.o string.o stun_simple.o \
 		stun_simple_client.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 

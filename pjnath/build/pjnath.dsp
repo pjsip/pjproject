@@ -91,11 +91,11 @@ SOURCE=..\src\pjnath\errno.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjnath\ice.c
+SOURCE=..\src\pjnath\ice_session.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjnath\ice_stream_transport.c
+SOURCE=..\src\pjnath\ice_strans.c
 # End Source File
 # Begin Source File
 
@@ -131,11 +131,11 @@ SOURCE=..\include\pjnath\errno.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\ice.h
+SOURCE=..\include\pjnath\ice_session.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\ice_stream_transport.h
+SOURCE=..\include\pjnath\ice_strans.h
 # End Source File
 # Begin Source File
 

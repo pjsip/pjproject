@@ -57,7 +57,7 @@ CFG=pjsua_lib_wince - Win32 (WCE x86) Debug
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "NDEBUG" /D "_LIB" /YX /Gs8192 /GF /O2 /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "_i386_" /D "_X86_" /D "x86" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "_i386_" /D "_X86_" /D "x86" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -83,7 +83,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "_LIB" /YX /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -109,7 +109,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "ARM" /D "_ARM_" /D "ARMV4I" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "ARM" /D "_ARM_" /D "ARMV4I" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -135,7 +135,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4I" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4I" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -161,7 +161,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -187,7 +187,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -213,7 +213,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -239,7 +239,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "ARM" /D "_ARM_" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -265,7 +265,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "NDEBUG" /D "_LIB" /YX /Gs8192 /GF /O2 /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "_i386_" /D "_X86_" /D "x86" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "_i386_" /D "_X86_" /D "x86" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -291,7 +291,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "_LIB" /YX /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -468,12 +468,22 @@ NODEP_CPP_PJSUA=\
 
 DEP_CPP_PJSUA=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -484,13 +494,8 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -504,6 +509,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -513,6 +519,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -520,6 +527,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -533,22 +541,29 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -563,23 +578,38 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -594,6 +624,7 @@ DEP_CPP_PJSUA=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -603,9 +634,6 @@ DEP_CPP_PJSUA=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"
@@ -1915,12 +1943,22 @@ NODEP_CPP_PJSUA_=\
 
 DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -1931,13 +1969,8 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -1951,6 +1984,7 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -1960,6 +1994,7 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -1967,6 +2002,7 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -1980,22 +2016,29 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -2010,23 +2053,38 @@ DEP_CPP_PJSUA_=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -2041,6 +2099,7 @@ DEP_CPP_PJSUA_=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -2050,9 +2109,6 @@ DEP_CPP_PJSUA_=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA_=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"
@@ -3362,12 +3418,22 @@ NODEP_CPP_PJSUA_C=\
 
 DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -3378,13 +3444,8 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -3398,6 +3459,7 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -3407,6 +3469,7 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -3414,6 +3477,7 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -3427,22 +3491,29 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -3457,23 +3528,38 @@ DEP_CPP_PJSUA_C=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -3488,6 +3574,7 @@ DEP_CPP_PJSUA_C=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -3497,9 +3584,6 @@ DEP_CPP_PJSUA_C=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA_C=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"
@@ -4809,12 +4893,22 @@ NODEP_CPP_PJSUA_I=\
 
 DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -4825,13 +4919,8 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -4845,6 +4934,7 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -4854,6 +4944,7 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -4861,6 +4952,7 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -4874,22 +4966,29 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -4904,23 +5003,38 @@ DEP_CPP_PJSUA_I=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -4935,6 +5049,7 @@ DEP_CPP_PJSUA_I=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -4944,9 +5059,6 @@ DEP_CPP_PJSUA_I=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA_I=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"
@@ -6256,12 +6368,22 @@ NODEP_CPP_PJSUA_M=\
 
 DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -6272,13 +6394,8 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -6292,6 +6409,7 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -6301,6 +6419,7 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -6308,6 +6427,7 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -6321,22 +6441,29 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -6351,23 +6478,38 @@ DEP_CPP_PJSUA_M=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -6382,6 +6524,7 @@ DEP_CPP_PJSUA_M=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -6391,9 +6534,6 @@ DEP_CPP_PJSUA_M=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA_M=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"
@@ -7703,12 +7843,22 @@ NODEP_CPP_PJSUA_P=\
 
 DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\sha1.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -7719,13 +7869,8 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -7739,6 +7884,7 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -7748,6 +7894,7 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -7755,6 +7902,7 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
 	"..\..\..\pjlib\include\pj\rbtree.h"\
@@ -7768,22 +7916,29 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\speex.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\types.h"\
 	"..\..\..\pjmedia\include\pjmedia.h"\
+	"..\..\..\pjmedia\include\pjmedia\alaw_ulaw.h"\
+	"..\..\..\pjmedia\include\pjmedia\bidirectional.h"\
 	"..\..\..\pjmedia\include\pjmedia\clock.h"\
 	"..\..\..\pjmedia\include\pjmedia\codec.h"\
 	"..\..\..\pjmedia\include\pjmedia\conference.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo.h"\
+	"..\..\..\pjmedia\include\pjmedia\echo_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\endpoint.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\g711.h"\
 	"..\..\..\pjmedia\include\pjmedia\jbuf.h"\
 	"..\..\..\pjmedia\include\pjmedia\master_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\mem_port.h"\
+	"..\..\..\pjmedia\include\pjmedia\mp3_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\null_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\plc.h"\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
@@ -7798,23 +7953,38 @@ DEP_CPP_PJSUA_P=\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
+	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
+	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\ice_session.h"\
+	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
+	"..\..\..\pjnath\include\pjnath\stun_config.h"\
+	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
+	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjsip-simple\evsub.h"\
 	"..\..\include\pjsip-simple\iscomposing.h"\
 	"..\..\include\pjsip-simple\pidf.h"\
 	"..\..\include\pjsip-simple\presence.h"\
+	"..\..\include\pjsip-simple\publish.h"\
 	"..\..\include\pjsip-simple\types.h"\
 	"..\..\include\pjsip-simple\xpidf.h"\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip-ua\sip_regc.h"\
+	"..\..\include\pjsip-ua\sip_replaces.h"\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -7829,6 +7999,7 @@ DEP_CPP_PJSUA_P=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_transport_tcp.h"\
+	"..\..\include\pjsip\sip_transport_tls.h"\
 	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_ua_layer.h"\
@@ -7838,9 +8009,6 @@ DEP_CPP_PJSUA_P=\
 	"..\..\include\pjsip_ua.h"\
 	"..\..\include\pjsua-lib\pjsua.h"\
 	"..\..\include\pjsua-lib\pjsua_internal.h"\
-	
-NODEP_CPP_PJSUA_P=\
-	"..\..\..\pjlib-util\include\pjlib-util\stun.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsua_lib_wince - Win32 (WCE ARMV4I) Release"

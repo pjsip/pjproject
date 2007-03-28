@@ -22,7 +22,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 export PJLIB_SRCDIR = ../src/pj
 export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	array.o config.o ctype.o errno.o except.o fifobuf.o guid.o \
-	hash.o list.o lock.o log.o os_time_common.o \
+	hash.o ip_helper_generic.o list.o lock.o log.o os_time_common.o \
 	pool.o pool_buf.o pool_caching.o pool_dbg.o rand.o \
 	rbtree.o string.o timer.o \
 	types.o symbols.o
@@ -33,8 +33,8 @@ export PJLIB_CFLAGS += $(_CFLAGS)
 #
 export TEST_SRCDIR = ../src/pjlib-test
 export TEST_OBJS += atomic.o echo_clt.o errno.o exception.o \
-		    fifobuf.o file.o \
-		    ioq_perf.o ioq_udp.o ioq_unreg.o ioq_tcp.o \
+		    fifobuf.o file.o ioq_perf.o ioq_udp.o ioq_unreg.o \
+		    ioq_tcp.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
 		    select.o sleep.o sock.o sock_perf.o \
 		    string.o test.o thread.o timer.o timestamp.o \

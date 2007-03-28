@@ -20,7 +20,7 @@
 #define __PJNATH_ICE_SOCK_H__
 
 /**
- * @file ice.h
+ * @file ice_session.h
  * @brief ICE session management
  */
 #include <pjnath/types.h>
@@ -43,10 +43,10 @@ PJ_BEGIN_DECL
  * @ingroup PJNATH_ICE
  * @{
  *
- * This module describes #pj_ice, a transport independent ICE session,
+ * This module describes #pj_ice_sess, a transport independent ICE session,
  * part of PJNATH - the Open Source NAT helper library.
  *
- * An ICE session, represented by #pj_ice structure, is the lowest 
+ * An ICE session, represented by #pj_ice_sess structure, is the lowest 
  * abstraction of ICE in PJNATH, and it is used to perform and manage
  * connectivity checks of transport address candidates <b>within a
  * single media stream</b> (note: this differs from what is described
@@ -69,10 +69,31 @@ PJ_BEGIN_DECL
  */
 typedef enum pj_ice_cand_type
 {
-    PJ_ICE_CAND_TYPE_HOST,	/**< ICE host candidate.		*/
-    PJ_ICE_CAND_TYPE_SRFLX,	/**< ICE server reflexive candidate.	*/
-    PJ_ICE_CAND_TYPE_PRFLX,	/**< ICE peer reflexive candidate.	*/
-    PJ_ICE_CAND_TYPE_RELAYED	/**< ICE relayed candidate.		*/
+    /**
+     * ICE host candidate. A host candidate represents the actual local
+     * transport address in the host.
+     */
+    PJ_ICE_CAND_TYPE_HOST,
+
+    /**
+     * ICE server reflexive candidate, which represents the public mapped
+     * address of the local address, and is obtained by sending STUN
+     * Binding request from the host candidate to a STUN server.
+     */
+    PJ_ICE_CAND_TYPE_SRFLX,
+
+    /**
+     * ICE peer reflexive candidate, which is the address as seen by peer
+     * agent during connectivity check.
+     */
+    PJ_ICE_CAND_TYPE_PRFLX,
+
+    /**
+     * ICE relayed candidate, which represents the address allocated in
+     * TURN server.
+     */
+    PJ_ICE_CAND_TYPE_RELAYED
+
 } pj_ice_cand_type;
 
 
@@ -88,11 +109,11 @@ enum pj_ice_type_pref
     PJ_ICE_RELAYED_PREF	    = 0	    /**< Preference value for relay	*/
 };
 
-/** Forward declaration for pj_ice */
-typedef struct pj_ice pj_ice;
+/** Forward declaration for pj_ice_sess */
+typedef struct pj_ice_sess pj_ice_sess;
 
-/** Forward declaration for pj_ice_check */
-typedef struct pj_ice_check pj_ice_check;
+/** Forward declaration for pj_ice_sess_check */
+typedef struct pj_ice_sess_check pj_ice_sess_check;
 
 
 /**
@@ -102,16 +123,16 @@ typedef struct pj_ice_check pj_ice_check;
  * based on RTP, there are two components per media stream - one for RTP,
  * and one for RTCP.
  */
-typedef struct pj_ice_comp
+typedef struct pj_ice_sess_comp
 {
     /**
      * The pointer to ICE check which was nominated for this component.
      * The value will be NULL if a nominated check has not been found
      * for this component.
      */
-    pj_ice_check	*valid_check;
+    pj_ice_sess_check	*valid_check;
 
-} pj_ice_comp;
+} pj_ice_sess_comp;
 
 
 /**
@@ -122,7 +143,7 @@ typedef struct pj_ice_comp
  * (server reflexive, relayed or host), priority, foundation, and
  * base.
  */
-typedef struct pj_ice_cand
+typedef struct pj_ice_sess_cand
 {
     /**
      * The component ID of this candidate. Note that component IDs starts
@@ -184,50 +205,50 @@ typedef struct pj_ice_cand
      */
     pj_stun_session	*stun_sess;
 
-} pj_ice_cand;
+} pj_ice_sess_cand;
 
 
 /**
  * This enumeration describes the state of ICE check.
  */
-typedef enum pj_ice_check_state
+typedef enum pj_ice_sess_check_state
 {
     /**
      * A check for this pair hasn't been performed, and it can't
      * yet be performed until some other check succeeds, allowing this
      * pair to unfreeze and move into the Waiting state.
      */
-    PJ_ICE_CHECK_STATE_FROZEN,
+    PJ_ICE_SESS_CHECK_STATE_FROZEN,
 
     /**
      * A check has not been performed for this pair, and can be
      * performed as soon as it is the highest priority Waiting pair on
      * the check list.
      */
-    PJ_ICE_CHECK_STATE_WAITING,
+    PJ_ICE_SESS_CHECK_STATE_WAITING,
 
     /**
      * A check has not been performed for this pair, and can be
      * performed as soon as it is the highest priority Waiting pair on
      * the check list.
      */
-    PJ_ICE_CHECK_STATE_IN_PROGRESS,
+    PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS,
 
     /**
      * A check has not been performed for this pair, and can be
      * performed as soon as it is the highest priority Waiting pair on
      * the check list.
      */
-    PJ_ICE_CHECK_STATE_SUCCEEDED,
+    PJ_ICE_SESS_CHECK_STATE_SUCCEEDED,
 
     /**
      * A check for this pair was already done and failed, either
      * never producing any response or producing an unrecoverable failure
      * response.
      */
-    PJ_ICE_CHECK_STATE_FAILED
+    PJ_ICE_SESS_CHECK_STATE_FAILED
 
-} pj_ice_check_state;
+} pj_ice_sess_check_state;
 
 
 /**
@@ -237,17 +258,17 @@ typedef enum pj_ice_check_state
  * A check is sent from the local candidate to the remote candidate 
  * of a candidate pair.
  */
-struct pj_ice_check
+struct pj_ice_sess_check
 {
     /**
      * Pointer to local candidate entry of this check.
      */
-    pj_ice_cand		*lcand;
+    pj_ice_sess_cand	*lcand;
 
     /**
      * Pointer to remote candidate entry of this check.
      */
-    pj_ice_cand		*rcand;
+    pj_ice_sess_cand	*rcand;
 
     /**
      * Check priority.
@@ -257,7 +278,7 @@ struct pj_ice_check
     /**
      * Connectivity check state.
      */
-    pj_ice_check_state	 state;
+    pj_ice_sess_check_state	 state;
 
     /**
      * STUN transmit data containing STUN Binding request that was sent 
@@ -284,38 +305,38 @@ struct pj_ice_check
 /**
  * This enumeration describes ICE checklist state.
  */
-typedef enum pj_ice_checklist_state
+typedef enum pj_ice_sess_checklist_state
 {
     /**
      * The checklist is not yet running.
      */
-    PJ_ICE_CHECKLIST_ST_IDLE,
+    PJ_ICE_SESS_CHECKLIST_ST_IDLE,
 
     /**
      * In this state, ICE checks are still in progress for this
      * media stream.
      */
-    PJ_ICE_CHECKLIST_ST_RUNNING,
+    PJ_ICE_SESS_CHECKLIST_ST_RUNNING,
 
     /**
      * In this state, ICE checks have completed for this media stream,
      * either successfully or with failure.
      */
-    PJ_ICE_CHECKLIST_ST_COMPLETED
+    PJ_ICE_SESS_CHECKLIST_ST_COMPLETED
 
-} pj_ice_checklist_state;
+} pj_ice_sess_checklist_state;
 
 
 /**
  * This structure represents ICE check list, that is an ordered set of 
  * candidate pairs that an agent will use to generate checks.
  */
-typedef struct pj_ice_checklist
+typedef struct pj_ice_sess_checklist
 {
     /**
      * The checklist state.
      */
-    pj_ice_checklist_state   state;
+    pj_ice_sess_checklist_state   state;
 
     /**
      * Number of candidate pairs (checks).
@@ -325,21 +346,21 @@ typedef struct pj_ice_checklist
     /**
      * Array of candidate pairs (checks).
      */
-    pj_ice_check	     checks[PJ_ICE_MAX_CHECKS];
+    pj_ice_sess_check	     checks[PJ_ICE_MAX_CHECKS];
 
     /**
      * A timer used to perform periodic check for this checklist.
      */
     pj_timer_entry	     timer;
 
-} pj_ice_checklist;
+} pj_ice_sess_checklist;
 
 
 /**
  * This structure contains callbacks that will be called by the ICE
  * session.
  */
-typedef struct pj_ice_cb
+typedef struct pj_ice_sess_cb
 {
     /**
      * An optional callback that will be called by the ICE session when
@@ -349,7 +370,7 @@ typedef struct pj_ice_cb
      * @param status	    Will contain PJ_SUCCESS if ICE negotiation is
      *			    successful, or some error code.
      */
-    void	(*on_ice_complete)(pj_ice *ice, pj_status_t status);
+    void	(*on_ice_complete)(pj_ice_sess *ice, pj_status_t status);
 
     /**
      * A mandatory callback which will be called by the ICE session when
@@ -363,7 +384,7 @@ typedef struct pj_ice_cb
      * @param dst_addr	    Packet destination address.
      * @param dst_addr_len  Length of destination address.
      */
-    pj_status_t (*on_tx_pkt)(pj_ice *ice, unsigned comp_id, 
+    pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id, 
 			     unsigned cand_id,
 			     const void *pkt, pj_size_t size,
 			     const pj_sockaddr_t *dst_addr,
@@ -381,29 +402,29 @@ typedef struct pj_ice_cb
      *			    from.
      * @param src_addr_len  The length of source address.
      */
-    void	(*on_rx_data)(pj_ice *ice, unsigned comp_id,
+    void	(*on_rx_data)(pj_ice_sess *ice, unsigned comp_id,
 			      void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *src_addr,
 			      unsigned src_addr_len);
-} pj_ice_cb;
+} pj_ice_sess_cb;
 
 
 /**
- * This enumeration describes ICE role.
+ * This enumeration describes the role of the ICE agent.
  */
-typedef enum pj_ice_role
+typedef enum pj_ice_sess_role
 {
     /**
      * The ICE agent is in controlled role.
      */
-    PJ_ICE_ROLE_CONTROLLED,
+    PJ_ICE_SESS_ROLE_CONTROLLED,
 
     /**
      * The ICE agent is in controlling role.
      */
-    PJ_ICE_ROLE_CONTROLLING
+    PJ_ICE_SESS_ROLE_CONTROLLING
 
-} pj_ice_role;
+} pj_ice_sess_role;
 
 
 /**
@@ -415,17 +436,17 @@ typedef enum pj_ice_role
  * while still allowing application to utilize multiple media streams by
  * creating multiple ICE sessions, one for each media stream.
  */
-struct pj_ice
+struct pj_ice_sess
 {
     char		obj_name[PJ_MAX_OBJ_NAME];  /**< Object name.	    */
 
     pj_pool_t		*pool;			    /**< Pool instance.	    */
     void		*user_data;		    /**< App. data.	    */
     pj_mutex_t		*mutex;			    /**< Mutex.		    */
-    pj_ice_role		 role;			    /**< ICE role.	    */
+    pj_ice_sess_role	 role;			    /**< ICE role.	    */
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
-    pj_ice_cb		 cb;			    /**< Callback.	    */
+    pj_ice_sess_cb	 cb;			    /**< Callback.	    */
 
     pj_stun_config	 stun_cfg;		    /**< STUN settings.	    */
 
@@ -439,21 +460,21 @@ struct pj_ice
 
     /* Components */
     unsigned		 comp_cnt;		    /**< # of components.   */
-    pj_ice_comp		 comp[PJ_ICE_MAX_COMP];	    /**< Component array    */
+    pj_ice_sess_comp	 comp[PJ_ICE_MAX_COMP];	    /**< Component array    */
 
     /* Local candidates */
     unsigned		 lcand_cnt;		    /**< # of local cand.   */
-    pj_ice_cand		 lcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
+    pj_ice_sess_cand	 lcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
 
     /* Remote candidates */
     unsigned		 rcand_cnt;		    /**< # of remote cand.  */
-    pj_ice_cand		 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
+    pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
 
     /* Checklist */
-    pj_ice_checklist	 clist;			    /**< Active checklist   */
+    pj_ice_sess_checklist clist;		    /**< Active checklist   */
     
     /* Valid list */
-    pj_ice_checklist	 valid_list;		    /**< Valid list.	    */
+    pj_ice_sess_checklist valid_list;		    /**< Valid list.	    */
 };
 
 
@@ -461,11 +482,26 @@ struct pj_ice
  * This is a utility function to retrieve the string name for the
  * particular candidate type.
  *
- * @param type	    Candidate type.
+ * @param type		Candidate type.
  *
- * @return	    The string representation of the candidate type.
+ * @return		The string representation of the candidate type.
  */
 PJ_DECL(const char*) pj_ice_get_cand_type_name(pj_ice_cand_type type);
+
+
+/**
+ * This is a utility function to calculate the foundation identification
+ * for a candidate.
+ *
+ * @param pool		Pool to allocate the foundation string.
+ * @param foundation	Pointer to receive the foundation string.
+ * @param type		Candidate type.
+ * @param base_addr	Base address of the candidate.
+ */
+PJ_DECL(void) pj_ice_calc_foundation(pj_pool_t *pool,
+				     pj_str_t *foundation,
+				     pj_ice_cand_type type,
+				     const pj_sockaddr *base_addr);
 
 
 /**
@@ -473,7 +509,7 @@ PJ_DECL(const char*) pj_ice_get_cand_type_name(pj_ice_cand_type type);
  * Application would typically need to create an ICE session before
  * sending an offer or upon receiving one. After the session is created,
  * application can register candidates to the ICE session by calling
- * #pj_ice_add_cand() function.
+ * #pj_ice_sess_add_cand() function.
  *
  * @param stun_cfg	The STUN configuration settings, containing among
  *			other things the timer heap instance to be used
@@ -492,27 +528,31 @@ PJ_DECL(const char*) pj_ice_get_cand_type_name(pj_ice_cand_type type);
  *
  * @return		PJ_SUCCESS if ICE session is created successfully.
  */
-PJ_DECL(pj_status_t) pj_ice_create(pj_stun_config *stun_cfg,
-				   const char *name,
-				   pj_ice_role role,
-				   unsigned comp_cnt,
-				   const pj_ice_cb *cb,
-				   const pj_str_t *local_ufrag,
-				   const pj_str_t *local_passwd,
-				   pj_ice **p_ice);
+PJ_DECL(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
+				        const char *name,
+				        pj_ice_sess_role role,
+				        unsigned comp_cnt,
+				        const pj_ice_sess_cb *cb,
+				        const pj_str_t *local_ufrag,
+				        const pj_str_t *local_passwd,
+				        pj_ice_sess **p_ice);
 
 /**
- * Destroy ICE session.
+ * Destroy ICE session. This will cancel any connectivity checks currently
+ * running, if any, and any other events scheduled by this session, as well
+ * as all memory resources.
  *
  * @param ice		ICE session instance.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
+PJ_DECL(pj_status_t) pj_ice_sess_destroy(pj_ice_sess *ice);
 
 
 /**
- * Add a candidate to this ICE session. 
+ * Add a candidate to this ICE session. Application must add candidates for
+ * each components ID before it can start pairing the candidates and 
+ * performing connectivity checks.
  *
  * @param ice		ICE session instance.
  * @param comp_id	Component ID of this candidate.
@@ -528,16 +568,16 @@ PJ_DECL(pj_status_t) pj_ice_destroy(pj_ice *ice);
  *
  * @return		PJ_SUCCESS if candidate is successfully added.
  */
-PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
-				     unsigned comp_id,
-				     pj_ice_cand_type type,
-				     pj_uint16_t local_pref,
-				     const pj_str_t *foundation,
-				     const pj_sockaddr_t *addr,
-				     const pj_sockaddr_t *base_addr,
-				     const pj_sockaddr_t *rel_addr,
-				     int addr_len,
-				     unsigned *p_cand_id);
+PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
+					  unsigned comp_id,
+					  pj_ice_cand_type type,
+					  pj_uint16_t local_pref,
+					  const pj_str_t *foundation,
+					  const pj_sockaddr_t *addr,
+					  const pj_sockaddr_t *base_addr,
+					  const pj_sockaddr_t *rel_addr,
+					  int addr_len,
+					  unsigned *p_cand_id);
 
 /**
  * Find default candidate for the specified component ID, using this
@@ -553,9 +593,9 @@ PJ_DECL(pj_status_t) pj_ice_add_cand(pj_ice *ice,
  *
  * @return		PJ_SUCCESS if a candidate has been selected.
  */
-PJ_DECL(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
-					      unsigned comp_id,
-					      int *p_cand_id);
+PJ_DECL(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
+						   unsigned comp_id,
+						   int *p_cand_id);
 
 /**
  * Pair the local and remote candidates to create check list. Application
@@ -564,7 +604,7 @@ PJ_DECL(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
  * offer, for UAS, or upon receiving the answer, for UAC).
  *
  * Note that ICE connectivity check will not start until application calls
- * #pj_ice_start_check().
+ * #pj_ice_sess_start_check().
  *
  * @param ice		ICE session instance.
  * @param rem_ufrag	Remote ufrag, as seen in the SDP received from 
@@ -578,22 +618,23 @@ PJ_DECL(pj_status_t) pj_ice_find_default_cand(pj_ice *ice,
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_ice_create_check_list(pj_ice *ice,
-					      const pj_str_t *rem_ufrag,
-					      const pj_str_t *rem_passwd,
-					      unsigned rem_cand_cnt,
-					      const pj_ice_cand rem_cand[]);
+PJ_DECL(pj_status_t) 
+pj_ice_sess_create_check_list(pj_ice_sess *ice,
+			      const pj_str_t *rem_ufrag,
+			      const pj_str_t *rem_passwd,
+			      unsigned rem_cand_cnt,
+			      const pj_ice_sess_cand rem_cand[]);
 
 /**
  * Start ICE periodic check. This function will return immediately, and
  * application will be notified about the connectivity check status in
- * #pj_ice_cb callback.
+ * #pj_ice_sess_cb callback.
  *
  * @param ice		The ICE session instance.
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_ice_start_check(pj_ice *ice);
+PJ_DECL(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice);
 
 
 /**
@@ -603,6 +644,9 @@ PJ_DECL(pj_status_t) pj_ice_start_check(pj_ice *ice);
  * destination using the nominated local candidate for the specified
  * component.
  *
+ * This function will in turn call \a on_tx_pkt function in
+ * #pj_ice_sess_cb callback to actually send the packet to the wire.
+ *
  * @param ice		The ICE session.
  * @param comp_id	Component ID.
  * @param data		The data or packet to be sent.
@@ -610,17 +654,17 @@ PJ_DECL(pj_status_t) pj_ice_start_check(pj_ice *ice);
  *
  * @return		PJ_SUCCESS if data is sent successfully.
  */
-PJ_DECL(pj_status_t) pj_ice_send_data(pj_ice *ice,
-				      unsigned comp_id,
-				      const void *data,
-				      pj_size_t data_len);
+PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
+					   unsigned comp_id,
+					   const void *data,
+					   pj_size_t data_len);
 
 /**
  * Report the arrival of packet to the ICE session. Since ICE session
  * itself doesn't have any transports, it relies on application or
  * higher layer component to give incoming packets to the ICE session.
  * If the packet is not a STUN packet, this packet will be given back
- * to application via \a on_rx_data() callback in #pj_ice_cb.
+ * to application via \a on_rx_data() callback in #pj_ice_sess_cb.
  *
  * @param ice		The ICE session.
  * @param comp_id	Component ID.
@@ -632,13 +676,13 @@ PJ_DECL(pj_status_t) pj_ice_send_data(pj_ice *ice,
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_ice_on_rx_pkt(pj_ice *ice,
-				      unsigned comp_id,
-				      unsigned cand_id,
-				      void *pkt,
-				      pj_size_t pkt_size,
-				      const pj_sockaddr_t *src_addr,
-				      int src_addr_len);
+PJ_DECL(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
+					   unsigned comp_id,
+					   unsigned cand_id,
+					   void *pkt,
+					   pj_size_t pkt_size,
+					   const pj_sockaddr_t *src_addr,
+					   int src_addr_len);
 
 
 

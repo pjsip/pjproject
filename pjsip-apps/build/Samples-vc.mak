@@ -25,7 +25,8 @@ LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  $(BUILD_FLAGS) \
 	  -I..\..\pjsip\include \
-	  -I..\..\pjlib\include -I..\..\pjlib-util\include \
+	  -I..\..\pjlib\include \
+	  -I..\..\pjlib-util\include \
 	  -I..\..\pjmedia\include \
 	  -I..\..\pjnath/include
 LDFLAGS = $(BUILD_FLAGS) $(LIBS) \

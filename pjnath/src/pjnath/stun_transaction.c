@@ -263,7 +263,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     pj_status_t status;
 
     /* Must be STUN response message */
-    if (!PJ_STUN_IS_RESPONSE(msg->hdr.type) && 
+    if (!PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) && 
 	!PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
 	PJ_LOG(4,(tsx->obj_name, 

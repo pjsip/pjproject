@@ -57,7 +57,7 @@ CFG=PJSIP_UA_WINCE - WIN32 (WCE EMULATOR) DEBUG
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "NDEBUG" /D "_LIB" /YX /Gs8192 /GF /O2 /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "NDEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "NDEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -83,7 +83,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "_LIB" /YX /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -109,7 +109,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "ARMV4I" /D "NDEBUG" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "ARMV4I" /D "NDEBUG" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -135,7 +135,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "ARMV4I" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "ARMV4I" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "ARMV4I" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -161,7 +161,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "NDEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "NDEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -187,7 +187,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -213,7 +213,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "NDEBUG" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "NDEBUG" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /O2 /M$(CECrtMT) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -239,7 +239,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clthumb.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "ARM" /D "_ARM_" /D "$(CePlatform)" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "THUMB" /D "_THUMB_" /D "ARMV4T" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /QRarch4T /QRinterwork-return /M$(CECrtMTDebug) /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -265,7 +265,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "NDEBUG" /D "_LIB" /YX /Gs8192 /GF /O2 /c
-# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "NDEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
+# ADD CPP /nologo /W3 /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "NDEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /O2 /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -291,7 +291,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=cl.exe
 # ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "_i386_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_X86_" /D "x86" /D "_LIB" /YX /Gs8192 /GF /c
-# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
+# ADD CPP /nologo /W3 /Zi /Od /I "../../include" /I "../../../pjlib-util/include" /I "../../../pjlib/include" /I "../../../pjmedia/include" /I "../../../pjnath/include" /D "DEBUG" /D "_i386_" /D "_X86_" /D "x86" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Gs8192 /GF /c
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
@@ -405,6 +405,8 @@ DEP_CPP_SIP_I=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -428,6 +430,7 @@ DEP_CPP_SIP_I=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -448,6 +451,7 @@ DEP_CPP_SIP_I=\
 	"..\..\..\pjlib\include\pj\unicode.h"\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia\errno.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp_neg.h"\
@@ -455,6 +459,7 @@ DEP_CPP_SIP_I=\
 	"..\..\include\pjsip-ua\sip_inv.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -1088,6 +1093,8 @@ DEP_CPP_SIP_R=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -1111,6 +1118,7 @@ DEP_CPP_SIP_R=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -1133,6 +1141,7 @@ DEP_CPP_SIP_R=\
 	"..\..\include\pjsip-ua\sip_regc.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -1749,6 +1758,8 @@ DEP_CPP_SIP_RE=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -1772,6 +1783,7 @@ DEP_CPP_SIP_RE=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -1792,6 +1804,7 @@ DEP_CPP_SIP_RE=\
 	"..\..\..\pjlib\include\pj\unicode.h"\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia\config.h"\
+	"..\..\..\pjmedia\include\pjmedia\config_auto.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp_neg.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
@@ -1800,6 +1813,7 @@ DEP_CPP_SIP_RE=\
 	"..\..\include\pjsip\print_util.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -2573,6 +2587,8 @@ DEP_CPP_SIP_X=\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
@@ -2596,6 +2612,7 @@ DEP_CPP_SIP_X=\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -2621,6 +2638,7 @@ DEP_CPP_SIP_X=\
 	"..\..\include\pjsip-ua\sip_xfer.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\

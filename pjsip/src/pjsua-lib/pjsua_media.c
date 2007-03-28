@@ -560,7 +560,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	pj_ice_st_comp comp;
+	pj_ice_strans_comp comp;
 	int next_port;
 
 	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, 2,
@@ -672,11 +672,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     pjsua_call *call = &pjsua_var.calls[call_id];
 
     if (pjsua_var.media_cfg.enable_ice) {
-	pj_ice_role ice_role;
+	pj_ice_sess_role ice_role;
 	pj_status_t status;
 
-	ice_role = (role==PJSIP_ROLE_UAC ? PJ_ICE_ROLE_CONTROLLING : 
-				           PJ_ICE_ROLE_CONTROLLED);
+	ice_role = (role==PJSIP_ROLE_UAC ? PJ_ICE_SESS_ROLE_CONTROLLING : 
+				           PJ_ICE_SESS_ROLE_CONTROLLED);
 
 	/* Restart ICE */
 	pjmedia_ice_stop_ice(call->med_tp);

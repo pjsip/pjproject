@@ -26,7 +26,7 @@
  */
 
 #include <pjmedia/stream.h>
-#include <pjnath/ice_stream_transport.h>
+#include <pjnath/ice_strans.h>
 
 
 /**
@@ -55,10 +55,10 @@ PJ_DECL(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp);
 
 PJ_DECL(pj_status_t) pjmedia_ice_get_comp(pjmedia_transport *tp,
 					  unsigned comp_id,
-					  pj_ice_st_comp *comp);
+					  pj_ice_strans_comp *comp);
 
 PJ_DECL(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
-					  pj_ice_role role,
+					  pj_ice_sess_role role,
 					  const pj_str_t *local_ufrag,
 					  const pj_str_t *local_passwd);
 PJ_DECL(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,

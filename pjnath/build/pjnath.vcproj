@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjnath"
 	ProjectGUID="{A5D9AA24-08ED-48B9-BD65-F0A25E96BFC4}"
+	RootNamespace="pjnath"
 	>
 	<Platforms>
 		<Platform
@@ -197,48 +198,12 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjnath\ice.c"
+				RelativePath="..\src\pjnath\ice_session.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjnath\ice_stream_transport.c"
+				RelativePath="..\src\pjnath\ice_strans.c"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjnath\stun_auth.c"
@@ -364,11 +329,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjnath\ice.h"
+				RelativePath="..\include\pjnath\ice_session.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjnath\ice_stream_transport.h"
+				RelativePath="..\include\pjnath\ice_strans.h"
 				>
 			</File>
 			<File

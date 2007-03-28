@@ -20,6 +20,7 @@ RULES_MAK := ../../build/rules.mak
 
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
+PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 
 export PJMEDIA_LIB:=../lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
 export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
@@ -49,8 +50,10 @@ NULLSOUND_OBJS := nullsound.o
 # Gather all flags.
 #
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
+		   $(CFLAGS) $(CC_INC)../include \
+		   $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include \
+		   $(CC_INC)../../pjnath/include \
 		   $(CC_INC)../src/pjmedia/portaudio \
 		   $(CC_INC)../src/pjmedia-codec
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
@@ -58,6 +61,7 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
@@ -74,7 +78,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			port.o splitcomb.o resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o \
-			tonegen.o transport_udp.o \
+			tonegen.o transport_ice.o transport_udp.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 

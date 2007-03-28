@@ -22,8 +22,11 @@ export PJSUA_LIB_LIB=../lib/libpjsua-$(TARGET_NAME)$(LIBEXT)
 # Gather all flags.
 #
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include \
-		   $(CC_INC)../../pjlib-util/include $(CC_INC)../../pjmedia/include
+		   $(CFLAGS) $(CC_INC)../include \
+		   $(CC_INC)../../pjlib/include \
+		   $(CC_INC)../../pjlib-util/include \
+		   $(CC_INC)../../pjnath/include \
+		   $(CC_INC)../../pjmedia/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
@@ -31,6 +34,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_SIMPLE_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
