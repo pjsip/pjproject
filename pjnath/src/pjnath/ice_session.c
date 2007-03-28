@@ -82,6 +82,8 @@ static void destroy_ice(pj_ice_sess *ice,
 			pj_status_t reason);
 static pj_status_t start_periodic_check(pj_timer_heap_t *th, 
 					pj_timer_entry *te);
+static void periodic_timer(pj_timer_heap_t *th, 
+			 pj_timer_entry *te);
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 				    const void *pkt,
 				    pj_size_t pkt_size,
@@ -1078,7 +1080,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
     td->ice = ice;
     td->clist = clist;
     clist->timer.user_data = (void*)td;
-    clist->timer.cb = &start_periodic_check;
+    clist->timer.cb = &periodic_timer;
 
 
     /* Log checklist */
@@ -1256,6 +1258,13 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     return PJ_SUCCESS;
 }
 
+
+/* Timer callback to perform periodic check */
+static void periodic_timer(pj_timer_heap_t *th, 
+			   pj_timer_entry *te)
+{
+    start_periodic_check(th, te);
+}
 
 /* Start ICE check */
 PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)

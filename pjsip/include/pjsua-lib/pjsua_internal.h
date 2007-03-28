@@ -295,8 +295,8 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 					   pj_pool_t *pool,
 					   pjmedia_sdp_session **p_sdp);
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
-				       pjmedia_sdp_session *local_sdp,
-				       pjmedia_sdp_session *remote_sdp);
+				       const pjmedia_sdp_session *local_sdp,
+				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
 
 

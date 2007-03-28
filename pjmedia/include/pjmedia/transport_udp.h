@@ -30,7 +30,7 @@
 
 /**
  * @defgroup PJMEDIA_TRANSPORT_UDP UDP Socket Transport
- * @ingroup PJMEDIA_TRANSPORT_H
+ * @ingroup PJMEDIA_TRANSPORT
  * @brief Implementation of media transport with UDP sockets.
  * @{
  */

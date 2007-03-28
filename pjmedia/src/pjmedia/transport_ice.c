@@ -400,14 +400,14 @@ static void set_no_ice(struct transport_ice *tp_ice)
 
 PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					  pj_pool_t *pool,
-					  pjmedia_sdp_session *rem_sdp,
+					  const pjmedia_sdp_session *rem_sdp,
 					  unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    pjmedia_sdp_attr *attr;
+    const pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
     pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
-    pjmedia_sdp_media *sdp_med;
+    const pjmedia_sdp_media *sdp_med;
     pj_str_t uname, pass;
     pj_status_t status;
 

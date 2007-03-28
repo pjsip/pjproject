@@ -771,8 +771,8 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 
 
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
-				       pjmedia_sdp_session *local_sdp,
-				       pjmedia_sdp_session *remote_sdp)
+				       const pjmedia_sdp_session *local_sdp,
+				       const pjmedia_sdp_session *remote_sdp)
 {
     int prev_media_st = 0;
     pjsua_call *call = &pjsua_var.calls[call_id];

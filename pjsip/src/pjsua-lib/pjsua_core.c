@@ -653,8 +653,6 @@ static void busy_sleep(unsigned msec)
 }
 
 
-static pj_status_t resolve_stun_server(pj_bool_t use_dns_srv);
-
 /*
  * Callback function to receive notification from the resolver
  * when the resolution process completes.

@@ -2086,8 +2086,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				       pj_status_t status)
 {
     pjsua_call *call;
-    pjmedia_sdp_session *local_sdp;
-    pjmedia_sdp_session *remote_sdp;
+    const pjmedia_sdp_session *local_sdp;
+    const pjmedia_sdp_session *remote_sdp;
 
     PJSUA_LOCK();
 
