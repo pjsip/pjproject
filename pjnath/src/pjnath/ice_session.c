@@ -685,7 +685,7 @@ static void dump_checklist(const char *title, const pj_ice_sess *ice,
 }
 
 #else
-#define dump_checklist(ice, clist)
+#define dump_checklist(title, ice, clist)
 #endif
 
 static void check_set_state(pj_ice_sess *ice, pj_ice_sess_check *check,

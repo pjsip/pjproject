@@ -631,6 +631,7 @@ on_error:
     /* Check for failure */
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
+	PJ_UNUSED_ARG(errmsg);
 	PJ_LOG(4,(query_job->objname, 
 		  "DNS %s record resolution error for '%.*s'."
 		  " Err=%d (%s)",
