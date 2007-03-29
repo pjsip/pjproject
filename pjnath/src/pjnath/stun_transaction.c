@@ -284,14 +284,14 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     err_attr = (pj_stun_errcode_attr*) 
 		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ERROR_CODE, 0);
 
-    if (err_attr && err_attr->err_class <= 2) {
+    if (err_attr && err_attr->err_code <= 200) {
 	/* draft-ietf-behave-rfc3489bis-05.txt Section 8.3.2:
 	 * Any response between 100 and 299 MUST result in the cessation
 	 * of request retransmissions, but otherwise is discarded.
 	 */
 	PJ_LOG(4,(tsx->obj_name, 
 		  "STUN rx_msg() error: received provisional %d code (%.*s)",
-		  err_attr->err_class * 100 + err_attr->number,
+		  err_attr->err_code,
 		  (int)err_attr->reason.slen,
 		  err_attr->reason.ptr));
 	return PJ_SUCCESS;
@@ -300,8 +300,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     if (err_attr == NULL) {
 	status = PJ_SUCCESS;
     } else {
-	status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_class * 100 + 
-					  err_attr->number);
+	status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
     }
 
     /* Call callback */

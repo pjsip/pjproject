@@ -27,6 +27,7 @@
 #include <pjnath/ice_session.h>
 #include <pjlib-util/resolver.h>
 #include <pj/ioqueue.h>
+#include <pj/timer.h>
 
 
 PJ_BEGIN_DECL
@@ -314,6 +315,8 @@ struct pj_ice_strans
     pj_bool_t		     has_rjob;	/**< Has pending resolve?	*/
     pj_sockaddr_in	     stun_srv;	/**< STUN server address.	*/
     pj_sockaddr_in	     turn_srv;	/**< TURN server address.	*/
+
+    pj_timer_entry	     ka_timer;	/**< STUN keep-alive timer.	*/
 };
 
 

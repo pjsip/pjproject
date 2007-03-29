@@ -60,6 +60,10 @@ static void stun_on_request_complete(pj_stun_session *sess,
 				     pj_stun_tx_data *tdata,
 				     const pj_stun_msg *response);
 
+/* Keep-alive timer */
+static void start_ka_timer(pj_ice_strans *ice_st);
+static void stop_ka_timer(pj_ice_strans *ice_st);
+
 /* Utility: print error */
 #if PJ_LOG_MAX_LEVEL >= 3
 static void ice_st_perror(pj_ice_strans *ice_st, const char *title, 
@@ -124,6 +128,9 @@ static void destroy_ice_st(pj_ice_strans *ice_st, pj_status_t reason)
 	pj_memcpy(obj_name, ice_st->obj_name, PJ_MAX_OBJ_NAME);
 	PJ_LOG(4,(obj_name, "ICE stream transport shutting down"));
     }
+
+    /* Kill keep-alive timer, if any */
+    stop_ka_timer(ice_st);
 
     /* Destroy ICE if we have ICE */
     if (ice_st->ice) {
@@ -196,7 +203,6 @@ PJ_DEF(pj_status_t) pj_ice_strans_set_stun_srv( pj_ice_strans *ice_st,
 
     return PJ_SUCCESS;
 }
-
 
 /* Add new candidate */
 static pj_status_t add_cand( pj_ice_strans *ice_st,
@@ -504,6 +510,84 @@ static void destroy_component(pj_ice_strans_comp *comp)
     }
 }
 
+
+/* STUN keep-alive timer callback */
+static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
+{
+    pj_ice_strans *ice_st = (pj_ice_strans*)te->user_data;
+    unsigned i;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    ice_st->ka_timer.id = PJ_FALSE;
+
+    for (i=0; i<ice_st->comp_cnt; ++i) {
+	pj_ice_strans_comp *comp = ice_st->comp[i];
+	pj_stun_tx_data *tdata;
+	unsigned j;
+
+	/* Does this component have STUN server reflexive candidate? */
+	for (j=0; j<comp->cand_cnt; ++j) {
+	    if (comp->cand_list[j].type == PJ_ICE_CAND_TYPE_SRFLX)
+		break;
+	}
+	if (j == comp->cand_cnt)
+	    continue;
+
+	/* Create STUN binding request */
+	status = pj_stun_session_create_req(comp->stun_sess,
+					    PJ_STUN_BINDING_REQUEST, &tdata);
+	if (status != PJ_SUCCESS)
+	    continue;
+
+	/* tdata->user_data is NULL for keep-alive */
+	tdata->user_data = NULL;
+
+	/* Send STUN binding request */
+	PJ_LOG(5,(ice_st->obj_name, "Sending STUN keep-alive"));
+	status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
+					  &ice_st->stun_srv, 
+					  sizeof(pj_sockaddr_in), tdata);
+    }
+
+    /* Start next timer */
+    start_ka_timer(ice_st);
+}
+
+/* Start STUN keep-alive timer */
+static void start_ka_timer(pj_ice_strans *ice_st)
+{
+    pj_time_val delay;
+
+    /* Skip if timer is already running */
+    if (ice_st->ka_timer.id != PJ_FALSE)
+	return;
+
+    delay.sec = 20;
+    delay.msec = 0;
+
+    ice_st->ka_timer.cb = &ka_timer_cb;
+    ice_st->ka_timer.user_data = ice_st;
+    
+    if (pj_timer_heap_schedule(ice_st->stun_cfg.timer_heap, 
+			       &ice_st->ka_timer, &delay)==PJ_SUCCESS)
+    {
+	ice_st->ka_timer.id = PJ_TRUE;
+    }
+}
+
+
+/* Stop STUN keep-alive timer */
+static void stop_ka_timer(pj_ice_strans *ice_st)
+{
+    /* Skip if timer is already stop */
+    if (ice_st->ka_timer.id == PJ_FALSE)
+	return;
+
+    pj_timer_heap_cancel(ice_st->stun_cfg.timer_heap, &ice_st->ka_timer);
+    ice_st->ka_timer.id = PJ_FALSE;
+}
 
 
 /*
@@ -830,21 +914,15 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 	return pj_ice_sess_send_data(ice_st->ice, comp_id, data, data_len);
     }
 
-#if 1
-    PJ_UNUSED_ARG(pkt_size);
-    PJ_UNUSED_ARG(status);
-
-    /* Otherwise return error */
-    return PJNATH_EICEINPROGRESS;
-#else
-    /* Otherwise send direcly with the socket */
+    /* Otherwise send direcly with the socket. This is for compatibility
+     * with remote that doesn't support ICE.
+     */
     pkt_size = data_len;
     status = pj_ioqueue_sendto(comp->key, &comp->write_op, 
 			       data, &pkt_size, 0,
 			       dst_addr, dst_addr_len);
     
     return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
-#endif
 }
 
 /*
@@ -943,6 +1021,11 @@ static void stun_on_request_complete(pj_stun_session *sess,
     comp = (pj_ice_strans_comp*) pj_stun_session_get_user_data(sess);
     cand = (pj_ice_strans_cand*) tdata->user_data;
 
+    if (cand == NULL) {
+	/* This is keep-alive */
+	return;
+    }
+
     /* Decrement pending count for this component */
     pj_assert(comp->pending_cnt > 0);
     comp->pending_cnt--;
@@ -980,5 +1063,8 @@ static void stun_on_request_complete(pj_stun_session *sess,
     /* Set this candidate as the default candidate */
     comp->default_cand = (cand - comp->cand_list);
     comp->last_status = PJ_SUCCESS;
+
+    /* We have STUN, so we must start the keep-alive timer */
+    start_ka_timer(comp->ice_st);
 }
 

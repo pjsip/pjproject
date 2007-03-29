@@ -51,18 +51,11 @@ PJ_END_DECL
 /* Doxygen documentation below: */
 
 /**
- * @mainpage PJNATH - Open Source STUN, TURN, and ICE Library
+ * @mainpage PJNATH - Open Source ICE, STUN, and TURN Library
  *
  * \n
  * This is the documentation of PJNATH, an Open Source library providing
- * NAT traversal helper functionalities by using standard based protocols 
- * such as:
- *  - <b>STUN</b> (Session Traversal Utilities),
- *  - <b>TURN</b> (Obtaining Relay Addresses from STUN)
- *  - <b>ICE</b> (Interactive Connectivity Establishment).
- * 
- * The following sections will give a short overview about the protocols
- * supported by this library, and how they are implemented in PJNATH.
+ * NAT traversal helper functionalities by using standard based protocols.
  *
  * \n
 
@@ -70,15 +63,10 @@ PJ_END_DECL
  *
  * Session Traversal Utilities (STUN, or previously known as Simple 
  * Traversal of User Datagram Protocol (UDP) Through Network Address 
- * Translators (NAT)s), was previously released as IETF standard
- * <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>, but since
- * then it has been revised into the following:
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-06.txt">
- *    <B>draft-ietf-behave-rfc3489bis-06</b></A> for the main STUN 
- *    specification,
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-03.txt">
- *    <B>draft-ietf-behave-turn-03</B></A> for TURN usage of STUN,
- *  - and several other drafts explaining other STUN usages.
+ * Translators (NAT)s), is a lightweight protocol that serves as a tool for
+ * application protocols in dealing with NAT traversal. It allows a client
+ * to determine the IP address and port allocated to them by a NAT and to 
+ * keep NAT bindings open.
  * 
  * The PJNATH library provides facilities to support both the core 
  * <B>STUN-bis</B> specification and the <B>TURN</B> usage of STUN, 
@@ -133,6 +121,19 @@ PJ_END_DECL
  * to the STUN components for processing. and it must supply the STUN 
  * components with callback to send outgoing messages.
  * 
+ *
+ * \subsection PJNATH_STUN_REF STUN Reference
+ *
+ * References for STUN:
+ *
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-06.txt">
+ *    <B>draft-ietf-behave-rfc3489bis-06</b></A>: Session Traversal 
+ *     Utilities for (NAT) (STUN),
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-03.txt">
+ *    <B>draft-ietf-behave-turn-03</B></A>: Obtaining Relay Addresses 
+ *    from Simple Traversal Underneath NAT (STUN)
+ *  - Obsoleted: <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>.
+ *
  * \n
  *
  * \section PJNATH_ICE ICE Implementation
@@ -170,6 +171,14 @@ PJ_END_DECL
  *  - the highest abstraction is ICE media transport, which maintains
  *    ICE stream transport and provides SDP translations to be used
  *    for SIP offer/answer exchanges.
+ *
+ * \subsection PJNATH_ICE_REF Reference
+ *
+ * References for ICE:
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-15.txt">
+ *    <B>draft-ietf-mmusic-ice-15.txt</B></A>: Interactive Connectivity 
+ *    Establishment (ICE): A Methodology for Network Address Translator 
+ *    (NAT) Traversal for Offer/Answer Protocols
  */
 
 /**

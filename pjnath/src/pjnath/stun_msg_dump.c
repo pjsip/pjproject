@@ -140,7 +140,7 @@ static int print_attr(char *buffer, unsigned length,
 	    attr = (const pj_stun_errcode_attr*) ahdr;
 	    len = pj_ansi_snprintf(p, end-p,
 				   ", err_code=%d, reason=\"%.*s\"\n",
-				   attr->err_class*100 + attr->number,
+				   attr->err_code,
 				   (int)attr->reason.slen,
 				   attr->reason.ptr);
 	}

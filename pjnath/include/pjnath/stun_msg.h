@@ -310,6 +310,8 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_ALTERNATE_SERVER   = 0x8023,/**< ALTERNATE-SERVER.	    */
     PJ_STUN_ATTR_REFRESH_INTERVAL   = 0x8024,/**< REFRESH-INTERVAL.	    */
     PJ_STUN_ATTR_FINGERPRINT	    = 0x8028,/**< FINGERPRINT attribute.    */
+    PJ_STUN_ATTR_ICE_CONTROLLED	    = 0x8029,/**< ICE-CCONTROLLED attribute.*/
+    PJ_STUN_ATTR_ICE_CONTROLLING    = 0x802a,/**< ICE-CCONTROLLING attribute*/
 
     PJ_STUN_ATTR_END_EXTENDED_ATTR
 
@@ -344,6 +346,7 @@ typedef enum pj_stun_status
     PJ_STUN_SC_CONNECTION_TIMEOUT       = 447,  /**< Connection Timeout	    */
     PJ_STUN_SC_ALLOCATION_QUOTA_REACHED = 486,  /**< Allocation Quota Reached
 						     (TURN) */
+    PJ_STUN_SC_ROLE_CONFLICT		= 487,  /**< Role Conflict	    */
     PJ_STUN_SC_SERVER_ERROR	        = 500,  /**< Server Error	    */
     PJ_STUN_SC_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity 
 						     (TURN) */
@@ -417,8 +420,6 @@ typedef struct pj_stun_msg_hdr
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |         Type                  |            Length             |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                             Value                 ....        |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
    \endverbatim
@@ -533,11 +534,30 @@ typedef struct pj_stun_uint_attr
     pj_stun_attr_hdr	hdr;
     
     /**
-     * The 32bit value.
+     * The 32bit value, in host byte order.
      */
     pj_uint32_t		value;
 
 } pj_stun_uint_attr;
+
+
+/**
+ * This structure represents a generic STUN attributes with 64bit (unsigned)
+ * integer value, such as ICE-CONTROLLED and ICE-CONTROLLING attributes.
+ */
+typedef struct pj_stun_uint64_attr
+{
+    /**
+     * Standard STUN attribute header.
+     */
+    pj_stun_attr_hdr	hdr;
+    
+    /**
+     * The 64bit value, in host byte order, represented with pj_timestamp.
+     */
+    pj_timestamp	value;
+
+} pj_stun_uint64_attr;
 
 
 /**
@@ -621,19 +641,9 @@ typedef struct pj_stun_errcode_attr
     pj_stun_attr_hdr	hdr;
 
     /**
-     * The value must be zero.
+     * STUN error code.
      */
-    pj_uint16_t		zero;
-
-    /**
-     * Error class (1-6).
-     */
-    pj_uint8_t		err_class;
-
-    /**
-     * Error number is the error number modulo 100.
-     */
-    pj_uint8_t		number;
+    int			err_code;
 
     /**
      * The reason phrase.
@@ -1347,6 +1357,37 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
 					       int attr_type,
 					       pj_uint32_t value);
 
+
+/**
+ * Create a STUN generic 64bit value attribute.
+ *
+ * @param pool		Pool to allocate memory from.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param value		Optional value to be assigned.
+ * @param p_attr	Pointer to receive the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DEF(pj_status_t)  pj_stun_uint64_attr_create(pj_pool_t *pool,
+					        int attr_type,
+					        const pj_timestamp *value,
+					        pj_stun_uint64_attr **p_attr);
+
+
+/**
+ *  Create and add STUN generic 64bit value attribute to the message. 
+ *
+ * @param pool		The pool to allocate memory from.
+ * @param msg		The STUN message
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param value		The 64bit value to be assigned to the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)  pj_stun_msg_add_uint64_attr(pj_pool_t *pool,
+					          pj_stun_msg *msg,
+					          int attr_type,
+					          const pj_timestamp *value);
 
 /**
  * Create a STUN MESSAGE-INTEGRITY attribute.

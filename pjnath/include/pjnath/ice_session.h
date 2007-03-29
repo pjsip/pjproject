@@ -444,6 +444,7 @@ struct pj_ice_sess
     void		*user_data;		    /**< App. data.	    */
     pj_mutex_t		*mutex;			    /**< Mutex.		    */
     pj_ice_sess_role	 role;			    /**< ICE role.	    */
+    pj_timestamp	 tie_breaker;		    /**< Tie breaker value  */
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
@@ -547,6 +548,21 @@ PJ_DECL(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_ice_sess_destroy(pj_ice_sess *ice);
+
+
+/**
+ * Change session role. This happens for example when ICE session was
+ * created with controlled role when receiving an offer, but it turns out
+ * that the offer contains "a=ice-lite" attribute when the SDP gets
+ * inspected.
+ *
+ * @param ice		The ICE session.
+ * @param new_role	The new role to be set.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
+					     pj_ice_sess_role new_role);
 
 
 /**

@@ -56,6 +56,12 @@ static const char *clist_state_name[] =
     "Completed"
 };
 
+static const char *role_names[] = 
+{
+    "Controlled",
+    "Controlling"
+};
+
 #define CHECK_NAME_LEN		128
 #define LOG4(expr)		PJ_LOG(4,expr)
 #define LOG5(expr)		PJ_LOG(4,expr)
@@ -196,6 +202,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     ice = PJ_POOL_ZALLOC_T(pool, pj_ice_sess);
     ice->pool = pool;
     ice->role = role;
+    ice->tie_breaker.u32.hi = pj_rand();
+    ice->tie_breaker.u32.lo = pj_rand();
 
     pj_ansi_snprintf(ice->obj_name, sizeof(ice->obj_name),
 		     name, ice);
@@ -237,9 +245,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
 
     LOG4((ice->obj_name, 
 	 "ICE session created, comp_cnt=%d, role is %s agent",
-	 comp_cnt,
-	 (ice->role==PJ_ICE_SESS_ROLE_CONTROLLING ? 
-	    "controlling":"controlled")));
+	 comp_cnt, role_names[ice->role]));
 
     return PJ_SUCCESS;
 }
@@ -289,6 +295,23 @@ PJ_DEF(pj_status_t) pj_ice_sess_destroy(pj_ice_sess *ice)
 {
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
     destroy_ice(ice, PJ_SUCCESS);
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Change session role. 
+ */
+PJ_DEF(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
+					    pj_ice_sess_role new_role)
+{
+    PJ_ASSERT_RETURN(ice, PJ_EINVAL);
+
+    if (new_role != ice->role) {
+	ice->role = new_role;
+	LOG4((ice->obj_name, "Role changed to %s", role_names[new_role]));
+    }
+
     return PJ_SUCCESS;
 }
 

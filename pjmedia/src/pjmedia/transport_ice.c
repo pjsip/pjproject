@@ -24,7 +24,7 @@
 struct transport_ice
 {
     pjmedia_transport	 base;
-    pj_ice_strans		*ice_st;
+    pj_ice_strans	*ice_st;
 
     pj_time_val		 start_ice;
     
@@ -408,6 +408,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     unsigned i, cand_cnt;
     pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
     const pjmedia_sdp_media *sdp_med;
+    pj_bool_t remote_is_lite = PJ_FALSE;
+    const pj_str_t STR_CANDIDATE = {"candidate", 9};
+    const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
     pj_str_t uname, pass;
     pj_status_t status;
 
@@ -444,13 +447,17 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     }
     pass = attr->value;
 
-    /* Get all candidates */
+    /* Get all candidates in the media */
     cand_cnt = 0;
     for (i=0; i<sdp_med->attr_count; ++i) {
 	pjmedia_sdp_attr *attr;
 
 	attr = sdp_med->attr[i];
-	if (pj_strcmp2(&attr->name, "candidate")!=0)
+
+	if (pj_strcmp(&attr->name, &STR_ICE_LITE)==0)
+	    remote_is_lite = PJ_TRUE;
+
+	if (pj_strcmp(&attr->name, &STR_CANDIDATE)!=0)
 	    continue;
 
 	status = parse_cand(pool, &attr->value, &cand[cand_cnt]);
@@ -462,6 +469,16 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 
     /* Mark start time */
     pj_gettimeofday(&tp_ice->start_ice);
+
+    /* If our role was controlled but it turns out that remote is 
+     * a lite implementation, change our role to controlling.
+     */
+    if (remote_is_lite && 
+	tp_ice->ice_st->ice->role == PJ_ICE_SESS_ROLE_CONTROLLED)
+    {
+	pj_ice_sess_change_role(tp_ice->ice_st->ice, 
+				PJ_ICE_SESS_ROLE_CONTROLLING);
+    }
 
     /* Start ICE */
     return pj_ice_strans_start_ice(tp_ice->ice_st, &uname, &pass, cand_cnt, cand);
@@ -552,8 +569,8 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     return pj_ice_strans_sendto(tp_ice->ice_st, 1, 
-			    pkt, size, &tp_ice->remote_rtp,
-			    sizeof(pj_sockaddr_in));
+			        pkt, size, &tp_ice->remote_rtp,
+				sizeof(pj_sockaddr_in));
 }
 
 
@@ -564,8 +581,8 @@ static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     if (tp_ice->ice_st->comp_cnt > 1) {
 	return pj_ice_strans_sendto(tp_ice->ice_st, 2, 
-				pkt, size, &tp_ice->remote_rtp,
-				sizeof(pj_sockaddr_in));
+				    pkt, size, &tp_ice->remote_rtp,
+				    sizeof(pj_sockaddr_in));
     } else {
 	return PJ_SUCCESS;
     }
