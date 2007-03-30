@@ -44,7 +44,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
     /* Provide enough buffer or otherwise it will fail with 
      * error 22 ("Not Enough Buffer") error.
      */
-    MIB_IPADDRTABLE ipTabBuff[4];
+    char ipTabBuff[1024];
     MIB_IPADDRTABLE *pTab;
     ULONG tabSize;
     unsigned i, count;
@@ -52,11 +52,11 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 
     PJ_ASSERT_RETURN(p_cnt && ifs, PJ_EINVAL);
 
-    pTab = ipTabBuff;
+    pTab = (MIB_IPADDRTABLE*)ipTabBuff;
 
     /* Get IP address table */
     tabSize = sizeof(ipTabBuff);
-    rc = GetIpAddrTable(ipTabBuff, &tabSize, FALSE);
+    rc = GetIpAddrTable(pTab, &tabSize, FALSE);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
@@ -85,9 +85,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 				     pj_ip_route_entry routes[])
 {
-    MIB_IPADDRTABLE ipTabBuff[4];
+    char ipTabBuff[1024];
     MIB_IPADDRTABLE *pIpTab;
-    MIB_IPFORWARDTABLE rtabBuff[4];
+    char rtabBuff[1024];
     MIB_IPFORWARDTABLE *prTab;
     ULONG tabSize;
     unsigned i, count;
@@ -95,18 +95,18 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 
     PJ_ASSERT_RETURN(p_cnt && routes, PJ_EINVAL);
 
-    pIpTab = ipTabBuff;
-    prTab = rtabBuff;
+    pIpTab = (MIB_IPADDRTABLE *)ipTabBuff;
+    prTab = (MIB_IPFORWARDTABLE *)rtabBuff;
 
     /* First get IP address table */
     tabSize = sizeof(ipTabBuff);
-    rc = GetIpAddrTable(ipTabBuff, &tabSize, FALSE);
+    rc = GetIpAddrTable(pIpTab, &tabSize, FALSE);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
     /* Next get IP route table */
     tabSize = sizeof(rtabBuff);
-    rc = GetIpForwardTable(rtabBuff, &tabSize, 1);
+    rc = GetIpForwardTable(prTab, &tabSize, 1);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
