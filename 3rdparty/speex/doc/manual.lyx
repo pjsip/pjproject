@@ -1,0 +1,8361 @@
+#LyX 1.4.4 created this file. For more info see http://www.lyx.org/
+\lyxformat 245
+\begin_document
+\begin_header
+\textclass scrbook
+\language english
+\inputencoding auto
+\fontscheme pslatex
+\graphics default
+\paperfontsize 10
+\spacing onehalf
+\papersize letterpaper
+\use_geometry true
+\use_amsmath 2
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle headings
+\tracking_changes false
+\output_changes true
+\end_header
+
+\begin_body
+
+\begin_layout Title
+The Speex Codec Manual
+\newline
+(version 1.2-beta2)
+\end_layout
+
+\begin_layout Author
+Jean-Marc Valin
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+Copyright (c) 2002-2006 Jean-Marc Valin/Xiph.org Foundation
+\end_layout
+
+\begin_layout Standard
+Permission is granted to copy, distribute and/or modify this document under
+ the terms of the GNU Free Documentation License, Version 1.1 or any later
+ version published by the Free Software Foundation; with no Invariant Section,
+ with no Front-Cover Texts, and with no Back-Cover.
+ A copy of the license is included in the section entitled "GNU Free Documentati
+on License".
+ 
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset
+
+
+\newpage
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FloatList table
+
+\end_inset
+
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Introduction to Speex
+\end_layout
+
+\begin_layout Standard
+The Speex project (
+\family typewriter
+http://www.speex.org/
+\family default
+) has been started because there was a need for a speech codec that was
+ open-source and free from software patents.
+ These are essential conditions for being used by any open-source software.
+ There is already Vorbis that does general audio, but it is not really suitable
+ for speech.
+ Also, unlike many other speech codecs, Speex is not targeted at cell phones
+ but rather at voice over IP (VoIP) and file-based compression.
+ 
+\end_layout
+
+\begin_layout Standard
+As design goals, we wanted to have a codec that would allow both very good
+ quality speech and low bit-rate (unfortunately not at the same time!),
+ which led us to developing a codec with multiple bit-rates.
+ Of course very good quality also meant we had to do wideband (16 kHz sampling
+ rate) in addition to narrowband (telephone quality, 8 kHz sampling rate).
+\end_layout
+
+\begin_layout Standard
+Designing for VoIP instead of cell phone use means that Speex must be robust
+ to lost packets, but not to corrupted ones since packets either arrive
+ unaltered or don't arrive at all.
+ Also, the idea was to have a reasonable complexity and memory requirement
+ without compromising too much on the efficiency of the codec.
+\end_layout
+
+\begin_layout Standard
+All this led us to the choice of CELP
+\begin_inset LatexCommand \index{CELP}
+
+\end_inset
+
+ as the encoding technique to use for Speex.
+ One of the main reasons is that CELP has long proved that it could do the
+ job and scale well to both low bit-rates (think DoD CELP @ 4.8 kbps) and
+ high bit-rates (think G.728 @ 16 kbps).
+ 
+\end_layout
+
+\begin_layout Standard
+This document is divided in the following way.
+ Section 
+\begin_inset LatexCommand \ref{sec:Feature-description}
+
+\end_inset
+
+ describes the different Speex features and defines some terms that will
+ be used in later sections.
+ Section 
+\begin_inset LatexCommand \ref{sec:Command-line-encoder/decoder}
+
+\end_inset
+
+ provides information about the standard command-line tools, while 
+\begin_inset LatexCommand \ref{sec:Programming-with-Speex}
+
+\end_inset
+
+ contains information about programming using the Speex API.
+ Section 
+\begin_inset LatexCommand \ref{sec:Formats-and-standards}
+
+\end_inset
+
+ has some information related to Speex and standards.
+ The three last sections describe the internals of the codec and require
+ some signal processing knowledge.
+ Section 
+\begin_inset LatexCommand \ref{sec:Introduction-to-CELP}
+
+\end_inset
+
+ explains the general idea behind CELP, while sections 
+\begin_inset LatexCommand \ref{sec:Speex-narrowband-mode}
+
+\end_inset
+
+ and 
+\begin_inset LatexCommand \ref{sec:Speex-wideband-mode}
+
+\end_inset
+
+ are specific to Speex.
+ Note that if you are only interested in using Speex, those three last sections
+ are not required.
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Codec description
+\begin_inset LatexCommand \label{sec:Feature-description}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section describes the main features provided by Speex.
+\end_layout
+
+\begin_layout Section
+Concepts
+\end_layout
+
+\begin_layout Standard
+Before introducing all the Speex features, here are some concepts in speech
+ coding that help better understand the rest of the manual.
+ Emphasis is placed on Speex.
+\end_layout
+
+\begin_layout Subsection*
+Sampling rate
+\begin_inset LatexCommand \index{sampling rate}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Speex is mainly designed for three different sampling rates: 8 kHz, 16 kHz,
+ and 32 kHz.
+ These are respectively refered to as narrowband
+\begin_inset LatexCommand \index{narrowband}
+
+\end_inset
+
+, wideband
+\begin_inset LatexCommand \index{wideband}
+
+\end_inset
+
+ and ultra-wideband
+\begin_inset LatexCommand \index{ultra-wideband}
+
+\end_inset
+
+.
+ For a sampling rate of 
+\begin_inset Formula $F_{s}$
+\end_inset
+
+ kHz, the highest frequency that can be represented is equal to 
+\begin_inset Formula $F_{s}/2$
+\end_inset
+
+ kHz.
+ This is a consequence of Nyquist's sampling theorem (and 
+\begin_inset Formula $F_{s}/2$
+\end_inset
+
+ is known as the Nyquist frequency).
+\end_layout
+
+\begin_layout Subsection*
+Quality
+\begin_inset LatexCommand \index{quality}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Speex encoding is controlled most of the time by a quality parameter that
+ ranges from 0 to 10.
+ In constant bit-rate
+\begin_inset LatexCommand \index{constant bit-rate}
+
+\end_inset
+
+ (CBR) operation, the quality parameter is an integer, while for variable
+ bit-rate (VBR), the parameter is a float.
+ 
+\end_layout
+
+\begin_layout Subsection*
+Complexity
+\begin_inset LatexCommand \index{complexity}
+
+\end_inset
+
+ (variable)
+\end_layout
+
+\begin_layout Standard
+With Speex, it is possible to vary the complexity allowed for the encoder.
+ This is done by controlling how the search is performed with an integer
+ ranging from 1 to 10 in a way that's similar to the -1 to -9 options to
+ 
+\emph on
+gzip
+\emph default
+ and 
+\emph on
+bzip2
+\emph default
+ compression utilities.
+ For normal use, the noise level at complexity 1 is between 1 and 2 dB higher
+ than at complexity 10, but the CPU requirements for complexity 10 is about
+ 5 times higher than for complexity 1.
+ In practice, the best trade-off is between complexity 2 and 4, though higher
+ settings are often useful when encoding non-speech sounds like DTMF
+\begin_inset LatexCommand \index{DTMF}
+
+\end_inset
+
+ tones.
+\end_layout
+
+\begin_layout Subsection*
+Variable Bit-Rate
+\begin_inset LatexCommand \index{variable bit-rate}
+
+\end_inset
+
+ (VBR)
+\end_layout
+
+\begin_layout Standard
+Variable bit-rate (VBR) allows a codec to change its bit-rate dynamically
+ to adapt to the 
+\begin_inset Quotes eld
+\end_inset
+
+difficulty
+\begin_inset Quotes erd
+\end_inset
+
+ of the audio being encoded.
+ In the example of Speex, sounds like vowels and high-energy transients
+ require a higher bit-rate to achieve good quality, while fricatives (e.g.
+ s,f sounds) can be coded adequately with less bits.
+ For this reason, VBR can achive lower bit-rate for the same quality, or
+ a better quality for a certain bit-rate.
+ Despite its advantages, VBR has two main drawbacks: first, by only specifying
+ quality, there's no guaranty about the final average bit-rate.
+ Second, for some real-time applications like voice over IP (VoIP), what
+ counts is the maximum bit-rate, which must be low enough for the communication
+ channel.
+\end_layout
+
+\begin_layout Subsection*
+Average Bit-Rate
+\begin_inset LatexCommand \index{average bit-rate}
+
+\end_inset
+
+ (ABR)
+\end_layout
+
+\begin_layout Standard
+Average bit-rate solves one of the problems of VBR, as it dynamically adjusts
+ VBR quality in order to meet a specific target bit-rate.
+ Because the quality/bit-rate is adjusted in real-time (open-loop), the
+ global quality will be slightly lower than that obtained by encoding in
+ VBR with exactly the right quality setting to meet the target average bit-rate.
+\end_layout
+
+\begin_layout Subsection*
+Voice Activity Detection
+\begin_inset LatexCommand \index{voice activity detection}
+
+\end_inset
+
+ (VAD)
+\end_layout
+
+\begin_layout Standard
+When enabled, voice activity detection detects whether the audio being encoded
+ is speech or silence/background noise.
+ VAD is always implicitly activated when encoding in VBR, so the option
+ is only useful in non-VBR operation.
+ In this case, Speex detects non-speech periods and encode them with just
+ enough bits to reproduce the background noise.
+ This is called 
+\begin_inset Quotes eld
+\end_inset
+
+comfort noise generation
+\begin_inset Quotes erd
+\end_inset
+
+ (CNG).
+\end_layout
+
+\begin_layout Subsection*
+Discontinuous Transmission
+\begin_inset LatexCommand \index{discontinuous transmission}
+
+\end_inset
+
+ (DTX)
+\end_layout
+
+\begin_layout Standard
+Discontinuous transmission is an addition to VAD/VBR operation, that allows
+ to stop transmitting completely when the background noise is stationary.
+ In file-based operation, since we cannot just stop writing to the file,
+ only 5 bits are used for such frames (corresponding to 250 bps).
+\end_layout
+
+\begin_layout Subsection*
+Perceptual enhancement
+\begin_inset LatexCommand \index{perceptual enhancement}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Perceptual enhancement is a part of the decoder which, when turned on, tries
+ to reduce (the perception of) the noise produced by the coding/decoding
+ process.
+ In most cases, perceptual enhancement make the sound further from the original
+ 
+\emph on
+objectively
+\emph default
+ (if you use SNR), but in the end it still 
+\emph on
+sounds
+\emph default
+ better (subjective improvement).
+\end_layout
+
+\begin_layout Subsection*
+Algorithmic delay
+\begin_inset LatexCommand \index{algorithmic delay}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Every speech codec introduces a delay in the transmission.
+ For Speex, this delay is equal to the frame size, plus some amount of 
+\begin_inset Quotes eld
+\end_inset
+
+look-ahead
+\begin_inset Quotes erd
+\end_inset
+
+ required to process each frame.
+ In narrowband operation (8 kHz), the delay is 30 ms, while for wideband
+ (16 kHz), the delay is 34 ms.
+ These values don't account for the CPU time it takes to encode or decode
+ the frames.
+\end_layout
+
+\begin_layout Section
+Codec
+\end_layout
+
+\begin_layout Standard
+The main characteristics of Speex can be summarized as follows:
+\end_layout
+
+\begin_layout Itemize
+Free software/open-source
+\begin_inset LatexCommand \index{open-source}
+
+\end_inset
+
+, patent
+\begin_inset LatexCommand \index{patent}
+
+\end_inset
+
+ and royalty-free
+\end_layout
+
+\begin_layout Itemize
+Integration of narrowband
+\begin_inset LatexCommand \index{narrowband}
+
+\end_inset
+
+ and wideband
+\begin_inset LatexCommand \index{wideband}
+
+\end_inset
+
+ using an embedded bit-stream
+\end_layout
+
+\begin_layout Itemize
+Wide range of bit-rates available (from 2.15 kbps to 44 kbps)
+\end_layout
+
+\begin_layout Itemize
+Dynamic bit-rate switching (AMR) and Variable Bit-Rate
+\begin_inset LatexCommand \index{variable bit-rate}
+
+\end_inset
+
+ (VBR) operation
+\end_layout
+
+\begin_layout Itemize
+Voice Activity Detection
+\begin_inset LatexCommand \index{voice activity detection}
+
+\end_inset
+
+ (VAD, integrated with VBR) and discontinuous transmission (DTX)
+\end_layout
+
+\begin_layout Itemize
+Variable complexity
+\begin_inset LatexCommand \index{complexity}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Embedded wideband structure (scalable sampling rate)
+\end_layout
+
+\begin_layout Itemize
+Ultra-wideband mode at 32 kHz
+\end_layout
+
+\begin_layout Itemize
+Intensity stereo encoding option
+\end_layout
+
+\begin_layout Itemize
+Fixed-point implementation (work in progress)
+\end_layout
+
+\begin_layout Section
+Preprocessor
+\end_layout
+
+\begin_layout Standard
+This part refers to the preprocessor module introduced in the 1.1.x branch.
+ The preprocessor is designed to be used on the audio 
+\emph on
+before
+\emph default
+ running the encoder.
+ The preprocessor provides three main functionalities:
+\end_layout
+
+\begin_layout Itemize
+noise suppression
+\end_layout
+
+\begin_layout Itemize
+automatic gain control (AGC)
+\end_layout
+
+\begin_layout Itemize
+voice activity detection (VAD)
+\end_layout
+
+\begin_layout Standard
+The denoiser can be used to reduce the amount of background noise present
+ in the input signal.
+ This provides higher quality speech whether or not the denoised signal
+ is encoded with Speex (or at all).
+ However, when using the denoised signal with the codec, there is an additional
+ benefit.
+ Speech codecs in general (Speex included) tend to perform poorly on noisy
+ input, which tends to amplify the noise.
+ The denoiser greatly reduces this effect.
+\end_layout
+
+\begin_layout Standard
+Automatic gain control (AGC) is a feature that deals with the fact that
+ the recording volume may vary by a large amount between different setups.
+ The AGC provides a way to adjust a signal to a reference volume.
+ This is useful for voice over IP because it removes the need for manual
+ adjustment of the microphone gain.
+ A secondary advantage is that by setting the microphone gain to a conservative
+ (low) level, it is easier to avoid clipping.
+\end_layout
+
+\begin_layout Standard
+The voice activity detector (VAD) provided by the preprocessor is more advanced
+ than the one directly provided in the codec.
+ 
+\end_layout
+
+\begin_layout Section
+Adaptive Jitter Buffer
+\end_layout
+
+\begin_layout Standard
+When transmitting voice (or any content for that matter) over UDP or RTP,
+ packet may be lost, arrive with different delay, or even out of order.
+ The purpose of a jitter buffer is to reorder packets and buffer them long
+ enough (but no longer than necessary) so they can be sent to be decoded.
+ 
+\end_layout
+
+\begin_layout Section
+Acoustic Echo Canceller
+\end_layout
+
+\begin_layout Standard
+In any hands-free communication system (Fig.
+ 
+\begin_inset LatexCommand \ref{fig:Acoustic-echo-model}
+
+\end_inset
+
+), speech from the remote end is played in the local loudspeaker, propagates
+ in the room and is captured by the microphone.
+ If the audio captured from the microphone is sent directly to the remote
+ end, then the remove user hears an echo of his voice.
+ An acoustic echo canceller is designed to remove the acoustic echo before
+ it is sent to the remote end.
+ It is important to understand that the echo canceller is meant to improve
+ the quality on the 
+\series bold
+remote
+\series default
+ end.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename echo_path.eps
+	width 10cm
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Acoustic echo model
+\begin_inset LatexCommand \label{fig:Acoustic-echo-model}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Compiling
+\end_layout
+
+\begin_layout Standard
+Compiling Speex under UNIX or any platform supported by autoconf (e.g.
+ Win32/cygwin) is as easy as typing:
+\end_layout
+
+\begin_layout LyX-Code
+% ./configure [options]
+\end_layout
+
+\begin_layout LyX-Code
+% make
+\end_layout
+
+\begin_layout LyX-Code
+% make install
+\end_layout
+
+\begin_layout Standard
+The options supported by the Speex configure script are:
+\end_layout
+
+\begin_layout Description
+--prefix=<path> Specifies where to install Speex
+\end_layout
+
+\begin_layout Description
+--enable-shared/--disable-shared Whether to compile shared libraries
+\end_layout
+
+\begin_layout Description
+--enable-static/--disable-static Whether to compile static libraries
+\end_layout
+
+\begin_layout Description
+--disable-wideband Disable the wideband part of Speex (typically to same
+ space)
+\end_layout
+
+\begin_layout Description
+--enable-valgrind Enable extra information when (and only when) running
+ with valgrind
+\end_layout
+
+\begin_layout Description
+--enable-sse Enable use of SSE instructions (x86/float only)
+\end_layout
+
+\begin_layout Description
+--enable-fixed-point
+\begin_inset LatexCommand \index{fixed-point}
+
+\end_inset
+
+ Compile Speex for a processor that does not have a floating point unit
+ (FPU)
+\end_layout
+
+\begin_layout Description
+--enable-arm4-asm Enable assembly specific to the ARMv4 architecture (gcc
+ only)
+\end_layout
+
+\begin_layout Description
+--enable-arm5e-asm Enable assembly specific to the ARMv5E architecture (gcc
+ only)
+\end_layout
+
+\begin_layout Description
+--enable-fixed-point-debug Use only for debugging the fixed-point
+\begin_inset LatexCommand \index{fixed-point}
+
+\end_inset
+
+ code (very slow)
+\end_layout
+
+\begin_layout Description
+--enable-epic-48k Enable a special (and non-compatible) 4.8 kbps narrowband
+ mode
+\end_layout
+
+\begin_layout Description
+--enable-ti-c55x Enable support for the TI C5x family
+\end_layout
+
+\begin_layout Description
+--enable-blackfin-asm Enable assembly specific to the Blackfin DSP architecture
+ (gcc only)
+\end_layout
+
+\begin_layout Description
+--enable-16bit-precision Reduces precision to 16 bits in time-critical areas
+ (fixed-point only)
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Command-line encoder/decoder
+\begin_inset LatexCommand \label{sec:Command-line-encoder/decoder}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The base Speex distribution includes a command-line encoder (
+\emph on
+speexenc
+\emph default
+) and decoder (
+\emph on
+speexdec
+\emph default
+).
+ This section describes how to use these tools.
+\end_layout
+
+\begin_layout Section
+
+\emph on
+speexenc
+\begin_inset LatexCommand \index{speexenc}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The 
+\emph on
+speexenc
+\emph default
+ utility is used to create Speex files from raw PCM or wave files.
+ It can be used by calling: 
+\end_layout
+
+\begin_layout LyX-Code
+speexenc [options] input_file output_file
+\end_layout
+
+\begin_layout Standard
+The value '-' for input_file or output_file corresponds respectively to
+ stdin and stdout.
+ The valid options are:
+\end_layout
+
+\begin_layout Description
+--narrowband\InsetSpace ~
+(-n) Tell Speex to treat the input as narrowband (8 kHz).
+ This is the default
+\end_layout
+
+\begin_layout Description
+--wideband\InsetSpace ~
+(-w) Tell Speex to treat the input as wideband (16 kHz)
+\end_layout
+
+\begin_layout Description
+--ultra-wideband\InsetSpace ~
+(-u) Tell Speex to treat the input as 
+\begin_inset Quotes eld
+\end_inset
+
+ultra-wideband
+\begin_inset Quotes erd
+\end_inset
+
+ (32 kHz)
+\end_layout
+
+\begin_layout Description
+--quality\InsetSpace ~
+n Set the encoding quality (0-10), default is 8
+\end_layout
+
+\begin_layout Description
+--bitrate\InsetSpace ~
+n Encoding bit-rate (use bit-rate n or lower) 
+\end_layout
+
+\begin_layout Description
+--vbr Enable VBR (Variable Bit-Rate), disabled by default
+\end_layout
+
+\begin_layout Description
+--abr\InsetSpace ~
+n Enable ABR (Average Bit-Rate) at n kbps, disabled by default
+\end_layout
+
+\begin_layout Description
+--vad Enable VAD (Voice Activity Detection), disabled by default
+\end_layout
+
+\begin_layout Description
+--dtx Enable DTX (Discontinuous Transmission), disabled by default
+\end_layout
+
+\begin_layout Description
+--nframes\InsetSpace ~
+n Pack n frames in each Ogg packet (this saves space at low bit-rates)
+\end_layout
+
+\begin_layout Description
+--comp\InsetSpace ~
+n Set encoding speed/quality tradeoff.
+ The higher the value of n, the slower the encoding (default is 3)
+\end_layout
+
+\begin_layout Description
+-V Verbose operation, print bit-rate currently in use
+\end_layout
+
+\begin_layout Description
+--help\InsetSpace ~
+(-h) Print the help
+\end_layout
+
+\begin_layout Description
+--version\InsetSpace ~
+(-v) Print version information
+\end_layout
+
+\begin_layout Subsection*
+Speex comments
+\end_layout
+
+\begin_layout Description
+--comment Add the given string as an extra comment.
+ This may be used multiple times.
+ 
+\end_layout
+
+\begin_layout Description
+--author Author of this track.
+ 
+\end_layout
+
+\begin_layout Description
+--title Title for this track.
+ 
+\end_layout
+
+\begin_layout Subsection*
+Raw input options
+\end_layout
+
+\begin_layout Description
+--rate\InsetSpace ~
+n Sampling rate for raw input
+\end_layout
+
+\begin_layout Description
+--stereo Consider raw input as stereo 
+\end_layout
+
+\begin_layout Description
+--le Raw input is little-endian 
+\end_layout
+
+\begin_layout Description
+--be Raw input is big-endian 
+\end_layout
+
+\begin_layout Description
+--8bit Raw input is 8-bit unsigned 
+\end_layout
+
+\begin_layout Description
+--16bit Raw input is 16-bit signed 
+\end_layout
+
+\begin_layout Section
+
+\emph on
+speexdec
+\begin_inset LatexCommand \index{speexdec}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The 
+\emph on
+speexdec
+\emph default
+ utility is used to decode Speex files and can be used by calling: 
+\end_layout
+
+\begin_layout LyX-Code
+speexdec [options] speex_file [output_file]
+\end_layout
+
+\begin_layout Standard
+The value '-' for input_file or output_file corresponds respectively to
+ stdin and stdout.
+ Also, when no output_file is specified, the file is played to the soundcard.
+ The valid options are:
+\end_layout
+
+\begin_layout Description
+--enh enable post-filter (default)
+\end_layout
+
+\begin_layout Description
+--no-enh disable post-filter
+\end_layout
+
+\begin_layout Description
+--force-nb Force decoding in narrowband 
+\end_layout
+
+\begin_layout Description
+--force-wb Force decoding in wideband 
+\end_layout
+
+\begin_layout Description
+--force-uwb Force decoding in ultra-wideband 
+\end_layout
+
+\begin_layout Description
+--mono Force decoding in mono 
+\end_layout
+
+\begin_layout Description
+--stereo Force decoding in stereo 
+\end_layout
+
+\begin_layout Description
+--rate\InsetSpace ~
+n Force decoding at n Hz sampling rate
+\end_layout
+
+\begin_layout Description
+--packet-loss\InsetSpace ~
+n Simulate n % random packet loss
+\end_layout
+
+\begin_layout Description
+-V Verbose operation, print bit-rate currently in use
+\end_layout
+
+\begin_layout Description
+--help\InsetSpace ~
+(-h) Print the help
+\end_layout
+
+\begin_layout Description
+--version\InsetSpace ~
+(-v) Print version information
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Programming with Speex (the libspeex
+\begin_inset LatexCommand \index{libspeex}
+
+\end_inset
+
+ API
+\begin_inset LatexCommand \index{API}
+
+\end_inset
+
+)
+\begin_inset LatexCommand \label{sec:Programming-with-Speex}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section explains how to use the Speex API.
+ Examples of code can also be found in appendix 
+\begin_inset LatexCommand \ref{sec:Sample-code}
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Encoding
+\begin_inset LatexCommand \label{sub:Encoding}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In order to encode speech using Speex, you first need to:
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex.h>
+\end_layout
+
+\begin_layout Standard
+You then need to declare a Speex bit-packing struct
+\end_layout
+
+\begin_layout LyX-Code
+SpeexBits bits;
+\end_layout
+
+\begin_layout Standard
+and a Speex encoder state
+\end_layout
+
+\begin_layout LyX-Code
+void *enc_state;
+\end_layout
+
+\begin_layout Standard
+The two are initialized by:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_init(&bits);
+\end_layout
+
+\begin_layout LyX-Code
+enc_state = speex_encoder_init(&speex_nb_mode);
+\end_layout
+
+\begin_layout Standard
+For wideband coding, 
+\emph on
+speex_nb_mode
+\emph default
+ will be replaced by 
+\emph on
+speex_wb_mode
+\emph default
+.
+ In most cases, you will need to know the frame size used by the mode you
+ are using.
+ You can get that value in the 
+\emph on
+frame_size
+\emph default
+ variable with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_encoder_ctl(enc_state,SPEEX_GET_FRAME_SIZE,&frame_size);
+\end_layout
+
+\begin_layout Standard
+In practice, 
+\emph on
+frame_size
+\emph default
+ will correspond to 20 ms when using 8, 16, or 32 kHz sampling rate.
+\end_layout
+
+\begin_layout Standard
+Once the initialization is done, for every input frame:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_reset(&bits);
+\end_layout
+
+\begin_layout LyX-Code
+speex_encode_int(enc_state, input_frame, &bits);
+\end_layout
+
+\begin_layout LyX-Code
+nbBytes = speex_bits_write(&bits, byte_ptr, MAX_NB_BYTES);
+\end_layout
+
+\begin_layout Standard
+where 
+\emph on
+input_frame
+\emph default
+ is a 
+\emph on
+(
+\emph default
+short
+\emph on
+ *)
+\emph default
+ pointing to the beginning of a speech frame, 
+\emph on
+byte_ptr
+\emph default
+ is a 
+\emph on
+(char *)
+\emph default
+ where the encoded frame will be written, 
+\emph on
+MAX_NB_BYTES
+\emph default
+ is the maximum number of bytes that can be written to 
+\emph on
+byte_ptr
+\emph default
+ without causing an overflow and 
+\emph on
+nbBytes
+\emph default
+ is the number of bytes actually written to 
+\emph on
+byte_ptr
+\emph default
+ (the encoded size in bytes).
+ Before calling speex_bits_write, it is possible to find the number of bytes
+ that need to be written by calling 
+\family typewriter
+speex_bits_nbytes(&bits)
+\family default
+, which returns a number of bytes.
+\end_layout
+
+\begin_layout Standard
+It is still possible to use the 
+\emph on
+speex_encode()
+\emph default
+ function, which takes a 
+\emph on
+(float *)
+\emph default
+ for the audio.
+ However, this would make an eventual port to an FPU-less platform (like
+ ARM) more complicated.
+ Internally, 
+\emph on
+speex_encode() 
+\emph default
+and
+\emph on
+ speex_encode_int()
+\emph default
+ are processed in the same way.
+ Whether the encoder uses the fixed-point version is only decided by the
+ compile-time flags, not at the API level.
+\end_layout
+
+\begin_layout Standard
+After you're done with the encoding, free all resources with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_destroy(&bits);
+\end_layout
+
+\begin_layout LyX-Code
+speex_encoder_destroy(enc_state);
+\end_layout
+
+\begin_layout Standard
+That's about it for the encoder.
+ 
+\end_layout
+
+\begin_layout Section
+Decoding
+\begin_inset LatexCommand \label{sub:Decoding}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In order to decode speech using Speex, you first need to:
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex.h>
+\end_layout
+
+\begin_layout Standard
+You also need to declare a Speex bit-packing struct
+\end_layout
+
+\begin_layout LyX-Code
+SpeexBits bits;
+\end_layout
+
+\begin_layout Standard
+and a Speex decoder state
+\end_layout
+
+\begin_layout LyX-Code
+void *dec_state;
+\end_layout
+
+\begin_layout Standard
+The two are initialized by:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_init(&bits);
+\end_layout
+
+\begin_layout LyX-Code
+dec_state = speex_decoder_init(&speex_nb_mode);
+\end_layout
+
+\begin_layout Standard
+For wideband decoding, 
+\emph on
+speex_nb_mode
+\emph default
+ will be replaced by 
+\emph on
+speex_wb_mode
+\emph default
+.
+ If you need to obtain the size of the frames that will be used by the decoder,
+ you can get that value in the 
+\emph on
+frame_size
+\emph default
+ variable with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_decoder_ctl(dec_state, SPEEX_GET_FRAME_SIZE, &frame_size); 
+\end_layout
+
+\begin_layout Standard
+There is also a parameter that can be set for the decoder: whether or not
+ to use a perceptual enhancer.
+ This can be set by: 
+\end_layout
+
+\begin_layout LyX-Code
+speex_decoder_ctl(dec_state, SPEEX_SET_ENH, &enh); 
+\end_layout
+
+\begin_layout Standard
+where 
+\emph on
+enh
+\emph default
+ is an int with value 0 to have the enhancer disabled and 1 to have it enabled.
+ As of 1.2-beta1, the default is now to enable the enhancer.
+\end_layout
+
+\begin_layout Standard
+Again, once the decoder initialization is done, for every input frame:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_read_from(&bits, input_bytes, nbBytes);
+\end_layout
+
+\begin_layout LyX-Code
+speex_decode_int(dec_state, &bits, output_frame);
+\end_layout
+
+\begin_layout Standard
+where input_bytes is a 
+\emph on
+(char *)
+\emph default
+ containing the bit-stream data received for a frame, 
+\emph on
+nbBytes
+\emph default
+ is the size (in bytes) of that bit-stream, and 
+\emph on
+output_frame
+\emph default
+ is a 
+\emph on
+(short *)
+\emph default
+ and points to the area where the decoded speech frame will be written.
+ A NULL value as the first argument indicates that we don't have the bits
+ for the current frame.
+ When a frame is lost, the Speex decoder will do its best to "guess" the
+ correct signal.
+\end_layout
+
+\begin_layout Standard
+As for the encoder, the 
+\emph on
+speex_decode()
+\emph default
+ function can still be used, with a 
+\emph on
+(float *)
+\emph default
+ as the output for the audio.
+\end_layout
+
+\begin_layout Standard
+After you're done with the decoding, free all resources with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_bits_destroy(&bits);
+\end_layout
+
+\begin_layout LyX-Code
+speex_decoder_destroy(dec_state);
+\end_layout
+
+\begin_layout Section
+Preprocessor
+\begin_inset LatexCommand \label{sub:Preprocessor}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In order to use the Speex preprocessor
+\begin_inset LatexCommand \index{preprocessor}
+
+\end_inset
+
+, you first need to:
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex_preprocess.h>
+\end_layout
+
+\begin_layout Standard
+Then, a preprocessor state can be created as:
+\end_layout
+
+\begin_layout LyX-Code
+SpeexPreprocessState *preprocess_state = speex_preprocess_state_init(frame_size,
+ sampling_rate);
+\end_layout
+
+\begin_layout Standard
+It is recommended to use the same value for 
+\family typewriter
+frame_size
+\family default
+ as is used by the encoder (20 
+\emph on
+ms
+\emph default
+).
+\end_layout
+
+\begin_layout Standard
+For each input frame, you need to call:
+\end_layout
+
+\begin_layout LyX-Code
+speex_preprocess_run(preprocess_state, audio_frame);
+\end_layout
+
+\begin_layout Standard
+where 
+\family typewriter
+audio_frame
+\family default
+ is used both as input and output.
+\end_layout
+
+\begin_layout Standard
+In cases where the output audio is not useful for a certain frame, it is
+ possible to use instead:
+\end_layout
+
+\begin_layout LyX-Code
+speex_preprocess_estimate_update(preprocess_state, audio_frame);
+\end_layout
+
+\begin_layout Standard
+This call will update all the preprocessor internal state variables without
+ computing the output audio, thus saving some CPU cycles.
+\end_layout
+
+\begin_layout Standard
+The behaviour of the preprocessor can be changed using:
+\end_layout
+
+\begin_layout LyX-Code
+speex_preprocess_ctl(preprocess_state, request, ptr);
+\end_layout
+
+\begin_layout Standard
+which is used in the same way as the encoder and decoder equivalent.
+ Options are listed in Section .
+\end_layout
+
+\begin_layout Standard
+The preprocessor state can be destroyed using:
+\end_layout
+
+\begin_layout LyX-Code
+speex_preprocess_state_destroy(preprocess_state);
+\end_layout
+
+\begin_layout Section
+Echo Cancellation
+\begin_inset LatexCommand \label{sub:Echo-Cancellation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The Speex library now includes an echo cancellation
+\begin_inset LatexCommand \index{echo cancellation}
+
+\end_inset
+
+ algorithm suitable for Acoustic Echo Cancellation
+\begin_inset LatexCommand \index{acoustic echo cancellation}
+
+\end_inset
+
+ (AEC).
+ In order to use the echo canceller, you first need to
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex_echo.h>
+\end_layout
+
+\begin_layout Standard
+Then, an echo canceller state can be created by:
+\end_layout
+
+\begin_layout LyX-Code
+SpeexEchoState *echo_state = speex_echo_state_init(frame_size, filter_length);
+\end_layout
+
+\begin_layout Standard
+where 
+\family typewriter
+frame_size
+\family default
+ is the amount of data (in samples) you want to process at once and 
+\family typewriter
+filter_length
+\family default
+ is the length (in samples) of the echo cancelling filter you want to use
+ (also known as 
+\shape italic
+tail length
+\shape default
+
+\begin_inset LatexCommand \index{tail length}
+
+\end_inset
+
+).
+ It is recommended to use a frame size in the order of 20 ms (or equal to
+ the codec frame size) and make sure it is easy to perform an FFT of that
+ size (powers of two are better than prime sizes).
+ The recommended tail length is approximately the third of the room reverberatio
+n time.
+ For example, in a small room, reverberation time is in the order of 300
+ ms, so a tail length of 100 ms is a good choice (800 samples at 8000 Hz
+ sampling rate).
+\end_layout
+
+\begin_layout Standard
+Once the echo canceller state is created, audio can be processed by:
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_cancellation(echo_state, input_frame, echo_frame, output_frame);
+\end_layout
+
+\begin_layout Standard
+where 
+\family typewriter
+input_frame
+\family default
+ is the audio as captured by the microphone, 
+\family typewriter
+echo_frame
+\family default
+ is the signal that was played in the speaker (and needs to be removed)
+ and 
+\family typewriter
+output_frame
+\family default
+ is the signal with echo removed.
+ 
+\end_layout
+
+\begin_layout Standard
+One important thing to keep in mind is the relationship between 
+\family typewriter
+input_frame
+\family default
+ and 
+\family typewriter
+echo_frame
+\family default
+.
+ It is important that, at any time, any echo that is present in the input
+ has already been sent to the echo canceller as 
+\family typewriter
+echo_frame
+\family default
+.
+ In other words, the echo canceller cannot remove a signal that it hasn't
+ yet received.
+ On the other hand, the delay between the input signal and the echo signal
+ must be small enough because otherwise part of the echo cancellation filter
+ is inefficient.
+ In the ideal case, you code would look like:
+\end_layout
+
+\begin_layout LyX-Code
+write_to_soundcard(echo_frame, frame_size);
+\end_layout
+
+\begin_layout LyX-Code
+read_from_soundcard(input_frame, frame_size);
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_cancellation(echo_state, input_frame, echo_frame, output_frame);
+\end_layout
+
+\begin_layout Standard
+If you wish to further reduce the echo present in the signal, you can do
+ so by 
+\family typewriter
+associating the echo canceller to the preprocessor
+\family default
+ (see Section 
+\begin_inset LatexCommand \ref{sub:Preprocessor}
+
+\end_inset
+
+).
+ This is done by calling:
+\end_layout
+
+\begin_layout LyX-Code
+speex_preprocess_ctl(preprocess_state, SPEEX_PREPROCESS_SET_ECHO_STATE,
+ echo_state);
+\end_layout
+
+\begin_layout Standard
+in the initialisation.
+\end_layout
+
+\begin_layout Standard
+As of version 1.2-beta2, there is an alternative, simpler API that can be
+ used instead of 
+\emph on
+speex_echo_cancellation()
+\emph default
+.
+ When audio capture and playback are handled asynchronously (e.g.
+ in different threads or using the 
+\emph on
+poll()
+\emph default
+ or 
+\emph on
+select()
+\emph default
+ system call), it can be difficult to keep track of what input_frame comes
+ with what echo_frame.
+ Instead, the playback comtext/thread can simply call:
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_playback(echo_state, echo_frame);
+\end_layout
+
+\begin_layout Standard
+every time an audio frame is played.
+ Then, the capture context/thread calls:
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_capture(echo_state, input_frame, output_frame);
+\end_layout
+
+\begin_layout Standard
+for every frame captured.
+ Internally, 
+\emph on
+speex_echo_playback()
+\emph default
+ simply buffers the playback frame so it can be used by 
+\emph on
+speex_echo_capture()
+\emph default
+ to call 
+\emph on
+speex_echo_cancel()
+\emph default
+.
+ A side effect of using this alternate API is that the playback audio is
+ delayed by two frames, which is the normal delay caused by the soundcard.
+ When capture and playback are already synchronised, 
+\emph on
+speex_echo_cancellation()
+\emph default
+ is preferable since it gives better control on the exact input/echo timing.
+\end_layout
+
+\begin_layout Standard
+The echo cancellation state can be destroyed with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_state_destroy(echo_state);
+\end_layout
+
+\begin_layout Standard
+It is also possible to reset the state of the echo canceller so it can be
+ reused without the need to create another state with:
+\end_layout
+
+\begin_layout LyX-Code
+speex_echo_state_reset(echo_state);
+\end_layout
+
+\begin_layout Subsection
+Troubleshooting
+\end_layout
+
+\begin_layout Standard
+There are several things that may prevent the echo canceller from working
+ properly.
+ One of them is a bug (or something suboptimal) in the code, but there are
+ many others you should consider first
+\end_layout
+
+\begin_layout Itemize
+Using a different soundcard to do the capture and plaback will *not* work,
+ regardless of what you may think.
+ The only exception to that is if the two cards can be made to have their
+ sampling clock 
+\begin_inset Quotes eld
+\end_inset
+
+locked
+\begin_inset Quotes erd
+\end_inset
+
+ on the same clock source.
+\end_layout
+
+\begin_layout Itemize
+The delay between the record and playback signals must be minimal.
+ Any signal played has to 
+\begin_inset Quotes eld
+\end_inset
+
+appear
+\begin_inset Quotes erd
+\end_inset
+
+ on the playback (far end) signal slightly before the echo canceller 
+\begin_inset Quotes eld
+\end_inset
+
+sees
+\begin_inset Quotes erd
+\end_inset
+
+ it in the near end signal, but excessive delay means that part of the filter
+ length is wasted.
+ In the worst situations, the delay is such that it is longer than the filter
+ length, in which case, no echo can be cancelled.
+\end_layout
+
+\begin_layout Itemize
+When it comes to echo tail length (filter length), longer is *not* better.
+ Actually, the longer the tail length, the longer it takes for the filter
+ to adapt.
+ Of course, a tail length that is too short will not cancel enough echo,
+ but the most common problem seen is that people set a very long tail length
+ and then wonder why no echo is being cancelled.
+\end_layout
+
+\begin_layout Itemize
+Non-linear distortion cannot (by definition) be modeled by the linear adaptive
+ filter used in the echo canceller and thus cannot be cancelled.
+ Use good audio gear and avoid saturation/clipping.
+\end_layout
+
+\begin_layout Standard
+Also useful is reading 
+\emph on
+Echo Cancellation Demystified
+\emph default
+ by Alexey Frunze
+\begin_inset Foot
+status collapsed
+
+\begin_layout Standard
+http://www.embeddedstar.com/articles/2003/7/article20030720-1.html
+\end_layout
+
+\end_inset
+
+, which explains the fundamental principles of echo cancellation.
+ The details of the algorithm described in the article are different, but
+ the general ideas of echo cancellation through adaptive filters are the
+ same.
+\end_layout
+
+\begin_layout Standard
+As of version 1.2beta2, a new 
+\family typewriter
+echo_diagnostic.m
+\family default
+ tool is included in the source distribution.
+ The first step is to define DUMP_ECHO_CANCEL_DATA during the build.
+ This causes the echo canceller to automatically save the near-end, far-end
+ and output signals to files (aec_rec.sw aec_play.sw and aec_out.sw).
+ These are exactly what the AEC receives and outputs.
+ From there, it is necessary to start Octave and type:
+\end_layout
+
+\begin_layout LyX-Code
+echo_diagnostic('aec_rec.sw', 'aec_play.sw', 'aec_diagnostic.sw', 1024);
+\end_layout
+
+\begin_layout Standard
+The value of 1024 is the filter length and can be changed.
+ There will be some (hopefully) useful messages printed and echo cancelled
+ audio will be saved to aec_diagnostic.sw .
+ If even that output is bad (almost no cancellation) then there is  probably
+ problem with the playback or recording process.
+\end_layout
+
+\begin_layout Section
+Jitter Buffer
+\end_layout
+
+\begin_layout Standard
+There are two jitter buffers.
+ Both can be enabled by including:
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex_jitter.c>
+\end_layout
+
+\begin_layout Subsection
+Generic Jitter Buffer
+\end_layout
+
+\begin_layout Subsection
+Speex Jitter Buffer
+\end_layout
+
+\begin_layout Section
+Resampler
+\end_layout
+
+\begin_layout Standard
+As of version 1.2beta2, Speex includes a resampling modules.
+ To make use of the resampler, it is necessary to include its header file:
+\end_layout
+
+\begin_layout LyX-Code
+#include <speex/speex_resampler.h>
+\end_layout
+
+\begin_layout Standard
+For each stream that is to be resampled, it is necessary to create a resampler
+ state with:
+\end_layout
+
+\begin_layout LyX-Code
+SpeexResamplerState *resampler;
+\end_layout
+
+\begin_layout LyX-Code
+resampler = speex_resampler_init(nb_channels, input_rate, output_rate, quality);
+\end_layout
+
+\begin_layout Standard
+where nb_channels is the number of channels that will be used (either interleave
+d or non-interleaved), input_rate is the sampling rate of the input stream,
+ output_rate is the sampling rate of the output stream and quality is the
+ requested quality setting (0 to 10).
+ The quality parameter is useful for controlling the quality/complexity/latency
+ tradeoff.
+ Using a higher quality setting means less noise/aliasing, a higher complexity
+ and a higher latency.
+ Usually, a quality of 3 is acceptable for most desktop uses and quality
+ 10 is mostly recommended for pro audio work.
+ Quality 0 usually has a decent sound (certainly better than using linear
+ interpolation resampling), but artifacts may be heard.
+\end_layout
+
+\begin_layout Section
+Codec Options (speex_*_ctl)
+\begin_inset LatexCommand \label{sub:Codec-Options}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Quote
+\align center
+
+\emph on
+Entities should not be multiplied beyond necessity -- William of Ockham.
+\end_layout
+
+\begin_layout Quote
+\align center
+
+\emph on
+Just because there's an option doesn't mean you have to use it -- me.
+\end_layout
+
+\begin_layout Standard
+The Speex encoder and decoder support many options and requests that can
+ be accessed through the 
+\emph on
+speex_encoder_ctl
+\emph default
+ and 
+\emph on
+speex_decoder_ctl
+\emph default
+ functions.
+ Despite that, the defaults are good for many applications and 
+\series bold
+optional settings should only be used when one understands them and knows
+ that they are needed
+\series default
+.
+ A common error is to attempt to set many unnecessary settings.
+ These functions are similar to the 
+\emph on
+ioctl
+\emph default
+ system call and their prototypes are:
+\end_layout
+
+\begin_layout LyX-Code
+void speex_encoder_ctl(void *encoder, int request, void *ptr);
+\end_layout
+
+\begin_layout LyX-Code
+void speex_decoder_ctl(void *encoder, int request, void *ptr);
+\end_layout
+
+\begin_layout Standard
+The different values of request allowed are (note that some only apply to
+ the encoder or the decoder):
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_ENH** Set perceptual enhancer
+\begin_inset LatexCommand \index{perceptual enhancement}
+
+\end_inset
+
+ to on (1) or off (0) (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_ENH** Get perceptual enhancer status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_FRAME_SIZE Get the frame size used for the current mode (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_QUALITY* Set the encoder speech quality (integer 0 to 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_QUALITY* Get the current encoder speech quality (integer 0 to
+ 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_LOW_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_LOW_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_HIGH_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_HIGH_MODE*
+\begin_inset Formula $\dagger$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_VBR* Set variable bit-rate (VBR) to on (1) or off (0) (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_VBR* Get variable bit-rate
+\begin_inset LatexCommand \index{variable bit-rate}
+
+\end_inset
+
+ (VBR) status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_VBR_QUALITY* Set the encoder VBR speech quality (float 0 to 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_VBR_QUALITY* Get the current encoder VBR speech quality (float
+ 0 to 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_COMPLEXITY* Set the CPU resources allowed for the encoder (integer
+ 1 to 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_COMPLEXITY* Get the CPU resources allowed for the encoder (integer
+ 1 to 10)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_BITRATE* Set the bit-rate to use to the closest value not exceeding
+ the parameter (integer in bps)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_BITRATE Get the current bit-rate in use (integer in bps)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_SAMPLING_RATE Set real sampling rate (integer in Hz)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_SAMPLING_RATE Get real sampling rate (integer in Hz)
+\end_layout
+
+\begin_layout Description
+SPEEX_RESET_STATE Reset the encoder/decoder state to its original state
+ (zeros all memories)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_VAD* Set voice activity detection
+\begin_inset LatexCommand \index{voice activity detection}
+
+\end_inset
+
+ (VAD) to on (1) or off (0) (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_VAD* Get voice activity detection (VAD) status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_DTX* Set discontinuous transmission
+\begin_inset LatexCommand \index{discontinuous transmission}
+
+\end_inset
+
+ (DTX) to on (1) or off (0) (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_DTX* Get discontinuous transmission (DTX) status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_ABR* Set average bit-rate
+\begin_inset LatexCommand \index{average bit-rate}
+
+\end_inset
+
+ (ABR) to a value n in bits per second (integer in bps)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_ABR* Get average bit-rate (ABR) setting (integer in bps)
+\end_layout
+
+\begin_layout Description
+SPEEX_SET_PLC_TUNING* Tell the encoder to optimize encoding for a certain
+ percentage of packet loss (integer in percent)
+\end_layout
+
+\begin_layout Description
+SPEEX_GET_PLC_TUNING* Get the current tuning of the encoder for PLC (integer
+ in percent)
+\end_layout
+
+\begin_layout Description
+* applies only to the encoder
+\end_layout
+
+\begin_layout Description
+** applies only to the decoder
+\end_layout
+
+\begin_layout Description
+\begin_inset Formula $\dagger$
+\end_inset
+
+ normally only used internally
+\end_layout
+
+\begin_layout Section
+Mode queries
+\begin_inset LatexCommand \label{sub:Mode-queries}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Speex modes have a query system similar to the speex_encoder_ctl and speex_decod
+er_ctl calls.
+ Since modes are read-only, it is only possible to get information about
+ a particular mode.
+ The function used to do that is:
+\end_layout
+
+\begin_layout LyX-Code
+void speex_mode_query(SpeexMode *mode, int request, void *ptr);
+\end_layout
+
+\begin_layout Standard
+The admissible values for request are (unless otherwise note, the values
+ are returned through 
+\emph on
+ptr
+\emph default
+):
+\end_layout
+
+\begin_layout Description
+SPEEX_MODE_FRAME_SIZE Get the frame size (in samples) for the mode
+\end_layout
+
+\begin_layout Description
+SPEEX_SUBMODE_BITRATE Get the bit-rate for a submode number specified through
+ 
+\emph on
+ptr
+\emph default
+ (integer in bps).
+ 
+\end_layout
+
+\begin_layout Section
+Preprocessor options
+\begin_inset LatexCommand \label{sub:Preprocessor-options}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_DENOISE Turns denoising on(1) or off(2) (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_DENOISE Get denoising status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_AGC Turns automatic gain control (AGC) on(1) or off(2)
+ (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_AGC Get AGC status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_VAD Turns voice activity detector (VAD) on(1) or off(2)
+ (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_VAD Get VAD status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_AGC_LEVEL
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_AGC_LEVEL
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_DEREVERB Turns reverberation removal on(1) or off(2)
+ (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_DEREVERB Get reverberation removal status (integer)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_DEREVERB_LEVEL
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_DEREVERB_LEVEL
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_DEREVERB_DECAY
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_DEREVERB_DECAY
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_PROB_START
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_PROB_START
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_PROB_CONTINUE
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_PROB_CONTINUE
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_NOISE_SUPPRESS Set maximum attenuation of the noise
+ in dB (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_NOISE_SUPPRESS Get maximum attenuation of the noise
+ in dB (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_ECHO_SUPPRESS Set maximum attenuation of the residual
+ echo in dB (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_ECHO_SUPPRESS Set maximum attenuation of the residual
+ echo in dB (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_ECHO_SUPPRESS_ACTIVE Set maximum attenuation of the
+ echo in dB when near end is active (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_ECHO_SUPPRESS_ACTIVE Set maximum attenuation of the
+ echo in dB when near end is active (negative number)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_SET_ECHO_STATE Set the associated echo canceller for residual
+ echo suppression (NULL for no residual echo suppression)
+\end_layout
+
+\begin_layout Description
+SPEEX_PREPROCESS_GET_ECHO_STATE Get the associated echo canceller
+\end_layout
+
+\begin_layout Section
+Packing and in-band signalling
+\begin_inset LatexCommand \index{in-band signalling}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Sometimes it is desirable to pack more than one frame per packet (or other
+ basic unit of storage).
+ The proper way to do it is to call speex_encode 
+\begin_inset Formula $N$
+\end_inset
+
+ times before writing the stream with speex_bits_write.
+ In cases where the number of frames is not determined by an out-of-band
+ mechanism, it is possible to include a terminator code.
+ That terminator consists of the code 15 (decimal) encoded with 5 bits,
+ as shown in Table 
+\begin_inset LatexCommand \ref{cap:quality_vs_bps}
+
+\end_inset
+
+.
+ Note that as of version 1.0.2, calling speex_bits_write automatically inserts
+ the terminator so as to fill the last byte.
+ This doesn't involves any overhead and makes sure Speex can always detect
+ when there is no more frame in a packet.
+\end_layout
+
+\begin_layout Standard
+It is also possible to send in-band 
+\begin_inset Quotes eld
+\end_inset
+
+messages
+\begin_inset Quotes erd
+\end_inset
+
+ to the other side.
+ All these messages are encoded as 
+\begin_inset Quotes eld
+\end_inset
+
+pseudo-frames
+\begin_inset Quotes erd
+\end_inset
+
+ of mode 14 which contain a 4-bit message type code, followed by the message.
+ Table 
+\begin_inset LatexCommand \ref{cap:In-band-signalling-codes}
+
+\end_inset
+
+ lists the available codes, their meaning and the size of the message that
+ follows.
+ Most of these messages are requests that are sent to the encoder or decoder
+ on the other end, which is free to comply or ignore them.
+ By default, all in-band messages are ignored.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement htbp
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="17" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0pt">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Code
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Size (bits)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Content
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks decoder to set perceptual enhancement off (0) or on(1)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks (if 1) the encoder to be less 
+\begin_inset Quotes eld
+\end_inset
+
+agressive
+\begin_inset Quotes erd
+\end_inset
+
+ due to high packet loss
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks encoder to switch to mode N
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks encoder to switch to mode N for low-band
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks encoder to switch to mode N for high-band
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks encoder to switch to quality N for VBR
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Request acknowloedge (0=no, 1=all, 2=only for in-band data)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Asks encoder to set CBR (0), VAD(1), DTX(3), VBR(5), VBR+DTX(7)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Transmit (8-bit) character to the other end
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Intensity stereo information
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+10
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+16
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Announce maximum bit-rate acceptable (N in bytes/second)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+11
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+16
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+32
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Acknowledge receiving packet N
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+13
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+32
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+14
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+64
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+64
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+In-band signalling codes
+\begin_inset LatexCommand \label{cap:In-band-signalling-codes}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, applications may define custom in-band messages using mode 13.
+ The size of the message in bytes is encoded with 5 bits, so that the decoder
+ can skip it if it doesn't know how to interpret it.
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Formats and standards
+\begin_inset LatexCommand \index{standards}
+
+\end_inset
+
+
+\begin_inset LatexCommand \label{sec:Formats-and-standards}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Speex can encode speech in both narrowband and wideband and provides different
+ bit-rates.
+ However, not all features need to be supported by a certain implementation
+ or device.
+ In order to be called 
+\begin_inset Quotes eld
+\end_inset
+
+Speex compatible
+\begin_inset Quotes erd
+\end_inset
+
+ (whatever that means), an implementation must implement at least a basic
+ set of features.
+\end_layout
+
+\begin_layout Standard
+At the minimum, all narrowband modes of operation MUST be supported at the
+ decoder.
+ This includes the decoding of a wideband bit-stream by the narrowband decoder
+\begin_inset Foot
+status collapsed
+
+\begin_layout Standard
+The wideband bit-stream contains an embedded narrowband bit-stream which
+ can be decoded alone
+\end_layout
+
+\end_inset
+
+.
+ If present, a wideband decoder MUST be able to decode a narrowband stream,
+ and MAY either be able to decode all wideband modes or be able to decode
+ the embedded narrowband part of all modes (which includes ignoring the
+ high-band bits).
+\end_layout
+
+\begin_layout Standard
+For encoders, at least one narrowband or wideband mode MUST be supported.
+ The main reason why all encoding modes do not have to be supported is that
+ some platforms may not be able to handle the complexity of encoding in
+ some modes.
+\end_layout
+
+\begin_layout Section
+RTP
+\begin_inset LatexCommand \index{RTP}
+
+\end_inset
+
+ Payload Format 
+\end_layout
+
+\begin_layout Standard
+The RTP payload draft is included in appendix 
+\begin_inset LatexCommand \ref{sec:IETF-draft}
+
+\end_inset
+
+ and the latest version is available at 
+\begin_inset LatexCommand \url{http://www.speex.org/drafts/latest}
+
+\end_inset
+
+.
+ This draft has been sent (2003/02/26) to the Internet Engineering Task
+ Force (IETF) and will be discussed at the March 18th meeting in San Francisco.
+ 
+\end_layout
+
+\begin_layout Section
+MIME Type
+\end_layout
+
+\begin_layout Standard
+For now, you should use the MIME type audio/x-speex for Speex-in-Ogg.
+ We will apply for type 
+\family typewriter
+audio/speex
+\family default
+ in the near future.
+\end_layout
+
+\begin_layout Section
+Ogg
+\begin_inset LatexCommand \index{Ogg}
+
+\end_inset
+
+ file format
+\end_layout
+
+\begin_layout Standard
+Speex bit-streams can be stored in Ogg files.
+ In this case, the first packet of the Ogg file contains the Speex header
+ described in table 
+\begin_inset LatexCommand \ref{cap:ogg_speex_header}
+
+\end_inset
+
+.
+ All integer fields in the headers are stored as little-endian.
+ The 
+\family typewriter
+speex_string
+\family default
+ field must contain the 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+Speex
+\family default
+\InsetSpace ~
+\InsetSpace ~
+\InsetSpace ~
+
+\begin_inset Quotes erd
+\end_inset
+
+ (with 3 trailing spaces), which identifies the bit-stream.
+ The next field, 
+\family typewriter
+speex_version
+\family default
+ contains the version of Speex that encoded the file.
+ For now, refer to speex_header.[ch] for more info.
+ The 
+\emph on
+beginning of stream
+\emph default
+ (
+\family typewriter
+b_o_s
+\family default
+) flag is set to 1 for the header.
+ The header packet has 
+\family typewriter
+packetno=0
+\family default
+ and 
+\family typewriter
+granulepos=0
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+The second packet contains the Speex comment header.
+ The format used is the Vorbis comment format described here: http://www.xiph.org/
+ogg/vorbis/doc/v-comment.html .
+ This packet has 
+\family typewriter
+packetno=1
+\family default
+ and 
+\family typewriter
+granulepos=0
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+The third and subsequent packets each contain one or more (number found
+ in header) Speex frames.
+ These are identified with 
+\family typewriter
+packetno
+\family default
+ starting from 2 and the 
+\family typewriter
+granulepos
+\family default
+ is the number of the last sample encoded in that packet.
+ The last of these packets has the 
+\emph on
+end of stream
+\emph default
+ (
+\family typewriter
+e_o_s
+\family default
+) flag is set to 1.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement htbp
+wide true
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Tabular
+<lyxtabular version="3" rows="16" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0pt">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Field
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Size
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+speex_string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+char[]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+speex_version
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+char[]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+20
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+speex_version_id
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+header_size
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+rate
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+mode
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+mode_bitstream_version
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+nb_channels
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+bitrate
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame_size
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+vbr
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frames_per_packet
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+extra_headers
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+int
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Ogg/Speex header packet
+\begin_inset LatexCommand \label{cap:ogg_speex_header}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+clearpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Introduction to CELP Coding
+\begin_inset LatexCommand \index{CELP}
+
+\end_inset
+
+
+\begin_inset LatexCommand \label{sec:Introduction-to-CELP}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Quote
+\align center
+
+\emph on
+Do not meddle in the affairs of poles, for they are subtle and quick to
+ leave the unit circle.
+\end_layout
+
+\begin_layout Standard
+Speex is based on CELP, which stands for Code Excited Linear Prediction.
+ This section attempts to introduce the principles behind CELP, so if you
+ are already familiar with CELP, you can safely skip to section 
+\begin_inset LatexCommand \ref{sec:Speex-narrowband-mode}
+
+\end_inset
+
+.
+ The CELP technique is based on three ideas:
+\end_layout
+
+\begin_layout Enumerate
+The use of a linear prediction (LP) model to model the vocal tract
+\end_layout
+
+\begin_layout Enumerate
+The use of (adaptive and fixed) codebook entries as input (excitation) of
+ the LP model
+\end_layout
+
+\begin_layout Enumerate
+The search performed in closed-loop in a 
+\begin_inset Quotes eld
+\end_inset
+
+perceptually weighted domain
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section describes the basic ideas behind CELP.
+ This is still a work in progress.
+\end_layout
+
+\begin_layout Section
+Source-Filter Model of Speech Prediction
+\end_layout
+
+\begin_layout Standard
+The source-filter model of speech production assumes that the vocal cords
+ are the source of spectrally flat sound (the excitation signal), and that
+ the vocal tract acts as a filter to spectrally shape the various sounds
+ of speech.
+ While still an approximation, the model is widely used in speech coding
+ because of its simplicity.Its use is also the reason why most speech codecs
+ (Speex included) perform badly on music signals.
+ The different phonemes can be distinguished by their excitation (source)
+ and spectral shape (filter).
+ Voiced sounds (e.g.
+ vowels) have an excitation signal that is periodic and that can be approximated
+ by an impulse train in the time domain or by regularly-spaced harmonics
+ in the frequency domain.
+ On the other hand, fricatives (such as the "s", "sh" and "f" sounds) have
+ an excitation signal that is similar to white Gaussian noise.
+ So called voice fricatives (such as "z" and "v") have excitation signal
+ composed of an harmonic part and a noisy part.
+\end_layout
+
+\begin_layout Standard
+The source-filter model is usually tied with the use of Linear prediction.
+ The CELP model is based on source-filter model, as can be seen from the
+ CELP decoder illustrated in Figure 
+\begin_inset LatexCommand \ref{fig:The-CELP-model}
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename celp_decoder.eps
+	width 45page%
+	keepAspectRatio
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+The CELP model of speech synthesis (decoder)
+\begin_inset LatexCommand \label{fig:The-CELP-model}
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Linear Prediction (LPC)
+\begin_inset LatexCommand \index{linear prediction}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Linear prediction is at the base of many speech coding techniques, including
+ CELP.
+ The idea behind it is to predict the signal 
+\begin_inset Formula $x[n]$
+\end_inset
+
+ using a linear combination of its past samples:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+y[n]=\sum_{i=1}^{N}a_{i}x[n-i]\]
+
+\end_inset
+
+where 
+\begin_inset Formula $y[n]$
+\end_inset
+
+ is the linear prediction of 
+\begin_inset Formula $x[n]$
+\end_inset
+
+.
+ The prediction error is thus given by:
+\begin_inset Formula \[
+e[n]=x[n]-y[n]=x[n]-\sum_{i=1}^{N}a_{i}x[n-i]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The goal of the LPC analysis is to find the best prediction coefficients
+ 
+\begin_inset Formula $a_{i}$
+\end_inset
+
+ which minimize the quadratic error function:
+\begin_inset Formula \[
+E=\sum_{n=0}^{L-1}\left[e[n]\right]^{2}=\sum_{n=0}^{L-1}\left[x[n]-\sum_{i=1}^{N}a_{i}x[n-i]\right]^{2}\]
+
+\end_inset
+
+That can be done by making all derivatives 
+\begin_inset Formula $\frac{\partial E}{\partial a_{i}}$
+\end_inset
+
+ equal to zero:
+\begin_inset Formula \[
+\frac{\partial E}{\partial a_{i}}=\frac{\partial}{\partial a_{i}}\sum_{n=0}^{L-1}\left[x[n]-\sum_{i=1}^{N}a_{i}x[n-i]\right]^{2}=0\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For an order 
+\begin_inset Formula $N$
+\end_inset
+
+ filter, the filter coefficients 
+\begin_inset Formula $a_{i}$
+\end_inset
+
+ are found by solving the system 
+\begin_inset Formula $N\times N$
+\end_inset
+
+ linear system 
+\begin_inset Formula $\mathbf{Ra}=\mathbf{r}$
+\end_inset
+
+, where
+\begin_inset Formula \[
+\mathbf{R}=\left[\begin{array}{cccc}
+R(0) & R(1) & \cdots & R(N-1)\\
+R(1) & R(0) & \cdots & R(N-2)\\
+\vdots & \vdots & \ddots & \vdots\\
+R(N-1) & R(N-2) & \cdots & R(0)\end{array}\right]\]
+
+\end_inset
+
+
+\begin_inset Formula \[
+\mathbf{r}=\left[\begin{array}{c}
+R(1)\\
+R(2)\\
+\vdots\\
+R(N)\end{array}\right]\]
+
+\end_inset
+
+with 
+\begin_inset Formula $R(m)$
+\end_inset
+
+, the auto-correlation
+\begin_inset LatexCommand \index{auto-correlation}
+
+\end_inset
+
+ of the signal 
+\begin_inset Formula $x[n]$
+\end_inset
+
+, computed as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+R(m)=\sum_{i=0}^{N-1}x[i]x[i-m]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Because 
+\begin_inset Formula $\mathbf{R}$
+\end_inset
+
+ is toeplitz hermitian, the Levinson-Durbin
+\begin_inset LatexCommand \index{Levinson-Durbin}
+
+\end_inset
+
+ algorithm can be used, making the solution to the problem 
+\begin_inset Formula $\mathcal{O}\left(N^{2}\right)$
+\end_inset
+
+ instead of 
+\begin_inset Formula $\mathcal{O}\left(N^{3}\right)$
+\end_inset
+
+.
+ Also, it can be proven that all the roots of 
+\begin_inset Formula $A(z)$
+\end_inset
+
+ are within the unit circle, which means that 
+\begin_inset Formula $1/A(z)$
+\end_inset
+
+ is always stable.
+ This is in theory; in practice because of finite precision, there are two
+ commonly used techniques to make sure we have a stable filter.
+ First, we multiply 
+\begin_inset Formula $R(0)$
+\end_inset
+
+ by a number slightly above one (such as 1.0001), which is equivalent to
+ adding noise to the signal.
+ Also, we can apply a window to the auto-correlation, which is equivalent
+ to filtering in the frequency domain, reducing sharp resonances.
+\end_layout
+
+\begin_layout Section
+Pitch Prediction
+\begin_inset LatexCommand \index{pitch}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+During voiced segments, the speech signal is periodic, so it is possible
+ to take advantage of that property by approximating the excitation signal
+ 
+\begin_inset Formula $e[n]$
+\end_inset
+
+ by a gain times the past of the excitation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+e[n]\simeq p[n]=\beta e[n-T]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $T$
+\end_inset
+
+ is the pitch period, 
+\begin_inset Formula $\beta$
+\end_inset
+
+ is the pitch gain.
+ We call that long-term prediction since the excitation is predicted from
+ 
+\begin_inset Formula $e[n-T]$
+\end_inset
+
+ with 
+\begin_inset Formula $T\gg N$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Innovation Codebook
+\end_layout
+
+\begin_layout Standard
+The final excitation 
+\begin_inset Formula $e[n]$
+\end_inset
+
+ will be the sum of the pitch prediction and an 
+\emph on
+innovation
+\emph default
+ signal 
+\begin_inset Formula $c[n]$
+\end_inset
+
+ taken from a fixed codebook, hence the name 
+\emph on
+Code
+\emph default
+ Excited Linear Prediction.
+ The final excitation is given by:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+e[n]=p[n]+c[n]=\beta e[n-T]+c[n]\]
+
+\end_inset
+
+The quantization of 
+\begin_inset Formula $c[n]$
+\end_inset
+
+ is where most of the bits in a CELP codec are allocated.
+ It represents the information that couldn't be obtained either from linear
+ prediction or pitch prediction.
+ In the 
+\emph on
+z
+\emph default
+-domain we can represent the final signal 
+\begin_inset Formula $X(z)$
+\end_inset
+
+ as 
+\begin_inset Formula \[
+X(z)=\frac{C(z)}{A(z)\left(1-\beta z^{-T}\right)}\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Noise Weighting
+\begin_inset LatexCommand \index{error weighting}
+
+\end_inset
+
+
+\begin_inset LatexCommand \index{analysis-by-synthesis}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Most (if not all) modern audio codecs attempt to 
+\begin_inset Quotes eld
+\end_inset
+
+shape
+\begin_inset Quotes erd
+\end_inset
+
+ the noise so that it appears mostly in the frequency regions where the
+ ear cannot detect it.
+ For example, the ear is more tolerant to noise in parts of the spectrum
+ that are louder and 
+\emph on
+vice versa
+\emph default
+.
+ In order to maximize speech quality, CELP codecs minimize the mean square
+ of the error (noise) in the perceptually weighted domain.
+ This means that a perceptual noise weighting filter 
+\begin_inset Formula $W(z)$
+\end_inset
+
+ is applied to the error signal in the encoder.
+ In most CELP codecs, 
+\begin_inset Formula $W(z)$
+\end_inset
+
+ is a pole-zero weighting filter derived from the linear prediction coefficients
+ (LPC), generally using bandwidth expansion.
+ Let the spectral envelope be represented by the synthesis filter 
+\begin_inset Formula $1/A(z)$
+\end_inset
+
+, CELP codecs typically derive the noise weighting filter as: 
+\begin_inset Formula \begin{equation}
+W(z)=\frac{A(z/\gamma_{1})}{A(z/\gamma_{2})}\label{eq:gamma-weighting}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\gamma_{1}=0.9$
+\end_inset
+
+ and 
+\begin_inset Formula $\gamma_{2}=0.6$
+\end_inset
+
+ in the Speex reference implementation.
+ If a filter 
+\begin_inset Formula $A(z)$
+\end_inset
+
+ has (complex) poles at 
+\begin_inset Formula $p_{i}$
+\end_inset
+
+ in the 
+\begin_inset Formula $z$
+\end_inset
+
+-plane, the filter 
+\begin_inset Formula $A(z/\gamma)$
+\end_inset
+
+ will have its poles at 
+\begin_inset Formula $p'_{i}=\gamma p_{i}$
+\end_inset
+
+, making it a flatter version of 
+\begin_inset Formula $A(z)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The weighting filter is applied to the error signal used to optimize the
+ codebook search through analysis-by-synthesis (AbS).
+ This results in a spectral shape of the noise that tends towards 
+\begin_inset Formula $1/W(z)$
+\end_inset
+
+.
+ While the simplicity of the model has been an important reason for the
+ success of CELP, it remains that 
+\begin_inset Formula $W(z)$
+\end_inset
+
+ is a very rough approximation for the perceptually optimal noise weighting
+ function.
+ Fig.
+ 
+\begin_inset LatexCommand \ref{cap:Standard-noise-shaping}
+
+\end_inset
+
+ illustrates the noise shaping that results from Eq.
+ 
+\begin_inset LatexCommand \ref{eq:gamma-weighting}
+
+\end_inset
+
+.
+ Throughout this paper, we refer to 
+\begin_inset Formula $W(z)$
+\end_inset
+
+ as the noise weighting filter and to 
+\begin_inset Formula $1/W(z)$
+\end_inset
+
+ as the noise shaping filter (or curve).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename ref_shaping.eps
+	width 45page%
+	keepAspectRatio
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Standard noise shaping in CELP.
+ Arbitrary y-axis offset.
+\begin_inset LatexCommand \label{cap:Standard-noise-shaping}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Analysis-by-Synthesis
+\end_layout
+
+\begin_layout Standard
+One of the main principles behind CELP is called Analysis-by-Synthesis (AbS),
+ meaning that the encoding (analysis) is performed by perceptually optimising
+ the decoded (synthesis) signal in a closed loop.
+ In theory, the best CELP stream would be produced by trying all possible
+ bit combinations and selecting the one that produces the best-sounding
+ decoded signal.
+ This is obviously not possible in practice for two reasons: the required
+ complexity is beyond any currently available hardware and the 
+\begin_inset Quotes eld
+\end_inset
+
+best sounding
+\begin_inset Quotes erd
+\end_inset
+
+ selection criterion implies a human listener.
+ 
+\end_layout
+
+\begin_layout Standard
+In order to achieve real-time encoding using limited computing resources,
+ the CELP optimisation is broken down into smaller, more manageable, sequential
+ searches using the perceptual weighting function described earlier.
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Speex narrowband mode
+\begin_inset LatexCommand \label{sec:Speex-narrowband-mode}
+
+\end_inset
+
+
+\begin_inset LatexCommand \index{narrowband}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section looks at how Speex works for narrowband (
+\begin_inset Formula $8\:\mathrm{kHz}$
+\end_inset
+
+ sampling rate) operation.
+ The frame size for this mode is 
+\begin_inset Formula $20\:\mathrm{ms}$
+\end_inset
+
+, corresponding to 160 samples.
+ Each frame is also subdivided into 4 sub-frames of 40 samples each.
+\end_layout
+
+\begin_layout Standard
+Also many design decisions were based on the original goals and assumptions:
+\end_layout
+
+\begin_layout Itemize
+Minimizing the amount of information extracted from past frames (for robustness
+ to packet loss)
+\end_layout
+
+\begin_layout Itemize
+Dynamically-selectable codebooks (LSP, pitch and innovation)
+\end_layout
+
+\begin_layout Itemize
+sub-vector fixed (innovation) codebooks
+\end_layout
+
+\begin_layout Section
+Whole-Frame Analysis
+\begin_inset LatexCommand \index{linear prediction}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In narrowband, Speex frames are 20 ms long (160 samples) and are subdivided
+ in 4 sub-frames of 5 ms each (40 samples).
+ For most narrowband bit-rates (8 kbps and above), the only parameters encoded
+ at the frame level are the Line Spectral Pairs (LSP) and a global excitation
+ gain 
+\begin_inset Formula $g_{frame}$
+\end_inset
+
+, as shown in Fig.
+ 
+\begin_inset LatexCommand \ref{cap:Frame-open-loop-analysis}
+
+\end_inset
+
+.
+ All other parameters are encoded at the sub-frame level.
+\end_layout
+
+\begin_layout Standard
+Linear prediction analysis is performed once per frame using an asymmetric
+ Hamming window centered on the fourth sub-frame.
+ Because linear prediction coefficients (LPC) are not robust to quantization,
+ they are first are converted to line spectral pairs (LSP)
+\begin_inset LatexCommand \index{line spectral pair}
+
+\end_inset
+
+.
+ The LSP's are considered to be associated to the 
+\begin_inset Formula $4^{th}$
+\end_inset
+
+ sub-frames and the LSP's associated to the first 3 sub-frames are linearly
+ interpolated using the current and previous LSP coefficients.
+ The LSP coefficients and converted back to the LPC filter 
+\begin_inset Formula $\hat{A}(z)$
+\end_inset
+
+.
+ The non-quantized interpolated filter is denoted 
+\begin_inset Formula $A(z)$
+\end_inset
+
+ and can be used for the weighting filter 
+\begin_inset Formula $W(z)$
+\end_inset
+
+ because it does not need to be available to the decoder.
+ 
+\end_layout
+
+\begin_layout Standard
+To make Speex more robust to packet loss, no prediction is applied on the
+ LSP coefficients prior to quantization.
+ The LSPs are encoded using vector quantizatin (VQ) with 30 bits for higher
+ quality modes and 18 bits for lower quality.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename speex_analysis.eps
+	width 35page%
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Frame open-loop analysis
+\begin_inset LatexCommand \label{cap:Frame-open-loop-analysis}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Sub-Frame Analysis-by-Synthesis
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+begin{center}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename speex_abs.eps
+	lyxscale 75
+	width 40page%
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+end{center}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Analysis-by-synthesis closed-loop optimization on a sub-frame.
+\begin_inset LatexCommand \label{cap:Sub-frame-AbS}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The analysis-by-synthesis (AbS) encoder loop is described in Fig.
+ 
+\begin_inset LatexCommand \ref{cap:Sub-frame-AbS}
+
+\end_inset
+
+.
+ There are three main aspects where Speex significantly differs from most
+ other CELP codecs.
+ First, while most recent CELP codecs make use of fractional pitch estimation
+ with a single gain, Speex uses an integer to encode the pitch period, but
+ uses a 3-tap predictor (3 gains).
+ The adaptive codebook contribution 
+\begin_inset Formula $e_{a}[n]$
+\end_inset
+
+ can thus be expressed as:
+\begin_inset Formula \begin{equation}
+e_{a}[n]=g_{0}e[n-T-1]+g_{1}e[n-T]+g_{2}e[n-T+1]\label{eq:adaptive-3tap}\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $g_{0}$
+\end_inset
+
+, 
+\begin_inset Formula $g_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $g_{2}$
+\end_inset
+
+ are the jointly quantized pitch gains and 
+\begin_inset Formula $e[n]$
+\end_inset
+
+ is the codec excitation memory.
+ It is worth noting that when the pitch is smaller than the sub-frame size,
+ we repeat the excitation at a period 
+\begin_inset Formula $T$
+\end_inset
+
+.
+ For example, when 
+\begin_inset Formula $n-T+1\geq0$
+\end_inset
+
+, we use 
+\begin_inset Formula $n-2T+1$
+\end_inset
+
+ instead.
+ In most modes, the pitch period is encoded with 7 bits in the 
+\begin_inset Formula $\left[17,144\right]$
+\end_inset
+
+ range and the 
+\begin_inset Formula $\beta_{i}$
+\end_inset
+
+ coefficients are vector-quantized using 7 bits at higher bit-rates (15
+ kbps narrowband and above) and 5 bits at lower bit-rates (11 kbps narrowband
+ and below).
+\end_layout
+
+\begin_layout Standard
+Many current CELP codecs use moving average (MA) prediction to encode the
+ fixed codebook gain.
+ This provides slightly better coding at the expense of introducing a dependency
+ on previously encoded frames.
+ A second difference is that Speex encodes the fixed codebook gain as the
+ product of the global excitation gain 
+\begin_inset Formula $g_{frame}$
+\end_inset
+
+ with a sub-frame gain corrections 
+\begin_inset Formula $g_{subf}$
+\end_inset
+
+.
+ This increases robustness to packet loss by eliminating the inter-frame
+ dependency.
+ The sub-frame gain correction is encoded before the fixed codebook is searched
+ (not closed-loop optimized) and uses between 0 and 3 bits per sub-frame,
+ depending on the bit-rate.
+\end_layout
+
+\begin_layout Standard
+The third difference is that Speex uses sub-vector quantization of the innovatio
+n (fixed codebook) signal instead of an algebraic codebook.
+ Each sub-frame is divided into sub-vectors of lengths ranging between 5
+ and 20 samples.
+ Each sub-vector is chosen from a bitrate-dependent codebook and all sub-vectors
+ are concatenated to form a sub-frame.
+ As an example, the 3.95 kbps mode uses a sub-vector size of 20 samples with
+ 32 entries in the codebook (5 bits).
+ This means that the innovation is encoded with 10 bits per sub-frame, or
+ 2000 bps.
+ On the other hand, the 18.2 kbps mode uses a sub-vector size of 5 samples
+ with 256 entries in the codebook (8 bits), so the innovation uses 64 bits
+ per sub-frame, or 12800 bps.
+ 
+\end_layout
+
+\begin_layout Section
+Bit allocation
+\end_layout
+
+\begin_layout Standard
+There are 7 different narrowband bit-rates defined for Speex, ranging from
+ 250 bps to 24.6 kbps, although the modes below 5.9 kbps should not be used
+ for speech.
+ The bit-allocation for each mode is detailed in table 
+\begin_inset LatexCommand \ref{cap:bits-narrowband}
+
+\end_inset
+
+.
+ Each frame starts with the mode ID encoded with 4 bits which allows a range
+ from 0 to 15, though only the first 7 values are used (the others are reserved).
+ The parameters are listed in the table in the order they are packed in
+ the bit-stream.
+ All frame-based parameters are packed before sub-frame parameters.
+ The parameters for a certain sub-frame are all packed before the following
+ sub-frame is packed.
+ Note that the 
+\begin_inset Quotes eld
+\end_inset
+
+OL
+\begin_inset Quotes erd
+\end_inset
+
+ in the parameter description means that the parameter is an open loop estimatio
+n based on the whole frame.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement h
+wide true
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="12" columns="11">
+<features>
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0pt">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Parameter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Update rate
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Wideband bit
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Mode ID
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+LSP
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+30
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+30
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+30
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+OL pitch
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+OL pitch gain
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+OL Exc gain
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Fine pitch
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Pitch gain
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Innovation gain
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Innovation VQ
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+16
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+20
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+35
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+48
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+64
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+96
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+10
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Total
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+43
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+119
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+160
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+220
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+300
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+364
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+492
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+79
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Bit allocation for narrowband modes
+\begin_inset LatexCommand \label{cap:bits-narrowband}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+So far, no MOS (Mean Opinion Score
+\begin_inset LatexCommand \index{mean opinion score}
+
+\end_inset
+
+) subjective evaluation has been performed for Speex.
+ In order to give an idea of the quality achivable with it, table 
+\begin_inset LatexCommand \ref{cap:quality_vs_bps}
+
+\end_inset
+
+ presents my own subjective opinion on it.
+ It sould be noted that different people will perceive the quality differently
+ and that the person that designed the codec often has a bias (one way or
+ another) when it comes to subjective evaluation.
+ Last thing, it should be noted that for most codecs (including Speex) encoding
+ quality sometimes varies depending on the input.
+ Note that the complexity is only approximate (within 0.5 mflops and using
+ the lowest complexity setting).
+ Decoding requires approximately 0.5 mflops
+\begin_inset LatexCommand \index{complexity}
+
+\end_inset
+
+ in most modes (1 mflops with perceptual enhancement).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement h
+wide true
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="17" columns="4">
+<features>
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0pt">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Mode
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Bit-rate
+\begin_inset LatexCommand \index{bit-rate}
+
+\end_inset
+
+ (bps)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+mflops
+\begin_inset LatexCommand \index{complexity}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Quality/description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+250
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+No transmission (DTX)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+2,150
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Vocoder (mostly for comfort noise)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5,950
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Very noticeable artifacts/noise, good intelligibility
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8,000
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+10
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Artifacts/noise sometimes noticeable
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+11,000
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+14
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Artifacts usually noticeable only with headphones
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+15,000
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+11
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Need good headphones to tell the difference
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+18,200
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+17.5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Hard to tell the difference even with good headphones
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+7
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+24,600
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+14.5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Completely transparent for voice, good quality music
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+8
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3,950
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+10.5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Very noticeable artifacts/noise, good intelligibility
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+9
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+10
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+11
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+reserved
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+13
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Application-defined, interpreted by callback or skipped
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+14
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Speex in-band signaling
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+N/A
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Terminator code
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Quality versus bit-rate
+\begin_inset LatexCommand \label{cap:quality_vs_bps}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Perceptual enhancement
+\begin_inset LatexCommand \index{perceptual enhancement}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+This section was only valid for version 1.1.12 and earlier.
+ It does not apply to version 1.2-beta1 (and later), for which the new perceptual
+ enhancement is not yet documented.
+\end_layout
+
+\begin_layout Standard
+This part of the codec only applies to the decoder and can even be changed
+ without affecting inter-operability.
+ For that reason, the implementation provided and described here should
+ only be considered as a reference implementation.
+ The enhancement system is divided into two parts.
+ First, the synthesis filter 
+\begin_inset Formula $S(z)=1/A(z)$
+\end_inset
+
+ is replaced by an enhanced filter:
+\begin_inset Formula \[
+S'(z)=\frac{A\left(z/a_{2}\right)A\left(z/a_{3}\right)}{A\left(z\right)A\left(z/a_{1}\right)}\]
+
+\end_inset
+
+where 
+\begin_inset Formula $a_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $a_{2}$
+\end_inset
+
+ depend on the mode in use and 
+\begin_inset Formula $a_{3}=\frac{1}{r}\left(1-\frac{1-ra_{1}}{1-ra_{2}}\right)$
+\end_inset
+
+ with 
+\begin_inset Formula $r=.9$
+\end_inset
+
+.
+ The second part of the enhancement consists of using a comb filter to enhance
+ the pitch in the excitation domain.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Speex wideband mode (sub-band CELP)
+\begin_inset LatexCommand \index{wideband}
+
+\end_inset
+
+
+\begin_inset LatexCommand \label{sec:Speex-wideband-mode}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For wideband, the Speex approach uses a 
+\emph on
+q
+\emph default
+uadrature 
+\emph on
+m
+\emph default
+irror 
+\emph on
+f
+\emph default
+ilter
+\begin_inset LatexCommand \index{quadrature mirror filter}
+
+\end_inset
+
+ (QMF) to split the band in two.
+ The 16 kHz signal is thus divided into two 8 kHz signals, one representing
+ the low band (0-4 kHz), the other the high band (4-8 kHz).
+ The low band is encoded with the narrowband mode described in section 
+\begin_inset LatexCommand \ref{sec:Speex-narrowband-mode}
+
+\end_inset
+
+ in such a way that the resulting 
+\begin_inset Quotes eld
+\end_inset
+
+embedded narrowband bit-stream
+\begin_inset Quotes erd
+\end_inset
+
+ can also be decoded with the narrowband decoder.
+ Since the low band encoding has already been described, only the high band
+ encoding is described in this section.
+\end_layout
+
+\begin_layout Section
+Linear Prediction
+\end_layout
+
+\begin_layout Standard
+The linear prediction part used for the high-band is very similar to what
+ is done for narrowband.
+ The only difference is that we use only 12 bits to encode the high-band
+ LSP's using a multi-stage vector quantizer (MSVQ).
+ The first level quantizes the 10 coefficients with 6 bits and the error
+ is then quantized using 6 bits, too.
+\end_layout
+
+\begin_layout Section
+Pitch Prediction
+\end_layout
+
+\begin_layout Standard
+That part is easy: there's no pitch prediction for the high-band.
+ There are two reasons for that.
+ First, there is usually little harmonic structure in this band (above 4
+ kHz).
+ Second, it would be very hard to implement since the QMF folds the 4-8
+ kHz band into 4-0 kHz (reversing the frequency axis), which means that
+ the location of the harmonics is no longer at multiples of the fundamental
+ (pitch).
+\end_layout
+
+\begin_layout Section
+Excitation Quantization
+\end_layout
+
+\begin_layout Standard
+The high-band excitation is coded in the same way as for narrowband.
+ 
+\end_layout
+
+\begin_layout Section
+Bit allocation
+\end_layout
+
+\begin_layout Standard
+For the wideband mode, the entire narrowband frame is packed before the
+ high-band is encoded.
+ The narrowband part of the bit-stream is as defined in table 
+\begin_inset LatexCommand \ref{cap:bits-narrowband}
+
+\end_inset
+
+.
+ The high-band follows, as described in table 
+\begin_inset LatexCommand \ref{cap:bits-wideband}
+
+\end_inset
+
+.
+ This also means that a wideband frame may be correctly decoded by a narrowband
+ decoder with the only caveat that if more than one frame is packed in the
+ same packet, the decoder will need to skip the high-band parts in order
+ to sync with the bit-stream.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+placement h
+wide true
+sideways false
+status open
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="7" columns="7">
+<features>
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" width="0pt">
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0pt">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Parameter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Update rate
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Wideband bit
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Mode ID
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+3
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+LSP
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+12
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Excitation gain
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+5
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Excitation VQ
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+sub-frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+0
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+20
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+40
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+80
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+Total
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+frame
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+4
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+36
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+112
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+192
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Standard
+352
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Caption
+Bit allocation for high-band in wideband mode
+\begin_inset LatexCommand \label{cap:bits-wideband}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Standard
+
+
+\backslash
+clearpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status collapsed
+
+\begin_layout Standard
+
+
+\backslash
+clearpage
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+\start_of_appendix
+FAQ
+\end_layout
+
+\begin_layout Subsection*
+Vorbis is open-source
+\begin_inset LatexCommand \index{open-source}
+
+\end_inset
+
+ and patent-free
+\begin_inset LatexCommand \index{patent}
+
+\end_inset
+
+; why do we need Speex?
+\end_layout
+
+\begin_layout Standard
+Vorbis is a great project but its goals are not the same as Speex.
+ Vorbis is mostly aimed at compressing music and audio in general, while
+ Speex targets speech only.
+ For that reason Speex can achieve much better results than Vorbis on speech,
+ typically 2-4 times higher compression at equal quality.
+\end_layout
+
+\begin_layout Subsection*
+Isn't there an open-source implementation of the GSM-FR codec? Why is Speex
+ necessary?
+\end_layout
+
+\begin_layout Standard
+First of all, it's not clear whether GSM-FR is covered by a Philips patent
+ (see http://kbs.cs.tu-berlin.de/~jutta/toast.html).
+ Also, GSM-FR offers mediocre quality at a relatively high bit-rate, while
+ Speex can offer equivalent quality at almost half the bit-rate.
+ Last but not least, Speex offers a wide range of bit-rates and sampling
+ rates, while GSM-FR is limited to 8 kHz speech at 13 kbps.
+\end_layout
+
+\begin_layout Subsection*
+Under what license is Speex released?
+\end_layout
+
+\begin_layout Standard
+As of version 1.0 beta 1, Speex is released under Xiph's version of the (revised)
+ BSD license (see Appendix 
+\begin_inset LatexCommand \ref{sec:Speex-License}
+
+\end_inset
+
+).
+ This license is one of the most permissive open-source licenses.
+\end_layout
+
+\begin_layout Subsection*
+Am I allowed to use Speex in commercial software?
+\end_layout
+
+\begin_layout Standard
+Yes.
+ As long as you comply with the license.
+ This basically means you have to keep the copyright notice and you can't
+ use our name to promote your product without authorization.
+ For more details, see license in Appendix 
+\begin_inset LatexCommand \ref{sec:Speex-License}
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection*
+Ogg
+\begin_inset LatexCommand \index{Ogg}
+
+\end_inset
+
+, Speex, Vorbis
+\begin_inset LatexCommand \index{Vorbis}
+
+\end_inset
+
+, what's the difference?
+\end_layout
+
+\begin_layout Standard
+Ogg is a container format for holding multimedia data.
+ Vorbis is an audio codec that uses Ogg to store its bit-streams as files,
+ hence the name Ogg Vorbis.
+ Speex also uses the Ogg format to store its bit-streams as files, so technicall
+y they would be 
+\begin_inset Quotes eld
+\end_inset
+
+Ogg Speex
+\begin_inset Quotes erd
+\end_inset
+
+ files (I prefer to call them just Speex files).
+ One difference with Vorbis however, is that Speex is less tied with Ogg.
+ Actually, if you just do Voice over IP (VoIP), you don't need Ogg at all.
+\end_layout
+
+\begin_layout Subsection*
+What's the extension for Speex?
+\end_layout
+
+\begin_layout Standard
+Speex files have the .spx extension.
+ Note, however that the Speex tools (speexenc, speexdec) do not rely on
+ the extension at all, so any extension will work.
+\end_layout
+
+\begin_layout Subsection*
+Can I use Speex for compressing music
+\begin_inset LatexCommand \index{music}
+
+\end_inset
+
+?
+\end_layout
+
+\begin_layout Standard
+Just like Vorbis is not really adapted to speech, Speex is really not adapted
+ for music.
+ In most cases, you'll be better of with Vorbis when it comes to music.
+\end_layout
+
+\begin_layout Subsection*
+I converted some MP3s to Speex and the quality is bad.
+ What's wrong?
+\end_layout
+
+\begin_layout Standard
+This is called transcoding and it will always result in much poorer quality
+ than the original MP3.
+ Unless you have a really good (size) reason to do so, never transcode speech.
+ This is even valid for self transcoding (tandeming), i.e.
+ If you decode a Speex file and re-encode it again at the same bit-rate,
+ you will lose quality.
+\end_layout
+
+\begin_layout Subsection*
+Does Speex run on Windows?
+\end_layout
+
+\begin_layout Standard
+Compilation on Windows has been supported since version 0.8.0.
+ There are also several front-ends available from the website.
+\end_layout
+
+\begin_layout Subsection*
+Why is encoding so slow compared to decoding?
+\end_layout
+
+\begin_layout Standard
+For most kinds of compression, encoding is inherently slower than decoding.
+ In the case of Speex, encoding consists of finding, for each vector of
+ 5 to 10 samples, the entry that matches the best within a codebook consisting
+ of 16 to 256 entries.
+ On the other hand, at decoding all that needs to be done is look up the
+ right entry in the codebook using the encoded index.
+ Since a lookup is much faster than a search, the decoder works much faster
+ than the encoder.
+\end_layout
+
+\begin_layout Subsection*
+Why is Speex so slow on my iPaq (or insert any platform without an FPU)?
+\end_layout
+
+\begin_layout Standard
+You probably didn't build Speex with the fixed-point option (--enable-fixed-poin
+t).
+ Even if you did, not all modes have been ported to use fixed-point arithmetic,
+ so the code may be slowed down by a few float operations left (e.g.
+ in the wideband mode).
+\end_layout
+
+\begin_layout Subsection*
+I'm getting unusual background noise (hiss) when using libspeex in my applicatio
+n.
+ How do I fix that?
+\end_layout
+
+\begin_layout Standard
+One of the causes could be scaling of the input speech.
+ Speex expects signals to have a 
+\begin_inset Formula $\pm2^{15}$
+\end_inset
+
+ (signed short) dynamic range.
+ If the dynamic range of your signals is too small (e.g.
+ 
+\begin_inset Formula $\pm1.0$
+\end_inset
+
+), you will suffer important quantization noise.
+ A good target is to have a dynamic range around 
+\begin_inset Formula $\pm8000$
+\end_inset
+
+ which is large enough, but small enough to make sure there's no clipping
+ when converting back to signed short.
+\end_layout
+
+\begin_layout Subsection*
+I get very distorted speech when using libspeex in my application.
+ What's wrong?
+\end_layout
+
+\begin_layout Standard
+There are many possible causes for that.
+ One of them is errors in the way the bits are manipulated.
+ Another possible cause is the use of the same encoder or decoder state
+ for more than one audio stream (channel), which produces strange effects
+ with the filter memories.
+ If the input speech has an amplitude close to 
+\begin_inset Formula $\pm2^{15}$
+\end_inset
+
+, it is possible that at decoding, the amplitude be a bit higher than that,
+ causing clipping when saving as 16-bit PCM.
+\end_layout
+
+\begin_layout Subsection*
+How does Speex compare to other proprietary codecs?
+\end_layout
+
+\begin_layout Standard
+It's hard to give precise figures since no formal listening tests have been
+ performed yet.
+ All I can say is that in terms of quality, Speex competes on the same ground
+ as other proprietary codecs (not necessarily the best, but not the worst
+ either).
+ Speex also has many features that are not present in most other codecs.
+ These include variable bit-rate (VBR), integration of narrowband and wideband,
+ as well as stereo support.
+ Of course, another area where Speex is really hard to beat is the quality/price
+ ratio.
+ Unlike many very expensive codecs, Speex is free and anyone may distribute
+ or modify it at will.
+\end_layout
+
+\begin_layout Subsection*
+Can Speex pass DTMF
+\begin_inset LatexCommand \index{DTMF}
+
+\end_inset
+
+?
+\end_layout
+
+\begin_layout Standard
+I guess it all depends on the bit-rate used.
+ Though no formal testing has yet been performed, I'd say is correctly at
+ 8 kbps and above.
+ Also, make sure you don't use the lowest complexity (see SPEEX_SET_COMPLEXITY
+ or --comp option), as it causes significant noise.
+\end_layout
+
+\begin_layout Subsection*
+Can Speex pass V.9x modem signals correctly?
+\end_layout
+
+\begin_layout Standard
+If I could do that I'd be very rich by now :-) Seriously, that would break
+ fundamental laws of information theory.
+\end_layout
+
+\begin_layout Subsection*
+What is your (Jean-Marc) relationship with the University of Sherbrooke
+ and how does Speex fit into that?
+\end_layout
+
+\begin_layout Standard
+I have completed my 
+\emph on
+Ph.D.
+
+\emph default
+ at the University of Sherbrooke in 2005 in mobile robotics.
+ Although I did my master with the Sherbrooke speech coding group (in speech
+ enhancement, not coding), was no longer associated with them when developing
+ Speex.
+ It should 
+\series bold
+not
+\series default
+ be understood that they or the University of Sherbrooke have anything to
+ do with the Speex project.
+ Furthermore, Speex does not make use of any code or proprietary technology
+ developed in the Sherbrooke speech coding group.
+ 
+\end_layout
+
+\begin_layout Subsection*
+CELP, ACELP
+\begin_inset LatexCommand \index{ACELP}
+
+\end_inset
+
+, what's the difference?
+\end_layout
+
+\begin_layout Standard
+CELP stands for 
+\begin_inset Quotes eld
+\end_inset
+
+Code Excited Linear Prediction
+\begin_inset Quotes erd
+\end_inset
+
+, while ACELP stands for 
+\begin_inset Quotes eld
+\end_inset
+
+
+\emph on
+Algebraic
+\emph default
+ Code Excited Linear Prediction
+\begin_inset Quotes erd
+\end_inset
+
+.
+ That means ACELP is a CELP technique that uses an algebraic codebook represente
+d as a sum of unit pulses, thus making the codebook search much more efficient.
+ This technique was invented at the University of Sherbrooke and is now
+ one of the most widely used form of CELP.
+ Unfortunately, since it is patented, it cannot be used in Speex.
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Sample code
+\begin_inset LatexCommand \label{sec:Sample-code}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section shows sample code for encoding and decoding speech using the
+ Speex API.
+ The commands can be used to encode and decode a file by calling:
+\family typewriter
+
+\newline
+% sampleenc in_file.sw | sampledec out_file.sw
+\family default
+
+\newline
+where both files are raw (no header) files encoded at 16 bits per sample
+ (in the machine natural endianness).
+\end_layout
+
+\begin_layout Section
+sampleenc.c
+\end_layout
+
+\begin_layout Standard
+sampleenc takes a raw 16 bits/sample file, encodes it and outputs a Speex
+ stream to stdout.
+ Note that the packing used is NOT compatible with that of speexenc/speexdec.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Include \verbatiminput{sampleenc.c}
+preview false
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+sampledec.c
+\end_layout
+
+\begin_layout Standard
+sampledec reads a Speex stream from stdin, decodes it and outputs it to
+ a raw 16 bits/sample file.
+ Note that the packing used is NOT compatible with that of speexenc/speexdec.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Include \verbatiminput{sampledec.c}
+preview false
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+IETF RTP Profile
+\begin_inset LatexCommand \label{sec:IETF-draft}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Include \verbatiminput{draft-herlein-speex-rtp-profile-02.txt}
+preview false
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+Speex License
+\begin_inset LatexCommand \label{sec:Speex-License}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Redistribution and use in source and binary forms, with or without modification,
+ are permitted provided that the following conditions are met:
+\end_layout
+
+\begin_layout Itemize
+Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+\end_layout
+
+\begin_layout Itemize
+Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+\end_layout
+
+\begin_layout Itemize
+Neither the name of the Xiph.org Foundation nor the names of its contributors
+ may be used to endorse or promote products derived from this software without
+ specific prior written permission.
+\end_layout
+
+\begin_layout Standard
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS
+ IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED.
+ IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\newpage
+
+\end_layout
+
+\begin_layout Chapter
+GNU Free Documentation License
+\end_layout
+
+\begin_layout Standard
+Version 1.1, March 2000
+\end_layout
+
+\begin_layout Standard
+Copyright (C) 2000 Free Software Foundation, Inc.
+ 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA Everyone is permitted
+ to copy and distribute verbatim copies of this license document, but changing
+ it is not allowed.
+ 
+\end_layout
+
+\begin_layout Section*
+0.
+ PREAMBLE
+\end_layout
+
+\begin_layout Standard
+The purpose of this License is to make a manual, textbook, or other written
+ document "free" in the sense of freedom: to assure everyone the effective
+ freedom to copy and redistribute it, with or without modifying it, either
+ commercially or noncommercially.
+ Secondarily, this License preserves for the author and publisher a way
+ to get credit for their work, while not being considered responsible for
+ modifications made by others.
+\end_layout
+
+\begin_layout Standard
+This License is a kind of "copyleft", which means that derivative works
+ of the document must themselves be free in the same sense.
+ It complements the GNU General Public License, which is a copyleft license
+ designed for free software.
+\end_layout
+
+\begin_layout Standard
+We have designed this License in order to use it for manuals for free software,
+ because free software needs free documentation: a free program should come
+ with manuals providing the same freedoms that the software does.
+ But this License is not limited to software manuals; it can be used for
+ any textual work, regardless of subject matter or whether it is published
+ as a printed book.
+ We recommend this License principally for works whose purpose is instruction
+ or reference.
+ 
+\end_layout
+
+\begin_layout Section*
+1.
+ APPLICABILITY AND DEFINITIONS
+\end_layout
+
+\begin_layout Standard
+This License applies to any manual or other work that contains a notice
+ placed by the copyright holder saying it can be distributed under the terms
+ of this License.
+ The "Document", below, refers to any such manual or work.
+ Any member of the public is a licensee, and is addressed as "you".
+\end_layout
+
+\begin_layout Standard
+A "Modified Version" of the Document means any work containing the Document
+ or a portion of it, either copied verbatim, or with modifications and/or
+ translated into another language.
+\end_layout
+
+\begin_layout Standard
+A "Secondary Section" is a named appendix or a front-matter section of the
+ Document that deals exclusively with the relationship of the publishers
+ or authors of the Document to the Document's overall subject (or to related
+ matters) and contains nothing that could fall directly within that overall
+ subject.
+ (For example, if the Document is in part a textbook of mathematics, a Secondary
+ Section may not explain any mathematics.) The relationship could be a matter
+ of historical connection with the subject or with related matters, or of
+ legal, commercial, philosophical, ethical or political position regarding
+ them.
+\end_layout
+
+\begin_layout Standard
+The "Invariant Sections" are certain Secondary Sections whose titles are
+ designated, as being those of Invariant Sections, in the notice that says
+ that the Document is released under this License.
+\end_layout
+
+\begin_layout Standard
+The "Cover Texts" are certain short passages of text that are listed, as
+ Front-Cover Texts or Back-Cover Texts, in the notice that says that the
+ Document is released under this License.
+\end_layout
+
+\begin_layout Standard
+A "Transparent" copy of the Document means a machine-readable copy, represented
+ in a format whose specification is available to the general public, whose
+ contents can be viewed and edited directly and straightforwardly with generic
+ text editors or (for images composed of pixels) generic paint programs
+ or (for drawings) some widely available drawing editor, and that is suitable
+ for input to text formatters or for automatic translation to a variety
+ of formats suitable for input to text formatters.
+ A copy made in an otherwise Transparent file format whose markup has been
+ designed to thwart or discourage subsequent modification by readers is
+ not Transparent.
+ A copy that is not "Transparent" is called "Opaque".
+\end_layout
+
+\begin_layout Standard
+Examples of suitable formats for Transparent copies include plain ASCII
+ without markup, Texinfo input format, LaTeX input format, SGML or XML using
+ a publicly available DTD, and standard-conforming simple HTML designed
+ for human modification.
+ Opaque formats include PostScript, PDF, proprietary formats that can be
+ read and edited only by proprietary word processors, SGML or XML for which
+ the DTD and/or processing tools are not generally available, and the machine-ge
+nerated HTML produced by some word processors for output purposes only.
+\end_layout
+
+\begin_layout Standard
+The "Title Page" means, for a printed book, the title page itself, plus
+ such following pages as are needed to hold, legibly, the material this
+ License requires to appear in the title page.
+ For works in formats which do not have any title page as such, "Title Page"
+ means the text near the most prominent appearance of the work's title,
+ preceding the beginning of the body of the text.
+\end_layout
+
+\begin_layout Section*
+2.
+ VERBATIM COPYING
+\end_layout
+
+\begin_layout Standard
+You may copy and distribute the Document in any medium, either commercially
+ or noncommercially, provided that this License, the copyright notices,
+ and the license notice saying this License applies to the Document are
+ reproduced in all copies, and that you add no other conditions whatsoever
+ to those of this License.
+ You may not use technical measures to obstruct or control the reading or
+ further copying of the copies you make or distribute.
+ However, you may accept compensation in exchange for copies.
+ If you distribute a large enough number of copies you must also follow
+ the conditions in section 3.
+\end_layout
+
+\begin_layout Standard
+You may also lend copies, under the same conditions stated above, and you
+ may publicly display copies.
+\end_layout
+
+\begin_layout Section*
+3.
+ COPYING IN QUANTITY
+\end_layout
+
+\begin_layout Standard
+If you publish printed copies of the Document numbering more than 100, and
+ the Document's license notice requires Cover Texts, you must enclose the
+ copies in covers that carry, clearly and legibly, all these Cover Texts:
+ Front-Cover Texts on the front cover, and Back-Cover Texts on the back
+ cover.
+ Both covers must also clearly and legibly identify you as the publisher
+ of these copies.
+ The front cover must present the full title with all words of the title
+ equally prominent and visible.
+ You may add other material on the covers in addition.
+ Copying with changes limited to the covers, as long as they preserve the
+ title of the Document and satisfy these conditions, can be treated as verbatim
+ copying in other respects.
+\end_layout
+
+\begin_layout Standard
+If the required texts for either cover are too voluminous to fit legibly,
+ you should put the first ones listed (as many as fit reasonably) on the
+ actual cover, and continue the rest onto adjacent pages.
+\end_layout
+
+\begin_layout Standard
+If you publish or distribute Opaque copies of the Document numbering more
+ than 100, you must either include a machine-readable Transparent copy along
+ with each Opaque copy, or state in or with each Opaque copy a publicly-accessib
+le computer-network location containing a complete Transparent copy of the
+ Document, free of added material, which the general network-using public
+ has access to download anonymously at no charge using public-standard network
+ protocols.
+ If you use the latter option, you must take reasonably prudent steps, when
+ you begin distribution of Opaque copies in quantity, to ensure that this
+ Transparent copy will remain thus accessible at the stated location until
+ at least one year after the last time you distribute an Opaque copy (directly
+ or through your agents or retailers) of that edition to the public.
+\end_layout
+
+\begin_layout Standard
+It is requested, but not required, that you contact the authors of the Document
+ well before redistributing any large number of copies, to give them a chance
+ to provide you with an updated version of the Document.
+ 
+\end_layout
+
+\begin_layout Section*
+4.
+ MODIFICATIONS
+\end_layout
+
+\begin_layout Standard
+You may copy and distribute a Modified Version of the Document under the
+ conditions of sections 2 and 3 above, provided that you release the Modified
+ Version under precisely this License, with the Modified Version filling
+ the role of the Document, thus licensing distribution and modification
+ of the Modified Version to whoever possesses a copy of it.
+ In addition, you must do these things in the Modified Version: 
+\end_layout
+
+\begin_layout Itemize
+A.
+ Use in the Title Page (and on the covers, if any) a title distinct from
+ that of the Document, and from those of previous versions (which should,
+ if there were any, be listed in the History section of the Document).
+ You may use the same title as a previous version if the original publisher
+ of that version gives permission.
+\end_layout
+
+\begin_layout Itemize
+B.
+ List on the Title Page, as authors, one or more persons or entities responsible
+ for authorship of the modifications in the Modified Version, together with
+ at least five of the principal authors of the Document (all of its principal
+ authors, if it has less than five).
+\end_layout
+
+\begin_layout Itemize
+C.
+ State on the Title page the name of the publisher of the Modified Version,
+ as the publisher.
+\end_layout
+
+\begin_layout Itemize
+D.
+ Preserve all the copyright notices of the Document.
+\end_layout
+
+\begin_layout Itemize
+E.
+ Add an appropriate copyright notice for your modifications adjacent to
+ the other copyright notices.
+\end_layout
+
+\begin_layout Itemize
+F.
+ Include, immediately after the copyright notices, a license notice giving
+ the public permission to use the Modified Version under the terms of this
+ License, in the form shown in the Addendum below.
+\end_layout
+
+\begin_layout Itemize
+G.
+ Preserve in that license notice the full lists of Invariant Sections and
+ required Cover Texts given in the Document's license notice.
+\end_layout
+
+\begin_layout Itemize
+H.
+ Include an unaltered copy of this License.
+\end_layout
+
+\begin_layout Itemize
+I.
+ Preserve the section entitled "History", and its title, and add to it an
+ item stating at least the title, year, new authors, and publisher of the
+ Modified Version as given on the Title Page.
+ If there is no section entitled "History" in the Document, create one stating
+ the title, year, authors, and publisher of the Document as given on its
+ Title Page, then add an item describing the Modified Version as stated
+ in the previous sentence.
+\end_layout
+
+\begin_layout Itemize
+J.
+ Preserve the network location, if any, given in the Document for public
+ access to a Transparent copy of the Document, and likewise the network
+ locations given in the Document for previous versions it was based on.
+ These may be placed in the "History" section.
+ You may omit a network location for a work that was published at least
+ four years before the Document itself, or if the original publisher of
+ the version it refers to gives permission.
+\end_layout
+
+\begin_layout Itemize
+K.
+ In any section entitled "Acknowledgements" or "Dedications", preserve the
+ section's title, and preserve in the section all the substance and tone
+ of each of the contributor acknowledgements and/or dedications given therein.
+\end_layout
+
+\begin_layout Itemize
+L.
+ Preserve all the Invariant Sections of the Document, unaltered in their
+ text and in their titles.
+ Section numbers or the equivalent are not considered part of the section
+ titles.
+\end_layout
+
+\begin_layout Itemize
+M.
+ Delete any section entitled "Endorsements".
+ Such a section may not be included in the Modified Version.
+\end_layout
+
+\begin_layout Itemize
+N.
+ Do not retitle any existing section as "Endorsements" or to conflict in
+ title with any Invariant Section.
+ 
+\end_layout
+
+\begin_layout Standard
+If the Modified Version includes new front-matter sections or appendices
+ that qualify as Secondary Sections and contain no material copied from
+ the Document, you may at your option designate some or all of these sections
+ as invariant.
+ To do this, add their titles to the list of Invariant Sections in the Modified
+ Version's license notice.
+ These titles must be distinct from any other section titles.
+\end_layout
+
+\begin_layout Standard
+You may add a section entitled "Endorsements", provided it contains nothing
+ but endorsements of your Modified Version by various parties--for example,
+ statements of peer review or that the text has been approved by an organization
+ as the authoritative definition of a standard.
+\end_layout
+
+\begin_layout Standard
+You may add a passage of up to five words as a Front-Cover Text, and a passage
+ of up to 25 words as a Back-Cover Text, to the end of the list of Cover
+ Texts in the Modified Version.
+ Only one passage of Front-Cover Text and one of Back-Cover Text may be
+ added by (or through arrangements made by) any one entity.
+ If the Document already includes a cover text for the same cover, previously
+ added by you or by arrangement made by the same entity you are acting on
+ behalf of, you may not add another; but you may replace the old one, on
+ explicit permission from the previous publisher that added the old one.
+\end_layout
+
+\begin_layout Standard
+The author(s) and publisher(s) of the Document do not by this License give
+ permission to use their names for publicity for or to assert or imply endorseme
+nt of any Modified Version.
+ 
+\end_layout
+
+\begin_layout Section*
+5.
+ COMBINING DOCUMENTS
+\end_layout
+
+\begin_layout Standard
+You may combine the Document with other documents released under this License,
+ under the terms defined in section 4 above for modified versions, provided
+ that you include in the combination all of the Invariant Sections of all
+ of the original documents, unmodified, and list them all as Invariant Sections
+ of your combined work in its license notice.
+\end_layout
+
+\begin_layout Standard
+The combined work need only contain one copy of this License, and multiple
+ identical Invariant Sections may be replaced with a single copy.
+ If there are multiple Invariant Sections with the same name but different
+ contents, make the title of each such section unique by adding at the end
+ of it, in parentheses, the name of the original author or publisher of
+ that section if known, or else a unique number.
+ Make the same adjustment to the section titles in the list of Invariant
+ Sections in the license notice of the combined work.
+\end_layout
+
+\begin_layout Standard
+In the combination, you must combine any sections entitled "History" in
+ the various original documents, forming one section entitled "History";
+ likewise combine any sections entitled "Acknowledgements", and any sections
+ entitled "Dedications".
+ You must delete all sections entitled "Endorsements."
+\end_layout
+
+\begin_layout Section*
+6.
+ COLLECTIONS OF DOCUMENTS
+\end_layout
+
+\begin_layout Standard
+You may make a collection consisting of the Document and other documents
+ released under this License, and replace the individual copies of this
+ License in the various documents with a single copy that is included in
+ the collection, provided that you follow the rules of this License for
+ verbatim copying of each of the documents in all other respects.
+\end_layout
+
+\begin_layout Standard
+You may extract a single document from such a collection, and distribute
+ it individually under this License, provided you insert a copy of this
+ License into the extracted document, and follow this License in all other
+ respects regarding verbatim copying of that document.
+ 
+\end_layout
+
+\begin_layout Section*
+7.
+ AGGREGATION WITH INDEPENDENT WORKS
+\end_layout
+
+\begin_layout Standard
+A compilation of the Document or its derivatives with other separate and
+ independent documents or works, in or on a volume of a storage or distribution
+ medium, does not as a whole count as a Modified Version of the Document,
+ provided no compilation copyright is claimed for the compilation.
+ Such a compilation is called an "aggregate", and this License does not
+ apply to the other self-contained works thus compiled with the Document,
+ on account of their being thus compiled, if they are not themselves derivative
+ works of the Document.
+\end_layout
+
+\begin_layout Standard
+If the Cover Text requirement of section 3 is applicable to these copies
+ of the Document, then if the Document is less than one quarter of the entire
+ aggregate, the Document's Cover Texts may be placed on covers that surround
+ only the Document within the aggregate.
+ Otherwise they must appear on covers around the whole aggregate.
+\end_layout
+
+\begin_layout Section*
+8.
+ TRANSLATION
+\end_layout
+
+\begin_layout Standard
+Translation is considered a kind of modification, so you may distribute
+ translations of the Document under the terms of section 4.
+ Replacing Invariant Sections with translations requires special permission
+ from their copyright holders, but you may include translations of some
+ or all Invariant Sections in addition to the original versions of these
+ Invariant Sections.
+ You may include a translation of this License provided that you also include
+ the original English version of this License.
+ In case of a disagreement between the translation and the original English
+ version of this License, the original English version will prevail.
+\end_layout
+
+\begin_layout Section*
+9.
+ TERMINATION
+\end_layout
+
+\begin_layout Standard
+You may not copy, modify, sublicense, or distribute the Document except
+ as expressly provided for under this License.
+ Any other attempt to copy, modify, sublicense or distribute the Document
+ is void, and will automatically terminate your rights under this License.
+ However, parties who have received copies, or rights, from you under this
+ License will not have their licenses terminated so long as such parties
+ remain in full compliance.
+ 
+\end_layout
+
+\begin_layout Section*
+10.
+ FUTURE REVISIONS OF THIS LICENSE
+\end_layout
+
+\begin_layout Standard
+The Free Software Foundation may publish new, revised versions of the GNU
+ Free Documentation License from time to time.
+ Such new versions will be similar in spirit to the present version, but
+ may differ in detail to address new problems or concerns.
+ See http://www.gnu.org/copyleft/.
+\end_layout
+
+\begin_layout Standard
+Each version of the License is given a distinguishing version number.
+ If the Document specifies that a particular numbered version of this License
+ "or any later version" applies to it, you have the option of following
+ the terms and conditions either of that specified version or of any later
+ version that has been published (not as a draft) by the Free Software Foundatio
+n.
+ If the Document does not specify a version number of this License, you
+ may choose any version ever published (not as a draft) by the Free Software
+ Foundation.
+\end_layout
+
+\begin_layout Standard
+\begin_inset LatexCommand \printindex{}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

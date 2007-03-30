@@ -1,0 +1,10 @@
+Narrowband:
+
+- pitch_gain_search_3tap calls syn_filt_zero more times than it should (we're
+computing some things twice)
+
+Wideband
+
+- All narrowband optimizations apply
+- Lots of time spent in the codebook search. We could speed that up by using
+  a hierarchical codebook

@@ -1,0 +1,76 @@
+The Speex RTP payload is defined as a header, followed by any number of
+requests to the remote encoder and all encoded speech frames.
+
++--------+----------+----------------+
+| Header | Requests | Speech data... |
++--------+----------+----------------+
+
+The header contains only the number of frames sent 
+encoded in 6 bits
+
+ 0 1 2 3 4 5 
++-+-+-+-+-+-+
+| NB frames |
++-+-+-+-+-+-+
+
+There can be any number of requests of the form
+
+ 0 1 2 3 4 5 6 7 0 1
++-+-+-+-+-+-+-+-+-+-+
+|R| ReqID | ReqVal  |
++-+-+-+-+-+-+-+-+-+-+
+
+where R is 1 when a request is following and 0 when there is no more
+request. Each request (if R=1) is composed of a 4-bit request ID (ReqID) and
+a 5-bit value (ReqVal)
+
+Possible values for ReqID are:
+ 0: REQ_PERSIST   ReqVal=1 for persistent requests/mode selection, 
+                  0 otherwise
+ 1: PERSIST_ACK   Acknowledge a REQ_PERSIST from the other end, 
+                  ReqVal equals the value received
+ 2: MODE          Choose the encoder mode directly
+ 3: QUALITY       Choose the encoder quality
+ 4: VBR           Set VBR on (ReqVal=1) or off (ReqVal=2)
+ 5: VBR_QUALITY   Set the encoder quality for VBR mode
+ 6: LOW_MODE      Set the encoder mode for low-band (wideband only)
+ 7: HIGH_MODE     Set the encoder mode for high-band (wideband only)
+
+All requests should be considered at the receiver as a suggestion and
+compliance is not mandatory. The PERSIST_ACK should be sent upon receiving a
+REQ_PERSIST request to indicate that the request has been received.
+
+The speech data part contains speech frames one after the other. The size of
+the encoded frames can be found since the mode is directly encoded into each
+frame.
+
+For example, a frame where we request VBR to be on with quality 8 and we
+transmit two frames encoded at 8.35 kbps (167 bits/frame) will be:
+
+ 0               1               2               3
+ 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   NB=2    |1|ReqID=2| ReqVal=0|1|ReqID=3|ReqVal=8 |0| frame 1 |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 1                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 1                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 1                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 1                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 1                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|end|                     frame 2                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 2                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 2                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 2                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         frame 2                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    end frame 2    |P|P|P|P|P|P|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

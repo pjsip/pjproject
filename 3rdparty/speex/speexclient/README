@@ -1,0 +1,18 @@
+This is a VERY SIMPLE Speex VoIP client. It is not a complete VoIP application,
+isn't compatible with anything else (including probably future versions of 
+itself) and does not support any form of standard protocols. It is intended
+only as a way to show how to use Speex in a VoIP application.
+
+To use it:
+
+On Alices machine:
+% speexclient plughw:0,0 bob.somewhere.net alice_port bob_port
+
+On Bob's machine:
+% speexclient plughw:0,0 alice.somewhere.net bob_port alice_port
+
+where bob_port is the UDP port on which bob receives and alice_port is the
+UDP port on which alice receives. In most cases, the two ports can be the same.
+
+Note that the clients do not even know whether they are connected or not. All
+they do is send/receive the audio to/from a specific port. 

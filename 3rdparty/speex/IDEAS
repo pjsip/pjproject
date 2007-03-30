@@ -1,0 +1,4 @@
+- Non-linear adaptive codebook (use exc[n]*|exc[n]| to reduce noise 
+  component in adaptive codebook excitation)
+
+- Include time-domain masking for VBR
