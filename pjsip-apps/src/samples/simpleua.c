@@ -247,7 +247,13 @@ int main(int argc, char *argv[])
      * Initialize media endpoint.
      * This will implicitly initialize PJMEDIA too.
      */
+#if PJ_HAS_THREADS
     status = pjmedia_endpt_create(&cp.factory, NULL, 1, &g_med_endpt);
+#else
+    status = pjmedia_endpt_create(&cp.factory, 
+				  pjsip_endpt_get_ioqueue(g_endpt), 
+				  0, &g_med_endpt);
+#endif
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
     /* 
