@@ -472,27 +472,49 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
 					       void (*cb)(void*,pjsip_event*));
 
 /**
+ * @}
+ */
+
+/**
+ * @defgroup PJSIP_PROXY_CORE Core Proxy Layer
+ * @ingroup PJSIP
+ * @brief Core proxy operations
+ * @{
+ */
+
+/**
  * Create new request message to be forwarded upstream to new destination URI 
  * in uri. The new request is a full/deep clone of the request received in 
  * rdata, unless if other copy mechanism is specified in the options. 
  * The branch parameter, if not NULL, will be used as the branch-param in 
  * the Via header. If it is NULL, then a unique branch parameter will be used.
  *
+ * Note: this function DOES NOT perform Route information preprocessing as
+ *	  described in RFC 3261 Section 16.4. Application must take care of
+ *	  removing/updating the Route headers according of the rules as
+ *	  described in that section.
+ *
  * @param endpt	    The endpoint instance.
  * @param rdata	    The incoming request message.
  * @param uri	    The URI where the request will be forwarded to.
- * @param branch    Optional branch parameter.
+ * @param branch    Optional branch parameter. Application may specify its
+ *		    own branch, for example if it wishes to perform loop
+ *		    detection. If the branch parameter is not specified,
+ *		    this function will generate its own by calling 
+ *		    #pjsip_calculate_branch_id() function.
  * @param options   Optional option flags when duplicating the message.
  * @param tdata	    The result.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd( pjsip_endpoint *endpt,
-						     pjsip_rx_data *rdata, 
-						     const pjsip_uri *uri,
-						     const pj_str_t *branch,
-						     unsigned options,
-						     pjsip_tx_data **tdata);
+PJ_DECL(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
+						    pjsip_rx_data *rdata, 
+						    const pjsip_uri *uri,
+						    const pj_str_t *branch,
+						    unsigned options,
+						    pjsip_tx_data **tdata);
+
+
 
 /**
  * Create new response message to be forwarded downstream by the proxy from 
@@ -515,13 +537,17 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
 						      pjsip_tx_data **tdata);
 
 
+
 /**
  * Create a globally unique branch parameter based on the information in 
- * the incoming request message. This function guarantees that subsequent 
- * retransmissions of the same request will generate the same branch id.
- * This function can also be used in the loop detection process. 
- * If the same request arrives back in the proxy with the same URL, it will
- * calculate into the same branch id.
+ * the incoming request message, for the purpose of creating a new request
+ * for forwarding. This is the default implementation used by 
+ * #pjsip_endpt_create_request_fwd() function if the branch parameter is
+ * not specified.
+ *
+ * The default implementation here will just create an MD5 hash of the
+ * top-most Via.
+ *
  * Note that the returned string was allocated from rdata's pool.
  *
  * @param rdata	    The incoming request message.

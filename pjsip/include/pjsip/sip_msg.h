@@ -710,6 +710,19 @@ struct pjsip_msg
  */
 PJ_DECL(pjsip_msg*)  pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type);
 
+
+/**
+ * Perform a deep clone of a SIP message.
+ *
+ * @param pool	    The pool for creating the new message.
+ * @param msg	    The message to be duplicated.
+ *
+ * @return	    New message, which is duplicated from the original 
+ *		    message.
+ */
+PJ_DECL(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *msg);
+
+
 /** 
  * Find a header in the message by the header type.
  *

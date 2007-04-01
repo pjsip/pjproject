@@ -49,6 +49,8 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\sipstateless.exe \
 	  $(BINDIR)\sndinfo.exe \
 	  $(BINDIR)\sndtest.exe \
+	  $(BINDIR)\stateful_proxy.exe \
+	  $(BINDIR)\stateless_proxy.exe \
 	  $(BINDIR)\streamutil.exe \
 	  $(BINDIR)\tonegen.exe
 

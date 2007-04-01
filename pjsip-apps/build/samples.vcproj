@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="samples"
 	ProjectGUID="{E378A1FC-0C9C-4462-860F-7E60BC1BF84E}"
+	RootNamespace="samples"
 	Keyword="MakeFileProj"
 	>
 	<Platforms>
@@ -137,6 +138,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\stateful_proxy.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\samples\stateless_proxy.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\streamutil.c"
 				>
 			</File>
@@ -149,6 +158,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\src\samples\proxy.h"
+				>
+			</File>
 			<File
 				RelativePath="..\src\samples\util.h"
 				>
