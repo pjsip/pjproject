@@ -2056,7 +2056,6 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
     pj_str_t str_method;
     pjsip_method method;
     pjsip_tx_data *tdata;
-    pjsua_acc_info acc_info;
     pjsip_endpoint *endpt;
     pj_status_t status;
 
@@ -2065,15 +2064,7 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
     str_method = pj_str(cstr_method);
     pjsip_method_init_np(&method, &str_method);
 
-    pjsua_acc_get_info(current_acc, &acc_info);
-
-    status = pjsip_endpt_create_request(endpt, &method, dst_uri, 
-					&acc_info.acc_uri, dst_uri,
-					NULL, NULL, -1, NULL, &tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create request", status);
-	return;
-    }
+    status = pjsua_acc_create_request(current_acc, &method, dst_uri, &tdata);
 
     status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
     if (status != PJ_SUCCESS) {

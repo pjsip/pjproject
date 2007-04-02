@@ -57,6 +57,8 @@ SAMPLES := confsample \
 	   sipstateless \
 	   sndinfo \
 	   sndtest \
+	   stateful_proxy \
+	   stateless_proxy \
 	   streamutil \
 	   tonegen
 

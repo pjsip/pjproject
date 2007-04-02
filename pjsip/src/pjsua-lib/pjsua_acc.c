@@ -925,6 +925,45 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 }
 
 
+/*
+ * Create arbitrary requests for this account. 
+ */
+PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
+					     const pjsip_method *method,
+					     const pj_str_t *target,
+					     pjsip_tx_data **p_tdata)
+{
+    pjsip_tx_data *tdata;
+    pjsua_acc *acc;
+    pjsip_route_hdr *r;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(method && target && p_tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
+
+    acc = &pjsua_var.acc[acc_id];
+
+    status = pjsip_endpt_create_request(pjsua_var.endpt, method, target, 
+					&acc->cfg.id, target,
+					NULL, NULL, -1, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create request", status);
+	return status;
+    }
+
+    /* Copy routeset */
+    r = acc->route_set.next;
+    while (r != &acc->route_set) {
+	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, r));
+	r = r->next;
+    }
+    
+    /* Done */
+    *p_tdata = tdata;
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 						  pj_str_t *contact,
 						  pjsua_acc_id acc_id,

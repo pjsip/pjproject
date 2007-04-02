@@ -247,6 +247,38 @@ PJ_DEF(pjsip_msg*) pjsip_msg_create( pj_pool_t *pool, pjsip_msg_type_e type)
     return msg;
 }
 
+PJ_DEF(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *src)
+{
+    pjsip_msg *dst;
+    const pjsip_hdr *sh;
+
+    dst = pjsip_msg_create(pool, src->type);
+
+    /* Clone request/status line */
+    if (src->type == PJSIP_REQUEST_MSG) {
+	pjsip_method_copy(pool, &dst->line.req.method, &src->line.req.method);
+	dst->line.req.uri = pjsip_uri_clone(pool, src->line.req.uri);
+    } else {
+	dst->line.status.code = src->line.status.code;
+	pj_strdup(pool, &dst->line.status.reason, &src->line.status.reason);
+    }
+
+    /* Clone headers */
+    sh = src->hdr.next;
+    while (sh != &src->hdr) {
+	pjsip_hdr *dh = pjsip_hdr_clone(pool, sh);
+	pjsip_msg_add_hdr(dst, dh);
+	sh = sh->next;
+    }
+
+    /* Clone message body */
+    if (src->body) {
+	dst->body = pjsip_msg_body_clone(pool, src->body);
+    }
+
+    return dst;
+}
+
 PJ_DEF(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg, 
 				   pjsip_hdr_e hdr_type, const void *start)
 {

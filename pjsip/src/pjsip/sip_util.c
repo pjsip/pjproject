@@ -1037,6 +1037,10 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
     /* Check arguments. */
     PJ_ASSERT_RETURN(pool && rdata && res_addr, PJ_EINVAL);
 
+    /* rdata must be a request message! */
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
+		     PJ_EINVAL);
+
     /* All requests must have "received" parameter.
      * This must always be done in transport layer.
      */
