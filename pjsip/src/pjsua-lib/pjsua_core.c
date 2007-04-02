@@ -141,6 +141,7 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
     pjsip_response_addr res_addr;
+    pjmedia_sock_info skinfo;
     pjmedia_sdp_session *sdp;
     const pjsip_hdr *cap_hdr;
     pj_status_t status;
@@ -195,9 +196,12 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 	pjsip_msg_add_hdr(tdata->msg, h);
     }
 
+    /* Get media socket info */
+    pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &skinfo);
+
     /* Add SDP body, using call0's RTP address */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 1,
-				      &pjsua_var.calls[0].skinfo, &sdp);
+				      &skinfo, &sdp);
     if (status == PJ_SUCCESS) {
 	pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
     }

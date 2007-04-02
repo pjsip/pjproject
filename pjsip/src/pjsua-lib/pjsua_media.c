@@ -505,19 +505,20 @@ pj_status_t pjsua_media_subsys_destroy(void)
 static pj_status_t create_udp_media_transports(pjsua_transport_config *cfg)
 {
     unsigned i;
+    pjmedia_sock_info skinfo;
     pj_status_t status;
 
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 
-	status = create_rtp_rtcp_sock(cfg, &pjsua_var.calls[i].skinfo);
+	status = create_rtp_rtcp_sock(cfg, &skinfo);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create RTP/RTCP socket",
 		         status);
 	    goto on_error;
 	}
 	status = pjmedia_transport_udp_attach(pjsua_var.med_endpt, NULL,
-					      &pjsua_var.calls[i].skinfo, 0,
+					      &skinfo, 0,
 					      &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create media transport",
@@ -605,10 +606,6 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	    goto on_error;
 	}
 
-	/* Get transport info */
-	pjmedia_transport_get_info(pjsua_var.calls[i].med_tp,
-				   &pjsua_var.calls[i].skinfo);
-
     }
 
     return PJ_SUCCESS;
@@ -694,11 +691,16 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 					   pjmedia_sdp_session **p_sdp)
 {
     pjmedia_sdp_session *sdp;
+    pjmedia_sock_info skinfo;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pj_status_t status;
 
+    /* Get media socket info */
+    pjmedia_transport_get_info(call->med_tp, &skinfo);
+
+    /* Create SDP */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, 1,
-				      &call->skinfo, &sdp);
+				      &skinfo, &sdp);
     if (status != PJ_SUCCESS)
 	goto on_error;
 

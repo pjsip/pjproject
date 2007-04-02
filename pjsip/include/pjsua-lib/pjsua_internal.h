@@ -49,7 +49,6 @@ typedef struct pjsua_call
     int			 conf_slot; /**< Slot # in conference bridge.	    */
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
-    pjmedia_sock_info	 skinfo;    /**< Preallocated media sockets.	    */
     pjmedia_transport	*med_tp;    /**< Media transport.		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */

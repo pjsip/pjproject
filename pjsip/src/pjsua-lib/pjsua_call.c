@@ -2173,11 +2173,15 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
     pj_status_t status;
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_attr *attr;
+    pjmedia_sock_info skinfo;
     pjmedia_sdp_session *sdp;
+
+    /* Get media socket info */
+    pjmedia_transport_get_info(call->med_tp, &skinfo);
 
     /* Create new offer */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pjsua_var.pool, 1,
-				      &call->skinfo, &sdp);
+				      &skinfo, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	return status;
