@@ -717,7 +717,7 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
     attr->sockaddr.ipv4.sin_addr.s_addr = GETVAL32N(buf, ATTR_HDR_LEN+4);
 
     /* Done */
-    *p_attr = attr;
+    *p_attr = (void*)attr;
 
     return PJ_SUCCESS;
 }
@@ -730,9 +730,11 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
     pj_stun_sockaddr_attr *attr;
     pj_status_t status;
 
-    status = decode_sockaddr_attr(pool, buf, &attr);
+    status = decode_sockaddr_attr(pool, buf, p_attr);
     if (status != PJ_SUCCESS)
 	return status;
+
+    attr = *(pj_stun_sockaddr_attr**)p_attr;
 
     attr->xor_ed = PJ_TRUE;
     attr->sockaddr.ipv4.sin_port ^= pj_htons(0x2112);
