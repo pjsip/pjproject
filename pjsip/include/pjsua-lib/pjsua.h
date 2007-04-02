@@ -2288,6 +2288,25 @@ PJ_DECL(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata);
 
 
 /**
+ * Create arbitrary requests using the account. Application should only use
+ * this function to create auxiliary requests outside dialog, such as
+ * OPTIONS, and use the call or presence API to create dialog related
+ * requests.
+ *
+ * @param acc_id	The account ID.
+ * @param method	The SIP method of the request.
+ * @param target	Target URI.
+ * @param p_tdata	Pointer to receive the request.
+ *
+ * @return		PJ_SUCCESS or the error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
+					      const pjsip_method *method,
+					      const pj_str_t *target,
+					      pjsip_tx_data **p_tdata);
+
+
+/**
  * Create a suitable URI to be put as Contact based on the specified
  * target URI for the specified account.
  *
