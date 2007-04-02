@@ -55,7 +55,7 @@ PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
     PJ_CHECK_STACK();
 
     for (i=0; i<len/8; ++i) {
-	unsigned val = pj_rand();
+	pj_uint32_t val = pj_rand();
 	pj_val_to_hex_digit( (val & 0xFF000000) >> 24, p+0 );
 	pj_val_to_hex_digit( (val & 0x00FF0000) >> 16, p+2 );
 	pj_val_to_hex_digit( (val & 0x0000FF00) >>  8, p+4 );
