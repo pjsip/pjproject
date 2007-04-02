@@ -77,7 +77,7 @@ static pj_status_t init_options(int argc, char *argv[])
 	switch (c) {
 	case 'p':
 	    global.port = atoi(pj_optarg);
-	    printf("Port is set to %d\n", global.pool);
+	    printf("Port is set to %d\n", global.port);
 	    break;
 	
 	case 'R':
