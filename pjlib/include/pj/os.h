@@ -933,6 +933,35 @@ PJ_INLINE(void) pj_set_timestamp32(pj_timestamp *t, pj_uint32_t hi,
     t->u32.lo = lo;
 }
 
+
+/**
+ * Compare timestamp t1 and t2.
+ * @param t1	    t1.
+ * @param t2	    t2.
+ * @return	    -1 if (t1 < t2), 1 if (t1 > t2), or 0 if (t1 == t2)
+ */
+PJ_INLINE(int) pj_cmp_timestamp(const pj_timestamp *t1, const pj_timestamp *t2)
+{
+#if PJ_HAS_INT64
+    if (t1->u64 < t2->u64)
+	return -1;
+    else if (t1->u64 > t2->u64)
+	return 1;
+    else
+	return 0;
+#else
+    if (t1->u32.hi < t2->u32.hi ||
+	(t1->u32.hi == t2->u32.hi && t1->u32.lo < t2->u32.lo))
+	return -1;
+    else if (t1->u32.hi > t2->u32.hi ||
+	     (t1->u32.hi == t2->u32.hi && t1->u32.lo > t2->u32.lo))
+	return 1;
+    else
+	return 0;
+#endif
+}
+
+
 /**
  * Add timestamp t2 to t1.
  * @param t1	    t1.
