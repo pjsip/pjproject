@@ -555,7 +555,6 @@ on_error:
 
 
 /* Find default candidate ID for the component */
-#if 0
 PJ_DEF(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
 						  unsigned comp_id,
 						  int *cand_id)
@@ -623,7 +622,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
     pj_assert(!"Should have a candidate by now");
     return PJ_EBUG;
 }
-#endif	/* if 0 */
 
 
 #ifndef MIN

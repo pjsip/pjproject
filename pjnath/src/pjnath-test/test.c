@@ -49,7 +49,7 @@ static int test_inner(void)
 
     mem = &caching_pool.factory;
 
-#if 0
+#if 1
     pj_log_set_level(3);
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
                      PJ_LOG_HAS_MICRO_SEC);

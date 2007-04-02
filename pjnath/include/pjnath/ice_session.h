@@ -606,9 +606,6 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 					  int addr_len,
 					  unsigned *p_cand_id);
 
-#if 0
-/* Temporarily disabled to reduce size, since we don't need this yet */
-
 /**
  * Find default candidate for the specified component ID, using this
  * rule:
@@ -626,7 +623,6 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 PJ_DECL(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
 						   unsigned comp_id,
 						   int *p_cand_id);
-#endif
 
 /**
  * Pair the local and remote candidates to create check list. Application
