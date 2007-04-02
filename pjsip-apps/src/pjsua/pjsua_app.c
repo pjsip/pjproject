@@ -1317,46 +1317,7 @@ static int write_settings(const struct app_config *config,
  */
 static void app_dump(pj_bool_t detail)
 {
-    unsigned old_decor;
-    char buf[1024];
-
-    PJ_LOG(3,(THIS_FILE, "Start dumping application states:"));
-
-    old_decor = pj_log_get_decor();
-    pj_log_set_decor(old_decor & (PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
-
-    if (detail)
-	pj_dump_config();
-
-    pjsip_endpt_dump(pjsua_get_pjsip_endpt(), detail);
-    pjmedia_endpt_dump(pjsua_get_pjmedia_endpt());
-    pjsip_tsx_layer_dump(detail);
-    pjsip_ua_dump(detail);
-
-
-    /* Dump all invite sessions: */
-    PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
-
-    if (pjsua_call_get_count() == 0) {
-
-	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
-
-    } else {
-	unsigned i;
-
-	for (i=0; i<app_config.cfg.max_calls; ++i) {
-	    if (pjsua_call_is_active(i)) {
-		pjsua_call_dump(i, detail, buf, sizeof(buf), "  ");
-		PJ_LOG(3,(THIS_FILE, "%s", buf));
-	    }
-	}
-    }
-
-    /* Dump presence status */
-    pjsua_pres_dump(detail);
-
-    pj_log_set_decor(old_decor);
-    PJ_LOG(3,(THIS_FILE, "Dump complete"));
+    pjsua_dump(detail);
 }
 
 

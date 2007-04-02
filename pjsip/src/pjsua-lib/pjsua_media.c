@@ -557,6 +557,13 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
     pj_sockaddr_in addr;
     pj_status_t status;
 
+    /* Make sure STUN server resolution has completed */
+    status = pjsua_resolve_stun_server(PJ_TRUE);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
+	return status;
+    }
+
     pj_sockaddr_in_init(&addr, 0, (pj_uint16_t)cfg->port);
 
     /* Create each media transport */

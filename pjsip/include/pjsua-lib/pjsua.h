@@ -1327,7 +1327,14 @@ PJ_DECL(void) pjsua_perror(const char *sender, const char *title,
 			   pj_status_t status);
 
 
-
+/**
+ * This is a utility function to dump the stack states to log, using
+ * verbosity level 3.
+ *
+ * @param detail	Will print detailed output (such as list of
+ *			SIP transactions) when non-zero.
+ */
+PJ_DECL(void) pjsua_dump(pj_bool_t detail);
 
 /**
  * @}

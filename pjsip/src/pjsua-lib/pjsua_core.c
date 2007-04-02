@@ -743,6 +743,7 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 	 */
 	if (pjsua_var.ua_cfg.stun_domain.slen) {
 	    pj_str_t res_type;
+	    pj_status_t status;
 
 	    /* Fail if resolver is not configured */
 	    if (pjsua_var.resolver == NULL) {
@@ -752,14 +753,17 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 		return PJLIB_UTIL_EDNSNONS;
 	    }
 	    res_type = pj_str("_stun._udp");
-	    pjsua_var.stun_status = 
+	    status = 
 		pj_dns_srv_resolve(&pjsua_var.ua_cfg.stun_domain, &res_type,
 				   3478, pjsua_var.pool, pjsua_var.resolver,
-				   0, NULL, stun_dns_srv_resolver_cb);
-	    if (pjsua_var.stun_status != PJ_SUCCESS) {
+				   0, NULL, &stun_dns_srv_resolver_cb);
+	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error starting DNS SRV resolution", 
 			     pjsua_var.stun_status);
+		pjsua_var.stun_status = status;
 		return pjsua_var.stun_status;
+	    } else {
+		pjsua_var.stun_status = PJ_EPENDING;
 	    }
 	}
 	/* Otherwise if stun_host is specified, resolve STUN server with
@@ -1690,3 +1694,69 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pj_pool_release(pool);
     return p ? 0 : -1;
 }
+
+
+/*
+ * This is a utility function to dump the stack states to log, using
+ * verbosity level 3.
+ */
+PJ_DEF(void) pjsua_dump(pj_bool_t detail)
+{
+    unsigned old_decor;
+    unsigned i;
+    char buf[1024];
+
+    PJ_LOG(3,(THIS_FILE, "Start dumping application states:"));
+
+    old_decor = pj_log_get_decor();
+    pj_log_set_decor(old_decor & (PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
+
+    if (detail)
+	pj_dump_config();
+
+    pjsip_endpt_dump(pjsua_get_pjsip_endpt(), detail);
+
+    pjmedia_endpt_dump(pjsua_get_pjmedia_endpt());
+
+    PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
+    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+	pjsua_call *call = &pjsua_var.calls[i];
+	pjmedia_sock_info skinfo;
+
+	pjmedia_transport_get_info(call->med_tp, &skinfo);
+
+	PJ_LOG(3,(THIS_FILE, " %s: %s:%d",
+		  (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
+		  pj_inet_ntoa(skinfo.rtp_addr_name.sin_addr),
+		  (int)pj_ntohs(skinfo.rtp_addr_name.sin_port)));
+    }
+
+    pjsip_tsx_layer_dump(detail);
+    pjsip_ua_dump(detail);
+
+
+    /* Dump all invite sessions: */
+    PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
+
+    if (pjsua_call_get_count() == 0) {
+
+	PJ_LOG(3,(THIS_FILE, "  - no sessions -"));
+
+    } else {
+	unsigned i;
+
+	for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+	    if (pjsua_call_is_active(i)) {
+		pjsua_call_dump(i, detail, buf, sizeof(buf), "  ");
+		PJ_LOG(3,(THIS_FILE, "%s", buf));
+	    }
+	}
+    }
+
+    /* Dump presence status */
+    pjsua_pres_dump(detail);
+
+    pj_log_set_decor(old_decor);
+    PJ_LOG(3,(THIS_FILE, "Dump complete"));
+}
+
