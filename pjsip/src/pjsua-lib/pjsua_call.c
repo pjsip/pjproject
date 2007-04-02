@@ -1218,6 +1218,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	return PJSIP_ESESSIONSTATE;
     }
 
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	pjsip_dlg_dec_lock(dlg);
+	return PJSIP_ESESSIONSTATE;
+    }
+
     /* Create SDP */
     PJ_UNUSED_ARG(unhold);
     PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
@@ -2245,8 +2253,18 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 		  "(media in offer is %s)", call->index, remote_state));
 	status = create_inactive_sdp( call, &answer );
     } else {
+
 	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 		  call->index));
+
+	/* Init media channel */
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	    PJSUA_UNLOCK();
+	    return;
+	}
+
 	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &answer);
     }
 

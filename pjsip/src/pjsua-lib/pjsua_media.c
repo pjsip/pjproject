@@ -814,7 +814,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	call->media_dir = PJMEDIA_DIR_NONE;
 
-	/* Shutdown transport */
+	/* Shutdown ICE session */
+	if (pjsua_var.media_cfg.enable_ice) {
+	    pjmedia_ice_stop_ice(call->med_tp);
+	}
+
 	/* No need because we need keepalive? */
 
     } else {
