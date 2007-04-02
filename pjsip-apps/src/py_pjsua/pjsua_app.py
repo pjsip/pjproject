@@ -208,16 +208,16 @@ def app_init():
 		err_exit("pjsua init() error", status)
 
 	# Configure STUN config
-	stun_cfg = py_pjsua.stun_config_default()
-	stun_cfg.stun_srv1 = C_STUN_SRV
-	stun_cfg.stun_srv2 = C_STUN_SRV
-	stun_cfg.stun_port1 = C_STUN_PORT
-	stun_cfg.stun_port2 = C_STUN_PORT
+	#stun_cfg = py_pjsua.stun_config_default()
+	#stun_cfg.stun_srv1 = C_STUN_SRV
+	#stun_cfg.stun_srv2 = C_STUN_SRV
+	#stun_cfg.stun_port1 = C_STUN_PORT
+	#stun_cfg.stun_port2 = C_STUN_PORT
 
 	# Configure UDP transport config
 	transport_cfg = py_pjsua.transport_config_default()
 	transport_cfg.port = C_SIP_PORT
-	transport_cfg.stun_config = stun_cfg
+	#transport_cfg.stun_config = stun_cfg
 	if C_STUN_SRV != "":
 		transport_cfg.use_stun = 1
 

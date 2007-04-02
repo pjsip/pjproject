@@ -51,6 +51,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjnath"="..\..\pjnath\build\pjnath.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjsip_core"="..\..\pjsip\build\pjsip_core.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -166,6 +178,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjsua_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjnath
     End Project Dependency
 }}}
 

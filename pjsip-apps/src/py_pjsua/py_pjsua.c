@@ -918,6 +918,9 @@ typedef struct
     unsigned thread_cnt;
     unsigned outbound_proxy_cnt;
     pj_str_t outbound_proxy[4];
+    PyObject *stun_domain;
+    PyObject *stun_host;
+    PyObject *stun_relay_host;
     unsigned cred_count;
     pjsip_cred_info cred_info[PJSUA_ACC_MAX_PROXIES];
     callback_Object * cb;
@@ -2347,141 +2350,6 @@ static char pjsua_msg_data_init_doc[] =
 /* LIB TRANSPORT */
 
 /*
- * stun_config_Object
- * STUN configuration
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    PyObject * stun_srv1;    
-    unsigned stun_port1;
-    PyObject * stun_srv2;
-    unsigned stun_port2;    
-} stun_config_Object;
-
-
-/*
- * stun_config_dealloc
- * deletes a stun config from memory
- */
-static void stun_config_dealloc(stun_config_Object* self)
-{
-    Py_XDECREF(self->stun_srv1);
-    Py_XDECREF(self->stun_srv2);
-    self->ob_type->tp_free((PyObject*)self);
-}
-
-
-/*
- * stun_config_new
- * constructor for stun_config object
- */
-static PyObject * stun_config_new(PyTypeObject *type, PyObject *args,
-                                    PyObject *kwds)
-{
-    stun_config_Object *self;	
-    self = (stun_config_Object *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
-        self->stun_srv1 = PyString_FromString("");
-        if (self->stun_srv1 == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-        self->stun_srv2 = PyString_FromString("");
-        if (self->stun_srv2 == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-    }
-
-    return (PyObject *)self;
-}
-
-
-/*
- * stun_config_members
- */
-static PyMemberDef stun_config_members[] =
-{
-    {
-        "stun_port1", T_INT, offsetof(stun_config_Object, stun_port1), 0,
-        "The first STUN server IP address or hostname."
-    },
-    {
-        "stun_port2", T_INT, offsetof(stun_config_Object, stun_port2), 0,
-        "Port number of the second STUN server. "
-        "If zero, default STUN port will be used."
-    },    
-    {
-        "stun_srv1", T_OBJECT_EX,
-        offsetof(stun_config_Object, stun_srv1), 0,
-        "The first STUN server IP address or hostname"
-    },
-    {
-        "stun_srv2", T_OBJECT_EX,
-        offsetof(stun_config_Object, stun_srv2), 0,
-        "Optional second STUN server IP address or hostname, for which the "
-        "result of the mapping request will be compared to. If the value "
-        "is empty, only one STUN server will be used"
-    },
-    {NULL}  /* Sentinel */
-};
-
-
-
-
-/*
- * stun_config_Type
- */
-static PyTypeObject stun_config_Type =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "py_pjsua.STUN_Config",      /*tp_name*/
-    sizeof(stun_config_Object),  /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    (destructor)stun_config_dealloc,/*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "STUN Config objects",       /* tp_doc */
-    0,                              /* tp_traverse */
-    0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    0,                              /* tp_methods */
-    stun_config_members,         /* tp_members */
-    0,                              /* tp_getset */
-    0,                              /* tp_base */
-    0,                              /* tp_dict */
-    0,                              /* tp_descr_get */
-    0,                              /* tp_descr_set */
-    0,                              /* tp_dictoffset */
-    0,                              /* tp_init */
-    0,                              /* tp_alloc */
-    stun_config_new,             /* tp_new */
-
-};
-
-/*
  * transport_config_Object
  * Transport configuration for creating UDP transports for both SIP
  * and media.
@@ -2493,8 +2361,6 @@ typedef struct
     unsigned port;
     PyObject * public_addr;
     PyObject * bound_addr;
-    int use_stun;
-    stun_config_Object * stun_config;
 } transport_config_Object;
 
 
@@ -2506,7 +2372,6 @@ static void transport_config_dealloc(transport_config_Object* self)
 {
     Py_XDECREF(self->public_addr);    
     Py_XDECREF(self->bound_addr);    
-    Py_XDECREF(self->stun_config);    
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -2535,14 +2400,6 @@ static PyObject * transport_config_new(PyTypeObject *type, PyObject *args,
             Py_DECREF(self);
             return NULL;
         }
-        self->stun_config = 
-            (stun_config_Object *)stun_config_new(&stun_config_Type,NULL,NULL);
-        if (self->stun_config == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-        
     }
 
     return (PyObject *)self;
@@ -2579,16 +2436,6 @@ static PyMemberDef transport_config_members[] =
         "published address of a transport (the public_addr field should be "
         "used for that purpose)."		
     },    
-    {
-        "use_stun", T_INT,
-        offsetof(transport_config_Object, use_stun), 0,
-        "Flag to indicate whether STUN should be used."
-    },
-    {
-        "stun_config", T_OBJECT_EX,
-        offsetof(transport_config_Object, stun_config), 0,
-        "STUN configuration, must be specified when STUN is used."
-    },
     {NULL}  /* Sentinel */
 };
 
@@ -2640,137 +2487,6 @@ static PyTypeObject transport_config_Type =
     0,                              /* tp_alloc */
     transport_config_new,             /* tp_new */
 
-};
-
-/*
- * sockaddr_Object
- * C/Python wrapper for sockaddr object
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    pj_uint8_t  sa_zero_len;
-    pj_uint8_t  sa_family;
-#else
-    pj_uint16_t	sa_family;	/**< Common data: address family.   */
-#endif
-    PyObject * sa_data;	/**< Address data.		    */
-} sockaddr_Object;
-
-/*
- * sockaddr_dealloc
- * deletes a sockaddr from memory
- */
-static void sockaddr_dealloc(sockaddr_Object* self)
-{
-    Py_XDECREF(self->sa_data);    
-    self->ob_type->tp_free((PyObject*)self);
-}
-
-
-/*
- * sockaddr_new
- * constructor for sockaddr object
- */
-static PyObject * sockaddr_new(PyTypeObject *type, PyObject *args,
-                                    PyObject *kwds)
-{
-    sockaddr_Object *self;
-
-    self = (sockaddr_Object *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
-        self->sa_data = PyString_FromString("");
-        if (self->sa_data == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-        
-    }
-
-    return (PyObject *)self;
-}
-
-
-/*
- * sockaddr_members
- * declares attributes accessible from both C and Python for sockaddr object
- */
-static PyMemberDef sockaddr_members[] =
-{
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    {
-        "sa_zero_len", T_INT, offsetof(sockaddr_Object, sa_zero_len), 0,
-        ""
-    },
-    {
-        "sa_family", T_INT,
-        offsetof(sockaddr_Object, sa_family), 0,
-        "Common data: address family."
-    },
-#else
-    {
-        "sa_family", T_INT,
-        offsetof(sockaddr_Object, sa_family), 0,
-        "Common data: address family."
-    },
-#endif
-    {
-        "sa_data", T_OBJECT_EX,
-        offsetof(sockaddr_Object, sa_data), 0,
-        "Address data"
-    },
-    {NULL}  /* Sentinel */
-};
-
-
-/*
- * sockaddr_Type
- */
-static PyTypeObject sockaddr_Type =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "py_pjsua.Sockaddr",        /*tp_name*/
-    sizeof(sockaddr_Object),    /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    (destructor)sockaddr_dealloc,/*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Sockaddr objects",         /*tp_doc*/
-    0,                              /*tp_traverse*/
-    0,                              /*tp_clear*/
-    0,                              /*tp_richcompare*/
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    0,                              /* tp_methods */
-    sockaddr_members,           /* tp_members */
-	0,                              /* tp_getset */
-    0,                              /* tp_base */
-    0,                              /* tp_dict */
-    0,                              /* tp_descr_get */
-    0,                              /* tp_descr_set */
-    0,                              /* tp_dictoffset */
-    0,                              /* tp_init */
-    0,                              /* tp_alloc */
-    sockaddr_new,             /* tp_new */
 };
 
 /*
@@ -2904,7 +2620,6 @@ typedef struct
     PyObject * info;
     unsigned flag;
     unsigned addr_len;
-    sockaddr_Object * local_addr;
     host_port_Object * local_name;
     unsigned usage_count;
 } transport_info_Object;
@@ -2918,7 +2633,6 @@ static void transport_info_dealloc(transport_info_Object* self)
 {
     Py_XDECREF(self->type_name); 
     Py_XDECREF(self->info);
-    Py_XDECREF(self->local_addr);
     Py_XDECREF(self->local_name);
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -2944,13 +2658,6 @@ static PyObject * transport_info_new(PyTypeObject *type, PyObject *args,
         }
         self->info = PyString_FromString("");
         if (self->info == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-        self->local_addr = 
-            (sockaddr_Object *)sockaddr_new(&sockaddr_Type,NULL,NULL);
-        if (self->local_addr == NULL)
     	{
             Py_DECREF(self);
             return NULL;
@@ -2998,11 +2705,6 @@ static PyMemberDef transport_info_members[] =
     {
         "addr_len", T_INT, offsetof(transport_info_Object, addr_len), 0,
         "Local address length."
-    },
-    {
-        "local_addr", T_OBJECT_EX,
-        offsetof(transport_info_Object, local_addr), 0,
-        "Local/bound address."
     },
     {
         "local_name", T_OBJECT_EX,
@@ -3109,33 +2811,6 @@ static PyTypeObject pjsip_transport_Type =
 
 
 /*
- * py_pjsua_stun_config_default
- * !modified @ 051206
- */
-static PyObject *py_pjsua_stun_config_default(PyObject *pSelf, PyObject *pArgs)
-{
-    stun_config_Object *obj;
-    pjsua_stun_config cfg;
-
-    if (!PyArg_ParseTuple(pArgs, ""))
-    {
-        return NULL;
-    }
-	
-    pjsua_stun_config_default(&cfg);
-    obj = (stun_config_Object *)stun_config_new(&stun_config_Type, NULL, NULL);
-    obj->stun_port1 = cfg.stun_port1;
-    obj->stun_port2 = cfg.stun_port2;
-    Py_XDECREF(obj->stun_srv1);
-    obj->stun_srv1 = 
-        PyString_FromStringAndSize(cfg.stun_srv1.ptr, cfg.stun_srv1.slen);
-    Py_XDECREF(obj->stun_srv2);
-    obj->stun_srv2 = 
-        PyString_FromStringAndSize(cfg.stun_srv2.ptr, cfg.stun_srv2.slen);
-    return (PyObject *)obj;
-}
-
-/*
  * py_pjsua_transport_config_default
  * !modified @ 051206
  */
@@ -3157,63 +2832,7 @@ static PyObject *py_pjsua_transport_config_default
     obj->bound_addr = 
         PyString_FromStringAndSize(cfg.bound_addr.ptr, cfg.bound_addr.slen);
     obj->port = cfg.port;
-    obj->use_stun = cfg.use_stun;
-    Py_XDECREF(obj->stun_config);
-    obj->stun_config = 
-        (stun_config_Object *)stun_config_new(&stun_config_Type, NULL, NULL);
-    obj->stun_config->stun_port1 = cfg.stun_config.stun_port1;
-    obj->stun_config->stun_port2 = cfg.stun_config.stun_port2;
-    Py_XDECREF(obj->stun_config->stun_srv1);
-    obj->stun_config->stun_srv1 = 
-        PyString_FromStringAndSize(cfg.stun_config.stun_srv1.ptr, 
-    cfg.stun_config.stun_srv1.slen);
-    Py_XDECREF(obj->stun_config->stun_srv2);
-    obj->stun_config->stun_srv2 = 
-        PyString_FromStringAndSize(cfg.stun_config.stun_srv2.ptr, 
-    cfg.stun_config.stun_srv2.slen);
     return (PyObject *)obj;
-}
-
-/*
- * py_pjsua_normalize_stun_config
- */
-static PyObject *py_pjsua_normalize_stun_config
-(PyObject *pSelf, PyObject *pArgs)
-{
-    PyObject * tmpObj;
-    stun_config_Object *obj;
-    pjsua_stun_config cfg;
-
-    if (!PyArg_ParseTuple(pArgs, "O", &tmpObj))
-    {
-        return NULL;
-    }
-
-    if (tmpObj == Py_None) {
-	Py_INCREF(Py_None);
-	return Py_None;
-    }
-
-    obj = (stun_config_Object *) tmpObj;
-    cfg.stun_port1 = obj->stun_port1;
-    cfg.stun_port2 = obj->stun_port2;
-    cfg.stun_srv1.ptr = PyString_AsString(obj->stun_srv1);
-    cfg.stun_srv1.slen = strlen(PyString_AsString(obj->stun_srv1));
-    cfg.stun_srv2.ptr = PyString_AsString(obj->stun_srv2);
-    cfg.stun_srv2.slen = strlen(PyString_AsString(obj->stun_srv2));
-
-    pjsua_normalize_stun_config(&cfg);
-    obj->stun_port1 = cfg.stun_port1;
-    obj->stun_port2 = cfg.stun_port2;
-    Py_XDECREF(obj->stun_srv1);
-    obj->stun_srv1 = 
-        PyString_FromStringAndSize(cfg.stun_srv1.ptr, cfg.stun_srv1.slen);
-    Py_XDECREF(obj->stun_srv2);
-    obj->stun_srv2 = 
-        PyString_FromStringAndSize(cfg.stun_srv2.ptr, cfg.stun_srv2.slen);
-
-    Py_INCREF(Py_None);
-    return Py_None;
 }
 
 /*
@@ -3241,17 +2860,6 @@ static PyObject *py_pjsua_transport_create(PyObject *pSelf, PyObject *pArgs)
         cfg.bound_addr.ptr = PyString_AsString(obj->bound_addr);
         cfg.bound_addr.slen = strlen(PyString_AsString(obj->bound_addr));
         cfg.port = obj->port;
-        cfg.use_stun = obj->use_stun;
-        cfg.stun_config.stun_port1 = obj->stun_config->stun_port1;
-        cfg.stun_config.stun_port2 = obj->stun_config->stun_port2;
-        cfg.stun_config.stun_srv1.ptr = 
-            PyString_AsString(obj->stun_config->stun_srv1);
-        cfg.stun_config.stun_srv1.slen = 
-            strlen(PyString_AsString(obj->stun_config->stun_srv1));
-        cfg.stun_config.stun_srv2.ptr = 
-            PyString_AsString(obj->stun_config->stun_srv2);
-        cfg.stun_config.stun_srv2.slen = 
-            strlen(PyString_AsString(obj->stun_config->stun_srv2));
         status = pjsua_transport_create(type, &cfg, &id);
     } else {
         status = pjsua_transport_create(type, NULL, &id);
@@ -3343,14 +2951,6 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
         obj->flag = info.flag;
         obj->id = info.id;
         obj->info = PyString_FromStringAndSize(info.info.ptr, info.info.slen);
-        obj->local_addr->sa_data = 
-			PyString_FromStringAndSize(info.local_addr.sa_data, 14);
-#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-        obj->local_addr->sa_zero_len = info.local_addr.sa_zero_len;
-        obj->local_addr->sa_family = info.local_addr.sa_family;
-#else
-        obj->local_addr->sa_family = info.local_addr.sa_family;
-#endif
         return Py_BuildValue("O", obj);
     } else {
         Py_INCREF(Py_None);
@@ -3393,15 +2993,9 @@ static PyObject *py_pjsua_transport_close(PyObject *pSelf, PyObject *pArgs)
     return Py_BuildValue("i",status);
 }
 
-static char pjsua_stun_config_default_doc[] =
-    "py_pjsua.STUN_Config py_pjsua.stun_config_default () "
-    "Call this function to initialize STUN config with default values.";
 static char pjsua_transport_config_default_doc[] =
     "py_pjsua.Transport_Config py_pjsua.transport_config_default () "
     "Call this function to initialize UDP config with default values.";
-static char pjsua_normalize_stun_config_doc[] =
-    "void py_pjsua.normalize_stun_config (py_pjsua.STUN_Config cfg) "
-    "Normalize STUN config. ";
 static char pjsua_transport_create_doc[] =
     "int, int py_pjsua.transport_create (int type, "
     "py_pjsua.Transport_Config cfg) "
@@ -8119,18 +7713,9 @@ static PyMethodDef py_pjsua_methods[] =
     	pjsua_msg_data_init_doc
     },
     {
-        "stun_config_default", py_pjsua_stun_config_default, METH_VARARGS,
-        pjsua_stun_config_default_doc
-    },
-    {
         "transport_config_default", py_pjsua_transport_config_default, 
         METH_VARARGS,pjsua_transport_config_default_doc
     },
-    {
-        "normalize_stun_config", py_pjsua_normalize_stun_config, METH_VARARGS,
-        pjsua_normalize_stun_config_doc
-    },
-    
     {
         "transport_create", py_pjsua_transport_create, METH_VARARGS,
         pjsua_transport_create_doc
@@ -8516,11 +8101,7 @@ initpy_pjsua(void)
 
     /* LIB TRANSPORT */
 
-    if (PyType_Ready(&stun_config_Type) < 0)
-        return;
     if (PyType_Ready(&transport_config_Type) < 0)
-        return;
-    if (PyType_Ready(&sockaddr_Type) < 0)
         return;
     if (PyType_Ready(&host_port_Type) < 0)
         return;
@@ -8637,13 +8218,9 @@ initpy_pjsua(void)
 
     /* LIB TRANSPORT */
 
-    Py_INCREF(&stun_config_Type);
-    PyModule_AddObject(m, "STUN_Config", (PyObject *)&stun_config_Type);
     Py_INCREF(&transport_config_Type);
     PyModule_AddObject
         (m, "Transport_Config", (PyObject *)&transport_config_Type);
-    Py_INCREF(&sockaddr_Type);
-    PyModule_AddObject(m, "Sockaddr", (PyObject *)&sockaddr_Type);
     Py_INCREF(&host_port_Type);
     PyModule_AddObject(m, "Host_Port", (PyObject *)&host_port_Type);
     
