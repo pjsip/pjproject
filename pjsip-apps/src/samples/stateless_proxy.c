@@ -34,19 +34,19 @@ static pj_status_t init_stateless_proxy(void)
 {
     static pjsip_module mod_stateless_proxy =
     {
-	NULL, NULL,		        /* prev, next.		*/
-	{ "mod-stateless-proxy", 19 },	/* Name.		*/
-	-1,			        /* Id			*/
-	PJSIP_MOD_PRIORITY_APPLICATION, /* Priority		*/
-	NULL,				/* load()		*/
-	NULL,				/* start()		*/
-	NULL,				/* stop()		*/
-	NULL,				/* unload()		*/
-	&on_rx_request,			/* on_rx_request()	*/
-	&on_rx_response,	        /* on_rx_response()	*/
-	NULL,				/* on_tx_request.	*/
-	NULL,				/* on_tx_response()	*/
-	NULL,				/* on_tsx_state()	*/
+	NULL, NULL,			    /* prev, next.	*/
+	{ "mod-stateless-proxy", 19 },	    /* Name.		*/
+	-1,				    /* Id		*/
+	PJSIP_MOD_PRIORITY_UA_PROXY_LAYER,  /* Priority		*/
+	NULL,				    /* load()		*/
+	NULL,				    /* start()		*/
+	NULL,				    /* stop()		*/
+	NULL,				    /* unload()		*/
+	&on_rx_request,			    /* on_rx_request()	*/
+	&on_rx_response,		    /* on_rx_response()	*/
+	NULL,				    /* on_tx_request.	*/
+	NULL,				    /* on_tx_response()	*/
+	NULL,				    /* on_tsx_state()	*/
     };
 
     pj_status_t status;
@@ -178,12 +178,11 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     global.port = 5060;
+    pj_log_set_level(4);
 
     status = init_options(argc, argv);
     if (status != PJ_SUCCESS)
 	return 1;
-
-    pj_log_set_level(4);
 
     status = init_stack();
     if (status != PJ_SUCCESS) {

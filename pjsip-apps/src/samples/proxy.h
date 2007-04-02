@@ -53,9 +53,10 @@ static void usage(void)
 {
     puts("Options:\n"
 	 "\n"
-	 " -p, --port N    Set local listener port to N\n"
-	 " -R, --rr        Perform record routing\n"
-	 " -h, --help      Show this help screen\n"
+	 " --port N       Set local listener port to N\n"
+	 " --rr           Perform record routing\n"
+	 " --log-level N  Set log level to N (default: 4)\n"
+	 " --help         Show this help screen\n"
 	 );
 }
 
@@ -63,15 +64,16 @@ static void usage(void)
 static pj_status_t init_options(int argc, char *argv[])
 {
     struct pj_getopt_option long_opt[] = {
-	{ "port",1, 0, 'p'},
-	{ "rr",  1, 0, 'R'},
-	{ "help",1, 0, 'h'},
+	{ "port",	1, 0, 'p'},
+	{ "rr",		0, 0, 'R'},
+	{ "log-level",	1, 0, 'L'},
+	{ "help",	0, 0, 'h'},
     };
     int c;
     int opt_ind;
 
     pj_optind = 0;
-    while((c=pj_getopt_long(argc, argv, "pRh", long_opt, &opt_ind))!=-1) {
+    while((c=pj_getopt_long(argc, argv, "", long_opt, &opt_ind))!=-1) {
 	switch (c) {
 	case 'p':
 	    global.port = atoi(pj_optarg);
@@ -83,18 +85,99 @@ static pj_status_t init_options(int argc, char *argv[])
 	    printf("Using record route mode\n");
 	    break;
 
+	case 'L':
+	    pj_log_set_level(atoi(pj_optarg));
+	    break;
+
 	case 'h':
 	    usage();
 	    return -1;
 
 	default:
-	    puts("Unknown option ignored");
-	    break;
+	    puts("Unknown option. Run with --help for help.");
+	    return -1;
 	}
     }
 
     return PJ_SUCCESS;
 }
+
+
+/*****************************************************************************
+ * This is a very simple PJSIP module, whose sole purpose is to display
+ * incoming and outgoing messages to log. This module will have priority
+ * higher than transport layer, which means:
+ *
+ *  - incoming messages will come to this module first before reaching
+ *    transaction layer.
+ *
+ *  - outgoing messages will come to this module last, after the message
+ *    has been 'printed' to contiguous buffer by transport layer and
+ *    appropriate transport instance has been decided for this message.
+ *
+ */
+
+/* Notification on incoming messages */
+static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
+{
+    PJ_LOG(5,(THIS_FILE, "RX %d bytes %s from %s %s:%d:\n"
+			 "%.*s\n"
+			 "--end msg--",
+			 rdata->msg_info.len,
+			 pjsip_rx_data_get_info(rdata),
+			 rdata->tp_info.transport->type_name,
+			 rdata->pkt_info.src_name,
+			 rdata->pkt_info.src_port,
+			 (int)rdata->msg_info.len,
+			 rdata->msg_info.msg_buf));
+    
+    /* Always return false, otherwise messages will not get processed! */
+    return PJ_FALSE;
+}
+
+/* Notification on outgoing messages */
+static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
+{
+    
+    /* Important note:
+     *	tp_info field is only valid after outgoing messages has passed
+     *	transport layer. So don't try to access tp_info when the module
+     *	has lower priority than transport layer.
+     */
+
+    PJ_LOG(5,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+			 "%.*s\n"
+			 "--end msg--",
+			 (tdata->buf.cur - tdata->buf.start),
+			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.transport->type_name,
+			 tdata->tp_info.dst_name,
+			 tdata->tp_info.dst_port,
+			 (int)(tdata->buf.cur - tdata->buf.start),
+			 tdata->buf.start));
+
+    /* Always return success, otherwise message will not get sent! */
+    return PJ_SUCCESS;
+}
+
+/* The module instance. */
+static pjsip_module mod_msg_logger = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-msg-logger", 14 },		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &logging_on_rx_msg,			/* on_rx_request()	*/
+    &logging_on_rx_msg,			/* on_rx_response()	*/
+    &logging_on_tx_msg,			/* on_tx_request.	*/
+    &logging_on_tx_msg,			/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
 
 
 static pj_status_t init_stack(void)
@@ -141,6 +224,9 @@ static pj_status_t init_stack(void)
     /* Create pool for the application */
     global.pool = pj_pool_create(&global.cp.factory, "proxyapp", 
 				 4000, 4000, NULL);
+
+    /* Register the logger module */
+    pjsip_endpt_register_module(global.endpt, &mod_msg_logger);
 
     return PJ_SUCCESS;
 }
@@ -412,11 +498,13 @@ static pj_status_t proxy_calculate_target(pjsip_rx_data *rdata,
      */
 
     /* We're not interested to receive request destined to us, so
-     * respond with 404/Not Found.
+     * respond with 404/Not Found (only if request is not ACK!).
      */
-    pjsip_endpt_respond_stateless(global.endpt, rdata,
-				  PJSIP_SC_NOT_FOUND, NULL,
-				  NULL, NULL);
+    if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+	pjsip_endpt_respond_stateless(global.endpt, rdata,
+				      PJSIP_SC_NOT_FOUND, NULL,
+				      NULL, NULL);
+    }
 
     /* Delete the request since we're not forwarding it */
     pjsip_tx_data_dec_ref(tdata);
