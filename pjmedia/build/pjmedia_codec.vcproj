@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjmedia_codec"
-	ProjectGUID="{855DC8C0-D3E9-4A2E-AE47-116605A7BC9B}"
+	ProjectGUID="{0545EB9B-CE7C-4EDC-86E8-FB46A8DC1236}"
 	>
 	<Platforms>
 		<Platform

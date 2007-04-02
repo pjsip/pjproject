@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjmedia"
-	ProjectGUID="{7FDE3880-A4AB-49E3-B439-EBEF0A0C7A65}"
+	ProjectGUID="{1434FE6C-89C6-4E13-8150-D5A4B1038AAA}"
 	RootNamespace="pjmedia"
 	>
 	<Platforms>

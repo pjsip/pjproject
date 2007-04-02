@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjsua"
-	ProjectGUID="{8310649E-A25E-4AF0-91E8-9E3CC659BB89}"
+	ProjectGUID="{19EBB464-60E7-47C5-96D8-E012B8CF3A41}"
 	RootNamespace="pjsua"
 	>
 	<Platforms>

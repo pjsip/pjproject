@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjsip_core"
-	ProjectGUID="{2BB84911-C1B4-4747-B93D-36AA82CC5031}"
+	ProjectGUID="{98E41390-0F17-4501-BB27-B7A933D06806}"
 	>
 	<Platforms>
 		<Platform
