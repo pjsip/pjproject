@@ -18,6 +18,7 @@
  */
 #include <pjnath/errno.h>
 #include <pjnath/stun_msg.h>
+#include <pj/log.h>
 #include <pj/string.h>
 
 
@@ -164,4 +165,31 @@ PJ_DEF(pj_status_t) pjnath_init(void)
 				  &pjnath_strerror2);
     return status;
 }
+
+
+#if PJNATH_ERROR_LEVEL <= PJ_LOG_MAX_LEVEL
+
+PJ_DEF(void) pjnath_perror(const char *sender, const char *title,
+			   pj_status_t status)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    pj_strerror(status, errmsg, sizeof(errmsg));
+
+#if PJNATH_ERROR_LEVEL==1
+    PJ_LOG(1,(sender, "%s: %s", title, errmsg));
+#elif PJNATH_ERROR_LEVEL==2
+    PJ_LOG(2,(sender, "%s: %s", title, errmsg));
+#elif PJNATH_ERROR_LEVEL==3
+    PJ_LOG(3,(sender, "%s: %s", title, errmsg));
+#elif PJNATH_ERROR_LEVEL==4
+    PJ_LOG(4,(sender, "%s: %s", title, errmsg));
+#elif PJNATH_ERROR_LEVEL==5
+    PJ_LOG(5,(sender, "%s: %s", title, errmsg));
+#else
+# error Invalid PJNATH_ERROR_LEVEL value
+#endif
+}
+
+#endif	/* PJNATH_ERROR_LEVEL <= PJ_LOG_MAX_LEVEL */
 

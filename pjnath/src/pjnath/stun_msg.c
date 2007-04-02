@@ -139,7 +139,7 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
 				     unsigned len, unsigned *printed);
 
 
-struct attr_desc mandatory_attr_desc[] = 
+static struct attr_desc mandatory_attr_desc[] = 
 {
     {
 	/* type zero */
@@ -437,13 +437,13 @@ static struct attr_desc extended_attr_desc[] =
     },
     {
 	/* PJ_STUN_ATTR_ICE_CONTROLLED, */
-	"ICE-CCONTROLLED",
+	"ICE-CONTROLLED",
 	&decode_uint64_attr,
 	&encode_uint64_attr
     },
     {
 	/* PJ_STUN_ATTR_ICE_CONTROLLING, */
-	"ICE-CCONTROLLING",
+	"ICE-CONTROLLING",
 	&decode_uint64_attr,
 	&encode_uint64_attr
     }
@@ -1870,8 +1870,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		if (has_msg_int) {
 		    /* Already has MESSAGE-INTEGRITY */
 		    if (p_response) {
-			pj_str_t e;
-			e = pj_str("MESSAGE-INTEGRITY already present");
 			pj_stun_msg_create_response(pool, msg,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
@@ -1884,8 +1882,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		if (has_fingerprint) {
 		    /* Already has FINGERPRINT */
 		    if (p_response) {
-			pj_str_t e;
-			e = pj_str("FINGERPRINT already present");
 			pj_stun_msg_create_response(pool, msg,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
@@ -1898,8 +1894,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		    /* Another attribute is found which is not FINGERPRINT
 		     * after FINGERPRINT or MESSAGE-INTEGRITY */
 		    if (p_response) {
-			pj_str_t e;
-			e = pj_str("Invalid attribute order");
 			pj_stun_msg_create_response(pool, msg,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
@@ -1912,12 +1906,9 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	    /* Make sure we have rooms for the new attribute */
 	    if (msg->attr_count >= PJ_STUN_MAX_ATTR) {
 		if (p_response) {
-		    pj_str_t e;
-
-		    e = pj_str("Too many attributes");
 		    pj_stun_msg_create_response(pool, msg,
 						PJ_STUN_SC_BAD_REQUEST,
-						&e, p_response);
+						NULL, p_response);
 		}
 		return PJNATH_ESTUNTOOMANYATTR;
 	    }

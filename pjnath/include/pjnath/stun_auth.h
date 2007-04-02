@@ -225,6 +225,8 @@ typedef struct pj_stun_auth_cred
 	     * in the message can be accepted. If this callback returns
 	     * PJ_FALSE, 438 (Stale Nonce) response will be created.
 	     *
+	     * This callback is optional.
+	     *
 	     * @param msg	The STUN message where the nonce was received.
 	     * @param user_data	The user data as specified in the credential.
 	     * @param realm	The realm as specified in the message.

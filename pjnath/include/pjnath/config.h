@@ -31,6 +31,21 @@
  * @{
  */
 
+
+/* **************************************************************************
+ * GENERAL
+ */
+
+/**
+ * The log level for PJNATH error display.
+ *
+ * default 1
+ */
+#ifndef PJNATH_ERROR_LEVEL
+#   define PJNATH_ERROR_LEVEL			    1
+#endif
+
+
 /* **************************************************************************
  * STUN CLIENT CONFIGURATION
  */

@@ -88,7 +88,9 @@ static pjmedia_transport_op tp_ice_op =
 };
 
 
-
+/*
+ * Create ICE media transport.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 				       const char *name,
 				       unsigned comp_cnt,
@@ -131,21 +133,28 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 }
 
 
+/*
+ * Destroy ICE media transport.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
     if (tp_ice->ice_st) {
 	pj_ice_strans_destroy(tp_ice->ice_st);
-	//Must not touch tp_ice after ice_st is destroyed!
-	//(it has the pool)
-	//tp_ice->ice_st = NULL;
+	/*Must not touch tp_ice after ice_st is destroyed!
+	 (it has the pool)
+	 tp_ice->ice_st = NULL;
+	 */
     }
 
     return PJ_SUCCESS;
 }
 
 
+/*
+ * Start media transport initialization.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 					    unsigned options,
 					    const pj_sockaddr_in *start_addr,
@@ -185,6 +194,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 }
 
 
+/*
+ * Get the status of media transport initialization.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
@@ -192,6 +204,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_get_init_status(pjmedia_transport *tp)
 }
 
 
+/*
+ * Get the component for the specified component ID.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_get_comp( pjmedia_transport *tp,
 					  unsigned comp_id,
 					  pj_ice_strans_comp *comp)
@@ -204,13 +219,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_get_comp( pjmedia_transport *tp,
     return PJ_SUCCESS;		    
 }
 
-PJ_DEF(pj_ice_strans*) pjmedia_ice_get_ice_st(pjmedia_transport *tp)
-{
-    struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return tp_ice->ice_st;
-}
 
-
+/*
+ * Create ICE! This happens when:
+ *  - UAC is ready to send offer
+ *  - UAS have just received an offer.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 					 pj_ice_sess_role role,
 					 const pj_str_t *local_ufrag,
@@ -221,6 +235,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 }
 
 
+/*
+ * For both UAC and UAS, pass in the SDP before sending it to remote.
+ * This will add ICE attributes to the SDP.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
 					   pj_pool_t *pool,
 					   pjmedia_sdp_session *sdp)
@@ -305,6 +323,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
 }
 
 
+/* Parse a=candidate line */
 static pj_status_t parse_cand(pj_pool_t *pool,
 			      const pj_str_t *orig_input,
 			      pj_ice_sess_cand *cand)
@@ -390,14 +409,19 @@ on_return:
     return status;
 }
 
-static void set_no_ice(struct transport_ice *tp_ice)
+
+/* Disable ICE when SDP from remote doesn't contain a=candidate line */
+static void set_no_ice(struct transport_ice *tp_ice, const char *reason)
 {
     PJ_LOG(4,(tp_ice->ice_st->obj_name, 
-	      "Remote does not support ICE, disabling local ICE"));
+	      "Disabling local ICE, reason=%s", reason));
     pjmedia_ice_stop_ice(&tp_ice->base);
 }
 
 
+/*
+ * Start ICE checks when both offer and answer are available.
+ */
 PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 					  pj_pool_t *pool,
 					  const pjmedia_sdp_session *rem_sdp,
@@ -409,8 +433,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
     const pjmedia_sdp_media *sdp_med;
     pj_bool_t remote_is_lite = PJ_FALSE;
+    pj_bool_t ice_mismatch = PJ_FALSE;
     const pj_str_t STR_CANDIDATE = {"candidate", 9};
     const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
+    const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
     pj_str_t uname, pass;
     pj_status_t status;
 
@@ -427,7 +453,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
 				      "ice-ufrag", NULL);
 	if (attr == NULL) {
-	    set_no_ice(tp_ice);
+	    set_no_ice(tp_ice, "ice-ufrag attribute not found");
 	    return PJ_SUCCESS;
 	}
     }
@@ -441,7 +467,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
 				      "ice-pwd", NULL);
 	if (attr == NULL) {
-	    set_no_ice(tp_ice);
+	    set_no_ice(tp_ice, "ice-pwd attribute not found");
 	    return PJ_SUCCESS;
 	}
     }
@@ -454,8 +480,15 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 
 	attr = sdp_med->attr[i];
 
-	if (pj_strcmp(&attr->name, &STR_ICE_LITE)==0)
+	if (pj_strcmp(&attr->name, &STR_ICE_LITE)==0) {
 	    remote_is_lite = PJ_TRUE;
+	    continue;
+	}
+
+	if (pj_strcmp(&attr->name, &STR_ICE_MISMATCH)==0) {
+	    ice_mismatch = PJ_TRUE;
+	    continue;
+	}
 
 	if (pj_strcmp(&attr->name, &STR_CANDIDATE)!=0)
 	    continue;
@@ -465,6 +498,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	    return status;
 
 	cand_cnt++;
+    }
+
+    /* Handle ice-mismatch case */
+    if (ice_mismatch) {
+	set_no_ice(tp_ice, "ice-mismatch detected");
+	return PJ_SUCCESS;
     }
 
     /* Mark start time */

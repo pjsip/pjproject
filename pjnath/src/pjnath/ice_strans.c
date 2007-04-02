@@ -65,19 +65,7 @@ static void start_ka_timer(pj_ice_strans *ice_st);
 static void stop_ka_timer(pj_ice_strans *ice_st);
 
 /* Utility: print error */
-#if PJ_LOG_MAX_LEVEL >= 3
-static void ice_st_perror(pj_ice_strans *ice_st, const char *title, 
-			  pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(3,(ice_st->obj_name, "%s: %s", title, errmsg));
-}
-#else
-#   define ice_st_perror(ice_st, title, status)
-#endif
-
+#define ice_st_perror(ice_st,msg,rc) pjnath_perror(ice_st->obj_name,msg,rc)
 
 /* 
  * Create ICE stream transport 
@@ -344,6 +332,7 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
 	for (i=0; i<ifs_cnt; ++i) {
 	    pj_sockaddr_in cand_addr;
 	    pj_bool_t set_default;
+	    pj_uint16_t local_pref;
 
 	    /* Ignore 127.0.0.0/24 address */
 	    if ((pj_ntohl(ifs[i].s_addr) >> 24)==127)
@@ -358,14 +347,15 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
 	     */
 	    if (ifs[i].s_addr == comp->local_addr.ipv4.sin_addr.s_addr) {
 		set_default = PJ_TRUE;
+		local_pref = 65535;
 	    } else {
 		set_default = PJ_FALSE;
+		local_pref = 0;
 	    }
 
 	    status = add_cand(ice_st, comp, comp_id, 
 			      PJ_ICE_CAND_TYPE_HOST, 
-			      (pj_uint16_t)(65535-i), &cand_addr,
-			      set_default);
+			      local_pref, &cand_addr, set_default);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}
@@ -759,6 +749,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
     pj_status_t status;
     unsigned i;
     pj_ice_sess_cb ice_cb;
+    const pj_uint8_t srflx_prio[4] = { 100, 126, 110, 0 };
 
     /* Check arguments */
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
@@ -782,6 +773,18 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
     /* Associate user data */
     ice_st->ice->user_data = (void*)ice_st;
+
+    /* If default candidate for components are SRFLX one, upload a custom
+     * type priority to ICE session so that SRFLX candidates will get
+     * checked first.
+     */
+    if (ice_st->comp[0]->default_cand >= 0 &&
+	ice_st->comp[0]->cand_list[ice_st->comp[0]->default_cand].type 
+	    == PJ_ICE_CAND_TYPE_SRFLX)
+    {
+	pj_ice_sess_set_prefs(ice_st->ice, srflx_prio);
+    }
+
 
     /* Add candidates */
     for (i=0; i<ice_st->comp_cnt; ++i) {

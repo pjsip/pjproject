@@ -43,21 +43,7 @@ struct pj_stun_session
 #   define TRACE_(expr)
 #endif
 
-#if PJ_LOG_MAX_LEVEL >= 4
-#   define LOG_ERR_(sess, title, rc) stun_perror(sess, title, rc)
-static void stun_perror(pj_stun_session *sess, const char *title, 
-			pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(4,(SNAME(sess), "%s: %s", title, errmsg));
-}
-
-#else
-#   define LOG_ERR_(sess, title, rc)
-#endif
+#define LOG_ERR_(sess,title,rc) pjnath_perror(sess->pool->obj_name,title,rc)
 
 #define TDATA_POOL_SIZE		    1024
 #define TDATA_POOL_INC		    1024
@@ -779,7 +765,7 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Lookup pending client transaction */
     tdata = tsx_lookup(sess, msg);
     if (tdata == NULL) {
-	PJ_LOG(4,(SNAME(sess), 
+	PJ_LOG(5,(SNAME(sess), 
 		  "Transaction not found, response silently discarded"));
 	return PJ_SUCCESS;
     }

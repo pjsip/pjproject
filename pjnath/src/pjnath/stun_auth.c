@@ -269,12 +269,16 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     if (anonce) {
 	pj_bool_t ok;
 
-	if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
+	if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC &&
+	    cred->data.dyn_cred.verify_nonce != NULL) 
+	{
 	    ok=cred->data.dyn_cred.verify_nonce(msg, 
 						cred->data.dyn_cred.user_data,
 						(arealm?&arealm->value:NULL),
 						&auser->value,
 						&anonce->value);
+	} else if (cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
+	    ok = PJ_TRUE;
 	} else {
 	    if (nonce.slen) {
 		ok = !pj_strcmp(&anonce->value, &nonce);

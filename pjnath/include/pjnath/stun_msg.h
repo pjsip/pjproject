@@ -1228,10 +1228,14 @@ PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
  *
  * @return		The message string output.
  */
+#if PJ_LOG_MAX_LEVEL > 0
 PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 			        char *buffer,
 			        unsigned length,
 				unsigned *printed_len);
+#else
+#   define pj_stun_msg_dump(msg, buf, length, printed_len)  ""
+#endif
 
 
 /**

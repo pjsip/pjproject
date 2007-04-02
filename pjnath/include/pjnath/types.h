@@ -37,9 +37,25 @@ PJ_BEGIN_DECL
 /**
  * Initialize pjnath library.
  *
- * @return  Initialization status.
+ * @return	    Initialization status.
  */
 PJ_DECL(pj_status_t) pjnath_init(void);
+
+
+/**
+ * Display error to the log.
+ *
+ * @param sender    The sender name.
+ * @param title	    Title message.
+ * @param status    The error status.
+ */
+#if PJNATH_ERROR_LEVEL <= PJ_LOG_MAX_LEVEL
+PJ_DECL(void) pjnath_perror(const char *sender, const char *title,
+			    pj_status_t status);
+#else
+# define pjnath_perror(sender, title, status)
+#endif
+
 
 
 PJ_END_DECL
@@ -147,6 +163,7 @@ PJ_END_DECL
  * for different types of application, including but not limited to
  * the usage of ICE in SIP/SDP offer/answer.
  * 
+ *
  * \subsection PJNATH_ICE_ARCH ICE Library Organization
  * 
  * \image html ice-arch.jpg "ICE Architecture"

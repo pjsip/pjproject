@@ -50,15 +50,7 @@ struct pj_stun_client_tsx
 static void retransmit_timer_callback(pj_timer_heap_t *timer_heap, 
 				      pj_timer_entry *timer);
 
-static void stun_perror(pj_stun_client_tsx *tsx, const char *title,
-			pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(4,(tsx->obj_name, "%s: %s", title, errmsg));
-}
-
+#define stun_perror(tsx,msg,rc) pjnath_perror(tsx->obj_name, msg, rc)
 
 /*
  * Create a STUN client transaction.
@@ -84,7 +76,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
 
     *p_tsx = tsx;
 
-    PJ_LOG(4,(tsx->obj_name, "STUN client transaction created"));
+    PJ_LOG(5,(tsx->obj_name, "STUN client transaction created"));
     return PJ_SUCCESS;
 }
 
@@ -191,7 +183,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 
     tsx->transmit_count++;
 
-    PJ_LOG(4,(tsx->obj_name, "STUN sending message (transmit count=%d)",
+    PJ_LOG(5,(tsx->obj_name, "STUN sending message (transmit count=%d)",
 	      tsx->transmit_count));
     return status;
 }

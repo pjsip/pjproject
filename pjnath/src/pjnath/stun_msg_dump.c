@@ -22,6 +22,9 @@
 #include <pj/string.h>
 
 
+#if PJ_LOG_MAX_LEVEL > 0
+
+
 #define APPLY()		if (len < 1 || len >= (end-p)) \
 			    goto on_return; \
 			p += len
@@ -244,7 +247,9 @@ on_return:
 	*printed_len = (p-buffer);
     return buffer;
 
+#undef APPLY
 }
 
 
-#undef APPLY
+#endif	/* PJ_LOG_MAX_LEVEL > 0 */
+

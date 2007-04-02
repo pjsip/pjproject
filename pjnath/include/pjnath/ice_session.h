@@ -97,18 +97,6 @@ typedef enum pj_ice_cand_type
 } pj_ice_cand_type;
 
 
-/**
- * This enumeration describes the default preference for the ICE
- * candidate types as described by ICE standard.
- */
-enum pj_ice_type_pref
-{
-    PJ_ICE_HOST_PREF	    = 126,  /**< Preference value for host.	*/
-    PJ_ICE_SRFLX_PREF	    = 100,  /**< Preference value for SRFLX.	*/
-    PJ_ICE_PRFLX_PREF	    = 110,  /**< Preference value for PRFLX	*/
-    PJ_ICE_RELAYED_PREF	    = 0	    /**< Preference value for relay	*/
-};
-
 /** Forward declaration for pj_ice_sess */
 typedef struct pj_ice_sess pj_ice_sess;
 
@@ -273,7 +261,7 @@ struct pj_ice_sess_check
     /**
      * Check priority.
      */
-    pj_uint64_t		 prio;
+    pj_timestamp	 prio;
 
     /**
      * Connectivity check state.
@@ -445,6 +433,7 @@ struct pj_ice_sess
     pj_mutex_t		*mutex;			    /**< Mutex.		    */
     pj_ice_sess_role	 role;			    /**< ICE role.	    */
     pj_timestamp	 tie_breaker;		    /**< Tie breaker value  */
+    pj_uint8_t		*prefs;			    /**< Type preference.   */
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
@@ -566,6 +555,28 @@ PJ_DECL(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
 
 
 /**
+ * Assign a custom preference values for ICE candidate types. By assigning
+ * custom preference value, application can control the order of candidates
+ * to be checked first. The default preference settings is to use 126 for 
+ * host candidates, 100 for server reflexive candidates, 110 for peer 
+ * reflexive candidates, an 0 for relayed candidates.
+ *
+ * Note that this function must be called before any candidates are added
+ * to the ICE session.
+ *
+ * @param ice		The ICE session.
+ * @param prefs		Array of candidate preference value. The values are
+ *			put in the array indexed by the candidate type as
+ *			specified in pj_ice_cand_type.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
+					   const pj_uint8_t prefs[4]);
+
+
+
+/**
  * Add a candidate to this ICE session. Application must add candidates for
  * each components ID before it can start pairing the candidates and 
  * performing connectivity checks.
@@ -595,6 +606,9 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 					  int addr_len,
 					  unsigned *p_cand_id);
 
+#if 0
+/* Temporarily disabled to reduce size, since we don't need this yet */
+
 /**
  * Find default candidate for the specified component ID, using this
  * rule:
@@ -612,6 +626,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 PJ_DECL(pj_status_t) pj_ice_sess_find_default_cand(pj_ice_sess *ice,
 						   unsigned comp_id,
 						   int *p_cand_id);
+#endif
 
 /**
  * Pair the local and remote candidates to create check list. Application
