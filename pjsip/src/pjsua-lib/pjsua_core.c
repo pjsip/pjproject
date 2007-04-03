@@ -290,7 +290,9 @@ static void log_writer(int level, const char *buffer, int len)
     if (pjsua_var.log_file) {
 	pj_ssize_t size = len;
 	pj_file_write(pjsua_var.log_file, buffer, &size);
-	pj_file_flush(pjsua_var.log_file);
+	/* This will slow things down considerably! Don't do it!
+	 pj_file_flush(pjsua_var.log_file);
+	*/
     }
 
     if (level <= (int)pjsua_var.log_cfg.console_level) {
