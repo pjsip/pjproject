@@ -56,6 +56,7 @@ static const struct
     PJ_BUILD_ERR( PJNATH_EICEFAILED,	    "All ICE checklists failed"),
     PJ_BUILD_ERR( PJNATH_EICEINCOMPID,	    "Invalid ICE component ID"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDID,	    "Invalid ICE candidate ID"),
+    PJ_BUILD_ERR( PJNATH_EICEINSRCADDR,	    "Source address mismatch"),
     PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
 

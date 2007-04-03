@@ -51,7 +51,9 @@ struct pj_stun_session
 
 static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
 				 pj_status_t status, 
-				 const pj_stun_msg *response);
+				 const pj_stun_msg *response,
+				 const pj_sockaddr_t *src_addr,
+				 unsigned src_addr_len);
 static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
 					const void *stun_pkt,
 					pj_size_t pkt_size);
@@ -325,7 +327,9 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 
 static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
 				 pj_status_t status, 
-				 const pj_stun_msg *response)
+				 const pj_stun_msg *response,
+				 const pj_sockaddr_t *src_addr,
+				 unsigned src_addr_len)
 {
     pj_stun_tx_data *tdata;
 
@@ -333,7 +337,8 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
 
     if (tdata->sess->cb.on_request_complete) {
 	(*tdata->sess->cb.on_request_complete)(tdata->sess, status, tdata, 
-					       response);
+					       response, 
+					       src_addr, src_addr_len);
     }
 }
 
@@ -696,7 +701,8 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     pj_mutex_lock(sess->mutex);
 
     if (notify) {
-	(sess->cb.on_request_complete)(sess, notify_status, tdata, NULL);
+	(sess->cb.on_request_complete)(sess, notify_status, tdata, NULL,
+				       NULL, 0);
     }
 
     /* Just destroy tdata. This will destroy the transaction as well */
@@ -775,7 +781,9 @@ static pj_status_t authenticate_msg(pj_stun_session *sess,
 
 /* Handle incoming response */
 static pj_status_t on_incoming_response(pj_stun_session *sess,
-					pj_stun_msg *msg)
+					pj_stun_msg *msg,
+					const pj_sockaddr_t *src_addr,
+					unsigned src_addr_len)
 {
     pj_stun_tx_data *tdata;
     pj_status_t status;
@@ -792,7 +800,8 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
      * If the message is accepted, transaction callback will be called,
      * and this will call the session callback too.
      */
-    status = pj_stun_client_tsx_on_rx_msg(tdata->client_tsx, msg);
+    status = pj_stun_client_tsx_on_rx_msg(tdata->client_tsx, msg, 
+					  src_addr, src_addr_len);
     if (status != PJ_SUCCESS) {
 	return status;
     }
@@ -958,7 +967,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     if (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
 	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
-	status = on_incoming_response(sess, msg);
+	status = on_incoming_response(sess, msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 

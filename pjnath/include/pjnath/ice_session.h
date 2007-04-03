@@ -403,6 +403,11 @@ typedef enum pj_ice_sess_role
     /**
      * The ICE agent is in controlled role.
      */
+    PJ_ICE_SESS_ROLE_UNKNOWN,
+
+    /**
+     * The ICE agent is in controlled role.
+     */
     PJ_ICE_SESS_ROLE_CONTROLLED,
 
     /**

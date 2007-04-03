@@ -70,10 +70,15 @@ typedef struct pj_stun_tsx_cb
      *			    response.
      * @param response	    The STUN response, which value may be NULL if
      *			    \a status is not PJ_SUCCESS.
+     * @param src_addr	    The source address of the response, if response 
+     *			    is not NULL.
+     * @param src_addr_len  The length of the source address.
      */
     void	(*on_complete)(pj_stun_client_tsx *tsx,
 			       pj_status_t status, 
-			       const pj_stun_msg *response);
+			       const pj_stun_msg *response,
+			       const pj_sockaddr_t *src_addr,
+			       unsigned src_addr_len);
 
     /**
      * This callback is called by the STUN transaction when it wants to send
@@ -228,11 +233,15 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  *
  * @param tsx		The STUN client transaction instance.
  * @param msg		The incoming STUN message.
+ * @param src_addr	The source address of the packet.
+ * @param src_addr_len	The length of the source address.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
-						  const pj_stun_msg *msg);
+						  const pj_stun_msg *msg,
+						  const pj_sockaddr_t*src_addr,
+						  unsigned src_addr_len);
 
 
 /**

@@ -275,7 +275,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	if (!tsx->complete) {
 	    tsx->complete = PJ_TRUE;
 	    if (tsx->cb.on_complete) {
-		tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL);
+		tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL, NULL, 0);
 	    }
 	}
 	return;
@@ -288,7 +288,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	if (!tsx->complete) {
 	    tsx->complete = PJ_TRUE;
 	    if (tsx->cb.on_complete) {
-		tsx->cb.on_complete(tsx, status, NULL);
+		tsx->cb.on_complete(tsx, status, NULL, NULL, 0);
 	    }
 	}
     }
@@ -313,7 +313,9 @@ static void destroy_timer_callback(pj_timer_heap_t *timer_heap,
  * Notify the STUN transaction about the arrival of STUN response.
  */
 PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
-						 const pj_stun_msg *msg)
+						 const pj_stun_msg *msg,
+						 const pj_sockaddr_t *src_addr,
+						 unsigned src_addr_len)
 {
     pj_stun_errcode_attr *err_attr;
     pj_status_t status;
@@ -363,7 +365,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     if (!tsx->complete) {
 	tsx->complete = PJ_TRUE;
 	if (tsx->cb.on_complete) {
-	    tsx->cb.on_complete(tsx, status, msg);
+	    tsx->cb.on_complete(tsx, status, msg, src_addr, src_addr_len);
 	}
     }
 

@@ -1095,7 +1095,7 @@ pj_stun_uint64_attr_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
 
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint64_attr);
-    INIT_ATTR(attr, attr_type, 4);
+    INIT_ATTR(attr, attr_type, 8);
 
     if (value) {
 	attr->value.u32.hi = value->u32.hi;
@@ -1154,7 +1154,7 @@ static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
 	return PJ_ETOOSMALL;
 
     PUTVAL16H(buf, 0, ca->hdr.type);
-    PUTVAL16H(buf, 2, ca->hdr.length);
+    PUTVAL16H(buf, 2, (pj_uint16_t)8);
     PUTVAL64H(buf, 4, &ca->value);
 
     /* Done */

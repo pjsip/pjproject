@@ -109,13 +109,25 @@ typedef struct pj_stun_session_cb
      *			    PJ_SUCCESS, the transaction has timed-out
      *			    or other error has occurred, and the response
      *			    argument may be NULL.
+     *			    Note that when the status is not success, the
+     *			    response may contain non-NULL value if the 
+     *			    response contains STUN ERROR-CODE attribute.
      * @param request	    The original STUN request.
-     * @param response	    The response message, on successful transaction.
+     * @param response	    The response message, on successful transaction,
+     *			    or otherwise MAY BE NULL if status is not success.
+     *			    Note that when the status is not success, this
+     *			    argument may contain non-NULL value if the 
+     *			    response contains STUN ERROR-CODE attribute.
+     * @param src_addr	    The source address where the response was 
+     *			    received, or NULL if the response is NULL.
+     * @param src_addr_len  The length of the source  address.
      */
     void (*on_request_complete)(pj_stun_session *sess,
 			        pj_status_t status,
 			        pj_stun_tx_data *tdata,
-			        const pj_stun_msg *response);
+			        const pj_stun_msg *response,
+				const pj_sockaddr_t *src_addr,
+				unsigned src_addr_len);
 
 
     /**

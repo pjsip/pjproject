@@ -66,7 +66,9 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
 static void stun_on_request_complete(pj_stun_session *sess,
 				     pj_status_t status,
 				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response);
+				     const pj_stun_msg *response,
+				     const pj_sockaddr_t *src_addr,
+				     unsigned src_addr_len);
 
 /* Keep-alive timer */
 static void start_ka_timer(pj_ice_strans *ice_st);
@@ -1045,7 +1047,9 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
 static void stun_on_request_complete(pj_stun_session *sess,
 				     pj_status_t status,
 				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response)
+				     const pj_stun_msg *response,
+				     const pj_sockaddr_t *src_addr,
+				     unsigned src_addr_len)
 {
     pj_ice_strans_comp *comp;
     pj_ice_strans_cand *cand = NULL;
@@ -1055,6 +1059,9 @@ static void stun_on_request_complete(pj_stun_session *sess,
 
     comp = (pj_ice_strans_comp*) pj_stun_session_get_user_data(sess);
     cand = (pj_ice_strans_cand*) tdata->user_data;
+
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
 
     if (cand == NULL) {
 	/* This is keep-alive */

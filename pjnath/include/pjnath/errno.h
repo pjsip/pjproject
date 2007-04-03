@@ -144,6 +144,13 @@
 #define PJNATH_EICEINCANDID	    (PJNATH_ERRNO_START+87) /* 370087 */
 /**
  * @hideinitializer
+ * Source address mismatch. This error occurs if the source address
+ * of the response for ICE connectivity check is different than
+ * the destination address of the request.
+ */
+#define PJNATH_EICEINSRCADDR	    (PJNATH_ERRNO_START+88) /* 370088 */
+/**
+ * @hideinitializer
  * Missing ICE SDP attribute
  */
 #define PJNATH_EICEMISSINGSDP	    (PJNATH_ERRNO_START+90) /* 370090 */

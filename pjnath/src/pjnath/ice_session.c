@@ -115,7 +115,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 static void on_stun_request_complete(pj_stun_session *stun_sess,
 				     pj_status_t status,
 				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response);
+				     const pj_stun_msg *response,
+				     const pj_sockaddr_t *src_addr,
+				     unsigned src_addr_len);
 static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 					 const pj_uint8_t *pkt,
 					 unsigned pkt_len,
@@ -1206,12 +1208,24 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     pj_stun_msg_add_uint_attr(check->tdata->pool, check->tdata->msg, 
 			      PJ_STUN_ATTR_PRIORITY, prio);
 
-    /* Add USE-CANDIDATE and set this check to nominated */
+    /* Add USE-CANDIDATE and set this check to nominated.
+     * Also add ICE-CONTROLLING or ICE-CONTROLLED
+     */
     if (ice->role == PJ_ICE_SESS_ROLE_CONTROLLING) {
 	pj_stun_msg_add_empty_attr(check->tdata->pool, check->tdata->msg, 
 				   PJ_STUN_ATTR_USE_CANDIDATE);
 	check->nominated = PJ_TRUE;
+
+	pj_stun_msg_add_uint64_attr(check->tdata->pool, check->tdata->msg, 
+				    PJ_STUN_ATTR_ICE_CONTROLLING,
+				    &ice->tie_breaker);
+
+    } else {
+	pj_stun_msg_add_uint64_attr(check->tdata->pool, check->tdata->msg, 
+				    PJ_STUN_ATTR_ICE_CONTROLLED,
+				    &ice->tie_breaker);
     }
+
 
     /* Note that USERNAME and MESSAGE-INTEGRITY will be added by the 
      * STUN session.
@@ -1428,7 +1442,9 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 static void on_stun_request_complete(pj_stun_session *stun_sess,
 				     pj_status_t status,
 				     pj_stun_tx_data *tdata,
-				     const pj_stun_msg *response)
+				     const pj_stun_msg *response,
+				     const pj_sockaddr_t *src_addr,
+				     unsigned src_addr_len)
 {
     struct req_data *rd = (struct req_data*) tdata->user_data;
     pj_ice_sess *ice;
@@ -1440,6 +1456,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     unsigned i;
 
     PJ_UNUSED_ARG(stun_sess);
+    PJ_UNUSED_ARG(src_addr_len);
 
     ice = rd->ice;
     check = &rd->clist->checks[rd->ckid];
@@ -1456,18 +1473,61 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      */
     lcand = NULL;
 
-    LOG4((ice->obj_name, 
-	 "Check %s%s: connectivity check %s",
-	 dump_check(buffer, sizeof(buffer), &ice->clist, check),
-	 (check->nominated ? " (nominated)" : " (not nominated)"),
-	 (status==PJ_SUCCESS ? "SUCCESS" : "FAILED")));
-
     if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+
+	if (status==PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_ROLE_CONFLICT)) {
+	    /* Role conclict response.
+	     * 7.1.2.1.  Failure Cases:
+	     * If the request had contained the ICE-CONTROLLED attribute, 
+	     * the agent MUST switch to the controlling role if it has not
+	     * already done so.  If the request had contained the 
+	     * ICE-CONTROLLING attribute, the agent MUST switch to the 
+	     * controlled role if it has not already done so.  Once it has
+	     * switched, the agent MUST immediately retry the request with
+	     * the ICE-CONTROLLING or ICE-CONTROLLED attribute reflecting 
+	     * its new role.
+	     */
+	    pj_ice_sess_role new_role = PJ_ICE_SESS_ROLE_UNKNOWN;
+	    pj_stun_msg *req = tdata->msg;
+
+	    if (pj_stun_msg_find_attr(req, PJ_STUN_ATTR_ICE_CONTROLLING, 0)) {
+		new_role = PJ_ICE_SESS_ROLE_CONTROLLED;
+	    } else if (pj_stun_msg_find_attr(req, PJ_STUN_ATTR_ICE_CONTROLLED, 
+					     0)) {
+		new_role = PJ_ICE_SESS_ROLE_CONTROLLING;
+	    } else {
+		pj_assert(!"We should have put CONTROLLING/CONTROLLED attr!");
+		new_role = PJ_ICE_SESS_ROLE_CONTROLLED;
+	    }
+
+	    if (new_role != ice->role) {
+		LOG4((ice->obj_name, 
+		      "Changing role because of role conflict"));
+		pj_ice_sess_change_role(ice, new_role);
+	    }
+
+	    /* Resend request */
+	    LOG4((ice->obj_name, "Resending check because of role conflict"));
+	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
+	    perform_check(ice, clist, rd->ckid);
+	    pj_mutex_unlock(ice->mutex);
+	    return;
+	}
+
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	LOG4((ice->obj_name, 
+	     "Check %s%s: connectivity check FAILED: %s",
+	     dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	     (check->nominated ? " (nominated)" : " (not nominated)"),
+	     errmsg));
+
 	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
 	on_check_complete(ice, check);
 	pj_mutex_unlock(ice->mutex);
 	return;
     }
+
 
     /* The agent MUST check that the source IP address and port of the
      * response equals the destination IP address and port that the Binding
@@ -1475,7 +1535,22 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * the response match the source IP address and port that the Binding
      * Request was sent from.
      */
-    PJ_TODO(ICE_CHECK_RESPONSE_SOURCE_ADDRESS);
+    if (sockaddr_cmp(&check->rcand->addr, src_addr) != 0) {
+	status = PJNATH_EICEINSRCADDR;
+	LOG4((ice->obj_name, 
+	     "Check %s%s: connectivity check FAILED: source address mismatch",
+	     dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	     (check->nominated ? " (nominated)" : " (not nominated)")));
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+	on_check_complete(ice, check);
+	pj_mutex_unlock(ice->mutex);
+	return;
+    }
+
+    LOG4((ice->obj_name, 
+	 "Check %s%s: connectivity check SUCCESS",
+	 dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	 (check->nominated ? " (nominated)" : " (not nominated)")));
 
     /* Get the STUN XOR-MAPPED-ADDRESS attribute. */
     xaddr = (pj_stun_xor_mapped_addr_attr*)
