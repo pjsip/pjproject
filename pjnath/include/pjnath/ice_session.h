@@ -120,6 +120,12 @@ typedef struct pj_ice_sess_comp
      */
     pj_ice_sess_check	*valid_check;
 
+    /**
+     * The STUN session to be used to send and receive STUN messages for this
+     * component.
+     */
+    pj_stun_session	*stun_sess;
+
 } pj_ice_sess_comp;
 
 
@@ -186,12 +192,6 @@ typedef struct pj_ice_sess_cand
      * in any way by the ICE session.
      */
     pj_sockaddr		 rel_addr;
-
-    /**
-     * The STUN session to be used to send and receive STUN messages for this
-     * candidate.
-     */
-    pj_stun_session	*stun_sess;
 
 } pj_ice_sess_cand;
 
@@ -366,14 +366,12 @@ typedef struct pj_ice_sess_cb
      *
      * @param ice	    The ICE session.
      * @param comp_id	    ICE component ID.
-     * @param cand_id	    ICE candidate ID.
      * @param pkt	    The STUN packet.
      * @param size	    The size of the packet.
      * @param dst_addr	    Packet destination address.
      * @param dst_addr_len  Length of destination address.
      */
     pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id, 
-			     unsigned cand_id,
 			     const void *pkt, pj_size_t size,
 			     const pj_sockaddr_t *dst_addr,
 			     unsigned dst_addr_len);
@@ -695,7 +693,6 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  *
  * @param ice		The ICE session.
  * @param comp_id	Component ID.
- * @param cand_id	Candidate ID.
  * @param pkt		Incoming packet.
  * @param pkt_size	Size of incoming packet.
  * @param src_addr	Source address of the packet.
@@ -705,7 +702,6 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  */
 PJ_DECL(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					   unsigned comp_id,
-					   unsigned cand_id,
 					   void *pkt,
 					   pj_size_t pkt_size,
 					   const pj_sockaddr_t *src_addr,

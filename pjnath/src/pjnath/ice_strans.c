@@ -23,14 +23,22 @@
 #include <pj/ip_helper.h>
 #include <pj/log.h>
 #include <pj/pool.h>
+#include <pj/rand.h>
 #include <pj/string.h>
+
+
+#if 0
+#  define TRACE_PKT(expr)	    PJ_LOG(5,expr)
+#else
+#  define TRACE_PKT(expr)
+#endif
 
 
 
 /* ICE callbacks */
 static void	   on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static pj_status_t ice_tx_pkt(pj_ice_sess *ice, 
-			      unsigned comp_id, unsigned cand_id,
+			      unsigned comp_id,
 			      const void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *dst_addr,
 			      unsigned dst_addr_len);
@@ -84,7 +92,7 @@ PJ_DECL(pj_status_t) pj_ice_strans_create(pj_stun_config *stun_cfg,
     PJ_ASSERT_RETURN(stun_cfg->ioqueue && stun_cfg->timer_heap, PJ_EINVAL);
 
     if (name == NULL)
-	name = "icest%p";
+	name = "icstr%p";
 
     pool = pj_pool_create(stun_cfg->pf, name, 4000, 4000, NULL);
     ice_st = PJ_POOL_ZALLOC_T(pool, pj_ice_strans);
@@ -242,6 +250,9 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     pj_ioqueue_callback ioqueue_cb;
     pj_ice_strans_comp *comp;
     int retry, addr_len;
+    struct {
+	pj_uint32_t a1, a2, a3;
+    } tsx_id;
     pj_status_t status;
 
     comp = PJ_POOL_ZALLOC_T(ice_st->pool, pj_ice_strans_comp);
@@ -250,6 +261,12 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     comp->options = options;
     comp->sock = PJ_INVALID_SOCKET;
     comp->last_status = PJ_SUCCESS;
+
+    /* Create transaction ID for STUN keep alives */
+    tsx_id.a1 = 0;
+    tsx_id.a2 = comp_id;
+    tsx_id.a3 = (pj_uint32_t) ice_st;
+    pj_memcpy(comp->ka_tsx_id, &tsx_id, sizeof(comp->ka_tsx_id));
 
     /* Create socket */
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &comp->sock);
@@ -437,26 +454,31 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	 * So far we don't have good solution for this.
 	 * The process below is just a workaround.
 	 */
-	if (ice_st->ice) {
-	    PJ_TODO(DISTINGUISH_BETWEEN_LOCAL_AND_RELAY);
-	    status = pj_ice_sess_on_rx_pkt(ice_st->ice, comp->comp_id, 
-				      comp->cand_list[0].ice_cand_id,
-				      comp->pkt, bytes_read,
-				      &comp->src_addr, comp->src_addr_len);
-	} else if (comp->stun_sess) {
-	    status = pj_stun_msg_check(comp->pkt, bytes_read, 
-				       PJ_STUN_IS_DATAGRAM);
-	    if (status == PJ_SUCCESS) {
+	status = pj_stun_msg_check(comp->pkt, bytes_read, 
+				   PJ_STUN_IS_DATAGRAM);
+
+	if (status == PJ_SUCCESS) {
+	    if (ice_st->ice==NULL ||
+		pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0) 
+	    {
 		status = pj_stun_session_on_rx_pkt(comp->stun_sess, comp->pkt,
 						   bytes_read, 
 						   PJ_STUN_IS_DATAGRAM, NULL,
 						   &comp->src_addr, 
 						   comp->src_addr_len);
 	    } else {
-		(*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, 
-					 comp->pkt, bytes_read, 
-					 &comp->src_addr, comp->src_addr_len);
+		PJ_TODO(DISTINGUISH_BETWEEN_LOCAL_AND_RELAY);
 
+		TRACE_PKT((comp->ice_st->obj_name, 
+			  "Component %d RX packet from %s:%d",
+			  comp->comp_id,
+			  pj_inet_ntoa(comp->src_addr.ipv4.sin_addr),
+			  (int)pj_ntohs(comp->src_addr.ipv4.sin_port)));
+
+		status = pj_ice_sess_on_rx_pkt(ice_st->ice, comp->comp_id, 
+					       comp->pkt, bytes_read,
+					       &comp->src_addr, 
+					       comp->src_addr_len);
 	    }
 	} else {
 	    (*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, 
@@ -527,7 +549,8 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
 	/* Create STUN binding request */
 	status = pj_stun_session_create_req(comp->stun_sess,
-					    PJ_STUN_BINDING_REQUEST, &tdata);
+					    PJ_STUN_BINDING_REQUEST, 
+					    comp->ka_tsx_id, &tdata);
 	if (status != PJ_SUCCESS)
 	    continue;
 
@@ -554,8 +577,9 @@ static void start_ka_timer(pj_ice_strans *ice_st)
     if (ice_st->ka_timer.id != PJ_FALSE)
 	return;
 
-    delay.sec = 20;
-    delay.msec = 0;
+    delay.sec = PJ_ICE_ST_KEEP_ALIVE_MIN;
+    delay.msec = pj_rand() % (PJ_ICE_ST_KEEP_ALIVE_MAX_RAND * 1000);
+    pj_time_val_normalize(&delay);
 
     ice_st->ka_timer.cb = &ka_timer_cb;
     ice_st->ka_timer.user_data = ice_st;
@@ -616,7 +640,9 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
 
     /* Create STUN binding request */
     status = pj_stun_session_create_req(comp->stun_sess, 
-					PJ_STUN_BINDING_REQUEST, &tdata);
+					PJ_STUN_BINDING_REQUEST, 
+					comp->ka_tsx_id, 
+					&tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -944,7 +970,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
  * Callback called by ICE session when it wants to send outgoing packet.
  */
 static pj_status_t ice_tx_pkt(pj_ice_sess *ice, 
-			      unsigned comp_id, unsigned cand_id,
+			      unsigned comp_id, 
 			      const void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *dst_addr,
 			      unsigned dst_addr_len)
@@ -958,6 +984,12 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 
     PJ_ASSERT_RETURN(comp_id && comp_id <= ice_st->comp_cnt, PJ_EINVAL);
     comp = ice_st->comp[comp_id-1];
+
+    TRACE_PKT((comp->ice_st->obj_name, 
+	      "Component %d TX packet to %s:%d",
+	      comp_id,
+	      pj_inet_ntoa(((pj_sockaddr_in*)dst_addr)->sin_addr),
+	      (int)pj_ntohs(((pj_sockaddr_in*)dst_addr)->sin_port)));
 
     pkt_size = size;
     status = pj_ioqueue_sendto(comp->key, &comp->write_op, 
@@ -1026,6 +1058,10 @@ static void stun_on_request_complete(pj_stun_session *sess,
 
     if (cand == NULL) {
 	/* This is keep-alive */
+	if (status != PJ_SUCCESS) {
+	    ice_st_perror(comp->ice_st, "STUN keep-alive request failed",
+			  status);
+	}
 	return;
     }
 

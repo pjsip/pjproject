@@ -274,6 +274,7 @@ typedef struct pj_ice_strans_comp
     pj_sock_t		 sock;		/**< Socket descriptor.		*/
 
     pj_stun_session	*stun_sess;	/**< STUN session.		*/
+    pj_uint8_t		 ka_tsx_id[12];	/**< ID for keep STUN alives	*/
 
     pj_sockaddr		 local_addr;	/**< Local/base address.	*/
 

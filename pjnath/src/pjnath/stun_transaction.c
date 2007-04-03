@@ -36,11 +36,13 @@ struct pj_stun_client_tsx
     void		*user_data;
 
     pj_bool_t		 complete;
-    \
+
     pj_bool_t		 require_retransmit;
-    pj_timer_entry	 timer;
+    pj_timer_entry	 retransmit_timer;
     unsigned		 transmit_count;
     pj_time_val		 retransmit_time;
+
+    pj_timer_entry	 destroy_timer;
 
     void		*last_pkt;
     unsigned		 last_pkt_size;
@@ -49,6 +51,8 @@ struct pj_stun_client_tsx
 
 static void retransmit_timer_callback(pj_timer_heap_t *timer_heap, 
 				      pj_timer_entry *timer);
+static void destroy_timer_callback(pj_timer_heap_t *timer_heap, 
+				   pj_timer_entry *timer);
 
 #define stun_perror(tsx,msg,rc) pjnath_perror(tsx->obj_name, msg, rc)
 
@@ -69,8 +73,11 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
     tsx->cfg = cfg;
     pj_memcpy(&tsx->cb, cb, sizeof(*cb));
 
-    tsx->timer.cb = &retransmit_timer_callback;
-    tsx->timer.user_data = tsx;
+    tsx->retransmit_timer.cb = &retransmit_timer_callback;
+    tsx->retransmit_timer.user_data = tsx;
+
+    tsx->destroy_timer.cb = &destroy_timer_callback;
+    tsx->destroy_timer.user_data = tsx;
 
     pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), "stuntsx%p", tsx);
 
@@ -81,17 +88,55 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
 }
 
 
+PJ_DEF(pj_status_t) 
+pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
+				    const pj_time_val *delay)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(tsx && delay, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tsx->cb.on_destroy, PJ_EINVAL);
+
+    /* Cancel previously registered timer */
+    if (tsx->destroy_timer.id != 0) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->destroy_timer);
+	tsx->destroy_timer.id = 0;
+    }
+
+    /* Stop retransmission, just in case */
+    if (tsx->retransmit_timer.id != 0) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->retransmit_timer);
+	tsx->retransmit_timer.id = 0;
+    }
+
+    status = pj_timer_heap_schedule(tsx->cfg->timer_heap,
+				    &tsx->destroy_timer, delay);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    tsx->destroy_timer.id = TIMER_ACTIVE;
+
+    return PJ_SUCCESS;
+}
+
+
 /*
- * .
+ * Destroy transaction immediately.
  */
 PJ_DEF(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx)
 {
     PJ_ASSERT_RETURN(tsx, PJ_EINVAL);
 
-    if (tsx->timer.id != 0) {
-	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
-	tsx->timer.id = 0;
+    if (tsx->retransmit_timer.id != 0) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->retransmit_timer);
+	tsx->retransmit_timer.id = 0;
     }
+    if (tsx->destroy_timer.id != 0) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->destroy_timer);
+	tsx->destroy_timer.id = 0;
+    }
+
+    PJ_LOG(5,(tsx->obj_name, "STUN client transaction destroyed"));
     return PJ_SUCCESS;
 }
 
@@ -135,7 +180,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 {
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(tsx->timer.id == 0, PJ_EBUSY);
+    PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0, PJ_EBUSY);
 
     if (tsx->require_retransmit) {
 	/* Calculate retransmit/timeout delay */
@@ -160,22 +205,24 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	 * cancel it (as opposed to when schedule_timer() failed we cannot
 	 * cancel transmission).
 	 */;
-	status = pj_timer_heap_schedule(tsx->cfg->timer_heap, &tsx->timer,
+	status = pj_timer_heap_schedule(tsx->cfg->timer_heap, 
+					&tsx->retransmit_timer,
 					&tsx->retransmit_time);
 	if (status != PJ_SUCCESS) {
-	    tsx->timer.id = 0;
+	    tsx->retransmit_timer.id = 0;
 	    return status;
 	}
-	tsx->timer.id = TIMER_ACTIVE;
+	tsx->retransmit_timer.id = TIMER_ACTIVE;
     }
 
 
     /* Send message */
     status = tsx->cb.on_send_msg(tsx, tsx->last_pkt, tsx->last_pkt_size);
     if (status != PJ_SUCCESS) {
-	if (tsx->timer.id != 0) {
-	    pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
-	    tsx->timer.id = 0;
+	if (tsx->retransmit_timer.id != 0) {
+	    pj_timer_heap_cancel(tsx->cfg->timer_heap, 
+				 &tsx->retransmit_timer);
+	    tsx->retransmit_timer.id = 0;
 	}
 	stun_perror(tsx, "STUN error sending message", status);
 	return status;
@@ -198,7 +245,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						unsigned pkt_len)
 {
     PJ_ASSERT_RETURN(tsx && pkt && pkt_len, PJ_EINVAL);
-    PJ_ASSERT_RETURN(tsx->timer.id == 0, PJ_EBUSY);
+    PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0, PJ_EBUSY);
 
     /* Encode message */
     tsx->last_pkt = pkt;
@@ -223,26 +270,43 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 
     if (tsx->transmit_count >= PJ_STUN_MAX_RETRANSMIT_COUNT) {
 	/* Retransmission count exceeded. Transaction has failed */
-	tsx->timer.id = 0;
+	tsx->retransmit_timer.id = 0;
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
-	tsx->complete = PJ_TRUE;
-	if (tsx->cb.on_complete) {
-	    tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL);
+	if (!tsx->complete) {
+	    tsx->complete = PJ_TRUE;
+	    if (tsx->cb.on_complete) {
+		tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL);
+	    }
 	}
 	return;
     }
 
-    tsx->timer.id = 0;
+    tsx->retransmit_timer.id = 0;
     status = tsx_transmit_msg(tsx);
     if (status != PJ_SUCCESS) {
-	tsx->timer.id = 0;
-	tsx->complete = PJ_TRUE;
-	if (tsx->cb.on_complete) {
-	    tsx->cb.on_complete(tsx, status, NULL);
+	tsx->retransmit_timer.id = 0;
+	if (!tsx->complete) {
+	    tsx->complete = PJ_TRUE;
+	    if (tsx->cb.on_complete) {
+		tsx->cb.on_complete(tsx, status, NULL);
+	    }
 	}
     }
 }
 
+
+/* Timer callback to destroy transaction */
+static void destroy_timer_callback(pj_timer_heap_t *timer_heap, 
+				   pj_timer_entry *timer)
+{
+    pj_stun_client_tsx *tsx = (pj_stun_client_tsx *) timer->user_data;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    tsx->destroy_timer.id = PJ_FALSE;
+    tsx->cb.on_destroy(tsx);
+    /* Don't access transaction after this */
+}
 
 
 /*
@@ -267,9 +331,9 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     /* We have a response with matching transaction ID. 
      * We can cancel retransmit timer now.
      */
-    if (tsx->timer.id) {
-	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->timer);
-	tsx->timer.id = 0;
+    if (tsx->retransmit_timer.id) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->retransmit_timer);
+	tsx->retransmit_timer.id = 0;
     }
 
     /* Find STUN error code attribute */
@@ -296,9 +360,11 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_on_rx_msg(pj_stun_client_tsx *tsx,
     }
 
     /* Call callback */
-    tsx->complete = PJ_TRUE;
-    if (tsx->cb.on_complete) {
-	tsx->cb.on_complete(tsx, status, msg);
+    if (!tsx->complete) {
+	tsx->complete = PJ_TRUE;
+	if (tsx->cb.on_complete) {
+	    tsx->cb.on_complete(tsx, status, msg);
+	}
     }
 
     return PJ_SUCCESS;

@@ -90,6 +90,19 @@ typedef struct pj_stun_tsx_cb
 			       const void *stun_pkt,
 			       pj_size_t pkt_size);
 
+    /**
+     * This callback is called after the timer that was scheduled by
+     * #pj_stun_client_tsx_schedule_destroy() has elapsed. Application
+     * should call #pj_stun_client_tsx_destroy() upon receiving this
+     * callback.
+     *
+     * This callback is optional if application will not call 
+     * #pj_stun_client_tsx_schedule_destroy().
+     *
+     * @param tsx	    The STUN transaction instance.
+     */
+    void (*on_destroy)(pj_stun_client_tsx *tsx);
+
 } pj_stun_tsx_cb;
 
 
@@ -116,7 +129,30 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_config *cfg,
 						pj_stun_client_tsx **p_tsx);
 
 /**
- * Destroy a STUN client transaction.
+ * Schedule timer to destroy the transaction after the transaction is 
+ * complete. Application normally calls this function in the on_complete()
+ * callback. When this timer elapsed, the on_destroy() callback will be 
+ * called.
+ *
+ * This is convenient to let the STUN transaction absorbs any response 
+ * for the previous request retransmissions. If application doesn't want
+ * this, it can destroy the transaction immediately by calling 
+ * #pj_stun_client_tsx_destroy().
+ *
+ * @param tsx		The STUN transaction.
+ * @param delay		The delay interval before on_destroy() callback
+ *			is called.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
+				    const pj_time_val *delay);
+
+
+/**
+ * Destroy a STUN client transaction immediately. This function can be 
+ * called at any time to stop the transaction and destroy it.
  *
  * @param tsx		The STUN transaction.
  *

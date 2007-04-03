@@ -49,17 +49,19 @@ struct pj_stun_session
 #define TDATA_POOL_INC		    1024
 
 
-static void tsx_on_complete(pj_stun_client_tsx *tsx,
-			    pj_status_t status, 
-			    const pj_stun_msg *response);
-static pj_status_t tsx_on_send_msg(pj_stun_client_tsx *tsx,
-				   const void *stun_pkt,
-				   pj_size_t pkt_size);
+static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
+				 pj_status_t status, 
+				 const pj_stun_msg *response);
+static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
+					const void *stun_pkt,
+					pj_size_t pkt_size);
+static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx);
 
 static pj_stun_tsx_cb tsx_cb = 
 {
-    &tsx_on_complete,
-    &tsx_on_send_msg
+    &stun_tsx_on_complete,
+    &stun_tsx_on_send_msg,
+    &stun_tsx_on_destroy
 };
 
 
@@ -120,6 +122,7 @@ static pj_status_t create_tdata(pj_stun_session *sess,
 
 static pj_status_t create_request_tdata(pj_stun_session *sess,
 					unsigned msg_type,
+					const pj_uint8_t tsx_id[12],
 					pj_stun_tx_data **p_tdata)
 {
     pj_status_t status;
@@ -131,7 +134,7 @@ static pj_status_t create_request_tdata(pj_stun_session *sess,
 
     /* Create STUN message */
     status = pj_stun_msg_create(tdata->pool, msg_type,  PJ_STUN_MAGIC, 
-				NULL, &tdata->msg);
+				tsx_id, &tdata->msg);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(tdata->pool);
 	return status;
@@ -148,20 +151,34 @@ static pj_status_t create_request_tdata(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
+
+static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx)
+{
+    pj_stun_tx_data *tdata;
+
+    tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
+    pj_stun_client_tsx_destroy(tsx);
+    pj_pool_release(tdata->pool);
+}
+
 static void destroy_tdata(pj_stun_tx_data *tdata)
 {
-    if (tdata->client_tsx) {
-	tsx_erase(tdata->sess, tdata);
-	pj_stun_client_tsx_destroy(tdata->client_tsx);
-	tdata->client_tsx = NULL;
-    }
     if (tdata->res_timer.id != PJ_FALSE) {
 	pj_timer_heap_cancel(tdata->sess->cfg->timer_heap, 
 			     &tdata->res_timer);
 	tdata->res_timer.id = PJ_FALSE;
 	pj_list_erase(tdata);
     }
-    pj_pool_release(tdata->pool);
+
+    if (tdata->client_tsx) {
+	pj_time_val delay = {2, 0};
+	tsx_erase(tdata->sess, tdata);
+	pj_stun_client_tsx_schedule_destroy(tdata->client_tsx, &delay);
+	tdata->client_tsx = NULL;
+
+    } else {
+	pj_pool_release(tdata->pool);
+    }
 }
 
 /*
@@ -306,9 +323,9 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 }
 
 
-static void tsx_on_complete(pj_stun_client_tsx *tsx,
-			    pj_status_t status, 
-			    const pj_stun_msg *response)
+static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
+				 pj_status_t status, 
+				 const pj_stun_msg *response)
 {
     pj_stun_tx_data *tdata;
 
@@ -320,9 +337,9 @@ static void tsx_on_complete(pj_stun_client_tsx *tsx,
     }
 }
 
-static pj_status_t tsx_on_send_msg(pj_stun_client_tsx *tsx,
-				   const void *stun_pkt,
-				   pj_size_t pkt_size)
+static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
+					const void *stun_pkt,
+					pj_size_t pkt_size)
 {
     pj_stun_tx_data *tdata;
 
@@ -441,6 +458,7 @@ PJ_DEF(void) pj_stun_session_set_credential(pj_stun_session *sess,
 
 PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 					       int method,
+					       const pj_uint8_t tsx_id[12],
 					       pj_stun_tx_data **p_tdata)
 {
     pj_stun_tx_data *tdata = NULL;
@@ -448,7 +466,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
 
-    status = create_request_tdata(sess, method, &tdata);
+    status = create_request_tdata(sess, method, tsx_id, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -765,7 +783,7 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Lookup pending client transaction */
     tdata = tsx_lookup(sess, msg);
     if (tdata == NULL) {
-	PJ_LOG(5,(SNAME(sess), 
+	PJ_LOG(4,(SNAME(sess), 
 		  "Transaction not found, response silently discarded"));
 	return PJ_SUCCESS;
     }

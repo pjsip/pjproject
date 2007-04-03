@@ -245,6 +245,7 @@ PJ_DECL(void) pj_stun_session_set_credential(pj_stun_session *sess,
  * @param sess	    The STUN session instance.
  * @param msg_type  The STUN request message type, from pj_stun_method_e or
  *		    from pj_stun_msg_type.
+ * @param tsx_id    Optional transaction ID.
  * @param p_tdata   Pointer to receive STUN transmit data instance containing
  *		    the request.
  *
@@ -252,6 +253,7 @@ PJ_DECL(void) pj_stun_session_set_credential(pj_stun_session *sess,
  */
 PJ_DECL(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 						int msg_type,
+						const pj_uint8_t tsx_id[12],
 						pj_stun_tx_data **p_tdata);
 
 /**

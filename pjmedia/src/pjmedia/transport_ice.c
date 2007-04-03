@@ -434,6 +434,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     const pjmedia_sdp_media *sdp_med;
     pj_bool_t remote_is_lite = PJ_FALSE;
     pj_bool_t ice_mismatch = PJ_FALSE;
+    pjmedia_sdp_conn *conn = NULL;
+    pj_sockaddr conn_addr;
+    pj_bool_t conn_found_in_candidate = PJ_FALSE;
     const pj_str_t STR_CANDIDATE = {"candidate", 9};
     const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
     const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
@@ -444,6 +447,22 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(media_index < rem_sdp->media_count, PJ_EINVAL);
 
     sdp_med = rem_sdp->media[media_index];
+
+    /* Get the SDP connection for the media stream.
+     * We'll verify later if the SDP connection address is specified 
+     * as one of the candidate.
+     */
+    conn = sdp_med->conn;
+    if (conn == NULL)
+	conn = rem_sdp->conn;
+
+    if (conn == NULL) {
+	/* Unable to find SDP connection */
+	return PJMEDIA_SDP_EMISSINGCONN;
+    }
+
+    pj_sockaddr_in_init(&conn_addr.ipv4, &conn->addr, 
+			(pj_uint16_t)sdp_med->desc.port);
 
     /* Find ice-ufrag attribute in session descriptor */
     attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
@@ -480,11 +499,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 
 	attr = sdp_med->attr[i];
 
+	/* Detect if remote is ICE lite */
 	if (pj_strcmp(&attr->name, &STR_ICE_LITE)==0) {
 	    remote_is_lite = PJ_TRUE;
 	    continue;
 	}
 
+	/* Detect if remote has reported ICE mismatch */
 	if (pj_strcmp(&attr->name, &STR_ICE_MISMATCH)==0) {
 	    ice_mismatch = PJ_TRUE;
 	    continue;
@@ -493,16 +514,33 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	if (pj_strcmp(&attr->name, &STR_CANDIDATE)!=0)
 	    continue;
 
+	/* Parse candidate */
 	status = parse_cand(pool, &attr->value, &cand[cand_cnt]);
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	/* Check if this candidate is equal to the connection line */
+	if (!conn_found_in_candidate &&
+	    pj_memcmp(&conn_addr.ipv4, &cand[cand_cnt].addr.ipv4,
+		      sizeof(pj_sockaddr_in))==0)
+	{
+	    conn_found_in_candidate = PJ_TRUE;
+	}
 
 	cand_cnt++;
     }
 
     /* Handle ice-mismatch case */
     if (ice_mismatch) {
-	set_no_ice(tp_ice, "ice-mismatch detected");
+	set_no_ice(tp_ice, "remote reported ice-mismatch");
+	return PJ_SUCCESS;
+    }
+
+    /* Handle case where SDP connection address is not specified as
+     * one of the candidate.
+     */
+    if (!conn_found_in_candidate) {
+	set_no_ice(tp_ice, "local reported ice-mismatch");
 	return PJ_SUCCESS;
     }
 
@@ -657,15 +695,18 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     char src_addr[32];
     char dst_addr[32];
 
+    pj_gettimeofday(&end_ice);
+    PJ_TIME_VAL_SUB(end_ice, tp_ice->start_ice);
+
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(1,(ice_st->obj_name, "ICE negotiation failed: %s", errmsg));
+	PJ_LOG(1,(ice_st->obj_name, 
+		  "ICE negotiation failed after %d:%03ds: %s", 
+		  (int)end_ice.sec, (int)end_ice.msec,
+		  errmsg));
 	return;
     }
-
-    pj_gettimeofday(&end_ice);
-    PJ_TIME_VAL_SUB(end_ice, tp_ice->start_ice);
 
     check = &ice_st->ice->valid_list.checks[0];
     
