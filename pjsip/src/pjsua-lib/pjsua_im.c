@@ -565,6 +565,9 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     /* Add additional headers etc. */
     pjsua_process_msg_data(tdata, msg_data);
 
+    /* Add route set */
+    pjsua_set_msg_route_set(tdata, &pjsua_var.acc[acc_id].route_set);
+
     /* Create data to reauthenticate */
     im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
     im_data->acc_id = acc_id;
