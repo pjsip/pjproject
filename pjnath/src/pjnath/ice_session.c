@@ -912,6 +912,20 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 
     pj_assert(check->state >= PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
 
+    /* 7.1.2.2.2.  Updating Pair States
+     * 
+     * The agent sets the state of the pair that generated the check to
+     * Succeeded.  The success of this check might also cause the state of
+     * other checks to change as well.  The agent MUST perform the following
+     * two steps:
+     * 
+     * 1.  The agent changes the states for all other Frozen pairs for the
+     * same media stream and same foundation to Waiting.  Typically
+     * these other pairs will have different component IDs but not
+     * always.
+     */
+
+
     /* If there is at least one nominated pair in the valid list:
      * - The agent MUST remove all Waiting and Frozen pairs in the check
      *   list for the same component as the nominated pairs for that
@@ -1582,14 +1596,24 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	pj_str_t foundation;
 
 	pj_ice_calc_foundation(ice->pool, &foundation, PJ_ICE_CAND_TYPE_PRFLX,
-			       &lcand->base_addr);
+			       &check->lcand->base_addr);
+
+	/* According to: 7.1.2.2.1. Discovering Peer Reflexive Candidates:
+	 * Its priority is set equal to the value of the PRIORITY attribute
+         * in the Binding Request.
+	 *
+	 * I think the priority calculated by add_cand() should be the same
+	 * as the one calculated in perform_check(), so there's no need to
+	 * get the priority from the PRIORITY attribute.
+	 */
 
 	/* Add new peer reflexive candidate */
 	status = pj_ice_sess_add_cand(ice, lcand->comp_id, 
-				 PJ_ICE_CAND_TYPE_PRFLX,
-				 65535, &foundation,
-				 &xaddr->sockaddr, &lcand->base_addr, NULL,
-				 sizeof(pj_sockaddr_in), &cand_id);
+				      PJ_ICE_CAND_TYPE_PRFLX,
+				      65535, &foundation,
+				      &xaddr->sockaddr, 
+				      &check->lcand->base_addr, NULL,
+				      sizeof(pj_sockaddr_in), &cand_id);
 	if (status != PJ_SUCCESS) {
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, 
 			    status);
@@ -1600,6 +1624,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
 	/* Update local candidate */
 	lcand = &ice->lcand[cand_id];
+
     }
 
     /* Add pair to valid list */
