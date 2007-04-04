@@ -108,7 +108,7 @@ static pj_xml_node *xml_parse_node( pj_pool_t *pool, pj_scanner *scanner)
 	pj_scan_get_until_chr( scanner, "=> \t", &attr->name);
 	if (*scanner->curptr == '=') {
 	    pj_scan_get_char( scanner );
-	    pj_scan_get_quote(scanner, '"', '"', &attr->value);
+            pj_scan_get_quotes(scanner, "\"'", "\"'", 2, &attr->value);
 	    /* remove quote characters */
 	    ++attr->value.ptr;
 	    attr->value.slen -= 2;
