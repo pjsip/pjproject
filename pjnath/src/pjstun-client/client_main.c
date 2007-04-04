@@ -29,6 +29,7 @@
 #define REQ_PORT_PROPS	-1		    /* -1 to disable */
 #define REQ_IP		NULL		    /* IP address string */
 
+#define OPTIONS		PJ_STUN_NO_AUTHENTICATE
 
 static struct global
 {
@@ -156,7 +157,7 @@ static int worker_thread(void *unused)
 
 		if (pj_stun_msg_check(buffer, len, PJ_STUN_IS_DATAGRAM)==PJ_SUCCESS) {
 		    rc = pj_stun_session_on_rx_pkt(g.sess, buffer, len, 
-						   0, 
+						   OPTIONS, 
 						   NULL, &addr, addrlen);
 		    if (rc != PJ_SUCCESS)
 			my_perror("Error processing packet", rc);

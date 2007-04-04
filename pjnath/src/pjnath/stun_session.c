@@ -956,11 +956,15 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	goto on_return;
     }
 
-    /* Authenticate the message */
-    status = authenticate_msg(sess, packet, pkt_size, msg, tmp_pool, 
-			      src_addr, src_addr_len);
-    if (status != PJ_SUCCESS) {
-	goto on_return;
+    /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
+     * is specified in the option.
+     */
+    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
+	status = authenticate_msg(sess, packet, pkt_size, msg, tmp_pool,
+				  src_addr, src_addr_len);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
     }
 
     /* Handle message */
@@ -990,5 +994,6 @@ on_return:
     pj_pool_release(tmp_pool);
     return status;
 }
+
 
 

@@ -1029,7 +1029,14 @@ enum pj_stun_decode_options
      * message by calling pj_stun_msg_check() before starting to
      * decode the packet.
      */
-    PJ_STUN_CHECK_PACKET    = 2
+    PJ_STUN_CHECK_PACKET    = 2,
+
+    /**
+     * This option current is only valid for #pj_stun_session_on_rx_pkt().
+     * When specified, it tells the session NOT to authenticate the
+     * message.
+     */
+    PJ_STUN_NO_AUTHENTICATE = 4
 };
 
 
