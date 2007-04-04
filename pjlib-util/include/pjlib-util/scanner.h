@@ -350,6 +350,29 @@ PJ_DECL(void) pj_scan_get_quote( pj_scanner *scanner,
 				 pj_str_t *out);
 
 /** 
+ * Get characters between quotes. If current input doesn't match begin_quote,
+ * syntax error will be thrown. Note that the resulting string will contain
+ * the enclosing quote.
+ *
+ * @param scanner	The scanner.
+ * @param begin_quotes  The character array to begin the quotes. For example,
+ *                      the two characters " and '.
+ * @param end_quotes    The character array to end the quotes. The position
+ *                      found in the begin_quotes array will be used to match
+ *                      the end quotes. So if the begin_quotes was the array
+ *                      of "'< the end_quotes should be "'>. If begin_array
+ *                      matched the ' then the end_quotes will look for ' to
+ *                      match at the end.
+ * @param qsize         The size of the begin_quotes and end_quotes arrays.
+ * @param out           String to store the result.
+ */
+PJ_DECL(void) pj_scan_get_quotes(pj_scanner *scanner,
+                                 const char *begin_quotes,
+                                 const char *end_quotes, int qsize,
+                                 pj_str_t *out);
+
+
+/**
  * Get N characters from the scanner.
  *
  * @param scanner   The scanner.

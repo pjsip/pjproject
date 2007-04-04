@@ -339,13 +339,30 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
 
 
 PJ_DEF(void) pj_scan_get_quote( pj_scanner *scanner,
-				 int begin_quote, int end_quote, 
-				 pj_str_t *out)
+				int begin_quote, int end_quote, 
+				pj_str_t *out)
+{
+    pj_scan_get_quotes(scanner, (char*)&begin_quote, (char*)&end_quote, 1, out);
+}
+
+PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
+                                const char *begin_quote, const char *end_quote,
+                                int qsize, pj_str_t *out)
 {
     register char *s = scanner->curptr;
-    
+    int qpair = -1;
+    int i;
+
+    pj_assert(qsize > 0);
+
     /* Check and eat the begin_quote. */
-    if (*s != begin_quote) {
+    for (i = 0; i < qsize; ++i) {
+	if (*s == begin_quote[i]) {
+	    qpair = i;
+	    break;
+	}
+    }
+    if (qpair == -1) {
 	pj_scan_syntax_err(scanner);
 	return;
     }
@@ -355,12 +372,12 @@ PJ_DEF(void) pj_scan_get_quote( pj_scanner *scanner,
      */
     do {
 	/* loop until end_quote is found. */
-	while (*s && *s != '\n' && *s != end_quote) {
+	while (*s && *s != '\n' && *s != end_quote[qpair]) {
 	    ++s;
 	}
 
 	/* check that no backslash character precedes the end_quote. */
-	if (*s == end_quote) {
+	if (*s == end_quote[qpair]) {
 	    if (*(s-1) == '\\') {
 		if (s-2 == scanner->begin) {
 		    break;
@@ -389,7 +406,7 @@ PJ_DEF(void) pj_scan_get_quote( pj_scanner *scanner,
     } while (1);
 
     /* Check and eat the end quote. */
-    if (*s != end_quote) {
+    if (*s != end_quote[qpair]) {
 	pj_scan_syntax_err(scanner);
 	return;
     }
@@ -403,6 +420,7 @@ PJ_DEF(void) pj_scan_get_quote( pj_scanner *scanner,
 	pj_scan_skip_whitespace(scanner);
     }
 }
+
 
 PJ_DEF(void) pj_scan_get_n( pj_scanner *scanner,
 			    unsigned N, pj_str_t *out)
