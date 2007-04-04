@@ -92,8 +92,13 @@ static pj_status_t on_send_msg(pj_stun_session *sess,
 static void on_request_complete(pj_stun_session *sess,
 			        pj_status_t status,
 			        pj_stun_tx_data *tdata,
-			        const pj_stun_msg *response)
+			        const pj_stun_msg *response,
+				const pj_sockaddr_t *src_addr,
+				unsigned src_addr_len)
 {
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
     if (status == PJ_SUCCESS) {
 	switch (response->hdr.type) {
 	case PJ_STUN_ALLOCATE_RESPONSE:
@@ -299,7 +304,8 @@ static void send_bind_request(void)
     pj_stun_tx_data *tdata;
     pj_status_t rc;
 
-    rc = pj_stun_session_create_req(g.sess, PJ_STUN_BINDING_REQUEST, &tdata);
+    rc = pj_stun_session_create_req(g.sess, PJ_STUN_BINDING_REQUEST, 
+				    NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
     rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
@@ -314,7 +320,8 @@ static void send_allocate_request(pj_bool_t allocate)
     pj_stun_tx_data *tdata;
     pj_status_t rc;
 
-    rc = pj_stun_session_create_req(g.sess, PJ_STUN_ALLOCATE_REQUEST, &tdata);
+    rc = pj_stun_session_create_req(g.sess, PJ_STUN_ALLOCATE_REQUEST, 
+				    NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
 
@@ -372,7 +379,9 @@ static void send_sad_request(pj_bool_t set)
 	return;
     }
 
-    rc = pj_stun_session_create_req(g.sess, PJ_STUN_SET_ACTIVE_DESTINATION_REQUEST, &tdata);
+    rc = pj_stun_session_create_req(g.sess, 
+				    PJ_STUN_SET_ACTIVE_DESTINATION_REQUEST, 
+				    NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
     if (set) {
