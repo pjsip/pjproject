@@ -232,10 +232,10 @@ static struct attr_desc mandatory_attr_desc[] =
 	NULL
     },
     {
-	/* ID 0x000F is not assigned */
-	NULL,
-	NULL,
-	NULL
+	/* PJ_STUN_ATTR_MAGIC_COOKIE */
+	"MAGIC-COOKIE",
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_BANDWIDTH, */
@@ -1772,15 +1772,15 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
     /* Parse attributes */
     uattr_cnt = 0;
-    while (pdu_len > 0) {
+    while (pdu_len >= 4) {
 	unsigned attr_type, attr_val_len;
 	const struct attr_desc *adesc;
 
 	/* Get attribute type and length. If length is not aligned
 	 * to 4 bytes boundary, add padding.
 	 */
-	attr_type = pj_ntohs(*(pj_uint16_t*)pdu);
-	attr_val_len = pj_ntohs(*(pj_uint16_t*)(pdu+2));
+	attr_type = GETVAL16H(pdu, 0);
+	attr_val_len = GETVAL16H(pdu, 2);
 	attr_val_len = (attr_val_len + 3) & (~3);
 
 	/* Check length */
@@ -1919,8 +1919,21 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	    msg->attr[msg->attr_count++] = (pj_stun_attr_hdr*)attr;
 	}
 
-	pdu += (attr_val_len + 4);
-	pdu_len -= (attr_val_len + 4);
+	if (attr_val_len + 4 >= pdu_len) {
+	    pdu += pdu_len;
+	    pdu_len = 0;
+	} else {
+	    pdu += (attr_val_len + 4);
+	    pdu_len -= (attr_val_len + 4);
+	}
+    }
+
+    if (pdu_len > 0) {
+	/* Stray trailing bytes */
+	PJ_LOG(4,(THIS_FILE, 
+		  "Error decoding STUN message: unparsed trailing %d bytes",
+		  pdu_len));
+	return PJNATH_EINSTUNMSGLEN;
     }
 
     *p_msg = msg;

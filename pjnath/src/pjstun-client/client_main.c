@@ -184,6 +184,7 @@ static int init()
 
     status = pj_init();
     status = pjlib_util_init();
+    status = pjnath_init();
 
     pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
 

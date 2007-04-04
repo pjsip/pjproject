@@ -285,6 +285,7 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES = 0x000A,/**< UNKNOWN-ATTRIBUTES.	    */
     PJ_STUN_ATTR_REFLECTED_FROM	    = 0x000B,/**< REFLECTED-FROM (deprecatd)*/
     PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< LIFETIME attribute.	    */
+    PJ_STUN_ATTR_MAGIC_COOKIE	    = 0x000F,/**< MAGIC-COOKIE attr (deprec)*/
     PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< BANDWIDTH attribute	    */
     PJ_STUN_ATTR_REMOTE_ADDR	    = 0x0012,/**< REMOTE-ADDRESS attribute  */
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */

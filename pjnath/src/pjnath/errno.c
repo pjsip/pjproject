@@ -134,6 +134,8 @@ static pj_str_t pjnath_strerror2(pj_status_t statcode,
     const pj_str_t cmsg = pj_stun_get_err_reason(stun_code);
     pj_str_t errstr;
 
+    buf[bufsize-1] = '\0';
+
     if (cmsg.slen == 0) {
 	/* Not found */
 	errstr.ptr = buf;
@@ -143,6 +145,10 @@ static pj_str_t pjnath_strerror2(pj_status_t statcode,
     } else {
 	errstr.ptr = buf;
 	pj_strncpy(&errstr, &cmsg, bufsize);
+	if (errstr.slen < (int)bufsize)
+	    buf[errstr.slen] = '\0';
+	else
+	    buf[bufsize-1] = '\0';
     }
 
     if (errstr.slen < 0) errstr.slen = 0;
