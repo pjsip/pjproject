@@ -72,6 +72,9 @@ static pj_str_t OPEN = { "open", 4 };
 static pj_str_t CLOSED = { "closed", 6 };
 static pj_str_t EMPTY_STRING = { NULL, 0 };
 
+static pj_str_t XMLNS = { "xmlns", 5 };
+static pj_str_t PIDF_XMLNS = { "urn:ietf:params:xml:ns:pidf", 27 };
+
 static void xml_init_node(pj_pool_t *pool, pj_xml_node *node,
 			  pj_str_t *name, const pj_str_t *value)
 {
@@ -99,6 +102,8 @@ PJ_DEF(void) pjpidf_pres_construct(pj_pool_t *pool, pjpidf_pres *pres,
 
     xml_init_node(pool, pres, &PRESENCE, NULL);
     attr = xml_create_attr(pool, &ENTITY, entity);
+    pj_xml_add_attr(pres, attr);
+    attr = xml_create_attr(pool, &XMLNS, &PIDF_XMLNS);
     pj_xml_add_attr(pres, attr);
 }
 
