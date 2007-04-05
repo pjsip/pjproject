@@ -989,6 +989,15 @@ typedef pj_stun_sockaddr_attr pj_stun_xor_internal_addr_attr;
  */
 typedef struct pj_stun_uint_attr pj_stun_timer_val_attr;
 
+/**
+ * This describes ICE-CONTROLLING attribute.
+ */
+typedef struct pj_stun_uint64_attr pj_stun_ice_controlling_attr;
+
+/**
+ * This describes ICE-CONTROLLED attribute.
+ */
+typedef struct pj_stun_uint64_attr pj_stun_ice_controlled_attr;
 
 /**
  * This structure describes a parsed STUN message. All integral fields

@@ -60,6 +60,7 @@ static const char *clist_state_name[] =
 
 static const char *role_names[] = 
 {
+    "Unknown",
     "Controlled",
     "Controlling"
 };
@@ -850,7 +851,8 @@ static int sockaddr_cmp(const pj_sockaddr *a1, const pj_sockaddr *a2)
 /* Prune checklist, this must have been done after the checklist
  * is sorted.
  */
-static void prune_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
+static pj_status_t prune_checklist(pj_ice_sess *ice, 
+				   pj_ice_sess_checklist *clist)
 {
     unsigned i;
 
@@ -864,30 +866,52 @@ static void prune_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
      * higher up on the priority list.  The result is a sequence of ordered
      * candidate pairs, called the check list for that media stream.    
      */
+    /* First replace SRFLX candidates with their base */
+    for (i=0; i<clist->count; ++i) {
+	pj_ice_sess_cand *srflx = clist->checks[i].lcand;
+
+	if (clist->checks[i].lcand->type == PJ_ICE_CAND_TYPE_SRFLX) {
+	    /* Find the base for this candidate */
+	    unsigned j;
+	    for (j=0; j<ice->lcand_cnt; ++j) {
+		pj_ice_sess_cand *host = &ice->lcand[j];
+
+		if (host->type != PJ_ICE_CAND_TYPE_HOST)
+		    continue;
+
+		if (sockaddr_cmp(&srflx->base_addr, &host->addr) == 0) {
+		    /* Replace this SRFLX with its BASE */
+		    clist->checks[i].lcand = host;
+		    break;
+		}
+	    }
+
+	    if (j==ice->lcand_cnt) {
+		/* Host candidate not found this this srflx! */
+		LOG4((ice->obj_name, 
+		      "Base candidate %s:%d not found for srflx candidate %d",
+		      pj_inet_ntoa(srflx->base_addr.ipv4.sin_addr),
+		      pj_ntohs(srflx->base_addr.ipv4.sin_port),
+		      GET_LCAND_ID(clist->checks[i].lcand)));
+		return PJNATH_EICENOHOSTCAND;
+	    }
+	}
+    }
+
+    /* Next remove a pair if its local and remote candidates are identical
+     * to the local and remote candidates of a pair higher up on the priority
+     * list
+     */
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_cand *licand = clist->checks[i].lcand;
 	pj_ice_sess_cand *ricand = clist->checks[i].rcand;
-	const pj_sockaddr *liaddr;
 	unsigned j;
-
-	if (licand->type == PJ_ICE_CAND_TYPE_SRFLX)
-	    liaddr = &licand->base_addr;
-	else
-	    liaddr = &licand->addr;
 
 	for (j=i+1; j<clist->count;) {
 	    pj_ice_sess_cand *ljcand = clist->checks[j].lcand;
 	    pj_ice_sess_cand *rjcand = clist->checks[j].rcand;
-	    const pj_sockaddr *ljaddr;
 
-	    if (ljcand->type == PJ_ICE_CAND_TYPE_SRFLX)
-		ljaddr = &ljcand->base_addr;
-	    else
-		ljaddr = &ljcand->addr;
-
-	    if (ricand == rjcand && 
-		sockaddr_cmp(liaddr, ljaddr) == SOCKADDR_EQUAL)
-	    {
+	    if ((licand == ljcand) && (ricand == rjcand)) {
 		/* Found duplicate, remove it */
 		char buf[CHECK_NAME_LEN];
 
@@ -904,6 +928,8 @@ static void prune_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 	    }
 	}
     }
+
+    return PJ_SUCCESS;
 }
 
 /* This function is called when ICE processing completes */
@@ -1124,6 +1150,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
     pj_str_t username;
     timer_data *td;
     unsigned i, j;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rcand_cnt && rcand,
 		     PJ_EINVAL);
@@ -1174,7 +1201,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
 	    pj_ice_sess_cand *rcand = &ice->rcand[j];
 	    pj_ice_sess_check *chk = &clist->checks[clist->count];
 
-	    if (clist->count > PJ_ICE_MAX_CHECKS) {
+	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
 		pj_mutex_unlock(ice->mutex);
 		return PJ_ETOOMANY;
 	    } 
@@ -1183,8 +1210,8 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
 	     * and only if the two candidates have the same component ID 
 	     * and have the same IP address version. 
 	     */
-	    if (lcand->comp_id != rcand->comp_id ||
-		lcand->addr.addr.sa_family != rcand->addr.addr.sa_family)
+	    if ((lcand->comp_id != rcand->comp_id) ||
+		(lcand->addr.addr.sa_family != rcand->addr.addr.sa_family))
 	    {
 		continue;
 	    }
@@ -1204,7 +1231,11 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
     sort_checklist(clist);
 
     /* Prune the checklist */
-    prune_checklist(ice, clist);
+    status = prune_checklist(ice, clist);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_unlock(ice->mutex);
+	return status;
+    }
 
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
@@ -1465,7 +1496,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 
     /* Pickup the first pair for component 1. */
     for (i=0; i<clist->count; ++i) {
-	if (clist->checks[0].lcand->comp_id == 1)
+	if (clist->checks[i].lcand->comp_id == 1)
 	    break;
     }
     if (i == clist->count) {
@@ -1886,6 +1917,18 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	}
     }
 
+    /* Handle the case when request comes before answer is received.
+     * We need to put credential in the response, and since we haven't
+     * got the response, copy the username from the request.
+     */
+    if (ice->rcand_cnt == 0) {
+	pj_stun_string_attr *uname_attr;
+
+	uname_attr = (pj_stun_string_attr*)
+		     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
+	pj_assert(uname_attr != NULL);
+	pj_strdup(ice->pool, &ice->rx_uname, &uname_attr->value);
+    }
 
     /* 
      * First send response to this request 
@@ -2089,6 +2132,20 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	     * Note this may end ICE process.
 	     */
 	    pj_bool_t complete;
+	    unsigned j;
+
+	    /* If this check is nominated, scan the valid_list for the
+	     * same check and update the nominated flag. A controlled 
+	     * agent might have finished the check earlier.
+	     */
+	    if (rcheck->use_candidate) {
+		for (j=0; j<ice->valid_list.count; ++j) {
+		    pj_ice_sess_check *vc = &ice->valid_list.checks[j];
+		    if (vc->lcand == c->lcand && vc->rcand == c->rcand) {
+			vc->nominated = PJ_TRUE;
+		    }
+		}
+	    }
 
 	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 				"because it's completed", i));
@@ -2207,6 +2264,12 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);
+	if (status != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    LOG4((ice->obj_name, "Error processing incoming message: %s",
+		  errmsg));
+	}
     } else {
 	(*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 
 			      src_addr, src_addr_len);

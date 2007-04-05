@@ -811,7 +811,7 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Lookup pending client transaction */
     tdata = tsx_lookup(sess, msg);
     if (tdata == NULL) {
-	PJ_LOG(4,(SNAME(sess), 
+	PJ_LOG(5,(SNAME(sess), 
 		  "Transaction not found, response silently discarded"));
 	return PJ_SUCCESS;
     }

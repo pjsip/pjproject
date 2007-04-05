@@ -461,14 +461,15 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 	if (status == PJ_SUCCESS) {
 	    if (ice_st->ice==NULL ||
-		pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0) 
+		(comp->stun_sess &&
+		 pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0)) 
 	    {
 		status = pj_stun_session_on_rx_pkt(comp->stun_sess, comp->pkt,
 						   bytes_read, 
 						   PJ_STUN_IS_DATAGRAM, NULL,
 						   &comp->src_addr, 
 						   comp->src_addr_len);
-	    } else {
+	    } else if (ice_st->ice) {
 		PJ_TODO(DISTINGUISH_BETWEEN_LOCAL_AND_RELAY);
 
 		TRACE_PKT((comp->ice_st->obj_name, 
@@ -481,6 +482,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 					       comp->pkt, bytes_read,
 					       &comp->src_addr, 
 					       comp->src_addr_len);
+	    } else {
+		/* This must have been a very late STUN reponse */
 	    }
 	} else {
 	    (*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, 

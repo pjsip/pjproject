@@ -159,7 +159,13 @@
  * Invalid SDP "candidate" attribute
  */
 #define PJNATH_EICEINCANDSDP	    (PJNATH_ERRNO_START+91) /* 370091 */
-
+/**
+ * @hideinitializer
+ * No host candidate associated with srflx. This error occurs when
+ * a server reflexive candidate is added without the matching 
+ * host candidate.
+ */
+#define PJNATH_EICENOHOSTCAND	    (PJNATH_ERRNO_START+92) /* 370092 */
 
 
 /**

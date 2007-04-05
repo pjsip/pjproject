@@ -59,6 +59,7 @@ static const struct
     PJ_BUILD_ERR( PJNATH_EICEINSRCADDR,	    "Source address mismatch"),
     PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
+    PJ_BUILD_ERR( PJNATH_EICENOHOSTCAND,    "No host candidate associated with srflx"),
 
 };
 #endif	/* PJ_HAS_ERROR_STRING */
