@@ -1126,7 +1126,39 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
     }
 
     if (i == ice->clist.count) {
-	/* All checks have completed */
+	/* All checks have completed, but we don't have nominated pair.
+	 * If agent's role is controlled, check if all components have
+	 * valid pair. If it does, this means the controlled agent has
+	 * finished the check list early and it's waiting for controlling
+	 * agent to send a check with USE-CANDIDATE flag set.
+	 */
+	if (ice->role == PJ_ICE_SESS_ROLE_CONTROLLED) {
+	    unsigned comp_id;
+	    for (comp_id=1; comp_id <= ice->comp_cnt; ++comp_id) {
+		unsigned j;
+		for (j=0; j<ice->valid_list.count; ++j) {
+		    pj_ice_sess_check *vc = &ice->valid_list.checks[j];
+		    if (vc->lcand->comp_id == comp_id)
+			break;
+		}
+		if (j == ice->valid_list.count)
+		    break;
+	    }
+
+	    if (comp_id <= ice->comp_cnt) {
+		/* This component ID doesn't have valid pair.
+		 * Mark ICE as failed. 
+		 */
+		on_ice_complete(ice, PJNATH_EICEFAILED);
+		return PJ_TRUE;
+	    } else {
+		/* All components have a valid pair.
+		 * We should wait until we receive nominated checks.
+		 */
+		return PJ_FALSE;
+	    }
+	}
+
 	on_ice_complete(ice, PJNATH_EICEFAILED);
 	return PJ_TRUE;
     }
