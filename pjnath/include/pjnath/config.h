@@ -165,6 +165,25 @@
 
 
 /**
+ * According to ICE Section 8.2. Updating States, if an In-Progress pair in 
+ * the check list is for the same component as a nominated pair, the agent 
+ * SHOULD cease retransmissions for its check if its pair priority is lower
+ * than the lowest priority nominated pair for that component.
+ *
+ * If a higher priority check is In Progress, this rule would cause that
+ * check to be performed even when it most likely will fail.
+ *
+ * The macro here controls if ICE session should cancel all In Progress 
+ * checks for the same component regardless of its priority.
+ *
+ * Default: 1 (yes, cancel all)
+ */
+#ifndef PJ_ICE_CANCEL_ALL
+#   define PJ_ICE_CANCEL_ALL			    1
+#endif
+
+
+/**
  * Minimum interval value to be used for sending STUN keep-alive on the ICE
  * stream transport, in seconds. This minimum interval, plus a random value
  * which maximum is PJ_ICE_ST_KEEP_ALIVE_MAX_RAND, specify the actual interval
@@ -192,7 +211,6 @@
 #ifndef PJ_ICE_ST_KEEP_ALIVE_MAX_RAND
 #   define PJ_ICE_ST_KEEP_ALIVE_MAX_RAND	    5
 #endif
-
 
 
 

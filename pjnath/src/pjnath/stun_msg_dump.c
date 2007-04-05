@@ -227,7 +227,7 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     APPLY();
 
     len = pj_ansi_snprintf(p, end-p, 
-			   " Hdr: length=%d, magic=%08x, tsx_id=%08x %08x %08x\n"
+			   " Hdr: length=%d, magic=%08x, tsx_id=%08x%08x%08x\n"
 			   " Attributes:\n",
 			   msg->hdr.length,
 			   msg->hdr.magic,

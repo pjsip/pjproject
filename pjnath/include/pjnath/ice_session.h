@@ -419,6 +419,31 @@ typedef enum pj_ice_sess_role
 
 
 /**
+ * This structure represents an incoming check (an incoming Binding
+ * request message), and is mainly used to keep early checks in the
+ * list in the ICE session. An early check is a request received
+ * from remote when we haven't received SDP answer yet, therefore we
+ * can't perform triggered check. For such cases, keep the incoming
+ * request in a list, and we'll do triggered checks (simultaneously)
+ * as soon as we receive answer.
+ */
+typedef struct pj_ice_rx_check
+{
+    PJ_DECL_LIST_MEMBER(struct pj_ice_rx_check);
+
+    unsigned		 comp_id;	/**< Component ID.		*/
+
+    pj_sockaddr		 src_addr;	/**< Source address of request	*/
+    unsigned		 src_addr_len;	/**< Length of src address.	*/
+
+    pj_bool_t		 use_candidate;	/**< USE-CANDIDATE is present?	*/
+    pj_uint32_t		 priority;	/**< PRIORITY value in the req.	*/
+    pj_stun_uint64_attr *role_attr;	/**< ICE-CONTROLLING/CONTROLLED	*/
+
+} pj_ice_rx_check;
+
+
+/**
  * This structure describes the ICE session. For this version of PJNATH,
  * an ICE session corresponds to a single media stream (unlike the ICE
  * session described in the ICE standard where an ICE session covers the
@@ -462,6 +487,9 @@ struct pj_ice_sess
     /* Remote candidates */
     unsigned		 rcand_cnt;		    /**< # of remote cand.  */
     pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
+
+    /* List of eearly checks */
+    pj_ice_rx_check	 early_check;		    /**< Early checks.	    */
 
     /* Checklist */
     pj_ice_sess_checklist clist;		    /**< Active checklist   */

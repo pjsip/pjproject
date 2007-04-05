@@ -29,7 +29,9 @@
 #define REQ_PORT_PROPS	-1		    /* -1 to disable */
 #define REQ_IP		NULL		    /* IP address string */
 
-#define OPTIONS		PJ_STUN_NO_AUTHENTICATE
+//#define OPTIONS		PJ_STUN_NO_AUTHENTICATE
+#define OPTIONS		0
+
 
 static struct global
 {

@@ -358,6 +358,20 @@ PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
 						pj_status_t status);
 
 /**
+ * Explicitly request retransmission of the request. Normally application
+ * doesn't need to do this, but this functionality is needed by ICE to
+ * speed up connectivity check completion.
+ *
+ * @param sess	    The STUN session instance.
+ * @param tdata	    The request message previously sent.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
+						    pj_stun_tx_data *tdata);
+
+
+/**
  * Application must call this function to notify the STUN session about
  * the arrival of STUN packet. The STUN packet MUST have been checked
  * first with #pj_stun_msg_check() to verify that this is indeed a valid

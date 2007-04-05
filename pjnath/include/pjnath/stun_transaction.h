@@ -221,6 +221,16 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						 void *pkt,
 						 unsigned pkt_len);
 
+/**
+ * Request to retransmit the request. Normally application should not need
+ * to call this function since retransmission would be handled internally,
+ * but this functionality is needed by ICE.
+ *
+ * @param tsx		The STUN client transaction instance.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx);
 
 
 /**

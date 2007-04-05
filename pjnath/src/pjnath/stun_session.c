@@ -710,8 +710,28 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
 
     pj_mutex_unlock(sess->mutex);
     return PJ_SUCCESS;
-
 }
+
+/*
+ * Explicitly request retransmission of the request.
+ */
+PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
+						   pj_stun_tx_data *tdata)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
+
+    pj_mutex_lock(sess->mutex);
+
+    status = pj_stun_client_tsx_retransmit(tdata->client_tsx);
+
+    pj_mutex_unlock(sess->mutex);
+
+    return status;
+}
+
 
 /* Send response */
 static pj_status_t send_response(pj_stun_session *sess, 

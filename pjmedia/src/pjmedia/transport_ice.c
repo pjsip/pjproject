@@ -464,12 +464,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     pj_sockaddr_in_init(&conn_addr.ipv4, &conn->addr, 
 			(pj_uint16_t)sdp_med->desc.port);
 
-    /* Find ice-ufrag attribute in session descriptor */
-    attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
+    /* Find ice-ufrag attribute in media descriptor */
+    attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
 				  "ice-ufrag", NULL);
     if (attr == NULL) {
-	/* Find in media descriptor */
-	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
+	/* Find ice-ufrag attribute in session descriptor */
+	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				      "ice-ufrag", NULL);
 	if (attr == NULL) {
 	    set_no_ice(tp_ice, "ice-ufrag attribute not found");
@@ -478,12 +478,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     }
     uname = attr->value;
 
-    /* Find ice-pwd attribute in session descriptor */
-    attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
+    /* Find ice-pwd attribute in media descriptor */
+    attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
 				  "ice-pwd", NULL);
     if (attr == NULL) {
-	/* Not found, find in media descriptor */
-	attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
+	/* Find ice-pwd attribute in session descriptor */
+	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
 				      "ice-pwd", NULL);
 	if (attr == NULL) {
 	    set_no_ice(tp_ice, "ice-pwd attribute not found");

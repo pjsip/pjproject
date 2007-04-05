@@ -294,6 +294,22 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
     }
 }
 
+/*
+ * Request to retransmit the request.
+ */
+PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx)
+{
+    if (tsx->destroy_timer.id != 0) {
+	return PJ_SUCCESS;
+    }
+
+    if (tsx->retransmit_timer.id != 0) {
+	pj_timer_heap_cancel(tsx->cfg->timer_heap, &tsx->retransmit_timer);
+	tsx->retransmit_timer.id = 0;
+    }
+
+    return tsx_transmit_msg(tsx);
+}
 
 /* Timer callback to destroy transaction */
 static void destroy_timer_callback(pj_timer_heap_t *timer_heap, 
