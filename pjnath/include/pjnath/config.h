@@ -25,6 +25,8 @@
  * @brief Compile time settings
  */
 
+#include <pj/types.h>
+
 /**
  * @defgroup PJNATH_CONFIG Configuration
  * @brief Various compile time settings
