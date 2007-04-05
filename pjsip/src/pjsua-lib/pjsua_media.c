@@ -401,21 +401,8 @@ pj_status_t pjsua_media_subsys_start(void)
     {
 	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
 	if (status != PJ_SUCCESS) {
-	    /* Error opening sound device, use null device */
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(THIS_FILE, 
-		      "Error opening default sound device (%s (status=%d)). "
-		      "Will use NULL device instead",
-		      errmsg, status));
-	    
-	    status = pjsua_set_null_snd_dev();
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error opening NULL sound device",
-			     status);
-		return status;
-	    }
+	    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+	    return status;
 	}
     }
 
