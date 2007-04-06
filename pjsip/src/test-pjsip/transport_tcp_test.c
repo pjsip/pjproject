@@ -27,6 +27,7 @@
 /*
  * TCP transport test.
  */
+#if PJ_HAS_TCP
 int transport_tcp_test(void)
 {
     enum { SEND_RECV_LOOP = 8 };
@@ -141,3 +142,9 @@ int transport_tcp_test(void)
     /* Done */
     return 0;
 }
+#else	/* PJ_HAS_TCP */
+int transport_tcp_test(void)
+{
+    return 0;
+}
+#endif	/* PJ_HAS_TCP */

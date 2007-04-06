@@ -1191,6 +1191,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].local_name = tp->local_name;
 	pjsua_var.tpdata[id].data.tp = tp;
 
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+
     } else if (type == PJSIP_TRANSPORT_TCP) {
 	/*
 	 * Create TCP transport.
@@ -1241,6 +1243,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].type = type;
 	pjsua_var.tpdata[id].local_name = tcp->addr_name;
 	pjsua_var.tpdata[id].data.factory = tcp;
+
+#endif	/* PJ_HAS_TCP */
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     } else if (type == PJSIP_TRANSPORT_TLS) {

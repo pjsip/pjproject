@@ -366,7 +366,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
 {
+#if PJ_HAS_TCP
     unsigned i;
+#endif
     pj_ioqueue_key_t *key;
 
     PJ_CHECK_STACK();
@@ -739,7 +741,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 {
     DWORD dwMsec;
+#if PJ_HAS_TCP
     int connect_count = 0;
+#endif
     int event_count = 0;
 
     PJ_ASSERT_RETURN(ioqueue, -PJ_EINVAL);

@@ -36,7 +36,7 @@
 #define HAS_UDP_TRANSPORT
 
 /* If this macro is set, TCP transport will be initialized at port 5060 */
-#define HAS_TCP_TRANSPORT
+#define HAS_TCP_TRANSPORT   (1 && PJ_HAS_TCP)
 
 /* Log identification */
 #define THIS_FILE	"sipstateless.c"
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-#ifdef HAS_TCP_TRANSPORT
+#if HAS_TCP_TRANSPORT
     /* 
      * Add UDP transport, with hard-coded port 
      */

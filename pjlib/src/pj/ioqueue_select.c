@@ -556,8 +556,10 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->rfdset);
     else if (event_type == WRITEABLE_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->wfdset);
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
     else if (event_type == EXCEPTION_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->xfdset);
+#endif
     else
         pj_assert(0);
 
@@ -580,8 +582,10 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->rfdset);
     else if (event_type == WRITEABLE_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->wfdset);
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
     else if (event_type == EXCEPTION_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->xfdset);
+#endif
     else
         pj_assert(0);
 
@@ -649,8 +653,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      * Otherwise select() will return error.
      */
     if (PJ_FD_COUNT(&ioqueue->rfdset)==0 &&
-        PJ_FD_COUNT(&ioqueue->wfdset)==0 &&
-        PJ_FD_COUNT(&ioqueue->xfdset)==0)
+        PJ_FD_COUNT(&ioqueue->wfdset)==0 
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+        && PJ_FD_COUNT(&ioqueue->xfdset)==0
+#endif
+	)
     {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	scan_closing_keys(ioqueue);

@@ -26,6 +26,11 @@
 
 #include <pjsip/sip_transport.h>
 
+
+/* Only declare the API if PJ_HAS_TCP is true */
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+
+
 PJ_BEGIN_DECL
 
 /**
@@ -111,5 +116,7 @@ PJ_END_DECL
 /**
  * @}
  */
+
+#endif	/* PJ_HAS_TCP */
 
 #endif	/* __PJSIP_TRANSPORT_TCP_H__ */
