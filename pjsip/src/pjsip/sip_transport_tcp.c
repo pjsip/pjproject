@@ -29,6 +29,9 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+/* Only declare the API if PJ_HAS_TCP is true */
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+
 
 #define THIS_FILE	"sip_transport_tcp.c"
 
@@ -1364,4 +1367,6 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     /* Flush all pending send operations */
     tcp_flush_pending_tx(tcp);
 }
+
+#endif	/* PJ_HAS_TCP */
 

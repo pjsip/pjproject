@@ -155,6 +155,7 @@ PJ_INLINE(int) key_has_pending_accept(pj_ioqueue_key_t *key)
 #if PJ_HAS_TCP
     return !pj_list_empty(&key->accept_list);
 #else
+    PJ_UNUSED_ARG(key);
     return 0;
 #endif
 }

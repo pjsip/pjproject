@@ -226,8 +226,10 @@ int test_main(void)
 #if INCLUDE_TSX_TEST
     unsigned i;
     pjsip_transport *tp;
+#if PJ_HAS_TCP
     pjsip_tpfactory *tpfactory;
-#endif
+#endif	/* PJ_HAS_TCP */
+#endif	/* INCLUDE_TSX_TEST */
     int line;
 
     pj_log_set_level(log_level);
@@ -331,6 +333,7 @@ int test_main(void)
 	++tsx_test_cnt;
     }
 
+#if PJ_HAS_TCP
     status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
     if (status == PJ_SUCCESS) {
 	tsx_test[tsx_test_cnt].port = tpfactory->addr_name.port;
@@ -342,6 +345,7 @@ int test_main(void)
 	rc = -4;
 	goto on_return;
     }
+#endif
 
 
     for (i=0; i<tsx_test_cnt; ++i) {

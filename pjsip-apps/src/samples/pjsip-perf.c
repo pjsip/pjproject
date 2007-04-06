@@ -771,7 +771,9 @@ static pj_status_t init_sip()
 	if (app.local_port != 0)
 	    addrname.port = app.local_port;
 
-	if (app.use_tcp) {
+	if (0) {
+#if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
+	} else if (app.use_tcp) {
 	    pj_sockaddr_in local_addr;
 	    pjsip_tpfactory *tpfactory;
 	    
@@ -783,6 +785,7 @@ static pj_status_t init_sip()
 		app.local_addr = tpfactory->addr_name.host;
 		app.local_port = tpfactory->addr_name.port;
 	    }
+#endif
 	} else {
 	    pjsip_transport *tp;
 
