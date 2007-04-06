@@ -53,10 +53,10 @@ static void usage(void)
 {
     puts("Options:\n"
 	 "\n"
-	 " --port N       Set local listener port to N\n"
-	 " --rr           Perform record routing\n"
-	 " --log-level N  Set log level to N (default: 4)\n"
-	 " --help         Show this help screen\n"
+	 " -p, --port N       Set local listener port to N\n"
+	 " -R, --rr           Perform record routing\n"
+	 " -L, --log-level N  Set log level to N (default: 4)\n"
+	 " -h, --help         Show this help screen\n"
 	 );
 }
 
@@ -68,12 +68,13 @@ static pj_status_t init_options(int argc, char *argv[])
 	{ "rr",		0, 0, 'R'},
 	{ "log-level",	1, 0, 'L'},
 	{ "help",	0, 0, 'h'},
+	{ NULL,		0, 0, 0}
     };
     int c;
     int opt_ind;
 
     pj_optind = 0;
-    while((c=pj_getopt_long(argc, argv, "", long_opt, &opt_ind))!=-1) {
+    while((c=pj_getopt_long(argc, argv, "p:L:Rh", long_opt, &opt_ind))!=-1) {
 	switch (c) {
 	case 'p':
 	    global.port = atoi(pj_optarg);
