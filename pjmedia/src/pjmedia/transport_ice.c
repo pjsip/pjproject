@@ -658,7 +658,7 @@ static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     if (tp_ice->ice_st->comp_cnt > 1) {
 	return pj_ice_strans_sendto(tp_ice->ice_st, 2, 
-				    pkt, size, &tp_ice->remote_rtp,
+				    pkt, size, &tp_ice->remote_rtcp,
 				    sizeof(pj_sockaddr_in));
     } else {
 	return PJ_SUCCESS;
