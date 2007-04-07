@@ -1,8 +1,28 @@
 /* Included by resamplesubs.c */
-#define LARGE_FILTER_NMULT ((RES_HWORD)65)
+
+/* 
+
+   USAGE: resample -expensiveFilter ...
+
+The -expensiveFilter option (-e) for resample selects the 'expensive'
+preloaded resampling filter.  The default filter requires an
+oversampling factor of around 20% to avoid aliasing.  The expensive
+filter is five times more computationally expensive and requires only
+about a 5-10% oversampling factor.  Both filters have comparable
+stop-band attenuations (approximately 80 dB). If both options -f and
+-e are present, the last one on the command line takes effect.  The
+expensive filter is not yet documented because its cut-off frequency
+should be retuned slightly for optimal performance.  Also, we plan to
+compute truly optimized resampling filters sometime in the future.  In
+the meantime, the default filter is fast, well tuned, and works very
+well for its level of computational expense.
+
+*/
+
+#define LARGE_FILTER_NMULT ((HWORD)65)
 #define LARGE_FILTER_SCALE 14746 /* Unity-gain scale factor */
 #define LARGE_FILTER_NWING 8192 /* Filter table length */
-static const RES_HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
+static HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
 32767,
 32766,
 32764,
@@ -8196,7 +8216,7 @@ static const RES_HWORD LARGE_FILTER_IMP[] /* Impulse response */ = {
 0,
 0};
 
-static const RES_HWORD LARGE_FILTER_IMPD[] /* Impulse response differences */ = {
+static HWORD LARGE_FILTER_IMPD[] /* Impulse response differences */ = {
 -1,
 -2,
 -3,

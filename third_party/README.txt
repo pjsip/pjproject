@@ -11,6 +11,7 @@ using the project files/Makefiles provided by the software.
 
 = Versions =
 
-speex:		SVN
-portaudio:	SVN
-gsm:		1.0.12
+speex:		SVN -r12832
+portaudio:	SVN -r1186
+gsm:		gsm-1.0.12
+resample:	resample-1.8.1
