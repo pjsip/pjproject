@@ -429,17 +429,5 @@ SOURCE=..\include\pjmedia\wav_port.h
 SOURCE=..\include\pjmedia\wave.h
 # End Source File
 # End Group
-# Begin Group "Resample Files"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\pjmedia\largefilter.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\smallfilter.h
-# End Source File
-# End Group
 # End Target
 # End Project

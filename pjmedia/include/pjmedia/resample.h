@@ -66,6 +66,7 @@ typedef struct pjmedia_resample pjmedia_resample;
  *				used, at the expense of more CPU and memory,
  *				because temporary buffer needs to be created.
  * @param large_filter		If true, large filter size will be used.
+ * @param channel_count		Number of channels.
  * @param rate_in		Clock rate of the input samples.
  * @param rate_out		Clock rate of the output samples.
  * @param samples_per_frame	Number of samples per frame in the input.
@@ -76,6 +77,7 @@ typedef struct pjmedia_resample pjmedia_resample;
 PJ_DECL(pj_status_t) pjmedia_resample_create(pj_pool_t *pool,
 					     pj_bool_t high_quality,
 					     pj_bool_t large_filter,
+					     unsigned channel_count,
 					     unsigned rate_in,
 					     unsigned rate_out,
 					     unsigned samples_per_frame,
@@ -105,6 +107,13 @@ PJ_DECL(void) pjmedia_resample_run( pjmedia_resample *resample,
  */
 PJ_DECL(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample);
 
+
+/**
+ * Destroy the resample.
+ *
+ * @param resample		The resample session.
+ */
+PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample *resample);
 
 /**
  * @}

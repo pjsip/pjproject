@@ -66,7 +66,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /GX /Ox /Ot /Og /Oi /Ob2 /I "." /I "../../speex/include" /I "../../../pjlib/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /GX /ZI /Od /Ob0 /I "." /I "../../speex/include" /I "../../../pjlib/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE RSC /l 0x809 /d "_DEBUG"
 # ADD RSC /l 0x809 /d "_DEBUG"
 BSC32=bscmake.exe
