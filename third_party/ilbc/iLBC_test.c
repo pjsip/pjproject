@@ -232,7 +232,7 @@
        /* loop over input blocks */
 
        while (fread(data,sizeof(short),Enc_Inst.blockl,ifileid)==
-               Enc_Inst.blockl) {
+               (size_t)Enc_Inst.blockl) {
 
            blockcount++;
 

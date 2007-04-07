@@ -29,8 +29,8 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
-#include "ilbc/iLBC_encode.h"
-#include "ilbc/iLBC_decode.h"
+#include "../../third_party/ilbc/iLBC_encode.h"
+#include "../../third_party/ilbc/iLBC_decode.h"
 
 
 /*
