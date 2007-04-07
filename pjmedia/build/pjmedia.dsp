@@ -194,11 +194,16 @@ SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\resample.c
+SOURCE=..\src\pjmedia\resample_port.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\resample_port.c
+SOURCE=..\src\pjmedia\resample_resample.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\resample_speex.c
+# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 

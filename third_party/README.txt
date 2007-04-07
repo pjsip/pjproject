@@ -14,4 +14,5 @@ using the project files/Makefiles provided by the software.
 speex:		SVN -r12832
 portaudio:	SVN -r1186
 gsm:		gsm-1.0.12
-resample:	resample-1.8.1
+ilbc:		from RFC
+plc_steveu:	Steve Underwood's PLC
