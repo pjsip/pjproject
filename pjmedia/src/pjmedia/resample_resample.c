@@ -477,6 +477,7 @@ struct pjmedia_resample
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 					     pj_bool_t high_quality,
 					     pj_bool_t large_filter,
+					     unsigned channel_count,
 					     unsigned rate_in,
 					     unsigned rate_out,
 					     unsigned samples_per_frame,
@@ -489,6 +490,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     resample = pj_pool_alloc(pool, sizeof(pjmedia_resample));
     PJ_ASSERT_RETURN(resample, PJ_ENOMEM);
+
+    PJ_UNUSED_ARG(channel_count);
 
     /*
      * If we're downsampling, always use the fast algorithm since it seems
@@ -702,3 +705,7 @@ PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample)
     return resample->frame_size;
 }
 
+PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
+{
+    PJ_UNUSED_ARG(resample);
+}

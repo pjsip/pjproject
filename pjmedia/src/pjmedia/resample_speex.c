@@ -31,10 +31,6 @@
 struct pjmedia_resample
 {
     SpeexResamplerState *state;
-#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT != 0
-    float		*in_buffer;
-    float		*out_buffer;
-#endif
     unsigned		 in_samples_per_frame;
     unsigned		 out_samples_per_frame;
 };
@@ -61,7 +57,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
     if (high_quality) {
 	if (large_filter)
-	    quality = 8;
+	    quality = 10;
 	else
 	    quality = 7;
     } else {
@@ -75,12 +71,6 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     if (resample->state == NULL || err != RESAMPLER_ERR_SUCCESS)
 	return PJ_ENOMEM;
 
-#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT != 0
-    resample->in_buffer = pj_pool_calloc(pool, resample->in_samples_per_frame, 
-					 sizeof(float));
-    resample->out_buffer=pj_pool_calloc(pool, resample->out_samples_per_frame,
-				        sizeof(float));
-#endif
 
     *p_resample = resample;
 
@@ -96,33 +86,15 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 				   pj_int16_t *output )
 {
     spx_uint32_t in_length, out_length;
-    float *fp;
-    unsigned i;
 
     PJ_ASSERT_ON_FAIL(resample, return);
 
     in_length = resample->in_samples_per_frame;
     out_length = resample->out_samples_per_frame;
 
-#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT != 0
-    fp = resample->in_buffer;
-    for (i=0; i<in_length; ++i) {
-	fp[i] = input[i];
-    }
-    speex_resampler_process_interleaved_float(resample->state,
-					      resample->in_buffer, &in_length,
-					      resample->out_buffer, &out_length);
-    fp = resample->out_buffer;
-    for (i=0; i<out_length; ++i) {
-	output[i] = (pj_int16_t)fp[i];
-    }
-#else
-    PJ_UNUSED_ARG(dst);
-    PJ_UNUSED_ARG(i);
     speex_resampler_process_interleaved_int(resample->state,
 					    (const __int16 *)input, &in_length,
 					    (__int16 *)output, &out_length);
-#endif
 
     pj_assert(in_length == resample->in_samples_per_frame);
     pj_assert(out_length == resample->out_samples_per_frame);
