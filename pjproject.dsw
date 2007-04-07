@@ -3,7 +3,31 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "libspeex"=".\third_party\speex\win32\libspeex\libspeex.dsp" - Package Owner=<4>
+Project: "libgsmcodec"=".\THIRD_PARTY\BUILD\GSM\libgsmcodec.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libportaudio"=".\THIRD_PARTY\BUILD\PORTAUDIO\libportaudio.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libspeex"=".\third_party\build\speex\libspeex.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

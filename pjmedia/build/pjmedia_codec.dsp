@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /c
+# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party/speex/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party/speex/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -161,114 +161,6 @@ SOURCE="..\include\pjmedia-codec\speex.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\types.h"
-# End Source File
-# End Group
-# Begin Group "GSM 06.10 Library"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\add.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\code.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\config.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\debug.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\decode.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_create.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_decode.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_destroy.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_encode.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_option.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\gsm_print.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\long_term.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\lpc.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\preprocess.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\private.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\proto.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\rpe.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\short_term.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\table.c"
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\toast.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\pjmedia-codec\gsm\unproto.h"
 # End Source File
 # End Group
 # Begin Group "iLBC Codec"

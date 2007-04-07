@@ -27,7 +27,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
-#include "gsm/gsm.h"
+#include "../../third_party/gsm/inc/gsm.h"
 
 /*
  * Only build this file if PJMEDIA_HAS_GSM_CODEC != 0
