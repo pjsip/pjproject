@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /I "../src/pjmedia-codec" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /I "../src/pjmedia-codec" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -161,10 +161,6 @@ SOURCE=..\src\pjmedia\mem_player.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\mp3_writer.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
@@ -181,15 +177,6 @@ SOURCE=..\src\pjmedia\plc_common.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\plc_steveu.c
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\plc_steveu.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
@@ -203,7 +190,6 @@ SOURCE=..\src\pjmedia\resample_resample.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\resample_speex.c
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -336,10 +322,6 @@ SOURCE=..\include\pjmedia\master_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\mem_port.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\mp3_port.h
 # End Source File
 # Begin Source File
 

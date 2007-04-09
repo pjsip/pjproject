@@ -16,16 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-
 #include <pjmedia/resample.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 
+#if defined(PJMEDIA_HAS_SPEEX_RESAMPLE) && PJMEDIA_HAS_SPEEX_RESAMPLE != 0
+
 #include <speex/speex_resampler.h>
 
-#define THIS_FILE   "resample.c"
+#define THIS_FILE   "resample_speex.c"
 
 
 struct pjmedia_resample
@@ -116,4 +117,10 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 	resample->state = NULL;
     }
 }
+
+#else /* PJMEDIA_HAS_SPEEX_RESAMPLE */
+
+int pjmedia_resample_speex_excluded;
+
+#endif	/* PJMEDIA_HAS_SPEEX_RESAMPLE */
 

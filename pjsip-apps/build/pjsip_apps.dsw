@@ -3,6 +3,66 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
+Project: "libgsmcodec"="..\..\third_party\build\gsm\libgsmcodec.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libilbccodec"="..\..\third_party\build\ilbc\libilbccodec.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libportaudio"="..\..\third_party\build\portaudio\libportaudio.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libresample"="..\..\third_party\build\resample\libresample.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libspeex"="..\..\third_party\build\speex\libspeex.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjlib"="..\..\pjlib\build\pjlib.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -134,6 +194,21 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name pjnath
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libgsmcodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libilbccodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libportaudio
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libresample
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libspeex
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -185,6 +260,21 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name pjnath
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libgsmcodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libilbccodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libportaudio
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libresample
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libspeex
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -220,6 +310,21 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjsua_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libgsmcodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libilbccodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libportaudio
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libresample
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libspeex
     End Project Dependency
 }}}
 

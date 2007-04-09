@@ -32,17 +32,17 @@ RSC=rc.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "output\libspeex-i386-vc6-release"
-# PROP BASE Intermediate_Dir "output\libspeex-i386-vc6-release"
+# PROP BASE Output_Dir "output\libspeex-i386-win32-vc6-release"
+# PROP BASE Intermediate_Dir "output\libspeex-i386-win32-vc6-release"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "output\libspeex-i386-vc6-release"
-# PROP Intermediate_Dir "output\libspeex-i386-vc6-release"
+# PROP Output_Dir "output\libspeex-i386-win32-vc6-release"
+# PROP Intermediate_Dir "output\libspeex-i386-win32-vc6-release"
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /GX /Ox /Ot /Og /Oi /Ob2 /I "." /I "../../speex/include" /I "../../../pjlib/include" /D inline=__inline /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MD /GX /Ox /Ot /Og /Oi /Ob2 /I "." /I "../../speex/include" /I "../../../pjlib/include" /D inline=__inline /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE RSC /l 0x809 /d "NDEBUG"
 # ADD RSC /l 0x809 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -50,23 +50,23 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\..\lib\libspeex-i386-vc6-release.lib"
+# ADD LIB32 /nologo /out:"..\..\lib\libspeex-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "libspeex - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "output\libspeex-i386-vc6-debug"
-# PROP BASE Intermediate_Dir "output\libspeex-i386-vc6-debug"
+# PROP BASE Output_Dir "output\libspeex-i386-win32-vc6-debug"
+# PROP BASE Intermediate_Dir "output\libspeex-i386-win32-vc6-debug"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "output\libspeex-i386-vc6-debug"
-# PROP Intermediate_Dir "output\libspeex-i386-vc6-debug"
+# PROP Output_Dir "output\libspeex-i386-win32-vc6-debug"
+# PROP Intermediate_Dir "output\libspeex-i386-win32-vc6-debug"
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /GX /ZI /Od /Ob0 /I "." /I "../../speex/include" /I "../../../pjlib/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
+# ADD CPP /nologo /MTd /W3 /GX /ZI /Od /I "." /I "../../speex/include" /I "../../../pjlib/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "HAVE_CONFIG_H" /YX /FD /c
 # ADD BASE RSC /l 0x809 /d "_DEBUG"
 # ADD RSC /l 0x809 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\..\lib\libspeex-i386-vc6-debug.lib"
+# ADD LIB32 /nologo /out:"..\..\lib\libspeex-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 

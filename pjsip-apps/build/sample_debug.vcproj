@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="sample_debug"
-	ProjectGUID="{E13CECAA-8A8E-48CC-841F-5C4B845F0ECB}"
+	ProjectGUID="{A0F1AA62-0F6F-420D-B09A-AC04B6862821}"
 	RootNamespace="sample_debug"
 	>
 	<Platforms>

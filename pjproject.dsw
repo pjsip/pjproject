@@ -39,6 +39,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "libresample"=".\THIRD_PARTY\BUILD\RESAMPLE\libresample.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "libspeex"=".\third_party\build\speex\libspeex.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -227,6 +239,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libspeex
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libresample
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -274,6 +289,21 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjsua_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libgsmcodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libilbccodec
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libportaudio
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libresample
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libspeex
     End Project Dependency
 }}}
 
