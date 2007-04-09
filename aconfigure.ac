@@ -17,6 +17,7 @@ AC_CONFIG_FILES([build.mak
 	         pjlib-util/build/os-auto.mak 
 		 pjmedia/build/os-auto.mak
 		 pjsip/build/os-auto.mak
+		 third_party/build/portaudio/Makefile
 	        ])
 
 
