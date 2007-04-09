@@ -1729,6 +1729,9 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 	pjsua_call *call = &pjsua_var.calls[i];
 	pjmedia_sock_info skinfo;
 
+	/* MSVC complains about skinfo not being initialized */
+	pj_bzero(&skinfo, sizeof(skinfo));
+
 	pjmedia_transport_get_info(call->med_tp, &skinfo);
 
 	PJ_LOG(3,(THIS_FILE, " %s: %s:%d",
