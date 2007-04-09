@@ -1,48 +1,15 @@
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-# Before we include local os-mak, set default sound framework to use
-# PortAudio.
-export SOUND_OBJS = $(PORTAUDIO_OBJS)
+RULES_MAK := $(PJDIR)/build/rules.mak
 
-# Also set default codec files to be included
-# If these codecs are to be excluded, then the appropriate PJMEDIA_HAS_XXX_CODEC macros 
-# MUST be set too in pj/config_site.h, to inform applications about the codec 
-# availability.
-#
-# E.g., to exclude Speex, we need to exclude SPEEX_OBJS from CODEC_OBJS, AND specify
-#       "#define PJMEDIA_HAS_SPEEX_CODEC 0" in pj/config_site.h.
-#
-export CODEC_OBJS = l16.o $(GSM_OBJS) $(SPEEX_OBJS) $(ILBC_OBJS)
-
-
-include ../../build/common.mak
-
-RULES_MAK := ../../build/rules.mak
-
-PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
-PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
-PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
+PJLIB_LIB:=$(PJDIR)/pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
+PJLIB_UTIL_LIB:=$(PJDIR)/pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
+PJNATH_LIB:=$(PJDIR)/pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 
 export PJMEDIA_LIB:=../lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
 export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
 export PJSDP_LIB:=../lib/libpjsdp-$(TARGET_NAME)$(LIBEXT)
-
-###############################################################################
-# Sound frameworks
-# These are activated by setting SOUND_OBJS var, e.g.:
-#  export SOUND_OBJS = $(PORTAUDIO_OBJS), or
-#  export SOUND_OBJS = $(NULLSOUND_OBJS)
-#
-PA_DIR:=portaudio
-PORTAUDIO_OBJS := pasound.o \
-		  $(PA_DIR)/pa_allocation.o \
-		  $(PA_DIR)/pa_converters.o \
-		  $(PA_DIR)/pa_cpuload.o \
-		  $(PA_DIR)/pa_dither.o \
-		  $(PA_DIR)/pa_front.o \
-		  $(PA_DIR)/pa_process.o \
-		  $(PA_DIR)/pa_skeleton.o \
-		  $(PA_DIR)/pa_stream.o \
-		  $(PA_DIR)/pa_trace.o
 
 NULLSOUND_OBJS := nullsound.o
 
@@ -54,8 +21,7 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include \
 		   $(CC_INC)../../pjnath/include \
-		   $(CC_INC)../src/pjmedia/portaudio \
-		   $(CC_INC)../src/pjmedia-codec
+		   $(CC_INC)../src/pjmedia/portaudio 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \

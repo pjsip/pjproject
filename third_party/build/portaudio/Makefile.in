@@ -1,10 +1,10 @@
 # @configure_input@
 include ../../../build.mak
-include ../../../build/common.mak
+include $(PJDIR)/build/common.mak
 
 export LIBDIR := ../../lib
 
-RULES_MAK := ../../build/rules.mak
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 export PORTAUDIO_LIB:=../../lib/libportaudio-$(TARGET_NAME)$(LIBEXT)
 
@@ -51,6 +51,7 @@ export PORTAUDIO_OBJS += pa_linux_alsa.o
 endif
 
 export CFLAGS += -DPA_USE_OSS=1
+export CFLAGS += @ac_pa_cflags@
 export PORTAUDIO_OBJS += pa_unix_oss.o
 endif
 
@@ -95,7 +96,7 @@ endif
 # Gather all flags.
 #
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS) $(CC_INC). $(CC_INC)src \
+		   $(CFLAGS) $(CC_INC). $(CC_INC)src 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
