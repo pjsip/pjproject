@@ -2,12 +2,12 @@
 # Include host/target/compiler selection.
 # This will export CC_NAME, MACHINE_NAME, OS_NAME, and HOST_NAME variables.
 #
-include ../../build.mak
+include $(PJDIR)/build.mak
 
 #
 # Include global compiler specific definitions
 #
-include ../../build/cc-$(CC_NAME).mak
+include $(PJDIR)/build/cc-$(CC_NAME).mak
 
 #
 # (Optionally) Include compiler specific configuration that is
@@ -19,13 +19,13 @@ include ../../build/cc-$(CC_NAME).mak
 #
 # Include global machine specific definitions
 #
-include ../../build/m-$(MACHINE_NAME).mak
+include $(PJDIR)/build/m-$(MACHINE_NAME).mak
 -include m-$(MACHINE_NAME).mak
 
 #
 # Include target OS specific definitions
 #
-include ../../build/os-$(OS_NAME).mak
+include $(PJDIR)/build/os-$(OS_NAME).mak
 
 #
 # (Optionally) Include target OS specific configuration that is
@@ -37,7 +37,7 @@ include ../../build/os-$(OS_NAME).mak
 #
 # Include host specific definitions
 #
-include ../../build/host-$(HOST_NAME).mak
+include $(PJDIR)/build/host-$(HOST_NAME).mak
 
 #
 # (Optionally) Include host specific configuration that is
@@ -49,6 +49,6 @@ include ../../build/host-$(HOST_NAME).mak
 #
 # Include global user configuration, if any
 #
--include ../../user.mak
+-include $(PJDIR)/user.mak
 
 

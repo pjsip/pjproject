@@ -1,4 +1,4 @@
-#include <pj/config.h>
+#include <pj/types.h>
 
 /* Check if we need to use the fixed point version */
 #if !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
@@ -9,6 +9,10 @@
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0) 
 #   include "../../speex/win32/config.h"
+#else
+#define inline __inline
+#define restrict
+#include "misc.h"
 #endif
 
 #ifdef _MSC_VER
