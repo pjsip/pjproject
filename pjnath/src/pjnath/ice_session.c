@@ -549,7 +549,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     char tmp[128];
 
-    PJ_ASSERT_RETURN(ice && comp_id && local_pref &&
+    PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(comp_id <= ice->comp_cnt, PJ_EINVAL);
