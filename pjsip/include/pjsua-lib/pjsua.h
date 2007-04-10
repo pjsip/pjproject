@@ -913,7 +913,8 @@ typedef struct pjsua_config
     pj_str_t	    stun_domain;
 
     /**
-     * Specify STUN server to be used.
+     * Specify STUN server to be used, in "HOST[:PORT]" format. If port is
+     * not specified, default port 3478 will be used.
      */
     pj_str_t	    stun_host;
 
