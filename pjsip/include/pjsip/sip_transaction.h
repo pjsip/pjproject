@@ -74,21 +74,6 @@ typedef enum pjsip_tsx_state_e
 
 
 /**
- * Transaction timeout timer policy, to control the UAC transaction timeout
- * scheduling (see #pjsip_tsx_set_uac_timeout()).
- */
-typedef enum pjsip_tsx_timeout_policy
-{
-    PJSIP_TSX_IGNORE_100 = 1,	/**< To make the UAC transaction NOT to cancel
-				     the timeout timer when 100 response is 
-				     received.*/
-    PJSIP_TSX_IGNORE_1xx = 3	/**< To make the UAC transaction NOT to cancel
-				     the timeout timer when any 1xx responses 
-				     are received. */
-} pjsip_tsx_timeout_policy;
-
-
-/**
  * This structure describes SIP transaction object. The transaction object
  * is used to handle both UAS and UAC transaction.
  */
@@ -144,9 +129,6 @@ struct pjsip_transaction
     int				retransmit_count;/**< Retransmission count. */
     pj_timer_entry		retransmit_timer;/**< Retransmit timer.     */
     pj_timer_entry		timeout_timer;  /**< Timeout timer.         */
-
-    unsigned			msec_timeout;	/**< User set timeout.	    */
-    pjsip_tsx_timeout_policy	timeout_policy;	/**< Timeout policy.	    */
 
     /** Module specific data. */
     void		       *mod_data[PJSIP_MAX_MODULE];
@@ -247,47 +229,6 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
  */
 PJ_DECL(pj_status_t) pjsip_tsx_set_transport(pjsip_transaction *tsx,
 					     const pjsip_tpselector *sel);
-
-
-/**
- * Set the UAC absolute transaction timeout. Normally UAC transaction will
- * stop its timeout timer (timer B for INVITE and timer F for non-INVITE
- * transactions) after a provisional response is received.
- *
- * When this timer is set, the transaction's timer B and F will use this
- * value, and if the \a flag flag is set, the transaction will continue
- * the scheduling of the timeout timer even when provisional response has
- * been received.
- *
- * Note that this function MUST be called AFTER the transaction has been
- * created AND BEFORE any request is transmitted.
- *
- * @param tsx	    The client/UAC transaction.
- * @param msec_time The timeout value, in miliseconds. Currently this
- *		    value must be non-zero (value zero is reserved for
- *		    future use).
- * @param flag	    Option flags to control whether the transaction should
- *		    cancel the timeout timer on arrival of provisional
- *		    responses (which is yes according to RFC 3261).
- *		    The valid values are:
- *		    - PJSIP_TSX_IGNORE_100, to make the UAC transaction
- *		      NOT to cancel the timeout timer when 100 response
- *		      is received.
- *		    - PJSIP_TSX_IGNORE_1xx, to make the UAC transaction
- *		      NOT to cancel the timeout timer when any 1xx 
- *		      responses are received.
- *
- *		    Note that regardless of the values in the \a flag 
- *		    argument, the provisional response would still be
- *		    delivered to transaction user and it will still
- *		    affect the transaction state. The \a flag flag only
- *		    changes the behavior of the timeout timer of the
- *		    transaction.
- */
-PJ_DECL(pj_status_t) pjsip_tsx_set_uac_timeout(pjsip_transaction *tsx,
-					       unsigned msec_time,
-					       pjsip_tsx_timeout_policy flag);
-
 
 /**
  * Call this function to manually feed a message to the transaction.
