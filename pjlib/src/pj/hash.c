@@ -133,6 +133,9 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
 
     if (hval && *hval != 0) {
 	hash = *hval;
+	if (keylen==PJ_HASH_KEY_STRING) {
+	    keylen = pj_ansi_strlen((const char*)key);
+	}
     } else {
 	/* This slightly differs with pj_hash_calc() because we need 
 	 * to get the keylen when keylen is PJ_HASH_KEY_STRING.
