@@ -58,3 +58,14 @@ xhdrid:
 		cp /tmp/id $$f; \
 	done
 
+prefix = /usr/local
+install:
+	mkdir -p $(DESTDIR)$(prefix)/lib
+	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
+	mkdir -p $(DESTDIR)$(prefix)/include
+	cp -RL $$(find  . -name include) $(DESTDIR)$(prefix)
+	cd $(DESTDIR)$(prefix)/lib && for i in $$(find . -name 'libpj*a'); do\
+		ln -s $$i $$(echo $$i | sed -e "s/-$(TARGET_NAME)//");\
+	done
+	mkdir -p $(DESTDIR)$(prefix)/lib/pkgconfig
+	sed -e "s!@PREFIX@!$(DESTDIR)$(prefix)!" libpj.pc.in > $(DESTDIR)/$(prefix)/lib/pkgconfig/libpj.pc

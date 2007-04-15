@@ -1,0 +1,12 @@
+# Package Information for pkg-config
+
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libpj
+Description: Multimedia communication library
+Version: 0.5.10.3
+Libs: -L${libdir} -lpjsua -lpjsip -lpjmedia -lpjsip-ua -lpjsip-simple -lpjsip-ua -lpjmedia-codec -lpjlib-util -lpj
+Cflags: -I${includedir}
