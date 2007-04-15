@@ -21,6 +21,8 @@
 
 #include <pjmedia/types.h>
 
+PJ_BEGIN_DECL
+
 #if defined(PJMEDIA_HAS_ALAW_ULAW_TABLE) && PJMEDIA_HAS_ALAW_ULAW_TABLE!=0
 
 extern const pj_uint8_t pjmedia_linear2ulaw_tab[16384];
@@ -134,9 +136,9 @@ PJ_DECL(unsigned char) pjmedia_alaw2ulaw(unsigned char aval);
  */
 PJ_DECL(unsigned char) pjmedia_ulaw2alaw(unsigned char uval);
 
-
 #endif
 
+PJ_END_DECL
 
 #endif	/* __PJMEDIA_ALAW_ULAW_H__ */
 
