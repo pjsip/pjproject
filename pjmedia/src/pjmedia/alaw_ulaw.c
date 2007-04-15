@@ -154,7 +154,7 @@ pjmedia_linear2alaw(
  */
 PJ_DEF(int)
 pjmedia_alaw2linear(
-	unsigned char	a_val)
+	unsigned a_val)
 {
 	int		t;
 	int		seg;
