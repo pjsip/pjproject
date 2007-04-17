@@ -2,9 +2,10 @@
 # OS make file may override this with os-specific files
 export PJNATH_TEST_OBJS = main.o
 
-include ../../build/common.mak
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-RULES_MAK := ../../build/rules.mak
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
@@ -65,7 +66,7 @@ distclean: realclean
 pjnath:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $(PJNATH_LIB)
 
-pjnath-test: $(PJLIB_LIB)
+pjnath-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $(PJNATH_TEST_EXE)
 
 .PHONY: ../lib/pjnath.ko

@@ -859,7 +859,6 @@ Optional Features:
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-small-filter  Exclude small filter in resampling
   --disable-large-filter  Exclude large filter in resampling
-  --disable-g711-plc      Exclude G.711 Annex A PLC
   --disable-speex-aec     Exclude Speex Acoustic Echo Canceller/AEC
   --disable-g711-codec    Exclude G.711 codecs from the build
   --disable-l16-codec     Exclude Linear/L16 codec family from the build
@@ -1440,7 +1439,7 @@ test -n "$target_alias" &&
   program_prefix=${target_alias}-
                                                   ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
-                                                                      ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/portaudio/Makefile"
+                                                                                ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/Makefile third_party/build/portaudio/Makefile"
 
 
 
@@ -9014,19 +9013,8 @@ else
 echo "${ECHO_T}Checking if large filter is disabled... no" >&6
 fi;
 
+ac_no_g711_plc=yes
 
-# Check whether --enable-g711-plc or --disable-g711-plc was given.
-if test "${enable_g711_plc+set}" = set; then
-  enableval="$enable_g711_plc"
-  if test "$enable_g711_plc" = "no"; then
-		ac_no_g711_plc='-DPJMEDIA_HAS_G711_PLC=0'
-		echo "$as_me:$LINENO: result: Checking if G.711 Annex A PLC is disabled...yes" >&5
-echo "${ECHO_T}Checking if G.711 Annex A PLC is disabled...yes" >&6
-	       fi
-else
-  echo "$as_me:$LINENO: result: Checking if G.711 Annex A PLC is disabled...no" >&5
-echo "${ECHO_T}Checking if G.711 Annex A PLC is disabled...no" >&6
-fi;
 
 
 # Check whether --enable-speex-aec or --disable-speex-aec was given.
@@ -10093,6 +10081,7 @@ do
   "pjlib-util/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjlib-util/build/os-auto.mak" ;;
   "pjmedia/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjmedia/build/os-auto.mak" ;;
   "pjsip/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjsip/build/os-auto.mak" ;;
+  "third_party/Makefile" ) CONFIG_FILES="$CONFIG_FILES third_party/Makefile" ;;
   "third_party/build/portaudio/Makefile" ) CONFIG_FILES="$CONFIG_FILES third_party/build/portaudio/Makefile" ;;
   "pjlib/include/pj/compat/os_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/os_auto.h" ;;
   "pjlib/include/pj/compat/m_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/m_auto.h" ;;

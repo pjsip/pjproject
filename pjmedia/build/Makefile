@@ -1,6 +1,7 @@
 include ../../build.mak
 include $(PJDIR)/build/common.mak
 
+THIRD_PARTY:=../../third_party
 RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=$(PJDIR)/pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
@@ -21,7 +22,7 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include \
 		   $(CC_INC)../../pjnath/include \
-		   $(CC_INC)../src/pjmedia/portaudio 
+		   $(CC_INC)../..
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
@@ -40,8 +41,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			conference.o echo_common.o echo_port.o echo_speex.o \
 			echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
-			mp3_writer.o null_port.o plc_common.o plc_steveu.o \
-			port.o splitcomb.o resample.o \
+			null_port.o plc_common.o port.o splitcomb.o \
+			resample_resample.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o \
 			tonegen.o transport_ice.o transport_udp.o \
@@ -66,43 +67,6 @@ export PJSDP_CFLAGS += $(_CFLAGS)
 ###############################################################################
 # Defines for building PJMEDIA-Codec library
 #
-GSM_OBJS := 	gsm.o \
-		gsm/add.o gsm/code.o gsm/decode.o \
-		gsm/gsm_create.o gsm/gsm_decode.o gsm/gsm_destroy.o \
-		gsm/gsm_encode.o gsm/gsm_explode.o gsm/gsm_implode.o \
-		gsm/gsm_option.o gsm/long_term.o \
-		gsm/lpc.o gsm/preprocess.o gsm/rpe.o gsm/short_term.o \
-		gsm/table.o
-GSM_CFLAGS :=
-
-SPEEX_OBJS :=	speex_codec.o \
-		speex/bits.o speex/cb_search.o speex/exc_10_16_table.o  \
-		speex/exc_10_32_table.o speex/exc_20_32_table.o \
-		speex/exc_5_256_table.o speex/exc_5_64_table.o \
-		speex/exc_8_128_table.o speex/fftwrap.o speex/filterbank.o \
-		speex/filters.o speex/gain_table.o speex/gain_table_lbr.o \
-		speex/hexc_10_32_table.o speex/hexc_table.o \
-		speex/high_lsp_tables.o speex/jitter.o \
-		speex/kiss_fft.o speex/kiss_fftr.o speex/lpc_spx.o \
-		speex/lsp.o speex/lsp_tables_nb.o speex/ltp.o \
-		speex/math_approx.o speex/misc.o speex/mdf.o speex/modes.o \
-		speex/nb_celp.o speex/preprocess_spx.o \
-		speex/quant_lsp.o speex/sb_celp.o speex/smallft.o \
-		speex/speex.o speex/speex_callbacks.o speex/speex_header.o \
-		speex/stereo.o speex/vbr.o speex/vq.o speex/window.o
-SPEEX_CFLAGS := -DHAVE_CONFIG_H=1 -I../src/pjmedia-codec
-
-ILBC_OBJS := 	ilbc.o \
-		ilbc/FrameClassify.o ilbc/LPCdecode.o ilbc/LPCencode.o \
-		ilbc/StateConstructW.o ilbc/StateSearchW.o ilbc/anaFilter.o \
-		ilbc/constants.o ilbc/createCB.o ilbc/doCPLC.o \
-		ilbc/enhancer.o ilbc/filter.o ilbc/gainquant.o \
-		ilbc/getCBvec.o ilbc/helpfun.o ilbc/hpInput.o \
-		ilbc/hpOutput.o ilbc/iCBConstruct.o ilbc/iCBSearch.o \
-		ilbc/iLBC_decode.o ilbc/iLBC_encode.o ilbc/lsf.o \
-		ilbc/packing.o ilbc/syntFilter.o
-ILBC_CFLAGS :=
-
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \

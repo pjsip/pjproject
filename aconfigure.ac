@@ -17,6 +17,7 @@ AC_CONFIG_FILES([build.mak
 	         pjlib-util/build/os-auto.mak 
 		 pjmedia/build/os-auto.mak
 		 pjsip/build/os-auto.mak
+		 third_party/Makefile
 		 third_party/build/portaudio/Makefile
 	        ])
 
@@ -317,17 +318,6 @@ AC_ARG_ENABLE(large-filter,
 		AC_MSG_RESULT([Checking if large filter is disabled... yes])
 	       fi],
 	      AC_MSG_RESULT([Checking if large filter is disabled... no]))
-
-dnl # Include G.711 Annex A PLC
-AC_SUBST(ac_no_g711_plc)
-AC_ARG_ENABLE(g711-plc,
-	      AC_HELP_STRING([--disable-g711-plc],
-			     [Exclude G.711 Annex A PLC]),
-	      [if test "$enable_g711_plc" = "no"; then
-		[ac_no_g711_plc='-DPJMEDIA_HAS_G711_PLC=0']
-		AC_MSG_RESULT([Checking if G.711 Annex A PLC is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if G.711 Annex A PLC is disabled...no]))
 
 dnl # Include Speex AEC
 AC_SUBST(ac_no_speex_aec)

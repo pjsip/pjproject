@@ -3,9 +3,10 @@
 # For example, see os-rtems.mak in current directory.
 export TEST_OBJS = main.o
 
-include ../../build/common.mak
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-RULES_MAK := ../../build/rules.mak
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
@@ -29,17 +30,6 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjmedia/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_SIMPLE_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(LDFLAGS)
-
 
 ###############################################################################
 # Defines for building PJSIP core library
@@ -99,7 +89,7 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o
 export TEST_CFLAGS += $(_CFLAGS)
-export TEST_LDFLAGS += $(_LDFLAGS)
+export TEST_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS)
 export TEST_EXE := ../bin/pjsip-test-$(TARGET_NAME)$(HOST_EXE)
 
 	
