@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PJDIR=`pwd`
+
 #
 # Detect machine, unless the choice has been made already.
 #
@@ -91,16 +93,18 @@ if test -f build.mak; then
   cp -f build.mak build.mak.old
 fi
 
-echo 'Writing build.mak as follows:'
-echo " MACHINE_NAME = $MACHINE_NAME"
-echo " OS_NAME      = $OS_NAME"
-echo " HOST_NAME    = $HOST_NAME"
-echo " CC_NAME      = $CC_NAME"
-echo " TARGET_NAME  = $TARGET_NAME"
-echo " CROSS_COMPILE= $CROSS_COMPILE"
-echo " LINUX_POLL   = $LINUX_POLL"
+echo 'build.mak configurations are set as follows:'
+echo " PJDIR         = $PJDIR"
+echo " MACHINE_NAME  = $MACHINE_NAME"
+echo " OS_NAME       = $OS_NAME"
+echo " HOST_NAME     = $HOST_NAME"
+echo " CC_NAME       = $CC_NAME"
+echo " TARGET_NAME   = $TARGET_NAME"
+echo " CROSS_COMPILE = $CROSS_COMPILE"
+echo " LINUX_POLL    = $LINUX_POLL"
 
 echo "# Auto-generated build.mak" > build.mak
+echo "export PJDIR := $PJDIR" >> build.mak
 echo "export MACHINE_NAME := $MACHINE_NAME" >> build.mak
 echo "export OS_NAME := $OS_NAME" >> build.mak
 echo "export HOST_NAME := $HOST_NAME" >> build.mak
@@ -109,7 +113,30 @@ echo "export TARGET_NAME := $TARGET_NAME" >> build.mak
 echo "export CROSS_COMPILE := $CROSS_COMPILE" >> build.mak
 echo "export LINUX_POLL := $LINUX_POLL" >> build.mak
 
+echo >> build.mak
+
+cat << EOF >> build.mak
+export APP_CC = \$(CROSS_COMPILE)\$(CC_NAME)
+
+export APP_CFLAGS = \$(CC_CFLAGS) \$(OS_CFLAGS) \$(HOST_CFLAGS) \$(M_CFLAGS) \$(CFLAGS) -I\$(PJDIR)/pjlib/include -I\$(PJDIR)/pjlib-util/include -I\$(PJDIR)/pjnath/include -I\$(PJDIR)/pjmedia/include -I\$(PJDIR)/pjsip/include
+
+export APP_CXXFLAGS = \$(APP_CFLAGS)
+
+export APP_LDFLAGS = -L\$(PJDIR)/pjlib/lib -L\$(PJDIR)/pjlib-util/lib -L\$(PJDIR)/pjnath/lib -L\$(PJDIR)/pjmedia/lib -L\$(PJDIR)/pjsip/lib -L\$(PJDIR)/third_party/lib 
+
+export APP_LDLIBS = -lpjsua-\$(TARGET_NAME) -lpjsip-ua-\$(TARGET_NAME) -lpjsip-simple-\$(TARGET_NAME) -lpjsip-\$(TARGET_NAME) -lpjmedia-codec-\$(TARGET_NAME) -lpjmedia-\$(TARGET_NAME) -lpjnath-\$(TARGET_NAME) -lpjlib-util-\$(TARGET_NAME) \$(APP_THIRD_PARTY_LIBS) -lpj-\$(TARGET_NAME) \$(CC_LDFLAGS) \$(OS_LDFLAGS) \$(M_LDFLAGS) \$(HOST_LDFLAGS) \$(LDFLAGS)
+
+export PJ_DIR = \$(PJDIR)
+export PJ_CC = \$(APP_CC)
+export PJ_CFLAGS = \$(APP_CFLAGS)
+export PJ_CXXFLAGS = \$(APP_CXXFLAGS)
+export PJ_LDFLAGS = \$(APP_LDFLAGS)
+export PJ_LDLIBS = \$(APP_LDLIBS)
+
+EOF
+
 touch user.mak
+
 
 echo
 echo "The configuration for current host has been written to 'build.mak'."

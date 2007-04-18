@@ -17,8 +17,8 @@ AC_CONFIG_FILES([build.mak
 	         pjlib-util/build/os-auto.mak 
 		 pjmedia/build/os-auto.mak
 		 pjsip/build/os-auto.mak
-		 third_party/Makefile
-		 third_party/build/portaudio/Makefile
+		 third_party/build/portaudio/os-auto.mak 
+		 third_party/build/os-auto.mak
 	        ])
 
 
@@ -516,4 +516,16 @@ case $target in
 esac
 AC_SUBST(CC)
 AC_OUTPUT()
+
+
+AC_MSG_RESULT([
+
+The configuration for current target has been written to 'build.mak', and 'os-auto.mak' in various build directories.
+
+Customizations can be put in:
+  - 'user.mak'
+  - 'pjlib/include/pj/config_site.h'
+
+The next step now is to run 'make dep' and 'make'.
+])
 

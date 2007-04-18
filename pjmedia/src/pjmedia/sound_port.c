@@ -25,14 +25,6 @@
 #include <pj/rand.h>
 #include <pj/string.h>	    /* pj_memset() */
 
-#ifndef PJMEDIA_SOUND_HAS_AEC
-#   define PJMEDIA_SOUND_HAS_AEC	1
-#endif
-
-#if defined(PJMEDIA_SOUND_HAS_AEC) && PJMEDIA_SOUND_HAS_AEC!=0
-#   include <speex/speex_echo.h>
-#endif
-
 //#define SIMULATE_LOST_PCT   20
 #define AEC_TAIL	    128	    /* default AEC length in ms */
 #define AEC_SUSPEND_LIMIT   5	    /* seconds of no activity	*/

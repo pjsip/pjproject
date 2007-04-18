@@ -52,6 +52,11 @@ export CFLAGS += -DPJMEDIA_HAS_SPEEX_CODEC=0
 else
 export CFLAGS += -I$(THIRD_PARTY)/build/speex -I$(THIRD_PARTY)/speex/include
 export CODEC_OBJS += speex_codec.o
+
+ifneq (@ac_no_speex_aec@,1)
+export PJMEDIA_OBJS += echo_speex.o
+endif
+
 endif
 
 ifeq ($(AC_NO_ILBC_CODEC),1)

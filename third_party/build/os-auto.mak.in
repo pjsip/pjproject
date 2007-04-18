@@ -1,0 +1,17 @@
+DIRS = resample
+
+ifneq (@ac_no_gsm_codec@,1)
+DIRS += gsm
+endif
+
+ifneq (@ac_no_ilbc_codec@,1)
+DIRS += ilbc
+endif
+
+ifneq (@ac_no_speex_codec@,1)
+DIRS += speex
+endif
+
+ifneq ($(findstring pa,@ac_pjmedia_snd@),)
+DIRS += portaudio
+endif

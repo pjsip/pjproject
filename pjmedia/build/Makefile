@@ -1,7 +1,10 @@
 include ../../build.mak
+
+THIRD_PARTY:=$(PJDIR)/third_party
+PA_DIR := $(THIRD_PARTY)/build/portaudio/src
+
 include $(PJDIR)/build/common.mak
 
-THIRD_PARTY:=../../third_party
 RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=$(PJDIR)/pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
@@ -38,7 +41,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			alaw_ulaw.o alaw_ulaw_table.o clock_thread.o codec.o \
-			conference.o echo_common.o echo_port.o echo_speex.o \
+			conference.o echo_common.o echo_port.o \
 			echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o port.o splitcomb.o \

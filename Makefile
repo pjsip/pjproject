@@ -1,7 +1,7 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 
-DIRS = pjlib pjlib-util pjnath pjmedia pjsip pjsip-apps
+DIRS = pjlib pjlib-util pjnath third_party pjmedia pjsip pjsip-apps
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
@@ -9,13 +9,11 @@ endif
 
 all clean dep depend distclean doc print realclean:
 	for dir in $(DIRS); do \
-	   if [ -d $$dir ]; then \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
 		    true; \
 		else \
 		    exit 1; \
 		fi; \
-	   fi; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \

@@ -308,7 +308,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX ac_pjdir CPP EGREP ac_os_objs ac_pjmedia_snd ac_pa_cflags ac_pa_use_alsa ac_no_small_filter ac_no_large_filter ac_no_g711_plc ac_no_speex_aec ac_no_g711_codec ac_no_l16_codec ac_no_gsm_codec ac_no_speex_codec ac_no_ilbc_codec ac_no_ssl openssl_h_present libssl_present libcrypto_present ac_cross_compile ac_linux_poll ac_host ac_main_obj LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX ac_pjdir CPP EGREP ac_os_objs ac_pjmedia_snd ac_pa_cflags ac_pa_use_alsa ac_no_small_filter ac_no_large_filter ac_no_speex_aec ac_no_g711_codec ac_no_l16_codec ac_no_gsm_codec ac_no_speex_codec ac_no_ilbc_codec ac_no_ssl openssl_h_present libssl_present libcrypto_present ac_cross_compile ac_linux_poll ac_host ac_main_obj LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1439,7 +1439,7 @@ test -n "$target_alias" &&
   program_prefix=${target_alias}-
                                                   ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
-                                                                                ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/Makefile third_party/build/portaudio/Makefile"
+                                                                                ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/portaudio/os-auto.mak third_party/build/os-auto.mak"
 
 
 
@@ -9013,9 +9013,6 @@ else
 echo "${ECHO_T}Checking if large filter is disabled... no" >&6
 fi;
 
-ac_no_g711_plc=yes
-
-
 
 # Check whether --enable-speex-aec or --disable-speex-aec was given.
 if test "${enable_speex_aec+set}" = set; then
@@ -10081,8 +10078,8 @@ do
   "pjlib-util/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjlib-util/build/os-auto.mak" ;;
   "pjmedia/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjmedia/build/os-auto.mak" ;;
   "pjsip/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES pjsip/build/os-auto.mak" ;;
-  "third_party/Makefile" ) CONFIG_FILES="$CONFIG_FILES third_party/Makefile" ;;
-  "third_party/build/portaudio/Makefile" ) CONFIG_FILES="$CONFIG_FILES third_party/build/portaudio/Makefile" ;;
+  "third_party/build/portaudio/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES third_party/build/portaudio/os-auto.mak" ;;
+  "third_party/build/os-auto.mak" ) CONFIG_FILES="$CONFIG_FILES third_party/build/os-auto.mak" ;;
   "pjlib/include/pj/compat/os_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/os_auto.h" ;;
   "pjlib/include/pj/compat/m_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjlib/include/pj/compat/m_auto.h" ;;
   "pjmedia/include/pjmedia/config_auto.h" ) CONFIG_HEADERS="$CONFIG_HEADERS pjmedia/include/pjmedia/config_auto.h" ;;
@@ -10203,7 +10200,6 @@ s,@ac_pa_cflags@,$ac_pa_cflags,;t t
 s,@ac_pa_use_alsa@,$ac_pa_use_alsa,;t t
 s,@ac_no_small_filter@,$ac_no_small_filter,;t t
 s,@ac_no_large_filter@,$ac_no_large_filter,;t t
-s,@ac_no_g711_plc@,$ac_no_g711_plc,;t t
 s,@ac_no_speex_aec@,$ac_no_speex_aec,;t t
 s,@ac_no_g711_codec@,$ac_no_g711_codec,;t t
 s,@ac_no_l16_codec@,$ac_no_l16_codec,;t t
@@ -10706,4 +10702,26 @@ if test "$no_create" != yes; then
   $ac_cs_success || { (exit 1); exit 1; }
 fi
 
+
+
+echo "$as_me:$LINENO: result:
+
+The configuration for current target has been written to 'build.mak', and 'os-auto.mak' in various build directories.
+
+Customizations can be put in:
+  - 'user.mak'
+  - 'pjlib/include/pj/config_site.h'
+
+The next step now is to run 'make dep' and 'make'.
+" >&5
+echo "${ECHO_T}
+
+The configuration for current target has been written to 'build.mak', and 'os-auto.mak' in various build directories.
+
+Customizations can be put in:
+  - 'user.mak'
+  - 'pjlib/include/pj/config_site.h'
+
+The next step now is to run 'make dep' and 'make'.
+" >&6
 
