@@ -212,9 +212,23 @@ static pj_status_t add_cand( pj_ice_strans *ice_st,
 			     pj_bool_t set_default)
 {
     pj_ice_strans_cand *cand;
+    unsigned i;
 
     PJ_ASSERT_RETURN(ice_st && comp && addr, PJ_EINVAL);
     PJ_ASSERT_RETURN(comp->cand_cnt < PJ_ICE_ST_MAX_CAND, PJ_ETOOMANY);
+
+    /* Check that we don't have candidate with the same
+     * address.
+     */
+    for (i=0; i<comp->cand_cnt; ++i) {
+	if (pj_memcmp(addr, &comp->cand_list[i].addr, 
+		      sizeof(pj_sockaddr_in))==0)
+	{
+	    /* Duplicate */
+	    PJ_LOG(5,(ice_st->obj_name, "Duplicate candidate not added"));
+	    return PJ_SUCCESS;
+	}
+    }
 
     cand = &comp->cand_list[comp->cand_cnt];
 
@@ -225,7 +239,7 @@ static pj_status_t add_cand( pj_ice_strans *ice_st,
     cand->ice_cand_id = -1;
     cand->local_pref = local_pref;
     pj_ice_calc_foundation(ice_st->pool, &cand->foundation, type, 
-			   (const pj_sockaddr*)addr);
+			   &comp->local_addr);
 
     if (set_default) 
 	comp->default_cand = comp->cand_cnt;
