@@ -1794,14 +1794,13 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
 
-    pj_assert(tsx->status_code < 200);
-
-    if (tsx->status_code >= 100)
+    if (tsx->role==PJSIP_ROLE_UAC && tsx->status_code >= 100)
 	msec_time = PJSIP_T2_TIMEOUT;
     else
 	msec_time = (1 << (tsx->retransmit_count)) * PJSIP_T1_TIMEOUT;
 
     if (tsx->role == PJSIP_ROLE_UAC) {
+	pj_assert(tsx->status_code < 200);
 	/* Retransmission for non-INVITE transaction caps-off at T2 */
 	if (msec_time>PJSIP_T2_TIMEOUT && tsx->method.id!=PJSIP_INVITE_METHOD)
 	    msec_time = PJSIP_T2_TIMEOUT;
@@ -2420,6 +2419,12 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    }
 	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					&timeout);
+
+	    /* Cancel retransmission timer */
+	    if (tsx->retransmit_timer._timer_id != -1) {
+		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+		tsx->retransmit_timer._timer_id = -1;
+	    }
 
 	    /* Move state to Completed, inform TU. */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
