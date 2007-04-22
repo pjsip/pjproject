@@ -518,6 +518,23 @@ PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
 PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
 
 /**
+ * Convert strings to an unsigned long-integer value.
+ * This function stops reading the string input either when the number
+ * of characters has exceeded the length of the input or it has read 
+ * the first character it cannot recognize as part of a number, that is
+ * a character greater than or equal to base. 
+ *
+ * @param str	    The input string.
+ * @param endptr    Optional pointer to receive the remainder/unparsed
+ *		    portion of the input.
+ * @param base	    Number base to use.
+ *
+ * @return the unsigned integer number.
+ */
+PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
+				   unsigned base);
+
+/**
  * Utility to convert unsigned integer to string. Note that the
  * string will be NULL terminated.
  *

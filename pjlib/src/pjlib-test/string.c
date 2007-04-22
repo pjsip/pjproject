@@ -48,6 +48,7 @@
  *  - pj_strtrim()
  *  - pj_utoa()
  *  - pj_strtoul()
+ *  - pj_strtoul2()
  *  - pj_create_random_string()
  *  - ... and mode..
  *
@@ -357,6 +358,32 @@ int string_test(void)
      */
     if (pj_strtoul(&s5) != UL_VALUE)
 	return -280;
+
+    /*
+     * pj_strtoul2()
+     */
+    s5 = pj_str("123456");
+
+    pj_strtoul2(&s5, NULL, 10);	/* Crash test */
+
+    if (pj_strtoul2(&s5, &s4, 10) != 123456UL)
+	return -290;
+    if (s4.slen != 0)
+	return -291;
+    if (pj_strtoul2(&s5, &s4, 16) != 0x123456UL)
+	return -292;
+
+    s5 = pj_str("0123ABCD");
+    if (pj_strtoul2(&s5, &s4, 10) != 123)
+	return -293;
+    if (s4.slen != 4)
+	return -294;
+    if (s4.ptr == NULL || *s4.ptr != 'A')
+	return -295;
+    if (pj_strtoul2(&s5, &s4, 16) != 0x123ABCDUL)
+	return -296;
+    if (s4.slen != 0)
+	return -297;
 
     /* 
      * pj_create_random_string() 

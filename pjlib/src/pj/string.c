@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/string.h>
+#include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/ctype.h>
 #include <pj/rand.h>
@@ -80,6 +81,42 @@ PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
     for (i=0; i<(unsigned)str->slen; ++i) {
 	value = value * 10 + (str->ptr[i] - '0');
     }
+    return value;
+}
+
+PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
+				  unsigned base)
+{
+    unsigned long value;
+    unsigned i;
+
+    PJ_CHECK_STACK();
+
+    value = 0;
+    if (base <= 10) {
+	for (i=0; i<(unsigned)str->slen; ++i) {
+	    unsigned c = (str->ptr[i] - '0');
+	    if (c >= base)
+		break;
+	    value = value * base + c;
+	}
+    } else if (base == 16) {
+	for (i=0; i<(unsigned)str->slen; ++i) {
+	    if (!pj_isxdigit(str->ptr[i]))
+		break;
+	    value = value * 16 + pj_hex_digit_to_val(str->ptr[i]);
+	}
+    } else {
+	pj_assert(!"Unsupported base");
+	i = 0;
+	value = 0xFFFFFFFFUL;
+    }
+
+    if (endptr) {
+	endptr->ptr = str->ptr + i;
+	endptr->slen = str->slen - i;
+    }
+
     return value;
 }
 

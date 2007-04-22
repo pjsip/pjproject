@@ -94,6 +94,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
     /* Check that transaction layer module is registered to endpoint */
     PJ_ASSERT_RETURN(mod_stateful_util.id != -1, PJ_EINVALIDOP);
 
+    PJ_UNUSED_ARG(timeout);
 
     status = pjsip_tsx_create_uac(&mod_stateful_util, tdata, &tsx);
     if (status != PJ_SUCCESS) {
@@ -104,11 +105,6 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
     tsx_data = pj_pool_alloc(tsx->pool, sizeof(struct tsx_data));
     tsx_data->token = token;
     tsx_data->cb = cb;
-
-    if (timeout >= 0) {
-	status = pjsip_tsx_set_uac_timeout(tsx, timeout, PJSIP_TSX_IGNORE_1xx);
-	pj_assert(status == PJ_SUCCESS);
-    }
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 

@@ -10,7 +10,6 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
-export PJNATH_LIB:=../lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.
@@ -27,7 +26,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 		   $(LDFLAGS) 
 
 ###############################################################################
-# Defines for building PJLIB-UTIL library
+# Defines for building PJNATH library
 #
 export PJNATH_SRCDIR = ../src/pjnath
 export PJNATH_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
@@ -45,13 +44,34 @@ export PJNATH_TEST_LDFLAGS += $(_LDFLAGS)
 export PJNATH_TEST_EXE:=../bin/pjnath-test-$(TARGET_NAME)$(HOST_EXE)
 
 	
+###############################################################################
+# Defines for building test client application
+#
+export PJSTUN_CLIENT_SRCDIR = ../src/pjstun-client
+export PJSTUN_CLIENT_OBJS += client_main.o
+export PJSTUN_CLIENT_CFLAGS += $(_CFLAGS)
+export PJSTUN_CLIENT_LDFLAGS += $(_LDFLAGS)
+export PJSTUN_CLIENT_EXE:=../bin/pjstun-client-$(TARGET_NAME)$(HOST_EXE)
+
+###############################################################################
+# Defines for building test server application
+#
+export PJSTUN_SRV_TEST_SRCDIR = ../src/pjstun-srv-test
+export PJSTUN_SRV_TEST_OBJS += 	bind_usage.o server.o turn_usage.o usage.o \
+				main.o
+export PJSTUN_SRV_TEST_CFLAGS += $(_CFLAGS)
+export PJSTUN_SRV_TEST_LDFLAGS += $(_LDFLAGS)
+export PJSTUN_SRV_TEST_EXE:=../bin/pjstun-srv-test-$(TARGET_NAME)$(HOST_EXE)
+
+	
+	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjnath pjnath-test
+TARGETS := pjnath pjnath-test pjstun-client pjstun-srv-test
 
 all: $(TARGETS)
 
@@ -68,6 +88,12 @@ pjnath:
 
 pjnath-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $(PJNATH_TEST_EXE)
+
+pjstun-client: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $(PJSTUN_CLIENT_EXE)
+
+pjstun-srv-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $(PJSTUN_SRV_TEST_EXE)
 
 .PHONY: ../lib/pjnath.ko
 ../lib/pjnath.ko:

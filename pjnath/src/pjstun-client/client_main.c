@@ -66,7 +66,7 @@ static struct options
 static pj_status_t parse_addr(const char *input, pj_sockaddr_in *addr);
 
 
-static my_perror(const char *title, pj_status_t status)
+static void my_perror(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_strerror(status, errmsg, sizeof(errmsg));
@@ -145,7 +145,7 @@ static int worker_thread(void *unused)
 	n = pj_sock_select(g.sock+1, &readset, NULL, NULL, &timeout);
 	if (n > 0) {
 	    if (PJ_FD_ISSET(g.sock, &readset)) {
-		char buffer[512];
+		pj_uint8_t buffer[512];
 		pj_ssize_t len;
 		pj_sockaddr_in addr;
 		int addrlen;
@@ -426,7 +426,7 @@ static void send_send_ind(void)
 				  PJ_STUN_ATTR_REMOTE_ADDR, PJ_FALSE,
 				  &g.peer_addr, sizeof(g.peer_addr));
     pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
-				PJ_STUN_ATTR_DATA, g.data, len);
+				PJ_STUN_ATTR_DATA, (pj_uint8_t*)g.data, len);
 
     rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
 				  &g.srv_addr, sizeof(g.srv_addr),
@@ -520,7 +520,7 @@ static void set_peer_addr(void)
 
     printf("Input peer address in IP:PORT format: ");
     fflush(stdout);
-    gets(addr);
+    fgets(addr, sizeof(addr), stdin);
 
     if (parse_addr(addr, &g.peer_addr) != PJ_SUCCESS) {
 	return;
@@ -561,7 +561,7 @@ static void console_main(void)
 
 	} else if (input[0]=='d' && input[1]=='t') {
 	    printf("Input data: ");
-	    gets(g.data);
+	    fgets(g.data, sizeof(g.data_buf), stdin);
 	    
 	} else if (input[0]=='p' && input[1]=='r') {
 	    set_peer_addr();

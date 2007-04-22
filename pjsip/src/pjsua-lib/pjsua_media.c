@@ -289,8 +289,8 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    stun_srv = pj_str(ip_addr);
 
 	    status=pjstun_get_mapped_addr(&pjsua_var.cp.factory, 2, sock,
-					   &stun_srv, 3478,
-					   &stun_srv, 3478,
+					   &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
+					   &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
 					   mapped_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "STUN resolve error", status);
