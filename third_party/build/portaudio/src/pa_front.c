@@ -1,1 +1,1 @@
-../../../portaudio/src/common/pa_front.c
+#include "../../../portaudio/src/common/pa_front.c"

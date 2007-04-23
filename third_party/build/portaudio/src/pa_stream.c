@@ -1,1 +1,1 @@
-../../../portaudio/src/common/pa_stream.c
+#include "../../../portaudio/src/common/pa_stream.c"

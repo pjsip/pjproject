@@ -1,1 +1,1 @@
-../../../portaudio/src/os/win/pa_win_hostapis.c
+#include "../../portaudio/src/os/win/pa_win_hostapis.c"

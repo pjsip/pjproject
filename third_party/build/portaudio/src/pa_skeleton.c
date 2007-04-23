@@ -1,1 +1,1 @@
-../../../portaudio/src/common/pa_skeleton.c
+#include "../../../portaudio/src/common/pa_skeleton.c"

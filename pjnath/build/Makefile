@@ -9,7 +9,7 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
-PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
+export PJNATH_LIB:=../lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################
 # Gather all flags.

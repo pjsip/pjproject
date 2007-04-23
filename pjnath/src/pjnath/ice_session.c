@@ -1452,12 +1452,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     }
 
     /* Cannot start check because there's no suitable candidate pair.
-     * Set checklist state to Completed.
      */
-    if (start_count==0) {
-	clist_set_state(ice, clist, PJ_ICE_SESS_CHECKLIST_ST_COMPLETED);
-
-    } else {
+    if (start_count!=0) {
 	/* Schedule for next timer */
 	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 

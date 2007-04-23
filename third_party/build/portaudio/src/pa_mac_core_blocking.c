@@ -1,1 +1,1 @@
-../../../portaudio/src/hostapi/coreaudio/pa_mac_core_blocking.c
+#include "../../../portaudio/src/hostapi/coreaudio/pa_mac_core_blocking.c"
