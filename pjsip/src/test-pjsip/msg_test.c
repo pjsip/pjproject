@@ -77,7 +77,7 @@ struct test_msg
 {
     /* Typical response message. */
     "SIP/2.0 200 OK\r\n"
-    "Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1\r\n"
+    "Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1;param=a:b\r\n"
     "Via: SIP/2.0/UDP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2\r\n"
     "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds ;received=192.0.2.3\r\n"
     "Route: <sip:proxy.sipprovider.com>\r\n"
@@ -175,6 +175,13 @@ parse_msg:
 	    goto on_return;
 	}
     }
+    if (!pj_list_empty(&err_list)) {
+	PJ_LOG(3,(THIS_FILE, "   Syntax error in line %d col %d",
+		      err_list.next->line, err_list.next->col));
+	status = -11;
+	goto on_return;
+    }
+
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
     pj_add_timestamp(&var.parse_time, &t2);
@@ -553,13 +560,14 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     pjsip_clen_hdr *clen;
     pjsip_cseq_hdr *cseq;
     pjsip_msg *msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
+    pjsip_param *param;
     pjsip_msg_body *body;
 
     //"SIP/2.0 200 OK\r\n"
     msg->line.status.code = 200;
     msg->line.status.reason = pj_str("OK");
 
-    //"Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1\r\n"
+    //"Via: SIP/2.0/SCTP server10.biloxi.com;branch=z9hG4bKnashds8;rport;received=192.0.2.1;param=a:b\r\n"
     via = pjsip_via_hdr_create(pool);
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)via);
     via->transport = pj_str("SCTP");
@@ -567,6 +575,11 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     via->branch_param = pj_str("z9hG4bKnashds8");
     via->rport_param = 0;
     via->recvd_param = pj_str("192.0.2.1");
+
+    param = pj_pool_zalloc(pool, sizeof(pjsip_param));
+    param->name = pj_str("param");
+    param->value = pj_str("a:b");
+    pj_list_push_back(&via->other_param, param);
 
     //"Via: SIP/2.0/UDP bigbox3.site3.atlanta.com;branch=z9hG4bK77ef4c2312983.1;received=192.0.2.2\r\n"
     via = pjsip_via_hdr_create(pool);
