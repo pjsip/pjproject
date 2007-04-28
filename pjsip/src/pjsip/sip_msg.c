@@ -1725,22 +1725,10 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     copy_advance_pair(buf, ";maddr=", 7, hdr->maddr_param);
     copy_advance_pair(buf, ";received=", 10, hdr->recvd_param);
     copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
-
-    /* Via's via-extension params should be printed with token spec
-     * according to RFC 3261's generic-param production, but some
-     * endpoint uses pname/pvalue production for these params, by
-     * sending to us Via parameter containing ":".
-     * 
-     * So for interoperability sake, lets allow ":" in Via param.
-
+    
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
 				   &pjsip_TOKEN_SPEC,
-     				   &pjsip_TOKEN_SPEC, ';');
-     */
-    printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_PARAM_CHAR_SPEC,
-     				   &pjsip_PARAM_CHAR_SPEC, ';');
-
+				   &pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
