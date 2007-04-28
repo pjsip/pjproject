@@ -1843,16 +1843,7 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	/* Via's via-extension params should be printed with token spec
-	 * according to RFC 3261's generic-param production, but some
-	 * endpoint uses pname/pvalue production for these params, by
-	 * sending to us Via parameter containing ":".
-	 * 
-	 * So for interoperability sake, lets allow ":" in Via param.
 	int_parse_param( scanner, pool, &pname, &pvalue);
-	 */
-
-	int_parse_uri_param(scanner, pool, &pname, &pvalue);
 
 	if (!parser_stricmp(pname, pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
