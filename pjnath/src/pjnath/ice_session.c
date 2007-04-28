@@ -918,8 +918,9 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 
 	    if ((licand == ljcand) && (ricand == rjcand)) {
 		reason = "duplicate found";
-	    } else if (sockaddr_cmp(&ljcand->base_addr, 
-				    &licand->base_addr)==0) 
+	    } else if ((rjcand == ricand) &&
+		       (sockaddr_cmp(&ljcand->base_addr, 
+				     &licand->base_addr)==0)) 
 	    {
 		reason = "equal base";
 	    }
