@@ -700,19 +700,18 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	pj_pool_release(pjsua_var.pool);
 	pjsua_var.pool = NULL;
 	pj_caching_pool_destroy(&pjsua_var.cp);
+
+	PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
+
+	/* End logging */
+	if (pjsua_var.log_file) {
+	    pj_file_close(pjsua_var.log_file);
+	    pjsua_var.log_file = NULL;
+	}
+
+	/* Shutdown PJLIB */
+	pj_shutdown();
     }
-
-
-    PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
-
-    /* End logging */
-    if (pjsua_var.log_file) {
-	pj_file_close(pjsua_var.log_file);
-	pjsua_var.log_file = NULL;
-    }
-
-    /* Shutdown PJLIB */
-    pj_shutdown();
 
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));

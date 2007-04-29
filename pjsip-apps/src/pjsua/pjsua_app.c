@@ -95,6 +95,7 @@ static pj_str_t		uri_arg;
 #ifdef STEREO_DEMO
 static void stereo_demo();
 #endif
+pj_status_t app_destroy(void);
 
 /*****************************************************************************
  * Configuration manipulation
@@ -3155,7 +3156,7 @@ pj_status_t app_init(int argc, char *argv[])
     return PJ_SUCCESS;
 
 on_error:
-    pjsua_destroy();
+    app_destroy();
     return status;
 }
 
@@ -3167,7 +3168,7 @@ pj_status_t app_main(void)
     /* Start pjsua */
     status = pjsua_start();
     if (status != PJ_SUCCESS) {
-	pjsua_destroy();
+	app_destroy();
 	return status;
     }
 
