@@ -510,7 +510,7 @@ static pjsip_uri *create_uri13(pj_pool_t *pool)
     url = pjsip_sip_uri_create(pool, 0);
     pj_strdup2(pool, &url->host, "localhost");
     //pj_strdup2(pool, &url->other_param, ";pvalue=\"hello world\"");
-    param_add(url->other_param, "pvalue", "hello world");
+    param_add(url->other_param, "pvalue", "\"hello world\"");
     return (pjsip_uri*)url;
 }
 
