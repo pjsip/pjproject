@@ -143,7 +143,8 @@ static void	    int_parse_param( pj_scanner *scanner,
 static void	    int_parse_uri_param( pj_scanner *scanner, 
 					 pj_pool_t *pool,
 					 pj_str_t *pname, 
-					 pj_str_t *pvalue);
+					 pj_str_t *pvalue,
+					 unsigned option);
 static void	    int_parse_hparam( pj_scanner *scanner,
 				      pj_pool_t *pool,
 				      pj_str_t *hname,
@@ -1130,14 +1131,15 @@ static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
 
 /* Parse parameter (";" pname ["=" pvalue]) in URI. */
 static void int_parse_uri_param( pj_scanner *scanner, pj_pool_t *pool,
-				 pj_str_t *pname, pj_str_t *pvalue)
+				 pj_str_t *pname, pj_str_t *pvalue,
+				 unsigned option)
 {
     /* Get ';' character */
     pj_scan_get_char(scanner);
 
     /* Get pname and optionally pvalue */
     pjsip_parse_uri_param_imp(scanner, pool, pname, pvalue, 
-			      PJSIP_PARSE_REMOVE_QUOTE);
+			      option);
 }
 
 
@@ -1356,7 +1358,7 @@ static void* int_parse_sip_url( pj_scanner *scanner,
       while (*scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_uri_param( scanner, pool, &pname, &pvalue);
+	int_parse_uri_param( scanner, pool, &pname, &pvalue, 0);
 
 	if (!parser_stricmp(pname, pjsip_USER_STR) && pvalue.slen) {
 	    url->user_param = pvalue;

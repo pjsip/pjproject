@@ -802,7 +802,7 @@ static int hdr_test_via(pjsip_hdr *h);
 #define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab:cd;p3"
 #define PARAM_CHAR	     "[]/:&+$"
 #define SIMPLE_ADDR_SPEC     "sip:host"
-#define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";" PARAM_CHAR "=" PARAM_CHAR
+#define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	     "<" ADDR_SPEC ">"
 
 #define HDR_FLAG_PARSE_FAIL 1
@@ -1113,7 +1113,7 @@ static int test_simple_addr_spec(pjsip_uri *uri)
 /* 
 #define PARAM_CHAR	    "[]/:&+$"
 #define SIMPLE_ADDR_SPEC    "sip:host"
-#define ADDR_SPEC	    SIMPLE_ADDR_SPEC ";" PARAM_CHAR "=" PARAM_CHAR
+#define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	    "<" ADDR_SPEC ">"
  */
 static int nameaddr_test(pjsip_uri *uri)
@@ -1129,7 +1129,7 @@ static int nameaddr_test(pjsip_uri *uri)
     if (rc != 0)
 	return rc;
 
-    if (pj_list_size(&sip_uri->other_param) != 1)
+    if (pj_list_size(&sip_uri->other_param) != 2)
 	return -940;
 
     param = sip_uri->other_param.next;
@@ -1138,6 +1138,12 @@ static int nameaddr_test(pjsip_uri *uri)
 	return -942;
 
     if (pj_strcmp2(&param->value, PARAM_CHAR))
+	return -943;
+
+    param = param->next;
+    if (pj_strcmp2(&param->name, "p1"))
+	return -942;
+    if (pj_strcmp2(&param->value, "\";\""))
 	return -943;
 
     return 0;
