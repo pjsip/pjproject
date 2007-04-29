@@ -110,7 +110,10 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
 	copy_advance_escape(buf, p->name, (*pname_spec));
 	if (p->value.slen) {
 	    *buf++ = '=';
-	    copy_advance_escape(buf, p->value, (*pvalue_spec));
+	    if (*p->value.ptr == '"')
+		copy_advance(buf, p->value);
+	    else
+		copy_advance_escape(buf, p->value, (*pvalue_spec));
 	}
 	p = p->next;
 	if (sep == '?') sep = '&';
