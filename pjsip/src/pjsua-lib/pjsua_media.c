@@ -476,10 +476,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 
 	pjmedia_endpt_destroy(pjsua_var.med_endpt);
 	pjsua_var.med_endpt = NULL;
-    }
 
-    /* Deinitialize sound subsystem */
-    pjmedia_snd_deinit();
+	/* Deinitialize sound subsystem */
+	pjmedia_snd_deinit();
+    }
 
     /* Reset RTP port */
     next_rtp_port = 0;

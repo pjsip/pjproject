@@ -82,6 +82,9 @@ int main(int argc, char *argv[])
     app_main();
     app_destroy();
 
+    /* This is on purpose */
+    app_destroy();
+
     return 0;
 }
 
