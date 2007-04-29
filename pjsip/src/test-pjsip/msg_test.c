@@ -777,6 +777,741 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
 }
 
 /*****************************************************************************/
+/* Test various header parsing and production */
+static int hdr_test_success(pjsip_hdr *h);
+static int hdr_test_accept0(pjsip_hdr *h);
+static int hdr_test_accept1(pjsip_hdr *h);
+static int hdr_test_accept2(pjsip_hdr *h);
+static int hdr_test_allow0(pjsip_hdr *h);
+static int hdr_test_authorization(pjsip_hdr *h);
+static int hdr_test_cid(pjsip_hdr *h);
+static int hdr_test_contact0(pjsip_hdr *h);
+static int hdr_test_contact1(pjsip_hdr *h);
+static int hdr_test_content_length(pjsip_hdr *h);
+static int hdr_test_content_type(pjsip_hdr *h);
+static int hdr_test_from(pjsip_hdr *h);
+static int hdr_test_proxy_authenticate(pjsip_hdr *h);
+static int hdr_test_record_route(pjsip_hdr *h);
+static int hdr_test_supported(pjsip_hdr *h);
+static int hdr_test_to(pjsip_hdr *h);
+static int hdr_test_via(pjsip_hdr *h);
+
+
+
+#define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
+#define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab:cd;p3"
+#define PARAM_CHAR	     "[]/:&+$"
+#define SIMPLE_ADDR_SPEC     "sip:host"
+#define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";" PARAM_CHAR "=" PARAM_CHAR
+#define NAME_ADDR	     "<" ADDR_SPEC ">"
+
+#define HDR_FLAG_PARSE_FAIL 1
+#define HDR_FLAG_DONT_PRINT 2
+
+struct hdr_test_t
+{
+    char *hname;
+    char *hshort_name;
+    char *hcontent;
+    int  (*test)(pjsip_hdr*);
+    unsigned flags;
+} hdr_test_data[] =
+{
+    {
+	/* Empty Accept */
+	"Accept", NULL,
+	"",
+	&hdr_test_accept0
+    },
+
+    {
+	/* Overflowing generic string header */
+	"Accept", NULL,
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, " \
+	"a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a",
+	&hdr_test_success,
+	HDR_FLAG_PARSE_FAIL
+    },
+
+    {
+	/* Normal Accept */
+	"Accept", NULL,
+	"application/*, text/plain",
+	&hdr_test_accept1
+    },
+
+    {
+	/* Accept with params */
+	"Accept", NULL,
+	"application/*;p1=v1, text/plain",
+	&hdr_test_accept2
+    },
+
+    {
+	/* Empty Allow */
+	"Allow", NULL,
+	"",
+	&hdr_test_allow0,
+    },
+
+    {
+	/* Authorization, testing which params should be quoted */
+	"Authorization", NULL,
+	"Digest username=\"username\", realm=\"realm\", nonce=\"nonce\", "  \
+		"uri=\"sip:domain\", response=\"RESPONSE\", algorithm=MD5, "    \
+		"cnonce=\"CNONCE\", opaque=\"OPAQUE\", qop=auth, nc=00000001",
+	&hdr_test_authorization
+    },
+
+    {
+	/* Call ID */
+	"Call-ID", "i",
+	"-.!%*_+`'~()<>:\\\"/[]?{}",
+	&hdr_test_cid,
+    },
+
+    {
+	/* Parameter belong to hparam */
+	"Contact", "m",
+	SIMPLE_ADDR_SPEC ";p1=v1",
+	&hdr_test_contact0,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* generic-param in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";" GENERIC_PARAM,
+	&hdr_test_contact1
+    },
+
+    {
+	/* Content-Length */
+	"Content-Length", "l",
+	"10",
+	&hdr_test_content_length
+    },
+
+    {
+	/* Content-Type, with generic-param */
+	"Content-Type", "c",
+	"application/sdp" ";" GENERIC_PARAM,
+	&hdr_test_content_type,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* From, testing parameters and generic-param */
+	"From", "f",
+	NAME_ADDR ";" GENERIC_PARAM,
+	&hdr_test_from
+    },
+
+    {
+	/* Proxy-Authenticate, testing which params should be quoted */
+	"Proxy-Authenticate", NULL,
+	"Digest  realm=\"realm\",domain=\"sip:domain\",nonce=\"nonce\","  \
+	        "opaque=\"opaque\",stale=true,algorithm=MD5,qop=\"auth\"",
+	&hdr_test_proxy_authenticate
+    },
+
+    {
+	/* Record-Route, param belong to header */
+	"Record-Route", NULL,
+	NAME_ADDR ";" GENERIC_PARAM,
+	&hdr_test_record_route
+    },
+
+    {
+	/* Empty Supported */
+	"Supported", "k",
+	"",
+	&hdr_test_supported,
+    },
+
+    {
+	/* To */
+	"To", "t",
+	NAME_ADDR ";" GENERIC_PARAM,
+	&hdr_test_to
+    },
+
+    {
+	/* Via */
+	"Via", "v",
+	"SIP/2.0/XYZ host" ";" GENERIC_PARAM,
+	&hdr_test_via
+    }
+};
+
+static int hdr_test_success(pjsip_hdr *h)
+{
+    PJ_UNUSED_ARG(h);
+    return 0;
+}
+
+/* "" */
+static int hdr_test_accept0(pjsip_hdr *h)
+{
+    pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
+
+    if (h->type != PJSIP_H_ACCEPT)
+	return -1010;
+
+    if (hdr->count != 0)
+	return -1020;
+
+    return 0;
+}
+
+/* "application/*, text/plain\r\n" */
+static int hdr_test_accept1(pjsip_hdr *h)
+{
+    pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
+
+    if (h->type != PJSIP_H_ACCEPT)
+	return -1110;
+
+    if (hdr->count != 2)
+	return -1120;
+
+    if (pj_strcmp2(&hdr->values[0], "application/*"))
+	return -1130;
+
+    if (pj_strcmp2(&hdr->values[1], "text/plain"))
+	return -1140;
+
+    return 0;
+}
+
+/* "application/*;p1=v1, text/plain\r\n" */
+static int hdr_test_accept2(pjsip_hdr *h)
+{
+    pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
+
+    if (h->type != PJSIP_H_ACCEPT)
+	return -1210;
+
+    if (hdr->count != 2)
+	return -1220;
+
+    if (pj_strcmp2(&hdr->values[0], "application/*;p1=v1"))
+	return -1230;
+
+    if (pj_strcmp2(&hdr->values[1], "text/plain"))
+	return -1240;
+
+    return 0;
+}
+
+/* "" */
+static int hdr_test_allow0(pjsip_hdr *h)
+{
+    pjsip_allow_hdr *hdr = (pjsip_allow_hdr*)h;
+
+    if (h->type != PJSIP_H_ALLOW)
+	return -1310;
+
+    if (hdr->count != 0)
+	return -1320;
+
+    return 0;
+
+}
+
+
+/*
+	"Digest username=\"username\", realm=\"realm\", nonce=\"nonce\", "  \
+		"uri=\"sip:domain\", response=\"RESPONSE\", algorithm=MD5, "    \
+		"cnonce=\"CNONCE\", opaque=\"OPAQUE\", qop=auth, nc=00000001",
+ */
+static int hdr_test_authorization(pjsip_hdr *h)
+{
+    pjsip_authorization_hdr *hdr = (pjsip_authorization_hdr*)h;
+
+    if (h->type != PJSIP_H_AUTHORIZATION)
+	return -1410;
+
+    if (pj_strcmp2(&hdr->scheme, "Digest"))
+	return -1420;
+
+    if (pj_strcmp2(&hdr->credential.digest.username, "username"))
+	return -1421;
+
+    if (pj_strcmp2(&hdr->credential.digest.realm, "realm"))
+	return -1422;
+
+    if (pj_strcmp2(&hdr->credential.digest.nonce, "nonce"))
+	return -1423;
+
+    if (pj_strcmp2(&hdr->credential.digest.uri, "sip:domain"))
+	return -1424;
+
+    if (pj_strcmp2(&hdr->credential.digest.response, "RESPONSE"))
+	return -1425;
+
+    if (pj_strcmp2(&hdr->credential.digest.algorithm, "MD5"))
+	return -1426;
+
+    if (pj_strcmp2(&hdr->credential.digest.cnonce, "CNONCE"))
+	return -1427;
+
+    if (pj_strcmp2(&hdr->credential.digest.opaque, "OPAQUE"))
+	return -1428;
+
+    if (pj_strcmp2(&hdr->credential.digest.qop, "auth"))
+	return -1429;
+
+    if (pj_strcmp2(&hdr->credential.digest.nc, "00000001"))
+	return -1430;
+
+    return 0;
+}
+
+
+/*
+    "-.!%*_+`'~()<>:\\\"/[]?{}\r\n"
+ */
+static int hdr_test_cid(pjsip_hdr *h)
+{
+    pjsip_cid_hdr *hdr = (pjsip_cid_hdr*)h;
+
+    if (h->type != PJSIP_H_CALL_ID)
+	return -1510;
+
+    if (pj_strcmp2(&hdr->id, "-.!%*_+`'~()<>:\\\"/[]?{}\r\n"))
+	return -1520;
+
+    return 0;
+}
+
+/*
+ #define SIMPLE_ADDR_SPEC    "sip:host"
+ */
+static int test_simple_addr_spec(pjsip_uri *uri)
+{
+    pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)pjsip_uri_get_uri(uri);
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri))
+	return -900;
+
+    if (pj_strcmp2(&sip_uri->host, "host"))
+	return -910;
+
+    if (sip_uri->port != 0)
+	return -920;
+
+    return 0;
+}
+
+/* 
+#define PARAM_CHAR	    "[]/:&+$"
+#define SIMPLE_ADDR_SPEC    "sip:host"
+#define ADDR_SPEC	    SIMPLE_ADDR_SPEC ";" PARAM_CHAR "=" PARAM_CHAR
+#define NAME_ADDR	    "<" ADDR_SPEC ">"
+ */
+static int nameaddr_test(pjsip_uri *uri)
+{
+    pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)pjsip_uri_get_uri(uri);
+    pjsip_param *param;
+    int rc;
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri))
+	return -930;
+
+    rc = test_simple_addr_spec((pjsip_uri*)sip_uri);
+    if (rc != 0)
+	return rc;
+
+    if (pj_list_size(&sip_uri->other_param) != 1)
+	return -940;
+
+    param = sip_uri->other_param.next;
+
+    if (pj_strcmp2(&param->name, PARAM_CHAR))
+	return -942;
+
+    if (pj_strcmp2(&param->value, PARAM_CHAR))
+	return -943;
+
+    return 0;
+}
+
+/*
+#define GENERIC_PARAM  "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
+ */
+static int generic_param_test(pjsip_param *param_head)
+{
+    pjsip_param *param;
+
+    if (pj_list_size(param_head) != 4)
+	return -950;
+
+    param = param_head->next;
+
+    if (pj_strcmp2(&param->name, "p0"))
+	return -952;
+    if (pj_strcmp2(&param->value, "a"))
+	return -953;
+
+    param = param->next;
+    if (pj_strcmp2(&param->name, "p1"))
+	return -954;
+    if (pj_strcmp2(&param->value, "\"ab:;cd\""))
+	return -955;
+
+    param = param->next;
+    if (pj_strcmp2(&param->name, "p2"))
+	return -956;
+    if (pj_strcmp2(&param->value, "ab:cd"))
+	return -957;
+
+    param = param->next;
+    if (pj_strcmp2(&param->name, "p3"))
+	return -958;
+    if (pj_strcmp2(&param->value, ""))
+	return -959;
+
+    return 0;
+}
+
+
+
+/*
+    SIMPLE_ADDR_SPEC ";p1=v1\r\n"
+ */
+static int hdr_test_contact0(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    pjsip_param *param;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1610;
+
+    rc = test_simple_addr_spec(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (pj_list_size(&hdr->other_param) != 1)
+	return -1620;
+
+    param = hdr->other_param.next;
+
+    if (pj_strcmp2(&param->name, "p1"))
+	return -1630;
+
+    if (pj_strcmp2(&param->value, "v1"))
+	return -1640;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR GENERIC_PARAM "\r\n",    
+ */
+static int hdr_test_contact1(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    rc = generic_param_test(&hdr->other_param);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+}
+
+/*
+    "10"
+ */
+static int hdr_test_content_length(pjsip_hdr *h)
+{
+    pjsip_clen_hdr *hdr = (pjsip_clen_hdr*)h;
+
+    if (h->type != PJSIP_H_CONTENT_LENGTH)
+	return -1810;
+
+    if (hdr->len != 10)
+	return -1820;
+
+    return 0;
+}
+
+/*
+    "application/sdp" GENERIC_PARAM,
+ */
+static int hdr_test_content_type(pjsip_hdr *h)
+{
+    pjsip_ctype_hdr *hdr = (pjsip_ctype_hdr*)h;
+
+    if (h->type != PJSIP_H_CONTENT_TYPE)
+	return -1910;
+
+    if (pj_strcmp2(&hdr->media.type, "application"))
+	return -1920;
+
+    if (pj_strcmp2(&hdr->media.subtype, "sdp"))
+	return -1930;
+
+    /* Currently, if the media parameter contains escaped characters,
+     * pjsip will print the parameter unescaped.
+     */
+    PJ_TODO(FIX_PARAMETER_IN_MEDIA_TYPE);
+
+    if (pj_strcmp2(&hdr->media.param, ";" GENERIC_PARAM_PARSED))
+	return -1940;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR GENERIC_PARAM,
+ */
+static int hdr_test_from(pjsip_hdr *h)
+{
+    pjsip_from_hdr *hdr = (pjsip_from_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_FROM)
+	return -2010;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    rc = generic_param_test(&hdr->other_param);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+}
+
+/*
+	"Digest realm=\"realm\", domain=\"sip:domain\", nonce=\"nonce\", "  \
+	        "opaque=\"opaque\", stale=true, algorithm=MD5, qop=\"auth\"",
+ */
+static int hdr_test_proxy_authenticate(pjsip_hdr *h)
+{
+    pjsip_proxy_authenticate_hdr *hdr = (pjsip_proxy_authenticate_hdr*)h;
+
+    if (h->type != PJSIP_H_PROXY_AUTHENTICATE)
+	return -2110;
+
+    if (pj_strcmp2(&hdr->scheme, "Digest"))
+	return -2120;
+
+    if (pj_strcmp2(&hdr->challenge.digest.realm, "realm"))
+	return -2130;
+
+    if (pj_strcmp2(&hdr->challenge.digest.domain, "sip:domain"))
+	return -2140;
+
+    if (pj_strcmp2(&hdr->challenge.digest.nonce, "nonce"))
+	return -2150;
+
+    if (pj_strcmp2(&hdr->challenge.digest.opaque, "opaque"))
+	return -2160;
+
+    if (hdr->challenge.digest.stale != 1)
+	return -2170;
+
+    if (pj_strcmp2(&hdr->challenge.digest.algorithm, "MD5"))
+	return -2180;
+
+    if (pj_strcmp2(&hdr->challenge.digest.qop, "auth"))
+	return -2190;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR GENERIC_PARAM,
+ */
+static int hdr_test_record_route(pjsip_hdr *h)
+{
+    pjsip_rr_hdr *hdr = (pjsip_rr_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_RECORD_ROUTE)
+	return -2210;
+
+    rc = nameaddr_test((pjsip_uri*)&hdr->name_addr);
+    if (rc != 0)
+	return rc;
+
+    rc = generic_param_test(&hdr->other_param);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+
+}
+
+/*
+    " \r\n"
+ */
+static int hdr_test_supported(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+	return -2310;
+
+    if (hdr->count != 0)
+	return -2320;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR GENERIC_PARAM,
+ */
+static int hdr_test_to(pjsip_hdr *h)
+{
+    pjsip_to_hdr *hdr = (pjsip_to_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_TO)
+	return -2410;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    rc = generic_param_test(&hdr->other_param);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+}
+
+/*
+    "SIP/2.0 host" GENERIC_PARAM
+ */
+static int hdr_test_via(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2510;
+
+    if (pj_strcmp2(&hdr->transport, "XYZ"))
+	return -2515;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "host"))
+	return -2520;
+
+    if (hdr->sent_by.port != 0)
+	return -2530;
+
+    rc = generic_param_test(&hdr->other_param);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+}
+
+
+static int hdr_test(void)
+{
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing header parsing.."));
+
+    for (i=0; i<PJ_ARRAY_SIZE(hdr_test_data); ++i) {
+	struct hdr_test_t  *test = &hdr_test_data[i];
+	pj_str_t hname;
+	int len, parsed_len;
+	pj_pool_t *pool;
+	pjsip_hdr *parsed_hdr1=NULL, *parsed_hdr2=NULL;
+	char *input, *output;
+	int rc;
+
+	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+
+	/* Parse the header */
+	hname = pj_str(test->hname);
+	len = strlen(test->hcontent);
+	parsed_hdr1 = pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+	if (parsed_hdr1 == NULL) {
+	    if (test->flags & HDR_FLAG_PARSE_FAIL) {
+		pj_pool_release(pool);
+		continue;
+	    }
+	    PJ_LOG(3,(THIS_FILE, "    error parsing header %s: %s", test->hname, test->hcontent));
+	    return -500;
+	}
+
+	/* Test the parsing result */
+	if (test->test && (rc=test->test(parsed_hdr1)) != 0) {
+	    PJ_LOG(3,(THIS_FILE, "    validation failed for header %s: %s", test->hname, test->hcontent));
+	    PJ_LOG(3,(THIS_FILE, "    error code is %d", rc));
+	    return -502;
+	}
+
+#if 0
+	/* Parse with hshortname, if present */
+	if (test->hshort_name) {
+	    hname = pj_str(test->hshort_name);
+	    len = strlen(test->hcontent);
+	    parsed_hdr2 = pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+	    if (parsed_hdr2 == NULL) {
+		PJ_LOG(3,(THIS_FILE, "    error parsing header %s: %s", test->hshort_name, test->hcontent));
+		return -510;
+	    }
+	}
+#endif
+
+	if (test->flags & HDR_FLAG_DONT_PRINT) {
+	    pj_pool_release(pool);
+	    continue;
+	}
+
+	/* Print the original header */
+	input = pj_pool_alloc(pool, 1024);
+	len = pj_ansi_snprintf(input, 1024, "%s: %s", test->hname, test->hcontent);
+	if (len < 1 || len >= 1024)
+	    return -520;
+
+	/* Print the parsed header*/
+	output = pj_pool_alloc(pool, 1024);
+	len = pjsip_hdr_print_on(parsed_hdr1, output, 1024);
+	if (len < 1 || len >= 1024) {
+	    PJ_LOG(3,(THIS_FILE, "    header too long: %s: %s", test->hname, test->hcontent));
+	    return -530;
+	}
+	output[len] = 0;
+
+	if (strcmp(input, output) != 0) {
+	    PJ_LOG(3,(THIS_FILE, "    header character by character comparison failed."));
+	    PJ_LOG(3,(THIS_FILE, "    original header=|%s|", input));
+	    PJ_LOG(3,(THIS_FILE, "    parsed header  =|%s|", output));
+	    return -540;
+	}
+
+	pj_pool_release(pool);
+    }
+
+    return 0;
+}
+
+
+/*****************************************************************************/
 
 int msg_test(void)
 {
@@ -792,6 +1527,10 @@ int msg_test(void)
 
     status = simple_test();
     if (status != PJ_SUCCESS)
+	return status;
+
+    status = hdr_test();
+    if (status != 0)
 	return status;
 
     for (i=0; i<COUNT; ++i) {
@@ -864,4 +1603,7 @@ int msg_test(void)
 
     return PJ_SUCCESS;
 }
+
+
+
 

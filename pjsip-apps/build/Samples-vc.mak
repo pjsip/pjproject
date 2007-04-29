@@ -18,9 +18,19 @@ PJSIP_UA_LIB = ..\..\pjsip\lib\pjsip-ua-$(TARGET)$(LIBEXT)
 PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
 PJSUA_LIB_LIB = ..\..\pjsip\lib\pjsua-lib-$(TARGET)$(LIBEXT)
 
+GSM_LIB = ..\..\third_party\lib\libgsmcodec-$(TARGET)$(LIBEXT)
+ILBC_LIB = ..\..\third_party\lib\libilbccodec-$(TARGET)$(LIBEXT)
+PORTAUDIO_LIB = ..\..\third_party\lib\libportaudio-$(TARGET)$(LIBEXT)
+RESAMPLE_LIB = ..\..\third_party\lib\libresample-$(TARGET)$(LIBEXT)
+SPEEX_LIB = ..\..\third_party\lib\libspeex-$(TARGET)$(LIBEXT)
+
+THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
+				   $(SPEEX_LIB)
+
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) $(PJNATH_LIB) \
-	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB)
+	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
+	  $(THIRD_PARTY_LIBS)
 
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  $(BUILD_FLAGS) \

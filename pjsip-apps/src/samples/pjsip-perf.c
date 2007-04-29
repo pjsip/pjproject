@@ -751,13 +751,13 @@ static pj_status_t create_app(void)
  */
 static pj_status_t init_sip()
 {
-    pj_status_t status;
+    pj_status_t status = -1;
 
     /* Add UDP/TCP transport. */
     {
 	pj_sockaddr_in addr;
 	pjsip_host_port addrname;
-	const char *transport_type;
+	const char *transport_type = NULL;
 
 	pj_bzero(&addr, sizeof(addr));
 	addr.sin_family = PJ_AF_INET;

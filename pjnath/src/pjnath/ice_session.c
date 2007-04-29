@@ -902,6 +902,10 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
      * to the local and remote candidates of a pair higher up on the priority
      * list
      */
+    /*
+     * Not in ICE!
+     * Remove host candidates if their base are the the same!
+     */
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_cand *licand = clist->checks[i].lcand;
 	pj_ice_sess_cand *ricand = clist->checks[i].rcand;
@@ -910,14 +914,25 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 	for (j=i+1; j<clist->count;) {
 	    pj_ice_sess_cand *ljcand = clist->checks[j].lcand;
 	    pj_ice_sess_cand *rjcand = clist->checks[j].rcand;
+	    const char *reason = NULL;
 
 	    if ((licand == ljcand) && (ricand == rjcand)) {
+		reason = "duplicate found";
+	    } else if ((rjcand == ricand) &&
+		       (sockaddr_cmp(&ljcand->base_addr, 
+				     &licand->base_addr)==0)) 
+	    {
+		reason = "equal base";
+	    }
+
+	    if (reason != NULL) {
 		/* Found duplicate, remove it */
 		char buf[CHECK_NAME_LEN];
 
-		LOG5((ice->obj_name, "Check %s pruned",
-		     dump_check(buf, sizeof(buf), &ice->clist, 
-			        &clist->checks[j])));
+		LOG5((ice->obj_name, "Check %s pruned (%s)",
+		      dump_check(buf, sizeof(buf), &ice->clist, 
+			         &clist->checks[j]),
+		      reason));
 
 		pj_array_erase(clist->checks, sizeof(clist->checks[0]),
 			       clist->count, j);
@@ -1452,12 +1467,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     }
 
     /* Cannot start check because there's no suitable candidate pair.
-     * Set checklist state to Completed.
      */
-    if (start_count==0) {
-	clist_set_state(ice, clist, PJ_ICE_SESS_CHECKLIST_ST_COMPLETED);
-
-    } else {
+    if (start_count!=0) {
 	/* Schedule for next timer */
 	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 

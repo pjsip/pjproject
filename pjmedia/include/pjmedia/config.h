@@ -108,22 +108,55 @@
 #endif
 
 
-/**
+/*
+ * **   THIS MACRO IS DEPRECATED in 0.6.   **
+ * ** See libresample for configuring this **
+ *
  * Include small filter table in resample.
  * This adds about 9KB in rdata.
  */
+/*
 #ifndef PJMEDIA_HAS_SMALL_FILTER
 #   define PJMEDIA_HAS_SMALL_FILTER	    1
+#endif
+*/
+
+/*
+ * **   THIS MACRO IS DEPRECATED in 0.6.   **
+ * ** See libresample for configuring this **
+ *
+ * Include large filter table in resample.
+ * This adds about 32KB in rdata.
+ */
+/*
+#ifndef PJMEDIA_HAS_LARGE_FILTER
+#   define PJMEDIA_HAS_LARGE_FILTER	    1
+#endif
+*/
+
+/**
+ * Specify whether libresample should be used for the sampling
+ * rate conversion. This macro and PJMEDIA_HAS_SPEEX_RESAMPLE
+ * are mutually exclusive. 
+ *
+ * Default: 1 (Yes)
+ */
+#ifndef PJMEDIA_HAS_LIBRESAMPLE
+#   define PJMEDIA_HAS_LIBRESAMPLE	    1
 #endif
 
 
 /**
- * Include large filter table in resample.
- * This adds about 32KB in rdata.
+ * Specify whether Speex sample rate convertor should be used for the
+ * sampling rate conversion. This macro and PJMEDIA_HAS_LIBRESAMPLE
+ * are mutually exclusive.
+ *
+ * Default: 0
  */
-#ifndef PJMEDIA_HAS_LARGE_FILTER
-#   define PJMEDIA_HAS_LARGE_FILTER	    1
+#ifndef PJMEDIA_HAS_SPEEX_RESAMPLE
+#   define PJMEDIA_HAS_SPEEX_RESAMPLE	    0
 #endif
+
 
 
 /**
@@ -243,9 +276,14 @@
 
 /**
  * Enable Steve Underwood's PLC.
+ *
+ * ** This has now been deprecated. If the codec does not have **
+ * ** PLC, then no PLC will be used for that particular codec. **
+ *
+ * Set this to zero, or other link error will occur.
  */
 #ifndef PJMEDIA_HAS_STEVEU_PLC
-#   define PJMEDIA_HAS_STEVEU_PLC		PJ_HAS_FLOATING_POINT
+#   define PJMEDIA_HAS_STEVEU_PLC		0
 #endif
 
 
@@ -275,7 +313,7 @@
  * 16 will effectively zero the signal.
  */
 #ifndef PJMEDIA_ECHO_SUPPRESS_FACTOR
-#   define PJMEDIA_ECHO_SUPPRESS_FACTOR		4
+#   define PJMEDIA_ECHO_SUPPRESS_FACTOR		10
 #endif
 
 

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjmedia"
-	ProjectGUID="{1434FE6C-89C6-4E13-8150-D5A4B1038AAA}"
+	ProjectGUID="{7FDE3880-A4AB-49E3-B439-EBEF0A0C7A65}"
 	RootNamespace="pjmedia"
 	>
 	<Platforms>
@@ -43,8 +43,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../src/pjmedia/portaudio,../src/pjmedia-codec,../../pjnath/include"
-				PreprocessorDefinitions="NDEBUG;PA_NO_ASIO;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../.."
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -119,8 +119,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../src/pjmedia/portaudio,../src/pjmedia-codec,../../pjnath/include"
-				PreprocessorDefinitions="_DEBUG;PA_NO_ASIO;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../.."
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -572,28 +572,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjmedia\mp3_writer.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\src\pjmedia\null_port.c"
 				>
 				<FileConfiguration
@@ -682,57 +660,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjmedia\plc_steveu.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="2"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\plc_steveu.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\pjmedia\port.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\resample.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -774,6 +702,14 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjmedia\resample_resample.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjmedia\resample_speex.c"
+				>
 			</File>
 			<File
 				RelativePath="..\src\pjmedia\rtcp.c"
@@ -1197,10 +1133,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjmedia\mp3_port.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\pjmedia\null_port.h"
 				>
 			</File>
@@ -1290,442 +1222,6 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\wave.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="PortAudio Files"
-			>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\dsound_wrapper.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\dsound_wrapper.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_allocation.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_allocation.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_converters.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_converters.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_cpuload.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_cpuload.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_dither.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_dither.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_endianness.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_front.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_hostapi.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_process.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_process.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_skeleton.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_stream.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_stream.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_trace.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_trace.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_types.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_util.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_win_ds.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_win_hostapis.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_win_util.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_win_wmme.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_win_wmme.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_x86_plain_converters.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						WarningLevel="3"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\pa_x86_plain_converters.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\portaudio\portaudio.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Resample Files"
-			>
-			<File
-				RelativePath="..\src\pjmedia\largefilter.h"
-				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\smallfilter.h"
 				>
 			</File>
 		</Filter>

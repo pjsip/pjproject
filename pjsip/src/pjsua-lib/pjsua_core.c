@@ -917,19 +917,18 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	pj_pool_release(pjsua_var.pool);
 	pjsua_var.pool = NULL;
 	pj_caching_pool_destroy(&pjsua_var.cp);
+
+	PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
+
+	/* End logging */
+	if (pjsua_var.log_file) {
+	    pj_file_close(pjsua_var.log_file);
+	    pjsua_var.log_file = NULL;
+	}
+
+	/* Shutdown PJLIB */
+	pj_shutdown();
     }
-
-
-    PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
-
-    /* End logging */
-    if (pjsua_var.log_file) {
-	pj_file_close(pjsua_var.log_file);
-	pjsua_var.log_file = NULL;
-    }
-
-    /* Shutdown PJLIB */
-    pj_shutdown();
 
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
@@ -1769,6 +1768,9 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
 	pjmedia_sock_info skinfo;
+
+	/* MSVC complains about skinfo not being initialized */
+	pj_bzero(&skinfo, sizeof(skinfo));
 
 	pjmedia_transport_get_info(call->med_tp, &skinfo);
 

@@ -1,6 +1,7 @@
-include ../../build/common.mak
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-RULES_MAK := ../../build/rules.mak
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 
 export PJLIB_LIB := ../lib/libpj-$(TARGET_NAME)$(LIBEXT)

@@ -2,11 +2,12 @@
 # OS make file may override this with os-specific files
 export UTIL_TEST_OBJS = main.o
 
-include ../../build/common.mak
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-RULES_MAK := ../../build/rules.mak
+RULES_MAK := $(PJDIR)/build/rules.mak
 
-PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
+PJLIB_LIB:=$(PJDIR)/pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 export PJLIB_UTIL_LIB:=../lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 
 ###############################################################################

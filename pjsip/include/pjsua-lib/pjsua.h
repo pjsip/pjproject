@@ -3917,21 +3917,18 @@ PJ_DECL(pj_status_t) pjsua_player_destroy(pjsua_player_id id);
 
 /**
  * Create a file recorder, and automatically connect this recorder to
- * the conference bridge. The recorder currently supports recording WAV file,
- * and on Windows, MP3 file. The type of the recorder to use is determined
- * by the extension of the file (e.g. ".wav" or ".mp3").
+ * the conference bridge. The recorder currently supports recording WAV file.
+ * The type of the recorder to use is determined by the extension of the file 
+ * (e.g. ".wav").
  *
  * @param filename	Output file name. The function will determine the
  *			default format to be used based on the file extension.
- *			Currently ".wav" is supported on all platforms, and
- *			also ".mp3" is support on Windows.
+ *			Currently ".wav" is supported on all platforms.
  * @param enc_type	Optionally specify the type of encoder to be used to
  *			compress the media, if the file can support different
  *			encodings. This value must be zero for now.
  * @param enc_param	Optionally specify codec specific parameter to be 
- *			passed to the file writer. For .MP3 recorder, this
- *			can point to pjmedia_mp3_encoder_option structure to
- *			specify additional settings for the .mp3 recorder.
+ *			passed to the file writer. 
  *			For .WAV recorder, this value must be NULL.
  * @param max_size	Maximum file size. Specify zero or -1 to remove size
  *			limitation. This value must be zero or -1 for now.

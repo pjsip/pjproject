@@ -476,10 +476,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 
 	pjmedia_endpt_destroy(pjsua_var.med_endpt);
 	pjsua_var.med_endpt = NULL;
-    }
 
-    /* Deinitialize sound subsystem */
-    pjmedia_snd_deinit();
+	/* Deinitialize sound subsystem */
+	pjmedia_snd_deinit();
+    }
 
     /* Reset RTP port */
     next_rtp_port = 0;
@@ -1370,14 +1370,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 						pjsua_var.mconf_cfg.samples_per_frame,
 						pjsua_var.mconf_cfg.bits_per_sample, 
 						options, 0, &port);
-    } else if (file_format == FMT_MP3) {
-	status = pjmedia_mp3_writer_port_create(pjsua_var.pool, path,
-						pjsua_var.media_cfg.clock_rate,
-						pjsua_var.mconf_cfg.channel_count,
-						pjsua_var.mconf_cfg.samples_per_frame,
-						pjsua_var.mconf_cfg.bits_per_sample,
-						enc_param, &port);
     } else {
+	PJ_UNUSED_ARG(enc_param);
 	port = NULL;
 	status = PJ_ENOTSUP;
     }

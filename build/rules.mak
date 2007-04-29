@@ -1,5 +1,9 @@
+ifeq ($(LIBDIR),)
 LIBDIR = ../lib
+endif
+ifeq ($(BINDIR),)
 BINDIR = ../bin
+endif
 
 #
 # The full path of output lib file (e.g. ../lib/libapp.a).
@@ -71,7 +75,7 @@ print_lib: print_common
 	@echo LIBDIR=$(LIBDIR)
 
 $(LIB): $(LIBDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
-	$(AR)$(LIB) $(OBJS)
+	$(AR) $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)
 
 $(EXE): $(BINDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)

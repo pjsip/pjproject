@@ -95,6 +95,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     status = pjmedia_resample_create(pool, 
 				     (opt&PJMEDIA_RESAMPLE_USE_LINEAR)==0,
 				     (opt&PJMEDIA_RESAMPLE_USE_SMALL_FILTER)==0,
+				     dn_port->info.channel_count,
 				     dn_port->info.clock_rate, 
 				     rport->base.info.clock_rate,
 				     dn_port->info.samples_per_frame, 
@@ -106,6 +107,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     status = pjmedia_resample_create(pool, 
 				     (opt&PJMEDIA_RESAMPLE_USE_LINEAR)==0, 
 				     (opt&PJMEDIA_RESAMPLE_USE_SMALL_FILTER)==0,
+				     dn_port->info.channel_count,
 				     rport->base.info.clock_rate, 
 				     dn_port->info.clock_rate,
 				     rport->base.info.samples_per_frame,
@@ -204,7 +206,15 @@ static pj_status_t resample_destroy(pjmedia_port *this_port)
 	rport->dn_port = NULL;
     }
 
-    /* Nothing else to do */
+    if (rport->resample_get) {
+	pjmedia_resample_destroy(rport->resample_get);
+	rport->resample_get = NULL;
+    }
+
+    if (rport->resample_put) {
+	pjmedia_resample_destroy(rport->resample_put);
+	rport->resample_put = NULL;
+    }
 
     return PJ_SUCCESS;
 }

@@ -40,8 +40,9 @@ RSC=rc.exe
 # PROP Output_Dir ".\output\pjmedia-i386-win32-vc6-release"
 # PROP Intermediate_Dir ".\output\pjmedia-i386-win32-vc6-release"
 # PROP Target_Dir ""
+F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /I "../src/pjmedia-codec" /I "../../pjnath/include" /D "NDEBUG" /D "PA_NO_ASIO" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -64,8 +65,9 @@ LIB32=link.exe -lib
 # PROP Output_Dir ".\output\pjmedia-i386-win32-vc6-debug"
 # PROP Intermediate_Dir ".\output\pjmedia-i386-win32-vc6-debug"
 # PROP Target_Dir ""
+F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../src/pjmedia/portaudio" /I "../src/pjmedia-codec" /I "../../pjnath/include" /D "_DEBUG" /D "PA_NO_ASIO" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -159,10 +161,6 @@ SOURCE=..\src\pjmedia\mem_player.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\mp3_writer.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\null_port.c
 # End Source File
 # Begin Source File
@@ -179,24 +177,19 @@ SOURCE=..\src\pjmedia\plc_common.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\plc_steveu.c
-# ADD CPP /W2
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\plc_steveu.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\resample.c
+SOURCE=..\src\pjmedia\resample_port.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\resample_port.c
+SOURCE=..\src\pjmedia\resample_resample.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\resample_speex.c
 # End Source File
 # Begin Source File
 
@@ -332,10 +325,6 @@ SOURCE=..\include\pjmedia\mem_port.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjmedia\mp3_port.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\include\pjmedia\null_port.h
 # End Source File
 # Begin Source File
@@ -425,157 +414,6 @@ SOURCE=..\include\pjmedia\wav_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\wave.h
-# End Source File
-# End Group
-# Begin Group "PortAudio Files"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\dsound_wrapper.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\dsound_wrapper.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_allocation.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_allocation.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_converters.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_converters.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_cpuload.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_cpuload.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_dither.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_dither.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_endianness.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_front.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_hostapi.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_process.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_process.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_skeleton.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_stream.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_stream.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_trace.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_trace.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_types.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_util.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_win_ds.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_win_hostapis.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_win_util.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_win_wmme.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_win_wmme.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_x86_plain_converters.c
-# ADD CPP /W3
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\pa_x86_plain_converters.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\portaudio\portaudio.h
-# End Source File
-# End Group
-# Begin Group "Resample Files"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\src\pjmedia\largefilter.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\smallfilter.h
 # End Source File
 # End Group
 # End Target

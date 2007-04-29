@@ -1,0 +1,2 @@
+export CFLAGS += -Wno-unused-label -Werror
+export LDFLAGS += -

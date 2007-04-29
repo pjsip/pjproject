@@ -298,6 +298,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 	status = pjmedia_resample_create( pool, 
 					  high_quality,
 					  large_filter,
+					  conf->channel_count,
 					  conf_port->clock_rate,/* Rate in */
 					  conf->clock_rate, /* Rate out */
 					  conf->samples_per_frame * 
@@ -312,6 +313,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 	status = pjmedia_resample_create(pool,
 					 high_quality,
 					 large_filter,
+					 conf->channel_count,
 					 conf->clock_rate,  /* Rate in */
 					 conf_port->clock_rate, /* Rate out */
 					 conf->samples_per_frame,

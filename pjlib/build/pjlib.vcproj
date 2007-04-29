@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjlib"
-	ProjectGUID="{5D0985B4-DAA1-42DB-BDB6-30C2409EAE14}"
+	ProjectGUID="{DA0E03ED-53A7-4050-8A85-90541C5509F8}"
 	RootNamespace="pjlib"
 	>
 	<Platforms>

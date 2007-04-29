@@ -1,6 +1,8 @@
-include ../../build/common.mak
+include ../../build.mak
+include $(PJDIR)/build/common.mak
 
-RULES_MAK := ../../build/rules.mak
+
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
 PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
@@ -24,19 +26,6 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjmedia/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJSUA_LIB_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_UA_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_SIMPLE_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJSIP_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(LDFLAGS) -lm
-
 
 ###############################################################################
 # Defines for building PJSUA
@@ -45,7 +34,7 @@ export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			main.o pjsua_app.o
 export PJSUA_CFLAGS += $(_CFLAGS)
-export PJSUA_LDFLAGS += $(_LDFLAGS)
+export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)
 
 
