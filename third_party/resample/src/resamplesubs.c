@@ -319,14 +319,14 @@ static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 }
 
 
-int res_SrcLinear(const RES_HWORD X[], RES_HWORD Y[], 
-		  double pFactor, RES_UHWORD nx)
+DECL(int) res_SrcLinear(const RES_HWORD X[], RES_HWORD Y[], 
+		        double pFactor, RES_UHWORD nx)
 {
     return SrcLinear(X, Y, pFactor, nx);
 }
 
-int res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
-	         RES_UHWORD nx, RES_BOOL LargeF, RES_BOOL Interp)
+DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+		       RES_UHWORD nx, RES_BOOL LargeF, RES_BOOL Interp)
 {
     if (pFactor >= 1) {
 
@@ -353,7 +353,7 @@ int res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     }
 }
 
-int res_GetXOFF(double pFactor, RES_BOOL LargeF)
+DECL(int) res_GetXOFF(double pFactor, RES_BOOL LargeF)
 {
     if (LargeF)
 	return (LARGE_FILTER_NMULT + 1) / 2.0  *  
