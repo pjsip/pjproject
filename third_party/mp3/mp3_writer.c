@@ -21,7 +21,7 @@
  * Contributed by:
  *  Toni < buldozer at aufbix dot org >
  */
-#include <pjmedia/mp3_port.h>
+#include "mp3_port.h"
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/file_access.h>
