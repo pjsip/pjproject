@@ -21,13 +21,21 @@
 
 #include <pj/types.h>
 
-#define GROUP_LIBC                  1
-#define GROUP_OS                    1
-#define GROUP_DATA_STRUCTURE        1
+#define GROUP_LIBC                  0
+#define GROUP_OS                    0
+#define GROUP_DATA_STRUCTURE        0
 #define GROUP_NETWORK               1
-#define GROUP_FILE                  1
+#if defined(PJ_SYMBIAN)
+#   define GROUP_FILE               0
+#else
+#   define GROUP_FILE               1
+#endif
 
-#define INCLUDE_ERRNO_TEST          GROUP_LIBC
+#if defined(PJ_SYMBIAN)
+#   define INCLUDE_ERRNO_TEST       0
+#else
+#   define INCLUDE_ERRNO_TEST       GROUP_LIBC
+#endif
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
 #define INCLUDE_EXCEPTION_TEST	    GROUP_LIBC
 #define INCLUDE_RAND_TEST	    GROUP_LIBC
@@ -39,16 +47,20 @@
 #define INCLUDE_RBTREE_TEST	    GROUP_DATA_STRUCTURE
 #define INCLUDE_TIMER_TEST	    GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
-#define INCLUDE_MUTEX_TEST	    GROUP_OS
+#define INCLUDE_MUTEX_TEST	    (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SLEEP_TEST          GROUP_OS
-#define INCLUDE_THREAD_TEST         GROUP_OS 
+#define INCLUDE_THREAD_TEST         (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SOCK_TEST	    GROUP_NETWORK
-#define INCLUDE_SOCK_PERF_TEST      GROUP_NETWORK
+#if defined(PJ_SYMBIAN)
+#   define INCLUDE_SOCK_PERF_TEST   0
+#else
+#   define INCLUDE_SOCK_PERF_TEST   GROUP_NETWORK
+#endif
 #define INCLUDE_SELECT_TEST	    GROUP_NETWORK
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
-#define INCLUDE_IOQUEUE_PERF_TEST   GROUP_NETWORK
-#define INCLUDE_IOQUEUE_UNREG_TEST  GROUP_NETWORK
+#define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK)
+#define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_FILE_TEST           GROUP_FILE
 
 #define INCLUDE_ECHO_SERVER         0

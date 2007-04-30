@@ -1,0 +1,57 @@
+TARGET 		pjlib_test.exe
+TARGETTYPE 	exe
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjlib\src\pjlib-test
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_IMPORTING
+
+OPTION		CW -lang c++
+
+// Test files
+
+SOURCE	atomic.c
+SOURCE	echo_clt.c
+SOURCE	errno.c
+SOURCE	exception.c
+SOURCE	fifobuf.c
+SOURCE	file.c
+SOURCE	ioq_perf.c
+SOURCE	ioq_tcp.c
+SOURCE	ioq_udp.c
+SOURCE	ioq_unreg.c
+SOURCE	list.c
+SOURCE	mutex.c
+SOURCE	os.c
+SOURCE	pool.c
+SOURCE	pool_perf.c
+SOURCE	rand.c
+SOURCE	rbtree.c
+SOURCE	select.c
+SOURCE	sleep.c
+SOURCE	sock.c
+SOURCE	sock_perf.c
+SOURCE	string.c
+SOURCE	test.c
+SOURCE	thread.c
+SOURCE	timer.c
+SOURCE	timestamp.c
+SOURCE	udp_echo_srv_ioqueue.c
+SOURCE	udp_echo_srv_sync.c
+SOURCE	util.c
+
+SOURCE	main_symbian.cpp
+
+
+SYSTEMINCLUDE	..\pjlib\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+LIBRARY		pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
+STATICLIBRARY   ecrt0.lib
+CAPABILITY	None
+

@@ -128,7 +128,7 @@ PJ_IDEF(pj_size_t) pj_list_size(pj_list_type *list)
 
     while (node != list) {
 	++count;
-	node = node->next;
+	node = (pj_list*)node->next;
     }
 
     return count;

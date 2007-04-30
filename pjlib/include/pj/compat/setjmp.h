@@ -82,6 +82,9 @@
 
 # endif   /* _ASM */
 
+#elif defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+    /* Symbian framework don't use setjmp/longjmp */
+    
 #else
 #  warning "setjmp()/longjmp() is not implemented"
    typedef int pj_jmp_buf[1];

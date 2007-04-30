@@ -237,6 +237,29 @@ pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN
 #define PJ_THROW(id)	    pj_throw_exception_(id)
 #define PJ_GET_EXCEPTION()  GetExceptionCode()
 
+
+#elif defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+/*****************************************************************************
+ **
+ ** IMPLEMENTATION OF EXCEPTION USING SYMBIAN LEAVE/TRAP FRAMEWORK
+ **
+ ****************************************************************************/
+
+class TPjException
+{
+public:
+    int code_;
+};
+
+#define PJ_USE_EXCEPTION
+#define PJ_TRY			try
+//#define PJ_CATCH(id)		
+#define PJ_CATCH_ANY		catch (const TPjException & pj_excp_)
+#define PJ_END
+#define PJ_THROW(x_id)		do { TPjException e; e.code_=x_id; throw e;} \
+				while (0)
+#define PJ_GET_EXCEPTION()	pj_excp_.code_
+
 #else
 /*****************************************************************************
  **

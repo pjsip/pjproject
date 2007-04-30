@@ -117,7 +117,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 
 static int worker_thread(void *arg)
 {
-    pj_ioqueue_t *ioqueue = arg;
+    pj_ioqueue_t *ioqueue = (pj_ioqueue_t*) arg;
     struct op_key read_op, write_op;
     char recv_buf[512], send_buf[512];
     pj_ssize_t length;

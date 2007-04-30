@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C)2003-2006 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pj/guid.h>
-#include <pj/pool.h>
+#include <pj/log.h>
+#include <pj/os.h>
+#include <pj/unicode.h>
 
-PJ_DEF(void) pj_create_unique_string(pj_pool_t *pool, pj_str_t *str)
+#include "os_symbian.h"
+#include <e32cons.h>
+
+PJ_DEF(void) pj_log_write(int level, const char *buffer, int len)
 {
-    str->ptr = (char*)pj_pool_alloc(pool, PJ_GUID_STRING_LENGTH);
-    pj_generate_unique_string(str);
+#if 0
+    wchar_t wbuffer[PJ_LOG_MAX_SIZE];
+    CConsoleBase *cons = PjSymbianOS::Instance->Console();
+
+    pj_ansi_to_unicode(buffer, len, wbuffer, PJ_ARRAY_SIZE(wbuffer));
+
+    
+    TPtrC16 aPtr((TUint16*)wbuffer, len);
+    console->Write(aPtr);
+#else
+    PJ_UNUSED_ARG(level);
+    PJ_UNUSED_ARG(buffer);
+    PJ_UNUSED_ARG(len);
+#endif
 }
+

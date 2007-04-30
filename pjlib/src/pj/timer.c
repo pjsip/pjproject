@@ -255,7 +255,8 @@ static void grow_heap(pj_timer_heap_t *ht)
     
     pj_timer_entry **new_heap = 0;
     
-    new_heap = pj_pool_alloc(ht->pool, sizeof(pj_timer_entry*) * new_size);
+    new_heap = (pj_timer_entry**) 
+    	       pj_pool_alloc(ht->pool, sizeof(pj_timer_entry*) * new_size);
     memcpy(new_heap, ht->heap, ht->max_size * sizeof(pj_timer_entry*));
     //delete [] this->heap_;
     ht->heap = new_heap;
@@ -263,7 +264,8 @@ static void grow_heap(pj_timer_heap_t *ht)
     // Grow the array of timer ids.
     
     new_timer_ids = 0;
-    new_timer_ids = pj_pool_alloc(ht->pool, new_size * sizeof(pj_timer_id_t));
+    new_timer_ids = (pj_timer_id_t*)
+    		    pj_pool_alloc(ht->pool, new_size * sizeof(pj_timer_id_t));
     
     memcpy( new_timer_ids, ht->timer_ids, ht->max_size * sizeof(pj_timer_id_t));
     
@@ -370,7 +372,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
     size += 2;
 
     /* Allocate timer heap data structure from the pool */
-    ht = pj_pool_alloc(pool, sizeof(pj_timer_heap_t));
+    ht = PJ_POOL_ALLOC_T(pool, pj_timer_heap_t);
     if (!ht)
         return PJ_ENOMEM;
 
@@ -386,12 +388,14 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
     ht->auto_delete_lock = 0;
 
     // Create the heap array.
-    ht->heap = pj_pool_alloc(pool, sizeof(pj_timer_entry*) * size);
+    ht->heap = (pj_timer_entry**)
+    	       pj_pool_alloc(pool, sizeof(pj_timer_entry*) * size);
     if (!ht->heap)
         return PJ_ENOMEM;
 
     // Create the parallel
-    ht->timer_ids = pj_pool_alloc( pool, sizeof(pj_timer_id_t) * size);
+    ht->timer_ids = (pj_timer_id_t *)
+    		    pj_pool_alloc( pool, sizeof(pj_timer_id_t) * size);
     if (!ht->timer_ids)
         return PJ_ENOMEM;
 

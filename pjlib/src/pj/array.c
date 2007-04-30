@@ -55,7 +55,7 @@ PJ_DEF(pj_status_t) pj_array_find( const void *array,
 				   void **result)
 {
     unsigned i;
-    const char *char_array = array;
+    const char *char_array = (const char*)array;
     for (i=0; i<count; ++i) {
 	if ( (*matching)(char_array) == PJ_SUCCESS) {
 	    if (result) {

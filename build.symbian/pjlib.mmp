@@ -1,0 +1,65 @@
+TARGET 		pjlib.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjlib\src\pj
+
+OPTION		CW -lang c++
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_EXPORTING
+
+//
+// Platform independent source
+//
+SOURCE		array.c
+SOURCE		config.c
+SOURCE		ctype.c
+SOURCE		errno.c
+SOURCE		fifobuf.c
+SOURCE		guid.c
+SOURCE		hash.c
+SOURCE		list.c
+SOURCE		lock.c
+SOURCE		string.c
+SOURCE		log.c
+SOURCE		os_time_common.c
+SOURCE		pool.c
+SOURCE		pool_buf.c
+SOURCE		pool_caching.c
+SOURCE		rand.c
+SOURCE		rbtree.c
+SOURCE		timer.c
+SOURCE		types.c
+
+
+//
+// Platform dependent source
+//
+SOURCE		addr_resolv_symbian.cpp
+SOURCE		exception_symbian.cpp
+SOURCE		file_access_unistd.c
+SOURCE		file_io_ansi.c
+SOURCE		guid_simple.c
+SOURCE		ip_helper_generic.c
+SOURCE		log_writer_symbian_console.cpp
+SOURCE		os_core_symbian.cpp
+SOURCE		os_error_symbian.cpp
+SOURCE		os_timestamp_common.c
+SOURCE		os_time_unix.c
+SOURCE		os_timestamp_posix.c
+SOURCE		pool_policy_new.cpp
+SOURCE		compat\string_compat.c
+SOURCE		sock_symbian.cpp
+SOURCE		sock_select_symbian.cpp
+SOURCE		ioqueue_symbian.cpp
+SOURCE		unicode_symbian.cpp
+
+
+SYSTEMINCLUDE	..\pjlib\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+

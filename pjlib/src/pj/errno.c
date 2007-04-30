@@ -18,13 +18,17 @@
  */
 #include <pj/errno.h>
 #include <pj/string.h>
+#include <pj/compat/string.h>
 #include <pj/assert.h>
 
 /* Prototype for platform specific error message, which will be defined 
  * in separate file.
  */
-extern int platform_strerror( pj_os_err_type code, 
-                              char *buf, pj_size_t bufsize );
+PJ_BEGIN_DECL
+
+    PJ_DECL(int) platform_strerror(pj_os_err_type code, 
+                              	   char *buf, pj_size_t bufsize );
+PJ_END_DECL
 
 #define PJLIB_MAX_ERR_MSG_HANDLER   8
 

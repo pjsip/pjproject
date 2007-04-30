@@ -64,7 +64,7 @@ static pj_status_t create_mutex_lock( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && lock, PJ_EINVAL);
 
-    p_lock = pj_pool_alloc(pool, sizeof(pj_lock_t));
+    p_lock = PJ_POOL_ALLOC_T(pool, pj_lock_t);
     if (!p_lock)
 	return PJ_ENOMEM;
 
@@ -152,7 +152,7 @@ PJ_DEF(pj_status_t) pj_lock_create_semaphore(  pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && lock, PJ_EINVAL);
 
-    p_lock = pj_pool_alloc(pool, sizeof(pj_lock_t));
+    p_lock = PJ_POOL_ALLOC_T(pool, pj_lock_t);
     if (!p_lock)
 	return PJ_ENOMEM;
 

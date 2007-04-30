@@ -31,6 +31,10 @@
 #  include <pj/compat/cc_msvc.h>
 #elif defined(__GNUC__)
 #  include <pj/compat/cc_gcc.h>
+#elif defined(__CW32__)
+#  include <pj/compat/cc_mwcc.h>
+#elif defined(__MWERKS__)
+#  include <pj/compat/cc_codew.h>
 #else
 #  error "Unknown compiler."
 #endif
@@ -44,6 +48,12 @@
      * Autoconf
      */
 #   include <pj/compat/os_auto.h>
+
+#elif defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+    /*
+     * SymbianOS
+     */
+#  include <pj/compat/os_symbian.h>
 
 #elif defined(PJ_WIN32_WINCE) || defined(_WIN32_WCE) || defined(UNDER_CE)
     /*

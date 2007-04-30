@@ -56,7 +56,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
     PJ_ASSERT_RETURN(pool && p_mutex, PJ_EINVAL);
 
     *p_mutex = NULL;
-    rwmutex = pj_pool_alloc(pool, sizeof(struct pj_rwmutex_t));
+    rwmutex = PJ_POOL_ALLOC_T(pool, pj_rwmutex_t);
 
     status = pj_mutex_create_simple(pool, name, &rwmutex ->read_lock);
     if (status != PJ_SUCCESS)

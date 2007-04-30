@@ -34,7 +34,7 @@ pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size)
 	       "fifobuf_init fifobuf=%p buffer=%p, size=%d", 
 	       fifobuf, buffer, size));
 
-    fifobuf->first = buffer;
+    fifobuf->first = (char*)buffer;
     fifobuf->last = fifobuf->first + size;
     fifobuf->ubegin = fifobuf->uend = fifobuf->first;
     fifobuf->full = 0;
@@ -118,7 +118,7 @@ pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 PJ_DEF(pj_status_t)
 pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
 {
-    char *ptr = buf;
+    char *ptr = (char*)buf;
     char *endptr;
     unsigned sz;
 
@@ -149,7 +149,7 @@ pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
 PJ_DEF(pj_status_t)
 pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
 {
-    char *ptr = buf;
+    char *ptr = (char*)buf;
     char *end;
     unsigned sz;
 

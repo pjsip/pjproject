@@ -236,6 +236,9 @@ static int stricmp_test(void)
 	//return -700;
     }
 
+    /* Avoid division by zero */
+    if (c2 == 0) c2=1;
+    
     PJ_LOG(3, ("", "  time: stricmp=%u, stricmp_alnum=%u (speedup=%d.%02dx)", 
 		   c1, c2,
 		   (c1 * 100 / c2) / 100,
@@ -328,7 +331,7 @@ int string_test(void)
     /* 
      * pj_strcpy(), pj_strcat() 
      */
-    s3.ptr = pj_pool_alloc(pool, 256);
+    s3.ptr = (char*) pj_pool_alloc(pool, 256);
     if (!s3.ptr) 
 	return -200;
     pj_strcpy(&s3, &s2);
@@ -348,7 +351,7 @@ int string_test(void)
     /* 
      * pj_utoa() 
      */
-    s5.ptr = pj_pool_alloc(pool, 16);
+    s5.ptr = (char*) pj_pool_alloc(pool, 16);
     if (!s5.ptr)
 	return -270;
     s5.slen = pj_utoa(UL_VALUE, s5.ptr);
@@ -392,7 +395,7 @@ int string_test(void)
     for (i=0; i<RCOUNT; ++i) {
 	int j;
 	
-	random[i].ptr = pj_pool_alloc(pool, RLEN);
+	random[i].ptr = (char*) pj_pool_alloc(pool, RLEN);
 	if (!random[i].ptr)
 	    return -320;
 

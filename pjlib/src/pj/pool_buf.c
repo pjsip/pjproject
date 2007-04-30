@@ -57,7 +57,7 @@ static void* stack_alloc(pj_pool_factory *factory, pj_size_t size)
 
     PJ_UNUSED_ARG(factory);
 
-    param = pj_thread_local_get(tls);
+    param = (struct creation_param*) pj_thread_local_get(tls);
     if (param == NULL) {
 	/* Don't assert(), this is normal no-memory situation */
 	return NULL;

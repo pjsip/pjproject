@@ -123,7 +123,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 static int worker_thread(void *arg)
 {
-    pj_ioqueue_t *ioqueue = arg;
+    pj_ioqueue_t *ioqueue = (pj_ioqueue_t*) arg;
 
     while (!thread_quitting) {
 	pj_time_val timeout = { 0, 20 };
@@ -210,9 +210,10 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
     /* Initialize test data */
     sock_data.pool = pj_pool_create(mem, "sd", 1000, 1000, NULL);
-    sock_data.buffer = pj_pool_alloc(sock_data.pool, 128);
+    sock_data.buffer = (char*) pj_pool_alloc(sock_data.pool, 128);
     sock_data.bufsize = 128;
-    sock_data.op_key = pj_pool_alloc(sock_data.pool, 
+    sock_data.op_key = (pj_ioqueue_op_key_t*) 
+    		       pj_pool_alloc(sock_data.pool, 
 				     sizeof(*sock_data.op_key));
     sock_data.received = 0;
     sock_data.unregistered = 0;

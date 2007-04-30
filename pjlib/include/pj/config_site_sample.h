@@ -65,7 +65,7 @@
 #   define PJSIP_UDP_SO_RCVBUF_SIZE	(24*1024*1024)
 #   define PJ_DEBUG			0
 #   define PJSIP_SAFE_MODULE		0
-#   define PJ_HAS_STRICMP_ALNUM		1
+#   define PJ_HAS_STRICMP_ALNUM		0
 #   define PJ_HASH_USE_OWN_TOLOWER	1
 #   define PJSIP_UNESCAPE_IN_PLACE	1
 

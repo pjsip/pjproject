@@ -1,0 +1,9 @@
+prj_mmpfiles
+pjlib.mmp
+//pjlib_util.mmp
+//pjsip.mmp
+//pjsip_simple.mmp
+//pjsdp.mmp
+//pjsip_ua.mmp
+//pjlib_test.mmp
+//sipstateless.mmp

@@ -63,13 +63,8 @@
 
 #define UDP_PORT	51234
 #define TCP_PORT        (UDP_PORT+10)
-#define BIG_DATA_LEN	9000
+#define BIG_DATA_LEN	8192
 #define ADDRESS		"127.0.0.1"
-#define A0		127
-#define A1		0
-#define A2		0
-#define A3		1
-
 
 static char bigdata[BIG_DATA_LEN];
 static char bigbuffer[BIG_DATA_LEN];
@@ -82,6 +77,12 @@ static int format_test(void)
     char zero[64];
     pj_sockaddr_in addr2;
     const pj_str_t *hostname;
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+    /* Symbian IP address is saved in host order */
+    unsigned char A[] = {1, 0, 0, 127};
+#else
+    unsigned char A[] = {127, 0, 0, 1};
+#endif
 
     PJ_LOG(3,("test", "...format_test()"));
     
@@ -91,7 +92,7 @@ static int format_test(void)
     
     /* Check the result. */
     p = (unsigned char*)&addr;
-    if (p[0]!=A0 || p[1]!=A1 || p[2]!=A2 || p[3]!=A3) {
+    if (p[0]!=A[0] || p[1]!=A[1] || p[2]!=A[2] || p[3]!=A[3]) {
 	PJ_LOG(3,("test", "  error: mismatched address. p0=%d, p1=%d, "
 			  "p2=%d, p3=%d", p[0] & 0xFF, p[1] & 0xFF, 
 			   p[2] & 0xFF, p[3] & 0xFF));
@@ -368,6 +369,8 @@ static int udp_test(void)
     if (rc != 0)
 	goto on_error;
 
+// This test will fail on S60 3rd Edition MR2
+#if 0
     /* connect() the sockets. */
     rc = pj_sock_connect(cs, &dstaddr, sizeof(dstaddr));
     if (rc != 0) {
@@ -385,6 +388,7 @@ static int udp_test(void)
                         sizeof(srcaddr));
     if (rc != 0)
 	goto on_error;
+#endif
 
 on_error:
     retval = rc;
@@ -459,12 +463,70 @@ static int gethostbyname_test(void)
 	return 0;
 }
 
+#if 0
+#include "../pj/os_symbian.h"
+static int connect_test()
+{
+	RSocketServ rSockServ;
+	RSocket rSock;
+	TInetAddr inetAddr;
+	TRequestStatus reqStatus;
+	char buffer[16];
+	TPtrC8 data((const TUint8*)buffer, (TInt)sizeof(buffer));
+ 	int rc;
+	
+	rc = rSockServ.Connect();
+	if (rc != KErrNone)
+		return rc;
+	
+	rc = rSock.Open(rSockServ, KAfInet, KSockDatagram, KProtocolInetUdp);
+    	if (rc != KErrNone) 
+    	{    		
+    		rSockServ.Close();
+    		return rc;
+    	}
+   	
+    	inetAddr.Init(KAfInet);
+    	inetAddr.Input(_L("127.0.0.1"));
+    	inetAddr.SetPort(80);
+    	
+    	rSock.Connect(inetAddr, reqStatus);
+    	User::WaitForRequest(reqStatus);
+
+    	if (reqStatus != KErrNone) {
+		rSock.Close();
+    		rSockServ.Close();
+		return rc;
+    	}
+    
+    	rSock.Send(data, 0, reqStatus);
+    	User::WaitForRequest(reqStatus);
+    	
+    	if (reqStatus!=KErrNone) {
+    		rSock.Close();
+    		rSockServ.Close();
+    		return rc;
+    	}
+    	
+    	rSock.Close();
+    	rSockServ.Close();
+	return KErrNone;
+}
+#endif
+
 int sock_test()
 {
     int rc;
     
     pj_create_random_string(bigdata, BIG_DATA_LEN);
 
+// Enable this to demonstrate the error witn S60 3rd Edition MR2
+#if 0
+    rc = connect_test();
+    if (rc != 0)
+    	return rc;
+#endif
+    
     rc = format_test();
     if (rc != 0)
 	return rc;

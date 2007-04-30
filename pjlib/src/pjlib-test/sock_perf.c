@@ -69,8 +69,8 @@ static int sock_producer_consumer(int sock_type,
     }
 
     /* Create buffers. */
-    outgoing_buffer = pj_pool_alloc(pool, buf_size);
-    incoming_buffer = pj_pool_alloc(pool, buf_size);
+    outgoing_buffer = (char*) pj_pool_alloc(pool, buf_size);
+    incoming_buffer = (char*) pj_pool_alloc(pool, buf_size);
 
     /* Start loop. */
     pj_get_timestamp(&start);

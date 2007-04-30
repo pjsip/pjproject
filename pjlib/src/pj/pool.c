@@ -170,7 +170,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 {
     pj_pool_t *pool;
     pj_pool_block *block;
-    unsigned char *buffer;
+    pj_uint8_t *buffer;
 
     PJ_CHECK_STACK();
 
@@ -183,7 +183,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 	callback = f->policy.callback;
 
     /* Allocate initial block */
-    buffer = (*f->policy.block_alloc)(f, initial_size);
+    buffer = (pj_uint8_t*) (*f->policy.block_alloc)(f, initial_size);
     if (!buffer)
 	return NULL;
 

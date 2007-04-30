@@ -85,7 +85,7 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
 
     /* Delete all pool in free list */
     for (i=0; i < PJ_CACHING_POOL_ARRAY_SIZE; ++i) {
-	pj_pool_t *pool = cp->free_list[i].next;
+	pj_pool_t *pool = (pj_pool_t*) cp->free_list[i].next;
 	pj_pool_t *next;
 	for (; pool != (void*)&cp->free_list[i]; pool = next) {
 	    next = pool->next;
@@ -95,7 +95,7 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
     }
 
     /* Delete all pools in used list */
-    pool = cp->used_list.next;
+    pool = (pj_pool_t*) cp->used_list.next;
     while (pool != (pj_pool_t*) &cp->used_list) {
 	pj_pool_t *next = pool->next;
 	pj_list_erase(pool);
@@ -164,7 +164,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 
     } else {
 	/* Get one pool from the list. */
-	pool = cp->free_list[idx].next;
+	pool = (pj_pool_t*) cp->free_list[idx].next;
 	pj_list_erase(pool);
 
 	/* Initialize the pool. */
@@ -257,7 +257,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
     PJ_LOG(3,("cachpool", "   Capacity=%u, max_capacity=%u, used_cnt=%u", \
 			     cp->capacity, cp->max_capacity, cp->used_count));
     if (detail) {
-	pj_pool_t *pool = cp->used_list.next;
+	pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
 	pj_uint32_t total_used = 0, total_capacity = 0;
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
 	while (pool != (void*)&cp->used_list) {
