@@ -970,7 +970,7 @@ static int hdr_test_accept0(pjsip_hdr *h)
     return 0;
 }
 
-/* "application/*, text/plain\r\n" */
+/* "application/ *, text/plain\r\n" */
 static int hdr_test_accept1(pjsip_hdr *h)
 {
     pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
@@ -990,7 +990,7 @@ static int hdr_test_accept1(pjsip_hdr *h)
     return 0;
 }
 
-/* "application/*;p1=v1, text/plain\r\n" */
+/* "application/ *;p1=v1, text/plain\r\n" */
 static int hdr_test_accept2(pjsip_hdr *h)
 {
     pjsip_accept_hdr *hdr = (pjsip_accept_hdr*)h;
@@ -1116,9 +1116,9 @@ static int test_simple_addr_spec(pjsip_uri *uri)
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	    "<" ADDR_SPEC ">"
  */
-static int nameaddr_test(pjsip_uri *uri)
+static int nameaddr_test(void *uri)
 {
-    pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)pjsip_uri_get_uri(uri);
+    pjsip_sip_uri *sip_uri=(pjsip_sip_uri *)pjsip_uri_get_uri((pjsip_uri*)uri);
     pjsip_param *param;
     int rc;
 
@@ -1355,7 +1355,7 @@ static int hdr_test_record_route(pjsip_hdr *h)
     if (h->type != PJSIP_H_RECORD_ROUTE)
 	return -2210;
 
-    rc = nameaddr_test((pjsip_uri*)&hdr->name_addr);
+    rc = nameaddr_test(&hdr->name_addr);
     if (rc != 0)
 	return rc;
 
@@ -1470,7 +1470,7 @@ static int hdr_test(void)
 	    return -502;
 	}
 
-#if 0
+#if 1
 	/* Parse with hshortname, if present */
 	if (test->hshort_name) {
 	    hname = pj_str(test->hshort_name);

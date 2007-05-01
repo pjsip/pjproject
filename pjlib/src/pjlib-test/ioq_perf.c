@@ -332,7 +332,7 @@ static int perform_test(int sock_type, const char *type_name,
     for (i=0; i<thread_cnt; ++i) {
 	struct thread_arg *arg;
 
-	arg = (thread_arg*) pj_pool_zalloc(pool, sizeof(*arg));
+	arg = (struct thread_arg*) pj_pool_zalloc(pool, sizeof(*arg));
 	arg->id = i;
 	arg->ioqueue = ioqueue;
 	arg->counter = 0;
