@@ -26,6 +26,12 @@
 #   define PJMEDIA_HAS_SPEEX_AEC	0
 #endif
 
+/*
+ * Typical configuration for Symbian OS target
+ */
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+#   define PJMEDIA_SOUND_IMPLEMENTATION PJMEDIA_SOUND_NULL_SOUND
+#endif
 
 
 /*

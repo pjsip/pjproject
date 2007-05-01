@@ -1,0 +1,29 @@
+TARGET 		pjsdp.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjmedia\src\pjmedia
+
+OPTION		CW -lang c++
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_EXPORTING
+
+//
+// Platform independent source
+//
+SOURCE		errno.c
+SOURCE		sdp.c
+SOURCE		sdp_cmp.c
+SOURCE		sdp_neg.c
+
+
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include 
+SYSTEMINCLUDE	..\pjmedia\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+

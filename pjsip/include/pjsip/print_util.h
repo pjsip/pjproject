@@ -105,10 +105,10 @@ extern const pj_str_t pjsip_hdr_names[];
 
 PJ_INLINE(void) init_hdr(void *hptr, pjsip_hdr_e htype, void *vptr)
 {
-    pjsip_hdr *hdr = hptr;
+    pjsip_hdr *hdr = (pjsip_hdr*) hptr;
     hdr->type = htype;
     hdr->name = hdr->sname = pjsip_hdr_names[htype];
-    hdr->vptr = vptr;
+    hdr->vptr = (pjsip_hdr_vptr*) vptr;
     pj_list_init(hdr);
 }
 

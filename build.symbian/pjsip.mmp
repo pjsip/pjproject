@@ -1,0 +1,46 @@
+TARGET 		pjsip.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjsip\src\pjsip
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_IMPORTING
+
+OPTION		CW -lang c++
+
+// PJSIP-CORE files
+
+SOURCE	sip_auth_client.c
+SOURCE	sip_auth_msg.c
+SOURCE	sip_auth_parser.c
+SOURCE	sip_auth_server.c
+SOURCE	sip_dialog.c
+SOURCE	sip_endpoint.c
+SOURCE	sip_errno.c
+SOURCE	sip_msg.c
+SOURCE	sip_parser.c
+SOURCE	sip_resolve.c
+SOURCE	sip_tel_uri.c
+SOURCE	sip_transaction.c
+SOURCE	sip_transport.c
+SOURCE	sip_transport_loop.c
+SOURCE	sip_transport_tcp.c
+SOURCE	sip_transport_udp.c
+SOURCE	sip_ua_layer.c
+SOURCE	sip_uri.c
+SOURCE	sip_util.c
+SOURCE	sip_util_proxy.c
+SOURCE	sip_util_statefull.c
+
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include 
+SYSTEMINCLUDE	..\pjsip\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+CAPABILITY	None
+

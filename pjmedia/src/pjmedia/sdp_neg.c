@@ -83,7 +83,7 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
     PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(local))==PJ_SUCCESS, status);
 
     /* Create and initialize negotiator. */
-    neg = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_neg));
+    neg = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_neg);
     PJ_ASSERT_RETURN(neg != NULL, PJ_ENOMEM);
 
     neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
@@ -118,7 +118,7 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
 	return status;
 
     /* Create and initialize negotiator. */
-    neg = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_neg));
+    neg = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_neg);
     PJ_ASSERT_RETURN(neg != NULL, PJ_ENOMEM);
 
     neg->prefer_remote_codec_order = PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER;
@@ -563,7 +563,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 		 * compare the encoding name.
 		 */
 		const pjmedia_sdp_attr *a;
-		pjmedia_sdp_rtpmap or;
+		pjmedia_sdp_rtpmap or_;
 
 		/* Get the rtpmap for the payload type in the offer. */
 		a = pjmedia_sdp_media_find_attr2(offer, "rtpmap", fmt);
@@ -571,7 +571,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 		    pj_assert(!"Bug! Offer should have been validated");
 		    return PJ_EBUG;
 		}
-		pjmedia_sdp_attr_get_rtpmap(a, &or);
+		pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
 		/* Find paylaod in answer SDP with matching 
 		 * encoding name and clock rate.
@@ -586,9 +586,9 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			/* See if encoding name, clock rate, and channel
 			 * count match 
 			 */
-			if (!pj_stricmp(&or.enc_name, &ar.enc_name) &&
-			    or.clock_rate == ar.clock_rate &&
-			    (pj_stricmp(&or.param, &ar.param)==0 ||
+			if (!pj_stricmp(&or_.enc_name, &ar.enc_name) &&
+			    or_.clock_rate == ar.clock_rate &&
+			    (pj_stricmp(&or_.param, &ar.param)==0 ||
 			     (ar.param.slen==1 && *ar.param.ptr=='1')))
 			{
 			    /* Match! */
@@ -744,7 +744,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		 * compare the encoding name.
 		 */
 		const pjmedia_sdp_attr *a;
-		pjmedia_sdp_rtpmap or;
+		pjmedia_sdp_rtpmap or_;
 		pj_bool_t is_codec;
 
 		/* Get the rtpmap for the payload type in the offer. */
@@ -754,9 +754,9 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		    pj_assert(!"Bug! Offer should have been validated");
 		    return PJMEDIA_SDP_EMISSINGRTPMAP;
 		}
-		pjmedia_sdp_attr_get_rtpmap(a, &or);
+		pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
-		if (!pj_strcmp2(&or.enc_name, "telephone-event")) {
+		if (!pj_strcmp2(&or_.enc_name, "telephone-event")) {
 		    offer_has_telephone_event = 1;
 		    if (found_matching_telephone_event)
 			continue;
@@ -781,10 +781,10 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			/* See if encoding name, clock rate, and
 			 * channel count  match 
 			 */
-			if (!pj_stricmp(&or.enc_name, &lr.enc_name) &&
-			    or.clock_rate == lr.clock_rate &&
-			    (pj_strcmp(&or.param, &lr.param)==0 ||
-			     (or.param.slen==1 && *or.param.ptr=='1'))) 
+			if (!pj_stricmp(&or_.enc_name, &lr.enc_name) &&
+			    or_.clock_rate == lr.clock_rate &&
+			    (pj_strcmp(&or_.param, &lr.param)==0 ||
+			     (or_.param.slen==1 && *or_.param.ptr=='1'))) 
 			{
 			    /* Match! */
 			    if (is_codec)

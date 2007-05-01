@@ -103,7 +103,7 @@ PJ_DEF(pj_status_t) pjsip_resolver_create( pj_pool_t *pool,
     pjsip_resolver_t *resolver;
 
     PJ_ASSERT_RETURN(pool && p_res, PJ_EINVAL);
-    resolver = pj_pool_zalloc(pool, sizeof(*resolver));
+    resolver = PJ_POOL_ZALLOC_T(pool, pjsip_resolver_t);
     *p_res = resolver;
 
     return PJ_SUCCESS;
@@ -278,7 +278,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 #if PJSIP_HAS_RESOLVER
 
     /* Build the query state */
-    query = pj_pool_zalloc(pool, sizeof(struct query));
+    query = PJ_POOL_ZALLOC_T(pool, struct query);
     pj_ansi_snprintf(query->objname, sizeof(query->objname), "rsvjob%X",
 		     resolver->job_id++);
     query->resolver = resolver;
@@ -298,7 +298,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     query->naptr[0].order = 0;
     query->naptr[0].pref = 0;
     query->naptr[0].type = type;
-    query->naptr[0].target_name.ptr = 
+    query->naptr[0].target_name.ptr = (char*)
 	pj_pool_alloc(pool, target->addr.host.slen + 12);
 
     if (type == PJSIP_TRANSPORT_TLS)
@@ -639,7 +639,7 @@ static void dns_callback(void *user_data,
 			 pj_status_t status,
 			 pj_dns_parsed_packet *pkt)
 {
-    struct query *query = user_data;
+    struct query *query = (struct query*) user_data;
     unsigned i;
 
     /* Proceed to next stage */

@@ -106,7 +106,7 @@ static void parse_digest_credential( pj_scanner *scanner, pj_pool_t *pool,
 	    cred->nc = value;
 
 	} else {
-	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	    p->name = name;
 	    p->value = value;
 	    pj_list_insert_before(&cred->other_param, p);
@@ -168,7 +168,7 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool,
 	    chal->qop = value;
 
 	} else {
-	    pjsip_param *p = pj_pool_alloc(pool, sizeof(pjsip_param));
+	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	    p->name = name;
 	    p->value = value;
 	    pj_list_insert_before(&chal->other_param, p);

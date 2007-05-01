@@ -1,0 +1,35 @@
+TARGET 		pjsip_simple.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjsip\src\pjsip-simple
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_IMPORTING
+
+//OPTION		CW -lang c++
+
+
+// PJSIP-SIMPLE files
+
+SOURCE	errno.c
+SOURCE	evsub.c
+SOURCE	evsub_msg.c
+SOURCE	iscomposing.c
+SOURCE	pidf.c
+SOURCE	presence.c
+SOURCE	presence_body.c
+SOURCE	publishc.c
+SOURCE	xpidf.c
+
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include 
+SYSTEMINCLUDE	..\pjsip\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+CAPABILITY	None
+

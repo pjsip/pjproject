@@ -153,7 +153,7 @@ static void pool_callback( pj_pool_t *pool, pj_size_t size )
 /* Compare module name, used for searching module based on name. */
 static int cmp_mod_name(void *name, const void *mod)
 {
-    return pj_stricmp(name, &((pjsip_module*)mod)->name);
+    return pj_stricmp((const pj_str_t*)name, &((pjsip_module*)mod)->name);
 }
 
 /*
@@ -445,7 +445,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 	return PJ_ENOMEM;
 
     /* Create endpoint. */
-    endpt = pj_pool_zalloc(pool, sizeof(*endpt));
+    endpt = PJ_POOL_ZALLOC_T(pool, pjsip_endpoint);
     endpt->pool = pool;
     endpt->pf = pf;
 
@@ -828,7 +828,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 	int port = rdata->msg_info.via->sent_by.port;
 	pj_bool_t mismatch = PJ_FALSE;
 	if (port == 0) {
-	    int type;
+	    pjsip_transport_type_e type;
 	    type = rdata->tp_info.transport->key.type;
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}

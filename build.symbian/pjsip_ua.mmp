@@ -1,0 +1,31 @@
+TARGET 		pjsip_ua.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjsip\src\pjsip-ua
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_IMPORTING
+
+//OPTION		CW -lang c++
+
+
+// PJSIP-SIMPLE files
+
+SOURCE	sip_inv.c
+SOURCE	sip_reg.c
+SOURCE	sip_replaces.c
+SOURCE	sip_xfer.c
+
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include 
+SYSTEMINCLUDE	..\pjsip\include 
+SYSTEMINCLUDE	..\pjmedia\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+CAPABILITY	None
+
