@@ -381,7 +381,7 @@ static void dns_callback(void *user_data,
 			 pj_status_t status,
 			 pj_dns_parsed_packet *pkt)
 {
-    pj_dns_srv_resolver_job *query_job = user_data;
+    pj_dns_srv_resolver_job *query_job = (pj_dns_srv_resolver_job*) user_data;
     unsigned i;
 
     /* Proceed to next stage */

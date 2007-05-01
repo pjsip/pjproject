@@ -1494,7 +1494,7 @@ pj_stun_binary_attr_create(pj_pool_t *pool,
 
     if (data && length) {
 	attr->length = length;
-	attr->data = pj_pool_alloc(pool, length);
+	attr->data = (pj_uint8_t*) pj_pool_alloc(pool, length);
 	pj_memcpy(attr->data, data, length);
     }
 
@@ -1536,7 +1536,7 @@ static pj_status_t decode_binary_attr(pj_pool_t *pool,
 
     /* Copy the data to the attribute */
     attr->length = attr->hdr.length;
-    attr->data = pj_pool_alloc(pool, attr->length);
+    attr->data = (pj_uint8_t*) pj_pool_alloc(pool, attr->length);
     pj_memcpy(attr->data, buf+ATTR_HDR_LEN, attr->length);
 
     /* Done */

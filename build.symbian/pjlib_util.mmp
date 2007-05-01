@@ -1,0 +1,41 @@
+TARGET 		pjlib_util.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjlib-util\src\pjlib-util
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+MACRO		PJ_IMPORTING
+
+OPTION		CW -lang c++
+
+// PJLIB-UTIL files
+
+SOURCE	crc32.c
+SOURCE	dns.c
+SOURCE	dns_dump.c
+SOURCE	errno.c
+SOURCE	getopt.c
+SOURCE	hmac_md5.c
+SOURCE	hmac_sha1.c
+SOURCE	md5.c
+SOURCE	resolver.c
+SOURCE	scanner.c
+SOURCE	sha1.c
+SOURCE	srv_resolver.c
+SOURCE	string.c
+SOURCE	stun_simple.c
+SOURCE	stun_simple_client.c
+SOURCE	xml.c
+
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+LIBRARY		pjlib.lib 
+CAPABILITY	None
+

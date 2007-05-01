@@ -380,7 +380,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
     sess->use_fingerprint = fingerprint;
     
-    sess->srv_name.ptr = pj_pool_alloc(pool, 32);
+    sess->srv_name.ptr = (char*) pj_pool_alloc(pool, 32);
     sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
 					   "pj_stun-%s", PJ_VERSION);
 
@@ -453,7 +453,7 @@ PJ_DEF(void) pj_stun_session_set_credential(pj_stun_session *sess,
     PJ_ASSERT_ON_FAIL(sess, return);
     if (cred) {
 	if (!sess->cred)
-	    sess->cred = pj_pool_alloc(sess->pool, sizeof(pj_stun_auth_cred));
+	    sess->cred = PJ_POOL_ALLOC_T(sess->pool, pj_stun_auth_cred);
 	pj_stun_auth_cred_dup(sess->pool, sess->cred, cred);
     } else {
 	sess->cred = NULL;
@@ -598,8 +598,9 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     }
 
     /* Encode message */
-    status = pj_stun_msg_encode(tdata->msg, tdata->pkt, tdata->max_len,
-			        0, get_passwd(sess, tdata->pool, tdata->msg),
+    status = pj_stun_msg_encode(tdata->msg, (pj_uint8_t*)tdata->pkt, 
+    				tdata->max_len, 0, 
+    				get_passwd(sess, tdata->pool, tdata->msg),
 				&tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
@@ -752,7 +753,7 @@ static pj_status_t send_response(pj_stun_session *sess,
 
     /* Alloc packet buffer */
     out_max_len = PJ_STUN_MAX_PKT_LEN;
-    out_pkt = pj_pool_alloc(pool, out_max_len);
+    out_pkt = (pj_uint8_t*) pj_pool_alloc(pool, out_max_len);
 
     /* Encode */
     status = pj_stun_msg_encode(response, out_pkt, out_max_len, 0, 
@@ -958,7 +959,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	return status;
     }
 
-    dump = pj_pool_alloc(tmp_pool, PJ_STUN_MAX_PKT_LEN);
+    dump = (char*) pj_pool_alloc(tmp_pool, PJ_STUN_MAX_PKT_LEN);
 
     PJ_LOG(5,(SNAME(sess),
 	      "RX STUN message:\n"
@@ -980,8 +981,8 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
      * is specified in the option.
      */
     if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
-	status = authenticate_msg(sess, packet, pkt_size, msg, tmp_pool,
-				  src_addr, src_addr_len);
+	status = authenticate_msg(sess, (const pj_uint8_t*) packet, pkt_size, 
+				  msg, tmp_pool, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}
@@ -995,12 +996,14 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 
-	status = on_incoming_request(sess, tmp_pool, packet, pkt_size, msg,
-				     src_addr, src_addr_len);
+	status = on_incoming_request(sess, tmp_pool, 
+				     (const pj_uint8_t*) packet, pkt_size, 
+				     msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_INDICATION(msg->hdr.type)) {
 
-	status = on_incoming_indication(sess, tmp_pool, packet, pkt_size,
+	status = on_incoming_indication(sess, tmp_pool, 
+					(const pj_uint8_t*) packet, pkt_size,
 					msg, src_addr, src_addr_len);
 
     } else {

@@ -243,7 +243,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 	return PJ_ENOMEM;
 
     /* Create pool and name */
-    resv = pj_pool_zalloc(pool, sizeof(struct pj_dns_resolver));
+    resv = PJ_POOL_ZALLOC_T(pool, struct pj_dns_resolver);
     resv->pool = pool;
     resv->udp_sock = PJ_INVALID_SOCKET;
     pj_strdup2_with_null(pool, &resv->name, name);
@@ -337,7 +337,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 
 	it = pj_hash_first(resolver->hquerybyid, &it_buf);
 	while (it) {
-	    pj_dns_async_query *q = pj_hash_this(resolver->hquerybyid, it);
+	    pj_dns_async_query *q = (pj_dns_async_query *)
+	    			    pj_hash_this(resolver->hquerybyid, it);
 	    pj_dns_async_query *cq;
 	    if (q->cb)
 		(*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
@@ -497,7 +498,7 @@ static pj_dns_async_query *alloc_qnode(pj_dns_resolver *resolver,
 	pj_list_erase(q);
 	pj_bzero(q, sizeof(*q));
     } else {
-	q = pj_pool_zalloc(resolver->pool, sizeof(*q));
+	q = PJ_POOL_ZALLOC_T(resolver->pool, pj_dns_async_query);
     }
 
     /* Init query */
@@ -657,7 +658,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
      * and the cached entry has not expired.
      */
     hval = 0;
-    cache = pj_hash_get(resolver->hrescache, &key, sizeof(key), &hval);
+    cache = (struct cached_res *) pj_hash_get(resolver->hrescache, &key, 
+    					      sizeof(key), &hval);
     if (cache) {
 	/* We've found a cached entry. */
 
@@ -702,7 +704,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     }
 
     /* Next, check if we have pending query on the same resource */
-    q = pj_hash_get(resolver->hquerybyres, &key, sizeof(key), NULL);
+    q = (pj_dns_async_query *) pj_hash_get(resolver->hquerybyres, &key, 
+    					   sizeof(key), NULL);
     if (q) {
 	/* Yes, there's another pending query to the same key.
 	 * Just create a new child query and add this query to
@@ -941,7 +944,8 @@ static void update_res_cache(pj_dns_resolver *resolver,
 
     /* If status is unsuccessful, clear the same entry from the cache */
     if (status != PJ_SUCCESS) {
-	cache = pj_hash_get(resolver->hrescache, key, sizeof(*key), &hval);
+	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
+						  sizeof(*key), &hval);
 	if (cache)
 	    pj_list_push_back(&resolver->res_free_nodes, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
@@ -976,7 +980,8 @@ static void update_res_cache(pj_dns_resolver *resolver,
 
     /* If TTL is zero, clear the same entry in the hash table */
     if (ttl == 0) {
-	cache = pj_hash_get(resolver->hrescache, key, sizeof(*key), &hval);
+	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
+						  sizeof(*key), &hval);
 	if (cache)
 	    pj_list_push_back(&resolver->res_free_nodes, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
@@ -984,13 +989,14 @@ static void update_res_cache(pj_dns_resolver *resolver,
     }
 
     /* Get a cache response entry */
-    cache = pj_hash_get(resolver->hrescache, key, sizeof(*key), &hval);
+    cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
+    					      sizeof(*key), &hval);
     if (cache == NULL) {
 	if (!pj_list_empty(&resolver->res_free_nodes)) {
 	    cache = resolver->res_free_nodes.next;
 	    pj_list_erase(cache);
 	} else {
-	    cache = pj_pool_zalloc(resolver->pool, sizeof(*cache));
+	    cache = PJ_POOL_ZALLOC_T(resolver->pool, struct cached_res);
 	}
     }
 
@@ -1040,7 +1046,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
-    q = entry->user_data;
+    q = (pj_dns_async_query *) entry->user_data;
     resolver = q->resolver;
 
     pj_mutex_lock(resolver->mutex);
@@ -1124,7 +1130,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     PJ_USE_EXCEPTION;
 
 
-    resolver = pj_ioqueue_get_user_data(key);
+    resolver = (pj_dns_resolver *) pj_ioqueue_get_user_data(key);
     pj_mutex_lock(resolver->mutex);
 
 
@@ -1187,7 +1193,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
 
     /* Find the query based on the transaction ID */
-    q = pj_hash_get(resolver->hquerybyid, &dns_pkt->hdr.id, 
+    q = (pj_dns_async_query*) 
+        pj_hash_get(resolver->hquerybyid, &dns_pkt->hdr.id,
 		    sizeof(dns_pkt->hdr.id), NULL);
     if (!q) {
 	PJ_LOG(5,(resolver->name.ptr, 
@@ -1371,7 +1378,8 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 	pj_hash_iterator_t itbuf, *it;
 	it = pj_hash_first(resolver->hrescache, &itbuf);
 	while (it) {
-	    struct cached_res *cache = pj_hash_this(resolver->hrescache, it);
+	    struct cached_res *cache;
+	    cache = (struct cached_res*)pj_hash_this(resolver->hrescache, it);
 	    PJ_LOG(3,(resolver->name.ptr, 
 		      "   Type %s: %s",
 		      pj_dns_get_type_name(cache->key.qtype), 
@@ -1389,7 +1397,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 	it = pj_hash_first(resolver->hquerybyid, &itbuf);
 	while (it) {
 	    struct pj_dns_async_query *q;
-	    q = pj_hash_this(resolver->hquerybyid, it);
+	    q = (pj_dns_async_query*) pj_hash_this(resolver->hquerybyid, it);
 	    PJ_LOG(3,(resolver->name.ptr, 
 		      "   Type %s: %s",
 		      pj_dns_get_type_name(q->key.qtype), 

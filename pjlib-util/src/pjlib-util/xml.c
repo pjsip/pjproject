@@ -37,7 +37,7 @@ static pj_xml_node *alloc_node( pj_pool_t *pool )
 {
     pj_xml_node *node;
 
-    node = pj_pool_zalloc(pool, sizeof(pj_xml_node));
+    node = PJ_POOL_ZALLOC_T(pool, pj_xml_node);
     pj_list_init( &node->attr_head );
     pj_list_init( &node->node_head );
 
@@ -46,7 +46,7 @@ static pj_xml_node *alloc_node( pj_pool_t *pool )
 
 static pj_xml_attr *alloc_attr( pj_pool_t *pool )
 {
-    return pj_pool_zalloc(pool, sizeof(pj_xml_attr));
+    return PJ_POOL_ZALLOC_T(pool, pj_xml_attr);
 }
 
 /* This is a recursive function! */
@@ -393,7 +393,7 @@ PJ_DEF(pj_xml_node*) pj_xml_find( pj_xml_node *parent, const pj_str_t *name,
 				  const void *data, 
 				  pj_bool_t (*match)(pj_xml_node *, const void*))
 {
-    pj_xml_node *head = (void*)&parent->node_head, *node = head->next;
+    pj_xml_node *head = (pj_xml_node*) &parent->node_head, *node = head->next;
 
     while (node != (void*)head) {
 	if (name && pj_stricmp(&node->name, name)==0) {

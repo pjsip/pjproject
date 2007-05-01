@@ -296,7 +296,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     }
 
     if (local_ufrag == NULL) {
-	ice->rx_ufrag.ptr = pj_pool_alloc(ice->pool, 16);
+	ice->rx_ufrag.ptr = (char*) pj_pool_alloc(ice->pool, 16);
 	pj_create_random_string(ice->rx_ufrag.ptr, 16);
 	ice->rx_ufrag.slen = 16;
     } else {
@@ -304,7 +304,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     }
 
     if (local_passwd == NULL) {
-	ice->rx_pass.ptr = pj_pool_alloc(ice->pool, 16);
+	ice->rx_pass.ptr = (char*) pj_pool_alloc(ice->pool, 16);
 	pj_create_random_string(ice->rx_pass.ptr, 16);
 	ice->rx_pass.slen = 16;
     } else {
@@ -396,8 +396,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
 					  const pj_uint8_t prefs[4])
 {
     PJ_ASSERT_RETURN(ice && prefs, PJ_EINVAL);
-    ice->prefs = pj_pool_calloc(ice->pool, PJ_ARRAY_SIZE(prefs), 
-				sizeof(pj_uint8_t));
+    ice->prefs = (pj_uint8_t*) pj_pool_calloc(ice->pool, PJ_ARRAY_SIZE(prefs),
+					      sizeof(pj_uint8_t));
     pj_memcpy(ice->prefs, prefs, sizeof(prefs));
     return PJ_SUCCESS;
 }
@@ -1708,7 +1708,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * the response match the source IP address and port that the Binding
      * Request was sent from.
      */
-    if (sockaddr_cmp(&check->rcand->addr, src_addr) != 0) {
+    if (sockaddr_cmp(&check->rcand->addr, (const pj_sockaddr*)src_addr) != 0) {
 	status = PJNATH_EICEINSRCADDR;
 	LOG4((ice->obj_name, 
 	     "Check %s%s: connectivity check FAILED: source address mismatch",
@@ -2063,7 +2063,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	pj_memcpy(&rcand->addr, &rcheck->src_addr, rcheck->src_addr_len);
 
 	/* Foundation is random, unique from other foundation */
-	rcand->foundation.ptr = pj_pool_alloc(ice->pool, 36);
+	rcand->foundation.ptr = (char*) pj_pool_alloc(ice->pool, 36);
 	rcand->foundation.slen = pj_ansi_snprintf(rcand->foundation.ptr, 36,
 						  "f%p", 
 						  rcand->foundation.ptr);
@@ -2302,7 +2302,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 	goto on_return;
     }
 
-    stun_status = pj_stun_msg_check(pkt, pkt_size, PJ_STUN_IS_DATAGRAM);
+    stun_status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
+    				    PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,

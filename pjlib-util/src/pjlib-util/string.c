@@ -31,7 +31,7 @@ PJ_DEF(pj_str_t) pj_str_unescape( pj_pool_t *pool, const pj_str_t *src_str)
     if (pj_strchr(src_str, '%')==NULL)
 	return *src_str;
 
-    dst = dst_str.ptr = pj_pool_alloc(pool, src_str->slen);
+    dst = dst_str.ptr = (char*) pj_pool_alloc(pool, src_str->slen);
 
     while (src != end) {
 	if (*src == '%' && src < end-2 && pj_isxdigit(*(src+1)) && 

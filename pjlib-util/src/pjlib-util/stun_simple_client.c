@@ -41,7 +41,7 @@ PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
     pj_sockaddr_in srv_addr[2];
     int i, j, send_cnt = 0;
     pj_pool_t *pool;
-    struct {
+    struct query_rec {
 	struct {
 	    pj_uint32_t	mapped_addr;
 	    pj_uint32_t	mapped_port;
@@ -61,7 +61,7 @@ PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 
 
     /* Allocate client records */
-    rec = pj_pool_calloc(pool, sock_cnt, sizeof(*rec));
+    rec = (struct query_rec*) pj_pool_calloc(pool, sock_cnt, sizeof(*rec));
     if (!rec) {
 	status = PJ_ENOMEM;
 	goto on_error;
@@ -97,7 +97,7 @@ PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 	/* Send messages to servers that has not given us response. */
 	for (i=0; i<sock_cnt && status==PJ_SUCCESS; ++i) {
 	    for (j=0; j<2 && status==PJ_SUCCESS; ++j) {
-		pjstun_msg_hdr *msg_hdr = out_msg;
+		pjstun_msg_hdr *msg_hdr = (pjstun_msg_hdr*) out_msg;
                 pj_ssize_t sent_len;
 
 		if (rec[i].srv[j].mapped_port != 0)
@@ -194,7 +194,8 @@ PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 		    continue;
 		}
 
-		attr = (void*)pjstun_msg_find_attr(&msg, PJSTUN_ATTR_MAPPED_ADDR);
+		attr = (pjstun_mapped_addr_attr*) 
+		       pjstun_msg_find_attr(&msg, PJSTUN_ATTR_MAPPED_ADDR);
 		if (!attr) {
 		    status = PJLIB_UTIL_ESTUNNOMAP;
 		    continue;
