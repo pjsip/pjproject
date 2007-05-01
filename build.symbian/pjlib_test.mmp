@@ -45,6 +45,7 @@ SOURCE	util.c
 
 SOURCE	main_symbian.cpp
 
+DOCUMENT test.h
 
 SYSTEMINCLUDE	..\pjlib\include
 

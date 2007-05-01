@@ -102,7 +102,7 @@ int errno_test(void)
     /*
      * Unix errors
      */
-#   ifdef EINVAL
+#   if defined(EINVAL) && !defined(PJ_SYMBIAN)
     rc = PJ_STATUS_FROM_OS(EINVAL);
     pj_set_os_error(rc);
 

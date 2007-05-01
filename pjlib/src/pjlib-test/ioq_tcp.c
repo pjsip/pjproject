@@ -536,7 +536,11 @@ on_error:
  */
 static int compliance_test_2(void)
 {
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+    enum { MAX_PAIR = 1, TEST_LOOP = 2 };
+#else
     enum { MAX_PAIR = 4, TEST_LOOP = 2 };
+#endif
 
     struct listener
     {

@@ -369,8 +369,11 @@ static int udp_test(void)
     if (rc != 0)
 	goto on_error;
 
-// This test will fail on S60 3rd Edition MR2
-#if 0
+    /* Disable this test on Symbian since UDP connect()/send() failed
+     * with S60 3rd edition (including MR2).
+     * See http://www.pjsip.org/trac/ticket/264
+     */    
+#if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* connect() the sockets. */
     rc = pj_sock_connect(cs, &dstaddr, sizeof(dstaddr));
     if (rc != 0) {

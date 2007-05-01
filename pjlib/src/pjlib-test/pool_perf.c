@@ -60,6 +60,35 @@ static int pool_test_pool()
     return 0;
 }
 
+/* Symbian doesn't have malloc()/free(), so we use new/delete instead */
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+
+static int pool_test_malloc_free()
+{
+    int i; /* must be signed */
+
+    for (i=0; i<COUNT; ++i) {
+	p[i] = new char[sizes[i]];
+	if (!p[i]) {
+	    PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+		      sizes[i]));
+	    --i;
+	    while (i >= 0)
+		delete [] p[i], --i;
+	    return -1;
+	}
+	*p[i] = '\0';
+    }
+
+    for (i=0; i<COUNT; ++i) {
+	delete [] p[i];
+    }
+
+    return 0;
+}
+
+#else	/* PJ_SYMBIAN */
+
 static int pool_test_malloc_free()
 {
     int i; /* must be signed */
@@ -83,6 +112,8 @@ static int pool_test_malloc_free()
 
     return 0;
 }
+
+#endif /* PJ_SYMBIAN */
 
 int pool_perf_test()
 {
@@ -140,6 +171,10 @@ int pool_perf_test()
 	best = pool_time, worst = pool_time2;
     else
 	best = pool_time2, worst = pool_time;
+    
+    /* avoid division by zero */
+    if (best==0) best=1;
+    if (worst==0) worst=1;
 
     PJ_LOG(3, (THIS_FILE, "..pool speedup over malloc best=%dx, worst=%dx", 
 			  (int)(malloc_time/best),
