@@ -170,7 +170,7 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 				   const pj_sockaddr_in *addr )
 {
     enum { M = 48 };
-    host_port->host.ptr = pj_pool_alloc(pool, M);
+    host_port->host.ptr = (char*) pj_pool_alloc(pool, M);
     host_port->host.slen = pj_ansi_snprintf( host_port->host.ptr, M, "%s", 
 					    pj_inet_ntoa(addr->sin_addr));
     host_port->port = pj_ntohs(addr->sin_port);
@@ -222,7 +222,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
 
-    listener = pj_pool_zalloc(pool, sizeof(struct tcp_listener));
+    listener = PJ_POOL_ZALLOC_T(pool, struct tcp_listener);
     listener->factory.pool = pool;
     listener->factory.type = PJSIP_TRANSPORT_TCP;
     listener->factory.type_name = "tcp";
@@ -345,8 +345,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 	    goto on_error;
 	}
 
-	listener->accept_op[i] = pj_pool_zalloc(pool, 
-						sizeof(struct pending_accept));
+	listener->accept_op[i] = PJ_POOL_ZALLOC_T(pool, 
+						  struct pending_accept);
 	pj_ioqueue_op_key_init(&listener->accept_op[i]->op_key, 
 				sizeof(listener->accept_op[i]->op_key));
 	listener->accept_op[i]->pool = pool;
@@ -507,7 +507,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     /*
      * Create and initialize basic transport structure.
      */
-    tcp = pj_pool_zalloc(pool, sizeof(*tcp));
+    tcp = PJ_POOL_ZALLOC_T(pool, struct tcp_transport);
     tcp->sock = sock;
     tcp->is_server = is_server;
     tcp->listener = listener;
@@ -532,7 +532,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.type_name = "tcp";
     tcp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TCP);
 
-    tcp->base.info = pj_pool_alloc(pool, 64);
+    tcp->base.info = (char*) pj_pool_alloc(pool, 64);
     pj_ansi_snprintf(tcp->base.info, 64, "TCP to %s:%d",
 		     pj_inet_ntoa(remote->sin_addr), 
 		     (int)pj_ntohs(remote->sin_port));
@@ -889,7 +889,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
     struct pending_accept *accept_op;
     int err_cnt = 0;
 
-    listener = pj_ioqueue_get_user_data(key);
+    listener = (struct tcp_listener*) pj_ioqueue_get_user_data(key);
     accept_op = (struct pending_accept*) op_key;
 
     /*
@@ -948,7 +948,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	    /* Create new accept_opt */
 	    pool = pjsip_endpt_create_pool(listener->endpt, "tcps%p", 
 					   POOL_TP_INIT, POOL_TP_INC);
-	    new_op = pj_pool_zalloc(pool, sizeof(struct pending_accept));
+	    new_op = PJ_POOL_ZALLOC_T(pool, struct pending_accept);
 	    new_op->pool = pool;
 	    new_op->listener = listener;
 	    new_op->index = accept_op->index;
@@ -1002,7 +1002,8 @@ static void on_write_complete(pj_ioqueue_key_t *key,
                               pj_ioqueue_op_key_t *op_key, 
                               pj_ssize_t bytes_sent)
 {
-    struct tcp_transport *tcp = pj_ioqueue_get_user_data(key);
+    struct tcp_transport *tcp = (struct tcp_transport*) 
+    				pj_ioqueue_get_user_data(key);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
     tdata_op_key->tdata = NULL;
@@ -1081,8 +1082,8 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 	     * connect() is still in progress. Put the transmit data to
 	     * the delayed list.
 	     */
-	    delayed_tdata = pj_pool_alloc(tdata->pool, 
-					  sizeof(*delayed_tdata));
+	    delayed_tdata = PJ_POOL_ALLOC_T(tdata->pool, 
+					    struct delayed_tdata);
 	    delayed_tdata->tdata_op_key = &tdata->op_key;
 
 	    pj_list_push_back(&tcp->delayed_list, delayed_tdata);
@@ -1292,7 +1293,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     pj_sockaddr_in addr;
     int addrlen;
 
-    tcp = pj_ioqueue_get_user_data(key);
+    tcp = (struct tcp_transport*) pj_ioqueue_get_user_data(key);
 
     /* Mark that pending connect() operation has completed. */
     tcp->has_pending_connect = PJ_FALSE;

@@ -61,7 +61,7 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
     if (event->type != PJSIP_EVENT_TSX_STATE)
 	return;
 
-    tsx_data = tsx->mod_data[mod_stateful_util.id];
+    tsx_data = (struct tsx_data*) tsx->mod_data[mod_stateful_util.id];
     if (tsx_data == NULL)
 	return;
 
@@ -102,7 +102,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 	return status;
     }
 
-    tsx_data = pj_pool_alloc(tsx->pool, sizeof(struct tsx_data));
+    tsx_data = PJ_POOL_ALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;
 
@@ -147,7 +147,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
     if (hdr_list) {
 	const pjsip_hdr *hdr = hdr_list->next;
 	while (hdr != hdr_list) {
-	    pjsip_msg_add_hdr( tdata->msg, pjsip_hdr_clone(tdata->pool, hdr) );
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+	    		      pjsip_hdr_clone(tdata->pool, hdr) );
 	    hdr = hdr->next;
 	}
     }

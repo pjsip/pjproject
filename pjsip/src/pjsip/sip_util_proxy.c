@@ -128,9 +128,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 
 	/* Set request URI */
 	if (uri) {
-	    dst->line.req.uri = pjsip_uri_clone(tdata->pool, uri);
+	    dst->line.req.uri = (pjsip_uri*) 
+	    			pjsip_uri_clone(tdata->pool, uri);
 	} else {
-	    dst->line.req.uri = pjsip_uri_clone(tdata->pool, src->line.req.uri);
+	    dst->line.req.uri= (pjsip_uri*)
+	    		       pjsip_uri_clone(tdata->pool, src->line.req.uri);
 	}
 
 	/* Clone ALL headers */
@@ -192,7 +194,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_fwd(pjsip_endpoint *endpt,
 #endif
 
 	    /* Clone the header */
-	    hdst = pjsip_hdr_clone(tdata->pool, hsrc);
+	    hdst = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hsrc);
 
 	    /* If this is Max-Forward header, decrement the value */
 	    if (hdst->type == PJSIP_H_MAX_FORWARDS) {
@@ -291,7 +293,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response_fwd( pjsip_endpoint *endpt,
 		continue;
 	    }
 
-	    pjsip_msg_add_hdr(dst, pjsip_hdr_clone(tdata->pool, hsrc));
+	    pjsip_msg_add_hdr(dst, 
+	    		      (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, hsrc));
 
 	    hsrc = hsrc->next;
 	}
@@ -341,7 +344,8 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
 		  rdata->msg_info.via->branch_param.slen);
     pj_md5_final(&ctx, digest);
 
-    branch.ptr = pj_pool_alloc(rdata->tp_info.pool, 
+    branch.ptr = (char*)
+    		 pj_pool_alloc(rdata->tp_info.pool, 
 			       32 + PJSIP_RFC3261_BRANCH_LEN);
     pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN);
 

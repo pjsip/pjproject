@@ -42,7 +42,8 @@ static const pj_str_t STR_XPIDF_XML =	{ "xpidf+xml", 9 };
 static int pres_print_body(struct pjsip_msg_body *msg_body, 
 			   char *buf, pj_size_t size)
 {
-    return pj_xml_print(msg_body->data, buf, size, PJ_TRUE);
+    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size, 
+    			PJ_TRUE);
 }
 
 
@@ -52,7 +53,7 @@ static int pres_print_body(struct pjsip_msg_body *msg_body,
 static void* xml_clone_data(pj_pool_t *pool, const void *data, unsigned len)
 {
     PJ_UNUSED_ARG(len);
-    return pj_xml_clone( pool, data);
+    return pj_xml_clone( pool, (const pj_xml_node*) data);
 }
 
 
@@ -100,7 +101,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 				     status->info[i].basic_open);
     }
 
-    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     body->data = pidf;
     body->content_type.type = STR_APPLICATION;
     body->content_type.subtype = STR_PIDF_XML;
@@ -139,7 +140,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_xpidf( pj_pool_t *pool,
     else
 	pjxpidf_set_status( xpidf, PJ_FALSE);
 
-    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     body->data = xpidf;
     body->content_type.type = STR_APPLICATION;
     body->content_type.subtype = STR_XPIDF_XML;
@@ -164,7 +165,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf( pjsip_rx_data *rdata,
     pjpidf_tuple *pidf_tuple;
 
     pidf = pjpidf_parse(rdata->tp_info.pool, 
-			rdata->msg_info.msg->body->data,
+			(char*)rdata->msg_info.msg->body->data,
 			rdata->msg_info.msg->body->len);
     if (pidf == NULL)
 	return PJSIP_SIMPLE_EBADPIDF;
@@ -209,7 +210,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
     pjxpidf_pres *xpidf;
 
     xpidf = pjxpidf_parse(rdata->tp_info.pool, 
-			  rdata->msg_info.msg->body->data,
+			  (char*)rdata->msg_info.msg->body->data,
 			  rdata->msg_info.msg->body->len);
     if (xpidf == NULL)
 	return PJSIP_SIMPLE_EBADXPIDF;

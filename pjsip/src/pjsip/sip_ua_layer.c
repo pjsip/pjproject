@@ -165,7 +165,7 @@ static void mod_ua_on_tsx_state( pjsip_transaction *tsx, pjsip_event *e)
     pjsip_dialog *dlg;
 
     /* Get the dialog where this transaction belongs. */
-    dlg = tsx->mod_data[mod_ua.mod.id];
+    dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
     
     /* If dialog instance has gone, it could mean that the dialog
      * may has been destroyed.
@@ -244,7 +244,7 @@ PJ_DEF(void) pjsip_ua_create_dlg_set_key( pj_pool_t *pool,
     PJ_ASSERT_ON_FAIL(pool && set_key && call_id && local_tag, return;);
 
     set_key->slen = call_id->slen + local_tag->slen + 1;
-    set_key->ptr = pj_pool_alloc(pool, set_key->slen);
+    set_key->ptr = (char*) pj_pool_alloc(pool, set_key->slen);
     pj_assert(set_key->ptr != NULL);
 
     pj_memcpy(set_key->ptr, call_id->ptr, call_id->slen);
@@ -267,7 +267,7 @@ static struct dlg_set *alloc_dlgset_node(void)
 	pj_list_erase(set);
 	return set;
     } else {
-	set = pj_pool_alloc(mod_ua.pool, sizeof(struct dlg_set));
+	set = PJ_POOL_ALLOC_T(mod_ua.pool, struct dlg_set);
 	return set;
     }
 }
@@ -298,7 +298,8 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
     if (dlg->role == PJSIP_ROLE_UAC) {
 	struct dlg_set *dlg_set;
 
-	dlg_set = pj_hash_get( mod_ua.dlg_table, dlg->local.info->tag.ptr, 
+	dlg_set = (struct dlg_set*)
+		  pj_hash_get( mod_ua.dlg_table, dlg->local.info->tag.ptr, 
 			       dlg->local.info->tag.slen,
 			       &dlg->local.tag_hval);
 
@@ -366,7 +367,7 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
     pj_mutex_lock(mod_ua.mutex);
 
     /* Find this dialog from the dialog set. */
-    dlg_set = dlg->dlg_set;
+    dlg_set = (struct dlg_set*) dlg->dlg_set;
     d = dlg_set->dlg_list.next;
     while (d != (pjsip_dialog*)&dlg_set->dlg_list && d != dlg) {
 	d = d->next;
@@ -400,12 +401,12 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
 
 PJ_DEF(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata )
 {
-    return rdata->endpt_info.mod_data[mod_ua.mod.id];
+    return (pjsip_dialog*) rdata->endpt_info.mod_data[mod_ua.mod.id];
 }
 
 PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 {
-    return tsx->mod_data[mod_ua.mod.id];
+    return (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
 }
 
 
@@ -426,7 +427,8 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
     pj_mutex_lock(mod_ua.mutex);
 
     /* Lookup the dialog set. */
-    dlg_set = pj_hash_get(mod_ua.dlg_table, local_tag->ptr, local_tag->slen,
+    dlg_set = (struct dlg_set*)
+    	      pj_hash_get(mod_ua.dlg_table, local_tag->ptr, local_tag->slen,
 			  NULL);
     if (dlg_set == NULL) {
 	/* Not found */
@@ -516,13 +518,13 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 
 	/* We should find the dialog attached to the INVITE transaction */
 	if (tsx) {
-	    dlg = tsx->mod_data[mod_ua.mod.id];
+	    dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
 	    pj_mutex_unlock(tsx->mutex);
 
 	    /* Dlg may be NULL on some extreme condition
 	     * (e.g. during debugging where initially there is a dialog)
 	     */
-	    return dlg ? dlg->dlg_set : NULL;
+	    return dlg ? (struct dlg_set*) dlg->dlg_set : NULL;
 
 	} else {
 	    return NULL;
@@ -539,7 +541,8 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 	    tag = &rdata->msg_info.from->tag;
 
 	/* Lookup the dialog set. */
-	dlg_set = pj_hash_get(mod_ua.dlg_table, tag->ptr, tag->slen, NULL);
+	dlg_set = (struct dlg_set*)
+		  pj_hash_get(mod_ua.dlg_table, tag->ptr, tag->slen, NULL);
 	return dlg_set;
     }
 }
@@ -704,7 +707,7 @@ retry_on_deadlock:
 	}
 
 	/* Get the dialog set. */
-	dlg_set = dlg->dlg_set;
+	dlg_set = (struct dlg_set*) dlg->dlg_set;
 
 	/* Even if transaction is found and (candidate) dialog has been 
 	 * identified, it's possible that the request has forked.
@@ -732,7 +735,8 @@ retry_on_deadlock:
 
 
 	/* Get the dialog set. */
-	dlg_set = pj_hash_get(mod_ua.dlg_table, 
+	dlg_set = (struct dlg_set*)
+		  pj_hash_get(mod_ua.dlg_table, 
 			      rdata->msg_info.from->tag.ptr,
 			      rdata->msg_info.from->tag.slen,
 			      NULL);
@@ -917,7 +921,7 @@ PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail)
 	    pjsip_dialog *dlg;
 	    const char *title;
 
-	    dlg_set = pj_hash_this(mod_ua.dlg_table, it);
+	    dlg_set = (struct dlg_set*) pj_hash_this(mod_ua.dlg_table, it);
 	    if (!dlg_set || pj_list_empty(&dlg_set->dlg_list)) continue;
 
 	    /* First dialog in dialog set. */

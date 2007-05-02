@@ -51,13 +51,13 @@ enum
 
 const pjsip_method pjsip_subscribe_method = 
 {
-    PJSIP_SUBSCRIBE_METHOD,
+    (pjsip_method_e) PJSIP_SUBSCRIBE_METHOD,
     { "SUBSCRIBE", 9 }
 };
 
 const pjsip_method pjsip_notify_method = 
 {
-    PJSIP_NOTIFY_METHOD,
+    (pjsip_method_e) PJSIP_NOTIFY_METHOD,
     { "NOTIFY", 6 }
 };
 
@@ -327,7 +327,7 @@ PJ_DEF(pjsip_module*) pjsip_evsub_instance(void)
  */
 PJ_DEF(pjsip_evsub*) pjsip_tsx_get_evsub(pjsip_transaction *tsx)
 {
-    return tsx->mod_data[mod_evsub.mod.id];
+    return (pjsip_evsub*) tsx->mod_data[mod_evsub.mod.id];
 }
 
 
@@ -395,7 +395,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 
     /* Create new event package: */
 
-    pkg = pj_pool_alloc(mod_evsub.pool, sizeof(struct evpkg));
+    pkg = PJ_POOL_ALLOC_T(mod_evsub.pool, struct evpkg);
     pkg->pkg_mod = pkg_mod;
     pkg->pkg_expires = expires;
     pj_strdup(mod_evsub.pool, &pkg->pkg_name, event_name);
@@ -508,8 +508,8 @@ static void evsub_destroy( pjsip_evsub *sub )
     /* Kill timer */
     set_timer(sub, TIMER_TYPE_NONE, 0);
 
-    /* Remote this session from dialog's list of subscription */
-    dlgsub_head = sub->dlg->mod_data[mod_evsub.mod.id];
+    /* Remove this session from dialog's list of subscription */
+    dlgsub_head = (struct dlgsub *) sub->dlg->mod_data[mod_evsub.mod.id];
     dlgsub = dlgsub_head->next;
     while (dlgsub != dlgsub_head) {
 	
@@ -572,7 +572,7 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
-    sub = entry->user_data;
+    sub = (pjsip_evsub*) entry->user_data;
 
     pjsip_dlg_inc_lock(sub->dlg);
 
@@ -673,7 +673,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 
     /* Init attributes: */
 
-    sub = pj_pool_zalloc(dlg->pool, sizeof(struct pjsip_evsub));
+    sub = PJ_POOL_ZALLOC_T(dlg->pool, struct pjsip_evsub);
     sub->pool = dlg->pool;
     sub->endpt = dlg->endpt;
     sub->dlg = dlg;
@@ -684,7 +684,8 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     sub->state = PJSIP_EVSUB_STATE_NULL;
     sub->state_str = evsub_state_names[sub->state];
     sub->expires = pjsip_expires_hdr_create(sub->pool, pkg->pkg_expires);
-    sub->accept = pjsip_hdr_clone(sub->pool, pkg->pkg_accept);
+    sub->accept = (pjsip_accept_hdr*) 
+    		  pjsip_hdr_clone(sub->pool, pkg->pkg_accept);
 
     sub->timer.user_data = sub;
     sub->timer.cb = &on_timer;
@@ -706,8 +707,8 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 
     /* Create subcription list: */
 
-    dlgsub_head = pj_pool_alloc(sub->pool, sizeof(struct dlgsub));
-    dlgsub = pj_pool_alloc(sub->pool, sizeof(struct dlgsub));
+    dlgsub_head = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
+    dlgsub = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
     dlgsub->sub = sub;
 
     pj_list_init(dlgsub_head);
@@ -828,7 +829,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
 	goto on_return;
 
     /* Just duplicate Event header from the request */
-    sub->event = pjsip_hdr_clone(sub->pool, event_hdr);
+    sub->event = (pjsip_event_hdr*) pjsip_hdr_clone(sub->pool, event_hdr);
 
     /* Set the method: */
     pjsip_method_copy(sub->pool, &sub->method, 
@@ -850,7 +851,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
     accept_hdr = (pjsip_accept_hdr*)
 	pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_ACCEPT, NULL);
     if (accept_hdr)
-	sub->accept = pjsip_hdr_clone(sub->pool, accept_hdr);
+	sub->accept = (pjsip_accept_hdr*)pjsip_hdr_clone(sub->pool,accept_hdr);
 
     /* We can start the session: */
 
@@ -941,22 +942,22 @@ PJ_DEF(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
 
 
     /* Add Event header: */
-    pjsip_msg_add_hdr( tdata->msg,
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->event));
 
     /* Update and add expires header: */
     if (expires >= 0)
 	sub->expires->ivalue = expires;
-    pjsip_msg_add_hdr( tdata->msg,
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->expires));
 
     /* Add Accept header: */
-    pjsip_msg_add_hdr( tdata->msg,
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->accept));
     
 
     /* Add Allow-Events header: */
-    pjsip_msg_add_hdr( tdata->msg,
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, 
 					       mod_evsub.allow_events_hdr));
 
@@ -1011,14 +1012,14 @@ PJ_DEF(pj_status_t) pjsip_evsub_accept( pjsip_evsub *sub,
 
 
     /* Add expires header: */
-    pjsip_msg_add_hdr( tdata->msg,
+    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->expires));
 
     /* Add additional header, if any. */
     if (hdr_list) {
 	const pjsip_hdr *hdr = hdr_list->next;
 	while (hdr != hdr_list) {
-	    pjsip_msg_add_hdr( tdata->msg,
+	    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 			       pjsip_hdr_clone(tdata->pool, hdr));
 	    hdr = hdr->next;
 	}
@@ -1117,7 +1118,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_notify( pjsip_evsub *sub,
 	goto on_return;
 
     /* Add Event header */
-    pjsip_msg_add_hdr(tdata->msg,
+    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
 		      pjsip_hdr_shallow_clone(tdata->pool, sub->event));
 
     /* Add Subscription-State header */
@@ -1126,7 +1127,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_notify( pjsip_evsub *sub,
     pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sub_state);
 
     /* Add Allow-Events header */
-    pjsip_msg_add_hdr(tdata->msg,
+    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
 		      pjsip_hdr_shallow_clone(tdata->pool, mod_evsub.allow_events_hdr));
 
     /* Add Authentication headers. */
@@ -1258,7 +1259,8 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	return NULL;
     }
 
-    event_hdr = pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
+    event_hdr = (pjsip_event_hdr*)
+    		pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
     if (!event_hdr) {
 	/* Not subscription related message */
 	return NULL;
@@ -1268,9 +1270,9 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
      * of Event header: 
      */
 
-    dlgsub_head = dlg->mod_data[mod_evsub.mod.id];
+    dlgsub_head = (struct dlgsub*) dlg->mod_data[mod_evsub.mod.id];
     if (dlgsub_head == NULL) {
-	dlgsub_head = pj_pool_alloc(dlg->pool, sizeof(struct dlgsub));
+	dlgsub_head = PJ_POOL_ALLOC_T(dlg->pool, struct dlgsub);
 	pj_list_init(dlgsub_head);
 	dlg->mod_data[mod_evsub.mod.id] = dlgsub_head;
     }
@@ -1416,7 +1418,7 @@ static pj_status_t create_response( pjsip_evsub *sub,
     /* Add response headers. */
     hdr = res_hdr->next;
     while (hdr != res_hdr) {
-	pjsip_msg_add_hdr( tdata->msg, 
+	pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 			   pjsip_hdr_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
@@ -1549,7 +1551,8 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 		pjsip_expires_hdr *expires;
 
 		msg = event->body.tsx_state.src.rdata->msg_info.msg;
-		expires = pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
+		expires = (pjsip_expires_hdr*)
+			  pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 		if (expires) {
 		    sub->expires->ivalue = expires->ivalue;
 		}
@@ -1655,7 +1658,8 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	pj_list_init(&res_hdr);
 
 	/* Get subscription state header. */
-	sub_state = pjsip_msg_find_hdr_by_name(msg, &STR_SUB_STATE, NULL);
+	sub_state = (pjsip_sub_state_hdr*)
+		    pjsip_msg_find_hdr_by_name(msg, &STR_SUB_STATE, NULL);
 	if (sub_state == NULL) {
 
 	    pjsip_warning_hdr *warn_hdr;
@@ -1803,8 +1807,10 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Set expiration time based on client request (in Expires header),
 	 * or package default expiration time.
 	 */
-	event_hdr = pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
-	expires = pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
+	event_hdr = (pjsip_event_hdr*)
+		    pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
+	expires = (pjsip_expires_hdr*)
+		  pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 	if (event_hdr && expires) {
 	    struct evpkg *evpkg;
 
@@ -1859,7 +1865,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 				 body, &tdata);
 	if (status == PJ_SUCCESS) {
 	    /* Add expires header: */
-	    pjsip_msg_add_hdr( tdata->msg,
+	    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 			       pjsip_hdr_shallow_clone(tdata->pool, 
 						       sub->expires));
 

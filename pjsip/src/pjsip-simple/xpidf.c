@@ -40,7 +40,7 @@ static pj_xml_node* xml_create_node(pj_pool_t *pool,
 {
     pj_xml_node *node;
 
-    node = pj_pool_alloc(pool, sizeof(pj_xml_node));
+    node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
     pj_list_init(&node->attr_head);
     pj_list_init(&node->node_head);
     node->name = *name;
@@ -53,7 +53,7 @@ static pj_xml_node* xml_create_node(pj_pool_t *pool,
 static pj_xml_attr* xml_create_attr(pj_pool_t *pool, pj_str_t *name,
 				    const pj_str_t *value)
 {
-    pj_xml_attr *attr = pj_pool_alloc(pool, sizeof(*attr));
+    pj_xml_attr *attr = PJ_POOL_ALLOC_T(pool, pj_xml_attr);
     attr->name = *name;
     pj_strdup(pool, &attr->value, value);
     return attr;
@@ -79,7 +79,8 @@ PJ_DEF(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri_cstr)
     pj_xml_add_node(pres, presentity);
 
     /* uri attribute */
-    uri.ptr = pj_pool_alloc(pool, uri_cstr->slen + STR_SUBSCRIBE_PARAM.slen);
+    uri.ptr = (char*) pj_pool_alloc(pool, uri_cstr->slen + 
+    					   STR_SUBSCRIBE_PARAM.slen);
     pj_strcpy( &uri, uri_cstr);
     pj_strcat( &uri, &STR_SUBSCRIBE_PARAM);
     attr = xml_create_attr(pool, &STR_URI, &uri);

@@ -95,7 +95,7 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
     /* Add refresh, if any. */
     if (is_composing && refresh > 1 && refresh < 3601) {
 	node = pj_xml_node_new(pool, &STR_REFRESH);
-	node->content.ptr = pj_pool_alloc(pool, 10);
+	node->content.ptr = (char*) pj_pool_alloc(pool, 10);
 	node->content.slen = pj_utoa(refresh, node->content.ptr);
 	pj_xml_add_node(doc, node);
     }
@@ -113,7 +113,8 @@ PJ_DEF(pj_xml_node*) pjsip_iscomposing_create_xml( pj_pool_t *pool,
 static int xml_print_body( struct pjsip_msg_body *msg_body, 
 			   char *buf, pj_size_t size)
 {
-    return pj_xml_print(msg_body->data, buf, size, PJ_TRUE);
+    return pj_xml_print((const pj_xml_node*)msg_body->data, buf, size, 
+    			PJ_TRUE);
 }
 
 
@@ -123,7 +124,7 @@ static int xml_print_body( struct pjsip_msg_body *msg_body,
 static void* xml_clone_data(pj_pool_t *pool, const void *data, unsigned len)
 {
     PJ_UNUSED_ARG(len);
-    return pj_xml_clone( pool, data);
+    return pj_xml_clone( pool, (const pj_xml_node*)data);
 }
 
 
@@ -143,7 +144,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_iscomposing_create_body( pj_pool_t *pool,
 	return NULL;
 
 
-    body = pj_pool_zalloc(pool, sizeof(pjsip_msg_body));
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     body->content_type.type = STR_MIME_TYPE;
     body->content_type.subtype = STR_MIME_SUBTYPE;
 

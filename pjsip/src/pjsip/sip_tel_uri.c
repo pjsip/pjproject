@@ -75,25 +75,27 @@ static pjsip_tel_uri* tel_uri_clone(pj_pool_t *pool, const pjsip_tel_uri *rhs);
 static void*	      tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 				     pj_bool_t parse_params);
 
-#ifdef __GNUC__
-#  define HAPPY_FLAG	(void*)
-#else
-#  define HAPPY_FLAG
-#endif
+typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
+typedef void* 		(*P_GET_URI)(void*);
+typedef pj_ssize_t 	(*P_PRINT_URI)(pjsip_uri_context_e,const void *,
+				       char*,unsigned);
+typedef int 		(*P_CMP_URI)(pjsip_uri_context_e, const void*, 
+				     const void*);
+typedef void* 		(*P_CLONE)(pj_pool_t*, const void*);
 
 static pjsip_uri_vptr tel_uri_vptr = 
 {
-    HAPPY_FLAG &tel_uri_get_scheme,
-    HAPPY_FLAG &tel_uri_get_uri,
-    HAPPY_FLAG &tel_uri_print,
-    HAPPY_FLAG &tel_uri_cmp,
-    HAPPY_FLAG &tel_uri_clone
+    (P_GET_SCHEME)	&tel_uri_get_scheme,
+    (P_GET_URI) 	&tel_uri_get_uri,
+    (P_PRINT_URI) 	&tel_uri_print,
+    (P_CMP_URI)		&tel_uri_cmp,
+    (P_CLONE)		&tel_uri_clone
 };
 
 
 PJ_DEF(pjsip_tel_uri*) pjsip_tel_uri_create(pj_pool_t *pool)
 {
-    pjsip_tel_uri *uri = pj_pool_zalloc(pool, sizeof(pjsip_tel_uri));
+    pjsip_tel_uri *uri = PJ_POOL_ZALLOC_T(pool, pjsip_tel_uri);
     uri->vptr = &tel_uri_vptr;
     pj_list_init(&uri->other_param);
     return uri;
@@ -426,7 +428,7 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
 	    } else if (pj_stricmp_alnum(&pname, &pjsip_PH_CTX_STR)==0) {
 		uri->context = pvalue;
 	    } else {
-		pjsip_param *param = pj_pool_alloc(pool, sizeof(pjsip_param));
+		pjsip_param *param = PJ_POOL_ALLOC_T(pool, pjsip_param);
 		param->name = pname;
 		param->value = pvalue;
 		pj_list_insert_before(&uri->other_param, param);

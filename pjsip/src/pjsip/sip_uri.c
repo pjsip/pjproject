@@ -60,7 +60,7 @@ PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
 
     pj_list_init(dst_list);
     while (p != src_list) {
-	pjsip_param *new_param = pj_pool_alloc(pool, sizeof(pjsip_param));
+	pjsip_param *new_param = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	pj_strdup(pool, &new_param->name, &p->name);
 	pj_strdup(pool, &new_param->value, &p->value);
 	pj_list_insert_before(dst_list, new_param);
@@ -77,7 +77,7 @@ PJ_DEF(void) pjsip_param_shallow_clone( pj_pool_t *pool,
 
     pj_list_init(dst_list);
     while (p != src_list) {
-	pjsip_param *new_param = pj_pool_alloc(pool, sizeof(pjsip_param));
+	pjsip_param *new_param = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	new_param->name = p->name;
 	new_param->value = p->value;
 	pj_list_insert_before(dst_list, new_param);
@@ -137,12 +137,6 @@ static void *pjsip_name_addr_get_uri( pjsip_name_addr *name );
 static pj_str_t sip_str = { "sip", 3 };
 static pj_str_t sips_str = { "sips", 4 };
 
-#ifdef __GNUC__
-#  define HAPPY_FLAG	(void*)
-#else
-#  define HAPPY_FLAG
-#endif
-
 static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool, 
 					       const pjsip_name_addr *rhs);
 static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
@@ -160,31 +154,40 @@ static int pjsip_url_compare( pjsip_uri_context_e context,
 static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, 
 				      const pjsip_sip_uri *rhs);
 
+typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
+typedef void* 		(*P_GET_URI)(void*);
+typedef pj_ssize_t 	(*P_PRINT_URI)(pjsip_uri_context_e,const void *,
+				       char*,unsigned);
+typedef int 		(*P_CMP_URI)(pjsip_uri_context_e, const void*, 
+				     const void*);
+typedef void* 		(*P_CLONE)(pj_pool_t*, const void*);
+
+
 static pjsip_uri_vptr sip_url_vptr = 
 {
-    HAPPY_FLAG &pjsip_url_get_scheme,
-    HAPPY_FLAG &pjsip_get_uri,
-    HAPPY_FLAG &pjsip_url_print,
-    HAPPY_FLAG &pjsip_url_compare,
-    HAPPY_FLAG &pjsip_url_clone
+    (P_GET_SCHEME)	&pjsip_url_get_scheme,
+    (P_GET_URI)		&pjsip_get_uri,
+    (P_PRINT_URI) 	&pjsip_url_print,
+    (P_CMP_URI) 	&pjsip_url_compare,
+    (P_CLONE) 		&pjsip_url_clone
 };
 
 static pjsip_uri_vptr sips_url_vptr = 
 {
-    HAPPY_FLAG &pjsips_url_get_scheme,
-    HAPPY_FLAG &pjsip_get_uri,
-    HAPPY_FLAG &pjsip_url_print,
-    HAPPY_FLAG &pjsip_url_compare,
-    HAPPY_FLAG &pjsip_url_clone
+    (P_GET_SCHEME)	&pjsips_url_get_scheme,
+    (P_GET_URI)		&pjsip_get_uri,
+    (P_PRINT_URI) 	&pjsip_url_print,
+    (P_CMP_URI) 	&pjsip_url_compare,
+    (P_CLONE) 		&pjsip_url_clone
 };
 
 static pjsip_uri_vptr name_addr_vptr = 
 {
-    HAPPY_FLAG &pjsip_name_addr_get_scheme,
-    HAPPY_FLAG &pjsip_name_addr_get_uri,
-    HAPPY_FLAG &pjsip_name_addr_print,
-    HAPPY_FLAG &pjsip_name_addr_compare,
-    HAPPY_FLAG &pjsip_name_addr_clone
+    (P_GET_SCHEME)	&pjsip_name_addr_get_scheme,
+    (P_GET_URI)		&pjsip_name_addr_get_uri,
+    (P_PRINT_URI) 	&pjsip_name_addr_print,
+    (P_CMP_URI) 	&pjsip_name_addr_compare,
+    (P_CLONE) 		&pjsip_name_addr_clone
 };
 
 static const pj_str_t *pjsip_url_get_scheme(const pjsip_sip_uri *url)
@@ -227,7 +230,7 @@ PJ_DEF(void) pjsip_sip_uri_init(pjsip_sip_uri *url, pj_bool_t secure)
 PJ_DEF(pjsip_sip_uri*) pjsip_sip_uri_create( pj_pool_t *pool, 
 					     pj_bool_t secure )
 {
-    pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
+    pjsip_sip_uri *url = PJ_POOL_ALLOC_T(pool, pjsip_sip_uri);
     pjsip_sip_uri_init(url, secure);
     return url;
 }
@@ -496,7 +499,7 @@ PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url,
 
 static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool, const pjsip_sip_uri *rhs)
 {
-    pjsip_sip_uri *url = pj_pool_alloc(pool, sizeof(pjsip_sip_uri));
+    pjsip_sip_uri *url = PJ_POOL_ALLOC_T(pool, pjsip_sip_uri);
     if (!url)
 	return NULL;
 
@@ -520,7 +523,7 @@ PJ_DEF(void) pjsip_name_addr_init(pjsip_name_addr *name)
 
 PJ_DEF(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t *pool)
 {
-    pjsip_name_addr *name_addr = pj_pool_alloc(pool, sizeof(pjsip_name_addr));
+    pjsip_name_addr *name_addr = PJ_POOL_ALLOC_T(pool, pjsip_name_addr);
     pjsip_name_addr_init(name_addr);
     return name_addr;
 }
@@ -534,7 +537,7 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
     char *endbuf = buf + size;
     pjsip_uri *uri;
 
-    uri = pjsip_uri_get_uri(name->uri);
+    uri = (pjsip_uri*) pjsip_uri_get_uri(name->uri);
     pj_assert(uri != NULL);
 
     if (context != PJSIP_URI_IN_REQ_URI) {
@@ -565,13 +568,13 @@ PJ_DEF(void) pjsip_name_addr_assign(pj_pool_t *pool, pjsip_name_addr *dst,
 				    const pjsip_name_addr *src)
 {
     pj_strdup( pool, &dst->display, &src->display);
-    dst->uri = pjsip_uri_clone(pool, src->uri);
+    dst->uri = (pjsip_uri*) pjsip_uri_clone(pool, src->uri);
 }
 
 static pjsip_name_addr* pjsip_name_addr_clone( pj_pool_t *pool, 
 					       const pjsip_name_addr *rhs)
 {
-    pjsip_name_addr *addr = pj_pool_alloc(pool, sizeof(pjsip_name_addr));
+    pjsip_name_addr *addr = PJ_POOL_ALLOC_T(pool, pjsip_name_addr);
     if (!addr)
 	return NULL;
 

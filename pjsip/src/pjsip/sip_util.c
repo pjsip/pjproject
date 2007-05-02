@@ -84,7 +84,8 @@ static void init_request_throw( pjsip_endpoint *endpt,
     /* Add additional request headers from endpoint. */
     endpt_hdr = pjsip_endpt_get_request_headers(endpt)->next;
     while (endpt_hdr != pjsip_endpt_get_request_headers(endpt)) {
-	pjsip_hdr *hdr = pjsip_hdr_shallow_clone(tdata->pool, endpt_hdr);
+	pjsip_hdr *hdr = (pjsip_hdr*) 
+			 pjsip_hdr_shallow_clone(tdata->pool, endpt_hdr);
 	pjsip_msg_add_hdr( tdata->msg, hdr );
 	endpt_hdr = endpt_hdr->next;
     }
@@ -92,26 +93,26 @@ static void init_request_throw( pjsip_endpoint *endpt,
     /* Add From header. */
     if (param_from->tag.slen == 0)
 	pj_create_unique_string(tdata->pool, &param_from->tag);
-    pjsip_msg_add_hdr(msg, (void*)param_from);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)param_from);
 
     /* Add To header. */
-    pjsip_msg_add_hdr(msg, (void*)param_to);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)param_to);
 
     /* Add Contact header. */
     if (param_contact) {
-	pjsip_msg_add_hdr(msg, (void*)param_contact);
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)param_contact);
     }
 
     /* Add Call-ID header. */
-    pjsip_msg_add_hdr(msg, (void*)param_call_id);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)param_call_id);
 
     /* Add CSeq header. */
-    pjsip_msg_add_hdr(msg, (void*)param_cseq);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)param_cseq);
 
     /* Add a blank Via header in the front of the message. */
     via = pjsip_via_hdr_create(tdata->pool);
     via->rport_param = 0;
-    pjsip_msg_insert_first_hdr(msg, (void*)via);
+    pjsip_msg_insert_first_hdr(msg, (pjsip_hdr*)via);
 
     /* Add header params as request headers */
     if (PJSIP_URI_SCHEME_IS_SIP(param_target) || 
@@ -134,7 +135,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
 
     /* Create message body. */
     if (param_text) {
-	body = pj_pool_calloc(tdata->pool, 1, sizeof(pjsip_msg_body));
+	body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
 	body->content_type.type = str_TEXT;
 	body->content_type.subtype = str_PLAIN;
 	body->data = pj_pool_alloc(tdata->pool, param_text->slen );
@@ -296,16 +297,18 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 
     PJ_TRY {
 	/* Duplicate target URI and headers. */
-	target = pjsip_uri_clone(tdata->pool, param_target);
-	from = pjsip_hdr_clone(tdata->pool, param_from);
+	target = (pjsip_uri*) pjsip_uri_clone(tdata->pool, param_target);
+	from = (pjsip_from_hdr*) pjsip_hdr_clone(tdata->pool, param_from);
 	pjsip_fromto_hdr_set_from(from);
-	to = pjsip_hdr_clone(tdata->pool, param_to);
+	to = (pjsip_to_hdr*) pjsip_hdr_clone(tdata->pool, param_to);
 	pjsip_fromto_hdr_set_to(to);
-	if (param_contact)
-	    contact = pjsip_hdr_clone(tdata->pool, param_contact);
-	else
+	if (param_contact) {
+	    contact = (pjsip_contact_hdr*) 
+	    	      pjsip_hdr_clone(tdata->pool, param_contact);
+	} else {
 	    contact = NULL;
-	call_id = pjsip_hdr_clone(tdata->pool, param_call_id);
+	}
+	call_id = (pjsip_cid_hdr*) pjsip_hdr_clone(tdata->pool, param_call_id);
 	cseq = pjsip_cseq_hdr_create(tdata->pool);
 	if (param_cseq >= 0)
 	    cseq->cseq = param_cseq;
@@ -385,39 +388,42 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     /* Copy all the via headers, in order. */
     via = rdata->msg_info.via;
     while (via) {
-	pjsip_msg_add_hdr( msg, pjsip_hdr_clone(tdata->pool, via));
+	pjsip_msg_add_hdr( msg, (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, via));
 	via = via->next;
 	if (via != (void*)&req_msg->hdr)
-	    via = pjsip_msg_find_hdr(req_msg, PJSIP_H_VIA, via);
+	    via = (pjsip_via_hdr*) 
+	    	  pjsip_msg_find_hdr(req_msg, PJSIP_H_VIA, via);
 	else
 	    break;
     }
 
     /* Copy all Record-Route headers, in order. */
-    rr = pjsip_msg_find_hdr(req_msg, PJSIP_H_RECORD_ROUTE, NULL);
+    rr = (pjsip_rr_hdr*) 
+    	 pjsip_msg_find_hdr(req_msg, PJSIP_H_RECORD_ROUTE, NULL);
     while (rr) {
-	pjsip_msg_add_hdr(msg, pjsip_hdr_clone(tdata->pool, rr));
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rr));
 	rr = rr->next;
 	if (rr != (void*)&req_msg->hdr)
-	    rr = pjsip_msg_find_hdr(req_msg, PJSIP_H_RECORD_ROUTE, rr);
+	    rr = (pjsip_rr_hdr*) pjsip_msg_find_hdr(req_msg, 
+	    					    PJSIP_H_RECORD_ROUTE, rr);
 	else
 	    break;
     }
 
     /* Copy Call-ID header. */
-    hdr = pjsip_msg_find_hdr( req_msg, PJSIP_H_CALL_ID, NULL);
-    pjsip_msg_add_hdr(msg, pjsip_hdr_clone(tdata->pool, hdr));
+    hdr = (pjsip_hdr*) pjsip_msg_find_hdr( req_msg, PJSIP_H_CALL_ID, NULL);
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr));
 
     /* Copy From header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.from);
+    hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.from);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* Copy To header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.to);
+    hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.to);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* Copy CSeq header. */
-    hdr = pjsip_hdr_clone(tdata->pool, rdata->msg_info.cseq);
+    hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.cseq);
     pjsip_msg_add_hdr( msg, hdr);
 
     /* All done. */
@@ -494,23 +500,25 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
 
 
     /* Clear Via headers in the new request. */
-    while ((via=pjsip_msg_find_hdr(ack->msg, PJSIP_H_VIA, NULL)) != NULL)
+    while ((via=(pjsip_hdr*)pjsip_msg_find_hdr(ack->msg, PJSIP_H_VIA, NULL)) != NULL)
 	pj_list_erase(via);
 
     /* Must contain single Via, just as the original INVITE. */
-    hdr = pjsip_msg_find_hdr( invite_msg, PJSIP_H_VIA, NULL);
-    pjsip_msg_insert_first_hdr( ack->msg, pjsip_hdr_clone(ack->pool,hdr) );
+    hdr = (pjsip_hdr*) pjsip_msg_find_hdr( invite_msg, PJSIP_H_VIA, NULL);
+    pjsip_msg_insert_first_hdr( ack->msg, 
+    			        (pjsip_hdr*) pjsip_hdr_clone(ack->pool,hdr) );
 
     /* If the original INVITE has Route headers, those header fields MUST 
      * appear in the ACK.
      */
-    hdr = pjsip_msg_find_hdr( invite_msg, PJSIP_H_ROUTE, NULL);
+    hdr = (pjsip_hdr*) pjsip_msg_find_hdr( invite_msg, PJSIP_H_ROUTE, NULL);
     while (hdr != NULL) {
-	pjsip_msg_add_hdr( ack->msg, pjsip_hdr_clone(ack->pool, hdr) );
+	pjsip_msg_add_hdr( ack->msg, 
+			   (pjsip_hdr*) pjsip_hdr_clone(ack->pool, hdr) );
 	hdr = hdr->next;
 	if (hdr == &invite_msg->hdr)
 	    break;
-	hdr = pjsip_msg_find_hdr( invite_msg, PJSIP_H_ROUTE, hdr);
+	hdr = (pjsip_hdr*) pjsip_msg_find_hdr( invite_msg, PJSIP_H_ROUTE, hdr);
     }
 
     /* We're done.
@@ -578,30 +586,31 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 	return status;
 
     /* Clear Via headers in the new request. */
-    while ((via=pjsip_msg_find_hdr(cancel_tdata->msg, PJSIP_H_VIA, NULL)) != NULL)
+    while ((via=(pjsip_hdr*)pjsip_msg_find_hdr(cancel_tdata->msg, PJSIP_H_VIA, NULL)) != NULL)
 	pj_list_erase(via);
 
 
     /* Must only have single Via which matches the top-most Via in the 
      * request being cancelled. 
      */
-    hdr = pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_VIA, NULL);
+    hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_VIA, NULL);
     if (hdr) {
 	pjsip_msg_insert_first_hdr(cancel_tdata->msg, 
-				   pjsip_hdr_clone(cancel_tdata->pool, hdr));
+				   (pjsip_hdr*)pjsip_hdr_clone(cancel_tdata->pool, hdr));
     }
 
     /* If the original request has Route header, the CANCEL request must also
      * has exactly the same.
      * Copy "Route" header from the request.
      */
-    hdr = pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_ROUTE, NULL);
+    hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_ROUTE, NULL);
     while (hdr != NULL) {
 	pjsip_msg_add_hdr(cancel_tdata->msg, 
-			  pjsip_hdr_clone(cancel_tdata->pool, hdr));
+			  (pjsip_hdr*) pjsip_hdr_clone(cancel_tdata->pool, hdr));
 	hdr = hdr->next;
 	if (hdr != &req_tdata->msg->hdr)
-	    hdr = pjsip_msg_find_hdr(req_tdata->msg, PJSIP_H_ROUTE, hdr);
+	    hdr = (pjsip_hdr*) pjsip_msg_find_hdr(req_tdata->msg, 
+	    					  PJSIP_H_ROUTE, hdr);
 	else
 	    break;
     }
@@ -637,7 +646,8 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 
     /* Get the first "Route" header from the message.
      */
-    first_route_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+    first_route_hdr = (const pjsip_route_hdr*) 
+    		      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
 	target_uri = first_route_hdr->name_addr.uri;
     } else {
@@ -697,13 +707,14 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
     /* Find the first and last "Route" headers from the message. */
-    last_route_hdr = first_route_hdr = 
+    last_route_hdr = first_route_hdr = (pjsip_route_hdr*)
 	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
     if (first_route_hdr) {
 	topmost_route_uri = &first_route_hdr->name_addr;
 	while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
 	    pjsip_route_hdr *hdr;
-	    hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+	    hdr = (pjsip_route_hdr*)
+	    	  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
                                      last_route_hdr->next);
 	    if (!hdr)
 		break;
@@ -728,7 +739,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	if (PJSIP_URI_SCHEME_IS_SIP(topmost_route_uri) ||
 	    PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
 	{
-	    const pjsip_sip_uri *url = 
+	    const pjsip_sip_uri *url = (const pjsip_sip_uri*)
 		pjsip_uri_get_uri((void*)topmost_route_uri);
 	    has_lr_param = url->lr_param;
 	} else {
@@ -747,7 +758,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 		last_route_hdr = NULL;
 	    */
 	} else {
-	    new_request_uri = pjsip_uri_get_uri((void*)topmost_route_uri);
+	    new_request_uri = (const pjsip_uri*) 
+	    		      pjsip_uri_get_uri((pjsip_uri*)topmost_route_uri);
 	    pj_list_erase(first_route_hdr);
 	    if (first_route_hdr == last_route_hdr)
 		last_route_hdr = NULL;
@@ -793,7 +805,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
      */
     if (new_request_uri && new_request_uri!=tdata->msg->line.req.uri) {
 	pjsip_route_hdr *route = pjsip_route_hdr_create(tdata->pool);
-	route->name_addr.uri = pjsip_uri_get_uri(tdata->msg->line.req.uri);
+	route->name_addr.uri = (pjsip_uri*) 
+			       pjsip_uri_get_uri(tdata->msg->line.req.uri);
 	if (last_route_hdr)
 	    pj_list_insert_after(last_route_hdr, route);
 	else
@@ -814,7 +827,7 @@ static void stateless_send_transport_cb( void *token,
 					 pjsip_tx_data *tdata,
 					 pj_ssize_t sent )
 {
-    pjsip_send_state *stateless_data = token;
+    pjsip_send_state *stateless_data = (pjsip_send_state*) token;
 
     PJ_UNUSED_ARG(tdata);
     pj_assert(tdata == stateless_data->tdata);
@@ -915,8 +928,8 @@ static void stateless_send_transport_cb( void *token,
 
 	if (via->branch_param.slen == 0) {
 	    pj_str_t tmp;
-	    via->branch_param.ptr = pj_pool_alloc(tdata->pool,
-						  PJSIP_MAX_BRANCH_LEN);
+	    via->branch_param.ptr = (char*)pj_pool_alloc(tdata->pool,
+						  	 PJSIP_MAX_BRANCH_LEN);
 	    via->branch_param.slen = PJSIP_MAX_BRANCH_LEN;
 	    pj_memcpy(via->branch_param.ptr, PJSIP_RFC3261_BRANCH_ID,
 		      PJSIP_RFC3261_BRANCH_LEN);
@@ -960,7 +973,7 @@ stateless_send_resolver_callback( pj_status_t status,
 				  void *token,
 				  const struct pjsip_server_addresses *addr)
 {
-    pjsip_send_state *stateless_data = token;
+    pjsip_send_state *stateless_data = (pjsip_send_state*) token;
 
     /* Fail on server resolution. */
     if (status != PJ_SUCCESS) {
@@ -1008,7 +1021,7 @@ pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
 	return status;
 
     /* Keep stateless data. */
-    stateless_data = pj_pool_zalloc(tdata->pool, sizeof(pjsip_send_state));
+    stateless_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_send_state);
     stateless_data->token = token;
     stateless_data->endpt = endpt;
     stateless_data->tdata = tdata;
@@ -1135,7 +1148,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
 static void send_response_transport_cb(void *token, pjsip_tx_data *tdata,
 				       pj_ssize_t sent)
 {
-    pjsip_send_state *send_state = token;
+    pjsip_send_state *send_state = (pjsip_send_state*) token;
     pj_bool_t cont = PJ_FALSE;
 
     /* Call callback, if any. */
@@ -1155,7 +1168,7 @@ static void send_response_transport_cb(void *token, pjsip_tx_data *tdata,
 static void send_response_resolver_cb( pj_status_t status, void *token,
 				       const pjsip_server_addresses *addr )
 {
-    pjsip_send_state *send_state = token;
+    pjsip_send_state *send_state = (pjsip_send_state*) token;
 
     if (status != PJ_SUCCESS) {
 	if (send_state->app_cb) {
@@ -1224,7 +1237,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
     pj_status_t status;
 
     /* Create structure to keep the sending state. */
-    send_state = pj_pool_zalloc(tdata->pool, sizeof(pjsip_send_state));
+    send_state = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_send_state);
     send_state->endpt = endpt;
     send_state->tdata = tdata;
     send_state->token = token;
@@ -1317,7 +1330,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
     if (hdr_list) {
 	const pjsip_hdr *hdr = hdr_list->next;
 	while (hdr != hdr_list) {
-	    pjsip_msg_add_hdr( tdata->msg, pjsip_hdr_clone(tdata->pool, hdr) );
+	    pjsip_msg_add_hdr(tdata->msg, 
+	    		      (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr) );
 	    hdr = hdr->next;
 	}
     }

@@ -78,7 +78,7 @@ struct recv_list *create_incoming_packet( struct loop_transport *loop,
     if (!pool)
 	return NULL;
 
-    pkt = pj_pool_zalloc(pool, sizeof(struct recv_list));
+    pkt = PJ_POOL_ZALLOC_T(pool, struct recv_list);
 
     /* Initialize rdata. */
     pkt->rdata.tp_info.pool = pool;
@@ -120,7 +120,7 @@ static pj_status_t add_notification( struct loop_transport *loop,
 
     pjsip_tx_data_add_ref(tdata);
     pj_lock_acquire(tdata->lock);
-    sent_status = pj_pool_alloc(tdata->pool, sizeof(struct send_list));
+    sent_status = PJ_POOL_ALLOC_T(tdata->pool, struct send_list);
     pj_lock_release(tdata->lock);
 
     sent_status->sent = sent;
@@ -253,7 +253,7 @@ static pj_status_t loop_destroy(pjsip_transport *tp)
 /* Worker thread for loop transport. */
 static int loop_transport_worker_thread(void *arg)
 {
-    struct loop_transport *loop = arg;
+    struct loop_transport *loop = (struct loop_transport*) arg;
     struct recv_list r;
     struct send_list s;
 
@@ -356,7 +356,7 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
 	return PJ_ENOMEM;
 
     /* Create the loop structure. */
-    loop = pj_pool_zalloc(pool, sizeof(struct loop_transport));
+    loop = PJ_POOL_ZALLOC_T(pool, struct loop_transport);
     
     /* Initialize transport properties. */
     pj_ansi_snprintf(loop->base.obj_name, sizeof(loop->base.obj_name), 

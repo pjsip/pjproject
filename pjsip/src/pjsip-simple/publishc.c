@@ -50,7 +50,7 @@ enum
 
 const pjsip_method pjsip_publish_method = 
 {
-    PJSIP_PUBLISH_METHOD,
+    (pjsip_method_e)PJSIP_PUBLISH_METHOD,
     { "PUBLISH", 7 }
 };
 
@@ -122,7 +122,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
     pool = pjsip_endpt_create_pool(endpt, "pubc%p", 1024, 1024);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    pubc = pj_pool_zalloc(pool, sizeof(struct pjsip_publishc));
+    pubc = PJ_POOL_ZALLOC_T(pool, pjsip_publishc);
 
     pubc->pool = pool;
     pubc->endpt = endpt;
@@ -291,13 +291,15 @@ static pj_status_t create_request(pjsip_publishc *pubc,
 	pjsip_hdr *route_pos;
 	const pjsip_route_hdr *route;
 
-	route_pos = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+	route_pos = (pjsip_hdr*)
+		    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 	if (!route_pos)
 	    route_pos = &tdata->msg->hdr;
 
 	route = pubc->route_set.next;
 	while (route != &pubc->route_set) {
-	    pjsip_hdr *new_hdr = pjsip_hdr_shallow_clone(tdata->pool, route);
+	    pjsip_hdr *new_hdr = (pjsip_hdr*)
+	    			 pjsip_hdr_shallow_clone(tdata->pool, route);
 	    pj_list_insert_after(route_pos, new_hdr);
 	    route_pos = new_hdr;
 	    route = route->next;
@@ -345,7 +347,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_publish(pjsip_publishc *pubc,
     if (pubc->expires_hdr) {
 	pjsip_hdr *dup;
 
-	dup = pjsip_hdr_shallow_clone(tdata->pool, pubc->expires_hdr);
+	dup = (pjsip_hdr*)
+	      pjsip_hdr_shallow_clone(tdata->pool, pubc->expires_hdr);
 	if (dup)
 	    pjsip_msg_add_hdr(tdata->msg, dup);
     }
@@ -424,7 +427,7 @@ static void call_callback(pjsip_publishc *pubc, pj_status_t status,
 static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 				   struct pj_timer_entry *entry)
 {
-    pjsip_publishc *pubc = entry->user_data;
+    pjsip_publishc *pubc = (pjsip_publishc*) entry->user_data;
     pjsip_tx_data *tdata;
     pj_status_t status;
     
@@ -446,7 +449,7 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
-    pjsip_publishc *pubc = token;
+    pjsip_publishc *pubc = (pjsip_publishc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     
     /* Decrement pending transaction counter. */
@@ -507,7 +510,8 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    }
 
 	    /* Update expires value */
-	    expires = pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
+	    expires = (pjsip_expires_hdr*)
+	    	      pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 
 	    if (expires)
 		expiration = expires->ivalue;
@@ -574,7 +578,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 
     /* Increment CSeq */
     cseq = ++pubc->cseq_hdr->cseq;
-    cseq_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+    cseq_hdr = (pjsip_cseq_hdr*)
+    	       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
 
     /* Increment pending transaction first, since transaction callback

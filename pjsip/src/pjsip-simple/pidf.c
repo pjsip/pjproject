@@ -88,7 +88,7 @@ static void xml_init_node(pj_pool_t *pool, pj_xml_node *node,
 static pj_xml_attr* xml_create_attr(pj_pool_t *pool, pj_str_t *name,
 				    const pj_str_t *value)
 {
-    pj_xml_attr *attr = pj_pool_alloc(pool, sizeof(*attr));
+    pj_xml_attr *attr = PJ_POOL_ALLOC_T(pool, pj_xml_attr);
     attr->name = *name;
     pj_strdup(pool, &attr->value, value);
     return attr;
@@ -110,7 +110,7 @@ PJ_DEF(void) pjpidf_pres_construct(pj_pool_t *pool, pjpidf_pres *pres,
 PJ_DEF(pjpidf_tuple*) pjpidf_pres_add_tuple(pj_pool_t *pool, pjpidf_pres *pres,
 					    const pj_str_t *id)
 {
-    pjpidf_tuple *t = pj_pool_alloc(pool, sizeof(*t));
+    pjpidf_tuple *t = PJ_POOL_ALLOC_T(pool, pjpidf_tuple);
     pjpidf_tuple_construct(pool, t, id);
     pj_xml_add_node(pres, t);
     return t;
@@ -129,7 +129,7 @@ PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_next_tuple(pjpidf_pres *pres,
 
 static pj_bool_t find_tuple_by_id(pj_xml_node *node, const void *id)
 {
-    return pj_xml_find_attr(node, &ID, id) != NULL;
+    return pj_xml_find_attr(node, &ID, (const pj_str_t*)id) != NULL;
 }
 
 PJ_DEF(pjpidf_tuple*) pjpidf_pres_find_tuple(pjpidf_pres *pres, const pj_str_t *id)
@@ -146,7 +146,7 @@ PJ_DEF(void) pjpidf_pres_remove_tuple(pjpidf_pres *pres, pjpidf_tuple *t)
 PJ_DEF(pjpidf_note*) pjpidf_pres_add_note(pj_pool_t *pool, pjpidf_pres *pres, 
 					  const pj_str_t *text)
 {
-    pjpidf_note *note = pj_pool_alloc(pool, sizeof(*note));
+    pjpidf_note *note = PJ_POOL_ALLOC_T(pool, pjpidf_note);
     xml_init_node(pool, note, &NOTE, text);
     pj_xml_add_node(pres, note);
     return note;
@@ -173,7 +173,7 @@ PJ_DEF(void) pjpidf_tuple_construct(pj_pool_t *pool, pjpidf_tuple *t,
     xml_init_node(pool, t, &TUPLE, NULL);
     attr = xml_create_attr(pool, &ID, id);
     pj_xml_add_attr(t, attr);
-    st = pj_pool_alloc(pool, sizeof(*st));
+    st = PJ_POOL_ALLOC_T(pool, pjpidf_status);
     pjpidf_status_construct(pool, st);
     pj_xml_add_node(t, st);
 }
@@ -214,7 +214,7 @@ PJ_DEF(void) pjpidf_tuple_set_contact(pj_pool_t *pool, pjpidf_tuple *t,
 {
     pj_xml_node *node = pj_xml_find_node(t, &CONTACT);
     if (!node) {
-	node = pj_pool_alloc(pool, sizeof(*node));
+	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
 	xml_init_node(pool, node, &CONTACT, contact);
 	pj_xml_add_node(t, node);
     } else {
@@ -229,7 +229,7 @@ PJ_DEF(void) pjpidf_tuple_set_contact_prio(pj_pool_t *pool, pjpidf_tuple *t,
     pj_xml_attr *attr;
 
     if (!node) {
-	node = pj_pool_alloc(pool, sizeof(*node));
+	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
 	xml_init_node(pool, node, &CONTACT, NULL);
 	pj_xml_add_node(t, node);
     }
@@ -259,7 +259,7 @@ PJ_DEF(const pj_str_t*) pjpidf_tuple_get_contact_prio(const pjpidf_tuple *t)
 PJ_DEF(pjpidf_note*) pjpidf_tuple_add_note(pj_pool_t *pool, pjpidf_tuple *t,
 					   const pj_str_t *text)
 {
-    pjpidf_note *note = pj_pool_alloc(pool, sizeof(*note));
+    pjpidf_note *note = PJ_POOL_ALLOC_T(pool, pjpidf_note);
     xml_init_node(pool, note, &NOTE, text);
     pj_xml_add_node(t, note);
     return note;
@@ -287,7 +287,7 @@ PJ_DEF(void) pjpidf_tuple_set_timestamp(pj_pool_t *pool, pjpidf_tuple *t,
 {
     pj_xml_node *node = pj_xml_find_node(t, &TIMESTAMP);
     if (!node) {
-	node = pj_pool_alloc(pool, sizeof(*node));
+	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
 	xml_init_node(pool, node, &TIMESTAMP, ts);
     } else {
 	pj_strdup(pool, &node->content, ts);
@@ -300,7 +300,7 @@ PJ_DEF(void) pjpidf_tuple_set_timestamp_np(pj_pool_t *pool, pjpidf_tuple *t,
 {
     pj_xml_node *node = pj_xml_find_node(t, &TIMESTAMP);
     if (!node) {
-	node = pj_pool_alloc(pool, sizeof(*node));
+	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
 	xml_init_node(pool, node, &TIMESTAMP, ts);
     } else {
 	node->content = *ts;
@@ -314,7 +314,7 @@ PJ_DEF(void) pjpidf_status_construct(pj_pool_t *pool, pjpidf_status *st)
     pj_xml_node *node;
 
     xml_init_node(pool, st, &STATUS, NULL);
-    node = pj_pool_alloc(pool, sizeof(*node));
+    node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
     xml_init_node(pool, node, &BASIC, &CLOSED);
     pj_xml_add_node(st, node);
 }
@@ -335,7 +335,7 @@ PJ_DEF(void) pjpidf_status_set_basic_open(pjpidf_status *st, pj_bool_t open)
 
 PJ_DEF(pjpidf_pres*) pjpidf_create(pj_pool_t *pool, const pj_str_t *entity)
 {
-    pjpidf_pres *pres = pj_pool_alloc(pool, sizeof(*pres));
+    pjpidf_pres *pres = PJ_POOL_ALLOC_T(pool, pjpidf_pres);
     pjpidf_pres_construct(pool, pres, entity);
     return pres;
 }

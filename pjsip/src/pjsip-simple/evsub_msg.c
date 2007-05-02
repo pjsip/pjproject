@@ -43,7 +43,7 @@ static pjsip_hdr_vptr event_hdr_vptr =
 
 PJ_DEF(pjsip_event_hdr*) pjsip_event_hdr_create(pj_pool_t *pool)
 {
-    pjsip_event_hdr *hdr = pj_pool_zalloc(pool, sizeof(*hdr));
+    pjsip_event_hdr *hdr = PJ_POOL_ZALLOC_T(pool, pjsip_event_hdr);
     hdr->type = PJSIP_H_OTHER;
     hdr->name.ptr = "Event";
     hdr->name.slen = 5;
@@ -93,7 +93,7 @@ static pjsip_event_hdr*
 pjsip_event_hdr_shallow_clone( pj_pool_t *pool,
 			       const pjsip_event_hdr *rhs )
 {
-    pjsip_event_hdr *hdr = pj_pool_alloc(pool, sizeof(*hdr));
+    pjsip_event_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_event_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
     pjsip_param_shallow_clone(pool, &hdr->other_param, &rhs->other_param);
     return hdr;
@@ -142,7 +142,7 @@ static pjsip_hdr_vptr sub_state_hdr_vptr =
 PJ_DEF(pjsip_sub_state_hdr*) pjsip_sub_state_hdr_create(pj_pool_t *pool)
 {
     pj_str_t sub_state = { "Subscription-State", 18 };
-    pjsip_sub_state_hdr *hdr = pj_pool_zalloc(pool, sizeof(*hdr));
+    pjsip_sub_state_hdr *hdr = PJ_POOL_ZALLOC_T(pool, pjsip_sub_state_hdr);
     hdr->type = PJSIP_H_OTHER;
     hdr->name = hdr->sname = sub_state;
     hdr->vptr = &sub_state_hdr_vptr;
@@ -208,7 +208,7 @@ static pjsip_sub_state_hdr*
 pjsip_sub_state_hdr_shallow_clone(pj_pool_t *pool,
 				  const pjsip_sub_state_hdr *rhs)
 {
-    pjsip_sub_state_hdr *hdr = pj_pool_alloc(pool, sizeof(*hdr));
+    pjsip_sub_state_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_sub_state_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
     pjsip_param_shallow_clone(pool, &hdr->other_param, &rhs->other_param);
     return hdr;
@@ -234,7 +234,7 @@ static pjsip_hdr *parse_hdr_event(pjsip_parse_ctx *ctx)
 	if (pj_stricmp(&pname, &id_param)==0) {
 	    hdr->id_param = pvalue;
 	} else {
-	    pjsip_param *param = pj_pool_alloc(ctx->pool, sizeof(pjsip_param));
+	    pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
 	    param->name = pname;
 	    param->value = pvalue;
 	    pj_list_push_back(&hdr->other_param, param);
@@ -271,7 +271,7 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
 	    hdr->retry_after = pj_strtoul(&pvalue);
 
 	} else {
-	    pjsip_param *param = pj_pool_alloc(ctx->pool, sizeof(pjsip_param));
+	    pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
 	    param->name = pname;
 	    param->value = pvalue;
 	    pj_list_push_back(&hdr->other_param, param);
