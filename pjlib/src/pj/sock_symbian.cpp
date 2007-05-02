@@ -151,8 +151,7 @@ void CPjSocketReader::StartRecvFrom(void (*cb)(void *key),
     if (fromAddr == NULL) fromAddr = &recvAddr_;
 
     sock_.Socket().RecvFrom(*aDesc, *fromAddr, flags, iStatus);
-    if (iStatus == KRequestPending)
-	SetActive();
+    SetActive();
 }
 
 void CPjSocketReader::DoCancel()

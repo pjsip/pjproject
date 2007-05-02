@@ -599,6 +599,14 @@
 #endif
 
 /**
+ * Is native platform error positive number?
+ * Default: 1 (yes)
+ */
+#ifndef PJ_NATIVE_ERR_POSITIVE
+#   define PJ_NATIVE_ERR_POSITIVE   1
+#endif
+ 
+/**
  * Include error message string in the library (pj_strerror()).
  * This is very much desirable!
  *

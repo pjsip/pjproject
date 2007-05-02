@@ -132,9 +132,54 @@ LOCAL_C void DoStartL()
 }
 
 
+////////////////////////////////////////////////////////////////////////////
+
+class TMyTrapHandler : public TTrapHandler 
+{
+public:
+	void Install();
+	void Uninstall();
+	virtual IMPORT_C void Trap();
+	virtual IMPORT_C void UnTrap();
+	virtual IMPORT_C void Leave(TInt aValue);
+	
+private:
+	TTrapHandler *prev_;
+};
+
+void TMyTrapHandler::Install() {
+	prev_ = User::SetTrapHandler(this);
+}
+
+void TMyTrapHandler::Uninstall() {
+	User::SetTrapHandler(prev_);
+}
+
+IMPORT_C void TMyTrapHandler::Trap() 
+{
+	prev_->Trap();
+}
+
+IMPORT_C void TMyTrapHandler::UnTrap() 
+{
+	prev_->UnTrap();
+}
+
+IMPORT_C void TMyTrapHandler::Leave(TInt aValue) 
+{
+	prev_->Leave(aValue);
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+
 //  Global Functions
 GLDEF_C TInt E32Main()
 {
+    TMyTrapHandler th;
+    
+    th.Install();
+    
     // Create cleanup stack
     //__UHEAP_MARK;
     CTrapCleanup* cleanup = CTrapCleanup::New();
@@ -152,6 +197,8 @@ GLDEF_C TInt E32Main()
     delete console;
     delete cleanup;
     //__UHEAP_MARKEND;
+    
+    th.Uninstall();
     return KErrNone;
 }
 

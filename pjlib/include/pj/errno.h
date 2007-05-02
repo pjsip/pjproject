@@ -167,7 +167,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * @warning	Macro implementation; the syserr argument may be evaluated
  *		multiple times.
  */
-#define PJ_STATUS_FROM_OS(e) (e == 0 ? PJ_SUCCESS : e + PJ_ERRNO_START_SYS)
+#if PJ_NATIVE_ERR_POSITIVE
+#   define PJ_STATUS_FROM_OS(e) (e == 0 ? PJ_SUCCESS : e + PJ_ERRNO_START_SYS)
+#else
+#   define PJ_STATUS_FROM_OS(e) (e == 0 ? PJ_SUCCESS : PJ_ERRNO_START_SYS - e)
+#endif
 
 /**
  * @hideinitializer
@@ -179,7 +183,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  *		multiple times.  If the statcode was not created by 
  *		pj_get_os_error or PJ_STATUS_FROM_OS, the results are undefined.
  */
-#define PJ_STATUS_TO_OS(e) (e == 0 ? PJ_SUCCESS : e - PJ_ERRNO_START_SYS)
+#if PJ_NATIVE_ERR_POSITIVE
+#   define PJ_STATUS_TO_OS(e) (e == 0 ? PJ_SUCCESS : e - PJ_ERRNO_START_SYS)
+#else
+#   define PJ_STATUS_TO_OS(e) (e == 0 ? PJ_SUCCESS : PJ_ERRNO_START_SYS - e)
+#endif
 
 
 /**

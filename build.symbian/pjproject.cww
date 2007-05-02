@@ -54,32 +54,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
-            <GROUPID>
-                <GIDHIGHPART>4294967294</GIDHIGHPART>
-                <GIDLOWPART>4294967294</GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>0</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">pjlib_test.mcp</PATH>
-        <FRAMELOC>
-            <X>0</X>
-            <Y>0</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>347</W>
-            <H>128</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>1</STATUS>
-            <ROW>0</ROW>
-            <COLUMN>0</COLUMN>
-            <DOCKBARID>59420</DOCKBARID>
-            <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -104,7 +79,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -129,7 +104,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -154,32 +129,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
-            <GROUPID>
-                <GIDHIGHPART>4294967294</GIDHIGHPART>
-                <GIDLOWPART>4294967294</GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>0</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">pjsdp.mcp</PATH>
-        <FRAMELOC>
-            <X>0</X>
-            <Y>0</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>347</W>
-            <H>128</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>1</STATUS>
-            <ROW>0</ROW>
-            <COLUMN>0</COLUMN>
-            <DOCKBARID>59420</DOCKBARID>
-            <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -204,57 +154,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
-            <GROUPID>
-                <GIDHIGHPART>4294967294</GIDHIGHPART>
-                <GIDLOWPART>4294967294</GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>0</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">pjsip_ua.mcp</PATH>
-        <FRAMELOC>
-            <X>548</X>
-            <Y>123</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>400</W>
-            <H>372</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>1</STATUS>
-            <ROW>0</ROW>
-            <COLUMN>0</COLUMN>
-            <DOCKBARID>59420</DOCKBARID>
-            <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
-            <GROUPID>
-                <GIDHIGHPART>4294967294</GIDHIGHPART>
-                <GIDLOWPART>4294967294</GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>0</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">pjsip_simple.mcp</PATH>
-        <FRAMELOC>
-            <X>0</X>
-            <Y>0</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>347</W>
-            <H>128</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>1</STATUS>
-            <ROW>0</ROW>
-            <COLUMN>0</COLUMN>
-            <DOCKBARID>59420</DOCKBARID>
-            <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -266,12 +166,12 @@
         <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">pjsua_lib.mcp</PATH>
         <FRAMELOC>
-            <X>631</X>
-            <Y>228</Y>
+            <X>634</X>
+            <Y>231</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>400</W>
-            <H>372</H>
+            <W>347</W>
+            <H>128</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>1</STATUS>
@@ -279,7 +179,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -291,12 +191,12 @@
         <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">symbian_ua.mcp</PATH>
         <FRAMELOC>
-            <X>568</X>
-            <Y>146</Y>
+            <X>571</X>
+            <Y>149</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>400</W>
-            <H>372</H>
+            <W>347</W>
+            <H>128</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>1</STATUS>
@@ -304,10 +204,60 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>506</HGT>
+            <HGT>294</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\sock_symbian.cpp</PATH>
+        <FRAMELOC>
+            <X>8</X>
+            <Y>27</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>646</W>
+            <H>464</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\main_symbian.cpp</PATH>
+        <FRAMELOC>
+            <X>8</X>
+            <Y>27</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>638</W>
+            <H>437</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
     </WINDOW>
@@ -320,8 +270,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>731</W>
-            <H>822</H>
+            <W>565</W>
+            <H>643</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -339,7 +289,7 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjsip\src\pjsua-lib\pjsua_media.c</PATH>
+        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\ioqueue_symbian.cpp</PATH>
         <FRAMELOC>
             <X>10</X>
             <Y>40</Y>
@@ -364,14 +314,14 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjmedia\src\pjmedia\nullsound.c</PATH>
+        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\os_core_symbian.cpp</PATH>
         <FRAMELOC>
-            <X>10</X>
-            <Y>40</Y>
+            <X>6</X>
+            <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>630</W>
-            <H>410</H>
+            <W>638</W>
+            <H>437</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -389,14 +339,39 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjmedia\include\pjmedia\sound.h</PATH>
+        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\os_error_symbian.cpp</PATH>
         <FRAMELOC>
-            <X>10</X>
-            <Y>40</Y>
+            <X>8</X>
+            <Y>27</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>630</W>
-            <H>410</H>
+            <W>638</W>
+            <H>437</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\errno.c</PATH>
+        <FRAMELOC>
+            <X>4</X>
+            <Y>23</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>646</W>
+            <H>464</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -435,9 +410,10 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINDOWS\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINNT\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\econs.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
@@ -448,8 +424,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>414</W>
-            <H>516</H>
+            <W>390</W>
+            <H>435</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -488,13 +464,15 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINDOWS\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINNT\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\econs.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>23</EDOCTYPE>
+        <DEFAULT>true</DEFAULT>
         <FRAMELOC>
             <X>6</X>
             <Y>81</Y>

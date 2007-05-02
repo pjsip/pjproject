@@ -25,16 +25,16 @@ SOURCE	stun_transaction.c
 //
 // Include files
 //
-DOCUMENT pjnath\config.h
-DOCUMENT pjnath\\errno.h
-DOCUMENT pjnath\\ice_session.h
-DOCUMENT pjnath\\ice_strans.h
-DOCUMENT pjnath\\stun_auth.h
-DOCUMENT pjnath\\stun_config.h
-DOCUMENT pjnath\\stun_msg.h
-DOCUMENT pjnath\\stun_session.h
-DOCUMENT pjnath\\stun_transaction.h
-DOCUMENT pjnath\\types.h
+//DOCUMENT pjnath\config.h
+//DOCUMENT pjnath\\errno.h
+//DOCUMENT pjnath\\ice_session.h
+//DOCUMENT pjnath\\ice_strans.h
+//DOCUMENT pjnath\\stun_auth.h
+//DOCUMENT pjnath\\stun_config.h
+//DOCUMENT pjnath\\stun_msg.h
+//DOCUMENT pjnath\\stun_session.h
+//DOCUMENT pjnath\\stun_transaction.h
+//DOCUMENT pjnath\\types.h
 
 
 

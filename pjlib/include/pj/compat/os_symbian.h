@@ -121,6 +121,7 @@
 #define PJ_OS_HAS_CHECK_STACK       0
 #define PJ_TERM_HAS_COLOR	    0
 #define PJ_NATIVE_STRING_IS_UNICODE 0
+#define PJ_NATIVE_ERR_POSITIVE	    0
 
 #define PJ_ATOMIC_VALUE_TYPE	    int
 #define PJ_THREAD_DESC_SIZE	    128

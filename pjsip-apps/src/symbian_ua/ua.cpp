@@ -301,7 +301,7 @@ int ua_main()
 	pj_status_t status;
 	
 	// Initialize pjsua
-	status  = app_startup(NULL);
+	status  = app_startup("sip:192.168.0.66:5061");
 	if (status != PJ_SUCCESS)
 		return status;
 	
@@ -311,6 +311,7 @@ int ua_main()
 	ConsoleUI *con = new ConsoleUI(asw, console);
 	
 	con->Run();
+	
 	asw->Start();
 	
 	delete con;

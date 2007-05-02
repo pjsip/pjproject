@@ -216,23 +216,8 @@ pj_status_t CIoqueueCallback::StartRead(pj_ioqueue_op_key_t *op_key,
 	sock_->Socket().Recv(aBufferPtr_, flags, iStatus);
     }
 
-    if (iStatus==KRequestPending) {
-	SetActive();
-	return PJ_EPENDING;
-    } else {
-    	// Complete immediately (with success or error)
-    	if (iStatus == KErrNone) {
-    	    *size = aBufferPtr_.Length();
-    	    HandleReadCompletion();
-    	    return PJ_SUCCESS;
-    	}
-    	else {
-	    pending_data_.read_.op_key_ = NULL;
-	    pending_data_.read_.addr_ = NULL;
-	    pending_data_.read_.addrlen_ = NULL;
-	    return PJ_RETURN_OS_ERROR(iStatus.Int());
-    	}
-    }
+    SetActive();
+    return PJ_EPENDING;
 }
 
 
@@ -260,24 +245,8 @@ pj_status_t CIoqueueCallback::StartAccept(pj_ioqueue_op_key_t *op_key,
     type_ = TYPE_ACCEPT;
     sock_->Socket().Accept(blank_sock_, iStatus);
 
-    if (iStatus==KRequestPending) {
-	SetActive();
-	return PJ_EPENDING;
-    } else {
-    	// Accept() completed immediately (with success or error).
-    	if (iStatus == KErrNone) {
-    	    HandleAcceptCompletion();
-    	    return PJ_SUCCESS;
-    	}
-    	else {
-	    pending_data_.accept_.op_key_ = NULL;
-	    pending_data_.accept_.new_sock_ = NULL;
-	    pending_data_.accept_.local_ = NULL;
-	    pending_data_.accept_.remote_ = NULL;
-	    pending_data_.accept_.addrlen_ = NULL;
-	    return PJ_RETURN_OS_ERROR(iStatus.Int());
-    	}
-    }
+    SetActive();
+    return PJ_EPENDING;
 }
 
 
@@ -286,17 +255,17 @@ pj_status_t CIoqueueCallback::StartAccept(pj_ioqueue_op_key_t *op_key,
 //
 void CIoqueueCallback::HandleReadCompletion() 
 {
-	if (pending_data_.read_.addr_) {
-	    PjSymbianOS::Addr2pj(aAddress_, 
-				 *(pj_sockaddr_in*)pending_data_.read_.addr_);
-	    pending_data_.read_.addr_ = NULL;
-	}
-	if (pending_data_.read_.addrlen_) {
-	    *pending_data_.read_.addrlen_ = sizeof(pj_sockaddr_in);
-	    pending_data_.read_.addrlen_ = NULL;
-	}
+    if (pending_data_.read_.addr_) {
+	PjSymbianOS::Addr2pj(aAddress_, 
+			     *(pj_sockaddr_in*)pending_data_.read_.addr_);
+	pending_data_.read_.addr_ = NULL;
+    }
+    if (pending_data_.read_.addrlen_) {
+	*pending_data_.read_.addrlen_ = sizeof(pj_sockaddr_in);
+	pending_data_.read_.addrlen_ = NULL;
+    }
 	
-	pending_data_.read_.op_key_ = NULL;
+    pending_data_.read_.op_key_ = NULL;
 }
 
 
