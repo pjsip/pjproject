@@ -19,6 +19,7 @@
 #include <pjmedia/sound.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/pool.h>
 
 #if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_NULL_SOUND
 
@@ -30,10 +31,32 @@ static pjmedia_snd_dev_info null_info =
     8000
 };
 
+static pj_pool_factory *pool_factory;
+
+struct pjmedia_snd_stream 
+{
+	pj_pool_t		*pool;
+	pjmedia_dir 		dir;
+	int 			rec_id;
+	int 			play_id;
+	unsigned		clock_rate;
+	unsigned		channel_count;
+	unsigned		samples_per_frame;
+	unsigned		bits_per_sample;
+	pjmedia_snd_rec_cb	rec_cb;
+	pjmedia_snd_play_cb	play_cb;
+	void			*user_data;
+};
+
 
 PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
-    PJ_UNUSED_ARG(factory);
+    pool_factory = factory;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
+{
     return PJ_SUCCESS;
 }
 
@@ -57,17 +80,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 					  void *user_data,
 					  pjmedia_snd_stream **p_snd_strm)
 {
-    PJ_UNUSED_ARG(index);
-    PJ_UNUSED_ARG(clock_rate);
-    PJ_UNUSED_ARG(channel_count);
-    PJ_UNUSED_ARG(samples_per_frame);
-    PJ_UNUSED_ARG(bits_per_sample);
-    PJ_UNUSED_ARG(rec_cb);
-    PJ_UNUSED_ARG(user_data);
-
-    *p_snd_strm = (void*)1;
-
-    return PJ_SUCCESS;
+    return pjmedia_snd_open(index, -2, clock_rate, channel_count,
+    			    samples_per_frame, bits_per_sample,
+    			    rec_cb, NULL, user_data, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
@@ -79,17 +94,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 					void *user_data,
 					pjmedia_snd_stream **p_snd_strm )
 {
-    PJ_UNUSED_ARG(index);
-    PJ_UNUSED_ARG(clock_rate);
-    PJ_UNUSED_ARG(channel_count);
-    PJ_UNUSED_ARG(samples_per_frame);
-    PJ_UNUSED_ARG(bits_per_sample);
-    PJ_UNUSED_ARG(play_cb);
-    PJ_UNUSED_ARG(user_data);
-
-    *p_snd_strm = (void*)1;
-
-    return PJ_SUCCESS;
+    return pjmedia_snd_open(-2, index, clock_rate, channel_count,
+    			    samples_per_frame, bits_per_sample,
+    			    NULL, play_cb, user_data, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
@@ -103,17 +110,35 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 				      void *user_data,
 				      pjmedia_snd_stream **p_snd_strm)
 {
-    PJ_UNUSED_ARG(rec_id);
-    PJ_UNUSED_ARG(play_id);
-    PJ_UNUSED_ARG(clock_rate);
-    PJ_UNUSED_ARG(channel_count);
-    PJ_UNUSED_ARG(samples_per_frame);
-    PJ_UNUSED_ARG(bits_per_sample);
-    PJ_UNUSED_ARG(rec_cb);
-    PJ_UNUSED_ARG(play_cb);
-    PJ_UNUSED_ARG(user_data);
+    pj_pool_t *pool;
+    pjmedia_snd_stream *snd_strm;
 
-    *p_snd_strm = (void*)1;
+    pool = pj_pool_create(pool_factory, NULL, 128, 128, NULL);
+    snd_strm = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
+    
+    snd_strm->pool = pool;
+    
+    if (rec_id == -1) rec_id = 0;
+    if (play_id == -1) play_id = 0;
+    
+    if (rec_id != -2 && play_id != -2)
+    	snd_strm->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    else if (rec_id != -2)
+    	snd_strm->dir = PJMEDIA_DIR_CAPTURE;
+    else if (play_id != -2)
+    	snd_strm->dir = PJMEDIA_DIR_PLAYBACK;
+    
+    snd_strm->rec_id = rec_id;
+    snd_strm->play_id = play_id;
+    snd_strm->clock_rate = clock_rate;
+    snd_strm->channel_count = channel_count;
+    snd_strm->samples_per_frame = samples_per_frame;
+    snd_strm->bits_per_sample = bits_per_sample;
+    snd_strm->rec_cb = rec_cb;
+    snd_strm->play_cb = play_cb;
+    snd_strm->user_data = user_data;
+    
+    *p_snd_strm = snd_strm;
 
     return PJ_SUCCESS;
 }
@@ -135,21 +160,25 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
 						pjmedia_snd_stream_info *pi)
 {
 
-    PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
-    return PJ_EINVALIDOP;
+    pj_bzero(pi, sizeof(pjmedia_snd_stream_info));
+    pi->dir = strm->dir;
+    pi->play_id = strm->play_id;
+    pi->rec_id = strm->rec_id;
+    pi->clock_rate = strm->clock_rate;
+    pi->channel_count = strm->channel_count;
+    pi->samples_per_frame = strm->samples_per_frame;
+    pi->bits_per_sample = strm->bits_per_sample;
+    pi->rec_latency = 0;
+    pi->play_latency = 0;
+    
+    return PJ_SUCCESS;
 }
 
 
 PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 {
-    PJ_UNUSED_ARG(stream);
+    pj_pool_release(stream->pool);
     return PJ_SUCCESS;
 }
-
-PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
-{
-    return PJ_SUCCESS;
-}
-
 
 #endif	/* PJMEDIA_SOUND_IMPLEMENTATION */

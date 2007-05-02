@@ -143,6 +143,7 @@ static pj_status_t app_startup(char *url)
 	pjsua_media_config med_cfg;
 
 	pjsua_config_default(&cfg);
+	cfg.max_calls = 2;
 	cfg.thread_cnt = 0; // Disable threading on Symbian
 	cfg.cb.on_incoming_call = &on_incoming_call;
 	cfg.cb.on_call_media_state = &on_call_media_state;

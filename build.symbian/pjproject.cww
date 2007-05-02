@@ -315,10 +315,9 @@
         <SESSION>-1</SESSION>
         <EDOCTYPE>1</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\ua.cpp</PATH>
-        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>4</X>
-            <Y>4</Y>
+            <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
             <W>731</W>
@@ -336,6 +335,109 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjsip\src\pjsua-lib\pjsua_media.c</PATH>
+        <FRAMELOC>
+            <X>10</X>
+            <Y>40</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>630</W>
+            <H>410</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjmedia\src\pjmedia\nullsound.c</PATH>
+        <FRAMELOC>
+            <X>10</X>
+            <Y>40</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>630</W>
+            <H>410</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjmedia\include\pjmedia\sound.h</PATH>
+        <FRAMELOC>
+            <X>10</X>
+            <Y>40</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>630</W>
+            <H>410</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>20</EDOCTYPE>
+        <MAXIMIZED>true</MAXIMIZED>
+        <FRAMELOC>
+            <X>0</X>
+            <Y>0</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>824</W>
+            <H>1521</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINDOWS\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
@@ -371,8 +473,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>792</W>
-            <H>1413</H>
+            <W>816</W>
+            <H>1494</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -386,12 +488,13 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
+            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINDOWS\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>23</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
-        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>6</X>
             <Y>81</Y>
