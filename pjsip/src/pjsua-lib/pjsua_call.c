@@ -84,7 +84,7 @@ static void reset_call(pjsua_call_id id)
     call->user_data = NULL;
     call->session = NULL;
     call->xfer_sub = NULL;
-    call->last_code = 0;
+    call->last_code = (pjsip_status_code) 0;
     call->conf_slot = PJSUA_INVALID_ID;
     call->last_text.ptr = call->last_text_buf_;
     call->last_text.slen = 0;
@@ -1946,7 +1946,8 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_CONNECTING:
 	    if (call->res_time.sec == 0)
 		pj_gettimeofday(&call->res_time);
-	    call->last_code = e->body.tsx_state.tsx->status_code;
+	    call->last_code = (pjsip_status_code) 
+	    		      e->body.tsx_state.tsx->status_code;
 	    pj_strncpy(&call->last_text, 
 		       &e->body.tsx_state.tsx->status_text,
 		       sizeof(call->last_text_buf_));
@@ -1959,14 +1960,16 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    if (call->res_time.sec == 0)
 		pj_gettimeofday(&call->res_time);
 	    if (e->body.tsx_state.tsx->status_code > call->last_code) {
-		call->last_code = e->body.tsx_state.tsx->status_code;
+		call->last_code = (pjsip_status_code) 
+				  e->body.tsx_state.tsx->status_code;
 		pj_strncpy(&call->last_text, 
 			   &e->body.tsx_state.tsx->status_text,
 			   sizeof(call->last_text_buf_));
 	    }
 	    break;
 	default:
-	    call->last_code = e->body.tsx_state.tsx->status_code;
+	    call->last_code = (pjsip_status_code) 
+	    		      e->body.tsx_state.tsx->status_code;
 	    pj_strncpy(&call->last_text, 
 		       &e->body.tsx_state.tsx->status_text,
 		       sizeof(call->last_text_buf_));
@@ -2534,7 +2537,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 							&code);
 
     if (code < 200)
-	code = 200;
+	code = PJSIP_SC_OK;
     if (code >= 300) {
 	/* Application rejects call transfer request */
 	pjsip_dlg_respond( inv->dlg, rdata, code, NULL, NULL, NULL);
@@ -2775,7 +2778,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 						    &im_data->to,
 						    &im_data->body,
 						    im_data->user_data,
-						    tsx->status_code,
+						    (pjsip_status_code)
+						    	tsx->status_code,
 						    &tsx->status_text);
 	    }
 	}

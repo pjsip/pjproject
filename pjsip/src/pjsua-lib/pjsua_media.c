@@ -38,7 +38,7 @@ static void close_snd_dev(void);
  */
 pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 {
-    pj_str_t codec_id;
+    pj_str_t codec_id = {NULL, 0};
     unsigned opt;
     pj_status_t status;
 

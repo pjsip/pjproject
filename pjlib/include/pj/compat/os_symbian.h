@@ -145,6 +145,7 @@ typedef unsigned int socklen_t;
 
 #include <e32def.h>
 
+/*
 #if defined(PJ_EXPORTING)
 #   define PJ_EXPORT_IMPORT EXPORT_C
 #elif defined(PJ_IMPORTING)
@@ -152,6 +153,7 @@ typedef unsigned int socklen_t;
 #else
 #   error "Must define either PJ_EXPORTING or PJ_IMPORTING"
 #endif
+*/
 
 #endif	/* __PJ_COMPAT_OS_SYMBIAN_H__ */
 

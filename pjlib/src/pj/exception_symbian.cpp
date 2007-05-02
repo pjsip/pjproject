@@ -35,44 +35,6 @@ static long thread_local_id = -1;
 #endif  /* PJ_HAS_EXCEPTION_NAMES */
 
 
-//#if !defined(PJ_EXCEPTION_USE_WIN32_SEH) || PJ_EXCEPTION_USE_WIN32_SEH==0
-#if 0
-PJ_DEF(void) pj_throw_exception_(int exception_id)
-{
-    struct pj_exception_state_t *handler;
-
-    handler = (pj_exception_state_t*)pj_thread_local_get(thread_local_id);
-    if (handler == NULL) {
-        PJ_LOG(1,("except.c", "!!!FATAL: unhandled exception %d!\n", exception_id));
-        pj_assert(handler != NULL);
-        /* This will crash the system! */
-    }
-    pj_longjmp(handler->state, exception_id);
-}
-
-PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
-{
-    struct pj_exception_state_t *parent_handler = NULL;
-
-    if (thread_local_id == -1) {
-	pj_thread_local_alloc(&thread_local_id);
-	pj_assert(thread_local_id != -1);
-    }
-    parent_handler = (pj_exception_state_t*)pj_thread_local_get(thread_local_id);
-    rec->prev = parent_handler;
-    pj_thread_local_set(thread_local_id, rec);
-}
-
-PJ_DEF(void) pj_pop_exception_handler_(void)
-{
-    struct pj_exception_state_t *handler;
-
-    handler = (pj_exception_state_t*)pj_thread_local_get(thread_local_id);
-    pj_assert(handler != NULL);
-    pj_thread_local_set(thread_local_id, handler->prev);
-}
-#endif
-
 #if defined(PJ_HAS_EXCEPTION_NAMES) && PJ_HAS_EXCEPTION_NAMES != 0
 PJ_DEF(pj_status_t) pj_exception_id_alloc( const char *name,
                                            pj_exception_id_t *id)

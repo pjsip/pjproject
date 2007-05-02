@@ -29,7 +29,27 @@
 
 /**
  * @defgroup PJLIB_UTIL PJLIB-UTIL Library
+ * @{
  */
+
+PJ_BEGIN_DECL
+
+/**
+ * Initialize PJLIB UTIL (defined in errno.c)
+ *
+ * @return PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjlib_util_init(void);
+
+
+
+PJ_END_DECL
+
+
+/**
+ * @}
+ */
+
 
 /**
  * @mainpage PJLIB-UTIL

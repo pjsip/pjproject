@@ -1,0 +1,30 @@
+TARGET 		symbian_ua.exe
+TARGETTYPE 	exe
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjsip-apps\src\symbian_ua
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+
+// Test files
+
+SOURCE	ua.cpp
+SOURCE	main_symbian.cpp
+
+DOCUMENT ua.h
+
+SYSTEMINCLUDE	..\pjlib\include
+SYSTEMINCLUDE	..\pjlib-util\include
+SYSTEMINCLUDE	..\pjnath\include
+SYSTEMINCLUDE	..\pjmedia\include
+SYSTEMINCLUDE	..\pjsip\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+LIBRARY		pjsua_lib.lib pjsip_ua.lib pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib pjnath.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
+STATICLIBRARY   ecrt0.lib
+CAPABILITY	None
+

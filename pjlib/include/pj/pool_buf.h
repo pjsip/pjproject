@@ -70,6 +70,7 @@
  * @{
  */
 
+PJ_BEGIN_DECL
 
 /**
  * Create the pool using the specified buffer as the pool's memory.
@@ -92,6 +93,8 @@
 PJ_DECL(pj_pool_t*) pj_pool_create_on_buf(const char *name,
 					  void *buf,
 					  pj_size_t size);
+
+PJ_END_DECL
 
 /**
  * @}

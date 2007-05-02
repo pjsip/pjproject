@@ -1,0 +1,79 @@
+TARGET 		pjmedia.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004299
+VENDORID	0x70000001
+
+SOURCEPATH	..\pjmedia\src\pjmedia
+
+//OPTION		CW -lang c++
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+
+//
+// Platform independent source
+//
+
+SOURCE		alaw_ulaw.c
+SOURCE		alaw_ulaw_table.c
+SOURCE		bidirectional.c
+SOURCE		clock_thread.c
+SOURCE		codec.c
+SOURCE		conference.c
+SOURCE		echo_common.c
+SOURCE		echo_port.c
+SOURCE		echo_suppress.c
+SOURCE		endpoint.c
+SOURCE		errno.c
+SOURCE		g711.c
+SOURCE		jbuf.c
+SOURCE		master_port.c
+SOURCE		mem_capture.c
+SOURCE		mem_player.c
+SOURCE		null_port.c
+SOURCE		plc_common.c
+SOURCE		port.c
+SOURCE		resample_port.c
+SOURCE		resample_resample.c
+SOURCE		rtcp.c
+SOURCE		rtp.c
+//SDP files are in pjsdp.mmp
+//SOURCE		sdp.c
+//SOURCE		sdp_cmp.c
+//SOURCE		sdp_neg.c
+SOURCE		session.c
+SOURCE		silencedet.c
+SOURCE		sound_port.c
+SOURCE		splitcomb.c
+SOURCE		stream.c
+SOURCE		transport_ice.c
+SOURCE		transport_udp.c
+SOURCE		wav_player.c
+SOURCE		wav_playlist.c
+SOURCE		wav_writer.c
+SOURCE		wave.c
+
+//
+// Symbian specific
+// These are on separate project
+//
+//SOURCE		symbian_sound.cpp
+//SOURCE		null_sound.c
+
+
+//
+// Header files
+//
+
+
+SYSTEMINCLUDE	..\pjmedia\include
+SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\pjlib-util\include 
+SYSTEMINCLUDE	..\pjnath\include 
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+SYSTEMINCLUDE	\epoc32\include\mmf\plugin
+
+CAPABILITY	None
+

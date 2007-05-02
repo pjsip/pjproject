@@ -217,7 +217,57 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 
 #else /* PJMEDIA_HAS_LIBRESAMPLE */
 
-int pjmedia_resample_resample_excluded;
+/*
+ * This is the configuration when sample rate conversion is disabled.
+ */
+struct pjmedia_resample
+{
+	unsigned samples_per_frame;
+};
+
+PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
+					     pj_bool_t high_quality,
+					     pj_bool_t large_filter,
+					     unsigned channel_count,
+					     unsigned rate_in,
+					     unsigned rate_out,
+					     unsigned samples_per_frame,
+					     pjmedia_resample **p_resample) 
+{
+	pjmedia_resample *resample;
+	
+	PJ_ASSERT_RETURN(rate_in == rate_out, PJ_EINVALIDOP);
+
+	PJ_UNUSED_ARG(high_quality);
+	PJ_UNUSED_ARG(large_filter);
+	PJ_UNUSED_ARG(channel_count);
+	PJ_UNUSED_ARG(rate_in);
+	PJ_UNUSED_ARG(rate_out);
+		
+	resample = PJ_POOL_ZALLOC_T(pool, pjmedia_resample);
+	resample->samples_per_frame = samples_per_frame;
+	
+	*p_resample = resample;
+	
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
+				   const pj_int16_t *input,
+				   pj_int16_t *output ) 
+{
+	pjmedia_copy_samples(output, input, resample->samples_per_frame);
+}
+
+PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample) 
+{
+	return resample->samples_per_frame;
+}
+
+PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample) 
+{
+	PJ_UNUSED_ARG(resample);
+}
 
 #endif	/* PJMEDIA_HAS_LIBRESAMPLE */
 

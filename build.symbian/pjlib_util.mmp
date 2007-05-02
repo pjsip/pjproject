@@ -7,12 +7,12 @@ SOURCEPATH	..\pjlib-util\src\pjlib-util
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
-MACRO		PJ_IMPORTING
 
 OPTION		CW -lang c++
 
+//
 // PJLIB-UTIL files
-
+//
 SOURCE	crc32.c
 SOURCE	dns.c
 SOURCE	dns_dump.c
@@ -29,6 +29,27 @@ SOURCE	string.c
 SOURCE	stun_simple.c
 SOURCE	stun_simple_client.c
 SOURCE	xml.c
+
+//
+// Header files
+//
+DOCUMENT pjlib-util\\config.h
+DOCUMENT pjlib-util\\crc32.h
+DOCUMENT pjlib-util\\dns.h
+DOCUMENT pjlib-util\\errno.h
+DOCUMENT pjlib-util\\getopt.h
+DOCUMENT pjlib-util\\hmac_md5.h
+DOCUMENT pjlib-util\hmac_sha1.h
+DOCUMENT pjlib-util\md5.h
+DOCUMENT pjlib-util\resolver.h
+DOCUMENT pjlib-util\scanner.h
+DOCUMENT pjlib-util\sha1.h
+DOCUMENT pjlib-util\srv_resolver.h
+DOCUMENT pjlib-util\string.h
+DOCUMENT pjlib-util\stun_simple.h
+DOCUMENT pjlib-util\types.h
+DOCUMENT pjlib-util\xml.h
+
 
 SYSTEMINCLUDE	..\pjlib\include 
 SYSTEMINCLUDE	..\pjlib-util\include

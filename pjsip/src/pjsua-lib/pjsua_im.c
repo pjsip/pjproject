@@ -35,7 +35,7 @@ enum
 
 const pjsip_method pjsip_message_method =
 {
-    PJSIP_MESSAGE_METHOD,
+    (pjsip_method_e) PJSIP_MESSAGE_METHOD,
     { "MESSAGE", 7 }
 };
 
@@ -340,7 +340,8 @@ static void im_callback(void *token, pjsip_event *e)
 					        &im_data->to,
 						&im_data->body,
 						im_data->user_data,
-						tsx->status_code,
+						(pjsip_status_code) 
+						    tsx->status_code,
 						&tsx->status_text);
     }
 }

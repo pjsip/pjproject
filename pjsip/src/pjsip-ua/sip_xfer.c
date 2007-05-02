@@ -58,7 +58,7 @@ enum
 };
 
 const pjsip_method pjsip_refer_method = {
-    PJSIP_REFER_METHOD,
+    (pjsip_method_e) PJSIP_REFER_METHOD,
     { "REFER", 5}
 };
 

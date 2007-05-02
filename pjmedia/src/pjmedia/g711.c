@@ -372,7 +372,7 @@ static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory,
 				      pjmedia_codec *codec )
 {
     struct g711_private *priv = codec->codec_data;
-    int i;
+    int i = 0;
 
     PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
 

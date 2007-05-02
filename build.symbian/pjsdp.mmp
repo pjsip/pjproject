@@ -9,7 +9,6 @@ OPTION		CW -lang c++
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
-MACRO		PJ_EXPORTING
 
 //
 // Platform independent source

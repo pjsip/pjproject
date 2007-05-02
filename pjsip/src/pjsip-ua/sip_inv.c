@@ -169,7 +169,7 @@ void inv_set_cause(pjsip_inv_session *inv, int cause_code,
 		   const pj_str_t *cause_text)
 {
     if (cause_code > inv->cause) {
-	inv->cause = cause_code;
+	inv->cause = (pjsip_status_code) cause_code;
 	if (cause_text)
 	    pj_strdup(inv->pool, &inv->cause_text, cause_text);
 	else if (cause_code/100 == 2)
@@ -461,7 +461,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv->dlg = dlg;
     inv->options = options;
     inv->notify = PJ_TRUE;
-    inv->cause = 0;
+    inv->cause = (pjsip_status_code) 0;
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
@@ -883,7 +883,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->dlg = dlg;
     inv->options = options;
     inv->notify = PJ_TRUE;
-    inv->cause = 0;
+    inv->cause = (pjsip_status_code) 0;
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);

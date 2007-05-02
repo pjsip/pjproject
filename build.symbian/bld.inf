@@ -1,9 +1,12 @@
 prj_mmpfiles
 pjlib.mmp
-//pjlib_util.mmp
-//pjsip.mmp
-//pjsip_simple.mmp
-//pjsdp.mmp
-//pjsip_ua.mmp
+pjlib_util.mmp
+pjnath.mmp
+pjsdp.mmp
+pjmedia.mmp
+pjsip.mmp
+pjsip_simple.mmp
+pjsip_ua.mmp
 //pjlib_test.mmp
 //sipstateless.mmp
+symbian_ua.mmp

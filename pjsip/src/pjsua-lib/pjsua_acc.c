@@ -682,22 +682,22 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
     info->online_status = acc->online_status;
     
     if (acc->reg_last_err) {
-	info->status = acc->reg_last_err;
+	info->status = (pjsip_status_code) acc->reg_last_err;
 	pj_strerror(acc->reg_last_err, info->buf_, sizeof(info->buf_));
 	info->status_text = pj_str(info->buf_);
     } else if (acc->reg_last_code) {
 	if (info->has_registration) {
-	    info->status = acc->reg_last_code;
+	    info->status = (pjsip_status_code) acc->reg_last_code;
 	    info->status_text = *pjsip_get_status_text(acc->reg_last_code);
 	} else {
-	    info->status = 0;
+	    info->status = (pjsip_status_code) 0;
 	    info->status_text = pj_str("not registered");
 	}
     } else if (acc->cfg.reg_uri.slen) {
-	info->status = 100;
+	info->status = PJSIP_SC_TRYING;
 	info->status_text = pj_str("In Progress");
     } else {
-	info->status = 0;
+	info->status = (pjsip_status_code) 0;
 	info->status_text = pj_str("does not register");
     }
     

@@ -322,7 +322,7 @@ pjmedia_codec_mgr_set_codec_priority(pjmedia_codec_mgr *mgr,
 	    pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
 			 codec_id->slen) == 0) 
 	{
-	    mgr->codec_desc[i].prio = prio;
+	    mgr->codec_desc[i].prio = (pjmedia_codec_priority) prio;
 	    ++found;
 	}
     }

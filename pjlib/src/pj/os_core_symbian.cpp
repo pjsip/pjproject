@@ -270,6 +270,8 @@ PJ_DECL(void) pj_shutdown(void);
  */
 PJ_DEF(pj_status_t) pj_init(void)
 {
+    pj_status_t status;
+    
     pj_ansi_strcpy(main_thread.obj_name, "pjthread");
 
     // Init main thread
@@ -280,10 +282,17 @@ PJ_DEF(pj_status_t) pj_init(void)
 
     PJ_LOG(4,(THIS_FILE, "Initializing PJLIB for Symbian OS.."));
 
-    TInt err;
+    TInt err; 
     err = os->Initialize();
     if (err != KErrNone)
 	goto on_error;
+    
+    /* Initialize exception ID for the pool. 
+     * Must do so after critical section is configured.
+     */ 
+    status = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
+    if (status != PJ_SUCCESS)
+        return status;
 
     PJ_LOG(5,(THIS_FILE, "PJLIB initialized."));
     return PJ_SUCCESS;
@@ -307,13 +316,11 @@ PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
 
 PJ_DEF(void) pj_shutdown(void)
 {
-    unsigned i;
-
     /* Call atexit() functions */
-    for (i=atexit_count-1; i>=0; --i) {
-	(*atexit_func[i])();
+    while (atexit_count > 0) {
+	(*atexit_func[atexit_count-1])();
+	--atexit_count;
     }
-    atexit_count = 0;
 
     /* Free exception ID */
     if (PJ_NO_MEMORY_EXCEPTION != -1) {

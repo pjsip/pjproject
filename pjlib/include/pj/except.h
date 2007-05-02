@@ -245,6 +245,11 @@ pj_throw_exception_(pj_exception_id_t id) PJ_ATTR_NORETURN
  **
  ****************************************************************************/
 
+/* To include this file, the source file must be compiled as
+ * C++ code!
+ */
+#ifdef __cplusplus
+
 class TPjException
 {
 public:
@@ -259,6 +264,8 @@ public:
 #define PJ_THROW(x_id)		do { TPjException e; e.code_=x_id; throw e;} \
 				while (0)
 #define PJ_GET_EXCEPTION()	pj_excp_.code_
+
+#endif	/* __cplusplus */
 
 #else
 /*****************************************************************************

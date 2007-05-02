@@ -30,7 +30,19 @@
  * Typical configuration for Symbian OS target
  */
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+
+#   undef PJ_HAS_FLOATING_POINT
+#   define PJ_HAS_FLOATING_POINT	0
+
 #   define PJMEDIA_SOUND_IMPLEMENTATION PJMEDIA_SOUND_NULL_SOUND
+#   define PJMEDIA_HAS_LIBRESAMPLE	0
+#   define PJMEDIA_HAS_SPEEX_AEC	0
+
+#   define PJMEDIA_HAS_L16_CODEC	0
+#   define PJMEDIA_HAS_GSM_CODEC	0
+#   define PJMEDIA_HAS_ILBC_CODEC	0
+#   define PJMEDIA_HAS_SPEEX_CODEC	0
+
 #endif
 
 
