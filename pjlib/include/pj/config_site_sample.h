@@ -48,7 +48,7 @@
 #   define PJMEDIA_HAS_ILBC_CODEC	0
 #   define PJMEDIA_HAS_SPEEX_CODEC	0
 
-#   define PJSIP_MAX_PKT_LEN		8000
+#   define PJSIP_MAX_PKT_LEN		2000
 
     /* Since we don't have threads, log buffer can use static buffer */
 #   define PJ_LOG_USE_STACK_BUFFER	0
@@ -66,6 +66,12 @@
 #   define PJSIP_POOL_TSX_LAYER_INC	256
 #   define PJSIP_POOL_TSX_LEN		512
 #   define PJSIP_POOL_TSX_INC		128
+
+    /* Set maximum number of dialog/transaction/calls to minimum */
+#   define PJSIP_MAX_TSX_COUNT 		31
+#   define PJSIP_MAX_DIALOG_COUNT 	31
+#   define PJSUA_MAX_CALLS		31
+    
 #endif
 
 

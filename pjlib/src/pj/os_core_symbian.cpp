@@ -121,8 +121,6 @@ void CPjTimeoutTimer::StartTimer(TUint miliSeconds)
     hasTimedOut_ = PJ_FALSE;
     timer_.After(iStatus, miliSeconds * 1000);
     SetActive();
-
-    pj_assert(iStatus==KRequestPending);
 }
 
 bool CPjTimeoutTimer::HasTimedOut() const

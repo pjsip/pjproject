@@ -38,13 +38,26 @@
  */
 
 #include <pjsua-lib/pjsua.h>
+#include <pjsua-lib/pjsua_internal.h>
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
 
+//
+// Account
+//
+#define HAS_SIP_ACCOUNT	0	// 0 to disable registration
 #define SIP_DOMAIN	"colinux"
 #define SIP_USER	"bulukucing"
 #define SIP_PASSWD	"netura"
+
+//
+// Outbound proxy for all accounts
+//
+#define SIP_PROXY	NULL
+//#define SIP_PROXY	"sip:192.168.0.1"
+
+
 
 
 /* Callback called by the library upon receiving incoming call */
@@ -114,7 +127,7 @@ static void log_writer(int level, const char *buf, unsigned len)
  */
 static pj_status_t app_startup(char *url)
 {
-    pjsua_acc_id acc_id;
+    pjsua_acc_id acc_id = 0;
     pj_status_t status;
 
     /* Redirect log before pjsua_init() */
@@ -149,6 +162,11 @@ static pj_status_t app_startup(char *url)
 	cfg.cb.on_call_media_state = &on_call_media_state;
 	cfg.cb.on_call_state = &on_call_state;
 
+	if (SIP_PROXY) {
+		cfg.outbound_proxy_cnt = 1;
+		cfg.outbound_proxy[0] = pj_str(SIP_PROXY);
+	}
+	
 	pjsua_logging_config_default(&log_cfg);
 	log_cfg.console_level = 4;
 	log_cfg.cb = &log_writer;
@@ -156,6 +174,7 @@ static pj_status_t app_startup(char *url)
 	pjsua_media_config_default(&med_cfg);
 	med_cfg.thread_cnt = 0; // Disable threading on Symbian
 	med_cfg.has_ioqueue = PJ_FALSE;
+	med_cfg.clock_rate = 8000;
 	med_cfg.ec_tail_len = 0;
 	
 	status = pjsua_init(&cfg, &log_cfg, &med_cfg);
@@ -169,15 +188,18 @@ static pj_status_t app_startup(char *url)
     /* Add UDP transport. */
     {
 	pjsua_transport_config cfg;
+	pjsua_transport_id tid;
 
 	pjsua_transport_config_default(&cfg);
 	cfg.port = 5060;
-	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, NULL);
+	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, &tid);
 	if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error creating transport", status);
 		pjsua_destroy();
 		return status;
 	}
+	
+	pjsua_acc_add_local(tid, PJ_TRUE, &acc_id);
     }
 
     /* Initialization is done, now start pjsua */
@@ -189,7 +211,7 @@ static pj_status_t app_startup(char *url)
     }
 
     /* Register to SIP server by creating SIP account. */
-    {
+    if (HAS_SIP_ACCOUNT) {
 	pjsua_acc_config cfg;
 
 	pjsua_acc_config_default(&cfg);
@@ -278,14 +300,37 @@ void ConsoleUI::DoCancel()
 	con_->ReadCancel();
 }
 
+static void PrintMenu() 
+{
+	PJ_LOG(3, (THIS_FILE, "\n\n"
+		"Menu:\n"
+		"  d    Dump states\n"
+		"  D    Dump all states (detail)\n"
+		"  P    Dump pool factory\n"
+		"  h    Hangup all calls\n"
+		"  q    Quit\n"));
+}
+
 // Implementation: called when read has completed.
 void ConsoleUI::RunL() 
 {
 	TKeyCode kc = con_->KeyCode();
-	
+
 	switch (kc) {
 	case 'q':
 		asw_->AsyncStop();
+		break;
+	case 'D':
+	case 'd':
+		pjsua_dump(kc == 'D');
+		Run();
+		break;
+	case 'P':
+		pj_pool_factory_dump(&pjsua_var.cp.factory, PJ_TRUE);
+		break;
+	case 'h':
+		pjsua_call_hangup_all();
+		Run();
 		break;
 	default:
 		PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed",
@@ -293,6 +338,8 @@ void ConsoleUI::RunL()
 		Run();
 		break;
 	}
+
+	PrintMenu();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -301,7 +348,7 @@ int ua_main()
 	pj_status_t status;
 	
 	// Initialize pjsua
-	status  = app_startup("sip:192.168.0.66:5061");
+	status  = app_startup("sip:192.168.0.77");
 	if (status != PJ_SUCCESS)
 		return status;
 	
@@ -312,6 +359,7 @@ int ua_main()
 	
 	con->Run();
 	
+	PrintMenu();
 	asw->Start();
 	
 	delete con;
