@@ -648,6 +648,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv( pj_ioqueue_key_t *key,
 				     pj_ssize_t *length,
 				     pj_uint32_t flags )
 {
+    // If socket has reader, delete it.
+    if (key->cbObj->get_pj_socket()->Reader())
+    	key->cbObj->get_pj_socket()->DestroyReader();
+    
     // Clear flag
     flags &= ~PJ_IOQUEUE_ALWAYS_ASYNC;
     return key->cbObj->StartRead(op_key, buffer, length, flags, NULL, NULL);
@@ -667,6 +671,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 					 pj_sockaddr_t *addr,
 					 int *addrlen)
 {
+    // If socket has reader, delete it.
+    if (key->cbObj->get_pj_socket()->Reader())
+    	key->cbObj->get_pj_socket()->DestroyReader();
+    
     if (key->cbObj->IsActive())
 	return PJ_EBUSY;
 

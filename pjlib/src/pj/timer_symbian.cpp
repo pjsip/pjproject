@@ -88,7 +88,11 @@ void CPjTimerEntry::ConstructL(const pj_time_val *delay)
     rtimer_.CreateLocal();
     CActiveScheduler::Add(this);
     
-    rtimer_.After(iStatus, PJ_TIME_VAL_MSEC(*delay) * 1000);
+    pj_int32_t interval = PJ_TIME_VAL_MSEC(*delay) * 1000;
+    if (interval < 0) {
+    	interval = 0;
+    }
+    rtimer_.After(iStatus, interval);
     SetActive();
 }
 

@@ -271,8 +271,8 @@
             <Y>4</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>605</W>
-            <H>778</H>
+            <W>629</W>
+            <H>859</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -296,8 +296,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>470</W>
-            <H>705</H>
+            <W>534</W>
+            <H>921</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -321,8 +321,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>904</W>
-            <H>1791</H>
+            <W>1008</W>
+            <H>2142</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -340,7 +340,6 @@
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>23</EDOCTYPE>
-        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>6</X>
             <Y>81</Y>

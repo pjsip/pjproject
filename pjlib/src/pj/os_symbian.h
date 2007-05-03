@@ -86,6 +86,9 @@ public:
     // Create socket reader.
     CPjSocketReader *CreateReader(unsigned max_len=CPjSocket::MAX_LEN);
 
+    // Delete socket reader when it's not wanted.
+    void DestroyReader();
+    
 private:
     RSocket	     sock_;	    // Must not be reference, or otherwise
 				    // it may point to local variable!
@@ -186,11 +189,6 @@ private:
 class PjSymbianOS
 {
 public:
-    //
-    // Construct PjSymbianOS instance.
-    //
-    static PjSymbianOS *NewL();
-
     //
     // Get the singleton instance of PjSymbianOS
     //

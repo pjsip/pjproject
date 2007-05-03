@@ -66,12 +66,7 @@ const pj_uint16_t PJ_SO_SNDBUF  = 0xFFFF;
 
 CPjSocket::~CPjSocket()
 {
-    if (sockReader_) {
-	if (sockReader_->IsActive())
-	    sockReader_->Cancel();
-	delete sockReader_;
-	sockReader_ = NULL;
-    }
+    DestroyReader();
     sock_.Close();
 }
 
@@ -81,6 +76,17 @@ CPjSocketReader *CPjSocket::CreateReader(unsigned max_len)
 {
     pj_assert(sockReader_ == NULL);
     return sockReader_ = CPjSocketReader::NewL(*this, max_len);
+}
+
+// Delete socket reader when it's not wanted.
+void CPjSocket::DestroyReader() 
+{
+    if (sockReader_) {
+	if (sockReader_->IsActive())
+	    sockReader_->Cancel();
+	delete sockReader_;
+	sockReader_ = NULL;
+    }
 }
 
 
@@ -163,7 +169,6 @@ void CPjSocketReader::RunL()
 {
     void (*old_cb)(void *key) = readCb_;
     void *old_key = key_;
-    bool is_active = IsActive();
 
     readCb_ = NULL;
     key_ = NULL;

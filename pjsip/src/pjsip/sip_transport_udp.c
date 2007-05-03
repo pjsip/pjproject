@@ -129,10 +129,13 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
      * complete asynchronously, to allow other sockets to get their data.
      */
     for (i=0;; ++i) {
+    	enum { MIN_SIZE = 32 };
 	pj_uint32_t flags;
 
-	/* Report the packet to transport manager. */
-	if (bytes_read > 0) {
+	/* Report the packet to transport manager. Only do so if packet size
+	 * is relatively big enough for a SIP packet.
+	 */
+	if (bytes_read > MIN_SIZE) {
 	    pj_size_t size_eaten;
 	    const pj_sockaddr_in *src_addr = 
 		(pj_sockaddr_in*)&rdata->pkt_info.src_addr;
@@ -157,7 +160,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    /* Since this is UDP, the whole buffer is the message. */
 	    rdata->pkt_info.len = 0;
 
-	} else if (bytes_read == 0) {
+	} else if (bytes_read <= MIN_SIZE) {
 
 	    /* TODO: */
 

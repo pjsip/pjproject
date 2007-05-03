@@ -421,6 +421,11 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *rec)
 PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 {
     User::After(msec*1000);
+    
+    TInt aError;
+    while (CActiveScheduler::RunIfReady(aError, EPriorityMuchLess))
+    	;
+    
     return PJ_SUCCESS;
 }
 

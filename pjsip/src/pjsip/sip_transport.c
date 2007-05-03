@@ -1011,6 +1011,28 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
     return PJ_SUCCESS;
 }
 
+/*
+ * Return number of transports currently registered to the transport
+ * manager.
+ */
+PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
+{
+    pj_hash_iterator_t itr_val;
+    pj_hash_iterator_t *itr;
+    int nr_of_transports = 0;
+    
+    pj_lock_acquire(mgr->lock);
+    
+    itr = pj_hash_first(mgr->table, &itr_val);
+    while (itr) {
+	nr_of_transports++;
+	itr = pj_hash_next(mgr->table, itr);
+    }
+    
+    pj_lock_release(mgr->lock);
+
+    return nr_of_transports;
+}
 
 /*
  * pjsip_tpmgr_destroy()

@@ -24,55 +24,35 @@
 
 //  Global Variables
 CConsoleBase* console;
-static CActiveSchedulerWait *asw;
 
 
-//  Local Functions
-
-LOCAL_C void MainL()
-{
-    //
-    // add your program code here, example code below
-    //
-    int rc = ua_main();
-
-    asw->AsyncStop();
-}
-
-class MyScheduler : public CActiveScheduler
-{
-public:
-    MyScheduler()
-    {}
-
-    void Error(TInt aError) const;
-};
-
-void MyScheduler::Error(TInt aError) const
-{
-    PJ_UNUSED_ARG(aError);
-}
-
+/////////////////////////////////////
 class MyTask : public CActive
 {
 public:
-    static MyTask *NewL();
+    static MyTask *NewL(CActiveSchedulerWait *asw);
+    ~MyTask();
     void Start();
 
 protected:
-    MyTask();
+    MyTask(CActiveSchedulerWait *asw);
     void ConstructL();
     virtual void RunL();
     virtual void DoCancel();
-    TInt RunError(TInt aError);
 
 private:
     RTimer timer_;
+    CActiveSchedulerWait *asw_;
 };
 
-MyTask::MyTask()
-: CActive(EPriorityNormal)
+MyTask::MyTask(CActiveSchedulerWait *asw)
+: CActive(EPriorityNormal), asw_(asw)
 {
+}
+
+MyTask::~MyTask() 
+{
+    timer_.Close();
 }
 
 void MyTask::ConstructL()
@@ -81,9 +61,9 @@ void MyTask::ConstructL()
     CActiveScheduler::Add(this);
 }
 
-MyTask *MyTask::NewL()
+MyTask *MyTask::NewL(CActiveSchedulerWait *asw)
 {
-    MyTask *self = new (ELeave) MyTask;
+    MyTask *self = new (ELeave) MyTask(asw);
     CleanupStack::PushL(self);
 
     self->ConstructL();
@@ -100,74 +80,36 @@ void MyTask::Start()
 
 void MyTask::RunL()
 {
-    MainL();
+    int rc = ua_main();
+    asw_->AsyncStop();
 }
 
 void MyTask::DoCancel()
 {
 }
 
-TInt MyTask::RunError(TInt aError)
-{
-    PJ_UNUSED_ARG(aError);
-    return KErrNone;
-}
-
-
 LOCAL_C void DoStartL()
 {
-    // Create active scheduler (to run active objects)
-    MyScheduler* scheduler = new (ELeave) MyScheduler;
+    CActiveScheduler *scheduler = new (ELeave) CActiveScheduler;
     CleanupStack::PushL(scheduler);
     CActiveScheduler::Install(scheduler);
 
-    MyTask *task = MyTask::NewL();
+    CActiveSchedulerWait *asw = new CActiveSchedulerWait;
+    CleanupStack::PushL(asw);
+    
+    MyTask *task = MyTask::NewL(asw);
     task->Start();
 
-    asw = new CActiveSchedulerWait;
     asw->Start();
     
+    delete task;
+    
+    CleanupStack::Pop(asw);
     delete asw;
+    
+    CActiveScheduler::Install(NULL);
     CleanupStack::Pop(scheduler);
-}
-
-
-////////////////////////////////////////////////////////////////////////////
-
-class TMyTrapHandler : public TTrapHandler 
-{
-public:
-	void Install();
-	void Uninstall();
-	virtual IMPORT_C void Trap();
-	virtual IMPORT_C void UnTrap();
-	virtual IMPORT_C void Leave(TInt aValue);
-	
-private:
-	TTrapHandler *prev_;
-};
-
-void TMyTrapHandler::Install() {
-	prev_ = User::SetTrapHandler(this);
-}
-
-void TMyTrapHandler::Uninstall() {
-	User::SetTrapHandler(prev_);
-}
-
-IMPORT_C void TMyTrapHandler::Trap() 
-{
-	prev_->Trap();
-}
-
-IMPORT_C void TMyTrapHandler::UnTrap() 
-{
-	prev_->UnTrap();
-}
-
-IMPORT_C void TMyTrapHandler::Leave(TInt aValue) 
-{
-	prev_->Leave(aValue);
+    delete scheduler;
 }
 
 
@@ -176,12 +118,8 @@ IMPORT_C void TMyTrapHandler::Leave(TInt aValue)
 //  Global Functions
 GLDEF_C TInt E32Main()
 {
-    TMyTrapHandler th;
-    
-    th.Install();
-    
     // Create cleanup stack
-    //__UHEAP_MARK;
+    __UHEAP_MARK;
     CTrapCleanup* cleanup = CTrapCleanup::New();
 
     // Create output console
@@ -192,13 +130,13 @@ GLDEF_C TInt E32Main()
     TRAPD(startError, DoStartL());
 
     console->Printf(_L("[press any key to close]\n"));
-    console->Getch();
+    //console->Getch();
     
     delete console;
     delete cleanup;
-    //__UHEAP_MARKEND;
-    
-    th.Uninstall();
+
+    CloseSTDLIB();    
+    __UHEAP_MARKEND;
     return KErrNone;
 }
 

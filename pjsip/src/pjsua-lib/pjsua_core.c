@@ -646,6 +646,10 @@ on_error:
 static void busy_sleep(unsigned msec)
 {
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    /* Ideally we shouldn't call pj_thread_sleep() and rather
+     * CActiveScheduler::WaitForAnyRequest() here, but that will
+     * drag in Symbian header and it doesn't look pretty.
+     */
     pj_thread_sleep(msec);
 #else
     pj_time_val timeout, now;
@@ -975,6 +979,15 @@ PJ_DEF(pj_status_t) pjsua_start(void)
  */
 PJ_DEF(int) pjsua_handle_events(unsigned msec_timeout)
 {
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    /* Ideally we shouldn't call pj_thread_sleep() and rather
+     * CActiveScheduler::WaitForAnyRequest() here, but that will
+     * drag in Symbian header and it doesn't look pretty.
+     */
+    pj_thread_sleep(msec_timeout);
+    return msec_timeout;
+#else
+
     unsigned count = 0;
     pj_time_val tv;
     pj_status_t status;
@@ -989,6 +1002,7 @@ PJ_DEF(int) pjsua_handle_events(unsigned msec_timeout)
 	return -status;
 
     return count;
+#endif
 }
 
 

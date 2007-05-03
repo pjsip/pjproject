@@ -46,6 +46,7 @@ SOURCE		silencedet.c
 SOURCE		sound_port.c
 SOURCE		splitcomb.c
 SOURCE		stream.c
+SOURCE		tonegen.c
 SOURCE		transport_ice.c
 SOURCE		transport_udp.c
 SOURCE		wav_player.c

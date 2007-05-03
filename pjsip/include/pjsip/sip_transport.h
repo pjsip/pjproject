@@ -932,6 +932,16 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 						  pj_str_t *ip_addr,
 						  int *port);
 
+/**
+ * Return number of transports currently registered to the transport
+ * manager.
+ *
+ * @param mgr	    The transport manager.
+ *
+ * @return	    Number of transports.
+ */
+PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr);
+
 
 /**
  * Destroy transport manager.

@@ -46,21 +46,50 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:192.168.0.70:5061"
+#define SIP_DST_URI	"sip:192.168.0.7:5061"
 
 //
 // Account
 //
 #define HAS_SIP_ACCOUNT	0	// 0 to disable registration
-#define SIP_DOMAIN	"colinux"
-#define SIP_USER	"bulukucing"
-#define SIP_PASSWD	"netura"
+#define SIP_DOMAIN	"server"
+#define SIP_USER	"user"
+#define SIP_PASSWD	"password"
 
 //
 // Outbound proxy for all accounts
 //
 #define SIP_PROXY	NULL
-//#define SIP_PROXY	"sip:192.168.0.1"
+//#define SIP_PROXY	"sip:192.168.0.8"
+
+
+//
+// Configure nameserver if DNS SRV is to be used with both SIP
+// or STUN (for STUN see other settings below)
+//
+#define NAMESERVER	NULL
+//#define NAMESERVER	"62.241.163.201"
+
+//
+// STUN server
+#if 0
+	// Use this to have the STUN server resolved normally
+#   define STUN_DOMAIN	NULL
+#   define STUN_SERVER	"stun.fwdnet.net"
+#elif 0
+	// Use this to have the STUN server resolved with DNS SRV
+#   define STUN_DOMAIN	"iptel.org"
+#   define STUN_SERVER	NULL
+#else
+	// Use this to disable STUN
+#   define STUN_DOMAIN	NULL
+#   define STUN_SERVER	NULL
+#endif
+
+//
+// Use ICE?
+//
+#define USE_ICE		1
 
 
 //
@@ -93,8 +122,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
     g_call_id = call_id;
     
-    /* Automatically answer incoming calls with 200/OK */
-    pjsua_call_answer(call_id, 200, NULL, NULL);
+    /* Automatically answer incoming calls with 180/Ringing */
+    pjsua_call_answer(call_id, 180, NULL, NULL);
 }
 
 /* Callback called by the library when call's state has changed */
@@ -109,7 +138,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
     	if (call_id == g_call_id)
     	    g_call_id = PJSUA_INVALID_ID;
-    } else {
+    } else if (ci.state != PJSIP_INV_STATE_INCOMING) {
     	if (g_call_id == PJSUA_INVALID_ID)
     	    g_call_id = call_id;
     }
@@ -275,6 +304,18 @@ static pj_status_t app_startup()
 		cfg.outbound_proxy[0] = pj_str(SIP_PROXY);
 	}
 	
+	if (NAMESERVER) {
+		cfg.nameserver_count = 1;
+		cfg.nameserver[0] = pj_str(NAMESERVER);
+	}
+	
+	if (NAMESERVER && STUN_DOMAIN) {
+		cfg.stun_domain = pj_str(STUN_DOMAIN);
+	} else if (STUN_SERVER) {
+		cfg.stun_host = pj_str(STUN_SERVER);
+	}
+	
+	
 	pjsua_logging_config_default(&log_cfg);
 	log_cfg.console_level = 4;
 	log_cfg.cb = &log_writer;
@@ -284,6 +325,7 @@ static pj_status_t app_startup()
 	med_cfg.has_ioqueue = PJ_FALSE;
 	med_cfg.clock_rate = 8000;
 	med_cfg.ec_tail_len = 0;
+	med_cfg.enable_ice = USE_ICE;
 	
 	status = pjsua_init(&cfg, &log_cfg, &med_cfg);
 	if (status != PJ_SUCCESS) {
@@ -482,6 +524,7 @@ void ConsoleUI::RunL()
 		Run();
 }
 
+
 ////////////////////////////////////////////////////////////////////////////
 int ua_main() 
 {
@@ -491,8 +534,7 @@ int ua_main()
 	status  = app_startup();
 	if (status != PJ_SUCCESS)
 		return status;
-	
-	
+
 	// Run the UI
 	CActiveSchedulerWait *asw = new CActiveSchedulerWait;
 	ConsoleUI *con = new ConsoleUI(asw, console);

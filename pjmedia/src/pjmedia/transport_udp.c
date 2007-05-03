@@ -230,7 +230,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
 
     /* Create transport structure */
-    pool = pjmedia_endpt_create_pool(endpt, name, 4000, 4000);
+    pool = pjmedia_endpt_create_pool(endpt, name, 512, 512);
     if (!pool)
 	return PJ_ENOMEM;
 
