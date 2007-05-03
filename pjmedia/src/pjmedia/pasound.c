@@ -189,6 +189,17 @@ static int PaRecorderPlayerCallback( const void *input,
     return rc;
 }
 
+/* Logging callback from PA */
+static void pa_log_cb(const char *log)
+{
+    PJ_LOG(5,(THIS_FILE, "PA message: %s", log));
+}
+
+/* We should include pa_debugprint.h for this, but the header
+ * is not available publicly. :(
+ */
+typedef void (*PaUtilLogCallback ) (const char *log);
+void PaUtil_SetDebugPrintFunction(PaUtilLogCallback  cb);
 
 /*
  * Init sound library.
@@ -197,6 +208,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
     if (++snd_init_count == 1) {
 	int err;
+
+	PaUtil_SetDebugPrintFunction(&pa_log_cb);
 
 	snd_mgr.factory = factory;
 	err = Pa_Initialize();
