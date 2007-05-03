@@ -210,8 +210,11 @@ void CPjSocketReader::ReadData(TDes8 &aDesc, TInetAddr *addr)
  */
 PJ_DEF(pj_uint16_t) pj_ntohs(pj_uint16_t netshort)
 {
-    /* There's no difference in host/network byte order in Symbian */
+#if PJ_IS_LITTLE_ENDIAN
+    return pj_swap16(netshort);
+#else
     return netshort;
+#endif
 }
 
 /*
@@ -219,8 +222,11 @@ PJ_DEF(pj_uint16_t) pj_ntohs(pj_uint16_t netshort)
  */
 PJ_DEF(pj_uint16_t) pj_htons(pj_uint16_t hostshort)
 {
-    /* There's no difference in host/network byte order in Symbian */
+#if PJ_IS_LITTLE_ENDIAN
+    return pj_swap16(hostshort);
+#else
     return hostshort;
+#endif
 }
 
 /*
@@ -228,8 +234,11 @@ PJ_DEF(pj_uint16_t) pj_htons(pj_uint16_t hostshort)
  */
 PJ_DEF(pj_uint32_t) pj_ntohl(pj_uint32_t netlong)
 {
-    /* There's no difference in host/network byte order in Symbian */
+#if PJ_IS_LITTLE_ENDIAN
+    return pj_swap32(netlong);
+#else
     return netlong;
+#endif
 }
 
 /*
@@ -237,8 +246,11 @@ PJ_DEF(pj_uint32_t) pj_ntohl(pj_uint32_t netlong)
  */
 PJ_DEF(pj_uint32_t) pj_htonl(pj_uint32_t hostlong)
 {
-    /* There's no difference in host/network byte order in Symbian */
-    return hostlong;
+#if PJ_IS_LITTLE_ENDIAN
+    return pj_swap32(hostlong);
+#else
+    return netlong;
+#endif
 }
 
 /*
@@ -250,7 +262,8 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
     static TBuf<20> str16;
     static char str8[20];
 
-    TInetAddr temp_addr((TUint32)inaddr.s_addr, (TUint)0);
+    /* (Symbian IP address is in host byte order) */
+    TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
     temp_addr.Output(str16);
  
     return pj_unicode_to_ansi(str16.PtrZ(), str16.Length(),
@@ -294,8 +307,8 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
     TInetAddr addr;
     addr.Init(KAfInet);
     if (addr.Input(ip_addr) == KErrNone) {
-	/* Success */
-	inp->s_addr = addr.Address();
+	/* Success (Symbian IP address is in host byte order) */
+	inp->s_addr = pj_htonl(addr.Address());
 	return 1;
     } else {
 	/* Error */
@@ -497,7 +510,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     PJ_CHECK_STACK();
 
-    pj_memset(&addr, 0, sizeof(addr));
+    pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
     addr.sin_addr.s_addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);

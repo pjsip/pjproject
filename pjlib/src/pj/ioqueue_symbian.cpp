@@ -34,7 +34,6 @@ class CIoqueueCallback;
 struct pj_ioqueue_t
 {
     int		     eventCount;
-    CPjTimeoutTimer *timeoutTimer;
 };
 
 
@@ -438,8 +437,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create(	pj_pool_t *pool,
 
     PJ_UNUSED_ARG(max_fd);
 
-    ioq = (pj_ioqueue_t*) pj_pool_zalloc(pool, sizeof(pj_ioqueue_t));
-    ioq->timeoutTimer = CPjTimeoutTimer::NewL();
+    ioq = PJ_POOL_ZALLOC_T(pool, pj_ioqueue_t);
     *p_ioqueue = ioq;
     return PJ_SUCCESS;
 }
@@ -450,9 +448,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create(	pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioq )
 {
-    delete ioq->timeoutTimer;
-    ioq->timeoutTimer = NULL;
-
+    PJ_UNUSED_ARG(ioq);
     return PJ_SUCCESS;
 }
 
@@ -487,7 +483,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
 {
     pj_ioqueue_key_t *key;
 
-    key = (pj_ioqueue_key_t*) pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
+    key = PJ_POOL_ZALLOC_T(pool, pj_ioqueue_key_t);
     key->cbObj = CIoqueueCallback::NewL(ioq, key, sock, cb, user_data);
 
     *p_key = key;
@@ -552,7 +548,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
 PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
 				     pj_size_t size )
 {
-    pj_memset(op_key, 0, size);
+    pj_bzero(op_key, size);
 }
 
 
@@ -634,34 +630,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioq,
 			     const pj_time_val *timeout)
 {
-    CPjTimeoutTimer *timer;
-
-    if (timeout) {
-	//if (!ioq->timeoutTimer->IsActive())
-	if (0)
-	    timer = ioq->timeoutTimer;
-	else
-	    timer = CPjTimeoutTimer::NewL();
-
-	timer->StartTimer(timeout->sec*1000 + timeout->msec);
-
-    } else {
-	timer = NULL;
-    }
-
-    ioq->eventCount = 0;
-
-    do {
-	PjSymbianOS::Instance()->WaitForActiveObjects();
-    } while (ioq->eventCount == 0 && (!timer || (timer && !timer->HasTimedOut())));
-
-    if (timer && !timer->HasTimedOut())
-	timer->Cancel();
-
-    if (timer && timer != ioq->timeoutTimer)
-	delete timer;
-
-    return ioq->eventCount;
+    /* Polling is not necessary on Symbian, since all async activities
+     * are registered to active scheduler.
+     */
+    PJ_UNUSED_ARG(ioq);
+    PJ_UNUSED_ARG(timeout);
+    return 0;
 }
 
 

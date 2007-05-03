@@ -57,6 +57,5 @@ SYSTEMINCLUDE	..\pjlib-util\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		pjlib.lib 
 CAPABILITY	None
 

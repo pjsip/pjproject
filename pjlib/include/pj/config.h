@@ -35,6 +35,10 @@
 #  include <pj/compat/cc_mwcc.h>
 #elif defined(__MWERKS__)
 #  include <pj/compat/cc_codew.h>
+#elif defined(__GCCE__)
+#  include <pj/compat/cc_gcce.h>
+#elif defined(__ARMCC__)
+#  include <pj/compat/cc_armcc.h>
 #else
 #  error "Unknown compiler."
 #endif

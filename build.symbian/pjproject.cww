@@ -164,6 +164,56 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>0</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">pjsip_ua.mcp</PATH>
+        <FRAMELOC>
+            <X>548</X>
+            <Y>123</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>400</W>
+            <H>372</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>1</STATUS>
+            <ROW>0</ROW>
+            <COLUMN>0</COLUMN>
+            <DOCKBARID>59420</DOCKBARID>
+            <PCTWIDTH>1.000000</PCTWIDTH>
+            <HGT>294</HGT>
+            <GROUPID>
+                <GIDHIGHPART>4294967294</GIDHIGHPART>
+                <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>0</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">pjsip_simple.mcp</PATH>
+        <FRAMELOC>
+            <X>0</X>
+            <Y>0</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>347</W>
+            <H>128</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>1</STATUS>
+            <ROW>0</ROW>
+            <COLUMN>0</COLUMN>
+            <DOCKBARID>59420</DOCKBARID>
+            <PCTWIDTH>1.000000</PCTWIDTH>
+            <HGT>294</HGT>
+            <GROUPID>
+                <GIDHIGHPART>4294967294</GIDHIGHPART>
+                <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">pjsua_lib.mcp</PATH>
         <FRAMELOC>
             <X>634</X>
@@ -214,189 +264,15 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\sock_symbian.cpp</PATH>
-        <FRAMELOC>
-            <X>8</X>
-            <Y>27</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>646</W>
-            <H>464</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\main_symbian.cpp</PATH>
-        <FRAMELOC>
-            <X>8</X>
-            <Y>27</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>638</W>
-            <H>437</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\ua.cpp</PATH>
-        <FRAMELOC>
-            <X>4</X>
-            <Y>23</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>565</W>
-            <H>643</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\ioqueue_symbian.cpp</PATH>
-        <FRAMELOC>
-            <X>10</X>
-            <Y>40</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>630</W>
-            <H>410</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\os_core_symbian.cpp</PATH>
-        <FRAMELOC>
-            <X>6</X>
-            <Y>23</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>638</W>
-            <H>437</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\os_error_symbian.cpp</PATH>
-        <FRAMELOC>
-            <X>8</X>
-            <Y>27</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>638</W>
-            <H>437</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjlib\src\pj\errno.c</PATH>
-        <FRAMELOC>
-            <X>4</X>
-            <Y>23</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>646</W>
-            <H>464</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>20</EDOCTYPE>
         <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
-            <X>0</X>
-            <Y>0</Y>
+            <X>4</X>
+            <Y>4</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>824</W>
-            <H>1521</H>
+            <W>605</W>
+            <H>778</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -410,10 +286,6 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINNT\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\econs.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
@@ -424,8 +296,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>390</W>
-            <H>435</H>
+            <W>470</W>
+            <H>705</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -449,8 +321,8 @@
             <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>816</W>
-            <H>1494</H>
+            <W>904</W>
+            <H>1791</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>
@@ -464,15 +336,11 @@
                 <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\euser.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\ekern.exe" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\WINNT\system32\ntdll.dll" MACHINENAME = "Local Windows PC"/>
-            <SYMBOLICSWINSETTINGS EXECUTABLEPATH = "C:\Symbian\9.1\S60_3rd_MR_2\EPOC32\RELEASE\WINSCW\UDEB\econs.dll" MACHINENAME = "Local Windows PC"/>
     </WINDOW>
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>23</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
+        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>6</X>
             <Y>81</Y>

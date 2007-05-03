@@ -44,6 +44,11 @@
 #define THIS_FILE	"symbian_ua.cpp"
 
 //
+// Destination URI (to make call, or to subscribe presence)
+//
+#define SIP_DST_URI	"sip:192.168.0.70:5061"
+
+//
 // Account
 //
 #define HAS_SIP_ACCOUNT	0	// 0 to disable registration
@@ -58,6 +63,12 @@
 //#define SIP_PROXY	"sip:192.168.0.1"
 
 
+//
+// Globals
+//
+static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
+static pjsua_call_id g_call_id = PJSUA_INVALID_ID;
+static pjsua_buddy_id g_buddy_id = PJSUA_INVALID_ID;
 
 
 /* Callback called by the library upon receiving incoming call */
@@ -69,12 +80,19 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
 
+    if (g_call_id != PJSUA_INVALID_ID) {
+    	pjsua_call_answer(call_id, PJSIP_SC_BUSY_HERE, NULL, NULL);
+    	return;
+    }
+    
     pjsua_call_get_info(call_id, &ci);
 
     PJ_LOG(3,(THIS_FILE, "Incoming call from %.*s!!",
 			 (int)ci.remote_info.slen,
 			 ci.remote_info.ptr));
 
+    g_call_id = call_id;
+    
     /* Automatically answer incoming calls with 200/OK */
     pjsua_call_answer(call_id, 200, NULL, NULL);
 }
@@ -87,6 +105,15 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     PJ_UNUSED_ARG(e);
 
     pjsua_call_get_info(call_id, &ci);
+    
+    if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
+    	if (call_id == g_call_id)
+    	    g_call_id = PJSUA_INVALID_ID;
+    } else {
+    	if (g_call_id == PJSUA_INVALID_ID)
+    	    g_call_id = call_id;
+    }
+    
     PJ_LOG(3,(THIS_FILE, "Call %d state=%.*s", call_id,
 			 (int)ci.state_text.slen,
 			 ci.state_text.ptr));
@@ -104,6 +131,92 @@ static void on_call_media_state(pjsua_call_id call_id)
 	pjsua_conf_connect(ci.conf_slot, 0);
 	pjsua_conf_connect(0, ci.conf_slot);
     }
+}
+
+
+/* Handler on buddy state changed. */
+static void on_buddy_state(pjsua_buddy_id buddy_id)
+{
+    pjsua_buddy_info info;
+    pjsua_buddy_get_info(buddy_id, &info);
+
+    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s",
+	      (int)info.uri.slen,
+	      info.uri.ptr,
+	      (int)info.status_text.slen,
+	      info.status_text.ptr));
+}
+
+
+/* Incoming IM message (i.e. MESSAGE request)!  */
+static void on_pager(pjsua_call_id call_id, const pj_str_t *from, 
+		     const pj_str_t *to, const pj_str_t *contact,
+		     const pj_str_t *mime_type, const pj_str_t *text)
+{
+    /* Note: call index may be -1 */
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(to);
+    PJ_UNUSED_ARG(contact);
+    PJ_UNUSED_ARG(mime_type);
+
+    PJ_LOG(3,(THIS_FILE,"MESSAGE from %.*s: %.*s",
+	      (int)from->slen, from->ptr,
+	      (int)text->slen, text->ptr));
+}
+
+
+/* Received typing indication  */
+static void on_typing(pjsua_call_id call_id, const pj_str_t *from,
+		      const pj_str_t *to, const pj_str_t *contact,
+		      pj_bool_t is_typing)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(to);
+    PJ_UNUSED_ARG(contact);
+
+    PJ_LOG(3,(THIS_FILE, "IM indication: %.*s %s",
+	      (int)from->slen, from->ptr,
+	      (is_typing?"is typing..":"has stopped typing")));
+}
+
+
+/* Call transfer request status. */
+static void on_call_transfer_status(pjsua_call_id call_id,
+				    int status_code,
+				    const pj_str_t *status_text,
+				    pj_bool_t final,
+				    pj_bool_t *p_cont)
+{
+    PJ_LOG(3,(THIS_FILE, "Call %d: transfer status=%d (%.*s) %s",
+	      call_id, status_code,
+	      (int)status_text->slen, status_text->ptr,
+	      (final ? "[final]" : "")));
+
+    if (status_code/100 == 2) {
+	PJ_LOG(3,(THIS_FILE, 
+	          "Call %d: call transfered successfully, disconnecting call",
+		  call_id));
+	pjsua_call_hangup(call_id, PJSIP_SC_GONE, NULL, NULL);
+	*p_cont = PJ_FALSE;
+    }
+}
+
+
+/* Notification that call is being replaced. */
+static void on_call_replaced(pjsua_call_id old_call_id,
+			     pjsua_call_id new_call_id)
+{
+    pjsua_call_info old_ci, new_ci;
+
+    pjsua_call_get_info(old_call_id, &old_ci);
+    pjsua_call_get_info(new_call_id, &new_ci);
+
+    PJ_LOG(3,(THIS_FILE, "Call %d with %.*s is being replaced by "
+			 "call %d with %.*s",
+			 old_call_id, 
+			 (int)old_ci.remote_info.slen, old_ci.remote_info.ptr,
+			 new_call_id,
+			 (int)new_ci.remote_info.slen, new_ci.remote_info.ptr));
 }
 
 
@@ -125,9 +238,8 @@ static void log_writer(int level, const char *buf, unsigned len)
  *
  * url may contain URL to call.
  */
-static pj_status_t app_startup(char *url)
+static pj_status_t app_startup()
 {
-    pjsua_acc_id acc_id = 0;
     pj_status_t status;
 
     /* Redirect log before pjsua_init() */
@@ -138,15 +250,6 @@ static pj_status_t app_startup(char *url)
     if (status != PJ_SUCCESS) {
     	pjsua_perror(THIS_FILE, "pjsua_create() error", status);
     	return status;
-    }
-
-    /* If argument is specified, it's got to be a valid SIP URL */
-    if (url) {
-	status = pjsua_verify_sip_url(url);
-	if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Invalid URL", status);
-		return status;
-	}
     }
 
     /* Init pjsua */
@@ -161,6 +264,11 @@ static pj_status_t app_startup(char *url)
 	cfg.cb.on_incoming_call = &on_incoming_call;
 	cfg.cb.on_call_media_state = &on_call_media_state;
 	cfg.cb.on_call_state = &on_call_state;
+	cfg.cb.on_buddy_state = &on_buddy_state;
+	cfg.cb.on_pager = &on_pager;
+	cfg.cb.on_typing = &on_typing;
+	cfg.cb.on_call_transfer_status = &on_call_transfer_status;
+    	cfg.cb.on_call_replaced = &on_call_replaced;
 
 	if (SIP_PROXY) {
 		cfg.outbound_proxy_cnt = 1;
@@ -199,7 +307,7 @@ static pj_status_t app_startup(char *url)
 		return status;
 	}
 	
-	pjsua_acc_add_local(tid, PJ_TRUE, &acc_id);
+	pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
     }
 
     /* Initialization is done, now start pjsua */
@@ -224,7 +332,7 @@ static pj_status_t app_startup(char *url)
 	cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
 	cfg.cred_info[0].data = pj_str(SIP_PASSWD);
 
-	status = pjsua_acc_add(&cfg, PJ_TRUE, &acc_id);
+	status = pjsua_acc_add(&cfg, PJ_TRUE, &g_acc_id);
 	if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error adding account", status);
 		pjsua_destroy();
@@ -232,18 +340,15 @@ static pj_status_t app_startup(char *url)
 	}
     }
 
-    /* If URL is specified, make call to the URL. */
-    if (url != NULL) {
-	pj_str_t uri = pj_str(url);
-	status = pjsua_call_make_call(acc_id, &uri, 0, NULL, NULL, NULL);
-	if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error making call", status);
-		pjsua_destroy();
-		return status;
-	}
-			
+    if (SIP_DST_URI) {
+    	pjsua_buddy_config bcfg;
+    
+    	pjsua_buddy_config_default(&bcfg);
+    	bcfg.uri = pj_str(SIP_DST_URI);
+    	bcfg.subscribe = PJ_FALSE;
+    	
+    	pjsua_buddy_add(&bcfg, &g_buddy_id);
     }
-
     return PJ_SUCCESS;
 }
 
@@ -307,7 +412,13 @@ static void PrintMenu()
 		"  d    Dump states\n"
 		"  D    Dump all states (detail)\n"
 		"  P    Dump pool factory\n"
+		"  m    Make call\n"
+		"  a    Answer call\n"
 		"  h    Hangup all calls\n"
+		"  s    Subscribe to buddy presence\n"
+		"  S    Unsubscribe buddy presence\n"
+		"  o    Set account online\n"
+		"  O    Set account offline\n"
 		"  q    Quit\n"));
 }
 
@@ -315,31 +426,60 @@ static void PrintMenu()
 void ConsoleUI::RunL() 
 {
 	TKeyCode kc = con_->KeyCode();
-
+	pj_bool_t reschedule = PJ_TRUE;
+	
 	switch (kc) {
 	case 'q':
 		asw_->AsyncStop();
+		reschedule = PJ_FALSE;
 		break;
 	case 'D':
 	case 'd':
 		pjsua_dump(kc == 'D');
-		Run();
 		break;
 	case 'P':
 		pj_pool_factory_dump(&pjsua_var.cp.factory, PJ_TRUE);
 		break;
+	case 'm':
+		if (g_call_id != PJSUA_INVALID_ID) {
+			PJ_LOG(3,(THIS_FILE, "Another call is active"));	
+			break;
+		}
+	
+		if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
+			pj_str_t dst = pj_str(SIP_DST_URI);
+			pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
+					     NULL, &g_call_id);
+		} else {
+			PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
+		}
+		break;
+	case 'a':
+		if (g_call_id != PJSUA_INVALID_ID)
+			pjsua_call_answer(g_call_id, 200, NULL, NULL);
+		break;
 	case 'h':
 		pjsua_call_hangup_all();
-		Run();
+		break;
+	case 's':
+	case 'S':
+		if (g_buddy_id != PJSUA_INVALID_ID)
+			pjsua_buddy_subscribe_pres(g_buddy_id, kc=='s');
+		break;
+	case 'o':
+	case 'O':
+		pjsua_acc_set_online_status(g_acc_id, kc=='o');
 		break;
 	default:
 		PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed",
 			  kc, kc));
-		Run();
 		break;
 	}
 
 	PrintMenu();
+	
+	if (reschedule)
+		Run();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -348,7 +488,7 @@ int ua_main()
 	pj_status_t status;
 	
 	// Initialize pjsua
-	status  = app_startup("sip:192.168.0.77");
+	status  = app_startup();
 	if (status != PJ_SUCCESS)
 		return status;
 	

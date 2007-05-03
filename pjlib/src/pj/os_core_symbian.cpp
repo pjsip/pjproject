@@ -83,7 +83,7 @@ static void (*atexit_func[32])(void);
 //
 
 CPjTimeoutTimer::CPjTimeoutTimer()
-: CActive(EPriorityNormal), hasTimedOut_(PJ_FALSE)
+: CActive(PJ_SYMBIAN_TIMER_PRIORITY), hasTimedOut_(PJ_FALSE)
 {
 }
 
@@ -420,13 +420,7 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *rec)
  */
 PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 {
-    //Not a good idea, as we don't want network events to
-    //arrive while we're not polling them:
-    //PjSymbianOS::Instance()->WaitForActiveObjects();
-
-    //.. so rather use this, which won't wake up Active Objects:
     User::After(msec*1000);
-
     return PJ_SUCCESS;
 }
 

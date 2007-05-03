@@ -30,18 +30,19 @@ SOURCE		pool_buf.c
 SOURCE		pool_caching.c
 SOURCE		rand.c
 SOURCE		rbtree.c
-SOURCE		timer.c
 SOURCE		types.c
 
 
 //
 // Platform dependent source
 //
+SOURCE		compat\string_compat.c
 SOURCE		addr_resolv_symbian.cpp
 SOURCE		exception_symbian.cpp
 SOURCE		file_access_unistd.c
 SOURCE		file_io_ansi.c
 SOURCE		guid_simple.c
+SOURCE		ioqueue_symbian.cpp
 SOURCE		ip_helper_generic.c
 SOURCE		log_writer_symbian_console.cpp
 SOURCE		os_core_symbian.cpp
@@ -50,10 +51,9 @@ SOURCE		os_timestamp_common.c
 SOURCE		os_time_unix.c
 SOURCE		os_timestamp_posix.c
 SOURCE		pool_policy_new.cpp
-SOURCE		compat\string_compat.c
 SOURCE		sock_symbian.cpp
 SOURCE		sock_select_symbian.cpp
-SOURCE		ioqueue_symbian.cpp
+SOURCE		timer_symbian.cpp
 SOURCE		unicode_symbian.cpp
 
 DOCUMENT	os_symbian.h

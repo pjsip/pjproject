@@ -20,6 +20,7 @@
 #define __OS_SYMBIAN_H__
 
 #include <pj/sock.h>
+#include <pj/string.h>
 
 #include <e32base.h>
 #include <e32cmn.h>
@@ -32,6 +33,10 @@
 
 // Forward declarations
 class CPjSocketReader;
+
+#ifndef PJ_SYMBIAN_TIMER_PRIORITY
+#    define PJ_SYMBIAN_TIMER_PRIORITY	EPriorityNormal
+#endif
 
 //
 // PJLIB Symbian's Socket
@@ -216,10 +221,10 @@ public:
     static inline void Addr2pj(const TInetAddr & sym_addr,
 			       pj_sockaddr_in &pj_addr)
     {
-	memset(&pj_addr, 0, sizeof(pj_sockaddr_in));
+	pj_bzero(&pj_addr, sizeof(pj_sockaddr_in));
 	pj_addr.sin_family = PJ_AF_INET;
-	pj_addr.sin_addr.s_addr = sym_addr.Address();
-	pj_addr.sin_port = (pj_uint16_t) sym_addr.Port();
+	pj_addr.sin_addr.s_addr = pj_htonl(sym_addr.Address());
+	pj_addr.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
     }
 
 
@@ -228,8 +233,8 @@ public:
 			       TInetAddr & sym_addr)
     {
 	sym_addr.Init(KAfInet);
-	sym_addr.SetAddress((TUint32)pj_addr.sin_addr.s_addr);
-	sym_addr.SetPort(pj_addr.sin_port);
+	sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.sin_addr.s_addr));
+	sym_addr.SetPort(pj_ntohs(pj_addr.sin_port));
     }
 
 

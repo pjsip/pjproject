@@ -645,6 +645,9 @@ on_error:
 /* Sleep with polling */
 static void busy_sleep(unsigned msec)
 {
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    pj_thread_sleep(msec);
+#else
     pj_time_val timeout, now;
 
     pj_gettimeofday(&timeout);
@@ -656,6 +659,7 @@ static void busy_sleep(unsigned msec)
 	    ;
 	pj_gettimeofday(&now);
     } while (PJ_TIME_VAL_LT(now, timeout));
+#endif
 }
 
 

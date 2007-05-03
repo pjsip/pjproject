@@ -57,8 +57,8 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     }
 
     strcpy(str->ptr, str_pid);
-    sprintf(str->ptr+4, "%04x", clock_seq++);
-    pj_memcpy(str->ptr+8, str_mac_addr, 12);
+    sprintf(str->ptr+4, "%08x", clock_seq++);
+    pj_memcpy(str->ptr+12, str_mac_addr, 8);
     str->slen = 20;
 
     return str;

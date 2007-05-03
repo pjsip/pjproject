@@ -24,7 +24,7 @@ SYSTEMINCLUDE	..\pjsip\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		pjsua_lib.lib pjsip_ua.lib pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib pjnath.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
-STATICLIBRARY   ecrt0.lib
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
+STATICLIBRARY   pjsua_lib.lib pjsip_ua.lib pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib pjnath.lib pjlib_util.lib pjlib.lib ecrt0.lib
 CAPABILITY	None
 
