@@ -2516,7 +2516,14 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	pj_time_val timeout;
 	pjsip_tx_data *ack_tdata = NULL;
 
+	/* Cancel retransmission timer */
+	if (tsx->retransmit_timer.id != 0) {
+	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+	    tsx->retransmit_timer.id = 0;
+	}
+
 	/* Stop timer B. */
+	tsx->timeout_timer.id = 0;
 	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 
 	/* Generate and send ACK (for INVITE) */
