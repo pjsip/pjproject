@@ -239,6 +239,31 @@
     <WINDOW>
         <SESSION>-1</SESSION>
         <EDOCTYPE>0</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">null_audio.mcp</PATH>
+        <FRAMELOC>
+            <X>0</X>
+            <Y>0</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>347</W>
+            <H>128</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>1</STATUS>
+            <ROW>0</ROW>
+            <COLUMN>0</COLUMN>
+            <DOCKBARID>59420</DOCKBARID>
+            <PCTWIDTH>1.000000</PCTWIDTH>
+            <HGT>294</HGT>
+            <GROUPID>
+                <GIDHIGHPART>4294967294</GIDHIGHPART>
+                <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">symbian_ua.mcp</PATH>
         <FRAMELOC>
             <X>571</X>
@@ -262,35 +287,8 @@
         </DOCKINFO>
     </WINDOW>
     <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\ua.cpp</PATH>
-        <MAXIMIZED>true</MAXIMIZED>
-        <FRAMELOC>
-            <X>4</X>
-            <Y>4</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>629</W>
-            <H>859</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>0</STATUS>
-            <ROW></ROW>
-            <COLUMN></COLUMN>
-            <DOCKBARID></DOCKBARID>
-            <PCTWIDTH></PCTWIDTH>
-            <HGT></HGT>
-            <GROUPID>
-                <GIDHIGHPART></GIDHIGHPART>
-                <GIDLOWPART></GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>36</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
         <FRAMELOC>
             <X>4</X>
             <Y>23</Y>
@@ -315,7 +313,6 @@
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>20</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
         <FRAMELOC>
             <X>4</X>
             <Y>23</Y>
