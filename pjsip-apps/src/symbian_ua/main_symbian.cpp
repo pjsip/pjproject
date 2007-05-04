@@ -1,32 +1,34 @@
-//Auto-generated file. Please do not modify.
-//#include <e32cmn.h>
-
-//#pragma data_seg(".SYMBIAN")
-//__EMULATOR_IMAGE_HEADER2 (0x1000007a,0x00000000,0x00000000,EPriorityForeground,0x00000000u,0x00000000u,0x00000000,0x00000000,0x00000000,0)
-//#pragma data_seg()
-
+/* $Id$ */
+/* 
+ * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
 #include "ua.h"
-#include <stdlib.h>
-#include <pj/errno.h>
-#include <pj/os.h>
-#include <pj/log.h>
-#include <pj/unicode.h>
-#include <stdio.h>
 
 #include <e32std.h>
-
-#include <pj/os.h>
-
 #include <e32base.h>
 #include <e32std.h>
-
+#include <stdlib.h>
 
 
 //  Global Variables
 CConsoleBase* console;
 
 
-/////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 class MyTask : public CActive
 {
 public:
@@ -86,7 +88,10 @@ void MyTask::RunL()
 
 void MyTask::DoCancel()
 {
+
 }
+
+////////////////////////////////////////////////////////////////////////////
 
 LOCAL_C void DoStartL()
 {
@@ -115,11 +120,13 @@ LOCAL_C void DoStartL()
 
 ////////////////////////////////////////////////////////////////////////////
 
-//  Global Functions
+// E32Main()
 GLDEF_C TInt E32Main()
 {
-    // Create cleanup stack
+    // Mark heap usage
     __UHEAP_MARK;
+
+    // Create cleanup stack
     CTrapCleanup* cleanup = CTrapCleanup::New();
 
     // Create output console
@@ -130,12 +137,14 @@ GLDEF_C TInt E32Main()
     TRAPD(startError, DoStartL());
 
     console->Printf(_L("[press any key to close]\n"));
-    //console->Getch();
+    console->Getch();
     
     delete console;
     delete cleanup;
 
-    CloseSTDLIB();    
+    CloseSTDLIB(); 
+
+    // Mark end of heap usage, detect memory leaks
     __UHEAP_MARKEND;
     return KErrNone;
 }

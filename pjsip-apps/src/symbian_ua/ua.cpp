@@ -16,32 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-
-/**
- * simple_pjsua.c
- *
- * This is a very simple but fully featured SIP user agent, with the 
- * following capabilities:
- *  - SIP registration
- *  - Making and receiving call
- *  - Audio/media to sound device.
- *
- * Usage:
- *  - To make outgoing call, start simple_pjsua with the URL of remote
- *    destination to contact.
- *    E.g.:
- *	 simpleua sip:user@remote
- *
- *  - Incoming calls will automatically be answered with 200.
- *
- * This program will quit once it has completed a single call.
- */
-
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
+
+//
+// Basic config.
+//
+#define SIP_PORT	5060
+
 
 //
 // Destination URI (to make call, or to subscribe presence)
@@ -252,7 +237,7 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 /* Logging callback */
 static void log_writer(int level, const char *buf, unsigned len)
 {
-    wchar_t buf16[PJ_LOG_MAX_SIZE];
+    static wchar_t buf16[PJ_LOG_MAX_SIZE];
 
     PJ_UNUSED_ARG(level);
     
@@ -282,75 +267,73 @@ static pj_status_t app_startup()
     }
 
     /* Init pjsua */
-    {
-	pjsua_config cfg;
-	pjsua_logging_config log_cfg;
-	pjsua_media_config med_cfg;
+    pjsua_config cfg;
+    pjsua_logging_config log_cfg;
+    pjsua_media_config med_cfg;
 
-	pjsua_config_default(&cfg);
-	cfg.max_calls = 2;
-	cfg.thread_cnt = 0; // Disable threading on Symbian
-	cfg.cb.on_incoming_call = &on_incoming_call;
-	cfg.cb.on_call_media_state = &on_call_media_state;
-	cfg.cb.on_call_state = &on_call_state;
-	cfg.cb.on_buddy_state = &on_buddy_state;
-	cfg.cb.on_pager = &on_pager;
-	cfg.cb.on_typing = &on_typing;
-	cfg.cb.on_call_transfer_status = &on_call_transfer_status;
-    	cfg.cb.on_call_replaced = &on_call_replaced;
+    pjsua_config_default(&cfg);
+    cfg.max_calls = 2;
+    cfg.thread_cnt = 0; // Disable threading on Symbian
+    cfg.cb.on_incoming_call = &on_incoming_call;
+    cfg.cb.on_call_media_state = &on_call_media_state;
+    cfg.cb.on_call_state = &on_call_state;
+    cfg.cb.on_buddy_state = &on_buddy_state;
+    cfg.cb.on_pager = &on_pager;
+    cfg.cb.on_typing = &on_typing;
+    cfg.cb.on_call_transfer_status = &on_call_transfer_status;
+    cfg.cb.on_call_replaced = &on_call_replaced;
 
-	if (SIP_PROXY) {
-		cfg.outbound_proxy_cnt = 1;
-		cfg.outbound_proxy[0] = pj_str(SIP_PROXY);
-	}
-	
-	if (NAMESERVER) {
-		cfg.nameserver_count = 1;
-		cfg.nameserver[0] = pj_str(NAMESERVER);
-	}
-	
-	if (NAMESERVER && STUN_DOMAIN) {
-		cfg.stun_domain = pj_str(STUN_DOMAIN);
-	} else if (STUN_SERVER) {
-		cfg.stun_host = pj_str(STUN_SERVER);
-	}
-	
-	
-	pjsua_logging_config_default(&log_cfg);
-	log_cfg.console_level = 4;
-	log_cfg.cb = &log_writer;
+    if (SIP_PROXY) {
+	    cfg.outbound_proxy_cnt = 1;
+	    cfg.outbound_proxy[0] = pj_str(SIP_PROXY);
+    }
+    
+    if (NAMESERVER) {
+	    cfg.nameserver_count = 1;
+	    cfg.nameserver[0] = pj_str(NAMESERVER);
+    }
+    
+    if (NAMESERVER && STUN_DOMAIN) {
+	    cfg.stun_domain = pj_str(STUN_DOMAIN);
+    } else if (STUN_SERVER) {
+	    cfg.stun_host = pj_str(STUN_SERVER);
+    }
+    
+    
+    pjsua_logging_config_default(&log_cfg);
+    log_cfg.console_level = 4;
+    log_cfg.cb = &log_writer;
 
-	pjsua_media_config_default(&med_cfg);
-	med_cfg.thread_cnt = 0; // Disable threading on Symbian
-	med_cfg.has_ioqueue = PJ_FALSE;
-	med_cfg.clock_rate = 8000;
-	med_cfg.ec_tail_len = 0;
-	med_cfg.enable_ice = USE_ICE;
-	
-	status = pjsua_init(&cfg, &log_cfg, &med_cfg);
-	if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "pjsua_init() error", status);
-		pjsua_destroy();
-		return status;
-	}
+    pjsua_media_config_default(&med_cfg);
+    med_cfg.thread_cnt = 0; // Disable threading on Symbian
+    med_cfg.has_ioqueue = PJ_FALSE;
+    med_cfg.clock_rate = 8000;
+    med_cfg.ec_tail_len = 0;
+    med_cfg.enable_ice = USE_ICE;
+    
+    status = pjsua_init(&cfg, &log_cfg, &med_cfg);
+    if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "pjsua_init() error", status);
+	    pjsua_destroy();
+	    return status;
     }
 
     /* Add UDP transport. */
-    {
-	pjsua_transport_config cfg;
-	pjsua_transport_id tid;
+    pjsua_transport_config tcfg;
+    pjsua_transport_id tid;
 
-	pjsua_transport_config_default(&cfg);
-	cfg.port = 5060;
-	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, &tid);
-	if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error creating transport", status);
-		pjsua_destroy();
-		return status;
-	}
-	
-	pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = SIP_PORT;
+    status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, &tid);
+    if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating transport", status);
+	    pjsua_destroy();
+	    return status;
     }
+
+    /* Add account for the transport */
+    pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
+
 
     /* Initialization is done, now start pjsua */
     status = pjsua_start();
@@ -396,160 +379,164 @@ static pj_status_t app_startup()
 
 
 ////////////////////////////////////////////////////////////////////////////
+/*
+ * The interractive console UI
+ */
 #include <e32base.h>
 
 class ConsoleUI : public CActive 
 {
 public:
-	ConsoleUI(CActiveSchedulerWait *asw, CConsoleBase *con);
-    
-	// Run console UI
-	void Run();
+    ConsoleUI(CActiveSchedulerWait *asw, CConsoleBase *con);
 
-	// Stop
-	void Stop();
+    // Run console UI
+    void Run();
+
+    // Stop
+    void Stop();
     
 protected:
-	// Cancel asynchronous read.
-	void DoCancel();
+    // Cancel asynchronous read.
+    void DoCancel();
 
-	// Implementation: called when read has completed.
-	void RunL();
+    // Implementation: called when read has completed.
+    void RunL();
     
 private:
-	CActiveSchedulerWait *asw_;
-	CConsoleBase *con_;
+    CActiveSchedulerWait *asw_;
+    CConsoleBase *con_;
 };
 
 
 ConsoleUI::ConsoleUI(CActiveSchedulerWait *asw, CConsoleBase *con) 
 : CActive(EPriorityStandard), asw_(asw), con_(con)
 {
-	CActiveScheduler::Add(this);
+    CActiveScheduler::Add(this);
 }
 
 // Run console UI
 void ConsoleUI::Run() 
 {
-	con_->Read(iStatus);
-	SetActive();
+    con_->Read(iStatus);
+    SetActive();
 }
 
 // Stop console UI
 void ConsoleUI::Stop() 
 {
-	DoCancel();
+    DoCancel();
 }
 
 // Cancel asynchronous read.
 void ConsoleUI::DoCancel() 
 {
-	con_->ReadCancel();
+    con_->ReadCancel();
 }
 
 static void PrintMenu() 
 {
-	PJ_LOG(3, (THIS_FILE, "\n\n"
-		"Menu:\n"
-		"  d    Dump states\n"
-		"  D    Dump all states (detail)\n"
-		"  P    Dump pool factory\n"
-		"  m    Make call\n"
-		"  a    Answer call\n"
-		"  h    Hangup all calls\n"
-		"  s    Subscribe to buddy presence\n"
-		"  S    Unsubscribe buddy presence\n"
-		"  o    Set account online\n"
-		"  O    Set account offline\n"
-		"  q    Quit\n"));
+    PJ_LOG(3, (THIS_FILE, "\n\n"
+	    "Menu:\n"
+	    "  d    Dump states\n"
+	    "  D    Dump all states (detail)\n"
+	    "  P    Dump pool factory\n"
+	    "  m    Make call to " SIP_DST_URI "\n"
+	    "  a    Answer call\n"
+	    "  h    Hangup all calls\n"
+	    "  s    Subscribe to " SIP_DST_URI "\n"
+	    "  S    Unsubscribe presence\n"
+	    "  o    Set account online\n"
+	    "  O    Set account offline\n"
+	    "  q    Quit\n"));
 }
 
 // Implementation: called when read has completed.
 void ConsoleUI::RunL() 
 {
-	TKeyCode kc = con_->KeyCode();
-	pj_bool_t reschedule = PJ_TRUE;
-	
-	switch (kc) {
-	case 'q':
-		asw_->AsyncStop();
-		reschedule = PJ_FALSE;
-		break;
-	case 'D':
-	case 'd':
-		pjsua_dump(kc == 'D');
-		break;
-	case 'P':
-		pj_pool_factory_dump(&pjsua_var.cp.factory, PJ_TRUE);
-		break;
-	case 'm':
-		if (g_call_id != PJSUA_INVALID_ID) {
-			PJ_LOG(3,(THIS_FILE, "Another call is active"));	
-			break;
-		}
-	
-		if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
-			pj_str_t dst = pj_str(SIP_DST_URI);
-			pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
-					     NULL, &g_call_id);
-		} else {
-			PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
-		}
-		break;
-	case 'a':
-		if (g_call_id != PJSUA_INVALID_ID)
-			pjsua_call_answer(g_call_id, 200, NULL, NULL);
-		break;
-	case 'h':
-		pjsua_call_hangup_all();
-		break;
-	case 's':
-	case 'S':
-		if (g_buddy_id != PJSUA_INVALID_ID)
-			pjsua_buddy_subscribe_pres(g_buddy_id, kc=='s');
-		break;
-	case 'o':
-	case 'O':
-		pjsua_acc_set_online_status(g_acc_id, kc=='o');
-		break;
-	default:
-		PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed",
-			  kc, kc));
-		break;
-	}
+    TKeyCode kc = con_->KeyCode();
+    pj_bool_t reschedule = PJ_TRUE;
+    
+    switch (kc) {
+    case 'q':
+	    asw_->AsyncStop();
+	    reschedule = PJ_FALSE;
+	    break;
+    case 'D':
+    case 'd':
+	    pjsua_dump(kc == 'D');
+	    break;
+    case 'p':
+    case 'P':
+	    pj_pool_factory_dump(&pjsua_var.cp.factory, PJ_TRUE);
+	    break;
+    case 'm':
+	    if (g_call_id != PJSUA_INVALID_ID) {
+		    PJ_LOG(3,(THIS_FILE, "Another call is active"));	
+		    break;
+	    }
+    
+	    if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
+		    pj_str_t dst = pj_str(SIP_DST_URI);
+		    pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
+					 NULL, &g_call_id);
+	    } else {
+		    PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
+	    }
+	    break;
+    case 'a':
+	    if (g_call_id != PJSUA_INVALID_ID)
+		    pjsua_call_answer(g_call_id, 200, NULL, NULL);
+	    break;
+    case 'h':
+	    pjsua_call_hangup_all();
+	    break;
+    case 's':
+    case 'S':
+	    if (g_buddy_id != PJSUA_INVALID_ID)
+		    pjsua_buddy_subscribe_pres(g_buddy_id, kc=='s');
+	    break;
+    case 'o':
+    case 'O':
+	    pjsua_acc_set_online_status(g_acc_id, kc=='o');
+	    break;
+    default:
+	    PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed",
+		      kc, kc));
+	    break;
+    }
 
-	PrintMenu();
-	
-	if (reschedule)
-		Run();
+    PrintMenu();
+    
+    if (reschedule)
+	Run();
 }
 
 
 ////////////////////////////////////////////////////////////////////////////
 int ua_main() 
 {
-	pj_status_t status;
-	
-	// Initialize pjsua
-	status  = app_startup();
-	if (status != PJ_SUCCESS)
-		return status;
+    pj_status_t status;
+    
+    // Initialize pjsua
+    status  = app_startup();
+    if (status != PJ_SUCCESS)
+	    return status;
 
-	// Run the UI
-	CActiveSchedulerWait *asw = new CActiveSchedulerWait;
-	ConsoleUI *con = new ConsoleUI(asw, console);
-	
-	con->Run();
-	
-	PrintMenu();
-	asw->Start();
-	
-	delete con;
-	delete asw;
-	
-	// Shutdown pjsua
-	pjsua_destroy();
-	
-    	return 0;
+    // Run the UI
+    CActiveSchedulerWait *asw = new CActiveSchedulerWait;
+    ConsoleUI *con = new ConsoleUI(asw, console);
+    
+    con->Run();
+    
+    PrintMenu();
+    asw->Start();
+    
+    delete con;
+    delete asw;
+    
+    // Shutdown pjsua
+    pjsua_destroy();
+    
+    return 0;
 }
 
