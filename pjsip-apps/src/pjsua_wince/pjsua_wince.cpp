@@ -15,6 +15,67 @@ static HWND	    hwndCB;
 static HWND	    hwndGlobalStatus, hwndURI, hwndCallStatus;
 static HWND	    hwndActionButton, hwndExitButton;
 
+
+
+//
+// Basic config.
+//
+#define SIP_PORT	5060
+
+
+//
+// Destination URI (to make call, or to subscribe presence)
+//
+#define SIP_DST_URI	"sip:192.168.0.7:5061"
+
+//
+// Account
+//
+#define HAS_SIP_ACCOUNT	0	// 0 to disable registration
+#define SIP_DOMAIN	"server"
+#define SIP_REALM	"server"
+#define SIP_USER	"user"
+#define SIP_PASSWD	"secret"
+
+//
+// Outbound proxy for all accounts
+//
+#define SIP_PROXY	NULL
+//#define SIP_PROXY	"sip:192.168.0.2;lr"
+
+
+//
+// Configure nameserver if DNS SRV is to be used with both SIP
+// or STUN (for STUN see other settings below)
+//
+#define NAMESERVER	NULL
+//#define NAMESERVER	"62.241.163.201"
+
+//
+// STUN server
+#if 0
+	// Use this to have the STUN server resolved normally
+#   define STUN_DOMAIN	NULL
+#   define STUN_SERVER	"stun.fwdnet.net"
+#elif 0
+	// Use this to have the STUN server resolved with DNS SRV
+#   define STUN_DOMAIN	"iptel.org"
+#   define STUN_SERVER	NULL
+#else
+	// Use this to disable STUN
+#   define STUN_DOMAIN	NULL
+#   define STUN_SERVER	NULL
+#endif
+
+//
+// Use ICE?
+//
+#define USE_ICE		1
+
+
+//
+// Globals
+//
 static pj_pool_t   *g_pool;
 static pj_str_t	    g_local_uri;
 static int	    g_current_acc;
@@ -37,8 +98,6 @@ enum
     ID_MENU_DISCONNECT,
     ID_BTN_ACTION,
 };
-
-#define DEFAULT_URI	"sip:192.168.0.7"
 
 
 // Forward declarations of functions included in this code module:
@@ -143,7 +202,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	g_current_call = PJSUA_INVALID_ID;
-	SetURI(DEFAULT_URI, -1);
+	SetURI(SIP_DST_URI, -1);
 	SetAction(ID_MENU_CALL);
 	//SetCallStatus(call_info.state_text.ptr, call_info.state_text.slen);
 	SetCallStatus(call_info.last_status_text.ptr, call_info.last_status_text.slen);
@@ -276,7 +335,8 @@ static BOOL OnInitStack(void)
     pjsua_config_default(&cfg);
     pjsua_media_config_default(&media_cfg);
     pjsua_transport_config_default(&udp_cfg);
-    udp_cfg.port = 50060;
+    udp_cfg.port = SIP_PORT;
+
     pjsua_transport_config_default(&rtp_cfg);
     rtp_cfg.port = 40000;
 
@@ -292,6 +352,7 @@ static BOOL OnInitStack(void)
     media_cfg.ec_tail_len = 256;
     media_cfg.quality = 1;
     media_cfg.ptime = 20;
+    media_cfg.enable_ice = USE_ICE;
 
     /* Initialize application callbacks */
     cfg.cb.on_call_state = &on_call_state;
@@ -302,6 +363,23 @@ static BOOL OnInitStack(void)
     cfg.cb.on_pager = &on_pager;
     cfg.cb.on_typing = &on_typing;
 
+    if (SIP_PROXY) {
+	    cfg.outbound_proxy_cnt = 1;
+	    cfg.outbound_proxy[0] = pj_str(SIP_PROXY);
+    }
+    
+    if (NAMESERVER) {
+	    cfg.nameserver_count = 1;
+	    cfg.nameserver[0] = pj_str(NAMESERVER);
+    }
+    
+    if (NAMESERVER && STUN_DOMAIN) {
+	    cfg.stun_domain = pj_str(STUN_DOMAIN);
+    } else if (STUN_SERVER) {
+	    cfg.stun_host = pj_str(STUN_SERVER);
+    }
+    
+    
     /* Initialize pjsua */
     status = pjsua_init(&cfg, &log_cfg, &media_cfg);
     if (status != PJ_SUCCESS) {
@@ -340,6 +418,38 @@ static BOOL OnInitStack(void)
     /* Add local account */
     pjsua_acc_add_local(transport_id, PJ_TRUE, &g_current_acc);
     pjsua_acc_set_online_status(g_current_acc, PJ_TRUE);
+
+    /* Add account */
+    if (HAS_SIP_ACCOUNT) {
+	pjsua_acc_config cfg;
+
+	pjsua_acc_config_default(&cfg);
+	cfg.id = pj_str("sip:" SIP_USER "@" SIP_DOMAIN);
+	cfg.reg_uri = pj_str("sip:" SIP_DOMAIN);
+	cfg.cred_count = 1;
+	cfg.cred_info[0].realm = pj_str(SIP_REALM);
+	cfg.cred_info[0].scheme = pj_str("digest");
+	cfg.cred_info[0].username = pj_str(SIP_USER);
+	cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+	cfg.cred_info[0].data = pj_str(SIP_PASSWD);
+
+	status = pjsua_acc_add(&cfg, PJ_TRUE, &g_current_acc);
+	if (status != PJ_SUCCESS) {
+	    pjsua_destroy();
+	    return PJ_FALSE;
+	}
+    }
+
+    /* Add buddy */
+    if (SIP_DST_URI) {
+    	pjsua_buddy_config bcfg;
+    
+    	pjsua_buddy_config_default(&bcfg);
+    	bcfg.uri = pj_str(SIP_DST_URI);
+    	bcfg.subscribe = PJ_FALSE;
+    	
+    	pjsua_buddy_add(&bcfg, NULL);
+    }
 
     /* Start pjsua */
     status = pjsua_start();
@@ -534,7 +644,7 @@ static void OnCreate(HWND hWnd)
                                 // you create a control
     SetCallStatus("Ready", 5);
     SetAction(ID_MENU_CALL);
-    SetURI(DEFAULT_URI, -1);
+    SetURI(SIP_DST_URI, -1);
     SetFocus(hWnd);
 
 }
