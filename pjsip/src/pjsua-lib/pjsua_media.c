@@ -689,6 +689,13 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     pjsua_call *call = &pjsua_var.calls[call_id];
     pj_status_t status;
 
+    /* Return error if media transport has not been created yet
+     * (e.g. application is starting)
+     */
+    if (call->med_tp == NULL) {
+	return PJ_EBUSY;
+    }
+
     /* Get media socket info */
     pjmedia_transport_get_info(call->med_tp, &skinfo);
 
