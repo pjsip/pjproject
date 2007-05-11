@@ -122,8 +122,8 @@ static struct gsm_codec_factory
 /* GSM codec private data. */
 struct gsm_data
 {
-    gsm_state		*encoder;
-    gsm_state		*decoder;
+    struct gsm_state	*encoder;
+    struct gsm_state	*decoder;
     pj_bool_t		 plc_enabled;
 #if !PLC_DISABLED
     pjmedia_plc		*plc;
