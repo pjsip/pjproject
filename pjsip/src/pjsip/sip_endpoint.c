@@ -167,7 +167,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 {
     pj_status_t status = PJ_SUCCESS;
     pjsip_module *m;
-    int i;
+    unsigned i;
 
     pj_rwmutex_lock_write(endpt->mod_mutex);
 
@@ -247,7 +247,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
 			{status = PJ_ENOTFOUND;goto on_return;} );
 
     /* Make sure the module exists in the array. */
-    PJ_ASSERT_ON_FAIL(	mod->id>=0 && mod->id<PJ_ARRAY_SIZE(endpt->modules) &&
+    PJ_ASSERT_ON_FAIL(	mod->id>=0 && 
+			mod->id<(int)PJ_ARRAY_SIZE(endpt->modules) &&
 			endpt->modules[mod->id] == mod,
 			{status = PJ_ENOTFOUND; goto on_return;});
 
@@ -1079,7 +1080,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
     PJ_UNUSED_ARG(endpt);
 
     len = pj_ansi_strlen(format);
-    if (len < sizeof(newformat)-30) {
+    if (len < (int)sizeof(newformat)-30) {
 	pj_str_t errstr;
 
 	pj_ansi_strcpy(newformat, format);

@@ -239,7 +239,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     pj_status_t status;
 
     /* Create port. */
-    conf_port = pj_pool_zalloc(pool, sizeof(struct conf_port));
+    conf_port = PJ_POOL_ZALLOC_T(pool, struct conf_port);
     PJ_ASSERT_RETURN(conf_port, PJ_ENOMEM);
 
     /* Set name */
@@ -254,7 +254,8 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     conf_port->rx_adj_level = NORMAL_LEVEL;
 
     /* Create transmit flag array */
-    conf_port->listener_slots = pj_pool_zalloc(pool, 
+    conf_port->listener_slots = (SLOT_TYPE*)
+				pj_pool_zalloc(pool, 
 					  conf->max_ports * sizeof(SLOT_TYPE));
     PJ_ASSERT_RETURN(conf_port->listener_slots, PJ_ENOMEM);
 
@@ -335,21 +336,24 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 					   conf_port->clock_rate * 1.0 /
 					   conf->clock_rate);
 	conf_port->rx_buf_count = 0;
-	conf_port->rx_buf = pj_pool_alloc(pool, conf_port->rx_buf_cap *
+	conf_port->rx_buf = (pj_int16_t*)
+			    pj_pool_alloc(pool, conf_port->rx_buf_cap *
 						sizeof(conf_port->rx_buf[0]));
 	PJ_ASSERT_RETURN(conf_port->rx_buf, PJ_ENOMEM);
 
 	/* Create TX buffer. */
 	conf_port->tx_buf_cap = conf_port->rx_buf_cap;
 	conf_port->tx_buf_count = 0;
-	conf_port->tx_buf = pj_pool_alloc(pool, conf_port->tx_buf_cap *
+	conf_port->tx_buf = (pj_int16_t*)
+			    pj_pool_alloc(pool, conf_port->tx_buf_cap *
 						sizeof(conf_port->tx_buf[0]));
 	PJ_ASSERT_RETURN(conf_port->tx_buf, PJ_ENOMEM);
     }
 
 
     /* Create mix buffer. */
-    conf_port->mix_buf = pj_pool_zalloc(pool, conf->samples_per_frame *
+    conf_port->mix_buf = (pj_uint32_t*)
+			 pj_pool_zalloc(pool, conf->samples_per_frame *
 					      sizeof(conf_port->mix_buf[0]));
     PJ_ASSERT_RETURN(conf_port->mix_buf, PJ_ENOMEM);
 
@@ -380,7 +384,8 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
 
     /* Passive port has rx buffers. */
     for (i=0; i<RX_BUF_COUNT; ++i) {
-	conf_port->snd_buf[i] = pj_pool_zalloc(pool, conf->samples_per_frame *
+	conf_port->snd_buf[i] = (pj_int16_t*)
+				pj_pool_zalloc(pool, conf->samples_per_frame *
 					      sizeof(conf_port->snd_buf[0][0]));
 	if (conf_port->snd_buf[i] == NULL) {
 	    return PJ_ENOMEM;
@@ -486,10 +491,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 	      max_ports));
 
     /* Create and init conf structure. */
-    conf = pj_pool_zalloc(pool, sizeof(pjmedia_conf));
+    conf = PJ_POOL_ZALLOC_T(pool, pjmedia_conf);
     PJ_ASSERT_RETURN(conf, PJ_ENOMEM);
 
-    conf->ports = pj_pool_zalloc(pool, max_ports*sizeof(void*));
+    conf->ports = (struct conf_port**) 
+		  pj_pool_zalloc(pool, max_ports*sizeof(void*));
     PJ_ASSERT_RETURN(conf->ports, PJ_ENOMEM);
 
     conf->options = options;
@@ -501,7 +507,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 
     
     /* Create and initialize the master port interface. */
-    conf->master_port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
+    conf->master_port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     PJ_ASSERT_RETURN(conf->master_port, PJ_ENOMEM);
     
     pjmedia_port_info_init(&conf->master_port->info, &name, SIGNATURE,
@@ -522,7 +528,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 	return status;
 
     /* Create temporary buffer. */
-    conf->uns_buf = pj_pool_zalloc(pool, samples_per_frame *
+    conf->uns_buf = (pj_uint16_t*)
+		    pj_pool_zalloc(pool, samples_per_frame *
 					 sizeof(conf->uns_buf[0]));
 
     /* Create mutex. */
@@ -597,7 +604,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
  */
 static pj_status_t destroy_port(pjmedia_port *this_port)
 {
-    pjmedia_conf *conf = this_port->port_data.pdata;
+    pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     return pjmedia_conf_destroy(conf);
 }
 
@@ -625,7 +632,7 @@ PJ_DEF(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf)
 PJ_DEF(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
 						const pj_str_t *name)
 {
-    int len;
+    unsigned len;
 
     /* Sanity check. */
     PJ_ASSERT_RETURN(conf != NULL && name != NULL, PJ_EINVAL);
@@ -763,12 +770,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     if (name == NULL) {
 	name = &tmp;
 
-	tmp.ptr = pj_pool_alloc(pool, 32);
+	tmp.ptr = (char*) pj_pool_alloc(pool, 32);
 	tmp.slen = pj_ansi_snprintf(tmp.ptr, 32, "ConfPort#%d", index);
     }
 
     /* Create and initialize the media port structure. */
-    port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
+    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     PJ_ASSERT_RETURN(port, PJ_ENOMEM);
     
     pjmedia_port_info_init(&port->info, name, SIGNATURE_PORT,
@@ -1600,7 +1607,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame)
 {
-    pjmedia_conf *conf = this_port->port_data.pdata;
+    pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
     unsigned ci, cj, i, j;
     
@@ -1676,7 +1683,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    }
 
 	    snd_buf = conf_port->snd_buf[conf_port->snd_read_pos];
-	    pjmedia_copy_samples(frame->buf, snd_buf, conf->samples_per_frame);
+	    pjmedia_copy_samples((pj_int16_t*)frame->buf, snd_buf, 
+				 conf->samples_per_frame);
 	    conf_port->snd_read_pos = (conf_port->snd_read_pos+1) % RX_BUF_COUNT;
 
 	} else {
@@ -1684,7 +1692,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pj_status_t status;
 	    pjmedia_frame_type frame_type;
 
-	    status = read_port(conf, conf_port, frame->buf, 
+	    status = read_port(conf, conf_port, (pj_int16_t*)frame->buf, 
 			       conf->samples_per_frame, &frame_type);
 	    
 	    if (status != PJ_SUCCESS) {
@@ -1710,7 +1718,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	 * Otherwise just calculate the averate level.
 	 */
 	if (conf_port->rx_adj_level != NORMAL_LEVEL) {
-	    pj_int16_t *input = frame->buf;
+	    pj_int16_t *input = (pj_int16_t*) frame->buf;
 	    pj_int32_t adj = conf_port->rx_adj_level;
 
 	    level = 0;
@@ -1738,7 +1746,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    level /= conf->samples_per_frame;
 
 	} else {
-	    level = pjmedia_calc_avg_signal(frame->buf, 
+	    level = pjmedia_calc_avg_signal((pj_int16_t*) frame->buf, 
 					    conf->samples_per_frame);
 	}
 
@@ -1799,7 +1807,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	     */
 	    if (listener->transmitter_cnt == 1) {
 		pjmedia_copy_samples((pj_int16_t*)mix_buf, 
-				     frame->buf, conf->samples_per_frame);
+				     (const pj_int16_t*)frame->buf, 
+				     conf->samples_per_frame);
 		listener->src_level = level;
 	    } else {
 		for (k=0; k<conf->samples_per_frame; ++k)
@@ -1856,10 +1865,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	TRACE_((THIS_FILE, "write to audio, count=%d", 
 			   conf->samples_per_frame));
 
-	pjmedia_copy_samples( frame->buf, (pj_int16_t*)conf->ports[0]->mix_buf, 
+	pjmedia_copy_samples( (pj_int16_t*)frame->buf, 
+			      (const pj_int16_t*)conf->ports[0]->mix_buf, 
 			      conf->samples_per_frame);
     } else {
-	pjmedia_zero_samples( frame->buf, conf->samples_per_frame ); 
+	pjmedia_zero_samples((pj_int16_t*)frame->buf, conf->samples_per_frame); 
     }
 
     /* MUST set frame type */
@@ -1897,9 +1907,9 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
 static pj_status_t put_frame(pjmedia_port *this_port, 
 			     const pjmedia_frame *frame)
 {
-    pjmedia_conf *conf = this_port->port_data.pdata;
+    pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];
-    const pj_int16_t *input = frame->buf;
+    const pj_int16_t *input = (const pj_int16_t*) frame->buf;
     pj_int16_t *target_snd_buf;
 
     /* Check for correct size. */

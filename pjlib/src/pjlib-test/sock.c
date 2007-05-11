@@ -141,7 +141,7 @@ static int simple_sock_test(void)
 
     PJ_LOG(3,("test", "...simple_sock_test()"));
 
-    for (i=0; i<sizeof(types)/sizeof(types[0]); ++i) {
+    for (i=0; i<(int)(sizeof(types)/sizeof(types[0])); ++i) {
 	
 	rc = pj_sock_socket(PJ_AF_INET, types[i], 0, &sock);
 	if (rc != PJ_SUCCESS) {

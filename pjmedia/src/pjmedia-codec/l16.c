@@ -428,7 +428,7 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
     /* Allocate new codec if no more is available */
     if (pj_list_empty(&l16_factory.codec_list)) {
 
-	codec = pj_pool_alloc(l16_factory.pool, sizeof(pjmedia_codec));
+	codec = PJ_POOL_ALLOC_T(l16_factory.pool, pjmedia_codec);
 	codec->codec_data = pj_pool_alloc(l16_factory.pool, 
 					  sizeof(struct l16_data));
 	codec->factory = factory;
@@ -441,7 +441,7 @@ static pj_status_t l16_alloc_codec( pjmedia_codec_factory *factory,
 
     /* Init private data */
     ptime = GET_PTIME(id->clock_rate);
-    data = codec->codec_data;
+    data = (struct l16_data*) codec->codec_data;
     data->frame_size = ptime * id->clock_rate * id->channel_cnt * 2 / 1000;
 
     /* Zero the list, for error detection in l16_dealloc_codec */

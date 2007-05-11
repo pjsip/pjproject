@@ -99,8 +99,8 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
 	goto on_error;
 
     usage->worker_cnt = si->thread_cnt;
-    usage->worker = pj_pool_calloc(pool, si->thread_cnt, 
-				   sizeof(struct worker));
+    usage->worker = (struct worker*) pj_pool_calloc(pool, si->thread_cnt, 
+				   		    sizeof(struct worker));
     for (i=0; i<si->thread_cnt; ++i) {
 	pj_ioqueue_op_key_init(&usage->worker[i].read_key, 
 			       sizeof(usage->worker[i].read_key));
@@ -108,7 +108,8 @@ PJ_DEF(pj_status_t) pj_stun_usage_create( pj_stun_server *srv,
     }
 
     usage->send_count = usage->worker_cnt * 2;
-    usage->send_key = pj_pool_calloc(pool, usage->send_count, 
+    usage->send_key = (pj_ioqueue_op_key_t*)
+		      pj_pool_calloc(pool, usage->send_count, 
 				     sizeof(pj_ioqueue_op_key_t));
     for (i=0; i<usage->send_count; ++i) {
 	pj_ioqueue_op_key_init(&usage->send_key[i], 
@@ -240,7 +241,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ssize_t bytes_read)
 {
     enum { MAX_LOOP = 10 };
-    pj_stun_usage *usage = pj_ioqueue_get_user_data(key);
+    pj_stun_usage *usage = (pj_stun_usage*) pj_ioqueue_get_user_data(key);
     struct worker *worker = (struct worker*) op_key;
     unsigned count;
     pj_status_t status;

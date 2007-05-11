@@ -112,7 +112,8 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
     /* Request MUST have message body, with Content-Type equal to
      * "text/plain".
      */
-    ctype = pjsip_msg_find_hdr(msg, PJSIP_H_CONTENT_TYPE, NULL);
+    ctype = (pjsip_ctype_hdr*)
+	    pjsip_msg_find_hdr(msg, PJSIP_H_CONTENT_TYPE, NULL);
     if (msg->body == NULL || ctype == NULL || 
 	!acceptable_message(&ctype->media)) 
     {
@@ -142,11 +143,12 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 
 
     /* Build remote contact */
-    contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+    contact_hdr = (pjsip_contact_hdr*)
+		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
 				     NULL);
     if (contact_hdr) {
-	contact.ptr = pj_pool_alloc(rdata->tp_info.pool, 
-				    PJSIP_MAX_URL_SIZE);
+	contact.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, 
+				    	    PJSIP_MAX_URL_SIZE);
 	contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
 				       contact_hdr->uri, contact.ptr,
 				       PJSIP_MAX_URL_SIZE);
@@ -162,7 +164,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	pj_str_t text_body;
 	
 	/* Save text body */
-	text_body.ptr = rdata->msg_info.msg->body->data;
+	text_body.ptr = (char*) rdata->msg_info.msg->body->data;
 	text_body.slen = rdata->msg_info.msg->body->len;
 
 	if (pjsua_var.ua_cfg.cb.on_pager) {
@@ -175,9 +177,9 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	pj_status_t status;
 	pj_bool_t is_typing;
 
-	status = pjsip_iscomposing_parse( rdata->tp_info.pool, body->data,
-					  body->len, &is_typing, NULL, NULL,
-					  NULL );
+	status = pjsip_iscomposing_parse(rdata->tp_info.pool, (char*)body->data,
+					 body->len, &is_typing, NULL, NULL,
+					 NULL );
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Invalid MESSAGE body", status);
 	    return;
@@ -240,8 +242,9 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
      * Contact header contains the port number information. If this is
      * not available, then use From header.
      */
-    from.ptr = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-    contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg,
+    from.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
+    contact_hdr = (pjsip_contact_hdr*)
+		  pjsip_msg_find_hdr(rdata->msg_info.msg,
 				     PJSIP_H_CONTACT, NULL);
     if (contact_hdr) {
 	from.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
@@ -257,7 +260,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 	from = pj_str("<--URI is too long-->");
 
     /* Build the To text. */
-    to.ptr = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
+    to.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
     to.slen = pjsip_uri_print( PJSIP_URI_IN_FROMTO_HDR, 
 			       rdata->msg_info.to->uri,
 			       to.ptr, PJSIP_MAX_URL_SIZE);
@@ -275,7 +278,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 /* Outgoing IM callback. */
 static void im_callback(void *token, pjsip_event *e)
 {
-    pjsua_im_data *im_data = token;
+    pjsua_im_data *im_data = (pjsua_im_data*) token;
 
     if (e->type == PJSIP_EVENT_TSX_STATE) {
 
@@ -352,7 +355,7 @@ static void im_callback(void *token, pjsip_event *e)
  */
 static void typing_callback(void *token, pjsip_event *e)
 {
-    pjsua_im_data *im_data = token;
+    pjsua_im_data *im_data = (pjsua_im_data*) token;
 
     if (e->type == PJSIP_EVENT_TSX_STATE) {
 
@@ -463,7 +466,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     /* Create IM data to keep message details and give it back to
      * application on the callback
      */
-    im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
+    im_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsua_im_data);
     im_data->acc_id = acc_id;
     im_data->call_id = PJSUA_INVALID_ID;
     pj_strdup_with_null(tdata->pool, &im_data->to, to);
@@ -570,7 +573,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     pjsua_set_msg_route_set(tdata, &pjsua_var.acc[acc_id].route_set);
 
     /* Create data to reauthenticate */
-    im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
+    im_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsua_im_data);
     im_data->acc_id = acc_id;
 
     /* Send request (statefully) */

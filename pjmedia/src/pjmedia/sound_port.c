@@ -73,7 +73,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
 			   /* out */  void *output,
 			   /* out */  unsigned size)
 {
-    pjmedia_snd_port *snd_port = user_data;
+    pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
     pjmedia_frame frame;
     pj_status_t status;
@@ -111,7 +111,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
 #endif
 
     if (snd_port->plc)
-	pjmedia_plc_save(snd_port->plc, output);
+	pjmedia_plc_save(snd_port->plc, (pj_int16_t*) output);
 
     if (snd_port->ec_state) {
 	if (snd_port->ec_suspended) {
@@ -120,7 +120,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
 	    PJ_LOG(4,(THIS_FILE, "EC activated"));
 	}
 	snd_port->ec_suspend_count = 0;
-	pjmedia_echo_playback(snd_port->ec_state, output);
+	pjmedia_echo_playback(snd_port->ec_state, (pj_int16_t*)output);
     }
 
 
@@ -136,14 +136,14 @@ no_frame:
 	}
 	if (snd_port->ec_state) {
 	    /* To maintain correct delay in EC */
-	    pjmedia_echo_playback(snd_port->ec_state, output);
+	    pjmedia_echo_playback(snd_port->ec_state, (pj_int16_t*)output);
 	}
     }
 
     /* Apply PLC */
     if (snd_port->plc) {
 
-	pjmedia_plc_generate(snd_port->plc, output);
+	pjmedia_plc_generate(snd_port->plc, (pj_int16_t*) output);
 #ifdef SIMULATE_LOST_PCT
 	PJ_LOG(4,(THIS_FILE, "Lost frame generated"));
 #endif
@@ -165,7 +165,7 @@ static pj_status_t rec_cb(/* in */   void *user_data,
 			  /* in */   void *input,
 			  /* in*/    unsigned size)
 {
-    pjmedia_snd_port *snd_port = user_data;
+    pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
     pjmedia_frame frame;
 
@@ -181,7 +181,7 @@ static pj_status_t rec_cb(/* in */   void *user_data,
 
     /* Cancel echo */
     if (snd_port->ec_state && !snd_port->ec_suspended) {
-	pjmedia_echo_capture(snd_port->ec_state, input, 0);
+	pjmedia_echo_capture(snd_port->ec_state, (pj_int16_t*) input, 0);
     }
 
     frame.buf = (void*)input;
@@ -326,7 +326,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
-    snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
+    snd_port = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_port);
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
     snd_port->rec_id = rec_id;
@@ -365,7 +365,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
-    snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
+    snd_port = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_port);
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
     snd_port->rec_id = dev_id;
@@ -402,7 +402,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
-    snd_port = pj_pool_zalloc(pool, sizeof(pjmedia_snd_port));
+    snd_port = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_port);
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
     snd_port->play_id = dev_id;

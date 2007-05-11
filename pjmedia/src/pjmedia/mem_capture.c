@@ -73,7 +73,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
 
-    rec = pj_pool_zalloc(pool, sizeof(struct mem_rec));
+    rec = PJ_POOL_ZALLOC_T(pool, struct mem_rec);
     PJ_ASSERT_RETURN(rec != NULL, PJ_ENOMEM);
 
     /* Create the rec */

@@ -84,7 +84,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 
 
     /* Create the master port instance */
-    m = pj_pool_zalloc(pool, sizeof(pjmedia_master_port));
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_master_port);
     m->options = options;
     m->u_port = u_port;
     m->d_port = d_port;
@@ -144,7 +144,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m)
  */
 static void clock_callback(const pj_timestamp *ts, void *user_data)
 {
-    pjmedia_master_port *m = user_data;
+    pjmedia_master_port *m = (pjmedia_master_port*) user_data;
     pjmedia_frame frame;
     pj_status_t status;
 

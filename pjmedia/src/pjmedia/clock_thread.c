@@ -66,7 +66,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && clock_rate && samples_per_frame && p_clock,
 		     PJ_EINVAL);
 
-    clock = pj_pool_alloc(pool, sizeof(pjmedia_clock));
+    clock = PJ_POOL_ALLOC_T(pool, pjmedia_clock);
 
     
     status = pj_get_timestamp_freq(&clock->freq);
@@ -197,7 +197,7 @@ PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
 static int clock_thread(void *arg)
 {
     pj_timestamp now;
-    pjmedia_clock *clock = arg;
+    pjmedia_clock *clock = (pjmedia_clock*) arg;
 
     /* Get the first tick */
     pj_get_timestamp(&clock->next_tick);

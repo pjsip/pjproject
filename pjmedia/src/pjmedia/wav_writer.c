@@ -83,7 +83,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
     /* Create file port instance. */
-    fport = pj_pool_zalloc(pool, sizeof(struct file_port));
+    fport = PJ_POOL_ZALLOC_T(pool, struct file_port);
     PJ_ASSERT_RETURN(fport != NULL, PJ_ENOMEM);
 
     /* Initialize port info. */
@@ -149,7 +149,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
 
     /* Allocate buffer and set initial write position */
-    fport->buf = pj_pool_alloc(pool, fport->bufsize);
+    fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (fport->buf == NULL) {
 	pj_file_close(fport->fd);
 	return PJ_ENOMEM;

@@ -164,25 +164,29 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
     /* Add Allow header */
     cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ALLOW, NULL);
     if (cap_hdr) {
-	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+	pjsip_msg_add_hdr(tdata->msg, 
+			  (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, cap_hdr));
     }
 
     /* Add Accept header */
     cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ACCEPT, NULL);
     if (cap_hdr) {
-	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+	pjsip_msg_add_hdr(tdata->msg, 
+			  (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, cap_hdr));
     }
 
     /* Add Supported header */
     cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_SUPPORTED, NULL);
     if (cap_hdr) {
-	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+	pjsip_msg_add_hdr(tdata->msg, 
+			  (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, cap_hdr));
     }
 
     /* Add Allow-Events header from the evsub module */
     cap_hdr = pjsip_evsub_get_allow_events_hdr(NULL);
     if (cap_hdr) {
-	pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, cap_hdr));
+	pjsip_msg_add_hdr(tdata->msg, 
+			  (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, cap_hdr));
     }
 
     /* Add User-Agent header */
@@ -1455,7 +1459,8 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
     pj_bzero(info, sizeof(*info));
 
     /* Make sure id is in range. */
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
+		     PJ_EINVAL);
 
     /* Make sure that transport exists */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
@@ -1523,7 +1528,8 @@ PJ_DEF(pj_status_t) pjsua_transport_set_enable( pjsua_transport_id id,
 						pj_bool_t enabled)
 {
     /* Make sure id is in range. */
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
+		     PJ_EINVAL);
 
     /* Make sure that transport exists */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
@@ -1546,7 +1552,8 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     pj_status_t status;
 
     /* Make sure id is in range. */
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.tpdata), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
+		     PJ_EINVAL);
 
     /* Make sure that transport exists */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
@@ -1639,7 +1646,7 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
     while (hdr && hdr != &msg_data->hdr_list) {
 	pjsip_hdr *new_hdr;
 
-	new_hdr = pjsip_hdr_clone(tdata->pool, hdr);
+	new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
 	pjsip_msg_add_hdr(tdata->msg, new_hdr);
 
 	hdr = hdr->next;
@@ -1671,7 +1678,7 @@ void pjsua_set_msg_route_set( pjsip_tx_data *tdata,
     while (r != route_set) {
 	pjsip_route_hdr *new_r;
 
-	new_r = pjsip_hdr_clone(tdata->pool, r);
+	new_r = (pjsip_route_hdr*) pjsip_hdr_clone(tdata->pool, r);
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)new_r);
 
 	r = r->next;
@@ -1718,7 +1725,7 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
     if (tp_id == PJSUA_INVALID_ID)
 	return;
 
-    pj_assert(tp_id >= 0 && tp_id < PJ_ARRAY_SIZE(pjsua_var.tpdata));
+    pj_assert(tp_id >= 0 && tp_id < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata));
     tpdata = &pjsua_var.tpdata[tp_id];
 
     flag = pjsip_transport_get_flag_from_type(tpdata->type);
@@ -1748,7 +1755,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pool = pj_pool_create(&pjsua_var.cp.factory, "check%p", 1024, 0, NULL);
     if (!pool) return -1;
 
-    url = pj_pool_alloc(pool, len+1);
+    url = (char*) pj_pool_alloc(pool, len+1);
     pj_ansi_strcpy(url, c_url);
 
     p = pjsip_parse_uri(pool, url, len, 0);

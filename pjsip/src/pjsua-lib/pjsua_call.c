@@ -203,14 +203,14 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     pjsip_inv_session *inv = NULL;
     pjsua_acc *acc;
     pjsua_call *call;
-    unsigned call_id;
+    int call_id = -1;
     pj_str_t contact;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
 
     /* Check that account is valid */
-    PJ_ASSERT_RETURN(acc_id>=0 || acc_id<PJ_ARRAY_SIZE(pjsua_var.acc), 
+    PJ_ASSERT_RETURN(acc_id>=0 || acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc), 
 		     PJ_EINVAL);
 
     /* Options must be zero for now */
@@ -230,12 +230,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Find free call slot. */
-    for (call_id=0; call_id<pjsua_var.ua_cfg.max_calls; ++call_id) {
+    for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
 	if (pjsua_var.calls[call_id].inv == NULL)
 	    break;
     }
 
-    if (call_id == pjsua_var.ua_cfg.max_calls) {
+    if (call_id == (int)pjsua_var.ua_cfg.max_calls) {
 	pjsua_perror(THIS_FILE, "Error making file", PJ_ETOOMANY);
 	PJSUA_UNLOCK();
 	return PJ_ETOOMANY;
@@ -507,7 +507,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pj_str_t st_text = { "OK", 2 };
 
 	/* Get the replaced call instance */
-	replaced_call = replaced_dlg->mod_data[pjsua_var.mod.id];
+	replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
 
 	/* Notify application */
 	pjsua_var.ua_cfg.cb.on_call_replace_request(replaced_call->index,
@@ -690,7 +690,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
 
 	/* Get the replaced call instance */
-	replaced_call = replaced_dlg->mod_data[pjsua_var.mod.id];
+	replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
 
 	/* Notify application */
 	if (pjsua_var.ua_cfg.cb.on_call_replaced)
@@ -1377,13 +1377,13 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
 		      dest_dlg->call_id->id.slen +
 		      dest_dlg->remote.info->tag.slen +
 		      dest_dlg->local.info->tag.slen + 32 
-		      < sizeof(str_dest_buf), PJSIP_EURITOOLONG);
+		      < (long)sizeof(str_dest_buf), PJSIP_EURITOOLONG);
 
     /* Print URI */
     str_dest_buf[0] = '<';
     str_dest.slen = 1;
 
-    uri = pjsip_uri_get_uri(dest_dlg->remote.info->uri);
+    uri = (pjsip_uri*) pjsip_uri_get_uri(dest_dlg->remote.info->uri);
     len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, uri, 
 		          str_dest_buf+1, sizeof(str_dest_buf)-1);
     if (len < 0)
@@ -1509,7 +1509,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Create IM data and attach to the request. */
-    im_data = pj_pool_zalloc(tdata->pool, sizeof(*im_data));
+    im_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsua_im_data);
     im_data->acc_id = call->acc_id;
     im_data->call_id = call_id;
     im_data->to = call->inv->dlg->remote.info_str;
@@ -1934,7 +1934,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
     PJSUA_LOCK();
 
-    call = inv->dlg->mod_data[pjsua_var.mod.id];
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (!call) {
 	PJSUA_UNLOCK();
@@ -2104,7 +2104,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     PJSUA_LOCK();
 
-    call = inv->dlg->mod_data[pjsua_var.mod.id];
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (status != PJ_SUCCESS) {
 
@@ -2231,7 +2231,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     PJSUA_LOCK();
 
-    call = inv->dlg->mod_data[pjsua_var.mod.id];
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /*
      * See if remote is offering active media (i.e. not on-hold)
@@ -2314,7 +2314,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	const pj_str_t REFER_SUB = { "Refer-Sub", 9 };
 	pjsua_call *call;
 
-	call = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+	call = (pjsua_call*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
 
 	/* Must be receipt of response message */
 	pj_assert(event->type == PJSIP_EVENT_TSX_STATE && 
@@ -2377,7 +2377,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	pj_bool_t cont;
 	pj_status_t status;
 
-	call = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+	call = (pjsua_call*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
 
 	/* When subscription is terminated, clear the xfer_sub member of 
 	 * the inv_data.
@@ -2421,7 +2421,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    }
 
 	    /* Try to parse the content */
-	    status = pjsip_parse_status_line(body->data, body->len, 
+	    status = pjsip_parse_status_line((char*)body->data, body->len, 
 					     &status_line);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(4,(THIS_FILE, 
@@ -2466,7 +2466,7 @@ static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
     if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
 	pjsua_call *call;
 
-	call = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+	call = (pjsua_call*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
 	if (!call)
 	    return;
 
@@ -2501,7 +2501,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
     pjsip_status_code code;
     pjsip_evsub *sub;
 
-    existing_call = inv->dlg->mod_data[pjsua_var.mod.id];
+    existing_call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /* Find the Refer-To header */
     refer_to = (pjsip_generic_string_hdr*)
@@ -2528,7 +2528,8 @@ static void on_call_transfered( pjsip_inv_session *inv,
     /* Find optional Referred-By header (to be copied onto outgoing INVITE
      * request.
      */
-    ref_by_hdr = pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_ref_by, 
+    ref_by_hdr = (pjsip_hdr*)
+		 pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_ref_by, 
 					    NULL);
 
     /* Notify callback */
@@ -2655,7 +2656,8 @@ static void on_call_transfered( pjsip_inv_session *inv,
      * to the outgoing INVITE request.
      */
     if (ref_by_hdr != NULL) {
-	pjsip_hdr *dup = pjsip_hdr_clone(rdata->tp_info.pool, ref_by_hdr);
+	pjsip_hdr *dup = (pjsip_hdr*)
+			 pjsip_hdr_clone(rdata->tp_info.pool, ref_by_hdr);
 	pj_list_push_back(&msg_data.hdr_list, dup);
     }
 
@@ -2710,7 +2712,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e)
 {
-    pjsua_call *call = inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     PJSUA_LOCK();
 
@@ -2772,7 +2774,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	if (tsx->status_code >= 200) {
 	    pjsua_im_data *im_data;
 
-	    im_data = tsx->mod_data[pjsua_var.mod.id];
+	    im_data = (pjsua_im_data*) tsx->mod_data[pjsua_var.mod.id];
 	    /* im_data can be NULL if this is typing indication */
 
 	    if (im_data && pjsua_var.ua_cfg.cb.on_pager_status) {

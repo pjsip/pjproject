@@ -285,7 +285,7 @@ static void tu_on_rx_data(pj_stun_usage *usage,
     
 
     if (client) {
-	status = pj_stun_msg_check(pkt, pkt_size, flags);
+	status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, flags);
 
 	if (status == PJ_SUCCESS) {
 	    /* Received STUN message */
@@ -1354,7 +1354,7 @@ static void client_on_read_complete(pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
-    client = pj_ioqueue_get_user_data(key);
+    client = (struct turn_client*) pj_ioqueue_get_user_data(key);
     
     /* Lock client */
     pj_mutex_lock(client->mutex);

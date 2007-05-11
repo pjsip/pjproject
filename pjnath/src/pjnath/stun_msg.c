@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/stun_msg.h>
+#include <pjnath/stun_auth.h>
 #include <pjnath/errno.h>
 #include <pjlib-util/crc32.h>
 #include <pjlib-util/hmac_sha1.h>

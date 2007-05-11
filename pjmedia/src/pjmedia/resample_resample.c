@@ -58,7 +58,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_resample && rate_in &&
 		     rate_out && samples_per_frame, PJ_EINVAL);
 
-    resample = pj_pool_alloc(pool, sizeof(pjmedia_resample));
+    resample = PJ_POOL_ALLOC_T(pool, pjmedia_resample);
     PJ_ASSERT_RETURN(resample, PJ_ENOMEM);
 
     PJ_UNUSED_ARG(channel_count);
@@ -88,7 +88,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 	resample->xoff = res_GetXOFF(resample->factor, (char)large_filter);
 
 	size = (samples_per_frame + 2*resample->xoff) * sizeof(pj_int16_t);
-	resample->buffer = pj_pool_alloc(pool, size);
+	resample->buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
 	PJ_ASSERT_RETURN(resample->buffer, PJ_ENOMEM);
 
 	pjmedia_zero_samples(resample->buffer, resample->xoff*2);

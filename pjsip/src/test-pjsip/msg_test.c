@@ -186,8 +186,8 @@ parse_msg:
     ref_msg = entry->creator(pool);
 
     /* Create buffer for comparison. */
-    str1.ptr = pj_pool_alloc(pool, BUFLEN);
-    str2.ptr = pj_pool_alloc(pool, BUFLEN);
+    str1.ptr = (char*)pj_pool_alloc(pool, BUFLEN);
+    str2.ptr = (char*)pj_pool_alloc(pool, BUFLEN);
 
     /* Compare message type. */
     if (parsed_msg->type != ref_msg->type) {
@@ -660,11 +660,11 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
     clen->len = 150;
 
     // Body
-    body = pj_pool_zalloc(pool, sizeof(*body));
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     msg->body = body;
     body->content_type.type = pj_str("application");
     body->content_type.subtype = pj_str("sdp");
-    body->data = 
+    body->data = (void*)
 	"v=0\r\n"
 	"o=alice 53655765 2353687637 IN IP4 pc33.atlanta.com\r\n"
 	"s=-\r\n"
@@ -672,7 +672,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 	"c=IN IP4 pc33.atlanta.com\r\n"
 	"m=audio 3456 RTP/AVP 0 1 3 99\r\n"
 	"a=rtpmap:0 PCMU/8000\r\n";
-    body->len = pj_native_strlen(body->data);
+    body->len = pj_native_strlen((const char*) body->data);
     body->print_body = &pjsip_print_text_body;
 
     return msg;
@@ -715,7 +715,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     zero.u64 = 0;
 
     for (loop=0; loop<LOOP; ++loop) {
-	for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(test_array); ++i) {
 	    pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
 	    status = test_entry( pool, &test_array[i] );
 	    pjsip_endpt_release_pool(endpt, pool);
@@ -1453,7 +1453,9 @@ static int hdr_test(void)
 	/* Parse the header */
 	hname = pj_str(test->hname);
 	len = strlen(test->hcontent);
-	parsed_hdr1 = pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+	parsed_hdr1 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, 
+						   test->hcontent, len, 
+						   &parsed_len);
 	if (parsed_hdr1 == NULL) {
 	    if (test->flags & HDR_FLAG_PARSE_FAIL) {
 		pj_pool_release(pool);
@@ -1475,7 +1477,7 @@ static int hdr_test(void)
 	if (test->hshort_name) {
 	    hname = pj_str(test->hshort_name);
 	    len = strlen(test->hcontent);
-	    parsed_hdr2 = pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+	    parsed_hdr2 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
 	    if (parsed_hdr2 == NULL) {
 		PJ_LOG(3,(THIS_FILE, "    error parsing header %s: %s", test->hshort_name, test->hcontent));
 		return -510;
@@ -1489,13 +1491,13 @@ static int hdr_test(void)
 	}
 
 	/* Print the original header */
-	input = pj_pool_alloc(pool, 1024);
+	input = (char*) pj_pool_alloc(pool, 1024);
 	len = pj_ansi_snprintf(input, 1024, "%s: %s", test->hname, test->hcontent);
 	if (len < 1 || len >= 1024)
 	    return -520;
 
 	/* Print the parsed header*/
-	output = pj_pool_alloc(pool, 1024);
+	output = (char*) pj_pool_alloc(pool, 1024);
 	len = pjsip_hdr_print_on(parsed_hdr1, output, 1024);
 	if (len < 1 || len >= 1024) {
 	    PJ_LOG(3,(THIS_FILE, "    header too long: %s: %s", test->hname, test->hcontent));

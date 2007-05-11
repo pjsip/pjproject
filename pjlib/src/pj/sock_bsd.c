@@ -385,7 +385,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
 {
     PJ_CHECK_STACK();
 
-    PJ_ASSERT_RETURN(addr && len >= sizeof(struct sockaddr_in), PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in), PJ_EINVAL);
 
     if (bind(sock, (struct sockaddr*)addr, len) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());

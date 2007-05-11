@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
     PJ_UNUSED_ARG(options);
     PJ_UNUSED_ARG(latency_ms);
 
-    ec = pj_pool_zalloc(pool, sizeof(struct echo_supp));
+    ec = PJ_POOL_ZALLOC_T(pool, struct echo_supp);
     ec->samples_per_frame = samples_per_frame;
     ec->tail_ms = tail_ms;
 
@@ -119,7 +119,7 @@ PJ_DEF(pj_status_t) echo_supp_destroy(void *state)
 PJ_DEF(pj_status_t) echo_supp_playback( void *state,
 					pj_int16_t *play_frm )
 {
-    echo_supp *ec = state;
+    echo_supp *ec = (echo_supp*) state;
     pj_bool_t silence;
     pj_bool_t last_suppressing = ec->suppressing;
 
@@ -149,7 +149,7 @@ PJ_DEF(pj_status_t) echo_supp_capture( void *state,
 				       pj_int16_t *rec_frm,
 				       unsigned options )
 {
-    echo_supp *ec = state;
+    echo_supp *ec = (echo_supp*) state;
     pj_time_val now;
     unsigned delay_ms;
 
@@ -185,7 +185,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 					   unsigned options,
 					   void *reserved )
 {
-    echo_supp *ec = state;
+    echo_supp *ec = (echo_supp*) state;
     pj_bool_t silence;
 
     PJ_UNUSED_ARG(options);

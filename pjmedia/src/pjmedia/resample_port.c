@@ -69,7 +69,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
 	    dn_port->info.clock_rate;
     
     /* Create and initialize port. */
-    rport = pj_pool_zalloc(pool, sizeof(struct resample_port));
+    rport = PJ_POOL_ZALLOC_T(pool, struct resample_port);
     PJ_ASSERT_RETURN(rport != NULL, PJ_ENOMEM);
 
     pjmedia_port_info_init(&rport->base.info, &name, SIGNATURE, clock_rate,
@@ -84,10 +84,12 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
      * We need separate buffer for get_frame() and put_frame() since
      * both functions may run simultaneously.
      */
-    rport->get_buf = pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
+    rport->get_buf = (pj_int16_t*)
+		     pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
     PJ_ASSERT_RETURN(rport->get_buf != NULL, PJ_ENOMEM);
 
-    rport->put_buf = pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
+    rport->put_buf = (pj_int16_t*)
+		     pj_pool_alloc(pool, dn_port->info.bytes_per_frame);
     PJ_ASSERT_RETURN(rport->put_buf != NULL, PJ_ENOMEM);
 
 
@@ -139,7 +141,8 @@ static pj_status_t resample_put_frame(pjmedia_port *this_port,
     }
 
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-	pjmedia_resample_run( rport->resample_put, frame->buf, 
+	pjmedia_resample_run( rport->resample_put, 
+			      (const pj_int16_t*) frame->buf, 
 			      rport->put_buf);
 
 	downstream_frame.buf = rport->put_buf;
@@ -188,7 +191,9 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
 	return PJ_SUCCESS;
     }
 
-    pjmedia_resample_run( rport->resample_get, tmp_frame.buf, frame->buf);
+    pjmedia_resample_run( rport->resample_get, 
+			  (const pj_int16_t*) tmp_frame.buf, 
+			  (pj_int16_t*) frame->buf);
 
     frame->size = rport->base.info.bytes_per_frame;
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;

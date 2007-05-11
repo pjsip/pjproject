@@ -96,8 +96,8 @@ static int stricmp_test(void)
  */
 #define STRTEST(res,S1,S2,code)	\
 	    do { \
-		s1.ptr=S1; s1.slen=S1?len:0; \
-		s2.ptr=S2; s2.slen=S2?len:0; \
+		s1.ptr=S1; s1.slen=(S1)?len:0; \
+		s2.ptr=S2; s2.slen=(S2)?len:0; \
 		pj_get_timestamp(&t1); \
 	        if (C(pj_stricmp(&s1,&s2),res)) return code; \
 		pj_get_timestamp(&t2); \
@@ -123,12 +123,14 @@ static int stricmp_test(void)
 
     pj_thread_sleep(0);
 
+#define SNULL 0
+
     /* Compare empty strings. */
     len=0;
     STRTEST( 0, "","",-500);
-    STRTEST( 0, NULL,"",-502);
-    STRTEST( 0, "",NULL,-504);
-    STRTEST( 0, NULL,NULL,-506);
+    STRTEST( 0, SNULL,"",-502);
+    STRTEST( 0, "",SNULL,-504);
+    STRTEST( 0, SNULL,SNULL,-506);
     STRTEST( 0, "hello","world",-508);
 
     /* equal, length=1 
@@ -139,8 +141,8 @@ static int stricmp_test(void)
     STRTEST( 0, "a",buf+0,-510);
     STRTEST( 0, "a",buf+1,-512);
     STRTEST( -1, "O", "P", -514);
-    STRTEST(-1, NULL, "a", -516);
-    STRTEST(1, "a", NULL, -518);
+    STRTEST(-1, SNULL, "a", -516);
+    STRTEST(1, "a", SNULL, -518);
 
     /* equal, length=2 
      * use buffer to simulate non-aligned string.
@@ -266,19 +268,19 @@ static int strcmp_test(void)
     /* Test with length == 0 */
     len=0;
     STR_TEST(0, "", "", -400);
-    STR_TEST(0, NULL, "", -405);
-    STR_TEST(0, "", NULL, -410);
-    STR_TEST(0, NULL, NULL, -415);
+    STR_TEST(0, SNULL, "", -405);
+    STR_TEST(0, "", SNULL, -410);
+    STR_TEST(0, SNULL, SNULL, -415);
     STR_TEST(0, "hello", "", -420);
-    STR_TEST(0, "hello", NULL, -425);
+    STR_TEST(0, "hello", SNULL, -425);
 
     /* Test with length != 0 */
     len = 2;
     STR_TEST(0, "12", "12", -430);
     STR_TEST(1, "12", "1", -435);
     STR_TEST(-1, "1", "12", -440);
-    STR_TEST(-1, NULL, "12", -445);
-    STR_TEST(1, "12", NULL, -450);
+    STR_TEST(-1, SNULL, "12", -445);
+    STR_TEST(1, "12", SNULL, -450);
 
     return 0;
 
@@ -295,7 +297,7 @@ int string_test(void)
     pj_pool_t *pool;
     int i;
 
-    pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
+    pool = pj_pool_create(mem, SNULL, 4096, 0, SNULL);
     if (!pool) return -5;
     
     /* 
@@ -367,7 +369,7 @@ int string_test(void)
      */
     s5 = pj_str("123456");
 
-    pj_strtoul2(&s5, NULL, 10);	/* Crash test */
+    pj_strtoul2(&s5, SNULL, 10);	/* Crash test */
 
     if (pj_strtoul2(&s5, &s4, 10) != 123456UL)
 	return -290;
@@ -381,7 +383,7 @@ int string_test(void)
 	return -293;
     if (s4.slen != 4)
 	return -294;
-    if (s4.ptr == NULL || *s4.ptr != 'A')
+    if (s4.ptr == SNULL || *s4.ptr != 'A')
 	return -295;
     if (pj_strtoul2(&s5, &s4, 16) != 0x123ABCDUL)
 	return -296;

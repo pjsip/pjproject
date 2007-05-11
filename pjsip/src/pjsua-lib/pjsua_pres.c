@@ -37,7 +37,7 @@ PJ_DEF(unsigned) pjsua_get_buddy_count(void)
  */
 PJ_DEF(pj_bool_t) pjsua_buddy_is_valid(pjsua_buddy_id buddy_id)
 {
-    return buddy_id>=0 && buddy_id<PJ_ARRAY_SIZE(pjsua_var.buddy) &&
+    return buddy_id>=0 && buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy) &&
 	   pjsua_var.buddy[buddy_id].uri.slen != 0;
 }
 
@@ -152,7 +152,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     PJSUA_LOCK();
 
     /* Find empty slot */
-    for (index=0; index<PJ_ARRAY_SIZE(pjsua_var.buddy); ++index) {
+    for (index=0; index<(int)PJ_ARRAY_SIZE(pjsua_var.buddy); ++index) {
 	if (pjsua_var.buddy[index].uri.slen == 0)
 	    break;
     }
@@ -423,7 +423,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
 
     PJSUA_LOCK();
 
-    uapres = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    uapres = (pjsua_srv_pres*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (uapres) {
 	PJ_LOG(3,(THIS_FILE, "Server subscription to %s is %s",
 		  uapres->remote, pjsip_evsub_get_state_name(sub)));
@@ -516,9 +516,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Attach our data to the subscription: */
-    uapres = pj_pool_alloc(dlg->pool, sizeof(pjsua_srv_pres));
+    uapres = PJ_POOL_ALLOC_T(dlg->pool, pjsua_srv_pres);
     uapres->sub = sub;
-    uapres->remote = pj_pool_alloc(dlg->pool, PJSIP_MAX_URL_SIZE);
+    uapres->remote = (char*) pj_pool_alloc(dlg->pool, PJSIP_MAX_URL_SIZE);
     status = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, dlg->remote.info->uri,
 			     uapres->remote, PJSIP_MAX_URL_SIZE);
     if (status < 1)
@@ -585,7 +585,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
  */
 static void publish_cb(struct pjsip_publishc_cbparam *param)
 {
-    pjsua_acc *acc = param->token;
+    pjsua_acc *acc = (pjsua_acc*) param->token;
 
     if (param->code/100 != 2 || param->status != PJ_SUCCESS) {
 	if (param->status != PJ_SUCCESS) {
@@ -855,7 +855,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 
     PJSUA_LOCK();
 
-    buddy = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (buddy) {
 	PJ_LOG(3,(THIS_FILE, 
 		  "Presence subscription to %.*s is %s",
@@ -888,7 +888,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
 
     PJSUA_LOCK();
 
-    buddy = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (!buddy) {
 	PJSUA_UNLOCK();
 	return;
@@ -914,14 +914,16 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
     }
 
     /* Find contact header. */
-    contact_hdr = pjsip_msg_find_hdr(event->body.rx_msg.rdata->msg_info.msg,
+    contact_hdr = (pjsip_contact_hdr*)
+		  pjsip_msg_find_hdr(event->body.rx_msg.rdata->msg_info.msg,
 				     PJSIP_H_CONTACT, NULL);
     if (!contact_hdr) {
 	PJSUA_UNLOCK();
 	return;
     }
 
-    buddy->contact.ptr = pj_pool_alloc(pjsua_var.pool, PJSIP_MAX_URL_SIZE);
+    buddy->contact.ptr = (char*)
+			 pj_pool_alloc(pjsua_var.pool, PJSIP_MAX_URL_SIZE);
     buddy->contact.slen = pjsip_uri_print( PJSIP_URI_IN_CONTACT_HDR,
 					   contact_hdr->uri,
 					   buddy->contact.ptr, 
@@ -945,7 +947,7 @@ static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub,
 
     PJSUA_LOCK();
 
-    buddy = pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (buddy) {
 	/* Update our info. */
 	pjsip_pres_get_status(sub, &buddy->status);

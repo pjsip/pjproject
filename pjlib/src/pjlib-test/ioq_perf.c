@@ -505,7 +505,7 @@ int ioqueue_perf_test(void)
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
 
     best_bandwidth = 0;
-    for (i=0; i<sizeof(test_param)/sizeof(test_param[0]); ++i) {
+    for (i=0; i<(int)(sizeof(test_param)/sizeof(test_param[0])); ++i) {
         pj_size_t bandwidth;
 
         rc = perform_test(test_param[i].type, 

@@ -75,7 +75,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
 
-    port = pj_pool_zalloc(pool, sizeof(struct mem_player));
+    port = PJ_POOL_ZALLOC_T(pool, struct mem_player);
     PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
 
     /* Create the port */

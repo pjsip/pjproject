@@ -193,7 +193,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
                      sizeof(union operation_key), PJ_EBUG);
 
     /* Create and init common ioqueue stuffs */
-    ioqueue = pj_pool_alloc(pool, sizeof(pj_ioqueue_t));
+    ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
     ioqueue_init(ioqueue);
 
     ioqueue->max = max_fd;
@@ -230,7 +230,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     for (i=0; i<max_fd; ++i) {
 	pj_ioqueue_key_t *key;
 
-	key = pj_pool_alloc(pool, sizeof(pj_ioqueue_key_t));
+	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
 	key->ref_count = 0;
 	rc = pj_mutex_create_recursive(pool, NULL, &key->mutex);
 	if (rc != PJ_SUCCESS) {

@@ -208,7 +208,7 @@ static void send_response_timer( pj_timer_heap_t *timer_heap,
 				 struct pj_timer_entry *entry)
 {
     pjsip_transaction *tsx;
-    struct response *r = entry->user_data;
+    struct response *r = (struct response*) entry->user_data;
     pj_status_t status;
 
     tsx = pjsip_tsx_layer_find_tsx(&r->tsx_key, PJ_TRUE);
@@ -276,7 +276,7 @@ static void schedule_send_response( pjsip_rx_data *rdata,
 	return;
     }
 
-    r = pj_pool_alloc(tdata->pool, sizeof(*r));
+    r = PJ_POOL_ALLOC_T(tdata->pool, struct response);
     pj_strdup(tdata->pool, &r->tsx_key, tsx_key);
     r->tdata = tdata;
 
@@ -284,7 +284,7 @@ static void schedule_send_response( pjsip_rx_data *rdata,
     delay.msec = msec_delay;
     pj_time_val_normalize(&delay);
 
-    t = pj_pool_zalloc(tdata->pool, sizeof(*t));
+    t = PJ_POOL_ZALLOC_T(tdata->pool, pj_timer_entry);
     t->user_data = r;
     t->cb = &send_response_timer;
 
@@ -1096,7 +1096,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		uri=(pjsip_sip_uri*)pjsip_uri_get_uri(tdata->msg->line.req.uri);
 		uri->transport_param = pj_str("loop-dgram");
 
-		via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+		via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 		via->branch_param = pj_str(TEST9_BRANCH_ID);
 
 		status = pjsip_endpt_send_request_stateless(endpt, tdata,
@@ -1197,7 +1197,7 @@ static int perform_test( char *target_uri, char *from_uri,
     }
 
     /* Set the branch param for test 1. */
-    via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->branch_param = pj_str(branch_param);
 
     /* Schedule first send. */
@@ -1471,7 +1471,7 @@ static int tsx_transport_failure_test(void)
     };
     int i, status;
 
-    for (i=0; i<PJ_ARRAY_SIZE(tests); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(tests); ++i) {
 	pj_time_val fail_time, end_test, now;
 
 	PJ_LOG(3,(THIS_FILE, "  %s", tests[i].title));
@@ -1532,7 +1532,7 @@ int tsx_uas_test(struct tsx_test_param *param)
     pj_status_t status;
 
     test_param = param;
-    tp_flag = pjsip_transport_get_flag_from_type(param->type);
+    tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)param->type);
 
     pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
 		    param->port, param->tp_type);

@@ -68,7 +68,7 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_sd, PJ_EINVAL);
 
-    sd = pj_pool_zalloc(pool, sizeof(struct pjmedia_silence_det));
+    sd = PJ_POOL_ZALLOC_T(pool, pjmedia_silence_det);
 
     pj_ansi_strncpy(sd->objname, THIS_FILE, PJ_MAX_OBJ_NAME);
     sd->objname[PJ_MAX_OBJ_NAME-1] = '\0';

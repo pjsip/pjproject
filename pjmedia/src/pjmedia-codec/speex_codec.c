@@ -481,8 +481,7 @@ static pj_status_t spx_alloc_codec( pjmedia_codec_factory *factory,
 	codec = spx_factory.codec_list.next;
 	pj_list_erase(codec);
     } else {
-	codec = pj_pool_zalloc(spx_factory.pool, 
-			       sizeof(pjmedia_codec));
+	codec = PJ_POOL_ZALLOC_T(spx_factory.pool, pjmedia_codec);
 	PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
 	codec->op = &spx_op;
 	codec->factory = factory;
@@ -736,7 +735,8 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
     speex_bits_reset(&spx->enc_bits);
 
     /* Encode the frame */
-    tx = speex_encode_int(spx->enc, input->buf, &spx->enc_bits);
+    tx = speex_encode_int(spx->enc, (spx_int16_t*)input->buf, 
+			  &spx->enc_bits);
 
     /* Check if we need not to transmit the frame (DTX) */
     if (tx == 0) {
@@ -753,7 +753,7 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 
     /* Copy the bits to an array of char that can be written */
     output->size = speex_bits_write(&spx->enc_bits, 
-				    output->buf, output_buf_len);
+				    (char*)output->buf, output_buf_len);
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 
@@ -781,14 +781,14 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     }
 
     /* Copy the data into the bit-stream struct */
-    speex_bits_read_from(&spx->dec_bits, input->buf, input->size);
+    speex_bits_read_from(&spx->dec_bits, (char*)input->buf, input->size);
 
     /* Decode the data */
-    speex_decode_int(spx->dec, &spx->dec_bits, output->buf);
+    speex_decode_int(spx->dec, &spx->dec_bits, (spx_int16_t*)output->buf);
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = speex_bits_nbytes(&spx->dec_bits);
-    pj_assert(output->size <= (int)output_buf_len);
+    pj_assert(output->size <= (unsigned)output_buf_len);
     output->timestamp.u64 = input->timestamp.u64;
 
 
@@ -814,7 +814,7 @@ static pj_status_t  spx_codec_recover(pjmedia_codec *codec,
     pj_assert(count <= output_buf_len/2);
 
     /* Recover packet loss */
-    speex_decode_int(spx->dec, NULL, output->buf);
+    speex_decode_int(spx->dec, NULL, (spx_int16_t*) output->buf);
 
     output->size = count * 2;
 

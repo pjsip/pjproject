@@ -249,7 +249,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
     pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
 
-    buffer = pj_pool_alloc(pool, MAXLEN);
+    buffer = (char*) pj_pool_alloc(pool, MAXLEN);
 
     /* Create ice-ufrag attribute */
     attr = pjmedia_sdp_attr_create(pool, "ice-ufrag", 

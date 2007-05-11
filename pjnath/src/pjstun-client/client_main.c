@@ -27,7 +27,7 @@
 #define LIFETIME	600		    /* -1 to disable */
 #define REQ_TRANSPORT	-1		    /* 0: udp, 1: tcp, -1: disable */
 #define REQ_PORT_PROPS	-1		    /* -1 to disable */
-#define REQ_IP		NULL		    /* IP address string */
+#define REQ_IP		0		    /* IP address string */
 
 //#define OPTIONS		PJ_STUN_NO_AUTHENTICATE
 #define OPTIONS		0
@@ -354,7 +354,7 @@ static void send_allocate_request(pj_bool_t allocate)
 				      PJ_STUN_ATTR_REQ_PORT_PROPS, REQ_PORT_PROPS);
 	}
 
-	if (REQ_IP != NULL) {
+	if (REQ_IP) {
 	    pj_sockaddr_in addr;
 	    pj_str_t tmp;
 

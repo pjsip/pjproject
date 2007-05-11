@@ -57,12 +57,12 @@ static struct pjsip_module mod_presence =
 /*
  * Presence message body type.
  */
-typedef enum content_type
+typedef enum content_type_e
 {
     CONTENT_TYPE_NONE,
     CONTENT_TYPE_PIDF,
     CONTENT_TYPE_XPIDF,
-} content_type;
+} content_type_e;
 
 /*
  * This structure describe a presentity, for both subscriber and notifier.
@@ -71,7 +71,7 @@ struct pjsip_pres
 {
     pjsip_evsub		*sub;		/**< Event subscribtion record.	    */
     pjsip_dialog	*dlg;		/**< The dialog.		    */
-    content_type	 content_type;	/**< Content-Type.		    */
+    content_type_e	 content_type;	/**< Content-Type.		    */
     pjsip_pres_status	 status;	/**< Presence status.		    */
     pjsip_pres_status	 tmp_status;	/**< Temp, before NOTIFY is answred.*/
     pjsip_evsub_user	 user_cb;	/**< The user callback.		    */
@@ -226,7 +226,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
     pjsip_event_hdr *event;
     pjsip_expires_hdr *expires_hdr;
     unsigned expires;
-    content_type content_type = CONTENT_TYPE_NONE;
+    content_type_e content_type = CONTENT_TYPE_NONE;
     pjsip_evsub *sub;
     pjsip_pres *pres;
     pj_status_t status;

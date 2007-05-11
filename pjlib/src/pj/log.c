@@ -146,7 +146,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 				     "<logging error: msg too long>");
     }
     len = len + print_len;
-    if (len > 0 && len < sizeof(log_buffer)-2) {
+    if (len > 0 && len < (int)sizeof(log_buffer)-2) {
 	if (log_decor & PJ_LOG_HAS_CR) {
 	    log_buffer[len++] = '\r';
 	}

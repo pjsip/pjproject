@@ -53,7 +53,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 					      NULL);
 
     /* Create transaction array */
-    tsx = pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;
@@ -130,10 +130,10 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pj_bzero(&rdata, sizeof(pjsip_rx_data));
     rdata.tp_info.pool = request->pool;
     rdata.msg_info.msg = request->msg;
-    rdata.msg_info.from = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
-    rdata.msg_info.to = pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
-    rdata.msg_info.cseq = pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.from = (pjsip_from_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.to = (pjsip_to_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
+    rdata.msg_info.cseq = (pjsip_cseq_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.via = via;
     
     pj_sockaddr_in_init(&remote, 0, 0);
@@ -147,7 +147,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
 
     /* Create transaction array */
-    tsx = pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
+    tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pj_pool_t*));
 
     pj_bzero(&mod_tsx_user, sizeof(mod_tsx_user));
     mod_tsx_user.id = -1;

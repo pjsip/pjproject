@@ -59,7 +59,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 		     PJ_EINVAL);
 
     /* Create the port and the AEC itself */
-    ec = pj_pool_zalloc(pool, sizeof(struct ec));
+    ec = PJ_POOL_ZALLOC_T(pool, struct ec);
     
     pjmedia_port_info_init(&ec->base.info, &AEC, SIGNATURE,
 			   dn_port->info.clock_rate, 
@@ -100,7 +100,7 @@ static pj_status_t ec_put_frame( pjmedia_port *this_port,
     PJ_ASSERT_RETURN(frame->size == this_port->info.samples_per_frame * 2,
 		     PJ_EINVAL);
 
-    pjmedia_echo_capture(ec->ec, frame->buf, 0);
+    pjmedia_echo_capture(ec->ec, (pj_int16_t*)frame->buf, 0);
 
     return pjmedia_port_put_frame(ec->dn_port, frame);
 }
@@ -116,10 +116,11 @@ static pj_status_t ec_get_frame( pjmedia_port *this_port,
 
     status = pjmedia_port_get_frame(ec->dn_port, frame);
     if (status!=PJ_SUCCESS || frame->type!=PJMEDIA_FRAME_TYPE_AUDIO) {
-	pjmedia_zero_samples(frame->buf, this_port->info.samples_per_frame);
+	pjmedia_zero_samples((pj_int16_t*)frame->buf, 
+			     this_port->info.samples_per_frame);
     }
 
-    pjmedia_echo_playback(ec->ec, frame->buf);
+    pjmedia_echo_playback(ec->ec, (pj_int16_t*)frame->buf);
 
     return status;
 }

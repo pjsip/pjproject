@@ -560,7 +560,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	rt_test_data[i].timeout_timer.cb = &rt_timeout_timer;
 
 	/* Generate Call-ID for each thread. */
-	rt_test_data[i].call_id.ptr = pj_pool_alloc(pool, rt_call_id.slen+1);
+	rt_test_data[i].call_id.ptr = (char*) pj_pool_alloc(pool, rt_call_id.slen+1);
 	pj_strcpy(&rt_test_data[i].call_id, &rt_call_id);
 	buf[0] = '0' + i;
 	pj_strcat(&rt_test_data[i].call_id, &str_id);

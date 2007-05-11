@@ -364,7 +364,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	    if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_PROCEEDING) {
 		PJ_LOG(3,(THIS_FILE, 
 			  "    error: prev state is %s instead of %s",
-			  pjsip_tsx_state_str(e->body.tsx_state.prev_state),
+			  pjsip_tsx_state_str((pjsip_tsx_state_e)e->body.tsx_state.prev_state),
 			  pjsip_tsx_state_str(PJSIP_TSX_STATE_PROCEEDING)));
 		test_complete = -739;
 	    }
@@ -547,7 +547,7 @@ struct response
 static void send_response_callback( pj_timer_heap_t *timer_heap,
 				    struct pj_timer_entry *entry)
 {
-    struct response *r = entry->user_data;
+    struct response *r = (struct response*) entry->user_data;
     pjsip_transport *tp = r->res_addr.transport;
 
     pjsip_endpt_send_response(endpt, &r->res_addr, r->tdata, NULL, NULL);
@@ -759,7 +759,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	pj_assert(status == PJ_SUCCESS);
 
 	/* Schedule sending final response in couple of of secs. */
-	r = pj_pool_alloc(tdata->pool, sizeof(*r));
+	r = PJ_POOL_ALLOC_T(tdata->pool, struct response);
 	r->res_addr = res_addr;
 	r->tdata = tdata;
 	if (r->res_addr.transport)
@@ -880,7 +880,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	    pj_assert(status == PJ_SUCCESS);
 
 	    /* Schedule sending final response in couple of of secs. */
-	    r = pj_pool_alloc(tdata->pool, sizeof(*r));
+	    r = PJ_POOL_ALLOC_T(tdata->pool, struct response);
 	    r->res_addr = res_addr;
 	    r->tdata = tdata;
 	    if (r->res_addr.transport)
@@ -968,7 +968,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
     }
 
     /* Set the branch param for test 1. */
-    via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->branch_param = pj_str(branch_param);
 
     /* Add additional reference to tdata to prevent transaction from
@@ -1097,7 +1097,7 @@ static int tsx_uac_retransmit_test(void)
      */
     enabled = msg_logger_set_enabled(0);
 
-    for (i=0; i<PJ_ARRAY_SIZE(sub_test); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(sub_test); ++i) {
 
 	PJ_LOG(3,(THIS_FILE, 
 		  "   variant %c: %s with %d ms network delay",
@@ -1231,7 +1231,7 @@ static int tsx_retransmit_fail_test(void)
 	      "  test4: transport fails after several retransmissions test"));
 
 
-    for (i=0; i<PJ_ARRAY_SIZE(delay); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(delay); ++i) {
 
 	PJ_LOG(3,(THIS_FILE, 
 		  "   variant %c: transport delay %d ms", ('a'+i), delay[i]));
@@ -1302,7 +1302,7 @@ static int perform_generic_test( const char *title,
     PJ_LOG(3,(THIS_FILE, "  %s", title));
 
     /* Do the test. */
-    for (i=0; i<PJ_ARRAY_SIZE(delay); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(delay); ++i) {
 	
 	if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
 	    PJ_LOG(3,(THIS_FILE, "   variant %c: with %d ms transport delay",
@@ -1343,7 +1343,7 @@ int tsx_uac_test(struct tsx_test_param *param)
     test_param = param;
 
     /* Get transport flag */
-    tp_flag = pjsip_transport_get_flag_from_type(test_param->type);
+    tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)test_param->type);
 
     pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
 		    param->port, param->tp_type);

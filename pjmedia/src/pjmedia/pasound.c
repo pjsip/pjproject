@@ -84,7 +84,7 @@ static int PaRecorderCallback(const void *input,
 			      PaStreamCallbackFlags statusFlags,
 			      void *userData )
 {
-    pjmedia_snd_stream *stream = userData;
+    pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
     pj_status_t status;
 
     PJ_UNUSED_ARG(output);
@@ -130,7 +130,7 @@ static int PaPlayerCallback( const void *input,
 			     PaStreamCallbackFlags statusFlags,
 			     void *userData )
 {
-    pjmedia_snd_stream *stream = userData;
+    pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
     pj_status_t status;
     unsigned size = frameCount * stream->bytes_per_sample *
 		    stream->channel_count;
@@ -388,7 +388,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = pj_pool_zalloc(pool, sizeof(*stream));
+    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE;
@@ -484,7 +484,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = pj_pool_calloc(pool, 1, sizeof(*stream));
+    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = stream->dir = PJMEDIA_DIR_PLAYBACK;
@@ -604,7 +604,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = pj_pool_zalloc(pool, sizeof(*stream));
+    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paRecDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;

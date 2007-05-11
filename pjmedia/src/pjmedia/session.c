@@ -421,7 +421,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
   
     /* Now that we have codec info, get the codec param. */
-    si->param = pj_pool_alloc(pool, sizeof(*si->param));
+    si->param = PJ_POOL_ALLOC_T(pool, pjmedia_codec_param);
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt, si->param);
     if (status != PJ_SUCCESS)
 	return status;
@@ -532,7 +532,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 				      PJMEDIA_SESSION_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    session = pj_pool_zalloc(pool, sizeof(pjmedia_session));
+    session = PJ_POOL_ZALLOC_T(pool, pjmedia_session);
     session->pool = pool;
     session->endpt = endpt;
     session->stream_cnt = si->stream_cnt;

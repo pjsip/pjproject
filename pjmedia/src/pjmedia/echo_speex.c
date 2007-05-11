@@ -77,7 +77,7 @@ PJ_DEF(pj_status_t) pjmedia_frame_queue_create( pj_pool_t *pool,
     pjmedia_frame_queue *fq;
     unsigned i;
 
-    fq = pj_pool_zalloc(pool, sizeof(pjmedia_frame_queue));
+    fq = PJ_POOL_ZALLOC_T(pool, pjmedia_frame_queue);
 
     pj_ansi_snprintf(fq->obj_name, sizeof(fq->obj_name), name, fq);
     fq->obj_name[sizeof(fq->obj_name)-1] = '\0';
@@ -93,7 +93,7 @@ PJ_DEF(pj_status_t) pjmedia_frame_queue_create( pj_pool_t *pool,
     for (i=0; i<max_count; ++i) {
 	struct fq_frame *f;
 
-	f = pj_pool_zalloc(pool, sizeof(struct fq_frame));
+	f = PJ_POOL_ZALLOC_T(pool, struct fq_frame);
 	f->buf = pj_pool_alloc(pool, frame_size);
 
 	pj_list_push_back(&fq->free_list, f);
@@ -294,7 +294,7 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 
     *p_echo = NULL;
 
-    echo = pj_pool_zalloc(pool, sizeof(speex_ec));
+    echo = PJ_POOL_ZALLOC_T(pool, speex_ec);
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
 
     if (options & PJMEDIA_ECHO_NO_LOCK) {
@@ -355,11 +355,12 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 
 
     /* Create temporary frame for echo cancellation */
-    echo->tmp_frame = pj_pool_zalloc(pool, 2 * samples_per_frame);
+    echo->tmp_frame = (pj_int16_t*) pj_pool_zalloc(pool, 2 * samples_per_frame);
     PJ_ASSERT_RETURN(echo->tmp_frame != NULL, PJ_ENOMEM);
 
     /* Create temporary frame to receive residue */
-    echo->residue = pj_pool_zalloc(pool, sizeof(spx_int32_t) * 
+    echo->residue = (spx_int32_t*)
+		    pj_pool_zalloc(pool, sizeof(spx_int32_t) * 
 					    (samples_per_frame+1));
     PJ_ASSERT_RETURN(echo->residue != NULL, PJ_ENOMEM);
 
@@ -391,7 +392,7 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) speex_aec_destroy(void *state )
 {
-    speex_ec *echo = state;
+    speex_ec *echo = (speex_ec*) state;
 
     PJ_ASSERT_RETURN(echo && echo->state, PJ_EINVAL);
 
@@ -423,7 +424,7 @@ PJ_DEF(pj_status_t) speex_aec_destroy(void *state )
 PJ_DEF(pj_status_t) speex_aec_playback(void *state,
 				       pj_int16_t *play_frm )
 {
-    speex_ec *echo = state;
+    speex_ec *echo = (speex_ec*) state;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && play_frm, PJ_EINVAL);
@@ -481,7 +482,7 @@ PJ_DEF(pj_status_t) speex_aec_capture( void *state,
 				       pj_int16_t *rec_frm,
 				       unsigned options )
 {
-    speex_ec *echo = state;
+    speex_ec *echo = (speex_ec*) state;
     pj_status_t status = PJ_SUCCESS;
 
     /* Sanity checks */
@@ -551,7 +552,7 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
 					   unsigned options,
 					   void *reserved )
 {
-    speex_ec *echo = state;
+    speex_ec *echo = (speex_ec*) state;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm && options==0 &&

@@ -126,7 +126,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     if (!pool)
 	return PJ_ENOMEM;
 
-    endpt = pj_pool_zalloc(pool, sizeof(struct pjmedia_endpt));
+    endpt = PJ_POOL_ZALLOC_T(pool, struct pjmedia_endpt);
     endpt->pool = pool;
     endpt->pf = pf;
     endpt->ioqueue = ioqueue;
@@ -246,7 +246,7 @@ PJ_DEF(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt)
  */
 static int PJ_THREAD_FUNC worker_proc(void *arg)
 {
-    pjmedia_endpt *endpt = arg;
+    pjmedia_endpt *endpt = (pjmedia_endpt*) arg;
 
     while (!endpt->quit_flag) {
 	pj_time_val timeout = { 0, 500 };
@@ -293,7 +293,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 		     PJ_ETOOMANY);
 
     /* Create and initialize basic SDP session */
-    sdp = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_session));
+    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
 
     pj_gettimeofday(&tv);
     sdp->origin.user = pj_str("-");
@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Since we only support one media stream at present, put the
      * SDP connection line in the session level.
      */
-    sdp->conn = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_conn));
+    sdp->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
     sdp->conn->net_type = STR_IN;
     sdp->conn->addr_type = STR_IP4;
     pj_strdup2(pool, &sdp->conn->addr, 
@@ -321,7 +321,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Create media stream 0: */
 
     sdp->media_count = 1;
-    m = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_media));
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
     sdp->media[0] = m;
 
     /* Standard media info: */
@@ -337,9 +337,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Add "rtcp" attribute */
 #if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
     if (sock_info->rtcp_addr_name.sin_family != 0) {
-	attr = pj_pool_alloc(pool, sizeof(pjmedia_sdp_attr));
+	attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
 	attr->name = pj_str("rtcp");
-	attr->value.ptr = pj_pool_alloc(pool, 80);
+	attr->value.ptr = (char*) pj_pool_alloc(pool, 80);
 	attr->value.slen = 
 	    pj_ansi_snprintf(attr->value.ptr, 80,
 			    "%u IN IP4 %s",
@@ -367,7 +367,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 					    &codec_param);
 	fmt = &m->desc.fmt[m->desc.fmt_count++];
 
-	fmt->ptr = pj_pool_alloc(pool, 8);
+	fmt->ptr = (char*) pj_pool_alloc(pool, 8);
 	fmt->slen = pj_utoa(codec_info->pt, fmt->ptr);
 
 	rtpmap.pt = *fmt;
@@ -399,10 +399,10 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	/* Add fmtp mode where applicable */
 	if (codec_param.setting.dec_fmtp_mode != 0) {
 	    const pj_str_t fmtp = { "fmtp", 4 };
-	    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
 
 	    attr->name = fmtp;
-	    attr->value.ptr = pj_pool_alloc(pool, 32);
+	    attr->value.ptr = (char*) pj_pool_alloc(pool, 32);
 	    attr->value.slen = 
 		pj_ansi_snprintf( attr->value.ptr, 32,
 				  "%d mode=%d",
@@ -413,7 +413,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     }
 
     /* Add sendrecv attribute. */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = STR_SENDRECV;
     m->attr[m->attr_count++] = attr;
 
@@ -427,14 +427,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
 
     /* Add rtpmap. */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("rtpmap");
     attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR 
 			 " telephone-event/8000");
     m->attr[m->attr_count++] = attr;
 
     /* Add fmtp */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("fmtp");
     attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
     m->attr[m->attr_count++] = attr;

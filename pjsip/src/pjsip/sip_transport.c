@@ -97,7 +97,7 @@ struct transport_key
 /*
  * Transport names.
  */
-struct
+struct transport_names_t
 {
     pjsip_transport_type_e type;
     pj_uint16_t		   port;
@@ -216,7 +216,7 @@ pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
 		     PJSIP_TRANSPORT_UDP, 0);
 
     /* Check that argument is valid. */
-    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 0);
+    PJ_ASSERT_RETURN((unsigned)type < PJ_ARRAY_SIZE(transport_names), 0);
 
     /* Return transport flag. */
     return transport_names[type].flag;
@@ -235,7 +235,7 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
 		     PJSIP_TRANSPORT_UDP, 0);
 
     /* Check that argument is valid. */
-    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), 5060);
+    PJ_ASSERT_RETURN((unsigned)type < PJ_ARRAY_SIZE(transport_names), 5060);
 
     /* Return the port. */
     return transport_names[type].port;
@@ -253,7 +253,7 @@ PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
 		     PJSIP_TRANSPORT_UDP, "Unknown");
 
     /* Check that argument is valid. */
-    PJ_ASSERT_RETURN(type < PJ_ARRAY_SIZE(transport_names), "Unknown");
+    PJ_ASSERT_RETURN((unsigned)type<PJ_ARRAY_SIZE(transport_names), "Unknown");
 
     /* Return the port. */
     return transport_names[type].name.ptr;
@@ -414,7 +414,7 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 			       cseq->cseq, obj_name);
     }
 
-    if (len < 1 || len >= sizeof(info_buf)) {
+    if (len < 1 || len >= (int)sizeof(info_buf)) {
 	return (char*)obj_name;
     }
 

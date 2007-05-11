@@ -382,7 +382,7 @@ static pjsip_uri *create_uri4(pj_pool_t *pool)
 #define param_add(list,pname,pvalue)  \
 	do { \
 	    pjsip_param *param; \
-	    param=pj_pool_alloc(pool, sizeof(pjsip_param)); \
+	    param=PJ_POOL_ALLOC_T(pool, pjsip_param); \
 	    param->name = pj_str(pname); \
 	    param->value = pj_str(pvalue); \
 	    pj_list_insert_before(&list, param); \
@@ -662,7 +662,7 @@ static pjsip_uri *create_uri34(pj_pool_t *pool)
 
     uri->number = pj_str("911");
     
-    p = pj_pool_alloc(pool, sizeof(*p));
+    p = PJ_POOL_ALLOC_T(pool, pjsip_param);
     p->name = p->value = pj_str("p1");
     pj_list_insert_before(&uri->other_param, p);
 
@@ -725,8 +725,8 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     ref_uri = entry->creator(pool);
 
     /* Print both URI. */
-    s1.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
-    s2.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+    s1.ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+    s2.ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 
     pj_get_timestamp(&t1);
     len = pjsip_uri_print( PJSIP_URI_IN_OTHER, parsed_uri, s1.ptr, PJSIP_MAX_URL_SIZE);

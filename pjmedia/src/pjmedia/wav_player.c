@@ -79,7 +79,7 @@ static struct file_port *create_file_port(pj_pool_t *pool)
     const pj_str_t name = pj_str("file");
     struct file_port *port;
 
-    port = pj_pool_zalloc(pool, sizeof(struct file_port));
+    port = PJ_POOL_ZALLOC_T(pool, struct file_port);
     if (!port)
 	return NULL;
 
@@ -349,7 +349,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
     /* Create buffer. */
-    fport->buf = pj_pool_alloc(pool, fport->bufsize);
+    fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (!fport->buf) {
 	pj_file_close(fport->fd);
 	return PJ_ENOMEM;

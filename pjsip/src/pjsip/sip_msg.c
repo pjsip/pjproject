@@ -97,7 +97,7 @@ static int print_media_type(char *buf, const pjsip_media_type *media);
 
 static int init_status_phrase()
 {
-    int i;
+    unsigned i;
     pj_str_t default_reason_phrase = { "Default status message", 22};
 
     for (i=0; i<PJ_ARRAY_SIZE(status_phrase); ++i)
@@ -194,7 +194,7 @@ PJ_DEF(void) pjsip_method_set( pjsip_method *m, pjsip_method_e me )
 PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 				  pj_str_t *str)
 {
-    int i;
+    unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
 	if (pj_memcmp(str->ptr, method_names[i]->ptr, str->slen)==0 || 
 	    pj_stricmp(str, method_names[i])==0) 
@@ -515,7 +515,8 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
 	init_status_phrase();
     }
 
-    return (code>=100 && code<(sizeof(status_phrase)/sizeof(status_phrase[0]))) ? 
+    return (code>=100 && 
+	    code<(int)(sizeof(status_phrase)/sizeof(status_phrase[0]))) ? 
 	&status_phrase[code] : &status_phrase[0];
 }
 

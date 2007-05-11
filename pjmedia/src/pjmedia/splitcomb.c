@@ -58,7 +58,7 @@ struct splitcomb
     struct {
 	pjmedia_port *port;
 	pj_bool_t     reversed;
-    } *port_desc;
+    } port_desc[64];
 
     /* Temporary buffers needed to extract mono frame from
      * multichannel frame. We could use stack for this, but this
@@ -143,16 +143,18 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
     *p_splitcomb = NULL;
 
     /* Create the splitter/combiner structure */
-    sc = pj_pool_zalloc(pool, sizeof(struct splitcomb));
+    sc = PJ_POOL_ZALLOC_T(pool, struct splitcomb);
     PJ_ASSERT_RETURN(sc != NULL, PJ_ENOMEM);
 
     /* Create temporary buffers */
-    sc->get_buf = pj_pool_alloc(pool, samples_per_frame * 
+    sc->get_buf = (TMP_SAMP_TYPE*)
+		  pj_pool_alloc(pool, samples_per_frame * 
 				      sizeof(TMP_SAMP_TYPE) /
 				      channel_count);
     PJ_ASSERT_RETURN(sc->get_buf, PJ_ENOMEM);
 
-    sc->put_buf = pj_pool_alloc(pool, samples_per_frame * 
+    sc->put_buf = (TMP_SAMP_TYPE*)
+		  pj_pool_alloc(pool, samples_per_frame * 
 				      sizeof(TMP_SAMP_TYPE) /
 				      channel_count);
     PJ_ASSERT_RETURN(sc->put_buf, PJ_ENOMEM);
@@ -170,7 +172,10 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
     sc->base.on_destroy = &on_destroy;
 
     /* Init ports array */
+    /*
     sc->port_desc = pj_pool_zalloc(pool, channel_count*sizeof(*sc->port_desc));
+    */
+    pj_bzero(sc->port_desc, sizeof(sc->port_desc));
 
     /* Done for now */
     *p_splitcomb = &sc->base;
@@ -237,7 +242,7 @@ pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     PJ_UNUSED_ARG(options);
 
     /* Create the port */
-    rport = pj_pool_zalloc(pool, sizeof(struct reverse_port));
+    rport = PJ_POOL_ZALLOC_T(pool, struct reverse_port);
     rport->parent = sc;
     rport->ch_num = ch_num;
 
@@ -261,14 +266,16 @@ pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 
     /* Create put buffers */
     for (i=0; i<rport->buf_cnt; ++i) {
-	rport->dnstream_buf[i] = pj_pool_zalloc(pool, port->info.bytes_per_frame);
+	rport->dnstream_buf[i]=(pj_int16_t*)
+                               pj_pool_zalloc(pool, port->info.bytes_per_frame);
 	PJ_ASSERT_RETURN(rport->dnstream_buf[i], PJ_ENOMEM);
     }
     rport->dn_write_pos = rport->buf_cnt/2;
 
     /* Create get buffers */
     for (i=0; i<rport->buf_cnt; ++i) {
-	rport->upstream_buf[i] = pj_pool_zalloc(pool, 
+	rport->upstream_buf[i] = (pj_int16_t*)
+				 pj_pool_zalloc(pool, 
 						port->info.bytes_per_frame);
 	PJ_ASSERT_RETURN(rport->upstream_buf[i], PJ_ENOMEM);
     }
@@ -366,7 +373,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	    pjmedia_frame mono_frame;
 
 	    /* Extract the mono frame */
-	    extract_mono_frame(frame->buf, sc->put_buf, ch, 
+	    extract_mono_frame((const pj_int16_t*)frame->buf, sc->put_buf, ch, 
 			       this_port->info.channel_count, 
 			       frame->size * 8 / 
 				 this_port->info.bits_per_sample /
@@ -404,7 +411,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	    }
 
 	    /* Extract mono-frame and put it in downstream buffer */
-	    extract_mono_frame(frame->buf, 
+	    extract_mono_frame((const pj_int16_t*)frame->buf, 
 			       rport->dnstream_buf[rport->dn_write_pos],
 			       ch, this_port->info.channel_count, 
 			       frame->size * 8 / 
@@ -433,7 +440,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pj_bool_t has_frame = PJ_FALSE;
 
     /* Clear output frame */
-    pjmedia_zero_samples(frame->buf, this_port->info.samples_per_frame);
+    pjmedia_zero_samples((pj_int16_t*)frame->buf, 
+			 this_port->info.samples_per_frame);
 
     /* Read frame from each port */
     for (ch=0; ch < this_port->info.channel_count; ++ch) {
@@ -459,7 +467,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    }
 
 	    /* Combine the mono frame into multichannel frame */
-	    store_mono_frame(mono_frame.buf, frame->buf, ch,
+	    store_mono_frame((const pj_int16_t*)mono_frame.buf, 
+			     (pj_int16_t*)frame->buf, ch,
 			     this_port->info.channel_count,
 			     mono_frame.size * 8 /
 				this_port->info.bits_per_sample);
@@ -494,8 +503,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		       rport->up_read_pos));
 
 	    /* Combine the mono frame into multichannel frame */
-	    store_mono_frame(rport->upstream_buf[rport->up_read_pos], 
-			     frame->buf, ch,
+	    store_mono_frame((const pj_int16_t*)rport->upstream_buf[rport->up_read_pos], 
+			     (pj_int16_t*)frame->buf, ch,
 			     this_port->info.channel_count,
 			     port->info.samples_per_frame);
 
@@ -579,7 +588,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
 
 
     pjmedia_copy_samples(rport->upstream_buf[rport->up_write_pos],
-			 frame->buf, count);
+			 (const pj_int16_t*) frame->buf, count);
     rport->up_write_pos = (rport->up_write_pos+1) % rport->buf_cnt;
 
     return PJ_SUCCESS;
@@ -621,7 +630,7 @@ static pj_status_t rport_get_frame(pjmedia_port *this_port,
     }
 
     /* Get the samples from the circular buffer */
-    pjmedia_copy_samples(frame->buf, 
+    pjmedia_copy_samples((pj_int16_t*)frame->buf, 
 			 rport->dnstream_buf[rport->dn_read_pos],
 			 count);
     rport->dn_read_pos = (rport->dn_read_pos+1) % rport->buf_cnt;

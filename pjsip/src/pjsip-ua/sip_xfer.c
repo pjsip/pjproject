@@ -179,7 +179,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uac( pjsip_dialog *dlg,
 	goto on_return;
 
     /* Create xfer session */
-    xfer = pj_pool_zalloc(dlg->pool, sizeof(pjsip_xfer));
+    xfer = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_xfer);
     xfer->dlg = dlg;
     xfer->sub = sub;
     if (user_cb)
@@ -248,7 +248,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
 	goto on_return;
 
     /* Create server xfer subscription */
-    xfer = pj_pool_zalloc(dlg->pool, sizeof(pjsip_xfer));
+    xfer = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_xfer);
     xfer->dlg = dlg;
     xfer->sub = sub;
     if (user_cb)
@@ -286,7 +286,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
 
 
     /* Get the xfer object. */
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_RETURN(xfer != NULL, PJSIP_ENOREFERSESSION);
 
     /* refer_to_uri argument MAY be NULL for subsequent REFER requests,
@@ -373,7 +373,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
 
     /* Get the xfer object. */
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_RETURN(xfer != NULL, PJSIP_ENOREFERSESSION);
 
 
@@ -398,7 +398,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
     pj_strdup(xfer->dlg->pool, &xfer->last_st_text, xfer_st_text);
 
     /* Create sipfrag content. */
-    body = pj_pool_alloc(tdata->pool, 128);
+    body = (char*) pj_pool_alloc(tdata->pool, 128);
     bodylen = pj_ansi_snprintf(body, 128, "SIP/2.0 %u %.*s",
 			       xfer_st_code,
 			       (int)xfer_st_text->slen,
@@ -409,7 +409,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
 
 
     /* Create SIP message body. */
-    msg_body = pj_pool_zalloc(tdata->pool, sizeof(pjsip_msg_body));
+    msg_body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
     msg_body->content_type.type = STR_MESSAGE;
     msg_body->content_type.subtype = STR_SIPFRAG;
     msg_body->content_type.param = STR_SIPFRAG_VERSION;
@@ -447,7 +447,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_current_notify( pjsip_evsub *sub,
     PJ_ASSERT_RETURN(sub, PJ_EINVAL);
 
     /* Get the xfer object. */
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_RETURN(xfer != NULL, PJSIP_ENOREFERSESSION);
 
     pjsip_dlg_inc_lock(xfer->dlg);
@@ -480,7 +480,7 @@ static void xfer_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_evsub_state)
@@ -496,7 +496,7 @@ static void xfer_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_tsx_state)
@@ -515,7 +515,7 @@ static void xfer_on_evsub_rx_refresh( pjsip_evsub *sub,
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_rx_refresh) {
@@ -556,7 +556,7 @@ static void xfer_on_evsub_rx_notify( pjsip_evsub *sub,
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_rx_notify)
@@ -571,7 +571,7 @@ static void xfer_on_evsub_client_refresh(pjsip_evsub *sub)
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_client_refresh) {
@@ -594,7 +594,7 @@ static void xfer_on_evsub_server_timeout(pjsip_evsub *sub)
 {
     pjsip_xfer *xfer;
 
-    xfer = pjsip_evsub_get_mod_data(sub, mod_xfer.id);
+    xfer = (pjsip_xfer*) pjsip_evsub_get_mod_data(sub, mod_xfer.id);
     PJ_ASSERT_ON_FAIL(xfer!=NULL, {return;});
 
     if (xfer->user_cb.on_server_timeout) {

@@ -259,7 +259,7 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 				   const pj_sockaddr_in *addr )
 {
     enum { M = 48 };
-    host_port->host.ptr = pj_pool_alloc(pool, M);
+    host_port->host.ptr = (char*)pj_pool_alloc(pool, M);
     host_port->host.slen = pj_ansi_snprintf( host_port->host.ptr, M, "%s", 
 					    pj_inet_ntoa(addr->sin_addr));
     host_port->port = pj_ntohs(addr->sin_port);
@@ -269,7 +269,7 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 /* SSL password callback. */
 static int password_cb(char *buf, int num, int rwflag, void *user_data)
 {
-    struct tls_listener *lis = user_data;
+    struct tls_listener *lis = (struct tls_listener*) user_data;
 
     PJ_UNUSED_ARG(rwflag);
 
@@ -904,7 +904,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
 
-    listener = pj_pool_zalloc(pool, sizeof(struct tls_listener));
+    listener = PJ_POOL_ZALLOC_T(pool, struct tls_listener);
     listener->factory.pool = pool;
     listener->factory.type = PJSIP_TRANSPORT_TLS;
     listener->factory.type_name = "tls";
@@ -1036,8 +1036,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
 	    goto on_error;
 	}
 
-	listener->accept_op[i] = pj_pool_zalloc(pool, 
-						sizeof(struct pending_accept));
+	listener->accept_op[i] = PJ_POOL_ZALLOC_T(pool, struct pending_accept);
 	pj_ioqueue_op_key_init(&listener->accept_op[i]->op_key, 
 				sizeof(listener->accept_op[i]->op_key));
 	listener->accept_op[i]->pool = pool;
@@ -1191,7 +1190,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     /*
      * Create and initialize basic transport structure.
      */
-    tls = pj_pool_zalloc(pool, sizeof(*tls));
+    tls = PJ_POOL_ZALLOC_T(pool, struct tls_transport);
     tls->sock = sock;
     tls->is_server = is_server;
     tls->listener = listener;
@@ -1217,7 +1216,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.type_name = "tls";
     tls->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
 
-    tls->base.info = pj_pool_alloc(pool, 64);
+    tls->base.info = (char*) pj_pool_alloc(pool, 64);
     pj_ansi_snprintf(tls->base.info, 64, "TLS to %s:%d",
 		     pj_inet_ntoa(remote->sin_addr), 
 		     (int)pj_ntohs(remote->sin_port));
@@ -1635,7 +1634,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
     struct pending_accept *accept_op;
     int err_cnt = 0;
 
-    listener = pj_ioqueue_get_user_data(key);
+    listener = (struct tls_listener*) pj_ioqueue_get_user_data(key);
     accept_op = (struct pending_accept*) op_key;
 
     /*
@@ -1694,7 +1693,7 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	    /* Create new accept_opt */
 	    pool = pjsip_endpt_create_pool(listener->endpt, "tlss%p", 
 					   POOL_TP_INIT, POOL_TP_INC);
-	    new_op = pj_pool_zalloc(pool, sizeof(struct pending_accept));
+	    new_op = PJ_POOL_ZALLOC_T(pool, struct pending_accept);
 	    new_op->pool = pool;
 	    new_op->listener = listener;
 	    new_op->index = accept_op->index;
@@ -1756,9 +1755,10 @@ static void on_write_complete(pj_ioqueue_key_t *key,
                               pj_ioqueue_op_key_t *op_key, 
                               pj_ssize_t bytes_sent)
 {
-    struct tls_transport *tls = pj_ioqueue_get_user_data(key);
+    struct tls_transport *tls;
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
+    tls = (struct tls_transport*) pj_ioqueue_get_user_data(key);
     tdata_op_key->tdata = NULL;
 
     /* Check for error/closure */
@@ -1789,8 +1789,7 @@ static void add_pending_tx(struct tls_transport *tls,
 {
     struct delayed_tdata *delayed_tdata;
 
-    delayed_tdata = pj_pool_alloc(tdata->pool, 
-				  sizeof(*delayed_tdata));
+    delayed_tdata = PJ_POOL_ALLOC_T(tdata->pool, struct delayed_tdata);
     delayed_tdata->tdata_op_key = &tdata->op_key;
     pj_list_push_back(&tls->delayed_list, delayed_tdata);
 }
@@ -2097,7 +2096,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     pj_sockaddr_in addr;
     int addrlen;
 
-    tls = pj_ioqueue_get_user_data(key);
+    tls = (struct tls_transport*) pj_ioqueue_get_user_data(key);
 
     /* Check connect() status */
     if (status != PJ_SUCCESS) {

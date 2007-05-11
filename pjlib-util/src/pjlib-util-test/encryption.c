@@ -384,7 +384,7 @@ static int rfc2202_test(void)
 }
 
 /* CRC32 test data, generated from crc32 test on a Linux box */
-struct
+struct crc32_test_t
 {
     char	    *input;
     pj_uint32_t	     crc;
@@ -551,7 +551,7 @@ int encryption_benchmark()
     if (!pool)
 	return PJ_ENOMEM;
 
-    input = pj_pool_alloc(pool, input_len);
+    input = (pj_uint8_t*)pj_pool_alloc(pool, input_len);
     pj_memset(input, '\xaa', input_len);
     
     PJ_LOG(3, (THIS_FILE, "  feeding %d Mbytes of data",

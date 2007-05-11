@@ -319,9 +319,8 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
     if (pj_list_empty(&g711_factory.codec_list)) {
 	struct g711_private *codec_priv;
 
-	codec = pj_pool_alloc(g711_factory.pool, sizeof(pjmedia_codec));
-	codec_priv = pj_pool_zalloc(g711_factory.pool, 
-				    sizeof(struct g711_private));
+	codec = PJ_POOL_ALLOC_T(g711_factory.pool, pjmedia_codec);
+	codec_priv = PJ_POOL_ZALLOC_T(g711_factory.pool, struct g711_private);
 	if (!codec || !codec_priv) {
 	    pj_mutex_unlock(g711_factory.mutex);
 	    return PJ_ENOMEM;
@@ -371,7 +370,7 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory, 
 				      pjmedia_codec *codec )
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
     int i = 0;
 
     PJ_ASSERT_RETURN(factory==&g711_factory.base, PJ_EINVAL);
@@ -420,7 +419,7 @@ static pj_status_t g711_init( pjmedia_codec *codec, pj_pool_t *pool )
 static pj_status_t g711_open(pjmedia_codec *codec, 
 			     pjmedia_codec_param *attr )
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
     priv->pt = attr->info.pt;
 #if !PLC_DISABLED
     priv->plc_enabled = (attr->setting.plc != 0);
@@ -439,7 +438,7 @@ static pj_status_t g711_close( pjmedia_codec *codec )
 static pj_status_t  g711_modify(pjmedia_codec *codec, 
 			        const pjmedia_codec_param *attr )
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
 
     if (attr->info.pt != priv->pt)
 	return PJMEDIA_EINVALIDPT;
@@ -487,7 +486,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 				struct pjmedia_frame *output)
 {
     pj_int16_t *samples = (pj_int16_t*) input->buf;
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
 
     /* Check output buffer length */
     if (output_buf_len < (input->size >> 1))
@@ -501,7 +500,8 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 	silence_period = pj_timestamp_diff32(&priv->last_tx,
 					     &input->timestamp);
 
-	is_silence = pjmedia_silence_det_detect(priv->vad, input->buf, 
+	is_silence = pjmedia_silence_det_detect(priv->vad, 
+						(const pj_int16_t*) input->buf, 
 						(input->size >> 1), NULL);
 	if (is_silence && 
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
@@ -520,7 +520,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
     /* Encode */
     if (priv->pt == PJMEDIA_RTP_PT_PCMA) {
 	unsigned i, n;
-	pj_uint8_t *dst = output->buf;
+	pj_uint8_t *dst = (pj_uint8_t*) output->buf;
 
 	n = (input->size >> 1);
 	for (i=0; i!=n; ++i, ++dst) {
@@ -528,7 +528,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 	}
     } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i, n;
-	pj_uint8_t *dst = output->buf;
+	pj_uint8_t *dst = (pj_uint8_t*) output->buf;
 
 	n = (input->size >> 1);
 	for (i=0; i!=n; ++i, ++dst) {
@@ -550,7 +550,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 				unsigned output_buf_len, 
 				struct pjmedia_frame *output)
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
 
     /* Check output buffer length */
     PJ_ASSERT_RETURN(output_buf_len >= (input->size << 1),
@@ -563,16 +563,16 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
     /* Decode */
     if (priv->pt == PJMEDIA_RTP_PT_PCMA) {
 	unsigned i;
-	pj_uint8_t *src = input->buf;
-	pj_uint16_t *dst = output->buf;
+	pj_uint8_t *src = (pj_uint8_t*) input->buf;
+	pj_uint16_t *dst = (pj_uint16_t*) output->buf;
 
 	for (i=0; i!=input->size; ++i) {
 	    *dst++ = (pj_uint16_t) pjmedia_alaw2linear(*src++);
 	}
     } else if (priv->pt == PJMEDIA_RTP_PT_PCMU) {
 	unsigned i;
-	pj_uint8_t *src = input->buf;
-	pj_uint16_t *dst = output->buf;
+	pj_uint8_t *src = (pj_uint8_t*) input->buf;
+	pj_uint16_t *dst = (pj_uint16_t*) output->buf;
 
 	for (i=0; i!=input->size; ++i) {
 	    *dst++ = (pj_uint16_t) pjmedia_ulaw2linear(*src++);

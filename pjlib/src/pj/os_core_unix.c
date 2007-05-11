@@ -21,7 +21,9 @@
  * - Thanks for Zetron, Inc. (Phil Torre, ptorre@zetron.com) for donating
  *   the RTEMS port.
  */
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE
+#endif
 #include <pj/os.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
@@ -339,7 +341,7 @@ pj_status_t pj_thread_init(void)
  */
 static void *thread_main(void *param)
 {
-    pj_thread_t *rec = param;
+    pj_thread_t *rec = (pj_thread_t*)param;
     void *result;
     pj_status_t rc;
 
@@ -506,7 +508,7 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
 PJ_DEF(pj_thread_t*) pj_thread_this(void)
 {
 #if PJ_HAS_THREADS
-    pj_thread_t *rec = pj_thread_local_get(thread_tls_id);
+    pj_thread_t *rec = (pj_thread_t*)pj_thread_local_get(thread_tls_id);
     
     if (rec == NULL) {
 	pj_assert(!"Calling pjlib from unknown/external thread. You must "
@@ -663,7 +665,10 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 				      pj_atomic_t **ptr_atomic)
 {
     pj_status_t rc;
-    pj_atomic_t *atomic_var = pj_pool_calloc(pool, 1, sizeof(pj_atomic_t));
+    pj_atomic_t *atomic_var;
+
+    atomic_var = PJ_POOL_ZALLOC_T(pool, pj_atomic_t);
+
     PJ_ASSERT_RETURN(atomic_var, PJ_ENOMEM);
     
 #if PJ_HAS_THREADS
@@ -907,6 +912,12 @@ PJ_DEF(void) pj_leave_critical_section(void)
 
 
 ///////////////////////////////////////////////////////////////////////////////
+#if defined(PJ_LINUX) && PJ_LINUX!=0
+PJ_BEGIN_DECL
+PJ_DECL(int) pthread_mutexattr_settype(pthread_mutexattr_t*,int);
+PJ_END_DECL
+#endif
+
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 {
 #if PJ_HAS_THREADS
@@ -921,7 +932,6 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 
     if (type == PJ_MUTEX_SIMPLE) {
 #if defined(PJ_LINUX) && PJ_LINUX!=0
-	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
 #elif defined(PJ_RTEMS) && PJ_RTEMS!=0
 	/* Nothing to do, default is simple */
@@ -930,7 +940,6 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 #endif
     } else {
 #if defined(PJ_LINUX) && PJ_LINUX!=0
-	extern int pthread_mutexattr_settype(pthread_mutexattr_t*,int);
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
 #elif defined(PJ_RTEMS) && PJ_RTEMS!=0
 	// Phil Torre <ptorre@zetron.com>:
@@ -991,7 +1000,7 @@ PJ_DEF(pj_status_t) pj_mutex_create(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && ptr_mutex, PJ_EINVAL);
 
-    mutex = pj_pool_alloc(pool, sizeof(*mutex));
+    mutex = PJ_POOL_ALLOC_T(pool, pj_mutex_t);
     PJ_ASSERT_RETURN(mutex, PJ_ENOMEM);
 
     if ((rc=init_mutex(mutex, name, type)) != PJ_SUCCESS)
@@ -1228,7 +1237,7 @@ PJ_DEF(pj_status_t) pj_rwmutex_create(pj_pool_t *pool, const char *name,
 
     PJ_UNUSED_ARG(name);
     
-    rwm = pj_pool_alloc(pool, sizeof(pj_rwmutex_t));
+    rwm = PJ_POOL_ALLOC_T(pool, pj_rwmutex_t);
     PJ_ASSERT_RETURN(rwm, PJ_ENOMEM);
 
     status = pthread_rwlock_init(&rwm->rwlock, NULL);
@@ -1329,7 +1338,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool != NULL && ptr_sem != NULL, PJ_EINVAL);
 
-    sem = pj_pool_alloc(pool, sizeof(*sem));
+    sem = PJ_POOL_ALLOC_T(pool, pj_sem_t);
     PJ_ASSERT_RETURN(sem, PJ_ENOMEM);
 
     if (sem_init( &sem->sem, 0, initial) != 0) 

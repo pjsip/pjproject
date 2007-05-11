@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (!pool)
 	return PJ_ENOMEM;
 
-    tp = pj_pool_zalloc(pool, sizeof(struct transport_udp));
+    tp = PJ_POOL_ZALLOC_T(pool, struct transport_udp);
     tp->pool = pool;
     tp->options = options;
     pj_ansi_strcpy(tp->base.name, name);
@@ -378,7 +378,7 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
-    udp = pj_ioqueue_get_user_data(key);
+    udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     do {
 	void (*cb)(void*,const void*,pj_ssize_t);
@@ -479,7 +479,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
-    udp = pj_ioqueue_get_user_data(key);
+    udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     do {
 	void (*cb)(void*,const void*,pj_ssize_t);
@@ -567,7 +567,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     pj_memcpy(&udp->rem_rtp_addr, rem_addr, sizeof(pj_sockaddr_in));
 
     /* Copy remote RTP address, if one is specified. */
-    rtcp_addr = rem_rtcp;
+    rtcp_addr = (const pj_sockaddr_in*) rem_rtcp;
     if (rtcp_addr && rtcp_addr->sin_addr.s_addr != 0) {
 	pj_memcpy(&udp->rem_rtcp_addr, rem_rtcp, sizeof(pj_sockaddr_in));
 

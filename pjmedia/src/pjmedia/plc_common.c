@@ -86,7 +86,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(options);
 
-    plc = pj_pool_zalloc(pool, sizeof(pjmedia_plc));
+    plc = PJ_POOL_ZALLOC_T(pool, pjmedia_plc);
 
     if (0)
 	;
@@ -150,17 +150,17 @@ static void* plc_replay_create(pj_pool_t *pool, unsigned clock_rate,
 
     PJ_UNUSED_ARG(clock_rate);
 
-    o = pj_pool_alloc(pool, sizeof(struct replay_plc));
+    o = PJ_POOL_ALLOC_T(pool, struct replay_plc);
     o->size = samples_per_frame * 2;
     o->replay_cnt = 0;
-    o->frame = pj_pool_zalloc(pool, o->size);
+    o->frame = (pj_int16_t*) pj_pool_zalloc(pool, o->size);
 
     return o;
 }
 
 static void plc_replay_save(void *plc, pj_int16_t *frame)
 {
-    struct replay_plc *o = plc;
+    struct replay_plc *o = (struct replay_plc*) plc;
 
     pj_memcpy(o->frame, frame, o->size);
     o->replay_cnt = 0;
@@ -168,7 +168,7 @@ static void plc_replay_save(void *plc, pj_int16_t *frame)
 
 static void plc_replay_generate(void *plc, pj_int16_t *frame)
 {
-    struct replay_plc *o = plc;
+    struct replay_plc *o = (struct replay_plc*) plc;
     unsigned i, count;
     pj_int16_t *samp;
 

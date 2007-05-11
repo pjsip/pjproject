@@ -35,7 +35,7 @@ static void cb(pj_status_t status,
 	       void *token,
 	       const struct pjsip_server_addresses *addr)
 {
-    struct result *result = token;
+    struct result *result = (struct result*) token;
 
     result->status = status;
     if (status == PJ_SUCCESS)

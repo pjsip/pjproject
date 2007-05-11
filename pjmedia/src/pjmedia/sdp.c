@@ -460,7 +460,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 			   (int)rtpmap->param.slen,
 			   rtpmap->param.ptr);
 
-    if (len < 1 || len > sizeof(tempbuf))
+    if (len < 1 || len > (int)sizeof(tempbuf))
 	return PJMEDIA_SDP_ERTPMAPTOOLONG;
 
     attr->value.slen = len;

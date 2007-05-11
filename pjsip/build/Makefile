@@ -89,7 +89,7 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o
 export TEST_CFLAGS += $(_CFLAGS)
-export TEST_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS)
+export TEST_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
 export TEST_EXE := ../bin/pjsip-test-$(TARGET_NAME)$(HOST_EXE)
 
 	

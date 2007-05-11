@@ -301,7 +301,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	    //write_op->op = 0;
         } else {
             pj_assert(!"Invalid operation type!");
-	    write_op->op = 0;
+	    write_op->op = PJ_IOQUEUE_OP_NONE;
             send_rc = PJ_EBUG;
         }
 
@@ -318,7 +318,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
             h->fd_type == PJ_SOCK_DGRAM) 
         {
 
-	    write_op->op = 0;
+	    write_op->op = PJ_IOQUEUE_OP_NONE;
 
             if (h->fd_type != PJ_SOCK_DGRAM) {
                 /* Write completion of the whole stream. */
@@ -375,7 +375,7 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         /* Get one accept operation from the list. */
 	accept_op = h->accept_list.next;
         pj_list_erase(accept_op);
-        accept_op->op = 0;
+        accept_op->op = PJ_IOQUEUE_OP_NONE;
 
 	/* Clear bit in fdset if there is no more pending accept */
         if (pj_list_empty(&h->accept_list))
@@ -417,18 +417,18 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         bytes_read = read_op->size;
 
 	if ((read_op->op == PJ_IOQUEUE_OP_RECV_FROM)) {
-	    read_op->op = 0;
+	    read_op->op = PJ_IOQUEUE_OP_NONE;
 	    rc = pj_sock_recvfrom(h->fd, read_op->buf, &bytes_read, 
 				  read_op->flags,
 				  read_op->rmt_addr, 
                                   read_op->rmt_addrlen);
 	} else if ((read_op->op == PJ_IOQUEUE_OP_RECV)) {
-	    read_op->op = 0;
+	    read_op->op = PJ_IOQUEUE_OP_NONE;
 	    rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
 			      read_op->flags);
         } else {
             pj_assert(read_op->op == PJ_IOQUEUE_OP_READ);
-	    read_op->op = 0;
+	    read_op->op = PJ_IOQUEUE_OP_NONE;
             /*
              * User has specified pj_ioqueue_read().
              * On Win32, we should do ReadFile(). But because we got
@@ -561,7 +561,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
 
     read_op = (struct read_operation*)op_key;
-    read_op->op = 0;
+    read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Check if key is closing. */
     if (IS_CLOSING(key))
@@ -630,7 +630,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 	return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
-    read_op->op = 0;
+    read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
      */
@@ -768,7 +768,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     }
 
     write_op->op = PJ_IOQUEUE_OP_SEND;
-    write_op->buf = (void*)data;
+    write_op->buf = (char*)data;
     write_op->size = *length;
     write_op->written = 0;
     write_op->flags = flags;
@@ -848,7 +848,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     /*
      * Check that address storage can hold the address parameter.
      */
-    PJ_ASSERT_RETURN(addrlen <= sizeof(pj_sockaddr_in), PJ_EBUG);
+    PJ_ASSERT_RETURN(addrlen <= (int)sizeof(pj_sockaddr_in), PJ_EBUG);
 
     /*
      * Schedule asynchronous send.
@@ -883,7 +883,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     }
 
     write_op->op = PJ_IOQUEUE_OP_SEND_TO;
-    write_op->buf = (void*)data;
+    write_op->buf = (char*)data;
     write_op->size = *length;
     write_op->written = 0;
     write_op->flags = flags;
@@ -920,7 +920,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 	return PJ_ECANCELLED;
 
     accept_op = (struct accept_operation*)op_key;
-    accept_op->op = 0;
+    accept_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Fast track:
      *  See if there's new connection available immediately.
@@ -1052,7 +1052,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     while (op_rec != (void*)&key->read_list) {
         if (op_rec == (void*)op_key) {
             pj_list_erase(op_rec);
-            op_rec->op = 0;
+            op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_mutex_unlock(key->mutex);
 
             (*key->cb.on_read_complete)(key, op_key, bytes_status);
@@ -1066,7 +1066,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     while (op_rec != (void*)&key->write_list) {
         if (op_rec == (void*)op_key) {
             pj_list_erase(op_rec);
-            op_rec->op = 0;
+            op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_mutex_unlock(key->mutex);
 
             (*key->cb.on_write_complete)(key, op_key, bytes_status);
@@ -1080,7 +1080,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     while (op_rec != (void*)&key->accept_list) {
         if (op_rec == (void*)op_key) {
             pj_list_erase(op_rec);
-            op_rec->op = 0;
+            op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_mutex_unlock(key->mutex);
 
             (*key->cb.on_accept_complete)(key, op_key, 

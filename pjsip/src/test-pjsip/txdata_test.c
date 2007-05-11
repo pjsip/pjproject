@@ -444,7 +444,7 @@ static int txdata_test_uri_params(void)
     }
 
     /* Fill up the Via header to prevent syntax error on parsing */
-    via = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+    via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->transport = pj_str("TCP");
     via->sent_by.host = pj_str("127.0.0.1");
 
@@ -707,8 +707,8 @@ static int create_response_bench(pj_timestamp *p_elapsed)
     via->rport_param = 0;
     via->branch_param = pj_str("012345678901234567890123456789");
     via->recvd_param = pj_str("192.168.0.7");
-    pjsip_msg_insert_first_hdr(request->msg, pjsip_hdr_clone(request->pool, via));
-    pjsip_msg_insert_first_hdr(request->msg, pjsip_hdr_clone(request->pool, via));
+    pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*) pjsip_hdr_clone(request->pool, via));
+    pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*) pjsip_hdr_clone(request->pool, via));
     pjsip_msg_insert_first_hdr(request->msg, (pjsip_hdr*)via);
     
 
@@ -716,10 +716,10 @@ static int create_response_bench(pj_timestamp *p_elapsed)
     pj_bzero(&rdata, sizeof(pjsip_rx_data));
     rdata.tp_info.pool = request->pool;
     rdata.msg_info.msg = request->msg;
-    rdata.msg_info.from = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
-    rdata.msg_info.to = pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
-    rdata.msg_info.cseq = pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.from = (pjsip_from_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.to = (pjsip_to_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
+    rdata.msg_info.cseq = (pjsip_cseq_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.via = via;
 
     /*

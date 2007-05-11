@@ -1237,7 +1237,7 @@ PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
  */
 PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
 
     return pjsua_var.player[id].slot;
@@ -1249,7 +1249,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_recorder_id id,
 					   pjmedia_port **p_port)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(p_port != NULL, PJ_EINVAL);
     
@@ -1264,7 +1264,7 @@ PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_recorder_id id,
 PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
 					  pj_uint32_t samples)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].type == 0, PJ_EINVAL);
 
@@ -1278,7 +1278,7 @@ PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
  */
 PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
 
     PJSUA_LOCK();
@@ -1414,7 +1414,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
  */
 PJ_DEF(pjsua_conf_port_id) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.recorder), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder), 
+		     PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
 
     return pjsua_var.recorder[id].slot;
@@ -1426,7 +1427,8 @@ PJ_DEF(pjsua_conf_port_id) pjsua_recorder_get_conf_port(pjsua_recorder_id id)
 PJ_DEF(pj_status_t) pjsua_recorder_get_port( pjsua_recorder_id id,
 					     pjmedia_port **p_port)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.recorder), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder), 
+		     PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(p_port != NULL, PJ_EINVAL);
 
@@ -1439,7 +1441,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_get_port( pjsua_recorder_id id,
  */
 PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
 {
-    PJ_ASSERT_RETURN(id>=0 && id<PJ_ARRAY_SIZE(pjsua_var.recorder), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder), 
+		     PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
 
     PJSUA_LOCK();

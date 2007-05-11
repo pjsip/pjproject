@@ -305,7 +305,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     PJ_ASSERT_RETURN(channel_count==1 || channel_count==2, PJ_EINVAL);
 
     /* Create and initialize port */
-    tonegen = pj_pool_zalloc(pool, sizeof(struct tonegen));
+    tonegen = PJ_POOL_ZALLOC_T(pool, struct tonegen);
     if (name == NULL || name->slen == 0) name = &STR_TONE_GEN;
     status = pjmedia_port_info_init(&tonegen->base.info, name, 
 				    SIGNATURE, clock_rate, channel_count, 
@@ -421,7 +421,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	}
     }
     
-    dst = frame->buf;
+    dst = (short*) frame->buf;
     end = dst + port->info.samples_per_frame;
 
     while (dst < end) {

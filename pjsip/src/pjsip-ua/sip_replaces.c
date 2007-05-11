@@ -52,7 +52,7 @@ static pjsip_endpoint *the_endpt;
 
 PJ_DEF(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool)
 {
-    pjsip_replaces_hdr *hdr = pj_pool_zalloc(pool, sizeof(*hdr));
+    pjsip_replaces_hdr *hdr = PJ_POOL_ZALLOC_T(pool, pjsip_replaces_hdr);
     hdr->type = PJSIP_H_OTHER;
     hdr->name.ptr = "Replaces";
     hdr->name.slen = 8;
@@ -108,7 +108,7 @@ static pjsip_replaces_hdr*
 replaces_hdr_shallow_clone( pj_pool_t *pool,
 			    const pjsip_replaces_hdr *rhs )
 {
-    pjsip_replaces_hdr *hdr = pj_pool_alloc(pool, sizeof(*hdr));
+    pjsip_replaces_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_replaces_hdr);
     pj_memcpy(hdr, rhs, sizeof(*hdr));
     pjsip_param_shallow_clone(pool, &hdr->other_param, &rhs->other_param);
     return hdr;
@@ -144,7 +144,7 @@ static pjsip_hdr *parse_hdr_replaces(pjsip_parse_ctx *ctx)
 	} else if (pj_stricmp(&pname, &early_only_tag)==0) {
 	    hdr->early_only = PJ_TRUE;
 	} else {
-	    pjsip_param *param = pj_pool_alloc(ctx->pool, sizeof(pjsip_param));
+	    pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
 	    param->name = pname;
 	    param->value = pvalue;
 	    pj_list_push_back(&hdr->other_param, param);
@@ -318,7 +318,7 @@ on_return:
 	    while (h != &res_hdr_list) {
 		pjsip_hdr *cloned;
 
-		cloned = pjsip_hdr_clone(tdata->pool, h);
+		cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
 		PJ_ASSERT_RETURN(cloned, PJ_ENOMEM);
 
 		pjsip_msg_add_hdr(tdata->msg, cloned);

@@ -84,7 +84,7 @@ static struct playlist_port *create_file_list_port(pj_pool_t *pool,
 {
     struct playlist_port *port;
 
-    port = pj_pool_zalloc(pool, sizeof(struct playlist_port));
+    port = PJ_POOL_ZALLOC_T(pool, struct playlist_port);
     if (!port)
 	return NULL;
 
@@ -275,25 +275,29 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     fport->max_file = file_count;
 
     /* Create file descriptor list */
-    fport->fd_list = pj_pool_zalloc(pool, sizeof(pj_oshandle_t)*file_count);
+    fport->fd_list = (pj_oshandle_t*)
+		     pj_pool_zalloc(pool, sizeof(pj_oshandle_t)*file_count);
     if (!fport->fd_list) {
 	return PJ_ENOMEM;
     }
 
     /* Create file size list */
-    fport->fsize_list = pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
+    fport->fsize_list = (pj_off_t*)
+			pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
     if (!fport->fsize_list) {
 	return PJ_ENOMEM;
     }
 
     /* Create start of WAVE data list */
-    fport->start_data_list = pj_pool_alloc(pool, sizeof(unsigned)*file_count);
+    fport->start_data_list = (unsigned*)
+			     pj_pool_alloc(pool, sizeof(unsigned)*file_count);
     if (!fport->start_data_list) {
 	return PJ_ENOMEM;
     }
 
     /* Create file position list */
-    fport->fpos_list = pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
+    fport->fpos_list = (pj_off_t*)
+		       pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
     if (!fport->fpos_list) {
 	return PJ_ENOMEM;
     }
@@ -305,7 +309,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 
 
     /* Create buffer. */
-    fport->buf = pj_pool_alloc(pool, fport->bufsize);
+    fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (!fport->buf) {
 	return PJ_ENOMEM;
     }

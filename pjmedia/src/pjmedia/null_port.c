@@ -44,7 +44,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
-    port = pj_pool_zalloc(pool, sizeof(pjmedia_port));
+    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
     pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
@@ -83,7 +83,8 @@ static pj_status_t null_get_frame(pjmedia_port *this_port,
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = this_port->info.samples_per_frame * 2;
     frame->timestamp.u32.lo += this_port->info.samples_per_frame;
-    pjmedia_zero_samples(frame->buf, this_port->info.samples_per_frame);
+    pjmedia_zero_samples((pj_int16_t*)frame->buf, 
+			 this_port->info.samples_per_frame);
 
     return PJ_SUCCESS;
 }

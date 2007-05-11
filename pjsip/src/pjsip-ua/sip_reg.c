@@ -103,13 +103,13 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     pool = pjsip_endpt_create_pool(endpt, "regc%p", 1024, 1024);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    regc = pj_pool_zalloc(pool, sizeof(struct pjsip_regc));
+    regc = PJ_POOL_ZALLOC_T(pool, pjsip_regc);
 
     regc->pool = pool;
     regc->endpt = endpt;
     regc->token = token;
     regc->cb = cb;
-    regc->contact_buf = pj_pool_alloc(pool, PJSIP_REGC_CONTACT_BUF_SIZE);
+    regc->contact_buf = (char*)pj_pool_alloc(pool, PJSIP_REGC_CONTACT_BUF_SIZE);
     regc->expires = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED;
 
     status = pjsip_auth_clt_init(&regc->auth_sess, endpt, regc->pool, 0);
@@ -386,13 +386,15 @@ static pj_status_t create_request(pjsip_regc *regc,
 	pjsip_hdr *route_pos;
 	const pjsip_route_hdr *route;
 
-	route_pos = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+	route_pos = (pjsip_hdr*)
+		    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 	if (!route_pos)
 	    route_pos = &tdata->msg->hdr;
 
 	route = regc->route_set.next;
 	while (route != &regc->route_set) {
-	    pjsip_hdr *new_hdr = pjsip_hdr_shallow_clone(tdata->pool, route);
+	    pjsip_hdr *new_hdr = (pjsip_hdr*)
+				 pjsip_hdr_shallow_clone(tdata->pool, route);
 	    pj_list_insert_after(route_pos, new_hdr);
 	    route_pos = new_hdr;
 	    route = route->next;
@@ -405,7 +407,8 @@ static pj_status_t create_request(pjsip_regc *regc,
 
 	hdr = regc->hdr_list.next;
 	while (hdr != &regc->hdr_list) {
-	    pjsip_hdr *new_hdr = pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	    pjsip_hdr *new_hdr = (pjsip_hdr*)
+				 pjsip_hdr_shallow_clone(tdata->pool, hdr);
 	    pjsip_msg_add_hdr(tdata->msg, new_hdr);
 	    hdr = hdr->next;
 	}
@@ -432,10 +435,12 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     /* Add Contact header. */
     msg = tdata->msg;
-    pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool, 
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			   pjsip_hdr_shallow_clone(tdata->pool, 
 						   regc->contact_hdr));
     if (regc->expires_hdr)
-	pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool,
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			       pjsip_hdr_shallow_clone(tdata->pool,
 						       regc->expires_hdr));
 
     if (regc->timer.id != 0) {
@@ -470,7 +475,8 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 	return status;
 
     msg = tdata->msg;
-    pjsip_msg_add_hdr(msg, pjsip_hdr_shallow_clone(tdata->pool, 
+    pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			   pjsip_hdr_shallow_clone(tdata->pool, 
 						   regc->contact_hdr));
     pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
 
@@ -553,7 +559,7 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
 static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 				   struct pj_timer_entry *entry)
 {
-    pjsip_regc *regc = entry->user_data;
+    pjsip_regc *regc = (pjsip_regc*) entry->user_data;
     pjsip_tx_data *tdata;
     pj_status_t status;
     
@@ -587,7 +593,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
-    pjsip_regc *regc = token;
+    pjsip_regc *regc = (pjsip_regc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     
     /* Decrement pending transaction counter. */
@@ -653,16 +659,19 @@ static void tsx_callback(void *token, pjsip_event *event)
 
 	    rdata = event->body.tsx_state.src.rdata;
 	    msg = rdata->msg_info.msg;
-	    hdr = pjsip_msg_find_hdr( msg, PJSIP_H_CONTACT, NULL);
+	    hdr = (pjsip_contact_hdr*)
+		  pjsip_msg_find_hdr( msg, PJSIP_H_CONTACT, NULL);
 	    while (hdr) {
 		contact[contact_cnt++] = hdr;
 		hdr = hdr->next;
 		if (hdr == (void*)&msg->hdr)
 		    break;
-		hdr = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, hdr);
+		hdr = (pjsip_contact_hdr*)
+		      pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, hdr);
 	    }
 
-	    expires = pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
+	    expires = (pjsip_expires_hdr*)
+		      pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 
 	    if (expires)
 		expiration = expires->ivalue;
@@ -740,7 +749,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 
     /* Increment CSeq */
     cseq = ++regc->cseq_hdr->cseq;
-    cseq_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
+    cseq_hdr = (pjsip_cseq_hdr*)
+	       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
 
     /* Increment pending transaction first, since transaction callback

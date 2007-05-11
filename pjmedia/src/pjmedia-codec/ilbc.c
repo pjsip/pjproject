@@ -319,7 +319,7 @@ static pj_status_t ilbc_alloc_codec(pjmedia_codec_factory *factory,
 				     2000, 2000);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    codec = pj_pool_zalloc(pool, sizeof(struct ilbc_codec));
+    codec = PJ_POOL_ZALLOC_T(pool, struct ilbc_codec);
     codec->base.op = &ilbc_op;
     codec->base.factory = factory;
     codec->pool = pool;
@@ -530,7 +530,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 					      &input->timestamp);
 
 	is_silence = pjmedia_silence_det_detect(ilbc_codec->vad, 
-					        input->buf,
+					        (const pj_int16_t*)input->buf,
 						(input->size >> 1),
 						NULL);
 	if (is_silence &&
@@ -585,7 +585,7 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EFRMINLEN;
 
     /* Decode to temporary buffer */
-    iLBC_decode(ilbc_codec->dec_block, input->buf,
+    iLBC_decode(ilbc_codec->dec_block, (unsigned char*) input->buf,
 		&ilbc_codec->dec, 1);
 
     /* Convert decodec samples from float to short */

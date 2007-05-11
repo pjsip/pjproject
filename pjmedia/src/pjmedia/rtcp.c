@@ -140,7 +140,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     sess->rtp_last_ts = (unsigned)-1;
 
     /* Name */
-    sess->name = name ? name : THIS_FILE,
+    sess->name = name ? name : (char*)THIS_FILE,
 
     /* Set clock rate */
     sess->clock_rate = clock_rate;
@@ -332,7 +332,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 				   const void *pkt,
 				   pj_size_t size)
 {
-    const pjmedia_rtcp_common *common = pkt;
+    pjmedia_rtcp_common *common = (pjmedia_rtcp_common*) pkt;
     const pjmedia_rtcp_rr *rr = NULL;
     const pjmedia_rtcp_sr *sr = NULL;
     pj_uint32_t last_loss, jitter_samp, jitter;

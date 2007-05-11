@@ -30,7 +30,7 @@
 #define THIS_FILE   "jbuf.c"
 
 
-struct jb_framelist
+typedef struct jb_framelist_t
 {
     char	*flist_buffer;
     int		*flist_frame_type;
@@ -40,15 +40,13 @@ struct jb_framelist
     unsigned	 flist_head;
     unsigned	 flist_tail;
     unsigned	 flist_origin;
-};
+} jb_framelist_t;
 
-
-typedef struct jb_framelist jb_framelist;
 
 struct pjmedia_jbuf
 {
     pj_str_t	    name;		  // jitter buffer name
-    jb_framelist    jb_framelist;
+    jb_framelist_t  jb_framelist;
     pj_size_t	    jb_frame_size;	  // frame size	
     unsigned	    jb_frame_ptime;	  // frame duration.
     pj_size_t	    jb_max_count;	  // max frames in the jitter framelist->flist_buffer
@@ -92,21 +90,22 @@ struct pjmedia_jbuf
 
 
 static pj_status_t jb_framelist_init( pj_pool_t *pool,
-				      jb_framelist *framelist,
+				      jb_framelist_t *framelist,
 				      unsigned frame_size,
 				      unsigned max_count) 
 {
     PJ_ASSERT_RETURN(pool && framelist, PJ_EINVAL);
 
-    pj_bzero(framelist, sizeof(jb_framelist));
+    pj_bzero(framelist, sizeof(jb_framelist_t));
 
     framelist->flist_frame_size = frame_size;
     framelist->flist_max_count = max_count;
-    framelist->flist_buffer = pj_pool_zalloc(pool,
+    framelist->flist_buffer = (char*) 
+			      pj_pool_zalloc(pool,
 					     framelist->flist_frame_size * 
 					     framelist->flist_max_count);
 
-    framelist->flist_frame_type = 
+    framelist->flist_frame_type = (int*)
 	pj_pool_zalloc(pool, sizeof(framelist->flist_frame_type[0]) * 
 				framelist->flist_max_count);
 
@@ -116,14 +115,14 @@ static pj_status_t jb_framelist_init( pj_pool_t *pool,
 
 }
 
-static pj_status_t jb_framelist_destroy(jb_framelist *framelist) 
+static pj_status_t jb_framelist_destroy(jb_framelist_t *framelist) 
 {
     PJ_UNUSED_ARG(framelist);
     return PJ_SUCCESS;
 }
 
 
-static unsigned jb_framelist_size(jb_framelist *framelist) 
+static unsigned jb_framelist_size(jb_framelist_t *framelist) 
 {
     if (framelist->flist_tail == framelist->flist_head) {
 	return framelist->flist_empty ? 0 : framelist->flist_max_count;
@@ -134,7 +133,7 @@ static unsigned jb_framelist_size(jb_framelist *framelist)
 }
 
 
-static pj_bool_t jb_framelist_get(jb_framelist *framelist,
+static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 				  void *frame,
 				  pjmedia_jb_frame_type *p_type) 
 {
@@ -167,7 +166,7 @@ static pj_bool_t jb_framelist_get(jb_framelist *framelist,
 }
 
 
-static void jb_framelist_remove_head( jb_framelist *framelist,
+static void jb_framelist_remove_head( jb_framelist_t *framelist,
 				      unsigned count) 
 {
     unsigned cur_size;
@@ -214,7 +213,7 @@ static void jb_framelist_remove_head( jb_framelist *framelist,
 }
 
 
-static pj_bool_t jb_framelist_put_at(jb_framelist *framelist,
+static pj_bool_t jb_framelist_put_at(jb_framelist_t *framelist,
 				     unsigned index,
 				     const void *frame,
 				     unsigned frame_size) 
@@ -282,7 +281,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     pjmedia_jbuf *jb;
     pj_status_t status;
 
-    jb = pj_pool_zalloc(pool, sizeof(pjmedia_jbuf));
+    jb = PJ_POOL_ZALLOC_T(pool, pjmedia_jbuf);
 
     status = jb_framelist_init(pool, &jb->jb_framelist, frame_size, max_count);
     if (status != PJ_SUCCESS)

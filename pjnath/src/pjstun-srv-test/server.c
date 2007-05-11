@@ -87,7 +87,8 @@ PJ_DEF(pj_status_t) pj_stun_server_create(pj_pool_factory *pf,
 			srv->si.timer_heap);
 
     srv->si.thread_cnt = thread_cnt;
-    srv->threads = pj_pool_calloc(pool, thread_cnt, sizeof(pj_thread_t*));
+    srv->threads = (pj_thread_t**)
+		   pj_pool_calloc(pool, thread_cnt, sizeof(pj_thread_t*));
     for (i=0; i<thread_cnt; ++i) {
 	status = pj_thread_create(pool, "worker%p", &worker_thread,
 				  srv, 0, 0, &srv->threads[i]);
