@@ -72,7 +72,6 @@ static struct app_config
     pj_bool_t		    auto_rec;
     pjsua_recorder_id	    rec_id;
     pjsua_conf_port_id	    rec_port;
-    unsigned		    ptime;
     unsigned		    auto_answer;
     unsigned		    duration;
 
@@ -1209,9 +1208,9 @@ static int write_settings(const struct app_config *config,
 
 
     /* ptime */
-    if (config->ptime) {
+    if (config->media_cfg.ptime) {
 	pj_ansi_sprintf(line, "--ptime %d\n",
-			config->ptime);
+			config->media_cfg.ptime);
 	pj_strcat2(&cfg, line);
     }
 
