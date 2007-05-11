@@ -29,6 +29,7 @@
  */
 
 #include <pj/types.h>
+#include <pjlib-util/md5.h>
 
 PJ_BEGIN_DECL
 
@@ -40,6 +41,15 @@ PJ_BEGIN_DECL
  * This module contains the implementation of HMAC: Keyed-Hashing 
  * for Message Authentication, as described in RFC 2104
  */
+
+/**
+ * The HMAC-MD5 context used in the incremental HMAC calculation.
+ */
+typedef struct pj_hmac_md5_context
+{
+    pj_md5_context  context;	/**< MD5 context	    */
+    pj_uint8_t	    k_opad[64];	/**< opad xor-ed with key   */
+} pj_hmac_md5_context;
 
 
 /**
@@ -55,6 +65,36 @@ PJ_DECL(void) pj_hmac_md5(const pj_uint8_t *input, unsigned input_len,
 			  const pj_uint8_t *key, unsigned key_len, 
 			  pj_uint8_t digest[16]);
 
+
+/**
+ * Initiate HMAC-MD5 context for incremental hashing.
+ *
+ * @param hctx		HMAC-MD5 context.
+ * @param key		Pointer to the authentication key.
+ * @param key_len	Length of the authentication key.
+ */
+PJ_DECL(void) pj_hmac_md5_init(pj_hmac_md5_context *hctx, 
+			       const pj_uint8_t *key, unsigned key_len);
+
+/**
+ * Append string to the message.
+ *
+ * @param hctx		HMAC-MD5 context.
+ * @param input		Pointer to the input stream.
+ * @param input_len	Length of input stream in bytes.
+ */
+PJ_DECL(void) pj_hmac_md5_update(pj_hmac_md5_context *hctx,
+				 const pj_uint8_t *input, 
+				 unsigned input_len);
+
+/**
+ * Finish the message and return the digest. 
+ *
+ * @param hctx		HMAC-MD5 context.
+ * @param digest	Buffer to be filled with HMAC MD5 digest.
+ */
+PJ_DECL(void) pj_hmac_md5_final(pj_hmac_md5_context *hctx,
+				pj_uint8_t digest[16]);
 
 /**
  * @}

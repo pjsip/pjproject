@@ -119,6 +119,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     pj_bool_t username_ok;
     const pj_stun_realm_attr *arealm;
     const pj_stun_realm_attr *anonce;
+    pj_hmac_sha1_context ctx;
     pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE];
     pj_uint8_t md5_digest[16];
     pj_str_t key;
@@ -327,8 +328,17 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	key = password;
     }
 
-    /* Now calculate HMAC of the message */
-    pj_hmac_sha1(pkt, amsgi_pos, (pj_uint8_t*)key.ptr, key.slen, digest);
+    /* Now calculate HMAC of the message, adding zero padding if necessary
+     * to make the input 64 bytes aligned.
+     */
+    pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key.ptr, key.slen);
+    pj_hmac_sha1_update(&ctx, pkt, amsgi_pos);
+    if (amsgi_pos & 0x3F) {
+	pj_uint8_t zeroes[64];
+	pj_bzero(zeroes, sizeof(zeroes));
+	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 0x3F));
+    }
+    pj_hmac_sha1_final(&ctx, digest);
 
     /* Compare HMACs */
     if (pj_memcmp(amsgi->hmac, digest, 20)) {

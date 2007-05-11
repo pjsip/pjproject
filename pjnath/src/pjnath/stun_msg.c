@@ -2139,6 +2139,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
     if (amsgint != NULL) {
 
 	pj_uint8_t md5_key_buf[16];
+	pj_hmac_sha1_context ctx;
 	pj_str_t key;
 
 	/* MESSAGE-INTEGRITY must be the last attribute in the message, or
@@ -2181,10 +2182,17 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	    key.slen = 16;
 	}
 
-	/* Calculate HMAC-SHA1 digest */
-	pj_hmac_sha1((pj_uint8_t*)start, buf-start, 
-		     (pj_uint8_t*)key.ptr, key.slen,
-		     amsgint->hmac);
+	/* Calculate HMAC-SHA1 digest, add zero padding to input
+	 * if necessary to make the input 64 bytes aligned.
+	 */
+	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key.ptr, key.slen);
+	pj_hmac_sha1_update(&ctx, (pj_uint8_t*)start, buf-start);
+	if ((buf-start) & 0x3F) {
+	    pj_uint8_t zeroes[64];
+	    pj_bzero(zeroes, sizeof(zeroes));
+	    pj_hmac_sha1_update(&ctx, zeroes, 64-((buf-start) & 0x3F));
+	}
+	pj_hmac_sha1_final(&ctx, amsgint->hmac);
 
 	/* Put this attribute in the message */
 	status = encode_msgint_attr(amsgint, buf, buf_size, 
