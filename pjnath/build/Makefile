@@ -107,16 +107,24 @@ pjstun-srv-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjnath-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjnath-test-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjstun-client-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjstun-srv-test-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $@
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_CLIENT app=pjstun-client $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSTUN_SRV_TEST app=pjstun-srv-test $@
 	echo '$(TEST_EXE): $(PJNATH_LIB)' >> .pjnath-test-$(TARGET_NAME).depend; \
 
 
