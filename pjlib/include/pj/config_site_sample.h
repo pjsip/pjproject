@@ -48,6 +48,9 @@
 #   define PJMEDIA_HAS_ILBC_CODEC	0
 #   define PJMEDIA_HAS_SPEEX_CODEC	0
 
+    /* Disable safe module access */
+#   define PJSIP_SAFE_MODULE		0
+
 #   define PJSIP_MAX_PKT_LEN		2000
 
     /* Since we don't have threads, log buffer can use static buffer */
