@@ -26,6 +26,7 @@
 
 #include <pj/types.h>
 #include <pj/compat/setjmp.h>
+#include <pj/log.h>
 
 
 PJ_BEGIN_DECL
@@ -264,6 +265,15 @@ public:
 #define PJ_THROW(x_id)		do { TPjException e; e.code_=x_id; throw e;} \
 				while (0)
 #define PJ_GET_EXCEPTION()	pj_excp_.code_
+
+#else
+
+#define PJ_USE_EXCEPTION
+#define PJ_TRY				
+#define PJ_CATCH_ANY		if (0)
+#define PJ_END
+#define PJ_THROW(x_id)		do { PJ_LOG(1,("PJ_THROW"," error code = %d",x_id)); } while (0)
+#define PJ_GET_EXCEPTION()	0
 
 #endif	/* __cplusplus */
 

@@ -6,6 +6,8 @@ VENDORID	0x70000001
 SOURCEPATH	..\pjmedia\src\pjmedia
 
 OPTION		CW -lang c++
+OPTION		ARMCC --cpp
+OPTION		GCC	-x c++
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1

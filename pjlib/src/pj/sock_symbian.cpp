@@ -271,7 +271,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
     TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
     temp_addr.Output(str16);
  
-    return pj_unicode_to_ansi(str16.PtrZ(), str16.Length(),
+    return pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
 			      str8, sizeof(str8));
 }
 
@@ -307,7 +307,7 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
     pj_ansi_to_unicode(tempaddr8, pj_ansi_strlen(tempaddr8),
 		       tempaddr16, sizeof(tempaddr16));
 
-    TBuf<MAXIPLEN> ip_addr(tempaddr16);
+    TBuf<MAXIPLEN> ip_addr((const TText*)tempaddr16);
 
     TInetAddr addr;
     addr.Init(KAfInet);
@@ -418,7 +418,7 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
 	resv.GetHostName(tmpName, reqStatus);
 	User::WaitForRequest(reqStatus);
 
-	hostname.ptr = pj_unicode_to_ansi(tmpName.Ptr(), tmpName.Length(),
+	hostname.ptr = pj_unicode_to_ansi((const wchar_t*)tmpName.Ptr(), tmpName.Length(),
 					  buf, sizeof(buf));
 	hostname.slen = tmpName.Length();
     }
@@ -551,7 +551,7 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
     PJ_CHECK_STACK();
     
     PJ_ASSERT_RETURN(sock && addr && namelen && 
-		     *namelen>=sizeof(pj_sockaddr_in), PJ_EINVAL);
+		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
@@ -578,7 +578,7 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
     PJ_CHECK_STACK();
     
     PJ_ASSERT_RETURN(sock && addr && namelen && 
-		     *namelen>=sizeof(pj_sockaddr_in), PJ_EINVAL);
+		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
@@ -728,7 +728,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
 
     PJ_ASSERT_RETURN(sock && buf && len && from && fromlen, PJ_EINVAL);
     PJ_ASSERT_RETURN(*len > 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(*fromlen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    PJ_ASSERT_RETURN(*fromlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();

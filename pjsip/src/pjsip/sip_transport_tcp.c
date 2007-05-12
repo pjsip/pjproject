@@ -449,9 +449,7 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 				const pj_sockaddr_t *rem_addr,
 				int addr_len,
 				void *token,
-				void (*callback)(pjsip_transport *transport,
-						 void *token, 
-						 pj_ssize_t sent_bytes));
+				pjsip_transport_callback callback);
 
 /* Called by transport manager to shutdown */
 static pj_status_t tcp_shutdown(pjsip_transport *transport);
@@ -1038,9 +1036,7 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 				const pj_sockaddr_t *rem_addr,
 				int addr_len,
 				void *token,
-				void (*callback)(pjsip_transport *transport,
-						 void *token, 
-						 pj_ssize_t sent_bytes))
+				pjsip_transport_callback callback)
 {
     struct tcp_transport *tcp = (struct tcp_transport*)transport;
     pj_ssize_t size;
@@ -1252,7 +1248,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet) - rdata->pkt_info.len;
-	rdata->pkt_info.src_addr_len = sizeof(rdata->pkt_info.src_addr);
+	rdata->pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
 	status = pj_ioqueue_recv(key, op_key, 
 				 rdata->pkt_info.packet+rdata->pkt_info.len,
 				 &bytes_read, flags);

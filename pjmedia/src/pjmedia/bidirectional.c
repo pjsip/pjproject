@@ -54,7 +54,7 @@ PJ_DEF(pj_status_t) pjmedia_bidirectional_port_create( pj_pool_t *pool,
 {
     struct bidir_port *port;
 
-    port = pj_pool_zalloc(pool, sizeof(struct bidir_port));
+    port = PJ_POOL_ZALLOC_T(pool, struct bidir_port);
 
     pjmedia_port_info_init(&port->base.info, &get_port->info.name, SIGNATURE,
 			   get_port->info.clock_rate,

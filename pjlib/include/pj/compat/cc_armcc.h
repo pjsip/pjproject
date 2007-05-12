@@ -33,8 +33,12 @@
 #define PJ_CC_VER_2		__ARMCC_MINOR__
 #define PJ_CC_VER_3		__ARMCC_PATCHLEVEL__
 
+#ifdef __cplusplus
+#  define PJ_INLINE_SPECIFIER	inline
+#else
+#  define PJ_INLINE_SPECIFIER	static __inline
+#endif
 
-#define PJ_INLINE_SPECIFIER	static // why is not inline accepted?
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		
 #define PJ_ATTR_NORETURN	__attribute__ ((noreturn))

@@ -51,7 +51,7 @@ LOCAL_C void MainL()
     //
     // add your program code here, example code below
     //
-    int rc = test_main();
+    test_main();
 
     console->Printf(_L(" [press any key]\n"));
     console->Getch();

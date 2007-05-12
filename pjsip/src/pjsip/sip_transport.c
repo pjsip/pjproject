@@ -548,9 +548,7 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 					   const pj_sockaddr_t *addr,
 					   int addr_len,
 					   void *token,
-					   void (*cb)(void *token, 
-						      pjsip_tx_data *tdata,
-						      pj_ssize_t))
+					   pjsip_tp_send_callback cb)
 {
     pj_status_t status;
 
@@ -883,11 +881,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
  */
 PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					pjsip_endpoint *endpt,
-					void (*rx_cb)(pjsip_endpoint*,
-						      pj_status_t,
-						      pjsip_rx_data *),
-					pj_status_t (*tx_cb)(pjsip_endpoint*,
-							     pjsip_tx_data*),
+					pjsip_rx_callback rx_cb,
+					pjsip_tx_callback tx_cb,
 					pjsip_tpmgr **p_mgr)
 {
     pjsip_tpmgr *mgr;

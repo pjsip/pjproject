@@ -605,7 +605,8 @@ PJ_DECL(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
  * TRANSPORT
  *
  *****************************************************************************/
-
+typedef void (*pjsip_transport_callback)(pjsip_transport *tp, void *token,
+                                         pj_ssize_t sent_bytes);
 /**
  * This structure represent the "public" interface of a SIP transport.
  * Applications normally extend this structure to include transport
@@ -671,9 +672,7 @@ struct pjsip_transport
 			    const pj_sockaddr_t *rem_addr,
 			    int addr_len,
 			    void *token,
-			    void (*callback)(pjsip_transport *transport,
-					     void *token, 
-					     pj_ssize_t sent_bytes));
+			    pjsip_transport_callback callback);
 
     /**
      * Instruct the transport to initiate graceful shutdown procedure.
@@ -884,7 +883,8 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  * TRANSPORT MANAGER
  *
  *****************************************************************************/
-
+typedef void (*pjsip_rx_callback)(pjsip_endpoint*, pj_status_t, pjsip_rx_data *);
+typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint*, pjsip_tx_data*);
 /**
  * Create a new transport manager.
  *
@@ -899,11 +899,8 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 					 pjsip_endpoint * endpt,
-					 void (*rx_cb)(pjsip_endpoint*,
-						       pj_status_t,
-						       pjsip_rx_data *),
-					 pj_status_t (*tx_cb)(pjsip_endpoint*,
-							      pjsip_tx_data*),
+					 pjsip_rx_callback rx_cb,
+					 pjsip_tx_callback tx_cb,
 					 pjsip_tpmgr **p_mgr);
 
 
@@ -987,7 +984,8 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						   const pjsip_tpselector *sel,
 						   pjsip_transport **tp);
 
-
+typedef void (*pjsip_tp_send_callback)(void *token, pjsip_tx_data *tdata,
+									   pj_ssize_t bytes_sent);
 /**
  * Send a SIP message using the specified transport.
  */
@@ -996,9 +994,7 @@ PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
 					   const pj_sockaddr_t *addr,
 					   int addr_len,
 					   void *token,
-					   void (*cb)(void *token, 
-						      pjsip_tx_data *tdata,
-						      pj_ssize_t bytes_sent));
+					   pjsip_tp_send_callback cb);
 
 
 /**

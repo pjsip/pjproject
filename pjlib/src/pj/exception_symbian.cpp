@@ -22,7 +22,6 @@
 #include <pj/log.h>
 #include <pj/errno.h>
 
-static long thread_local_id = -1;
 
 #if defined(PJ_HAS_EXCEPTION_NAMES) && PJ_HAS_EXCEPTION_NAMES != 0
     static const char *exception_id_names[PJ_MAX_EXCEPTION_ID];

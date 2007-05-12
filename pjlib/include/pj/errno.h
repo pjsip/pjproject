@@ -111,6 +111,7 @@ PJ_DECL(void) pj_set_netos_error(pj_status_t code);
 PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode, 
 			       char *buf, pj_size_t bufsize);
 
+typedef pj_str_t (*pjsip_error_callback)(pj_status_t, char*, pj_size_t);
 /**
  * Register strerror message handler for the specified error space.
  * Application can register its own handler to supply the error message
@@ -132,8 +133,7 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  */
 PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 					  pj_status_t err_space,
-					  pj_str_t (*f)(pj_status_t,char*,
-							pj_size_t));
+					  pjsip_error_callback f);
 
 /**
  * @hideinitializer

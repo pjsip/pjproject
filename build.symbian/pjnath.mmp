@@ -8,7 +8,9 @@ SOURCEPATH	..\pjnath\src\pjnath
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
-//OPTION		CW -lang c++
+OPTION		CW -lang c++
+OPTION		ARMCC --cpp
+OPTION		GCC	-x c++
 
 //
 // PJNATH files
@@ -45,7 +47,7 @@ SYSTEMINCLUDE	..\pjnath\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		pjlib.lib 
-LIBRARY		pjlib_util.lib 
+//STATICLIBRARY		pjlib.lib 
+//STATICLIBRARY		pjlib_util.lib 
 CAPABILITY	None
 

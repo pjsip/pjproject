@@ -1005,9 +1005,7 @@ PJ_DEF(pj_status_t)
 pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt, 
 				   pjsip_tx_data *tdata,
 				   void *token,
-				   void (*cb)(pjsip_send_state*,
-					      pj_ssize_t sent,
-					      pj_bool_t *cont))
+				   pjsip_endpt_callback cb)
 {
     pjsip_host_info dest_info;
     pjsip_send_state *stateless_data;
@@ -1226,9 +1224,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 					       pjsip_response_addr *res_addr,
 					       pjsip_tx_data *tdata,
 					       void *token,
-					       void (*cb)(pjsip_send_state*,
-							  pj_ssize_t sent,
-							  pj_bool_t *cont))
+					       pjsip_endpt_callback cb)
 {
     /* Determine which transports and addresses to send the response,
      * based on Section 18.2.2 of RFC 3261.
@@ -1277,9 +1273,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response2( pjsip_endpoint *endpt,
 					        pjsip_rx_data *rdata,
 					        pjsip_tx_data *tdata,
 						void *token,
-						void (*cb)(pjsip_send_state*,
-							   pj_ssize_t sent,
-							   pj_bool_t *cont))
+						pjsip_endpt_callback cb)
 {
     pjsip_response_addr res_addr;
     pj_status_t status;

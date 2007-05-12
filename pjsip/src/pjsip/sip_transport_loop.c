@@ -145,9 +145,7 @@ static pj_status_t loop_send_msg( pjsip_transport *tp,
 				  const pj_sockaddr_t *rem_addr,
 				  int addr_len,
 				  void *token,
-				  void (*cb)(pjsip_transport *transport,
-					     void *token, 
-					     pj_ssize_t sent_bytes))
+				  pjsip_transport_callback cb)
 {
     struct loop_transport *loop = (struct loop_transport*)tp;
     struct recv_list *recv_pkt;

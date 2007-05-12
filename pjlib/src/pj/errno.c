@@ -103,8 +103,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 /* Register strerror handle. */
 PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start,
 					  pj_status_t space,
-					  pj_str_t (*f)(pj_status_t,char*,
-							pj_size_t))
+					  pjsip_error_callback f)
 {
     unsigned i;
 

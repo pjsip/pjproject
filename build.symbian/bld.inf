@@ -1,3 +1,8 @@
+prj_platforms
+winscw
+armv5
+gcce
+
 prj_mmpfiles
 pjlib.mmp
 pjlib_util.mmp

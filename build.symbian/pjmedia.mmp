@@ -74,7 +74,7 @@ SYSTEMINCLUDE	..\pjnath\include
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
-SYSTEMINCLUDE	\epoc32\include\mmf\plugin
+//SYSTEMINCLUDE	\epoc32\include\mmf\plugin
 
 CAPABILITY	None
 

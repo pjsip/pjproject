@@ -35,7 +35,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
     // Convert name to Unicode
     wchar_t name16[PJ_MAX_HOSTNAME];
     pj_ansi_to_unicode(name->ptr, name->slen, name16, PJ_ARRAY_SIZE(name16));
-    TPtrC16 data(name16);
+    TPtrC16 data((const TUint16*)name16);
 
     // Resolve!
     TNameEntry nameEntry;
@@ -65,7 +65,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
     static pj_sockaddr_in resolved_addr;
 
     // Convert the official address to ANSI.
-    pj_unicode_to_ansi(nameEntry().iName.Ptr(), nameEntry().iName.Length(),
+    pj_unicode_to_ansi((const wchar_t*)nameEntry().iName.Ptr(), nameEntry().iName.Length(),
 		       resolved_name, sizeof(resolved_name));
 
     // Convert IP address

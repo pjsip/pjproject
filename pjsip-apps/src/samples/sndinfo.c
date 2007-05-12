@@ -256,7 +256,6 @@ int main(int argc, char *argv[])
     
     if (argc == 1) {
 	enum_devices();
-	return 0;
     } else if (argc == 6) {
 	
 	int dev_id;

@@ -11,7 +11,7 @@ MACRO		PJ_SYMBIAN=1
 //OPTION		CW -lang c++
 
 
-// PJSIP-SIMPLE files
+// PJSIP-UA files
 
 SOURCE	sip_inv.c
 SOURCE	sip_reg.c

@@ -286,9 +286,7 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 				 const pj_sockaddr_t *rem_addr,
 				 int addr_len,
 				 void *token,
-				 void (*callback)(pjsip_transport*,
-						  void *token,
-						  pj_ssize_t))
+				 pjsip_transport_callback callback)
 {
     struct udp_transport *tp = (struct udp_transport*)transport;
     pj_ssize_t size;

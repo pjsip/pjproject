@@ -908,6 +908,7 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 
     parsing_headers = PJ_FALSE;
 
+retry_parse:
     PJ_TRY 
     {
 	if (parsing_headers)
@@ -1054,7 +1055,7 @@ parse_headers:
 
 	    /* Continue parse next header, if any. */
 	    if (!pj_scan_is_eof(scanner) && !IS_NEWLINE(*scanner->curptr)) {
-		goto parse_headers;
+		goto retry_parse;
 	    }
 	}
 

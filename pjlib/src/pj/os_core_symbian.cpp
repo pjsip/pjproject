@@ -301,7 +301,7 @@ on_error:
 }
 
 
-PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
+PJ_DEF(pj_status_t) pj_atexit(pj_exit_callback func)
 {
     if (atexit_count >= PJ_ARRAY_SIZE(atexit_func))
 	return PJ_ETOOMANY;
@@ -459,7 +459,7 @@ PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
  */
 PJ_DEF(void) pj_thread_local_free(long index)
 {
-    PJ_ASSERT_ON_FAIL(index >= 0 && index < PJ_ARRAY_SIZE(tls_vars) &&
+    PJ_ASSERT_ON_FAIL(index >= 0 && index < (int)PJ_ARRAY_SIZE(tls_vars) &&
 		     tls_vars[index] != 0, return);
 
     tls_vars[index] = 0;
@@ -473,7 +473,7 @@ PJ_DEF(pj_status_t) pj_thread_local_set(long index, void *value)
 {
     pj_thread_t *rec = pj_thread_this();
 
-    PJ_ASSERT_RETURN(index >= 0 && index < PJ_ARRAY_SIZE(tls_vars) &&
+    PJ_ASSERT_RETURN(index >= 0 && index < (int)PJ_ARRAY_SIZE(tls_vars) &&
 		     tls_vars[index] != 0, PJ_EINVAL);
 
     rec->tls_values[index] = value;
@@ -487,7 +487,7 @@ PJ_DEF(void*) pj_thread_local_get(long index)
 {
     pj_thread_t *rec = pj_thread_this();
 
-    PJ_ASSERT_RETURN(index >= 0 && index < PJ_ARRAY_SIZE(tls_vars) &&
+    PJ_ASSERT_RETURN(index >= 0 && index < (int)PJ_ARRAY_SIZE(tls_vars) &&
 		     tls_vars[index] != 0, NULL);
 
     return rec->tls_values[index];

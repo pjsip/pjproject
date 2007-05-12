@@ -83,7 +83,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 					       pjsip_tx_data *tdata,
 					       pj_int32_t timeout,
 					       void *token,
-					       void (*cb)(void*,pjsip_event*))
+					       pjsip_endpt_send_callback cb)
 {
     pjsip_transaction *tsx;
     struct tsx_data *tsx_data;

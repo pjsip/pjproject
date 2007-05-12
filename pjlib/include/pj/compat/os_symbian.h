@@ -144,7 +144,9 @@
 #define PJ_HAS_SOCKLEN_T		1
 typedef unsigned int socklen_t;
 
+#ifndef __GCCE__
 #include <e32def.h>
+#endif
 
 /*
 #if defined(PJ_EXPORTING)
