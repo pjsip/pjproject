@@ -72,6 +72,7 @@ static const pj_str_t STR_MIME_PLAIN	   = { "plain", 5 };
 
 
 /* Check if content type is acceptable */
+#if 0
 static pj_bool_t acceptable_message(const pjsip_media_type *mime)
 {
     return (pj_stricmp(&mime->type, &STR_MIME_TEXT)==0 &&
@@ -80,7 +81,7 @@ static pj_bool_t acceptable_message(const pjsip_media_type *mime)
 	   (pj_stricmp(&mime->type, &STR_MIME_APP)==0 &&
 	    pj_stricmp(&mime->subtype, &STR_MIME_ISCOMPOSING)==0);
 }
-
+#endif
 
 /**
  * Create Accept header for MESSAGE.
@@ -104,6 +105,8 @@ pjsip_accept_hdr* pjsua_im_create_accept(pj_pool_t *pool)
 pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 				pjsip_accept_hdr **p_accept_hdr)
 {
+    /* Some UA sends text/html, so this check will break */
+#if 0
     pjsip_ctype_hdr *ctype;
     pjsip_msg *msg;
 
@@ -122,6 +125,10 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 
 	return PJ_FALSE;
     }
+#else
+    PJ_UNUSED_ARG(rdata);
+    PJ_UNUSED_ARG(p_accept_hdr);
+#endif
 
     return PJ_TRUE;
 }
@@ -154,23 +161,9 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	contact.slen = 0;
     }
 
-
-    if (pj_stricmp(&body->content_type.type, &STR_MIME_TEXT)==0 &&
-	pj_stricmp(&body->content_type.subtype, &STR_MIME_PLAIN)==0)
+    if (pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
+	pj_stricmp(&body->content_type.subtype, &STR_MIME_ISCOMPOSING)==0)
     {
-	const pj_str_t mime_text_plain = pj_str("text/plain");
-	pj_str_t text_body;
-	
-	/* Save text body */
-	text_body.ptr = rdata->msg_info.msg->body->data;
-	text_body.slen = rdata->msg_info.msg->body->len;
-
-	if (pjsua_var.ua_cfg.cb.on_pager) {
-	    (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
-					    &mime_text_plain, &text_body);
-	}
-
-    } else {
 	/* Expecting typing indication */
 	pj_status_t status;
 	pj_bool_t is_typing;
@@ -187,6 +180,33 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	    (*pjsua_var.ua_cfg.cb.on_typing)(call_id, from, to, &contact,
 					     is_typing);
 	}
+
+    } else {
+	pj_str_t mime_type;
+	char buf[256];
+	pjsip_media_type *m;
+	pj_str_t text_body;
+	
+	/* Save text body */
+	text_body.ptr = rdata->msg_info.msg->body->data;
+	text_body.slen = rdata->msg_info.msg->body->len;
+
+	/* Get mime type */
+	m = &rdata->msg_info.msg->body->content_type;
+	mime_type.ptr = buf;
+	mime_type.slen = pj_ansi_snprintf(buf, sizeof(buf),
+				          "%.*s/%.*s",
+				          (int)m->type.slen,
+					  m->type.ptr,
+					  (int)m->subtype.slen,
+					  m->subtype.ptr);
+	if (mime_type.slen < 1)
+	    mime_type.slen = 0;
+
+	if (pjsua_var.ua_cfg.cb.on_pager) {
+	    (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
+					    &mime_type, &text_body);
+	}
     }
 
 }
@@ -199,7 +219,6 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_str_t from, to;
     pjsip_accept_hdr *accept_hdr;
-    pjsip_contact_hdr *contact_hdr;
     pjsip_msg *msg;
     pj_status_t status;
 
@@ -241,17 +260,9 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
      * not available, then use From header.
      */
     from.ptr = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-    contact_hdr = pjsip_msg_find_hdr(rdata->msg_info.msg,
-				     PJSIP_H_CONTACT, NULL);
-    if (contact_hdr) {
-	from.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-				    contact_hdr->uri, 
-				    from.ptr, PJSIP_MAX_URL_SIZE);
-    } else {
-	from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
-				    rdata->msg_info.from->uri,
-				    from.ptr, PJSIP_MAX_URL_SIZE);
-    }
+    from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
+				rdata->msg_info.from->uri,
+				from.ptr, PJSIP_MAX_URL_SIZE);
 
     if (from.slen < 1)
 	from = pj_str("<--URI is too long-->");
