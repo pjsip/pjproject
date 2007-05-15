@@ -157,7 +157,7 @@ static pj_status_t sess_on_rx_request(pj_stun_session *sess,
     PJ_UNUSED_ARG(pkt_len);
 
     /* Create response */
-    status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
+    status = pj_stun_session_create_res(sess, msg, 0, NULL, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 

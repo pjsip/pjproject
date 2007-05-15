@@ -1869,9 +1869,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	status = pj_stun_session_create_response(sess, msg, 
-						 PJ_STUN_SC_BAD_REQUEST,
-						 NULL, &tdata);
+	status = pj_stun_session_create_res(sess, msg, 
+					    PJ_STUN_SC_BAD_REQUEST,
+					    NULL, &tdata);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -1927,9 +1927,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	    pj_ice_sess_change_role(ice, PJ_ICE_SESS_ROLE_CONTROLLED);
 	} else {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_response(sess, msg, 
-					             PJ_STUN_SC_ROLE_CONFLICT,
-						     NULL, &tdata);
+	    status = pj_stun_session_create_res(sess, msg, 
+					        PJ_STUN_SC_ROLE_CONFLICT,
+						NULL, &tdata);
 	    if (status == PJ_SUCCESS) {
 		pj_stun_session_send_msg(sess, PJ_TRUE, 
 				         src_addr, src_addr_len, tdata);
@@ -1943,9 +1943,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     {
 	if (pj_cmp_timestamp(&ice->tie_breaker, &role_attr->value) < 0) {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_response(sess, msg, 
-					             PJ_STUN_SC_ROLE_CONFLICT,
-						     NULL, &tdata);
+	    status = pj_stun_session_create_res(sess, msg, 
+					        PJ_STUN_SC_ROLE_CONFLICT,
+						NULL, &tdata);
 	    if (status == PJ_SUCCESS) {
 		pj_stun_session_send_msg(sess, PJ_TRUE, 
 				         src_addr, src_addr_len, tdata);
@@ -1976,7 +1976,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     /* 
      * First send response to this request 
      */
-    status = pj_stun_session_create_response(sess, msg, 0, NULL, &tdata);
+    status = pj_stun_session_create_res(sess, msg, 0, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pj_mutex_unlock(ice->mutex);
 	return status;

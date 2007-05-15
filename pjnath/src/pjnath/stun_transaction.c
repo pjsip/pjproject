@@ -188,11 +188,11 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	    tsx->retransmit_time.sec = 0;
 	    tsx->retransmit_time.msec = tsx->cfg->rto_msec;
 
-	} else if (tsx->transmit_count < PJ_STUN_MAX_RETRANSMIT_COUNT-1) {
+	} else if (tsx->transmit_count < PJ_STUN_MAX_TRANSMIT_COUNT-1) {
 	    unsigned msec;
 
 	    msec = PJ_TIME_VAL_MSEC(tsx->retransmit_time);
-	    msec = (msec << 1) + 100;
+	    msec <<= 1;
 	    tsx->retransmit_time.sec = msec / 1000;
 	    tsx->retransmit_time.msec = msec % 1000;
 
@@ -216,6 +216,11 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
     }
 
 
+    tsx->transmit_count++;
+
+    PJ_LOG(5,(tsx->obj_name, "STUN sending message (transmit count=%d)",
+	      tsx->transmit_count));
+
     /* Send message */
     status = tsx->cb.on_send_msg(tsx, tsx->last_pkt, tsx->last_pkt_size);
     if (status != PJ_SUCCESS) {
@@ -228,10 +233,6 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	return status;
     }
 
-    tsx->transmit_count++;
-
-    PJ_LOG(5,(tsx->obj_name, "STUN sending message (transmit count=%d)",
-	      tsx->transmit_count));
     return status;
 }
 
@@ -268,7 +269,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
-    if (tsx->transmit_count >= PJ_STUN_MAX_RETRANSMIT_COUNT) {
+    if (tsx->transmit_count >= PJ_STUN_MAX_TRANSMIT_COUNT) {
 	/* Retransmission count exceeded. Transaction has failed */
 	tsx->retransmit_timer.id = 0;
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));

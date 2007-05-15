@@ -98,7 +98,7 @@ PJ_INLINE(void) pj_stun_config_init(pj_stun_config *cfg,
     cfg->ioqueue = ioqueue;
     cfg->timer_heap = timer_heap;
     cfg->rto_msec = PJ_STUN_RTO_VALUE;
-    cfg->res_cache_msec = 10000;
+    cfg->res_cache_msec = PJ_STUN_RES_CACHE_DURATION;
 }
 
 

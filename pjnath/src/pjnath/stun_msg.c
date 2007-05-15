@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/stun_msg.h>
-#include <pjnath/stun_auth.h>
 #include <pjnath/errno.h>
 #include <pjlib-util/crc32.h>
 #include <pjlib-util/hmac_sha1.h>
@@ -1948,10 +1947,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 /* Calculate HMAC-SHA1 key for long term credential, by getting
  * MD5 digest of username, realm, and password. 
  */
-void pj_stun_calc_md5_key(pj_uint8_t digest[16],
-			  const pj_str_t *realm,
-			  const pj_str_t *username,
-			  const pj_str_t *passwd)
+static void calc_md5_key(pj_uint8_t digest[16],
+			 const pj_str_t *realm,
+			 const pj_str_t *username,
+			 const pj_str_t *passwd)
 {
     /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
      * the MD5 hash of the result of concatenating the following five
@@ -1966,9 +1965,9 @@ void pj_stun_calc_md5_key(pj_uint8_t digest[16],
     pj_md5_init(&ctx);
 
 #define REMOVE_QUOTE(s)	if (s.slen && *s.ptr=='"') \
-		    s.ptr++, s.slen--; \
-		if (s.slen && s.ptr[s.slen-1]=='"') \
-		    s.slen--;
+			    s.ptr++, s.slen--; \
+			if (s.slen && s.ptr[s.slen-1]=='"') \
+			    s.slen--;
 
     /* Add username */
     s = *username;
@@ -1993,6 +1992,28 @@ void pj_stun_calc_md5_key(pj_uint8_t digest[16],
 
     /* Done */
     pj_md5_final(&ctx, digest);
+}
+
+
+/*
+ * Create authentication key to be used for encoding the message with
+ * MESSAGE-INTEGRITY. 
+ */
+PJ_DEF(void) pj_stun_create_key(pj_pool_t *pool,
+				pj_str_t *key,
+				const pj_str_t *realm,
+				const pj_str_t *username,
+				const pj_str_t *passwd)
+{
+    PJ_ASSERT_ON_FAIL(pool && key && username && passwd, return);
+
+    if (realm && realm->slen) {
+	key->ptr = (char*) pj_pool_alloc(pool, 16);
+	calc_md5_key((pj_uint8_t*)key->ptr, realm, username, passwd);
+	key->slen = 16;
+    } else {
+	pj_strdup(pool, key, passwd);
+    }
 }
 
 
@@ -2028,16 +2049,13 @@ static char *print_binary(const pj_uint8_t *data, unsigned data_len)
 PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				       pj_uint8_t *buf, unsigned buf_size,
 				       unsigned options,
-				       const pj_str_t *password,
+				       const pj_str_t *key,
 				       unsigned *p_msg_len)
 {
-    pj_stun_msg_hdr *hdr;
     pj_uint8_t *start = buf;
-    pj_stun_realm_attr *arealm = NULL;
-    pj_stun_username_attr *auname = NULL;
     pj_stun_msgint_attr *amsgint = NULL;
     pj_stun_fingerprint_attr *afingerprint = NULL;
-    unsigned printed = 0;
+    unsigned printed = 0, body_len;
     pj_status_t status;
     unsigned i;
 
@@ -2052,16 +2070,16 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
      */
     if (buf_size < sizeof(pj_stun_msg_hdr))
 	return PJ_ETOOSMALL;
-    pj_memcpy(buf, &msg->hdr, sizeof(pj_stun_msg_hdr));
-    hdr = (pj_stun_msg_hdr*) buf;
-    hdr->magic = pj_htonl(hdr->magic);
-    hdr->type = pj_htons(hdr->type);
-    /* We'll fill in the length later */
+    
+    PUTVAL16H(buf, 0, msg->hdr.type);
+    PUTVAL16H(buf, 2, 0);   /* length will be calculated later */
+    PUTVAL32H(buf, 4, msg->hdr.magic);
+    pj_memcpy(buf+8, msg->hdr.tsx_id, sizeof(msg->hdr.tsx_id));
 
     buf += sizeof(pj_stun_msg_hdr);
     buf_size -= sizeof(pj_stun_msg_hdr);
 
-    /* Print each attribute */
+    /* Encode each attribute to the message */
     for (i=0; i<msg->attr_count; ++i) {
 	const struct attr_desc *adesc;
 	const pj_stun_attr_hdr *attr_hdr = msg->attr[i];
@@ -2072,14 +2090,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 	    /* Stop when encountering MESSAGE-INTEGRITY */
 	    break;
-
-	} else if (attr_hdr->type == PJ_STUN_ATTR_USERNAME) {
-	    pj_assert(auname == NULL);
-	    auname = (pj_stun_username_attr*) attr_hdr;
-
-	} else if (attr_hdr->type == PJ_STUN_ATTR_REALM) {
-	    pj_assert(arealm == NULL);
-	    arealm = (pj_stun_realm_attr*) attr_hdr;
 
 	} else if (attr_hdr->type == PJ_STUN_ATTR_FINGERPRINT) {
 	    afingerprint = (pj_stun_fingerprint_attr*) attr_hdr;
@@ -2123,25 +2133,24 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
      * Note that length is not including the 20 bytes header.
      */
     if (amsgint && afingerprint) {
-	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
+	body_len = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
     } else if (amsgint) {
-	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 24);
+	body_len = (pj_uint16_t)((buf - start) - 20 + 24);
     } else if (afingerprint) {
-	msg->hdr.length = (pj_uint16_t)((buf - start) - 20 + 8);
+	body_len = (pj_uint16_t)((buf - start) - 20 + 8);
     } else {
-	msg->hdr.length = (pj_uint16_t)((buf - start) - 20);
+	body_len = (pj_uint16_t)((buf - start) - 20);
     }
 
     /* hdr->length = pj_htons(length); */
-    start[2] = (pj_uint8_t)((msg->hdr.length >> 8) & 0x00FF);
-    start[3] = (pj_uint8_t)(msg->hdr.length & 0x00FF);
+    PUTVAL16H(start, 2, (pj_uint16_t)body_len);
 
     /* Calculate message integrity, if present */
     if (amsgint != NULL) {
-
-	pj_uint8_t md5_key_buf[16];
 	pj_hmac_sha1_context ctx;
-	pj_str_t key;
+
+	/* Key MUST be specified */
+	PJ_ASSERT_RETURN(key, PJ_EINVALIDOP);
 
 	/* MESSAGE-INTEGRITY must be the last attribute in the message, or
 	 * the last attribute before FINGERPRINT.
@@ -2161,32 +2170,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	    }
 	}
 
-	/* Must have USERNAME attribute */
-	if (auname == NULL) {
-	    /* Should not happen for message generated by us */
-	    pj_assert(PJ_FALSE);
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_MISSING_USERNAME);
-	}
-
-	/* Password must be specified */
-	PJ_ASSERT_RETURN(password, PJ_EINVAL);
-
-	/* Get the key to sign the message */
-	if (arealm == NULL ) {
-	    /* For short term credential, the key is the password */
-	    key = *password;
-
-	} else {
-	    pj_stun_calc_md5_key(md5_key_buf, &arealm->value, 
-				 &auname->value, password);
-	    key.ptr = (char*) md5_key_buf;
-	    key.slen = 16;
-	}
-
 	/* Calculate HMAC-SHA1 digest, add zero padding to input
 	 * if necessary to make the input 64 bytes aligned.
 	 */
-	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key.ptr, key.slen);
+	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
 	pj_hmac_sha1_update(&ctx, (pj_uint8_t*)start, buf-start);
 	if ((buf-start) & 0x3F) {
 	    pj_uint8_t zeroes[64];
@@ -2220,7 +2207,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	buf_size -= printed;
     }
 
-    /* Done */
+    /* Update message length. */
+    msg->hdr.length = (pj_uint16_t) ((buf - start) - 20);
+
+    /* Return the length */
     if (p_msg_len)
 	*p_msg_len = (buf - start);
 

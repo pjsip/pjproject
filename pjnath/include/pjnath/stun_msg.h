@@ -132,12 +132,10 @@ enum pj_stun_msg_class_e
  */
 #define PJ_STUN_IS_REQUEST(msg_type)	(((msg_type) & 0x0110) == 0x0000)
 
-
 /**
- * Determine if the message type is a response.
+ * Determine if the message type is a successful response.
  */
 #define PJ_STUN_IS_SUCCESS_RESPONSE(msg_type) (((msg_type) & 0x0110) == 0x0100)
-
 
 /**
  * The response bit in the message type.
@@ -149,12 +147,15 @@ enum pj_stun_msg_class_e
  */
 #define PJ_STUN_IS_ERROR_RESPONSE(msg_type) (((msg_type) & 0x0110) == 0x0110)
 
-
 /**
  * The error response bit in the message type.
  */
 #define PJ_STUN_ERROR_RESPONSE_BIT	(0x0110)
 
+/**
+ * Determine if the message type is a response.
+ */
+#define PJ_STUN_IS_RESPONSE(msg_type) (((msg_type) & 0x0100) == 0x0100)
 
 /**
  * Determine if the message type is an indication message.
@@ -1148,17 +1149,20 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * Print the STUN message structure to a packet buffer, ready to be 
  * sent to remote destination. This function will take care about 
  * calculating the MESSAGE-INTEGRITY digest as well as FINGERPRINT
- * value.
+ * value, if these attributes are present in the message.
  *
- * If MESSAGE-INTEGRITY attribute is present, the function assumes
- * that application wants to include credential (short or long term)
- * in the message, and this function will calculate the HMAC digest
- * from the message using the supplied password in the parameter. 
- * If REALM attribute is present, the HMAC digest is calculated as
- * long term credential, otherwise as short term credential.
+ * If application wants to apply credential to the message, it MUST
+ * include a blank MESSAGE-INTEGRITY attribute in the message, as the
+ * last attribute or the attribute before FINGERPRINT. This function will
+ * calculate the HMAC digest from the message using  the supplied key in
+ * the parameter. The key should be set to the password if short term 
+ * credential is used, or calculated from the MD5 hash of the realm, 
+ * username, and password using #pj_stun_create_key() if long term 
+ * credential is used.
  *
  * If FINGERPRINT attribute is present, this function will calculate
- * the FINGERPRINT CRC attribute for the message.
+ * the FINGERPRINT CRC attribute for the message. The FINGERPRINT MUST
+ * be added as the last attribute of the message.
  *
  * @param msg		The STUN message to be printed. Upon return,
  *			some fields in the header (such as message
@@ -1166,9 +1170,9 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * @param pkt_buf	The buffer to be filled with the packet.
  * @param buf_size	Size of the buffer.
  * @param options	Options, which currently must be zero.
- * @param password	Password to be used when credential is to be
- *			included. This parameter MUST be specified when
- *			the message contains MESSAGE-INTEGRITY attribute.
+ * @param key		Authentication key to calculate MESSAGE-INTEGRITY
+ *			value. Application can create this key by using
+ *			#pj_stun_create_key() function.
  * @param p_msg_len	Upon return, it will be filed with the size of 
  *			the packet in bytes, or negative value on error.
  *
@@ -1178,8 +1182,32 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				        pj_uint8_t *pkt_buf,
 				        unsigned buf_size,
 				        unsigned options,
-					const pj_str_t *password,
+					const pj_str_t *key,
 				        unsigned *p_msg_len);
+
+
+/**
+ * Create authentication key to be used for encoding the message with
+ * MESSAGE-INTEGRITY. If short term credential is used (i.e. the realm
+ * argument is NULL or empty), the key will be copied from the password.
+ * If long term credential is used, the key will be calculated from the
+ * MD5 hash of the realm, username, and password.
+ *
+ * @param pool		Pool to allocate memory for the key.
+ * @param key		String to receive the key.
+ * @param realm		The realm of the credential, if long term credential
+ *			is to be used. If short term credential is wanted,
+ *			application can put NULL or empty string here.
+ * @param username	The username.
+ * @param passwd	The clear text password.
+ */
+PJ_DECL(void) pj_stun_create_key(pj_pool_t *pool,
+				 pj_str_t *key,
+				 const pj_str_t *realm,
+				 const pj_str_t *username,
+				 const pj_str_t *passwd);
+
+
 
 /**
  * Check that the PDU is potentially a valid STUN message. This function

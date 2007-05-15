@@ -104,13 +104,13 @@ static pj_status_t create_challenge(pj_pool_t *pool,
 }
 
 
-/* Verify credential */
-PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
-					       unsigned pkt_len,
-					       const pj_stun_msg *msg,
-					       pj_stun_auth_cred *cred,
-					       pj_pool_t *pool,
-					       pj_stun_msg **p_response)
+/* Verify credential in the request */
+PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
+					         unsigned pkt_len,
+					         const pj_stun_msg *msg,
+					         pj_stun_auth_cred *cred,
+					         pj_pool_t *pool,
+					         pj_stun_msg **p_response)
 {
     pj_str_t realm, nonce, password;
     const pj_stun_msgint_attr *amsgi;
@@ -121,7 +121,6 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     const pj_stun_realm_attr *anonce;
     pj_hmac_sha1_context ctx;
     pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE];
-    pj_uint8_t md5_digest[16];
     pj_str_t key;
     pj_status_t status;
 
@@ -224,7 +223,7 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	/* We want long term, and REALM is present */
 
 	/* NONCE must be present. */
-	if (anonce == NULL) {
+	if (anonce == NULL && nonce.slen) {
 	    if (p_response) {
 		create_challenge(pool, msg, PJ_STUN_SC_MISSING_NONCE, 
 				 NULL, &realm, &nonce, p_response);
@@ -319,24 +318,18 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
 	return PJ_EBUG;
     }
 
-    /* Determine which key to use */
-    if (realm.slen) {
-	pj_stun_calc_md5_key(md5_digest, &realm, &auser->value, &password);
-	key.ptr = (char*)md5_digest;
-	key.slen = 16;
-    } else {
-	key = password;
-    }
+    /* Calculate key */
+    pj_stun_create_key(pool, &key, &realm, &auser->value, &password);
 
     /* Now calculate HMAC of the message, adding zero padding if necessary
      * to make the input 64 bytes aligned.
      */
     pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key.ptr, key.slen);
     pj_hmac_sha1_update(&ctx, pkt, amsgi_pos);
-    if (amsgi_pos & 0x3F) {
+    if (amsgi_pos & 63) {
 	pj_uint8_t zeroes[64];
 	pj_bzero(zeroes, sizeof(zeroes));
-	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 0x3F));
+	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 63));
     }
     pj_hmac_sha1_final(&ctx, digest);
 
@@ -354,4 +347,78 @@ PJ_DEF(pj_status_t) pj_stun_verify_credential( const pj_uint8_t *pkt,
     return PJ_SUCCESS;
 }
 
+
+/* Authenticate MESSAGE-INTEGRITY in the response */
+PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
+					          unsigned pkt_len,
+					          const pj_stun_msg *msg,
+					          const pj_str_t *key)
+{
+    const pj_stun_msgint_attr *amsgi;
+    unsigned amsgi_pos;
+    pj_hmac_sha1_context ctx;
+    pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE];
+
+    PJ_ASSERT_RETURN(pkt && pkt_len && msg && key, PJ_EINVAL);
+
+    /* First check that MESSAGE-INTEGRITY is present */
+    amsgi = (const pj_stun_msgint_attr*)
+	    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_MESSAGE_INTEGRITY, 0);
+    if (amsgi == NULL) {
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
+    }
+
+
+    /* Check that message length is valid */
+    if (msg->hdr.length < 24) {
+	return PJNATH_EINSTUNMSGLEN;
+    }
+
+    /* Get the position of MESSAGE-INTEGRITY in the packet */
+    amsgi_pos = 20+msg->hdr.length-24;
+    if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+	/* Found MESSAGE-INTEGRITY as the last attribute */
+    } else {
+	amsgi_pos = 0;
+    }
+    
+    if (amsgi_pos==0) {
+	/* Check that message length is valid */
+	if (msg->hdr.length < 32) {
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
+	}
+
+	amsgi_pos = 20+msg->hdr.length-8-24;
+	if (GET_VAL16(pkt, amsgi_pos) == PJ_STUN_ATTR_MESSAGE_INTEGRITY) {
+	    /* Found MESSAGE-INTEGRITY before FINGERPRINT */
+	} else {
+	    amsgi_pos = 0;
+	}
+    }
+
+    if (amsgi_pos==0) {
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
+    }
+
+    /* Now calculate HMAC of the message, adding zero padding if necessary
+     * to make the input 64 bytes aligned.
+     */
+    pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
+    pj_hmac_sha1_update(&ctx, pkt, amsgi_pos);
+    if (amsgi_pos & 0x3F) {
+	pj_uint8_t zeroes[64];
+	pj_bzero(zeroes, sizeof(zeroes));
+	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 0x3F));
+    }
+    pj_hmac_sha1_final(&ctx, digest);
+
+    /* Compare HMACs */
+    if (pj_memcmp(amsgi->hmac, digest, 20)) {
+	/* HMAC value mismatch */
+	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_INTEGRITY_CHECK_FAILURE);
+    }
+
+    /* Everything looks okay! */
+    return PJ_SUCCESS;
+}
 

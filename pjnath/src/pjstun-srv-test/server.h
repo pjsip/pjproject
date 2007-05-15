@@ -124,6 +124,8 @@ PJ_DECL(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
 					       unsigned port,
 					       pj_stun_usage **p_bu);
 
+PJ_DECL(pj_status_t) pj_stun_turn_usage_set_credential(pj_stun_usage *turn,
+						       const pj_stun_auth_cred *cred);
 
 pj_status_t pj_stun_server_register_usage(pj_stun_server *srv,
 					  pj_stun_usage *usage);

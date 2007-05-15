@@ -1,3 +1,5 @@
+DIRS = resample
+
 include ../../build.mak
 include $(PJDIR)/build/common.mak
 

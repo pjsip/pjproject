@@ -161,6 +161,8 @@ struct pj_stun_tx_data
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
     pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */
 
+    pj_str_t		 auth_key;	/**< Auth key.			    */
+
     void		*pkt;		/**< The STUN packet.		    */
     unsigned		 max_len;	/**< Length of packet buffer.	    */
     unsigned		 pkt_size;	/**< The actual length of STUN pkt. */
@@ -305,11 +307,11 @@ PJ_DECL(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_session_create_response(pj_stun_session *sess,
-						     const pj_stun_msg *req,
-						     unsigned err_code,
-						     const pj_str_t *err_msg,
-						     pj_stun_tx_data **p_tdata);
+PJ_DECL(pj_status_t) pj_stun_session_create_res(pj_stun_session *sess,
+						const pj_stun_msg *req,
+						unsigned err_code,
+						const pj_str_t *err_msg,
+						pj_stun_tx_data **p_tdata);
 
 
 /**

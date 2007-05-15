@@ -78,9 +78,10 @@ int main(int argc, char *argv[])
     int c, opt_id;
     pj_caching_pool cp;
     pj_stun_server *srv;
+    pj_stun_usage *turn;
     pj_status_t status;
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:hF", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hF", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'r':
 	    o.realm = pj_optarg;
@@ -131,10 +132,22 @@ int main(int argc, char *argv[])
     */
 
     status = pj_stun_turn_usage_create(srv, PJ_SOCK_DGRAM, NULL,
-				       3478, NULL);
+				       3478, &turn);
     if (status != PJ_SUCCESS) {
 	pj_stun_perror(THIS_FILE, "Unable to create bind usage", status);
 	return 1;
+    }
+
+    if (o.user_name && o.password) {
+	pj_stun_auth_cred cred;
+	pj_bzero(&cred, sizeof(cred));
+	cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	cred.data.static_cred.realm = pj_str(o.realm);
+	cred.data.static_cred.username = pj_str(o.user_name);
+	cred.data.static_cred.data_type = 0;
+	cred.data.static_cred.data = pj_str(o.password);
+	cred.data.static_cred.nonce = pj_str(o.nonce);
+	pj_stun_turn_usage_set_credential(turn, &cred);
     }
 
     server_main(srv);

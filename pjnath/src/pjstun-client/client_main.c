@@ -107,6 +107,15 @@ static void on_request_complete(pj_stun_session *sess,
 	case PJ_STUN_ALLOCATE_RESPONSE:
 	    {
 		pj_stun_relay_addr_attr *ar;
+		pj_stun_lifetime_attr *al;
+
+		al = (pj_stun_lifetime_attr*)
+		     pj_stun_msg_find_attr(response, 
+					   PJ_STUN_ATTR_LIFETIME, 0);
+		if (!al) {
+		    PJ_LOG(1,(THIS_FILE, "Error: LIFETIME attribute not present"));
+		    return;
+		}
 
 		ar = (pj_stun_relay_addr_attr*)
 		     pj_stun_msg_find_attr(response, 
@@ -119,6 +128,10 @@ static void on_request_complete(pj_stun_session *sess,
 			      (int)pj_ntohs(g.relay_addr.sin_port)));
 		} else {
 		    pj_memset(&g.relay_addr, 0, sizeof(g.relay_addr));
+		}
+
+		if (al->value == 0) {
+		    PJ_LOG(3,(THIS_FILE, "Relay deallocated"));
 		}
 	    }
 	    break;
@@ -632,7 +645,7 @@ int main(int argc, char *argv[])
 
     g.data = g.data_buf;
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:hF", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hF", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'r':
 	    o.realm = pj_optarg;

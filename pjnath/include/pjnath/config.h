@@ -88,12 +88,22 @@
 
 
 /**
- * Maximum number of STUN retransmission count.
+ * Maximum number of STUN transmission count.
  *
  * Default: 7 (as per RFC 3489-bis)
  */
-#ifndef PJ_STUN_MAX_RETRANSMIT_COUNT
-#   define PJ_STUN_MAX_RETRANSMIT_COUNT		    7
+#ifndef PJ_STUN_MAX_TRANSMIT_COUNT
+#   define PJ_STUN_MAX_TRANSMIT_COUNT		    7
+#endif
+
+
+/**
+ * Duration to keep response in the cache, in msec.
+ *
+ * Default: 10000 (as per RFC 3489-bis)
+ */
+#ifndef PJ_STUN_RES_CACHE_DURATION
+#   define PJ_STUN_RES_CACHE_DURATION		    10000
 #endif
 
 

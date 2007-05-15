@@ -78,6 +78,7 @@ struct turn_usage
     int			 type;
     pj_stun_session	*default_session;
     pj_hash_table_t	*client_htable;
+    pj_stun_auth_cred	*cred;
 
     unsigned		 max_bw_kbps;
     unsigned		 max_lifetime;
@@ -221,6 +222,19 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
 	*p_bu = tu->usage;
     }
 
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pj_stun_turn_usage_set_credential(pj_stun_usage *turn,
+						      const pj_stun_auth_cred *c)
+{
+    struct turn_usage *tu;
+    tu = (struct turn_usage*) pj_stun_usage_get_user_data(turn);
+
+    tu->cred = PJ_POOL_ZALLOC_T(tu->pool, pj_stun_auth_cred);
+    pj_stun_auth_cred_dup(tu->pool, tu->cred, c);
+    pj_stun_session_set_credential(tu->default_session, tu->cred);
     return PJ_SUCCESS;
 }
 
@@ -441,9 +455,9 @@ static pj_status_t tu_sess_on_rx_request(pj_stun_session *sess,
 
     } else if (msg->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {
 	if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
-	    status = pj_stun_session_create_response(sess, msg, 
-						     PJ_STUN_SC_NO_BINDING,
-						     NULL, &tdata);
+	    status = pj_stun_session_create_res(sess, msg, 
+						PJ_STUN_SC_NO_BINDING,
+						NULL, &tdata);
 	    if (status==PJ_SUCCESS) {
 		status = pj_stun_session_send_msg(sess, PJ_FALSE, 
 						  src_addr, src_addr_len,
@@ -629,6 +643,9 @@ static pj_status_t client_create(struct turn_usage *tu,
 	pj_pool_release(pool);
 	return status;
     }
+
+    if (tu->cred)
+	pj_stun_session_set_credential(client->session, tu->cred);
 
     sd = PJ_POOL_ZALLOC_T(pool, struct session_data);
     sd->tu = tu;
@@ -863,9 +880,9 @@ static pj_status_t client_respond(struct turn_client *client,
     if (custom_msg)
 	pj_cstr(&err_msg, custom_msg), p_err_msg = &err_msg;
     
-    status = pj_stun_session_create_response(client->session, msg, 
-					     err_code, p_err_msg, 
-					     &response);
+    status = pj_stun_session_create_res(client->session, msg, 
+					err_code, p_err_msg, 
+					&response);
     if (status == PJ_SUCCESS)
 	status = pj_stun_session_send_msg(client->session, PJ_TRUE,
 					  dst_addr, dst_addr_len, response);
@@ -1014,8 +1031,8 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
     client->expiry_timer.id = PJ_TRUE;
 
     /* Done successfully, create and send success response */
-    status = pj_stun_session_create_response(client->session, msg, 
-					     0, NULL, &response);
+    status = pj_stun_session_create_res(client->session, msg, 
+					0, NULL, &response);
     if (status != PJ_SUCCESS) {
 	return status;
     }
@@ -1062,8 +1079,8 @@ static pj_status_t handle_binding_req(pj_stun_session *session,
     pj_status_t status;
 
     /* Create response */
-    status = pj_stun_session_create_response(session, msg, 0, NULL, 
-					     &tdata);
+    status = pj_stun_session_create_res(session, msg, 0, NULL, 
+					&tdata);
     if (status != PJ_SUCCESS)
 	return status;
 

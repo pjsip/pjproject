@@ -262,7 +262,7 @@ PJ_DECL(void) pj_stun_auth_cred_dup(pj_pool_t *pool,
 
 
 /**
- * Verify credential in the STUN message. Note that before calling this
+ * Verify credential in the STUN request. Note that before calling this
  * function, application must have checked that the message contains
  * PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute by calling pj_stun_msg_find_attr()
  * function, because this function will reject the message with 401 error
@@ -286,35 +286,41 @@ PJ_DECL(void) pj_stun_auth_cred_dup(pj_pool_t *pool,
  *			NULL, an appropriate response will be returned in
  *			\a p_response.
  */
-PJ_DECL(pj_status_t) pj_stun_verify_credential(const pj_uint8_t *pkt,
-					       unsigned pkt_len,
-					       const pj_stun_msg *msg,
-					       pj_stun_auth_cred *cred,
-					       pj_pool_t *pool,
-					       pj_stun_msg **p_response);
+PJ_DECL(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
+					          unsigned pkt_len,
+					          const pj_stun_msg *msg,
+					          pj_stun_auth_cred *cred,
+					          pj_pool_t *pool,
+					          pj_stun_msg **p_response);
 
 
+/**
+ * Verify credential in the STUN response. Note that before calling this
+ * function, application must have checked that the message contains
+ * PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute by calling pj_stun_msg_find_attr()
+ * function, because otherwise this function will report authentication
+ * failure.
+ *
+ * @param pkt		The original packet which has been parsed into
+ *			the message. This packet MUST NOT have been modified
+ *			after the parsing.
+ * @param pkt_len	The length of the packet.
+ * @param msg		The parsed message to be verified.
+ * @param key		Authentication key to calculate MESSAGE-INTEGRITY
+ *			value. Application can create this key by using
+ *			#pj_stun_create_key() function.
+ *
+ * @return		PJ_SUCCESS if credential is verified successfully.
+ */
+PJ_DECL(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
+					           unsigned pkt_len,
+					           const pj_stun_msg *msg,
+					           const pj_str_t *key);
 
 
 /**
  * @}
  */
-
-
-/**
- * Calculate HMAC-SHA1 key for long term credential, by getting
- * MD5 digest of username, realm, and password. 
- *
- * @param digest    The buffer for the digest.
- * @param realm	    The realm of the credential, if long term credential
- *		    is to be used.
- * @param username  The username.
- * @param passwd    The clear text password.
- */
-void pj_stun_calc_md5_key(pj_uint8_t digest[16],
-			  const pj_str_t *realm,
-			  const pj_str_t *username,
-			  const pj_str_t *passwd);
 
 
 PJ_END_DECL

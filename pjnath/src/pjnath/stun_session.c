@@ -211,13 +211,18 @@ static void on_cache_timeout(pj_timer_heap_t *timer_heap,
     pj_stun_msg_destroy_tdata(tdata->sess, tdata);
 }
 
-static pj_str_t *get_passwd(pj_stun_session *sess, pj_pool_t *pool,
-			    const pj_stun_msg *msg)
+static pj_status_t get_key(pj_stun_session *sess, pj_pool_t *pool,
+			   const pj_stun_msg *msg, pj_str_t *auth_key)
 {
     if (sess->cred == NULL) {
-	return NULL;
+	auth_key->slen = 0;
+	return PJ_SUCCESS;
     } else if (sess->cred->type == PJ_STUN_AUTH_CRED_STATIC) {
-	return &sess->cred->data.static_cred.data;
+	pj_stun_create_key(pool, auth_key, 
+			   &sess->cred->data.static_cred.realm,
+			   &sess->cred->data.static_cred.username,
+			   &sess->cred->data.static_cred.data);
+	return PJ_SUCCESS;
     } else if (sess->cred->type == PJ_STUN_AUTH_CRED_DYNAMIC) {
 	pj_str_t realm, username, nonce;
 	pj_str_t *password;
@@ -231,10 +236,17 @@ static pj_str_t *get_passwd(pj_stun_session *sess, pj_pool_t *pool,
 						       &realm, &username,
 						       &nonce, &data_type,
 						       password);
-	return password;
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	pj_stun_create_key(pool, auth_key, 
+			   &realm, &username, password);
+
+	return PJ_SUCCESS;
 
     } else {
-	return NULL;
+	pj_assert(!"Unknown credential type");
+	return PJ_EBUG;
     }
 }
 
@@ -243,26 +255,23 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 				     pj_stun_msg *msg)
 {
     pj_status_t status = 0;
+    pj_bool_t need_auth;
     pj_str_t realm, username, nonce, password;
     int data_type = 0;
 
     realm.slen = username.slen = nonce.slen = password.slen = 0;
 
     /* The server SHOULD include a SERVER attribute in all responses */
-    if (sess->srv_name.slen && (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
-			        PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))) 
-    {
+    if (sess->srv_name.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
 	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER,
 				    &sess->srv_name);
     }
 
-    /* From draft-ietf-behave-rfc3489bis-05.txt
-     * Section 8.3.1.  Formulating the Request Message
-     *
-     * Note: only put MESSAGE-INTEGRITY in non error response.
-     */
+    need_auth = PJ_STUN_IS_REQUEST(msg->hdr.type) ||
+	        PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type);
+
     if (sess->cred && sess->cred->type == PJ_STUN_AUTH_CRED_STATIC &&
-	!PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type)) 
+	need_auth)
     {
 	realm = sess->cred->data.static_cred.realm;
 	username = sess->cred->data.static_cred.username;
@@ -271,7 +280,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 	nonce = sess->cred->data.static_cred.nonce;
 
     } else if (sess->cred && sess->cred->type == PJ_STUN_AUTH_CRED_DYNAMIC &&
-	       !PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type)) 
+	       need_auth) 
     {
 	void *user_data = sess->cred->data.dyn_cred.user_data;
 
@@ -284,8 +293,8 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     }
 
 
-    /* Create and add USERNAME attribute */
-    if (username.slen) {
+    /* Create and add USERNAME attribute for */
+    if (username.slen && PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 	status = pj_stun_msg_add_string_attr(pool, msg,
 					     PJ_STUN_ATTR_USERNAME,
 					     &username);
@@ -293,7 +302,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     }
 
     /* Add REALM only when long term credential is used */
-    if (realm.slen) {
+    if (realm.slen &&  PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 	status = pj_stun_msg_add_string_attr(pool, msg,
 					    PJ_STUN_ATTR_REALM,
 					    &realm);
@@ -301,14 +310,17 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     }
 
     /* Add NONCE when desired */
-    if (nonce.slen) {
+    if (nonce.slen && 
+	(PJ_STUN_IS_REQUEST(msg->hdr.type) ||
+	 PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))) 
+    {
 	status = pj_stun_msg_add_string_attr(pool, msg,
 					    PJ_STUN_ATTR_NONCE,
 					    &nonce);
     }
 
     /* Add MESSAGE-INTEGRITY attribute */
-    if (username.slen) {
+    if (username.slen && need_auth) {
 	status = pj_stun_msg_add_msgint_attr(pool, msg);
 	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
@@ -508,11 +520,11 @@ PJ_DEF(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
 /*
  * Create a STUN response message.
  */
-PJ_DEF(pj_status_t) pj_stun_session_create_response( pj_stun_session *sess,
-						     const pj_stun_msg *req,
-						     unsigned err_code,
-						     const pj_str_t *err_msg,
-						     pj_stun_tx_data **p_tdata)
+PJ_DEF(pj_status_t) pj_stun_session_create_res( pj_stun_session *sess,
+						const pj_stun_msg *req,
+						unsigned err_code,
+						const pj_str_t *err_msg,
+						pj_stun_tx_data **p_tdata)
 {
     pj_status_t status;
     pj_stun_tx_data *tdata = NULL;
@@ -597,10 +609,18 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	return status;
     }
 
+    status = get_key(sess, tdata->pool, tdata->msg, &tdata->auth_key);
+    if (status != PJ_SUCCESS) {
+	pj_stun_msg_destroy_tdata(sess, tdata);
+	pj_mutex_unlock(sess->mutex);
+	LOG_ERR_(sess, "Error getting creadential's key", status);
+	return status;
+    }
+
     /* Encode message */
     status = pj_stun_msg_encode(tdata->msg, (pj_uint8_t*)tdata->pkt, 
     				tdata->max_len, 0, 
-    				get_passwd(sess, tdata->pool, tdata->msg),
+    				&tdata->auth_key,
 				&tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
@@ -737,6 +757,7 @@ PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
 /* Send response */
 static pj_status_t send_response(pj_stun_session *sess, 
 				 pj_pool_t *pool, pj_stun_msg *response,
+				 const pj_str_t *auth_key,
 				 pj_bool_t retransmission,
 				 const pj_sockaddr_t *addr, unsigned addr_len)
 {
@@ -757,8 +778,7 @@ static pj_status_t send_response(pj_stun_session *sess,
 
     /* Encode */
     status = pj_stun_msg_encode(response, out_pkt, out_max_len, 0, 
-				get_passwd(sess, pool, response),
-				&out_len);
+				auth_key, &out_len);
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "Error encoding message", status);
 	return status;
@@ -774,7 +794,7 @@ static pj_status_t send_response(pj_stun_session *sess,
 }
 
 /* Authenticate incoming message */
-static pj_status_t authenticate_msg(pj_stun_session *sess,
+static pj_status_t authenticate_req(pj_stun_session *sess,
 				    const pj_uint8_t *pkt,
 				    unsigned pkt_len,
 				    const pj_stun_msg *msg,
@@ -788,11 +808,11 @@ static pj_status_t authenticate_msg(pj_stun_session *sess,
     if (PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type) || sess->cred == NULL)
 	return PJ_SUCCESS;
 
-    status = pj_stun_verify_credential(pkt, pkt_len, msg, sess->cred,
-				       tmp_pool, &response);
+    status = pj_stun_authenticate_request(pkt, pkt_len, msg, sess->cred,
+				          tmp_pool, &response);
     if (status != PJ_SUCCESS && response != NULL) {
 	PJ_LOG(5,(SNAME(sess), "Message authentication failed"));
-	send_response(sess, tmp_pool, response, PJ_FALSE, 
+	send_response(sess, tmp_pool, response, NULL, PJ_FALSE, 
 		      src_addr, src_addr_len);
     }
 
@@ -802,6 +822,9 @@ static pj_status_t authenticate_msg(pj_stun_session *sess,
 
 /* Handle incoming response */
 static pj_status_t on_incoming_response(pj_stun_session *sess,
+					unsigned options,
+					const pj_uint8_t *pkt,
+					unsigned pkt_len,
 					pj_stun_msg *msg,
 					const pj_sockaddr_t *src_addr,
 					unsigned src_addr_len)
@@ -815,6 +838,18 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
 	PJ_LOG(5,(SNAME(sess), 
 		  "Transaction not found, response silently discarded"));
 	return PJ_SUCCESS;
+    }
+
+    /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
+     * is specified in the option.
+     */
+    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
+	status = pj_stun_authenticate_response(pkt, pkt_len, msg, &tdata->auth_key);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(5,(SNAME(sess), 
+		      "Response authentication failed"));
+	    return status;
+	}
     }
 
     /* Pass the response to the transaction. 
@@ -866,7 +901,7 @@ static pj_status_t check_cached_response(pj_stun_session *sess,
 	PJ_LOG(5,(SNAME(sess), 
 		 "Request retransmission, sending cached response"));
 
-	send_response(sess, tmp_pool, t->msg, PJ_TRUE, 
+	send_response(sess, tmp_pool, t->msg, &t->auth_key, PJ_TRUE, 
 		      src_addr, src_addr_len);
 	return PJ_SUCCESS;
     }
@@ -876,6 +911,7 @@ static pj_status_t check_cached_response(pj_stun_session *sess,
 
 /* Handle incoming request */
 static pj_status_t on_incoming_request(pj_stun_session *sess,
+				       unsigned options,
 				       pj_pool_t *tmp_pool,
 				       const pj_uint8_t *in_pkt,
 				       unsigned in_pkt_len,
@@ -884,6 +920,17 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 				       unsigned src_addr_len)
 {
     pj_status_t status;
+
+    /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
+     * is specified in the option.
+     */
+    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
+	status = authenticate_req(sess, (const pj_uint8_t*) in_pkt, in_pkt_len,
+				  msg, tmp_pool, src_addr, src_addr_len);
+	if (status != PJ_SUCCESS) {
+	    return status;
+	}
+    }
 
     /* Distribute to handler, or respond with Bad Request */
     if (sess->cb.on_rx_request) {
@@ -897,7 +944,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 					     &response);
 	if (status == PJ_SUCCESS && response) {
 	    status = send_response(sess, tmp_pool, response, 
-				   PJ_FALSE, src_addr, src_addr_len);
+				   NULL, PJ_FALSE, src_addr, src_addr_len);
 	}
     }
 
@@ -952,7 +999,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "STUN msg_decode() error", status);
 	if (response) {
-	    send_response(sess, tmp_pool, response, 
+	    send_response(sess, tmp_pool, response, NULL,
 			  PJ_FALSE, src_addr, src_addr_len);
 	}
 	pj_pool_release(tmp_pool);
@@ -977,26 +1024,17 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	goto on_return;
     }
 
-    /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
-     * is specified in the option.
-     */
-    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
-	status = authenticate_msg(sess, (const pj_uint8_t*) packet, pkt_size, 
-				  msg, tmp_pool, src_addr, src_addr_len);
-	if (status != PJ_SUCCESS) {
-	    goto on_return;
-	}
-    }
-
     /* Handle message */
     if (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
 	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
-	status = on_incoming_response(sess, msg, src_addr, src_addr_len);
+	status = on_incoming_response(sess, options, 
+				      (const pj_uint8_t*) packet, pkt_size, 
+				      msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 
-	status = on_incoming_request(sess, tmp_pool, 
+	status = on_incoming_request(sess, options, tmp_pool, 
 				     (const pj_uint8_t*) packet, pkt_size, 
 				     msg, src_addr, src_addr_len);
 
