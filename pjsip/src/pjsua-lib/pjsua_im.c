@@ -190,7 +190,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	pj_str_t text_body;
 	
 	/* Save text body */
-	text_body.ptr = rdata->msg_info.msg->body->data;
+	text_body.ptr = (char*)rdata->msg_info.msg->body->data;
 	text_body.slen = rdata->msg_info.msg->body->len;
 
 	/* Get mime type */
@@ -261,7 +261,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
      * Contact header contains the port number information. If this is
      * not available, then use From header.
      */
-    from.ptr = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
+    from.ptr = (char*)pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
     from.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, 
 				rdata->msg_info.from->uri,
 				from.ptr, PJSIP_MAX_URL_SIZE);
