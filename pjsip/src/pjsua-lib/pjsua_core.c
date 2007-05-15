@@ -488,7 +488,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	/* Create DNS resolver */
 	status = pjsip_endpt_create_resolver(pjsua_var.endpt, 
 					     &pjsua_var.resolver);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating resolver", status);
+	    return status;
+	}
 
 	/* Configure nameserver for the DNS resolver */
 	status = pj_dns_resolver_set_ns(pjsua_var.resolver, 
