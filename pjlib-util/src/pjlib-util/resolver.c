@@ -290,6 +290,11 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Bind to any address/port */
+    status = pj_sock_bind_in(resv->udp_sock, 0, 0);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     /* Register to ioqueue */
     pj_bzero(&socket_cb, sizeof(socket_cb));
     socket_cb.on_read_complete = &on_read_complete;
