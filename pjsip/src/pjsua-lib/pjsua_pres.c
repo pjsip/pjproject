@@ -1104,7 +1104,7 @@ static void unsubscribe_buddy_presence(unsigned index)
 	status = pjsip_pres_send_request( buddy->sub, tdata );
     }
 
-    if (status != PJ_SUCCESS) {
+    if (status != PJ_SUCCESS && buddy->sub) {
 	pjsip_pres_terminate(buddy->sub, PJ_FALSE);
 	buddy->sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to unsubscribe presence", 
