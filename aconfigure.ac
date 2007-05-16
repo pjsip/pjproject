@@ -48,6 +48,8 @@ AC_CHECK_LIB(winmm,puts)
 AC_CHECK_LIB(socket,puts)
 AC_CHECK_LIB(rt,puts)
 AC_CHECK_LIB(nsl,puts)
+AC_CHECK_LIB(uuid,uuid_generate)
+AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 
 AC_MSG_RESULT([Setting PJ_M_NAME to $target_cpu])
 AC_DEFINE_UNQUOTED(PJ_M_NAME,["$target_cpu"])
@@ -151,6 +153,7 @@ AC_CHECK_HEADER(unistd.h,[AC_DEFINE(PJ_HAS_UNISTD_H,1)])
 AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)])
 AC_CHECK_HEADER(winsock.h,[AC_DEFINE(PJ_HAS_WINSOCK_H,1)])
 AC_CHECK_HEADER(winsock2.h,[AC_DEFINE(PJ_HAS_WINSOCK2_H,1)])
+AC_CHECK_HEADER(uuid/uuid.h,[ac_has_uuid_h=1])
 
 AC_MSG_RESULT([Setting PJ_OS_NAME to $target])
 AC_DEFINE_UNQUOTED(PJ_OS_NAME,["$target"])
@@ -232,9 +235,16 @@ case $target in
 	ac_os_objs="file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o ioqueue_select.o"
 	;;
   *)
-	ac_os_objs="file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o guid_simple.o ioqueue_select.o"
+	ac_os_objs="file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o ioqueue_select.o"
+	# UUID
+	if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
+		ac_os_objs="$ac_os_objs guid_uuid.o"
+	else
+		ac_os_objs="$ac_os_objs guid_simple.o"
+	fi
 	;;
 esac
+
 
 
 dnl ##########################################

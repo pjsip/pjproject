@@ -48,10 +48,13 @@ PJ_BEGIN_DECL
 /**
  * PJ_GUID_STRING_LENGTH specifies length of GUID string. The value is
  * dependent on the algorithm used internally to generate the GUID string.
- * If real GUID generator is used, then the length will be 128bit or 
- * 32 bytes. If shadow GUID generator is used, then the length
+ * If real GUID generator is used, then the length will be between 32 and
+ * 36 bytes. If shadow GUID generator is used, then the length
  * will be 20 bytes. Application should not assume which algorithm will
  * be used by GUID generator.
+ *
+ * Regardless of the actual length of the GUID, it will not exceed
+ * PJ_GUID_MAX_LENGTH characters.
  */
 extern const unsigned PJ_GUID_STRING_LENGTH;
 
@@ -59,7 +62,7 @@ extern const unsigned PJ_GUID_STRING_LENGTH;
  * PJ_GUID_MAX_LENGTH specifies the maximum length of GUID string,
  * regardless of which algorithm to use.
  */
-#define PJ_GUID_MAX_LENGTH  32
+#define PJ_GUID_MAX_LENGTH  36
 
 /**
  * Create a globally unique string, which length is PJ_GUID_STRING_LENGTH
