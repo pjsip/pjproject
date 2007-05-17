@@ -843,8 +843,10 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
      * is specified in the option.
      */
-    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
-	status = pj_stun_authenticate_response(pkt, pkt_len, msg, &tdata->auth_key);
+    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0 && tdata->auth_key.slen != 0)
+    {
+	status = pj_stun_authenticate_response(pkt, pkt_len, msg, 
+					       &tdata->auth_key);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(5,(SNAME(sess), 
 		      "Response authentication failed"));
