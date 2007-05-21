@@ -748,6 +748,9 @@ typedef struct pjsua_callback
      * Argument call_id will be -1 if MESSAGE request is not related to an
      * existing call.
      *
+     * See also \a on_pager2() callback for the version with \a pjsip_rx_data
+     * passed as one of the argument.
+     *
      * @param call_id	    Containts the ID of the call where the IM was
      *			    sent, or PJSUA_INVALID_ID if the IM was sent
      *			    outside call context.
@@ -773,6 +776,25 @@ typedef struct pjsua_callback
     void (*on_pager)(pjsua_call_id call_id, const pj_str_t *from,
 		     const pj_str_t *to, const pj_str_t *contact,
 		     const pj_str_t *mime_type, const pj_str_t *body);
+
+    /**
+     * This is the alternative version of the \a on_pager() callback with
+     * \a pjsip_rx_data argument.
+     *
+     * @param call_id	    Containts the ID of the call where the IM was
+     *			    sent, or PJSUA_INVALID_ID if the IM was sent
+     *			    outside call context.
+     * @param from	    URI of the sender.
+     * @param to	    URI of the destination message.
+     * @param contact	    The Contact URI of the sender, if present.
+     * @param mime_type	    MIME type of the message.
+     * @param body	    The message content.
+     * @param rdata	    The incoming MESSAGE request.
+     */
+    void (*on_pager2)(pjsua_call_id call_id, const pj_str_t *from,
+		      const pj_str_t *to, const pj_str_t *contact,
+		      const pj_str_t *mime_type, const pj_str_t *body,
+		      pjsip_rx_data *rdata);
 
     /**
      * Notify application about the delivery status of outgoing pager

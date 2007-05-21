@@ -209,8 +209,12 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	    (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
 					    &mime_type, &text_body);
 	}
-    }
 
+	if (pjsua_var.ua_cfg.cb.on_pager2) {
+	    (*pjsua_var.ua_cfg.cb.on_pager2)(call_id, from, to, &contact, 
+					     &mime_type, &text_body, rdata);
+	}
+    }
 }
 
 
