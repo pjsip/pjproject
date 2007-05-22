@@ -292,8 +292,10 @@ static int perform_ice_test(const char *title,
 
     /* Start ICE on im2 */
     status = start_ice(im2, im1);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	app_perror("   error starting ICE", status);
 	return -30;
+    }
 
     /* Start ICE on im1 */
     status = start_ice(im1, im2);
@@ -328,8 +330,10 @@ static int perform_ice_test(const char *title,
 
 	data_from_answerer = pj_str("from answerer");
 	status = pj_ice_sess_send_data(im2->ice, 1, data_from_answerer.ptr, data_from_answerer.slen);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    app_perror("   error sending packet", status);
 	    return -48;
+	}
 
 	/* Poll to allow data to be received */
 	for (;;) {
@@ -476,9 +480,12 @@ int ice_test(void)
 	goto on_return;
 
     /* Failure case (all checks fail) */
+#if 0
+    /* Cannot just add an SRFLX candidate; it needs a base */
     rc = perform_ice_test("Failure case (all checks fail)", PJ_FALSE, 1, PJ_FALSE, D3, D3, 1, ocand, 1, acand);
     if (rc != 0)
 	goto on_return;
+#endif
 
     /* Direct communication with invalid address */
     rc = perform_ice_test("With 1 unreachable address", PJ_TRUE, 1, PJ_TRUE, D1, D2, 1, ocand, 0, NULL);

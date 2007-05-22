@@ -64,6 +64,8 @@ static int test_inner(void)
     pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
+    pjnath_init();
+
 #if INCLUDE_ICE_TEST
     DO_TEST(ice_test());
 #endif
