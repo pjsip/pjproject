@@ -96,6 +96,7 @@ static int print_attr(char *buffer, unsigned length,
 		len = pj_ansi_snprintf(p, end-p,
 				       ", INVALID ADDRESS FAMILY!\n");
 	    }
+	    APPLY();
 	}
 	break;
 
@@ -117,6 +118,7 @@ static int print_attr(char *buffer, unsigned length,
 				   ", value=%d (0x%x)\n",
 				   (pj_uint32_t)attr->value,
 				   (pj_uint32_t)attr->value);
+	    APPLY();
 	}
 	break;
 
@@ -133,6 +135,7 @@ static int print_attr(char *buffer, unsigned length,
 				   ", value=\"%.*s\"\n",
 				   (int)attr->value.slen,
 				   attr->value.ptr);
+	    APPLY();
 	}
 	break;
 
@@ -146,6 +149,7 @@ static int print_attr(char *buffer, unsigned length,
 				   attr->err_code,
 				   (int)attr->reason.slen,
 				   attr->reason.ptr);
+	    APPLY();
 	}
 	break;
 
@@ -191,11 +195,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_USE_CANDIDATE:
     default:
 	len = pj_ansi_snprintf(p, end-p, "\n");
-
+	APPLY();
 	break;
     }
-
-    APPLY();
 
     return (p-buffer);
 

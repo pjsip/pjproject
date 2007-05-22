@@ -1656,15 +1656,15 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
     if (GETVAL32H(pdu, 4) == PJ_STUN_MAGIC) {
 
 	/* Check if FINGERPRINT attribute is present */
-	if (GETVAL16H(pdu, msg_len + 20) == PJ_STUN_ATTR_FINGERPRINT) {
-	    pj_uint16_t attr_len = GETVAL16H(pdu, msg_len + 22);
-	    pj_uint32_t fingerprint = GETVAL32H(pdu, msg_len + 24);
+	if (GETVAL16H(pdu, msg_len + 20 - 8) == PJ_STUN_ATTR_FINGERPRINT) {
+	    pj_uint16_t attr_len = GETVAL16H(pdu, msg_len + 20 - 8 + 2);
+	    pj_uint32_t fingerprint = GETVAL32H(pdu, msg_len + 20 - 8 + 4);
 	    pj_uint32_t crc;
 
 	    if (attr_len != 4)
 		return PJNATH_ESTUNINATTRLEN;
 
-	    crc = pj_crc32_calc(pdu, msg_len + 20);
+	    crc = pj_crc32_calc(pdu, msg_len + 20 - 8);
 	    crc ^= STUN_XOR_FINGERPRINT;
 
 	    if (crc != fingerprint)

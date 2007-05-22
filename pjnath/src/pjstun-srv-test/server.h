@@ -122,6 +122,7 @@ PJ_DECL(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
 					       int type,
 					       const pj_str_t *ip_addr,
 					       unsigned port,
+					       pj_bool_t use_fingerprint,
 					       pj_stun_usage **p_bu);
 
 PJ_DECL(pj_status_t) pj_stun_turn_usage_set_credential(pj_stun_usage *turn,

@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     */
 
     status = pj_stun_turn_usage_create(srv, PJ_SOCK_DGRAM, NULL,
-				       3478, &turn);
+				       3478, o.use_fingerprint, &turn);
     if (status != PJ_SUCCESS) {
 	pj_stun_perror(THIS_FILE, "Unable to create bind usage", status);
 	return 1;

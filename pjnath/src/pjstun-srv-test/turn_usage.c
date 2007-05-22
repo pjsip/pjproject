@@ -79,6 +79,7 @@ struct turn_usage
     pj_stun_session	*default_session;
     pj_hash_table_t	*client_htable;
     pj_stun_auth_cred	*cred;
+    pj_bool_t		 use_fingerprint;
 
     unsigned		 max_bw_kbps;
     unsigned		 max_lifetime;
@@ -146,6 +147,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
 					      int type,
 					      const pj_str_t *ip_addr,
 					      unsigned port,
+					      pj_bool_t use_fingerprint,
 					      pj_stun_usage **p_bu)
 {
     pj_pool_t *pool;
@@ -172,6 +174,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     tu->next_port = START_PORT;
     tu->max_bw_kbps = 64;
     tu->max_lifetime = 10 * 60;
+    tu->use_fingerprint = use_fingerprint;
 
     status = pj_sockaddr_in_init(&local_addr, ip_addr, (pj_uint16_t)port);
     if (status != PJ_SUCCESS)
@@ -199,7 +202,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     sess_cb.on_send_msg = &tu_sess_on_send_msg;
     sess_cb.on_rx_request = &tu_sess_on_rx_request;
     status = pj_stun_session_create(&si->stun_cfg, "turns%p", &sess_cb, 
-				    PJ_FALSE, &tu->default_session);
+				    use_fingerprint, &tu->default_session);
     if (status != PJ_SUCCESS) {
 	pj_stun_usage_destroy(tu->usage);
 	return status;
@@ -637,7 +640,7 @@ static pj_status_t client_create(struct turn_usage *tu,
     sess_cb.on_rx_request = &client_sess_on_rx_msg;
     sess_cb.on_rx_indication = &client_sess_on_rx_msg;
     status = pj_stun_session_create(tu->cfg, client->obj_name, 
-				    &sess_cb, PJ_FALSE,
+				    &sess_cb, tu->use_fingerprint,
 				    &client->session);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);
