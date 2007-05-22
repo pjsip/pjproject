@@ -1560,6 +1560,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     /* Done */
 
+    inv->cancelling = PJ_TRUE;
     *p_tdata = tdata;
 
     return PJ_SUCCESS;
@@ -1950,7 +1951,9 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		inv_check_sdp_in_incoming_msg(inv, tsx, 
 					      e->body.tsx_state.src.rdata);
 
-	    } else if (tsx->status_code==401 || tsx->status_code==407) {
+	    } else if ((tsx->status_code==401 || tsx->status_code==407) &&
+			!inv->cancelling) 
+	    {
 
 		/* Handle authentication failure:
 		 * Resend the request with Authorization header.
