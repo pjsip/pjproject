@@ -90,6 +90,7 @@ static pj_status_t play_cb(/* in */   void *user_data,
 
     frame.buf = output;
     frame.size = size;
+    frame.timestamp.u32.hi = 0;
     frame.timestamp.u32.lo = timestamp;
 
     status = pjmedia_port_get_frame(port, &frame);
