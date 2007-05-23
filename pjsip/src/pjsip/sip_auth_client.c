@@ -803,9 +803,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	pjsip_authorization_hdr *hauth;
 
 	/* Find WWW-Authenticate or Proxy-Authenticate header. */
-	while (hdr->type != PJSIP_H_WWW_AUTHENTICATE &&
-	       hdr->type != PJSIP_H_PROXY_AUTHENTICATE &&
-	       hdr != &rdata->msg_info.msg->hdr)
+	while (hdr != &rdata->msg_info.msg->hdr &&
+	       hdr->type != PJSIP_H_WWW_AUTHENTICATE &&
+	       hdr->type != PJSIP_H_PROXY_AUTHENTICATE)
 	{
 	    hdr = hdr->next;
 	}
