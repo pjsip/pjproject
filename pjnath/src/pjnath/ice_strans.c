@@ -708,7 +708,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_create_comp(pj_ice_strans *ice_st,
 					      pj_uint32_t options,
 					      const pj_sockaddr_in *addr)
 {
-    pj_ice_strans_comp *comp;
+    pj_ice_strans_comp *comp = NULL;
     pj_status_t status;
 
     /* Verify arguments */
