@@ -540,11 +540,18 @@ static void tsx_callback(void *token, pjsip_event *event)
 
 	/* Call callback. */
 	if (expiration == 0xFFFF) expiration = -1;
+
+	/* Temporarily increment pending_tsx to prevent callback from
+	 * destroying pubc.
+	 */
+	++pubc->pending_tsx;
+
 	call_callback(pubc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: pjsip_get_status_text(tsx->status_code)),
 		      rdata, expiration);
 
+	--pubc->pending_tsx;
     }
 
     /* Delete the record if user destroy pubc during the callback. */
