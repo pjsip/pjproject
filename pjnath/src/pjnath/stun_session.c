@@ -267,8 +267,7 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
 				    &sess->srv_name);
     }
 
-    need_auth = PJ_STUN_IS_REQUEST(msg->hdr.type) ||
-	        PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type);
+    need_auth = pj_stun_auth_valid_for_msg(msg);
 
     if (sess->cred && sess->cred->type == PJ_STUN_AUTH_CRED_STATIC &&
 	need_auth)
@@ -843,7 +842,8 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
     /* Authenticate the message, unless PJ_STUN_NO_AUTHENTICATE
      * is specified in the option.
      */
-    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0 && tdata->auth_key.slen != 0)
+    if ((options & PJ_STUN_NO_AUTHENTICATE) == 0 && tdata->auth_key.slen != 0
+	&& pj_stun_auth_valid_for_msg(msg))
     {
 	status = pj_stun_authenticate_response(pkt, pkt_len, msg, 
 					       &tdata->auth_key);

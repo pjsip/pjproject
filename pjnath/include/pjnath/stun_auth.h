@@ -295,6 +295,19 @@ PJ_DECL(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 
 
 /**
+ * Determine if STUN message can be authenticated. Some STUN error
+ * responses cannot be authenticated since they cannot contain STUN
+ * MESSAGE-INTEGRITY attribute. STUN Indication messages also cannot
+ * be authenticated.
+ *
+ * @param msg		The STUN message.
+ *
+ * @return		Non-zero if the STUN message can be authenticated.
+ */
+PJ_DECL(pj_bool_t) pj_stun_auth_valid_for_msg(const pj_stun_msg *msg);
+
+
+/**
  * Verify credential in the STUN response. Note that before calling this
  * function, application must have checked that the message contains
  * PJ_STUN_ATTR_MESSAGE_INTEGRITY attribute by calling pj_stun_msg_find_attr()

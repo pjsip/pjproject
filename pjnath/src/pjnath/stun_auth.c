@@ -21,8 +21,10 @@
 #include <pjlib-util/hmac_sha1.h>
 #include <pjlib-util/sha1.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/string.h>
 
+#define THIS_FILE   "stun_auth.c"
 
 /* Duplicate credential */
 PJ_DEF(void) pj_stun_auth_cred_dup( pj_pool_t *pool,
@@ -345,6 +347,47 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 
     /* Everything looks okay! */
     return PJ_SUCCESS;
+}
+
+
+/* Determine if STUN message can be authenticated */
+PJ_DEF(pj_bool_t) pj_stun_auth_valid_for_msg(const pj_stun_msg *msg)
+{
+    unsigned msg_type = msg->hdr.type;
+    const pj_stun_errcode_attr *err_attr;
+
+    /* STUN requests and success response can be authenticated */
+    if (!PJ_STUN_IS_ERROR_RESPONSE(msg_type) && 
+	!PJ_STUN_IS_INDICATION(msg_type))
+    {
+	return PJ_TRUE;
+    }
+
+    /* STUN Indication cannot be authenticated */
+    if (PJ_STUN_IS_INDICATION(msg_type))
+	return PJ_FALSE;
+
+    /* Authentication for STUN error responses depend on the error
+     * code.
+     */
+    err_attr = (const pj_stun_errcode_attr*)
+	       pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ERROR_CODE, 0);
+    if (err_attr == NULL) {
+	PJ_LOG(4,(THIS_FILE, "STUN error code attribute not present in "
+			     "error response"));
+	return PJ_TRUE;
+    }
+
+    switch (err_attr->err_code) {
+    case PJ_STUN_SC_UNAUTHORIZED:
+    case PJ_STUN_SC_MISSING_USERNAME:
+    case PJ_STUN_SC_MISSING_REALM:
+    case PJ_STUN_SC_UNKNOWN_USERNAME:
+    case PJ_STUN_SC_INTEGRITY_CHECK_FAILURE:
+	return PJ_FALSE;
+    default:
+	return PJ_TRUE;
+    }
 }
 
 
