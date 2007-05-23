@@ -444,9 +444,7 @@ static pj_status_t stun_auth_get_cred(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(pool);
     realm->slen = nonce->slen = 0;
 
-    if (PJ_STUN_IS_SUCCESS_RESPONSE(msg->hdr.type) ||
-	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
-    {
+    if (PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
 	/* Outgoing responses need to have the same credential as
 	 * incoming requests.
 	 */
@@ -1915,6 +1913,19 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	            pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICE_CONTROLLED, 0);
     }
 
+    /* Handle the case when request comes before answer is received.
+     * We need to put credential in the response, and since we haven't
+     * got the response, copy the username from the request.
+     */
+    if (ice->rcand_cnt == 0) {
+	pj_stun_string_attr *uname_attr;
+
+	uname_attr = (pj_stun_string_attr*)
+		     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
+	pj_assert(uname_attr != NULL);
+	pj_strdup(ice->pool, &ice->rx_uname, &uname_attr->value);
+    }
+
     /* 7.2.1.1.  Detecting and Repairing Role Conflicts
      */
     if (ice->role == PJ_ICE_SESS_ROLE_CONTROLLING &&
@@ -1958,19 +1969,6 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 		  "Changing role because of ICE-CONTROLLED attribute"));
 	    pj_ice_sess_change_role(ice, PJ_ICE_SESS_ROLE_CONTROLLING);
 	}
-    }
-
-    /* Handle the case when request comes before answer is received.
-     * We need to put credential in the response, and since we haven't
-     * got the response, copy the username from the request.
-     */
-    if (ice->rcand_cnt == 0) {
-	pj_stun_string_attr *uname_attr;
-
-	uname_attr = (pj_stun_string_attr*)
-		     pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
-	pj_assert(uname_attr != NULL);
-	pj_strdup(ice->pool, &ice->rx_uname, &uname_attr->value);
     }
 
     /* 

@@ -2267,7 +2267,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 		  call->index));
 
 	/* Init media channel */
-	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
