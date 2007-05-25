@@ -356,8 +356,10 @@ static void *thread_main(void *param)
     }
 
     /* Check if suspension is required. */
-    if (rec->suspended_mutex)
+    if (rec->suspended_mutex) {
 	pj_mutex_lock(rec->suspended_mutex);
+	pj_mutex_unlock(rec->suspended_mutex);
+    }
 
     PJ_LOG(6,(rec->obj_name, "Thread started"));
 
