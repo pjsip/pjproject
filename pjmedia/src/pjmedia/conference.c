@@ -968,6 +968,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+/*
+ * Get number of ports currently registered to the conference bridge.
+ */
+PJ_DEF(unsigned) pjmedia_conf_get_port_count(pjmedia_conf *conf)
+{
+    return conf->port_cnt;
+}
 
 /*
  * Get total number of ports connections currently set up in the bridge.
