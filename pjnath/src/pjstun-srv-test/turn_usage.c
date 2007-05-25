@@ -1331,7 +1331,7 @@ static void client_handle_peer_data(struct turn_client *client,
      */
     if (peer == client->active_peer && !has_magic_cookie) {
 	pj_stun_usage_sendto(client->tu->usage, client->pkt, bytes_read, 0,
-			     &client->pkt_src_addr, client->pkt_src_addr_len);
+			     &client->client_src_addr, sizeof(pj_sockaddr_in));
     } else {
 	/* Otherwise wrap in Data Indication */
 	pj_stun_tx_data *data_ind;
@@ -1352,8 +1352,8 @@ static void client_handle_peer_data(struct turn_client *client,
 
 
 	pj_stun_session_send_msg(client->session, PJ_FALSE,
-				 &client->pkt_src_addr, 
-				 client->pkt_src_addr_len,
+				 &client->client_src_addr, 
+				 sizeof(pj_sockaddr_in),
 				 data_ind);
     }
 }

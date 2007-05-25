@@ -41,6 +41,7 @@ static struct global
     pj_timer_heap_t	*th;
     pj_stun_session	*sess;
     pj_sock_t		 sock;
+    pj_sock_t		 peer_sock;
     pj_thread_t		*thread;
     pj_bool_t		 quit;
     pj_sockaddr_in	 peer_addr;
@@ -154,8 +155,10 @@ static int worker_thread(void *unused)
 
 	PJ_FD_ZERO(&readset);
 	PJ_FD_SET(g.sock, &readset);
+	PJ_FD_SET(g.peer_sock, &readset);
 
-	n = pj_sock_select(g.sock+1, &readset, NULL, NULL, &timeout);
+	n = (g.peer_sock > g.sock) ? g.peer_sock : g.sock;
+	n = pj_sock_select(n+1, &readset, NULL, NULL, &timeout);
 	if (n > 0) {
 	    if (PJ_FD_ISSET(g.sock, &readset)) {
 		pj_uint8_t buffer[512];
@@ -179,9 +182,43 @@ static int worker_thread(void *unused)
 
 		} else {
 		    buffer[len] = '\0';
-		    PJ_LOG(3,(THIS_FILE, "Received data: %s", (char*)buffer));
+		    PJ_LOG(3,(THIS_FILE, "Received data on client sock: %s", (char*)buffer));
 		}
+
+	    } else if (PJ_FD_ISSET(g.peer_sock, &readset)) {
+		pj_uint8_t buffer[512];
+		pj_ssize_t len;
+		pj_sockaddr_in addr;
+		int addrlen;
+		pj_status_t rc;
+
+		len = sizeof(buffer);
+		addrlen = sizeof(addr);
+		rc = pj_sock_recvfrom(g.peer_sock, buffer, &len, 0, &addr, &addrlen);
+		if (rc != PJ_SUCCESS || len <= 0)
+		    continue;
+
+		buffer[len] = '\0';
+
+		if (pj_stun_msg_check(buffer, len, PJ_STUN_IS_DATAGRAM)==PJ_SUCCESS) {
+		    pj_stun_msg *msg;
+
+		    rc = pj_stun_msg_decode(g.pool, (pj_uint8_t*)buffer, len, 0,
+					    &msg, NULL, NULL);
+		    if (rc != PJ_SUCCESS) {
+			my_perror("Error decoding packet on peer sock", rc);
+		    } else {
+			pj_stun_msg_dump(msg, buffer, sizeof(buffer), NULL);
+			PJ_LOG(3,(THIS_FILE, "Received STUN packet on peer sock: %s",
+				  buffer));
+		    }
+
+		} else {
+		    PJ_LOG(3,(THIS_FILE, "Received data on peer sock: %s", (char*)buffer));
+		}
+
 	    }
+
 	} else if (n < 0)
 	    pj_thread_sleep(50);
     }
@@ -233,6 +270,12 @@ static int init()
     pj_stun_config_init(&g.stun_config, &g.cp.factory, 0, NULL, g.th);
     pj_assert(status == PJ_SUCCESS);
 
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g.peer_sock);
+    pj_assert(status == PJ_SUCCESS);
+
+    status = pj_sock_bind_in(g.peer_sock, 0, 0);
+    pj_assert(status == PJ_SUCCESS);
+
     status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g.sock);
     pj_assert(status == PJ_SUCCESS);
 
@@ -249,9 +292,12 @@ static int init()
 
     PJ_LOG(3,(THIS_FILE, "Listening on port %d", (int)pj_ntohs(addr.sin_port)));
 
-    pj_memcpy(&g.peer_addr, &addr, sizeof(pj_sockaddr_in));
+    len = sizeof(g.peer_addr);
+    status = pj_sock_getsockname(g.peer_sock, &g.peer_addr, &len);
     if (g.peer_addr.sin_addr.s_addr == 0)
 	pj_gethostip(&g.peer_addr.sin_addr);
+
+    PJ_LOG(3,(THIS_FILE, "Peer is on port %d", (int)pj_ntohs(g.peer_addr.sin_port)));
 
     pj_memset(&stun_cb, 0, sizeof(stun_cb));
     stun_cb.on_send_msg = &on_send_msg;
@@ -487,7 +533,7 @@ static void send_raw_data_to_relay(void)
     }
 
     len = strlen(g.data);
-    pj_sock_sendto(g.sock, g.data, &len, 0, &g.relay_addr, sizeof(g.relay_addr));
+    pj_sock_sendto(g.peer_sock, g.data, &len, 0, &g.relay_addr, sizeof(g.relay_addr));
 }
 
 static pj_status_t parse_addr(const char *input,
@@ -644,6 +690,7 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     g.data = g.data_buf;
+    pj_ansi_strcpy(g.data, "Hello world");
 
     while((c=pj_getopt_long(argc,argv, "r:u:p:N:hF", long_options, &opt_id))!=-1) {
 	switch (c) {
