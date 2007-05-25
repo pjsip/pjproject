@@ -120,8 +120,8 @@ const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
 
 
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-#   define SET_LEN(addr,len) (((pj_sockaddr*)(addr))->sa_zero_len=(len))
-#   define RESET_LEN(addr)   (((pj_sockaddr*)(addr))->sa_zero_len=0)
+#   define SET_LEN(addr,len) (((pj_sockaddr_in*)(addr))->sin_zero_len=(len))
+#   define RESET_LEN(addr)   (((pj_sockaddr_in*)(addr))->sin_zero_len=0)
 #else
 #   define SET_LEN(addr,len) 
 #   define RESET_LEN(addr)
