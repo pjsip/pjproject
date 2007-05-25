@@ -117,6 +117,8 @@ static pj_status_t create_tdata(pj_stun_session *sess,
     tdata->pool = pool;
     tdata->sess = sess;
 
+    pj_list_init(tdata);
+
     *p_tdata = tdata;
 
     return PJ_SUCCESS;
