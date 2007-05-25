@@ -208,7 +208,7 @@ static int worker_thread(void *unused)
 		    if (rc != PJ_SUCCESS) {
 			my_perror("Error decoding packet on peer sock", rc);
 		    } else {
-			pj_stun_msg_dump(msg, buffer, sizeof(buffer), NULL);
+			pj_stun_msg_dump(msg, (char*)buffer, sizeof(buffer), NULL);
 			PJ_LOG(3,(THIS_FILE, "Received STUN packet on peer sock: %s",
 				  buffer));
 		    }
