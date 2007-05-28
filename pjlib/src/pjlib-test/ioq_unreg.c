@@ -74,7 +74,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_mutex_lock(sock_data.mutex);
 
     if (sock_data.unregistered) {
-	/* No need to unlock. Mutex may have been destroyed */
+	pj_mutex_unlock(sock_data.mutex);
 	return;
     }
 
@@ -253,6 +253,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
 	    sock_data.unregistered = 1;
 	    pj_ioqueue_unregister(sock_data.key);
+	    pj_mutex_unlock(sock_data.mutex);
 	    pj_mutex_destroy(sock_data.mutex);
 	    pj_pool_release(sock_data.pool);
 	    sock_data.pool = NULL;
