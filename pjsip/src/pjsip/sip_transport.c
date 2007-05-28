@@ -81,12 +81,6 @@ struct pjsip_tpmgr
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
 };
 
-/* Key for looking up hash table */
-struct transport_key
-{
-    pjsip_transport_type_e  type;
-    pj_sockaddr		    addr;
-};
 
 /*****************************************************************************
  *
@@ -1351,15 +1345,16 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	 * specific transport/listener to be used to send message to.
 	 * In this case, lookup the transport from the hash table.
 	 */
-	struct transport_key key;
+	pjsip_transport_key key;
 	int key_len;
 	pjsip_transport *transport;
 
+	pj_bzero(&key, sizeof(key));
 	key_len = sizeof(key.type) + addr_len;
 
 	/* First try to get exact destination. */
 	key.type = type;
-	pj_memcpy(&key.addr, remote, addr_len);
+	pj_memcpy(&key.rem_addr, remote, addr_len);
 
 	transport = (pjsip_transport*)
 		    pj_hash_get(mgr->table, &key, key_len, NULL);
@@ -1371,7 +1366,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	    if (type == PJSIP_TRANSPORT_LOOP ||
 		     type == PJSIP_TRANSPORT_LOOP_DGRAM)
 	    {
-		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.rem_addr;
 
 		pj_bzero(addr, sizeof(pj_sockaddr_in));
 		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
@@ -1383,7 +1378,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	    else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
 		     (remote_addr->addr.sa_family == PJ_AF_INET)) 
 	    {
-		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.addr;
+		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.rem_addr;
 
 		pj_bzero(addr, sizeof(pj_sockaddr_in));
 		addr->sin_family = PJ_AF_INET;

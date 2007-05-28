@@ -605,8 +605,29 @@ PJ_DECL(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
  * TRANSPORT
  *
  *****************************************************************************/
+/**
+ * Type of callback to receive transport operation status.
+ */
 typedef void (*pjsip_transport_callback)(pjsip_transport *tp, void *token,
                                          pj_ssize_t sent_bytes);
+
+/**
+ * This structure describes transport key to be registered to hash table.
+ */
+typedef struct pjsip_transport_key
+{
+    /**
+     * Transport type.
+     */
+    long		    type;
+
+    /**
+     * Destination address.
+     */
+    pj_sockaddr		    rem_addr;
+
+} pjsip_transport_key;
+
 /**
  * This structure represent the "public" interface of a SIP transport.
  * Applications normally extend this structure to include transport
@@ -623,10 +644,7 @@ struct pjsip_transport
     pj_bool_t		    is_shutdown;    /**< Being shutdown?	    */
 
     /** Key for indexing this transport in hash table. */
-    struct {
-	pjsip_transport_type_e  type;	    /**< Transport type.	    */
-	pj_sockaddr		rem_addr;   /**< Remote addr (zero for UDP) */
-    } key;
+    pjsip_transport_key	    key;
 
     char		   *type_name;	    /**< Type name.		    */
     unsigned		    flag;	    /**< #pjsip_transport_flags_e   */
