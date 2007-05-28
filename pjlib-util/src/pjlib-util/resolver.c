@@ -125,8 +125,8 @@ struct pj_dns_async_query
     unsigned		 transmit_cnt;	/**< Number of transmissions.	    */
 
     struct res_key	 key;		/**< Key to index this query.	    */
-    char		 hbufid[PJ_HASH_ENTRY_SIZE];	/**< Hash buffer 1  */
-    char		 hbufkey[PJ_HASH_ENTRY_SIZE];	/**< Hash buffer 2  */
+    pj_hash_entry_buf	 hbufid;	/**< Hash buffer 1		    */
+    pj_hash_entry_buf	 hbufkey;	/**< Hash buffer 2		    */
     pj_timer_entry	 timer_entry;	/**< Timer to manage timeouts	    */
     unsigned		 options;	/**< Query options.		    */
     void		*user_data;	/**< Application data.		    */
@@ -144,7 +144,7 @@ struct cached_res
 
     struct res_key	     key;	    /**< Resource key.		    */
     char		     buf[RES_BUF_SZ];/**< Resource buffer.	    */
-    char		     hbuf[PJ_HASH_ENTRY_SIZE];	/**< Hash buffer    */
+    pj_hash_entry_buf	     hbuf;	    /**< Hash buffer		    */
     pj_time_val		     expiry_time;   /**< Expiration time.	    */
     pj_dns_parsed_packet    *pkt;	    /**< The response packet.	    */
 };

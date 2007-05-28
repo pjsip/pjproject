@@ -62,7 +62,7 @@ struct dlg_set
     PJ_DECL_LIST_MEMBER(struct dlg_set);
 
     /* This is the buffer to store this entry in the hash table. */
-    char ht_entry[PJ_HASH_ENTRY_SIZE];
+    pj_hash_entry_buf ht_entry;
 
     /* List of dialog in this dialog set. */
     struct dlg_set_head  dlg_list;
