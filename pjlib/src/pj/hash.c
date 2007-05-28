@@ -100,8 +100,8 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
     pj_hash_table_t *h;
     unsigned table_size;
     
-    /* Check that PJ_HASH_ENTRY_SIZE is correct. */
-    PJ_ASSERT_RETURN(sizeof(pj_hash_entry)==PJ_HASH_ENTRY_SIZE, NULL);
+    /* Check that PJ_HASH_ENTRY_BUF_SIZE is correct. */
+    PJ_ASSERT_RETURN(sizeof(pj_hash_entry)<=PJ_HASH_ENTRY_BUF_SIZE, NULL);
 
     h = pj_pool_alloc(pool, sizeof(pj_hash_table_t));
     h->count = 0;
@@ -236,11 +236,13 @@ PJ_DEF(void) pj_hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
 
 PJ_DEF(void) pj_hash_set_np( pj_hash_table_t *ht,
 			     const void *key, unsigned keylen, 
-			     pj_uint32_t hval, void *entry_buf, void *value)
+			     pj_uint32_t hval, pj_hash_entry_buf entry_buf, 
+			     void *value)
 {
     pj_hash_entry **p_entry;
 
-    p_entry = find_entry( NULL, ht, key, keylen, value, &hval, entry_buf );
+    p_entry = find_entry( NULL, ht, key, keylen, value, &hval, 
+			 (void*)entry_buf );
     if (*p_entry) {
 	if (value == NULL) {
 	    /* delete entry */

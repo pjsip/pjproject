@@ -47,7 +47,12 @@ PJ_BEGIN_DECL
 /**
  * This indicates the size of of each hash entry.
  */
-#define PJ_HASH_ENTRY_SIZE	(3*sizeof(void*) + 2*sizeof(pj_uint32_t))
+#define PJ_HASH_ENTRY_BUF_SIZE	(3*sizeof(void*) + 2*sizeof(pj_uint32_t))
+
+/**
+ * Type declaration for entry buffer, used by #pj_hash_set_np()
+ */
+typedef void *pj_hash_entry_buf[(PJ_HASH_ENTRY_BUF_SIZE+sizeof(void*)-1)/(sizeof(void*))];
 
 /**
  * This is the function that is used by the hash table to calculate hash value
@@ -147,18 +152,15 @@ PJ_DECL(void) pj_hash_set( pj_pool_t *pool, pj_hash_table_t *ht,
  *		    this value to search the entry's index, otherwise it will
  *		    compute the key. This value can be obtained when calling
  *		    #pj_hash_get().
- * @param entry_buf Pointer to buffer which will be used for the new entry,
- *		    when one needs to be created. The buffer must be at least
- *		    PJ_HASH_ENTRY_SIZE long, and the first PJ_HASH_ENTRY_SIZE
- *		    bytes of the buffer will be used by the hash table.
- *		    Application may use the remaining portion of the buffer
- *		    for its own purpose.
+ * @param entry_buf Buffer which will be used for the new entry, when one needs
+ *		    to be created.
  * @param value	    value to be associated, or NULL to delete the entry with
  *		    the specified key.
  */
 PJ_DECL(void) pj_hash_set_np(pj_hash_table_t *ht,
 			     const void *key, unsigned keylen, 
-			     pj_uint32_t hval, void *entry_buf, void *value);
+			     pj_uint32_t hval, pj_hash_entry_buf entry_buf, 
+			     void *value);
 
 /**
  * Get the total number of entries in the hash table.
