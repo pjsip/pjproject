@@ -206,6 +206,9 @@ struct pjsua_data
     unsigned		 buddy_cnt;		    /**< Buddy count.	*/
     pjsua_buddy		 buddy[PJSUA_MAX_BUDDIES];  /**< Buddy array.	*/
 
+    /* Presence: */
+    pj_timer_entry	 pres_timer;/**< Presence refresh timer.	*/
+
     /* Media: */
     pjsua_media_config   media_cfg; /**< Media config.			*/
     pjmedia_endpt	*med_endpt; /**< Media endpoint.		*/

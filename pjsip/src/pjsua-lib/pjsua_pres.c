@@ -22,6 +22,10 @@
 
 #define THIS_FILE   "pjsua_pres.c"
 
+#ifndef PJSUA_PRES_TIMER
+#   define PJSUA_PRES_TIMER	120
+#endif
+
 
 /*
  * Get total number of buddies.
@@ -1133,6 +1137,25 @@ static void refresh_client_subscriptions(void)
     }
 }
 
+/* Timer callback to re-create client subscription */
+static void pres_timer_cb(pj_timer_heap_t *th,
+			  pj_timer_entry *entry)
+{
+    pj_time_val delay = { PJSUA_PRES_TIMER, 0 };
+
+    PJ_UNUSED_ARG(th);
+
+    PJSUA_LOCK();
+
+    entry->id = PJ_FALSE;
+    refresh_client_subscriptions();
+
+    pjsip_endpt_schedule_timer(pjsua_var.endpt, entry, &delay);
+    entry->id = PJ_TRUE;
+
+    PJSUA_UNLOCK();
+}
+
 
 /*
  * Init presence
@@ -1161,7 +1184,17 @@ pj_status_t pjsua_pres_init()
  */
 pj_status_t pjsua_pres_start(void)
 {
-    /* Nothing to do (is it?) */
+    /* Start presence timer to re-subscribe to buddy's presence when
+     * subscription has failed.
+     */
+    if (pjsua_var.pres_timer.id == PJ_FALSE) {
+	pj_time_val pres_interval = {PJSUA_PRES_TIMER, 0};
+
+	pjsua_var.pres_timer.cb = &pres_timer_cb;
+	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.pres_timer,
+				   &pres_interval);
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1188,6 +1221,11 @@ void pjsua_pres_refresh()
 void pjsua_pres_shutdown(void)
 {
     unsigned i;
+
+    if (pjsua_var.pres_timer.id != 0) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.pres_timer);
+	pjsua_var.pres_timer.id = PJ_FALSE;
+    }
 
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	if (!pjsua_var.acc[i].valid)
