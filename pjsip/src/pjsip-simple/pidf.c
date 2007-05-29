@@ -343,11 +343,16 @@ PJ_DEF(pjpidf_pres*) pjpidf_create(pj_pool_t *pool, const pj_str_t *entity)
 PJ_DEF(pjpidf_pres*) pjpidf_parse(pj_pool_t *pool, char *text, int len)
 {
     pjpidf_pres *pres = pj_xml_parse(pool, text, len);
-    if (pres) {
-	if (pj_stricmp(&pres->name, &PRESENCE) != 0)
-	    return NULL;
+    if (pres && pres->name.slen >= 8) {
+	pj_str_t name;
+
+	name.ptr = pres->name.ptr + (pres->name.slen - 8);
+	name.slen = 8;
+
+	if (pj_stricmp(&name, &PRESENCE) == 0)
+	    return pres;
     }
-    return pres;
+    return NULL;
 }
 
 PJ_DEF(int) pjpidf_print(const pjpidf_pres* pres, char *buf, int len)
