@@ -373,7 +373,8 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     loop->base.flag = PJSIP_TRANSPORT_DATAGRAM;
     loop->base.local_name.host = pj_str(ADDR_LOOP_DGRAM);
     loop->base.local_name.port = 
-	pjsip_transport_get_default_port_for_type(loop->base.key.type);
+	pjsip_transport_get_default_port_for_type((pjsip_transport_type_e)
+						  loop->base.key.type);
     loop->base.addr_len = sizeof(pj_sockaddr_in);
     loop->base.endpt = endpt;
     loop->base.tpmgr = pjsip_endpt_get_tpmgr(endpt);

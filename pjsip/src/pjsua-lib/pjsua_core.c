@@ -1410,7 +1410,7 @@ PJ_DEF(pj_status_t) pjsua_transport_register( pjsip_transport *tp,
     }
 
     /* Save the transport */
-    pjsua_var.tpdata[id].type = tp->key.type;
+    pjsua_var.tpdata[id].type = (pjsip_transport_type_e) tp->key.type;
     pjsua_var.tpdata[id].local_name = tp->local_name;
     pjsua_var.tpdata[id].data.tp = tp;
 
@@ -1480,7 +1480,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 	}
     
 	info->id = id;
-	info->type = tp->key.type;
+	info->type = (pjsip_transport_type_e) tp->key.type;
 	info->type_name = pj_str(tp->type_name);
 	info->info = pj_str(tp->info);
 	info->flag = tp->flag;

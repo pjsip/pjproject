@@ -830,7 +830,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 	pj_bool_t mismatch = PJ_FALSE;
 	if (port == 0) {
 	    pjsip_transport_type_e type;
-	    type = rdata->tp_info.transport->key.type;
+	    type = (pjsip_transport_type_e)rdata->tp_info.transport->key.type;
 	    port = pjsip_transport_get_default_port_for_type(type);
 	}
 	local_addr = &rdata->tp_info.transport->local_name.host;

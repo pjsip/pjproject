@@ -1076,7 +1076,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
 	pj_memcpy(&res_addr->addr, &rdata->pkt_info.src_addr,
 		  rdata->pkt_info.src_addr_len);
 	res_addr->addr_len = rdata->pkt_info.src_addr_len;
-	res_addr->dst_host.type = src_transport->key.type;
+	res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
 	res_addr->dst_host.flag = src_transport->flag;
 	pj_strdup( pool, &res_addr->dst_host.addr.host, 
 		   &rdata->msg_info.via->recvd_param);
@@ -1095,7 +1095,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
 	 * that parameter is not present. 
 	 */
 	res_addr->transport = NULL;
-	res_addr->dst_host.type = src_transport->key.type;
+	res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
 	res_addr->dst_host.flag = src_transport->flag;
 	pj_strdup( pool, &res_addr->dst_host.addr.host, 
 		   &rdata->msg_info.via->maddr_param);
@@ -1114,7 +1114,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
 	pj_memcpy(&res_addr->addr, &rdata->pkt_info.src_addr,
 		  rdata->pkt_info.src_addr_len);
 	res_addr->addr_len = rdata->pkt_info.src_addr_len;
-	res_addr->dst_host.type = src_transport->key.type;
+	res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
 	res_addr->dst_host.flag = src_transport->flag;
 	pj_strdup( pool, &res_addr->dst_host.addr.host, 
 		   &rdata->msg_info.via->recvd_param);
@@ -1126,7 +1126,7 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
 
     } else {
 	res_addr->transport = NULL;
-	res_addr->dst_host.type = src_transport->key.type;
+	res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
 	res_addr->dst_host.flag = src_transport->flag;
 	pj_strdup( pool, &res_addr->dst_host.addr.host, 
 		   &rdata->msg_info.via->recvd_param);
