@@ -379,11 +379,13 @@ PJ_DEF(pj_bool_t) pj_stun_auth_valid_for_msg(const pj_stun_msg *msg)
     }
 
     switch (err_attr->err_code) {
-    case PJ_STUN_SC_UNAUTHORIZED:
-    case PJ_STUN_SC_MISSING_USERNAME:
-    case PJ_STUN_SC_MISSING_REALM:
-    case PJ_STUN_SC_UNKNOWN_USERNAME:
-    case PJ_STUN_SC_INTEGRITY_CHECK_FAILURE:
+    case PJ_STUN_SC_BAD_REQUEST:	    /* 400 (Bad Request)	    */
+    case PJ_STUN_SC_UNAUTHORIZED:	    /* 401 (Unauthorized)	    */
+    case PJ_STUN_SC_STALE_CREDENTIALS:	    /* 430 (Stale Credential)	    */
+    case PJ_STUN_SC_MISSING_USERNAME:	    /* 432 (Missing Username)	    */
+    case PJ_STUN_SC_MISSING_REALM:	    /* 434 (Missing Realm)	    */
+    case PJ_STUN_SC_UNKNOWN_USERNAME:	    /* 436 (Unknown Username)	    */
+    case PJ_STUN_SC_INTEGRITY_CHECK_FAILURE:/* 431 (Integrity Check Fail)   */
 	return PJ_FALSE;
     default:
 	return PJ_TRUE;
