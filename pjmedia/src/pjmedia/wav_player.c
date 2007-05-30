@@ -204,6 +204,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     if (ptime == 0)
 	ptime = 20;
 
+    /* Normalize buff_size */
+    if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
+
+
     /* Create fport instance. */
     fport = create_file_port(pool);
     if (!fport) {
@@ -344,9 +348,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     /* Create file buffer.
      */
-    if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
     fport->bufsize = buff_size;
 
+
+    /* samples_per_frame must be smaller than bufsize (because get_frame()
+     * doesn't handle this case).
+     */
+    if (fport->base.info.samples_per_frame*fport->base.info.bits_per_sample >=
+	fport->bufsize)
+    {
+	pj_file_close(fport->fd);
+	return PJ_EINVAL;
+    }
 
     /* Create buffer. */
     fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
@@ -538,3 +551,4 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     pj_file_close(fport->fd);
     return PJ_SUCCESS;
 }
+
