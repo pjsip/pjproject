@@ -362,11 +362,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 	resolver->timer = NULL;
     }
 
-    if (resolver->own_ioqueue && resolver->ioqueue) {
-	pj_ioqueue_destroy(resolver->ioqueue);
-	resolver->ioqueue = NULL;
-    }
-
     if (resolver->udp_key != NULL) {
 	pj_ioqueue_unregister(resolver->udp_key);
 	resolver->udp_key = NULL;
@@ -374,6 +369,11 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
     } else if (resolver->udp_sock != PJ_INVALID_SOCKET) {
 	pj_sock_close(resolver->udp_sock);
 	resolver->udp_sock = PJ_INVALID_SOCKET;
+    }
+
+    if (resolver->own_ioqueue && resolver->ioqueue) {
+	pj_ioqueue_destroy(resolver->ioqueue);
+	resolver->ioqueue = NULL;
     }
 
     if (resolver->mutex) {

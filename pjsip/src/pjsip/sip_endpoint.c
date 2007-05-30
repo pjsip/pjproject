@@ -577,6 +577,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 	mod = prev;
     }
 
+    /* Destroy resolver */
+    pjsip_resolver_destroy(endpt->resolver);
+
     /* Shutdown and destroy all transports. */
     pjsip_tpmgr_destroy(endpt->transport_mgr);
 
