@@ -1419,9 +1419,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 {
     struct tsx_lock_data lck;
 
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+
     PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction"));
 
-    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
     if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
@@ -1430,6 +1431,34 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
     lock_tsx(tsx, &lck);
     tsx_set_status_code(tsx, code, NULL);
     tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER, NULL);
+    unlock_tsx(tsx, &lck);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Cease retransmission on the UAC transaction. The UAC transaction is
+ * still considered running, and it will complete when either final
+ * response is received or the transaction times out.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
+{
+    struct tsx_lock_data lck;
+
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tsx->role == PJSIP_ROLE_UAC &&
+		     tsx->method.id == PJSIP_INVITE_METHOD,
+		     PJ_EINVALIDOP);
+
+    PJ_LOG(5,(tsx->obj_name, "Request to stop retransmission"));
+
+    lock_tsx(tsx, &lck);
+    /* Cancel retransmission timer. */
+    if (tsx->retransmit_timer.id != 0) {
+	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
+	tsx->retransmit_timer.id = 0;
+    }
     unlock_tsx(tsx, &lck);
 
     return PJ_SUCCESS;

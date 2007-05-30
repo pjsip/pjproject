@@ -297,6 +297,18 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
 
 
 /**
+ * Cease retransmission on the UAC transaction. The UAC transaction is
+ * still considered running, and it will complete when either final
+ * response is received or the transaction times out.
+ *
+ * This operation normally is used for INVITE transaction only, when
+ * the transaction is cancelled before any provisional response has been
+ * received.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx);
+
+
+/**
  * Get the transaction instance in the incoming message. If the message
  * has a corresponding transaction, this function will return non NULL
  * value.

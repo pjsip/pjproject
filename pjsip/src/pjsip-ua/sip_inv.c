@@ -1512,8 +1512,12 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	     */
 	    if (inv->invite_tsx->status_code < 100) {
 
-		pjsip_tsx_terminate(inv->invite_tsx, 487);
+		pjsip_tsx_stop_retransmit(inv->invite_tsx);
+		inv->cancelling = PJ_TRUE;
+		inv->pending_cancel = PJ_TRUE;
 		*p_tdata = NULL;
+		PJ_LOG(4, (inv->obj_name, "Stopping retransmission, "
+			   "delaying CANCEL"));
 		return PJ_SUCCESS;
 	    }
 
@@ -1925,6 +1929,16 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	    break;
 
 	case PJSIP_TSX_STATE_PROCEEDING:
+	    if (inv->pending_cancel) {
+		pjsip_tx_data *cancel;
+
+		inv->pending_cancel = PJ_FALSE;
+
+		status = pjsip_inv_end_session(inv, 487, NULL, &cancel);
+		if (status == PJ_SUCCESS && cancel)
+		    status = pjsip_inv_send_msg(inv, cancel);
+	    }
+
 	    if (dlg->remote.info->tag.slen) {
 
 		inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);

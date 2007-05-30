@@ -223,7 +223,8 @@ struct pjsip_inv_session
     char		 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification */
     pj_pool_t		*pool;			    /**< Dialog's pool.	    */
     pjsip_inv_state	 state;			    /**< Invite sess state. */
-    pj_bool_t		 cancelling;		    /**< CANCEL sent?	    */
+    pj_bool_t		 cancelling;		    /**< CANCEL requested   */
+    pj_bool_t		 pending_cancel;	    /**< Wait to send CANCEL*/
     pjsip_status_code	 cause;			    /**< Disconnect cause.  */
     pj_str_t		 cause_text;		    /**< Cause text.	    */
     pj_bool_t		 notify;		    /**< Internal.	    */
