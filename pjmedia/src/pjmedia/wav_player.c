@@ -354,7 +354,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* samples_per_frame must be smaller than bufsize (because get_frame()
      * doesn't handle this case).
      */
-    if (fport->base.info.samples_per_frame*fport->base.info.bits_per_sample >=
+    if (fport->base.info.samples_per_frame * BYTES_PER_SAMPLE >=
 	fport->bufsize)
     {
 	pj_file_close(fport->fd);
