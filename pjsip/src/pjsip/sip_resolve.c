@@ -760,43 +760,76 @@ static void dns_callback(void *user_data,
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
 
+	    unsigned srv_idx;
+
 	    /* Update IP address of the corresponding hostname */
-	    for (i=0; i<query->srv_cnt; ++i) {
+	    for (srv_idx=0; srv_idx<query->srv_cnt; ++srv_idx) {
 		if (pj_stricmp(&pkt->ans[0].name, 
-			       &query->srv[i].target_name)==0) 
+			       &query->srv[srv_idx].target_name)==0) 
 		{
 		    break;
 		}
 	    }
 
-	    if (i == query->srv_cnt) {
+	    if (srv_idx == query->srv_cnt) {
 		PJ_LOG(4,(query->objname, 
 			  "Received answer to DNS A request with no matching "
 			  "SRV record! The unknown name is %.*s",
 			  (int)pkt->ans[0].name.slen, pkt->ans[0].name.ptr));
 	    } else {
-		unsigned j;
+		int ans_idx = -1;
+		unsigned k, j;
+		pj_str_t cname = { NULL, 0 };
 
-		query->srv[i].addr[query->srv[i].addr_cnt++].s_addr =
-		    pkt->ans[0].rdata.a.ip_addr.s_addr;
+		/* Find the first DNS A record in the answer while processing
+		 * the CNAME info found in the response.
+		 */
+		for (k=0; k < pkt->hdr.anscount; ++k) {
+
+		    pj_dns_parsed_rr *rr = &pkt->ans[k];
+
+		    if (rr->type == PJ_DNS_TYPE_A &&
+			(cname.slen == 0 || pj_stricmp(&rr->name, &cname)==0))
+		    {
+			if (ans_idx == -1)
+			    ans_idx = k;
+
+		    } else if (rr->type == PJ_DNS_TYPE_CNAME &&
+			       pj_stricmp(&query->srv[srv_idx].target_name, 
+				          &rr->name)==0) 
+		    {
+			cname = rr->rdata.cname.name;
+		    }
+		}
+
+		if (ans_idx == -1) {
+		    /* There's no DNS A answer! */
+		    PJ_LOG(5,(query->objname, 
+			      "No DNS A record in response!"));
+		    status = PJLIB_UTIL_EDNSNOANSWERREC;
+		    goto on_error;
+		}
+
+		query->srv[srv_idx].addr[query->srv[srv_idx].addr_cnt++].s_addr =
+		    pkt->ans[ans_idx].rdata.a.ip_addr.s_addr;
 
 		PJ_LOG(5,(query->objname, 
 			  "DNS A for %.*s: %s",
-			  (int)query->srv[i].target_name.slen, 
-			  query->srv[i].target_name.ptr,
-			  pj_inet_ntoa(pkt->ans[0].rdata.a.ip_addr)));
+			  (int)query->srv[srv_idx].target_name.slen, 
+			  query->srv[srv_idx].target_name.ptr,
+			  pj_inet_ntoa(pkt->ans[ans_idx].rdata.a.ip_addr)));
 
 		/* Check for multiple IP addresses */
-		for (j=1; j<pkt->hdr.anscount && 
-			    query->srv[i].addr_cnt < ADDR_MAX_COUNT; ++j)
+		for (j=ans_idx+1; j<pkt->hdr.anscount && 
+			    query->srv[srv_idx].addr_cnt < ADDR_MAX_COUNT; ++j)
 		{
-		    query->srv[i].addr[query->srv[i].addr_cnt++].s_addr = 
+		    query->srv[srv_idx].addr[query->srv[srv_idx].addr_cnt++].s_addr = 
 			pkt->ans[j].rdata.a.ip_addr.s_addr;
 
 		    PJ_LOG(5,(query->objname, 
 			      "Additional DNS A for %.*s: %s",
-			      (int)query->srv[i].target_name.slen, 
-			      query->srv[i].target_name.ptr,
+			      (int)query->srv[srv_idx].target_name.slen, 
+			      query->srv[srv_idx].target_name.ptr,
 			      pj_inet_ntoa(pkt->ans[j].rdata.a.ip_addr)));
 		}
 	    }
