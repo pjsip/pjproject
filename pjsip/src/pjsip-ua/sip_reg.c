@@ -651,6 +651,11 @@ static void tsx_callback(void *token, pjsip_event *event)
 	pjsip_rx_data *rdata;
 	pj_int32_t expiration = 0xFFFF;
 
+	/* User must not destroy the regc while transaction was in
+	 * progress
+	 */
+	pj_assert(regc->_delete_flag == 0);
+
 	if (tsx->status_code/100 == 2) {
 	    int i;
 	    pjsip_contact_hdr *hdr;
