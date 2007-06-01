@@ -44,7 +44,9 @@
  *
  * @param expr	    The expression to be evaluated.
  */
-#define pj_assert(expr)   assert(expr)
+#ifndef pj_assert
+#   define pj_assert(expr)   assert(expr)
+#endif
 
 
 /**
