@@ -26,6 +26,7 @@
 /*
  * This file contains pool default policy definition and implementation.
  */
+#include "pool_signature.h"
 
 
 static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
@@ -41,11 +42,16 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
 	    return NULL;
     }
 
-    p = malloc(size);
+    p = malloc(size+(SIG_SIZE << 1));
 
     if (p == NULL) {
 	if (factory->on_block_free) 
 	    factory->on_block_free(factory, size);
+    } else {
+	/* Apply signature when PJ_SAFE_POOL is set. It will move
+	 * "p" pointer forward.
+	 */
+	APPLY_SIG(p, size);
     }
 
     return p;
@@ -58,6 +64,15 @@ static void default_block_free(pj_pool_factory *factory, void *mem,
 
     if (factory->on_block_free) 
         factory->on_block_free(factory, size);
+
+    /* Check and remove signature when PJ_SAFE_POOL is set. It will
+     * move "mem" pointer backward.
+     */
+    REMOVE_SIG(mem, size);
+
+    /* Note that when PJ_SAFE_POOL is set, the actual size of the block
+     * is size + SIG_SIZE*2.
+     */
 
     free(mem);
 }

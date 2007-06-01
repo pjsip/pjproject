@@ -388,6 +388,22 @@
 
 
 /**
+ * Set this flag to non-zero to enable various checking for pool
+ * operations. When this flag is set, assertion must be enabled
+ * in the application.
+ *
+ * This will slow down pool creation and destruction and will add
+ * few bytes of overhead, so application would normally want to 
+ * disable this feature on release build.
+ *
+ * Default: 0
+ */
+#ifndef PJ_SAFE_POOL
+#   define PJ_SAFE_POOL		    0
+#endif
+
+
+/**
  * If pool debugging is used, then each memory allocation from the pool
  * will call malloc(), and pool will release all memory chunks when it
  * is destroyed. This works better when memory verification programs

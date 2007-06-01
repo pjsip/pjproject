@@ -25,15 +25,28 @@
 /*
  * This file contains pool default policy definition and implementation.
  */
+#include "pool_signature.h"
  
 
 static void *operator_new(pj_pool_factory *factory, pj_size_t size)
 {
+    void *mem;
+
     PJ_CHECK_STACK();
     PJ_UNUSED_ARG(factory);
     PJ_UNUSED_ARG(size);
 
-    return new char[size];
+    mem = (void*) new char[size+(SIG_SIZE << 1)];
+    
+    /* Exception for new operator may be disabled, so.. */
+    if (mem) {
+	/* Apply signature when PJ_SAFE_POOL is set. It will move
+	 * "mem" pointer forward.
+	 */
+	APPLY_SIG(mem, size);
+    }
+
+    return mem;
 }
 
 static void operator_delete(pj_pool_factory *factory, void *mem, pj_size_t size)
@@ -41,6 +54,15 @@ static void operator_delete(pj_pool_factory *factory, void *mem, pj_size_t size)
     PJ_CHECK_STACK();
     PJ_UNUSED_ARG(factory);
     PJ_UNUSED_ARG(size);
+
+    /* Check and remove signature when PJ_SAFE_POOL is set. It will
+     * move "mem" pointer backward.
+     */
+    REMOVE_SIG(mem, size);
+
+    /* Note that when PJ_SAFE_POOL is set, the actual size of the block
+     * is size + SIG_SIZE*2.
+     */
 
     char *p = (char*)mem;
     delete [] p;

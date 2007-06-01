@@ -99,6 +99,8 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
     while (pool != (pj_pool_t*) &cp->used_list) {
 	pj_pool_t *next = pool->next;
 	pj_list_erase(pool);
+	PJ_LOG(4,(pool->obj_name, 
+		  "Pool is not released by application, releasing now"));
 	pj_pool_destroy_int(pool);
 	pool = next;
     }
@@ -197,7 +199,17 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 
     PJ_CHECK_STACK();
 
+    PJ_ASSERT_ON_FAIL(pf && pool, return);
+
     pj_lock_acquire(cp->lock);
+
+#if PJ_SAFE_POOL
+    /* Make sure pool is still in our used list */
+    if (pj_list_find_node(&cp->used_list, pool) != pool) {
+	pj_assert(!"Attempt to destroy pool that has been destroyed before");
+	return;
+    }
+#endif
 
     /* Erase from the used list. */
     pj_list_erase(pool);
