@@ -613,8 +613,10 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
+	    ++regc->busy;
 	    status = pjsip_regc_send(regc, tdata);
-	} 
+	    --regc->busy;
+	}
 	
 	if (status != PJ_SUCCESS) {
 
@@ -650,11 +652,6 @@ static void tsx_callback(void *token, pjsip_event *event)
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 	pjsip_rx_data *rdata;
 	pj_int32_t expiration = 0xFFFF;
-
-	/* User must not destroy the regc while transaction was in
-	 * progress
-	 */
-	pj_assert(regc->_delete_flag == 0);
 
 	if (tsx->status_code/100 == 2) {
 	    int i;
