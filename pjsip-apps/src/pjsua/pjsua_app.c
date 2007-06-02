@@ -3142,20 +3142,17 @@ pj_status_t app_destroy(void)
 static void stereo_demo()
 {
     pjmedia_port *conf, *splitter, *ch1;
-    unsigned clock;
     pj_status_t status;
 
     /* Disable existing sound device */
     conf = pjsua_set_no_snd_dev();
 
-    clock = app_config.media_cfg.clock_rate;
-
     /* Create stereo-mono splitter/combiner */
     status = pjmedia_splitcomb_create(app_config.pool, 
-				      clock /* clock rate */,
+				      conf->info.clock_rate /* clock rate */,
 				      2	    /* stereo */,
-				      clock*2*10/1000/* 10ms samples * 2ch */,
-				      16    /* bits */,
+				      2 * conf->info.samples_per_frame,
+				      conf->info.bits_per_sample,
 				      0	    /* options */,
 				      &splitter);
     pj_assert(status == PJ_SUCCESS);
@@ -3182,10 +3179,10 @@ static void stereo_demo()
     
     /* Create sound device */
     status = pjmedia_snd_port_create(app_config.pool, -1, -1, 
-				     clock  /* clock rate */,
+				     conf->info.clock_rate,
 				     2	    /* stereo */,
-				     clock*2*10/1000 /* 10 ms samples * 2ch */,
-				     16	    /* bits */,
+				     2 * conf->info.samples_per_frame,
+				     conf->info.bits_per_sample,
 				     0, &app_config.snd);
     pj_assert(status == PJ_SUCCESS);
 
