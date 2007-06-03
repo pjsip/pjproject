@@ -74,6 +74,16 @@ static const char *USAGE =
 
 #include <stdlib.h>
 
+/* Uncomment these to disable threads.
+ * NOTE:
+ *   when threading is disabled, siprtp won't transmit any
+ *   RTP packets.
+ */
+/*
+#undef PJ_HAS_THREADS
+#define PJ_HAS_THREADS 0
+*/
+
 
 #if PJ_HAS_HIGH_RES_TIMER==0
 #   error "High resolution timer is needed for this sample"
@@ -401,7 +411,13 @@ static pj_status_t init_media()
     /* Initialize media endpoint so that at least error subsystem is properly
      * initialized.
      */
+#if PJ_HAS_THREADS
     status = pjmedia_endpt_create(&app.cp.factory, NULL, 1, &app.med_endpt);
+#else
+    status = pjmedia_endpt_create(&app.cp.factory, 
+				  pjsip_endpt_get_ioqueue(app.sip_endpt),
+				  0, &app.med_endpt);
+#endif
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 
@@ -1435,12 +1451,14 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     /* Start media thread. */
     audio->thread_quit_flag = 0;
+#if PJ_HAS_THREADS
     status = pj_thread_create( inv->pool, "media", &media_thread, audio,
 			       0, 0, &audio->thread);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Error creating media thread", status);
 	return;
     }
+#endif
 
     /* Set the media as active */
     audio->active = PJ_TRUE;
@@ -2070,10 +2088,12 @@ int main(int argc, char *argv[])
     }
 
     /* Start worker threads */
+#if PJ_HAS_THREADS
     for (i=0; i<app.thread_count; ++i) {
 	pj_thread_create( app.pool, "app", &sip_worker_thread, NULL,
 			  0, 0, &app.sip_thread[i]);
     }
+#endif
 
     /* If URL is specified, then make call immediately */
     if (app.uri_to_call.slen) {
@@ -2096,8 +2116,10 @@ int main(int argc, char *argv[])
 		pj_thread_sleep(100);
 	    pj_thread_sleep(200);
 	} else {
+#if PJ_HAS_THREADS
 	    /* Start user interface loop */
 	    console_main();
+#endif
 	}
 
     } else {
@@ -2105,11 +2127,19 @@ int main(int argc, char *argv[])
 	PJ_LOG(3,(THIS_FILE, "Ready for incoming calls (max=%d)", 
 		  app.max_calls));
 
+#if PJ_HAS_THREADS
 	/* Start user interface loop */
 	console_main();
-
+#endif
     }
 
+#if !PJ_HAS_THREADS
+    PJ_LOG(3,(THIS_FILE, "Press Ctrl-C to quit"));
+    for (;;) {
+	pj_time_val t = {0, 10};
+	pjsip_endpt_handle_events(app.sip_endpt, &t);
+    }
+#endif
     
     /* Shutting down... */
     destroy_sip();
