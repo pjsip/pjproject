@@ -675,13 +675,10 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
     cand = &comp->cand_list[comp->cand_cnt];
     tdata->user_data = (void*)cand;
 
-    /* Send STUN binding request */
-    status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
-				      &ice_st->stun_srv, 
-				      sizeof(pj_sockaddr_in), tdata);
-    if (status != PJ_SUCCESS)
-	return status;
-
+    /* Add pending count first, since stun_on_request_complete()
+     * may be called before this function completes
+     */
+    comp->pending_cnt++;
 
     /* Add new alias to this component */
     cand->type = PJ_ICE_CAND_TYPE_SRFLX;
@@ -693,8 +690,15 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
 
     ++comp->cand_cnt;
 
-    /* Add pending count for this component */
-    comp->pending_cnt++;
+    /* Send STUN binding request */
+    status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
+				      &ice_st->stun_srv, 
+				      sizeof(pj_sockaddr_in), tdata);
+    if (status != PJ_SUCCESS) {
+	--comp->pending_cnt;
+	--comp->cand_cnt;
+	return status;
+    }
 
     return PJ_SUCCESS;
 }
