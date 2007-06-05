@@ -1065,7 +1065,9 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+	if (buddy->sub) {
+	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+	}
 	buddy->sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
 		     status);
@@ -1076,7 +1078,9 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+	if (buddy->sub) {
+	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+	}
 	buddy->sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
 		     status);
