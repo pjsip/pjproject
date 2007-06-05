@@ -152,6 +152,15 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 
 	    if (fport->current_file == fport->max_file)
 	    {
+		/* Clear the remaining part of the buffer first, to prevent
+		 * old samples from being played. If the playback restarts,
+		 * this will be overwritten by new reading.
+		 */
+		if (size_left > 0) {
+		    pj_bzero(&fport->buf[fport->bufsize-size_left], 
+			     size_left);
+		}
+
 		/* All files have been played. Call callback, if any. */
 		if (fport->cb)
 		{
