@@ -476,7 +476,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 				   PJ_STUN_IS_DATAGRAM);
 
 	if (status == PJ_SUCCESS) {
-	    if (ice_st->ice==NULL ||
+	    if (ice_st->ice==NULL &&
 		(comp->stun_sess &&
 		 pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0)) 
 	    {
