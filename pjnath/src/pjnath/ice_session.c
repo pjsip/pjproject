@@ -1782,7 +1782,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	 */
 
 	/* Add new peer reflexive candidate */
-	status = pj_ice_sess_add_cand(ice, lcand->comp_id, 
+	status = pj_ice_sess_add_cand(ice, check->lcand->comp_id, 
 				      PJ_ICE_CAND_TYPE_PRFLX,
 				      65535, &foundation,
 				      &xaddr->sockaddr, 
