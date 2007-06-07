@@ -95,6 +95,10 @@ SOURCE="..\src\pjlib-util-test\main.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util-test\resolver_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util-test\stun.c"
 # End Source File
 # Begin Source File
