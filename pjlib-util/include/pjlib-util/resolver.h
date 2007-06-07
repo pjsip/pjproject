@@ -193,7 +193,16 @@ typedef struct pj_dns_settings
     unsigned	qretr_count;	/**< Query maximum retransmission count.    */
     unsigned	cache_max_ttl;	/**< Maximum TTL for cached responses. If the
 				     value is zero, caching is disabled.    */
+    unsigned	good_ns_ttl;	/**< See #PJ_DNS_RESOLVER_GOOD_NS_TTL	    */
+    unsigned	bad_ns_ttl;	/**< See #PJ_DNS_RESOLVER_BAD_NS_TTL	    */
 } pj_dns_settings;
+
+/**
+ * Set default values to the DNS settings.
+ *
+ * @param s	    The DNS settings to be initialized.
+ */
+PJ_DECL(void) pj_dns_settings_default(pj_dns_settings *s);
 
 
 /**

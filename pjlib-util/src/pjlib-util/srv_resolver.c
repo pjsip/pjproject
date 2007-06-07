@@ -127,7 +127,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
     query_job->dns_state = PJ_DNS_TYPE_SRV;
 
     PJ_LOG(5, (query_job->objname, 
-	       "Starting async DNS %s query_job: target=%.*",
+	       "Starting async DNS %s query_job: target=%.*s",
 	       pj_dns_get_type_name(query_job->dns_state),
 	       (int)target_name.slen, target_name.ptr));
 
@@ -185,6 +185,12 @@ static void build_server_entries(pj_dns_srv_resolver_job *query_job,
 	srv->weight = rr->rdata.srv.weight;
 	
 	++query_job->srv_cnt;
+    }
+
+    if (query_job->srv_cnt == 0) {
+	PJ_LOG(4,(query_job->objname, 
+		  "Could not find SRV record in DNS answer!"));
+	return;
     }
 
     /* First pass: 
