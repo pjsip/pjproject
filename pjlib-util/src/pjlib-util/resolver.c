@@ -62,6 +62,14 @@ enum ns_state
     STATE_BAD,
 };
 
+static const char *state_names[3] =
+{
+    "Probing",
+    "Active",
+    "Bad"
+};
+
+
 /* 
  * Each nameserver entry.
  * A name server is identified by its socket address (IP and port).
@@ -216,6 +224,18 @@ static pj_status_t select_nameservers(pj_dns_resolver *resolver,
 				      unsigned servers[]);
 
 
+/* Initialize DNS settings with default values */
+PJ_DEF(void) pj_dns_settings_default(pj_dns_settings *s)
+{
+    pj_bzero(s, sizeof(pj_dns_settings));
+    s->qretr_delay = PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY;
+    s->qretr_count = PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT;
+    s->cache_max_ttl = PJ_DNS_RESOLVER_MAX_TTL;
+    s->good_ns_ttl = PJ_DNS_RESOLVER_GOOD_NS_TTL;
+    s->bad_ns_ttl = PJ_DNS_RESOLVER_BAD_NS_TTL;
+}
+
+
 /*
  * Create the resolver.
  */
@@ -257,10 +277,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     resv->timer = timer;
     resv->ioqueue = ioqueue;
     resv->last_id = 1;
+
+    pj_dns_settings_default(&resv->settings);
     resv->settings.options = options;
-    resv->settings.qretr_delay = PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY;
-    resv->settings.qretr_count = PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT;
-    resv->settings.cache_max_ttl = PJ_DNS_RESOLVER_MAX_TTL;
 
     /* Create the timer heap if one is not specified */
     if (resv->timer == NULL) {
@@ -790,18 +809,23 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
 				 const pj_time_val *now)
 {
     struct nameserver *ns = &resolver->ns[index];
+    enum ns_state old_state = ns->state;
 
     ns->state = state;
     ns->state_expiry = *now;
 
     if (state == STATE_PROBING)
-	ns->state_expiry.sec += ((PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT + 2) *
-				 PJ_DNS_RESOLVER_QUERY_RETRANSMIT_DELAY) / 1000;
+	ns->state_expiry.sec += ((resolver->settings.qretr_count + 2) *
+				 resolver->settings.qretr_delay) / 1000;
     else if (state == STATE_ACTIVE)
-	ns->state_expiry.sec += PJ_DNS_RESOLVER_GOOD_NS_TTL;
+	ns->state_expiry.sec += resolver->settings.good_ns_ttl;
     else
-	ns->state_expiry.sec += PJ_DNS_RESOLVER_BAD_NS_TTL;
+	ns->state_expiry.sec += resolver->settings.bad_ns_ttl;
 
+    PJ_LOG(5, (resolver->name.ptr, "Nameserver %s:%d state changed %s --> %s",
+	       pj_inet_ntoa(ns->addr.sin_addr),
+	       (int)pj_ntohs(ns->addr.sin_port),
+	       state_names[old_state], state_names[state]));
 }
 
 
@@ -1070,7 +1094,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     q->timer_entry.id = 0;
 
     /* Check to see if we should retransmit instead of time out */
-    if (q->transmit_cnt < PJ_DNS_RESOLVER_QUERY_RETRANSMIT_COUNT) {
+    if (q->transmit_cnt < resolver->settings.qretr_count) {
 	status = transmit_query(resolver, q);
 	if (status == PJ_SUCCESS) {
 	    pj_mutex_unlock(resolver->mutex);
@@ -1203,11 +1227,10 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 		    sizeof(dns_pkt->hdr.id), NULL);
     if (!q) {
 	PJ_LOG(5,(resolver->name.ptr, 
-		  "Unable to find query for DNS response id=%d from %s:%d "
-		  "(the query may had been answered by other name servers)",
-		  (unsigned)dns_pkt->hdr.id,
+		  "DNS response from %s:%d id=%d discarded",
 		  pj_inet_ntoa(resolver->udp_src_addr.sin_addr), 
-		  pj_ntohs(resolver->udp_src_addr.sin_port)));
+		  pj_ntohs(resolver->udp_src_addr.sin_port),
+		  (unsigned)dns_pkt->hdr.id));
 	goto read_next_packet;
     }
 
