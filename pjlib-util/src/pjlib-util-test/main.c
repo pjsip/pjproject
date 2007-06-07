@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
+#include <pj/string.h>
 
 #if defined(PJ_SUNOS) && PJ_SUNOS!=0
 #include <signal.h>
@@ -47,6 +48,13 @@ int main(int argc, char *argv[])
     init_signals();
 
     rc = test_main();
+
+    if (argc==2 && pj_ansi_strcmp(argv[1], "-i")==0) {
+	char s[10];
+
+	puts("Press ENTER to quit");
+	fgets(s, sizeof(s), stdin);
+    }
 
     return rc;
 }

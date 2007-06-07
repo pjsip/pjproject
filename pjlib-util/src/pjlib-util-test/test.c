@@ -18,6 +18,7 @@
  */
 #include "test.h"
 #include <pjlib.h>
+#include <pjlib-util.h>
 
 void app_perror(const char *msg, pj_status_t rc)
 {
@@ -49,7 +50,7 @@ static int test_inner(void)
 
     mem = &caching_pool.factory;
 
-    pj_log_set_level(3);
+    pj_log_set_level(5);
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
                      PJ_LOG_HAS_MICRO_SEC);
 
@@ -58,7 +59,10 @@ static int test_inner(void)
 	app_perror("pj_init() error!!", rc);
 	return rc;
     }
-    
+
+    rc = pjlib_util_init();
+    pj_assert(rc == 0);
+
     pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
@@ -73,6 +77,10 @@ static int test_inner(void)
 
 #if INCLUDE_STUN_TEST
     DO_TEST(stun_test());
+#endif
+
+#if INCLUDE_RESOLVER_TEST
+    DO_TEST(resolver_test());
 #endif
 
 on_return:
