@@ -233,6 +233,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util-test\resolver_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util-test\stun.c"
 				>
 			</File>
