@@ -124,6 +124,8 @@ pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
 	    pjsip_PASSWD_SPEC_ESC,	/* Variant without escaped char */
 	    pjsip_USER_SPEC,	        /* User */
 	    pjsip_USER_SPEC_ESC,	/* Variant without escaped char */
+	    pjsip_USER_SPEC_LENIENT,	/* User, with additional '#' char */
+	    pjsip_USER_SPEC_LENIENT_ESC,
 	    pjsip_NOT_COMMA_OR_NEWLINE, /* Array separator. */
 	    pjsip_NOT_NEWLINE,		/* For eating up header.*/
 	    pjsip_DISPLAY_SPEC;         /* Used when searching for display name
@@ -360,6 +362,14 @@ static pj_status_t init_parser()
     status = pj_cis_dup(&pjsip_USER_SPEC_ESC, &pjsip_USER_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_del_str( &pjsip_USER_SPEC_ESC, ESCAPED);
+
+    status = pj_cis_dup(&pjsip_USER_SPEC_LENIENT, &pjsip_USER_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pjsip_USER_SPEC_LENIENT, "#");
+
+    status = pj_cis_dup(&pjsip_USER_SPEC_LENIENT_ESC, &pjsip_USER_SPEC_ESC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pjsip_USER_SPEC_LENIENT_ESC, "#");
 
     status = pj_cis_dup(&pjsip_PASSWD_SPEC, &pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -1208,8 +1218,8 @@ static int int_is_next_user(pj_scanner *scanner)
 static void int_parse_user_pass( pj_scanner *scanner, pj_pool_t *pool,
 				 pj_str_t *user, pj_str_t *pass)
 {
-    parser_get_and_unescape(scanner, pool, &pjsip_USER_SPEC, 
-			    &pjsip_USER_SPEC_ESC, user);
+    parser_get_and_unescape(scanner, pool, &pjsip_USER_SPEC_LENIENT, 
+			    &pjsip_USER_SPEC_LENIENT_ESC, user);
 
     if ( *scanner->curptr == ':') {
 	pj_scan_get_char( scanner );
