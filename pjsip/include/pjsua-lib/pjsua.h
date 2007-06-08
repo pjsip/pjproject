@@ -1749,7 +1749,7 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
  * either "sip" or "sips".
  */
 #ifndef PJSUA_SECURE_SCHEME
-#   define PJSUA_SECURE_SCHEME		"sips"
+#   define PJSUA_SECURE_SCHEME		"sip"
 #endif
 
 
