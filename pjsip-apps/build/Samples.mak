@@ -5,9 +5,9 @@ include ../../build/common.mak
 ###############################################################################
 # Gather all flags.
 #
-export _CFLAGS 	:= $(PJ_CFLAGS)
+export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS)
 export _CXXFLAGS:= $(PJ_CXXFLAGS)
-export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS)
+export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
 
 SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(TARGET_NAME)

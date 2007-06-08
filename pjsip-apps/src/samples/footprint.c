@@ -32,6 +32,7 @@
 #include <pjmedia-codec.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
+#include <pjnath.h>
 #include <stdlib.h>
 
 /* All flags: */
@@ -44,6 +45,11 @@
 #define HAS_PJLIB_SCANNER
 #define HAS_PJLIB_DNS
 #define HAS_PJLIB_RESOLVER
+#define HAS_PJLIB_SRV_RESOLVER
+
+#define HAS_PJLIB_CRC32
+#define HAS_PJLIB_HMAC_MD5
+#define HAS_PJLIB_HMAC_SHA1
 
 #define HAS_PJSIP_CORE_MSG_ELEM
 #define HAS_PJSIP_CORE
@@ -51,6 +57,7 @@
 
 #define HAS_PJSIP_UDP_TRANSPORT
 #define HAS_PJSIP_TCP_TRANSPORT
+#define HAS_PJSIP_TLS_TRANSPORT
 #define HAS_PJSIP_TRANSACTION
 #define HAS_PJSIP_UA_LAYER
 #define HAS_PJMEDIA_SDP
@@ -62,6 +69,9 @@
 #define HAS_PJSIP_CALL_TRANSFER
 #define HAS_PJSIP_PRESENCE
 #define HAS_PJSIP_IS_COMPOSING
+
+#define HAS_PJNATH_STUN
+#define HAS_PJNATH_ICE
 
 #define HAS_PJMEDIA
 #define HAS_PJMEDIA_SND_DEV
@@ -82,6 +92,7 @@
 #define HAS_PJMEDIA_FILE_CAPTURE
 #define HAS_PJMEDIA_MEM_PLAYER
 #define HAS_PJMEDIA_MEM_CAPTURE
+#define HAS_PJMEDIA_ICE
 
 #define HAS_PJMEDIA_G711_CODEC
 #define HAS_PJMEDIA_GSM_CODEC
@@ -112,7 +123,7 @@ int dummy_function()
 #endif
 
 #ifdef HAS_PJLIB_STUN
-    pj_stun_get_mapped_addr(&cp.factory, 0, NULL, NULL, 80, NULL, 80, NULL);
+    pjstun_get_mapped_addr(&cp.factory, 0, NULL, NULL, 80, NULL, 80, NULL);
 #endif
 
 #ifdef HAS_PJLIB_GETOPT
@@ -161,7 +172,7 @@ int dummy_function()
 #ifdef HAS_PJLIB_DNS
     pj_dns_make_query(NULL, NULL, 0, 0, NULL);
     pj_dns_parse_packet(NULL, NULL, 0, NULL);
-    pj_dns_packet_dup(NULL, NULL, NULL);
+    pj_dns_packet_dup(NULL, NULL, 0, NULL);
 #endif
 
 #ifdef HAS_PJLIB_RESOLVER
@@ -172,6 +183,45 @@ int dummy_function()
     pj_dns_resolver_start_query(NULL, NULL, 0, 0, NULL, NULL, NULL);
     pj_dns_resolver_cancel_query(NULL, 0);
     pj_dns_resolver_add_entry(NULL, NULL, 0);
+#endif
+
+#ifdef HAS_PJLIB_SRV_RESOLVER
+    pj_dns_srv_resolve(NULL, NULL, 0, NULL, NULL, PJ_FALSE, NULL, NULL);
+#endif
+
+#ifdef HAS_PJLIB_CRC32
+    pj_crc32_init(NULL);
+    pj_crc32_update(NULL, NULL, 0);
+    pj_crc32_final(NULL);
+#endif
+
+#ifdef HAS_PJLIB_HMAC_MD5
+    pj_hmac_md5(NULL, 0, NULL, 0, NULL);
+#endif
+
+#ifdef HAS_PJLIB_HMAC_SHA1
+    pj_hmac_sha1(NULL, 0, NULL, 0, NULL);
+#endif
+
+#ifdef HAS_PJNATH_STUN
+    pj_stun_session_create(NULL, NULL, NULL, PJ_FALSE, NULL);
+    pj_stun_session_destroy(NULL);
+    pj_stun_session_set_credential(NULL, NULL);
+    pj_stun_session_create_req(NULL, 0, NULL, NULL);
+    pj_stun_session_create_ind(NULL, 0, NULL);
+    pj_stun_session_create_res(NULL, NULL, 0, NULL, NULL);
+    pj_stun_session_send_msg(NULL, PJ_FALSE, NULL, 0, NULL);
+#endif
+
+#ifdef HAS_PJNATH_ICE
+    pj_ice_strans_create(NULL, NULL, 0, NULL, NULL, NULL);
+    pj_ice_strans_set_stun_domain(NULL, NULL, NULL);
+    pj_ice_strans_create_comp(NULL, 0, 0, NULL);
+    pj_ice_strans_add_cand(NULL, 0, PJ_ICE_CAND_TYPE_HOST, 0, NULL, PJ_FALSE);
+    pj_ice_strans_init_ice(NULL, PJ_ICE_SESS_ROLE_CONTROLLED, NULL, NULL);
+    pj_ice_strans_start_ice(NULL, NULL, NULL, 0, NULL);
+    pj_ice_strans_stop_ice(NULL);
+    pj_ice_strans_sendto(NULL, 0, NULL, 0, NULL, 0);
 #endif
 
 #ifdef HAS_PJSIP_CORE_MSG_ELEM
@@ -232,7 +282,7 @@ int dummy_function()
     pjsip_endpt_create_response(NULL, NULL, -1, NULL, NULL);
     pjsip_endpt_create_ack(NULL, NULL, NULL, NULL);
     pjsip_endpt_create_cancel(NULL, NULL, NULL);
-    pjsip_get_request_addr(NULL, NULL);
+    pjsip_get_request_dest(NULL, NULL);
     pjsip_endpt_send_request_stateless(NULL, NULL, NULL, NULL);
     pjsip_get_response_addr(NULL, NULL, NULL);
     pjsip_endpt_send_response(NULL, NULL, NULL, NULL, NULL);
@@ -245,6 +295,10 @@ int dummy_function()
 
 #ifdef HAS_PJSIP_TCP_TRANSPORT
     pjsip_tcp_transport_start(NULL, NULL, 1, NULL);
+#endif
+
+#ifdef HAS_PJSIP_TLS_TRANSPORT
+    pjsip_tls_transport_start(NULL, NULL, NULL, NULL, 0, NULL);
 #endif
 
 #ifdef HAS_PJSIP_TRANSACTION
@@ -429,7 +483,7 @@ int dummy_function()
 #endif
 
 #ifdef HAS_PJMEDIA_RESAMPLE
-    pjmedia_resample_create(NULL, PJ_TRUE, PJ_TRUE, 0, 0, 0, NULL);
+    pjmedia_resample_create(NULL, PJ_TRUE, PJ_TRUE, 0, 0, 0, 0, NULL);
     pjmedia_resample_run(NULL, NULL, NULL);
 #endif
 
@@ -547,6 +601,16 @@ int dummy_function()
 
 #ifdef HAS_PJMEDIA_MEM_CAPTURE
     pjmedia_mem_capture_create(NULL, NULL, 1000, 8000, 1, 80, 16, 0, NULL);
+#endif
+
+#ifdef HAS_PJMEDIA_ICE
+    pjmedia_ice_create(NULL, NULL, 0, NULL, NULL);
+    pjmedia_ice_destroy(NULL);
+    pjmedia_ice_start_init(NULL, 0, NULL, NULL, NULL);
+    pjmedia_ice_init_ice(NULL, PJ_ICE_SESS_ROLE_CONTROLLED, NULL, NULL);
+    pjmedia_ice_modify_sdp(NULL, NULL, NULL);
+    pjmedia_ice_start_ice(NULL, NULL, NULL, 0);
+    pjmedia_ice_stop_ice(NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_G711_CODEC

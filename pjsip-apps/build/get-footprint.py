@@ -44,6 +44,9 @@ compile_flags = [
     ['HAS_PJLIB_XML',		'PJLIB-UTIL tiny XML (parsing and API) (needs text scanner)'],
     ['HAS_PJLIB_DNS',		'PJLIB-UTIL DNS packet and parsing'],
     ['HAS_PJLIB_RESOLVER',	'PJLIB-UTIL Asynchronous DNS resolver/caching engine'],
+    ['HAS_PJLIB_CRC32',		'PJLIB-UTIL CRC32 algorithm'],
+    ['HAS_PJLIB_HMAC_MD5',	'PJLIB-UTIL HMAC-MD5 algorithm'],
+    ['HAS_PJLIB_HMAC_SHA1',	'PJLIB-UTIL HMAC-SHA1 algorithm'],
 
     # PJSIP
     ['HAS_PJSIP_CORE_MSG_ELEM',	'PJSIP Core - Messaging Elements and Parsing (message, headers, SIP URI, TEL URI/RFC 3966, etc.)'],
@@ -53,6 +56,7 @@ compile_flags = [
     ['',			'Subtotal: A minimalistic SIP application (parsing, UDP transport+STUN, no transaction)'],
    
     ['HAS_PJSIP_TCP_TRANSPORT',	'PJSIP TCP transport'],
+    ['HAS_PJSIP_TLS_TRANSPORT',	'PJSIP TLS transport'],
     ['HAS_PJSIP_INFO',		'PJSIP INFO support (RFC 2976) (no special treatment, thus the zero size)'],
     ['HAS_PJSIP_TRANSACTION',	'PJSIP transaction and stateful API'],
     ['HAS_PJSIP_AUTH_CLIENT',	'PJSIP digest authentication client'],
@@ -75,6 +79,10 @@ compile_flags = [
     # Subtotal
     ['',			'Subtotal: Complete PJSIP package (call, registration, presence, IM) +STUN +GETOPT (+PJLIB), no media'],
     
+    # PJNATH
+    ['HAS_PJNATH_STUN',		'PJNATH STUN'],
+    ['HAS_PJNATH_ICE',		'PJNATH ICE'],
+
     # PJMEDIA
     ['HAS_PJMEDIA_EC',		'PJMEDIA accoustic echo cancellation'],
     ['HAS_PJMEDIA_SND_DEV',	'PJMEDIA sound device backend (platform specific)'],
@@ -96,6 +104,7 @@ compile_flags = [
     ['HAS_PJMEDIA_FILE_CAPTURE',	'PJMEDIA WAV file writer'],
     ['HAS_PJMEDIA_MEM_PLAYER',	'PJMEDIA fixed buffer player'],
     ['HAS_PJMEDIA_MEM_CAPTURE',	'PJMEDIA fixed buffer writer'],
+    ['HAS_PJMEDIA_ICE',		'PJMEDIA ICE transport'],
 
     # Subtotal
     ['',			'Subtotal: Complete SIP and all PJMEDIA features (G.711 codec only)'],
