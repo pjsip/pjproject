@@ -221,6 +221,7 @@ static void ssl_report_error(const char *sender, int level,
 
     va_start(marker, format);
 
+#if PJ_LOG_MAX_LEVEL > 0
     if (status != PJ_SUCCESS) {
 	char err_format[PJ_ERR_MSG_SIZE + 512];
 	int len;
@@ -249,6 +250,7 @@ static void ssl_report_error(const char *sender, int level,
 	    pj_log(sender, level, err_format, marker);
 	}
     }
+#endif
 
     va_end(marker);
 }
