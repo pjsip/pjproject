@@ -37,6 +37,22 @@
  */
 
 /**
+ * Maximum number of IP addresses in DNS A response.
+ */
+#ifndef PJ_DNS_MAX_IP_IN_A_REC
+#   define PJ_DNS_MAX_IP_IN_A_REC   8
+#endif
+
+
+/**
+ * Maximum server address entries per one SRV record
+ */
+#ifndef PJ_DNS_SRV_MAX_ADDR
+#   define PJ_DNS_SRV_MAX_ADDR	    8
+#endif
+
+
+/**
  * This constant specifies the maximum names to keep in the temporary name
  * table when performing name compression scheme when duplicating DNS packet
  * (the #pj_dns_packet_dup() function).
@@ -162,10 +178,10 @@
  * size (PJ_DNS_RESOLVER_MAX_UDP_SIZE), since the DNS replicator function
  * (#pj_dns_packet_dup()) is also capable of performing name compressions.
  *
- * Default: 512 (as a broad guidance, 400 is good for 4 SRV entries).
+ * Default: 1000 (as a broad guidance, 400 is good for 4 SRV entries).
  */
 #ifndef PJ_DNS_RESOLVER_RES_BUF_SIZE
-#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    512
+#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    1000
 #endif
 
 
