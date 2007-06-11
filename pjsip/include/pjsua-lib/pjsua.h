@@ -1070,7 +1070,10 @@ PJ_INLINE(void) pjsua_config_dup(pj_pool_t *pool,
 typedef struct pjsua_msg_data
 {
     /**
-     * Additional message headers as linked list.
+     * Additional message headers as linked list. Application can add
+     * headers to the list by creating the header, either from the heap/pool
+     * or from temporary local variable, and add the header using
+     * linked list operation. See pjsip_apps.c for some sample codes.
      *
      * \par Python:
      * This field is implemented as string linked-list in Python, where each
