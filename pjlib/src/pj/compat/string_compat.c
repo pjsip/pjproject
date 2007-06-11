@@ -19,6 +19,8 @@
 #include <pj/types.h>
 #include <pj/compat/string.h>
 #include <pj/ctype.h>
+#include <pj/assert.h>
+
 
 #if defined(PJ_HAS_STRING_H) && PJ_HAS_STRING_H != 0
 /* Nothing to do */
@@ -64,8 +66,16 @@ PJ_DEF(int) snprintf(char *s1, pj_size_t len, const char *s2, ...)
 
 PJ_DEF(int) vsnprintf(char *s1, pj_size_t len, const char *s2, va_list arg)
 {
-    PJ_UNUSED_ARG(len);
-    return vsprintf(s1,s2,arg);
+#define MARK_CHAR   ((char)255)
+    int rc;
+
+    s1[len-1] = MARK_CHAR;
+
+    rc = vsprintf(s1,s2,arg);
+
+    pj_assert(s1[len-1] == MARK_CHAR || s1[len-1] == '\0');
+
+    return rc;
 }
 
 #endif
