@@ -352,7 +352,7 @@ static void im_callback(void *token, pjsip_event *e)
 		      tsx->status_text.ptr));
 	}
 
-	if (pjsua_var.ua_cfg.cb.on_pager_status)
+	if (pjsua_var.ua_cfg.cb.on_pager_status) {
 	    pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id, 
 					        &im_data->to,
 						&im_data->body,
@@ -360,6 +360,25 @@ static void im_callback(void *token, pjsip_event *e)
 						(pjsip_status_code) 
 						    tsx->status_code,
 						&tsx->status_text);
+	}
+
+	if (pjsua_var.ua_cfg.cb.on_pager_status2) {
+	    pjsip_rx_data *rdata;
+
+	    if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+		rdata = e->body.tsx_state.src.rdata;
+	    else
+		rdata = NULL;
+
+	    pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id, 
+					         &im_data->to,
+					 	 &im_data->body,
+						 im_data->user_data,
+						 (pjsip_status_code) 
+						    tsx->status_code,
+						 &tsx->status_text,
+						 rdata);
+	}
     }
 }
 

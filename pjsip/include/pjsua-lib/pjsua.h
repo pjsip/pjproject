@@ -798,7 +798,8 @@ typedef struct pjsua_callback
 
     /**
      * Notify application about the delivery status of outgoing pager
-     * request.
+     * request. See also on_pager_status2() callback for the version with
+     * \a pjsip_rx_data in the argument list.
      *
      * @param call_id	    Containts the ID of the call where the IM was
      *			    sent, or PJSUA_INVALID_ID if the IM was sent
@@ -829,6 +830,31 @@ typedef struct pjsua_callback
 			    void *user_data,
 			    pjsip_status_code status,
 			    const pj_str_t *reason);
+
+    /**
+     * Notify application about the delivery status of outgoing pager
+     * request.
+     *
+     * @param call_id	    Containts the ID of the call where the IM was
+     *			    sent, or PJSUA_INVALID_ID if the IM was sent
+     *			    outside call context.
+     * @param to	    Destination URI.
+     * @param body	    Message body.
+     * @param user_data	    Arbitrary data that was specified when sending
+     *			    IM message.
+     * @param status	    Delivery status.
+     * @param reason	    Delivery status reason.
+     * @param rdata	    The incoming MESSAGE response, or NULL if the
+     *			    message transaction fails because of time out 
+     *			    or transport error.
+     */
+    void (*on_pager_status2)(pjsua_call_id call_id,
+			     const pj_str_t *to,
+			     const pj_str_t *body,
+			     void *user_data,
+			     pjsip_status_code status,
+			     const pj_str_t *reason,
+			     pjsip_rx_data *rdata);
 
     /**
      * Notify application about typing indication.
