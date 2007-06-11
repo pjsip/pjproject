@@ -75,15 +75,8 @@ PJ_BEGIN_DECL
  */
 
 /**
- * Maximum server address entries per one SRV record
- */
-#ifndef PJ_DNS_SRV_MAX_ADDR
-#   define PJ_DNS_SRV_MAX_ADDR	    8
-#endif
-
-
-/**
- * The server addresses returned by the resolver.
+ * This structure represents DNS SRV records as the result of DNS SRV
+ * resolution using #pj_dns_srv_resolve().
  */
 typedef struct pj_dns_srv_record
 {
@@ -92,18 +85,18 @@ typedef struct pj_dns_srv_record
 
     /** Address records. */
     struct
-    {
+v    {
 	/** Server priority (the lower the higher the priority). */
 	unsigned		priority;
 
 	/** Server weight (the higher the more load it can handle). */
 	unsigned		weight;
 
-	/** The server's address. */
-	pj_sockaddr		addr;
+	/** Port number. */
+	pj_uint16_t		port;
 
-	/** Address length. */
-	int			addr_len;
+	/** The host address. */
+	pj_dns_a_record		server;
 
     } entry[PJ_DNS_SRV_MAX_ADDR];
 
@@ -138,6 +131,9 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  *			the calback is called.
  * @param cb		Pointer to callback function to receive the
  *			notification when the resolution process completes.
+ * @param p_query	Optional pointer to receive the query object, if one
+ *			was started. If this pointer is specified, a NULL may
+ *			be returned if response cache is available immediately.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -148,7 +144,8 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
 					pj_dns_resolver *resolver,
 					pj_bool_t fallback_a,
 					void *token,
-					pj_dns_srv_resolver_cb *cb);
+					pj_dns_srv_resolver_cb *cb,
+					pj_dns_async_query **p_query);
 
 
 /**

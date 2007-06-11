@@ -28,7 +28,7 @@
 
 #define THIS_FILE   "srv_resolver.c"
 
-#define ADDR_MAX_COUNT	    8
+#define ADDR_MAX_COUNT	    PJ_DNS_MAX_IP_IN_A_REC
 
 struct srv_target
 {
@@ -52,7 +52,6 @@ typedef struct pj_dns_srv_resolver_job
     pj_dns_type		     dns_state;	    /**< DNS type being resolved.   */
     void		    *token;
     pj_dns_srv_resolver_cb  *cb;
-    pj_dns_async_query	    *qobject;
     pj_status_t		     last_error;
 
     /* Original request: */
@@ -88,7 +87,8 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 					pj_dns_resolver *resolver,
 					pj_bool_t fallback_a,
 					void *token,
-					pj_dns_srv_resolver_cb *cb)
+					pj_dns_srv_resolver_cb *cb,
+					pj_dns_async_query **p_query)
 {
     int len;
     pj_str_t target_name;
@@ -127,14 +127,15 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
     query_job->dns_state = PJ_DNS_TYPE_SRV;
 
     PJ_LOG(5, (query_job->objname, 
-	       "Starting async DNS %s query_job: target=%.*s",
+	       "Starting async DNS %s query_job: target=%.*s:%d",
 	       pj_dns_get_type_name(query_job->dns_state),
-	       (int)target_name.slen, target_name.ptr));
+	       (int)target_name.slen, target_name.ptr,
+	       def_port));
 
     status = pj_dns_resolver_start_query(resolver, &target_name, 
 				         query_job->dns_state, 0, 
 					 &dns_callback,
-    					 query_job, &query_job->qobject);
+    					 query_job, p_query);
     return status;
 }
 
@@ -465,93 +466,65 @@ static void dns_callback(void *user_data,
 
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
-	    int ans_idx = -1;
+	    unsigned srv_idx;
+	    struct srv_target *srv = NULL;
+	    pj_dns_a_record rec;
 
-	    /* Find the first DNS A record in the answer while processing
-	     * the CNAME info found in the response.
-	     */
-	    for (i=0; i < pkt->hdr.anscount; ++i) {
-
-		pj_dns_parsed_rr *rr = &pkt->ans[i];
-
-		if (rr->type == PJ_DNS_TYPE_A) {
-
-		    if (ans_idx == -1)
-			ans_idx = i;
-
-		} else if (rr->type == PJ_DNS_TYPE_CNAME) {
-		    /* Find which server entry to be updated with
-		     * the CNAME information.
-		     */
-		    unsigned j;
-		    pj_str_t cname = rr->rdata.cname.name;
-
-		    for (j=0; j<query_job->srv_cnt; ++j) 
-		    {
-			struct srv_target *srv = &query_job->srv[j];
-			if (pj_stricmp(&rr->name, &srv->target_name)==0)
-			{
-			    /* Update CNAME info for this server entry */
-			    srv->cname.ptr = srv->cname_buf;
-			    pj_strncpy(&srv->cname, &cname, 
-				       sizeof(srv->cname_buf));
-			    break;
-			}
-		    }
-		}
-	    }
-
-	    if (ans_idx == -1) {
-		/* There's no DNS A answer! */
-		PJ_LOG(5,(query_job->objname, 
-			  "No DNS A record in response!"));
-		status = PJLIB_UTIL_EDNSNOANSWERREC;
+	    /* Parse response */
+	    status = pj_dns_parse_a_response(pkt, &rec);
+	    if (status != PJ_SUCCESS)
 		goto on_error;
-	    }
 
-	    /* Update IP address of the corresponding hostname or CNAME */
-	    for (i=0; i<query_job->srv_cnt; ++i) {
-		pj_dns_parsed_rr *rr = &pkt->ans[ans_idx];
-		struct srv_target *srv = &query_job->srv[i];
+	    pj_assert(rec.addr_count != 0);
 
-		if (pj_stricmp(&rr->name, &srv->target_name)==0 ||
-		    pj_stricmp(&rr->name, &srv->cname)==0) 
-		{
+	    /* Find which server entry to be updated. */
+	    for (srv_idx=0; srv_idx<query_job->srv_cnt; ++srv_idx) {
+		srv = &query_job->srv[srv_idx];
+		if (pj_stricmp(&rec.name, &srv->target_name)==0) {
 		    break;
 		}
 	    }
 
-	    if (i == query_job->srv_cnt) {
-		PJ_LOG(4,(query_job->objname, 
-			  "Received answer to DNS A request with no matching "
-			  "SRV record! The unknown name is %.*s",
-			  (int)pkt->ans[ans_idx].name.slen, 
-			  pkt->ans[ans_idx].name.ptr));
-	    } else {
-		unsigned j;
+	    if (srv_idx==query_job->srv_cnt) {
+		/* The DNS A response doesn't match any server names
+		 * we're querying!
+		 */
+		status = PJLIB_UTIL_EDNSINANSWER;
+		goto on_error;
+	    }
 
-		query_job->srv[i].addr[query_job->srv[i].addr_cnt++].s_addr =
-		    pkt->ans[ans_idx].rdata.a.ip_addr.s_addr;
+	    srv = &query_job->srv[srv_idx];
+
+	    /* Update CNAME alias, if present. */
+	    if (rec.alias.slen) {
+		pj_assert(rec.alias.slen <= sizeof(srv->cname_buf));
+		srv->cname.ptr = srv->cname_buf;
+		pj_strcpy(&srv->cname, &rec.alias);
+	    } else {
+		srv->cname.slen = 0;
+	    }
+
+	    /* Update IP address of the corresponding hostname or CNAME */
+	    if (srv->addr_cnt < ADDR_MAX_COUNT) {
+		srv->addr[srv->addr_cnt++].s_addr = rec.addr[0].s_addr;
 
 		PJ_LOG(5,(query_job->objname, 
 			  "DNS A for %.*s: %s",
-			  (int)query_job->srv[i].target_name.slen, 
-			  query_job->srv[i].target_name.ptr,
-			  pj_inet_ntoa(pkt->ans[ans_idx].rdata.a.ip_addr)));
+			  (int)srv->target_name.slen, 
+			  srv->target_name.ptr,
+			  pj_inet_ntoa(rec.addr[0])));
+	    }
 
-		/* Check for multiple IP addresses */
-		for (j=ans_idx+1; j<pkt->hdr.anscount && 
-			    query_job->srv[i].addr_cnt < ADDR_MAX_COUNT; ++j)
-		{
-		    query_job->srv[i].addr[query_job->srv[i].addr_cnt++].s_addr = 
-			pkt->ans[j].rdata.a.ip_addr.s_addr;
+	    /* Check for multiple IP addresses */
+	    for (i=1; i<rec.addr_count && srv->addr_cnt < ADDR_MAX_COUNT; ++i)
+	    {
+		srv->addr[srv->addr_cnt++].s_addr = rec.addr[i].s_addr;
 
-		    PJ_LOG(5,(query_job->objname, 
-			      "Additional DNS A for %.*s: %s",
-			      (int)query_job->srv[i].target_name.slen, 
-			      query_job->srv[i].target_name.ptr,
-			      pj_inet_ntoa(pkt->ans[j].rdata.a.ip_addr)));
-		}
+		PJ_LOG(5,(query_job->objname, 
+			  "Additional DNS A for %.*s: %s",
+			  (int)srv->target_name.slen, 
+			  srv->target_name.ptr,
+			  pj_inet_ntoa(rec.addr[i])));
 	    }
 
 	} else if (status != PJ_SUCCESS) {
@@ -577,48 +550,42 @@ static void dns_callback(void *user_data,
     /* Check if all hosts have been resolved */
     if (query_job->host_resolved == query_job->srv_cnt) {
 	/* Got all answers, build server addresses */
-	pj_dns_srv_record svr_addr;
+	pj_dns_srv_record srv_rec;
 
-	svr_addr.count = 0;
+	srv_rec.count = 0;
 	for (i=0; i<query_job->srv_cnt; ++i) {
 	    unsigned j;
+	    struct srv_target *srv = &query_job->srv[i];
 
-	    /* Do we have IP address for this server? */
-	    /* This log is redundant really.
-	    if (query_job->srv[i].addr_cnt == 0) {
-		PJ_LOG(5,(query_job->objname, 
-			  " SRV target %.*s:%d does not have IP address!",
-			  (int)query_job->srv[i].target_name.slen,
-			  query_job->srv[i].target_name.ptr,
-			  query_job->srv[i].port));
-		continue;
+	    srv_rec.entry[srv_rec.count].priority = srv->priority;
+	    srv_rec.entry[srv_rec.count].weight = srv->weight;
+	    srv_rec.entry[srv_rec.count].port = (pj_uint16_t)srv->port ;
+
+	    srv_rec.entry[srv_rec.count].server.name = srv->target_name;
+	    srv_rec.entry[srv_rec.count].server.alias = srv->cname;
+	    srv_rec.entry[srv_rec.count].server.addr_count = 0;
+
+	    pj_assert(srv->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
+
+	    for (j=0; j<srv->addr_cnt; ++j) {
+		srv_rec.entry[srv_rec.count].server.addr[j].s_addr = 
+		    srv->addr[j].s_addr;
+		++srv_rec.entry[srv_rec.count].server.addr_count;
 	    }
-	    */
 
-	    for (j=0; j<query_job->srv[i].addr_cnt; ++j) {
-		unsigned idx = svr_addr.count;
-		pj_sockaddr_in *addr;
-
-		svr_addr.entry[idx].priority = query_job->srv[i].priority;
-		svr_addr.entry[idx].weight = query_job->srv[i].weight;
-		svr_addr.entry[idx].addr_len = sizeof(pj_sockaddr_in);
-	     
-		addr = (pj_sockaddr_in*)&svr_addr.entry[idx].addr;
-		pj_bzero(addr, sizeof(pj_sockaddr_in));
-		addr->sin_family = PJ_AF_INET;
-		addr->sin_addr = query_job->srv[i].addr[j];
-		addr->sin_port = pj_htons((pj_uint16_t)query_job->srv[i].port);
-
-		++svr_addr.count;
+	    if (srv->addr_cnt > 0) {
+		++srv_rec.count;
+		if (srv_rec.count == PJ_DNS_SRV_MAX_ADDR)
+		    break;
 	    }
 	}
 
 	PJ_LOG(5,(query_job->objname, 
 		  "Server resolution complete, %d server entry(s) found",
-		  svr_addr.count));
+		  srv_rec.count));
 
 
-	if (svr_addr.count > 0)
+	if (srv_rec.count > 0)
 	    status = PJ_SUCCESS;
 	else {
 	    status = query_job->last_error;
@@ -627,7 +594,7 @@ static void dns_callback(void *user_data,
 	}
 
 	/* Call the callback */
-	(*query_job->cb)(query_job->token, status, &svr_addr);
+	(*query_job->cb)(query_job->token, status, &srv_rec);
     }
 
 

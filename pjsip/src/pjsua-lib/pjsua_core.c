@@ -742,8 +742,11 @@ static void stun_dns_srv_resolver_cb(void *user_data,
 	return;
     }
 
-    pj_memcpy(&pjsua_var.stun_srv, &rec->entry[0].addr, 
-	      rec->entry[0].addr_len);
+    pj_assert(rec->count != 0 && rec->entry[0].server.addr_count != 0);
+    pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL,
+			rec->entry[0].port);
+    pjsua_var.stun_srv.ipv4.sin_addr.s_addr = 
+	rec->entry[0].server.addr[0].s_addr;
 
     PJ_LOG(3,(THIS_FILE, "_stun._udp.%.*s resolved, found %d entry(s):",
 	      (int)pjsua_var.ua_cfg.stun_domain.slen,
@@ -754,8 +757,8 @@ static void stun_dns_srv_resolver_cb(void *user_data,
 	PJ_LOG(3,(THIS_FILE, 
 		  " %d: prio=%d, weight=%d  %s:%d", 
 		  i, rec->entry[i].priority, rec->entry[i].weight,
-		  pj_inet_ntoa(rec->entry[i].addr.ipv4.sin_addr),
-		  (int)pj_ntohs(rec->entry[i].addr.ipv4.sin_port)));
+		  pj_inet_ntoa(rec->entry[i].server.addr[0]),
+		  (int)rec->entry[i].port));
     }
 
 }
@@ -793,7 +796,7 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 	    status = 
 		pj_dns_srv_resolve(&pjsua_var.ua_cfg.stun_domain, &res_type,
 				   3478, pjsua_var.pool, pjsua_var.resolver,
-				   0, NULL, &stun_dns_srv_resolver_cb);
+				   0, NULL, &stun_dns_srv_resolver_cb, NULL);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error starting DNS SRV resolution", 
 			     pjsua_var.stun_status);
