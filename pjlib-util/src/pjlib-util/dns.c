@@ -41,6 +41,13 @@ PJ_DEF(const char *) pj_dns_get_type_name(int type)
 }
 
 
+static void write16(pj_uint8_t *p, pj_uint16_t val)
+{
+    p[0] = (pj_uint8_t)(val >> 8);
+    p[1] = (pj_uint8_t)(val & 0xFF);
+}
+
+
 /**
  * Initialize a DNS query transaction.
  */
@@ -50,10 +57,8 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
 				       int qtype,
 				       const pj_str_t *name)
 {
-    pj_dns_hdr *hdr;
-    char *query, *p;
+    pj_uint8_t *query, *p = packet;
     const char *startlabel, *endlabel, *endname;
-    pj_uint16_t tmp;
     unsigned d;
 
     /* Sanity check */
@@ -66,14 +71,14 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     PJ_ASSERT_RETURN(*size >= d, PJLIB_UTIL_EDNSQRYTOOSMALL);
 
     /* Initialize header */
-    hdr = (pj_dns_hdr*) packet;
-    pj_bzero(hdr, sizeof(struct pj_dns_hdr));
-    hdr->id = pj_htons(id);
-    hdr->flags = pj_htons(PJ_DNS_SET_RD(1));
-    hdr->qdcount = pj_htons(1);
+    pj_assert(sizeof(pj_dns_hdr)==12);
+    pj_bzero(p, sizeof(struct pj_dns_hdr));
+    write16(p+0, id);
+    write16(p+2, (pj_uint16_t)PJ_DNS_SET_RD(1));
+    write16(p+4, (pj_uint16_t)1);
 
     /* Initialize query */
-    query = p = (char*)(hdr+1);
+    query = p = ((pj_uint8_t*)packet)+sizeof(pj_dns_hdr);
 
     /* Tokenize name */
     startlabel = endlabel = name->ptr;
@@ -81,7 +86,7 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     while (endlabel != endname) {
 	while (endlabel != endname && *endlabel != '.')
 	    ++endlabel;
-	*p++ = (char)(endlabel - startlabel);
+	*p++ = (pj_uint8_t)(endlabel - startlabel);
 	pj_memcpy(p, startlabel, endlabel-startlabel);
 	p += (endlabel-startlabel);
 	if (endlabel != endname && *endlabel == '.')
@@ -91,17 +96,15 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     *p++ = '\0';
 
     /* Set type */
-    tmp = pj_htons((pj_uint16_t)(qtype));
-    pj_memcpy(p, &tmp, 2);
+    write16(p, (pj_uint16_t)qtype);
     p += 2;
 
     /* Set class (IN=1) */
-    tmp = pj_htons(1);
-    pj_memcpy(p, &tmp, 2);
+    write16(p, 1);
     p += 2;
 
     /* Done, calculate length */
-    *size = p - (char*)packet;
+    *size = p - (pj_uint8_t*)packet;
 
     return 0;
 }
@@ -111,7 +114,7 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
  * it may contain pointers when name compression is applied) 
  */
 static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt, 
-				const pj_uint8_t *start, const pj_uint8_t *max,
+				const pj_uint8_t *start, const pj_uint8_t *max, 
 				int *parsed_len, int *name_len)
 {
     const pj_uint8_t *p;
@@ -239,7 +242,7 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
 }
 
 
-/* Skip query records. */
+/* Parse query records. */
 static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
 			       const pj_uint8_t *pkt, const pj_uint8_t *start,
 			       const pj_uint8_t *max, int *parsed_len)
@@ -326,12 +329,12 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 
     /* Get TTL */
     pj_memcpy(&rr->ttl, p, 4);
-    rr->ttl = pj_htonl(rr->ttl);
+    rr->ttl = pj_ntohl(rr->ttl);
     p += 4;
 
     /* Get rdlength */
     pj_memcpy(&rr->rdlength, p, 2);
-    rr->rdlength = pj_htons(rr->rdlength);
+    rr->rdlength = pj_ntohs(rr->rdlength);
     p += 2;
 
     /* Check that length is valid */
