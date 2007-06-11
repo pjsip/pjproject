@@ -174,6 +174,13 @@
  * No answer record in the DNS response.
  */
 #define PJLIB_UTIL_EDNSNOANSWERREC  (PJLIB_UTIL_ERRNO_START+47)	/* 320047 */
+/**
+ * @hideinitializer
+ * Invalid DNS answer. This error is raised for example when the DNS
+ * answer does not have a query section, or the type of RR in the answer
+ * doesn't match the query.
+ */
+#define PJLIB_UTIL_EDNSINANSWER	    (PJLIB_UTIL_ERRNO_START+48)	/* 320048 */
 
 
 /* DNS ERRORS MAPPED FROM RCODE: */

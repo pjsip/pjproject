@@ -424,6 +424,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(resolver && count && servers, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count < PJ_DNS_RESOLVER_MAX_NS, PJ_EINVAL);
 
     pj_mutex_lock(resolver->mutex);
 
@@ -801,6 +802,103 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
 }
 
 
+/* 
+ * DNS response containing A packet. 
+ */
+PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
+					    pj_dns_a_record *rec)
+{
+    pj_str_t hostname, alias, *res_name;
+    unsigned bufstart = 0;
+    unsigned bufleft = sizeof(rec->buf_);
+    unsigned i, ansidx;
+
+    PJ_ASSERT_RETURN(pkt && rec, PJ_EINVAL);
+
+    /* Init the record */
+    pj_bzero(rec, sizeof(pj_dns_a_record));
+
+    /* Return error if there's error in the packet. */
+    if (PJ_DNS_GET_RCODE(pkt->hdr.flags))
+	return PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_GET_RCODE(pkt->hdr.flags));
+
+    /* Return error if there's no query section */
+    if (pkt->hdr.qdcount == 0)
+	return PJLIB_UTIL_EDNSINANSWER;
+
+    /* Return error if there's no answer */
+    if (pkt->hdr.anscount == 0)
+	return PJLIB_UTIL_EDNSNOANSWERREC;
+
+    /* Get the hostname from the query. */
+    hostname = pkt->q[0].name;
+
+    /* Copy hostname to the record */
+    if (hostname.slen > (int)bufleft) {
+	return PJ_ENAMETOOLONG;
+    }
+
+    pj_memcpy(&rec->buf_[bufstart], hostname.ptr, hostname.slen);
+    rec->name.ptr = &rec->buf_[bufstart];
+    rec->name.slen = hostname.slen;
+
+    bufstart += hostname.slen;
+    bufleft -= hostname.slen;
+
+    /* Find the first RR which name matches the hostname */
+    for (ansidx=0; ansidx < pkt->hdr.anscount; ++ansidx) {
+	if (pj_stricmp(&pkt->ans[ansidx].name, &hostname)==0)
+	    break;
+    }
+
+    if (ansidx == pkt->hdr.anscount)
+	return PJLIB_UTIL_EDNSNOANSWERREC;
+
+    /* If hostname is a CNAME, get the alias. */
+    if (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME) {
+	alias = pkt->ans[ansidx].rdata.cname.name;
+	res_name = &alias;
+    } else if (pkt->ans[ansidx].type == PJ_DNS_TYPE_A) {
+	alias.ptr = NULL;
+	alias.slen = 0;
+	res_name = &hostname;
+    } else {
+	return PJLIB_UTIL_EDNSINANSWER;
+    }
+
+    /* Copy alias to the record, if present. */
+    if (alias.slen) {
+	if (alias.slen > (int)bufleft)
+	    return PJ_ENAMETOOLONG;
+
+	pj_memcpy(&rec->buf_[bufstart], alias.ptr, alias.slen);
+	rec->alias.ptr = &rec->buf_[bufstart];
+	rec->alias.slen = alias.slen;
+
+	bufstart += alias.slen;
+	bufleft -= alias.slen;
+    }
+
+    /* Now scan the answer for all type A RRs where the name matches
+     * hostname or alias.
+     */
+    for (i=0; i<pkt->hdr.anscount; ++i) {
+	if (pkt->ans[i].type == PJ_DNS_TYPE_A &&
+	    pj_stricmp(&pkt->ans[i].name, res_name)==0 &&
+	    rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
+	{
+	    rec->addr[rec->addr_count].s_addr = 
+		pkt->ans[i].rdata.a.ip_addr.s_addr;
+	    ++rec->addr_count;
+	}
+    }
+
+    if (rec->addr_count == 0)
+	return PJLIB_UTIL_EDNSNOANSWERREC;
+
+    return PJ_SUCCESS;
+}
+
 
 /* Set nameserver state */
 static void set_nameserver_state(pj_dns_resolver *resolver,
@@ -1030,14 +1128,16 @@ static void update_res_cache(pj_dns_resolver *resolver,
     }
 
     /* Duplicate the packet.
-     * We don't need to keep the query, NS, and AR sections from the packet,
-     * so exclude from duplication.
+     * We don't need to keep the NS and AR sections from the packet,
+     * so exclude from duplication. We do need to keep the Query
+     * section since DNS A parser needs the query section to know
+     * the name being requested.
      */
     res_pool = pj_pool_create_on_buf("respool", cache->buf, sizeof(cache->buf));
     PJ_TRY {
 	cache->pkt = NULL;
 	pj_dns_packet_dup(res_pool, pkt, 
-			  PJ_DNS_NO_QD | PJ_DNS_NO_NS | PJ_DNS_NO_AR,
+			  PJ_DNS_NO_NS | PJ_DNS_NO_AR,
 			  &cache->pkt);
     }
     PJ_CATCH_ANY {

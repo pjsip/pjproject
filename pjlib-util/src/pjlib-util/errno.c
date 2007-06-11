@@ -58,6 +58,7 @@ static const struct
     PJ_BUILD_ERR( PJLIB_UTIL_EDNSNONS,		"No nameserver is in DNS resolver"),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNSNOWORKINGNS,	"No working DNS nameserver"),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNSNOANSWERREC,	"No answer record in the DNS response"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EDNSINANSWER,	"Invalid DNS answer"),
 
     PJ_BUILD_ERR( PJLIB_UTIL_EDNS_FORMERR,	"DNS \"Format error\""),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNS_SERVFAIL,	"DNS \"Server failure\""),

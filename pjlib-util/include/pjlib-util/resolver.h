@@ -197,6 +197,33 @@ typedef struct pj_dns_settings
     unsigned	bad_ns_ttl;	/**< See #PJ_DNS_RESOLVER_BAD_NS_TTL	    */
 } pj_dns_settings;
 
+
+/**
+ * This structure represents DNS A record, as the result of parsing
+ * DNS response packet using #pj_dns_parse_a_response().
+ */
+typedef struct pj_dns_a_record
+{
+    /** The target name being queried.   */
+    pj_str_t		name;
+
+    /** If target name corresponds to a CNAME entry, the alias contains
+     *  the value of the CNAME entry, otherwise it will be empty.
+     */
+    pj_str_t		alias;
+
+    /** Number of IP addresses. */
+    unsigned		addr_count;
+
+    /** IP addresses of the host found in the response */
+    pj_in_addr		addr[PJ_DNS_MAX_IP_IN_A_REC];
+
+    /** Internal buffer for hostname and alias. */
+    char		buf_[128];
+
+} pj_dns_a_record;
+
+
 /**
  * Set default values to the DNS settings.
  *
@@ -364,6 +391,19 @@ PJ_DECL(pj_status_t) pj_dns_resolver_start_query(pj_dns_resolver *resolver,
  */
 PJ_DECL(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
 						  pj_bool_t notify);
+
+/**
+ * A utility function to parse a DNS response containing A records into 
+ * DNS A record.
+ *
+ * @param pkt	    The DNS response packet.
+ * @param rec	    The structure to be initialized with the parsed
+ *		    DNS A record from the packet.
+ *
+ * @return	    PJ_SUCCESS if response can be parsed successfully.
+ */
+PJ_DECL(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
+					     pj_dns_a_record *rec);
 
 
 /**
