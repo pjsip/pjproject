@@ -377,6 +377,7 @@ static void im_callback(void *token, pjsip_event *e)
 						 (pjsip_status_code) 
 						    tsx->status_code,
 						 &tsx->status_text,
+						 tsx->last_tx,
 						 rdata);
 	}
     }

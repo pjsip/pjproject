@@ -844,6 +844,7 @@ typedef struct pjsua_callback
      *			    IM message.
      * @param status	    Delivery status.
      * @param reason	    Delivery status reason.
+     * @param tdata	    The original MESSAGE request.
      * @param rdata	    The incoming MESSAGE response, or NULL if the
      *			    message transaction fails because of time out 
      *			    or transport error.
@@ -854,6 +855,7 @@ typedef struct pjsua_callback
 			     void *user_data,
 			     pjsip_status_code status,
 			     const pj_str_t *reason,
+			     pjsip_tx_data *tdata,
 			     pjsip_rx_data *rdata);
 
     /**
