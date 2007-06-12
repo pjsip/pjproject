@@ -321,7 +321,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	inv->invite_tsx == NULL) 
     {
 
-	//inv_send_ack(inv, rdata);
+	inv_send_ack(inv, rdata);
 	return PJ_TRUE;
 
     }
@@ -2508,7 +2508,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 					  e->body.tsx_state.src.rdata);
 
 	    /* Send ACK */
-	    //inv_send_ack(inv, e->body.tsx_state.src.rdata);
+	    inv_send_ack(inv, e->body.tsx_state.src.rdata);
 
 	} else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 		   (tsx->status_code==401 || tsx->status_code==407))
