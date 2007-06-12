@@ -57,7 +57,7 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
 				       int qtype,
 				       const pj_str_t *name)
 {
-    pj_uint8_t *query, *p = packet;
+    pj_uint8_t *query, *p = (pj_uint8_t*)packet;
     const char *startlabel, *endlabel, *endname;
     unsigned d;
 
