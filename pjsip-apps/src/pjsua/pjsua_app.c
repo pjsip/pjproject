@@ -309,7 +309,17 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 static int my_atoi(const char *cs)
 {
     pj_str_t s;
-    return pj_strtoul(pj_cstr(&s, cs));
+
+    pj_cstr(&s, cs);
+    if (cs[0] == '-') {
+	s.ptr++, s.slen--;
+	return 0 - (int)pj_strtoul(&s);
+    } else if (cs[0] == '+') {
+	s.ptr++, s.slen--;
+	return pj_strtoul(&s);
+    } else {
+	return pj_strtoul(&s);
+    }
 }
 
 
