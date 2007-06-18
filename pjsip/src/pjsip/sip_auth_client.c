@@ -69,6 +69,7 @@ void pjsip_auth_create_digest( pj_str_t *result,
 			       const pj_str_t *cnonce,
 			       const pj_str_t *qop,
 			       const pj_str_t *uri,
+			       const pj_str_t *realm,
 			       const pjsip_cred_info *cred_info,
 			       const pj_str_t *method)
 {
@@ -88,7 +89,7 @@ void pjsip_auth_create_digest( pj_str_t *result,
 	pj_md5_init(&pms);
 	MD5_APPEND( &pms, cred_info->username.ptr, cred_info->username.slen);
 	MD5_APPEND( &pms, ":", 1);
-	MD5_APPEND( &pms, cred_info->realm.ptr, cred_info->realm.slen);
+	MD5_APPEND( &pms, realm->ptr, realm->slen);
 	MD5_APPEND( &pms, ":", 1);
 	MD5_APPEND( &pms, cred_info->data.ptr, cred_info->data.slen);
 	pj_md5_final(&pms, digest);
@@ -221,7 +222,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 
 	/* Convert digest to string and store in chal->response. */
 	pjsip_auth_create_digest( &cred->response, &cred->nonce, NULL, NULL, 
-				  NULL, uri, cred_info, method);
+				  NULL, uri, &chal->realm, cred_info, method);
 
     } else if (has_auth_qop(pool, &chal->qop)) {
 	/* Server requires quality of protection. 
@@ -239,8 +240,8 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	}
 
 	pjsip_auth_create_digest( &cred->response, &cred->nonce, &cred->nc, 
-				  cnonce, &pjsip_AUTH_STR, uri, cred_info, 
-				  method );
+				  cnonce, &pjsip_AUTH_STR, uri, &chal->realm, 
+				  cred_info, method );
 
     } else {
 	/* Server requires quality protection that we don't support. */
@@ -328,11 +329,27 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
 					      const pj_str_t *auth_scheme)
 {
     unsigned i;
+    int wildcard = -1;
+
     PJ_UNUSED_ARG(auth_scheme);
+
     for (i=0; i<sess->cred_cnt; ++i) {
 	if (pj_stricmp(&sess->cred_info[i].realm, realm) == 0)
 	    return &sess->cred_info[i];
+	else if (sess->cred_info[i].realm.slen == 1 &&
+		 sess->cred_info[i].realm.ptr[0] == '*')
+	{
+	    wildcard = i;
+	}
     }
+
+    /* No matching realm. See if we have credential with wildcard ('*')
+     * as the realm.
+     */
+    if (wildcard != -1)
+	return &sess->cred_info[wildcard];
+
+    /* Nothing is suitable */
     return NULL;
 }
 
