@@ -628,6 +628,50 @@ on_missing_hdr:
 }
 
 
+/* Fill-up destination information from a target URI */
+static pj_status_t get_dest_info(const pjsip_uri *target_uri, 
+				 pj_pool_t *pool,
+				 pjsip_host_info *dest_info)
+{
+    /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
+     * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
+     */
+    pj_bzero(dest_info, sizeof(*dest_info));
+
+    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
+	pjsip_uri *uri = (pjsip_uri*) target_uri;
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
+	if (url->maddr_param.slen)
+	    pj_strdup(pool, &dest_info->addr.host, &url->maddr_param);
+	else
+	    pj_strdup(pool, &dest_info->addr.host, &url->host);
+        dest_info->addr.port = url->port;
+	dest_info->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
+
+    } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
+	pjsip_uri *uri = (pjsip_uri*) target_uri;
+	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	if (url->maddr_param.slen)
+	    pj_strdup(pool, &dest_info->addr.host, &url->maddr_param);
+	else
+	    pj_strdup(pool, &dest_info->addr.host, &url->host);
+	dest_info->addr.port = url->port;
+	dest_info->type = 
+            pjsip_transport_get_type_from_name(&url->transport_param);
+	dest_info->flag = 
+	    pjsip_transport_get_flag_from_type(dest_info->type);
+    } else {
+        pj_assert(!"Unsupported URI scheme!");
+	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);
+	return PJSIP_EINVALIDSCHEME;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Find which destination to be used to send the request message, based
  * on the request URI and Route headers in the message. The procedure
@@ -654,37 +698,7 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 	target_uri = tdata->msg->line.req.uri;
     }
 
-
-    /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
-     * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
-     */
-    pj_bzero(dest_info, sizeof(*dest_info));
-
-    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
-	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
-        dest_info->addr.port = url->port;
-	dest_info->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-
-    } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
-	dest_info->addr.port = url->port;
-	dest_info->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-	dest_info->flag = 
-	    pjsip_transport_get_flag_from_type(dest_info->type);
-    } else {
-        pj_assert(!"Unsupported URI scheme!");
-	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);
-	return PJSIP_EINVALIDSCHEME;
-    }
-
-    return PJ_SUCCESS;
+    return get_dest_info(target_uri, (pj_pool_t*)tdata->pool, dest_info);
 }
 
 
@@ -701,6 +715,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     const pjsip_uri *new_request_uri, *target_uri;
     const pjsip_name_addr *topmost_route_uri;
     pjsip_route_hdr *first_route_hdr, *last_route_hdr;
+    pj_status_t status;
     
     PJ_ASSERT_RETURN(tdata->msg->type == PJSIP_REQUEST_MSG, 
 		     PJSIP_ENOTREQUESTMSG);
@@ -771,34 +786,10 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	target_uri = new_request_uri = tdata->msg->line.req.uri;
     }
 
-    /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
-     * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
-     */
-    pj_bzero(dest_info, sizeof(*dest_info));
-
-    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
-	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
-        dest_info->addr.port = url->port;
-	dest_info->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-
-    } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
-	pjsip_uri *uri = (pjsip_uri*) target_uri;
-	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-	pj_strdup(tdata->pool, &dest_info->addr.host, &url->host);
-	dest_info->addr.port = url->port;
-	dest_info->type = 
-            pjsip_transport_get_type_from_name(&url->transport_param);
-	dest_info->flag = 
-	    pjsip_transport_get_flag_from_type(dest_info->type);
-    } else {
-        pj_assert(!"Unsupported URI scheme!");
-	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);
-	return PJSIP_EINVALIDSCHEME;
-    }
+    /* Fill up the destination host/port from the URI. */
+    status = get_dest_info(target_uri, tdata->pool, dest_info);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* If target URI is different than request URI, replace 
      * request URI add put the original URI in the last Route header.
