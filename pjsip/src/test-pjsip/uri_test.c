@@ -915,7 +915,7 @@ on_return:
 
 int uri_test(void)
 {
-    enum { COUNT = 4, DETECT=0, PARSE=1, PRINT=2 };
+    enum { COUNT = 1, DETECT=0, PARSE=1, PRINT=2 };
     struct {
 	unsigned parse;
 	unsigned print;
