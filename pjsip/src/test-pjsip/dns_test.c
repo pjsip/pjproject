@@ -47,6 +47,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
 {
     /* Inject DNS SRV entry */
     pj_dns_parsed_packet pkt;
+    pj_dns_parsed_query q;
     pj_dns_parsed_rr ans[4];
     pj_dns_parsed_rr ar[5];
     pj_str_t tmp;
@@ -154,8 +155,13 @@ static void add_dns_entries(pj_dns_resolver *resv)
      */
     for (i=0; i<PJ_ARRAY_SIZE(ar); ++i) {
 	pj_bzero(&pkt, sizeof(pkt));
-	pkt.hdr.anscount = 1;
 	pkt.hdr.flags = PJ_DNS_SET_QR(1);
+	pkt.hdr.qdcount = 1;
+	pkt.q = &q;
+	q.name = ar[i].name;
+	q.type = ar[i].type;
+	q.dnsclass = PJ_DNS_CLASS_IN;
+	pkt.hdr.anscount = 1;
 	pkt.ans = &ar[i];
 
 	pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
@@ -259,6 +265,12 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].ttl = 3600;
     ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "6.6.6.6"));
 
+    pkt.hdr.qdcount = 1;
+    pkt.q = &q;
+    q.name = ans[0].name;
+    q.type = ans[0].type;
+    q.dnsclass = ans[0].dnsclass;
+
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
 
     /* Add the A record for sip07.domain.com */
@@ -268,7 +280,15 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].ttl = 3600;
     ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "7.7.7.7"));
 
+    pkt.hdr.qdcount = 1;
+    pkt.q = &q;
+    q.name = ans[0].name;
+    q.type = ans[0].type;
+    q.dnsclass = ans[0].dnsclass;
+
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+
+    pkt.hdr.qdcount = 0;
 }
 
 

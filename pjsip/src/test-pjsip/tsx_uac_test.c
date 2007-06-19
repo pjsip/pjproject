@@ -1151,7 +1151,7 @@ static int tsx_resolve_error_test(void)
 
     status = perform_tsx_test(-800, 
 			      "sip:bob@unresolved-host",
-			      FROM_URI,  TEST2_BRANCH_ID, 10, 
+			      FROM_URI,  TEST2_BRANCH_ID, 20, 
 			      &pjsip_options_method);
     if (status != 0)
 	return status;
