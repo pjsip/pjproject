@@ -861,6 +861,9 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     pjsip_sip_uri *sip_uri;
     unsigned i;
 
+    /* Check that there's at least one account configured */
+    PJ_ASSERT_RETURN(pjsua_var.acc_cnt!=0, pjsua_var.default_acc);
+
     uri = rdata->msg_info.to->uri;
 
     /* Just return default account if To URI is not SIP: */
