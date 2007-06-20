@@ -50,6 +50,12 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *offer);
 
 /*
+ * Called to generate new offer.
+ */
+static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
+				       pjmedia_sdp_session **offer);
+
+/*
  * This callback is called when transaction state has changed in INVITE
  * session. We use this to trap:
  *  - incoming REFER request.
@@ -118,6 +124,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_new_session = &pjsua_call_on_forked;
     inv_cb.on_media_update = &pjsua_call_on_media_update;
     inv_cb.on_rx_offer = &pjsua_call_on_rx_offer;
+    inv_cb.on_create_offer = &pjsua_call_on_create_offer;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
 
 
@@ -2289,6 +2296,52 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	PJSUA_UNLOCK();
 	return;
     }
+
+    PJSUA_UNLOCK();
+}
+
+
+/*
+ * Called to generate new offer.
+ */
+static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
+				       pjmedia_sdp_session **offer)
+{
+    pjsua_call *call;
+    pj_status_t status;
+
+    PJSUA_LOCK();
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    /* See if we've put call on hold. */
+    if (call->media_st == PJSUA_CALL_MEDIA_LOCAL_HOLD) {
+	PJ_LOG(4,(THIS_FILE, 
+		  "Call %d: call is on-hold locally, creating inactive SDP ",
+		  call->index));
+	status = create_inactive_sdp( call, offer );
+    } else {
+
+	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
+		  call->index));
+
+	/* Init media channel */
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	    PJSUA_UNLOCK();
+	    return;
+	}
+
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, offer);
+    }
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
+	PJSUA_UNLOCK();
+	return;
+    }
+
 
     PJSUA_UNLOCK();
 }

@@ -149,13 +149,32 @@ typedef struct pjsip_inv_callback
     /**
      * This callback is called when the invite session has received 
      * new offer from peer. Application can inspect the remote offer 
-     * in "offer". 
+     * in "offer", and set the SDP answer with #pjsip_inv_set_sdp_answer().
+     * When the application sends a SIP message to send the answer, 
+     * this SDP answer will be negotiated with the offer, and the result
+     * will be sent with the SIP message.
      *
      * @param inv	The invite session.
      * @param offer	Remote offer.
      */
     void (*on_rx_offer)(pjsip_inv_session *inv,
 			const pjmedia_sdp_session *offer);
+
+    /**
+     * This callback is optional, and it is used to ask the application
+     * to create a fresh offer, when the invite session has received 
+     * re-INVITE without offer. This offer then will be sent in the
+     * 200/OK response to the re-INVITE request.
+     *
+     * If application doesn't implement this callback, the invite session
+     * will send the currently active SDP as the offer.
+     *
+     * @param inv	The invite session.
+     * @param p_offer	Pointer to receive the SDP offer created by
+     *			application.
+     */
+    void (*on_create_offer)(pjsip_inv_session *inv,
+			    pjmedia_sdp_session **p_offer);
 
     /**
      * This callback is called after SDP offer/answer session has completed.

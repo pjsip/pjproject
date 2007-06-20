@@ -985,6 +985,26 @@ static pj_status_t create_answer( pj_pool_t *pool,
     return has_active ? PJ_SUCCESS : status;
 }
 
+/* Cancel offer */
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
+{
+    PJ_ASSERT_RETURN(neg, PJ_EINVAL);
+
+    /* Must be in LOCAL_OFFER state. */
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
+		     PJMEDIA_SDPNEG_EINSTATE);
+
+    /* Reset state to done */
+    neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+
+    /* Clear temporary SDP */
+    neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
+    neg->has_remote_answer = PJ_FALSE;
+
+    return PJ_SUCCESS;
+}
+
+
 /* The best bit: SDP negotiation function! */
 PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 					       pjmedia_sdp_neg *neg,

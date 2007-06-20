@@ -50,11 +50,11 @@
  *                                              modify_local_offer()
  *     create_w_local_offer()  +-------------+  send_local_offer()
  *     ----------------------->| LOCAL_OFFER |<-----------------------
- *    |                        +-------------+                        |
- *    |                               |                               |
- *    |           set_remote_answer() |                               |
- *    |                               V                               |
- * +--+---+                     +-----------+     negotiate()     +------+
+ *    |                        +-------------+______                  |
+ *    |                               |             \______ cancel()  |
+ *    |           set_remote_answer() |                    \______    |
+ *    |                               V                            \  |
+ * +--+---+                     +-----------+     negotiate()     +-~----+
  * | NULL |                     | WAIT_NEGO |-------------------->| DONE |
  * +------+                     +-----------+                     +------+
  *    |                               A                               |
@@ -172,6 +172,29 @@
  * Regardless of the return status of the #pjmedia_sdp_neg_negotiate(), 
  * the negotiator state will move to PJMEDIA_SDP_NEG_STATE_DONE.
  * 
+ *
+ * \subsection sdpneg_cancel_offer Cancelling an Offer
+ *
+ * In other case, after an offer is generated (negotiator state is in
+ * PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER), the answer may not be received, and
+ * application wants the negotiator to reset itself to its previous state.
+ * Consider this example:
+ *
+ *  - media has been established, and negotiator state is
+ *    PJMEDIA_SDP_NEG_STATE_DONE.
+ *  - application generates a new offer for re-INVITE, so in this case
+ *    it would either call #pjmedia_sdp_neg_send_local_offer() or
+ *    #pjmedia_sdp_neg_modify_local_offer()
+ *  - the negotiator state moves to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER
+ *  - the re-INVITE was rejected with an error
+ *
+ * Since an answer is not received, it is necessary to reset the negotiator
+ * state back to PJMEDIA_SDP_NEG_STATE_DONE so that the negotiator can
+ * create or receive new offer.
+ *
+ * This can be accomplished by calling #pjmedia_sdp_neg_cancel_offer(),
+ * to reset the negotiator state back to PJMEDIA_SDP_NEG_STATE_DONE. In
+ * this case, both active local and active remote will not be modified.
  *
  * \subsection sdpneg_create_answer Generating SDP Answer
  *
@@ -595,6 +618,18 @@ pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
  *			if remote has answered local offer.
  */
 PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
+
+
+/**
+ * Cancel previously sent offer, and move negotiator state back to
+ * previous stable state (PJMEDIA_SDP_NEG_STATE_DONE). The negotiator
+ * must be in PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER state.
+ *
+ * @param neg		The negotiator.
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg);
 
 
 /**

@@ -1225,8 +1225,13 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
     /* MUST NOT do multiple SDP offer/answer in a single transaction. 
      */
 
-    if (tsx_inv_data->sdp_done)
+    if (tsx_inv_data->sdp_done) {
+	if (rdata->msg_info.msg->body) {
+	    PJ_LOG(4,(inv->obj_name, "SDP negotiation done, message "
+		      "body is ignored"));
+	}
 	return PJ_SUCCESS;
+    }
 
     /* Check if SDP is present in the message. */
 
@@ -1383,11 +1388,19 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 	} else if (neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO &&
 		   pjmedia_sdp_neg_has_local_answer(inv->neg) )
 	{
+	    struct tsx_inv_data *tsx_inv_data;
+
+	    /* Get invite session's transaction data */
+	    tsx_inv_data = (struct tsx_inv_data*) 
+		           inv->invite_tsx->mod_data[mod_inv.mod.id];
 
 	    status = inv_negotiate_sdp(inv);
 	    if (status != PJ_SUCCESS)
 		return status;
 	    
+	    /* Mark this transaction has having SDP offer/answer done. */
+	    tsx_inv_data->sdp_done = 1;
+
 	    status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
 	}
     }
@@ -2503,12 +2516,33 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    if (rdata->msg_info.msg->body != NULL) {
 		status = process_answer(inv, 200, tdata, NULL);
 	    } else {
-		const pjmedia_sdp_session *active_sdp;
-		status = pjmedia_sdp_neg_send_local_offer(dlg->pool, 
-							  inv->neg, 
-							  &active_sdp);
-		if (status == PJ_SUCCESS) {
-		    tdata->msg->body = create_sdp_body(tdata->pool, active_sdp);
+		/* INVITE does not have SDP. 
+		 * If on_create_offer() callback is implemented, ask app.
+		 * to generate an offer, otherwise just send active local
+		 * SDP to signal that nothing gets modified.
+		 */
+		pjmedia_sdp_session *sdp = NULL;
+
+		if (mod_inv.cb.on_create_offer)  {
+		    (*mod_inv.cb.on_create_offer)(inv, &sdp);
+		    if (sdp) {
+			status = pjmedia_sdp_neg_modify_local_offer(dlg->pool,
+								    inv->neg,
+								    sdp);
+		    }
+		} 
+		
+		if (sdp == NULL) {
+		    const pjmedia_sdp_session *active_sdp = NULL;
+		    status = pjmedia_sdp_neg_send_local_offer(dlg->pool, 
+							      inv->neg, 
+							      &active_sdp);
+		    if (status == PJ_SUCCESS)
+			sdp = (pjmedia_sdp_session*) active_sdp;
+		}
+
+		if (sdp) {
+		    tdata->msg->body = create_sdp_body(tdata->pool, sdp);
 		}
 	    }
 
@@ -2604,6 +2638,16 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	     */
 	    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+	} else if (tsx->status_code >= 300 && tsx->status_code < 700) {
+
+	    pjmedia_sdp_neg_state neg_state;
+
+	    /* Outgoing INVITE transaction has failed, cancel SDP nego */
+	    neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+	    if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+		pjmedia_sdp_neg_cancel_offer(inv->neg);
+	    }
 	}
     }
 }
