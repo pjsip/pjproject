@@ -67,15 +67,21 @@ typedef enum pjsip_auth_qop_type
  * This structure describes credential information. 
  * A credential information is a static, persistent information that identifies
  * username and password required to authorize to a specific realm.
+ *
+ * Note that since PJSIP 0.7.0.1, it is possible to make a credential that is
+ * valid for any realms, by setting the realm to star/asterisk character,
+ * i.e. realm = pj_str("*");.
  */
 struct pjsip_cred_info
 {
-    pj_str_t    realm;		/**< Realm.	    */
-    pj_str_t	scheme;		/**< Scheme.	    */
-    pj_str_t	username;	/**< User name.	    */
-    int		data_type;	/**< Type of data.  */
+    pj_str_t    realm;		/**< Realm. Use "*" to make a credential that
+				     can be used to authenticate against any
+				     challenges.			    */
+    pj_str_t	scheme;		/**< Scheme (e.g. "digest").		    */
+    pj_str_t	username;	/**< User name.				    */
+    int		data_type;	/**< Type of data (0 for plaintext passwd). */
     pj_str_t	data;		/**< The data, which can be a plaintext 
-				     password or a hashed digest. */
+				     password or a hashed digest.	    */
 };
 
 /**
