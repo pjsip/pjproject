@@ -62,6 +62,14 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e);
 static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e);
 static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e);
 
+static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
+						  pjsip_transaction *tsx,
+						  pjsip_rx_data *rdata);
+static pj_status_t process_answer( pjsip_inv_session *inv,
+				   int st_code,
+				   pjsip_tx_data *tdata,
+				   const pjmedia_sdp_session *local_sdp);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -141,6 +149,27 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 		   pjsip_event *e)
 {
     pjsip_inv_state prev_state = inv->state;
+    pj_status_t status;
+
+
+    /* If state is confirmed, check that SDP negotiation is done,
+     * otherwise disconnect the session.
+     */
+    if (state == PJSIP_INV_STATE_CONFIRMED) {
+	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+	    pjsip_tx_data *bye;
+
+	    PJ_LOG(4,(inv->obj_name, "SDP offer/answer incomplete, ending the "
+		      "session"));
+
+	    status = pjsip_inv_end_session(inv, PJSIP_SC_NOT_ACCEPTABLE, 
+					   NULL, &bye);
+	    if (status == PJ_SUCCESS && bye)
+		status = pjsip_inv_send_msg(inv, bye);
+
+	    return;
+	}
+    }
 
     /* Set state. */
     inv->state = state;
@@ -267,6 +296,12 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	if (inv->invite_tsx && 
 	    inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
 	{
+	    /* Before we terminate INVITE transaction, process the SDP
+	     * in the ACK request, if any.
+	     */
+	    inv_check_sdp_in_incoming_msg(inv, inv->invite_tsx, rdata);
+
+	    /* Now we can terminate the INVITE transaction */
 	    pj_assert(inv->invite_tsx->status_code >= 200);
 	    pjsip_tsx_terminate(inv->invite_tsx, 
 				inv->invite_tsx->status_code);
@@ -2173,7 +2208,8 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	    break;
 
 	case PJSIP_TSX_STATE_CONFIRMED:
-	    /* For some reason can go here */
+	    /* For some reason can go here (maybe when ACK for 2xx has
+	     * the same branch value as the INVITE transaction) */
 
 	case PJSIP_TSX_STATE_TERMINATED:
 	    /* INVITE transaction can be terminated either because UAC
@@ -2261,8 +2297,17 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	switch (tsx->state) {
 
 	case PJSIP_TSX_STATE_CONFIRMED:
-	    if (tsx->status_code/100 == 2)
+	    /* It can only go here if incoming ACK request has the same Via
+	     * branch parameter as the INVITE transaction.
+	     */
+	    if (tsx->status_code/100 == 2) {
+		if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+		    inv_check_sdp_in_incoming_msg(inv, tsx,
+						  e->body.tsx_state.src.rdata);
+		}
+
 		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
+	    }
 	    break;
 
 	case PJSIP_TSX_STATE_TERMINATED:
@@ -2452,8 +2497,20 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    if (status != PJ_SUCCESS)
 		return;
 
-	    /* Process SDP in the answer */
-	    status = process_answer(inv, 200, tdata, NULL);
+	    /* If the INVITE request has SDP body, send answer.
+	     * Otherwise generate offer from local active SDP.
+	     */
+	    if (rdata->msg_info.msg->body != NULL) {
+		status = process_answer(inv, 200, tdata, NULL);
+	    } else {
+		const pjmedia_sdp_session *active_sdp;
+		status = pjmedia_sdp_neg_send_local_offer(dlg->pool, 
+							  inv->neg, 
+							  &active_sdp);
+		if (status == PJ_SUCCESS) {
+		    tdata->msg->body = create_sdp_body(tdata->pool, active_sdp);
+		}
+	    }
 
 	    if (status != PJ_SUCCESS) {
 		/*
@@ -2487,6 +2544,17 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	    /* Send 2xx regardless of the status of negotiation */
 	    status = pjsip_inv_send_msg(inv, tdata);
+
+	} else if (tsx->state == PJSIP_TSX_STATE_CONFIRMED) {
+	    /* This is the case where ACK has the same branch as
+	     * the INVITE request.
+	     */
+	    if (tsx->status_code/100 == 2 &&
+		e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) 
+	    {
+		inv_check_sdp_in_incoming_msg(inv, tsx,
+					      e->body.tsx_state.src.rdata);
+	    }
 
 	}
 
