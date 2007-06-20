@@ -27,7 +27,7 @@
 /*
  * Implementation of media clock with OS thread.
  */
-
+#define MAX_JUMP    500
 
 struct pjmedia_clock
 {
@@ -184,6 +184,10 @@ PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
     clock->timestamp.u64 += clock->samples_per_frame;
 
     /* Calculate next tick */
+    if (clock->next_tick.u64+MAX_JUMP < now.u64) {
+	/* Timestamp has made large jump, adjust next_tick */
+	clock->next_tick.u64 = now.u64;
+    }
     clock->next_tick.u64 += clock->interval.u64;
 
     /* Done */
@@ -229,6 +233,10 @@ static int clock_thread(void *arg)
 	clock->timestamp.u64 += clock->samples_per_frame;
 
 	/* Calculate next tick */
+	if (clock->next_tick.u64+MAX_JUMP < now.u64) {
+	    /* Timestamp has made large jump, adjust next_tick */
+	    clock->next_tick.u64 = now.u64;
+	}
 	clock->next_tick.u64 += clock->interval.u64;
 
 	pj_lock_release(clock->lock);
