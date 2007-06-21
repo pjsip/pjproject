@@ -305,11 +305,15 @@ static void tu_on_rx_data(pj_stun_usage *usage,
 	status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, flags);
 
 	if (status == PJ_SUCCESS) {
-	    /* Received STUN message */
-	    status = pj_stun_session_on_rx_pkt(client->session, 
-					       (pj_uint8_t*)pkt, pkt_size, 
-					       flags, NULL, 
-					       src_addr, src_addr_len);
+	    if (client->session) {
+		/* Received STUN message */
+		status = pj_stun_session_on_rx_pkt(client->session, 
+						   (pj_uint8_t*)pkt, pkt_size, 
+						   flags, NULL, 
+						   src_addr, src_addr_len);
+	    } else {
+		client_destroy(client, PJ_SUCCESS);
+	    }
 	} else if (client->active_peer) {
 	    /* Received non-STUN message and client has active destination */
 	    pj_ssize_t sz = pkt_size;
