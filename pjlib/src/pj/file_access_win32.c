@@ -25,6 +25,14 @@
 #include <windows.h>
 #include <time.h>
 
+#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    /* WinCE lacks READ_CONTROL so we must use GENERIC_READ */
+#   define CONTROL_ACCESS   GENERIC_READ
+#else
+#   define CONTROL_ACCESS   READ_CONTROL
+#endif
+
+
 /*
  * pj_file_exists()
  */
@@ -36,7 +44,7 @@ PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
     PJ_ASSERT_RETURN(filename != NULL, 0);
 
     hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename,sizeof(wfilename)), 
-		       READ_CONTROL, 
+		       CONTROL_ACCESS, 
 		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -60,7 +68,7 @@ PJ_DEF(pj_off_t) pj_file_size(const char *filename)
     PJ_ASSERT_RETURN(filename != NULL, -1);
 
     hFile = CreateFile(PJ_STRING_TO_NATIVE(filename, wfilename,sizeof(wfilename)), 
-		       READ_CONTROL, 
+		       CONTROL_ACCESS, 
                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -169,7 +177,7 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
     PJ_ASSERT_RETURN(filename!=NULL && stat!=NULL, PJ_EINVAL);
 
     hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename,sizeof(wfilename)), 
-		       READ_CONTROL, 
+		       CONTROL_ACCESS, 
 		       FILE_SHARE_READ, NULL,
                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
