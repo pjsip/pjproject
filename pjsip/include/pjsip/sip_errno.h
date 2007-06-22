@@ -222,7 +222,13 @@ PJ_BEGIN_DECL
  * the specified destination.
  */
 #define PJSIP_ETPNOTSUITABLE	(PJSIP_ERRNO_START_PJSIP + 64)	/* 171064 */
-
+/**
+ * @hideinitializer
+ * Transport not available. This error occurs for example when the SIP stack 
+ * is trying to use a SIP transport while the transport is being paused by 
+ * application.
+ */
+#define PJSIP_ETPNOTAVAIL	(PJSIP_ERRNO_START_PJSIP + 65)	/* 171065 */
 
 /************************************************************
  * TRANSACTION ERRORS

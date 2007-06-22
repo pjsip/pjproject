@@ -38,6 +38,27 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Flag that can be specified when calling #pjsip_udp_transport_pause() or
+ * #pjsip_udp_transport_restart().
+ */
+enum
+{
+    /**
+     * This flag tells the transport to keep the existing/internal socket
+     * handle.
+     */
+    PJSIP_UDP_TRANSPORT_KEEP_SOCKET	= 1,
+
+    /**
+     * This flag tells the transport to destroy the existing/internal socket
+     * handle. Naturally this flag and PJSIP_UDP_TRANSPORT_KEEP_SOCKET are 
+     * mutually exclusive.
+     */
+    PJSIP_UDP_TRANSPORT_DESTROY_SOCKET	= 2
+};
+
+
+/**
  * Start UDP transport.
  *
  * @param endpt		The SIP endpoint.
@@ -79,6 +100,96 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_attach(pjsip_endpoint *endpt,
 						const pjsip_host_port *a_name,
 						unsigned async_cnt,
 						pjsip_transport **p_transport);
+
+
+/**
+ * Retrieve the internal socket handle used by the UDP transport. Note
+ * that this socket normally is registered to ioqueue, so if application
+ * wants to make use of this socket, it should temporarily pause the
+ * transport.
+ *
+ * @param transport	The UDP transport.
+ *
+ * @return		The socket handle, or PJ_INVALID_SOCKET if no socket
+ *			is currently being used (for example, when transport
+ *			is being paused).
+ */
+PJ_DECL(pj_sock_t) pjsip_udp_transport_get_socket(pjsip_transport *transport);
+
+
+/**
+ * Temporarily pause or shutdown the transport. When transport is being
+ * paused, it cannot be used by the SIP stack to send or receive SIP
+ * messages.
+ *
+ * Two types of operations are supported by this function:
+ *  - to temporarily make this transport unavailable for SIP uses, but
+ *    otherwise keep the socket handle intact. Application then can
+ *    retrieve the socket handle with #pjsip_udp_transport_get_socket()
+ *    and use it to send/receive application data (for example, STUN
+ *    messages). In this case, application should specify
+ *    PJSIP_UDP_TRANSPORT_KEEP_SOCKET when calling this function, and
+ *    also to specify this flag when calling #pjsip_udp_transport_restart()
+ *    later.
+ *  - to temporarily shutdown the transport, including closing down
+ *    the internal socket handle. This is useful for example to
+ *    temporarily suspend the application for an indefinite period. In
+ *    this case, application should specify PJSIP_UDP_TRANSPORT_DESTROY_SOCKET
+ *    flag when calling this function, and specify a new socket when
+ *    calling #pjsip_udp_transport_restart().
+ *
+ * @param transport	The UDP transport.
+ * @param option	Pause option.
+ *
+ * @return		PJ_SUCCESS if transport is paused successfully,
+ *			or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
+					       unsigned option);
+
+/**
+ * Restart the transport. Several operations are supported by this function:
+ *  - if transport was made temporarily unavailable to SIP stack with
+ *    pjsip_udp_transport_pause() and PJSIP_UDP_TRANSPORT_KEEP_SOCKET,
+ *    application can make the transport available to the SIP stack
+ *    again, by specifying PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag here.
+ *  - if application wants to replace the internal socket with a new
+ *    socket, it must specify PJSIP_UDP_TRANSPORT_DESTROY_SOCKET when
+ *    calling this function, so that the internal socket will be destroyed
+ *    if it hasn't been closed. In this case, application has two choices
+ *    on how to create the new socket: 1) to let the transport create
+ *    the new socket, in this case the \a sock option should be set
+ *    to \a PJ_INVALID_SOCKET and optionally the \a local parameter can be
+ *    filled with the desired address and port where the new socket 
+ *    should be bound to, or 2) to specify its own socket to be used
+ *    by this transport, by specifying a valid socket in \a sock argument
+ *    and set the \a local argument to NULL. In both cases, application
+ *    may specify the published address of the socket in \a a_name
+ *    argument.
+ *
+ * @param transport	The UDP transport.
+ * @param option	Restart option.
+ * @param sock		Optional socket to be used by the transport.
+ * @param local		The address where the socket should be bound to.
+ *			If this argument is NULL, socket will be bound
+ *			to any available port.
+ * @param a_name	Optionally specify the published address for
+ *			this transport. If the socket is not replaced
+ *			(PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
+ *			specified), then if this argument is NULL, the
+ *			previous value will be used. If the socket is
+ *			replaced and this argument is NULL, the bound
+ *			address will be used as the published address 
+ *			of the transport.
+ *
+ * @return		PJ_SUCCESS if transport can be restarted, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
+					         unsigned option,
+						 pj_sock_t sock,
+						 const pj_sockaddr_in *local,
+						 const pjsip_host_port *a_name);
 
 
 PJ_END_DECL

@@ -102,6 +102,10 @@ SOURCE=..\src\samples\footprint.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\invtester.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\level.c
 # End Source File
 # Begin Source File
@@ -167,6 +171,10 @@ SOURCE=..\src\samples\streamutil.c
 # Begin Source File
 
 SOURCE=..\src\samples\tonegen.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\samples\transportpausetest.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
