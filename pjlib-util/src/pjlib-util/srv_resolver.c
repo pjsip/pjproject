@@ -497,7 +497,7 @@ static void dns_callback(void *user_data,
 
 	    /* Update CNAME alias, if present. */
 	    if (rec.alias.slen) {
-		pj_assert(rec.alias.slen <= sizeof(srv->cname_buf));
+		pj_assert(rec.alias.slen <= (int)sizeof(srv->cname_buf));
 		srv->cname.ptr = srv->cname_buf;
 		pj_strcpy(&srv->cname, &rec.alias);
 	    } else {
