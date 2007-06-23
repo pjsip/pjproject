@@ -387,6 +387,7 @@ void CIoqueueCallback::DoCancel()
 	sock_->Socket().CancelAccept();
 
     type_ = TYPE_NONE;
+    pending_data_.common_.op_key_ = NULL;
 }
 
 //
@@ -397,13 +398,15 @@ void CIoqueueCallback::CancelOperation(pj_ioqueue_op_key_t *op_key,
 {
     Type cur_type = type_;
 
+    pj_assert(op_key == pending_data_.common_.op_key_);
+
     Cancel();
 
     if (cur_type == TYPE_READ) {
     	if (cb_.on_read_complete)
     	    cb_.on_read_complete(key_, op_key, bytes_status);
     } else if (cur_type == TYPE_ACCEPT)
-	;
+	;    
 }
 
 
