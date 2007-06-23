@@ -603,31 +603,77 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 }
 
 
-/* Send raw data */
-PJ_DEF(pj_status_t) pjsip_transport_send_raw(pjsip_transport *tr,
-					     const void *raw_data,
-					     pj_size_t data_len,
-					     const pj_sockaddr_t *addr,
-					     int addr_len,
-					     void *token,
-					     pjsip_tp_send_callback cb)
+/* send_raw() callback */
+static void send_raw_callback(pjsip_transport *transport,
+			      void *token,
+			      pj_ssize_t size)
 {
-    pjsip_tx_data *tdata;
+    pjsip_tx_data *tdata = (pjsip_tx_data*) token;
+
+    /* Mark pending off so that app can resend/reuse txdata from inside
+     * the callback.
+     */
+    tdata->is_pending = 0;
+
+    /* Call callback, if any. */
+    if (tdata->cb) {
+	(*tdata->cb)(tdata->token, tdata, size);
+    }
+
+    /* Decrement tdata reference count. */
+    pjsip_tx_data_dec_ref(tdata);
+
+    /* Decrement transport reference count */
+    pjsip_transport_dec_ref(transport);
+}
+
+
+/* Send raw data */
+PJ_DEF(pj_status_t) pjsip_tpmgr_send_raw(pjsip_tpmgr *mgr,
+					 pjsip_transport_type_e tp_type,
+					 const pjsip_tpselector *sel,
+					 pjsip_tx_data *tdata,
+					 const void *raw_data,
+					 pj_size_t data_len,
+					 const pj_sockaddr_t *addr,
+					 int addr_len,
+					 void *token,
+					 pjsip_tp_send_callback cb)
+{
+    pjsip_transport *tr;
     pj_status_t status;
  
-    status = pjsip_endpt_create_tdata(tr->endpt, &tdata);
+    /* Acquire the transport */
+    status = pjsip_tpmgr_acquire_transport(mgr, tp_type, addr, addr_len,
+					   sel, &tr);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add reference counter. */
-    pjsip_tx_data_add_ref(tdata);
- 
+    /* Create transmit data buffer if one is not specified */
+    if (tdata == NULL) {
+	status = pjsip_endpt_create_tdata(tr->endpt, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsip_transport_dec_ref(tr);
+	    return status;
+	}
+
+	/* Add reference counter. */
+	pjsip_tx_data_add_ref(tdata);
+    }
+
     /* Allocate buffer */
-    tdata->buf.start = (char*) pj_pool_alloc(tdata->pool, data_len);
-    tdata->buf.end = tdata->buf.start + data_len;
+    if (tdata->buf.start == NULL ||
+	(tdata->buf.end - tdata->buf.start) < (int)data_len)
+    {
+	/* Note: data_len may be zero, so allocate +1 */
+	tdata->buf.start = (char*) pj_pool_alloc(tdata->pool, data_len+1);
+	tdata->buf.end = tdata->buf.start + data_len + 1;
+    }
  
-    /* Copy data */
-    pj_memcpy(tdata->buf.start, raw_data, data_len);
+    /* Copy data, if any! (application may send zero len packet) */
+    if (data_len) {
+	pj_memcpy(tdata->buf.start, raw_data, data_len);
+    }
     tdata->buf.cur = tdata->buf.start + data_len;
  
     /* Save callback data. */
@@ -637,13 +683,14 @@ PJ_DEF(pj_status_t) pjsip_transport_send_raw(pjsip_transport *tr,
     /* Mark as pending. */
     tdata->is_pending = 1;
 
-    /* Send to transoprt */
+    /* Send to transport */
     status = tr->send_msg(tr, tdata, addr, addr_len,
-			  tdata, &transport_send_callback);
+			  tdata, &send_raw_callback);
  
     if (status != PJ_EPENDING) {
 	/* callback will not be called, so destroy tdata now. */
 	pjsip_tx_data_dec_ref(tdata);
+	pjsip_transport_dec_ref(tr);
     }
 
     return status;

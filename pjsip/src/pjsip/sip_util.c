@@ -996,7 +996,7 @@ PJ_DEF(pj_status_t)
 pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt, 
 				   pjsip_tx_data *tdata,
 				   void *token,
-				   pjsip_endpt_callback cb)
+				   pjsip_send_callback cb)
 {
     pjsip_host_info dest_info;
     pjsip_send_state *stateless_data;
@@ -1023,6 +1023,150 @@ pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
 			 &stateless_send_resolver_callback);
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Send raw data to a destination.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_send_raw( pjsip_endpoint *endpt,
+					  pjsip_transport_type_e tp_type,
+					  const pjsip_tpselector *sel,
+					  const void *raw_data,
+					  pj_size_t data_len,
+					  const pj_sockaddr_t *addr,
+					  int addr_len,
+					  void *token,
+					  pjsip_tp_send_callback cb)
+{
+    return pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(endpt), tp_type, sel,
+				NULL, raw_data, data_len, addr, addr_len,
+				token, cb);
+}
+
+
+/* Callback data for sending raw data */
+struct send_raw_data
+{
+    pjsip_endpoint	    *endpt;
+    pjsip_tx_data	    *tdata;
+    pjsip_tpselector	    *sel;
+    void		    *app_token;
+    pjsip_tp_send_callback   app_cb;
+};
+
+
+/* Resolver callback for sending raw data. */
+static void send_raw_resolver_callback( pj_status_t status,
+    					void *token,
+					const pjsip_server_addresses *addr)
+{
+    struct send_raw_data *sraw_data = (struct send_raw_data*) token;
+
+    if (status != PJ_SUCCESS) {
+	if (sraw_data->app_cb) {
+	    (*sraw_data->app_cb)(sraw_data->app_token, sraw_data->tdata,
+				 -status);
+	}
+    } else {
+	pj_size_t data_len;
+
+	pj_assert(addr->count != 0);
+
+	data_len = sraw_data->tdata->buf.cur - sraw_data->tdata->buf.start;
+	status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(sraw_data->endpt),
+				      addr->entry[0].type,
+				      sraw_data->sel, sraw_data->tdata,
+				      sraw_data->tdata->buf.start, data_len,
+				      &addr->entry[0].addr, 
+				      addr->entry[0].addr_len, 
+				      sraw_data->app_token,
+				      sraw_data->app_cb);
+	if (status == PJ_SUCCESS) {
+	    (*sraw_data->app_cb)(sraw_data->app_token, sraw_data->tdata,
+				 data_len);
+	} else if (status != PJ_EPENDING) {
+	    (*sraw_data->app_cb)(sraw_data->app_token, sraw_data->tdata,
+				 -status);
+	}
+    }
+
+    if (sraw_data->sel) {
+	pjsip_tpselector_dec_ref(sraw_data->sel);
+    }
+    pjsip_tx_data_dec_ref(sraw_data->tdata);
+}
+
+
+/*
+ * Send raw data to the specified destination URI. 
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
+						const pj_str_t *p_dst_uri,
+						const pjsip_tpselector *sel,
+						const void *raw_data,
+						pj_size_t data_len,
+						void *token,
+						pjsip_tp_send_callback cb)
+{
+    pjsip_tx_data *tdata;
+    struct send_raw_data *sraw_data;
+    pj_str_t dst_uri;
+    pjsip_uri *uri;
+    pjsip_host_info dest_info;
+    pj_status_t status;
+
+    /* Allocate buffer */
+    status = pjsip_endpt_create_tdata(endpt, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pjsip_tx_data_add_ref(tdata);
+
+    /* Duplicate URI since parser requires URI to be NULL terminated */
+    pj_strdup_with_null(tdata->pool, &dst_uri, p_dst_uri);
+
+    /* Parse URI */
+    uri = pjsip_parse_uri(tdata->pool, dst_uri.ptr, dst_uri.slen, 0);
+    if (uri == NULL) {
+	pjsip_tx_data_dec_ref(tdata);
+	return PJSIP_EINVALIDURI;
+    }
+
+    /* Build destination info. */
+    status = get_dest_info(uri, tdata->pool, &dest_info);
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
+
+    /* Copy data (note: data_len may be zero!) */
+    tdata->buf.start = (char*) pj_pool_alloc(tdata->pool, data_len+1);
+    tdata->buf.end = tdata->buf.start + data_len + 1;
+    if (data_len)
+	pj_memcpy(tdata->buf.start, raw_data, data_len);
+    tdata->buf.cur = tdata->buf.start + data_len;
+
+    /* Init send_raw_data */
+    sraw_data = PJ_POOL_ZALLOC_T(tdata->pool, struct send_raw_data);
+    sraw_data->endpt = endpt;
+    sraw_data->tdata = tdata;
+    sraw_data->app_token = token;
+    sraw_data->app_cb = cb;
+
+    if (sel) {
+	sraw_data->sel = PJ_POOL_ALLOC_T(tdata->pool, pjsip_tpselector);
+	pj_memcpy(sraw_data->sel, sel, sizeof(pjsip_tpselector));
+	pjsip_tpselector_add_ref(sraw_data->sel);
+    }
+
+    /* Resolve destination host.
+     * The processing then resumed when the resolving callback is called.
+     */
+    pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, sraw_data,
+			 &send_raw_resolver_callback);
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Determine which address (and transport) to use to send response message
@@ -1215,7 +1359,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 					       pjsip_response_addr *res_addr,
 					       pjsip_tx_data *tdata,
 					       void *token,
-					       pjsip_endpt_callback cb)
+					       pjsip_send_callback cb)
 {
     /* Determine which transports and addresses to send the response,
      * based on Section 18.2.2 of RFC 3261.
@@ -1264,7 +1408,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response2( pjsip_endpoint *endpt,
 					        pjsip_rx_data *rdata,
 					        pjsip_tx_data *tdata,
 						void *token,
-						pjsip_endpt_callback cb)
+						pjsip_send_callback cb)
 {
     pjsip_response_addr res_addr;
     pj_status_t status;

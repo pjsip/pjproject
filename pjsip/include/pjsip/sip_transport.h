@@ -1058,10 +1058,20 @@ PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
 
 
 /**
- * This is a low-level function to send raw data using the specified transport
- * to the specified destination.
+ * This is a low-level function to send raw data to a destination.
  *
- * @param tr	    The SIP transport to be used.
+ * See also #pjsip_endpt_send_raw() and #pjsip_endpt_send_raw_to_uri().
+ *
+ * @param mgr	    Transport manager.
+ * @param tp_type   Transport type.
+ * @param sel	    Optional pointer to transport selector instance if
+ *		    application wants to use a specific transport instance
+ *		    rather then letting transport manager finds the suitable
+ *		    transport.
+ * @param tdata	    Optional transmit data buffer to be used. If this value
+ *		    is NULL, this function will create one internally. If
+ *		    tdata is specified, this function will decrement the
+ *		    reference counter upon completion.
  * @param raw_data  The data to be sent.
  * @param data_len  The length of the data.
  * @param addr	    Destination address.
@@ -1079,14 +1089,16 @@ PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
  *		    indicates immediate failure, and in this case the 
  *		    callback will not be called.
  */
-PJ_DECL(pj_status_t) pjsip_transport_send_raw(pjsip_transport *tr,
-					      const void *raw_data,
-					      pj_size_t data_len,
-					      const pj_sockaddr_t *addr,
-					      int addr_len,
-					      void *token,
-					      pjsip_tp_send_callback cb);
-
+PJ_DECL(pj_status_t) pjsip_tpmgr_send_raw(pjsip_tpmgr *mgr,
+					  pjsip_transport_type_e tp_type,
+					  const pjsip_tpselector *sel,
+					  pjsip_tx_data *tdata,
+					  const void *raw_data,
+					  pj_size_t data_len,
+					  const pj_sockaddr_t *addr,
+					  int addr_len,
+					  void *token,
+					  pjsip_tp_send_callback cb);
 
 /**
  * @}

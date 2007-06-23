@@ -20,6 +20,7 @@
 #define __PJSIP_SIP_MISC_H__
 
 #include <pjsip/sip_msg.h>
+#include <pjsip/sip_transport.h>
 #include <pjsip/sip_resolve.h>
 
 PJ_BEGIN_DECL
@@ -219,7 +220,6 @@ PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 					     pjsip_host_info *dest_info );
 
-
 /**
  * This structure holds the state of outgoing stateless request.
  */
@@ -258,8 +258,10 @@ typedef struct pjsip_send_state
 		   pj_bool_t *cont);
 } pjsip_send_state;
 
-typedef void (*pjsip_endpt_callback)(pjsip_send_state*, pj_ssize_t sent,
-									 pj_bool_t *cont);
+
+typedef void (*pjsip_send_callback)(pjsip_send_state*, pj_ssize_t sent,
+				    pj_bool_t *cont);
+
 /**
  * Send outgoing request statelessly The function will take care of which 
  * destination and transport to use based on the information in the message,
@@ -281,7 +283,81 @@ PJ_DECL(pj_status_t)
 pjsip_endpt_send_request_stateless( pjsip_endpoint *endpt,
 				    pjsip_tx_data *tdata,
 				    void *token,
-				    pjsip_endpt_callback cb);
+				    pjsip_send_callback cb);
+
+/**
+ * This is a low-level function to send raw data to a destination.
+ *
+ * See also #pjsip_endpt_send_raw_to_uri().
+ *
+ * @param endpt	    The SIP endpoint instance.
+ * @param tp_type   Transport type.
+ * @param sel	    Optional pointer to transport selector instance if
+ *		    application wants to use a specific transport instance
+ *		    rather then letting transport manager finds the suitable
+ *		    transport..
+ * @param raw_data  The data to be sent.
+ * @param data_len  The length of the data.
+ * @param addr	    Destination address.
+ * @param addr_len  Length of destination address.
+ * @param token	    Arbitrary token to be returned back to callback.
+ * @param cb	    Optional callback to be called to notify caller about
+ *		    the completion status of the pending send operation.
+ *
+ * @return	    If the message has been sent successfully, this function
+ *		    will return PJ_SUCCESS and the callback will not be 
+ *		    called. If message cannot be sent immediately, this
+ *		    function will return PJ_EPENDING, and application will
+ *		    be notified later about the completion via the callback.
+ *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *		    indicates immediate failure, and in this case the 
+ *		    callback will not be called.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_send_raw(pjsip_endpoint *endpt,
+					  pjsip_transport_type_e tp_type,
+					  const pjsip_tpselector *sel,
+					  const void *raw_data,
+					  pj_size_t data_len,
+					  const pj_sockaddr_t *addr,
+					  int addr_len,
+					  void *token,
+					  pjsip_tp_send_callback cb);
+
+/**
+ * Send raw data to the specified destination URI. The actual destination
+ * address will be calculated from the URI, using normal SIP URI to host
+ * resolution.
+ *
+ * See also #pjsip_endpt_send_raw().
+ *
+ * @param endpt	    The SIP endpoint instance.
+ * @param dst_uri   Destination address URI.
+ * @param sel	    Optional pointer to transport selector instance if
+ *		    application wants to use a specific transport instance
+ *		    rather then letting transport manager finds the suitable
+ *		    transport..
+ * @param raw_data  The data to be sent.
+ * @param data_len  The length of the data.
+ * @param token	    Arbitrary token to be returned back to callback.
+ * @param cb	    Optional callback to be called to notify caller about
+ *		    the completion status of the pending send operation.
+ *
+ * @return	    If the message has been sent successfully, this function
+ *		    will return PJ_SUCCESS and the callback will not be 
+ *		    called. If message cannot be sent immediately, this
+ *		    function will return PJ_EPENDING, and application will
+ *		    be notified later about the completion via the callback.
+ *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *		    indicates immediate failure, and in this case the 
+ *		    callback will not be called.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
+						 const pj_str_t *dst_uri,
+						 const pjsip_tpselector *sel,
+						 const void *raw_data,
+						 pj_size_t data_len,
+						 void *token,
+						 pjsip_tp_send_callback cb);
 
 /**
  * This structure describes destination information to send response.
@@ -357,7 +433,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 					        pjsip_response_addr *res_addr,
 					        pjsip_tx_data *tdata,
 						void *token,
-						pjsip_endpt_callback cb);
+						pjsip_send_callback cb);
 
 /**
  * This is a convenient function which wraps #pjsip_get_response_addr() and
@@ -380,7 +456,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_response2(pjsip_endpoint *endpt,
 					        pjsip_rx_data *rdata,
 					        pjsip_tx_data *tdata,
 						void *token,
-						pjsip_endpt_callback cb);
+						pjsip_send_callback cb);
 
 /**
  * This composite function sends response message statelessly to an incoming
