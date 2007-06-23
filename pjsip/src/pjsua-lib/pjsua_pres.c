@@ -107,7 +107,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     info->contact.ptr = info->buf_ + total;
     pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_)-total);
     total += info->contact.slen;
-	
+
     /* status and status text */    
     if (buddy->sub == NULL || buddy->status.info_cnt==0) {
 	info->status = PJSUA_BUDDY_STATUS_UNKNOWN;
@@ -1197,6 +1197,7 @@ pj_status_t pjsua_pres_start(void)
 	pjsua_var.pres_timer.cb = &pres_timer_cb;
 	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.pres_timer,
 				   &pres_interval);
+	pjsua_var.pres_timer.id = PJ_TRUE;
     }
 
     return PJ_SUCCESS;
