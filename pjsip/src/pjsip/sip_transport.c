@@ -602,6 +602,54 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     return status;
 }
 
+
+/* Send raw data */
+PJ_DEF(pj_status_t) pjsip_transport_send_raw(pjsip_transport *tr,
+					     const void *raw_data,
+					     pj_size_t data_len,
+					     const pj_sockaddr_t *addr,
+					     int addr_len,
+					     void *token,
+					     pjsip_tp_send_callback cb)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+ 
+    status = pjsip_endpt_create_tdata(tr->endpt, &tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Add reference counter. */
+    pjsip_tx_data_add_ref(tdata);
+ 
+    /* Allocate buffer */
+    tdata->buf.start = (char*) pj_pool_alloc(tdata->pool, data_len);
+    tdata->buf.end = tdata->buf.start + data_len;
+ 
+    /* Copy data */
+    pj_memcpy(tdata->buf.start, raw_data, data_len);
+    tdata->buf.cur = tdata->buf.start + data_len;
+ 
+    /* Save callback data. */
+    tdata->token = token;
+    tdata->cb = cb;
+
+    /* Mark as pending. */
+    tdata->is_pending = 1;
+
+    /* Send to transoprt */
+    status = tr->send_msg(tr, tdata, addr, addr_len,
+			  tdata, &transport_send_callback);
+ 
+    if (status != PJ_EPENDING) {
+	/* callback will not be called, so destroy tdata now. */
+	pjsip_tx_data_dec_ref(tdata);
+    }
+
+    return status;
+}
+
+
 static void transport_idle_callback(pj_timer_heap_t *timer_heap,
 				    struct pj_timer_entry *entry)
 {

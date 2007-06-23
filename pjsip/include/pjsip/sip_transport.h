@@ -904,7 +904,9 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
 typedef void (*pjsip_rx_callback)(pjsip_endpoint*, pj_status_t, pjsip_rx_data *);
 typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint*, pjsip_tx_data*);
 /**
- * Create a new transport manager.
+ * Create a transport manager. Normally application doesn't need to call
+ * this function directly, since a transport manager will be created and
+ * destroyed automatically by the SIP endpoint.
  *
  * @param pool	    Pool.
  * @param endpt	    Endpoint instance.
@@ -959,13 +961,21 @@ PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr);
 
 
 /**
- * Destroy transport manager.
+ * Destroy a transport manager. Normally application doesn't need to call
+ * this function directly, since a transport manager will be created and
+ * destroyed automatically by the SIP endpoint.
+ *
+ * @param mgr	    The transport manager.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_destroy(pjsip_tpmgr *mgr);
 
 
 /**
- * Dump transport info.
+ * Dump transport info and status to log.
+ *
+ * @param mgr	    The transport manager.
  */
 PJ_DECL(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr);
 
@@ -1002,10 +1012,42 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						   const pjsip_tpselector *sel,
 						   pjsip_transport **tp);
 
-typedef void (*pjsip_tp_send_callback)(void *token, pjsip_tx_data *tdata,
-									   pj_ssize_t bytes_sent);
 /**
- * Send a SIP message using the specified transport.
+ * Type of callback to receive notification when message or raw data
+ * has been sent.
+ *
+ * @param token		The token that was given when calling the function
+ *			to send message or raw data.
+ * @param tdata		The transmit buffer used to send the message.
+ * @param bytes_sent	Number of bytes sent. On success, the value will be
+ *			positive number indicating the number of bytes sent.
+ *			On failure, the value will be a negative number of
+ *			the error code (i.e. bytes_sent = -status).
+ */
+typedef void (*pjsip_tp_send_callback)(void *token, pjsip_tx_data *tdata,
+				       pj_ssize_t bytes_sent);
+
+
+/**
+ * This is a low-level function to send a SIP message using the specified
+ * transport to the specified destination.
+ * 
+ * @param tr	    The SIP transport to be used.
+ * @param tdata	    Transmit data buffer containing SIP message.
+ * @param addr	    Destination address.
+ * @param addr_len  Length of destination address.
+ * @param token	    Arbitrary token to be returned back to callback.
+ * @param cb	    Optional callback to be called to notify caller about
+ *		    the completion status of the pending send operation.
+ *
+ * @return	    If the message has been sent successfully, this function
+ *		    will return PJ_SUCCESS and the callback will not be 
+ *		    called. If message cannot be sent immediately, this
+ *		    function will return PJ_EPENDING, and application will
+ *		    be notified later about the completion via the callback.
+ *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *		    indicates immediate failure, and in this case the 
+ *		    callback will not be called.
  */
 PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr, 
 					   pjsip_tx_data *tdata,
@@ -1013,6 +1055,37 @@ PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
 					   int addr_len,
 					   void *token,
 					   pjsip_tp_send_callback cb);
+
+
+/**
+ * This is a low-level function to send raw data using the specified transport
+ * to the specified destination.
+ *
+ * @param tr	    The SIP transport to be used.
+ * @param raw_data  The data to be sent.
+ * @param data_len  The length of the data.
+ * @param addr	    Destination address.
+ * @param addr_len  Length of destination address.
+ * @param token	    Arbitrary token to be returned back to callback.
+ * @param cb	    Optional callback to be called to notify caller about
+ *		    the completion status of the pending send operation.
+ *
+ * @return	    If the message has been sent successfully, this function
+ *		    will return PJ_SUCCESS and the callback will not be 
+ *		    called. If message cannot be sent immediately, this
+ *		    function will return PJ_EPENDING, and application will
+ *		    be notified later about the completion via the callback.
+ *		    Any statuses other than PJ_SUCCESS or PJ_EPENDING
+ *		    indicates immediate failure, and in this case the 
+ *		    callback will not be called.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_send_raw(pjsip_transport *tr,
+					      const void *raw_data,
+					      pj_size_t data_len,
+					      const pj_sockaddr_t *addr,
+					      int addr_len,
+					      void *token,
+					      pjsip_tp_send_callback cb);
 
 
 /**
