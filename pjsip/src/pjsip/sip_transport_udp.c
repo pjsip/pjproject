@@ -541,6 +541,10 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback ioqueue_cb;
 
+    /* Ignore if already registered */
+    if (tp->key != NULL)
+    	return PJ_SUCCESS;
+    
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(tp->base.endpt);
     pj_memset(&ioqueue_cb, 0, sizeof(ioqueue_cb));
@@ -831,6 +835,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
 	    }
 	}
 	tp->sock = PJ_INVALID_SOCKET;
+	
     }
 
     PJ_LOG(4,(tp->base.obj_name, "SIP UDP transport paused"));
