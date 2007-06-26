@@ -101,13 +101,27 @@
 typedef void* (*pjsip_hdr_clone_fptr)(pj_pool_t *, const void*);
 typedef int   (*pjsip_hdr_print_fptr)(void *hdr, char *buf, pj_size_t len);
 
-extern const pj_str_t pjsip_hdr_names[];
+typedef struct pjsip_hdr_name_info_t
+{
+    char	*name;
+    unsigned	 name_len;
+    char	*sname;
+} pjsip_hdr_name_info_t;
+
+extern const pjsip_hdr_name_info_t pjsip_hdr_names[];
 
 PJ_INLINE(void) init_hdr(void *hptr, pjsip_hdr_e htype, void *vptr)
 {
     pjsip_hdr *hdr = (pjsip_hdr*) hptr;
     hdr->type = htype;
-    hdr->name = hdr->sname = pjsip_hdr_names[htype];
+    hdr->name.ptr = pjsip_hdr_names[htype].name;
+    hdr->name.slen = pjsip_hdr_names[htype].name_len;
+    if (pjsip_hdr_names[htype].sname) {
+	hdr->sname.ptr = pjsip_hdr_names[htype].sname;
+	hdr->sname.slen = 1;
+    } else {
+	hdr->sname = hdr->name;
+    }
     hdr->vptr = (pjsip_hdr_vptr*) vptr;
     pj_list_init(hdr);
 }

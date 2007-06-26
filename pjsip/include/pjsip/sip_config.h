@@ -129,6 +129,35 @@
 
 
 /**
+ * Encode SIP headers in their short forms to reduce size. By default,
+ * SIP headers in outgoing messages will be encoded in their full names. 
+ * If this option is enabled, then SIP headers for outgoing messages
+ * will be encoded in their short forms, to reduce message size. 
+ * Note that this does not affect the ability of PJSIP to parse incoming
+ * SIP messages, as the parser always supports parsing both the long
+ * and short version of the headers.
+ *
+ * Note that there is also an undocumented variable defined in sip_msg.c
+ * to control whether compact form should be used for encoding SIP
+ * headers. The default value of this variable is PJSIP_ENCODE_SHORT_HNAME.
+ * To change PJSIP behavior during run-time, application can use the 
+ * following construct:
+ *
+ \verbatim
+   extern pj_bool_t pjsip_use_compact_form;
+ 
+   // enable compact form
+   pjsip_use_compact_form = PJ_TRUE;
+ \endverbatim
+ *
+ * Default is 0 (no)
+ */
+#ifndef PJSIP_ENCODE_SHORT_HNAME
+#   define PJSIP_ENCODE_SHORT_HNAME	0
+#endif
+
+
+/**
  * Allow SIP modules removal or insertions during operation?
  * If yes, then locking will be employed when endpoint need to
  * access module.

@@ -42,55 +42,57 @@ static const pj_str_t *method_names[] =
     &pjsip_options_method.name
 };
 
-const pj_str_t pjsip_hdr_names[] = 
+const pjsip_hdr_name_info_t pjsip_hdr_names[] = 
 {
-    { "Accept",		     6 },   // PJSIP_H_ACCEPT,
-    { "Accept-Encoding",    15 },   // PJSIP_H_ACCEPT_ENCODING,
-    { "Accept-Language",    15 },   // PJSIP_H_ACCEPT_LANGUAGE,
-    { "Alert-Info",	    10 },   // PJSIP_H_ALERT_INFO,
-    { "Allow",		     5 },   // PJSIP_H_ALLOW,
-    { "Authentication-Info",19 },   // PJSIP_H_AUTHENTICATION_INFO,
-    { "Authorization",	    13 },   // PJSIP_H_AUTHORIZATION,
-    { "Call-ID",	     7 },   // PJSIP_H_CALL_ID,
-    { "Call-Info",	     9 },   // PJSIP_H_CALL_INFO,
-    { "Contact",	     7 },   // PJSIP_H_CONTACT,
-    { "Content-Disposition",19 },   // PJSIP_H_CONTENT_DISPOSITION,
-    { "Content-Encoding",   16 },   // PJSIP_H_CONTENT_ENCODING,
-    { "Content-Language",   16 },   // PJSIP_H_CONTENT_LANGUAGE,
-    { "Content-Length",	    14 },   // PJSIP_H_CONTENT_LENGTH,
-    { "Content-Type",	    12 },   // PJSIP_H_CONTENT_TYPE,
-    { "CSeq",		     4 },   // PJSIP_H_CSEQ,
-    { "Date",		     4 },   // PJSIP_H_DATE,
-    { "Error-Info",	    10 },   // PJSIP_H_ERROR_INFO,
-    { "Expires",	     7 },   // PJSIP_H_EXPIRES,
-    { "From",		     4 },   // PJSIP_H_FROM,
-    { "In-Reply-To",	    11 },   // PJSIP_H_IN_REPLY_TO,
-    { "Max-Forwards",	    12 },   // PJSIP_H_MAX_FORWARDS,
-    { "MIME-Version",	    12 },   // PJSIP_H_MIME_VERSION,
-    { "Min-Expires",	    11 },   // PJSIP_H_MIN_EXPIRES,
-    { "Organization",	    12 },   // PJSIP_H_ORGANIZATION,
-    { "Priority",	     8 },   // PJSIP_H_PRIORITY,
-    { "Proxy-Authenticate", 18 },   // PJSIP_H_PROXY_AUTHENTICATE,
-    { "Proxy-Authorization",19 },   // PJSIP_H_PROXY_AUTHORIZATION,
-    { "Proxy-Require",	    13 },   // PJSIP_H_PROXY_REQUIRE,
-    { "Record-Route",	    12 },   // PJSIP_H_RECORD_ROUTE,
-    { "Reply-To",	     8 },   // PJSIP_H_REPLY_TO,
-    { "Require",	     7 },   // PJSIP_H_REQUIRE,
-    { "Retry-After",	    11 },   // PJSIP_H_RETRY_AFTER,
-    { "Route",		     5 },   // PJSIP_H_ROUTE,
-    { "Server",		     6 },   // PJSIP_H_SERVER,
-    { "Subject",	     7 },   // PJSIP_H_SUBJECT,
-    { "Supported",	     9 },   // PJSIP_H_SUPPORTED,
-    { "Timestamp",	     9 },   // PJSIP_H_TIMESTAMP,
-    { "To",		     2 },   // PJSIP_H_TO,
-    { "Unsupported",	    11 },   // PJSIP_H_UNSUPPORTED,
-    { "User-Agent",	    10 },   // PJSIP_H_USER_AGENT,
-    { "Via",		     3 },   // PJSIP_H_VIA,
-    { "Warning",	     7 },   // PJSIP_H_WARNING,
-    { "WWW-Authenticate",   16 },   // PJSIP_H_WWW_AUTHENTICATE,
+    { "Accept",		    6,  NULL },   // PJSIP_H_ACCEPT,
+    { "Accept-Encoding",    15, NULL },   // PJSIP_H_ACCEPT_ENCODING,
+    { "Accept-Language",    15, NULL },   // PJSIP_H_ACCEPT_LANGUAGE,
+    { "Alert-Info",	    10, NULL },   // PJSIP_H_ALERT_INFO,
+    { "Allow",		    5,  NULL },   // PJSIP_H_ALLOW,
+    { "Authentication-Info",19, NULL },   // PJSIP_H_AUTHENTICATION_INFO,
+    { "Authorization",	    13, NULL },   // PJSIP_H_AUTHORIZATION,
+    { "Call-ID",	    7,  "i" },    // PJSIP_H_CALL_ID,
+    { "Call-Info",	    9,  NULL },   // PJSIP_H_CALL_INFO,
+    { "Contact",	    7,  "m" },    // PJSIP_H_CONTACT,
+    { "Content-Disposition",19, NULL },   // PJSIP_H_CONTENT_DISPOSITION,
+    { "Content-Encoding",   16, "e" },    // PJSIP_H_CONTENT_ENCODING,
+    { "Content-Language",   16, NULL },   // PJSIP_H_CONTENT_LANGUAGE,
+    { "Content-Length",	    14, "l" },    // PJSIP_H_CONTENT_LENGTH,
+    { "Content-Type",	    12, "c" },    // PJSIP_H_CONTENT_TYPE,
+    { "CSeq",		     4, NULL },   // PJSIP_H_CSEQ,
+    { "Date",		     4, NULL },   // PJSIP_H_DATE,
+    { "Error-Info",	    10, NULL },   // PJSIP_H_ERROR_INFO,
+    { "Expires",	     7, NULL },   // PJSIP_H_EXPIRES,
+    { "From",		     4, "f" },    // PJSIP_H_FROM,
+    { "In-Reply-To",	    11, NULL },   // PJSIP_H_IN_REPLY_TO,
+    { "Max-Forwards",	    12, NULL },   // PJSIP_H_MAX_FORWARDS,
+    { "MIME-Version",	    12, NULL },   // PJSIP_H_MIME_VERSION,
+    { "Min-Expires",	    11, NULL },   // PJSIP_H_MIN_EXPIRES,
+    { "Organization",	    12, NULL },   // PJSIP_H_ORGANIZATION,
+    { "Priority",	     8, NULL },   // PJSIP_H_PRIORITY,
+    { "Proxy-Authenticate", 18, NULL },   // PJSIP_H_PROXY_AUTHENTICATE,
+    { "Proxy-Authorization",19, NULL },   // PJSIP_H_PROXY_AUTHORIZATION,
+    { "Proxy-Require",	    13, NULL },   // PJSIP_H_PROXY_REQUIRE,
+    { "Record-Route",	    12, NULL },   // PJSIP_H_RECORD_ROUTE,
+    { "Reply-To",	     8, NULL },   // PJSIP_H_REPLY_TO,
+    { "Require",	     7, NULL },   // PJSIP_H_REQUIRE,
+    { "Retry-After",	    11, NULL },   // PJSIP_H_RETRY_AFTER,
+    { "Route",		     5, NULL },   // PJSIP_H_ROUTE,
+    { "Server",		     6, NULL },   // PJSIP_H_SERVER,
+    { "Subject",	     7, "s" },    // PJSIP_H_SUBJECT,
+    { "Supported",	     9, "k" },    // PJSIP_H_SUPPORTED,
+    { "Timestamp",	     9, NULL },   // PJSIP_H_TIMESTAMP,
+    { "To",		     2, "t" },    // PJSIP_H_TO,
+    { "Unsupported",	    11, NULL },   // PJSIP_H_UNSUPPORTED,
+    { "User-Agent",	    10, NULL },   // PJSIP_H_USER_AGENT,
+    { "Via",		     3, "v" },    // PJSIP_H_VIA,
+    { "Warning",	     7, NULL },   // PJSIP_H_WARNING,
+    { "WWW-Authenticate",   16, NULL },   // PJSIP_H_WWW_AUTHENTICATE,
 
-    { "_Unknown-Header",    15 },   // PJSIP_H_OTHER,
+    { "_Unknown-Header",    15, NULL },   // PJSIP_H_OTHER,
 };
+
+pj_bool_t pjsip_use_compact_form = PJSIP_ENCODE_SHORT_HNAME;
 
 static pj_str_t status_phrase[710];
 static int print_media_type(char *buf, const pjsip_media_type *media);
@@ -305,13 +307,8 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
 	hdr = msg->hdr.next;
     }
     for (; hdr!=end; hdr = hdr->next) {
-	if (hdr->type < PJSIP_H_OTHER) {
-	    if (pj_stricmp(&pjsip_hdr_names[hdr->type], name) == 0)
-		return (void*)hdr;
-	} else {
-	    if (pj_stricmp(&hdr->name, name) == 0)
-		return (void*)hdr;
-	}
+	if (pj_stricmp(&hdr->name, name) == 0)
+	    return (void*)hdr;
     }
     return NULL;
 }
@@ -333,6 +330,11 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
     int len;
     pjsip_hdr *hdr;
     pj_str_t clen_hdr =  { "Content-Length: ", 16};
+
+    if (pjsip_use_compact_form) {
+	clen_hdr.ptr = "l: ";
+	clen_hdr.slen = 3;
+    }
 
     /* Get a wild guess on how many bytes are typically needed.
      * We'll check this later in detail, but this serves as a quick check.
@@ -409,6 +411,11 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	if (msg->body->content_type.type.slen) {
 	    pj_str_t ctype_hdr = { "Content-Type: ", 14};
 	    const pjsip_media_type *media = &msg->body->content_type;
+
+	    if (pjsip_use_compact_form) {
+		ctype_hdr.ptr = "c: ";
+		ctype_hdr.slen = 3;
+	    }
 
 	    /* Add Content-Type header. */
 	    if ( (end-p) < 24 + media->type.slen + media->subtype.slen + 
@@ -596,12 +603,13 @@ static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr,
 					   char *buf, pj_size_t size)
 {
     char *p = buf;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
     
-    if ((pj_ssize_t)size < hdr->name.slen + hdr->hvalue.slen + 5)
+    if ((pj_ssize_t)size < hname->slen + hdr->hvalue.slen + 5)
 	return -1;
 
-    pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
-    p += hdr->name.slen;
+    pj_memcpy(p, hname->ptr, hname->slen);
+    p += hname->slen;
     *p++ = ':';
     *p++ = ' ';
     pj_memcpy(p, hdr->hvalue.ptr, hdr->hvalue.slen);
@@ -619,7 +627,7 @@ static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool
     hdr = pjsip_generic_string_hdr_create(pool, &rhs->name, &rhs->hvalue);
 
     hdr->type = rhs->type;
-    hdr->sname = hdr->name;
+    pj_strdup(pool, &hdr->sname, &rhs->sname);
     return hdr;
 }
 
@@ -678,12 +686,13 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
 					char *buf, pj_size_t size)
 {
     char *p = buf;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    if ((pj_ssize_t)size < hdr->name.slen + 15)
+    if ((pj_ssize_t)size < hname->slen + 15)
 	return -1;
 
-    pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
-    p += hdr->name.slen;
+    pj_memcpy(p, hname->ptr, hname->slen);
+    p += hname->slen;
     *p++ = ':';
     *p++ = ' ';
 
@@ -753,8 +762,9 @@ static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
 					  char *buf, pj_size_t size)
 {
     char *p = buf, *endbuf = buf+size;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    copy_advance(p, hdr->name);
+    copy_advance(p, (*hname));
     *p++ = ':';
     *p++ = ' ';
 
@@ -901,12 +911,13 @@ static int pjsip_clen_hdr_print( pjsip_clen_hdr *hdr,
 {
     char *p = buf;
     int len;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    if ((pj_ssize_t)size < hdr->name.slen + 14)
+    if ((pj_ssize_t)size < hname->slen + 14)
 	return -1;
 
-    pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
-    p += hdr->name.slen;
+    pj_memcpy(p, hname->ptr, hname->slen);
+    p += hname->slen;
     *p++ = ':';
     *p++ = ' ';
 
@@ -965,6 +976,7 @@ static int pjsip_cseq_hdr_print( pjsip_cseq_hdr *hdr, char *buf, pj_size_t size)
 {
     char *p = buf;
     int len;
+    /* CSeq doesn't have compact form */
 
     if ((pj_ssize_t)size < hdr->name.slen + hdr->method.name.slen + 15)
 	return -1;
@@ -1042,12 +1054,14 @@ PJ_DEF(pjsip_contact_hdr*) pjsip_contact_hdr_create( pj_pool_t *pool )
 static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf, 
 				    pj_size_t size)
 {
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
+
     if (hdr->star) {
 	char *p = buf;
-	if ((pj_ssize_t)size < hdr->name.slen + 6)
+	if ((pj_ssize_t)size < hname->slen + 6)
 	    return -1;
-	pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
-	p += hdr->name.slen;
+	pj_memcpy(p, hname->ptr, hname->slen);
+	p += hname->slen;
 	*p++ = ':';
 	*p++ = ' ';
 	*p++ = '*';
@@ -1058,7 +1072,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	char *startbuf = buf;
 	char *endbuf = buf + size;
 
-	copy_advance(buf, hdr->name);
+	copy_advance(buf, (*hname));
 	*buf++ = ':';
 	*buf++ = ' ';
 
@@ -1190,16 +1204,17 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
 {
     char *p = buf;
     int len;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    if ((pj_ssize_t)size < hdr->name.slen + 
+    if ((pj_ssize_t)size < hname->slen + 
 			   hdr->media.type.slen + hdr->media.subtype.slen + 
 			   hdr->media.param.slen + 8)
     {
 	return -1;
     }
 
-    pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
-    p += hdr->name.slen;
+    pj_memcpy(p, hname->ptr, hname->slen);
+    p += hname->slen;
     *p++ = ':';
     *p++ = ' ';
 
@@ -1307,14 +1322,20 @@ PJ_DEF(pjsip_to_hdr*) pjsip_to_hdr_create( pj_pool_t *pool )
 PJ_DEF(pjsip_from_hdr*) pjsip_fromto_hdr_set_from( pjsip_fromto_hdr *hdr )
 {
     hdr->type = PJSIP_H_FROM;
-    hdr->name = hdr->sname = pjsip_hdr_names[PJSIP_H_FROM];
+    hdr->name.ptr = pjsip_hdr_names[PJSIP_H_FROM].name;
+    hdr->name.slen = pjsip_hdr_names[PJSIP_H_FROM].name_len;
+    hdr->sname.ptr = pjsip_hdr_names[PJSIP_H_FROM].sname;
+    hdr->sname.slen = 1;
     return hdr;
 }
 
 PJ_DEF(pjsip_to_hdr*) pjsip_fromto_hdr_set_to( pjsip_fromto_hdr *hdr )
 {
     hdr->type = PJSIP_H_TO;
-    hdr->name = hdr->sname = pjsip_hdr_names[PJSIP_H_TO];
+    hdr->name.ptr = pjsip_hdr_names[PJSIP_H_TO].name;
+    hdr->name.slen = pjsip_hdr_names[PJSIP_H_TO].name_len;
+    hdr->sname.ptr = pjsip_hdr_names[PJSIP_H_TO].sname;
+    hdr->sname.slen = 1;
     return hdr;
 }
 
@@ -1324,8 +1345,9 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    copy_advance(buf, hdr->name);
+    copy_advance(buf, (*hname));
     *buf++ = ':';
     *buf++ = ' ';
 
@@ -1481,14 +1503,18 @@ PJ_DEF(pjsip_route_hdr*) pjsip_route_hdr_create( pj_pool_t *pool )
 PJ_DEF(pjsip_rr_hdr*) pjsip_routing_hdr_set_rr( pjsip_routing_hdr *hdr )
 {
     hdr->type = PJSIP_H_RECORD_ROUTE;
-    hdr->name = hdr->sname = pjsip_hdr_names[PJSIP_H_RECORD_ROUTE];
+    hdr->name.ptr = pjsip_hdr_names[PJSIP_H_RECORD_ROUTE].name;
+    hdr->name.slen = pjsip_hdr_names[PJSIP_H_RECORD_ROUTE].name_len;
+    hdr->sname = hdr->name;
     return hdr;
 }
 
 PJ_DEF(pjsip_route_hdr*) pjsip_routing_hdr_set_route( pjsip_routing_hdr *hdr )
 {
     hdr->type = PJSIP_H_ROUTE;
-    hdr->name = hdr->sname = pjsip_hdr_names[PJSIP_H_ROUTE];
+    hdr->name.ptr = pjsip_hdr_names[PJSIP_H_ROUTE].name;
+    hdr->name.slen = pjsip_hdr_names[PJSIP_H_ROUTE].name_len;
+    hdr->sname = hdr->name;
     return hdr;
 }
 
@@ -1498,6 +1524,7 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    /* Route and Record-Route don't compact forms */
 
     copy_advance(buf, hdr->name);
     *buf++ = ':';
@@ -1676,15 +1703,16 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     char *startbuf = buf;
     char *endbuf = buf + size;
     pj_str_t sip_ver = { "SIP/2.0/", 8 };
+    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
-    if ((pj_ssize_t)size < hdr->name.slen + sip_ver.slen + 
+    if ((pj_ssize_t)size < hname->slen + sip_ver.slen + 
 			   hdr->transport.slen + hdr->sent_by.host.slen + 12)
     {
 	return -1;
     }
 
     /* pjsip_hdr_names */
-    copy_advance(buf, hdr->name);
+    copy_advance(buf, (*hname));
     *buf++ = ':';
     *buf++ = ' ';
 
