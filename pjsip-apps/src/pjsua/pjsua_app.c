@@ -96,8 +96,6 @@ static void stereo_demo();
 #endif
 pj_status_t app_destroy(void);
 
-extern pj_bool_t pjsip_use_compact_form;
-
 /*****************************************************************************
  * Configuration manipulation
  */
@@ -2885,8 +2883,6 @@ pj_status_t app_init(int argc, char *argv[])
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_status_t status;
-
-    //pjsip_use_compact_form = PJ_TRUE;
 
     /* Create pjsua */
     status = pjsua_create();

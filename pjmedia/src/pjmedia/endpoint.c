@@ -45,6 +45,10 @@ static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
  */
 static int error_subsys_registered;
 
+/* Config to control rtpmap inclusion for static payload types */
+pj_bool_t pjmedia_add_rtpmap_for_static_pt = 
+	    PJMEDIA_ADD_RTPMAP_FOR_STATIC_PT;
+
 
 /**
  * Defined in pjmedia/errno.c
@@ -394,8 +398,10 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	    rtpmap.param.slen = 0;
 	}
 
-	pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
-	m->attr[m->attr_count++] = attr;
+	if (codec_info->pt >= 96 || pjmedia_add_rtpmap_for_static_pt) {
+	    pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
+	    m->attr[m->attr_count++] = attr;
+	}
 
 	/* Add fmtp mode where applicable */
 	if (codec_param.setting.dec_fmtp_mode != 0) {

@@ -351,6 +351,30 @@
 
 
 /**
+ * This macro controls whether pjmedia should include SDP rtpmap 
+ * attribute for static payload types. SDP rtpmap for static
+ * payload types are optional, although they are normally included
+ * for interoperability reason.
+ *
+ * Note that there is also a run-time variable to turn this setting
+ * on or off, defined in endpoint.c. To access this variable, use
+ * the following construct
+ *
+ \verbatim
+    extern pj_bool_t pjmedia_add_rtpmap_for_static_pt;
+
+    // Do not include rtpmap for static payload types (<96)
+    pjmedia_add_rtpmap_for_static_pt = PJ_FALSE;
+ \endverbatim
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_ADD_RTPMAP_FOR_STATIC_PT
+#   define PJMEDIA_ADD_RTPMAP_FOR_STATIC_PT	1
+#endif
+
+
+/**
  * This macro declares the payload type for telephone-event
  * that is advertised by PJMEDIA for outgoing SDP. If this macro
  * is set to zero, telephone events would not be advertised nor
