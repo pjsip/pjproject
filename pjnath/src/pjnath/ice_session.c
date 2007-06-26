@@ -1195,6 +1195,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
     pj_str_t username;
     timer_data *td;
     unsigned i, j;
+    unsigned highest_comp = 0;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rcand_cnt && rcand,
@@ -1231,6 +1232,9 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
 	if (rcand[i].comp_id==0 || rcand[i].comp_id > ice->comp_cnt) {
 	    continue;
 	}
+
+	if (rcand[i].comp_id > highest_comp)
+	    highest_comp = rcand[i].comp_id;
 
 	pj_memcpy(cn, &rcand[i], sizeof(pj_ice_sess_cand));
 	pj_strdup(ice->pool, &cn->foundation, &rcand[i].foundation);
@@ -1280,6 +1284,11 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
     if (status != PJ_SUCCESS) {
 	pj_mutex_unlock(ice->mutex);
 	return status;
+    }
+
+    /* Disable our components which don't have matching component */
+    if (ice->comp_cnt==2 && highest_comp==1) {
+	ice->comp_cnt = 1;
     }
 
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
@@ -2254,8 +2263,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
 
-    PJ_ASSERT_RETURN(ice && comp_id && comp_id <= ice->comp_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
     
+    /* It is possible that comp_cnt is less than comp_id, when remote
+     * doesn't support all the components that we have.
+     */
+    if (comp_id > ice->comp_cnt) {
+	return PJNATH_EICEINCOMPID;
+    }
+
     pj_mutex_lock(ice->mutex);
 
     comp = find_comp(ice, comp_id);
