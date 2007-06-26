@@ -715,6 +715,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_RTP_PORT:
 	    cfg->rtp_cfg.port = my_atoi(pj_optarg);
+	    if (cfg->rtp_cfg.port == 0) {
+		enum { START_PORT=4000 };
+		unsigned range;
+
+		range = (65535-START_PORT-PJSUA_MAX_CALLS*2);
+		cfg->rtp_cfg.port = START_PORT + 
+				    ((pj_rand() % range) & 0xFFFE);
+	    }
+
 	    if (cfg->rtp_cfg.port < 1 || cfg->rtp_cfg.port > 65535) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: rtp-port argument value "
