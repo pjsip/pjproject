@@ -113,6 +113,8 @@ struct tsx_inv_data
     pj_bool_t		 sdp_done;
 };
 
+/* Config */
+extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
 
 /*
  * Module load()
@@ -1153,10 +1155,12 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     }
 
     /* Add Allow header. */
-    hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_ALLOW, NULL);
-    if (hdr) {
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
-			  pjsip_hdr_shallow_clone(tdata->pool, hdr));
+    if (pjsip_include_allow_hdr_in_dlg) {
+	hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_ALLOW, NULL);
+	if (hdr) {
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+			      pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	}
     }
 
     /* Add Supported header */

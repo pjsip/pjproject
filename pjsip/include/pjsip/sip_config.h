@@ -158,6 +158,32 @@
 
 
 /**
+ * Send Allow header in dialog establishing requests?
+ * RFC 3261 Allow header SHOULD be included in dialog establishing
+ * requests to inform remote agent about which SIP requests are
+ * allowed within dialog.
+ *
+ * Note that there is also an undocumented variable defined in sip_dialog.c
+ * to control whether Allow header should be included. The default value 
+ * of this variable is PJSIP_INCLUDE_ALLOW_HDR_IN_DLG.
+ * To change PJSIP behavior during run-time, application can use the 
+ * following construct:
+ *
+ \verbatim
+   extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
+ 
+   // do not transmit Allow header
+   pjsip_include_allow_hdr_in_dlg = PJ_FALSE;
+ \endverbatim
+ *
+ * Default is 1 (Yes)
+ */
+#ifndef PJSIP_INCLUDE_ALLOW_HDR_IN_DLG
+#   define PJSIP_INCLUDE_ALLOW_HDR_IN_DLG	1
+#endif
+
+
+/**
  * Allow SIP modules removal or insertions during operation?
  * If yes, then locking will be employed when endpoint need to
  * access module.

@@ -39,6 +39,10 @@
 
 long pjsip_dlg_lock_tls_id;
 
+/* Config */
+pj_bool_t pjsip_include_allow_hdr_in_dlg = PJSIP_INCLUDE_ALLOW_HDR_IN_DLG;
+
+
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 {
     const pjsip_method subscribe = { PJSIP_OTHER_METHOD, {"SUBSCRIBE", 9}};
@@ -1196,7 +1200,8 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
 	}
 
 	/* Add Allow header in 2xx and 405 response. */
-	if ((st_class==2 || st_code==405) &&
+	if (((st_class==2 && pjsip_include_allow_hdr_in_dlg)
+	     || st_code==405) &&
 	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL)==NULL) 
 	{
 	    c_hdr = pjsip_endpt_get_capability(dlg->endpt,
