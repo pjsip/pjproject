@@ -204,6 +204,19 @@
 
 
 /**
+ * Specify whether RTCP should be advertised in SDP. This setting would
+ * affect whether RTCP candidate will be added in SDP when ICE is used.
+ * Application might want to disable RTCP advertisement in SDP to
+ * reduce the message size.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_ADVERTISE_RTCP
+#   define PJMEDIA_ADVERTISE_RTCP		1
+#endif
+
+
+/**
  * Interval to send RTCP packets, in msec
  */
 #ifndef PJMEDIA_RTCP_INTERVAL
@@ -343,10 +356,10 @@
 
 /**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
- * Default is yes.
+ * Default is equal to PJMEDIA_ADVERTISE_RTCP setting.
  */
 #ifndef PJMEDIA_HAS_RTCP_IN_SDP
-#   define PJMEDIA_HAS_RTCP_IN_SDP		1
+#   define PJMEDIA_HAS_RTCP_IN_SDP		(PJMEDIA_ADVERTISE_RTCP)
 #endif
 
 

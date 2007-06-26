@@ -557,8 +557,13 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pj_ice_strans_comp comp;
 	int next_port;
+#if PJMEDIA_ADVERTISE_RTCP
+	enum { COMP_CNT=2 };
+#else
+	enum { COMP_CNT=1 };
+#endif
 
-	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, 2,
+	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, COMP_CNT,
 				    &pjsua_var.stun_cfg, 
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
