@@ -1210,6 +1210,23 @@ on_return:
 }
 
 
+/* Callback to be called to terminate transaction. */
+static void terminate_timer_cb(pj_timer_heap_t *timer_heap,
+			       struct pj_timer_entry *entry)
+{
+    pj_str_t *key;
+    pjsip_transaction *tsx;
+
+    PJ_UNUSED_ARG(timer_heap);
+
+    key = (pj_str_t*)entry->user_data;
+    tsx = pjsip_tsx_layer_find_tsx(key, PJ_FALSE);
+    /* Chance of race condition here */
+    if (tsx) {
+	pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_UPDATED);
+    }
+}
+
 
 /*
  * Attach subscription session to newly created transaction, if appropriate.
@@ -1375,6 +1392,10 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	if (sub->pending_sub && 
 	    sub->pending_sub->state < PJSIP_TSX_STATE_COMPLETED) 
 	{
+	    pj_timer_entry *timer;
+	    pj_str_t *key;
+	    pj_time_val timeout = {0, 0};
+
 	    PJ_LOG(4,(sub->obj_name, 
 		      "Cancelling pending subscription request"));
 
@@ -1382,7 +1403,22 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	     * When transaction handler (below) see this status code, it
 	     * will ignore the transaction.
 	     */
-	    pjsip_tsx_terminate(sub->pending_sub, PJSIP_SC_REQUEST_UPDATED);
+	    /* This unfortunately may cause deadlock, because at the moment
+	     * we are holding dialog's mutex. If a response to this
+	     * transaction is in progress in another thread, that thread
+	     * will deadlock when trying to acquire dialog mutex, because
+	     * it is holding the transaction mutex.
+	     *
+	     * So the solution is to register timer to kill this transaction.
+	     */
+	    //pjsip_tsx_terminate(sub->pending_sub, PJSIP_SC_REQUEST_UPDATED);
+	    timer = PJ_POOL_ZALLOC_T(dlg->pool, pj_timer_entry);
+	    key = PJ_POOL_ALLOC_T(dlg->pool, pj_str_t);
+	    pj_strdup(dlg->pool, key, &sub->pending_sub->transaction_key);
+	    timer->cb = &terminate_timer_cb;
+	    timer->user_data = key;
+
+	    pjsip_endpt_schedule_timer(dlg->endpt, timer, &timeout);
 	}
 
 	sub->pending_sub = tsx;
@@ -1499,8 +1535,15 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	}
 
 	/* Clear pending subscription */
-	if (tsx == sub->pending_sub)
+	if (tsx == sub->pending_sub) {
 	    sub->pending_sub = NULL;
+	} else if (sub->pending_sub != NULL) {
+	    /* This SUBSCRIBE transaction has been "renewed" with another
+	     * SUBSCRIBE, so we can just ignore this. For example, user
+	     * sent SUBSCRIBE followed immediately with UN-SUBSCRIBE.
+	     */
+	    return;
+	}
 
 	/* Handle authentication. */
 	if (tsx->status_code==401 || tsx->status_code==407) {
