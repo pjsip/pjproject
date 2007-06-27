@@ -456,6 +456,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsip_tx_data *tdata;
     pjsip_pres_status pres_status;
     pjsip_dialog *dlg;
+    pjsip_expires_hdr *expires_hdr;
+    pjsip_evsub_state ev_state;
     pj_status_t status;
 
     if (pjsip_method_cmp(req_method, &pjsip_subscribe_method) != 0)
@@ -558,9 +560,19 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     pjsip_pres_set_status(sub, &pres_status);
 
+    /* Check expires value. If it's zero, send our presense state but
+     * set subscription state to TERMINATED.
+     */
+    expires_hdr=(pjsip_expires_hdr*)
+    		pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
+
+    if (expires_hdr && expires_hdr->ivalue == 0)
+	ev_state = PJSIP_EVSUB_STATE_TERMINATED;
+    else
+	ev_state = PJSIP_EVSUB_STATE_ACTIVE;
+
     /* Create and send the first NOTIFY to active subscription: */
-    status = pjsip_pres_notify( sub, PJSIP_EVSUB_STATE_ACTIVE, NULL,
-			        NULL, &tdata);
+    status = pjsip_pres_notify( sub, ev_state, NULL, NULL, &tdata);
     if (status == PJ_SUCCESS) {
 	pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_pres_send_request( sub, tdata);

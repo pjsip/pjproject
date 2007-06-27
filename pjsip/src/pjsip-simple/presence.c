@@ -224,8 +224,6 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
 {
     pjsip_accept_hdr *accept;
     pjsip_event_hdr *event;
-    pjsip_expires_hdr *expires_hdr;
-    unsigned expires;
     content_type_e content_type = CONTENT_TYPE_NONE;
     pjsip_evsub *sub;
     pjsip_pres *pres;
@@ -281,22 +279,6 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
 	content_type = CONTENT_TYPE_PIDF;
     }
 
-    /* Check that expires is not too short. */
-    expires_hdr=(pjsip_expires_hdr*)
-    		pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
-    if (expires_hdr) {
-	if (expires_hdr->ivalue < 5) {
-	    return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_INTERVAL_TOO_BRIEF);
-	}
-
-	expires = expires_hdr->ivalue;
-	if (expires > PRES_DEFAULT_EXPIRES)
-	    expires = PRES_DEFAULT_EXPIRES;
-
-    } else {
-	expires = PRES_DEFAULT_EXPIRES;
-    }
-    
     /* Lock dialog */
     pjsip_dlg_inc_lock(dlg);
 
