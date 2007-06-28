@@ -341,7 +341,7 @@ PJ_IDECL(int) pj_strncmp2( const pj_str_t *str1, const char *str2,
 			   pj_size_t len);
 
 /**
- * Perform lowercase comparison to the strings.
+ * Perform case-insensitive comparison to the strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
@@ -398,7 +398,7 @@ PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
 #endif
 
 /**
- * Perform lowercase comparison to the strings.
+ * Perform case-insensitive comparison to the strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
@@ -411,7 +411,7 @@ PJ_IDECL(int) pj_stricmp_alnum(const pj_str_t *str1, const pj_str_t *str2);
 PJ_IDECL(int) pj_stricmp2( const pj_str_t *str1, const char *str2);
 
 /**
- * Perform lowercase comparison to the strings.
+ * Perform case-insensitive comparison to the strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.
@@ -426,7 +426,7 @@ PJ_IDECL(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2,
 			   pj_size_t len);
 
 /**
- * Perform lowercase comparison to the strings.
+ * Perform case-insensitive comparison to the strings.
  *
  * @param str1	    The string to compare.
  * @param str2	    The string to compare.

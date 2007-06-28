@@ -71,11 +71,11 @@
 /* See if both integers have the same sign */
 PJ_INLINE(int) cmp(const char *expr, int i, int j)
 {
-    i = !((i>0 && j>0) || (i<0 && j<0) || (i==0 && j==0));
-    if (i) {
+    int r = !((i>0 && j>0) || (i<0 && j<0) || (i==0 && j==0));
+    if (r) {
 	PJ_LOG(3,(THIS_FILE,"   error: %s: expecting %d, got %d", expr, j, i));
     }
-    return i;
+    return r;
 }
 #else
 /* For strict comparison, must be equal */
@@ -94,7 +94,7 @@ static int stricmp_test(void)
  * In addition, it also tests pj_stricmp2(), pj_strnicmp(), and 
  * pj_strnicmp2().
  */
-#define STRTEST(res,S1,S2,code)	\
+#define STRTEST(res,res2,S1,S2,code)	\
 	    do { \
 		s1.ptr=S1; s1.slen=(S1)?len:0; \
 		s2.ptr=S2; s2.slen=(S2)?len:0; \
@@ -108,7 +108,7 @@ static int stricmp_test(void)
 		pj_get_timestamp(&t2); \
 		pj_sub_timestamp(&t2, &t1); \
 		pj_add_timestamp(&e2, &t2); \
-		if (C(pj_stricmp2(&s1,S2),res)) return code*10; \
+		if (C(pj_stricmp2(&s1,S2),res2)) return code*10; \
 		if (C(pj_strnicmp(&s1,&s2,len),res)) return code*100; \
 		if (C(pj_strnicmp2(&s1,S2,len),res)) return code*1000; \
 	    } while (0)
@@ -127,107 +127,107 @@ static int stricmp_test(void)
 
     /* Compare empty strings. */
     len=0;
-    STRTEST( 0, "","",-500);
-    STRTEST( 0, SNULL,"",-502);
-    STRTEST( 0, "",SNULL,-504);
-    STRTEST( 0, SNULL,SNULL,-506);
-    STRTEST( 0, "hello","world",-508);
+    STRTEST( 0, 0, "","",-500);
+    STRTEST( 0, 0, SNULL,"",-502);
+    STRTEST( 0, 0, "",SNULL,-504);
+    STRTEST( 0, 0, SNULL,SNULL,-506);
+    STRTEST( 0, -1, "hello","world",-508);
 
     /* equal, length=1 
      * use buffer to simulate non-aligned string.
      */
     buf = "a""A";
     len=1;
-    STRTEST( 0, "a",buf+0,-510);
-    STRTEST( 0, "a",buf+1,-512);
-    STRTEST( -1, "O", "P", -514);
-    STRTEST(-1, SNULL, "a", -516);
-    STRTEST(1, "a", SNULL, -518);
+    STRTEST( 0,  -1, "a",buf+0,-510);
+    STRTEST( 0,  0, "a",buf+1,-512);
+    STRTEST(-1, -1, "O", "P", -514);
+    STRTEST(-1, -1, SNULL, "a", -516);
+    STRTEST( 1,  1, "a", SNULL, -518);
 
     /* equal, length=2 
      * use buffer to simulate non-aligned string.
      */
     buf = "aa""Aa""aA""AA";
     len=2;
-    STRTEST( 0, "aa",buf+0,-520);
-    STRTEST( 0, "aa",buf+2,-522);
-    STRTEST( 0, "aa",buf+4,-524);
-    STRTEST( 0, "aa",buf+6,-524);
+    STRTEST( 0, -1, "aa",buf+0,-520);
+    STRTEST( 0, -1, "aa",buf+2,-522);
+    STRTEST( 0, -1, "aa",buf+4,-524);
+    STRTEST( 0, 0, "aa",buf+6,-524);
 
     /* equal, length=3 
      * use buffer to simulate non-aligned string.
      */
     buf = "aaa""Aaa""aAa""aaA""AAa""aAA""AaA""AAA";
     len=3;
-    STRTEST( 0, "aaa",buf+0,-530);
-    STRTEST( 0, "aaa",buf+3,-532);
-    STRTEST( 0, "aaa",buf+6,-534);
-    STRTEST( 0, "aaa",buf+9,-536);
-    STRTEST( 0, "aaa",buf+12,-538);
-    STRTEST( 0, "aaa",buf+15,-540);
-    STRTEST( 0, "aaa",buf+18,-542);
-    STRTEST( 0, "aaa",buf+21,-534);
+    STRTEST( 0, -1, "aaa",buf+0,-530);
+    STRTEST( 0, -1, "aaa",buf+3,-532);
+    STRTEST( 0, -1, "aaa",buf+6,-534);
+    STRTEST( 0, -1, "aaa",buf+9,-536);
+    STRTEST( 0, -1, "aaa",buf+12,-538);
+    STRTEST( 0, -1, "aaa",buf+15,-540);
+    STRTEST( 0, -1, "aaa",buf+18,-542);
+    STRTEST( 0, 0, "aaa",buf+21,-534);
 
     /* equal, length=4 */
     len=4;
-    STRTEST( 0, "aaaa","aaaa",-540);
-    STRTEST( 0, "aaaa","Aaaa",-542);
-    STRTEST( 0, "aaaa","aAaa",-544);
-    STRTEST( 0, "aaaa","aaAa",-546);
-    STRTEST( 0, "aaaa","aaaA",-548);
-    STRTEST( 0, "aaaa","AAaa",-550);
-    STRTEST( 0, "aaaa","aAAa",-552);
-    STRTEST( 0, "aaaa","aaAA",-554);
-    STRTEST( 0, "aaaa","AaAa",-556);
-    STRTEST( 0, "aaaa","aAaA",-558);
-    STRTEST( 0, "aaaa","AaaA",-560);
-    STRTEST( 0, "aaaa","AAAa",-562);
-    STRTEST( 0, "aaaa","aAAA",-564);
-    STRTEST( 0, "aaaa","AAaA",-566);
-    STRTEST( 0, "aaaa","AaAA",-568);
-    STRTEST( 0, "aaaa","AAAA",-570);
+    STRTEST( 0, 0, "aaaa","aaaa",-540);
+    STRTEST( 0, 0, "aaaa","Aaaa",-542);
+    STRTEST( 0, 0, "aaaa","aAaa",-544);
+    STRTEST( 0, 0, "aaaa","aaAa",-546);
+    STRTEST( 0, 0, "aaaa","aaaA",-548);
+    STRTEST( 0, 0, "aaaa","AAaa",-550);
+    STRTEST( 0, 0, "aaaa","aAAa",-552);
+    STRTEST( 0, 0, "aaaa","aaAA",-554);
+    STRTEST( 0, 0, "aaaa","AaAa",-556);
+    STRTEST( 0, 0, "aaaa","aAaA",-558);
+    STRTEST( 0, 0, "aaaa","AaaA",-560);
+    STRTEST( 0, 0, "aaaa","AAAa",-562);
+    STRTEST( 0, 0, "aaaa","aAAA",-564);
+    STRTEST( 0, 0, "aaaa","AAaA",-566);
+    STRTEST( 0, 0, "aaaa","AaAA",-568);
+    STRTEST( 0, 0, "aaaa","AAAA",-570);
 
     /* equal, length=5 */
     buf = "aaaAa""AaaaA""AaAaA""AAAAA";
     len=5;
-    STRTEST( 0, "aaaaa",buf+0,-580);
-    STRTEST( 0, "aaaaa",buf+5,-582);
-    STRTEST( 0, "aaaaa",buf+10,-584);
-    STRTEST( 0, "aaaaa",buf+15,-586);
+    STRTEST( 0, -1, "aaaaa",buf+0,-580);
+    STRTEST( 0, -1, "aaaaa",buf+5,-582);
+    STRTEST( 0, -1, "aaaaa",buf+10,-584);
+    STRTEST( 0, 0, "aaaaa",buf+15,-586);
 
     /* not equal, length=1 */
     len=1;
-    STRTEST( -1, "a", "b", -600);
+    STRTEST( -1, -1, "a", "b", -600);
 
     /* not equal, length=2 */
     buf = "ab""ba";
     len=2;
-    STRTEST( -1, "aa", buf+0, -610);
-    STRTEST( -1, "aa", buf+2, -612);
+    STRTEST( -1, -1, "aa", buf+0, -610);
+    STRTEST( -1, -1, "aa", buf+2, -612);
 
     /* not equal, length=3 */
     buf = "aab""aba""baa";
     len=3;
-    STRTEST( -1, "aaa", buf+0, -620);
-    STRTEST( -1, "aaa", buf+3, -622);
-    STRTEST( -1, "aaa", buf+6, -624);
+    STRTEST( -1, -1, "aaa", buf+0, -620);
+    STRTEST( -1, -1, "aaa", buf+3, -622);
+    STRTEST( -1, -1, "aaa", buf+6, -624);
 
     /* not equal, length=4 */
     buf = "aaab""aaba""abaa""baaa";
     len=4;
-    STRTEST( -1, "aaaa", buf+0, -630);
-    STRTEST( -1, "aaaa", buf+4, -632);
-    STRTEST( -1, "aaaa", buf+8, -634);
-    STRTEST( -1, "aaaa", buf+12, -636);
+    STRTEST( -1, -1, "aaaa", buf+0, -630);
+    STRTEST( -1, -1, "aaaa", buf+4, -632);
+    STRTEST( -1, -1, "aaaa", buf+8, -634);
+    STRTEST( -1, -1, "aaaa", buf+12, -636);
 
     /* not equal, length=5 */
     buf="aaaab""aaaba""aabaa""abaaa""baaaa";
     len=5;
-    STRTEST( -1, "aaaaa", buf+0, -640);
-    STRTEST( -1, "aaaaa", buf+5, -642);
-    STRTEST( -1, "aaaaa", buf+10, -644);
-    STRTEST( -1, "aaaaa", buf+15, -646);
-    STRTEST( -1, "aaaaa", buf+20, -648);
+    STRTEST( -1, -1, "aaaaa", buf+0, -640);
+    STRTEST( -1, -1, "aaaaa", buf+5, -642);
+    STRTEST( -1, -1, "aaaaa", buf+10, -644);
+    STRTEST( -1, -1, "aaaaa", buf+15, -646);
+    STRTEST( -1, -1, "aaaaa", buf+20, -648);
 
     zero.u32.hi = zero.u32.lo = 0;
     c1 = pj_elapsed_cycle(&zero, &e1);
