@@ -392,6 +392,9 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
      * access account once it's created
      */
 
+    /* Update default account */
+    if (pjsua_var.default_acc == acc_id)
+	pjsua_var.default_acc = 0;
 
     PJSUA_UNLOCK();
 

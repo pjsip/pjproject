@@ -2420,7 +2420,35 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    } else if (menuin[1] == 'a') {
 
-		printf("Sorry, this command is not supported yet\n");
+		char id[80], registrar[80], realm[80], uname[80], passwd[30];
+		pjsua_acc_config acc_cfg;
+		pj_status_t status;
+
+		if (!simple_input("Your SIP URL:", id, sizeof(id)))
+		    break;
+		if (!simple_input("URL of the registrar:", registrar, sizeof(registrar)))
+		    break;
+		if (!simple_input("Auth Realm:", realm, sizeof(realm)))
+		    break;
+		if (!simple_input("Auth Username:", uname, sizeof(uname)))
+		    break;
+		if (!simple_input("Auth Password:", passwd, sizeof(passwd)))
+		    break;
+
+		pjsua_acc_config_default(&acc_cfg);
+		acc_cfg.id = pj_str(id);
+		acc_cfg.reg_uri = pj_str(registrar);
+		acc_cfg.cred_count = 1;
+		acc_cfg.cred_info[0].scheme = pj_str("digest");
+		acc_cfg.cred_info[0].realm = pj_str(realm);
+		acc_cfg.cred_info[0].username = pj_str(uname);
+		acc_cfg.cred_info[0].data_type = 0;
+		acc_cfg.cred_info[0].data = pj_str(passwd);
+
+		status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error adding new account", status);
+		}
 
 	    } else {
 		printf("Invalid input %s\n", menuin);
