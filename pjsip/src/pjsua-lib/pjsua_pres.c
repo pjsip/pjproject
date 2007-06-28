@@ -23,7 +23,7 @@
 #define THIS_FILE   "pjsua_pres.c"
 
 #ifndef PJSUA_PRES_TIMER
-#   define PJSUA_PRES_TIMER	120
+#   define PJSUA_PRES_TIMER	2
 #endif
 
 
@@ -70,7 +70,6 @@ PJ_DEF(pj_status_t) pjsua_enum_buddies( pjsua_buddy_id ids[],
     PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
-
 }
 
 
@@ -207,9 +206,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 
     pjsua_var.buddy_cnt++;
 
-    pjsua_buddy_subscribe_pres(index, cfg->subscribe);
-
     PJSUA_UNLOCK();
+
+    pjsua_buddy_subscribe_pres(index, cfg->subscribe);
 
     return PJ_SUCCESS;
 }
@@ -224,15 +223,14 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
 			buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy),
 		     PJ_EINVAL);
 
-    PJSUA_LOCK();
-
     if (pjsua_var.buddy[buddy_id].uri.slen == 0) {
-	PJSUA_UNLOCK();
 	return PJ_SUCCESS;
     }
 
     /* Unsubscribe presence */
     pjsua_buddy_subscribe_pres(buddy_id, PJ_FALSE);
+
+    PJSUA_LOCK();
 
     /* Remove buddy */
     pjsua_var.buddy[buddy_id].uri.slen = 0;
@@ -262,9 +260,10 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
 
     buddy = &pjsua_var.buddy[buddy_id];
     buddy->monitor = subscribe;
-    pjsua_pres_refresh();
 
     PJSUA_UNLOCK();
+
+    pjsua_pres_refresh();
 
     return PJ_SUCCESS;
 }
@@ -1014,7 +1013,6 @@ static void subscribe_buddy_presence(unsigned index)
     int acc_id;
     pjsua_acc *acc;
     pj_str_t contact;
-    pjsip_dialog *dlg;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -1039,20 +1037,20 @@ static void subscribe_buddy_presence(unsigned index)
 				   &acc->cfg.id,
 				   &contact,
 				   &buddy->uri,
-				   NULL, &dlg);
+				   NULL, &buddy->dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create dialog", 
 		     status);
 	return;
     }
 
-    status = pjsip_pres_create_uac( dlg, &pres_callback, 
+    status = pjsip_pres_create_uac( buddy->dlg, &pres_callback, 
 				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
 	pjsua_var.buddy[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create presence client", 
 		     status);
-	pjsip_dlg_terminate(dlg);
+	pjsip_dlg_terminate(buddy->dlg);
 	return;
     }
 
@@ -1063,17 +1061,17 @@ static void subscribe_buddy_presence(unsigned index)
 	pjsip_tpselector tp_sel;
 
 	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-	pjsip_dlg_set_transport(dlg, &tp_sel);
+	pjsip_dlg_set_transport(buddy->dlg, &tp_sel);
     }
 
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
-	pjsip_dlg_set_route_set(dlg, &acc->route_set);
+	pjsip_dlg_set_route_set(buddy->dlg, &acc->route_set);
     }
 
     /* Set credentials */
     if (acc->cred_cnt) {
-	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
+	pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
 					acc->cred_cnt, acc->cred);
     }
 
@@ -1137,10 +1135,32 @@ static void unsubscribe_buddy_presence(unsigned index)
 }
 
 
+/* Lock all buddies */
+#define LOCK_BUDDIES	unsigned cnt_ = 0; \
+			pjsip_dialog *dlg_list_[PJSUA_MAX_BUDDIES]; \
+			unsigned i_; \
+			for (i_=0; i_<PJ_ARRAY_SIZE(pjsua_var.buddy);++i_) { \
+			    if (pjsua_var.buddy[i_].sub) { \
+				dlg_list_[cnt_++] = pjsua_var.buddy[i_].dlg; \
+				pjsip_dlg_inc_lock(pjsua_var.buddy[i_].dlg); \
+			    } \
+			} \
+			PJSUA_LOCK();
+
+/* Unlock all buddies */
+#define UNLOCK_BUDDIES	PJSUA_UNLOCK(); \
+			for (i_=0; i_<cnt_; ++i_) { \
+			    pjsip_dlg_dec_lock(dlg_list_[i_]); \
+			}
+			
+
+
 /* It does what it says.. */
 static void refresh_client_subscriptions(void)
 {
     unsigned i;
+
+    LOCK_BUDDIES;
 
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
 
@@ -1155,6 +1175,8 @@ static void refresh_client_subscriptions(void)
 
 	}
     }
+
+    UNLOCK_BUDDIES;
 }
 
 /* Timer callback to re-create client subscription */
@@ -1163,17 +1185,13 @@ static void pres_timer_cb(pj_timer_heap_t *th,
 {
     pj_time_val delay = { PJSUA_PRES_TIMER, 0 };
 
-    PJ_UNUSED_ARG(th);
-
-    PJSUA_LOCK();
-
     entry->id = PJ_FALSE;
     refresh_client_subscriptions();
 
     pjsip_endpt_schedule_timer(pjsua_var.endpt, entry, &delay);
     entry->id = PJ_TRUE;
 
-    PJSUA_UNLOCK();
+    PJ_UNUSED_ARG(th);
 }
 
 

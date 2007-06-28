@@ -133,6 +133,7 @@ typedef struct pjsua_buddy
     pj_str_t		 host;	    /**< Buddy host.			*/
     unsigned		 port;	    /**< Buddy port.			*/
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
+    pjsip_dialog	*dlg;	    /**< The underlying dialog.		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
 
