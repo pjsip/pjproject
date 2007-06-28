@@ -699,8 +699,10 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
     return PJ_SUCCESS;
 
 on_error:
-    pjsip_publishc_destroy(acc->publish_sess);
-    acc->publish_sess = NULL;
+    if (acc->publish_sess) {
+	pjsip_publishc_destroy(acc->publish_sess);
+	acc->publish_sess = NULL;
+    }
     return status;
 }
 
@@ -735,8 +737,10 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 	}
 
 	/* Add credential for authentication */
-	pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt, 
-				       acc->cred);
+	if (acc->cred_cnt) {
+	    pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt, 
+					   acc->cred);
+	}
 
 	/* Set route-set */
 	pjsip_publishc_set_route_set(acc->publish_sess, &acc->route_set);

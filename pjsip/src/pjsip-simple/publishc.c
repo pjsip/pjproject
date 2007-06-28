@@ -596,11 +596,13 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
     status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc, 
 				      &tsx_callback);
     if (status!=PJ_SUCCESS) {
-	--pubc->pending_tsx;
+	// no need to decrement, callback has been called and it should
+	// already decremented pending_tsx. Decrementing this here may 
+	// cause accessing freed memory location.
+	//--pubc->pending_tsx;
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
 
     return status;
 }
-
 
