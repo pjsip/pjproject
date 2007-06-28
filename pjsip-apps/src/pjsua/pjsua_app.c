@@ -264,24 +264,60 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 
     /* Scan tokens in the file. */
     while (argc < MAX_ARGS && !feof(fhnd)) {
-	char *token, *p = line;
-
+	char  *token;
+	char  *p;
+	const char *whitespace = " \t\r\n";
+	char  cDelimiter;
+	int   len, token_len;
+	
 	if (fgets(line, sizeof(line), fhnd) == NULL) break;
+	
+	// Trim ending newlines
+	len = strlen(line);
+	if (line[len-1]=='\n')
+	    line[--len] = '\0';
+	if (line[len-1]=='\r')
+	    line[--len] = '\0';
 
-	for (token = strtok(p, " \t\r\n"); argc < MAX_ARGS; 
-	     token = strtok(NULL, " \t\r\n"))
-	{
-	    int token_len;
+	if (len==0) continue;
+
+	for (p = line; *p != '\0' && argc < MAX_ARGS; p++) {
+	    // first, scan whitespaces
+	    while (*p != '\0' && strchr(whitespace, *p) != NULL) p++;
+
+	    if (*p == '\0')		    // are we done yet?
+		break;
 	    
-	    if (!token) break;
-	    if (*token == '#') break;
+	    if (*p == '"' || *p == '\'') {    // is token a quoted string
+		cDelimiter = *p++;	    // save quote delimiter
+		token = p;
+		
+		while (*p != '\0' && *p != cDelimiter) p++;
+		
+		if (*p == '\0')		// found end of the line, but,
+		    cDelimiter = '\0';	// didn't find a matching quote
 
-	    token_len = strlen(token);
-	    if (!token_len)
-		continue;
-	    argv[argc] = pj_pool_alloc(pool, token_len+1);
-	    pj_memcpy(argv[argc], token, token_len+1);
-	    ++argc;
+	    } else {			// token's not a quoted string
+		token = p;
+		
+		while (*p != '\0' && strchr(whitespace, *p) == NULL) p++;
+		
+		cDelimiter = *p;
+	    }
+	    
+	    *p = '\0';
+	    token_len = p-token;
+	    
+	    if (token_len > 0) {
+		if (*token == '#')
+		    break;  // ignore remainder of line
+		
+		argv[argc] = pj_pool_alloc(pool, token_len + 1);
+		pj_memcpy(argv[argc], token, token_len + 1);
+		++argc;
+	    }
+	    
+	    *p = cDelimiter;
 	}
     }
 
