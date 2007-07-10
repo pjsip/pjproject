@@ -194,6 +194,29 @@
 
 
 /**
+ * Perform Via sent-by checking as specified in RFC 3261 Section 18.1.2,
+ * which says that UAC MUST silently discard responses with Via sent-by
+ * containing values that the UAC doesn't recognize as its transport
+ * address.
+ *
+ * In PJSIP, this will cause response to be discarded and a message is
+ * written to the log, saying something like:
+ *  "Dropping response Response msg 200/INVITE/cseq=608594373 (rdata00A99EF4)
+ *   from 1.2.3.4:5060 because sent-by is mismatch"
+ *
+ * The default behavior is yes, but when the UA supports IP address change
+ * for the SIP transport, it will need to turn this checking off since
+ * when the transport address is changed between request is sent and 
+ * response is received, the response will be discarded since its Via
+ * sent-by now contains address that is different than the transport
+ * address.
+ */
+#ifndef PJSIP_CHECK_VIA_SENT_BY
+#   define PJSIP_CHECK_VIA_SENT_BY	1
+#endif
+
+
+/**
  * If non-zero, SIP parser will unescape the escape characters ('%')
  * in the original message, which means that it will modify the
  * original message. Otherwise the parser will create a copy of

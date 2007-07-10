@@ -823,6 +823,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     PJ_LOG(5, (THIS_FILE, "Processing incoming message: %s", 
 	       pjsip_rx_data_get_info(rdata)));
 
+#if defined(PJSIP_CHECK_VIA_SENT_BY) && PJSIP_CHECK_VIA_SENT_BY != 0
     /* For response, check that the value in Via sent-by match the transport.
      * If not matched, silently drop the response.
      * Ref: RFC3261 Section 18.1.2 Receiving Response
@@ -879,6 +880,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 	    return;
 	}
     }
+#endif
 
 
     /* Distribute to modules, starting from modules with highest priority */
