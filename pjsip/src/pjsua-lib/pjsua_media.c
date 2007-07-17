@@ -1105,6 +1105,19 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
  * File player.
  */
 
+static char* get_basename(const char *path, unsigned len)
+{
+    char *p = ((char*)path) + len;
+
+    if (len==0)
+	return p;
+
+    for (--p; p!=path && *p!='/' && *p!='\\'; --p);
+
+    return (p==path) ? p : p+1;
+}
+
+
 /*
  * Create a file player, and automatically connect this player to
  * the conference bridge.
@@ -1115,6 +1128,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 {
     unsigned slot, file_id;
     char path[PJ_MAXPATH];
+    pj_pool_t *pool;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -1137,13 +1151,21 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
-    status = pjmedia_wav_player_port_create(pjsua_var.pool, path,
+
+    pool = pjsua_pool_create(get_basename(path, filename->slen), 1000, 1000);
+    if (!pool) {
+	PJSUA_UNLOCK();
+	return PJ_ENOMEM;
+    }
+
+    status = pjmedia_wav_player_port_create(pool, path,
 					    pjsua_var.mconf_cfg.samples_per_frame *
 					      1000 / pjsua_var.media_cfg.clock_rate, 
 					    options, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for playback", status);
+	pj_pool_release(pool);
 	return status;
     }
 
@@ -1154,10 +1176,12 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to add file to conference bridge", 
 		     status);
+	pj_pool_release(pool);
 	return status;
     }
 
     pjsua_var.player[file_id].type = 0;
+    pjsua_var.player[file_id].pool = pool;
     pjsua_var.player[file_id].port = port;
     pjsua_var.player[file_id].slot = slot;
 
@@ -1181,6 +1205,7 @@ PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
 					   pjsua_player_id *p_id)
 {
     unsigned slot, file_id, ptime;
+    pj_pool_t *pool;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -1205,25 +1230,34 @@ PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
     ptime = pjsua_var.mconf_cfg.samples_per_frame * 1000 / 
 	    pjsua_var.media_cfg.clock_rate;
 
-    status = pjmedia_wav_playlist_create(pjsua_var.pool, label, 
+    pool = pjsua_pool_create("playlist", 1000, 1000);
+    if (!pool) {
+	PJSUA_UNLOCK();
+	return PJ_ENOMEM;
+    }
+
+    status = pjmedia_wav_playlist_create(pool, label, 
 					 file_names, file_count,
 					 ptime, options, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to create playlist", status);
+	pj_pool_release(pool);
 	return status;
     }
 
-    status = pjmedia_conf_add_port(pjsua_var.mconf, pjsua_var.pool, 
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, 
 				   port, &port->info.name, &slot);
     if (status != PJ_SUCCESS) {
 	pjmedia_port_destroy(port);
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to add port", status);
+	pj_pool_release(pool);
 	return status;
     }
 
     pjsua_var.player[file_id].type = 1;
+    pjsua_var.player[file_id].pool = pool;
     pjsua_var.player[file_id].port = port;
     pjsua_var.player[file_id].slot = slot;
 
@@ -1294,6 +1328,8 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
 	pjmedia_port_destroy(pjsua_var.player[id].port);
 	pjsua_var.player[id].port = NULL;
 	pjsua_var.player[id].slot = 0xFFFF;
+	pj_pool_release(pjsua_var.player[id].pool);
+	pjsua_var.player[id].pool = NULL;
 	pjsua_var.player_cnt--;
     }
 
@@ -1328,6 +1364,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     char path[PJ_MAXPATH];
     pj_str_t ext;
     int file_format;
+    pj_pool_t *pool;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -1375,8 +1412,14 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
+    pool = pjsua_pool_create(get_basename(path, filename->slen), 1000, 1000);
+    if (!pool) {
+	PJSUA_UNLOCK();
+	return PJ_ENOMEM;
+    }
+
     if (file_format == FMT_WAV) {
-	status = pjmedia_wav_writer_port_create(pjsua_var.pool, path, 
+	status = pjmedia_wav_writer_port_create(pool, path, 
 						pjsua_var.media_cfg.clock_rate, 
 						pjsua_var.mconf_cfg.channel_count,
 						pjsua_var.mconf_cfg.samples_per_frame,
@@ -1391,19 +1434,22 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for recording", status);
+	pj_pool_release(pool);
 	return status;
     }
 
-    status = pjmedia_conf_add_port(pjsua_var.mconf, pjsua_var.pool, 
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, 
 				   port, filename, &slot);
     if (status != PJ_SUCCESS) {
 	pjmedia_port_destroy(port);
 	PJSUA_UNLOCK();
+	pj_pool_release(pool);
 	return status;
     }
 
     pjsua_var.recorder[file_id].port = port;
     pjsua_var.recorder[file_id].slot = slot;
+    pjsua_var.recorder[file_id].pool = pool;
 
     if (p_id) *p_id = file_id;
 
@@ -1458,6 +1504,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
 	pjmedia_port_destroy(pjsua_var.recorder[id].port);
 	pjsua_var.recorder[id].port = NULL;
 	pjsua_var.recorder[id].slot = 0xFFFF;
+	pj_pool_release(pjsua_var.recorder[id].pool);
+	pjsua_var.recorder[id].pool = NULL;
 	pjsua_var.rec_cnt--;
     }
 

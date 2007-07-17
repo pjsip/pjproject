@@ -2963,7 +2963,7 @@ pj_status_t app_init(int argc, char *argv[])
 	return status;
 
     /* Create pool for application */
-    app_config.pool = pjsua_pool_create("pjsua", 4000, 4000);
+    app_config.pool = pjsua_pool_create("pjsua", 1000, 1000);
 
     /* Initialize default config */
     default_config(&app_config);

@@ -147,6 +147,7 @@ typedef struct pjsua_file_data
 {
     pj_bool_t	     type;  /* 0=player, 1=playlist */
     pjmedia_port    *port;
+    pj_pool_t	    *pool;
     unsigned	     slot;
 } pjsua_file_data;
 
