@@ -23,7 +23,7 @@
 #define THIS_FILE   "pjsua_pres.c"
 
 #ifndef PJSUA_PRES_TIMER
-#   define PJSUA_PRES_TIMER	2
+#   define PJSUA_PRES_TIMER	120
 #endif
 
 
