@@ -62,7 +62,7 @@ static int sock_producer_consumer(int sock_type,
         return -10;
 
     /* Create producer-consumer pair. */
-    rc = app_socketpair(PJ_AF_INET, sock_type, 0, &consumer, &producer);
+    rc = app_socketpair(pj_AF_INET(), sock_type, 0, &consumer, &producer);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: create socket pair", rc);
         return -20;
@@ -105,7 +105,7 @@ static int sock_producer_consumer(int sock_type,
                 return -73;
             }
 	    if ((pj_size_t)part_received != buf_size-received) {
-                if (sock_type != PJ_SOCK_STREAM) {
+                if (sock_type != pj_SOCK_STREAM()) {
 	            PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
                               buf_size-received, part_received));
 	            return -76;
@@ -165,13 +165,13 @@ int sock_perf_test(void)
      */    
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     /* Benchmarking UDP */
-    rc = sock_producer_consumer(PJ_SOCK_DGRAM, 512, LOOP, &bandwidth);
+    rc = sock_producer_consumer(pj_SOCK_DGRAM(), 512, LOOP, &bandwidth);
     if (rc != 0) return rc;
     PJ_LOG(3,("", "....bandwidth UDP = %d KB/s", bandwidth));
 #endif
 
     /* Benchmarking TCP */
-    rc = sock_producer_consumer(PJ_SOCK_STREAM, 512, LOOP, &bandwidth);
+    rc = sock_producer_consumer(pj_SOCK_STREAM(), 512, LOOP, &bandwidth);
     if (rc != 0) return rc;
     PJ_LOG(3,("", "....bandwidth TCP = %d KB/s", bandwidth));
 

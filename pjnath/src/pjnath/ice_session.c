@@ -726,7 +726,7 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 
     pj_ansi_strcpy(laddr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
 
-    if (lcand->addr.addr.sa_family == PJ_AF_INET) {
+    if (lcand->addr.addr.sa_family == pj_AF_INET()) {
 	len = pj_ansi_snprintf(buffer, bufsize,
 			       "%d: [%d] %s:%d-->%s:%d",
 			       GET_CHECK_ID(clist, check),
@@ -834,10 +834,10 @@ static int sockaddr_cmp(const pj_sockaddr *a1, const pj_sockaddr *a2)
     if (a1->addr.sa_family != a2->addr.sa_family)
 	return SOCKADDR_NOT_EQUAL;
 
-    if (a1->addr.sa_family == PJ_AF_INET) {
+    if (a1->addr.sa_family == pj_AF_INET()) {
 	return !(a1->ipv4.sin_addr.s_addr == a2->ipv4.sin_addr.s_addr &&
 		 a1->ipv4.sin_port == a2->ipv4.sin_port);
-    } else if (a1->addr.sa_family == PJ_AF_INET6) {
+    } else if (a1->addr.sa_family == pj_AF_INET6()) {
 	return pj_memcmp(&a1->ipv6, &a2->ipv6, sizeof(a1->ipv6));
     } else {
 	pj_assert(!"Invalid address family!");

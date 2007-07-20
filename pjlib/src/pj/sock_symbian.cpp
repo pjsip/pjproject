@@ -52,11 +52,22 @@ const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_UDP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
 
+/* TOS */
+const pj_uint16_t PJ_IP_TOS		= 0;
+const pj_uint16_t PJ_IPTOS_LOWDELAY	= 0;
+const pj_uint16_t PJ_IPTOS_THROUGHPUT	= 0;
+const pj_uint16_t PJ_IPTOS_RELIABILITY	= 0;
+const pj_uint16_t PJ_IPTOS_MINCOST	= 0;
+
 /* ioctl() is also not supported. */
 const pj_uint16_t PJ_SO_TYPE    = 0xFFFF;
 const pj_uint16_t PJ_SO_RCVBUF  = 0xFFFF;
 const pj_uint16_t PJ_SO_SNDBUF  = 0xFFFF;
 
+/* Flags */
+const int PJ_MSG_OOB	     = 0;
+const int PJ_MSG_PEEK	     = KSockReadPeek;
+const int PJ_MSG_DONTROUTE   = 0;
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -455,9 +466,9 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
     /* Set proto if none is specified. */
     if (proto == 0) {
-	if (type == PJ_SOCK_STREAM)
+	if (type == pj_SOCK_STREAM())
 	    proto = KProtocolInetTcp;
-	else if (type == PJ_SOCK_DGRAM)
+	else if (type == pj_SOCK_DGRAM())
 	    proto = KProtocolInetUdp;
     }
 

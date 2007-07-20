@@ -25,8 +25,7 @@
 
 #define SZ  sizeof(unsigned)
 
-PJ_DEF(void)
-pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size)
+PJ_DEF(void) pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size)
 {
     PJ_CHECK_STACK();
 
@@ -40,8 +39,7 @@ pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size)
     fifobuf->full = 0;
 }
 
-PJ_DEF(unsigned)
-pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
+PJ_DEF(unsigned) pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
 {
     unsigned s1, s2;
 
@@ -57,8 +55,7 @@ pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
     return s1<s2 ? s2 : s1;
 }
 
-PJ_DEF(void*)
-pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
+PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 {
     unsigned available;
     char *start;
@@ -115,8 +112,7 @@ pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
     return NULL;
 }
 
-PJ_DEF(pj_status_t)
-pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
+PJ_DEF(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
 {
     char *ptr = (char*)buf;
     char *endptr;
@@ -146,8 +142,7 @@ pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
     return 0;
 }
 
-PJ_DEF(pj_status_t)
-pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
+PJ_DEF(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
 {
     char *ptr = (char*)buf;
     char *end;

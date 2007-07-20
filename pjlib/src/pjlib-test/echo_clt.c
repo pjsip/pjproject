@@ -65,7 +65,7 @@ static int echo_client_thread(void *arg)
     pj_status_t last_recv_err = PJ_SUCCESS, last_send_err = PJ_SUCCESS;
     unsigned counter = 0;
 
-    rc = app_socket(PJ_AF_INET, client->sock_type, 0, -1, &sock);
+    rc = app_socket(pj_AF_INET(), client->sock_type, 0, -1, &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...unable to create socket", rc);
         return -10;

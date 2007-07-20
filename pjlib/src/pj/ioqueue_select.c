@@ -64,22 +64,6 @@
 #   error "Error reporting must be enabled for this function to work!"
 #endif
 
-/**
- * Get the number of descriptors in the set. This is defined in sock_select.c
- * This function will only return the number of sockets set from PJ_FD_SET
- * operation. When the set is modified by other means (such as by select()),
- * the count will not be reflected here.
- *
- * That's why don't export this function in the header file, to avoid
- * misunderstanding.
- *
- * @param fdsetp    The descriptor set.
- *
- * @return          Number of descriptors in the set.
- */
-PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
-
-
 /*
  * During debugging build, VALIDATE_FD_SET is set.
  * This will check the validity of the fd_sets.

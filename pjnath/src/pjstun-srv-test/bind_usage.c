@@ -74,7 +74,7 @@ PJ_DEF(pj_status_t) pj_stun_bind_usage_create(pj_stun_server *srv,
     usage_cb.on_destroy = &usage_on_destroy;
 
     status = pj_stun_usage_create(srv, "bind%p", &usage_cb,
-				  PJ_AF_INET, PJ_SOCK_DGRAM, 0,
+				  pj_AF_INET(), pj_SOCK_DGRAM(), 0,
 				  &local_addr, sizeof(local_addr),
 				  &bu->usage);
     if (status != PJ_SUCCESS) {

@@ -243,7 +243,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     for (i=0; i<RTP_RETRY; ++i, next_rtp_port += 2) {
 
 	/* Create and bind RTP socket. */
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[0]);
+	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[0]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    return status;
@@ -258,7 +258,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	}
 
 	/* Create and bind RTCP socket. */
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[1]);
+	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[1]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    pj_sock_close(sock[0]);

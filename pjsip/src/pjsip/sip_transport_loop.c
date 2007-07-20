@@ -367,7 +367,7 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
     loop->base.key.type = PJSIP_TRANSPORT_LOOP_DGRAM;
-    //loop->base.key.rem_addr.sa_family = PJ_AF_INET;
+    //loop->base.key.rem_addr.sa_family = pj_AF_INET();
     loop->base.type_name = "LOOP-DGRAM";
     loop->base.info = "LOOP-DGRAM";
     loop->base.flag = PJSIP_TRANSPORT_DATAGRAM;

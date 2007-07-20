@@ -769,7 +769,7 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
     *buf++ = '\0';
 
     /* Family (IPv4 only for now) */
-    PJ_ASSERT_RETURN(ca->sockaddr.addr.sa_family == PJ_AF_INET, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ca->sockaddr.addr.sa_family == pj_AF_INET(), PJ_EINVAL);
     *buf++ = 1;
 
     if (ca->xor_ed) {

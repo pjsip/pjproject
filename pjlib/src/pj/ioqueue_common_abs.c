@@ -100,10 +100,10 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
      * will be performed during send to allow parallel send operations.
      */
     optlen = sizeof(key->fd_type);
-    rc = pj_sock_getsockopt(sock, PJ_SOL_SOCKET, PJ_SO_TYPE,
+    rc = pj_sock_getsockopt(sock, pj_SOL_SOCKET(), pj_SO_TYPE(),
                             &key->fd_type, &optlen);
     if (rc != PJ_SUCCESS)
-        key->fd_type = PJ_SOCK_STREAM;
+        key->fd_type = pj_SOCK_STREAM();
 
     /* Create mutex for the key. */
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -269,7 +269,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
         /* For datagrams, we can remove the write_op from the list
          * so that send() can work in parallel.
          */
-        if (h->fd_type == PJ_SOCK_DGRAM) {
+        if (h->fd_type == pj_SOCK_DGRAM()) {
             pj_list_erase(write_op);
 
             if (pj_list_empty(&h->write_list))
@@ -315,12 +315,12 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
         /* Are we finished with this buffer? */
         if (send_rc!=PJ_SUCCESS || 
             write_op->written == (pj_ssize_t)write_op->size ||
-            h->fd_type == PJ_SOCK_DGRAM) 
+            h->fd_type == pj_SOCK_DGRAM()) 
         {
 
 	    write_op->op = PJ_IOQUEUE_OP_NONE;
 
-            if (h->fd_type != PJ_SOCK_DGRAM) {
+            if (h->fd_type != pj_SOCK_DGRAM()) {
                 /* Write completion of the whole stream. */
                 pj_list_erase(write_op);
 

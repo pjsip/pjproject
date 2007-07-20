@@ -101,7 +101,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 #define IN_RANGE(val,start,end)	    ((val)>=(start) && (val)<(end))
 
 /* Register strerror handle. */
-PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start,
+PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
 					  pj_status_t space,
 					  pjsip_error_callback f)
 {

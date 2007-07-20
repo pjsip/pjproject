@@ -264,7 +264,7 @@ static int create_ses_by_remote_sdp(int local_port, char *sdp)
     }
 
     pj_bzero(&skinfo, sizeof(skinfo));
-    skinfo.rtp_sock = skinfo.rtcp_sock = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 0);
+    skinfo.rtp_sock = skinfo.rtcp_sock = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 0);
     if (skinfo.rtp_sock == PJ_INVALID_SOCKET) {
 	PJ_LOG(1,(THIS_FILE, "Unable to create socket"));
 	goto on_error;

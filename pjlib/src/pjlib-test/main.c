@@ -81,9 +81,9 @@ int main(int argc, char *argv[])
             pj_str_t type = pj_str(argv[--argc]);
             
             if (pj_stricmp2(&type, "tcp")==0)
-                param_echo_sock_type = PJ_SOCK_STREAM;
+                param_echo_sock_type = pj_SOCK_STREAM();
             else if (pj_stricmp2(&type, "udp")==0)
-                param_echo_sock_type = PJ_SOCK_DGRAM;
+                param_echo_sock_type = pj_SOCK_DGRAM();
             else {
                 PJ_LOG(3,("", "error: unknown socket type %s", type.ptr));
                 return 1;

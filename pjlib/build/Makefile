@@ -25,8 +25,7 @@ export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	array.o config.o ctype.o errno.o except.o fifobuf.o guid.o \
 	hash.o ip_helper_generic.o list.o lock.o log.o os_time_common.o \
 	pool.o pool_buf.o pool_caching.o pool_dbg.o rand.o \
-	rbtree.o string.o timer.o \
-	types.o symbols.o
+	rbtree.o sock_common.o string.o timer.o types.o
 export PJLIB_CFLAGS += $(_CFLAGS)
 
 ###############################################################################

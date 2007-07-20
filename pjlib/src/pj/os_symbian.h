@@ -220,7 +220,7 @@ public:
 			       pj_sockaddr_in &pj_addr)
     {
 	pj_bzero(&pj_addr, sizeof(pj_sockaddr_in));
-	pj_addr.sin_family = PJ_AF_INET;
+	pj_addr.sin_family = pj_AF_INET();
 	pj_addr.sin_addr.s_addr = pj_htonl(sym_addr.Address());
 	pj_addr.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
     }

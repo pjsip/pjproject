@@ -1,7 +1,22 @@
+#if defined(EKA2)
+// ARM ABIv2 doesn't support static libraries anymore
+TARGET		pjlib.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004299
+CAPABILITY	NONE
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjlib.def
+
+#else
+
 TARGET 		pjlib.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
-VENDORID	0x70000001
+//VENDORID	0x70000001
+#endif
 
 SOURCEPATH	..\pjlib\src\pj
 
@@ -32,6 +47,7 @@ SOURCE		pool_buf.c
 SOURCE		pool_caching.c
 SOURCE		rand.c
 SOURCE		rbtree.c
+SOURCE		sock_common.c
 SOURCE		types.c
 
 
@@ -91,7 +107,7 @@ SOURCE		unicode_symbian.cpp
 //DOCUMENT	pj\unicode.h
 
 SYSTEMINCLUDE	..\pjlib\include
-
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
+
 

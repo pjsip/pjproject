@@ -212,7 +212,7 @@ static pj_status_t init_stack(void)
     {
 	pj_sockaddr_in addr;
 
-	addr.sin_family = PJ_AF_INET;
+	addr.sin_family = pj_AF_INET();
 	addr.sin_addr.s_addr = 0;
 	addr.sin_port = pj_htons((pj_uint16_t)global.port);
 

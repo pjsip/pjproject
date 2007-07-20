@@ -86,12 +86,18 @@ static void default_pool_callback(pj_pool_t *pool, pj_size_t size)
     PJ_THROW(PJ_NO_MEMORY_EXCEPTION);
 }
 
-pj_pool_factory_policy pj_pool_factory_default_policy = 
+PJ_DECL_DATA(pj_pool_factory_policy) pj_pool_factory_default_policy =
 {
     &default_block_alloc,
     &default_block_free,
     &default_pool_callback,
     0
 };
+
+PJ_DEF(const pj_pool_factory_policy*) pj_pool_factory_get_default_policy(void)
+{
+    return &pj_pool_factory_default_policy;
+}
+
 
 #endif	/* PJ_HAS_POOL_ALT_API */

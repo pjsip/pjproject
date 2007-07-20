@@ -162,7 +162,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
     si.rtp_sock = si.rtcp_sock = PJ_INVALID_SOCKET;
 
     /* Create RTP socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &si.rtp_sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &si.rtp_sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -175,7 +175,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
 
 
     /* Create RTCP socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &si.rtcp_sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &si.rtcp_sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 

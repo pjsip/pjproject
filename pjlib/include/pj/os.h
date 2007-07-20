@@ -236,6 +236,69 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_SYMBIAN_OS Symbian OS Specific
+ * @ingroup PJ_OS
+ * @{
+ * Functionalities specific to Symbian OS.
+ *
+ * Symbian OS strongly discourages the use of polling since this wastes
+ * CPU power, and instead provides Active Object and Active Scheduler
+ * pattern to allow application (in this case, PJLIB) to register asynchronous
+ * tasks. PJLIB port for Symbian complies to this recommended behavior.
+ * As the result, few things have been changed in PJLIB for Symbian:
+ *	- the timer heap (see @ref PJ_TIMER) is implemented with active
+ *	  object framework, and each timer entry registered to the timer 
+ *	  heap will register an Active Object to the Active Scheduler.
+ *	  Because of this, polling the timer heap with pj_timer_heap_poll()
+ *	  is no longer necessary, and this function will just evaluate
+ *	  to nothing.
+ *	- the ioqueue (see @ref PJ_IOQUEUE) is also implemented with
+ *	  active object framework, with each asynchronous operation will
+ *	  register an Active Object to the Active Scheduler. Because of
+ *	  this, polling the ioqueue with pj_ioqueue_poll() is no longer
+ *	  necessary, and this function will just evaluate to nothing.
+ *
+ * Since timer heap and ioqueue polling are no longer necessary, Symbian
+ * application can now poll for all events by calling 
+ * \a User::WaitForAnyRequest() and \a CActiveScheduler::RunIfReady().
+ * PJLIB provides a thin wrapper which calls these two functions,
+ * called pj_symbianos_poll().
+ */
+ 
+/**
+ * Wait the completion of any Symbian active objects. When the timeout
+ * value is not specified (the \a ms_timeout argument is -1), this 
+ * function is a thin wrapper which calls \a User::WaitForAnyRequest() 
+ * and \a CActiveScheduler::RunIfReady(). If the timeout value is
+ * specified, this function will schedule a timer entry to the timer
+ * heap (which is an Active Object), to limit the wait time for event
+ * occurences. Scheduling a timer entry is an expensive operation,
+ * therefore application should only specify a timeout value when it's
+ * really necessary (for example, when it's not sure there are other
+ * Active Objects currently running in the application).
+ *
+ * @param priority	The minimum priority of the Active Objects to
+ *			poll, which values are from CActive::TPriority
+ *			constants. If -1 is given, CActive::EPriorityStandard.
+ *			priority will be used.
+ * @param ms_timeout	Optional timeout to wait. Application should
+ *			specify -1 to let the function wait indefinitely
+ *			for any events.
+ *
+ * @return		PJ_TRUE if there have been any events executed
+ *			during the polling. This function will only return
+ *			PJ_FALSE if \a ms_timeout argument is specified
+ *			(i.e. the value is not -1) and there was no event
+ *			executed when the timeout timer elapsed.
+ */
+PJ_DECL(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout);
+
+/**
+ * @}
+ */
+ 
+/* **************************************************************************/
+/**
  * @defgroup PJ_TLS Thread Local Storage.
  * @ingroup PJ_OS
  * @{
@@ -405,7 +468,7 @@ PJ_DECL(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  * Mutex types:
  *  - PJ_MUTEX_DEFAULT: default mutex type, which is system dependent.
  *  - PJ_MUTEX_SIMPLE: non-recursive mutex.
- *  - PJ_MUTEX_RECURSIVE: recursive mutex.
+ *  - PJ_MUTEX_RECURSE: recursive mutex.
  */
 typedef enum pj_mutex_type_e
 {

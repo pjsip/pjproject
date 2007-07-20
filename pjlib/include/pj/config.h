@@ -657,17 +657,43 @@
  */
 
 /**
+ * Guide for building dynamic link libraries (DLL).
+ *
+ * The libraries support generation of dynamic link libraries for
+ * Symbian ABIv2 target (.dso files, in S60 3rd Edition). Similar
+ * procedures may be applied for Win32 DLL too, with some modification.
+ *
+ * Macros related for building DLL/DSO files:
+ *  - For platforms that supports dynamic link libraries generation,
+ *    it must declare PJ_EXPORT_SPECIFIER macro which value contains
+ *    the prefix to be added to symbol definition, to export this 
+ *    symbol in the DLL/DSO. For example, on Win32/Visual Studio, the
+ *    value of this macro is "__declspec(dllexport)", and for ARM 
+ *    ABIv2/Symbian, the value is \a EXPORT_C. 
+ *  - For platforms that supports linking with dynamic link libraries,
+ *    it must declare PJ_IMPORT_SPECIFIER macro which value contains
+ *    the prefix to be added to symbol declaration, to import this 
+ *    symbol from a DLL/DSO. For example, on Win32/Visual Studio, the
+ *    value of this macro is "__declspec(dllimport)", and for ARM 
+ *    ABIv2/Symbian, the value is \a IMPORT_C. 
+ *  - When PJLIB is built as DLL/DSO, both \a PJ_DLL and \a PJ_EXPORTING
+ *    macros must be declared, so that PJ_EXPORT_SPECIFIER prefix will be
+ *    added into function definition.
+ *  - When application wants to link dynamically with PJLIB, then it
+ *    must declare \a PJ_DLL macro when using/including PJLIB header,
+ *    so that PJ_IMPORT_SPECIFIER is properly added into symbol
+ *    declarations.
+ *
+ * When \a PJ_DLL macro is not declared, static linking is assumed.
+ */
+
+/**
  * @def PJ_INLINE(type)
  * @param type The return type of the function.
  * Expand the function as inline.
  */
 #define PJ_INLINE(type)	  PJ_INLINE_SPECIFIER type
 
-/**
- * @def PJ_DECL(type)
- * @param type The return type of the function.
- * Declare a function.
- */
 /**
  * @def PJ_DECL_NO_RETURN(type)
  * @param type The return type of the function.
@@ -682,37 +708,123 @@
  * Mark end of declaration section in a header file.
  */
 #ifdef __cplusplus
-#  define PJ_DECL(type)		    type
 #  define PJ_DECL_NO_RETURN(type)   type PJ_NORETURN
 #  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
 #  define PJ_BEGIN_DECL		    extern "C" {
 #  define PJ_END_DECL		    }
 #else
-#  define PJ_DECL(type)		    extern type
 #  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN type
 #  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
 #  define PJ_BEGIN_DECL
 #  define PJ_END_DECL
 #endif
 
+
+/**
+ * This macro declares platform/compiler specific specifier prefix
+ * to be added to symbol declaration to export the symbol when PJLIB
+ * is built as dynamic library.
+ *
+ * This macro should have been added by platform specific headers,
+ * if the platform supports building dynamic library target. 
+ */
+#ifndef PJ_EXPORT_DECL_SPECIFIER
+#   define PJ_EXPORT_DECL_SPECIFIER
+#endif
+
+
+/**
+ * This macro declares platform/compiler specific specifier prefix
+ * to be added to symbol definition to export the symbol when PJLIB
+ * is built as dynamic library.
+ *
+ * This macro should have been added by platform specific headers,
+ * if the platform supports building dynamic library target. 
+ */
+#ifndef PJ_EXPORT_DEF_SPECIFIER
+#   define PJ_EXPORT_DEF_SPECIFIER
+#endif
+
+
+/**
+ * This macro declares platform/compiler specific specifier prefix
+ * to be added to symbol declaration to import the symbol.
+ *
+ * This macro should have been added by platform specific headers,
+ * if the platform supports building dynamic library target.
+ */
+#ifndef PJ_IMPORT_DECL_SPECIFIER
+#   define PJ_IMPORT_DECL_SPECIFIER
+#endif
+
+
+/**
+ * This macro has been deprecated. It will evaluate to nothing.
+ */
+#ifndef PJ_EXPORT_SYMBOL
+#   define PJ_EXPORT_SYMBOL(x)
+#endif
+
+
+/**
+ * @def PJ_DECL(type)
+ * @param type The return type of the function.
+ * Declare a function.
+ */
+#if defined(PJ_DLL)
+#   if defined(PJ_EXPORTING)
+#	define PJ_DECL(type)	    PJ_EXPORT_DECL_SPECIFIER type
+#   else
+#	define PJ_DECL(type)	    PJ_IMPORT_DECL_SPECIFIER type
+#   endif
+#elif !defined(PJ_DECL)
+#   if defined(__cplusplus)
+#	define PJ_DECL(type)	    type
+#   else
+#	define PJ_DECL(type)	    extern type
+#   endif
+#endif
+
+
 /**
  * @def PJ_DEF(type)
  * @param type The return type of the function.
  * Define a function.
  */
-#define PJ_DEF(type)	  type
+#if defined(PJ_DLL) && defined(PJ_EXPORTING)
+#   define PJ_DEF(type)		    PJ_EXPORT_DEF_SPECIFIER type
+#elif !defined(PJ_DEF)
+#   define PJ_DEF(type)		    type
+#endif
+
 
 /**
- * @def PJ_EXPORT_SYMBOL(sym)
- * @param sym The symbol to export.
- * Export the specified symbol in compilation type that requires export
- * (e.g. Linux kernel).
- */
-#ifdef __PJ_EXPORT_SYMBOL
-#  define PJ_EXPORT_SYMBOL(sym)	    __PJ_EXPORT_SYMBOL(sym)
-#else
-#  define PJ_EXPORT_SYMBOL(sym)
+ * @def PJ_DECL_DATA(type)
+ * @param type The data type.
+ * Declare a global data.
+ */ 
+#if defined(PJ_DLL)
+#   if defined(PJ_EXPORTING)
+#	define PJ_DECL_DATA(type)   PJ_EXPORT_DECL_SPECIFIER extern type
+#   else
+#	define PJ_DECL_DATA(type)   PJ_IMPORT_DECL_SPECIFIER extern type
+#   endif
+#elif !defined(PJ_DECL_DATA)
+#   define PJ_DECL_DATA(type)	    extern type
 #endif
+
+
+/**
+ * @def PJ_DEF_DATA(type)
+ * @param type The data type.
+ * Define a global data.
+ */ 
+#if defined(PJ_DLL) && defined(PJ_EXPORTING)
+#   define PJ_DEF_DATA(type)	    PJ_EXPORT_DEF_SPECIFIER type
+#elif !defined(PJ_DEF_DATA)
+#   define PJ_DEF_DATA(type)	    type
+#endif
+
 
 /**
  * @def PJ_IDECL(type)
@@ -732,6 +844,7 @@
 #  define PJ_IDECL(type)  PJ_DECL(type)
 #  define PJ_IDEF(type)   PJ_DEF(type)
 #endif
+
 
 /**
  * @def PJ_UNUSED_ARG(arg)

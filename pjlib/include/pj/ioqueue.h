@@ -478,6 +478,9 @@ PJ_DECL(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 /**
  * Poll the I/O Queue for completed events.
  *
+ * Note: polling the ioqueue is not necessary in Symbian. Please see
+ * @ref PJ_SYMBIAN_OS for more info.
+ *
  * @param ioque		the I/O Queue.
  * @param timeout	polling timeout, or NULL if the thread wishes to wait
  *			indefinetely for the event.

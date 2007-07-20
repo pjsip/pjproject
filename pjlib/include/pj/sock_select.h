@@ -67,6 +67,21 @@ PJ_DECL(void) PJ_FD_ZERO(pj_fd_set_t *fdsetp);
 
 
 /**
+ * This is an internal function, application shouldn't use this.
+ * 
+ * Get the number of descriptors in the set. This is defined in sock_select.c
+ * This function will only return the number of sockets set from PJ_FD_SET
+ * operation. When the set is modified by other means (such as by select()),
+ * the count will not be reflected here.
+ *
+ * @param fdsetp    The descriptor set.
+ *
+ * @return          Number of descriptors in the set.
+ */
+PJ_DECL(pj_size_t) PJ_FD_COUNT(const pj_fd_set_t *fdsetp);
+
+
+/**
  * Add the file descriptor fd to the set pointed to by fdsetp. 
  * If the file descriptor fd is already in this set, there shall be no effect
  * on the set, nor will an error be returned.

@@ -64,7 +64,7 @@ int test_inner(void)
     }
     
     //pj_dump_config();
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+    pj_caching_pool_init( &caching_pool, NULL, 0 );
 
 #if INCLUDE_ERRNO_TEST
     DO_TEST( errno_test() );
@@ -165,7 +165,7 @@ int test_inner(void)
 
 #elif INCLUDE_ECHO_CLIENT
     if (param_echo_sock_type == 0)
-        param_echo_sock_type = PJ_SOCK_DGRAM;
+        param_echo_sock_type = pj_SOCK_DGRAM();
 
     echo_client( param_echo_sock_type, 
                  param_echo_server, 
@@ -191,9 +191,14 @@ on_return:
     return 0;
 }
 
+#include <pj/sock.h>
+
 int test_main(void)
 {
+    int i;
     PJ_USE_EXCEPTION;
+
+    i = pj_AF_INET();
 
     PJ_TRY {
         return test_inner();

@@ -109,11 +109,13 @@ PJ_DEF(pj_status_t) pj_file_read( pj_oshandle_t fd,
     return PJ_SUCCESS;
 }
 
+/*
 PJ_DEF(pj_bool_t) pj_file_eof(pj_oshandle_t fd, enum pj_file_access access)
 {
     PJ_UNUSED_ARG(access);
     return feof((FILE*)fd) ? PJ_TRUE : 0;
 }
+*/
 
 PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
                                     pj_off_t offset,

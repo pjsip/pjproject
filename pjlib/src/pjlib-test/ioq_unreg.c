@@ -159,7 +159,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
      * will return from the poll early.
      */
     if (other_socket) {
-	status = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 56127, &osd.sock);
+	status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 56127, &osd.sock);
 	if (status != PJ_SUCCESS) {
 	    app_perror("Error creating other socket", status);
 	    return -12;
@@ -200,7 +200,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     }
 
     /* Create pair of client/server sockets */
-    status = app_socketpair(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 
+    status = app_socketpair(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 
 			    &sock_data.sock, &sock_data.csock);
     if (status != PJ_SUCCESS) {
 	app_perror("app_socketpair error", status);

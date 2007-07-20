@@ -159,7 +159,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     pj_sockaddr_in local_addr;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(srv && (type==PJ_SOCK_DGRAM||type==PJ_SOCK_STREAM),
+    PJ_ASSERT_RETURN(srv && (type==pj_SOCK_DGRAM()||type==pj_SOCK_STREAM()),
 		     PJ_EINVAL);
     si = pj_stun_server_get_info(srv);
 
@@ -185,7 +185,7 @@ PJ_DEF(pj_status_t) pj_stun_turn_usage_create(pj_stun_server *srv,
     usage_cb.on_rx_data = &tu_on_rx_data;
     usage_cb.on_destroy = &tu_on_destroy;
     status = pj_stun_usage_create(srv, "turn%p", &usage_cb,
-				  PJ_AF_INET, tu->type, 0,
+				  pj_AF_INET(), tu->type, 0,
 				  &local_addr, sizeof(local_addr),
 				  &tu->usage);
     if (status != PJ_SUCCESS) {
@@ -297,7 +297,7 @@ static void tu_on_rx_data(pj_stun_usage *usage,
 
     /* STUN message decoding flag */
     flags = 0;
-    if (tu->type == PJ_SOCK_DGRAM)
+    if (tu->type == pj_SOCK_DGRAM())
 	flags |= PJ_STUN_IS_DATAGRAM;
     
 
@@ -361,7 +361,7 @@ static pj_status_t tu_alloc_port(struct turn_usage *tu,
 	*err_code = PJ_STUN_SC_INVALID_PORT;
 
 	/* Allocate specific port */
-	status = pj_sock_socket(PJ_AF_INET, type, 0, &sock);
+	status = pj_sock_socket(pj_AF_INET(), type, 0, &sock);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -400,7 +400,7 @@ static pj_status_t tu_alloc_port(struct turn_usage *tu,
 		break;
 	    }
 
-	    status = pj_sock_socket(PJ_AF_INET, type, 0, &sock);
+	    status = pj_sock_socket(pj_AF_INET(), type, 0, &sock);
 	    if (status != PJ_SUCCESS)
 		return status;
 
@@ -510,7 +510,7 @@ static pj_status_t tu_sess_on_send_msg(pj_stun_session *sess,
 
     sd = (struct session_data*) pj_stun_session_get_user_data(sess);
 
-    if (sd->tu->type == PJ_SOCK_DGRAM) {
+    if (sd->tu->type == pj_SOCK_DGRAM()) {
 	return pj_stun_usage_sendto(sd->tu->usage, pkt, pkt_size, 0,
 				    dst_addr, addr_len);
     } else {
@@ -546,9 +546,9 @@ static struct peer* client_add_peer(struct turn_client *client,
 
 static const char *get_tp_type(int type)
 {
-    if (type==PJ_SOCK_DGRAM)
+    if (type==pj_SOCK_DGRAM())
 	return "udp";
-    else if (type==PJ_SOCK_STREAM)
+    else if (type==pj_SOCK_STREAM())
 	return "tcp";
     else
 	return "???";
@@ -594,7 +594,7 @@ static pj_status_t client_sess_on_send_msg(pj_stun_session *sess,
 
     sd = (struct session_data*) pj_stun_session_get_user_data(sess);
 
-    if (sd->tu->type == PJ_SOCK_DGRAM) {
+    if (sd->tu->type == pj_SOCK_DGRAM()) {
 	return pj_stun_usage_sendto(sd->tu->usage, pkt, pkt_size, 0,
 				    dst_addr, addr_len);
     } else {
@@ -951,13 +951,13 @@ static pj_status_t client_handle_allocate_req(struct turn_client *client,
 		       src_addr, src_addr_len);
 	return PJ_SUCCESS;
     } else if (a_rt) {
-	client->sock_type = a_rt->value ? PJ_SOCK_STREAM : PJ_SOCK_DGRAM;
+	client->sock_type = a_rt->value ? pj_SOCK_STREAM() : pj_SOCK_DGRAM();
     } else {
 	client->sock_type = client->tu->type;;
     }
 
     /* Process REQUESTED-IP attribute */
-    if (a_rip && a_rip->sockaddr.addr.sa_family != PJ_AF_INET) {
+    if (a_rip && a_rip->sockaddr.addr.sa_family != pj_AF_INET()) {
 	client_respond(client, msg, PJ_STUN_SC_INVALID_IP_ADDR, NULL,
 		       src_addr, src_addr_len);
 	return PJ_SUCCESS;
@@ -1130,7 +1130,7 @@ static pj_status_t client_handle_sad(struct turn_client *client,
 	/* Remote active destination needs to be cleared */
 	client->active_peer = NULL;
 
-    } else if (a_raddr->sockaddr.addr.sa_family != PJ_AF_INET) {
+    } else if (a_raddr->sockaddr.addr.sa_family != pj_AF_INET()) {
 	/* Bad request (not IPv4) */
 	client_respond(client, msg, PJ_STUN_SC_BAD_REQUEST, NULL,
 		       src_addr, src_addr_len);
@@ -1196,7 +1196,7 @@ static pj_status_t client_handle_send_ind(struct turn_client *client,
 	/* REMOTE-ADDRESS not present, discard packet */
 	return PJ_SUCCESS;
 
-    } else if (a_raddr->sockaddr.addr.sa_family != PJ_AF_INET) {
+    } else if (a_raddr->sockaddr.addr.sa_family != pj_AF_INET()) {
 	/* REMOTE-ADDRESS present but not IPv4, discard packet */
 	return PJ_SUCCESS;
 
@@ -1209,7 +1209,7 @@ static pj_status_t client_handle_send_ind(struct turn_client *client,
 	data = (const pj_uint8_t *)a_data->data;
 	datalen = a_data->length;
 
-    } else if (client->sock_type == PJ_SOCK_STREAM) {
+    } else if (client->sock_type == pj_SOCK_STREAM()) {
 	/* Discard if no Data and Allocation type is TCP */
 	return PJ_SUCCESS;
 

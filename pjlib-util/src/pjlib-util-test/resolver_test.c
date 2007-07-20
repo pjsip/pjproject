@@ -427,7 +427,7 @@ static int init(void)
     for (i=0; i<2; ++i) {
 	pj_sockaddr_in addr;
 
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g_server[i].sock);
+	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &g_server[i].sock);
 	if (status != PJ_SUCCESS)
 	    return -10;
 

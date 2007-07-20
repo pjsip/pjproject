@@ -285,7 +285,7 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     pj_memcpy(comp->ka_tsx_id, &tsx_id, sizeof(comp->ka_tsx_id));
 
     /* Create socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &comp->sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &comp->sock);
     if (status != PJ_SUCCESS)
 	return status;
 

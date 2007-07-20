@@ -77,12 +77,7 @@ static int format_test(void)
     char zero[64];
     pj_sockaddr_in addr2;
     const pj_str_t *hostname;
-#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
-    /* Symbian IP address is saved in host order */
-    unsigned char A[] = {1, 0, 0, 127};
-#else
-    unsigned char A[] = {127, 0, 0, 1};
-#endif
+    const unsigned char A[] = {127, 0, 0, 1};
 
     PJ_LOG(3,("test", "...format_test()"));
     
@@ -136,16 +131,16 @@ static int simple_sock_test(void)
     int i;
     pj_status_t rc = PJ_SUCCESS;
 
-    types[0] = PJ_SOCK_STREAM;
-    types[1] = PJ_SOCK_DGRAM;
+    types[0] = pj_SOCK_STREAM();
+    types[1] = pj_SOCK_DGRAM();
 
     PJ_LOG(3,("test", "...simple_sock_test()"));
 
     for (i=0; i<(int)(sizeof(types)/sizeof(types[0])); ++i) {
 	
-	rc = pj_sock_socket(PJ_AF_INET, types[i], 0, &sock);
+	rc = pj_sock_socket(pj_AF_INET(), types[i], 0, &sock);
 	if (rc != PJ_SUCCESS) {
-	    app_perror("...error: unable to create socket type %d", rc);
+	    app_perror("...error: unable to create socket", rc);
 	    break;
 	} else {
 	    rc = pj_sock_close(sock);
@@ -237,7 +232,7 @@ static int send_recv_test(int sock_type,
                 rc = -156; goto on_error;
             }
 	    if (received != DATA_LEN-total_received) {
-                if (sock_type != PJ_SOCK_STREAM) {
+                if (sock_type != pj_SOCK_STREAM()) {
 	            PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
                               DATA_LEN-total_received, received));
 	            rc = -157; goto on_error;
@@ -295,7 +290,7 @@ static int send_recv_test(int sock_type,
             rc = -173; goto on_error;
         }
 	if (received != BIG_DATA_LEN-total_received) {
-            if (sock_type != PJ_SOCK_STREAM) {
+            if (sock_type != pj_SOCK_STREAM()) {
 	        PJ_LOG(3,("", "...error: expecting %u bytes, got %u bytes",
                           BIG_DATA_LEN-total_received, received));
 	        rc = -176; goto on_error;
@@ -325,19 +320,19 @@ static int udp_test(void)
 
     PJ_LOG(3,("test", "...udp_test()"));
 
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &ss);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &ss);
     if (rc != 0) {
 	app_perror("...error: unable to create socket", rc);
 	return -100;
     }
 
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &cs);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &cs);
     if (rc != 0)
 	return -110;
 
     /* Bind server socket. */
     pj_bzero(&dstaddr, sizeof(dstaddr));
-    dstaddr.sin_family = PJ_AF_INET;
+    dstaddr.sin_family = pj_AF_INET();
     dstaddr.sin_port = pj_htons(UDP_PORT);
     dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
     
@@ -348,7 +343,7 @@ static int udp_test(void)
 
     /* Bind client socket. */
     pj_bzero(&srcaddr, sizeof(srcaddr));
-    srcaddr.sin_family = PJ_AF_INET;
+    srcaddr.sin_family = pj_AF_INET();
     srcaddr.sin_port = pj_htons(UDP_PORT-1);
     srcaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
 
@@ -358,13 +353,13 @@ static int udp_test(void)
     }
 	    
     /* Test send/recv, with sendto */
-    rc = send_recv_test(PJ_SOCK_DGRAM, ss, cs, &dstaddr, NULL, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr, NULL, 
                         sizeof(dstaddr));
     if (rc != 0)
 	goto on_error;
 
     /* Test send/recv, with sendto and recvfrom */
-    rc = send_recv_test(PJ_SOCK_DGRAM, ss, cs, &dstaddr, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, &dstaddr, 
                         &srcaddr, sizeof(dstaddr));
     if (rc != 0)
 	goto on_error;
@@ -382,12 +377,12 @@ static int udp_test(void)
     }
 
     /* Test send/recv with send() */
-    rc = send_recv_test(PJ_SOCK_DGRAM, ss, cs, NULL, NULL, 0);
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, NULL, NULL, 0);
     if (rc != 0)
 	goto on_error;
 
     /* Test send/recv with send() and recvfrom */
-    rc = send_recv_test(PJ_SOCK_DGRAM, ss, cs, NULL, &srcaddr, 
+    rc = send_recv_test(pj_SOCK_DGRAM(), ss, cs, NULL, &srcaddr, 
                         sizeof(srcaddr));
     if (rc != 0)
 	goto on_error;
@@ -420,14 +415,14 @@ static int tcp_test(void)
 
     PJ_LOG(3,("test", "...tcp_test()"));
 
-    rc = app_socketpair(PJ_AF_INET, PJ_SOCK_STREAM, 0, &ss, &cs);
+    rc = app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &ss, &cs);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: app_socketpair():", rc);
         return -2000;
     }
 
     /* Test send/recv with send() and recv() */
-    retval = send_recv_test(PJ_SOCK_STREAM, ss, cs, NULL, NULL, 0);
+    retval = send_recv_test(pj_SOCK_STREAM(), ss, cs, NULL, NULL, 0);
 
     rc = pj_sock_close(cs);
     if (rc != PJ_SUCCESS) {

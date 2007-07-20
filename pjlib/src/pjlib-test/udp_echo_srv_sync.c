@@ -77,7 +77,7 @@ int echo_srv_sync(void)
         return -6;
     }
 
-    rc = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM,0, ECHO_SERVER_START_PORT, &sock);
+    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(),0, ECHO_SERVER_START_PORT, &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...socket error", rc);
         return -10;

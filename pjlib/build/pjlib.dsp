@@ -40,6 +40,7 @@ RSC=rc.exe
 # PROP Output_Dir ".\output\pjlib-i386-win32-vc6-release"
 # PROP Intermediate_Dir ".\output\pjlib-i386-win32-vc6-release"
 # PROP Target_Dir ""
+F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD CPP /nologo /MD /W4 /Zi /O2 /Ob2 /I "../include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PJ_WIN32" /D "PJ_M_I386" /FR /FD /c
 # SUBTRACT CPP /YX
@@ -64,6 +65,7 @@ LIB32=link.exe -lib
 # PROP Output_Dir ".\output\pjlib-i386-win32-vc6-debug"
 # PROP Intermediate_Dir ".\output\pjlib-i386-win32-vc6-debug"
 # PROP Target_Dir ""
+F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
 # ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PJ_WIN32" /D "PJ_M_I386" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
@@ -328,6 +330,10 @@ SOURCE=..\src\pj\rbtree.c
 # Begin Source File
 
 SOURCE=..\src\pj\sock_bsd.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\sock_common.c
 # End Source File
 # Begin Source File
 

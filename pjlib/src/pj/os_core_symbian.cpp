@@ -260,8 +260,6 @@ PJ_DEF(pj_uint32_t) pj_getpid(void)
 }
 
 
-PJ_DECL(void) pj_shutdown(void);
-
 /*
  * pj_init(void).
  * Init PJLIB!
@@ -331,6 +329,94 @@ PJ_DEF(void) pj_shutdown(void)
 
     PjSymbianOS *os = PjSymbianOS::Instance();
     os->Shutdown();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+class CPollTimeoutTimer : public CActive 
+{
+public:
+    static CPollTimeoutTimer* NewL(int msec, TInt prio);
+    ~CPollTimeoutTimer();
+    
+    virtual void RunL();
+    virtual void DoCancel();
+
+private:	
+    RTimer	     rtimer_;
+    
+    explicit CPollTimeoutTimer(TInt prio);
+    void ConstructL(int msec);
+};
+
+CPollTimeoutTimer::CPollTimeoutTimer(TInt prio)
+: CActive(prio)
+{
+}
+
+
+CPollTimeoutTimer::~CPollTimeoutTimer() 
+{
+    rtimer_.Close();
+}
+
+void CPollTimeoutTimer::ConstructL(int msec) 
+{
+    rtimer_.CreateLocal();
+    CActiveScheduler::Add(this);
+    rtimer_.After(iStatus, msec*1000);
+    SetActive();
+}
+
+CPollTimeoutTimer* CPollTimeoutTimer::NewL(int msec, TInt prio) 
+{
+    CPollTimeoutTimer *self = new CPollTimeoutTimer(prio);
+    CleanupStack::PushL(self);
+    self->ConstructL(msec);    
+    CleanupStack::Pop(self);
+
+    return self;
+}
+
+void CPollTimeoutTimer::RunL() 
+{
+}
+
+void CPollTimeoutTimer::DoCancel() 
+{
+     rtimer_.Cancel();
+}
+
+
+/*
+ * Wait the completion of any Symbian active objects. 
+ */
+PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
+{
+    CPollTimeoutTimer *timer = NULL;
+    
+    if (priority==-1)
+    	priority = CActive::EPriorityStandard;
+    
+    if (ms_timeout >= 0) {
+    	timer = CPollTimeoutTimer::NewL(ms_timeout, priority);
+    }
+    
+    PjSymbianOS::Instance()->WaitForActiveObjects(priority);
+    
+    if (timer) {
+        bool timer_is_active = timer->IsActive();
+    
+        if (timer_is_active)
+            timer->Cancel();
+        
+        delete timer;
+        
+    	return timer_is_active ? PJ_TRUE : PJ_FALSE;
+    	
+    } else {
+    	return PJ_TRUE;
+    }
 }
 
 

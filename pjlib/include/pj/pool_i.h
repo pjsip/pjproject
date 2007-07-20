@@ -20,7 +20,6 @@
 
 #include <pj/string.h>
 
-PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, unsigned size);
 
 PJ_IDEF(pj_size_t) pj_pool_get_capacity( pj_pool_t *pool )
 {

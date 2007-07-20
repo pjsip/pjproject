@@ -270,13 +270,13 @@ static int init()
     pj_stun_config_init(&g.stun_config, &g.cp.factory, 0, NULL, g.th);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g.peer_sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &g.peer_sock);
     pj_assert(status == PJ_SUCCESS);
 
     status = pj_sock_bind_in(g.peer_sock, 0, 0);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &g.sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &g.sock);
     pj_assert(status == PJ_SUCCESS);
 
     status = pj_sockaddr_in_init(&addr, NULL, 0);

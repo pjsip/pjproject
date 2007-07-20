@@ -227,9 +227,9 @@ PJ_BEGIN_DECL
 	    return 1;
 	}
 
-	// Create the pool factory, in this case, a caching pool.
-	pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 
-			     1024*1024 );
+	// Create the pool factory, in this case, a caching pool,
+	// using default pool policy.
+	pj_caching_pool_init(&cp, NULL, 1024*1024 );
 
 	// Do a demo
 	pool_demo_1(&cp.factory);
@@ -505,8 +505,14 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
 #define PJ_POOL_ZALLOC_T(pool,type) \
 	    ((type*)pj_pool_zalloc(pool, sizeof(type)))
 
+/*
+ * Internal functions
+ */
+PJ_IDECL(void*) pj_pool_alloc_from_block(pj_pool_block *block, pj_size_t size);
+PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, unsigned size);
 
 
+	
 /**
  * @}	// PJ_POOL
  */
@@ -617,8 +623,19 @@ extern int PJ_NO_MEMORY_EXCEPTION;
  *  - block allocation and deallocation use malloc() and free().
  *  - callback will raise PJ_NO_MEMORY_EXCEPTION exception.
  *  - access to pool factory is not serialized (i.e. not thread safe).
+ *
+ * @see pj_pool_factory_get_default_policy
  */
-extern pj_pool_factory_policy pj_pool_factory_default_policy;
+PJ_DECL_DATA(pj_pool_factory_policy) pj_pool_factory_default_policy;
+
+
+/**
+ * Get the default pool factory policy.
+ *
+ * @return the pool policy.
+ */
+PJ_DECL(const pj_pool_factory_policy*) pj_pool_factory_get_default_policy(void);
+
 
 /**
  * This structure contains the declaration for pool factory interface.

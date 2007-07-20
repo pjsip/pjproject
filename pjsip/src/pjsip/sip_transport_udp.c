@@ -419,7 +419,7 @@ static pj_status_t create_socket(const pj_sockaddr_in *local_a,
     pj_sockaddr_in tmp_addr;
     pj_status_t status;
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -508,7 +508,7 @@ static void udp_set_socket(struct udp_transport *tp,
 
     /* Adjust socket rcvbuf size */
     sobuf_size = PJSIP_UDP_SO_RCVBUF_SIZE;
-    status = pj_sock_setsockopt(sock, PJ_SOL_SOCKET, PJ_SO_RCVBUF,
+    status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_RCVBUF(),
 				&sobuf_size, sizeof(sobuf_size));
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
@@ -519,7 +519,7 @@ static void udp_set_socket(struct udp_transport *tp,
 
     /* Adjust socket sndbuf size */
     sobuf_size = PJSIP_UDP_SO_SNDBUF_SIZE;
-    status = pj_sock_setsockopt(sock, PJ_SOL_SOCKET, PJ_SO_SNDBUF,
+    status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_SNDBUF(),
 				&sobuf_size, sizeof(sobuf_size));
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
@@ -639,7 +639,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach( pjsip_endpoint *endpt,
     tp->base.key.type = PJSIP_TRANSPORT_UDP;
 
     /* Remote address is left zero (except the family) */
-    tp->base.key.rem_addr.addr.sa_family = PJ_AF_INET;
+    tp->base.key.rem_addr.addr.sa_family = pj_AF_INET();
 
     /* Type name. */
     tp->base.type_name = "UDP";

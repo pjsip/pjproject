@@ -305,7 +305,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     pj_list_init(&resv->query_free_nodes);
 
     /* Create the UDP socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &resv->udp_sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &resv->udp_sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 

@@ -133,7 +133,7 @@ static int compliance_test(void)
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
-    pj_ioqueue_key_t *skey, *ckey;
+    pj_ioqueue_key_t *skey = NULL, *ckey = NULL;
     pj_ioqueue_op_key_t read_op, write_op;
     int bufsize = BUF_MIN_SIZE;
     pj_ssize_t bytes, status = -1;
@@ -152,9 +152,9 @@ static int compliance_test(void)
 
     // Allocate sockets for sending and receiving.
     TRACE_("creating sockets...");
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &ssock);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &ssock);
     if (rc==PJ_SUCCESS)
-        rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &csock);
+        rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &csock);
     else
         csock = PJ_INVALID_SOCKET;
     if (rc != PJ_SUCCESS) {
@@ -165,7 +165,7 @@ static int compliance_test(void)
     // Bind server socket.
     TRACE_("bind socket...");
     pj_bzero(&addr, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
+    addr.sin_family = pj_AF_INET();
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
 	status=-10; goto on_error;
@@ -258,7 +258,11 @@ static int compliance_test(void)
 	pj_time_val timeout = { 5, 0 };
 
 	TRACE_("poll...");
+#ifdef PJ_SYMBIAN
+	rc = pj_symbianos_poll(-1, 5000);
+#else
 	rc = pj_ioqueue_poll(ioque, &timeout);
+#endif
 
 	if (rc == 0) {
 	    PJ_LOG(1,(THIS_FILE, "...ERROR: timed out..."));
@@ -285,7 +289,7 @@ static int compliance_test(void)
 	    if (addrlen != sizeof(pj_sockaddr_in)) {
 		status=-68; goto on_error;
 	    }
-	    if (addr.sin_family != PJ_AF_INET) {
+	    if (addr.sin_family != pj_AF_INET()) {
 		status=-69; goto on_error;
 	    }
 
@@ -312,10 +316,16 @@ static int compliance_test(void)
     status = 0;
 
 on_error:
-    if (ssock)
+    if (skey)
+    	pj_ioqueue_unregister(skey);
+    else if (ssock != -1)
 	pj_sock_close(ssock);
-    if (csock)
+    
+    if (ckey)
+    	pj_ioqueue_unregister(ckey);
+    else if (csock != -1)
 	pj_sock_close(csock);
+    
     if (ioque != NULL)
 	pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -372,14 +382,14 @@ static int unregister_test(void)
     }
 
     /* Create sender socket */
-    status = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, SPORT, &ssock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, SPORT, &ssock);
     if (status != PJ_SUCCESS) {
 	app_perror("Error initializing socket", status);
 	return -120;
     }
 
     /* Create receiver socket. */
-    status = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, RPORT, &rsock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, RPORT, &rsock);
     if (status != PJ_SUCCESS) {
 	app_perror("Error initializing socket", status);
 	return -130;
@@ -435,7 +445,11 @@ static int unregister_test(void)
 
     /* Check if packet is received. */
     timeout.sec = 1; timeout.msec = 0;
+#ifdef PJ_SYMBIAN
+    pj_symbianos_poll(-1, 1000);
+#else
     pj_ioqueue_poll(ioqueue, &timeout);
+#endif
 
     if (packet_cnt != 1) {
 	return -180;
@@ -469,8 +483,12 @@ static int unregister_test(void)
     pj_ioqueue_unregister(key);
 
     /* Poll ioqueue. */
+#ifdef PJ_SYMBIAN
+    pj_symbianos_poll(-1, 1000);
+#else
     timeout.sec = 1; timeout.msec = 0;
     pj_ioqueue_poll(ioqueue, &timeout);
+#endif
 
     /* Must NOT receive any packets after socket is closed! */
     if (packet_cnt > 0) {
@@ -524,7 +542,7 @@ static int many_handles_test(void)
     /* Register as many sockets. */
     for (count=0; count<MAX; ++count) {
 	sock[count] = PJ_INVALID_SOCKET;
-	rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock[count]);
+	rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[count]);
 	if (rc != PJ_SUCCESS || sock[count] == PJ_INVALID_SOCKET) {
 	    PJ_LOG(3,(THIS_FILE, "....unable to create %d-th socket, rc=%d", 
 				 count, rc));
@@ -591,7 +609,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
     pj_ioqueue_op_key_t *inactive_read_op;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
-    pj_ioqueue_key_t *skey, *ckey, *key;
+    pj_ioqueue_key_t *skey, *ckey, *keys[SOCK_INACTIVE_MAX+2];
     pj_timestamp t1, t2, t_elapsed;
     int rc=0, i;    /* i must be signed */
     pj_str_t temp;
@@ -607,9 +625,9 @@ static int bench_test(int bufsize, int inactive_sock_count)
     recv_buf = (char*)pj_pool_alloc(pool, bufsize);
 
     // Allocate sockets for sending and receiving.
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &ssock);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &ssock);
     if (rc == PJ_SUCCESS) {
-        rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &csock);
+        rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &csock);
     } else
         csock = PJ_INVALID_SOCKET;
     if (rc != PJ_SUCCESS) {
@@ -619,7 +637,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 
     // Bind server socket.
     pj_bzero(&addr, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
+    addr.sin_family = pj_AF_INET();
     addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr)))
 	goto on_error;
@@ -640,11 +658,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
     inactive_read_op = (pj_ioqueue_op_key_t*)pj_pool_alloc(pool,
                               inactive_sock_count*sizeof(pj_ioqueue_op_key_t));
     pj_bzero(&addr, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
+    addr.sin_family = pj_AF_INET();
     for (i=0; i<inactive_sock_count; ++i) {
         pj_ssize_t bytes;
 
-	rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &inactive_sock[i]);
+	rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &inactive_sock[i]);
 	if (rc != PJ_SUCCESS || inactive_sock[i] < 0) {
 	    app_perror("...error: pj_sock_socket()", rc);
 	    goto on_error;
@@ -656,7 +674,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	    goto on_error;
 	}
 	rc = pj_ioqueue_register_sock(pool, ioque, inactive_sock[i], 
-			              NULL, &test_cb, &key);
+			              NULL, &test_cb, &keys[i]);
 	if (rc != PJ_SUCCESS) {
 	    pj_sock_close(inactive_sock[i]);
 	    inactive_sock[i] = PJ_INVALID_SOCKET;
@@ -665,7 +683,7 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	    goto on_error;
 	}
         bytes = bufsize;
-	rc = pj_ioqueue_recv(key, &inactive_read_op[i], recv_buf, &bytes, 0);
+	rc = pj_ioqueue_recv(keys[i], &inactive_read_op[i], recv_buf, &bytes, 0);
 	if (rc != PJ_EPENDING) {
 	    pj_sock_close(inactive_sock[i]);
 	    inactive_sock[i] = PJ_INVALID_SOCKET;
@@ -735,7 +753,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	TRACE__((THIS_FILE, "     waiting for key = %p", skey));
 	do {
 	    pj_time_val timeout = { 1, 0 };
+#ifdef PJ_SYMBIAN
+	    rc = pj_symbianos_poll(-1, 1000);
+#else
 	    rc = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	    TRACE__((THIS_FILE, "     poll rc=%d", rc));
 	} while (rc >= 0 && callback_read_key != skey);
 
@@ -760,7 +782,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
 	// Poll until all events are exhausted, before we start the next loop.
 	do {
 	    pj_time_val timeout = { 0, 10 };
+#ifdef PJ_SYMBIAN
+	    rc = pj_symbianos_poll(-1, 100);
+#else	    
 	    rc = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	} while (rc>0);
 
 	rc = 0;
@@ -784,11 +810,11 @@ static int bench_test(int bufsize, int inactive_sock_count)
 
     // Cleaning up.
     for (i=inactive_sock_count-1; i>=0; --i) {
-	pj_sock_close(inactive_sock[i]);
+	pj_ioqueue_unregister(keys[i]);
     }
 
-    pj_sock_close(ssock);
-    pj_sock_close(csock);
+    pj_ioqueue_unregister(skey);
+    pj_ioqueue_unregister(ckey);
 
 
     pj_ioqueue_destroy(ioque);

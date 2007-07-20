@@ -112,12 +112,12 @@ int select_test()
     PJ_LOG(3, (THIS_FILE, "...Testing simple UDP select()"));
     
     // Create two UDP sockets.
-    rc = pj_sock_socket( PJ_AF_INET, PJ_SOCK_DGRAM, 0, &udp1);
+    rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp1);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create socket", rc);
 	status=-10; goto on_return;
     }
-    rc = pj_sock_socket( PJ_AF_INET, PJ_SOCK_DGRAM, 0, &udp2);
+    rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp2);
     if (udp2 == PJ_INVALID_SOCKET) {
         app_perror("...error: unable to create socket", rc);
 	status=-20; goto on_return;
@@ -125,7 +125,7 @@ int select_test()
 
     // Bind one of the UDP socket.
     pj_bzero(&udp_addr, sizeof(udp_addr));
-    udp_addr.sin_family = PJ_AF_INET;
+    udp_addr.sin_family = pj_AF_INET();
     udp_addr.sin_port = UDP_PORT;
     udp_addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 

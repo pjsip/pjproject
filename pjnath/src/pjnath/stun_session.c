@@ -562,10 +562,10 @@ static void dump_tx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
     const pj_sockaddr *dst = (const pj_sockaddr*)addr;
     char buf[512];
     
-    if (dst->addr.sa_family == PJ_AF_INET) {
+    if (dst->addr.sa_family == pj_AF_INET()) {
 	dst_name = pj_inet_ntoa(dst->ipv4.sin_addr);
 	dst_port = pj_ntohs(dst->ipv4.sin_port);
-    } else if (dst->addr.sa_family == PJ_AF_INET6) {
+    } else if (dst->addr.sa_family == pj_AF_INET6()) {
 	dst_name = "IPv6";
 	dst_port = pj_ntohs(dst->ipv6.sin6_port);
     } else {

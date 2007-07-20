@@ -24,7 +24,11 @@
 
 #if PJ_LOG_MAX_LEVEL >= 1
 
-PJ_DEF(int) pj_log_max_level = PJ_LOG_MAX_LEVEL;
+#if 0
+PJ_DEF_DATA(int) pj_log_max_level = PJ_LOG_MAX_LEVEL;
+#else
+static int pj_log_max_level = PJ_LOG_MAX_LEVEL;
+#endif
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE;
@@ -48,7 +52,7 @@ PJ_DEF(void) pj_log_set_level(int level)
     pj_log_max_level = level;
 }
 
-#if 0
+#if 1
 PJ_DEF(int) pj_log_get_level(void)
 {
     return pj_log_max_level;
@@ -169,6 +173,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	(*log_writer)(level, log_buffer, len);
 }
 
+/*
 PJ_DEF(void) pj_log_0(const char *obj, const char *format, ...)
 {
     va_list arg;
@@ -176,6 +181,7 @@ PJ_DEF(void) pj_log_0(const char *obj, const char *format, ...)
     pj_log(obj, 0, format, arg);
     va_end(arg);
 }
+*/
 
 PJ_DEF(void) pj_log_1(const char *obj, const char *format, ...)
 {

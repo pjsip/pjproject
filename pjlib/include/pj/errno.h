@@ -352,11 +352,10 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  *  - PJNATH_ERRNO_START	(PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*4)
  */
 
-
-PJ_END_DECL
-
 /* Internal */
 void pj_errno_clear_handlers(void);
+
+PJ_END_DECL
 
 #endif	/* __PJ_ERRNO_H__ */
 

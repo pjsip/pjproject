@@ -1080,7 +1080,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	return status;
     }
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "socket() error", status);
 	return status;
@@ -1151,7 +1151,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	    return status;
 	}
 
-	p_pub_addr->sin_family = PJ_AF_INET;
+	p_pub_addr->sin_family = pj_AF_INET();
 	p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
     }
 

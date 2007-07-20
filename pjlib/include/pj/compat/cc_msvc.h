@@ -53,6 +53,10 @@
 #  define PJ_INLINE_SPECIFIER	static __inline
 #endif
 
+#define PJ_EXPORT_DECL_SPECIFIER    __declspec(dllexport)
+#define PJ_EXPORT_DEF_SPECIFIER	    __declspec(dllexport)
+#define PJ_IMPORT_DECL_SPECIFIER    __declspec(dllimport)
+
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		__declspec(noreturn)
 #define PJ_ATTR_NORETURN	

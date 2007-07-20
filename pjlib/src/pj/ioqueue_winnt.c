@@ -1106,7 +1106,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
      */
     op_key_rec = (union operation_key*)op_key->internal__;
     
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, 
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
                             &op_key_rec->accept.newsock);
     if (status != PJ_SUCCESS)
 	return status;

@@ -83,13 +83,13 @@ static int print_attr(char *buffer, unsigned length,
 
 	    attr = (const pj_stun_sockaddr_attr*)ahdr;
 
-	    if (attr->sockaddr.addr.sa_family == PJ_AF_INET) {
+	    if (attr->sockaddr.addr.sa_family == pj_AF_INET()) {
 		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv4 addr=%s:%d\n",
 				       pj_inet_ntoa(attr->sockaddr.ipv4.sin_addr),
 				       pj_ntohs(attr->sockaddr.ipv4.sin_port));
 
-	    } else if (attr->sockaddr.addr.sa_family == PJ_AF_INET6) {
+	    } else if (attr->sockaddr.addr.sa_family == pj_AF_INET6()) {
 		len = pj_ansi_snprintf(p, end-p,
 				       ", IPv6 addr present\n");
 	    } else {

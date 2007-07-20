@@ -253,6 +253,9 @@ PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht,
  * Poll the timer heap, check for expired timers and call the callback for
  * each of the expired timers.
  *
+ * Note: polling the timer heap is not necessary in Symbian. Please see
+ * @ref PJ_SYMBIAN_OS for more info.
+ *
  * @param ht         The timer heap.
  * @param next_delay If this parameter is not NULL, it will be filled up with
  *		     the time delay until the next timer elapsed, or -1 in

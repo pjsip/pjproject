@@ -18,6 +18,8 @@
  */
 #include <pj/os.h>
 #include <pj/compat/time.h>
+#include <pj/errno.h>
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -65,11 +67,19 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
 /**
  * Convert local time to GMT.
  */
-PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv);
+PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv)
+{
+    PJ_UNUSED_ARG(tv);
+    return PJ_EBUG;
+}
 
 /**
  * Convert GMT to local time.
  */
-PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv);
+PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
+{
+    PJ_UNUSED_ARG(tv);
+    return PJ_EBUG;
+}
 
 

@@ -937,7 +937,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
 
 
     /* Create and bind socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &listener->sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &listener->sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -1526,7 +1526,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 		     addr_len && p_transport, PJ_EINVAL);
 
     /* Check that address is a sockaddr_in */
-    PJ_ASSERT_RETURN(rem_addr->addr.sa_family == PJ_AF_INET &&
+    PJ_ASSERT_RETURN(rem_addr->addr.sa_family == pj_AF_INET() &&
 		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
 
 
@@ -1534,7 +1534,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     
     /* Create socket */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 

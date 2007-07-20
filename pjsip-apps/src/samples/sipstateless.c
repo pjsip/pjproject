@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     {
 	pj_sockaddr_in addr;
 
-	addr.sin_family = PJ_AF_INET;
+	addr.sin_family = pj_AF_INET();
 	addr.sin_addr.s_addr = 0;
 	addr.sin_port = pj_htons(5060);
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     {
 	pj_sockaddr_in addr;
 
-	addr.sin_family = PJ_AF_INET;
+	addr.sin_family = pj_AF_INET();
 	addr.sin_addr.s_addr = 0;
 	addr.sin_port = pj_htons(5060);
 

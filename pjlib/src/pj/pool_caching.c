@@ -65,6 +65,10 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     for (i=0; i<PJ_CACHING_POOL_ARRAY_SIZE; ++i)
 	pj_list_init(&cp->free_list[i]);
 
+    if (policy == NULL) {
+    	policy = &pj_pool_factory_default_policy;
+    }
+    
     pj_memcpy(&cp->factory.policy, policy, sizeof(pj_pool_factory_policy));
     cp->factory.create_pool = &cpool_create_pool;
     cp->factory.release_pool = &cpool_release_pool;

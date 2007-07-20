@@ -176,7 +176,7 @@ int udp_echo_srv_ioqueue(void)
         return -20;
     }
 
-    rc = app_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, 
+    rc = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 
                     ECHO_SERVER_START_PORT, &sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...app_socket error", rc);

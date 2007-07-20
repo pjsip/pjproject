@@ -217,7 +217,7 @@ PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 	if (rec[i].srv[0].mapped_addr == rec[i].srv[1].mapped_addr &&
 	    rec[i].srv[0].mapped_port == rec[i].srv[1].mapped_port)
 	{
-	    mapped_addr[i].sin_family = PJ_AF_INET;
+	    mapped_addr[i].sin_family = pj_AF_INET();
 	    mapped_addr[i].sin_addr.s_addr = rec[i].srv[0].mapped_addr;
 	    mapped_addr[i].sin_port = (pj_uint16_t)rec[i].srv[0].mapped_port;
 

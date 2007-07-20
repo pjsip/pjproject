@@ -76,7 +76,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
     // Return hostent
     he->h_name = resolved_name;
     he->h_aliases = no_aliases;
-    he->h_addrtype = PJ_AF_INET;
+    he->h_addrtype = pj_AF_INET();
     he->h_length = 4;
     he->h_addr_list = (char**) addr_list;
 
@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
 
 
 /* Resolve the IP address of local machine */
-pj_status_t pj_gethostip(pj_in_addr *addr)
+PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 {
     const pj_str_t *hostname = pj_gethostname();
     struct pj_hostent he;
@@ -111,7 +111,7 @@ pj_status_t pj_gethostip(pj_in_addr *addr)
 	pj_sockaddr_in a;
 	int len;
 
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &fd);
+	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
 	if (status != PJ_SUCCESS) {
 	    return status;
 	}

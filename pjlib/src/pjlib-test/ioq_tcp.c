@@ -50,6 +50,7 @@ static pj_ssize_t	     callback_read_size,
                              callback_write_size,
                              callback_accept_status,
                              callback_connect_status;
+static unsigned		     callback_call_count;
 static pj_ioqueue_key_t     *callback_read_key,
                             *callback_write_key,
                             *callback_accept_key,
@@ -65,6 +66,7 @@ static void on_ioqueue_read(pj_ioqueue_key_t *key,
     callback_read_key = key;
     callback_read_op = op_key;
     callback_read_size = bytes_read;
+    callback_call_count++;
 }
 
 static void on_ioqueue_write(pj_ioqueue_key_t *key, 
@@ -74,6 +76,7 @@ static void on_ioqueue_write(pj_ioqueue_key_t *key,
     callback_write_key = key;
     callback_write_op = op_key;
     callback_write_size = bytes_written;
+    callback_call_count++;
 }
 
 static void on_ioqueue_accept(pj_ioqueue_key_t *key, 
@@ -96,6 +99,7 @@ static void on_ioqueue_accept(pj_ioqueue_key_t *key,
 	callback_accept_key = key;
 	callback_accept_op = op_key;
 	callback_accept_status = status;
+	callback_call_count++;
     }
 }
 
@@ -103,6 +107,7 @@ static void on_ioqueue_connect(pj_ioqueue_key_t *key, int status)
 {
     callback_connect_key = key;
     callback_connect_status = status;
+    callback_call_count++;
 }
 
 static pj_ioqueue_callback test_cb = 
@@ -168,7 +173,12 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     status = 0;
     while (pending_op > 0) {
         timeout.sec = 1; timeout.msec = 0;
+#ifdef PJ_SYMBIAN
+	PJ_UNUSED_ARG(ioque);
+	status = pj_symbianos_poll(-1, 1000);
+#else
 	status = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	if (status > 0) {
             if (callback_read_size) {
                 if (callback_read_size != bufsize)
@@ -197,7 +207,11 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     // Pending op is zero.
     // Subsequent poll should yield zero too.
     timeout.sec = timeout.msec = 0;
+#ifdef PJ_SYMBIAN
+    status = pj_symbianos_poll(-1, 1);
+#else
     status = pj_ioqueue_poll(ioque, &timeout);
+#endif
     if (status != 0)
         return -173;
 
@@ -226,7 +240,7 @@ static int compliance_test_0(void)
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
-    pj_ioqueue_key_t *skey, *ckey0, *ckey1;
+    pj_ioqueue_key_t *skey=NULL, *ckey0=NULL, *ckey1=NULL;
     pj_ioqueue_op_key_t accept_op;
     int bufsize = BUF_MIN_SIZE;
     pj_ssize_t status = -1;
@@ -243,13 +257,13 @@ static int compliance_test_0(void)
     recv_buf = (char*)pj_pool_alloc(pool, bufsize);
 
     // Create server socket and client socket for connecting
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &ssock);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &ssock);
     if (rc != PJ_SUCCESS) {
         app_perror("...error creating socket", rc);
         status=-1; goto on_error;
     }
 
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &csock1);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &csock1);
     if (rc != PJ_SUCCESS) {
         app_perror("...error creating socket", rc);
 	status=-1; goto on_error;
@@ -321,6 +335,7 @@ static int compliance_test_0(void)
     // Poll until connected
     callback_read_size = callback_write_size = 0;
     callback_accept_status = callback_connect_status = -2;
+    callback_call_count = 0;
 
     callback_read_key = callback_write_key = 
         callback_accept_key = callback_connect_key = NULL;
@@ -329,7 +344,13 @@ static int compliance_test_0(void)
     while (pending_op) {
 	pj_time_val timeout = {1, 0};
 
-	status=pj_ioqueue_poll(ioque, &timeout);
+#ifdef PJ_SYMBIAN
+	callback_call_count = 0;
+	pj_symbianos_poll(-1, 1000);
+	status = callback_call_count;
+#else
+	status = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	if (status > 0) {
             if (callback_accept_status != -2) {
                 if (callback_accept_status != 0) {
@@ -373,7 +394,11 @@ static int compliance_test_0(void)
     // When we poll the ioqueue, there must not be events.
     if (pending_op == 0) {
         pj_time_val timeout = {1, 0};
+#ifdef PJ_SYMBIAN
+	status = pj_symbianos_poll(-1, 1000);
+#else
         status = pj_ioqueue_poll(ioque, &timeout);
+#endif
         if (status != 0) {
             status=-60; goto on_error;
         }
@@ -407,12 +432,21 @@ static int compliance_test_0(void)
     status = 0;
 
 on_error:
-    if (ssock != PJ_INVALID_SOCKET)
+    if (skey != NULL)
+    	pj_ioqueue_unregister(skey);
+    else if (ssock != PJ_INVALID_SOCKET)
 	pj_sock_close(ssock);
-    if (csock1 != PJ_INVALID_SOCKET)
+    
+    if (ckey1 != NULL)
+    	pj_ioqueue_unregister(ckey1);
+    else if (csock1 != PJ_INVALID_SOCKET)
 	pj_sock_close(csock1);
-    if (csock0 != PJ_INVALID_SOCKET)
+    
+    if (ckey0 != NULL)
+    	pj_ioqueue_unregister(ckey0);
+    else if (csock0 != PJ_INVALID_SOCKET)
 	pj_sock_close(csock0);
+    
     if (ioque != NULL)
 	pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -426,11 +460,11 @@ on_error:
  */
 static int compliance_test_1(void)
 {
-    pj_sock_t csock1=-1;
+    pj_sock_t csock1=PJ_INVALID_SOCKET;
     pj_sockaddr_in addr;
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioque = NULL;
-    pj_ioqueue_key_t *ckey1;
+    pj_ioqueue_key_t *ckey1 = NULL;
     pj_ssize_t status = -1;
     int pending_op = 0;
     pj_str_t s;
@@ -446,7 +480,7 @@ static int compliance_test_1(void)
     }
 
     // Create client socket
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &csock1);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &csock1);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_sock_socket()", rc);
 	status=-1; goto on_error;
@@ -483,7 +517,13 @@ static int compliance_test_1(void)
     while (pending_op) {
 	pj_time_val timeout = {1, 0};
 
-	status=pj_ioqueue_poll(ioque, &timeout);
+#ifdef PJ_SYMBIAN
+	callback_call_count = 0;
+	pj_symbianos_poll(-1, 1000);
+	status = callback_call_count;
+#else
+	status = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	if (status > 0) {
             if (callback_connect_key==ckey1) {
 		if (callback_connect_status == 0) {
@@ -512,7 +552,11 @@ static int compliance_test_1(void)
     // When we poll the ioqueue, there must not be events.
     if (pending_op == 0) {
         pj_time_val timeout = {1, 0};
+#ifdef PJ_SYMBIAN
+	status = pj_symbianos_poll(-1, 1000);
+#else
         status = pj_ioqueue_poll(ioque, &timeout);
+#endif
         if (status != 0) {
             status=-60; goto on_error;
         }
@@ -522,8 +566,11 @@ static int compliance_test_1(void)
     status = 0;
 
 on_error:
-    if (csock1 != PJ_INVALID_SOCKET)
+    if (ckey1 != NULL)
+    	pj_ioqueue_unregister(ckey1);
+    else if (csock1 != PJ_INVALID_SOCKET)
 	pj_sock_close(csock1);
+    
     if (ioque != NULL)
 	pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
@@ -576,6 +623,19 @@ static int compliance_test_2(void)
     pj_str_t s;
     pj_status_t rc;
 
+    listener.sock = PJ_INVALID_SOCKET;
+    listener.key = NULL;
+    
+    for (i=0; i<MAX_PAIR; ++i) {
+    	server[i].sock = PJ_INVALID_SOCKET;
+    	server[i].key = NULL;
+    }
+    
+    for (i=0; i<MAX_PAIR; ++i) {
+    	client[i].sock = PJ_INVALID_SOCKET;
+    	client[i].key = NULL;	
+    }
+    
     // Create pool.
     pool = pj_pool_create(mem, NULL, POOL_SIZE, 4000, NULL);
 
@@ -593,7 +653,7 @@ static int compliance_test_2(void)
     recv_buf = (char*)pj_pool_alloc(pool, bufsize);
 
     // Create listener socket
-    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &listener.sock);
+    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &listener.sock);
     if (rc != PJ_SUCCESS) {
         app_perror("...error creating socket", rc);
         status=-20; goto on_error;
@@ -635,7 +695,7 @@ static int compliance_test_2(void)
     for (test_loop=0; test_loop < TEST_LOOP; ++test_loop) {
 	// Client connect and server accept.
 	for (i=0; i<MAX_PAIR; ++i) {
-	    rc = pj_sock_socket(PJ_AF_INET, PJ_SOCK_STREAM, 0, &client[i].sock);
+	    rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &client[i].sock);
 	    if (rc != PJ_SUCCESS) {
 		app_perror("...error creating socket", rc);
 		status=-70; goto on_error;
@@ -683,7 +743,11 @@ static int compliance_test_2(void)
 	while (pending_op) {
 	    pj_time_val timeout = {1, 0};
 
-	    status=pj_ioqueue_poll(ioque, &timeout);
+#ifdef PJ_SYMBIAN
+	    status = pj_symbianos_poll(-1, 1000);
+#else
+	    status = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	    if (status > 0) {
 		if (status > pending_op) {
 		    PJ_LOG(3,(THIS_FILE,
@@ -704,7 +768,11 @@ static int compliance_test_2(void)
 	// When we poll the ioqueue, there must not be events.
 	if (pending_op == 0) {
 	    pj_time_val timeout = {1, 0};
+#ifdef PJ_SYMBIAN
+	    status = pj_symbianos_poll(-1, 1000);
+#else
 	    status = pj_ioqueue_poll(ioque, &timeout);
+#endif
 	    if (status != 0) {
 		status=-120; goto on_error;
 	    }
@@ -719,7 +787,7 @@ static int compliance_test_2(void)
 	    }
 
 	    // Check addresses
-	    if (server[i].local_addr.sin_family != PJ_AF_INET ||
+	    if (server[i].local_addr.sin_family != pj_AF_INET() ||
 		server[i].local_addr.sin_addr.s_addr == 0 ||
 		server[i].local_addr.sin_port == 0)
 	    {
@@ -728,7 +796,7 @@ static int compliance_test_2(void)
 		goto on_error;
 	    }
 
-	    if (server[i].rem_addr.sin_family != PJ_AF_INET ||
+	    if (server[i].rem_addr.sin_family != pj_AF_INET() ||
 		server[i].rem_addr.sin_addr.s_addr == 0 ||
 		server[i].rem_addr.sin_port == 0)
 	    {

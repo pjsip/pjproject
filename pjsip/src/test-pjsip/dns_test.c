@@ -483,7 +483,7 @@ static void add_ref(pjsip_server_addresses *r,
     r->entry[r->count].addr_len = sizeof(pj_sockaddr_in);
 
     a = (pj_sockaddr_in *)&r->entry[r->count].addr;
-    a->sin_family = PJ_AF_INET;
+    a->sin_family = pj_AF_INET();
     tmp = pj_str(addr);
     a->sin_addr = pj_inet_addr(&tmp);
     a->sin_port = pj_htons((pj_uint16_t)port);

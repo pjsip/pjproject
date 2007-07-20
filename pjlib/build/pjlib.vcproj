@@ -916,6 +916,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pj\sock_common.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pj\sock_select.c"
 				>
 				<FileConfiguration

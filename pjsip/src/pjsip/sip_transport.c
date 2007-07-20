@@ -560,7 +560,7 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     tdata->tp_info.transport = tr;
     pj_memcpy(&tdata->tp_info.dst_addr, addr, addr_len);
     tdata->tp_info.dst_addr_len = addr_len;
-    if (((pj_sockaddr*)addr)->addr.sa_family == PJ_AF_INET) {
+    if (((pj_sockaddr*)addr)->addr.sa_family == pj_AF_INET()) {
 	const char *str_addr;
 	str_addr = pj_inet_ntoa(((pj_sockaddr_in*)addr)->sin_addr);
 	pj_ansi_strcpy(tdata->tp_info.dst_name, str_addr);
@@ -1471,12 +1471,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	    /* For datagram INET transports, try lookup with zero address.
 	     */
 	    else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
-		     (remote_addr->addr.sa_family == PJ_AF_INET)) 
+		     (remote_addr->addr.sa_family == pj_AF_INET())) 
 	    {
 		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.rem_addr;
 
 		pj_bzero(addr, sizeof(pj_sockaddr_in));
-		addr->sin_family = PJ_AF_INET;
+		addr->sin_family = pj_AF_INET();
 
 		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
 		transport = (pjsip_transport*)

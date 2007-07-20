@@ -83,7 +83,7 @@ PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 	pj_sockaddr_in a;
 	int len;
 
-	status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &fd);
+	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
 	if (status != PJ_SUCCESS) {
 	    return status;
 	}

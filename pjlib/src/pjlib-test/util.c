@@ -53,7 +53,7 @@ pj_status_t app_socket(int family, int type, int proto, int port,
         return rc;
     
 #if PJ_HAS_TCP
-    if (type == PJ_SOCK_STREAM) {
+    if (type == pj_SOCK_STREAM()) {
         rc = pj_sock_listen(sock, 5);
         if (rc != PJ_SUCCESS)
             return rc;
@@ -86,7 +86,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
 
     /* Retry bind */
     pj_bzero(&addr, sizeof(addr));
-    addr.sin_family = PJ_AF_INET;
+    addr.sin_family = pj_AF_INET();
     for (i=0; i<5; ++i) {
         addr.sin_port = pj_htons(port++);
         rc = pj_sock_bind(sock[SERVER], &addr, sizeof(addr));
@@ -99,7 +99,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
 
     /* For TCP, listen the socket. */
 #if PJ_HAS_TCP
-    if (type == PJ_SOCK_STREAM) {
+    if (type == pj_SOCK_STREAM()) {
         rc = pj_sock_listen(sock[SERVER], PJ_SOMAXCONN);
         if (rc != PJ_SUCCESS)
             goto on_error;
@@ -114,7 +114,7 @@ pj_status_t app_socketpair(int family, int type, int protocol,
 
     /* For TCP, must accept(), and get the new socket. */
 #if PJ_HAS_TCP
-    if (type == PJ_SOCK_STREAM) {
+    if (type == pj_SOCK_STREAM()) {
         pj_sock_t newserver;
 
         rc = pj_sock_accept(sock[SERVER], &newserver, NULL, NULL);

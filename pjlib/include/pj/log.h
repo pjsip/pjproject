@@ -174,10 +174,10 @@ PJ_DECL(void) pj_log_set_level(int level);
  *
  * @return	    Current log maximum level.
  */
-#if 0
+#if 1
 PJ_DECL(int) pj_log_get_level(void);
 #else
-extern int pj_log_max_level;
+PJ_DECL_DATA(int) pj_log_max_level;
 #define pj_log_get_level()  pj_log_max_level
 #endif
 

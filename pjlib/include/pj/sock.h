@@ -59,12 +59,18 @@ PJ_BEGIN_DECL
  * APPLICATION MUST USE THESE VALUES INSTEAD OF NORMAL AF_*, BECAUSE
  * THE LIBRARY WILL DO TRANSLATION TO THE NATIVE VALUE.
  */
-extern const pj_uint16_t PJ_AF_UNIX;    /**< Unix domain socket.	*/
-#define PJ_AF_LOCAL	 PJ_AF_UNIX;    /**< POSIX name for AF_UNIX	*/
-extern const pj_uint16_t PJ_AF_INET;    /**< Internet IP protocol.	*/
-extern const pj_uint16_t PJ_AF_INET6;   /**< IP version 6.		*/
-extern const pj_uint16_t PJ_AF_PACKET;  /**< Packet family.		*/
-extern const pj_uint16_t PJ_AF_IRDA;    /**< IRDA sockets.		*/
+extern const pj_uint16_t PJ_AF_UNIX; /**< Unix domain socket.	*/
+#define PJ_AF_LOCAL	 PJ_AF_UNIX; /**< POSIX name for AF_UNIX	*/
+extern const pj_uint16_t PJ_AF_INET; /**< Internet IP protocol.	*/
+extern const pj_uint16_t PJ_AF_INET6;/**< IP version 6.		*/
+extern const pj_uint16_t PJ_AF_PACKET;/**< Packet family.	*/
+extern const pj_uint16_t PJ_AF_IRDA; /**< IRDA sockets.		*/
+
+PJ_DECL(pj_uint16_t) pj_AF_UNIX(void);
+PJ_DECL(pj_uint16_t) pj_AF_INET(void);
+PJ_DECL(pj_uint16_t) pj_AF_INET6(void);
+PJ_DECL(pj_uint16_t) pj_AF_PACKET(void);
+PJ_DECL(pj_uint16_t) pj_AF_IRDA(void);
 
 
 /**
@@ -74,12 +80,18 @@ extern const pj_uint16_t PJ_AF_IRDA;    /**< IRDA sockets.		*/
  */
 
 extern const pj_uint16_t PJ_SOCK_STREAM; /**< Sequenced, reliable, connection-
-					      based byte streams.           */
+					     based byte streams.           */
 extern const pj_uint16_t PJ_SOCK_DGRAM;  /**< Connectionless, unreliable 
-					      datagrams of fixed maximum 
-					      lengths.                      */
+					     datagrams of fixed maximum 
+					     lengths.                      */
 extern const pj_uint16_t PJ_SOCK_RAW;    /**< Raw protocol interface.       */
 extern const pj_uint16_t PJ_SOCK_RDM;    /**< Reliably-delivered messages.  */
+
+
+PJ_DECL(int) pj_SOCK_STREAM(void);
+PJ_DECL(int) pj_SOCK_DGRAM(void);
+PJ_DECL(int) pj_SOCK_RAW(void);
+PJ_DECL(int) pj_SOCK_RDM(void);
 
 
 /**
@@ -93,6 +105,12 @@ extern const pj_uint16_t PJ_SOL_TCP;	/**< TCP level.	    */
 extern const pj_uint16_t PJ_SOL_UDP;	/**< UDP level.	    */
 extern const pj_uint16_t PJ_SOL_IPV6;	/**< IP version 6   */
 
+PJ_DECL(pj_uint16_t) pj_SOL_SOCKET(void);
+PJ_DECL(pj_uint16_t) pj_SOL_IP(void);
+PJ_DECL(pj_uint16_t) pj_SOL_TCP(void);
+PJ_DECL(pj_uint16_t) pj_SOL_UDP(void);
+PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
+
 
 /* IP_TOS 
  *
@@ -102,6 +120,7 @@ extern const pj_uint16_t PJ_SOL_IPV6;	/**< IP version 6   */
  */
 extern const pj_uint16_t PJ_IP_TOS;	/**< IP_TOS optname in setsockopt() */
 
+PJ_DECL(int) pj_IP_TOS(void);
 
 /*
  * IP TOS related constats.
@@ -114,24 +133,37 @@ extern const pj_uint16_t PJ_IPTOS_LOWDELAY;	/**< Minimize  delays	    */
 extern const pj_uint16_t PJ_IPTOS_THROUGHPUT;	/**< Optimize throughput    */
 extern const pj_uint16_t PJ_IPTOS_RELIABILITY;	/**< Optimize for reliability*/
 extern const pj_uint16_t PJ_IPTOS_MINCOST;	/**< "filler data" where slow 
-						 transmission does't matter */
+						  transmission does't matter */
+
+PJ_DECL(int) pj_IPTOS_LOWDELAY(void);
+PJ_DECL(int) pj_IPTOS_THROUGHPUT(void);
+PJ_DECL(int) pj_IPTOS_RELIABILITY(void);
+PJ_DECL(int) pj_IPTOS_MINCOST(void);
 
 
 /**
  * Values to be specified as \c optname when calling #pj_sock_setsockopt() 
  * or #pj_sock_getsockopt().
  */
-extern const pj_uint16_t PJ_SO_TYPE;    /**< Socket type.               */
-extern const pj_uint16_t PJ_SO_RCVBUF;  /**< Buffer size for receive.   */
-extern const pj_uint16_t PJ_SO_SNDBUF;  /**< Buffer size for send.      */
+extern const pj_uint16_t PJ_SO_TYPE;  /**< Socket type.             */
+extern const pj_uint16_t PJ_SO_RCVBUF;/**< Buffer size for receive. */
+extern const pj_uint16_t PJ_SO_SNDBUF;/**< Buffer size for send.    */
+
+PJ_DECL(pj_uint16_t) pj_SO_TYPE(void);
+PJ_DECL(pj_uint16_t) pj_SO_RCVBUF(void);
+PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
 
 
 /*
  * Flags to be specified in #pj_sock_recv, #pj_sock_send, etc.
  */
-extern const int PJ_MSG_OOB;	    /**< Out-of-band messages.		 */
-extern const int PJ_MSG_PEEK;	    /**< Peek, don't remove from buffer. */
-extern const int PJ_MSG_DONTROUTE;  /**< Don't route.			 */
+extern const int PJ_MSG_OOB;	  /**< Out-of-band messages.         */
+extern const int PJ_MSG_PEEK;	  /**< Peek, don't remove from buffer*/
+extern const int PJ_MSG_DONTROUTE;/**< Don't route.                  */
+
+PJ_DECL(int) pj_MSG_OOB(void);
+PJ_DECL(int) pj_MSG_PEEK(void);
+PJ_DECL(int) pj_MSG_DONTROUTE(void);
 
 
 /**
