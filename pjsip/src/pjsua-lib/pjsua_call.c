@@ -331,7 +331,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
 
     /* Create and associate our data in the session. */
-
+    call->acc_id = acc_id;
     call->inv = inv;
 
     dlg->mod_data[pjsua_var.mod.id] = call;
