@@ -354,6 +354,18 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
  * @}
  */
 
+/* Internal function defined in sip_auth_client.c */
+void pjsip_auth_create_digest( pj_str_t *result,
+			       const pj_str_t *nonce,
+			       const pj_str_t *nc,
+			       const pj_str_t *cnonce,
+			       const pj_str_t *qop,
+			       const pj_str_t *uri,
+			       const pj_str_t *realm,
+			       const pjsip_cred_info *cred_info,
+			       const pj_str_t *method);
+
+
 
 PJ_END_DECL
 

@@ -26,17 +26,6 @@
 #include <pj/assert.h>
 
 
-/* Defined in sip_auth_client.c */
-void pjsip_auth_create_digest( pj_str_t *result,
-			       const pj_str_t *nonce,
-			       const pj_str_t *nc,
-			       const pj_str_t *cnonce,
-			       const pj_str_t *qop,
-			       const pj_str_t *uri,
-			       const pjsip_cred_info *cred_info,
-			       const pj_str_t *method);
-
-
 /*
  * Initialize server authorization session data structure to serve the 
  * specified realm and to use lookup_func function to look for the credential 
@@ -90,6 +79,7 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
 				 &hdr->credential.digest.cnonce,
 				 &hdr->credential.digest.qop,
 				 &hdr->credential.digest.uri,
+				 &cred_info->realm,
 				 cred_info, 
 				 method );
 
