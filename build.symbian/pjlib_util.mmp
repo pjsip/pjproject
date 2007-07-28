@@ -1,7 +1,21 @@
+#if defined(EKA2)
+TARGET		pjlib_util.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004298
+CAPABILITY	NONE
+LIBRARY		pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjlib_util.def
+
+#else
 TARGET 		pjlib_util.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
-VENDORID	0x70000001
+//VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjlib-util\src\pjlib-util
 
@@ -59,5 +73,4 @@ SYSTEMINCLUDE	..\pjlib-util\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-CAPABILITY	None
 

@@ -32,11 +32,11 @@ static int stun_timer[] = {1600, 1600, 1600 };
 #define LOG_ADDR(addr)	pj_inet_ntoa(addr.sin_addr), pj_ntohs(addr.sin_port)
 
 
-PJ_DECL(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
-					      int sock_cnt, pj_sock_t sock[],
-					      const pj_str_t *srv1, int port1,
-					      const pj_str_t *srv2, int port2,
-					      pj_sockaddr_in mapped_addr[])
+PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
+					    int sock_cnt, pj_sock_t sock[],
+					    const pj_str_t *srv1, int port1,
+					    const pj_str_t *srv2, int port2,
+					    pj_sockaddr_in mapped_addr[])
 {
     pj_sockaddr_in srv_addr[2];
     int i, j, send_cnt = 0;

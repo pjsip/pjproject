@@ -59,17 +59,40 @@ PJ_BEGIN_DECL
  * APPLICATION MUST USE THESE VALUES INSTEAD OF NORMAL AF_*, BECAUSE
  * THE LIBRARY WILL DO TRANSLATION TO THE NATIVE VALUE.
  */
-extern const pj_uint16_t PJ_AF_UNIX; /**< Unix domain socket.	*/
-#define PJ_AF_LOCAL	 PJ_AF_UNIX; /**< POSIX name for AF_UNIX	*/
-extern const pj_uint16_t PJ_AF_INET; /**< Internet IP protocol.	*/
-extern const pj_uint16_t PJ_AF_INET6;/**< IP version 6.		*/
-extern const pj_uint16_t PJ_AF_PACKET;/**< Packet family.	*/
-extern const pj_uint16_t PJ_AF_IRDA; /**< IRDA sockets.		*/
 
+/** Unix domain socket.	@see pj_AF_UNIX() */
+extern const pj_uint16_t PJ_AF_UNIX;
+
+/** POSIX name for AF_UNIX	*/
+#define PJ_AF_LOCAL	 PJ_AF_UNIX;
+
+/** Internet IP protocol. @see pj_AF_INET() */
+extern const pj_uint16_t PJ_AF_INET;
+
+/** IP version 6. @see pj_AF_INET6() */
+extern const pj_uint16_t PJ_AF_INET6;
+
+/** Packet family. @see pj_AF_PACKET() */
+extern const pj_uint16_t PJ_AF_PACKET;
+
+/** IRDA sockets. @see pj_AF_IRDA() */
+extern const pj_uint16_t PJ_AF_IRDA;
+
+/*
+ * Accessor functions for various address family constants. These
+ * functions are provided because Symbian doesn't allow exporting
+ * global variables from a DLL.
+ */
+
+/** Get #PJ_AF_UNIX value. */
 PJ_DECL(pj_uint16_t) pj_AF_UNIX(void);
+/** Get #PJ_AF_INET value. */
 PJ_DECL(pj_uint16_t) pj_AF_INET(void);
+/** Get #PJ_AF_INET6 value. */
 PJ_DECL(pj_uint16_t) pj_AF_INET6(void);
+/** Get #PJ_AF_PACKET value. */
 PJ_DECL(pj_uint16_t) pj_AF_PACKET(void);
+/** Get #PJ_AF_IRDA value. */
 PJ_DECL(pj_uint16_t) pj_AF_IRDA(void);
 
 
@@ -79,18 +102,33 @@ PJ_DECL(pj_uint16_t) pj_AF_IRDA(void);
  * THE LIBRARY WILL TRANSLATE THE VALUE TO THE NATIVE VALUE.
  */
 
-extern const pj_uint16_t PJ_SOCK_STREAM; /**< Sequenced, reliable, connection-
-					     based byte streams.           */
-extern const pj_uint16_t PJ_SOCK_DGRAM;  /**< Connectionless, unreliable 
-					     datagrams of fixed maximum 
-					     lengths.                      */
-extern const pj_uint16_t PJ_SOCK_RAW;    /**< Raw protocol interface.       */
-extern const pj_uint16_t PJ_SOCK_RDM;    /**< Reliably-delivered messages.  */
+/** Sequenced, reliable, connection-based byte streams.
+ *  @see pj_SOCK_STREAM() */
+extern const pj_uint16_t PJ_SOCK_STREAM;
+
+/** Connectionless, unreliable datagrams of fixed maximum lengths.
+ *  @see pj_SOCK_DGRAM() */
+extern const pj_uint16_t PJ_SOCK_DGRAM;
+
+/** Raw protocol interface. @see pj_SOCK_RAW() */
+extern const pj_uint16_t PJ_SOCK_RAW;
+
+/** Reliably-delivered messages.  @see pj_SOCK_RDM() */
+extern const pj_uint16_t PJ_SOCK_RDM;
 
 
+/*
+ * Accessor functions for various constants. These functions are provided
+ * because Symbian doesn't allow exporting global variables from a DLL.
+ */
+
+/** Get #PJ_SOCK_STREAM constant */
 PJ_DECL(int) pj_SOCK_STREAM(void);
+/** Get #PJ_SOCK_DGRAM constant */
 PJ_DECL(int) pj_SOCK_DGRAM(void);
+/** Get #PJ_SOCK_RAW constant */
 PJ_DECL(int) pj_SOCK_RAW(void);
+/** Get #PJ_SOCK_RDM constant */
 PJ_DECL(int) pj_SOCK_RDM(void);
 
 
@@ -99,16 +137,31 @@ PJ_DECL(int) pj_SOCK_RDM(void);
  * APPLICATION MUST USE THESE VALUES INSTEAD OF NORMAL SOL_*, BECAUSE
  * THE LIBRARY WILL TRANSLATE THE VALUE TO THE NATIVE VALUE.
  */
-extern const pj_uint16_t PJ_SOL_SOCKET;	/**< Socket level.  */
-extern const pj_uint16_t PJ_SOL_IP;	/**< IP level.	    */
-extern const pj_uint16_t PJ_SOL_TCP;	/**< TCP level.	    */
-extern const pj_uint16_t PJ_SOL_UDP;	/**< UDP level.	    */
-extern const pj_uint16_t PJ_SOL_IPV6;	/**< IP version 6   */
+/** Socket level. @see pj_SOL_SOCKET() */
+extern const pj_uint16_t PJ_SOL_SOCKET;
+/** IP level. @see pj_SOL_IP() */
+extern const pj_uint16_t PJ_SOL_IP;
+/** TCP level. @see pj_SOL_TCP() */
+extern const pj_uint16_t PJ_SOL_TCP;
+/** UDP level. @see pj_SOL_UDP() */
+extern const pj_uint16_t PJ_SOL_UDP;
+/** IP version 6. @see pj_SOL_IPV6() */
+extern const pj_uint16_t PJ_SOL_IPV6;
 
+/*
+ * Accessor functions for various constants. These functions are provided
+ * because Symbian doesn't allow exporting global variables from a DLL.
+ */
+
+/** Get #PJ_SOL_SOCKET constant */
 PJ_DECL(pj_uint16_t) pj_SOL_SOCKET(void);
+/** Get #PJ_SOL_IP constant */
 PJ_DECL(pj_uint16_t) pj_SOL_IP(void);
+/** Get #PJ_SOL_TCP constant */
 PJ_DECL(pj_uint16_t) pj_SOL_TCP(void);
+/** Get #PJ_SOL_UDP constant */
 PJ_DECL(pj_uint16_t) pj_SOL_UDP(void);
+/** Get #PJ_SOL_IPV6 constant */
 PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
 
 
@@ -118,8 +171,10 @@ PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
  *  TOS CURRENTLY DOES NOT WORK IN Windows 2000 and above!
  *  See http://support.microsoft.com/kb/248611
  */
-extern const pj_uint16_t PJ_IP_TOS;	/**< IP_TOS optname in setsockopt() */
+/** IP_TOS optname in setsockopt(). @see pj_IP_TOS() */
+extern const pj_uint16_t PJ_IP_TOS;
 
+/** Get #PJ_IP_TOS constant */
 PJ_DECL(int) pj_IP_TOS(void);
 
 /*
@@ -129,15 +184,30 @@ PJ_DECL(int) pj_IP_TOS(void);
  *  TOS CURRENTLY DOES NOT WORK IN Windows 2000 and above!
  *  See http://support.microsoft.com/kb/248611
  */
-extern const pj_uint16_t PJ_IPTOS_LOWDELAY;	/**< Minimize  delays	    */
-extern const pj_uint16_t PJ_IPTOS_THROUGHPUT;	/**< Optimize throughput    */
-extern const pj_uint16_t PJ_IPTOS_RELIABILITY;	/**< Optimize for reliability*/
-extern const pj_uint16_t PJ_IPTOS_MINCOST;	/**< "filler data" where slow 
-						  transmission does't matter */
+/** Minimize delays. @see pj_IPTOS_LOWDELAY() */
+extern const pj_uint16_t PJ_IPTOS_LOWDELAY;
 
+/** Optimize throughput. @see pj_IPTOS_THROUGHPUT() */
+extern const pj_uint16_t PJ_IPTOS_THROUGHPUT;
+
+/** Optimize for reliability. @see pj_IPTOS_RELIABILITY() */
+extern const pj_uint16_t PJ_IPTOS_RELIABILITY;
+
+/** "filler data" where slow transmission does't matter.
+ *  @see pj_IPTOS_MINCOST() */
+extern const pj_uint16_t PJ_IPTOS_MINCOST;
+
+
+/** Get #PJ_IPTOS_LOWDELAY constant */
 PJ_DECL(int) pj_IPTOS_LOWDELAY(void);
+
+/** Get #PJ_IPTOS_THROUGHPUT constant */
 PJ_DECL(int) pj_IPTOS_THROUGHPUT(void);
+
+/** Get #PJ_IPTOS_RELIABILITY constant */
 PJ_DECL(int) pj_IPTOS_RELIABILITY(void);
+
+/** Get #PJ_IPTOS_MINCOST constant */
 PJ_DECL(int) pj_IPTOS_MINCOST(void);
 
 
@@ -145,29 +215,53 @@ PJ_DECL(int) pj_IPTOS_MINCOST(void);
  * Values to be specified as \c optname when calling #pj_sock_setsockopt() 
  * or #pj_sock_getsockopt().
  */
-extern const pj_uint16_t PJ_SO_TYPE;  /**< Socket type.             */
-extern const pj_uint16_t PJ_SO_RCVBUF;/**< Buffer size for receive. */
-extern const pj_uint16_t PJ_SO_SNDBUF;/**< Buffer size for send.    */
 
+/** Socket type. @see pj_SO_TYPE() */
+extern const pj_uint16_t PJ_SO_TYPE;
+
+/** Buffer size for receive. @see pj_SO_RCVBUF() */
+extern const pj_uint16_t PJ_SO_RCVBUF;
+
+/** Buffer size for send. @see pj_SO_SNDBUF() */
+extern const pj_uint16_t PJ_SO_SNDBUF;
+
+
+/** Get #PJ_SO_TYPE constant */
 PJ_DECL(pj_uint16_t) pj_SO_TYPE(void);
+
+/** Get #PJ_SO_RCVBUF constant */
 PJ_DECL(pj_uint16_t) pj_SO_RCVBUF(void);
+
+/** Get #PJ_SO_SNDBUF constant */
 PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
 
 
 /*
  * Flags to be specified in #pj_sock_recv, #pj_sock_send, etc.
  */
-extern const int PJ_MSG_OOB;	  /**< Out-of-band messages.         */
-extern const int PJ_MSG_PEEK;	  /**< Peek, don't remove from buffer*/
-extern const int PJ_MSG_DONTROUTE;/**< Don't route.                  */
 
+/** Out-of-band messages. @see pj_MSG_OOB() */
+extern const int PJ_MSG_OOB;
+
+/** Peek, don't remove from buffer. @see pj_MSG_PEEK() */
+extern const int PJ_MSG_PEEK;
+
+/** Don't route. @see pj_MSG_DONTROUTE() */
+extern const int PJ_MSG_DONTROUTE;
+
+
+/** Get #PJ_MSG_OOB constant */
 PJ_DECL(int) pj_MSG_OOB(void);
+
+/** Get #PJ_MSG_PEEK constant */
 PJ_DECL(int) pj_MSG_PEEK(void);
+
+/** Get #PJ_MSG_DONTROUTE constant */
 PJ_DECL(int) pj_MSG_DONTROUTE(void);
 
 
 /**
- * Flag to be specified in #pj_sock_shutdown.
+ * Flag to be specified in #pj_sock_shutdown().
  */
 typedef enum pj_socket_sd_type
 {
@@ -711,7 +805,7 @@ PJ_DECL(pj_status_t) pj_sock_setsockopt( pj_sock_t sockfd,
  * @param buf		The buffer to receive the data or message.
  * @param len		On input, the length of the buffer. On return,
  *			contains the length of data received.
- * @param flags		Combination of #pj_sock_msg_flag.
+ * @param flags		Flags (such as pj_MSG_PEEK()).
  *
  * @return		PJ_SUCCESS or the error code.
  */
@@ -727,7 +821,7 @@ PJ_DECL(pj_status_t) pj_sock_recv(pj_sock_t sockfd,
  * @param buf		The buffer to receive the data or message.
  * @param len		On input, the length of the buffer. On return,
  *			contains the length of data received.
- * @param flags		Bitmask combination of #pj_sock_msg_flag.
+ * @param flags		Flags (such as pj_MSG_PEEK()).
  * @param from		If not NULL, it will be filled with the source
  *			address of the connection.
  * @param fromlen	Initially contains the length of from address,
@@ -751,7 +845,7 @@ PJ_DECL(pj_status_t) pj_sock_recvfrom( pj_sock_t sockfd,
  * @param len		On input, the length of the data in the buffer.
  *			Upon return, it will be filled with the length
  *			of data sent.
- * @param flags		Bitmask combination of #pj_sock_msg_flag.
+ * @param flags		Flags (such as pj_MSG_DONTROUTE()).
  *
  * @return		PJ_SUCCESS or the status code.
  */
@@ -768,7 +862,7 @@ PJ_DECL(pj_status_t) pj_sock_send(pj_sock_t sockfd,
  * @param len		On input, the length of the data in the buffer.
  *			Upon return, it will be filled with the length
  *			of data sent.
- * @param flags		Bitmask combination of #pj_sock_msg_flag.
+ * @param flags		Flags (such as pj_MSG_DONTROUTE()).
  * @param to		The address to send.
  * @param tolen		The length of the address in bytes.
  *

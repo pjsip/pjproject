@@ -1183,8 +1183,8 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 
 
 /* Create checklist by pairing local candidates with remote candidates */
-PJ_DEF(pj_status_t) 
-pj_ice_sess_create_check_list(pj_ice_sess *ice,
+PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
+			      pj_ice_sess *ice,
 			      const pj_str_t *rem_ufrag,
 			      const pj_str_t *rem_passwd,
 			      unsigned rcand_cnt,

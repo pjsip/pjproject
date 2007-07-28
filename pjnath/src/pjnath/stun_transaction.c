@@ -88,8 +88,8 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
 }
 
 
-PJ_DEF(pj_status_t) 
-pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
+PJ_DEF(pj_status_t) pj_stun_client_tsx_schedule_destroy(
+				    pj_stun_client_tsx *tsx,
 				    const pj_time_val *delay)
 {
     pj_status_t status;

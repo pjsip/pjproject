@@ -905,9 +905,16 @@
 PJ_BEGIN_DECL
 
 /**
- * PJLIB version string.
+ * PJLIB version string constant. @see pj_get_version()
  */
-extern const char *PJ_VERSION;
+PJ_DECL_DATA(const char*) PJ_VERSION;
+
+/**
+ * Get PJLIB version string.
+ *
+ * @return #PJ_VERSION constant.
+ */
+PJ_DECL(const char*) pj_get_version(void);
 
 /**
  * Dump configuration to log with verbosity equal to info(3).

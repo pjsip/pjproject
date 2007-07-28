@@ -136,7 +136,8 @@ PJ_INLINE(int) pj_isxdigit(int c){ return isxdigit(c); }
 /**
  * Array of hex digits, in lowerspace.
  */
-extern char pj_hex_digits[];
+/*extern char pj_hex_digits[];*/
+#define pj_hex_digits	"0123456789abcdef"
 
 /**
  * Convert a value to hex representation.

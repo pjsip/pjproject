@@ -52,5 +52,5 @@ done
 
 
 echo
-echo "Done. Total $i symbols exported."
+echo "Done. Total $i symbols exported in $DEFFILE."
 

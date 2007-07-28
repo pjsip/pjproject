@@ -1,7 +1,22 @@
+#if defined(EKA2)
+TARGET		pjnath.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004297
+CAPABILITY	None
+LIBRARY		pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjnath.def
+
+#else
+
 TARGET 		pjnath.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
 VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjnath\src\pjnath
 
@@ -49,5 +64,4 @@ SYSTEMINCLUDE	\epoc32\include\libc
 
 //STATICLIBRARY		pjlib.lib 
 //STATICLIBRARY		pjlib_util.lib 
-CAPABILITY	None
 

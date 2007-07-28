@@ -94,8 +94,8 @@ static const struct
 /*
  * pjlib_util_strerror()
  */
-PJ_DEF(pj_str_t) pjlib_util_strerror( pj_status_t statcode, 
-				      char *buf, pj_size_t bufsize )
+pj_str_t pjlib_util_strerror(pj_status_t statcode, 
+			     char *buf, pj_size_t bufsize )
 {
     pj_str_t errstr;
 

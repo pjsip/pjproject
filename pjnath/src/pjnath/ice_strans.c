@@ -80,7 +80,7 @@ static void stop_ka_timer(pj_ice_strans *ice_st);
 /* 
  * Create ICE stream transport 
  */
-PJ_DECL(pj_status_t) pj_ice_strans_create(pj_stun_config *stun_cfg,
+PJ_DEF(pj_status_t) pj_ice_strans_create( pj_stun_config *stun_cfg,
 					  const char *name,
 					  unsigned comp_cnt,
 					  void *user_data,
@@ -928,7 +928,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 /*
  * Stop ICE!
  */
-PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
+PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
 {
     unsigned i;
 

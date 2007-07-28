@@ -395,7 +395,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     
     sess->srv_name.ptr = (char*) pj_pool_alloc(pool, 32);
     sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
-					   "pj_stun-%s", PJ_VERSION);
+					   "pj_stun-%s", pj_get_version());
 
     pj_list_init(&sess->pending_request_list);
     pj_list_init(&sess->cached_response_list);
