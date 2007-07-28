@@ -34,6 +34,72 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 
+typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
+					   PULONG pdwSize, 
+					   BOOL bOrder);
+typedef DWORD (WINAPI *PFN_GetIpForwardTable)(PMIB_IPFORWARDTABLE pIpForwardTable,
+					      PULONG pdwSize, 
+					      BOOL bOrder);
+
+static HANDLE s_hDLL;
+static PFN_GetIpAddrTable s_pfnGetIpAddrTable;
+static PFN_GetIpForwardTable s_pfnGetIpForwardTable;
+
+static unload_iphlp_module(void)
+{
+    FreeLibrary(s_hDLL);
+    s_hDLL = NULL;
+    s_pfnGetIpAddrTable = NULL;
+    s_pfnGetIpForwardTable = NULL;
+}
+
+static FARPROC GetIpHlpApiProc(pj_char_t *lpProcName)
+{
+    if(NULL == s_hDLL) {
+	s_hDLL = LoadLibrary(PJ_T("IpHlpApi"));
+	if(NULL != s_hDLL) {
+	    pj_atexit(&unload_iphlp_module);
+	}
+    }
+	
+    if(NULL != s_hDLL)
+	return GetProcAddress(s_hDLL, lpProcName);
+    
+    return NULL;
+}
+
+static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable, 
+			      PULONG pdwSize, 
+			      BOOL bOrder)
+{
+    if(NULL == s_pfnGetIpAddrTable) {
+	s_pfnGetIpAddrTable = (PFN_GetIpAddrTable) 
+	    GetIpHlpApiProc(PJ_T("GetIpAddrTable"));
+    }
+    
+    if(NULL != s_pfnGetIpAddrTable) {
+	return s_pfnGetIpAddrTable(pIpAddrTable, pdwSize, bOrder);
+    }
+    
+    return ERROR_NOT_SUPPORTED;
+}
+
+
+static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable, 
+				 PULONG pdwSize, 
+				 BOOL bOrder)
+{
+    if(NULL == s_pfnGetIpForwardTable) {
+	s_pfnGetIpForwardTable = (PFN_GetIpForwardTable) 
+	    GetIpHlpApiProc(PJ_T("GetIpForwardTable"));
+    }
+    
+    if(NULL != s_pfnGetIpForwardTable) {
+	return s_pfnGetIpForwardTable(pIpForwardTable, pdwSize, bOrder);
+    }
+    
+    return ERROR_NOT_SUPPORTED;
+}
 
 /*
  * Enumerate the local IP interface currently active in the host.
@@ -48,7 +114,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
     MIB_IPADDRTABLE *pTab;
     ULONG tabSize;
     unsigned i, count;
-    DWORD rc;
+    DWORD rc = NO_ERROR;
 
     PJ_ASSERT_RETURN(p_cnt && ifs, PJ_EINVAL);
 
@@ -56,7 +122,8 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 
     /* Get IP address table */
     tabSize = sizeof(ipTabBuff);
-    rc = GetIpAddrTable(pTab, &tabSize, FALSE);
+
+    rc = MyGetIpAddrTable(pTab, &tabSize, FALSE);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
@@ -91,7 +158,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     MIB_IPFORWARDTABLE *prTab;
     ULONG tabSize;
     unsigned i, count;
-    DWORD rc;
+    DWORD rc = NO_ERROR;
 
     PJ_ASSERT_RETURN(p_cnt && routes, PJ_EINVAL);
 
@@ -100,13 +167,14 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 
     /* First get IP address table */
     tabSize = sizeof(ipTabBuff);
-    rc = GetIpAddrTable(pIpTab, &tabSize, FALSE);
+    rc = MyGetIpAddrTable(pIpTab, &tabSize, FALSE);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
     /* Next get IP route table */
     tabSize = sizeof(rtabBuff);
-    rc = GetIpForwardTable(prTab, &tabSize, 1);
+
+    rc = MyGetIpForwardTable(prTab, &tabSize, 1);
     if (rc != NO_ERROR)
 	return PJ_RETURN_OS_ERROR(rc);
 
@@ -137,6 +205,4 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 
     return PJ_SUCCESS;
 }
-
-
 
