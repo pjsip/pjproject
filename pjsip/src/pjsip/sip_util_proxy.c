@@ -23,6 +23,7 @@
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/except.h>
+#include <pj/guid.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pjlib-util/md5.h>
@@ -42,6 +43,7 @@
  *
  * @return	    PJ_SUCCESS on success.
  */
+/*
 PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
 					   const pjsip_rx_data *rdata,
 					   pjsip_tx_data **p_tdata)
@@ -61,6 +63,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_clone_msg( pjsip_endpoint *endpt,
 
     return PJ_SUCCESS;
 }
+*/
 
 
 /*
@@ -335,6 +338,31 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
     pj_md5_context ctx;
     pj_uint8_t digest[16];
     pj_str_t branch;
+    pj_str_t rfc3261_branch = {PJSIP_RFC3261_BRANCH_ID, 
+                               PJSIP_RFC3261_BRANCH_LEN};
+
+    /* If incoming request does not have RFC 3261 branch value, create
+     * a branch value from GUID .
+     */
+    if (pj_strncmp(&rdata->msg_info.via->branch_param, 
+		   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 ) 
+    {
+	pj_str_t tmp;
+
+	branch.ptr = (char*)
+		     pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_BRANCH_LEN);
+	branch.slen = PJSIP_RFC3261_BRANCH_LEN;
+	pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, 
+	          PJSIP_RFC3261_BRANCH_LEN);
+
+	tmp.ptr = branch.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
+	*(tmp.ptr-2) = (pj_int8_t)(branch.slen+73); 
+	*(tmp.ptr-1) = (pj_int8_t)(branch.slen+99);
+	pj_generate_unique_string( &tmp );
+
+	branch.slen = PJSIP_MAX_BRANCH_LEN;
+	return branch;
+    }
 
     /* Create branch ID for new request by calculating MD5 hash
      * of the branch parameter in top-most Via header.
@@ -346,12 +374,13 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
 
     branch.ptr = (char*)
     		 pj_pool_alloc(rdata->tp_info.pool, 
-			       32 + PJSIP_RFC3261_BRANCH_LEN);
+			       34 + PJSIP_RFC3261_BRANCH_LEN);
     pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN);
-
-    digest2str(digest, branch.ptr+PJSIP_RFC3261_BRANCH_LEN);
-
-    branch.slen = 32 + PJSIP_RFC3261_BRANCH_LEN;
+    branch.slen = PJSIP_RFC3261_BRANCH_LEN;
+    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN) = (pj_int8_t)(branch.slen+73);
+    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN+1) = (pj_int8_t)(branch.slen+99);
+    digest2str(digest, branch.ptr+PJSIP_RFC3261_BRANCH_LEN+2);
+    branch.slen = 34 + PJSIP_RFC3261_BRANCH_LEN;
 
     return branch;
 }

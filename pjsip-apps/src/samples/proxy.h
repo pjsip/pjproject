@@ -235,7 +235,9 @@ static pj_status_t init_stack(void)
 
 static pj_status_t init_proxy(void)
 {
-    pj_in_addr addr;
+    pj_in_addr pri_addr;
+    pj_in_addr addr_list[16];
+    unsigned addr_cnt = PJ_ARRAY_SIZE(addr_list);
     unsigned i;
 
     /* List all names matching local endpoint.
@@ -248,16 +250,32 @@ static pj_status_t init_proxy(void)
     /* The first address is important since this would be the one
      * to be added in Record-Route.
      */
-    if (pj_gethostip(&addr) == PJ_SUCCESS) {
+    if (pj_gethostip(&pri_addr)==PJ_SUCCESS) {
 	pj_strdup2(global.pool, &global.name[global.name_cnt].host,
-		   pj_inet_ntoa(addr));
+		   pj_inet_ntoa(pri_addr));
 	global.name[global.name_cnt].port = global.port;
 	global.name_cnt++;
     }
 
+    /* Get the rest of IP interfaces */
+    if (pj_enum_ip_interface(&addr_cnt, addr_list) == PJ_SUCCESS) {
+	for (i=0; i<addr_cnt; ++i) {
+
+	    if (addr_list[i].s_addr == pri_addr.s_addr)
+		continue;
+
+	    pj_strdup2(global.pool, &global.name[global.name_cnt].host,
+		       pj_inet_ntoa(addr_list[i]));
+	    global.name[global.name_cnt].port = global.port;
+	    global.name_cnt++;
+	}
+    }
+
+    /* No need to add this, this should have been added above.
     global.name[global.name_cnt].host = pj_str("127.0.0.1");
     global.name[global.name_cnt].port = global.port;
     global.name_cnt++;
+    */
 
     global.name[global.name_cnt].host = *pj_gethostname();
     global.name[global.name_cnt].port = global.port;
