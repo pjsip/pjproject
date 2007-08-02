@@ -386,6 +386,13 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     cur_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
     duration = cur_ts - digit->start_ts;
 
+    if (duration == 0) {
+	PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c", 
+		  digitmap[digit->event]));
+	duration = stream->port.info.samples_per_frame;
+	digit->start_ts = cur_ts - duration;
+    }
+
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
     event->duration = pj_htons((pj_uint16_t)duration);
@@ -408,9 +415,6 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 		      digitmap[stream->tx_dtmf_buf[0].event]));
 	}
 
-    } else if (duration == 0) {
-	PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c", 
-		  digitmap[digit->event]));
     }
 
 
@@ -1646,8 +1650,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
 /*
  * Set callback to be called upon receiving DTMF digits.
  */
-PJ_DEF(pj_status_t)
-pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
+PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 				 void (*cb)(pjmedia_stream*, 
 					    void *user_data, 
 					    int digit), 
