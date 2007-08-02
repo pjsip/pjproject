@@ -421,7 +421,46 @@ static pj_status_t proxy_process_routing(pjsip_tx_data *tdata)
      * Route header field.  The proxy MUST then proceed as if it received
      * this modified request.
      */
-    /* Nah, we don't want to support this */
+    if (is_uri_local(target)) {
+	pjsip_route_hdr *r;
+	pjsip_sip_uri *uri;
+
+	/* Find the first Route header */
+	r = hroute = (pjsip_route_hdr*)
+		     pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+	if (r == NULL) {
+	    /* No Route header. This request is destined for this proxy. */
+	    return PJ_SUCCESS;
+	}
+
+	/* Find the last Route header */
+	while ( (r=(pjsip_route_hdr*)pjsip_msg_find_hdr(tdata->msg, 
+						        PJSIP_H_ROUTE, 
+							r->next)) != NULL )
+	{
+	    hroute = r;
+	}
+
+	/* If the last Route header doesn't have ";lr" parameter, then
+	 * this is a strict-routed request indeed, and we follow the steps
+	 * in processing strict-route requests above.
+	 *
+	 * But if it does contain ";lr" parameter, skip the strict-route
+	 * processing.
+	 */
+	uri = (pjsip_sip_uri*)
+	      pjsip_uri_get_uri(&hroute->name_addr);
+	if (uri->lr_param == 0) {
+	    /* Yes this is strict route, so:
+	     * - replace req URI with the URI in Route header,
+	     * - remove the Route header,
+	     * - proceed as if it received this modified request. 
+	    */
+	    tdata->msg->line.req.uri = hroute->name_addr.uri;
+	    target = (pjsip_sip_uri*) tdata->msg->line.req.uri;
+	    pj_list_erase(hroute);
+	}
+    }
 
     /* If the Request-URI contains a maddr parameter, the proxy MUST check
      * to see if its value is in the set of addresses or domains the proxy
@@ -475,7 +514,7 @@ static void proxy_postprocess(pjsip_tx_data *tdata)
 	uri = pj_str(uribuf);
 	rr = pjsip_generic_string_hdr_create(tdata->pool,
 					     &H_RR, &uri);
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)rr);
+	pjsip_msg_insert_first_hdr(tdata->msg, (pjsip_hdr*)rr);
     }
 }
 
