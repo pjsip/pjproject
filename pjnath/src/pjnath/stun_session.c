@@ -891,6 +891,7 @@ static pj_status_t check_cached_response(pj_stun_session *sess,
     t = sess->cached_response_list.next;
     while (t != &sess->cached_response_list) {
 	if (t->msg_magic == msg->hdr.magic &&
+	    t->msg->hdr.type == msg->hdr.type &&
 	    pj_memcmp(t->msg_key, msg->hdr.tsx_id, 
 		      sizeof(msg->hdr.tsx_id))==0)
 	{
