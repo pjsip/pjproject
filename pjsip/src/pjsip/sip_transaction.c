@@ -2640,6 +2640,8 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    }
 
 	} else {
+	    pj_time_val timeout;
+
 	    /* Process incoming ACK request. */
 
 	    /* Cease retransmission. */
@@ -2649,11 +2651,22 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    }
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
-	    /* Start timer I in T4 interval (transaction termination). */
+	    /* Reschedule timeout timer. */
 	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 	    tsx->timeout_timer.id = TIMER_ACTIVE;
+
+	    /* Timer I is T4 timer for unreliable transports, and
+	     * zero seconds for reliable transports.
+	     */
+	    if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		timeout.sec = 0; 
+		timeout.msec = 0;
+	    } else {
+		timeout.sec = t4_timer_val.sec;
+		timeout.msec = t4_timer_val.msec;
+	    }
 	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-					&t4_timer_val);
+					&timeout);
 
 	    /* Move state to "Confirmed" */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_CONFIRMED, 
