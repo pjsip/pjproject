@@ -45,7 +45,7 @@ static HANDLE s_hDLL;
 static PFN_GetIpAddrTable s_pfnGetIpAddrTable;
 static PFN_GetIpForwardTable s_pfnGetIpForwardTable;
 
-static unload_iphlp_module(void)
+static void unload_iphlp_module(void)
 {
     FreeLibrary(s_hDLL);
     s_hDLL = NULL;
