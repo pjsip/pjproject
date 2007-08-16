@@ -251,7 +251,7 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
 #endif
 
     pj_assert(sizeof(pj_dns_hdr)==12);
-    if (size < sizeof(pj_dns_hdr))
+    if (size < (int)sizeof(pj_dns_hdr))
 	return -1;
 
     /* Initialize header */
