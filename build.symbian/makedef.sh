@@ -13,15 +13,22 @@ else
 	exit 1
 fi
 
-TARGET=`grep -w TARGET $MMP | awk '{print $2}' | awk -F '.' '{print $1}' | head -1`
+TARGET=`grep -w '^TARGET' $MMP | awk '{print $2}' | awk -F '.' '{print $1}' | head -1`
 DEFFILE="${TARGET}U.def"
-SOURCES=`grep -w SOURCE $MMP | awk '{print $2}' | tr '\\\\' '/'`
-SOURCEPATH=`grep -w SOURCEPATH $MMP | tr '\\\\' '/' | awk '{print $2}'`
-INCPATH=`grep INCLUDE $MMP | awk '{print $2}' | grep pj | tr '\\\\' '/'`
+SOURCES=`grep -w '^SOURCE' $MMP | awk '{print $2}' | tr '\\\\' '/'`
+SOURCEPATH=`grep -w '^SOURCEPATH' $MMP | tr '\\\\' '/' | awk '{print $2}'`
+INCPATH=`grep 'INCLUDE' $MMP | awk '{print $2}' | grep pj | tr '\\\\' '/'`
 INCLUDE=""
 for INC in $INCPATH; do
 	INCLUDE=`echo $INCLUDE -I$INC`
 done
+
+#-- debug --
+#echo TARGET=$TARGET
+#echo SOURCES=$SOURCES
+#echo SOURCEPATH=$SOURCEPATH
+#echo INCLUDE=$INCLUDE
+#-- end --
 
 echo > tmpnames.def
 

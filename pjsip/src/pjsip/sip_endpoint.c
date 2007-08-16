@@ -34,7 +34,7 @@
 #include <pj/errno.h>
 #include <pj/lock.h>
 
-#define PJSIP_EX_NO_MEMORY  PJ_NO_MEMORY_EXCEPTION
+#define PJSIP_EX_NO_MEMORY  pj_NO_MEMORY_EXCEPTION()
 #define THIS_FILE	    "sip_endpoint.c"
 
 #define MAX_METHODS   32
@@ -116,24 +116,6 @@ pj_status_t pjsip_tel_uri_subsys_init(void);
 
 /* Specifies whether error subsystem has been registered to pjlib. */
 static int error_subsys_initialized;
-
-/**
- * Defined in sip_errno.c
- *
- * Get error message for the specified error code. This can only get
- * PJSIP specific error message. To get all types of error message,
- * use pj_strerror() instead.
- *
- * @param status    The error code.
- * @param buffer    The buffer where to put the error message.
- * @param bufsize   Size of the buffer.
- *
- * @return	    The error message as NULL terminated string,
- *                  wrapped with pj_str_t.
- */
-PJ_DECL(pj_str_t) pjsip_strerror( pj_status_t status, char *buffer,
-				  pj_size_t bufsize);
-
 
 /*
  * This is the global handler for memory allocation failure, for pools that

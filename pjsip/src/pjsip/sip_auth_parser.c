@@ -195,12 +195,14 @@ static void parse_pgp_challenge( pj_scanner *scanner, pj_pool_t *pool,
 static void int_parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool,
 					 pjsip_authorization_hdr *hdr)
 {
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+    
     if (*scanner->curptr == '"') {
 	pj_scan_get_quote(scanner, '"', '"', &hdr->scheme);
 	hdr->scheme.ptr++;
 	hdr->scheme.slen -= 2;
     } else {
-	pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->scheme);
+	pj_scan_get(scanner, &pc->pjsip_TOKEN_SPEC, &hdr->scheme);
     }
 
     if (!pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR)) {
@@ -221,12 +223,14 @@ static void int_parse_hdr_authorization( pj_scanner *scanner, pj_pool_t *pool,
 static void int_parse_hdr_authenticate( pj_scanner *scanner, pj_pool_t *pool, 
 					pjsip_www_authenticate_hdr *hdr)
 {
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+
     if (*scanner->curptr == '"') {
 	pj_scan_get_quote(scanner, '"', '"', &hdr->scheme);
 	hdr->scheme.ptr++;
 	hdr->scheme.slen -= 2;
     } else {
-	pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->scheme);
+	pj_scan_get(scanner, &pc->pjsip_TOKEN_SPEC, &hdr->scheme);
     }
 
     if (!pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR)) {

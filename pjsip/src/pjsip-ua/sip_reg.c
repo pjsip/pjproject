@@ -366,7 +366,7 @@ static pj_status_t create_request(pjsip_regc *regc,
 
     /* Create the request. */
     status = pjsip_endpt_create_request_from_hdr( regc->endpt, 
-						  &pjsip_register_method,
+						  pjsip_get_register_method(),
 						  regc->srv_url,
 						  regc->from_hdr,
 						  regc->to_hdr,

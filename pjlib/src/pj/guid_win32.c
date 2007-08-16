@@ -24,7 +24,12 @@
 #include <pj/os.h>
 
 
-const unsigned PJ_GUID_STRING_LENGTH=32;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=32;
+
+PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
+{
+    return PJ_GUID_STRING_LENGTH;
+}
 
 PJ_INLINE(void) hex2digit(unsigned value, char *p)
 {

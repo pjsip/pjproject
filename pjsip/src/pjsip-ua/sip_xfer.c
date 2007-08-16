@@ -57,11 +57,15 @@ enum
     PJSIP_REFER_METHOD = PJSIP_OTHER_METHOD
 };
 
-const pjsip_method pjsip_refer_method = {
+PJ_DEF_DATA(const pjsip_method) pjsip_refer_method = {
     (pjsip_method_e) PJSIP_REFER_METHOD,
     { "REFER", 5}
 };
 
+PJ_DEF(const pjsip_method*) pjsip_get_refer_method()
+{
+    return &pjsip_refer_method;
+}
 
 /*
  * String constants
@@ -144,7 +148,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt)
 	return status;
 
     status = pjsip_endpt_add_capability( endpt, &mod_xfer, PJSIP_H_ALLOW, 
-					 NULL, 1, &pjsip_refer_method.name);
+					 NULL, 1, 
+					 &pjsip_get_refer_method()->name);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -223,7 +228,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_create_uas( pjsip_dialog *dlg,
 
     /* Check that request is REFER */
     PJ_ASSERT_RETURN(pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
-				      &pjsip_refer_method)==0,
+				      pjsip_get_refer_method())==0,
 		     PJSIP_ENOTREFER);
 
     /* Lock dialog */
@@ -298,7 +303,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
     pjsip_dlg_inc_lock(xfer->dlg);
 
     /* Create basic REFER request */
-    status = pjsip_evsub_initiate(sub, &pjsip_refer_method, -1, 
+    status = pjsip_evsub_initiate(sub, pjsip_get_refer_method(), -1, 
 				  &tdata);
     if (status != PJ_SUCCESS)
 	goto on_return;

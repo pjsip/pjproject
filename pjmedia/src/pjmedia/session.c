@@ -478,8 +478,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 /*
  * Initialize session info from SDP session descriptors.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_session_info_from_sdp( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_session_info_from_sdp( pj_pool_t *pool,
 			       pjmedia_endpt *endpt,
 			       unsigned max_streams,
 			       pjmedia_session_info *si,
@@ -760,8 +759,7 @@ PJ_DEF(pj_status_t) pjmedia_session_get_dtmf( pjmedia_session *session,
 /*
  * Install DTMF callback.
  */
-PJ_DEF(pj_status_t)
-pjmedia_session_set_dtmf_callback(pjmedia_session *session,
+PJ_DEF(pj_status_t) pjmedia_session_set_dtmf_callback(pjmedia_session *session,
 				  unsigned index,
 				  void (*cb)(pjmedia_stream*, 
 				 	     void *user_data, 

@@ -21,7 +21,7 @@
 #include <pjmedia/echo.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
-
+#include "echo_internal.h"
 
 typedef struct ec_operations ec_operations;
 
@@ -55,29 +55,6 @@ struct ec_operations
 };
 
 
-
-/*
- * Simple echo suppressor
- */
-PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned samples_per_frame,
-				      unsigned tail_ms,
-				      unsigned latency_ms,
-				      unsigned options,
-				      void **p_state );
-PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
-PJ_DECL(pj_status_t) echo_supp_playback(void *state,
-					pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) echo_supp_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
-PJ_DECL(pj_status_t) echo_supp_cancel_echo(void *state,
-					   pj_int16_t *rec_frm,
-					   const pj_int16_t *play_frm,
-					   unsigned options,
-					   void *reserved );
-
 static struct ec_operations echo_supp_op = 
 {
     &echo_supp_create,
@@ -93,25 +70,6 @@ static struct ec_operations echo_supp_op =
  * Speex AEC prototypes
  */
 #if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
-PJ_DECL(pj_status_t) speex_aec_create(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned samples_per_frame,
-				      unsigned tail_ms,
-				      unsigned latency_ms,
-				      unsigned options,
-				      void **p_state );
-PJ_DECL(pj_status_t) speex_aec_destroy(void *state );
-PJ_DECL(pj_status_t) speex_aec_playback(void *state,
-				        pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) speex_aec_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
-PJ_DECL(pj_status_t) speex_aec_cancel_echo(void *state,
-					   pj_int16_t *rec_frm,
-					   const pj_int16_t *play_frm,
-					   unsigned options,
-					   void *reserved );
-
 static struct ec_operations aec_op = 
 {
     &speex_aec_create,

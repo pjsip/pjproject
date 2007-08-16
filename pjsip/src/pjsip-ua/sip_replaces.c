@@ -68,6 +68,7 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
     char *p = buf;
     char *endbuf = buf+size;
     int printed;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
     *p++ = ':';
@@ -83,8 +84,8 @@ static int replaces_hdr_print( pjsip_replaces_hdr *hdr,
     }
     
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-				   &pjsip_TOKEN_SPEC, 
-				   &pjsip_TOKEN_SPEC, ';');
+				   &pc->pjsip_TOKEN_SPEC, 
+				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return printed;
 

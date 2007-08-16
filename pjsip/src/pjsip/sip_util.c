@@ -261,8 +261,7 @@ on_error:
     return status;
 }
 
-PJ_DEF(pj_status_t)
-pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
+PJ_DEF(pj_status_t) pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 				     const pjsip_method *method,
 				     const pjsip_uri *param_target,
 				     const pjsip_from_hdr *param_from,
@@ -484,7 +483,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
 
     /* Create new request message from the headers. */
     status = pjsip_endpt_create_request_from_hdr(endpt, 
-						 &pjsip_ack_method,
+						 pjsip_get_ack_method(),
 						 tdata->msg->line.req.uri,
 						 from_hdr, to_hdr,
 						 NULL, cid_hdr,
@@ -575,7 +574,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 
     /* Create new request message from the headers. */
     status = pjsip_endpt_create_request_from_hdr(endpt, 
-						 &pjsip_cancel_method,
+						 pjsip_get_cancel_method(),
 						 req_tdata->msg->line.req.uri,
 						 from_hdr, to_hdr,
 						 NULL, cid_hdr,
@@ -992,8 +991,7 @@ stateless_send_resolver_callback( pj_status_t status,
  *  - establish transport (#pjsip_endpt_acquire_transport)
  *  - send the message (#pjsip_transport_send)
  */
-PJ_DEF(pj_status_t) 
-pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt, 
+PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt, 
 				   pjsip_tx_data *tdata,
 				   void *token,
 				   pjsip_send_callback cb)

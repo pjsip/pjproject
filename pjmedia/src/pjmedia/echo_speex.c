@@ -28,6 +28,7 @@
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
 
+#include "echo_internal.h"
 
 #define THIS_FILE	"echo_speex.c"
 #define BUF_COUNT	16
@@ -225,29 +226,6 @@ PJ_DEF(pj_status_t) pjmedia_frame_queue_get( pjmedia_frame_queue *fq,
     pj_list_push_front(&fq->free_list, f);
     return PJ_SUCCESS;
 }
-
-/*
- * Prototypes
- */
-PJ_DECL(pj_status_t) speex_aec_create(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned samples_per_frame,
-				      unsigned tail_ms,
-				      unsigned latency_ms,
-				      unsigned options,
-				      void **p_state );
-PJ_DECL(pj_status_t) speex_aec_destroy(void *state );
-PJ_DECL(pj_status_t) speex_aec_playback(void *state,
-				        pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) speex_aec_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
-PJ_DECL(pj_status_t) speex_aec_cancel_echo(void *state,
-					   pj_int16_t *rec_frm,
-					   const pj_int16_t *play_frm,
-					   unsigned options,
-					   void *reserved );
-
 
 enum
 {

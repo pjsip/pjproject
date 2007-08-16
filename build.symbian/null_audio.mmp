@@ -1,7 +1,24 @@
+#if defined(EKA2)
+
+TARGET		null_audio.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004294
+
+CAPABILITY	None
+LIBRARY		pjlib.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\null_audio.def
+
+#else
+
 TARGET 		null_audio.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
 VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjmedia\src\pjmedia
 

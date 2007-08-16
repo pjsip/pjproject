@@ -1196,7 +1196,7 @@ static pj_status_t init_options(int argc, char *argv[])
     app.local_port = 5060;
     app.thread_count = 1;
     app.client.job_count = DEFAULT_COUNT;
-    app.client.method = pjsip_options_method;
+    app.client.method = *pjsip_get_options_method();
     app.client.job_window = c = JOB_WINDOW;
     app.client.timeout = 60;
     app.log_level = 3;

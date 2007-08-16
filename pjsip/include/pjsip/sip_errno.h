@@ -487,6 +487,22 @@ PJ_BEGIN_DECL
 #define PJSIP_TLS_ETIMEDOUT	(PJSIP_ERRNO_START_PJSIP+172)	/* 171172 */
 
 
+/**
+ * Get error message for the specified error code. Note that this
+ * function is only able to decode PJSIP specific error code.
+ * Application should use pj_strerror(), which should be able to
+ * decode all error codes belonging to all subsystems (e.g. pjlib,
+ * pjmedia, pjsip, etc).
+ *
+ * @param status    The error code.
+ * @param buffer    The buffer where to put the error message.
+ * @param bufsize   Size of the buffer.
+ *
+ * @return	    The error message as NULL terminated string,
+ *                  wrapped with pj_str_t.
+ */
+PJ_DECL(pj_str_t) pjsip_strerror(pj_status_t status, 
+				 char *buffer, pj_size_t bufsize);
 
 
 PJ_END_DECL
@@ -497,3 +513,4 @@ PJ_END_DECL
  */
 
 #endif	/* __PJSIP_SIP_ERRNO_H__ */
+

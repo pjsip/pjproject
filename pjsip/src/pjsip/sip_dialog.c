@@ -81,6 +81,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     dlg->ua = ua;
     dlg->endpt = endpt;
     dlg->state = PJSIP_DIALOG_STATE_NULL;
+    dlg->add_allow = pjsip_include_allow_hdr_in_dlg;
 
     pj_list_init(&dlg->inv_hdr);
 
@@ -1200,7 +1201,7 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
 	}
 
 	/* Add Allow header in 2xx and 405 response. */
-	if (((st_class==2 && pjsip_include_allow_hdr_in_dlg)
+	if (((st_class==2 && dlg->add_allow)
 	     || st_code==405) &&
 	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL)==NULL) 
 	{

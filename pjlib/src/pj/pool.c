@@ -32,7 +32,12 @@
 
 #define LOG(expr)   PJ_LOG(6,expr)
 
-int PJ_NO_MEMORY_EXCEPTION;
+PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
+
+PJ_DEF(int) pj_NO_MEMORY_EXCEPTION()
+{
+    return PJ_NO_MEMORY_EXCEPTION;
+}
 
 /*
  * Create new block.

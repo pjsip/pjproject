@@ -114,7 +114,7 @@ PJ_DECL(pj_status_t) pjsip_ua_destroy(void);
  *
  * @param detail	If non-zero, list of dialogs will be printed.
  */
-PJ_DEF(void) pjsip_ua_dump(pj_bool_t detail);
+PJ_DECL(void) pjsip_ua_dump(pj_bool_t detail);
 
 /**
  * Get the endpoint instance of a user agent module.

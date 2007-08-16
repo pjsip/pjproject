@@ -2771,7 +2771,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     if (tsx->role==PJSIP_ROLE_UAS &&
 	tsx->state==PJSIP_TSX_STATE_TRYING &&
-	pjsip_method_cmp(&tsx->method, &pjsip_refer_method)==0)
+	pjsip_method_cmp(&tsx->method, pjsip_get_refer_method())==0)
     {
 	/*
 	 * Incoming REFER request.

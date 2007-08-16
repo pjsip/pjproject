@@ -309,8 +309,8 @@ PJ_DECL(void) pjmedia_rtcp_init( pjmedia_rtcp_session *session,
  *
  * @return		    PJ_SUCCESS on success.
  */
-PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
-					      pjmedia_rtcp_ntp_rec *ntp);
+PJ_DECL(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
+					       pjmedia_rtcp_ntp_rec *ntp);
 
 
 /**

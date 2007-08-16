@@ -104,7 +104,7 @@ PJ_DECL(pjsip_sub_state_hdr*) pjsip_sub_state_hdr_create(pj_pool_t *pool);
 /**
  * Initialize parser for event notify module.
  */
-PJ_DEF(void) pjsip_evsub_init_parser(void);
+PJ_DECL(void) pjsip_evsub_init_parser(void);
 
 
 PJ_END_DECL

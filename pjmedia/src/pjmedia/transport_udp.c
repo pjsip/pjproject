@@ -324,8 +324,7 @@ on_error:
 /*
  * Get media socket info.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_transport_udp_get_info( pjmedia_transport *tp,
+PJ_DEF(pj_status_t) pjmedia_transport_udp_get_info( pjmedia_transport *tp,
 				pjmedia_transport_udp_info *inf)
 {
     return transport_get_info(tp, &inf->skinfo);

@@ -50,8 +50,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr)
 /*
  * Register a codec factory.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 				    pjmedia_codec_factory *factory)
 {
     pjmedia_codec_info info[PJMEDIA_CODEC_MGR_MAX_CODECS];
@@ -100,9 +99,9 @@ pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 /*
  * Unregister a codec factory.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_codec_mgr_unregister_factory(pjmedia_codec_mgr *mgr, 
-				     pjmedia_codec_factory *factory)
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
+				pjmedia_codec_mgr *mgr, 
+				pjmedia_codec_factory *factory)
 {
     unsigned i;
     PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
@@ -139,8 +138,7 @@ pjmedia_codec_mgr_unregister_factory(pjmedia_codec_mgr *mgr,
 /*
  * Enum all codecs.
  */
-PJ_DEF(pj_status_t)
-pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr, 
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr, 
 			      unsigned *count, 
 			      pjmedia_codec_info codecs[],
 			      unsigned *prio)
@@ -170,8 +168,7 @@ pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr,
 /*
  * Get codec info for static payload type.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
 				  unsigned pt,
 				  const pjmedia_codec_info **p_info)
 {
@@ -222,8 +219,7 @@ PJ_DEF(char*) pjmedia_codec_info_to_id( const pjmedia_codec_info *info,
  * "L16" is specified, then it will find "L16/8000/1", "L16/16000/1",
  * and so on, up to the maximum count specified in the argument.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
 				     const pj_str_t *codec_id,
 				     unsigned *count,
 				     const pjmedia_codec_info *p_info[],
@@ -306,10 +302,10 @@ static void sort_codecs(pjmedia_codec_mgr *mgr)
  * are found with the same codec_id prefix, then the function sets the
  * priorities of all those codecs.
  */
-PJ_DEF(pj_status_t)
-pjmedia_codec_mgr_set_codec_priority(pjmedia_codec_mgr *mgr, 
-				     const pj_str_t *codec_id,
-				     pj_uint8_t prio)
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_codec_priority(
+				pjmedia_codec_mgr *mgr, 
+				const pj_str_t *codec_id,
+				pj_uint8_t prio)
 {
     unsigned i, found = 0;
 

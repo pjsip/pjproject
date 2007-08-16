@@ -55,8 +55,16 @@ PJ_BEGIN_DECL
  *
  * Regardless of the actual length of the GUID, it will not exceed
  * PJ_GUID_MAX_LENGTH characters.
+ *
+ * @see pj_GUID_STRING_LENGTH()
+ * @see PJ_GUID_MAX_LENGTH
  */
-extern const unsigned PJ_GUID_STRING_LENGTH;
+PJ_DECL_DATA(const unsigned) PJ_GUID_STRING_LENGTH;
+
+/**
+ * Get #PJ_GUID_STRING_LENGTH constant.
+ */
+PJ_DECL(unsigned) pj_GUID_STRING_LENGTH();
 
 /**
  * PJ_GUID_MAX_LENGTH specifies the maximum length of GUID string,

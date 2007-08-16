@@ -87,49 +87,28 @@ static unsigned uri_handler_count;
  */
 int PJSIP_SYN_ERR_EXCEPTION;
 
-const pj_str_t  pjsip_USER_STR      = { "user", 4};
-const pj_str_t  pjsip_METHOD_STR    = { "method", 6};
-const pj_str_t  pjsip_TRANSPORT_STR = { "transport", 9};
-const pj_str_t  pjsip_MADDR_STR     = { "maddr", 5 };
-const pj_str_t  pjsip_LR_STR        = { "lr", 2 };
-const pj_str_t  pjsip_SIP_STR       = { "sip", 3 };
-const pj_str_t  pjsip_SIPS_STR      = { "sips", 4 };
-const pj_str_t  pjsip_TEL_STR       = { "tel", 3 };
-const pj_str_t  pjsip_BRANCH_STR    = { "branch", 6 };
-const pj_str_t  pjsip_TTL_STR       = { "ttl", 3 };
-const pj_str_t  pjsip_RECEIVED_STR  = { "received", 8 };
-const pj_str_t  pjsip_Q_STR         = { "q", 1 };
-const pj_str_t  pjsip_EXPIRES_STR   = { "expires", 7 };
-const pj_str_t  pjsip_TAG_STR       = { "tag", 3 };
-const pj_str_t  pjsip_RPORT_STR     = { "rport", 5};
+/* Parser constants */
+static pjsip_parser_const_t pconst =
+{
+    { "user", 4},	/* pjsip_USER_STR	*/
+    { "method", 6},	/* pjsip_METHOD_STR	*/
+    { "transport", 9},	/* pjsip_TRANSPORT_STR	*/
+    { "maddr", 5 },	/* pjsip_MADDR_STR	*/
+    { "lr", 2 },	/* pjsip_LR_STR		*/
+    { "sip", 3 },	/* pjsip_SIP_STR	*/
+    { "sips", 4 },	/* pjsip_SIPS_STR	*/
+    { "tel", 3 },	/* pjsip_TEL_STR	*/
+    { "branch", 6 },	/* pjsip_BRANCH_STR	*/
+    { "ttl", 3 },	/* pjsip_TTL_STR	*/
+    { "received", 8 },	/* pjsip_RECEIVED_STR	*/
+    { "q", 1 },		/* pjsip_Q_STR		*/
+    { "expires", 7 },	/* pjsip_EXPIRES_STR	*/
+    { "tag", 3 },	/* pjsip_TAG_STR	*/
+    { "rport", 5}	/* pjsip_RPORT_STR	*/
+};
 
 /* Character Input Specification buffer. */
 static pj_cis_buf_t cis_buf;
-
-/* Character Input Specifications. */
-pj_cis_t    pjsip_HOST_SPEC,	        /* For scanning host part. */
-	    pjsip_DIGIT_SPEC,	        /* Decimal digits */
-	    pjsip_ALPHA_SPEC,	        /* Alpha (A-Z, a-z) */
-	    pjsip_ALNUM_SPEC,	        /* Decimal + Alpha. */
-	    pjsip_TOKEN_SPEC,	        /* Token. */
-	    pjsip_TOKEN_SPEC_ESC,	/* Token without '%' character */
-	    pjsip_HEX_SPEC,	        /* Hexadecimal digits. */
-	    pjsip_PARAM_CHAR_SPEC,      /* For scanning pname (or pvalue when
-                                         * it's not quoted.) */
-	    pjsip_PARAM_CHAR_SPEC_ESC,	/* The variant without escaped char */
-	    pjsip_HDR_CHAR_SPEC,	/* Chars in hname or hvalue */
-	    pjsip_HDR_CHAR_SPEC_ESC,	/* Variant without escaped char */
-	    pjsip_PROBE_USER_HOST_SPEC, /* Hostname characters. */
-	    pjsip_PASSWD_SPEC,	        /* Password. */
-	    pjsip_PASSWD_SPEC_ESC,	/* Variant without escaped char */
-	    pjsip_USER_SPEC,	        /* User */
-	    pjsip_USER_SPEC_ESC,	/* Variant without escaped char */
-	    pjsip_USER_SPEC_LENIENT,	/* User, with additional '#' char */
-	    pjsip_USER_SPEC_LENIENT_ESC,
-	    pjsip_NOT_COMMA_OR_NEWLINE, /* Array separator. */
-	    pjsip_NOT_NEWLINE,		/* For eating up header.*/
-	    pjsip_DISPLAY_SPEC;         /* Used when searching for display name
-                                         * in URL. */
 
 
 /*
@@ -243,10 +222,17 @@ static void on_syntax_error(pj_scanner *scanner)
     PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 }
 
+/* Get parser constants. */
+PJ_DEF(const pjsip_parser_const_t*) pjsip_parser_const(void)
+{
+    return &pconst;
+}
+
 /* Concatenate unrecognized params into single string. */
-void pjsip_concat_param_imp( pj_str_t *param, pj_pool_t *pool, 
-			     const pj_str_t *pname, const pj_str_t *pvalue, 
-                             int sepchar)
+PJ_DEF(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool, 
+			     	    const pj_str_t *pname, 
+				    const pj_str_t *pvalue, 
+                             	    int sepchar)
 {
     char *new_param, *p;
     int len;
@@ -300,94 +286,94 @@ static pj_status_t init_parser()
 
     pj_cis_buf_init(&cis_buf);
 
-    status = pj_cis_init(&cis_buf, &pjsip_DIGIT_SPEC);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_DIGIT_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_num(&pjsip_DIGIT_SPEC);
+    pj_cis_add_num(&pconst.pjsip_DIGIT_SPEC);
     
-    status = pj_cis_init(&cis_buf, &pjsip_ALPHA_SPEC);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_ALPHA_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_alpha( &pjsip_ALPHA_SPEC );
+    pj_cis_add_alpha( &pconst.pjsip_ALPHA_SPEC );
     
-    status = pj_cis_init(&cis_buf, &pjsip_ALNUM_SPEC);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_alpha( &pjsip_ALNUM_SPEC );
-    pj_cis_add_num( &pjsip_ALNUM_SPEC );
+    pj_cis_add_alpha( &pconst.pjsip_ALNUM_SPEC );
+    pj_cis_add_num( &pconst.pjsip_ALNUM_SPEC );
 
-    status = pj_cis_init(&cis_buf, &pjsip_NOT_NEWLINE);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_NOT_NEWLINE);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_NOT_NEWLINE, "\r\n");
-    pj_cis_invert(&pjsip_NOT_NEWLINE);
+    pj_cis_add_str(&pconst.pjsip_NOT_NEWLINE, "\r\n");
+    pj_cis_invert(&pconst.pjsip_NOT_NEWLINE);
 
-    status = pj_cis_init(&cis_buf, &pjsip_NOT_COMMA_OR_NEWLINE);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_NOT_COMMA_OR_NEWLINE);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_NOT_COMMA_OR_NEWLINE, ",\r\n");
-    pj_cis_invert(&pjsip_NOT_COMMA_OR_NEWLINE);
+    pj_cis_add_str( &pconst.pjsip_NOT_COMMA_OR_NEWLINE, ",\r\n");
+    pj_cis_invert(&pconst.pjsip_NOT_COMMA_OR_NEWLINE);
 
-    status = pj_cis_dup(&pjsip_TOKEN_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_TOKEN_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_TOKEN_SPEC, TOKEN);
+    pj_cis_add_str( &pconst.pjsip_TOKEN_SPEC, TOKEN);
 
-    status = pj_cis_dup(&pjsip_TOKEN_SPEC_ESC, &pjsip_TOKEN_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_TOKEN_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str(&pjsip_TOKEN_SPEC_ESC, "%");
+    pj_cis_del_str(&pconst.pjsip_TOKEN_SPEC_ESC, "%");
 
-    status = pj_cis_dup(&pjsip_HOST_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_HOST_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_HOST_SPEC, HOST);
+    pj_cis_add_str( &pconst.pjsip_HOST_SPEC, HOST);
 
-    status = pj_cis_dup(&pjsip_HEX_SPEC, &pjsip_DIGIT_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_HEX_SPEC, &pconst.pjsip_DIGIT_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_HEX_SPEC, HEX_DIGIT);
+    pj_cis_add_str( &pconst.pjsip_HEX_SPEC, HEX_DIGIT);
 
-    status = pj_cis_dup(&pjsip_PARAM_CHAR_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_PARAM_CHAR_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_PARAM_CHAR_SPEC, PARAM_CHAR);
+    pj_cis_add_str(&pconst.pjsip_PARAM_CHAR_SPEC, PARAM_CHAR);
 
-    status = pj_cis_dup(&pjsip_PARAM_CHAR_SPEC_ESC, &pjsip_PARAM_CHAR_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_PARAM_CHAR_SPEC_ESC, &pconst.pjsip_PARAM_CHAR_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str(&pjsip_PARAM_CHAR_SPEC_ESC, ESCAPED);
+    pj_cis_del_str(&pconst.pjsip_PARAM_CHAR_SPEC_ESC, ESCAPED);
 
-    status = pj_cis_dup(&pjsip_HDR_CHAR_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_HDR_CHAR_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_HDR_CHAR_SPEC, HDR_CHAR);
+    pj_cis_add_str(&pconst.pjsip_HDR_CHAR_SPEC, HDR_CHAR);
 
-    status = pj_cis_dup(&pjsip_HDR_CHAR_SPEC_ESC, &pjsip_HDR_CHAR_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_HDR_CHAR_SPEC_ESC, &pconst.pjsip_HDR_CHAR_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str(&pjsip_HDR_CHAR_SPEC_ESC, ESCAPED);
+    pj_cis_del_str(&pconst.pjsip_HDR_CHAR_SPEC_ESC, ESCAPED);
 
-    status = pj_cis_dup(&pjsip_USER_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_USER_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_USER_SPEC, UNRESERVED ESCAPED USER_UNRESERVED );
+    pj_cis_add_str( &pconst.pjsip_USER_SPEC, UNRESERVED ESCAPED USER_UNRESERVED );
 
-    status = pj_cis_dup(&pjsip_USER_SPEC_ESC, &pjsip_USER_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_USER_SPEC_ESC, &pconst.pjsip_USER_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str( &pjsip_USER_SPEC_ESC, ESCAPED);
+    pj_cis_del_str( &pconst.pjsip_USER_SPEC_ESC, ESCAPED);
 
-    status = pj_cis_dup(&pjsip_USER_SPEC_LENIENT, &pjsip_USER_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_USER_SPEC_LENIENT, &pconst.pjsip_USER_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_USER_SPEC_LENIENT, "#");
+    pj_cis_add_str(&pconst.pjsip_USER_SPEC_LENIENT, "#");
 
-    status = pj_cis_dup(&pjsip_USER_SPEC_LENIENT_ESC, &pjsip_USER_SPEC_ESC);
+    status = pj_cis_dup(&pconst.pjsip_USER_SPEC_LENIENT_ESC, &pconst.pjsip_USER_SPEC_ESC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pjsip_USER_SPEC_LENIENT_ESC, "#");
+    pj_cis_add_str(&pconst.pjsip_USER_SPEC_LENIENT_ESC, "#");
 
-    status = pj_cis_dup(&pjsip_PASSWD_SPEC, &pjsip_ALNUM_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_PASSWD_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_PASSWD_SPEC, UNRESERVED ESCAPED PASS);
+    pj_cis_add_str( &pconst.pjsip_PASSWD_SPEC, UNRESERVED ESCAPED PASS);
 
-    status = pj_cis_dup(&pjsip_PASSWD_SPEC_ESC, &pjsip_PASSWD_SPEC);
+    status = pj_cis_dup(&pconst.pjsip_PASSWD_SPEC_ESC, &pconst.pjsip_PASSWD_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_del_str( &pjsip_PASSWD_SPEC_ESC, ESCAPED);
+    pj_cis_del_str( &pconst.pjsip_PASSWD_SPEC_ESC, ESCAPED);
 
-    status = pj_cis_init(&cis_buf, &pjsip_PROBE_USER_HOST_SPEC);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_PROBE_USER_HOST_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_PROBE_USER_HOST_SPEC, "@ \n>");
-    pj_cis_invert( &pjsip_PROBE_USER_HOST_SPEC );
+    pj_cis_add_str( &pconst.pjsip_PROBE_USER_HOST_SPEC, "@ \n>");
+    pj_cis_invert( &pconst.pjsip_PROBE_USER_HOST_SPEC );
 
-    status = pj_cis_init(&cis_buf, &pjsip_DISPLAY_SPEC);
+    status = pj_cis_init(&cis_buf, &pconst.pjsip_DISPLAY_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str( &pjsip_DISPLAY_SPEC, ":\r\n<");
-    pj_cis_invert(&pjsip_DISPLAY_SPEC);
+    pj_cis_add_str( &pconst.pjsip_DISPLAY_SPEC, ":\r\n<");
+    pj_cis_invert(&pconst.pjsip_DISPLAY_SPEC);
 
     /*
      * Register URI parsers.
@@ -817,7 +803,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 		}
 
 		/* Get number */
-		pj_scan_get(&scanner, &pjsip_DIGIT_SPEC, &str_clen);
+		pj_scan_get(&scanner, &pconst.pjsip_DIGIT_SPEC, &str_clen);
 
 		/* Get newline. */
 		pj_scan_get_newline(&scanner);
@@ -959,7 +945,7 @@ parse_headers:
 	    hname.slen = 0;
 	    
 	    /* Get hname. */
-	    pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &hname);
+	    pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hname);
 	    if (pj_scan_get_char( scanner ) != ':') {
 		PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 	    }
@@ -1109,22 +1095,22 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 }
 
 /* Parse parameter (pname ["=" pvalue]) using token. */
-void pjsip_parse_param_imp(  pj_scanner *scanner, pj_pool_t *pool,
-			     pj_str_t *pname, pj_str_t *pvalue,
-			     unsigned option)
+PJ_DEF(void) pjsip_parse_param_imp(pj_scanner *scanner, pj_pool_t *pool,
+			     	   pj_str_t *pname, pj_str_t *pvalue,
+			     	   unsigned option)
 {
-    parse_param_imp(scanner, pool, pname, pvalue, &pjsip_TOKEN_SPEC,
-		    &pjsip_TOKEN_SPEC_ESC, option);
+    parse_param_imp(scanner, pool, pname, pvalue, &pconst.pjsip_TOKEN_SPEC,
+		    &pconst.pjsip_TOKEN_SPEC_ESC, option);
 }
 
 
 /* Parse parameter (pname ["=" pvalue]) using paramchar. */
-void pjsip_parse_uri_param_imp(pj_scanner *scanner, pj_pool_t *pool,
-			       pj_str_t *pname, pj_str_t *pvalue,
-			       unsigned option)
+PJ_DEF(void) pjsip_parse_uri_param_imp( pj_scanner *scanner, pj_pool_t *pool,
+			       		pj_str_t *pname, pj_str_t *pvalue,
+			       		unsigned option)
 {
-    parse_param_imp(scanner, pool, pname, pvalue, &pjsip_PARAM_CHAR_SPEC,
-		    &pjsip_PARAM_CHAR_SPEC_ESC, option);
+    parse_param_imp(scanner,pool, pname, pvalue, &pconst.pjsip_PARAM_CHAR_SPEC,
+		    &pconst.pjsip_PARAM_CHAR_SPEC_ESC, option);
 }
 
 
@@ -1162,8 +1148,8 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     pj_scan_get_char(scanner);
 
     /* hname */
-    parser_get_and_unescape(scanner, pool, &pjsip_HDR_CHAR_SPEC, 
-			    &pjsip_HDR_CHAR_SPEC_ESC, hname);
+    parser_get_and_unescape(scanner, pool, &pconst.pjsip_HDR_CHAR_SPEC, 
+			    &pconst.pjsip_HDR_CHAR_SPEC_ESC, hname);
 
     /* Init hvalue */
     hvalue->ptr = NULL;
@@ -1173,10 +1159,10 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     if (*scanner->curptr == '=') {
 	pj_scan_get_char(scanner);
 	if (!pj_scan_is_eof(scanner) && 
-	    pj_cis_match(&pjsip_HDR_CHAR_SPEC, *scanner->curptr))
+	    pj_cis_match(&pconst.pjsip_HDR_CHAR_SPEC, *scanner->curptr))
 	{
-	    parser_get_and_unescape(scanner, pool, &pjsip_HDR_CHAR_SPEC,
-				    &pjsip_HDR_CHAR_SPEC_ESC, hvalue);
+	    parser_get_and_unescape(scanner, pool, &pconst.pjsip_HDR_CHAR_SPEC,
+				    &pconst.pjsip_HDR_CHAR_SPEC_ESC, hvalue);
 	}
     }
 }
@@ -1185,12 +1171,12 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
 static void int_parse_uri_host_port( pj_scanner *scanner, 
 				     pj_str_t *host, int *p_port)
 {
-    pj_scan_get( scanner, &pjsip_HOST_SPEC, host);
+    pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
     /* RFC3261 section 19.1.2: host don't need to be unescaped */
     if (*scanner->curptr == ':') {
 	pj_str_t port;
 	pj_scan_get_char(scanner);
-	pj_scan_get(scanner, &pjsip_DIGIT_SPEC, &port);
+	pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &port);
 	*p_port = pj_strtoul(&port);
     } else {
 	*p_port = 0;
@@ -1206,7 +1192,7 @@ static int int_is_next_user(pj_scanner *scanner)
     /* Find character '@'. If this character exist, then the token
      * must be a username.
      */
-    if (pj_scan_peek( scanner, &pjsip_PROBE_USER_HOST_SPEC, &dummy) == '@')
+    if (pj_scan_peek( scanner, &pconst.pjsip_PROBE_USER_HOST_SPEC, &dummy) == '@')
 	is_user = 1;
     else
 	is_user = 0;
@@ -1218,13 +1204,13 @@ static int int_is_next_user(pj_scanner *scanner)
 static void int_parse_user_pass( pj_scanner *scanner, pj_pool_t *pool,
 				 pj_str_t *user, pj_str_t *pass)
 {
-    parser_get_and_unescape(scanner, pool, &pjsip_USER_SPEC_LENIENT, 
-			    &pjsip_USER_SPEC_LENIENT_ESC, user);
+    parser_get_and_unescape(scanner, pool, &pconst.pjsip_USER_SPEC_LENIENT, 
+			    &pconst.pjsip_USER_SPEC_LENIENT_ESC, user);
 
     if ( *scanner->curptr == ':') {
 	pj_scan_get_char( scanner );
-	parser_get_and_unescape(scanner, pool, &pjsip_PASSWD_SPEC,
-				&pjsip_PASSWD_SPEC_ESC, pass);
+	parser_get_and_unescape(scanner, pool, &pconst.pjsip_PASSWD_SPEC,
+				&pconst.pjsip_PASSWD_SPEC_ESC, pass);
     } else {
 	pass->ptr = NULL;
 	pass->slen = 0;
@@ -1251,7 +1237,7 @@ static pjsip_uri *int_parse_uri_or_name_addr( pj_scanner *scanner, pj_pool_t *po
 	pj_str_t scheme;
 	int next_ch;
 
-	next_ch = pj_scan_peek( scanner, &pjsip_DISPLAY_SPEC, &scheme);
+	next_ch = pj_scan_peek( scanner, &pconst.pjsip_DISPLAY_SPEC, &scheme);
 
 	if (next_ch==':') {
 	    pjsip_parse_uri_func *func = find_uri_handler(&scheme);
@@ -1304,7 +1290,7 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
 	pjsip_parse_uri_func *func;
 
 	/* Get scheme. */
-	colon = pj_scan_peek(scanner, &pjsip_TOKEN_SPEC, &scheme);
+	colon = pj_scan_peek(scanner, &pconst.pjsip_TOKEN_SPEC, &scheme);
 	if (colon != ':') {
 	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 	}
@@ -1337,16 +1323,16 @@ static void* int_parse_sip_url( pj_scanner *scanner,
     int skip_ws = scanner->skip_ws;
     scanner->skip_ws = 0;
 
-    pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &scheme);
+    pj_scan_get(scanner, &pconst.pjsip_TOKEN_SPEC, &scheme);
     colon = pj_scan_get_char(scanner);
     if (colon != ':') {
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
     }
 
-    if (parser_stricmp(scheme, pjsip_SIP_STR)==0) {
+    if (parser_stricmp(scheme, pconst.pjsip_SIP_STR)==0) {
 	url = pjsip_sip_uri_create(pool, 0);
 
-    } else if (parser_stricmp(scheme, pjsip_SIPS_STR)==0) {
+    } else if (parser_stricmp(scheme, pconst.pjsip_SIPS_STR)==0) {
 	url = pjsip_sip_uri_create(pool, 1);
 
     } else {
@@ -1372,22 +1358,22 @@ static void* int_parse_sip_url( pj_scanner *scanner,
 
 	int_parse_uri_param( scanner, pool, &pname, &pvalue, 0);
 
-	if (!parser_stricmp(pname, pjsip_USER_STR) && pvalue.slen) {
+	if (!parser_stricmp(pname, pconst.pjsip_USER_STR) && pvalue.slen) {
 	    url->user_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_METHOD_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_METHOD_STR) && pvalue.slen) {
 	    url->method_param = pvalue;
 
-	} else if (!parser_stricmp(pname,pjsip_TRANSPORT_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_TRANSPORT_STR) && pvalue.slen) {
 	    url->transport_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_TTL_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_TTL_STR) && pvalue.slen) {
 	    url->ttl_param = pj_strtoul(&pvalue);
 
-	} else if (!parser_stricmp(pname, pjsip_MADDR_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_MADDR_STR) && pvalue.slen) {
 	    url->maddr_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_LR_STR)) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_LR_STR)) {
 	    url->lr_param = 1;
 
 	} else {
@@ -1438,7 +1424,7 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
 	 * We're only interested in display name, because SIP URL
 	 * will be parser later.
 	 */
-	next = pj_scan_peek(scanner, &pjsip_DISPLAY_SPEC, &dummy);
+	next = pj_scan_peek(scanner, &pconst.pjsip_DISPLAY_SPEC, &dummy);
 	if (next == '<') {
 	    /* Ok, this is what we're looking for, a display name. */
 	    pj_scan_get_until_ch( scanner, '<', &name_addr->display);
@@ -1469,7 +1455,7 @@ static void int_parse_req_line( pj_scanner *scanner, pj_pool_t *pool,
 {
     pj_str_t token;
 
-    pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &token);
+    pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &token);
     pjsip_method_init_np( &req_line->method, &token);
 
     req_line->uri = int_parse_uri(scanner, pool, PJ_TRUE);
@@ -1489,9 +1475,9 @@ static void int_parse_status_line( pj_scanner *scanner,
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
     pj_scan_advance_n( scanner, 7, 1);
 
-    pj_scan_get( scanner, &pjsip_DIGIT_SPEC, &token);
+    pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &token);
     status_line->code = pj_strtoul(&token);
-    pj_scan_get( scanner, &pjsip_NOT_NEWLINE, &status_line->reason);
+    pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &status_line->reason);
     pj_scan_get_newline( scanner );
 }
 
@@ -1538,7 +1524,7 @@ static void parse_hdr_end( pj_scanner *scanner )
 }
 
 /* Parse ending of header. */
-void pjsip_parse_end_hdr_imp( pj_scanner *scanner )
+PJ_DEF(void) pjsip_parse_end_hdr_imp( pj_scanner *scanner )
 {
     parse_hdr_end(scanner);
 }
@@ -1556,12 +1542,12 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 	goto end;
     }
 
-    pj_scan_get( scanner, &pjsip_NOT_COMMA_OR_NEWLINE, &hdr->values[0]);
+    pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &hdr->values[0]);
     hdr->count++;
 
     while (*scanner->curptr == ',') {
 	pj_scan_get_char(scanner);
-	pj_scan_get( scanner, &pjsip_NOT_COMMA_OR_NEWLINE, 
+	pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
 		     &hdr->values[hdr->count]);
 	hdr->count++;
 
@@ -1577,8 +1563,8 @@ end:
 static void parse_generic_string_hdr( pjsip_generic_string_hdr *hdr,
 				      pj_scanner *scanner )
 {
-    if (pj_cis_match(&pjsip_NOT_NEWLINE, *scanner->curptr))
-	pj_scan_get( scanner, &pjsip_NOT_NEWLINE, &hdr->hvalue);
+    if (pj_cis_match(&pconst.pjsip_NOT_NEWLINE, *scanner->curptr))
+	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &hdr->hvalue);
     else
 	hdr->hvalue.slen = 0;
 
@@ -1590,7 +1576,7 @@ static void parse_generic_int_hdr( pjsip_generic_int_hdr *hdr,
 				   pj_scanner *scanner )
 {
     pj_str_t tmp;
-    pj_scan_get( scanner, &pjsip_DIGIT_SPEC, &tmp);
+    pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
     hdr->ivalue = pj_strtoul(&tmp);
     parse_hdr_end(scanner);
 }
@@ -1616,7 +1602,7 @@ static pjsip_hdr* parse_hdr_allow(pjsip_parse_ctx *ctx)
 static pjsip_hdr* parse_hdr_call_id(pjsip_parse_ctx *ctx)
 {
     pjsip_cid_hdr *hdr = pjsip_cid_hdr_create(ctx->pool);
-    pj_scan_get( ctx->scanner, &pjsip_NOT_NEWLINE, &hdr->id);
+    pj_scan_get( ctx->scanner, &pconst.pjsip_NOT_NEWLINE, &hdr->id);
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
@@ -1634,7 +1620,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	pj_str_t pname, pvalue;
 
 	int_parse_param( scanner, pool, &pname, &pvalue, 0);
-	if (!parser_stricmp(pname, pjsip_Q_STR) && pvalue.slen) {
+	if (!parser_stricmp(pname, pconst.pjsip_Q_STR) && pvalue.slen) {
 	    char *dot_pos = (char*) pj_memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
 		hdr->q1000 = pj_strtoul(&pvalue);
@@ -1643,7 +1629,7 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 		pvalue.ptr = dot_pos + 1;
 		hdr->q1000 = pj_strtoul_mindigit(&pvalue, 3);
 	    }    
-	} else if (!parser_stricmp(pname, pjsip_EXPIRES_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && pvalue.slen) {
 	    hdr->expires = pj_strtoul(&pvalue);
 
 	} else {
@@ -1700,7 +1686,7 @@ static pjsip_hdr* parse_hdr_content_len( pjsip_parse_ctx *ctx )
     pjsip_clen_hdr *hdr;
 
     hdr = pjsip_clen_hdr_create(ctx->pool);
-    pj_scan_get(ctx->scanner, &pjsip_DIGIT_SPEC, &digit);
+    pj_scan_get(ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &digit);
     hdr->len = pj_strtoul(&digit);
     parse_hdr_end(ctx->scanner);
 
@@ -1719,9 +1705,9 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
     hdr = pjsip_ctype_hdr_create(ctx->pool);
     
     /* Parse media type and subtype. */
-    pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->media.type);
+    pj_scan_get(scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->media.type);
     pj_scan_get_char(scanner);
-    pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &hdr->media.subtype);
+    pj_scan_get(scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->media.subtype);
 
     /* Parse media parameters */
     while (*scanner->curptr == ';') {
@@ -1745,10 +1731,10 @@ static pjsip_hdr* parse_hdr_cseq( pjsip_parse_ctx *ctx )
     pjsip_cseq_hdr *hdr;
 
     hdr = pjsip_cseq_hdr_create(ctx->pool);
-    pj_scan_get( ctx->scanner, &pjsip_DIGIT_SPEC, &cseq);
+    pj_scan_get( ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &cseq);
     hdr->cseq = pj_strtoul(&cseq);
 
-    pj_scan_get( ctx->scanner, &pjsip_TOKEN_SPEC, &method);
+    pj_scan_get( ctx->scanner, &pconst.pjsip_TOKEN_SPEC, &method);
     pjsip_method_init_np(&hdr->method, &method);
 
     parse_hdr_end( ctx->scanner );
@@ -1781,7 +1767,7 @@ static void parse_hdr_fromto( pj_scanner *scanner,
 
 	int_parse_param( scanner, pool, &pname, &pvalue, 0);
 
-	if (!parser_stricmp(pname, pjsip_TAG_STR)) {
+	if (!parser_stricmp(pname, pconst.pjsip_TAG_STR)) {
 	    hdr->tag = pvalue;
 	    
 	} else {
@@ -1865,19 +1851,19 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 
 	int_parse_param( scanner, pool, &pname, &pvalue, 0);
 
-	if (!parser_stricmp(pname, pjsip_BRANCH_STR) && pvalue.slen) {
+	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_TTL_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_TTL_STR) && pvalue.slen) {
 	    hdr->ttl_param = pj_strtoul(&pvalue);
 	    
-	} else if (!parser_stricmp(pname, pjsip_MADDR_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_MADDR_STR) && pvalue.slen) {
 	    hdr->maddr_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_RECEIVED_STR) && pvalue.slen) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_RECEIVED_STR) && pvalue.slen) {
 	    hdr->recvd_param = pvalue;
 
-	} else if (!parser_stricmp(pname, pjsip_RPORT_STR)) {
+	} else if (!parser_stricmp(pname, pconst.pjsip_RPORT_STR)) {
 	    if (pvalue.slen)
 		hdr->rport_param = pj_strtoul(&pvalue);
 	    else
@@ -2003,13 +1989,13 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 
 	pj_scan_advance_n( scanner, 8, 1);
 
-	pj_scan_get( scanner, &pjsip_TOKEN_SPEC, &hdr->transport);
-	pj_scan_get( scanner, &pjsip_HOST_SPEC, &hdr->sent_by.host);
+	pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->transport);
+	pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, &hdr->sent_by.host);
 
 	if (*scanner->curptr==':') {
 	    pj_str_t digit;
 	    pj_scan_get_char(scanner);
-	    pj_scan_get(scanner, &pjsip_DIGIT_SPEC, &digit);
+	    pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &digit);
 	    hdr->sent_by.port = pj_strtoul(&digit);
 	}
 	

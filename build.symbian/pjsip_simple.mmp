@@ -1,7 +1,25 @@
+#if defined(EKA2)
+
+TARGET		pjsip_simple.dll
+TARGETTYPE	dll
+
+UID		0x1000008d 0xA0004292
+
+CAPABILITY	None
+LIBRARY		pjsip.lib pjsdp.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjsip_simple.def
+
+#else
+
 TARGET 		pjsip_simple.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
 VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjsip\src\pjsip-simple
 
@@ -31,6 +49,4 @@ SYSTEMINCLUDE	..\pjsip\include
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
-
-CAPABILITY	None
 

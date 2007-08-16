@@ -131,11 +131,10 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_clone(pj_pool_t *pool,
     return attr;
 }
 
-PJ_DEF(pjmedia_sdp_attr*) 
-pjmedia_sdp_attr_find (unsigned count, 
-		       pjmedia_sdp_attr *const attr_array[],
-		       const pj_str_t *name,
-		       const pj_str_t *c_fmt)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count, 
+				       pjmedia_sdp_attr *const attr_array[],
+				       const pj_str_t *name,
+				       const pj_str_t *c_fmt)
 {
     unsigned i;
     unsigned c_pt = 0xFFFF;
@@ -158,11 +157,10 @@ pjmedia_sdp_attr_find (unsigned count,
     return NULL;
 }
 
-PJ_DEF(pjmedia_sdp_attr*) 
-pjmedia_sdp_attr_find2(unsigned count, 
-		       pjmedia_sdp_attr *const attr_array[],
-		       const char *c_name,
-		       const pj_str_t *c_fmt)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find2(unsigned count, 
+				       pjmedia_sdp_attr *const attr_array[],
+				       const char *c_name,
+				       const pj_str_t *c_fmt)
 {
     pj_str_t name;
 
@@ -615,9 +613,9 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
     return m;
 }
 
-PJ_DEF(pjmedia_sdp_attr*) 
-pjmedia_sdp_media_find_attr(const pjmedia_sdp_media *m,
-			    const pj_str_t *name, const pj_str_t *fmt)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr(
+				const pjmedia_sdp_media *m,
+				const pj_str_t *name, const pj_str_t *fmt)
 {
     PJ_ASSERT_RETURN(m && name, NULL);
     return pjmedia_sdp_attr_find(m->attr_count, m->attr, name, fmt);
@@ -625,9 +623,9 @@ pjmedia_sdp_media_find_attr(const pjmedia_sdp_media *m,
 
 
 
-PJ_DEF(pjmedia_sdp_attr*) 
-pjmedia_sdp_media_find_attr2(const pjmedia_sdp_media *m,
-			     const char *name, const pj_str_t *fmt)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_media_find_attr2(
+				const pjmedia_sdp_media *m,
+				const char *name, const pj_str_t *fmt)
 {
     PJ_ASSERT_RETURN(m && name, NULL);
     return pjmedia_sdp_attr_find2(m->attr_count, m->attr, name, fmt);
@@ -640,16 +638,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_add_attr( pjmedia_sdp_media *m,
     return pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 }
 
-PJ_DEF(unsigned) 
-pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
-				  const char *name)
+PJ_DEF(unsigned) pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
+						   const char *name)
 {
     return pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, name);
 }
 
-PJ_DEF(pj_status_t)
-pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
-			      pjmedia_sdp_attr *attr)
+PJ_DEF(pj_status_t) pjmedia_sdp_media_remove_attr(pjmedia_sdp_media *m,
+			      			  pjmedia_sdp_attr *attr)
 {
     return pjmedia_sdp_attr_remove(&m->attr_count, m->attr, attr);
 }
@@ -1128,9 +1124,8 @@ PJ_DEF(int) pjmedia_sdp_print( const pjmedia_sdp_session *desc,
 /*
  * Clone session
  */
-PJ_DEF(pjmedia_sdp_session*) 
-pjmedia_sdp_session_clone( pj_pool_t *pool,
-			   const pjmedia_sdp_session *rhs)
+PJ_DEF(pjmedia_sdp_session*) pjmedia_sdp_session_clone( pj_pool_t *pool,
+			   			const pjmedia_sdp_session *rhs)
 {
     pjmedia_sdp_session *sess;
     unsigned i;

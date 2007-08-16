@@ -818,7 +818,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 /*
  * Change TX and RX settings for the port.
  */
-PJ_DECL(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
+PJ_DEF(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
 						  unsigned slot,
 						  pjmedia_port_op tx,
 						  pjmedia_port_op rx)
@@ -979,7 +979,7 @@ PJ_DEF(unsigned) pjmedia_conf_get_port_count(pjmedia_conf *conf)
 /*
  * Get total number of ports connections currently set up in the bridge.
  */
-PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf)
+PJ_DEF(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf)
 {
     return conf->connect_cnt;
 }

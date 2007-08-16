@@ -455,8 +455,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
  * Register a callback to be called when the file reading has reached the
  * end of file.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
+PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 			       void *user_data,
 			       pj_status_t (*cb)(pjmedia_port *port,
 						 void *usr_data))

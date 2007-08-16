@@ -459,7 +459,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsip_evsub_state ev_state;
     pj_status_t status;
 
-    if (pjsip_method_cmp(req_method, &pjsip_subscribe_method) != 0)
+    if (pjsip_method_cmp(req_method, pjsip_get_subscribe_method()) != 0)
 	return PJ_FALSE;
 
     /* Incoming SUBSCRIBE: */
@@ -926,7 +926,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
     if (tsx->status_code/100 != 2 ||
 	tsx->role != PJSIP_UAC_ROLE ||
 	event->type != PJSIP_EVENT_RX_MSG || 
-	pjsip_method_cmp(&tsx->method, &pjsip_subscribe_method)!=0)
+	pjsip_method_cmp(&tsx->method, pjsip_get_subscribe_method())!=0)
     {
 	PJSUA_UNLOCK();
 	return;

@@ -24,13 +24,61 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
-const pjsip_method 
-    pjsip_invite_method	    = { PJSIP_INVITE_METHOD,	{ "INVITE",6 }	},
-    pjsip_cancel_method	    = { PJSIP_CANCEL_METHOD,	{ "CANCEL",6 }	},
-    pjsip_ack_method	    = { PJSIP_ACK_METHOD,	{ "ACK",3}	},
-    pjsip_bye_method	    = { PJSIP_BYE_METHOD,	{ "BYE",3}	},
-    pjsip_register_method   = { PJSIP_REGISTER_METHOD,	{ "REGISTER",8}	},
-    pjsip_options_method    = { PJSIP_OPTIONS_METHOD,	{ "OPTIONS",7}	};
+PJ_DEF_DATA(const pjsip_method) pjsip_invite_method =
+	{ PJSIP_INVITE_METHOD, { "INVITE",6 }};
+
+PJ_DEF_DATA(const pjsip_method) pjsip_cancel_method =
+	{ PJSIP_CANCEL_METHOD, { "CANCEL",6 }};
+
+PJ_DEF_DATA(const pjsip_method) pjsip_ack_method =
+	{ PJSIP_ACK_METHOD, { "ACK",3}};
+
+PJ_DEF_DATA(const pjsip_method) pjsip_bye_method =
+	{ PJSIP_BYE_METHOD, { "BYE",3}};
+
+PJ_DEF_DATA(const pjsip_method) pjsip_register_method =
+	{ PJSIP_REGISTER_METHOD, { "REGISTER", 8}};
+
+PJ_DEF_DATA(const pjsip_method) pjsip_options_method =
+	{ PJSIP_OPTIONS_METHOD, { "OPTIONS",7}};
+
+
+/** INVITE method constant. */
+PJ_DEF(const pjsip_method*) pjsip_get_invite_method(void)
+{
+    return &pjsip_invite_method;
+}
+
+/** CANCEL method constant. */
+PJ_DEF(const pjsip_method*) pjsip_get_cancel_method(void)
+{
+    return &pjsip_cancel_method;
+}
+
+/** ACK method constant. */
+PJ_DEF(const pjsip_method*) pjsip_get_ack_method(void)
+{
+    return &pjsip_ack_method;
+}
+
+/** BYE method constant. */
+PJ_DEF(const pjsip_method*) pjsip_get_bye_method(void)
+{
+    return &pjsip_bye_method;
+}
+
+/** REGISTER method constant.*/
+PJ_DEF(const pjsip_method*) pjsip_get_register_method(void)
+{
+    return &pjsip_register_method;
+}
+
+/** OPTIONS method constant. */
+PJ_DEF(const pjsip_method*) pjsip_get_options_method(void)
+{
+    return &pjsip_options_method;
+}
+
 
 static const pj_str_t *method_names[] = 
 {
@@ -565,11 +613,10 @@ PJ_DEF(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *hdr,
 }
 
 
-PJ_DEF(pjsip_generic_string_hdr*) 
-pjsip_generic_string_hdr_init( pj_pool_t *pool,
-			       void *mem,
-			       const pj_str_t *hnames,
-			       const pj_str_t *hvalue)
+PJ_DEF(pjsip_generic_string_hdr*) pjsip_generic_string_hdr_init(pj_pool_t *pool,
+					       void *mem,
+					       const pj_str_t *hnames,
+					       const pj_str_t *hvalue)
 {
     pjsip_generic_string_hdr *hdr = (pjsip_generic_string_hdr*) mem;
     pj_str_t dup_hname, dup_hval;
@@ -590,8 +637,7 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
     return hdr;
 }
 
-PJ_DEF(pjsip_generic_string_hdr*) 
-pjsip_generic_string_hdr_create( pj_pool_t *pool,
+PJ_DEF(pjsip_generic_string_hdr*) pjsip_generic_string_hdr_create(pj_pool_t *pool,
 				 const pj_str_t *hnames,
 				 const pj_str_t *hvalue)
 {
@@ -1055,6 +1101,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 				    pj_size_t size)
 {
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     if (hdr->star) {
 	char *p = buf;
@@ -1109,7 +1156,8 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	}
 
 	printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
-				       &pjsip_TOKEN_SPEC, &pjsip_TOKEN_SPEC, 
+				       &pc->pjsip_TOKEN_SPEC,
+				       &pc->pjsip_TOKEN_SPEC, 
 				       ';');
 	if (printed < 0)
 	    return printed;
@@ -1346,6 +1394,7 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(buf, (*hname));
     *buf++ = ':';
@@ -1361,8 +1410,8 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     copy_advance_pair(buf, ";tag=", 5, hdr->tag);
 
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_TOKEN_SPEC,
-				   &pjsip_TOKEN_SPEC, ';');
+				   &pc->pjsip_TOKEN_SPEC,
+				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1524,6 +1573,7 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
     /* Route and Record-Route don't compact forms */
 
     copy_advance(buf, hdr->name);
@@ -1537,8 +1587,8 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     buf += printed;
 
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_TOKEN_SPEC, 
-				   &pjsip_TOKEN_SPEC, ';');
+				   &pc->pjsip_TOKEN_SPEC, 
+				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1704,6 +1754,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     char *endbuf = buf + size;
     pj_str_t sip_ver = { "SIP/2.0/", 8 };
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     if ((pj_ssize_t)size < hname->slen + sip_ver.slen + 
 			   hdr->transport.slen + hdr->sent_by.host.slen + 12)
@@ -1757,8 +1808,8 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
     
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
-				   &pjsip_TOKEN_SPEC,
-				   &pjsip_TOKEN_SPEC, ';');
+				   &pc->pjsip_TOKEN_SPEC,
+				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -1813,10 +1864,9 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
     return pjsip_generic_string_hdr_create(pool, &str_warning, &hvalue);
 }
 
-PJ_DEF(pjsip_warning_hdr*) 
-pjsip_warning_hdr_create_from_status( pj_pool_t *pool,
-				      const pj_str_t *host,
-				      pj_status_t status)
+PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create_from_status(pj_pool_t *pool,
+						      const pj_str_t *host,
+						      pj_status_t status)
 {
     char errbuf[PJ_ERR_MSG_SIZE];
     pj_str_t text;

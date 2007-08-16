@@ -51,7 +51,7 @@ static pj_status_t rec_get_frame(pjmedia_port *this_port,
 static pj_status_t rec_on_destroy(pjmedia_port *this_port);
 
 
-PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool,
 						void *buffer,
 						pj_size_t size,
 						unsigned clock_rate,
@@ -104,8 +104,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
  * Register a callback to be called when the file reading has reached the
  * end of buffer.
  */
-PJ_DEF(pj_status_t)
-pjmedia_mem_capture_set_eof_cb( pjmedia_port *port,
+PJ_DEF(pj_status_t) pjmedia_mem_capture_set_eof_cb( pjmedia_port *port,
 				void *user_data,
 				pj_status_t (*cb)(pjmedia_port *port,
 						  void *usr_data))

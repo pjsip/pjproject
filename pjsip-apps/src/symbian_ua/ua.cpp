@@ -438,12 +438,12 @@ static void PrintMenu()
     PJ_LOG(3, (THIS_FILE, "\n\n"
 	    "Menu:\n"
 	    "  d    Dump states\n"
-	    "  D    Dump all states (detail)\n"
+	    "  D    Dump states detail\n"
 	    "  P    Dump pool factory\n"
-	    "  m    Make call to " SIP_DST_URI "\n"
+	    "  m    Call " SIP_DST_URI "\n"
 	    "  a    Answer call\n"
 	    "  h    Hangup all calls\n"
-	    "  s    Subscribe to " SIP_DST_URI "\n"
+	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
 	    "  O    Set account offline\n"
@@ -467,7 +467,7 @@ void ConsoleUI::RunL()
 	    break;
     case 'p':
     case 'P':
-	    pj_pool_factory_dump(&pjsua_var.cp.factory, PJ_TRUE);
+	    pj_pool_factory_dump(pjsua_get_pool_factory(), PJ_TRUE);
 	    break;
     case 'm':
 	    if (g_call_id != PJSUA_INVALID_ID) {

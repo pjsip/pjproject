@@ -84,13 +84,44 @@ struct pjsip_method
 /*
  * For convenience, standard method structures are defined in the library.
  */
-extern const pjsip_method pjsip_invite_method;	    /**< INVITE structure.  */
-extern const pjsip_method pjsip_cancel_method;	    /**< CANCEL structure.  */
-extern const pjsip_method pjsip_ack_method;	    /**< ACK structure.     */
-extern const pjsip_method pjsip_bye_method;	    /**< BYE structure.     */
-extern const pjsip_method pjsip_register_method;    /**< REGISTER structure.*/
-extern const pjsip_method pjsip_options_method;	    /**< OPTIONS structure. */
+/** INVITE method constant. @see pjsip_get_invite_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_invite_method;
 
+/** CANCEL method constant. @see pjsip_get_cancel_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_cancel_method;
+
+/** ACK method constant. @see pjsip_get_ack_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_ack_method;
+
+/** BYE method constant. @see pjsip_get_bye_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_bye_method;
+
+/** REGISTER method constant. @see pjsip_get_register_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_register_method;
+
+/** OPTIONS method constant. @see pjsip_get_options_method() */
+PJ_DECL_DATA(const pjsip_method) pjsip_options_method;
+
+/*
+ * Accessor functions for standard SIP methods.
+ */
+/** Get INVITE method constant. */
+PJ_DECL(const pjsip_method*) pjsip_get_invite_method(void);
+/** Get CANCEL method constant. */
+PJ_DECL(const pjsip_method*) pjsip_get_cancel_method(void);
+/** Get ACK method constant. */
+PJ_DECL(const pjsip_method*) pjsip_get_ack_method(void);
+/** Get BYE method constant. */
+PJ_DECL(const pjsip_method*) pjsip_get_bye_method(void);
+/** Get REGISTER method constant.*/
+PJ_DECL(const pjsip_method*) pjsip_get_register_method(void);
+/** Get OPTIONS method constant. */
+PJ_DECL(const pjsip_method*) pjsip_get_options_method(void);
+
+
+/*
+ * Accessor functions
+ */
 
 /** 
  * Initialize the method structure from a string. 

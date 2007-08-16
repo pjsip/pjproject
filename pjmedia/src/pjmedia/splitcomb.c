@@ -216,8 +216,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_set_channel( pjmedia_port *splitcomb,
 /*
  * Create reverse phase port for the specified channel.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 				      pjmedia_port *splitcomb,
 				      unsigned ch_num,
 				      unsigned options,

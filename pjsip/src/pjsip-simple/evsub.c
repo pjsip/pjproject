@@ -49,17 +49,34 @@ enum
     PJSIP_NOTIFY_METHOD = PJSIP_OTHER_METHOD
 };
 
-const pjsip_method pjsip_subscribe_method = 
+PJ_DEF_DATA(const pjsip_method) pjsip_subscribe_method = 
 {
     (pjsip_method_e) PJSIP_SUBSCRIBE_METHOD,
     { "SUBSCRIBE", 9 }
 };
 
-const pjsip_method pjsip_notify_method = 
+PJ_DEF_DATA(const pjsip_method) pjsip_notify_method = 
 {
     (pjsip_method_e) PJSIP_NOTIFY_METHOD,
     { "NOTIFY", 6 }
 };
+
+/**
+ * SUBSCRIBE method constant.
+ */
+PJ_DEF(const pjsip_method*) pjsip_get_subscribe_method()
+{
+    return &pjsip_subscribe_method;
+}
+
+/**
+ * NOTIFY method constant.
+ */
+PJ_DEF(const pjsip_method*) pjsip_get_notify_method()
+{
+    return &pjsip_notify_method;
+}
+
 
 /*
  * Static prototypes.
@@ -1112,8 +1129,8 @@ PJ_DEF(pj_status_t) pjsip_evsub_notify( pjsip_evsub *sub,
     pjsip_dlg_inc_lock(sub->dlg);
 
     /* Create NOTIFY request */
-    status = pjsip_dlg_create_request( sub->dlg, &pjsip_notify_method, -1, 
-				       &tdata);
+    status = pjsip_dlg_create_request( sub->dlg, pjsip_get_notify_method(), 
+				       -1, &tdata);
     if (status != PJ_SUCCESS)
 	goto on_return;
 

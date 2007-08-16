@@ -194,8 +194,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port )
 /*
  * Register callback.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
+PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
 				pj_size_t pos,
 				void *user_data,
 			        pj_status_t (*cb)(pjmedia_port *port,

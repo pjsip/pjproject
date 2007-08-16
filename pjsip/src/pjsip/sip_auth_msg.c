@@ -67,6 +67,7 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
     
     copy_advance_pair_quote_cond(buf, "username=", 9, cred->username, '"', '"');
     copy_advance_pair_quote_cond(buf, ", realm=", 8, cred->realm, '"', '"');
@@ -83,8 +84,8 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     copy_advance_pair(buf, ", nc=", 5, cred->nc);
     
     printed = pjsip_param_print_on(&cred->other_param, buf, endbuf-buf, 
-				   &pjsip_TOKEN_SPEC, 
-				   &pjsip_TOKEN_SPEC, ',');
+				   &pc->pjsip_TOKEN_SPEC, 
+				   &pc->pjsip_TOKEN_SPEC, ',');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -228,6 +229,7 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance_pair_quote_cond(buf, " realm=", 7, chal->realm, '"', '"');
     copy_advance_pair_quote_cond(buf, ",domain=", 8, chal->domain, '"', '"');
@@ -241,8 +243,8 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     copy_advance_pair_quote_cond(buf, ",qop=", 5, chal->qop, '"', '"');
     
     printed = pjsip_param_print_on(&chal->other_param, buf, endbuf-buf, 
-				   &pjsip_TOKEN_SPEC, 
-				   &pjsip_TOKEN_SPEC, ',');
+				   &pc->pjsip_TOKEN_SPEC, 
+				   &pc->pjsip_TOKEN_SPEC, ',');
     if (printed < 0)
 	return -1;
     buf += printed;

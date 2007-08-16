@@ -21,7 +21,12 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 
-const unsigned PJ_GUID_STRING_LENGTH=20;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=20;
+
+PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
+{
+    return PJ_GUID_STRING_LENGTH;
+}
 
 static void init_mac_address(unsigned char mac_addr[16])
 {

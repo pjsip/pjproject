@@ -116,8 +116,7 @@ search(
  * For further information see John C. Bellamy's Digital Telephony, 1982,
  * John Wiley & Sons, pps 98-111 and 472-476.
  */
-PJ_DEF(pj_uint8_t)
-pjmedia_linear2alaw(
+PJ_DEF(pj_uint8_t) pjmedia_linear2alaw(
 	int		pcm_val)	/* 2's complement (16-bit range) */
 {
 	int		mask;
@@ -152,8 +151,7 @@ pjmedia_linear2alaw(
  * alaw2linear() - Convert an A-law value to 16-bit linear PCM
  *
  */
-PJ_DEF(int)
-pjmedia_alaw2linear(
+PJ_DEF(int) pjmedia_alaw2linear(
 	unsigned a_val)
 {
 	int		t;
@@ -208,8 +206,7 @@ pjmedia_alaw2linear(
  * For further information see John C. Bellamy's Digital Telephony, 1982,
  * John Wiley & Sons, pps 98-111 and 472-476.
  */
-PJ_DECL(unsigned char)
-pjmedia_linear2ulaw(
+PJ_DEF(unsigned char) pjmedia_linear2ulaw(
 	int		pcm_val)	/* 2's complement (16-bit range) */
 {
 	int		mask;
@@ -250,8 +247,7 @@ pjmedia_linear2ulaw(
  * Note that this function expects to be passed the complement of the
  * original code word. This is in keeping with ISDN conventions.
  */
-PJ_DEF(int)
-pjmedia_ulaw2linear(
+PJ_DEF(int) pjmedia_ulaw2linear(
 	unsigned char	u_val)
 {
 	int		t;
@@ -276,8 +272,7 @@ pjmedia_ulaw2linear(
 }
 
 /* A-law to u-law conversion */
-PJ_DEF(unsigned char)
-pjmedia_alaw2ulaw(
+PJ_DEF(unsigned char) pjmedia_alaw2ulaw(
 	unsigned char	aval)
 {
 	aval &= 0xff;
@@ -286,8 +281,7 @@ pjmedia_alaw2ulaw(
 }
 
 /* u-law to A-law conversion */
-PJ_DEF(unsigned char)
-pjmedia_ulaw2alaw(
+PJ_DEF(unsigned char) pjmedia_ulaw2alaw(
 	unsigned char	uval)
 {
 	uval &= 0xff;

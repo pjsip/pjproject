@@ -1417,7 +1417,7 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DEF(pj_status_t)  pj_stun_uint64_attr_create(pj_pool_t *pool,
+PJ_DECL(pj_status_t)  pj_stun_uint64_attr_create(pj_pool_t *pool,
 					        int attr_type,
 					        const pj_timestamp *value,
 					        pj_stun_uint64_attr **p_attr);

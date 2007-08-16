@@ -202,15 +202,24 @@ typedef struct pjsip_evsub_user pjsip_evsub_user;
 
 
 /**
+ * SUBSCRIBE method constant. @see pjsip_get_subscribe_method()
+ */
+PJ_DECL_DATA(const pjsip_method) pjsip_subscribe_method;
+
+/**
+ * NOTIFY method constant. @see pjsip_get_notify_method()
+ */
+PJ_DECL_DATA(const pjsip_method) pjsip_notify_method;
+
+/**
  * SUBSCRIBE method constant.
  */
-extern const pjsip_method pjsip_subscribe_method;
+PJ_DECL(const pjsip_method*) pjsip_get_subscribe_method();
 
 /**
  * NOTIFY method constant.
  */
-extern const pjsip_method pjsip_notify_method;
-
+PJ_DECL(const pjsip_method*) pjsip_get_notify_method();
 
 
 /**

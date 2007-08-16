@@ -105,7 +105,7 @@ PJ_DEF(pjsip_tel_uri*) pjsip_tel_uri_create(pj_pool_t *pool)
 static const pj_str_t *tel_uri_get_scheme( const pjsip_tel_uri *uri )
 {
     PJ_UNUSED_ARG(uri);
-    return &pjsip_TEL_STR;
+    return &pjsip_parser_const()->pjsip_TEL_STR;
 }
 
 static void *tel_uri_get_uri( pjsip_tel_uri *uri )
@@ -182,11 +182,12 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
     int printed;
     char *startbuf = buf;
     char *endbuf = buf+size;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     PJ_UNUSED_ARG(context);
 
     /* Print scheme. */
-    copy_advance(buf, pjsip_TEL_STR);
+    copy_advance(buf, pc->pjsip_TEL_STR);
     *buf++ = ':';
 
     /* Print number. */
@@ -370,14 +371,15 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_tel_uri *uri;
     pj_str_t token;
     int skip_ws = scanner->skip_ws;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     scanner->skip_ws = 0;
 
     /* Parse scheme. */
-    pj_scan_get(scanner, &pjsip_TOKEN_SPEC, &token);
+    pj_scan_get(scanner, &pc->pjsip_TOKEN_SPEC, &token);
     if (pj_scan_get_char(scanner) != ':')
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-    if (pj_stricmp_alnum(&token, &pjsip_TEL_STR) != 0)
+    if (pj_stricmp_alnum(&token, &pc->pjsip_TEL_STR) != 0)
 	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
 
     /* Create URI */
@@ -394,21 +396,22 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     /* Get all parameters. */
     if (parse_params && *scanner->curptr==';') {
 	pj_str_t pname, pvalue;
+	const pjsip_parser_const_t *pc = pjsip_parser_const();
 
 	do {
 	    /* Eat the ';' separator. */
 	    pj_scan_get_char(scanner);
 
 	    /* Get pname. */
-	    pj_scan_get(scanner, &pjsip_PARAM_CHAR_SPEC, &pname);
+	    pj_scan_get(scanner, &pc->pjsip_PARAM_CHAR_SPEC, &pname);
 
 	    if (*scanner->curptr == '=') {
 		pj_scan_get_char(scanner);
 
 #		if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
-		    pj_scan_get_unescape( scanner, 
-					  &pjsip_TEL_PARSING_PVALUE_SPEC_ESC,
-					  &pvalue);
+		    pj_scan_get_unescape(scanner, 
+					 &pjsip_TEL_PARSING_PVALUE_SPEC_ESC,
+					 &pvalue);
 #		else
 		    pj_scan_get(scanner, &pjsip_TEL_PARSING_PVALUE_SPEC, 
 				&pvalue);

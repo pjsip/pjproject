@@ -61,10 +61,11 @@
 PJ_BEGIN_DECL
 
 
-/**
- * Declaration for REFER method constant.
- */
-extern const pjsip_method pjsip_refer_method;
+/** Declaration for REFER method constant. */
+PJ_DECL_DATA(const pjsip_method) pjsip_refer_method;
+
+/** Get REFER method constant */
+PJ_DECL(const pjsip_method*) pjsip_get_refer_method();
 
 
 /**

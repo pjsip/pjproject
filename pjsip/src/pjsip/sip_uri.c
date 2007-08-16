@@ -243,6 +243,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     char *startbuf = buf;
     char *endbuf = buf+size;
     const pj_str_t *scheme;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     *buf = '\0';
 
@@ -253,10 +254,10 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print "user:password@", if any. */
     if (url->user.slen) {
-	copy_advance_escape(buf, url->user, pjsip_USER_SPEC);
+	copy_advance_escape(buf, url->user, pc->pjsip_USER_SPEC);
 	if (url->passwd.slen) {
 	    *buf++ = ':';
-	    copy_advance_escape(buf, url->passwd, pjsip_PASSWD_SPEC);
+	    copy_advance_escape(buf, url->passwd, pc->pjsip_PASSWD_SPEC);
 	}
 
 	*buf++ = '@';
@@ -289,13 +290,13 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     /* Method param is only allowed in external/other context. */
     if (context == PJSIP_URI_IN_OTHER) {
 	copy_advance_pair_escape(buf, ";method=", 8, url->method_param, 
-				 pjsip_PARAM_CHAR_SPEC);
+				 pc->pjsip_PARAM_CHAR_SPEC);
     }
 
     /* Transport is not allowed in From/To header. */
     if (context != PJSIP_URI_IN_FROMTO_HDR) {
 	copy_advance_pair_escape(buf, ";transport=", 11, url->transport_param,
-				 pjsip_PARAM_CHAR_SPEC);
+				 pc->pjsip_PARAM_CHAR_SPEC);
     }
 
     /* TTL param is not allowed in From, To, Route, and Record-Route header. */
@@ -312,7 +313,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     /* maddr param is not allowed in From and To header. */
     if (context != PJSIP_URI_IN_FROMTO_HDR) {
 	copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
-				 pjsip_PARAM_CHAR_SPEC);
+				 pc->pjsip_PARAM_CHAR_SPEC);
     }
 
     /* lr param is not allowed in From, To, and Contact header. */
@@ -327,8 +328,8 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Other param. */
     printed = pjsip_param_print_on(&url->other_param, buf, endbuf-buf, 
-				   &pjsip_PARAM_CHAR_SPEC, 
-				   &pjsip_PARAM_CHAR_SPEC, ';');
+				   &pc->pjsip_PARAM_CHAR_SPEC, 
+				   &pc->pjsip_PARAM_CHAR_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;
@@ -340,8 +341,8 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
      */
     if (context == PJSIP_URI_IN_CONTACT_HDR || context == PJSIP_URI_IN_OTHER) {
 	printed = pjsip_param_print_on(&url->header_param, buf, endbuf-buf,
-				       &pjsip_HDR_CHAR_SPEC, 
-				       &pjsip_HDR_CHAR_SPEC, '?');
+				       &pc->pjsip_HDR_CHAR_SPEC, 
+				       &pc->pjsip_HDR_CHAR_SPEC, '?');
 	if (printed < 0)
 	    return -1;
 	buf += printed;

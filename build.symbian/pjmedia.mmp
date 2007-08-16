@@ -1,7 +1,23 @@
+#if defined(EKA2)
+
+TARGET		pjmedia.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004295
+CAPABILITY	None
+LIBRARY		null_audio.lib pjsdp.lib pjnath.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjmedia.def
+
+#else
+
 TARGET 		pjmedia.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
 VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjmedia\src\pjmedia
 
@@ -37,10 +53,7 @@ SOURCE		resample_port.c
 SOURCE		resample_resample.c
 SOURCE		rtcp.c
 SOURCE		rtp.c
-//SDP files are in pjsdp.mmp
-//SOURCE		sdp.c
-//SOURCE		sdp_cmp.c
-//SOURCE		sdp_neg.c
+//SDP files are in pjsdp.mmp: sdp.c, sdp_cmp.c, sdp_neg.c
 SOURCE		session.c
 SOURCE		silencedet.c
 SOURCE		sound_port.c
@@ -76,5 +89,4 @@ SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 //SYSTEMINCLUDE	\epoc32\include\mmf\plugin
 
-CAPABILITY	None
 

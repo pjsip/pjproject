@@ -25,6 +25,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 
+#include "echo_internal.h"
 
 #define THIS_FILE			    "echo_suppress.c"
 
@@ -40,30 +41,6 @@ typedef struct echo_supp
     unsigned		 samples_per_frame;
     unsigned		 tail_ms;
 } echo_supp;
-
-
-
-/*
- * Prototypes.
- */
-PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
-				      unsigned clock_rate,
-				      unsigned samples_per_frame,
-				      unsigned tail_ms,
-				      unsigned latency_ms,
-				      unsigned options,
-				      void **p_state );
-PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
-PJ_DECL(pj_status_t) echo_supp_playback(void *state,
-					pj_int16_t *play_frm );
-PJ_DECL(pj_status_t) echo_supp_capture(void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options );
-PJ_DECL(pj_status_t) echo_supp_cancel_echo(void *state,
-					   pj_int16_t *rec_frm,
-					   const pj_int16_t *play_frm,
-					   unsigned options,
-					   void *reserved );
 
 
 

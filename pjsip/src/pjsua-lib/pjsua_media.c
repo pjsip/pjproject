@@ -625,8 +625,8 @@ on_error:
  * Create UDP media transports for all the calls. This function creates
  * one UDP media transport for each call.
  */
-PJ_DEF(pj_status_t) 
-pjsua_media_transports_create(const pjsua_transport_config *app_cfg)
+PJ_DEF(pj_status_t) pjsua_media_transports_create(
+			const pjsua_transport_config *app_cfg)
 {
     pjsua_transport_config cfg;
     unsigned i;
@@ -1112,7 +1112,7 @@ static char* get_basename(const char *path, unsigned len)
     if (len==0)
 	return p;
 
-    for (--p; p!=path && *p!='/' && *p!='\\'; --p);
+    for (--p; p!=path && *p!='/' && *p!='\\'; ) --p;
 
     return (p==path) ? p : p+1;
 }

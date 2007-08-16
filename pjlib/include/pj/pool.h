@@ -614,8 +614,15 @@ typedef struct pj_pool_factory_policy
 /**
  * This constant denotes the exception number that will be thrown by default
  * memory factory policy when memory allocation fails.
+ *
+ * @see pj_NO_MEMORY_EXCEPTION()
  */
-extern int PJ_NO_MEMORY_EXCEPTION;
+PJ_DECL_DATA(int) PJ_NO_MEMORY_EXCEPTION;
+
+/**
+ * Get #PJ_NO_MEMORY_EXCEPTION constant.
+ */ 
+PJ_DECL(int) pj_NO_MEMORY_EXCEPTION();
 
 /**
  * This global variable points to default memory pool factory policy.

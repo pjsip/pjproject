@@ -251,7 +251,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
 	
 	/* Find the UAS INVITE transaction */
 	pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_UAS_ROLE,
-			     &pjsip_invite_method, rdata);
+			     pjsip_get_invite_method(), rdata);
 	invite_uas = pjsip_tsx_layer_find_tsx(&key, PJ_TRUE);
 	if (!invite_uas) {
 	    /* Invite transaction not found, respond CANCEL with 481 */

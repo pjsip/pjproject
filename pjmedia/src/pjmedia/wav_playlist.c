@@ -538,8 +538,7 @@ on_error:
  * Register a callback to be called when the file reading has reached the
  * end of the last file.
  */
-PJ_DEF(pj_status_t)
-pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
+PJ_DEF(pj_status_t) pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
 			        void *user_data,
 			        pj_status_t (*cb)(pjmedia_port *port,
 						  void *usr_data))

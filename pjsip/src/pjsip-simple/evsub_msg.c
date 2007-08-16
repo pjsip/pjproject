@@ -61,6 +61,7 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
     char *p = buf;
     char *endbuf = buf+size;
     int printed;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
     *p++ = ':';
@@ -70,8 +71,8 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
     copy_advance_pair(p, ";id=", 4, hdr->id_param);
     
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
-				   &pjsip_TOKEN_SPEC, 
-				   &pjsip_TOKEN_SPEC, ';');
+				   &pc->pjsip_TOKEN_SPEC, 
+				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
 	return printed;
 
@@ -159,6 +160,7 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     char *p = buf;
     char *endbuf = buf+size;
     int printed;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
     *p++ = ':';
@@ -180,8 +182,8 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     }
     
     printed = pjsip_param_print_on( &hdr->other_param, p, endbuf-p, 
-				    &pjsip_TOKEN_SPEC,
-				    &pjsip_TOKEN_SPEC,
+				    &pc->pjsip_TOKEN_SPEC,
+				    &pc->pjsip_TOKEN_SPEC,
 				    ';');
     if (printed < 0)
 	return printed;
@@ -222,8 +224,9 @@ static pjsip_hdr *parse_hdr_event(pjsip_parse_ctx *ctx)
 {
     pjsip_event_hdr *hdr = pjsip_event_hdr_create(ctx->pool);
     const pj_str_t id_param = { "id", 2 };
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
 
-    pj_scan_get(ctx->scanner, &pjsip_TOKEN_SPEC, &hdr->event_type);
+    pj_scan_get(ctx->scanner, &pc->pjsip_TOKEN_SPEC, &hdr->event_type);
 
     while (*ctx->scanner->curptr == ';') {
 	pj_str_t pname, pvalue;
@@ -253,7 +256,9 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
     const pj_str_t reason = { "reason", 6 },
 		   expires = { "expires", 7 },
 		   retry_after = { "retry-after", 11 };
-    pj_scan_get(ctx->scanner, &pjsip_TOKEN_SPEC, &hdr->sub_state);
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+
+    pj_scan_get(ctx->scanner, &pc->pjsip_TOKEN_SPEC, &hdr->sub_state);
 
     while (*ctx->scanner->curptr == ';') {
 	pj_str_t pname, pvalue;

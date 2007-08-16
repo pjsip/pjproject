@@ -54,6 +54,113 @@ static void init_data()
 }
 
 
+PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+
+    cfg->msg_logging = PJ_TRUE;
+    cfg->level = 5;
+    cfg->console_level = 4;
+    cfg->decor = PJ_LOG_HAS_SENDER | PJ_LOG_HAS_TIME | 
+		 PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE;
+}
+
+PJ_DEF(void) pjsua_logging_config_dup(pj_pool_t *pool,
+				      pjsua_logging_config *dst,
+				      const pjsua_logging_config *src)
+{
+    pj_memcpy(dst, src, sizeof(*src));
+    pj_strdup_with_null(pool, &dst->log_filename, &src->log_filename);
+}
+
+PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+
+    cfg->max_calls = 4;
+    cfg->thread_cnt = 1;
+}
+
+PJ_DEF(void) pjsip_cred_dup( pj_pool_t *pool,
+			     pjsip_cred_info *dst,
+			     const pjsip_cred_info *src)
+{
+    pj_strdup_with_null(pool, &dst->realm, &src->realm);
+    pj_strdup_with_null(pool, &dst->scheme, &src->scheme);
+    pj_strdup_with_null(pool, &dst->username, &src->username);
+    pj_strdup_with_null(pool, &dst->data, &src->data);
+}
+
+PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
+			      pjsua_config *dst,
+			      const pjsua_config *src)
+{
+    unsigned i;
+
+    pj_memcpy(dst, src, sizeof(*src));
+
+    for (i=0; i<src->outbound_proxy_cnt; ++i) {
+	pj_strdup_with_null(pool, &dst->outbound_proxy[i],
+			    &src->outbound_proxy[i]);
+    }
+
+    for (i=0; i<src->cred_count; ++i) {
+	pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
+    }
+
+    pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
+    pj_strdup_with_null(pool, &dst->stun_domain, &src->stun_domain);
+    pj_strdup_with_null(pool, &dst->stun_host, &src->stun_host);
+    pj_strdup_with_null(pool, &dst->stun_relay_host, &src->stun_relay_host);
+}
+
+PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
+{
+    pj_bzero(msg_data, sizeof(*msg_data));
+    pj_list_init(&msg_data->hdr_list);
+}
+
+PJ_DEF(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    pjsip_tls_setting_default(&cfg->tls_setting);
+}
+
+PJ_DEF(void) pjsua_transport_config_dup(pj_pool_t *pool,
+					pjsua_transport_config *dst,
+					const pjsua_transport_config *src)
+{
+    PJ_UNUSED_ARG(pool);
+    pj_memcpy(dst, src, sizeof(*src));
+}
+
+PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+
+    cfg->reg_timeout = PJSUA_REG_INTERVAL;
+    cfg->transport_id = PJSUA_INVALID_ID;
+}
+
+PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+}
+
+PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+
+    cfg->clock_rate = PJSUA_DEFAULT_CLOCK_RATE;
+    cfg->max_media_ports = 32;
+    cfg->has_ioqueue = PJ_TRUE;
+    cfg->thread_cnt = 1;
+    cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
+    cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
+    cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
+    cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
+}
+
 
 /*****************************************************************************
  * This is a very simple PJSIP module, whose sole purpose is to display
@@ -148,7 +255,7 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 
     /* Only want to handle OPTIONS requests */
     if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
-			 &pjsip_options_method) != 0)
+			 pjsip_get_options_method()) != 0)
     {
 	return PJ_FALSE;
     }

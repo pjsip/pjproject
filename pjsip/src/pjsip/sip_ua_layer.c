@@ -236,6 +236,7 @@ PJ_DEF(pj_status_t) pjsip_ua_destroy(void)
 /*
  * Create key to identify dialog set.
  */
+/*
 PJ_DEF(void) pjsip_ua_create_dlg_set_key( pj_pool_t *pool,
 					  pj_str_t *set_key,
 					  const pj_str_t *call_id,
@@ -252,6 +253,7 @@ PJ_DEF(void) pjsip_ua_create_dlg_set_key( pj_pool_t *pool,
     pj_memcpy(set_key->ptr + call_id->slen + 1, 
 	      local_tag->ptr, local_tag->slen);
 }
+*/
 
 /*
  * Acquire one dlg_set node to be put in the hash table.
@@ -511,7 +513,7 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 	    role = PJSIP_ROLE_UAC;
 
 	pjsip_tsx_create_key(rdata->tp_info.pool, &key, role, 
-			     &pjsip_invite_method, rdata);
+			     pjsip_get_invite_method(), rdata);
 
 	/* Lookup the INVITE transaction */
 	tsx = pjsip_tsx_layer_find_tsx(&key, PJ_TRUE);

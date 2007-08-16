@@ -1,7 +1,7 @@
 prj_platforms
 winscw
 //armv5
-gcce
+//gcce
 
 prj_mmpfiles
 pjlib.mmp
@@ -13,8 +13,6 @@ pjmedia.mmp
 pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
-pjlib_test.mmp
-sipstateless.mmp
 pjsua_lib.mmp
 null_audio.mmp
 symbian_ua.mmp

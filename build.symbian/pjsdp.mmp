@@ -1,7 +1,22 @@
+#if defined(EKA2)
+TARGET		pjsdp.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004296
+CAPABILITY	None
+LIBRARY		pjlib_util.lib pjlib.lib charconv.lib euser.lib estlib.lib
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\pjsdp.def
+
+#else
+
 TARGET 		pjsdp.lib
 TARGETTYPE 	lib
 UID		0x100039CE 0x10004299
 VENDORID	0x70000001
+
+#endif
 
 SOURCEPATH	..\pjmedia\src\pjmedia
 

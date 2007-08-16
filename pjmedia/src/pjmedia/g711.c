@@ -42,10 +42,6 @@
 #define FRAME_SIZE	    (8000 * PTIME / 1000)   /* 80 bytes	    */
 #define SAMPLES_PER_FRAME   (8000 * PTIME / 1000)   /* 80 samples   */
 
-/* These are the only public functions exported to applications */
-PJ_DECL(pj_status_t) g711_init_factory (pjmedia_codec_factory *factory, 
-					pj_pool_t *pool);
-
 /* Prototypes for G711 factory */
 static pj_status_t g711_test_alloc( pjmedia_codec_factory *factory, 
 				    const pjmedia_codec_info *id );

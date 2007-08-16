@@ -25,9 +25,9 @@
 #include <e32base.h>
 #include <e32cmn.h>
 #include <e32std.h>
-#include <ES_SOCK.H>
+#include <es_sock.h>
 #include <in_sock.h>
-#include <CHARCONV.H>
+#include <charconf.h>
 #include <utf.h>
 #include <e32cons.h>
 

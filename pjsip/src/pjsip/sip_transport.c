@@ -113,7 +113,7 @@ struct transport_names_t
 /*
  * Register new transport type to PJSIP.
  */
-PJ_DECL(pj_status_t) pjsip_transport_register_type(unsigned tp_flag,
+PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
 						   const char *tp_name,
 						   int def_port,
 						   int *p_tp_type)
@@ -149,8 +149,7 @@ PJ_DECL(pj_status_t) pjsip_transport_register_type(unsigned tp_flag,
 /*
  * Get transport type from name.
  */
-PJ_DEF(pjsip_transport_type_e) 
-pjsip_transport_get_type_from_name(const pj_str_t *name)
+PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_name(const pj_str_t *name)
 {
     unsigned i;
 
@@ -178,8 +177,7 @@ pjsip_transport_get_type_from_name(const pj_str_t *name)
 /*
  * Get the transport type for the specified flags.
  */
-PJ_DEF(pjsip_transport_type_e) 
-pjsip_transport_get_type_from_flag(unsigned flag)
+PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
 {
     unsigned i;
 
@@ -200,8 +198,7 @@ pjsip_transport_get_type_from_flag(unsigned flag)
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
 
-PJ_DEF(unsigned)
-pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
+PJ_DEF(unsigned) pjsip_transport_get_flag_from_type(pjsip_transport_type_e type)
 {
     /* Sanity check. 
      * Check that transport_names[] are indexed on transport type. 
@@ -219,8 +216,7 @@ pjsip_transport_get_flag_from_type( pjsip_transport_type_e type )
 /*
  * Get the default SIP port number for the specified type.
  */
-PJ_DEF(int) 
-pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
+PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
 {
     /* Sanity check. 
      * Check that transport_names[] are indexed on transport type. 

@@ -218,7 +218,7 @@ struct pjsip_event
  * @param e the event ID.
  * @note defined in sip_util.c
  */
-PJ_DEF(const char *) pjsip_event_str(pjsip_event_id_e e);
+PJ_DECL(const char *) pjsip_event_str(pjsip_event_id_e e);
 
 /**
  * @}

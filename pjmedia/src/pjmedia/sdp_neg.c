@@ -66,8 +66,7 @@ PJ_DEF(const char*) pjmedia_sdp_neg_state_str(pjmedia_sdp_neg_state state)
 /*
  * Create with local offer.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
 				      const pjmedia_sdp_session *local,
 				      pjmedia_sdp_neg **p_neg)
 {
@@ -98,8 +97,7 @@ pjmedia_sdp_neg_create_w_local_offer( pj_pool_t *pool,
 /*
  * Create with remote offer and initial local offer/answer.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
 				      const pjmedia_sdp_session *initial,
 				      const pjmedia_sdp_session *remote,
 				      pjmedia_sdp_neg **p_neg)
@@ -147,9 +145,9 @@ pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
 /*
  * Set codec order preference.
  */
-PJ_DEF(pj_status_t)
-pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
-					      pj_bool_t prefer_remote)
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_prefer_remote_codec_order(
+						pjmedia_sdp_neg *neg,
+						pj_bool_t prefer_remote)
 {
     PJ_ASSERT_RETURN(neg, PJ_EINVAL);
     neg->prefer_remote_codec_order = prefer_remote;
@@ -160,8 +158,7 @@ pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
 /*
  * Get SDP negotiator state.
  */
-PJ_DEF(pjmedia_sdp_neg_state)
-pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg )
+PJ_DEF(pjmedia_sdp_neg_state) pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg )
 {
     /* Check arguments are valid. */
     PJ_ASSERT_RETURN(neg != NULL, PJMEDIA_SDP_NEG_STATE_NULL);
@@ -169,9 +166,8 @@ pjmedia_sdp_neg_get_state( pjmedia_sdp_neg *neg )
 }
 
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
-				  const pjmedia_sdp_session **local)
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
+					const pjmedia_sdp_session **local)
 {
     PJ_ASSERT_RETURN(neg && local, PJ_EINVAL);
     PJ_ASSERT_RETURN(neg->active_local_sdp, PJMEDIA_SDPNEG_ENOACTIVE);
@@ -181,8 +177,7 @@ pjmedia_sdp_neg_get_active_local( pjmedia_sdp_neg *neg,
 }
 
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
 				   const pjmedia_sdp_session **remote)
 {
     PJ_ASSERT_RETURN(neg && remote, PJ_EINVAL);
@@ -193,8 +188,7 @@ pjmedia_sdp_neg_get_active_remote( pjmedia_sdp_neg *neg,
 }
 
 
-PJ_DEF(pj_bool_t)
-pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg)
+PJ_DEF(pj_bool_t) pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg)
 {
     PJ_ASSERT_RETURN(neg, PJ_FALSE);
 
@@ -202,8 +196,7 @@ pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg)
 }
 
 
-PJ_DEF(pj_status_t)
-pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
 				const pjmedia_sdp_session **remote)
 {
     PJ_ASSERT_RETURN(neg && remote, PJ_EINVAL);
@@ -213,8 +206,7 @@ pjmedia_sdp_neg_get_neg_remote( pjmedia_sdp_neg *neg,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
 			       const pjmedia_sdp_session **local)
 {
     PJ_ASSERT_RETURN(neg && local, PJ_EINVAL);
@@ -228,8 +220,7 @@ pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
 /*
  * Modify local SDP and wait for remote answer.
  */
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 				    pjmedia_sdp_neg *neg,
 				    const pjmedia_sdp_session *local)
 {
@@ -249,8 +240,7 @@ pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 }
 
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 				  pjmedia_sdp_neg *neg,
 				  const pjmedia_sdp_session **offer)
 {
@@ -285,8 +275,7 @@ pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 }
 
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
 				   pjmedia_sdp_neg *neg,
 				   const pjmedia_sdp_session *remote)
 {
@@ -308,8 +297,7 @@ pjmedia_sdp_neg_set_remote_answer( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
 				  pjmedia_sdp_neg *neg,
 				  const pjmedia_sdp_session *remote)
 {
@@ -330,8 +318,7 @@ pjmedia_sdp_neg_set_remote_offer( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) 
-pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 				  pjmedia_sdp_neg *neg,
 				  const pjmedia_sdp_session *local)
 {

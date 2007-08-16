@@ -113,9 +113,6 @@ struct tsx_inv_data
     pj_bool_t		 sdp_done;
 };
 
-/* Config */
-extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
-
 /*
  * Module load()
  */
@@ -223,7 +220,7 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
     PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
 	      pjsip_rx_data_get_info(rdata)));
 
-    status = pjsip_dlg_create_request(inv->dlg, &pjsip_ack_method, 
+    status = pjsip_dlg_create_request(inv->dlg, pjsip_get_ack_method(), 
 				      rdata->msg_info.cseq->cseq, &tdata);
     if (status != PJ_SUCCESS) {
 	/* Better luck next time */
@@ -1108,7 +1105,7 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     pjsip_dlg_inc_lock(inv->dlg);
 
     /* Create the INVITE request. */
-    status = pjsip_dlg_create_request(inv->dlg, &pjsip_invite_method, -1,
+    status = pjsip_dlg_create_request(inv->dlg, pjsip_get_invite_method(), -1,
 				      &tdata);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -1155,7 +1152,7 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     }
 
     /* Add Allow header. */
-    if (pjsip_include_allow_hdr_in_dlg) {
+    if (inv->dlg->add_allow) {
 	hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_ALLOW, NULL);
 	if (hdr) {
 	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
@@ -1597,8 +1594,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     case PJSIP_INV_STATE_CONNECTING:
     case PJSIP_INV_STATE_CONFIRMED:
 	/* For established dialog, send BYE */
-	status = pjsip_dlg_create_request(inv->dlg, &pjsip_bye_method, -1, 
-					  &tdata);
+	status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
+					  -1, &tdata);
 	break;
 
     case PJSIP_INV_STATE_DISCONNECTED:
@@ -1792,7 +1789,7 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
     /* See if we have matching INVITE server transaction: */
 
     pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
-			 &pjsip_invite_method, rdata);
+			 pjsip_get_invite_method(), rdata);
     invite_tsx = pjsip_tsx_layer_find_tsx(&key, PJ_TRUE);
 
     if (invite_tsx == NULL) {
