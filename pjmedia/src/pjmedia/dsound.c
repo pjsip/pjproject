@@ -51,7 +51,7 @@
 struct dsound_dev_info
 {
     pjmedia_snd_dev_info    info;
-    LPGUID		    lpGuid;
+    GUID		    guid;
 };
 
 static unsigned dev_count;
@@ -158,7 +158,7 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     /*
      * Create DirectSound device.
      */
-    hr = DirectSoundCreate(dev_info[dev_id].lpGuid, &ds_strm->ds.play.lpDs, 
+    hr = DirectSoundCreate(&dev_info[dev_id].guid, &ds_strm->ds.play.lpDs, 
 			   NULL);
     if (FAILED(hr))
 	return PJ_RETURN_OS_ERROR(hr);
@@ -277,7 +277,7 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
     /*
      * Creating recorder device.
      */
-    hr = DirectSoundCaptureCreate(dev_info[dev_id].lpGuid, 
+    hr = DirectSoundCaptureCreate(&dev_info[dev_id].guid, 
 				  &ds_strm->ds.capture.lpDs, NULL);
     if (FAILED(hr))
 	return PJ_RETURN_OS_ERROR(hr);
@@ -601,7 +601,7 @@ static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCSTR lpcstrDescription,
      * dev_info item, by looking at the GUID.
      */
     for (index=0; index<dev_count; ++index) {
-	if (dev_info[index].lpGuid == lpGuid)
+	if (pj_memcmp(&dev_info[index].guid, lpGuid, sizeof(GUID))==0)
 	    break;
     }
 
@@ -616,7 +616,7 @@ static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCSTR lpcstrDescription,
 
     strncpy(dev_info[index].info.name, lpcstrDescription, max);
     dev_info[index].info.name[max-1] = '\0';
-    dev_info[index].lpGuid = lpGuid;
+    pj_memcpy(&dev_info[index].guid, lpGuid, sizeof(GUID));
     dev_info[index].info.default_samples_per_sec = 44100;
     
     /* Just assumed that device supports stereo capture/playback */
