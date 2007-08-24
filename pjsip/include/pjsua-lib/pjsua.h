@@ -1769,6 +1769,12 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t	    publish_enabled;
 
+    /**
+     * Optional PIDF tuple ID for outgoing PUBLISH and NOTIFY. If this value
+     * is not specified, a random string will be used.
+     */
+    pj_str_t	    pidf_tuple_id;
+
     /** 
      * Optional URI to be put as Contact for this account. It is recommended
      * that this field is left empty, so that the value will be calculated

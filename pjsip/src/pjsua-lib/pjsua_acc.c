@@ -75,6 +75,7 @@ static void copy_acc_config(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->id, &src->id);
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
+    pj_strdup_with_null(pool, &dst->pidf_tuple_id, &src->pidf_tuple_id);
 
     dst->proxy_cnt = src->proxy_cnt;
     for (i=0; i<src->proxy_cnt; ++i)

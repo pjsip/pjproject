@@ -553,6 +553,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pj_bzero(&pres_status, sizeof(pres_status));
     pres_status.info_cnt = 1;
     pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
+    pres_status.info[0].id = pjsua_var.acc[acc_id].cfg.pidf_tuple_id;
     //Both pjsua_var.local_uri and pjsua_var.contact_uri are enclosed in "<" and ">"
     //causing XML parsing to fail.
     //pres_status.info[0].contact = pjsua_var.local_uri;
@@ -650,6 +651,7 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 	pj_bzero(&pres_status, sizeof(pres_status));
 	pres_status.info_cnt = 1;
 	pres_status.info[0].basic_open = acc->online_status;
+	pres_status.info[0].id = acc->cfg.pidf_tuple_id;
 
 	/* Be careful not to send PIDF with presence entity ID containing
 	 * "<" character.
