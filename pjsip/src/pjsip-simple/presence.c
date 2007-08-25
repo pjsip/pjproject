@@ -390,6 +390,17 @@ PJ_DEF(pj_status_t) pjsip_pres_set_status( pjsip_evsub *sub,
 	pj_strdup(pres->dlg->pool, 
 		  &pres->status.info[i].contact,
 		  &status->info[i].contact);
+
+	/* Duplicate <person> */
+	pres->status.info[i].rpid.activity = 
+	    status->info[i].rpid.activity;
+	pj_strdup(pres->dlg->pool, 
+		  &pres->status.info[i].rpid.id,
+		  &status->info[i].rpid.id);
+	pj_strdup(pres->dlg->pool,
+		  &pres->status.info[i].rpid.note,
+		  &status->info[i].rpid.note);
+
     }
 
     pres->status.info_cnt = status->info_cnt;

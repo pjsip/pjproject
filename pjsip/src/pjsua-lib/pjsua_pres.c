@@ -113,7 +113,15 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 	info->status_text = pj_str("?");
     } else if (pjsua_var.buddy[buddy_id].status.info[0].basic_open) {
 	info->status = PJSUA_BUDDY_STATUS_ONLINE;
-	info->status_text = pj_str("Online");
+
+	/* copy RPID information */
+	info->rpid = buddy->status.info[0].rpid;
+
+	if (info->rpid.note.slen)
+	    info->status_text = info->rpid.note;
+	else
+	    info->status_text = pj_str("Online");
+
     } else {
 	info->status = PJSUA_BUDDY_STATUS_OFFLINE;
 	info->status_text = pj_str("Offline");
@@ -652,6 +660,9 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 	pres_status.info_cnt = 1;
 	pres_status.info[0].basic_open = acc->online_status;
 	pres_status.info[0].id = acc->cfg.pidf_tuple_id;
+	/* .. including RPID information */
+	pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+		  sizeof(pjrpid_element));
 
 	/* Be careful not to send PIDF with presence entity ID containing
 	 * "<" character.
@@ -821,8 +832,8 @@ void pjsua_pres_delete_acc(int acc_id)
 }
 
 
-/* Refresh subscription (e.g. when our online status has changed) */
-static void refresh_server_subscription(int acc_id)
+/* Update server subscription (e.g. when our online status has changed) */
+void pjsua_pres_update_acc(int acc_id, pj_bool_t force)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
@@ -836,8 +847,12 @@ static void refresh_server_subscription(int acc_id)
 	pjsip_tx_data *tdata;
 
 	pjsip_pres_get_status(uapres->sub, &pres_status);
-	if (pres_status.info[0].basic_open != acc->online_status) {
+	if (force || pres_status.info[0].basic_open != acc->online_status) {
+
 	    pres_status.info[0].basic_open = acc->online_status;
+	    pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+		      sizeof(pjrpid_element));
+
 	    pjsip_pres_set_status(uapres->sub, &pres_status);
 
 	    if (pjsip_pres_current_notify(uapres->sub, &tdata)==PJ_SUCCESS) {
@@ -855,7 +870,7 @@ static void refresh_server_subscription(int acc_id)
      * send the first PUBLISH. 
      */
     if (acc_cfg->publish_enabled && acc->publish_sess) {
-	if (acc->publish_state != acc->online_status) {
+	if (force || acc->publish_state != acc->online_status) {
 	    send_publish(acc_id, PJ_TRUE);
 	}
     }
@@ -1251,7 +1266,7 @@ void pjsua_pres_refresh()
 
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	if (pjsua_var.acc[i].valid)
-	    refresh_server_subscription(i);
+	    pjsua_pres_update_acc(i, PJ_FALSE);
     }
 }
 

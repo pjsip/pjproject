@@ -101,6 +101,11 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 				     status->info[i].basic_open);
     }
 
+    /* Create <person> (RPID) */
+    if (status->info_cnt) {
+	pjrpid_add_element(pidf, pool, 0, &status->info[0].rpid);
+    }
+
     body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     body->data = pidf;
     body->content_type.type = STR_APPLICATION;
@@ -195,6 +200,9 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf( pjsip_rx_data *rdata,
 	pidf_tuple = pjpidf_pres_get_next_tuple( pidf, pidf_tuple );
 	pres_status->info_cnt++;
     }
+
+    /* Parse <person> (RPID) */
+    pjrpid_get_element(pidf, pool, &pres_status->info[0].rpid);
 
     return PJ_SUCCESS;
 }

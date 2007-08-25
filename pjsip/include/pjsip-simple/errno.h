@@ -77,6 +77,11 @@ PJ_BEGIN_DECL
  * Bad XPIDF Message
  */
 #define PJSIP_SIMPLE_EBADXPIDF	    (PJSIP_SIMPLE_ERRNO_START+25)   /*270025*/
+/**
+ * @hideinitializer
+ * Bad RPID Message
+ */
+#define PJSIP_SIMPLE_EBADRPID	    (PJSIP_SIMPLE_ERRNO_START+26)   /*270026*/
 
 
 /************************************************************

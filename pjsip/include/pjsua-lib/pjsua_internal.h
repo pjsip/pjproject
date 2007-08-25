@@ -95,6 +95,7 @@ typedef struct pjsua_acc
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.	*/
 
     pj_bool_t	     online_status; /**< Our online status.		*/
+    pjrpid_element   rpid;	    /**< RPID element information.	*/
     pjsua_srv_pres   pres_srv_list; /**< Server subscription list.	*/
     pjsip_publishc  *publish_sess;  /**< Client publication session.	*/
     pj_bool_t	     publish_state; /**< Last published online status	*/
@@ -318,6 +319,11 @@ pj_status_t pjsua_pres_start(void);
  * Refresh presence subscriptions
  */
 void pjsua_pres_refresh(void);
+
+/*
+ * Update server subscription (e.g. when our online status has changed)
+ */
+void pjsua_pres_update_acc(int acc_id, pj_bool_t force);
 
 /*
  * Shutdown presence.

@@ -430,7 +430,26 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
     pjsua_var.acc[acc_id].online_status = is_online;
-    pjsua_pres_refresh();
+    pj_bzero(&pjsua_var.acc[acc_id].rpid, sizeof(pjrpid_element));
+    pjsua_pres_update_acc(acc_id, PJ_FALSE);
+    return PJ_SUCCESS;
+}
+
+
+/* 
+ * Set online status with extended information 
+ */
+PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
+						  pj_bool_t is_online,
+						  const pjrpid_element *pr)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
+
+    pjsua_var.acc[acc_id].online_status = is_online;
+    pjrpid_element_dup(pjsua_var.pool, &pjsua_var.acc[acc_id].rpid, pr);
+    pjsua_pres_update_acc(acc_id, PJ_TRUE);
     return PJ_SUCCESS;
 }
 
@@ -689,7 +708,14 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
     info->acc_uri = acc_cfg->id;
     info->has_registration = (acc->cfg.reg_uri.slen > 0);
     info->online_status = acc->online_status;
-    
+    pj_memcpy(&info->rpid, &acc->rpid, sizeof(pjrpid_element));
+    if (info->rpid.note.slen)
+	info->online_status_text = info->rpid.note;
+    else if (info->online_status)
+	info->online_status_text = pj_str("Online");
+    else
+	info->online_status_text = pj_str("Offline");
+
     if (acc->reg_last_err) {
 	info->status = (pjsip_status_code) acc->reg_last_err;
 	pj_strerror(acc->reg_last_err, info->buf_, sizeof(info->buf_));

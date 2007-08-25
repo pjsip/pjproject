@@ -350,6 +350,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjsip-simple\rpid.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjsip-simple\xpidf.c"
 				>
 				<FileConfiguration
@@ -406,6 +410,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjsip-simple\publish.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjsip-simple\rpid.h"
 				>
 			</File>
 			<File

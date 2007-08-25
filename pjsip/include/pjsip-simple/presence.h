@@ -26,6 +26,7 @@
 #include <pjsip-simple/evsub.h>
 #include <pjsip-simple/pidf.h>
 #include <pjsip-simple/xpidf.h>
+#include <pjsip-simple/rpid.h>
 
 
 PJ_BEGIN_DECL
@@ -73,6 +74,7 @@ PJ_DECL(pjsip_module*) pjsip_pres_instance(void);
  */
 #define PJSIP_PRES_STATUS_MAX_INFO  8
 
+
 /**
  * This structure describes presence status of a presentity.
  */
@@ -82,6 +84,8 @@ struct pjsip_pres_status
     struct {
 
 	pj_bool_t	basic_open;	/**< Basic status/availability.	    */
+	pjrpid_element	rpid;		/**< Optional RPID info.	    */
+
 	pj_str_t	id;		/**< Tuple id.			    */
 	pj_str_t	contact;	/**< Optional contact address.	    */
 

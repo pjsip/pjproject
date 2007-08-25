@@ -1918,6 +1918,16 @@ typedef struct pjsua_acc_info
     pj_bool_t		online_status;
 
     /**
+     * Presence online status text.
+     */
+    pj_str_t		online_status_text;
+
+    /**
+     * Extended RPID online status information.
+     */
+    pjrpid_element	rpid;
+
+    /**
      * Buffer that is used internally to store the status text.
      */
     char		buf_[PJ_ERR_MSG_SIZE];
@@ -2080,7 +2090,10 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
 /**
  * Modify account's presence status to be advertised to remote/presence
  * subscribers. This would trigger the sending of outgoing NOTIFY request
- * if there are server side presence subscription for this account.
+ * if there are server side presence subscription for this account, and/or
+ * outgoing PUBLISH if presence publication is enabled for this account.
+ *
+ * @see pjsua_acc_set_online_status2()
  *
  * @param acc_id	The account ID.
  * @param is_online	True of false.
@@ -2095,6 +2108,24 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
 PJ_DECL(pj_status_t) pjsua_acc_set_online_status(pjsua_acc_id acc_id,
 						 pj_bool_t is_online);
 
+/**
+ * Modify account's presence status to be advertised to remote/presence
+ * subscribers. This would trigger the sending of outgoing NOTIFY request
+ * if there are server side presence subscription for this account, and/or
+ * outgoing PUBLISH if presence publication is enabled for this account.
+ *
+ * @see pjsua_acc_set_online_status()
+ *
+ * @param acc_id	The account ID.
+ * @param is_online	True of false.
+ * @param pr		Extended information in subset of RPID format
+ *			which allows setting custom presence text.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
+						  pj_bool_t is_online,
+						  const pjrpid_element *pr);
 
 /**
  * Update registration or perform unregistration. If registration is
@@ -2988,9 +3019,14 @@ typedef struct pjsua_buddy_info
     pj_bool_t		monitor_pres;
 
     /**
+     * Extended RPID information about the person.
+     */
+    pjrpid_element	rpid;
+
+    /**
      * Internal buffer.
      */
-    char		buf_[256];
+    char		buf_[512];
 
 } pjsua_buddy_info;
 

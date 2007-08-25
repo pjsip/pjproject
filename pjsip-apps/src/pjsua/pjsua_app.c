@@ -1820,8 +1820,10 @@ static void print_buddy_list(void)
 	    if (pjsua_buddy_get_info(ids[i], &info) != PJ_SUCCESS)
 		continue;
 
-	    printf(" [%2d] <%7s>  %.*s\n", 
-		    ids[i]+1, info.status_text.ptr, 
+	    printf(" [%2d] <%.*s>  %.*s\n", 
+		    ids[i]+1, 
+		    (int)info.status_text.slen,
+		    info.status_text.ptr, 
 		    (int)info.uri.slen,
 		    info.uri.ptr);
 	}
@@ -1857,8 +1859,9 @@ static void print_acc_status(int acc_id)
 
     printf(" %c[%2d] %.*s: %s\n", (acc_id==current_acc?'*':' '),
 	   acc_id,  (int)info.acc_uri.slen, info.acc_uri.ptr, buf);
-    printf("       Online status: %s\n", 
-	   (info.online_status ? "Online" : "Invisible"));
+    printf("       Online status: %.*s\n", 
+	(int)info.online_status_text.slen,
+	info.online_status_text.ptr);
 }
 
 
@@ -1887,11 +1890,11 @@ static void keystroke_help(void)
     puts("|                              |                          |                   |");
     puts("|  m  Make new call            | +b  Add new buddy       .| +a  Add new accnt |");
     puts("|  M  Make multiple calls      | -b  Delete buddy         | -a  Delete accnt. |");
-    puts("|  a  Answer call              | !b  Modify buddy         | !a  Modify accnt. |");
-    puts("|  h  Hangup call  (ha=all)    |  i  Send IM              | rr  (Re-)register |");
-    puts("|  H  Hold call                |  s  Subscribe presence   | ru  Unregister    |");
-    puts("|  v  re-inVite (release hold) |  u  Unsubscribe presence |  >  Cycle next ac.|");
-    puts("|  ]  Select next dialog       |  t  ToGgle Online status |  <  Cycle prev ac.|");
+    puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
+    puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
+    puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
+    puts("|  v  re-inVite (release hold) |  t  ToGgle Online status |  >  Cycle next ac.|");
+    puts("|  ]  Select next dialog       |  T  Set online status    |  <  Cycle prev ac.|");
     puts("|  [  Select previous dialog   +--------------------------+-------------------+");
     puts("|  x  Xfer call                |      Media Commands:     |  Status & Config: |");
     puts("|  X  Xfer with Replaces       |                          |                   |");
@@ -2088,6 +2091,85 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
 	pjsua_perror(THIS_FILE, "Unable to send request", status);
 	return;
     }
+}
+
+
+/*
+ * Change extended online status.
+ */
+static void change_online_status(void)
+{
+    char menuin[32];
+    pj_bool_t online_status;
+    pjrpid_element elem;
+    int i, choice;
+
+    enum {
+	AVAILABLE, BUSY, OTP, IDLE, AWAY, BRB, OFFLINE, OPT_MAX
+    };
+
+    struct opt {
+	int id;
+	char *name;
+    } opts[] = {
+	{ AVAILABLE, "Available" },
+	{ BUSY, "Busy"},
+	{ OTP, "On the phone"},
+	{ IDLE, "Idle"},
+	{ AWAY, "Away"},
+	{ BRB, "Be right back"},
+	{ OFFLINE, "Offline"}
+    };
+
+    printf("\n"
+	   "Choices:\n");
+    for (i=0; i<PJ_ARRAY_SIZE(opts); ++i) {
+	printf("  %d  %s\n", opts[i].id+1, opts[i].name);
+    }
+
+    if (!simple_input("Select status", menuin, sizeof(menuin)))
+	return;
+
+    choice = atoi(menuin) - 1;
+    if (choice < 0 || choice >= OPT_MAX) {
+	puts("Invalid selection");
+	return;
+    }
+
+    pj_bzero(&elem, sizeof(elem));
+    elem.type = PJRPID_ELEMENT_TYPE_PERSON;
+
+    online_status = PJ_TRUE;
+
+    switch (choice) {
+    case AVAILABLE:
+	break;
+    case BUSY:
+	elem.activity = PJRPID_ACTIVITY_BUSY;
+	elem.note = pj_str("Busy");
+	break;
+    case OTP:
+	elem.activity = PJRPID_ACTIVITY_BUSY;
+	elem.note = pj_str("On the phone");
+	break;
+    case IDLE:
+	elem.activity = PJRPID_ACTIVITY_UNKNOWN;
+	elem.note = pj_str("Idle");
+	break;
+    case AWAY:
+	elem.activity = PJRPID_ACTIVITY_AWAY;
+	elem.note = pj_str("Away");
+	break;
+    case BRB:
+	elem.activity = PJRPID_ACTIVITY_UNKNOWN;
+	elem.note = pj_str("Be right back");
+	break;
+    case OFFLINE:
+	online_status = PJ_FALSE;
+	break;
+    }
+
+    pjsua_acc_set_online_status2(current_acc, online_status, &elem);
 }
 
 
@@ -2800,6 +2882,10 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    printf("Setting %s online status to %s\n",
 		   acc_info.acc_uri.ptr,
 		   (acc_info.online_status?"online":"offline"));
+	    break;
+
+	case 'T':
+	    change_online_status();
 	    break;
 
 	case 'c':

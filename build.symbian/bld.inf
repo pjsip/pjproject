@@ -1,11 +1,11 @@
 prj_platforms
 winscw
 //armv5
-//gcce
+gcce
 
 prj_mmpfiles
 pjlib.mmp
-pjlib_test.mmp
+//pjlib_test.mmp
 pjlib_util.mmp
 pjnath.mmp
 pjsdp.mmp

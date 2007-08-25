@@ -43,6 +43,7 @@ static const struct
     { PJSIP_SIMPLE_EBADCONTENT,	    "Bad Content-Type for presence" },
     { PJSIP_SIMPLE_EBADPIDF,	    "Bad PIDF content for presence" },
     { PJSIP_SIMPLE_EBADXPIDF,	    "Bad XPIDF content for presence" },
+    { PJSIP_SIMPLE_EBADRPID,	    "Invalid or bad RPID document"},
 
     /* isComposing errors. */
     { PJSIP_SIMPLE_EBADISCOMPOSE,   "Bad isComposing indication/XML message" },

@@ -41,6 +41,7 @@ SOURCE	pidf.c
 SOURCE	presence.c
 SOURCE	presence_body.c
 SOURCE	publishc.c
+SOURCE	rpid.c
 SOURCE	xpidf.c
 
 SYSTEMINCLUDE	..\pjlib\include 
