@@ -102,7 +102,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     }
     if (log_decor & PJ_LOG_HAS_MONTH) {
 	*pre++ = '-';
-	pre += pj_utoa_pad(ptime.mon, pre, 2, '0');
+	pre += pj_utoa_pad(ptime.mon+1, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_DAY_OF_MON) {
 	*pre++ = ' ';
