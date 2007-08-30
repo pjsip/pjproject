@@ -527,7 +527,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     pjsua_var.cap_dev = pjsua_var.play_dev = -1;
 
     /* Init caching pool. */
-    pj_caching_pool_init(&pjsua_var.cp, &pj_pool_factory_default_policy, 0);
+    pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 
     /* Create memory pool for application. */
     pjsua_var.pool = pjsua_pool_create("pjsua", 4000, 4000);
@@ -749,7 +749,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     /* Done! */
 
     PJ_LOG(3,(THIS_FILE, "pjsua version %s for %s initialized", 
-			 PJ_VERSION, PJ_OS_NAME));
+			 pj_get_version(), PJ_OS_NAME));
 
     return PJ_SUCCESS;
 

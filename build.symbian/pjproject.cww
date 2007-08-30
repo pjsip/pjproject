@@ -54,7 +54,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -79,7 +79,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -104,7 +104,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -129,32 +129,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
-            <GROUPID>
-                <GIDHIGHPART>4294967294</GIDHIGHPART>
-                <GIDLOWPART>4294967294</GIDLOWPART>
-            </GROUPID>
-        </DOCKINFO>
-    </WINDOW>
-    <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>0</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">pjmedia.mcp</PATH>
-        <FRAMELOC>
-            <X>0</X>
-            <Y>0</Y>
-        </FRAMELOC>
-        <FRAMESIZE>
-            <W>347</W>
-            <H>128</H>
-        </FRAMESIZE>
-        <DOCKINFO>
-            <STATUS>1</STATUS>
-            <ROW>0</ROW>
-            <COLUMN>0</COLUMN>
-            <DOCKBARID>59420</DOCKBARID>
-            <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -179,7 +154,32 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
+            <GROUPID>
+                <GIDHIGHPART>4294967294</GIDHIGHPART>
+                <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>0</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">pjmedia.mcp</PATH>
+        <FRAMELOC>
+            <X>0</X>
+            <Y>0</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>347</W>
+            <H>128</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>1</STATUS>
+            <ROW>0</ROW>
+            <COLUMN>0</COLUMN>
+            <DOCKBARID>59420</DOCKBARID>
+            <PCTWIDTH>1.000000</PCTWIDTH>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -204,7 +204,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -229,7 +229,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -241,12 +241,12 @@
         <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">pjsip_ua.mcp</PATH>
         <FRAMELOC>
-            <X>548</X>
-            <Y>123</Y>
+            <X>0</X>
+            <Y>0</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>400</W>
-            <H>372</H>
+            <W>347</W>
+            <H>128</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>1</STATUS>
@@ -254,7 +254,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -266,8 +266,8 @@
         <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">pjsua_lib.mcp</PATH>
         <FRAMELOC>
-            <X>634</X>
-            <Y>231</Y>
+            <X>0</X>
+            <Y>0</Y>
         </FRAMELOC>
         <FRAMESIZE>
             <W>347</W>
@@ -279,7 +279,7 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
@@ -291,8 +291,8 @@
         <EDOCTYPE>0</EDOCTYPE>
         <PATH USERELATIVEPATHS = "true">symbian_ua.mcp</PATH>
         <FRAMELOC>
-            <X>571</X>
-            <Y>149</Y>
+            <X>0</X>
+            <Y>0</Y>
         </FRAMELOC>
         <FRAMESIZE>
             <W>347</W>
@@ -304,10 +304,36 @@
             <COLUMN>0</COLUMN>
             <DOCKBARID>59420</DOCKBARID>
             <PCTWIDTH>1.000000</PCTWIDTH>
-            <HGT>274</HGT>
+            <HGT>350</HGT>
             <GROUPID>
                 <GIDHIGHPART>4294967294</GIDHIGHPART>
                 <GIDLOWPART>4294967294</GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-1</SESSION>
+        <EDOCTYPE>1</EDOCTYPE>
+        <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\ua.cpp</PATH>
+        <MAXIMIZED>true</MAXIMIZED>
+        <FRAMELOC>
+            <X>4</X>
+            <Y>4</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>557</W>
+            <H>627</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
             </GROUPID>
         </DOCKINFO>
     </WINDOW>

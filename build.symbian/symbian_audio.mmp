@@ -1,0 +1,42 @@
+#if defined(EKA2)
+
+TARGET		symbian_audio.dll
+TARGETTYPE	dll
+UID		0x1000008d 0xA0004288
+
+CAPABILITY	None
+LIBRARY		pjlib.lib charconv.lib euser.lib estlib.lib
+LIBRARY 	mediaclientaudiostream.lib
+LIBRARY 	mediaclientaudioinputstream.lib
+
+MACRO		PJ_DLL
+MACRO		PJ_EXPORTING
+
+DEFFILE		.\symbian_audio.def
+
+#else
+
+TARGET 		symbian_audio.lib
+TARGETTYPE 	lib
+UID		0x100039CE 0x10004288
+VENDORID	0x70000001
+
+#endif
+
+SOURCEPATH	..\pjmedia\src\pjmedia
+
+OPTION		CW -lang c++
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+
+SOURCE		symbian_sound.cpp
+
+SYSTEMINCLUDE	..\pjlib\include
+SYSTEMINCLUDE	..\pjmedia\include
+
+SYSTEMINCLUDE	\epoc32\include
+SYSTEMINCLUDE	\epoc32\include\libc
+
+SYSTEMINCLUDE	\epoc32\include\mmf\plugin 
+

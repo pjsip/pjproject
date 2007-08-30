@@ -211,7 +211,7 @@ static void default_config(struct app_config *cfg)
     unsigned i;
 
     pjsua_config_default(&cfg->cfg);
-    pj_ansi_sprintf(tmp, "PJSUA v%s/%s", PJ_VERSION, PJ_OS_NAME);
+    pj_ansi_sprintf(tmp, "PJSUA v%s/%s", pj_get_version(), PJ_OS_NAME);
     pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
 
     pjsua_logging_config_default(&cfg->log_cfg);

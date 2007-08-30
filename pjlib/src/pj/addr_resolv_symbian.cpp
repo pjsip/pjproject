@@ -127,8 +127,9 @@ PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 
 	len = sizeof(a);
 	status = pj_sock_getsockname(fd, &a, &len);
-	if (status != PJ_SUCCESS) {
+	if (status != PJ_SUCCESS || a.sin_addr.s_addr==0) {
 	    pj_sock_close(fd);
+	    /* May return 127.0.0.1 */
 	    return status;
 	}
 
