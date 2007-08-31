@@ -115,13 +115,21 @@ static TInt get_channel_cap(unsigned channel_count)
 }
 
 
+/*
+ * Utility: print sound device error
+ */
+static void snd_perror(const char *title, TInt rc) 
+{
+    PJ_LOG(1,(THIS_FILE, "%s: error code %d", title, rc));
+}
+ 
 //////////////////////////////////////////////////////////////////////////////
 //
 
 /*
  * Implementation: Symbian Input Stream.
  */
-class CPjAudioInputEngine : public MMdaAudioInputStreamCallback
+class CPjAudioInputEngine : public CBase, MMdaAudioInputStreamCallback
 {
 public:
     enum State
@@ -143,7 +151,7 @@ public:
     pj_status_t StartRecord();
     void Stop();
 
-public:
+private:
     State		     state_;
     pjmedia_snd_stream	    *parentStrm_;
     pjmedia_snd_rec_cb	     recCb_;
@@ -158,6 +166,7 @@ public:
 			pjmedia_snd_rec_cb rec_cb,
 			void *user_data);
     void ConstructL();
+    TPtr8 & GetFrame();
     
 public:
     virtual void MaiscOpenComplete(TInt aError);
@@ -171,7 +180,7 @@ CPjAudioInputEngine::CPjAudioInputEngine(pjmedia_snd_stream *parent_strm,
 					 pjmedia_snd_rec_cb rec_cb,
 					 void *user_data)
     : state_(STATE_INACTIVE), parentStrm_(parent_strm), recCb_(rec_cb), 
-      iInputStream_(NULL), iStreamBuffer_(NULL), iFramePtr_(NULL, 0),
+      iInputStream_(NULL), iStreamBuffer_(NULL), iFramePtr_(0, 0),
       userData_(user_data), lastError_(KErrNone), timeStamp_(0)
 {
 }
@@ -180,13 +189,14 @@ CPjAudioInputEngine::~CPjAudioInputEngine()
 {
     Stop();
     delete iStreamBuffer_;
+    iStreamBuffer_ = NULL;
 }
 
 void CPjAudioInputEngine::ConstructL()
 {
-    iStreamBuffer_ = HBufC8::NewMaxL(parentStrm_->samples_per_frame *
-				     parentStrm_->channel_count * 
-				     BYTES_PER_SAMPLE);
+    iStreamBuffer_ = HBufC8::NewL(parentStrm_->samples_per_frame *
+				  parentStrm_->channel_count * 
+				  BYTES_PER_SAMPLE);
 }
 
 CPjAudioInputEngine *CPjAudioInputEngine::NewLC(pjmedia_snd_stream *parent,
@@ -241,18 +251,6 @@ pj_status_t CPjAudioInputEngine::StartRecord()
     pj_assert(iStreamSettings.iChannels != 0 && 
 	      iStreamSettings.iSampleRate != 0);
 
-    // Create timeout timer to wait for Open to complete
-    RTimer timer;
-    TRequestStatus reqStatus;
-    TInt rc;
-    
-    rc = timer.CreateLocal();
-    if (rc != KErrNone) {
-    	delete iInputStream_;
-	iInputStream_ = NULL;
-	return PJ_RETURN_OS_ERROR(rc);
-    }
-
     PJ_LOG(4,(THIS_FILE, "Opening sound device for capture, "
     		         "clock rate=%d, channel count=%d..",
     		         parentStrm_->clock_rate, 
@@ -261,40 +259,7 @@ pj_status_t CPjAudioInputEngine::StartRecord()
     // Open stream.
     lastError_ = KRequestPending;
     iInputStream_->Open(&iStreamSettings);
-
-    // Wait until callback is called.
-    if (lastError_ == KRequestPending) {
-	timer.After(reqStatus, 5 * 1000 * 1000);
-
-	do {
-	    User::WaitForAnyRequest();
-	} while (lastError_==KRequestPending && reqStatus==KRequestPending);
-	
-	if (reqStatus==KRequestPending)
-	    timer.Cancel();
-    }
-
-    // Close timer
-    timer.Close();
     
-    // Handle timeout
-    if (lastError_ == KRequestPending) {
-    	iInputStream_->Stop();
-    	delete iInputStream_;
-	iInputStream_ = NULL;
-	return PJ_ETIMEDOUT;
-    }
-    else if (lastError_ != KErrNone) {
-    	// Handle failure.
-	delete iInputStream_;
-	iInputStream_ = NULL;
-	return PJ_RETURN_OS_ERROR(lastError_);
-    }
-
-    // Feed the first frame.
-    iFramePtr_ = iStreamBuffer_->Des();
-    iInputStream_->ReadL(iFramePtr_);
-
     // Success
     PJ_LOG(4,(THIS_FILE, "Sound capture started."));
     return PJ_SUCCESS;
@@ -322,17 +287,44 @@ void CPjAudioInputEngine::Stop()
 }
 
 
+TPtr8 & CPjAudioInputEngine::GetFrame() 
+{
+    TInt l = parentStrm_->samples_per_frame *
+	     parentStrm_->channel_count * 
+	     BYTES_PER_SAMPLE;
+    iStreamBuffer_->Des().FillZ(l);
+    iFramePtr_.Set((TUint8*)(iStreamBuffer_->Ptr()), l, l);
+    return iFramePtr_;
+}
+
 void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
 {
     lastError_ = aError;
+    if (aError != KErrNone) {
+        snd_perror("Error in MaiscOpenComplete()", aError);
+    	return;
+    }
+
+    // set stream priority to normal and time sensitive
+    iInputStream_->SetPriority(EPriorityNormal, 
+    			       EMdaPriorityPreferenceTime);				
+
+    // Read the first frame.
+    TPtr8 & frm = GetFrame();
+    TRAPD(err2, iInputStream_->ReadL(frm));
+    if (err2) {
+    	PJ_LOG(4,(THIS_FILE, "Exception in iInputStream_->ReadL()"));
+    }
 }
 
 void CPjAudioInputEngine::MaiscBufferCopied(TInt aError, 
 					    const TDesC8 &aBuffer)
 {
     lastError_ = aError;
-    if (aError != KErrNone)
+    if (aError != KErrNone) {
+    	snd_perror("Error in MaiscBufferCopied()", aError);
 	return;
+    }
 
     // Call the callback.
     recCb_(userData_, timeStamp_, (void*)aBuffer.Ptr(), aBuffer.Size());
@@ -341,8 +333,11 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
     timeStamp_ += (aBuffer.Size() * BYTES_PER_SAMPLE);
 
     // Record next frame
-    iFramePtr_ = iStreamBuffer_->Des();
-    iInputStream_->ReadL(iFramePtr_);
+    TPtr8 & frm = GetFrame();
+    TRAPD(err2, iInputStream_->ReadL(frm));
+    if (err2) {
+    	PJ_LOG(4,(THIS_FILE, "Exception in iInputStream_->ReadL()"));
+    }
 }
 
 
@@ -350,6 +345,9 @@ void CPjAudioInputEngine::MaiscRecordComplete(TInt aError)
 {
     lastError_ = aError;
     state_ = STATE_INACTIVE;
+    if (aError != KErrNone) {
+    	snd_perror("Error in MaiscRecordComplete()", aError);
+    }
 }
 
 
@@ -361,7 +359,7 @@ void CPjAudioInputEngine::MaiscRecordComplete(TInt aError)
  * Implementation: Symbian Output Stream.
  */
 
-class CPjAudioOutputEngine : public MMdaAudioOutputStreamCallback
+class CPjAudioOutputEngine : public CBase, MMdaAudioOutputStreamCallback
 {
 public:
     enum State
@@ -383,7 +381,7 @@ public:
     pj_status_t StartPlay();
     void Stop();
 
-public:
+private:
     State		     state_;
     pjmedia_snd_stream	    *parentStrm_;
     pjmedia_snd_play_cb	     playCb_;
@@ -391,6 +389,7 @@ public:
     CMdaAudioOutputStream   *iOutputStream_;
     TUint8		    *frameBuf_;
     unsigned		     frameBufSize_;
+    TPtrC8		     frame_;
     TInt		     lastError_;
     unsigned		     timestamp_;
 
@@ -479,21 +478,10 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
     		         "clock rate=%d, channel count=%d..",
     		         parentStrm_->clock_rate, 
     		         parentStrm_->channel_count));
-    
+
     // Open stream.
     lastError_ = KRequestPending;
     iOutputStream_->Open(&iStreamSettings);
-
-    // Wait until callback is called.
-    while (lastError_ == KRequestPending)
-	pj_thread_sleep(100);
-
-    // Handle failure.
-    if (lastError_ != KErrNone) {
-	delete iOutputStream_;
-	iOutputStream_ = NULL;
-	return PJ_RETURN_OS_ERROR(lastError_);
-    }
 
     // Success
     PJ_LOG(4,(THIS_FILE, "Sound playback started"));
@@ -560,9 +548,11 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	// subsequent calls to WriteL() will be issued in 
 	// MMdaAudioOutputStreamCallback::MaoscBufferCopied() 
 	// until whole data buffer is written.
-	TPtrC8 frame(frameBuf_, frameBufSize_);
-	iOutputStream_->WriteL(frame);
-    } 
+	frame_.Set(frameBuf_, frameBufSize_);
+	iOutputStream_->WriteL(frame_);
+    } else {
+    	snd_perror("Error in MaoscOpenComplete()", aError);
+    }
 }
 
 void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError, 
@@ -586,8 +576,8 @@ void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
 	timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
 	// Write to playback stream.
-	TPtrC8 frame(frameBuf_, frameBufSize_);
-	iOutputStream_->WriteL(frame);
+	frame_.Set(frameBuf_, frameBufSize_);
+	iOutputStream_->WriteL(frame_);
 
     } else if (aError==KErrAbort) {
 	// playing was aborted, due to call to CMdaAudioOutputStream::Stop()
@@ -596,6 +586,7 @@ void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
 	// error writing data to output
 	lastError_ = aError;
 	state_ = STATE_INACTIVE;
+	snd_perror("Error in MaoscBufferCopied()", aError);
     }
 }
 
@@ -603,6 +594,9 @@ void CPjAudioOutputEngine::MaoscPlayComplete(TInt aError)
 {
     lastError_ = aError;
     state_ = STATE_INACTIVE;
+    if (aError != KErrNone) {
+    	snd_perror("Error in MaoscPlayComplete()", aError);
+    }
 }
 
 
@@ -655,6 +649,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     pj_pool_t *pool;
     pjmedia_snd_stream *strm;
 
+    if (index==-1) index = 0;
+    
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(clock_rate && channel_count && samples_per_frame &&
     		     bits_per_sample && rec_cb && p_snd_strm, PJ_EINVAL);
@@ -671,15 +667,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     strm->channel_count = channel_count;
     strm->samples_per_frame = samples_per_frame;
 
-    TMdaAudioDataSettings settings;
-    TInt clockRateCap, channelCountCap;
-
-    clockRateCap = get_clock_rate_cap(clock_rate);
-    channelCountCap = get_channel_cap(channel_count);
-
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
-    PJ_ASSERT_RETURN(clockRateCap != 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(channelCountCap != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_clock_rate_cap(clock_rate) != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_channel_cap(channel_count) != 0, PJ_EINVAL);
 
     // Create the input stream.
     TRAPD(err, strm->inEngine = CPjAudioInputEngine::NewL(strm, rec_cb, 
@@ -707,6 +697,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     pj_pool_t *pool;
     pjmedia_snd_stream *strm;
 
+    if (index == -1) index = 0;
+    
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(clock_rate && channel_count && samples_per_frame &&
     		     bits_per_sample && play_cb && p_snd_strm, PJ_EINVAL);
@@ -723,15 +715,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     strm->channel_count = channel_count;
     strm->samples_per_frame = samples_per_frame;
 
-    TMdaAudioDataSettings settings;
-    TInt clockRateCap, channelCountCap;
-
-    clockRateCap = get_clock_rate_cap(clock_rate);
-    channelCountCap = get_channel_cap(channel_count);
-
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
-    PJ_ASSERT_RETURN(clockRateCap != 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(channelCountCap != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_clock_rate_cap(clock_rate) != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_channel_cap(channel_count) != 0, PJ_EINVAL);
 
     // Create the output stream.
     TRAPD(err, strm->outEngine = CPjAudioOutputEngine::NewL(strm, play_cb, 
@@ -760,6 +746,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     pj_pool_t *pool;
     pjmedia_snd_stream *strm;
 
+    if (rec_id == -1) rec_id = 0;
+    if (play_id == -1) play_id = 0;
+    
     PJ_ASSERT_RETURN(rec_id == 0 && play_id == 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(clock_rate && channel_count && samples_per_frame &&
     		     bits_per_sample && rec_cb && play_cb && p_snd_strm, 
@@ -777,15 +766,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     strm->channel_count = channel_count;
     strm->samples_per_frame = samples_per_frame;
 
-    TMdaAudioDataSettings settings;
-    TInt clockRateCap, channelCountCap;
-
-    clockRateCap = get_clock_rate_cap(clock_rate);
-    channelCountCap = get_channel_cap(channel_count);
-
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
-    PJ_ASSERT_RETURN(clockRateCap != 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(channelCountCap != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_clock_rate_cap(clock_rate) != 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(get_channel_cap(channel_count) != 0, PJ_EINVAL);
 
     // Create the output stream.
     TRAPD(err, strm->outEngine = CPjAudioOutputEngine::NewL(strm, play_cb, 
@@ -793,6 +776,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     if (err != KErrNone) {
     	pj_pool_release(pool);	
 	return PJ_RETURN_OS_ERROR(err);
+    }
+
+    // Create the input stream.
+    TRAPD(err1, strm->inEngine = CPjAudioInputEngine::NewL(strm, rec_cb, 
+    							   user_data));
+    if (err1 != KErrNone) {
+        strm->inEngine = NULL;
+        delete strm->outEngine;
+    	strm->outEngine = NULL;
+    	pj_pool_release(pool);	
+	return PJ_RETURN_OS_ERROR(err1);
     }
 
     // Done.
@@ -807,18 +801,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
     
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
     
-    if (stream->inEngine) {
-    	status = stream->inEngine->StartRecord();
-    	if (status != PJ_SUCCESS)
-    	    return status;
-    }
-    	
     if (stream->outEngine) {
     	status = stream->outEngine->StartPlay();
     	if (status != PJ_SUCCESS)
     	    return status;
     }
     
+    if (stream->inEngine) {
+    	status = stream->inEngine->StartRecord();
+    	if (status != PJ_SUCCESS)
+    	    return status;
+    }
+    	
     return PJ_SUCCESS;
 }
 
