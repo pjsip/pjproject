@@ -334,9 +334,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 
     /* State now is STATE_WAIT_NEGO. */
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
-    if (local)
+    if (local) {
+	if (!neg->initial_sdp) {
+	    neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
+	}
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
-    else {
+    } else {
 	PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
     }
