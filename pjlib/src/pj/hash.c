@@ -33,7 +33,7 @@
 struct pj_hash_entry
 {
     struct pj_hash_entry *next;
-    const void *key;
+    void *key;
     pj_uint32_t hash;
     pj_uint32_t keylen;
     void *value;
@@ -193,7 +193,12 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     }
     entry->next = NULL;
     entry->hash = hash;
-    entry->key = key;
+    if (pool) {
+	entry->key = pj_pool_alloc(pool, keylen);
+	pj_memcpy(entry->key, key, keylen);
+    } else {
+	entry->key = (void*)key;
+    }
     entry->keylen = keylen;
     entry->value = val;
     *p_entry = entry;
