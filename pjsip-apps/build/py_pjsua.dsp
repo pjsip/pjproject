@@ -70,7 +70,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "PY_PJSUA_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\pjlib\include" /I "..\..\pjlib-util\include" /I "..\..\pjmedia\include" /I "..\..\pjsip\include" /I "../../pjnath/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "PY_PJSUA_EXPORTS" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "..\..\pjlib\include" /I "..\..\pjlib-util\include" /I "..\..\pjmedia\include" /I "..\..\pjsip\include" /I "../../pjnath/include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "PY_PJSUA_EXPORTS" /FR /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x421 /d "_DEBUG"
@@ -113,6 +113,10 @@ SOURCE=..\src\py_pjsua\py_pjsua.def
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=..\src\py_pjsua\py_pjsua.h
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 

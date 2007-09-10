@@ -570,7 +570,7 @@ typedef struct pjsua_callback
      * \par Python Syntax:
      * \code
      # call_id: integer
-     # digit:	integer
+     # digit:	digit string
 
      def on_dtmf_digit(call_id, digit):
 	    return

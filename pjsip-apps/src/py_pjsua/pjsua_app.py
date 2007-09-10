@@ -17,11 +17,14 @@ C_QUIT = 0
 C_LOG_LEVEL = 4
 
 # STUN config.
-# Set C_STUN_SRV to the address of the STUN server to enable STUN
+# Set C_STUN_HOST to the address:port of the STUN server to enable STUN
 #
-C_STUN_SRV = ""
+#C_STUN_HOST = ""
+C_STUN_HOST = "192.168.0.2"
+#C_STUN_HOST = "stun.iptel.org:3478"
+
+# SIP port
 C_SIP_PORT = 5060
-C_STUN_PORT = 3478
 
 
 # Globals
@@ -40,6 +43,7 @@ g_rec_port = 0
 #
 def err_exit(title, rc):
     py_pjsua.perror(THIS_FILE, title, rc)
+    py_pjsua.destroy()
     exit(1)
 
 
@@ -196,6 +200,10 @@ def app_init():
 	ua_cfg.cb.on_call_transfer_status = on_call_transfer_status
 	ua_cfg.cb.on_call_transfer_request = on_call_transfer_request
 
+	# Configure STUN setting
+	if C_STUN_HOST != "":
+	    ua_cfg.stun_host = C_STUN_HOST;
+
 	# Create and initialize media config
 	med_cfg = py_pjsua.media_config_default()
 	med_cfg.ec_tail_len = 0
@@ -207,31 +215,20 @@ def app_init():
 	if status != 0:
 		err_exit("pjsua init() error", status)
 
-	# Configure STUN config
-	#stun_cfg = py_pjsua.stun_config_default()
-	#stun_cfg.stun_srv1 = C_STUN_SRV
-	#stun_cfg.stun_srv2 = C_STUN_SRV
-	#stun_cfg.stun_port1 = C_STUN_PORT
-	#stun_cfg.stun_port2 = C_STUN_PORT
-
 	# Configure UDP transport config
 	transport_cfg = py_pjsua.transport_config_default()
 	transport_cfg.port = C_SIP_PORT
-	#transport_cfg.stun_config = stun_cfg
-	if C_STUN_SRV != "":
-		transport_cfg.use_stun = 1
 
 	# Create UDP transport
 	status, transport_id = \
 	    py_pjsua.transport_create(py_pjsua.PJSIP_TRANSPORT_UDP, transport_cfg)
 	if status != 0:
-		py_pjsua.destroy()
 		err_exit("Error creating UDP transport", status)
+		
 
 	# Create initial default account
 	status, acc_id = py_pjsua.acc_add_local(transport_id, 1)
 	if status != 0:
-		py_pjsua.destroy()
 		err_exit("Error creating account", status)
 
 	g_acc_id = acc_id
@@ -496,7 +493,6 @@ def app_start():
 	#
 	status = py_pjsua.start()
 	if status != 0:
-		py_pjsua.destroy()
 		err_exit("Error starting pjsua!", status)
 
 	# Start worker thread
