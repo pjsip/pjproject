@@ -65,8 +65,7 @@ struct pjsip_regc
     pj_str_t			 from_uri;
     pjsip_from_hdr		*from_hdr;
     pjsip_to_hdr		*to_hdr;
-    char			*contact_buf;
-    pjsip_generic_string_hdr	*contact_hdr;
+    pjsip_hdr			 contact_hdr_list;
     pjsip_expires_hdr		*expires_hdr;
     pjsip_contact_hdr		*unreg_contact_hdr;
     pjsip_expires_hdr		*unreg_expires_hdr;
@@ -109,7 +108,6 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     regc->endpt = endpt;
     regc->token = token;
     regc->cb = cb;
-    regc->contact_buf = (char*)pj_pool_alloc(pool, PJSIP_REGC_CONTACT_BUF_SIZE);
     regc->expires = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED;
 
     status = pjsip_auth_clt_init(&regc->auth_sess, endpt, regc->pool, 0);
@@ -118,6 +116,7 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
 
     pj_list_init(&regc->route_set);
     pj_list_init(&regc->hdr_list);
+    pj_list_init(&regc->contact_hdr_list);
 
     /* Done */
     *p_regc = regc;
@@ -190,30 +189,26 @@ static pj_status_t set_contact( pjsip_regc *regc,
 			        int contact_cnt,
 				const pj_str_t contact[] )
 {
+    const pj_str_t CONTACT = { "Contact", 7 };
     int i;
-    char *s;
-    const pj_str_t contact_STR = { "Contact", 7};
+    
+    /* Clear existing contacts */
+    pj_list_init(&regc->contact_hdr_list);
 
-    /* Concatenate contacts. */
-    for (i=0, s=regc->contact_buf; i<contact_cnt; ++i) {
-	if ((s-regc->contact_buf) + contact[i].slen + 2 > PJSIP_REGC_CONTACT_BUF_SIZE) {
-	    return PJSIP_EURITOOLONG;
-	}
-	pj_memcpy(s, contact[i].ptr, contact[i].slen);
-	s += contact[i].slen;
+    for (i=0; i<contact_cnt; ++i) {
+	pjsip_hdr *hdr;
+	pj_str_t tmp;
 
-	if (i != contact_cnt - 1) {
-	    *s++ = ',';
-	    *s++ = ' ';
+	pj_strdup_with_null(regc->pool, &tmp, &contact[i]);
+	hdr = pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
+	if (hdr == NULL) {
+	    PJ_LOG(4,(THIS_FILE, "Invalid Contact URI: \"%.*s\"", 
+		     (int)tmp.slen, tmp.ptr));
+	    return PJSIP_EINVALIDURI;
 	}
+
+	pj_list_push_back(&regc->contact_hdr_list, hdr);
     }
-
-    /* Set "Contact" header. */
-    regc->contact_hdr = pjsip_generic_string_hdr_create(regc->pool, 
-							&contact_STR,
-							NULL);
-    regc->contact_hdr->hvalue.ptr = regc->contact_buf;
-    regc->contact_hdr->hvalue.slen = (s - regc->contact_buf);
 
     return PJ_SUCCESS;
 }
@@ -424,6 +419,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 					pjsip_tx_data **p_tdata)
 {
     pjsip_msg *msg;
+    pjsip_hdr *hdr;
     pj_status_t status;
     pjsip_tx_data *tdata;
 
@@ -433,11 +429,16 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add Contact header. */
     msg = tdata->msg;
-    pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			   pjsip_hdr_shallow_clone(tdata->pool, 
-						   regc->contact_hdr));
+
+    /* Add Contact headers. */
+    hdr = regc->contact_hdr_list.next;
+    while (hdr != &regc->contact_hdr_list) {
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	hdr = hdr->next;
+    }
+
     if (regc->expires_hdr)
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
 			       pjsip_hdr_shallow_clone(tdata->pool,
@@ -461,6 +462,7 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 {
     pjsip_tx_data *tdata;
     pjsip_msg *msg;
+    pjsip_hdr *hdr;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
@@ -475,9 +477,15 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 	return status;
 
     msg = tdata->msg;
-    pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			   pjsip_hdr_shallow_clone(tdata->pool, 
-						   regc->contact_hdr));
+
+    /* Add Contact headers. */
+    hdr = regc->contact_hdr_list.next;
+    while (hdr != &regc->contact_hdr_list) {
+	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
+			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	hdr = hdr->next;
+    }
+
     pjsip_msg_add_hdr( msg, (pjsip_hdr*)regc->unreg_expires_hdr);
 
     *p_tdata = tdata;
@@ -680,8 +688,24 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    
 	    for (i=0; i<contact_cnt; ++i) {
 		hdr = contact[i];
-		if (hdr->expires >= 0 && hdr->expires < expiration)
-		    expiration = contact[i]->expires;
+		if (hdr->expires >= 0 && hdr->expires < expiration) {
+		    pjsip_contact_hdr *our_contact;
+
+		    our_contact = (pjsip_contact_hdr*)
+				  regc->contact_hdr_list.next;
+		    if ((void*)our_contact==(void*)&regc->contact_hdr_list.next)
+			continue;
+
+		    /* Only set expiration time if this is the same Contact
+		     * that we register.
+		     */
+		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, 
+				      hdr->uri, 
+				      our_contact->uri)==0) 
+		    {
+			expiration = contact[i]->expires;
+		    }
+		}
 	    }
 
 	    if (regc->auto_reg && expiration != 0 && expiration != 0xFFFF) {
