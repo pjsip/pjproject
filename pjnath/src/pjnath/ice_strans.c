@@ -476,9 +476,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 				   PJ_STUN_IS_DATAGRAM);
 
 	if (status == PJ_SUCCESS) {
-	    if (ice_st->ice==NULL &&
-		(comp->stun_sess &&
-		 pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0)) 
+	    if (comp->stun_sess &&
+		PJ_STUN_IS_RESPONSE(((pj_stun_msg_hdr*)comp->pkt)->type) &&
+		pj_memcmp(comp->pkt+8, comp->ka_tsx_id, 12) == 0) 
 	    {
 		status = pj_stun_session_on_rx_pkt(comp->stun_sess, comp->pkt,
 						   bytes_read, 
@@ -499,7 +499,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 					       &comp->src_addr, 
 					       comp->src_addr_len);
 	    } else {
-		/* This must have been a very late STUN reponse */
+		/* This must have been a very late STUN reponse,
+		 * or an early STUN Binding Request when our local
+		 * ICE has not been created yet. */
 	    }
 	} else {
 	    (*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, 
