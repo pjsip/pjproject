@@ -162,6 +162,18 @@ typedef struct pj_ice_strans_cb
     void    (*on_ice_complete)(pj_ice_strans *ice_st, 
 			       pj_status_t status);
 
+    /**
+     * This callback will be called when ICE transport has detected that
+     * the STUN mapped address of a candidate has changed.
+     *
+     * @param ice_st	    The ICE stream transport.
+     * @param comp_id	    Component ID.
+     * @param cand_id	    Candidate ID.
+     */
+    void    (*on_addr_change)(pj_ice_strans *ice_st, 
+			      unsigned comp_id, 
+			      unsigned cand_id);
+			      
 } pj_ice_strans_cb;
 
 

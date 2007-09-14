@@ -582,13 +582,21 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	    continue;
 
 	/* tdata->user_data is NULL for keep-alive */
-	tdata->user_data = NULL;
+	//tdata->user_data = NULL;
+
+	// We need this to support mapped address change
+	tdata->user_data = &comp->cand_list[j];
+	++comp->pending_cnt;
+
 
 	/* Send STUN binding request */
 	PJ_LOG(5,(ice_st->obj_name, "Sending STUN keep-alive"));
 	status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
 					  &ice_st->stun_srv, 
 					  sizeof(pj_sockaddr_in), tdata);
+	if (status != PJ_SUCCESS) {
+	    --comp->pending_cnt;
+	}
     }
 
     /* Start next timer */
@@ -1085,6 +1093,7 @@ static void stun_on_request_complete(pj_stun_session *sess,
     pj_stun_xor_mapped_addr_attr *xa;
     pj_stun_mapped_addr_attr *ma;
     pj_sockaddr *mapped_addr;
+    char ip[20];
 
     comp = (pj_ice_strans_comp*) pj_stun_session_get_user_data(sess);
     cand = (pj_ice_strans_cand*) tdata->user_data;
@@ -1128,8 +1137,18 @@ static void stun_on_request_complete(pj_stun_session *sess,
 	return;
     }
 
+    /* Ignore response if it reports the same address */
+    if (cand->addr.ipv4.sin_addr.s_addr == mapped_addr->ipv4.sin_addr.s_addr &&
+	cand->addr.ipv4.sin_port == mapped_addr->ipv4.sin_port)
+    {
+	return;
+    }
+
+    pj_ansi_strcpy(ip, pj_inet_ntoa(comp->local_addr.ipv4.sin_addr));
+
     PJ_LOG(4,(comp->ice_st->obj_name, 
-	      "STUN mapped address: %s:%d",
+	      "STUN mapped address for %s:%d is %s:%d",
+	      ip, (int)pj_ntohs(comp->local_addr.ipv4.sin_port),
 	      pj_inet_ntoa(mapped_addr->ipv4.sin_addr),
 	      (int)pj_ntohs(mapped_addr->ipv4.sin_port)));
     pj_memcpy(&cand->addr, mapped_addr, sizeof(pj_sockaddr_in));
@@ -1141,5 +1160,10 @@ static void stun_on_request_complete(pj_stun_session *sess,
 
     /* We have STUN, so we must start the keep-alive timer */
     start_ka_timer(comp->ice_st);
+
+    /* Notify app that STUN address has changed. */
+    if (comp->ice_st->cb.on_addr_change)
+	(*comp->ice_st->cb.on_addr_change)(comp->ice_st, comp->comp_id, 
+					   (cand - comp->cand_list));
 }
 
