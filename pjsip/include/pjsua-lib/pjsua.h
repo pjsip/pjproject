@@ -2375,6 +2375,9 @@ typedef enum pjsua_call_media_status
     /** The media is currently put on hold by remote endpoint */
     PJSUA_CALL_MEDIA_REMOTE_HOLD,
 
+    /** The media has reported error (e.g. ICE negotiation) */
+    PJSUA_CALL_MEDIA_ERROR
+
 } pjsua_call_media_status;
 
 

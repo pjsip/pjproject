@@ -1675,6 +1675,14 @@ static void on_call_media_state(pjsua_call_id call_id)
 	PJ_LOG(3,(THIS_FILE, 
 		  "Media for call %d is suspended (hold) by remote",
 		  call_id));
+    } else if (call_info.media_status == PJSUA_CALL_MEDIA_ERROR) {
+	pj_str_t reason = pj_str("ICE negotiation failed");
+
+	PJ_LOG(1,(THIS_FILE,
+		  "Media has reported error, disconnecting call"));
+
+	pjsua_call_hangup(call_id, 500, &reason, NULL);
+
     } else {
 	PJ_LOG(3,(THIS_FILE, 
 		  "Media for call %d is inactive",

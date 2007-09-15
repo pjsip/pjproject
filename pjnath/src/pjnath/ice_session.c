@@ -336,6 +336,12 @@ static void destroy_ice(pj_ice_sess *ice,
 	LOG4((ice->obj_name, "Destroying ICE session"));
     }
 
+    if (ice->completion_timer.id) {
+	pj_timer_heap_cancel(ice->stun_cfg.timer_heap, 
+			     &ice->completion_timer);
+	ice->completion_timer.id = PJ_FALSE;
+    }
+
     for (i=0; i<ice->comp_cnt; ++i) {
 	if (ice->comp[i].stun_sess) {
 	    pj_stun_session_destroy(ice->comp[i].stun_sess);
@@ -945,6 +951,20 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
     return PJ_SUCCESS;
 }
 
+/* Timer callback to call on_ice_complete() callback */
+static void on_completion_timer(pj_timer_heap_t *th, 
+			        pj_timer_entry *te)
+{
+    pj_ice_sess *ice = (pj_ice_sess*) te->user_data;
+
+    PJ_UNUSED_ARG(th);
+
+    te->id = PJ_FALSE;
+
+    if (ice->cb.on_ice_complete)
+	(*ice->cb.on_ice_complete)(ice, ice->ice_status);
+}
+
 /* This function is called when ICE processing completes */
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 {
@@ -962,7 +982,15 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
 	/* Call callback */
 	if (ice->cb.on_ice_complete) {
-	    (*ice->cb.on_ice_complete)(ice, status);
+	    pj_time_val delay = {0, 0};
+
+	    ice->completion_timer.cb = &on_completion_timer;
+	    ice->completion_timer.user_data = (void*) ice;
+	    ice->completion_timer.id = PJ_TRUE;
+
+	    pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
+				   &ice->completion_timer,
+				   &delay);
 	}
     }
 }

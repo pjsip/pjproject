@@ -40,6 +40,22 @@ PJ_BEGIN_DECL
 
 
 /**
+ * Structure containing callbacks to receive ICE notifications.
+ */
+typedef struct pjmedia_ice_cb
+{
+    /**
+     * This callback will be called when ICE negotiation completes.
+     *
+     * @param tp	PJMEDIA ICE transport.
+     * @param status	ICE negotiation result, PJ_SUCCESS on success.
+     */
+    void    (*on_ice_complete)(pjmedia_transport *tp,
+			       pj_status_t status);
+
+} pjmedia_ice_cb;
+
+/**
  * Create the media transport.
  *
  * @param endpt		The media endpoint.
@@ -47,6 +63,7 @@ PJ_BEGIN_DECL
  *			for logging purposes.
  * @param comp_cnt	Number of components to be created.
  * @param stun_cfg	Pointer to STUN configuration settings.
+ * @param cb		Optional callbacks.
  * @param p_tp		Pointer to receive the media transport instance.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -55,6 +72,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					const char *name,
 					unsigned comp_cnt,
 					pj_stun_config *stun_cfg,
+					const pjmedia_ice_cb *cb,
 					pjmedia_transport **p_tp);
 
 /**

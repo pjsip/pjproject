@@ -25,6 +25,7 @@ struct transport_ice
 {
     pjmedia_transport	 base;
     pj_ice_strans	*ice_st;
+    pjmedia_ice_cb	 cb;
 
     pj_time_val		 start_ice;
     
@@ -95,6 +96,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 				       const char *name,
 				       unsigned comp_cnt,
 				       pj_stun_config *stun_cfg,
+				       const pjmedia_ice_cb *cb,
 	    			       pjmedia_transport **p_tp)
 {
     pj_ice_strans *ice_st;
@@ -122,6 +124,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     pj_ansi_strcpy(tp_ice->base.name, ice_st->obj_name);
     tp_ice->base.op = &tp_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
+
+    if (cb)
+	pj_memcpy(&tp_ice->cb, cb, sizeof(pjmedia_ice_cb));
 
     ice_st->user_data = (void*)tp_ice;
 
@@ -686,7 +691,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 
 
 static void ice_on_ice_complete(pj_ice_strans *ice_st, 
-			        pj_status_t status)
+			        pj_status_t result)
 {
     struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
     pj_time_val end_ice;
@@ -698,30 +703,33 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     pj_gettimeofday(&end_ice);
     PJ_TIME_VAL_SUB(end_ice, tp_ice->start_ice);
 
-    if (status != PJ_SUCCESS) {
+    if (result != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(status, errmsg, sizeof(errmsg));
+	pj_strerror(result, errmsg, sizeof(errmsg));
 	PJ_LOG(1,(ice_st->obj_name, 
 		  "ICE negotiation failed after %d:%03ds: %s", 
 		  (int)end_ice.sec, (int)end_ice.msec,
 		  errmsg));
-	return;
+    } else {
+	check = &ice_st->ice->valid_list.checks[0];
+    
+	lcand = check->lcand;
+	rcand = check->rcand;
+
+	pj_ansi_strcpy(src_addr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
+	pj_ansi_strcpy(dst_addr, pj_inet_ntoa(rcand->addr.ipv4.sin_addr));
+
+	PJ_LOG(4,(ice_st->obj_name, 
+		  "ICE negotiation completed in %d.%03ds. Sending from "
+		  "%s:%d to %s:%d",
+		  (int)end_ice.sec, (int)end_ice.msec,
+		  src_addr, pj_ntohs(lcand->addr.ipv4.sin_port),
+		  dst_addr, pj_ntohs(rcand->addr.ipv4.sin_port)));
     }
 
-    check = &ice_st->ice->valid_list.checks[0];
-    
-    lcand = check->lcand;
-    rcand = check->rcand;
-
-    pj_ansi_strcpy(src_addr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
-    pj_ansi_strcpy(dst_addr, pj_inet_ntoa(rcand->addr.ipv4.sin_addr));
-
-    PJ_LOG(3,(ice_st->obj_name, 
-	      "ICE negotiation completed in %d.%03ds. Sending from "
-	      "%s:%d to %s:%d",
-	      (int)end_ice.sec, (int)end_ice.msec,
-	      src_addr, pj_ntohs(lcand->addr.ipv4.sin_port),
-	      dst_addr, pj_ntohs(rcand->addr.ipv4.sin_port)));
+    /* Notify application */
+    if (tp_ice->cb.on_ice_complete)
+	(*tp_ice->cb.on_ice_complete)(&tp_ice->base, result);
 }
 
 

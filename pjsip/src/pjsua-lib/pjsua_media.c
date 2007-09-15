@@ -537,6 +537,42 @@ on_error:
 }
 
 
+/* This callback is called when ICE negotiation completes */
+static void on_ice_complete(pjmedia_transport *tp, pj_status_t result)
+{
+    unsigned id, c;
+    pj_bool_t found = PJ_FALSE;
+
+    /* We're only interested with failure case */
+    if (result == PJ_SUCCESS)
+	return;
+
+    /* Find call which has this media transport */
+
+    PJSUA_LOCK();
+
+    for (id=0, c=0; id<PJSUA_MAX_CALLS && c<pjsua_var.call_cnt; ++id) {
+	pjsua_call *call = &pjsua_var.calls[id];
+	if (call->inv) {
+	    ++c;
+
+	    if (call->med_tp == tp) {
+		call->media_st = PJSUA_CALL_MEDIA_ERROR;
+		call->media_dir = PJMEDIA_DIR_NONE;
+		found = PJ_TRUE;
+		break;
+	    }
+	}
+    }
+
+    PJSUA_UNLOCK();
+
+    if (found && pjsua_var.ua_cfg.cb.on_call_media_state) {
+	pjsua_var.ua_cfg.cb.on_call_media_state(id);
+    }
+}
+
+
 /* Create ICE media transports (when ice is enabled) */
 static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 {
@@ -556,6 +592,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pj_ice_strans_comp comp;
+	pjmedia_ice_cb ice_cb;
 	int next_port;
 #if PJMEDIA_ADVERTISE_RTCP
 	enum { COMP_CNT=2 };
@@ -563,8 +600,11 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	enum { COMP_CNT=1 };
 #endif
 
+	pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
+	ice_cb.on_ice_complete = &on_ice_complete;
+
 	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, COMP_CNT,
-				    &pjsua_var.stun_cfg, 
+				    &pjsua_var.stun_cfg, &ice_cb,
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create ICE media transport",
