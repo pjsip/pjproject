@@ -20,6 +20,8 @@
 #include <pjnath/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/rand.h>
+
 
 struct transport_ice
 {
@@ -32,6 +34,9 @@ struct transport_ice
     void		*stream;
     pj_sockaddr_in	 remote_rtp;
     pj_sockaddr_in	 remote_rtcp;
+
+    unsigned		 tx_drop_pct;	/**< Percent of tx pkts to drop.    */
+    unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
 
     void	       (*rtp_cb)(void*,
 			         const void*,
@@ -650,6 +655,17 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 			       pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+
+    /* Simulate packet lost on TX direction */
+    if (tp_ice->tx_drop_pct) {
+	if ((pj_rand() % 100) <= (int)tp_ice->tx_drop_pct) {
+	    PJ_LOG(5,(tp_ice->ice_st->obj_name, 
+		      "TX RTP packet dropped because of pkt lost "
+		      "simulation"));
+	    return PJ_SUCCESS;
+	}
+    }
+
     return pj_ice_strans_sendto(tp_ice->ice_st, 1, 
 			        pkt, size, &tp_ice->remote_rtp,
 				sizeof(pj_sockaddr_in));
@@ -678,9 +694,21 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 {
     struct transport_ice *tp_ice = (struct transport_ice*) ice_st->user_data;
 
-    if (comp_id==1 && tp_ice->rtp_cb)
+    if (comp_id==1 && tp_ice->rtp_cb) {
+
+	/* Simulate packet lost on RX direction */
+	if (tp_ice->rx_drop_pct) {
+	    if ((pj_rand() % 100) <= (int)tp_ice->rx_drop_pct) {
+		PJ_LOG(5,(ice_st->obj_name, 
+			  "RX RTP packet dropped because of pkt lost "
+			  "simulation"));
+		return;
+	    }
+	}
+
 	(*tp_ice->rtp_cb)(tp_ice->stream, pkt, size);
-    else if (comp_id==2 && tp_ice->rtcp_cb)
+
+    } else if (comp_id==2 && tp_ice->rtcp_cb)
 	(*tp_ice->rtcp_cb)(tp_ice->stream, pkt, size);
 
     PJ_UNUSED_ARG(src_addr);
@@ -732,4 +760,22 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 	(*tp_ice->cb.on_ice_complete)(&tp_ice->base, result);
 }
 
+
+/* Simulate lost */
+PJ_DEF(pj_status_t) pjmedia_ice_simulate_lost( pjmedia_transport *tp,
+					       pjmedia_dir dir,
+					       unsigned pct_lost)
+{
+    struct transport_ice *ice = (struct transport_ice*) tp;
+
+    PJ_ASSERT_RETURN(tp && pct_lost <= 100, PJ_EINVAL);
+
+    if (dir & PJMEDIA_DIR_ENCODING)
+	ice->tx_drop_pct = pct_lost;
+
+    if (dir & PJMEDIA_DIR_DECODING)
+	ice->rx_drop_pct = pct_lost;
+
+    return PJ_SUCCESS;
+}
 

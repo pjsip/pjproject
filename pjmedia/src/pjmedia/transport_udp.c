@@ -699,16 +699,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_simulate_lost(pjmedia_transport *tp,
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
 
-    PJ_ASSERT_RETURN(tp && 
-		     (dir==PJMEDIA_DIR_ENCODING||dir==PJMEDIA_DIR_DECODING) &&
-		     pct_lost <= 100, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp && pct_lost <= 100, PJ_EINVAL);
 
-    if (dir == PJMEDIA_DIR_ENCODING)
+    if (dir & PJMEDIA_DIR_ENCODING)
 	udp->tx_drop_pct = pct_lost;
-    else if (dir == PJMEDIA_DIR_DECODING)
+    
+    if (dir & PJMEDIA_DIR_DECODING)
 	udp->rx_drop_pct = pct_lost;
-    else
-	return PJ_EINVAL;
 
     return PJ_SUCCESS;
 }

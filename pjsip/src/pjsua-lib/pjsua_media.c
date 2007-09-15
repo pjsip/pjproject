@@ -612,6 +612,14 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	    goto on_error;
 	}
 
+	pjmedia_ice_simulate_lost(pjsua_var.calls[i].med_tp,
+				  PJMEDIA_DIR_ENCODING,
+				  pjsua_var.media_cfg.tx_drop_pct);
+
+	pjmedia_ice_simulate_lost(pjsua_var.calls[i].med_tp,
+				  PJMEDIA_DIR_DECODING,
+				  pjsua_var.media_cfg.rx_drop_pct);
+
 	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, 0, &addr,
 				        &pjsua_var.stun_srv.ipv4, NULL);
 	if (status != PJ_SUCCESS) {

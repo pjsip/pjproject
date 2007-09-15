@@ -216,6 +216,22 @@ PJ_DECL(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 PJ_DECL(pj_status_t) pjmedia_ice_stop_ice(pjmedia_transport *tp);
 
 
+/**
+ * Simulate packet lost in the specified direction (for testing purposes).
+ * When enabled, the transport will randomly drop packets to the specified
+ * direction.
+ *
+ * @param tp	    The ICE media transport.
+ * @param dir	    Media direction to which packets will be randomly dropped.
+ * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
+ *		    lost simulation.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_simulate_lost(pjmedia_transport *tp,
+					       pjmedia_dir dir,
+					       unsigned pct_lost);
+
 
 
 
