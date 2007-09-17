@@ -19,8 +19,8 @@ C_LOG_LEVEL = 4
 # STUN config.
 # Set C_STUN_HOST to the address:port of the STUN server to enable STUN
 #
-#C_STUN_HOST = ""
-C_STUN_HOST = "192.168.0.2"
+C_STUN_HOST = ""
+#C_STUN_HOST = "192.168.0.2"
 #C_STUN_HOST = "stun.iptel.org:3478"
 
 # SIP port
@@ -267,12 +267,16 @@ def add_account():
 	acc_cfg = py_pjsua.acc_config_default()
 	acc_cfg.id = "sip:" + acc_username + "@" + acc_domain
 	acc_cfg.reg_uri = "sip:" + acc_domain
-	acc_cfg.cred_count = 1
-	acc_cfg.cred_info[0].realm = acc_domain
-	acc_cfg.cred_info[0].scheme = "digest"
-	acc_cfg.cred_info[0].username = acc_username
-	acc_cfg.cred_info[0].data_type = 0
-	acc_cfg.cred_info[0].data = acc_passwd
+
+	cred_info = py_pjsua.Pjsip_Cred_Info()
+	cred_info.realm = "*"
+	cred_info.scheme = "digest"
+	cred_info.username = acc_username
+	cred_info.data_type = 0
+	cred_info.data = acc_passwd
+
+	acc_cfg.cred_info.append(1)
+	acc_cfg.cred_info[0] = cred_info
 
 	# Add new SIP account
 	status, acc_id = py_pjsua.acc_add(acc_cfg, 1)
@@ -338,8 +342,8 @@ def conf_list():
 		info = None
 		info = py_pjsua.conf_get_port_info(port)
 		txlist = ""
-		for i in range(info.listener_cnt):
-			txlist = txlist + "#" + `info.listeners[i]` + " "
+		for listener in info.listeners:
+			txlist = txlist + "#" + `listener` + " "
 		
 		print "Port #" + `info.slot_id` + "[" + `(info.clock_rate/1000)` + "KHz/" + `(info.samples_per_frame * 1000 / info.clock_rate)` + "ms] " + info.name + " transmitting to: " + txlist
 		

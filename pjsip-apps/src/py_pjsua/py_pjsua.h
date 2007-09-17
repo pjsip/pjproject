@@ -28,8 +28,13 @@ PJ_INLINE(pj_str_t) PyString_to_pj_str(const PyObject *obj)
 {
     pj_str_t str;
 
-    str.ptr = PyString_AS_STRING(obj);
-    str.slen = PyString_GET_SIZE(obj);
+    if (obj) {
+	str.ptr = PyString_AS_STRING(obj);
+	str.slen = PyString_GET_SIZE(obj);
+    } else {
+	str.ptr = NULL;
+	str.slen = 0;
+    }
 
     return str;
 }
@@ -1905,25 +1910,25 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->force_contact = PyString_FromStringAndSize(cfg->force_contact.ptr,
 						    cfg->force_contact.slen);
     Py_XDECREF(obj->proxy);
-    obj->proxy = (PyListObject *)PyList_New(8);
+    obj->proxy = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->proxy_cnt; ++i) {
 	PyObject * str;
 	str = PyString_FromStringAndSize(cfg->proxy[i].ptr, 
 					 cfg->proxy[i].slen);
-	PyList_SetItem((PyObject *)obj->proxy, i, str);
+	PyList_Append((PyObject *)obj->proxy, str);
     }
 
     obj->reg_timeout = cfg->reg_timeout;
 
     Py_XDECREF(obj->cred_info);
-    obj->cred_info = (PyListObject *)PyList_New(8);
+    obj->cred_info = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->cred_count; ++i) {
 	PyObj_pjsip_cred_info * ci;
 	
 	ci = (PyObj_pjsip_cred_info *)
 	     PyObj_pjsip_cred_info_new(&PyTyp_pjsip_cred_info,NULL,NULL);
 	PyObj_pjsip_cred_info_import(ci, &cfg->cred_info[i]);
-	PyList_SetItem((PyObject *)obj->cred_info, i, (PyObject *)ci);
+	PyList_Append((PyObject *)obj->cred_info, (PyObject *)ci);
     }
 
     obj->transport_id = cfg->transport_id;
@@ -1991,12 +1996,12 @@ static PyObject * PyObj_pjsua_acc_config_new(PyTypeObject *type,
             Py_DECREF(self);
             return NULL;
         }
-	self->proxy = (PyListObject *)PyList_New(8);
+	self->proxy = (PyListObject *)PyList_New(0);
 	if (self->proxy == NULL) {
 	    Py_DECREF(self);
 	    return NULL;
 	}
-	self->cred_info = (PyListObject *)PyList_New(8);
+	self->cred_info = (PyListObject *)PyList_New(0);
 	if (self->cred_info == NULL) {
 	    Py_DECREF(self);
 	    return NULL;

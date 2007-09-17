@@ -2403,7 +2403,6 @@ typedef struct
     unsigned  channel_count;
     unsigned  samples_per_frame;
     unsigned  bits_per_sample;
-    unsigned  listener_cnt;
     PyListObject * listeners;
 
 } PyObj_pjsua_conf_port_info;
@@ -2443,7 +2442,7 @@ static PyObject * conf_port_info_new(PyTypeObject *type, PyObject *args,
             return NULL;
         }        
 	
-	self->listeners = (PyListObject *)PyList_New(PJSUA_MAX_CONF_PORTS);
+	self->listeners = (PyListObject *)PyList_New(0);
         if (self->listeners == NULL)
     	{
             Py_DECREF(self);
@@ -2487,11 +2486,6 @@ static PyMemberDef conf_port_info_members[] =
         "bits_per_sample", T_INT, 
         offsetof(PyObj_pjsua_conf_port_info, bits_per_sample), 0,
         "Bits per sample"
-    },
-    {
-        "listener_cnt", T_INT, 
-        offsetof(PyObj_pjsua_conf_port_info, listener_cnt), 0,
-        "Number of listeners in the array."
     },
     {
         "listeners", T_OBJECT_EX,
@@ -3166,7 +3160,7 @@ static PyObject *py_pjsua_conf_get_port_info
     PyObj_pjsua_conf_port_info * obj;
     pjsua_conf_port_info info;
     int status;	
-    int i;
+    unsigned i;
 
     PJ_UNUSED_ARG(pSelf);
 
@@ -3182,12 +3176,12 @@ static PyObject *py_pjsua_conf_get_port_info
     obj->bits_per_sample = info.bits_per_sample;
     obj->channel_count = info.bits_per_sample;
     obj->clock_rate = info.clock_rate;
-    obj->listener_cnt = info.listener_cnt;
     obj->name = PyString_FromStringAndSize(info.name.ptr, info.name.slen);
     obj->samples_per_frame = info.samples_per_frame;
     obj->slot_id = info.slot_id;
     
-    for (i = 0; i < PJSUA_MAX_CONF_PORTS; i++) {
+    obj->listeners = (PyListObject *)PyList_New(info.listener_cnt);
+    for (i = 0; i < info.listener_cnt; i++) {
 	PyObject * item = Py_BuildValue("i",info.listeners[i]);
 	PyList_SetItem((PyObject *)obj->listeners, i, item);
     }
