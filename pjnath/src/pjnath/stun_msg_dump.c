@@ -192,6 +192,22 @@ static int print_attr(char *buffer, unsigned length,
 	    APPLY();
 	}
 	break;
+    case PJ_STUN_ATTR_ICE_CONTROLLED:
+    case PJ_STUN_ATTR_ICE_CONTROLLING:
+	{
+	    const pj_stun_uint64_attr *attr;
+	    pj_uint8_t data[8];
+	    int i;
+
+	    attr = (const pj_stun_uint64_attr*) ahdr;
+
+	    for (i=0; i<8; ++i)
+		data[i] = ((const pj_uint8_t*)&attr->value)[7-i];
+
+	    len = print_binary(p, end-p, data, 8);
+	    APPLY();
+	}
+	break;
     case PJ_STUN_ATTR_USE_CANDIDATE:
     default:
 	len = pj_ansi_snprintf(p, end-p, "\n");

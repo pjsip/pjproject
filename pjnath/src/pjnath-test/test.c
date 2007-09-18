@@ -66,6 +66,10 @@ static int test_inner(void)
 
     pjnath_init();
 
+#if INCLUDE_STUN_TEST
+    DO_TEST(stun_test());
+#endif
+
 #if INCLUDE_ICE_TEST
     DO_TEST(ice_test());
 #endif

@@ -31,6 +31,8 @@
 #define THIS_FILE		"stun_msg.c"
 #define STUN_XOR_FINGERPRINT	0x5354554eL
 
+static int padding_char;
+
 static const char *stun_method_names[] = 
 {
     "Unknown",			/* 0 */
@@ -54,14 +56,14 @@ static struct
     { PJ_STUN_SC_BAD_REQUEST,		    "Bad Request"},
     { PJ_STUN_SC_UNAUTHORIZED,		    "Unauthorized"},
     { PJ_STUN_SC_UNKNOWN_ATTRIBUTE,	    "Unknown Attribute"},
-    { PJ_STUN_SC_STALE_CREDENTIALS,	    "Stale Credentials"},
-    { PJ_STUN_SC_INTEGRITY_CHECK_FAILURE,   "Integrity Check Failure"},
-    { PJ_STUN_SC_MISSING_USERNAME,	    "Missing Username"},
-    { PJ_STUN_SC_USE_TLS,		    "Use TLS"},
-    { PJ_STUN_SC_MISSING_REALM,		    "Missing Realm"},
-    { PJ_STUN_SC_MISSING_NONCE,		    "Missing Nonce"},
-    { PJ_STUN_SC_UNKNOWN_USERNAME,	    "Unknown Username"},
-    { PJ_STUN_SC_NO_BINDING,		    "No Binding"},
+    //{ PJ_STUN_SC_STALE_CREDENTIALS,	    "Stale Credentials"},
+    //{ PJ_STUN_SC_INTEGRITY_CHECK_FAILURE, "Integrity Check Failure"},
+    //{ PJ_STUN_SC_MISSING_USERNAME,	    "Missing Username"},
+    //{ PJ_STUN_SC_USE_TLS,		    "Use TLS"},
+    //{ PJ_STUN_SC_MISSING_REALM,	    "Missing Realm"},
+    //{ PJ_STUN_SC_MISSING_NONCE,	    "Missing Nonce"},
+    //{ PJ_STUN_SC_UNKNOWN_USERNAME,	    "Unknown Username"},
+    //{ PJ_STUN_SC_NO_BINDING,		    "No Binding"},
     { PJ_STUN_SC_STALE_NONCE,		    "Stale Nonce"},
     { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
     { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},
@@ -568,6 +570,17 @@ PJ_DEF(pj_str_t) pj_stun_get_err_reason(int err_code)
 }
 
 
+/*
+ * Set padding character.
+ */
+PJ_DEF(int) pj_stun_set_padding_char(int chr)
+{
+    int old_pad = padding_char;
+    padding_char = chr;
+    return old_pad;
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -899,6 +912,14 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
 
     /* Copy the string */
     pj_memcpy(buf+ATTR_HDR_LEN, ca->value.ptr, ca->value.slen);
+
+    /* Add padding character, if string is not 4-bytes aligned. */
+    if (ca->value.slen & 0x03) {
+	pj_uint8_t pad[3];
+	pj_memset(pad, padding_char, sizeof(pad));
+	pj_memcpy(buf+ATTR_HDR_LEN+ca->value.slen, pad,
+		  4-(ca->value.slen & 0x03));
+    }
 
     /* Done */
     return PJ_SUCCESS;
@@ -1378,11 +1399,13 @@ PJ_DEF(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
     /* If the number of unknown attributes is an odd number, one of the
      * attributes MUST be repeated in the list.
      */
+    /* No longer necessary
     if ((attr_cnt & 0x01)) {
 	attr->attrs[attr_cnt] = attr_array[attr_cnt-1];
     }
+    */
 
-    *p_attr = NULL;
+    *p_attr = attr;
 
     return PJ_SUCCESS;
 }
@@ -1636,6 +1659,13 @@ PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
 	return PJNATH_EINSTUNMSGLEN;
     }
 
+    /* STUN message is always padded to the nearest 4 bytes, thus
+     * the last two bits of the length field are always zero.
+     */
+    if ((msg_len & 0x03) != 0) {
+	return PJNATH_EINSTUNMSGLEN;
+    }
+
     /* If magic is set, then there is great possibility that this is
      * a STUN message.
      */
@@ -1878,16 +1908,17 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		}
 		has_fingerprint = PJ_TRUE;
 	    } else {
-		if (has_msg_int || has_fingerprint) {
+		if (has_fingerprint) {
 		    /* Another attribute is found which is not FINGERPRINT
-		     * after FINGERPRINT or MESSAGE-INTEGRITY */
+		     * after FINGERPRINT. Note that non-FINGERPRINT is
+		     * allowed to appear after M-I
+		     */
 		    if (p_response) {
 			pj_stun_msg_create_response(pool, msg,
 						    PJ_STUN_SC_BAD_REQUEST,
 						    NULL, p_response);
 		    }
-		    return has_fingerprint ? PJNATH_ESTUNFINGERPOS :
-					     PJNATH_ESTUNMSGINTPOS;
+		    return PJNATH_ESTUNFINGERPOS;
 		}
 	    }
 
@@ -2114,16 +2145,11 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	}
     }
 
-    /* We MUST update the message length in the header NOW before
-     * calculating MESSAGE-INTEGRITY and FINGERPRINT. 
-     * Note that length is not including the 20 bytes header.
+    /* If MESSAGE-INTEGRITY is present, include the M-I attribute
+     * in message length before calculating M-I
      */
-    if (amsgint && afingerprint) {
-	body_len = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
-    } else if (amsgint) {
+    if (amsgint) {
 	body_len = (pj_uint16_t)((buf - start) - 20 + 24);
-    } else if (afingerprint) {
-	body_len = (pj_uint16_t)((buf - start) - 20 + 8);
     } else {
 	body_len = (pj_uint16_t)((buf - start) - 20);
     }
@@ -2161,11 +2187,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	 */
 	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
 	pj_hmac_sha1_update(&ctx, (pj_uint8_t*)start, buf-start);
-	if ((buf-start) & 0x3F) {
-	    pj_uint8_t zeroes[64];
-	    pj_bzero(zeroes, sizeof(zeroes));
-	    pj_hmac_sha1_update(&ctx, zeroes, 64-((buf-start) & 0x3F));
-	}
+	// These are obsoleted in rfc3489bis-08
+	//if ((buf-start) & 0x3F) {
+	//    pj_uint8_t zeroes[64];
+	//    pj_bzero(zeroes, sizeof(zeroes));
+	//    pj_hmac_sha1_update(&ctx, zeroes, 64-((buf-start) & 0x3F));
+	//}
 	pj_hmac_sha1_final(&ctx, amsgint->hmac);
 
 	/* Put this attribute in the message */
@@ -2180,6 +2207,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
     /* Calculate FINGERPRINT if present */
     if (afingerprint != NULL) {
+	/* Update message length */
+	PUTVAL16H(start, 2, 
+		 (pj_uint16_t)(GETVAL16H(start, 2)+8));
+
 	afingerprint->value = pj_crc32_calc(start, buf-start);
 	afingerprint->value ^= STUN_XOR_FINGERPRINT;
 

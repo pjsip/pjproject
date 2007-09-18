@@ -142,8 +142,8 @@ PJ_END_DECL
  *
  * References for STUN:
  *
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-06.txt">
- *    <B>draft-ietf-behave-rfc3489bis-06</b></A>: Session Traversal 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-10.txt">
+ *    <B>draft-ietf-behave-rfc3489bis-10</b></A>: Session Traversal 
  *     Utilities for (NAT) (STUN),
  *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-03.txt">
  *    <B>draft-ietf-behave-turn-03</B></A>: Obtaining Relay Addresses 

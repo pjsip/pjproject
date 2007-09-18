@@ -49,7 +49,7 @@
 
 
 /* **************************************************************************
- * STUN CLIENT CONFIGURATION
+ * STUN CONFIGURATION
  */
 
 /**
@@ -80,10 +80,10 @@
  * After the last retransmission is sent and if no response is received 
  * after this time, the STUN transaction will be considered to have failed.
  *
- * The default value is 1600 miliseconds (as per RFC 3489-bis).
+ * The default value is 16x RTO (as per RFC 3489-bis).
  */
 #ifndef PJ_STUN_TIMEOUT_VALUE
-#   define PJ_STUN_TIMEOUT_VALUE		    1600
+#   define PJ_STUN_TIMEOUT_VALUE		    (16 * PJ_STUN_RTO_VALUE)
 #endif
 
 
@@ -120,6 +120,15 @@
  */
 #define PJ_STUN_PORT				    3478
 
+
+/**
+ * Padding character for string attributes.
+ *
+ * Default: ASCII 0
+ */
+#ifndef PJ_STUN_STRING_ATTR_PAD_CHR
+#   define PJ_STUN_STRING_ATTR_PAD_CHR		    0
+#endif
 
 
 /* **************************************************************************

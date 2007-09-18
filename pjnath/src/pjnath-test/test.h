@@ -20,8 +20,10 @@
 #include <pjlib-util.h>
 #include <pjnath.h>
 
+#define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
 
+extern int stun_test(void);
 extern int ice_test(void);
 extern int test_main(void);
 

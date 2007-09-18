@@ -280,7 +280,7 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_SOURCE_ADDR	    = 0x0004,/**< SOURCE-ADDRESS (deprecated)*/
     PJ_STUN_ATTR_CHANGED_ADDR	    = 0x0005,/**< CHANGED-ADDRESS (deprecatd)*/
     PJ_STUN_ATTR_USERNAME	    = 0x0006,/**< USERNAME attribute.	    */
-    PJ_STUN_ATTR_PASSWORD	    = 0x0007,/**< PASSWORD attribute.	    */
+    PJ_STUN_ATTR_PASSWORD	    = 0x0007,/**< was PASSWORD attribute.   */
     PJ_STUN_ATTR_MESSAGE_INTEGRITY  = 0x0008,/**< MESSAGE-INTEGRITY.	    */
     PJ_STUN_ATTR_ERROR_CODE	    = 0x0009,/**< ERROR-CODE.		    */
     PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES = 0x000A,/**< UNKNOWN-ATTRIBUTES.	    */
@@ -329,14 +329,17 @@ typedef enum pj_stun_status
     PJ_STUN_SC_BAD_REQUEST		= 400,  /**< Bad Request	    */
     PJ_STUN_SC_UNAUTHORIZED	        = 401,  /**< Unauthorized	    */
     PJ_STUN_SC_UNKNOWN_ATTRIBUTE        = 420,  /**< Unknown Attribute	    */
-    PJ_STUN_SC_STALE_CREDENTIALS        = 430,  /**< Stale Credentials	    */
-    PJ_STUN_SC_INTEGRITY_CHECK_FAILURE  = 431,  /**< Integrity Chk Fail	    */
-    PJ_STUN_SC_MISSING_USERNAME		= 432,  /**< Missing Username	    */
-    PJ_STUN_SC_USE_TLS			= 433,  /**< Use TLS		    */
-    PJ_STUN_SC_MISSING_REALM		= 434,  /**< Missing Realm	    */
-    PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
-    PJ_STUN_SC_UNKNOWN_USERNAME		= 436,  /**< Unknown Username	    */
-    PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
+#if 0
+    /* These were obsolete in recent rfc3489bis */
+    //PJ_STUN_SC_STALE_CREDENTIALS      = 430,  /**< Stale Credentials	    */
+    //PJ_STUN_SC_INTEGRITY_CHECK_FAILURE= 431,  /**< Integrity Chk Fail	    */
+    //PJ_STUN_SC_MISSING_USERNAME	= 432,  /**< Missing Username	    */
+    //PJ_STUN_SC_USE_TLS		= 433,  /**< Use TLS		    */
+    //PJ_STUN_SC_MISSING_REALM		= 434,  /**< Missing Realm	    */
+    //PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
+    //PJ_STUN_SC_UNKNOWN_USERNAME	= 436,  /**< Unknown Username	    */
+    //PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
+#endif
     PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
     PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
@@ -1088,6 +1091,15 @@ PJ_DECL(const char*) pj_stun_get_attr_name(unsigned attr_type);
  * @return		The STUN error reason phrase.
  */
 PJ_DECL(pj_str_t) pj_stun_get_err_reason(int err_code);
+
+
+/**
+ * Internal: set the padding character for string attribute.
+ * The default padding character is PJ_STUN_STRING_ATTR_PAD_CHR.
+ *
+ * @return		The previous padding character.
+ */
+PJ_DECL(int) pj_stun_set_padding_char(int chr);
 
 
 /**

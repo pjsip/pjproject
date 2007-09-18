@@ -489,7 +489,7 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 	/* Incoming response is authenticated with TX credential */
 	/* Verify username */
 	if (pj_strcmp(username, &ice->tx_uname) != 0)
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_USERNAME);
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
 	*data_type = 0;
 	*data = ice->tx_pass;
 
@@ -507,13 +507,13 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 
 	pos = (const char*)pj_memchr(username->ptr, ':', username->slen);
 	if (pos == NULL)
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_USERNAME);
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
 
 	ufrag.ptr = (char*)username->ptr;
 	ufrag.slen = (pos - username->ptr);
 
 	if (pj_strcmp(&ufrag, &ice->rx_ufrag) != 0)
-	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_USERNAME);
+	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
 
 	*data_type = 0;
 	*data = ice->rx_pass;
