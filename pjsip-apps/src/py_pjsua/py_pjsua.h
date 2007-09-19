@@ -19,6 +19,8 @@
 #ifndef __PY_PJSUA_H__
 #define __PY_PJSUA_H__
 
+#define _CRT_SECURE_NO_DEPRECATE
+
 #include <Python.h>
 #include <structmember.h>
 #include <pjsua-lib/pjsua.h>
