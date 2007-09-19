@@ -119,6 +119,11 @@ struct pj_ioqueue_t
  */
 #include "ioqueue_common_abs.c"
 
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+/* Scan closing keys to be put to free list again */
+static void scan_closing_keys(pj_ioqueue_t *ioqueue);
+#endif
+
 /*
  * pj_ioqueue_name()
  */
@@ -321,6 +326,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
      * the key from the free list. Otherwise allocate a new one. 
      */
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
+
+    /* Scan closing_keys first to let them come back to free_list */
+    scan_closing_keys(ioqueue);
+
     pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
 	rc = PJ_ETOOMANY;
