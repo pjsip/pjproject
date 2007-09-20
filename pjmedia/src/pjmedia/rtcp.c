@@ -349,7 +349,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 				    + sizeof(pjmedia_rtcp_sr)));
 	}
     } else if (common->pt == RTCP_RR && common->count > 0)
-	rr = (pjmedia_rtcp_rr*)(((char*)pkt) +sizeof(pjmedia_rtcp_common) +4);
+	rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
 
 
     if (sr) {
