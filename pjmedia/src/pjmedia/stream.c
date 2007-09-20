@@ -62,7 +62,7 @@ struct pjmedia_channel
 struct dtmf
 {
     int		    event;
-    pj_uint32_t	    start_ts;
+    pj_uint32_t	    duration;
 };
 
 /**
@@ -166,7 +166,7 @@ static void stream_perror(const char *sender, const char *title,
  */
 static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 {
-    pjmedia_stream *stream = port->port_data.pdata;
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
     pjmedia_channel *channel = stream->dec;
     unsigned samples_count, samples_per_frame, samples_required;
     pj_int16_t *p_out_samp;
@@ -191,7 +191,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 			stream->codec_param.info.clock_rate *
 			stream->codec_param.info.channel_cnt / 
 			1000;
-    p_out_samp = frame->buf;
+    p_out_samp = (pj_int16_t*) frame->buf;
 
     for (samples_count=0; samples_count < samples_required; 
 	 samples_count += samples_per_frame) 
@@ -373,46 +373,47 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
  * Transmit DTMF
  */
 static void create_dtmf_payload(pjmedia_stream *stream, 
-			  struct pjmedia_frame *frame_out)
+			        struct pjmedia_frame *frame_out,
+				int *first, int *last)
 {
     pjmedia_rtp_dtmf_event *event;
     struct dtmf *digit = &stream->tx_dtmf_buf[0];
-    unsigned duration;
     pj_uint32_t cur_ts;
 
     pj_assert(sizeof(pjmedia_rtp_dtmf_event) == 4);
 
-    event = frame_out->buf;
+    *first = *last = 0;
+
+    event = (pjmedia_rtp_dtmf_event*) frame_out->buf;
     cur_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
-    duration = cur_ts - digit->start_ts;
+
+    if (digit->duration == 0) {
+	PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c", 
+		  digitmap[digit->event]));
+	*first = 1;
+    }
+
+    digit->duration += stream->port.info.samples_per_frame;
 
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
-    event->duration = pj_htons((pj_uint16_t)duration);
+    event->duration = pj_htons((pj_uint16_t)digit->duration);
 
-    if (duration >= PJMEDIA_DTMF_DURATION) {
+
+    if (digit->duration >= PJMEDIA_DTMF_DURATION) {
+
 	event->e_vol |= 0x80;
+	*last = 1;
 
 	/* Prepare next digit. */
 	pj_mutex_lock(stream->jb_mutex);
+
 	pj_array_erase(stream->tx_dtmf_buf, sizeof(stream->tx_dtmf_buf[0]),
 		       stream->tx_dtmf_count, 0);
 	--stream->tx_dtmf_count;
 
-	stream->tx_dtmf_buf[0].start_ts = cur_ts;
 	pj_mutex_unlock(stream->jb_mutex);
-
-	if (stream->tx_dtmf_count) {
-	    PJ_LOG(5,(stream->port.info.name.ptr,
-		      "Sending DTMF digit id %c", 
-		      digitmap[stream->tx_dtmf_buf[0].event]));
-	}
-
-    } else if (duration == 0) {
-	PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c", 
-		  digitmap[digit->event]));
     }
-
 
     frame_out->size = 4;
 }
@@ -438,7 +439,7 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
     } else if (timestamp - stream->rtcp_last_tx >= stream->rtcp_interval) {
 	
-	pjmedia_rtcp_pkt *rtcp_pkt;
+	void *rtcp_pkt;
 	int len;
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
@@ -514,14 +515,14 @@ static void rebuffer(pjmedia_stream *stream,
 static pj_status_t put_frame_imp( pjmedia_port *port, 
 				  const pjmedia_frame *frame )
 {
-    pjmedia_stream *stream = port->port_data.pdata;
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     pjmedia_frame frame_out;
     unsigned ts_len, samples_per_frame;
     void *rtphdr;
     int rtphdrlen;
-
+    int inc_timestamp = 0;
 
     /* Don't do anything if stream is paused */
     if (channel->paused) {
@@ -550,15 +551,27 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      * Otherwise encode the PCM buffer.
      */
     if (stream->tx_dtmf_count) {
+	int first=0, last=0;
 
-	create_dtmf_payload(stream, &frame_out);
+	create_dtmf_payload(stream, &frame_out, &first, &last);
 
-	/* Encapsulate. */
+	/* Encapsulate into RTP packet. Note that:
+         *  - RTP marker should be set on the beginning of a new event
+	 *  - RTP timestamp is constant for the same packet. 
+         */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
-					 stream->tx_event_pt, 0, 
-					 frame_out.size, ts_len, 
+					 stream->tx_event_pt, first, 
+					 frame_out.size, (first?ts_len:0), 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
+
+	if (last) {
+	    /* This is the last packet for the event. 
+	     * Increment the RTP timestamp of the RTP session, for next
+	     * RTP packets.
+	     */
+	    inc_timestamp = PJMEDIA_DTMF_DURATION - ts_len;
+	}
 
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
 	unsigned ts, codec_samples_per_frame;
@@ -662,10 +675,18 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     /* Copy RTP header to the beginning of packet */
     pj_memcpy(channel->out_pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
 
+    /* Special case for DTMF: timestamp remains constant for
+     * the same event, and is only updated after a complete event
+     * has been transmitted.
+     */
+    if (inc_timestamp) {
+	pjmedia_rtp_encode_rtp( &channel->rtp, stream->tx_event_pt, 0,
+				0, inc_timestamp, NULL, NULL);
+    }
 
     /* Set RTP marker bit if currently not streaming */
     if (stream->is_streaming == PJ_FALSE) {
-	pjmedia_rtp_hdr *rtp = channel->out_pkt;
+	pjmedia_rtp_hdr *rtp = (pjmedia_rtp_hdr*) channel->out_pkt;
 
 	rtp->m = 1;
 	PJ_LOG(5,(stream->port.info.name.ptr,"Start talksprut.."));
@@ -697,7 +718,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 static pj_status_t put_frame( pjmedia_port *port, 
 			      const pjmedia_frame *frame )
 {
-    pjmedia_stream *stream = port->port_data.pdata;
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
     pjmedia_frame tmp_zero_frame;
     unsigned samples_per_frame;
 
@@ -830,7 +851,7 @@ static void dump_bin(const char *buf, unsigned len)
 static void handle_incoming_dtmf( pjmedia_stream *stream, 
 				  const void *payload, unsigned payloadlen)
 {
-    const pjmedia_rtp_dtmf_event *event = payload;
+    pjmedia_rtp_dtmf_event *event = (pjmedia_rtp_dtmf_event*) payload;
 
     /* Check compiler packing. */
     pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
@@ -902,7 +923,7 @@ static void on_rx_rtp( void *data,
                        pj_ssize_t bytes_read)
 
 {
-    pjmedia_stream *stream = data;
+    pjmedia_stream *stream = (pjmedia_stream*) data;
     pjmedia_channel *channel = stream->dec;
     const pjmedia_rtp_hdr *hdr;
     const void *payload;
@@ -918,7 +939,7 @@ static void on_rx_rtp( void *data,
     }
 
     /* Ignore keep-alive packets */
-    if (bytes_read < sizeof(pjmedia_rtp_hdr))
+    if (bytes_read < (pj_ssize_t) sizeof(pjmedia_rtp_hdr))
 	return;
 
     /* Update RTP and RTCP session. */
@@ -1052,7 +1073,7 @@ static void on_rx_rtcp( void *data,
                         const void *pkt, 
                         pj_ssize_t bytes_read)
 {
-    pjmedia_stream *stream = data;
+    pjmedia_stream *stream = (pjmedia_stream*) data;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -1080,7 +1101,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     
     /* Allocate memory for channel descriptor */
 
-    channel = pj_pool_zalloc(pool, sizeof(pjmedia_channel));
+    channel = (pjmedia_channel*) pj_pool_zalloc(pool, sizeof(pjmedia_channel));
     PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
 
     /* Init channel info. */
@@ -1146,11 +1167,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Allocate the media stream: */
 
-    stream = pj_pool_zalloc(pool, sizeof(pjmedia_stream));
+    stream = (pjmedia_stream*) pj_pool_zalloc(pool, sizeof(pjmedia_stream));
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
 
     /* Init stream/port name */
-    name.ptr = pj_pool_alloc(pool, M);
+    name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "strm%p", stream);
 
 
@@ -1262,7 +1283,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 	/* Allocate buffer */
 	stream->enc_buf_size = stream->port.info.clock_rate * ptime / 1000;
-	stream->enc_buf = pj_pool_alloc(pool, stream->enc_buf_size * 2);
+	stream->enc_buf = (pj_int16_t*)
+			  pj_pool_alloc(pool, stream->enc_buf_size * 2);
 
     } else {
 	stream->enc_samples_per_frame = stream->port.info.samples_per_frame;
@@ -1535,7 +1557,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
     pj_mutex_lock(stream->jb_mutex);
     
     if (stream->tx_dtmf_count+digit_char->slen >=
-	PJ_ARRAY_SIZE(stream->tx_dtmf_buf))
+	(long)PJ_ARRAY_SIZE(stream->tx_dtmf_buf))
     {
 	status = PJ_ETOOMANY;
     } else {
@@ -1571,24 +1593,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    }
 
 	    stream->tx_dtmf_buf[stream->tx_dtmf_count+i].event = pt;
+	    stream->tx_dtmf_buf[stream->tx_dtmf_count+i].duration = 0;
 	}
 
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
-	/* Init start_ts and end_ts only for the first digit.
-	 * Subsequent digits are initialized on the fly.
-	 */
-	if (stream->tx_dtmf_count ==0) {
-	    pj_uint32_t start_ts;
-
-	    start_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
-	    stream->tx_dtmf_buf[0].start_ts = start_ts;
-	}
-
 	/* Increment digit count only if all digits are valid. */
 	stream->tx_dtmf_count += digit_char->slen;
-
     }
 
 on_return:
@@ -1645,8 +1657,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
 /*
  * Set callback to be called upon receiving DTMF digits.
  */
-PJ_DEF(pj_status_t)
-pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
+PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 				 void (*cb)(pjmedia_stream*, 
 					    void *user_data, 
 					    int digit), 

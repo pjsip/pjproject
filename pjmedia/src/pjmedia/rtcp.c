@@ -130,7 +130,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
 			       unsigned samples_per_frame,
 			       pj_uint32_t ssrc)
 {
-    pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
+    pjmedia_rtcp_sr_pkt *sr_pkt = &sess->rtcp_sr_pkt;
     pj_time_val now;
     
     /* Memset everything */
@@ -140,21 +140,25 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     sess->rtp_last_ts = (unsigned)-1;
 
     /* Name */
-    sess->name = name ? name : THIS_FILE,
+    sess->name = name ? name : (char*)THIS_FILE,
 
     /* Set clock rate */
     sess->clock_rate = clock_rate;
     sess->pkt_size = samples_per_frame;
 
-    /* Init common RTCP header */
-    rtcp_pkt->common.version = 2;
-    rtcp_pkt->common.count = 1;
-    rtcp_pkt->common.pt = RTCP_SR;
-    rtcp_pkt->common.length = pj_htons(12);
+    /* Init common RTCP SR header */
+    sr_pkt->common.version = 2;
+    sr_pkt->common.count = 1;
+    sr_pkt->common.pt = RTCP_SR;
+    sr_pkt->common.length = pj_htons(12);
+    sr_pkt->common.ssrc = pj_htonl(ssrc);
     
-    /* Init SR */
-    rtcp_pkt->sr.ssrc = pj_htonl(ssrc);
-    
+    /* Copy to RTCP RR header */
+    pj_memcpy(&sess->rtcp_rr_pkt.common, &sr_pkt->common, 
+	      sizeof(pjmedia_rtcp_common));
+    sess->rtcp_rr_pkt.common.pt = RTCP_RR;
+    sess->rtcp_rr_pkt.common.length = pj_htons(7);
+
     /* Get time and timestamp base and frequency */
     pj_gettimeofday(&now);
     sess->tv_base = now;
@@ -332,7 +336,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 				   const void *pkt,
 				   pj_size_t size)
 {
-    const pjmedia_rtcp_common *common = pkt;
+    pjmedia_rtcp_common *common = (pjmedia_rtcp_common*) pkt;
     const pjmedia_rtcp_rr *rr = NULL;
     const pjmedia_rtcp_sr *sr = NULL;
     pj_uint32_t last_loss, jitter_samp, jitter;
@@ -340,12 +344,12 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     /* Parse RTCP */
     if (common->pt == RTCP_SR) {
 	sr = (pjmedia_rtcp_sr*) (((char*)pkt) + sizeof(pjmedia_rtcp_common));
-	if (common->count > 0 && size >= (sizeof(pjmedia_rtcp_pkt))) {
+	if (common->count > 0 && size >= (sizeof(pjmedia_rtcp_sr_pkt))) {
 	    rr = (pjmedia_rtcp_rr*)(((char*)pkt) + (sizeof(pjmedia_rtcp_common)
 				    + sizeof(pjmedia_rtcp_sr)));
 	}
     } else if (common->pt == RTCP_RR && common->count > 0)
-	rr = (pjmedia_rtcp_rr*)(((char*)pkt) +sizeof(pjmedia_rtcp_common) +4);
+	rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
 
 
     if (sr) {
@@ -529,33 +533,73 @@ end_rtt_calc:
 
 
 PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess, 
-				     pjmedia_rtcp_pkt **ret_p_pkt, 
-				     int *len)
+				     void **ret_p_pkt, int *len)
 {
     pj_uint32_t expected, expected_interval, received_interval, lost_interval;
-    pjmedia_rtcp_pkt *rtcp_pkt = &sess->rtcp_pkt;
+    pjmedia_rtcp_common *common;
+    pjmedia_rtcp_sr *sr;
+    pjmedia_rtcp_rr *rr;
     pj_timestamp ts_now;
     pjmedia_rtcp_ntp_rec ntp;
-    
-    /* Packet count */
-    rtcp_pkt->sr.sender_pcount = pj_htonl(sess->stat.tx.pkt);
 
-    /* Octets count */
-    rtcp_pkt->sr.sender_bcount = pj_htonl(sess->stat.tx.bytes);
+    /* Get current NTP time. */
+    pj_get_timestamp(&ts_now);
+    pjmedia_rtcp_get_ntp_time(sess, &ntp);
+
+
+    /* See if we have transmitted RTP packets since last time we
+     * sent RTCP SR.
+     */
+    if (sess->stat.tx.pkt != pj_ntohl(sess->rtcp_sr_pkt.sr.sender_pcount)) {
+
+	/* So we should send RTCP SR */
+	*ret_p_pkt = (void*) &sess->rtcp_sr_pkt;
+	*len = sizeof(pjmedia_rtcp_sr_pkt);
+	common = &sess->rtcp_sr_pkt.common;
+	rr = &sess->rtcp_sr_pkt.rr;
+	sr = &sess->rtcp_sr_pkt.sr;
+
+	/* Update packet count */
+	sr->sender_pcount = pj_htonl(sess->stat.tx.pkt);
+
+	/* Update octets count */
+	sr->sender_bcount = pj_htonl(sess->stat.tx.bytes);
+
+	/* Fill in NTP timestamp in SR. */
+	sr->ntp_sec = pj_htonl(ntp.hi);
+	sr->ntp_frac = pj_htonl(ntp.lo);
+
+	TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
+			   ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
+				>> 16)));
+
+
+    } else {
+	/* We should send RTCP RR then */
+	*ret_p_pkt = (void*) &sess->rtcp_rr_pkt;
+	*len = sizeof(pjmedia_rtcp_rr_pkt);
+	common = &sess->rtcp_rr_pkt.common;
+	rr = &sess->rtcp_rr_pkt.rr;
+	sr = NULL;
+    }
     
     /* SSRC and last_seq */
-    rtcp_pkt->rr.ssrc = pj_htonl(sess->peer_ssrc);
-    rtcp_pkt->rr.last_seq = (sess->seq_ctrl.cycles & 0xFFFF0000L);
-    rtcp_pkt->rr.last_seq += sess->seq_ctrl.max_seq;
-    rtcp_pkt->rr.last_seq = pj_htonl(rtcp_pkt->rr.last_seq);
+    rr->ssrc = pj_htonl(sess->peer_ssrc);
+    rr->last_seq = (sess->seq_ctrl.cycles & 0xFFFF0000L);
+    /* Since this is an "+=" operation, make sure we update last_seq on
+     * both RR and SR.
+     */
+    sess->rtcp_sr_pkt.rr.last_seq += sess->seq_ctrl.max_seq;
+    sess->rtcp_rr_pkt.rr.last_seq += sess->seq_ctrl.max_seq;
+    rr->last_seq = pj_htonl(rr->last_seq);
 
 
     /* Jitter */
-    rtcp_pkt->rr.jitter = pj_htonl(sess->jitter >> 4);
+    rr->jitter = pj_htonl(sess->jitter >> 4);
     
     
     /* Total lost. */
-    expected = pj_ntohl(rtcp_pkt->rr.last_seq) - sess->seq_ctrl.base_seq;
+    expected = pj_ntohl(rr->last_seq) - sess->seq_ctrl.base_seq;
 
     /* This is bug: total lost already calculated on each incoming RTP!
     if (expected >= sess->received)
@@ -564,9 +608,9 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	sess->stat.rx.loss = 0;
     */
 
-    rtcp_pkt->rr.total_lost_2 = (sess->stat.rx.loss >> 16) & 0xFF;
-    rtcp_pkt->rr.total_lost_1 = (sess->stat.rx.loss >> 8) & 0xFF;
-    rtcp_pkt->rr.total_lost_0 = (sess->stat.rx.loss & 0xFF);
+    rr->total_lost_2 = (sess->stat.rx.loss >> 16) & 0xFF;
+    rr->total_lost_1 = (sess->stat.rx.loss >> 8) & 0xFF;
+    rr->total_lost_0 = (sess->stat.rx.loss & 0xFF);
 
     /* Fraction lost calculation */
     expected_interval = expected - sess->exp_prior;
@@ -575,29 +619,20 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     received_interval = sess->received - sess->rx_prior;
     sess->rx_prior = sess->received;
     
-    lost_interval = expected_interval - received_interval;
+    if (expected_interval >= received_interval)
+	lost_interval = expected_interval - received_interval;
+    else
+	lost_interval = 0;
     
     if (expected_interval==0 || lost_interval == 0) {
-	rtcp_pkt->rr.fract_lost = 0;
+	rr->fract_lost = 0;
     } else {
-	rtcp_pkt->rr.fract_lost = (lost_interval << 8) / expected_interval;
+	rr->fract_lost = (lost_interval << 8) / expected_interval;
     }
     
-    /* Get current NTP time. */
-    pj_get_timestamp(&ts_now);
-    pjmedia_rtcp_get_ntp_time(sess, &ntp);
-    
-    /* Fill in NTP timestamp in SR. */
-    rtcp_pkt->sr.ntp_sec = pj_htonl(ntp.hi);
-    rtcp_pkt->sr.ntp_frac = pj_htonl(ntp.lo);
-
-    TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
-		       ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
-			    >> 16)));
-
     if (sess->rx_lsr_time.u64 == 0 || sess->rx_lsr == 0) {
-	rtcp_pkt->rr.lsr = 0;
-	rtcp_pkt->rr.dlsr = 0;
+	rr->lsr = 0;
+	rr->dlsr = 0;
     } else {
 	pj_timestamp ts;
 	pj_uint32_t lsr = sess->rx_lsr;
@@ -610,7 +645,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	/* Fill in LSR.
 	   LSR is the middle 32bit of the last SR NTP time received.
 	 */
-	rtcp_pkt->rr.lsr = pj_htonl(lsr);
+	rr->lsr = pj_htonl(lsr);
 	
 	/* Fill in DLSR.
 	   DLSR is Delay since Last SR, in 1/65536 seconds.
@@ -622,7 +657,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 
 	/* Get DLSR */
 	dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
-	rtcp_pkt->rr.dlsr = pj_htonl(dlsr);
+	rr->dlsr = pj_htonl(dlsr);
 
 	TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
 			   "(%ds:%03dms)",
@@ -637,11 +672,6 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     /* Update counter */
     pj_gettimeofday(&sess->stat.rx.update);
     sess->stat.rx.update_cnt++;
-
-
-    /* Return pointer. */
-    *ret_p_pkt = rtcp_pkt;
-    *len = sizeof(pjmedia_rtcp_pkt);
 }
 
  
