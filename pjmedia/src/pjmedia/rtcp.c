@@ -619,7 +619,10 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     received_interval = sess->received - sess->rx_prior;
     sess->rx_prior = sess->received;
     
-    lost_interval = expected_interval - received_interval;
+    if (expected_interval >= received_interval)
+	lost_interval = expected_interval - received_interval;
+    else
+	lost_interval = 0;
     
     if (expected_interval==0 || lost_interval == 0) {
 	rr->fract_lost = 0;
