@@ -1342,7 +1342,7 @@ static int media_thread(void *arg)
 	    /*
 	     * Time to send RTCP packet.
 	     */
-	    pjmedia_rtcp_pkt *rtcp_pkt;
+	    void *rtcp_pkt;
 	    int rtcp_len;
 	    pj_ssize_t size;
 	    pj_status_t status;

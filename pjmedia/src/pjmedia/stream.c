@@ -439,7 +439,7 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
     } else if (timestamp - stream->rtcp_last_tx >= stream->rtcp_interval) {
 	
-	pjmedia_rtcp_pkt *rtcp_pkt;
+	void *rtcp_pkt;
 	int len;
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);

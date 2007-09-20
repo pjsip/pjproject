@@ -58,7 +58,6 @@ PJ_BEGIN_DECL
  */
 struct pjmedia_rtcp_sr
 {
-    pj_uint32_t	    ssrc;	    /**< SSRC identification.		*/
     pj_uint32_t	    ntp_sec;	    /**< NTP time, seconds part.	*/
     pj_uint32_t	    ntp_frac;	    /**< NTP time, fractions part.	*/
     pj_uint32_t	    rtp_ts;	    /**< RTP timestamp.			*/
@@ -117,6 +116,7 @@ struct pjmedia_rtcp_common
     unsigned	    pt:8;	/**< payload type           */
 #endif
     unsigned	    length:16;	/**< packet length          */
+    pj_uint32_t	    ssrc;	/**< SSRC identification    */
 };
 
 /**
@@ -129,17 +129,21 @@ typedef struct pjmedia_rtcp_common pjmedia_rtcp_common;
  * Incoming RTCP packet may have different format, and must be parsed
  * manually by application.
  */
-struct pjmedia_rtcp_pkt
+typedef struct pjmedia_rtcp_sr_pkt
 {
     pjmedia_rtcp_common  common;	/**< Common header.	    */
     pjmedia_rtcp_sr	 sr;		/**< Sender report.	    */
     pjmedia_rtcp_rr	 rr;		/**< variable-length list   */
-};
+} pjmedia_rtcp_sr_pkt;
 
 /**
- * @see pjmedia_rtcp_pkt
+ * This structure declares RTCP RR (Receiver Report) packet.
  */
-typedef struct pjmedia_rtcp_pkt pjmedia_rtcp_pkt;
+typedef struct pjmedia_rtcp_rr_pkt
+{
+    pjmedia_rtcp_common  common;	/**< Common header.	    */
+    pjmedia_rtcp_rr	 rr;		/**< variable-length list   */
+} pjmedia_rtcp_rr_pkt;
 
 
 #pragma pack()
@@ -250,7 +254,8 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
 struct pjmedia_rtcp_session
 {
     char		   *name;	/**< Name identification.	    */
-    pjmedia_rtcp_pkt	    rtcp_pkt;	/**< Cached RTCP packet.	    */
+    pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP packet.	    */
+    pjmedia_rtcp_rr_pkt	    rtcp_rr_pkt;/**< Cached RTCP RR packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
     unsigned		    rtp_last_ts;/**< Last timestamp in RX RTP pkt.  */
@@ -363,19 +368,20 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
 
 
 /**
- * Build a RTCP SR+RR packet to be transmitted to remote RTP peer.
+ * Build a RTCP packet to be transmitted to remote RTP peer. This will
+ * create RTCP Sender Report (SR) or Receiver Report (RR) depending on
+ * whether the endpoint has been transmitting RTP since the last interval.
  * Note that this function will reset the interval counters (such as
  * the ones to calculate fraction lost) in the session.
  *
  * @param session   The RTCP session.
  * @param rtcp_pkt  Upon return, it will contain pointer to the 
- *		    RTCP packet.
+ *		    RTCP packet, which can be RTCP SR or RR.
  * @param len	    Upon return, it will indicate the size of 
  *		    the RTCP packet.
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
-				       pjmedia_rtcp_pkt **rtcp_pkt, 
-				       int *len);
+				       void **rtcp_pkt, int *len);
 
 
 /**
