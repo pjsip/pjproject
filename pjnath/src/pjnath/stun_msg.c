@@ -63,7 +63,7 @@ static struct
     //{ PJ_STUN_SC_MISSING_REALM,	    "Missing Realm"},
     //{ PJ_STUN_SC_MISSING_NONCE,	    "Missing Nonce"},
     //{ PJ_STUN_SC_UNKNOWN_USERNAME,	    "Unknown Username"},
-    //{ PJ_STUN_SC_NO_BINDING,		    "No Binding"},
+    { PJ_STUN_SC_NO_BINDING,		    "No Binding"},
     { PJ_STUN_SC_STALE_NONCE,		    "Stale Nonce"},
     { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
     { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},

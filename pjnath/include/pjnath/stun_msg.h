@@ -338,8 +338,8 @@ typedef enum pj_stun_status
     //PJ_STUN_SC_MISSING_REALM		= 434,  /**< Missing Realm	    */
     //PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
     //PJ_STUN_SC_UNKNOWN_USERNAME	= 436,  /**< Unknown Username	    */
-    //PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
 #endif
+    PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
     PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
     PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
