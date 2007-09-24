@@ -14,7 +14,9 @@ PJSUA_OPT=--null-audio
 
 build_test: distclean rm_build_mak build_mak everything cpp_prep cpp_test cpp_post everything
  
-all: build_test pjlib_test pjlib_util_test pjnath_test pjsip_test pjsua_test
+run_test: pjlib_test pjlib_util_test pjnath_test pjsip_test pjsua_test
+
+all: build_test run_test
 
 CPP_DIR=pjlib pjlib-util pjnath pjmedia pjsip
 
@@ -57,6 +59,7 @@ cpp_post:
 	make -f c++-build.mak clean
 
 pjsua_test: pjsua_config_file pjsua_local_port0 pjsua_ip_addr pjsua_no_tcp pjsua_no_udp pjsua_outbound pjsua_use_ice pjsua_add_codec pjsua_clock_rate pjsua_play_file pjsua_play_tone pjsua_rec_file pjsua_rtp_port pjsua_quality pjsua_ptime pjsua_ectail
+	@echo pjsua_test completed successfully
 
 pjsua_config_file:
 	touch testconfig.cfg

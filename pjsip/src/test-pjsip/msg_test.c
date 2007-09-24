@@ -1085,7 +1085,7 @@ static int hdr_test_cid(pjsip_hdr *h)
     if (h->type != PJSIP_H_CALL_ID)
 	return -1510;
 
-    if (pj_strcmp2(&hdr->id, "-.!%*_+`'~()<>:\\\"/[]?{}\r\n"))
+    if (pj_strcmp2(&hdr->id, "-.!%*_+`'~()<>:\\\"/[]?{}"))
 	return -1520;
 
     return 0;

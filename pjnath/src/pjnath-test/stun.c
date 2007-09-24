@@ -637,7 +637,7 @@ static int fingerprint_test_vector()
 	}
 
 	pos = cmp_buf(buf, (const pj_uint8_t*)v->pdu, len);
-	if (pos != -1) {
+	if (pos != (unsigned)-1) {
 	    PJ_LOG(1,(THIS_FILE, "    Message mismatch at byte %d", pos));
 	    rc = -1060;
 	    goto on_return;
