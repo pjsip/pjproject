@@ -38,7 +38,14 @@ AC_PROG_CXX
 AC_LANG_C
 
 AC_SUBST(ac_pjdir)
-ac_pjdir=`pwd`
+case $target in 
+    *mingw* | *cygw* | *win32* | *w32* )
+	ac_pjdir=`pwd -W`
+	;;
+    *)
+	ac_pjdir=`pwd`
+	;;
+esac
 
 AC_CHECK_LIB(pthread,pthread_create)
 AC_CHECK_LIB(wsock32,puts)
