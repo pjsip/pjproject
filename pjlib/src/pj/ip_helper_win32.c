@@ -34,16 +34,22 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 
+#ifndef PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF	1
+#endif
+
 typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
 					   PULONG pdwSize, 
 					   BOOL bOrder);
 typedef DWORD (WINAPI *PFN_GetIpForwardTable)(PMIB_IPFORWARDTABLE pIpForwardTable,
 					      PULONG pdwSize, 
 					      BOOL bOrder);
+typedef DWORD (WINAPI *PFN_GetIfEntry)(PMIB_IFROW pIfRow);
 
 static HANDLE s_hDLL;
 static PFN_GetIpAddrTable s_pfnGetIpAddrTable;
 static PFN_GetIpForwardTable s_pfnGetIpForwardTable;
+static PFN_GetIfEntry s_pfnGetIfEntry;
 
 static void unload_iphlp_module(void)
 {
@@ -83,6 +89,23 @@ static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable,
     
     return ERROR_NOT_SUPPORTED;
 }
+
+
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+static DWORD MyGetIfEntry(MIB_IFROW *pIfRow)
+{
+    if(NULL == s_pfnGetIfEntry) {
+	s_pfnGetIfEntry = (PFN_GetIfEntry) 
+	    GetIpHlpApiProc(PJ_T("GetIfEntry"));
+    }
+    
+    if(NULL != s_pfnGetIfEntry) {
+	return s_pfnGetIfEntry(pIfRow);
+    }
+    
+    return ERROR_NOT_SUPPORTED;
+}
+#endif
 
 
 static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable, 
@@ -134,9 +157,23 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
     count = (pTab->dwNumEntries < *p_cnt) ? pTab->dwNumEntries : *p_cnt;
     *p_cnt = 0;
     for (i=0; i<count; ++i) {
+	MIB_IFROW ifRow;
+
 	/* Some Windows returns 0.0.0.0! */
 	if (pTab->table[i].dwAddr == 0)
 	    continue;
+
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+	/* Investigate the type of this interface */
+	pj_bzero(&ifRow, sizeof(ifRow));
+	ifRow.dwIndex = pTab->table[i].dwIndex;
+	if (MyGetIfEntry(&ifRow) != 0)
+	    continue;
+
+	if (ifRow.dwType == MIB_IF_TYPE_LOOPBACK)
+	    continue;
+#endif
+
 	ifs[*p_cnt].s_addr = pTab->table[i].dwAddr;
 	(*p_cnt)++;
     }

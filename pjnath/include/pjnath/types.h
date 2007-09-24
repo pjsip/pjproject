@@ -157,8 +157,8 @@ PJ_END_DECL
  * Interactive Connectivity Establishment (ICE) is a standard based 
  * methodology for traversing Network Address Translator (NAT), and
  * is described in 
- * <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-14.txt">
- * <B>draft-ietf-mmusic-ice-14.txt</B></A> draft. The PJNATH ICE
+ * <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-18.txt">
+ * <B>draft-ietf-mmusic-ice-18.txt</B></A> draft. The PJNATH ICE
  * implementation is aimed to provide a usable and generic ICE transports
  * for different types of application, including but not limited to
  * the usage of ICE in SIP/SDP offer/answer.

@@ -590,7 +590,9 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
 
 	/* Send STUN binding request */
-	PJ_LOG(5,(ice_st->obj_name, "Sending STUN keep-alive"));
+	PJ_LOG(5,(ice_st->obj_name, "Sending STUN keep-alive from %s;%d",
+		  pj_inet_ntoa(comp->local_addr.ipv4.sin_addr),
+		  pj_ntohs(comp->local_addr.ipv4.sin_port)));
 	status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
 					  &ice_st->stun_srv, 
 					  sizeof(pj_sockaddr_in), tdata);
@@ -1137,14 +1139,19 @@ static void stun_on_request_complete(pj_stun_session *sess,
 	return;
     }
 
+    /* Save IP address for logging */
+    pj_ansi_strcpy(ip, pj_inet_ntoa(comp->local_addr.ipv4.sin_addr));
+
     /* Ignore response if it reports the same address */
-    if (cand->addr.ipv4.sin_addr.s_addr == mapped_addr->ipv4.sin_addr.s_addr &&
-	cand->addr.ipv4.sin_port == mapped_addr->ipv4.sin_port)
+    if (comp->local_addr.ipv4.sin_addr.s_addr == mapped_addr->ipv4.sin_addr.s_addr &&
+	comp->local_addr.ipv4.sin_port == mapped_addr->ipv4.sin_port)
     {
+	PJ_LOG(4,(comp->ice_st->obj_name, 
+		  "Candidate %s:%d is directly connected to Internet, "
+		  "STUN mapped address is ignored",
+		  ip, pj_ntohs(comp->local_addr.ipv4.sin_port)));
 	return;
     }
-
-    pj_ansi_strcpy(ip, pj_inet_ntoa(comp->local_addr.ipv4.sin_addr));
 
     PJ_LOG(4,(comp->ice_st->obj_name, 
 	      "STUN mapped address for %s:%d is %s:%d",

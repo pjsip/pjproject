@@ -234,6 +234,16 @@
 #endif
 
 
+/**
+ * This constant specifies the length of random string generated for ICE
+ * ufrag and password.
+ *
+ * Default: 8 (characters)
+ */
+#ifndef PJ_ICE_UFRAG_LEN
+#   define PJ_ICE_UFRAG_LEN			    8
+#endif
+
 
 /**
  * @}

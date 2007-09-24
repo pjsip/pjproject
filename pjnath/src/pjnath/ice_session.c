@@ -214,7 +214,7 @@ static pj_status_t init_comp(pj_ice_sess *ice,
 
     /* Create STUN session for this candidate */
     status = pj_stun_session_create(&ice->stun_cfg, NULL, 
-			            &sess_cb, PJ_FALSE,
+			            &sess_cb, PJ_TRUE,
 				    &comp->stun_sess);
     if (status != PJ_SUCCESS)
 	return status;
@@ -296,17 +296,17 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     }
 
     if (local_ufrag == NULL) {
-	ice->rx_ufrag.ptr = (char*) pj_pool_alloc(ice->pool, 16);
-	pj_create_random_string(ice->rx_ufrag.ptr, 16);
-	ice->rx_ufrag.slen = 16;
+	ice->rx_ufrag.ptr = (char*) pj_pool_alloc(ice->pool, PJ_ICE_UFRAG_LEN);
+	pj_create_random_string(ice->rx_ufrag.ptr, PJ_ICE_UFRAG_LEN);
+	ice->rx_ufrag.slen = PJ_ICE_UFRAG_LEN;
     } else {
 	pj_strdup(ice->pool, &ice->rx_ufrag, local_ufrag);
     }
 
     if (local_passwd == NULL) {
-	ice->rx_pass.ptr = (char*) pj_pool_alloc(ice->pool, 16);
-	pj_create_random_string(ice->rx_pass.ptr, 16);
-	ice->rx_pass.slen = 16;
+	ice->rx_pass.ptr = (char*) pj_pool_alloc(ice->pool, PJ_ICE_UFRAG_LEN);
+	pj_create_random_string(ice->rx_pass.ptr, PJ_ICE_UFRAG_LEN);
+	ice->rx_pass.slen = PJ_ICE_UFRAG_LEN;
     } else {
 	pj_strdup(ice->pool, &ice->rx_pass, local_passwd);
     }

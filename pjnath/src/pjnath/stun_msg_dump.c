@@ -115,7 +115,7 @@ static int print_attr(char *buffer, unsigned length,
 
 	    attr = (const pj_stun_uint_attr*)ahdr;
 	    len = pj_ansi_snprintf(p, end-p,
-				   ", value=%d (0x%x)\n",
+				   ", value=%u (0x%x)\n",
 				   (pj_uint32_t)attr->value,
 				   (pj_uint32_t)attr->value);
 	    APPLY();
