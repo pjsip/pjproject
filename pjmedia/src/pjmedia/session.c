@@ -39,8 +39,14 @@ struct pjmedia_session
 
 #define THIS_FILE		"session.c"
 
-#define PJMEDIA_SESSION_SIZE	(48*1024)
-#define PJMEDIA_SESSION_INC	1024
+#ifndef PJMEDIA_SESSION_SIZE
+#   define PJMEDIA_SESSION_SIZE	(10*1024)
+#endif
+
+#ifndef PJMEDIA_SESSION_INC
+#   define PJMEDIA_SESSION_INC	1024
+#endif
+
 
 static const pj_str_t ID_AUDIO = { "audio", 5};
 static const pj_str_t ID_VIDEO = { "video", 5};
