@@ -778,7 +778,7 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id)
 
 
 /* Acquire lock to the specified call_id */
-static pj_status_t acquire_call(const char *title,
+pj_status_t acquire_call(const char *title,
 				pjsua_call_id call_id,
 				pjsua_call **p_call,
 				pjsip_dialog **p_dlg)
@@ -1603,7 +1603,7 @@ PJ_DEF(void) pjsua_call_hangup_all(void)
 }
 
 
-static const char *good_number(char *buf, pj_int32_t val)
+const char *good_number(char *buf, pj_int32_t val)
 {
     if (val < 1000) {
 	pj_ansi_sprintf(buf, "%d", val);
@@ -1817,7 +1817,7 @@ static void dump_media_session(const char *indent,
 
 
 /* Print call info */
-static void print_call(const char *title,
+void print_call(const char *title,
 		       int call_id, 
 		       char *buf, pj_size_t size)
 {

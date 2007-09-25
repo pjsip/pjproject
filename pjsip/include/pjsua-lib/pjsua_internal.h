@@ -426,6 +426,15 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
 			   pjsip_tpselector *sel);
 
 
+pj_status_t acquire_call(const char *title,
+                         pjsua_call_id call_id,
+                         pjsua_call **p_call,
+                         pjsip_dialog **p_dlg);
+const char *good_number(char *buf, pj_int32_t val);
+void print_call(const char *title,
+                int call_id,
+                char *buf, pj_size_t size);
+
 
 PJ_END_DECL
 
