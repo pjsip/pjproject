@@ -1847,6 +1847,19 @@ typedef struct pjsua_acc_config
      */
     pjsua_transport_id  transport_id;
 
+    /**
+     * This option is useful for keeping the UDP transport address up to
+     * date with the NAT public mapped address. When this option is 
+     * enabled and STUN is configured, the library will keep track of
+     * the public IP address from the response of REGISTER request. Once
+     * it detects that the address has changed, it will unregister current
+     * Contact, update the UDP transport address, and register a new
+     * Contact to the registrar.
+     *
+     * Default: 1 (yes)
+     */
+    pj_bool_t auto_update_nat;
+
 } pjsua_acc_config;
 
 

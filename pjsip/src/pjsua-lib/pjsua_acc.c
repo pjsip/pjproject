@@ -454,6 +454,83 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
 }
 
 
+/* Update NAT address from the REGISTER response */
+static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
+				    struct pjsip_regc_cbparam *param)
+{
+    pjsip_transport *tp;
+    const pj_str_t *via_addr;
+    int rport;
+    pjsip_via_hdr *via;
+
+    tp = param->rdata->tp_info.transport;
+
+    /* Only update if account is configured to auto-update */
+    if (acc->cfg.auto_update_nat == PJ_FALSE)
+	return PJ_FALSE;
+
+    /* Only update if registration uses UDP transport */
+    if (tp->key.type != PJSIP_TRANSPORT_UDP)
+	return PJ_FALSE;
+
+    /* Only update if STUN is enabled (for now) */
+    if (pjsua_var.ua_cfg.stun_domain.slen == 0 &&
+	pjsua_var.ua_cfg.stun_host.slen == 0)
+    {
+	return PJ_FALSE;
+    }
+
+    /* Get the received and rport info */
+    via = param->rdata->msg_info.via;
+    if (via->rport_param < 1) {
+	/* Remote doesn't support rport */
+	rport = via->sent_by.port;
+    } else
+	rport = via->rport_param;
+
+    if (via->recvd_param.slen != 0)
+	via_addr = &via->recvd_param;
+    else
+	via_addr = &via->sent_by.host;
+
+    /* Compare received and rport with transport published address */
+    if (tp->local_name.port == rport &&
+	pj_stricmp(&tp->local_name.host, via_addr)==0)
+    {
+	/* Address doesn't change */
+	return PJ_FALSE;
+    }
+
+    /* At this point we've detected that the address as seen by registrar.
+     * has changed.
+     */
+    PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
+			 "(%.*s:%d --> %.*s:%d). Updating registration..",
+			 acc->index,
+			 (int)tp->local_name.host.slen,
+			 tp->local_name.host.ptr,
+			 tp->local_name.port,
+			 (int)via_addr->slen,
+			 via_addr->ptr,
+			 rport));
+
+    /* Unregister current contact */
+    pjsua_acc_set_registration(acc->index, PJ_FALSE);
+    if (acc->regc != NULL) {
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
+    }
+
+    /* Update transport address */
+    pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
+    tp->local_name.port = rport;
+
+    /* Perform new registration */
+    pjsua_acc_set_registration(acc->index, PJ_TRUE);
+
+    return PJ_TRUE;
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -462,6 +539,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 {
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
+
+    if (param->regc != acc->regc)
+	return;
 
     PJSUA_LOCK();
 
@@ -489,6 +569,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
 		      pjsua_var.acc[acc->index].cfg.id.ptr));
 	} else {
+	    /* Check NAT bound address */
+	    if (acc_check_nat_addr(acc, param)) {
+		/* Update address, don't notify application yet */
+		PJSUA_UNLOCK();
+		return;
+	    }
+
 	    PJ_LOG(3, (THIS_FILE, 
 		       "%s: registration success, status=%d (%.*s), "
 		       "will re-register in %d seconds", 

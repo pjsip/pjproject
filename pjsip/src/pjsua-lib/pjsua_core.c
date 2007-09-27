@@ -140,6 +140,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
     cfg->transport_id = PJSUA_INVALID_ID;
+    cfg->auto_update_nat = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
