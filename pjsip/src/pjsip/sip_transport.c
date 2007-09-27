@@ -1310,16 +1310,19 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    goto finish_process_fragment;
 	}
 
-	/* Always add received parameter to the via. */
-	pj_strdup2(rdata->tp_info.pool, 
-		   &rdata->msg_info.via->recvd_param, 
-		   rdata->pkt_info.src_name);
+	/* For request: */
+	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG) {
+	    /* always add received parameter to the via. */
+	    pj_strdup2(rdata->tp_info.pool, 
+		       &rdata->msg_info.via->recvd_param, 
+		       rdata->pkt_info.src_name);
 
-	/* RFC 3581:
-	 * If message contains "rport" param, put the received port there.
-	 */
-	if (rdata->msg_info.via->rport_param == 0) {
-	    rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
+	    /* RFC 3581:
+	     * If message contains "rport" param, put the received port there.
+	     */
+	    if (rdata->msg_info.via->rport_param == 0) {
+		rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
+	    }
 	}
 
 	/* Drop response message if it has more than one Via.
