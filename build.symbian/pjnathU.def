@@ -76,10 +76,11 @@ EXPORTS
 	pj_stun_session_set_credential           @ 75 NONAME
 	pj_stun_session_set_server_name          @ 76 NONAME
 	pj_stun_session_set_user_data            @ 77 NONAME
-	pj_stun_sockaddr_attr_create             @ 78 NONAME
-	pj_stun_string_attr_create               @ 79 NONAME
-	pj_stun_uint64_attr_create               @ 80 NONAME
-	pj_stun_uint_attr_create                 @ 81 NONAME
-	pj_stun_unknown_attr_create              @ 82 NONAME
-	pjnath_init                              @ 83 NONAME
-	pjnath_perror                            @ 84 NONAME
+	pj_stun_set_padding_char                 @ 78 NONAME
+	pj_stun_sockaddr_attr_create             @ 79 NONAME
+	pj_stun_string_attr_create               @ 80 NONAME
+	pj_stun_uint64_attr_create               @ 81 NONAME
+	pj_stun_uint_attr_create                 @ 82 NONAME
+	pj_stun_unknown_attr_create              @ 83 NONAME
+	pjnath_init                              @ 84 NONAME
+	pjnath_perror                            @ 85 NONAME
