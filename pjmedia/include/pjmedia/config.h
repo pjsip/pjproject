@@ -73,6 +73,16 @@
 
 
 /**
+ * Specify whether we prefer to use DirectSound on Windows.
+ *
+ * Say yes!
+ */
+#ifndef PJMEDIA_PREFER_DIRECT_SOUND
+#   define PJMEDIA_PREFER_DIRECT_SOUND	    1
+#endif
+
+
+/**
  * Specify number of sound buffers. Larger number is better for sound
  * stability and to accomodate sound devices that are unable to send frames
  * in timely manner, however it would probably cause more audio delay (and 

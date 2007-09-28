@@ -265,6 +265,23 @@ static int pa_get_default_input_dev(int channel_count)
 {
     int i, count;
 
+    /* Special for Windows - try to use the DirectSound implementation
+     * first since it provides better latency.
+     */
+#if PJMEDIA_PREFER_DIRECT_SOUND
+    if (Pa_HostApiTypeIdToHostApiIndex(paDirectSound) >= 0) {
+	const PaHostApiInfo *pHI;
+	int index = Pa_HostApiTypeIdToHostApiIndex(paDirectSound);
+	pHI = Pa_GetHostApiInfo(index);
+	if (pHI) {
+	    const PaDeviceInfo *paDevInfo = NULL;
+	    paDevInfo = Pa_GetDeviceInfo(pHI->defaultInputDevice);
+	    if (paDevInfo && paDevInfo->maxInputChannels >= channel_count)
+		return pHI->defaultInputDevice;
+	}
+    }
+#endif
+
     /* Enumerate the host api's for the default devices, and return
      * the device with suitable channels.
      */
@@ -304,6 +321,23 @@ static int pa_get_default_output_dev(int channel_count)
 {
     int i, count;
 
+    /* Special for Windows - try to use the DirectSound implementation
+     * first since it provides better latency.
+     */
+#if PJMEDIA_PREFER_DIRECT_SOUND
+    if (Pa_HostApiTypeIdToHostApiIndex(paDirectSound) >= 0) {
+	const PaHostApiInfo *pHI;
+	int index = Pa_HostApiTypeIdToHostApiIndex(paDirectSound);
+	pHI = Pa_GetHostApiInfo(index);
+	if (pHI) {
+	    const PaDeviceInfo *paDevInfo = NULL;
+	    paDevInfo = Pa_GetDeviceInfo(pHI->defaultOutputDevice);
+	    if (paDevInfo && paDevInfo->maxOutputChannels >= channel_count)
+		return pHI->defaultOutputDevice;
+	}
+    }
+#endif
+
     /* Enumerate the host api's for the default devices, and return
      * the device with suitable channels.
      */
@@ -334,7 +368,7 @@ static int pa_get_default_output_dev(int channel_count)
 	if (paDevInfo->maxOutputChannels >= channel_count)
 	    return i;
     }
-    
+
     return -1;
 }
 
