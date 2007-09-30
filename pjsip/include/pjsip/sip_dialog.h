@@ -70,7 +70,7 @@ typedef struct pjsip_dlg_party
     pj_uint32_t		 tag_hval;  /**< Hashed value of the tag.	*/
     pjsip_contact_hdr	*contact;   /**< Contact header.		*/
     pj_int32_t		 first_cseq;/**< First CSeq seen.		*/
-    pj_int32_t		 cseq;	    /**< Next sequence number.		*/
+    pj_uint32_t		 cseq;	    /**< Next sequence number.		*/
 } pjsip_dlg_party;
 
 
