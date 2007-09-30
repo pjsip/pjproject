@@ -342,7 +342,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp)
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
     /* Must not close while application is using this */
-    PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
+    //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
     
 
     if (udp->rtp_key) {
