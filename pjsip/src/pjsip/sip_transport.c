@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     tdata = PJ_POOL_ZALLOC_T(pool, pjsip_tx_data);
     tdata->pool = pool;
     tdata->mgr = mgr;
-    pj_ansi_snprintf(tdata->obj_name, PJ_MAX_OBJ_NAME, "tdta%p", tdata);
+    pj_memcpy(tdata->obj_name, pool->obj_name, PJ_MAX_OBJ_NAME);
 
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);
     if (status != PJ_SUCCESS) {
