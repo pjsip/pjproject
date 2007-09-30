@@ -1223,7 +1223,7 @@ PJ_DECL(pjsip_clen_hdr*) pjsip_clen_hdr_init( pj_pool_t *pool,
 typedef struct pjsip_cseq_hdr
 {
     PJSIP_DECL_HDR_MEMBER(struct pjsip_cseq_hdr);
-    int		    cseq;	/**< CSeq number. */
+    pj_int32_t	    cseq;	/**< CSeq number. */
     pjsip_method    method;	/**< CSeq method. */
 } pjsip_cseq_hdr;
 
