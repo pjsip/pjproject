@@ -86,42 +86,42 @@ static struct mod_100rel
 };
 
 /* List of pending transmission (may include the final response as well) */
-typedef struct tx_data_list
+typedef struct tx_data_list_t
 {
-	PJ_DECL_LIST_MEMBER(struct tx_data_list);
+	PJ_DECL_LIST_MEMBER(struct tx_data_list_t);
 	pj_uint32_t	 rseq;
 	pjsip_tx_data	*tdata;
-} tx_data_list;
+} tx_data_list_t;
 
 
 /* Below, UAS and UAC roles are of the INVITE transaction */
 
 /* UAS state. */
-typedef struct uas_state
+typedef struct uas_state_t
 {
 	pj_int32_t	 cseq;
 	pj_uint32_t	 rseq;	/* Initialized to -1 */
 	pj_bool_t	 has_sdp;
-	tx_data_list	 tx_data_list;
+	tx_data_list_t	 tx_data_list;
 	unsigned	 retransmit_count;
 	pj_timer_entry	 retransmit_timer;
-} uas_state;
+} uas_state_t;
 
 
 /* UAC state */
-typedef struct uac_state
+typedef struct uac_state_t
 {
 	pj_int32_t	cseq;
 	pj_uint32_t	rseq;	/* Initialized to -1 */
-} uac_state;
+} uac_state_t;
 
 
 /* State attached to each dialog. */
 struct dlg_data
 {
 	pjsip_inv_session	*inv;
-	uas_state		*uas_state;
-	uac_state		*uac_state;
+	uas_state_t		*uas_state;
+	uac_state_t		*uac_state;
 };
 
 
@@ -275,7 +275,7 @@ static void parse_rack(const pj_str_t *rack,
 /* Clear all responses in the transmission list */
 static void clear_all_responses(dlg_data *dd)
 {
-	tx_data_list *tl;
+	tx_data_list_t *tl;
 
 	tl = dd->uas_state->tx_data_list.next;
 	while (tl != &dd->uas_state->tx_data_list) {
@@ -331,7 +331,7 @@ static void handle_incoming_prack(dlg_data *dd, pjsip_transaction *tsx,
 	if (rseq == dd->uas_state->tx_data_list.next->rseq &&
 	    cseq == dd->uas_state->cseq)
 	{
-		tx_data_list *tl = dd->uas_state->tx_data_list.next;
+		tx_data_list_t *tl = dd->uas_state->tx_data_list.next;
 
 		/* Yes it match! */
 		if (dd->uas_state->retransmit_timer.id) {
@@ -404,7 +404,7 @@ static void handle_incoming_response(dlg_data *dd, pjsip_transaction *tsx,
 	/* Create new UAC state if we don't have one */
 	if (dd->uac_state == NULL) {
 		dd->uac_state = PJ_POOL_ZALLOC_T(dd->inv->dlg->pool,
-						 struct uac_state);
+						 uac_state_t);
 		dd->uac_state->cseq = rdata->msg_info.cseq->cseq;
 		dd->uac_state->rseq = rseq - 1;
 	}
@@ -448,7 +448,7 @@ static void handle_incoming_response(dlg_data *dd, pjsip_transaction *tsx,
 				     rseq, rdata->msg_info.cseq->cseq,
 				     (int)tsx->method.name.slen,
 				     tsx->method.name.ptr);
-	PJ_ASSERT_ON_FAIL(rack.slen > 0 && rack.slen < sizeof(rack_buf),
+	PJ_ASSERT_ON_FAIL(rack.slen > 0 && rack.slen < (int)sizeof(rack_buf),
 			{ pjsip_tx_data_dec_ref(tdata); return; });
 	rack_hdr = pjsip_generic_string_hdr_create(tdata->pool, &RACK, &rack);
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) rack_hdr);
@@ -499,7 +499,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
 			  struct pj_timer_entry *entry)
 {
 	dlg_data *dd;
-	tx_data_list *tl;
+	tx_data_list_t *tl;
 	pjsip_tx_data *tdata;
 	pj_bool_t final;
 	pj_time_val delay;
@@ -599,7 +599,7 @@ static pjsip_tx_data *clone_tdata(dlg_data *dd,
 	/* Duplicate all headers */
 	hsrc = src->msg->hdr.next;
 	while (hsrc != &src->msg->hdr) {
-		pjsip_hdr *h = pjsip_hdr_clone(dst->pool, hsrc);
+		pjsip_hdr *h = (pjsip_hdr*) pjsip_hdr_clone(dst->pool, hsrc);
 		pjsip_msg_add_hdr(msg, h);
 		hsrc = hsrc->next;
 	}
@@ -682,9 +682,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 			/* Yes we have transmitted 1xx with SDP reliably.
 			 * In this case, must queue the 2xx response.
 			 */
-			tx_data_list *tl;
+			tx_data_list_t *tl;
 
-			tl = PJ_POOL_ZALLOC_T(tdata->pool, tx_data_list);
+			tl = PJ_POOL_ZALLOC_T(tdata->pool, tx_data_list_t);
 			tl->tdata = tdata;
 			tl->rseq = (pj_uint32_t)-1;
 			pj_list_push_back(&dd->uas_state->tx_data_list, tl);
@@ -761,12 +761,12 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 		 */
 		char rseq_str[32];
 		pj_str_t rseq;
-		tx_data_list *tl;
+		tx_data_list_t *tl;
 
 		/* Create UAS state if we don't have one */
 		if (dd->uas_state == NULL) {
 			dd->uas_state = PJ_POOL_ZALLOC_T(inv->dlg->pool,
-							 uas_state);
+							 uas_state_t);
 			dd->uas_state->cseq = cseq_hdr->cseq;
 			dd->uas_state->rseq = pj_rand() % 0x7FFF;
 			pj_list_init(&dd->uas_state->tx_data_list);
@@ -793,7 +793,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)rseq_hdr);
 
 		/* Create list entry for this response */
-		tl = PJ_POOL_ZALLOC_T(tdata->pool, tx_data_list);
+		tl = PJ_POOL_ZALLOC_T(tdata->pool, tx_data_list_t);
 		tl->tdata = tdata;
 		tl->rseq = dd->uas_state->rseq++;
 
