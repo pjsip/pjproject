@@ -252,6 +252,7 @@ struct pjsip_inv_session
     unsigned		 options;		    /**< Options in use.    */
     pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
     pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
+    pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
     void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
 };
 

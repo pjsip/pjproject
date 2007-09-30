@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsip-ua/sip_inv.h>
+#include <pjsip-ua/sip_100rel.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_event.h>
@@ -31,7 +32,7 @@
 #include <pj/log.h>
 
 
-#define THIS_FILE	"sip_invite_session.c"
+#define THIS_FILE	"sip_inv.c"
 
 static const char *inv_state_names[] =
 {
@@ -305,6 +306,10 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    pjsip_tsx_terminate(inv->invite_tsx, 
 				inv->invite_tsx->status_code);
 	    inv->invite_tsx = NULL;
+	    if (inv->last_answer) {
+		    pjsip_tx_data_dec_ref(inv->last_answer);
+		    inv->last_answer = NULL;
+	    }
 	}
 
 	/* On receipt of ACK, only set state to confirmed when state
@@ -395,8 +400,13 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
      * terminated, but this didn't work when ACK has the same Via branch
      * value as the INVITE (see http://www.pjsip.org/trac/ticket/113)
      */
-    if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx)
+    if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx) {
         inv->invite_tsx = NULL;
+	if (inv->last_answer) {
+		pjsip_tx_data_dec_ref(inv->last_answer);
+		inv->last_answer = NULL;
+	}
+    }
 }
 
 
@@ -482,6 +492,14 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
 
+#if !PJSIP_HAS_100REL
+    /* options cannot specify 100rel if 100rel is disabled */
+    PJ_ASSERT_RETURN(
+	(options & (PJSIP_INV_REQUIRE_100REL | PJSIP_INV_SUPPORT_100REL))==0,
+	PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_EXTENSION));
+    
+#endif
+
     if (options & PJSIP_INV_REQUIRE_TIMER)
 	options |= PJSIP_INV_SUPPORT_TIMER;
 
@@ -519,6 +537,11 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 
     /* Increment dialog session */
     pjsip_dlg_inc_session(dlg, &mod_inv.mod);
+
+#if PJSIP_HAS_100REL
+    /* Create 100rel handler */
+    pjsip_100rel_attach(inv);
+#endif
 
     /* Done */
     *p_inv = inv;
@@ -829,6 +852,18 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
 	goto on_return;
     }
 
+    /* If remote Require something that we support, make us Require
+     * that feature too.
+     */
+    if (rem_option & PJSIP_INV_REQUIRE_100REL) {
+	    pj_assert(*options & PJSIP_INV_SUPPORT_100REL);
+	    *options |= PJSIP_INV_REQUIRE_100REL;
+    }
+    if (rem_option & PJSIP_INV_REQUIRE_TIMER) {
+	    pj_assert(*options & PJSIP_INV_SUPPORT_TIMER);
+	    *options |= PJSIP_INV_REQUIRE_TIMER;
+    }
+
 on_return:
 
     /* Create response if necessary */
@@ -908,6 +943,14 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
 
+#if !PJSIP_HAS_100REL
+    /* options cannot specify 100rel if 100rel is disabled */
+    PJ_ASSERT_RETURN(
+	(options & (PJSIP_INV_REQUIRE_100REL | PJSIP_INV_SUPPORT_100REL))==0,
+	PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_EXTENSION));
+    
+#endif
+
     if (options & PJSIP_INV_REQUIRE_TIMER)
 	options |= PJSIP_INV_SUPPORT_TIMER;
 
@@ -976,6 +1019,13 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     tsx_inv_data = PJ_POOL_ZALLOC_T(inv->invite_tsx->pool, struct tsx_inv_data);
     tsx_inv_data->inv = inv;
     inv->invite_tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+
+#if PJSIP_HAS_100REL
+    /* Create 100rel handler */
+    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+	    pjsip_100rel_attach(inv);
+    }
+#endif
 
     /* Done */
     pjsip_dlg_dec_lock(dlg);
@@ -1168,7 +1218,15 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     }
 
     /* Add Require header. */
-    PJ_TODO(INVITE_ADD_REQUIRE_HEADER);
+    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+	    const pj_str_t HREQ = { "Require", 7 };
+	    const pj_str_t tag_100rel = { "100rel", 6 };
+	    pjsip_generic_string_hdr *hreq;
+
+	    hreq = pjsip_generic_string_hdr_create(tdata->pool, &HREQ, 
+						   &tag_100rel);
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) hreq);
+    }
 
     /* Done. */
     *p_tdata = tdata;
@@ -1452,6 +1510,12 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 	goto on_return;
     }
 
+    /* Save this answer */
+    inv->last_answer = tdata;
+    pjsip_tx_data_add_ref(inv->last_answer);
+    PJ_LOG(5,(inv->dlg->obj_name, "Initial answer %s",
+	      pjsip_tx_data_get_info(inv->last_answer)));
+
     *p_tdata = tdata;
 
 on_return:
@@ -1479,17 +1543,21 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     /* Must have INVITE transaction. */
     PJ_ASSERT_RETURN(inv->invite_tsx, PJ_EBUG);
 
-    /* INVITE transaction MUST have transmitted a response (e.g. 100) */
-    PJ_ASSERT_RETURN(inv->invite_tsx->last_tx, PJ_EINVALIDOP);
+    /* Must have created an answer before */
+    PJ_ASSERT_RETURN(inv->last_answer, PJ_EINVALIDOP);
 
     pjsip_dlg_inc_lock(inv->dlg);
 
     /* Modify last response. */
-    last_res = inv->invite_tsx->last_tx;
+    last_res = inv->last_answer;
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    /* For non-2xx final response, strip message body */
+    if (st_code >= 300) {
+	last_res->msg->body = NULL;
+    }
 
     /* Process SDP in answer */
     status = process_answer(inv, st_code, last_res, local_sdp);
@@ -1764,7 +1832,15 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 			  && (cseq->cseq == inv->invite_tsx->cseq),
 			 PJ_EINVALIDOP);
 
-	status = pjsip_dlg_send_response(inv->dlg, inv->invite_tsx, tdata);
+#if PJSIP_HAS_100REL
+	if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+		status = pjsip_100rel_tx_response(inv, tdata);
+	} else 
+#endif
+	{
+		status = pjsip_dlg_send_response(inv->dlg, inv->invite_tsx, tdata);
+	}
+
 	if (status != PJ_SUCCESS)
 	    return status;
     }
@@ -2042,6 +2118,10 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		    /* Restart session. */
 		    inv->state = PJSIP_INV_STATE_NULL;
 		    inv->invite_tsx = NULL;
+		    if (inv->last_answer) {
+			pjsip_tx_data_dec_ref(inv->last_answer);
+			inv->last_answer = NULL;
+		    }
 
 		    /* Send the request. */
 		    status = pjsip_inv_send_msg(inv, tdata);

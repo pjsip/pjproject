@@ -65,6 +65,17 @@
 
 
 /**
+ * Specify whether support for reliable provisional response (100rel, PRACK)
+ * should be built in the library.
+ *
+ * Default: 1
+ */
+#ifndef PJSIP_HAS_100REL
+#    define PJSIP_HAS_100REL		1
+#endif
+
+
+/**
  * Specify maximum transaction count in transaction hash table.
  * Default value is 16*1024
  */

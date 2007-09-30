@@ -141,6 +141,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
     cfg->transport_id = PJSUA_INVALID_ID;
     cfg->auto_update_nat = PJ_TRUE;
+    cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
@@ -648,6 +649,11 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_replaces_init_module( pjsua_var.endpt );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+#if PJSIP_HAS_100REL
+    /* Initialize 100rel support */
+    status = pjsip_100rel_init_module(pjsua_var.endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
     /* Initialize and register PJSUA application module. */
     {

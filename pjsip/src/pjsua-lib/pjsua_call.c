@@ -220,9 +220,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(acc_id>=0 || acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc), 
 		     PJ_EINVAL);
 
-    /* Options must be zero for now */
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
-
     /* Check arguments */
     PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
 
@@ -322,8 +319,13 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Create the INVITE session: */
+#if PJSIP_HAS_100REL
+    options |= PJSIP_INV_SUPPORT_100REL;
+#endif
+    if (acc->cfg.require_100rel)
+	options |= PJSIP_INV_REQUIRE_100REL;
 
-    status = pjsip_inv_create_uac( dlg, offer, 0, &inv);
+    status = pjsip_inv_create_uac( dlg, offer, options, &inv);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Invite session creation failed", status);
 	goto on_error;
@@ -557,8 +559,20 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* 
+     * Get which account is most likely to be associated with this incoming
+     * call. We need the account to find which contact URI to put for
+     * the call.
+     */
+    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
     /* Verify that we can handle the request. */
+#if PJSIP_HAS_100REL
+    options |= PJSIP_INV_SUPPORT_100REL;
+#endif
+    if (pjsua_var.acc[acc_id].cfg.require_100rel)
+	options |= PJSIP_INV_REQUIRE_100REL;
+
     status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
 				      pjsua_var.endpt, &response);
     if (status != PJ_SUCCESS) {
@@ -566,7 +580,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/*
 	 * No we can't handle the incoming INVITE request.
 	 */
-
 	if (response) {
 	    pjsip_response_addr res_addr;
 
@@ -586,13 +599,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     } 
 
-
-    /* 
-     * Get which account is most likely to be associated with this incoming
-     * call. We need the account to find which contact URI to put for
-     * the call.
-     */
-    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
     /* Get suitable Contact header */
     status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
@@ -625,7 +631,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /* Create invite session: */
-    status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &inv);
+    status = pjsip_inv_create_uas( dlg, rdata, answer, options, &inv);
     if (status != PJ_SUCCESS) {
 	pjsip_hdr hdr_list;
 	pjsip_warning_hdr *w;

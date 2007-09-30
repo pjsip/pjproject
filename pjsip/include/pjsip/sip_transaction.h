@@ -93,7 +93,7 @@ struct pjsip_transaction
     char			obj_name[PJ_MAX_OBJ_NAME];  /**< Log info.  */
     pjsip_role_e		role;           /**< Role (UAS or UAC)      */
     pjsip_method		method;         /**< The method.            */
-    int				cseq;           /**< The CSeq               */
+    pj_int32_t			cseq;           /**< The CSeq               */
     pj_str_t			transaction_key;/**< Hash table key.        */
     pj_uint32_t			hashed_key;	/**< Key's hashed value.    */
     pj_str_t			branch;         /**< The branch Id.         */
@@ -265,6 +265,24 @@ PJ_DECL(void) pjsip_tsx_recv_msg( pjsip_transaction *tsx,
  */
 PJ_DECL(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx,
 					 pjsip_tx_data *tdata);
+
+
+/**
+ * Manually retransmit the last message transmitted by this transaction,
+ * without updating the transaction state. This function is useful when
+ * TU wants to maintain the retransmision by itself (for example,
+ * retransmitting reliable provisional response).
+ *
+ * @param tsx	    The transaction.
+ * @param tdata     The outgoing message. If NULL is specified, then the
+ *		    last message transmitted (or the message specified 
+ *		    in UAC initialization) will be sent.
+ *
+ *
+ * @return	    PJ_SUCCESS if successful.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
+						   pjsip_tx_data *tdata);
 
 
 /**

@@ -1815,6 +1815,33 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
 
 /*
+ * Manually retransmit the last messagewithout updating the transaction state.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
+						  pjsip_tx_data *tdata)
+{
+    struct tsx_lock_data lck;
+    pj_status_t status;
+
+    lock_tsx(tsx, &lck);
+    if (tdata == NULL) {
+	tdata = tsx->last_tx;
+    }
+    status = tsx_send_msg(tsx, tdata);
+    unlock_tsx(tsx, &lck);
+
+    /* Only decrement reference counter when it returns success.
+     * (This is the specification from the .PDF design document).
+     */
+    if (status == PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+    }
+
+    return status;
+}
+
+
+/*
  * Retransmit last message sent.
  */
 static void tsx_resched_retransmission( pjsip_transaction *tsx )

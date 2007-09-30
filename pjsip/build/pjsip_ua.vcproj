@@ -175,6 +175,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjsip-ua\sip_100rel.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjsip-ua\sip_inv.c"
 				>
 				<FileConfiguration
@@ -269,6 +273,10 @@
 			>
 			<File
 				RelativePath="..\include\pjsip_ua.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjsip-ua\sip_100rel.h"
 				>
 			</File>
 			<File

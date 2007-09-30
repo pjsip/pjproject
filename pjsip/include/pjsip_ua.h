@@ -23,6 +23,7 @@
 #include <pjsip-ua/sip_regc.h>
 #include <pjsip-ua/sip_replaces.h>
 #include <pjsip-ua/sip_xfer.h>
+#include <pjsip-ua/sip_100rel.h>
 
 
 #endif	/* __PJSIP_UA_H__ */

@@ -9,10 +9,10 @@ pjlib.mmp
 pjlib_util.mmp
 pjnath.mmp
 pjsdp.mmp
+null_audio.mmp
+symbian_ua.mmp
 pjmedia.mmp
 pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
-null_audio.mmp
-symbian_ua.mmp

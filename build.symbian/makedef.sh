@@ -2,8 +2,24 @@
 
 MMP=$1
 if test "$MMP" == ""; then
-	echo Usage: makedef.sh FILE.MMP
+	echo "Usage: makedef.sh FILE.MMP"
+	echo "    or makedef.sh all"
 	exit 1
+fi
+
+if test "$MMP" == "all"; then
+	. $0 pjlib.mmp
+	. $0 pjlib_util.mmp
+	. $0 pjnath.mmp
+	. $0 pjmedia.mmp
+	. $0 pjsdp.mmp
+	. $0 pjsip.mmp
+	. $0 pjsip_simple.mmp
+	. $0 pjsip_ua.mmp
+	. $0 pjsua_lib.mmp
+	. $0 symbian_audio.mmp
+	. $0 null_audio.mmp
+	exit 0
 fi
 
 if test -f $MMP; then
@@ -32,6 +48,7 @@ done
 
 echo > tmpnames.def
 
+echo "${TARGET}:"
 
 for file in $SOURCES; do
 	#SYMBOLS=`grep PJ_DEF ${SOURCEPATH}/$file | awk -F ')' '{print $2}' | awk -F '(' '{print $1}' | awk -F '=' '{print $1}' | tr -d '[:blank:]' | sort | uniq`

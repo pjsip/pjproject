@@ -960,6 +960,15 @@ typedef struct pjsua_config
      */
     pj_str_t	    stun_relay_host;
 
+    /**
+     * Specify whether support for reliable provisional response (100rel and
+     * PRACK) should be required by default. Note that this setting can be
+     * further customized in account configuration (#pjsua_acc_config).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    require_100rel;
+
     /** 
      * Number of credentials in the credential array.
      */
@@ -1781,6 +1790,14 @@ typedef struct pjsua_acc_config
      * automatically based on the transport address.
      */
     pj_str_t	    force_contact;
+
+    /**
+     * Specify whether support for reliable provisional response (100rel and
+     * PRACK) should be required for all sessions of this account.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    require_100rel;
 
     /**
      * Number of proxies in the proxy array below.

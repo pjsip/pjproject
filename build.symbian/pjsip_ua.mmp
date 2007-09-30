@@ -35,6 +35,7 @@ SOURCE	sip_inv.c
 SOURCE	sip_reg.c
 SOURCE	sip_replaces.c
 SOURCE	sip_xfer.c
+SOURCE	sip_100rel.c
 
 SYSTEMINCLUDE	..\pjlib\include 
 SYSTEMINCLUDE	..\pjlib-util\include 
