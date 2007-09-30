@@ -199,7 +199,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 				       dlg->local.info->tag.slen);
 
     /* Randomize local CSeq. */
-    dlg->local.first_cseq = pj_rand() & 0x7FFFFFFFL;
+    dlg->local.first_cseq = pj_rand() & 0x7FFF;
     dlg->local.cseq = dlg->local.first_cseq;
 
     /* Init local contact. */
@@ -367,7 +367,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 
 
     /* Randomize local cseq */
-    dlg->local.first_cseq = pj_rand() & 0x7FFFFFFFL;
+    dlg->local.first_cseq = pj_rand() & 0x7FFF;
     dlg->local.cseq = dlg->local.first_cseq;
 
     /* Init local contact. */
