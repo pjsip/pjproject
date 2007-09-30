@@ -36,7 +36,7 @@
 
 #define REFRESH_TIMER		1
 #define DELAY_BEFORE_REFRESH	5
-#define THIS_FILE		"sip_regc.c"
+#define THIS_FILE		"sip_reg.c"
 
 /* Outgoing transaction timeout when server sends 100 but never replies
  * with final response. Value is in MILISECONDS!
