@@ -101,7 +101,6 @@ typedef struct uas_state_t
 {
 	pj_int32_t	 cseq;
 	pj_uint32_t	 rseq;	/* Initialized to -1 */
-	pj_bool_t	 has_sdp;
 	tx_data_list_t	 tx_data_list;
 	unsigned	 retransmit_count;
 	pj_timer_entry	 retransmit_timer;
@@ -615,6 +614,23 @@ static pjsip_tx_data *clone_tdata(dlg_data *dd,
 	return dst;
 }
 
+/* Check if pending response has SDP */
+static pj_bool_t has_sdp(dlg_data *dd)
+{
+	tx_data_list_t *tl;
+
+	tl = dd->uas_state->tx_data_list.next;
+	while (tl != &dd->uas_state->tx_data_list) {
+		if (tl->tdata->msg->body)
+			return PJ_TRUE;
+		tl = tl->next;
+	}
+
+	return PJ_FALSE;
+}
+
+
+/* Send response reliably */
 PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 					     pjsip_tx_data *tdata)
 {
@@ -678,7 +694,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 		responses are acknowledged.
 		*/
 
-		if (dd->uas_state && dd->uas_state->has_sdp) {
+		if (dd->uas_state && has_sdp(dd)) {
 			/* Yes we have transmitted 1xx with SDP reliably.
 			 * In this case, must queue the 2xx response.
 			 */
@@ -820,10 +836,6 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 			status = PJ_SUCCESS;
 		}
 
-		/* Update SDP flag. Need to call this after the response
-		 * is scheduled for transmission.
-		 */
-		dd->uas_state->has_sdp |= (tdata->msg->body != NULL);
 	}
 
 	return status;
