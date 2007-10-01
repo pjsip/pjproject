@@ -478,7 +478,9 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	pjsua_var.med_endpt = NULL;
 
 	/* Deinitialize sound subsystem */
-	pjmedia_snd_deinit();
+	// Not necessary, as pjmedia_snd_deinit() should have been called
+	// in pjmedia_endpt_destroy().
+	//pjmedia_snd_deinit();
     }
 
     /* Reset RTP port */
