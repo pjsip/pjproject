@@ -1310,7 +1310,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(	pjsip_dialog *dlg,
 	pj_list_erase(hdr);
 
     /* Add tag etc. if necessary */
-    dlg_beautify_response(dlg, PJ_FALSE, st_code, tdata);
+    dlg_beautify_response(dlg, st_code/100 <= 2, st_code, tdata);
 
 
     /* Must add reference counter, since tsx_send_msg() will decrement it */
@@ -1518,7 +1518,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      */
     if (!processed && tsx && tsx->status_code < 200) {
 	pjsip_tx_data *tdata;
-	const pj_str_t reason = { "No session found", 16};
+	const pj_str_t reason = { "Unhandled by dialog usages", 26};
 
 	PJ_LOG(4,(tsx->obj_name, "%s was unhandled by "
 				 "dialog usages, sending 500 response",
