@@ -145,7 +145,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
     }
 
     /* Check that offset is less than packet size */
-    if (offset >= pkt_len)
+    if (offset > pkt_len)
 	return PJMEDIA_RTP_EINLEN;
 
     /* Find and set payload. */

@@ -992,6 +992,9 @@ static void on_rx_rtp( void *data,
     if (seq_st.status.flag.bad)
 	return;
 
+    /* Ignore if payloadlen is zero */
+    if (payloadlen == 0)
+        return;
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
      * when RTP session is restarted.
