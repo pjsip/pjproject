@@ -253,6 +253,8 @@ struct pjsip_inv_session
     pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
     pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
     pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
+    pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
+    pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
     void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
 };
 
@@ -561,20 +563,15 @@ PJ_DECL(pj_status_t) pjsip_inv_reinvite(pjsip_inv_session *inv,
 
 
 /**
- * Create an UPDATE request. 
+ * Create an UPDATE request to initiate new SDP offer.
  *
  * @param inv		The invite session.
  * @param new_contact	If application wants to update its local contact
  *			and inform peer to perform target refresh with a new
  *			contact, it can specify the new contact in this 
  *			argument; otherwise this argument must be NULL.
- * @param new_offer	Application MAY initiate a new SDP offer/answer 
- *			session in the request when there is no pending answer
- *			to be sent or received. It can detect this condition
- *			by observing the state of the SDP negotiator of the 
- *			invite session. If new offer should be sent to remote,
- *			the offer must be specified in this argument; otherwise
- *			this argument must be NULL.
+ * @param offer		Offer to be sent to remote. This argument is
+ *			mandatory.
  * @param p_tdata	Pointer to receive the UPDATE request message to
  *			be created.
  *
@@ -584,7 +581,7 @@ PJ_DECL(pj_status_t) pjsip_inv_reinvite(pjsip_inv_session *inv,
  */
 PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 					const pj_str_t *new_contact,
-					const pjmedia_sdp_session *new_offer,
+					const pjmedia_sdp_session *offer,
 					pjsip_tx_data **p_tdata );
 
 

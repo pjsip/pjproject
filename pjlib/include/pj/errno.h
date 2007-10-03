@@ -304,7 +304,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Size is too small.
  */
 #define PJ_ETOOSMALL	    (PJ_ERRNO_START_STATUS + 19)/* 70019 */
-
+/**
+ * @hideinitializer
+ * Ignored
+ */
+#define PJ_EIGNORED	    (PJ_ERRNO_START_STATUS + 20)/* 70020 */
 
 /** @} */   /* pj_errnum */
 

@@ -44,7 +44,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="2"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;PJ_WIN32;PJ_M_I386"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -139,7 +139,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;PJ_WIN32;PJ_M_I386"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -253,6 +253,10 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\test-pjsip\inv_offer_answer_test.c"
+				>
 			</File>
 			<File
 				RelativePath="..\src\test-pjsip\main.c"

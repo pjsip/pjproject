@@ -70,6 +70,7 @@ static const struct
     PJ_BUILD_ERR(PJ_ETOOBIG,	   "Size is too big"),
     PJ_BUILD_ERR(PJ_ERESOLVE,	   "gethostbyname() has returned error"),
     PJ_BUILD_ERR(PJ_ETOOSMALL,	   "Size is too short"),
+    PJ_BUILD_ERR(PJ_EIGNORED,	   "Ignored"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

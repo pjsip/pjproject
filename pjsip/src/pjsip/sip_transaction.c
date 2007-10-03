@@ -904,6 +904,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
 
     pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), 
 		     "tsx%p", tsx);
+    pj_memcpy(pool->obj_name, tsx->obj_name, sizeof(pool->obj_name));
 
     tsx->handle_200resp = 1;
     tsx->retransmit_timer.id = 0;

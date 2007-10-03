@@ -1200,8 +1200,8 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
 	    }
 	}
 
-	/* Add Allow header in 2xx and 405 response. */
-	if (((st_class==2 && dlg->add_allow)
+	/* Add Allow header in 18x, 2xx and 405 response. */
+	if ((((st_code/10==18 || st_class==2) && dlg->add_allow)
 	     || st_code==405) &&
 	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL)==NULL) 
 	{

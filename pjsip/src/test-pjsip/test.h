@@ -39,6 +39,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_MESSAGING_GROUP	    1
 #define INCLUDE_TRANSPORT_GROUP	    1
 #define INCLUDE_TSX_GROUP	    1
+#define INCLUDE_INV_GROUP	    1
 
 /*
  * Include tests that normally would fail under certain gcc
@@ -58,7 +59,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_TCP_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_RESOLVE_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
-
+#define INCLUDE_INV_OA_TEST	INCLUDE_INV_GROUP
 
 
 /* The tests */
@@ -93,6 +94,9 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
 		       char *target_url,
 		       int *pkt_lost);
+
+/* Invite session */
+int inv_offer_answer_test(void);
 
 /* Test main entry */
 int  test_main(void);

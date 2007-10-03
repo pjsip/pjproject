@@ -355,6 +355,10 @@ int test_main(void)
     }
 #endif
 
+#if INCLUDE_INV_OA_TEST
+    DO_TEST(inv_offer_answer_test());
+#endif
+
 
 on_return:
     flush_events(500);

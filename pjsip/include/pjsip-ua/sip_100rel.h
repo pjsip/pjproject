@@ -45,12 +45,7 @@
  *
  * \subsection pjsip_100rel_init Initializing 100rel Module
  *
- * \a PRACK and \a 100rel extension support is built into the library when
- * #PJSIP_HAS_100REL macro is enabled. The default is yes. Application can
- * set this macro to zero if it does not wish to support reliable provisional
- * response extension.
- *
- * Application must also explicitly initialize 100rel module by calling
+ * Application must explicitly initialize 100rel module by calling
  * #pjsip_100rel_init_module() in application initialization function.
  *
  * Once the 100rel module is initialized, it will register \a PRACK method
@@ -59,7 +54,7 @@
  * \subsection pjsip_100rel_sess Using 100rel in a Session
  *
  * For UAC, \a 100rel support will be enabled in the session if \a 100rel
- * support is enabled in the library (with #PJSIP_HAS_100REL macro). 
+ * support is enabled in the library (default is yes). 
  * Outgoing INVITE request will include \a 100rel tag in \a Supported
  * header and \a PRACK method in \a Allow header. When callee endpoint
  * sends reliable provisional responses, the UAC will automatically send
@@ -86,9 +81,7 @@
  * \verbatim
     unsigned options = 0;
 
-#if PJSIP_HAS_100REL
     options |= PJSIP_INV_SUPPORT_100REL;
-#endif
 
     status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
 				      endpt, &resp);
@@ -129,6 +122,20 @@
 
 PJ_BEGIN_DECL
 
+
+/** 
+ * PRACK method constant. 
+ * @see pjsip_get_prack_method() 
+  */
+PJ_DECL_DATA(const pjsip_method) pjsip_prack_method;
+
+
+/** 
+ * Get #pjsip_invite_method constant. 
+ */
+PJ_DECL(const pjsip_method*) pjsip_get_prack_method(void);
+
+
 /**
  * Initialize 100rel module. This function must be called once during
  * application initialization, to register 100rel module to SIP endpoint.
@@ -138,6 +145,7 @@ PJ_BEGIN_DECL
  * @return		PJ_SUCCESS if module is successfully initialized.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
+
 
 /**
  * Add 100rel support to the specified invite session. This function will
@@ -149,6 +157,56 @@ PJ_DECL(pj_status_t) pjsip_100rel_init_module(pjsip_endpoint *endpt);
  * @return		PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
+
+
+/**
+ * Check if incoming response has reliable provisional response feature.
+ *
+ * @param rdata		Receive data buffer containing the response.
+ *
+ * @return		PJ_TRUE if the provisional response is reliable.
+ */
+PJ_DECL(pj_bool_t) pjsip_100rel_is_reliable(pjsip_rx_data *rdata);
+
+
+/**
+ * Create PRACK request for the incoming reliable provisional response.
+ * Note that PRACK request MUST be sent using #pjsip_100rel_send_prack().
+ *
+ * @param inv		The invite session.
+ * @param rdata		The incoming reliable provisional response.
+ * @param p_tdata	Upon return, it will be initialized with the
+ *			PRACK request.
+ *
+ * @return		PJ_SUCCESS on successful.
+ */
+PJ_DECL(pj_status_t) pjsip_100rel_create_prack(pjsip_inv_session *inv,
+					       pjsip_rx_data *rdata,
+					       pjsip_tx_data **p_tdata);
+
+/**
+ * Send PRACK request.
+ *
+ * @param inv		The invite session.
+ * @param tdata		The PRACK request.
+ *
+ * @return		PJ_SUCCESS on successful.
+ */
+PJ_DECL(pj_status_t) pjsip_100rel_send_prack(pjsip_inv_session *inv,
+					     pjsip_tx_data *tdata);
+
+
+/**
+ * Handle incoming PRACK request.
+ *
+ * @param inv		The invite session.
+ * @param rdata		Incoming PRACK request.
+ *
+ * @return		PJ_SUCCESS on successful.
+ */
+PJ_DECL(pj_status_t) pjsip_100rel_on_rx_prack(pjsip_inv_session *inv,
+					      pjsip_rx_data *rdata);
+
 
 /**
  * Transmit INVITE response (provisional or final) reliably according to
@@ -164,6 +222,16 @@ PJ_DECL(pj_status_t) pjsip_100rel_attach(pjsip_inv_session *inv);
  */
 PJ_DECL(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 					      pjsip_tx_data *tdata);
+
+
+/**
+ * Notify 100rel module that the invite session has been disconnected.
+ *
+ * @param inv		The invite session.
+ *
+ * @return		PJ_SUCCESS on successful.
+ */
+PJ_DECL(pj_status_t) pjsip_100rel_end_session(pjsip_inv_session *inv);
 
 
 PJ_END_DECL

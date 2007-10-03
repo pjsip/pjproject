@@ -97,6 +97,10 @@ SOURCE="..\src\test-pjsip\dns_test.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\inv_offer_answer_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\main.c"
 # End Source File
 # Begin Source File

@@ -195,6 +195,8 @@ PJ_DEF(pj_status_t) pjsua_enum_calls( pjsua_call_id ids[],
 }
 
 
+#define LATE_SDP    0
+
 /*
  * Make outgoing call to the specified URI using the specified account.
  */
@@ -312,11 +314,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Create SDP offer */
+#if LATE_SDP
+    offer = NULL;
+#else
     status = pjsua_media_channel_create_sdp(call->index, dlg->pool, &offer);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
     }
+#endif
 
     /* Create the INVITE session: */
 #if PJSIP_HAS_100REL
