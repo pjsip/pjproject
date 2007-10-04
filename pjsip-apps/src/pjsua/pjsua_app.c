@@ -1909,14 +1909,15 @@ static void keystroke_help(void)
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
     puts("|  v  re-inVite (release hold) |  t  ToGgle Online status |  >  Cycle next ac.|");
-    puts("|  ]  Select next dialog       |  T  Set online status    |  <  Cycle prev ac.|");
-    puts("|  [  Select previous dialog   +--------------------------+-------------------+");
+    puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
+    puts("| ],[ Select next/prev call    +--------------------------+-------------------+");
     puts("|  x  Xfer call                |      Media Commands:     |  Status & Config: |");
     puts("|  X  Xfer with Replaces       |                          |                   |");
-    puts("|  #  Send DTMF string         | cl  List ports           |  d  Dump status   |");
-    puts("| dq  Dump curr. call quality  | cc  Connect port         | dd  Dump detailed |");
-    puts("|                              | cd  Disconnect port      | dc  Dump config   |");
-    puts("|  S  Send arbitrary REQUEST   |  V  Adjust audio Volume  |  f  Save config   |");
+    puts("|  #  Send RFC 2833 DTMF       | cl  List ports           |  d  Dump status   |");
+    puts("|  *  Send DTMF with INFO      | cc  Connect port         | dd  Dump detailed |");
+    puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
+    puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
+    puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT                  sleep N: console sleep for N ms                   |");
     puts("+=============================================================================+");
@@ -2185,6 +2186,58 @@ static void change_online_status(void)
     }
 
     pjsua_acc_set_online_status2(current_acc, online_status, &elem);
+}
+
+
+/*
+ * Change codec priorities.
+ */
+static void manage_codec_prio(void)
+{
+    pjsua_codec_info c[32];
+    unsigned i, count = PJ_ARRAY_SIZE(c);
+    char input[32];
+    char *codec, *prio;
+    pj_str_t id;
+    int new_prio;
+    pj_status_t status;
+
+    printf("List of codecs:\n");
+
+    pjsua_enum_codecs(c, &count);
+    for (i=0; i<count; ++i) {
+	printf("  %d\t%.*s\n", c[i].priority, (int)c[i].codec_id.slen,
+			       c[i].codec_id.ptr);
+    }
+
+    puts("");
+    puts("Enter codec name and its new priority (e.g. \"speex/16000 200\"), empty to cancel:");
+
+    printf("Codec name and priority: ");
+    fgets(input, sizeof(input), stdin);
+    if (input[0]=='\r' || input[0]=='\n') {
+	puts("Done");
+	return;
+    }
+
+    codec = strtok(input, " \t\r\n");
+    prio = strtok(NULL, " \r\n");
+
+    if (!codec || !prio) {
+	puts("Invalid input");
+	return;
+    }
+
+    new_prio = atoi(prio);
+    if (new_prio < 0) 
+	new_prio = 0;
+    else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST) 
+	new_prio = PJMEDIA_CODEC_PRIO_HIGHEST;
+
+    status = pjsua_codec_set_priority(pj_cstr(&id, codec), 
+				      (pj_uint8_t)new_prio);
+    if (status != PJ_SUCCESS)
+	pjsua_perror(THIS_FILE, "Error setting codec priority", status);
 }
 
 
@@ -2608,6 +2661,25 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    } else {
 		PJ_LOG(3,(THIS_FILE, "No current call"));
+	    }
+	    break;
+
+	case 'U':
+	    /*
+	     * Send UPDATE
+	     */
+	    if (current_call != -1) {
+		
+		pjsua_call_update(current_call, 0, NULL);
+
+	    } else {
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+	    }
+	    break;
+
+	case 'C':
+	    if (menuin[1] == 'p') {
+		manage_codec_prio();
 	    }
 	    break;
 

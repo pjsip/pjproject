@@ -1282,6 +1282,70 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 
 
 /*
+ * Send UPDATE request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
+				       unsigned options,
+				       const pjsua_msg_data *msg_data)
+{
+    pjmedia_sdp_session *sdp;
+    pjsip_tx_data *tdata;
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(options);
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    status = acquire_call("pjsua_call_update()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	pjsip_dlg_dec_lock(dlg);
+	return PJSIP_ESESSIONSTATE;
+    }
+
+    /* Create SDP */
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
+		     status);
+	pjsip_dlg_dec_lock(dlg);
+	return status;
+    }
+
+    /* Create re-INVITE with new offer */
+    status = pjsip_inv_update(call->inv, NULL, sdp, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create UPDATE request", status);
+	pjsip_dlg_dec_lock(dlg);
+	return status;
+    }
+
+    /* Add additional headers etc */
+    pjsua_process_msg_data( tdata, msg_data);
+
+    /* Send the request */
+    status = pjsip_inv_send_msg( call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send UPDAT Erequest", status);
+	pjsip_dlg_dec_lock(dlg);
+	return status;
+    }
+
+    pjsip_dlg_dec_lock(dlg);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Initiate call transfer to the specified address.
  */
 PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id, 

@@ -2765,6 +2765,19 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 					 pj_bool_t unhold,
 					 const pjsua_msg_data *msg_data);
 
+/**
+ * Send UPDATE request.
+ *
+ * @param call_id	Call identification.
+ * @param options	Must be zero for now.
+ * @param msg_data	Optional message components to be sent with
+ *			the request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
+				       unsigned options,
+				       const pjsua_msg_data *msg_data);
 
 /**
  * Initiate call transfer to the specified address. This function will send
