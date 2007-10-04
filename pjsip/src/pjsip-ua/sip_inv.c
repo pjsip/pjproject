@@ -251,11 +251,11 @@ void inv_set_cause(pjsip_inv_session *inv, int cause_code,
  * Check if outgoing request needs to have SDP answer.
  * This applies for both ACK and PRACK requests.
  */
-static pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
-						   pjsip_transaction *tsx)
+static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
+						         pjsip_transaction *tsx)
 {
     pjmedia_sdp_neg_state neg_state;
-    pjmedia_sdp_session *sdp = NULL;
+    const pjmedia_sdp_session *sdp = NULL;
     pj_status_t status;
 
     /* If SDP negotiator is ready, start negotiation. */
@@ -312,7 +312,7 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
     if (inv->last_ack && rdata->msg_info.cseq->cseq == inv->last_ack_cseq) {
 	pjsip_tx_data_add_ref(inv->last_ack);
     } else {
-	pjmedia_sdp_session *sdp = NULL;
+	const pjmedia_sdp_session *sdp = NULL;
 
 	/* Destroy last_ack */
 	if (inv->last_ack) {
@@ -2193,7 +2193,7 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 	    status = pjsip_dlg_create_response(inv->dlg, rdata, 
 					       PJSIP_SC_OK, NULL, &tdata);
 	    if (status == PJ_SUCCESS) {
-		pjmedia_sdp_session *sdp;
+		const pjmedia_sdp_session *sdp;
 		status = pjmedia_sdp_neg_get_active_local(inv->neg, &sdp);
 		if (status == PJ_SUCCESS)
 		    tdata->msg->body = create_sdp_body(tdata->pool, sdp);
@@ -2263,7 +2263,7 @@ static void inv_handle_incoming_reliable_response(pjsip_inv_session *inv,
 						  pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
-    pjmedia_sdp_session *sdp;
+    const pjmedia_sdp_session *sdp;
     pj_status_t status;
 
     /* Create PRACK */
