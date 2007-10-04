@@ -265,10 +265,10 @@
  * Idle timeout interval to be applied to transports with no usage
  * before the transport is destroyed. Value is in seconds.
  *
- * Default: 60
+ * Default: 600
  */
 #ifndef PJSIP_TRANSPORT_IDLE_TIME
-#   define PJSIP_TRANSPORT_IDLE_TIME	60
+#   define PJSIP_TRANSPORT_IDLE_TIME	600
 #endif
 
 
@@ -294,6 +294,52 @@
  */
 #ifndef PJSIP_TCP_TRANSPORT_BACKLOG
 #   define PJSIP_TCP_TRANSPORT_BACKLOG	5
+#endif
+
+
+/**
+ * Set the interval to send keep-alive packet for TCP transports.
+ * If the value is zero, keep-alive will be disabled for TCP.
+ *
+ * Default: 90 (seconds)
+ *
+ * @see PJSIP_TCP_KEEP_ALIVE_DATA
+ */
+#ifndef PJSIP_TCP_KEEP_ALIVE_INTERVAL
+#   define PJSIP_TCP_KEEP_ALIVE_INTERVAL    90
+#endif
+
+
+/**
+ * Set the payload of the TCP keep-alive packet.
+ *
+ * Default: CRLF
+ */
+#ifndef PJSIP_TCP_KEEP_ALIVE_DATA
+#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n", 2 }
+#endif
+
+
+/**
+ * Set the interval to send keep-alive packet for TLS transports.
+ * If the value is zero, keep-alive will be disabled for TLS.
+ *
+ * Default: 90 (seconds)
+ *
+ * @see PJSIP_TLS_KEEP_ALIVE_DATA
+ */
+#ifndef PJSIP_TLS_KEEP_ALIVE_INTERVAL
+#   define PJSIP_TLS_KEEP_ALIVE_INTERVAL    90
+#endif
+
+
+/**
+ * Set the payload of the TLS keep-alive packet.
+ *
+ * Default: CRLF
+ */
+#ifndef PJSIP_TLS_KEEP_ALIVE_DATA
+#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n", 2 }
 #endif
 
 

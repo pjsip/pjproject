@@ -41,7 +41,6 @@
 #define POOL_TP_INIT	4000
 #define POOL_TP_INC	4002
 
-
 struct tcp_listener;
 struct tcp_transport;
 
@@ -112,6 +111,11 @@ struct tcp_transport
     pj_ioqueue_key_t	    *key;
     pj_bool_t		     has_pending_connect;
 
+    /* Keep-alive timer. */
+    pj_timer_entry	     ka_timer;
+    pj_time_val		     last_activity;
+    pjsip_tx_data_op_key     ka_op_key;
+    pj_str_t		     ka_pkt;
 
     /* TCP transport can only have  one rdata!
      * Otherwise chunks of incoming PDU may be received on different
@@ -476,6 +480,8 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 static void on_connect_complete(pj_ioqueue_key_t *key, 
                                 pj_status_t status);
 
+/* TCP keep-alive timer callback */
+static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 
 /*
  * Common function to create TCP transport, called when pending accept() and
@@ -491,6 +497,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     struct tcp_transport *tcp;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback tcp_callback;
+    const pj_str_t ka_pkt = PJSIP_TCP_KEEP_ALIVE_DATA;
     pj_status_t status;
     
 
@@ -568,6 +575,12 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     }
 
     tcp->is_registered = PJ_TRUE;
+
+    /* Initialize keep-alive timer */
+    tcp->ka_timer.user_data = (void*)tcp;
+    tcp->ka_timer.cb = &tcp_keep_alive_timer;
+    pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
+    pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
     /* Done setting up basic transport. */
     *p_tcp = tcp;
@@ -966,6 +979,16 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 		if (status != PJ_SUCCESS) {
 		    PJ_LOG(3,(tcp->base.obj_name, "New transport cancelled"));
 		    tcp_destroy(&tcp->base, status);
+		} else {
+		    /* Start keep-alive timer */
+		    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+			pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
+			pjsip_endpt_schedule_timer(listener->endpt, 
+						   &tcp->ka_timer, 
+						   &delay);
+			tcp->ka_timer.id = PJ_TRUE;
+			pj_gettimeofday(&tcp->last_activity);
+		    }
 		}
 	    }
 
@@ -1005,6 +1028,10 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     				pj_ioqueue_get_user_data(key);
     pjsip_tx_data_op_key *tdata_op_key = (pjsip_tx_data_op_key*)op_key;
 
+    /* Note that op_key may be the op_key from keep-alive, thus
+     * it will not have tdata etc.
+     */
+
     tdata_op_key->tdata = NULL;
 
     /* Check for error/closure */
@@ -1025,6 +1052,9 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 	 * Notify sip_transport.c that packet has been sent.
 	 */
 	tdata_op_key->callback(&tcp->base, tdata_op_key->token, bytes_sent);
+
+	/* Mark last activity time */
+	pj_gettimeofday(&tcp->last_activity);
     }
 }
 
@@ -1127,14 +1157,17 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 
 /* 
  * This callback is called by transport manager to shutdown transport.
- * This normally is only used by UDP transport.
  */
 static pj_status_t tcp_shutdown(pjsip_transport *transport)
 {
+    struct tcp_transport *tcp = (struct tcp_transport*)transport;
+    
+    /* Stop keep-alive timer. */
+    if (tcp->ka_timer.id) {
+	pjsip_endpt_cancel_timer(tcp->listener->endpt, &tcp->ka_timer);
+	tcp->ka_timer.id = PJ_FALSE;
+    }
 
-    PJ_UNUSED_ARG(transport);
-
-    /* Nothing to do for TCP */
     return PJ_SUCCESS;
 }
 
@@ -1174,6 +1207,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	 */
 	if (bytes_read > 0) {
 	    pj_size_t size_eaten;
+
+	    /* Mark this as an activity */
+	    pj_gettimeofday(&tcp->last_activity);
 
 	    /* Init pkt_info part. */
 	    rdata->pkt_info.len += bytes_read;
@@ -1364,7 +1400,70 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
 
     /* Flush all pending send operations */
     tcp_flush_pending_tx(tcp);
+
+    /* Start keep-alive timer */
+    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+	pj_time_val delay = { PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0 };
+	pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+				   &delay);
+	tcp->ka_timer.id = PJ_TRUE;
+	pj_gettimeofday(&tcp->last_activity);
+    }
 }
+
+/* Transport keep-alive timer callback */
+static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    struct tcp_transport *tcp = (struct tcp_transport*) e->user_data;
+    pj_time_val delay;
+    pj_time_val now;
+    pj_ssize_t size;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    tcp->ka_timer.id = PJ_TRUE;
+
+    pj_gettimeofday(&now);
+    PJ_TIME_VAL_SUB(now, tcp->last_activity);
+
+    if (now.sec > 0 && now.sec < PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+	/* There has been activity, so don't send keep-alive */
+	delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL - now.sec;
+	delay.msec = 0;
+
+	pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+				   &delay);
+	tcp->ka_timer.id = PJ_TRUE;
+	return;
+    }
+
+    PJ_LOG(5,(tcp->base.obj_name, "Sending %d byte(s) keep-alive to %.*s:%d", 
+	      (int)tcp->ka_pkt.slen, (int)tcp->base.remote_name.host.slen,
+	      tcp->base.remote_name.host.ptr,
+	      tcp->base.remote_name.port));
+
+    /* Send the data */
+    size = tcp->ka_pkt.slen;
+    status = pj_ioqueue_send(tcp->key, &tcp->ka_op_key.key,
+			     tcp->ka_pkt.ptr, &size, 0);
+
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	tcp_perror(tcp->base.obj_name, 
+		   "Error sending keep-alive packet", status);
+	pjsip_transport_shutdown(&tcp->base);
+	return;
+    }
+
+    /* Register next keep-alive */
+    delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL;
+    delay.msec = 0;
+
+    pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+			       &delay);
+    tcp->ka_timer.id = PJ_TRUE;
+}
+
 
 #endif	/* PJ_HAS_TCP */
 

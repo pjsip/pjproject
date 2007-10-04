@@ -167,6 +167,10 @@ struct tls_transport
     SSL			    *ssl;
     pj_bool_t		     ssl_shutdown_called;
 
+    /* Keep alive */
+    pj_timer_entry	     ka_timer;
+    pj_time_val		     last_activity;
+
     /* TLS transport can only have  one rdata!
      * Otherwise chunks of incoming PDU may be received on different
      * buffer.
@@ -741,15 +745,16 @@ static pj_status_t ssl_accept(struct tls_transport *tls)
 
 
 /* Send outgoing data with SSL connection */
-static pj_status_t ssl_write(struct tls_transport *tls,
-			     pjsip_tx_data *tdata)
+static pj_status_t ssl_write_bytes(struct tls_transport *tls,
+				   const void *data,
+				   int size,
+				   const char *data_name)
 {
-    int size = tdata->buf.cur - tdata->buf.start;
     int sent = 0;
 
     do {
 	const int fragment_sent = SSL_write(tls->ssl,
-					    tdata->buf.start + sent, 
+					    ((pj_uint8_t*)data) + sent, 
 					    size - sent);
     
 	switch( SSL_get_error(tls->ssl, fragment_sent)) {
@@ -798,7 +803,7 @@ static pj_status_t ssl_write(struct tls_transport *tls,
 	default:
 	    ssl_report_error(tls->base.obj_name, 4, PJ_SUCCESS,
 			     "Error sending %s with SSL_write()",
-			     pjsip_tx_data_get_info(tdata));
+			     data_name);
 	    return pj_get_netos_error() ? pj_get_netos_error() 
 		    : PJSIP_TLS_ESEND;
 	}
@@ -806,6 +811,16 @@ static pj_status_t ssl_write(struct tls_transport *tls,
     } while (sent < size);
 
     return PJ_SUCCESS;
+
+}
+
+/* Send outgoing tdata with SSL connection */
+static pj_status_t ssl_write(struct tls_transport *tls,
+			     pjsip_tx_data *tdata)
+{
+    return ssl_write_bytes(tls, tdata->buf.start, 
+			   tdata->buf.cur - tdata->buf.start,
+			   pjsip_tx_data_get_info(tdata));
 }
 
 
@@ -1161,6 +1176,8 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 static void on_connect_complete(pj_ioqueue_key_t *key, 
                                 pj_status_t status);
 
+/* TLS keep-alive timer callback */
+static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 
 /*
  * Common function to create TLS transport, called when pending accept() and
@@ -1203,7 +1220,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 		     (is_server ? "tlss%p" :"tlsc%p"), tls);
 
     /* Initialize transport reference counter to 1 */
-    status = pj_atomic_create(pool, 1, &tls->base.ref_cnt);
+    status = pj_atomic_create(pool, 0, &tls->base.ref_cnt);
     if (status != PJ_SUCCESS) {
 	goto on_error;
     }
@@ -1272,6 +1289,11 @@ static pj_status_t tls_create( struct tls_listener *listener,
     }
 
     tls->is_registered = PJ_TRUE;
+
+    /* Initialize keep-alive timer */
+    tls->ka_timer.user_data = (void*) tls;
+    tls->ka_timer.cb = &tls_keep_alive_timer;
+
 
     /* Done setting up basic transport. */
     *p_tls = tls;
@@ -1723,6 +1745,17 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 		ssl_report_error(tls->base.obj_name, 4, status,
 				 "Error creating incoming TLS transport");
 		pjsip_transport_shutdown(&tls->base);
+
+	    } else {
+		/* Start keep-alive timer */
+		if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+		    pj_time_val delay = {PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0};
+		    pjsip_endpt_schedule_timer(listener->endpt, 
+					       &tls->ka_timer, 
+					       &delay);
+		    tls->ka_timer.id = PJ_TRUE;
+		    pj_gettimeofday(&tls->last_activity);
+		}
 	    }
 
 	    accept_op = new_op;
@@ -1774,6 +1807,9 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 				     -bytes_sent;
 	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
 	pjsip_transport_shutdown(&tls->base);
+    } else {
+	/* Mark last activity */
+	pj_gettimeofday(&tls->last_activity);
     }
 
     if (tdata_op_key->callback) {
@@ -1918,8 +1954,7 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
 
     /* Shutdown SSL */
     if (!tls->ssl_shutdown_called) {
-	/* Release our reference counter and shutdown SSL */
-	pjsip_transport_dec_ref(transport);
+	/* shutdown SSL */
 	SSL_shutdown(tls->ssl);
 	tls->ssl_shutdown_called = PJ_TRUE;
 
@@ -1968,6 +2003,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	     * We have packet!
 	     */
 	    pj_size_t size_eaten;
+
+	    /* Mark last activity */
+	    pj_gettimeofday(&tls->last_activity);
 
 	    /* Init pkt_info part. */
 	    rdata->pkt_info.zero = 0;
@@ -2216,6 +2254,69 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
 
     /* Flush all pending send operations */
     tls_flush_pending_tx(tls);
+
+    /* Start keep-alive timer */
+    if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+	pj_time_val delay = { PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0 };
+	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+				   &delay);
+	tls->ka_timer.id = PJ_TRUE;
+	pj_gettimeofday(&tls->last_activity);
+    }
+
+}
+
+
+/* Transport keep-alive timer callback */
+static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    struct tls_transport *tls = (struct tls_transport*) e->user_data;
+    const pj_str_t ka_data = PJSIP_TLS_KEEP_ALIVE_DATA;
+    pj_time_val delay;
+    pj_time_val now;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    tls->ka_timer.id = PJ_TRUE;
+
+    pj_gettimeofday(&now);
+    PJ_TIME_VAL_SUB(now, tls->last_activity);
+
+    if (now.sec > 0 && now.sec < PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+	/* There has been activity, so don't send keep-alive */
+	delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL - now.sec;
+	delay.msec = 0;
+
+	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+				   &delay);
+	tls->ka_timer.id = PJ_TRUE;
+	return;
+    }
+
+    PJ_LOG(5,(tls->base.obj_name, "Sending %d byte(s) keep-alive to %.*s:%d", 
+	      (int)ka_data.slen, (int)tls->base.remote_name.host.slen,
+	      tls->base.remote_name.host.ptr,
+	      tls->base.remote_name.port));
+
+    /* Send the data */
+    status = ssl_write_bytes(tls, ka_data.ptr, (int)ka_data.slen, 
+			     "keep-alive");
+    if (status != PJ_SUCCESS && 
+	status != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK))
+    {
+	ssl_report_error(tls->base.obj_name, 1, status,
+			 "Error sending keep-alive packet");
+	return;
+    }
+
+    /* Register next keep-alive */
+    delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL;
+    delay.msec = 0;
+
+    pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+			       &delay);
+    tls->ka_timer.id = PJ_TRUE;
 }
 
 #endif	/* PJSIP_HAS_TLS_TRANSPORT */
