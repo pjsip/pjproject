@@ -44,10 +44,6 @@ typedef struct dlg_data dlg_data;
  */
 static pj_status_t mod_100rel_load(pjsip_endpoint *endpt);
 
-static void handle_incoming_prack(dlg_data *dd, pjsip_transaction *tsx,
-				  pjsip_event *e);
-static void handle_incoming_response(dlg_data *dd, pjsip_transaction *tsx,
-				     pjsip_event *e);
 static void on_retransmit(pj_timer_heap_t *timer_heap,
 			  struct pj_timer_entry *entry);
 
