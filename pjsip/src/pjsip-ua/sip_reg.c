@@ -84,6 +84,11 @@ struct pjsip_regc
 
     /* Transport selector */
     pjsip_tpselector		 tp_sel;
+
+    /* Last transport used. We acquire the transport to keep
+     * it open.
+     */
+    pjsip_transport		*last_transport;
 };
 
 
@@ -133,6 +138,10 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	regc->cb = NULL;
     } else {
 	pjsip_tpselector_dec_ref(&regc->tp_sel);
+	if (regc->last_transport) {
+	    pjsip_transport_dec_ref(regc->last_transport);
+	    regc->last_transport = NULL;
+	}
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 
@@ -608,6 +617,19 @@ static void tsx_callback(void *token, pjsip_event *event)
     /* Decrement pending transaction counter. */
     pj_assert(regc->has_tsx);
     regc->has_tsx = PJ_FALSE;
+
+    /* Add reference to the transport */
+    if (tsx->transport != regc->last_transport) {
+	if (regc->last_transport) {
+	    pjsip_transport_dec_ref(regc->last_transport);
+	    regc->last_transport = NULL;
+	}
+
+	if (tsx->transport) {
+	    regc->last_transport = tsx->transport;
+	    pjsip_transport_add_ref(regc->last_transport);
+	}
+    }
 
     /* Handle 401/407 challenge (even when _delete_flag is set) */
     if (tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED ||
