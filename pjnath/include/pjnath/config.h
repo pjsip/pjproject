@@ -111,7 +111,7 @@
  * Maximum size of STUN message.
  */
 #ifndef PJ_STUN_MAX_PKT_LEN
-#   define PJ_STUN_MAX_PKT_LEN			    512
+#   define PJ_STUN_MAX_PKT_LEN			    800
 #endif
 
 
@@ -128,6 +128,16 @@
  */
 #ifndef PJ_STUN_STRING_ATTR_PAD_CHR
 #   define PJ_STUN_STRING_ATTR_PAD_CHR		    0
+#endif
+
+
+/**
+ * Enable pre-RFC3489bis-07 style of STUN MESSAGE-INTEGRITY and FINGERPRINT
+ * calculation. By default this should be disabled since the calculation is
+ * not backward compatible with current STUN specification.
+ */
+#ifndef PJ_STUN_OLD_STYLE_MI_FINGERPRINT
+#   define PJ_STUN_OLD_STYLE_MI_FINGERPRINT	    0
 #endif
 
 

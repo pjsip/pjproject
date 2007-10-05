@@ -342,6 +342,10 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
     /* Now calculate HMAC of the message. */
     pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key.ptr, key.slen);
 
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
+    /* Pre rfc3489bis-06 style of calculation */
+    pj_hmac_sha1_update(&ctx, pkt, 20);
+#else
     /* First calculate HMAC for the header.
      * The calculation is different depending on whether FINGERPRINT attribute
      * is present in the message.
@@ -354,15 +358,18 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
     } else {
 	pj_hmac_sha1_update(&ctx, pkt, 20);
     }
+#endif	/* PJ_STUN_OLD_STYLE_MI_FINGERPRINT */
 
     /* Now update with the message body */
     pj_hmac_sha1_update(&ctx, pkt+20, amsgi_pos);
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
     // This is no longer necessary as per rfc3489bis-08
-    //if (amsgi_pos & 0x3F) {
-    //	pj_uint8_t zeroes[64];
-    //	pj_bzero(zeroes, sizeof(zeroes));
-    //	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 0x3F));
-    //}
+    if ((amsgi_pos+20) & 0x3F) {
+    	pj_uint8_t zeroes[64];
+    	pj_bzero(zeroes, sizeof(zeroes));
+    	pj_hmac_sha1_update(&ctx, zeroes, 64-((amsgi_pos+20) & 0x3F));
+    }
+#endif
     pj_hmac_sha1_final(&ctx, digest);
 
 
@@ -474,6 +481,10 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
     /* Now calculate HMAC of the message. */
     pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
 
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
+    /* Pre rfc3489bis-06 style of calculation */
+    pj_hmac_sha1_update(&ctx, pkt, 20);
+#else
     /* First calculate HMAC for the header.
      * The calculation is different depending on whether FINGERPRINT attribute
      * is present in the message.
@@ -486,15 +497,18 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_response(const pj_uint8_t *pkt,
     } else {
 	pj_hmac_sha1_update(&ctx, pkt, 20);
     }
+#endif	/* PJ_STUN_OLD_STYLE_MI_FINGERPRINT */
 
     /* Now update with the message body */
     pj_hmac_sha1_update(&ctx, pkt+20, amsgi_pos);
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
     // This is no longer necessary as per rfc3489bis-08
-    //if (amsgi_pos & 0x3F) {
-    //	pj_uint8_t zeroes[64];
-    //	pj_bzero(zeroes, sizeof(zeroes));
-    //	pj_hmac_sha1_update(&ctx, zeroes, 64-(amsgi_pos & 0x3F));
-    //}
+    if ((amsgi_pos+20) & 0x3F) {
+    	pj_uint8_t zeroes[64];
+    	pj_bzero(zeroes, sizeof(zeroes));
+    	pj_hmac_sha1_update(&ctx, zeroes, 64-((amsgi_pos+20) & 0x3F));
+    }
+#endif
     pj_hmac_sha1_final(&ctx, digest);
 
     /* Compare HMACs */

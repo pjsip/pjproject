@@ -560,7 +560,7 @@ static void dump_tx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
     const char *dst_name;
     int dst_port;
     const pj_sockaddr *dst = (const pj_sockaddr*)addr;
-    char buf[512];
+    char buf[800];
     
     if (dst->addr.sa_family == pj_AF_INET()) {
 	dst_name = pj_inet_ntoa(dst->ipv4.sin_addr);

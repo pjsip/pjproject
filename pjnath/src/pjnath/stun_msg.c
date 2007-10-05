@@ -2145,6 +2145,25 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	}
     }
 
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
+    /*
+     * This is the old style MESSAGE-INTEGRITY and FINGERPRINT
+     * calculation, used in rfc3489bis-06 and older.
+     */
+    /* We MUST update the message length in the header NOW before
+     * calculating MESSAGE-INTEGRITY and FINGERPRINT. 
+     * Note that length is not including the 20 bytes header.
+      */
+    if (amsgint && afingerprint) {
+	body_len = (pj_uint16_t)((buf - start) - 20 + 24 + 8);
+    } else if (amsgint) {
+	body_len = (pj_uint16_t)((buf - start) - 20 + 24);
+    } else if (afingerprint) {
+	body_len = (pj_uint16_t)((buf - start) - 20 + 8);
+    } else {
+	body_len = (pj_uint16_t)((buf - start) - 20);
+    }
+#else
     /* If MESSAGE-INTEGRITY is present, include the M-I attribute
      * in message length before calculating M-I
      */
@@ -2153,6 +2172,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
     } else {
 	body_len = (pj_uint16_t)((buf - start) - 20);
     }
+#endif	/* PJ_STUN_OLD_STYLE_MI_FINGERPRINT */
 
     /* hdr->length = pj_htons(length); */
     PUTVAL16H(start, 2, (pj_uint16_t)body_len);
@@ -2187,12 +2207,14 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	 */
 	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
 	pj_hmac_sha1_update(&ctx, (pj_uint8_t*)start, buf-start);
+#if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
 	// These are obsoleted in rfc3489bis-08
-	//if ((buf-start) & 0x3F) {
-	//    pj_uint8_t zeroes[64];
-	//    pj_bzero(zeroes, sizeof(zeroes));
-	//    pj_hmac_sha1_update(&ctx, zeroes, 64-((buf-start) & 0x3F));
-	//}
+	if ((buf-start) & 0x3F) {
+	    pj_uint8_t zeroes[64];
+	    pj_bzero(zeroes, sizeof(zeroes));
+	    pj_hmac_sha1_update(&ctx, zeroes, 64-((buf-start) & 0x3F));
+	}
+#endif	/* PJ_STUN_OLD_STYLE_MI_FINGERPRINT */
 	pj_hmac_sha1_final(&ctx, amsgint->hmac);
 
 	/* Put this attribute in the message */
@@ -2207,9 +2229,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
     /* Calculate FINGERPRINT if present */
     if (afingerprint != NULL) {
+
+#if !PJ_STUN_OLD_STYLE_MI_FINGERPRINT
 	/* Update message length */
 	PUTVAL16H(start, 2, 
 		 (pj_uint16_t)(GETVAL16H(start, 2)+8));
+#endif
 
 	afingerprint->value = pj_crc32_calc(start, buf-start);
 	afingerprint->value ^= STUN_XOR_FINGERPRINT;
