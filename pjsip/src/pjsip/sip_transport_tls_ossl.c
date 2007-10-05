@@ -1397,6 +1397,12 @@ static pj_status_t tls_destroy(pjsip_transport *transport,
     /* Mark transport as closing */
     ++tls->is_closing;
 
+    /* Stop keep-alive timer. */
+    if (tls->ka_timer.id) {
+	pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	tls->ka_timer.id = PJ_FALSE;
+    }
+
     /* Cancel all delayed transmits */
     while (!pj_list_empty(&tls->delayed_list)) {
 	struct delayed_tdata *pending_tx;
@@ -1957,6 +1963,12 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
 	/* shutdown SSL */
 	SSL_shutdown(tls->ssl);
 	tls->ssl_shutdown_called = PJ_TRUE;
+
+	/* Stop keep-alive timer. */
+	if (tls->ka_timer.id) {
+	    pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	    tls->ka_timer.id = PJ_FALSE;
+	}
 
 	PJ_LOG(4,(transport->obj_name, "TLS transport shutdown"));
     }

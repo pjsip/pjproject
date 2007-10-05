@@ -663,6 +663,12 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
     /* Mark transport as closing */
     tcp->is_closing = PJ_TRUE;
 
+    /* Stop keep-alive timer. */
+    if (tcp->ka_timer.id) {
+	pjsip_endpt_cancel_timer(tcp->listener->endpt, &tcp->ka_timer);
+	tcp->ka_timer.id = PJ_FALSE;
+    }
+
     /* Cancel all delayed transmits */
     while (!pj_list_empty(&tcp->delayed_list)) {
 	struct delayed_tdata *pending_tx;
