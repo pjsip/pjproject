@@ -1596,6 +1596,72 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
 
 /*
+ * Handler when a transaction within a call has changed state.
+ */
+static void on_call_tsx_state(pjsua_call_id call_id,
+			      pjsip_transaction *tsx,
+			      pjsip_event *e)
+{
+    const pjsip_method info_method = 
+    {
+	PJSIP_OTHER_METHOD,
+	{ "INFO", 4 }
+    };
+
+    if (pjsip_method_cmp(&tsx->method, &info_method)==0) {
+	/*
+	 * Handle INFO method.
+	 */
+	if (tsx->role == PJSIP_ROLE_UAC && 
+	    (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
+	       tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	       e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)) 
+	{
+	    /* Status of outgoing INFO request */
+	    if (tsx->status_code >= 200 && tsx->status_code < 300) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Call %d: DTMF sent successfully with INFO",
+			  call_id));
+	    } else if (tsx->status_code >= 300) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Call %d: Failed to send DTMF with INFO: %d/%.*s",
+			  call_id,
+		          tsx->status_code,
+			  (int)tsx->status_text.slen,
+			  tsx->status_text.ptr));
+	    }
+	} else if (tsx->role == PJSIP_ROLE_UAS &&
+		   tsx->state == PJSIP_TSX_STATE_TRYING)
+	{
+	    /* Answer incoming INFO with 200/OK */
+	    pjsip_rx_data *rdata;
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
+	    rdata = e->body.tsx_state.src.rdata;
+
+	    if (rdata->msg_info.msg->body) {
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     200, NULL, &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_tsx_send_msg(tsx, tdata);
+
+		PJ_LOG(3,(THIS_FILE, "Call %d: incoming INFO:\n%.*s", 
+			  call_id,
+			  (int)rdata->msg_info.msg->body->len,
+			  rdata->msg_info.msg->body->data));
+	    } else {
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     400, NULL, &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_tsx_send_msg(tsx, tdata);
+	    }
+	}
+    }
+}
+
+
+/*
  * Callback on media state changed event.
  * The action may connect the call to sound device, to file, or
  * to loop the call.
@@ -2862,6 +2928,53 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    }
 	    break;
 
+	case '*':
+	    /* Send DTMF with INFO */
+	    if (current_call == -1) {
+		
+		PJ_LOG(3,(THIS_FILE, "No current call"));
+
+	    } else {
+		const pj_str_t SIP_INFO = pj_str("INFO");
+		pj_str_t digits;
+		int call = current_call;
+		int i;
+		pj_status_t status;
+
+		if (!simple_input("DTMF strings to send (0-9*#A-B)", buf, 
+				  sizeof(buf)))
+		{
+			break;
+		}
+
+		if (call != current_call) {
+		    puts("Call has been disconnected");
+		    continue;
+		}
+
+		digits = pj_str(buf);
+		for (i=0; i<digits.slen; ++i) {
+		    pjsua_msg_data msg_data;
+		    char body[80];
+
+		    pjsua_msg_data_init(&msg_data);
+		    msg_data.content_type = pj_str("application/dtmf-relay");
+		    
+		    pj_ansi_snprintf(body, sizeof(body),
+				     "Signal=%c\r\n"
+				     "Duration=160",
+				     buf[i]);
+		    msg_data.msg_body = pj_str(body);
+
+		    status = pjsua_call_send_request(current_call, &SIP_INFO, 
+						     &msg_data);
+		    if (status != PJ_SUCCESS) {
+			break;
+		    }
+		}
+	    }
+	    break;
+
 	case 'S':
 	    /*
 	     * Send arbitrary request
@@ -3150,6 +3263,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_state = &on_call_state;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
+    app_config.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     app_config.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;

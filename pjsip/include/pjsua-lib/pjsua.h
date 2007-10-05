@@ -545,6 +545,21 @@ typedef struct pjsua_callback
 			     pjsip_rx_data *rdata);
 
     /**
+     * This is a general notification callback which is called whenever
+     * a transaction within the call has changed state. Application can
+     * implement this callback for example to monitor the state of 
+     * outgoing requests, or to answer unhandled incoming requests 
+     * (such as INFO) with a final response.
+     *
+     * @param call_id	Call identification.
+     * @param tsx	The transaction which has changed state.
+     * @param e		Transaction event that caused the state change.
+     */
+    void (*on_call_tsx_state)(pjsua_call_id call_id, 
+			      pjsip_transaction *tsx,
+			      pjsip_event *e);
+
+    /**
      * Notify application when media state in the call has changed.
      * Normal application would need to implement this callback, e.g.
      * to connect the call's media to sound device.
@@ -2905,6 +2920,24 @@ PJ_DECL(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_send_typing_ind(pjsua_call_id call_id, 
 						pj_bool_t is_typing,
 						const pjsua_msg_data*msg_data);
+
+/**
+ * Send arbitrary request with the call. This is useful for example to send
+ * INFO request. Note that application should not use this function to send
+ * requests which would change the invite session's state, such as re-INVITE,
+ * UPDATE, PRACK, and BYE.
+ *
+ * @param call_id	Call identification.
+ * @param method	SIP method of the request.
+ * @param msg_data	Optional message body and/or list of headers to be 
+ *			included in outgoing request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_send_request(pjsua_call_id call_id,
+					     const pj_str_t *method,
+					     const pjsua_msg_data *msg_data);
+
 
 /**
  * Terminate all calls. This will initiate #pjsua_call_hangup() for all

@@ -133,7 +133,8 @@ typedef struct pjsip_inv_callback
     /**
      * This callback is called whenever any transactions within the session
      * has changed their state. Application MAY implement this callback, 
-     * e.g. to monitor the progress of an outgoing request.
+     * e.g. to monitor the progress of an outgoing request, or to send
+     * response to unhandled incoming request (such as INFO).
      *
      * This callback is optional.
      *

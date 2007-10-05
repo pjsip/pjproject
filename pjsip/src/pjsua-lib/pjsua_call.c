@@ -1662,6 +1662,52 @@ on_return:
 
 
 /*
+ * Send arbitrary request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_send_request(pjsua_call_id call_id,
+					    const pj_str_t *method_str,
+					    const pjsua_msg_data *msg_data)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+    pjsip_method method;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    status = acquire_call("pjsua_call_send_request", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Init method */
+    pjsip_method_init_np(&method, (pj_str_t*)method_str);
+
+    /* Create request message. */
+    status = pjsip_dlg_create_request( call->inv->dlg, &method, -1, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create request", status);
+	goto on_return;
+    }
+
+    /* Add additional headers etc */
+    pjsua_process_msg_data( tdata, msg_data);
+
+    /* Send the request. */
+    status = pjsip_dlg_send_request( call->inv->dlg, tdata, -1, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send request", status);
+	goto on_return;
+    }
+
+on_return:
+    pjsip_dlg_dec_lock(dlg);
+    return status;
+}
+
+
+/*
  * Terminate all calls.
  */
 PJ_DEF(void) pjsua_call_hangup_all(void)
@@ -2844,6 +2890,11 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     PJSUA_LOCK();
+
+    /* Notify application callback first */
+    if (pjsua_var.ua_cfg.cb.on_call_tsx_state) {
+	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index, tsx, e);
+    }
 
     if (tsx->role==PJSIP_ROLE_UAS &&
 	tsx->state==PJSIP_TSX_STATE_TRYING &&
