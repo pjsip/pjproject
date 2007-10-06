@@ -196,7 +196,18 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	     * In this case, full resolution must be performed.
 	     * But we don't support it (yet).
 	     */
-	    type = PJSIP_TRANSPORT_UDP;
+#if PJ_HAS_TCP
+	    if (target->flag & PJSIP_TRANSPORT_SECURE) 
+	    {
+		type = PJSIP_TRANSPORT_TLS;
+	    } else if (target->flag & PJSIP_TRANSPORT_RELIABLE) 
+	    {
+		type = PJSIP_TRANSPORT_TCP;
+	    } else 
+#endif
+	    {
+		type = PJSIP_TRANSPORT_UDP;
+	    }
 	}
     }
 
