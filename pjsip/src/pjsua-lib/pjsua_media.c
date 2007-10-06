@@ -22,8 +22,6 @@
 
 #define THIS_FILE		"pjsua_media.c"
 
-#define PTIME		    20
-#define FPS		    (1000/PTIME)
 #define DEFAULT_RTP_PORT    4000
 
 /* Next RTP port to be used */
@@ -155,7 +153,8 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
      * reference.
      */
     pjsua_var.mconf_cfg.samples_per_frame = pjsua_var.media_cfg.clock_rate * 
-					    PTIME / 1000;
+					    pjsua_var.media_cfg.audio_frame_ptime / 
+					    1000;
     pjsua_var.mconf_cfg.channel_count = 1;
     pjsua_var.mconf_cfg.bits_per_sample = 16;
 
@@ -1648,16 +1647,18 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
 	char errmsg[PJ_ERR_MSG_SIZE];
+	unsigned fps;
 
 	PJ_LOG(4,(THIS_FILE, 
 		  "pjsua_set_snd_dev(): attempting to open devices "
 		  "@%d Hz", clock_rates[i]));
 
 	/* Create the sound device. Sound port will start immediately. */
+	fps = 1000 / pjsua_var.media_cfg.audio_frame_ptime;
 	status = pjmedia_snd_port_create(pjsua_var.pool, capture_dev,
 					 playback_dev, 
 					 clock_rates[i], 1,
-					 clock_rates[i]/FPS,
+					 clock_rates[i]/fps,
 					 16, 0, &pjsua_var.snd_port);
 
 	if (status == PJ_SUCCESS) {

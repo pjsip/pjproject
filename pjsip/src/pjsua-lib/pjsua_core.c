@@ -154,6 +154,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->clock_rate = PJSUA_DEFAULT_CLOCK_RATE;
+    cfg->audio_frame_ptime = 10;
     cfg->max_media_ports = 32;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
@@ -1880,8 +1881,11 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pj_ansi_strcpy(url, c_url);
 
     p = pjsip_parse_uri(pool, url, len, 0);
-    if (!p || pj_stricmp2(pjsip_uri_get_scheme(p), "sip") != 0)
+    if (!p || (pj_stricmp2(pjsip_uri_get_scheme(p), "sip") != 0 &&
+	       pj_stricmp2(pjsip_uri_get_scheme(p), "sips") != 0))
+    {
 	p = NULL;
+    }
 
     pj_pool_release(pool);
     return p ? 0 : -1;

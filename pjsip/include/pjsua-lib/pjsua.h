@@ -1744,7 +1744,7 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
  * either "sip" or "sips".
  */
 #ifndef PJSUA_SECURE_SCHEME
-#   define PJSUA_SECURE_SCHEME		"sip"
+#   define PJSUA_SECURE_SCHEME		"sips"
 #endif
 
 
@@ -3466,6 +3466,16 @@ struct pjsua_media_config
     unsigned		clock_rate;
 
     /**
+     * Specify audio frame ptime. The value here will affect the 
+     * samples per frame of both the sound device and the conference
+     * bridge. Specifying lower ptime will normally reduce the
+     * latency.
+     *
+     * Default: 20 (miliseconds)
+     */
+    unsigned		audio_frame_ptime;
+
+    /**
      * Specify maximum number of media ports to be created in the
      * conference bridge. Since all media terminate in the bridge
      * (calls, file player, file recorder, etc), the value must be
@@ -3505,7 +3515,7 @@ struct pjsua_media_config
     unsigned		quality;
 
     /**
-     * Specify default ptime.
+     * Specify default codec ptime.
      *
      * Default: 0 (codec specific)
      */
