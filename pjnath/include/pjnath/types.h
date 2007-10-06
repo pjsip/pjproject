@@ -192,8 +192,8 @@ PJ_END_DECL
  * \subsection PJNATH_ICE_REF Reference
  *
  * References for ICE:
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-15.txt">
- *    <B>draft-ietf-mmusic-ice-15.txt</B></A>: Interactive Connectivity 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-18.txt">
+ *    <B>draft-ietf-mmusic-ice-18.txt</B></A>: Interactive Connectivity 
  *    Establishment (ICE): A Methodology for Network Address Translator 
  *    (NAT) Traversal for Offer/Answer Protocols
  */
