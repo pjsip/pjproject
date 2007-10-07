@@ -117,26 +117,39 @@ PJ_END_DECL
  *
  * The STUN library is organized as follows:
  *
- *  - the lowest layer of the library is \ref PJNATH_STUN_MSG. This layer
- *    provides STUN message representation, validation, parsing, and
- *    debugging (dump to log) of STUN messages.
+ *  - for both client and server, the highest abstraction is
+ *    \ref PJNATH_STUN_SESSION, which provides management of incoming
+ *    and outgoing messages and association of STUN credential to
+ *    a STUN session. 
  *
- *  - for client, the next higher layer is \ref PJNATH_STUN_TRANSACTION,
- *    which manages retransmissions of STUN request.
+ *  - for client, the next layer below is \ref PJNATH_STUN_TRANSACTION,
+ *    which manages retransmissions of STUN request. Server side STUN
+ *    transaction is handled in \ref PJNATH_STUN_SESSION layer above.
  *
  *  - \ref PJNATH_STUN_AUTH provides mechanism to verify STUN
  *    credential in incoming STUN messages.
  *
- *  - for both client and server, the next higher abstraction is
- *    \ref PJNATH_STUN_SESSION, which provides management of incoming
- *    and outgoing messages and association of STUN credential to
- *    a STUN session.
+ *  - the lowest layer of the library is \ref PJNATH_STUN_MSG. This layer
+ *    provides STUN message representation, validation, parsing, 
+ *    encoding MESSAGE-INTEGRITY for outgoing messages, and
+ *    debugging (dump to log) of STUN messages.
  *
- * As mentioned previously, all STUN library components are independent
- * of any transports. Application gives incoming packet
- * to the STUN components for processing. and it must supply the STUN 
- * components with callback to send outgoing messages.
+ * All STUN library components are independent of any transports. 
+ * Application gives incoming packet to the STUN components for processing,
+ * and it must supply the STUN components with callback to send outgoing 
+ * messages.
  * 
+ *
+ * \subsection PJNATH_STUN_USING Using STUN Library
+ *
+ * [The developers guide documentation can certainly be improved here]
+ *
+ * For a sample STUN and TURN client, please see <tt>pjstun-client</tt>
+ * project under <tt>pjnath/src</tt> directory.
+ *
+ * For a sample STUN and TURN server, please see <tt>pjstun-srv-test</tt>
+ * project under <tt>pjnath/src</tt> directory.
+ *
  *
  * \subsection PJNATH_STUN_REF STUN Reference
  *
@@ -170,6 +183,19 @@ PJ_END_DECL
  *
  * The ICE library is organized as follows:
  *
+ *  - the highest abstraction is ICE media transport, which maintains
+ *    ICE stream transport and provides SDP translations to be used
+ *    for SIP offer/answer exchanges. ICE media transport is part
+ *    of PJMEDIA library.
+ *
+ *  - higher in the hierarchy is \ref PJNATH_ICE_STREAM_TRANSPORT,
+ *    which binds ICE with UDP sockets, and provides STUN binding
+ *    and relay/TURN allocation for the sockets. This component can
+ *    be directly used by application, although normally application
+ *    should use the next higher abstraction since it provides
+ *    SDP translations and better integration with other PJ libraries
+ *    such as PJSIP and PJMEDIA.
+ *
  *  - the lowest layer is \ref PJNATH_ICE_SESSION, which provides 
  *    ICE management and negotiation in a transport-independent way.
  *    This layer contains the state machines to perform ICE
@@ -177,17 +203,13 @@ PJ_END_DECL
  *    aspects of ICE session. This layer normally is only usable for
  *    ICE implementors.
  *
- *  - higher in the hierarchy is \ref PJNATH_ICE_STREAM_TRANSPORT,
- *    which binds ICE with UDP sockets, and provides STUN binding
- *    and relay/TURN allocation for the sockets. This component can
- *    be directly used by application, although normally application
- *    should use the next higher abstraction below since it provides
- *    SDP translations and better integration with other PJ libraries
- *    such as PJSIP and PJMEDIA.
+ * \subsection PJNATH_ICE_USING Using the ICE Library
  *
- *  - the highest abstraction is ICE media transport, which maintains
- *    ICE stream transport and provides SDP translations to be used
- *    for SIP offer/answer exchanges.
+ * For ICE implementation that has been integrated with socket transport,
+ * please see \ref PJNATH_ICE_STREAM_TRANSPORT_USING.
+ *
+ * For ICE implementation that has not been integrated with socket
+ * transport, please see \ref pj_ice_sess_using_sec.
  *
  * \subsection PJNATH_ICE_REF Reference
  *

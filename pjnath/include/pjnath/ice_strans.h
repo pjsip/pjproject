@@ -35,7 +35,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJNATH_ICE_STREAM_TRANSPORT ICE Stream Transport
- * @brief Transport for media stream using ICE
+ * @brief Transport for media streams using ICE
  * @ingroup PJNATH_ICE
  * @{
  *
@@ -44,7 +44,7 @@ PJ_BEGIN_DECL
  * library.
  *
  * ICE stream transport, as represented by #pj_ice_strans structure, is an ICE
- * capable component for transporting media within a media stream. 
+ * capable component for transporting media streams within a media session. 
  * It consists of one or more transport sockets (typically two for RTP
  * based communication - one for RTP and one for RTCP), and an 
  * \ref PJNATH_ICE_SESSION for performing connectivity checks among the.
@@ -67,23 +67,48 @@ PJ_BEGIN_DECL
  * Regardless of which usage scenario is being used, the ICE stream
  * transport is capable for restarting the ICE session being used and to
  * send STUN keep-alives for its STUN server reflexive and relayed
- * candidates.
+ * candidates. When ICE stream transport detects that the STUN mapped
+ * address has changed in the keep-alive response, it will automatically
+ * update its address to the new address, and notify the application via
+ * \a on_addr_change() function of the #pj_ice_strans_cb callback.
  *
- * \subsection PJNATH_ICE_ST_TRA_INIT Stream Transport Initialization
+ * \subsection PJNATH_ICE_ST_TRA_INIT Initialization
  *
  * Application creates the ICE stream transport by calling 
- * #pj_ice_strans_create() function.
+ * #pj_ice_strans_create() function. Among other things, application needs
+ * to specify:
+ *	- STUN configuration (pj_stun_config), containing STUN settings
+ *	  such as timeout values and the instances of timer heap and
+ *	  ioqueue.
+ *	- Session name, useful for identifying this session in the log.
+ *	- Number of ICE components.
+ *	- Arbitrary user data, useful when associating the ICE session
+ *	  with some application's data structure.
+ *	- A callback (#pj_ice_strans_cb) to receive events from the ICE
+ *	  stream transport. Two of the most important fields in this
+ *	  callback structure are \a on_rx_data() to notify application
+ *	  about incoming data (perhaps RTP or RTCP packet), and
+ *	  \a on_ice_complete() to notify application that ICE negotiation
+ *	  has completed, either successfully or with failure.
  *
  * After the ICE stream transport is created, application may set up the
  * STUN servers to be used to obtain STUN server reflexive and relayed
  * candidate, by calling #pj_ice_strans_set_stun_domain() or 
- * #pj_ice_strans_set_stun_srv(). Then it has to create each component by
- * calling #pj_ice_strans_create_comp(); this would create an actual socket
+ * #pj_ice_strans_set_stun_srv().
+ *
+ * Application then creates each component by calling 
+ * #pj_ice_strans_create_comp(); this would create an actual socket
  * which listens to the specified local address, and it would also
  * perform lookup to find various transport address candidates for this
  * socket.
+ *
+ * Adding component may involve contacting STUN and TURN servers to get
+ * STUN mapped address and allocate TURN relay channel, and this process
+ * may take some time to complete. Once application has added all
+ * components, it can check whether server reflexive and relayed 
+ * candidates have been acquired, by calling #pj_ice_strans_get_comps_status().
  * 
- * \subsection PJNATH_ICE_ST_TRA_INIT_ICE ICE Session Initialization
+ * \subsection PJNATH_ICE_ST_TRA_INIT_ICE Starting ICE Session
  *
  * When application is about to send an offer containing ICE capability,
  * or when it receives an offer containing ICE capability, it would
@@ -95,12 +120,30 @@ PJ_BEGIN_DECL
  *
  * \subsection PJNATH_ICE_ST_TRA_START Starting Connectivity Checks
  *
- * Once application receives the SDP from remote, it can start ICE
- * connectivity checks by calling #pj_ice_strans_start_ice(), specifying
- * the username, password, and candidates of the remote agent. The ICE
- * session/transport will then notify the application via the callback
- * when ICE connectivity checks completes, either successfully or with
- * failure.
+ * Once application receives the SDP from remote, it pairs local candidates
+ * with remote candidates, and can start ICE connectivity checks. This is
+ * done by calling #pj_ice_strans_start_ice(), specifying
+ * the remote candidate list, and remote username and password. If the
+ * pairing process is successful, ICE connectivity checks will begin
+ * immediately. The ICE session/transport will then notify the application 
+ * via the callback when ICE connectivity checks completes, either 
+ * successfully or with failure.
+ *
+ * \subsection PJNATH_ICE_ST_TRA_SEND_RECV Sending and Receiving Data
+ *
+ * Application can send data (normally RTP or RTCP packets) at any time
+ * by calling #pj_ice_strans_sendto(). This function takes a destination
+ * address as one of the arguments, and this destination address should
+ * be taken from the default transport address of the component (that is
+ * the address in SDP c= and m= lines, or in a=rtcp attribute). 
+ * If ICE negotiation is in progress, this function will send the data 
+ * to the destination address. Otherwise if ICE negotiation has completed
+ * successfully, this function will send the data to the nominated remote 
+ * address, as negotiated by ICE.
+ *
+ * Upon receiving incoming data (that is a non-STUN  message), the ICE
+ * stream transport will notify the application by calling \a on_rx_data()
+ * of the #pj_ice_strans_cb callback.
  *
  * \subsection PJNATH_ICE_ST_TRA_STOP Stopping ICE Session
  *
@@ -108,7 +151,11 @@ PJ_BEGIN_DECL
  * ICE session, so it should call #pj_ice_strans_stop_ice() to destroy the
  * ICE session within this ICE stream transport. Note that this WILL NOT
  * destroy the sockets/transports, it only destroys the ICE session
- * within this ICE stream transport.
+ * within this ICE stream transport. It is recommended that application 
+ * retains the ICE stream transport to speed up the process of setting up
+ * the next call. The ICE stream transport will continue to send STUN 
+ * keep-alive packets to keep the NAT binding open and to detect change 
+ * in STUN mapped address.
  *
  * \subsection PJNATH_ICE_ST_TRA_RESTART Restarting ICE Session
  *
@@ -569,8 +616,8 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
 /**
  * Send outgoing packet using this transport. If ICE checks have not 
  * produced a valid check for the specified component ID, this function 
- * will return with failure. Otherwise it will send the packet to remote
- * destination using the nominated local candidate as have been checked
+ * send to the destination address. Otherwise it will send the packet to
+ * remote destination using the nominated local candidate as have been checked
  * previously.
  *
  * @param ice_st	The ICE stream transport.

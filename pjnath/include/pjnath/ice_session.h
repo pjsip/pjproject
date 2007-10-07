@@ -46,6 +46,8 @@ PJ_BEGIN_DECL
  * This module describes #pj_ice_sess, a transport independent ICE session,
  * part of PJNATH - the Open Source NAT helper library.
  *
+ * \section pj_ice_sess_sec ICE Session
+ *
  * An ICE session, represented by #pj_ice_sess structure, is the lowest 
  * abstraction of ICE in PJNATH, and it is used to perform and manage
  * connectivity checks of transport address candidates <b>within a
@@ -62,6 +64,67 @@ PJ_BEGIN_DECL
  *
  * For higher abstraction of ICE where transport is included, please 
  * see \ref PJNATH_ICE_STREAM_TRANSPORT.
+ *
+ * \subsection pj_ice_sess_using_sec Using The ICE Session
+ *
+ * The steps below describe how to use ICE session. Alternatively application
+ * can use the higher level ICE API, \ref PJNATH_ICE_STREAM_TRANSPORT,
+ * which has provided the integration of ICE with socket transport.
+ *
+ * The steps to use ICE session is similar for both offerer and
+ * answerer:
+ * - create ICE session with #pj_ice_sess_create(). Among other things,
+ *   application needs to specify:
+ *	- STUN configuration (pj_stun_config), containing STUN settings
+ *	  such as timeout values and the instances of timer heap and
+ *	  ioqueue.
+ *	- Session name, useful for identifying this session in the log.
+ *	- Initial ICE role (#pj_ice_sess_role). The role can be changed
+ *	  at later time with #pj_ice_sess_change_role(), and ICE session
+ *	  can also change its role automatically when it detects role
+ *	  conflict.
+ *	- Number of components in the media session.
+ *	- Callback to receive ICE events (#pj_ice_sess_cb)
+ *	- Optional local ICE username and password. If these arguments
+ *	  are NULL, they will be generated randomly.
+ * - Add local candidates for each component, with #pj_ice_sess_add_cand().
+ *   A candidate is represented with #pj_ice_sess_cand structure.
+ *   Each component must be provided with at least one candidate, and
+ *   all components must have the same number of candidates. Failing
+ *   to comply with this will cause failure during pairing process.
+ * - Create offer to describe local ICE candidates. ICE session does not
+ *   provide a function to create such offer, but application should be
+ *   able to create one since it knows about all components and candidates.
+ *   If application uses \ref PJNATH_ICE_STREAM_TRANSPORT, it can
+ *   enumerate local candidates by calling #pj_ice_strans_enum_cands().
+ *   Application may use #pj_ice_sess_find_default_cand() to let ICE
+ *   session chooses the default transport address to be used in SDP
+ *   c= and m= lines.
+ * - Send the offer to remote endpoint using signaling such as SIP.
+ * - Once application has received the answer, it should parse this
+ *   answer, build array of remote candidates, and create check lists by
+ *   calling #pj_ice_sess_create_check_list(). This process is known as
+ *   pairing the candidates, and will result in the creation of check lists.
+ * - Once checklist has been created, application then can call
+ *   #pj_ice_sess_start_check() to instruct ICE session to start
+ *   performing connectivity checks. The ICE session performs the
+ *   connectivity checks by processing each check in the checklists.
+ * - Application will be notified about the result of ICE connectivity
+ *   checks via the callback that was given in #pj_ice_sess_create()
+ *   above.
+ *
+ * To send data, application calls #pj_ice_sess_send_data(). If ICE
+ * negotiation has not completed, ICE session would simply drop the data,
+ * and return error to caller. If ICE negotiation has completed
+ * successfully, ICE session will in turn call the \a on_tx_pkt
+ * callback of #pj_ice_sess_cb instance that was previously registered
+ * in #pj_ice_sess_create() above.
+ *
+ * When application receives any packets on the underlying sockets, it
+ * must call #pj_ice_sess_on_rx_pkt(). The ICE session will inspect the
+ * packet to decide whether to process it locally (if the packet is a
+ * STUN message and is part of ICE session) or otherwise pass it back to
+ * application via \a on_rx_data callback.
  */
 
 /**
