@@ -28,6 +28,8 @@
 
 #define THIS_FILE	"pasound.c"
 
+#define MAX_LATENCY	(PJMEDIA_PASOUND_MAX_LATENCY / 1000.0)
+
 static int snd_init_count;
 
 static struct snd_mgr
@@ -441,6 +443,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
+    if (inputParam.suggestedLatency > MAX_LATENCY)
+	inputParam.suggestedLatency = MAX_LATENCY;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
@@ -536,7 +540,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = 1.0 * samples_per_frame / clock_rate;;
+    outputParam.suggestedLatency = paDevInfo->defaultLowOutputLatency;
+    if (outputParam.suggestedLatency > MAX_LATENCY)
+	outputParam.suggestedLatency = MAX_LATENCY;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
@@ -658,6 +664,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
     inputParam.suggestedLatency = paRecDevInfo->defaultLowInputLatency;
+    if (inputParam.suggestedLatency > MAX_LATENCY)
+	inputParam.suggestedLatency = MAX_LATENCY;
 
     paRecHostApiInfo = Pa_GetHostApiInfo(paRecDevInfo->hostApi);
 
@@ -667,6 +675,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
     outputParam.suggestedLatency = paPlayDevInfo->defaultLowOutputLatency;
+    if (outputParam.suggestedLatency > MAX_LATENCY)
+	outputParam.suggestedLatency = MAX_LATENCY;
 
     paPlayHostApiInfo = Pa_GetHostApiInfo(paPlayDevInfo->hostApi);
 

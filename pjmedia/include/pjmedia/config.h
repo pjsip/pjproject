@@ -75,10 +75,18 @@
 /**
  * Specify whether we prefer to use DirectSound on Windows.
  *
- * Say yes!
+ * Default: 0
  */
 #ifndef PJMEDIA_PREFER_DIRECT_SOUND
-#   define PJMEDIA_PREFER_DIRECT_SOUND	    1
+#   define PJMEDIA_PREFER_DIRECT_SOUND	    0
+#endif
+
+
+/**
+ * Specify PortAudio maximum buffering latency, in milliseconds.
+ */
+#ifndef PJMEDIA_PASOUND_MAX_LATENCY
+#   define PJMEDIA_PASOUND_MAX_LATENCY	    60
 #endif
 
 
