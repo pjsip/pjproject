@@ -267,6 +267,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 				     &worker->src_addr, &worker->src_addr_len);
 	if (status == PJ_EPENDING)
 	    break;
+	else if (status != PJ_SUCCESS)
+	    bytes_read = -status;
     }
 }
 

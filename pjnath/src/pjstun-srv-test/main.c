@@ -115,6 +115,7 @@ int main(int argc, char *argv[])
 
     pj_init();
     pjlib_util_init();
+    pjnath_init();
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
 
     status = pj_stun_server_create(&cp.factory, 1, &srv);

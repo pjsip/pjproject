@@ -1390,7 +1390,7 @@ static void client_on_read_complete(pj_ioqueue_key_t *key,
 	    /* Received data from peer! */
 	    client_handle_peer_data(client, bytes_read);
 
-	} else if (bytes_read < 0) {
+	} else if (bytes_read <= 0) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(-bytes_read, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, "TURN client %s: error reading data "
