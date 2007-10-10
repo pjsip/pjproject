@@ -46,11 +46,14 @@ PJ_BEGIN_DECL
 #define PJSIP_MD5STRLEN 32
 
 
-/** Type of data in the credential information. */
+/** Type of data in the credential information in #pjsip_cred_info. */
 typedef enum pjsip_cred_data_type
 {
-    PJSIP_CRED_DATA_PLAIN_PASSWD,   /**< Plain text password.	*/
-    PJSIP_CRED_DATA_DIGEST	    /**< Hashed digest.		*/
+    PJSIP_CRED_DATA_PLAIN_PASSWD=0, /**< Plain text password.		*/
+    PJSIP_CRED_DATA_DIGEST	=1, /**< Hashed digest.			*/
+
+    PJSIP_CRED_DATA_EXT_AKA	=16 /**< Extended AKA info is available */
+
 } pjsip_cred_data_type;
 
 /** Authentication's quality of protection (qop) type. */
@@ -63,13 +66,43 @@ typedef enum pjsip_auth_qop_type
 } pjsip_auth_qop_type;
 
 
+/**
+ * Type of callback function to create authentication response.
+ * Application can specify this callback in \a cb field of the credential info
+ * (#pjsip_cred_info) and specifying PJSIP_CRED_DATA_DIGEST_CALLBACK as 
+ * \a data_type. When this function is called, most of the fields in the 
+ * \a auth authentication response will have been filled by the framework. 
+ * Application normally should just need to calculate the response digest 
+ * of the authentication response.
+ *
+ * @param pool	    Pool to allocate memory from if application needs to.
+ * @param chal	    The authentication challenge sent by server in 401
+ *		    or 401 response, in either Proxy-Authenticate or
+ *		    WWW-Authenticate header.
+ * @param cred	    The credential that has been selected by the framework
+ *		    to authenticate against the challenge.
+ * @param auth	    The authentication response which application needs to
+ *		    calculate the response digest.
+ *
+ * @return	    Application may return non-PJ_SUCCESS to abort the
+ *		    authentication process. When this happens, the 
+ *		    framework will return failure to the original function
+ *		    that requested authentication.
+ */
+typedef pj_status_t (*pjsip_cred_cb)(pj_pool_t *pool,
+				     const pjsip_digest_challenge *chal,
+				     const pjsip_cred_info *cred,
+				     const pj_str_t *method,
+				     pjsip_digest_credential *auth);
+
+
 /** 
  * This structure describes credential information. 
  * A credential information is a static, persistent information that identifies
  * username and password required to authorize to a specific realm.
  *
  * Note that since PJSIP 0.7.0.1, it is possible to make a credential that is
- * valid for any realms, by setting the realm to star/asterisk character,
+ * valid for any realms, by setting the realm to star/wildcard character,
  * i.e. realm = pj_str("*");.
  */
 struct pjsip_cred_info
@@ -82,6 +115,21 @@ struct pjsip_cred_info
     int		data_type;	/**< Type of data (0 for plaintext passwd). */
     pj_str_t	data;		/**< The data, which can be a plaintext 
 				     password or a hashed digest.	    */
+
+    /** Extended data */
+    union {
+	/** Digest AKA credential information. Note that when AKA credential
+	 *  is being used, the \a data field of this #pjsip_cred_info is
+	 *  not used, but it still must be initialized to an empty string.
+	 */
+	struct {
+	    pj_str_t	  k;	/**< Permanent key.			*/
+	    pj_str_t	  op;	/**< Operator variant key.		*/
+	    pj_str_t	  amf;	/**< Authentication Management Field	*/
+	    pjsip_cred_cb cb;	/**< Callback to create AKA digest.	*/
+	} aka;
+
+    } ext;
 };
 
 /**
@@ -148,6 +196,17 @@ typedef struct pjsip_auth_clt_sess
 
 } pjsip_auth_clt_sess;
 
+
+/**
+ * Duplicate a credential info.
+ *
+ * @param pool	    The memory pool.
+ * @param dst	    Destination credential.
+ * @param src	    Source credential.
+ */
+PJ_DECL(void) pjsip_cred_info_dup(pj_pool_t *pool,
+				  pjsip_cred_info *dst,
+				  const pjsip_cred_info *src);
 
 /**
  * Type of function to lookup credential for the specified name.
@@ -349,21 +408,35 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
 					       pj_bool_t stale,
 					       pjsip_tx_data *tdata);
 
+/**
+ * Helper function to create MD5 digest out of the specified 
+ * parameters.
+ *
+ * @param result	String to store the response digest. This string
+ *			must have been preallocated by caller with the 
+ *			buffer at least PJSIP_MD5STRLEN (32 bytes) in size.
+ * @param nonce		Optional nonce.
+ * @param nc		Nonce count.
+ * @param cnonce	Optional cnonce.
+ * @param qop		Optional qop.
+ * @param uri		URI.
+ * @param realm		Realm.
+ * @param cred_info	Credential info.
+ * @param method	SIP method.
+ */
+PJ_DECL(void) pjsip_auth_create_digest(pj_str_t *result,
+				       const pj_str_t *nonce,
+				       const pj_str_t *nc,
+				       const pj_str_t *cnonce,
+				       const pj_str_t *qop,
+				       const pj_str_t *uri,
+				       const pj_str_t *realm,
+				       const pjsip_cred_info *cred_info,
+				       const pj_str_t *method);
 
 /**
  * @}
  */
-
-/* Internal function defined in sip_auth_client.c */
-void pjsip_auth_create_digest( pj_str_t *result,
-			       const pj_str_t *nonce,
-			       const pj_str_t *nc,
-			       const pj_str_t *cnonce,
-			       const pj_str_t *qop,
-			       const pj_str_t *uri,
-			       const pj_str_t *realm,
-			       const pjsip_cred_info *cred_info,
-			       const pj_str_t *method);
 
 
 

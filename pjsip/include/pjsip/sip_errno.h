@@ -381,6 +381,16 @@ PJ_BEGIN_DECL
  * keeps rejecting our authorization request with stale=true.
  */
 #define PJSIP_EAUTHSTALECOUNT	(PJSIP_ERRNO_START_PJSIP + 111)	/* 171111 */
+/**
+ * @hideinitializer
+ * Invalid nonce value in the challenge.
+ */
+#define PJSIP_EAUTHINNONCE	(PJSIP_ERRNO_START_PJSIP + 112)	/* 171112 */
+/**
+ * @hideinitializer
+ * Invalid AKA credential.
+ */
+#define PJSIP_EAUTHINAKACRED	(PJSIP_ERRNO_START_PJSIP + 113)	/* 171113 */
 
 
 /************************************************************

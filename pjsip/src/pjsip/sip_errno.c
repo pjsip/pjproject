@@ -102,6 +102,8 @@ static const struct
     PJ_BUILD_ERR( PJSIP_EAUTHINVALIDREALM, "Invalid authorization realm"),
     PJ_BUILD_ERR( PJSIP_EAUTHINVALIDDIGEST,"Invalid authorization digest" ),
     PJ_BUILD_ERR( PJSIP_EAUTHSTALECOUNT,   "Maximum number of stale retries exceeded"),
+    PJ_BUILD_ERR( PJSIP_EAUTHINNONCE,	   "Invalid nonce value in authentication challenge"),
+    PJ_BUILD_ERR( PJSIP_EAUTHINAKACRED,	   "Invalid AKA credential"),
 
     /* UA/dialog layer. */
     PJ_BUILD_ERR( PJSIP_EMISSINGTAG,	"Missing From/To tag parameter" ),

@@ -27,6 +27,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "libmilenage"="..\..\..\third_party\build\milenage\libmilenage.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "libportaudio"="..\..\..\THIRD_PARTY\BUILD\PORTAUDIO\libportaudio.vcp" - Package Owner=<4>
 
 Package=<5>
@@ -241,6 +253,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libspeex
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libmilenage
     End Project Dependency
 }}}
 

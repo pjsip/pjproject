@@ -164,6 +164,10 @@ SOURCE=..\src\pjsip\sip_transport_udp.c
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_auth_aka.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_auth_client.c
 # End Source File
 # Begin Source File
@@ -305,6 +309,10 @@ SOURCE=..\include\pjsip\sip_transport_udp.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_auth.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_auth_aka.h
 # End Source File
 # Begin Source File
 

@@ -45,6 +45,7 @@
 
 /* Authentication. */
 #include <pjsip/sip_auth.h>
+#include <pjsip/sip_auth_aka.h>
 
 /* Transaction layer. */
 #include <pjsip/sip_transaction.h>

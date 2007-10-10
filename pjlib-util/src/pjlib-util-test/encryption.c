@@ -465,9 +465,112 @@ static int crc32_test(void)
 }
 
 
+/*
+ * Base64 test vectors (RFC 4648)
+ */
+static struct base64_test_vec
+{
+    const char *base256;
+    const char *base64;
+} base64_test_vec[] = 
+{
+    {
+	"",
+	""
+    },
+    {
+	"f",
+	"Zg=="
+    },
+    {
+	"fo",
+	"Zm8="
+    },
+    {
+	"foo",
+	"Zm9v"
+    },
+    {
+	"foob",
+	"Zm9vYg=="
+    },
+    {
+	"fooba",
+	"Zm9vYmE=",
+    },
+    {
+	"foobar",
+	"Zm9vYmFy"
+    },
+    {
+	"\x14\xfb\x9c\x03\xd9\x7e",
+	"FPucA9l+"
+    },
+    {
+	"\x14\xfb\x9c\x03\xd9",
+	"FPucA9k="
+    },
+    {
+	"\x14\xfb\x9c\x03",
+	"FPucAw=="
+    }
+};
+
+
+static int base64_test(void)
+{
+    unsigned i;
+    char output[80];
+    pj_status_t rc;
+
+    PJ_LOG(3, (THIS_FILE, "  base64 test.."));
+
+    for (i=0; i<PJ_ARRAY_SIZE(base64_test_vec); ++i) {
+	/* Encode test */
+	pj_str_t input;
+	int out_len = sizeof(output);
+
+	rc = pj_base64_encode(base64_test_vec[i].base256, 
+			      strlen(base64_test_vec[i].base256),
+			      output, &out_len);
+	if (rc != PJ_SUCCESS)
+	    return -90;
+
+	if (out_len != strlen(base64_test_vec[i].base64))
+	    return -91;
+
+	output[out_len] = '\0';
+	if (strcmp(output, base64_test_vec[i].base64) != 0)
+	    return -92;
+
+	/* Decode test */
+	out_len = sizeof(output);
+	input.ptr = base64_test_vec[i].base64;
+	input.slen = strlen(base64_test_vec[i].base64);
+	rc = pj_base64_decode(&input, (pj_uint8_t*)output, &out_len);
+	if (rc != PJ_SUCCESS)
+	    return -95;
+
+	if (out_len != strlen(base64_test_vec[i].base256))
+	    return -96;
+
+	output[out_len] = '\0';
+
+	if (strcmp(output, base64_test_vec[i].base256) != 0)
+	    return -97;
+    }
+
+    return 0;
+}
+
+
 int encryption_test()
 {
     int rc;
+
+    rc = base64_test();
+    if (rc != 0)
+	return rc;
 
     rc = sha1_test1();
     if (rc != 0)

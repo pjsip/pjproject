@@ -1,4 +1,3 @@
-DIRS = resample
 DIRS += gsm
 DIRS += ilbc
 DIRS += speex

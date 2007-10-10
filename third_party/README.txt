@@ -15,5 +15,4 @@ speex:		SVN -r12832
 portaudio:	SVN -r1186
 gsm:		gsm-1.0.12
 ilbc:		from RFC
-plc_steveu:	Steve Underwood's PLC
 resample:	lib-resample, I think version 1.7

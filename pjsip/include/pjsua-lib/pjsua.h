@@ -1029,20 +1029,8 @@ typedef struct pjsua_config
 PJ_DECL(void) pjsua_config_default(pjsua_config *cfg);
 
 
-/**
- * Duplicate credential.
- *
- * @param pool	    The memory pool.
- * @param dst	    Destination credential.
- * @param src	    Source credential.
- *
- * \par Python:
- * Not applicable (for now). Probably we could just assign one credential
- * variable to another, but this has not been tested.
- */
-PJ_DECL(void) pjsip_cred_dup( pj_pool_t *pool,
-			      pjsip_cred_info *dst,
-			      const pjsip_cred_info *src);
+/* The implementation has been moved to sip_auth.h */
+#define pjsip_cred_dup	pjsip_cred_info_dup
 
 
 /**

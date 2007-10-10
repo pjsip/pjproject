@@ -81,16 +81,6 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->thread_cnt = 1;
 }
 
-PJ_DEF(void) pjsip_cred_dup( pj_pool_t *pool,
-			     pjsip_cred_info *dst,
-			     const pjsip_cred_info *src)
-{
-    pj_strdup_with_null(pool, &dst->realm, &src->realm);
-    pj_strdup_with_null(pool, &dst->scheme, &src->scheme);
-    pj_strdup_with_null(pool, &dst->username, &src->username);
-    pj_strdup_with_null(pool, &dst->data, &src->data);
-}
-
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
 			      pjsua_config *dst,
 			      const pjsua_config *src)

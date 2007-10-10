@@ -19,6 +19,7 @@
 
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_auth_parser.h>	/* just to get pjsip_DIGEST_STR */
+#include <pjsip/sip_auth_aka.h>
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
@@ -43,6 +44,28 @@
 #  define AUTH_TRACE_(expr)
 #endif
 
+#define PASSWD_MASK	    0x000F
+#define EXT_MASK	    0x00F0
+
+
+PJ_DEF(void) pjsip_cred_info_dup(pj_pool_t *pool,
+				 pjsip_cred_info *dst,
+				 const pjsip_cred_info *src)
+{
+    pj_memcpy(dst, src, sizeof(pjsip_cred_info));
+
+    pj_strdup_with_null(pool, &dst->realm, &src->realm);
+    pj_strdup_with_null(pool, &dst->scheme, &src->scheme);
+    pj_strdup_with_null(pool, &dst->username, &src->username);
+    pj_strdup_with_null(pool, &dst->data, &src->data);
+
+    if ((dst->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+	pj_strdup(pool, &dst->ext.aka.k, &src->ext.aka.k);
+	pj_strdup(pool, &dst->ext.aka.op, &src->ext.aka.op);
+	pj_strdup(pool, &dst->ext.aka.amf, &src->ext.aka.amf);
+    }
+}
+
 
 /* Transform digest to string.
  * output must be at least PJSIP_MD5STRLEN+1 bytes.
@@ -63,15 +86,15 @@ static void digest2str(const unsigned char digest[], char *output)
  * Create response digest based on the parameters and store the
  * digest ASCII in 'result'. 
  */
-void pjsip_auth_create_digest( pj_str_t *result,
-			       const pj_str_t *nonce,
-			       const pj_str_t *nc,
-			       const pj_str_t *cnonce,
-			       const pj_str_t *qop,
-			       const pj_str_t *uri,
-			       const pj_str_t *realm,
-			       const pjsip_cred_info *cred_info,
-			       const pj_str_t *method)
+PJ_DEF(void) pjsip_auth_create_digest( pj_str_t *result,
+				       const pj_str_t *nonce,
+				       const pj_str_t *nc,
+				       const pj_str_t *cnonce,
+				       const pj_str_t *qop,
+				       const pj_str_t *uri,
+				       const pj_str_t *realm,
+				       const pjsip_cred_info *cred_info,
+				       const pj_str_t *method)
 {
     char ha1[PJSIP_MD5STRLEN];
     char ha2[PJSIP_MD5STRLEN];
@@ -82,7 +105,7 @@ void pjsip_auth_create_digest( pj_str_t *result,
 
     AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
 
-    if (cred_info->data_type == PJSIP_CRED_DATA_PLAIN_PASSWD) {
+    if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_PLAIN_PASSWD) {
 	/*** 
 	 *** ha1 = MD5(username ":" realm ":" password) 
 	 ***/
@@ -96,9 +119,11 @@ void pjsip_auth_create_digest( pj_str_t *result,
 
 	digest2str(digest, ha1);
 
-    } else if (cred_info->data_type == PJSIP_CRED_DATA_DIGEST) {
+    } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST) {
 	pj_assert(cred_info->data.slen == 32);
 	pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
+    } else {
+	pj_assert(!"Invalid data_type");
     }
 
     AUTH_TRACE_((THIS_FILE, "  ha1=%.32s", ha1));
@@ -220,9 +245,17 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     if (chal->qop.slen == 0) {
 	/* Server doesn't require quality of protection. */
 
-	/* Convert digest to string and store in chal->response. */
-	pjsip_auth_create_digest( &cred->response, &cred->nonce, NULL, NULL, 
-				  NULL, uri, &chal->realm, cred_info, method);
+	if ((cred_info->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+	    /* Call application callback to create the response digest */
+	    return (*cred_info->ext.aka.cb)(pool, chal, cred_info, 
+					    method, cred);
+	} 
+	else {
+	    /* Convert digest to string and store in chal->response. */
+	    pjsip_auth_create_digest( &cred->response, &cred->nonce, NULL, 
+				      NULL,  NULL, uri, &chal->realm, 
+				      cred_info, method);
+	}
 
     } else if (has_auth_qop(pool, &chal->qop)) {
 	/* Server requires quality of protection. 
@@ -239,9 +272,16 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	    pj_strdup(pool, &cred->cnonce, &dummy_cnonce);
 	}
 
-	pjsip_auth_create_digest( &cred->response, &cred->nonce, &cred->nc, 
-				  cnonce, &pjsip_AUTH_STR, uri, &chal->realm, 
-				  cred_info, method );
+	if ((cred_info->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+	    /* Call application callback to create the response digest */
+	    return (*cred_info->ext.aka.cb)(pool, chal, cred_info, 
+					    method, cred);
+	}
+	else {
+	    pjsip_auth_create_digest( &cred->response, &cred->nonce, 
+				      &cred->nc, cnonce, &pjsip_AUTH_STR, 
+				      uri, &chal->realm, cred_info, method );
+	}
 
     } else {
 	/* Server requires quality protection that we don't support. */
@@ -424,6 +464,35 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 			  pj_pool_alloc(sess->pool, cred_cnt * sizeof(*c));
 	for (i=0; i<cred_cnt; ++i) {
 	    sess->cred_info[i].data_type = c[i].data_type;
+
+	    /* When data_type is PJSIP_CRED_DATA_EXT_AKA, 
+	     * callback must be specified.
+	     */
+	    if ((c[i].data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+		/* Callback must be specified */
+		PJ_ASSERT_RETURN(c[i].ext.aka.cb != NULL, PJ_EINVAL);
+
+		/* Verify K len */
+		PJ_ASSERT_RETURN(c[i].ext.aka.k.slen == PJSIP_AKA_KLEN, 
+				 PJSIP_EAUTHINAKACRED);
+
+		/* Verify OP len */
+		PJ_ASSERT_RETURN(c[i].ext.aka.op.slen == PJSIP_AKA_OPLEN, 
+				 PJSIP_EAUTHINAKACRED);
+
+		/* Verify AMF len */
+		PJ_ASSERT_RETURN(c[i].ext.aka.amf.slen == PJSIP_AKA_AMFLEN,
+				 PJSIP_EAUTHINAKACRED);
+
+		sess->cred_info[i].ext.aka.cb = c[i].ext.aka.cb;
+		pj_strdup(sess->pool, &sess->cred_info[i].ext.aka.k,
+			  &c[i].ext.aka.k);
+		pj_strdup(sess->pool, &sess->cred_info[i].ext.aka.op,
+			  &c[i].ext.aka.op);
+		pj_strdup(sess->pool, &sess->cred_info[i].ext.aka.amf,
+			  &c[i].ext.aka.amf);
+	    }
+
 	    pj_strdup(sess->pool, &sess->cred_info[i].scheme, &c[i].scheme);
 	    pj_strdup(sess->pool, &sess->cred_info[i].realm, &c[i].realm);
 	    pj_strdup(sess->pool, &sess->cred_info[i].username, &c[i].username);
