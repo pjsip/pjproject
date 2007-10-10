@@ -616,6 +616,16 @@
 
 
 /**
+ * Specify support for IMS/3GPP digest AKA authentication.
+ *
+ * Default: 0 (disabled for now)
+ */
+#ifndef PJSIP_HAS_DIGEST_AKAV1_AUTH
+#   define PJSIP_HAS_DIGEST_AKAV1_AUTH	    0
+#endif
+
+
+/**
  * @}
  */
 

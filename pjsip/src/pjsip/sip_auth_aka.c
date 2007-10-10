@@ -25,6 +25,8 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#if PJSIP_HAS_DIGEST_AKAV1_AUTH
+
 #include "../../third_party/milenage/milenage.h"
 
 /*
@@ -118,4 +120,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
     /* Done */
     return PJ_SUCCESS;
 }
+
+
+#endif	/* PJSIP_HAS_DIGEST_AKAV1_AUTH */
 
