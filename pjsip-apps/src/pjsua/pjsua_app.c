@@ -1614,8 +1614,8 @@ static void on_call_tsx_state(pjsua_call_id call_id,
 	 */
 	if (tsx->role == PJSIP_ROLE_UAC && 
 	    (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
-	       tsx->state == PJSIP_TSX_STATE_TERMINATED &&
-	       e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)) 
+	       (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	        e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED))) 
 	{
 	    /* Status of outgoing INFO request */
 	    if (tsx->status_code >= 200 && tsx->status_code < 300) {

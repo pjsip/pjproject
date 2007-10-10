@@ -76,7 +76,7 @@ PJ_DECL(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
  *		    length of the output.
  */
 PJ_DECL(pj_status_t) pj_base64_decode(const pj_str_t *input, 
-				      pj_uint8_t *out, long *out_len);
+				      pj_uint8_t *out, int *out_len);
 
 
 

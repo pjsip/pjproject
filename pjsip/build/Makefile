@@ -39,8 +39,9 @@ export PJSIP_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		sip_errno.o sip_msg.o sip_parser.o sip_tel_uri.o sip_uri.o \
 		sip_endpoint.o sip_util.o sip_util_proxy.o \
 		sip_resolve.o sip_transport.o sip_transport_loop.o \
-		sip_transport_udp.o sip_transport_tcp.o sip_transport_tls_ossl.o \
-		sip_auth_client.o sip_auth_msg.o sip_auth_parser.o \
+		sip_transport_udp.o sip_transport_tcp.o \
+		sip_transport_tls_ossl.o sip_auth_aka.o sip_auth_client.o \
+		sip_auth_msg.o sip_auth_parser.o \
 		sip_auth_server.o \
 		sip_transaction.o sip_util_statefull.o \
 		sip_dialog.o sip_ua_layer.o

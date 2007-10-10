@@ -530,7 +530,7 @@ static int base64_test(void)
 	pj_str_t input;
 	int out_len = sizeof(output);
 
-	rc = pj_base64_encode(base64_test_vec[i].base256, 
+	rc = pj_base64_encode((pj_uint8_t*)base64_test_vec[i].base256, 
 			      strlen(base64_test_vec[i].base256),
 			      output, &out_len);
 	if (rc != PJ_SUCCESS)
@@ -545,7 +545,7 @@ static int base64_test(void)
 
 	/* Decode test */
 	out_len = sizeof(output);
-	input.ptr = base64_test_vec[i].base64;
+	input.ptr = (char*)base64_test_vec[i].base64;
 	input.slen = strlen(base64_test_vec[i].base64);
 	rc = pj_base64_decode(&input, (pj_uint8_t*)output, &out_len);
 	if (rc != PJ_SUCCESS)
