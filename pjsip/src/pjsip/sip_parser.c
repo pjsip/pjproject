@@ -875,21 +875,6 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
     return NULL;
 }
 
-/* Generic function to print message body.
- * This assumes that the 'data' member points to a contigous memory where the 
- * actual body is laid.
- */
-static int generic_print_body (pjsip_msg_body *msg_body, 
-                               char *buf, pj_size_t size)
-{
-    pjsip_msg_body *body = msg_body;
-    if (size < body->len)
-	return 0;
-
-    pj_memcpy (buf, body->data, body->len);
-    return body->len;
-}
-
 /* Internal function to parse SIP message */
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
@@ -1005,7 +990,7 @@ parse_headers:
 
 	    body->data = scanner->curptr;
 	    body->len = scanner->end - scanner->curptr;
-	    body->print_body = &generic_print_body;
+	    body->print_body = &pjsip_print_text_body;
 	    body->clone_data = &pjsip_clone_text_data;
 
 	    msg->body = body;
