@@ -47,7 +47,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
     pj_uint8_t sqn[PJSIP_AKA_AUTNLEN];
     pj_uint8_t xmac[PJSIP_AKA_MACLEN];
     pjsip_cred_info aka_cred;
-    int i;
+    int i, len;
     pj_status_t status;
 
     /* Check the algorithm is supported. */
@@ -63,10 +63,10 @@ PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
     }
 
     /* Decode nonce */
-    nonce_bin.slen = PJ_BASE64_TO_BASE256_LEN(chal->nonce.slen);
+    nonce_bin.slen = len = PJ_BASE64_TO_BASE256_LEN(chal->nonce.slen);
     nonce_bin.ptr = pj_pool_alloc(pool, nonce_bin.slen + 1);
-    status = pj_base64_decode(&chal->nonce, (pj_uint8_t*)nonce_bin.ptr,
-			      &nonce_bin.slen);
+    status = pj_base64_decode(&chal->nonce, (pj_uint8_t*)nonce_bin.ptr, &len);
+    nonce_bin.slen = len;
     if (status != PJ_SUCCESS)
 	return PJSIP_EAUTHINNONCE;
 
