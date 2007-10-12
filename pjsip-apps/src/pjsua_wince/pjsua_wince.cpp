@@ -53,10 +53,10 @@ static HWND	    hwndActionButton, hwndExitButton;
 
 //
 // STUN server
-#if 0
+#if 1
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
-#   define STUN_SERVER	"192.168.0.2"
+#   define STUN_SERVER	"stun.fwdnet.net"
 #elif 0
 	// Use this to have the STUN server resolved with DNS SRV
 #   define STUN_DOMAIN	"iptel.org"
