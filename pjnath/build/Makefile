@@ -30,7 +30,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 #
 export PJNATH_SRCDIR = ../src/pjnath
 export PJNATH_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-		errno.o ice_session.o ice_strans.o stun_auth.o \
+		errno.o ice_session.o ice_strans.o nat_detect.o stun_auth.o \
 		stun_msg.o stun_msg_dump.o stun_session.o stun_transaction.o
 export PJNATH_CFLAGS += $(_CFLAGS)
 

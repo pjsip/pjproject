@@ -40,6 +40,9 @@
 /* Include all PJSIP-SIMPLE headers */
 #include <pjsip_simple.h>
 
+/* Include all PJNATH headers */
+#include <pjnath.h>
+
 /* Include all PJLIB-UTIL headers. */
 #include <pjlib-util.h>
 
@@ -1308,6 +1311,24 @@ PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
  * Utilities.
  *
  */
+
+/**
+ * This is a utility function to detect NAT type in front of this
+ * endpoint. Once invoked successfully, this function will complete 
+ * asynchronously and report the result in the callback.
+ *
+ * @param srv_port	Optional STUN server and port, in "SERVER[:PORT]"
+ *			format. If this option is NULL, the function will use
+ *			the STUN server that has been set in the pjsua
+ *			configuration.
+ * @param user_data	User data to be returned back in the callback.
+ * @param cb		Optional callback to report the detection result.
+ *
+ * @return		PJ_SUCCESS if detection is started successfully.
+ */
+PJ_DECL(pj_status_t) pjsua_detect_nat_type(void *user_data,
+					   pj_stun_nat_detect_cb *cb);
+
 
 /**
  * This is a utility function to verify that valid SIP url is given. If the

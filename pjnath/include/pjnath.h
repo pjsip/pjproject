@@ -21,6 +21,7 @@
 #include <pjnath/errno.h>
 #include <pjnath/ice_session.h>
 #include <pjnath/ice_strans.h>
+#include <pjnath/nat_detect.h>
 #include <pjnath/stun_auth.h>
 #include <pjnath/stun_config.h>
 #include <pjnath/stun_msg.h>

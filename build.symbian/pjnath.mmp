@@ -33,6 +33,7 @@ OPTION		GCC	-x c++
 SOURCE	errno.c
 SOURCE	ice_session.c
 SOURCE	ice_strans.c
+SOURCE	nat_detect.c
 SOURCE	stun_auth.c
 SOURCE	stun_msg.c
 SOURCE	stun_msg_dump.c

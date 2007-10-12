@@ -206,6 +206,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjnath\nat_detect.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjnath\stun_auth.c"
 				>
 				<FileConfiguration
@@ -334,6 +338,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjnath\ice_strans.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\nat_detect.h"
 				>
 			</File>
 			<File

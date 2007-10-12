@@ -49,6 +49,8 @@ static struct global
     pj_sockaddr_in	 relay_addr;
     char		 data_buf[256];
     char		*data;
+    pj_bool_t		 detect;
+    pj_status_t		 detect_result;
 } g;
 
 static struct options
@@ -152,6 +154,7 @@ static int worker_thread(void *unused)
 	int n;
 
 	pj_timer_heap_poll(g.th, NULL);
+	pj_ioqueue_poll(g.stun_config.ioqueue, &timeout);
 
 	PJ_FD_ZERO(&readset);
 	PJ_FD_SET(g.sock, &readset);
@@ -329,6 +332,10 @@ static int init()
 	if (parse_addr(o.peer_addr, &g.peer_addr)!=PJ_SUCCESS)
 	    return -1;
     }
+
+    status = pj_ioqueue_create(g.pool, 16, &g.stun_config.ioqueue);
+    if (status != PJ_SUCCESS)
+	return status;
 
     status = pj_thread_create(g.pool, "stun", &worker_thread, NULL, 
 			      0, 0, &g.thread);
@@ -587,9 +594,42 @@ static void set_peer_addr(void)
 
 }
 
+
+static void nat_detect_cb(void *user_data,
+			  const pj_stun_nat_detect_result *res)
+{
+    g.detect_result = res->status;
+
+    if (res->status == PJ_SUCCESS) {
+	PJ_LOG(3,(THIS_FILE, "NAT successfully detected as %s", res->nat_type_name));
+    } else {
+	PJ_LOG(2,(THIS_FILE, "Error detecting NAT type: %s", res->status_text));
+    }
+}
+
+static pj_status_t perform_detection()
+{
+    pj_status_t status;
+
+    g.detect_result = PJ_EPENDING;
+    status = pj_stun_detect_nat_type(&g.srv_addr, &g.stun_config, NULL, 
+				     &nat_detect_cb);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    while (g.detect_result == PJ_EPENDING)
+	pj_thread_sleep(100);
+
+    status = g.detect_result;
+
+    return status;
+}
+
+
 static void menu(void)
 {
     puts("Menu:");
+    puts("  d       Perform NAT detection");
     printf("  pr      Set peer address (currently %s:%d)\n",
 	   pj_inet_ntoa(g.peer_addr.sin_addr), pj_ntohs(g.peer_addr.sin_port));
     printf("  dt      Set data (currently \"%s\")\n", g.data);
@@ -616,7 +656,9 @@ static void console_main(void)
 
 	fgets(input, sizeof(input), stdin);
 	
-	if (0) {
+	if (input[0] == 'd' && (input[1]=='\r' || input[1]=='\n')) {
+
+	    perform_detection();
 
 	} else if (input[0]=='d' && input[1]=='t') {
 	    printf("Input data: ");
@@ -663,6 +705,7 @@ static void usage(void)
     puts("where TARGET is \"host[:port]\"");
     puts("");
     puts("and OPTIONS:");
+    puts(" --detect, -d      Perform NAT type detection first");
     puts(" --realm, -r       Set realm of the credential");
     puts(" --username, -u    Set username of the credential");
     puts(" --password, -p    Set password of the credential");
@@ -676,6 +719,7 @@ static void usage(void)
 int main(int argc, char *argv[])
 {
     struct pj_getopt_option long_options[] = {
+	{ "detect",	0, 0, 'd'},
 	{ "realm",	1, 0, 'r'},
 	{ "username",	1, 0, 'u'},
 	{ "password",	1, 0, 'p'},
@@ -692,8 +736,11 @@ int main(int argc, char *argv[])
     g.data = g.data_buf;
     pj_ansi_strcpy(g.data, "Hello world");
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hF", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:N:dhF", long_options, &opt_id))!=-1) {
 	switch (c) {
+	case 'd':
+	    g.detect = PJ_TRUE;
+	    break;
 	case 'r':
 	    o.realm = pj_optarg;
 	    break;
@@ -743,6 +790,12 @@ int main(int argc, char *argv[])
     if (status != PJ_SUCCESS)
 	goto on_return;
     
+    if (g.detect) {
+	status = perform_detection();
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+    }
+
     console_main();
 
 on_return:

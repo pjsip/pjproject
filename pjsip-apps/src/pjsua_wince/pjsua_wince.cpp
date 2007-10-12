@@ -56,7 +56,7 @@ static HWND	    hwndActionButton, hwndExitButton;
 #if 0
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
-#   define STUN_SERVER	"stun.fwdnet.net"
+#   define STUN_SERVER	"192.168.0.2"
 #elif 0
 	// Use this to have the STUN server resolved with DNS SRV
 #   define STUN_DOMAIN	"iptel.org"
@@ -515,6 +515,25 @@ static ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
 }
 
 
+/* Callback upon NAT detection completion */
+static void nat_detect_cb(void *user_data,
+			  const pj_stun_nat_detect_result *res)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    if (res->status != PJ_SUCCESS) {
+	char msg[250];
+	pj_ansi_snprintf(msg, sizeof(msg), "NAT detection failed: %s",
+			 res->status_text);
+	SetCallStatus(msg, pj_ansi_strlen(msg));
+    } else {
+	char msg[250];
+	pj_ansi_snprintf(msg, sizeof(msg), "NAT type is %s",
+			 res->nat_type_name);
+	SetCallStatus(msg, pj_ansi_strlen(msg));
+    }
+}
+
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
@@ -548,6 +567,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	CommandBar_Show(hwndCB, TRUE);
 
     SetTimer(hMainWnd, ID_POLL_TIMER, 50, NULL);
+
+    pjsua_detect_nat_type(NULL, &nat_detect_cb);
     return TRUE;
 }
 

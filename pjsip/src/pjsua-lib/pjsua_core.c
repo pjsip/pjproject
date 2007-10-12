@@ -678,6 +678,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
 
     /* Start resolving STUN server */
+
     status = pjsua_resolve_stun_server(PJ_FALSE);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
@@ -938,21 +939,26 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 		port = 3478;
 	    }
 
+	    pjsua_var.stun_status = 
+		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, &str_host, 
+				    (pj_uint16_t)port);
 
-	    pjsua_var.stun_status = pj_gethostbyname(&str_host, &he);
+	    if (pjsua_var.stun_status != PJ_SUCCESS) {
+		pjsua_var.stun_status = pj_gethostbyname(&str_host, &he);
 
-	    if (pjsua_var.stun_status == PJ_SUCCESS) {
-		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
-		pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
-		pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)port);
-
-		PJ_LOG(3,(THIS_FILE, 
-			  "STUN server %.*s resolved, address is %s:%d",
-			  (int)pjsua_var.ua_cfg.stun_host.slen,
-			  pjsua_var.ua_cfg.stun_host.ptr,
-			  pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr),
-			  (int)pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port)));
+		if (pjsua_var.stun_status == PJ_SUCCESS) {
+		    pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
+		    pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
+		    pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)port);
+		}
 	    }
+
+	    PJ_LOG(3,(THIS_FILE, 
+		      "STUN server %.*s resolved, address is %s:%d",
+		      (int)pjsua_var.ua_cfg.stun_host.slen,
+		      pjsua_var.ua_cfg.stun_host.ptr,
+		      pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr),
+		      (int)pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port)));
 
 	}
 	/* Otherwise disable STUN. */
@@ -1849,6 +1855,31 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
 	sel->type = PJSIP_TPSELECTOR_LISTENER;
 	sel->u.listener = tpdata->data.factory;
     }
+}
+
+
+/*
+ * Detect NAT type.
+ */
+PJ_DEF(pj_status_t) pjsua_detect_nat_type( void *user_data,
+					   pj_stun_nat_detect_cb *cb)
+{
+    pj_status_t status;
+
+    /* Make sure STUN server resolution has completed */
+    status = pjsua_resolve_stun_server(PJ_TRUE);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    /* Make sure we have STUN */
+    if (pjsua_var.stun_srv.ipv4.sin_family == 0) {
+	return PJ_EINVALIDOP;
+    }
+
+    return pj_stun_detect_nat_type(&pjsua_var.stun_srv.ipv4, 
+				   &pjsua_var.stun_cfg, 
+				   user_data, cb);
 }
 
 
