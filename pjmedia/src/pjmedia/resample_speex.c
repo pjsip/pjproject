@@ -22,7 +22,7 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
-#if defined(PJMEDIA_HAS_SPEEX_RESAMPLE) && PJMEDIA_HAS_SPEEX_RESAMPLE != 0
+#if PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_SPEEX
 
 #include <speex/speex_resampler.h>
 
@@ -118,9 +118,9 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
     }
 }
 
-#else /* PJMEDIA_HAS_SPEEX_RESAMPLE */
+#else /* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_SPEEX */
 
 int pjmedia_resample_speex_excluded;
 
-#endif	/* PJMEDIA_HAS_SPEEX_RESAMPLE */
+#endif	/* PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_SPEEX */
 

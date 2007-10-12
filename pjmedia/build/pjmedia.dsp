@@ -181,6 +181,10 @@ SOURCE=..\src\pjmedia\port.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\resample_libsamplerate.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\resample_port.c
 # End Source File
 # Begin Source File

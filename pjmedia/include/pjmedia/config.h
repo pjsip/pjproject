@@ -127,54 +127,86 @@
 
 
 /*
- * **   THIS MACRO IS DEPRECATED in 0.6.   **
- * ** See libresample for configuring this **
+ * Warn about obsolete macros.
  *
- * Include small filter table in resample.
- * This adds about 9KB in rdata.
+ * PJMEDIA_HAS_SMALL_FILTER has been deprecated in 0.7.
  */
-/*
-#ifndef PJMEDIA_HAS_SMALL_FILTER
-#   define PJMEDIA_HAS_SMALL_FILTER	    1
+#if defined(PJMEDIA_HAS_SMALL_FILTER)
+#   ifdef _MSC_VER
+#	pragma message("Warning: PJMEDIA_HAS_SMALL_FILTER macro is deprecated"\
+		       " and has no effect")
+#   else
+#	warning "PJMEDIA_HAS_SMALL_FILTER macro is deprecated and has no effect"
+#   endif
 #endif
-*/
+
 
 /*
- * **   THIS MACRO IS DEPRECATED in 0.6.   **
- * ** See libresample for configuring this **
+ * Warn about obsolete macros.
  *
- * Include large filter table in resample.
- * This adds about 32KB in rdata.
+ * PJMEDIA_HAS_LARGE_FILTER has been deprecated in 0.7.
  */
-/*
-#ifndef PJMEDIA_HAS_LARGE_FILTER
-#   define PJMEDIA_HAS_LARGE_FILTER	    1
+#if defined(PJMEDIA_HAS_LARGE_FILTER)
+#   ifdef _MSC_VER
+#	pragma message("Warning: PJMEDIA_HAS_LARGE_FILTER macro is deprecated"\
+		       " and has no effect")
+#   else
+#	warning "PJMEDIA_HAS_LARGE_FILTER macro is deprecated"
+#   endif
 #endif
-*/
+
+
+/*
+ * These macros are obsolete in 0.7.1 so it will trigger compilation error.
+ * Please use PJMEDIA_RESAMPLE_IMP to select the resample implementation
+ * to use.
+ */
+#ifdef PJMEDIA_HAS_LIBRESAMPLE
+#   error "PJMEDIA_HAS_LIBRESAMPLE macro is deprecated. Use '#define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBRESAMPLE'"
+#endif
+
+#ifdef PJMEDIA_HAS_SPEEX_RESAMPLE
+#   error "PJMEDIA_HAS_SPEEX_RESAMPLE macro is deprecated. Use '#define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_SPEEX'"
+#endif
+
+
+/*
+ * Sample rate conversion backends.
+ * Select one of these backends in PJMEDIA_RESAMPLE_IMP.
+ */
+#define PJMEDIA_RESAMPLE_NONE		    1	/**< No resampling.	    */
+#define PJMEDIA_RESAMPLE_LIBRESAMPLE	    2	/**< Sample rate conversion 
+						     using libresample.  */
+#define PJMEDIA_RESAMPLE_SPEEX		    3	/**< Sample rate conversion 
+						     using Speex. */
+#define PJMEDIA_RESAMPLE_LIBSAMPLERATE	    4	/**< Sample rate conversion 
+						     using libsamplerate 
+						     (a.k.a Secret Rabbit Code)
+						 */
 
 /**
- * Specify whether libresample should be used for the sampling
- * rate conversion. This macro and PJMEDIA_HAS_SPEEX_RESAMPLE
- * are mutually exclusive. 
+ * Select which resample implementation to use. Currently pjmedia supports:
+ *  - #PJMEDIA_RESAMPLE_LIBRESAMPLE, to use libresample-1.7, this is the default
+ *    implementation to be used.
+ *  - #PJMEDIA_RESAMPLE_LIBSAMPLERATE, to use libsamplerate implementation
+ *    (a.k.a. Secret Rabbit Code).
+ *  - #PJMEDIA_RESAMPLE_SPEEX, to use experimental sample rate conversion in
+ *    Speex library.
+ *  - #PJMEDIA_RESAMPLE_NONE, to disable sample rate conversion. Any calls to
+ *    resample function will return error.
  *
- * Default: 1 (Yes)
+ * Default is PJMEDIA_RESAMPLE_LIBRESAMPLE
  */
-#ifndef PJMEDIA_HAS_LIBRESAMPLE
-#   define PJMEDIA_HAS_LIBRESAMPLE	    1
+#ifndef PJMEDIA_RESAMPLE_IMP
+#   define PJMEDIA_RESAMPLE_IMP		    PJMEDIA_RESAMPLE_LIBRESAMPLE
 #endif
 
 
 /**
- * Specify whether Speex sample rate convertor should be used for the
- * sampling rate conversion. This macro and PJMEDIA_HAS_LIBRESAMPLE
- * are mutually exclusive.
- *
- * Default: 0
+ * Specify whether libsamplerate, when used, should be linked statically
+ * into the application. This option is only useful for Visual Studio
+ * projects, and when this static linking is enabled
  */
-#ifndef PJMEDIA_HAS_SPEEX_RESAMPLE
-#   define PJMEDIA_HAS_SPEEX_RESAMPLE	    0
-#endif
-
 
 
 /**

@@ -25,7 +25,7 @@
 #include <pj/pool.h>
 
 
-#if defined(PJMEDIA_HAS_LIBRESAMPLE) && PJMEDIA_HAS_LIBRESAMPLE != 0
+#if PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_LIBRESAMPLE
 
 #include <third_party/resample/include/resamplesubs.h>
 
@@ -215,16 +215,11 @@ PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
 }
 
 
-#else /* PJMEDIA_HAS_LIBRESAMPLE */
+#elif PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_NONE
 
 /*
  * This is the configuration when sample rate conversion is disabled.
  */
-struct pjmedia_resample
-{
-	unsigned samples_per_frame;
-};
-
 PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 					     pj_bool_t high_quality,
 					     pj_bool_t large_filter,
@@ -234,40 +229,37 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 					     unsigned samples_per_frame,
 					     pjmedia_resample **p_resample) 
 {
-	pjmedia_resample *resample;
-	
-	PJ_ASSERT_RETURN(rate_in == rate_out, PJ_EINVALIDOP);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(high_quality);
+    PJ_UNUSED_ARG(large_filter);
+    PJ_UNUSED_ARG(channel_count);
+    PJ_UNUSED_ARG(rate_in);
+    PJ_UNUSED_ARG(rate_out);
+    PJ_UNUSED_ARG(samples_per_frame);
+    PJ_UNUSED_ARG(p_resample);
 
-	PJ_UNUSED_ARG(high_quality);
-	PJ_UNUSED_ARG(large_filter);
-	PJ_UNUSED_ARG(channel_count);
-	PJ_UNUSED_ARG(rate_in);
-	PJ_UNUSED_ARG(rate_out);
-		
-	resample = PJ_POOL_ZALLOC_T(pool, pjmedia_resample);
-	resample->samples_per_frame = samples_per_frame;
-	
-	*p_resample = resample;
-	
-	return PJ_SUCCESS;
+    return PJ_EINVALIDOP;
 }
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 				   const pj_int16_t *input,
 				   pj_int16_t *output ) 
 {
-	pjmedia_copy_samples(output, input, resample->samples_per_frame);
+    PJ_UNUSED_ARG(resample);
+    PJ_UNUSED_ARG(input);
+    PJ_UNUSED_ARG(output);
 }
 
 PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample) 
 {
-	return resample->samples_per_frame;
+    PJ_UNUSED_ARG(resample);
+    return 0;
 }
 
 PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample) 
 {
-	PJ_UNUSED_ARG(resample);
+    PJ_UNUSED_ARG(resample);
 }
 
-#endif	/* PJMEDIA_HAS_LIBRESAMPLE */
+#endif	/* PJMEDIA_RESAMPLE_IMP */
 
