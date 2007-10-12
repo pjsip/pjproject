@@ -41,8 +41,11 @@ static const char *nat_type_names[] =
 };
 
 
-#define CHANGE_PORT	    (0x01 << 30)
-#define CHANGE_ADDR_PORT    (0x03 << 29)
+//#define CHANGE_PORT	    (0x01 << 30)
+//#define CHANGE_ADDR_PORT    (0x03 << 29)
+//#define CHANGE_ADDR_PORT	0xFFFFFFFFU
+#define CHANGE_PORT		2
+#define CHANGE_ADDR_PORT	6
 
 
 enum state
