@@ -126,6 +126,7 @@ static pj_status_t create_tdata(pj_stun_session *sess,
 
 static pj_status_t create_request_tdata(pj_stun_session *sess,
 					unsigned msg_type,
+					pj_uint32_t magic,
 					const pj_uint8_t tsx_id[12],
 					pj_stun_tx_data **p_tdata)
 {
@@ -137,7 +138,7 @@ static pj_status_t create_request_tdata(pj_stun_session *sess,
 	return status;
 
     /* Create STUN message */
-    status = pj_stun_msg_create(tdata->pool, msg_type,  PJ_STUN_MAGIC, 
+    status = pj_stun_msg_create(tdata->pool, msg_type,  magic, 
 				tsx_id, &tdata->msg);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(tdata->pool);
@@ -476,6 +477,7 @@ PJ_DEF(void) pj_stun_session_set_credential(pj_stun_session *sess,
 
 PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 					       int method,
+					       pj_uint32_t magic,
 					       const pj_uint8_t tsx_id[12],
 					       pj_stun_tx_data **p_tdata)
 {
@@ -484,7 +486,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && p_tdata, PJ_EINVAL);
 
-    status = create_request_tdata(sess, method, tsx_id, &tdata);
+    status = create_request_tdata(sess, method, magic, tsx_id, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 

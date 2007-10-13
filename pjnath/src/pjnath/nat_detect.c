@@ -54,6 +54,14 @@ enum state
     ST_TEST_3
 };
 
+static const char *test_names[] =
+{
+    "Test I: Binding request",
+    "Test II: Binding request with change address and port request",
+    "Test IB: Binding request to alternate address",
+    "Test III: Binding request with change port request"
+};
+
 typedef struct nat_detect_session
 {
     pj_pool_t		    *pool;
@@ -308,25 +316,29 @@ static pj_status_t start_test(nat_detect_session *sess,
 
     /* Create BIND request */
     status = pj_stun_session_create_req(sess->stun_sess, 
-					PJ_STUN_BINDING_REQUEST,
+					PJ_STUN_BINDING_REQUEST, 0x83224,
 					NULL, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add CHANGE-REQUEST attribute if necessary */
-    if (change_flag) {
-	status = pj_stun_msg_add_uint_attr(sess->pool, tdata->msg,
-					   PJ_STUN_ATTR_CHANGE_REQUEST,
-					   change_flag);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
+    /* Add CHANGE-REQUEST attribute */
+    status = pj_stun_msg_add_uint_attr(sess->pool, tdata->msg,
+				       PJ_STUN_ATTR_CHANGE_REQUEST,
+				       change_flag);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Configure alternate address */
     if (alt_addr)
 	sess->cur_server = (pj_sockaddr_in*) alt_addr;
     else
 	sess->cur_server = &sess->server;
+
+    PJ_LOG(5,(sess->pool->obj_name, 
+              "Performing %s to %s:%d", 
+	      test_names[state],
+	      pj_inet_ntoa(sess->cur_server->sin_addr),
+	      pj_ntohs(sess->cur_server->sin_port)));
 
     /* Send the request */
     status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
@@ -561,12 +573,12 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		      sizeof(pj_sockaddr_in));
 
 	    /* Compare mapped address with local address */
-	    sess->test1_same_ip = (pj_memcmp(&sess->local_addr, &mattr->sockaddr,
-					     sizeof(pj_sockaddr_in))==0);
+	    sess->test1_same_ip=(pj_memcmp(&sess->local_addr, &mattr->sockaddr,
+					   sizeof(pj_sockaddr_in))==0);
 	    
 	    /* Execute test 2:
-	     *  Send BINDING_REQUEST with both the "change IP" and "change port" 
-	     *  flags from the CHANGE-REQUEST attribute set
+	     * Send BINDING_REQUEST with both the "change IP" and "change port" 
+	     * flags from the CHANGE-REQUEST attribute set
 	     */
 	    start_test(sess, ST_TEST_2, NULL, CHANGE_ADDR_PORT);
 
@@ -662,3 +674,4 @@ static void on_timer_destroy(pj_timer_heap_t *th,
 
     sess_destroy(sess);
 }
+

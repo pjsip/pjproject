@@ -1376,7 +1376,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
-					PJ_STUN_BINDING_REQUEST, 
+					PJ_STUN_BINDING_REQUEST, PJ_STUN_MAGIC,
 					NULL, &check->tdata);
     if (status != PJ_SUCCESS) {
 	pjnath_perror(ice->obj_name, "Error creating STUN request", status);

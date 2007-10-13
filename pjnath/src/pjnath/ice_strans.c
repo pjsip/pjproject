@@ -577,6 +577,7 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	/* Create STUN binding request */
 	status = pj_stun_session_create_req(comp->stun_sess,
 					    PJ_STUN_BINDING_REQUEST, 
+					    PJ_STUN_MAGIC,
 					    comp->ka_tsx_id, &tdata);
 	if (status != PJ_SUCCESS)
 	    continue;
@@ -678,6 +679,7 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
     /* Create STUN binding request */
     status = pj_stun_session_create_req(comp->stun_sess, 
 					PJ_STUN_BINDING_REQUEST, 
+					PJ_STUN_MAGIC,
 					comp->ka_tsx_id, 
 					&tdata);
     if (status != PJ_SUCCESS)

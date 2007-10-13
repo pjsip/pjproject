@@ -375,7 +375,7 @@ static void send_bind_request(void)
     pj_status_t rc;
 
     rc = pj_stun_session_create_req(g.sess, PJ_STUN_BINDING_REQUEST, 
-				    NULL, &tdata);
+				    PJ_STUN_MAGIC, NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
     rc = pj_stun_session_send_msg(g.sess, PJ_FALSE, 
@@ -391,7 +391,7 @@ static void send_allocate_request(pj_bool_t allocate)
     pj_status_t rc;
 
     rc = pj_stun_session_create_req(g.sess, PJ_STUN_ALLOCATE_REQUEST, 
-				    NULL, &tdata);
+				    PJ_STUN_MAGIC, NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
 
@@ -451,7 +451,7 @@ static void send_sad_request(pj_bool_t set)
 
     rc = pj_stun_session_create_req(g.sess, 
 				    PJ_STUN_SET_ACTIVE_DESTINATION_REQUEST, 
-				    NULL, &tdata);
+				    PJ_STUN_MAGIC, NULL, &tdata);
     pj_assert(rc == PJ_SUCCESS);
 
     if (set) {
