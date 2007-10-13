@@ -23,6 +23,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 #include <pj/timer.h>
 #include <pj/compat/socket.h>
@@ -41,25 +42,32 @@ static const char *nat_type_names[] =
 };
 
 
-#define CHANGE_ADDR		4
-#define CHANGE_PORT		2
-#define CHANGE_ADDR_PORT	(CHANGE_ADDR | CHANGE_PORT)
+#define CHANGE_IP_FLAG		4
+#define CHANGE_PORT_FLAG	2
+#define CHANGE_IP_PORT_FLAG	(CHANGE_IP_FLAG | CHANGE_PORT_FLAG)
+#define TEST_INTERVAL		50
 
-
-enum state
+enum test_type
 {
     ST_TEST_1,
     ST_TEST_2,
+    ST_TEST_3,
     ST_TEST_1B,
-    ST_TEST_3
+    ST_MAX
 };
 
 static const char *test_names[] =
 {
     "Test I: Binding request",
     "Test II: Binding request with change address and port request",
-    "Test IB: Binding request to alternate address",
-    "Test III: Binding request with change port request"
+    "Test III: Binding request with change port request",
+    "Test IB: Binding request to alternate address"
+};
+
+enum timer_type
+{
+    TIMER_TEST	    = 1,
+    TIMER_DESTROY   = 2
 };
 
 typedef struct nat_detect_session
@@ -68,7 +76,7 @@ typedef struct nat_detect_session
     pj_mutex_t		    *mutex;
 
     pj_timer_heap_t	    *timer_heap;
-    pj_timer_entry	     destroy_timer;
+    pj_timer_entry	     timer;
 
     void		    *user_data;
     pj_stun_nat_detect_cb   *cb;
@@ -78,7 +86,6 @@ typedef struct nat_detect_session
     pj_sockaddr_in	     server;
     pj_sockaddr_in	    *cur_server;
     pj_stun_session	    *stun_sess;
-    enum state		     state;
 
     pj_ioqueue_op_key_t	     read_op, write_op;
     pj_uint8_t		     rx_pkt[PJ_STUN_MAX_PKT_LEN];
@@ -86,9 +93,14 @@ typedef struct nat_detect_session
     pj_sockaddr_in	     src_addr;
     int			     src_addr_len;
 
-    pj_bool_t		     test1_same_ip;
-    pj_sockaddr_in	     test1_ma;	    /* MAPPED-ADDRESS */
-    pj_sockaddr_in	     test1_ca;	    /* CHANGED-ADDRESS */
+    struct result
+    {
+	pj_bool_t	executed;
+	pj_bool_t	complete;
+	pj_status_t	status;
+	pj_sockaddr_in	ma;
+	pj_sockaddr_in	ca;
+    } result[ST_MAX];
 
 } nat_detect_session;
 
@@ -108,13 +120,34 @@ static pj_status_t on_send_msg(pj_stun_session *sess,
 			       const pj_sockaddr_t *dst_addr,
 			       unsigned addr_len);
 
-static pj_status_t start_test(nat_detect_session *sess,
-			      enum state state,
-			      const pj_sockaddr_in *alt_addr,
-			      pj_uint32_t change_flag);
-static void on_timer_destroy(pj_timer_heap_t *th,
+static pj_status_t send_test(nat_detect_session *sess,
+			     enum test_type test_id,
+			     const pj_sockaddr_in *alt_addr,
+			     pj_uint32_t change_flag);
+static void on_sess_timer(pj_timer_heap_t *th,
 			     pj_timer_entry *te);
 static void sess_destroy(nat_detect_session *sess);
+
+
+static int test_executed(nat_detect_session *sess)
+{
+    unsigned i, count;
+    for (i=0, count=0; i<PJ_ARRAY_SIZE(sess->result); ++i) {
+	if (sess->result[i].executed)
+	    ++count;
+    }
+    return count;
+}
+
+static int test_completed(nat_detect_session *sess)
+{
+    unsigned i, count;
+    for (i=0, count=0; i<PJ_ARRAY_SIZE(sess->result); ++i) {
+	if (sess->result[i].complete)
+	    ++count;
+    }
+    return count;
+}
 
 static pj_status_t get_local_interface(const pj_sockaddr_in *server,
 				       pj_in_addr *local_addr)
@@ -192,8 +225,8 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
      * Init timer to self-destroy.
      */
     sess->timer_heap = stun_cfg->timer_heap;
-    sess->destroy_timer.cb = &on_timer_destroy;
-    sess->destroy_timer.user_data = sess;
+    sess->timer.cb = &on_sess_timer;
+    sess->timer.user_data = sess;
 
 
     /*
@@ -232,6 +265,10 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 	      pj_inet_ntoa(sess->local_addr.sin_addr), 
 	      pj_ntohs(sess->local_addr.sin_port)));
 
+    PJ_LOG(5,(sess->pool->obj_name, "Server set to %s:%d",
+	      pj_inet_ntoa(server->sin_addr), 
+	      pj_ntohs(server->sin_port)));
+
     /*
      * Register socket to ioqueue to receive asynchronous input
      * notification.
@@ -268,13 +305,8 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Start TEST_1
      */
-    PJ_LOG(5,(sess->pool->obj_name, "Server set to %s:%d",
-	      pj_inet_ntoa(server->sin_addr), 
-	      pj_ntohs(server->sin_port)));
-
-    status = start_test(sess, ST_TEST_1, NULL, 0);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    sess->timer.id = TIMER_TEST;
+    on_sess_timer(stun_cfg->timer_heap, &sess->timer);
 
     return PJ_SUCCESS;
 
@@ -306,54 +338,6 @@ static void sess_destroy(nat_detect_session *sess)
 }
 
 
-static pj_status_t start_test(nat_detect_session *sess,
-			      enum state state,
-			      const pj_sockaddr_in *alt_addr,
-			      pj_uint32_t change_flag)
-{
-    pj_stun_tx_data *tdata;
-    pj_status_t status;
-
-    /* Create BIND request */
-    status = pj_stun_session_create_req(sess->stun_sess, 
-					PJ_STUN_BINDING_REQUEST, 0x83224,
-					NULL, &tdata);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Add CHANGE-REQUEST attribute */
-    status = pj_stun_msg_add_uint_attr(sess->pool, tdata->msg,
-				       PJ_STUN_ATTR_CHANGE_REQUEST,
-				       change_flag);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Configure alternate address */
-    if (alt_addr)
-	sess->cur_server = (pj_sockaddr_in*) alt_addr;
-    else
-	sess->cur_server = &sess->server;
-
-    PJ_LOG(5,(sess->pool->obj_name, 
-              "Performing %s to %s:%d", 
-	      test_names[state],
-	      pj_inet_ntoa(sess->cur_server->sin_addr),
-	      pj_ntohs(sess->cur_server->sin_port)));
-
-    /* Send the request */
-    status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
-				      sess->cur_server, 
-				      sizeof(pj_sockaddr_in),
-				      tdata);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    sess->state = state;
-
-    return PJ_SUCCESS;
-}
-
-
 static void end_session(nat_detect_session *sess,
 			pj_status_t status,
 			pj_stun_nat_type nat_type)
@@ -377,7 +361,8 @@ static void end_session(nat_detect_session *sess,
     delay.sec = 0;
     delay.msec = 0;
 
-    pj_timer_heap_schedule(sess->timer_heap, &sess->destroy_timer, &delay);
+    sess->timer.id = TIMER_DESTROY;
+    pj_timer_heap_schedule(sess->timer_heap, &sess->timer, &delay);
 }
 
 
@@ -440,12 +425,15 @@ static pj_status_t on_send_msg(pj_stun_session *stun_sess,
 {
     nat_detect_session *sess;
     pj_ssize_t pkt_len;
+    pj_status_t status;
 
     sess = (nat_detect_session*) pj_stun_session_get_user_data(stun_sess);
 
     pkt_len = pkt_size;
-    return pj_ioqueue_sendto(sess->key, &sess->write_op, pkt, &pkt_len, 0,
-			     dst_addr, addr_len);
+    status = pj_ioqueue_sendto(sess->key, &sess->write_op, pkt, &pkt_len, 0,
+			       dst_addr, addr_len);
+
+    return status;
 
 }
 
@@ -461,6 +449,10 @@ static void on_request_complete(pj_stun_session *stun_sess,
 {
     nat_detect_session *sess;
     pj_stun_sockaddr_attr *mattr = NULL;
+    pj_stun_changed_addr_attr *ca = NULL;
+    pj_uint32_t *tsx_id;
+    int cmp;
+    unsigned test_id;
 
     PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(src_addr);
@@ -502,8 +494,51 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	    if (mattr == NULL) {
 		status = PJNATH_ESTUNNOMAPPEDADDR;
 	    }
+
+	    /* Get CHANGED-ADDRESS attribute */
+	    ca = (pj_stun_changed_addr_attr*)
+		 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CHANGED_ADDR, 0);
+
+	    if (ca == NULL) {
+		status = PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_SERVER_ERROR);
+	    }
+
 	}
     }
+
+    /* Save the result */
+    tsx_id = (pj_uint32_t*) tdata->msg->hdr.tsx_id;
+    test_id = tsx_id[2];
+
+    if (test_id >= ST_MAX) {
+	PJ_LOG(4,(sess->pool->obj_name, "Invalid transaction ID %u in response",
+		  test_id));
+	end_session(sess, status, 
+		    PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_SERVER_ERROR));
+	return;
+    }
+
+    PJ_LOG(5,(sess->pool->obj_name, "Completed %s, status=%d",
+	      test_names[test_id], status));
+
+    sess->result[test_id].complete = PJ_TRUE;
+    sess->result[test_id].status = status;
+    if (status == PJ_SUCCESS) {
+	pj_memcpy(&sess->result[test_id].ma, &mattr->sockaddr.ipv4,
+		  sizeof(pj_sockaddr_in));
+	pj_memcpy(&sess->result[test_id].ca, &ca->sockaddr.ipv4,
+		  sizeof(pj_sockaddr_in));
+    }
+
+    if (test_id == ST_TEST_1 && status == PJ_SUCCESS) {
+	cmp = pj_memcmp(&sess->local_addr, &sess->result[ST_TEST_1].ma,
+			sizeof(pj_sockaddr_in));
+	if (cmp != 0)
+	    send_test(sess, ST_TEST_1B, &sess->result[test_id].ca, 0);
+    }
+
+    if (test_completed(sess)<3 || test_completed(sess)!=test_executed(sess))
+	return;
 
     /* Handle the test result according to RFC 3489 page 22:
 
@@ -554,103 +589,144 @@ static void on_request_complete(pj_stun_session *stun_sess,
                  Figure 2: Flow for type discovery process
      */
 
-    switch (sess->state) {
-    case ST_TEST_1:
-	if (status == PJ_SUCCESS) {
-	    pj_stun_changed_addr_attr *ca;
-
-	    /* Get CHANGED-ADDRESS attribute */
-	    ca = (pj_stun_changed_addr_attr*)
-		 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CHANGED_ADDR, 0);
-
-	    if (ca) {
-		pj_memcpy(&sess->test1_ca, &ca->sockaddr, 
-			  sizeof(pj_sockaddr_in));
-	    }
-
-	    /* Save mapped address */
-	    pj_memcpy(&sess->test1_ma, &mattr->sockaddr,
-		      sizeof(pj_sockaddr_in));
-
-	    /* Compare mapped address with local address */
-	    sess->test1_same_ip=(pj_memcmp(&sess->local_addr, &mattr->sockaddr,
-					   sizeof(pj_sockaddr_in))==0);
-	    
-	    /* Execute test 2:
-	     * Send BINDING_REQUEST with both the "change IP" and "change port" 
-	     * flags from the CHANGE-REQUEST attribute set
-	     */
-	    start_test(sess, ST_TEST_2, NULL, CHANGE_ADDR_PORT);
-
-	} else {
-	    /* Test 1 has completed with error.
-	     * Terminate our test session.
-	     */
-	    if (status == PJNATH_ESTUNTIMEDOUT)
-		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_BLOCKED);
-	    else
-		end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
-	}
+    switch (sess->result[ST_TEST_1].status) {
+    case PJNATH_ESTUNTIMEDOUT:
+	/*
+	 * Test 1 has timed-out. Conclude with NAT_TYPE_BLOCKED. 
+	 */
+	end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_BLOCKED);
 	break;
-
-    case ST_TEST_2:
-	if (sess->test1_same_ip) {
-	    if (status == PJ_SUCCESS) {
-		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_OPEN);
-	    } else if (status == PJNATH_ESTUNTIMEDOUT) {
-		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_SYMMETRIC_UDP);
-	    } else {
-		end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
-	    }
-	} else {
-	    if (status == PJ_SUCCESS) {
-		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_FULL_CONE);
-	    } else if (status == PJNATH_ESTUNTIMEDOUT) {
-		if (sess->test1_ca.sin_family == 0) {
-		    PJ_LOG(4,(sess->pool->obj_name, 
-			      "CHANGED-ADDRESS attribute not present in "
-			      "Binding response, unable to continue test"));
-		    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_UNKNOWN);
-		} else {
-		    /* Execute TEST_1B */
-		    start_test(sess, ST_TEST_1B, &sess->test1_ca, 0);
-		}
-	    } else {
-		end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
-	    }
-	}
-	break;
-
-    case ST_TEST_1B:
-	if (status == PJ_SUCCESS) {
-	    int cmp;
-
-	    /* Compare MAPPED-ADDRESS with the one from TEST_1 */
-	    cmp = pj_memcmp(&mattr->sockaddr, &sess->test1_ma, 
-			    sizeof(pj_sockaddr_in));
-
-	    if (cmp!=0) {
-		/* Different address, this is symmetric NAT */
-		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_SYMMETRIC);
-	    } else {
-		/* Same address. Check if this is port restricted.
-		 * Execute TEST_3
+    case PJ_SUCCESS:
+	/*
+	 * Test 1 is successful. Further tests are needed to detect
+	 * NAT type. Compare the MAPPED-ADDRESS with the local address.
+	 */
+	cmp = pj_memcmp(&sess->local_addr, &sess->result[ST_TEST_1].ma,
+			sizeof(pj_sockaddr_in));
+	if (cmp==0) {
+	    /*
+	     * MAPPED-ADDRESS and local address is equal. Need one more
+	     * test to determine NAT type.
+	     */
+	    switch (sess->result[ST_TEST_2].status) {
+	    case PJ_SUCCESS:
+		/*
+		 * Test 2 is also successful. We're in the open.
 		 */
-		start_test(sess, ST_TEST_3, NULL, CHANGE_PORT);
+		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_OPEN);
+		break;
+	    case PJNATH_ESTUNTIMEDOUT:
+		/*
+		 * Test 2 has timed out. We're behind somekind of UDP
+		 * firewall.
+		 */
+		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_SYMMETRIC_UDP);
+		break;
+	    default:
+		/*
+		 * We've got other error with Test 2.
+		 */
+		end_session(sess, sess->result[ST_TEST_2].status, 
+			    PJ_STUN_NAT_TYPE_UNKNOWN);
+		break;
 	    }
 	} else {
-	    end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
+	    /*
+	     * MAPPED-ADDRESS is different than local address.
+	     * We're behind NAT.
+	     */
+	    switch (sess->result[ST_TEST_2].status) {
+	    case PJ_SUCCESS:
+		/*
+		 * Test 2 is successful. We're behind a full-cone NAT.
+		 */
+		end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_FULL_CONE);
+		break;
+	    case PJNATH_ESTUNTIMEDOUT:
+		/*
+		 * Test 2 has timed-out Check result of test 1B..
+		 */
+		switch (sess->result[ST_TEST_1B].status) {
+		case PJ_SUCCESS:
+		    /*
+		     * Compare the MAPPED-ADDRESS of test 1B with the
+		     * MAPPED-ADDRESS returned in test 1..
+		     */
+		    cmp = pj_memcmp(&sess->result[ST_TEST_1].ma,
+				    &sess->result[ST_TEST_1B].ma,
+				    sizeof(pj_sockaddr_in));
+		    if (cmp != 0) {
+			/*
+			 * MAPPED-ADDRESS is different, we're behind a
+			 * symmetric NAT.
+			 */
+			end_session(sess, PJ_SUCCESS,
+				    PJ_STUN_NAT_TYPE_SYMMETRIC);
+		    } else {
+			/*
+			 * MAPPED-ADDRESS is equal. We're behind a restricted
+			 * or port-restricted NAT, depending on the result of
+			 * test 3.
+			 */
+			switch (sess->result[ST_TEST_3].status) {
+			case PJ_SUCCESS:
+			    /*
+			     * Test 3 is successful, we're behind a restricted
+			     * NAT.
+			     */
+			    end_session(sess, PJ_SUCCESS,
+					PJ_STUN_NAT_TYPE_RESTRICTED);
+			    break;
+			case PJNATH_ESTUNTIMEDOUT:
+			    /*
+			     * Test 3 failed, we're behind a port restricted
+			     * NAT.
+			     */
+			    end_session(sess, PJ_SUCCESS,
+					PJ_STUN_NAT_TYPE_PORT_RESTRICTED);
+			    break;
+			default:
+			    /*
+			     * Got other error with test 3.
+			     */
+			    end_session(sess, sess->result[ST_TEST_3].status,
+					PJ_STUN_NAT_TYPE_UNKNOWN);
+			    break;
+			}
+		    }
+		    break;
+		case PJNATH_ESTUNTIMEDOUT:
+		    /*
+		     * Strangely test 1B has failed. Maybe connectivity was
+		     * lost?
+		     */
+		    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_BLOCKED);
+		    break;
+		default:
+		    /*
+		     * Got other error with test 1B.
+		     */
+		    end_session(sess, sess->result[ST_TEST_1B].status,
+				PJ_STUN_NAT_TYPE_UNKNOWN);
+		    break;
+		}
+		break;
+	    default:
+		/*
+		 * We've got other error with Test 2.
+		 */
+		end_session(sess, sess->result[ST_TEST_2].status, 
+			    PJ_STUN_NAT_TYPE_UNKNOWN);
+		break;
+	    }
 	}
 	break;
-
-    case ST_TEST_3:
-	if (status == PJ_SUCCESS) {
-	    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_RESTRICTED);
-	} else if (status == PJNATH_ESTUNTIMEDOUT) {
-	    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_PORT_RESTRICTED);
-	} else {
-	    end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
-	}
+    default:
+	/*
+	 * We've got other error with Test 1.
+	 */
+	end_session(sess, sess->result[ST_TEST_1].status, 
+		    PJ_STUN_NAT_TYPE_UNKNOWN);
 	break;
     }
 
@@ -658,20 +734,121 @@ static void on_request_complete(pj_stun_session *stun_sess,
 }
 
 
-static void on_timer_destroy(pj_timer_heap_t *th,
+/* Perform test */
+static pj_status_t send_test(nat_detect_session *sess,
+			     enum test_type test_id,
+			     const pj_sockaddr_in *alt_addr,
+			     pj_uint32_t change_flag)
+{
+    pj_stun_tx_data *tdata;
+    pj_uint32_t magic, tsx_id[3];
+    pj_status_t status;
+
+    sess->result[test_id].executed = PJ_TRUE;
+
+    /* Randomize tsx id */
+    do {
+	magic = pj_rand();
+    } while (magic == PJ_STUN_MAGIC);
+
+    tsx_id[0] = pj_rand();
+    tsx_id[1] = pj_rand();
+    tsx_id[2] = test_id;
+
+    /* Create BIND request */
+    status = pj_stun_session_create_req(sess->stun_sess, 
+					PJ_STUN_BINDING_REQUEST, magic,
+					(pj_uint8_t*)tsx_id, &tdata);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Add CHANGE-REQUEST attribute */
+    status = pj_stun_msg_add_uint_attr(sess->pool, tdata->msg,
+				       PJ_STUN_ATTR_CHANGE_REQUEST,
+				       change_flag);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Configure alternate address */
+    if (alt_addr)
+	sess->cur_server = (pj_sockaddr_in*) alt_addr;
+    else
+	sess->cur_server = &sess->server;
+
+    PJ_LOG(5,(sess->pool->obj_name, 
+              "Performing %s to %s:%d", 
+	      test_names[test_id],
+	      pj_inet_ntoa(sess->cur_server->sin_addr),
+	      pj_ntohs(sess->cur_server->sin_port)));
+
+    /* Send the request */
+    status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
+				      sess->cur_server, 
+				      sizeof(pj_sockaddr_in),
+				      tdata);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    return PJ_SUCCESS;
+
+on_error:
+    sess->result[test_id].complete = PJ_TRUE;
+    sess->result[test_id].status = status;
+
+    return status;
+}
+
+
+/* Timer callback */
+static void on_sess_timer(pj_timer_heap_t *th,
 			     pj_timer_entry *te)
 {
     nat_detect_session *sess;
 
-    PJ_UNUSED_ARG(th);
-
     sess = (nat_detect_session*) te->user_data;
 
-    pj_mutex_lock(sess->mutex);
-    pj_ioqueue_unregister(sess->key);
-    sess->key = NULL;
-    pj_mutex_unlock(sess->mutex);
+    if (te->id == TIMER_DESTROY) {
+	pj_mutex_lock(sess->mutex);
+	pj_ioqueue_unregister(sess->key);
+	sess->key = NULL;
+	te->id = 0;
+	pj_mutex_unlock(sess->mutex);
 
-    sess_destroy(sess);
+	sess_destroy(sess);
+
+    } else if (te->id == TIMER_TEST) {
+
+	int executed;
+	pj_bool_t next_timer;
+
+	pj_mutex_lock(sess->mutex);
+
+	executed = test_executed(sess);
+	next_timer = PJ_FALSE;
+
+	if (executed == ST_TEST_1) {
+	    send_test(sess, ST_TEST_1, NULL, 0);
+	    next_timer = PJ_TRUE;
+	} else if (executed == ST_TEST_2) {
+	    send_test(sess, ST_TEST_2, NULL, CHANGE_IP_PORT_FLAG);
+	    next_timer = PJ_TRUE;
+	} else if (executed == ST_TEST_3) {
+	    send_test(sess, ST_TEST_3, NULL, CHANGE_PORT_FLAG);
+	} else {
+	    pj_assert(!"Shouldn't have timer at this state");
+	}
+
+	if (next_timer) {
+	    pj_time_val delay = {0, TEST_INTERVAL};
+	    pj_timer_heap_schedule(th, te, &delay);
+	} else {
+	    te->id = 0;
+	}
+
+	pj_mutex_unlock(sess->mutex);
+
+    } else {
+	pj_assert(!"Invalid timer ID");
+    }
 }
 
