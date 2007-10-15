@@ -50,6 +50,17 @@
 	    } \
 	} while (0)
 
+#define copy_advance_pair_quote(buf,str1,len1,str2,quotebegin,quoteend) \
+	do { \
+		printed = len1+str2.slen+2; \
+		if (printed >= (endbuf-buf)) return -1;	\
+		pj_memcpy(buf,str1,len1); \
+		*(buf+len1)=quotebegin; \
+		pj_memcpy(buf+len1+1, str2.ptr, str2.slen); \
+		*(buf+printed-1) = quoteend; \
+		buf += printed; \
+	} while (0)
+
 #define copy_advance_pair_escape(buf,str1,len1,str2,unres)	\
 	do { \
 	  if (str2.slen) { \
@@ -85,7 +96,6 @@
 
 #define copy_advance 		copy_advance_check
 #define copy_advance_pair 	copy_advance_pair_check
-#define copy_advance_pair_quote	copy_advance_pair_quote_check
 
 #define copy_advance_pair_quote_cond(buf,str1,len1,str2,quotebegin,quoteend) \
 	do {	\

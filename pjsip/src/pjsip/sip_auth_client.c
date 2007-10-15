@@ -48,6 +48,18 @@
 #define EXT_MASK	    0x00F0
 
 
+static void dup_bin(pj_pool_t *pool, pj_str_t *dst, const pj_str_t *src)
+{
+    dst->slen = src->slen;
+
+    if (dst->slen) {
+	dst->ptr = (char*) pj_pool_alloc(pool, src->slen);
+	pj_memcpy(dst->ptr, src->ptr, src->slen);
+    } else {
+	dst->ptr = NULL;
+    }
+}
+
 PJ_DEF(void) pjsip_cred_info_dup(pj_pool_t *pool,
 				 pjsip_cred_info *dst,
 				 const pjsip_cred_info *src)
@@ -60,9 +72,9 @@ PJ_DEF(void) pjsip_cred_info_dup(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->data, &src->data);
 
     if ((dst->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
-	pj_strdup(pool, &dst->ext.aka.k, &src->ext.aka.k);
-	pj_strdup(pool, &dst->ext.aka.op, &src->ext.aka.op);
-	pj_strdup(pool, &dst->ext.aka.amf, &src->ext.aka.amf);
+	dup_bin(pool, &dst->ext.aka.k, &src->ext.aka.k);
+	dup_bin(pool, &dst->ext.aka.op, &src->ext.aka.op);
+	dup_bin(pool, &dst->ext.aka.amf, &src->ext.aka.amf);
     }
 }
 
@@ -222,9 +234,16 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 				   pj_uint32_t nc,
 				   const pj_str_t *method)
 {
-    /* Check algorithm is supported. We only support MD5. */
-    if (chal->algorithm.slen && pj_stricmp(&chal->algorithm, &pjsip_MD5_STR))
+    const pj_str_t pjsip_AKAv1_MD5_STR = { "AKAv1-MD5", 9 };
+
+    /* Check algorithm is supported. We support MD5 and AKAv1-MD5. */
+    if (chal->algorithm.slen==0 ||
+	(pj_stricmp(&chal->algorithm, &pjsip_MD5_STR) ||
+	 pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5_STR)))
     {
+	;
+    }
+    else {
 	PJ_LOG(4,(THIS_FILE, "Unsupported digest algorithm \"%.*s\"",
 		  chal->algorithm.slen, chal->algorithm.ptr));
 	return PJSIP_EINVALIDALGORITHM;
@@ -235,9 +254,9 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     pj_strdup(pool, &cred->realm, &chal->realm);
     pj_strdup(pool, &cred->nonce, &chal->nonce);
     pj_strdup(pool, &cred->uri, uri);
-    cred->algorithm = pjsip_MD5_STR;
+    pj_strdup(pool, &cred->algorithm, &chal->algorithm);
     pj_strdup(pool, &cred->opaque, &chal->opaque);
-    
+
     /* Allocate memory. */
     cred->response.ptr = (char*) pj_pool_alloc(pool, PJSIP_MD5STRLEN);
     cred->response.slen = PJSIP_MD5STRLEN;
@@ -470,8 +489,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 	     */
 	    if ((c[i].data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
 
-#if !PJSIP_HAS_DIGEST_AKAV1_AUTH
-		pj_assert(!"PJSIP_HAS_DIGEST_AKAV1_AUTH is not enabled");
+#if !PJSIP_HAS_DIGEST_AKA_AUTH
+		pj_assert(!"PJSIP_HAS_DIGEST_AKA_AUTH is not enabled");
 		return PJSIP_EAUTHINAKACRED;
 #endif
 
@@ -479,15 +498,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 		PJ_ASSERT_RETURN(c[i].ext.aka.cb != NULL, PJ_EINVAL);
 
 		/* Verify K len */
-		PJ_ASSERT_RETURN(c[i].ext.aka.k.slen == PJSIP_AKA_KLEN, 
+		PJ_ASSERT_RETURN(c[i].ext.aka.k.slen <= PJSIP_AKA_KLEN, 
 				 PJSIP_EAUTHINAKACRED);
 
 		/* Verify OP len */
-		PJ_ASSERT_RETURN(c[i].ext.aka.op.slen == PJSIP_AKA_OPLEN, 
+		PJ_ASSERT_RETURN(c[i].ext.aka.op.slen <= PJSIP_AKA_OPLEN, 
 				 PJSIP_EAUTHINAKACRED);
 
 		/* Verify AMF len */
-		PJ_ASSERT_RETURN(c[i].ext.aka.amf.slen == PJSIP_AKA_AMFLEN,
+		PJ_ASSERT_RETURN(c[i].ext.aka.amf.slen <= PJSIP_AKA_AMFLEN,
 				 PJSIP_EAUTHINAKACRED);
 
 		sess->cred_info[i].ext.aka.cb = c[i].ext.aka.cb;
@@ -792,7 +811,18 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 	    if (pj_stricmp(&hchal->challenge.common.realm, 
 			   &sent_auth->credential.common.realm )==0)
 	    {
-		break;
+		/* If this authorization has empty response, remove it. */
+		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
+		    sent_auth->credential.digest.response.slen == 0)
+		{
+		    /* This is empty authorization, remove it. */
+		    hdr = hdr->next;
+		    pj_list_erase(sent_auth);
+		    continue;
+		} else {
+		    /* Found previous authorization attempt */
+		    break;
+		}
 	    }
 	}
 	hdr = hdr->next;

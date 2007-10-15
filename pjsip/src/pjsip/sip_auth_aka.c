@@ -20,44 +20,68 @@
 #include <pjsip/sip_errno.h>
 #include <pjlib-util/base64.h>
 #include <pjlib-util/md5.h>
+#include <pjlib-util/hmac_md5.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if PJSIP_HAS_DIGEST_AKAV1_AUTH
+#if PJSIP_HAS_DIGEST_AKA_AUTH
 
 #include "../../third_party/milenage/milenage.h"
 
 /*
  * Create MD5-AKA1 digest response.
  */
-PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjsip_auth_create_aka_response( 
+					     pj_pool_t *pool,
 					     const pjsip_digest_challenge*chal,
 					     const pjsip_cred_info *cred,
 					     const pj_str_t *method,
 					     pjsip_digest_credential *auth)
 {
     pj_str_t nonce_bin;
-    pj_uint8_t *chal_rand, *chal_autn, *chal_mac;
+    int aka_version;
+    const pj_str_t pjsip_AKAv1_MD5 = { "AKAv1-MD5", 9 };
+    const pj_str_t pjsip_AKAv2_MD5 = { "AKAv2-MD5", 9 };
+    pj_uint8_t *chal_rand, *chal_sqnxoraka, *chal_mac;
+    pj_uint8_t k[PJSIP_AKA_KLEN];
+    pj_uint8_t op[PJSIP_AKA_OPLEN];
+    pj_uint8_t amf[PJSIP_AKA_AMFLEN];
     pj_uint8_t res[PJSIP_AKA_RESLEN];
     pj_uint8_t ck[PJSIP_AKA_CKLEN];
     pj_uint8_t ik[PJSIP_AKA_IKLEN];
     pj_uint8_t ak[PJSIP_AKA_AKLEN];
-    pj_uint8_t sqn[PJSIP_AKA_AUTNLEN];
+    pj_uint8_t sqn[PJSIP_AKA_SQNLEN];
     pj_uint8_t xmac[PJSIP_AKA_MACLEN];
     pjsip_cred_info aka_cred;
     int i, len;
     pj_status_t status;
 
     /* Check the algorithm is supported. */
-    if (pj_stricmp2(&chal->algorithm, "md5") == 0) {
+    if (chal->algorithm.slen==0 || pj_stricmp2(&chal->algorithm, "md5") == 0) {
+	/*
+	 * A normal MD5 authentication is requested. Fallbackt to the usual
+	 * MD5 digest creation.
+	 */
 	pjsip_auth_create_digest(&auth->response, &auth->nonce, &auth->nc,
 				 &auth->cnonce, &auth->qop, &auth->uri,
 				 &auth->realm, cred, method);
 	return PJ_SUCCESS;
 
-    } else if (pj_stricmp2(&chal->algorithm, "AKAv1-MD5") != 0) {
+    } else if (pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5) == 0) {
+	/*
+	 * AKA version 1 is requested.
+	 */
+	aka_version = 1;
+
+    } else if (pj_stricmp(&chal->algorithm, &pjsip_AKAv2_MD5) == 0) {
+	/*
+	 * AKA version 2 is requested.
+	 */
+	aka_version = 2;
+
+    } else {
 	/* Unsupported algorithm */
 	return PJSIP_EINVALIDALGORITHM;
     }
@@ -70,36 +94,40 @@ PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return PJSIP_EAUTHINNONCE;
 
-    if (nonce_bin.slen < PJSIP_AKA_RANDLEN + PJSIP_AKA_AUTNLEN + PJSIP_AKA_MACLEN)
+    if (nonce_bin.slen < PJSIP_AKA_RANDLEN + PJSIP_AKA_AUTNLEN)
 	return PJSIP_EAUTHINNONCE;
 
     /* Get RAND, AUTN, and MAC */
-    chal_rand = (pj_uint8_t*) (nonce_bin.ptr + 0);
-    chal_autn = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN);
-    chal_mac =  (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN + PJSIP_AKA_AUTNLEN);
+    chal_rand = (pj_uint8_t*)(nonce_bin.ptr + 0);
+    chal_sqnxoraka = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN);
+    chal_mac = (pj_uint8_t*) (nonce_bin.ptr + PJSIP_AKA_RANDLEN + 
+			      PJSIP_AKA_SQNLEN + PJSIP_AKA_AMFLEN);
 
-    /* Verify credential */
-    PJ_ASSERT_RETURN(cred->ext.aka.k.slen == PJSIP_AKA_KLEN, PJSIP_EAUTHINAKACRED);
-    PJ_ASSERT_RETURN(cred->ext.aka.op.slen == PJSIP_AKA_OPLEN, PJSIP_EAUTHINAKACRED);
+    /* Copy k. op, and amf */
+    pj_bzero(k, sizeof(k));
+    pj_bzero(op, sizeof(op));
+    pj_bzero(amf, sizeof(amf));
+
+    if (cred->ext.aka.k.slen)
+	pj_memcpy(k, cred->ext.aka.k.ptr, cred->ext.aka.k.slen);
+    if (cred->ext.aka.op.slen)
+	pj_memcpy(op, cred->ext.aka.op.ptr, cred->ext.aka.op.slen);
+    if (cred->ext.aka.amf.slen)
+	pj_memcpy(amf, cred->ext.aka.amf.ptr, cred->ext.aka.amf.slen);
 
     /* Given key K and random challenge RAND, compute response RES,
      * confidentiality key CK, integrity key IK and anonymity key AK.
      */
-    f2345((pj_uint8_t*)cred->ext.aka.k.ptr, 
-	  chal_rand, 
-	  res, ck, ik, ak, 
-          (pj_uint8_t*)cred->ext.aka.op.ptr);
+    f2345(k, chal_rand, res, ck, ik, ak, op);
 
     /* Compute sequence number SQN */
-    for (i=0; i<PJSIP_AKA_AUTNLEN; ++i)
-	sqn[i] = (pj_uint8_t) (chal_autn[i] ^ ak[i]);
-
-    /* Compute XMAC */
-    f1((pj_uint8_t*)cred->ext.aka.k.ptr, chal_rand, sqn,
-       (pj_uint8_t*)cred->ext.aka.amf.ptr, xmac, 
-       (pj_uint8_t*)cred->ext.aka.op.ptr);
+    for (i=0; i<PJSIP_AKA_SQNLEN; ++i)
+	sqn[i] = (pj_uint8_t) (chal_sqnxoraka[i] ^ ak[i]);
 
     /* Verify MAC in the challenge */
+    /* Compute XMAC */
+    f1(k, chal_rand, sqn, amf, xmac, op);
+
     if (pj_memcmp(chal_mac, xmac, PJSIP_AKA_MACLEN) != 0) {
 	return PJSIP_EAUTHINNONCE;
     }
@@ -109,18 +137,57 @@ PJ_DEF(pj_status_t) pjsip_auth_create_akav1( pj_pool_t *pool,
      */
     pj_memcpy(&aka_cred, cred, sizeof(aka_cred));
     aka_cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
-    aka_cred.data.ptr = (char*)res;
-    aka_cred.data.slen = PJSIP_AKA_RESLEN;
 
     /* Create a response */
-    pjsip_auth_create_digest(&auth->response, &chal->nonce, 
-			     &auth->nc, &auth->cnonce, &auth->qop, &auth->uri,
-			     &chal->realm, &aka_cred, method);
+    if (aka_version == 1) {
+	/*
+	 * For AKAv1, the password is RES
+	 */
+	aka_cred.data.ptr = (char*)res;
+	aka_cred.data.slen = PJSIP_AKA_RESLEN;
+
+	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+				 &auth->nc, &auth->cnonce, &auth->qop, 
+				 &auth->uri, &chal->realm, &aka_cred, method);
+
+    } else if (aka_version == 2) {
+	/*
+	 * For AKAv2, password is base64 encoded [1] parameters:
+	 *    PRF(RES||IK||CK,"http-digest-akav2-password")
+	 *
+	 * The pseudo-random function (PRF) is HMAC-MD5 in this case.
+	 */
+	pj_hmac_md5_context ctx;
+	pj_uint8_t hmac_digest[16];
+	char hmac_digest64[24];
+	int out_len;
+
+	pj_hmac_md5_init(&ctx, (pj_uint8_t*)"http-digest-akav2-password", 26);
+	pj_hmac_md5_update(&ctx, res, PJSIP_AKA_RESLEN);
+	pj_hmac_md5_update(&ctx, ik, PJSIP_AKA_IKLEN);
+	pj_hmac_md5_update(&ctx, ck, PJSIP_AKA_CKLEN);
+	pj_hmac_md5_final(&ctx, hmac_digest);
+
+	out_len = sizeof(hmac_digest64);
+	status = pj_base64_encode(hmac_digest, 16, hmac_digest64, &out_len);
+	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+
+	aka_cred.data.ptr = hmac_digest64;
+	aka_cred.data.slen = out_len;
+
+	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+				 &auth->nc, &auth->cnonce, &auth->qop, 
+				 &auth->uri, &chal->realm, &aka_cred, method);
+
+    } else {
+	pj_assert(!"Bug!");
+	return PJ_EBUG;
+    }
 
     /* Done */
     return PJ_SUCCESS;
 }
 
 
-#endif	/* PJSIP_HAS_DIGEST_AKAV1_AUTH */
+#endif	/* PJSIP_HAS_DIGEST_AKA_AUTH */
 

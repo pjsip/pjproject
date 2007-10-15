@@ -121,9 +121,10 @@ struct pjsip_cred_info
 	/** Digest AKA credential information. Note that when AKA credential
 	 *  is being used, the \a data field of this #pjsip_cred_info is
 	 *  not used, but it still must be initialized to an empty string.
+	 * Please see \ref PJSIP_AUTH_AKA_API for more information.
 	 */
 	struct {
-	    pj_str_t	  k;	/**< Permanent key.			*/
+	    pj_str_t	  k;	/**< Permanent subscriber key.		*/
 	    pj_str_t	  op;	/**< Operator variant key.		*/
 	    pj_str_t	  amf;	/**< Authentication Management Field	*/
 	    pjsip_cred_cb cb;	/**< Callback to create AKA digest.	*/

@@ -32,6 +32,7 @@ OPTION		GCC	-x c++
 
 // PJSIP-CORE files
 
+//SOURCE	sip_auth_aka.c
 SOURCE	sip_auth_client.c
 SOURCE	sip_auth_msg.c
 SOURCE	sip_auth_parser.c

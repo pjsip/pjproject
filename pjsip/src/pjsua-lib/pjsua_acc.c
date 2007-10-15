@@ -737,6 +737,27 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	status = pjsip_regc_register(pjsua_var.acc[acc_id].regc, 1, 
 				     &tdata);
 
+	if (0 && status == PJ_SUCCESS && pjsua_var.acc[acc_id].cred_cnt) {
+	    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+	    pjsip_authorization_hdr *h;
+	    char *uri;
+	    int d;
+
+	    uri = (char*) pj_pool_alloc(tdata->pool, acc->cfg.reg_uri.slen+10);
+	    d = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
+				uri, acc->cfg.reg_uri.slen+10);
+	    pj_assert(d > 0);
+
+	    h = pjsip_authorization_hdr_create(tdata->pool);
+	    h->scheme = pj_str("Digest");
+	    h->credential.digest.username = acc->cred[0].username;
+	    h->credential.digest.realm = acc->srv_domain;
+	    h->credential.digest.uri = pj_str(uri);
+	    h->credential.digest.algorithm = pj_str("md5");
+
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
+	}
+
     } else {
 	if (pjsua_var.acc[acc_id].regc == NULL) {
 	    PJ_LOG(3,(THIS_FILE, "Currently not registered"));

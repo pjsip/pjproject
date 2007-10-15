@@ -671,6 +671,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_PASSWORD:   /* authentication password */
 	    cur_acc->cred_info[cur_acc->cred_count].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
 	    cur_acc->cred_info[cur_acc->cred_count].data = pj_str(pj_optarg);
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+	    cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
+	    cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
+	    cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
+#endif
 	    break;
 
 	case OPT_NEXT_CRED: /* next credential */
