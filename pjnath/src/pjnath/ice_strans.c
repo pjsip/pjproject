@@ -25,6 +25,7 @@
 #include <pj/pool.h>
 #include <pj/rand.h>
 #include <pj/string.h>
+#include <pj/compat/socket.h>
 
 
 #if 0
@@ -440,7 +441,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 			    pj_ioqueue_get_user_data(key);
     pj_ice_strans *ice_st = comp->ice_st;
     pj_ssize_t pkt_size;
-    enum { RETRY = 4 };
+    enum { RETRY = 10 };
     unsigned retry;
     pj_status_t status;
 
@@ -515,13 +516,21 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
 
     /* Read next packet */
-    for (retry=0; retry<RETRY; ++retry) {
+    for (retry=0; retry<RETRY;) {
 	pkt_size = sizeof(comp->pkt);
 	comp->src_addr_len = sizeof(comp->src_addr);
 	status = pj_ioqueue_recvfrom(key, op_key, comp->pkt, &pkt_size, 
 				     PJ_IOQUEUE_ALWAYS_ASYNC,
 				     &comp->src_addr, &comp->src_addr_len);
-	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) ||
+	    status == PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) || 
+	    status == PJ_STATUS_FROM_OS(OSERR_ECONNRESET))
+	{
+	    ice_st_perror(comp->ice_st, "ioqueue recvfrom() error", status);
+	    ++retry;
+	    continue;
+	} else if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	    retry += 2;
 	    ice_st_perror(comp->ice_st, "ioqueue recvfrom() error", status);
 	} else {
 	    break;
