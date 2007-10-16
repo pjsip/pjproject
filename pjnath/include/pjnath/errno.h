@@ -110,6 +110,11 @@
  */
 #define PJNATH_ESTUNIPV6NOTSUPP	    (PJNATH_ERRNO_START+41) /* 370041 */
 
+/**
+ * @hideinitializer
+ * Invalid STUN server or server not configured.
+ */
+#define PJNATH_ESTUNINSERVER	    (PJNATH_ERRNO_START+42) /* 370042 */
 
 
 

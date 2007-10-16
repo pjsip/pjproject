@@ -32,7 +32,8 @@
 static const char *nat_type_names[] =
 {
     "Unknown",
-    "Open Internet",
+    "ErrUnknown",
+    "Open",
     "Blocked",
     "Symmetric UDP",
     "Full Cone",
@@ -128,6 +129,17 @@ static void on_sess_timer(pj_timer_heap_t *th,
 			     pj_timer_entry *te);
 static void sess_destroy(nat_detect_session *sess);
 
+
+/*
+ * Get the NAT name from the specified NAT type.
+ */
+PJ_DEF(const char*) pj_stun_get_nat_name(pj_stun_nat_type type)
+{
+    PJ_ASSERT_RETURN(type >= 0 && type <= PJ_STUN_NAT_TYPE_PORT_RESTRICTED,
+		     "*Invalid*");
+
+    return nat_type_names[type];
+}
 
 static int test_executed(nat_detect_session *sess)
 {
@@ -387,7 +399,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
 	{
 	    /* Permanent error */
-	    end_session(sess, -bytes_read, PJ_STUN_NAT_TYPE_UNKNOWN);
+	    end_session(sess, -bytes_read, PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 	    goto on_return;
 	}
 
@@ -406,7 +418,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     if (status != PJ_EPENDING) {
 	pj_assert(status != PJ_SUCCESS);
-	end_session(sess, status, PJ_STUN_NAT_TYPE_UNKNOWN);
+	end_session(sess, status, PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
     }
 
 on_return:
@@ -627,7 +639,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		 * We've got other error with Test 2.
 		 */
 		end_session(sess, sess->result[ST_TEST_2].status, 
-			    PJ_STUN_NAT_TYPE_UNKNOWN);
+			    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 		break;
 	    }
 	} else {
@@ -690,7 +702,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 			     * Got other error with test 3.
 			     */
 			    end_session(sess, sess->result[ST_TEST_3].status,
-					PJ_STUN_NAT_TYPE_UNKNOWN);
+					PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 			    break;
 			}
 		    }
@@ -707,7 +719,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		     * Got other error with test 1B.
 		     */
 		    end_session(sess, sess->result[ST_TEST_1B].status,
-				PJ_STUN_NAT_TYPE_UNKNOWN);
+				PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 		    break;
 		}
 		break;
@@ -716,7 +728,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		 * We've got other error with Test 2.
 		 */
 		end_session(sess, sess->result[ST_TEST_2].status, 
-			    PJ_STUN_NAT_TYPE_UNKNOWN);
+			    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 		break;
 	    }
 	}
@@ -726,7 +738,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	 * We've got other error with Test 1.
 	 */
 	end_session(sess, sess->result[ST_TEST_1].status, 
-		    PJ_STUN_NAT_TYPE_UNKNOWN);
+		    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 	break;
     }
 

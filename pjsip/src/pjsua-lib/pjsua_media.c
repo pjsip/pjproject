@@ -194,6 +194,9 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 				      &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Perform NAT detection */
+    pjsua_detect_nat_type();
+
     return PJ_SUCCESS;
 }
 
@@ -758,6 +761,30 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 				      &skinfo, &sdp);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Add NAT info in the SDP */
+    if (pjsua_var.ua_cfg.nat_type_in_sdp) {
+	pjmedia_sdp_attr *a;
+	pj_str_t value;
+	char nat_info[80];
+
+	value.ptr = nat_info;
+	if (pjsua_var.ua_cfg.nat_type_in_sdp == 1) {
+	    value.slen = pj_ansi_snprintf(nat_info, sizeof(nat_info),
+					  "%d", pjsua_var.nat_type);
+	} else {
+	    const char *type_name = pj_stun_get_nat_name(pjsua_var.nat_type);
+	    value.slen = pj_ansi_snprintf(nat_info, sizeof(nat_info),
+					  "%d %s",
+					  pjsua_var.nat_type,
+					  type_name);
+	}
+
+	a = pjmedia_sdp_attr_create(pool, "X-nat", &value);
+
+	pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
+
+    }
 
     if (pjsua_var.media_cfg.enable_ice) {
 	status = pjmedia_ice_modify_sdp(call->med_tp, pool, sdp);

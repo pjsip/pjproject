@@ -565,7 +565,9 @@ typedef struct pjsua_callback
     /**
      * Notify application when media state in the call has changed.
      * Normal application would need to implement this callback, e.g.
-     * to connect the call's media to sound device.
+     * to connect the call's media to sound device. When ICE is used,
+     * this callback will also be called to report ICE negotiation
+     * failure.
      *
      * @param call_id	The call index.
      *
@@ -891,6 +893,14 @@ typedef struct pjsua_callback
 		      const pj_str_t *to, const pj_str_t *contact,
 		      pj_bool_t is_typing);
 
+    /**
+     * Callback when the library has finished performing NAT type
+     * detection.
+     *
+     * @param res	    NAT detection result.
+     */
+    void (*on_nat_detect)(const pj_stun_nat_detect_result *res);
+
 } pjsua_callback;
 
 
@@ -977,6 +987,17 @@ typedef struct pjsua_config
      * Specify STUN relay server to be used.
      */
     pj_str_t	    stun_relay_host;
+
+    /**
+     * Include local endpoint's NAT type in the SDP to assist troubleshooting.
+     * The valid values are:
+     *	- 0: no information will be added in SDP.
+     *	- 1: only the NAT type number is added.
+     *	- 2: add both NAT type number and name.
+     *
+     * Default: 2
+     */
+    int		    nat_type_in_sdp;
 
     /**
      * Specify whether support for reliable provisional response (100rel and
@@ -1315,19 +1336,37 @@ PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
 /**
  * This is a utility function to detect NAT type in front of this
  * endpoint. Once invoked successfully, this function will complete 
- * asynchronously and report the result in the callback.
+ * asynchronously and report the result in \a on_nat_detect() callback
+ * of pjsua_callback.
  *
- * @param srv_port	Optional STUN server and port, in "SERVER[:PORT]"
- *			format. If this option is NULL, the function will use
- *			the STUN server that has been set in the pjsua
- *			configuration.
- * @param user_data	User data to be returned back in the callback.
- * @param cb		Optional callback to report the detection result.
+ * After NAT has been detected and the callback is called, application can
+ * get the detected NAT type by calling #pjsua_get_nat_type(). Application
+ * can also perform NAT detection by calling #pjsua_detect_nat_type()
+ * again at later time.
  *
- * @return		PJ_SUCCESS if detection is started successfully.
+ * Note that STUN must be enabled to run this function successfully.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_detect_nat_type(void *user_data,
-					   pj_stun_nat_detect_cb *cb);
+PJ_DECL(pj_status_t) pjsua_detect_nat_type(void);
+
+
+/**
+ * Get the NAT type as detected by #pjsua_detect_nat_type() function.
+ * This function will only return useful NAT type after #pjsua_detect_nat_type()
+ * has completed successfully and \a on_nat_detect() callback has been called.
+ *
+ * @param type		NAT type.
+ *
+ * @return		When detection is in progress, this function will 
+ *			return PJ_EPENDING and \a type will be set to 
+ *			PJ_STUN_NAT_TYPE_UNKNOWN. After NAT type has been
+ *			detected successfully, this function will return
+ *			PJ_SUCCESS and \a type will be set to the correct
+ *			value. Other return values indicate error and
+ *			\a type will be set to PJ_STUN_NAT_TYPE_ERR_UNKNOWN.
+ */
+PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
 
 
 /**

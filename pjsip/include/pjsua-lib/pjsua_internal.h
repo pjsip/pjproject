@@ -194,6 +194,11 @@ struct pjsua_data
     pj_status_t		 stun_status; /**< STUN server status.		*/
     pj_dns_resolver	*resolver;  /**< DNS resolver.			*/
 
+    /* Detected NAT type */
+    pj_stun_nat_type	 nat_type;	/**< NAT type.			*/
+    pj_status_t		 nat_status;	/**< Detection status.		*/
+    pj_bool_t		 nat_in_progress; /**< Detection in progress	*/
+
     /* Account: */
     unsigned		 acc_cnt;	     /**< Number of accounts.	*/
     pjsua_acc_id	 default_acc;	     /**< Default account ID	*/

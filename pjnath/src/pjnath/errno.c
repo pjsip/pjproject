@@ -49,6 +49,7 @@ static const struct
 
     PJ_BUILD_ERR( PJNATH_ESTUNNOMAPPEDADDR, "STUN (XOR-)MAPPED-ADDRESS attribute not found"),
     PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
+    PJ_BUILD_ERR( PJNATH_ESTUNINSERVER,	    "Invalid STUN server or server not configured"),
 
     /* ICE related errors */
     PJ_BUILD_ERR( PJNATH_ENOICE,	    "ICE session not available"),

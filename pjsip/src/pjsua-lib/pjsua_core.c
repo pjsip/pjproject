@@ -51,6 +51,7 @@ static void init_data()
 	pjsua_var.tpdata[i].index = i;
 
     pjsua_var.stun_status = PJ_EUNKNOWN;
+    pjsua_var.nat_status = PJ_EPENDING;
 }
 
 
@@ -79,6 +80,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 
     cfg->max_calls = 4;
     cfg->thread_cnt = 1;
+    cfg->nat_type_in_sdp = 2;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -1858,28 +1860,69 @@ void pjsua_init_tpselector(pjsua_transport_id tp_id,
 }
 
 
+/* Callback upon NAT detection completion */
+static void nat_detect_cb(void *user_data, 
+			  const pj_stun_nat_detect_result *res)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    pjsua_var.nat_in_progress = PJ_FALSE;
+    pjsua_var.nat_status = res->status;
+    pjsua_var.nat_type = res->nat_type;
+
+    if (pjsua_var.ua_cfg.cb.on_nat_detect) {
+	(*pjsua_var.ua_cfg.cb.on_nat_detect)(res);
+    }
+}
+
+
 /*
  * Detect NAT type.
  */
-PJ_DEF(pj_status_t) pjsua_detect_nat_type( void *user_data,
-					   pj_stun_nat_detect_cb *cb)
+PJ_DEF(pj_status_t) pjsua_detect_nat_type()
 {
     pj_status_t status;
+
+    if (pjsua_var.nat_in_progress)
+	return PJ_SUCCESS;
 
     /* Make sure STUN server resolution has completed */
     status = pjsua_resolve_stun_server(PJ_TRUE);
     if (status != PJ_SUCCESS) {
+	pjsua_var.nat_status = status;
+	pjsua_var.nat_type = PJ_STUN_NAT_TYPE_ERR_UNKNOWN;
 	return status;
     }
 
     /* Make sure we have STUN */
     if (pjsua_var.stun_srv.ipv4.sin_family == 0) {
-	return PJ_EINVALIDOP;
+	pjsua_var.nat_status = PJNATH_ESTUNINSERVER;
+	return PJNATH_ESTUNINSERVER;
     }
 
-    return pj_stun_detect_nat_type(&pjsua_var.stun_srv.ipv4, 
-				   &pjsua_var.stun_cfg, 
-				   user_data, cb);
+    status = pj_stun_detect_nat_type(&pjsua_var.stun_srv.ipv4, 
+				     &pjsua_var.stun_cfg, 
+				     NULL, &nat_detect_cb);
+
+    if (status != PJ_SUCCESS) {
+	pjsua_var.nat_status = status;
+	pjsua_var.nat_type = PJ_STUN_NAT_TYPE_ERR_UNKNOWN;
+	return status;
+    }
+
+    pjsua_var.nat_in_progress = PJ_TRUE;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get NAT type.
+ */
+PJ_DEF(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type)
+{
+    *type = pjsua_var.nat_type;
+    return pjsua_var.nat_status;
 }
 
 

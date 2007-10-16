@@ -48,9 +48,15 @@ PJ_BEGIN_DECL
 typedef enum pj_stun_nat_type
 {
     /**
-     * NAT type is unknown, because the detection has failed.
+     * NAT type is unknown because the detection has not been performed.
      */
     PJ_STUN_NAT_TYPE_UNKNOWN,
+
+    /**
+     * NAT type is unknown because there is failure in the detection
+     * process, possibly because server does not support RFC 3489.
+     */
+    PJ_STUN_NAT_TYPE_ERR_UNKNOWN,
 
     /**
      * This specifies that the client has open access to Internet (or
@@ -149,6 +155,16 @@ typedef struct pj_stun_nat_detect_result
  */
 typedef void pj_stun_nat_detect_cb(void *user_data,
 				   const pj_stun_nat_detect_result *res);
+
+
+/**
+ * Get the NAT name from the specified NAT type.
+ *
+ * @param type		NAT type.
+ *
+ * @return		NAT name.
+ */
+PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
 
 
 /**

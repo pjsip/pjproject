@@ -1885,6 +1885,19 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 
 
 /*
+ * NAT type detection callback.
+ */
+static void on_nat_detect(const pj_stun_nat_detect_result *res)
+{
+    if (res->status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "NAT detection failed", res->status);
+    } else {
+	PJ_LOG(3, (THIS_FILE, "NAT detected as %s", res->nat_type_name));
+    }
+}
+
+
+/*
  * Print buddy list.
  */
 static void print_buddy_list(void)
@@ -2312,33 +2325,6 @@ static void manage_codec_prio(void)
 }
 
 
-/* Callback upon NAT detection completion */
-static void nat_detect_cb(void *user_data,
-			  const pj_stun_nat_detect_result *res)
-{
-    PJ_UNUSED_ARG(user_data);
-
-    if (res->status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "NAT detection failed", res->status);
-    } else {
-	PJ_LOG(3, (THIS_FILE, "NAT detected as %s", res->nat_type_name));
-    }
-}
-
-
-/*
- * Detect NAT type.
- */
-static void detect_nat_type(void)
-{
-    pj_status_t status;
-
-    status = pjsua_detect_nat_type(NULL, &nat_detect_cb);
-    if (status != PJ_SUCCESS)
-	pjsua_perror(THIS_FILE, "Error", status);
-}
-
-
 /*
  * Main "user interface" loop.
  */
@@ -2453,7 +2439,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    break;
 
 	case 'n':
-	    detect_nat_type();
+	    pjsua_detect_nat_type();
 	    break;
 
 	case 'i':
@@ -3307,6 +3293,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     app_config.cfg.cb.on_call_replaced = &on_call_replaced;
+    app_config.cfg.cb.on_nat_detect = &on_nat_detect;
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
@@ -3508,9 +3495,6 @@ pj_status_t app_main(void)
 	app_destroy();
 	return status;
     }
-
-    if (app_config.cfg.stun_domain.slen || app_config.cfg.stun_host.slen)
-	detect_nat_type();
 
     console_app_main(&uri_arg);
 
