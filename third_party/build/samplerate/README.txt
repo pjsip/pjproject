@@ -59,14 +59,21 @@ Visual Studio Build
 
 Makefile build
 --------------
-   libsamplerate build is integrated with PJSIP's build system.
+   - Build and install libsamplerate (configure && make && make install).
+     Please follow the instructions in libsamplerate documentation.
 
-   TBD.
+   - Re-run PJSIP's "configure" script with this option:
+
+       ./configure --enable-libsamplerate
+
+     this will detect the presence of libsamplerate library and add it
+     to the input library list.
 
 
 Enabling libsamplerate for PJMEDIA's resample
 ---------------------------------------------
-    Add this in config_site.h:
+    For both Visual Studio and Makefile based build system, add this in 
+    config_site.h:
 
       #define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBSAMPLERATE
 

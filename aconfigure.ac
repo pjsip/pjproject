@@ -409,6 +409,13 @@ AC_ARG_ENABLE(ilbc-codec,
 	       fi],
 	      AC_MSG_RESULT([Checking if iLBC codec is disabled...no]))
 
+dnl # Include libsamplerate
+AC_ARG_ENABLE(libsamplerate,
+	      AC_HELP_STRING([--enable-libsamplerate],
+			     [Link with libsamplerate when available. Note that PJMEDIA_RESAMPLE_IMP must also be configured]),
+	      [ AC_CHECK_LIB(samplerate,src_new) ],
+	      AC_MSG_RESULT([Skipping libsamplerate detection])
+	     )
 
 
 dnl ##########################################

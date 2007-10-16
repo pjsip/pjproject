@@ -865,6 +865,8 @@ Optional Features:
   --disable-gsm-codec     Exclude GSM codec in the build
   --disable-speex-codec   Exclude Speex codecs in the build
   --disable-ilbc-codec    Exclude iLBC codec in the build
+  --enable-libsamplerate  Link with libsamplerate when available. Note that
+                          PJMEDIA_RESAMPLE_IMP must also be configured
   --disable-ssl           Exclude SSL support the build (default: autodetect)
 
 
@@ -9417,6 +9419,88 @@ else
 echo "${ECHO_T}Checking if iLBC codec is disabled...no" >&6
 fi;
 
+# Check whether --enable-libsamplerate or --disable-libsamplerate was given.
+if test "${enable_libsamplerate+set}" = set; then
+  enableval="$enable_libsamplerate"
+
+echo "$as_me:$LINENO: checking for src_new in -lsamplerate" >&5
+echo $ECHO_N "checking for src_new in -lsamplerate... $ECHO_C" >&6
+if test "${ac_cv_lib_samplerate_src_new+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsamplerate  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char src_new ();
+int
+main ()
+{
+src_new ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_samplerate_src_new=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_samplerate_src_new=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_samplerate_src_new" >&5
+echo "${ECHO_T}$ac_cv_lib_samplerate_src_new" >&6
+if test $ac_cv_lib_samplerate_src_new = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBSAMPLERATE 1
+_ACEOF
+
+  LIBS="-lsamplerate $LIBS"
+
+fi
+
+else
+  echo "$as_me:$LINENO: result: Skipping libsamplerate detection" >&5
+echo "${ECHO_T}Skipping libsamplerate detection" >&6
+
+fi;
 
 
 
