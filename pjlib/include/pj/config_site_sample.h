@@ -41,7 +41,7 @@
 #   define PJMEDIA_SOUND_IMPLEMENTATION PJMEDIA_SOUND_NULL_SOUND
 
     /* Disable these */
-#   define PJMEDIA_HAS_LIBRESAMPLE	0
+#   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
 #   define PJMEDIA_HAS_SPEEX_AEC	0
 
     /* Disable all codecs but G.711, for now */

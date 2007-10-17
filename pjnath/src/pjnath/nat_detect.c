@@ -169,7 +169,7 @@ static pj_status_t get_local_interface(const pj_sockaddr_in *server,
     int addr_len;
     pj_status_t status;
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -244,7 +244,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Initialize socket.
      */
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sess->sock);
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sess->sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -252,7 +252,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
      * Bind to any.
      */
     pj_bzero(&sess->local_addr, sizeof(pj_sockaddr_in));
-    sess->local_addr.sin_family = PJ_AF_INET;
+    sess->local_addr.sin_family = pj_AF_INET();
     status = pj_sock_bind(sess->sock, &sess->local_addr, 
 			  sizeof(pj_sockaddr_in));
     if (status != PJ_SUCCESS)
@@ -525,8 +525,8 @@ static void on_request_complete(pj_stun_session *stun_sess,
     if (test_id >= ST_MAX) {
 	PJ_LOG(4,(sess->pool->obj_name, "Invalid transaction ID %u in response",
 		  test_id));
-	end_session(sess, status, 
-		    PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_SERVER_ERROR));
+	end_session(sess, PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_SERVER_ERROR),
+		    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 	return;
     }
 

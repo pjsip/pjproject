@@ -82,7 +82,7 @@ void MyTask::Start()
 
 void MyTask::RunL()
 {
-    int rc = ua_main();
+    ua_main();
     asw_->AsyncStop();
 }
 
