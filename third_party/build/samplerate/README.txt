@@ -78,4 +78,8 @@ Enabling libsamplerate for PJMEDIA's resample
       #define PJMEDIA_RESAMPLE_IMP PJMEDIA_RESAMPLE_LIBSAMPLERATE
 
 
+Limitations
+-----------
+Sample rate 22050 Hz is only supported with 20ms ptime, and sample rate 11025 Hz is only supported with 40ms ptime. This is the limitation of PJMEDIA rather than libsamplerate.
+
 
