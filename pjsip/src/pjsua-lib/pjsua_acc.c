@@ -531,6 +531,99 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     return PJ_TRUE;
 }
 
+/* Check and update Service-Route header */
+void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
+{
+    pjsip_generic_string_hdr *hsr = NULL;
+    pjsip_route_hdr *hr, *h;
+    const pj_str_t HNAME = { "Service-Route", 13 };
+    const pj_str_t HROUTE = { "Route", 5 };
+    pjsip_uri *uri[PJSUA_ACC_MAX_PROXIES];
+    unsigned i, uri_cnt = 0;
+
+    /* Find and parse Service-Route headers */
+    for (;;) {
+	char saved;
+	int parsed_len;
+
+	/* Find Service-Route header */
+	hsr = (pjsip_generic_string_hdr*)
+	      pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &HNAME, hsr);
+	if (!hsr)
+	    break;
+
+	/* Parse as Route header since the syntax is similar. This may
+	 * return more than one headers.
+	 */
+	saved = hsr->hvalue.ptr[hsr->hvalue.slen];
+	hsr->hvalue.ptr[hsr->hvalue.slen] = '\0';
+	hr = (pjsip_route_hdr*)
+	     pjsip_parse_hdr(rdata->tp_info.pool, &HROUTE, hsr->hvalue.ptr,
+			     hsr->hvalue.slen, &parsed_len);
+	hsr->hvalue.ptr[hsr->hvalue.slen] = saved;
+
+	if (hr == NULL) {
+	    /* Error */
+	    PJ_LOG(1,(THIS_FILE, "Error parsing Service-Route header"));
+	    return;
+	}
+
+	/* Save each URI in the result */
+	h = hr;
+	do {
+	    if (!PJSIP_URI_SCHEME_IS_SIP(h->name_addr.uri) &&
+		!PJSIP_URI_SCHEME_IS_SIPS(h->name_addr.uri))
+	    {
+		PJ_LOG(1,(THIS_FILE,"Error: non SIP URI in Service-Route: %.*s",
+			  (int)hsr->hvalue.slen, hsr->hvalue.ptr));
+		return;
+	    }
+
+	    uri[uri_cnt++] = h->name_addr.uri;
+	    h = h->next;
+	} while (h != hr && uri_cnt != PJ_ARRAY_SIZE(uri));
+
+	if (h != hr) {
+	    PJ_LOG(1,(THIS_FILE, "Error: too many Service-Route headers"));
+	    return;
+	}
+
+	/* Prepare to find next Service-Route header */
+	hsr = hsr->next;
+	if ((void*)hsr == (void*)&rdata->msg_info.msg->hdr)
+	    break;
+    }
+
+    if (uri_cnt == 0)
+	return;
+
+    /* 
+     * Update account's route set 
+     */
+    
+    /* First remove all routes which are not the outbound proxies */
+    for (i=0, hr=acc->route_set.prev; 
+	 i<pjsua_var.ua_cfg.outbound_proxy_cnt; 
+	 ++i)
+     {
+	pjsip_route_hdr *prev = hr->prev;
+	pj_list_erase(hr);
+	hr = prev;
+     }
+
+    /* Then append the Service-Route URIs */
+    for (i=0; i<uri_cnt; ++i) {
+	hr = pjsip_route_hdr_create(pjsua_var.pool);
+	hr->name_addr.uri = pjsip_uri_clone(pjsua_var.pool, uri[i]);
+	pj_list_push_back(&acc->route_set, hr);
+    }
+
+    /* Done */
+
+    PJ_LOG(4,(THIS_FILE, "Service-Route updated for acc %d with %d URI(s)",
+	      acc->index, uri_cnt));
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -575,6 +668,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		PJSUA_UNLOCK();
 		return;
 	    }
+
+	    /* Check and update Service-Route header */
+	    update_service_route(acc, param->rdata);
 
 	    PJ_LOG(3, (THIS_FILE, 
 		       "%s: registration success, status=%d (%.*s), "
