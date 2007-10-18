@@ -539,7 +539,7 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     const pj_str_t HNAME = { "Service-Route", 13 };
     const pj_str_t HROUTE = { "Route", 5 };
     pjsip_uri *uri[PJSUA_ACC_MAX_PROXIES];
-    unsigned i, uri_cnt = 0;
+    unsigned i, uri_cnt = 0, rcnt;
 
     /* Find and parse Service-Route headers */
     for (;;) {
@@ -602,14 +602,17 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
      */
     
     /* First remove all routes which are not the outbound proxies */
-    for (i=0, hr=acc->route_set.prev; 
-	 i<pjsua_var.ua_cfg.outbound_proxy_cnt; 
-	 ++i)
-     {
-	pjsip_route_hdr *prev = hr->prev;
-	pj_list_erase(hr);
-	hr = prev;
-     }
+    rcnt = pj_list_size(&acc->route_set);
+    if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt) {
+	for (i=pjsua_var.ua_cfg.outbound_proxy_cnt, hr=acc->route_set.prev; 
+	     i<rcnt; 
+	     ++i)
+	 {
+	    pjsip_route_hdr *prev = hr->prev;
+	    pj_list_erase(hr);
+	    hr = prev;
+	 }
+    }
 
     /* Then append the Service-Route URIs */
     for (i=0; i<uri_cnt; ++i) {
