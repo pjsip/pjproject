@@ -502,6 +502,10 @@
 				Name="Authentication (.c)"
 				>
 				<File
+					RelativePath="..\src\pjsip\sip_auth_aka.c"
+					>
+				</File>
+				<File
 					RelativePath="..\src\pjsip\sip_auth_client.c"
 					>
 					<FileConfiguration
@@ -796,6 +800,10 @@
 				>
 				<File
 					RelativePath="..\include\pjsip\sip_auth.h"
+					>
+				</File>
+				<File
+					RelativePath="..\include\pjsip\sip_auth_aka.h"
 					>
 				</File>
 				<File

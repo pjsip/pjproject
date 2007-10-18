@@ -176,6 +176,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjlib-util\base64.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\crc32.c"
 				>
 				<FileConfiguration
@@ -584,6 +588,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\include\pjlib-util\base64.h"
+				>
+			</File>
 			<File
 				RelativePath="..\include\pjlib-util\config.h"
 				>

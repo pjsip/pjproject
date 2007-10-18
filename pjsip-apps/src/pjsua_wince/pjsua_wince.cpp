@@ -516,11 +516,8 @@ static ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
 
 
 /* Callback upon NAT detection completion */
-static void nat_detect_cb(void *user_data,
-			  const pj_stun_nat_detect_result *res)
+static void nat_detect_cb(const pj_stun_nat_detect_result *res)
 {
-    PJ_UNUSED_ARG(user_data);
-
     if (res->status != PJ_SUCCESS) {
 	char msg[250];
 	pj_ansi_snprintf(msg, sizeof(msg), "NAT detection failed: %s",
@@ -568,7 +565,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     SetTimer(hMainWnd, ID_POLL_TIMER, 50, NULL);
 
-    pjsua_detect_nat_type(NULL, &nat_detect_cb);
+    pjsua_detect_nat_type();
     return TRUE;
 }
 

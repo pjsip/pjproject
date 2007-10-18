@@ -375,11 +375,1014 @@ BSC32=bscmake.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\..\src\pjsip\sip_auth_client.c
+SOURCE=..\..\src\pjsip\sip_auth_aka.c
 
 !IF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Release"
 
 DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Release"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_SIP_A=\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\milenage\milenage.h"\
+	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
+	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
+	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_errno.h"\
+	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_types.h"\
+	"..\..\include\pjsip\sip_uri.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\pjsip\sip_auth_client.c
+
+!IF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -431,7 +1434,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -439,48 +1442,80 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
 	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth.h"\
+	"..\..\include\pjsip\sip_auth_aka.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
 	"..\..\include\pjsip\sip_auth_parser.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -490,16 +1525,11 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_A=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -551,7 +1581,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -559,7 +1589,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -611,7 +1641,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -619,7 +1649,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Release"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -671,7 +1701,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -679,7 +1709,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -731,7 +1761,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -739,7 +1769,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -792,14 +1822,14 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -851,7 +1881,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -859,7 +1889,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -911,7 +1941,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -919,7 +1949,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -971,7 +2001,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -979,7 +2009,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -1031,7 +2061,7 @@ DEP_CPP_SIP_A=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_A=\
+NODEP_CPP_SIP_AU=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1039,7 +2069,7 @@ NODEP_CPP_SIP_A=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_SIP_A=\
+DEP_CPP_SIP_AU=\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -1107,7 +2137,7 @@ SOURCE=..\..\src\pjsip\sip_auth_msg.c
 
 !IF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1145,7 +2175,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1153,53 +2183,86 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\print_util.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
 	"..\..\include\pjsip\sip_auth_parser.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_AU=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1237,7 +2300,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1245,7 +2308,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1283,7 +2346,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1291,7 +2354,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1329,7 +2392,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1337,7 +2400,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1375,7 +2438,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1383,7 +2446,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1422,14 +2485,14 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1467,7 +2530,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1475,7 +2538,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1513,7 +2576,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1521,7 +2584,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1559,7 +2622,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1567,7 +2630,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1605,7 +2668,7 @@ DEP_CPP_SIP_AU=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AU=\
+NODEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1613,7 +2676,7 @@ NODEP_CPP_SIP_AU=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_SIP_AU=\
+DEP_CPP_SIP_AUT=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1667,7 +2730,7 @@ SOURCE=..\..\src\pjsip\sip_auth_parser.c
 
 !IF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1706,7 +2769,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1714,54 +2777,85 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
 	"..\..\include\pjsip\sip_auth_parser.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_AUT=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1800,7 +2894,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1808,7 +2902,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1847,7 +2941,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1855,7 +2949,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1894,7 +2988,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1902,7 +2996,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1941,7 +3035,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -1949,7 +3043,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -1989,14 +3083,14 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2035,7 +3129,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2043,7 +3137,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2082,7 +3176,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2090,7 +3184,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2129,7 +3223,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2137,7 +3231,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2176,7 +3270,7 @@ DEP_CPP_SIP_AUT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUT=\
+NODEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2184,7 +3278,7 @@ NODEP_CPP_SIP_AUT=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_SIP_AUT=\
+DEP_CPP_SIP_AUTH=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2239,7 +3333,7 @@ SOURCE=..\..\src\pjsip\sip_auth_server.c
 
 !IF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2284,7 +3378,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2292,43 +3386,76 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
 	"..\..\include\pjsip\sip_auth_parser.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
@@ -2336,16 +3463,11 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_AUTH=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2390,7 +3512,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2398,7 +3520,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2443,7 +3565,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2451,7 +3573,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2496,7 +3618,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2504,7 +3626,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE MIPSIV_FP) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2549,7 +3671,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2557,7 +3679,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2603,14 +3725,14 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2655,7 +3777,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2663,7 +3785,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2708,7 +3830,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2716,7 +3838,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2761,7 +3883,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2769,7 +3891,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2814,7 +3936,7 @@ DEP_CPP_SIP_AUTH=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	
-NODEP_CPP_SIP_AUTH=\
+NODEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
 	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
@@ -2822,7 +3944,7 @@ NODEP_CPP_SIP_AUTH=\
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_SIP_AUTH=\
+DEP_CPP_SIP_AUTH_=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
@@ -2951,49 +4073,76 @@ NODEP_CPP_SIP_D=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_D=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -3008,11 +4157,6 @@ DEP_CPP_SIP_D=\
 	"..\..\include\pjsip\sip_ua_layer.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_D=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -3759,45 +4903,74 @@ NODEP_CPP_SIP_E=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_E=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -3812,11 +4985,6 @@ DEP_CPP_SIP_E=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_E=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -4503,44 +5671,77 @@ NODEP_CPP_SIP_ER=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_ER=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_ER=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -5031,48 +6232,79 @@ NODEP_CPP_SIP_M=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_M=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\print_util.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_M=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -5615,48 +6847,74 @@ NODEP_CPP_SIP_P=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_P=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\string.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth_parser.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
@@ -5664,11 +6922,6 @@ DEP_CPP_SIP_P=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_P=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -6326,42 +7579,76 @@ NODEP_CPP_SIP_R=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_R=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\srv_resolver.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
@@ -6370,11 +7657,6 @@ DEP_CPP_SIP_R=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_R=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -6978,51 +8260,80 @@ NODEP_CPP_SIP_T=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_T=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\string.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\print_util.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_tel_uri.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_T=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -7596,43 +8907,74 @@ NODEP_CPP_SIP_TR=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_TR=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
 	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -7646,11 +8988,6 @@ DEP_CPP_SIP_TR=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_TR=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -8322,43 +9659,74 @@ NODEP_CPP_SIP_TRA=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_TRA=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -8370,11 +9738,6 @@ DEP_CPP_SIP_TRA=\
 	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_TRA=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -9026,42 +10389,75 @@ NODEP_CPP_SIP_TRAN=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_TRAN=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
 	"..\..\..\pjlib\include\pj\compat\socket.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -9072,11 +10468,6 @@ DEP_CPP_SIP_TRAN=\
 	"..\..\include\pjsip\sip_transport_loop.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_TRAN=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -9709,37 +11100,55 @@ DEP_CPP_SIP_TRANS=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_TRANS=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
 	"..\..\..\pjlib\include\pj\compat\socket.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
@@ -9747,12 +11156,19 @@ DEP_CPP_SIP_TRANS=\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -10420,42 +11836,75 @@ NODEP_CPP_SIP_TRANSP=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_TRANSP=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\socket.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -10463,13 +11912,9 @@ DEP_CPP_SIP_TRANSP=\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_resolve.h"\
 	"..\..\include\pjsip\sip_transport.h"\
+	"..\..\include\pjsip\sip_transport_udp.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_TRANSP=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -11097,44 +12542,76 @@ NODEP_CPP_SIP_U=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_U=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
 	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\sip_auth.h"\
 	"..\..\include\pjsip\sip_auth_msg.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_dialog.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
@@ -11149,11 +12626,6 @@ DEP_CPP_SIP_U=\
 	"..\..\include\pjsip\sip_ua_layer.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_U=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -11835,49 +13307,80 @@ NODEP_CPP_SIP_UR=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_UR=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\string.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjsip\print_util.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
 	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
-	
-NODEP_CPP_SIP_UR=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -12432,44 +13935,74 @@ NODEP_CPP_SIP_UT=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_UT=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
 	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
 	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -12483,11 +14016,6 @@ DEP_CPP_SIP_UT=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_UT=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -13152,42 +14680,85 @@ NODEP_CPP_SIP_UTI=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_UTI=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
+	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
 	"..\..\include\pjsip\sip_msg.h"\
+	"..\..\include\pjsip\sip_parser.h"\
 	"..\..\include\pjsip\sip_resolve.h"\
+	"..\..\include\pjsip\sip_transport.h"\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_UTI=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -13666,39 +15237,74 @@ NODEP_CPP_SIP_UTIL=\
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SIP_UTIL=\
+	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
 	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
 	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjsip\sip_autoconf.h"\
 	"..\..\include\pjsip\sip_config.h"\
 	"..\..\include\pjsip\sip_endpoint.h"\
 	"..\..\include\pjsip\sip_errno.h"\
@@ -13712,11 +15318,6 @@ DEP_CPP_SIP_UTIL=\
 	"..\..\include\pjsip\sip_types.h"\
 	"..\..\include\pjsip\sip_uri.h"\
 	"..\..\include\pjsip\sip_util.h"\
-	
-NODEP_CPP_SIP_UTIL=\
-	"..\..\..\pjlib\include\pj\compat\m_arm.h"\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjsip_core_wince - Win32 (WCE ARMV4I) Release"
@@ -14298,6 +15899,10 @@ SOURCE=..\..\include\pjsip\print_util.h
 # Begin Source File
 
 SOURCE=..\..\include\pjsip\sip_auth.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pjsip\sip_auth_aka.h
 # End Source File
 # Begin Source File
 
