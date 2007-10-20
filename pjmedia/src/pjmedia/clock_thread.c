@@ -27,7 +27,6 @@
 /*
  * Implementation of media clock with OS thread.
  */
-#define MAX_JUMP    500
 
 struct pjmedia_clock
 {
@@ -37,6 +36,7 @@ struct pjmedia_clock
     pj_timestamp	     timestamp;
     unsigned		     samples_per_frame;
     unsigned		     options;
+    pj_uint64_t		     max_jump;
     pjmedia_clock_callback  *cb;
     void		    *user_data;
     pj_thread_t		    *thread;
@@ -48,6 +48,7 @@ struct pjmedia_clock
 
 static int clock_thread(void *arg);
 
+#define MAX_JUMP_MSEC	500
 
 /*
  * Create media clock.
@@ -76,6 +77,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     clock->interval.u64 = samples_per_frame * clock->freq.u64 / clock_rate;
     clock->next_tick.u64 = 0;
     clock->timestamp.u64 = 0;
+    clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;
     clock->samples_per_frame = samples_per_frame;
     clock->options = options;
     clock->cb = cb;
@@ -142,6 +144,18 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 }
 
 
+/* Calculate next tick */
+PJ_INLINE(void) clock_calc_next_tick(pjmedia_clock *clock,
+				     pj_timestamp *now)
+{
+    if (clock->next_tick.u64+clock->max_jump < now->u64) {
+	/* Timestamp has made large jump, adjust next_tick */
+	clock->next_tick.u64 = now->u64;
+    }
+    clock->next_tick.u64 += clock->interval.u64;
+
+}
+
 /*
  * Poll the clock. 
  */
@@ -184,11 +198,7 @@ PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
     clock->timestamp.u64 += clock->samples_per_frame;
 
     /* Calculate next tick */
-    if (clock->next_tick.u64+MAX_JUMP < now.u64) {
-	/* Timestamp has made large jump, adjust next_tick */
-	clock->next_tick.u64 = now.u64;
-    }
-    clock->next_tick.u64 += clock->interval.u64;
+    clock_calc_next_tick(clock, &now);
 
     /* Done */
     return PJ_TRUE;
@@ -220,8 +230,11 @@ static int clock_thread(void *arg)
 	}
 
 	/* Skip if not running */
-	if (!clock->running)
+	if (!clock->running) {
+	    /* Calculate next tick */
+	    clock_calc_next_tick(clock, &now);
 	    continue;
+	}
 
 	pj_lock_acquire(clock->lock);
 
@@ -233,11 +246,7 @@ static int clock_thread(void *arg)
 	clock->timestamp.u64 += clock->samples_per_frame;
 
 	/* Calculate next tick */
-	if (clock->next_tick.u64+MAX_JUMP < now.u64) {
-	    /* Timestamp has made large jump, adjust next_tick */
-	    clock->next_tick.u64 = now.u64;
-	}
-	clock->next_tick.u64 += clock->interval.u64;
+	clock_calc_next_tick(clock, &now);
 
 	pj_lock_release(clock->lock);
     }
