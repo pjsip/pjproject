@@ -86,7 +86,7 @@
  * Specify PortAudio maximum buffering latency, in milliseconds.
  */
 #ifndef PJMEDIA_PASOUND_MAX_LATENCY
-#   define PJMEDIA_PASOUND_MAX_LATENCY	    60
+#   define PJMEDIA_PASOUND_MAX_LATENCY	    100
 #endif
 
 
