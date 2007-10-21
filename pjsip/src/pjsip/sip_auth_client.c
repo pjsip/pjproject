@@ -490,8 +490,10 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 	    if ((c[i].data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
 
 #if !PJSIP_HAS_DIGEST_AKA_AUTH
-		pj_assert(!"PJSIP_HAS_DIGEST_AKA_AUTH is not enabled");
-		return PJSIP_EAUTHINAKACRED;
+		if (!PJSIP_HAS_DIGEST_AKA_AUTH) {
+		    pj_assert(!"PJSIP_HAS_DIGEST_AKA_AUTH is not enabled");
+		    return PJSIP_EAUTHINAKACRED;
+		}
 #endif
 
 		/* Callback must be specified */
