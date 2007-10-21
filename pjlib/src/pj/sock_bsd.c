@@ -64,6 +64,8 @@ const pj_uint16_t PJ_SOL_IP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_TCP	= SOL_TCP;
 #elif defined(IPPROTO_TCP)
 const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+#else
+const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
 #endif /* SOL_TCP */
 #ifdef SOL_UDP
 const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
