@@ -118,7 +118,7 @@
 				InlineFunctionExpansion="1"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				PrecompiledHeaderFile=".\output/libmilenage-i386-win32-vc8-release/libmilenage.pch"
 				AssemblerListingLocation=".\output/libmilenage-i386-win32-vc8-release/"
