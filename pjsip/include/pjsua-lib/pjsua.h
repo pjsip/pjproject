@@ -3471,7 +3471,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * The default echo canceller tail length.
  */
 #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
-#   define PJSUA_DEFAULT_EC_TAIL_LEN	800
+#   define PJSUA_DEFAULT_EC_TAIL_LEN	200
 #endif
 
 
