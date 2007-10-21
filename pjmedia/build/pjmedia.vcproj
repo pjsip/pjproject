@@ -682,6 +682,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\resample_libsamplerate.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\resample_port.c"
 				>
 				<FileConfiguration
