@@ -713,6 +713,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 		hdr = contact[i];
 		if (hdr->expires >= 0 && hdr->expires < expiration) {
 		    pjsip_contact_hdr *our_contact;
+		    const pjsip_uri *uri1, *uri2;
 
 		    our_contact = (pjsip_contact_hdr*)
 				  regc->contact_hdr_list.next;
@@ -722,9 +723,15 @@ static void tsx_callback(void *token, pjsip_event *event)
 		    /* Only set expiration time if this is the same Contact
 		     * that we register.
 		     */
-		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, 
-				      hdr->uri, 
-				      our_contact->uri)==0) 
+
+		    /* Exclude the display name when comparing the URI.
+		     * This is because a well known open source proxy server
+		     * doesn't return the display name in the Contact header
+		     * of the REGISTER response.
+		     */
+		    uri1 = pjsip_uri_get_uri(hdr->uri);
+		    uri2 = pjsip_uri_get_uri(our_contact->uri);
+		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, uri1, uri2)==0)
 		    {
 			expiration = contact[i]->expires;
 		    }
