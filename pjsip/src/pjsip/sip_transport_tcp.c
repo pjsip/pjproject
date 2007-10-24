@@ -138,6 +138,12 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 				pj_sock_t sock, 
 				pj_status_t status);
 
+/* Handle accept() completion */
+static pj_status_t handle_accept(pj_ioqueue_key_t *key, 
+				 pj_ioqueue_op_key_t *op_key, 
+				 pj_sock_t sock, 
+				 pj_status_t status);
+
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory);
 
@@ -358,8 +364,10 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 	listener->accept_op[i]->listener = listener;
 	listener->accept_op[i]->index = i;
 
-	on_accept_complete(listener->key, &listener->accept_op[i]->op_key,
-			   listener->sock, PJ_EPENDING);
+	status = handle_accept(listener->key, &listener->accept_op[i]->op_key,
+			       listener->sock, PJ_EPENDING);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
     }
 
     PJ_LOG(4,(listener->factory.obj_name, 
@@ -902,6 +910,16 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 				pj_sock_t sock, 
 				pj_status_t status)
 {
+    handle_accept(key, op_key, sock, status);
+}
+
+
+/* Handle accept() completion */
+static pj_status_t handle_accept(pj_ioqueue_key_t *key, 
+				 pj_ioqueue_op_key_t *op_key, 
+				 pj_sock_t sock, 
+				 pj_status_t status)
+{
     struct tcp_listener *listener;
     struct tcp_transport *tcp;
     struct pending_accept *accept_op;
@@ -935,9 +953,10 @@ static void on_accept_complete(	pj_ioqueue_key_t *key,
 	     * we stop the accept() operation.
 	     */
 	    ++err_cnt;
-	    if (err_cnt >= 10) {
+	    if (err_cnt >= 20) {
 		PJ_LOG(1, (listener->factory.obj_name, 
-			   "Too many errors, listener stopping"));
+			   "Too many errors, LISTENER IS STOPPING!"));
+		return status;
 	    }
 
 	} else {
@@ -1020,6 +1039,8 @@ next_accept:
 	 */
 
     } while (status != PJ_EPENDING);
+
+    return PJ_SUCCESS;
 }
 
 
