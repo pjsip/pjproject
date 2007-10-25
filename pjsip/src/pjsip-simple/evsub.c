@@ -405,6 +405,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
     PJ_ASSERT_RETURN(accept_cnt < PJ_ARRAY_SIZE(pkg->pkg_accept->values), 
 		     PJ_ETOOMANY);
 
+    /* Make sure evsub module has been initialized */
+    PJ_ASSERT_RETURN(mod_evsub.mod.id != -1, PJ_EINVALIDOP);
+
     /* Make sure no module with the specified name already registered: */
 
     PJ_ASSERT_RETURN(find_pkg(event_name) == NULL, PJSIP_SIMPLE_EPKGEXISTS);
