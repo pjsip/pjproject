@@ -567,7 +567,7 @@
  * will grow the memory usage undefinitely until the dialog/registration
  * session is terminated.
  *
- * Default: 1
+ * Default: 0
  */
 #if !defined(PJSIP_AUTH_HEADER_CACHING)
 #   define PJSIP_AUTH_HEADER_CACHING	    0
@@ -588,7 +588,7 @@
  * indefinitely until it is terminated, because the stack needs to keep the
  * last WWW-Authenticate/Proxy-Authenticate challenge.
  *
- * Default: 1
+ * Default: 0
  */
 #if !defined(PJSIP_AUTH_AUTO_SEND_NEXT)
 #   define PJSIP_AUTH_AUTO_SEND_NEXT	    0
@@ -609,6 +609,8 @@
 /**
  * Maximum number of stale retries when server keeps rejecting our request
  * with stale=true.
+ *
+ * Default: 3
  */
 #ifndef PJSIP_MAX_STALE_COUNT
 #   define PJSIP_MAX_STALE_COUNT	    3
