@@ -1888,6 +1888,11 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
 
+    /**
+     * Enable Service-Route processing for this account.
+     */
+    pj_bool_t	    enable_service_route;
+
     /** 
      * Optional interval for registration, in seconds. If the value is zero, 
      * default interval will be used (PJSUA_REG_INTERVAL, 55 seconds).

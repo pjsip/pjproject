@@ -128,6 +128,7 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
+    puts  ("  --service-route     Enable Service-Route processing");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
@@ -371,7 +372,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
-	   OPT_100REL, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+	   OPT_100REL, OPT_SERVICE_ROUTE, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
@@ -408,6 +409,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "reg-timeout",1, 0, OPT_REG_TIMEOUT},
 	{ "publish",    0, 0, OPT_PUBLISH},
 	{ "use-100rel", 0, 0, OPT_100REL},
+	{ "service-route", 0, 0, OPT_SERVICE_ROUTE},
 	{ "id",		1, 0, OPT_ID},
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "realm",	1, 0, OPT_REALM},
@@ -632,6 +634,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_100REL: /** 100rel */
 	    cur_acc->require_100rel = PJ_TRUE;
 	    cfg->cfg.require_100rel = PJ_TRUE;
+	    break;
+
+	case OPT_SERVICE_ROUTE: /* Service-Route processing */
+	    cur_acc->enable_service_route = PJ_TRUE;
 	    break;
 
 	case OPT_ID:   /* id */

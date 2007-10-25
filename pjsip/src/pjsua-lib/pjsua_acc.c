@@ -541,6 +541,10 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     pjsip_uri *uri[PJSUA_ACC_MAX_PROXIES];
     unsigned i, uri_cnt = 0, rcnt;
 
+    /* Skip processing is enable_service_route is not set */
+    if (!acc->cfg.enable_service_route)
+	return;
+
     /* Find and parse Service-Route headers */
     for (;;) {
 	char saved;
