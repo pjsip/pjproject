@@ -20,6 +20,7 @@
 #define __OS_SYMBIAN_H__
 
 #include <pj/sock.h>
+#include <pj/os.h>
 #include <pj/string.h>
 
 #include <e32base.h>
@@ -195,6 +196,11 @@ public:
     static PjSymbianOS *Instance();
 
     //
+    // Set parameters
+    //
+    void SetParameters(pj_symbianos_params *params);
+    
+    //
     // Initialize.
     //
     TInt Initialize();
@@ -212,9 +218,15 @@ public:
     // Get RSocketServ instance to be used by all sockets.
     RSocketServ &SocketServ()
     {
-	return socketServ_;
+	return appSocketServ_ ? *appSocketServ_ : socketServ_;
     }
 
+    // Get RConnection instance, if any.
+    RConnection *Connection() 
+    {
+    	return appConnection_;
+    }
+    
     // Convert TInetAddr to pj_sockaddr_in
     static inline void Addr2pj(const TInetAddr & sym_addr,
 			       pj_sockaddr_in &pj_addr)
@@ -243,7 +255,7 @@ public:
     // Get RHostResolver instance
     RHostResolver & GetResolver()
     {
-	return hostResolver_;
+	return appHostResolver_ ? *appHostResolver_ : hostResolver_;
     }
 
 
@@ -296,6 +308,11 @@ private:
 
     CPjTimeoutTimer *selectTimeoutTimer_;
 
+    // App parameters
+    RSocketServ *appSocketServ_;
+    RConnection *appConnection_;
+    RHostResolver *appHostResolver_;
+    
 private:
     PjSymbianOS();
 };

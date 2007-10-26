@@ -312,17 +312,68 @@
         </DOCKINFO>
     </WINDOW>
     <WINDOW>
-        <SESSION>-1</SESSION>
-        <EDOCTYPE>1</EDOCTYPE>
-        <PATH USERELATIVEPATHS = "true">..\pjsip-apps\src\symbian_ua\ua.cpp</PATH>
+        <SESSION>-2147483648</SESSION>
+        <EDOCTYPE>20</EDOCTYPE>
+        <DEFAULT>true</DEFAULT>
         <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>4</X>
-            <Y>4</Y>
+            <Y>23</Y>
         </FRAMELOC>
         <FRAMESIZE>
-            <W>557</W>
-            <H>627</H>
+            <W>1464</W>
+            <H>3681</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-2147483648</SESSION>
+        <EDOCTYPE>36</EDOCTYPE>
+        <DEFAULT>true</DEFAULT>
+        <FRAMELOC>
+            <X>4</X>
+            <Y>23</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>366</W>
+            <H>354</H>
+        </FRAMESIZE>
+        <DOCKINFO>
+            <STATUS>0</STATUS>
+            <ROW></ROW>
+            <COLUMN></COLUMN>
+            <DOCKBARID></DOCKBARID>
+            <PCTWIDTH></PCTWIDTH>
+            <HGT></HGT>
+            <GROUPID>
+                <GIDHIGHPART></GIDHIGHPART>
+                <GIDLOWPART></GIDLOWPART>
+            </GROUPID>
+        </DOCKINFO>
+    </WINDOW>
+    <WINDOW>
+        <SESSION>-2147483648</SESSION>
+        <EDOCTYPE>23</EDOCTYPE>
+        <DEFAULT>true</DEFAULT>
+        <MAXIMIZED>true</MAXIMIZED>
+        <FRAMELOC>
+            <X>6</X>
+            <Y>81</Y>
+        </FRAMELOC>
+        <FRAMESIZE>
+            <W>566</W>
+            <H>477</H>
         </FRAMESIZE>
         <DOCKINFO>
             <STATUS>0</STATUS>

@@ -474,7 +474,14 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
     /* Create Symbian RSocket */
     RSocket rSock;
-    rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), af, type, proto);
+    if (PjSymbianOS::Instance()->Connection())
+    	rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+    			af, type, proto,
+    			*PjSymbianOS::Instance()->Connection());
+    else
+    	rc = rSock.Open(PjSymbianOS::Instance()->SocketServ(), 
+    			af, type, proto);
+        
     if (rc != KErrNone)
 	return PJ_RETURN_OS_ERROR(rc);
 

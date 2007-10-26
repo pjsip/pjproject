@@ -293,6 +293,48 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
  */
 PJ_DECL(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout);
 
+
+/**
+ * This structure declares Symbian OS specific parameters that can be
+ * specified when calling #pj_symbianos_set_params().
+ */
+typedef struct pj_symbianos_params 
+{
+    /**
+     * Optional RSocketServ instance to be used by PJLIB. If this
+     * value is NULL, PJLIB will create a new RSocketServ instance
+     * when pj_init() is called.
+     */
+    void	*rsocketserv;
+    
+    /**
+     * Optional RConnection instance to be used by PJLIB when creating
+     * sockets. If this value is NULL, no RConnection will be
+     * specified when creating sockets.
+     */
+    void	*rconnection;
+    
+    /**
+     * Optional RHostResolver instance to be used by PJLIB. If this value
+     * is NULL, a new RHostResolver instance will be created when
+     * pj_init() is called.
+     */
+    void 	*rhostresolver;
+     
+} pj_symbianos_params;
+
+/**
+ * Specify Symbian OS parameters to be used by PJLIB. This function MUST
+ * be called before #pj_init() is called.
+ *
+ * @param prm		Symbian specific parameters.
+ *
+ * @return		PJ_SUCCESS if the parameters can be applied
+ *			successfully.
+ */
+PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm);
+
+
 /**
  * @}
  */

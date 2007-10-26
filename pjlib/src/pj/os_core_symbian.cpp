@@ -153,8 +153,17 @@ TInt CPjTimeoutTimer::RunError(TInt aError)
 
 PjSymbianOS::PjSymbianOS()
 : isSocketServInitialized_(false), isResolverInitialized_(false),
-  console_(NULL), selectTimeoutTimer_(NULL)
+  console_(NULL), selectTimeoutTimer_(NULL),
+  appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL)
 {
+}
+
+// Set parameters
+void PjSymbianOS::SetParameters(pj_symbianos_params *params) 
+{
+    appSocketServ_ = (RSocketServ*) params->rsocketserv;
+    appConnection_ = (RConnection*) params->rconnection;
+    appHostResolver_ = (RHostResolver*) params->rhostresolver;
 }
 
 // Get PjSymbianOS instance
@@ -179,7 +188,10 @@ TInt PjSymbianOS::Initialize()
     return err;
 #endif
 
-    if (!isSocketServInitialized_) {
+    /* Only create RSocketServ if application doesn't specify it
+     * in the parameters
+     */
+    if (!isSocketServInitialized_ && appSocketServ_ == NULL) {
 	err = socketServ_.Connect();
 	if (err != KErrNone)
 	    goto on_error;
@@ -187,8 +199,13 @@ TInt PjSymbianOS::Initialize()
 	isSocketServInitialized_ = true;
     }
 
-    if (!isResolverInitialized_) {
-	err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
+    if (!isResolverInitialized_ && appHostResolver_ == NULL) {
+    	if (Connection())
+    	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream,
+    	    			     *Connection());
+    	else
+	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
+    	
 	if (err != KErrNone)
 	    goto on_error;
 
@@ -257,6 +274,15 @@ TInt PjSymbianOS::ConvertFromUnicode(TDes8 &aForeign, const TDesC16 &aUnicode)
 PJ_DEF(pj_uint32_t) pj_getpid(void)
 {
     return 0;
+}
+
+
+/* Set Symbian specific parameters */
+PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm) 
+{
+    PJ_ASSERT_RETURN(prm != NULL, PJ_EINVAL);
+    PjSymbianOS::Instance()->SetParameters(prm);
+    return PJ_SUCCESS;
 }
 
 
