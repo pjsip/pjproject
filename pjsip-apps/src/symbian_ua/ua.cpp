@@ -57,7 +57,7 @@
 
 //
 // STUN server
-#if 0
+#if 1
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
 #   define STUN_SERVER	"stun.fwdnet.net"
@@ -216,6 +216,16 @@ static void on_call_transfer_status(pjsua_call_id call_id,
 }
 
 
+/* NAT detection result */
+static void on_nat_detect(const pj_stun_nat_detect_result *res) 
+{
+    if (res->status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "NAT detection failed", res->status);
+    } else {
+	PJ_LOG(3, (THIS_FILE, "NAT detected as %s", res->nat_type_name));
+    }    
+}
+
 /* Notification that call is being replaced. */
 static void on_call_replaced(pjsua_call_id old_call_id,
 			     pjsua_call_id new_call_id)
@@ -282,7 +292,8 @@ static pj_status_t app_startup()
     cfg.cb.on_typing = &on_typing;
     cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     cfg.cb.on_call_replaced = &on_call_replaced;
-
+    cfg.cb.on_nat_detect = &on_nat_detect;
+    
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
 	    cfg.outbound_proxy[0] = pj_str(SIP_PROXY);

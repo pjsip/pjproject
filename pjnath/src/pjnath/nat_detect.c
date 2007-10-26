@@ -830,6 +830,7 @@ static void on_sess_timer(pj_timer_heap_t *th,
 	pj_mutex_lock(sess->mutex);
 	pj_ioqueue_unregister(sess->key);
 	sess->key = NULL;
+	sess->sock = PJ_INVALID_SOCKET;
 	te->id = 0;
 	pj_mutex_unlock(sess->mutex);
 
