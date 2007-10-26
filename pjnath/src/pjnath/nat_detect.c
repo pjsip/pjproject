@@ -78,6 +78,7 @@ typedef struct nat_detect_session
 
     pj_timer_heap_t	    *timer_heap;
     pj_timer_entry	     timer;
+    unsigned		     timer_executed;
 
     void		    *user_data;
     pj_stun_nat_detect_cb   *cb;
@@ -357,6 +358,11 @@ static void end_session(nat_detect_session *sess,
     pj_stun_nat_detect_result result;
     char errmsg[PJ_ERR_MSG_SIZE];
     pj_time_val delay;
+
+    if (sess->timer.id != 0) {
+	pj_timer_heap_cancel(sess->timer_heap, &sess->timer);
+	sess->timer.id = 0;
+    }
 
     pj_bzero(&result, sizeof(result));
     errmsg[0] = '\0';
@@ -830,25 +836,25 @@ static void on_sess_timer(pj_timer_heap_t *th,
 
     } else if (te->id == TIMER_TEST) {
 
-	int executed;
 	pj_bool_t next_timer;
 
 	pj_mutex_lock(sess->mutex);
 
-	executed = test_executed(sess);
 	next_timer = PJ_FALSE;
 
-	if (executed == ST_TEST_1) {
+	if (sess->timer_executed == 0) {
 	    send_test(sess, ST_TEST_1, NULL, 0);
 	    next_timer = PJ_TRUE;
-	} else if (executed == ST_TEST_2) {
+	} else if (sess->timer_executed == 1) {
 	    send_test(sess, ST_TEST_2, NULL, CHANGE_IP_PORT_FLAG);
 	    next_timer = PJ_TRUE;
-	} else if (executed == ST_TEST_3) {
+	} else if (sess->timer_executed == 2) {
 	    send_test(sess, ST_TEST_3, NULL, CHANGE_PORT_FLAG);
 	} else {
 	    pj_assert(!"Shouldn't have timer at this state");
 	}
+
+	++sess->timer_executed;
 
 	if (next_timer) {
 	    pj_time_val delay = {0, TEST_INTERVAL};
