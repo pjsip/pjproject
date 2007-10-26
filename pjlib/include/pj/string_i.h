@@ -194,6 +194,7 @@ PJ_IDEF(int) pj_strcmp2( const pj_str_t *str1, const char *str2 )
 	copy2.ptr = (char*)str2;
 	copy2.slen = pj_ansi_strlen(str2);
     } else {
+	copy2.ptr = NULL;
 	copy2.slen = 0;
     }
 
@@ -297,6 +298,7 @@ PJ_IDEF(int) pj_stricmp2( const pj_str_t *str1, const char *str2)
 	copy2.ptr = (char*)str2;
 	copy2.slen = pj_ansi_strlen(str2);
     } else {
+	copy2.ptr = NULL;
 	copy2.slen = 0;
     }
 
