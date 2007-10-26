@@ -533,7 +533,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		  test_id));
 	end_session(sess, PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_SERVER_ERROR),
 		    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
-	return;
+	goto on_return;
     }
 
     PJ_LOG(5,(sess->pool->obj_name, "Completed %s, status=%d",
@@ -556,7 +556,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
     }
 
     if (test_completed(sess)<3 || test_completed(sess)!=test_executed(sess))
-	return;
+	goto on_return;
 
     /* Handle the test result according to RFC 3489 page 22:
 
@@ -748,6 +748,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	break;
     }
 
+on_return:
     pj_mutex_unlock(sess->mutex);
 }
 
