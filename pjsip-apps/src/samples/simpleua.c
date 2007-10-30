@@ -235,6 +235,9 @@ int main(int argc, char *argv[])
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
 
+    /* Initialize 100rel support */
+    status = pjsip_100rel_init_module(g_endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /*
      * Register our module to receive incoming requests.
@@ -334,6 +337,26 @@ int main(int argc, char *argv[])
 	 */
 
 
+	/* Get the SDP body to be put in the outgoing INVITE, by asking
+	 * media endpoint to create one for us. The SDP will contain all
+	 * codecs that have been registered to it (in this case, only
+	 * PCMA and PCMU), plus telephony event.
+	 */
+	status = pjmedia_endpt_create_sdp( g_med_endpt,	    /* the media endpt	*/
+					   dlg->pool,	    /* pool.		*/
+					   1,		    /* # of streams	*/
+					   &g_med_skinfo,   /* RTP sock info	*/
+					   &local_sdp);	    /* the SDP result	*/
+	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
+
+
+	/* Create the INVITE session, and pass the SDP returned earlier
+	 * as the session's initial capability.
+	 */
+	status = pjsip_inv_create_uac( dlg, local_sdp, 0, &g_inv);
+	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
 	/* If we want the initial INVITE to travel to specific SIP proxies,
 	 * then we should put the initial dialog's route set here. The final
 	 * route set will be updated once a dialog has been established.
@@ -359,28 +382,6 @@ int main(int argc, char *argv[])
 	 *
 	 * Note that Route URI SHOULD have an ";lr" parameter!
 	 */
-
-
-	/* Get the SDP body to be put in the outgoing INVITE, by asking
-	 * media endpoint to create one for us. The SDP will contain all
-	 * codecs that have been registered to it (in this case, only
-	 * PCMA and PCMU), plus telephony event.
-	 */
-	status = pjmedia_endpt_create_sdp( g_med_endpt,	    /* the media endpt	*/
-					   dlg->pool,	    /* pool.		*/
-					   1,		    /* # of streams	*/
-					   &g_med_skinfo,   /* RTP sock info	*/
-					   &local_sdp);	    /* the SDP result	*/
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-
-
-
-	/* Create the INVITE session, and pass the SDP returned earlier
-	 * as the session's initial capability.
-	 */
-	status = pjsip_inv_create_uac( dlg, local_sdp, 0, &g_inv);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-
 
 	/* Create initial INVITE request.
 	 * This INVITE request will contain a perfectly good request and 
