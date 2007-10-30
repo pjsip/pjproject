@@ -27,6 +27,12 @@
 struct pjsua_data pjsua_var;
 
 
+PJ_DEF(struct pjsua_data*) pjsua_get_var(void)
+{
+    return &pjsua_var;
+}
+
+
 /* Display error */
 PJ_DEF(void) pjsua_perror( const char *sender, const char *title, 
 			   pj_status_t status)

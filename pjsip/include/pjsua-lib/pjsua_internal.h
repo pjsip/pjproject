@@ -242,6 +242,12 @@ struct pjsua_data
 
 extern struct pjsua_data pjsua_var;
 
+/**
+ * Get the instance of pjsua
+ */
+PJ_DECL(struct pjsua_data*) pjsua_get_var(void);
+
+
 
 /**
  * IM callback data.
