@@ -282,7 +282,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 	    sess->received < PJMEDIA_RTCP_IGNORE_FIRST_PACKETS) 
 	{
 	    sess->transit = transit;
-	    sess->stat.rx.jitter.min = 2000;
+	    sess->stat.rx.jitter.min = (unsigned)-1;
 	} else {
 	    pj_int32_t d;
 	    pj_uint32_t jitter;
