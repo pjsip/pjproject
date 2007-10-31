@@ -392,6 +392,7 @@ static void increment_counter(pj_ioqueue_key_t *key)
  */
 static void decrement_counter(pj_ioqueue_key_t *key)
 {
+    pj_lock_acquire(key->ioqueue->lock);
     pj_mutex_lock(key->ioqueue->ref_cnt_mutex);
     --key->ref_count;
     if (key->ref_count == 0) {
@@ -401,14 +402,13 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 	key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
 	pj_time_val_normalize(&key->free_time);
 
-	pj_lock_acquire(key->ioqueue->lock);
 	pj_list_erase(key);
 	pj_list_push_back(&key->ioqueue->closing_list, key);
 	/* Rescan fdset to get max descriptor */
 	rescan_fdset(key->ioqueue);
-	pj_lock_release(key->ioqueue->lock);
     }
     pj_mutex_unlock(key->ioqueue->ref_cnt_mutex);
+    pj_lock_release(key->ioqueue->lock);
 }
 #endif
 
