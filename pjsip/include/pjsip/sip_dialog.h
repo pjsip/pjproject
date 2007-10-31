@@ -130,6 +130,7 @@ struct pjsip_dialog
     pj_bool_t		add_allow;  /**< Add Allow header in requests?	    */
     pjsip_cid_hdr      *call_id;    /**< Call-ID header.		    */
     pjsip_route_hdr	route_set;  /**< Route set.			    */
+    pj_bool_t		route_set_frozen; /**< Route set has been set.	    */
     pjsip_auth_clt_sess	auth_sess;  /**< Client authentication session.	    */
 
     /** Session counter. */

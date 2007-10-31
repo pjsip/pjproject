@@ -472,6 +472,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 	rr = (pjsip_route_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, 
 						   PJSIP_H_RECORD_ROUTE, rr);
     }
+    dlg->route_set_frozen = PJ_TRUE;
 
     /* Init client authentication session. */
     status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
@@ -641,6 +642,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
 
 	r = r->next;
     }
+    dlg->route_set_frozen = PJ_TRUE;
 
     /* Clone client authentication session. */
     status = pjsip_auth_clt_clone(dlg->pool, &dlg->auth_sess, 
@@ -1540,6 +1542,10 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_msg *msg)
 {
     const pjsip_hdr *hdr, *end_hdr;
 
+    /* Ignore if route set has been set */
+    if (dlg->route_set_frozen)
+	return;
+
     pj_list_init(&dlg->route_set);
 
     end_hdr = &msg->hdr;
@@ -1551,6 +1557,7 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_msg *msg)
 	    pj_list_push_back(&dlg->route_set, r);
 	}
     }
+    dlg->route_set_frozen = PJ_TRUE;
 }
 
 /* This function is called by user agent upon receiving incoming response
@@ -1559,7 +1566,6 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_msg *msg)
 void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     unsigned i;
-    pj_bool_t routeset_updated = PJ_FALSE;
     int res_code;
 
     PJ_LOG(5,(dlg->obj_name, "Received %s",
@@ -1613,7 +1619,6 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 * route set for future requests in this dialog.
 	 */
 	dlg_update_routeset(dlg, rdata->msg_info.msg);
-	routeset_updated = PJ_TRUE;
 
 	/* The remote target MUST be set to the URI from the Contact header 
 	 * field of the response.
@@ -1673,10 +1678,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	    dlg->target = dlg->remote.contact->uri;
 	}
 
-	if (!routeset_updated) {
-	    dlg_update_routeset(dlg, rdata->msg_info.msg);
-	    routeset_updated = PJ_TRUE;
-	}
+	dlg_update_routeset(dlg, rdata->msg_info.msg);
     }
 
 
