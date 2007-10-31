@@ -3334,6 +3334,29 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
 
 
 /**
+ * Update the presence information for the buddy. Although the library
+ * periodically refreshes the presence subscription for all buddies, some
+ * application may want to refresh the buddy's presence subscription
+ * immediately, and in this case it can use this function to accomplish
+ * this.
+ *
+ * Note that the buddy's presence subscription will only be initiated
+ * if presence monitoring is enabled for the buddy. See 
+ * #pjsua_buddy_subscribe_pres() for more info. Also if presence subscription
+ * for the buddy is already active, this function will not do anything.
+ *
+ * Once the presence subscription is activated successfully for the buddy,
+ * application will be notified about the buddy's presence status in the
+ * on_buddy_state() callback.
+ *
+ * @param buddy_id	Buddy identification.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
+
+
+/**
  * Dump presence subscriptions to log.
  *
  * @param verbose	Yes or no.

@@ -311,6 +311,42 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
 
 
 /*
+ * Update buddy's presence.
+ */
+PJ_DEF(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id)
+{
+    pjsua_buddy *buddy;
+
+    PJ_ASSERT_RETURN(buddy_id>=0 && 
+			buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy),
+		     PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    buddy = &pjsua_var.buddy[buddy_id];
+
+    /* Return error if buddy's presence monitoring is not enabled */
+    if (!buddy->monitor) {
+	PJSUA_UNLOCK();
+	return PJ_EINVALIDOP;
+    }
+
+    /* Ignore if presence is already active for the buddy */
+    if (buddy->sub) {
+	PJSUA_UNLOCK();
+	return PJ_SUCCESS;
+    }
+
+    /* Initiate presence subscription */
+    subscribe_buddy_presence(buddy_id);
+
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Dump presence subscriptions to log file.
  */
 PJ_DEF(void) pjsua_pres_dump(pj_bool_t verbose)
