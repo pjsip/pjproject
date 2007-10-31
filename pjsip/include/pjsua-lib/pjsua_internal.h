@@ -52,6 +52,7 @@ typedef struct pjsua_call
     pjmedia_transport	*med_tp;    /**< Media transport.		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */
+    pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 

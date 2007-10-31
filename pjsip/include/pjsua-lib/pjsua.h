@@ -989,13 +989,13 @@ typedef struct pjsua_config
     pj_str_t	    stun_relay_host;
 
     /**
-     * Include local endpoint's NAT type in the SDP to assist troubleshooting.
-     * The valid values are:
-     *	- 0: no information will be added in SDP.
+     * Support for adding and parsing NAT type in the SDP to assist 
+     * troubleshooting. The valid values are:
+     *	- 0: no information will be added in SDP, and parsing is disabled.
      *	- 1: only the NAT type number is added.
      *	- 2: add both NAT type number and name.
      *
-     * Default: 2
+     * Default: 1
      */
     int		    nat_type_in_sdp;
 
@@ -1365,6 +1365,8 @@ PJ_DECL(pj_status_t) pjsua_detect_nat_type(void);
  *			PJ_SUCCESS and \a type will be set to the correct
  *			value. Other return values indicate error and
  *			\a type will be set to PJ_STUN_NAT_TYPE_ERR_UNKNOWN.
+ *
+ * @see pjsua_call_get_rem_nat_type()
  */
 PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
 
@@ -2729,6 +2731,30 @@ PJ_DECL(pj_status_t) pjsua_call_set_user_data(pjsua_call_id call_id,
  */
 PJ_DECL(void*) pjsua_call_get_user_data(pjsua_call_id call_id);
 
+
+/**
+ * Get the NAT type of remote's endpoint. This is a proprietary feature
+ * of PJSUA-LIB which sends its NAT type in the SDP when \a nat_type_in_sdp
+ * is set in #pjsua_config.
+ *
+ * This function can only be called after SDP has been received from remote,
+ * which means for incoming call, this function can be called as soon as
+ * call is received as long as incoming call contains SDP, and for outgoing
+ * call, this function can be called only after SDP is received (normally in
+ * 200/OK response to INVITE). As a general case, application should call 
+ * this function after or in \a on_call_media_state() callback.
+ *
+ * @param call_id	Call identification.
+ * @param p_type	Pointer to store the NAT type. Application can then
+ *			retrieve the string description of the NAT type
+ *			by calling pj_stun_get_nat_name().
+ *
+ * @return		PJ_SUCCESS on success.
+ *
+ * @see pjsua_get_nat_type(), nat_type_in_sdp
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_rem_nat_type(pjsua_call_id call_id,
+						 pj_stun_nat_type *p_type);
 
 /**
  * Send response to incoming INVITE request. Depending on the status

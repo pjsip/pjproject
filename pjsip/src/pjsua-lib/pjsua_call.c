@@ -98,6 +98,7 @@ static void reset_call(pjsua_call_id id)
     call->conn_time.msec = 0;
     call->res_time.sec = 0;
     call->res_time.msec = 0;
+    call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
 }
 
 
@@ -429,6 +430,24 @@ on_error:
 }
 
 
+/* Get the NAT type information in remote's SDP */
+static void update_remote_nat_type(pjsua_call *call, 
+				   const pjmedia_sdp_session *sdp)
+{
+    const pjmedia_sdp_attr *xnat;
+
+    xnat = pjmedia_sdp_attr_find2(sdp->attr_count, sdp->attr, "X-nat", NULL);
+    if (xnat) {
+	call->rem_nat_type = (pj_stun_nat_type) (xnat->value.ptr[0] - '0');
+    } else {
+	call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
+    }
+
+    PJ_LOG(5,(THIS_FILE, "Call %d: remote NAT type is %d (%s)", call->index,
+	      call->rem_nat_type, pj_stun_get_nat_name(call->rem_nat_type)));
+}
+
+
 /**
  * Handle incoming INVITE request.
  * Called by pjsua_core.c
@@ -658,6 +677,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* Update NAT type of remote endpoint */
+    if (pjsua_var.ua_cfg.nat_type_in_sdp) {
+	const pjmedia_sdp_session *remote_sdp;
+
+	if (pjmedia_sdp_neg_get_neg_remote(inv->neg, &remote_sdp)==PJ_SUCCESS)
+	    update_remote_nat_type(call, remote_sdp);
+    }
 
     /* Create and attach pjsua_var data to the dialog: */
     call->inv = inv;
@@ -1019,6 +1045,21 @@ PJ_DEF(void*) pjsua_call_get_user_data(pjsua_call_id call_id)
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     NULL);
     return pjsua_var.calls[call_id].user_data;
+}
+
+
+/*
+ * Get remote's NAT type.
+ */
+PJ_DEF(pj_status_t) pjsua_call_get_rem_nat_type(pjsua_call_id call_id,
+						pj_stun_nat_type *p_type)
+{
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(p_type != NULL, PJ_EINVAL);
+
+    *p_type = pjsua_var.calls[call_id].rem_nat_type;
+    return PJ_SUCCESS;
 }
 
 
@@ -2267,7 +2308,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-
     status = pjmedia_sdp_neg_get_active_remote(call->inv->neg, &remote_sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -2278,6 +2318,12 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
+    /* Update remote's NAT type */
+    if (pjsua_var.ua_cfg.nat_type_in_sdp) {
+	update_remote_nat_type(call, remote_sdp);
+    }
+
+    /* Update media channel with the new SDP */
     status = pjsua_media_channel_update(call->index, local_sdp, remote_sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 

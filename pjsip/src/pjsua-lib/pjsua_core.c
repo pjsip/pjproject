@@ -86,7 +86,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 
     cfg->max_calls = 4;
     cfg->thread_cnt = 1;
-    cfg->nat_type_in_sdp = 2;
+    cfg->nat_type_in_sdp = 1;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
