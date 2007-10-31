@@ -417,11 +417,11 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 {
 
-    if (tdata==NULL || tdata->msg==NULL)
-	return "NULL";
-
     if (tdata->info)
 	return tdata->info;
+
+    if (tdata==NULL || tdata->msg==NULL)
+	return "NULL";
 
     pj_lock_acquire(tdata->lock);
     tdata->info = get_msg_info(tdata->pool, tdata->obj_name, tdata->msg);
@@ -652,6 +652,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_send_raw(pjsip_tpmgr *mgr,
 	    pjsip_transport_dec_ref(tr);
 	    return status;
 	}
+
+	tdata->info = "raw";
 
 	/* Add reference counter. */
 	pjsip_tx_data_add_ref(tdata);

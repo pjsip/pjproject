@@ -64,9 +64,9 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_get_default(void)
 /*
  * Copy account configuration.
  */
-static void copy_acc_config(pj_pool_t *pool,
-			    pjsua_acc_config *dst,
-			    const pjsua_acc_config *src)
+PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
+				   pjsua_acc_config *dst,
+				   const pjsua_acc_config *src)
 {
     unsigned i;
 
@@ -87,6 +87,9 @@ static void copy_acc_config(pj_pool_t *pool,
     for (i=0; i<src->cred_count; ++i) {
 	pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
     }
+
+    dst->ka_interval = src->ka_interval;
+    pj_strdup(pool, &dst->ka_data, &src->ka_data);
 }
 
 
@@ -275,7 +278,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 			{PJSUA_UNLOCK(); return PJ_EBUG;});
 
     /* Copy config */
-    copy_acc_config(pjsua_var.pool, &pjsua_var.acc[id].cfg, cfg);
+    pjsua_acc_config_dup(pjsua_var.pool, &pjsua_var.acc[id].cfg, cfg);
     
     /* Normalize registration timeout */
     if (pjsua_var.acc[id].cfg.reg_uri.slen &&
@@ -631,6 +634,123 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 	      acc->index, uri_cnt));
 }
 
+
+/* Keep alive timer callback */
+static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
+{
+    pjsua_acc *acc;
+    pjsip_tpselector tp_sel;
+    pj_time_val delay;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    PJSUA_LOCK();
+
+    te->id = PJ_FALSE;
+
+    acc = (pjsua_acc*) te->user_data;
+
+    /* Select the transport to send the packet */
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+    tp_sel.u.transport = acc->ka_transport;
+
+    PJ_LOG(5,(THIS_FILE, 
+	      "Sending %d bytes keep-alive packet for acc %d to %s:%d",
+	      acc->cfg.ka_data.slen, acc->index,
+	      pj_inet_ntoa(acc->ka_target.ipv4.sin_addr),
+	      pj_ntohs(acc->ka_target.ipv4.sin_port)));
+
+    /* Send raw packet */
+    status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+				  PJSIP_TRANSPORT_UDP, &tp_sel,
+				  NULL, acc->cfg.ka_data.ptr, 
+				  acc->cfg.ka_data.slen, 
+				  &acc->ka_target, acc->ka_target_len,
+				  NULL, NULL);
+
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	pjsua_perror(THIS_FILE, "Error sending keep-alive packet", status);
+    }
+
+    /* Reschedule next timer */
+    delay.sec = acc->cfg.ka_interval;
+    delay.msec = 0;
+    status = pjsip_endpt_schedule_timer(pjsua_var.endpt, te, &delay);
+    if (status == PJ_SUCCESS) {
+	te->id = PJ_TRUE;
+    } else {
+	pjsua_perror(THIS_FILE, "Error starting keep-alive timer", status);
+    }
+
+    PJSUA_UNLOCK();
+}
+
+
+/* Update keep-alive for the account */
+static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
+			      struct pjsip_regc_cbparam *param)
+{
+    /* In all cases, stop keep-alive timer if it's running. */
+    if (acc->ka_timer.id) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
+	acc->ka_timer.id = PJ_FALSE;
+
+	pjsip_transport_dec_ref(acc->ka_transport);
+	acc->ka_transport = NULL;
+    }
+
+    if (start) {
+	pj_time_val delay;
+	pj_status_t status;
+
+	/* Only do keep-alive if:
+	 *  - STUN is enabled in global config, and
+	 *  - ka_interval is not zero in the account, and
+	 *  - transport is UDP.
+	 */
+	if (pjsua_var.stun_srv.ipv4.sin_family == 0 ||
+	    acc->cfg.ka_interval == 0 ||
+	    param->rdata->tp_info.transport->key.type != PJSIP_TRANSPORT_UDP)
+	{
+	    /* Keep alive is not necessary */
+	    return;
+	}
+
+	/* Save transport and destination address. */
+	acc->ka_transport = param->rdata->tp_info.transport;
+	pjsip_transport_add_ref(acc->ka_transport);
+	pj_memcpy(&acc->ka_target, &param->rdata->pkt_info.src_addr,
+		  param->rdata->pkt_info.src_addr_len);
+	acc->ka_target_len = param->rdata->pkt_info.src_addr_len;
+
+	/* Setup and start the timer */
+	acc->ka_timer.cb = &keep_alive_timer_cb;
+	acc->ka_timer.user_data = (void*)acc;
+
+	delay.sec = acc->cfg.ka_interval;
+	delay.msec = 0;
+	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
+					    &delay);
+	if (status == PJ_SUCCESS) {
+	    acc->ka_timer.id = PJ_TRUE;
+	    PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
+				 "destination:%s:%d, interval:%ds",
+				 acc->index,
+				 param->rdata->pkt_info.src_name,
+				 param->rdata->pkt_info.src_port,
+				 acc->cfg.ka_interval));
+	} else {
+	    acc->ka_timer.id = PJ_FALSE;
+	    pjsip_transport_dec_ref(acc->ka_transport);
+	    acc->ka_transport = NULL;
+	    pjsua_perror(THIS_FILE, "Error starting keep-alive timer", status);
+	}
+    }
+}
+
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -654,6 +774,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 	
+	/* Stop keep-alive timer if any. */
+	update_keep_alive(acc, PJ_FALSE, NULL);
+
     } else if (param->code < 0 || param->code >= 300) {
 	PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
 		   param->code, 
@@ -661,11 +784,18 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 
+	/* Stop keep-alive timer if any. */
+	update_keep_alive(acc, PJ_FALSE, NULL);
+
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
 
 	if (param->expiration < 1) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
+
+	    /* Stop keep-alive timer if any. */
+	    update_keep_alive(acc, PJ_FALSE, NULL);
+
 	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
 		      pjsua_var.acc[acc->index].cfg.id.ptr));
 	} else {
@@ -686,6 +816,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		       param->code,
 		       (int)param->reason.slen, param->reason.ptr,
 		       param->expiration));
+
+	    /* Start keep-alive timer if necessary. */
+	    update_keep_alive(acc, PJ_TRUE, param);
 
 	    /* Send initial PUBLISH if it is enabled */
 	    if (acc->cfg.publish_enabled && acc->publish_sess==NULL)

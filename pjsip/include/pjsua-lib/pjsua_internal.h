@@ -86,9 +86,13 @@ typedef struct pjsua_acc
     int		     srv_port;	    /**< Port number of reg server.	*/
 
     pjsip_regc	    *regc;	    /**< Client registration session.   */
-    pj_timer_entry   reg_timer;	    /**< Registration timer.		*/
     pj_status_t	     reg_last_err;  /**< Last registration error.	*/
     int		     reg_last_code; /**< Last status last register.	*/
+
+    pj_timer_entry   ka_timer;	    /**< Keep-alive timer for UDP.	*/
+    pjsip_transport *ka_transport;  /**< Transport for keep-alive.	*/
+    pj_sockaddr	     ka_target;	    /**< Destination address for K-A	*/
+    unsigned	     ka_target_len; /**< Length of ka_target.		*/
 
     pjsip_route_hdr  route_set;	    /**< Complete route set inc. outbnd.*/
 

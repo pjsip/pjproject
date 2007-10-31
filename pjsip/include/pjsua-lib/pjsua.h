@@ -1768,7 +1768,7 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
  * Default registration interval.
  */
 #ifndef PJSUA_REG_INTERVAL
-#   define PJSUA_REG_INTERVAL	    55
+#   define PJSUA_REG_INTERVAL	    300
 #endif
 
 
@@ -1897,7 +1897,7 @@ typedef struct pjsua_acc_config
 
     /** 
      * Optional interval for registration, in seconds. If the value is zero, 
-     * default interval will be used (PJSUA_REG_INTERVAL, 55 seconds).
+     * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */
     unsigned	    reg_timeout;
 
@@ -1947,6 +1947,28 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t auto_update_nat;
 
+    /**
+     * Set the interval for periodic keep-alive transmission for this account.
+     * If this value is zero, keep-alive will be disabled for this account.
+     * The keep-alive transmission will be sent to the registrar's address,
+     * after successful registration.
+     *
+     * Even if this setting is enabled, keep-alive transmission is only done
+     * when STUN is enabled in the global #pjsua_config, and the transport
+     * used for registration is UDP. For TCP and TLS transports, keep-alive
+     * is done by the transport themselves.
+     *
+     * Default: 15 (seconds)
+     */
+    unsigned	     ka_interval;
+
+    /**
+     * Specify the data to be transmitted as keep-alive packets.
+     *
+     * Default: CR-LF
+     */
+    pj_str_t	     ka_data;
+
 } pjsua_acc_config;
 
 
@@ -1963,6 +1985,18 @@ typedef struct pjsua_acc_config
  * \endcode
  */
 PJ_DECL(void) pjsua_acc_config_default(pjsua_acc_config *cfg);
+
+
+/**
+ * Duplicate account config.
+ *
+ * @param pool	    Pool to be used for duplicating the config.
+ * @param dst	    Destination configuration.
+ * @param src	    Source configuration.
+ */
+PJ_DECL(void) pjsua_acc_config_dup(pj_pool_t *pool,
+				   pjsua_acc_config *dst,
+				   const pjsua_acc_config *src);
 
 
 /**
