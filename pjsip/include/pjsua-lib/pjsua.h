@@ -3082,6 +3082,17 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 
 
 /**
+ * This specifies how long the library should retry resending SUBSCRIBE
+ * if the previous SUBSCRIBE failed.
+ *
+ * Default: 300 seconds
+ */
+#ifndef PJSUA_PRES_TIMER
+#   define PJSUA_PRES_TIMER	    300
+#endif
+
+
+/**
  * This structure describes buddy configuration when adding a buddy to
  * the buddy list with #pjsua_buddy_add(). Application MUST initialize
  * the structure with #pjsua_buddy_config_default() to initialize this

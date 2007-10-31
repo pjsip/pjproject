@@ -22,9 +22,42 @@
 
 #define THIS_FILE   "pjsua_pres.c"
 
-#ifndef PJSUA_PRES_TIMER
-#   define PJSUA_PRES_TIMER	120
-#endif
+
+static void subscribe_buddy_presence(unsigned index);
+
+
+/*
+ * Find buddy.
+ */
+static pjsua_buddy_id pjsua_find_buddy(const pjsip_uri *uri)
+{
+    const pjsip_sip_uri *sip_uri;
+    unsigned i;
+
+    uri = pjsip_uri_get_uri((pjsip_uri*)uri);
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+	return PJSUA_INVALID_ID;
+
+    sip_uri = (const pjsip_sip_uri*) uri;
+
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
+	const pjsua_buddy *b = &pjsua_var.buddy[i];
+
+	if (!pjsua_buddy_is_valid(i))
+	    continue;
+
+	if (pj_stricmp(&sip_uri->user, &b->name)==0 &&
+	    pj_stricmp(&sip_uri->host, &b->host)==0 &&
+	    (sip_uri->port==(int)b->port || (sip_uri->port==0 && b->port==5060)))
+	{
+	    /* Match */
+	    return i;
+	}
+    }
+
+    return PJSUA_INVALID_ID;
+}
 
 
 /*
@@ -465,6 +498,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsip_dialog *dlg;
     pjsip_expires_hdr *expires_hdr;
     pjsip_evsub_state ev_state;
+    pjsua_buddy_id buddy_id;
     pj_status_t status;
 
     if (pjsip_method_cmp(req_method, pjsip_get_subscribe_method()) != 0)
@@ -595,6 +629,17 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_FALSE;
     }
 
+
+    /* Subscribe to buddy's presence if we're not subscribed */
+    buddy_id = pjsua_find_buddy(dlg->remote.info->uri);
+    if (buddy_id != PJSUA_INVALID_ID) {
+	pjsua_buddy *b = &pjsua_var.buddy[buddy_id];
+	if (b->monitor && b->sub == NULL) {
+	    PJ_LOG(4,(THIS_FILE, "Received SUBSCRIBE from buddy %d, "
+		      "activating outgoing subscription", buddy_id));
+	    subscribe_buddy_presence(buddy_id);
+	}
+    }
 
     /* Done: */
 
