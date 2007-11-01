@@ -326,9 +326,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 #endif
 
     /* Create the INVITE session: */
-#if PJSIP_HAS_100REL
     options |= PJSIP_INV_SUPPORT_100REL;
-#endif
     if (acc->cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
 
@@ -592,9 +590,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
     /* Verify that we can handle the request. */
-#if PJSIP_HAS_100REL
     options |= PJSIP_INV_SUPPORT_100REL;
-#endif
     if (pjsua_var.acc[acc_id].cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
 
