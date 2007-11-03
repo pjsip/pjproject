@@ -1462,7 +1462,10 @@ static void int_parse_status_line( pj_scanner *scanner,
 
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &token);
     status_line->code = pj_strtoul(&token);
-    pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &status_line->reason);
+    if (*scanner->curptr != '\r' && *scanner->curptr != '\n')
+	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &status_line->reason);
+    else
+	status_line->reason.slen=0, status_line->reason.ptr=NULL;
     pj_scan_get_newline( scanner );
 }
 
