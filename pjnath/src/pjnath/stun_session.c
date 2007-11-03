@@ -1016,10 +1016,12 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     dump = (char*) pj_pool_alloc(tmp_pool, PJ_STUN_MAX_PKT_LEN);
 
     PJ_LOG(5,(SNAME(sess),
-	      "RX STUN message:\n"
+	      "RX STUN message from %s:%d:\n"
 	      "--- begin STUN message ---\n"
 	      "%s"
 	      "--- end of STUN message ---\n",
+	      pj_inet_ntoa(((pj_sockaddr_in*)src_addr)->sin_addr),
+	      pj_ntohs(((pj_sockaddr_in*)src_addr)->sin_port),
 	      pj_stun_msg_dump(msg, dump, PJ_STUN_MAX_PKT_LEN, NULL)));
 
     pj_mutex_lock(sess->mutex);
