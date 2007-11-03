@@ -391,7 +391,10 @@ PJ_BEGIN_DECL
  * Invalid AKA credential.
  */
 #define PJSIP_EAUTHINAKACRED	(PJSIP_ERRNO_START_PJSIP + 113)	/* 171113 */
-
+/**
+ * No challenge is found in the challenge.
+ */
+#define PJSIP_EAUTHNOCHAL	(PJSIP_ERRNO_START_PJSIP + 114)	/* 171114 */
 
 /************************************************************
  * UA AND DIALOG ERRORS
