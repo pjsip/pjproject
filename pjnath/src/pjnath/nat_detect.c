@@ -102,6 +102,7 @@ typedef struct nat_detect_session
 	pj_status_t	status;
 	pj_sockaddr_in	ma;
 	pj_sockaddr_in	ca;
+	pj_stun_tx_data	*tdata;
     } result[ST_MAX];
 
 } nat_detect_session;
@@ -548,11 +549,19 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		  sizeof(pj_sockaddr_in));
     }
 
-    if (test_id == ST_TEST_1 && status == PJ_SUCCESS) {
+    /* Send Test 1B only when Test 2 completes. Must not send Test 1B
+     * before Test 2 completes to avoid creating mapping on the NAT.
+     */
+    if (!sess->result[ST_TEST_1B].executed && 
+	sess->result[ST_TEST_2].complete &&
+	sess->result[ST_TEST_2].status != PJ_SUCCESS &&
+	sess->result[ST_TEST_1].complete &&
+	sess->result[ST_TEST_1].status == PJ_SUCCESS) 
+    {
 	cmp = pj_memcmp(&sess->local_addr, &sess->result[ST_TEST_1].ma,
 			sizeof(pj_sockaddr_in));
 	if (cmp != 0)
-	    send_test(sess, ST_TEST_1B, &sess->result[test_id].ca, 0);
+	    send_test(sess, ST_TEST_1B, &sess->result[ST_TEST_1].ca, 0);
     }
 
     if (test_completed(sess)<3 || test_completed(sess)!=test_executed(sess))
@@ -759,7 +768,6 @@ static pj_status_t send_test(nat_detect_session *sess,
 			     const pj_sockaddr_in *alt_addr,
 			     pj_uint32_t change_flag)
 {
-    pj_stun_tx_data *tdata;
     pj_uint32_t magic, tsx_id[3];
     pj_status_t status;
 
@@ -777,12 +785,14 @@ static pj_status_t send_test(nat_detect_session *sess,
     /* Create BIND request */
     status = pj_stun_session_create_req(sess->stun_sess, 
 					PJ_STUN_BINDING_REQUEST, magic,
-					(pj_uint8_t*)tsx_id, &tdata);
+					(pj_uint8_t*)tsx_id, 
+					&sess->result[test_id].tdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /* Add CHANGE-REQUEST attribute */
-    status = pj_stun_msg_add_uint_attr(sess->pool, tdata->msg,
+    status = pj_stun_msg_add_uint_attr(sess->pool, 
+				       sess->result[test_id].tdata->msg,
 				       PJ_STUN_ATTR_CHANGE_REQUEST,
 				       change_flag);
     if (status != PJ_SUCCESS)
@@ -804,7 +814,7 @@ static pj_status_t send_test(nat_detect_session *sess,
     status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
 				      sess->cur_server, 
 				      sizeof(pj_sockaddr_in),
-				      tdata);
+				      sess->result[test_id].tdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
