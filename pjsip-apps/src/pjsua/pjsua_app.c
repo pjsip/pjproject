@@ -2009,7 +2009,7 @@ static void keystroke_help(void)
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
-    puts("|  q  QUIT                  sleep N: console sleep for N ms                   |");
+    puts("|  q  QUIT       sleep N: console sleep for N ms    n: detect NAT type        |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -2445,7 +2445,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    break;
 
 	case 'n':
-	    pjsua_detect_nat_type();
+	    i = pjsua_detect_nat_type();
+	    if (i != PJ_SUCCESS)
+		pjsua_perror(THIS_FILE, "Error", i);
 	    break;
 
 	case 'i':
