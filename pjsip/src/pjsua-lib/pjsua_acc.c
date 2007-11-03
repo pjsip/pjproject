@@ -610,8 +610,9 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     
     /* First remove all routes which are not the outbound proxies */
     rcnt = pj_list_size(&acc->route_set);
-    if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt) {
-	for (i=pjsua_var.ua_cfg.outbound_proxy_cnt, hr=acc->route_set.prev; 
+    if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt) {
+	for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt, 
+		hr=acc->route_set.prev; 
 	     i<rcnt; 
 	     ++i)
 	 {
