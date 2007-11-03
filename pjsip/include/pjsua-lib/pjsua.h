@@ -3618,7 +3618,7 @@ struct pjsua_media_config
      * bridge. Specifying lower ptime will normally reduce the
      * latency.
      *
-     * Default: 20 (miliseconds)
+     * Default: 10 (miliseconds)
      */
     unsigned		audio_frame_ptime;
 
