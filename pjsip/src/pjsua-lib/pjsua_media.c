@@ -22,7 +22,12 @@
 
 #define THIS_FILE		"pjsua_media.c"
 
-#define DEFAULT_RTP_PORT    4000
+#define DEFAULT_RTP_PORT			4000
+
+#ifndef PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT
+#   define PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT	0
+#endif
+
 
 /* Next RTP port to be used */
 static pj_uint16_t next_rtp_port;
@@ -299,6 +304,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 		goto on_error;
 	    }
 
+#if PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT
 	    if (pj_ntohs(mapped_addr[1].sin_port) == 
 		pj_ntohs(mapped_addr[0].sin_port)+1)
 	    {
@@ -311,6 +317,19 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 
 	    pj_sock_close(sock[1]); 
 	    sock[1] = PJ_INVALID_SOCKET;
+#else
+	    if (pj_ntohs(mapped_addr[1].sin_port) != 
+		pj_ntohs(mapped_addr[0].sin_port)+1)
+	    {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Note: STUN mapped RTCP port %d is not adjacent"
+			  " to RTP port %d",
+			  pj_ntohs(mapped_addr[1].sin_port),
+			  pj_ntohs(mapped_addr[0].sin_port)));
+	    }
+	    /* Success! */
+	    break;
+#endif
 
 	} else if (cfg->public_addr.slen) {
 
