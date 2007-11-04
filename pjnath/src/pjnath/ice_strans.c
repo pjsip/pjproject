@@ -1127,7 +1127,17 @@ static void stun_on_request_complete(pj_stun_session *sess,
     pj_assert(comp->pending_cnt > 0);
     comp->pending_cnt--;
 
-    if (status != PJ_SUCCESS) {
+    if (status == PJNATH_ESTUNTIMEDOUT) {
+
+	PJ_LOG(4,(comp->ice_st->obj_name, 
+		  "STUN Binding request has timed-out, will retry "
+		  "again alter"));
+
+	/* Restart keep-alive timer */
+	start_ka_timer(comp->ice_st);
+	return;
+
+    } else if (status != PJ_SUCCESS) {
 	comp->last_status = cand->status = status;
 	ice_st_perror(comp->ice_st, "STUN Binding request failed", 
 		      cand->status);
@@ -1164,7 +1174,7 @@ static void stun_on_request_complete(pj_stun_session *sess,
 	return;
     }
 
-    PJ_LOG(4,(comp->ice_st->obj_name, 
+    PJ_LOG(5,(comp->ice_st->obj_name, 
 	      "STUN mapped address for %s:%d is %s:%d",
 	      ip, (int)pj_ntohs(comp->local_addr.ipv4.sin_port),
 	      pj_inet_ntoa(mapped_addr->ipv4.sin_addr),
