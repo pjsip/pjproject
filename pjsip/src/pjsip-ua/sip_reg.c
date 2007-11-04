@@ -682,16 +682,20 @@ static void tsx_callback(void *token, pjsip_event *event)
 	int contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 	pjsip_rx_data *rdata;
-	pj_int32_t expiration = 0xFFFF;
+	enum { NOEXP = 0x1FFFFFFF };
+	pj_int32_t expiration = NOEXP;
 
 	if (tsx->status_code/100 == 2) {
 	    int i;
 	    pjsip_contact_hdr *hdr;
 	    pjsip_msg *msg;
+	    pj_bool_t has_our_contact = PJ_FALSE;
 	    pjsip_expires_hdr *expires;
 
 	    rdata = event->body.tsx_state.src.rdata;
 	    msg = rdata->msg_info.msg;
+
+	    /* Record all Contact headers in the response */
 	    hdr = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr( msg, PJSIP_H_CONTACT, NULL);
 	    while (hdr) {
@@ -703,42 +707,57 @@ static void tsx_callback(void *token, pjsip_event *event)
 		      pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, hdr);
 	    }
 
+	    /* Set default expiration value to the value of Expires hdr */
 	    expires = (pjsip_expires_hdr*)
 		      pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 
 	    if (expires)
 		expiration = expires->ivalue;
 	    
+	    /* Enumerate all Contact headers found in the response and
+	     * find the Contact(s) that we register.
+	     */
 	    for (i=0; i<contact_cnt; ++i) {
-		hdr = contact[i];
-		if (hdr->expires >= 0 && hdr->expires < expiration) {
-		    pjsip_contact_hdr *our_contact;
+		pjsip_contact_hdr *our_contact;
+
+		our_contact = (pjsip_contact_hdr*)
+			      regc->contact_hdr_list.next;
+
+		while ((void*)our_contact != (void*)&regc->contact_hdr_list) {
+
 		    const pjsip_uri *uri1, *uri2;
 
-		    our_contact = (pjsip_contact_hdr*)
-				  regc->contact_hdr_list.next;
-		    if ((void*)our_contact==(void*)&regc->contact_hdr_list.next)
-			continue;
-
-		    /* Only set expiration time if this is the same Contact
-		     * that we register.
+		    /* Compare URIs.
+		     * Exclude the display name when comparing the URI since
+		     * server may not return it.
 		     */
 
-		    /* Exclude the display name when comparing the URI.
-		     * This is because a well known open source proxy server
-		     * doesn't return the display name in the Contact header
-		     * of the REGISTER response.
-		     */
-		    uri1 = pjsip_uri_get_uri(hdr->uri);
+		    uri1 = pjsip_uri_get_uri(contact[i]->uri);
 		    uri2 = pjsip_uri_get_uri(our_contact->uri);
 		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, uri1, uri2)==0)
 		    {
-			expiration = contact[i]->expires;
+			has_our_contact = PJ_TRUE;
+
+			if (contact[i]->expires >= 0 && 
+			    contact[i]->expires < expiration) 
+			{
+			    /* Get the lowest expiration time. */
+			    expiration = contact[i]->expires;
+			}
 		    }
+
+		    our_contact = our_contact->next;
 		}
 	    }
 
-	    if (regc->auto_reg && expiration != 0 && expiration != 0xFFFF) {
+	    /* When the response doesn't contain our Contact header, that
+	     * means we have been unregistered.
+	     */
+	    if (!has_our_contact)
+		expiration = 0;
+
+	    /* Schedule next registration */
+	    if (regc->auto_reg && expiration != 0 && expiration != NOEXP) {
 		pj_time_val delay = { 0, 0};
 
 		delay.sec = expiration - DELAY_BEFORE_REFRESH;
@@ -769,7 +788,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 	++regc->busy;
 
 	/* Call callback. */
-	if (expiration == 0xFFFF) expiration = -1;
+	if (expiration == NOEXP) expiration = -1;
 	call_callback(regc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: pjsip_get_status_text(tsx->status_code)),
