@@ -1078,6 +1078,9 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 	/*
 	 * Notify sip_transport.c that packet has been sent.
 	 */
+	if (bytes_sent == 0)
+	    bytes_sent = -PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
+
 	tdata_op_key->callback(&tcp->base, tdata_op_key->token, bytes_sent);
 
 	/* Mark last activity time */
