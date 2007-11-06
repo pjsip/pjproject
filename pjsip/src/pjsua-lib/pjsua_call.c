@@ -688,8 +688,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
-    /* Update NAT type of remote endpoint */
-    if (pjsua_var.ua_cfg.nat_type_in_sdp) {
+    /* Update NAT type of remote endpoint, only when there is SDP in
+     * incoming INVITE! 
+     */
+    if (pjsua_var.ua_cfg.nat_type_in_sdp &&
+	pjmedia_sdp_neg_get_state(inv->neg) > PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) 
+    {
 	const pjmedia_sdp_session *remote_sdp;
 
 	if (pjmedia_sdp_neg_get_neg_remote(inv->neg, &remote_sdp)==PJ_SUCCESS)
