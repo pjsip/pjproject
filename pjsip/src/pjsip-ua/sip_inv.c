@@ -1406,6 +1406,9 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
     status = pjmedia_sdp_parse(rdata->tp_info.pool, 
 			       (char*)msg->body->data,
 			       msg->body->len, &sdp);
+    if (status == PJ_SUCCESS)
+	status = pjmedia_sdp_validate(sdp);
+
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_strerror(status, errmsg, sizeof(errmsg));
