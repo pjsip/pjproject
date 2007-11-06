@@ -1560,9 +1560,12 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
 	if (msg->type != PJSIP_RESPONSE_MSG)
 	    return;
 
-	/* Ignore subsequent responses with higher CSeq than initial CSeq */
-	if (msg_cseq != dlg->local.first_cseq)
-	    return;
+	/* Ignore subsequent responses with higher CSeq than initial CSeq.
+	 * Unfortunately this would be broken when the first request is 
+	 * challenged!
+	 */
+	//if (msg_cseq != dlg->local.first_cseq)
+	//    return;
 
     } else {
 
@@ -1576,6 +1579,10 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
 
     /* Based on the checks above, we should only get response message here */
     pj_assert(msg->type == PJSIP_RESPONSE_MSG);
+
+    /* Ignore if this is not 1xx or 2xx response */
+    if (msg->line.status.code >= 300)
+	return;
 
     /* Reset route set */
     pj_list_init(&dlg->route_set);
@@ -1591,6 +1598,8 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
 	}
     }
 
+    PJ_LOG(5,(dlg->obj_name, "Route-set updated"));
+
     /* Freeze the route set only when the route set comes in 2xx response. 
      * If it is in 1xx response, prepare to recompute the route set when 
      * the 2xx response comes in.
@@ -1599,9 +1608,15 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
      * is established with reliable provisional response, but I think
      * it is safer to not freeze the route set (thus recompute the route set
      * upon receiving 2xx response). Also RFC 3261 says so in 13.2.2.4.
+     *
+     * The pjsip_method_creates_dialog() check protects from wrongly 
+     * freezing the route set upon receiving 200/OK response for PRACK.
      */
-    if (PJSIP_IS_STATUS_IN_CLASS(msg->line.status.code, 200)) {
+    if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
+	PJSIP_IS_STATUS_IN_CLASS(msg->line.status.code, 200)) 
+    {
 	dlg->route_set_frozen = PJ_TRUE;
+	PJ_LOG(5,(dlg->obj_name, "Route-set frozen"));
     }
 }
 
