@@ -823,7 +823,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 	status = pjsip_publishc_init(acc->publish_sess, &STR_PRESENCE,
 				     &acc_cfg->id, &acc_cfg->id,
 				     &acc_cfg->id, 
-				     60);
+				     PJSUA_PRES_TIMER);
 	if (status != PJ_SUCCESS) {
 	    acc->publish_sess = NULL;
 	    return status;
