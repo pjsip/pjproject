@@ -362,7 +362,7 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     token = strtok(NULL, " ");
     if (!token)
 	goto on_return;
-    if (strcmp(token, "UDP") != 0)
+    if (pj_ansi_stricmp(token, "UDP") != 0)
 	goto on_return;
 
     /* Priority */
@@ -388,7 +388,7 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     token = strtok(NULL, " ");
     if (!token)
 	goto on_return;
-    if (strcmp(token, "typ") != 0)
+    if (pj_ansi_stricmp(token, "typ") != 0)
 	goto on_return;
 
     /* candidate type */
@@ -396,16 +396,16 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     if (!token)
 	goto on_return;
 
-    if (strcmp(token, "host") == 0) {
+    if (pj_ansi_stricmp(token, "host") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_HOST;
 
-    } else if (strcmp(token, "srflx") == 0) {
+    } else if (pj_ansi_stricmp(token, "srflx") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_SRFLX;
 
-    } else if (strcmp(token, "relay") == 0) {
+    } else if (pj_ansi_stricmp(token, "relay") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 
-    } else if (strcmp(token, "prflx") == 0) {
+    } else if (pj_ansi_stricmp(token, "prflx") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_PRFLX;
 
     } else {
@@ -510,18 +510,18 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 	attr = sdp_med->attr[i];
 
 	/* Detect if remote is ICE lite */
-	if (pj_strcmp(&attr->name, &STR_ICE_LITE)==0) {
+	if (pj_stricmp(&attr->name, &STR_ICE_LITE)==0) {
 	    remote_is_lite = PJ_TRUE;
 	    continue;
 	}
 
 	/* Detect if remote has reported ICE mismatch */
-	if (pj_strcmp(&attr->name, &STR_ICE_MISMATCH)==0) {
+	if (pj_stricmp(&attr->name, &STR_ICE_MISMATCH)==0) {
 	    ice_mismatch = PJ_TRUE;
 	    continue;
 	}
 
-	if (pj_strcmp(&attr->name, &STR_CANDIDATE)!=0)
+	if (pj_stricmp(&attr->name, &STR_CANDIDATE)!=0)
 	    continue;
 
 	/* Parse candidate */
