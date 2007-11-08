@@ -1037,7 +1037,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
     pjsip_dlg_inc_lock(dlg);
 
     /* Use outgoing CSeq and increment it by one. */
-    if (cseq <= 0)
+    if (cseq < 0)
 	cseq = dlg->local.cseq + 1;
 
     /* Keep compiler happy */
