@@ -22,6 +22,7 @@
 #include <pj/log.h>
 #include <pj/rand.h>
 
+#define THIS_FILE   "transport_ice.c"
 
 struct transport_ice
 {
@@ -348,53 +349,77 @@ static pj_status_t parse_cand(pj_pool_t *pool,
 
     /* Foundation */
     token = strtok(input.ptr, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE foundation in candidate"));
 	goto on_return;
+    }
     pj_strdup2(pool, &cand->foundation, token);
 
     /* Component ID */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE component ID in candidate"));
 	goto on_return;
+    }
     cand->comp_id = atoi(token);
 
     /* Transport */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE transport in candidate"));
 	goto on_return;
-    if (pj_ansi_stricmp(token, "UDP") != 0)
+    }
+    if (pj_ansi_stricmp(token, "UDP") != 0) {
+	PJ_LOG(5,(THIS_FILE, 
+		  "Expecting ICE UDP transport only in candidate"));
 	goto on_return;
+    }
 
     /* Priority */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE priority in candidate"));
 	goto on_return;
+    }
     cand->prio = atoi(token);
 
     /* Host */
     host = strtok(NULL, " ");
-    if (!host)
+    if (!host) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE host in candidate"));
 	goto on_return;
-    if (pj_sockaddr_in_init(&cand->addr.ipv4, pj_cstr(&s, host), 0))
+    }
+    if (pj_sockaddr_in_init(&cand->addr.ipv4, pj_cstr(&s, host), 0)) {
+	PJ_LOG(5,(THIS_FILE, 
+		  "Expecting ICE IPv4 transport address in candidate"));
 	goto on_return;
+    }
 
     /* Port */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE port number in candidate"));
 	goto on_return;
+    }
     cand->addr.ipv4.sin_port = pj_htons((pj_uint16_t)atoi(token));
 
     /* typ */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
-    if (pj_ansi_stricmp(token, "typ") != 0)
+    }
+    if (pj_ansi_stricmp(token, "typ") != 0) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
+    }
 
     /* candidate type */
     token = strtok(NULL, " ");
-    if (!token)
+    if (!token) {
+	PJ_LOG(5,(THIS_FILE, "Expecting ICE candidate type in candidate"));
 	goto on_return;
+    }
 
     if (pj_ansi_stricmp(token, "host") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_HOST;
@@ -409,6 +434,8 @@ static pj_status_t parse_cand(pj_pool_t *pool,
 	cand->type = PJ_ICE_CAND_TYPE_PRFLX;
 
     } else {
+	PJ_LOG(5,(THIS_FILE, "Invalid ICE candidate type %s in candidate", 
+		  token));
 	goto on_return;
     }
 
@@ -526,8 +553,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 
 	/* Parse candidate */
 	status = parse_cand(pool, &attr->value, &cand[cand_cnt]);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(4,(THIS_FILE, 
+		      "Error in parsing SDP candidate attribute, "
+		      "candidate is ignored"));
+	    continue;
+	}
 
 	/* Check if this candidate is equal to the connection line */
 	if (!conn_found_in_candidate &&
