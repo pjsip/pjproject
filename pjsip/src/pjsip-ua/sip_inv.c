@@ -2075,8 +2075,11 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
 	tdata = invite_tsx->last_tx;
 
 	status = pjsip_dlg_modify_response(inv->dlg, tdata, 487, NULL);
-	if (status == PJ_SUCCESS)
+	if (status == PJ_SUCCESS) {
+	    /* Remove the message body */
+	    tdata->msg->body = NULL;
 	    pjsip_dlg_send_response(inv->dlg, invite_tsx, tdata);
+	}
     }
 
     if (invite_tsx)
