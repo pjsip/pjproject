@@ -307,6 +307,13 @@ PJ_DEF(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
     return pjsip_auth_clt_set_credentials(&regc->auth_sess, count, cred);
 }
 
+PJ_DEF(pj_status_t) pjsip_regc_set_prefs( pjsip_regc *regc,
+					  const pjsip_auth_clt_pref *pref)
+{
+    PJ_ASSERT_RETURN(regc && pref, PJ_EINVAL);
+    return pjsip_auth_clt_set_prefs(&regc->auth_sess, pref);
+}
+
 PJ_DEF(pj_status_t) pjsip_regc_set_route_set( pjsip_regc *regc,
 					      const pjsip_route_hdr *route_set)
 {

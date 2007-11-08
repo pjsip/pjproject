@@ -571,8 +571,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
-    /* Set credentials. */
+    /* Set credentials and preference. */
     pjsip_auth_clt_set_credentials(&dlg->auth_sess, acc->cred_cnt, acc->cred);
+    pjsip_auth_clt_set_prefs(&dlg->auth_sess, &acc->cfg.auth_pref);
 
     /* Init callback: */
     pj_bzero(&pres_cb, sizeof(pres_cb));
@@ -1172,6 +1173,9 @@ static void subscribe_buddy_presence(unsigned index)
 	pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
 					acc->cred_cnt, acc->cred);
     }
+
+    /* Set authentication preference */
+    pjsip_auth_clt_set_prefs(&buddy->dlg->auth_sess, &acc->cfg.auth_pref);
 
     pjsip_evsub_set_mod_data(buddy->sub, pjsua_var.mod.id, buddy);
 

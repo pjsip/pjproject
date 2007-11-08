@@ -189,6 +189,17 @@ PJ_DECL(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
 						 const pjsip_cred_info cred[] );
 
 /**
+ * Set authentication preference.
+ *
+ * @param regc	    The registration structure.
+ * @param pref	    Authentication preference.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_prefs( pjsip_regc *regc,
+					   const pjsip_auth_clt_pref *pref);
+
+/**
  * Set route set to be used for outgoing requests.
  *
  * @param regc	    The client registration structure.

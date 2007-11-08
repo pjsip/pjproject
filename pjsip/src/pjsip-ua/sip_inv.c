@@ -1563,9 +1563,19 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 
     /* Include SDP when it's available for 2xx and 18x (but not 180) response.
      * Subsequent response will include this SDP.
+     *
+     * Note note:
+     *	- When offer/answer has been completed in reliable 183, we MUST NOT
+     *	  send SDP in 2xx response. So if we don't have SDP to send, clear
+     *	  the SDP in the message body ONLY if 100rel is active in this 
+     *    session.
      */
     if (sdp) {
 	tdata->msg->body = create_sdp_body(tdata->pool, sdp);
+    } else {
+	if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+	    tdata->msg->body = NULL;
+	}
     }
 
 
@@ -2226,8 +2236,32 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
     struct tsx_inv_data *tsx_inv_data = NULL;
     pj_status_t status = -1;
 
-    /* Process 2xx response */
+    /* Handle 401/407 challenge. */
     if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	(tsx->status_code == 401 || tsx->status_code == 407)) {
+
+	pjsip_tx_data *tdata;
+	
+	status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
+					    e->body.tsx_state.src.rdata,
+					    tsx->last_tx,
+					    &tdata);
+	
+	if (status != PJ_SUCCESS) {
+	    
+	    /* Does not have proper credentials. 
+	     * End the session anyway.
+	     */
+	    inv_set_cause(inv, PJSIP_SC_OK, NULL);
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    
+	} else {
+	    /* Re-send BYE. */
+	    status = pjsip_inv_send_msg(inv, tdata);
+	}
+
+    /* Process 2xx response */
+    } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 	tsx->status_code/100 == 2 &&
 	e->body.tsx_state.src.rdata->msg_info.msg->body)
     {

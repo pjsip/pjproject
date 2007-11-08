@@ -383,6 +383,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 					acc->cred_cnt, acc->cred);
     }
 
+    /* Set authentication preference */
+    pjsip_auth_clt_set_prefs(&dlg->auth_sess, &acc->cfg.auth_pref);
 
     /* Create initial INVITE: */
 
@@ -665,6 +667,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				       pjsua_var.acc[acc_id].cred_cnt,
 				       pjsua_var.acc[acc_id].cred);
     }
+
+    /* Set preference */
+    pjsip_auth_clt_set_prefs(&dlg->auth_sess, 
+			     &pjsua_var.acc[acc_id].cfg.auth_pref);
 
     /* Create invite session: */
     status = pjsip_inv_create_uas( dlg, rdata, answer, options, &inv);

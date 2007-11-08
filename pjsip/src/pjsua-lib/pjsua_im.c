@@ -321,6 +321,9 @@ static void im_callback(void *token, pjsip_event *e)
 		pjsua_var.acc[im_data->acc_id].cred_cnt,
 		pjsua_var.acc[im_data->acc_id].cred);
 
+	    pjsip_auth_clt_set_prefs(&auth, 
+				     &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
+
 	    status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
 					       &tdata);
 	    if (status == PJ_SUCCESS) {
@@ -416,6 +419,9 @@ static void typing_callback(void *token, pjsip_event *e)
 	    pjsip_auth_clt_set_credentials(&auth, 
 		pjsua_var.acc[im_data->acc_id].cred_cnt,
 		pjsua_var.acc[im_data->acc_id].cred);
+
+	    pjsip_auth_clt_set_prefs(&auth, 
+				     &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
 	    status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
 					       &tdata);

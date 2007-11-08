@@ -1840,8 +1840,15 @@ typedef struct pjsua_acc_config
     /**
      * If this flag is set, the presence information of this account will
      * be PUBLISH-ed to the server where the account belongs.
+     *
+     * Default: PJ_FALSE
      */
     pj_bool_t	    publish_enabled;
+
+    /**
+     * Authentication preference.
+     */
+    pjsip_auth_clt_pref auth_pref;
 
     /**
      * Optional PIDF tuple ID for outgoing PUBLISH and NOTIFY. If this value
@@ -1889,11 +1896,6 @@ typedef struct pjsua_acc_config
      * This will be list of strings.
      */
     pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
-
-    /**
-     * Enable Service-Route processing for this account.
-     */
-    pj_bool_t	    enable_service_route;
 
     /** 
      * Optional interval for registration, in seconds. If the value is zero, 

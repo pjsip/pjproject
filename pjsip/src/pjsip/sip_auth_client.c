@@ -532,6 +532,36 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 }
 
 
+/*
+ * Set the preference for the client authentication session.
+ */
+PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
+					     const pjsip_auth_clt_pref *p)
+{
+    PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
+
+    pj_memcpy(&sess->pref, p, sizeof(*p));
+    pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
+    //if (sess->pref.algorithm.slen == 0)
+    //	sess->pref.algorithm = pj_str("md5");
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get the preference for the client authentication session.
+ */
+PJ_DEF(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
+					     pjsip_auth_clt_pref *p)
+{
+    PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
+
+    pj_memcpy(p, &sess->pref, sizeof(pjsip_auth_clt_pref));
+    return PJ_SUCCESS;
+}
+
+
 /* 
  * Create Authorization/Proxy-Authorization response header based on the challege
  * in WWW-Authenticate/Proxy-Authenticate header.
@@ -698,6 +728,22 @@ static pj_status_t new_auth_for_req( pjsip_tx_data *tdata,
 #endif
 
 
+/* Find credential in list of (Proxy-)Authorization headers */
+static pjsip_authorization_hdr* get_header_for_realm(const pjsip_hdr *hdr_list,
+						     const pj_str_t *realm)
+{
+    pjsip_authorization_hdr *h;
+
+    h = (pjsip_authorization_hdr*)hdr_list->next;
+    while (h != (pjsip_authorization_hdr*)hdr_list) {
+	if (pj_stricmp(&h->credential.digest.realm, realm)==0)
+	    return h;
+	h = h->next;
+    }
+
+    return NULL;
+}
+
 
 /* Initialize outgoing request. */
 PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
@@ -705,11 +751,15 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 {
     const pjsip_method *method;
     pjsip_cached_auth *auth;
+    pjsip_hdr added;
 
     PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(sess->pool, PJSIP_ENOTINITIALIZED);
     PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
 		     PJSIP_ENOTREQUESTMSG);
+
+    /* Init list */
+    pj_list_init(&added);
 
     /* Get the method. */
     method = &tdata->msg->line.req.method;
@@ -728,7 +778,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 		    if (pjsip_method_cmp(&entry->method, method)==0) {
 			pjsip_authorization_hdr *hauth;
 			hauth = pjsip_hdr_shallow_clone(tdata->pool, entry->hdr);
-			pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
+			//pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
+			pj_list_push_back(&added, hauth);
 			break;
 		    }
 		    entry = entry->next;
@@ -776,11 +827,78 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 	    if (status != PJ_SUCCESS)
 		return status;
 	    
-	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
+	    //pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);
+	    pj_list_push_back(&added, hauth);
 	}
 #	endif	/* PJSIP_AUTH_QOP_SUPPORT && PJSIP_AUTH_AUTO_SEND_NEXT */
 
 	auth = auth->next;
+    }
+
+    if (sess->pref.initial_auth == PJ_FALSE) {
+	pjsip_hdr *h;
+
+	/* Don't want to send initial empty Authorization header, so
+	 * just send whatever available in the list (maybe empty).
+	 */
+
+	h = added.next;
+	while (h != &added) {
+	    pjsip_hdr *next = h->next;
+	    pjsip_msg_add_hdr(tdata->msg, h);
+	    h = next;
+	}
+    } else {
+	/* For each realm, add either the cached authorization header
+	 * or add an empty authorization header.
+	 */
+	unsigned i;
+	char *uri_str;
+	int len;
+
+	uri_str = pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE);
+	len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
+			      uri_str, PJSIP_MAX_URL_SIZE);
+	if (len < 1 || len >= PJSIP_MAX_URL_SIZE)
+	    return PJSIP_EURITOOLONG;
+
+	for (i=0; i<sess->cred_cnt; ++i) {
+	    pjsip_cred_info *c = &sess->cred_info[i];
+	    pjsip_authorization_hdr *h;
+
+	    h = get_header_for_realm(&added, &c->realm);
+	    if (h) {
+		pj_list_erase(h);
+		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
+	    } else {
+		enum { HDRLEN = 256 };
+		const pj_str_t hname = pj_str("Authorization");
+		pj_str_t hval;
+		pjsip_generic_string_hdr *hs;
+		char *hdr;
+
+		hdr = pj_pool_alloc(tdata->pool, HDRLEN);
+		len = pj_ansi_snprintf(
+		    hdr, HDRLEN,
+		    "%.*s username=\"%.*s\", realm=\"%.*s\","
+		    " nonce=\"\", uri=\"%s\",%s%.*s%s response=\"\"",
+		    (int)c->scheme.slen, c->scheme.ptr,
+		    (int)c->username.slen, c->username.ptr,
+		    (int)c->realm.slen, c->realm.ptr,
+		    uri_str,
+		    (sess->pref.algorithm.slen ? " algorithm=" : ""),
+		    (int)sess->pref.algorithm.slen, sess->pref.algorithm.ptr,
+		    (sess->pref.algorithm.slen ? "," : ""));
+
+		PJ_ASSERT_RETURN(len>0 && len<HDRLEN, PJ_ETOOBIG);
+
+		hval.ptr = hdr;
+		hval.slen = len;
+		hs = pjsip_generic_string_hdr_create(tdata->pool, &hname, 
+						     &hval);
+		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hs);
+	    }
+	}
     }
 
     return PJ_SUCCESS;

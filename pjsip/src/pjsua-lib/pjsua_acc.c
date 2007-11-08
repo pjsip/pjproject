@@ -544,10 +544,6 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     pjsip_uri *uri[PJSUA_ACC_MAX_PROXIES];
     unsigned i, uri_cnt = 0, rcnt;
 
-    /* Skip processing is enable_service_route is not set */
-    if (!acc->cfg.enable_service_route)
-	return;
-
     /* Find and parse Service-Route headers */
     for (;;) {
 	char saved;
@@ -915,6 +911,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
     if (acc->cred_cnt) {
 	pjsip_regc_set_credentials( acc->regc, acc->cred_cnt, acc->cred);
     }
+
+    /* Set authentication preference */
+    pjsip_regc_set_prefs(acc->regc, &acc->cfg.auth_pref);
 
     /* Set route-set
      */

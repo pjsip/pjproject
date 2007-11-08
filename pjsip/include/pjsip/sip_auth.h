@@ -183,6 +183,28 @@ typedef struct pjsip_cached_auth
 
 
 /**
+ * This structure describes client authentication session preference.
+ * The preference can be set by calling #pjsip_auth_clt_set_prefs().
+ */
+typedef struct pjsip_auth_clt_pref
+{
+    /**
+     * If this flag is set, the authentication client framework will
+     * send an empty Authorization header in each initial request.
+     * Default is no.
+     */
+    pj_bool_t	initial_auth;
+
+    /**
+     * Specify the algorithm to use when empty Authorization header 
+     * is to be sent for each initial request (see above)
+     */
+    pj_str_t	algorithm;
+
+} pjsip_auth_clt_pref;
+
+
+/**
  * This structure describes client authentication sessions. It keeps
  * all the information needed to authorize the client against all downstream 
  * servers.
@@ -191,6 +213,7 @@ typedef struct pjsip_auth_clt_sess
 {
     pj_pool_t		*pool;		/**< Pool to use.		    */
     pjsip_endpoint	*endpt;		/**< Endpoint where this belongs.   */
+    pjsip_auth_clt_pref  pref;		/**< Preference/options.	    */
     unsigned		 cred_cnt;	/**< Number of credentials.	    */
     pjsip_cred_info	*cred_info;	/**< Array of credential information*/
     pjsip_cached_auth	 cached_auth;	/**< Cached authorization info.	    */
@@ -287,6 +310,29 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
 						     int cred_cnt,
 						     const pjsip_cred_info *c);
 
+
+/**
+ * Set the preference for the client authentication session.
+ *
+ * @param sess		The client authentication session.
+ * @param p		Preference.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
+					      const pjsip_auth_clt_pref *p);
+
+
+/**
+ * Get the preference for the client authentication session.
+ *
+ * @param sess		The client authentication session.
+ * @param p		Pointer to receive the preference.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
+					      pjsip_auth_clt_pref *p);
 
 /**
  * Initialize new request message with authorization headers.

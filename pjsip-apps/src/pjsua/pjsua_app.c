@@ -117,6 +117,7 @@ static void usage(void)
     puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
     puts  ("");
     puts  ("SIP Account options:");
+    puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
     puts  ("  --contact=url       Optionally override the Contact information");
@@ -128,7 +129,6 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
-    puts  ("  --service-route     Enable Service-Route processing");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
@@ -372,7 +372,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
-	   OPT_100REL, OPT_SERVICE_ROUTE, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
@@ -409,7 +409,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "reg-timeout",1, 0, OPT_REG_TIMEOUT},
 	{ "publish",    0, 0, OPT_PUBLISH},
 	{ "use-100rel", 0, 0, OPT_100REL},
-	{ "service-route", 0, 0, OPT_SERVICE_ROUTE},
+	{ "use-ims",    0, 0, OPT_USE_IMS},
 	{ "id",		1, 0, OPT_ID},
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "realm",	1, 0, OPT_REALM},
@@ -636,8 +636,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->cfg.require_100rel = PJ_TRUE;
 	    break;
 
-	case OPT_SERVICE_ROUTE: /* Service-Route processing */
-	    cur_acc->enable_service_route = PJ_TRUE;
+	case OPT_USE_IMS: /* Activate IMS settings */
+	    cur_acc->auth_pref.initial_auth = PJ_TRUE;
 	    break;
 
 	case OPT_ID:   /* id */
@@ -667,7 +667,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_USERNAME:   /* Default authentication user */
 	    cur_acc->cred_info[cur_acc->cred_count].username = pj_str(pj_optarg);
-	    cur_acc->cred_info[cur_acc->cred_count].scheme = pj_str("digest");
+	    cur_acc->cred_info[cur_acc->cred_count].scheme = pj_str("Digest");
 	    break;
 
 	case OPT_REALM:	    /* Default authentication realm. */
@@ -992,9 +992,34 @@ static pj_status_t parse_args(int argc, char *argv[],
 	cfg->acc_cnt++;
 
     for (i=0; i<cfg->acc_cnt; ++i) {
-	if (cfg->acc_cfg[i].cred_info[cfg->acc_cfg[i].cred_count].username.slen)
+	pjsua_acc_config *acfg = &cfg->acc_cfg[i];
+
+	if (acfg->cred_info[acfg->cred_count].username.slen)
 	{
-	    cfg->acc_cfg[i].cred_count++;
+	    acfg->cred_count++;
+	}
+
+	/* When IMS mode is enabled for the account, verify that settings
+	 * are okay.
+	 */
+	/* For now we check if IMS mode is activated by looking if
+	 * initial_auth is set.
+	 */
+	if (acfg->auth_pref.initial_auth && acfg->cred_count) {
+	    /* Realm must point to the real domain */
+	    if (*acfg->cred_info[0].realm.ptr=='*') {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: cannot use '*' as realm with IMS"));
+		return PJ_EINVAL;
+	    }
+
+	    /* Username for authentication must be in a@b format */
+	    if (strchr(acfg->cred_info[0].username.ptr, '@')==0) {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: Username for authentication must "
+			  "be in user@domain format with IMS"));
+		return PJ_EINVAL;
+	    }
 	}
     }
 
@@ -2685,7 +2710,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		acc_cfg.id = pj_str(id);
 		acc_cfg.reg_uri = pj_str(registrar);
 		acc_cfg.cred_count = 1;
-		acc_cfg.cred_info[0].scheme = pj_str("digest");
+		acc_cfg.cred_info[0].scheme = pj_str("Digest");
 		acc_cfg.cred_info[0].realm = pj_str(realm);
 		acc_cfg.cred_info[0].username = pj_str(uname);
 		acc_cfg.cred_info[0].data_type = 0;
