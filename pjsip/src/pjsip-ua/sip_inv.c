@@ -2186,6 +2186,14 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 					   PJSIP_SC_INTERNAL_SERVER_ERROR,
 					   NULL, &tdata);
 
+    /* If UPDATE doesn't contain SDP, just respond with 200/OK.
+     * This is a valid scenario according to session-timer draft.
+     */
+    } else if (rdata->msg_info.msg->body == NULL) {
+
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 
+					   200, NULL, &tdata);
+
     } else {
 	/* We receive new offer from remote */
 	inv_check_sdp_in_incoming_msg(inv, pjsip_rdata_get_tsx(rdata), rdata);
