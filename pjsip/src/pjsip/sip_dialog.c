@@ -48,11 +48,13 @@ PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
     const pjsip_method subscribe = { PJSIP_OTHER_METHOD, {"SUBSCRIBE", 9}};
     const pjsip_method refer = { PJSIP_OTHER_METHOD, {"REFER", 5}};
     const pjsip_method notify = { PJSIP_OTHER_METHOD, {"NOTIFY", 6}};
+    const pjsip_method update = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
 
     return m->id == PJSIP_INVITE_METHOD ||
 	   (pjsip_method_cmp(m, &subscribe)==0) ||
 	   (pjsip_method_cmp(m, &refer)==0) ||
-	   (pjsip_method_cmp(m, &notify)==0);
+	   (pjsip_method_cmp(m, &notify)==0) ||
+	   (pjsip_method_cmp(m, &update)==0);
 }
 
 static pj_status_t create_dialog( pjsip_user_agent *ua,
