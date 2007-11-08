@@ -2448,7 +2448,8 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	is_remote_active = PJ_FALSE;
 
     } 
-    else if (pjmedia_sdp_media_find_attr2(offer->media[0], "inactive", NULL))
+    else if (pjmedia_sdp_media_find_attr2(offer->media[0], "inactive", NULL) ||
+	     pjmedia_sdp_media_find_attr2(offer->media[0], "sendonly", NULL))
     {
 	is_remote_active = PJ_FALSE;
     }
