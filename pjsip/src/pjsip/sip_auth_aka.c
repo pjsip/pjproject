@@ -156,24 +156,17 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
 	 *    PRF(RES||IK||CK,"http-digest-akav2-password")
 	 *
 	 * The pseudo-random function (PRF) is HMAC-MD5 in this case.
+	 *
+	 * Hmmm.. but those above doesn't seem to work, and this below does!
 	 */
-	pj_hmac_md5_context ctx;
-	pj_uint8_t hmac_digest[16];
-	char hmac_digest64[24];
-	int out_len;
-
-	pj_hmac_md5_init(&ctx, (pj_uint8_t*)"http-digest-akav2-password", 26);
-	pj_hmac_md5_update(&ctx, res, PJSIP_AKA_RESLEN);
-	pj_hmac_md5_update(&ctx, ik, PJSIP_AKA_IKLEN);
-	pj_hmac_md5_update(&ctx, ck, PJSIP_AKA_CKLEN);
-	pj_hmac_md5_final(&ctx, hmac_digest);
-
-	out_len = sizeof(hmac_digest64);
-	status = pj_base64_encode(hmac_digest, 16, hmac_digest64, &out_len);
-	PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
-
-	aka_cred.data.ptr = hmac_digest64;
-	aka_cred.data.slen = out_len;
+	aka_cred.data.slen = PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN + 
+			     PJSIP_AKA_CKLEN;
+	aka_cred.data.ptr = pj_pool_alloc(pool, aka_cred.data.slen);
+	
+	pj_memcpy(aka_cred.data.ptr + 0, res, PJSIP_AKA_RESLEN);
+	pj_memcpy(aka_cred.data.ptr + PJSIP_AKA_RESLEN, ik, PJSIP_AKA_IKLEN);
+	pj_memcpy(aka_cred.data.ptr + PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN, 
+		  ck, PJSIP_AKA_CKLEN);
 
 	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
 				 &auth->nc, &auth->cnonce, &auth->qop, 
