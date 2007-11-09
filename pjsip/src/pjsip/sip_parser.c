@@ -85,7 +85,7 @@ static unsigned uri_handler_count;
 /*
  * Global vars (also extern).
  */
-int PJSIP_SYN_ERR_EXCEPTION;
+int PJSIP_SYN_ERR_EXCEPTION = -1;
 
 /* Parser constants */
 static pjsip_parser_const_t pconst =
@@ -276,6 +276,7 @@ static pj_status_t init_parser()
     /*
      * Syntax error exception number.
      */
+    pj_assert (PJSIP_SYN_ERR_EXCEPTION == -1);
     status = pj_exception_id_alloc("PJSIP syntax error", 
 				   &PJSIP_SYN_ERR_EXCEPTION);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -482,6 +483,10 @@ void deinit_sip_parser(void)
 	/* Clear URI handlers */
 	pj_bzero(uri_handler, sizeof(uri_handler));
 	uri_handler_count = 0;
+
+	/* Deregister exception ID */
+	pj_exception_id_free(PJSIP_SYN_ERR_EXCEPTION);
+	PJSIP_SYN_ERR_EXCEPTION = -1;
     }
     pj_leave_critical_section();
 }
