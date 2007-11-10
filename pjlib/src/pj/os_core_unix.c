@@ -146,7 +146,8 @@ PJ_DEF(pj_status_t) pj_init(void)
         return rc;
     
     /* Init random seed. */
-    pj_srand( clock() );
+    /* Or probably not. Let application in charge of this */
+    /* pj_srand( clock() ); */
 
     /* Startup GUID. */
     guid.ptr = dummy_guid;

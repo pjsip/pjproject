@@ -141,7 +141,8 @@ PJ_DEF(pj_status_t) pj_init(void)
     }
     
     /* Init random seed. */
-    pj_srand( GetCurrentProcessId() );
+    /* Or probably not. Let application in charge of this */
+    /* pj_srand( GetCurrentProcessId() ); */
 
     /* Startup GUID. */
     guid.ptr = dummy_guid;
