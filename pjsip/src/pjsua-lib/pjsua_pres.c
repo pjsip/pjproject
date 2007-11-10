@@ -34,7 +34,7 @@ static pjsua_buddy_id pjsua_find_buddy(const pjsip_uri *uri)
     const pjsip_sip_uri *sip_uri;
     unsigned i;
 
-    uri = pjsip_uri_get_uri((pjsip_uri*)uri);
+    uri = (const pjsip_uri*) pjsip_uri_get_uri((pjsip_uri*)uri);
 
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	return PJSUA_INVALID_ID;

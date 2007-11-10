@@ -536,7 +536,7 @@ static int base64_test(void)
 	if (rc != PJ_SUCCESS)
 	    return -90;
 
-	if (out_len != strlen(base64_test_vec[i].base64))
+	if (out_len != (int)strlen(base64_test_vec[i].base64))
 	    return -91;
 
 	output[out_len] = '\0';
@@ -551,7 +551,7 @@ static int base64_test(void)
 	if (rc != PJ_SUCCESS)
 	    return -95;
 
-	if (out_len != strlen(base64_test_vec[i].base256))
+	if (out_len != (int)strlen(base64_test_vec[i].base256))
 	    return -96;
 
 	output[out_len] = '\0';

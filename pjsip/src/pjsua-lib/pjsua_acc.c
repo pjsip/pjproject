@@ -621,7 +621,7 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     /* Then append the Service-Route URIs */
     for (i=0; i<uri_cnt; ++i) {
 	hr = pjsip_route_hdr_create(pjsua_var.pool);
-	hr->name_addr.uri = pjsip_uri_clone(pjsua_var.pool, uri[i]);
+	hr->name_addr.uri = (pjsip_uri*)pjsip_uri_clone(pjsua_var.pool, uri[i]);
 	pj_list_push_back(&acc->route_set, hr);
     }
 

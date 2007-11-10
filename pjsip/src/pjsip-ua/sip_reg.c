@@ -739,8 +739,8 @@ static void tsx_callback(void *token, pjsip_event *event)
 		     * server may not return it.
 		     */
 
-		    uri1 = pjsip_uri_get_uri(contact[i]->uri);
-		    uri2 = pjsip_uri_get_uri(our_contact->uri);
+		    uri1=(const pjsip_uri*)pjsip_uri_get_uri(contact[i]->uri);
+		    uri2=(const pjsip_uri*)pjsip_uri_get_uri(our_contact->uri);
 		    if (pjsip_uri_cmp(PJSIP_URI_IN_CONTACT_HDR, uri1, uri2)==0)
 		    {
 			has_our_contact = PJ_TRUE;

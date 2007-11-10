@@ -856,7 +856,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 	char *uri_str;
 	int len;
 
-	uri_str = pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE);
+	uri_str = (char*)pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE);
 	len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
 			      uri_str, PJSIP_MAX_URL_SIZE);
 	if (len < 1 || len >= PJSIP_MAX_URL_SIZE)
@@ -877,7 +877,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 		pjsip_generic_string_hdr *hs;
 		char *hdr;
 
-		hdr = pj_pool_alloc(tdata->pool, HDRLEN);
+		hdr = (char*)pj_pool_alloc(tdata->pool, HDRLEN);
 		len = pj_ansi_snprintf(
 		    hdr, HDRLEN,
 		    "%.*s username=\"%.*s\", realm=\"%.*s\","
