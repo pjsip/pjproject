@@ -1240,7 +1240,15 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
     /* Get the published address, either by STUN or by resolving
      * the name of local host.
      */
-    if (stun_srv.slen) {
+    if (p_pub_addr->sin_addr.s_addr != 0) {
+	/*
+	 * Public address is already specified, no need to resolve the 
+	 * address, only set the port.
+	 */
+	if (p_pub_addr->sin_port == 0)
+	    p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
+
+    } else if (stun_srv.slen) {
 	/*
 	 * STUN is specified, resolve the address with STUN.
 	 */
@@ -1253,14 +1261,6 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	    pj_sock_close(sock);
 	    return status;
 	}
-
-    } else if (p_pub_addr->sin_addr.s_addr != 0) {
-	/*
-	 * Public address is already specified, no need to resolve the 
-	 * address, only set the port.
-	 */
-	if (p_pub_addr->sin_port == 0)
-	    p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
 
     } else {
 
