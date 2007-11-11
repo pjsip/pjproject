@@ -18,7 +18,11 @@
  *
 *-----------------------------------------------------------------*/
 
-#define LITTLE_ENDIAN	/* For INTEL architecture */
+#include <pj/types.h>
+
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN != 0
+#	define LITTLE_ENDIAN	/* For INTEL architecture */
+#endif
 
 typedef unsigned char   u8;
 typedef unsigned int	 u32;
