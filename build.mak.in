@@ -8,7 +8,7 @@ export CROSS_COMPILE := @ac_cross_compile@
 export LINUX_POLL := @ac_linux_poll@ 
 
 # Determine which party libraries to use
-export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME)
+export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) -lmilenage-$(TARGET_NAME)
 
 ifneq (@ac_no_gsm_codec@,1)
 APP_THIRD_PARTY_LIBS += -lgsmcodec-$(TARGET_NAME)
