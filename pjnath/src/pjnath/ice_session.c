@@ -336,6 +336,12 @@ static void destroy_ice(pj_ice_sess *ice,
 	LOG4((ice->obj_name, "Destroying ICE session"));
     }
 
+    /* Let other callbacks finish */
+    if (ice->mutex) {
+	pj_mutex_lock(ice->mutex);
+	pj_mutex_unlock(ice->mutex);
+    }
+
     if (ice->completion_timer.id) {
 	pj_timer_heap_cancel(ice->stun_cfg.timer_heap, 
 			     &ice->completion_timer);
