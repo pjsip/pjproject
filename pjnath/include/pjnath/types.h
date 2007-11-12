@@ -155,8 +155,8 @@ PJ_END_DECL
  *
  * References for STUN:
  *
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-10.txt">
- *    <B>draft-ietf-behave-rfc3489bis-10</b></A>: Session Traversal 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-11.txt">
+ *    <B>draft-ietf-behave-rfc3489bis-11</b></A>: Session Traversal 
  *     Utilities for (NAT) (STUN),
  *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-03.txt">
  *    <B>draft-ietf-behave-turn-03</B></A>: Obtaining Relay Addresses 
@@ -170,8 +170,8 @@ PJ_END_DECL
  * Interactive Connectivity Establishment (ICE) is a standard based 
  * methodology for traversing Network Address Translator (NAT), and
  * is described in 
- * <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-18.txt">
- * <B>draft-ietf-mmusic-ice-18.txt</B></A> draft. The PJNATH ICE
+ * <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
+ * <B>draft-ietf-mmusic-ice-19.txt</B></A> draft. The PJNATH ICE
  * implementation is aimed to provide a usable and generic ICE transports
  * for different types of application, including but not limited to
  * the usage of ICE in SIP/SDP offer/answer.
@@ -214,8 +214,8 @@ PJ_END_DECL
  * \subsection PJNATH_ICE_REF Reference
  *
  * References for ICE:
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-18.txt">
- *    <B>draft-ietf-mmusic-ice-18.txt</B></A>: Interactive Connectivity 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
+ *    <B>draft-ietf-mmusic-ice-19.txt</B></A>: Interactive Connectivity 
  *    Establishment (ICE): A Methodology for Network Address Translator 
  *    (NAT) Traversal for Offer/Answer Protocols
  */
