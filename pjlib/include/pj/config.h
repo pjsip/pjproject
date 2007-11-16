@@ -695,32 +695,6 @@
 #define PJ_INLINE(type)	  PJ_INLINE_SPECIFIER type
 
 /**
- * @def PJ_DECL_NO_RETURN(type)
- * @param type The return type of the function.
- * Declare a function that will not return.
- */
-/**
- * @def PJ_BEGIN_DECL
- * Mark beginning of declaration section in a header file.
- */
-/**
- * @def PJ_END_DECL
- * Mark end of declaration section in a header file.
- */
-#ifdef __cplusplus
-#  define PJ_DECL_NO_RETURN(type)   type PJ_NORETURN
-#  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
-#  define PJ_BEGIN_DECL		    extern "C" {
-#  define PJ_END_DECL		    }
-#else
-#  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN type
-#  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
-#  define PJ_BEGIN_DECL
-#  define PJ_END_DECL
-#endif
-
-
-/**
  * This macro declares platform/compiler specific specifier prefix
  * to be added to symbol declaration to export the symbol when PJLIB
  * is built as dynamic library.
@@ -796,6 +770,33 @@
 #elif !defined(PJ_DEF)
 #   define PJ_DEF(type)		    type
 #endif
+
+
+/**
+ * @def PJ_DECL_NO_RETURN(type)
+ * @param type The return type of the function.
+ * Declare a function that will not return.
+ */
+/**
+ * @def PJ_BEGIN_DECL
+ * Mark beginning of declaration section in a header file.
+ */
+/**
+ * @def PJ_END_DECL
+ * Mark end of declaration section in a header file.
+ */
+#ifdef __cplusplus
+#  define PJ_DECL_NO_RETURN(type)   PJ_DECL(type) PJ_NORETURN
+#  define PJ_IDECL_NO_RETURN(type)  PJ_INLINE(type) PJ_NORETURN
+#  define PJ_BEGIN_DECL		    extern "C" {
+#  define PJ_END_DECL		    }
+#else
+#  define PJ_DECL_NO_RETURN(type)   PJ_NORETURN PJ_DECL(type)
+#  define PJ_IDECL_NO_RETURN(type)  PJ_NORETURN PJ_INLINE(type)
+#  define PJ_BEGIN_DECL
+#  define PJ_END_DECL
+#endif
+
 
 
 /**
