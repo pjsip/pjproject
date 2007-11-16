@@ -172,9 +172,7 @@ PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
  * Parse an URI in the input and return the correct instance of URI.
  *
  * @param pool		The pool to get memory allocations.
- * @param buf		The input buffer, which size must be at least (size+1)
- *			because the function will temporarily put NULL 
- *			termination at the end of the buffer during parsing.
+ * @param buf		The input buffer, which MUST be NULL terminated.
  * @param size		The length of the string (not counting NULL terminator).
  * @param options	If no options are given (value is zero), the object 
  *			returned is dependent on the syntax of the URI, 
@@ -193,8 +191,8 @@ PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
 /**
  * Parse SIP status line.
  *
- * @param buf		Text buffer to parse.
- * @param size		The size of the buffer.
+ * @param buf		Text buffer to parse, which MUST be NULL terminated.
+ * @param size		The size of the buffer, excluding the NULL character.
  * @param status_line	Structure to receive the parsed elements.
  *
  * @return		PJ_SUCCESS if a status line is parsed successfully.
@@ -211,9 +209,7 @@ PJ_DECL(pj_status_t) pjsip_parse_status_line(char *buf, pj_size_t size,
  * of the body.
  *
  * @param pool		The pool to allocate memory.
- * @param buf		The input buffer, which size must be at least (size+1)
- *			because the function will temporarily put NULL 
- *			termination at the end of the buffer during parsing.
+ * @param buf		The input buffer, which MUST be NULL terminated.
  * @param size		The length of the string (not counting NULL terminator).
  * @param err_list	If this parameter is not NULL, then the parser will
  *			put error messages during parsing in this list.
@@ -234,10 +230,7 @@ PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool,
  *
  * This function is normally called by the transport layer.
  *
- * @param buf           The input buffer
- * @param buf		The input buffer, which size must be at least (size+1)
- *			because the function will temporarily put NULL 
- *			termination at the end of the buffer during parsing.
+ * @param buf		The input buffer, which MUST be NULL terminated.
  * @param size		The length of the string (not counting NULL terminator).
  * @param rdata         The receive data buffer to store the message and
  *                      its elements.
@@ -272,7 +265,7 @@ PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf,
  * @param pool		Pool to allocate memory for the header.
  * @param hname		Header name which is used to find the correct function
  *			to parse the header.
- * @param line		Header content, which size must be at least size+1.
+ * @param line		Header content, which must be NULL terminated.
  * @param size		The length of the string (not counting NULL terminator,
  *			if any).
  * @param parsed_len	If the value is not NULL, then upon return the function
@@ -296,7 +289,7 @@ PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
  * however is optional for the last header.
  *
  * @param pool		the pool.
- * @param input		the input text to parse.
+ * @param input		the input text to parse, which must be NULL terminated.
  * @param size		the text length.
  * @param hlist		the header list to store the parsed headers. 
  *			This list must have been initialized before calling 
