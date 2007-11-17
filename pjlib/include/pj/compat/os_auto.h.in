@@ -51,6 +51,7 @@
 #undef PJ_HAS_NETDB_H
 #undef PJ_HAS_NETINET_IN_H
 #undef PJ_HAS_NETINET_IP_H
+#undef PJ_HAS_NET_IF_H
 #undef PJ_HAS_SETJMP_H
 #undef PJ_HAS_STDARG_H
 #undef PJ_HAS_STDDEF_H

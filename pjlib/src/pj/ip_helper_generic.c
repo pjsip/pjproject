@@ -21,12 +21,10 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/string.h>
+#include <pj/compat/socket.h>
 
-/*
- * Enumerate the local IP interface currently active in the host.
- */
-PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
-					 pj_in_addr ifs[])
+static pj_status_t dummy_enum_ip_interface(unsigned *p_cnt,
+					  pj_in_addr ifs[])
 {
     pj_status_t status;
 
@@ -41,6 +39,63 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 
     *p_cnt = 1;
     return PJ_SUCCESS;
+}
+
+#ifdef SIOCGIFCONF
+static pj_status_t sock_enum_ip_interface(unsigned *p_cnt,
+					  pj_in_addr ifs[])
+{
+    pj_sock_t sock;
+    char buf[512];
+    struct ifconf ifc;
+    struct ifreq *ifr;
+    int i, count;
+    pj_status_t status;
+
+    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Query available interfaces */
+    ifc.ifc_len = sizeof(buf);
+    ifc.ifc_buf = buf;
+
+    if (ioctl(sock, SIOCGIFCONF, &ifc) < 0) {
+	int oserr = pj_get_netos_error();
+	pj_sock_close(sock);
+	return PJ_RETURN_OS_ERROR(oserr);
+    }
+
+    /* Done with socket */
+    pj_sock_close(sock);
+
+    /* Interface interfaces */
+    ifr = (struct ifreq*) ifc.ifc_req;
+    count = ifc.ifc_len / sizeof(struct ifreq);
+    if (count > *p_cnt)
+	count = *p_cnt;
+    else
+	*p_cnt = count;
+    for (i=0; i<count; ++i) {
+	struct ifreq *itf = &ifr[i];
+	ifs[i].s_addr = ((struct sockaddr_in *)&itf->ifr_addr)->sin_addr.s_addr;
+    }
+
+    return PJ_SUCCESS;
+}
+#endif /* SIOCGIFCONF */
+
+/*
+ * Enumerate the local IP interface currently active in the host.
+ */
+PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
+					 pj_in_addr ifs[])
+{
+#ifdef SIOCGIFCONF
+    if (sock_enum_ip_interface(p_cnt, ifs) == PJ_SUCCESS)
+	return PJ_SUCCESS;
+#endif
+    return dummy_enum_ip_interface(p_cnt, ifs);
 }
 
 /*

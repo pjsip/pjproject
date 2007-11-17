@@ -57,6 +57,11 @@
 #  include <netinet/ip.h>
 #endif
 
+#if defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
+/* For interface enumeration in ip_helper */
+#   include <net/if.h>
+#endif
+
 #if defined(PJ_HAS_ARPA_INET_H) && PJ_HAS_ARPA_INET_H != 0
 #  include <arpa/inet.h>
 #endif
