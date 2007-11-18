@@ -18,6 +18,11 @@
  */
 #include <pj/sock.h>
 
+PJ_DEF(pj_uint16_t) pj_AF_UNSPEC(void)
+{
+    return PJ_AF_UNSPEC;
+}
+
 PJ_DEF(pj_uint16_t) pj_AF_UNIX(void)
 {
     return PJ_AF_UNIX;

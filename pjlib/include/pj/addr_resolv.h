@@ -73,6 +73,16 @@ typedef struct pj_hostent
 /** Shortcut to h_addr_list[0] */
 #define h_addr h_addr_list[0]
 
+/** 
+ * This structure describes address information pj_getaddrinfo().
+ */
+typedef struct pj_addrinfo
+{
+    char	 ai_canonname[PJ_MAX_HOSTNAME]; /**< Canonical name for host*/
+    pj_sockaddr  ai_addr;			/**< Binary address.	    */
+} pj_addrinfo;
+
+
 /**
  * This function fills the structure of type pj_hostent for a given host name.
  *
@@ -93,6 +103,27 @@ PJ_DECL(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he);
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_gethostip(pj_in_addr *ip_addr);
+
+
+/**
+ * This function translates the name of a service location (for example, 
+ * a host name) and returns a set of addresses and associated information
+ * to be used in creating a socket with which to address the specified 
+ * service.
+ *
+ * @param name	    Descriptive name or an address string, such as host
+ *		    name.
+ * @param af	    The desired address family to query.
+ * @param count	    On input, it specifies the number of elements in
+ *		    \a ai array. On output, this will be set with the
+ *		    number of address informations found for the
+ *		    specified name.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
+				    unsigned *count, pj_addrinfo ai[]);
+
 
 
 /** @} */

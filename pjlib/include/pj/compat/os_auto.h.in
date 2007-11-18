@@ -72,6 +72,9 @@
 #undef PJ_HAS_WINSOCK2_H
 
 #undef PJ_SOCK_HAS_INET_ATON
+#undef PJ_SOCK_HAS_INET_PTON
+#undef PJ_SOCK_HAS_INET_NTOP
+#undef PJ_SOCK_HAS_GETADDRINFO
 
 /* Set 1 if native sockaddr_in has sin_len member. 
  * Default: 0

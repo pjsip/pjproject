@@ -115,3 +115,73 @@ PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 }
 
 
+/* Resolve IPv4/IPv6 address */
+PJ_DEF(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
+				   unsigned *count, pj_addrinfo ai[])
+{
+#if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
+    char nodecopy[PJ_MAX_HOSTNAME];
+    struct addrinfo hint, *res;
+    unsigned i;
+    int rc;
+
+    PJ_ASSERT_RETURN(nodename && count && *count && ai, PJ_EINVAL);
+    PJ_ASSERT_RETURN(nodename->ptr && nodename->slen, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+
+    /* Copy node name to null terminated string. */
+    if (nodename->slen >= PJ_MAX_HOSTNAME)
+	return PJ_ENAMETOOLONG;
+    pj_memcpy(nodecopy, nodename->ptr, nodename->slen);
+    nodecopy[nodename->slen] = '\0';
+
+    /* Call getaddrinfo() */
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = af;
+
+    rc = getaddrinfo(nodecopy, NULL, &hint, &res);
+    if (rc != 0)
+	return PJ_ERESOLVE;
+
+    /* Enumerate each item in the result */
+    for (i=0; i<*count && res; res=res->ai_next) {
+	int len;
+
+	/* Ignore unwanted address families */
+	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
+	    continue;
+
+	/* Ignore name that's too long */
+	len = pj_ansi_strlen(res->ai_canonname);
+	if (len >= PJ_MAX_HOSTNAME)
+	    continue;
+
+	/* Store canonical name */
+	pj_ansi_strcpy(ai[i].ai_canonname, res->ai_canonname);
+
+	/* Store address */
+	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
+	pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
+
+	/* Next slot */
+	++i;
+    }
+
+    *count = i;
+
+    /* Done */
+    return PJ_SUCCESS;
+
+#else	/* PJ_SOCK_HAS_GETADDRINFO */
+    /* IPv6 is not supported */
+    PJ_UNUSED_ARG(nodename);
+    PJ_UNUSED_ARG(af);
+    PJ_UNUSED_ARG(ai);
+
+    PJ_ASSERT_RETURN(count, PJ_EINVAL);
+    *count = 0;
+
+    return PJ_EIPV6NOTSUP;
+#endif	/* PJ_SOCK_HAS_GETADDRINFO */
+}
+

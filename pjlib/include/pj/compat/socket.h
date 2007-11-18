@@ -32,6 +32,45 @@
 #  include <winsock.h>
 #endif
 
+/*
+ * IPv6 for Visual Studio's
+ *
+ * = Visual Studio 6 =
+ *
+ * Visual Studio 6 does not ship with IPv6 support, so you MUST
+ * download and install IPv6 Tehnology Preview (IPv6Kit) from:
+ *    http://msdn.microsoft.com/downloads/sdks/platform/tpipv6/ReadMe.asp
+ * Then put IPv6Kit\inc in your Visual Studio include path.
+ * 
+ * In addition, by default IPv6Kit does not want to install on
+ * Windows 2000 SP4. Please see:
+ *    http://msdn.microsoft.com/downloads/sdks/platform/tpipv6/faq.asp
+ * on  how to install IPv6Kit on Win2K SP4.
+ *
+ *
+ * = Visual Studio 2003, 2005 (including Express) =
+ *
+ * These VS uses Microsoft Platform SDK for Windows Server 2003 SP1, and
+ * it has built-in IPv6 support.
+ */
+#if defined(_MSC_VER) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+#   ifndef s_addr
+#	define s_addr  S_un.S_addr
+#   endif
+
+#   include <ws2tcpip.h>
+
+#   ifndef IPPROTO_IPV6
+	/* Need to download and install IPv6Kit for this platform.
+	 * Please see the comments above about Visual Studio 6.
+	 */
+#	include <tpipv6.h>
+#   endif
+
+#   undef s_addr
+#endif	/* _MSC_VER */
+
+
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
 #  include <sys/types.h>
 #endif

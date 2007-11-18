@@ -309,6 +309,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Ignored
  */
 #define PJ_EIGNORED	    (PJ_ERRNO_START_STATUS + 20)/* 70020 */
+/**
+ * @hideinitializer
+ * IPv6 is not supported
+ */
+#define PJ_EIPV6NOTSUP	    (PJ_ERRNO_START_STATUS + 21)/* 70021 */
 
 /** @} */   /* pj_errnum */
 

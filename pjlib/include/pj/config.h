@@ -449,6 +449,17 @@
 #endif
 
 /**
+ * \def PJ_HAS_IPV6
+ * Support IPv6 in the library. If this support is disabled, some IPv6 
+ * related functions will return PJ_EIPV6NOTSUP.
+ *
+ * Default: 0 (disabled, for now)
+ */
+#ifndef PJ_HAS_IPV6
+#  define PJ_HAS_IPV6		    0
+#endif
+
+ /**
  * Maximum hostname length.
  * Libraries sometimes needs to make copy of an address to stack buffer;
  * the value here affects the stack usage.

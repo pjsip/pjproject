@@ -40,6 +40,8 @@
  * The APIs tested in this test:
  *  - pj_inet_aton()
  *  - pj_inet_ntoa()
+ *  - pj_inet_pton()  (only if IPv6 is enabled)
+ *  - pj_inet_ntop()  (only if IPv6 is enabled)
  *  - pj_gethostname()
  *  - pj_sock_socket()
  *  - pj_sock_close()
@@ -100,7 +102,51 @@ static int format_test(void)
 	return -20;
 
     if (pj_strcmp2(&s, (char*)p) != 0)
-	return -30;
+	return -22;
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    /* pj_inet_pton() */
+    /* pj_inet_ntop() */
+    {
+	const pj_str_t s_ipv4 = pj_str("127.0.0.1");
+	const pj_str_t s_ipv6 = pj_str("fe80::2ff:83ff:fe7c:8b42");
+	char buf_ipv4[PJ_INET_ADDRSTRLEN];
+	char buf_ipv6[PJ_INET6_ADDRSTRLEN];
+	pj_in_addr ipv4;
+	pj_in6_addr ipv6;
+
+	if (pj_inet_pton(pj_AF_INET(), &s_ipv4, &ipv4) != PJ_SUCCESS)
+	    return -24;
+
+	p = (unsigned char*)&ipv4;
+	if (p[0]!=A[0] || p[1]!=A[1] || p[2]!=A[2] || p[3]!=A[3]) {
+	    return -25;
+	}
+
+	if (pj_inet_pton(pj_AF_INET6(), &s_ipv6, &ipv6) != PJ_SUCCESS)
+	    return -26;
+
+	p = (unsigned char*)&ipv6;
+	if (p[0] != 0xfe || p[1] != 0x80 || p[2] != 0 || p[3] != 0 ||
+	    p[4] != 0 || p[5] != 0 || p[6] != 0 || p[7] != 0 ||
+	    p[8] != 0x02 || p[9] != 0xff || p[10] != 0x83 || p[11] != 0xff ||
+	    p[12]!=0xfe || p[13]!=0x7c || p[14] != 0x8b || p[15]!=0x42)
+	{
+	    return -27;
+	}
+
+	if (pj_inet_ntop(pj_AF_INET(), &ipv4, buf_ipv4, sizeof(buf_ipv4)) != PJ_SUCCESS)
+	    return -28;
+	if (pj_stricmp2(&s_ipv4, buf_ipv4) != 0)
+	    return -29;
+
+	if (pj_inet_ntop(pj_AF_INET6(), &ipv6, buf_ipv6, sizeof(buf_ipv6)) != PJ_SUCCESS)
+	    return -30;
+	if (pj_stricmp2(&s_ipv6, buf_ipv6) != 0)
+	    return -31;
+    }
+
+#endif	/* PJ_HAS_IPV6 */
 
     /* Test that pj_sockaddr_in_init() initialize the whole structure, 
      * including sin_zero.

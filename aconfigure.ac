@@ -182,10 +182,42 @@ AC_MSG_RESULT([Setting PJ_ATOMIC_VALUE_TYPE to long])
 AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
 
 dnl # Determine if inet_aton() is available
-AC_MSG_CHECKING([if inet_aton is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <arpa/inet.h>]],
+AC_MSG_CHECKING([if inet_aton() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+				     #include <arpa/inet.h>]],
 		    		  [inet_aton(0, 0);])],
 		  [AC_DEFINE(PJ_SOCK_HAS_INET_ATON,1)
+		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
+dnl # Determine if inet_pton() is available
+AC_MSG_CHECKING([if inet_pton() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+				     #include <arpa/inet.h>]],
+		    		  [inet_pton(0, 0, 0);])],
+		  [AC_DEFINE(PJ_SOCK_HAS_INET_PTON,1)
+		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
+dnl # Determine if inet_ntop() is available
+AC_MSG_CHECKING([if inet_ntop() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+				     #include <arpa/inet.h>]],
+		    		  [inet_ntop(0, 0, 0, 0);])],
+		  [AC_DEFINE(PJ_SOCK_HAS_INET_NTOP,1)
+		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
+dnl # Determine if getaddrinfo() is available
+AC_MSG_CHECKING([if getaddrinfo() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>
+				     #include <netdb.h>]],
+		    		  [getaddrinfo(0, 0, 0, 0);])],
+		  [AC_DEFINE(PJ_SOCK_HAS_GETADDRINFO,1)
 		   AC_MSG_RESULT(yes)],
 		  [AC_MSG_RESULT(no)])
 
@@ -545,9 +577,9 @@ AC_OUTPUT()
 
 AC_MSG_RESULT([
 
-The configuration for current target has been written to 'build.mak', and 'os-auto.mak' in various build directories.
+Configurations for current target have been written to 'build.mak', and 'os-auto.mak' in various build directories, and pjlib/include/pj/compat/os_auto.h.
 
-Customizations can be put in:
+Further customizations can be put in:
   - 'user.mak'
   - 'pjlib/include/pj/config_site.h'
 

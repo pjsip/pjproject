@@ -60,6 +60,9 @@ PJ_BEGIN_DECL
  * THE LIBRARY WILL DO TRANSLATION TO THE NATIVE VALUE.
  */
 
+/** Address family is unspecified. @see pj_AF_UNSPEC() */
+extern const pj_uint16_t PJ_AF_UNSPEC;
+
 /** Unix domain socket.	@see pj_AF_UNIX() */
 extern const pj_uint16_t PJ_AF_UNIX;
 
@@ -84,6 +87,8 @@ extern const pj_uint16_t PJ_AF_IRDA;
  * global variables from a DLL.
  */
 
+/** Get #PJ_AF_UNSPEC value */
+PJ_DECL(pj_uint16_t) pj_AF_UNSPEC(void);
 /** Get #PJ_AF_UNIX value. */
 PJ_DECL(pj_uint16_t) pj_AF_UNIX(void);
 /** Get #PJ_AF_INET value. */
@@ -313,6 +318,17 @@ typedef struct pj_in_addr
 
 
 /**
+ * Maximum length of text representation of an IPv4 address.
+ */
+#define PJ_INET_ADDRSTRLEN	16
+
+/**
+ * Maximum length of text representation of an IPv6 address.
+ */
+#define PJ_INET6_ADDRSTRLEN	46
+
+
+/**
  * This structure describes Internet socket address.
  * If PJ_SOCKADDR_HAS_LEN is not zero, then sin_zero_len member is added
  * to this struct. As far the application is concerned, the value of
@@ -333,26 +349,25 @@ struct pj_sockaddr_in
     char	sin_zero[8];	/**< Padding.			    */
 };
 
+
 #undef s6_addr
 
 /**
  * This structure describes IPv6 address.
  */
-typedef struct pj_in6_addr
+typedef union pj_in6_addr
 {
-    /** Union of address formats. */
-    union {
-	pj_uint8_t  u6_addr8[16];   /**< u6_addr8   */
-	pj_uint16_t u6_addr16[8];   /**< u6_addr16  */
-	pj_uint32_t u6_addr32[4];   /**< u6_addr32  */
-    } in6_u;
-/** Shortcut to access in6_u.u6_addr8. */
-#define s6_addr                 in6_u.u6_addr8
-/** Shortcut to access in6_u.u6_addr16. */
-#define s6_addr16               in6_u.u6_addr16
-/** Shortcut to access in6_u.u6_addr32. */
-#define s6_addr32               in6_u.u6_addr32
+    /* This is the main entry */
+    pj_uint8_t  s6_addr[16];   /**< 8-bit array */
+
+    /* While these are used for proper alignment */
+    pj_uint32_t	u6_addr32[4];
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+    pj_int64_t	u6_addr64[2];
+#endif
+
 } pj_in6_addr;
+
 
 /** Initializer value for pj_in6_addr. */
 #define PJ_IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
@@ -371,15 +386,15 @@ typedef struct pj_in6_addr
 typedef struct pj_sockaddr_in6
 {
 #if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
-    pj_uint8_t  sin_zero_len;	    /**< Just ignore this.	   */
-    pj_uint8_t  sin_family;	    /**< Address family.	   */
+    pj_uint8_t  sin6_zero_len;	    /**< Just ignore this.	   */
+    pj_uint8_t  sin6_family;	    /**< Address family.	   */
 #else
     pj_uint16_t	sin6_family;	    /**< Address family		    */
 #endif
     pj_uint16_t	sin6_port;	    /**< Transport layer port number. */
     pj_uint32_t	sin6_flowinfo;	    /**< IPv6 flow information	    */
     pj_in6_addr sin6_addr;	    /**< IPv6 address.		    */
-    pj_uint32_t sin6_scope_id;	    /**< IPv6 scope-id		    */
+    pj_uint32_t sin6_scope_id;	    /**< Set of interfaces for a scope	*/
 } pj_sockaddr_in6;
 
 
@@ -472,6 +487,44 @@ PJ_DECL(char*) pj_inet_ntoa(pj_in_addr inaddr);
  * @return	nonzero if the address is valid, zero if not.
  */
 PJ_DECL(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp);
+
+/**
+ * This function converts an address in its standard text presentation form
+ * into its numeric binary form. It supports both IPv4 and IPv6 address
+ * conversion.
+ *
+ * @param af	Specify the family of the address.  The PJ_AF_INET and 
+ *		PJ_AF_INET6 address families shall be supported.  
+ * @param src	Points to the string being passed in. 
+ * @param dst	Points to a buffer into which the function stores the 
+ *		numeric address; this shall be large enough to hold the
+ *		numeric address (32 bits for PJ_AF_INET, 128 bits for
+ *		PJ_AF_INET6).  
+ *
+ * @return	PJ_SUCCESS if conversion was successful.
+ */
+PJ_DECL(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst);
+
+/**
+ * This function converts a numeric address into a text string suitable
+ * for presentation. It supports both IPv4 and IPv6 address
+ * conversion.
+ *
+ * @param af	Specify the family of the address. This can be PJ_AF_INET
+ *		or PJ_AF_INET6.
+ * @param src	Points to a buffer holding an IPv4 address if the af argument
+ *		is PJ_AF_INET, or an IPv6 address if the af argument is
+ *		PJ_AF_INET6; the address must be in network byte order.  
+ * @param dst	Points to a buffer where the function stores the resulting
+ *		text string; it shall not be NULL.  
+ * @param size	Specifies the size of this buffer, which shall be large 
+ *		enough to hold the text string (PJ_INET_ADDRSTRLEN characters
+ *		for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
+ *
+ * @return	PJ_SUCCESS if conversion was successful..
+ */
+PJ_DECL(pj_status_t) pj_inet_ntop(int af, const void *src,
+				  char *dst, int size);
 
 /**
  * Convert address string with numbers and dots to binary IP address.

@@ -23,11 +23,13 @@
 #include <pj/compat/socket.h>
 #include <pj/addr_resolv.h>
 #include <pj/errno.h>
+#include <pj/unicode.h>
 
 /*
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
  */
+const pj_uint16_t PJ_AF_UNSPEC	= AF_UNSPEC;
 const pj_uint16_t PJ_AF_UNIX	= AF_UNIX;
 const pj_uint16_t PJ_AF_INET	= AF_INET;
 const pj_uint16_t PJ_AF_INET6	= AF_INET6;
@@ -184,7 +186,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 {
-    char tempaddr[16];
+    char tempaddr[PJ_INET_ADDRSTRLEN];
 
     /* Initialize output with PJ_INADDR_NONE.
      * Some apps relies on this instead of the return value
@@ -197,7 +199,7 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
      *  (i.e. when called with hostname to check if it's an IP addr).
      */
     PJ_ASSERT_RETURN(cp && cp->slen && inp, 0);
-    if (cp->slen >= 16) {
+    if (cp->slen >= PJ_INET_ADDRSTRLEN) {
 	return 0;
     }
 
@@ -209,6 +211,176 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 #else
     inp->s_addr = inet_addr(tempaddr);
     return inp->s_addr == PJ_INADDR_NONE ? 0 : 1;
+#endif
+}
+
+/*
+ * Convert text to IPv4/IPv6 address.
+ */
+PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
+{
+    char tempaddr[PJ_INET6_ADDRSTRLEN];
+
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    PJ_ASSERT_RETURN(src && src->slen && dst, PJ_EINVAL);
+
+    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be 
+     * compatible with pj_inet_aton()
+     */
+    if (af==PJ_AF_INET) {
+	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
+    }
+
+    /* Caution:
+     *	this function might be called with cp->slen >= 46
+     *  (i.e. when called with hostname to check if it's an IP addr).
+     */
+    if (src->slen >= PJ_INET6_ADDRSTRLEN) {
+	return PJ_ENAMETOOLONG;
+    }
+
+    pj_memcpy(tempaddr, src->ptr, src->slen);
+    tempaddr[src->slen] = '\0';
+
+#if defined(PJ_SOCK_HAS_INET_PTON) && PJ_SOCK_HAS_INET_PTON != 0
+    /*
+     * Implementation using inet_pton()
+     */
+    if (inet_pton(af, tempaddr, dst) != 1) {
+	pj_status_t status = pj_get_netos_error();
+	if (status == PJ_SUCCESS)
+	    status = PJ_EUNKNOWN;
+
+	return status;
+    }
+
+    return PJ_SUCCESS;
+
+#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+    /*
+     * Implementation on Windows, using WSAStringToAddress().
+     * Should also work on Unicode systems.
+     */
+    {
+	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+	pj_sockaddr sock_addr;
+	int addr_len = sizeof(sock_addr);
+	int rc;
+
+	sock_addr.addr.sa_family = (pj_uint16_t)af;
+	rc = WSAStringToAddress(
+		PJ_STRING_TO_NATIVE(tempaddr,wtempaddr,sizeof(wtempaddr)), 
+		af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
+	if (rc != 0) {
+	    pj_status_t status = pj_get_netos_error();
+	    if (status == PJ_SUCCESS)
+		status = PJ_EUNKNOWN;
+
+	    return status;
+	}
+
+	if (sock_addr.addr.sa_family == PJ_AF_INET) {
+	    pj_memcpy(dst, &sock_addr.ipv4.sin_addr, 4);
+	    return PJ_SUCCESS;
+	} else if (sock_addr.addr.sa_family == PJ_AF_INET6) {
+	    pj_memcpy(dst, &sock_addr.ipv6.sin6_addr, 16);
+	    return PJ_SUCCESS;
+	} else {
+	    pj_assert(!"Shouldn't happen");
+	    return PJ_EBUG;
+	}
+    }
+#elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
+    /* IPv6 support is disabled, just return error without raising assertion */
+    return PJ_EIPV6NOTSUP;
+#else
+    pj_assert(!"Not supported");
+    return PJ_EIPV6NOTSUP;
+#endif
+}
+
+/*
+ * Convert IPv4/IPv6 address to text.
+ */
+PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
+				 char *dst, int size)
+
+{
+    PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+
+#if defined(PJ_SOCK_HAS_INET_NTOP) && PJ_SOCK_HAS_INET_NTOP != 0
+    /*
+     * Implementation using inet_ntop()
+     */
+    if (inet_ntop(af, src, dst, size) == NULL) {
+	pj_status_t status = pj_get_netos_error();
+	if (status == PJ_SUCCESS)
+	    status = PJ_EUNKNOWN;
+
+	return status;
+    }
+
+    return PJ_SUCCESS;
+
+#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+    /*
+     * Implementation on Windows, using WSAAddressToString().
+     * Should also work on Unicode systems.
+     */
+    {
+	PJ_DECL_UNICODE_TEMP_BUF(wtempaddr,PJ_INET6_ADDRSTRLEN)
+	pj_sockaddr sock_addr;
+	DWORD addr_len, addr_str_len;
+	int rc;
+
+	pj_bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.addr.sa_family = (pj_uint16_t)af;
+	if (af == PJ_AF_INET) {
+	    if (size < PJ_INET_ADDRSTRLEN)
+		return PJ_ETOOSMALL;
+	    pj_memcpy(&sock_addr.ipv4.sin_addr, src, 4);
+	    addr_len = sizeof(pj_sockaddr_in);
+	    addr_str_len = PJ_INET_ADDRSTRLEN;
+	} else if (af == PJ_AF_INET6) {
+	    if (size < PJ_INET6_ADDRSTRLEN)
+		return PJ_ETOOSMALL;
+	    pj_memcpy(&sock_addr.ipv6.sin6_addr, src, 16);
+	    addr_len = sizeof(pj_sockaddr_in6);
+	    addr_str_len = PJ_INET6_ADDRSTRLEN;
+	} else {
+	    pj_assert(!"Unsupported address family");
+	    return PJ_EINVAL;
+	}
+
+#if PJ_NATIVE_STRING_IS_UNICODE
+	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+				NULL, wtempaddr, addr_str_len);
+	if (rc == 0) {
+	    pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
+	}
+#else
+	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
+				NULL, dst, &addr_str_len);
+#endif
+
+	if (rc != 0) {
+	    pj_status_t status = pj_get_netos_error();
+	    if (status == PJ_SUCCESS)
+		status = PJ_EUNKNOWN;
+
+	    return status;
+	}
+
+	return PJ_SUCCESS;
+    }
+
+#elif !defined(PJ_HAS_IPV6) || PJ_HAS_IPV6==0
+    /* IPv6 support is disabled, just return error without raising assertion */
+    return PJ_EIPV6NOTSUP;
+#else
+    pj_assert(!"Not supported");
+    return PJ_EIPV6NOTSUP;
 #endif
 }
 
