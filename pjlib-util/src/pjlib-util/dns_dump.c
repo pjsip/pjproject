@@ -117,6 +117,11 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
     } else if (rr->type == PJ_DNS_TYPE_A) {
 	PJ_LOG(3,(THIS_FILE, "    IP address: %s",
 		  pj_inet_ntoa(rr->rdata.a.ip_addr)));
+    } else if (rr->type == PJ_DNS_TYPE_AAAA) {
+	char addr[PJ_INET6_ADDRSTRLEN];
+	PJ_LOG(3,(THIS_FILE, "    IPv6 address: %s",
+		  pj_inet_ntop(pj_AF_INET6(), &rr->rdata.aaaa.ip_addr,
+			       addr, sizeof(addr))));
     }
 }
 

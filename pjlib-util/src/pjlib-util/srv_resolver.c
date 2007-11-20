@@ -55,7 +55,7 @@ typedef struct pj_dns_srv_resolver_job
     pj_status_t		     last_error;
 
     /* Original request: */
-    pj_bool_t		     fallback_a;
+    unsigned		     option;
     pj_str_t		     full_name;
     pj_str_t		     domain_part;
     pj_uint16_t		     def_port;
@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 					unsigned def_port,
 					pj_pool_t *pool,
 					pj_dns_resolver *resolver,
-					pj_bool_t fallback_a,
+					unsigned option,
 					void *token,
 					pj_dns_srv_resolver_cb *cb,
 					pj_dns_async_query **p_query)
@@ -116,7 +116,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
     query_job->resolver = resolver;
     query_job->token = token;
     query_job->cb = cb;
-    query_job->fallback_a = fallback_a;
+    query_job->option = option;
     query_job->full_name = target_name;
     query_job->domain_part.ptr = target_name.ptr + len;
     query_job->domain_part.slen = target_name.slen - len;
@@ -417,7 +417,9 @@ static void dns_callback(void *user_data,
 		      errmsg));
 
 	    /* Trigger error when fallback is disabled */
-	    if (query_job->fallback_a == PJ_FALSE) {
+	    if ((query_job->option &
+		 (PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA)) == 0) 
+	    {
 		goto on_error;
 	    }
 	}

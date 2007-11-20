@@ -41,7 +41,10 @@ PJ_BEGIN_DECL
  *
  * This module provides low-level services to parse and packetize DNS queries
  * and responses. The functions support building a DNS query packet and parse
- * the data in the DNS response.
+ * the data in the DNS response. This implementation conforms to the 
+ * following specifications:
+ *  - RFC 1035: DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION
+ *  - RFC 1886: DNS Extensions to support IP version 6
  *
  * To create a DNS query packet, application should call #pj_dns_make_query()
  * function, specifying the desired DNS query type, the name to be resolved,
@@ -258,8 +261,13 @@ typedef struct pj_dns_parsed_rr
 
 	/** A Resource Data (PJ_DNS_TYPE_A, 1) */
 	struct a {
-	    pj_in_addr	ip_addr;/**< IP host address string.		    */
+	    pj_in_addr	ip_addr;/**< IPv4 address in network byte order.    */
 	} a;
+
+	/** AAAA Resource Data (PJ_DNS_TYPE_AAAA, 28) */
+	struct aaaa {
+	    pj_in6_addr	ip_addr;/**< IPv6 address in network byte order.    */
+	} aaaa;
 
     } rdata;
 

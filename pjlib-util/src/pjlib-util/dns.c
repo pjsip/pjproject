@@ -29,6 +29,7 @@ PJ_DEF(const char *) pj_dns_get_type_name(int type)
 {
     switch (type) {
     case PJ_DNS_TYPE_A:	    return "A";
+    case PJ_DNS_TYPE_AAAA:  return "AAAA";
     case PJ_DNS_TYPE_SRV:   return "SRV";
     case PJ_DNS_TYPE_NS:    return "NS";
     case PJ_DNS_TYPE_CNAME: return "CNAME";
@@ -346,6 +347,10 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 	pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
 	p += 4;
 
+    } else if (rr->type == PJ_DNS_TYPE_AAAA) {
+	pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
+	p += 16;
+
     } else if (rr->type == PJ_DNS_TYPE_CNAME ||
 	       rr->type == PJ_DNS_TYPE_NS ||
 	       rr->type == PJ_DNS_TYPE_PTR) 
@@ -591,6 +596,9 @@ static void copy_rr(pj_pool_t *pool, pj_dns_parsed_rr *dst,
 			 pool, &dst->rdata.srv.target);
     } else if (src->type == PJ_DNS_TYPE_A) {
 	dst->rdata.a.ip_addr.s_addr =  src->rdata.a.ip_addr.s_addr;
+    } else if (src->type == PJ_DNS_TYPE_AAAA) {
+	pj_memcpy(&dst->rdata.aaaa.ip_addr, &src->rdata.aaaa.ip_addr,
+		  sizeof(pj_in6_addr));
     } else if (src->type == PJ_DNS_TYPE_CNAME) {
 	pj_strdup(pool, &dst->rdata.cname.name, &src->rdata.cname.name);
     } else if (src->type == PJ_DNS_TYPE_NS) {

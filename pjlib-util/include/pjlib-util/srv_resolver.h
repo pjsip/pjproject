@@ -75,6 +75,40 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Flags to be specified when starting the DNS SRV query.
+ */
+enum pj_dns_srv_option
+{
+    /**
+     * Specify if the resolver should fallback with DNS A
+     * resolution when the SRV resolution fails. This option may
+     * be specified together with PJ_DNS_SRV_FALLBACK_AAAA to
+     * make the resolver fallback to AAAA if SRV resolution fails,
+     * and then to DNS A resolution if the AAAA resolution fails.
+     */
+    PJ_DNS_SRV_FALLBACK_A	= 1,
+
+    /**
+     * Specify if the resolver should fallback with DNS AAAA
+     * resolution when the SRV resolution fails. This option may
+     * be specified together with PJ_DNS_SRV_FALLBACK_A to
+     * make the resolver fallback to AAAA if SRV resolution fails,
+     * and then to DNS A resolution if the AAAA resolution fails.
+     */
+    PJ_DNS_SRV_FALLBACK_AAAA	= 2,
+
+    /**
+     * Specify if the resolver should try to resolve with DNS AAAA
+     * resolution first of each targets in the DNS SRV record. If
+     * this option is not specified, the SRV resolver will query
+     * the DNS A record for the target instead.
+     */
+    PJ_DNS_SRV_RESOLVE_AAAA	= 4
+
+} pj_dns_srv_option;
+
+
+/**
  * This structure represents DNS SRV records as the result of DNS SRV
  * resolution using #pj_dns_srv_resolve().
  */
@@ -85,7 +119,7 @@ typedef struct pj_dns_srv_record
 
     /** Address records. */
     struct
-v    {
+    {
 	/** Server priority (the lower the higher the priority). */
 	unsigned		priority;
 
@@ -125,8 +159,13 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  *			resolved with DNS A resolution.
  * @param pool		Memory pool used to allocate memory for the query.
  * @param resolver	The resolver instance.
- * @param fallback_a	Specify if the resolver should fallback with DNS A
- *			resolution when the SRV resolution fails.
+ * @param option	Option flags, which can be constructed from
+ *			#pj_dns_srv_option bitmask. Note that this argument
+ *			was called "fallback_a" in pjsip version 0.8.0 and
+ *			older, but the new option should be backward 
+ *			compatible with existing applications. If application
+ *			specifies PJ_TRUE as "fallback_a" value, it will
+ *			correspond to PJ_DNS_SRV_FALLBACK_A option.
  * @param token		Arbitrary data to be associated with this query when
  *			the calback is called.
  * @param cb		Pointer to callback function to receive the
@@ -142,7 +181,7 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
 					unsigned def_port,
 					pj_pool_t *pool,
 					pj_dns_resolver *resolver,
-					pj_bool_t fallback_a,
+					unsigned option,
 					void *token,
 					pj_dns_srv_resolver_cb *cb,
 					pj_dns_async_query **p_query);

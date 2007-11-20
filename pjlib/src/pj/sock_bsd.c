@@ -307,6 +307,9 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 
 {
     PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
+
+    *dst = '\0';
+
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
 
 #if defined(PJ_SOCK_HAS_INET_NTOP) && PJ_SOCK_HAS_INET_NTOP != 0
