@@ -30,6 +30,7 @@
 /*
  * Address families.
  */
+const pj_uint16_t PJ_AF_UNSPEC	= KAFUnspec;
 const pj_uint16_t PJ_AF_UNIX	= 0xFFFF;
 const pj_uint16_t PJ_AF_INET	= KAfInet;
 const pj_uint16_t PJ_AF_INET6	= KAfInet6;
@@ -330,6 +331,114 @@ PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 	/* Error */
 	return 0;
     }
+}
+
+/*
+ * Convert text to IPv4/IPv6 address.
+ */
+PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
+{
+    char tempaddr[PJ_INET6_ADDRSTRLEN];
+
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    PJ_ASSERT_RETURN(src && src->slen && dst, PJ_EINVAL);
+
+    /* Initialize output with PJ_IN_ADDR_NONE for IPv4 (to be 
+     * compatible with pj_inet_aton()
+     */
+    if (af==PJ_AF_INET) {
+	((pj_in_addr*)dst)->s_addr = PJ_INADDR_NONE;
+    }
+
+    /* Caution:
+     *	this function might be called with cp->slen >= 46
+     *  (i.e. when called with hostname to check if it's an IP addr).
+     */
+    if (src->slen >= PJ_INET6_ADDRSTRLEN) {
+	return PJ_ENAMETOOLONG;
+    }
+
+    pj_memcpy(tempaddr, src->ptr, src->slen);
+    tempaddr[src->slen] = '\0';
+
+
+    wchar_t tempaddr16[PJ_INET6_ADDRSTRLEN];
+    pj_ansi_to_unicode(tempaddr, pj_ansi_strlen(tempaddr),
+		       tempaddr16, sizeof(tempaddr16));
+
+    TBuf<PJ_INET6_ADDRSTRLEN> ip_addr((const TText*)tempaddr16);
+
+    TInetAddr addr;
+    addr.Init(KAfInet6);
+    if (addr.Input(ip_addr) == KErrNone) {
+	if (af==PJ_AF_INET) {
+	    /* Success (Symbian IP address is in host byte order) */
+	    pj_uint32_t ip = pj_htonl(addr.Address());
+	    pj_memcpy(dst, &ip, 4);
+	} else if (af==PJ_AF_INET6) {
+	    const TIp6Addr & ip6 = addr.Ip6Address();
+	    pj_memcpy(dst, ip6.u.iAddr8, 16);
+	} else {
+	    pj_assert(!"Unexpected!");
+	    return PJ_EBUG;
+	}
+	return PJ_SUCCESS;
+    } else {
+	/* Error */
+	return PJ_EINVAL;
+    }
+}
+
+/*
+ * Convert IPv4/IPv6 address to text.
+ */
+PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
+				 char *dst, int size)
+
+{
+    PJ_ASSERT_RETURN(src && dst && size, PJ_EINVAL);
+
+    *dst = '\0';
+
+    if (af==PJ_AF_INET) {
+
+	TBuf<PJ_INET_ADDRSTRLEN> str16;
+	pj_in_addr inaddr;
+
+	if (size <= PJ_INET_ADDRSTRLEN)
+	    return PJ_ETOOSMALL;
+
+	pj_memcpy(&inaddr, src, 4);
+
+	/* Symbian IP address is in host byte order */
+	TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
+	temp_addr.Output(str16);
+ 
+	pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
+			   dst, size);
+	return PJ_SUCCESS;
+
+    } else if (af==PJ_AF_INET6) {
+	TBuf<PJ_INET6_ADDRSTRLEN> str16;
+
+	if (size <= PJ_INET6_ADDRSTRLEN)
+	    return PJ_ETOOSMALL;
+
+	TIp6Addr ip6;
+	pj_memcpy(ip6.u.iAddr8, src, 16);
+
+	TInetAddr temp_addr(ip6, (TUint)0);
+	temp_addr.Output(str16);
+ 
+	pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
+			   dst, size);
+	return PJ_SUCCESS;
+
+    } else {
+	pj_assert(!"Unsupport address family");
+	return PJ_EINVAL;
+    }
+
 }
 
 /*
