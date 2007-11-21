@@ -138,6 +138,19 @@ PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
 
 
 /**
+ * Return native handle from pj_thread_t for manipulation using native
+ * OS APIs.
+ *
+ * @param thread	PJLIB thread descriptor.
+ *
+ * @return		Native thread handle. For example, when the
+ *			backend thread uses pthread, this function will
+ *			return pointer to pthread_t, and on Windows,
+ *			this function will return HANDLE.
+ */
+PJ_DECL(void*) pj_thread_get_os_handle(pj_thread_t *thread);
+
+/**
  * Get thread name.
  *
  * @param thread    The thread handle.

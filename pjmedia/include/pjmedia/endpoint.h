@@ -87,6 +87,26 @@ PJ_DECL(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt);
 
 
 /**
+ * Get the number of worker threads on the media endpoint
+ *
+ * @param endpt		The media endpoint instance.
+ * @return		The number of worker threads on the media endpoint
+ */
+PJ_DECL(unsigned) pjmedia_endpt_get_thread_count(pjmedia_endpt *endpt);
+
+/**
+ * Get a reference to one of the worker threads of the media endpoint 
+ *
+ * @param endpt		The media endpoint instance.
+ * @param index		The index of the thread: 0<= index < thread_cnt
+ *
+ * @return		pj_thread_t or NULL
+ */
+PJ_DECL(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt, 
+					       unsigned index);
+
+
+/**
  * Request the media endpoint to create pool.
  *
  * @param endpt		The media endpoint instance.

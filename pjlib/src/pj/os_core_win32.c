@@ -245,6 +245,21 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 }
 
 /*
+ * Get native thread handle
+ */
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+{
+    PJ_ASSERT_RETURN(thread, NULL);
+
+#if PJ_HAS_THREADS
+    return thread->hthread;
+#else
+    pj_assert("pj_thread_is_registered() called in non-threading mode!");
+    return NULL;
+#endif
+}
+
+/*
  * pj_thread_register(..)
  */
 PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,

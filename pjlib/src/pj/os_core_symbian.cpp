@@ -447,6 +447,23 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
 
 
 /*
+ * pj_thread_is_registered()
+ */
+PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
+{
+    return PJ_FALSE;
+}
+
+/*
+ * pj_thread_get_os_handle()
+ */
+PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread) 
+{
+    PJ_UNUSED_ARG(thread);
+    return NULL;
+}
+
+/*
  * pj_thread_register(..)
  */
 PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,

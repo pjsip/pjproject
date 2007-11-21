@@ -226,6 +226,28 @@ PJ_DEF(pj_ioqueue_t*) pjmedia_endpt_get_ioqueue(pjmedia_endpt *endpt)
     return endpt->ioqueue;
 }
 
+/**
+ * Get the number of worker threads in media endpoint.
+ */
+PJ_DEF(unsigned) pjmedia_endpt_get_thread_count(pjmedia_endpt *endpt)
+{
+    PJ_ASSERT_RETURN(endpt, 0);
+    return endpt->thread_cnt;
+}
+
+/**
+ * Get a reference to one of the worker threads of the media endpoint 
+ */
+PJ_DEF(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt, 
+					      unsigned index)
+{
+    PJ_ASSERT_RETURN(endpt, NULL);
+    PJ_ASSERT_RETURN(index < endpt->thread_cnt, NULL);
+
+    /* here should be an assert on index >= 0 < endpt->thread_cnt */
+
+    return endpt->thread[index];
+}
 
 /**
  * Worker thread proc.
