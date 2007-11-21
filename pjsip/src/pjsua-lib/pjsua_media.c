@@ -956,6 +956,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	sess_info.stream_info[0].jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
 	sess_info.stream_info[0].jb_max = pjsua_var.media_cfg.jb_max;
 
+	/* Set SSRC */
+	sess_info.stream_info[0].ssrc = call->ssrc;
+
 	/* Create session based on session info. */
 	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,
 					 &call->med_tp,

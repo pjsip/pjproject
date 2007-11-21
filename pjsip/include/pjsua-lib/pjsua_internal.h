@@ -46,6 +46,7 @@ typedef struct pjsua_call
     pjsua_call_media_status media_st;/**< Media state.			    */
     pjmedia_dir		 media_dir; /**< Media direction.		    */
     pjmedia_session	*session;   /**< The media session.		    */
+    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
     int			 conf_slot; /**< Slot # in conference bridge.	    */
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
