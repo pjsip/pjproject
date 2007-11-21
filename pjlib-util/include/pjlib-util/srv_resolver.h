@@ -77,7 +77,7 @@ PJ_BEGIN_DECL
 /**
  * Flags to be specified when starting the DNS SRV query.
  */
-enum pj_dns_srv_option
+typedef enum pj_dns_srv_option
 {
     /**
      * Specify if the resolver should fallback with DNS A
