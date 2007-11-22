@@ -77,7 +77,9 @@ PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
     /* If we end up with 127.x.x.x, resolve the IP by getting the default
      * interface to connect to some public host.
      */
-    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127) {
+    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127 ||
+	addr->s_addr == 0) 
+    {
 	pj_sock_t fd;
 	pj_str_t cp;
 	pj_sockaddr_in a;
