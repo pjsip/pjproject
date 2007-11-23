@@ -412,6 +412,24 @@ PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 }
 
 
+/*
+ * Retrieve the current number of dialog-set currently registered
+ * in the hash table. 
+ */
+PJ_DEF(unsigned) pjsip_ua_get_dlg_set_count(void)
+{
+    unsigned count;
+
+    PJ_ASSERT_RETURN(mod_ua.endpt, 0);
+
+    pj_mutex_lock(mod_ua.mutex);
+    count = pj_hash_count(mod_ua.dlg_table);
+    pj_mutex_unlock(mod_ua.mutex);
+
+    return count;
+}
+
+
 /* 
  * Find a dialog.
  */

@@ -159,6 +159,14 @@ PJ_DECL(pjsip_module*) pjsip_tsx_layer_instance(void);
 PJ_DECL(pj_status_t) pjsip_tsx_layer_destroy(void);
 
 /**
+ * Retrieve the current number of transactions currently registered
+ * in the hash table.
+ *
+ * @return	    Number of transactions.
+ */
+PJ_DECL(unsigned) pjsip_tsx_layer_get_tsx_count(void);
+
+/**
  * Find a transaction with the specified key. The transaction key normally
  * is created by calling #pjsip_tsx_create_key() from an incoming message.
  *

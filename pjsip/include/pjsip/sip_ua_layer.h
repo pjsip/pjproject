@@ -81,6 +81,19 @@ PJ_DECL(pjsip_user_agent*) pjsip_ua_instance(void);
 
 
 /**
+ * Retrieve the current number of dialog-set currently registered
+ * in the hash table. Note that dialog-set is different than dialog
+ * when the request forks. In this case, all dialogs created from
+ * the original request will belong to the same dialog set. When
+ * no forking occurs, the number of dialog sets will be equal to
+ * the number of dialogs.
+ *
+ * @return	    Number of dialog sets.
+ */
+PJ_DECL(pj_uint32_t) pjsip_ua_get_dlg_set_count(void);
+
+
+/**
  * Find a dialog with the specified Call-ID and tags properties. This
  * function may optionally lock the matching dialog instance before
  * returning it back to the caller.

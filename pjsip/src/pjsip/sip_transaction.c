@@ -581,6 +581,25 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
 
 
 /*
+ * Retrieve the current number of transactions currently registered in 
+ * the hash table.
+ */
+PJ_DEF(unsigned) pjsip_tsx_layer_get_tsx_count(void)
+{
+    unsigned count;
+
+    /* Are we registered? */
+    PJ_ASSERT_RETURN(mod_tsx_layer.endpt!=NULL, 0);
+
+    pj_mutex_lock(mod_tsx_layer.mutex);
+    count = pj_hash_count(mod_tsx_layer.htable);
+    pj_mutex_unlock(mod_tsx_layer.mutex);
+
+    return count;
+}
+
+
+/*
  * Find a transaction.
  */
 PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
