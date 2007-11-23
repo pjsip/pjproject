@@ -18,6 +18,7 @@
  */
 #include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
+#include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/rand.h>
@@ -25,8 +26,8 @@
 #include <pj/string.h>
 
 
-enum { MAX_REQUEST = 3 };
-static int stun_timer[] = {1600, 1600, 1600 };
+enum { MAX_REQUEST = 4 };
+static int stun_timer[] = {1000, 1000, 1000, 1000 };
 
 #define THIS_FILE	"stun_client.c"
 #define LOG_ADDR(addr)	pj_inet_ntoa(addr.sin_addr), pj_ntohs(addr.sin_port)
@@ -130,7 +131,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 	pj_time_val_normalize(&next_tx);
 
 	for (pj_gettimeofday(&now), select_rc=1; 
-	     status==PJ_SUCCESS && select_rc==1 && wait_resp>0 
+	     status==PJ_SUCCESS && select_rc>=1 && wait_resp>0 
 	       && PJ_TIME_VAL_LT(now, next_tx); 
 	     pj_gettimeofday(&now)) 
 	{
@@ -165,16 +166,35 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 				           (pj_sockaddr_t*)&addr,
 					   &addrlen);
 
-		--wait_resp;
-
-		if (status != PJ_SUCCESS)
-		    continue;
-
-		status = pjstun_parse_msg(recv_buf, len, &msg);
 		if (status != PJ_SUCCESS) {
+		    char errmsg[PJ_ERR_MSG_SIZE];
+
+		    PJ_LOG(4,(THIS_FILE, "recvfrom() error ignored: %s",
+			      pj_strerror(status, errmsg,sizeof(errmsg)).ptr));
+
+		    /* Ignore non-PJ_SUCCESS status.
+		     * It possible that other SIP entity is currently 
+		     * sending SIP request to us, and because SIP message
+		     * is larger than STUN, we could get EMSGSIZE when
+		     * we call recvfrom().
+		     */
+		    status = PJ_SUCCESS;
 		    continue;
 		}
 
+		status = pjstun_parse_msg(recv_buf, len, &msg);
+		if (status != PJ_SUCCESS) {
+		    char errmsg[PJ_ERR_MSG_SIZE];
+
+		    PJ_LOG(4,(THIS_FILE, "STUN parsing error ignored: %s",
+			      pj_strerror(status, errmsg,sizeof(errmsg)).ptr));
+
+		    /* Also ignore non-successful parsing. This may not
+		     * be STUN response at all. See the comment above.
+		     */
+		    status = PJ_SUCCESS;
+		    continue;
+		}
 
 		sock_idx = pj_ntohl(msg.hdr->tsx[2]);
 		srv_idx = pj_ntohl(msg.hdr->tsx[3]);
@@ -188,6 +208,11 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 		    status = PJLIB_UTIL_ESTUNNOBINDRES;
 		    continue;
 		}
+
+		/* From this part, we consider the packet as a valid STUN
+		 * response for our request.
+		 */
+		--wait_resp;
 
 		if (pjstun_msg_find_attr(&msg, PJSTUN_ATTR_ERROR_CODE) != NULL) {
 		    status = PJLIB_UTIL_ESTUNRECVERRATTR;
