@@ -2044,9 +2044,9 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
     if (invite_tsx == NULL) {
 
 	/* Invite transaction not found! 
-	 * Respond CANCEL with 491 (RFC 3261 Section 9.2 page 42)
+	 * Respond CANCEL with 481 (RFC 3261 Section 9.2 page 55)
 	 */
-	status = pjsip_dlg_create_response( inv->dlg, rdata, 200, NULL, 
+	status = pjsip_dlg_create_response( inv->dlg, rdata, 481, NULL, 
 					    &tdata);
 
     } else {
@@ -2566,8 +2566,11 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle case when outgoing request is answered with 481 (Call/
 	 * Transaction Does Not Exist), 408, or when it's timed out. In these
 	 * cases, disconnect session (i.e. dialog usage only).
+	 * Note that 481 response to CANCEL does not terminate dialog usage,
+	 * but only the transaction.
 	 */
-	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+		tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
@@ -2784,8 +2787,11 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle case when outgoing request is answered with 481 (Call/
 	 * Transaction Does Not Exist), 408, or when it's timed out. In these
 	 * cases, disconnect session (i.e. dialog usage only).
+	 * Note that 481 response to CANCEL does not terminate dialog usage,
+	 * but only the transaction.
 	 */
-	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+		tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
@@ -2923,8 +2929,11 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle case when outgoing request is answered with 481 (Call/
 	 * Transaction Does Not Exist), 408, or when it's timed out. In these
 	 * cases, disconnect session (i.e. dialog usage only).
+	 * Note that 481 response to CANCEL does not terminate dialog usage,
+	 * but only the transaction.
 	 */
-	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+		tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
@@ -3231,8 +3240,11 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle case when outgoing request is answered with 481 (Call/
 	 * Transaction Does Not Exist), 408, or when it's timed out. In these
 	 * cases, disconnect session (i.e. dialog usage only).
+	 * Note that 481 response to CANCEL does not terminate dialog usage,
+	 * but only the transaction.
 	 */
-	if (tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST ||
+	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+		tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
 	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
