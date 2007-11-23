@@ -660,7 +660,6 @@
 #   define PJ_HAS_STRICMP_ALNUM	    0
 #endif
 
-
 /** @} */
 
 /********************************************************************
@@ -668,34 +667,81 @@
  */
 
 /**
- * Guide for building dynamic link libraries (DLL).
+ * @defgroup pj_dll_target Building Dynamic Link Libraries (DLL/DSO)
+ * @ingroup pj_config
+ * @{
  *
  * The libraries support generation of dynamic link libraries for
- * Symbian ABIv2 target (.dso files, in S60 3rd Edition). Similar
- * procedures may be applied for Win32 DLL too, with some modification.
+ * Symbian ABIv2 target (.dso/Dynamic Shared Object files, in Symbian
+ * terms). Similar procedures may be applied for Win32 DLL with some 
+ * modification.
+ *
+ * Depending on the platforms, these steps may be necessary in order to
+ * produce the dynamic libraries:
+ *  - Create the (Visual Studio) projects to produce DLL output. PJLIB
+ *    does not provide ready to use project files to produce DLL, so
+ *    you need to create these projects yourself. For Symbian, the MMP
+ *    files have been setup to produce DSO files for targets that 
+ *    require them.
+ *  - In the (Visual Studio) projects, some macros need to be declared
+ *    so that appropriate modifiers are added to symbol declarations
+ *    and definitions. Please see the macro section below for information
+ *    regarding these macros. For Symbian, these have been taken care by the
+ *    MMP files.
+ *  - Some build systems require .DEF file to be specified when creating
+ *    the DLL. For Symbian, .DEF files are included in pjlib distribution,
+ *    in <tt>pjlib/build.symbian</tt> directory. These DEF files are 
+ *    created by running <tt>./makedef.sh all</tt> from this directory,
+ *    inside Mingw.
  *
  * Macros related for building DLL/DSO files:
  *  - For platforms that supports dynamic link libraries generation,
- *    it must declare PJ_EXPORT_SPECIFIER macro which value contains
+ *    it must declare <tt>PJ_EXPORT_SPECIFIER</tt> macro which value contains
  *    the prefix to be added to symbol definition, to export this 
  *    symbol in the DLL/DSO. For example, on Win32/Visual Studio, the
- *    value of this macro is "__declspec(dllexport)", and for ARM 
+ *    value of this macro is \a __declspec(dllexport), and for ARM 
  *    ABIv2/Symbian, the value is \a EXPORT_C. 
  *  - For platforms that supports linking with dynamic link libraries,
- *    it must declare PJ_IMPORT_SPECIFIER macro which value contains
+ *    it must declare <tt>PJ_IMPORT_SPECIFIER</tt> macro which value contains
  *    the prefix to be added to symbol declaration, to import this 
  *    symbol from a DLL/DSO. For example, on Win32/Visual Studio, the
- *    value of this macro is "__declspec(dllimport)", and for ARM 
+ *    value of this macro is \a __declspec(dllimport), and for ARM 
  *    ABIv2/Symbian, the value is \a IMPORT_C. 
- *  - When PJLIB is built as DLL/DSO, both \a PJ_DLL and \a PJ_EXPORTING
- *    macros must be declared, so that PJ_EXPORT_SPECIFIER prefix will be
- *    added into function definition.
+ *  - Both <tt>PJ_EXPORT_SPECIFIER</tt> and <tt>PJ_IMPORT_SPECIFIER</tt> 
+ *    macros above can be declared in your \a config_site.h if they are not
+ *    declared by pjlib.
+ *  - When PJLIB is built as DLL/DSO, both <tt>PJ_DLL</tt> and 
+ *    <tt>PJ_EXPORTING</tt> macros must be declared, so that 
+ *     <tt>PJ_EXPORT_SPECIFIER</tt> modifier will be added into function
+ *    definition.
  *  - When application wants to link dynamically with PJLIB, then it
- *    must declare \a PJ_DLL macro when using/including PJLIB header,
- *    so that PJ_IMPORT_SPECIFIER is properly added into symbol
- *    declarations.
+ *    must declare <tt>PJ_DLL</tt> macro when using/including PJLIB header,
+ *    so that <tt>PJ_IMPORT_SPECIFIER</tt> modifier is properly added into 
+ *    symbol declarations.
  *
- * When \a PJ_DLL macro is not declared, static linking is assumed.
+ * When <b>PJ_DLL</b> macro is not declared, static linking is assumed.
+ *
+ * For example, here are some settings to produce DLLs with Visual Studio
+ * on Windows/Win32:
+ *  - Create Visual Studio projects to produce DLL. Add the appropriate 
+ *    project dependencies to avoid link errors.
+ *  - In the projects, declare <tt>PJ_DLL</tt> and <tt>PJ_EXPORTING</tt> 
+ *    macros.
+ *  - Declare these macros in your <tt>config_site.h</tt>:
+ \verbatim
+	#define PJ_EXPORT_SPECIFIER  __declspec(dllexport)
+	#define PJ_IMPORT_SPECIFIER  __declspec(dllimport)
+ \endverbatim
+ *  - And in the application (that links with the DLL) project, add 
+ *    <tt>PJ_DLL</tt> in the macro declarations.
+ */
+
+/** @} */
+
+/**
+ * @defgroup pj_config Build Configuration
+ * @ingroup PJ
+ * @{
  */
 
 /**
@@ -882,6 +928,7 @@
  */
 #define __pj_throw__(x)
 
+/** @} */
 
 /********************************************************************
  * Sanity Checks
