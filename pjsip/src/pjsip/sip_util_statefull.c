@@ -102,6 +102,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 	return status;
     }
 
+    pjsip_tsx_set_transport(tsx, &tdata->tp_sel);
+
     tsx_data = PJ_POOL_ALLOC_T(tsx->pool, struct tsx_data);
     tsx_data->token = token;
     tsx_data->cb = cb;

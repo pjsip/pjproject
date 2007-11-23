@@ -835,6 +835,9 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 	       pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
     cseq_hdr->cseq = cseq;
 
+    /* Bind to transport selector */
+    pjsip_tx_data_set_transport(tdata, &regc->tp_sel);
+
     /* Increment pending transaction first, since transaction callback
      * may be called even before send_request() returns!
      */
