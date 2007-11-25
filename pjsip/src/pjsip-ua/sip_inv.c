@@ -272,9 +272,20 @@ static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
 	       pjmedia_sdp_neg_has_local_answer(inv->neg) )
     {
 	struct tsx_inv_data *tsx_inv_data;
+	struct tsx_inv_data dummy;
 
-	/* Get invite session's transaction data */
-	tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
+	/* Get invite session's transaction data.
+	 * Note that tsx may be NULL, for example when application sends
+	 * delayed ACK request (at this time, the original INVITE 
+	 * transaction may have been destroyed.
+	 */
+	if (tsx) {
+	    tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+	} else {
+	    tsx_inv_data = &dummy;
+	    pj_bzero(&dummy, sizeof(dummy));
+	    dummy.inv = inv;
+	}
 
 	status = inv_negotiate_sdp(inv);
 	if (status != PJ_SUCCESS)
@@ -301,45 +312,41 @@ static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
 /*
  * Send ACK for 2xx response.
  */
-static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
+static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
 {
+    pjsip_rx_data *rdata;
     pj_status_t status;
+
+    if (e->type == PJSIP_EVENT_TSX_STATE)
+	rdata = e->body.tsx_state.src.rdata;
+    else if (e->type == PJSIP_EVENT_RX_MSG)
+	rdata = e->body.rx_msg.rdata;
+    else {
+	pj_assert(!"Unsupported event type");
+	return PJ_EBUG;
+    }
 
     PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
 	      pjsip_rx_data_get_info(rdata)));
 
     /* Check if we have cached ACK request */
     if (inv->last_ack && rdata->msg_info.cseq->cseq == inv->last_ack_cseq) {
+
 	pjsip_tx_data_add_ref(inv->last_ack);
+
+    } else if (mod_inv.cb.on_send_ack) {
+	/* If application handles ACK transmission manually, just notify the
+	 * callback
+	 */
+	PJ_LOG(5,(inv->obj_name, "Received %s, notifying application callback",
+		  pjsip_rx_data_get_info(rdata)));
+
+	(*mod_inv.cb.on_send_ack)(inv, rdata);
+	return PJ_SUCCESS;
+
     } else {
-	const pjmedia_sdp_session *sdp = NULL;
-
-	/* Destroy last_ack */
-	if (inv->last_ack) {
-	    pjsip_tx_data_dec_ref(inv->last_ack);
-	    inv->last_ack = NULL;
-	}
-
-	/* Create new ACK request */
-	status = pjsip_dlg_create_request(inv->dlg, pjsip_get_ack_method(), 
-					  rdata->msg_info.cseq->cseq, 
-					  &inv->last_ack);
-	if (status != PJ_SUCCESS) {
-	    /* Better luck next time */
-	    pj_assert(!"Unable to create ACK!");
-	    return status;
-	}
-
-	/* See if we have pending SDP answer to send */
-	sdp = inv_has_pending_answer(inv, inv->invite_tsx);
-	if (sdp) {
-	    inv->last_ack->msg->body=create_sdp_body(inv->last_ack->pool, sdp);
-	}
-
-
-	/* Keep this for subsequent response retransmission */
-	inv->last_ack_cseq = rdata->msg_info.cseq->cseq;
-	pjsip_tx_data_add_ref(inv->last_ack);
+	status = pjsip_inv_create_ack(inv, rdata->msg_info.cseq->cseq,
+				      &inv->last_ack);
     }
 
     /* Send ACK */
@@ -348,6 +355,12 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_rx_data *rdata)
 	/* Better luck next time */
 	pj_assert(!"Unable to send ACK!");
 	return status;
+    }
+
+
+    /* Set state to CONFIRMED (if we're not in CONFIRMED yet) */
+    if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
     }
 
     return PJ_SUCCESS;
@@ -473,8 +486,10 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
 	inv->invite_tsx == NULL) 
     {
+	pjsip_event e;
 
-	inv_send_ack(inv, rdata);
+	PJSIP_EVENT_INIT_RX_MSG(e, rdata);
+	inv_send_ack(inv, &e);
 	return PJ_TRUE;
 
     }
@@ -1969,6 +1984,54 @@ on_error:
 }
 
 /*
+ * Create an ACK request.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_create_ack(pjsip_inv_session *inv,
+					 int cseq,
+					 pjsip_tx_data **p_tdata)
+{
+    const pjmedia_sdp_session *sdp = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
+
+    /* Lock dialog. */
+    pjsip_dlg_inc_lock(inv->dlg);
+
+    /* Destroy last_ack */
+    if (inv->last_ack) {
+	pjsip_tx_data_dec_ref(inv->last_ack);
+	inv->last_ack = NULL;
+    }
+
+    /* Create new ACK request */
+    status = pjsip_dlg_create_request(inv->dlg, pjsip_get_ack_method(), 
+				      cseq, &inv->last_ack);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(inv->dlg);
+	return status;
+    }
+
+    /* See if we have pending SDP answer to send */
+    sdp = inv_has_pending_answer(inv, inv->invite_tsx);
+    if (sdp) {
+	inv->last_ack->msg->body = create_sdp_body(inv->last_ack->pool, sdp);
+    }
+
+    /* Keep this for subsequent response retransmission */
+    inv->last_ack_cseq = cseq;
+    pjsip_tx_data_add_ref(inv->last_ack);
+
+    /* Done */
+    *p_tdata = inv->last_ack;
+
+    /* Unlock dialog. */
+    pjsip_dlg_dec_lock(inv->dlg);
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Send a request or response message.
  */
 PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
@@ -2547,9 +2610,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		/* Send ACK */
 		pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
-		inv_send_ack(inv, e->body.tsx_state.src.rdata);
-		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
-
+		inv_send_ack(inv, e);
 
 	    } else  {
 		inv_set_cause(inv, tsx->status_code, &tsx->status_text);
@@ -2726,8 +2787,7 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		if (tsx->role == PJSIP_ROLE_UAC) {
 		    pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
 
-		    inv_send_ack(inv, e->body.tsx_state.src.rdata);
-		    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
+		    inv_send_ack(inv, e);
 		}
 
 	    } else  {
@@ -3167,7 +3227,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 					  e->body.tsx_state.src.rdata);
 
 	    /* Send ACK */
-	    inv_send_ack(inv, e->body.tsx_state.src.rdata);
+	    inv_send_ack(inv, e);
 
 	} else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 		   (tsx->status_code==401 || tsx->status_code==407))

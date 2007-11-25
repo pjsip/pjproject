@@ -191,6 +191,30 @@ typedef struct pjsip_inv_callback
     void (*on_media_update)(pjsip_inv_session *inv_ses, 
 			    pj_status_t status);
 
+    /**
+     * This callback is called when the framework needs to send
+     * ACK request after it receives incoming  2xx response for 
+     * INVITE. It allows application to manually handle the 
+     * transmission of ACK request, which is required by some 3PCC
+     * scenarios. If this callback is not implemented, the framework
+     * will handle the ACK transmission automatically.
+     *
+     * When this callback is overridden, application may delay the
+     * sending of the ACK request (for example, when it needs to 
+     * wait for answer from the other call leg, in 3PCC scenarios). 
+     *
+     * Application creates the ACK request
+     *
+     * Once it has sent the ACK request, the framework will keep 
+     * this ACK request in the cache. Subsequent receipt of 2xx response
+     * will not cause this callback to be called, and instead automatic
+     * retransmission of this ACK request from the cache will be done
+     * by the framework.
+     *
+     * This callback is optional.
+     */
+    void (*on_send_ack)(pjsip_inv_session *inv, pjsip_rx_data *rdata);
+
 } pjsip_inv_callback;
 
 
@@ -587,6 +611,32 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 
 
 /**
+ * Create an ACK request. Normally ACK request transmission is handled
+ * by the framework. Application only needs to use this function if it
+ * handles the ACK transmission manually, by overriding \a on_send_ack()
+ * callback in #pjsip_inv_callback.
+ *
+ * Note that if the invite session has a pending offer to be answered 
+ * (for example when the last 2xx response to INVITE contains an offer), 
+ * application MUST have set the SDP answer with #pjsip_create_sdp_body()
+ * prior to creating the ACK request. In this case, the ACK request
+ * will be added with SDP message body.
+ *
+ * @param inv		The invite session.
+ * @param cseq		Mandatory argument to specify the CSeq of the
+ *			ACK request. This value MUST match the value
+ *			of the INVITE transaction to be acknowledged.
+ * @param p_tdata	Pointer to receive the ACK request message to
+ *			be created.
+ *
+ * @return		PJ_SUCCESS if ACK request has been created.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_create_ack(pjsip_inv_session *inv,
+					  int cseq,
+					  pjsip_tx_data **p_tdata);
+
+
+/**
  * Send request or response message in tdata. 
  *
  * @param inv		The invite session.
@@ -600,7 +650,6 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  */
 PJ_DECL(pj_status_t) pjsip_inv_send_msg(pjsip_inv_session *inv,
 					pjsip_tx_data *tdata);
-
 
 
 /**
