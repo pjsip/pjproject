@@ -33,7 +33,7 @@ static pj_status_t dummy_enum_ip_interface(unsigned *p_cnt,
     pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
 
     /* Just get one default route */
-    status = pj_gethostip(&ifs[0]);
+    status = pj_getdefaultipinterface(&ifs[0]);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -111,7 +111,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     pj_bzero(routes, sizeof(routes[0]) * (*p_cnt));
 
     /* Just get one default route */
-    status = pj_gethostip(&routes[0].ipv4.if_addr);
+    status = pj_getdefaultipinterface(&routes[0].ipv4.if_addr);
     if (status != PJ_SUCCESS)
 	return status;
 

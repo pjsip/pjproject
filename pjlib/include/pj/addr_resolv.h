@@ -106,6 +106,18 @@ PJ_DECL(pj_status_t) pj_gethostip(pj_in_addr *ip_addr);
 
 
 /**
+ * Get the IP address of the default interface. Default interface is the
+ * interface of the default route.
+ *
+ * @param ip_addr   On successful resolution, this will be filled up with
+ *		    the IP address, in network byte order.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_getdefaultipinterface(pj_in_addr *ip_addr);
+
+
+/**
  * This function translates the name of a service location (for example, 
  * a host name) and returns a set of addresses and associated information
  * to be used in creating a socket with which to address the specified 

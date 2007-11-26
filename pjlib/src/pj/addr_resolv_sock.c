@@ -20,6 +20,7 @@
 #include <pj/assert.h>
 #include <pj/string.h>
 #include <pj/errno.h>
+#include <pj/ip_helper.h>
 #include <pj/compat/socket.h>
 
 
@@ -54,6 +55,45 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
     return PJ_SUCCESS;
 }
 
+/* Get the default IP interface */
+PJ_DEF(pj_status_t) pj_getdefaultipinterface(pj_in_addr *addr)
+{
+    pj_sock_t fd;
+    pj_str_t cp;
+    pj_sockaddr_in a;
+    int len;
+    pj_status_t status;
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    cp = pj_str("1.1.1.1");
+    pj_sockaddr_in_init(&a, &cp, 53);
+
+    status = pj_sock_connect(fd, &a, sizeof(a));
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(fd);
+	return status;
+    }
+
+    len = sizeof(a);
+    status = pj_sock_getsockname(fd, &a, &len);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(fd);
+	return status;
+    }
+
+    pj_sock_close(fd);
+
+    *addr = a.sin_addr;
+
+    /* Success */
+    return PJ_SUCCESS;
+}
+
+
 /* Resolve the IP address of local machine */
 PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
 {
@@ -80,37 +120,23 @@ PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
     if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127 ||
 	addr->s_addr == 0) 
     {
-	pj_sock_t fd;
-	pj_str_t cp;
-	pj_sockaddr_in a;
-	int len;
+	status = pj_getdefaultipinterface(addr);
+    }
 
-	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
-	if (status != PJ_SUCCESS) {
-	    return status;
+    /* As the last resort, get the first available interface */
+    if (status != PJ_SUCCESS) {
+	pj_in_addr addrs[2];
+	unsigned count = PJ_ARRAY_SIZE(addrs);
+
+	status = pj_enum_ip_interface(&count, addrs);
+	if (status == PJ_SUCCESS) {
+	    if (count != 0) {
+		*addr = addrs[0];
+	    } else {
+		/* Just return 127.0.0.1 */
+		addr->s_addr = pj_htonl (0x7f000001);
+	    }
 	}
-
-	cp = pj_str("1.1.1.1");
-	pj_sockaddr_in_init(&a, &cp, 53);
-
-	status = pj_sock_connect(fd, &a, sizeof(a));
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(fd);
-	    /* Return 127.0.0.1 as the address */
-	    return PJ_SUCCESS;
-	}
-
-	len = sizeof(a);
-	status = pj_sock_getsockname(fd, &a, &len);
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(fd);
-	    /* Return 127.0.0.1 as the address */
-	    return PJ_SUCCESS;
-	}
-
-	pj_sock_close(fd);
-
-	*addr = a.sin_addr;
     }
 
     return status;
