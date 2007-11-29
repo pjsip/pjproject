@@ -460,7 +460,7 @@ typedef struct pjsua_logging_config
 	    print data,
      * \endcode
      */
-    void       (*cb)(int level, const char *data, pj_size_t len);
+    void       (*cb)(int level, const char *data, int len);
 
 
 } pjsua_logging_config;
