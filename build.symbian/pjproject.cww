@@ -314,8 +314,6 @@
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>20</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
-        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>4</X>
             <Y>23</Y>
@@ -340,7 +338,6 @@
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>36</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
         <FRAMELOC>
             <X>4</X>
             <Y>23</Y>
@@ -365,8 +362,6 @@
     <WINDOW>
         <SESSION>-2147483648</SESSION>
         <EDOCTYPE>23</EDOCTYPE>
-        <DEFAULT>true</DEFAULT>
-        <MAXIMIZED>true</MAXIMIZED>
         <FRAMELOC>
             <X>6</X>
             <Y>81</Y>

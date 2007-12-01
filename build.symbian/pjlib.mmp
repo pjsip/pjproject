@@ -61,7 +61,7 @@ SOURCE		file_access_unistd.c
 SOURCE		file_io_ansi.c
 SOURCE		guid_simple.c
 SOURCE		ioqueue_symbian.cpp
-SOURCE		ip_helper_generic.c
+SOURCE		ip_helper_symbian.cpp
 SOURCE		log_writer_symbian_console.cpp
 SOURCE		os_core_symbian.cpp
 SOURCE		os_error_symbian.cpp
