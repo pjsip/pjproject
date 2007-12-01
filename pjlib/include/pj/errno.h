@@ -314,6 +314,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * IPv6 is not supported
  */
 #define PJ_EIPV6NOTSUP	    (PJ_ERRNO_START_STATUS + 21)/* 70021 */
+/**
+ * @hideinitializer
+ * Unsupported address family
+ */
+#define PJ_EAFNOTSUP	    (PJ_ERRNO_START_STATUS + 22)/* 70022 */
 
 /** @} */   /* pj_errnum */
 

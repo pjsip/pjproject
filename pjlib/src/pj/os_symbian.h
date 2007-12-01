@@ -19,6 +19,8 @@
 #ifndef __OS_SYMBIAN_H__
 #define __OS_SYMBIAN_H__
 
+#include <pj/assert.h>
+#include <pj/errno.h>
 #include <pj/sock.h>
 #include <pj/os.h>
 #include <pj/string.h>
@@ -51,14 +53,20 @@ public:
     };
 
     // Construct CPjSocket
-    CPjSocket(RSocket &sock)
-	: sock_(sock), connected_(false), sockReader_(NULL)
+    CPjSocket(int af, RSocket &sock)
+	: af_(af), sock_(sock), connected_(false), sockReader_(NULL)
     { 
     }
 
     // Destroy CPjSocket
     ~CPjSocket();
 
+    // Get address family
+    int GetAf() const 
+    {
+    	return af_;	
+    }
+    
     // Get the internal RSocket
     RSocket& Socket()
     {
@@ -91,6 +99,7 @@ public:
     void DestroyReader();
     
 private:
+    int		     af_;
     RSocket	     sock_;	    // Must not be reference, or otherwise
 				    // it may point to local variable!
     bool	     connected_;
@@ -228,23 +237,57 @@ public:
     }
     
     // Convert TInetAddr to pj_sockaddr_in
-    static inline void Addr2pj(const TInetAddr & sym_addr,
-			       pj_sockaddr_in &pj_addr)
+    static inline pj_status_t Addr2pj(const TInetAddr & sym_addr,
+			       	      pj_sockaddr &pj_addr,
+			       	      int *addr_len)
     {
-	pj_bzero(&pj_addr, sizeof(pj_sockaddr_in));
-	pj_addr.sin_family = pj_AF_INET();
-	pj_addr.sin_addr.s_addr = pj_htonl(sym_addr.Address());
-	pj_addr.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
+	pj_bzero(&pj_addr, sizeof(pj_sockaddr));
+	pj_addr.addr.sa_family = (pj_uint16_t)sym_addr.Family();
+	if (pj_addr.addr.sa_family == PJ_AF_INET) {
+	    PJ_ASSERT_RETURN(*addr_len >= sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
+	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
+	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
+	    *addr_len = sizeof(pj_sockaddr_in);
+	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
+	    PJ_ASSERT_RETURN(*addr_len >= sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
+	    const TIp6Addr & ip6 = sym_addr.Ip6Address();
+	    pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
+	    pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
+	    pj_addr.ipv6.sin6_scope_id = pj_htonl(sym_addr.Scope());
+	    pj_addr.ipv6.sin6_flowinfo = pj_htonl(sym_addr.FlowLabel());
+	    *addr_len = sizeof(pj_sockaddr_in6);
+	} else {
+	    pj_assert(!"Unsupported address family");
+	    return PJ_EAFNOTSUP;
+	}
+	
+	return PJ_SUCCESS;
     }
 
 
     // Convert pj_sockaddr_in to TInetAddr
-    static inline void pj2Addr(const pj_sockaddr_in &pj_addr,
-			       TInetAddr & sym_addr)
+    static inline pj_status_t pj2Addr(const pj_sockaddr &pj_addr,
+    				      int addrlen,
+			       	      TInetAddr & sym_addr)
     {
-	sym_addr.Init(KAfInet);
-	sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.sin_addr.s_addr));
-	sym_addr.SetPort(pj_ntohs(pj_addr.sin_port));
+    	if (pj_addr.addr.sa_family == PJ_AF_INET) {
+    	    PJ_ASSERT_RETURN(addrlen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+	    sym_addr.Init(KAfInet);
+    	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
+    	    sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
+    	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
+    	    TIp6Addr ip6;
+    	
+    	    PJ_ASSERT_RETURN(addrlen >= sizeof(pj_sockaddr_in6), PJ_EINVAL);
+    	    pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
+    	    sym_addr.Init(KAfInet6);
+    	    sym_addr.SetAddress(ip6);
+    	    sym_addr.SetScope(pj_ntohl(pj_addr.ipv6.sin6_scope_id));
+    	    sym_addr.SetFlowLabel(pj_ntohl(pj_addr.ipv6.sin6_flowinfo));
+    	} else {
+    	    pj_assert(!"Unsupported address family");
+    	}
+    	return PJ_SUCCESS;
     }
 
 
@@ -253,9 +296,13 @@ public:
     //
 
     // Get RHostResolver instance
-    RHostResolver & GetResolver()
+    RHostResolver & GetResolver(int af)
     {
-	return appHostResolver_ ? *appHostResolver_ : hostResolver_;
+    	if (af==PJ_AF_INET6) {
+    	    return appHostResolver6_ ? *appHostResolver6_ : hostResolver6_;
+    	} else {
+    	    return appHostResolver_ ? *appHostResolver_ : hostResolver_;
+    	}
     }
 
 
@@ -303,6 +350,7 @@ private:
 
     bool isResolverInitialized_;
     RHostResolver hostResolver_;
+    RHostResolver hostResolver6_;
 
     CConsoleBase* console_;
 
@@ -312,6 +360,7 @@ private:
     RSocketServ *appSocketServ_;
     RConnection *appConnection_;
     RHostResolver *appHostResolver_;
+    RHostResolver *appHostResolver6_;
     
 private:
     PjSymbianOS();

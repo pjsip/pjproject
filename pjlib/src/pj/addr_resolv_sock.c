@@ -55,96 +55,8 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
     return PJ_SUCCESS;
 }
 
-/* Get the default IP interface */
-PJ_DEF(pj_status_t) pj_getdefaultipinterface(pj_in_addr *addr)
-{
-    pj_sock_t fd;
-    pj_str_t cp;
-    pj_sockaddr_in a;
-    int len;
-    pj_status_t status;
-
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
-    if (status != PJ_SUCCESS) {
-	return status;
-    }
-
-    cp = pj_str("1.1.1.1");
-    pj_sockaddr_in_init(&a, &cp, 53);
-
-    status = pj_sock_connect(fd, &a, sizeof(a));
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(fd);
-	return status;
-    }
-
-    len = sizeof(a);
-    status = pj_sock_getsockname(fd, &a, &len);
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(fd);
-	return status;
-    }
-
-    pj_sock_close(fd);
-
-    *addr = a.sin_addr;
-
-    /* Success */
-    return PJ_SUCCESS;
-}
-
-
-/* Resolve the IP address of local machine */
-PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
-{
-    const pj_str_t *hostname = pj_gethostname();
-    struct pj_hostent he;
-    pj_status_t status;
-
-
-#ifdef _MSC_VER
-    /* Get rid of "uninitialized he variable" with MS compilers */
-    pj_bzero(&he, sizeof(he));
-#endif
-
-    /* Try with resolving local hostname first */
-    status = pj_gethostbyname(hostname, &he);
-    if (status == PJ_SUCCESS) {
-	*addr = *(pj_in_addr*)he.h_addr;
-    }
-
-
-    /* If we end up with 127.x.x.x, resolve the IP by getting the default
-     * interface to connect to some public host.
-     */
-    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127 ||
-	addr->s_addr == 0) 
-    {
-	status = pj_getdefaultipinterface(addr);
-    }
-
-    /* As the last resort, get the first available interface */
-    if (status != PJ_SUCCESS) {
-	pj_in_addr addrs[2];
-	unsigned count = PJ_ARRAY_SIZE(addrs);
-
-	status = pj_enum_ip_interface(&count, addrs);
-	if (status == PJ_SUCCESS) {
-	    if (count != 0) {
-		*addr = addrs[0];
-	    } else {
-		/* Just return 127.0.0.1 */
-		addr->s_addr = pj_htonl (0x7f000001);
-	    }
-	}
-    }
-
-    return status;
-}
-
-
 /* Resolve IPv4/IPv6 address */
-PJ_DEF(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
+PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 				   unsigned *count, pj_addrinfo ai[])
 {
 #if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
@@ -155,7 +67,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
 
     PJ_ASSERT_RETURN(nodename && count && *count && ai, PJ_EINVAL);
     PJ_ASSERT_RETURN(nodename->ptr && nodename->slen, PJ_EINVAL);
-    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 ||
+		     af==PJ_AF_UNSPEC, PJ_EINVAL);
 
     /* Copy node name to null terminated string. */
     if (nodename->slen >= PJ_MAX_HOSTNAME)
@@ -179,13 +92,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
 	    continue;
 
-	/* Ignore name that's too long */
-	len = pj_ansi_strlen(res->ai_canonname);
-	if (len >= PJ_MAX_HOSTNAME)
-	    continue;
-
-	/* Store canonical name */
-	pj_ansi_strcpy(ai[i].ai_canonname, res->ai_canonname);
+	/* Store canonical name (possibly truncating the name) */
+	pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
+		        sizeof(ai[i].ai_canonname));
+	ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
 
 	/* Store address */
 	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
@@ -201,15 +111,43 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
     return PJ_SUCCESS;
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
-    /* IPv6 is not supported */
-    PJ_UNUSED_ARG(nodename);
-    PJ_UNUSED_ARG(af);
-    PJ_UNUSED_ARG(ai);
 
     PJ_ASSERT_RETURN(count, PJ_EINVAL);
-    *count = 0;
 
-    return PJ_EIPV6NOTSUP;
+    if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
+	pj_hostent he;
+	unsigned i, max_count;
+	pj_status_t status;
+	
+	status = pj_gethostbyname(nodename, &he);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	max_count = *count;
+	*count = 0;
+
+	pj_bzero(ai, max_count * sizeof(pj_addrinfo));
+
+	for (i=0; he.h_addr_list[i] && *count<max_count; ++i) {
+	    pj_ansi_strncpy(ai[*count].ai_canonname, he.h_name,
+			    sizeof(ai[*count].ai_canonname));
+	    ai[*count].ai_canonname[sizeof(ai[*count].ai_canonname)-1] = '\0';
+
+	    ai[*count].ai_addr.ipv4.sin_family = PJ_AF_INET;
+	    pj_memcpy(&ai[*count].ai_addr.ipv4.sin_addr,
+		      he.h_addr_list[i], he.h_length);
+
+	    (*count)++;
+	}
+
+	return PJ_SUCCESS;
+
+    } else {
+	/* IPv6 is not supported */
+	*count = 0;
+
+	return PJ_EIPV6NOTSUP;
+    }
 #endif	/* PJ_SOCK_HAS_GETADDRINFO */
 }
 

@@ -17,6 +17,416 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/sock.h>
+#include <pj/assert.h>
+#include <pj/errno.h>
+#include <pj/ip_helper.h>
+#include <pj/os.h>
+#include <pj/addr_resolv.h>
+#include <pj/string.h>
+#include <pj/compat/socket.h>
+
+
+/*
+ * Convert address string with numbers and dots to binary IP address.
+ */ 
+PJ_DEF(pj_in_addr) pj_inet_addr(const pj_str_t *cp)
+{
+    pj_in_addr addr;
+
+    pj_inet_aton(cp, &addr);
+    return addr;
+}
+
+/*
+ * Convert address string with numbers and dots to binary IP address.
+ */ 
+PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
+{
+    pj_str_t str = pj_str((char*)cp);
+    return pj_inet_addr(&str);
+}
+
+/*
+ * Set the IP address of an IP socket address from string address, 
+ * with resolving the host if necessary. The string address may be in a
+ * standard numbers and dots notation or may be a hostname. If hostname
+ * is specified, then the function will resolve the host into the IP
+ * address.
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
+					         const pj_str_t *str_addr)
+{
+    PJ_CHECK_STACK();
+
+    PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
+                     (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+
+    PJ_SOCKADDR_RESET_LEN(addr);
+    addr->sin_family = AF_INET;
+    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+
+    if (str_addr && str_addr->slen) {
+	addr->sin_addr = pj_inet_addr(str_addr);
+	if (addr->sin_addr.s_addr == PJ_INADDR_NONE) {
+    	    pj_hostent he;
+	    pj_status_t rc;
+
+	    rc = pj_gethostbyname(str_addr, &he);
+	    if (rc == 0) {
+		addr->sin_addr.s_addr = *(pj_uint32_t*)he.h_addr;
+	    } else {
+		addr->sin_addr.s_addr = PJ_INADDR_NONE;
+		return rc;
+	    }
+	}
+
+    } else {
+	addr->sin_addr.s_addr = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Set address from a name */
+PJ_DEF(pj_status_t) pj_sockaddr_set_str_addr(int af,
+					     pj_sockaddr *addr,
+					     const pj_str_t *str_addr)
+{
+    pj_status_t status;
+
+    if (af == PJ_AF_INET) {
+	return pj_sockaddr_in_set_str_addr(&addr->ipv4, str_addr);
+    }
+
+    PJ_ASSERT_RETURN(af==PJ_AF_INET6, PJ_EAFNOTSUP);
+
+    /* IPv6 specific */
+
+    addr->ipv6.sin6_family = PJ_AF_INET6;
+    PJ_SOCKADDR_RESET_LEN(addr);
+
+    if (str_addr && str_addr->slen) {
+	status = pj_inet_pton(PJ_AF_INET6, str_addr, &addr->ipv6.sin6_addr);
+	if (status != PJ_SUCCESS) {
+    	    pj_addrinfo ai;
+	    unsigned count = 1;
+
+	    status = pj_getaddrinfo(PJ_AF_INET6, str_addr, &count, &ai);
+	    if (status==PJ_SUCCESS) {
+		pj_memcpy(&addr->ipv6.sin6_addr, &ai.ai_addr.ipv6.sin6_addr,
+			  sizeof(pj_sockaddr_in6));
+	    }
+	}
+    } else {
+	status = PJ_SUCCESS;
+    }
+
+    return status;
+}
+
+/*
+ * Set the IP address and port of an IP socket address.
+ * The string address may be in a standard numbers and dots notation or 
+ * may be a hostname. If hostname is specified, then the function will 
+ * resolve the host into the IP address.
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
+				         const pj_str_t *str_addr,
+					 pj_uint16_t port)
+{
+    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+
+    PJ_SOCKADDR_RESET_LEN(addr);
+    addr->sin_family = PJ_AF_INET;
+    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    pj_sockaddr_in_set_port(addr, port);
+    return pj_sockaddr_in_set_str_addr(addr, str_addr);
+}
+
+/*
+ * Initialize IP socket address based on the address and port info.
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_init(int af, 
+				     pj_sockaddr *addr,
+				     const pj_str_t *cp,
+				     pj_uint16_t port)
+{
+    pj_status_t status;
+
+    if (af == PJ_AF_INET) {
+	return pj_sockaddr_in_init(&addr->ipv4, cp, port);
+    }
+
+    /* IPv6 specific */
+    PJ_ASSERT_RETURN(af==PJ_AF_INET6, PJ_EAFNOTSUP);
+
+    pj_bzero(addr, sizeof(pj_sockaddr_in6));
+    addr->addr.sa_family = PJ_AF_INET6;
+    
+    status = pj_sockaddr_set_str_addr(af, addr, cp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    addr->ipv6.sin6_port = pj_htons(port);
+    return PJ_SUCCESS;
+}
+
+/*
+ * Get first IP address associated with the hostname.
+ */
+PJ_DEF(pj_in_addr) pj_gethostaddr(void)
+{
+    pj_sockaddr_in addr;
+    const pj_str_t *hostname = pj_gethostname();
+
+    pj_sockaddr_in_set_str_addr(&addr, hostname);
+    return addr.sin_addr;
+}
+
+/*
+ * Get port number of a pj_sockaddr_in
+ */
+PJ_DEF(pj_uint16_t) pj_sockaddr_in_get_port(const pj_sockaddr_in *addr)
+{
+    return pj_ntohs(addr->sin_port);
+}
+
+/*
+ * Get the address part
+ */
+PJ_DEF(void*) pj_sockaddr_get_addr(const pj_sockaddr_t *addr)
+{
+    const pj_sockaddr *a = (const pj_sockaddr*)addr;
+
+    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+		     a->addr.sa_family == PJ_AF_INET6, NULL);
+
+    if (a->addr.sa_family == PJ_AF_INET6)
+	return (void*) &a->ipv6.sin6_addr;
+    else
+	return (void*) &a->ipv4.sin_addr;
+}
+
+/*
+ * Check if sockaddr contains a non-zero address
+ */
+PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
+{
+    const pj_sockaddr *a = (const pj_sockaddr*)addr;
+
+    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+
+    if (a->addr.sa_family == PJ_AF_INET6) {
+	pj_uint8_t zero[24];
+	pj_bzero(zero, sizeof(zero));
+	return pj_memcmp(a->ipv6.sin6_addr.s6_addr, zero, 
+			 sizeof(pj_in6_addr)) != 0;
+    } else
+	return a->ipv4.sin_addr.s_addr != PJ_INADDR_ANY;
+}
+
+/*
+ * Get port number
+ */
+PJ_DEF(pj_uint16_t) pj_sockaddr_get_port(const pj_sockaddr_t *addr)
+{
+    const pj_sockaddr *a = (const pj_sockaddr*) addr;
+
+    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+		     a->addr.sa_family == PJ_AF_INET6, (pj_uint16_t)0xFFFF);
+
+    return pj_ntohs((pj_uint16_t)(a->addr.sa_family == PJ_AF_INET6 ?
+				    a->ipv6.sin6_port : a->ipv4.sin_port));
+}
+
+/*
+ * Get the length of the address part.
+ */
+PJ_DEF(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr)
+{
+    const pj_sockaddr *a = (const pj_sockaddr*) addr;
+    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+    return a->addr.sa_family == PJ_AF_INET6 ?
+	    sizeof(pj_in6_addr) : sizeof(pj_in_addr);
+}
+
+/*
+ * Set port number of pj_sockaddr_in
+ */
+PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
+				     pj_uint16_t hostport)
+{
+    addr->sin_port = pj_htons(hostport);
+}
+
+/*
+ * Set port number of pj_sockaddr
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr, 
+					 pj_uint16_t hostport)
+{
+    int af = addr->addr.sa_family;
+
+    PJ_ASSERT_ON_FAIL(af == PJ_AF_INET || af == PJ_AF_INET6, 
+		      PJ_EINVAL);
+
+    if (af == PJ_AF_INET6)
+	addr->ipv6.sin6_port = pj_htons(hostport);
+    else
+	addr->ipv4.sin_port = pj_htons(hostport);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Get IPv4 address
+ */
+PJ_DEF(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr)
+{
+    pj_in_addr in_addr;
+    in_addr.s_addr = pj_ntohl(addr->sin_addr.s_addr);
+    return in_addr;
+}
+
+/*
+ * Set IPv4 address
+ */
+PJ_DEF(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
+				     pj_uint32_t hostaddr)
+{
+    addr->sin_addr.s_addr = pj_htonl(hostaddr);
+}
+
+/* Resolve the IP address of local machine */
+PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
+{
+    unsigned count;
+    pj_addrinfo ai;
+    pj_status_t status;
+
+
+#ifdef _MSC_VER
+    /* Get rid of "uninitialized he variable" with MS compilers */
+    pj_bzero(&ai, sizeof(ai));
+#endif
+
+    addr->addr.sa_family = (pj_uint16_t)af;
+    PJ_SOCKADDR_RESET_LEN(addr);
+
+    /* Try with resolving local hostname first */
+    count = 1;
+    status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
+    if (status == PJ_SUCCESS) {
+	pj_memcpy(pj_sockaddr_get_addr(addr),
+		  pj_sockaddr_get_addr(&ai.ai_addr),
+		  pj_sockaddr_get_addr_len(&ai.ai_addr));
+    }
+
+
+    /* If we end up with 127.x.x.x, resolve the IP by getting the default
+     * interface to connect to some public host.
+     */
+    if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(addr) ||
+	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr) >> 24)==127))
+    {
+	status = pj_getdefaultipinterface(af, addr);
+    }
+
+    /* If failed, get the first available interface */
+    if (status != PJ_SUCCESS) {
+	pj_sockaddr itf[1];
+	unsigned count = PJ_ARRAY_SIZE(itf);
+
+	status = pj_enum_ip_interface(af, &count, itf);
+	if (status == PJ_SUCCESS) {
+	    itf[0].addr.sa_family = (pj_uint16_t)af;
+	    pj_memcpy(pj_sockaddr_get_addr(addr),
+		      pj_sockaddr_get_addr(&itf[0]),
+		      pj_sockaddr_get_addr_len(&itf[0]));
+	}
+    }
+
+    /* If else fails, returns loopback interface as the last resort */
+    if (status != PJ_SUCCESS) {
+	if (af==PJ_AF_INET) {
+	    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
+	} else {
+	    pj_in6_addr *s6_addr;
+
+	    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
+	    pj_bzero(s6_addr, sizeof(pj_in6_addr));
+	    s6_addr->s6_addr[15] = 1;
+	}
+	status = PJ_SUCCESS;
+    }
+
+    return status;
+}
+
+/* Get the default IP interface */
+PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
+{
+    pj_sock_t fd;
+    pj_str_t cp;
+    pj_sockaddr a;
+    int len;
+    pj_uint8_t zero[64];
+    pj_status_t status;
+
+    addr->addr.sa_family = (pj_uint16_t)af;
+
+    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &fd);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    if (af == PJ_AF_INET) {
+	cp = pj_str("1.1.1.1");
+    } else {
+	cp = pj_str("1::1");
+    }
+    status = pj_sockaddr_init(af, &a, &cp, 53);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(fd);
+	return status;
+    }
+
+    status = pj_sock_connect(fd, &a, sizeof(a));
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(fd);
+	return status;
+    }
+
+    len = sizeof(a);
+    status = pj_sock_getsockname(fd, &a, &len);
+    if (status != PJ_SUCCESS) {
+	pj_sock_close(fd);
+	return status;
+    }
+
+    pj_sock_close(fd);
+
+    /* Check that the address returned is not zero */
+    pj_bzero(zero, sizeof(zero));
+    if (pj_memcmp(pj_sockaddr_get_addr(&a), zero,
+		  pj_sockaddr_get_addr_len(&a))==0)
+    {
+	return PJ_ENOTFOUND;
+    }
+
+    pj_memcpy(pj_sockaddr_get_addr(addr),
+	      pj_sockaddr_get_addr(&a),
+	      pj_sockaddr_get_addr_len(&a));
+
+    /* Success */
+    return PJ_SUCCESS;
+}
+
+
+/* Only need to implement these in DLL build */
+#if defined(PJ_DLL)
 
 PJ_DEF(pj_uint16_t) pj_AF_UNSPEC(void)
 {
@@ -147,4 +557,6 @@ PJ_DEF(int) pj_MSG_DONTROUTE(void)
 {
     return PJ_MSG_DONTROUTE;
 }
+
+#endif	/* PJ_DLL */
 

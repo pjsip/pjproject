@@ -334,6 +334,13 @@ typedef struct pj_symbianos_params
      */
     void 	*rhostresolver;
      
+    /**
+     * Optional RHostResolver for IPv6 instance to be used by PJLIB. 
+     * If this value is NULL, a new RHostResolver instance will be created
+     * when pj_init() is called.
+     */
+    void 	*rhostresolver6;
+     
 } pj_symbianos_params;
 
 /**

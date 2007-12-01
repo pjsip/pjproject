@@ -185,6 +185,28 @@
     typedef int socklen_t;
 #endif
 
+/* Regarding sin_len member of sockaddr_in:
+ *  BSD systems (including MacOS X requires that the sin_len member of 
+ *  sockaddr_in be set to sizeof(sockaddr_in), while other systems (Windows
+ *  and Linux included) do not.
+ *
+ *  To maintain compatibility between systems, PJLIB will automatically
+ *  set this field before invoking native OS socket API, and it will
+ *  always reset the field to zero before returning pj_sockaddr_in to
+ *  application (such as in pj_getsockname() and pj_recvfrom()).
+ *
+ *  Application MUST always set this field to zero.
+ *
+ *  This way we can avoid hard to find problem such as when the socket 
+ *  address is used as hash table key.
+ */
+#if defined(PJ_SOCKADDR_HAS_LEN) && PJ_SOCKADDR_HAS_LEN!=0
+#   define PJ_SOCKADDR_SET_LEN(addr,len) (((pj_addr_hdr*)(addr))->sa_zero_len=(len))
+#   define PJ_SOCKADDR_RESET_LEN(addr)   (((pj_addr_hdr*)(addr))->sa_zero_len=0)
+#else
+#   define PJ_SOCKADDR_SET_LEN(addr,len) 
+#   define PJ_SOCKADDR_RESET_LEN(addr)
+#endif
 
 #endif	/* __PJ_COMPAT_SOCKET_H__ */
 

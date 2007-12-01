@@ -23,8 +23,9 @@
 #include <pj/string.h>
 #include <pj/compat/socket.h>
 
-static pj_status_t dummy_enum_ip_interface(unsigned *p_cnt,
-					  pj_in_addr ifs[])
+static pj_status_t dummy_enum_ip_interface(int af,
+					   unsigned *p_cnt,
+					   pj_sockaddr ifs[])
 {
     pj_status_t status;
 
@@ -33,7 +34,7 @@ static pj_status_t dummy_enum_ip_interface(unsigned *p_cnt,
     pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
 
     /* Just get one default route */
-    status = pj_getdefaultipinterface(&ifs[0]);
+    status = pj_getdefaultipinterface(af, &ifs[0]);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -42,8 +43,9 @@ static pj_status_t dummy_enum_ip_interface(unsigned *p_cnt,
 }
 
 #ifdef SIOCGIFCONF
-static pj_status_t sock_enum_ip_interface(unsigned *p_cnt,
-					  pj_in_addr ifs[])
+static pj_status_t sock_enum_ip_interface(int af,
+					  unsigned *p_cnt,
+					  pj_sockaddr ifs[])
 {
     pj_sock_t sock;
     char buf[512];
@@ -52,7 +54,9 @@ static pj_status_t sock_enum_ip_interface(unsigned *p_cnt,
     int i, count;
     pj_status_t status;
 
-    status = pj_sock_socket(PJ_AF_INET, PJ_SOCK_DGRAM, 0, &sock);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    
+    status = pj_sock_socket(af, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -78,7 +82,12 @@ static pj_status_t sock_enum_ip_interface(unsigned *p_cnt,
 	*p_cnt = count;
     for (i=0; i<count; ++i) {
 	struct ifreq *itf = &ifr[i];
-	ifs[i].s_addr = ((struct sockaddr_in *)&itf->ifr_addr)->sin_addr.s_addr;
+	struct sockaddr *ad = itf->ifr_addr;
+	
+	ifs[i].addr.sa_family = ad->sa_family;
+	pj_memcpy(pj_sockaddr_get_addr(&ifs[i]),
+		  pj_sockaddr_get_addr(ad),
+		  pj_sockaddr_get_addr_len(ad));
     }
 
     return PJ_SUCCESS;
@@ -88,14 +97,15 @@ static pj_status_t sock_enum_ip_interface(unsigned *p_cnt,
 /*
  * Enumerate the local IP interface currently active in the host.
  */
-PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
-					 pj_in_addr ifs[])
+PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
+					 unsigned *p_cnt,
+					 pj_sockaddr ifs[])
 {
 #ifdef SIOCGIFCONF
-    if (sock_enum_ip_interface(p_cnt, ifs) == PJ_SUCCESS)
+    if (sock_enum_ip_interface(af, p_cnt, ifs) == PJ_SUCCESS)
 	return PJ_SUCCESS;
 #endif
-    return dummy_enum_ip_interface(p_cnt, ifs);
+    return dummy_enum_ip_interface(af, p_cnt, ifs);
 }
 
 /*
@@ -104,6 +114,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 				     pj_ip_route_entry routes[])
 {
+    pj_sockaddr itf;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(p_cnt && *p_cnt > 0 && routes, PJ_EINVAL);
@@ -111,10 +122,11 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     pj_bzero(routes, sizeof(routes[0]) * (*p_cnt));
 
     /* Just get one default route */
-    status = pj_getdefaultipinterface(&routes[0].ipv4.if_addr);
+    status = pj_getdefaultipinterface(PJ_AF_INET, &itf);
     if (status != PJ_SUCCESS)
 	return status;
-
+    
+    routes[0].ipv4.if_addr.s_addr = itf.ipv4.sin_addr.s_addr;
     routes[0].ipv4.dst_addr.s_addr = 0;
     routes[0].ipv4.mask.s_addr = 0;
     *p_cnt = 1;

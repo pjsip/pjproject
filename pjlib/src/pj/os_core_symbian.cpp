@@ -154,7 +154,8 @@ TInt CPjTimeoutTimer::RunError(TInt aError)
 PjSymbianOS::PjSymbianOS()
 : isSocketServInitialized_(false), isResolverInitialized_(false),
   console_(NULL), selectTimeoutTimer_(NULL),
-  appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL)
+  appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL),
+  appHostResolver6_(NULL)
 {
 }
 
@@ -164,6 +165,7 @@ void PjSymbianOS::SetParameters(pj_symbianos_params *params)
     appSocketServ_ = (RSocketServ*) params->rsocketserv;
     appConnection_ = (RConnection*) params->rconnection;
     appHostResolver_ = (RHostResolver*) params->rhostresolver;
+    appHostResolver6_ = (RHostResolver*) params->rhostresolver6;
 }
 
 // Get PjSymbianOS instance
@@ -199,16 +201,29 @@ TInt PjSymbianOS::Initialize()
 	isSocketServInitialized_ = true;
     }
 
-    if (!isResolverInitialized_ && appHostResolver_ == NULL) {
-    	if (Connection())
-    	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream,
-    	    			     *Connection());
-    	else
-	    err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
+    if (!isResolverInitialized_) {
+    	if (appHostResolver_ == NULL) {
+    	    if (Connection())
+    	    	err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream,
+    	    			     	 *Connection());
+    	    else
+	    	err = hostResolver_.Open(SocketServ(), KAfInet, KSockStream);
     	
-	if (err != KErrNone)
-	    goto on_error;
-
+	    if (err != KErrNone)
+	    	goto on_error;
+    	}
+    	
+    	if (appHostResolver6_ == NULL) {
+    	    if (Connection())
+    	    	err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream,
+    	    			     	  *Connection());
+    	    else
+	    	err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream);
+    	
+	    if (err != KErrNone)
+	    	goto on_error;
+    	}
+    	
 	isResolverInitialized_ = true;
     }
 
@@ -224,6 +239,7 @@ void PjSymbianOS::Shutdown()
 {
     if (isResolverInitialized_) {
 	hostResolver_.Close();
+    	hostResolver6_.Close();
 	isResolverInitialized_ = false;
     }
 

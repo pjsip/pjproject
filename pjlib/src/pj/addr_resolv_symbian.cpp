@@ -27,12 +27,48 @@
 #include "os_symbian.h"
  
 
+
 // PJLIB API: resolve hostname
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
 {
-    PJ_ASSERT_RETURN(name && he, PJ_EINVAL);
+    static pj_addrinfo ai;
+    static char *aliases[2];
+    static char *addrlist[2];
+    unsigned count = 1;
+    pj_status_t status;
+    
+    status = pj_getaddrinfo(PJ_AF_INET, name, &count, &ai);
+    if (status != PJ_SUCCESS)
+    	return status;
+    
+    aliases[0] = ai.ai_canonname;
+    aliases[1] = NULL;
+    
+    addrlist[0] = (char*) &ai.ai_addr.ipv4.sin_addr;
+    addrlist[1] = NULL;
+    
+    pj_bzero(he, sizeof(*he));
+    he->h_name = aliases[0];
+    he->h_aliases = aliases;
+    he->h_addrtype = PJ_AF_INET;
+    he->h_length = 4;
+    he->h_addr_list = addrlist;
+    
+    return PJ_SUCCESS;
+}
 
-    RHostResolver &resv = PjSymbianOS::Instance()->GetResolver();
+
+// Resolve for specific address family
+static pj_status_t getaddrinfo_by_af(int af, const pj_str_t *name,
+				     unsigned *count, pj_addrinfo ai[]) 
+{
+    unsigned i;
+    pj_status_t status;
+    
+    PJ_ASSERT_RETURN(name && count && ai, PJ_EINVAL);
+
+    // Get resolver for the specified address family
+    RHostResolver &resv = PjSymbianOS::Instance()->GetResolver(af);
 
     // Convert name to Unicode
     wchar_t name16[PJ_MAX_HOSTNAME];
@@ -46,126 +82,81 @@ PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he)
     resv.GetByName(data, nameEntry, reqStatus);
     User::WaitForRequest(reqStatus);
     
-    if (reqStatus != KErrNone)
-	return PJ_RETURN_OS_ERROR(reqStatus.Int());
+    // Iterate each result
+    i = 0;
+    while (reqStatus == KErrNone && i < *count) {
+    	
+	// Get the resolved TInetAddr
+	TInetAddr inetAddr(nameEntry().iAddr);
+	int addrlen;
 
-    // Get the resolved TInetAddr
-    // This doesn't work, see Martin email on 28/3/2007:
-    // const TNameRecord &rec = (const TNameRecord&) nameEntry;
-    // TInetAddr inetAddr(rec.iAddr);
-    TInetAddr inetAddr(nameEntry().iAddr);
-
-    //
-    // This where we keep static variables.
-    // These should be kept in TLS probably, to allow multiple threads
-    // to call pj_gethostbyname() without interfering each other.
-    // But again, we don't support threads in Symbian!
-    //
-    static char resolved_name[PJ_MAX_HOSTNAME];
-    static char *no_aliases[1];
-    static pj_in_addr *addr_list[2];
-    static pj_sockaddr_in resolved_addr;
-
-    // Convert the official address to ANSI.
-    pj_unicode_to_ansi((const wchar_t*)nameEntry().iName.Ptr(), nameEntry().iName.Length(),
-		       resolved_name, sizeof(resolved_name));
-
-    // Convert IP address
-    
-    PjSymbianOS::Addr2pj(inetAddr, resolved_addr);
-    addr_list[0] = &resolved_addr.sin_addr;
-
-    // Return hostent
-    he->h_name = resolved_name;
-    he->h_aliases = no_aliases;
-    he->h_addrtype = pj_AF_INET();
-    he->h_length = 4;
-    he->h_addr_list = (char**) addr_list;
-
-    return PJ_SUCCESS;
-}
-
-
-/* Get the default IP interface */
-PJ_DEF(pj_status_t) pj_getdefaultipinterface(pj_in_addr *addr)
-{
-    pj_sock_t fd;
-    pj_str_t cp;
-    pj_sockaddr_in a;
-    int len;
-    pj_status_t status;
-
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &fd);
-    if (status != PJ_SUCCESS) {
-	return status;
-    }
-
-    cp = pj_str("1.1.1.1");
-    pj_sockaddr_in_init(&a, &cp, 53);
-
-    status = pj_sock_connect(fd, &a, sizeof(a));
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(fd);
-	return status;
-    }
-
-    len = sizeof(a);
-    status = pj_sock_getsockname(fd, &a, &len);
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(fd);
-	return status;
-    }
-
-    pj_sock_close(fd);
-
-    *addr = a.sin_addr;
-
-    /* Success */
-    return PJ_SUCCESS;
-}
-
-
-/* Resolve the IP address of local machine */
-PJ_DEF(pj_status_t) pj_gethostip(pj_in_addr *addr)
-{
-    const pj_str_t *hostname = pj_gethostname();
-    struct pj_hostent he;
-    pj_status_t status;
-
-
-    /* Try with resolving local hostname first */
-    status = pj_gethostbyname(hostname, &he);
-    if (status == PJ_SUCCESS) {
-	*addr = *(pj_in_addr*)he.h_addr;
-    }
-
-
-    /* If we end up with 127.x.x.x, resolve the IP by getting the default
-     * interface to connect to some public host.
-     */
-    if (status != PJ_SUCCESS || (pj_ntohl(addr->s_addr) >> 24)==127 ||
-	addr->s_addr == 0) 
-    {
-	status = pj_getdefaultipinterface(addr);
-    }
-
-    /* As the last resort, get the first available interface */
-    if (status != PJ_SUCCESS) {
-	pj_in_addr addrs[2];
-	unsigned count = PJ_ARRAY_SIZE(addrs);
-
-	status = pj_enum_ip_interface(&count, addrs);
-	if (status == PJ_SUCCESS) {
-	    if (count != 0) {
-		*addr = addrs[0];
-	    } else {
-		/* Just return 127.0.0.1 */
-		addr->s_addr = pj_htonl(0x7f000001);
-	    }
+	// Ignore if this is not the same address family
+	if (inetAddr.Family() != af) {
+	    resv.Next(nameEntry, reqStatus);
+	    User::WaitForRequest(reqStatus);
+	    continue;
 	}
+	
+	// Convert the official address to ANSI.
+	pj_unicode_to_ansi((const wchar_t*)nameEntry().iName.Ptr(), 
+			   nameEntry().iName.Length(),
+		       	   ai[i].ai_canonname, sizeof(ai[i].ai_canonname));
+
+	// Convert IP address
+	addrlen = sizeof(ai[i].ai_addr);
+	status = PjSymbianOS::Addr2pj(inetAddr, ai[i].ai_addr, &addrlen);
+	if (status != PJ_SUCCESS)
+	    return status;
+	
+	// Next
+	++i;
+	resv.Next(nameEntry, reqStatus);
+	User::WaitForRequest(reqStatus);
     }
 
-    return status;
+    *count = i;
+    return PJ_SUCCESS;
 }
 
+/* Resolve IPv4/IPv6 address */
+PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
+				   unsigned *count, pj_addrinfo ai[]) 
+{
+    unsigned start;
+    pj_status_t status;
+    
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 || af==PJ_AF_UNSPEC,
+    		     PJ_EAFNOTSUP);
+    PJ_ASSERT_RETURN(nodename && count && *count && ai, PJ_EINVAL);
+    
+    start = 0;
+    
+    if (af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) {
+        unsigned max = *count;
+    	status = getaddrinfo_by_af(PJ_AF_INET6, nodename, 
+    				   &max, &ai[start]);
+    	if (status == PJ_SUCCESS) {
+    	    (*count) -= max;
+    	    start += max;
+    	}
+    }
+    
+    if (af==PJ_AF_INET || af==PJ_AF_UNSPEC) {
+        unsigned max = *count;
+    	status = getaddrinfo_by_af(PJ_AF_INET, nodename, 
+    				   &max, &ai[start]);
+    	if (status == PJ_SUCCESS) {
+    	    (*count) -= max;
+    	    start += max;
+    	}
+    }
+    
+    *count = start;
+    
+    if (*count) {
+    	return PJ_SUCCESS;
+    } else {
+    	return status!=PJ_SUCCESS ? status : PJ_ENOTFOUND;
+    }
+}
 

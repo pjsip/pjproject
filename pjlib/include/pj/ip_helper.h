@@ -53,16 +53,24 @@ typedef union pj_ip_route_entry
 
 
 /**
- * Enumerate the local IP interface currently active in the host.
+ * Enumerate the local IP interfaces currently active in the host.
  *
+ * @param af	    Family of the address to be retrieved. Application
+ *		    may specify pj_AF_UNSPEC() to retrieve all addresses,
+ *		    or pj_AF_INET() or pj_AF_INET6() to retrieve interfaces
+ *		    with specific address family.
  * @param count	    On input, specify the number of entries. On output,
  *		    it will be filled with the actual number of entries.
- * @param ifs	    Array of IP addresses.
+ * @param ifs	    Array of socket addresses, which address part will
+ *		    be filled with the interface address. The address
+ *		    family part will be initialized with the address
+ *		    family of the IP address.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_enum_ip_interface(unsigned *count,
-					  pj_in_addr ifs[]);
+PJ_DECL(pj_status_t) pj_enum_ip_interface(int af,
+					  unsigned *count,
+					  pj_sockaddr ifs[]);
 
 
 /**

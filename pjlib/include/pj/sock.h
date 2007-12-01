@@ -87,18 +87,36 @@ extern const pj_uint16_t PJ_AF_IRDA;
  * global variables from a DLL.
  */
 
-/** Get #PJ_AF_UNSPEC value */
-PJ_DECL(pj_uint16_t) pj_AF_UNSPEC(void);
-/** Get #PJ_AF_UNIX value. */
-PJ_DECL(pj_uint16_t) pj_AF_UNIX(void);
-/** Get #PJ_AF_INET value. */
-PJ_DECL(pj_uint16_t) pj_AF_INET(void);
-/** Get #PJ_AF_INET6 value. */
-PJ_DECL(pj_uint16_t) pj_AF_INET6(void);
-/** Get #PJ_AF_PACKET value. */
-PJ_DECL(pj_uint16_t) pj_AF_PACKET(void);
-/** Get #PJ_AF_IRDA value. */
-PJ_DECL(pj_uint16_t) pj_AF_IRDA(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_AF_UNSPEC value */
+    PJ_DECL(pj_uint16_t) pj_AF_UNSPEC(void);
+    /** Get #PJ_AF_UNIX value. */
+    PJ_DECL(pj_uint16_t) pj_AF_UNIX(void);
+    /** Get #PJ_AF_INET value. */
+    PJ_DECL(pj_uint16_t) pj_AF_INET(void);
+    /** Get #PJ_AF_INET6 value. */
+    PJ_DECL(pj_uint16_t) pj_AF_INET6(void);
+    /** Get #PJ_AF_PACKET value. */
+    PJ_DECL(pj_uint16_t) pj_AF_PACKET(void);
+    /** Get #PJ_AF_IRDA value. */
+    PJ_DECL(pj_uint16_t) pj_AF_IRDA(void);
+#else
+    /* When pjlib is not built as DLL, these accessor functions are
+     * simply a macro to get their constants
+     */
+    /** Get #PJ_AF_UNSPEC value */
+#   define pj_AF_UNSPEC()   PJ_AF_UNSPEC
+    /** Get #PJ_AF_UNIX value. */
+#   define pj_AF_UNIX()	    PJ_AF_UNIX
+    /** Get #PJ_AF_INET value. */
+#   define pj_AF_INET()	    PJ_AF_INET
+    /** Get #PJ_AF_INET6 value. */
+#   define pj_AF_INET6()    PJ_AF_INET6
+    /** Get #PJ_AF_PACKET value. */
+#   define pj_AF_PACKET()   PJ_AF_PACKET
+    /** Get #PJ_AF_IRDA value. */
+#   define pj_AF_IRDA()	    PJ_AF_IRDA
+#endif
 
 
 /**
@@ -127,14 +145,25 @@ extern const pj_uint16_t PJ_SOCK_RDM;
  * because Symbian doesn't allow exporting global variables from a DLL.
  */
 
-/** Get #PJ_SOCK_STREAM constant */
-PJ_DECL(int) pj_SOCK_STREAM(void);
-/** Get #PJ_SOCK_DGRAM constant */
-PJ_DECL(int) pj_SOCK_DGRAM(void);
-/** Get #PJ_SOCK_RAW constant */
-PJ_DECL(int) pj_SOCK_RAW(void);
-/** Get #PJ_SOCK_RDM constant */
-PJ_DECL(int) pj_SOCK_RDM(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_SOCK_STREAM constant */
+    PJ_DECL(int) pj_SOCK_STREAM(void);
+    /** Get #PJ_SOCK_DGRAM constant */
+    PJ_DECL(int) pj_SOCK_DGRAM(void);
+    /** Get #PJ_SOCK_RAW constant */
+    PJ_DECL(int) pj_SOCK_RAW(void);
+    /** Get #PJ_SOCK_RDM constant */
+    PJ_DECL(int) pj_SOCK_RDM(void);
+#else
+    /** Get #PJ_SOCK_STREAM constant */
+#   define pj_SOCK_STREAM() PJ_SOCK_STREAM
+    /** Get #PJ_SOCK_DGRAM constant */
+#   define pj_SOCK_DGRAM()  PJ_SOCK_DGRAM
+    /** Get #PJ_SOCK_RAW constant */
+#   define pj_SOCK_RAW()    PJ_SOCK_RAW
+    /** Get #PJ_SOCK_RDM constant */
+#   define pj_SOCK_RDM()    PJ_SOCK_RDM
+#endif
 
 
 /**
@@ -158,16 +187,29 @@ extern const pj_uint16_t PJ_SOL_IPV6;
  * because Symbian doesn't allow exporting global variables from a DLL.
  */
 
-/** Get #PJ_SOL_SOCKET constant */
-PJ_DECL(pj_uint16_t) pj_SOL_SOCKET(void);
-/** Get #PJ_SOL_IP constant */
-PJ_DECL(pj_uint16_t) pj_SOL_IP(void);
-/** Get #PJ_SOL_TCP constant */
-PJ_DECL(pj_uint16_t) pj_SOL_TCP(void);
-/** Get #PJ_SOL_UDP constant */
-PJ_DECL(pj_uint16_t) pj_SOL_UDP(void);
-/** Get #PJ_SOL_IPV6 constant */
-PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_SOL_SOCKET constant */
+    PJ_DECL(pj_uint16_t) pj_SOL_SOCKET(void);
+    /** Get #PJ_SOL_IP constant */
+    PJ_DECL(pj_uint16_t) pj_SOL_IP(void);
+    /** Get #PJ_SOL_TCP constant */
+    PJ_DECL(pj_uint16_t) pj_SOL_TCP(void);
+    /** Get #PJ_SOL_UDP constant */
+    PJ_DECL(pj_uint16_t) pj_SOL_UDP(void);
+    /** Get #PJ_SOL_IPV6 constant */
+    PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
+#else
+    /** Get #PJ_SOL_SOCKET constant */
+#   define pj_SOL_SOCKET()  PJ_SOL_SOCKET
+    /** Get #PJ_SOL_IP constant */
+#   define pj_SOL_IP()	    PJ_SOL_IP
+    /** Get #PJ_SOL_TCP constant */
+#   define pj_SOL_TCP()	    PJ_SOL_TCP
+    /** Get #PJ_SOL_UDP constant */
+#   define pj_SOL_UDP()	    PJ_SOL_UDP
+    /** Get #PJ_SOL_IPV6 constant */
+#   define pj_SOL_IPV6()    PJ_SOL_IPV6
+#endif
 
 
 /* IP_TOS 
@@ -178,9 +220,6 @@ PJ_DECL(pj_uint16_t) pj_SOL_IPV6(void);
  */
 /** IP_TOS optname in setsockopt(). @see pj_IP_TOS() */
 extern const pj_uint16_t PJ_IP_TOS;
-
-/** Get #PJ_IP_TOS constant */
-PJ_DECL(int) pj_IP_TOS(void);
 
 /*
  * IP TOS related constats.
@@ -203,17 +242,37 @@ extern const pj_uint16_t PJ_IPTOS_RELIABILITY;
 extern const pj_uint16_t PJ_IPTOS_MINCOST;
 
 
-/** Get #PJ_IPTOS_LOWDELAY constant */
-PJ_DECL(int) pj_IPTOS_LOWDELAY(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_IP_TOS constant */
+    PJ_DECL(int) pj_IP_TOS(void);
 
-/** Get #PJ_IPTOS_THROUGHPUT constant */
-PJ_DECL(int) pj_IPTOS_THROUGHPUT(void);
+    /** Get #PJ_IPTOS_LOWDELAY constant */
+    PJ_DECL(int) pj_IPTOS_LOWDELAY(void);
 
-/** Get #PJ_IPTOS_RELIABILITY constant */
-PJ_DECL(int) pj_IPTOS_RELIABILITY(void);
+    /** Get #PJ_IPTOS_THROUGHPUT constant */
+    PJ_DECL(int) pj_IPTOS_THROUGHPUT(void);
 
-/** Get #PJ_IPTOS_MINCOST constant */
-PJ_DECL(int) pj_IPTOS_MINCOST(void);
+    /** Get #PJ_IPTOS_RELIABILITY constant */
+    PJ_DECL(int) pj_IPTOS_RELIABILITY(void);
+
+    /** Get #PJ_IPTOS_MINCOST constant */
+    PJ_DECL(int) pj_IPTOS_MINCOST(void);
+#else
+    /** Get #PJ_IP_TOS constant */
+#   define pj_IP_TOS()		PJ_IP_TOS
+
+    /** Get #PJ_IPTOS_LOWDELAY constant */
+#   define pj_IPTOS_LOWDELAY()	PJ_IP_TOS_LOWDELAY
+
+    /** Get #PJ_IPTOS_THROUGHPUT constant */
+#   define pj_IPTOS_THROUGHPUT() PJ_IP_TOS_THROUGHPUT
+
+    /** Get #PJ_IPTOS_RELIABILITY constant */
+#   define pj_IPTOS_RELIABILITY() PJ_IP_TOS_RELIABILITY
+
+    /** Get #PJ_IPTOS_MINCOST constant */
+#   define pj_IPTOS_MINCOST()	PJ_IP_TOS_MINCOST
+#endif
 
 
 /**
@@ -231,14 +290,25 @@ extern const pj_uint16_t PJ_SO_RCVBUF;
 extern const pj_uint16_t PJ_SO_SNDBUF;
 
 
-/** Get #PJ_SO_TYPE constant */
-PJ_DECL(pj_uint16_t) pj_SO_TYPE(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_SO_TYPE constant */
+    PJ_DECL(pj_uint16_t) pj_SO_TYPE(void);
 
-/** Get #PJ_SO_RCVBUF constant */
-PJ_DECL(pj_uint16_t) pj_SO_RCVBUF(void);
+    /** Get #PJ_SO_RCVBUF constant */
+    PJ_DECL(pj_uint16_t) pj_SO_RCVBUF(void);
 
-/** Get #PJ_SO_SNDBUF constant */
-PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
+    /** Get #PJ_SO_SNDBUF constant */
+    PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
+#else
+    /** Get #PJ_SO_TYPE constant */
+#   define pj_SO_TYPE()	    PJ_SO_TYPE
+
+    /** Get #PJ_SO_RCVBUF constant */
+#   define pj_SO_RCVBUF()   PJ_SO_RCVBUF
+
+    /** Get #PJ_SO_SNDBUF constant */
+#   define pj_SO_SNDBUF()   PJ_SO_SNDBUF
+#endif
 
 
 /*
@@ -255,14 +325,25 @@ extern const int PJ_MSG_PEEK;
 extern const int PJ_MSG_DONTROUTE;
 
 
-/** Get #PJ_MSG_OOB constant */
-PJ_DECL(int) pj_MSG_OOB(void);
+#if defined(PJ_DLL)
+    /** Get #PJ_MSG_OOB constant */
+    PJ_DECL(int) pj_MSG_OOB(void);
 
-/** Get #PJ_MSG_PEEK constant */
-PJ_DECL(int) pj_MSG_PEEK(void);
+    /** Get #PJ_MSG_PEEK constant */
+    PJ_DECL(int) pj_MSG_PEEK(void);
 
-/** Get #PJ_MSG_DONTROUTE constant */
-PJ_DECL(int) pj_MSG_DONTROUTE(void);
+    /** Get #PJ_MSG_DONTROUTE constant */
+    PJ_DECL(int) pj_MSG_DONTROUTE(void);
+#else
+    /** Get #PJ_MSG_OOB constant */
+#   define pj_MSG_OOB()		PJ_MSG_OOB
+
+    /** Get #PJ_MSG_PEEK constant */
+#   define pj_MSG_PEEK()	PJ_MSG_PEEK
+
+    /** Get #PJ_MSG_DONTROUTE constant */
+#   define pj_MSG_DONTROUTE()	PJ_MSG_DONTROUTE
+#endif
 
 
 /**
@@ -306,6 +387,7 @@ typedef enum pj_socket_sd_type
  */
 #define PJ_INVALID_SOCKET   (-1)
 
+/* Must undefine s_addr because of pj_in_addr below */
 #undef s_addr
 
 /**
@@ -362,7 +444,12 @@ typedef union pj_in6_addr
 
     /* While these are used for proper alignment */
     pj_uint32_t	u6_addr32[4];
-#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+
+    /* Do not use this with Winsock2, as this will align pj_sockaddr_in6
+     * to 64-bit boundary and Winsock2 doesn't like it!
+     */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0 && \
+    (!defined(PJ_WIN32) || PJ_WIN32==0)
     pj_int64_t	u6_addr64[2];
 #endif
 
@@ -555,76 +642,12 @@ PJ_DECL(pj_in_addr) pj_inet_addr(const pj_str_t *cp);
 PJ_DECL(pj_in_addr) pj_inet_addr2(const char *cp);
 
 /**
- * Get the transport layer port number of an Internet socket address.
- * The port is returned in host byte order.
- *
- * @param addr	    The IP socket address.
- * @return	    Port number, in host byte order.
- */
-PJ_INLINE(pj_uint16_t) pj_sockaddr_in_get_port(const pj_sockaddr_in *addr)
-{
-    return pj_ntohs(addr->sin_port);
-}
-
-/**
- * Set the port number of an Internet socket address.
- *
- * @param addr	    The IP socket address.
- * @param hostport  The port number, in host byte order.
- */
-PJ_INLINE(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
-					pj_uint16_t hostport)
-{
-    addr->sin_port = pj_htons(hostport);
-}
-
-/**
- * Get the IP address of an Internet socket address.
- * The address is returned as 32bit value in host byte order.
- *
- * @param addr	    The IP socket address.
- * @return	    32bit address, in host byte order.
- */
-PJ_INLINE(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr)
-{
-    pj_in_addr in_addr;
-    in_addr.s_addr = pj_ntohl(addr->sin_addr.s_addr);
-    return in_addr;
-}
-
-/**
- * Set the IP address of an Internet socket address.
- *
- * @param addr	    The IP socket address.
- * @param hostaddr  The host address, in host byte order.
- */
-PJ_INLINE(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
-					pj_uint32_t hostaddr)
-{
-    addr->sin_addr.s_addr = pj_htonl(hostaddr);
-}
-
-/**
- * Set the IP address of an IP socket address from string address, 
- * with resolving the host if necessary. The string address may be in a
- * standard numbers and dots notation or may be a hostname. If hostname
- * is specified, then the function will resolve the host into the IP
- * address.
- *
- * @param addr	    The IP socket address to be set.
- * @param cp	    The address string, which can be in a standard 
- *		    dotted numbers or a hostname to be resolved.
- *
- * @return	    Zero on success.
- */
-PJ_DECL(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
-					          const pj_str_t *cp);
-
-/**
- * Set the IP address and port of an IP socket address.
+ * Initialize IPv4 socket address based on the address and port info.
  * The string address may be in a standard numbers and dots notation or 
  * may be a hostname. If hostname is specified, then the function will 
  * resolve the host into the IP address.
+ *
+ * @see pj_sockaddr_init()
  *
  * @param addr	    The IP socket address to be set.
  * @param cp	    The address string, which can be in a standard 
@@ -637,6 +660,149 @@ PJ_DECL(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 				          const pj_str_t *cp,
 					  pj_uint16_t port);
 
+/**
+ * Initialize IP socket address based on the address and port info.
+ * The string address may be in a standard numbers and dots notation or 
+ * may be a hostname. If hostname is specified, then the function will 
+ * resolve the host into the IP address.
+ *
+ * @see pj_sockaddr_in_init()
+ *
+ * @param af	    Internet address family.
+ * @param addr	    The IP socket address to be set.
+ * @param cp	    The address string, which can be in a standard 
+ *		    dotted numbers or a hostname to be resolved.
+ * @param port	    The port number, in host byte order.
+ *
+ * @return	    Zero on success.
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_init(int af, 
+				      pj_sockaddr *addr,
+				      const pj_str_t *cp,
+				      pj_uint16_t port);
+
+/**
+ * Get pointer to the address part of a socket address.
+ * 
+ * @param addr	    Socket address.
+ *
+ * @return	    Pointer to address part (sin_addr or sin6_addr,
+ *		    depending on address family)
+ */
+PJ_DECL(void*) pj_sockaddr_get_addr(const pj_sockaddr_t *addr);
+
+/**
+ * Check that a socket address contains a non-zero address part.
+ *
+ * @param addr	    Socket address.
+ *
+ * @return	    Non-zero if address is set to non-zero.
+ */
+PJ_DECL(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr);
+
+/**
+ * Get the address part length of a socket address, based on its address
+ * family. For PJ_AF_INET, the length will be sizeof(pj_in_addr), and
+ * for PJ_AF_INET6, the length will be sizeof(pj_in6_addr).
+ * 
+ * @param addr	    Socket address.
+ *
+ * @return	    Port number, in host byte order.
+ */
+PJ_DECL(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr);
+
+/**
+ * Get the IP address of an IPv4 socket address.
+ * The address is returned as 32bit value in host byte order.
+ *
+ * @param addr	    The IP socket address.
+ * @return	    32bit address, in host byte order.
+ */
+PJ_DECL(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr);
+
+/**
+ * Set the IP address of an IPv4 socket address.
+ *
+ * @param addr	    The IP socket address.
+ * @param hostaddr  The host address, in host byte order.
+ */
+PJ_DECL(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
+				      pj_uint32_t hostaddr);
+
+/**
+ * Set the IP address of an IP socket address from string address, 
+ * with resolving the host if necessary. The string address may be in a
+ * standard numbers and dots notation or may be a hostname. If hostname
+ * is specified, then the function will resolve the host into the IP
+ * address.
+ *
+ * @see pj_sockaddr_set_str_addr()
+ *
+ * @param addr	    The IP socket address to be set.
+ * @param cp	    The address string, which can be in a standard 
+ *		    dotted numbers or a hostname to be resolved.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
+					          const pj_str_t *cp);
+
+/**
+ * Set the IP address of an IPv4 or IPv6 socket address from string address,
+ * with resolving the host if necessary. The string address may be in a
+ * standard IPv6 or IPv6 address or may be a hostname. If hostname
+ * is specified, then the function will resolve the host into the IP
+ * address according to the address family.
+ *
+ * @param af	    Address family.
+ * @param addr	    The IP socket address to be set.
+ * @param cp	    The address string, which can be in a standard 
+ *		    IP numbers (IPv4 or IPv6) or a hostname to be resolved.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_set_str_addr(int af,
+					      pj_sockaddr *addr,
+					      const pj_str_t *cp);
+
+/**
+ * Get the port number of a socket address, in host byte order. 
+ * This function can be used for both IPv4 and IPv6 socket address.
+ * 
+ * @param addr	    Socket address.
+ *
+ * @return	    Port number, in host byte order.
+ */
+PJ_DECL(pj_uint16_t) pj_sockaddr_get_port(const pj_sockaddr_t *addr);
+
+/**
+ * Get the transport layer port number of an Internet socket address.
+ * The port is returned in host byte order.
+ *
+ * @param addr	    The IP socket address.
+ * @return	    Port number, in host byte order.
+ */
+PJ_DECL(pj_uint16_t) pj_sockaddr_in_get_port(const pj_sockaddr_in *addr);
+
+/**
+ * Set the port number of an Internet socket address.
+ *
+ * @param addr	    The socket address.
+ * @param hostport  The port number, in host byte order.
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr, 
+					  pj_uint16_t hostport);
+
+/**
+ * Set the port number of an IPv4 socket address.
+ *
+ * @see pj_sockaddr_set_port()
+ *
+ * @param addr	    The IP socket address.
+ * @param hostport  The port number, in host byte order.
+ */
+PJ_DECL(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
+				      pj_uint16_t hostport);
 
 /*****************************************************************************
  *

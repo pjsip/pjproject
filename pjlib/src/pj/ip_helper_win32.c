@@ -27,6 +27,12 @@
 #if defined(_MSC_VER) && _MSC_VER==1200 && !defined(PJ_WIN32_WINCE)
 #   define PMIB_ICMP_EX void*
 #endif
+#include <winsock2.h>
+
+/* If you encounter error "Cannot open include file: 'Iphlpapi.h' here,
+ * you need to install newer Platform SDK. Presumably you're using
+ * Microsoft Visual Studio 6?
+ */
 #include <Iphlpapi.h>
 
 #include <pj/ip_helper.h>
@@ -41,6 +47,13 @@
 typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
 					   PULONG pdwSize, 
 					   BOOL bOrder);
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+typedef DWORD (WINAPI *PFN_GetAdapterAddresses)(ULONG Family,
+					        ULONG Flags,
+					        PVOID Reserved,
+					        PIP_ADAPTER_ADDRESSES AdapterAddresses,
+					        PULONG SizePointer);
+#endif	/* PJ_HAS_IPV6 */
 typedef DWORD (WINAPI *PFN_GetIpForwardTable)(PMIB_IPFORWARDTABLE pIpForwardTable,
 					      PULONG pdwSize, 
 					      BOOL bOrder);
@@ -48,8 +61,12 @@ typedef DWORD (WINAPI *PFN_GetIfEntry)(PMIB_IFROW pIfRow);
 
 static HANDLE s_hDLL;
 static PFN_GetIpAddrTable s_pfnGetIpAddrTable;
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    static PFN_GetAdapterAddresses s_pfnGetAdapterAddresses;
+#endif	/* PJ_HAS_IPV6 */
 static PFN_GetIpForwardTable s_pfnGetIpForwardTable;
 static PFN_GetIfEntry s_pfnGetIfEntry;
+
 
 static void unload_iphlp_module(void)
 {
@@ -57,6 +74,10 @@ static void unload_iphlp_module(void)
     s_hDLL = NULL;
     s_pfnGetIpAddrTable = NULL;
     s_pfnGetIpForwardTable = NULL;
+    s_pfnGetIfEntry = NULL;
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    s_pfnGetAdapterAddresses = NULL;
+#endif
 }
 
 static FARPROC GetIpHlpApiProc(pj_char_t *lpProcName)
@@ -90,6 +111,26 @@ static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable,
     return ERROR_NOT_SUPPORTED;
 }
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+static DWORD MyGetAdapterAddresses(ULONG Family,
+				   ULONG Flags,
+				   PVOID Reserved,
+				   PIP_ADAPTER_ADDRESSES AdapterAddresses,
+				   PULONG SizePointer)
+{
+    if(NULL == s_pfnGetAdapterAddresses) {
+	s_pfnGetAdapterAddresses = (PFN_GetAdapterAddresses) 
+	    GetIpHlpApiProc(PJ_T("GetAdapterAddresses"));
+    }
+    
+    if(NULL != s_pfnGetAdapterAddresses) {
+	return s_pfnGetAdapterAddresses(Family, Flags, Reserved,
+					AdapterAddresses, SizePointer);
+    }
+    
+    return ERROR_NOT_SUPPORTED;
+}
+#endif	/* PJ_HAS_IPV6 */
 
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 static DWORD MyGetIfEntry(MIB_IFROW *pIfRow)
@@ -124,11 +165,11 @@ static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable,
     return ERROR_NOT_SUPPORTED;
 }
 
-/*
- * Enumerate the local IP interface currently active in the host.
+/* Enumerate local IP interface using GetIpAddrTable()
+ * for IPv4 addresses only.
  */
-PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
-					 pj_in_addr ifs[])
+static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
+				       pj_sockaddr ifs[])
 {
     /* Provide enough buffer or otherwise it will fail with 
      * error 22 ("Not Enough Buffer") error.
@@ -159,7 +200,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
     for (i=0; i<count; ++i) {
 	MIB_IFROW ifRow;
 
-	/* Some Windows returns 0.0.0.0! */
+	/* Ignore 0.0.0.0 address (interface is down?) */
 	if (pTab->table[i].dwAddr == 0)
 	    continue;
 
@@ -174,14 +215,72 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(unsigned *p_cnt,
 	    continue;
 #endif
 
-	ifs[*p_cnt].s_addr = pTab->table[i].dwAddr;
+	ifs[*p_cnt].ipv4.sin_family = PJ_AF_INET;
+	ifs[*p_cnt].ipv4.sin_addr.s_addr = pTab->table[i].dwAddr;
 	(*p_cnt)++;
     }
 
     return PJ_SUCCESS;
-
 }
 
+
+/* Enumerate local IP interface using GetAdapterAddresses(),
+ * which works for both IPv4 and IPv6.
+ */
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+static pj_status_t enum_ipv4_ipv6_interface(int af,
+					    unsigned *p_cnt,
+					    pj_sockaddr ifs[])
+{
+    pj_uint8_t buffer[1024];
+    IP_ADAPTER_ADDRESSES *adapter = (IP_ADAPTER_ADDRESSES*)buffer;
+    ULONG size = sizeof(buffer);
+    unsigned i;
+    DWORD rc;
+
+    rc = MyGetAdapterAddresses(af, 0, NULL, adapter, &size);
+    if (rc != ERROR_SUCCESS)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    for (i=0; i<*p_cnt && adapter; ++i, adapter = adapter->Next) {
+	SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
+	ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
+	pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+    }
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Enumerate the local IP interface currently active in the host.
+ */
+PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
+					 unsigned *p_cnt,
+					 pj_sockaddr ifs[])
+{
+    pj_status_t status = -1;
+
+    PJ_ASSERT_RETURN(p_cnt && ifs, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_UNSPEC || af==PJ_AF_INET || af==PJ_AF_INET6,
+		     PJ_EAFNOTSUP);
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    status = enum_ipv4_ipv6_interface(af, p_cnt, ifs);
+    if (status != PJ_SUCCESS && (af==PJ_AF_INET || af==PJ_AF_UNSPEC))
+	status = enum_ipv4_interface(p_cnt, ifs);
+    return status;
+#else
+    if (af==PJ_AF_INET6)
+	return PJ_EIPV6NOTSUP;
+    else if (af != PJ_AF_INET && af != PJ_AF_UNSPEC)
+	return PJ_EAFNOTSUP;
+
+    status = enum_ipv4_interface(p_cnt, ifs);
+    return status;
+#endif
+}
 
 /*
  * Enumerate the IP routing table for this host.

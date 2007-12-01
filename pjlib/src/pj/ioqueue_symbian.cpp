@@ -232,6 +232,10 @@ pj_status_t CIoqueueCallback::StartAccept(pj_ioqueue_op_key_t *op_key,
     PJ_ASSERT_RETURN(IsActive()==false, PJ_EBUSY);
     PJ_ASSERT_RETURN(pending_data_.common_.op_key_==NULL, PJ_EBUSY);
 
+    // addrlen must be specified if local or remote is specified
+    PJ_ASSERT_RETURN((!local && !remote) ||
+    		     (addrlen && *addrlen), PJ_EINVAL);
+    
     pending_data_.accept_.op_key_ = op_key;
     pending_data_.accept_.new_sock_ = new_sock;
     pending_data_.accept_.local_ = local;
@@ -254,13 +258,11 @@ pj_status_t CIoqueueCallback::StartAccept(pj_ioqueue_op_key_t *op_key,
 //
 void CIoqueueCallback::HandleReadCompletion() 
 {
-    if (pending_data_.read_.addr_) {
+    if (pending_data_.read_.addr_ && pending_data_.read_.addrlen_) {
 	PjSymbianOS::Addr2pj(aAddress_, 
-			     *(pj_sockaddr_in*)pending_data_.read_.addr_);
+			     *(pj_sockaddr*)pending_data_.read_.addr_,
+			     pending_data_.read_.addrlen_);
 	pending_data_.read_.addr_ = NULL;
-    }
-    if (pending_data_.read_.addrlen_) {
-	*pending_data_.read_.addrlen_ = sizeof(pj_sockaddr_in);
 	pending_data_.read_.addrlen_ = NULL;
     }
 	
@@ -273,8 +275,10 @@ void CIoqueueCallback::HandleReadCompletion()
 //
 CPjSocket *CIoqueueCallback::HandleAcceptCompletion() 
 {
-	CPjSocket *pjNewSock = new CPjSocket(blank_sock_);
-
+	CPjSocket *pjNewSock = new CPjSocket(get_pj_socket()->GetAf(), 
+					     blank_sock_);
+	int addrlen = 0;
+	
 	if (pending_data_.accept_.new_sock_) {
 	    *pending_data_.accept_.new_sock_ = (pj_sock_t)pjNewSock;
 	    pending_data_.accept_.new_sock_ = NULL;
@@ -282,26 +286,37 @@ CPjSocket *CIoqueueCallback::HandleAcceptCompletion()
 
 	if (pending_data_.accept_.local_) {
 	    TInetAddr aAddr;
-	    pj_sockaddr_in *ptr_sockaddr;
-
+	    pj_sockaddr *ptr_sockaddr;
+	    
 	    blank_sock_.LocalName(aAddr);
-	    ptr_sockaddr = (pj_sockaddr_in*)pending_data_.accept_.local_;
-	    PjSymbianOS::Addr2pj(aAddr, *ptr_sockaddr);
+	    ptr_sockaddr = (pj_sockaddr*)pending_data_.accept_.local_;
+	    addrlen = *pending_data_.accept_.addrlen_;
+	    PjSymbianOS::Addr2pj(aAddr, *ptr_sockaddr, &addrlen);
 	    pending_data_.accept_.local_ = NULL;
 	}
 
 	if (pending_data_.accept_.remote_) {
 	    TInetAddr aAddr;
-	    pj_sockaddr_in *ptr_sockaddr;
+	    pj_sockaddr *ptr_sockaddr;
 
 	    blank_sock_.RemoteName(aAddr);
-	    ptr_sockaddr = (pj_sockaddr_in*)pending_data_.accept_.remote_;
-	    PjSymbianOS::Addr2pj(aAddr, *ptr_sockaddr);
+	    ptr_sockaddr = (pj_sockaddr*)pending_data_.accept_.remote_;
+	    addrlen = *pending_data_.accept_.addrlen_;
+	    PjSymbianOS::Addr2pj(aAddr, *ptr_sockaddr, &addrlen);
 	    pending_data_.accept_.remote_ = NULL;
 	}
 
 	if (pending_data_.accept_.addrlen_) {
-	    *pending_data_.accept_.addrlen_ = sizeof(pj_sockaddr_in);
+	    if (addrlen == 0) {
+	    	if (pjNewSock->GetAf() == PJ_AF_INET)
+	    	    addrlen = sizeof(pj_sockaddr_in);
+	    	else if (pjNewSock->GetAf() == PJ_AF_INET6)
+	    	    addrlen = sizeof(pj_sockaddr_in6);
+	    	else {
+	    	    pj_assert(!"Unsupported address family");
+	    	}
+	    }
+	    *pending_data_.accept_.addrlen_ = addrlen;
 	    pending_data_.accept_.addrlen_ = NULL;
 	}
 	
@@ -605,13 +620,18 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 					const pj_sockaddr_t *addr,
 					int addrlen )
 {
-    PJ_ASSERT_RETURN(addrlen == sizeof(pj_sockaddr_in), PJ_EINVAL);
-
+    pj_status_t status;
+    
     RSocket &rSock = key->cbObj->get_pj_socket()->Socket();
     TInetAddr inetAddr;
-    PjSymbianOS::pj2Addr(*(const pj_sockaddr_in*)addr, inetAddr);
     TRequestStatus reqStatus;
 
+    // Convert address
+    status = PjSymbianOS::pj2Addr(*(const pj_sockaddr*)addr, addrlen, 
+    				  inetAddr);
+    if (status != PJ_SUCCESS)
+    	return status;
+    
     // We don't support async connect for now.
     PJ_TODO(IOQUEUE_SUPPORT_ASYNC_CONNECT);
 
@@ -674,9 +694,22 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 					 pj_sockaddr_t *addr,
 					 int *addrlen)
 {
+    CPjSocket *sock = key->cbObj->get_pj_socket();
+    
+    // If address is specified, check that the length match the
+    // address family
+    if (addr || addrlen) {
+    	PJ_ASSERT_RETURN(addr && addrlen && *addrlen, PJ_EINVAL);
+    	if (sock->GetAf() == PJ_AF_INET) {
+    	    PJ_ASSERT_RETURN(*addrlen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    	} else if (sock->GetAf() == PJ_AF_INET6) {
+    	    PJ_ASSERT_RETURN(*addrlen >= sizeof(pj_sockaddr_in6), PJ_EINVAL);
+    	}
+    }
+    
     // If socket has reader, delete it.
-    if (key->cbObj->get_pj_socket()->Reader())
-    	key->cbObj->get_pj_socket()->DestroyReader();
+    if (sock->Reader())
+    	sock->DestroyReader();
     
     if (key->cbObj->IsActive())
 	return PJ_EBUSY;
@@ -736,20 +769,23 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     TPtrC8 aBuffer;
     TInetAddr inetAddr;
     TSockXfrLength aLen;
+    pj_status_t status;
     
     PJ_UNUSED_ARG(op_key);
 
     // Forcing pending operation is not supported.
     PJ_ASSERT_RETURN((flags & PJ_IOQUEUE_ALWAYS_ASYNC)==0, PJ_EINVAL);
 
-    // Must be pj_sockaddr_in for now.
-    PJ_ASSERT_RETURN(addrlen == sizeof(pj_sockaddr_in), PJ_EINVAL);
-
+    // Convert address
+    status = PjSymbianOS::pj2Addr(*(const pj_sockaddr*)addr, addrlen, 
+    				  inetAddr);
+    if (status != PJ_SUCCESS)
+    	return status;
+    
     // Clear flag
     flags &= ~PJ_IOQUEUE_ALWAYS_ASYNC;
 
     aBuffer.Set((const TUint8*)data, (TInt)*length);
-    PjSymbianOS::pj2Addr(*(const pj_sockaddr_in*)addr, inetAddr);
     CPjSocket *pjSock = key->cbObj->get_pj_socket();
 
     pjSock->Socket().SendTo(aBuffer, inetAddr, flags, reqStatus, aLen);

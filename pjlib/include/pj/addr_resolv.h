@@ -85,9 +85,14 @@ typedef struct pj_addrinfo
 
 /**
  * This function fills the structure of type pj_hostent for a given host name.
+ * For host resolution function that also works with IPv6, please see
+ * #pj_getaddrinfo().
  *
- * @param name	    Host name, or IPv4 or IPv6 address in standard dot notation.
- * @param he	    The pj_hostent structure to be filled.
+ * @param name	    Host name, or IPv4 address in standard dot notation.
+ * @param he	    The pj_hostent structure to be filled. Note that
+ *		    the pointers in this structure points to temporary
+ *		    variables which value will be reset upon subsequent
+ *		    invocation.
  *
  * @return	    PJ_SUCCESS, or the appropriate error codes.
  */ 
@@ -97,24 +102,33 @@ PJ_DECL(pj_status_t) pj_gethostbyname(const pj_str_t *name, pj_hostent *he);
 /**
  * Resolve the primary IP address of local host. 
  *
- * @param ip_addr   On successful resolution, this will be filled up with
- *		    the host IP address, in network byte order.
+ * @param af	    The desired address family to query. Valid values
+ *		    are pj_AF_INET() or pj_AF_INET6().
+ * @param addr      On successful resolution, the address family and address
+ *		    part of this socket address will be filled up with the host
+ *		    IP address, in network byte order. Other parts of the socket
+ *		    address are untouched.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_gethostip(pj_in_addr *ip_addr);
+PJ_DECL(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr);
 
 
 /**
  * Get the IP address of the default interface. Default interface is the
  * interface of the default route.
  *
- * @param ip_addr   On successful resolution, this will be filled up with
- *		    the IP address, in network byte order.
+ * @param af	    The desired address family to query. Valid values
+ *		    are pj_AF_INET() or pj_AF_INET6().
+ * @param addr      On successful resolution, the address family and address
+ *		    part of this socket address will be filled up with the host
+ *		    IP address, in network byte order. Other parts of the socket
+ *		    address are untouched.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_getdefaultipinterface(pj_in_addr *ip_addr);
+PJ_DECL(pj_status_t) pj_getdefaultipinterface(int af,
+					      pj_sockaddr *addr);
 
 
 /**
@@ -123,17 +137,20 @@ PJ_DECL(pj_status_t) pj_getdefaultipinterface(pj_in_addr *ip_addr);
  * to be used in creating a socket with which to address the specified 
  * service.
  *
+ * @param af	    The desired address family to query. Valid values
+ *		    are pj_AF_INET(), pj_AF_INET6(), or pj_AF_UNSPEC().
  * @param name	    Descriptive name or an address string, such as host
  *		    name.
- * @param af	    The desired address family to query.
  * @param count	    On input, it specifies the number of elements in
  *		    \a ai array. On output, this will be set with the
  *		    number of address informations found for the
  *		    specified name.
+ * @param ai	    Array of address info to be filled with the information
+ *		    about the host.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_getaddrinfo(const pj_str_t *nodename, int af,
+PJ_DECL(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *name,
 				    unsigned *count, pj_addrinfo ai[]);
 
 
