@@ -346,19 +346,19 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     {
 	/* Socket is bound to INADDR_ANY */
 	unsigned i, ifs_cnt;
-	pj_in_addr ifs[PJ_ICE_ST_MAX_CAND-2];
+	pj_sockaddr ifs[PJ_ICE_ST_MAX_CAND-2];
 
 	/* Reset default candidate */
 	comp->default_cand = -1;
 
 	/* Enum all IP interfaces in the host */
 	ifs_cnt = PJ_ARRAY_SIZE(ifs);
-	status = pj_enum_ip_interface(&ifs_cnt, ifs);
+	status = pj_enum_ip_interface(pj_AF_INET(), &ifs_cnt, ifs);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
 	/* Set default IP interface as the base address */
-	status = pj_gethostip(&comp->local_addr.ipv4.sin_addr);
+	status = pj_gethostip(pj_AF_INET(), &comp->local_addr);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -369,17 +369,17 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
 	    pj_uint16_t local_pref;
 
 	    /* Ignore 127.0.0.0/24 address */
-	    if ((pj_ntohl(ifs[i].s_addr) >> 24)==127)
+	    if ((pj_ntohl(ifs[i].ipv4.sin_addr.s_addr) >> 24)==127)
 		continue;
 
 	    pj_memcpy(&cand_addr, &comp->local_addr, sizeof(pj_sockaddr_in));
-	    cand_addr.sin_addr.s_addr = ifs[i].s_addr;
+	    cand_addr.sin_addr.s_addr = ifs[i].ipv4.sin_addr.s_addr;
 
 
 	    /* If the IP address is equal to local address, assign it
 	     * as default candidate.
 	     */
-	    if (ifs[i].s_addr == comp->local_addr.ipv4.sin_addr.s_addr) {
+	    if (ifs[i].ipv4.sin_addr.s_addr == comp->local_addr.ipv4.sin_addr.s_addr) {
 		set_default = PJ_TRUE;
 		local_pref = 65535;
 	    } else {
@@ -412,7 +412,7 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
 	 * in case its value is zero.
 	 */
 	if (comp->local_addr.ipv4.sin_addr.s_addr == 0) {
-	    status = pj_gethostip(&comp->local_addr.ipv4.sin_addr);
+	    status = pj_gethostip(pj_AF_INET(), &comp->local_addr);
 	    if (status != PJ_SUCCESS)
 		return status;
 	}
