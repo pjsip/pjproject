@@ -82,7 +82,16 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_LOOP_DGRAM,
 
     /** Start of user defined transport */
-    PJSIP_TRANSPORT_START_OTHER
+    PJSIP_TRANSPORT_START_OTHER,
+
+    /** Start of IPv6 transports */
+    PJSIP_TRANSPORT_IPV6    = 128,
+
+    /** UDP over IPv6 */
+    PJSIP_TRANSPORT_UDP6 = PJSIP_TRANSPORT_UDP + PJSIP_TRANSPORT_IPV6,
+
+    /** TCP over IPv6 */
+    PJSIP_TRANSPORT_TCP6 = PJSIP_TRANSPORT_TCP + PJSIP_TRANSPORT_IPV6
 
 } pjsip_transport_type_e;
 

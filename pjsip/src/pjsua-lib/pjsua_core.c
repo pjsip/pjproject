@@ -1182,17 +1182,32 @@ PJ_DEF(pj_pool_factory*) pjsua_get_pool_factory(void)
  */
 
 /*
+ * Tools to get address string.
+ */
+static const char *addr_string(const pj_sockaddr_t *addr)
+{
+    static char str[128];
+    str[0] = '\0';
+    pj_inet_ntop(((const pj_sockaddr*)addr)->addr.sa_family, 
+		 pj_sockaddr_get_addr(addr),
+		 str, sizeof(str));
+    return str;
+}
+
+/*
  * Create and initialize SIP socket (and possibly resolve public
  * address via STUN, depending on config).
  */
-static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
+static pj_status_t create_sip_udp_sock(int af,
+				       const pj_str_t *bind_param,
 				       int port,
 				       pj_sock_t *p_sock,
-				       pj_sockaddr_in *p_pub_addr)
+				       pj_sockaddr *p_pub_addr)
 {
-    char ip_addr[32];
+    char stun_ip_addr[PJ_INET6_ADDRSTRLEN];
     pj_str_t stun_srv;
     pj_sock_t sock;
+    pj_sockaddr bind_addr;
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
@@ -1202,14 +1217,27 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	return status;
     }
 
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
+    /* Initialize bound address */
+    if (bind_param->slen) {
+	status = pj_sockaddr_init(af, &bind_addr, bind_param, 
+				  (pj_uint16_t)port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, 
+			 "Unable to resolve transport bound address", 
+			 status);
+	    return status;
+	}
+    } else {
+	pj_sockaddr_init(af, &bind_addr, NULL, (pj_uint16_t)port);
+    }
+
+    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "socket() error", status);
 	return status;
     }
 
-    status = pj_sock_bind_in(sock, pj_ntohl(bound_addr.s_addr), 
-			     (pj_uint16_t)port);
+    status = pj_sock_bind(sock, &bind_addr, sizeof(bind_addr));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "bind() error", status);
 	pj_sock_close(sock);
@@ -1218,7 +1246,7 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 
     /* If port is zero, get the bound port */
     if (port == 0) {
-	pj_sockaddr_in bound_addr;
+	pj_sockaddr bound_addr;
 	int namelen = sizeof(bound_addr);
 	status = pj_sock_getsockname(sock, &bound_addr, &namelen);
 	if (status != PJ_SUCCESS) {
@@ -1227,12 +1255,12 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	    return status;
 	}
 
-	port = pj_ntohs(bound_addr.sin_port);
+	port = pj_sockaddr_get_port(&bound_addr);
     }
 
     if (pjsua_var.stun_srv.addr.sa_family != 0) {
-	pj_ansi_strcpy(ip_addr,pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
-	stun_srv = pj_str(ip_addr);
+	pj_ansi_strcpy(stun_ip_addr,pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+	stun_srv = pj_str(stun_ip_addr);
     } else {
 	stun_srv.slen = 0;
     }
@@ -1240,22 +1268,28 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
     /* Get the published address, either by STUN or by resolving
      * the name of local host.
      */
-    if (p_pub_addr->sin_addr.s_addr != 0) {
+    if (pj_sockaddr_has_addr(p_pub_addr)) {
 	/*
 	 * Public address is already specified, no need to resolve the 
 	 * address, only set the port.
 	 */
-	if (p_pub_addr->sin_port == 0)
-	    p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
+	if (pj_sockaddr_get_port(p_pub_addr) == 0)
+	    pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
 
     } else if (stun_srv.slen) {
 	/*
 	 * STUN is specified, resolve the address with STUN.
 	 */
+	if (af != pj_AF_INET()) {
+	    pjsua_perror(THIS_FILE, "Cannot use STUN", PJ_EAFNOTSUP);
+	    pj_sock_close(sock);
+	    return PJ_EAFNOTSUP;
+	}
+
 	status = pjstun_get_mapped_addr(&pjsua_var.cp.factory, 1, &sock,
 				         &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
 					 &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
-				         p_pub_addr);
+				         &p_pub_addr->ipv4);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error contacting STUN server", status);
 	    pj_sock_close(sock);
@@ -1263,25 +1297,24 @@ static pj_status_t create_sip_udp_sock(pj_in_addr bound_addr,
 	}
 
     } else {
+	pj_bzero(p_pub_addr, sizeof(pj_sockaddr));
 
-	pj_bzero(p_pub_addr, sizeof(pj_sockaddr_in));
-
-	status = pj_gethostip(&p_pub_addr->sin_addr);
+	status = pj_gethostip(af, p_pub_addr);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
 	    pj_sock_close(sock);
 	    return status;
 	}
 
-	p_pub_addr->sin_family = pj_AF_INET();
-	p_pub_addr->sin_port = pj_htons((pj_uint16_t)port);
+	p_pub_addr->addr.sa_family = (pj_uint16_t)af;
+	pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
     }
 
     *p_sock = sock;
 
     PJ_LOG(4,(THIS_FILE, "SIP UDP socket reachable at %s:%d",
-	      pj_inet_ntoa(p_pub_addr->sin_addr),
-	      (int)pj_ntohs(p_pub_addr->sin_port)));
+	      addr_string(p_pub_addr),
+	      (int)pj_sockaddr_get_port(p_pub_addr)));
 
     return PJ_SUCCESS;
 }
@@ -1313,14 +1346,14 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
     }
 
     /* Create the transport */
-    if (type == PJSIP_TRANSPORT_UDP) {
+    if (type & PJSIP_TRANSPORT_UDP) {
 	/*
-	 * Create UDP transport.
+	 * Create UDP transport (IPv4 or IPv6).
 	 */
 	pjsua_transport_config config;
+	char hostbuf[PJ_INET6_ADDRSTRLEN];
 	pj_sock_t sock = PJ_INVALID_SOCKET;
-	pj_sockaddr_in bound_addr;
-	pj_sockaddr_in pub_addr;
+	pj_sockaddr pub_addr;
 	pjsip_host_port addr_name;
 
 	/* Supply default config if it's not specified */
@@ -1329,22 +1362,12 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	    cfg = &config;
 	}
 
-	/* Initialize bound address, if any */
-	bound_addr.sin_addr.s_addr = PJ_INADDR_ANY;
-	if (cfg->bound_addr.slen) {
-	    status = pj_sockaddr_in_set_str_addr(&bound_addr,&cfg->bound_addr);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, 
-			     "Unable to resolve transport bound address", 
-			     status);
-		goto on_return;
-	    }
-	}
-
 	/* Initialize the public address from the config, if any */
-	pj_sockaddr_in_init(&pub_addr, NULL, (pj_uint16_t)cfg->port);
+	pj_sockaddr_init(pjsip_transport_type_get_af(type), &pub_addr, 
+			 NULL, (pj_uint16_t)cfg->port);
 	if (cfg->public_addr.slen) {
-	    status = pj_sockaddr_in_set_str_addr(&pub_addr, &cfg->public_addr);
+	    status = pj_sockaddr_set_str_addr(pjsip_transport_type_get_af(type),
+					      &pub_addr, &cfg->public_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, 
 			     "Unable to resolve transport public address", 
@@ -1356,18 +1379,19 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	/* Create the socket and possibly resolve the address with STUN 
 	 * (only when public address is not specified).
 	 */
-	status = create_sip_udp_sock(bound_addr.sin_addr, cfg->port, 
+	status = create_sip_udp_sock(pjsip_transport_type_get_af(type),
+				     &cfg->bound_addr, cfg->port,
 				     &sock, &pub_addr);
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
-	addr_name.host = pj_str(pj_inet_ntoa(pub_addr.sin_addr));
-	addr_name.port = pj_ntohs(pub_addr.sin_port);
+	pj_ansi_strcpy(hostbuf, addr_string(&pub_addr));
+	addr_name.host = pj_str(hostbuf);
+	addr_name.port = pj_sockaddr_get_port(&pub_addr);
 
 	/* Create UDP transport */
-	status = pjsip_udp_transport_attach( pjsua_var.endpt, sock,
-					     &addr_name, 1, 
-					     &tp);
+	status = pjsip_udp_transport_attach2(pjsua_var.endpt, type, sock,
+					     &addr_name, 1, &tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating SIP UDP transport", 
 			 status);

@@ -93,21 +93,102 @@ struct pjsip_tpmgr
  */
 struct transport_names_t
 {
-    pjsip_transport_type_e type;
-    pj_uint16_t		   port;
-    pj_str_t		   name;
-    unsigned		   flag;
-    char		   name_buf[16];
+    pjsip_transport_type_e type;	    /* Transport type	    */
+    pj_uint16_t		   port;	    /* Default port number  */
+    pj_str_t		   name;	    /* Id tag		    */
+    const char		  *description;	    /* Longer description   */
+    unsigned		   flag;	    /* Flags		    */
+    char		   name_buf[16];    /* For user's transport */
 } transport_names[16] = 
 {
-    { PJSIP_TRANSPORT_UNSPECIFIED, 0, {"Unspecified", 11}, 0},
-    { PJSIP_TRANSPORT_UDP, 5060, {"UDP", 3}, PJSIP_TRANSPORT_DATAGRAM},
-    { PJSIP_TRANSPORT_TCP, 5060, {"TCP", 3}, PJSIP_TRANSPORT_RELIABLE},
-    { PJSIP_TRANSPORT_TLS, 5061, {"TLS", 3}, PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE},
-    { PJSIP_TRANSPORT_SCTP, 5060, {"SCTP", 4}, PJSIP_TRANSPORT_RELIABLE},
-    { PJSIP_TRANSPORT_LOOP, 15060, {"LOOP", 4}, PJSIP_TRANSPORT_RELIABLE}, 
-    { PJSIP_TRANSPORT_LOOP_DGRAM, 15060, {"LOOP-DGRAM", 10}, PJSIP_TRANSPORT_DATAGRAM},
+    { 
+	PJSIP_TRANSPORT_UNSPECIFIED, 
+	0, 
+	{"Unspecified", 11}, 
+	"Unspecified", 
+	0
+    },
+    { 
+	PJSIP_TRANSPORT_UDP, 
+	5060, 
+	{"UDP", 3}, 
+	"UDP transport", 
+	PJSIP_TRANSPORT_DATAGRAM
+    },
+    { 
+	PJSIP_TRANSPORT_TCP, 
+	5060, 
+	{"TCP", 3}, 
+	"TCP transport", 
+	PJSIP_TRANSPORT_RELIABLE
+    },
+    { 
+	PJSIP_TRANSPORT_TLS, 
+	5061, 
+	{"TLS", 3}, 
+	"TLS transport", 
+	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
+    },
+    { 
+	PJSIP_TRANSPORT_SCTP, 
+	5060, 
+	{"SCTP", 4}, 
+	"SCTP transport", 
+	PJSIP_TRANSPORT_RELIABLE
+    },
+    { 
+	PJSIP_TRANSPORT_LOOP, 
+	15060, 
+	{"LOOP", 4}, 
+	"Loopback transport", 
+	PJSIP_TRANSPORT_RELIABLE
+    }, 
+    { 
+	PJSIP_TRANSPORT_LOOP_DGRAM, 
+	15060, 
+	{"LOOP-DGRAM", 10}, 
+	"Loopback datagram transport", 
+	PJSIP_TRANSPORT_DATAGRAM
+    },
+    { 
+	PJSIP_TRANSPORT_UDP6, 
+	5060, 
+	{"UDP", 3}, 
+	"UDP IPv6 transport", 
+	PJSIP_TRANSPORT_DATAGRAM
+    },
+    { 
+	PJSIP_TRANSPORT_TCP6, 
+	5060, 
+	{"TCP", 3}, 
+	"TCP IPv6 transport", 
+	PJSIP_TRANSPORT_RELIABLE
+    },
 };
+
+struct transport_names_t *get_tpname(pjsip_transport_type_e type)
+{
+    unsigned i;
+    for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
+	if (transport_names[i].type == type)
+	    return &transport_names[i];
+    }
+    pj_assert(!"Invalid transport type!");
+    return NULL;
+}
+
+
+/*
+ * Tools to get address string.
+ */
+static const char *addr_string(const pj_sockaddr_t *addr)
+{
+    static char str[PJ_INET6_ADDRSTRLEN];
+    pj_inet_ntop(((const pj_sockaddr*)addr)->addr.sa_family, 
+		 pj_sockaddr_get_addr(addr),
+		 str, sizeof(str));
+    return str;
+}
 
 
 /*
@@ -153,12 +234,6 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_name(const pj_str_t
 {
     unsigned i;
 
-    /* Sanity check. 
-     * Check that transport_names[] are indexed on transport type. 
-     */
-    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
-		     PJSIP_TRANSPORT_UDP, PJSIP_TRANSPORT_UNSPECIFIED);
-
     if (name->slen == 0)
 	return PJSIP_TRANSPORT_UNSPECIFIED;
 
@@ -181,12 +256,6 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
 {
     unsigned i;
 
-    /* Sanity check. 
-     * Check that transport_names[] are indexed on transport type. 
-     */
-    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
-		     PJSIP_TRANSPORT_UDP, PJSIP_TRANSPORT_UNSPECIFIED);
-
     /* Get the transport type for the specified flags. */
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {
 	if (transport_names[i].flag == flag) {
@@ -198,19 +267,21 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
 
+/*
+ * Get the socket address family of a given transport type.
+ */
+PJ_DEF(int) pjsip_transport_type_get_af(pjsip_transport_type_e type)
+{
+    if (type | PJSIP_TRANSPORT_IPV6)
+	return pj_AF_INET6();
+    else
+	return pj_AF_INET();
+}
+
 PJ_DEF(unsigned) pjsip_transport_get_flag_from_type(pjsip_transport_type_e type)
 {
-    /* Sanity check. 
-     * Check that transport_names[] are indexed on transport type. 
-     */
-    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
-		     PJSIP_TRANSPORT_UDP, 0);
-
-    /* Check that argument is valid. */
-    PJ_ASSERT_RETURN((unsigned)type < PJ_ARRAY_SIZE(transport_names), 0);
-
     /* Return transport flag. */
-    return transport_names[type].flag;
+    return get_tpname(type)->flag;
 }
 
 /*
@@ -218,17 +289,8 @@ PJ_DEF(unsigned) pjsip_transport_get_flag_from_type(pjsip_transport_type_e type)
  */
 PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
 {
-    /* Sanity check. 
-     * Check that transport_names[] are indexed on transport type. 
-     */
-    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
-		     PJSIP_TRANSPORT_UDP, 0);
-
-    /* Check that argument is valid. */
-    PJ_ASSERT_RETURN((unsigned)type < PJ_ARRAY_SIZE(transport_names), 5060);
-
     /* Return the port. */
-    return transport_names[type].port;
+    return get_tpname(type)->port;
 }
 
 /*
@@ -236,17 +298,17 @@ PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e typ
  */
 PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
 {
-    /* Sanity check. 
-     * Check that transport_names[] are indexed on transport type. 
-     */
-    PJ_ASSERT_RETURN(transport_names[PJSIP_TRANSPORT_UDP].type ==
-		     PJSIP_TRANSPORT_UDP, "Unknown");
+    /* Return the name. */
+    return get_tpname(type)->name.ptr;
+}
 
-    /* Check that argument is valid. */
-    PJ_ASSERT_RETURN((unsigned)type<PJ_ARRAY_SIZE(transport_names), "Unknown");
-
-    /* Return the port. */
-    return transport_names[type].name.ptr;
+/*
+ * Get transport description.
+ */
+PJ_DEF(const char*) pjsip_transport_get_type_desc(pjsip_transport_type_e type)
+{
+    /* Return the description. */
+    return get_tpname(type)->description;
 }
 
 
@@ -556,15 +618,12 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
     tdata->tp_info.transport = tr;
     pj_memcpy(&tdata->tp_info.dst_addr, addr, addr_len);
     tdata->tp_info.dst_addr_len = addr_len;
-    if (((pj_sockaddr*)addr)->addr.sa_family == pj_AF_INET()) {
-	const char *str_addr;
-	str_addr = pj_inet_ntoa(((pj_sockaddr_in*)addr)->sin_addr);
-	pj_ansi_strcpy(tdata->tp_info.dst_name, str_addr);
-	tdata->tp_info.dst_port = pj_ntohs(((pj_sockaddr_in*)addr)->sin_port);
-    } else {
-	pj_ansi_strcpy(tdata->tp_info.dst_name, "<unknown>");
-	tdata->tp_info.dst_port = 0;
-    }
+
+    pj_inet_ntop(((pj_sockaddr*)addr)->addr.sa_family,
+		 pj_sockaddr_get_addr(addr),
+		 tdata->tp_info.dst_name,
+		 sizeof(tdata->tp_info.dst_name));
+    tdata->tp_info.dst_port = pj_sockaddr_get_port(addr);
 
     /* Distribute to modules. 
      * When the message reach mod_msg_print, the contents of the message will
@@ -803,8 +862,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     TRACE_((THIS_FILE,"Transport %s registered: type=%s, remote=%s:%d",
 		       tp->obj_name,
 		       pjsip_transport_get_type_name(tp->key.type),
-		       pj_inet_ntoa(((pj_sockaddr_in*)&tp->key.rem_addr)->sin_addr),
-		       pj_ntohs(((pj_sockaddr_in*)&tp->key.rem_addr)->sin_port)));
+		       addr_string(&tp->key.rem_addr),
+		       pj_sockaddr_get_port(&tp->key.rem_addr)));
 
     return PJ_SUCCESS;
 }
@@ -1054,12 +1113,21 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 
     } else if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
 	
-	pj_sockaddr_in remote;
+	pj_sockaddr remote;
+	int addr_len;
 	pjsip_transport *tp;
 
-	pj_sockaddr_in_init(&remote, NULL, 0);
+	pj_bzero(&remote, sizeof(remote));
+	if (type & PJSIP_TRANSPORT_IPV6) {
+	    addr_len = sizeof(pj_sockaddr_in6);
+	    remote.addr.sa_family = pj_AF_INET6();
+	} else {
+	    addr_len = sizeof(pj_sockaddr_in);
+	    remote.addr.sa_family = pj_AF_INET();
+	}
+
 	status = pjsip_tpmgr_acquire_transport(tpmgr, type, &remote,
-					       sizeof(remote), NULL, &tp);
+					       addr_len, NULL, &tp);
 
 	if (status == PJ_SUCCESS) {
 	    pj_strdup(pool, ip_addr, &tp->local_name.host);
@@ -1381,8 +1449,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 
     TRACE_((THIS_FILE,"Acquiring transport type=%s, remote=%s:%d",
 		       pjsip_transport_get_type_name(type),
-		       pj_inet_ntoa(((pj_sockaddr_in*)remote)->sin_addr),
-		       pj_ntohs(((pj_sockaddr_in*)remote)->sin_port)));
+		       addr_string(remote),
+		       pj_sockaddr_get_port(remote)));
 
     pj_lock_acquire(mgr->lock);
 
@@ -1462,24 +1530,23 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	    if (type == PJSIP_TRANSPORT_LOOP ||
 		     type == PJSIP_TRANSPORT_LOOP_DGRAM)
 	    {
-		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.rem_addr;
+		pj_sockaddr *addr = &key.rem_addr;
 
-		pj_bzero(addr, sizeof(pj_sockaddr_in));
-		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+		pj_bzero(addr, addr_len);
+		key_len = sizeof(key.type) + addr_len;
 		transport = (pjsip_transport*) 
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }
-	    /* For datagram INET transports, try lookup with zero address.
+	    /* For datagram transports, try lookup with zero address.
 	     */
-	    else if ((flag & PJSIP_TRANSPORT_DATAGRAM) && 
-		     (remote_addr->addr.sa_family == pj_AF_INET())) 
+	    else if (flag & PJSIP_TRANSPORT_DATAGRAM)
 	    {
-		pj_sockaddr_in *addr = (pj_sockaddr_in*)&key.rem_addr;
+		pj_sockaddr *addr = &key.rem_addr;
 
-		pj_bzero(addr, sizeof(pj_sockaddr_in));
-		addr->sin_family = pj_AF_INET();
+		pj_bzero(addr, addr_len);
+		addr->addr.sa_family = remote_addr->addr.sa_family;
 
-		key_len = sizeof(key.type) + sizeof(pj_sockaddr_in);
+		key_len = sizeof(key.type) + addr_len;
 		transport = (pjsip_transport*)
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }

@@ -133,6 +133,15 @@ PJ_DECL(pjsip_transport_type_e)
 pjsip_transport_get_type_from_flag(unsigned flag);
 
 /**
+ * Get the socket address family of a given transport type.
+ *
+ * @param type	    Transport type.
+ *
+ * @return	    Transport type.
+ */
+PJ_DECL(int) pjsip_transport_type_get_af(pjsip_transport_type_e type);
+
+/**
  * Get transport flag from type.
  *
  * @param type	    Transport type.
@@ -161,6 +170,15 @@ pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type);
  * @return	    Transport name.
  */
 PJ_DECL(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e t);
+
+/**
+ * Get longer description for the specified transport type.
+ *
+ * @param t	    Transport type.
+ *
+ * @return	    Transport description.
+ */
+PJ_DECL(const char*) pjsip_transport_get_type_desc(pjsip_transport_type_e t);
 
 
 
@@ -307,7 +325,7 @@ struct pjsip_rx_data
 	int			 src_addr_len;
 
 	/** The IP source address string (NULL terminated). */
-	char			 src_name[16];
+	char			 src_name[PJ_INET6_ADDRSTRLEN];
 
 	/** The IP source port number. */
 	int			 src_port;
@@ -506,7 +524,7 @@ struct pjsip_tx_data
 	pjsip_transport	    *transport;	    /**< Transport being used.	*/
 	pj_sockaddr	     dst_addr;	    /**< Destination address.	*/
 	int		     dst_addr_len;  /**< Length of address.	*/
-	char		     dst_name[16];  /**< Destination address.	*/
+	char		     dst_name[PJ_INET6_ADDRSTRLEN]; /**< Destination address.	*/
 	int		     dst_port;	    /**< Destination port.	*/
     } tp_info;
 

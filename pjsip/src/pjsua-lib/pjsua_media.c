@@ -346,15 +346,15 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    break;
 
 	} else {
-	    pj_in_addr addr;
+	    pj_sockaddr addr;
 
 	    /* Get local IP address. */
-	    status = pj_gethostip(&addr);
+	    status = pj_gethostip(pj_AF_INET(), &addr);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
 	    for (i=0; i<2; ++i)
-		mapped_addr[i].sin_addr = addr;
+		mapped_addr[i].sin_addr.s_addr = addr.ipv4.sin_addr.s_addr;
 
 	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)next_rtp_port);
 	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(next_rtp_port+1));
