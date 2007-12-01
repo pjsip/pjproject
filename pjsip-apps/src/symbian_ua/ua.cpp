@@ -245,7 +245,7 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 
 
 /* Logging callback */
-static void log_writer(int level, const char *buf, unsigned len)
+static void log_writer(int level, const char *buf, int len)
 {
     static wchar_t buf16[PJ_LOG_MAX_SIZE];
 
@@ -255,6 +255,7 @@ static void log_writer(int level, const char *buf, unsigned len)
 
     TPtrC16 aBuf((const TUint16*)buf16, (TInt)len);
     console->Write(aBuf);
+    
 }
 
 /*
@@ -548,6 +549,7 @@ int ua_main()
     // Shutdown pjsua
     pjsua_destroy();
     
-    return 0;
+on_return:
+    return status;
 }
 
