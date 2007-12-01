@@ -170,6 +170,10 @@ SOURCE=..\src\samples\streamutil.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\strerror.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\tonegen.c
 # End Source File
 # Begin Source File

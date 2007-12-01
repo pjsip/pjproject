@@ -65,6 +65,7 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\stateful_proxy.exe \
 	  $(BINDIR)\stateless_proxy.exe \
 	  $(BINDIR)\streamutil.exe \
+	  $(BINDIR)\strerror.exe \
 	  $(BINDIR)\tonegen.exe
 
 

@@ -29,6 +29,7 @@ SAMPLES := confsample \
 	   stateful_proxy \
 	   stateless_proxy \
 	   streamutil \
+	   strerror \
 	   tonegen
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))

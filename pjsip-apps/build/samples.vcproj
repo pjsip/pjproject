@@ -150,6 +150,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\strerror.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\tonegen.c"
 				>
 			</File>
