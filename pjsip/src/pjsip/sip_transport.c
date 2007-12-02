@@ -272,7 +272,7 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
  */
 PJ_DEF(int) pjsip_transport_type_get_af(pjsip_transport_type_e type)
 {
-    if (type | PJSIP_TRANSPORT_IPV6)
+    if (type & PJSIP_TRANSPORT_IPV6)
 	return pj_AF_INET6();
     else
 	return pj_AF_INET();
@@ -1158,7 +1158,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 	pj_lock_release(tpmgr->lock);
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 /*

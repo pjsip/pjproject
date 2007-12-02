@@ -265,7 +265,12 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print host. */
     pj_assert(url->host.slen != 0);
-    copy_advance_check(buf, url->host);
+    /* Detect IPv6 IP address */
+    if (pj_memchr(url->host.ptr, ':', url->host.slen)) {
+	copy_advance_pair_quote_cond(buf, "", 0, url->host, '[', ']');
+    } else {
+	copy_advance_check(buf, url->host);
+    }
 
     /* Only print port if it is explicitly specified. 
      * Port is not allowed in To and From header.
@@ -311,9 +316,15 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     }
 
     /* maddr param is not allowed in From and To header. */
-    if (context != PJSIP_URI_IN_FROMTO_HDR) {
-	copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
-				 pc->pjsip_PARAM_CHAR_SPEC);
+    if (context != PJSIP_URI_IN_FROMTO_HDR && url->maddr_param.slen) {
+	/* Detect IPv6 IP address */
+	if (pj_memchr(url->maddr_param.ptr, ':', url->maddr_param.slen)) {
+	    copy_advance_pair_quote_cond(buf, ";maddr=", 7, url->maddr_param,
+				         '[', ']');
+	} else {
+	    copy_advance_pair_escape(buf, ";maddr=", 7, url->maddr_param,
+				     pc->pjsip_PARAM_CHAR_SPEC);
+	}
     }
 
     /* lr param is not allowed in From, To, and Contact header. */

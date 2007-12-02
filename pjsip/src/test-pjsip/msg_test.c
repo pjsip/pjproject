@@ -700,6 +700,7 @@ static pj_status_t simple_test(void)
 }
 
 
+#if INCLUDE_BENCHMARKS
 static int msg_benchmark(unsigned *p_detect, unsigned *p_parse, 
 			 unsigned *p_print)
 {
@@ -775,6 +776,7 @@ static int msg_benchmark(unsigned *p_detect, unsigned *p_parse,
     *p_print = (unsigned)avg_print;
     return status;
 }
+#endif	/* INCLUDE_BENCHMARKS */
 
 /*****************************************************************************/
 /* Test various header parsing and production */
@@ -795,12 +797,14 @@ static int hdr_test_record_route(pjsip_hdr *h);
 static int hdr_test_supported(pjsip_hdr *h);
 static int hdr_test_to(pjsip_hdr *h);
 static int hdr_test_via(pjsip_hdr *h);
-
+static int hdr_test_via_ipv6_1(pjsip_hdr *h);
+static int hdr_test_via_ipv6_2(pjsip_hdr *h);
+static int hdr_test_via_ipv6_3(pjsip_hdr *h);
 
 
 #define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
 #define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab:cd;p3"
-#define PARAM_CHAR	     "[]/:&+$"
+#define PARAM_CHAR	     "][/:&+$"
 #define SIMPLE_ADDR_SPEC     "sip:host"
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	     "<" ADDR_SPEC ">"
@@ -947,6 +951,27 @@ struct hdr_test_t
 	"Via", "v",
 	"SIP/2.0/XYZ host" ";" GENERIC_PARAM,
 	&hdr_test_via
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1]",
+	&hdr_test_via_ipv6_1
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1]:5061",
+	&hdr_test_via_ipv6_2
+    },
+
+    {
+	/* Via with IPv6 */
+	"Via", "v",
+	"SIP/2.0/UDP [::1];rport=5061;received=::2",
+	&hdr_test_via_ipv6_3
     }
 };
 
@@ -1111,7 +1136,7 @@ static int test_simple_addr_spec(pjsip_uri *uri)
 }
 
 /* 
-#define PARAM_CHAR	    "[]/:&+$"
+#define PARAM_CHAR	    "][/:&+$"
 #define SIMPLE_ADDR_SPEC    "sip:host"
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
 #define NAME_ADDR	    "<" ADDR_SPEC ">"
@@ -1433,6 +1458,74 @@ static int hdr_test_via(pjsip_hdr *h)
 }
 
 
+/*
+    "SIP/2.0/UDP [::1]"
+ */
+static int hdr_test_via_ipv6_1(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2610;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2615;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2620;
+
+    if (hdr->sent_by.port != 0)
+	return -2630;
+
+    return 0;
+}
+
+/* "SIP/2.0/UDP [::1]:5061" */
+static int hdr_test_via_ipv6_2(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2710;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2715;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2720;
+
+    if (hdr->sent_by.port != 5061)
+	return -2730;
+
+    return 0;
+}
+
+/* "SIP/2.0/UDP [::1];rport=5061;received=::2" */
+static int hdr_test_via_ipv6_3(pjsip_hdr *h)
+{
+    pjsip_via_hdr *hdr = (pjsip_via_hdr*)h;
+
+    if (h->type != PJSIP_H_VIA)
+	return -2810;
+
+    if (pj_strcmp2(&hdr->transport, "UDP"))
+	return -2815;
+
+    if (pj_strcmp2(&hdr->sent_by.host, "::1"))
+	return -2820;
+
+    if (hdr->sent_by.port != 0)
+	return -2830;
+
+    if (pj_strcmp2(&hdr->recvd_param, "::2"))
+	return -2840;
+
+    if (hdr->rport_param != 5061)
+	return -2850;
+
+    return 0;
+}
+
 static int hdr_test(void)
 {
     unsigned i;
@@ -1533,14 +1626,15 @@ int msg_test(void)
     char desc[250];
     pj_status_t status;
 
-    status = simple_test();
-    if (status != PJ_SUCCESS)
-	return status;
-
     status = hdr_test();
     if (status != 0)
 	return status;
 
+    status = simple_test();
+    if (status != PJ_SUCCESS)
+	return status;
+
+#if INCLUDE_BENCHMARKS
     for (i=0; i<COUNT; ++i) {
 	PJ_LOG(3,(THIS_FILE, "  benchmarking (%d of %d)..", i+1, COUNT));
 	status = msg_benchmark(&run[i].detect, &run[i].parse, &run[i].print);
@@ -1608,6 +1702,7 @@ int msg_test(void)
 		"SIP messages printed per second). "
 		"The value is derived from msg-print-per-sec above.");
 
+#endif	/* INCLUDE_BENCHMARKS */
 
     return PJ_SUCCESS;
 }

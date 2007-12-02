@@ -1773,8 +1773,14 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     pj_memcpy(buf, hdr->transport.ptr, hdr->transport.slen);
     buf += hdr->transport.slen;
     *buf++ = ' ';
-    pj_memcpy(buf, hdr->sent_by.host.ptr, hdr->sent_by.host.slen);
-    buf += hdr->sent_by.host.slen;
+
+    /* Check if host contains IPv6 */
+    if (pj_memchr(hdr->sent_by.host.ptr, ':', hdr->sent_by.host.slen)) {
+	copy_advance_pair_quote_cond(buf, "", 0, hdr->sent_by.host, '[', ']');
+    } else {
+	copy_advance_check(buf, hdr->sent_by.host);
+    }
+
     if (hdr->sent_by.port != 0) {
 	*buf++ = ':';
 	printed = pj_utoa(hdr->sent_by.port, buf);
@@ -1803,7 +1809,16 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     }
 
 
-    copy_advance_pair(buf, ";maddr=", 7, hdr->maddr_param);
+    if (hdr->maddr_param.slen) {
+	/* Detect IPv6 IP address */
+	if (pj_memchr(hdr->maddr_param.ptr, ':', hdr->maddr_param.slen)) {
+	    copy_advance_pair_quote_cond(buf, ";maddr=", 7, hdr->maddr_param,
+				         '[', ']');
+	} else {
+	    copy_advance_pair(buf, ";maddr=", 7, hdr->maddr_param);
+	}
+    }
+
     copy_advance_pair(buf, ";received=", 10, hdr->recvd_param);
     copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
     

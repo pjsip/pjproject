@@ -1077,6 +1077,14 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 		    pvalue->ptr++;
 		    pvalue->slen -= 2;
 		}
+	    } else if (*scanner->curptr == '[') {
+		/* pvalue can be a quoted IPv6; in this case, the
+		 * '[' and ']' quote characters are to be removed
+		 * from the pvalue. 
+		 */
+		pj_scan_get_char(scanner);
+		pj_scan_get_until_ch(scanner, ']', pvalue);
+		pj_scan_get_char(scanner);
 	    } else if(pj_cis_match(spec, *scanner->curptr)) {
 		parser_get_and_unescape(scanner, pool, spec, esc_spec, pvalue);
 	    }
@@ -1157,11 +1165,27 @@ static void int_parse_hparam( pj_scanner *scanner, pj_pool_t *pool,
     }
 }
 
+/* Parse host part:
+ *   host =  hostname / IPv4address / IPv6reference
+ */
+static void int_parse_host(pj_scanner *scanner, pj_str_t *host)
+{
+    if (*scanner->curptr == '[') {
+	/* Note: the '[' and ']' characters are removed from the host */
+	pj_scan_get_char(scanner);
+	pj_scan_get_until_ch(scanner, ']', host);
+	pj_scan_get_char(scanner);
+    } else {
+	pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
+    }
+}
+
 /* Parse host:port in URI. */
 static void int_parse_uri_host_port( pj_scanner *scanner, 
 				     pj_str_t *host, int *p_port)
 {
-    pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
+    int_parse_host(scanner, host);
+
     /* RFC3261 section 19.1.2: host don't need to be unescaped */
     if (*scanner->curptr == ':') {
 	pj_str_t port;
@@ -1842,7 +1866,14 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
     while ( *scanner->curptr == ';' ) {
 	pj_str_t pname, pvalue;
 
-	int_parse_param( scanner, pool, &pname, &pvalue, 0);
+	//Parse with PARAM_CHAR instead, to allow IPv6
+	//int_parse_param( scanner, pool, &pname, &pvalue, 0);
+	/* Get ';' character */
+	pj_scan_get_char(scanner);
+
+	parse_param_imp(scanner, pool, &pname, &pvalue, 
+			&pconst.pjsip_PARAM_CHAR_SPEC,
+			&pconst.pjsip_PARAM_CHAR_SPEC_ESC, 0);
 
 	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
@@ -1983,7 +2014,7 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	pj_scan_advance_n( scanner, 8, 1);
 
 	pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->transport);
-	pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, &hdr->sent_by.host);
+	int_parse_host(scanner, &hdr->sent_by.host);
 
 	if (*scanner->curptr==':') {
 	    pj_str_t digit;

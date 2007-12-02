@@ -41,6 +41,8 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_TSX_GROUP	    1
 #define INCLUDE_INV_GROUP	    1
 
+#define INCLUDE_BENCHMARKS	    1
+
 /*
  * Include tests that normally would fail under certain gcc
  * optimization levels.

@@ -325,6 +325,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 {
     pjsua_acc_config cfg;
     pjsua_transport_data *t = &pjsua_var.tpdata[tid];
+    const char *beginquote, *endquote;
+    char transport_param[32];
     char uri[PJSIP_MAX_URL_SIZE];
 
     /* ID must be valid */
@@ -339,13 +341,32 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     /* Lower the priority of local account */
     --cfg.priority;
 
+    /* Enclose IPv6 address in square brackets */
+    if (t->type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if ((t->type & PJSIP_TRANSPORT_UDP) == 0) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(t->type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
     /* Build URI for the account */
     pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,
-		     "<sip:%.*s:%d;transport=%s>", 
+		     "<sip:%s%.*s%s:%d%s>", 
+		     beginquote,
 		     (int)t->local_name.host.slen,
 		     t->local_name.host.ptr,
+		     endquote,
 		     t->local_name.port,
-		     pjsip_transport_get_type_name(t->type));
+		     transport_param);
 
     cfg.id = pj_str(uri);
     
@@ -1361,6 +1382,9 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     unsigned flag;
     int secure;
     int local_port;
+    const char *beginquote, *endquote;
+    char transport_param[32];
+
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
@@ -1405,6 +1429,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
+    /* If destination URI specifies IPv6, then set transport type
+     * to use IPv6 as well.
+     */
+    if (pj_strchr(suri, ':'))
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
@@ -1418,10 +1448,28 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Enclose IPv6 address in square brackets */
+    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if ((tp_type & PJSIP_TRANSPORT_UDP) == 0) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(tp_type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
+
     /* Create the contact header */
     contact->ptr = (char*)pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1429,10 +1477,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
+				     beginquote,
 				     (int)local_addr.slen,
 				     local_addr.ptr,
+				     endquote,
 				     local_port,
-				     pjsip_transport_get_type_name(tp_type));
+				     transport_param);
 
     return PJ_SUCCESS;
 }
@@ -1461,6 +1511,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     unsigned flag;
     int secure;
     int local_port;
+    const char *beginquote, *endquote;
+    char transport_param[32];
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
@@ -1508,9 +1560,15 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 	tp_type = PJSIP_TRANSPORT_UDP;
     } else
 	tp_type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
-    
+
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
+
+    /* If destination URI specifies IPv6, then set transport type
+     * to use IPv6 as well.
+     */
+    if (pj_strchr(&sip_uri->host, ':'))
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
@@ -1525,10 +1583,28 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Enclose IPv6 address in square brackets */
+    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+	beginquote = "[";
+	endquote = "]";
+    } else {
+	beginquote = endquote = "";
+    }
+
+    /* Don't add transport parameter if it's UDP */
+    if ((tp_type & PJSIP_TRANSPORT_UDP) == 0) {
+	pj_ansi_snprintf(transport_param, sizeof(transport_param),
+		         ";transport=%s",
+			 pjsip_transport_get_type_name(tp_type));
+    } else {
+	transport_param[0] = '\0';
+    }
+
+
     /* Create the contact header */
     contact->ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%.*s:%d;transport=%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1536,10 +1612,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
+				     beginquote,
 				     (int)local_addr.slen,
 				     local_addr.ptr,
+				     endquote,
 				     local_port,
-				     pjsip_transport_get_type_name(tp_type));
+				     transport_param);
 
     return PJ_SUCCESS;
 }

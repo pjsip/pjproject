@@ -76,7 +76,8 @@ static pjsip_uri *create_uri31( pj_pool_t *pool );
 static pjsip_uri *create_uri32( pj_pool_t *pool );
 static pjsip_uri *create_uri33( pj_pool_t *pool );
 static pjsip_uri *create_uri34( pj_pool_t *pool );
-//static pjsip_uri *create_uri35( pj_pool_t *pool );
+static pjsip_uri *create_uri35( pj_pool_t *pool );
+static pjsip_uri *create_uri36( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
 
 #define ERR_NOT_EQUAL	-1001
@@ -318,7 +319,21 @@ struct uri_test
 	&create_uri34,
 	"tel:911;p1=p1;p2=p2"
     },
-    
+    {
+	/* 35: IPv6 in host and maddr parameter */
+	PJ_SUCCESS,
+	"sip:user@[::1];maddr=[::01]",
+	&create_uri35,
+	"sip:user@[::1];maddr=[::01]"
+    },
+    {
+	/* 36: IPv6 in host and maddr, without username */
+	PJ_SUCCESS,
+	"sip:[::1];maddr=[::01]",
+	&create_uri36,
+	"sip:[::1];maddr=[::01]"
+    }
+
 };
 
 static pjsip_uri *create_uri0(pj_pool_t *pool)
@@ -669,6 +684,27 @@ static pjsip_uri *create_uri34(pj_pool_t *pool)
     return (pjsip_uri*)uri;    
 }
 
+/* "sip:user@[::1];maddr=[::01]" */
+static pjsip_uri *create_uri35( pj_pool_t *pool )
+{
+    pjsip_sip_uri *url;
+    url = pjsip_sip_uri_create(pool, 0);
+    url->user = pj_str("user");
+    url->host = pj_str("::1");
+    url->maddr_param = pj_str("::01");
+    return (pjsip_uri*)url;
+}
+
+/* "sip:[::1];maddr=[::01]" */
+static pjsip_uri *create_uri36( pj_pool_t *pool )
+{
+    pjsip_sip_uri *url;
+    url = pjsip_sip_uri_create(pool, 0);
+    url->host = pj_str("::1");
+    url->maddr_param = pj_str("::01");
+    return (pjsip_uri*)url;
+
+}
 
 static pjsip_uri *create_dummy(pj_pool_t *pool)
 {
@@ -824,6 +860,7 @@ static int simple_uri_test(void)
     return 0;
 }
 
+#if INCLUDE_BENCHMARKS
 static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
 {
     unsigned i, loop;
@@ -909,7 +946,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
 on_return:
     return status;
 }
-
+#endif	/* INCLUDE_BENCHMARKS */
 
 /*****************************************************************************/
 
@@ -929,6 +966,7 @@ int uri_test(void)
     if (status != PJ_SUCCESS)
 	return status;
 
+#if INCLUDE_BENCHMARKS
     for (i=0; i<COUNT; ++i) {
 	PJ_LOG(3,(THIS_FILE, "  benchmarking (%d of %d)...", i+1, COUNT));
 	status = uri_benchmark(&run[i].parse, &run[i].print, &run[i].cmp);
@@ -992,6 +1030,8 @@ int uri_test(void)
 			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
 
     report_ival("uri-cmp-per-sec", max, "URI/sec", desc);
+
+#endif	/* INCLUDE_BENCHMARKS */
 
     return PJ_SUCCESS;
 }

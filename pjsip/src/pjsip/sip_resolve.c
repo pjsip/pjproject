@@ -225,7 +225,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      */
     if (ip_addr_ver || resolver->res == NULL) {
 
-	pj_in_addr ip_addr;
+	char ip_addr[PJ_INET6_ADDRSTRLEN];
 	int af;
 	pj_addrinfo ai;
 	unsigned count;
@@ -271,22 +271,23 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	}
 
 	/* Call the callback. */
-	ip_addr = ((pj_sockaddr_in*)&svr_addr.entry[0].addr)->sin_addr;
 	PJ_LOG(5,(THIS_FILE, 
 		  "Target '%.*s:%d' type=%s resolved to "
-		  "'%s:%d' type=%s",
+		  "'%s:%d' type=%s (%s)",
 		  (int)target->addr.host.slen,
 		  target->addr.host.ptr,
 		  target->addr.port,
 		  pjsip_transport_get_type_name(target->type),
-		  pj_inet_ntoa(ip_addr),
+		  pj_inet_ntop2(af, pj_sockaddr_get_addr(&svr_addr.entry[0].addr),
+				ip_addr, sizeof(ip_addr)),
 		  srv_port,
-		  pjsip_transport_get_type_name(type)));
+		  pjsip_transport_get_type_name(type),
+		  pjsip_transport_get_type_desc(type)));
 	svr_addr.count = 1;
 	svr_addr.entry[0].priority = 0;
 	svr_addr.entry[0].weight = 0;
 	svr_addr.entry[0].type = type;
-	svr_addr.entry[0].addr_len = sizeof(pj_sockaddr_in);
+	svr_addr.entry[0].addr_len = pj_sockaddr_get_len(&svr_addr.entry[0].addr);
 	(*cb)(status, token, &svr_addr);
 
 	/* Done. */
