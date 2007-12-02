@@ -47,6 +47,18 @@ PJ_DEF(pj_in_addr) pj_inet_addr2(const char *cp)
 }
 
 /*
+ * Get text representation.
+ */
+PJ_DEF(char*) pj_inet_ntop2( int af, const void *src,
+			     char *dst, int size)
+{
+    pj_status_t status;
+
+    status = pj_inet_ntop(af, src, dst, size);
+    return (status==PJ_SUCCESS)? dst : NULL;
+}
+
+/*
  * Set the IP address of an IP socket address from string address, 
  * with resolving the host if necessary. The string address may be in a
  * standard numbers and dots notation or may be a hostname. If hostname
@@ -253,6 +265,18 @@ PJ_DEF(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr)
 }
 
 /*
+ * Get socket address length.
+ */
+PJ_DEF(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr)
+{
+    const pj_sockaddr *a = (const pj_sockaddr*) addr;
+    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+    return a->addr.sa_family == PJ_AF_INET6 ?
+	    sizeof(pj_sockaddr_in6) : sizeof(pj_sockaddr_in);
+}
+
+/*
  * Set port number of pj_sockaddr_in
  */
 PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
@@ -269,8 +293,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr,
 {
     int af = addr->addr.sa_family;
 
-    PJ_ASSERT_ON_FAIL(af == PJ_AF_INET || af == PJ_AF_INET6, 
-		      PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
 
     if (af == PJ_AF_INET6)
 	addr->ipv6.sin6_port = pj_htons(hostport);

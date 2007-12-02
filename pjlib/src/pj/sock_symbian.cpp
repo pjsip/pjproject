@@ -524,7 +524,7 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(sock != 0, PJ_EINVAL);
-    PJ_ASSERT_RETURN(addr && len >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr && len>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     // Convert PJLIB's pj_sockaddr into Symbian's TInetAddr
     TInetAddr inetAddr;
@@ -675,7 +675,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     RSocket &rSock = pjSock->Socket();
 
     // Only supports AF_INET for now
-    PJ_ASSERT_RETURN(tolen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    PJ_ASSERT_RETURN(tolen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     TInetAddr inetAddr;
     status = PjSymbianOS::pj2Addr(*(pj_sockaddr*)to, tolen, inetAddr);

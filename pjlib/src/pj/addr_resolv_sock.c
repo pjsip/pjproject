@@ -61,7 +61,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 {
 #if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
     char nodecopy[PJ_MAX_HOSTNAME];
-    struct addrinfo hint, *res;
+    struct addrinfo hint, *res, *orig_res;
     unsigned i;
     int rc;
 
@@ -84,18 +84,22 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     if (rc != 0)
 	return PJ_ERESOLVE;
 
+    orig_res = res;
+
     /* Enumerate each item in the result */
     for (i=0; i<*count && res; res=res->ai_next) {
-	int len;
-
 	/* Ignore unwanted address families */
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
 	    continue;
 
 	/* Store canonical name (possibly truncating the name) */
-	pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
-		        sizeof(ai[i].ai_canonname));
-	ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
+	if (res->ai_canonname) {
+	    pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
+			    sizeof(ai[i].ai_canonname));
+	    ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
+	} else {
+	    pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+	}
 
 	/* Store address */
 	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
@@ -106,6 +110,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     }
 
     *count = i;
+
+    freeaddrinfo(orig_res);
 
     /* Done */
     return PJ_SUCCESS;

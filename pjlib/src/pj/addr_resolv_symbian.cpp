@@ -91,7 +91,7 @@ static pj_status_t getaddrinfo_by_af(int af, const pj_str_t *name,
 	int addrlen;
 
 	// Ignore if this is not the same address family
-	if (inetAddr.Family() != af) {
+	if (inetAddr.Family() != (unsigned)af) {
 	    resv.Next(nameEntry, reqStatus);
 	    User::WaitForRequest(reqStatus);
 	    continue;

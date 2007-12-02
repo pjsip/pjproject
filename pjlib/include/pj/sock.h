@@ -608,10 +608,30 @@ PJ_DECL(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst);
  *		enough to hold the text string (PJ_INET_ADDRSTRLEN characters
  *		for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
  *
- * @return	PJ_SUCCESS if conversion was successful..
+ * @return	PJ_SUCCESS if conversion was successful.
  */
 PJ_DECL(pj_status_t) pj_inet_ntop(int af, const void *src,
 				  char *dst, int size);
+
+/**
+ * Converts numeric address into its text string representation.
+ *
+ * @param af	Specify the family of the address. This can be PJ_AF_INET
+ *		or PJ_AF_INET6.
+ * @param src	Points to a buffer holding an IPv4 address if the af argument
+ *		is PJ_AF_INET, or an IPv6 address if the af argument is
+ *		PJ_AF_INET6; the address must be in network byte order.  
+ * @param dst	Points to a buffer where the function stores the resulting
+ *		text string; it shall not be NULL.  
+ * @param size	Specifies the size of this buffer, which shall be large 
+ *		enough to hold the text string (PJ_INET_ADDRSTRLEN characters
+ *		for IPv4, PJ_INET6_ADDRSTRLEN characters for IPv6).
+ *
+ * @return	The address string or NULL if failed.
+ */
+PJ_DECL(char*) pj_inet_ntop2(int af, const void *src,
+			     char *dst, int size);
+
 
 /**
  * Convert address string with numbers and dots to binary IP address.
@@ -707,9 +727,20 @@ PJ_DECL(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr);
  * 
  * @param addr	    Socket address.
  *
- * @return	    Port number, in host byte order.
+ * @return	    Length in bytes.
  */
 PJ_DECL(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr);
+
+/**
+ * Get the socket address length, based on its address
+ * family. For PJ_AF_INET, the length will be sizeof(pj_sockaddr_in), and
+ * for PJ_AF_INET6, the length will be sizeof(pj_sockaddr_in6).
+ * 
+ * @param addr	    Socket address.
+ *
+ * @return	    Length in bytes.
+ */
+PJ_DECL(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr);
 
 /**
  * Get the IP address of an IPv4 socket address.

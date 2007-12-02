@@ -244,12 +244,12 @@ public:
 	pj_bzero(&pj_addr, sizeof(pj_sockaddr));
 	pj_addr.addr.sa_family = (pj_uint16_t)sym_addr.Family();
 	if (pj_addr.addr.sa_family == PJ_AF_INET) {
-	    PJ_ASSERT_RETURN(*addr_len >= sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
+	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
 	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
 	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
 	    *addr_len = sizeof(pj_sockaddr_in);
 	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
-	    PJ_ASSERT_RETURN(*addr_len >= sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
+	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
 	    const TIp6Addr & ip6 = sym_addr.Ip6Address();
 	    pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
 	    pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
@@ -271,14 +271,14 @@ public:
 			       	      TInetAddr & sym_addr)
     {
     	if (pj_addr.addr.sa_family == PJ_AF_INET) {
-    	    PJ_ASSERT_RETURN(addrlen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    	    PJ_ASSERT_RETURN(addrlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 	    sym_addr.Init(KAfInet);
     	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
     	    sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
     	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
     	    TIp6Addr ip6;
     	
-    	    PJ_ASSERT_RETURN(addrlen >= sizeof(pj_sockaddr_in6), PJ_EINVAL);
+    	    PJ_ASSERT_RETURN(addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
     	    pj_memcpy(ip6.u.iAddr8, &pj_addr.ipv6.sin6_addr, 16);
     	    sym_addr.Init(KAfInet6);
     	    sym_addr.SetAddress(ip6);

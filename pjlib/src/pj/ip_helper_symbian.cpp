@@ -59,7 +59,7 @@ static pj_status_t rsock_enum_interface(int af,
     	TInetAddr &iAddress = info().iAddress;
     	int namelen;
     	
-    	if (iAddress.Family() != af) {
+    	if (iAddress.Family() != (unsigned)af) {
     	    continue;
     	}
     	
@@ -76,11 +76,6 @@ static pj_status_t rsock_enum_interface(int af,
     *p_cnt = i;
     
     return PJ_SUCCESS;
-    
-on_error:
-    rSock.Close();
-    *p_cnt = 0;
-    return PJ_RETURN_OS_ERROR(rc);
 }
 					
 /*

@@ -68,6 +68,7 @@
 #   endif
 
 #   undef s_addr
+#   define PJ_SOCK_HAS_GETADDRINFO  1
 #endif	/* _MSC_VER */
 
 

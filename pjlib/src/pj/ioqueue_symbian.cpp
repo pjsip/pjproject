@@ -701,9 +701,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     if (addr || addrlen) {
     	PJ_ASSERT_RETURN(addr && addrlen && *addrlen, PJ_EINVAL);
     	if (sock->GetAf() == PJ_AF_INET) {
-    	    PJ_ASSERT_RETURN(*addrlen >= sizeof(pj_sockaddr_in), PJ_EINVAL);
+    	    PJ_ASSERT_RETURN(*addrlen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
     	} else if (sock->GetAf() == PJ_AF_INET6) {
-    	    PJ_ASSERT_RETURN(*addrlen >= sizeof(pj_sockaddr_in6), PJ_EINVAL);
+    	    PJ_ASSERT_RETURN(*addrlen>=(int)sizeof(pj_sockaddr_in6), PJ_EINVAL);
     	}
     }
     
