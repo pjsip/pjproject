@@ -22,30 +22,97 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 #include <pj/compat/socket.h>
+#include <pj/sock.h>
 
-static pj_status_t dummy_enum_ip_interface(int af,
-					   unsigned *p_cnt,
-					   pj_sockaddr ifs[])
+/* Set to 1 to enable tracing */
+#if 0
+#   include <pj/log.h>
+#   define THIS_FILE	"ip_helper_generic.c"
+#   define TRACE_(exp)	PJ_LOG(5,exp)
+    static const char *get_os_errmsg(void)
+    {
+	static char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(pj_get_os_error(), errmsg, sizeof(errmsg));
+	return errmsg;
+    }
+    static const char *get_addr(void *addr)
+    {
+	static char txt[PJ_INET6_ADDRSTRLEN];
+	struct sockaddr *ad = (struct sockaddr*)addr;
+	if (ad->sa_family != PJ_AF_INET && ad->sa_family != PJ_AF_INET6)
+	    return "?";
+	return pj_inet_ntop2(ad->sa_family, pj_sockaddr_get_addr(ad), 
+			     txt, sizeof(txt));
+    }
+#else
+#   define TRACE_(exp)
+#endif
+
+
+#if 0
+    /* dummy */
+
+#elif defined(PJ_HAS_IFADDRS_H) && PJ_HAS_IFADDRS_H != 0
+/* Using getifaddrs() is preferred since it can work with both IPv4 and IPv6 */
+static pj_status_t if_enum_by_af(int af,
+				 unsigned *p_cnt,
+				 pj_sockaddr ifs[])
 {
-    pj_status_t status;
+    struct ifaddrs *ifap = NULL, *it;
+    unsigned max;
 
-    PJ_ASSERT_RETURN(p_cnt && *p_cnt > 0 && ifs, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+    
+    TRACE_((THIS_FILE, "Starting interface enum with getifaddrs() for af=%d",
+	    af));
 
-    pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
+    if (getifaddrs(&ifap) != 0) {
+	TRACE_((THIS_FILE, " getifarrds() failed: %s", get_os_errmsg()));
+	return PJ_RETURN_OS_ERROR(pj_get_netos_error());
+    }
 
-    /* Just get one default route */
-    status = pj_getdefaultipinterface(af, &ifs[0]);
-    if (status != PJ_SUCCESS)
-	return status;
+    it = ifap;
+    max = *p_cnt;
+    *p_cnt = 0;
+    for (; it!=NULL && *p_cnt < max; it = it->ifa_next) {
+	struct sockaddr *ad = it->ifa_addr;
 
-    *p_cnt = 1;
-    return PJ_SUCCESS;
+	TRACE_((THIS_FILE, " checking %s", it->ifa_name));
+
+	if ((it->ifa_flags & IFF_UP)==0) {
+	    TRACE_((THIS_FILE, "  interface is down"));
+	    continue; /* Skip when interface is down */
+	}
+
+	if (it->ifa_flags & IFF_LOOPBACK) {
+	    TRACE_((THIS_FILE, "  loopback interface"));
+	    continue; /* Skip loopback interface */
+	}
+
+	if (ad->sa_family != af) {
+	    TRACE_((THIS_FILE, "  address %s ignored (af=%d)", 
+		    get_addr(ad), ad->sa_family));
+	    continue; /* Skip when interface is down */
+	}
+
+	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+		get_addr(ad), ad->sa_family, *p_cnt));
+
+	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
+	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
+	(*p_cnt)++;
+    }
+
+    freeifaddrs(ifap);
+    TRACE_((THIS_FILE, "done, found %d address(es)", *p_cnt));
+    return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
-#ifdef SIOCGIFCONF
-static pj_status_t sock_enum_ip_interface(int af,
-					  unsigned *p_cnt,
-					  pj_sockaddr ifs[])
+#elif defined(SIOCGIFCONF)
+/* Note: this does not work with IPv6 */
+static pj_status_t if_enum_by_af(int af,
+				 unsigned *p_cnt,
+				 pj_sockaddr ifs[])
 {
     pj_sock_t sock;
     char buf[512];
@@ -56,6 +123,9 @@ static pj_status_t sock_enum_ip_interface(int af,
 
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
     
+    TRACE_((THIS_FILE, "Starting interface enum with SIOCGIFCONF for af=%d",
+	    af));
+
     status = pj_sock_socket(af, PJ_SOCK_DGRAM, 0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
@@ -66,6 +136,7 @@ static pj_status_t sock_enum_ip_interface(int af,
 
     if (ioctl(sock, SIOCGIFCONF, &ifc) < 0) {
 	int oserr = pj_get_netos_error();
+	TRACE_((THIS_FILE, " ioctl(SIOCGIFCONF) failed: %s", get_os_errmsg()));
 	pj_sock_close(sock);
 	return PJ_RETURN_OS_ERROR(oserr);
     }
@@ -78,18 +149,141 @@ static pj_status_t sock_enum_ip_interface(int af,
     count = ifc.ifc_len / sizeof(struct ifreq);
     if (count > *p_cnt)
 	count = *p_cnt;
-    else
-	*p_cnt = count;
+
+    *p_cnt = 0;
     for (i=0; i<count; ++i) {
 	struct ifreq *itf = &ifr[i];
 	struct sockaddr *ad = &itf->ifr_addr;
 	
-	ifs[i].addr.sa_family = ad->sa_family;
-	pj_memcpy(pj_sockaddr_get_addr(&ifs[i]),
-		  pj_sockaddr_get_addr(ad),
-		  pj_sockaddr_get_addr_len(ad));
+	TRACE_((THIS_FILE, " checking interface %s", itf->ifr_name));
+
+	/* Skip address with different family */
+	if (ad->sa_family != af) {
+	    TRACE_((THIS_FILE, "  address %s (af=%d) ignored",
+		    get_addr(ad), (int)ad->sa_family));
+	    continue;
+	}
+
+	if ((itf->ifr_flags & IFF_UP)==0) {
+	    TRACE_((THIS_FILE, "  interface is down"));
+	    continue; /* Skip when interface is down */
+	}
+
+	if (itf->ifr_flags & IFF_LOOPBACK) {
+	    TRACE_((THIS_FILE, "  loopback interface"));
+	    continue; /* Skip loopback interface */
+	}
+
+	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+		get_addr(ad), ad->sa_family, *p_cnt));
+
+	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
+	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
+	(*p_cnt)++;
     }
 
+    TRACE_((THIS_FILE, "done, found %d address(es)", *p_cnt));
+    return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
+}
+
+#elif defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
+/* Note: this does not work with IPv6 */
+static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
+{
+    struct if_nameindex *if_list;
+    struct ifreq ifreq;
+    pj_sock_t sock;
+    unsigned i, max_count;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6, PJ_EINVAL);
+
+    TRACE_((THIS_FILE, "Starting if_nameindex() for af=%d", af));
+
+    status = pj_sock_socket(af, PJ_SOCK_DGRAM, 0, &sock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if_list = if_nameindex();
+    if (if_list == NULL)
+	return PJ_ENOTFOUND;
+
+    max_count = *p_cnt;
+    *p_cnt = 0;
+    for (i=0; if_list[i].if_index && *p_cnt<max_count; ++i) {
+	int rc;
+
+	strncpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
+
+	TRACE_((THIS_FILE, " checking interface %s", ifreq.ifr_name));
+
+	if ((rc=ioctl(sock, SIOCGIFFLAGS, &ifreq)) != 0) {
+	    TRACE_((THIS_FILE, "  ioctl(SIOCGIFFLAGS) failed: %s",
+		    get_os_errmsg()));
+	    continue;	/* Failed to get flags, continue */
+	}
+
+	if ((ifreq.ifr_flags & IFF_UP)==0) {
+	    TRACE_((THIS_FILE, "  interface is down"));
+	    continue; /* Skip when interface is down */
+	}
+
+	if (ifreq.ifr_flags & IFF_LOOPBACK) {
+	    TRACE_((THIS_FILE, "  loopback interface"));
+	    continue; /* Skip loopback interface */
+	}
+
+	/* Note: SIOCGIFADDR does not work for IPv6! */
+	if ((rc=ioctl(sock, SIOCGIFADDR, &ifreq)) != 0) {
+	    TRACE_((THIS_FILE, "  ioctl(SIOCGIFADDR) failed: %s",
+		    get_os_errmsg()));
+	    continue;	/* Failed to get address, continue */
+	}
+
+	if (ifreq.ifr_addr.sa_family != af) {
+	    TRACE_((THIS_FILE, "  address %s family %d ignored", 
+			       get_addr(&ifreq.ifr_addr),
+			       ifreq.ifr_addr.sa_family));
+	    continue;	/* Not address family that we want, continue */
+	}
+
+	/* Got an address ! */
+	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
+		get_addr(&ifreq.ifr_addr), ifreq.ifr_addr.sa_family, *p_cnt));
+
+	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
+	pj_memcpy(&ifs[*p_cnt], &ifreq.ifr_addr, 
+		  pj_sockaddr_get_len(&ifreq.ifr_addr));
+	(*p_cnt)++;
+    }
+
+    if_freenameindex(if_list);
+    pj_sock_close(sock);
+
+    TRACE_((THIS_FILE, "done, found %d address(es)", *p_cnt));
+    return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
+}
+
+#else
+static pj_status_t if_enum_by_af(int af,
+				 unsigned *p_cnt,
+				 pj_sockaddr ifs[])
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(p_cnt && *p_cnt > 0 && ifs, PJ_EINVAL);
+
+    PJ_UNUSED_ARG(&get_addr);
+    PJ_UNUSED_ARG(&get_os_errmsg);
+
+    pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
+
+    /* Just get one default route */
+    status = pj_getdefaultipinterface(af, &ifs[0]);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    *p_cnt = 1;
     return PJ_SUCCESS;
 }
 #endif /* SIOCGIFCONF */
@@ -101,11 +295,31 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
 					 unsigned *p_cnt,
 					 pj_sockaddr ifs[])
 {
-#ifdef SIOCGIFCONF
-    if (sock_enum_ip_interface(af, p_cnt, ifs) == PJ_SUCCESS)
-	return PJ_SUCCESS;
-#endif
-    return dummy_enum_ip_interface(af, p_cnt, ifs);
+    unsigned start;
+    pj_status_t status;
+
+    start = 0;
+    if (af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) {
+	unsigned max = *p_cnt;
+	status = if_enum_by_af(PJ_AF_INET6, &max, &ifs[start]);
+	if (status == PJ_SUCCESS) {
+	    start += max;
+	    (*p_cnt) -= max;
+	}
+    }
+
+    if (af==PJ_AF_INET || af==PJ_AF_UNSPEC) {
+	unsigned max = *p_cnt;
+	status = if_enum_by_af(PJ_AF_INET, &max, &ifs[start]);
+	if (status == PJ_SUCCESS) {
+	    start += max;
+	    (*p_cnt) -= max;
+	}
+    }
+
+    *p_cnt = start;
+
+    return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
 /*

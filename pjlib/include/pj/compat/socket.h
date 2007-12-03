@@ -101,6 +101,11 @@
 #   include <net/if.h>
 #endif
 
+#if defined(PJ_HAS_IFADDRS_H) && PJ_HAS_IFADDRS_H != 0
+/* Interface enum with getifaddrs() which works with IPv6 */
+#   include <ifaddrs.h>
+#endif
+
 #if defined(PJ_HAS_ARPA_INET_H) && PJ_HAS_ARPA_INET_H != 0
 #  include <arpa/inet.h>
 #endif
