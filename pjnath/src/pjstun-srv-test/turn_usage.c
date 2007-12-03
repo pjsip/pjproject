@@ -769,7 +769,7 @@ static pj_status_t client_create_relay(struct turn_client *client)
     }
 
     if (client->alloc_addr.sin_addr.s_addr == 0) {
-	status = pj_gethostip(&client->alloc_addr.sin_addr);
+	status = pj_gethostip(pj_AF_INET(), (pj_sockaddr*)&client->alloc_addr.sin_addr);
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(client->sock);
 	    client->sock = PJ_INVALID_SOCKET;

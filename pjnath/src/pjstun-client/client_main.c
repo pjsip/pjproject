@@ -231,7 +231,7 @@ static int worker_thread(void *unused)
 
 static int init()
 {
-    pj_sockaddr_in addr;
+    pj_sockaddr addr;
     pj_stun_session_cb stun_cb;
     int len;
     pj_status_t status;
@@ -282,10 +282,10 @@ static int init()
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &g.sock);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_sockaddr_in_init(&addr, NULL, 0);
+    status = pj_sockaddr_in_init(&addr.ipv4, NULL, 0);
     pj_assert(status == PJ_SUCCESS);
 
-    addr.sin_port = pj_htons((pj_uint16_t)LOCAL_PORT);
+    addr.ipv4.sin_port = pj_htons((pj_uint16_t)LOCAL_PORT);
     status = pj_sock_bind(g.sock, &addr, sizeof(addr));
     pj_assert(status == PJ_SUCCESS);
 
@@ -293,12 +293,12 @@ static int init()
     status = pj_sock_getsockname(g.sock, &addr, &len);
     pj_assert(status == PJ_SUCCESS);
 
-    PJ_LOG(3,(THIS_FILE, "Listening on port %d", (int)pj_ntohs(addr.sin_port)));
+    PJ_LOG(3,(THIS_FILE, "Listening on port %d", (int)pj_ntohs(addr.ipv4.sin_port)));
 
     len = sizeof(g.peer_addr);
     status = pj_sock_getsockname(g.peer_sock, &g.peer_addr, &len);
     if (g.peer_addr.sin_addr.s_addr == 0)
-	pj_gethostip(&g.peer_addr.sin_addr);
+	pj_gethostip(pj_AF_INET(), (pj_sockaddr*)&g.peer_addr.sin_addr);
 
     PJ_LOG(3,(THIS_FILE, "Peer is on port %d", (int)pj_ntohs(g.peer_addr.sin_port)));
 
@@ -549,7 +549,7 @@ static pj_status_t parse_addr(const char *input,
     const char *pos;
     pj_str_t ip;
     pj_uint16_t port;
-    pj_sockaddr_in tmp_addr;
+    pj_sockaddr tmp_addr;
 
     pos = pj_ansi_strchr(input, ':');
     if (pos==NULL) {
@@ -566,12 +566,12 @@ static pj_status_t parse_addr(const char *input,
 	return -1;
     }
 
-    if (pj_sockaddr_in_init(&tmp_addr, &ip, port)!=PJ_SUCCESS) {
+    if (pj_sockaddr_in_init(&tmp_addr.ipv4, &ip, port)!=PJ_SUCCESS) {
 	puts("Invalid address");
 	return -1;
     }
 
-    pj_memcpy(addr, &tmp_addr, sizeof(tmp_addr));
+    pj_memcpy(addr, &tmp_addr, sizeof(pj_sockaddr_in));
 
     return PJ_SUCCESS;
 }

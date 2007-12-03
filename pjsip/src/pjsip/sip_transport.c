@@ -38,6 +38,15 @@
 
 #if 0
 #   define TRACE_(x)	PJ_LOG(5,x)
+
+static const char *addr_string(const pj_sockaddr_t *addr)
+{
+    static char str[PJ_INET6_ADDRSTRLEN];
+    pj_inet_ntop(((const pj_sockaddr*)addr)->addr.sa_family, 
+		 pj_sockaddr_get_addr(addr),
+		 str, sizeof(str));
+    return str;
+}
 #else
 #   define TRACE_(x)
 #endif
@@ -177,18 +186,6 @@ struct transport_names_t *get_tpname(pjsip_transport_type_e type)
     return NULL;
 }
 
-
-/*
- * Tools to get address string.
- */
-static const char *addr_string(const pj_sockaddr_t *addr)
-{
-    static char str[PJ_INET6_ADDRSTRLEN];
-    pj_inet_ntop(((const pj_sockaddr*)addr)->addr.sa_family, 
-		 pj_sockaddr_get_addr(addr),
-		 str, sizeof(str));
-    return str;
-}
 
 
 /*

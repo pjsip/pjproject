@@ -991,13 +991,13 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start( pjsip_endpoint *endpt,
 	 * interface address as the transport's address.
 	 */
 	if (listener_addr->sin_addr.s_addr == 0) {
-	    pj_in_addr hostip;
+	    pj_sockaddr hostip;
 
-	    status = pj_gethostip(&hostip);
+	    status = pj_gethostip(pj_AF_INET(), &hostip);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    listener_addr->sin_addr = hostip;
+	    listener_addr->sin_addr = hostip.ipv4.sin_addr;
 	}
 
 	/* Save the address name */

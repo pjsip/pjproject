@@ -82,7 +82,7 @@ static pj_status_t sock_enum_ip_interface(int af,
 	*p_cnt = count;
     for (i=0; i<count; ++i) {
 	struct ifreq *itf = &ifr[i];
-	struct sockaddr *ad = itf->ifr_addr;
+	struct sockaddr *ad = &itf->ifr_addr;
 	
 	ifs[i].addr.sa_family = ad->sa_family;
 	pj_memcpy(pj_sockaddr_get_addr(&ifs[i]),
