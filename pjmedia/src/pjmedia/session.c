@@ -52,8 +52,9 @@ static const pj_str_t ID_AUDIO = { "audio", 5};
 static const pj_str_t ID_VIDEO = { "video", 5};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
-static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };
-static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
+static const pj_str_t ID_IP6 = { "IP6", 3};
+/*static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };*/
+/*static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };*/
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 static const pj_str_t ID_TELEPHONE_EVENT = { "telephone-event", 15 };
 
@@ -129,6 +130,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     const pjmedia_sdp_media *rem_m;
     const pjmedia_sdp_conn *local_conn;
     const pjmedia_sdp_conn *rem_conn;
+    int rem_af, local_af;
+    pj_sockaddr local_addr;
     pjmedia_sdp_rtpmap *rtpmap;
     int local_fmtp_mode = 0, rem_fmtp_mode = 0;
     unsigned i, pt, fmti;
@@ -185,11 +188,61 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJMEDIA_SDPNEG_EINVANSTP;
     }
 
+    /* Check address family in remote SDP */
+    rem_af = pj_AF_UNSPEC();
+    if (pj_stricmp(&rem_conn->net_type, &ID_IN)==0) {
+	if (pj_stricmp(&rem_conn->addr_type, &ID_IP4)==0) {
+	    rem_af = pj_AF_INET();
+	} else if (pj_stricmp(&rem_conn->addr_type, &ID_IP6)==0) {
+	    rem_af = pj_AF_UNSPEC();
+	}
+    }
+
+    if (rem_af==pj_AF_UNSPEC()) {
+	/* Unsupported address family */
+	return PJ_EAFNOTSUP;
+    }
+
+    /* Set remote address: */
+    status = pj_sockaddr_init(rem_af, &si->rem_addr, &rem_conn->addr, 
+			      rem_m->desc.port);
+    if (status != PJ_SUCCESS) {
+	/* Invalid IP address. */
+	return PJMEDIA_EINVALIDIP;
+    }
+
+    /* Check address family of local info */
+    local_af = pj_AF_UNSPEC();
+    if (pj_stricmp(&local_conn->net_type, &ID_IN)==0) {
+	if (pj_stricmp(&local_conn->addr_type, &ID_IP4)==0) {
+	    local_af = pj_AF_INET();
+	} else if (pj_stricmp(&local_conn->addr_type, &ID_IP6)==0) {
+	    local_af = pj_AF_UNSPEC();
+	}
+    }
+
+    if (local_af==pj_AF_UNSPEC()) {
+	/* Unsupported address family */
+	return PJ_EAFNOTSUP;
+    }
+
+    /* Set remote address: */
+    status = pj_sockaddr_init(local_af, &local_addr, &local_conn->addr, 
+			      local_m->desc.port);
+    if (status != PJ_SUCCESS) {
+	/* Invalid IP address. */
+	return PJMEDIA_EINVALIDIP;
+    }
+
+    /* Local and remote address family must match */
+    if (local_af != rem_af)
+	return PJ_EAFNOTSUP;
+
     /* Media direction: */
 
     if (local_m->desc.port == 0 || 
-	pj_inet_addr(&local_conn->addr).s_addr==0 ||
-	pj_inet_addr(&rem_conn->addr).s_addr==0 ||
+	pj_sockaddr_has_addr(&local_addr)==PJ_FALSE ||
+	pj_sockaddr_has_addr(&si->rem_addr)==PJ_FALSE ||
 	pjmedia_sdp_media_find_attr(local_m, &STR_INACTIVE, NULL)!=NULL)
     {
 	/* Inactive stream. */
@@ -216,15 +269,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     }
 
-
-    /* Set remote address: */
-    status = pj_sockaddr_in_init(&si->rem_addr, &rem_conn->addr, 
-				 rem_m->desc.port);
-    if (status != PJ_SUCCESS) {
-	/* Invalid IP address. */
-	return PJMEDIA_EINVALIDIP;
-    }
-
     /* If "rtcp" attribute is present in the SDP, set the RTCP address
      * from that attribute. Otherwise, calculate from RTP address.
      */
@@ -235,22 +279,24 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp);
 	if (status == PJ_SUCCESS) {
 	    if (rtcp.addr.slen) {
-		status = pj_sockaddr_in_init(&si->rem_rtcp, &rtcp.addr,
-					     (pj_uint16_t)rtcp.port);
+		status = pj_sockaddr_init(rem_af, &si->rem_rtcp, &rtcp.addr,
+					  (pj_uint16_t)rtcp.port);
 	    } else {
-		pj_sockaddr_in_init(&si->rem_rtcp, NULL, 
-				    (pj_uint16_t)rtcp.port);
-		si->rem_rtcp.sin_addr.s_addr = si->rem_addr.sin_addr.s_addr;
+		pj_sockaddr_init(rem_af, &si->rem_rtcp, NULL, 
+				 (pj_uint16_t)rtcp.port);
+		pj_memcpy(pj_sockaddr_get_addr(&si->rem_rtcp),
+		          pj_sockaddr_get_addr(&si->rem_addr),
+			  pj_sockaddr_get_addr_len(&si->rem_addr));
 	    }
 	}
     }
     
-    if (si->rem_rtcp.sin_addr.s_addr == 0) {
+    if (!pj_sockaddr_has_addr(&si->rem_rtcp) == 0) {
 	int rtcp_port;
 
-	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr_in));
-	rtcp_port = pj_ntohs(si->rem_addr.sin_port) + 1;
-	si->rem_rtcp.sin_port = pj_htons((pj_uint16_t)rtcp_port);
+	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr));
+	rtcp_port = pj_sockaddr_get_port(&si->rem_addr) + 1;
+	pj_sockaddr_set_port(&si->rem_rtcp, (pj_uint16_t)rtcp_port);
     }
 
 

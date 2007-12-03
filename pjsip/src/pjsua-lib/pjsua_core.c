@@ -2014,16 +2014,17 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
 	pjmedia_sock_info skinfo;
+	char addr_buf[80];
 
 	/* MSVC complains about skinfo not being initialized */
 	pj_bzero(&skinfo, sizeof(skinfo));
 
 	pjmedia_transport_get_info(call->med_tp, &skinfo);
 
-	PJ_LOG(3,(THIS_FILE, " %s: %s:%d",
+	PJ_LOG(3,(THIS_FILE, " %s: %s",
 		  (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
-		  pj_inet_ntoa(skinfo.rtp_addr_name.sin_addr),
-		  (int)pj_ntohs(skinfo.rtp_addr_name.sin_port)));
+		  pj_sockaddr_print(&skinfo.rtp_addr_name, addr_buf,
+				    sizeof(addr_buf), 3)));
     }
 
     pjsip_tsx_layer_dump(detail);

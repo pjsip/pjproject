@@ -220,6 +220,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     pj_sockaddr_in bound_addr;
     pj_sockaddr_in mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
+    char addr_buf[80];
     pj_sock_t sock[2];
 
     /* Make sure STUN server resolution has completed */
@@ -228,7 +229,6 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	return status;
     }
-
 
     if (next_rtp_port == 0)
 	next_rtp_port = (pj_uint16_t)cfg->port;
@@ -378,11 +378,11 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	      &mapped_addr[1], sizeof(pj_sockaddr_in));
 
     PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s:%d",
-	      pj_inet_ntoa(skinfo->rtp_addr_name.sin_addr), 
-	      pj_ntohs(skinfo->rtp_addr_name.sin_port)));
+	      pj_sockaddr_print(&skinfo->rtp_addr_name, addr_buf,
+				sizeof(addr_buf), 3)));
     PJ_LOG(4,(THIS_FILE, "RTCP socket reachable at %s:%d",
-	      pj_inet_ntoa(skinfo->rtcp_addr_name.sin_addr), 
-	      pj_ntohs(skinfo->rtcp_addr_name.sin_port)));
+	      pj_sockaddr_print(&skinfo->rtcp_addr_name, addr_buf,
+				sizeof(addr_buf), 3)));
 
     next_rtp_port += 2;
     return PJ_SUCCESS;

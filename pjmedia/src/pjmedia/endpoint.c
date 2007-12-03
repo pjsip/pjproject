@@ -34,6 +34,7 @@ static const pj_str_t STR_AUDIO = { "audio", 5};
 static const pj_str_t STR_VIDEO = { "video", 5};
 static const pj_str_t STR_IN = { "IN", 2 };
 static const pj_str_t STR_IP4 = { "IP4", 3};
+static const pj_str_t STR_IP6 = { "IP6", 3};
 static const pj_str_t STR_RTP_AVP = { "RTP/AVP", 7 };
 static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
@@ -289,6 +290,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 {
     pj_time_val tv;
     unsigned i;
+    const pj_sockaddr *addr0;
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *m;
     pjmedia_sdp_attr *attr;
@@ -303,23 +305,38 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Create and initialize basic SDP session */
     sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
 
+    addr0 = &sock_info[0].rtp_addr_name;
+
     pj_gettimeofday(&tv);
     sdp->origin.user = pj_str("-");
     sdp->origin.version = sdp->origin.id = tv.sec + 2208988800UL;
     sdp->origin.net_type = STR_IN;
-    sdp->origin.addr_type = STR_IP4;
-    pj_strdup2(pool, &sdp->origin.addr, 
-	       pj_inet_ntoa(sock_info[0].rtp_addr_name.sin_addr));
+
+    if (addr0->addr.sa_family == pj_AF_INET()) {
+	sdp->origin.addr_type = STR_IP4;
+	pj_strdup2(pool, &sdp->origin.addr, 
+		   pj_inet_ntoa(addr0->ipv4.sin_addr));
+    } else if (addr0->addr.sa_family == pj_AF_INET6()) {
+	char tmp_addr[PJ_INET6_ADDRSTRLEN];
+
+	sdp->origin.addr_type = STR_IP6;
+	pj_strdup2(pool, &sdp->origin.addr, 
+		   pj_sockaddr_print(addr0, tmp_addr, sizeof(tmp_addr), 0));
+
+    } else {
+	pj_assert(!"Invalid address family");
+	return PJ_EAFNOTSUP;
+    }
+
     sdp->name = STR_SDP_NAME;
 
     /* Since we only support one media stream at present, put the
      * SDP connection line in the session level.
      */
     sdp->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
-    sdp->conn->net_type = STR_IN;
-    sdp->conn->addr_type = STR_IP4;
-    pj_strdup2(pool, &sdp->conn->addr, 
-	       pj_inet_ntoa(sock_info[0].rtp_addr_name.sin_addr));
+    sdp->conn->net_type = sdp->origin.net_type;
+    sdp->conn->addr_type = sdp->origin.addr_type;
+    sdp->conn->addr = sdp->origin.addr;
 
 
     /* SDP time and attributes. */
@@ -334,7 +351,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
     /* Standard media info: */
     pj_strdup(pool, &m->desc.media, &STR_AUDIO);
-    m->desc.port = pj_ntohs(sock_info[0].rtp_addr_name.sin_port);
+    m->desc.port = pj_sockaddr_get_port(addr0);
     m->desc.port_count = 1;
     pj_strdup (pool, &m->desc.transport, &STR_RTP_AVP);
 
@@ -344,15 +361,31 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
     /* Add "rtcp" attribute */
 #if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
-    if (sock_info->rtcp_addr_name.sin_family != 0) {
+    if (sock_info->rtcp_addr_name.addr.sa_family != 0) {
+	const pj_sockaddr *rtcp_addr = &sock_info->rtcp_addr_name;
+
 	attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
 	attr->name = pj_str("rtcp");
 	attr->value.ptr = (char*) pj_pool_alloc(pool, 80);
-	attr->value.slen = 
-	    pj_ansi_snprintf(attr->value.ptr, 80,
-			    "%u IN IP4 %s",
-			    pj_ntohs(sock_info[0].rtcp_addr_name.sin_port),
-			    pj_inet_ntoa(sock_info[0].rtcp_addr_name.sin_addr));
+	if (rtcp_addr->addr.sa_family == pj_AF_INET()) {
+	    attr->value.slen = 
+		pj_ansi_snprintf(attr->value.ptr, 80,
+				"%u IN IP4 %s",
+				pj_ntohs(rtcp_addr->ipv4.sin_port),
+				pj_inet_ntoa(rtcp_addr->ipv4.sin_addr));
+	} else if (rtcp_addr->addr.sa_family == pj_AF_INET6()) {
+	    char tmp_addr[PJ_INET6_ADDRSTRLEN];
+	    attr->value.slen = 
+		pj_ansi_snprintf(attr->value.ptr, 80,
+				"%u IN IP6 %s",
+				pj_sockaddr_get_port(rtcp_addr),
+				pj_sockaddr_print(rtcp_addr, tmp_addr, 
+						  sizeof(tmp_addr), 0));
+
+	} else {
+	    pj_assert(!"Unsupported address family");
+	    return PJ_EAFNOTSUP;
+	}
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
     }
 #endif

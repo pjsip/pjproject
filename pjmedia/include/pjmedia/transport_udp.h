@@ -112,6 +112,32 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create2(pjmedia_endpt *endpt,
 						   pjmedia_transport **p_tp);
 
 /**
+ * Another variant of #pjmedia_transport_udp_create() which allows
+ * the creation of IPv6 transport.
+ *
+ * @param endpt	    The media endpoint instance.
+ * @param af	    Address family, which can be pj_AF_INET() for IPv4 or
+ *		    pj_AF_INET6() for IPv6.
+ * @param name	    Optional name to be assigned to the transport.
+ * @param addr	    Optional local address to bind the sockets to. If this
+ *		    argument is NULL or empty, the sockets will be bound
+ *		    to all interface.
+ * @param port	    UDP port number for the RTP socket. The RTCP port number
+ *		    will be set to one above RTP port.
+ * @param options   Options, bitmask of #pjmedia_transport_udp_options.
+ * @param p_tp	    Pointer to receive the transport instance.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
+						   int af,
+						   const char *name,
+						   const pj_str_t *addr,
+						   int port,
+						   unsigned options,
+						   pjmedia_transport **p_tp);
+
+/**
  * Get media socket info from the specified UDP transport.
  *
  * @param tp	    The UDP transport interface.

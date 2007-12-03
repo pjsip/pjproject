@@ -1824,16 +1824,16 @@ static void dump_media_session(const char *indent,
 
     for (i=0; i<info.stream_cnt; ++i) {
 	pjmedia_rtcp_stat stat;
+	char rem_addr_buf[80];
 	const char *rem_addr;
-	int rem_port;
 	const char *dir;
 	char last_update[64];
 	char packets[32], bytes[32], ipbytes[32], avg_bps[32], avg_ipbps[32];
 	pj_time_val media_duration, now;
 
 	pjmedia_session_get_stream_stat(session, i, &stat);
-	rem_addr = pj_inet_ntoa(info.stream_info[i].rem_addr.sin_addr);
-	rem_port = pj_ntohs(info.stream_info[i].rem_addr.sin_port);
+	rem_addr = pj_sockaddr_print(&info.stream_info[i].rem_addr,
+				     rem_addr_buf, sizeof(rem_addr_buf), 3);
 
 	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
 	    dir = "sendonly";
@@ -1846,13 +1846,13 @@ static void dump_media_session(const char *indent,
 
 	
 	len = pj_ansi_snprintf(buf, end-p, 
-		  "%s  #%d %.*s @%dKHz, %s, peer=%s:%d",
+		  "%s  #%d %.*s @%dKHz, %s, peer=%s",
 		  indent, i,
 		  (int)info.stream_info[i].fmt.encoding_name.slen,
 		  info.stream_info[i].fmt.encoding_name.ptr,
 		  info.stream_info[i].fmt.clock_rate / 1000,
 		  dir,
-		  rem_addr, rem_port);
+		  rem_addr);
 	if (len < 1 || len > end-p) {
 	    *p = '\0';
 	    return;

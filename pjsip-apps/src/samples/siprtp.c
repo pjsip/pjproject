@@ -1027,7 +1027,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 
     /* Standard media info: */
     m->desc.media = pj_str("audio");
-    m->desc.port = pj_ntohs(tpinfo.skinfo.rtp_addr_name.sin_port);
+    m->desc.port = pj_ntohs(tpinfo.skinfo.rtp_addr_name.ipv4.sin_port);
     m->desc.port_count = 1;
     m->desc.transport = pj_str("RTP/AVP");
 

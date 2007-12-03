@@ -174,16 +174,17 @@ EXPORTS
 	pjmedia_transport_udp_close              @ 173 NONAME
 	pjmedia_transport_udp_create             @ 174 NONAME
 	pjmedia_transport_udp_create2            @ 175 NONAME
-	pjmedia_transport_udp_get_info           @ 176 NONAME
-	pjmedia_transport_udp_simulate_lost      @ 177 NONAME
-	pjmedia_wav_player_port_create           @ 178 NONAME
-	pjmedia_wav_player_port_get_pos          @ 179 NONAME
-	pjmedia_wav_player_port_set_pos          @ 180 NONAME
-	pjmedia_wav_player_set_eof_cb            @ 181 NONAME
-	pjmedia_wav_playlist_create              @ 182 NONAME
-	pjmedia_wav_playlist_set_eof_cb          @ 183 NONAME
-	pjmedia_wav_writer_port_create           @ 184 NONAME
-	pjmedia_wav_writer_port_get_pos          @ 185 NONAME
-	pjmedia_wav_writer_port_set_cb           @ 186 NONAME
-	pjmedia_wave_hdr_file_to_host            @ 187 NONAME
-	pjmedia_wave_hdr_host_to_file            @ 188 NONAME
+	pjmedia_transport_udp_create3            @ 176 NONAME
+	pjmedia_transport_udp_get_info           @ 177 NONAME
+	pjmedia_transport_udp_simulate_lost      @ 178 NONAME
+	pjmedia_wav_player_port_create           @ 179 NONAME
+	pjmedia_wav_player_port_get_pos          @ 180 NONAME
+	pjmedia_wav_player_port_set_pos          @ 181 NONAME
+	pjmedia_wav_player_set_eof_cb            @ 182 NONAME
+	pjmedia_wav_playlist_create              @ 183 NONAME
+	pjmedia_wav_playlist_set_eof_cb          @ 184 NONAME
+	pjmedia_wav_writer_port_create           @ 185 NONAME
+	pjmedia_wav_writer_port_get_pos          @ 186 NONAME
+	pjmedia_wav_writer_port_set_cb           @ 187 NONAME
+	pjmedia_wave_hdr_file_to_host            @ 188 NONAME
+	pjmedia_wave_hdr_host_to_file            @ 189 NONAME

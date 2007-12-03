@@ -141,7 +141,7 @@ typedef struct pjmedia_sock_info
      *  address (for example, this address can be the address resolved
      *  with STUN).
      */
-    pj_sockaddr_in  rtp_addr_name;
+    pj_sockaddr	    rtp_addr_name;
 
     /** The RTCP socket handle. */
     pj_sock_t	    rtcp_sock;
@@ -151,7 +151,7 @@ typedef struct pjmedia_sock_info
      *  address (for example, this address can be the address resolved
      *  with STUN).
      */
-    pj_sockaddr_in  rtcp_addr_name;
+    pj_sockaddr	    rtcp_addr_name;
 
 } pjmedia_sock_info;
 
