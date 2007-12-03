@@ -273,9 +273,6 @@ static pj_status_t if_enum_by_af(int af,
 
     PJ_ASSERT_RETURN(p_cnt && *p_cnt > 0 && ifs, PJ_EINVAL);
 
-    PJ_UNUSED_ARG(&get_addr);
-    PJ_UNUSED_ARG(&get_os_errmsg);
-
     pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
 
     /* Just get one default route */

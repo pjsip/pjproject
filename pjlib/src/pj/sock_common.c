@@ -59,6 +59,48 @@ PJ_DEF(char*) pj_inet_ntop2( int af, const void *src,
 }
 
 /*
+ * Print socket address.
+ */
+PJ_DEF(char*) pj_sockaddr_print( const pj_sockaddr_t *addr,
+				 char *buf, int size,
+				 unsigned flags)
+{
+    enum {
+	WITH_PORT = 1,
+	WITH_BRACKETS = 2
+    };
+
+    char txt[PJ_INET6_ADDRSTRLEN];
+    char port[32];
+    const pj_addr_hdr *h = (const pj_addr_hdr*)addr;
+    char *bquote, *equote;
+    pj_status_t status;
+
+    status = pj_inet_ntop(h->sa_family, pj_sockaddr_get_addr(addr),
+			  txt, sizeof(txt));
+    if (status != PJ_SUCCESS)
+	return "";
+
+    if (h->sa_family != PJ_AF_INET6 || (flags & WITH_BRACKETS)==0) {
+	bquote = ""; equote = "";
+    } else {
+	bquote = "["; equote = "]";
+    }
+
+    if (flags & WITH_PORT) {
+	pj_ansi_snprintf(port, sizeof(port), ":%d",
+			 pj_sockaddr_get_port(addr));
+    } else {
+	port[0] = '\0';
+    }
+
+    pj_ansi_snprintf(buf, size, "%s%s%s%s",
+		     bquote, txt, equote, port);
+
+    return buf;
+}
+
+/*
  * Set the IP address of an IP socket address from string address, 
  * with resolving the host if necessary. The string address may be in a
  * standard numbers and dots notation or may be a hostname. If hostname
@@ -184,6 +226,47 @@ PJ_DEF(pj_status_t) pj_sockaddr_init(int af,
 }
 
 /*
+ * Compare two socket addresses.
+ */
+PJ_DEF(int) pj_sockaddr_cmp( const pj_sockaddr_t *addr1,
+			     const pj_sockaddr_t *addr2)
+{
+    const pj_sockaddr *a1 = (const pj_sockaddr*) addr1;
+    const pj_sockaddr *a2 = (const pj_sockaddr*) addr2;
+    int port1, port2;
+    int result;
+
+    /* Compare address family */
+    if (a1->addr.sa_family < a2->addr.sa_family)
+	return -1;
+    else if (a1->addr.sa_family > a2->addr.sa_family)
+	return 1;
+
+    /* Compare addresses */
+    result = pj_memcmp(pj_sockaddr_get_addr(a1),
+		       pj_sockaddr_get_addr(a2),
+		       pj_sockaddr_get_addr_len(a1));
+    if (result != 0)
+	return result;
+
+    /* Compare port number */
+    port1 = pj_sockaddr_get_port(a1);
+    port2 = pj_sockaddr_get_port(a2);
+
+    if (port1 < port2)
+	return -1;
+    else if (port1 > port2)
+	return 1;
+
+    /* TODO:
+     *	Do we need to compare flow label and scope id in IPv6? 
+     */
+    
+    /* Looks equal */
+    return 0;
+}
+
+/*
  * Get first IP address associated with the hostname.
  */
 PJ_DEF(pj_in_addr) pj_gethostaddr(void)
@@ -274,6 +357,17 @@ PJ_DEF(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr)
 		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
     return a->addr.sa_family == PJ_AF_INET6 ?
 	    sizeof(pj_sockaddr_in6) : sizeof(pj_sockaddr_in);
+}
+
+/*
+ * Copy only the address part (sin_addr/sin6_addr) of a socket address.
+ */
+PJ_DEF(void) pj_sockaddr_copy_addr( pj_sockaddr *dst,
+				    const pj_sockaddr *src)
+{
+    pj_memcpy(pj_sockaddr_get_addr(dst),
+	      pj_sockaddr_get_addr(src),
+	      pj_sockaddr_get_addr_len(src));
 }
 
 /*

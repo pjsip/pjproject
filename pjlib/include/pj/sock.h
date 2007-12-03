@@ -595,7 +595,8 @@ PJ_DECL(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst);
 /**
  * This function converts a numeric address into a text string suitable
  * for presentation. It supports both IPv4 and IPv6 address
- * conversion.
+ * conversion. 
+ * @see pj_sockaddr_print()
  *
  * @param af	Specify the family of the address. This can be PJ_AF_INET
  *		or PJ_AF_INET6.
@@ -615,6 +616,7 @@ PJ_DECL(pj_status_t) pj_inet_ntop(int af, const void *src,
 
 /**
  * Converts numeric address into its text string representation.
+ * @see pj_sockaddr_print()
  *
  * @param af	Specify the family of the address. This can be PJ_AF_INET
  *		or PJ_AF_INET6.
@@ -632,6 +634,21 @@ PJ_DECL(pj_status_t) pj_inet_ntop(int af, const void *src,
 PJ_DECL(char*) pj_inet_ntop2(int af, const void *src,
 			     char *dst, int size);
 
+/**
+ * Print socket address.
+ *
+ * @param addr	The socket address.
+ * @param buf	Text buffer.
+ * @param size	Size of buffer.
+ * @param flags	Bitmask combination of these value:
+ *		  - 1: port number is included.
+ *		  - 2: square bracket is included for IPv6 address.
+ *
+ * @return	The address string.
+ */
+PJ_DECL(char*) pj_sockaddr_print(const pj_sockaddr_t *addr,
+				 char *buf, int size,
+				 unsigned flags);
 
 /**
  * Convert address string with numbers and dots to binary IP address.
@@ -702,6 +719,18 @@ PJ_DECL(pj_status_t) pj_sockaddr_init(int af,
 				      pj_uint16_t port);
 
 /**
+ * Compare two socket addresses.
+ *
+ * @param addr1	    First address.
+ * @param addr2	    Second address.
+ *
+ * @return	    Zero on equal, -1 if addr1 is less than addr2,
+ *		    and +1 if addr1 is more than addr2.
+ */
+PJ_DECL(int) pj_sockaddr_cmp(const pj_sockaddr_t *addr1,
+			     const pj_sockaddr_t *addr2);
+
+/**
  * Get pointer to the address part of a socket address.
  * 
  * @param addr	    Socket address.
@@ -742,6 +771,14 @@ PJ_DECL(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr);
  */
 PJ_DECL(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr);
 
+/** 
+ * Copy only the address part (sin_addr/sin6_addr) of a socket address.
+ *
+ * @param dst	    Destination socket address.
+ * @param src	    Source socket address.
+ */
+PJ_DECL(void) pj_sockaddr_copy_addr(pj_sockaddr *dst,
+				    const pj_sockaddr *src);
 /**
  * Get the IP address of an IPv4 socket address.
  * The address is returned as 32bit value in host byte order.
