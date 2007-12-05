@@ -123,6 +123,18 @@ const int PJ_MSG_PEEK		= MSG_PEEK;
 const int PJ_MSG_DONTROUTE	= MSG_DONTROUTE;
 
 
+#if 0
+static void CHECK_ADDR_LEN(const pj_sockaddr *addr, int len)
+{
+    pj_sockaddr *a = (pj_sockaddr*)addr;
+    pj_assert((a->addr.sa_family==PJ_AF_INET && len==sizeof(pj_sockaddr_in)) ||
+	      (a->addr.sa_family==PJ_AF_INET6 && len==sizeof(pj_sockaddr_in6)));
+
+}
+#else
+#define CHECK_ADDR_LEN(addr,len)
+#endif
+
 /*
  * Convert 16-bit value from network byte order to host byte order.
  */
@@ -449,7 +461,6 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 }
 #endif
 
-
 /*
  * Bind socket.
  */
@@ -460,6 +471,8 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(addr && len >= (int)sizeof(struct sockaddr_in), PJ_EINVAL);
+
+    CHECK_ADDR_LEN(addr, len);
 
     if (bind(sock, (struct sockaddr*)addr, len) != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -574,6 +587,8 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
+    
+    CHECK_ADDR_LEN(to, tolen);
 
     *len = sendto(sock, (const char*)buf, *len, flags, 
 		  (const struct sockaddr*)to, tolen);

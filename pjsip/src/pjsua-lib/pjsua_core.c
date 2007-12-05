@@ -1237,7 +1237,7 @@ static pj_status_t create_sip_udp_sock(int af,
 	return status;
     }
 
-    status = pj_sock_bind(sock, &bind_addr, sizeof(bind_addr));
+    status = pj_sock_bind(sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "bind() error", status);
 	pj_sock_close(sock);

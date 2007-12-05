@@ -1368,7 +1368,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 
-				      &info->rem_rtcp, sizeof(info->rem_addr), 
+				      &info->rem_rtcp, 
+				      pj_sockaddr_get_len(&info->rem_addr), 
                                       &on_rx_rtp, &on_rx_rtcp);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
