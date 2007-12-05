@@ -940,9 +940,9 @@ static pj_status_t init_media()
 
 	skinfo = &app.skinfo[i];
 	
-	pj_sockaddr_in_init(&skinfo->rtp_addr_name, &app.local_addr,
+	pj_sockaddr_in_init(&skinfo->rtp_addr_name.ipv4, &app.local_addr,
 			    (pj_uint16_t)rtp_port);
-	pj_sockaddr_in_init(&skinfo->rtp_addr_name, &app.local_addr,
+	pj_sockaddr_in_init(&skinfo->rtp_addr_name.ipv4, &app.local_addr,
 			    (pj_uint16_t)(rtp_port+1));
 	app.skinfo_cnt++;
     }
