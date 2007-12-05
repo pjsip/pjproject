@@ -900,6 +900,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
 				" for registration", 
 		     status);
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
 	return status;
     }
 
@@ -913,6 +915,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsua_perror(THIS_FILE, 
 		     "Client registration initialization error", 
 		     status);
+	pjsip_regc_destroy(acc->regc);
+	acc->regc = NULL;
 	return status;
     }
 
@@ -1432,7 +1436,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     /* If destination URI specifies IPv6, then set transport type
      * to use IPv6 as well.
      */
-    if (pj_strchr(suri, ':'))
+    if (pj_strchr(&sip_uri->host, ':'))
 	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
