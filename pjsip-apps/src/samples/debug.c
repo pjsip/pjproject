@@ -28,8 +28,60 @@
  *  #include "playfile.c"
  */
 //#include "aectest.c"
-#include <pjlib.h>
+//#include "strerror.c"
 
+#include <pjlib.h>
+#include <pjlib-util.h>
+
+#define THIS_FILE   "test.c"
+
+void check_error(const char *func, pj_status_t status)
+{
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(1,(THIS_FILE, "%s error: %s", func, errmsg));
+	exit(1);
+    }
+}
+
+#define DO(func)  status = func; check_error(#func, status);
+
+int main()
+{
+    pj_sock_t sock;
+    pj_sockaddr_in addr;
+    pj_str_t stun_srv = pj_str("stun.fwdnet.net");
+    pj_caching_pool cp;
+    pj_status_t status;
+
+    DO( pj_init() );
+
+    pj_caching_pool_init(&cp, NULL, 0);
+
+    DO( pjlib_util_init() );
+    DO( pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock) );
+    DO( pj_sock_bind_in(sock, 0, 0) );
+
+    DO( pjstun_get_mapped_addr(&cp.factory, 1, &sock,
+			       &stun_srv, 3478,
+			       &stun_srv, 3478,
+			       &addr) );
+
+    PJ_LOG(3,(THIS_FILE, "Mapped address is %s:%d",
+	      pj_inet_ntoa(addr.sin_addr),
+	      (int)pj_ntohs(addr.sin_port)));
+
+    DO( pj_sock_close(sock) );
+    pj_caching_pool_destroy(&cp);
+    pj_shutdown();
+
+    return 0;
+}
+
+
+#if 0
+#include <pjlib.h>
 
 static void on_accept_complete(pj_ioqueue_key_t *key, 
                            pj_ioqueue_op_key_t *op_key, 
@@ -87,3 +139,4 @@ int main()
     PJ_ASSERT_RETURN(status==PJ_EPENDING, 1);
 }
 
+#endif

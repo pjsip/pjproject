@@ -1346,7 +1346,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
     }
 
     /* Create the transport */
-    if (type & PJSIP_TRANSPORT_UDP) {
+    if (type==PJSIP_TRANSPORT_UDP || type==PJSIP_TRANSPORT_UDP6) {
 	/*
 	 * Create UDP transport (IPv4 or IPv6).
 	 */
@@ -1407,7 +1407,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
-    } else if (type == PJSIP_TRANSPORT_TCP) {
+    } else if (type == PJSIP_TRANSPORT_TCP || type == PJSIP_TRANSPORT_TCP6) {
 	/*
 	 * Create TCP transport.
 	 */

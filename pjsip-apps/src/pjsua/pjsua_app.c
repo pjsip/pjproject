@@ -91,6 +91,8 @@ static struct app_config
 static pjsua_call_id	current_call = PJSUA_INVALID_ID;
 static pj_str_t		uri_arg;
 
+static pjsua_transport_id   tls_id;
+
 #ifdef STEREO_DEMO
 static void stereo_demo();
 #endif
@@ -567,8 +569,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NO_UDP: /* no-udp */
 	    if (cfg->no_tcp) {
-	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
-	      return PJ_EINVAL;
+	      //PJ_LOG(1,(THIS_FILE,"Error: cannot disable both TCP and UDP"));
+	      //return PJ_EINVAL;
 	    }
 
 	    cfg->no_udp = PJ_TRUE;
@@ -580,8 +582,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NO_TCP: /* no-tcp */
 	    if (cfg->no_udp) {
-	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
-	      return PJ_EINVAL;
+	      //PJ_LOG(1,(THIS_FILE,"Error: cannot disable both TCP and UDP"));
+	      //return PJ_EINVAL;
 	    }
 
 	    cfg->no_tcp = PJ_TRUE;
@@ -2216,12 +2218,15 @@ static void send_request(char *cstr_method, const pj_str_t *dst_uri)
     pjsip_method_init_np(&method, &str_method);
 
     status = pjsua_acc_create_request(current_acc, &method, dst_uri, &tdata);
+    if (status == PJ_SUCCESS) {
+	status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
+    }
 
-    status = pjsip_endpt_send_request(endpt, tdata, -1, NULL, NULL);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send request", status);
+	pjsua_perror(THIS_FILE, "Unable to create/send request", status);
 	return;
     }
+
 }
 
 
@@ -3424,6 +3429,34 @@ pj_status_t app_init(int argc, char *argv[])
 	}
     }
 
+    /* Add IPv6 UDP */
+#if 0 && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    if (1) {
+	pjsua_acc_id aid;
+
+	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP6,
+					&app_config.udp_cfg, 
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	//pjsua_acc_set_transport(aid, transport_id);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+
+	if (app_config.udp_cfg.port == 0) {
+	    pjsua_transport_info ti;
+	    pj_sockaddr_in *a;
+
+	    pjsua_transport_get_info(transport_id, &ti);
+	    a = (pj_sockaddr_in*)&ti.local_addr;
+
+	    tcp_cfg.port = pj_ntohs(a->sin_port);
+	}
+    }
+#endif	/* PJ_HAS_IPV6 */
+
     /* Add TCP transport unless it's disabled */
     if (!app_config.no_tcp) {
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
@@ -3454,6 +3487,8 @@ pj_status_t app_init(int argc, char *argv[])
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 	
+	tls_id = transport_id;
+
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
 	pjsua_acc_set_online_status(acc_id, PJ_TRUE);
@@ -3555,6 +3590,8 @@ pj_status_t app_destroy(void)
 	pj_pool_release(app_config.pool);
 	app_config.pool = NULL;
     }
+
+    pjsua_transport_close(tls_id, 0);
 
     status = pjsua_destroy();
 
