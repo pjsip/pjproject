@@ -353,8 +353,10 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    for (i=0; i<2; ++i)
+	    for (i=0; i<2; ++i) {
+		pj_sockaddr_in_init(&mapped_addr[i], NULL, 0);
 		mapped_addr[i].sin_addr.s_addr = addr.ipv4.sin_addr.s_addr;
+	    }
 
 	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)next_rtp_port);
 	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(next_rtp_port+1));
