@@ -1269,6 +1269,9 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
     } else {
 
+	/* Initialize frame type to None */
+	*type = PJMEDIA_FRAME_TYPE_NONE;
+
 	/*
 	 * If we don't have enough samples in rx_buf, read from the port 
 	 * first. Remember that rx_buf may be in different clock rate!
@@ -1296,6 +1299,9 @@ static pj_status_t read_port( pjmedia_conf *conf,
 		TRACE_((THIS_FILE, "  get_frame returned non-audio"));
 		pjmedia_zero_samples( cport->rx_buf + cport->rx_buf_count,
 				      cport->samples_per_frame);
+	    } else {
+		/* We've got at least one frame */
+		*type = PJMEDIA_FRAME_TYPE_AUDIO;
 	    }
 
 	    cport->rx_buf_count += cport->samples_per_frame;
@@ -1717,6 +1723,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	    /* Check that the port is not removed when we call get_frame() */
 	    if (conf->ports[i] == NULL)
+		continue;
+
+	    /* Ignore if we didn't get any frame */
+	    if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO)
 		continue;
 	}
 
