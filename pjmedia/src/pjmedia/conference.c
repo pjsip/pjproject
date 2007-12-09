@@ -1014,29 +1014,40 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     /* Remove this port from transmit array of other ports. */
     for (i=0; i<conf->max_ports; ++i) {
 	unsigned j;
+	struct conf_port *src_port;
 
-	conf_port = conf->ports[i];
+	src_port = conf->ports[i];
 
-	if (!conf_port)
+	if (!src_port)
 	    continue;
 
-	if (conf_port->listener_cnt == 0)
+	if (src_port->listener_cnt == 0)
 	    continue;
 
-	for (j=0; j<conf_port->listener_cnt; ++j) {
-	    if (conf_port->listener_slots[j] == port) {
-		pj_array_erase(conf_port->listener_slots, sizeof(SLOT_TYPE),
-			       conf_port->listener_cnt, j);
+	for (j=0; j<src_port->listener_cnt; ++j) {
+	    if (src_port->listener_slots[j] == port) {
+		pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
+			       src_port->listener_cnt, j);
+		pj_assert(conf->connect_cnt > 0);
 		--conf->connect_cnt;
-		--conf_port->listener_cnt;
+		--src_port->listener_cnt;
 		break;
 	    }
 	}
     }
 
-    /* Update conf's connection count. */
-    conf_port = conf->ports[port];
-    conf->connect_cnt -= conf_port->listener_cnt;
+    /* Update transmitter_cnt of ports we're transmitting to */
+    while (conf_port->listener_cnt) {
+	unsigned dst_slot;
+	struct conf_port *dst_port;
+
+	dst_slot = conf_port->listener_slots[conf_port->listener_cnt-1];
+	dst_port = conf->ports[dst_slot];
+	--dst_port->transmitter_cnt;
+	--conf_port->listener_cnt;
+	pj_assert(conf->connect_cnt > 0);
+	--conf->connect_cnt;
+    }
 
     /* Remove the port. */
     conf->ports[port] = NULL;
