@@ -256,8 +256,8 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    return status;
 	}
 
-	status = pj_sock_bind_in(sock[0], bound_addr.sin_addr.s_addr, 
-				 next_rtp_port);
+	status=pj_sock_bind_in(sock[0], pj_ntohl(bound_addr.sin_addr.s_addr), 
+			       next_rtp_port);
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -272,8 +272,8 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    return status;
 	}
 
-	status = pj_sock_bind_in(sock[1], bound_addr.sin_addr.s_addr, 
-				 (pj_uint16_t)(next_rtp_port+1));
+	status=pj_sock_bind_in(sock[1], pj_ntohl(bound_addr.sin_addr.s_addr), 
+			       (pj_uint16_t)(next_rtp_port+1));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]); 
 	    sock[0] = PJ_INVALID_SOCKET;
