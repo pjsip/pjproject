@@ -57,6 +57,8 @@ static struct app_config
 
     unsigned		    codec_cnt;
     pj_str_t		    codec_arg[32];
+    unsigned		    codec_dis_cnt;
+    pj_str_t                codec_dis[32];
     pj_bool_t		    null_audio;
     unsigned		    wav_count;
     pj_str_t		    wav_files[32];
@@ -129,6 +131,8 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
+    puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
+    puts  ("                      symmetric NAT (default 1)");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
@@ -162,6 +166,7 @@ static void usage(void)
     puts  ("Media Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
+    puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
     puts  ("  --clock-rate=N      Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --play-file=file    Register WAV file in conference bridge.");
@@ -197,6 +202,7 @@ static void usage(void)
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
     puts  ("  --norefersub        Suppress event subscription when transfering calls");
+    puts  ("  --use-compact-form  Minimize SIP message size");
 
     puts  ("");
     puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
@@ -388,6 +394,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
+	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -412,6 +419,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "use-ims",    0, 0, OPT_USE_IMS},
 	{ "id",		1, 0, OPT_ID},
 	{ "contact",	1, 0, OPT_CONTACT},
+	{ "auto-update-nat",	1, 0, OPT_AUTO_UPDATE_NAT},
+        { "use-compact-form",	0, 0, OPT_USE_COMPACT_FORM},
 	{ "realm",	1, 0, OPT_REALM},
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
@@ -433,6 +442,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "use-ice",    0, 0, OPT_USE_ICE},
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
+	{ "dis-codec",  1, 0, OPT_DIS_CODEC},
 	{ "complexity",	1, 0, OPT_COMPLEXITY},
 	{ "quality",	1, 0, OPT_QUALITY},
 	{ "ptime",      1, 0, OPT_PTIME},
@@ -660,6 +670,25 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cur_acc->force_contact = pj_str(pj_optarg);
 	    break;
 
+	case OPT_AUTO_UPDATE_NAT:   /* OPT_AUTO_UPDATE_NAT */
+            cur_acc->auto_update_nat  = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    break;
+
+	case OPT_USE_COMPACT_FORM:
+	    /* enable compact form - from Ticket #342 */
+            {
+		extern pj_bool_t pjsip_use_compact_form;
+		extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
+		extern pj_bool_t pjmedia_add_rtpmap_for_static_pt;
+
+		pjsip_use_compact_form = PJ_TRUE;
+		/* do not transmit Allow header */
+		pjsip_include_allow_hdr_in_dlg = PJ_FALSE;
+		/* Do not include rtpmap for static payload types (<96) */
+		pjmedia_add_rtpmap_for_static_pt = PJ_FALSE;
+            }
+	    break;
+
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
 	    cfg->acc_cnt++;
 	    cur_acc = &cfg->acc_cfg[cfg->acc_cnt];
@@ -784,6 +813,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 			  "(expecting 1-65535"));
 		return -1;
 	    }
+	    break;
+
+	case OPT_DIS_CODEC:
+            cfg->codec_dis[cfg->codec_dis_cnt++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_ADD_CODEC:
@@ -1070,6 +1103,14 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 	pj_strcat2(result, line);
     }
 
+    /*  */
+    //if (acc_cfg->auto_update_nat)
+    {
+	pj_ansi_sprintf(line, "--auto-update-nat %i\n",
+			(int)acc_cfg->auto_update_nat);
+	pj_strcat2(result, line);
+    }
+
     /* Proxy */
     for (i=0; i<acc_cfg->proxy_cnt; ++i) {
 	pj_ansi_sprintf(line, "--proxy %.*s\n",
@@ -1118,6 +1159,7 @@ static int write_settings(const struct app_config *config,
     unsigned i;
     pj_str_t cfg;
     char line[128];
+    extern pj_bool_t pjsip_use_compact_form;
 
     PJ_UNUSED_ARG(max);
 
@@ -1366,6 +1408,12 @@ static int write_settings(const struct app_config *config,
 		    config->codec_arg[i].ptr);
 	pj_strcat2(&cfg, line);
     }
+    /* Disable codec */
+    for (i=0; i<config->codec_dis_cnt; ++i) {
+	pj_ansi_sprintf(line, "--dis-codec %s\n",
+		    config->codec_dis[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
 
     pj_strcat2(&cfg, "\n#\n# User agent:\n#\n");
 
@@ -1393,6 +1441,10 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--norefersub\n");
     }
 
+    if (pjsip_use_compact_form)
+    {
+	pj_strcat2(&cfg, "--use-compact-form\n");
+    }
 
     pj_strcat2(&cfg, "\n#\n# Buddies:\n#\n");
 
@@ -3486,6 +3538,11 @@ pj_status_t app_init(int argc, char *argv[])
     for (i=0; i<app_config.codec_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_arg[i],
 				 (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
+    }
+
+    /* Optionally disable some codec */
+    for (i=0; i<app_config.codec_dis_cnt; ++i) {
+	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
     }
 
     /* Add RTP transports */
