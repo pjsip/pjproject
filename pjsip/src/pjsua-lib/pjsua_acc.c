@@ -659,6 +659,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     pjsua_acc *acc;
     pjsip_tpselector tp_sel;
     pj_time_val delay;
+    char addrtxt[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
 
     PJ_UNUSED_ARG(th);
@@ -675,10 +676,9 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     tp_sel.u.transport = acc->ka_transport;
 
     PJ_LOG(5,(THIS_FILE, 
-	      "Sending %d bytes keep-alive packet for acc %d to %s:%d",
+	      "Sending %d bytes keep-alive packet for acc %d to %s",
 	      acc->cfg.ka_data.slen, acc->index,
-	      pj_inet_ntoa(acc->ka_target.ipv4.sin_addr),
-	      pj_ntohs(acc->ka_target.ipv4.sin_port)));
+	      pj_sockaddr_print(&acc->ka_target, addrtxt, sizeof(addrtxt),3)));
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
