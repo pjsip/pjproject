@@ -108,7 +108,7 @@ enum pj_log_decoration
  * write the actual log message to some output device.
  *
  * @param level	    Log level.
- * @param data	    Log message.
+ * @param data	    Log message, which will be NULL terminated.
  * @param len	    Message length.
  */
 typedef void pj_log_func(int level, const char *data, int len);
