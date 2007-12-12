@@ -309,10 +309,29 @@ PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
 {
     const pj_sockaddr *a = (const pj_sockaddr*)addr;
 
-    PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
-		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+    /* It's probably not wise to raise assertion here if
+     * the address doesn't contain a valid address family, and
+     * just return PJ_FALSE instead.
+     * 
+     * The reason is because application may need to distinguish 
+     * these three conditions with sockaddr:
+     *	a) sockaddr is not initialized. This is by convention
+     *	   indicated by sa_family==0.
+     *	b) sockaddr is initialized with zero address. This is
+     *	   indicated with the address field having zero address.
+     *	c) sockaddr is initialized with valid address/port.
+     *
+     * If we enable this assertion, then application will loose
+     * the capability to specify condition a), since it will be
+     * forced to always initialize sockaddr (even with zero address).
+     * This may break some parts of upper layer libraries.
+     */
+    //PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
+    //		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
 
-    if (a->addr.sa_family == PJ_AF_INET6) {
+    if (a->addr.sa_family!=PJ_AF_INET && a->addr.sa_family!=PJ_AF_INET6) {
+	return PJ_FALSE;
+    } else if (a->addr.sa_family == PJ_AF_INET6) {
 	pj_uint8_t zero[24];
 	pj_bzero(zero, sizeof(zero));
 	return pj_memcmp(a->ipv6.sin6_addr.s6_addr, zero, 
