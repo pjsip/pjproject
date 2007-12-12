@@ -241,7 +241,7 @@ public:
 			       	      pj_sockaddr &pj_addr,
 			       	      int *addr_len)
     {
-	pj_bzero(&pj_addr, sizeof(pj_sockaddr));
+	pj_bzero(&pj_addr, *addr_len);
 	pj_addr.addr.sa_family = (pj_uint16_t)sym_addr.Family();
 	if (pj_addr.addr.sa_family == PJ_AF_INET) {
 	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
