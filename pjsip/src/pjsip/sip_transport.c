@@ -381,7 +381,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
 	return status;
     }
 
-    pj_ioqueue_op_key_init(&tdata->op_key.key, sizeof(tdata->op_key));
+    pj_ioqueue_op_key_init(&tdata->op_key.key, sizeof(tdata->op_key.key));
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     pj_atomic_inc( tdata->mgr->tdata_counter );
