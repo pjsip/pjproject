@@ -27,7 +27,7 @@
 
 
 /* Maximum size of incoming RTP packet */
-#define RTP_LEN	    1500
+#define RTP_LEN	    PJMEDIA_MAX_MTU
 
 /* Maximum size of incoming RTCP packet */
 #define RTCP_LEN    600
