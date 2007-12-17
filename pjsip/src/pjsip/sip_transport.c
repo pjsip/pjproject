@@ -475,11 +475,14 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 
 PJ_DEF(char*) pjsip_tx_data_get_info( pjsip_tx_data *tdata )
 {
-    if (tdata==NULL || tdata->msg==NULL)
-	return "NULL";
-
+    /* tdata->info may be assigned by application so if it exists
+     * just return it.
+     */
     if (tdata->info)
 	return tdata->info;
+
+    if (tdata==NULL || tdata->msg==NULL)
+	return "NULL";
 
     pj_lock_acquire(tdata->lock);
     tdata->info = get_msg_info(tdata->pool, tdata->obj_name, tdata->msg);
