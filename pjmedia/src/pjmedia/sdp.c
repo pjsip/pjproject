@@ -248,6 +248,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(attr->value.slen != 0, PJMEDIA_SDP_EINATTR);
 
+    init_sdp_parser();
+
     /* Check if input is null terminated, and null terminate if
      * necessary. Unfortunately this may crash the application if
      * attribute was allocated from a read-only memory location.
@@ -366,6 +368,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtcp")==0, PJ_EINVALIDOP);
 
+    init_sdp_parser();
+
     /* fmtp BNF:
      *	a=rtcp:<port> [nettype addrtype address]
      */
@@ -463,7 +467,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 
     attr->value.slen = len;
     attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen);
-    pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen);
+    pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen+1);
 
     *p_attr = attr;
     return PJ_SUCCESS;
