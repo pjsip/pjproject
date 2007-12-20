@@ -1299,11 +1299,15 @@ static pj_status_t create_sip_udp_sock(int af,
     } else {
 	pj_bzero(p_pub_addr, sizeof(pj_sockaddr));
 
-	status = pj_gethostip(af, p_pub_addr);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
-	    pj_sock_close(sock);
-	    return status;
+	if (pj_sockaddr_has_addr(&bind_addr)) {
+	    pj_sockaddr_copy_addr(p_pub_addr, &bind_addr);
+	} else {
+	    status = pj_gethostip(af, p_pub_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
+		pj_sock_close(sock);
+		return status;
+	    }
 	}
 
 	p_pub_addr->addr.sa_family = (pj_uint16_t)af;

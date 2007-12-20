@@ -346,16 +346,21 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    break;
 
 	} else {
-	    pj_sockaddr addr;
 
-	    /* Get local IP address. */
-	    status = pj_gethostip(pj_AF_INET(), &addr);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
+	    if (bound_addr.sin_addr.s_addr == 0) {
+		pj_sockaddr addr;
+
+		/* Get local IP address. */
+		status = pj_gethostip(pj_AF_INET(), &addr);
+		if (status != PJ_SUCCESS)
+		    goto on_error;
+
+		bound_addr.sin_addr.s_addr = addr.ipv4.sin_addr.s_addr;
+	    }
 
 	    for (i=0; i<2; ++i) {
 		pj_sockaddr_in_init(&mapped_addr[i], NULL, 0);
-		mapped_addr[i].sin_addr.s_addr = addr.ipv4.sin_addr.s_addr;
+		mapped_addr[i].sin_addr.s_addr = bound_addr.sin_addr.s_addr;
 	    }
 
 	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)next_rtp_port);
