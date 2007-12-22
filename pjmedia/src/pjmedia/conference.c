@@ -1280,8 +1280,13 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
     } else {
 
-	/* Initialize frame type to None */
-	*type = PJMEDIA_FRAME_TYPE_NONE;
+	/* Initialize frame type */
+	if (cport->rx_buf_count == 0) {
+	    *type = PJMEDIA_FRAME_TYPE_NONE;
+	} else {
+	    /* we got some samples in the buffer */
+	    *type = PJMEDIA_FRAME_TYPE_AUDIO;
+	}
 
 	/*
 	 * If we don't have enough samples in rx_buf, read from the port 
