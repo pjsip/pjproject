@@ -235,7 +235,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
  */
 PJ_DEF(int) pjmedia_snd_get_dev_count(void)
 {
-    return Pa_GetDeviceCount();
+    int count = Pa_GetDeviceCount();
+    return count < 0 ? 0 : count;
 }
 
 
@@ -306,7 +307,7 @@ static int pa_get_default_input_dev(int channel_count)
     }
 
     /* If still no device is found, enumerate all devices */
-    count = Pa_GetDeviceCount();
+    count = pjmedia_snd_get_dev_count();
     for (i=0; i<count; ++i) {
 	const PaDeviceInfo *paDevInfo;
 
@@ -362,7 +363,7 @@ static int pa_get_default_output_dev(int channel_count)
     }
 
     /* If still no device is found, enumerate all devices */
-    count = Pa_GetDeviceCount();
+    count = pjmedia_snd_get_dev_count();
     for (i=0; i<count; ++i) {
 	const PaDeviceInfo *paDevInfo;
 
@@ -525,7 +526,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
-    stream->dir = stream->dir = PJMEDIA_DIR_PLAYBACK;
+    stream->dir = PJMEDIA_DIR_PLAYBACK;
     stream->play_id = index;
     stream->rec_id = -1;
     stream->user_data = user_data;
