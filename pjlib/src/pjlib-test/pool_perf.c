@@ -61,27 +61,29 @@ static int pool_test_pool()
 }
 
 /* Symbian doesn't have malloc()/free(), so we use new/delete instead */
-#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
-
+//#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+#if 0
 static int pool_test_malloc_free()
 {
     int i; /* must be signed */
 
     for (i=0; i<COUNT; ++i) {
-	p[i] = new char[sizes[i]];
-	if (!p[i]) {
-	    PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
-		      sizes[i]));
-	    --i;
-	    while (i >= 0)
-		delete [] p[i], --i;
-	    return -1;
-	}
-	*p[i] = '\0';
+		p[i] = new char[sizes[i]];
+		if (!p[i]) {
+			PJ_LOG(3,(THIS_FILE,"   error: malloc failed to allocate %d bytes",
+					  sizes[i]));
+			--i;
+			while (i >= 0) {
+				delete [] p[i];
+				--i;
+			}
+			return -1;
+		}
+		*p[i] = '\0';
     }
 
     for (i=0; i<COUNT; ++i) {
-	delete [] p[i];
+    	delete [] p[i];
     }
 
     return 0;
