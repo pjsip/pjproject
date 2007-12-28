@@ -213,6 +213,7 @@ TInt PjSymbianOS::Initialize()
 	    	goto on_error;
     	}
     	
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     	if (appHostResolver6_ == NULL) {
     	    if (Connection())
     	    	err = hostResolver6_.Open(SocketServ(), KAfInet6, KSockStream,
@@ -223,6 +224,8 @@ TInt PjSymbianOS::Initialize()
 	    if (err != KErrNone)
 	    	goto on_error;
     	}
+#endif
+    	
     	
 	isResolverInitialized_ = true;
     }
@@ -238,9 +241,11 @@ on_error:
 void PjSymbianOS::Shutdown()
 {
     if (isResolverInitialized_) {
-	hostResolver_.Close();
+		hostResolver_.Close();
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     	hostResolver6_.Close();
-	isResolverInitialized_ = false;
+#endif
+    	isResolverInitialized_ = false;
     }
 
     if (isSocketServInitialized_) {
@@ -323,14 +328,14 @@ PJ_DEF(pj_status_t) pj_init(void)
     TInt err; 
     err = os->Initialize();
     if (err != KErrNone)
-	goto on_error;
+    	return status;
     
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
      */ 
     status = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_error;
 
     PJ_LOG(5,(THIS_FILE, "PJLIB initialized."));
     return PJ_SUCCESS;
