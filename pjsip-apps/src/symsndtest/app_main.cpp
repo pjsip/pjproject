@@ -28,9 +28,9 @@
 #define CLOCK_RATE		8000
 #define CHANNEL_COUNT		1
 #define PTIME			100
-#define SAMPLES_PER_FRAME	(2048)
+#define SAMPLES_PER_FRAME	(80)
 #define BITS_PER_SAMPLE		16
-
+#define LOOPBACK_BUFF_COUNT 100
 
 extern CConsoleBase* console;
 
@@ -39,6 +39,9 @@ static pjmedia_snd_stream *strm;
 static unsigned rec_cnt, play_cnt;
 static pj_time_val t_start;
 
+
+static pj_int16_t buff_loopback[SAMPLES_PER_FRAME*LOOPBACK_BUFF_COUNT];
+static pj_uint32_t pointer_w, pointer_r;
 
 /* Logging callback */
 static void log_writer(int level, const char *buf, unsigned len)
@@ -70,6 +73,7 @@ static pj_status_t app_init()
     /* Redirect log */
     pj_log_set_log_func((void (*)(int,const char*,int)) &log_writer);
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+    pj_log_set_level(5);
     
     /* Init pjlib */
     status = pj_init();
@@ -114,6 +118,18 @@ static pj_status_t rec_cb(void *user_data,
     PJ_UNUSED_ARG(timestamp);
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(size);
+
+    pj_memcpy(&buff_loopback[pointer_w*SAMPLES_PER_FRAME], input, size);
+
+    if (size != SAMPLES_PER_FRAME*2) {
+		PJ_LOG(3, (THIS_FILE, "Size captured = %u",
+	 		   size));
+		pj_bzero(&buff_loopback[pointer_w*SAMPLES_PER_FRAME]+size/2, SAMPLES_PER_FRAME*2 - size);
+    }
+
+    if (++pointer_w >= LOOPBACK_BUFF_COUNT) {
+    	pointer_w = 0;
+    }
     
     ++rec_cnt;
     return PJ_SUCCESS;
@@ -128,7 +144,12 @@ static pj_status_t play_cb(void *user_data,
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(timestamp);
     
-    pj_bzero(output, size);
+    //pj_bzero(output, size);
+    pj_memcpy(output, &buff_loopback[pointer_r*SAMPLES_PER_FRAME], SAMPLES_PER_FRAME*2);
+
+    if (++pointer_r >= LOOPBACK_BUFF_COUNT) {
+    	pointer_r = 0;
+    }
     
     ++play_cnt;
     return PJ_SUCCESS;	
@@ -173,6 +194,9 @@ static pj_status_t snd_start(unsigned flag)
     	return status;
     }
 
+    pointer_w = LOOPBACK_BUFF_COUNT/2;
+    pointer_r = 0;
+    
     return PJ_SUCCESS;
 }
 
@@ -297,7 +321,7 @@ void ConsoleUI::RunL()
 	break;
     case 'p':
     	snd_start(PJMEDIA_DIR_PLAYBACK);
-	break;
+    break;
     case 'c':
     	snd_stop();
 	break;

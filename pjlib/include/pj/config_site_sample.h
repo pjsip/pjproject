@@ -76,7 +76,9 @@
 #   define PJSIP_MAX_TSX_COUNT 		31
 #   define PJSIP_MAX_DIALOG_COUNT 	31
 #   define PJSUA_MAX_CALLS		31
-    
+
+#	define PJMEDIA_SOUND_BUFFER_COUNT 12
+
 #endif
 
 

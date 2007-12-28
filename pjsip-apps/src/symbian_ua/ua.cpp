@@ -31,7 +31,7 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:192.168.0.7:5061"
+#define SIP_DST_URI	"sip:192.168.0.11:5060"
 
 //
 // Account
@@ -57,7 +57,7 @@
 
 //
 // STUN server
-#if 1
+#if 0
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
 #   define STUN_SERVER	"stun.fwdnet.net"
@@ -74,7 +74,7 @@
 //
 // Use ICE?
 //
-#define USE_ICE		1
+#define USE_ICE		0
 
 
 //
@@ -320,6 +320,7 @@ static pj_status_t app_startup()
     med_cfg.thread_cnt = 0; // Disable threading on Symbian
     med_cfg.has_ioqueue = PJ_FALSE;
     med_cfg.clock_rate = 8000;
+    med_cfg.audio_frame_ptime = 40;
     med_cfg.ec_tail_len = 0;
     med_cfg.enable_ice = USE_ICE;
     
@@ -452,6 +453,8 @@ static void PrintMenu()
 	    "  d    Dump states\n"
 	    "  D    Dump states detail\n"
 	    "  P    Dump pool factory\n"
+   	    "  l    Start loopback audio device\n"
+   	    "  L    Stop loopback audio device\n"
 	    "  m    Call " SIP_DST_URI "\n"
 	    "  a    Answer call\n"
 	    "  h    Hangup all calls\n"
@@ -480,6 +483,12 @@ void ConsoleUI::RunL()
     case 'p':
     case 'P':
 	    pj_pool_factory_dump(pjsua_get_pool_factory(), PJ_TRUE);
+	    break;
+    case 'l':
+		pjsua_conf_connect(0, 0);
+	    break;
+    case 'L':
+		pjsua_conf_disconnect(0, 0);
 	    break;
     case 'm':
 	    if (g_call_id != PJSUA_INVALID_ID) {

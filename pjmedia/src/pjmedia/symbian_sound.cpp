@@ -64,6 +64,7 @@ struct pjmedia_snd_stream
     pj_pool_t			*pool;
 
     // Common settings.
+    pjmedia_dir		 	 dir;
     unsigned			 clock_rate;
     unsigned			 channel_count;
     unsigned			 samples_per_frame;
@@ -162,6 +163,15 @@ private:
     TInt		     lastError_;
     pj_uint32_t		     timeStamp_;
 
+    // cache variable
+    // to avoid calculating frame length repeatedly
+    TInt			  frameLen_;
+    
+    // in some SymbianOS (e.g: OSv9.1), sometimes recorded size != requested framesize
+    // so let's provide a buffer to make sure the rec callback returns framesize as requested.
+    TUint8		     *frameRecBuf_;
+    TInt			  frameRecBufLen_;
+
     CPjAudioInputEngine(pjmedia_snd_stream *parent_strm,
 			pjmedia_snd_rec_cb rec_cb,
 			void *user_data);
@@ -179,24 +189,34 @@ public:
 CPjAudioInputEngine::CPjAudioInputEngine(pjmedia_snd_stream *parent_strm,
 					 pjmedia_snd_rec_cb rec_cb,
 					 void *user_data)
-    : state_(STATE_INACTIVE), parentStrm_(parent_strm), recCb_(rec_cb), 
+    : state_(STATE_INACTIVE), parentStrm_(parent_strm), 
+      recCb_(rec_cb), userData_(user_data), 
       iInputStream_(NULL), iStreamBuffer_(NULL), iFramePtr_(0, 0),
-      userData_(user_data), lastError_(KErrNone), timeStamp_(0)
+      lastError_(KErrNone), timeStamp_(0),
+      frameLen_(parent_strm->samples_per_frame * parent_strm->channel_count * BYTES_PER_SAMPLE),
+      frameRecBuf_(NULL), frameRecBufLen_(0)
 {
 }
 
 CPjAudioInputEngine::~CPjAudioInputEngine()
 {
     Stop();
+
     delete iStreamBuffer_;
     iStreamBuffer_ = NULL;
+    
+    delete [] frameRecBuf_;
+    frameRecBuf_ = NULL;
+    frameRecBufLen_ = 0;
 }
 
 void CPjAudioInputEngine::ConstructL()
 {
-    iStreamBuffer_ = HBufC8::NewL(parentStrm_->samples_per_frame *
-				  parentStrm_->channel_count * 
-				  BYTES_PER_SAMPLE);
+    iStreamBuffer_ = HBufC8::NewL(frameLen_);
+    CleanupStack::PushL(iStreamBuffer_);
+
+    frameRecBuf_ = new TUint8[frameLen_*2];
+    CleanupStack::PushL(frameRecBuf_);
 }
 
 CPjAudioInputEngine *CPjAudioInputEngine::NewLC(pjmedia_snd_stream *parent,
@@ -216,6 +236,8 @@ CPjAudioInputEngine *CPjAudioInputEngine::NewL(pjmedia_snd_stream *parent,
 					       void *user_data)
 {
     CPjAudioInputEngine *self = NewLC(parent, rec_cb, user_data);
+    CleanupStack::Pop(self->frameRecBuf_);
+    CleanupStack::Pop(self->iStreamBuffer_);
     CleanupStack::Pop(self);
     return self;
 }
@@ -289,11 +311,8 @@ void CPjAudioInputEngine::Stop()
 
 TPtr8 & CPjAudioInputEngine::GetFrame() 
 {
-    TInt l = parentStrm_->samples_per_frame *
-	     parentStrm_->channel_count * 
-	     BYTES_PER_SAMPLE;
-    iStreamBuffer_->Des().FillZ(l);
-    iFramePtr_.Set((TUint8*)(iStreamBuffer_->Ptr()), l, l);
+    //iStreamBuffer_->Des().FillZ(frameLen_);
+    iFramePtr_.Set((TUint8*)(iStreamBuffer_->Ptr()), frameLen_, frameLen_);
     return iFramePtr_;
 }
 
@@ -326,11 +345,27 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
 	return;
     }
 
-    // Call the callback.
-    recCb_(userData_, timeStamp_, (void*)aBuffer.Ptr(), aBuffer.Size());
+    if (frameRecBufLen_ || aBuffer.Size() < frameLen_) {
+		pj_memcpy(frameRecBuf_ + frameRecBufLen_, (void*) aBuffer.Ptr(), aBuffer.Size());
+		frameRecBufLen_ += aBuffer.Size();
+    }
 
-    // Increment timestamp.
-    timeStamp_ += (aBuffer.Size() * BYTES_PER_SAMPLE);
+    if (frameRecBufLen_) {
+    	while (frameRecBufLen_ >= frameLen_) {
+	    	// Call the callback.
+		    recCb_(userData_, timeStamp_, frameRecBuf_, frameLen_);
+		    // Increment timestamp.
+		    timeStamp_ += parentStrm_->samples_per_frame;
+
+		    frameRecBufLen_ -= frameLen_;
+		    pj_memmove(frameRecBuf_, frameRecBuf_+frameLen_, frameRecBufLen_);
+    	}
+    } else {
+    	// Call the callback.
+	    recCb_(userData_, timeStamp_, (void*) aBuffer.Ptr(), aBuffer.Size());
+	    // Increment timestamp.
+	    timeStamp_ += parentStrm_->samples_per_frame;
+    }
 
     // Record next frame
     TPtr8 & frm = GetFrame();
@@ -525,8 +560,8 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	iOutputStream_->SetAudioPropertiesL(iSettings.iSampleRate, 
 					    iSettings.iChannels);
 
-	// set volume to 1/4th of stream max volume
-	iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/4);
+	// set volume to 1/2th of stream max volume
+	iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
 	
 	// set stream priority to normal and time sensitive
 	iOutputStream_->SetPriority(EPriorityNormal, 
@@ -628,6 +663,9 @@ PJ_DEF(int) pjmedia_snd_get_dev_count(void)
 PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
     /* Always return the default sound device */
+    if (index == (unsigned)-1)
+	index = 0;
+
     PJ_ASSERT_RETURN(index==0, NULL);
     return &symbian_snd_dev_info;
 }
@@ -662,6 +700,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 
     strm = (pjmedia_snd_stream*) pj_pool_zalloc(pool, 
     						sizeof(pjmedia_snd_stream));
+    strm->dir = PJMEDIA_DIR_CAPTURE;
     strm->pool = pool;
     strm->clock_rate = clock_rate;
     strm->channel_count = channel_count;
@@ -676,9 +715,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     							  user_data));
     if (err != KErrNone) {
     	pj_pool_release(pool);
-	return PJ_RETURN_OS_ERROR(err);
+    	return PJ_RETURN_OS_ERROR(err);
     }
-
 
     // Done.
     *p_snd_strm = strm;
@@ -710,6 +748,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 
     strm = (pjmedia_snd_stream*) pj_pool_zalloc(pool, 
     						sizeof(pjmedia_snd_stream));
+    strm->dir = PJMEDIA_DIR_PLAYBACK;    
     strm->pool = pool;
     strm->clock_rate = clock_rate;
     strm->channel_count = channel_count;
@@ -761,6 +800,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     strm = (pjmedia_snd_stream*) pj_pool_zalloc(pool, 
     						sizeof(pjmedia_snd_stream));
+    strm->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     strm->pool = pool;
     strm->clock_rate = clock_rate;
     strm->channel_count = channel_count;
@@ -791,6 +831,28 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     // Done.
     *p_snd_strm = strm;
+    return PJ_SUCCESS;
+}
+
+/*
+ * Get stream info.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
+						pjmedia_snd_stream_info *pi)
+{
+    PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
+
+    pj_bzero(pi, sizeof(*pi));
+    pi->dir = strm->dir;
+    pi->play_id = 0;
+    pi->rec_id = 0;
+    pi->clock_rate = strm->clock_rate;
+    pi->channel_count = strm->channel_count;
+    pi->samples_per_frame = strm->samples_per_frame;
+    pi->bits_per_sample = BYTES_PER_SAMPLE * 8;
+    pi->rec_latency = 0;
+    pi->play_latency = 0;
+
     return PJ_SUCCESS;
 }
 
