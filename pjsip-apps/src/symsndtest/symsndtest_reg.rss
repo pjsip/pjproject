@@ -1,7 +1,7 @@
 #include <appinfo.rh>
 
 UID2 KUidAppRegistrationResourceFile
-UID3 0xA000000F
+UID3 0xA000000E
 
 RESOURCE APP_REGISTRATION_INFO
 {

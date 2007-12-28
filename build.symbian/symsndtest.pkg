@@ -4,7 +4,7 @@
 &EN
 
 ; Header
-#{"symsndtest"},(0xA000000F), 0, 1, 1
+#{"symsndtest"},(0xA000000E), 0, 1, 1
 
 ; Platform compatibility
 [0x101F7961], *, *, *, {"Series60ProductID"}
