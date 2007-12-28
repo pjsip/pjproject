@@ -884,9 +884,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp)
 {
+    unsigned i;
     int prev_media_st = 0;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjmedia_session_info sess_info;
+    pjmedia_stream_info *si = NULL;
     pjmedia_port *media_port;
     pj_str_t port_name;
     char tmp[PJSIP_MAX_URL_SIZE];
@@ -897,19 +899,37 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     stop_media_session(call->index);
 
     /* Create media session info based on SDP parameters. 
-     * We only support one stream per session at the moment
      */    
     status = pjmedia_session_info_from_sdp( call->inv->dlg->pool, 
 					    pjsua_var.med_endpt, 
-					    1,&sess_info, 
+					    PJMEDIA_MAX_SDP_MEDIA, &sess_info,
 					    local_sdp, remote_sdp);
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Find which session is audio (we only support audio for now) */
+    for (i=0; i < sess_info.stream_cnt; ++i) {
+	if (sess_info.stream_info[i].type == PJMEDIA_TYPE_AUDIO &&
+	    sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_AVP)
+	{
+	    si = &sess_info.stream_info[i];
+	    break;
+	}
+    }
+
+    if (si == NULL) {
+	/* Not found */
+	return PJMEDIA_EINVALIMEDIATYPE;
+    }
+
+    
+    /* Reset session info with only one media stream */
+    sess_info.stream_cnt = 1;
+    if (si != &sess_info.stream_info[0])
+	pj_memcpy(&sess_info.stream_info[0], si, sizeof(pjmedia_stream_info));
 
     /* Check if media is put on-hold */
-    if (sess_info.stream_cnt == 0 || 
-	sess_info.stream_info[0].dir == PJMEDIA_DIR_NONE)
+    if (sess_info.stream_cnt == 0 || si->dir == PJMEDIA_DIR_NONE)
     {
 
 	/* Determine who puts the call on-hold */
@@ -943,28 +963,28 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	/* Override ptime, if this option is specified. */
 	if (pjsua_var.media_cfg.ptime != 0) {
-	    sess_info.stream_info[0].param->setting.frm_per_pkt = (pj_uint8_t)
-		(pjsua_var.media_cfg.ptime / sess_info.stream_info[0].param->info.frm_ptime);
-	    if (sess_info.stream_info[0].param->setting.frm_per_pkt == 0)
-		sess_info.stream_info[0].param->setting.frm_per_pkt = 1;
+	    si->param->setting.frm_per_pkt = (pj_uint8_t)
+		(pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
+	    if (si->param->setting.frm_per_pkt == 0)
+		si->param->setting.frm_per_pkt = 1;
 	}
 
 	/* Disable VAD, if this option is specified. */
 	if (pjsua_var.media_cfg.no_vad) {
-	    sess_info.stream_info[0].param->setting.vad = 0;
+	    si->param->setting.vad = 0;
 	}
 
 
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
-	sess_info.stream_info[0].jb_init = pjsua_var.media_cfg.jb_init;
-	sess_info.stream_info[0].jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
-	sess_info.stream_info[0].jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
-	sess_info.stream_info[0].jb_max = pjsua_var.media_cfg.jb_max;
+	si->jb_init = pjsua_var.media_cfg.jb_init;
+	si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
+	si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
+	si->jb_max = pjsua_var.media_cfg.jb_max;
 
 	/* Set SSRC */
-	sess_info.stream_info[0].ssrc = call->ssrc;
+	si->ssrc = call->ssrc;
 
 	/* Create session based on session info. */
 	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,
@@ -1009,7 +1029,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	/* Call's media state is active */
 	call->media_st = PJSUA_CALL_MEDIA_ACTIVE;
-	call->media_dir = sess_info.stream_info[0].dir;
+	call->media_dir = si->dir;
     }
 
     /* Print info. */

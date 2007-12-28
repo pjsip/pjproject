@@ -68,6 +68,25 @@ typedef enum pjmedia_type
 } pjmedia_type;
 
 
+/** 
+ * Media transport protocol. 
+ */
+typedef enum pjmedia_tp_proto
+{
+    /** No transport type */
+    PJMEDIA_TP_PROTO_NONE = 0,
+
+    /** RTP using A/V profile */
+    PJMEDIA_TP_PROTO_RTP_AVP,
+
+    /** Secure RTP */
+    PJMEDIA_TP_PROTO_RTP_SAVP,
+
+    /** Unknown */
+    PJMEDIA_TP_PROTO_UNKNOWN
+
+} pjmedia_tp_proto;
+
 
 /** 
  * Media direction. 

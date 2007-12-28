@@ -53,8 +53,9 @@ static const pj_str_t ID_VIDEO = { "video", 5};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
-/*static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };*/
-/*static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };*/
+static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };
+static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
+//static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 static const pj_str_t ID_TELEPHONE_EVENT = { "telephone-event", 15 };
 
@@ -180,6 +181,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJMEDIA_EINVALIMEDIATYPE;
     }
 
+    /* Transport protocol */
+
     /* Transport type must be equal */
     if (pj_stricmp(&rem_m->desc.transport, 
 		   &local_m->desc.transport) != 0) 
@@ -187,6 +190,21 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	si->type = PJMEDIA_TYPE_UNKNOWN;
 	return PJMEDIA_SDPNEG_EINVANSTP;
     }
+
+    if (pj_stricmp(&local_m->desc.transport, &ID_RTP_AVP) == 0) {
+
+	si->proto = PJMEDIA_TP_PROTO_RTP_AVP;
+
+    } else if (pj_stricmp(&local_m->desc.transport, &ID_RTP_SAVP) == 0) {
+
+	si->proto = PJMEDIA_TP_PROTO_RTP_SAVP;
+
+    } else {
+
+	si->proto = PJMEDIA_TP_PROTO_UNKNOWN;
+	return PJMEDIA_SDP_EINPROTO;
+    }
+
 
     /* Check address family in remote SDP */
     rem_af = pj_AF_UNSPEC();

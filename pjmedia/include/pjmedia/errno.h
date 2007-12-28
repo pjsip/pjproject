@@ -148,6 +148,11 @@ PJ_BEGIN_DECL
  * Invalid SDP "rtcp" attribute.
  */
 #define PJMEDIA_SDP_EINRTCP	    (PJMEDIA_ERRNO_START+35)    /* 220035 */
+/**
+ * @hideinitializer
+ * Invalid SDP media transport protocol.
+ */
+#define PJMEDIA_SDP_EINPROTO	    (PJMEDIA_ERRNO_START+36)    /* 220036 */
 
 
 /************************************************************
