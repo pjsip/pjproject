@@ -1,7 +1,6 @@
 TARGET 		pjstun_client.exe
 TARGETTYPE 	exe
-UID		0x100039CE 0x10004299
-VENDORID	0x70000001
+UID		0x0 0xA000000A
 
 SOURCEPATH	..\pjnath\src\pjstun-client
 
@@ -26,7 +25,19 @@ SYSTEMINCLUDE	..\pjnath\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		pjnath.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
-STATICLIBRARY   ecrt0.lib
+#if defined(PJ_BUILD_DLL)
+MACRO		PJ_DLL
+LIBRARY		pjnath.lib pjlib_util.lib pjlib.lib
+#else
+STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
+#endif
+
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib
+
+#ifdef WINSCW
+STATICLIBRARY   eexe.lib ecrt0.lib
+#endif
+
+
 CAPABILITY	None
 

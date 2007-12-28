@@ -1,15 +1,18 @@
 TARGET 		pjlib_test.exe
 TARGETTYPE 	exe
-UID		0x100039CE 0x10004299
-VENDORID	0x70000001
+UID		0x0 0xA0000002
+
 
 SOURCEPATH	..\pjlib\src\pjlib-test
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
-#if defined(EKA2)
+#if defined(PJ_BUILD_DLL)
 MACRO		PJ_DLL
+LIBRARY		pjlib.lib 
+#else
+STATICLIBRARY	pjlib.lib 
 #endif
 
 OPTION		CW -lang c++
@@ -57,7 +60,8 @@ SYSTEMINCLUDE	..\pjlib\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
-STATICLIBRARY   ecrt0.lib
-CAPABILITY	None
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
+#ifdef WINSCW
+STATICLIBRARY   eexe.lib ecrt0.lib
+#endif
 

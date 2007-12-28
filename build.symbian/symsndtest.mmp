@@ -1,13 +1,15 @@
 TARGET 		symsndtest.exe
 TARGETTYPE 	exe
-UID		0x100039CE 0x10004287
-VENDORID	0x70000001
+UID		0x0 0xA000000E
 
 SOURCEPATH	..\pjsip-apps\src\symsndtest
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
-MACRO		PJ_DLL=1
+
+#if defined(PJ_BUILD_DLL)
+	MACRO		PJ_DLL=1
+#endif
 
 // Test files
 
@@ -20,7 +22,25 @@ SYSTEMINCLUDE	..\pjmedia\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		charconv.lib euser.lib estlib.lib eexe.lib
-LIBRARY		symbian_audio.lib pjlib.lib ecrt0.lib
-CAPABILITY	None
+LIBRARY		charconv.lib euser.lib estlib.lib
+
+#if defined(PJ_BUILD_DLL)
+	LIBRARY		symbian_audio.lib pjlib.lib 
+#else
+	STATICLIBRARY	symbian_audio.lib pjlib.lib 
+#endif
+
+LIBRARY		esock.lib insock.lib
+LIBRARY 	mediaclientaudiostream.lib
+LIBRARY 	mediaclientaudioinputstream.lib
+
+#ifdef WINSCW
+	STATICLIBRARY   eexe.lib ecrt0.lib
+#endif
+
+CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
+
+START RESOURCE  symsndtest_reg.rss
+	TARGETPATH	\private\10003a3f\apps
+END
 

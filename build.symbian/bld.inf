@@ -5,14 +5,17 @@ gcce
 
 prj_mmpfiles
 pjlib.mmp
-//pjlib_test.mmp
 pjlib_util.mmp
 pjnath.mmp
 pjsdp.mmp
 null_audio.mmp
-symbian_ua.mmp
+symbian_audio.mmp
 pjmedia.mmp
 pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
+
+pjlib_test.mmp
+symbian_ua.mmp
+symsndtest.mmp

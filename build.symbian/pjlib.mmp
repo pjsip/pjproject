@@ -1,8 +1,8 @@
-#if defined(EKA2)
-// ARM ABIv2 doesn't support static libraries anymore
+#if defined(PJ_BUILD_DLL)
 TARGET		pjlib.dll
 TARGETTYPE	dll
-UID		0x1000008d 0xA0004299
+UID		0x0 0xA0000001
+
 CAPABILITY	NONE
 LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib
 MACRO		PJ_DLL
@@ -14,8 +14,7 @@ DEFFILE		.\pjlib.def
 
 TARGET 		pjlib.lib
 TARGETTYPE 	lib
-UID		0x100039CE 0x10004299
-//VENDORID	0x70000001
+
 #endif
 
 SOURCEPATH	..\pjlib\src\pj

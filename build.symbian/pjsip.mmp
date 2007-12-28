@@ -1,9 +1,10 @@
-#if defined(EKA2)
+#if defined(PJ_BUILD_DLL)
 
 TARGET		pjsip.dll
 TARGETTYPE	dll
 
-UID		0x1000008d 0xA0004293
+UID		0x0 0xA0000007
+
 
 CAPABILITY	None
 LIBRARY		pjsdp.lib pjlib_util.lib pjlib.lib esock.lib insock.lib charconv.lib euser.lib estlib.lib
@@ -16,8 +17,6 @@ DEFFILE		.\pjsip.def
 
 TARGET 		pjsip.lib
 TARGETTYPE 	lib
-UID		0x100039CE 0x10004299
-VENDORID	0x70000001
 
 #endif
 

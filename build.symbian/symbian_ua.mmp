@@ -1,15 +1,17 @@
 TARGET 		symbian_ua.exe
 TARGETTYPE 	exe
-UID		0x100039CE 0x10004289
-VENDORID	0x70000001
+UID		0x0 0xA000000D
 
 SOURCEPATH	..\pjsip-apps\src\symbian_ua
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
-MACRO		PJ_DLL=1
 
-// Test files
+#if defined(PJ_BUILD_DLL)
+	MACRO		PJ_DLL=1
+#endif
+
+// Source files
 
 SOURCE	ua.cpp
 SOURCE	main_symbian.cpp
@@ -25,7 +27,29 @@ SYSTEMINCLUDE	..\pjsip\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib eexe.lib
-LIBRARY		null_audio.lib pjsua_lib.lib pjsip_ua.lib pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib pjnath.lib pjlib_util.lib pjlib.lib ecrt0.lib
-CAPABILITY	None
+#if defined(PJ_BUILD_DLL)
+	LIBRARY		pjsua_lib.lib pjsip_ua.lib
+	LIBRARY		pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
+	LIBRARY		pjnath.lib pjlib_util.lib pjlib.lib
+	LIBRARY		symbian_audio.lib
+#else
+	STATICLIBRARY	pjsua_lib.lib pjsip_ua.lib
+	STATICLIBRARY	pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
+	STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
+	STATICLIBRARY	symbian_audio.lib
+#endif
+
+#ifdef WINSCW
+	STATICLIBRARY   eexe.lib ecrt0.lib
+#endif
+
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
+LIBRARY 	mediaclientaudiostream.lib
+LIBRARY 	mediaclientaudioinputstream.lib
+
+CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
+
+START RESOURCE  symbian_ua_reg.rss
+	TARGETPATH      \private\10003a3f\apps
+END
 
