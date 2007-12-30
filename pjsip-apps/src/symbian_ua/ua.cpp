@@ -455,14 +455,14 @@ static void PrintMenu()
 	    "  P    Dump pool factory\n"
    	    "  l    Start loopback audio device\n"
    	    "  L    Stop loopback audio device\n"
-	    "  m    Call " SIP_DST_URI "\n"
-	    "  a    Answer call\n"
-	    "  h    Hangup all calls\n"
+	    "  1    Call " SIP_DST_URI "\n"
+	    "  2    Answer call\n"
+	    "  3    Hangup all calls\n"
 	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
 	    "  O    Set account offline\n"
-	    "  q    Quit\n"));
+	    "  9    Quit\n"));
 }
 
 // Implementation: called when read has completed.
@@ -472,7 +472,7 @@ void ConsoleUI::RunL()
     pj_bool_t reschedule = PJ_TRUE;
     
     switch (kc) {
-    case 'q':
+    case '9':
 	    asw_->AsyncStop();
 	    reschedule = PJ_FALSE;
 	    break;
@@ -490,7 +490,7 @@ void ConsoleUI::RunL()
     case 'L':
 		pjsua_conf_disconnect(0, 0);
 	    break;
-    case 'm':
+    case '1':
 	    if (g_call_id != PJSUA_INVALID_ID) {
 		    PJ_LOG(3,(THIS_FILE, "Another call is active"));	
 		    break;
@@ -504,11 +504,11 @@ void ConsoleUI::RunL()
 		    PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
 	    }
 	    break;
-    case 'a':
+    case '2':
 	    if (g_call_id != PJSUA_INVALID_ID)
 		    pjsua_call_answer(g_call_id, 200, NULL, NULL);
 	    break;
-    case 'h':
+    case '3':
 	    pjsua_call_hangup_all();
 	    break;
     case 's':
