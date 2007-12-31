@@ -405,7 +405,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 	TBuf<PJ_INET_ADDRSTRLEN> str16;
 	pj_in_addr inaddr;
 
-	if (size <= PJ_INET_ADDRSTRLEN)
+	if (size < PJ_INET_ADDRSTRLEN)
 	    return PJ_ETOOSMALL;
 
 	pj_memcpy(&inaddr, src, 4);
@@ -421,7 +421,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
     } else if (af==PJ_AF_INET6) {
 	TBuf<PJ_INET6_ADDRSTRLEN> str16;
 
-	if (size <= PJ_INET6_ADDRSTRLEN)
+	if (size < PJ_INET6_ADDRSTRLEN)
 	    return PJ_ETOOSMALL;
 
 	TIp6Addr ip6;

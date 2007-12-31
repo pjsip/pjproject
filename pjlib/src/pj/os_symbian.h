@@ -239,18 +239,25 @@ public:
     // Convert TInetAddr to pj_sockaddr_in
     static inline pj_status_t Addr2pj(const TInetAddr & sym_addr,
 			       	      pj_sockaddr &pj_addr,
-			       	      int *addr_len)
+			       	      int *addr_len,
+			       	      pj_bool_t convert_ipv4_mapped_addr = PJ_FALSE)
     {
+    TUint fam = sym_addr.Family();
 	pj_bzero(&pj_addr, *addr_len);
-	pj_addr.addr.sa_family = (pj_uint16_t)sym_addr.Family();
-	if (pj_addr.addr.sa_family == PJ_AF_INET) {
+	if (fam == PJ_AF_INET || 
+			(convert_ipv4_mapped_addr && 
+			 fam == PJ_AF_INET6 && 
+			 sym_addr.IsV4Mapped())) 
+	{
+		pj_addr.addr.sa_family = PJ_AF_INET;
 	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
 	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
 	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
 	    *addr_len = sizeof(pj_sockaddr_in);
-	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
+	} else if (fam == PJ_AF_INET6) {
 	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in6), PJ_ETOOSMALL);
 	    const TIp6Addr & ip6 = sym_addr.Ip6Address();
+	    pj_addr.addr.sa_family = PJ_AF_INET6;
 	    pj_memcpy(&pj_addr.ipv6.sin6_addr, ip6.u.iAddr8, 16);
 	    pj_addr.ipv6.sin6_port = pj_htons((pj_uint16_t) sym_addr.Port());
 	    pj_addr.ipv6.sin6_scope_id = pj_htonl(sym_addr.Scope());

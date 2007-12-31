@@ -455,9 +455,8 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     count = 1;
     status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
     if (status == PJ_SUCCESS) {
-	pj_memcpy(pj_sockaddr_get_addr(addr),
-		  pj_sockaddr_get_addr(&ai.ai_addr),
-		  pj_sockaddr_get_addr_len(&ai.ai_addr));
+    	pj_assert(ai.ai_addr.addr.sa_family == (pj_uint16_t)af);
+    	pj_sockaddr_copy_addr(addr, &ai.ai_addr);
     }
 
 
@@ -465,37 +464,35 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
      * interface to connect to some public host.
      */
     if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(addr) ||
-	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr) >> 24)==127))
+		(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr) >> 24)==127))
     {
-	status = pj_getdefaultipinterface(af, addr);
+		status = pj_getdefaultipinterface(af, addr);
     }
 
     /* If failed, get the first available interface */
     if (status != PJ_SUCCESS) {
-	pj_sockaddr itf[1];
-	unsigned count = PJ_ARRAY_SIZE(itf);
-
-	status = pj_enum_ip_interface(af, &count, itf);
-	if (status == PJ_SUCCESS) {
-	    itf[0].addr.sa_family = (pj_uint16_t)af;
-	    pj_memcpy(pj_sockaddr_get_addr(addr),
-		      pj_sockaddr_get_addr(&itf[0]),
-		      pj_sockaddr_get_addr_len(&itf[0]));
-	}
+		pj_sockaddr itf[1];
+		unsigned count = PJ_ARRAY_SIZE(itf);
+	
+		status = pj_enum_ip_interface(af, &count, itf);
+		if (status == PJ_SUCCESS) {
+		    pj_assert(itf[0].addr.sa_family == (pj_uint16_t)af);
+		    pj_sockaddr_copy_addr(addr, &itf[0]);
+		}
     }
 
     /* If else fails, returns loopback interface as the last resort */
     if (status != PJ_SUCCESS) {
-	if (af==PJ_AF_INET) {
-	    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
-	} else {
-	    pj_in6_addr *s6_addr;
-
-	    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
-	    pj_bzero(s6_addr, sizeof(pj_in6_addr));
-	    s6_addr->s6_addr[15] = 1;
-	}
-	status = PJ_SUCCESS;
+		if (af==PJ_AF_INET) {
+		    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
+		} else {
+		    pj_in6_addr *s6_addr;
+	
+		    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
+		    pj_bzero(s6_addr, sizeof(pj_in6_addr));
+		    s6_addr->s6_addr[15] = 1;
+		}
+		status = PJ_SUCCESS;
     }
 
     return status;
@@ -552,9 +549,7 @@ PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
 	return PJ_ENOTFOUND;
     }
 
-    pj_memcpy(pj_sockaddr_get_addr(addr),
-	      pj_sockaddr_get_addr(&a),
-	      pj_sockaddr_get_addr_len(&a));
+    pj_sockaddr_copy_addr(addr, &a);
 
     /* Success */
     return PJ_SUCCESS;

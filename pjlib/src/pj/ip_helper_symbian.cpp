@@ -20,11 +20,15 @@
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/string.h>
 #include <pj/compat/socket.h>
 
 
 #include "os_symbian.h"
+
+#define THIS_FILE	"ip_helper_symbian.cpp"
+#define TRACE_ME	0
 
 static pj_status_t rsock_enum_interface(int af,
 					unsigned *p_cnt,
@@ -58,14 +62,31 @@ static pj_status_t rsock_enum_interface(int af,
     {
     	TInetAddr &iAddress = info().iAddress;
     	int namelen;
-    	
-    	if (iAddress.Family() != (unsigned)af) {
-    	    continue;
-    	}
+
+#if TRACE_ME
+		if (1) {
+			pj_sockaddr a;
+			char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+			
+			namelen = sizeof(pj_sockaddr);
+			if (PjSymbianOS::Addr2pj(iAddress, a, &namelen, 
+									 PJ_FALSE) == PJ_SUCCESS) 
+			{
+				PJ_LOG(5,(THIS_FILE, "Enum: found address %s", 
+						pj_sockaddr_print(&a, ipaddr, sizeof(ipaddr), 2)));
+			}
+		}
+#endif
     	
     	namelen = sizeof(ifs[i]);
-    	if (PjSymbianOS::Addr2pj(iAddress, ifs[i], &namelen) != PJ_SUCCESS)
+    	if (PjSymbianOS::Addr2pj(iAddress, ifs[i], &namelen, 
+    							 PJ_TRUE) != PJ_SUCCESS)
+    	{
     	    continue;
+    	}
+
+    	if (ifs[i].addr.sa_family != af)
+		    continue;
     	
     	++i;
     }

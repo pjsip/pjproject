@@ -20,12 +20,15 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/ip_helper.h>
+#include <pj/log.h>
 #include <pj/sock.h>
 #include <pj/string.h>
 #include <pj/unicode.h>
 
 #include "os_symbian.h"
  
+#define THIS_FILE 	"addr_resolv_symbian.cpp"
+#define TRACE_ME	0
 
 
 // PJLIB API: resolve hostname
@@ -86,32 +89,59 @@ static pj_status_t getaddrinfo_by_af(int af, const pj_str_t *name,
     i = 0;
     while (reqStatus == KErrNone && i < *count) {
     	
-	// Get the resolved TInetAddr
-	TInetAddr inetAddr(nameEntry().iAddr);
-	int addrlen;
+		// Get the resolved TInetAddr
+		TInetAddr inetAddr(nameEntry().iAddr);
+		int addrlen;
 
-	// Ignore if this is not the same address family
-	if (inetAddr.Family() != (unsigned)af) {
-	    resv.Next(nameEntry, reqStatus);
-	    User::WaitForRequest(reqStatus);
-	    continue;
-	}
-	
-	// Convert the official address to ANSI.
-	pj_unicode_to_ansi((const wchar_t*)nameEntry().iName.Ptr(), 
-			   nameEntry().iName.Length(),
-		       	   ai[i].ai_canonname, sizeof(ai[i].ai_canonname));
+#if TRACE_ME
+		if (1) {
+			pj_sockaddr a;
+			char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+			int namelen;
+			
+			namelen = sizeof(pj_sockaddr);
+			if (PjSymbianOS::Addr2pj(inetAddr, a, &namelen, 
+									 PJ_FALSE) == PJ_SUCCESS) 
+			{
+				PJ_LOG(5,(THIS_FILE, "resolve %.*s: %s", 
+						(int)name->slen, name->ptr,
+						pj_sockaddr_print(&a, ipaddr, sizeof(ipaddr), 2)));
+			}
+		}
+#endif
+		
+		// Ignore if this is not the same address family
+		// Not a good idea, as Symbian mapps IPv4 to IPv6.
+		//fam = inetAddr.Family();
+		//if (fam != af) {
+		//    resv.Next(nameEntry, reqStatus);
+		//    User::WaitForRequest(reqStatus);
+		//    continue;
+		//}
+		
+		// Convert IP address first to get IPv4 mapped address
+		addrlen = sizeof(ai[i].ai_addr);
+		status = PjSymbianOS::Addr2pj(inetAddr, ai[i].ai_addr, 
+									  &addrlen, PJ_TRUE);
+		if (status != PJ_SUCCESS)
+		    return status;
+		
+		// Ignore if address family doesn't match
+		if (ai[i].ai_addr.addr.sa_family != af) {
+		    resv.Next(nameEntry, reqStatus);
+		    User::WaitForRequest(reqStatus);
+		    continue;
+		}
 
-	// Convert IP address
-	addrlen = sizeof(ai[i].ai_addr);
-	status = PjSymbianOS::Addr2pj(inetAddr, ai[i].ai_addr, &addrlen);
-	if (status != PJ_SUCCESS)
-	    return status;
+		// Convert the official address to ANSI.
+		pj_unicode_to_ansi((const wchar_t*)nameEntry().iName.Ptr(), 
+				   nameEntry().iName.Length(),
+			       	   ai[i].ai_canonname, sizeof(ai[i].ai_canonname));
 	
-	// Next
-	++i;
-	resv.Next(nameEntry, reqStatus);
-	User::WaitForRequest(reqStatus);
+		// Next
+		++i;
+		resv.Next(nameEntry, reqStatus);
+		User::WaitForRequest(reqStatus);
     }
 
     *count = i;
