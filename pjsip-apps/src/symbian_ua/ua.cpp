@@ -21,6 +21,7 @@
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
+#define LOG_LEVEL	4
 
 //
 // Basic config.
@@ -31,7 +32,7 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:192.168.0.11:5060"
+#define SIP_DST_URI	"sip:192.168.0.13"
 
 //
 // Account
@@ -57,7 +58,7 @@
 
 //
 // STUN server
-#if 0
+#if 1
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
 #   define STUN_SERVER	"stun.fwdnet.net"
@@ -74,7 +75,7 @@
 //
 // Use ICE?
 //
-#define USE_ICE		0
+#define USE_ICE		1
 
 
 //
@@ -268,7 +269,10 @@ static pj_status_t app_startup()
     pj_status_t status;
 
     /* Redirect log before pjsua_init() */
-    pj_log_set_log_func((void (*)(int,const char*,int)) &log_writer);
+    pj_log_set_log_func(&log_writer);
+    
+    /* Set log level */
+    pj_log_set_level(LOG_LEVEL);
 
     /* Create pjsua first! */
     status = pjsua_create();
@@ -455,14 +459,14 @@ static void PrintMenu()
 	    "  P    Dump pool factory\n"
    	    "  l    Start loopback audio device\n"
    	    "  L    Stop loopback audio device\n"
-	    "  1    Call " SIP_DST_URI "\n"
-	    "  2    Answer call\n"
-	    "  3    Hangup all calls\n"
+	    "  m    Call " SIP_DST_URI "\n"
+	    "  a    Answer call\n"
+	    "  g    Hangup all calls\n"
 	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
 	    "  O    Set account offline\n"
-	    "  9    Quit\n"));
+	    "  w    Quit\n"));
 }
 
 // Implementation: called when read has completed.
@@ -472,7 +476,7 @@ void ConsoleUI::RunL()
     pj_bool_t reschedule = PJ_TRUE;
     
     switch (kc) {
-    case '9':
+    case 'w':
 	    asw_->AsyncStop();
 	    reschedule = PJ_FALSE;
 	    break;
@@ -490,7 +494,7 @@ void ConsoleUI::RunL()
     case 'L':
 		pjsua_conf_disconnect(0, 0);
 	    break;
-    case '1':
+    case 'm':
 	    if (g_call_id != PJSUA_INVALID_ID) {
 		    PJ_LOG(3,(THIS_FILE, "Another call is active"));	
 		    break;
@@ -504,11 +508,11 @@ void ConsoleUI::RunL()
 		    PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
 	    }
 	    break;
-    case '2':
+    case 'a':
 	    if (g_call_id != PJSUA_INVALID_ID)
 		    pjsua_call_answer(g_call_id, 200, NULL, NULL);
 	    break;
-    case '3':
+    case 'g':
 	    pjsua_call_hangup_all();
 	    break;
     case 's':
@@ -532,16 +536,143 @@ void ConsoleUI::RunL()
 	Run();
 }
 
+#if 0
+// IP networking related testing
+static pj_status_t test_addr(void)
+{
+	int af;
+	unsigned i, count;
+	pj_addrinfo ai[8];
+	pj_sockaddr ifs[8];
+	const pj_str_t *hostname;
+	pj_hostent he;
+	pj_status_t status;
+	
+	pj_log_set_log_func(&log_writer);
+	
+	status = pj_init();
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_init() error", status);
+		return status;
+	}
+	
+	af = pj_AF_INET();
+	
+	// Hostname
+	hostname = pj_gethostname();
+	if (hostname == NULL) {
+		status = PJ_ERESOLVE;
+		pjsua_perror(THIS_FILE, "pj_gethostname() error", status);
+		goto on_return;
+	}
+	
+	PJ_LOG(3,(THIS_FILE, "Hostname: %.*s", hostname->slen, hostname->ptr));
+	
+	// Gethostbyname
+	status = pj_gethostbyname(hostname, &he);
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_gethostbyname() error", status);
+	} else {
+		PJ_LOG(3,(THIS_FILE, "gethostbyname: %s", 
+				  pj_inet_ntoa(*(pj_in_addr*)he.h_addr)));
+	}
+	
+	// Getaddrinfo
+	count = PJ_ARRAY_SIZE(ai);
+	status = pj_getaddrinfo(af, hostname, &count, ai);
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_getaddrinfo() error", status);
+	} else {
+		for (i=0; i<count; ++i) {
+			char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+			PJ_LOG(3,(THIS_FILE, "Addrinfo: %s", 
+					  pj_sockaddr_print(&ai[i].ai_addr, ipaddr, sizeof(ipaddr), 2)));
+		}
+	}
+	
+	// Enum interface
+	count = PJ_ARRAY_SIZE(ifs);
+	status = pj_enum_ip_interface(af, &count, ifs);
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_enum_ip_interface() error", status);
+	} else {
+		for (i=0; i<count; ++i) {
+			char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+			PJ_LOG(3,(THIS_FILE, "Interface: %s", 
+					  pj_sockaddr_print(&ifs[i], ipaddr, sizeof(ipaddr), 2)));
+		}
+	}
+
+	// Get default iinterface
+	status = pj_getdefaultipinterface(af, &ifs[0]);
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_getdefaultipinterface() error", status);
+	} else {
+		char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+		PJ_LOG(3,(THIS_FILE, "Default IP: %s", 
+				  pj_sockaddr_print(&ifs[0], ipaddr, sizeof(ipaddr), 2)));
+	}
+	
+	// Get default IP address
+	status = pj_gethostip(af, &ifs[0]);
+	if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "pj_gethostip() error", status);
+	} else {
+		char ipaddr[PJ_INET6_ADDRSTRLEN+2];
+		PJ_LOG(3,(THIS_FILE, "Host IP: %s", 
+				  pj_sockaddr_print(&ifs[0], ipaddr, sizeof(ipaddr), 2)));
+	}
+	
+	status = -1;
+	
+on_return:
+	pj_shutdown();
+	return status;
+}
+#endif
+
+
+#include <ES_SOCK.H>
 
 ////////////////////////////////////////////////////////////////////////////
 int ua_main() 
 {
+	RSocketServ aSocketServer;
+	RConnection aConn;
+	TInt err;
+	pj_symbianos_params sym_params;
     pj_status_t status;
+    
+    // Initialize RSocketServ
+    if ((err=aSocketServer.Connect()) != KErrNone)
+    	return PJ_STATUS_FROM_OS(err);
+    
+    // Open up a connection
+    if ((err=aConn.Open(aSocketServer)) != KErrNone) {
+	    aSocketServer.Close();
+		return PJ_STATUS_FROM_OS(err);
+    }
+    
+    if ((err=aConn.Start()) != KErrNone) {
+    	aSocketServer.Close();
+    	return PJ_STATUS_FROM_OS(err);
+    }
+    
+    // Set Symbian OS parameters in pjlib.
+    // This must be done before pj_init() is called.
+    pj_bzero(&sym_params, sizeof(sym_params));
+    sym_params.rsocketserv = &aSocketServer;
+    sym_params.rconnection = &aConn;
+    pj_symbianos_set_params(&sym_params);
     
     // Initialize pjsua
     status  = app_startup();
-    if (status != PJ_SUCCESS)
+    //status = test_addr();
+    if (status != PJ_SUCCESS) {
+    	aConn.Close();
+    	aSocketServer.Close();
 	    return status;
+    }
 
     // Run the UI
     CActiveSchedulerWait *asw = new CActiveSchedulerWait;
@@ -558,7 +689,10 @@ int ua_main()
     // Shutdown pjsua
     pjsua_destroy();
     
-on_return:
+    // Close connection and socket server
+    aConn.Close();
+	aSocketServer.Close();
+	
     return status;
 }
 
