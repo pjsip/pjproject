@@ -707,6 +707,8 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
     pj_stun_sockaddr_attr *attr;
     pj_uint32_t val;
 
+    PJ_CHECK_STACK();
+    
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     GETATTRHDR(buf, &attr->hdr);
@@ -771,6 +773,8 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
     if (len < ATTR_LEN) 
 	return PJ_ETOOSMALL;
 
+    PJ_CHECK_STACK();
+    
     /* Copy and convert headers to network byte order */
     PUTVAL16H(buf, 0, ca->hdr.type);
     PUTVAL16H(buf, 2, STUN_GENERIC_IP_ADDR_LEN);
@@ -899,6 +903,8 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
     const pj_stun_string_attr *ca = 
 	(const pj_stun_string_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     /* Calculated total attr_len (add padding if necessary) */
     *printed = (ca->value.slen + ATTR_HDR_LEN + 3) & (~3);
     if (len < *printed) {
@@ -1080,6 +1086,8 @@ static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf,
 {
     const pj_stun_uint_attr *ca = (const pj_stun_uint_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     if (len < 8) 
 	return PJ_ETOOSMALL;
 
@@ -1163,6 +1171,8 @@ static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
 {
     const pj_stun_uint64_attr *ca = (const pj_stun_uint64_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     if (len < 12) 
 	return PJ_ETOOSMALL;
 
@@ -1242,6 +1252,8 @@ static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf,
 {
     const pj_stun_msgint_attr *ca = (const pj_stun_msgint_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     if (len < 24) 
 	return PJ_ETOOSMALL;
 
@@ -1346,6 +1358,8 @@ static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
     const pj_stun_errcode_attr *ca = 
 	(const pj_stun_errcode_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen) 
 	return PJ_ETOOSMALL;
 
@@ -1461,6 +1475,8 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
     pj_uint16_t *dst_unk_attr;
     unsigned i;
 
+    PJ_CHECK_STACK();
+    
     /* Check that buffer is enough */
     if (len < ATTR_HDR_LEN + (ca->attr_count << 1))
 	return PJ_ETOOSMALL;
@@ -1561,6 +1577,8 @@ static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf,
 {
     const pj_stun_binary_attr *ca = (const pj_stun_binary_attr*)a;
 
+    PJ_CHECK_STACK();
+    
     /* Calculated total attr_len (add padding if necessary) */
     *printed = (ca->length + ATTR_HDR_LEN + 3) & (~3);
     if (len < *printed)

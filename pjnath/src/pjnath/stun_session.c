@@ -45,8 +45,8 @@ struct pj_stun_session
 
 #define LOG_ERR_(sess,title,rc) pjnath_perror(sess->pool->obj_name,title,rc)
 
-#define TDATA_POOL_SIZE		    1024
-#define TDATA_POOL_INC		    1024
+#define TDATA_POOL_SIZE		    PJNATH_POOL_LEN_STUN_TDATA
+#define TDATA_POOL_INC		    PJNATH_POOL_INC_STUN_TDATA
 
 
 static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
@@ -383,9 +383,10 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     PJ_ASSERT_RETURN(cfg && cb && p_sess, PJ_EINVAL);
 
     if (name==NULL)
-	name = "sess%p";
+	name = "stuse%p";
 
-    pool = pj_pool_create(cfg->pf, name, 4000, 4000, NULL);
+    pool = pj_pool_create(cfg->pf, name, PJNATH_POOL_LEN_STUN_SESS, 
+			  PJNATH_POOL_INC_STUN_SESS, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
     sess = PJ_POOL_ZALLOC_T(pool, pj_stun_session);
@@ -995,7 +996,9 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && packet && pkt_size, PJ_EINVAL);
 
-    tmp_pool = pj_pool_create(sess->cfg->pf, "tmpstun", 1024, 1024, NULL);
+    tmp_pool = pj_pool_create(sess->cfg->pf, "tmpstun", 
+			      PJNATH_POOL_LEN_STUN_TDATA, 
+			      PJNATH_POOL_INC_STUN_TDATA, NULL);
     if (!tmp_pool)
 	return PJ_ENOMEM;
 

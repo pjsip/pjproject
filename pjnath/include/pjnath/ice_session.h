@@ -25,6 +25,7 @@
  */
 #include <pjnath/types.h>
 #include <pjnath/stun_session.h>
+#include <pjnath/errno.h>
 #include <pj/sock.h>
 #include <pj/timer.h>
 
@@ -560,6 +561,12 @@ struct pj_ice_sess
     
     /* Valid list */
     pj_ice_sess_checklist valid_list;		    /**< Valid list.	    */
+    
+    /* Temporary buffer for misc stuffs to avoid using stack too much */
+    union {
+    	char txt[128];
+	char errmsg[PJ_ERR_MSG_SIZE];
+    } tmp;
 };
 
 

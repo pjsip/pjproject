@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/ice_session.h>
-#include <pjnath/errno.h>
 #include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -261,7 +260,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     if (name == NULL)
 	name = "ice%p";
 
-    pool = pj_pool_create(stun_cfg->pf, name, 4000, 4000, NULL);
+    pool = pj_pool_create(stun_cfg->pf, name, PJNATH_POOL_LEN_ICE_SESS, 
+			  PJNATH_POOL_INC_ICE_SESS, NULL);
     ice = PJ_POOL_ZALLOC_T(pool, pj_ice_sess);
     ice->pool = pool;
     ice->role = role;
@@ -557,7 +557,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 {
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
-    char tmp[128];
 
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
@@ -584,7 +583,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	pj_bzero(&lcand->rel_addr, sizeof(lcand->rel_addr));
 
 
-    pj_ansi_strcpy(tmp, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
+    pj_ansi_strcpy(ice->tmp.txt, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
     LOG4((ice->obj_name, 
 	 "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
 	 "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
@@ -593,7 +592,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 cand_type_names[lcand->type],
 	 (int)lcand->foundation.slen,
 	 lcand->foundation.ptr,
-	 tmp, 
+	 ice->tmp.txt, 
 	 (int)pj_ntohs(lcand->addr.ipv4.sin_port),
 	 pj_inet_ntoa(lcand->base_addr.ipv4.sin_addr),
 	 (int)pj_htons(lcand->base_addr.ipv4.sin_port),
@@ -733,8 +732,10 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 {
     const pj_ice_sess_cand *lcand = check->lcand;
     const pj_ice_sess_cand *rcand = check->rcand;
-    char laddr[CHECK_NAME_LEN];
+    char laddr[PJ_INET6_ADDRSTRLEN];
     int len;
+
+    PJ_CHECK_STACK();
 
     pj_ansi_strcpy(laddr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
 
@@ -760,17 +761,16 @@ static const char *dump_check(char *buffer, unsigned bufsize,
     return buffer;
 }
 
-static void dump_checklist(const char *title, const pj_ice_sess *ice, 
+static void dump_checklist(const char *title, pj_ice_sess *ice, 
 			   const pj_ice_sess_checklist *clist)
 {
     unsigned i;
-    char buffer[CHECK_NAME_LEN];
 
     LOG4((ice->obj_name, "%s", title));
     for (i=0; i<clist->count; ++i) {
 	const pj_ice_sess_check *c = &clist->checks[i];
 	LOG4((ice->obj_name, " %s (%s, state=%s)",
-	     dump_check(buffer, sizeof(buffer), clist, c),
+	     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), clist, c),
 	     (c->nominated ? "nominated" : "not nominated"), 
 	     check_state_name[c->state]));
     }
@@ -784,12 +784,10 @@ static void check_set_state(pj_ice_sess *ice, pj_ice_sess_check *check,
 			    pj_ice_sess_check_state st, 
 			    pj_status_t err_code)
 {
-    char buf[CHECK_NAME_LEN];
-
     pj_assert(check->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
 
     LOG5((ice->obj_name, "Check %s: state changed from %s to %s",
-	 dump_check(buf, sizeof(buf), &ice->clist, check),
+	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), &ice->clist, check),
 	 check_state_name[check->state],
 	 check_state_name[st]));
     check->state = st;
@@ -937,11 +935,9 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 
 	    if (reason != NULL) {
 		/* Found duplicate, remove it */
-		char buf[CHECK_NAME_LEN];
-
 		LOG5((ice->obj_name, "Check %s pruned (%s)",
-		      dump_check(buf, sizeof(buf), &ice->clist, 
-			         &clist->checks[j]),
+		      dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+				 &ice->clist, &clist->checks[j]),
 		      reason));
 
 		pj_array_erase(clist->checks, sizeof(clist->checks[0]),
@@ -975,14 +971,13 @@ static void on_completion_timer(pj_timer_heap_t *th,
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 {
     if (!ice->is_complete) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
 	ice->is_complete = PJ_TRUE;
 	ice->ice_status = status;
     
 	/* Log message */
 	LOG4((ice->obj_name, "ICE process complete, status=%s", 
-	     pj_strerror(status, errmsg, sizeof(errmsg)).ptr));
+	     pj_strerror(status, ice->tmp.errmsg, 
+			 sizeof(ice->tmp.errmsg)).ptr));
 
 	dump_checklist("Valid list", ice, &ice->valid_list);
 
@@ -1056,7 +1051,6 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
      */
     if (check->err_code==PJ_SUCCESS && check->nominated) {
 	pj_ice_sess_comp *comp;
-	char buf[CHECK_NAME_LEN];
 
 	LOG5((ice->obj_name, "Check %d is successful and nominated",
 	     GET_CHECK_ID(&ice->clist, check)));
@@ -1074,7 +1068,8 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 		    /* Just fail Frozen/Waiting check */
 		    LOG5((ice->obj_name, 
 			 "Check %s to be failed because state is %s",
-			 dump_check(buf, sizeof(buf), &ice->clist, c), 
+			 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+				    &ice->clist, c), 
 			 check_state_name[c->state]));
 		    check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_FAILED,
 				    PJ_ECANCELLED);
@@ -1087,7 +1082,8 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 		    if (c->tdata) {
 			LOG5((ice->obj_name, 
 			     "Cancelling check %s (In Progress)",
-			     dump_check(buf, sizeof(buf), &ice->clist, c)));
+			     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+					&ice->clist, c)));
 			pj_stun_session_cancel_req(comp->stun_sess, 
 						   c->tdata, PJ_FALSE, 0);
 			c->tdata = NULL;
@@ -1368,7 +1364,6 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     const pj_ice_sess_cand *lcand;
     const pj_ice_sess_cand *rcand;
     pj_uint32_t prio;
-    char buffer[128];
     pj_status_t status;
 
     check = &clist->checks[check_id];
@@ -1378,7 +1373,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 
     LOG5((ice->obj_name, 
 	 "Sending connectivity check for check %s", 
-	 dump_check(buffer, sizeof(buffer), clist, check)));
+	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), clist, check)));
 
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
@@ -1553,9 +1548,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 {
     pj_ice_sess_checklist *clist;
     const pj_ice_sess_cand *cand0;
-    const pj_str_t *flist[PJ_ICE_MAX_CAND];
+    const pj_str_t *flist[PJ_ICE_MAX_CAND]; // XXX
     pj_ice_rx_check *rcheck;
     unsigned i, flist_cnt = 0;
+    pj_time_val delay;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
@@ -1624,7 +1621,19 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     pj_list_init(&ice->early_check);
 
     /* Start periodic check */
-    return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
+    /* We could start it immediately like below, but lets schedule timer 
+     * instead to reduce stack usage:
+     * return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
+     */
+    clist->timer.id = PJ_TRUE;
+    delay.sec = delay.msec = 0;
+    status = pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
+				    &clist->timer, &delay);
+    if (status != PJ_SUCCESS) {
+	clist->timer.id = PJ_FALSE;
+    }
+
+    return status;
 }
 
 
@@ -1661,7 +1670,6 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     pj_ice_sess_cand *lcand;
     pj_ice_sess_checklist *clist;
     pj_stun_xor_mapped_addr_attr *xaddr;
-    char buffer[CHECK_NAME_LEN];
     unsigned i;
 
     PJ_UNUSED_ARG(stun_sess);
@@ -1730,7 +1738,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	LOG4((ice->obj_name, 
 	     "Check %s%s: connectivity check FAILED: %s",
-	     dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+			&ice->clist, check),
 	     (check->nominated ? " (nominated)" : " (not nominated)"),
 	     errmsg));
 
@@ -1753,7 +1762,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	status = PJNATH_EICEINSRCADDR;
 	LOG4((ice->obj_name, 
 	     "Check %s%s: connectivity check FAILED: source address mismatch",
-	     dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+			&ice->clist, check),
 	     (check->nominated ? " (nominated)" : " (not nominated)")));
 	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
 	on_check_complete(ice, check);
@@ -1779,7 +1789,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
     LOG4((ice->obj_name, 
 	 "Check %s%s: connectivity check SUCCESS",
-	 dump_check(buffer, sizeof(buffer), &ice->clist, check),
+	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+		    &ice->clist, check),
 	 (check->nominated ? " (nominated)" : " (not nominated)")));
 
     /* Get the STUN XOR-MAPPED-ADDRESS attribute. */
@@ -2357,10 +2368,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    pj_strerror(status, ice->tmp.errmsg, sizeof(ice->tmp.errmsg));
 	    LOG4((ice->obj_name, "Error processing incoming message: %s",
-		  errmsg));
+		  ice->tmp.errmsg));
 	}
     } else {
 	(*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 

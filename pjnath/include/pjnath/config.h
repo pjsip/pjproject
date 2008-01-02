@@ -255,6 +255,57 @@
 #endif
 
 
+/** ICE session pool initial size. */
+#ifndef PJNATH_POOL_LEN_ICE_SESS
+#   define PJNATH_POOL_LEN_ICE_SESS		    512
+#endif
+
+/** ICE session pool increment size */
+#ifndef PJNATH_POOL_INC_ICE_SESS
+#   define PJNATH_POOL_INC_ICE_SESS		    512
+#endif
+
+/** ICE stream transport pool initial size. */
+#ifndef PJNATH_POOL_LEN_ICE_STRANS
+#   define PJNATH_POOL_LEN_ICE_STRANS		    1000
+#endif
+
+/** ICE stream transport pool increment size */
+#ifndef PJNATH_POOL_INC_ICE_STRANS
+#   define PJNATH_POOL_INC_ICE_STRANS		    512
+#endif
+
+/** NAT detect pool initial size */
+#ifndef PJNATH_POOL_LEN_NATCK
+#   define PJNATH_POOL_LEN_NATCK		    512
+#endif
+
+/** NAT detect pool increment size */
+#ifndef PJNATH_POOL_INC_NATCK
+#   define PJNATH_POOL_INC_NATCK		    512
+#endif
+
+/** STUN session pool initial size */
+#ifndef PJNATH_POOL_LEN_STUN_SESS
+#   define PJNATH_POOL_LEN_STUN_SESS		    1000
+#endif
+
+/** STUN session pool increment size */
+#ifndef PJNATH_POOL_INC_STUN_SESS
+#   define PJNATH_POOL_INC_STUN_SESS		    1000
+#endif
+
+/** STUN session transmit data pool initial size */
+#ifndef PJNATH_POOL_LEN_STUN_TDATA
+#   define PJNATH_POOL_LEN_STUN_TDATA		    1000
+#endif
+
+/** STUN session transmit data pool increment size */
+#ifndef PJNATH_POOL_INC_STUN_TDATA
+#   define PJNATH_POOL_INC_STUN_TDATA		    1000
+#endif
+
+
 /**
  * @}
  */

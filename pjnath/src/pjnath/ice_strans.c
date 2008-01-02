@@ -97,7 +97,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( pj_stun_config *stun_cfg,
     if (name == NULL)
 	name = "icstr%p";
 
-    pool = pj_pool_create(stun_cfg->pf, name, 1000, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, name, PJNATH_POOL_LEN_ICE_STRANS, 
+			  PJNATH_POOL_INC_ICE_STRANS, NULL);
     ice_st = PJ_POOL_ZALLOC_T(pool, pj_ice_strans);
     ice_st->pool = pool;
     pj_memcpy(ice_st->obj_name, pool->obj_name, PJ_MAX_OBJ_NAME);

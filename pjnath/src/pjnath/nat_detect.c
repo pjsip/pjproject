@@ -220,7 +220,8 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Init NAT detection session.
      */
-    pool = pj_pool_create(stun_cfg->pf, "natck%p", 512, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, "natck%p", PJNATH_POOL_LEN_NATCK, 
+			  PJNATH_POOL_INC_NATCK, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 

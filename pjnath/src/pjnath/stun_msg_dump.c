@@ -19,8 +19,8 @@
 #include <pjnath/stun_msg.h>
 #include <pjnath/errno.h>
 #include <pj/assert.h>
+#include <pj/os.h>
 #include <pj/string.h>
-
 
 #if PJ_LOG_MAX_LEVEL > 0
 
@@ -236,6 +236,8 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 
     PJ_ASSERT_RETURN(msg && buffer && length, NULL);
 
+    PJ_CHECK_STACK();
+    
     p = buffer;
     end = buffer + length;
 
