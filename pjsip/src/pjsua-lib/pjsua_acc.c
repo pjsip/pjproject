@@ -864,7 +864,6 @@ static pj_status_t pjsua_regc_init(int acc_id)
 {
     pjsua_acc *acc;
     pj_str_t contact;
-    char contact_buf[1024];
     pj_pool_t *pool;
     pj_status_t status;
 
@@ -893,7 +892,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	return status;
     }
 
-    pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
+    pool = pjsua_pool_create("tmpregc", 512, 512);
     status = pjsua_acc_create_uac_contact( pool, &contact,
 					   acc_id, &acc->cfg.reg_uri);
     if (status != PJ_SUCCESS) {
@@ -901,6 +900,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 				" for registration", 
 		     status);
 	pjsip_regc_destroy(acc->regc);
+	pj_pool_release(pool);
 	acc->regc = NULL;
 	return status;
     }
@@ -916,6 +916,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 		     "Client registration initialization error", 
 		     status);
 	pjsip_regc_destroy(acc->regc);
+	pj_pool_release(pool);
 	acc->regc = NULL;
 	return status;
     }
@@ -952,7 +953,6 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	const pj_str_t STR_USER_AGENT = { "User-Agent", 10 };
 	pjsip_generic_string_hdr *h;
 
-	pool = pj_pool_create_on_buf(NULL, contact_buf, sizeof(contact_buf));
 	pj_list_init(&hdr_list);
 
 	h = pjsip_generic_string_hdr_create(pool, &STR_USER_AGENT, 
@@ -961,6 +961,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 
 	pjsip_regc_add_headers(acc->regc, &hdr_list);
     }
+
+    pj_pool_release(pool);
 
     return PJ_SUCCESS;
 }

@@ -1500,7 +1500,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
 {
     pjsua_call *dest_call;
     pjsip_dialog *dest_dlg;
-    char str_dest_buf[512];
+    char str_dest_buf[PJSIP_MAX_URL_SIZE*2];
     pj_str_t str_dest;
     int len;
     pjsip_uri *uri;

@@ -220,7 +220,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     pj_sockaddr_in bound_addr;
     pj_sockaddr_in mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
-    char addr_buf[80];
+    char addr_buf[PJ_INET6_ADDRSTRLEN+2];
     pj_sock_t sock[2];
 
     /* Make sure STUN server resolution has completed */
@@ -624,6 +624,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	pj_ice_strans_comp comp;
 	pjmedia_ice_cb ice_cb;
 	int next_port;
+	char name[32];
 #if PJMEDIA_ADVERTISE_RTCP
 	enum { COMP_CNT=2 };
 #else
@@ -633,7 +634,9 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
 	ice_cb.on_ice_complete = &on_ice_complete;
 
-	status = pjmedia_ice_create(pjsua_var.med_endpt, NULL, COMP_CNT,
+	pj_ansi_snprintf(name, sizeof(name), "icetp%02d", i);
+			 
+	status = pjmedia_ice_create(pjsua_var.med_endpt, name, COMP_CNT,
 				    &pjsua_var.stun_cfg, &ice_cb,
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
@@ -890,8 +893,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     pjmedia_session_info sess_info;
     pjmedia_stream_info *si = NULL;
     pjmedia_port *media_port;
-    pj_str_t port_name;
-    char tmp[PJSIP_MAX_URL_SIZE];
     pj_status_t status;
 
     /* Destroy existing media session, if any. */
@@ -952,7 +953,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/* No need because we need keepalive? */
 
     } else {
-
 	/* Start ICE */
 	if (pjsua_var.media_cfg.enable_ice) {
 	    status = pjmedia_ice_start_ice(call->med_tp, call->inv->pool, 
@@ -1012,19 +1012,24 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/*
 	 * Add the call to conference bridge.
 	 */
-	port_name.ptr = tmp;
-	port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-					 call->inv->dlg->remote.info->uri,
-					 tmp, sizeof(tmp));
-	if (port_name.slen < 1) {
-	    port_name = pj_str("call");
-	}
-	status = pjmedia_conf_add_port( pjsua_var.mconf, call->inv->pool,
-					media_port, 
-					&port_name,
-					(unsigned*)&call->conf_slot);
-	if (status != PJ_SUCCESS) {
-	    return status;
+	{
+	    char tmp[PJSIP_MAX_URL_SIZE];
+	    pj_str_t port_name;
+
+	    port_name.ptr = tmp;
+	    port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+					     call->inv->dlg->remote.info->uri,
+					     tmp, sizeof(tmp));
+	    if (port_name.slen < 1) {
+		port_name = pj_str("call");
+	    }
+	    status = pjmedia_conf_add_port( pjsua_var.mconf, call->inv->pool,
+					    media_port, 
+					    &port_name,
+					    (unsigned*)&call->conf_slot);
+	    if (status != PJ_SUCCESS) {
+		return status;
+	    }
 	}
 
 	/* Call's media state is active */
@@ -1089,7 +1094,7 @@ PJ_DEF(unsigned) pjsua_conf_get_max_ports(void)
  */
 PJ_DEF(unsigned) pjsua_conf_get_active_ports(void)
 {
-    unsigned ports[256];
+    unsigned ports[PJSUA_MAX_CONF_PORTS];
     unsigned count = PJ_ARRAY_SIZE(ports);
     pj_status_t status;
 
