@@ -40,6 +40,9 @@
 
 #   define PJMEDIA_SOUND_IMPLEMENTATION PJMEDIA_SOUND_NULL_SOUND
 
+    /* Misc PJLIB setting */
+#   define PJ_MAXPATH			80
+
     /* Disable these */
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
 #   define PJMEDIA_HAS_SPEEX_AEC	0
@@ -50,6 +53,9 @@
 #   define PJMEDIA_HAS_ILBC_CODEC	0
 #   define PJMEDIA_HAS_SPEEX_CODEC	0
 
+    /* Need larger sound buffers */
+#   define PJMEDIA_SOUND_BUFFER_COUNT	16
+
     /* Disable safe module access */
 #   define PJSIP_SAFE_MODULE		0
 
@@ -57,6 +63,10 @@
 
     /* Since we don't have threads, log buffer can use static buffer */
 #   define PJ_LOG_USE_STACK_BUFFER	0
+
+	/* Disable check stack since it increases footprint */
+#   undef PJ_OS_HAS_CHECK_STACK
+#   define PJ_OS_HAS_CHECK_STACK	0
 
     /* Symbian has problem with too many large blocks */
 #   define PJSIP_POOL_LEN_ENDPT		1000
@@ -75,9 +85,14 @@
     /* Set maximum number of dialog/transaction/calls to minimum */
 #   define PJSIP_MAX_TSX_COUNT 		31
 #   define PJSIP_MAX_DIALOG_COUNT 	31
-#   define PJSUA_MAX_CALLS		31
+#   define PJSUA_MAX_CALLS		4
 
-#	define PJMEDIA_SOUND_BUFFER_COUNT 12
+    /* Other pjsua settings */
+#   define PJSUA_MAX_ACC		4
+#   define PJSUA_MAX_PLAYERS		4
+#   define PJSUA_MAX_RECORDERS		4
+#   define PJSUA_MAX_CONF_PORTS		(PJSUA_MAX_CALLS+2*PJSUA_MAX_PLAYERS)
+#   define PJSUA_MAX_BUDDIES		32
 
 #endif
 
