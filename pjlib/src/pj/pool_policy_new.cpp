@@ -33,9 +33,14 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
     void *mem;
 
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
 
+    if (factory->on_block_alloc) {
+		int rc;
+		rc = factory->on_block_alloc(factory, size);
+		if (!rc)
+		    return NULL;
+    }
+    
     mem = (void*) new char[size+(SIG_SIZE << 1)];
     
     /* Exception for new operator may be disabled, so.. */
@@ -52,9 +57,10 @@ static void *operator_new(pj_pool_factory *factory, pj_size_t size)
 static void operator_delete(pj_pool_factory *factory, void *mem, pj_size_t size)
 {
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(size);
 
+    if (factory->on_block_free) 
+        factory->on_block_free(factory, size);
+    
     /* Check and remove signature when PJ_SAFE_POOL is set. It will
      * move "mem" pointer backward.
      */
