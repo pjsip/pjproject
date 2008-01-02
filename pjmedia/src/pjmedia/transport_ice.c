@@ -94,6 +94,10 @@ static pjmedia_transport_op tp_ice_op =
     &pjmedia_ice_destroy
 };
 
+static const pj_str_t STR_CANDIDATE = {"candidate", 9};
+static const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
+static const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
+
 
 /*
  * Create ICE media transport.
@@ -467,16 +471,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     const pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
-    pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
+    pj_ice_sess_cand *cand;
     const pjmedia_sdp_media *sdp_med;
     pj_bool_t remote_is_lite = PJ_FALSE;
     pj_bool_t ice_mismatch = PJ_FALSE;
     pjmedia_sdp_conn *conn = NULL;
     pj_sockaddr conn_addr;
     pj_bool_t conn_found_in_candidate = PJ_FALSE;
-    const pj_str_t STR_CANDIDATE = {"candidate", 9};
-    const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
-    const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
     pj_str_t uname, pass;
     pj_status_t status;
 
@@ -529,9 +530,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     }
     pass = attr->value;
 
+    /* Allocate candidate array */
+    cand = (pj_ice_sess_cand*)
+	   pj_pool_calloc(pool, PJ_ICE_MAX_CAND, sizeof(pj_ice_sess_cand));
+
     /* Get all candidates in the media */
     cand_cnt = 0;
-    for (i=0; i<sdp_med->attr_count; ++i) {
+    for (i=0; i<sdp_med->attr_count && cand_cnt < PJ_ICE_MAX_CAND; ++i) {
 	pjmedia_sdp_attr *attr;
 
 	attr = sdp_med->attr[i];
