@@ -313,6 +313,7 @@ PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm)
  */
 PJ_DEF(pj_status_t) pj_init(void)
 {
+	char stack_ptr;
     pj_status_t status;
     
     pj_ansi_strcpy(main_thread.obj_name, "pjthread");
@@ -336,6 +337,14 @@ PJ_DEF(pj_status_t) pj_init(void)
     status = pj_exception_id_alloc("PJLIB/No memory", &PJ_NO_MEMORY_EXCEPTION);
     if (status != PJ_SUCCESS)
         goto on_error;
+
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    main_thread.stk_start = &stack_ptr;
+    main_thread.stk_size = 0xFFFFFFFFUL;
+    main_thread.stk_max_usage = 0;
+#else
+    stack_ptr = '\0';
+#endif
 
     PJ_LOG(5,(THIS_FILE, "PJLIB initialized."));
     return PJ_SUCCESS;
