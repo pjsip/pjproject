@@ -276,8 +276,8 @@ PJ_DEF(pj_uint32_t) pj_htonl(pj_uint32_t hostlong)
  */
 PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 {
-    static TBuf<20> str16;
-    static char str8[20];
+	static char str8[PJ_INET_ADDRSTRLEN];
+    TBuf<PJ_INET_ADDRSTRLEN> str16(0);
 
     /* (Symbian IP address is in host byte order) */
     TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
@@ -294,7 +294,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
  */
 PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
 {
-    enum { MAXIPLEN = 16 };
+    enum { MAXIPLEN = PJ_INET_ADDRSTRLEN };
 
     /* Initialize output with PJ_INADDR_NONE.
      * Some apps relies on this instead of the return value
