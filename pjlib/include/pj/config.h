@@ -428,6 +428,17 @@
 
 
 /**
+ * Specify if PJ_CHECK_STACK() macro is enabled to check the sanity of 
+ * the stack. The OS implementation may check that no stack overflow 
+ * occurs, and it also may collect statistic about stack usage. Note
+ * that this will increase the footprint of the libraries since it
+ * tracks the filename and line number of each functions.
+ */
+#ifndef PJ_OS_HAS_CHECK_STACK
+#	define PJ_OS_HAS_CHECK_STACK		0
+#endif
+
+/**
  * Do we have alternate pool implementation?
  *
  * Default: 0
