@@ -53,3 +53,7 @@ START RESOURCE  symbian_ua_reg.rss
 	TARGETPATH      \private\10003a3f\apps
 END
 
+// The default 8KB seems to be insufficient with all bells and
+// whistles turned on
+EPOCSTACKSIZE	12288
+
