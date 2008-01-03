@@ -198,6 +198,15 @@ PJ_DEF(void) pj_shutdown()
 {
     int i;
 
+    /* Display stack usage */
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    {
+	pj_thread_t *rec = (pj_thread_t*)main_thread;
+	PJ_LOG(5,(rec->obj_name, "Main thread stack max usage=%u by %s:%d", 
+		  rec->stk_max_usage, rec->caller_file, rec->caller_line));
+    }
+#endif
+
     /* Call atexit() functions */
     for (i=atexit_count-1; i>=0; --i) {
 	(*atexit_func[i])();
@@ -349,6 +358,11 @@ static DWORD WINAPI thread_main(void *param)
     result = (*rec->proc)(rec->arg);
 
     PJ_LOG(6,(rec->obj_name, "Thread quitting"));
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    PJ_LOG(5,(rec->obj_name, "Thread stack max usage=%u by %s:%d", 
+	      rec->stk_max_usage, rec->caller_file, rec->caller_line));
+#endif
+
     return (DWORD)result;
 }
 
