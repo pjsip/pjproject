@@ -346,6 +346,10 @@ static pj_status_t init_sip()
     status = pjsip_ua_init_module( app.sip_endpt, NULL );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Initialize 100rel support */
+    status = pjsip_100rel_init_module(app.sip_endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
     /*  Init invite session module. */
     {
 	pjsip_inv_callback inv_cb;
