@@ -21,7 +21,7 @@
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
-#define LOG_LEVEL	4
+#define LOG_LEVEL	3
 
 //
 // Basic config.
@@ -32,14 +32,14 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:192.168.0.13"
+#define SIP_DST_URI	"sip:user@192.168.0.11"
 
 //
 // Account
 //
 #define HAS_SIP_ACCOUNT	0	// 0 to disable registration
-#define SIP_DOMAIN	"server"
-#define SIP_USER	"user"
+#define SIP_DOMAIN	"domain"
+#define SIP_USER	"username"
 #define SIP_PASSWD	"password"
 
 //
@@ -54,14 +54,14 @@
 // or STUN (for STUN see other settings below)
 //
 #define NAMESERVER	NULL
-//#define NAMESERVER	"62.241.163.201"
+//#define NAMESERVER	"192.168.0.1"
 
 //
 // STUN server
-#if 1
+#if 0
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
-#   define STUN_SERVER	"stun.fwdnet.net"
+#   define STUN_SERVER	"stun.xten.com"
 #elif 0
 	// Use this to have the STUN server resolved with DNS SRV
 #   define STUN_DOMAIN	"iptel.org"
@@ -558,6 +558,26 @@ static pj_status_t test_addr(void)
 	
 	af = pj_AF_INET();
 	
+#if 0
+	pj_in_addr in_addr;
+	pj_str_t aa = pj_str("1.1.1.1");
+	in_addr = pj_inet_addr(&aa);
+	char *the_addr = pj_inet_ntoa(in_addr);
+	PJ_LOG(3,(THIS_FILE, "IP addr=%s", the_addr));
+
+	aa = pj_str("192.168.0.15");
+	in_addr = pj_inet_addr(&aa);
+	the_addr = pj_inet_ntoa(in_addr);
+	PJ_LOG(3,(THIS_FILE, "IP addr=%s", the_addr));
+
+	aa = pj_str("2.2.2.2");
+	in_addr = pj_inet_addr(&aa);
+	the_addr = pj_inet_ntoa(in_addr);
+	PJ_LOG(3,(THIS_FILE, "IP addr=%s", the_addr));
+	
+	return -1;
+#endif
+	
 	// Hostname
 	hostname = pj_gethostname();
 	if (hostname == NULL) {
@@ -685,7 +705,27 @@ int ua_main()
     
     delete con;
     delete asw;
+
+    // Dump memory statistics
+    PJ_LOG(3,(THIS_FILE, "Max heap usage: %u.%03uMB",
+    		  pjsua_var.cp.peak_used_size / 1000000,
+    		  (pjsua_var.cp.peak_used_size % 1000000)/1000));
     
+    // check max stack usage
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+	pj_thread_t* this_thread = pj_thread_this();
+	if (!this_thread)
+		return status;
+	
+	const char* max_stack_file;
+	int max_stack_line;
+	status = pj_thread_get_stack_info(this_thread, &max_stack_file, &max_stack_line);
+	
+	PJ_LOG(3,(THIS_FILE, "Max stack usage: %u at %s:%d", 
+			pj_thread_get_stack_max_usage(this_thread), 
+			max_stack_file, max_stack_line));
+#endif
+	
     // Shutdown pjsua
     pjsua_destroy();
     
