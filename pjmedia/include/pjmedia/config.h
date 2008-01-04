@@ -91,6 +91,30 @@
 
 
 /**
+ * Specify whether delay buffer is used for sound device.
+ * When delay buffer is enabled, the sound device callback 
+ * will be called one after another evenly.
+ * The delay buffer also performs the best delay calculation
+ * for the sound device, and will try to limit the delay caused
+ * by uneven callback calls to this delay.
+ */
+#ifndef PJMEDIA_SOUND_USE_DELAYBUF
+#   define PJMEDIA_SOUND_USE_DELAYBUF	    0
+#endif
+
+
+/**
+ * Whenever delay buffer is enabled for sound device,
+ * PJMEDIA_SOUND_BUFFER_COUNT is better to be set to 1,
+ * because sound callbacks will be called evenly thus 
+ * there's no need to have this buffer.
+ */
+#if defined(PJMEDIA_SOUND_USE_DELAYBUF) && PJMEDIA_SOUND_USE_DELAYBUF!=0
+#   define PJMEDIA_SOUND_BUFFER_COUNT	    1
+#endif
+
+
+/**
  * Specify number of sound buffers. Larger number is better for sound
  * stability and to accommodate sound devices that are unable to send frames
  * in timely manner, however it would probably cause more audio delay (and 
@@ -100,6 +124,9 @@
  * The setting here currently is used by the conference bridge, the splitter
  * combiner port, and dsound.c.
  *
+ * Note that when PJMEDIA_SOUND_USE_DELAYBUF is enabled, it's best to
+ * set PJMEDIA_SOUND_BUFFER_COUNT to 1 to reduce voice latency.
+ * 
  * Default: 6
  */
 #ifndef PJMEDIA_SOUND_BUFFER_COUNT

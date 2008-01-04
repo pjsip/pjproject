@@ -308,6 +308,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\delaybuf.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\dsound.c"
 				>
 				<FileConfiguration
@@ -1098,6 +1102,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\config.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\delaybuf.h"
 				>
 			</File>
 			<File

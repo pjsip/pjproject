@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound_port.h>
+#include <pjmedia/delaybuf.h>
 #include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/plc.h>
@@ -62,6 +63,10 @@ struct pjmedia_snd_port
     unsigned		 channel_count;
     unsigned		 samples_per_frame;
     unsigned		 bits_per_sample;
+
+#if PJMEDIA_SOUND_USE_DELAYBUF
+    pjmedia_delay_buf	*delay_buf;
+#endif
 };
 
 /*
@@ -92,6 +97,15 @@ static pj_status_t play_cb(/* in */   void *user_data,
     frame.size = size;
     frame.timestamp.u32.hi = 0;
     frame.timestamp.u32.lo = timestamp;
+
+#if PJMEDIA_SOUND_USE_DELAYBUF
+    status = pjmedia_delay_buf_get(snd_port->delay_buf, (pj_int16_t*)output);
+    if (status != PJ_SUCCESS) {
+	pj_bzero(output, size);
+    }
+
+    pjmedia_port_put_frame(port, &frame);
+#endif
 
     status = pjmedia_port_get_frame(port, &frame);
     if (status != PJ_SUCCESS)
@@ -185,12 +199,19 @@ static pj_status_t rec_cb(/* in */   void *user_data,
 	pjmedia_echo_capture(snd_port->ec_state, (pj_int16_t*) input, 0);
     }
 
+#if PJMEDIA_SOUND_USE_DELAYBUF
+    PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(timestamp);
+    PJ_UNUSED_ARG(frame);
+    pjmedia_delay_buf_put(snd_port->delay_buf, (pj_int16_t*)input);
+#else
     frame.buf = (void*)input;
     frame.size = size;
     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame.timestamp.u32.lo = timestamp;
 
     pjmedia_port_put_frame(port, &frame);
+#endif
 
     return PJ_SUCCESS;
 }
@@ -324,6 +345,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 					     pjmedia_snd_port **p_port)
 {
     pjmedia_snd_port *snd_port;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
@@ -338,6 +360,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
     snd_port->bits_per_sample = bits_per_sample;
+    
+#if PJMEDIA_SOUND_USE_DELAYBUF
+    status = pjmedia_delay_buf_create(pool, "snd_buff", samples_per_frame, 
+				      16, &snd_port->delay_buf);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#else
+    PJ_UNUSED_ARG(status);
+#endif
 
     *p_port = snd_port;
 

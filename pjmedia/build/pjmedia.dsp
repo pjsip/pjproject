@@ -113,6 +113,10 @@ SOURCE=..\src\pjmedia\conference.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\delaybuf.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\dsound.c
 # End Source File
 # Begin Source File
@@ -290,6 +294,10 @@ SOURCE=..\include\pjmedia\conference.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\delaybuf.h
 # End Source File
 # Begin Source File
 
