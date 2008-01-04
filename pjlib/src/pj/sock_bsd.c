@@ -361,7 +361,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 
 #if PJ_NATIVE_STRING_IS_UNICODE
 	rc = WSAAddressToString((LPSOCKADDR)&sock_addr, addr_len,
-				NULL, wtempaddr, addr_str_len);
+				NULL, wtempaddr, &addr_str_len);
 	if (rc == 0) {
 	    pj_unicode_to_ansi(wtempaddr, wcslen(wtempaddr), dst, size);
 	}
