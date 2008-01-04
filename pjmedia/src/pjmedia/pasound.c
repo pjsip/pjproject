@@ -61,7 +61,8 @@ struct pjmedia_snd_stream
     pjmedia_snd_rec_cb   rec_cb;
     pjmedia_snd_play_cb  play_cb;
 
-    pj_uint32_t		 timestamp;
+    pj_uint32_t		 play_timestamp;
+    pj_uint32_t		 rec_timestamp;
     pj_uint32_t		 underflow;
     pj_uint32_t		 overflow;
 
@@ -89,6 +90,8 @@ static int PaRecorderCallback(const void *input,
     pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
     pj_status_t status;
 
+    pj_assert(frameCount == stream->samples_per_frame * stream->channel_count);
+
     PJ_UNUSED_ARG(output);
     PJ_UNUSED_ARG(timeInfo);
 
@@ -110,9 +113,9 @@ static int PaRecorderCallback(const void *input,
     if (statusFlags & paInputOverflow)
 	++stream->overflow;
 
-    stream->timestamp += frameCount;
+    stream->rec_timestamp += frameCount;
 
-    status = (*stream->rec_cb)(stream->user_data, stream->timestamp, 
+    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp, 
 			       (void*)input, 
 			       frameCount * stream->bytes_per_sample *
 				 stream->channel_count);
@@ -137,6 +140,8 @@ static int PaPlayerCallback( const void *input,
     unsigned size = frameCount * stream->bytes_per_sample *
 		    stream->channel_count;
 
+    pj_assert(frameCount == stream->samples_per_frame * stream->channel_count);
+
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(timeInfo);
 
@@ -158,9 +163,9 @@ static int PaPlayerCallback( const void *input,
     if (statusFlags & paOutputOverflow)
 	++stream->overflow;
 
-    stream->timestamp += frameCount;
+    stream->play_timestamp += frameCount;
 
-    status = (*stream->play_cb)(stream->user_data, stream->timestamp, 
+    status = (*stream->play_cb)(stream->user_data, stream->play_timestamp, 
 			        output, size);
     
     if (status==0) 
