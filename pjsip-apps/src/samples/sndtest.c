@@ -79,6 +79,7 @@ struct test_data {
     unsigned channel_count;
     pj_bool_t running;
     pj_bool_t has_error;
+    pj_mutex_t *mutex;
 
     struct stream_data capture_data;
     struct stream_data playback_data;
@@ -136,9 +137,13 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
     struct test_data *test_data = user_data;
     struct stream_data *strm_data = &test_data->playback_data;
 
+    pj_mutex_lock(test_data->mutex);
+
     /* Skip frames when test is not started or test has finished */
     if (!test_data->running) {
 	pj_bzero(output, size);
+
+	pj_mutex_unlock(test_data->mutex);
 	return PJ_SUCCESS;
     }
 
@@ -179,6 +184,9 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
     }
 
     pj_bzero(output, size);
+
+    pj_mutex_unlock(test_data->mutex);
+
     return PJ_SUCCESS;
 }
 
@@ -189,11 +197,14 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
     struct test_data *test_data = user_data;
     struct stream_data *strm_data = &test_data->capture_data;
 
+    pj_mutex_lock(test_data->mutex);
+
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(size);
 
     /* Skip frames when test is not started or test has finished */
     if (!test_data->running) {
+	pj_mutex_unlock(test_data->mutex);
 	return PJ_SUCCESS;
     }
 
@@ -233,6 +244,7 @@ static pj_status_t rec_cb(void *user_data, pj_uint32_t timestamp,
 
     }
 
+    pj_mutex_unlock(test_data->mutex);
     return PJ_SUCCESS;
 }
 
@@ -353,7 +365,7 @@ static void print_stream_data(const char *title,
 }
 
 
-static int perform_test(int dev_id, pjmedia_dir dir,
+static int perform_test(pj_pool_t *pool, int dev_id, pjmedia_dir dir,
 		        unsigned clock_rate, unsigned samples_per_frame, 
 			unsigned nchannel, int verbose)
 {
@@ -361,8 +373,7 @@ static int perform_test(int dev_id, pjmedia_dir dir,
     pjmedia_snd_stream *strm;
     struct test_data test_data;
     pjmedia_snd_stream_info si;
-
-
+    
     /*
      * Init test parameters
      */
@@ -371,6 +382,8 @@ static int perform_test(int dev_id, pjmedia_dir dir,
     test_data.clock_rate = clock_rate;
     test_data.samples_per_frame = samples_per_frame;
     test_data.channel_count = nchannel;
+
+    pj_mutex_create_simple(pool, "sndtest", &test_data.mutex); 
 
     /*
      * Open device.
@@ -466,7 +479,8 @@ static int perform_test(int dev_id, pjmedia_dir dir,
 		   test_data.playback_data.last_timestamp;
 	start_diff = test_data.capture_data.first_timestamp-
 		      test_data.playback_data.first_timestamp;
-	drift = end_diff - start_diff;
+	drift = end_diff > start_diff? end_diff - start_diff :
+		start_diff - end_diff;
 
 	PJ_LOG(3,(THIS_FILE, "  Checking for clock drifts:"));
 
@@ -507,6 +521,7 @@ static int perform_test(int dev_id, pjmedia_dir dir,
 int main(int argc, char *argv[])
 {
     pj_caching_pool cp;
+    pj_pool_t *pool;
     pjmedia_endpt *med_endpt;
     int id = -1, verbose = 0;
     int clock_rate = 8000;
@@ -532,6 +547,9 @@ int main(int argc, char *argv[])
     
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
+
+    /* Also create pool for misc purposes */
+    pool = pj_pool_create(&cp.factory, "sndtest", 1000, 1000, NULL);
 
     /* 
      * Initialize media endpoint.
@@ -588,13 +606,15 @@ int main(int argc, char *argv[])
 	frame = 10 * clock_rate / 1000;
 
 
-    status = perform_test(id, PJMEDIA_DIR_CAPTURE_PLAYBACK, 
+    status = perform_test(pool, id, PJMEDIA_DIR_CAPTURE_PLAYBACK, 
 			  clock_rate, frame, channel, verbose);
-    if (status != 0)
-	return 1;
 
+    pjmedia_endpt_destroy(med_endpt);
+    pj_pool_release(pool);
+    pj_caching_pool_destroy(&cp);
+    pj_shutdown();
     
-    return 0;
+    return status == PJ_SUCCESS ? 0 : 1;
 }
 
 
