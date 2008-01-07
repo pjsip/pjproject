@@ -140,11 +140,6 @@ static const char digitmap[16] = { '0', '1', '2', '3',
 				   '8', '9', '*', '#',
 				   'A', 'B', 'C', 'D'};
 
-/* Zero PCM frame */
-#define ZERO_PCM_MAX_SIZE   1920    /* 40ms worth of PCM @ 48KHz */
-static pj_int16_t zero_frame[ZERO_PCM_MAX_SIZE];
-
-
 /*
  * Print error.
  */
@@ -573,7 +568,12 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	    inc_timestamp = PJMEDIA_DTMF_DURATION - ts_len;
 	}
 
-    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE) {
+	/* No need to encode if this is a zero frame.
+	 * See http://www.pjsip.org/trac/ticket/439 
+	 */
+    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE &&
+	       frame->buf != NULL) 
+    {
 	unsigned ts, codec_samples_per_frame;
 
 	/* Repeatedly call encode if there are multiple frames to be
@@ -729,13 +729,11 @@ static pj_status_t put_frame( pjmedia_port *port,
      *  instead so that encoder can decide whether or not to transmit
      *  silence frame.
      */
-    if (frame->type == PJMEDIA_FRAME_TYPE_NONE &&
-	samples_per_frame <= ZERO_PCM_MAX_SIZE) 
-    {
+    if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
 	pj_memcpy(&tmp_zero_frame, frame, sizeof(pjmedia_frame));
 	frame = &tmp_zero_frame;
 
-	tmp_zero_frame.buf = zero_frame;
+	tmp_zero_frame.buf = NULL;
 	tmp_zero_frame.size = samples_per_frame * 2;
 	tmp_zero_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     }
@@ -755,7 +753,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	pj_memcpy(&tmp_in_frame, frame, sizeof(pjmedia_frame));
 	frame = &tmp_in_frame;
 
-	tmp_in_frame.buf = zero_frame;
+	tmp_in_frame.buf = NULL;
 	tmp_in_frame.size = samples_per_frame * 2;
 	tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     }
