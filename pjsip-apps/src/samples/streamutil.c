@@ -144,6 +144,13 @@ static pj_status_t create_stream( pj_pool_t *pool,
     /* Copy remote address */
     pj_memcpy(&info.rem_addr, rem_addr, sizeof(pj_sockaddr_in));
 
+    /* If remote address is not set, set to an arbitrary address
+     * (otherwise stream will assert).
+     */
+    if (info.rem_addr.addr.sa_family == 0) {
+	const pj_str_t addr = pj_str("127.0.0.1");
+	pj_sockaddr_in_init(&info.rem_addr.ipv4, &addr, 0);
+    }
 
     /* Create media transport */
     status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
