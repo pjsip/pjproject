@@ -35,8 +35,10 @@ static const char *USAGE =
 "\n"
 " Program options:\n"
 "   --count=N,        -c    Set number of calls to create (default:1) \n"
+"   --gap=N           -g    Set call gapping to N msec (default:0)\n"
 "   --duration=SEC,   -d    Set maximum call duration (default:unlimited) \n"
 "   --auto-quit,      -q    Quit when calls have been completed (default:no)\n"
+"   --call-report     -R    Display report on call termination (default:yes)\n"
 "\n"
 " Address and ports options:\n"
 "   --local-port=PORT,-p    Set local SIP port (default: 5060)\n"
@@ -159,6 +161,8 @@ struct call
 static struct app
 {
     unsigned		 max_calls;
+    unsigned		 call_gap;
+    pj_bool_t		 call_report;
     unsigned		 uac_calls;
     unsigned		 duration;
     pj_bool_t		 auto_quit;
@@ -758,8 +762,11 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 		  inv->cause,
 		  (int)inv->cause_text.slen,
 		  inv->cause_text.ptr));
-	PJ_LOG(3,(THIS_FILE, "Call #%d statistics:", call->index));
-	print_call(call->index);
+
+	if (app.call_report) {
+	    PJ_LOG(3,(THIS_FILE, "Call #%d statistics:", call->index));
+	    print_call(call->index);
+	}
 
 
 	call->inv = NULL;
@@ -846,6 +853,8 @@ static pj_status_t init_options(int argc, char *argv[])
 
     struct pj_getopt_option long_options[] = {
 	{ "count",	    1, 0, 'c' },
+	{ "gap",            1, 0, 'g' },
+	{ "call-report",    0, 0, 'R' },
 	{ "duration",	    1, 0, 'd' },
 	{ "auto-quit",	    0, 0, 'q' },
 	{ "local-port",	    1, 0, 'p' },
@@ -898,7 +907,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
     /* Parse options */
     pj_optind = 0;
-    while((c=pj_getopt_long(argc,argv, "c:d:p:r:i:l:q", 
+    while((c=pj_getopt_long(argc,argv, "c:d:p:r:i:l:g:qR", 
 			    long_options, &option_index))!=-1) 
     {
 	switch (c) {
@@ -908,6 +917,12 @@ static pj_status_t init_options(int argc, char *argv[])
 		PJ_LOG(3,(THIS_FILE, "Invalid max calls value %s", pj_optarg));
 		return 1;
 	    }
+	    break;
+	case 'g':
+	    app.call_gap = atoi(pj_optarg);
+	    break;
+	case 'R':
+	    app.call_report = PJ_TRUE;
 	    break;
 	case 'd':
 	    app.duration = atoi(pj_optarg);
@@ -1830,6 +1845,7 @@ static void hangup_all_calls()
 	if (!app.call[i].inv)
 	    continue;
 	hangup_call(i);
+	pj_thread_sleep(app.call_gap);
     }
     
     /* Wait until all calls are terminated */
@@ -2112,6 +2128,7 @@ int main(int argc, char *argv[])
 		app_perror(THIS_FILE, "Error making call", status);
 		break;
 	    }
+	    pj_thread_sleep(app.call_gap);
 	}
 
 	if (app.auto_quit) {
