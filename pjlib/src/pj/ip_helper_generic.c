@@ -52,7 +52,8 @@
 #if 0
     /* dummy */
 
-#elif defined(PJ_HAS_IFADDRS_H) && PJ_HAS_IFADDRS_H != 0
+#elif defined(PJ_HAS_IFADDRS_H) && PJ_HAS_IFADDRS_H != 0 && \
+      defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
 /* Using getifaddrs() is preferred since it can work with both IPv4 and IPv6 */
 static pj_status_t if_enum_by_af(int af,
 				 unsigned *p_cnt,
@@ -108,7 +109,9 @@ static pj_status_t if_enum_by_af(int af,
     return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
-#elif defined(SIOCGIFCONF)
+#elif defined(SIOCGIFCONF) && \
+      defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
+
 /* Note: this does not work with IPv6 */
 static pj_status_t if_enum_by_af(int af,
 				 unsigned *p_cnt,
