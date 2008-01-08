@@ -83,7 +83,8 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
     b = PJ_POOL_ZALLOC_T(pool, pjmedia_delay_buf);
 
     pj_ansi_strncpy(b->obj_name, name, PJ_MAX_OBJ_NAME-1);
-    b->frame_buf = pj_pool_zalloc(pool, samples_per_frame * max_cnt * 
+    b->frame_buf = (pj_int16_t*)
+		   pj_pool_zalloc(pool, samples_per_frame * max_cnt * 
 					 sizeof(pj_int16_t));
     b->samples_per_frame = samples_per_frame;
     b->max_cnt = max_cnt;
@@ -107,7 +108,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 
 static void update(pjmedia_delay_buf *b, enum OP op)
 {
-    enum OP other = !op;
+    enum OP other = (enum OP) !op;
 
     switch (b->state) {
     case STATE_RUNNING:
