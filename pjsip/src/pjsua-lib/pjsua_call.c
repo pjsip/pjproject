@@ -1879,6 +1879,12 @@ static void dump_media_session(const char *indent,
 	if (PJ_TIME_VAL_MSEC(media_duration) == 0)
 	    media_duration.msec = 1;
 
+	/* protect against division by zero */
+	if (stat.rx.pkt == 0)
+	    stat.rx.pkt = 1;
+	if (stat.tx.pkt == 0)
+	    stat.tx.pkt = 1;
+
 	len = pj_ansi_snprintf(p, end-p,
 	       "%s     RX pt=%d, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
