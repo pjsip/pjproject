@@ -312,6 +312,12 @@ AC_CHECK_HEADER(linux/soundcard.h,
 AC_CHECK_HEADER(machine/soundcard.h,
 	 	[ac_pa_cflags="$ac_pa_cflags -DHAVE_MACHINE_SOUNDCARD_H"])
 
+if test "x$ac_cv_c_bigendian" = "xyes"; then
+  ac_pa_cflags="$ac_pa_cflags -DPA_BIG_ENDIAN"
+else
+  ac_pa_cflags="$ac_pa_cflags -DPA_LITTLE_ENDIAN"
+fi
+
 if test "$enable_sound" = "no"; then
   true;
 else
