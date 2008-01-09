@@ -444,6 +444,7 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
 {
     pj_assert(entry && cb);
 
+    entry->_timer_id = -1;
     entry->id = id;
     entry->user_data = user_data;
     entry->cb = cb;
