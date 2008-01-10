@@ -3541,35 +3541,49 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  */
 
 /**
- * Max ports in the conference bridge.
+ * Max ports in the conference bridge. This setting is the default value
+ * for pjsua_media_config.max_media_ports.
  */
 #ifndef PJSUA_MAX_CONF_PORTS
 #   define PJSUA_MAX_CONF_PORTS		254
 #endif
 
 /**
- * The default clock rate to be used by the conference bridge.
+ * The default clock rate to be used by the conference bridge. This setting
+ * is the default value for pjsua_media_config.clock_rate.
  */
 #ifndef PJSUA_DEFAULT_CLOCK_RATE
 #   define PJSUA_DEFAULT_CLOCK_RATE	16000
 #endif
 
 /**
- * Default codec quality settings.
+ * Default frame length in the conference bridge. This setting
+ * is the default value for pjsua_media_config.audio_frame_ptime.
+ */
+#ifndef PJSUA_DEFAULT_AUDIO_FRAME_PTIME
+#   define PJSUA_DEFAULT_AUDIO_FRAME_PTIME  10
+#endif
+
+
+/**
+ * Default codec quality settings. This setting is the default value
+ * for pjsua_media_config.quality.
  */
 #ifndef PJSUA_DEFAULT_CODEC_QUALITY
 #   define PJSUA_DEFAULT_CODEC_QUALITY	5
 #endif
 
 /**
- * Default iLBC mode.
+ * Default iLBC mode. This setting is the default value for 
+ * pjsua_media_config.ilbc_mode.
  */
 #ifndef PJSUA_DEFAULT_ILBC_MODE
-#   define PJSUA_DEFAULT_ILBC_MODE	20
+#   define PJSUA_DEFAULT_ILBC_MODE	30
 #endif
 
 /**
- * The default echo canceller tail length.
+ * The default echo canceller tail length. This setting
+ * is the default value for pjsua_media_config.ec_tail_len.
  */
 #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
 #   define PJSUA_DEFAULT_EC_TAIL_LEN	200
@@ -3620,7 +3634,7 @@ struct pjsua_media_config
      * bridge. Specifying lower ptime will normally reduce the
      * latency.
      *
-     * Default: 10 (miliseconds)
+     * Default value: PJSUA_DEFAULT_AUDIO_FRAME_PTIME
      */
     unsigned		audio_frame_ptime;
 
@@ -3630,6 +3644,8 @@ struct pjsua_media_config
      * (calls, file player, file recorder, etc), the value must be
      * large enough to support all of them. However, the larger
      * the value, the more computations are performed.
+     *
+     * Default value: PJSUA_MAX_CONF_PORTS
      */
     unsigned		max_media_ports;
 
@@ -3680,7 +3696,7 @@ struct pjsua_media_config
     /**
      * iLBC mode (20 or 30).
      *
-     * Default: 20 (PJSUA_DEFAULT_ILBC_MODE)
+     * Default: 30 (PJSUA_DEFAULT_ILBC_MODE)
      */
     unsigned		ilbc_mode;
 
