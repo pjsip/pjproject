@@ -772,8 +772,10 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 
     spx = (struct spx_private*) codec->codec_data;
 
+    PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
+
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	pj_bzero(output->buf, output_buf_len);
+	pjmedia_zero_samples((pj_int16_t*)output->buf, 160);
 	output->size = 320;
 	output->timestamp.u64 = input->timestamp.u64;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -787,8 +789,7 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     speex_decode_int(spx->dec, &spx->dec_bits, (spx_int16_t*)output->buf);
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = speex_bits_nbytes(&spx->dec_bits);
-    pj_assert(output->size <= (unsigned)output_buf_len);
+    output->size = 320;
     output->timestamp.u64 = input->timestamp.u64;
 
 
