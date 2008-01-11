@@ -98,6 +98,10 @@ SOURCE=..\src\samples\confsample.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\encdec.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\footprint.c
 # End Source File
 # Begin Source File

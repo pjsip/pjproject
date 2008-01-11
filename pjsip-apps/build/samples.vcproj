@@ -82,6 +82,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\encdec.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\footprint.c"
 				>
 			</File>

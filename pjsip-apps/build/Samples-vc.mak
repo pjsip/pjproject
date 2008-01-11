@@ -50,6 +50,7 @@ BINDIR = ..\bin\samples
 
 SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
+	  $(BINDIR)\encdec.exe \
 	  $(BINDIR)\level.exe \
 	  $(BINDIR)\pjsip-perf.exe \
 	  $(BINDIR)\playfile.exe \

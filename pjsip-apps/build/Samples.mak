@@ -14,6 +14,7 @@ OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples
 
 SAMPLES := confsample \
+	   encdec \
 	   level \
 	   pjsip-perf \
 	   playfile \
