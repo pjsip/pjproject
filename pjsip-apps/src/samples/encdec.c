@@ -52,12 +52,22 @@ static const char *desc =
  "\n"
 ;
 
-#define HAS_G729_CODEC	0
-#if HAS_G729_CODEC
-#include "keystream_g729ab.h"
+#ifndef HAS_G729_CODEC
+# define HAS_G729_CODEC	0
 #endif
 
-#if 0
+#if HAS_G729_CODEC
+#include <keystream_g729ab.h>
+#endif
+
+//#undef PJ_TRACE
+//#define PJ_TRACE 1
+
+#ifndef PJ_TRACE
+#	define PJ_TRACE 0
+#endif
+
+#if PJ_TRACE
 #   define TRACE_(expr)	    PJ_LOG(4,expr)
 #else
 #   define TRACE_(expr)
@@ -90,17 +100,26 @@ static pj_status_t enc_dec_test(const char *codec_id,
     pj_pool_t *pool;
     pjmedia_codec_mgr *cm;
     pjmedia_codec *codec;
-    pjmedia_codec_info *pci;
+    const pjmedia_codec_info *pci;
     pjmedia_codec_param param;
     unsigned cnt, samples_per_frame;
     pj_str_t tmp;
     pjmedia_port *wavin, *wavout;
+    unsigned lost_pct;
     pj_status_t status;
 
+#define T   file_msec_duration/1000, file_msec_duration%1000
+    
     pool = pjmedia_endpt_create_pool(mept, "encdec", 1000, 1000);
 
     cm = pjmedia_endpt_get_codec_mgr(mept);
 
+#ifdef LOST_PCT
+    lost_pct = LOST_PCT;
+#else
+    lost_pct = 0;
+#endif
+    
     cnt = 1;
     CHECK( pjmedia_codec_mgr_find_codecs_by_id(cm, pj_cstr(&tmp, codec_id), 
 					       &cnt, &pci, NULL) );
@@ -109,7 +128,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     samples_per_frame = param.info.clock_rate * param.info.frm_ptime / 1000;
 
     /* Control VAD */
-    param.setting.vad = 0;
+    param.setting.vad = 1;
 
     /* Open wav for reading */
     CHECK( pjmedia_wav_player_port_create(pool, filein, 
@@ -143,11 +162,31 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	if (frm_pcm.type != PJMEDIA_FRAME_TYPE_AUDIO)
 	    break;;
 
+	/* Update duration */
+	file_msec_duration += samples_per_frame * 1000 / 
+			      param.info.clock_rate;
+
 	/* Encode */
 	frm_bit.buf = bitstream;
 	frm_bit.size = sizeof(bitstream);
 	CHECK(codec->op->encode(codec, &frm_pcm, sizeof(bitstream), &frm_bit));
 
+	/* On DTX, write zero frame to wavout to maintain duration */
+	if (frm_bit.size == 0 || frm_bit.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+	    out_frm.buf = (char*)pcmbuf;
+	    out_frm.size = 160;
+	    CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
+	    TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u",
+		    T, frm_pcm.size, frm_bit.size));
+	    continue;
+	}
+	
+	/* Simulate jitter buffer bug */
+	if (pci->pt==PJMEDIA_RTP_PT_G729 && frm_bit.size == 2) {
+	    TRACE_((THIS_FILE, "%d.%03d G729 SID frame masqueraded", T));
+	    frm_bit.size = 10;
+	}
+	
 	/* Parse the bitstream (not really necessary for this case
 	 * since we always decode 1 frame, but it's still good
 	 * for testing)
@@ -158,20 +197,25 @@ static pj_status_t enc_dec_test(const char *codec_id,
 			        frames) );
 	CHECK( (cnt==1 ? PJ_SUCCESS : -1) );
 
-	/* Decode */
+	/* Decode or simulate packet loss */
 	out_frm.buf = (char*)pcmbuf;
 	out_frm.size = sizeof(pcmbuf);
-	CHECK( codec->op->decode(codec, &frames[0], sizeof(pcmbuf), 
-				 &out_frm) );
+	
+	if ((pj_rand() % 100) < lost_pct) {
+	    /* Simulate loss */
+	    CHECK( codec->op->recover(codec, sizeof(pcmbuf), &out_frm) );
+	    TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
+	} else {
+	    /* Decode */
+	    CHECK( codec->op->decode(codec, &frames[0], sizeof(pcmbuf), 
+				     &out_frm) );
+	}
 
 	/* Write to WAV */
 	CHECK( pjmedia_port_put_frame(wavout, &out_frm) );
 
-	file_msec_duration += samples_per_frame * 1000 / 
-			      param.info.clock_rate;
-
-	TRACE_((THIS_FILE, "Bytes read: %u, encode: %u, decode/write: %u",
-		frm_pcm.size, frm_bit.size, out_frm.size));
+	TRACE_((THIS_FILE, "%d.%03d read: %u, enc: %u, dec/write: %u",
+		T, frm_pcm.size, frm_bit.size, out_frm.size));
     }
 
     /* Close wavs */
@@ -237,7 +281,7 @@ int main(int argc, char *argv[])
 	puts("Success");
 	printf("Duration: %ds.%03d\n", file_msec_duration/1000, 
 				       file_msec_duration%1000);
-	printf("Time: %ds.%03d\n", t1.sec, t1.msec);
+	printf("Time: %lds.%03ld\n", t1.sec, t1.msec);
     }
 
     return 0;
