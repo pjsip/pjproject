@@ -18,8 +18,11 @@
  */
 #include <pjmedia/tonegen.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/silencedet.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
+#include <pj/lock.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 
 
@@ -228,6 +231,13 @@ static void generate_tone(struct gen_state *state,
 /****************************************************************************/
 
 #define SIGNATURE   PJMEDIA_PORT_SIGNATURE('t', 'n', 'g', 'n')
+#define THIS_FILE   "tonegen.c"
+
+#if 0
+#   define TRACE_(expr)	PJ_LOG(4,expr)
+#else
+#   define TRACE_(expr)
+#endif
 
 struct tonegen
 {
@@ -236,6 +246,9 @@ struct tonegen
     /* options */
     unsigned		options;
     unsigned		playback_options;
+
+    /* lock */
+    pj_lock_t	       *lock;
 
     /* Digit map */
     pjmedia_tone_digit_map  *digit_map;
@@ -278,6 +291,7 @@ static pjmedia_tone_digit_map digit_map =
 
 static pj_status_t tonegen_get_frame(pjmedia_port *this_port, 
 				     pjmedia_frame *frame);
+static pj_status_t tonegen_destroy(pjmedia_port *this_port);
 
 /*
  * Create an instance of tone generator with the specified parameters.
@@ -293,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
 					    unsigned options,
 					    pjmedia_port **p_port)
 {
-    const pj_str_t STR_TONE_GEN = pj_str("tone-gen");
+    const pj_str_t STR_TONE_GEN = pj_str("tonegen");
     struct tonegen  *tonegen;
     pj_status_t status;
 
@@ -315,7 +329,22 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
 
     tonegen->options = options;
     tonegen->base.get_frame = &tonegen_get_frame;
+    tonegen->base.on_destroy = &tonegen_destroy;
     tonegen->digit_map = &digit_map;
+
+    /* Lock */
+    if (options & PJMEDIA_TONEGEN_NO_LOCK) {
+	status = pj_lock_create_null_mutex(pool, "tonegen", &tonegen->lock);
+    } else {
+	status = pj_lock_create_simple_mutex(pool, "tonegen", &tonegen->lock);
+    }
+
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    TRACE_((THIS_FILE, "Tonegen created: %u/%u/%u/%u", clock_rate, 
+	    channel_count, samples_per_frame, bits_per_sample));
 
     /* Done */
     *p_port = &tonegen->base;
@@ -355,12 +384,36 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *port)
 {
     struct tonegen *tonegen = (struct tonegen*) port;
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
+
+    TRACE_((THIS_FILE, "tonegen_stop()"));
+
+    pj_lock_acquire(tonegen->lock);
     tonegen->count = 0;
     tonegen->cur_digit = 0;
     tonegen->dig_samples = 0;
+    pj_lock_release(tonegen->lock);
+
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Callback to destroy tonegen
+ */
+static pj_status_t tonegen_destroy(pjmedia_port *port)
+{
+    struct tonegen *tonegen = (struct tonegen*) port;
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
+
+    TRACE_((THIS_FILE, "tonegen_destroy()"));
+
+    pj_lock_acquire(tonegen->lock);
+    pj_lock_release(tonegen->lock);
+
+    pj_lock_destroy(tonegen->lock);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Fill a frame with tones.
@@ -374,10 +427,12 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
 
+    pj_lock_acquire(tonegen->lock);
+
     if (tonegen->count == 0) {
 	/* We don't have digits to play */
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
+	goto on_return;
     }
 
     if (tonegen->cur_digit > tonegen->count) {
@@ -388,10 +443,14 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    tonegen->cur_digit = 0;
 	    tonegen->dig_samples = 0;
 
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): rewind"));
+
 	} else {
 	    tonegen->count = 0;
+	    tonegen->cur_digit = 0;
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	    return PJ_SUCCESS;
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): no more digit"));
+	    goto on_return;
 	}
     }
 
@@ -402,6 +461,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	/* We have finished with current digit */
 	tonegen->cur_digit++;
 	tonegen->dig_samples = 0;
+
+	TRACE_((THIS_FILE, "tonegen_get_frame(): next digit"));
     }
 
     if (tonegen->cur_digit > tonegen->count) {
@@ -414,10 +475,14 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    tonegen->cur_digit = 0;
 	    tonegen->dig_samples = 0;
 
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): rewind"));
+
 	} else {
 	    tonegen->count = 0;
+	    tonegen->cur_digit = 0;
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	    return PJ_SUCCESS;
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): no more digit"));
+	    goto on_return;
 	}
     }
     
@@ -462,7 +527,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	tonegen->dig_samples += cnt;
 
 	/* Move to next digit if we're finished with this tone */
-	if (tonegen->dig_samples == on_samp + off_samp) {
+	if (tonegen->dig_samples >= on_samp + off_samp) {
 	    tonegen->cur_digit++;
 	    tonegen->dig_samples = 0;
 
@@ -485,6 +550,9 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = port->info.bytes_per_frame;
 
+    TRACE_((THIS_FILE, "tonegen_get_frame(): frame created, level=%u",
+	    pjmedia_calc_avg_signal((pj_int16_t*)frame->buf, frame->size/2)));
+
     if (tonegen->cur_digit >= tonegen->count) {
 	if ((tonegen->options|tonegen->playback_options)&PJMEDIA_TONEGEN_LOOP)
 	{
@@ -492,11 +560,18 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    tonegen->cur_digit = 0;
 	    tonegen->dig_samples = 0;
 
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): rewind"));
+
 	} else {
 	    tonegen->count = 0;
+	    tonegen->cur_digit = 0;
+
+	    TRACE_((THIS_FILE, "tonegen_get_frame(): no more digit"));
 	}
     }
 
+on_return:
+    pj_lock_release(tonegen->lock);
     return PJ_SUCCESS;
 }
 
@@ -519,6 +594,8 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
     PJ_ASSERT_RETURN(count+tonegen->count <= PJMEDIA_TONEGEN_MAX_DIGITS,
 		     PJ_ETOOMANY);
 
+    pj_lock_acquire(tonegen->lock);
+
     /* Set playback options */
     tonegen->playback_options = options;
     
@@ -537,6 +614,8 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
 
     tonegen->count += count;
 
+    pj_lock_release(tonegen->lock);
+
     return PJ_SUCCESS;
 }
 
@@ -551,12 +630,16 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play_digits( pjmedia_port *port,
 {
     struct tonegen *tonegen = (struct tonegen*) port;
     pjmedia_tone_desc tones[PJMEDIA_TONEGEN_MAX_DIGITS];
-    const pjmedia_tone_digit_map *map = tonegen->digit_map;
+    const pjmedia_tone_digit_map *map;
     unsigned i;
 
     PJ_ASSERT_RETURN(port && port->info.signature == SIGNATURE &&
 		     count && digits, PJ_EINVAL);
     PJ_ASSERT_RETURN(count < PJMEDIA_TONEGEN_MAX_DIGITS, PJ_ETOOMANY);
+
+    pj_lock_acquire(tonegen->lock);
+
+    map = tonegen->digit_map;
 
     for (i=0; i<count; ++i) {
 	int d = pj_tolower(digits[i].digit);
@@ -567,8 +650,10 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play_digits( pjmedia_port *port,
 	    if (d == map->digits[j].digit)
 		break;
 	}
-	if (j == map->count)
+	if (j == map->count) {
+	    pj_lock_release(tonegen->lock);
 	    return PJMEDIA_RTP_EINDTMF;
+	}
 
 	tones[i].freq1 = map->digits[j].freq1;
 	tones[i].freq2 = map->digits[j].freq2;
@@ -576,6 +661,8 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play_digits( pjmedia_port *port,
 	tones[i].off_msec = digits[i].off_msec;
 	tones[i].volume = digits[i].volume;
     }
+
+    pj_lock_release(tonegen->lock);
 
     return pjmedia_tonegen_play(port, count, tones, options);
 }
@@ -609,7 +696,11 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_set_digit_map(pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
     PJ_ASSERT_RETURN(m != NULL, PJ_EINVAL);
 
+    pj_lock_acquire(tonegen->lock);
+
     tonegen->digit_map = m;
+
+    pj_lock_release(tonegen->lock);
 
     return PJ_SUCCESS;
 }

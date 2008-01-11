@@ -107,7 +107,12 @@ enum
      * Play the tones in loop, restarting playing the first tone after
      * the last tone has been played.
      */
-    PJMEDIA_TONEGEN_LOOP    = 1
+    PJMEDIA_TONEGEN_LOOP    = 1,
+
+    /**
+     * Disable mutex protection to the tone generator.
+     */
+    PJMEDIA_TONEGEN_NO_LOCK = 2
 };
 
 
