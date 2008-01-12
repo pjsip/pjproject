@@ -49,10 +49,12 @@ static const char *desc =
  "\n"
  " options:\n"
  "    -c N          Set clock rate to N Hz (default 16000)\n"
+ "    -f            Force write (overwrite output without warning\n"
 ;
 
 #define MAX_WAV	    16
 #define PTIME	    20
+#define APPEND	    1000
 
 struct wav_input
 {
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
     pj_pool_t *pool;
     pjmedia_endpt *med_ept;
     unsigned clock_rate = 16000;
-    int c;
+    int c, force=0;
     const char *out_fname;
     pjmedia_conf *conf;
     pjmedia_port *wavout;
@@ -92,7 +94,7 @@ int main(int argc, char *argv[])
 
 
     /* Parse arguments */
-    while ((c=pj_getopt(argc, argv, "c:")) != -1) {
+    while ((c=pj_getopt(argc, argv, "c:f")) != -1) {
 	switch (c) {
 	case 'c':
 	    clock_rate = atoi(pj_optarg);
@@ -100,6 +102,9 @@ int main(int argc, char *argv[])
 		puts("Error: invalid clock rate");
 		return -1;
 	    }
+	    break;
+	case 'f':
+	    force = 1;
 	    break;
 	}
     }
@@ -111,7 +116,7 @@ int main(int argc, char *argv[])
     }
 
     out_fname = argv[pj_optind++];
-    if (pj_file_exists(out_fname)) {
+    if (force==0 && pj_file_exists(out_fname)) {
 	char in[8];
 
 	printf("File %s exists, overwrite? [Y/N] ", out_fname);
@@ -166,7 +171,8 @@ int main(int argc, char *argv[])
 					      PJMEDIA_FILE_NO_LOOP, 0, 
 					      &wav_input[i].port) );
 	len = pjmedia_wav_player_get_len(wav_input[i].port);
-	len = len * clock_rate / wav_input[i].port->info.clock_rate;
+	len = (pj_ssize_t)(len * 1.0 * clock_rate / 
+			    wav_input[i].port->info.clock_rate);
 	if (len > longest)
 	    longest = len;
 
@@ -178,7 +184,7 @@ int main(int argc, char *argv[])
 
     /* Loop reading frame from the bridge and write it to WAV */
     processed = 0;
-    while (processed < longest) {
+    while (processed < longest + clock_rate * APPEND * 2 / 1000) {
 	pj_int16_t framebuf[PTIME * 48000 / 1000];
 	pjmedia_port *cp = pjmedia_conf_get_master_port(conf);
 	pjmedia_frame frame;
@@ -187,14 +193,16 @@ int main(int argc, char *argv[])
 	frame.size = cp->info.samples_per_frame * 2;
 	pj_assert(frame.size <= sizeof(framebuf));
 	
-	status = pjmedia_port_get_frame(cp, &frame);
-	if (status != PJ_SUCCESS)
-	    break;
+	CHECK( pjmedia_port_get_frame(cp, &frame) );
 
 	CHECK( pjmedia_port_put_frame(wavout, &frame));
 
 	processed += frame.size;
     }
+
+    PJ_LOG(3,(THIS_FILE, "Done. Output duration: %d.%03d",
+	      (processed >> 2)/clock_rate,
+	      ((processed >> 2)*1000/clock_rate) % 1000));
 
     /* Shutdown everything */
     CHECK( pjmedia_port_destroy(wavout) );
