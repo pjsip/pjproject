@@ -156,8 +156,13 @@ static pj_status_t fill_buffer(struct file_port *fport)
 		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
 			  (int)fport->base.info.name.slen,
 			  fport->base.info.name.ptr));
+		/* Zero remaining buffer */
+		pj_bzero(fport->buf+size, size_left);
+		/* Mark port as EOF */
 		fport->eof = PJ_TRUE;
-		return PJ_EEOF;
+		/* Must return PJ_SUCCESS, otherwise this buffer 
+		 * is not read */
+		return PJ_SUCCESS;
 	    } else {
 		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
 			  (int)fport->base.info.name.slen,
@@ -510,6 +515,13 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 
     pj_assert(fport->base.info.signature == SIGNATURE);
 
+    /* Check EOF */
+    if (fport->eof) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	frame->size = 0;
+    	return PJ_EEOF;
+    }
+
     //frame_size = fport->base.info.bytes_per_frame;
     //pj_assert(frame->size == frame_size);
     frame_size = frame->size;
@@ -549,6 +561,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	status = fill_buffer(fport);
 	if (status != PJ_SUCCESS) {
 	    pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
+	    fport->readpos = fport->buf + fport->bufsize;
 	    return status;
 	}
 
