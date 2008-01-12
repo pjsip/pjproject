@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     pjmedia_conf *conf;
     pjmedia_port *wavout;
     struct wav_input wav_input[MAX_WAV];
-    pj_ssize_t longest = 0, processed;
+    pj_size_t longest = 0, processed;
     unsigned i, input_cnt = 0;
     pj_status_t status;
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
 	len = pjmedia_wav_player_get_len(wav_input[i].port);
 	len = (pj_ssize_t)(len * 1.0 * clock_rate / 
 			    wav_input[i].port->info.clock_rate);
-	if (len > longest)
+	if (len > (pj_ssize_t)longest)
 	    longest = len;
 
 	CHECK( pjmedia_conf_add_port(conf, pool, wav_input[i].port,
@@ -194,6 +194,11 @@ int main(int argc, char *argv[])
 	pj_assert(frame.size <= sizeof(framebuf));
 	
 	CHECK( pjmedia_port_get_frame(cp, &frame) );
+
+	if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+	    pj_bzero(frame.buf, frame.size);
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	}
 
 	CHECK( pjmedia_port_put_frame(wavout, &frame));
 
