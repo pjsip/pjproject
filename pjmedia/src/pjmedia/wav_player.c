@@ -515,13 +515,6 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 
     pj_assert(fport->base.info.signature == SIGNATURE);
 
-    /* Check EOF */
-    if (fport->eof) {
-	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	frame->size = 0;
-    	return PJ_EEOF;
-    }
-
     //frame_size = fport->base.info.bytes_per_frame;
     //pj_assert(frame->size == frame_size);
     frame_size = frame->size;
@@ -560,9 +553,16 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	/* Second stage: fill up buffer, and read from the start of buffer. */
 	status = fill_buffer(fport);
 	if (status != PJ_SUCCESS) {
-	    pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
+	    /* If we don't get anything, return NONE frame. Otherwise
+	     * return AUDIO frame since we have partial audio.
+	     */
+	    if (endread == 0) {
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    } else {
+		pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
+	    }
 	    fport->readpos = fport->buf + fport->bufsize;
-	    return status;
+	    return PJ_SUCCESS;
 	}
 
 	pj_memcpy(((char*)frame->buf)+endread, fport->buf, frame_size-endread);
