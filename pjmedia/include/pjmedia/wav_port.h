@@ -75,6 +75,17 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /**
+ * Get the data length, in bytes.
+ *
+ * @param port		The file player port.
+ *
+ * @return		The length of the data, in bytes. Upon error it will
+ *			return negative value.
+ */
+PJ_DECL(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port);
+
+
+/**
  * Set the file play position of WAV player.
  *
  * @param port		The file player port.

@@ -400,6 +400,27 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /*
+ * Get the data length, in bytes.
+ */
+PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
+{
+    struct file_port *fport;
+    pj_ssize_t size;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    size = (pj_ssize_t) fport->fsize;
+    return size - fport->start_data;
+}
+
+
+/*
  * Set position.
  */
 PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
@@ -408,10 +429,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
     struct file_port *fport;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
 
     /* Check that this is really a player port */
-    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
 
     fport = (struct file_port*) port;
