@@ -94,6 +94,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\mix.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\pjsip-perf.c"
 				>
 			</File>

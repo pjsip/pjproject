@@ -16,6 +16,7 @@ BINDIR := ../bin/samples
 SAMPLES := confsample \
 	   encdec \
 	   level \
+	   mix \
 	   pjsip-perf \
 	   playfile \
 	   playsine \

@@ -114,6 +114,10 @@ SOURCE=..\src\samples\level.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\mix.c
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\samples\pjsip-perf.c"
 # End Source File
 # Begin Source File

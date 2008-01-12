@@ -52,6 +52,7 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
 	  $(BINDIR)\encdec.exe \
 	  $(BINDIR)\level.exe \
+	  $(BINDIR)\mix.exe \
 	  $(BINDIR)\pjsip-perf.exe \
 	  $(BINDIR)\playfile.exe \
 	  $(BINDIR)\playsine.exe\

@@ -201,7 +201,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	out_frm.buf = (char*)pcmbuf;
 	out_frm.size = sizeof(pcmbuf);
 	
-	if ((pj_rand() % 100) < lost_pct) {
+	if ((pj_rand() % 100) < (int)lost_pct) {
 	    /* Simulate loss */
 	    CHECK( codec->op->recover(codec, sizeof(pcmbuf), &out_frm) );
 	    TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
