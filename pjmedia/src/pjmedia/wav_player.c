@@ -52,7 +52,7 @@
 #   define samples_to_host(samples,count)
 #endif
 
-struct file_port
+struct file_reader_port
 {
     pjmedia_port     base;
     unsigned	     options;
@@ -74,12 +74,12 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 				  pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
 
-static struct file_port *create_file_port(pj_pool_t *pool)
+static struct file_reader_port *create_file_port(pj_pool_t *pool)
 {
     const pj_str_t name = pj_str("file");
-    struct file_port *port;
+    struct file_reader_port *port;
 
-    port = PJ_POOL_ZALLOC_T(pool, struct file_port);
+    port = PJ_POOL_ZALLOC_T(pool, struct file_reader_port);
     if (!port)
 	return NULL;
 
@@ -99,7 +99,7 @@ static struct file_port *create_file_port(pj_pool_t *pool)
 /*
  * Fill buffer.
  */
-static pj_status_t fill_buffer(struct file_port *fport)
+static pj_status_t fill_buffer(struct file_reader_port *fport)
 {
     pj_ssize_t size_left = fport->bufsize;
     unsigned size_to_read;
@@ -192,7 +192,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 {
     pjmedia_wave_hdr wave_hdr;
     pj_ssize_t size_to_read, size_read;
-    struct file_port *fport;
+    struct file_reader_port *fport;
     pj_off_t pos;
     pj_status_t status;
 
@@ -409,7 +409,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
 {
-    struct file_port *fport;
+    struct file_reader_port *fport;
     pj_ssize_t size;
 
     /* Sanity check */
@@ -418,7 +418,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
-    fport = (struct file_port*) port;
+    fport = (struct file_reader_port*) port;
 
     size = (pj_ssize_t) fport->fsize;
     return size - fport->start_data;
@@ -431,7 +431,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
 PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
 						    pj_uint32_t bytes )
 {
-    struct file_port *fport;
+    struct file_reader_port *fport;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(port, PJ_EINVAL);
@@ -440,7 +440,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
 
-    fport = (struct file_port*) port;
+    fport = (struct file_reader_port*) port;
 
     PJ_ASSERT_RETURN(bytes < fport->fsize - fport->start_data, PJ_EINVAL);
 
@@ -457,7 +457,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
 {
-    struct file_port *fport;
+    struct file_reader_port *fport;
     pj_size_t payload_pos;
 
     /* Sanity check */
@@ -466,7 +466,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
-    fport = (struct file_port*) port;
+    fport = (struct file_reader_port*) port;
 
     payload_pos = (pj_size_t)(fport->fpos - fport->start_data);
     if (payload_pos >= fport->bufsize)
@@ -486,7 +486,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 			       pj_status_t (*cb)(pjmedia_port *port,
 						 void *usr_data))
 {
-    struct file_port *fport;
+    struct file_reader_port *fport;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(port, -PJ_EINVAL);
@@ -494,7 +494,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
-    fport = (struct file_port*) port;
+    fport = (struct file_reader_port*) port;
 
     fport->base.port_data.pdata = user_data;
     fport->cb = cb;
@@ -509,7 +509,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame)
 {
-    struct file_port *fport = (struct file_port*)this_port;
+    struct file_reader_port *fport = (struct file_reader_port*)this_port;
     unsigned frame_size;
     pj_status_t status;
 
@@ -538,6 +538,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	    if (status != PJ_SUCCESS) {
 		frame->type = PJMEDIA_FRAME_TYPE_NONE;
 		frame->size = 0;
+		fport->readpos = fport->buf + fport->bufsize;
 		return status;
 	    }
 	}
@@ -562,7 +563,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 		pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
 	    }
 	    fport->readpos = fport->buf + fport->bufsize;
-	    return PJ_SUCCESS;
+	    return (endread? PJ_SUCCESS : status);
 	}
 
 	pj_memcpy(((char*)frame->buf)+endread, fport->buf, frame_size-endread);
@@ -577,7 +578,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
  */
 static pj_status_t file_on_destroy(pjmedia_port *this_port)
 {
-    struct file_port *fport = (struct file_port*) this_port;
+    struct file_reader_port *fport = (struct file_reader_port*) this_port;
 
     pj_assert(this_port->info.signature == SIGNATURE);
 
