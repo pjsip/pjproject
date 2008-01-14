@@ -71,19 +71,21 @@ static FILE *fhnd_rec;
  * signal level of the ports, so that sudden change in signal level
  * in the port does not cause misaligned signal (which causes noise).
  */
-#if 1
-#   define ATTACK_A	    10
-#   define ATTACK_B	    2
-#   define DECAY_A	    10
-#   define DECAY_B	    2
-#else
-    /* To simulate old behavior */
-#   define ATTACK_A	    0
-#   define ATTACK_B	    1
-#   define DECAY_A	    0
-#   define DECAY_B	    1
-#endif
+#define ATTACK_A    (conf->clock_rate / conf->samples_per_frame)
+#define ATTACK_B    1
+#define DECAY_A	    0
+#define DECAY_B	    1
 
+#define SIMPLE_AGC(last, target) \
+    if (target >= last) \
+	target = (ATTACK_A*(last+1)+ATTACK_B*target)/(ATTACK_A+ATTACK_B); \
+    else \
+	target = (DECAY_A*last+DECAY_B*target)/(DECAY_A+DECAY_B)
+
+#define MAX_LEVEL   (32767)
+#define MIN_LEVEL   (-32768)
+
+#define IS_OVERFLOW(s) ((s > MAX_LEVEL) || (s < MIN_LEVEL))
 
 
 /*
@@ -113,9 +115,6 @@ struct conf_port
     /* Shortcut for port info. */
     unsigned		 clock_rate;	/**< Port's clock rate.		    */
     unsigned		 samples_per_frame; /**< Port's samples per frame.  */
-
-    /* Last level calculated from this port */
-    pj_int32_t		 last_level;
 
     /* Calculated signal levels: */
     unsigned		 tx_level;	/**< Last tx level to this port.    */
@@ -148,20 +147,18 @@ struct conf_port
     unsigned		 rx_buf_cap;	/**< Max size, in samples	    */
     unsigned		 rx_buf_count;	/**< # of samples in the buf.	    */
 
-    /* Mix buf is a temporary buffer used to calculate the average signal
-     * received by this port from all other ports. Samples from all ports
-     * that are transmitting to this port will be accumulated here, then
-     * they will be divided by the source level before the samples are put
-     * to the TX buffer of this port.
+    /* Mix buf is a temporary buffer used to mix all signal received
+     * by this port from all other ports. The mixed signal will be 
+     * automatically adjusted to the appropriate level whenever
+     * there is possibility of clipping.
      *
      * This buffer contains samples at bridge's clock rate.
      * The size of this buffer is equal to samples per frame of the bridge.
-     *
-     * Note that the samples here are unsigned 32bit.
      */
-    unsigned		 src_level;	/**< Sum of input levels	    */
-    unsigned		 src_cnt;	/**< Number of sources.		    */
-    pj_uint32_t		*mix_buf;	/**< Total sum of signal.	    */
+
+    int			 mix_adj;	/**< Adjustment level for mix_buf.  */
+    int			 last_mix_adj;	/**< Last adjustment level.	    */
+    pj_int32_t		*mix_buf;	/**< Total sum of signal.	    */
 
     /* Tx buffer is a temporary buffer to be used when there's mismatch 
      * between port's clock rate or ptime with conference's sample rate
@@ -208,7 +205,6 @@ struct pjmedia_conf
     char		  master_name_buf[80]; /**< Port0 name buffer.	    */
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct conf_port	**ports;	/**< Array of ports.		    */
-    pj_uint16_t		 *uns_buf;	/**< Buf for unsigned conversion    */
     unsigned		  clock_rate;	/**< Sampling rate.		    */
     unsigned		  channel_count;/**< Number of channels (1=mono).   */
     unsigned		  samples_per_frame;	/**< Samples per frame.	    */
@@ -352,10 +348,11 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
 
     /* Create mix buffer. */
-    conf_port->mix_buf = (pj_uint32_t*)
+    conf_port->mix_buf = (pj_int32_t*)
 			 pj_pool_zalloc(pool, conf->samples_per_frame *
 					      sizeof(conf_port->mix_buf[0]));
     PJ_ASSERT_RETURN(conf_port->mix_buf, PJ_ENOMEM);
+    conf_port->last_mix_adj = NORMAL_LEVEL;
 
 
     /* Done */
@@ -526,11 +523,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     status = create_sound_port(pool, conf);
     if (status != PJ_SUCCESS)
 	return status;
-
-    /* Create temporary buffer. */
-    conf->uns_buf = (pj_uint16_t*)
-		    pj_pool_zalloc(pool, samples_per_frame *
-					 sizeof(conf->uns_buf[0]));
 
     /* Create mutex. */
     status = pj_mutex_create_recursive(pool, "conf", &conf->mutex);
@@ -1231,19 +1223,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
 }
 
 
-/* Convert signed 16bit pcm sample to unsigned 16bit sample */
-static pj_uint16_t pcm2unsigned(pj_int32_t pcm)
-{
-    return (pj_uint16_t)(pcm + 32768);
-}
-
-/* Convert unsigned 16bit sample to signed 16bit pcm sample */
-static pj_int16_t unsigned2pcm(pj_uint32_t uns)
-{
-    return (pj_int16_t)(uns - 32768);
-}
-
-
 /*
  * Read from port.
  */
@@ -1377,6 +1356,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     pj_int16_t *buf;
     unsigned j, ts;
     pj_status_t status;
+    pj_int32_t adj_level;
+    pj_int32_t tx_level;
 
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
@@ -1402,135 +1383,65 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
 
-    } else if (cport->src_level==0) {
-
-	pjmedia_frame frame;
-
-	/* If silence is transmitted to this port, transmit silence
-	 * PCM frame (otherwise if we transmit NULL frame, nothing will
-	 * be written to WAV port). This would work with stream too
-	 * since stream has it's own silence detector.
-	 */
-	pjmedia_zero_samples((pj_int16_t*)cport->mix_buf, 
-			     cport->samples_per_frame);
-
-	/* Adjust the timestamp */
-	frame.timestamp.u64 = timestamp->u64 * cport->clock_rate /
-				conf->clock_rate;
-	frame.type = PJMEDIA_FRAME_TYPE_NONE;
-	frame.buf = (void*)cport->mix_buf;
-	frame.size = (cport->samples_per_frame << 1);
-
-	if (cport->port && cport->port->put_frame) {
-	    pjmedia_port_put_frame(cport->port, &frame);
-	}
-
-	cport->tx_level = 0;
-	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
-
-
     } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
 	cport->tx_level = 0;
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
 
-    buf = (pj_int16_t*)cport->mix_buf;
+    buf = (pj_int16_t*) cport->mix_buf;
 
-    /* This is the convention set in get_frame(). For optimization purpose,
-     * if we only have one transmitter transmitting to this port, then
-     * the transmitter will directly copy the original 16bit frame to
-     * mix_buf.
-     */
-    if (cport->transmitter_cnt==1 && cport->src_cnt == 1) {
-
-	/* But still see if we need to adjust the level */
-	if (cport->tx_adj_level != NORMAL_LEVEL) {
-	    pj_int16_t *input = buf;
-	    pj_int32_t adj = cport->tx_adj_level;
-
-	    for (j=0; j<conf->samples_per_frame; ++j) {
-		pj_int32_t itemp;
-
-		/* For the level adjustment, we need to store the sample to
-		 * a temporary 32bit integer value to avoid overflowing the
-		 * 16bit sample storage.
-		 */
-		itemp = input[j];
-		/*itemp = itemp * adj / NORMAL_LEVEL; */
-		itemp = (itemp * adj) >> 7;
-
-		/* Clip the signal if it's too loud */
-		if (itemp > 32767) itemp = 32767;
-		else if (itemp < -32768) itemp = -32768;
-
-		input[j] = (pj_int16_t) itemp;
-	    }
-	}
-
-    } 
     /* If there are sources in the mix buffer, convert the mixed samples
-     * to the mixed samples itself. This is possible because mixed sample
-     * is 32bit.
+     * from 32bit to 16bit in the mixed samples itself. This is possible 
+     * because mixed sample is 32bit.
      *
      * In addition to this process, if we need to change the level of
      * TX signal, we adjust is here too.
      */
-    else if (cport->tx_adj_level != NORMAL_LEVEL && cport->src_level) {
 
-	pj_int32_t adj_level = cport->tx_adj_level;
+    /* Calculate signal level and adjust the signal when needed. 
+     * Two adjustments performed at once: 
+     * 1. user setting adjustment (tx_adj_level). 
+     * 2. automatic adjustment of overflowed mixed buffer (mix_adj).
+     */
 
-	/* We need to adjust signal level. */
-	for (j=0; j<conf->samples_per_frame; ++j) {
-	    pj_int32_t itemp;
+    /* Apply simple AGC to the mix_adj, the automatic adjust, to avoid 
+     * dramatic change in the level thus causing noise because the signal 
+     * is now not aligned with the signal from the previous frame.
+     */
+    SIMPLE_AGC(cport->last_mix_adj, cport->mix_adj);
+    cport->last_mix_adj = cport->mix_adj;
 
-	    /* Calculate average level, and convert the sample to
-	     * 16bit signed integer.
-	     */
-	    itemp = unsigned2pcm(cport->mix_buf[j] / cport->src_level);
+    adj_level = cport->tx_adj_level * cport->mix_adj / NORMAL_LEVEL;
+    tx_level = 0;
+
+    for (j=0; j<conf->samples_per_frame; ++j) {
+	if (adj_level != NORMAL_LEVEL) {
+	    pj_int32_t itemp = cport->mix_buf[j];
 
 	    /* Adjust the level */
 	    /*itemp = itemp * adj_level / NORMAL_LEVEL;*/
 	    itemp = (itemp * adj_level) >> 7;
 
 	    /* Clip the signal if it's too loud */
-	    if (itemp > 32767) itemp = 32767;
-	    else if (itemp < -32768) itemp = -32768;
+	    if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+	    else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
 
 	    /* Put back in the buffer. */
 	    buf[j] = (pj_int16_t) itemp;
+	} else {
+	    buf[j] = (pj_int16_t) cport->mix_buf[j];
 	}
 
-    } else if (cport->src_level) {
-	/* No need to adjust signal level. */
-	for (j=0; j<conf->samples_per_frame; ++j) {
-	    buf[j] = unsigned2pcm(cport->mix_buf[j] / cport->src_level);
-	}
-    } else {
-	// Not necessarry. Buffer has been zeroed before.
-	// pjmedia_zero_samples(buf, conf->samples_per_frame);
-	//pj_assert(buf[0] == 0);
-
-	// This shouldn't happen. Function should've already bailed out when
-	// cport->src_level == 0.
-	pj_assert(0);
+	tx_level += (buf[j]>0? buf[j] : -buf[j]);
     }
 
-    /* Calculate TX level if we need to do so. 
-     * This actually is not the most correct place to calculate TX signal 
-     * level of the port; it should calculate the level of the actual
-     * frame just before put_frame() is called.
-     * But doing so would make the code more complicated than it is
-     * necessary, since the purpose of level calculation mostly is just
-     * for VU meter display. By doing it here, it should give the acceptable
-     * indication of the signal level of the port.
-     */
-    if (cport->src_cnt) {
-	cport->tx_level = cport->src_level / cport->src_cnt;
-    } else {
-	cport->tx_level = 0;
-    }
+    tx_level /= conf->samples_per_frame;
+
+    /* Convert level to 8bit complement ulaw */
+    tx_level = pjmedia_linear2ulaw(tx_level) ^ 0xff;
+
+    cport->tx_level = tx_level;
 
     /* If port has the same clock_rate and samples_per_frame settings as
      * the conference bridge, transmit the frame as is.
@@ -1542,7 +1453,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    pjmedia_frame frame;
 
 	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	    frame.buf = (pj_int16_t*)cport->mix_buf;
+	    frame.buf = buf;
 	    frame.size = conf->samples_per_frame * BYTES_PER_SAMPLE;
 	    /* No need to adjust timestamp, port has the same
 	     * clock rate as conference bridge 
@@ -1639,6 +1550,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
     unsigned ci, cj, i, j;
+    pj_int16_t *p_in;
     
     TRACE_((THIS_FILE, "- clock -"));
 
@@ -1661,9 +1573,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	++ci;
 
-	/* Reset sources */
-	conf_port->src_level = 0;
-	conf_port->src_cnt = 0;
+	/* Reset buffer & auto adjustment level for mixed signal */
+	conf_port->mix_adj = NORMAL_LEVEL;
+	if (conf_port->transmitter_cnt) {
+	    pj_bzero(conf_port->mix_buf,
+		     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
+	}
     }
 
     /* Get frames from all ports, and "mix" the signal 
@@ -1671,7 +1586,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
      */
     for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
-	pj_int32_t level;
+	pj_int32_t level = 0;
 
 	/* Skip empty port. */
 	if (!conf_port)
@@ -1746,56 +1661,34 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		continue;
 	}
 
-	/* If we need to adjust the RX level from this port, adjust the level
+	p_in = (pj_int16_t*) frame->buf;
+
+	/* Adjust the RX level from this port
 	 * and calculate the average level at the same time.
-	 * Otherwise just calculate the averate level.
 	 */
-	if (conf_port->rx_adj_level != NORMAL_LEVEL) {
-	    pj_int16_t *input = (pj_int16_t*) frame->buf;
-	    pj_int32_t adj = conf_port->rx_adj_level;
-
-	    level = 0;
-	    for (j=0; j<conf->samples_per_frame; ++j) {
-		pj_int32_t itemp;
-
+	for (j=0; j<conf->samples_per_frame; ++j) {
+	    if (conf_port->rx_adj_level != NORMAL_LEVEL) {
 		/* For the level adjustment, we need to store the sample to
 		 * a temporary 32bit integer value to avoid overflowing the
 		 * 16bit sample storage.
 		 */
-		itemp = input[j];
+		pj_int32_t itemp;
+
+		itemp = p_in[j];
 		/*itemp = itemp * adj / NORMAL_LEVEL;*/
-		itemp = (itemp * adj) >> 7;
+		itemp = (itemp * conf_port->rx_adj_level) >> 7;
 
 		/* Clip the signal if it's too loud */
-		if (itemp > 32767) itemp = 32767;
-		else if (itemp < -32768) itemp = -32768;
+		if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+		else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
 
-		input[j] = (pj_int16_t) itemp;
-
-		if (itemp >=0 ) level += itemp;
-		else level -= itemp;
+		p_in[j] = (pj_int16_t) itemp;
 	    }
 
-	    level /= conf->samples_per_frame;
+	    level += (p_in[j]>0? p_in[j] : -p_in[j]);
+        }
 
-	} else {
-	    level = pjmedia_calc_avg_signal((pj_int16_t*) frame->buf, 
-					    conf->samples_per_frame);
-	}
-
-	/* Apply simple AGC to the level, to avoid dramatic change in the
-	 * level thus causing noise because the signal now is not aligned
-	 * with the signal from the previous frame.
-	 */
-	if (level >= conf_port->last_level) {
-	    level = (conf_port->last_level * ATTACK_A + level * ATTACK_B) / 
-		    (ATTACK_A + ATTACK_B);
-	} else {
-	    level = (conf_port->last_level * DECAY_A + level * DECAY_B) / 
-		    (DECAY_A + DECAY_B);
-	}
-	conf_port->last_level = level;
-
+	level /= conf->samples_per_frame;
 
 	/* Convert level to 8bit complement ulaw */
 	level = pjmedia_linear2ulaw(level) ^ 0xff;
@@ -1807,15 +1700,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	if (level == 0)
 	    continue;
 
-	/* Convert the buffer to unsigned 16bit value */
-	for (j=0; j<conf->samples_per_frame; ++j)
-	    conf->uns_buf[j] = pcm2unsigned(((pj_int16_t*)frame->buf)[j]);
-
 	/* Add the signal to all listeners. */
 	for (cj=0; cj < conf_port->listener_cnt; ++cj) 
 	{
 	    struct conf_port *listener;
-	    pj_uint32_t *mix_buf;
+	    pj_int32_t *mix_buf;
 	    unsigned k;
 
 	    listener = conf->ports[conf_port->listener_slots[cj]];
@@ -1824,34 +1713,27 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
 		continue;
 
-	    /* Mix the buffer. If this is the first source for target port,
-	     * zero the mix buffer of target port first.
-	     */
 	    mix_buf = listener->mix_buf;
-	    if (listener->src_level == 0) {
-		pj_bzero( mix_buf, conf->samples_per_frame*sizeof(mix_buf[0]));
-	    }
 
-	    /* A little bit of optimization:
-	     *  When "conf_port" is the only transmitter to "listener",
-	     *  just add copy the frame directly from the original
-	     *  16bit frame (avoiding unsigned2pcm() conversion).
-	     *  But write_port() needs to be aware of this trick!
+	    /* Mixing signals,
+	     * and calculate appropriate level adjustment if there is
+	     * any overflowed level in the mixed signal.
 	     */
-	    if (listener->transmitter_cnt == 1) {
-		pjmedia_copy_samples((pj_int16_t*)mix_buf, 
-				     (const pj_int16_t*)frame->buf, 
-				     conf->samples_per_frame);
-		listener->src_level = level;
-	    } else {
-		for (k=0; k<conf->samples_per_frame; ++k)
-		    mix_buf[k] += (conf->uns_buf[k] * level);
+	    for (k=0; k<conf->samples_per_frame; ++k) {
+		mix_buf[k] += p_in[k];
+		/* Check if normalization adjustment needed. */
+		if (IS_OVERFLOW(mix_buf[k])) {
+		    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf[k]; */
+		    int tmp_adj = (MAX_LEVEL<<7) / mix_buf[k];
+		    if (tmp_adj<0) tmp_adj = -tmp_adj;
 
-		listener->src_level += level;
-	    }
-	    listener->src_cnt++;
-	}
-    }
+		    if (tmp_adj<listener->mix_adj)
+			listener->mix_adj = tmp_adj;
+
+		} /* if any overflow in the mixed signals */
+	    } /* loop mixing signals */
+	} /* loop the listeners of conf port */
+    } /* loop of all conf ports */
 
     /* Time for all ports to transmit whetever they have in their
      * buffer. 
@@ -1894,15 +1776,15 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     }
 
     /* Return sound playback frame. */
-    if (conf->ports[0]->src_level) {
+    if (conf->ports[0]->tx_level) {
 	TRACE_((THIS_FILE, "write to audio, count=%d", 
 			   conf->samples_per_frame));
-
 	pjmedia_copy_samples( (pj_int16_t*)frame->buf, 
 			      (const pj_int16_t*)conf->ports[0]->mix_buf, 
 			      conf->samples_per_frame);
     } else {
-	pjmedia_zero_samples((pj_int16_t*)frame->buf, conf->samples_per_frame); 
+	/* Force frame type NONE */
+	speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
     }
 
     /* MUST set frame type */
