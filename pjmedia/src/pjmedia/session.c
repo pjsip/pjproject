@@ -493,7 +493,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     /* Now that we have codec info, get the codec param. */
     si->param = PJ_POOL_ALLOC_T(pool, pjmedia_codec_param);
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt, si->param);
-    if (status != PJ_SUCCESS)
+
+    /* When direction is NONE (it means SDP negotiation has failed) we don't
+     * need to return a failure here, as returning failure will cause
+     * the whole SDP to be rejected. See ticket #:
+     *	http://
+     *
+     * Thanks Alain Totouom 
+     */
+    if (status != PJ_SUCCESS && si->dir != PJMEDIA_DIR_NONE)
 	return status;
 
     /* Set fmtp mode for both local and remote */
