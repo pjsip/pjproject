@@ -1412,7 +1412,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     SIMPLE_AGC(cport->last_mix_adj, cport->mix_adj);
     cport->last_mix_adj = cport->mix_adj;
 
-    adj_level = cport->tx_adj_level * cport->mix_adj / NORMAL_LEVEL;
+    /* adj_level = cport->tx_adj_level * cport->mix_adj / NORMAL_LEVEL;*/
+    adj_level = cport->tx_adj_level * cport->mix_adj;
+    adj_level >>= 7;
+
     tx_level = 0;
 
     for (j=0; j<conf->samples_per_frame; ++j) {
@@ -1676,7 +1679,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 		itemp = p_in[j];
 		/*itemp = itemp * adj / NORMAL_LEVEL;*/
-		itemp = (itemp * conf_port->rx_adj_level) >> 7;
+		/* bad code (signed/unsigned badness):
+		 *  itemp = (itemp * conf_port->rx_adj_level) >> 7;
+		 */
+		itemp *= conf_port->rx_adj_level;
+		itemp >>= 7;
 
 		/* Clip the signal if it's too loud */
 		if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
