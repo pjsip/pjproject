@@ -30,8 +30,8 @@
  *  - mediaclientaudioinputstream.lib 
  */
 #include <mda/common/audio.h>
-#include <MdaAudioOutputStream.h>
-#include <MdaAudioInputStream.h>
+#include <mdaaudiooutputstream.h>
+#include <mdaaudioinputstream.h>
 
 
 
