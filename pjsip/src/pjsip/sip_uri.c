@@ -157,7 +157,7 @@ static pjsip_sip_uri* pjsip_url_clone(pj_pool_t *pool,
 typedef const pj_str_t* (*P_GET_SCHEME)(const void*);
 typedef void* 		(*P_GET_URI)(void*);
 typedef pj_ssize_t 	(*P_PRINT_URI)(pjsip_uri_context_e,const void *,
-				       char*,unsigned);
+				       char*,pj_size_t);
 typedef int 		(*P_CMP_URI)(pjsip_uri_context_e, const void*, 
 				     const void*);
 typedef void* 		(*P_CLONE)(pj_pool_t*, const void*);
