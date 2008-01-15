@@ -2284,12 +2284,31 @@ static void pjsua_call_on_forked( pjsip_inv_session *inv,
 static void call_disconnect( pjsip_inv_session *inv, 
 			     int code )
 {
+    pjsua_call *call;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
     status = pjsip_inv_end_session(inv, code, NULL, &tdata);
-    if (status == PJ_SUCCESS)
-	pjsip_inv_send_msg(inv, tdata);
+    if (status != PJ_SUCCESS)
+	return;
+
+    /* Add SDP in 488 status */
+    if (call && call->med_tp && code==PJSIP_SC_NOT_ACCEPTABLE_HERE) {
+	pjmedia_sdp_session *local_sdp;
+	pjmedia_sock_info si;
+
+	call->med_tp->op->get_info(call->med_tp, &si);
+	status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 
+					  1, &si, &local_sdp);
+	if (status == PJ_SUCCESS) {
+	    pjsip_create_sdp_body(tdata->pool, local_sdp,
+				  &tdata->msg->body);
+	}
+    }
+
+    pjsip_inv_send_msg(inv, tdata);
 }
 
 /*
@@ -2360,7 +2379,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
-	call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	call_disconnect(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE);
 	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return;
