@@ -1415,7 +1415,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 /*
  * Get the media port for the player.
  */
-PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_recorder_id id,
+PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_player_id id,
 					   pjmedia_port **p_port)
 {
     PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
