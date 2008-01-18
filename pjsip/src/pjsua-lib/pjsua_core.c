@@ -443,6 +443,9 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     /* Set decor */
     pj_log_set_decor(pjsua_var.log_cfg.decor);
 
+    /* Set log level */
+    pj_log_set_level(pjsua_var.log_cfg.level);
+
     /* Close existing file, if any */
     if (pjsua_var.log_file) {
 	pj_file_close(pjsua_var.log_file);
