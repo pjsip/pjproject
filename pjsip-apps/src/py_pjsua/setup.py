@@ -22,10 +22,11 @@ for line in f:
 	pj_libs.append(line.rstrip("\r\n"))
 f.close()
 
-setup(name="py_pjsua", version="0.7",
+setup(name="py_pjsua", version="0.8",
 	ext_modules = [
 		Extension("py_pjsua", 
 			  ["py_pjsua.c"], 
+			  define_macros=[('PJ_AUTOCONF', '1'),],
 			  include_dirs=pj_inc_dirs, 
 			  library_dirs=pj_lib_dirs, 
 			  libraries=pj_libs),

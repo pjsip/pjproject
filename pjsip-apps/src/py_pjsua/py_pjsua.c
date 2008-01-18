@@ -35,7 +35,7 @@ static long thread_id;
  * cb_log_cb
  * declares method for reconfiguring logging process for callback struct
  */
-static void cb_log_cb(int level, const char *data, pj_size_t len)
+static void cb_log_cb(int level, const char *data, int len)
 {
 	
     /* Ignore if this callback is called from alien thread context,
