@@ -4084,7 +4084,8 @@ PJ_DECL(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
  *			WAV files are supported, and the WAV file MUST be
  *			formatted as 16bit PCM mono/single channel (any
  *			clock rate is supported).
- * @param options	Options (currently zero).
+ * @param options	Optional option flag. Application may specify
+ *			PJMEDIA_FILE_NO_LOOP to prevent playback loop.
  * @param p_id		Pointer to receive player ID.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -4150,7 +4151,7 @@ PJ_DECL(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id);
  * \par Python:
  * Not applicable.
  */
-PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_recorder_id id,
+PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_player_id id,
 					   pjmedia_port **p_port);
 
 /**
