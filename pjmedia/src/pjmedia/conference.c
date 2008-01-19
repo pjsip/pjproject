@@ -55,7 +55,13 @@ static FILE *fhnd_rec;
 
 
 #define THIS_FILE	"conference.c"
-#define RX_BUF_COUNT	PJMEDIA_SOUND_BUFFER_COUNT
+
+/* When delay buffer is used, we only need 1 frame buffering */
+#if defined(PJMEDIA_SOUND_USE_DELAYBUF) && PJMEDIA_SOUND_USE_DELAYBUF!=0
+#   define RX_BUF_COUNT	    1
+#else
+#   define RX_BUF_COUNT	    PJMEDIA_SOUND_BUFFER_COUNT
+#endif
 
 #define BYTES_PER_SAMPLE    2
 

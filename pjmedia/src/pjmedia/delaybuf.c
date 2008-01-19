@@ -40,8 +40,25 @@ enum OP
 /* The following macros represent cycles of test. */
 /* Since there are two operations performed (get & put), */
 /* these macros value must be minimum 2 and should be even number */
-#define WAITING_COUNT	8
-#define LEARN_COUNT	8
+#define WAITING_COUNT	4
+#define LEARN_COUNT	16
+
+/* Number of buffers to add to learnt level for additional stability */
+#define SAFE_MARGIN	2
+
+/*
+ * Some experimental data (with SAFE_MARGIN=1):
+ *
+ * System 1:
+ *  - XP, WMME, 10ms ptime, 
+ *  - Sennheiser Headset+USB sound card
+ *  - Stable delaybuf level: 6, on WAITING_COUNT=4 and LEARNING_COUNT=48
+ *
+ * System 2:
+ *  - XP, WMME, 10ms ptime
+ *  - Onboard SoundMAX Digital Audio
+ *  - Stable delaybuf level: 6, on WAITING_COUNT=4 and LEARNING_COUNT=48
+ */
 
 struct pjmedia_delay_buf
 {
@@ -133,8 +150,8 @@ static void update(pjmedia_delay_buf *b, enum OP op)
 	    b->op[other].level = 0;
 	    b->state_count++;
 	    if (b->state_count == LEARN_COUNT) {
-		/* give ONE frame compensation */
-		b->max_level += 1;
+		/* give SAFE_MARGIN compensation for added stability */
+		b->max_level += SAFE_MARGIN;
 		
 		PJ_LOG(5,(b->obj_name,"Delay buffer start running, level=%u",
 		    b->max_level));

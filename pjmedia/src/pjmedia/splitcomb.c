@@ -27,7 +27,13 @@
 #define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'P')
 #define THIS_FILE	    "splitcomb.c"
 #define TMP_SAMP_TYPE	    pj_int16_t
-#define MAX_BUF_CNT	    PJMEDIA_SOUND_BUFFER_COUNT
+
+/* When delay buffer is used, we only need 1 frame buffering */
+#if defined(PJMEDIA_SOUND_USE_DELAYBUF) && PJMEDIA_SOUND_USE_DELAYBUF!=0
+#   define MAX_BUF_CNT	    1
+#else
+#   define MAX_BUF_CNT	    PJMEDIA_SOUND_BUFFER_COUNT
+#endif
 
 #if 0
 #   define TRACE_UP_(x)	PJ_LOG(5,x)

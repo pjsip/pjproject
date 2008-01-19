@@ -31,7 +31,7 @@
 #include "echo_internal.h"
 
 #define THIS_FILE	"echo_speex.c"
-#define BUF_COUNT	16
+#define BUF_COUNT	PJMEDIA_SOUND_BUFFER_COUNT
 #define MIN_PREFETCH	2
 #define MAX_PREFETCH	(BUF_COUNT*2/3)
 

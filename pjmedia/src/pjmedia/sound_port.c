@@ -363,7 +363,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     
 #if PJMEDIA_SOUND_USE_DELAYBUF
     status = pjmedia_delay_buf_create(pool, "snd_buff", samples_per_frame, 
-				      16, -1, &snd_port->delay_buf);
+				      PJMEDIA_SOUND_BUFFER_COUNT, -1, 
+				      &snd_port->delay_buf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #else
     PJ_UNUSED_ARG(status);
