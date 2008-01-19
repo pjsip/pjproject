@@ -58,6 +58,10 @@ enum OP
  *  - XP, WMME, 10ms ptime
  *  - Onboard SoundMAX Digital Audio
  *  - Stable delaybuf level: 6, on WAITING_COUNT=4 and LEARNING_COUNT=48
+ *
+ * System 3:
+ *  - MacBook Core 2 Duo, OSX 10.5, 10ms ptime
+ *  - Stable delaybuf level: 2, on WAITING_COUNT=4 and LEARNING_COUNT=8
  */
 
 struct pjmedia_delay_buf
