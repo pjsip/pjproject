@@ -214,6 +214,47 @@ PJ_DEF(pj_status_t) pjsua_enum_calls( pjsua_call_id ids[],
 
 #define LATE_SDP    0
 
+/* Allocate one call id */
+static pjsua_call_id alloc_call_id(void)
+{
+    pjsua_call_id cid;
+
+#if 1
+    /* New algorithm: round-robin */
+    if (pjsua_var.next_call_id >= (int)pjsua_var.ua_cfg.max_calls || 
+	pjsua_var.next_call_id < 0)
+    {
+	cid = 0;
+    }
+
+    for (cid=pjsua_var.next_call_id; 
+	 cid<(int)pjsua_var.ua_cfg.max_calls; 
+	 ++cid) 
+    {
+	if (pjsua_var.calls[cid].inv == NULL) {
+	    ++pjsua_var.next_call_id;
+	    return cid;
+	}
+    }
+
+    for (cid=0; cid < pjsua_var.next_call_id; ++cid) {
+	if (pjsua_var.calls[cid].inv == NULL) {
+	    ++pjsua_var.next_call_id;
+	    return cid;
+	}
+    }
+
+#else
+    /* Old algorithm */
+    for (cid=0; cid<(int)pjsua_var.ua_cfg.max_calls; ++cid) {
+	if (pjsua_var.calls[cid].inv == NULL)
+	    return cid;
+    }
+#endif
+
+    return PJSUA_INVALID_ID;
+}
+
 /*
  * Make outgoing call to the specified URI using the specified account.
  */
@@ -253,12 +294,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Find free call slot. */
-    for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
-	if (pjsua_var.calls[call_id].inv == NULL)
-	    break;
-    }
+    call_id = alloc_call_id();
 
-    if (call_id == (int)pjsua_var.ua_cfg.max_calls) {
+    if (call_id == PJSUA_INVALID_ID) {
 	pjsua_perror(THIS_FILE, "Error making file", PJ_ETOOMANY);
 	PJSUA_UNLOCK();
 	return PJ_ETOOMANY;
@@ -497,12 +535,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     PJSUA_LOCK();
 
     /* Find free call slot. */
-    for (call_id=0; call_id<(int)pjsua_var.ua_cfg.max_calls; ++call_id) {
-	if (pjsua_var.calls[call_id].inv == NULL)
-	    break;
-    }
+    call_id = alloc_call_id();
 
-    if (call_id == (int)pjsua_var.ua_cfg.max_calls) {
+    if (call_id == PJSUA_INVALID_ID) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
 				      PJSIP_SC_BUSY_HERE, NULL,
 				      NULL, NULL);
