@@ -125,6 +125,11 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	unsigned i, max_count;
 	pj_status_t status;
 	
+	/* VC6 complains that "he" is uninitialized */
+	#ifdef _MSC_VER
+	pj_bzero(&he, sizeof(he));
+	#endif
+
 	status = pj_gethostbyname(nodename, &he);
 	if (status != PJ_SUCCESS)
 	    return status;
