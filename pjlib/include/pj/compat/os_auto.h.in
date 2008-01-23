@@ -57,6 +57,7 @@
 #undef PJ_HAS_STDARG_H
 #undef PJ_HAS_STDDEF_H
 #undef PJ_HAS_STDIO_H
+#undef PJ_HAS_STDINT_H
 #undef PJ_HAS_STDLIB_H
 #undef PJ_HAS_STRING_H
 #undef PJ_HAS_SYS_IOCTL_H

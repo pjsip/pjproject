@@ -43,6 +43,7 @@
 #define PJ_HAS_SETJMP_H		    1
 #define PJ_HAS_STDARG_H		    1
 #define PJ_HAS_STDDEF_H		    1
+#undef  PJ_HAS_STDINT_H
 #define PJ_HAS_STDIO_H		    1
 #define PJ_HAS_STDLIB_H		    1
 #define PJ_HAS_STRING_H		    1
