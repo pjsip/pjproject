@@ -50,6 +50,7 @@ struct pjmedia_session
 
 static const pj_str_t ID_AUDIO = { "audio", 5};
 static const pj_str_t ID_VIDEO = { "video", 5};
+static const pj_str_t ID_APPLICATION = { "application", 11};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
@@ -175,10 +176,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
 	si->type = PJMEDIA_TYPE_VIDEO;
 
+    } else if (pj_stricmp(&local_m->desc.media, &ID_APPLICATION) == 0) {
+
+	si->type = PJMEDIA_TYPE_APPLICATION;
+
     } else {
 
 	si->type = PJMEDIA_TYPE_UNKNOWN;
 	return PJMEDIA_EINVALIMEDIATYPE;
+
     }
 
     /* Transport protocol */
@@ -579,7 +585,6 @@ PJ_DEF(pj_status_t) pjmedia_session_info_from_sdp( pj_pool_t *pool,
 					       local, remote, i);
 	if (status != PJ_SUCCESS)
 	    return status;
-
     }
 
     return PJ_SUCCESS;

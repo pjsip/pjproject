@@ -63,7 +63,10 @@ typedef enum pjmedia_type
     /** Unknown media type, in this case the name will be specified in 
      *  encoding_name.
      */
-    PJMEDIA_TYPE_UNKNOWN = 3
+    PJMEDIA_TYPE_UNKNOWN = 3,
+
+    /** The media is application. */
+    PJMEDIA_TYPE_APPLICATION = 4
 
 } pjmedia_type;
 
