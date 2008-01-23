@@ -428,7 +428,12 @@ PJ_BEGIN_DECL
  * Invalid session state for the specified operation.
  */
 #define PJSIP_ESESSIONSTATE	 (PJSIP_ERRNO_START_PJSIP+141)	/* 171141 */
-
+/**
+ * @hideinitializer
+ * The feature being requested requires the use of secure session or 
+ * transport.
+ */
+#define PJSIP_ESESSIONINSECURE	(PJSIP_ERRNO_START_PJSIP+142)	/* 171142 */
 
 /************************************************************
  * TLS TRANSPORT ERRORS

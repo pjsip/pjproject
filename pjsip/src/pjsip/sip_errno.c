@@ -114,6 +114,7 @@ static const struct
     /* Invite session. */
     PJ_BUILD_ERR( PJSIP_ESESSIONTERMINATED, "INVITE session already terminated" ),
     PJ_BUILD_ERR( PJSIP_ESESSIONSTATE,      "Invalid INVITE session state" ),
+    PJ_BUILD_ERR( PJSIP_ESESSIONINSECURE,   "Require secure session/transport"),
 
     /* SSL errors */
     PJ_BUILD_ERR( PJSIP_TLS_EUNKNOWN,	"Unknown TLS error" ),
